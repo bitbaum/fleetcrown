@@ -51,7 +51,7 @@ export default async function LandingPage() {
   return (
     <PublicSurface right={<PublicHeaderActions />}>
       <div className="ui-public-hero-fold">
-        <div className="max-w-5xl">
+        <div className="w-full max-w-5xl">
           <div className="ui-public-hero-badge">
             {MARKETING_POSITIONING}
           </div>

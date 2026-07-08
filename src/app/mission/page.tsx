@@ -12,9 +12,11 @@ export default function MissionPage() {
   return (
     <PublicSurface right={<PublicHeaderActions />}>
       <div className="ui-public-hero-fold">
-        <div className="ui-public-eyebrow">{MISSION.eyebrow}</div>
-        <h1 className="ui-public-hero-title mt-6">{MISSION.title}</h1>
-        <p className="ui-public-hero-lede mt-10 max-w-3xl">{MISSION.statement}</p>
+        <div className="w-full max-w-5xl">
+          <div className="ui-public-eyebrow">{MISSION.eyebrow}</div>
+          <h1 className="ui-public-hero-title mt-6">{MISSION.title}</h1>
+          <p className="ui-public-hero-lede mt-10 max-w-3xl">{MISSION.statement}</p>
+        </div>
       </div>
 
       <div className="border-t border-border-subtle py-24">
