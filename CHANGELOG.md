@@ -2,7 +2,28 @@
 
 Notable, user-facing changes. Older history lives in the git log (conventional commits).
 
-**Last modified:** 2026-07-02 — fleet truth pass: honest hero, actionable failure streaks, self-running janitors.
+**Last modified:** 2026-07-08 — public-truth pass: share links, honest hero, execution-locus essay.
+
+## 2026-07-08
+
+### Added
+- **Essay — _Every Ship, One Bridge_.** Where agent work runs (your laptop, a box
+  you own, the provider's own cloud) is not who commands it. The execution-locus
+  landscape and why the captain sits over every locus, not one.
+
+### Fixed
+- **Share links are now public URLs.** A project's shareable dossier link was built
+  from the server's internal address, so every copied/opened link was unreachable.
+  It now uses the canonical public domain — the same source email links use.
+- **No test data on the public landing.** A leftover dogfood project could surface in
+  the landing page's live Fleet Command console; the public projection now filters
+  smoke/test artifacts by construction, and the stray row was purged from production.
+- **Correct web address in the download page** (was a stale, unregistered domain).
+
+### Changed
+- **Deploy reliability.** A slow-to-stop app process can no longer roll back a healthy
+  release (bounded stop + readiness polling), and the nightly fleet-knowledge reindex
+  now always runs current code, so shared dossiers embed their full text.
 
 ## 2026-07-03 (c)
 

@@ -6,6 +6,7 @@ import type { DevLogEntry } from "@/db/schema/user-projects";
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
 import { getOrgPeerIds } from "./utils";
 import { findProjectEntityByName } from "./project-merge";
+import { isPublicTestArtifact } from "@/lib/project-display";
 
 export async function getUserProjects(userId: string): Promise<UserProject[]> {
   return db
@@ -83,11 +84,15 @@ export async function ensureUserProjectEntityLinks(userId: string): Promise<User
 }
 
 export async function getPublicProjects(userId: string): Promise<UserProject[]> {
-  return db
+  const rows = await db
     .select()
     .from(userProjects)
     .where(and(eq(userProjects.userId, userId), eq(userProjects.isActive, true), isNotNull(userProjects.gitUrl)))
     .orderBy(asc(userProjects.position), asc(userProjects.createdAt));
+  // Defense-in-depth for the public face (landing hero, /u profiles): never
+  // surface a smoke/dogfood artifact even if one leaks into the DB. See
+  // isPublicTestArtifact.
+  return rows.filter((p) => !isPublicTestArtifact(p.name));
 }
 
 /**

@@ -1,4 +1,4 @@
-import { APP_NAME, MARKETING_TAGLINE, MARKETING_SUBTITLE, MARKETING_POSITIONING } from "./brand";
+import { APP_NAME, APP_DOMAIN, MARKETING_TAGLINE, MARKETING_SUBTITLE, MARKETING_POSITIONING } from "./brand";
 
 // Central source of truth for all public marketing copy.
 // Rebrand, reposition, or A/B test by editing this file — no component changes.
@@ -309,7 +309,7 @@ export const DESKTOP_DOWNLOAD = {
   // Web vs. desktop — answers "do I need this?" in plain language.
   comparison: {
     web: {
-      label: "Web (fleetcrown.com)",
+      label: `Web (${APP_DOMAIN})`,
       tagline: "Already available — no install",
       bullets: [
         "Full fleet visibility across all projects",

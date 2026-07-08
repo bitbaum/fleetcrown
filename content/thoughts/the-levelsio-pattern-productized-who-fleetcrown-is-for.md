@@ -55,7 +55,7 @@ FleetCrown is the answer to all five.
 
 Look at FleetCrown's surface area honestly. It is, at the core, **a dashboard for a fleet of AI coding agents running on machines you control**. The dashboard sees what's happening across all the projects, lets you dispatch new tasks from any device, logs the history of who did what, applies a policy to "the agent just finished — what next?", and surfaces real-time notifications.
 
-The local component (Fleet Runner) is the bit that lives on each of your machines and actually drives the agents. The cloud component (the web UI at fleetcrown.vercel.app) is the bit you look at from wherever you are. They talk to each other over a thin sync layer.
+The local component (Fleet Runner) is the bit that lives on each of your machines and actually drives the agents. The cloud component (the web UI at fleetcrown.orangecat.ch) is the bit you look at from wherever you are. They talk to each other over a thin sync layer.
 
 This is precisely the architecture levelsio describes building manually with `tmux`, `ssh`, his eyes, and an iCloud calendar of "remember to check on the agent at 6 PM." FleetCrown replaces every piece of that stack with a real product. The terminal session becomes a managed agent runtime. The SSH attach becomes a real-time dashboard. The scrollback becomes a structured handoff log. The "remember at 6 PM" becomes an autopilot that fires the next task. The "is the build passing" becomes a push notification on his phone.
 
