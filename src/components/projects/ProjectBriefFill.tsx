@@ -7,7 +7,7 @@
 // editors write to, so a wrong guess is one click from fixable.
 
 import { useState } from "react";
-import { GitBranch, Loader2, Mic, Sparkles, Square } from "lucide-react";
+import { GitBranch, ListChecks, Loader2, Mic, Sparkles, Square } from "lucide-react";
 import { postJson } from "@/lib/api/fetch";
 import { useVoiceInput } from "@/hooks/use-voice-input";
 
@@ -25,30 +25,34 @@ export function ProjectBriefFill({
 }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
-  const [busy, setBusy] = useState<"brief" | "enrich" | null>(null);
+  const [busy, setBusy] = useState<"brief" | "enrich" | "roadmap" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [appliedKeys, setAppliedKeys] = useState<string[] | null>(null);
+  const [createdGoals, setCreatedGoals] = useState<string[] | null>(null);
   const voice = useVoiceInput({
     // Speaking is the fastest "no forms" path — append so users can mix
     // dictation with typed/pasted notes before one AI fill pass.
     onTranscript: (t) => setText((prev) => (prev ? `${prev.trimEnd()} ${t}` : t)),
   });
 
-  async function run(kind: "brief" | "enrich") {
+  async function run(kind: "brief" | "enrich" | "roadmap") {
     setBusy(kind);
     setError(null);
     setAppliedKeys(null);
+    setCreatedGoals(null);
     try {
+      // brief + roadmap read the pasted text; enrich reads the repo README.
       const res = await postJson(
         `/api/projects/${projectId}/${kind}`,
-        kind === "brief" ? { text } : {},
+        kind === "enrich" ? {} : { text },
       );
-      const json = await res.json() as { ok?: boolean; applied?: AppliedFields; error?: string };
+      const json = await res.json() as { ok?: boolean; applied?: AppliedFields; created?: string[]; error?: string };
       if (!res.ok || !json.ok) {
         setError(json.error ?? `HTTP ${res.status}`);
         return;
       }
-      setAppliedKeys(Object.keys(json.applied ?? {}));
+      if (kind === "roadmap") setCreatedGoals(json.created ?? []);
+      else setAppliedKeys(Object.keys(json.applied ?? {}));
       setText("");
       setOpen(false);
       onReload();
@@ -106,6 +110,15 @@ export function ProjectBriefFill({
               {busy === "brief" ? <Loader2 className="ui-spinner-xs" /> : <Sparkles className="h-3.5 w-3.5" />}
               Fill profile
             </button>
+            <button
+              onClick={() => run("roadmap")}
+              disabled={busy !== null || text.trim().length < 10}
+              className="ui-btn-chip gap-1.5 px-3 py-1.5 text-xs"
+              title="Decompose the pasted spec into an ordered set of milestones, created as project goals."
+            >
+              {busy === "roadmap" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ListChecks className="h-3.5 w-3.5 text-accent-text" />}
+              Generate milestones
+            </button>
             {voice.isSupported && (
               <button
                 onClick={() => (voice.status === "recording" ? voice.stop() : voice.start())}
@@ -134,6 +147,11 @@ export function ProjectBriefFill({
       {appliedKeys && appliedKeys.length > 0 && (
         <p className="text-xs text-status-positive">
           Filled: {appliedKeys.map((k) => k.replace(/_/g, " ")).join(", ")}. Click any field to adjust.
+        </p>
+      )}
+      {createdGoals && createdGoals.length > 0 && (
+        <p className="text-xs text-status-positive">
+          Created {createdGoals.length} milestone{createdGoals.length === 1 ? "" : "s"} as goals — see the Goals tab.
         </p>
       )}
       {error && <p className="ui-error-xs">{error}</p>}
