@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { attributes, entities } from "@/db/schema";
 import { SOURCE_FLEETCROWN_UI } from "@/lib/constants";
 import { patchProject } from "@/db/queries/projects";
+import { syncUserProjectDescription } from "@/db/queries/user-projects";
 import { scheduleProjectProfileReindexByEntityId } from "@/lib/rag/reindex-project-profile";
 
 /**
@@ -263,6 +264,10 @@ export async function applyProjectProfile(
     const updated = await patchProject(userId, entityId, { description: profile.description });
     if (!updated) return null;
     applied.description = profile.description;
+    // Mirror the brief onto the projects-page one-liner so the fleet index (which
+    // reads user_projects.description) reflects saved context too, not just the
+    // dossier/RAG (which read the entity). Best-effort — never fail the save.
+    await syncUserProjectDescription(userId, entityId, profile.description).catch(() => {});
   }
 
   const attrKeys = [

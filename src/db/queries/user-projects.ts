@@ -162,6 +162,20 @@ export async function getUserProjectByEntityId(userId: string, entityProjectId: 
   return row ?? null;
 }
 
+/**
+ * Keep the projects-page one-liner (user_projects.description) in sync with the
+ * entity brief. A project has two description homes — the entity (dossier / RAG)
+ * and the user_projects row (the fleet-index one-liner). When a brief write
+ * updates the entity, this mirrors it so the fleet index reflects saved context
+ * too, not just the dossier. No-op when the project has no linked user_projects row.
+ */
+export async function syncUserProjectDescription(userId: string, entityProjectId: string, description: string): Promise<void> {
+  await db
+    .update(userProjects)
+    .set({ description: description.trim() || null, updatedAt: new Date() })
+    .where(and(eq(userProjects.userId, userId), eq(userProjects.entityProjectId, entityProjectId)));
+}
+
 export async function getUserProject(id: string, userId: string): Promise<UserProject | null> {
   const [row] = await db
     .select()
