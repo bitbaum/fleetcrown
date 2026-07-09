@@ -15,13 +15,14 @@ type Variant = "cloud" | "machine";
 
 const COPY: Record<
   Variant,
-  { loading: string; empty: string; emptyHint: string; offlineHint: string; icon: typeof MonitorSmartphone }
+  { loading: string; empty: string; emptyHint: string; offlineHint: string; stalledHint: string; icon: typeof MonitorSmartphone }
 > = {
   cloud: {
     loading: EXECUTOR_COPY.terminal.cloudLoading,
     empty: EXECUTOR_COPY.terminal.cloudEmpty,
     emptyHint: EXECUTOR_COPY.terminal.cloudEmptyHint,
     offlineHint: EXECUTOR_COPY.terminal.cloudOfflineHint,
+    stalledHint: EXECUTOR_COPY.terminal.cloudStalledHint,
     icon: MonitorSmartphone,
   },
   machine: {
@@ -29,6 +30,7 @@ const COPY: Record<
     empty: EXECUTOR_COPY.terminal.thisComputerEmpty,
     emptyHint: EXECUTOR_COPY.terminal.thisComputerEmptyHint,
     offlineHint: EXECUTOR_COPY.terminal.thisComputerOfflineHint,
+    stalledHint: EXECUTOR_COPY.terminal.thisComputerStalledHint,
     icon: MonitorSmartphone,
   },
 };
@@ -138,6 +140,7 @@ export function BuilderAgentView({
             fill
             interactive
             compactChrome={immersive}
+            stalledHint={copy.stalledHint}
           />
         )}
       </div>

@@ -139,6 +139,11 @@ export const EXECUTOR_COPY = {
     // `unavailable` payload for non-allowed users, and is shown instead.)
     cloudEmptyHint: "The cloud builder is online — dispatch an agent from Control and it shows up here live.",
     cloudOfflineHint: "The cloud builder (box-runner on Hetzner) is offline right now.",
+    // Connected to the peek stream but no screen frames arrived → the runner is
+    // wedged (e.g. its outbound fetch is failing). Honest, actionable — not a
+    // black pane labelled "live".
+    cloudStalledHint: "Connected, but the cloud builder isn't streaming this session — it may be stuck. Check the box-runner service on Hetzner.",
+    thisComputerStalledHint: "Connected, but Fleet Runner on this computer isn't streaming output — it may be stuck. Quit it from the menu bar and reopen.",
     thisComputerHelp:
       "Interactive view of agents on this computer via the desktop app. Same keystroke path as Cloud — click the terminal and type.",
     thisComputerEmpty: "No agents on this computer right now.",

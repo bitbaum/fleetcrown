@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { AlertTriangle } from "lucide-react";
 import "@xterm/xterm/css/xterm.css";
 import type { AgentLifecycle } from "@/lib/agent-execution/types";
 import type { TerminalTransport } from "./terminal-transport";
@@ -74,6 +75,19 @@ function LinkBar({ links, onDismiss }: { links: string[]; onDismiss: () => void 
   );
 }
 
+/** Honest overlay for a connected-but-silent stream: the source said it was
+ *  ready but never streamed the screen. Replaces the black "live" pane. */
+function TerminalStalledOverlay({ message }: { message: string }) {
+  return (
+    <div className="absolute inset-0 flex items-center justify-center p-4">
+      <div className="ui-card-shell-raised flex max-w-md flex-col items-center gap-2 px-4 py-3 text-center">
+        <AlertTriangle className="h-5 w-5 text-status-warning" aria-hidden="true" />
+        <p className="text-sm text-text-secondary">{message}</p>
+      </div>
+    </div>
+  );
+}
+
 /**
  * The ONE xterm view, parameterized by its transport (terminal-transport.ts).
  * Renders a workspace's / agent's byte stream, optionally captures keystrokes,
@@ -87,6 +101,13 @@ function LinkBar({ links, onDismiss }: { links: string[]; onDismiss: () => void 
  *  - chrome (default): a connecting/live label, the terminal, and — when
  *    `onSend` is given — a gated single-line "Send a line" box.
  */
+/** How long to wait after the stream connects (`ready`) before deciding the
+ *  source is wedged. A healthy runner/executor always pushes an initial screen
+ *  snapshot immediately on peek_start, so "connected but zero frames" past this
+ *  window means the runner isn't actually serving — surface that instead of a
+ *  black pane falsely labelled "live". */
+const STALL_MS = 6000;
+
 export function TerminalView({
   transport,
   interactive = false,
@@ -96,6 +117,10 @@ export function TerminalView({
   bare = false,
   /** Minimal chrome for mobile full-screen — more rows for xterm. */
   compactChrome = false,
+  /** Shown when the stream connects but no frames arrive (wedged runner). The
+   *  caller knows the substrate (cloud vs this computer) so it supplies the
+   *  actionable message; a generic default covers other callers. */
+  stalledHint,
   className,
 }: {
   transport: TerminalTransport;
@@ -110,16 +135,22 @@ export function TerminalView({
   /** Render only the xterm host — no label, no send box. */
   bare?: boolean;
   compactChrome?: boolean;
+  stalledHint?: string;
   /** Host div class (bare layout). */
   className?: string;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const [connected, setConnected] = useState(false);
+  // Connected (SSE `ready`) but no frame within STALL_MS → the source is wedged.
+  const [stalled, setStalled] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
   const [line, setLine] = useState("");
   const [sending, setSending] = useState(false);
   // URLs detected in the terminal output stream — surfaced by <LinkBar/>.
   const [links, setLinks] = useState<string[]>([]);
+
+  const stallMessage = stalledHint ??
+    "Connected, but no output arrived — the session may be unresponsive. Reopen it, or restart the executor.";
 
   // Keep the latest transport/onStatus without retearing the stream every render.
   const transportRef = useRef(transport);
@@ -130,6 +161,9 @@ export function TerminalView({
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return;
+    // Fresh substrate (tab switch) → back to "connecting…" until it proves live.
+    setConnected(false);
+    setStalled(false);
     let disposed = false;
     let disconnect = () => {};
     let cleanupTerm = () => {};
@@ -318,15 +352,36 @@ export function TerminalView({
           }
         }, 150);
       };
+      // Stall watchdog: arm on connect, disarm on the first frame. If it fires,
+      // the stream said "ready" but the runner never streamed the screen —
+      // an honest "not responding" beats a black pane labelled "live".
+      let framed = false;
+      let stallTimer = 0;
+      const clearStallTimer = () => { if (stallTimer) { window.clearTimeout(stallTimer); stallTimer = 0; } };
+      const armStall = () => {
+        if (framed) return;
+        clearStallTimer();
+        stallTimer = window.setTimeout(() => { if (!framed) setStalled(true); }, STALL_MS);
+      };
+      const markFramed = () => {
+        framed = true;
+        clearStallTimer();
+        setStalled(false);
+      };
       disconnect = transport.connect({
-        onOutput: (data) => { term.write(data); scheduleScan(); },
-        onReset: () => { term.reset(); setLinks([]); },
+        onOutput: (data) => { markFramed(); term.write(data); scheduleScan(); },
+        onReset: () => { markFramed(); term.reset(); setLinks([]); },
         onStatus: (status) => onStatusRef.current?.(status),
-        onConnected: (c) => setConnected(c),
+        onConnected: (c) => {
+          setConnected(c);
+          if (c) armStall();
+          else { clearStallTimer(); setStalled(false); }
+        },
       });
 
       cleanupTerm = () => {
         if (scanTimer) window.clearTimeout(scanTimer);
+        clearStallTimer();
         linkProvider.dispose();
         resizeObserver.disconnect();
         inputDisposable?.dispose();
@@ -346,7 +401,10 @@ export function TerminalView({
   if (bare) {
     return (
       <div className={`flex flex-col ${className ?? "h-full w-full"}`}>
-        <div ref={hostRef} className="min-h-0 flex-1" />
+        <div className="relative min-h-0 flex-1">
+          <div ref={hostRef} className="h-full w-full" />
+          {stalled && <TerminalStalledOverlay message={stallMessage} />}
+        </div>
         <LinkBar links={links} onDismiss={() => setLinks([])} />
       </div>
     );
@@ -363,8 +421,12 @@ export function TerminalView({
     <div className={`flex flex-col gap-2 ${fill ? "h-full min-h-0" : ""}`}>
       {!compactChrome && (
         <div className="flex items-center justify-between gap-2">
-          <span className="ui-micro-label">
-            {connected ? (interactive ? "live · click to focus, type directly" : "live") : "connecting…"}
+          <span className={`ui-micro-label ${stalled ? "text-status-warning" : ""}`}>
+            {stalled
+              ? "not responding"
+              : connected
+                ? (interactive ? "live · click to focus, type directly" : "live")
+                : "connecting…"}
           </span>
           {onSend && !interactive && (
             <button type="button" className="ui-btn-xs" onClick={() => setSendOpen((v) => !v)}>
@@ -380,7 +442,10 @@ export function TerminalView({
           </button>
         </div>
       )}
-      <div ref={hostRef} className={`${fill ? "min-h-0 flex-1" : compactChrome ? "min-h-0 flex-1" : "h-72"} w-full overflow-hidden rounded-md bg-black`} />
+      <div className={`relative w-full overflow-hidden rounded-md bg-black ${fill ? "min-h-0 flex-1" : compactChrome ? "min-h-0 flex-1" : "h-72"}`}>
+        <div ref={hostRef} className="h-full w-full" />
+        {stalled && <TerminalStalledOverlay message={stallMessage} />}
+      </div>
       <LinkBar links={links} onDismiss={() => setLinks([])} />
       {onSend && !interactive && sendOpen && (
         <div className="flex items-center gap-2">
