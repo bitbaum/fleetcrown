@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { MessagesSquare, Plus, SlidersHorizontal } from "lucide-react";
+import { Maximize2, MessagesSquare, Minimize2, Plus, SlidersHorizontal, Sparkles } from "lucide-react";
 import { getJson, postJson, deleteJson, throwApiError } from "@/lib/api/fetch";
 import { resolveLokiProjectSelection } from "@/lib/loki/project-selection";
 import { deriveExecutorHonestyLabel } from "@/lib/executor-honesty";
@@ -69,6 +69,11 @@ export function LokiWorkspace({
   // as permanent columns). Keeps the chat full-width on phones.
   const [historyOpen, setHistoryOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
+  // Focus mode — a full-viewport, single-column, distraction-free chat (Grok/
+  // ChatGPT feel). Off by default; the preference is remembered across sessions
+  // and can be forced with ?focus=1. The side panes collapse into the same
+  // drawers mobile already uses, so nothing is lost — just decluttered.
+  const [focus, setFocusState] = useState(false);
   const builderPresence = useBuilderPresence();
   const dispatchHonesty = deriveExecutorHonestyLabel({
     runnerConnected: builderPresence.runnerConnected,
@@ -89,6 +94,37 @@ export function LokiWorkspace({
     window.addEventListener("loki:prefill", handler);
     return () => window.removeEventListener("loki:prefill", handler);
   }, []);
+
+  // Restore the remembered focus preference (or honor ?focus=1) on mount.
+  useEffect(() => {
+    let stored: string | null = null;
+    try {
+      stored = window.localStorage.getItem("loki:focus");
+    } catch {
+      /* private mode / storage disabled — fall back to the URL only */
+    }
+    if (searchParams.get("focus") === "1" || stored === "1") setFocusState(true);
+  }, [searchParams]);
+
+  const setFocus = useCallback((v: boolean) => {
+    setFocusState(v);
+    try {
+      window.localStorage.setItem("loki:focus", v ? "1" : "0");
+    } catch {
+      /* non-fatal: the toggle still works for this session */
+    }
+  }, []);
+
+  // Esc leaves focus mode — but only when no drawer is open (the Drawer owns Esc
+  // first, so one press closes the drawer, a second leaves focus).
+  useEffect(() => {
+    if (!focus) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !historyOpen && !filterOpen) setFocus(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [focus, historyOpen, filterOpen, setFocus]);
 
   const reloadProjects = useCallback(async () => {
     setProjectsLoading(true);
@@ -251,80 +287,49 @@ export function LokiWorkspace({
     );
   };
 
-  return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3 md:grid md:grid-cols-[16rem_1fr] md:gap-4 lg:grid-cols-[16rem_1fr_16rem]">
-      {/* LEFT — conversation list (permanent column on md+; a drawer on mobile) */}
-      <aside className="ui-panel hidden min-h-0 p-3 md:block">
-        <ConversationList
-          conversations={visibleConversations}
-          activeId={activeId}
-          loading={convosLoading}
-          error={convosError}
-          onRetry={() => void reloadConversations()}
-          onSelect={setActiveId}
-          onNew={() => void createConversation()}
-          onDelete={(id) => void deleteConversation(id)}
-        />
-      </aside>
-
-      {/* CENTER — the chat itself, always the primary, full-width on mobile */}
-      <section className="flex min-h-0 flex-1 flex-col gap-2 md:gap-3">
-        {/* Mobile-only toolbar: reach the history + project panes without
-            stealing chat width. Hidden on md+ where they're permanent columns. */}
-        <div className="flex items-center gap-2 md:hidden">
-          <button type="button" className="ui-btn-chip" onClick={() => setHistoryOpen(true)}>
-            <MessagesSquare className="h-4 w-4" /> Chats
-          </button>
-          <button type="button" className="ui-btn-chip" onClick={() => void createConversation()}>
-            <Plus className="h-4 w-4" /> New
-          </button>
-          <button type="button" className="ui-btn-chip ml-auto" onClick={() => setFilterOpen(true)}>
-            <SlidersHorizontal className="h-4 w-4" />
-            Projects{selectedProjects.length > 0 ? ` · ${selectedProjects.length}` : ""}
-          </button>
-        </div>
-
-        <div className="ui-panel flex min-h-0 flex-1 flex-col px-3 py-2 md:px-4 md:py-3">
-          <Transcript
-            messages={messages}
-            sending={sending}
-            onPickProject={dispatchWithProject}
-            onStart={(prompt) => void send(prompt, {}, [], { chatOnly: true, selectedProjectsOverride: [] })}
-          />
-        </div>
-        {messages.length > 0 && (
-          <SaveContextBar
-            projects={projects}
-            messages={messages}
-            selectedProject={selectedProjects[0] ?? null}
-          />
-        )}
-        {error && <p className="ui-error">{error}</p>}
-        <Composer
-          key={composerPrefill ?? "default"}
-          defaultText={composerPrefill ?? ""}
-          selectedProjects={selectedProjects}
-          onRemoveProject={toggleProject}
-          disabled={false}
+  // The chat itself — reused verbatim in the normal grid and the focus overlay.
+  // `bare` drops the bordered panel for the open, distraction-free focus look.
+  const chatBody = (bare: boolean) => (
+    <>
+      <div
+        className={
+          bare
+            ? "flex min-h-0 flex-1 flex-col"
+            : "ui-panel flex min-h-0 flex-1 flex-col px-3 py-2 md:px-4 md:py-3"
+        }
+      >
+        <Transcript
+          messages={messages}
           sending={sending}
-          dispatchHonesty={dispatchHonesty}
-          onSend={(t, choice, attachments) => void send(t, choice, attachments)}
+          onPickProject={dispatchWithProject}
+          onStart={(prompt) => void send(prompt, {}, [], { chatOnly: true, selectedProjectsOverride: [] })}
         />
-      </section>
-
-      {/* RIGHT — project multi-select (permanent column on lg+; a drawer on mobile) */}
-      <aside className="ui-panel hidden min-h-0 p-3 lg:block">
-        <ProjectFilter
+      </div>
+      {messages.length > 0 && (
+        <SaveContextBar
           projects={projects}
-          selected={selectedProjects}
-          loading={projectsLoading}
-          error={projectsError}
-          onRetry={() => void reloadProjects()}
-          onToggle={toggleProject}
+          messages={messages}
+          selectedProject={selectedProjects[0] ?? null}
         />
-      </aside>
+      )}
+      {error && <p className="ui-error">{error}</p>}
+      <Composer
+        key={composerPrefill ?? "default"}
+        defaultText={composerPrefill ?? ""}
+        selectedProjects={selectedProjects}
+        onRemoveProject={toggleProject}
+        disabled={false}
+        sending={sending}
+        dispatchHonesty={dispatchHonesty}
+        onSend={(t, choice, attachments) => void send(t, choice, attachments)}
+      />
+    </>
+  );
 
-      {/* Mobile slide-overs */}
+  // History + project-scope slide-overs. Shared by both layouts: on mobile they
+  // back the toolbar buttons; in focus mode they back the top-bar buttons.
+  const drawers = (
+    <>
       {historyOpen && (
         <Drawer onClose={() => setHistoryOpen(false)} size="md">
           <div className="flex min-h-0 flex-1 flex-col p-3">
@@ -355,6 +360,105 @@ export function LokiWorkspace({
           </div>
         </Drawer>
       )}
+    </>
+  );
+
+  // FOCUS MODE — full viewport, one centered column, minimal chrome. Sits above
+  // the app shell (z-50) but below drawers/modals (z-[60]) so they open on top.
+  if (focus) {
+    return (
+      <div className="fixed inset-0 z-50 flex flex-col bg-surface-page">
+        <div className="flex items-center gap-2 border-b border-border-subtle px-3 py-2 md:px-4">
+          <span className="ui-kicker flex items-center gap-1.5">
+            <Sparkles className="h-3.5 w-3.5 text-accent-primary" /> Loki
+          </span>
+          <div className="ml-auto flex items-center gap-1.5">
+            <button type="button" className="ui-btn-chip" onClick={() => void createConversation()}>
+              <Plus className="h-4 w-4" /> New
+            </button>
+            <button type="button" className="ui-btn-chip" onClick={() => setHistoryOpen(true)}>
+              <MessagesSquare className="h-4 w-4" /> Chats
+            </button>
+            <button type="button" className="ui-btn-chip" onClick={() => setFilterOpen(true)}>
+              <SlidersHorizontal className="h-4 w-4" />
+              Scope{selectedProjects.length > 0 ? ` · ${selectedProjects.length}` : ""}
+            </button>
+            <button
+              type="button"
+              className="ui-btn-icon"
+              onClick={() => setFocus(false)}
+              aria-label="Exit focus mode"
+              title="Exit focus (Esc)"
+            >
+              <Minimize2 className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+        <div className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col gap-2 px-3 py-3 md:px-4">
+          {chatBody(true)}
+        </div>
+        {drawers}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col gap-3 md:grid md:grid-cols-[16rem_1fr] md:gap-4 lg:grid-cols-[16rem_1fr_16rem]">
+      {/* LEFT — conversation list (permanent column on md+; a drawer on mobile) */}
+      <aside className="ui-panel hidden min-h-0 p-3 md:block">
+        <ConversationList
+          conversations={visibleConversations}
+          activeId={activeId}
+          loading={convosLoading}
+          error={convosError}
+          onRetry={() => void reloadConversations()}
+          onSelect={setActiveId}
+          onNew={() => void createConversation()}
+          onDelete={(id) => void deleteConversation(id)}
+        />
+      </aside>
+
+      {/* CENTER — the chat itself, always the primary, full-width on mobile */}
+      <section className="flex min-h-0 flex-1 flex-col gap-2 md:gap-3">
+        {/* Control row: mobile reaches the history/project panes here; every
+            breakpoint gets the Focus toggle (a full-screen, single-column chat). */}
+        <div className="flex items-center gap-2">
+          <button type="button" className="ui-btn-chip md:hidden" onClick={() => setHistoryOpen(true)}>
+            <MessagesSquare className="h-4 w-4" /> Chats
+          </button>
+          <button type="button" className="ui-btn-chip md:hidden" onClick={() => void createConversation()}>
+            <Plus className="h-4 w-4" /> New
+          </button>
+          <button type="button" className="ui-btn-chip md:hidden" onClick={() => setFilterOpen(true)}>
+            <SlidersHorizontal className="h-4 w-4" />
+            Projects{selectedProjects.length > 0 ? ` · ${selectedProjects.length}` : ""}
+          </button>
+          <button
+            type="button"
+            className="ui-btn-chip ml-auto"
+            onClick={() => setFocus(true)}
+            title="Full-screen chat"
+          >
+            <Maximize2 className="h-4 w-4" /> Focus
+          </button>
+        </div>
+
+        {chatBody(false)}
+      </section>
+
+      {/* RIGHT — project multi-select (permanent column on lg+; a drawer on mobile) */}
+      <aside className="ui-panel hidden min-h-0 p-3 lg:block">
+        <ProjectFilter
+          projects={projects}
+          selected={selectedProjects}
+          loading={projectsLoading}
+          error={projectsError}
+          onRetry={() => void reloadProjects()}
+          onToggle={toggleProject}
+        />
+      </aside>
+
+      {drawers}
     </div>
   );
 }
