@@ -561,7 +561,11 @@ export async function POST(
       chatProject,
     );
     const loki = await askLoki(chatPrompt, {
-      sessionKey: `agent:main:web:conv:${conversationId}`,
+      // Proactive fleet reviews are one-shot analyses — route them to the warm
+      // shared ask-session (same as /api/loki) rather than a cold per-conversation
+      // session, which on a modest model can echo the injected context instead of
+      // answering. Normal chat keeps its own per-thread memory.
+      sessionKey: chatOnly ? `agent:main:web:ask:${userId}` : `agent:main:web:conv:${conversationId}`,
       userId,
     });
     const reply =

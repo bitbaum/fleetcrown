@@ -83,7 +83,7 @@ export async function buildLokiFleetContext(userId: string, query: string): Prom
   if (!index && !detail) return "";
   return [
     "## Fleet context (read-only background — the operator's current projects)",
-    "Use this to answer accurately and specifically about the operator's work. It is current state, not part of the conversation. If a question falls outside it, say so rather than guessing.",
+    "Use this to answer accurately and specifically about the operator's work. It is current state, NOT part of the conversation — and NOT something to repeat back. Never restate, summarise, or list this context to the user; answer their actual question directly and concisely, citing specific projects. If a question falls outside this context, say so rather than guessing.",
     index,
     detail,
   ].filter(Boolean).join("\n\n");
