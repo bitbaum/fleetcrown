@@ -6,7 +6,6 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { FetchErrorState } from "@/components/ui/fetch-error-state";
 import { useFetch } from "@/hooks/use-fetch";
 import { APP_LOCALE } from "@/lib/constants";
-import { APP_NAME } from "@/config/brand";
 
 type CalendarEvent = {
   summary?: string;
@@ -19,6 +18,12 @@ type CalendarEvent = {
 export function CalendarCard() {
   const { data, loading, error, refetch } = useFetch<{ events: CalendarEvent[]; error?: string; runtimeOnly?: boolean }>("/api/calendar", { intervalMs: 5 * 60_000, timeoutMs: 12_000 });
   const events = data?.events ?? [];
+
+  // Cloud mode: calendar data comes from the `gog` CLI on the machine running the
+  // web server, which the hosted box can't reach and the runner can't supply.
+  // Rather than show a permanent "open localhost" apology on hosted, hide the card
+  // entirely — it only earns its place on a local install. Weather sits beside it.
+  if (data?.runtimeOnly) return null;
 
   return (
     <Card>
@@ -37,15 +42,6 @@ export function CalendarCard() {
         </div>
       ) : error || (data?.error && events.length === 0) ? (
         <FetchErrorState message="Couldn't load calendar" detail={error ?? data?.error} onRetry={refetch} />
-      ) : data?.runtimeOnly ? (
-        // Cloud mode — `gog calendar list` runs from the app server, not the
-        // runner. The cloud host can't shell out to it; connecting the runner won't
-        // help. Tell the user where the data actually lives so they don't
-        // waste time re-pairing.
-        <EmptyState>
-          Calendar uses the <code>gog</code> CLI on the machine that runs the {APP_NAME} web server.
-          Open this page on your local {APP_NAME} (<code>http://localhost:3000/today</code>) to see today&apos;s events.
-        </EmptyState>
       ) : events.length === 0 ? (
         <EmptyState>No events today</EmptyState>
       ) : (

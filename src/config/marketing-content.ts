@@ -100,13 +100,13 @@ export const INVESTORS = {
     "The same control patterns transfer to physical robotics. The market has not yet appreciated this.",
   ],
   built: "A web command center coordinates fleets of AI agents across projects. A native Fleet Runner desktop app — same React tree as the web, plus tray and OS notifications — runs them directly in the operator's terminal environment via Zellij. Per-project autonomy controls, reliable handoff systems, queue management, and truthful status surfaces are live and in daily use. Signed multi-OS installers ship from a single CI matrix on every release tag.",
-  traction: "Sophisticated power users run multi-project agent operations daily. Demand for finer autonomy controls, fleet visibility, and freedom from single-vendor frontier subscriptions is consistent and growing.",
+  traction: "FleetCrown runs its own creator's entire operation: a live fleet of 19 projects dispatched, monitored, and governed daily through the product itself. Every surface is proven in continuous real-world self-use before it ships — the operator is the first and most demanding user. The bet is that the same workflow generalizes to anyone running many agents at once.",
   ask: "We are raising to productize the local fleet runner, harden the remote control plane, expand open-model support, and lay groundwork for robotic orchestration.",
 };
 
 export const INVESTOR_DETAILS = {
   deck: "Available upon request",
-  contact: "investors@fleetcrown.app",
+  contact: "mao@orangecat.ch",
 };
 
 // Roadmap — multi-phase, with concrete bullets and cross-cutting throughlines

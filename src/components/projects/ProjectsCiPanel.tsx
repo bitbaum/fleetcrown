@@ -4,7 +4,6 @@ import { useMemo } from "react";
 import { GitBranch, CheckCircle, XCircle, Loader2, Clock, ChevronDown } from "lucide-react";
 import { useFetch } from "@/hooks/use-fetch";
 import { FetchErrorState } from "@/components/ui/fetch-error-state";
-import { APP_NAME } from "@/config/brand";
 import type { ProjectGridRow } from "./ProjectGridCard";
 
 type RepoStatus = {
@@ -45,24 +44,22 @@ export function ProjectsCiPanel({ projects }: { projects: ProjectGridRow[] }) {
     return repos.filter((r) => linkedSlugs.has(r.repo));
   }, [repos, linkedSlugs]);
 
-  const hasLinkedRepos = linkedSlugs.size > 0;
-
   const failing = linkedRepos.filter((r) => r.ci_status === "failure").length;
   const summaryLabel = loading
     ? "Loading CI…"
     : error || (data?.error && repos.length === 0)
       ? "CI unavailable"
-      : data?.runtimeOnly
-        ? "Local install only"
-        : linkedRepos.length === 0
-          ? "No linked repos"
-          : failing > 0
-            ? `${failing} repo${failing > 1 ? "s" : ""} failing CI`
-            : `${linkedRepos.length} repo${linkedRepos.length > 1 ? "s" : ""} tracked`;
+      : linkedRepos.length === 0
+        ? "No linked repos"
+        : failing > 0
+          ? `${failing} repo${failing > 1 ? "s" : ""} failing CI`
+          : `${linkedRepos.length} repo${linkedRepos.length > 1 ? "s" : ""} tracked`;
 
-  // Cloud hosts can't run gh — hide the panel when it would only say "local only"
-  // and the fleet has nothing linkable anyway.
-  if (!loading && data?.runtimeOnly && !hasLinkedRepos) {
+  // Cloud hosts can't run `gh`, so CI status is unknowable here regardless of how
+  // many repos are linked. Hide the whole panel on hosted rather than show a
+  // permanent "Local install only" dead-end. (Follow-up: wire /api/github to the
+  // GitHub REST API with the box GH_TOKEN so this works on hosted too.)
+  if (!loading && data?.runtimeOnly) {
     return null;
   }
 
@@ -86,11 +83,6 @@ export function ProjectsCiPanel({ projects }: { projects: ProjectGridRow[] }) {
           </div>
         ) : error || (data?.error && repos.length === 0) ? (
           <FetchErrorState message="Couldn't load GitHub status" detail={error ?? data?.error} onRetry={refetch} />
-        ) : data?.runtimeOnly ? (
-          <p className="text-sm leading-relaxed text-text-secondary">
-            CI status is collected by the <code className="font-mono text-xs">gh</code> CLI on the machine running {APP_NAME}.
-            Open Projects on your local install to see live CI.
-          </p>
         ) : linkedRepos.length === 0 ? (
           <p className="text-sm text-text-tertiary">
             Link a GitHub repo on a project profile to see CI and open PR counts here.
