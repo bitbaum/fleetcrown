@@ -31,10 +31,13 @@ function model(): string {
   return process.env.EMBEDDINGS_MODEL?.trim() || DEFAULT_MODEL;
 }
 
-/** Embed a batch. Returns null per-input on failure; [] when RAG is disabled. */
-export async function embedTexts(inputs: string[]): Promise<(number[] | null)[]> {
-  const url = baseUrl();
-  if (!url || inputs.length === 0) return inputs.map(() => null);
+// One request per this many inputs. A single request with the whole index
+// (hundreds of chunks after section-chunking) overran the local server and
+// timed out ("fetch failed"), so we page the embeds. A failed page nulls only
+// its own inputs — the rest still embed.
+const EMBED_BATCH = 48;
+
+async function embedBatch(url: string, inputs: string[]): Promise<(number[] | null)[]> {
   try {
     const res = await fetch(`${url}/embeddings`, {
       method: "POST",
@@ -57,6 +60,17 @@ export async function embedTexts(inputs: string[]): Promise<(number[] | null)[]>
     console.error("[embeddings] failed:", e instanceof Error ? e.message : e);
     return inputs.map(() => null);
   }
+}
+
+/** Embed a batch (paged). Returns null per-input on failure; [] when RAG is disabled. */
+export async function embedTexts(inputs: string[]): Promise<(number[] | null)[]> {
+  const url = baseUrl();
+  if (!url || inputs.length === 0) return inputs.map(() => null);
+  const out: (number[] | null)[] = [];
+  for (let i = 0; i < inputs.length; i += EMBED_BATCH) {
+    out.push(...(await embedBatch(url, inputs.slice(i, i + EMBED_BATCH))));
+  }
+  return out;
 }
 
 export async function embedText(input: string): Promise<number[] | null> {

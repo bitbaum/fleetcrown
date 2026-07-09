@@ -46,15 +46,25 @@ export async function upsertKnowledge(userId: string, item: KnowledgeItem): Prom
 }
 
 /**
- * Delete all of a user's rows for the given source types. The reindexer calls
- * this before a full rebuild so chunk-id changes (e.g. re-chunking essays) and
- * deleted projects/essays leave no orphan rows — the index is a true mirror,
- * not an append-only pile. Scoped to types so embed-on-write sources survive.
+ * Prune a user's orphan rows: for the given owned source types, delete rows
+ * whose sourceId is NOT in `keepIds`. The reindexer calls this AFTER a
+ * successful upsert (insert-first, prune-after) so re-chunked ids and removed
+ * projects/essays leave no orphans — WITHOUT ever emptying the index if the
+ * embed step fails. Scoped to types so embed-on-write sources survive.
  */
-export async function deleteKnowledgeByTypes(userId: string, sourceTypes: KnowledgeSourceType[]): Promise<void> {
+export async function pruneKnowledgeToIds(
+  userId: string,
+  sourceTypes: KnowledgeSourceType[],
+  keepIds: string[],
+): Promise<void> {
   if (sourceTypes.length === 0) return;
   const typeArray = sql`ARRAY[${sql.join(sourceTypes.map((t) => sql`${t}`), sql`, `)}]::text[]`;
-  await db.execute(sql`DELETE FROM knowledge_embeddings WHERE user_id = ${userId} AND source_type = ANY(${typeArray})`);
+  const keepClause = keepIds.length
+    ? sql`AND source_id <> ALL(${sql`ARRAY[${sql.join(keepIds.map((id) => sql`${id}`), sql`, `)}]::text[]`})`
+    : sql``;
+  await db.execute(
+    sql`DELETE FROM knowledge_embeddings WHERE user_id = ${userId} AND source_type = ANY(${typeArray}) ${keepClause}`,
+  );
 }
 
 /**

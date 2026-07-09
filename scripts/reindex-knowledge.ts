@@ -15,7 +15,7 @@ import { getProjectContext } from "@/db/queries/project-context";
 import { getProjectDossierByProjectKey, renderProjectDossierForAgent } from "@/db/queries/project-dossier";
 import { getGoals, type GoalWithChildren } from "@/db/queries/goals";
 import { listThoughts } from "@/lib/thoughts-content";
-import { upsertKnowledgeBatch, deleteKnowledgeByTypes, type KnowledgeItem } from "@/db/queries/knowledge-embeddings";
+import { upsertKnowledgeBatch, pruneKnowledgeToIds, type KnowledgeItem } from "@/db/queries/knowledge-embeddings";
 import { chunkMarkdown } from "@/lib/rag/chunk";
 import { embeddingsEnabled } from "@/lib/rag/embeddings";
 import type { DevLogEntry } from "@/db/schema/user-projects";
@@ -87,10 +87,13 @@ async function main() {
       });
     }
 
-    // Full rebuild: clear the source types we own before inserting, so re-chunked
-    // essays and removed projects/essays leave no orphan rows.
-    await deleteKnowledgeByTypes(userId, ["project_profile", "dev_log", "goal", "thought"]);
+    // Insert-first, prune-after: upsert the fresh set, then (only if it produced
+    // rows) drop owned-type orphans not in it. Ordering matters — deleting first
+    // would empty the index whenever the embed step fails (learned the hard way).
     const n = await upsertKnowledgeBatch(userId, items);
+    if (n > 0) {
+      await pruneKnowledgeToIds(userId, ["project_profile", "dev_log", "goal", "thought"], items.map((i) => i.sourceId));
+    }
     totalChunks += n;
     console.log(`[reindex] user ${userId.slice(0, 8)}…: ${n}/${items.length} chunks (${projects.length} projects)`);
   }
