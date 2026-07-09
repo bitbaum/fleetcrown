@@ -151,6 +151,12 @@ export function NextSection({ dossier, interactive = true }: { dossier: ProjectD
 export function DoneSection({ dossier }: { dossier: ProjectDossier }) {
   const entries = devLogNewestFirst(dossier);
   const runs = dossier.runs.filter((run) => run.finishedAt);
+  // Cap the inline list: a dossier once buried its shipped changelog under
+  // ~30 stale timeout rows from the box-credential outage. Show the recent few;
+  // the full timeline lives one click away in Activity.
+  const RUN_HISTORY_LIMIT = 6;
+  const shownRuns = runs.slice(0, RUN_HISTORY_LIMIT);
+  const hiddenRunCount = runs.length - shownRuns.length;
 
   return (
     <SectionShell kicker="Done" title="Report — what has shipped">
@@ -169,7 +175,7 @@ export function DoneSection({ dossier }: { dossier: ProjectDossier }) {
         <div className="space-y-2 border-t border-border-subtle pt-3">
           <p className="ui-micro-label">Run history</p>
           <ul className="space-y-1.5">
-            {runs.map((run) => {
+            {shownRuns.map((run) => {
               const commit = run.summary?.commit && run.summary.commit !== "none" ? run.summary.commit : null;
               const errorText = typeof run.payload?.error === "string" ? run.payload.error : null;
               return (
@@ -192,7 +198,7 @@ export function DoneSection({ dossier }: { dossier: ProjectDossier }) {
             href={`/activity?window=month&project=${encodeURIComponent(dossier.detail.project.name)}`}
             className="inline-block text-xs text-accent-text underline-offset-2 hover:underline"
           >
-            Full activity timeline
+            {hiddenRunCount > 0 ? `Full activity timeline (${hiddenRunCount} more)` : "Full activity timeline"}
           </Link>
         </div>
       )}

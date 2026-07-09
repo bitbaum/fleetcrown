@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { LokiPaneBody } from "./LokiPaneBody";
+import { shortTimeAgo } from "@/lib/dates";
 import type { ConversationSummary } from "./types";
 
 export function ConversationList({
@@ -58,9 +59,14 @@ export function ConversationList({
                       className={`ui-loki-convo pr-10 ${c.id === activeId ? "ui-loki-convo-active" : ""}`}
                     >
                       <div className="ui-loki-convo-title">{c.title}</div>
-                      {c.projectKeys.length > 0 && (
-                        <div className="ui-loki-convo-meta">{c.projectKeys.join(", ")}</div>
-                      )}
+                      {/* Always show a meta line: project(s) + when. Many threads
+                          share the same opening line ("move forward on …"); the
+                          timestamp is what makes them distinguishable. */}
+                      <div className="ui-loki-convo-meta">
+                        {[c.projectKeys.join(", "), shortTimeAgo(Date.parse(c.updatedAt))]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </div>
                     </button>
                     <button
                       type="button"

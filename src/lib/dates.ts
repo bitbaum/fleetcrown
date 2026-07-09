@@ -9,6 +9,20 @@ export function timeAgo(ms: number): string {
   return `${Math.round(diff / 60)}h ago`;
 }
 
+/** Ultra-compact relative time for dense lists: "now" / "5m" / "3h" / "2d" /
+ *  "3w" / "5mo" / "1y" — from epoch ms. Unlike timeAgo it keeps scaling past
+ *  hours, so a history rail of same-titled items stays distinguishable. */
+export function shortTimeAgo(ms: number): string {
+  const s = Math.max(0, Math.floor((Date.now() - ms) / 1000));
+  if (s < 60) return "now";
+  const m = Math.floor(s / 60); if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60); if (h < 24) return `${h}h`;
+  const d = Math.floor(h / 24); if (d < 7) return `${d}d`;
+  const w = Math.floor(d / 7); if (w < 5) return `${w}w`;
+  const mo = Math.floor(d / 30); if (mo < 12) return `${mo}mo`;
+  return `${Math.floor(d / 365)}y`;
+}
+
 /** Compact elapsed display: "12s" / "3m" / "1h" — from epoch seconds */
 export function secondsAgo(ts: number): string {
   const diff = Math.floor(Date.now() / 1000) - ts;

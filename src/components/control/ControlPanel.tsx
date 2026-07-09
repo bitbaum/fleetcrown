@@ -129,9 +129,17 @@ export function ControlPanel() {
   const fleetPulse = deriveFleetPulse({
     automationMode: automationPolicy.mode,
     workingCount: dashboard?.runningCount ?? 0,
-    latestOutcomes: (data?.projects ?? [])
-      .map((p) => p.recentOutcomes?.[0])
-      .filter((o): o is NonNullable<typeof o> => Boolean(o)),
+    // Pair each project's latest outcome with how long ago its latest run
+    // finished, so a stale outage doesn't read as "currently stalled".
+    latestRuns: (data?.projects ?? [])
+      .map((p) => {
+        const outcome = p.recentOutcomes?.[0];
+        if (!outcome) return null;
+        const finishedAt = p.latestOrchestrationRun?.finishedAt;
+        const ageMs = finishedAt ? nowS * 1000 - Date.parse(finishedAt) : null;
+        return { outcome, ageMs };
+      })
+      .filter((r): r is { outcome: NonNullable<typeof r>["outcome"]; ageMs: number | null } => Boolean(r)),
   });
   const liveTabRows = useMemo(
     () => (data ? buildLiveTabRows(data.zellijTabs, data.projects, nowS, runnerSyncStale) : []),

@@ -189,23 +189,34 @@ const FAILED_OUTCOMES: ReadonlySet<string> = new Set(["error", "hang", "timeout"
  *     succeeded                            → "Stalled" (+ detail, Activity link)
  *   - nothing working                      → "Waiting to dispatch"
  * user_abort counts as neutral (a human choice, not a systemic failure).
+ *
+ * Recency gate: a failure only counts toward "Stalled" if the run finished
+ * RECENTLY. Without this, an old outage (e.g. the box-credential expiry that
+ * timed out 18 projects) kept the hero red for weeks — every project's LATEST
+ * outcome was a two-week-old timeout, so `failed` stayed high while the fleet
+ * was merely idle. "Stalled" must mean "failing now", not "last failed once".
  */
+export const FLEET_PULSE_STALE_MS = 24 * 60 * 60 * 1000;
+
 export function deriveFleetPulse(input: {
   automationMode: string;
   workingCount: number;
-  /** Latest outcome per project, only for projects that have any run history. */
-  latestOutcomes: OrchestrationOutcome[];
+  /** Latest run per project (projects with any finished run). `ageMs` = how long
+   *  ago it finished; null = unknown age (open/newer run) → excluded from the
+   *  stall signal since an active project isn't "stalled". */
+  latestRuns: Array<{ outcome: OrchestrationOutcome; ageMs: number | null }>;
 }): FleetPulse {
   if (input.automationMode === "off") return { key: "paused", label: "Paused", detail: null };
   if (input.workingCount > 0) return { key: "building", label: "Building", detail: null };
 
-  const failed = input.latestOutcomes.filter((o) => FAILED_OUTCOMES.has(o)).length;
-  const succeeded = input.latestOutcomes.filter((o) => o === "success" || o === "partial").length;
+  const recent = input.latestRuns.filter((r) => r.ageMs != null && r.ageMs <= FLEET_PULSE_STALE_MS);
+  const failed = recent.filter((r) => FAILED_OUTCOMES.has(r.outcome)).length;
+  const succeeded = recent.filter((r) => r.outcome === "success" || r.outcome === "partial").length;
   if (failed >= 2 && succeeded === 0) {
     return {
       key: "failing",
       label: "Stalled",
-      detail: `The latest run on ${failed} projects failed and nothing is currently building.`,
+      detail: `The latest run on ${failed} project${failed === 1 ? "" : "s"} failed and nothing is currently building.`,
     };
   }
   return { key: "waiting", label: "Waiting to dispatch", detail: null };

@@ -264,36 +264,48 @@ function runTests(): void {
     assert(isCurrentPromptStale(project, nowS), "newer handoff should end displayed work");
   });
 
+  // Helper: recent runs (age 0) unless a specific age is given.
+  const runs = (outcomes: Array<"error" | "hang" | "timeout" | "success" | "partial" | "user_abort">, ageMs = 0) =>
+    outcomes.map((outcome) => ({ outcome, ageMs }));
+
   check("fleet pulse: off → Paused regardless of outcomes", () => {
-    const pulse = deriveFleetPulse({ automationMode: "off", workingCount: 3, latestOutcomes: ["error", "error"] });
+    const pulse = deriveFleetPulse({ automationMode: "off", workingCount: 3, latestRuns: runs(["error", "error"]) });
     assert(pulse.key === "paused", "off must be paused");
   });
 
   check("fleet pulse: any working agent → Building", () => {
-    const pulse = deriveFleetPulse({ automationMode: "on", workingCount: 1, latestOutcomes: ["error", "error"] });
+    const pulse = deriveFleetPulse({ automationMode: "on", workingCount: 1, latestRuns: runs(["error", "error"]) });
     assert(pulse.key === "building", "working agents mean building even with past failures");
   });
 
-  check("fleet pulse: 0 working + all latest runs failed → Stalled", () => {
+  check("fleet pulse: 0 working + all RECENT runs failed → Stalled", () => {
     // The 2026-07-02 dead-fleet shape: autopilot on, nothing working, every
-    // project's latest run a timeout — must NOT read "Building".
-    const pulse = deriveFleetPulse({ automationMode: "on", workingCount: 0, latestOutcomes: ["timeout", "timeout", "error"] });
+    // project's latest run a recent timeout — must NOT read "Building".
+    const pulse = deriveFleetPulse({ automationMode: "on", workingCount: 0, latestRuns: runs(["timeout", "timeout", "error"]) });
     assert(pulse.key === "failing", "all-failed fleet must surface as failing");
     assert(!!pulse.detail, "failing pulse carries a detail sentence");
   });
 
+  check("fleet pulse: STALE failures (older than 24h) → Waiting, not Stalled", () => {
+    // The box-credential outage shape: every latest run is a timeout, but they
+    // all finished weeks ago and nothing has run since. Idle, not stalled.
+    const old = 3 * 24 * 60 * 60 * 1000;
+    const pulse = deriveFleetPulse({ automationMode: "on", workingCount: 0, latestRuns: runs(["timeout", "timeout", "error"], old) });
+    assert(pulse.key === "waiting", "old failures with no recent runs are idle, not a live stall");
+  });
+
   check("fleet pulse: one failure among successes → Waiting, not Stalled", () => {
-    const pulse = deriveFleetPulse({ automationMode: "on", workingCount: 0, latestOutcomes: ["error", "success", "partial"] });
+    const pulse = deriveFleetPulse({ automationMode: "on", workingCount: 0, latestRuns: runs(["error", "success", "partial"]) });
     assert(pulse.key === "waiting", "a single failing project must not panic the hero");
   });
 
   check("fleet pulse: 0 working, no history → Waiting to dispatch", () => {
-    const pulse = deriveFleetPulse({ automationMode: "on", workingCount: 0, latestOutcomes: [] });
+    const pulse = deriveFleetPulse({ automationMode: "on", workingCount: 0, latestRuns: [] });
     assert(pulse.key === "waiting", "quiet fleet with autopilot on is waiting, not building");
   });
 
   check("fleet pulse: user_abort is neutral, not a systemic failure", () => {
-    const pulse = deriveFleetPulse({ automationMode: "on", workingCount: 0, latestOutcomes: ["user_abort", "timeout"] });
+    const pulse = deriveFleetPulse({ automationMode: "on", workingCount: 0, latestRuns: runs(["user_abort", "timeout"]) });
     assert(pulse.key === "waiting", "aborts are human choices — only real failures stall the hero");
   });
 
