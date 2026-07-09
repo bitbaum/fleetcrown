@@ -172,13 +172,17 @@ export function ProjectDossierView({
       )}
 
       {mode === "private" && (
-        <section className="ui-card-shell p-4 sm:p-5">
-          <div className="mb-2 flex items-center gap-2">
-            <MessageSquare className="h-4 w-4 text-accent-text" />
-            <h2 className="font-medium text-text-primary">Discuss with Loki</h2>
+        <Link
+          href={`/loki?project=${encodeURIComponent(name)}`}
+          className="ui-card-shell group flex items-center gap-3 p-4 transition hover:bg-surface-raised sm:p-5"
+        >
+          <MessageSquare className="h-4 w-4 shrink-0 text-accent-text" />
+          <div className="min-w-0 flex-1">
+            <h2 className="font-medium text-text-primary">Discuss {name} with Loki</h2>
+            <p className="text-sm text-text-secondary">A project-scoped chat with the same dossier context your agents get.</p>
           </div>
-          <p className="text-sm text-text-secondary">Use Quick edit to open the project-scoped Loki chat with the same dossier context agents receive.</p>
-        </section>
+          <ExternalLink className="h-4 w-4 shrink-0 text-text-tertiary transition group-hover:text-text-secondary" aria-hidden />
+        </Link>
       )}
 
       {showChangelog && <DoneSection dossier={dossier} />}

@@ -22,7 +22,6 @@ import {
   Download,
   Newspaper,
   Network,
-  Columns2,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -46,7 +45,6 @@ export const NAV = {
   loki:       { id: "loki",     label: "Loki",     description: "Conversational command surface",     href: "/loki",       icon: MessageSquare, active: true, mobile: true  },
   terminal:   { id: "terminal", label: "Terminal", description: "Local shells — multi-tab & panes",   href: "/terminal",   icon: SquareTerminal, active: true, mobile: false },
   agents:     { id: "agents",   label: "Agents",   description: "Fleet status & inter-agent comms",  href: "/agents",     icon: Network,      active: true,  mobile: false },
-  duet:       { id: "duet",     label: "Duet",     description: "Watch two agents side by side",     href: "/duet",       icon: Columns2,     active: true,  mobile: false },
   control:    { id: "control",  label: "Control",  description: "Dispatch agents across projects",   href: "/control",    icon: Terminal,     active: true,  mobile: true  },
   projects:   { id: "projects", label: "Projects", description: "Repo health & project context",     href: "/projects",   icon: FolderKanban, active: true,  mobile: false },
   prompts:    { id: "prompts",  label: "Prompts",  description: "Agent prompt library & scheduler",  href: "/prompts",    icon: Zap,          active: true,  mobile: false },
@@ -91,7 +89,7 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
     // project state, prompt library, audit log, system health, and the
     // Thoughts essays the user authors and publishes from inside the app.
     label: "Work",
-    items: [NAV.today, NAV.loki, NAV.terminal, NAV.agents, NAV.duet, NAV.control, NAV.projects, NAV.prompts, NAV.activity, NAV.system, NAV.thoughts],
+    items: [NAV.today, NAV.loki, NAV.terminal, NAV.agents, NAV.control, NAV.projects, NAV.prompts, NAV.activity, NAV.system, NAV.thoughts],
   },
   {
     id: "private",

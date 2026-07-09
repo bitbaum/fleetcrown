@@ -116,13 +116,16 @@ export function AgentsCockpit() {
         </div>
 
         {comms?.unavailable ? (
-          <p className="text-sm text-text-muted">{comms.unavailable.message}</p>
+          <p className="text-sm leading-relaxed text-text-muted">
+            Messages agents send each other during parallel work show up here — read live from the
+            machine they run on. Open Agents in the desktop app (or on your box) to see them.
+          </p>
         ) : commsLoading && messages.length === 0 ? (
           <div className="flex items-center gap-2 text-sm text-text-muted">
             <Loader2 className="ui-spinner-sm" /> Loading messages…
           </div>
         ) : messages.length === 0 ? (
-          <p className="text-sm text-text-muted">No inter-agent messages yet.</p>
+          <p className="text-sm text-text-muted">No inter-agent messages yet — they&rsquo;ll appear here as your agents talk.</p>
         ) : (
           <ul className="flex min-h-0 flex-col gap-2 overflow-y-auto">
             {messages.map((m) => (
