@@ -45,6 +45,9 @@ export type ProjectDossier = {
   outcomes: RecentOutcome[];
   /** The runtime row (devLog lives on detail; this adds gitUrl/dirPath/OC link). */
   userProject: UserProject | null;
+  /** Wall-clock at build time — the ONE `now` the render uses to age handoffs
+   *  and run outcomes, so components stay pure (no Date.now() in render). */
+  builtAtMs: number;
 };
 
 export type SharedProjectDossier = {
@@ -78,6 +81,7 @@ export async function getProjectDossier(
     runs,
     outcomes,
     userProject,
+    builtAtMs: Date.now(),
   };
 }
 

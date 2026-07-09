@@ -5,7 +5,7 @@ import type { ProjectShare } from "@/db/schema/project-shares";
 import { OutcomeStreak } from "@/components/control/OutcomeStreak";
 import { DoneSection, NextSection, NowSection } from "@/components/projects/ProjectDossierSections";
 import { getProjectLinks } from "@/components/projects/project-detail-types";
-import { cleanDescription } from "@/lib/project-display";
+import { summarizeDescription } from "@/lib/project-display";
 import { isResourceVisibleInShare } from "@/lib/project-share-visibility";
 import { NAV } from "@/config/navigation";
 
@@ -37,7 +37,16 @@ export function ProjectDossierView({
   const attrs = detail.attrs;
   const name = detail.project.name;
   const links = getProjectLinks(attrs, userProject?.gitUrl ?? detail.project.gitUrl);
-  const description = cleanDescription(detail.project.description) ?? attrs.description ?? attrs.mission ?? null;
+  // Header lead = a SHORT summary. Descriptions are often the whole CLAUDE.md.
+  const description =
+    summarizeDescription(detail.project.description) ??
+    summarizeDescription(attrs.description) ??
+    summarizeDescription(attrs.mission);
+  // Run-outcome streak = RECENT run health only. Without this, a fleet of
+  // two-week-old outage timeouts painted the header with ten ✗ that flatly
+  // contradicted the maturity badge.
+  const STREAK_WINDOW_MS = 72 * 60 * 60 * 1000;
+  const recentOutcomes = outcomes.filter((o) => o.finishedAt && dossier.builtAtMs - o.finishedAt.getTime() < STREAK_WINDOW_MS);
   const resources = visibleResources(dossier, mode, share);
   const showRepo = mode === "private" || share?.includeRepo;
   const showLive = mode === "private" || share?.includeLiveUrl;
@@ -49,12 +58,14 @@ export function ProjectDossierView({
     ["Customers", attrs.customers],
     ["Market", attrs.potential_customers],
   ].filter(([, v]) => v?.trim()) as Array<[string, string]>;
-  const build = [
+  const build = ([
     ["Stack", attrs.stack ?? userProject?.stack],
     ["Architecture", attrs.architecture],
     ["Conventions", attrs.conventions],
-    ["Definition of done", attrs.definition_of_done],
-  ].filter(([, v]) => v?.trim()) as Array<[string, string]>;
+    // Private view edits the Definition of done in the Status-quo card, so don't
+    // repeat it here; shared view has no editor, so show it read-only.
+    ["Definition of done", mode === "shared" ? attrs.definition_of_done : undefined],
+  ] as Array<[string, string | undefined]>).filter(([, v]) => v?.trim()) as Array<[string, string]>;
 
   return (
     <div className="space-y-6">
@@ -65,8 +76,8 @@ export function ProjectDossierView({
               {attrs.status && <span className="ui-tag ui-tag-neutral">{attrs.status}</span>}
               {attrs.maturity && <span className="ui-tag ui-tag-neutral">{attrs.maturity}</span>}
               {mode === "shared" && <span className="ui-tag ui-tag-neutral gap-1"><Lock className="h-3 w-3" /> Shared dossier</span>}
-              {outcomes.length > 0 && mode === "private" && (
-                <OutcomeStreak outcomes={outcomes.map((o) => o.outcome)} projectKey={name} />
+              {recentOutcomes.length > 0 && mode === "private" && (
+                <OutcomeStreak outcomes={recentOutcomes.map((o) => o.outcome)} projectKey={name} />
               )}
             </div>
             <h1 className="text-3xl font-semibold tracking-normal text-text-primary">{name}</h1>

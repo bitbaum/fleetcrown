@@ -19,6 +19,29 @@ export function cleanDescription(desc: string | null | undefined): string | null
   return PLACEHOLDER_DESCRIPTIONS.has(d.toLowerCase()) ? null : d;
 }
 
+/**
+ * A short lead for a dossier/card header — the first sentence(s) up to ~maxChars.
+ * Descriptions are frequently the entire CLAUDE.md dumped in (400+ words); the
+ * header wants a summary, not an essay. Prefers whole-sentence boundaries and
+ * appends an ellipsis when it trims.
+ */
+export function summarizeDescription(desc: string | null | undefined, maxChars = 220): string | null {
+  const clean = cleanDescription(desc);
+  if (!clean || clean.length <= maxChars) return clean;
+  const sentences = clean.split(/(?<=[.!?])\s+/);
+  let out = sentences[0] ?? "";
+  for (let i = 1; i < sentences.length; i++) {
+    if (out.length + 1 + sentences[i].length > maxChars) break;
+    out += " " + sentences[i];
+  }
+  if (out.length > maxChars) out = out.slice(0, maxChars).replace(/\s+\S*$/, "");
+  return `${out.trimEnd()}…`;
+}
+
+/** A handoff/run older than this reads as stale: the dossier's "Status quo" must
+ *  not present a week-old snapshot as the live, healthy present. */
+export const DOSSIER_STALE_MS = 6 * 60 * 60 * 1000;
+
 // Names our own smoke/dogfood suites mint — e.g. `smoke-1783188931860-gh`,
 // `smoke-<ts> person`. A leaked test row once surfaced on the public landing
 // hero (2026-07-08 dogfood find); defend the public face so a future leak

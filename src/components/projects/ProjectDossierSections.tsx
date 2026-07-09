@@ -11,7 +11,8 @@ import type { DevLogEntry } from "@/db/schema/user-projects";
 import { DevLogList } from "@/components/shared/DevLogList";
 import { GoalProgressBar } from "@/components/shared/GoalProgressBar";
 import { GoalEditor } from "@/components/projects/GoalEditor";
-import { timeAgo } from "@/lib/dates";
+import { timeAgo, shortTimeAgo } from "@/lib/dates";
+import { DOSSIER_STALE_MS } from "@/lib/project-display";
 import { APP_LOCALE } from "@/lib/constants";
 
 const OUTCOME_TAG: Record<string, string> = {
@@ -49,18 +50,26 @@ export function NowSection({ dossier, interactive = true }: { dossier: ProjectDo
   const attrs = detail.attrs;
   const latest = latestDevLog(dossier);
 
-  const liveLabel = state?.agentRunning
-    ? state.currentPromptLabel
-      ? `Working — ${state.currentPromptLabel}`
-      : "Agent process running"
-    : state?.sessionStatus === "ready"
-      ? "Ready for the next task"
-      : "No live agent";
+  // A handoff older than DOSSIER_STALE_MS is a week-old freeze, not the live
+  // present. Never claim "running"/"ready" (or show that snapshot's health
+  // checks as current) once it's stale — say idle + when it was last active.
+  const handoffMs = state?.sessionUpdatedAt?.getTime() ?? null;
+  const stale = handoffMs != null && dossier.builtAtMs - handoffMs > DOSSIER_STALE_MS;
+  const liveLabel = stale
+    ? "Idle"
+    : state?.agentRunning
+      ? state.currentPromptLabel
+        ? `Working — ${state.currentPromptLabel}`
+        : "Agent process running"
+      : state?.sessionStatus === "ready"
+        ? "Ready for the next task"
+        : "No live agent";
+  const liveActive = !stale && !!state?.agentRunning;
 
+  // Stack is shown in the Technology card below — don't repeat it here.
   const briefRows: Array<[string, string]> = (
     [
       ["Mission", attrs.mission],
-      ["Stack", attrs.stack],
       ["Status", attrs.status],
     ] as Array<[string, string | undefined]>
   ).filter((row): row is [string, string] => Boolean(row[1]));
@@ -74,13 +83,17 @@ export function NowSection({ dossier, interactive = true }: { dossier: ProjectDo
     <SectionShell kicker="Now" title="Status quo">
       <div className="space-y-1.5">
         <p className="text-sm text-text-primary">
-          <span className={state?.agentRunning ? "ui-dot ui-dot-positive mr-1.5" : "ui-dot ui-dot-neutral mr-1.5"} aria-hidden="true" />
+          <span className={liveActive ? "ui-dot ui-dot-positive mr-1.5" : "ui-dot ui-dot-neutral mr-1.5"} aria-hidden="true" />
           {liveLabel}
-          {state?.sessionUpdatedAt && (
-            <span className="text-xs text-text-muted"> · handoff {timeAgo(state.sessionUpdatedAt.getTime())}</span>
+          {handoffMs != null && (
+            <span className="text-xs text-text-muted">
+              {" · "}{stale ? `last active ${shortTimeAgo(handoffMs)} ago` : `handoff ${timeAgo(handoffMs)}`}
+            </span>
           )}
         </p>
-        {latest && (latest.tests || latest.health) && (
+        {/* The last handoff's checks describe THAT run — only current if the
+            handoff is recent. A week-old "health good" is not a live signal. */}
+        {!stale && latest && (latest.tests || latest.health) && (
           <p className="text-xs text-text-muted">
             Last checks: {[latest.tests, latest.todos ? `${latest.todos} TODOs` : null, latest.health ? `health ${latest.health}` : null]
               .filter(Boolean)
@@ -110,8 +123,17 @@ export function NowSection({ dossier, interactive = true }: { dossier: ProjectDo
 /** NEXT — the resume state from the latest handoff + linked goals. */
 export function NextSection({ dossier, interactive = true }: { dossier: ProjectDossier; interactive?: boolean }) {
   const latest = latestDevLog(dossier);
-  const next = latest?.next?.trim() || dossier.detail.attrs.next_step?.trim() || null;
   const goals = dossier.detail.linkedGoals;
+  // A stale handoff's "next" is a week-old verification chore (and it's already
+  // echoed in the changelog). Only trust it when fresh; otherwise fall back to
+  // the project's planned next step, then the top unfinished goal.
+  const handoffMs = dossier.state?.sessionUpdatedAt?.getTime() ?? null;
+  const staleHandoff = handoffMs != null && dossier.builtAtMs - handoffMs > DOSSIER_STALE_MS;
+  const topOpenGoal = goals.find((g) => (g.progress ?? 0) < 100);
+  const next =
+    (staleHandoff ? null : latest?.next?.trim()) ||
+    dossier.detail.attrs.next_step?.trim() ||
+    (topOpenGoal ? `Advance: ${topOpenGoal.title}` : null);
 
   return (
     <SectionShell kicker="Next" title="What happens next">
@@ -149,7 +171,7 @@ export function NextSection({ dossier, interactive = true }: { dossier: ProjectD
 
 /** DONE — the report: changelog (dev log) + run history with outcomes/commits. */
 export function DoneSection({ dossier }: { dossier: ProjectDossier }) {
-  const entries = devLogNewestFirst(dossier);
+  const entries = dedupeDevLog(devLogNewestFirst(dossier));
   const runs = dossier.runs.filter((run) => run.finishedAt);
   // Cap the inline list: a dossier once buried its shipped changelog under
   // ~30 stale timeout rows from the box-credential outage. Show the recent few;
@@ -208,6 +230,22 @@ export function DoneSection({ dossier }: { dossier: ProjectDossier }) {
 
 function devLogNewestFirst(dossier: ProjectDossier): DevLogEntry[] {
   return [...((dossier.detail.devLog ?? []) as DevLogEntry[])].reverse();
+}
+
+/** Collapse near-duplicate changelog entries (an agent re-writing the same
+ *  handoff verbatim) by a normalized prefix of the `done` line, and cap the
+ *  visible list so one fix's step-by-step handoffs don't read as a wall. */
+function dedupeDevLog(entries: DevLogEntry[], limit = 5): DevLogEntry[] {
+  const seen = new Set<string>();
+  const out: DevLogEntry[] = [];
+  for (const e of entries) {
+    const key = (e.done ?? "").toLowerCase().replace(/\s+/g, " ").trim().slice(0, 48);
+    if (key && seen.has(key)) continue;
+    if (key) seen.add(key);
+    out.push(e);
+    if (out.length >= limit) break;
+  }
+  return out;
 }
 
 function latestDevLog(dossier: ProjectDossier): DevLogEntry | null {

@@ -53,9 +53,9 @@ export function GoalEditor({
     return (
       <div>
         <dt className="ui-micro-label flex items-center gap-1.5">
-          <Target className="h-3 w-3" /> Goal
+          <Target className="h-3 w-3" /> Definition of done
           <button className="ui-btn-xs ml-auto" onClick={() => setEditing(true)}>
-            {definitionOfDone ? "Edit" : "Set goal"}
+            {definitionOfDone ? "Edit" : "Set"}
           </button>
         </dt>
         <dd className="text-sm leading-relaxed text-text-secondary">
@@ -67,7 +67,7 @@ export function GoalEditor({
               </span>
             </>
           ) : (
-            <span className="text-text-muted">No goal set — the fleet stops on the agent&apos;s own say-so.</span>
+            <span className="text-text-muted">Not set — the fleet stops on the agent&apos;s own say-so.</span>
           )}
         </dd>
       </div>
@@ -77,7 +77,7 @@ export function GoalEditor({
   return (
     <div className="space-y-2">
       <dt className="ui-micro-label flex items-center gap-1.5">
-        <Target className="h-3 w-3" /> Goal — a run isn&apos;t done until this holds
+        <Target className="h-3 w-3" /> Definition of done — a run isn&apos;t done until this holds
       </dt>
       <textarea
         className="ui-input w-full"
