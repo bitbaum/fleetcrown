@@ -38,6 +38,18 @@ function isUnusableGatewayText(text: string): boolean {
   return t.length === 0 || /couldn'?t generate a response/i.test(t);
 }
 
+/**
+ * True when a modest model degenerated into restating the injected fleet index
+ * (a bulleted list of most/all projects) instead of answering — observed with
+ * gemini-flash on fleet-wide questions. Eight+ `- **Name**` bullets is a listing,
+ * not a focused answer; treat it as unusable so we fall back to a model that
+ * actually answers (Groq handles these well). Belt to the prompt's suspenders.
+ */
+function looksLikeFleetEcho(text: string): boolean {
+  const bullets = text.match(/^\s*[-*]\s+\*\*[^*\n]+\*\*/gm);
+  return (bullets?.length ?? 0) >= 8;
+}
+
 // Degraded fallback when the OpenClaw gateway is unavailable.
 async function callGroq(message: string, voice: string | null): Promise<{ text: string; model: string }> {
   const text = await callGroqText(message, {
@@ -85,13 +97,17 @@ export async function askLoki(message: string, opts?: { sessionKey?: string; use
     // reasoning-heavy prompts). Passing that through would surface a broken
     // answer as Loki's. Treat it as a failure and fall back — so Loki stays
     // useful even when the model isn't.
-    if (res.ok && !isUnusableGatewayText(text)) {
+    if (res.ok && !isUnusableGatewayText(text) && !looksLikeFleetEcho(text)) {
       return {
         status: 200,
         body: { ok: true, text, model: res.model ?? "openclaw/main", durationMs: res.durationMs ?? 0 },
       };
     }
-    const reason = res.ok ? "the model returned an empty/incomplete response" : (res.error ?? "gateway error");
+    const reason = !res.ok
+      ? (res.error ?? "gateway error")
+      : looksLikeFleetEcho(text)
+        ? "the model restated the fleet instead of answering"
+        : "the model returned an empty/incomplete response";
     console.error("[loki] gateway unusable:", reason);
     if (!process.env.GROQ_API_KEY) {
       return { status: 503, body: { error: `Loki is offline — ${reason}.` } };
