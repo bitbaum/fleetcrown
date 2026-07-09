@@ -15,7 +15,8 @@ import { getProjectContext } from "@/db/queries/project-context";
 import { getProjectDossierByProjectKey, renderProjectDossierForAgent } from "@/db/queries/project-dossier";
 import { getGoals, type GoalWithChildren } from "@/db/queries/goals";
 import { listThoughts } from "@/lib/thoughts-content";
-import { upsertKnowledgeBatch, type KnowledgeItem } from "@/db/queries/knowledge-embeddings";
+import { upsertKnowledgeBatch, deleteKnowledgeByTypes, type KnowledgeItem } from "@/db/queries/knowledge-embeddings";
+import { chunkMarkdown } from "@/lib/rag/chunk";
 import { embeddingsEnabled } from "@/lib/rag/embeddings";
 import type { DevLogEntry } from "@/db/schema/user-projects";
 import type { Milestone } from "@/db/schema/goals";
@@ -75,12 +76,20 @@ async function main() {
     // thought: the published strategic essays. This is where the operator has
     // written down HOW the projects relate (three-layer thesis, the two halves,
     // etc.) — so Loki can reason about synergies from first-hand sources, not
-    // guess. Global content, indexed per user so per-user retrieval reaches it.
+    // guess. Split each essay into section-sized passages so retrieval returns
+    // the relevant part, not a truncated whole. Global content, indexed per user
+    // so per-user retrieval reaches it.
     for (const t of listThoughts()) {
-      const chunk = [`Essay: ${t.title}`, t.summary, "", t.body].filter(Boolean).join("\n").slice(0, 6000);
-      items.push({ sourceType: "thought", sourceId: `thought:${t.slug}`, chunk, metadata: { title: t.title, slug: t.slug } });
+      const passages = chunkMarkdown(t.body, { maxChars: 1400, prefix: `Essay: ${t.title}` });
+      const chunks = passages.length ? passages : [`Essay: ${t.title}\n${t.summary}`];
+      chunks.forEach((chunk, i) => {
+        items.push({ sourceType: "thought", sourceId: `thought:${t.slug}#${i}`, chunk: chunk.slice(0, 2000), metadata: { title: t.title, slug: t.slug } });
+      });
     }
 
+    // Full rebuild: clear the source types we own before inserting, so re-chunked
+    // essays and removed projects/essays leave no orphan rows.
+    await deleteKnowledgeByTypes(userId, ["project_profile", "dev_log", "goal", "thought"]);
     const n = await upsertKnowledgeBatch(userId, items);
     totalChunks += n;
     console.log(`[reindex] user ${userId.slice(0, 8)}…: ${n}/${items.length} chunks (${projects.length} projects)`);

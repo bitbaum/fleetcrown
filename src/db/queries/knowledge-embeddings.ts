@@ -46,6 +46,18 @@ export async function upsertKnowledge(userId: string, item: KnowledgeItem): Prom
 }
 
 /**
+ * Delete all of a user's rows for the given source types. The reindexer calls
+ * this before a full rebuild so chunk-id changes (e.g. re-chunking essays) and
+ * deleted projects/essays leave no orphan rows — the index is a true mirror,
+ * not an append-only pile. Scoped to types so embed-on-write sources survive.
+ */
+export async function deleteKnowledgeByTypes(userId: string, sourceTypes: KnowledgeSourceType[]): Promise<void> {
+  if (sourceTypes.length === 0) return;
+  const typeArray = sql`ARRAY[${sql.join(sourceTypes.map((t) => sql`${t}`), sql`, `)}]::text[]`;
+  await db.execute(sql`DELETE FROM knowledge_embeddings WHERE user_id = ${userId} AND source_type = ANY(${typeArray})`);
+}
+
+/**
  * Retrieve top-K fleet-knowledge chunks for a query, scoped to one user.
  * Cosine distance via pgvector `<=>`; similarity = 1 - distance. Hard-thresholded
  * so off-topic rows don't pollute injected context.

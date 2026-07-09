@@ -28,6 +28,16 @@ function voiceClause(voice: string | null | undefined): string {
   return v ? ` Adopt this writing voice in your reply: ${v}` : "";
 }
 
+/**
+ * True when the gateway's text is not a real answer — empty, or the OpenClaw
+ * "incomplete turn" marker a flaky/thinking model produces (payloads=0). Callers
+ * treat these as failures and fall back rather than surfacing them to the user.
+ */
+function isUnusableGatewayText(text: string): boolean {
+  const t = text.trim();
+  return t.length === 0 || /couldn'?t generate a response/i.test(t);
+}
+
 // Degraded fallback when the OpenClaw gateway is unavailable.
 async function callGroq(message: string, voice: string | null): Promise<{ text: string; model: string }> {
   const text = await callGroqText(message, {
@@ -68,15 +78,23 @@ export async function askLoki(message: string, opts?: { sessionKey?: string; use
     const v = voice?.trim();
     const prefaced = v ? `[Voice for this reply — ${v}]\n\n${contextualMessage}` : contextualMessage;
     const res = await askGatewayAgent(prefaced, { sessionKey: opts?.sessionKey });
-    if (res.ok) {
+    const text = (res.text ?? "").trim();
+    // The gateway can return ok=true with EMPTY or "couldn't generate a
+    // response" text when the underlying model flakes (e.g. a thinking model
+    // that emits no final payload — observed with gemini-2.5-pro on
+    // reasoning-heavy prompts). Passing that through would surface a broken
+    // answer as Loki's. Treat it as a failure and fall back — so Loki stays
+    // useful even when the model isn't.
+    if (res.ok && !isUnusableGatewayText(text)) {
       return {
         status: 200,
-        body: { ok: true, text: res.text ?? "", model: res.model ?? "openclaw/main", durationMs: res.durationMs ?? 0 },
+        body: { ok: true, text, model: res.model ?? "openclaw/main", durationMs: res.durationMs ?? 0 },
       };
     }
-    console.error("[loki] gateway agent failed:", res.error);
+    const reason = res.ok ? "the model returned an empty/incomplete response" : (res.error ?? "gateway error");
+    console.error("[loki] gateway unusable:", reason);
     if (!process.env.GROQ_API_KEY) {
-      return { status: 503, body: { error: `Loki is offline — ${res.error}.` } };
+      return { status: 503, body: { error: `Loki is offline — ${reason}.` } };
     }
     console.warn("[loki] degraded: falling back to Groq");
   }

@@ -15,19 +15,47 @@
  * RAG off/empty), so callers can concat safely.
  */
 import { getUserProjects } from "@/db/queries/user-projects";
-import { searchKnowledge } from "@/db/queries/knowledge-embeddings";
+import { searchKnowledge, type KnowledgeHit } from "@/db/queries/knowledge-embeddings";
 import { embeddingsEnabled } from "@/lib/rag/embeddings";
 import { buildFleetIndex } from "@/lib/loki-fleet-index";
 import type { UserProject } from "@/db/schema/user-projects";
 
 const RAG_K = 6;
+const RAG_POOL = 16;
+const PER_SOURCE_CAP = 2;
 const RAG_CHUNK_MAX = 300;
 
-/** RAG depth: top-K relevant chunks across ALL projects for the query. */
+/** The key a hit belongs to for diversity — its project, or essay slug. */
+function diversityKey(h: KnowledgeHit): string {
+  return (h.metadata?.project as string | undefined) || (h.metadata?.slug as string | undefined) || h.sourceId;
+}
+
+/**
+ * Spread retrieval across projects/essays: from a larger similarity-ranked pool,
+ * take the top hits but cap how many come from any single source. Stops a
+ * cross-project question ("how do these fit together") from returning six chunks
+ * of one project and nothing of the others.
+ */
+function diversify(pool: KnowledgeHit[]): KnowledgeHit[] {
+  const seen = new Map<string, number>();
+  const picked: KnowledgeHit[] = [];
+  for (const h of pool) {
+    const key = diversityKey(h);
+    const n = seen.get(key) ?? 0;
+    if (n >= PER_SOURCE_CAP) continue;
+    seen.set(key, n + 1);
+    picked.push(h);
+    if (picked.length >= RAG_K) break;
+  }
+  return picked;
+}
+
+/** RAG depth: diverse top-K relevant chunks across ALL projects for the query. */
 async function buildRetrievedDetail(userId: string, query: string): Promise<string> {
   if (!embeddingsEnabled() || !query.trim()) return "";
-  const hits = await searchKnowledge(userId, query, { k: RAG_K }).catch(() => []);
-  if (hits.length === 0) return "";
+  const pool = await searchKnowledge(userId, query, { k: RAG_POOL }).catch(() => []);
+  if (pool.length === 0) return "";
+  const hits = diversify(pool);
   // Source-aware labels so Loki cites where each fact came from — a companion
   // that shows its work. Kind + project (or essay title) precede the chunk.
   const lines = hits.map((h) => {
