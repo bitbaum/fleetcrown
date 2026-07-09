@@ -223,8 +223,12 @@ export async function POST(
   const projects = await getUserProjects(userId);
   const projectNames = projects.map((p) => p.name);
 
-  // Fleet fast paths — deterministic, no LLM.
-  if (isListProjectsQuery(text)) {
+  // Fleet fast paths — deterministic, no LLM. Skipped entirely for chatOnly:
+  // the proactive fleet-review starters ("review my fleet", "all my projects")
+  // are analysis requests that would otherwise be intercepted here (e.g. the
+  // list-projects fast path) and answered with a bare project list. chatOnly
+  // means "let Loki think", so bypass every deterministic shortcut.
+  if (!chatOnly && isListProjectsQuery(text)) {
     const assistant = await addMessage(conversationId, {
       role: "assistant",
       kind: "chat",
@@ -234,7 +238,7 @@ export async function POST(
     return NextResponse.json({ message: assistant });
   }
 
-  const createReq = parseCreateProjectRequest(text);
+  const createReq = chatOnly ? null : parseCreateProjectRequest(text);
   if (createReq) {
     let name = createReq.name;
     if (!name) {
@@ -308,7 +312,7 @@ export async function POST(
     return NextResponse.json({ message: assistant });
   }
 
-  if (isDevelopAllFleetRequest(text)) {
+  if (!chatOnly && isDevelopAllFleetRequest(text)) {
     const scopeKeys =
       selectedProjects.length > 0 ? selectedProjects : undefined;
     const outcome = await kickFleet(userId, {
@@ -329,7 +333,7 @@ export async function POST(
     return NextResponse.json({ message: assistant });
   }
 
-  if (isMoveForwardRequest(text)) {
+  if (!chatOnly && isMoveForwardRequest(text)) {
     if (selectedProjects.length === 1) {
       const assistant = await persistDispatch({
         userId,
