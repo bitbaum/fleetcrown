@@ -27,10 +27,29 @@ export type GateInput = {
   queueLength: number;
   streakSuffix: string;
   noOpCount?: number;
+  /** Most-recent-first finished outcomes for this project (route already
+   *  fetches them for the streak suffix). Feeds the failure brake. */
+  recentOutcomes?: string[];
 };
 
+/** How many consecutive most-recent failures trip the failure brake. */
+export const FAILURE_BRAKE_STREAK = 3;
+
+const BRAKE_FAILURES = new Set(["error", "hang", "timeout"]);
+
+/** Leading run of hard failures (user_abort is neutral and breaks the run,
+ *  as does any success/partial). */
+export function leadingFailureStreak(outcomes: string[]): number {
+  let n = 0;
+  for (const o of outcomes) {
+    if (BRAKE_FAILURES.has(o)) n++;
+    else break;
+  }
+  return n;
+}
+
 export function evaluateDispatchGates(input: GateInput): DispatchResult | null {
-  const { status, blockerCount, mode, queueLength, streakSuffix, noOpCount = 0 } = input;
+  const { status, blockerCount, mode, queueLength, streakSuffix, noOpCount = 0, recentOutcomes = [] } = input;
 
   if (status === "working" || status === "blocked") {
     return {
@@ -52,6 +71,19 @@ export function evaluateDispatchGates(input: GateInput): DispatchResult | null {
     return {
       action: "off",
       reason: `No-op fuse tripped after ${noOpCount} consecutive no-op turn(s) — autopilot waits for a real state change or human reset.`,
+      source: "status_gate",
+    };
+  }
+
+  // Failure brake: when the last N runs ALL failed (error/hang/timeout), keep
+  // re-firing is pure waste — the July credential outage burned a week of
+  // daily next_best timeouts because nothing checked the streak. A manual
+  // dispatch (or any success) resets the streak and re-opens autopilot.
+  const failStreak = leadingFailureStreak(recentOutcomes);
+  if (failStreak >= FAILURE_BRAKE_STREAK) {
+    return {
+      action: "off",
+      reason: `Failure brake: last ${failStreak} runs all failed.${streakSuffix} Autopilot pauses this project until a run succeeds — dispatch manually to retry.`,
       source: "status_gate",
     };
   }

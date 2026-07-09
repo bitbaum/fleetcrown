@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNotNull, isNull, lt, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNotNull, isNull, lt, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   orchestrationRuns,
@@ -170,6 +170,9 @@ export async function getRecentOutcomesByProjectKeys(
       inArray(orchestrationRuns.projectKey, projectKeys),
       isNotNull(orchestrationRuns.outcome),
       isNotNull(orchestrationRuns.finishedAt),
+      // Same recency window as getRecentOutcomes — stale failures are history,
+      // not a live streak on every project card.
+      gt(orchestrationRuns.finishedAt, new Date(Date.now() - RECENT_OUTCOMES_WINDOW_MS)),
     ))
     .orderBy(desc(orchestrationRuns.finishedAt));
 
@@ -183,7 +186,17 @@ export async function getRecentOutcomesByProjectKeys(
 }
 
 /**
- * Returns the most recent finished orchestration runs for a project, newest first.
+ * "Recent" means RECENT: outcomes older than this are history, not current
+ * state. Without this window, the July credential outage kept painting ✗
+ * streaks on Control cards and the dispatch reasoner for weeks after the
+ * failures stopped being news. SSOT here so every consumer (streak chips,
+ * dispatch gates, nudge brake, dossier) ages out together.
+ */
+export const RECENT_OUTCOMES_WINDOW_MS = 72 * 60 * 60 * 1000;
+
+/**
+ * Returns the most recent finished orchestration runs for a project, newest
+ * first — bounded to RECENT_OUTCOMES_WINDOW_MS.
  * Backed by idx_orchestration_runs_recent_outcomes (partial index, finishedAt IS NOT NULL).
  * Used by the dispatch reasoner and ProjectCard streak chip.
  */
@@ -198,6 +211,7 @@ export async function getRecentOutcomes(
     eq(orchestrationRuns.projectKey, projectKey),
     isNotNull(orchestrationRuns.outcome),
     isNotNull(orchestrationRuns.finishedAt),
+    gt(orchestrationRuns.finishedAt, new Date(Date.now() - RECENT_OUTCOMES_WINDOW_MS)),
   ];
   if (opts.intent) conditions.push(eq(orchestrationRuns.intent, opts.intent));
 

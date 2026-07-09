@@ -30,6 +30,8 @@ import { ENTITY_TYPE } from "@/lib/constants/statuses";
 import { MAX_CONCURRENT_BUILDING } from "@/lib/constants/control";
 import { getFleetAutopilotUserIds } from "@/db/queries/beacon-settings";
 import { getUserProjects } from "@/db/queries/user-projects";
+import { getRecentOutcomes } from "@/db/queries/orchestration-runs";
+import { FAILURE_BRAKE_STREAK, leadingFailureStreak } from "@/lib/orchestration/dispatch-gates";
 import { injectPrompt } from "@/lib/inject-core";
 
 const IDLE_WINDOW_HOURS = 2;
@@ -48,6 +50,7 @@ interface Skips {
   recent_activity: number;
   has_pending_command: number;
   recent_nudge: number;
+  failing_streak: number;
   inject_failed: number;
 }
 
@@ -61,6 +64,7 @@ export async function GET(req: NextRequest) {
     recent_activity: 0,
     has_pending_command: 0,
     recent_nudge: 0,
+    failing_streak: 0,
     inject_failed: 0,
   };
   const nudgedRows: Array<{ userId: string; projectId: string; projectName: string }> = [];
@@ -165,6 +169,17 @@ export async function GET(req: NextRequest) {
           .limit(1);
         if (openCommand.length > 0) {
           skipped.has_pending_command++;
+          continue;
+        }
+
+        // (e) Failure brake — the July outage burned a WEEK of daily next_best
+        // timeouts per project because nothing here checked whether the last
+        // nudges ever succeeded. If the most recent runs are all hard failures,
+        // re-nudging is guaranteed waste: skip until a run succeeds (a manual
+        // dispatch resets the streak).
+        const outcomes = await getRecentOutcomes(userId, proj.name, { limit: FAILURE_BRAKE_STREAK + 2 }).catch(() => []);
+        if (leadingFailureStreak(outcomes.map((o) => o.outcome)) >= FAILURE_BRAKE_STREAK) {
+          skipped.failing_streak++;
           continue;
         }
 

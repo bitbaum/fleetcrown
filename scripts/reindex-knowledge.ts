@@ -16,6 +16,7 @@ import { getProjectDossierByProjectKey, renderProjectDossierForAgent } from "@/d
 import { getGoals, type GoalWithChildren } from "@/db/queries/goals";
 import { listThoughts } from "@/lib/thoughts-content";
 import { upsertKnowledgeBatch, pruneKnowledgeToIds, type KnowledgeItem } from "@/db/queries/knowledge-embeddings";
+import { cleanDescription } from "@/lib/project-display";
 import { chunkMarkdown } from "@/lib/rag/chunk";
 import { embeddingsEnabled } from "@/lib/rag/embeddings";
 import type { DevLogEntry } from "@/db/schema/user-projects";
@@ -45,7 +46,8 @@ async function main() {
       // project_profile: the same rich context block we inject per dispatch.
       const dossier = await getProjectDossierByProjectKey(userId, p.name).catch(() => null);
       const ctx = dossier ? renderProjectDossierForAgent(dossier) : await getProjectContext(userId, p.name).catch(() => null);
-      const profile = [p.name, p.description, p.stack, ctx].filter(Boolean).join("\n");
+      // cleanDescription: never embed the bulk-import placeholder as project context.
+      const profile = [p.name, cleanDescription(p.description), p.stack, ctx].filter(Boolean).join("\n");
       if (profile.trim()) {
         items.push({ sourceType: "project_profile", sourceId: p.name, chunk: profile.slice(0, 6000), metadata: { project: p.name } });
       }

@@ -60,6 +60,16 @@ export function stripHarnessScaffolding(text: string): string {
     .trim();
 }
 
+// The fully-assembled operator dispatch (preamble + engineering standards +
+// autopilot ruleset + exit contract, ~2,000 words) is machine plumbing, not a
+// human changelog entry. When a stored prompt IS that envelope, rendering it
+// verbatim buried the Activity timeline under three full copies of the
+// pipeline's guts. Detect it and collapse to the intent label instead.
+const OPERATOR_ENVELOPE = /#\s*FleetCrown operator dispatch/i;
+export function isOperatorEnvelope(text: string): boolean {
+  return OPERATOR_ENVELOPE.test(text.slice(0, 200));
+}
+
 // The most informative body for a prompt row. Custom text (what the user
 // typed) wins; then the rendered intent template (populated for dispatches
 // from 2026-06-10 onward); then the intent label so legacy rows still
@@ -68,10 +78,10 @@ export function stripHarnessScaffolding(text: string): string {
 // Used by every surface that displays a prompt.
 export function promptDisplayBody(row: PromptBodyInput): string {
   const custom = row.customPrompt ? stripHarnessScaffolding(row.customPrompt) : "";
-  if (custom) return custom;
+  if (custom && !isOperatorEnvelope(custom)) return custom;
   const resolved = row.resolvedPrompt ? stripHarnessScaffolding(row.resolvedPrompt) : "";
-  if (resolved) return resolved;
-  return getIntentLabel(row.intent);
+  if (resolved && !isOperatorEnvelope(resolved)) return resolved;
+  return `${getIntentLabel(row.intent)} — assembled operator dispatch (brief + goals + autopilot rules; full text hidden)`;
 }
 
 // Strip the harness envelope and collapse to null when nothing human remains.
@@ -83,7 +93,10 @@ export function promptDisplayBody(row: PromptBodyInput): string {
 function nonEmptyStripped(text: string | null | undefined): string | null {
   if (!text || !text.trim()) return null;
   const stripped = stripHarnessScaffolding(text);
-  return stripped.trim() ? stripped : null;
+  if (!stripped.trim()) return null;
+  // Operator envelopes are machine plumbing — treat like scaffolding-only so
+  // surfaces that render these fields directly never leak the full dispatch.
+  return isOperatorEnvelope(stripped) ? null : stripped;
 }
 
 export function toPromptDisplayFields(row: PromptBodyInput): PromptDisplayFields {

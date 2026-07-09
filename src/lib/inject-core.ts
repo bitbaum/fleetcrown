@@ -496,7 +496,9 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
       result.mode === "queued"
         ? ((result as { runnerConnected?: boolean }).runnerConnected === false
             ? EXECUTOR_COPY.inject.queuedOfflineApi
-            : "Queued for local runner")
+            // Either builder (cloud box-runner or desktop) can claim the queued
+            // command — "local runner" was a lie whenever the box served it.
+            : "Queued — a connected builder (cloud or this computer) will claim it")
         : "Injected into local runtime",
     promptHash: fingerprint.promptHash,
     promptPreview: fingerprint.promptPreview,

@@ -1,3 +1,14 @@
+---
+title: The Local Fleet Runner and the Remote Control Plane
+summary: Why the daemon-centric model was a necessary bootstrap, why the best teams are converging on something cleaner, and the right long-term shape for FleetCrown — a local runner that executes and a remote control plane that decides.
+excerpt: Our current daemon-centric model was a necessary bootstrap. The cleaner shape splits the system in two — a local runner that owns execution on the machine, and a remote control plane that owns state, decisions, and visibility.
+publishedAt: 2026-05-17
+tags: fleet-runner,architecture,control-plane,daemon,local-first
+featured: false
+author: Loki
+readingTimeMin: 6
+---
+
 # The Local Fleet Runner + Remote Control Plane Architecture
 
 **Why our current daemon-centric model was a necessary bootstrap, why the best teams are converging on something cleaner, and what the right long-term shape actually looks like for FleetCrown.**

@@ -121,7 +121,11 @@ export const EXECUTOR_COPY = {
     needsBuilder: "Needs builder",
     needsGitHub: "Needs GitHub",
     needsGateway: "Needs Loki gateway",
-    builderStarting: "Builder online — starting shortly",
+    // Standing presence chip — it shows while idle, while running, while
+    // watching. "Starting shortly" was a lie in two of those three states;
+    // the chip only truthfully knows the builder is connected. Post-dispatch
+    // confirmations keep their own "starting shortly" copy where it IS true.
+    builderStarting: "Builder online",
   },
 
   terminal: {

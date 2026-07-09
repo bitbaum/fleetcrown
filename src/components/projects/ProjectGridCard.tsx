@@ -69,17 +69,17 @@ export function ProjectGridCard({
               <h3 className="truncate text-base font-semibold text-text-primary">{project.name}</h3>
               {project.readonly && <span className="ui-kicker shrink-0">team</span>}
               {status && <StatusBadge value={status} />}
-              <span
-                className={cn(
-                  "ui-micro-badge rounded-full",
-                  loopReadiness.tone === "positive"
-                    ? "border-status-positive/25 bg-status-positive/[0.08] text-status-positive"
-                    : "border-status-warning/30 bg-status-warning/[0.08] text-status-warning",
-                )}
-                title={loopReadiness.description}
-              >
-                {loopReadiness.label}
-              </span>
+              {/* Only the EXCEPTIONS earn a badge. "Loop-ready" sat on 19/19
+                  projects — a label everything carries filters nothing. Show
+                  the chip only when something needs the user (no path / paused). */}
+              {loopReadiness.state !== "ready" && (
+                <span
+                  className="ui-micro-badge rounded-full border-status-warning/30 bg-status-warning/[0.08] text-status-warning"
+                  title={loopReadiness.description}
+                >
+                  {loopReadiness.label}
+                </span>
+              )}
             </div>
             {description ? (
               <p className="mt-1.5 line-clamp-2 text-sm leading-relaxed text-text-secondary">{description}</p>

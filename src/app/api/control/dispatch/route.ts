@@ -202,6 +202,7 @@ export async function POST(req: NextRequest) {
     queueLength: queue.length,
     streakSuffix,
     noOpCount,
+    recentOutcomes: recentOutcomes.map((o) => o.outcome),
   });
   // evaluateDispatchGates never returns null after the collapse — it owns
   // the off/on decision completely. The non-null assertion is safe.

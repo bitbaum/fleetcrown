@@ -50,6 +50,25 @@ export function FleetDoctorCard() {
     );
   }
 
+  // Hosted view: the doctor's checks need the local runtime, so "can't run
+  // here" is NOT-APPLICABLE — rendering it as an amber "needs attention"
+  // manufactured a permanent false alarm on /system. Say what's true, calmly.
+  if (!data.runtime) {
+    return (
+      <Card>
+        <CardHeader
+          icon={Stethoscope}
+          title="Fleet Doctor"
+          right={<span className="text-xs font-medium text-text-tertiary">not applicable here</span>}
+        />
+        <p className="text-sm text-text-secondary">
+          Full health checks run where the local runtime lives — the desktop app or the box install.
+          Nothing is wrong; this hosted view just can&apos;t run them.
+        </p>
+      </Card>
+    );
+  }
+
   const summaryTone = TONE[data.summary.status];
 
   return (

@@ -35,7 +35,15 @@ function parseFrontmatter(raw: string): { meta: Record<string, string>; body: st
   for (const line of header.split("\n")) {
     const idx = line.indexOf(":");
     if (idx <= 0) continue;
-    meta[line.slice(0, idx).trim()] = line.slice(idx + 1).trim();
+    let value = line.slice(idx + 1).trim();
+    // YAML-quoted values ('...' / "...") rendered their quotes LITERALLY on
+    // the page ("2026-05-18" · "Prompts, Timing, and Orchestration…") because
+    // this homegrown parser never stripped them. Authors quote titles that
+    // contain colons — support that instead of forbidding it.
+    if (value.length >= 2 && ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'")))) {
+      value = value.slice(1, -1);
+    }
+    meta[line.slice(0, idx).trim()] = value;
   }
   return { meta, body };
 }
@@ -51,8 +59,10 @@ export function listThoughts(): Array<ThoughtMeta & { body: string }> {
       return {
         slug,
         title: meta.title ?? slug,
-        summary: meta.summary ?? "",
-        excerpt: meta.excerpt ?? "",
+        // Six early essays carried their one-liner under `subtitle:` — the
+        // renderer ignored it and they listed as bare titles. Honor it.
+        summary: meta.summary ?? meta.subtitle ?? "",
+        excerpt: meta.excerpt ?? meta.subtitle ?? "",
         publishedAt: meta.publishedAt ?? "",
         tags: (meta.tags ?? "").split(",").map((s) => s.trim()).filter(Boolean),
         featured: (meta.featured ?? "false") === "true",

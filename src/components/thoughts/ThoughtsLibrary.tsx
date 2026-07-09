@@ -23,6 +23,24 @@ export function ThoughtsLibrary({
   const featured = articles.find((article) => article.featured) ?? articles[0] ?? null;
   const [query, setQuery] = useState("");
   const [activeTag, setActiveTag] = useState<string>("all");
+  const [showAllTags, setShowAllTags] = useState(false);
+
+  // ~130 raw tags is a wall, not a filter. Rank by how many essays carry each
+  // tag and show the top slice; "+N more" expands to everything. The active
+  // tag always stays visible so expanding/collapsing never hides the filter
+  // you're standing on.
+  const TOP_TAGS = 12;
+  const rankedTags = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const a of articles) for (const t of a.tags) counts.set(t, (counts.get(t) ?? 0) + 1);
+    return [...tags].sort((a, b) => (counts.get(b) ?? 0) - (counts.get(a) ?? 0) || a.localeCompare(b));
+  }, [articles, tags]);
+  const visibleTags = showAllTags
+    ? rankedTags
+    : rankedTags.slice(0, TOP_TAGS).concat(
+        activeTag !== "all" && !rankedTags.slice(0, TOP_TAGS).includes(activeTag) ? [activeTag] : [],
+      );
+  const hiddenTagCount = rankedTags.length - Math.min(TOP_TAGS, rankedTags.length);
 
   const filtered = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -90,7 +108,7 @@ export function ThoughtsLibrary({
             (0429728) for the mobile chevron + fade rather than re-inlining
             the pattern. Adds ui-scroll-fade-right that was previously
             missing here too. */}
-        <ScrollAffordance childCount={tags.length + 1} threshold={4}>
+        <ScrollAffordance childCount={visibleTags.length + 2} threshold={4}>
           <div className="flex gap-2 overflow-x-auto ui-scroll-fade-right pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
             <button
               type="button"
@@ -99,7 +117,7 @@ export function ThoughtsLibrary({
             >
               All
             </button>
-            {tags.map((tag) => (
+            {visibleTags.map((tag) => (
               <button
                 key={tag}
                 type="button"
@@ -109,6 +127,15 @@ export function ThoughtsLibrary({
                 {tag}
               </button>
             ))}
+            {hiddenTagCount > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowAllTags((v) => !v)}
+                className="ui-chip-filter shrink-0"
+              >
+                {showAllTags ? "fewer tags" : `+${hiddenTagCount} more`}
+              </button>
+            )}
           </div>
         </ScrollAffordance>
       </div>

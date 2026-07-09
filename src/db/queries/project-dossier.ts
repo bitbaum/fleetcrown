@@ -25,6 +25,7 @@ import { getProjectStateByProjectId } from "./project-states";
 import { getProjectActivity, type ProjectActivityEvent } from "./activity";
 import { getProjectOrchestrationRuns, getRecentOutcomes, type RecentOutcome } from "./orchestration-runs";
 import { getUserProjectByEntityId } from "./user-projects";
+import { cleanDescription } from "@/lib/project-display";
 import { getProjectShareByToken } from "./project-shares";
 import type { UserProject } from "@/db/schema";
 import type { orchestrationRuns } from "@/db/schema/orchestration-runs";
@@ -126,7 +127,10 @@ export function renderProjectDossierForAgent(dossier: ProjectDossier): string {
     `# Project dossier: ${detail.project.name}`,
   ];
 
-  const description = detail.project.description?.trim();
+  // cleanDescription filters the bulk-import placeholder ("Local repository
+  // imported from fleetcrown-ui") — feeding that to agents as the project
+  // "Brief" was context poison, visible verbatim in every dispatched prompt.
+  const description = cleanDescription(detail.project.description);
   if (description) lines.push(`Brief: ${description}`);
 
   const profile: Array<[string, string | undefined | null]> = [
