@@ -19,6 +19,8 @@ export type LokiMessage = Omit<ConversationMessage, "createdAt" | "meta"> & {
 export type LokiProject = {
   id: string;
   name: string;
+  /** Entity project id — the key the /api/projects/[id]/* routes use (brief, etc.). */
+  entityProjectId?: string | null;
   topGoal?: { title: string; progress: number | null } | null;
 };
 

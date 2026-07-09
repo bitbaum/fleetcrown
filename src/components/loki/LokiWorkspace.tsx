@@ -11,6 +11,7 @@ import { Drawer } from "@/components/ui/modal";
 import { ConversationList } from "./ConversationList";
 import { Transcript } from "./Transcript";
 import { Composer } from "./Composer";
+import { SaveContextBar } from "./SaveContextBar";
 import { ProjectFilter } from "./ProjectFilter";
 import type { Attachment, ConversationSummary, LokiMessage, LokiProject, ModelChoice } from "./types";
 
@@ -93,10 +94,10 @@ export function LokiWorkspace({
     setProjectsLoading(true);
     setProjectsError(null);
     try {
-      const rows = await fetchJson<Array<{ id: string; name: string; topGoal?: LokiProject["topGoal"] }>>(
+      const rows = await fetchJson<Array<{ id: string; name: string; entityProjectId?: string | null; topGoal?: LokiProject["topGoal"] }>>(
         "/api/user-projects",
       );
-      setProjects(rows.map((p) => ({ id: p.id, name: p.name, topGoal: p.topGoal ?? null })));
+      setProjects(rows.map((p) => ({ id: p.id, name: p.name, entityProjectId: p.entityProjectId ?? null, topGoal: p.topGoal ?? null })));
     } catch {
       setProjectsError("Could not load projects.");
     } finally {
@@ -291,6 +292,13 @@ export function LokiWorkspace({
             onStart={(prompt) => void send(prompt, {}, [], { chatOnly: true, selectedProjectsOverride: [] })}
           />
         </div>
+        {messages.length > 0 && (
+          <SaveContextBar
+            projects={projects}
+            messages={messages}
+            selectedProject={selectedProjects[0] ?? null}
+          />
+        )}
         {error && <p className="ui-error">{error}</p>}
         <Composer
           key={composerPrefill ?? "default"}

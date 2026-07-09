@@ -30,6 +30,7 @@ export async function prefetchLokiWorkspace(userId: string): Promise<LokiWorkspa
       return projects.map((p) => ({
         id: p.id,
         name: p.name,
+        entityProjectId: p.entityProjectId ?? null,
         topGoal: p.entityProjectId ? goalByEntity.get(p.entityProjectId) ?? null : null,
       }));
     })(),
