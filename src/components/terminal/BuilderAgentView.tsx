@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Loader2, MonitorSmartphone } from "lucide-react";
 import { useFetch } from "@/hooks/use-fetch";
+import { useBuilderPresence } from "@/hooks/use-builder-presence";
 import { EXECUTOR_COPY } from "@/config/executor-copy";
 import { TerminalView } from "./TerminalView";
 import { TabVoiceMic } from "./TabVoiceMic";
@@ -13,18 +15,20 @@ type Variant = "cloud" | "machine";
 
 const COPY: Record<
   Variant,
-  { loading: string; empty: string; emptyHint: string; icon: typeof MonitorSmartphone }
+  { loading: string; empty: string; emptyHint: string; offlineHint: string; icon: typeof MonitorSmartphone }
 > = {
   cloud: {
     loading: EXECUTOR_COPY.terminal.cloudLoading,
     empty: EXECUTOR_COPY.terminal.cloudEmpty,
     emptyHint: EXECUTOR_COPY.terminal.cloudEmptyHint,
+    offlineHint: EXECUTOR_COPY.terminal.cloudOfflineHint,
     icon: MonitorSmartphone,
   },
   machine: {
     loading: EXECUTOR_COPY.terminal.thisComputerLoading,
     empty: EXECUTOR_COPY.terminal.thisComputerEmpty,
     emptyHint: EXECUTOR_COPY.terminal.thisComputerEmptyHint,
+    offlineHint: EXECUTOR_COPY.terminal.thisComputerOfflineHint,
     icon: MonitorSmartphone,
   },
 };
@@ -50,6 +54,11 @@ export function BuilderAgentView({
     `/api/control/open-tabs?channel=${builderChannel}`,
     { intervalMs: 5000 },
   );
+  const presence = useBuilderPresence();
+  // Is THIS builder actually connected? Distinguishes "offline" from "online but
+  // idle" so the empty state stops mislabeling a working, idle builder as gated.
+  const builderConnected =
+    variant === "cloud" ? presence.builderPresence?.cloud : presence.builderPresence?.local;
   const tabs = data?.tabs ?? [];
   const [selected, setSelected] = useState<string | null>(initialTab ?? null);
   const active = selected && tabs.includes(selected) ? selected : (tabs[0] ?? null);
@@ -63,11 +72,24 @@ export function BuilderAgentView({
   }
 
   if (tabs.length === 0) {
+    // Three honest states, in priority order:
+    //   1. gated       → API returned `unavailable` (this account can't use it)
+    //   2. offline      → allowed, but this builder isn't connected right now
+    //   3. online-idle  → allowed + connected, just nothing running → offer to dispatch
+    const gated = data?.unavailable?.message ?? null;
+    const offline = builderConnected === false;
+    const hint = gated ?? (offline ? copy.offlineHint : copy.emptyHint);
+    const showDispatch = !gated && !offline;
     return (
       <div className="ui-empty-page">
         <Icon className="h-6 w-6 text-text-muted" />
-        <p className="text-sm text-text-secondary">{copy.empty}</p>
-        <p className="max-w-md text-center text-xs text-text-muted">{data?.unavailable?.message ?? copy.emptyHint}</p>
+        <p className="text-sm text-text-secondary">
+          {offline ? copy.empty.replace("right now", "— builder offline") : copy.empty}
+        </p>
+        <p className="max-w-md text-center text-xs text-text-muted">{hint}</p>
+        {showDispatch && (
+          <Link href="/control" className="ui-btn-secondary mt-1">Dispatch from Control</Link>
+        )}
       </div>
     );
   }

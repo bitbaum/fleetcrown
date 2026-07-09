@@ -134,11 +134,16 @@ export const EXECUTOR_COPY = {
       "Agents on the cloud builder (box-runner). Pick a project tab, click to focus, and type — keystrokes go straight to the agent PTY. Ctrl+C, arrows, and paste work.",
     cloudLoading: "Looking for agents on the cloud builder…",
     cloudEmpty: "No agents on the cloud builder right now.",
-    cloudEmptyHint: "Cloud builder is available only for enabled accounts until hosted sandboxes are tenant-isolated.",
+    // Online + idle: the builder is up, nothing is running — actionable, not a
+    // gate. (The "private for this account" gate message comes from the API's
+    // `unavailable` payload for non-allowed users, and is shown instead.)
+    cloudEmptyHint: "The cloud builder is online — dispatch an agent from Control and it shows up here live.",
+    cloudOfflineHint: "The cloud builder (box-runner on Hetzner) is offline right now.",
     thisComputerHelp:
       "Interactive view of agents on this computer via the desktop app. Same keystroke path as Cloud — click the terminal and type.",
     thisComputerEmpty: "No agents on this computer right now.",
-    thisComputerEmptyHint: "Launch from Control or Loki after Fleet Runner is connected to this account.",
+    thisComputerEmptyHint: "Dispatch from Control or Loki and it shows up here.",
+    thisComputerOfflineHint: "Connect Fleet Runner on this computer to this account.",
     thisComputerLoading: "Looking for agents on this computer…",
   },
 } as const;
