@@ -30,7 +30,7 @@ import {
   DEFAULT_CONVERSATION_TITLE,
 } from "@/db/queries/conversations";
 import type { Conversation, ConversationMessage } from "@/db/schema/conversations";
-import { resolveCommand, isGenericDevelopHandoff } from "@/lib/command-resolve";
+import { resolveCommand, isGenericDevelopHandoff, type CommandResolution } from "@/lib/command-resolve";
 import { injectPrompt } from "@/lib/inject-core";
 import { askLoki } from "@/lib/loki-core";
 import { ORCHESTRATION_ADAPTER_IDS, type AdapterId } from "@/lib/orchestration";
@@ -84,6 +84,11 @@ const Body = z
     model: z.string().trim().min(1).max(60).optional(),
     attachments: z.array(AttachmentBodySchema).max(MAX_ATTACHMENTS).optional(),
     dispatchOnly: z.boolean().optional(),
+    // Force the chat path, skipping the command classifier. The proactive
+    // fleet-review starters are definitionally analysis/Q&A, not "run work on a
+    // project" — without this the classifier can misread "review my fleet" as a
+    // command and return a needs-project picker instead of Loki's answer.
+    chatOnly: z.boolean().optional(),
   })
   .superRefine((data, ctx) => {
     const hasAttach = (data.attachments?.length ?? 0) > 0;
@@ -187,7 +192,7 @@ export async function POST(
 
   const dataOrResp = await readJsonBody(req, Body);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
-  const { text: rawText, selectedProjects, agent, model, attachments: rawAttachments, dispatchOnly } = dataOrResp;
+  const { text: rawText, selectedProjects, agent, model, attachments: rawAttachments, dispatchOnly, chatOnly } = dataOrResp;
   const text =
     rawText.trim() ||
     DEFAULT_VISION_QUESTION;
@@ -450,10 +455,12 @@ export async function POST(
     return NextResponse.json({ message: assistant });
   }
 
-  const resolution = await resolveCommand(
-    { text, projects: projectNames, selectedProject: selectedProjects[0] },
-    userId,
-  );
+  const resolution: CommandResolution = chatOnly
+    ? { kind: "chat", projectKey: selectedProjects[0] ?? null, intentId: null, prompt: text, needsProject: false, reason: "forced chat (proactive fleet review)" }
+    : await resolveCommand(
+        { text, projects: projectNames, selectedProject: selectedProjects[0] },
+        userId,
+      );
 
   const namedInText =
     projectNames.find((p) => text.toLowerCase().includes(p.toLowerCase())) ?? null;

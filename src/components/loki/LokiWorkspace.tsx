@@ -184,10 +184,11 @@ export function LokiWorkspace({
     text: string,
     choice: ModelChoice = {},
     attachments: Attachment[] = [],
-    opts: { selectedProjectsOverride?: string[]; dispatchOnly?: boolean } = {},
+    opts: { selectedProjectsOverride?: string[]; dispatchOnly?: boolean; chatOnly?: boolean } = {},
   ) => {
     const scopedProjects = opts.selectedProjectsOverride ?? selectedProjects;
     const dispatchOnly = opts.dispatchOnly ?? false;
+    const chatOnly = opts.chatOnly ?? false;
     setError(null);
     setSending(true);
     // Ensure a thread exists; a fresh page send creates one implicitly.
@@ -216,6 +217,7 @@ export function LokiWorkspace({
         text,
         selectedProjects: scopedProjects,
         ...(dispatchOnly ? { dispatchOnly: true } : {}),
+        ...(chatOnly ? { chatOnly: true } : {}),
         // Model picker — omitted keys mean "Auto" (project default).
         ...(choice.agent ? { agent: choice.agent } : {}),
         ...(choice.model ? { model: choice.model } : {}),
@@ -286,7 +288,7 @@ export function LokiWorkspace({
             messages={messages}
             sending={sending}
             onPickProject={dispatchWithProject}
-            onStart={(prompt) => void send(prompt)}
+            onStart={(prompt) => void send(prompt, {}, [], { chatOnly: true, selectedProjectsOverride: [] })}
           />
         </div>
         {error && <p className="ui-error">{error}</p>}
