@@ -286,6 +286,7 @@ export function LokiWorkspace({
             messages={messages}
             sending={sending}
             onPickProject={dispatchWithProject}
+            onStart={(prompt) => void send(prompt)}
           />
         </div>
         {error && <p className="ui-error">{error}</p>}

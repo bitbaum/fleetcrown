@@ -2,10 +2,11 @@
 
 import { useEffect, useRef } from "react";
 import Link from "next/link";
-import { ExternalLink, MessageSquare, Monitor, TerminalSquare } from "lucide-react";
+import { ExternalLink, Monitor, Sparkles, TerminalSquare } from "lucide-react";
 import { MarkdownText } from "@/components/ui/markdown-text";
 import type { LokiMessage } from "./types";
 import { dispatchStatusLabel } from "@/lib/dispatch-status";
+import { LOKI_PROACTIVE_STARTERS } from "@/config/loki-suggested-actions";
 
 /** Human-readable label for an assistant turn's kind badge. SSOT for the
  *  small set of kinds the messages route emits. */
@@ -121,10 +122,13 @@ export function Transcript({
   messages,
   sending,
   onPickProject,
+  onStart,
 }: {
   messages: LokiMessage[];
   sending: boolean;
   onPickProject?: (project: string, pendingText: string) => void;
+  /** Send a full prompt (proactive starters on the empty state). */
+  onStart?: (prompt: string) => void;
 }) {
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -133,16 +137,33 @@ export function Transcript({
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length, sending]);
 
-  // Empty transcript — fresh thread (or none selected) with nothing in flight.
+  // Empty transcript — instead of a passive "nothing here", Loki proactively
+  // offers to look across the whole fleet. One tap runs a fleet-wide review from
+  // its full context; it surfaces what needs attention and asks what it needs.
   if (messages.length === 0 && !sending) {
     return (
       <div className="flex min-h-0 flex-1 items-center justify-center">
-        <div className="ui-empty-block ui-empty-block-md">
-          <MessageSquare className="ui-empty-icon" />
-          <p className="ui-empty-title">Nothing here yet</p>
+        <div className="w-full max-w-md text-center">
+          <Sparkles className="ui-empty-icon mx-auto" />
+          <p className="ui-empty-title">Loki is watching your whole fleet</p>
           <p className="ui-empty-helper">
-            Ask anything, or dispatch a command like &ldquo;code review for kivvi&rdquo;.
+            Ask anything — or let it look across your projects and tell you what needs you.
           </p>
+          {onStart && (
+            <div className="mt-5 flex flex-col gap-2">
+              {LOKI_PROACTIVE_STARTERS.map((s, i) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => onStart(s.prompt)}
+                  className={i === 0 ? "ui-btn-primary w-full justify-center gap-2" : "ui-btn-secondary w-full justify-center gap-2"}
+                >
+                  {i === 0 && <Sparkles className="h-4 w-4" />}
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     );
