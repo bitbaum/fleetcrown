@@ -628,15 +628,15 @@ async function handleCommand(
             // never ran was being acked ok/verified with the UI cheerfully
             // saying "starting shortly" (dogfood 2026-07-10: dispatches 401'd
             // while every layer reported success). The 401 also lands in the
-            // transcript AFTER the generate-verify window on a fresh/slow launch,
-            // so a single check races it — poll briefly when the agent didn't
-            // verifiably generate. On a real success one check returns false.
-            let authFailed = detectAuthFailure(dir)
-            if (!authFailed && !verified) {
-              for (let i = 0; i < 6 && !authFailed; i++) {
-                await asleep(2000)
-                authFailed = detectAuthFailure(dir)
-              }
+            // transcript slightly AFTER the generate-verify window, so a single
+            // check races it. Poll for ~12s REGARDLESS of verify (a verified 401
+            // is exactly the false-positive we must catch). This runs on the
+            // background ack, not the operator's initial feedback, so the wait
+            // never delays the person; on a real success every check is false.
+            let authFailed = false
+            for (let i = 0; i < 6 && !authFailed; i++) {
+              authFailed = detectAuthFailure(dir)
+              if (!authFailed && i < 5) await asleep(2000)
             }
             if (authFailed) {
               ok = false
