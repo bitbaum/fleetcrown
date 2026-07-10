@@ -1,11 +1,51 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ExternalLink, Monitor, Sparkles, TerminalSquare } from "lucide-react";
 import { MarkdownText } from "@/components/ui/markdown-text";
 import type { LokiMessage } from "./types";
-import { dispatchStatusLabel } from "@/lib/dispatch-status";
+import { dispatchStatusLabel, type DispatchLiveView } from "@/lib/dispatch-status";
+
+const DISPATCH_DOT: Record<DispatchLiveView["tone"], string> = {
+  positive: "ui-dot-positive",
+  warning: "ui-dot-warning",
+  negative: "ui-dot-negative",
+  neutral: "ui-dot-neutral",
+};
+
+/** Poll a queued dispatch's live status so the footer tells the truth as it
+ *  unfolds (queued → picked up → ran/failed) instead of freezing on the
+ *  optimistic snapshot. No commandId (direct/legacy dispatch) → no polling,
+ *  and the static footer is used. Stops as soon as the command settles. */
+function useDispatchLiveStatus(commandId: string | null): DispatchLiveView | null {
+  const [view, setView] = useState<DispatchLiveView | null>(null);
+  useEffect(() => {
+    if (!commandId) return;
+    let active = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const poll = async () => {
+      try {
+        const res = await fetch(`/api/control/commands/${commandId}`);
+        if (res.ok) {
+          const v = (await res.json()) as DispatchLiveView;
+          if (!active) return;
+          setView(v);
+          if (v.terminal) return;
+        }
+      } catch {
+        /* transient — retry below */
+      }
+      if (active) timer = setTimeout(poll, 2500);
+    };
+    void poll();
+    return () => {
+      active = false;
+      if (timer) clearTimeout(timer);
+    };
+  }, [commandId]);
+  return view;
+}
 import { LOKI_PROACTIVE_STARTERS } from "@/config/loki-suggested-actions";
 
 /** Human-readable label for an assistant turn's kind badge. SSOT for the
@@ -20,6 +60,10 @@ const KIND_LABEL: Record<string, string> = {
  *  is running, queued, or stuck (runner offline), and links into Control to
  *  watch it. Reads the meta the messages route stamps on dispatch turns. */
 function DispatchFooter({ meta }: { meta: Record<string, unknown> | null }) {
+  // Hook first — before any early return — to satisfy rules-of-hooks. commandId
+  // is read defensively so it's safe even when meta is null.
+  const commandId = typeof meta?.commandId === "string" ? meta.commandId : null;
+  const live = useDispatchLiveStatus(commandId);
   if (!meta) return null;
   const projectKey = typeof meta.projectKey === "string" ? meta.projectKey : null;
   const projectKeys = projectKey
@@ -31,12 +75,16 @@ function DispatchFooter({ meta }: { meta: Record<string, unknown> | null }) {
   const failed = meta.ok === false;
   const runnerConnected =
     typeof meta.runnerConnected === "boolean" ? meta.runnerConnected : null;
-  const { label: status, warn } = dispatchStatusLabel({
+  const { label: staticStatus, warn } = dispatchStatusLabel({
     ok: failed ? false : true,
     mode: typeof meta.mode === "string" ? meta.mode : null,
     warning: typeof meta.warning === "string" ? meta.warning : null,
     runnerConnected,
   });
+  // Live status supersedes the frozen snapshot once the runner acts on the
+  // command. Absent (no commandId / not yet claimed) → the static label stands.
+  const status = live ? live.label : staticStatus;
+  const dotClass = live ? DISPATCH_DOT[live.tone] : warn ? "ui-dot-warning" : "ui-dot-positive";
   // Only present when the operator pinned a non-default model in the composer.
   const agent = typeof meta.agent === "string" ? meta.agent : null;
   const model = typeof meta.model === "string" ? meta.model : null;
@@ -50,8 +98,9 @@ function DispatchFooter({ meta }: { meta: Record<string, unknown> | null }) {
   return (
     <div className="ui-loki-dispatch-card">
       <div className="ui-loki-dispatch-status">
-        <span className={warn ? "ui-dot-warning" : "ui-dot-positive"} />
+        <span className={dotClass} />
         <span className="font-medium text-text-primary">{status}</span>
+        {live?.detail && <span className="text-text-tertiary">{live.detail}</span>}
         <span className="text-text-tertiary">Target: {targetLabel}</span>
         {pinned && <span className="text-text-tertiary">Agent: {pinned}</span>}
       </div>

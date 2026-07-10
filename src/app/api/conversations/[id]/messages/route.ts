@@ -150,6 +150,12 @@ async function persistDispatch(opts: DispatchOpts): Promise<ConversationMessage>
     runnerConnected:
       typeof inject.body.runnerConnected === "boolean" ? inject.body.runnerConnected : null,
   };
+  // Identifiers the transcript footer polls to show LIVE dispatch status
+  // (queued → picked up → ran/failed) instead of a frozen "starting shortly".
+  // commandId is present only for queued (cloud-drained) dispatches; runId
+  // tracks the underlying orchestration run.
+  const commandId = typeof inject.body.commandId === "string" ? inject.body.commandId : null;
+  const runId = typeof inject.body.runId === "string" ? inject.body.runId : null;
   const content = ok
     ? dispatchAssistantContent(opts.projectKey, dispatchInput)
     : `Could not dispatch to ${opts.projectKey}: ${
@@ -168,6 +174,8 @@ async function persistDispatch(opts: DispatchOpts): Promise<ConversationMessage>
       runnerConnected: dispatchInput.runnerConnected,
       agent: opts.agent ?? null,
       model: opts.model ?? null,
+      commandId,
+      runId,
     },
   });
   if (!opts.existing.conversation.projectKeys.includes(opts.projectKey)) {

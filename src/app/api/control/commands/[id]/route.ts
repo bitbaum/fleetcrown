@@ -2,6 +2,31 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCommandById, markCommandExecuted } from "@/db/queries/pending-commands";
 import { emitRunEvent } from "@/db/queries/run-events";
 import { getApiUserId } from "@/lib/session";
+import { deriveDispatchLiveStatus, type CommandLiveInput } from "@/lib/dispatch-status";
+
+// GET /api/control/commands/:id — live dispatch status the transcript footer
+// polls so a dispatch shows queued → picked up → ran/failed instead of a frozen
+// "starting shortly". Scoped to the owner; returns a settled `terminal` flag so
+// the client can stop polling.
+export async function GET(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params;
+  const userId = await getApiUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const command = await getCommandById(id);
+  if (!command || command.userId !== userId) {
+    return NextResponse.json({ error: "Command not found" }, { status: 404 });
+  }
+  const view = deriveDispatchLiveStatus({
+    claimedAt: command.claimedAt,
+    executedAt: command.executedAt,
+    result: (command.result ?? null) as CommandLiveInput["result"],
+  });
+  return NextResponse.json(view);
+}
 
 // Runner calls this to mark a command as executed.
 // PATCH /api/control/commands/:id  body: { ok: boolean, error?: string }
