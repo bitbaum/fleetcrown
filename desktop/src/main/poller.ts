@@ -622,25 +622,31 @@ async function handleCommand(
             ok = true
             workspaceId = runnerWorkspaceId(tab)
             text = launched ? `launched ${agent} (pty) + injected` : `injected to running ${agent} (pty)`
-            if (!verified) {
-              warning = detectAuthFailure(dir)
-                ? `${text}, but the agent reports dead credentials (401/login required) — run 'claude setup-token' on the runner host`
-                : `${text}, but the agent isn't generating yet — it may still be booting or already idle`
+            // Auth failure is a HARD failure, and it must WIN over a "verified"
+            // success: a 401 emits the "/login" error, which counts as output
+            // and can false-positive waitForAgentGenerating — so a dispatch that
+            // never ran was being acked ok/verified with the UI cheerfully
+            // saying "starting shortly" (dogfood 2026-07-10: dispatches 401'd
+            // while every layer reported success). The 401 also lands in the
+            // transcript AFTER the generate-verify window on a fresh/slow launch,
+            // so a single check races it — poll briefly when the agent didn't
+            // verifiably generate. On a real success one check returns false.
+            let authFailed = detectAuthFailure(dir)
+            if (!authFailed && !verified) {
+              for (let i = 0; i < 6 && !authFailed; i++) {
+                await asleep(2000)
+                authFailed = detectAuthFailure(dir)
+              }
             }
-            // Auth failure is a HARD failure even when verify passed. A 401
-            // emits the "/login" error, which flips the agent off "idle" and
-            // false-positives waitForAgentGenerating — so a dispatch that never
-            // ran gets acked ok/verified and the UI cheerfully says "starting
-            // shortly" (dogfood 2026-07-10: three dispatches 401'd while every
-            // layer reported success). Re-check the fresh transcript here and
-            // turn a dead-credentials dispatch into an honest, actionable fail.
-            if (detectAuthFailure(dir)) {
+            if (authFailed) {
               ok = false
               verified = false
               warning = undefined
               error =
                 `${agent} is not authenticated (401 / login required) — the prompt was delivered but the agent can't run. ` +
                 `On the runner host, remove any stale ~/.claude/.credentials.json and set CLAUDE_CODE_OAUTH_TOKEN (claude setup-token).`
+            } else if (!verified) {
+              warning = `${text}, but the agent isn't generating yet — it may still be booting or already idle`
             }
             break
           }
