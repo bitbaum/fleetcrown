@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { Copy, Check } from "lucide-react";
+import { useClipboard } from "@/hooks/use-clipboard";
 
 /**
  * Code block + one-click copy button for terminal commands shown in onboarding flows.
@@ -9,16 +9,10 @@ import { Copy, Check } from "lucide-react";
  * promote to components/ui/ if a second feature needs it.
  */
 export function CopyableCommand({ command }: { command: string }) {
-  const [copied, setCopied] = useState(false);
+  const { copied, copy } = useClipboard();
 
-  async function handleCopy() {
-    try {
-      await navigator.clipboard.writeText(command);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      // Clipboard API can fail in non-secure contexts; user can fall back to manual select-all.
-    }
+  function handleCopy() {
+    copy(command);
   }
 
   return (

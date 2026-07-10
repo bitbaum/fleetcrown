@@ -6,6 +6,7 @@ import type { GoalWithChildren } from "@/db/queries/goals";
 import type { Milestone } from "@/db/schema/goals";
 import { patchGoal, createGoal } from "@/lib/api/goals";
 import { GOAL_STATUS } from "@/lib/constants/statuses";
+import { TOAST_MEDIUM_MS } from "@/lib/constants/timings";
 import { useInlineEdit } from "./use-inline-edit";
 
 export function useGoalCard(goal: GoalWithChildren) {
@@ -60,7 +61,7 @@ export function useGoalCard(goal: GoalWithChildren) {
     }).then((saved) => {
       if (!saved) {
         setTitleError("Failed to save — try again");
-        setTimeout(() => setTitleError(null), 4000);
+        setTimeout(() => setTitleError(null), TOAST_MEDIUM_MS);
       }
     });
   };
@@ -74,7 +75,7 @@ export function useGoalCard(goal: GoalWithChildren) {
     }).then((saved) => {
       if (!saved) {
         setDescError("Failed to save — try again");
-        setTimeout(() => setDescError(null), 4000);
+        setTimeout(() => setDescError(null), TOAST_MEDIUM_MS);
       }
     });
   };
@@ -91,7 +92,7 @@ export function useGoalCard(goal: GoalWithChildren) {
       if (newStatus === GOAL_STATUS.COMPLETED) setProgress(100);
     } catch {
       setStatusError("Failed to save — try again");
-      setTimeout(() => setStatusError(null), 4000);
+      setTimeout(() => setStatusError(null), TOAST_MEDIUM_MS);
     } finally {
       setTogglingStatus(false);
     }
@@ -107,7 +108,7 @@ export function useGoalCard(goal: GoalWithChildren) {
       setStatus(newStatus);
     } catch {
       setStatusError("Failed to save — try again");
-      setTimeout(() => setStatusError(null), 4000);
+      setTimeout(() => setStatusError(null), TOAST_MEDIUM_MS);
     } finally {
       setAbandoningStatus(false);
     }

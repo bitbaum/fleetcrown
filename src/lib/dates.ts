@@ -73,6 +73,32 @@ export function deadlineLabel(date: Date | string | null | undefined): {
   };
 }
 
+/**
+ * Compact elapsed duration from a whole-second count: "45s" / "3m 12s" /
+ * "1h 20m". Seconds are only shown below an hour; once past an hour the
+ * display drops to hour+minute granularity. Used for live run timers.
+ */
+export function formatElapsedSeconds(seconds: number): string {
+  if (seconds >= 3600) {
+    return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
+  }
+  if (seconds >= 60) {
+    return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
+  }
+  return `${seconds}s`;
+}
+
+/**
+ * Compact duration from a whole-minute count: "<1m" / "42m" / "1h 3m".
+ * Sub-minute durations collapse to "<1m" (the caller has already rounded to
+ * minutes, so a real zero is indistinguishable from "just under a minute").
+ */
+export function formatDurationMinutes(minutes: number): string {
+  if (minutes < 1) return "<1m";
+  if (minutes < 60) return `${minutes}m`;
+  return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
+}
+
 /** Advance a subscription due date by one billing period. */
 export function advanceDueDate(current: string | null, frequency: string | null): string {
   const base = current ? new Date(current) : new Date();

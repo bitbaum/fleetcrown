@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Check, Copy, ExternalLink, Loader2, Share2, X } from "lucide-react";
 import { deleteJson, postJson, throwApiError } from "@/lib/api/fetch";
+import { useClipboard } from "@/hooks/use-clipboard";
 
 type ShareSettings = {
   audience: "advisor" | "team" | "public";
@@ -38,7 +39,9 @@ export function ProjectSharePanel({
   const [share, setShare] = useState<ExistingShare | null>(initialShare);
   const [settings, setSettings] = useState<ShareSettings>(() => initialShare ?? DEFAULTS);
   const [busy, setBusy] = useState(false);
-  const [copied, setCopied] = useState(false);
+  // Custom 1400ms reset — matches this panel's pre-existing feedback duration
+  // (not one of the named timing constants).
+  const { copied, copy } = useClipboard(1400);
   const [error, setError] = useState<string | null>(null);
   const hasShare = Boolean(share);
 
@@ -83,12 +86,10 @@ export function ProjectSharePanel({
     }
   }
 
-  async function copy() {
+  function copyLink() {
     if (!share?.url) return;
     const url = share.url.startsWith("http") ? share.url : `${window.location.origin}${share.url}`;
-    await navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1400);
+    copy(url);
   }
 
   return (
@@ -145,7 +146,7 @@ export function ProjectSharePanel({
             </button>
             {share && (
               <>
-                <button type="button" onClick={copy} className="ui-btn-secondary gap-1.5">
+                <button type="button" onClick={copyLink} className="ui-btn-secondary gap-1.5">
                   {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                   {copied ? "Copied" : "Copy"}
                 </button>

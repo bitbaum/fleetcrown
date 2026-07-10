@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Check, Copy, ExternalLink } from "lucide-react";
 import { DESKTOP_DOWNLOAD, type DesktopDownloadPlatform } from "@/config/marketing-content";
 import { FEEDBACK_MEDIUM_MS } from "@/lib/constants/timings";
+import { useClipboard } from "@/hooks/use-clipboard";
 
 type PlatformId = DesktopDownloadPlatform["id"];
 
@@ -239,25 +240,14 @@ function ComingSoonPanel({ platform }: { platform: Extract<DesktopDownloadPlatfo
 }
 
 function CopyableCommand({ command }: { command: string }) {
-  const [copied, setCopied] = useState(false);
-
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(command);
-      setCopied(true);
-      setTimeout(() => setCopied(false), FEEDBACK_MEDIUM_MS);
-    } catch {
-      // Clipboard API can fail on insecure origins or restricted browsers —
-      // the code is still visible and selectable, so this is non-blocking.
-    }
-  }
+  const { copied, copy } = useClipboard(FEEDBACK_MEDIUM_MS);
 
   return (
     <div className="ui-public-download-command-row">
       <code>{command}</code>
       <button
         type="button"
-        onClick={copy}
+        onClick={() => copy(command)}
         aria-label={copied ? "Copied" : "Copy command"}
         className="ui-public-download-command-copy"
       >

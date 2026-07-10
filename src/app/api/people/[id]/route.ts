@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPersonDetail, patchPerson, deletePerson, PatchPersonBody } from "@/db/queries/people";
-import { readIdParam, readJsonBody } from "@/lib/api/route-helpers";
+import { readIdParam, readJsonBody, isUniqueViolation } from "@/lib/api/route-helpers";
 import { requirePrivateApiAccess } from "@/lib/private-zone-api";
 
 export async function PATCH(
@@ -21,7 +21,7 @@ export async function PATCH(
     if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json({ ok: true });
   } catch (e: unknown) {
-    if (e && typeof e === "object" && "code" in e && e.code === "23505") {
+    if (isUniqueViolation(e)) {
       return NextResponse.json({ error: "A person with that name already exists" }, { status: 409 });
     }
     throw e;

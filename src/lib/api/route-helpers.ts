@@ -83,6 +83,21 @@ export function handleDuplicateEntityNameError(
   return null;
 }
 
+/**
+ * True when a caught error is a Postgres unique-constraint violation
+ * (SQLSTATE 23505). Drizzle/pg surface the driver error with a `code`
+ * field; route handlers use this to turn a duplicate insert into a 409
+ * instead of a 500.
+ */
+export function isUniqueViolation(e: unknown): boolean {
+  return (
+    !!e &&
+    typeof e === "object" &&
+    "code" in e &&
+    (e as { code?: string }).code === "23505"
+  );
+}
+
 // Re-export zod so route files don't have to import from "zod" + this
 // helper file — keeps the validation surface in one place.
 export { z };

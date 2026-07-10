@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, X, Check, Loader2, Trash2 } from "lucide-react";
 import { getJson, postJson, deleteJson } from "@/lib/api/fetch";
+import { FEEDBACK_SHORT_MS } from "@/lib/constants/timings";
 import type { Capture } from "@/db/schema";
 
 type CaptureItem = Pick<Capture, "id" | "body" | "createdAt">;
@@ -46,7 +47,7 @@ export function QuickCaptureButton() {
       setDone(true);
       setRecent((prev) => [data.capture, ...prev]);
       setBody("");
-      setTimeout(() => { setDone(false); }, 1500);
+      setTimeout(() => { setDone(false); }, FEEDBACK_SHORT_MS);
       router.refresh();
     } catch {
       setError("Something went wrong");

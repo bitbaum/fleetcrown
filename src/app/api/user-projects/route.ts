@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUserId } from "@/lib/session";
-import { readJsonBody, z } from "@/lib/api/route-helpers";
+import { readJsonBody, z, isUniqueViolation } from "@/lib/api/route-helpers";
 import { emptyToUndefined } from "@/lib/validation";
 import { createUserProject, ensureUserProjectEntityLinks, countActiveProjects } from "@/db/queries/user-projects";
 import { getTopActiveGoalByProject } from "@/db/queries/project-context";
@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
     const project = await createUserProject({ userId, ...dataOrResp, name });
     return NextResponse.json(project, { status: 201 });
   } catch (e: unknown) {
-    if (e && typeof e === "object" && "code" in e && e.code === "23505") {
+    if (isUniqueViolation(e)) {
       return NextResponse.json(
         { error: "You already have a project with that name." },
         { status: 409 },

@@ -14,7 +14,7 @@
  */
 import { type NextRequest, NextResponse } from "next/server";
 import { getApiUserId } from "@/lib/session";
-import { readIdParam, readJsonBody, z } from "@/lib/api/route-helpers";
+import { readIdParam, readJsonBody, z, isUniqueViolation } from "@/lib/api/route-helpers";
 import {
   countActiveProjects,
   createUserProject,
@@ -289,9 +289,7 @@ export async function POST(
       const created = await createUserProject({ userId, name });
       projectName = created.name;
     } catch (e: unknown) {
-      const duplicate =
-        e && typeof e === "object" && "code" in e && e.code === "23505";
-      if (!duplicate) throw e;
+      if (!isUniqueViolation(e)) throw e;
     }
 
     if (createReq.dispatchAfter) {

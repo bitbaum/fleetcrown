@@ -3,7 +3,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { getSessionUserId } from "@/lib/session";
-import { readIdParam, readJsonBody } from "@/lib/api/route-helpers";
+import { readIdParam, readJsonBody, isUniqueViolation } from "@/lib/api/route-helpers";
 import { readCronJobs } from "@/lib/crons";
 import { patchProject, deleteProject, PatchProjectBody, resolveProjectDetailWithOrgFallback } from "@/db/queries/projects";
 import { scheduleProjectProfileReindexByEntityId } from "@/lib/rag/reindex-project-profile";
@@ -56,7 +56,7 @@ export async function PATCH(
     }
     return NextResponse.json({ ok: true });
   } catch (e: unknown) {
-    if (e && typeof e === "object" && "code" in e && e.code === "23505") {
+    if (isUniqueViolation(e)) {
       return NextResponse.json({ error: "A project with that name already exists" }, { status: 409 });
     }
     throw e;

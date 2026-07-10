@@ -4,6 +4,8 @@ import { useState } from "react";
 import { X } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { postJson } from "@/lib/api/fetch";
+import { useClipboard } from "@/hooks/use-clipboard";
+import { FEEDBACK_MEDIUM_MS } from "@/lib/constants/timings";
 import {
   type Brief, type BootstrapResult,
   BRIEF_DEFAULTS,
@@ -33,7 +35,7 @@ export function BootstrapModal({
   const [result, setResult] = useState<BootstrapResult | null>(null);
   const [launching, setLaunching] = useState(false);
   const [launchError, setLaunchError] = useState("");
-  const [copied, setCopied] = useState(false);
+  const { copied, copy } = useClipboard(FEEDBACK_MEDIUM_MS);
 
   async function generateBrief() {
     if (!idea.trim() || generating) return;
@@ -117,11 +119,9 @@ export function BootstrapModal({
     }
   }
 
-  async function copyPrompt() {
+  function copyPrompt() {
     if (!result?.launchPrompt) return;
-    await navigator.clipboard.writeText(result.launchPrompt);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    copy(result.launchPrompt);
   }
 
   const STEP_LABELS: Record<Step, { title: string; sub: string }> = {

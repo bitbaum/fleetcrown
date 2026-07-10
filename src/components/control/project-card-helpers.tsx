@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { secondsAgo } from "@/lib/dates";
+import { secondsAgo, formatElapsedSeconds } from "@/lib/dates";
 import { getIntentLabel, getAdapterLabel } from "@/config/control-intents";
 import type { ProjectState } from "@/lib/control-types";
 
@@ -88,11 +88,7 @@ export function RunningBanner({ label, promptKey, startedAt }: { label: string; 
     return () => clearInterval(id);
   }, [startedAt]);
 
-  const elapsedStr = elapsed >= 3600
-    ? `${Math.floor(elapsed / 3600)}h ${Math.floor((elapsed % 3600) / 60)}m`
-    : elapsed >= 60
-    ? `${Math.floor(elapsed / 60)}m ${elapsed % 60}s`
-    : `${elapsed}s`;
+  const elapsedStr = formatElapsedSeconds(elapsed);
 
   const timerClass = elapsed > 900 ? "text-status-warning" : "text-text-muted";
   const isCustom = promptKey === "custom";

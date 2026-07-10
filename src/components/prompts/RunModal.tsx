@@ -7,7 +7,7 @@ import type { PromptTemplate } from "@/config/prompt-library";
 import type { Project } from "./types";
 import { Modal } from "@/components/ui/modal";
 import { postJson } from "@/lib/api/fetch";
-import { FEEDBACK_SHORT_MS } from "@/lib/constants/timings";
+import { useClipboard } from "@/hooks/use-clipboard";
 
 export function RunModal({
   template,
@@ -26,7 +26,7 @@ export function RunModal({
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const { copied, copy } = useClipboard();
 
   const resolvedMessage =
     template.scope === "project" && projectName
@@ -53,11 +53,7 @@ export function RunModal({
   };
 
   const handleCopy = () => {
-    if (result) {
-      navigator.clipboard.writeText(result);
-      setCopied(true);
-      setTimeout(() => setCopied(false), FEEDBACK_SHORT_MS);
-    }
+    if (result) copy(result);
   };
 
   return (

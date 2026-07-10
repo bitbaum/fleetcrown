@@ -4,6 +4,7 @@ import { useState } from "react";
 import { CheckCircle, Loader2, Plus, X } from "lucide-react";
 import type { Milestone } from "@/db/schema/goals";
 import { patchGoal } from "@/lib/api/goals";
+import { TOAST_MEDIUM_MS } from "@/lib/constants/timings";
 import { DeleteButton } from "@/components/ui/delete-button";
 
 export function AddMilestoneInline({
@@ -103,7 +104,7 @@ export function MilestoneRow({
 
   const flashError = (msg: string) => {
     setError(msg);
-    setTimeout(() => setError(null), 4000);
+    setTimeout(() => setError(null), TOAST_MEDIUM_MS);
   };
 
   const toggle = async () => {

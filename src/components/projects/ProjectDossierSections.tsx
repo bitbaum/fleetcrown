@@ -11,7 +11,7 @@ import type { DevLogEntry } from "@/db/schema/user-projects";
 import { DevLogList } from "@/components/shared/DevLogList";
 import { GoalProgressBar } from "@/components/shared/GoalProgressBar";
 import { GoalEditor } from "@/components/projects/GoalEditor";
-import { timeAgo, shortTimeAgo } from "@/lib/dates";
+import { timeAgo, shortTimeAgo, formatDurationMinutes } from "@/lib/dates";
 import { DOSSIER_STALE_MS } from "@/lib/project-display";
 import { APP_LOCALE } from "@/lib/constants";
 
@@ -39,9 +39,7 @@ function SectionShell({ kicker, title, children }: { kicker: string; title: stri
 function runDuration(run: ProjectRunRow): string | null {
   if (!run.finishedAt) return null;
   const mins = Math.round((run.finishedAt.getTime() - run.startedAt.getTime()) / 60_000);
-  if (mins < 1) return "<1m";
-  if (mins < 60) return `${mins}m`;
-  return `${Math.floor(mins / 60)}h ${mins % 60}m`;
+  return formatDurationMinutes(mins);
 }
 
 /** NOW — live session state + the latest handoff's health signals + brief. */

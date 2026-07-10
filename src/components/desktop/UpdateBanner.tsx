@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ArrowUpCircle, Copy, Check, RefreshCw, X } from "lucide-react";
+import { useClipboard } from "@/hooks/use-clipboard";
 import type { UpdateState } from "./types";
 
 /**
@@ -30,7 +31,7 @@ const DISMISS_KEY = "fleetcrown:update-banner-dismissed-version";
 
 export function UpdateBanner() {
   const [state, setState] = useState<UpdateState | null>(null);
-  const [copied, setCopied] = useState(false);
+  const { copied, copy } = useClipboard();
   const [installing, setInstalling] = useState(false);
   const [dismissedVersion, setDismissedVersion] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
@@ -68,9 +69,7 @@ export function UpdateBanner() {
   }
 
   function onCopy(text: string) {
-    void navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+    copy(text);
   }
 
   async function onRestartToInstall() {

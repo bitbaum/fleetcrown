@@ -1,13 +1,12 @@
 "use client";
 
-import { useState } from "react";
 import { CheckCircle, Clipboard, Loader2, X } from "lucide-react";
 import { LokiDispatchButton } from "@/components/shared/LokiDispatchButton";
 import type { Milestone } from "@/db/schema/goals";
 import { patchGoal } from "@/lib/api/goals";
 import { deadlineLabel, toLocalDateStr } from "@/lib/dates";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
-import { FEEDBACK_SHORT_MS } from "@/lib/constants/timings";
+import { useClipboard } from "@/hooks/use-clipboard";
 
 export function ProgressInput({
   goalId,
@@ -168,12 +167,10 @@ function buildGoalPrompt({ title, description, progress, milestones, targetDate,
 }
 
 export function CopyGoalPromptButton(props: GoalPromptProps) {
-  const [copied, setCopied] = useState(false);
+  const { copied, copy } = useClipboard();
 
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(buildGoalPrompt(props));
-    setCopied(true);
-    setTimeout(() => setCopied(false), FEEDBACK_SHORT_MS);
+  const handleCopy = () => {
+    copy(buildGoalPrompt(props));
   };
 
   return (
