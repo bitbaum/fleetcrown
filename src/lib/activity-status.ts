@@ -81,7 +81,13 @@ export function promptDisplayBody(row: PromptBodyInput): string {
   if (custom && !isOperatorEnvelope(custom)) return custom;
   const resolved = row.resolvedPrompt ? stripHarnessScaffolding(row.resolvedPrompt) : "";
   if (resolved && !isOperatorEnvelope(resolved)) return resolved;
-  return `${getIntentLabel(row.intent)} — assembled operator dispatch (brief + goals + autopilot rules; full text hidden)`;
+  const label = getIntentLabel(row.intent);
+  // Tag "assembled operator dispatch" ONLY when we actually hid an operator
+  // envelope. A legacy row with no prompt text just shows the intent label —
+  // it must not claim a ~2,000-word dispatch was hidden when there was none.
+  return isOperatorEnvelope(custom) || isOperatorEnvelope(resolved)
+    ? `${label} — assembled operator dispatch (brief + goals + autopilot rules; full text hidden)`
+    : label;
 }
 
 // Strip the harness envelope and collapse to null when nothing human remains.
