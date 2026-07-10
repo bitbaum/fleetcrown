@@ -145,8 +145,13 @@ rollback_box() {
   fi
 }
 
+# Keepalive on the rsync transport: without it a dead TCP connection wedges the
+# transfer indefinitely (observed a 15-min stall at 0 bytes/s with the box fully
+# reachable). ServerAlive drops the channel after ~90s of silence so the deploy
+# fails fast and can be rerun, rather than hanging past every timeout below.
+RSYNC_SSH="ssh -o ConnectTimeout=10 -o ServerAliveInterval=15 -o ServerAliveCountMax=6"
 echo "→ rsync standalone → $HOST:$APP_DIR"
-rsync -az --delete \
+rsync -az --delete -e "$RSYNC_SSH" \
   --exclude '.env' \
   --exclude 'launch.sh' \
   --exclude 'backups' \
@@ -235,7 +240,7 @@ echo "✓ deployed $(git -C "$PROJECT_DIR" rev-parse --short "${REF:-HEAD}") to 
 # drift between deploys.
 BRIDGE_DIR="/opt/fleetcrown/bridge"
 echo "→ sync event bridge → $HOST:$BRIDGE_DIR"
-rsync -az --delete --no-perms --omit-dir-times \
+rsync -az --delete --no-perms --omit-dir-times -e "$RSYNC_SSH" \
   --exclude '.env' \
   --exclude 'node_modules' \
   "$PROJECT_DIR/bridge/" "$HOST:$BRIDGE_DIR/"
@@ -250,16 +255,16 @@ echo "  ✓ fleetcrown-bridge active"
 # so poller/pty-runtime fixes reach the always-on executor.
 RUNNER_DIR="/opt/fleetcrown/runner"
 echo "→ sync box-runner code → $HOST:$RUNNER_DIR"
-rsync -az --no-perms --omit-dir-times \
+rsync -az --no-perms --omit-dir-times -e "$RSYNC_SSH" \
   "$PROJECT_DIR/src/" "$HOST:$RUNNER_DIR/src/"
-rsync -az --no-perms --omit-dir-times \
+rsync -az --no-perms --omit-dir-times -e "$RSYNC_SSH" \
   "$PROJECT_DIR/desktop/src/" "$HOST:$RUNNER_DIR/desktop/src/"
-rsync -az --no-perms --omit-dir-times \
+rsync -az --no-perms --omit-dir-times -e "$RSYNC_SSH" \
   "$PROJECT_DIR/scripts/box-runner.ts" \
   "$PROJECT_DIR/scripts/mint-box-runner-token.ts" \
   "$PROJECT_DIR/scripts/reindex-knowledge.ts" \
   "$HOST:$RUNNER_DIR/scripts/"
-rsync -a "$PROJECT_DIR/tsconfig.json" "$HOST:$RUNNER_DIR/tsconfig.json"
+rsync -a -e "$RSYNC_SSH" "$PROJECT_DIR/tsconfig.json" "$HOST:$RUNNER_DIR/tsconfig.json"
 ssh "$HOST" "chown -R $RUNNER_OWNER:$RUNNER_OWNER $RUNNER_DIR/src $RUNNER_DIR/desktop $RUNNER_DIR/scripts $RUNNER_DIR/tsconfig.json"
 
 echo "→ restart fleetcrown-box-runner (cloud builder)"
