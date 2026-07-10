@@ -627,6 +627,21 @@ async function handleCommand(
                 ? `${text}, but the agent reports dead credentials (401/login required) — run 'claude setup-token' on the runner host`
                 : `${text}, but the agent isn't generating yet — it may still be booting or already idle`
             }
+            // Auth failure is a HARD failure even when verify passed. A 401
+            // emits the "/login" error, which flips the agent off "idle" and
+            // false-positives waitForAgentGenerating — so a dispatch that never
+            // ran gets acked ok/verified and the UI cheerfully says "starting
+            // shortly" (dogfood 2026-07-10: three dispatches 401'd while every
+            // layer reported success). Re-check the fresh transcript here and
+            // turn a dead-credentials dispatch into an honest, actionable fail.
+            if (detectAuthFailure(dir)) {
+              ok = false
+              verified = false
+              warning = undefined
+              error =
+                `${agent} is not authenticated (401 / login required) — the prompt was delivered but the agent can't run. ` +
+                `On the runner host, remove any stale ~/.claude/.credentials.json and set CLAUDE_CODE_OAUTH_TOKEN (claude setup-token).`
+            }
             break
           }
           // PTY launch failed → fall through to the zellij path below.
