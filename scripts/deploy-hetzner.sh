@@ -45,6 +45,25 @@ while [ $# -gt 0 ]; do
   esac
 done
 
+# Alert the operator (Telegram) when a deploy fails or rolls back. A silently
+# broken ship + a silent rollback both left the box in an unknown state with
+# nobody told; this closes that loop. Reads the box's own bot creds and sends
+# from the box. Best-effort — a failed alert never affects the deploy. The
+# message is base64'd so arbitrary text survives the ssh boundary unquoted.
+deploy_alert() {
+  local b64; b64=$(printf '%s' "$1" | base64 -w0 2>/dev/null || printf '%s' "$1" | base64)
+  ssh "$HOST" "bash -s" <<REMOTE 2>/dev/null || true
+E=/opt/fleetcrown/app/.env
+T=\$(grep -oP '^TELEGRAM_BOT_TOKEN=\K.*' "\$E" 2>/dev/null | tr -d '"')
+C=\$(grep -oP '^APP_TELEGRAM_CHAT_ID=\K.*' "\$E" 2>/dev/null | tr -d '"')
+MSG=\$(echo '$b64' | base64 -d)
+[ -n "\$T" ] && [ -n "\$C" ] && curl -s -m 10 -o /dev/null \
+  "https://api.telegram.org/bot\$T/sendMessage" \
+  --data-urlencode "chat_id=\$C" \
+  --data-urlencode "text=🚨 FleetCrown deploy: \$MSG" || true
+REMOTE
+}
+
 # ── Serialize deploys (fix: concurrent-build collision) ──────────────────────
 # Two near-simultaneous pushes to main each background a deploy; without a lock
 # both run `npm run build` in the shared .next tree and collide ("Another next
@@ -133,6 +152,7 @@ ssh "$HOST" "test -d '$APP_DIR' && rsync -a --delete --exclude backups '$APP_DIR
 # broken deploy doesn't strand the box. --delete but --exclude backups, so the
 # dump store is never touched; .env/launch.sh come from the snapshot.
 rollback_box() {
+  local why="${1:-deploy failed}"
   echo "↩ deploy failed after ship — rolling box back to previous build" >&2
   if ssh "$HOST" "test -d '$APP_DIR.prev' \
     && rsync -a --delete --exclude backups '$APP_DIR.prev/' '$APP_DIR/' \
@@ -140,8 +160,10 @@ rollback_box() {
     && systemctl restart fleetcrown-app && sleep 3 \
     && systemctl is-active fleetcrown-app >/dev/null"; then
     echo "  ✓ rolled back to previous build" >&2
+    deploy_alert "❌ $why — auto-rolled back to the previous build. Box is serving the last-good version; the ship was aborted."
   else
     echo "  ✗ ROLLBACK FAILED — box needs manual attention" >&2
+    deploy_alert "🔥 $why AND ROLLBACK FAILED — the box needs manual attention NOW ($APP_DIR may be in a torn state)."
   fi
 }
 
@@ -168,7 +190,7 @@ if ! timeout 180 ssh -o ServerAliveInterval=15 -o ServerAliveCountMax=6 "$HOST" 
   && systemctl restart fleetcrown-app \
   && sleep 3 \
   && systemctl is-active fleetcrown-app >/dev/null"; then
-  echo "✗ restart failed on box" >&2; rollback_box; exit 1
+  echo "✗ restart failed on box" >&2; rollback_box "fleetcrown-app failed to restart"; exit 1
 fi
 
 # Post-deploy verification — fails the deploy LOUDLY instead of shipping a
@@ -199,7 +221,7 @@ if ! ssh "$HOST" 'set -e
     echo "$prov" | grep -q "\"$p\"" || { echo "  ✗ auth provider missing: $p"; exit 1; }
   done
   echo "  ✓ providers mounted: github google x-1a email-password"'; then
-  echo "✗ post-deploy verification failed" >&2; rollback_box; exit 1
+  echo "✗ post-deploy verification failed" >&2; rollback_box "post-deploy verification failed (sign-in / health / providers)"; exit 1
 fi
 
 # Schema-drift guard against the BOX database. The pre-push check (scripts/
@@ -229,6 +251,12 @@ if [ -n "$MISSING" ] || [ -n "$MISSING_COLUMNS" ]; then
   echo "  ✗ box DB is missing declared columns:"
   [ -n "$MISSING_COLUMNS" ] && printf '%s\n' "$MISSING_COLUMNS" | sed 's/^/    - /' || echo "    - none"
   echo "  → run 'DATABASE_URL=<box> npx drizzle-kit push' before trusting this deploy"
+  # The app is already live at this point but is missing tables/columns the new
+  # code needs — it will 500 on those features. Roll back to the last-good build
+  # (whose schema matched the box) and alert, rather than serve a half-broken app.
+  # Schema application stays a deliberate manual step: auto-applying DDL to prod
+  # (drops included) is not worth the blast radius; the gate + rollback is safe.
+  rollback_box "box DB is missing declared tables/columns — schema not pushed"
   exit 1
 fi
 echo "  ✓ schema: all $(printf '%s\n' "$DECLARED" | grep -c .) declared tables and $(printf '%s\n' "$DECLARED_COLUMNS" | grep -c .) declared columns present on box"
