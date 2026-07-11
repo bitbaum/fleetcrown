@@ -3,19 +3,22 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { X } from "lucide-react";
+import { MailWarning, X } from "lucide-react";
 import { ROUTES } from "@/config/auth";
 import { postJson } from "@/lib/api/fetch";
 
+// localStorage (not sessionStorage): an OPTIONAL reminder that the user chose to
+// dismiss shouldn't reappear in every new tab. Dismiss once, gone for good.
 const DISMISS_KEY = "fleetcrown-verify-email-dismiss";
 
-/** Optional verification reminder — email is not required to use the app. */
+/** Optional verification reminder — email is not required to use the app. One
+ *  calm line so it never outranks the actual page content beneath it. */
 export function EmailVerificationBanner() {
   const { data: session, status } = useSession();
   const [dismissed, setDismissed] = useState(() => {
     if (typeof window === "undefined") return false;
     try {
-      return window.sessionStorage.getItem(DISMISS_KEY) === "1";
+      return window.localStorage.getItem(DISMISS_KEY) === "1";
     } catch {
       return false;
     }
@@ -43,42 +46,27 @@ export function EmailVerificationBanner() {
 
   function dismiss() {
     try {
-      window.sessionStorage.setItem(DISMISS_KEY, "1");
+      window.localStorage.setItem(DISMISS_KEY, "1");
     } catch { /* ignore */ }
     setDismissed(true);
   }
 
   return (
-    <div className="ui-callout-accent mx-3 mb-2 mt-2 flex items-start justify-between gap-3 sm:mx-4">
-      <div className="min-w-0 text-sm leading-relaxed text-text-secondary">
-        <p className="font-medium text-text-primary">Verify your email (optional)</p>
-        <p className="mt-1">
-          {sent
-            ? "Verification link sent — check your inbox."
-            : "Helps with account recovery. You can use FleetCrown without verifying."}
-        </p>
-        {!sent && (
-          <button
-            type="button"
-            className="ui-btn-ghost ui-btn-xs mt-2"
-            disabled={sending}
-            onClick={() => void resend()}
-          >
-            {sending ? "Sending…" : "Resend link"}
-          </button>
-        )}
-        {" "}
-        <Link href={ROUTES.VERIFY_EMAIL} className="text-accent underline">
-          Learn more
-        </Link>
-      </div>
-      <button
-        type="button"
-        className="ui-btn-icon shrink-0"
-        onClick={dismiss}
-        aria-label="Dismiss"
-      >
-        <X className="h-4 w-4" />
+    <div className="ui-callout-accent mx-3 mb-2 mt-2 flex items-center gap-2 py-1.5 text-xs text-text-secondary sm:mx-4">
+      <MailWarning className="h-3.5 w-3.5 shrink-0 text-text-tertiary" />
+      <span className="min-w-0 flex-1 truncate">
+        {sent ? "Verification link sent — check your inbox." : "Verify your email for account recovery (optional)."}
+      </span>
+      {!sent && (
+        <button type="button" className="ui-btn-ghost ui-btn-xs shrink-0" disabled={sending} onClick={() => void resend()}>
+          {sending ? "Sending…" : "Resend"}
+        </button>
+      )}
+      <Link href={ROUTES.VERIFY_EMAIL} className="shrink-0 text-accent underline">
+        Learn more
+      </Link>
+      <button type="button" className="ui-btn-icon shrink-0" onClick={dismiss} aria-label="Dismiss">
+        <X className="h-3.5 w-3.5" />
       </button>
     </div>
   );
