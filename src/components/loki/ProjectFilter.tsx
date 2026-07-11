@@ -1,6 +1,7 @@
 "use client";
 
-import { Check } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Check, Search } from "lucide-react";
 import { LokiPaneBody } from "./LokiPaneBody";
 import type { LokiProject } from "./types";
 
@@ -11,6 +12,8 @@ export function ProjectFilter({
   error,
   onRetry,
   onToggle,
+  onSelectMany,
+  onClear,
 }: {
   projects: LokiProject[];
   selected: string[];
@@ -18,17 +21,64 @@ export function ProjectFilter({
   error?: string | null;
   onRetry?: () => void;
   onToggle: (name: string) => void;
+  /** Add every currently-filtered project to the selection in one click — the
+   *  whole point of multi-dispatch (same task → N projects) without N clicks. */
+  onSelectMany?: (names: string[]) => void;
+  onClear?: () => void;
 }) {
+  const [query, setQuery] = useState("");
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return q ? projects.filter((p) => p.name.toLowerCase().includes(q)) : projects;
+  }, [projects, query]);
+
   return (
-    <div className="flex h-full flex-col gap-3">
-      <h2 className="ui-kicker">Projects</h2>
+    <div className="flex h-full flex-col gap-2">
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="ui-kicker">
+          Projects{selected.length > 0 ? ` · ${selected.length}` : ""}
+        </h2>
+        <div className="flex items-center gap-1">
+          {onSelectMany && filtered.length > 0 && (
+            <button
+              type="button"
+              className="ui-btn-xs"
+              onClick={() => onSelectMany(filtered.map((p) => p.name))}
+              title={query ? "Select all matching" : "Select all projects"}
+            >
+              All{query ? ` (${filtered.length})` : ""}
+            </button>
+          )}
+          {onClear && selected.length > 0 && (
+            <button type="button" className="ui-btn-xs" onClick={onClear}>
+              Clear
+            </button>
+          )}
+        </div>
+      </div>
+
+      {projects.length > 8 && (
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-tertiary" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Filter projects…"
+            className="ui-input-compact w-full pl-7"
+            aria-label="Filter projects"
+          />
+        </div>
+      )}
+
       <div className="min-h-0 flex-1 overflow-y-auto">
         <LokiPaneBody loading={loading} error={error} onRetry={onRetry}>
           {projects.length === 0 ? (
             <p className="ui-loki-convo-meta">No projects yet.</p>
+          ) : filtered.length === 0 ? (
+            <p className="ui-loki-convo-meta">No projects match “{query}”.</p>
           ) : (
             <div className="flex flex-col gap-1">
-              {projects.map((p) => {
+              {filtered.map((p) => {
                 const isOn = selected.includes(p.name);
                 return (
                   <button

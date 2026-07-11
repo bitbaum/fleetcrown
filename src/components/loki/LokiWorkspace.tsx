@@ -286,6 +286,10 @@ export function LokiWorkspace({
       prev.includes(name) ? prev.filter((p) => p !== name) : [...prev, name],
     );
   };
+  // One-click multi-target — the fast path for "same task → N projects".
+  const selectManyProjects = (names: string[]) =>
+    setSelectedProjects((prev) => Array.from(new Set([...prev, ...names])));
+  const clearProjects = () => setSelectedProjects([]);
 
   // The chat itself — reused verbatim in the normal grid and the focus overlay.
   // `bare` drops the bordered panel for the open, distraction-free focus look.
@@ -356,6 +360,8 @@ export function LokiWorkspace({
               error={projectsError}
               onRetry={() => void reloadProjects()}
               onToggle={toggleProject}
+              onSelectMany={selectManyProjects}
+              onClear={clearProjects}
             />
           </div>
         </Drawer>
@@ -455,6 +461,8 @@ export function LokiWorkspace({
           error={projectsError}
           onRetry={() => void reloadProjects()}
           onToggle={toggleProject}
+          onSelectMany={selectManyProjects}
+          onClear={clearProjects}
         />
       </aside>
 
