@@ -14,17 +14,15 @@ export async function LockedZoneBanner() {
   const userId = await requirePageUserId();
   if (!(await isPrivateZoneLocked(userId))) return null;
 
+  // One calm line, not a card: it names what's gated and gives the one action,
+  // without out-reading the actual Today content (minimize-friction: fewer words,
+  // reclaim the prime slot below the greeting).
   return (
-    <Link href="/unlock" className="ui-locked-banner group">
-      <div className="ui-locked-banner-icon">
-        <Lock className="h-5 w-5" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="text-sm font-semibold text-text-primary">Private zone is locked</div>
-        <div className="mt-0.5 text-sm text-text-tertiary">
-          Unlock to see goals, people, habits, events, money, and memory.
-        </div>
-      </div>
+    <Link href="/unlock" className="ui-locked-banner group gap-2 py-2.5">
+      <Lock className="h-4 w-4 shrink-0 text-text-tertiary" />
+      <span className="min-w-0 flex-1 truncate text-sm text-text-secondary">
+        Private zone locked — goals, people, habits, money &amp; memory are hidden.
+      </span>
       <span className="ui-locked-banner-cta">
         Unlock
         <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
