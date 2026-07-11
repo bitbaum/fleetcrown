@@ -42,11 +42,11 @@ export type NavItem = {
 
 export const NAV = {
   today:      { id: "today",    label: "Today",    description: "Daily overview & action queue",     href: "/today",      icon: Sun,          active: true,  mobile: true  },
-  loki:       { id: "loki",     label: "Loki",     description: "Conversational command surface",     href: "/loki",       icon: MessageSquare, active: true, mobile: true  },
-  terminal:   { id: "terminal", label: "Terminal", description: "Local shells — multi-tab & panes",   href: "/terminal",   icon: SquareTerminal, active: true, mobile: false },
-  agents:     { id: "agents",   label: "Agents",   description: "Fleet status & inter-agent comms",  href: "/agents",     icon: Network,      active: true,  mobile: false },
-  control:    { id: "control",  label: "Control",  description: "Dispatch agents across projects",   href: "/control",    icon: Terminal,     active: true,  mobile: true  },
-  projects:   { id: "projects", label: "Projects", description: "Repo health & project context",     href: "/projects",   icon: FolderKanban, active: true,  mobile: false },
+  loki:       { id: "loki",     label: "Loki",     description: "Talk to your fleet — ask or dispatch in plain language", href: "/loki",       icon: MessageSquare, active: true, mobile: true  },
+  terminal:   { id: "terminal", label: "Terminal", description: "Type directly into a live agent — cloud or this computer", href: "/terminal",   icon: SquareTerminal, active: true, mobile: false },
+  agents:     { id: "agents",   label: "Agents",   description: "Fleet roster & inter-agent messages", href: "/agents",     icon: Network,      active: true,  mobile: false },
+  control:    { id: "control",  label: "Control",  description: "Command deck — live agent status, dispatch work", href: "/control",    icon: Terminal,     active: true,  mobile: true  },
+  projects:   { id: "projects", label: "Projects", description: "Your project catalog — health, context & goals", href: "/projects",   icon: FolderKanban, active: true,  mobile: false },
   prompts:    { id: "prompts",  label: "Prompts",  description: "Agent prompt library & scheduler",  href: "/prompts",    icon: Zap,          active: true,  mobile: false },
   activity:   { id: "activity", label: "Activity", description: "Project status and event timeline",  href: "/activity", icon: Newspaper,    active: true,  mobile: false },
   system:     { id: "system",   label: "System",   description: "Runtime health & scheduled jobs",   href: "/system",     icon: Server,       active: true,  mobile: false },

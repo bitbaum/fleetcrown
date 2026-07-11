@@ -33,7 +33,7 @@ export default async function ProjectsPage({
     <PullToRefresh>
       <PageLayout
         title="Projects"
-        subtitle="Search your fleet — attention items surface first"
+        subtitle="Your project catalog — health, context & goals; needs-attention first"
         maxWidth="max-w-5xl"
         right={<NewProjectButton autoOpen={autoOpenCreate} initialName={prefillName} />}
       >
