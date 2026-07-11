@@ -22,17 +22,19 @@ export async function GET(req: NextRequest) {
 
   const reaped = await cleanupStaleOrchestrationRuns();
   for (const run of reaped) {
-    // Run ledger: a reaped run's biography ends with an explicit timeout
-    // verdict — the janitor declares the close like any other closer.
-    void emitRunEvent(run.id, run.userId, "closed", { outcome: "timeout", by: "reaper" });
+    // Run ledger: the janitor declares the close with the run's ACTUAL verdict
+    // — `partial` when the agent had already written a handoff (worked, close
+    // just didn't fire), `timeout` only when there was no evidence of work.
+    void emitRunEvent(run.id, run.userId, "closed", { outcome: run.outcome ?? "timeout", by: "reaper" });
   }
+  const partial = reaped.filter((r) => r.outcome === "partial").length;
   if (reaped.length > 0) {
     await logDebug({
       source: "crons/reap-stale-runs",
       level: "warn",
-      message: `Reaped ${reaped.length} stale run(s) as timeout`,
+      message: `Reaped ${reaped.length} stale run(s): ${reaped.length - partial} timeout, ${partial} partial (agent had worked)`,
       meta: { runs: reaped },
     });
   }
-  return NextResponse.json({ ok: true, reaped: reaped.length });
+  return NextResponse.json({ ok: true, reaped: reaped.length, partial });
 }

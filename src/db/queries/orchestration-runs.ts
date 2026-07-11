@@ -35,37 +35,59 @@ export async function updateOrchestrationRun(
 }
 
 export async function cleanupStaleOrchestrationRuns(userId?: string) {
+  // Did this run's project produce a handoff AFTER the run started? project_states
+  // holds the box-pushed session state; a ready_at / session_updated_at newer
+  // than started_at means the agent actually worked — the close just didn't fire.
+  // Such a run is `partial` (progress), NOT a `timeout` failure. Only a run with
+  // no evidence of work is a real timeout. (2026-07-11: reaping working agents as
+  // timeout was inflating the fleet-pulse "Stalled" — truthseeker generated at
+  // 05:00:43 yet its run was stamped timeout at 05:00:02.)
+  const wroteAfterStart = sql`EXISTS (
+    SELECT 1 FROM project_states ps
+    WHERE ps.user_id = ${orchestrationRuns.userId}
+      AND lower(ps.project_key) = lower(${orchestrationRuns.projectKey})
+      AND GREATEST(ps.ready_at, ps.session_updated_at) > ${orchestrationRuns.startedAt}
+  )`;
+  // Alive and recently active = a long task, not a dead run. Don't reap it; it
+  // closes from its own handoff, or a later tick reaps it once it goes quiet.
+  const liveNow = sql`EXISTS (
+    SELECT 1 FROM project_states ps
+    WHERE ps.user_id = ${orchestrationRuns.userId}
+      AND lower(ps.project_key) = lower(${orchestrationRuns.projectKey})
+      AND ps.agent_running = true
+      AND ps.session_updated_at > NOW() - INTERVAL '20 minutes'
+  )`;
+
   const staleWhere = and(
     // Both un-terminal states: "running" (runner picked it up) and "waiting"
     // (opened but never closed). The local-runtime path opens runs as
     // "waiting" and closes them from the session handoff; if the agent never
     // writes a ready handoff (tab closed, process killed), the run would
-    // otherwise linger open forever — reap it as a timeout like a dead runner.
+    // otherwise linger open forever — reap it like a dead runner.
     inArray(orchestrationRuns.state, ["waiting", "running"]),
     lt(orchestrationRuns.startedAt, new Date(Date.now() - STALE_RUN_MINUTES * 60 * 1000)),
+    sql`NOT ${liveNow}`,
   );
   const reaped = await db
     .update(orchestrationRuns)
     .set({
-      state: "error",
-      // Record a terminal OUTCOME, not just state=error. Without this, a reaped
-      // run stays outcome=null and is invisible to the outcome streak / success
-      // stats (which read `outcome`), so a runner that dies mid-task silently
-      // vanishes from the autonomy feedback loop instead of counting as a
-      // timeout — the exact truthful-state gap the loop must reflect.
-      outcome: "timeout",
-      // Truthful duration: the run DIED at the timeout threshold, not at the
-      // moment a janitor happened to notice. Stamping reap-time here once
-      // produced "51h" durations in Activity for runs that timed out after
-      // 60 minutes — the reaper only ran on Control page loads and nobody
-      // opened Control for two days.
+      // done (worked) vs error (dead). A reaped run must record a terminal
+      // OUTCOME (not null) so it can't silently vanish from the streak/stats.
+      state: sql`CASE WHEN ${wroteAfterStart} THEN 'done' ELSE 'error' END`,
+      outcome: sql`CASE WHEN ${wroteAfterStart} THEN 'partial' ELSE 'timeout' END`,
+      // Truthful duration: the run ended at the timeout threshold, not when the
+      // janitor noticed. (Stamping reap-time once produced "51h" durations.)
       finishedAt: sql`${orchestrationRuns.startedAt} + make_interval(mins => ${STALE_RUN_MINUTES})`,
-      payload: sql`jsonb_set(COALESCE(payload, '{}'), '{error}', '"Timed out — run exceeded maximum duration and was cleaned up"')`,
+      payload: sql`jsonb_set(COALESCE(payload, '{}'), '{error}', to_jsonb(
+        CASE WHEN ${wroteAfterStart}
+          THEN 'Reaper closed an open run whose agent had already written a handoff — counted as partial, not a failure'
+          ELSE 'Timed out — run exceeded maximum duration and was cleaned up'
+        END::text))`,
     })
     // No userId (the cron janitor) → reap across ALL users; the page-load call
     // sites keep passing their own userId for scope hygiene.
     .where(userId ? and(eq(orchestrationRuns.userId, userId), staleWhere) : staleWhere)
-    .returning({ id: orchestrationRuns.id, projectKey: orchestrationRuns.projectKey, userId: orchestrationRuns.userId });
+    .returning({ id: orchestrationRuns.id, projectKey: orchestrationRuns.projectKey, userId: orchestrationRuns.userId, outcome: orchestrationRuns.outcome });
   return reaped;
 }
 
