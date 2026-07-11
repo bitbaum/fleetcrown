@@ -2,6 +2,7 @@ import { and, desc, eq, gte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { promptHistory, orchestrationRuns, userProjects, claudeCodeHistory } from "@/db/schema";
 import { splitSessionItems } from "@/lib/session-content";
+import { getBlockedReasonsForRuns } from "@/db/queries/run-events";
 import { getAdapterLabel, getIntentLabel } from "@/config/control-intents";
 import {
   isErrorRun,
@@ -360,13 +361,19 @@ function buildLocalChatTimeline(rows: LocalChatRow[]): DigestTimelineItem[] {
   });
 }
 
-function buildRunTimeline(runs: RunRow[]): DigestTimelineItem[] {
+function buildRunTimeline(runs: RunRow[], blockedReasons: Map<string, string>): DigestTimelineItem[] {
   return runs.slice(0, MAX_RUN_SAMPLES_FOR_TIMELINE).map((run) => {
     // Show what the agent actually did AND what's next — the two facts that
     // make the timeline useful — plus the error when it failed.
     const done = run.summary?.done?.trim();
     const next = run.summary?.next?.trim();
-    const err = run.payload?.error?.trim();
+    // The REAL cause wins over the reaper's circular "timed out — exceeded max
+    // duration": a blocked-event reason ("agent isn't generating", "not
+    // authenticated (401)") tells you WHY without opening a transcript. Capped
+    // so a long operator-remediation message doesn't flood the timeline.
+    const blocked = blockedReasons.get(run.id);
+    const rawErr = (blocked || run.payload?.error?.trim() || "").trim();
+    const err = rawErr.length > 160 ? `${rawErr.slice(0, 157)}…` : rawErr;
     const parts: string[] = [];
     if (done) parts.push(done);
     if (next) parts.push(`Next: ${next}`);
@@ -452,9 +459,15 @@ export async function getProjectDigest(
   const stats = buildStats(rows.prompts, rows.runs, rows.promptCounts, rows.runCounts, projectKey);
   const compacted = buildCompacted(rows.prompts, rows.runs);
 
+  // Real failure causes for the timeline runs, so "why did this fail" is
+  // answered right here instead of in a transcript. Batched over the runs the
+  // timeline actually shows.
+  const timelineRunIds = rows.runs.slice(0, MAX_RUN_SAMPLES_FOR_TIMELINE).map((r) => r.id);
+  const blockedReasons = await getBlockedReasonsForRuns(timelineRunIds);
+
   const timeline = [
     ...buildPromptTimeline(rows.prompts),
-    ...buildRunTimeline(rows.runs),
+    ...buildRunTimeline(rows.runs, blockedReasons),
     ...buildLocalChatTimeline(rows.localChats),
   ]
     .sort((a, b) => b.occurredAt.localeCompare(a.occurredAt))
