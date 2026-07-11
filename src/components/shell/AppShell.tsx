@@ -12,6 +12,7 @@ import { RefreshOnFocus } from "@/components/shared/RefreshOnFocus";
 import { FleetRunnerAutoMint } from "@/components/desktop/FleetRunnerAutoMint";
 import { UpdateBanner } from "@/components/desktop/UpdateBanner";
 import { EmailVerificationBanner } from "@/components/shell/EmailVerificationBanner";
+import { FleetSurfaceGuide } from "@/components/shell/FleetSurfaceGuide";
 import {
   CommandPaletteProvider,
   useCommandPaletteHotkey,
@@ -56,6 +57,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="app-main-column">
           <AppTopBar onOpenSessions={() => setSessionsOpen(true)} />
           <EmailVerificationBanner />
+          <FleetSurfaceGuide />
           <main className="app-main">{children}</main>
           <AppFooter />
         </div>
