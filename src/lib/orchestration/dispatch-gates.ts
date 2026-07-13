@@ -19,6 +19,7 @@
 
 import type { DispatchAction, DispatchResult } from "@/app/api/control/dispatch/route";
 import type { AutoInjectMode } from "@/config/beacon";
+import { SESSION_STATUS } from "@/lib/constants/statuses";
 
 export type GateInput = {
   status: string;
@@ -51,7 +52,7 @@ export function leadingFailureStreak(outcomes: string[]): number {
 export function evaluateDispatchGates(input: GateInput): DispatchResult | null {
   const { status, blockerCount, mode, queueLength, streakSuffix, noOpCount = 0, recentOutcomes = [] } = input;
 
-  if (status === "working" || status === "blocked") {
+  if (status === SESSION_STATUS.WORKING || status === SESSION_STATUS.BLOCKED) {
     return {
       action: "off",
       reason: `Agent reported status:${status} — autopilot must not interrupt this turn.`,

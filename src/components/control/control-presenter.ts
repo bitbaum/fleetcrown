@@ -7,6 +7,7 @@ import {
   withinWindow,
 } from "@/lib/constants/control";
 import { timeAgo } from "@/lib/dates";
+import { SESSION_STATUS } from "@/lib/constants/statuses";
 import { AGENT_LABELS, type AnyAgentId } from "@/lib/agent-labels";
 import { inferAdapterFromTabName } from "@/lib/agent-resolution";
 import {
@@ -59,10 +60,10 @@ export function isCurrentPromptStale(project: ProjectState, nowS: number): boole
   if (!startedAt) return false;
 
   const sessionStatus = project.session?.status?.trim().toLowerCase();
-  if (sessionStatus === "ready") return true;
+  if (sessionStatus === SESSION_STATUS.READY) return true;
   // Agents mid-task update the handoff file with status: working — that must
   // not clear the live "Working" badge (was causing false "Open, idle").
-  if (sessionStatus === "working") {
+  if (sessionStatus === SESSION_STATUS.WORKING) {
     return nowS - startedAt > STALE_PROMPT_S;
   }
 

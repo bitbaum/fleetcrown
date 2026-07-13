@@ -18,7 +18,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
-  switch (event.type) {
+  try {
+    switch (event.type) {
     case "checkout.session.completed": {
       const session = event.data.object as Stripe.Checkout.Session;
       if (session.mode !== "subscription") break;
@@ -69,6 +70,14 @@ export async function POST(req: NextRequest) {
     default:
       // Unhandled event types are silently ignored
       break;
+    }
+  } catch (err) {
+    // Signature is already verified above; the risk here is a DB blip mid-event
+    // (getUserByStripeCustomerId / updateUserBilling). Don't let it surface as an
+    // unhandled 500 + stack — return 500 deliberately so Stripe retries this
+    // idempotent event later, and the user isn't left on a stale plan silently.
+    console.error("[stripe/webhook] handler failed:", event.type, err);
+    return NextResponse.json({ error: "handler failed" }, { status: 500 });
   }
 
   return NextResponse.json({ received: true });

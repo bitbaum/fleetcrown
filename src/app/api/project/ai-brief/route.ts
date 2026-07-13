@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { spawn } from "child_process";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
-import { auth } from "@/auth";
+import { getSessionUserId } from "@/lib/session";
 import { isRuntimeAvailable } from "@/lib/runtime";
 
 export const maxDuration = 90;
@@ -46,8 +46,8 @@ ${description}
 Extract the brief. Be opinionated: pick Next.js + TypeScript + Tailwind + Drizzle + PostgreSQL as the default stack unless the founder explicitly says otherwise. Keep each field concise. The project name should be lowercase-friendly (suitable as a directory and GitHub repo name).`;
 
 export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const userId = await getSessionUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!isRuntimeAvailable()) {
     return NextResponse.json({ error: "AI brief requires local claude CLI — not available in cloud mode" }, { status: 503 });
   }

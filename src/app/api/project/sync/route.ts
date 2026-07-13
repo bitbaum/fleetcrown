@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { exec } from "child_process";
 import { promisify } from "util";
-import { auth } from "@/auth";
+import { getSessionUserId } from "@/lib/session";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { isRuntimeAvailable } from "@/lib/runtime";
 
@@ -12,8 +12,8 @@ const SyncBody = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const userId = await getSessionUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!isRuntimeAvailable()) {
     return NextResponse.json({ error: "Git sync requires local runtime" }, { status: 503 });
   }

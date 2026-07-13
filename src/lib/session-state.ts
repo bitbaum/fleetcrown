@@ -28,6 +28,7 @@
  */
 
 import type { SessionState } from "@/lib/control-types";
+import { SESSION_STATUS } from "@/lib/constants/statuses";
 
 /**
  * Read `noOpCount` from the structured field if the agent wrote one; otherwise
@@ -70,7 +71,7 @@ function parseNoOpCountFromText(done: string | undefined | null): number | null 
 export function isAwaitingUser(session: SessionState | null | undefined): boolean {
   if (!session) return false;
   if (session.blockReason) return true;
-  if (session.status?.toLowerCase().trim() === "blocked") return true;
+  if (session.status?.toLowerCase().trim() === SESSION_STATUS.BLOCKED) return true;
   return /awaiting\s+user/i.test(session.health ?? "");
 }
 
@@ -107,8 +108,8 @@ export function deriveLoopState(session: SessionState | null | undefined): Deriv
   const status = session.status?.toLowerCase().trim();
 
   if (awaitingUser) return { state: "paused", noOpCount, awaitingUser };
-  if (status === "working") return { state: "active", noOpCount, awaitingUser };
-  if (status === "ready") return { state: "firing", noOpCount, awaitingUser };
+  if (status === SESSION_STATUS.WORKING) return { state: "active", noOpCount, awaitingUser };
+  if (status === SESSION_STATUS.READY) return { state: "firing", noOpCount, awaitingUser };
   // Missing/unknown status — treat as firing-ish so the UI surfaces the
   // count if a spiral is forming, but the bash guard suppresses real
   // wake-ups (its default-fire only triggers when status semantics check out).

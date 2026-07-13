@@ -1,5 +1,4 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
 import { claimNextPendingCommand } from "@/db/queries/pending-commands";
 import { getApiUserId } from "@/lib/session";
 import { RUNNER_LONG_POLL_MS } from "@/lib/constants/runner";
@@ -11,18 +10,14 @@ import type { RunnerChannel } from "@/db/schema/pending-commands";
 // command arrives or wait expires. Cap lives in @/lib/constants/runner so the
 // desktop poller's request shape and this server-side ceiling can't drift.
 export async function GET(request: NextRequest) {
-  // Resolve user IDs once (supports both browser session and Bearer token).
-  let userIds: string[];
-  const session = await auth();
-  if (session?.user?.id) {
-    userIds = [session.user.id];
-  } else {
-    // Bearer-authenticated runners are per-user. A token must never claim
-    // another account's commands, even if projects share the same host.
-    const userId = await getApiUserId();
-    if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    userIds = [userId];
-  }
+  // Resolve the user once. getApiUserId does the cookie session FIRST — via
+  // resolveSessionUserId, which recovers an orphaned JWT (valid token, no user
+  // row after a reseed) by verified email instead of polling under a dangling id
+  // — THEN falls back to the runner's Bearer token. Per-user either way: a token
+  // must never claim another account's commands, even on a shared host.
+  const userId = await getApiUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const userIds = [userId];
 
   const types = request.nextUrl.searchParams.get("types")
     ?.split(",")

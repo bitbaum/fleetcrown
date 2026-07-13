@@ -1,5 +1,6 @@
 import type { OrchestrationOutcome } from "@/db/schema/orchestration-runs";
 import type { OrchestrationTaskSummary } from "./contract";
+import { SESSION_STATUS } from "@/lib/constants/statuses";
 
 export type InferOutcomeInput = {
   summary?: OrchestrationTaskSummary | null;
@@ -41,7 +42,7 @@ export function inferOutcome(input: InferOutcomeInput): OrchestrationOutcome {
     return "partial";
   }
 
-  if ((contains(summary?.health, "good") || summary?.status?.toLowerCase() === "ready") && summary?.done) {
+  if ((contains(summary?.health, "good") || summary?.status?.toLowerCase() === SESSION_STATUS.READY) && summary?.done) {
     return "success";
   }
 

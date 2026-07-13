@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import { stateFile } from "@/lib/agent-config";
 import { injectIntoTab } from "@/lib/zellij";
-import { auth } from "@/auth";
+import { getSessionUserId } from "@/lib/session";
 import { getUserProjects } from "@/db/queries/user-projects";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { isRuntimeAvailable } from "@/lib/runtime";
@@ -12,8 +12,8 @@ const ClearBody = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const userId = await getSessionUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   // Cloud mode has no zellij and no agent panes to clear. Before this guard
   // the call landed at injectIntoTab which threw a generic "zellij not found"
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
   if (dataOrResp instanceof NextResponse) return dataOrResp;
   const { tab } = dataOrResp;
 
-  const dbProjects = await getUserProjects(session.user.id).catch(() => []);
+  const dbProjects = await getUserProjects(userId).catch(() => []);
   const dbMatch = dbProjects.find((p) => p.name.toLowerCase() === tab.toLowerCase());
   if (!dbMatch) {
     return NextResponse.json({ error: `Unknown tab: ${tab}` }, { status: 404 });

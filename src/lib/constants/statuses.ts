@@ -22,6 +22,21 @@ export const COMMITMENT_STATUS = {
 export type CommitmentStatus = (typeof COMMITMENT_STATUS)[keyof typeof COMMITMENT_STATUS];
 
 /**
+ * Agent-reported session lifecycle status — the value an agent writes in its
+ * `status:` handoff line, read by the auto-inject gate (dispatch-gates.ts) and
+ * the session-state parser. SSOT so a rename cannot silently break the iron-rule
+ * gate that keeps FleetCrown from interrupting a working/blocked agent.
+ * NOTE: distinct from project-STATE keys ("working"/"ready" chips) in
+ * control-states.ts, which happen to share strings but mean a different thing.
+ */
+export const SESSION_STATUS = {
+  READY: "ready",     // agent finished its turn — safe to auto-continue
+  WORKING: "working", // agent mid-turn — never interrupt
+  BLOCKED: "blocked", // agent blocked on user/input — never interrupt
+} as const;
+export type SessionStatus = (typeof SESSION_STATUS)[keyof typeof SESSION_STATUS];
+
+/**
  * Action workflow status values — IRON RULE: only 'approved' actions execute.
  * Flow: draft → approved → executed (or draft → rejected / expired)
  */

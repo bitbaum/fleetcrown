@@ -18,7 +18,7 @@ import { getRunnerConnected } from "@/db/queries/runner-presence";
 import { injectPrompt } from "@/lib/inject-core";
 import { DEFAULT_AUTO_INJECT_MODE, MAX_CONCURRENT_BUILDING } from "@/lib/constants/control";
 import { EXECUTOR_COPY } from "@/config/executor-copy";
-import { ENTITY_TYPE } from "@/lib/constants/statuses";
+import { ENTITY_TYPE, SESSION_STATUS } from "@/lib/constants/statuses";
 import { normalizeAutoInjectMode, type AutoInjectMode } from "@/config/beacon";
 import { sortProjectsForKick } from "@/lib/fleet-kick-format";
 export { formatFleetKickReply, sortProjectsForKick } from "@/lib/fleet-kick-format";
@@ -124,7 +124,7 @@ export async function kickFleet(userId: string, opts: FleetKickOptions): Promise
 
   const readyKeys = new Set(
     states
-      .filter((s) => s.sessionStatus === "ready" || s.readyAt)
+      .filter((s) => s.sessionStatus === SESSION_STATUS.READY || s.readyAt)
       .map((s) => s.projectKey.toLowerCase()),
   );
 

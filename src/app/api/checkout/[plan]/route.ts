@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { getSessionUserId } from "@/lib/session";
 import { stripe, STRIPE_PRICE_IDS, isStripeReady } from "@/lib/stripe";
 import { getUserById, updateUserBilling } from "@/db/queries/users";
 import { ROUTES } from "@/config/auth";
@@ -14,8 +14,8 @@ function isPaidPlan(value: string): value is PaidPlan {
 export async function GET(req: NextRequest, { params }: { params: Promise<{ plan: string }> }) {
   const { plan } = await params;
 
-  const session = await auth();
-  if (!session?.user?.id) {
+  const userId = await getSessionUserId();
+  if (!userId) {
     const signInUrl = new URL(ROUTES.SIGN_IN, req.url);
     signInUrl.searchParams.set("callbackUrl", `/api/checkout/${plan}`);
     return NextResponse.redirect(signInUrl);
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ plan
     return NextResponse.redirect(new URL("/settings?billing=not-configured", req.url));
   }
 
-  const user = await getUserById(session.user.id);
+  const user = await getUserById(userId);
   if (!user) return NextResponse.redirect(new URL(ROUTES.SIGN_IN, req.url));
 
   // Already on this plan
@@ -47,10 +47,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ plan
     const customer = await stripe.customers.create({
       email:    user.email    ?? undefined,
       name:     user.name     ?? undefined,
-      metadata: { fleetcrownUserId: session.user.id },
+      metadata: { fleetcrownUserId: userId },
     });
     customerId = customer.id;
-    await updateUserBilling(session.user.id, { stripeCustomerId: customerId });
+    await updateUserBilling(userId, { stripeCustomerId: customerId });
   }
 
   const origin = new URL(req.url).origin;
@@ -61,9 +61,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ plan
     line_items: [{ price: priceId, quantity: 1 }],
     success_url: `${origin}/settings?billing=success`,
     cancel_url:  `${origin}/settings?billing=canceled`,
-    metadata:    { fleetcrownUserId: session.user.id, plan },
+    metadata:    { fleetcrownUserId: userId, plan },
     subscription_data: {
-      metadata: { fleetcrownUserId: session.user.id, plan },
+      metadata: { fleetcrownUserId: userId, plan },
     },
   });
 
