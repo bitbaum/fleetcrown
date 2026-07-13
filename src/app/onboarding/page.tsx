@@ -138,7 +138,10 @@ export default function OnboardingPage() {
         throw new Error(body.error ?? "Failed to complete onboarding");
       }
       await update();
-      router.push(ROUTES.APP_HOME);
+      // Land on Control, not /today: the onboarding's whole arc is "connect a
+      // builder to dispatch agents", so the next step a new builder wants is the
+      // dispatch surface — and the finish button literally says "Go to Control".
+      router.push("/control");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
@@ -248,6 +251,17 @@ export default function OnboardingPage() {
                     {gitUrl && <p className="ui-auth-repo-desc">{gitUrl}</p>}
                   </div>
                 </div>
+                {/* Local path even for a picked repo: a Fleet Runner on your own
+                    machine dispatches INTO this directory, so without it a local
+                    dispatch has nowhere to run. Optional — hosted runs clone the
+                    gitUrl instead, and it's editable later on the project. */}
+                <AuthField label="Local path on your machine (optional)">
+                  <AuthInput
+                    value={dirPath}
+                    onChange={(e) => setDirPath(e.target.value)}
+                    placeholder="/home/you/my-app"
+                  />
+                </AuthField>
                 <button
                   type="button"
                   onClick={() => setShowManual(true)}
