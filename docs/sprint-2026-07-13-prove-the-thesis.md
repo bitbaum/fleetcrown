@@ -56,12 +56,12 @@ The code shipped weeks ago; nobody had watched it work in prod. Now witnessed:
 - **Bug found + fixed to get here:** the loop "was never verified end-to-end" because OrangeCat's v1 entity-create inserted via a cookie-session Supabase client (anon under bearer auth) → RLS 42501. Fixed by applying OC's own service-role pattern (OC commit `d818ceb6`), deployed. See [[bug_oc_bridge_rls_entity_create]].
 - **Proof:** a real FleetCrown build event, live on orangecat.ch, tagged "via FleetCrown." *"The integration is the product"* is now a **fact**, not a claim.
 
-### Day 3 (Wed) — Make "best-effort" stop meaning "silently lossy" (Phase 0.4)
-The one piece of Phase 0 that is code, not clicks — and it's the same anti-pattern
-we just killed twice (the calendar no-op, the email fallback):
-- Add the **promote backfill/reconcile cron**: re-emit unacknowledged promotes.
-- Add the **Settings → "Connect OrangeCat"** path for already-signed-in users (today only the sign-in button exists).
-- **Proof:** kill a promote mid-flight, watch the cron heal it. The bridge is now durable, not hopeful.
+### Day 3 (Wed) — Make "best-effort" stop meaning "silently lossy" (Phase 0.4) ✅ DONE 2026-07-13
+Surprise: **both** pieces were already built (FC commit `d9b784d` "feat(bridge): promote backfill cron + settings Connect OrangeCat") — the Day-2 map was wrong. So Day 3 became a verify-day, and both are now proven working in prod:
+- ✅ **Backfill/reconcile cron** — `fc-cron@orangecat-promote-backfill.timer` active (daily 09:00 UTC, CRON_SECRET set, in install-hetzner-crons.sh). PROVEN: Day 2's publish dropped its `project_published` fire-and-forget promote (only the awaited devlog landed). Ran the backfill → `posted: 2, failed: 0` → the dropped **Project Published** anchor ("Life OS + AI agent fleet command · via FleetCrown") + a devlog entry appeared on the wall. "Best-effort" no longer means "silently lossy."
+- ✅ **Settings → Connect OrangeCat** — `AccountSettings.ConnectedAccountsSection` (`showOrangeCatConnect` → `signIn("orangecat", {callbackUrl:"/settings#account"})` + disconnect guard). VERIFIED: Settings → Account shows **OrangeCat · Connected** alongside Google + GitHub; connected-accounts API + `[provider]` disconnect route both live.
+- **Proof:** watched the reconcile cron heal a real dropped promote on orangecat.ch. The bridge is durable, not hopeful.
+- **Known residual fragility (not blocking):** the publish-time `project_published` promote is `void`-fire-and-forget after the response, so it drops on every publish and relies on the daily cron to heal. Awaiting it (or a proper queue) would make it lossless at the source. Also flagged from Day 2: FC publishes the project as OC-**Draft** (OC `createProject` hardcodes DRAFT, ignoring FC's `status:"active"`), so the public project page's "Recent Activity" (reads `project_updates`, active/completed only) shows nothing — the wall lives on the profile Timeline. Both are real "build-in-public" coherence gaps for a later day.
 
 ### Day 4 (Thu) — Showcase the moat: cross-model verification
 This is the single most 10-year-differentiating thing in the codebase, and it's invisible.
