@@ -75,13 +75,14 @@ The DoD stop-gate already had a different-lineage judge (`gpt-oss-120b`) grading
 - ✅ Live at fleetcrown.orangecat.ch/thoughts/shipped-is-not-witnessed (200, renders correctly). Build events already on the OC wall from Days 2–3 as the living proof the essay points to.
 - **Proof:** a public essay that is reportage, not a promise — thesis: *shipping is a claim, witnessing is the fact.*
 
-### Day 6 (Sat) — One stranger's on-ramp (Phase 1.1, sliced)
-The revenue thesis needs the signup → runner → first-dispatch path to work for
-someone who isn't you.
-- Walk the onboarding as a fresh user (new account, no founder allowlist): sign up → create a project → install Fleet Runner → first dispatch → watch it live.
-- Fix the top 1–2 friction points that block it (measure signup→first-dispatch time).
-- Flip `isStripeReady()` live if the price IDs are a 10-minute config away (the `/pricing` page already shipped).
-- **Proof:** a screen recording of a clean-room signup reaching a first successful dispatch.
+### Day 6 (Sat) — One stranger's on-ramp (Phase 1.1, sliced) ◑ PARTIAL 2026-07-13
+Audited the whole signup → project → runner → first-dispatch path as code (can't create a real stranger account myself). Verdict: the path is **structurally complete and mostly honest**; the real remaining blockers are infra/config that are the founder's to do.
+- ✅ **Fixed 2 friction points** (FC commit `d068dc7`): onboarding finish routed to `/today` while its button said "Go to Control" → now lands on `/control` (the dispatch surface a new builder wants); and a GitHub-repo-picked project captured `gitUrl` but never `dirPath` (local-path field only showed in manual entry) → a local runner had nowhere to dispatch. Now the local-path field shows for picked repos too.
+- ✅ **Verified honest/correct (not bugs):** execution gating (stranger can't use the shared cloud builder — right, no per-tenant sandbox — but their own Fleet Runner dispatches on `local` with a clear message); `/pricing` CTAs gracefully route away when Stripe is dark (no dead-end); `/download` marks mac/win "coming soon" (no 404 link).
+- 🔴 **Founder-only blockers (I can't do these):**
+  - **Stripe is dark** (no `STRIPE_SECRET_KEY`/`WEBHOOK_SECRET`/price IDs on the box). Enabling = your Stripe account. Set the keys + price IDs, point a webhook at `/api/stripe/webhook`, restart → `isStripeReady()` flips live.
+  - **mac/win desktop builds don't exist** (only Linux). Needs a CI release matrix (electron-builder `--mac`/`--win`) — most strangers are on Mac, so this gates the majority. Can't build from the Linux box.
+- **Proof status:** the clean-room signup→first-dispatch recording needs a real fresh account (account creation is yours). The BYO-runner path works today for a Linux stranger; the two fixes remove the sharpest onboarding friction on it.
 
 ### Day 7 (Sun) — Harden what a paying user would hit + retro
 The audit's HIGH/MEDIUM items are "future 2am incidents with a paying user attached":
