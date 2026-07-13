@@ -70,12 +70,10 @@ The DoD stop-gate already had a different-lineage judge (`gpt-oss-120b`) grading
 - ✅ **Found + fixed a real judge bug:** `summaryForJudge` didn't pass `commit` to the judge, so DoDs saying "committed" false-negatived a real commit. Fixed → verified the case flips to met.
 - **Proof (witnessed live in prod Activity):** ran the real gate against a real Claude run's handoff → `gpt-oss-120b` returned **NOT met: "Missing evidence that the change has been deployed to production and is green"** — now shown on that run in Activity. *A different mind caught what the worker's self-report glossed. This is the thing no single-agent runtime can do.* (One historical run was annotated for the demo; going forward the gate fires automatically at close and also downgrades not-met success→partial.)
 
-### Day 5 (Fri) — Narrate it: the bridge essay (Phase 4.1)
-54 essays is a distribution asset most funded startups lack. The bridge essay was
-forward-referenced months ago; this is the week it's true.
-- Write + publish the essay narrating the loop you witnessed Days 2–4 (build → publish → verify → wall).
-- Cross-post the FleetCrown build events to the OC wall as living proof.
-- **Proof:** a public essay that is *reportage, not a promise* — with links to the real artifacts.
+### Day 5 (Fri) — Narrate it: the bridge essay (Phase 4.1) ✅ DONE 2026-07-13
+- ✅ Wrote + published **"Shipped Is Not Witnessed"** (`content/thoughts/shipped-is-not-witnessed.md`) — reportage of Days 2–4: the login that failed on an expired state cookie, the 403 that was an RLS/anon-write bug not a permissions problem, the fire-and-forget promote that dropped + the cron that healed it, the cross-model judge catching a Claude handoff with no deploy evidence. House voice, every detail verified (no fabricated timelines/metrics), reviewed + approved before publish.
+- ✅ Live at fleetcrown.orangecat.ch/thoughts/shipped-is-not-witnessed (200, renders correctly). Build events already on the OC wall from Days 2–3 as the living proof the essay points to.
+- **Proof:** a public essay that is reportage, not a promise — thesis: *shipping is a claim, witnessing is the fact.*
 
 ### Day 6 (Sat) — One stranger's on-ramp (Phase 1.1, sliced)
 The revenue thesis needs the signup → runner → first-dispatch path to work for
