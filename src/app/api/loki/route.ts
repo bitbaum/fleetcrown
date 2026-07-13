@@ -3,6 +3,7 @@ import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { getApiUserId } from "@/lib/session";
 import { askLoki } from "@/lib/loki-core";
 import { getProjectContext } from "@/db/queries/project-context";
+import { enqueueProposalFromMessage } from "@/lib/actions/enqueue-proposal";
 
 const AskLokiBody = z.object({
   message: z.string().trim().min(1, "message is required"),
@@ -46,6 +47,17 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const { status, body } = await askLoki(message, { sessionKey, userId });
+  // Answer the turn AND, in parallel, detect whether the operator asked Loki to
+  // DO something external (message someone, email, book an event, make a
+  // commitment). Extraction runs on the RAW user message — the intent, not the
+  // context-wrapped prompt — and is fully best-effort: a null/throw just means
+  // "nothing to queue this turn" and never blocks the reply. This is the queue's
+  // producer; the operator still approves every draft before it executes.
+  const [{ status, body }, queued] = await Promise.all([
+    askLoki(message, { sessionKey, userId }),
+    enqueueProposalFromMessage(userId, dataOrResp.message, new Date().toISOString()).catch(() => null),
+  ]);
+
+  if (queued) body.queuedAction = queued;
   return NextResponse.json(body, { status });
 }

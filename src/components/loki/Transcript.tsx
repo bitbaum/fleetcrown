@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ExternalLink, Monitor, Sparkles, TerminalSquare } from "lucide-react";
+import { ExternalLink, ListChecks, Monitor, Sparkles, TerminalSquare } from "lucide-react";
 import { MarkdownText } from "@/components/ui/markdown-text";
 import type { LokiMessage } from "./types";
 import { dispatchStatusLabel, type DispatchLiveView } from "@/lib/dispatch-status";
@@ -136,6 +136,21 @@ function DispatchFooter({ meta }: { meta: Record<string, unknown> | null }) {
   );
 }
 
+/** Footer when a chat turn proposed a real action into the approval queue. Loki
+ *  can only PROPOSE — this is the visible handoff to the operator, who approves
+ *  it on Today before anything executes. */
+function QueuedActionFooter({ meta }: { meta: Record<string, unknown> | null }) {
+  const id = typeof meta?.queuedActionId === "string" ? meta.queuedActionId : null;
+  if (!id) return null;
+  const title = typeof meta?.queuedActionTitle === "string" ? meta.queuedActionTitle : "an action";
+  return (
+    <Link href="/today#actions" className="ui-loki-queued-action">
+      <ListChecks className="h-3.5 w-3.5" />
+      <span>Added to your approval queue: <strong>{title}</strong> — review to run it</span>
+    </Link>
+  );
+}
+
 /** One-tap project pick when a command needs a target project. */
 function NeedsProjectPicker({
   meta,
@@ -235,6 +250,7 @@ export function Transcript({
               <NeedsProjectPicker meta={m.meta} onPick={onPickProject} />
             )}
             {m.kind === "dispatch" && <DispatchFooter meta={m.meta} />}
+            {m.kind === "chat" && <QueuedActionFooter meta={m.meta} />}
           </div>
         ),
       )}
