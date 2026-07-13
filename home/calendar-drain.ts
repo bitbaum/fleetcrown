@@ -30,19 +30,28 @@ import type { ActionPayload } from "@/db/schema/actions";
 
 type DrainEvent = { id: string; title: string; payload: ActionPayload | null };
 
-function baseUrl(): string {
-  return (process.env.FLEETCROWN_API_URL ?? APP_URL).replace(/\/$/, "");
+/**
+ * Where to reach the cloud drain endpoint and how to auth. Standalone CLI use
+ * fills these from env; the embedded desktop runner passes them explicitly from
+ * its own token store + base-URL resolution so we don't duplicate the protocol.
+ */
+export type DrainConfig = { baseUrl?: string; token?: string };
+
+function baseUrl(cfg?: DrainConfig): string {
+  return (cfg?.baseUrl ?? process.env.FLEETCROWN_API_URL ?? APP_URL).replace(/\/$/, "");
 }
 
-function authHeader(): Record<string, string> {
-  const token = process.env.FLEETCROWN_AGENT_TOKEN?.trim();
+function authHeader(cfg?: DrainConfig): Record<string, string> {
+  const token = (cfg?.token ?? process.env.FLEETCROWN_AGENT_TOKEN)?.trim();
   if (!token) throw new Error("FLEETCROWN_AGENT_TOKEN is required (mint a ck_* token at /settings → Agent tokens)");
   return { authorization: `Bearer ${token}` };
 }
 
 /** One drain pass: fetch approved events, book each, report back. Returns count booked. */
-export async function drainOnce(): Promise<{ booked: number; failed: number }> {
-  const res = await fetch(`${baseUrl()}/api/actions/drain-events`, { headers: authHeader() });
+export async function drainOnce(cfg?: DrainConfig): Promise<{ booked: number; failed: number }> {
+  const base = baseUrl(cfg);
+  const auth = authHeader(cfg);
+  const res = await fetch(`${base}/api/actions/drain-events`, { headers: auth });
   if (!res.ok) throw new Error(`drain GET failed: ${res.status} ${res.statusText}`);
   const { events } = (await res.json()) as { events: DrainEvent[] };
 
@@ -53,9 +62,9 @@ export async function drainOnce(): Promise<{ booked: number; failed: number }> {
     const body = result.ok
       ? { id: ev.id, ok: true as const, eventId: result.eventId, htmlLink: result.htmlLink }
       : { id: ev.id, ok: false as const, error: result.error };
-    await fetch(`${baseUrl()}/api/actions/drain-events`, {
+    await fetch(`${base}/api/actions/drain-events`, {
       method: "POST",
-      headers: { ...authHeader(), "content-type": "application/json" },
+      headers: { ...auth, "content-type": "application/json" },
       body: JSON.stringify(body),
     });
     if (result.ok) {
