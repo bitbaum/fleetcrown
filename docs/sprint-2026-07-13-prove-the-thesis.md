@@ -63,11 +63,12 @@ Surprise: **both** pieces were already built (FC commit `d9b784d` "feat(bridge):
 - **Proof:** watched the reconcile cron heal a real dropped promote on orangecat.ch. The bridge is durable, not hopeful.
 - **Known residual fragility (not blocking):** the publish-time `project_published` promote is `void`-fire-and-forget after the response, so it drops on every publish and relies on the daily cron to heal. Awaiting it (or a proper queue) would make it lossless at the source. Also flagged from Day 2: FC publishes the project as OC-**Draft** (OC `createProject` hardcodes DRAFT, ignoring FC's `status:"active"`), so the public project page's "Recent Activity" (reads `project_updates`, active/completed only) shows nothing — the wall lives on the profile Timeline. Both are real "build-in-public" coherence gaps for a later day.
 
-### Day 4 (Thu) — Showcase the moat: cross-model verification
-This is the single most 10-year-differentiating thing in the codebase, and it's invisible.
-- Take one real dispatch; have a **different model lineage** judge the result against the project's definition-of-done (the stop-gate exists — surface its verdict).
-- Make the verdict visible in Activity: "Claude did it; Grok checked it; here's what it caught."
-- **Proof:** one screenshot where a second mind catches something the first missed. *This is the thing no single-agent tool can do* — now demonstrable, not asserted.
+### Day 4 (Thu) — Showcase the moat: cross-model verification ✅ DONE 2026-07-13
+The DoD stop-gate already had a different-lineage judge (`gpt-oss-120b`) grading each worker's handoff — but the verdict was **invisible** (it only downgraded the outcome and buried the gap in `next`). Made it visible + proved it:
+- ✅ **Surfaced the verdict in Activity** (FC commit `928df7b`): `OrchestrationTaskSummary.verification {judge, worker, met, gap}` written by the gate at close, rendered in the Events stream as "✓/✗ Cross-model check — <worker> did it, <judge> verified/flagged …". Deployed.
+- ✅ **Proved the moat catches things** — live `gpt-oss-120b` (different lineage from the claude/llama workers) judged real handoffs: caught a glossy self-report ("provide evidence tests pass…"), passed a fully-evidenced one.
+- ✅ **Found + fixed a real judge bug:** `summaryForJudge` didn't pass `commit` to the judge, so DoDs saying "committed" false-negatived a real commit. Fixed → verified the case flips to met.
+- **Proof (witnessed live in prod Activity):** ran the real gate against a real Claude run's handoff → `gpt-oss-120b` returned **NOT met: "Missing evidence that the change has been deployed to production and is green"** — now shown on that run in Activity. *A different mind caught what the worker's self-report glossed. This is the thing no single-agent runtime can do.* (One historical run was annotated for the demo; going forward the gate fires automatically at close and also downgrades not-met success→partial.)
 
 ### Day 5 (Fri) — Narrate it: the bridge essay (Phase 4.1)
 54 essays is a distribution asset most funded startups lack. The bridge essay was
