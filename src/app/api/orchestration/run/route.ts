@@ -26,6 +26,7 @@ import { consumeProjectPrompt, getProjectState, persistProjectRuntimeIfNewer, pr
 import { getApiUserId } from "@/lib/session";
 import { getUserProjects, getOrgProjects } from "@/db/queries/user-projects";
 import { getProjectContext } from "@/db/queries/project-context";
+import { buildOperatorContextSection } from "@/lib/dispatch-operator-context";
 import { enqueueDispatchCommand } from "@/db/queries/pending-commands";
 import { getRunnerConnected } from "@/db/queries/runner-presence";
 import { logDebug } from "@/db/queries/debug-logs";
@@ -128,6 +129,10 @@ export async function POST(req: NextRequest) {
     const intent = getOrchestrationIntent(request.intent as OrchestrationTaskIntentId);
     // Aim the agent at the project's roadmap: brief + active goals (getProjectContext).
     request.projectContext = (await getProjectContext(userId, request.projectKey)) ?? undefined;
+    // Life-OS half: the operator's top-level goals + near-term deadlines, so this
+    // cloud-queued dispatch serves the captain's objectives too (mirrors the
+    // inject-prompt/inject-core paths). Best-effort background section.
+    const operatorSection = await buildOperatorContextSection(userId).catch(() => "");
     // Exit contract — WITHOUT it a box-executed agent finishes real work, writes
     // no ~/.claude/sessions/<tab>.md handoff, and gets reaped as a timeout (the
     // same gap inject-prompt.ts:66-74 closes for the inject path). The local
@@ -136,7 +141,7 @@ export async function POST(req: NextRequest) {
     // (renderTaskForAdapter does not include it) so every dispatch path lands a
     // handoff. Tilde-relative on purpose: the agent expands HOME, not the server.
     const sessionFileRef = `~/.claude/sessions/${request.projectKey}.md`;
-    const prompt = `${renderTaskForAdapter(request)}\n\n## Exit contract (operator requirement)\nBefore stopping, create ${sessionFileRef}.\n${sessionHandoffContract(sessionFileRef)}`;
+    const prompt = `${[operatorSection, renderTaskForAdapter(request)].filter(Boolean).join("\n\n")}\n\n## Exit contract (operator requirement)\nBefore stopping, create ${sessionFileRef}.\n${sessionHandoffContract(sessionFileRef)}`;
     // Create an orchestration_runs row for trackable intents so the local runner
     // can write /tmp/cockpit-run-<tab> and agent-hook-bridge.sh can close out the
     // outcome when the agent session ends. Lifecycle intents (hard_stop /
@@ -238,8 +243,13 @@ export async function POST(req: NextRequest) {
 
   // Aim the agent at the project's roadmap: brief + active goals (getProjectContext).
   request.projectContext = (await getProjectContext(userId, request.projectKey)) ?? undefined;
+  // Life-OS half: the operator's top-level goals + near-term deadlines, prepended
+  // as a background section so tab-injected and queued-behind dispatches serve the
+  // captain's objectives too (mirrors inject-core/inject-prompt). Best-effort.
+  const operatorSection = await buildOperatorContextSection(userId).catch(() => "");
+  const withOperator = (body: string) => [operatorSection, body].filter(Boolean).join("\n\n");
   // Log every dispatch regardless of adapter — foundation for reuse suggestions and analytics
-  const resolvedPromptBody = renderTaskForAdapter(request);
+  const resolvedPromptBody = withOperator(renderTaskForAdapter(request));
   insertPromptHistory(userId, {
     projectId: request.projectId ?? null,
     projectKey: request.projectKey,
@@ -313,7 +323,7 @@ export async function POST(req: NextRequest) {
   if (request.adapter === "claude") {
     try {
       const nowS = Math.floor(Date.now() / 1000);
-      const prompt = renderTaskForAdapter(request);
+      const prompt = withOperator(renderTaskForAdapter(request));
       // Fetch the project's current state so the agent receives the same
       // one-line WHY the human sees on the badge tooltip. Same SSOT
       // (STATE_DEFINITIONS[k].description) — no paraphrasing — so reading

@@ -33,6 +33,7 @@ import type { Conversation, ConversationMessage } from "@/db/schema/conversation
 import { resolveCommand, isGenericDevelopHandoff, type CommandResolution } from "@/lib/command-resolve";
 import { injectPrompt } from "@/lib/inject-core";
 import { askLoki } from "@/lib/loki-core";
+import { enqueueProposalFromMessage } from "@/lib/actions/enqueue-proposal";
 import { ORCHESTRATION_ADAPTER_IDS, type AdapterId } from "@/lib/orchestration";
 import {
   MAX_ATTACHMENTS,
@@ -570,14 +571,23 @@ export async function POST(
       resolution.prompt + attachmentSuffix,
       chatProject,
     );
-    const loki = await askLoki(chatPrompt, {
-      // Proactive fleet reviews are one-shot analyses — route them to the warm
-      // shared ask-session (same as /api/loki) rather than a cold per-conversation
-      // session, which on a modest model can echo the injected context instead of
-      // answering. Normal chat keeps its own per-thread memory.
-      sessionKey: chatOnly ? `agent:main:web:ask:${userId}` : `agent:main:web:conv:${conversationId}`,
-      userId,
-    });
+    // Answer AND, in parallel, mine the raw user message for an actionable
+    // request (message/email/event/commitment) → enqueue a draft the operator
+    // approves. This is the queue's producer on the main chat surface; the
+    // deterministic parsers above already handle create-project / profile-update,
+    // so this only fires for the four external action types. Best-effort — a
+    // failure just means nothing queued, never a broken reply.
+    const [loki, queued] = await Promise.all([
+      askLoki(chatPrompt, {
+        // Proactive fleet reviews are one-shot analyses — route them to the warm
+        // shared ask-session (same as /api/loki) rather than a cold per-conversation
+        // session, which on a modest model can echo the injected context instead of
+        // answering. Normal chat keeps its own per-thread memory.
+        sessionKey: chatOnly ? `agent:main:web:ask:${userId}` : `agent:main:web:conv:${conversationId}`,
+        userId,
+      }),
+      enqueueProposalFromMessage(userId, text, new Date().toISOString()).catch(() => null),
+    ]);
     const reply =
       (typeof loki.body.text === "string" && loki.body.text) ||
       (typeof loki.body.error === "string" ? loki.body.error : "Loki is unavailable right now.");
@@ -588,6 +598,9 @@ export async function POST(
       meta: {
         model: loki.body.model ?? null,
         projectKey: chatProject,
+        ...(queued
+          ? { queuedActionId: queued.id, queuedActionTitle: queued.title, queuedActionType: queued.type }
+          : {}),
       },
     });
     if (

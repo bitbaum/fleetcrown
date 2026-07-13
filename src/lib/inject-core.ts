@@ -27,6 +27,7 @@ import { enqueueHostedDispatchCommand } from "@/db/queries/pending-commands";
 import { EXECUTOR_COPY } from "@/config/executor-copy";
 import { retrieveFleetContextBlock } from "@/db/queries/knowledge-embeddings";
 import { assembleInjectPrompt } from "@/lib/inject-prompt";
+import { buildOperatorContextSection } from "@/lib/dispatch-operator-context";
 
 type ResolvedAdapter = (typeof ORCHESTRATION_ADAPTER_IDS)[number];
 
@@ -158,18 +159,22 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
     // "inject-core bypass"). buildPromptWithSession then adds the Session tier, so
     // every dispatch now carries all three tiers. Best-effort: never break a
     // dispatch if context assembly fails.
-    const projectContext = await getProjectContext(userId, canonical).catch(() => null);
-    const contextBlock = renderProjectContextBlock(projectContext ?? undefined);
-    // Captain RAG: surface relevant context from the operator's OTHER projects
-    // (fleet-knowledge vector index), retrieved against this task. The current
-    // project's own profile is already in contextBlock, so it's excluded. Off
-    // (returns "") when EMBEDDINGS_BASE_URL is unset — e.g. local dev.
     const ragQuery = customPrompt ?? promptKey ?? "";
-    const fleetBlock = ragQuery
-      ? await retrieveFleetContextBlock(userId, ragQuery, { excludeProject: canonical }).catch(() => "")
-      : "";
+    // Captain RAG: relevant context from the operator's OTHER projects (fleet
+    // vector index). Operator block: the life-OS half — top-level goals +
+    // near-term deadlines, so local dispatches serve the captain's objectives
+    // too, not just the per-project task. Both best-effort; both mirror the
+    // cloud assembleInjectPrompt path so local and remote dispatch match.
+    const [projectContext, fleetBlock, operatorSection] = await Promise.all([
+      getProjectContext(userId, canonical).catch(() => null),
+      ragQuery
+        ? retrieveFleetContextBlock(userId, ragQuery, { excludeProject: canonical }).catch(() => "")
+        : Promise.resolve(""),
+      buildOperatorContextSection(userId).catch(() => ""),
+    ]);
+    const contextBlock = renderProjectContextBlock(projectContext ?? undefined);
     const withContext = (body: string) =>
-      [contextBlock || null, fleetBlock || null, body].filter(Boolean).join("\n\n");
+      [contextBlock || null, operatorSection || null, fleetBlock || null, body].filter(Boolean).join("\n\n");
 
     if (customPrompt) {
       prompt = withContext(customPrompt);

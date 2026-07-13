@@ -18,6 +18,7 @@ import {
   formatTrayTooltip,
 } from './poller'
 import { startPusher, stopPusher, restartPusher, pushNow } from './pusher'
+import { startCalendarDrain, stopCalendarDrain, restartCalendarDrain } from './calendar-drain'
 import { dispatchAutopilot } from './dispatch'
 import { ensureZellijReady } from '@/lib/zellij-bootstrap'
 import type { PaneRecord } from '@/db/schema/runtime-snapshots'
@@ -552,6 +553,7 @@ function createWindow(): void {
       // which marks the daemon as online on the web UI.
       restartPoller()
       restartPusher()
+      restartCalendarDrain()
     }
     return result
   })
@@ -566,6 +568,7 @@ function createWindow(): void {
     if (result.ok) {
       stopPoller()
       stopPusher()
+      stopCalendarDrain()
     }
     return result
   })
@@ -779,6 +782,7 @@ function handleDeepLinkUrl(url: string) {
   }
   restartPoller()
   restartPusher()
+  restartCalendarDrain()
   if (mainWindow) {
     if (!mainWindow.isVisible()) mainWindow.show()
     mainWindow.focus()
@@ -959,6 +963,9 @@ app.whenReady().then(async () => {
   // so /control showed "Local daemon offline" even when dispatch was
   // working. See pusher.ts for the why.
   startPusher()
+  // Book cloud-approved calendar events locally via gog. Runs alongside the
+  // poller/pusher, sharing their token + base URL. See calendar-drain.ts.
+  startCalendarDrain()
   // Refresh the "last poll Ns ago" string between status events so the
   // tooltip never feels frozen during the 25-second long-poll wait.
   trayTickHandle = setInterval(() => {
@@ -975,6 +982,7 @@ app.whenReady().then(async () => {
     console.log('[desktop] system resumed — forcing poller + bridge reconnect')
     restartPoller()
     restartPusher()
+    restartCalendarDrain()
   })
   powerMonitor.on('unlock-screen', () => {
     console.log('[desktop] screen unlocked — refreshing poller + bridge')
@@ -1081,6 +1089,7 @@ app.on('before-quit', () => {
   }
   try { stopPoller() } catch { /* ignore */ }
   try { stopPusher() } catch { /* ignore */ }
+  try { stopCalendarDrain() } catch { /* ignore */ }
 })
 
 function createTray() {

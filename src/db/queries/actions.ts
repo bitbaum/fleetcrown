@@ -58,6 +58,34 @@ export async function markActionExecuted(id: string, userId: string): Promise<Ac
   return updated ?? null;
 }
 
+/**
+ * Approved-but-not-yet-executed actions of a given type, oldest first.
+ *
+ * The local runtime's calendar drain calls this (type=create_event) to find
+ * events approved on the cloud control plane — where `gog` isn't present — so it
+ * can book them locally. `markActionExecuted` (guarded on status='approved')
+ * remains the only path to 'executed', so this list naturally drains as each is
+ * booked and is safe to re-poll (a booked row drops out on its next pass).
+ */
+export async function getApprovedActionsByType(userId: string, type: ActionType) {
+  return db
+    .select()
+    .from(actions)
+    .where(
+      and(eq(actions.userId, userId), eq(actions.status, ACTION_STATUS.APPROVED), eq(actions.type, type)),
+    )
+    .orderBy(actions.createdAt);
+}
+
+export async function getActionById(userId: string, id: string): Promise<ActionRow | null> {
+  const [row] = await db
+    .select()
+    .from(actions)
+    .where(and(eq(actions.id, id), eq(actions.userId, userId)))
+    .limit(1);
+  return row ?? null;
+}
+
 export async function getPendingActions(userId: string) {
   return db
     .select()

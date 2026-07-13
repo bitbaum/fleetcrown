@@ -176,6 +176,15 @@ export async function ActionQueueCard() {
                       </div>
                     )}
 
+                    {/* Calendar events: show when/where so nothing is approved blind. */}
+                    {(payload?.eventStart != null || payload?.eventDate != null) && (
+                      <div className="text-xs md:text-sm text-text-tertiary mt-0.5">
+                        {"When: "}{String(payload.eventStart ?? payload.eventDate)}
+                        {payload?.eventEnd != null ? ` – ${String(payload.eventEnd)}` : ""}
+                        {payload?.eventLocation != null ? ` · ${String(payload.eventLocation)}` : ""}
+                      </div>
+                    )}
+
                     {(payload?.body != null || payload?.subject != null) && (
                       <div className="mt-2 p-2 rounded bg-surface-base border border-border-subtle">
                         {payload?.subject != null && (

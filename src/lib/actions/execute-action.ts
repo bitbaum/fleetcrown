@@ -8,6 +8,8 @@ import { upsertEntityAttribute } from "@/db/queries/utils";
 import { scheduleProjectProfileReindexByEntityId } from "@/lib/rag/reindex-project-profile";
 import { sendTelegramMessage, selfTelegramTarget } from "@/lib/actions/telegram-send";
 import { sendEmail } from "@/lib/email";
+import { bookCalendarEvent } from "@/lib/actions/calendar-event";
+import { isRuntimeAvailable } from "@/lib/runtime";
 
 export type ExecuteActionResult = {
   /** true only when a real-world effect happened and the row reached status='executed'. */
@@ -19,11 +21,10 @@ export type ExecuteActionResult = {
 };
 
 /** Action types whose executor isn't wired yet. Fail-closed: they pass the human
- *  gate but do nothing at execution until built. SEND_MESSAGE (Telegram) and
- *  SEND_EMAIL (Resend) are now wired — see the switch below. CREATE_EVENT stays
- *  deferred (no calendar backend; gog mutations are blocked by design). */
+ *  gate but do nothing at execution until built. SEND_MESSAGE (Telegram),
+ *  SEND_EMAIL (Resend) and CREATE_EVENT (gog calendar create) are now wired —
+ *  see the switch below. */
 const DEFERRED_TYPES = new Set<Action["type"]>([
-  ACTION_TYPE.CREATE_EVENT,
   ACTION_TYPE.FOLLOW_UP,
   ACTION_TYPE.OTHER,
 ]);
@@ -141,6 +142,39 @@ export async function executeAction(userId: string, action: Action): Promise<Exe
           return { executed: false, error: "not-approved-at-execute-time" };
         }
         await recordActionAuditEvent(userId, action, "executed");
+        return { executed: true };
+      }
+
+      case ACTION_TYPE.CREATE_EVENT: {
+        // External but reversible (an event can be deleted). Booked via the
+        // locally-authenticated `gog` CLI — which only exists on the local
+        // runtime. When approval happens on the cloud control plane (no gog),
+        // we do NOT fake success: leave the row 'approved' and audit it as
+        // deferred with an honest reason. The local runtime's calendar drain
+        // (see api/actions/drain-events) picks it up and books it for real.
+        if (!isRuntimeAvailable()) {
+          await recordActionAuditEvent(userId, action, "deferred", {
+            reason: "calendar runtime offline — awaiting local runtime to book via gog",
+          });
+          return { executed: false, deferred: true };
+        }
+
+        const booked = await bookCalendarEvent(action.payload, action.title);
+        if (!booked.ok) {
+          await recordActionAuditEvent(userId, action, "failed", { reason: booked.error });
+          return { executed: false, error: booked.error };
+        }
+
+        const done = await markActionExecuted(action.id, userId);
+        if (!done) {
+          await recordActionAuditEvent(userId, action, "failed", {
+            reason: "event booked but action was not in 'approved' state to mark executed",
+          });
+          return { executed: false, error: "not-approved-at-execute-time" };
+        }
+        await recordActionAuditEvent(userId, action, "executed", {
+          meta: { eventId: booked.eventId ?? null, htmlLink: booked.htmlLink ?? null },
+        });
         return { executed: true };
       }
 

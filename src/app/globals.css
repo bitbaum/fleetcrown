@@ -2914,6 +2914,9 @@
   .ui-loki-dispatch-link {
     @apply inline-flex min-h-9 items-center gap-1.5 rounded-full border border-border-subtle bg-surface-raised px-3 text-xs text-text-secondary transition-colors hover:border-border-default hover:text-text-primary;
   }
+  .ui-loki-queued-action {
+    @apply mt-2 inline-flex max-w-full items-center gap-1.5 rounded-xl border border-accent-muted bg-accent-muted/10 px-3 py-2 text-xs text-text-secondary transition-colors hover:border-accent-primary hover:text-text-primary;
+  }
 
   /* Composer (center pane, bottom). Grok-like: one large command object with
      scope, attachments, tools, suggestions and send all visually connected. */
