@@ -69,6 +69,27 @@ export async function fulfillCommitment(id: string, userId: string) {
     .where(and(eq(commitments.id, id), eq(commitments.userId, userId)));
 }
 
+/** Active commitments due on or before `now + days` (overdue included — those are
+ *  the most urgent). Feeds dispatch context so agents are aware of the operator's
+ *  time-sensitive obligations. Soonest first; capped so a long list can't bloat
+ *  the prompt. */
+export async function listUpcomingCommitments(userId: string, days = 14, limit = 8) {
+  const until = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+  return db
+    .select({ description: commitments.description, dueDate: commitments.dueDate })
+    .from(commitments)
+    .where(
+      and(
+        eq(commitments.userId, userId),
+        eq(commitments.status, COMMITMENT_STATUS.ACTIVE),
+        isNotNull(commitments.dueDate),
+        lte(commitments.dueDate, until),
+      ),
+    )
+    .orderBy(commitments.dueDate)
+    .limit(limit);
+}
+
 export async function getActiveCommitments(userId: string) {
   return db
     .select()
