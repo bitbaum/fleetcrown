@@ -12,10 +12,17 @@ export type ActionPayload = {
   channel?: string;     // whatsapp, telegram, email
   body?: string;        // message text
   subject?: string;     // email subject
-  // For events:
+  // For events (create_event). Loki fills what it knows; the executor is lenient:
+  //   - eventStart/eventEnd: explicit RFC3339 instants (preferred, precise).
+  //   - eventDate: a fallback when only a day is known — YYYY-MM-DD ⇒ all-day,
+  //     or a full datetime ⇒ a 1-hour block from that instant.
+  //   - allDay: force an all-day event regardless of the above.
   eventTitle?: string;
   eventDate?: string;
+  eventStart?: string;
+  eventEnd?: string;
   eventLocation?: string;
+  allDay?: boolean;
   // For commitments:
   commitment?: string;
   dueDate?: string;

@@ -19,6 +19,22 @@ const LOKI_SYSTEM_PROMPT =
   `You are Loki, the assistant inside ${APP_NAME} — the captain's layer over a builder's fleet of AI agents and projects. ` +
   `When fleet context about the operator's projects is provided, treat it as current ground truth and answer specifically and accurately from it; if a question falls outside it, say so rather than inventing detail. Be concise and direct.`;
 
+/**
+ * Ground-truth of what Loki can actually DO, injected into every turn's context.
+ *
+ * Why a message preface and not just the system prompt: the real Loki is the
+ * external OpenClaw agent reached over the gateway (askGatewayAgent) — it never
+ * sees LOKI_SYSTEM_PROMPT (that only shapes the Groq fallback). The only reliable
+ * way to bind the real brain per-turn is to prepend this to the message, exactly
+ * as fleet context is. Kept terse to limit per-turn token cost.
+ *
+ * This exists because Loki once told the operator a "security sandbox hard-blocked"
+ * a calendar write and invented an Approve button that would book it — both false.
+ * The truth: Loki has no direct external powers; it only proposes to the queue.
+ */
+const LOKI_CAPABILITIES =
+  `CAPABILITIES — ground truth; never exceed or invent beyond this: You have NO ability to directly change the operator's Google Calendar, send messages/emails, or take any external action yourself. Your only lever is the ${APP_NAME} approval queue — you PROPOSE actions (send a Telegram message, send an email, create a calendar event, create a commitment, update a project profile) and the operator must approve each one before anything happens. An approved calendar event is booked by running \`gog calendar create\` on the operator's own machine, so it lands only after they approve AND their local runtime is connected — it is not written the instant you propose it. Never claim a "security sandbox" or similar blocked you, and never report a result (an event booked, a message sent) you did not actually receive confirmation of. If you cannot do something, say so plainly and, when useful, propose the matching queue action instead.`;
+
 // The user's Settings → Voice preference, layered onto whichever brain answers.
 // SSOT for turning that free-text instruction into a directive — applied to both
 // the Groq fallback (system prompt) and the gateway agent (message preface) so
@@ -78,10 +94,12 @@ export async function askLoki(message: string, opts?: { sessionKey?: string; use
     opts?.userId ? buildLokiFleetContext(opts.userId, message).catch(() => "") : Promise.resolve(""),
   ]);
 
-  // The message the brain actually sees: fleet context (read-only background)
-  // ahead of the operator's question. Used by both the gateway and Groq paths
-  // so Loki answers with project knowledge regardless of which one serves it.
-  const contextualMessage = fleetContext ? `${fleetContext}\n\n---\n\n${message}` : message;
+  // The message the brain actually sees: capability ground-truth + fleet context
+  // (both read-only background) ahead of the operator's question. Used by the
+  // gateway AND Groq paths so Loki answers with project knowledge and, critically,
+  // never over-claims what it can do — regardless of which one serves the turn.
+  const background = fleetContext ? `${LOKI_CAPABILITIES}\n\n---\n\n${fleetContext}` : LOKI_CAPABILITIES;
+  const contextualMessage = `${background}\n\n---\n\n${message}`;
 
   // Real Loki: the OpenClaw agent (same brain + memory as Telegram). The voice
   // rides in as a one-line preface so the shared `main` agent honours it per-turn
