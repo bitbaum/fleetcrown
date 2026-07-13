@@ -376,6 +376,20 @@ function buildRunTimeline(runs: RunRow[], blockedReasons: Map<string, string>): 
     const err = rawErr.length > 160 ? `${rawErr.slice(0, 157)}…` : rawErr;
     const parts: string[] = [];
     if (done) parts.push(done);
+    // Cross-model verdict — the moat made visible. When a project declares a
+    // definition_of_done, a DIFFERENT model lineage judged this worker's handoff
+    // (see dod-gate.ts). Surface WHO judged and WHAT they caught, so "done"
+    // demonstrably means a second mind agreed — not the agent grading itself.
+    const v = run.summary?.verification;
+    if (v) {
+      const judge = v.judge.includes("/") ? v.judge.split("/").pop() : v.judge;
+      const worker = getAdapterLabel(run.adapter);
+      parts.push(
+        v.met
+          ? `✓ Cross-model check — ${worker} did it, ${judge} verified the definition of done is met`
+          : `✗ Cross-model check — ${worker} did it, ${judge} found the definition of done NOT met${v.gap ? `: ${v.gap}` : ""}`,
+      );
+    }
     if (next) parts.push(`Next: ${next}`);
     if (!parts.length && run.payload?.resultText) parts.push(run.payload.resultText);
     if (err) parts.push(`Error: ${err}`);

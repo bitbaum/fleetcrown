@@ -17,7 +17,11 @@ import { callGroqText } from "@/lib/groq";
 import type { RunClosePatch } from "./close-from-session";
 import type { OrchestrationTaskSummary } from "./contract";
 
-const JUDGE_MODEL = "openai/gpt-oss-120b"; // different lineage from the worker
+/** The default cross-model judge — a different lineage from the workers
+ *  (claude/llama/grok), so its blind spots don't overlap theirs. Exported so the
+ *  close path can record WHO judged in the run's surfaced verdict. */
+export const DOD_JUDGE_MODEL = "openai/gpt-oss-120b";
+const JUDGE_MODEL = DOD_JUDGE_MODEL; // different lineage from the worker
 
 export type DoDVerdict = { met: boolean; gap: string };
 
@@ -34,6 +38,10 @@ function summaryForJudge(s: OrchestrationTaskSummary): string {
     ["tests", "Tests"],
     ["tsc", "Typecheck"],
     ["lint", "Lint"],
+    // The resulting HEAD sha (or "none"). DoDs routinely say "committed"/"shipped",
+    // so the judge must SEE whether the agent actually committed — without this it
+    // false-negatives a fully-evidenced handoff for "no commit evidence".
+    ["commit", "Commit (resulting HEAD sha, or 'none' if no commit)"],
     ["health", "Health"],
     ["next", "Agent's stated next step"],
   ];

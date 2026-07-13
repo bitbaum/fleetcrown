@@ -31,7 +31,7 @@ import {
 } from "@/lib/orchestration/derive-project-lifecycle";
 import { adapterFor } from "@/lib/orchestration/adapter-registry";
 import { getProjectGoalConfig } from "@/db/queries/project-context";
-import { verifyDefinitionOfDone, applyDoDGate } from "@/lib/orchestration/dod-gate";
+import { verifyDefinitionOfDone, applyDoDGate, DOD_JUDGE_MODEL } from "@/lib/orchestration/dod-gate";
 import type { RunClosePatch } from "@/lib/orchestration/close-from-session";
 import type { OrchestrationOutcome } from "@/db/schema/orchestration-runs";
 
@@ -46,7 +46,7 @@ const closingRuns = new Set<string>();
  * the run closes "partial" with the gap as `next`, so autopilot's continue-loop
  * keeps working instead of stopping on the agent's own say-so (the /goal pattern).
  */
-async function gateAndCloseRun(runId: string, closePatch: RunClosePatch, userId: string, projectKey: string, recentOutcomes: OrchestrationOutcome[] = []): Promise<void> {
+async function gateAndCloseRun(runId: string, closePatch: RunClosePatch, userId: string, projectKey: string, recentOutcomes: OrchestrationOutcome[] = [], workerAdapter = "agent"): Promise<void> {
   let patch = closePatch;
   if (closePatch.outcome === "success") {
     const { definitionOfDone: dod, maxTurns } = await getProjectGoalConfig(userId, projectKey).catch(() => ({ definitionOfDone: null, maxTurns: null }));
@@ -57,6 +57,16 @@ async function gateAndCloseRun(runId: string, closePatch: RunClosePatch, userId:
       let priorPartials = 0;
       for (const o of recentOutcomes) { if (o === "partial") priorPartials++; else break; }
       patch = applyDoDGate(closePatch, verdict, { maxTurns, priorPartials });
+      // Record the cross-model verdict on the run so Activity can show that a
+      // DIFFERENT model lineage judged the worker's handoff — the moat made
+      // visible ("worker did it, judge checked it, here's the verdict").
+      patch = {
+        ...patch,
+        summary: {
+          ...patch.summary,
+          verification: { judge: DOD_JUDGE_MODEL, worker: workerAdapter, met: verdict.met, gap: verdict.gap || undefined },
+        },
+      };
     }
   }
   await updateOrchestrationRun(runId, patch, userId);
@@ -310,7 +320,7 @@ export async function GET() {
       // more than once for the same run.
       if (closePatch && !closingRuns.has(latestRun.id)) {
         closingRuns.add(latestRun.id);
-        gateAndCloseRun(latestRun.id, closePatch, ownerUserId, tab, recentOutcomesMap.get(tab) ?? [])
+        gateAndCloseRun(latestRun.id, closePatch, ownerUserId, tab, recentOutcomesMap.get(tab) ?? [], latestRun.adapter)
           .catch((err) => console.error("[control] run close failed:", err))
           .finally(() => closingRuns.delete(latestRun.id));
       }

@@ -146,6 +146,17 @@ export type OrchestrationTaskSummary = {
   commit?: string;
   "block-reason"?: string;
   "no-op-count"?: string;
+  /** Cross-model definition-of-done verdict — written by the DoD stop-gate at
+   *  close when the project declares a definition_of_done. Records that a
+   *  DIFFERENT model lineage judged the worker's own handoff (the verification a
+   *  single-agent runtime structurally cannot do — its judge would be itself).
+   *  Surfaced in Activity so "done" visibly means a second mind agreed. */
+  verification?: {
+    judge: string;    // the judging model (different lineage from the worker)
+    worker: string;   // the adapter that did the work
+    met: boolean;     // did the handoff evidence the stated Definition of Done?
+    gap?: string;     // when not met, the single most important thing still required
+  };
 };
 
 export type OrchestrationTaskStatus = {

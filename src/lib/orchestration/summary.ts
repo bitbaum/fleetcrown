@@ -14,9 +14,13 @@ import {
 export function buildOrchestrationSummary(
   fields: Partial<Record<OrchestrationTaskSummaryField, string | undefined>>,
 ): OrchestrationTaskSummary {
+  // Object.fromEntries infers a string-record; the summary also has the optional
+  // structured `verification` field (absent here — set only by the DoD gate at
+  // close), so cast through unknown. Every required text field is present via the
+  // SSOT field list above.
   return Object.fromEntries(
     ORCHESTRATION_TASK_SUMMARY_FIELDS.map((field) => [field, fields[field] ?? ""]),
-  ) as OrchestrationTaskSummary;
+  ) as unknown as OrchestrationTaskSummary;
 }
 
 export function parseOrchestrationSummary(text: string | undefined): OrchestrationTaskSummary | undefined {
