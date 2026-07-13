@@ -11,6 +11,7 @@
  */
 import type { ActionPayload } from "@/db/schema/actions";
 import { runToolArgs } from "@/lib/tools";
+import { callGroqText, GROQ_FAST_MODEL } from "@/lib/groq";
 
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 const HOUR_MS = 60 * 60 * 1000;
@@ -83,15 +84,86 @@ export type BookEventResult =
   | { ok: false; error: string };
 
 /**
+ * Agents sometimes propose a calendar event with a MESSAGE-shaped payload
+ * (subject + a free-text body like "Time: Friday, July 24, 2026, 18:00 - 22:00
+ * (Europe/Zurich)\nLocation: …") instead of the structured eventStart/eventDate
+ * fields the booker needs — so resolveEventTimes returns null and nothing ever
+ * books. When the structured fields are missing, recover them from that free text
+ * with a Groq JSON pass (it parses the human/German dates the pure resolver
+ * can't). Best-effort: returns the payload unchanged when there's no text, no
+ * GROQ key, or the parse fails — the caller then reports the honest
+ * "missing date/time" error instead of booking garbage.
+ */
+async function enrichEventPayloadFromText(
+  payload: ActionPayload | null | undefined,
+  fallbackTitle: string,
+): Promise<ActionPayload | null | undefined> {
+  if (!process.env.GROQ_API_KEY) return payload;
+  const text = [payload?.subject, payload?.body, payload?.eventTitle, fallbackTitle]
+    .map((v) => (typeof v === "string" ? v.trim() : ""))
+    .filter(Boolean)
+    .join("\n");
+  if (!text) return payload;
+
+  const system = `Extract calendar-event fields from the text. Respond with ONE JSON object only:
+{"eventTitle":"<short title>","eventStart":"<RFC3339 start, or omit>","eventEnd":"<RFC3339 end, or omit>","eventDate":"<YYYY-MM-DD when only a day is known, or omit>","eventLocation":"<place, or omit>","allDay":<true when there is no time-of-day>}
+Resolve relative/human/German dates against the current time; output absolute values. Include the timezone offset in eventStart/eventEnd when the text names one. eventLocation must be a real place (venue, address, or city) — never a timezone, an organization name, or a note; omit it if none is given. Omit any field you cannot determine.`;
+  let raw: string;
+  try {
+    raw = await callGroqText(`Current time: ${new Date().toISOString()}\n\nText:\n${text}`, {
+      systemPrompt: system, model: GROQ_FAST_MODEL, maxTokens: 300, temperature: 0, timeoutMs: 10_000,
+    });
+  } catch {
+    return payload;
+  }
+  const s = raw.indexOf("{"), e = raw.lastIndexOf("}");
+  if (s === -1 || e <= s) return payload;
+  let obj: Record<string, unknown>;
+  try {
+    obj = JSON.parse(raw.slice(s, e + 1));
+  } catch {
+    return payload;
+  }
+  const pick = (k: string) =>
+    typeof obj[k] === "string" && (obj[k] as string).trim() ? (obj[k] as string).trim() : undefined;
+  const merged: ActionPayload = { ...(payload ?? {}) };
+  merged.eventTitle ??= pick("eventTitle");
+  merged.eventStart ??= pick("eventStart");
+  merged.eventEnd ??= pick("eventEnd");
+  merged.eventDate ??= pick("eventDate");
+  merged.eventLocation ??= pick("eventLocation");
+  if (merged.allDay === undefined && obj.allDay === true) merged.allDay = true;
+  return merged;
+}
+
+/**
  * Book the event by running gog. Assumes the caller already checked the local
  * runtime is available (gog only exists there). Reversible: a wrong booking can
  * be deleted from the calendar — but we still only run behind the approval gate.
  */
+/**
+ * Resolve the `gog calendar create` argv for a payload, recovering structured
+ * fields from free text when they're missing (see enrichEventPayloadFromText).
+ * Exported so a repair/dry-run can inspect what WOULD be booked without running
+ * gog. Returns null when the event still can't be resolved.
+ */
+export async function resolveGogCreateArgs(
+  payload: ActionPayload | null | undefined,
+  fallbackTitle: string,
+): Promise<string[] | null> {
+  if (buildGogCreateArgs(payload, fallbackTitle)) {
+    return buildGogCreateArgs(payload, fallbackTitle);
+  }
+  const enriched = await enrichEventPayloadFromText(payload, fallbackTitle).catch(() => payload);
+  return buildGogCreateArgs(enriched, fallbackTitle);
+}
+
 export async function bookCalendarEvent(
   payload: ActionPayload | null | undefined,
   fallbackTitle: string,
 ): Promise<BookEventResult> {
-  const args = buildGogCreateArgs(payload, fallbackTitle);
+  // Structured fields present → book directly. Missing → recover from free text.
+  const args = await resolveGogCreateArgs(payload, fallbackTitle);
   if (!args) return { ok: false, error: "missing title or date/time in event payload" };
 
   const res = await runToolArgs("gog", args, 20000);
