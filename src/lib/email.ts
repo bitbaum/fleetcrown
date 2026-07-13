@@ -31,8 +31,10 @@ export function appUrl(): string {
 // Fire-and-forget — callers don't await
 export function sendEmailFire(to: string, subject: string, html: string, text: string): void {
   if (!process.env.RESEND_API_KEY) {
-    console.log("[email] no RESEND_API_KEY — skipping send");
-    console.log(`  To: ${to}\n  Subject: ${subject}\n  Text: ${text}`);
+    // NEVER log `text`/`html` here — reset-password and verify-email bodies carry
+    // a live one-time token URL; stdout is not a safe place for a credential.
+    // The recipient + subject are captured structurally by logSend (debug_logs).
+    console.log(`[email] no RESEND_API_KEY — skipping send: "${subject}" → ${to}`);
     logSend(to, subject, null, "no RESEND_API_KEY — skipped");
     return;
   }
