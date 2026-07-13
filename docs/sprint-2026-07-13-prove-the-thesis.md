@@ -48,12 +48,13 @@ context, PR #62). Prove it as a human:
   visibly carries the captain's objectives. *"The life-OS run by my fleet"* is now
   a fact, not a diagram.
 
-### Day 2 (Tue) — Witness the OrangeCat bridge (master-plan Phase 0.1–0.3)
-The code shipped weeks ago; nobody has watched it work in prod.
-- Sign in to fleetcrown.orangecat.ch with OrangeCat; confirm `orangecatActorId` persists.
-- Publish the FleetCrown project itself to OC (`OrangeCatPublishButton`); confirm the entity + back-link.
-- Append a real devlog entry; watch `promoteDevLogEntry` land it on the OC project wall.
-- **Proof:** the FleetCrown project page on orangecat.ch showing a live, real build event. *"The integration is the product"* becomes true.
+### Day 2 (Tue) — Witness the OrangeCat bridge (master-plan Phase 0.1–0.3) ✅ DONE 2026-07-13
+The code shipped weeks ago; nobody had watched it work in prod. Now witnessed:
+- ✅ Signed in with OrangeCat (OIDC); `orangecat_actor_id` c9e52937-… + access/refresh tokens persisted. (Caught + noted: state-cookie expiry if the consent screen sits >15 min.)
+- ✅ Published the FleetCrown project to OC → `orangecat_project_id` 856ef4ba-…; live at orangecat.ch/projects/856ef4ba-…
+- ✅ Promoted a real devlog entry → rendered LIVE on mao's OrangeCat profile **Timeline** ("Project Updated · via FleetCrown").
+- **Bug found + fixed to get here:** the loop "was never verified end-to-end" because OrangeCat's v1 entity-create inserted via a cookie-session Supabase client (anon under bearer auth) → RLS 42501. Fixed by applying OC's own service-role pattern (OC commit `d818ceb6`), deployed. See [[bug_oc_bridge_rls_entity_create]].
+- **Proof:** a real FleetCrown build event, live on orangecat.ch, tagged "via FleetCrown." *"The integration is the product"* is now a **fact**, not a claim.
 
 ### Day 3 (Wed) — Make "best-effort" stop meaning "silently lossy" (Phase 0.4)
 The one piece of Phase 0 that is code, not clicks — and it's the same anti-pattern
