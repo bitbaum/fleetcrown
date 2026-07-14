@@ -49,7 +49,7 @@ import { getRuntimeSnapshot } from "@/db/queries/runtime-snapshots";
 import { writePromptQueueMirror } from "@/lib/prompt-queue-mirror";
 import { fetchAllGitStates } from "@/lib/git-state";
 import { matchProfile, matchProfileById, resolveAutoInjectOverride } from "@/lib/project-profile-match";
-import { resolveProjectSession } from "@/lib/project-session";
+import { resolveProjectSession, isRuntimeObservationFresh } from "@/lib/project-session";
 import { workspaceIdFor } from "@/lib/agent-execution/ownership";
 
 export type { ProjectProfile, CurrentPrompt, ProjectState, SessionState, GitState, ControlData, FailedCommand };
@@ -290,12 +290,15 @@ export async function GET() {
     const projectAgent = agentRegistry.agents.find((entry) => entry.id === projectAgentId);
     // On the cloud host (no /proc access) fall back to runner-pushed DB state so the control
     // panel reflects live agent activity on the home machine.
+    // Stale runner observations must not read as live work (a killed agent
+    // once showed "Working" forever) — gate the DB fallback on freshness.
+    const dbRuntimeFresh = isRuntimeObservationFresh(dbState);
     const agentRunning = runtimeAvailable
       ? projectProcesses.length > 0
-      : (dbState?.agentRunning ?? false);
+      : (dbRuntimeFresh && (dbState?.agentRunning ?? false));
     const activeAgents = runtimeAvailable
       ? [...new Set(projectProcesses.map((process) => process.agentId))]
-      : (dbState?.activeAgents ?? []);
+      : (dbRuntimeFresh ? (dbState?.activeAgents ?? []) : []);
     const sessionLifecycleSignals = projectProcesses.length > 0
       ? projectProcesses.some((process) => process.sessionLifecycleSignals)
       : projectAgent?.capabilities.sessionLifecycleSignals ?? false;

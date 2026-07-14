@@ -12,7 +12,7 @@ import { isRuntimeAvailable } from "@/lib/runtime";
 import { NOTIFY_CHANNEL } from "@/db/setup-notify-trigger";
 import type { FastProjectState } from "@/lib/control-fast-state";
 import { sseBus } from "@/lib/sse-bus";
-import { resolveProjectSession, dbRowToSession } from "@/lib/project-session";
+import { resolveProjectSession, dbRowToSession, isRuntimeObservationFresh } from "@/lib/project-session";
 import { getDatabaseDirectUrl } from "@/lib/db-url";
 import postgres from "postgres";
 
@@ -32,14 +32,17 @@ function dbToFastState(
   return confProjects.map(({ tab, ownerUserId }) => {
     const r = byKey.get(`${ownerUserId}:${tab.toLowerCase()}`);
     if (!r) return { tab, workspaceId: null, agentRunning: false, tabOpen: false, activeAgents: [], session: null, currentPrompt: null, readyAt: null, lockAt: null, closingAt: null, closedAt: null };
+    // Runtime liveness claims expire when the runner stops reporting this
+    // project (see isRuntimeObservationFresh) — session handoffs do not.
+    const fresh = isRuntimeObservationFresh(r);
     return {
       tab,
       workspaceId: r.workspaceId,
-      agentRunning: r.agentRunning,
-      tabOpen: r.tabOpen,
-      activeAgents: r.activeAgents,
+      agentRunning: fresh && r.agentRunning,
+      tabOpen: fresh && r.tabOpen,
+      activeAgents: fresh ? r.activeAgents : [],
       session: dbRowToSession(r),
-      currentPrompt: r.currentPromptKey
+      currentPrompt: fresh && r.currentPromptKey
         ? { key: r.currentPromptKey, label: r.currentPromptLabel ?? r.currentPromptKey, startedAt: r.currentPromptStartedAt ? Math.floor(r.currentPromptStartedAt.getTime() / 1000) : 0, source: "inject" as const }
         : null,
       readyAt:   r.readyAt   ? Math.floor(r.readyAt.getTime()   / 1000) : null,

@@ -1,5 +1,25 @@
 import type { SessionState } from "@/lib/control-types";
 import type { ProjectState as DbProjectState } from "@/db/schema/project-states";
+import { RUNNER_OFFLINE_THRESHOLD_MS } from "@/lib/constants/runner";
+
+/**
+ * Is a persisted runtime observation still trustworthy? Runtime fields
+ * (agentRunning, activeAgents, currentPrompt, tabOpen) are CLAIMS made by a
+ * runner at push time — when the runner stops reporting a project (agent
+ * killed, machine asleep, project dropped from its payload), the row freezes
+ * at its last observation and would otherwise show "Working" forever
+ * (2026-07-14: a killed agent read as "Live agent process detected · 23m").
+ * Past the runner-offline threshold, treat those claims as expired. Session
+ * HANDOFFS are deliberately exempt — a handoff is a historical fact, not a
+ * liveness claim, and it must survive so runs can still close from it.
+ */
+export function isRuntimeObservationFresh(
+  r: Pick<DbProjectState, "runtimeObservedAt"> | null | undefined,
+  nowMs = Date.now(),
+): boolean {
+  const t = r?.runtimeObservedAt?.getTime();
+  return t != null && nowMs - t < RUNNER_OFFLINE_THRESHOLD_MS;
+}
 
 /**
  * Project a persisted `project_states` row into the `SessionState` shape, or
