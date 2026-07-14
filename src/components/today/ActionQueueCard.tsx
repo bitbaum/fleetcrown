@@ -8,6 +8,7 @@ import { ACTION_TYPE, ACTION_STATUS, type ActionType } from "@/lib/constants/sta
 import { ActionButtons } from "./ActionButtons";
 import { ApproveGroupButton } from "./ApproveGroupButton";
 import { HEALTH_ACTIVE_DAYS } from "@/lib/constants/people";
+import { CHECKIN_TITLE_PREFIX } from "@/lib/actions/checkin-proposal";
 import { compactRelativeDate } from "@/lib/dates";
 
 const TYPE_ICONS: Record<ActionType, typeof Send> = {
@@ -32,8 +33,11 @@ function groupSimilarActions(
   const checkins: ActionRow[] = [];
   const standalone: ActionRow[] = [];
 
+  // Group by the check-in intent (title prefix), regardless of action type — the
+  // proactive producer proposes these as CREATE_COMMITMENT reminders, not
+  // send_message. The prefix is the SSOT the producer writes with.
   for (const a of actions) {
-    if (a.type === ACTION_TYPE.SEND_MESSAGE && a.title.startsWith("Check in with ")) {
+    if (a.title.startsWith(CHECKIN_TITLE_PREFIX)) {
       checkins.push(a);
     } else {
       standalone.push(a);
@@ -43,11 +47,11 @@ function groupSimilarActions(
   const groups: ActionGroup[] = [];
   if (checkins.length > 1) {
     groups.push({
-      type: ACTION_TYPE.SEND_MESSAGE,
+      type: checkins[0].type,
       reasoning: `No interaction in ${HEALTH_ACTIVE_DAYS}+ days. Maintaining relationships matters.`,
       actions: checkins.map((a) => ({
         id: a.id,
-        title: a.title.replace("Check in with ", ""),
+        title: a.title.replace(CHECKIN_TITLE_PREFIX, ""),
         payload: a.payload,
       })),
     });

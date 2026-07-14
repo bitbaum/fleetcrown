@@ -1,8 +1,9 @@
 import { db } from "@/db";
 import { actions } from "@/db/schema";
 import type { ActionPayload, NewAction } from "@/db/schema/actions";
-import { eq, and, desc, ne, sql } from "drizzle-orm";
+import { eq, and, desc, ne, sql, gt, like, isNotNull } from "drizzle-orm";
 import { ACTION_STATUS, type ActionType } from "@/lib/constants/statuses";
+import { CHECKIN_TITLE_PREFIX } from "@/lib/actions/checkin-proposal";
 
 export type ActionRow = typeof actions.$inferSelect;
 
@@ -136,4 +137,45 @@ export async function getActionStats(userId: string) {
     executed: Number(result.executed),
     rejected: Number(result.rejected),
   };
+}
+
+// ── Proactive check-in producer support (see lib/actions/checkin-producer.ts) ──
+
+/**
+ * Count pending (draft) check-in proposals for a user. Queue-pressure guard so
+ * the proactive producer never floods the approval queue with un-actioned nudges.
+ */
+export async function countPendingCheckins(userId: string): Promise<number> {
+  const [row] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(actions)
+    .where(
+      and(
+        eq(actions.userId, userId),
+        eq(actions.status, ACTION_STATUS.DRAFT),
+        like(actions.title, `${CHECKIN_TITLE_PREFIX}%`),
+      ),
+    );
+  return row?.n ?? 0;
+}
+
+/**
+ * Entity ids that already had a check-in proposed within `sinceDays` (ANY
+ * status). The per-contact cooldown: a rejected or executed nudge shouldn't be
+ * re-proposed the next tick — only after the window lapses. Complements the
+ * still-pending dedupe already enforced by proposeAction's unique-draft index.
+ */
+export async function getEntityIdsWithRecentCheckin(userId: string, sinceDays: number): Promise<Set<string>> {
+  const rows = await db
+    .selectDistinct({ entityId: actions.entityId })
+    .from(actions)
+    .where(
+      and(
+        eq(actions.userId, userId),
+        isNotNull(actions.entityId),
+        like(actions.title, `${CHECKIN_TITLE_PREFIX}%`),
+        gt(actions.createdAt, sql`now() - make_interval(days => ${sinceDays})`),
+      ),
+    );
+  return new Set(rows.map((r) => r.entityId).filter((id): id is string => id !== null));
 }
