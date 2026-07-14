@@ -5,6 +5,7 @@ import { auth } from "@/auth";
 import { PublicSurface } from "@/components/public/PublicSurface";
 import { PublicHeaderActions } from "@/components/public/PublicHeaderActions";
 import { isStripeReady } from "@/lib/stripe";
+import { orangeCatPayUrl } from "@/lib/oc-pay";
 import { ROUTES } from "@/config/auth";
 import { APP_NAME } from "@/config/brand";
 import {
@@ -41,7 +42,13 @@ export default async function PricingPage() {
     if (stripeReady) {
       return { href: `/api/checkout/${plan.key}`, label: plan.cta };
     }
-    // Stripe not configured yet — start free, upgrade in-app later.
+    // Stripe blocked on incorporation — but the Bitcoin/OrangeCat rail needs no
+    // merchant account. If this tier has an OC pass configured, offer it.
+    const btc = orangeCatPayUrl(plan.key);
+    if (btc) {
+      return { href: btc, label: "Pay in Bitcoin" };
+    }
+    // Neither rail live yet — start free, upgrade in-app later.
     return signedIn
       ? { href: ROUTES.APP_HOME, label: `Open ${APP_NAME}` }
       : { href: ROUTES.SIGN_UP, label: "Start free" };

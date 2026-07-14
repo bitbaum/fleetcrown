@@ -49,6 +49,11 @@ export const users = pgTable("users", {
   planStatus: text("plan_status").$type<PlanStatus>(),
   stripeCustomerId: text("stripe_customer_id").unique(),
   stripeSubscriptionId: text("stripe_subscription_id").unique(),
+  // OrangeCat/Bitcoin-rail passes are time-boxed (BTC has no native recurring):
+  // the entitlement webhook sets this to now + period, and the
+  // downgrade-expired-plans cron reverts the plan to free once it passes. Null =
+  // no expiry (free tier, or a Stripe subscription which manages its own cycle).
+  planExpiresAt: timestamp("plan_expires_at", { withTimezone: true }),
   // Private-zone PIN — scrypt hash in `<hash>.<salt>` format. Null = no PIN
   // configured for this user; the gate stays open. Each user sets / changes
   // / disables their own PIN through Settings → Privacy.

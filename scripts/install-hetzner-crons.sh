@@ -42,7 +42,7 @@ ExecStart=/opt/fleetcrown/fc-cron.sh %i
 SVC
 
 # Times are "HH:MM" (daily) or "*:MM" (hourly) — both expand to OnCalendar=*-*-* <val>:00.
-declare -A SCHED=( [prune-debug-logs]="03:00" [nudge-idle]="04:00" [prune-agent-tokens]="05:00" [email-canary]="06:00" [send-digest-emails]="07:00" [frontier-digest]="08:00" [orangecat-promote-backfill]="09:00" [reap-stale-runs]="*:15" [check-runner-stall]="*:30" )
+declare -A SCHED=( [prune-debug-logs]="03:00" [nudge-idle]="04:00" [prune-agent-tokens]="05:00" [email-canary]="06:00" [send-digest-emails]="07:00" [frontier-digest]="08:00" [orangecat-promote-backfill]="09:00" [downgrade-expired-plans]="09:30" [reap-stale-runs]="*:15" [check-runner-stall]="*:30" )
 for name in "${!SCHED[@]}"; do
   cat > "/etc/systemd/system/fc-cron@${name}.timer" <<TIMER
 [Unit]
@@ -59,7 +59,7 @@ TIMER
 done
 
 systemctl daemon-reload
-for name in prune-debug-logs nudge-idle prune-agent-tokens email-canary send-digest-emails frontier-digest orangecat-promote-backfill reap-stale-runs check-runner-stall; do
+for name in prune-debug-logs nudge-idle prune-agent-tokens email-canary send-digest-emails frontier-digest orangecat-promote-backfill downgrade-expired-plans reap-stale-runs check-runner-stall; do
   systemctl enable --now "fc-cron@${name}.timer" >/dev/null 2>&1
 done
 
