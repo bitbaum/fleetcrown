@@ -28,6 +28,9 @@
  * the pusher's 30s cadence would slip. Two timers, two responsibilities.
  */
 
+import { readdirSync } from 'fs'
+import { homedir } from 'os'
+import { join } from 'path'
 import { getZellijTabs } from '@/lib/zellij'
 import { APP_URL } from '@/config/brand'
 import { DAEMON_HEARTBEAT_MS } from '@/lib/constants/daemon'
@@ -220,19 +223,37 @@ function buildPaneTopology(openTabs: string[]): PaneRecord[] {
  * days-old snapshot while real PTY agents ran unseen (2026-07-02 incident).
  * Fallback: derive {tab, dir} from the agent processes actually running —
  * the PTYs are the ground truth the payload exists to report.
+ *
+ * Session-handoff merge (2026-07-14): process-derived entries vanish the moment
+ * the agent EXITS — which is exactly when its final `status: ready` handoff is
+ * written. On the conf-less box the finished project dropped out of the payload
+ * before its handoff was ever pushed, so runs never closed and the reaper
+ * stamped every completed autopilot run `timeout` (14 days, zero recorded
+ * successes). A project with a session handoff on disk is therefore always
+ * included, agent running or not.
  */
 function projectEntries(agentProcesses: ReturnType<typeof getAgentProcesses>): { tab: string; dir: string }[] {
-  const conf = parseProjectsConf()
-  if (conf.length > 0) return conf
   const seen = new Set<string>()
   const out: { tab: string; dir: string }[] = []
-  for (const p of agentProcesses) {
-    const tab = p.cwd.split('/').filter(Boolean).pop() ?? p.cwd
-    if (!seen.has(tab.toLowerCase())) {
-      seen.add(tab.toLowerCase())
-      out.push({ tab, dir: p.cwd })
-    }
+  const add = (tab: string, dir: string) => {
+    if (!tab || seen.has(tab.toLowerCase())) return
+    seen.add(tab.toLowerCase())
+    out.push({ tab, dir })
   }
+  for (const entry of parseProjectsConf()) add(entry.tab, entry.dir)
+  for (const p of agentProcesses) add(p.cwd.split('/').filter(Boolean).pop() ?? p.cwd, p.cwd)
+  // Projects whose agent already exited but whose handoff awaits pushing.
+  // parseSession reads by tab name, so the dir here is only used for process
+  // matching — the dev-root convention path is correct on both box and laptop,
+  // and for an exited agent nothing matches it, which is the truth.
+  try {
+    const sessionsDir = join(homedir(), '.claude', 'sessions')
+    for (const f of readdirSync(sessionsDir)) {
+      if (!f.endsWith('.md')) continue
+      const tab = f.slice(0, -3)
+      add(tab, join(homedir(), 'dev', tab))
+    }
+  } catch { /* no sessions dir yet — nothing to merge */ }
   return out
 }
 

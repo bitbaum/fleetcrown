@@ -8,6 +8,7 @@ import { isRuntimeAvailable } from "@/lib/runtime";
 import { emitStateChanged } from "@/lib/sse-bus";
 import { writePromptQueueMirror } from "@/lib/prompt-queue-mirror";
 import { isCloudRunnerVersion } from "@/lib/builder-presence";
+import { closeOpenRunsForProject } from "@/lib/orchestration/close-sweep";
 
 function sanitizePanes(raw: unknown[]): PaneRecord[] {
   const out: PaneRecord[] = [];
@@ -167,6 +168,16 @@ export async function POST(req: NextRequest) {
           todos: p.sessionTodos,
           health: p.sessionHealth,
         }).catch((err) => console.error("[runtime-state] changelog append failed:", err));
+      }
+      // A freshly-ingested READY handoff is the run's completion signal — close
+      // the open run NOW instead of waiting for a human /control load or the
+      // hourly cron sweep. Fire-and-forget: ingestion latency stays flat, and
+      // closeRunFromSession's own guards (finishedAt, handoff-postdates-start)
+      // make a duplicate attempt a no-op.
+      if (updated && p.sessionStatus?.toLowerCase() === "ready") {
+        void closeOpenRunsForProject(userId, p.tab).catch((err) =>
+          console.error("[runtime-state] run close from handoff failed:", err),
+        );
       }
     }
   }));

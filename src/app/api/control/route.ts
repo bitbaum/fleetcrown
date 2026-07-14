@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getZellijTabs } from "@/lib/zellij";
 import { getProjects, type ProjectRow } from "@/db/queries/projects";
 import { getLatestEventsByProjectKeys } from "@/db/queries/orchestration-events";
-import { getLatestRunsByProjectPaths, getRecentOutcomesByProjectKeys, cleanupStaleOrchestrationRuns, updateOrchestrationRun } from "@/db/queries/orchestration-runs";
+import { getLatestRunsByProjectPaths, getRecentOutcomesByProjectKeys, cleanupStaleOrchestrationRuns } from "@/db/queries/orchestration-runs";
 import { getRecentActivity, getRecentCustomPromptsByProjectKeys, type RecentCustomPrompt } from "@/db/queries/prompt-history";
 import { getProjectActivityBatch, type ProjectActivityEvent } from "@/db/queries/activity";
 import { getProjectStatesByUserId, getProjectStatesByUserIds, persistProjectSessionIfNewer } from "@/db/queries/project-states";
@@ -30,57 +30,15 @@ import {
   persistRuntimeLifecycleEvents,
 } from "@/lib/orchestration/derive-project-lifecycle";
 import { adapterFor } from "@/lib/orchestration/adapter-registry";
-import { getProjectGoalConfig } from "@/db/queries/project-context";
-import { verifyDefinitionOfDone, applyDoDGate, DOD_JUDGE_MODEL } from "@/lib/orchestration/dod-gate";
-import type { RunClosePatch } from "@/lib/orchestration/close-from-session";
-import type { OrchestrationOutcome } from "@/db/schema/orchestration-runs";
 
-// Runs whose close is being gated/persisted right now — prevents the DoD judge
-// from firing more than once per run while the fire-and-forget close is in flight.
-const closingRuns = new Set<string>();
+import { gateAndCloseRun, closingRuns } from "@/lib/orchestration/gate-and-close";
 
-/**
- * Close an orchestration run, applying the definition-of-done stop-gate first.
- * When the run would close SUCCESS and the project declares a definition_of_done,
- * a different-lineage model checks the handoff against that bar; if it isn't met,
- * the run closes "partial" with the gap as `next`, so autopilot's continue-loop
- * keeps working instead of stopping on the agent's own say-so (the /goal pattern).
- */
-async function gateAndCloseRun(runId: string, closePatch: RunClosePatch, userId: string, projectKey: string, recentOutcomes: OrchestrationOutcome[] = [], workerAdapter = "agent"): Promise<void> {
-  let patch = closePatch;
-  if (closePatch.outcome === "success") {
-    const { definitionOfDone: dod, maxTurns } = await getProjectGoalConfig(userId, projectKey).catch(() => ({ definitionOfDone: null, maxTurns: null }));
-    if (dod) {
-      const verdict = await verifyDefinitionOfDone(dod, closePatch.summary);
-      // priorPartials = consecutive partial closes so far = how many times the
-      // goal has already re-looped (recentOutcomes is most-recent-first).
-      let priorPartials = 0;
-      for (const o of recentOutcomes) { if (o === "partial") priorPartials++; else break; }
-      patch = applyDoDGate(closePatch, verdict, { maxTurns, priorPartials });
-      // Record the cross-model verdict on the run so Activity can show that a
-      // DIFFERENT model lineage judged the worker's handoff — the moat made
-      // visible ("worker did it, judge checked it, here's the verdict").
-      patch = {
-        ...patch,
-        summary: {
-          ...patch.summary,
-          verification: { judge: DOD_JUDGE_MODEL, worker: workerAdapter, met: verdict.met, gap: verdict.gap || undefined },
-        },
-      };
-    }
-  }
-  await updateOrchestrationRun(runId, patch, userId);
-  // Run ledger: the closing hop declares itself with its (possibly DoD-gated)
-  // outcome — the run's biography ends with a verdict, not silence.
-  void emitRunEvent(runId, userId, "closed", { outcome: patch.outcome, state: patch.state });
-}
 // Canonical states/events (ORCHESTRATION_STATES, OrchestrationState, etc.) from
 // contract (see debt roadmap Priority 1 + openclaw plan). Raw fast-state (/tmp,
 // sessions) and pending-commands are *inputs* / compat only. Derived truth +
 // events table should be preferred for new code. This route is being thinned to
 // delegate more to lib/orchestration (deriveLifecycleState etc already used).
 import { getSessionUserId } from "@/lib/session";
-import { emitRunEvent } from "@/db/queries/run-events";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { getBuilderPresence } from "@/db/queries/runner-presence";
 import { isAgentId, listAgentRegistry } from "@/lib/agent-registry";

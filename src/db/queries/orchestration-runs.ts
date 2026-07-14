@@ -92,6 +92,32 @@ export async function cleanupStaleOrchestrationRuns(userId?: string) {
 }
 
 /**
+ * All currently-open runs (no terminal state yet), oldest first — the work-list
+ * for the cron close-sweep. minAgeMinutes skips runs that just started so the
+ * sweep never races a dispatch that hasn't produced a handoff yet.
+ */
+export async function listOpenRuns(minAgeMinutes = 5) {
+  return db
+    .select({
+      id: orchestrationRuns.id,
+      userId: orchestrationRuns.userId,
+      adapter: orchestrationRuns.adapter,
+      projectKey: orchestrationRuns.projectKey,
+      startedAt: orchestrationRuns.startedAt,
+      finishedAt: orchestrationRuns.finishedAt,
+    })
+    .from(orchestrationRuns)
+    .where(
+      and(
+        inArray(orchestrationRuns.state, ["waiting", "running"]),
+        isNull(orchestrationRuns.finishedAt),
+        lt(orchestrationRuns.startedAt, new Date(Date.now() - minAgeMinutes * 60 * 1000)),
+      ),
+    )
+    .orderBy(orchestrationRuns.startedAt);
+}
+
+/**
  * Is this project busy for this user — i.e. is another agent's run AHEAD of
  * ours? The SSOT "busy" predicate for per-project dispatch serialization.
  *
