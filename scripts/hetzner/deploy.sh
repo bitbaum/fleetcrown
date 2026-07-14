@@ -25,6 +25,14 @@ trap 'ssh -S "$TUNNEL_SOCK" -O exit "$BOX" 2>/dev/null; [ -n "$STAGE" ] && rm -r
 [ -n "${DATABASE_URL:-}" ] && export DATABASE_URL="${DATABASE_URL/@localhost:5432/@127.0.0.1:15432}"
 [ -n "${DIRECT_URL:-}" ] && export DIRECT_URL="${DIRECT_URL/@localhost:5432/@127.0.0.1:15432}"
 
+# Reconcile DB schema BEFORE building — SSG may query columns/tables that the new
+# code introduces. Guarded: applies only pending, additive migrations and refuses
+# any destructive diff (aborts without shipping). See apply-schema.sh.
+if [ "$DB" != "-" ]; then
+  "$(dirname "${BASH_SOURCE[0]}")/apply-schema.sh" "$NAME" "$REPO" "$DB" \
+    || { echo "ERROR: schema step failed — deploy aborted (no code shipped)"; exit 1; }
+fi
+
 echo "=== build $NAME ($SRC) ==="
 SELF_HOST=1 npm run build
 
