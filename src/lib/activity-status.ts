@@ -7,8 +7,7 @@
 // these rules anywhere, import from here instead.
 
 import { getIntentLabel } from "@/config/control-intents";
-
-export type EventStatus = "negative" | "warning" | "positive" | "neutral";
+import type { StatusTone } from "@/lib/constants/statuses";
 
 type RunStatusInput = {
   state: string | null;
@@ -21,7 +20,7 @@ export function isErrorRun(run: RunStatusInput): boolean {
   return run.outcome === "error" || run.state === "error" || Boolean(run.payload?.error);
 }
 
-export function runStatus(run: RunStatusInput): EventStatus {
+export function runStatus(run: RunStatusInput): StatusTone {
   if (isErrorRun(run)) return "negative";
   if (run.state === "running" && !run.finishedAt) return "warning";
   if (run.outcome === "success") return "positive";
@@ -123,7 +122,7 @@ export function toPromptDisplayFields(row: PromptBodyInput): PromptDisplayFields
 }
 
 // Severity ordering for "worst of N events" reductions (status strip etc).
-export const STATUS_RANK: Record<EventStatus, number> = {
+export const STATUS_RANK: Record<StatusTone, number> = {
   negative: 3,
   warning: 2,
   positive: 1,

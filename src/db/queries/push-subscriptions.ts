@@ -28,10 +28,6 @@ export async function upsertSubscription(
     });
 }
 
-export async function removeSubscriptionByEndpoint(endpoint: string): Promise<void> {
-  await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, endpoint));
-}
-
 /** Remove subscriptions by endpoint, scoped to a single user — used by the
  *  client's "unsubscribe" path so one user can't drop another user's row. */
 export async function removeSubscriptionForUser(userId: string, endpoint: string): Promise<void> {

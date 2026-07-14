@@ -6,6 +6,7 @@ import { useVoiceInput } from "@/hooks/use-voice-input";
 import { postJson } from "@/lib/api/fetch";
 import { haptic } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
+import type { BuilderChannel } from "@/lib/constants/statuses";
 
 type SendState = "idle" | "sending" | "sent" | "error";
 
@@ -27,7 +28,7 @@ export function TabVoiceMic({
   tab: string | null;
   /** Passed through for symmetry with the terminal surface; tab-inject keys off
    *  the tab name + caller runtime, so no per-channel branch is needed today. */
-  channel?: "cloud" | "local";
+  channel?: BuilderChannel;
   compact?: boolean;
 }) {
   const [send, setSend] = useState<SendState>("idle");

@@ -113,17 +113,6 @@ export async function getLatestPendingSession(userId: string): Promise<BeaconSes
   return rows[0] ? rowToSession(rows[0]) : null;
 }
 
-/** PATCH a beacon session's choice. Empty string ("") = cancelled.
- *  Returns the updated row or null if the id doesn't exist. */
-export async function updateBeaconChoice(id: string, choice: string): Promise<BeaconSession | null> {
-  const [row] = await db
-    .update(beaconSessions)
-    .set({ choice })
-    .where(eq(beaconSessions.id, id))
-    .returning();
-  return row ? rowToSession(row) : null;
-}
-
 /** Cancel any active (un-chosen, not expired) beacon session for a user+
  *  project pair. Called by /api/inject when a direct injection races with
  *  an open popup — preserves the file-based contract that setting choice

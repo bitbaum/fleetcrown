@@ -1,5 +1,6 @@
 import { APP_LOCALE } from "@/lib/constants";
-import type { DigestWindow, EventStatus } from "@/db/queries/digests";
+import type { DigestWindow } from "@/db/queries/digests";
+import type { StatusTone } from "@/lib/constants/statuses";
 
 // ─── Density (UI-only concept, not in the data layer) ────────────────────────
 
@@ -28,7 +29,7 @@ export const RANGE_LABEL: Record<DigestWindow, string> = {
 
 // ─── Status → dot class (SSOT for the colored circles) ──────────────────────
 
-export const STATUS_DOT_CLASS: Record<EventStatus, string> = {
+export const STATUS_DOT_CLASS: Record<StatusTone, string> = {
   negative: "ui-dot-negative",
   warning: "ui-dot-warning",
   positive: "ui-dot-positive",

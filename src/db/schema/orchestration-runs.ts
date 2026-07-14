@@ -16,13 +16,23 @@ export type OrchestrationRunPayload = {
   error?: string;
 };
 
+/** Canonical run outcome values — SSOT for the column type, the finish-route
+ *  validator (ORCHESTRATION_OUTCOMES tuple), and outcome inference. */
+export const ORCHESTRATION_OUTCOME = {
+  SUCCESS: "success",
+  PARTIAL: "partial",
+  ERROR: "error",
+  HANG: "hang",
+  USER_ABORT: "user_abort",
+  TIMEOUT: "timeout",
+} as const;
 export const ORCHESTRATION_OUTCOMES = [
-  "success",
-  "partial",
-  "error",
-  "hang",
-  "user_abort",
-  "timeout",
+  ORCHESTRATION_OUTCOME.SUCCESS,
+  ORCHESTRATION_OUTCOME.PARTIAL,
+  ORCHESTRATION_OUTCOME.ERROR,
+  ORCHESTRATION_OUTCOME.HANG,
+  ORCHESTRATION_OUTCOME.USER_ABORT,
+  ORCHESTRATION_OUTCOME.TIMEOUT,
 ] as const;
 export type OrchestrationOutcome = (typeof ORCHESTRATION_OUTCOMES)[number];
 

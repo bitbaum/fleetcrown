@@ -28,7 +28,9 @@ src/
 │   ├── shell/     → AppShell, Sidebar, MobileNav (Today/Control/Projects + Loki + More), AskLokiButton → /loki
 │   ├── control/   → ControlPanel, ProjectCard, ProjectTile, ProjectProfile (fleet command)
 │   ├── agents/    → AgentsCockpit (roster + inter-agent comms feed, parses ~/.claude/cross-project/inbox-*.md)
-│   ├── duet/      → DuetView, DuetPane (watch two agents' last prompts side by side, live off one bridge SSE)
+│   ├── loki/      → LokiWorkspace, Transcript, Composer, ConversationList (chat assistant)
+│   ├── terminal/  → TerminalWorkspace, BuilderAgentView, TabVoiceMic (live embedded terminal, cloud + local PTY)
+│   ├── activity/  → ActivityView, EventStream, DigestPanel (fleet activity timeline + digests)
 │   ├── today/     → CalendarCard, WeatherCard, CommitmentsCard, SubscriptionsCard, HabitsList
 │   ├── people/    → PeopleGrid, PersonCard, PersonDetail
 │   ├── projects/  → ProjectGrid, ProjectDetail (split into header/tabs/inline-editors)
@@ -174,6 +176,7 @@ grep -rn "text-gray-\|text-slate-\|text-zinc-\|text-blue-\|text-green-\|text-red
 - **Date helpers**: `lib/dates.ts` exports `toLocalDateStr` (YYYY-MM-DD in local time) and `deadlineLabel`
 - **Inline-edit lifecycle**: `useInlineEdit` from `hooks/use-inline-edit.ts`
 - **Create flow**: `useCreateMutation` from `hooks/use-create-mutation.ts`
+- **API envelope**: this repo returns `{ ok: true, ... }` on success and `{ error }` on failure — use `jsonOk`/`jsonError` from `lib/api/route-helpers.ts` in new routes (overrides the global `{ success, data }` guidance)
 
 ### Data Flow
 - **Server Components** for DB data (commitments, entities, subscriptions) — query directly
@@ -226,9 +229,12 @@ Smoke is opt-in (needs the dev server running) — run before opening a PR.
 |------|-------|--------|
 | Control | /control | Fleet command center: dispatch intents to AI agents, real-time SSE status, per-project cards, git sync guard |
 | Agents | /agents | Fleet roster (open tabs + presence/active dots) beside a live inter-agent comms feed parsed from ~/.claude/cross-project/inbox-*.md; message-type badges (task/result/question/escalation) |
-| Duet | /duet | Watch two agents side by side — each pane shows a project's last dispatched prompt, updating live off one bridge SSE connection |
+| Loki | /loki | Chat assistant workspace — conversations, project-scoped dispatch, save-to-memory |
+| Terminal | /terminal | Live embedded terminal — watch/drive the cloud builder or local Fleet Runner PTY per project tab |
+| Activity | /activity | Fleet activity timeline — digests, event stream, per-project status strip across windows (hour/day/week/month) |
+| Duet | /duet | RETIRED — redirects to /agents (side-by-side prompt view earned nothing over Terminal + Agents) |
 | Today | /today | Calendar, weather, commitments, bills, daily habit check-off, log conversation |
-| People | /people | 1,286 contacts, search, detail panel, inline name/notes edit |
+| People | /people | Contacts, search, detail panel, inline name/notes edit |
 | Money | /money | Subscriptions, monthly burn |
 | Goals | /goals | Hierarchical tree, progress, milestones, inline target-date / progress edit |
 | Projects | /projects | registered projects + GitHub CI, inline editors for name/desc/status/maturity; per-project dossier + shareable public link (/share/project/[token], audience-scoped resource visibility) |

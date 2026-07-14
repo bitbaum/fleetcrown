@@ -61,6 +61,27 @@ function friendlyZodMessage(error: z.ZodError): string {
 }
 
 /**
+ * Success envelope — `{ ok: true, ...data }`. The de-facto response shape
+ * across the API surface; use in new routes instead of hand-rolling
+ * NextResponse.json({ ok: true, ... }).
+ *
+ *   return jsonOk({ mode: "queued", tab });
+ */
+export function jsonOk(data?: Record<string, unknown>, init?: ResponseInit): NextResponse {
+  return NextResponse.json({ ok: true, ...data }, init);
+}
+
+/**
+ * Error envelope — `{ error, ...extra }` with an explicit status. Matches the
+ * shape every route already returns (and what useFetch/postJson expect).
+ *
+ *   return jsonError("Unauthorized", 401);
+ */
+export function jsonError(message: string, status: number, extra?: Record<string, unknown>): NextResponse {
+  return NextResponse.json({ error: message, ...extra }, { status });
+}
+
+/**
  * Handle the unique constraint on (userId, name, type) in the entities table.
  * Returns a 409 NextResponse when the error is a duplicate-name violation,
  * or null if it's a different error (so the caller can re-throw).

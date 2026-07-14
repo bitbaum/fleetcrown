@@ -180,23 +180,6 @@ export async function listPromptsForUser(userId: string): Promise<PromptRow[]> {
     .orderBy(desc(prompts.updatedAt), asc(prompts.name));
 }
 
-/** Prompts pinned to a specific project, plus the caller's global prompts.
- *  Used by ProjectCard's "available prompts" surface. */
-export async function listPromptsForProject(userId: string, projectId: string): Promise<PromptRow[]> {
-  return db
-    .select()
-    .from(prompts)
-    .where(and(
-      eq(prompts.isActive, true),
-      eq(prompts.userId, userId),
-      or(
-        eq(prompts.scope, "global"),
-        and(eq(prompts.scope, "project"), eq(prompts.projectId, projectId)),
-      ),
-    ))
-    .orderBy(asc(prompts.name));
-}
-
 export async function getPrompt(userId: string, id: string): Promise<PromptRow | null> {
   const [row] = await db
     .select()

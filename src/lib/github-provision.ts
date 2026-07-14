@@ -47,6 +47,10 @@ export async function seedTemplate(
   const gh = (path: string, init?: RequestInit) =>
     fetch(`https://api.github.com${path}`, {
       ...init,
+      // Each step is a small metadata call — a hung one would eat the route's
+      // whole maxDuration budget. Time out fast; the catch below makes it
+      // non-fatal (repo stays bare).
+      signal: AbortSignal.timeout(10_000),
       headers: {
         Authorization: `Bearer ${token}`,
         Accept: "application/vnd.github+json",
@@ -58,36 +62,41 @@ export async function seedTemplate(
 
   const repoPath = `/repos/${ownerLogin}/${repoName}`;
 
-  const branchRes = await gh(`${repoPath}/branches/main`);
-  if (!branchRes.ok) return false;
-  const branchData = (await branchRes.json()) as { commit: { sha: string; commit: { tree: { sha: string } } } };
-  const baseCommitSha = branchData.commit.sha;
-  const baseTreeSha = branchData.commit.commit.tree.sha;
+  try {
+    const branchRes = await gh(`${repoPath}/branches/main`);
+    if (!branchRes.ok) return false;
+    const branchData = (await branchRes.json()) as { commit: { sha: string; commit: { tree: { sha: string } } } };
+    const baseCommitSha = branchData.commit.sha;
+    const baseTreeSha = branchData.commit.commit.tree.sha;
 
-  const blobs = await Promise.all(
-    Object.entries(template.files).map(async ([path, body]) => {
-      const content = renderTemplate(body, values);
-      const blobRes = await gh(`${repoPath}/git/blobs`, { method: "POST", body: JSON.stringify({ content, encoding: "utf-8" }) });
-      if (!blobRes.ok) throw new Error(`blob create failed for ${path}`);
-      const { sha } = (await blobRes.json()) as { sha: string };
-      return { path, mode: "100644" as const, type: "blob" as const, sha };
-    }),
-  ).catch(() => null);
-  if (!blobs) return false;
+    const blobs = await Promise.all(
+      Object.entries(template.files).map(async ([path, body]) => {
+        const content = renderTemplate(body, values);
+        const blobRes = await gh(`${repoPath}/git/blobs`, { method: "POST", body: JSON.stringify({ content, encoding: "utf-8" }) });
+        if (!blobRes.ok) throw new Error(`blob create failed for ${path}`);
+        const { sha } = (await blobRes.json()) as { sha: string };
+        return { path, mode: "100644" as const, type: "blob" as const, sha };
+      }),
+    ).catch(() => null);
+    if (!blobs) return false;
 
-  const treeRes = await gh(`${repoPath}/git/trees`, { method: "POST", body: JSON.stringify({ base_tree: baseTreeSha, tree: blobs }) });
-  if (!treeRes.ok) return false;
-  const { sha: newTreeSha } = (await treeRes.json()) as { sha: string };
+    const treeRes = await gh(`${repoPath}/git/trees`, { method: "POST", body: JSON.stringify({ base_tree: baseTreeSha, tree: blobs }) });
+    if (!treeRes.ok) return false;
+    const { sha: newTreeSha } = (await treeRes.json()) as { sha: string };
 
-  const commitRes = await gh(`${repoPath}/git/commits`, {
-    method: "POST",
-    body: JSON.stringify({ message: `Add ${template.label} starter (seeded by FleetCrown)`, tree: newTreeSha, parents: [baseCommitSha] }),
-  });
-  if (!commitRes.ok) return false;
-  const { sha: newCommitSha } = (await commitRes.json()) as { sha: string };
+    const commitRes = await gh(`${repoPath}/git/commits`, {
+      method: "POST",
+      body: JSON.stringify({ message: `Add ${template.label} starter (seeded by FleetCrown)`, tree: newTreeSha, parents: [baseCommitSha] }),
+    });
+    if (!commitRes.ok) return false;
+    const { sha: newCommitSha } = (await commitRes.json()) as { sha: string };
 
-  const refRes = await gh(`${repoPath}/git/refs/heads/main`, { method: "PATCH", body: JSON.stringify({ sha: newCommitSha }) });
-  return refRes.ok;
+    const refRes = await gh(`${repoPath}/git/refs/heads/main`, { method: "PATCH", body: JSON.stringify({ sha: newCommitSha }) });
+    return refRes.ok;
+  } catch {
+    // Timeout or network failure mid-flow — non-fatal per contract above.
+    return false;
+  }
 }
 
 export type ProvisionResult =
@@ -103,16 +112,23 @@ export async function provisionGithubRepo(
   if (!name) return { ok: false, status: 400, error: "Name must contain at least one alphanumeric character" };
 
   const description = opts.description ?? `Started from FleetCrown · ${opts.name}`;
-  const res = await fetch("https://api.github.com/user/repos", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: "application/vnd.github+json",
-      "X-GitHub-Api-Version": "2022-11-28",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ name, description, private: (opts.visibility ?? "private") === "private", auto_init: opts.initReadme ?? true }),
-  });
+  let res: Response;
+  try {
+    res = await fetch("https://api.github.com/user/repos", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ name, description, private: (opts.visibility ?? "private") === "private", auto_init: opts.initReadme ?? true }),
+      // Repo creation can be slow but must not hang the route forever.
+      signal: AbortSignal.timeout(15_000),
+    });
+  } catch {
+    return { ok: false, status: 502, error: "GitHub create timed out or was unreachable" };
+  }
 
   if (!res.ok) {
     let detail = "";
@@ -146,16 +162,22 @@ export async function deprovisionGithubRepo(
 ): Promise<DeprovisionResult> {
   const parsed = parseGithubRepoUrl(gitUrl);
   if (!parsed) return { ok: false, status: 400, error: "Linked repo is not a GitHub repository URL." };
-  const res = await fetch(`https://api.github.com/repos/${parsed.owner}/${parsed.repo}`, {
-    method: mode === "delete" ? "DELETE" : "PATCH",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: "application/vnd.github+json",
-      "X-GitHub-Api-Version": "2022-11-28",
-      "Content-Type": "application/json",
-    },
-    body: mode === "archive" ? JSON.stringify({ archived: true }) : undefined,
-  });
+  let res: Response;
+  try {
+    res = await fetch(`https://api.github.com/repos/${parsed.owner}/${parsed.repo}`, {
+      method: mode === "delete" ? "DELETE" : "PATCH",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+        "Content-Type": "application/json",
+      },
+      body: mode === "archive" ? JSON.stringify({ archived: true }) : undefined,
+      signal: AbortSignal.timeout(10_000),
+    });
+  } catch {
+    return { ok: false, status: 502, error: `GitHub ${mode === "delete" ? "delete" : "archive"} timed out or was unreachable` };
+  }
   if (res.ok || res.status === 204) return { ok: true };
   let detail = "";
   try {

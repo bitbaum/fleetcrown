@@ -14,19 +14,12 @@ import { getRecentOrchestrationRuns } from "@/db/queries/today";
 import { listThoughts } from "@/lib/thoughts-content";
 import { HEALTH_TAG_STYLE } from "@/config/ui";
 import { cleanDescription } from "@/lib/project-display";
+import { compactRelativeDate } from "@/lib/dates";
 import type { DevLogEntry } from "@/db/schema/user-projects";
 
 // Deduplicate the user lookup across generateMetadata + the page component.
 // Both run in the same request; React cache() collapses them to one DB query.
 const getUser = cache(getUserByUsername);
-
-// Compact "2d ago" relative time for the activity feed.
-function timeAgo(d: Date): string {
-  const s = Math.max(1, Math.floor((Date.now() - d.getTime()) / 1000));
-  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
-  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
-  return `${Math.floor(s / 86400)}d ago`;
-}
 
 export async function generateMetadata({
   params,
@@ -154,7 +147,7 @@ export default async function PublicProfilePage({
                   <span className="ui-dot-positive shrink-0" />
                   <span className="font-mono text-sm text-text-secondary">{run.projectKey}</span>
                   <span className="text-sm text-text-tertiary">agent run · {run.state}</span>
-                  <span className="ml-auto text-xs text-text-muted">{run.finishedAt ? timeAgo(run.finishedAt) : ""}</span>
+                  <span className="ml-auto text-xs text-text-muted">{run.finishedAt ? compactRelativeDate(run.finishedAt) : ""}</span>
                 </div>
               ))}
             </div>

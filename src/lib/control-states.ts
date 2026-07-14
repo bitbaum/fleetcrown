@@ -171,41 +171,18 @@ export const STATE_DEFINITIONS: Record<ProjectStateKey, ProjectStateDefinition> 
 
 /* ── Lookup helpers ──────────────────────────────────────────────────────────
  *
- * Every consumer goes through one of these — no direct dictionary indexing
- * elsewhere. Adding a memoization layer or a logging layer later means
- * editing exactly these three functions.
+ * Consumers either read STATE_DEFINITIONS directly or use these named
+ * helpers for the most common lookups.
  */
 
 export function projectStateLabel(key: ProjectStateKey): string {
   return STATE_DEFINITIONS[key].label;
 }
 
-export function projectStateDotClass(key: ProjectStateKey): string {
-  return STATE_DEFINITIONS[key].dotClass;
-}
-
 /** The descriptive sentence — shipped both as the hover tooltip and as
  *  the prompt-context line so the human and the agent read the same words. */
 export function projectStateDescription(key: ProjectStateKey): string {
   return STATE_DEFINITIONS[key].description;
-}
-
-/** Returns the actionable hint when the state itself signals a problem
- *  (e.g. "Offline" → "start the runner"). UI components surface this as
- *  a tooltip + a one-click action chip. */
-export function projectStateProblem(
-  key: ProjectStateKey,
-): ProjectStateDefinition["problem"] {
-  return STATE_DEFINITIONS[key].problem;
-}
-
-/** Counter bucket the summary chip reads. The chip arithmetic ("X working ·
- *  Y awaiting input") MUST use this — it's the only way the badge and the
- *  chip can stay in sync as states are added or refined. */
-export function projectStateCounterCategory(
-  key: ProjectStateKey,
-): ProjectCounterCategory {
-  return STATE_DEFINITIONS[key].counterCategory;
 }
 
 /* ── Runner-side states ──────────────────────────────────────────────────────
@@ -269,22 +246,6 @@ export const RUNNER_STATE_DEFINITIONS: Record<RunnerStateKey, RunnerStateDefinit
     problem: null,
   },
 };
-
-export function runnerStateLabel(key: RunnerStateKey): string {
-  return RUNNER_STATE_DEFINITIONS[key].label;
-}
-
-export function runnerStateDescription(key: RunnerStateKey): string {
-  return RUNNER_STATE_DEFINITIONS[key].description;
-}
-
-export function runnerStateDotClass(key: RunnerStateKey): string {
-  return RUNNER_STATE_DEFINITIONS[key].dotClass;
-}
-
-export function runnerStateProblem(key: RunnerStateKey): RunnerStateDefinition["problem"] {
-  return RUNNER_STATE_DEFINITIONS[key].problem;
-}
 
 /** Derive the runner's state from the same fields ControlFleetStatus.tsx
  *  already computes locally (runnerNeverSeen / runnerOffline / etc.). One

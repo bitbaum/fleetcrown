@@ -1,4 +1,4 @@
-import type { OrchestrationOutcome } from "@/db/schema/orchestration-runs";
+import { ORCHESTRATION_OUTCOME, type OrchestrationOutcome } from "@/db/schema/orchestration-runs";
 import type { OrchestrationTaskSummary } from "./contract";
 import { SESSION_STATUS } from "@/lib/constants/statuses";
 
@@ -30,22 +30,22 @@ function hasFailedTests(tests: string | undefined | null): boolean {
 export function inferOutcome(input: InferOutcomeInput): OrchestrationOutcome {
   const { summary, durationMs, error, userAbort } = input;
 
-  if (userAbort) return "user_abort";
-  if (error || contains(summary?.health, "critical") || contains(summary?.tsc, "fail")) return "error";
+  if (userAbort) return ORCHESTRATION_OUTCOME.USER_ABORT;
+  if (error || contains(summary?.health, "critical") || contains(summary?.tsc, "fail")) return ORCHESTRATION_OUTCOME.ERROR;
 
   // No handoff written + ran long → hung
   if (!summary?.done && typeof durationMs === "number" && durationMs > THIRTY_MINUTES_MS) {
-    return "hang";
+    return ORCHESTRATION_OUTCOME.HANG;
   }
 
   if (hasFailedTests(summary?.tests) || contains(summary?.lint, "fail") || contains(summary?.health, "needs attention")) {
-    return "partial";
+    return ORCHESTRATION_OUTCOME.PARTIAL;
   }
 
   if ((contains(summary?.health, "good") || summary?.status?.toLowerCase() === SESSION_STATUS.READY) && summary?.done) {
-    return "success";
+    return ORCHESTRATION_OUTCOME.SUCCESS;
   }
 
   // Default — work happened but signal is weak
-  return "partial";
+  return ORCHESTRATION_OUTCOME.PARTIAL;
 }

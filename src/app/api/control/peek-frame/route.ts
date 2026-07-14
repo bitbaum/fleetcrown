@@ -12,8 +12,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { getApiUserId } from "@/lib/session";
 import { emitPeekFrame } from "@/lib/sse-bus";
+import { BUILDER_CHANNELS } from "@/lib/constants/statuses";
 
-const Channel = z.enum(["cloud", "local"]);
+const Channel = z.enum(BUILDER_CHANNELS);
 
 const Body = z.object({
   tab:   z.string().trim().min(1).max(120),

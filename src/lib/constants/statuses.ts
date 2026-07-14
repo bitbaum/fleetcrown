@@ -67,6 +67,25 @@ export const EVENT_STATUS = {
 } as const;
 export type EventStatus = (typeof EVENT_STATUS)[keyof typeof EVENT_STATUS];
 
+/**
+ * Display tone for a status dot/badge — severity semantics shared by the
+ * activity classifier (lib/activity-status.ts) and the dispatch live status
+ * (lib/dispatch-status.ts). NOTE: distinct from EVENT_STATUS above, which is
+ * the events-table lifecycle (active/archived) — this is how something LOOKS,
+ * not what it IS.
+ */
+export type StatusTone = "negative" | "warning" | "positive" | "neutral";
+
+/**
+ * Builder channels — which builder executes a command: the hosted box-runner
+ * ("cloud") or the desktop Fleet Runner ("local"). SSOT for the union that was
+ * previously hand-declared at every transport boundary (pending-command
+ * payloads, bridge fast-lane events, peek fanout, route validators). Array
+ * form so route schemas can `z.enum(BUILDER_CHANNELS)` directly.
+ */
+export const BUILDER_CHANNELS = ["cloud", "local"] as const;
+export type BuilderChannel = (typeof BUILDER_CHANNELS)[number];
+
 /** Entity type values — used in people queries, projects queries, and API routes */
 export const ENTITY_TYPE = {
   PERSON:  "person",

@@ -56,12 +56,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: result.error, detail: result.detail }, { status: result.status === 422 ? 409 : 502 });
   }
 
-  // Link the repo to the entity, and set dirPath to the box-runner's clone target
-  // so the project shows in Control and a dispatch clones it into place.
-  await patchProject(userId, id, { gitUrl: result.repo.html_url });
+  // Link the repo + set dirPath (the box-runner's clone target) on the
+  // user_projects row in ONE update, so a mid-flight crash can never leave a
+  // repo linked without a dirPath (= visible but undispatchable in Control).
+  // The entity patch comes last: it only mirrors gitUrl for the dossier and
+  // the "already provisioned" 409 guard, so a crash before it just means the
+  // guard doesn't trip — the project itself is already fully dispatchable.
   const dirPath = path.join(DEV_ROOT, repoSlug(project.name));
   const up = await getUserProjectByEntityId(userId, id);
-  if (up) await updateUserProject(up.id, userId, { dirPath });
+  if (up) await updateUserProject(up.id, userId, { gitUrl: result.repo.html_url, dirPath });
+  await patchProject(userId, id, { gitUrl: result.repo.html_url });
 
   return NextResponse.json({
     ok: true,

@@ -17,8 +17,9 @@ import { executor } from "@/lib/agent-execution";
 import { workspaceIdFor } from "@/lib/agent-execution/ownership";
 import { publishFastLaneEvent } from "@/lib/bridge-publish";
 import { getExecutionAccess } from "@/lib/execution-access";
+import { BUILDER_CHANNELS } from "@/lib/constants/statuses";
 
-const Channel = z.enum(["cloud", "local"]);
+const Channel = z.enum(BUILDER_CHANNELS);
 
 const Body = z.discriminatedUnion("kind", [
   z.object({

@@ -42,11 +42,10 @@ import { HEALTH_SIGNAL_CONFIG } from "./project-badges";
 import { AddAttrInline, AttrRow, ClaudeSession, DevLogSection } from "./project-overview-helpers";
 import { postJson } from "@/lib/api/fetch";
 import { toLocalDateStr, timeAgo } from "@/lib/dates";
-import { ENTITY_TYPE, INTERACTION_DIRECTION } from "@/lib/constants/statuses";
+import { ENTITY_TYPE, INTERACTION_DIRECTION, type StatusTone } from "@/lib/constants/statuses";
 import { cn } from "@/lib/utils";
 import { STATUS_DOT_CLASS, formatActivityTime } from "@/components/activity/activity-shared";
 import { isNoisyProfileActivity, sanitizeActivityPreview } from "@/lib/activity-display";
-import type { EventStatus } from "@/lib/activity-status";
 import { NAV } from "@/config/navigation";
 
 const CHANNEL_ICON: Record<string, React.ElementType> = {
@@ -204,7 +203,7 @@ export function OverviewTab({
   type FeedEntry = {
     id: string;
     at: string;
-    tone: EventStatus;
+    tone: StatusTone;
     icon: React.ElementType;
     primary: string;
     secondary?: string | null;
@@ -226,7 +225,7 @@ export function OverviewTab({
     ...activityList.map((i, idx) => ({
       id: `interaction:${idx}:${i.occurredAt}`,
       at: i.occurredAt,
-      tone: "neutral" as EventStatus,
+      tone: "neutral" as StatusTone,
       icon: CHANNEL_ICON[i.channel] ?? Circle,
       primary: i.channel.replace(/-/g, " "),
       secondary: i.summary,

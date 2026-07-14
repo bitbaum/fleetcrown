@@ -62,7 +62,14 @@ export async function requestToken(callbackUrl: string): Promise<{ oauth_token: 
   const url = `${API}/oauth/request_token`;
   const params: Record<string, string> = { ...baseOauth(), oauth_callback: callbackUrl };
   params.oauth_signature = sign("POST", url, params);
-  const res = await fetch(url, { method: "POST", headers: { Authorization: authHeader(params) } });
+  // Login path — a hung X API must fail fast with a clear error, not stall the sign-in.
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { Authorization: authHeader(params) },
+    signal: AbortSignal.timeout(10_000),
+  }).catch(() => {
+    throw new Error("request_token timed out — X API unreachable");
+  });
   const text = await res.text();
   if (!res.ok) throw new Error(`request_token ${res.status}: ${text.slice(0, 200)}`);
   const p = new URLSearchParams(text);
@@ -81,7 +88,14 @@ export async function accessToken(
   const url = `${API}/oauth/access_token`;
   const params: Record<string, string> = { ...baseOauth(), oauth_token: oauthToken, oauth_verifier: verifier };
   params.oauth_signature = sign("POST", url, params, oauthTokenSecret);
-  const res = await fetch(url, { method: "POST", headers: { Authorization: authHeader(params) } });
+  // Login path — fail fast (see requestToken).
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { Authorization: authHeader(params) },
+    signal: AbortSignal.timeout(10_000),
+  }).catch(() => {
+    throw new Error("access_token timed out — X API unreachable");
+  });
   const text = await res.text();
   if (!res.ok) throw new Error(`access_token ${res.status}: ${text.slice(0, 200)}`);
   const p = new URLSearchParams(text);

@@ -21,6 +21,7 @@ const ENV_KEYS = [
   "NODE_ENV", "AUTH_SECRET", "RESEND_API_KEY", "CRON_SECRET",
   "GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET",
   "X1_CONSUMER_KEY", "X1_CONSUMER_SECRET", "DATABASE_URL", "NEXTAUTH_URL", "EMAIL_FROM",
+  "GROQ_API_KEY",
 ] as const;
 const CLEAN_PROD_ENV: Record<string, string> = {
   NODE_ENV: "production",
@@ -33,6 +34,7 @@ const CLEAN_PROD_ENV: Record<string, string> = {
   DATABASE_URL: "postgres://x",
   NEXTAUTH_URL: "https://fleetcrown.orangecat.ch",
   EMAIL_FROM: "FleetCrown <noreply@fleetcrown.orangecat.ch>",
+  GROQ_API_KEY: "gsk_test",
 };
 
 function checkEnvWith(overrides: Record<string, string | undefined>): EnvIssue[] {

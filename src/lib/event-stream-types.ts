@@ -73,7 +73,9 @@ export function isKnownTable(t: string): t is NotifiedTable {
 // in sync.
 export const BRIDGE_NOTIFY_CHANNEL = "fc:state";
 
-export type BuilderChannel = "cloud" | "local";
+// Re-exported from the constants SSOT so existing importers keep working.
+import type { BuilderChannel } from "@/lib/constants/statuses";
+export type { BuilderChannel };
 
 /** A raw terminal keystroke (verbatim bytes) bound for the runner's PTY. */
 export interface RawKeyEvent {

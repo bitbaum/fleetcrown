@@ -1,5 +1,6 @@
 import { pgTable, uuid, text, timestamp, jsonb, index } from "drizzle-orm/pg-core";
 import { users } from "./users";
+import type { BuilderChannel } from "@/lib/constants/statuses";
 
 // Commands queued by the cloud control plane for the local runtime node to execute.
 // The local runner polls this table, claims rows, executes them via zellij, and marks them done.
@@ -64,7 +65,9 @@ export type AutoContinuePayload = {
   enabled: boolean;
 };
 
-export type RunnerChannel = "cloud" | "local";
+/** Alias of the shared BuilderChannel union — kept so existing importers
+ *  (routes, queries, execution-access) don't all have to change. */
+export type RunnerChannel = BuilderChannel;
 
 export type TabPayload = {
   tab: string;

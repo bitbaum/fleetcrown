@@ -1,4 +1,5 @@
 import { EXECUTOR_COPY } from "@/config/executor-copy";
+import type { StatusTone } from "@/lib/constants/statuses";
 
 export type DispatchStatusInput = {
   ok?: boolean;
@@ -66,7 +67,7 @@ export type DispatchLiveView = {
   status: DispatchLiveStatus;
   label: string;
   detail: string | null;
-  tone: "positive" | "warning" | "negative" | "neutral";
+  tone: StatusTone;
   /** true once the command reached a settled state — the footer stops polling. */
   terminal: boolean;
 };

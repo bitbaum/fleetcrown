@@ -9,13 +9,12 @@ import {
   promptDisplayBody,
   runStatus,
   STATUS_RANK,
-  type EventStatus,
 } from "@/lib/activity-status";
+import type { StatusTone } from "@/lib/constants/statuses";
 
-// Re-export pure helpers + the status type so existing consumers keep working
-// without changing imports. New code should prefer @/lib/activity-status.
+// Re-export pure helpers so existing consumers keep working without changing
+// imports. New code should prefer @/lib/activity-status.
 export { isErrorRun, promptDisplayBody, runStatus } from "@/lib/activity-status";
-export type { EventStatus } from "@/lib/activity-status";
 
 // ─── Caps ────────────────────────────────────────────────────────────────────
 // All bounded inputs/outputs. None of these protect correctness — they cap
@@ -86,7 +85,7 @@ export type DigestTimelineItem = {
   projectKey: string;
   title: string;
   body: string;
-  status: EventStatus;
+  status: StatusTone;
   kind: "prompt" | "run" | "local_chat";
   /** Short right-aligned fact (e.g. a run's duration). Optional. */
   detail?: string;
@@ -113,7 +112,7 @@ export type ProjectStatus = {
   warning: number;
   success: number;
   total: number;
-  worst: EventStatus;
+  worst: StatusTone;
 };
 
 export type ProjectDigest = {

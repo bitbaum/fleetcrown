@@ -78,6 +78,13 @@ export function checkEnv(): EnvIssue[] {
     }
   }
 
+  // 5. Non-fatal capability gaps: the app runs fine without these, but the
+  //    feature goes silently dark (extract-proposal returns null, digest cron
+  //    no-ops) and the operator has no signal for WHY nothing is produced.
+  if (!present("GROQ_API_KEY")) {
+    issues.push({ level: "warn", key: "GROQ_API_KEY", msg: "unset — chat action-producer and digest generation are disabled" });
+  }
+
   return issues;
 }
 

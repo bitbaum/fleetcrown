@@ -1,5 +1,6 @@
 import { EventEmitter } from "events";
 import { APP_SLUG } from "@/config/brand";
+import type { BuilderChannel } from "@/lib/constants/statuses";
 
 // Global singleton keyed on globalThis — survives Next.js hot-reload in dev.
 const KEY = `$$${APP_SLUG}_sse_bus`;
@@ -24,7 +25,8 @@ export function emitStateChanged(userId: string) {
 // the existing buffer). Absent/false = a full zellij dump-screen snapshot (the
 // viewer reset()s then writes). One channel, two producers.
 export type PeekFrame = { seq: number; frame: string; at: number; append?: boolean };
-export type PeekBuilderChannel = "cloud" | "local";
+/** Alias of the shared BuilderChannel union — kept for existing importers. */
+export type PeekBuilderChannel = BuilderChannel;
 
 export function peekChannel(userId: string, tab: string, channel?: PeekBuilderChannel): string {
   return `peek:${channel ?? "any"}:${userId}:${tab.toLowerCase()}`;

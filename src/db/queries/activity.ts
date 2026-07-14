@@ -3,7 +3,8 @@ import { db } from "@/db";
 import { promptHistory } from "@/db/schema/prompt-history";
 import { orchestrationEvents } from "@/db/schema/orchestration-events";
 import { orchestrationRuns } from "@/db/schema/orchestration-runs";
-import { runStatus, toPromptDisplayFields, type EventStatus } from "@/lib/activity-status";
+import { runStatus, toPromptDisplayFields } from "@/lib/activity-status";
+import type { StatusTone } from "@/lib/constants/statuses";
 import { getIntentLabel } from "@/config/control-intents";
 import type { OrchestrationEventType } from "@/lib/orchestration";
 
@@ -50,7 +51,7 @@ export type ProjectActivityEvent = {
   /** Optional secondary detail. */
   detail: string | null;
   /** Dot/severity tone, reusing the app's shared classifier. */
-  status: EventStatus;
+  status: StatusTone;
 };
 
 // Lifecycle signals the dispatch/run rows don't already express. task_failed is
@@ -64,7 +65,7 @@ const EVENT_TITLES: Partial<Record<OrchestrationEventType, string>> = {
   task_failed: "Task failed",
 };
 
-const EVENT_STATUS: Partial<Record<OrchestrationEventType, EventStatus>> = {
+const EVENT_TONE: Partial<Record<OrchestrationEventType, StatusTone>> = {
   input_requested: "warning",
   session_closed: "neutral",
   task_failed: "negative",
@@ -158,7 +159,7 @@ function eventToEvent(r: EventRow): ProjectActivityEvent {
     intent: r.intent,
     title: EVENT_TITLES[r.eventType] ?? r.eventType,
     detail: r.detail ? oneLine(r.detail) : null,
-    status: EVENT_STATUS[r.eventType] ?? "neutral",
+    status: EVENT_TONE[r.eventType] ?? "neutral",
   };
 }
 
