@@ -24,8 +24,14 @@ export async function GET(request: NextRequest) {
     .map((type) => type.trim())
     .filter(Boolean);
   const channelParam = request.nextUrl.searchParams.get("channel");
-  const runnerChannel: RunnerChannel | undefined =
-    channelParam === "cloud" || channelParam === "local" ? channelParam : undefined;
+  // Legacy-desktop compat: a poller that declares NO channel is an older
+  // packaged Fleet Runner (<= 0.8.9, built before channel declaration) —
+  // always a user-owned LOCAL machine. Treat it as "local" so channel-pinned
+  // dispatches (projectPreferredChannel) still reach it. The shared cloud
+  // builder is provisioned by install-box-runner.sh, which has always set
+  // FLEETCROWN_RUNNER_PRESENCE_CHANNEL=cloud — it never polls paramless.
+  const runnerChannel: RunnerChannel =
+    channelParam === "cloud" || channelParam === "local" ? channelParam : "local";
 
   // Long-poll: hold the request until a command arrives or the wait expires.
   const waitMs = Math.min(
