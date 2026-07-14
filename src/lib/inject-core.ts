@@ -15,6 +15,7 @@ import { getProjectContext } from "@/db/queries/project-context";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { workspaceIdFor } from "@/lib/agent-execution/ownership";
 import { executeInject } from "@/lib/executor";
+import { projectPreferredChannel } from "@/lib/execution-access";
 import { createOrchestrationEvent } from "@/db/queries/orchestration-events";
 import { createOrchestrationRun, isProjectBusy } from "@/db/queries/orchestration-runs";
 import { emitRunEvent } from "@/db/queries/run-events";
@@ -358,8 +359,15 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
   const projectBusy = !lifecycleIntent
     && (await isProjectBusy(userId, canonical, { excludeRunId: runId }).catch(() => false));
 
+  // Project-aware channel affinity: a dirPath-only project (no cloneable repo)
+  // can only execute on the machine that has the directory — pin the queued
+  // command to "local" so the cloud builder can never claim it and invent an
+  // empty workspace (the 2026-07-14 BiasLens misroute). Cloneable projects
+  // keep the executor's own default (any/cloud).
+  const pinnedChannel = projectPreferredChannel(dbMatch, null);
+
   const result = await executeInject(
-    { tab: effectiveTab, prompt, promptKey, promptLabel, adapter: eventAdapter, model: eventModel, projectId, projectKey: canonical, runId, dir: projectPath, projectBusy },
+    { tab: effectiveTab, prompt, promptKey, promptLabel, adapter: eventAdapter, model: eventModel, projectId, projectKey: canonical, runId, dir: projectPath, projectBusy, ...(pinnedChannel ? { channel: pinnedChannel } : {}) },
     userId,
     injectFn ?? (() => Promise.reject(new Error("Runtime unavailable"))),
   );

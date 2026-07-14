@@ -1,5 +1,6 @@
 import type { RunnerChannel } from "@/db/schema/pending-commands";
 import type { BuilderChannelPresence } from "@/lib/builder-presence";
+import { isCloneableGitUrl } from "@/lib/git-url";
 
 const CLOUD_BUILDER_PRIVATE_MESSAGE =
   "Cloud builder access is private for this account. Connect Fleet Runner on this computer to run agent work.";
@@ -116,6 +117,24 @@ export function decideQueuedExecution(
     runnerConnected,
     access,
   };
+}
+
+/**
+ * Which channel can actually MATERIALIZE this project's workspace?
+ *
+ * A dispatch whose project has a local dirPath but NO cloneable GitHub gitUrl
+ * can only execute on the machine that has the directory — the cloud builder
+ * would clone-fail and (before 2026-07-14, silently) invent an empty dir for
+ * the agent to "work" in. Locus is a property of the task: pin such dispatches
+ * to "local". Projects with a cloneable repo (or no dirPath at all) keep the
+ * caller's fallback — any builder can obtain those.
+ */
+export function projectPreferredChannel<F extends RunnerChannel | null>(
+  project: { dirPath?: string | null; gitUrl?: string | null } | null | undefined,
+  fallback: F,
+): RunnerChannel | F {
+  if (project?.dirPath && !isCloneableGitUrl(project.gitUrl)) return "local";
+  return fallback;
 }
 
 export function executionAccessErrorBody(decision: Extract<QueuedExecutionDecision, { ok: false }>) {

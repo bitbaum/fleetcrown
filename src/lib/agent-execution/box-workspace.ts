@@ -49,14 +49,10 @@ function ensureClaudeReady(dir: string): void {
   fs.writeFileSync(setPath, JSON.stringify(settings, null, 2));
 }
 
-/** Normalize git URLs to https://github.com/owner/repo for unattended clone. */
-export function normalizeGitHubCloneUrl(gitUrl: string): string | null {
-  const trimmed = gitUrl.trim();
-  const ssh = trimmed.match(/^git@github\.com:([^/]+\/[^/]+?)(?:\.git)?$/);
-  if (ssh) return `https://github.com/${ssh[1]}.git`;
-  if (/^https:\/\/github\.com\/[^/]+\/[^/]+/.test(trimmed)) return trimmed;
-  return null;
-}
+// Re-exported for existing importers; the implementation is the shared pure
+// module so dispatch routing and workspace prep can never disagree.
+export { normalizeGitHubCloneUrl } from "@/lib/git-url";
+import { normalizeGitHubCloneUrl } from "@/lib/git-url";
 
 function authedUrl(gitUrl: string, token: string): string {
   if (!token) return gitUrl;
@@ -111,6 +107,17 @@ export async function ensureBoxWorkspace(tab: string, requestedDir: string): Pro
       stdio: "inherit",
       timeout: 180_000,
     });
+  } else if (requestedDir) {
+    // The dispatch named a REAL directory that only exists on another machine
+    // and there is no gitUrl to clone from. Inventing an empty dir here would
+    // let the agent "work" on a phantom workspace and report success against
+    // nothing (2026-07-14: a BiasLens dispatch routed to the box bootstrapped
+    // a fresh Next app in an empty dir while the real scaffold sat on the
+    // laptop). Fail loud so the ack records the truth and the operator sees a
+    // failed command instead of confident garbage.
+    throw new Error(
+      `workspace for "${tab}" is not materializable on this builder: ${requestedDir} does not exist here and the project has no cloneable GitHub gitUrl${gitUrlRaw ? ` (unsupported URL: ${gitUrlRaw})` : ""}. Dispatch it to the machine that has the directory, or link a GitHub repo.`,
+    );
   } else {
     console.log(
       `[box-prepare] no GitHub gitUrl for "${tab}"${gitUrlRaw ? ` (unsupported URL: ${gitUrlRaw})` : ""}; creating empty ${boxDir}`,

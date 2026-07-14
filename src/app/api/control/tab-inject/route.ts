@@ -7,7 +7,7 @@ import { isRuntimeAvailable } from "@/lib/runtime";
 import { executor } from "@/lib/agent-execution";
 import { workspaceIdFor } from "@/lib/agent-execution/ownership";
 import { assembleInjectPrompt } from "@/lib/inject-prompt";
-import { executionAccessErrorBody, resolveQueuedExecution } from "@/lib/execution-access";
+import { executionAccessErrorBody, resolveQueuedExecution, projectPreferredChannel } from "@/lib/execution-access";
 import {
   DEFAULT_ADAPTER_ID,
   ORCHESTRATION_ADAPTER_IDS,
@@ -89,7 +89,10 @@ export async function POST(req: NextRequest) {
   // exited or its zellij tab vanished. That no-op was the failure that broke the
   // loop. Resolve the project's dir + agent so the runner can recover the tab.
   // Fall back to bare inject only when the project/dir is unknown.
-  const execution = await resolveQueuedExecution(userId, { defaultChannel: "cloud" });
+  // Project-aware default: a dirPath-only project (no cloneable repo) can only
+  // execute where the directory exists — pin it to the local runner instead of
+  // letting the cloud builder invent an empty workspace (BiasLens, 2026-07-14).
+  const execution = await resolveQueuedExecution(userId, { defaultChannel: projectPreferredChannel(project, "cloud") });
   if (!execution.ok) {
     return NextResponse.json(executionAccessErrorBody(execution), { status: execution.status });
   }

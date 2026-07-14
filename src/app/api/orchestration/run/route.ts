@@ -32,7 +32,7 @@ import { getRunnerConnected } from "@/db/queries/runner-presence";
 import { logDebug } from "@/db/queries/debug-logs";
 import { APP_SLUG } from "@/config/brand";
 import { writePromptQueueMirror } from "@/lib/prompt-queue-mirror";
-import { executionAccessErrorBody, resolveQueuedExecution } from "@/lib/execution-access";
+import { executionAccessErrorBody, resolveQueuedExecution, projectPreferredChannel } from "@/lib/execution-access";
 import { workspaceIdFor } from "@/lib/agent-execution/ownership";
 
 const RunOrchestrationBody = z.object({
@@ -122,7 +122,14 @@ export async function POST(req: NextRequest) {
         { status: 503 },
       );
     }
-    const execution = await resolveQueuedExecution(userId, { defaultChannel: "cloud" });
+    // Project-aware default channel — a dirPath-only project (no cloneable
+    // repo) can only execute where its directory exists; pin it to "local"
+    // instead of letting the cloud builder invent an empty workspace.
+    const registryMatch = [
+      ...(await getUserProjects(userId).catch(() => [])),
+      ...(await getOrgProjects(userId).catch(() => [])),
+    ].find((p) => p.name.toLowerCase() === request.projectKey.toLowerCase());
+    const execution = await resolveQueuedExecution(userId, { defaultChannel: projectPreferredChannel(registryMatch, "cloud") });
     if (!execution.ok) {
       return NextResponse.json(executionAccessErrorBody(execution), { status: execution.status });
     }
@@ -303,8 +310,16 @@ export async function POST(req: NextRequest) {
   if (TAB_ADAPTERS && TRACKABLE_INTENTS
       && (await isProjectBusy(userId, request.projectKey, { excludeRunId: trackedRunId ?? undefined }).catch(() => false))) {
     const runnerConnected = await getRunnerConnected(userId);
+    // Same project-aware pinning as the cloud branch: a dirPath-only project
+    // must not be claimable by a builder that can't materialize its workspace.
+    const busyMatch = [
+      ...(await getUserProjects(userId).catch(() => [])),
+      ...(await getOrgProjects(userId).catch(() => [])),
+    ].find((p) => p.name.toLowerCase() === request.projectKey.toLowerCase());
+    const pinnedChannel = projectPreferredChannel(busyMatch, null);
     const commandId = await enqueueDispatchCommand(userId, {
       tab: request.projectKey,
+      ...(pinnedChannel ? { channel: pinnedChannel } : {}),
       dir: request.projectPath,
       agent: request.adapter,
       prompt: resolvedPromptBody,
