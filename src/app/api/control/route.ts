@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getZellijTabs } from "@/lib/zellij";
 import { getProjects, type ProjectRow } from "@/db/queries/projects";
 import { getLatestEventsByProjectKeys } from "@/db/queries/orchestration-events";
-import { getLatestRunsByProjectPaths, getRecentOutcomesByProjectKeys, cleanupStaleOrchestrationRuns } from "@/db/queries/orchestration-runs";
+import { getLatestRunsByProjectPaths, getRecentOutcomesByProjectKeys } from "@/db/queries/orchestration-runs";
 import { getRecentActivity, getRecentCustomPromptsByProjectKeys, type RecentCustomPrompt } from "@/db/queries/prompt-history";
 import { getProjectActivityBatch, type ProjectActivityEvent } from "@/db/queries/activity";
 import { getProjectStatesByUserId, getProjectStatesByUserIds, persistProjectSessionIfNewer } from "@/db/queries/project-states";
@@ -190,7 +190,12 @@ export async function GET() {
     Promise.all(allOwnerIds.map((oid) => getProjects(oid).catch((e) => { console.error("[control/GET] getProjects failed for", oid, e); return [] as ProjectRow[]; }))).then((arrs) => arrs.flat()),
     getRecentFailedCommands([userId]).catch((e): FailedCommand[] => { console.error("[control/GET] failedCommands failed:", e); return []; }),
   ]);
-  cleanupStaleOrchestrationRuns(userId).catch((err) => console.error("[control] cleanup failed:", err))
+  // Stale-run reaping moved EXCLUSIVELY to the reap-stale-runs cron (hourly),
+  // which runs the close-from-handoff sweep FIRST. Reaping on page load raced
+  // that ordering: a human opening /control could stamp `timeout` onto a run
+  // whose ready handoff was minutes from arriving (2026-07-15: the witnessed
+  // BiasLens bootstrap was reaped at +60m while its handoff sat behind a
+  // permission prompt; the work had succeeded). One reaper, one ordering.
   // Key by (ownerUserId, projectKey) — two users in the same org may both have a
   // project with the same key, and we want each card to read its own owner's row.
   const dbStateMap = new Map(dbStatesArr.map((s) => [`${s.userId}:${s.projectKey.toLowerCase()}`, s]));
