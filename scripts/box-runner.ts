@@ -16,9 +16,10 @@
  * /opt/fleetcrown/runner. See docs/architecture/box-owned-pty-executor.md.
  */
 import { startPoller, stopPoller, onPollerStatus, formatTrayTooltip } from "../desktop/src/main/poller";
-import { startPusher, stopPusher } from "../desktop/src/main/pusher";
+import { pushNow, startPusher, stopPusher } from "../desktop/src/main/pusher";
 import { loadToken } from "../desktop/src/main/token-store";
 import { APP_URL } from "@/config/brand";
+import { startWatcher } from "../home/watcher";
 
 const VERSION = process.env.FLEETCROWN_RUNNER_VERSION ?? "box";
 const WEB = (process.env.FLEETCROWN_WEB_URL || "").trim() || APP_URL;
@@ -56,9 +57,16 @@ function main(): void {
     }
   });
 
+  // Unlike the desktop, the box has no static projects.conf: its projects are
+  // cloned on demand. Watch every FleetCrown-owned handoff and push immediately
+  // so a completed run never waits for the five-minute liveness heartbeat.
+  const watcher = startWatcher({
+    acceptUnregistered: true,
+    onIdle: () => { void pushNow(); },
+  });
+
   // Poller starts the bridge subscriber (presence + fast-path wake) itself; the
-  // pusher publishes the runtime-state heartbeat. Together they are the whole
-  // runner: claim → execute in an owned PTY → stream → ack, presence online.
+  // pusher publishes runtime state and the watcher pushes completion handoffs.
   startPoller();
   startPusher();
   log("poller + pusher started; presence via bridge SSE");
@@ -70,6 +78,7 @@ function main(): void {
     log(`${sig} → draining`);
     try { stopPoller(); } catch { /* best-effort */ }
     try { stopPusher(); } catch { /* best-effort */ }
+    try { watcher.close(); } catch { /* best-effort */ }
     // Let in-flight stop work settle, then exit so systemd sees a clean stop.
     setTimeout(() => process.exit(0), 300);
   };

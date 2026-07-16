@@ -16,7 +16,8 @@ Notable, user-facing changes. Older history lives in the git log (conventional c
 - **FleetCrown owns its handoff files.** New handoffs live under
   `~/.fleetcrown/sessions`, outside Claude Code's protected configuration tree.
   Runner startup copies legacy Markdown handoffs forward before watching them,
-  keeps legacy reads during the transition, and leaves Claude's live JSON alone.
+  keeps legacy reads during the transition, leaves Claude's live JSON alone, and
+  pushes box-runner completions immediately instead of waiting for a heartbeat.
 
 ### Fixed
 - **Dispatch status follows the run through completion.** Loki now distinguishes

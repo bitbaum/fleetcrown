@@ -43,6 +43,10 @@ try {
   fs.utimesSync(currentFile, new Date(now + 2_000), new Date(now + 2_000));
   assert.equal(resolveSessionFile("FLEETCROWN"), currentFile);
 
+  // A watcher seeds migrated files after migration, so their preserved mtimes
+  // remain historical rather than looking like fresh completion events.
+  assert.ok(Math.abs(fs.statSync(currentFile).mtimeMs - (now + 2_000)) < 1);
+
   console.log("session paths: ok");
 } finally {
   if (previousHome === undefined) delete process.env.HOME;

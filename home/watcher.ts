@@ -80,6 +80,7 @@ const pendingFlush = new Map<string, NodeJS.Timeout>();
  * restarts the watcher after editing the conf file.
  */
 let registeredLower: Set<string> = new Set();
+let acceptUnregistered = false;
 
 function tabFromFilename(filename: string): string | null {
   if (!filename.endsWith(".md")) return null;
@@ -110,7 +111,7 @@ function readAndEmit(filename: string) {
 
   // Filter to registered projects only — strips scratch tabs like Tab #1.md
   // and prevents the brain's state map from accumulating ad-hoc entries.
-  if (!registeredLower.has(tab.toLowerCase())) {
+  if (!acceptUnregistered && !registeredLower.has(tab.toLowerCase())) {
     logSkipOnce(filename, `not in ${projectsConfPath()}`);
     return;
   }
@@ -157,8 +158,9 @@ function scheduleFlush(filename: string) {
 
 // ── Boot ─────────────────────────────────────────────────────────────────────
 
-export function startWatcher(opts: { onIdle?: OnIdle } = {}): { close: () => void } {
+export function startWatcher(opts: { onIdle?: OnIdle; acceptUnregistered?: boolean } = {}): { close: () => void } {
   onIdleSubscriber = opts.onIdle ?? null;
+  acceptUnregistered = opts.acceptUnregistered ?? false;
 
   // Load the registry. Empty registry isn't fatal — it just means nothing
   // will ever pass the filter; first run gets a clear log line.
@@ -180,7 +182,7 @@ export function startWatcher(opts: { onIdle?: OnIdle } = {}): { close: () => voi
   console.log(`[watcher] registry: ${registeredLower.size} project(s) from ${projectsConfPath()}`);
   console.log(`[watcher] seeded ${lastMtime.size} session files; emitting on change`);
   console.log(`[watcher] events → ~/.${APP_SLUG}/events.jsonl`);
-  if (registeredLower.size === 0) {
+  if (registeredLower.size === 0 && !acceptUnregistered) {
     console.log(`[watcher] WARN: empty registry — no session.md changes will emit. Add entries to ${projectsConfPath()}.`);
   }
 
@@ -196,6 +198,7 @@ export function startWatcher(opts: { onIdle?: OnIdle } = {}): { close: () => voi
     for (const t of pendingFlush.values()) clearTimeout(t);
     pendingFlush.clear();
     onIdleSubscriber = null;
+    acceptUnregistered = false;
   };
 
   // Only install process signal handlers when running as the direct CLI process.
