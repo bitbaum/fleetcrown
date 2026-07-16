@@ -148,12 +148,13 @@ export async function retryFailedCommand(userId: string, id: string): Promise<st
 // authorized user IDs. API bearer routes must pass only the token owner's ID.
 // FOR UPDATE SKIP LOCKED prevents two concurrent pollers from claiming the same row.
 //
-// 10s (was 90s) because the multi-poller race (runner + Fleet Runner) means a
-// row can be claimed by one runtime, validation-rejected, and left orphaned —
-// the other runtime should pick it up almost immediately. 10s mirrors the
-// upper bound on a Fleet Runner round-trip from claim to bail. Until Phase B's
-// ?types= filter lands, this is the user-facing "voice didn't fire" mitigation.
-const STALE_CLAIM_SECONDS = 10;
+// Dispatch legitimately holds a claim while it launches an agent, verifies the
+// prompt was submitted, and runs the delayed auth canary (normally 20-35s).
+// A 10s lease reclaimed healthy work mid-handler, making Loki regress from
+// "working" back to "queued" and handing the row to a second poller. Runner
+// type filters now prevent the old incompatible-runner orphan case, so retain a
+// 90s crash-recovery lease without duplicating live dispatches.
+const STALE_CLAIM_SECONDS = 90;
 
 // Commands queued while the runner was offline go stale fast: executing a
 // days-old "inject into tab X" / "launch agent in Y" against a Zellij that has

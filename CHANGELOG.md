@@ -23,7 +23,8 @@ Notable, user-facing changes. Older history lives in the git log (conventional c
 ### Fixed
 - **Dispatch status follows the run through completion.** Loki now distinguishes
   queued, picked up, delivered, completed, partial, failed, timed out, and hung
-  states instead of freezing at an optimistic acknowledgement.
+  states instead of freezing at an optimistic acknowledgement. Healthy long
+  dispatches also retain their claim instead of briefly regressing to queued.
 - **Mobile workspace height and handoff controls.** Loki and Terminal composers
   remain above mobile navigation, the three workspace modes fit the viewport, and
   Control renders an honest loading skeleton instead of an empty first paint.
