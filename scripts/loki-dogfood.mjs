@@ -24,6 +24,9 @@ const base = (process.env.BASE ?? "https://fleetcrown.orangecat.ch").replace(/\/
 const projectNeedle = (process.env.PROJECT ?? "fleetcrown").toLowerCase();
 const headless = process.env.HEADLESS === "1";
 const sessionToken = (process.env.FLEETCROWN_SESSION_TOKEN ?? process.env.COCKPIT_SESSION_TOKEN)?.trim();
+const sessionCookieName = base.startsWith("https://")
+  ? "__Secure-authjs.session-token"
+  : "authjs.session-token";
 
 const BRAVE_PROFILE =
   process.env.BRAVE_PROFILE ??
@@ -114,10 +117,10 @@ try {
     });
     await context.addCookies([
       {
-        name: "__Secure-authjs.session-token",
+        name: sessionCookieName,
         value: sessionToken,
         url: base,
-        secure: true,
+        secure: base.startsWith("https://"),
         httpOnly: true,
         sameSite: "Lax",
       },
@@ -134,7 +137,7 @@ try {
   }
 
   const page = context.pages()[0] ?? (await context.newPage());
-  await page.goto(`${base}/loki`, { waitUntil: "domcontentloaded", timeout: 60_000 });
+  await page.goto(`${base}/loki?project=${encodeURIComponent(projectNeedle)}`, { waitUntil: "domcontentloaded", timeout: 60_000 });
   await waitForAuthenticated(page);
   report.steps.push({ step: "authenticated", url: page.url() });
 
@@ -151,20 +154,21 @@ try {
   await page.waitForSelector(".ui-loki-composer-input, .ui-empty-page", { timeout: 60_000 });
   await page.waitForTimeout(1500);
 
-  // Scope to target project (right pane on lg+).
-  const projectBtn = page.locator(".ui-loki-project").filter({
-    has: page.locator(".truncate", { hasText: new RegExp(projectNeedle, "i") }),
-  });
-  if (await projectBtn.count()) {
-    await projectBtn.first().click();
-    await page.waitForTimeout(400);
-  } else {
-    report.steps.push({ step: "project-not-found", needle: projectNeedle });
-  }
+  await page.waitForFunction(
+    (name) => document.querySelector(".ui-loki-scope-pill")?.textContent?.trim().toLowerCase().includes(name),
+    projectNeedle,
+    { timeout: 30_000 },
+  );
 
+  const dispatchResponse = page.waitForResponse(
+    (res) => res.request().method() === "POST" && /\/api\/conversations\/[^/]+\/messages$/.test(new URL(res.url()).pathname),
+    { timeout: 120_000 },
+  );
   await page.getByRole("button", { name: "Move forward", exact: true }).click();
-  await page.waitForTimeout(300);
-  await page.locator(".ui-loki-send-btn").click();
+  const messageResponse = await dispatchResponse;
+  if (!messageResponse.ok()) {
+    throw new Error(`Loki dispatch failed: ${messageResponse.status()} ${messageResponse.statusText()}`);
+  }
 
   await page.waitForSelector(".ui-loki-dispatch-card, .ui-loki-kind", { timeout: 120_000 });
   await page.waitForTimeout(2000);
@@ -239,6 +243,7 @@ try {
     afterDispatch.kind === "Dispatched" &&
     afterDispatch.dispatchLinks.some((l) => l.href.includes("source=server")) &&
     afterDispatch.dispatchLinks.some((l) => l.href.includes("source=machine")) &&
+    !/(failed|error|unconfirmed|not sent)/i.test(afterDispatch.dispatchStatus ?? "") &&
     !afterDispatch.dispatchStatus?.includes("runs when the builder is online") &&
     terminalAudit.url.includes("source=server") &&
     machineShellOk;

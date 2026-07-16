@@ -34,6 +34,15 @@ export async function updateOrchestrationRun(
   return updated;
 }
 
+export async function getOrchestrationRunById(userId: string, id: string) {
+  const [row] = await db
+    .select()
+    .from(orchestrationRuns)
+    .where(and(eq(orchestrationRuns.id, id), eq(orchestrationRuns.userId, userId)))
+    .limit(1);
+  return row ?? null;
+}
+
 export async function cleanupStaleOrchestrationRuns(userId?: string) {
   // Did this run's project produce a handoff AFTER the run started? project_states
   // holds the box-pushed session state; a ready_at / session_updated_at newer

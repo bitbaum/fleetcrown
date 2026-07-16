@@ -68,6 +68,10 @@ async function waitForControlPrompt(page, projectTab, token) {
 }
 
 async function clickVisibleActivityToggles(page) {
+  await page.getByRole("button", { name: /recent activity/i }).first().waitFor({
+    state: "visible",
+    timeout: 30_000,
+  });
   const labels = [/recent activity/i, /^activity/i];
   for (const label of labels) {
     const buttons = page.getByRole("button", { name: label });

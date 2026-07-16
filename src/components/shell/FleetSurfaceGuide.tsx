@@ -1,51 +1,88 @@
 "use client";
 
+import { useCallback, useEffect, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { MessageSquare, SlidersHorizontal, SquareTerminal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FLEET_SURFACES } from "@/config/navigation";
+import {
+  FLEET_PROJECT_EVENT,
+  fleetSurfaceHref,
+  projectFromFleetRoute,
+  readRememberedFleetProject,
+  rememberFleetProject,
+  type FleetSurfaceId,
+} from "@/lib/fleet-context";
+
+const ICONS = {
+  chat: MessageSquare,
+  control: SlidersHorizontal,
+  terminal: SquareTerminal,
+} satisfies Record<FleetSurfaceId, typeof MessageSquare>;
+
+function subscribeToFleetProject(onStoreChange: () => void) {
+  window.addEventListener(FLEET_PROJECT_EVENT, onStoreChange);
+  window.addEventListener("storage", onStoreChange);
+  return () => {
+    window.removeEventListener(FLEET_PROJECT_EVENT, onStoreChange);
+    window.removeEventListener("storage", onStoreChange);
+  };
+}
 
 /**
- * A calm one-line map of the four surfaces that all touch "projects + agents"
- * (Projects, Loki, Control, Terminal). Users repeatedly asked which to use when;
- * showing all four with a one-word job and highlighting the current one makes
- * the relationship visible from any of them — and doubles as quick cross-nav
- * (the hand-off links between these surfaces already exist; this names the map).
- *
- * Renders ONLY while on one of the four surfaces, so it never clutters the rest
- * of the app. Wired once in AppShell — no per-page integration to drift.
+ * Chat, Control, and Terminal are modes of one project workspace. These links
+ * preserve that project so moving from an instruction to state or raw terminal
+ * output does not require finding the project again.
  */
 export function FleetSurfaceGuide() {
   const pathname = usePathname();
   const currentIndex = FLEET_SURFACES.findIndex((s) => pathname === s.href || pathname.startsWith(`${s.href}/`));
+  const readProject = useCallback(() => {
+    const routeProject = projectFromFleetRoute(pathname, new URLSearchParams(window.location.search));
+    return routeProject ?? readRememberedFleetProject();
+  }, [pathname]);
+  const project = useSyncExternalStore(subscribeToFleetProject, readProject, () => null);
+
+  useEffect(() => {
+    const routeProject = projectFromFleetRoute(pathname, new URLSearchParams(window.location.search));
+    if (routeProject) rememberFleetProject(routeProject);
+  }, [pathname]);
+
   if (currentIndex === -1) return null;
 
   return (
     <nav
-      aria-label="Fleet surfaces"
-      className="mx-3 -mb-1 mt-1 flex flex-wrap items-center gap-x-1 gap-y-1 text-xs text-text-tertiary sm:mx-4"
+      aria-label="Project workspace views"
+      className="mx-3 mt-2 flex max-w-6xl shrink-0 items-center gap-2 sm:mx-4 xl:mx-auto xl:w-full"
     >
-      {FLEET_SURFACES.map((s, i) => {
-        const active = i === currentIndex;
-        return (
-          <span key={s.href} className="flex items-center gap-1">
-            {i > 0 && <span className="text-text-muted" aria-hidden="true">·</span>}
+      <div className="inline-flex items-center rounded-lg border border-border-subtle bg-surface-base p-1">
+        {FLEET_SURFACES.map((s, i) => {
+          const active = i === currentIndex;
+          const Icon = ICONS[s.id];
+          return (
             <Link
-              href={s.href}
+              key={s.href}
+              href={fleetSurfaceHref(s.id, project)}
               className={cn(
-                "rounded px-1 py-0.5 transition-colors",
+                "inline-flex min-h-11 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors sm:min-h-8 sm:px-3",
                 active
-                  ? "font-medium text-text-primary"
+                  ? "bg-surface-raised text-text-primary shadow-sm"
                   : "text-text-tertiary hover:text-text-secondary",
               )}
               aria-current={active ? "page" : undefined}
             >
+              <Icon className="h-3.5 w-3.5" aria-hidden="true" />
               {s.label}
-              {active && <span className="font-normal text-text-tertiary"> — {s.role}</span>}
             </Link>
-          </span>
-        );
-      })}
+          );
+        })}
+      </div>
+      {project && (
+        <span className="min-w-0 truncate text-xs text-text-tertiary" title={project}>
+          {project}
+        </span>
+      )}
     </nav>
   );
 }

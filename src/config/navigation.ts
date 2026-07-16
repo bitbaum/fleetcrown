@@ -113,18 +113,14 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
 // (mobile bottom tab bar filter, command palette indexing, etc.).
 export const NAV_ITEMS: NavItem[] = SIDEBAR_SECTIONS.flatMap((s) => s.items).concat(NAV.settings);
 
-// ─── Fleet surfaces — the four pages that all touch "projects + agents" ───────
-// Users kept asking "which of these do I use?". This is the SSOT for the little
-// contextual guide (FleetSurfaceGuide) shown on each: it names the four, gives
-// each a one-word job, and highlights where you are — so the relationship is
-// visible from any of them, not memorized. Order = the natural reading (what
-// exists → how you direct it → how you watch it); Loki/Control are two ways to
-// direct, not sequential steps.
+// ─── Fleet workspace tabs ─────────────────────────────────────────────────────
+// These are three views of the same active project. FleetSurfaceGuide turns this
+// config into project-preserving links; the project catalog remains a separate
+// inventory surface rather than pretending to be a fourth execution mode.
 export const FLEET_SURFACES = [
-  { href: NAV.projects.href, label: NAV.projects.label, role: "your catalog" },
-  { href: NAV.loki.href,     label: NAV.loki.label,     role: "talk to the fleet" },
-  { href: NAV.control.href,  label: NAV.control.label,  role: "command deck" },
-  { href: NAV.terminal.href, label: NAV.terminal.label, role: "watch an agent" },
+  { id: "chat", href: NAV.loki.href, label: "Chat" },
+  { id: "control", href: NAV.control.href, label: NAV.control.label },
+  { id: "terminal", href: NAV.terminal.href, label: NAV.terminal.label },
 ] as const;
 
 export const MOBILE_NAV_ITEMS = NAV_ITEMS.filter((item) => item.mobile);

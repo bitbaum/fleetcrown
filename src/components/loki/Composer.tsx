@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Send, Mic, MicOff, Check, Loader2, Paperclip, X, ImageIcon } from "lucide-react";
+import { Send, Mic, MicOff, Check, Loader2, Paperclip, X, ImageIcon, FolderKanban, Plus } from "lucide-react";
 import { useVoiceInput } from "@/hooks/use-voice-input";
 import { getJson } from "@/lib/api/fetch";
 import {
@@ -14,7 +14,7 @@ import {
 import { LOKI_SUGGESTED_ACTIONS, fillSuggestedAction } from "@/config/loki-suggested-actions";
 import { ExecutorHonestyChip } from "@/components/executor/ExecutorHonestyChip";
 import type { ExecutorHonestyLabel } from "@/lib/executor-honesty";
-import type { Attachment, LokiAgent, ModelChoice } from "./types";
+import type { Attachment, LokiAgent, LokiProject, ModelChoice } from "./types";
 
 const AUTO = "";
 const SEP = "::";
@@ -35,7 +35,9 @@ export function Composer({
   onSend,
   defaultText = "",
   selectedProjects = [],
+  selectedGoal = null,
   onRemoveProject,
+  onOpenProjects,
   dispatchHonesty = null,
 }: {
   disabled: boolean;
@@ -44,7 +46,9 @@ export function Composer({
   defaultText?: string;
   /** Selected projects from the project pane — visible inside the composer. */
   selectedProjects?: string[];
+  selectedGoal?: LokiProject["topGoal"];
   onRemoveProject?: (name: string) => void;
+  onOpenProjects?: () => void;
   /** Shown beside Send when dispatches queue without a live builder. */
   dispatchHonesty?: ExecutorHonestyLabel | null;
 }) {
@@ -208,12 +212,22 @@ export function Composer({
 
   const canSend = (text.trim().length > 0 || attachments.length > 0) && !sending;
   const scopedProjectForTemplate = selectedProjects.length === 1 ? selectedProjects[0] : null;
-  const selectedCountLabel =
-    selectedProjects.length === 0
-      ? "No project pinned"
-      : selectedProjects.length === 1
-        ? "1 project"
-        : `${selectedProjects.length} projects`;
+  const suggestedActions = selectedGoal && scopedProjectForTemplate
+    ? [
+        {
+          id: "active_goal",
+          label: "Advance top goal",
+          template: `Move ${scopedProjectForTemplate} toward its active goal: ${selectedGoal.title}. Inspect the current state and complete the highest-impact next step you can verify.`,
+        },
+        ...LOKI_SUGGESTED_ACTIONS.filter((action) => action.id !== "next_best"),
+      ]
+    : LOKI_SUGGESTED_ACTIONS;
+
+  const sendSuggested = (template: string) => {
+    if (disabled || sending) return;
+    const prompt = fillSuggestedAction(template, scopedProjectForTemplate);
+    onSend(prompt, parseChoice(choiceKey), []);
+  };
 
   return (
     <div className="ui-loki-composer-wrap">
@@ -246,7 +260,11 @@ export function Composer({
         )}
         <div className="ui-loki-composer">
           <div className="ui-loki-composer-scope-row">
-            <span className="ui-loki-scope-hint">{selectedCountLabel}</span>
+            {selectedProjects.length === 0 && onOpenProjects && (
+              <button type="button" className="ui-btn-chip" onClick={onOpenProjects}>
+                <FolderKanban className="h-3.5 w-3.5" /> Project
+              </button>
+            )}
             {selectedProjects.map((project) => (
               <span key={project} className="ui-loki-scope-pill">
                 <span className="truncate">{project}</span>
@@ -262,20 +280,29 @@ export function Composer({
                 )}
               </span>
             ))}
+            {selectedProjects.length > 0 && onOpenProjects && (
+              <button
+                type="button"
+                className="ui-loki-scope-add"
+                onClick={onOpenProjects}
+                aria-label="Change project scope"
+                title="Change project scope"
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
 
           {!text.trim() && (
             <div className="ui-loki-suggest-row">
-              {LOKI_SUGGESTED_ACTIONS.slice(0, 5).map((action) => (
+              {suggestedActions.slice(0, 5).map((action) => (
                 <button
                   key={action.id}
                   type="button"
                   className="ui-loki-suggest-chip"
                   disabled={disabled || sending}
-                  onClick={() => {
-                    setText(fillSuggestedAction(action.template, scopedProjectForTemplate));
-                    textareaRef.current?.focus();
-                  }}
+                  onClick={() => sendSuggested(action.template)}
+                  title={`Run: ${fillSuggestedAction(action.template, scopedProjectForTemplate)}`}
                 >
                   {action.label}
                 </button>

@@ -46,6 +46,7 @@
     "dogfood:machine:ci": "FLEETCROWN_SESSION_TOKEN=$(npx tsx scripts/test/print-session-token.ts) HEADLESS=1 node scripts/machine-dogfood.mjs",
     "dogfood:self": "node scripts/fleetcrown-self-dogfood.mjs",
     "test:dispatch-status": "npx tsx scripts/test/dispatch-status.ts",
+    "test:fleet-context": "npx tsx scripts/test/fleet-context.ts",
     "test:execution-access": "npx tsx scripts/test/execution-access.ts",
     "test:workspace-access": "npx tsx scripts/test/workspace-access.ts",
     "test:authenticated-smoke": "npx tsx scripts/test/authenticated-smoke.ts",

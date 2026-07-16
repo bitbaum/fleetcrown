@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCommandById, markCommandExecuted } from "@/db/queries/pending-commands";
+import { getOrchestrationRunById } from "@/db/queries/orchestration-runs";
 import { emitRunEvent } from "@/db/queries/run-events";
 import { getApiUserId } from "@/lib/session";
 import { deriveDispatchLiveStatus, type CommandLiveInput } from "@/lib/dispatch-status";
@@ -20,10 +21,21 @@ export async function GET(
   if (!command || command.userId !== userId) {
     return NextResponse.json({ error: "Command not found" }, { status: 404 });
   }
+  const runId = (command.payload as { runId?: unknown } | null)?.runId;
+  const run = typeof runId === "string"
+    ? await getOrchestrationRunById(userId, runId).catch(() => null)
+    : null;
   const view = deriveDispatchLiveStatus({
     claimedAt: command.claimedAt,
     executedAt: command.executedAt,
     result: (command.result ?? null) as CommandLiveInput["result"],
+    run: run
+      ? {
+          state: run.state,
+          outcome: run.outcome,
+          payload: run.payload ? { error: run.payload.error } : null,
+        }
+      : null,
   });
   return NextResponse.json(view);
 }

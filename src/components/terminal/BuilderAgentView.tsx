@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Loader2, MonitorSmartphone } from "lucide-react";
 import { useFetch } from "@/hooks/use-fetch";
@@ -10,6 +10,7 @@ import { TerminalView } from "./TerminalView";
 import { TabVoiceMic } from "./TabVoiceMic";
 import { runnerTransport } from "./terminal-transport";
 import { cn } from "@/lib/utils";
+import { rememberFleetProject } from "@/lib/fleet-context";
 
 type Variant = "cloud" | "machine";
 
@@ -64,6 +65,10 @@ export function BuilderAgentView({
   const tabs = data?.tabs ?? [];
   const [selected, setSelected] = useState<string | null>(initialTab ?? null);
   const active = selected && tabs.includes(selected) ? selected : (tabs[0] ?? null);
+
+  useEffect(() => {
+    if (active) rememberFleetProject(active);
+  }, [active]);
 
   if (loading && tabs.length === 0) {
     return (

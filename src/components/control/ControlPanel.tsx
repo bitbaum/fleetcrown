@@ -9,6 +9,7 @@ import { useControlData } from "@/hooks/use-control-data";
 import { useLaunchModal } from "@/hooks/use-launch-modal";
 import { useCreateProject } from "@/hooks/use-create-project";
 import { buildControlPageState, buildProjectOperationsSnapshots, buildLiveTabRows, deriveFleetPulse } from "./control-presenter";
+import { rememberFleetProject } from "@/lib/fleet-context";
 import { ControlFleetStatus } from "./ControlFleetStatus";
 import { AttentionBar } from "./AttentionBar";
 import { RunnerStatusBanner } from "./RunnerStatusBanner";
@@ -55,6 +56,7 @@ export function ControlPanel() {
   const [highlightTab, setHighlightTab] = useState<string | null>(null);
   const [liveTargetTab, setLiveTargetTab] = useState<string | null>(null);
   const livePanelRef = useRef<HTMLElement>(null);
+  const handledFocusRef = useRef<string | null>(null);
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -162,9 +164,17 @@ export function ControlPanel() {
     setSelectedTab(priority?.project.tab ?? snapshots[0].project.tab);
   }, [snapshots, selectedTab]);
 
+  useEffect(() => {
+    if (selectedTab) rememberFleetProject(selectedTab);
+  }, [selectedTab]);
+
   // Push notification / palette deep-link: /control?focus=<tab>&switchTo=<agent>
   useEffect(() => {
-    if (!focusParam || !data) return;
+    if (!focusParam) {
+      handledFocusRef.current = null;
+      return;
+    }
+    if (!data) return;
 
     const tabLower = focusParam.toLowerCase();
     const snapshot = snapshots?.find((s) => s.project.tab.toLowerCase() === tabLower);
@@ -172,6 +182,9 @@ export function ControlPanel() {
     const liveTab = liveTabRows.find((r) => r.tabName.toLowerCase() === tabLower)?.tabName;
     const resolvedTab = snapshotTab ?? liveTab;
     if (!resolvedTab) return;
+    const requestKey = `${tabLower}\u0000${switchToParam ?? ""}`;
+    if (handledFocusRef.current === requestKey) return;
+    handledFocusRef.current = requestKey;
 
     if (snapshotTab) setSelectedTab(snapshotTab);
     setHighlightTab(resolvedTab);
@@ -253,6 +266,18 @@ export function ControlPanel() {
   // standalone variant repeated the <summary>'s "Workspaces · N open" header
   // inside the panel — the page showed the same heading and count twice.
   const livePanel = <ZellijLivePanel {...livePanelProps} embedded />;
+
+  if (!data) {
+    return (
+      <div className="space-y-6" aria-busy="true" aria-label="Loading live fleet state">
+        <div className="ui-panel h-36 animate-pulse bg-surface-base" />
+        <div className="ui-control-loading-grid">
+          <div className="ui-panel animate-pulse bg-surface-base" />
+          <div className="ui-panel animate-pulse bg-surface-base" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -381,6 +406,14 @@ export function ControlPanel() {
         <div className="ui-control-live-details-body">{livePanel}</div>
       </details>
 
+      {data.recentActivity.length > 0 && (
+        <ActivityLogPanel
+          activities={data.recentActivity}
+          open={activityOpen}
+          onToggle={() => setActivityOpen((v) => !v)}
+        />
+      )}
+
       <details className="ui-control-launch-defaults">
         <summary className="ui-control-launch-defaults-summary flex items-center gap-2">
           <Settings2 className="h-3.5 w-3.5" />
@@ -409,13 +442,6 @@ export function ControlPanel() {
               />
           </section>
 
-          {data && data.recentActivity.length > 0 && (
-            <ActivityLogPanel
-              activities={data.recentActivity}
-              open={activityOpen}
-              onToggle={() => setActivityOpen((v) => !v)}
-            />
-          )}
         </div>
       </details>
 

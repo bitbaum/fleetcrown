@@ -50,7 +50,15 @@ export function dispatchAssistantContent(
  *  row. Lets the transcript footer show the truth as it unfolds — queued →
  *  picked up → ran / failed — instead of freezing on the optimistic snapshot
  *  stamped at dispatch time. SSOT for both the status API and the footer. */
-export type DispatchLiveStatus = "queued" | "working" | "ran" | "unconfirmed" | "failed";
+export type DispatchLiveStatus =
+  | "queued"
+  | "working"
+  | "delivered"
+  | "completed"
+  | "partial"
+  | "stopped"
+  | "unconfirmed"
+  | "failed";
 
 export type CommandLiveInput = {
   claimedAt: string | Date | null;
@@ -60,6 +68,11 @@ export type CommandLiveInput = {
     verified?: boolean | null;
     warning?: string | null;
     error?: string | null;
+  } | null;
+  run?: {
+    state: string;
+    outcome: string | null;
+    payload?: { error?: string } | null;
   } | null;
 };
 
@@ -86,5 +99,58 @@ export function deriveDispatchLiveStatus(cmd: CommandLiveInput): DispatchLiveVie
   if (r.verified === false) {
     return { status: "unconfirmed", label: "Delivered — not confirmed", detail: r.warning ?? "the agent hasn't confirmed it started generating", tone: "warning", terminal: true };
   }
-  return { status: "ran", label: "Agent is running it", detail: "the prompt is live in the agent session", tone: "positive", terminal: true };
+
+  const run = cmd.run;
+  if (!run) {
+    return {
+      status: "delivered",
+      label: "Delivered to agent",
+      detail: "the runner confirmed the prompt was submitted",
+      tone: "positive",
+      terminal: true,
+    };
+  }
+
+  if (run.state === "waiting") {
+    return {
+      status: "delivered",
+      label: "Delivered to agent",
+      detail: "waiting for a completion handoff",
+      tone: "positive",
+      terminal: false,
+    };
+  }
+  if (run.state === "running" || run.state === "closing") {
+    return {
+      status: "working",
+      label: run.state === "closing" ? "Agent is finishing" : "Agent is working",
+      detail: "the tracked run is still open",
+      tone: "positive",
+      terminal: false,
+    };
+  }
+
+  const error = run.payload?.error?.trim() || null;
+  switch (run.outcome) {
+    case "success":
+      return { status: "completed", label: "Completed", detail: "successful outcome recorded", tone: "positive", terminal: true };
+    case "partial":
+      return { status: "partial", label: "Finished with follow-up", detail: "the run recorded remaining work", tone: "warning", terminal: true };
+    case "user_abort":
+      return { status: "stopped", label: "Stopped by you", detail: null, tone: "neutral", terminal: true };
+    case "hang":
+      return { status: "failed", label: "Agent stopped responding", detail: error, tone: "negative", terminal: true };
+    case "timeout":
+      return { status: "failed", label: "Run timed out", detail: error, tone: "negative", terminal: true };
+    case "error":
+      return { status: "failed", label: "Run failed", detail: error, tone: "negative", terminal: true };
+    default:
+      return {
+        status: "unconfirmed",
+        label: "Run closed — outcome missing",
+        detail: "check Activity for the recorded evidence",
+        tone: "warning",
+        terminal: true,
+      };
+  }
 }

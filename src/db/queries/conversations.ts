@@ -28,9 +28,10 @@ export function deriveConversationTitle(text: string): string | null {
   return cleaned.length > MAX ? `${cleaned.slice(0, MAX).trimEnd()}…` : cleaned;
 }
 
-/** List a user's conversations, newest-updated first. Optional projectKeys
- *  filter keeps only threads tagged with at least one of the given keys
- *  (overlap). Selects only the columns the left-pane list renders. */
+/** List a user's non-empty conversations, newest-updated first. Optional
+ *  projectKeys filter keeps only threads tagged with at least one given key.
+ *  The inner join deliberately hides abandoned placeholders left by clients
+ *  that created a thread but never sent a first message. */
 export async function listConversations(
   userId: string,
   opts: { projectKeys?: string[] } = {},
@@ -43,7 +44,17 @@ export async function listConversations(
       updatedAt: conversations.updatedAt,
     })
     .from(conversations)
+    .innerJoin(
+      conversationMessages,
+      eq(conversationMessages.conversationId, conversations.id),
+    )
     .where(eq(conversations.userId, userId))
+    .groupBy(
+      conversations.id,
+      conversations.title,
+      conversations.projectKeys,
+      conversations.updatedAt,
+    )
     .orderBy(desc(conversations.updatedAt));
 
   const filter = opts.projectKeys?.filter(Boolean) ?? [];

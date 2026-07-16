@@ -313,7 +313,7 @@ export async function POST(
     const assistant = await addMessage(conversationId, {
       role: "assistant",
       kind: "chat",
-      content: `Registered **${projectName}**. Select it on the right, then say what to run.`,
+      content: `Registered **${projectName}**. It is now available from the Project control; say what you want to run.`,
       meta: { source: "create-project", projectKey: projectName },
     });
     return NextResponse.json({ message: assistant });
@@ -551,7 +551,7 @@ export async function POST(
     assistant = await addMessage(conversationId, {
       role: "assistant",
       kind: "command",
-      content: "Which project should I run that on? Tap one below, select on the right, or name it in your message.",
+      content: "Which project should I run that on? Tap one below, use the Project control, or name it in your message.",
       meta: {
         needsProject: true,
         intentId: resolution.intentId,

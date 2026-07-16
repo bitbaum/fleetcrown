@@ -2,7 +2,7 @@
  * Inline tests for dispatch queue status copy.
  * Run: npx tsx scripts/test/dispatch-status.ts
  */
-import { dispatchAssistantContent, dispatchStatusLabel } from "@/lib/dispatch-status";
+import { deriveDispatchLiveStatus, dispatchAssistantContent, dispatchStatusLabel } from "@/lib/dispatch-status";
 import { EXECUTOR_COPY } from "@/config/executor-copy";
 
 const offline = dispatchStatusLabel({ mode: "queued", runnerConnected: false, warning: "runner-offline" });
@@ -23,6 +23,36 @@ if (direct.warn || direct.label !== "Running now") {
 const md = dispatchAssistantContent("fleetcrown", { ok: true, mode: "queued", runnerConnected: true });
 if (!md.includes("fleetcrown") || !md.includes("builder")) {
   throw new Error("assistant content");
+}
+
+const delivered = deriveDispatchLiveStatus({
+  claimedAt: new Date(),
+  executedAt: new Date(),
+  result: { ok: true, verified: true },
+  run: { state: "waiting", outcome: null },
+});
+if (delivered.label !== "Delivered to agent" || delivered.terminal) {
+  throw new Error("tracked delivery must keep polling");
+}
+
+const completed = deriveDispatchLiveStatus({
+  claimedAt: new Date(),
+  executedAt: new Date(),
+  result: { ok: true, verified: true },
+  run: { state: "done", outcome: "success" },
+});
+if (completed.label !== "Completed" || !completed.terminal || completed.tone !== "positive") {
+  throw new Error("successful run completion");
+}
+
+const timeout = deriveDispatchLiveStatus({
+  claimedAt: new Date(),
+  executedAt: new Date(),
+  result: { ok: true, verified: true },
+  run: { state: "error", outcome: "timeout", payload: { error: "timed out" } },
+});
+if (timeout.label !== "Run timed out" || !timeout.terminal || timeout.tone !== "negative") {
+  throw new Error("timed out run completion");
 }
 
 console.log("✓ dispatch-status tests passed");

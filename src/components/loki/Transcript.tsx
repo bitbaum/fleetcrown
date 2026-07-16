@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ExternalLink, ListChecks, Monitor, Sparkles, TerminalSquare } from "lucide-react";
+import { ExternalLink, ListChecks, Loader2, Monitor, Sparkles, TerminalSquare } from "lucide-react";
 import { MarkdownText } from "@/components/ui/markdown-text";
 import type { LokiMessage } from "./types";
 import { dispatchStatusLabel, type DispatchLiveView } from "@/lib/dispatch-status";
@@ -14,19 +14,23 @@ const DISPATCH_DOT: Record<DispatchLiveView["tone"], string> = {
   neutral: "ui-dot-neutral",
 };
 
-/** Poll a queued dispatch's live status so the footer tells the truth as it
- *  unfolds (queued → picked up → ran/failed) instead of freezing on the
- *  optimistic snapshot. No commandId (direct/legacy dispatch) → no polling,
- *  and the static footer is used. Stops as soon as the command settles. */
-function useDispatchLiveStatus(commandId: string | null): DispatchLiveView | null {
+/** Poll a dispatch's live status so queued commands and direct terminal runs
+ *  both converge on their recorded completion outcome instead of freezing on
+ *  the optimistic snapshot. Stops as soon as the tracked lifecycle settles. */
+function useDispatchLiveStatus(commandId: string | null, runId: string | null): DispatchLiveView | null {
   const [view, setView] = useState<DispatchLiveView | null>(null);
   useEffect(() => {
-    if (!commandId) return;
+    const statusUrl = commandId
+      ? `/api/control/commands/${commandId}`
+      : runId
+        ? `/api/orchestration/runs/${runId}`
+        : null;
+    if (!statusUrl) return;
     let active = true;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const poll = async () => {
       try {
-        const res = await fetch(`/api/control/commands/${commandId}`);
+        const res = await fetch(statusUrl);
         if (res.ok) {
           const v = (await res.json()) as DispatchLiveView;
           if (!active) return;
@@ -43,7 +47,7 @@ function useDispatchLiveStatus(commandId: string | null): DispatchLiveView | nul
       active = false;
       if (timer) clearTimeout(timer);
     };
-  }, [commandId]);
+  }, [commandId, runId]);
   return view;
 }
 import { LOKI_PROACTIVE_STARTERS } from "@/config/loki-suggested-actions";
@@ -63,7 +67,8 @@ function DispatchFooter({ meta }: { meta: Record<string, unknown> | null }) {
   // Hook first — before any early return — to satisfy rules-of-hooks. commandId
   // is read defensively so it's safe even when meta is null.
   const commandId = typeof meta?.commandId === "string" ? meta.commandId : null;
-  const live = useDispatchLiveStatus(commandId);
+  const runId = typeof meta?.runId === "string" ? meta.runId : null;
+  const live = useDispatchLiveStatus(commandId, runId);
   if (!meta) return null;
   const projectKey = typeof meta.projectKey === "string" ? meta.projectKey : null;
   const projectKeys = projectKey
@@ -82,7 +87,7 @@ function DispatchFooter({ meta }: { meta: Record<string, unknown> | null }) {
     runnerConnected,
   });
   // Live status supersedes the frozen snapshot once the runner acts on the
-  // command. Absent (no commandId / not yet claimed) → the static label stands.
+  // command and keeps following the associated run through its real outcome.
   const status = live ? live.label : staticStatus;
   const dotClass = live ? DISPATCH_DOT[live.tone] : warn ? "ui-dot-warning" : "ui-dot-positive";
   // Only present when the operator pinned a non-default model in the composer.
@@ -184,11 +189,13 @@ function NeedsProjectPicker({
 
 export function Transcript({
   messages,
+  loading = false,
   sending,
   onPickProject,
   onStart,
 }: {
   messages: LokiMessage[];
+  loading?: boolean;
   sending: boolean;
   onPickProject?: (project: string, pendingText: string) => void;
   /** Send a full prompt (proactive starters on the empty state). */
@@ -200,6 +207,14 @@ export function Transcript({
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length, sending]);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-0 flex-1 items-center justify-center text-sm text-text-muted" role="status">
+        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading conversation
+      </div>
+    );
+  }
 
   // Empty transcript — instead of a passive "nothing here", Loki proactively
   // offers to look across the whole fleet. One tap runs a fleet-wide review from
@@ -213,20 +228,15 @@ export function Transcript({
           <p className="ui-empty-helper">
             Ask anything — or let it look across your projects and tell you what needs you.
           </p>
-          {onStart && (
-            <div className="mt-5 flex flex-col gap-2">
-              {LOKI_PROACTIVE_STARTERS.map((s, i) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => onStart(s.prompt)}
-                  className={i === 0 ? "ui-btn-primary w-full justify-center gap-2" : "ui-btn-secondary w-full justify-center gap-2"}
-                >
-                  {i === 0 && <Sparkles className="h-4 w-4" />}
-                  {s.label}
-                </button>
-              ))}
-            </div>
+          {onStart && LOKI_PROACTIVE_STARTERS[0] && (
+            <button
+              type="button"
+              onClick={() => onStart(LOKI_PROACTIVE_STARTERS[0].prompt)}
+              className="ui-btn-primary mx-auto mt-4 justify-center gap-2 px-5"
+            >
+              <Sparkles className="h-4 w-4" />
+              {LOKI_PROACTIVE_STARTERS[0].label}
+            </button>
           )}
         </div>
       </div>
@@ -255,7 +265,9 @@ export function Transcript({
         ),
       )}
       {sending && (
-        <div className="ui-loki-bubble ui-loki-bubble-assistant">Thinking…</div>
+        <div className="ui-loki-bubble ui-loki-bubble-assistant flex items-center gap-2 text-text-tertiary" role="status">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loki is thinking
+        </div>
       )}
       <div ref={endRef} />
     </div>

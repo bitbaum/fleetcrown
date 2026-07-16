@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { LokiWorkspace } from "@/components/loki/LokiWorkspace";
-import { PageTitle } from "@/components/ui/page-title";
 import { getSessionUserId } from "@/lib/session";
 import { prefetchLokiWorkspace } from "@/lib/loki/prefetch";
 
@@ -15,16 +14,8 @@ export default async function LokiPage() {
   const seed = userId ? await prefetchLokiWorkspace(userId) : null;
 
   return (
-    <div className="app-page app-page-compact app-viewport-pane flex flex-col gap-2 md:gap-4">
-      <div className="ui-page-header hidden sm:flex">
-        <div>
-          <PageTitle title="Loki" />
-          <p className="ui-page-subtitle">
-            Say what you want — Loki figures out which project and whether to chat or dispatch.
-          </p>
-        </div>
-      </div>
-      <Suspense fallback={null}>
+    <div className="app-page app-page-compact app-viewport-pane flex flex-col">
+      <Suspense fallback={<div className="mx-auto h-full w-full max-w-5xl animate-pulse rounded-lg bg-surface-base" />}>
         <LokiWorkspace
           initialProjects={seed?.projects}
           initialConversations={seed?.conversations}

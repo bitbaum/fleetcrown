@@ -2,8 +2,8 @@
 
 ---
 created_date: 2026-06-30
-last_modified_date: 2026-06-30
-last_modified_summary: Multitenancy execution boundary documented and enforced: shared cloud builder remains private; Docker SandboxExecutor substrate exists behind an env flag; external tenants use Fleet Runner until hosted entitlements, credentials, and metering ship.
+last_modified_date: 2026-07-16
+last_modified_summary: Horizon C1-C4 completed: Loki resolves project context from natural language, suggests grounded next commands, sends suggestion chips immediately, shares project context with Control and Terminal, and Control has an honest first-paint skeleton.
 ---
 
 **North star:** Borrow the workers, own the bridge — one captain's interface over swappable runtimes, with verification and fleet governance you can trust.
@@ -50,10 +50,10 @@ Goal: Talk to Loki → work runs on cloud → watch it without mental model hack
 
 | ID | Initiative | Status |
 |----|------------|--------|
-| C1 | Loki Phase 4 — smart project pre-select from NL | [ ] |
-| C2 | Suggested next commands from fleet state | [ ] |
-| C3 | Control SSR/skeleton fleet header (no empty first paint) | [ ] |
-| C4 | Chip → send (Move forward one tap) | [ ] |
+| C1 | Loki Phase 4 — smart project pre-select from NL | [x] |
+| C2 | Suggested next commands from fleet state | [x] |
+| C3 | Control SSR/skeleton fleet header (no empty first paint) | [x] skeleton |
+| C4 | Chip → send (Move forward one tap) | [x] |
 | C5 | Hosted runner Phase 1 honest — sandboxed Hermes, docs updated | [ ] Sandbox substrate exists; hosted product path still gated |
 
 ## Horizon D — First external user (weeks 12–16)
@@ -70,7 +70,7 @@ Goal: Talk to Loki → work runs on cloud → watch it without mental model hack
 
 Only after D succeeds. See `docs/architecture/agent-execution-platform.md`, `docs/architecture/cross-product-identity-bridge.md`.
 
-**Current gate:** Horizon C/D/E are intentionally not marked complete on 2026-06-30. B6 still has legacy zellij attach fallback; D/E require external-user onboarding, per-user agent credentials, rollback automation, and sandboxed multi-tenant execution.
+**Current gate:** Horizon C1-C4 are complete as of 2026-07-16. C5 remains gated on hosted-runner isolation and product controls. B6 still has legacy zellij attach fallback; D/E require external-user onboarding, per-user agent credentials, rollback automation, and sandboxed multi-tenant execution.
 
 ## Defer (anti-patterns)
 

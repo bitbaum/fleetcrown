@@ -165,31 +165,17 @@ try {
     await page.waitForFunction(
       (name) => {
         const pill = document.querySelector(".ui-loki-scope-pill")?.textContent?.trim();
-        if (pill?.toLowerCase().includes(name)) return true;
-        return [...document.querySelectorAll(".ui-loki-project-active .truncate")].some(
-          (el) => el.textContent?.trim().toLowerCase() === name,
-        );
+        return Boolean(pill?.toLowerCase().includes(name));
       },
       project.toLowerCase(),
       { timeout: 30_000 },
     );
 
-    await page.getByRole("button", { name: "Move forward", exact: true }).click();
-    await page.waitForTimeout(400);
-    const composer = page.locator(".ui-loki-composer-input");
-    const text = await composer.inputValue();
-    if (!text.trim()) {
-      await composer.fill(`move forward on ${project}`);
-    }
-    await page.waitForFunction(
-      () => !document.querySelector('button[aria-label="Send"]')?.hasAttribute("disabled"),
-      { timeout: 15_000 },
-    );
     const sendResponse = page.waitForResponse(
       (res) => res.request().method() === "POST" && /\/api\/conversations\/[^/]+\/messages$/.test(new URL(res.url()).pathname),
       { timeout: 120_000 },
     );
-    await page.getByRole("button", { name: "Send" }).click();
+    await page.getByRole("button", { name: "Move forward", exact: true }).click();
     const messageResponse = await sendResponse.catch(() => null);
     const gotDispatch = Boolean(messageResponse?.ok()) && await page
       .waitForSelector(".ui-loki-dispatch-card, .ui-loki-kind", { timeout: 30_000 })
@@ -213,6 +199,9 @@ try {
       report.shots.push(await shot(page, "03-loki-dispatch", "Loki — after Move forward dispatch"));
     }
     report.steps.push({ step: "loki-dispatch", audit: lokiAudit });
+    if (gotDispatch && /failed|error|unconfirmed|not sent/i.test(lokiAudit.status ?? "")) {
+      note("loki-dispatch-outcome", "high", `Loki reported ${lokiAudit.status}`, "Pick an open project session or fix the dispatch path before calling dogfood successful");
+    }
 
     if (lokiAudit.status?.includes("runs when the builder is online")) {
       note("presence", "high", "Dispatch footer still says builder offline on localhost", "Local dev has no box-runner; copy should say cloud-only or link to prod");
@@ -277,27 +266,22 @@ try {
     report.shots.push(await shot(page, "01-control-prod", "Prod Control"));
     report.steps.push({ step: "control", url: page.url() });
 
-    await gotoPage(page, `${base}/loki`);
+    await gotoPage(page, `${base}/loki?project=${encodeURIComponent(project)}`);
     await page.waitForSelector(".ui-loki-composer-input", { timeout: 60_000 });
-    const projBtn = page.locator(".ui-loki-project").filter({
-      has: page.locator(".truncate", { hasText: new RegExp(project, "i") }),
-    });
-    if (await projBtn.count()) await projBtn.first().click();
-    report.shots.push(await shot(page, "02-loki-prod", "Prod Loki scoped"));
-    await page.getByRole("button", { name: "Move forward", exact: true }).click();
-    await page.waitForTimeout(400);
-    const composer = page.locator(".ui-loki-composer-input");
-    const text = await composer.inputValue();
-    if (!text.trim()) {
-      await composer.fill(`move forward on ${project}`);
-    }
     await page.waitForFunction(
-      () => !document.querySelector('button[aria-label="Send"]')?.hasAttribute("disabled"),
-      { timeout: 15_000 },
+      (name) => document.querySelector(".ui-loki-scope-pill")?.textContent?.trim().toLowerCase().includes(name),
+      project.toLowerCase(),
+      { timeout: 30_000 },
     );
-    await page.getByRole("button", { name: "Send" }).click();
-    const gotDispatch = await page
-      .waitForSelector(".ui-loki-dispatch-card, .ui-loki-kind, .ui-error", { timeout: 120_000 })
+    report.shots.push(await shot(page, "02-loki-prod", "Prod Loki scoped"));
+    const sendResponse = page.waitForResponse(
+      (res) => res.request().method() === "POST" && /\/api\/conversations\/[^/]+\/messages$/.test(new URL(res.url()).pathname),
+      { timeout: 120_000 },
+    );
+    await page.getByRole("button", { name: "Move forward", exact: true }).click();
+    const messageResponse = await sendResponse.catch(() => null);
+    const gotDispatch = Boolean(messageResponse?.ok()) && await page
+      .waitForSelector(".ui-loki-dispatch-card, .ui-loki-kind, .ui-error", { timeout: 30_000 })
       .then(() => true)
       .catch(() => false);
     await page.waitForTimeout(2000);
@@ -314,6 +298,9 @@ try {
       report.shots.push(await shot(page, "03-loki-dispatch-prod", "Prod dispatch"));
     }
     report.steps.push({ step: "loki-dispatch", audit: lokiAudit });
+    if (gotDispatch && /failed|error|unconfirmed|not sent/i.test(lokiAudit.status ?? "")) {
+      note("loki-dispatch-outcome", "high", `Prod Loki reported ${lokiAudit.status}`, "Fix the live dispatch path before calling dogfood successful");
+    }
 
     const cloud = page.getByRole("link", { name: /Cloud terminal/i });
     if (await cloud.count()) {
@@ -342,8 +329,14 @@ try {
 
   report.weaknesses = weaknesses;
   report.shotDir = outDir;
+  const dispatchStep = report.steps.find((step) => step.step === "loki-dispatch");
+  const dispatchStatus = dispatchStep?.audit?.status ?? "";
+  report.ok = Boolean(dispatchStep)
+    && !/(failed|error|unconfirmed|not sent)/i.test(dispatchStatus)
+    && !weaknesses.some((weakness) => weakness.severity === "high");
   fs.writeFileSync(path.join(outDir, "report.json"), JSON.stringify(report, null, 2));
-  console.log(JSON.stringify({ ok: true, shotDir: outDir, weaknesses, steps: report.steps.map((s) => s.step) }, null, 2));
+  console.log(JSON.stringify({ ok: report.ok, shotDir: outDir, weaknesses, steps: report.steps.map((s) => s.step) }, null, 2));
+  if (!report.ok) process.exitCode = 1;
 } catch (err) {
   report.error = String(err?.stack ?? err);
   report.weaknesses = weaknesses;

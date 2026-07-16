@@ -332,28 +332,37 @@
 @layer components {
 
   /* Shell */
-  .app-shell-frame { @apply min-h-screen overflow-x-clip text-text-primary; }
+  .app-shell-frame {
+    height: 100dvh;
+    min-height: 100dvh;
+    @apply overflow-x-clip overflow-y-hidden text-text-primary;
+  }
   .app-main-column {
     /* The right side of the shell — top bar + main + footer stacked. */
-    @apply flex min-w-0 flex-1 flex-col overflow-x-clip;
+    height: 100dvh;
+    @apply flex min-h-0 min-w-0 flex-1 flex-col overflow-x-clip;
   }
   .app-main {
-    @apply min-w-0 flex-1 overflow-x-clip overflow-y-auto md:pb-0;
+    @apply min-h-0 min-w-0 flex-1 overflow-x-clip overflow-y-auto;
     padding-bottom: calc(var(--mobile-chrome-bottom) + 1rem);
   }
-  /* Full-height panes (Loki, Terminal, workspace) — SSOT for viewport math */
-  .app-viewport-pane {
-    height: var(--app-viewport-height);
-    @apply flex min-h-0 flex-col;
-  }
   @media (min-width: 48rem) {
-    .app-viewport-pane {
-      height: calc(100dvh - 2rem);
-    }
+    .app-main { padding-bottom: 0; }
+  }
+  /* Full-height panes derive their size from the remaining shell space. This
+     keeps banners and workspace tabs from pushing chat/terminal under mobile
+     navigation or beyond the desktop viewport. */
+  .app-viewport-pane {
+    height: 100%;
+    max-height: 100%;
+    @apply flex min-h-0 flex-col;
   }
   /* Chat/terminal pages — tighter vertical padding on phones so content fits */
   .app-page-compact {
     @apply py-3 sm:py-5 md:py-8;
+  }
+  .ui-control-loading-grid {
+    @apply grid min-h-[28rem] gap-4 md:grid-cols-[17rem_minmax(0,1fr)];
   }
 
   /* App top bar — slim, sticky, hosts Cmd-K + global status pills */
@@ -2848,7 +2857,13 @@
     background-color: color-mix(in oklch, var(--status-negative) 18%, transparent);
   }
 
-  /* ── Loki — conversational command surface (3-pane) ──────────────────────── */
+  /* ── Loki — conversational command surface ───────────────────────────────── */
+  .ui-loki-workspace {
+    @apply flex min-h-0 flex-1 flex-col gap-2 lg:grid lg:gap-5;
+  }
+  @media (min-width: 64rem) {
+    .ui-loki-workspace { grid-template-columns: 15rem minmax(0, 1fr); }
+  }
   /* Conversation list row (left pane). */
   .ui-loki-convo {
     @apply w-full rounded-lg border border-transparent px-3 py-2 text-left text-sm text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary;
@@ -2894,7 +2909,8 @@
     @apply self-end bg-accent-muted text-text-primary;
   }
   .ui-loki-bubble-assistant {
-    @apply self-start border border-border-subtle bg-surface-base text-text-secondary;
+    @apply w-full self-start px-1 text-text-secondary;
+    max-width: 100%;
   }
   /* Kind badge above an assistant turn (dispatch / chat / command). */
   .ui-loki-kind {
@@ -2924,13 +2940,13 @@
     @apply flex flex-col gap-2;
   }
   .ui-loki-composer {
-    @apply flex flex-col gap-2 rounded-3xl border border-border-subtle bg-surface-base p-3 shadow-sm transition-colors focus-within:border-border-default sm:p-4;
+    @apply flex flex-col gap-2 rounded-2xl border border-border-subtle bg-surface-base p-3 shadow-sm transition-colors focus-within:border-border-default sm:p-4;
   }
   .ui-loki-composer-scope-row {
     @apply flex min-h-7 flex-wrap items-center gap-1.5;
   }
   .ui-loki-composer-input {
-    @apply max-h-60 min-h-24 w-full resize-none bg-transparent px-1 py-1 text-base leading-relaxed text-text-primary placeholder:text-text-tertiary outline-none sm:min-h-28;
+    @apply max-h-60 min-h-20 w-full resize-none bg-transparent px-1 py-1 text-base leading-relaxed text-text-primary placeholder:text-text-tertiary outline-none sm:min-h-24;
   }
   .ui-loki-composer-actions {
     @apply flex items-center justify-between gap-2 border-t border-border-subtle pt-2;
@@ -2956,7 +2972,7 @@
     @apply flex min-w-0 flex-1 gap-1.5 overflow-x-auto pr-1 sm:flex-none sm:justify-end;
   }
   .ui-loki-suggest-chip {
-    @apply inline-flex h-8 shrink-0 items-center rounded-full border border-border-subtle bg-surface-raised px-3 text-xs text-text-secondary transition-colors hover:border-border-default hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-45;
+    @apply inline-flex min-h-9 shrink-0 items-center rounded-full border border-border-subtle bg-surface-raised px-3 text-xs text-text-secondary transition-colors hover:border-border-default hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-45 sm:min-h-8;
   }
   /* Drawer scroll body — safe-area padding on phones */
   .ui-drawer-body {
@@ -3032,6 +3048,9 @@
   }
   .ui-loki-scope-remove {
     @apply -mr-1 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-accent-text/70 transition-colors hover:bg-accent-primary/15 hover:text-accent-text;
+  }
+  .ui-loki-scope-add {
+    @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border-subtle bg-surface-raised text-text-tertiary transition-colors hover:border-border-default hover:text-text-primary;
   }
   .ui-loki-scope-hint {
     @apply text-xs text-text-tertiary;
