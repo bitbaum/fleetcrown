@@ -18,6 +18,7 @@ Notable, user-facing changes. Older history lives in the git log (conventional c
   Runner startup copies legacy Markdown handoffs forward before watching them,
   keeps legacy reads during the transition, leaves Claude's live JSON alone, and
   pushes box-runner completions immediately instead of waiting for a heartbeat.
+  Deploys now synchronize the shared `home/` watcher code to the box runner too.
 
 ### Fixed
 - **Dispatch status follows the run through completion.** Loki now distinguishes

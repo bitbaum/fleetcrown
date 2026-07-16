@@ -288,12 +288,14 @@ rsync -az --no-perms --omit-dir-times -e "$RSYNC_SSH" \
 rsync -az --no-perms --omit-dir-times -e "$RSYNC_SSH" \
   "$PROJECT_DIR/desktop/src/" "$HOST:$RUNNER_DIR/desktop/src/"
 rsync -az --no-perms --omit-dir-times -e "$RSYNC_SSH" \
+  "$PROJECT_DIR/home/" "$HOST:$RUNNER_DIR/home/"
+rsync -az --no-perms --omit-dir-times -e "$RSYNC_SSH" \
   "$PROJECT_DIR/scripts/box-runner.ts" \
   "$PROJECT_DIR/scripts/mint-box-runner-token.ts" \
   "$PROJECT_DIR/scripts/reindex-knowledge.ts" \
   "$HOST:$RUNNER_DIR/scripts/"
 rsync -a -e "$RSYNC_SSH" "$PROJECT_DIR/tsconfig.json" "$HOST:$RUNNER_DIR/tsconfig.json"
-ssh "$HOST" "chown -R $RUNNER_OWNER:$RUNNER_OWNER $RUNNER_DIR/src $RUNNER_DIR/desktop $RUNNER_DIR/scripts $RUNNER_DIR/tsconfig.json"
+ssh "$HOST" "chown -R $RUNNER_OWNER:$RUNNER_OWNER $RUNNER_DIR/src $RUNNER_DIR/desktop $RUNNER_DIR/home $RUNNER_DIR/scripts $RUNNER_DIR/tsconfig.json"
 
 echo "→ restart fleetcrown-box-runner (cloud builder)"
 ssh "$HOST" "systemctl restart fleetcrown-box-runner \
