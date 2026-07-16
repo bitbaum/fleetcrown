@@ -173,7 +173,7 @@ This doc will be updated as we execute. The goal is to treat the architecture es
 **Known gaps (current prototype — desktop-2/3 dispatch + idle paths complete)**:
 - Desktop main owns the core local loop for runs it originates:
   - Real appendEvent for bridge.dispatch + worker.started/crashed (with runId + /tmp sentinel for stop-hook correlation).
-  - Embedded `home/watcher` (startWatcher): fs.watch on ~/.claude/sessions for registered projects, debounced `worker.idle` + parsed handoff on change. No external watcher process needed for full event emission when the Fleet Runner is the runtime.
+  - Embedded `home/watcher` (startWatcher): fs.watch on ~/.fleetcrown/sessions for registered projects, debounced `worker.idle` + parsed handoff on change. No external watcher process needed for full event emission when the Fleet Runner is the runtime.
 - Local UI + "Sync to Web" snapshots are still lightweight (eager apply of events seen by this process). A full in-process Brain (tail the log, serve rich state) is a smaller follow-on slice.
 - Standalone home/ trio and legacy daemon continue to work for headless use.
 - No tray/notifications, signed distributables with auto-update, or packaged "run as background runtime only" mode yet.

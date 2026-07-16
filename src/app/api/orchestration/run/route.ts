@@ -11,6 +11,7 @@ import { injectIntoTab, shellEscape, getZellijTabs } from "@/lib/zellij";
 import { AGENT_DEFAULT_MODELS } from "@/lib/agent-registry";
 import { cancelActiveBeaconSessions } from "@/app/api/beacon/route";
 import { buildPromptWithSession, resolveEffectiveTab, stateFile, clearHandshakeFiles, sessionHandoffContract } from "@/lib/agent-config";
+import { FLEET_SESSIONS_DISPLAY_PATH } from "@/lib/session-paths";
 import {
   ORCHESTRATION_ADAPTER_IDS,
   ORCHESTRATION_TASK_INTENT_IDS,
@@ -141,13 +142,13 @@ export async function POST(req: NextRequest) {
     // inject-prompt/inject-core paths). Best-effort background section.
     const operatorSection = await buildOperatorContextSection(userId).catch(() => "");
     // Exit contract — WITHOUT it a box-executed agent finishes real work, writes
-    // no ~/.claude/sessions/<tab>.md handoff, and gets reaped as a timeout (the
+    // no ~/.fleetcrown/sessions/<tab>.md handoff, and gets reaped as a timeout (the
     // same gap inject-prompt.ts:66-74 closes for the inject path). The local
     // orchestration path gets this via buildPromptWithSession; the cloud path —
     // Control's dispatch / Next-best buttons — was the one bypass. Appended here
     // (renderTaskForAdapter does not include it) so every dispatch path lands a
     // handoff. Tilde-relative on purpose: the agent expands HOME, not the server.
-    const sessionFileRef = `~/.claude/sessions/${request.projectKey}.md`;
+    const sessionFileRef = `${FLEET_SESSIONS_DISPLAY_PATH}/${request.projectKey}.md`;
     const prompt = `${[operatorSection, renderTaskForAdapter(request)].filter(Boolean).join("\n\n")}\n\n## Exit contract (operator requirement)\nBefore stopping, create ${sessionFileRef}.\n${sessionHandoffContract(sessionFileRef)}`;
     // Create an orchestration_runs row for trackable intents so the local runner
     // can write /tmp/cockpit-run-<tab> and agent-hook-bridge.sh can close out the

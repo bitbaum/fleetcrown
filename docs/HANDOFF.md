@@ -138,7 +138,7 @@ Desktop main process: validateCommand (zod) → injectIntoTab(tab, prompt)
   ↓
 Zellij tab on user's machine receives keystrokes → Claude/Codex/etc. starts executing
   ↓
-On idle, agent writes ~/.claude/sessions/<tab>.md
+On idle, agent writes ~/.fleetcrown/sessions/<tab>.md
   ↓
 desktop watcher detects file change → appends worker.idle event → pushNow() → POST /api/control/runtime-state
   ↓ INSERT into runtime_snapshots fires fc_notify_runtime_snapshots

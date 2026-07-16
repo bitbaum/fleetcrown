@@ -1,6 +1,6 @@
 /**
  * Pure derivations from a project's SessionState (the YAML-ish handoff the
- * agent itself writes to ~/.claude/sessions/<project>.md). The shape is
+ * agent itself writes to ~/.fleetcrown/sessions/<project>.md). The shape is
  * already flowed end-to-end:
  *
  *   agent writes session.md

@@ -40,6 +40,7 @@ import { listAgentRegistry } from '@/lib/agent-registry'
 import type { PaneRecord } from '@/db/schema/runtime-snapshots'
 import { loadToken, clearToken, isDevBaseOverride } from './token-store'
 import { listPtyTabs, runnerWorkspaceId } from './pty-runtime'
+import { fleetSessionsDir, legacyClaudeSessionsDir } from '@/lib/session-paths'
 
 // Runner version is reported in the runtime-state heartbeat. The desktop sets
 // FLEETCROWN_RUNNER_VERSION from app.getVersion() before starting the pusher
@@ -246,14 +247,15 @@ function projectEntries(agentProcesses: ReturnType<typeof getAgentProcesses>): {
   // parseSession reads by tab name, so the dir here is only used for process
   // matching — the dev-root convention path is correct on both box and laptop,
   // and for an exited agent nothing matches it, which is the truth.
-  try {
-    const sessionsDir = join(homedir(), '.claude', 'sessions')
-    for (const f of readdirSync(sessionsDir)) {
-      if (!f.endsWith('.md')) continue
-      const tab = f.slice(0, -3)
-      add(tab, join(homedir(), 'dev', tab))
-    }
-  } catch { /* no sessions dir yet — nothing to merge */ }
+  for (const sessionsDir of [fleetSessionsDir(), legacyClaudeSessionsDir()]) {
+    try {
+      for (const f of readdirSync(sessionsDir)) {
+        if (!f.endsWith('.md')) continue
+        const tab = f.slice(0, -3)
+        add(tab, join(homedir(), 'dev', tab))
+      }
+    } catch { /* no sessions dir yet — nothing to merge */ }
+  }
   return out
 }
 

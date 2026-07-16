@@ -920,7 +920,7 @@ app.whenReady().then(async () => {
 
   // Start the embedded home/ watcher bridge inside the desktop main process.
   // This gives us the "real worker idle path": when a dispatched agent finishes
-  // and writes its handoff to ~/.claude/sessions/<project>.md, we append
+  // and writes its handoff to ~/.fleetcrown/sessions/<project>.md, we append
   // worker.idle events to the shared log (just like a standalone home/watcher.ts).
   // Combined with the dispatch-side appendEvent(bridge.dispatch + started/crashed),
   // desktop-originated runs now produce a more complete lifecycle in the event log

@@ -3,7 +3,7 @@
  *
  * Used by inject-core on BOTH local and cloud paths so phone → cloud → Fleet Runner
  * carries the same project context + intent templates as Control → orchestration/run.
- * Local-only session enrichment (zellij state, ~/.claude/sessions) stays in inject-core.
+ * Local-only session enrichment (zellij state, FleetCrown handoffs) stays in inject-core.
  */
 import {
   ORCHESTRATION_TASK_INTENT_IDS,
@@ -18,6 +18,7 @@ import { buildOperatorContextSection } from "@/lib/dispatch-operator-context";
 import { PROMPT_TEMPLATES } from "@/config/prompt-library";
 import { getOrchestrationIntent } from "@/lib/orchestration/intents";
 import { sessionHandoffContract } from "@/lib/agent-config";
+import { FLEET_SESSIONS_DISPLAY_PATH } from "@/lib/session-paths";
 
 export type AssembleInjectPromptInput = {
   userId: string;
@@ -71,13 +72,13 @@ export async function assembleInjectPrompt(
 
   // Handoff exit-contract, appended to EVERY queued dispatch. The run only
   // closes when the agent's session handoff reports ready (closeRunFromSession
-  // reads what the pusher persisted from ~/.claude/sessions/<tab>.md on the
+  // reads what the pusher persisted from ~/.fleetcrown/sessions/<tab>.md on the
   // executing machine) — without this block, box-executed agents finished
   // real work, wrote no handoff, and were reaped as timeouts. Tilde-relative
   // on purpose: the assembling server doesn't know the executing machine's
   // HOME; the agent expands it. resolveSessionFile reads case-insensitively,
   // so projectKey casing vs repo-dir casing cannot strand the handoff.
-  const sessionFileRef = `~/.claude/sessions/${projectKey}.md`;
+  const sessionFileRef = `${FLEET_SESSIONS_DISPLAY_PATH}/${projectKey}.md`;
   const exitContract = `## Exit contract (operator requirement)\nBefore stopping, create ${sessionFileRef}.\n${sessionHandoffContract(sessionFileRef)}`;
   // Authority framing: without it, a well-aligned agent cannot tell the
   // operator's task from retrieved context — one refused a dispatch as a

@@ -4,7 +4,7 @@
  *
  * Why fresh-spawn-from-snapshot is the default:
  *   Agent CLIs (claude, codex, cursor, gemini, grok) persist their session
- *   state in their own files (~/.claude/sessions/<tab>.md, etc.). When we
+ *   state in their own files (~/.fleetcrown/sessions/<tab>.md, etc.). When we
  *   restart `claude` in the right cwd, it auto-resumes the conversation.
  *   Zellij's built-in resurrection ALSO captures the same (tab, command,
  *   cwd) tuple — but it adds a "Press ENTER to run" gate per pane that

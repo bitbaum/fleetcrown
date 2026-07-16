@@ -225,7 +225,7 @@ export function ProjectStatusChips({
       {showAwaitingUser && (
         <span
           className={compact ? "text-status-warning" : statusChipClass("warning")}
-          title={`Agent is waiting on you. Last reported next step: "${project.session?.next ?? "(none)"}". Open the project's session handoff or check ~/.claude/sessions/${project.tab}.blockers/pending/ for the blocker file.`}
+          title={`Agent is waiting on you. Last reported next step: "${project.session?.next ?? "(none)"}". Open the project's session handoff or check ~/.fleetcrown/sessions/${project.tab}.blockers/pending/ for the blocker file.`}
         >
           Needs input
         </span>

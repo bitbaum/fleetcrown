@@ -11,7 +11,7 @@ See `docs/desktop-app.md` (at repo root) for the full plan, stack decision, arch
 - Native IPC remains available via the preload-injected `window.fleetRunner` bridge — the web app can detect Fleet Runner via the `FleetRunner/<version>` UA suffix and call into the local runtime where it makes sense.
 - Real `home/` stack integration in the main process: loads your projects config from agent-projects.conf, uses `decide()`, renders actual prompts via the orchestration layer (renderTaskForAdapter) on every dispatch.
 - Dispatch uses the *canonical* `injectIntoTab` (same code path as the daemon/worker): go-to-tab + focus poll guard (prevents typing into wrong pane) + write-chars + Enter + best-effort restore of previous tab.
-- The embedded `home/watcher` reacts to `~/.claude/sessions/*.md` changes and fires a native OS notification on every `worker.idle` event — fire-and-walk-away UX.
+- The embedded `home/watcher` reacts to `~/.fleetcrown/sessions/*.md` changes and fires a native OS notification on every `worker.idle` event — fire-and-walk-away UX.
 
 ### Overriding the shell URL
 
@@ -28,7 +28,7 @@ FLEETCROWN_WEB_URL=local npm run dev
 
 **Known gaps (prototype phase — desktop-2/3 largely complete for dispatch+idle)**:
 - Dispatch uses real `appendEvent` (bridge.dispatch + worker.started/crashed + runId + sentinel).
-- The main process now embeds the home/ watcher (startWatcher): fs.watch on ~/.claude/sessions/*.md for registered projects, debounced emit of `worker.idle` with parsed handoff. Desktop-originated runs now produce the full dispatch → started → idle (on handoff) → finished (stop hook) chain in the shared log without a separate watcher process.
+- The main process now embeds the home/ watcher (startWatcher): fs.watch on ~/.fleetcrown/sessions/*.md for registered projects, debounced emit of `worker.idle` with parsed handoff. Desktop-originated runs now produce the full dispatch → started → idle (on handoff) → finished (stop hook) chain in the shared log without a separate watcher process.
 - Local UI snapshot still uses an in-process projection; a future slice can tail the log inside the app for a complete local Brain view.
 - See `docs/desktop-app.md` for status. Co-running the standalone home/ trio is still supported for headless/transition use.
 

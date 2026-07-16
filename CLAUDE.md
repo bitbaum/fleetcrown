@@ -51,7 +51,7 @@ src/
 home/              → Local-first agent orchestration library — runs on the
                      user's machine (not the hosted box). Pure pieces that tail one
                      append-only JSONL event log: watcher.ts (Bridge — emits
-                     worker.idle when ~/.claude/sessions/*.md changes),
+                     worker.idle when ~/.fleetcrown/sessions/*.md changes),
                      worker.ts (Consumer — injects bridge.dispatch into zellij,
                      sends Ctrl+C on bridge.cancel), plus decide/render/state.
                      The standalone Brain (home/server.ts, port 3001) and its

@@ -19,6 +19,7 @@
 import fs from "fs";
 import path from "path";
 import { APP_SLUG } from "@/config/brand";
+import { fleetSessionsDir, legacyClaudeSessionsDir } from "@/lib/session-paths";
 
 // Lazy accessors — evaluated at request time, not module load time.
 // Module-level path.join(process.env.HOME, …) causes Turbopack's NFT tracer
@@ -32,7 +33,7 @@ const CLAUDE_PROJECTS_CONF = () => path.join(/*turbopackIgnore: true*/ home(), "
 export const PROMPTS_FILE = () => process.env.AGENT_PROMPTS_FILE ?? path.join(/*turbopackIgnore: true*/ home(), ".config", "agent-prompts.json");
 const CLAUDE_PROMPTS_FILE = () => path.join(/*turbopackIgnore: true*/ home(), ".config", "claude-prompts.json");
 
-export const SESSIONS_DIR = () => path.join(/*turbopackIgnore: true*/ home(), ".claude", "sessions");
+export const SESSIONS_DIR = () => fleetSessionsDir(home());
 
 /** Per-adapter handoff directory — mirrors scripts/_agents.sh `_agent_session_dir`. */
 export function agentSessionDir(adapter: string): string {
@@ -60,19 +61,21 @@ export function sessionFilePath(tab: string, adapter = "claude"): string {
  * (newest = the live handoff when several case variants linger), or null.
  */
 export function resolveSessionFile(tab: string, adapter = "claude"): string | null {
-  const exact = sessionFilePath(tab, adapter);
-  if (fs.existsSync(exact)) return exact;
-  const dir = agentSessionDir(adapter);
   const target = `${tab}.md`.toLowerCase();
   let best: { path: string; mtimeMs: number } | null = null;
-  try {
-    for (const name of fs.readdirSync(dir)) {
-      if (name.toLowerCase() !== target) continue;
-      const full = path.join(dir, name);
-      const mtimeMs = fs.statSync(full).mtimeMs;
-      if (!best || mtimeMs > best.mtimeMs) best = { path: full, mtimeMs };
-    }
-  } catch { /* session dir missing */ }
+  const dirs = adapter === "claude"
+    ? [agentSessionDir(adapter), legacyClaudeSessionsDir(home())]
+    : [agentSessionDir(adapter)];
+  for (const dir of new Set(dirs)) {
+    try {
+      for (const name of fs.readdirSync(dir)) {
+        if (name.toLowerCase() !== target) continue;
+        const full = path.join(dir, name);
+        const mtimeMs = fs.statSync(full).mtimeMs;
+        if (!best || mtimeMs > best.mtimeMs) best = { path: full, mtimeMs };
+      }
+    } catch { /* session dir missing */ }
+  }
   return best?.path ?? null;
 }
 
@@ -239,7 +242,7 @@ export function readPrompts(): Record<string, string> {
  * must write when it finishes. Consumed by buildPromptWithSession (local
  * enrichment path) AND assembleInjectPrompt (cloud/queued path). The cloud
  * path once omitted it entirely, so box-executed agents finished real work,
- * searched ~/.claude/sessions/ for the contract, found nothing, wrote no
+ * searched ~/.fleetcrown/sessions/ for the contract, found nothing, wrote no
  * handoff — and their runs sat "waiting" until reaped as timeouts
  * (2026-07-02; laptop agents only ever complied because the founder's
  * personal global CLAUDE.md happens to describe the same contract).

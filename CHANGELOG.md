@@ -2,7 +2,29 @@
 
 Notable, user-facing changes. Older history lives in the git log (conventional commits).
 
-**Last modified:** 2026-07-08 — public-truth pass: share links, honest hero, execution-locus essay.
+**Last modified:** 2026-07-16 — connected fleet workspace, truthful dispatch lifecycle, and unattended handoff reliability.
+
+## 2026-07-16
+
+### Changed
+- **Chat, Control, and Terminal are one project workspace.** Moving between the
+  three views preserves the active project, and Loki now leads with a compact,
+  chat-first interaction instead of permanent filter and focus-mode panels.
+- **Loki starts threads only when a message is sent.** Empty database threads no
+  longer accumulate or appear in history, and stale transcripts cannot flash while
+  a newly selected conversation loads.
+- **FleetCrown owns its handoff files.** New handoffs live under
+  `~/.fleetcrown/sessions`, outside Claude Code's protected configuration tree.
+  Runner startup copies legacy Markdown handoffs forward before watching them,
+  keeps legacy reads during the transition, and leaves Claude's live JSON alone.
+
+### Fixed
+- **Dispatch status follows the run through completion.** Loki now distinguishes
+  queued, picked up, delivered, completed, partial, failed, timed out, and hung
+  states instead of freezing at an optimistic acknowledgement.
+- **Mobile workspace height and handoff controls.** Loki and Terminal composers
+  remain above mobile navigation, the three workspace modes fit the viewport, and
+  Control renders an honest loading skeleton instead of an empty first paint.
 
 ## 2026-07-08
 

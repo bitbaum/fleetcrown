@@ -63,7 +63,7 @@ const HandoffSchema = z.object({
 const DispatchBody = z.object({
   handoff:       HandoffSchema,
   queue:         z.array(z.string().trim().min(1)).max(20),
-  /** Count of files in ~/.claude/sessions/<P>.blockers/pending/ as reported
+  /** Count of files in ~/.fleetcrown/sessions/<P>.blockers/pending/ as reported
    *  by the caller. >0 short-circuits dispatch — human-action gate. */
   blockerCount:  z.number().int().nonnegative().default(0),
   noOpCount:     z.number().int().nonnegative().default(0),

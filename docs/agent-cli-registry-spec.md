@@ -60,6 +60,11 @@ interface AgentDefinition {
 
 ## Current Hardcoded Places (Audit Snapshot 2026-05-26)
 
+> 2026-07-16 update: FleetCrown handoffs now default to
+> `~/.fleetcrown/sessions`; `home/watcher.ts` consumes the shared path helper and
+> runner startup migrates legacy Claude Markdown state. The items below remain
+> the historical audit snapshot.
+
 **High duplication / risk areas** (must be eliminated or made obvious consumers of the SSOT):
 
 1. `src/lib/agent-registry.ts` — closest to SSOT today, but missing `installCommand`, `sessionDir`, full grok, and some capabilities.

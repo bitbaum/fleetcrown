@@ -879,8 +879,8 @@ Setup (run, read outputs):
   rg -c '(TODO|FIXME|HACK)' src/ 2>/dev/null | awk -F: '{s+=$2}END{print s+0}'
   git log --format=%s -5
   git log --format= --name-only -3 | grep -v '^$' | xargs -n1 dirname | sort -u | wc -l
-  ls ~/.claude/sessions/<P>.blockers/pending/ 2>/dev/null
-Read: last 10 user messages · ~/.claude/sessions/<P>.roadmap.md · ~/.claude/sessions/<P>.md
+  ls ~/.fleetcrown/sessions/<P>.blockers/pending/ 2>/dev/null
+Read: last 10 user messages · ~/.fleetcrown/sessions/<P>.roadmap.md · ~/.fleetcrown/sessions/<P>.md
 
 Self-throttle (decides whether to engage Pick at all — both directions share the "no real user message between turns" anchor):
 
@@ -891,7 +891,7 @@ Self-throttle (decides whether to engage Pick at all — both directions share t
   Stop (nothing high-impact remains — the most important brake): If Pick finds nothing in rules 0–8 (no pending blocker, no type/lint errors, no uncommitted work, no unactioned ask, no open T0/T1, no genuine adjacent-broken-thing) so the only candidate left is a T2 cleanup (rule 9), AND no real user message has arrived between turns → write status: blocked, block-reason: "awaiting_user — no high-impact work remains; <one-line summary of where the project stands>" and STOP. Do NOT manufacture T2 busywork to keep the loop alive. Ending development and handing back to the human IS the correct move when there is nothing genuinely worth doing — the founder picks the next direction. (A human who explicitly wants cleanup still gets it via rule 3 or a typed prompt; this brake only suppresses autopilot-invented T2 churn.)
 
 Pick (first matching wins):
-0. Pending blocker file in ~/.claude/sessions/<P>.blockers/pending/ → cat its contents to the user, do not pick a task this turn. When the user confirms the ask is resolved, mv the file from pending/ to applied/.
+0. Pending blocker file in ~/.fleetcrown/sessions/<P>.blockers/pending/ → cat its contents to the user, do not pick a task this turn. When the user confirms the ask is resolved, mv the file from pending/ to applied/.
 1. Type errors → fix.
 2. Uncommitted / merge-conflicted work → resolve and commit.
 3. Unactioned ask in last 10 messages → action it. Unactioned means agent cannot point to a specific commit hash that delivered it AND explain why. Multiple plausible commits → AskUserQuestion. Question/explanation asks are actioned by the reply, not a commit.
@@ -915,7 +915,7 @@ AskUserQuestion ONLY when crossing the gravity well: overriding a specific sessi
 
 Scope: one user-visible outcome. >3 commits → split sessions. Pivot at commit boundaries only — never mid-commit.
 
-Optional: append mid-session observations under "## Proposed" in ~/.claude/sessions/<P>.roadmap.md.
+Optional: append mid-session observations under "## Proposed" in ~/.fleetcrown/sessions/<P>.roadmap.md.
 
 Worked examples (read these once; they replace 200 lines of edge-case rules):
 
@@ -984,9 +984,9 @@ Run \`grep -rn "TODO\\|FIXME\\|console\\.log\\|// @ts-ignore" src/ 2>/dev/null |
   git log --oneline -10
   git status
   git stash list
-  cat ~/.claude/sessions/<P>.roadmap.md | head -50
-  cat ~/.claude/sessions/<P>.md
-  ls ~/.claude/sessions/<P>.blockers/pending/ 2>/dev/null
+  cat ~/.fleetcrown/sessions/<P>.roadmap.md | head -50
+  cat ~/.fleetcrown/sessions/<P>.md
+  ls ~/.fleetcrown/sessions/<P>.blockers/pending/ 2>/dev/null
 
 Then in 5 bullets tell me:
 - What shipped in the last 24h
@@ -1022,10 +1022,10 @@ Do not implement either path yet. Hand off to the user with these four answers s
   {
     id: "roadmap-check",
     name: "Roadmap check",
-    description: "Audit ~/.claude/sessions/<P>.roadmap.md for stale entries, duplicates, completed items still marked open.",
+    description: "Audit ~/.fleetcrown/sessions/<P>.roadmap.md for stale entries, duplicates, completed items still marked open.",
     category: "control",
     scope: "global",
-    template: `Read ~/.claude/sessions/<P>.roadmap.md end-to-end. For every T0/T1/T2 entry, verify against git log + current code state:
+    template: `Read ~/.fleetcrown/sessions/<P>.roadmap.md end-to-end. For every T0/T1/T2 entry, verify against git log + current code state:
 - Is it actually still open? (If it was shipped, mark DONE with the commit hash.)
 - Is it a duplicate of another entry? (Collapse.)
 - Does it have a clear next-step verb, or is it vague aspirational text? (Reword or delete.)
@@ -1067,7 +1067,7 @@ For each step, name (a) what is unclear, (b) what is missing, (c) what is broken
     scope: "global",
     template: `You hit something that needs a human action you cannot take yourself (credentials you cannot enter, an OAuth consent only the owner can give, a deploy that needs manual trigger, a destructive op that needs explicit approval, a missing env var that only the user can set). Raise a blocker so the next loop iteration surfaces it concretely instead of you spinning or guessing.
 
-Write a file to ~/.claude/sessions/<P>.blockers/pending/$(date -u +%Y%m%d-%H%M%S)-<short-kebab-slug>.md with this structure:
+Write a file to ~/.fleetcrown/sessions/<P>.blockers/pending/$(date -u +%Y%m%d-%H%M%S)-<short-kebab-slug>.md with this structure:
 
 # <one-line title of what is blocked>
 
@@ -1080,7 +1080,7 @@ Write a file to ~/.claude/sessions/<P>.blockers/pending/$(date -u +%Y%m%d-%H%M%S
 ## How the agent will know it is resolved
 <observable signal — env var set, file exists, OAuth app registered, deploy ready, etc.>
 
-After writing the file, do NOT pick a task this iteration. Update <P>.md with status: blocked and next: empty (the blocker file IS the next step). Tell the user one sentence: "Raised blocker: <title>. See ~/.claude/sessions/<P>.blockers/pending/<filename>."
+After writing the file, do NOT pick a task this iteration. Update <P>.md with status: blocked and next: empty (the blocker file IS the next step). Tell the user one sentence: "Raised blocker: <title>. See ~/.fleetcrown/sessions/<P>.blockers/pending/<filename>."
 
 Next loop iteration: next_best Setup detects the file, Rule 0 surfaces it, and on user confirmation the agent moves the file from pending/ to applied/.`,
     agentKey: "blocker_create",

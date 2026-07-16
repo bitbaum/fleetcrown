@@ -2,7 +2,7 @@
 /**
  * Watcher — M3 Bridge.
  *
- * Watches ~/.claude/sessions/<TAB>.md for changes. When an agent writes
+ * Watches ~/.fleetcrown/sessions/<TAB>.md for changes. When an agent writes
  * its end-of-session handoff (done/next/tests/todos/health), this process
  * emits a `worker.idle` event into the JSONL event log so the orchestrator
  * learns about the run without modifying the agent's stop hooks.
@@ -14,14 +14,14 @@
  * were retired on 2026-06-11 — see content/thoughts/killing-the-bash-daemon.md.)
  *
  * Run:    npx tsx home/watcher.ts
- * Verify: edit any ~/.claude/sessions/*.md (or wait for a real agent to
+ * Verify: edit any ~/.fleetcrown/sessions/*.md (or wait for a real agent to
  *         finish) and tail ~/.<APP_SLUG>/events.jsonl
  */
 
 import fs from "node:fs";
 import path from "node:path";
-import os from "node:os";
 import { APP_NAME, APP_SLUG } from "@/config/brand";
+import { FLEET_SESSIONS_DISPLAY_PATH, migrateLegacyHandoffs } from "@/lib/session-paths";
 import { appendEvent } from "./emit";
 import { loadProjects, projectsConfPath } from "./projects";
 import type { Handoff } from "@/lib/events";
@@ -35,16 +35,15 @@ const isDirectCli = import.meta.url === `file://${process.argv[1]}` || process.a
 
 if (isDirectCli && !process.argv.includes("--start") && !process.argv.includes("--self-test")) {
   console.log(`${APP_NAME} watcher — Bridge layer of the home/ stack.
-Watches ~/.claude/sessions/*.md and emits worker.idle events into ~/.${APP_SLUG}/events.jsonl.
+Watches ${FLEET_SESSIONS_DISPLAY_PATH}/*.md and emits worker.idle events into ~/.${APP_SLUG}/events.jsonl.
 Usage:  npx tsx home/watcher.ts --start       (boot the watcher)
         npx tsx home/watcher.ts --self-test   (run inline tests, no I/O)
-Env:    APP_SESSIONS_DIR  override sessions dir (default ~/.claude/sessions)`);
+Env:    APP_SESSIONS_DIR  override sessions dir (default ${FLEET_SESSIONS_DISPLAY_PATH})`);
   process.exit(0);
 }
 
-// Override via APP_SESSIONS_DIR for testing — production tails Claude's real dir.
-const SESSIONS_DIR =
-  process.env.APP_SESSIONS_DIR ?? path.join(os.homedir(), ".claude", "sessions");
+// Migrate before seeding mtimes so legacy handoffs never replay as fresh events.
+const SESSIONS_DIR = migrateLegacyHandoffs();
 /** Drop changes smaller than this (handles editor save-during-typing). */
 const DEBOUNCE_MS = 250;
 
@@ -160,13 +159,6 @@ function scheduleFlush(filename: string) {
 
 export function startWatcher(opts: { onIdle?: OnIdle } = {}): { close: () => void } {
   onIdleSubscriber = opts.onIdle ?? null;
-
-  if (!fs.existsSync(SESSIONS_DIR)) {
-    console.error(`[watcher] ${SESSIONS_DIR} does not exist — is Claude installed?`);
-    // In library mode (desktop) we don't want to kill the whole process.
-    // Return a no-op closer; caller can decide to surface to user.
-    return { close: () => { onIdleSubscriber = null; } };
-  }
 
   // Load the registry. Empty registry isn't fatal — it just means nothing
   // will ever pass the filter; first run gets a clear log line.

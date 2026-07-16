@@ -197,7 +197,7 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
         closedAt: injectRow?.closedAt ? Math.floor(injectRow.closedAt.getTime() / 1000) : null,
       });
       // Adapter owns prompt enrichment: the claude seam appends
-      // ~/.claude/sessions/<tab>.md (identical to the prior buildPromptWithSession
+      // ~/.fleetcrown/sessions/<tab>.md (identical to the prior buildPromptWithSession
       // call); adapters without a session seam fall back to identity.
       const enrichPrompt =
         (await import("@/lib/orchestration/adapter-registry")).adapterFor(eventAdapter)?.enrichPrompt ??

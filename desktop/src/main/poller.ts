@@ -57,13 +57,13 @@ const PUSH_AFTER = new Set(['launch_agent', 'dispatch', 'switch_agent', 'close_t
 import { validateCommand } from './command-validator'
 import { loadToken, clearToken, isDevBaseOverride } from './token-store'
 import { ensureZellijReady } from '@/lib/zellij-bootstrap'
+import { fleetSessionsDir } from '@/lib/session-paths'
 import { FLEET_RUNNER_COMMAND_TYPES_PARAM } from '@/lib/pending-command-contract'
 
 /** Where Claude (and our handoff parser) writes the per-tab session file.
  *  Used by post-flight verification: if the file's mtime advances within a
  *  few seconds of an inject, we know the agent received and reacted. */
-const SESSIONS_DIR =
-  process.env.APP_SESSIONS_DIR ?? path.join(os.homedir(), '.claude', 'sessions')
+const SESSIONS_DIR = fleetSessionsDir()
 
 const DEFAULT_SESSION_NAME = 'fleet'
 const COMMAND_DEDUP_DIR = path.join(os.tmpdir())

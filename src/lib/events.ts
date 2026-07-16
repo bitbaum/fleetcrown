@@ -28,7 +28,7 @@ const PaneId = z.string().min(1).max(120);
 const Project = z.string().min(1).max(200);
 
 /**
- * Session-handoff fields the agent writes to ~/.claude/sessions/<tab>.md.
+ * Session-handoff fields the agent writes to ~/.fleetcrown/sessions/<tab>.md.
  *
  * `status` (added 2026-05) is the agent's self-reported lifecycle state for
  * the run — "ready" means done with everything (auto-inject may proceed),

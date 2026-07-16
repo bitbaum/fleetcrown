@@ -5,10 +5,9 @@
  * watching: the trust-folder dialog on a fresh workspace, or a permission ask
  * for a tool outside the allowlist. The box has done this since box-prepare
  * shipped; the DESKTOP launch path never did, so on a machine without a
- * hand-tuned ~/.claude/settings.json (i.e. every new user — and, it turned
- * out, the founder's laptop: `Write(*)` only matches in-cwd paths, so the
- * final session-handoff write to ~/.claude/sessions/<tab>.md sat behind an
- * unanswered prompt for 26+ minutes, twice) agents stall at the finish line.
+ * hand-tuned ~/.claude/settings.json. FleetCrown handoffs used to live under
+ * Claude's protected ~/.claude tree, where even broad Write allow rules cannot
+ * suppress a confirmation prompt. They now migrate to ~/.fleetcrown/sessions.
  *
  * Extracted from box-workspace.ts so both runners share ONE prep. Merge-only:
  * adds trust + allow rules, never removes or narrows anything the user set.
@@ -16,11 +15,13 @@
 import fs from "fs";
 import os from "os";
 import path from "path";
+import { migrateLegacyHandoffs } from "@/lib/session-paths";
 
 export const UNATTENDED_ALLOW = ["Bash", "Edit", "Write", "Read", "Glob", "Grep", "WebFetch", "WebSearch", "MultiEdit", "TodoWrite"];
 
 export function ensureClaudeReady(dir: string): void {
   const home = os.homedir();
+  migrateLegacyHandoffs(home);
   const cfgPath = path.join(home, ".claude.json");
   let cfg: { projects?: Record<string, Record<string, unknown>> } = {};
   try { cfg = JSON.parse(fs.readFileSync(cfgPath, "utf-8")); } catch { /* fresh config */ }

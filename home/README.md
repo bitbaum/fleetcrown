@@ -108,7 +108,7 @@ EOF
 | `projects.ts` | Reads `~/.config/agent-projects.conf` — the tab→path[→adapter] SSOT.            |
 | `state.ts`    | Pure event projection — folds the JSONL log into current per-project state. (Was served over HTTP by the retired `server.ts`; now consumed by Fleet Runner.) |
 | `log.ts`      | JSONL tailer — the replay path the worker uses to rebuild state on boot.          |
-| `watcher.ts`  | M3 Bridge. Watches `~/.claude/sessions/*.md`, emits `worker.idle`. Filters to registered projects only. |
+| `watcher.ts`  | M3 Bridge. Watches `~/.fleetcrown/sessions/*.md`, emits `worker.idle`. Filters to registered projects only. |
 | `worker.ts`   | M8 Consumer. Acts on `bridge.dispatch` (inject) and `bridge.cancel` (Ctrl+C), emits `worker.started` / `worker.crashed`. |
 
 ## Idempotency

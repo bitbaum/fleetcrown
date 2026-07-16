@@ -7,7 +7,7 @@
  * structured-baking-kazoo.md and content/thoughts/killing-the-bash-daemon.md).
  *
  * Trigger path now:
- *   home/watcher.ts detects ~/.claude/sessions/<P>.md changing to status:ready
+ *   home/watcher.ts detects ~/.fleetcrown/sessions/<P>.md changing to status:ready
  *     → desktop/src/main/index.ts notifyOnIdle() fires
  *     → dispatchAutopilot() here POSTs /api/control/dispatch
  *     → cloud writes a pending_command (action=queue or action=nextbest)

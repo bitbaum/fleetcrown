@@ -70,7 +70,7 @@ Goal: Talk to Loki → work runs on cloud → watch it without mental model hack
 
 Only after D succeeds. See `docs/architecture/agent-execution-platform.md`, `docs/architecture/cross-product-identity-bridge.md`.
 
-**Current gate:** Horizon C1-C4 are complete as of 2026-07-16. C5 remains gated on hosted-runner isolation and product controls. B6 still has legacy zellij attach fallback; D/E require external-user onboarding, per-user agent credentials, rollback automation, and sandboxed multi-tenant execution.
+**Current gate:** Horizon C1-C4 are complete as of 2026-07-16. Production dogfood also moved FleetCrown handoffs to `~/.fleetcrown/sessions`, outside Claude's protected configuration tree; startup migrates legacy Markdown state before watching it. C5 remains gated on hosted-runner isolation and product controls. B6 still has legacy zellij attach fallback; D/E require external-user onboarding, per-user agent credentials, rollback automation, and sandboxed multi-tenant execution.
 
 ## Defer (anti-patterns)
 

@@ -81,7 +81,7 @@ export async function launchAgentPty(
   // Unattended-launch prep for claude on EVERY runner (not just the box):
   // pre-trust the workspace and merge the unattended allowlist so a dispatched
   // agent can never hang on a trust dialog or an out-of-cwd permission ask
-  // (e.g. the final session-handoff write to ~/.claude/sessions/<tab>.md) —
+  // (e.g. the final session-handoff write to ~/.fleetcrown/sessions/<tab>.md) —
   // with nobody at the PTY, an unanswered prompt is a dead run. Pure fs, no
   // dotfiles or hand-tuned settings required on the user's machine.
   if (agent === "claude") {
