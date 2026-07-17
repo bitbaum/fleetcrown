@@ -36,8 +36,14 @@ box "test -d '$DEST'" || { echo "ERROR: $DEST does not exist"; exit 1; }
 
 echo "rolling back $NAME: $CUR → $DEST"
 box "ln -sfn '$DEST' /opt/$NAME/app.new && mv -T /opt/$NAME/app.new /opt/$NAME/app && sudo systemctl restart $NAME-app"
-sleep 4
-status=$(box "systemctl is-active $NAME-app || true")
-code=$(box "curl -s -o /dev/null -w '%{http_code}' --max-time 10 http://localhost:$PORT/ || echo 000")
+status=inactive; code=000
+for _ in $(seq 1 15); do
+  sleep 4
+  status=$(box "systemctl is-active $NAME-app 2>/dev/null" || true)
+  code=$(box "curl -s -o /dev/null -w '%{http_code}' --max-time 10 http://localhost:$PORT/ 2>/dev/null" || true)
+  code="${code:-000}"
+  [ "$status" = "active" ] && [ "$code" -ge 200 ] 2>/dev/null && [ "$code" -lt 400 ] && break
+  [ "$status" = "failed" ] && break
+done
 echo "RESULT $NAME: systemd=$status http=$code now-serving=$TARGET"
 [ "$status" = "active" ] && [ "$code" -ge 200 ] && [ "$code" -lt 400 ]
