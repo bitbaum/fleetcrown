@@ -5,7 +5,13 @@
 # Runtime env: <repo>/<app_dir>/.env.selfhost.local is uploaded as /opt/<name>/app/.env
 # ONLY if missing on the box (box env is never overwritten — fix it there or pass --env).
 # Usage: deploy.sh <app> [--env]   (--env force-uploads .env.selfhost.local)
-source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
+# Absolute script dir, resolved BEFORE the cd into the app repo below — a
+# relative invocation (`bash deploy.sh app` from this dir) otherwise resolves
+# sibling scripts as ./apply-schema.sh inside the APP repo and aborts the
+# deploy. The push-deploy hook always passed absolute paths, which is why this
+# never fired until a manual relative run (2026-07-17).
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$HERE/lib.sh"
 
 app_lookup "${1:?usage: deploy.sh <app> [--env]}"
 FORCE_ENV="${2:-}"
@@ -29,7 +35,7 @@ trap 'ssh -S "$TUNNEL_SOCK" -O exit "$BOX" 2>/dev/null; [ -n "$STAGE" ] && rm -r
 # code introduces. Guarded: applies only pending, additive migrations and refuses
 # any destructive diff (aborts without shipping). See apply-schema.sh.
 if [ "$DB" != "-" ]; then
-  "$(dirname "${BASH_SOURCE[0]}")/apply-schema.sh" "$NAME" "$REPO" "$DB" "$APP_DIR" \
+  "$HERE/apply-schema.sh" "$NAME" "$REPO" "$DB" "$APP_DIR" \
     || { echo "ERROR: schema step failed — deploy aborted (no code shipped)"; exit 1; }
 fi
 
