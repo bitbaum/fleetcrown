@@ -146,6 +146,9 @@ function h<K extends keyof HTMLElementTagNameMap>(
     return;
   }
   const apiBase = script?.src ? new URL(script.src).origin : "";
+  // Optional FAB offset (px from the bottom edge) so the launcher can stack
+  // above a host site's own floating button instead of covering it.
+  const bottomOffset = parseInt(script?.getAttribute("data-fc-bottom") ?? "", 10);
   if (document.getElementById("fleetcrown-feedback-host")) return;
 
   const mount = () => {
@@ -171,6 +174,7 @@ function h<K extends keyof HTMLElementTagNameMap>(
 
     // ---- FAB ----
     const fab = h("button", "fab");
+    if (Number.isFinite(bottomOffset)) fab.style.bottom = `${bottomOffset}px`;
     fab.innerHTML = PENCIL_SVG;
     fab.setAttribute("aria-label", "Give feedback");
     fab.setAttribute("aria-haspopup", "dialog");
