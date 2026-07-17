@@ -21,7 +21,7 @@
  */
 
 import { eq } from "drizzle-orm";
-import { OrangeCatClient, OrangeCatError } from "@orangecat/sdk";
+import type { OrangeCatClient, OrangeCatError } from "@orangecat/sdk";
 import { db } from "@/db";
 import { subscriptions } from "@/db/schema";
 
@@ -40,14 +40,23 @@ interface SubscriptionForSync {
 }
 
 let cached: OrangeCatClient | null = null;
+let errorClass: typeof OrangeCatError | null = null;
 
 /**
  * Returns the singleton client when configured, or `null` when the env
  * vars are missing. Callers must handle null — most users / dev
  * environments will not have the integration set up, and the absence is
  * not an error.
+ *
+ * The SDK is loaded lazily via dynamic import: @orangecat/sdk is ESM-only
+ * (its `exports` map has no `require` condition), and a static import here
+ * breaks the box-runner — its tsx/CJS require of the chain box-workspace →
+ * user-projects → orangecat-publish → this module threw
+ * ERR_PACKAGE_PATH_NOT_EXPORTED at import time, which silently killed
+ * workspace prep for EVERY cloud dispatch (agent PTYs died in a
+ * nonexistent laptop path, runs stuck "waiting"; found 2026-07-17).
  */
-export function getOrangeCatClient(): OrangeCatClient | null {
+export async function getOrangeCatClient(): Promise<OrangeCatClient | null> {
   if (cached) {
     return cached;
   }
@@ -55,7 +64,9 @@ export function getOrangeCatClient(): OrangeCatClient | null {
   if (!apiKey || !apiKey.startsWith("ock_")) {
     return null;
   }
-  cached = new OrangeCatClient({
+  const sdk = await import("@orangecat/sdk");
+  errorClass = sdk.OrangeCatError;
+  cached = new sdk.OrangeCatClient({
     apiKey,
     baseUrl: process.env.ORANGECAT_API_BASE ?? ORANGECAT_BASE_FALLBACK,
     userAgent: `fleetcrown/${process.env.npm_package_version ?? "0.1.0"} (+sdk)`,
@@ -72,7 +83,7 @@ export function getOrangeCatClient(): OrangeCatClient | null {
 export async function syncSubscriptionToOrangeCat(
   sub: SubscriptionForSync,
 ): Promise<string | null> {
-  const client = getOrangeCatClient();
+  const client = await getOrangeCatClient();
   if (!client) {
     return null;
   }
@@ -127,7 +138,7 @@ function buildDescription(sub: SubscriptionForSync): string {
 }
 
 function logSyncFailure(sub: SubscriptionForSync, err: unknown): void {
-  if (err instanceof OrangeCatError) {
+  if (errorClass && err instanceof errorClass) {
     console.warn("[orangecat] sync failed (non-fatal)", {
       fleetcrown_subscription_id: sub.id,
       code: err.code,
