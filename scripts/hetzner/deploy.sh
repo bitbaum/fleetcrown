@@ -52,26 +52,73 @@ NEST=$(cd "$STAGE" && find . -maxdepth 4 -name server.js -not -path '*node_modul
 cp -r "$SRC/.next/static" "$STAGE/$NEST/.next/static"
 [ -d "$SRC/public" ] && cp -r "$SRC/public" "$STAGE/$NEST/public"
 
-if [ "$FORCE_ENV" = "--env" ] || ! box "test -f /opt/$NAME/app/.env"; then
+# ── Releases layout (rollback-able deploys) ─────────────────────────────────
+# /opt/<name>/shared/{.env,launch.sh}        persistent box-side files
+# /opt/<name>/releases/<ts>-<sha>/           one dir per deploy
+# /opt/<name>/app -> releases/<ts>-<sha>     ATOMIC symlink; systemd units keep
+#                                            pointing at /opt/<name>/app unchanged.
+# A failed health check flips the symlink back to the previous release
+# (auto-rollback); rollback.sh <app> does the same on demand. Legacy layout
+# (app as a real dir) is migrated in place on the first release-deploy.
+REL="$(date +%Y%m%d-%H%M%S)-$(git -C "$REPO" rev-parse --short HEAD 2>/dev/null || echo nosha)"
+RELDIR="/opt/$NAME/releases/$REL"
+
+# One-time shared/ bootstrap: COPY (not move — the running service still uses
+# them) .env + launch.sh out of a legacy app dir. Idempotent.
+box "set -e
+  mkdir -p /opt/$NAME/releases /opt/$NAME/shared
+  if [ -d /opt/$NAME/app ] && [ ! -L /opt/$NAME/app ]; then
+    [ -f /opt/$NAME/shared/.env ]      || cp -p /opt/$NAME/app/.env /opt/$NAME/shared/.env 2>/dev/null || true
+    [ -f /opt/$NAME/shared/launch.sh ] || cp -p /opt/$NAME/app/launch.sh /opt/$NAME/shared/launch.sh 2>/dev/null || true
+  fi"
+
+if [ "$FORCE_ENV" = "--env" ] || ! box "test -f /opt/$NAME/shared/.env"; then
   [ -f "$SRC/.env.selfhost.local" ] || { echo "ERROR: $SRC/.env.selfhost.local missing"; exit 1; }
-  scp -o BatchMode=yes "$SRC/.env.selfhost.local" "$BOX:/opt/$NAME/app/.env"
-  box "chmod 600 /opt/$NAME/app/.env"
-  echo "uploaded .env"
+  scp -o BatchMode=yes "$SRC/.env.selfhost.local" "$BOX:/opt/$NAME/shared/.env"
+  box "chmod 600 /opt/$NAME/shared/.env"
+  echo "uploaded .env → shared/"
 fi
 
-echo "=== rsync → /opt/$NAME/app ==="
+echo "=== rsync → $RELDIR ==="
 for attempt in 1 2 3; do
-  rsync -az --delete --partial \
+  rsync -az --partial \
     -e "ssh -o BatchMode=yes -o ServerAliveInterval=15 -o ServerAliveCountMax=4" \
     --exclude '.env' --exclude 'launch.sh' \
-    "$STAGE"/ "$BOX:/opt/$NAME/app/" && break
+    "$STAGE"/ "$BOX:$RELDIR/" && break
   echo "rsync attempt $attempt failed, retrying in 5s..."; sleep 5
   [ "$attempt" = 3 ] && { echo "ERROR: rsync failed after 3 attempts"; exit 1; }
 done
 
-box "sudo systemctl restart $NAME-app"
+# Wire shared files into the release, remember the current target for
+# rollback, then swap ATOMICALLY (ln to temp name + rename over) and restart.
+PREV=$(box "readlink /opt/$NAME/app 2>/dev/null || true")
+box "set -e
+  ln -sfn /opt/$NAME/shared/.env      '$RELDIR/.env'
+  ln -sfn /opt/$NAME/shared/launch.sh '$RELDIR/launch.sh'
+  if [ -d /opt/$NAME/app ] && [ ! -L /opt/$NAME/app ]; then
+    mv /opt/$NAME/app /opt/$NAME/releases/legacy-\$(date +%s)
+  fi
+  ln -sfn '$RELDIR' /opt/$NAME/app.new && mv -T /opt/$NAME/app.new /opt/$NAME/app
+  sudo systemctl restart $NAME-app"
 sleep 4
-status=$(box "systemctl is-active $NAME-app")
-code=$(box "curl -s -o /dev/null -w '%{http_code}' --max-time 10 http://localhost:$PORT/")
-echo "RESULT $NAME: systemd=$status http=$code"
-[ "$status" = "active" ] && { [ "$code" -ge 200 ] && [ "$code" -lt 400 ]; }
+status=$(box "systemctl is-active $NAME-app || true")
+code=$(box "curl -s -o /dev/null -w '%{http_code}' --max-time 10 http://localhost:$PORT/ || echo 000")
+echo "RESULT $NAME: systemd=$status http=$code release=$REL"
+
+if [ "$status" = "active" ] && [ "$code" -ge 200 ] && [ "$code" -lt 400 ]; then
+  # Healthy — prune old releases, keep the newest 3 (current is among them).
+  box "cd /opt/$NAME/releases && ls -1t | tail -n +4 | xargs -r rm -rf"
+  exit 0
+fi
+
+# Unhealthy — auto-rollback to the previous release if one exists.
+if [ -n "$PREV" ]; then
+  echo "DEPLOY UNHEALTHY — rolling back to $PREV"
+  box "ln -sfn '$PREV' /opt/$NAME/app.new && mv -T /opt/$NAME/app.new /opt/$NAME/app && sudo systemctl restart $NAME-app"
+  sleep 4
+  rb=$(box "systemctl is-active $NAME-app || true")
+  echo "ROLLBACK $NAME: systemd=$rb → $PREV"
+else
+  echo "DEPLOY UNHEALTHY — no previous release to roll back to (first release-deploy)"
+fi
+exit 1

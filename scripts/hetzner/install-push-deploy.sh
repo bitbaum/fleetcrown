@@ -43,9 +43,20 @@ $MARK_BEGIN
 # (background; see /tmp/push-deploy-$app.log). Repos differ: some use
 # 'main', some still use 'master' — match either so push-to-deploy fires
 # regardless of the repo's branch convention.
+# CI GATE: the background deploy first waits for GitHub CI on the pushed
+# commit and is BLOCKED on a red — prod only receives what CI verified
+# (ci-gate.sh; repos without CI pass after a short grace window).
 if git symbolic-ref --short HEAD 2>/dev/null | grep -qxE 'main|master'; then
-  ( sleep 5 && $deploy_cmd ) >> /tmp/push-deploy-$app.log 2>&1 & disown 2>/dev/null || true
-  echo "[push-deploy] $app: deploy started in background → /tmp/push-deploy-$app.log"
+  ( sleep 5
+    _sha=\$(git rev-parse HEAD)
+    _nwo=\$(git remote get-url origin 2>/dev/null | sed -E 's#(git@github.com:|https://github.com/)##; s#\\.git\$##')
+    if [ -n "\$_nwo" ] && ! bash "$HERE/ci-gate.sh" "\$_nwo" "\$_sha"; then
+      echo "[push-deploy] $app: BLOCKED by CI gate for \${_sha} — fix CI, then re-push or deploy manually"
+    else
+      $deploy_cmd
+    fi
+  ) >> /tmp/push-deploy-$app.log 2>&1 & disown 2>/dev/null || true
+  echo "[push-deploy] $app: CI-gated deploy started in background → /tmp/push-deploy-$app.log"
 fi
 $MARK_END
 EOF

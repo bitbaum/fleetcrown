@@ -47,7 +47,23 @@ for cand in \
   probe=("$cand"/[0-9]*.sql)
   [ "${#probe[@]}" -gt 0 ] && { MIG_DIR="$cand"; break; }
 done
-[ -n "$MIG_DIR" ] || { echo "[schema] $NAME: no drizzle migrations found — skipping (generate a baseline: npx drizzle-kit generate)"; exit 0; }
+# Prisma apps: no drizzle dir, but prisma/migrations exists → use Prisma's own
+# forward-only applier (its _prisma_migrations history table, native guardrails).
+# Needs DATABASE_URL (deploy.sh calls us with it tunneled to the box); a
+# standalone invocation without it skips with a warning rather than guessing.
+if [ -z "$MIG_DIR" ] && [ -d "$REPO/$APP_DIR/prisma/migrations" ]; then
+  if [ -z "${DATABASE_URL:-}" ]; then
+    echo "[schema] $NAME: prisma app but DATABASE_URL unset (standalone run?) — skipping"
+    exit 0
+  fi
+  echo "[schema] $NAME: prisma migrate deploy"
+  (cd "$REPO/$APP_DIR" && npx prisma migrate deploy) \
+    || { echo "[schema] $NAME: prisma migrate deploy FAILED"; exit 1; }
+  echo "[schema] $NAME: schema applied ✓ (prisma)"
+  exit 0
+fi
+
+[ -n "$MIG_DIR" ] || { echo "[schema] $NAME: no migrations found (drizzle or prisma) — skipping (generate a baseline first)"; exit 0; }
 MIGS=("$MIG_DIR"/[0-9]*.sql)
 [ "${#MIGS[@]}" -gt 0 ] || { echo "[schema] $NAME: no migrations — skipping"; exit 0; }
 IFS=$'\n' MIGS=($(sort <<<"${MIGS[*]}")); unset IFS
