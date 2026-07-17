@@ -14,7 +14,8 @@
 
 set -euo pipefail
 
-HOST="root@${HETZNER_IP:-167.233.22.31}"
+. "$(dirname "${BASH_SOURCE[0]}")/hetzner/_box-env.sh"   # SSOT: HETZNER_IP, BOX_ROOT, BOX_UBUNTU
+HOST="$BOX_ROOT"
 APP_DIR="/opt/fleetcrown/app"
 # The box-runner's Unix owner. Defaults to ubuntu; set to fcrunner AFTER running
 # migrate-box-runner-to-fcrunner.sh so the runner-code sync doesn't chown the

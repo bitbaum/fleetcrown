@@ -1,5 +1,6 @@
 import { and, desc, eq, gt, inArray, isNotNull, isNull, lt, sql } from "drizzle-orm";
 import { db } from "@/db";
+import { ORCH_STATE } from "@/lib/orchestration/contract";
 import {
   orchestrationRuns,
   type NewOrchestrationRun,
@@ -73,7 +74,7 @@ export async function cleanupStaleOrchestrationRuns(userId?: string) {
     // "waiting" and closes them from the session handoff; if the agent never
     // writes a ready handoff (tab closed, process killed), the run would
     // otherwise linger open forever — reap it like a dead runner.
-    inArray(orchestrationRuns.state, ["waiting", "running"]),
+    inArray(orchestrationRuns.state, [ORCH_STATE.WAITING, ORCH_STATE.RUNNING]),
     lt(orchestrationRuns.startedAt, new Date(Date.now() - STALE_RUN_MINUTES * 60 * 1000)),
     sql`NOT ${liveNow}`,
   );
@@ -118,7 +119,7 @@ export async function listOpenRuns(minAgeMinutes = 5) {
     .from(orchestrationRuns)
     .where(
       and(
-        inArray(orchestrationRuns.state, ["waiting", "running"]),
+        inArray(orchestrationRuns.state, [ORCH_STATE.WAITING, ORCH_STATE.RUNNING]),
         isNull(orchestrationRuns.finishedAt),
         lt(orchestrationRuns.startedAt, new Date(Date.now() - minAgeMinutes * 60 * 1000)),
       ),

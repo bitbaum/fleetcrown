@@ -1,5 +1,6 @@
 import { EXECUTOR_COPY } from "@/config/executor-copy";
 import type { StatusTone } from "@/lib/constants/statuses";
+import { ORCH_STATE } from "@/lib/orchestration/contract";
 
 export type DispatchStatusInput = {
   ok?: boolean;
@@ -111,7 +112,7 @@ export function deriveDispatchLiveStatus(cmd: CommandLiveInput): DispatchLiveVie
     };
   }
 
-  if (run.state === "waiting") {
+  if (run.state === ORCH_STATE.WAITING) {
     return {
       status: "delivered",
       label: "Delivered to agent",
@@ -120,10 +121,10 @@ export function deriveDispatchLiveStatus(cmd: CommandLiveInput): DispatchLiveVie
       terminal: false,
     };
   }
-  if (run.state === "running" || run.state === "closing") {
+  if (run.state === ORCH_STATE.RUNNING || run.state === ORCH_STATE.CLOSING) {
     return {
       status: "working",
-      label: run.state === "closing" ? "Agent is finishing" : "Agent is working",
+      label: run.state === ORCH_STATE.CLOSING ? "Agent is finishing" : "Agent is working",
       detail: "the tracked run is still open",
       tone: "positive",
       terminal: false,

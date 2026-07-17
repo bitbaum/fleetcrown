@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef } from "react";
+import { PALETTE } from "@/lib/palette";
 
 // Resolves a CSS custom property to a concrete rgb() value by temporarily
 // applying it to a hidden element and reading the browser-computed color.
@@ -32,11 +33,11 @@ export function MermaidDiagram({ chart }: { chart: string }) {
         theme: "dark",
         themeVariables: {
           background:          "transparent",
-          primaryColor:        resolveColorVar("--surface-raised",  "#1e1e1e"),
-          primaryTextColor:    resolveColorVar("--text-primary",    "#e8e8e8"),
-          lineColor:           resolveColorVar("--text-tertiary",   "#666666"),
-          edgeLabelBackground: resolveColorVar("--surface-base",    "#0d0d0d"),
-          clusterBkg:          resolveColorVar("--surface-raised",  "#1e1e1e"),
+          primaryColor:        resolveColorVar("--surface-raised",  PALETTE.darkFallback.surfaceRaised),
+          primaryTextColor:    resolveColorVar("--text-primary",    PALETTE.darkFallback.textPrimary),
+          lineColor:           resolveColorVar("--text-tertiary",   PALETTE.darkFallback.textTertiary),
+          edgeLabelBackground: resolveColorVar("--surface-base",    PALETTE.darkFallback.surfaceBase),
+          clusterBkg:          resolveColorVar("--surface-raised",  PALETTE.darkFallback.surfaceRaised),
         },
         fontFamily: "inherit",
       });

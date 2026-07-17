@@ -24,7 +24,8 @@
 #   bash scripts/hetzner/harden-box-runner.sh --revert  # remove the drop-in
 set -euo pipefail
 
-HOST="${FLEETCROWN_BOX_HOST:-root@167.233.22.31}"
+. "$(dirname "${BASH_SOURCE[0]}")/_box-env.sh"   # SSOT: HETZNER_IP, BOX_ROOT, BOX_UBUNTU
+HOST="${FLEETCROWN_BOX_HOST:-$BOX_ROOT}"
 UNIT="fleetcrown-box-runner.service"
 DROPIN_DIR="/etc/systemd/system/${UNIT}.d"
 DROPIN="${DROPIN_DIR}/10-hardening.conf"

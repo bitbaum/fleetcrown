@@ -6,7 +6,7 @@
 # FleetCrown auth/email health signals, so it's box-wide infra and lives here
 # next to sync-infra.sh / verify.sh / install-backups.sh.
 #
-# What it installs on the box (167.233.22.31):
+# What it installs on the box (address SSOT: scripts/hetzner/_box-env.sh):
 #   /opt/monitoring/watch.sh                  the check runner
 #   /opt/monitoring/targets.conf              label|url|expected_code (seeded from apps.conf)
 #   /etc/systemd/system/watchdog.{service,timer}   runs every 5 minutes
@@ -28,8 +28,9 @@
 
 set -euo pipefail
 
-HOST="root@${HETZNER_IP:-167.233.22.31}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+. "$SCRIPT_DIR/_box-env.sh"   # SSOT: HETZNER_IP, BOX_ROOT, BOX_UBUNTU
+HOST="$BOX_ROOT"
 APPS_CONF="$SCRIPT_DIR/apps.conf"
 
 # ── Build the target list (SSOT-derived) ────────────────────────────────────

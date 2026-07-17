@@ -12,6 +12,7 @@
  * Credentials provider (see auth.ts `x-1a`). Endpoints: src/app/api/x-login/*.
  */
 import crypto from "crypto";
+import { HTTP_TIMEOUT_SHORT_MS } from "@/lib/constants/time";
 
 const CONSUMER_KEY = process.env.X1_CONSUMER_KEY ?? "";
 const CONSUMER_SECRET = process.env.X1_CONSUMER_SECRET ?? "";
@@ -66,7 +67,7 @@ export async function requestToken(callbackUrl: string): Promise<{ oauth_token: 
   const res = await fetch(url, {
     method: "POST",
     headers: { Authorization: authHeader(params) },
-    signal: AbortSignal.timeout(10_000),
+    signal: AbortSignal.timeout(HTTP_TIMEOUT_SHORT_MS),
   }).catch(() => {
     throw new Error("request_token timed out — X API unreachable");
   });
@@ -92,7 +93,7 @@ export async function accessToken(
   const res = await fetch(url, {
     method: "POST",
     headers: { Authorization: authHeader(params) },
-    signal: AbortSignal.timeout(10_000),
+    signal: AbortSignal.timeout(HTTP_TIMEOUT_SHORT_MS),
   }).catch(() => {
     throw new Error("access_token timed out — X API unreachable");
   });

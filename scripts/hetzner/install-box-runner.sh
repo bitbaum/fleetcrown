@@ -14,7 +14,8 @@
 # Usage:  bash scripts/hetzner/install-box-runner.sh [user@host]
 set -euo pipefail
 
-HOST="${1:-root@167.233.22.31}"
+. "$(dirname "$0")/_box-env.sh"   # SSOT: HETZNER_IP, BOX_ROOT, BOX_UBUNTU
+HOST="${1:-$BOX_ROOT}"
 RUNNER_DIR="/opt/fleetcrown/runner"
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 # Runner Unix owner — set FLEETCROWN_RUNNER_OWNER=fcrunner after the migration

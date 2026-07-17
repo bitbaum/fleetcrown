@@ -8,6 +8,7 @@
 
 import { getIntentLabel } from "@/config/control-intents";
 import type { StatusTone } from "@/lib/constants/statuses";
+import { ORCH_STATE } from "@/lib/orchestration/contract";
 
 type RunStatusInput = {
   state: string | null;
@@ -17,12 +18,12 @@ type RunStatusInput = {
 };
 
 export function isErrorRun(run: RunStatusInput): boolean {
-  return run.outcome === "error" || run.state === "error" || Boolean(run.payload?.error);
+  return run.outcome === "error" || run.state === ORCH_STATE.ERROR || Boolean(run.payload?.error);
 }
 
 export function runStatus(run: RunStatusInput): StatusTone {
   if (isErrorRun(run)) return "negative";
-  if (run.state === "running" && !run.finishedAt) return "warning";
+  if (run.state === ORCH_STATE.RUNNING && !run.finishedAt) return "warning";
   if (run.outcome === "success") return "positive";
   if (run.outcome === "partial") return "warning";
   return "neutral";

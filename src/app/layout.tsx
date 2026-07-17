@@ -4,6 +4,7 @@ import { GeistMono } from "geist/font/mono";
 import { SessionProvider } from "next-auth/react";
 import { ThemeProvider } from "@/components/shell/ThemeProvider";
 import { APP_DESCRIPTION, APP_NAME, APP_URL } from "@/config/brand";
+import { PALETTE } from "@/lib/palette";
 import "./globals.css";
 
 // Geist (Vercel's technical grotesk) + Geist Mono — the x.ai / grok / modern
@@ -53,8 +54,8 @@ export const viewport: Viewport = {
   // keyboard rather than being covered by it.
   interactiveWidget: "resizes-content",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f7f7f7" },
-    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+    { media: "(prefers-color-scheme: light)", color: PALETTE.light.surfacePage },
+    { media: "(prefers-color-scheme: dark)", color: PALETTE.dark.surfacePage },
   ],
 };
 

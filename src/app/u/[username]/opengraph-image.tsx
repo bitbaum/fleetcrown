@@ -3,6 +3,7 @@ import { getUserByUsername } from "@/db/queries/users";
 import { getPublicProjects } from "@/db/queries/user-projects";
 import { getInitials } from "@/lib/initials";
 import { APP_NAME, APP_TAGLINE } from "@/config/brand";
+import { PALETTE } from "@/lib/palette";
 
 // Per-profile OG image: takes the same `params` as the page and renders a
 // personalized 1200×630 card with avatar/initials + display name + @handle +
@@ -33,8 +34,8 @@ export default async function ProfileOGImage({
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            background: "#0a0a0a",
-            color: "#a1a1aa",
+            background: PALETTE.dark.surfacePage,
+            color: PALETTE.zinc[400],
             fontFamily: "sans-serif",
             fontSize: 48,
           }}
@@ -58,8 +59,8 @@ export default async function ProfileOGImage({
           height: "100%",
           display: "flex",
           alignItems: "center",
-          background: "#0a0a0a",
-          color: "#ededed",
+          background: PALETTE.dark.surfacePage,
+          color: PALETTE.dark.textPrimary,
           padding: "80px",
           fontFamily: "sans-serif",
           gap: 56,
@@ -80,8 +81,8 @@ export default async function ProfileOGImage({
               width: 200,
               height: 200,
               borderRadius: 100,
-              background: "#1f2937",
-              color: "#ededed",
+              background: PALETTE.gray[800],
+              color: PALETTE.dark.textPrimary,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -113,7 +114,7 @@ export default async function ProfileOGImage({
             style={{
               marginTop: 16,
               fontSize: 36,
-              color: "#a1a1aa",
+              color: PALETTE.zinc[400],
               lineHeight: 1.1,
             }}
           >
@@ -123,14 +124,14 @@ export default async function ProfileOGImage({
             style={{
               marginTop: 40,
               fontSize: 28,
-              color: "#a1a1aa",
+              color: PALETTE.zinc[400],
               display: "flex",
               alignItems: "center",
               gap: 16,
             }}
           >
             <span>{`${projects.length} public project${projects.length === 1 ? "" : "s"}`}</span>
-            <span style={{ color: "#52525b" }}>·</span>
+            <span style={{ color: PALETTE.zinc[600] }}>·</span>
             <span>{`${APP_NAME} · ${APP_TAGLINE}`}</span>
           </div>
         </div>

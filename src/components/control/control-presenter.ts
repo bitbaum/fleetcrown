@@ -7,6 +7,7 @@ import {
   withinWindow,
 } from "@/lib/constants/control";
 import { timeAgo } from "@/lib/dates";
+import { ORCH_STATE } from "@/lib/orchestration/contract";
 import { SESSION_STATUS } from "@/lib/constants/statuses";
 import { AGENT_LABELS, type AnyAgentId } from "@/lib/agent-labels";
 import { inferAdapterFromTabName } from "@/lib/agent-resolution";
@@ -490,7 +491,7 @@ export function getProjectDisplayState(
     !isClosed &&
     !isClosing &&
     !currentPrompt &&
-    project.latestOrchestrationRun?.state === "done" &&
+    project.latestOrchestrationRun?.state === ORCH_STATE.DONE &&
     withinWindow(latestFinishedAtS, nowS, READY_WINDOW_S);
 
   const isRunning = promptRunning;
@@ -499,7 +500,7 @@ export function getProjectDisplayState(
   const showRunningBanner = !isClosing && !isReady && Boolean(currentPrompt);
   const showLatestOrchestration =
     Boolean(project.latestOrchestrationRun) &&
-    project.latestOrchestrationRun?.state !== "error" &&
+    project.latestOrchestrationRun?.state !== ORCH_STATE.ERROR &&
     !isRunning &&
     !showRunningBanner &&
     !isReady &&

@@ -9,6 +9,7 @@
 
 import { callGroqText, GROQ_FAST_MODEL } from "@/lib/groq";
 import { getProjectDigest, type ProjectDigest } from "@/db/queries/digests";
+import { HTTP_TIMEOUT_MS } from "@/lib/constants/time";
 
 export const DIGEST_SYSTEM_PROMPT = `You write short, executive-style activity reports for a developer running an AI agent fleet across multiple projects.
 
@@ -84,7 +85,7 @@ export async function generateDigest({
     systemPrompt: DIGEST_SYSTEM_PROMPT,
     maxTokens: 700,
     temperature: 0.3,
-    timeoutMs: 15_000,
+    timeoutMs: HTTP_TIMEOUT_MS,
   });
 
   return {

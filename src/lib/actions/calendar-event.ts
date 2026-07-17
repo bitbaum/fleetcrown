@@ -12,7 +12,7 @@
 import type { ActionPayload } from "@/db/schema/actions";
 import { runToolArgs } from "@/lib/tools";
 import { callGroqText, GROQ_FAST_MODEL } from "@/lib/groq";
-import { DAY_MS, HOUR_MS } from "@/lib/constants/time";
+import { DAY_MS, HOUR_MS, HTTP_TIMEOUT_SHORT_MS } from "@/lib/constants/time";
 
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 const DEFAULT_CALENDAR = "primary";
@@ -110,7 +110,7 @@ Resolve relative/human/German dates against the current time; output absolute va
   let raw: string;
   try {
     raw = await callGroqText(`Current time: ${new Date().toISOString()}\n\nText:\n${text}`, {
-      systemPrompt: system, model: GROQ_FAST_MODEL, maxTokens: 300, temperature: 0, timeoutMs: 10_000,
+      systemPrompt: system, model: GROQ_FAST_MODEL, maxTokens: 300, temperature: 0, timeoutMs: HTTP_TIMEOUT_SHORT_MS,
     });
   } catch {
     return payload;

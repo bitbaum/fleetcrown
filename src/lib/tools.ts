@@ -1,5 +1,6 @@
 import { exec, execFile } from "child_process";
 import { homedir } from "os";
+import { EXEC_TIMEOUT_MS } from "@/lib/constants/time";
 
 const HOME = homedir();
 const TOOL_PATH = [
@@ -14,7 +15,7 @@ const TOOL_PATH = [
 
 export function runTool(
   command: string,
-  timeout = 15000,
+  timeout = EXEC_TIMEOUT_MS,
   extraEnv: Record<string, string> = {},
 ): Promise<{ ok: boolean; data?: string; error?: string }> {
   return new Promise((resolve) => {
@@ -50,7 +51,7 @@ export function runTool(
 export function runToolArgs(
   file: string,
   args: string[],
-  timeout = 15000,
+  timeout = EXEC_TIMEOUT_MS,
   extraEnv: Record<string, string> = {},
 ): Promise<{ ok: boolean; data?: string; error?: string }> {
   return new Promise((resolve) => {

@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
 import { APP_NAME, APP_TAGLINE, APP_DESCRIPTION } from "@/config/brand";
 import { BRAND_MARK, spiralPathD } from "@/config/brand-mark";
+import { PALETTE } from "@/lib/palette";
 
 // Next.js file-convention OG image: served at /opengraph-image and auto-picked
 // up by the framework when the root layout's `openGraph` block is set.
@@ -22,8 +23,8 @@ export default async function OGImage() {
           flexDirection: "column",
           alignItems: "flex-start",
           justifyContent: "center",
-          background: "#0a0a0a",
-          color: "#ededed",
+          background: PALETTE.dark.surfacePage,
+          color: PALETTE.dark.textPrimary,
           padding: "80px",
           fontFamily: "sans-serif",
         }}
@@ -33,7 +34,7 @@ export default async function OGImage() {
           <path
             d={spiralPathD()}
             fill="none"
-            stroke="#ededed"
+            stroke={PALETTE.dark.textPrimary}
             strokeWidth={BRAND_MARK.strokeWidth}
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -54,7 +55,7 @@ export default async function OGImage() {
           style={{
             marginTop: 24,
             fontSize: 36,
-            color: "#a1a1aa",
+            color: PALETTE.zinc[400],
             lineHeight: 1.2,
             maxWidth: 900,
           }}

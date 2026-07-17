@@ -8,6 +8,8 @@
 // Regenerate the static raster/vector assets after changing any parameter:
 //   npm run generate:brand
 
+import { PALETTE } from "@/lib/palette";
+
 export const BRAND_MARK = {
   /** Square viewBox edge. All coordinates below live in this space. */
   viewBox: 100,
@@ -58,8 +60,8 @@ export function spiralPathD(opts: Partial<BrandMarkParams> = {}): string {
 export function brandMarkSvg(
   opts: {
     size?: number;
-    /** Stroke color. Defaults to off-white (#ededed). Use "currentColor" for
-     *  themable inline use. */
+    /** Stroke color. Defaults to the dark text-primary mirror
+     *  (PALETTE.dark.textPrimary). Use "currentColor" for themable inline use. */
     stroke?: string;
     /** When set, draws a rounded-rect background behind the spiral (app icon /
      *  favicon). Omit for a transparent glyph (tray icon / inline mark). */
@@ -72,7 +74,7 @@ export function brandMarkSvg(
 ): string {
   const vb = BRAND_MARK.viewBox;
   const size = opts.size ?? vb;
-  const stroke = opts.stroke ?? "#ededed";
+  const stroke = opts.stroke ?? PALETTE.dark.textPrimary;
   const sw = opts.strokeWidth ?? BRAND_MARK.strokeWidth;
   const bg = opts.background
     ? `<rect width="${vb}" height="${vb}" rx="${opts.radius ?? 22}" fill="${opts.background}"/>`

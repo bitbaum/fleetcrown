@@ -1,18 +1,16 @@
 import type { ITheme } from "@xterm/xterm";
+import { PALETTE } from "@/lib/palette";
 
-// SSOT for the embedded terminal's colors. This is a standard ANSI-16 terminal
-// palette, NOT a set of brand design tokens — a terminal's "red" must read as
-// red regardless of theme, so these intentionally live here (the documented
-// exception, like Recharts/canvas) rather than as semantic CSS vars. Tuned to a
-// near-black, low-glare dark scheme that sits next to the public surface.
-export const TERMINAL_THEME: ITheme = {
-  // MUST match --surface-terminal in src/app/globals.css (xterm needs a JS
-  // literal here — it can't read CSS vars). Change both together.
-  background: "#0a0a0a",
-  foreground: "#e4e4e7",
-  cursor: "#e4e4e7",
-  cursorAccent: "#0a0a0a",
-  selectionBackground: "#3f3f46",
+// SSOT for the embedded terminal's colors. The base surface/text colors come
+// from src/lib/palette.ts (the JS mirror of globals.css tokens — xterm can't
+// read CSS vars). The ANSI-16 set below is intentionally local: it's a
+// standard terminal palette, NOT a set of brand design tokens — a terminal's
+// "red" must read as red regardless of theme. Tuned to a near-black, low-glare
+// dark scheme that sits next to the public surface.
+
+// xterm-specific ANSI-16 colors (normal + bright). Terminal semantics, not
+// design tokens — do not move these into palette.ts.
+const ANSI_16 = {
   // Normal
   black: "#1c1917",
   red: "#f87171",
@@ -31,4 +29,15 @@ export const TERMINAL_THEME: ITheme = {
   brightMagenta: "#d8b4fe",
   brightCyan: "#67e8f9",
   brightWhite: "#fafafa",
+} as const;
+
+export const TERMINAL_THEME: ITheme = {
+  // MUST equal --surface-terminal in src/app/globals.css; PALETTE.dark.surfacePage
+  // is the JS mirror of that token.
+  background: PALETTE.dark.surfacePage,
+  foreground: PALETTE.zinc[200],
+  cursor: PALETTE.zinc[200],
+  cursorAccent: PALETTE.dark.surfacePage,
+  selectionBackground: PALETTE.zinc[700],
+  ...ANSI_16,
 };

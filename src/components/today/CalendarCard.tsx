@@ -5,6 +5,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FetchErrorState } from "@/components/ui/fetch-error-state";
 import { useFetch } from "@/hooks/use-fetch";
+import { REFRESH_CADENCE } from "@/config/refresh";
 import { APP_LOCALE } from "@/lib/constants";
 
 type CalendarEvent = {
@@ -16,7 +17,7 @@ type CalendarEvent = {
 };
 
 export function CalendarCard() {
-  const { data, loading, error, refetch } = useFetch<{ events: CalendarEvent[]; error?: string; runtimeOnly?: boolean }>("/api/calendar", { intervalMs: 5 * 60_000, timeoutMs: 12_000 });
+  const { data, loading, error, refetch } = useFetch<{ events: CalendarEvent[]; error?: string; runtimeOnly?: boolean }>("/api/calendar", { intervalMs: REFRESH_CADENCE.calendar, timeoutMs: 12_000 });
   const events = data?.events ?? [];
 
   // Cloud mode: calendar data comes from the `gog` CLI on the machine running the

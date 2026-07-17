@@ -3,6 +3,8 @@
  * Dispatch strategist, prompt-merge, and Loki all use this.
  */
 
+import { HTTP_TIMEOUT_SHORT_MS, HTTP_TIMEOUT_LONG_MS, HTTP_TIMEOUT_XL_MS } from "@/lib/constants/time";
+
 export const GROQ_FAST_MODEL = "llama-3.3-70b-versatile";
 export const GROQ_VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
 export const GROQ_WHISPER_MODEL = "whisper-large-v3-turbo";
@@ -27,7 +29,7 @@ export async function callGroqText(prompt: string, options: GroqOptions = {}): P
   const key = process.env.GROQ_API_KEY;
   if (!key) throw new Error("GROQ_API_KEY not set");
 
-  const { maxTokens = 200, temperature = 0.2, timeoutMs = 10_000, systemPrompt, model = GROQ_FAST_MODEL } = options;
+  const { maxTokens = 200, temperature = 0.2, timeoutMs = HTTP_TIMEOUT_SHORT_MS, systemPrompt, model = GROQ_FAST_MODEL } = options;
 
   const messages: Array<{ role: string; content: string }> = [];
   if (systemPrompt) messages.push({ role: "system", content: systemPrompt });
@@ -75,7 +77,7 @@ export async function callGroqVision(options: GroqVisionOptions): Promise<string
     images,
     systemPrompt,
     maxTokens = 900,
-    timeoutMs = 45_000,
+    timeoutMs = HTTP_TIMEOUT_XL_MS,
     model = GROQ_VISION_MODEL,
   } = options;
 
@@ -130,7 +132,7 @@ export async function callGroqTranscribe(audio: Blob, mimeType = "audio/webm"): 
     method: "POST",
     headers: { Authorization: `Bearer ${key}` },
     body: form,
-    signal: AbortSignal.timeout(30_000),
+    signal: AbortSignal.timeout(HTTP_TIMEOUT_LONG_MS),
   });
 
   if (!res.ok) {

@@ -161,7 +161,7 @@
   /* Theme-invariant tokens — same value in light and dark (inherited by .dark) */
   --scrim: rgb(0 0 0 / 0.45);      /* overlay backdrop behind modals/drawers/sheets */
   --toggle-knob: oklch(1 0 0);     /* switch knob — stays light in both themes (sits on a colored/overlay track) */
-  --surface-terminal: #0a0a0a;     /* MUST match TERMINAL_THEME.background in src/lib/terminal-theme.ts (xterm needs a JS literal, it can't read CSS vars) */
+  --surface-terminal: #0a0a0a;     /* MUST match PALETTE.dark.surfacePage in src/lib/palette.ts — the JS mirror used by xterm/OG/email/themeColor (they can't read CSS vars) */
   --shell-max: 90rem;
   /* Mobile chrome — bottom nav + safe area (Layer 1) */
   --mobile-nav-height: 3.25rem;

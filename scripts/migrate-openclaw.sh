@@ -18,7 +18,11 @@
 #   ssh <box>; sudo -iu openclaw bash /tmp/migrate-openclaw.sh restore
 set -euo pipefail
 
-HOST="${OPENCLAW_BOX:-root@${HETZNER_IP:-167.233.22.31}}"
+# Box-address SSOT. Sourced conditionally: the `restore` phase runs this script
+# FROM the box out of /tmp (no repo there); HOST is only used by `package`.
+BOX_ENV="$(dirname "${BASH_SOURCE[0]}")/hetzner/_box-env.sh"
+if [ -f "$BOX_ENV" ]; then . "$BOX_ENV"; fi
+HOST="${OPENCLAW_BOX:-${BOX_ROOT:-}}"
 STATE="$HOME/.openclaw"
 PKG="/tmp/openclaw-migrate.tgz"
 EXCLUDES=(

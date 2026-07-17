@@ -28,19 +28,45 @@ export { normalizeGitHubCloneUrl } from "@/lib/git-url";
 import { normalizeGitHubCloneUrl } from "@/lib/git-url";
 import { ensureClaudeReady } from "@/lib/agent-execution/claude-prep";
 
-function authedUrl(gitUrl: string, token: string): string {
-  if (!token) return gitUrl;
-  return gitUrl.replace(/^https:\/\/(github\.com\/)/, `https://x-access-token:${token}@$1`);
+/**
+ * Auth via a per-invocation extraheader instead of embedding the token in the
+ * remote URL. An embedded token persists in .git/config forever and leaks via
+ * `git remote -v`, logs, and any agent that cats the config (observed: every
+ * box workspace remote carried a plaintext OAuth token). The header exists
+ * only for the lifetime of the command — same pattern actions/checkout uses.
+ */
+function authArgs(token: string): string[] {
+  if (!token) return [];
+  const basic = Buffer.from(`x-access-token:${token}`).toString("base64");
+  return ["-c", `http.https://github.com/.extraheader=AUTHORIZATION: basic ${basic}`];
+}
+
+function boxToken(): string {
+  return (process.env.GITHUB_TOKEN || "").trim();
+}
+
+/** Strip a legacy embedded credential from origin so old clones stop leaking. */
+function scrubRemoteUrl(boxDir: string): void {
+  try {
+    const url = execFileSync("git", ["-C", boxDir, "remote", "get-url", "origin"], { timeout: 15_000 })
+      .toString().trim();
+    const clean = url.replace(/^https:\/\/[^@/]+@/, "https://");
+    if (clean !== url) execFileSync("git", ["-C", boxDir, "remote", "set-url", "origin", clean], { timeout: 15_000 });
+  } catch {
+    // No origin (empty scaffold dir) — nothing to scrub.
+  }
 }
 
 function syncExistingClone(boxDir: string): void {
   if (!fs.existsSync(path.join(boxDir, ".git"))) return;
+  scrubRemoteUrl(boxDir);
+  const auth = authArgs(boxToken());
   try {
-    execFileSync("git", ["-C", boxDir, "fetch", "--depth", "50", "origin"], {
+    execFileSync("git", [...auth, "-C", boxDir, "fetch", "--depth", "50", "origin"], {
       stdio: "inherit",
       timeout: 120_000,
     });
-    execFileSync("git", ["-C", boxDir, "pull", "--ff-only"], { stdio: "inherit", timeout: 120_000 });
+    execFileSync("git", [...auth, "-C", boxDir, "pull", "--ff-only"], { stdio: "inherit", timeout: 120_000 });
   } catch (e) {
     console.warn(`[box-prepare] git sync failed for ${boxDir}: ${e instanceof Error ? e.message : String(e)}`);
   }
@@ -75,9 +101,9 @@ export async function ensureBoxWorkspace(tab: string, requestedDir: string): Pro
   fs.mkdirSync(DEV_ROOT, { recursive: true });
 
   if (gitUrl) {
-    const token = (process.env.GITHUB_TOKEN || "").trim();
     console.log(`[box-prepare] cloning ${tab} ← ${gitUrl} → ${boxDir}`);
-    execFileSync("git", ["clone", "--depth", "50", authedUrl(gitUrl, token), boxDir], {
+    // Clean URL in .git/config; the token travels only in the ephemeral header.
+    execFileSync("git", [...authArgs(boxToken()), "clone", "--depth", "50", gitUrl, boxDir], {
       stdio: "inherit",
       timeout: 180_000,
     });

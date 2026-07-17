@@ -14,6 +14,7 @@ import { callGroqText, GROQ_FAST_MODEL } from "@/lib/groq";
 import { getUserPreferences } from "@/db/queries/user-preferences";
 import { buildLokiFleetContext } from "@/lib/loki-fleet-context";
 import { APP_NAME } from "@/config/brand";
+import { HTTP_TIMEOUT_LONG_MS } from "@/lib/constants/time";
 
 const LOKI_SYSTEM_PROMPT =
   `You are Loki, the assistant inside ${APP_NAME} — the captain's layer over a builder's fleet of AI agents and projects. ` +
@@ -71,7 +72,7 @@ async function callGroq(message: string, voice: string | null): Promise<{ text: 
   const text = await callGroqText(message, {
     systemPrompt: LOKI_SYSTEM_PROMPT + voiceClause(voice),
     maxTokens: 1024,
-    timeoutMs: 30_000,
+    timeoutMs: HTTP_TIMEOUT_LONG_MS,
   });
   return { text, model: `groq/${GROQ_FAST_MODEL}` };
 }

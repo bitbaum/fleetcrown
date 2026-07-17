@@ -14,6 +14,7 @@ import { join } from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { callGroqText, GROQ_FAST_MODEL } from "@/lib/groq";
+import { HTTP_TIMEOUT_LONG_MS } from "@/lib/constants/time";
 
 const run = promisify(execFile);
 
@@ -86,7 +87,7 @@ export async function analyzeRepo(input: {
       manifests ? `\nKey manifests:\n${manifests}` : "",
     ].join("\n");
 
-    const report = await callGroqText(user, { systemPrompt: SYSTEM, maxTokens: 1200, temperature: 0.3, timeoutMs: 30_000 });
+    const report = await callGroqText(user, { systemPrompt: SYSTEM, maxTokens: 1200, temperature: 0.3, timeoutMs: HTTP_TIMEOUT_LONG_MS });
     return { ok: true, report, model: GROQ_FAST_MODEL };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "analysis failed" };

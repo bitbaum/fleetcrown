@@ -18,6 +18,7 @@
 // of a discarded diff. Never auto-merges; a human reviews the PR.
 
 import { mkdtemp, rm } from "node:fs/promises";
+import { EXEC_TIMEOUT_MS, EXEC_TIMEOUT_LONG_MS } from "@/lib/constants/time";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execFile } from "node:child_process";
@@ -84,10 +85,10 @@ export async function runHermesTask(input: {
     const cloneUrl = token && gitUrl.startsWith("https://")
       ? gitUrl.replace("https://", `https://x-access-token:${token}@`)
       : gitUrl;
-    await run("git", ["clone", "--depth", "1", "--no-tags", cloneUrl, dir], { timeout: 120_000, maxBuffer: 16 * 1024 * 1024 });
+    await run("git", ["clone", "--depth", "1", "--no-tags", cloneUrl, dir], { timeout: EXEC_TIMEOUT_LONG_MS, maxBuffer: 16 * 1024 * 1024 });
 
     // Identify base branch + a unique work branch up front.
-    const { stdout: baseRaw } = await run("git", ["-C", dir, "rev-parse", "--abbrev-ref", "HEAD"], { timeout: 15_000 }).catch(() => ({ stdout: "main" }));
+    const { stdout: baseRaw } = await run("git", ["-C", dir, "rev-parse", "--abbrev-ref", "HEAD"], { timeout: EXEC_TIMEOUT_MS }).catch(() => ({ stdout: "main" }));
     const base = baseRaw.trim() || "main";
     const slug = task.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 32) || "task";
     const branch = `hermes/${slug}-${Date.now().toString(36)}`;
@@ -114,9 +115,9 @@ export async function runHermesTask(input: {
     // Preserve the work: commit on a branch, push, open a PR (never auto-merge).
     await run("git", ["-C", dir, "config", "user.email", "runner@fleetcrown.local"], { timeout: 10_000 });
     await run("git", ["-C", dir, "config", "user.name", "FleetCrown Hosted Runner"], { timeout: 10_000 });
-    await run("git", ["-C", dir, "checkout", "-b", branch], { timeout: 15_000 });
+    await run("git", ["-C", dir, "checkout", "-b", branch], { timeout: EXEC_TIMEOUT_MS });
     await run("git", ["-C", dir, "commit", "-m", `hermes: ${task.slice(0, 72)}`], { timeout: 30_000 });
-    await run("git", ["-C", dir, "push", "origin", `HEAD:refs/heads/${branch}`], { timeout: 120_000 });
+    await run("git", ["-C", dir, "push", "origin", `HEAD:refs/heads/${branch}`], { timeout: EXEC_TIMEOUT_LONG_MS });
 
     let prUrl: string | undefined;
     const gh = parseGitHub(gitUrl);

@@ -100,7 +100,7 @@ export function PeekTabDrawer({ tab, onClose }: { tab: string; onClose: () => vo
   useEffect(() => {
     if (view !== "snapshot") return; // live streams via TerminalView; activity reads the DB
     void fetchPeek();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchPeek is recreated each render; tab/view are its real inputs
   }, [tab, view]);
 
   useEffect(() => {
@@ -109,7 +109,7 @@ export function PeekTabDrawer({ tab, onClose }: { tab: string; onClose: () => vo
     // enough that the brief Zellij focus flash doesn't become annoying.
     const id = setInterval(() => { void fetchPeek(); }, 3_000);
     return () => clearInterval(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchPeek is recreated each render; autoRefresh/view/tab are its real inputs
   }, [autoRefresh, view, tab]);
 
   const subtitle =

@@ -1,4 +1,5 @@
 import { db } from "@/db";
+import { ORCH_STATE } from "@/lib/orchestration/contract";
 import { pendingCommands, type NewPendingCommand, type InjectPayload, type DispatchPayload, type SwitchAgentPayload, type AutoContinuePayload, type TabPayload, type LaunchAgentPayload, type RunnerChannel } from "@/db/schema/pending-commands";
 import { eq, isNull, isNotNull, and, inArray, desc, sql } from "drizzle-orm";
 import type { FailedCommand } from "@/lib/control-types";
@@ -251,7 +252,7 @@ export async function claimNextPendingCommand(userIds: string[], types?: string[
 	              AND r.finished_at IS NULL
 	              AND r.started_at > NOW() - INTERVAL '1 minute' * ${STALE_RUN_MINUTES}
 	              AND (
-	                r.state <> 'waiting'
+	                r.state <> ${ORCH_STATE.WAITING}
 	                OR EXISTS (
 	                  SELECT 1 FROM pending_commands blocker
 	                  WHERE blocker.payload->>'runId' = r.id::text

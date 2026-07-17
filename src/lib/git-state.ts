@@ -25,6 +25,7 @@
 import { exec } from "child_process";
 import { promisify } from "util";
 import { shellEscape } from "@/lib/zellij";
+import { EXEC_TIMEOUT_MS } from "@/lib/constants/time";
 import type { GitState } from "@/lib/control-types";
 
 const execAsync = promisify(exec);
@@ -65,7 +66,7 @@ wait
   const result = new Map<string, GitState>();
   try {
     const { stdout } = await execAsync(`bash -c '${script.replace(/'/g, "'\\''")}'`, {
-      timeout: 15000,
+      timeout: EXEC_TIMEOUT_MS,
       maxBuffer: 2 * 1024 * 1024,
     });
     for (const line of stdout.split("\n")) {

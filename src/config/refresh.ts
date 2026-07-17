@@ -18,4 +18,8 @@ export const REFRESH_CADENCE = {
   today:    60_000,
   memory:   60_000,
   projects: 60_000,
+  // Client-widget useFetch polls (data changes slowly; endpoint patience stays per-widget)
+  weather:    10 * 60_000,
+  calendar:   5 * 60_000,
+  projectsCi: 2 * 60_000,
 } as const;

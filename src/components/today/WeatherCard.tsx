@@ -4,6 +4,7 @@ import { Sun, CloudRain, Cloud, CloudSnow, CloudFog } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { FetchErrorState } from "@/components/ui/fetch-error-state";
 import { useFetch } from "@/hooks/use-fetch";
+import { REFRESH_CADENCE } from "@/config/refresh";
 import { WEATHER_CITY } from "@/lib/constants/today";
 
 function parseWeather(raw: string) {
@@ -39,7 +40,7 @@ function WeatherIcon({ condition, className }: { condition: string; className?: 
 }
 
 export function WeatherCard() {
-  const { data, loading, error, refetch } = useFetch<{ weather: string | null; city?: string; error?: string }>("/api/weather", { intervalMs: 10 * 60_000, timeoutMs: 8_000 });
+  const { data, loading, error, refetch } = useFetch<{ weather: string | null; city?: string; error?: string }>("/api/weather", { intervalMs: REFRESH_CADENCE.weather, timeoutMs: 8_000 });
 
   if (loading) {
     return (

@@ -104,7 +104,7 @@ export function useProjectCardActions({
       if (!cancelled && res.ok) setPreloadedDispatch(await res.json() as DispatchResult);
     }).catch(() => {});
     return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- preload fires only on the ready-transition; payload fields are read fresh when it does
   }, [isReadyNow, queue.length]);
 
   const sessionHealthBlocksQueue = (): boolean => {
@@ -263,7 +263,7 @@ export function useProjectCardActions({
     // because the gate-evaluator picked nextbest (or the caller asked
     // without a queue head); fire the canned template.
     await sendIntent("next_best");
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- sendIntent/toast helpers are stable closures; listed deps are the decision inputs
   }, [autoContinueEnabled, preloadedDispatch, queue, removeFromQueue, project.tab, project.agentRunning, project.currentPrompt, onInject, setDismissed, project.session?.status, project.session?.health, project.session?.tests]);
 
   const handleSendFromQueue = useCallback(async (index: number) => {

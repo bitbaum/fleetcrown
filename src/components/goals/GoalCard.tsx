@@ -164,7 +164,7 @@ export function GoalCard({
                   <span className="text-xs text-status-positive/60">{goal.entityName}</span>
                 </Link>
                 {!isClosed && controlPrompt && (
-                  <ControlDispatchButton tab={goal.entityName!} prompt={controlPrompt} />
+                  <ControlDispatchButton tab={goal.entityName!} />
                 )}
               </div>
             )}

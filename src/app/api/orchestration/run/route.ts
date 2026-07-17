@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
+import { ORCH_STATE } from "@/lib/orchestration/contract";
 import { spawn } from "node:child_process";
 import path from "node:path";
 import { isRuntimeAvailable } from "@/lib/runtime";
@@ -164,7 +165,7 @@ export async function POST(req: NextRequest) {
           intent: request.intent,
           // The runner has not executed this command yet. Runtime state will
           // show active work only after a successful local injection.
-          state: "waiting",
+          state: ORCH_STATE.WAITING,
           projectKey: request.projectKey,
           projectPath: request.projectPath,
           payload: {
@@ -281,7 +282,7 @@ export async function POST(req: NextRequest) {
         projectId: request.projectId ?? null,
         adapter: request.adapter,
         intent: request.intent,
-        state: "running",
+        state: ORCH_STATE.RUNNING,
         projectKey: request.projectKey,
         projectPath: request.projectPath,
         payload: {
@@ -534,7 +535,7 @@ export async function POST(req: NextRequest) {
     projectId: request.projectId ?? null,
     adapter: request.adapter,
     intent: request.intent,
-    state: "running",
+    state: ORCH_STATE.RUNNING,
     projectKey: request.projectKey,
     projectPath: request.projectPath,
     payload: {
@@ -567,7 +568,7 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     await updateOrchestrationRun(run.id, {
-      state: "error",
+      state: ORCH_STATE.ERROR,
       outcome: "error",
       finishedAt: new Date(),
       payload: {

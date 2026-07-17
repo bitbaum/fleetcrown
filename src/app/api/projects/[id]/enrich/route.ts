@@ -6,6 +6,7 @@ import { extractProjectProfile, applyProjectProfile } from "@/lib/project-brief"
 import { getProjectCore } from "@/db/queries/projects";
 import { fetchAttributesByEntityIds } from "@/db/queries/utils";
 import { GITHUB_API_BASE } from "@/lib/github-api";
+import { HTTP_TIMEOUT_SHORT_MS } from "@/lib/constants/time";
 
 // Repo → profile. The project's own README (plus CLAUDE.md when present)
 // already says what the project is — websites and repos hold the context,
@@ -31,7 +32,7 @@ async function fetchRepoFile(
   const url = path === "readme"
     ? `${GITHUB_API_BASE}/repos/${owner}/${repo}/readme`
     : `${GITHUB_API_BASE}/repos/${owner}/${repo}/contents/${path}`;
-  const res = await fetch(url, { headers, signal: AbortSignal.timeout(10_000) }).catch(() => null);
+  const res = await fetch(url, { headers, signal: AbortSignal.timeout(HTTP_TIMEOUT_SHORT_MS) }).catch(() => null);
   if (!res?.ok) return null;
   const text = await res.text().catch(() => null);
   return text?.trim() || null;

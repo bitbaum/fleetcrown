@@ -55,10 +55,7 @@ export async function StuckGoalsCard() {
                   title="Ask Loki to unblock this goal"
                 />
                 {goal.entityName && (
-                  <ControlDispatchButton
-                    tab={goal.entityName}
-                    prompt={`Goal: ${goal.title}\nProgress: 0%\nIdle for ${idle} days.\nProject: ${goal.entityName}\n\nThis goal has been stalled with no progress. Please investigate the codebase and make the first concrete step to get it moving.`}
-                  />
+                  <ControlDispatchButton tab={goal.entityName} />
                 )}
                 <AbandonGoalButton goalId={goal.id} />
               </div>

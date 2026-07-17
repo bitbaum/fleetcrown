@@ -7,6 +7,7 @@ import type { FailedCommand } from "@/lib/control-types";
 import { HEALTH_TAG_STYLE } from "@/config/ui";
 import { timeAgo } from "@/lib/dates";
 import { postJson } from "@/lib/api/fetch";
+import { CONTROL_DISMISSED_FAILURES_KEY } from "@/config/brand-storage";
 
 /** Group consecutive failures that match on (type, tab, error). Stops the
  *  "three identical error rows" stacking that happens when the user clicks
@@ -43,7 +44,7 @@ export function AttentionBar({
 }) {
   const [dismissed, setDismissed] = useState<Set<string>>(() => {
     try {
-      const raw = localStorage.getItem("control:dismissed-failures");
+      const raw = localStorage.getItem(CONTROL_DISMISSED_FAILURES_KEY);
       return new Set(raw ? JSON.parse(raw) : []);
     } catch { return new Set(); }
   });
@@ -51,7 +52,7 @@ export function AttentionBar({
   const dismiss = (id: string) => {
     setDismissed((prev) => {
       const next = new Set(prev).add(id);
-      try { localStorage.setItem("control:dismissed-failures", JSON.stringify([...next])); } catch { /* */ }
+      try { localStorage.setItem(CONTROL_DISMISSED_FAILURES_KEY, JSON.stringify([...next])); } catch { /* */ }
       return next;
     });
   };

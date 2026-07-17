@@ -2,8 +2,9 @@
 # Shared helpers for the Hetzner self-host tooling. Source, don't execute.
 set -euo pipefail
 
-BOX="ubuntu@167.233.22.31"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+. "$HERE/_box-env.sh"   # SSOT: HETZNER_IP, BOX_ROOT, BOX_UBUNTU
+BOX="$BOX_UBUNTU"
 MANIFEST="$HERE/apps.conf"
 
 # app_lookup <name> — sets NAME PORT DOMAINS REPO APP_DIR DB or exits 1

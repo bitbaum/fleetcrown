@@ -14,6 +14,19 @@ export const ORCHESTRATION_STATES = [
 
 export type OrchestrationState = (typeof ORCHESTRATION_STATES)[number];
 
+/** Keyed access to run states — the SSOT for every comparison and write.
+ *  Use ORCH_STATE.RUNNING instead of the raw "running" literal so the
+ *  compiler catches typos and refactors stay one-file changes. */
+export const ORCH_STATE = {
+  IDLE: "idle",
+  RUNNING: "running",
+  WAITING: "waiting",
+  DONE: "done",
+  CLOSING: "closing",
+  CLOSED: "closed",
+  ERROR: "error",
+} as const satisfies Record<string, OrchestrationState>;
+
 export const ORCHESTRATION_EVENTS = [
   "task_started",
   "input_requested",

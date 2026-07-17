@@ -6,6 +6,7 @@ import { callGroqText } from "@/lib/groq";
 import { fetchAttributesByEntityIds, upsertEntityAttribute } from "@/db/queries/utils";
 import { getProjectPromptActivity } from "@/db/queries/prompt-history";
 import { scheduleProjectProfileReindexByEntityId } from "@/lib/rag/reindex-project-profile";
+import { HTTP_TIMEOUT_XL_MS } from "@/lib/constants/time";
 
 /**
  * The living business plan — automatic business creation and development.
@@ -119,7 +120,7 @@ export async function generateBusinessPlan(userId: string, entityId: string): Pr
         systemPrompt: SYSTEM_PROMPT,
         maxTokens: 2200,
         temperature: 0.3,
-        timeoutMs: 45_000,
+        timeoutMs: HTTP_TIMEOUT_XL_MS,
       });
       break;
     } catch (e) {

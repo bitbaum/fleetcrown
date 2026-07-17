@@ -1,6 +1,7 @@
 import { Resend } from "resend";
 import { ROUTES } from "@/config/auth";
 import { APP_NAME, APP_EMAIL_FROM, APP_TAGLINE, LOCAL_DEV_URL } from "@/config/brand";
+import { PALETTE } from "@/lib/palette";
 import { logDebug } from "@/db/queries/debug-logs";
 
 // Record every send outcome to debug_logs so "did the reset/verify email
@@ -69,24 +70,24 @@ function emailShell(content: string): string {
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>${APP_NAME}</title>
 </head>
-<body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:40px 16px;">
+<body style="margin:0;padding:0;background:${PALETTE.zinc[100]};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:${PALETTE.zinc[100]};padding:40px 16px;">
     <tr><td align="center">
       <table width="540" cellpadding="0" cellspacing="0" style="max-width:540px;width:100%;">
         <!-- Header -->
-        <tr><td style="background:#09090b;padding:20px 32px;border-radius:12px 12px 0 0;text-align:center;">
-          <span style="color:#ffffff;font-size:17px;font-weight:700;letter-spacing:-0.3px;">⚡ ${APP_NAME}</span>
+        <tr><td style="background:${PALETTE.zinc[950]};padding:20px 32px;border-radius:12px 12px 0 0;text-align:center;">
+          <span style="color:${PALETTE.white};font-size:17px;font-weight:700;letter-spacing:-0.3px;">⚡ ${APP_NAME}</span>
         </td></tr>
         <!-- Body -->
-        <tr><td style="background:#ffffff;padding:40px 32px;border-radius:0 0 12px 12px;color:#09090b;">
+        <tr><td style="background:${PALETTE.white};padding:40px 32px;border-radius:0 0 12px 12px;color:${PALETTE.zinc[950]};">
           ${content}
         </td></tr>
       </table>
       <!-- Footer -->
       <table width="540" cellpadding="0" cellspacing="0" style="max-width:540px;width:100%;margin-top:20px;">
-        <tr><td style="text-align:center;color:#71717a;font-size:12px;line-height:1.6;">
+        <tr><td style="text-align:center;color:${PALETTE.zinc[500]};font-size:12px;line-height:1.6;">
           ${APP_NAME} &mdash; ${APP_TAGLINE}<br>
-          <a href="${url}" style="color:#71717a;text-decoration:underline;">${url.replace(/^https?:\/\//, "")}</a>
+          <a href="${url}" style="color:${PALETTE.zinc[500]};text-decoration:underline;">${url.replace(/^https?:\/\//, "")}</a>
         </td></tr>
       </table>
     </td></tr>
@@ -96,15 +97,15 @@ function emailShell(content: string): string {
 }
 
 function btn(href: string, label: string): string {
-  return `<a href="${href}" style="display:inline-block;background:#09090b;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;padding:12px 28px;border-radius:8px;margin:24px 0;">${label}</a>`;
+  return `<a href="${href}" style="display:inline-block;background:${PALETTE.zinc[950]};color:${PALETTE.white};font-size:14px;font-weight:600;text-decoration:none;padding:12px 28px;border-radius:8px;margin:24px 0;">${label}</a>`;
 }
 
 function p(text: string): string {
-  return `<p style="margin:0 0 16px 0;font-size:15px;line-height:1.6;color:#374151;">${text}</p>`;
+  return `<p style="margin:0 0 16px 0;font-size:15px;line-height:1.6;color:${PALETTE.gray[700]};">${text}</p>`;
 }
 
 function small(text: string): string {
-  return `<p style="margin:24px 0 0 0;font-size:12px;line-height:1.6;color:#9ca3af;">${text}</p>`;
+  return `<p style="margin:24px 0 0 0;font-size:12px;line-height:1.6;color:${PALETTE.gray[400]};">${text}</p>`;
 }
 
 // ─── Templates ───────────────────────────────────────────────────────────────
@@ -112,10 +113,10 @@ function small(text: string): string {
 export function verifyEmailTemplate(verifyUrl: string, name: string) {
   const subject = `Verify your ${APP_NAME} email`;
   const html = emailShell(`
-    <h2 style="margin:0 0 8px 0;font-size:22px;font-weight:700;color:#09090b;">Verify your email</h2>
+    <h2 style="margin:0 0 8px 0;font-size:22px;font-weight:700;color:${PALETTE.zinc[950]};">Verify your email</h2>
     ${p(`Hi ${name}, welcome to ${APP_NAME}. Verifying your email is optional but helps with account recovery and password reset.`)}
     <div style="text-align:center;">${btn(verifyUrl, "Verify email →")}</div>
-    ${small(`Or paste this link in your browser:<br><a href="${verifyUrl}" style="color:#6b7280;word-break:break-all;">${verifyUrl}</a>`)}
+    ${small(`Or paste this link in your browser:<br><a href="${verifyUrl}" style="color:${PALETTE.gray[500]};word-break:break-all;">${verifyUrl}</a>`)}
     ${small(`This link expires in 24 hours. If you didn't create a ${APP_NAME} account, you can safely ignore this email.`)}
   `);
   const text = `Hi ${name}, verify your ${APP_NAME} email:\n\n${verifyUrl}\n\nThis link expires in 24 hours.`;
@@ -126,10 +127,10 @@ export function welcomeEmailTemplate(name: string) {
   const url = appUrl();
   const subject = `Welcome to ${APP_NAME}`;
   const html = emailShell(`
-    <h2 style="margin:0 0 8px 0;font-size:22px;font-weight:700;color:#09090b;">You're in, ${name} ⚡</h2>
+    <h2 style="margin:0 0 8px 0;font-size:22px;font-weight:700;color:${PALETTE.zinc[950]};">You're in, ${name} ⚡</h2>
     ${p(`${APP_NAME} is your command center for everything that matters — projects, goals, habits, people, money, and AI agents.`)}
     ${p("Here's what to do first:")}
-    <ul style="margin:0 0 16px 0;padding-left:20px;color:#374151;font-size:15px;line-height:1.8;">
+    <ul style="margin:0 0 16px 0;padding-left:20px;color:${PALETTE.gray[700]};font-size:15px;line-height:1.8;">
       <li>Add your projects and connect GitHub</li>
       <li>Set up your daily habits and goals</li>
       <li>Dispatch your first AI agent from the Control panel</li>
@@ -144,10 +145,10 @@ export function welcomeEmailTemplate(name: string) {
 export function resetPasswordEmailTemplate(resetUrl: string) {
   const subject = `Reset your ${APP_NAME} password`;
   const html = emailShell(`
-    <h2 style="margin:0 0 8px 0;font-size:22px;font-weight:700;color:#09090b;">Reset your password</h2>
+    <h2 style="margin:0 0 8px 0;font-size:22px;font-weight:700;color:${PALETTE.zinc[950]};">Reset your password</h2>
     ${p(`Someone requested a password reset for your ${APP_NAME} account. Click the button below to set a new password.`)}
     <div style="text-align:center;">${btn(resetUrl, "Reset password →")}</div>
-    ${small(`Or paste this link in your browser:<br><a href="${resetUrl}" style="color:#6b7280;word-break:break-all;">${resetUrl}</a>`)}
+    ${small(`Or paste this link in your browser:<br><a href="${resetUrl}" style="color:${PALETTE.gray[500]};word-break:break-all;">${resetUrl}</a>`)}
     ${small("This link expires in 2 hours. If you didn't request this, you can safely ignore this email — your password won't change.")}
   `);
   const text = `Reset your ${APP_NAME} password:\n\n${resetUrl}\n\nThis link expires in 2 hours. If you didn't request this, ignore it.`;
@@ -169,22 +170,22 @@ function renderDigestMarkdown(markdown: string): string {
     }
   };
   const inline = (text: string) =>
-    text.replace(/\*\*([^*]+)\*\*/g, '<strong style="color:#09090b;">$1</strong>');
+    text.replace(/\*\*([^*]+)\*\*/g, `<strong style="color:${PALETTE.zinc[950]};">$1</strong>`);
   for (const rawLine of markdown.split(/\r?\n/)) {
     const line = rawLine.trim();
     if (!line) { closeList(); continue; }
     if (line.startsWith("- ") || line.startsWith("* ")) {
       if (!listOpen) {
-        blocks.push('<ul style="margin:0 0 16px 0;padding-left:20px;color:#374151;font-size:15px;line-height:1.7;">');
+        blocks.push(`<ul style="margin:0 0 16px 0;padding-left:20px;color:${PALETTE.gray[700]};font-size:15px;line-height:1.7;">`);
         listOpen = true;
       }
       blocks.push(`<li>${inline(line.slice(2))}</li>`);
     } else if (/^#{1,3} /.test(line)) {
       closeList();
-      blocks.push(`<h3 style="margin:20px 0 8px 0;font-size:16px;font-weight:600;color:#09090b;">${inline(line.replace(/^#+\s+/, ""))}</h3>`);
+      blocks.push(`<h3 style="margin:20px 0 8px 0;font-size:16px;font-weight:600;color:${PALETTE.zinc[950]};">${inline(line.replace(/^#+\s+/, ""))}</h3>`);
     } else {
       closeList();
-      blocks.push(`<p style="margin:0 0 14px 0;font-size:15px;line-height:1.7;color:#374151;">${inline(line)}</p>`);
+      blocks.push(`<p style="margin:0 0 14px 0;font-size:15px;line-height:1.7;color:${PALETTE.gray[700]};">${inline(line)}</p>`);
     }
   }
   closeList();
@@ -204,7 +205,7 @@ export function digestEmailTemplate({
 }) {
   const subject = `${APP_NAME} ${cadenceLabel} digest`;
   const html = emailShell(`
-    <h2 style="margin:0 0 4px 0;font-size:22px;font-weight:700;color:#09090b;">${cadenceLabel.charAt(0).toUpperCase() + cadenceLabel.slice(1)} digest</h2>
+    <h2 style="margin:0 0 4px 0;font-size:22px;font-weight:700;color:${PALETTE.zinc[950]};">${cadenceLabel.charAt(0).toUpperCase() + cadenceLabel.slice(1)} digest</h2>
     ${p(`What your fleet did in ${windowLabel}.`)}
     ${renderDigestMarkdown(markdown)}
     <div style="text-align:center;">${btn(activityUrl, "Open Activity →")}</div>

@@ -5,6 +5,7 @@
 
 import { TEMPLATES, renderTemplate, type TemplateId } from "@/lib/project-templates";
 import { GITHUB_API_BASE } from "@/lib/github-api";
+import { HTTP_TIMEOUT_SHORT_MS, HTTP_TIMEOUT_MS } from "@/lib/constants/time";
 
 export type ProvisionedRepo = {
   id: number;
@@ -51,7 +52,7 @@ export async function seedTemplate(
       // Each step is a small metadata call — a hung one would eat the route's
       // whole maxDuration budget. Time out fast; the catch below makes it
       // non-fatal (repo stays bare).
-      signal: AbortSignal.timeout(10_000),
+      signal: AbortSignal.timeout(HTTP_TIMEOUT_SHORT_MS),
       headers: {
         Authorization: `Bearer ${token}`,
         Accept: "application/vnd.github+json",
@@ -125,7 +126,7 @@ export async function provisionGithubRepo(
       },
       body: JSON.stringify({ name, description, private: (opts.visibility ?? "private") === "private", auto_init: opts.initReadme ?? true }),
       // Repo creation can be slow but must not hang the route forever.
-      signal: AbortSignal.timeout(15_000),
+      signal: AbortSignal.timeout(HTTP_TIMEOUT_MS),
     });
   } catch {
     return { ok: false, status: 502, error: "GitHub create timed out or was unreachable" };
@@ -174,7 +175,7 @@ export async function deprovisionGithubRepo(
         "Content-Type": "application/json",
       },
       body: mode === "archive" ? JSON.stringify({ archived: true }) : undefined,
-      signal: AbortSignal.timeout(10_000),
+      signal: AbortSignal.timeout(HTTP_TIMEOUT_SHORT_MS),
     });
   } catch {
     return { ok: false, status: 502, error: `GitHub ${mode === "delete" ? "delete" : "archive"} timed out or was unreachable` };

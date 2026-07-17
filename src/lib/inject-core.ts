@@ -13,6 +13,7 @@ import { ensureUserProjectEntityLinks, getOrgProjects } from "@/db/queries/user-
 import { ORCHESTRATION_ADAPTER_IDS, ORCHESTRATION_TASK_INTENT_IDS, DEFAULT_ADAPTER_ID, renderProjectContextBlock, type OrchestrationTaskIntentId } from "@/lib/orchestration";
 import { getProjectContext } from "@/db/queries/project-context";
 import { isRuntimeAvailable } from "@/lib/runtime";
+import { ORCH_STATE } from "@/lib/orchestration/contract";
 import { workspaceIdFor } from "@/lib/agent-execution/ownership";
 import { executeInject } from "@/lib/executor";
 import { projectPreferredChannel } from "@/lib/execution-access";
@@ -266,7 +267,7 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
         projectId,
         adapter: eventAdapter,
         intent: eventIntent ?? "custom",
-        state: "waiting",
+        state: ORCH_STATE.WAITING,
         projectKey: canonical,
         projectPath: resolvedProjectPath,
         payload: {

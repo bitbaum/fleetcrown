@@ -11,7 +11,8 @@
 # See docs/architecture/fleet-knowledge-rag.md
 set -euo pipefail
 
-HOST="${1:-root@${HETZNER_IP:-167.233.22.31}}"
+. "$(dirname "$0")/_box-env.sh"   # SSOT: HETZNER_IP, BOX_ROOT, BOX_UBUNTU
+HOST="${1:-$BOX_ROOT}"
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 EMBED_DIR="/opt/fleetcrown/embed"
 APP_ENV="/opt/fleetcrown/app/.env"

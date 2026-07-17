@@ -1,5 +1,6 @@
 import type { OrchestrationTaskRequest } from "@/lib/orchestration";
 import { runOpenClawIntent } from "@/lib/orchestration/runners/openclaw";
+import { ORCH_STATE } from "@/lib/orchestration/contract";
 import { parseOrchestrationSummary } from "@/lib/orchestration/summary";
 import { updateOrchestrationRun } from "@/db/queries/orchestration-runs";
 
@@ -26,7 +27,7 @@ export async function executeOpenClawRun(runId: string, request: OrchestrationTa
     return { ok: result.ok, summary: summary ?? null, error: result.error ?? null };
   } catch (error) {
     await updateOrchestrationRun(runId, {
-      state: "error",
+      state: ORCH_STATE.ERROR,
       payload: {
         projectKey: request.projectKey,
         projectPath: request.projectPath,

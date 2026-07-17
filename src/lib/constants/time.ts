@@ -27,3 +27,21 @@ export const RATE_LIMIT_WINDOW_SHORT_MS = 15 * MINUTE_MS;
 /** Auth-route rate-limit window for sensitive account mutations
  *  (register, password change). */
 export const RATE_LIMIT_WINDOW_LONG_MS = HOUR_MS;
+
+/** Outbound HTTP — quick API probes (GitHub metadata, OAuth token exchange). */
+export const HTTP_TIMEOUT_SHORT_MS = 10 * SECOND_MS;
+
+/** Outbound HTTP — default budget for a standard external call. */
+export const HTTP_TIMEOUT_MS = 15 * SECOND_MS;
+
+/** Outbound HTTP — LLM completions and other slow endpoints. */
+export const HTTP_TIMEOUT_LONG_MS = 30 * SECOND_MS;
+
+/** Outbound HTTP — the longest LLM calls (vision, plan generation). */
+export const HTTP_TIMEOUT_XL_MS = 45 * SECOND_MS;
+
+/** Subprocess default — local CLI tools and git probes. */
+export const EXEC_TIMEOUT_MS = 15 * SECOND_MS;
+
+/** Subprocess — clones, pushes, builds, and other long git operations. */
+export const EXEC_TIMEOUT_LONG_MS = 2 * MINUTE_MS;

@@ -27,7 +27,7 @@ import type { UpdateState } from "./types";
  * user can hide it and the banner only re-appears on the next version.
  */
 
-const DISMISS_KEY = "fleetcrown:update-banner-dismissed-version";
+import { UPDATE_BANNER_DISMISS_KEY as DISMISS_KEY } from "@/config/brand-storage";
 
 export function UpdateBanner() {
   const [state, setState] = useState<UpdateState | null>(null);

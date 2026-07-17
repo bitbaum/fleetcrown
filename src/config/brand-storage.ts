@@ -28,3 +28,11 @@ export const LEGACY_PALETTE_RECENT_STORAGE_KEY = "cockpit.palette.recent";
 
 /** Web push notification tag prefix. */
 export const PUSH_TAG_PREFIX = `${APP_SLUG}:`;
+
+/** Desktop update-banner dismissal (value = dismissed version). */
+export const UPDATE_BANNER_DISMISS_KEY = `${APP_SLUG}:update-banner-dismissed-version`;
+/** One-shot guard so the desktop token auto-mint runs once per session. */
+export const AUTO_MINT_SESSION_FLAG = `${APP_SLUG}:auto-mint-attempted-v1`;
+/** Control AttentionBar dismissed-failure ids (pre-slug literal kept — changing
+ *  the key would resurface every already-dismissed failure). */
+export const CONTROL_DISMISSED_FAILURES_KEY = "control:dismissed-failures";

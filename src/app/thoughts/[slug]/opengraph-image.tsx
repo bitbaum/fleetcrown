@@ -2,6 +2,7 @@ import { ImageResponse } from "next/og";
 import { getThought } from "@/lib/thoughts-content";
 import { APP_NAME } from "@/config/brand";
 import { BRAND_MARK, spiralPathD } from "@/config/brand-mark";
+import { PALETTE } from "@/lib/palette";
 
 // Per-essay OG image: dark 1200×630 canvas with a small brand stamp top-left,
 // the essay title large, summary as 2-line clamp, and a footer row showing
@@ -31,8 +32,8 @@ export default async function EssayOGImage({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            background: "#0a0a0a",
-            color: "#a1a1aa",
+            background: PALETTE.dark.surfacePage,
+            color: PALETTE.zinc[400],
             fontSize: 48,
             fontFamily: "sans-serif",
           }}
@@ -60,8 +61,8 @@ export default async function EssayOGImage({
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between",
-          background: "#0a0a0a",
-          color: "#ededed",
+          background: PALETTE.dark.surfacePage,
+          color: PALETTE.dark.textPrimary,
           padding: "64px 80px",
           fontFamily: "sans-serif",
         }}
@@ -72,14 +73,14 @@ export default async function EssayOGImage({
             <path
               d={spiralPathD()}
               fill="none"
-              stroke="#ededed"
+              stroke={PALETTE.dark.textPrimary}
               strokeWidth={BRAND_MARK.strokeWidth}
               strokeLinecap="round"
               strokeLinejoin="round"
             />
           </svg>
           <span style={{ fontSize: 24, fontWeight: 600, letterSpacing: "-0.01em" }}>{APP_NAME}</span>
-          <span style={{ fontSize: 20, color: "#52525b", marginLeft: 4 }}>· Essay</span>
+          <span style={{ fontSize: 20, color: PALETTE.zinc[600], marginLeft: 4 }}>· Essay</span>
         </div>
 
         {/* Title + summary */}
@@ -102,7 +103,7 @@ export default async function EssayOGImage({
             <div
               style={{
                 fontSize: 28,
-                color: "#a1a1aa",
+                color: PALETTE.zinc[400],
                 lineHeight: 1.4,
                 display: "-webkit-box",
                 WebkitLineClamp: 2,
@@ -117,10 +118,10 @@ export default async function EssayOGImage({
 
         {/* Footer meta — published date, read time, tags */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 24 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 16, fontSize: 22, color: "#a1a1aa" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 16, fontSize: 22, color: PALETTE.zinc[400] }}>
             {metaParts.map((part, i) => (
               <div key={i} style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                {i > 0 && <span style={{ color: "#52525b" }}>·</span>}
+                {i > 0 && <span style={{ color: PALETTE.zinc[600] }}>·</span>}
                 <span>{part}</span>
               </div>
             ))}
@@ -132,8 +133,8 @@ export default async function EssayOGImage({
                   key={tag}
                   style={{
                     fontSize: 18,
-                    color: "#a1a1aa",
-                    border: "1px solid #3f3f46",
+                    color: PALETTE.zinc[400],
+                    border: `1px solid ${PALETTE.zinc[700]}`,
                     borderRadius: 999,
                     padding: "6px 14px",
                   }}

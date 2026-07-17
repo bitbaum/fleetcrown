@@ -35,7 +35,8 @@
 #   bash scripts/hetzner/migrate-box-runner-to-fcrunner.sh --revert   # back to ubuntu
 set -euo pipefail
 
-HOST="${FLEETCROWN_BOX_HOST:-root@167.233.22.31}"
+. "$(dirname "${BASH_SOURCE[0]}")/_box-env.sh"   # SSOT: HETZNER_IP, BOX_ROOT, BOX_UBUNTU
+HOST="${FLEETCROWN_BOX_HOST:-$BOX_ROOT}"
 MODE="${1:-apply}"
 case "$MODE" in --dry-run) MODE=dry ;; --revert) MODE=revert ;; "" ) MODE=apply ;; --*) echo "unknown flag: $MODE" >&2; exit 2 ;; esac
 
@@ -136,18 +137,18 @@ fi
 
 echo "== fcrunner migration — APPLY =="
 run_remote apply
-cat <<'NEXT'
+cat <<NEXT
 
 ✓ box-runner migrated to fcrunner.
 
 MUST DO NEXT (or the next deploy reverts ownership to ubuntu):
   Set FLEETCROWN_RUNNER_OWNER=fcrunner wherever deploy-hetzner.sh runs — add it
   to the push-deploy block in .husky/pre-push, e.g.
-      env FLEETCROWN_RUNNER_OWNER=fcrunner bash scripts/deploy-hetzner.sh --ref "$SHA"
+      env FLEETCROWN_RUNNER_OWNER=fcrunner bash scripts/deploy-hetzner.sh --ref "\$SHA"
 
 VERIFY BEFORE TRUSTING (the claude-auth-after-copy risk):
   1. Dispatch a small task from /control to a project.
-  2. ssh root@167.233.22.31 journalctl -u fleetcrown-box-runner -f
+  2. ssh $BOX_ROOT journalctl -u fleetcrown-box-runner -f
   3. Confirm the runner clones into /home/fcrunner/dev, the agent AUTHENTICATES
      (no login prompt), runs, and reports back. If claude asks to log in, copy
      ubuntu's creds: cp -a /home/ubuntu/.claude/credentials.json /home/fcrunner/.claude/ && chown fcrunner:fcrunner /home/fcrunner/.claude/credentials.json

@@ -22,7 +22,7 @@ import type { FleetRunnerBridge } from "./types";
  * from Settings → Agent tokens, which is the path used when the app is
  * open in a normal browser.
  */
-const SESSION_FLAG = "fleetcrown:auto-mint-attempted-v1";
+import { AUTO_MINT_SESSION_FLAG as SESSION_FLAG } from "@/config/brand-storage";
 
 function hasAutoMintBridge(
   b: Window["fleetRunner"],

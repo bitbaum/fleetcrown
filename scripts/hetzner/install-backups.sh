@@ -7,7 +7,7 @@
 # the 12 apps in apps.conf), so they're box-wide infra and live here next to
 # sync-infra.sh / verify.sh.
 #
-# What it installs on the box (167.233.22.31):
+# What it installs on the box (address SSOT: scripts/hetzner/_box-env.sh):
 #   /opt/backups/pg-backup.sh            nightly dump-all-databases runner
 #   /etc/systemd/system/pg-backup.{service,timer}   runs daily at 02:30 UTC
 #   restic (apt)                         for the optional off-box push
@@ -25,7 +25,8 @@
 
 set -euo pipefail
 
-HOST="root@${HETZNER_IP:-167.233.22.31}"
+. "$(dirname "${BASH_SOURCE[0]}")/_box-env.sh"   # SSOT: HETZNER_IP, BOX_ROOT, BOX_UBUNTU
+HOST="$BOX_ROOT"
 
 ssh -o BatchMode=yes "$HOST" 'bash -s' <<'REMOTE'
 set -euo pipefail
@@ -136,7 +137,7 @@ echo "--- /opt/backups/pg ---"
 ls -lh /opt/backups/pg | tail -n +2
 REMOTE
 
-cat <<'NEXT'
+cat <<NEXT
 
 ────────────────────────────────────────────────────────────────────────────
 Phase 1 is LIVE: nightly dump of every database to /opt/backups/pg (02:30 UTC).
@@ -151,7 +152,7 @@ But that's the same disk — to survive disk loss, enable off-box (Phase 2):
    (or paste root@bitbaum's ~/.ssh/id_*.pub into the Storage Box → SSH keys UI)
 4. On the box, create the config (replace uXXXXXX + pick a strong password,
    and SAVE the password somewhere safe — losing it means losing the backups):
-     ssh root@167.233.22.31
+     ssh $BOX_ROOT
      cat > /opt/backups/restic.env <<EOF
      export RESTIC_REPOSITORY="sftp:uXXXXXX@uXXXXXX.your-storagebox.de:/pg"
      export RESTIC_PASSWORD="<a-strong-passphrase>"
@@ -160,8 +161,8 @@ But that's the same disk — to survive disk loss, enable off-box (Phase 2):
 5. Prove it:  /opt/backups/pg-backup.sh   # should print "restic push ok"
 
 Restore drill (do this once so you trust it):
-     restic -r "$RESTIC_REPOSITORY" snapshots
-     restic -r "$RESTIC_REPOSITORY" restore latest --target /tmp/restore
+     restic -r "\$RESTIC_REPOSITORY" snapshots
+     restic -r "\$RESTIC_REPOSITORY" restore latest --target /tmp/restore
      sudo -u postgres pg_restore -d <db> --clean /tmp/restore/opt/backups/pg/<db>-*.dump
 ────────────────────────────────────────────────────────────────────────────
 NEXT

@@ -3,6 +3,7 @@ import { runTool } from "@/lib/tools";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { callGroqText } from "@/lib/groq";
 import { getApiUserId } from "@/lib/session";
+import { HTTP_TIMEOUT_LONG_MS } from "@/lib/constants/time";
 
 const Body = z.object({
   prompts: z.array(z.string().trim().min(1)).min(2),
@@ -17,7 +18,7 @@ type AgentResult = {
 // ── Groq (fast path — seconds, free tier) ──────────────────────────────────
 // Set GROQ_API_KEY in .env.local to enable. Falls back to openclaw agent.
 async function mergeViaGroq(message: string): Promise<string> {
-  return callGroqText(message, { maxTokens: 500, temperature: 0.3, timeoutMs: 30_000 });
+  return callGroqText(message, { maxTokens: 500, temperature: 0.3, timeoutMs: HTTP_TIMEOUT_LONG_MS });
 }
 
 // ── openclaw fallback (Claude via gateway, ~20-30s) ────────────────────────

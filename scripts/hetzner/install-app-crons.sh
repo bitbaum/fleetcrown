@@ -17,7 +17,8 @@
 # Usage: bash scripts/hetzner/install-app-crons.sh
 set -euo pipefail
 
-HOST="root@${HETZNER_IP:-167.233.22.31}"
+. "$(dirname "${BASH_SOURCE[0]}")/_box-env.sh"   # SSOT: HETZNER_IP, BOX_ROOT, BOX_UBUNTU
+HOST="$BOX_ROOT"
 
 ssh -o BatchMode=yes "$HOST" 'bash -s' <<'REMOTE'
 set -euo pipefail

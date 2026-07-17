@@ -7,6 +7,7 @@ import { secondsAgo, formatElapsedSeconds } from "@/lib/dates";
 import { getIntentLabel, getAdapterLabel } from "@/config/control-intents";
 import type { ProjectState } from "@/lib/control-types";
 import { MINUTE_MS } from "@/lib/constants/time";
+import { ORCH_STATE } from "@/lib/orchestration/contract";
 
 export function ClosedBanner({
   session,
@@ -156,7 +157,7 @@ export function LatestOrchestrationPanel({
 }) {
   const startedMs = run.startedAt ? Date.parse(run.startedAt) : 0;
   const staleRunning =
-    run.state === "running" && startedMs > 0 && nowMs - startedMs > STALE_RUNNING_MS;
+    run.state === ORCH_STATE.RUNNING && startedMs > 0 && nowMs - startedMs > STALE_RUNNING_MS;
   const displayState = staleRunning ? "interrupted" : run.state;
   const stateClass = staleRunning
     ? "ui-tag ui-tag-neutral"
@@ -180,7 +181,7 @@ export function LatestOrchestrationPanel({
   // mode the control loop must catch.
   const commitRaw = run.summary?.commit?.trim() ?? "";
   const committed = commitRaw && commitRaw.toLowerCase() !== "none";
-  const claimedWorkNoCommit = run.state === "done" && summaryDone.length > 0 && !committed;
+  const claimedWorkNoCommit = run.state === ORCH_STATE.DONE && summaryDone.length > 0 && !committed;
 
   // Loop-control truthful state (persisted via the SSOT summary build): a blocked
   // agent isn't failing OR succeeding — it's stuck waiting, and a high no-op count

@@ -146,10 +146,7 @@ export async function RecentRunsCard() {
                         prompt={`Project: ${run.projectKey}\nAgent recommended next step: ${next}\n\nPlease help me execute this next step.`}
                         title="Ask Loki to execute this next step"
                       />
-                      <ControlDispatchButton
-                        tab={run.projectKey}
-                        prompt={`Project: ${run.projectKey}\nPrevious run: ${done}\nNext step: ${next}\n\nPlease execute this next step in the codebase.`}
-                      />
+                      <ControlDispatchButton tab={run.projectKey} />
                     </div>
                   )}
                 </div>

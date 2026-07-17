@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { GitBranch, CheckCircle, XCircle, Loader2, Clock, ChevronDown } from "lucide-react";
 import { useFetch } from "@/hooks/use-fetch";
+import { REFRESH_CADENCE } from "@/config/refresh";
 import { FetchErrorState } from "@/components/ui/fetch-error-state";
 import type { ProjectGridRow } from "./ProjectGridCard";
 
@@ -30,7 +31,7 @@ function repoSlugFromUrl(url: string | null | undefined): string | null {
 export function ProjectsCiPanel({ projects }: { projects: ProjectGridRow[] }) {
   const { data, loading, error, refetch } = useFetch<{ repos: RepoStatus[]; error?: string; runtimeOnly?: boolean }>(
     "/api/github",
-    { intervalMs: 2 * 60_000, timeoutMs: 35_000 },
+    { intervalMs: REFRESH_CADENCE.projectsCi, timeoutMs: 35_000 },
   );
   const repos = useMemo(() => data?.repos ?? [], [data?.repos]);
 
