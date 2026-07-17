@@ -3,7 +3,7 @@
  * Time is the information architecture: Done (changelog + runs), Now
  * (live state + brief), Next (resume state + goals). Everything renders
  * from the ProjectDossier SSOT assembly — no client fetches, no parallel
- * state; the quick-edit drawer (/projects?open=) stays the mutation surface.
+ * state. The canonical project workspace composes these sections with editors.
  */
 import Link from "next/link";
 import type { ProjectDossier, ProjectRunRow } from "@/db/queries/project-dossier";
@@ -43,7 +43,15 @@ function runDuration(run: ProjectRunRow): string | null {
 }
 
 /** NOW — live session state + the latest handoff's health signals + brief. */
-export function NowSection({ dossier, interactive = true }: { dossier: ProjectDossier; interactive?: boolean }) {
+export function NowSection({
+  dossier,
+  interactive = true,
+  showBrief = true,
+}: {
+  dossier: ProjectDossier;
+  interactive?: boolean;
+  showBrief?: boolean;
+}) {
   const { state, detail } = dossier;
   const attrs = detail.attrs;
   const latest = latestDevLog(dossier);
@@ -65,12 +73,12 @@ export function NowSection({ dossier, interactive = true }: { dossier: ProjectDo
   const liveActive = !stale && !!state?.agentRunning;
 
   // Stack is shown in the Technology card below — don't repeat it here.
-  const briefRows: Array<[string, string]> = (
+  const briefRows: Array<[string, string]> = showBrief ? (
     [
       ["Mission", attrs.mission],
       ["Status", attrs.status],
     ] as Array<[string, string | undefined]>
-  ).filter((row): row is [string, string] => Boolean(row[1]));
+  ).filter((row): row is [string, string] => Boolean(row[1])) : [];
 
   const goalMaxTurns = (() => {
     const n = parseInt(attrs.goal_max_turns ?? "", 10);
@@ -99,27 +107,37 @@ export function NowSection({ dossier, interactive = true }: { dossier: ProjectDo
           </p>
         )}
       </div>
-      <dl className="space-y-2 border-t border-border-subtle pt-3">
-        {briefRows.map(([label, value]) => (
-          <div key={label}>
-            <dt className="ui-micro-label">{label}</dt>
-            <dd className="text-sm leading-relaxed text-text-secondary">{value}</dd>
-          </div>
-        ))}
-        {interactive && (
-          <GoalEditor
-            projectKey={detail.project.name}
-            definitionOfDone={attrs.definition_of_done ?? null}
-            maxTurns={goalMaxTurns}
-          />
-        )}
-      </dl>
+      {(briefRows.length > 0 || interactive) && (
+        <dl className="space-y-2 border-t border-border-subtle pt-3">
+          {briefRows.map(([label, value]) => (
+            <div key={label}>
+              <dt className="ui-micro-label">{label}</dt>
+              <dd className="text-sm leading-relaxed text-text-secondary">{value}</dd>
+            </div>
+          ))}
+          {interactive && (
+            <GoalEditor
+              projectKey={detail.project.name}
+              definitionOfDone={attrs.definition_of_done ?? null}
+              maxTurns={goalMaxTurns}
+            />
+          )}
+        </dl>
+      )}
     </SectionShell>
   );
 }
 
 /** NEXT — the resume state from the latest handoff + linked goals. */
-export function NextSection({ dossier, interactive = true }: { dossier: ProjectDossier; interactive?: boolean }) {
+export function NextSection({
+  dossier,
+  interactive = true,
+  showGoals = true,
+}: {
+  dossier: ProjectDossier;
+  interactive?: boolean;
+  showGoals?: boolean;
+}) {
   const latest = latestDevLog(dossier);
   const goals = dossier.detail.linkedGoals;
   // A stale handoff's "next" is a week-old verification chore (and it's already
@@ -143,7 +161,7 @@ export function NextSection({ dossier, interactive = true }: { dossier: ProjectD
       ) : (
         <p className="text-sm text-text-muted">No queued next step — dispatch one from Control.</p>
       )}
-      {goals.length > 0 && (
+      {showGoals && goals.length > 0 && (
         <div className="space-y-2.5 border-t border-border-subtle pt-3">
           {goals.map((goal) => (
             <div key={goal.id} className="space-y-1">
@@ -187,13 +205,13 @@ export function DoneSection({ dossier }: { dossier: ProjectDossier }) {
       )}
       {entries.length > 0 && (
         <div className="space-y-2">
-          <p className="ui-micro-label">Changelog</p>
+          <p className="text-xs font-medium text-text-tertiary">Changelog</p>
           <DevLogList entries={entries} />
         </div>
       )}
       {runs.length > 0 && (
         <div className="space-y-2 border-t border-border-subtle pt-3">
-          <p className="ui-micro-label">Run history</p>
+          <p className="text-xs font-medium text-text-tertiary">Run history</p>
           <ul className="space-y-1.5">
             {shownRuns.map((run) => {
               const commit = run.summary?.commit && run.summary.commit !== "none" ? run.summary.commit : null;

@@ -5,6 +5,7 @@ import { readIdParam, readJsonBody } from "@/lib/api/route-helpers";
 import { extractRoadmap } from "@/lib/project-brief";
 import { getProjectCore } from "@/db/queries/projects";
 import { createGoal } from "@/db/queries/goals";
+import { scheduleProjectProfileReindexByEntityId } from "@/lib/rag/reindex-project-profile";
 
 // Spec → build roadmap. The user pastes a product/engineering spec; the model
 // decomposes it into an ordered set of milestones, which we create as project
@@ -58,5 +59,6 @@ export async function POST(
   }
 
   if (created.length === 0) return NextResponse.json({ error: "Could not create goals for this project." }, { status: 500 });
+  scheduleProjectProfileReindexByEntityId(userId, idOrResp);
   return NextResponse.json({ ok: true, created });
 }

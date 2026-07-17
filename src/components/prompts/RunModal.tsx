@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Check, Copy, FolderOpen, Loader2, X, Zap } from "lucide-react";
-import { ProjectDetail } from "@/components/projects/ProjectDetail";
 import type { PromptTemplate } from "@/config/prompt-library";
 import type { Project } from "./types";
 import { Modal } from "@/components/ui/modal";
@@ -22,7 +22,6 @@ export function RunModal({
     template.scope === "global" ? "__global__" : "",
   );
   const [projectName, setProjectName] = useState("");
-  const [showProjectDetail, setShowProjectDetail] = useState(false);
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -88,12 +87,12 @@ export function RunModal({
               <div className="mb-2 flex items-center justify-between">
                 <label className="ui-kicker text-text-tertiary">Project</label>
                 {projectId && projectId !== "__global__" && (
-                  <button
-                    onClick={() => setShowProjectDetail(true)}
+                  <Link
+                    href={`/projects/${projectId}`}
                     className="flex items-center gap-1 text-sm font-medium text-accent-text transition-colors hover:text-accent-hover"
                   >
                     <FolderOpen className="h-4 w-4" /> View Project
-                  </button>
+                  </Link>
                 )}
               </div>
               <select
@@ -161,14 +160,6 @@ export function RunModal({
           </button>
         </div>
       </Modal>
-
-      {/* Project detail overlay */}
-      {showProjectDetail && projectId && projectId !== "__global__" && (
-        <ProjectDetail
-          projectId={projectId}
-          onClose={() => setShowProjectDetail(false)}
-        />
-      )}
     </>
   );
 }

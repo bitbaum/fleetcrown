@@ -84,8 +84,6 @@ export function buildCardProps(deps: Deps) {
         throw err;
       }
     },
-    onDeleted: () => { deps.refresh(true); },
-    onProfileSaved: () => { deps.refresh(true); },
     onLaunch: () => deps.openLaunchModal(project),
     runtimeAvailable: deps.runtimeAvailable,
     runtimeStateKnown: deps.runtimeStateKnown,

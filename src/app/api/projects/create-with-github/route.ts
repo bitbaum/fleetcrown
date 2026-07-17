@@ -15,6 +15,7 @@ import { createProject } from "@/db/queries/projects";
 import { SOURCE_FLEETCROWN_UI } from "@/lib/constants";
 import { TEMPLATES, renderTemplate } from "@/lib/project-templates";
 import { provisionGithubRepo } from "@/lib/github-provision";
+import { scheduleProjectProfileReindexByEntityId } from "@/lib/rag/reindex-project-profile";
 
 export const maxDuration = 60;
 
@@ -62,6 +63,7 @@ export async function POST(req: NextRequest) {
     const project = await createProject(userId, { name, description: description ?? undefined, gitUrl: repo.html_url }, SOURCE_FLEETCROWN_UI);
     projectId = project.id;
     projectName = project.name;
+    scheduleProjectProfileReindexByEntityId(userId, project.id);
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
     // The GitHub repo IS created; we just couldn't add the FC row. Surface the URL.

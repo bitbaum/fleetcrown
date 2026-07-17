@@ -1,19 +1,13 @@
-import Link from "next/link";
-import { ExternalLink, FileText, GitBranch, Globe, Lock, MessageSquare, Target } from "lucide-react";
+import { FileText, GitBranch, Globe, Lock, Target } from "lucide-react";
 import type { ProjectDossier } from "@/db/queries/project-dossier";
 import type { ProjectShare } from "@/db/schema/project-shares";
-import { OutcomeStreak } from "@/components/control/OutcomeStreak";
 import { DoneSection, NextSection, NowSection } from "@/components/projects/ProjectDossierSections";
 import { getProjectLinks } from "@/components/projects/project-detail-types";
 import { summarizeDescription } from "@/lib/project-display";
 import { isResourceVisibleInShare } from "@/lib/project-share-visibility";
-import { NAV } from "@/config/navigation";
 
-type Mode = "private" | "shared";
-
-function visibleResources(dossier: ProjectDossier, mode: Mode, share?: ProjectShare | null) {
+function visibleResources(dossier: ProjectDossier, share?: ProjectShare | null) {
   const resources = dossier.detail.resources ?? [];
-  if (mode === "private") return resources;
   if (!share?.includeResources) return [];
   return resources.filter((r) => isResourceVisibleInShare(r, share.audience as "advisor" | "team" | "public"));
 }
@@ -24,16 +18,14 @@ function resourceLabel(kind: string): string {
 
 export function ProjectDossierView({
   dossier,
-  mode,
   share,
   actions,
 }: {
   dossier: ProjectDossier;
-  mode: Mode;
   share?: ProjectShare | null;
   actions?: React.ReactNode;
 }) {
-  const { detail, userProject, outcomes } = dossier;
+  const { detail, userProject } = dossier;
   const attrs = detail.attrs;
   const name = detail.project.name;
   const links = getProjectLinks(attrs, userProject?.gitUrl ?? detail.project.gitUrl);
@@ -42,16 +34,11 @@ export function ProjectDossierView({
     summarizeDescription(detail.project.description) ??
     summarizeDescription(attrs.description) ??
     summarizeDescription(attrs.mission);
-  // Run-outcome streak = RECENT run health only. Without this, a fleet of
-  // two-week-old outage timeouts painted the header with ten ✗ that flatly
-  // contradicted the maturity badge.
-  const STREAK_WINDOW_MS = 72 * 60 * 60 * 1000;
-  const recentOutcomes = outcomes.filter((o) => o.finishedAt && dossier.builtAtMs - o.finishedAt.getTime() < STREAK_WINDOW_MS);
-  const resources = visibleResources(dossier, mode, share);
-  const showRepo = mode === "private" || share?.includeRepo;
-  const showLive = mode === "private" || share?.includeLiveUrl;
-  const showRoadmap = mode === "private" || share?.includeRoadmap;
-  const showChangelog = mode === "private" || share?.includeChangelog;
+  const resources = visibleResources(dossier, share);
+  const showRepo = share?.includeRepo;
+  const showLive = share?.includeLiveUrl;
+  const showRoadmap = share?.includeRoadmap;
+  const showChangelog = share?.includeChangelog;
   const business = [
     ["Problem", attrs.problem],
     ["Solution", attrs.solution],
@@ -62,9 +49,7 @@ export function ProjectDossierView({
     ["Stack", attrs.stack ?? userProject?.stack],
     ["Architecture", attrs.architecture],
     ["Conventions", attrs.conventions],
-    // Private view edits the Definition of done in the Status-quo card, so don't
-    // repeat it here; shared view has no editor, so show it read-only.
-    ["Definition of done", mode === "shared" ? attrs.definition_of_done : undefined],
+    ["Definition of done", attrs.definition_of_done],
   ] as Array<[string, string | undefined]>).filter(([, v]) => v?.trim()) as Array<[string, string]>;
 
   return (
@@ -75,10 +60,7 @@ export function ProjectDossierView({
             <div className="mb-2 flex flex-wrap items-center gap-2">
               {attrs.status && <span className="ui-tag ui-tag-neutral">{attrs.status}</span>}
               {attrs.maturity && <span className="ui-tag ui-tag-neutral">{attrs.maturity}</span>}
-              {mode === "shared" && <span className="ui-tag ui-tag-neutral gap-1"><Lock className="h-3 w-3" /> Shared dossier</span>}
-              {recentOutcomes.length > 0 && mode === "private" && (
-                <OutcomeStreak outcomes={recentOutcomes.map((o) => o.outcome)} projectKey={name} />
-              )}
+              <span className="ui-tag ui-tag-neutral gap-1"><Lock className="h-3 w-3" /> Shared dossier</span>
             </div>
             <h1 className="text-3xl font-semibold tracking-normal text-text-primary">{name}</h1>
             {description && <p className="mt-3 max-w-2xl text-base leading-relaxed text-text-secondary">{description}</p>}
@@ -97,23 +79,12 @@ export function ProjectDossierView({
               <GitBranch className="h-3.5 w-3.5" /> Repository
             </a>
           )}
-          {mode === "private" && userProject?.orangecatProjectId && (
-            <a href={`https://orangecat.ch/projects/${userProject.orangecatProjectId}`} target="_blank" rel="noopener noreferrer" className="ui-btn-secondary gap-1.5">
-              <ExternalLink className="h-3.5 w-3.5" /> OrangeCat
-            </a>
-          )}
-          {mode === "private" && (
-            <>
-              <Link href={NAV.control.href} className="ui-btn-secondary">Control</Link>
-              <Link href={`/projects?open=${detail.project.id}`} className="ui-btn-secondary">Quick edit</Link>
-            </>
-          )}
         </div>
       </section>
 
       <div className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
-        <NowSection dossier={dossier} interactive={mode === "private"} />
-        {showRoadmap ? <NextSection dossier={dossier} interactive={mode === "private"} /> : (
+        <NowSection dossier={dossier} interactive={false} />
+        {showRoadmap ? <NextSection dossier={dossier} interactive={false} /> : (
           <section className="ui-card-shell p-4 sm:p-5">
             <p className="ui-kicker">Next</p>
             <h2 className="font-medium text-text-primary">Roadmap hidden</h2>
@@ -180,20 +151,6 @@ export function ProjectDossierView({
             ))}
           </div>
         </section>
-      )}
-
-      {mode === "private" && (
-        <Link
-          href={`/loki?project=${encodeURIComponent(name)}`}
-          className="ui-card-shell group flex items-center gap-3 p-4 transition hover:bg-surface-raised sm:p-5"
-        >
-          <MessageSquare className="h-4 w-4 shrink-0 text-accent-text" />
-          <div className="min-w-0 flex-1">
-            <h2 className="font-medium text-text-primary">Discuss {name} with Loki</h2>
-            <p className="text-sm text-text-secondary">A project-scoped chat with the same dossier context your agents get.</p>
-          </div>
-          <ExternalLink className="h-4 w-4 shrink-0 text-text-tertiary transition group-hover:text-text-secondary" aria-hidden />
-        </Link>
       )}
 
       {showChangelog && <DoneSection dossier={dossier} />}

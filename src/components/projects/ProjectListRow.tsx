@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { ChevronRight, ArrowRight } from "lucide-react";
 import { StatusBadge, getHealthSignals } from "./project-badges";
 import { shortProjectStatus } from "@/lib/projects-display";
@@ -9,10 +10,8 @@ import { deriveProjectLoopReadiness } from "@/lib/project-loop-readiness";
 
 export function ProjectListRow({
   project,
-  onOpen,
 }: {
   project: ProjectGridRow;
-  onOpen: () => void;
 }) {
   const { attrs } = project;
   const status = attrs["status"];
@@ -24,9 +23,8 @@ export function ProjectListRow({
   const loopReadiness = deriveProjectLoopReadiness(project);
 
   return (
-    <button
-      type="button"
-      onClick={onOpen}
+    <Link
+      href={`/projects/${project.id}`}
       className={cn(
         "ui-projects-row group flex w-full min-h-11 items-center gap-3",
         signals.length > 0 && "ui-projects-row-flagged",
@@ -36,19 +34,16 @@ export function ProjectListRow({
       <div className="min-w-0 flex-1 text-left">
         <div className="flex min-w-0 items-center gap-2">
           <span className="truncate text-sm font-medium text-text-primary">{project.name}</span>
-          {project.readonly && <span className="ui-kicker shrink-0">team</span>}
+          {project.readonly && <span className="ui-projects-badge shrink-0">Team</span>}
           {statusLabel && <StatusBadge value={statusLabel} />}
-          <span
-            className={cn(
-              "ui-micro-badge hidden rounded-full sm:inline-flex",
-              loopReadiness.tone === "positive"
-                ? "border-status-positive/25 bg-status-positive/[0.08] text-status-positive"
-                : "border-status-warning/30 bg-status-warning/[0.08] text-status-warning",
-            )}
-            title={loopReadiness.description}
-          >
-            {loopReadiness.label}
-          </span>
+          {loopReadiness.state !== "ready" && (
+            <span
+              className="ui-projects-badge hidden border-status-warning/30 bg-status-warning/[0.08] text-status-warning sm:inline-flex"
+              title={loopReadiness.description}
+            >
+              {loopReadiness.label}
+            </span>
+          )}
         </div>
         {line && (
           <p className="mt-0.5 flex items-start gap-1.5 truncate text-xs text-text-tertiary">
@@ -61,6 +56,6 @@ export function ProjectListRow({
         className="h-4 w-4 shrink-0 text-text-muted transition-transform group-hover:translate-x-0.5 group-hover:text-text-secondary"
         aria-hidden="true"
       />
-    </button>
+    </Link>
   );
 }

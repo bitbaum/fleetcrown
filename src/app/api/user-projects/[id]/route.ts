@@ -3,6 +3,7 @@ import { getSessionUserId } from "@/lib/session";
 import { readJsonBody, readIdParam, z } from "@/lib/api/route-helpers";
 import { emptyToUndefined } from "@/lib/validation";
 import { getUserProject, updateUserProject, deleteUserProject } from "@/db/queries/user-projects";
+import { scheduleProjectProfileReindexByEntityId } from "@/lib/rag/reindex-project-profile";
 
 const UpdateBody = z.object({
   name: z.string().trim().min(1).max(120).optional(),
@@ -36,6 +37,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (dataOrResp instanceof NextResponse) return dataOrResp;
   const updated = await updateUserProject(idOrResp, userId, dataOrResp);
   if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (updated.entityProjectId) scheduleProjectProfileReindexByEntityId(userId, updated.entityProjectId);
   return NextResponse.json(updated);
 }
 
@@ -44,6 +46,8 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const idOrResp = await readIdParam(params);
   if (idOrResp instanceof NextResponse) return idOrResp;
+  const project = await getUserProject(idOrResp, userId);
   await deleteUserProject(idOrResp, userId);
+  if (project?.entityProjectId) scheduleProjectProfileReindexByEntityId(userId, project.entityProjectId);
   return NextResponse.json({ ok: true });
 }

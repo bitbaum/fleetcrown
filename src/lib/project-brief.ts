@@ -16,15 +16,14 @@ import { scheduleProjectProfileReindexByEntityId } from "@/lib/rag/reindex-proje
  * want the project to be in free form — or we read the project's own README —
  * and the model fills the profile. The output lands in the exact same SSOT
  * the form would write to: entities.description + the attributes table, so
- * everything downstream (ProjectOverviewTab, control cards, dispatch context)
+ * everything downstream (project workspace, control cards, dispatch context)
  * sees it with zero new storage.
  *
  * Both intake routes (/api/projects/[id]/brief for free text,
  * /api/projects/[id]/enrich for repo READMEs) funnel through here.
  */
 
-/** Profile fields the extractor may fill. Mirrors the suggested/reserved
- *  attribute keys ProjectOverviewTab already renders. */
+/** Profile fields the extractor may fill. Mirrors the canonical workspace fields. */
 const FIELD_LIMIT = 500;
 
 export const ExtractedProfileSchema = z.object({

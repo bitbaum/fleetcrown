@@ -79,15 +79,11 @@ export function ProjectsSummary({
           );
         })}
       </div>
-      <p className="shrink-0 text-xs text-text-tertiary">
-        {filtered ? (
-          <>
-            <span className="font-medium text-text-secondary">{resultCount}</span> of {totalCount}
-          </>
-        ) : (
-          <>{totalCount} projects</>
-        )}
-      </p>
+      {filtered && (
+        <p className="shrink-0 text-xs text-text-tertiary">
+          <span className="font-medium text-text-secondary">{resultCount}</span> of {totalCount}
+        </p>
+      )}
     </div>
   );
 }

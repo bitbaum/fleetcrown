@@ -40,5 +40,6 @@ export async function DELETE(
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
   await deleteEntityAttribute(userId, idOrResp, dataOrResp.key);
+  scheduleProjectProfileReindexByEntityId(userId, idOrResp);
   return NextResponse.json({ ok: true });
 }

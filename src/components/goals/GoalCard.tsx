@@ -156,7 +156,7 @@ export function GoalCard({
             {goal.entityName && goal.entityId && (
               <div className="flex items-center gap-2 mt-1">
                 <Link
-                  href={`/projects?open=${goal.entityId}`}
+                  href={`/projects/${goal.entityId}`}
                   className="flex items-center gap-1 hover:opacity-80 transition-opacity"
                   title="Open project"
                 >

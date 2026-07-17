@@ -2245,7 +2245,7 @@
   }
   /* Dashed-border "add" placeholder chip — click-to-add inline affordance */
   .ui-add-chip {
-    @apply text-micro text-text-muted hover:text-text-secondary transition-colors border border-dashed border-border-default rounded px-1.5 py-0.5;
+    @apply rounded border border-dashed border-border-default px-2 py-1 text-xs text-text-muted transition-colors hover:text-text-secondary;
   }
   /* Small meta badge pill (scope, schedule indicator, etc.) */
   .ui-badge {
@@ -2460,7 +2460,7 @@
     @apply sticky top-0 z-10 -mx-4 border-b border-border-subtle bg-surface-page/95 px-4 pb-3 pt-0 backdrop-blur-sm sm:-mx-0 sm:rounded-2xl sm:border sm:px-4 sm:pb-4;
   }
   .ui-projects-section-label {
-    @apply text-micro font-semibold uppercase tracking-wider text-text-muted;
+    @apply text-xs font-semibold text-text-tertiary;
   }
   .ui-projects-list {
     @apply flex flex-col overflow-hidden rounded-2xl border border-border-subtle bg-surface-base;
@@ -2494,7 +2494,10 @@
     @apply border-accent-primary/40 bg-accent-muted text-text-primary ring-1 ring-accent-primary/30;
   }
   .ui-projects-filter-count {
-    @apply rounded-full bg-surface-overlay px-1.5 py-0.5 font-mono text-micro text-text-tertiary;
+    @apply rounded-full bg-surface-overlay px-1.5 py-0.5 font-mono text-xs text-text-tertiary;
+  }
+  .ui-projects-badge {
+    @apply inline-flex items-center rounded border border-border-subtle px-2 py-0.5 text-xs font-medium text-text-secondary;
   }
   .ui-projects-toolbar {
     @apply flex flex-col gap-3 sm:flex-row sm:items-center;
@@ -2541,19 +2544,6 @@
     @apply flex items-center justify-between gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-surface-raised;
   }
 
-  /* Project profile drawer — action-first hierarchy */
-  .ui-project-drawer-panel {
-    @apply overflow-hidden rounded-xl border border-border-subtle bg-surface-base;
-  }
-  .ui-project-drawer-panel-summary {
-    @apply flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-medium text-text-primary transition-colors hover:bg-surface-raised;
-  }
-  .ui-project-drawer-panel-summary::-webkit-details-marker {
-    display: none;
-  }
-  .ui-project-drawer-panel-body {
-    @apply space-y-3 border-t border-border-subtle px-4 py-3;
-  }
   .ui-project-action-stack {
     @apply space-y-3;
   }

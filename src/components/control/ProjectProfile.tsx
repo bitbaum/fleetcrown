@@ -1,24 +1,19 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import Link from "next/link";
 import { ExternalLink, GitBranch, Loader2, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFetch } from "@/hooks/use-fetch";
 import { patchJson } from "@/lib/api/fetch";
 import type { AgentPrompt } from "@/app/api/prompts/agent/route";
 import type { ProjectState } from "@/lib/control-types";
-import type { DevLogEntry, UserProject } from "@/db/schema/user-projects";
+import type { UserProject } from "@/db/schema/user-projects";
 import {
   DIMENSION_META,
-  MetaSection,
   DimensionSection,
 } from "./project-profile-sections";
-import {
-  NotesSection,
-  DevLogSection,
-  RemoveSection,
-  QuickProfileForm,
-} from "./project-profile-helpers";
+import { NotesSection } from "./project-profile-helpers";
 import { buildSessionHandoffFromProjectSession, SessionHandoff } from "./SessionHandoff";
 
 type AgentEntry = { id: string; label: string; modelSuggestions: string[] };
@@ -32,8 +27,17 @@ function ProjectContextSummary({ project }: { project: ProjectState }) {
   return (
     <div className="border-t border-border-subtle px-4 py-4 sm:px-5">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <p className="ui-kicker text-accent-text">Project context</p>
-        {profile?.url && (
+        <p className="ui-kicker text-accent-text">Run context</p>
+        <div className="flex flex-wrap items-center gap-3">
+          {project.projectId && (
+            <Link
+              href={`/projects/${project.projectId}`}
+              className="inline-flex min-h-9 items-center gap-1 text-xs font-medium text-accent-text hover:underline"
+            >
+              Full project profile <ExternalLink className="h-3 w-3" />
+            </Link>
+          )}
+          {profile?.url && (
           <a
             href={profile.url.startsWith("http") ? profile.url : `https://${profile.url}`}
             target="_blank"
@@ -42,7 +46,8 @@ function ProjectContextSummary({ project }: { project: ProjectState }) {
           >
             Open product <ExternalLink className="h-3 w-3" />
           </a>
-        )}
+          )}
+        </div>
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">
@@ -106,8 +111,6 @@ export function ProjectProfile({
   onSetAgent,
   onFillPrompt,
   onRunPrompt,
-  onDeleted,
-  onProfileSaved,
 }: {
   project: ProjectState;
   globalAdapter: string;
@@ -121,8 +124,6 @@ export function ProjectProfile({
   /** Send-immediate for prompts flagged sendNow:true in the SSOT (hard_stop
    *  kill switch, etc.). Surfaced as a small ↪ button next to the fill action. */
   onRunPrompt: (prompt: string, agent: string) => Promise<void>;
-  onDeleted?: () => void;
-  onProfileSaved?: () => void;
 }) {
   const [sending, setSending] = useState(false);
   const [localModel, setLocalModel] = useState<string | null>(project.modelPref ?? null);
@@ -144,11 +145,6 @@ export function ProjectProfile({
 
   const { data: allPrompts } = useFetch<AgentPrompt[]>("/api/prompts/agent");
   const { data: userProject } = useFetch<UserProject>(project.id ? `/api/user-projects/${project.id}` : null);
-  const devLogEntries = useMemo<DevLogEntry[]>(() => {
-    if (!userProject?.devLog) return [];
-    return [...userProject.devLog].reverse().slice(0, 12);
-  }, [userProject]);
-
   const dimensionGroups = useMemo(() => {
     if (!allPrompts) return [];
     const byDim = new Map<string, AgentPrompt[]>();
@@ -180,29 +176,6 @@ export function ProjectProfile({
   return (
     <div>
       <ProjectContextSummary project={project} />
-
-      {/* Project metadata editor when profile context is missing */}
-      {project.profile ? (
-        <MetaSection profile={project.profile} />
-      ) : project.projectId && !project.readonly ? (
-        <div className="border-t border-border-subtle">
-          <div className="px-4 pt-3 sm:px-5">
-            <p className="text-xs text-text-tertiary">
-              No profile yet — add context so agents know what this project is about.
-            </p>
-          </div>
-          <QuickProfileForm
-            projectId={project.projectId}
-            onSaved={() => onProfileSaved?.()}
-          />
-        </div>
-      ) : !project.profile ? (
-        <div className="px-4 py-6 text-center sm:px-5">
-          <p className="text-sm text-text-secondary">
-            No profile — add metadata in the Projects view to enable full awareness.
-          </p>
-        </div>
-      ) : null}
 
       {/* Agent selector */}
       <div className="flex flex-col gap-3 border-t border-border-subtle px-4 py-3 sm:flex-row sm:items-center sm:px-5">
@@ -277,12 +250,6 @@ export function ProjectProfile({
       {/* Per-project notes / scratchpad */}
       {project.id && <NotesSection projectId={project.id} project={userProject} />}
 
-      {/* Dev log — appended automatically when beacon sessions end */}
-      {project.id && <DevLogSection entries={devLogEntries} />}
-
-      {project.id && !project.readonly && onDeleted && (
-        <RemoveSection projectId={project.id} onRemoved={onDeleted} />
-      )}
     </div>
   );
 }

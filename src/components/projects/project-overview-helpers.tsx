@@ -1,13 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { ChevronDown, ChevronRight, Loader2, Pencil, Save, Trash2, Terminal, X, History } from "lucide-react";
-import { DevLogList } from "@/components/shared/DevLogList";
-import type { DevLogEntry } from "./project-detail-types";
-import { getJson } from "@/lib/api/fetch";
-import type { SessionData } from "@/app/api/sessions/route";
+import { useState } from "react";
+import { Loader2, Pencil, Save, Trash2, X } from "lucide-react";
 import { setAttr, removeAttr } from "@/lib/api/attrs";
-import { buildSessionHandoffFromBeaconSession, SessionHandoff } from "@/components/control/SessionHandoff";
 
 export function AddAttrInline({
   projectId,
@@ -49,13 +44,13 @@ export function AddAttrInline({
   return (
     <div className="space-y-1.5">
       {error && <p className="ui-error-xs">{error}</p>}
-      <div className="flex gap-2 items-center">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         {!presetKey && (
           <input
             placeholder="key"
             value={key}
             onChange={(e) => setKey(e.target.value)}
-            className="ui-input-inline border-border-subtle w-24 px-2 py-1.5 text-xs text-text-secondary placeholder:text-text-muted"
+            className="ui-input-inline min-h-11 w-full border-border-subtle px-3 py-2 text-base text-text-secondary placeholder:text-text-muted sm:w-32 sm:text-sm"
           />
         )}
         <input
@@ -64,20 +59,23 @@ export function AddAttrInline({
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") onCancel?.(); }}
           autoFocus
-          className="ui-input-inline border-border-subtle flex-1 px-2 py-1.5 text-xs text-text-secondary placeholder:text-text-muted"
+          className="ui-input-inline min-h-11 min-w-0 flex-1 border-border-subtle px-3 py-2 text-base text-text-secondary placeholder:text-text-muted sm:text-sm"
         />
-        {onCancel && (
-          <button onClick={onCancel} className="ui-btn-inline-cancel">
-            <X className="h-3 w-3" />
+        <div className="flex items-center justify-end gap-2">
+          {onCancel && (
+            <button onClick={onCancel} className="ui-icon-action min-h-11 min-w-11" aria-label="Cancel editing">
+              <X className="h-4 w-4" />
+            </button>
+          )}
+          <button
+            onClick={save}
+            disabled={!key.trim() || !value.trim() || saving}
+            className="ui-btn-primary min-h-11 shrink-0 px-4"
+            aria-label="Save field"
+          >
+            {saving ? <Loader2 className="ui-spinner-sm" /> : <Save className="h-4 w-4" />}
           </button>
-        )}
-        <button
-          onClick={save}
-          disabled={!key.trim() || !value.trim() || saving}
-          className="ui-btn-confirm-icon shrink-0"
-        >
-          {saving ? <Loader2 className="ui-spinner-xs" /> : <Save className="h-3 w-3" />}
-        </button>
+        </div>
       </div>
     </div>
   );
@@ -131,110 +129,39 @@ export function AttrRow({
 
   const isUrl = value.startsWith("http");
   return (
-    <div className="group flex items-start gap-3 py-2 border-b border-border-subtle last:border-0">
-      <span className="ui-micro-label w-24 shrink-0 pt-0.5 leading-relaxed">{label}</span>
+    <div className="group flex min-h-14 flex-col gap-1.5 border-b border-border-subtle py-3 last:border-0 sm:flex-row sm:gap-4">
+      <span className="ui-micro-label shrink-0 pt-0.5 leading-relaxed sm:w-32">{label}</span>
       <div className="flex-1 min-w-0 flex items-start gap-1.5">
         {isUrl ? (
           <a href={value} target="_blank" rel="noreferrer"
-            className="text-xs text-text-secondary hover:text-text-primary underline underline-offset-2 break-all leading-relaxed">
+            className="break-all text-sm leading-relaxed text-text-secondary underline underline-offset-2 hover:text-text-primary">
             {value.replace(/^https?:\/\//, "")}
           </a>
         ) : (
-          <span className="text-xs text-text-secondary leading-relaxed break-words">{value}</span>
+          <span className="break-words text-sm leading-relaxed text-text-secondary">{value}</span>
         )}
         {editable && (
           <>
             <button
               onClick={() => setEditing(true)}
-              className="ui-hover-reveal ui-icon-btn p-1 rounded text-text-muted hover:text-text-secondary hover:bg-surface-raised transition-all shrink-0 mt-0.5"
+              className="ui-icon-action -my-2 min-h-10 min-w-10 shrink-0 text-text-muted hover:text-text-secondary"
               title="Edit"
+              aria-label={`Edit ${label}`}
             >
               <Pencil className="h-3 w-3" />
             </button>
             <button
               onClick={deleteAttr}
               disabled={deleting}
-              className="ui-hover-reveal ui-icon-btn p-1 rounded text-text-muted hover:text-status-negative hover:bg-surface-raised transition-all shrink-0 mt-0.5 disabled:opacity-30"
+              className="ui-icon-action -my-2 min-h-10 min-w-10 shrink-0 text-text-muted hover:text-status-negative disabled:opacity-30"
               title="Delete attribute"
+              aria-label={`Delete ${label}`}
             >
               {deleting ? <Loader2 className="ui-spinner-xs" /> : <Trash2 className="h-3 w-3" />}
             </button>
           </>
         )}
       </div>
-    </div>
-  );
-}
-
-export function DevLogSection({ entries }: { entries: DevLogEntry[] }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div>
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 ui-link-muted py-1"
-      >
-        <History className="h-3.5 w-3.5" />
-        Session Log ({entries.length})
-        {open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-      </button>
-      {open && (
-        <div className="mt-2">
-          <DevLogList entries={entries} />
-        </div>
-      )}
-    </div>
-  );
-}
-
-export function ClaudeSession({ tabName }: { tabName: string }) {
-  const [session, setSession] = useState<SessionData | null>(null);
-  const [showRaw, setShowRaw] = useState(false);
-
-  useEffect(() => {
-    getJson<SessionData>(`/api/sessions?project=${encodeURIComponent(tabName)}`)
-      .then((d) => setSession(d))
-      .catch(() => {});
-  }, [tabName]);
-
-  if (!session || !session.found) return null;
-
-  return (
-    <div className="ui-panel overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-border-subtle/50">
-        <div className="flex items-center gap-2 text-text-secondary">
-          <Terminal className="h-3.5 w-3.5" />
-          <span className="text-sm font-medium">Latest agent handoff</span>
-        </div>
-        <button
-          onClick={() => setShowRaw((v) => !v)}
-          className="ui-link-muted"
-        >
-          {showRaw ? "Structured" : "Raw"}
-        </button>
-      </div>
-
-      {showRaw ? (
-        <pre className="px-4 py-3 text-xs text-text-secondary leading-relaxed whitespace-pre-wrap break-words font-mono">
-          {session.raw}
-        </pre>
-      ) : (
-        <div className="p-4">
-          <SessionHandoff
-            data={buildSessionHandoffFromBeaconSession({
-              next: session.next ? [session.next] : [],
-              in_progress: [],
-              done: session.done ? [session.done] : [],
-              tests: session.tests,
-              todos: session.todos,
-              health: session.health,
-            })}
-            surface="plain"
-            microLabels
-          />
-        </div>
-      )}
     </div>
   );
 }

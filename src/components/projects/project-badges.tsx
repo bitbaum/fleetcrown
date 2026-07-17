@@ -22,6 +22,7 @@ export const HEALTH_SIGNAL_CONFIG: HealthSignalConfig[] = HEALTH_SIGNAL_BASE.map
 export type HealthSignal = {
   kind: HealthSignalKind;
   label: string;
+  value: string;
 };
 
 export function getHealthSignals(attrs: Record<string, string>): HealthSignal[] {
@@ -30,9 +31,9 @@ export function getHealthSignals(attrs: Record<string, string>): HealthSignal[] 
     if (!attrs[cfg.key]) continue;
     if (cfg.kind === "broken") {
       const count = attrs[cfg.key].split(",").length;
-      signals.push({ kind: cfg.kind, label: `${count} broken feature${count > 1 ? "s" : ""}` });
+      signals.push({ kind: cfg.kind, label: `${count} broken feature${count > 1 ? "s" : ""}`, value: attrs[cfg.key] });
     } else {
-      signals.push({ kind: cfg.kind, label: cfg.label });
+      signals.push({ kind: cfg.kind, label: cfg.label, value: attrs[cfg.key] });
     }
   }
   return signals;
@@ -56,7 +57,7 @@ export function MaturityBar({ value }: { value: string }) {
           />
         ))}
       </div>
-      <span className="text-micro text-text-tertiary">{score}/10</span>
+      <span className="text-xs text-text-tertiary">{score}/10</span>
     </div>
   );
 }
@@ -79,14 +80,14 @@ const STATUS_COLOR_MAP: Record<string, string> = {
 
 export function StatusBadge({ value }: { value: string }) {
   const cls = STATUS_COLOR_MAP[value.toLowerCase()] ?? "bg-surface-raised text-text-tertiary border-border-subtle";
-  // ui-micro-badge is inline-flex; truncate on the outer text node won't add
+  // The badge is inline-flex; truncate on the outer text node won't add
   // an ellipsis because flex layout doesn't apply text-overflow to anonymous
   // children. Wrap the text in a real span so truncate has a block-like
   // target. Spotted live on Projects mobile: a status like "Strategic
   // planning only - no code, n…" was cutting mid-word with no ellipsis,
   // making the chip look broken.
   return (
-    <span className={`ui-micro-badge max-w-[180px] overflow-hidden ${cls}`} title={value}>
+    <span className={`ui-projects-badge max-w-[180px] overflow-hidden ${cls}`} title={value}>
       <span className="truncate">{value}</span>
     </span>
   );
@@ -96,7 +97,7 @@ export function HealthBadge({ signal }: { signal: HealthSignal }) {
   const cfg = HEALTH_SIGNAL_CONFIG.find((c) => c.kind === signal.kind)!;
   const Icon = cfg.icon;
   return (
-    <span className={`ui-micro-badge gap-1 ${cfg.badgeCls}`}>
+    <span className={`ui-projects-badge gap-1 ${cfg.badgeCls}`}>
       <Icon className="h-3 w-3 shrink-0" />
       {signal.label}
     </span>

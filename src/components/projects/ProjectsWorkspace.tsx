@@ -1,12 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Search, FolderKanban, ChevronDown } from "lucide-react";
-import Link from "next/link";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useEscapeKey } from "@/hooks/use-escape-key";
-import { NAV } from "@/config/navigation";
 import { SEARCH_DEBOUNCE_MS } from "@/lib/constants/timings";
 import { PROJECTS_LIST_CHUNK } from "@/lib/projects-display";
 import {
@@ -15,7 +13,6 @@ import {
   partitionAttentionProjects,
   type ProjectsPageFilter,
 } from "@/lib/projects-page-stats";
-import { ProjectDetail } from "./ProjectDetail";
 import { ProjectGridCard, type ProjectGridRow } from "./ProjectGridCard";
 import { ProjectListRow } from "./ProjectListRow";
 import { ProjectsSummary } from "./ProjectsSummary";
@@ -30,10 +27,8 @@ function parseFilter(raw: string | null): ProjectsPageFilter {
 
 export function ProjectsWorkspace({ projects }: { projects: ProjectGridRow[] }) {
   const pathname = usePathname();
-  const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [selectedId, setSelectedId] = useState<string | null>(() => searchParams.get("open"));
   const [query, setQuery] = useState(() => searchParams.get("q") ?? "");
   const [debouncedQuery, setDebouncedQuery] = useState(query);
   const [pageFilter, setPageFilter] = useState<ProjectsPageFilter>(() => parseFilter(searchParams.get("filter")));
@@ -48,10 +43,9 @@ export function ProjectsWorkspace({ projects }: { projects: ProjectGridRow[] }) 
     const params = new URLSearchParams();
     if (debouncedQuery.trim()) params.set("q", debouncedQuery.trim());
     if (pageFilter) params.set("filter", pageFilter);
-    if (selectedId) params.set("open", selectedId);
     const qs = params.toString();
     window.history.replaceState(null, "", qs ? `${pathname}?${qs}` : pathname);
-  }, [debouncedQuery, pageFilter, selectedId, pathname]);
+  }, [debouncedQuery, pageFilter, pathname]);
 
   const stats = useMemo(() => computeProjectsPageStats(projects), [projects]);
 
@@ -66,23 +60,9 @@ export function ProjectsWorkspace({ projects }: { projects: ProjectGridRow[] }) 
   const visibleRest = listExpanded ? rest : rest.slice(0, PROJECTS_LIST_CHUNK);
 
   useEscapeKey(() => {
-    if (!selectedId) {
-      setQuery("");
-      setPageFilter(null);
-    }
+    setQuery("");
+    setPageFilter(null);
   });
-
-  // Card click → the FULL project page (/projects/[id], the dossier). The
-  // right-side drawer remains the quick-edit surface, reachable via the
-  // page's "Quick edit" button and existing ?open= deep links.
-  const openProject = (id: string) => router.push(`/projects/${id}`);
-  const closeProject = () => {
-    setSelectedId(null);
-    const params = new URLSearchParams(window.location.search);
-    params.delete("open");
-    const qs = params.toString();
-    window.history.replaceState(null, "", qs ? `${pathname}?${qs}` : pathname);
-  };
 
   return (
     <div className="space-y-5">
@@ -135,7 +115,7 @@ export function ProjectsWorkspace({ projects }: { projects: ProjectGridRow[] }) 
               )}
               <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
                 {attention.map((project) => (
-                  <ProjectGridCard key={project.id} project={project} onOpen={() => openProject(project.id)} />
+                  <ProjectGridCard key={project.id} project={project} />
                 ))}
               </div>
             </section>
@@ -150,7 +130,7 @@ export function ProjectsWorkspace({ projects }: { projects: ProjectGridRow[] }) 
               )}
               <div className="ui-projects-list flex flex-col">
                 {visibleRest.map((project) => (
-                  <ProjectListRow key={project.id} project={project} onOpen={() => openProject(project.id)} />
+                  <ProjectListRow key={project.id} project={project} />
                 ))}
               </div>
               {listOverflow && !listExpanded && (
@@ -170,17 +150,6 @@ export function ProjectsWorkspace({ projects }: { projects: ProjectGridRow[] }) 
 
       <ProjectsCiPanel projects={projects} />
 
-      {projects.length > 0 && filtered.length > 0 && (
-        <p className="text-center text-xs text-text-muted">
-          Open a row for the full profile ·{" "}
-          <Link href={NAV.control.href} className="text-accent-text underline-offset-2 hover:underline">
-            Control
-          </Link>{" "}
-          to dispatch agents
-        </p>
-      )}
-
-      {selectedId && <ProjectDetail projectId={selectedId} onClose={closeProject} />}
     </div>
   );
 }

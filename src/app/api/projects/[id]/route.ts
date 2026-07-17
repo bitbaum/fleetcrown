@@ -5,8 +5,12 @@ import path from "node:path";
 import { getSessionUserId } from "@/lib/session";
 import { readIdParam, readJsonBody, isUniqueViolation } from "@/lib/api/route-helpers";
 import { readCronJobs } from "@/lib/crons";
-import { patchProject, deleteProject, PatchProjectBody, resolveProjectDetailWithOrgFallback } from "@/db/queries/projects";
-import { scheduleProjectProfileReindexByEntityId } from "@/lib/rag/reindex-project-profile";
+import { patchProject, deleteProject, getProjectCore, PatchProjectBody, resolveProjectDetailWithOrgFallback } from "@/db/queries/projects";
+import {
+  scheduleDeletedProjectProfileRemoval,
+  scheduleProjectProfileReindexByEntityId,
+  scheduleRenamedProjectProfileReindex,
+} from "@/lib/rag/reindex-project-profile";
 import { getProjectActivity } from "@/db/queries/activity";
 import { getProjectStateByProjectId } from "@/db/queries/project-states";
 import { getUserProjectByEntityId } from "@/db/queries/user-projects";
@@ -49,9 +53,12 @@ export async function PATCH(
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
   try {
+    const before = dataOrResp.name !== undefined ? await getProjectCore(userId, idOrResp) : null;
     const updated = await patchProject(userId, idOrResp, dataOrResp);
     if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    if (dataOrResp.description !== undefined) {
+    if (dataOrResp.name !== undefined && before?.name) {
+      scheduleRenamedProjectProfileReindex(userId, idOrResp, before.name);
+    } else if (dataOrResp.description !== undefined) {
       scheduleProjectProfileReindexByEntityId(userId, idOrResp);
     }
     return NextResponse.json({ ok: true });
@@ -95,6 +102,7 @@ export async function DELETE(
 
   const deleted = await deleteProject(userId, idOrResp);
   if (!deleted) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  scheduleDeletedProjectProfileRemoval(userId, resolved.detail.project.name);
   return NextResponse.json({ ok: true });
 }
 

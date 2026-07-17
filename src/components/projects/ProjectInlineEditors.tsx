@@ -1,81 +1,21 @@
 "use client";
 
-import { useState } from "react";
 import { Loader2, Pencil } from "lucide-react";
 import { MaturityBar, StatusBadge } from "./project-badges";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
-
-/** Inline-editable project name (h2 ↔ input). */
-export function NameEditor({
-  value,
-  editable,
-  onSave,
-}: {
-  value: string;
-  editable: boolean;
-  /** Should throw with a user-facing message on failure (e.g. duplicate name). */
-  onSave: (next: string) => Promise<void>;
-}) {
-  const ie = useInlineEdit<string>("");
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-
-  const commit = async () => {
-    const trimmed = ie.draft.trim();
-    if (!trimmed || trimmed === value) { ie.cancel(); return; }
-    setSaveError(null);
-    setSaving(true);
-    try {
-      await onSave(trimmed);
-      ie.cancel();
-    } catch (e) {
-      setSaveError(e instanceof Error ? e.message : "Failed to save");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  if (ie.editing) {
-    return (
-      <div className="flex flex-col gap-0.5">
-        <div className="flex items-center gap-1.5">
-          <input
-            value={ie.draft}
-            onChange={(e) => { ie.setDraft(e.target.value); setSaveError(null); }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") commit();
-              if (e.key === "Escape") { ie.cancel(); setSaveError(null); }
-            }}
-            autoFocus
-            className={`ui-input-inline px-2 py-0.5 text-base font-semibold w-48 ${saveError ? "border-status-negative/60 focus:border-status-negative" : "border-border-strong"}`}
-          />
-          {saving && <Loader2 className="ui-spinner-sm text-text-tertiary shrink-0" />}
-        </div>
-        {saveError && <p className="ui-error-xs">{saveError}</p>}
-      </div>
-    );
-  }
-
-  return (
-    <h2
-      className={`text-base font-semibold truncate ${editable ? "cursor-text hover:text-text-primary transition-colors" : ""}`}
-      onClick={editable ? () => ie.start(value) : undefined}
-      title={editable ? "Click to rename" : undefined}
-    >
-      {value}
-    </h2>
-  );
-}
+import { cn } from "@/lib/utils";
 
 /** Inline-editable description (button ↔ textarea + Save/Cancel). */
 export function DescriptionEditor({
   value,
   editable = true,
   onSave,
+  size = "compact",
 }: {
   value: string | null;
   editable?: boolean;
   onSave: (next: string) => Promise<void>;
+  size?: "compact" | "lead";
 }) {
   const ie = useInlineEdit<string>("");
 
@@ -83,7 +23,10 @@ export function DescriptionEditor({
 
   if (!editable) {
     return value ? (
-      <p className="ui-link-subtle mt-0.5 w-full text-left leading-relaxed cursor-default">{value}</p>
+      <p className={cn(
+        "mt-0.5 w-full cursor-default text-left leading-relaxed text-text-secondary",
+        size === "lead" ? "line-clamp-3 text-sm sm:text-base" : "ui-link-subtle",
+      )}>{value}</p>
     ) : null;
   }
 
@@ -100,7 +43,10 @@ export function DescriptionEditor({
           autoFocus
           rows={2}
           placeholder="Add a description…"
-          className="ui-input-inline w-full px-2 py-1.5 text-xs text-text-primary placeholder:text-text-muted resize-none"
+          className={cn(
+            "ui-input-inline w-full resize-none px-2 py-1.5 text-text-primary placeholder:text-text-muted",
+            size === "lead" ? "text-sm sm:text-base" : "text-xs",
+          )}
         />
         <div className="flex items-center gap-2">
           <button
@@ -124,7 +70,10 @@ export function DescriptionEditor({
   return (
     <button
       onClick={() => ie.start(value ?? "")}
-      className="group/desc ui-link-subtle mt-0.5 w-full text-left leading-relaxed flex items-start gap-1.5"
+      className={cn(
+        "group/desc mt-0.5 flex min-h-11 w-full items-center gap-1.5 text-left leading-relaxed text-text-secondary",
+        size === "lead" ? "text-sm sm:text-base" : "ui-link-subtle",
+      )}
       title="Click to edit description"
     >
       <span className="flex-1">
@@ -167,7 +116,7 @@ export function StatusEditor({
           onBlur={commit}
           autoFocus
           placeholder="e.g. Production"
-          className="ui-input-inline border-border-strong px-2 py-0.5 text-xs text-text-primary placeholder:text-text-muted w-36"
+          className="ui-input-inline min-h-11 w-36 border-border-strong px-2 py-2 text-base text-text-primary placeholder:text-text-muted sm:min-h-0 sm:py-0.5 sm:text-xs"
         />
         {ie.saving && <Loader2 className="ui-spinner-xs text-text-muted shrink-0" />}
       </div>
@@ -175,7 +124,7 @@ export function StatusEditor({
   }
 
   return (
-    <button onClick={() => ie.start(value ?? "")} title="Click to edit status" className="flex items-center">
+    <button onClick={() => ie.start(value ?? "")} title="Edit status" className="flex min-h-11 items-center">
       {value
         ? <StatusBadge value={value} />
         : <span className="ui-add-chip">+ status</span>}
@@ -213,23 +162,23 @@ export function MaturityEditor({
           max={10}
           value={ie.draft}
           onChange={(e) => ie.setDraft(Number(e.target.value))}
-          className="w-24 ui-range-accent"
+          className="min-h-11 w-24 ui-range-accent"
         />
-        <span className="text-micro text-text-secondary w-8">{ie.draft}/10</span>
+        <span className="w-8 text-xs text-text-secondary">{ie.draft}/10</span>
         <button
           onClick={() => ie.commit(() => onSave(`${ie.draft}/10`))}
           disabled={ie.saving}
-          className="px-2 py-0.5 rounded ui-btn-confirm disabled:opacity-40 text-micro transition-colors"
+          className="ui-btn-confirm min-h-11 rounded px-2 text-xs transition-colors disabled:opacity-40 sm:min-h-0"
         >
           {ie.saving ? <Loader2 className="ui-spinner-xs" /> : "Save"}
         </button>
-        <button onClick={ie.cancel} className="text-micro text-text-muted hover:text-text-secondary">Cancel</button>
+        <button onClick={ie.cancel} className="min-h-11 text-xs text-text-muted hover:text-text-secondary sm:min-h-0">Cancel</button>
       </div>
     );
   }
 
   return (
-    <button onClick={start} title="Click to edit maturity" className="flex items-center">
+    <button onClick={start} title="Edit maturity" className="flex min-h-11 items-center">
       {value
         ? <MaturityBar value={value} />
         : <span className="ui-add-chip">+ maturity</span>}

@@ -43,8 +43,6 @@ export function ProjectCard({
   onRunCustomPrompt,
   onCollapse,
   onFocus,
-  onDeleted,
-  onProfileSaved,
   onLaunch,
   isOnlyReady = false,
   runtimeAvailable = true,
@@ -64,8 +62,6 @@ export function ProjectCard({
   onRunCustomPrompt: (project: ProjectState, prompt: string, agent: string) => Promise<void>;
   onCollapse?: () => void;
   onFocus?: () => void;
-  onDeleted?: () => void;
-  onProfileSaved?: () => void;
   onLaunch?: () => void;
   isOnlyReady?: boolean;
   runtimeAvailable?: boolean;
@@ -350,8 +346,6 @@ export function ProjectCard({
           onSetAgent={setLocalAgent}
           onFillPrompt={setCustom}
           onRunPrompt={(prompt, agent) => onRunCustomPrompt(project, prompt, agent)}
-          onDeleted={onDeleted}
-          onProfileSaved={onProfileSaved}
         />
       ) : (
         <>

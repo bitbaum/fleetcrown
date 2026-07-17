@@ -131,6 +131,14 @@ export async function createGoal(userId: string, data: CreateGoalInput) {
   return created;
 }
 
+export async function getGoalEntityId(userId: string, id: string): Promise<string | null> {
+  const row = await db.query.goals.findFirst({
+    where: and(eq(goals.id, id), eq(goals.userId, userId)),
+    columns: { entityId: true },
+  });
+  return row?.entityId ?? null;
+}
+
 export async function patchGoal(userId: string, id: string, data: z.infer<typeof PatchGoalBody>) {
   if (data.entityId !== undefined) await assertEntityOwnership(userId, data.entityId || null);
   const patch: Partial<typeof goals.$inferInsert> = { updatedAt: new Date() };

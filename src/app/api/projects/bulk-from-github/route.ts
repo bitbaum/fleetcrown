@@ -14,6 +14,7 @@ import { SOURCE_FLEETCROWN_UI } from "@/lib/constants";
 import { createProject } from "@/db/queries/projects";
 import { getGithubToken } from "@/lib/github-token";
 import type { GitHubRepo } from "@/app/api/github/repos/route";
+import { scheduleProjectProfileReindexByEntityId } from "@/lib/rag/reindex-project-profile";
 
 const BulkBody = z.object({
   repoIds: z.array(z.number().int().positive()).min(1).max(100),
@@ -74,6 +75,7 @@ export async function POST(req: NextRequest) {
         },
         SOURCE_FLEETCROWN_UI,
       );
+      scheduleProjectProfileReindexByEntityId(userId, project.id);
       created.push({ id: project.id, name: project.name, repoId });
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);

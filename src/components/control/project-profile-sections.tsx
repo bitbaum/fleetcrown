@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronRight, ExternalLink, Globe } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AgentPrompt } from "@/app/api/prompts/agent/route";
 import type { ProjectState } from "@/lib/control-types";
@@ -26,7 +26,7 @@ export function CollapsibleSection({
     <div className="border-t border-border-subtle">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-surface-raised/40 sm:px-5"
+        className="flex min-h-11 w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-surface-raised/40 sm:px-5"
       >
         <span className="flex items-center gap-2.5">
           {icon}
@@ -67,129 +67,6 @@ export function interpolate(
     .replace(/\{mission\}/g, ctx.mission ?? "not specified")
     .replace(/\{stack\}/g, ctx.stack ?? "not specified")
     .replace(/\{url\}/g, ctx.url ?? "not deployed yet");
-}
-
-function MaturityDots({ maturity }: { maturity: string }) {
-  const m = maturity.match(/^(\d+)/);
-  if (!m) return <span className="text-sm text-text-secondary">{maturity}</span>;
-  const n = parseInt(m[1], 10);
-  const label = maturity.replace(/^\d+\/10\s*[-–]?\s*/, "").trim();
-  return (
-    <div className="flex items-center gap-3">
-      <div className="flex gap-[3px]">
-        {Array.from({ length: 10 }, (_, i) => (
-          <div
-            key={i}
-            className={cn(
-              "h-[3px] w-3 rounded-full transition-colors",
-              i < n ? "bg-accent-text" : "bg-surface-overlay"
-            )}
-          />
-        ))}
-      </div>
-      <span className="text-xs tabular-nums text-text-tertiary">{n}/10{label ? ` — ${label}` : ""}</span>
-    </div>
-  );
-}
-
-function StatusChip({ value }: { value: string }) {
-  const v = value.toLowerCase();
-  const active = v.includes("active") || v.includes("live") || v.includes("production");
-  const warn = v.includes("pause") || v.includes("hold") || v.includes("slow");
-  const cls = active ? "ui-tag ui-tag-positive" : warn ? "ui-tag ui-tag-warning" : "ui-tag ui-tag-neutral";
-  return <span className={cls}>{value}</span>;
-}
-
-function MetaRow({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="grid gap-y-1 border-b border-border-subtle/50 py-2.5 last:border-0 sm:grid-cols-[6rem_1fr] sm:items-baseline sm:gap-x-4">
-      <span className="ui-kicker shrink-0">{label}</span>
-      <span className="text-sm leading-relaxed text-text-secondary">{children}</span>
-    </div>
-  );
-}
-
-// Human labels for profile attributes — so a shared profile reads like a brief,
-// not a raw key dump (definition_of_done → "Definition of done"). Order also
-// drives display order: the build-execution lens first (what an engineer/agent
-// needs), then the market lens.
-const ATTR_LABELS: Record<string, string> = {
-  vision: "Vision",
-  architecture: "Architecture",
-  conventions: "Conventions",
-  definition_of_done: "Definition of done",
-  next_step: "Next step",
-  customers: "Customers",
-  problem: "Problem",
-  solution: "Solution",
-  current_alternatives: "Current alternatives",
-  competitors: "Competitors",
-  complements_substitutes: "Complements & substitutes",
-  partnerships: "Partnerships",
-  potential_customers: "Potential customers",
-  expansion_ideas: "Expansion ideas",
-};
-const ATTR_ORDER = Object.keys(ATTR_LABELS);
-const attrLabel = (k: string) => ATTR_LABELS[k] ?? k.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
-
-export function MetaSection({ profile }: { profile: NonNullable<ProjectState["profile"]> }) {
-  const excluded = new Set(["mission", "stack", "status", "maturity", "url", "description"]);
-  const extraAttrs = Object.entries(profile.attrs)
-    .filter(([k, v]) => v && !excluded.has(k))
-    .sort(([a], [b]) => {
-      const ia = ATTR_ORDER.indexOf(a), ib = ATTR_ORDER.indexOf(b);
-      return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
-    });
-
-  return (
-    <div className="space-y-5 px-4 pb-5 pt-4 sm:px-5">
-      {profile.description && (
-        <p className="text-base leading-relaxed text-text-secondary">{profile.description}</p>
-      )}
-      {profile.mission && (
-        <div className="border-l-2 border-accent-primary/40 pl-4">
-          <p className="ui-kicker mb-1.5">Mission</p>
-          <p className="text-sm leading-relaxed text-text-primary">{profile.mission}</p>
-        </div>
-      )}
-      {(profile.status || profile.maturity) && (
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-          {profile.status && (
-            <div className="flex items-center gap-2">
-              <span className="ui-kicker">Status</span>
-              <StatusChip value={profile.status} />
-            </div>
-          )}
-          {profile.maturity && (
-            <div className="flex items-center gap-2">
-              <span className="ui-kicker">Maturity</span>
-              <MaturityDots maturity={profile.maturity} />
-            </div>
-          )}
-        </div>
-      )}
-      {profile.url && (
-        <a
-          href={profile.url.startsWith("http") ? profile.url : `https://${profile.url}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 text-sm text-accent-text hover:text-text-primary transition-colors"
-        >
-          <Globe className="h-3.5 w-3.5 shrink-0" />
-          {profile.url.replace(/^https?:\/\//, "")}
-          <ExternalLink className="h-3 w-3 opacity-60" />
-        </a>
-      )}
-      {(profile.stack || extraAttrs.length > 0) && (
-        <div className="ui-panel overflow-hidden">
-          {profile.stack && <MetaRow label="Stack">{profile.stack}</MetaRow>}
-          {extraAttrs.map(([k, v]) => (
-            <MetaRow key={k} label={attrLabel(k)}>{v}</MetaRow>
-          ))}
-        </div>
-      )}
-    </div>
-  );
 }
 
 export function DimensionSection({

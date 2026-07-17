@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { MessageSquare, SlidersHorizontal, SquareTerminal } from "lucide-react";
+import { FolderKanban, MessageSquare, SlidersHorizontal, SquareTerminal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FLEET_SURFACES } from "@/config/navigation";
 import {
@@ -16,6 +16,7 @@ import {
 } from "@/lib/fleet-context";
 
 const ICONS = {
+  profile: FolderKanban,
   chat: MessageSquare,
   control: SlidersHorizontal,
   terminal: SquareTerminal,
@@ -31,13 +32,17 @@ function subscribeToFleetProject(onStoreChange: () => void) {
 }
 
 /**
- * Chat, Control, and Terminal are modes of one project workspace. These links
- * preserve that project so moving from an instruction to state or raw terminal
- * output does not require finding the project again.
+ * Profile, Chat, Control, and Terminal are views of one project workspace.
+ * Moving between them preserves the active project.
  */
 export function FleetSurfaceGuide() {
   const pathname = usePathname();
-  const currentIndex = FLEET_SURFACES.findIndex((s) => pathname === s.href || pathname.startsWith(`${s.href}/`));
+  const isProjectProfile = pathname.startsWith("/projects/");
+  const currentIndex = FLEET_SURFACES.findIndex((s) =>
+    s.id === "profile"
+      ? isProjectProfile
+      : pathname === s.href || pathname.startsWith(`${s.href}/`),
+  );
   const readProject = useCallback(() => {
     const routeProject = projectFromFleetRoute(pathname, new URLSearchParams(window.location.search));
     return routeProject ?? readRememberedFleetProject();
@@ -54,9 +59,9 @@ export function FleetSurfaceGuide() {
   return (
     <nav
       aria-label="Project workspace views"
-      className="mx-3 mt-2 flex max-w-6xl shrink-0 items-center gap-2 sm:mx-4 xl:mx-auto xl:w-full"
+      className="mx-3 mt-2 flex max-w-6xl shrink-0 items-center gap-2 overflow-hidden sm:mx-4 xl:mx-auto xl:w-full"
     >
-      <div className="inline-flex items-center rounded-lg border border-border-subtle bg-surface-base p-1">
+      <div className="inline-flex max-w-full items-center rounded-lg border border-border-subtle bg-surface-base p-1">
         {FLEET_SURFACES.map((s, i) => {
           const active = i === currentIndex;
           const Icon = ICONS[s.id];
@@ -65,14 +70,14 @@ export function FleetSurfaceGuide() {
               key={s.href}
               href={fleetSurfaceHref(s.id, project)}
               className={cn(
-                "inline-flex min-h-11 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors sm:min-h-8 sm:px-3",
+                "inline-flex min-h-11 items-center gap-1.5 rounded-md px-2 text-xs font-medium transition-colors sm:min-h-8 sm:px-3",
                 active
                   ? "bg-surface-raised text-text-primary shadow-sm"
                   : "text-text-tertiary hover:text-text-secondary",
               )}
               aria-current={active ? "page" : undefined}
             >
-              <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+              <Icon className="h-3.5 w-3.5 max-[350px]:hidden" aria-hidden="true" />
               {s.label}
             </Link>
           );

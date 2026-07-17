@@ -15,6 +15,7 @@ import { entities } from "@/db/schema/entities";
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
 import { upsertEntityAttribute } from "@/db/queries/utils";
 import { getSessionUserId } from "@/lib/session";
+import { scheduleProjectProfileReindexByEntityId } from "@/lib/rag/reindex-project-profile";
 
 const Body = z.object({
   projectKey: z.string().trim().min(1),
@@ -47,6 +48,8 @@ export async function POST(req: NextRequest) {
   if (maxTurns !== undefined) {
     await upsertEntityAttribute(userId, entity.id, "goal_max_turns", maxTurns ? String(maxTurns) : "");
   }
+
+  scheduleProjectProfileReindexByEntityId(userId, entity.id);
 
   return NextResponse.json({ ok: true });
 }

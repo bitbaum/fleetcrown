@@ -13,13 +13,12 @@
  * Deliberately deterministic — no vector retrieval. pgvector earns its keep
  * for similarity ACROSS projects (fleet-RAG, already injected into
  * dispatches); a single project's dossier is a few KB and must be exact,
- * not similar. getProjectContext (the agent-facing text projection) should
- * converge onto this assembly so the page a human reads and the context an
- * agent receives can never disagree.
+ * not similar. getProjectContext uses this same assembly so the page a human
+ * reads and the exact context an agent receives cannot drift apart.
  */
 import { resolveProjectDetailWithOrgFallback, type ProjectDetail } from "./projects";
 import { db } from "@/db";
-import { entities } from "@/db/schema";
+import { entities, userProjects } from "@/db/schema";
 import { and, eq, ilike } from "drizzle-orm";
 import { getProjectStateByProjectId } from "./project-states";
 import { getProjectActivity, type ProjectActivityEvent } from "./activity";
@@ -98,11 +97,18 @@ export async function getProjectDossierByProjectKey(
   ownerUserId: string,
   projectKey: string,
 ): Promise<ProjectDossier | null> {
-  const project = await db.query.entities.findFirst({
-    where: and(eq(entities.userId, ownerUserId), eq(entities.type, ENTITY_TYPE.PROJECT), ilike(entities.name, projectKey)),
-    columns: { id: true },
-  });
-  return project ? getProjectDossierByOwner(ownerUserId, project.id) : null;
+  const [project, runtimeProject] = await Promise.all([
+    db.query.entities.findFirst({
+      where: and(eq(entities.userId, ownerUserId), eq(entities.type, ENTITY_TYPE.PROJECT), ilike(entities.name, projectKey)),
+      columns: { id: true },
+    }),
+    db.query.userProjects.findFirst({
+      where: and(eq(userProjects.userId, ownerUserId), ilike(userProjects.name, projectKey)),
+      columns: { entityProjectId: true },
+    }),
+  ]);
+  const projectId = project?.id ?? runtimeProject?.entityProjectId;
+  return projectId ? getProjectDossierByOwner(ownerUserId, projectId) : null;
 }
 
 export async function getSharedProjectDossier(token: string): Promise<SharedProjectDossier | null> {
@@ -137,6 +143,8 @@ export function renderProjectDossierForAgent(dossier: ProjectDossier): string {
     ["Mission", attrs.mission],
     ["Vision", attrs.vision],
     ["Customers", attrs.customers],
+    ["Problem", attrs.problem],
+    ["Solution", attrs.solution],
     ["Status", attrs.status],
     ["Maturity", attrs.maturity],
     ["Stack", attrs.stack ?? userProject?.stack],

@@ -69,7 +69,7 @@ export function ProjectBriefFill({
         {!open && (
           <button
             onClick={() => { setOpen(true); setAppliedKeys(null); }}
-            className="ui-btn-chip gap-1.5 px-3 py-1.5 text-xs"
+            className="ui-btn-chip min-h-11 gap-1.5 px-3 text-xs sm:min-h-0"
             title="Write what this project is and should become, in your own words — AI fills mission, vision, customers, stack and next step for you."
           >
             <Sparkles className="h-3.5 w-3.5 text-accent-text" />
@@ -80,7 +80,7 @@ export function ProjectBriefFill({
           <button
             onClick={() => run("enrich")}
             disabled={busy !== null}
-            className="ui-btn-chip gap-1.5 px-3 py-1.5 text-xs"
+            className="ui-btn-chip min-h-11 gap-1.5 px-3 text-xs sm:min-h-0"
             title="Read the repo's README (and CLAUDE.md) and fill the profile from it."
           >
             {busy === "enrich" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <GitBranch className="h-3.5 w-3.5 text-accent-text" />}
@@ -98,14 +98,14 @@ export function ProjectBriefFill({
             rows={4}
             maxLength={8000}
             placeholder="Free form — what is this project, who is it for, what should it become, what's next? Paste notes, dictate, anything. AI sorts it into the profile."
-            className="w-full ui-input text-xs leading-relaxed"
+            className="ui-input w-full text-base leading-relaxed sm:text-xs"
             onKeyDown={(e) => { if (e.key === "Escape") setOpen(false); }}
           />
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => run("brief")}
               disabled={busy !== null || text.trim().length < 10}
-              className="ui-btn-save gap-1.5"
+              className="ui-btn-save min-h-11 gap-1.5 sm:min-h-0"
             >
               {busy === "brief" ? <Loader2 className="ui-spinner-xs" /> : <Sparkles className="h-3.5 w-3.5" />}
               Fill profile
@@ -113,7 +113,7 @@ export function ProjectBriefFill({
             <button
               onClick={() => run("roadmap")}
               disabled={busy !== null || text.trim().length < 10}
-              className="ui-btn-chip gap-1.5 px-3 py-1.5 text-xs"
+              className="ui-btn-chip min-h-11 gap-1.5 px-3 text-xs sm:min-h-0"
               title="Decompose the pasted spec into an ordered set of milestones, created as project goals."
             >
               {busy === "roadmap" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ListChecks className="h-3.5 w-3.5 text-accent-text" />}
@@ -123,7 +123,7 @@ export function ProjectBriefFill({
               <button
                 onClick={() => (voice.status === "recording" ? voice.stop() : voice.start())}
                 disabled={busy !== null || voice.status === "transcribing"}
-                className="ui-btn-chip gap-1.5 px-3 py-1.5 text-xs"
+                className="ui-btn-chip min-h-11 gap-1.5 px-3 text-xs sm:min-h-0"
                 title={voice.status === "recording" ? "Stop recording" : "Dictate — speak what this project should be"}
               >
                 {voice.status === "transcribing" ? (
@@ -136,7 +136,7 @@ export function ProjectBriefFill({
                 {voice.status === "recording" ? "Stop" : voice.status === "transcribing" ? "Transcribing…" : "Speak"}
               </button>
             )}
-            <button onClick={() => { setOpen(false); setError(null); voice.cancel(); }} className="ui-btn-text-cancel">
+            <button onClick={() => { setOpen(false); setError(null); voice.cancel(); }} className="ui-btn-text-cancel min-h-11 sm:min-h-0">
               Cancel
             </button>
           </div>

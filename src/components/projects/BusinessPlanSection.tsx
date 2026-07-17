@@ -46,6 +46,7 @@ export function BusinessPlanSection({
   projectName,
   editable,
   onReload,
+  showMarketLens = true,
 }: {
   attrs: Record<string, string>;
   projectId: string;
@@ -53,6 +54,7 @@ export function BusinessPlanSection({
   projectName: string;
   editable: boolean;
   onReload: () => void;
+  showMarketLens?: boolean;
 }) {
   const plan = attrs["business_plan"];
   const actions = parseActions(attrs["business_actions"]);
@@ -65,7 +67,7 @@ export function BusinessPlanSection({
   const [queuedTitles, setQueuedTitles] = useState<Set<string>>(new Set());
   const [queueError, setQueueError] = useState<string | null>(null);
 
-  const hasAnything = Boolean(plan) || lensFilled.length > 0;
+  const hasAnything = Boolean(plan) || (showMarketLens && lensFilled.length > 0);
   if (!hasAnything && !editable) return null;
 
   async function generate() {
@@ -110,7 +112,7 @@ export function BusinessPlanSection({
 
   return (
     <div className="ui-card-shell p-3">
-      <button onClick={() => setOpen((v) => !v)} className="flex w-full items-center gap-1.5 text-left">
+      <button onClick={() => setOpen((v) => !v)} className="flex min-h-11 w-full items-center gap-1.5 text-left">
         {open ? <ChevronDown className="h-3.5 w-3.5 text-text-muted" /> : <ChevronRight className="h-3.5 w-3.5 text-text-muted" />}
         <Briefcase className="h-3.5 w-3.5 text-accent-text" />
         <span className="text-sm font-medium text-text-primary">Business plan</span>
@@ -125,7 +127,7 @@ export function BusinessPlanSection({
       {open && (
         <div className="mt-3 space-y-4">
           {editable && (
-            <button onClick={generate} disabled={generating} className="ui-btn-chip gap-1.5 px-3 py-1.5 text-xs">
+            <button onClick={generate} disabled={generating} className="ui-btn-chip min-h-11 gap-1.5 px-3 text-xs sm:min-h-0">
               {generating
                 ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 : plan ? <RefreshCw className="h-3.5 w-3.5 text-accent-text" /> : <Sparkles className="h-3.5 w-3.5 text-accent-text" />}
@@ -149,7 +151,7 @@ export function BusinessPlanSection({
                     <button
                       onClick={() => queueAction(action)}
                       disabled={queuedTitles.has(action.title)}
-                      className="ui-btn-chip shrink-0 gap-1 px-2 py-1 text-micro"
+                      className="ui-btn-chip min-h-11 shrink-0 gap-1 px-2 text-xs sm:min-h-0"
                       title="Add to this project's prompt queue — the autopilot executes it"
                     >
                       {queuedTitles.has(action.title)
@@ -163,7 +165,7 @@ export function BusinessPlanSection({
             </div>
           )}
 
-          {lensFilled.length > 0 && (
+          {showMarketLens && lensFilled.length > 0 && (
             <div>
               <p className="ui-kicker mb-1">Market lens</p>
               {lensFilled.map(({ key, label }) => (

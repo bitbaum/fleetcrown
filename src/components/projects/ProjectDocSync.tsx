@@ -73,7 +73,7 @@ export function ProjectDocSync({ projectId, onReload }: { projectId: string; onR
       {!open && (
         <button
           onClick={() => { setOpen(true); setDoneMsg(null); }}
-          className="ui-btn-chip gap-1.5 px-3 py-1.5 text-xs"
+          className="ui-btn-chip min-h-11 gap-1.5 px-3 text-xs sm:min-h-0"
           title="Paste an updated concept/spec — AI updates only the fields that changed and proposes new ones. You review before it applies."
         >
           <RefreshCw className="h-3.5 w-3.5 text-accent-text" />
@@ -90,15 +90,15 @@ export function ProjectDocSync({ projectId, onReload }: { projectId: string; onR
             rows={4}
             maxLength={8000}
             placeholder="Paste the updated concept or spec. AI diffs it against the current fields and shows you exactly what would change before anything is saved."
-            className="w-full ui-input text-xs leading-relaxed"
+            className="ui-input w-full text-base leading-relaxed sm:text-xs"
             onKeyDown={(e) => { if (e.key === "Escape") setOpen(false); }}
           />
-          <div className="flex items-center gap-2">
-            <button onClick={runPreview} disabled={busy !== null || text.trim().length < 10} className="ui-btn-save gap-1.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <button onClick={runPreview} disabled={busy !== null || text.trim().length < 10} className="ui-btn-save min-h-11 gap-1.5 sm:min-h-0">
               {busy === "preview" ? <Loader2 className="ui-spinner-xs" /> : <RefreshCw className="h-3.5 w-3.5" />}
               Preview changes
             </button>
-            <button onClick={() => { setOpen(false); setError(null); }} className="ui-btn-text-cancel">Cancel</button>
+            <button onClick={() => { setOpen(false); setError(null); }} className="ui-btn-text-cancel min-h-11 sm:min-h-0">Cancel</button>
           </div>
         </div>
       )}
@@ -123,7 +123,7 @@ export function ProjectDocSync({ projectId, onReload }: { projectId: string; onR
               <p className="ui-micro-label">Proposed new fields — tick to add</p>
               {preview.newAttributes.map((a) => (
                 <label key={a.key} className="flex cursor-pointer items-start gap-2 rounded-md border border-border-subtle p-2">
-                  <input type="checkbox" checked={!rejected.has(a.key)} onChange={() => toggleNew(a.key)} className="mt-0.5" />
+                  <input type="checkbox" checked={!rejected.has(a.key)} onChange={() => toggleNew(a.key)} className="mt-0.5 h-5 w-5 shrink-0" />
                   <span className="min-w-0">
                     <span className="inline-flex items-center gap-1 text-xs font-medium text-text-secondary"><Plus className="h-3 w-3 text-accent-text" />{a.label}</span>
                     <span className="block text-xs text-text-primary">{a.value}</span>
@@ -135,12 +135,12 @@ export function ProjectDocSync({ projectId, onReload }: { projectId: string; onR
 
           <p className="text-micro text-text-muted">{preview.unchangedCount} field{preview.unchangedCount === 1 ? "" : "s"} untouched.</p>
 
-          <div className="flex items-center gap-2">
-            <button onClick={apply} disabled={busy !== null} className="ui-btn-save gap-1.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <button onClick={apply} disabled={busy !== null} className="ui-btn-save min-h-11 gap-1.5 sm:min-h-0">
               {busy === "apply" ? <Loader2 className="ui-spinner-xs" /> : <Check className="h-3.5 w-3.5" />}
               Apply changes
             </button>
-            <button onClick={() => setPreview(null)} disabled={busy !== null} className="ui-btn-text-cancel inline-flex items-center gap-1">
+            <button onClick={() => setPreview(null)} disabled={busy !== null} className="ui-btn-text-cancel inline-flex min-h-11 items-center gap-1 sm:min-h-0">
               <X className="h-3.5 w-3.5" /> Discard
             </button>
           </div>

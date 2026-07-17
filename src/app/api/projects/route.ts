@@ -3,6 +3,7 @@ import { SOURCE_FLEETCROWN_UI } from "@/lib/constants";
 import { getSessionUserId } from "@/lib/session";
 import { createProject, CreateProjectBody } from "@/db/queries/projects";
 import { readJsonBody, handleDuplicateEntityNameError } from "@/lib/api/route-helpers";
+import { scheduleProjectProfileReindexByEntityId } from "@/lib/rag/reindex-project-profile";
 
 export async function POST(req: NextRequest) {
   const userId = await getSessionUserId();
@@ -12,6 +13,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const created = await createProject(userId, dataOrResp, SOURCE_FLEETCROWN_UI);
+    scheduleProjectProfileReindexByEntityId(userId, created.id);
     return NextResponse.json({ ok: true, project: created }, { status: 201 });
   } catch (e: unknown) {
     const dup = handleDuplicateEntityNameError(e, "project");

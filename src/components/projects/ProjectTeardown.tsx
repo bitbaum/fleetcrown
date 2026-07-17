@@ -39,52 +39,52 @@ export function ProjectTeardown({
   }
 
   return (
-    <details className="ui-project-drawer-panel">
-      <summary className="ui-project-drawer-panel-summary text-status-negative">
+    <section className="space-y-4 border-t border-border-subtle pt-5">
+      <div className="flex items-center gap-2 text-sm font-medium text-status-negative">
         <Trash2 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
         Danger zone
-      </summary>
-      <div className="ui-project-drawer-panel-body space-y-3">
+      </div>
+      <div className="space-y-4">
         <div className="space-y-2 text-xs text-text-secondary">
           {hasRepo && (
             <>
-              <label className="flex items-center gap-2">
-                <input type="radio" checked={deprovision === "none"} onChange={() => setDeprovision("none")} />
+              <label className="flex min-h-11 items-center gap-2">
+                <input className="h-5 w-5 shrink-0" type="radio" checked={deprovision === "none"} onChange={() => setDeprovision("none")} />
                 Keep linked GitHub repository
               </label>
-              <label className="flex items-center gap-2">
-                <input type="radio" checked={deprovision === "archive-repo"} onChange={() => setDeprovision("archive-repo")} />
+              <label className="flex min-h-11 items-center gap-2">
+                <input className="h-5 w-5 shrink-0" type="radio" checked={deprovision === "archive-repo"} onChange={() => setDeprovision("archive-repo")} />
                 <Archive className="h-3.5 w-3.5" aria-hidden="true" /> Archive GitHub repository
               </label>
-              <label className="flex items-center gap-2 text-status-negative">
-                <input type="radio" checked={deprovision === "delete-repo"} onChange={() => setDeprovision("delete-repo")} />
+              <label className="flex min-h-11 items-center gap-2 text-status-negative">
+                <input className="h-5 w-5 shrink-0" type="radio" checked={deprovision === "delete-repo"} onChange={() => setDeprovision("delete-repo")} />
                 <Trash2 className="h-3.5 w-3.5" aria-hidden="true" /> Delete GitHub repository
               </label>
             </>
           )}
           {hasLocalPath && (
-            <label className="flex items-center gap-2">
-              <input type="checkbox" checked={deleteLocal} onChange={(e) => setDeleteLocal(e.target.checked)} />
+            <label className="flex min-h-11 items-center gap-2">
+              <input className="h-5 w-5 shrink-0" type="checkbox" checked={deleteLocal} onChange={(e) => setDeleteLocal(e.target.checked)} />
               <FolderX className="h-3.5 w-3.5" aria-hidden="true" /> Delete local checkout under dev root
             </label>
           )}
         </div>
 
         {armed ? (
-          <div className="flex items-center gap-2">
-            <button type="button" onClick={destroy} disabled={busy} className="ui-btn-danger gap-1.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" onClick={destroy} disabled={busy} className="ui-btn-danger min-h-11 gap-1.5">
               {busy ? <Loader2 className="ui-spinner-xs" /> : <Trash2 className="h-3.5 w-3.5" />}
               Delete project
             </button>
-            <button type="button" onClick={() => { setArmed(false); setError(null); }} className="ui-btn-text-cancel">Cancel</button>
+            <button type="button" onClick={() => { setArmed(false); setError(null); }} className="ui-btn-text-cancel min-h-11">Cancel</button>
           </div>
         ) : (
-          <button type="button" onClick={() => setArmed(true)} className="ui-btn-danger gap-1.5">
+          <button type="button" onClick={() => setArmed(true)} className="ui-btn-danger min-h-11 gap-1.5">
             <Trash2 className="h-3.5 w-3.5" /> Delete project
           </button>
         )}
         {error && <p className="ui-error-xs">{error}</p>}
       </div>
-    </details>
+    </section>
   );
 }

@@ -99,7 +99,7 @@ export function formatBusinessPlanReply(outcome: Extract<BusinessPlanOutcome, { 
     "**Next actions:**",
     actionLines,
     "",
-    `Open [Projects](/projects?open=${outcome.entityId}) to read the full plan and dispatch from the Business section.`,
+    `Open the [project profile](/projects/${outcome.entityId}) to review its context and plan.`,
   ]
     .filter(Boolean)
     .join("\n");

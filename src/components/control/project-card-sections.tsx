@@ -197,7 +197,7 @@ export function ProjectCardHeader({
         <div className="ui-card-actions shrink-0 self-start">
           {project.projectId && (
             <Link
-              href={`/projects?open=${project.projectId}`}
+              href={`/projects/${project.projectId}`}
               className="ui-icon-action"
               title="Project details"
             >
@@ -217,7 +217,7 @@ export function ProjectCardHeader({
           )}
           <button
             onClick={onProfileToggle}
-            title={profileOpen ? "Close context" : "Project context and settings"}
+            title={profileOpen ? "Close run setup" : "Agent, model, and prompt setup"}
             className={cn(
               "ui-icon-action",
               profileOpen ? "text-accent-text" : "text-text-muted",

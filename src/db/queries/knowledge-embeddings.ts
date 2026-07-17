@@ -45,6 +45,18 @@ export async function upsertKnowledge(userId: string, item: KnowledgeItem): Prom
   await upsertKnowledgeBatch(userId, [item]);
 }
 
+/** Delete one owned knowledge source, used after a project is renamed. */
+export async function deleteKnowledgeSource(
+  userId: string,
+  sourceType: KnowledgeSourceType,
+  sourceId: string,
+): Promise<void> {
+  await db.execute(sql`
+    DELETE FROM knowledge_embeddings
+    WHERE user_id = ${userId} AND source_type = ${sourceType} AND source_id = ${sourceId}
+  `);
+}
+
 /**
  * Prune a user's orphan rows: for the given owned source types, delete rows
  * whose sourceId is NOT in `keepIds`. The reindexer calls this AFTER a

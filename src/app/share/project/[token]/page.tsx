@@ -14,7 +14,7 @@ export default async function SharedProjectPage({ params }: { params: Promise<{ 
   return (
     <PublicSurface right={<PublicHeaderActions />} showNav={false}>
       <main className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6 sm:py-14">
-        <ProjectDossierView dossier={shared.dossier} mode="shared" share={shared.share} />
+        <ProjectDossierView dossier={shared.dossier} share={shared.share} />
       </main>
     </PublicSurface>
   );

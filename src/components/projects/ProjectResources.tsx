@@ -100,13 +100,13 @@ export function ProjectResources({
   if (items.length === 0 && !editable) return null;
 
   return (
-    <details className="ui-project-drawer-panel" open={items.length > 0}>
-      <summary className="ui-project-drawer-panel-summary">
+    <section aria-labelledby="project-resources-title">
+      <div className="flex min-h-11 items-center gap-2 border-b border-border-subtle">
         <FileText className="h-3.5 w-3.5 shrink-0 text-text-tertiary" aria-hidden="true" />
-        Resources
+        <h3 id="project-resources-title" className="text-sm font-medium text-text-primary">Resources</h3>
         <span className="ui-projects-filter-count">{items.length}</span>
-      </summary>
-      <div className="ui-project-drawer-panel-body space-y-3">
+      </div>
+      <div className="space-y-3 pt-3">
         {items.length > 0 && (
           <div className="space-y-2">
             {items.map((item) => (
@@ -135,7 +135,7 @@ export function ProjectResources({
                       type="button"
                       onClick={() => remove(item.id)}
                       disabled={saving}
-                      className="ui-icon-btn shrink-0 text-text-muted hover:text-status-negative"
+                      className="ui-icon-action min-h-11 min-w-11 shrink-0 text-text-muted hover:text-status-negative"
                       title="Remove resource"
                       aria-label={`Remove ${item.title}`}
                     >
@@ -150,37 +150,37 @@ export function ProjectResources({
 
         {adding ? (
           <div className="space-y-2 rounded-lg border border-border-subtle bg-surface-raised p-3">
-            <div className="flex gap-2">
-              <select value={kind} onChange={(e) => setKind(e.target.value as ProjectResource["kind"])} className="ui-input-tight w-32">
+            <div className="grid gap-2 sm:grid-cols-[9rem_minmax(0,1fr)]">
+              <select value={kind} onChange={(e) => setKind(e.target.value as ProjectResource["kind"])} className="ui-input min-h-11 w-full">
                 {KINDS.map((k) => <option key={k.value} value={k.value}>{k.label}</option>)}
               </select>
-              <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Name" className="ui-input-tight flex-1" />
+              <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Name" className="ui-input min-h-11 w-full" />
             </div>
-            <div className="flex gap-2">
-              <select value={visibility} onChange={(e) => setVisibility(e.target.value as NonNullable<ProjectResource["visibility"]>)} className="ui-input-tight flex-1" aria-label="Resource visibility">
+            <div className="grid gap-2 sm:grid-cols-2">
+              <select value={visibility} onChange={(e) => setVisibility(e.target.value as NonNullable<ProjectResource["visibility"]>)} className="ui-input min-h-11 w-full" aria-label="Resource visibility">
                 {VISIBILITY.map((v) => <option key={v.value} value={v.value}>{v.label}</option>)}
               </select>
-              <select value={sensitivity} onChange={(e) => setSensitivity(e.target.value as NonNullable<ProjectResource["sensitivity"]>)} className="ui-input-tight flex-1" aria-label="Resource sensitivity">
+              <select value={sensitivity} onChange={(e) => setSensitivity(e.target.value as NonNullable<ProjectResource["sensitivity"]>)} className="ui-input min-h-11 w-full" aria-label="Resource sensitivity">
                 {SENSITIVITY.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
               </select>
             </div>
-            <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="URL, file path, or reference" className="ui-input-tight w-full" />
-            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes, access details, or why this matters" rows={3} className="ui-input-tight w-full resize-none" />
-            <div className="flex items-center gap-2">
-              <button type="button" onClick={add} disabled={saving || !title.trim()} className="ui-btn-save gap-1.5">
+            <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="URL, file path, or reference" className="ui-input min-h-11 w-full" />
+            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes, access details, or why this matters" rows={3} className="ui-input w-full resize-none" />
+            <div className="flex flex-wrap items-center gap-2">
+              <button type="button" onClick={add} disabled={saving || !title.trim()} className="ui-btn-primary min-h-11 gap-1.5">
                 {saving ? <Loader2 className="ui-spinner-xs" /> : <Plus className="h-3.5 w-3.5" />}
                 Add
               </button>
-              <button type="button" onClick={() => { setAdding(false); setError(null); }} className="ui-btn-text-cancel">Cancel</button>
+              <button type="button" onClick={() => { setAdding(false); setError(null); }} className="ui-btn-secondary min-h-11">Cancel</button>
             </div>
           </div>
         ) : editable && (
-          <button type="button" onClick={() => setAdding(true)} className="ui-btn-add-success">
+          <button type="button" onClick={() => setAdding(true)} className="ui-btn-add-success min-h-11">
             <Plus className="h-3.5 w-3.5" aria-hidden="true" /> Add resource
           </button>
         )}
         {error && <p className="ui-error-xs">{error}</p>}
       </div>
-    </details>
+    </section>
   );
 }

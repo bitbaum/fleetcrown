@@ -2,7 +2,26 @@
 
 Notable, user-facing changes. Older history lives in the git log (conventional commits).
 
-**Last modified:** 2026-07-16 — connected fleet workspace, truthful dispatch lifecycle, and unattended handoff reliability.
+**Last modified:** 2026-07-17 - one canonical, mobile-first project workspace.
+
+## 2026-07-17
+
+### Changed
+- **Projects now has one clear job.** `/projects` is the portfolio for finding and
+  prioritizing work; `/projects/[id]` is the one canonical project workspace. The
+  duplicate right-side profile drawer is gone, old `?open=` links redirect to the
+  canonical page, and every project row/card has one predictable destination.
+- **Project pages are mobile-first working profiles.** Purpose, product context,
+  build contract, plan, goals, evidence, resources, sharing, and lifecycle settings
+  now live in one anchored page with an explicit return to the portfolio. Chat,
+  Control, Terminal, and Profile preserve the active project as adjacent views.
+- **Control stays operational.** Its expanded project view keeps run context, agent,
+  model, prompts, and private notes; duplicated mission, technology, activity, and
+  deletion forms moved to the canonical project workspace.
+- **Project memory follows profile and plan changes.** Creation, import, rename,
+  deletion, notes, goals, roadmap generation, and attribute/resource edits now
+  refresh or retire the project's knowledge embedding. Exact project context
+  remains deterministic while vector search supplies cross-project memory.
 
 ## 2026-07-16
 

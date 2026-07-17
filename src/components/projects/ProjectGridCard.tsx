@@ -4,20 +4,13 @@ import Link from "next/link";
 import {
   ArrowRight,
   ChevronRight,
-  GitBranch,
-  Globe,
-  Terminal,
 } from "lucide-react";
-import { LokiDispatchButton } from "@/components/shared/LokiDispatchButton";
 import {
   MaturityBar,
   StatusBadge,
   HealthBadge,
   getHealthSignals,
 } from "./project-badges";
-import { getProjectLinks } from "./project-detail-types";
-import { buildProjectLokiPrompt } from "@/lib/loki-prompts";
-import { NAV } from "@/config/navigation";
 import { cn } from "@/lib/utils";
 import { deriveProjectLoopReadiness } from "@/lib/project-loop-readiness";
 
@@ -34,20 +27,16 @@ export type ProjectGridRow = {
 
 export function ProjectGridCard({
   project,
-  onOpen,
 }: {
   project: ProjectGridRow;
-  onOpen: () => void;
 }) {
   const { attrs } = project;
   const description = project.description ?? attrs["description"] ?? null;
-  const { prodUrl, repo } = getProjectLinks(attrs, project.gitUrl);
   const maturity = attrs["maturity"];
   const status = attrs["status"];
   const nextStep = attrs["next_step"]?.trim() ?? null;
   const signals = getHealthSignals(attrs);
   const hasIssues = signals.length > 0;
-  const lokiPrompt = buildProjectLokiPrompt({ name: project.name, description, attrs });
   const loopReadiness = deriveProjectLoopReadiness(project);
 
   return (
@@ -57,9 +46,8 @@ export function ProjectGridCard({
         hasIssues && "ui-projects-card-attention",
       )}
     >
-      <button
-        type="button"
-        onClick={onOpen}
+      <Link
+        href={`/projects/${project.id}`}
         className="ui-projects-card-main"
         aria-label={`Open ${project.name} profile`}
       >
@@ -67,14 +55,14 @@ export function ProjectGridCard({
           <div className="min-w-0 flex-1 text-left">
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="truncate text-base font-semibold text-text-primary">{project.name}</h3>
-              {project.readonly && <span className="ui-kicker shrink-0">team</span>}
+              {project.readonly && <span className="ui-projects-badge shrink-0">Team</span>}
               {status && <StatusBadge value={status} />}
               {/* Only the EXCEPTIONS earn a badge. "Loop-ready" sat on 19/19
                   projects — a label everything carries filters nothing. Show
                   the chip only when something needs the user (no path / paused). */}
               {loopReadiness.state !== "ready" && (
                 <span
-                  className="ui-micro-badge rounded-full border-status-warning/30 bg-status-warning/[0.08] text-status-warning"
+                  className="ui-projects-badge border-status-warning/30 bg-status-warning/[0.08] text-status-warning"
                   title={loopReadiness.description}
                 >
                   {loopReadiness.label}
@@ -109,64 +97,7 @@ export function ProjectGridCard({
           </div>
         )}
 
-        {(project.dirPath || project.agentPref || loopReadiness.reason === "no_path") && (
-          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-text-tertiary">
-            {project.dirPath && (
-              <code className="truncate rounded bg-surface-overlay px-1.5 py-0.5 font-mono text-micro" title={project.dirPath}>
-                {project.dirPath.replace(/^.*\/([^/]+\/[^/]+)$/, "$1")}
-              </code>
-            )}
-            {!project.dirPath && (
-              <span className="ui-micro-badge rounded-full border-status-warning/30 bg-status-warning/[0.08] text-status-warning">
-                add local path to run loops
-              </span>
-            )}
-            {project.agentPref && (
-              <span className="ui-micro-badge rounded-full border-border-default bg-surface-overlay">{project.agentPref}</span>
-            )}
-          </div>
-        )}
-      </button>
-
-      <div className="ui-projects-card-actions">
-        {!project.readonly && (
-          <Link href={NAV.control.href} className="ui-projects-card-action" onClick={(e) => e.stopPropagation()}>
-            <Terminal className="h-3.5 w-3.5" aria-hidden="true" />
-            Control
-          </Link>
-        )}
-        <div className="ml-auto flex items-center gap-0.5">
-          <LokiDispatchButton
-            prompt={lokiPrompt}
-            title="Ask Loki about this project"
-            className="ui-icon-action min-h-9 min-w-9 rounded-lg p-1.5 text-text-muted hover:text-status-positive"
-          />
-          {prodUrl && (
-            <a
-              href={prodUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="ui-icon-action min-h-9 min-w-9 rounded-lg p-1.5"
-              title="Open production site"
-              aria-label="Open production site"
-            >
-              <Globe className="h-3.5 w-3.5" />
-            </a>
-          )}
-          {repo && (
-            <a
-              href={repo}
-              target="_blank"
-              rel="noreferrer"
-              className="ui-icon-action min-h-9 min-w-9 rounded-lg p-1.5"
-              title="Open repository"
-              aria-label="Open repository"
-            >
-              <GitBranch className="h-3.5 w-3.5" />
-            </a>
-          )}
-        </div>
-      </div>
+      </Link>
     </article>
   );
 }

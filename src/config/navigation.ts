@@ -114,10 +114,11 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
 export const NAV_ITEMS: NavItem[] = SIDEBAR_SECTIONS.flatMap((s) => s.items).concat(NAV.settings);
 
 // ─── Fleet workspace tabs ─────────────────────────────────────────────────────
-// These are three views of the same active project. FleetSurfaceGuide turns this
-// config into project-preserving links; the project catalog remains a separate
-// inventory surface rather than pretending to be a fourth execution mode.
+// These are four views of the same active project. The catalog stays the fleet
+// index; a project profile is the persistent context beside the three execution
+// surfaces. FleetSurfaceGuide preserves the project between every view.
 export const FLEET_SURFACES = [
+  { id: "profile", href: NAV.projects.href, label: "Profile" },
   { id: "chat", href: NAV.loki.href, label: "Chat" },
   { id: "control", href: NAV.control.href, label: NAV.control.label },
   { id: "terminal", href: NAV.terminal.href, label: NAV.terminal.label },

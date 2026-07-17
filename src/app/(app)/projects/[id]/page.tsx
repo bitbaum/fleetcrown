@@ -2,20 +2,13 @@ import { auth } from "@/auth";
 import { notFound, redirect } from "next/navigation";
 import { getProjectDossier } from "@/db/queries/project-dossier";
 import { getActiveProjectShare } from "@/db/queries/project-shares";
-import { PageLayout } from "@/components/ui/page-layout";
-import { ProjectDossierView } from "@/components/projects/ProjectDossierView";
+import { ProjectWorkspaceView } from "@/components/projects/ProjectWorkspaceView";
 import { ProjectSharePanel } from "@/components/projects/ProjectSharePanel";
 import { ROUTES } from "@/config/auth";
 
 export const metadata = { title: "Project" };
 
-/**
- * The full project page — the captain's dossier for one project, and the
- * refactor target for the old right-side drawer (which stays reachable as
- * the quick-edit surface via /projects?open=). Server-rendered from the
- * getProjectDossier SSOT assembly: Done (changelog + runs), Now (live
- * state + brief), Next (resume state + goals).
- */
+/** The one canonical project workspace, rendered from the dossier SSOT. */
 export default async function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user?.id) redirect(ROUTES.SIGN_IN);
@@ -39,13 +32,9 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
   } : null;
 
   return (
-    <PageLayout
-      title="Project"
-      subtitle="Living dossier for humans and agents"
-      maxWidth="max-w-5xl"
-      right={!dossier.readonly ? <ProjectSharePanel projectId={id} initialShare={shareForClient} /> : undefined}
-    >
-      <ProjectDossierView dossier={dossier} mode="private" />
-    </PageLayout>
+    <ProjectWorkspaceView
+      dossier={dossier}
+      shareAction={!dossier.readonly ? <ProjectSharePanel projectId={id} initialShare={shareForClient} /> : undefined}
+    />
   );
 }

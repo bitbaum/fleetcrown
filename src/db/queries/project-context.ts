@@ -28,6 +28,8 @@ const DRIVING_FIELDS: ReadonlyArray<readonly [string, string]> = [
   ["mission", "Mission"],
   ["vision", "Vision"],
   ["customers", "Customers"],
+  ["problem", "Problem"],
+  ["solution", "Solution"],
   ["stack", "Stack"],
   ["next_step", "Next step (owner's highest-priority action right now)"],
   ["architecture", "Architecture"],
