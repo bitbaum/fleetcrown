@@ -94,8 +94,5 @@
     "electron-vite": "^2.3.0",
     "typescript": "^5",
     "vite": "^6.0.7"
-  },
-  "overrides": {
-    "@electron/rebuild": "^4.2.0"
   }
 }
