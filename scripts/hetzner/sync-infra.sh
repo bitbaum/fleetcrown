@@ -52,8 +52,16 @@ RestartSec=3
 # the cgroup, freeing the port fast for the new process.
 TimeoutStopSec=15
 KillMode=mixed
+# Memory ceiling: a leaking/runaway Next process is OOM-killed (and restarted)
+# alone instead of taking the whole small box down. MemoryHigh throttles first.
+MemoryMax=1G
+MemoryHigh=768M
 StandardOutput=journal
 StandardError=journal
+# Any failure fires an instant Telegram (see install-host-alerts.sh). Wired here
+# so a newly-synced app is alertable from its first boot, not only after a
+# separate install-host-alerts run.
+OnFailure=notify-failure@%n.service
 
 [Install]
 WantedBy=multi-user.target

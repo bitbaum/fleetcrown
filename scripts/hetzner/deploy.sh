@@ -72,8 +72,10 @@ box "set -e
     [ -f /opt/$NAME/shared/launch.sh ] || cp -p /opt/$NAME/app/launch.sh /opt/$NAME/shared/launch.sh 2>/dev/null || true
   fi
   # launch.sh must resolve its dir PHYSICALLY: /opt/<name>/app is a symlink in
-  # the releases layout, and \\`find\\` does not descend a logical symlink path —
-  # vitareba crash-looped on the first release-deploy until pwd -P (2026-07-17).
+  # the releases layout, and its server.js search does not descend a logical
+  # symlink path — vitareba crash-looped on the first release-deploy until
+  # pwd -P (2026-07-17). NB: no backticks in this box \"...\" string — they run
+  # as command substitution on the box (that is what emitted find\\: not found).
   [ -f /opt/$NAME/shared/launch.sh ] && sed -i 's|&& pwd)\"|\&\& pwd -P)\"|' /opt/$NAME/shared/launch.sh"
 
 if [ "$FORCE_ENV" = "--env" ] || ! box "test -f /opt/$NAME/shared/.env"; then

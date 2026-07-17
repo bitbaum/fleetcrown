@@ -84,6 +84,9 @@ while IFS= read -r row; do
 Description=appcron ${app} ${method} ${path}
 After=network-online.target ${app}-app.service
 Wants=network-online.target
+# Failed cron → instant Telegram (install-host-alerts.sh). Encoded here so a
+# newly-synced cron is alertable immediately, not only after a separate run.
+OnFailure=notify-failure@%n.service
 
 [Service]
 Type=oneshot
