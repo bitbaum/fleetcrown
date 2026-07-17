@@ -7,7 +7,8 @@
   ],
   "scripts": {
     "dev": "next dev",
-    "prebuild": "npx tsx scripts/generate-bash-state-vocab.ts",
+    "prebuild": "npx tsx scripts/generate-bash-state-vocab.ts && npm run build:widget",
+    "build:widget": "esbuild widget/main.ts --bundle --minify --format=iife --outfile=public/widget.js --log-level=warning",
     "build": "next build",
     "postbuild": "bash scripts/deploy-local.sh",
     "start": "next start",
@@ -111,6 +112,7 @@
     "@types/web-push": "^3.6.4",
     "better-sqlite3": "^12.8.0",
     "drizzle-kit": "^0.31.10",
+    "esbuild": "^0.28.1",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "husky": "^9.1.7",

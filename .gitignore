@@ -40,3 +40,4 @@ desktop/resources/bin/
 !desktop/resources/*.png
 
 .env.vercel.production.snapshot.OLD
+/public/widget.js
