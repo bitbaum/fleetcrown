@@ -1,0 +1,93 @@
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { RATE_LIMIT_WINDOW_SHORT_MS, RATE_LIMIT_WINDOW_LONG_MS } from "@/lib/constants/time";
+import { FEEDBACK_SCOPE_VALUES } from "@/lib/constants/statuses";
+import { getWidgetTokenByToken } from "@/db/queries/widget-tokens";
+import { insertSiteFeedback } from "@/db/queries/site-feedback";
+
+/**
+ * Public ingest for the embeddable feedback widget (docs/architecture/
+ * feedback-widget.md). Cross-origin POST from customer sites, so this route:
+ *   • is excluded from the auth middleware in proxy.ts
+ *   • answers CORS preflight (JSON POST always triggers one)
+ *   • authenticates via the write-only fcw_* widget token in the body
+ *
+ * ACAO is `*` — the token grants submit-only capability and no cookies are
+ * involved, so origin secrecy buys nothing. The per-token `origins` allowlist
+ * is enforced server-side against the Origin header instead.
+ */
+
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Max-Age": "86400",
+} as const;
+
+function corsError(message: string, status: number): NextResponse {
+  return NextResponse.json({ error: message }, { status, headers: CORS_HEADERS });
+}
+
+const FeedbackBody = z.object({
+  token: z.string().startsWith("fcw_").max(100),
+  suggestion: z.string().trim().min(1).max(2000),
+  contact: z.string().max(200).optional(),
+  page: z.string().max(300).optional(),
+  url: z.string().max(1000).optional(),
+  pageTitle: z.string().max(300).optional(),
+  scope: z.enum(FEEDBACK_SCOPE_VALUES).optional(),
+  selectedElements: z.array(z.object({
+    elementType: z.string().max(100),
+    elementText: z.string().max(300),
+    selector: z.string().max(500),
+  })).max(10).optional(),
+});
+
+export function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+}
+
+export async function POST(req: NextRequest) {
+  const ip = getClientIp(req);
+  if (!checkRateLimit(`feedback:ip:${ip}`, 10, RATE_LIMIT_WINDOW_SHORT_MS)) {
+    return corsError("Too many submissions, try again later", 429);
+  }
+
+  const raw = await req.json().catch(() => null);
+  const parsed = FeedbackBody.safeParse(raw);
+  if (!parsed.success) return corsError("Invalid submission", 400);
+  const data = parsed.data;
+
+  const token = await getWidgetTokenByToken(data.token);
+  if (!token) return corsError("Unknown or revoked widget token", 403);
+
+  // Server-side origin allowlist (empty/null = any origin).
+  const origin = req.headers.get("origin");
+  if (token.origins?.length && (!origin || !token.origins.includes(origin))) {
+    return corsError("Origin not allowed for this widget", 403);
+  }
+
+  // Second-tier cap per token: one hostile page can't flood a project's inbox
+  // from many IPs without tripping this.
+  if (!checkRateLimit(`feedback:token:${token.id}`, 200, RATE_LIMIT_WINDOW_LONG_MS)) {
+    return corsError("Too many submissions, try again later", 429);
+  }
+
+  const created = await insertSiteFeedback({
+    projectId: token.projectId,
+    userId: token.userId,
+    tokenId: token.id,
+    suggestion: data.suggestion,
+    contact: data.contact ?? null,
+    page: data.page ?? null,
+    url: data.url ?? null,
+    pageTitle: data.pageTitle ?? null,
+    scope: data.scope ?? null,
+    selectedElements: data.selectedElements ?? null,
+    userAgent: req.headers.get("user-agent")?.slice(0, 300) ?? null,
+  });
+  if (!created) return corsError("Could not store feedback, try again later", 500);
+
+  return NextResponse.json({ ok: true }, { headers: CORS_HEADERS });
+}

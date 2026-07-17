@@ -70,6 +70,23 @@ export const EVENT_STATUS = {
 export type EventStatus = (typeof EVENT_STATUS)[keyof typeof EVENT_STATUS];
 
 /**
+ * Site-feedback inbox status — visitor feedback via the embeddable widget.
+ * Nothing auto-dispatches; the operator triages.
+ * Flow: new → dispatched → resolved, or new → archived.
+ */
+export const FEEDBACK_STATUS = {
+  NEW: "new",
+  DISPATCHED: "dispatched",
+  RESOLVED: "resolved",
+  ARCHIVED: "archived",
+} as const;
+export type FeedbackStatus = (typeof FEEDBACK_STATUS)[keyof typeof FEEDBACK_STATUS];
+
+/** What the visitor pointed the feedback widget at. */
+export const FEEDBACK_SCOPE_VALUES = ["element", "page", "site"] as const;
+export type FeedbackScope = (typeof FEEDBACK_SCOPE_VALUES)[number];
+
+/**
  * Display tone for a status dot/badge — severity semantics shared by the
  * activity classifier (lib/activity-status.ts) and the dispatch live status
  * (lib/dispatch-status.ts). NOTE: distinct from EVENT_STATUS above, which is

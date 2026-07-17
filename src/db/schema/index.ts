@@ -41,6 +41,8 @@ export * from "./conversations";
 export * from "./frontier-digests";
 export * from "./frontier-proposals";
 export * from "./project-shares";
+export * from "./widget-tokens";
+export * from "./site-feedback";
 
 export * from "./knowledge-embeddings";
 export * from "./run-events";
