@@ -1,6 +1,13 @@
 # FleetCrown Feedback Widget
 
-**Status**: Spec — not yet implemented (2026-07-17)
+**Status**: Phases 1–4 implemented 2026-07-17 — four `feat(feedback):` commits
+(ingest spine, embed bundle, inbox + dispatch, self-dogfood); find them with
+`git log --oneline --grep 'feat(feedback)'` (hashes not pinned here — a
+concurrent session rewrote history once already on implementation day).
+Remaining: revampit cutover (customer #1, lives in the revampit repo) and prod
+activation — run the widget_tokens/site_feedback DDL on the box (drizzle push
+is TTY-blocked by the pre-existing agent_tokens prompt), then mint a
+fleetcrown-project token and set FEEDBACK_WIDGET_TOKEN in the app env.
 **Origin**: Extract revampit's visitor-feedback FAB (`src/components/feedback/`, ~900 lines,
 modular, survived the Hirn deletion intentionally) into a FleetCrown-owned embeddable
 widget. Any registered project drops one script tag on its site; visitor feedback flows
