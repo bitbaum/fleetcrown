@@ -3,6 +3,7 @@ import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import { SessionProvider } from "next-auth/react";
 import { ThemeProvider } from "@/components/shell/ThemeProvider";
+import { PublicFeedbackWidget } from "@/components/shell/PublicFeedbackWidget";
 import { APP_DESCRIPTION, APP_NAME, APP_URL } from "@/config/brand";
 import { PALETTE } from "@/lib/palette";
 import "./globals.css";
@@ -77,6 +78,11 @@ export default function RootLayout({
         <SessionProvider>
           <ThemeProvider>{children}</ThemeProvider>
         </SessionProvider>
+        {/* Dogfood: FleetCrown's own feedback widget on public pages, active
+            only where FEEDBACK_WIDGET_TOKEN is provisioned (see config/feedback-widget.ts). */}
+        {process.env.FEEDBACK_WIDGET_TOKEN && (
+          <PublicFeedbackWidget token={process.env.FEEDBACK_WIDGET_TOKEN} />
+        )}
       </body>
     </html>
   );
