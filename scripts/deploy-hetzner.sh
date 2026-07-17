@@ -110,10 +110,10 @@ git_head() { git -C "$PROJECT_DIR" rev-parse HEAD 2>/dev/null || echo unknown; }
 # Schema BEFORE build (same order as scripts/hetzner/deploy.sh): guarded,
 # forward-only drizzle migrations from ./drizzle via the shared applier — the
 # first run baselines the existing file set against the live fleetcrown DB.
-# NB: drizzle/meta journal is desynced (idx 34 vs files to 0039 — legacy
-# push-then-hand-number workflow); the applier is filename-based and immune,
-# but a future `drizzle-kit generate` will mint colliding numbers until the
-# journal is reconciled. Number new migration files by hand (0040+) meanwhile.
+# NB: drizzle/meta journal was desynced (files to 0039, journal to 0035) and is
+# now reconciled via bootstrap-migration-ledger.ts --write-journal; the applier
+# is filename-based and immune either way. drizzle/meta still has NO snapshots,
+# so `drizzle-kit generate` can't diff — keep numbering new files by hand (0040+).
 bash "$SCRIPT_DIR/hetzner/apply-schema.sh" fleetcrown "$PROJECT_DIR" fleetcrown "." \
   || { echo "✗ schema step failed — deploy aborted (no code shipped)" >&2; exit 1; }
 
