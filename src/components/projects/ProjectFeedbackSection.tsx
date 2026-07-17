@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Archive, Check, Code2, Copy, Loader2, MessageSquare, RefreshCw, Rocket, Undo2, X } from "lucide-react";
+import { Archive, Check, Code2, Copy, Loader2, MessageSquare, RefreshCw, Rocket, ScanEye, Undo2, X } from "lucide-react";
 import { useFetch } from "@/hooks/use-fetch";
 import { useClipboard } from "@/hooks/use-clipboard";
 import { deleteJson, patchJson, postJson, throwApiError } from "@/lib/api/fetch";
@@ -22,6 +22,7 @@ export function ProjectFeedbackSection({ projectId }: { projectId: string }) {
   const feedbackFetch = useFetch<{ feedback: SiteFeedback[] }>(`/api/projects/${projectId}/feedback`);
   const tokenFetch = useFetch<{ token: WidgetTokenInfo | null }>(`/api/projects/${projectId}/widget-token`);
   const [setupOpen, setSetupOpen] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -53,18 +54,34 @@ export function ProjectFeedbackSection({ projectId }: { projectId: string }) {
 
   return (
     <section className="scroll-mt-28 border-t border-border-subtle pt-7" aria-labelledby="project-feedback-title">
-      <div className="mb-4 flex items-center justify-between gap-2">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <h2 id="project-feedback-title" className="text-lg font-semibold text-text-primary">
             Visitor feedback
           </h2>
           {newCount > 0 && <span className="ui-badge">{newCount} new</span>}
         </div>
-        <button type="button" onClick={() => setSetupOpen((v) => !v)} className="ui-btn-secondary gap-1.5">
-          <Code2 className="h-3.5 w-3.5" />
-          Widget
-        </button>
+        <div className="flex shrink-0 items-center gap-1.5">
+          {token && (
+            <button type="button" onClick={() => setReviewOpen((v) => !v)} className="ui-btn-secondary gap-1.5" title="Dispatch an agent to visually review a page and file findings here">
+              <ScanEye className="h-3.5 w-3.5" />
+              AI review
+            </button>
+          )}
+          <button type="button" onClick={() => setSetupOpen((v) => !v)} className="ui-btn-secondary gap-1.5">
+            <Code2 className="h-3.5 w-3.5" />
+            Widget
+          </button>
+        </div>
       </div>
+
+      {reviewOpen && token && (
+        <AiReviewCard
+          projectId={projectId}
+          defaultUrl={items.find((f) => f.url)?.url ?? ""}
+          onClose={() => setReviewOpen(false)}
+        />
+      )}
 
       {showSetup && (
         <WidgetSetupCard
@@ -276,6 +293,85 @@ function WidgetSetupCard({
             Enable widget
           </button>
         </div>
+      )}
+      {error && <p className="mt-2 ui-error">{error}</p>}
+    </div>
+  );
+}
+
+function AiReviewCard({
+  projectId,
+  defaultUrl,
+  onClose,
+}: {
+  projectId: string;
+  defaultUrl: string;
+  onClose: () => void;
+}) {
+  const [url, setUrl] = useState(defaultUrl);
+  const [busy, setBusy] = useState(false);
+  const [dispatched, setDispatched] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function dispatchReview() {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await postJson(`/api/projects/${projectId}/feedback/ai-review`, { url });
+      if (!res.ok) await throwApiError(res, "Could not dispatch the review");
+      setDispatched(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not dispatch the review");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="ui-card-shell mb-4 p-4 sm:p-5">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
+            <ScanEye className="h-4 w-4" />
+            AI page review
+          </div>
+          <p className="mt-1 text-xs leading-relaxed text-text-muted">
+            An agent opens the page in a headless browser, reviews it on desktop and mobile,
+            and files each issue into this inbox — you triage and dispatch fixes as usual.
+          </p>
+        </div>
+        <button type="button" onClick={onClose} className="ui-btn-icon" aria-label="Close AI review">
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
+      {dispatched ? (
+        <p className="mt-3 flex items-center gap-1.5 text-xs text-text-secondary">
+          <Check className="h-3.5 w-3.5" />
+          Review dispatched — findings land here when the agent finishes.
+        </p>
+      ) : (
+        <form
+          className="mt-3 flex flex-wrap items-center gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void dispatchReview();
+          }}
+        >
+          <input
+            type="url"
+            required
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="https://your-site.com/page-to-review"
+            className="ui-input-compact min-w-0 flex-1 basis-56"
+            aria-label="Page URL to review"
+          />
+          <button type="submit" disabled={busy || !url} className="ui-btn-save gap-1.5">
+            {busy ? <Loader2 className="ui-spinner-xs" /> : <Rocket className="h-3 w-3" />}
+            Review
+          </button>
+        </form>
       )}
       {error && <p className="mt-2 ui-error">{error}</p>}
     </div>

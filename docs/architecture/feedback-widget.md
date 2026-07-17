@@ -178,8 +178,17 @@ matters):
    /frontier) pointed at the FleetCrown project; then revampit swaps its React widget
    for the embed tag (its `site_suggestions` pipeline retires; optional dual-write
    during transition).
-5. **Later (not now, YAGNI)** — email loop back to submitter, screenshot capture,
-   auto-triage draft actions via the action queue, per-page analytics, theming API.
+5. **AI reviewer (shipped with prod activation)** — `POST /api/projects/[id]/feedback/ai-review`
+   dispatches an agent (via the `injectPrompt` SSOT) to open a page headless
+   (Playwright), review it on desktop + 320px mobile, and file each finding
+   through the same public `POST /api/feedback` + `fcw_` token a human visitor
+   uses (`contact: "FleetCrown AI reviewer"`). Human and AI feedback share one
+   inbox and one triage flow; review runs never auto-dispatch fixes. UI: "AI
+   review" button on the project feedback section (needs an active widget token).
+6. **Later (not now, YAGNI)** — email loop back to submitter, screenshot capture,
+   auto-triage draft actions via the action queue, per-page analytics, theming API,
+   site-wide crawl review, conversational widget (Loki-in-widget — needs its own
+   security model; the fcw_ token stays write-only).
 
 ## Out of scope
 
