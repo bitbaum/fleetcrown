@@ -29,7 +29,7 @@ trap 'ssh -S "$TUNNEL_SOCK" -O exit "$BOX" 2>/dev/null; [ -n "$STAGE" ] && rm -r
 # code introduces. Guarded: applies only pending, additive migrations and refuses
 # any destructive diff (aborts without shipping). See apply-schema.sh.
 if [ "$DB" != "-" ]; then
-  "$(dirname "${BASH_SOURCE[0]}")/apply-schema.sh" "$NAME" "$REPO" "$DB" \
+  "$(dirname "${BASH_SOURCE[0]}")/apply-schema.sh" "$NAME" "$REPO" "$DB" "$APP_DIR" \
     || { echo "ERROR: schema step failed — deploy aborted (no code shipped)"; exit 1; }
 fi
 

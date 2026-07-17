@@ -20,17 +20,34 @@
 #   ssh <box> "sudo -u postgres psql -d <db> \
 #     -c \"INSERT INTO public._deploy_schema_history(tag) VALUES ('0040_xxx')\""
 #
-# Usage: apply-schema.sh <name> <repo> <db>
+# Usage: apply-schema.sh <name> <repo> <db> [app_dir]
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
-NAME="${1:?usage: apply-schema.sh <name> <repo> <db>}"
+NAME="${1:?usage: apply-schema.sh <name> <repo> <db> [app_dir]}"
 REPO="${2:?}"
 DB="${3:?}"
-MIG_DIR="$REPO/packages/database/drizzle"
+APP_DIR="${4:-.}"
 
-[ -d "$MIG_DIR" ] || { echo "[schema] $NAME: no drizzle dir — skipping"; exit 0; }
+# Resolve the migrations dir per app layout. The original hardcoded kivvi's
+# monorepo path, so every OTHER drizzle app silently skipped this step and
+# deploys shipped code without schema ("no drizzle dir — skipping" looked
+# benign in logs). Probe the known layouts, first dir with numbered .sql wins:
+#   packages/database/drizzle      kivvi (monorepo)
+#   <app_dir>/drizzle              vitareba, petvity, surf-your-life (root apps)
+#   <app_dir>/src/lib/db/migrations  revamp-info
 shopt -s nullglob
+MIG_DIR=""
+for cand in \
+  "$REPO/packages/database/drizzle" \
+  "$REPO/$APP_DIR/drizzle" \
+  "$REPO/$APP_DIR/src/lib/db/migrations" \
+  "$REPO/drizzle" \
+  "$REPO/src/lib/db/migrations"; do
+  probe=("$cand"/[0-9]*.sql)
+  [ "${#probe[@]}" -gt 0 ] && { MIG_DIR="$cand"; break; }
+done
+[ -n "$MIG_DIR" ] || { echo "[schema] $NAME: no drizzle migrations found — skipping (generate a baseline: npx drizzle-kit generate)"; exit 0; }
 MIGS=("$MIG_DIR"/[0-9]*.sql)
 [ "${#MIGS[@]}" -gt 0 ] || { echo "[schema] $NAME: no migrations — skipping"; exit 0; }
 IFS=$'\n' MIGS=($(sort <<<"${MIGS[*]}")); unset IFS
