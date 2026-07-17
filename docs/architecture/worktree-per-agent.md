@@ -46,16 +46,41 @@ its work on `origin/main` (rebase-first push from its branch), the handoff still
 carries the commit SHA, and `isProjectBusy` still serializes same-project
 dispatches. What changed is only *where the agent's index lives*.
 
-## Deliberate phase-1 limits
+## Phase 2 — same-project parallel dispatch (implemented, opt-in)
 
-1. **Opt-in flag, default off** — safe rollout; flip the env after dogfooding.
-2. **Same-project parallelism not yet lifted.** `isProjectBusy` still queues
-   (`queuedBehind`) — worktrees remove the shared-checkout *reason* for that
-   gate, so lifting it (distinct tabs per run) is the natural phase 2.
-3. **Box runner:** `FLEETCROWN_BOX_PREPARE` resolves its clone first; combining
+**Flag:** `FLEETCROWN_PARALLEL_DISPATCH=true` on the SERVER (flip only after the
+worktree flag has been dogfooded). **SSOT:** `src/lib/run-tab.ts`.
+
+When a project is busy, instead of queueing (`queuedBehind`) the dispatch fires
+immediately under a **derived tab alias** `<project>~<runId8>`. Because the
+whole loop is tab-keyed, every mechanism composes unchanged: own PTY workspace
+(`runner:<alias>`), own session file (`<alias>.md`), own sentinels, own zellij
+tab, own worktree. The pieces that ARE alias-aware:
+
+- **Dispatch route** (`run/route.ts`): mints the alias, bakes the Exit contract
+  with the alias session path, stores `payload.sessionTab` on the run — the run
+  row keeps the BASE `projectKey` so analytics/busy checks aggregate per project.
+- **Runner guard** (`poller.ts`): a derived tab FORCES worktree isolation
+  regardless of the env flag — parallel-without-isolation is impossible.
+- **Ingestion** (`runtime-state`): alias tabs are never persisted as
+  project_states rows (no ghost cards; no clobbering the base project's runtime
+  facts). A READY alias handoff closes exactly the run whose
+  `payload.sessionTab` matches (`closeOpenRunBySessionTab`), from the pushed
+  session fields directly.
+- **Close-sweep guard**: runs carrying a `sessionTab` are never closed from the
+  base project's state row — run A's ready handoff can't close run B. The
+  reaper remains the backstop for lost alias runs.
+
+Trade-off (deliberate): parallel alias runs have no live project card — they
+surface in Activity/runs, not /control cards. Net: `scripts/test/run-tab.ts`.
+
+## Deliberate limits
+
+1. **Both flags default off** — worktree isolation first, then parallelism.
+2. **Box runner:** `FLEETCROWN_BOX_PREPARE` resolves its clone first; combining
    both flags worktrees the box clone only when the box dir exists locally —
-   fine, but the flag targets the laptop runner first.
-4. **`switch_agent` / manual `launch_agent` stay on the primary** — isolation is
+   fine, but the flags target the laptop runner first.
+3. **`switch_agent` / manual `launch_agent` stay on the primary** — isolation is
    for dispatched runs, not the human's own session.
-5. **Desktop runner needs a release** to pick up the poller change; the box
-   runner gets it on the next deploy from main.
+4. **Desktop runner needs a release** to pick up the poller changes; the box
+   runner gets them on the next deploy from main.

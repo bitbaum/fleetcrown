@@ -14,6 +14,7 @@
  */
 import { listOpenRuns } from "@/db/queries/orchestration-runs";
 import { getProjectState } from "@/db/queries/project-states";
+import type { SessionState } from "@/lib/control-types";
 import { getRecentOutcomes } from "@/db/queries/orchestration-runs";
 import { resolveProjectSession } from "@/lib/project-session";
 import { adapterFor } from "@/lib/orchestration/adapter-registry";
@@ -27,12 +28,28 @@ export type CloseSweepResult = {
 
 type OpenRunRow = Awaited<ReturnType<typeof listOpenRuns>>[number];
 
-/** Try to close ONE open run from its project's pushed session state. Returns
- *  the closed outcome, or null when the run stays open. */
-async function tryCloseRun(run: OpenRunRow): Promise<string | null> {
+/** The derived session tab a parallel run (phase 2 worktree-per-agent) carries
+ *  in its payload, or null for ordinary runs. */
+function runSessionTab(run: OpenRunRow): string | null {
+  const payload = run.payload as { sessionTab?: unknown } | null;
+  return typeof payload?.sessionTab === "string" ? payload.sessionTab : null;
+}
+
+/** Try to close ONE open run from its project's pushed session state (or a
+ *  directly-supplied session for parallel-alias runs). Returns the closed
+ *  outcome, or null when the run stays open. */
+async function tryCloseRun(run: OpenRunRow, sessionOverride?: SessionState): Promise<string | null> {
   if (closingRuns.has(run.id)) return null; // another close is in flight
-  const state = await getProjectState(run.userId, run.projectKey).catch(() => null);
-  const session = resolveProjectSession(null, state);
+  let session = sessionOverride ?? null;
+  if (!session) {
+    // A parallel run's handoff lives under its DERIVED tab, not the project's
+    // state row — closing it from the base project's session would let run A's
+    // ready handoff close run B (both open, both post-dating). Such runs close
+    // only via closeOpenRunBySessionTab; the reaper covers true losses.
+    if (runSessionTab(run)) return null;
+    const state = await getProjectState(run.userId, run.projectKey).catch(() => null);
+    session = resolveProjectSession(null, state);
+  }
   if (!session) return null;
 
   const adapterId: AdapterId = (ORCHESTRATION_ADAPTER_IDS as readonly string[]).includes(run.adapter)
@@ -82,4 +99,24 @@ export async function closeOpenRunsForProject(userId: string, projectKey: string
     if (outcome) n++;
   }
   return n;
+}
+
+/**
+ * Close the ONE parallel run whose payload.sessionTab matches a pushed derived-
+ * tab handoff (phase 2 worktree-per-agent). The session comes straight from
+ * the runner's push — alias tabs are deliberately never persisted as
+ * project_states rows (they'd show up as ghost project cards and clobber the
+ * base project's runtime facts), so this is their only close path besides the
+ * reaper. Precise by construction: one alias ↔ one run.
+ */
+export async function closeOpenRunBySessionTab(
+  userId: string,
+  sessionTab: string,
+  session: SessionState,
+): Promise<boolean> {
+  const open = await listOpenRuns(0);
+  const run = open.find((r) => r.userId === userId && runSessionTab(r) === sessionTab);
+  if (!run) return false;
+  const outcome = await tryCloseRun(run, session).catch(() => null);
+  return outcome != null;
 }

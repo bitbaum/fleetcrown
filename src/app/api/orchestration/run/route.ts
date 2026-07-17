@@ -12,6 +12,7 @@ import { AGENT_DEFAULT_MODELS } from "@/lib/agent-registry";
 import { cancelActiveBeaconSessions } from "@/app/api/beacon/route";
 import { buildPromptWithSession, resolveEffectiveTab, stateFile, clearHandshakeFiles, sessionHandoffContract } from "@/lib/agent-config";
 import { FLEET_SESSIONS_DISPLAY_PATH } from "@/lib/session-paths";
+import { deriveRunTab } from "@/lib/run-tab";
 import {
   ORCHESTRATION_ADAPTER_IDS,
   ORCHESTRATION_TASK_INTENT_IDS,
@@ -35,6 +36,13 @@ import { APP_SLUG } from "@/config/brand";
 import { writePromptQueueMirror } from "@/lib/prompt-queue-mirror";
 import { executionAccessErrorBody, resolveQueuedExecution, projectPreferredChannel } from "@/lib/execution-access";
 import { workspaceIdFor } from "@/lib/agent-execution/ownership";
+
+/** Same-project parallel dispatch (phase 2 of worktree-per-agent): when a
+ *  project is busy, dispatch immediately under a derived tab alias instead of
+ *  queueing behind. Requires worktree isolation on the runner (the runner
+ *  force-isolates derived tabs, so this can't create shared-checkout races).
+ *  Default off — flip after the worktree flag has been dogfooded. */
+const PARALLEL_DISPATCH_ENABLED = process.env.FLEETCROWN_PARALLEL_DISPATCH === "true";
 
 const RunOrchestrationBody = z.object({
   projectId: z.string().uuid().nullable().optional(),
@@ -318,6 +326,50 @@ export async function POST(req: NextRequest) {
       ...(await getOrgProjects(userId).catch(() => [])),
     ].find((p) => p.name.toLowerCase() === request.projectKey.toLowerCase());
     const pinnedChannel = projectPreferredChannel(busyMatch, null);
+
+    // Phase 2 of worktree-per-agent: same-project PARALLEL dispatch. With
+    // checkout isolation in place (each run gets its own git worktree), the
+    // only reason to queue was the shared tab/session/sentinel identity — so
+    // mint this run a derived tab alias (<project>~<runId8>) and every
+    // tab-keyed mechanism (PTY workspace, session handoff, sentinels, zellij
+    // tab, worktree) composes unchanged. The runner FORCES worktree isolation
+    // for derived tabs regardless of its env flag, so parallel-without-
+    // isolation is impossible. Run row keeps the BASE projectKey (analytics,
+    // busy checks aggregate per project); payload.sessionTab carries the alias
+    // for the close path. Opt-in via FLEETCROWN_PARALLEL_DISPATCH.
+    if (PARALLEL_DISPATCH_ENABLED && trackedRunId) {
+      const runTab = deriveRunTab(request.projectKey, trackedRunId);
+      await updateOrchestrationRun(trackedRunId, {
+        payload: {
+          projectId: request.projectId ?? null,
+          projectKey: request.projectKey,
+          projectPath: request.projectPath,
+          model: request.model,
+          sessionTab: runTab,
+        },
+      }).catch((err) => console.error("[orchestration/run] sessionTab persist failed:", err));
+      // The alias gets its own session file — bake the Exit contract with the
+      // DERIVED path so the handoff lands where the close path looks for it.
+      const sessionFileRef = `${FLEET_SESSIONS_DISPLAY_PATH}/${runTab}.md`;
+      const parallelPrompt =
+        `${resolvedPromptBody}\n\n## Exit contract (operator requirement)\nBefore stopping, create ${sessionFileRef}.\n${sessionHandoffContract(sessionFileRef)}`;
+      const commandId = await enqueueDispatchCommand(userId, {
+        tab: runTab,
+        ...(pinnedChannel ? { channel: pinnedChannel } : {}),
+        dir: request.projectPath,
+        agent: request.adapter,
+        prompt: parallelPrompt,
+        promptKey: request.intent,
+        promptLabel: intent.name,
+        model: request.model,
+        projectKey: request.projectKey,
+        runId: trackedRunId,
+      });
+      return NextResponse.json({
+        ok: true, queued: true, parallel: true, mode: "parallel", tab: runTab, commandId, runId: trackedRunId, runnerConnected,
+      });
+    }
+
     const commandId = await enqueueDispatchCommand(userId, {
       tab: request.projectKey,
       ...(pinnedChannel ? { channel: pinnedChannel } : {}),
