@@ -6,18 +6,22 @@
  * Terminal Cloud and This computer both list these and stream via peek-stream.
  */
 import { NextResponse } from "next/server";
+import { z } from "@/lib/api/route-helpers";
 import { getSessionUserId } from "@/lib/session";
+import { BUILDER_CHANNELS } from "@/lib/constants/statuses";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { getRuntimeSnapshot } from "@/db/queries/runtime-snapshots";
 import { getExecutionAccess } from "@/lib/execution-access";
 
 export const runtime = "nodejs";
 
+const Channel = z.enum(BUILDER_CHANNELS);
+
 export async function GET(req: Request) {
   const userId = await getSessionUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const channelParam = new URL(req.url).searchParams.get("channel");
-  const requestedChannel = channelParam === "cloud" || channelParam === "local" ? channelParam : null;
+  const channelParam = Channel.safeParse(new URL(req.url).searchParams.get("channel"));
+  const requestedChannel = channelParam.success ? channelParam.data : null;
 
   if (requestedChannel === "cloud" && !isRuntimeAvailable()) {
     const access = await getExecutionAccess(userId);

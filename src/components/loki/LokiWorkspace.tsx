@@ -15,6 +15,7 @@ import { Composer } from "./Composer";
 import { SaveContextBar } from "./SaveContextBar";
 import { ProjectFilter } from "./ProjectFilter";
 import type { Attachment, ConversationSummary, LokiMessage, LokiProject, ModelChoice } from "./types";
+import { LOKI_PREFILL_EVENT } from "@/lib/client-events";
 
 const REFETCH_TIMEOUT_MS = 15_000;
 
@@ -86,8 +87,8 @@ export function LokiWorkspace({
       const prompt = (e as CustomEvent<{ prompt: string }>).detail?.prompt ?? "";
       setComposerPrefill(prompt);
     };
-    window.addEventListener("loki:prefill", handler);
-    return () => window.removeEventListener("loki:prefill", handler);
+    window.addEventListener(LOKI_PREFILL_EVENT, handler);
+    return () => window.removeEventListener(LOKI_PREFILL_EVENT, handler);
   }, []);
 
   const reloadProjects = useCallback(async () => {

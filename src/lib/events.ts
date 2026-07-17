@@ -17,6 +17,9 @@
  */
 
 import { z } from "zod";
+// Type-only — erased at build time, so home/ pieces that import this file at
+// runtime never pull drizzle/DB deps. Used solely for the drift guard below.
+import type { OrchestrationOutcome } from "@/db/schema/orchestration-runs";
 
 export const EVENT_VERSION = 1;
 
@@ -53,9 +56,30 @@ export const Handoff = z.object({
 export type Handoff = z.infer<typeof Handoff>;
 
 /** Outcome categories — same union as orchestration_runs.outcome. */
-export const OUTCOMES = ["success", "partial", "error", "hang", "user_abort", "timeout"] as const;
+export const OUTCOMES = ["success", "partial", "error", "hang", "user_abort", "timeout"] as const satisfies readonly OrchestrationOutcome[];
 export const Outcome = z.enum(OUTCOMES);
 export type Outcome = z.infer<typeof Outcome>;
+
+/** Compile-time drift guard: errors if OUTCOMES and the DB schema's outcome
+ *  union ever diverge (in either direction). Runtime value is inert. */
+export const OUTCOMES_MATCH_DB_SCHEMA:
+  [Exclude<Outcome, OrchestrationOutcome>, Exclude<OrchestrationOutcome, Outcome>] extends [never, never]
+    ? true
+    : never = true;
+
+/**
+ * The outcomes that count as hard failures — SSOT for the dispatch failure
+ * brake (dispatch-gates), run-close state derivation (finish route +
+ * close-from-session), the control hero's "Stalled" signal, and the brain's
+ * last-error breadcrumb (home/state). user_abort is deliberately excluded:
+ * a human choice is neutral, not a systemic failure.
+ */
+export const FAILING_OUTCOMES: ReadonlySet<string> = new Set(
+  ["error", "hang", "timeout"] as const satisfies readonly Outcome[],
+);
+export function isFailingOutcome(outcome: string | null | undefined): boolean {
+  return outcome != null && FAILING_OUTCOMES.has(outcome);
+}
 
 /** Autonomy levels — drives confidence-gated auto-dispatch in the brain. */
 export const AUTONOMY = ["manual", "confirm", "auto", "sleep"] as const;

@@ -10,7 +10,7 @@
  * dispatch counters arrive in M5 when the decide() function needs them.
  */
 
-import type { Adapter, Event, Handoff, Outcome } from "@/lib/events";
+import { isFailingOutcome, type Adapter, type Event, type Handoff, type Outcome } from "@/lib/events";
 
 export type ProjectState = {
   project: string;
@@ -118,7 +118,7 @@ export function applyEvent(state: GlobalState, event: Event): GlobalState {
       ps.recentOutcomes = [outcome, ...ps.recentOutcomes].slice(0, RECENT_OUTCOME_LIMIT);
       // Clear the last-error breadcrumb on a non-error finish — the project
       // has moved past the failure.
-      if (outcome !== "error" && outcome !== "hang" && outcome !== "timeout") {
+      if (!isFailingOutcome(outcome)) {
         ps.lastError = undefined;
       }
       break;

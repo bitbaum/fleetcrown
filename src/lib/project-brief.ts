@@ -7,6 +7,7 @@ import { SOURCE_FLEETCROWN_UI } from "@/lib/constants";
 import { patchProject } from "@/db/queries/projects";
 import { syncUserProjectDescription } from "@/db/queries/user-projects";
 import { scheduleProjectProfileReindexByEntityId } from "@/lib/rag/reindex-project-profile";
+import { PROJECT_ATTR } from "@/config/project-attrs";
 
 /**
  * AI-powered project profile extraction — the "no forms" path.
@@ -270,10 +271,12 @@ export async function applyProjectProfile(
   }
 
   const attrKeys = [
-    "mission", "vision", "customers", "stack", "status", "next_step",
-    "architecture", "conventions", "definition_of_done",
-    "problem", "solution", "current_alternatives", "competitors",
-    "complements_substitutes", "partnerships", "potential_customers", "expansion_ideas",
+    PROJECT_ATTR.MISSION, PROJECT_ATTR.VISION, PROJECT_ATTR.CUSTOMERS,
+    PROJECT_ATTR.STACK, PROJECT_ATTR.STATUS, PROJECT_ATTR.NEXT_STEP,
+    PROJECT_ATTR.ARCHITECTURE, PROJECT_ATTR.CONVENTIONS, PROJECT_ATTR.DEFINITION_OF_DONE,
+    PROJECT_ATTR.PROBLEM, PROJECT_ATTR.SOLUTION, PROJECT_ATTR.CURRENT_ALTERNATIVES,
+    PROJECT_ATTR.COMPETITORS, PROJECT_ATTR.COMPLEMENTS_SUBSTITUTES, PROJECT_ATTR.PARTNERSHIPS,
+    PROJECT_ATTR.POTENTIAL_CUSTOMERS, PROJECT_ATTR.EXPANSION_IDEAS,
   ] as const;
 
   const entries = attrKeys.flatMap((key) => {

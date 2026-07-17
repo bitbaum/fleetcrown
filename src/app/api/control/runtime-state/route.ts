@@ -9,6 +9,7 @@ import { emitStateChanged } from "@/lib/sse-bus";
 import { writePromptQueueMirror } from "@/lib/prompt-queue-mirror";
 import { isCloudRunnerVersion } from "@/lib/builder-presence";
 import { closeOpenRunsForProject } from "@/lib/orchestration/close-sweep";
+import { SESSION_STATUS } from "@/lib/constants/statuses";
 
 function sanitizePanes(raw: unknown[]): PaneRecord[] {
   const out: PaneRecord[] = [];
@@ -174,7 +175,7 @@ export async function POST(req: NextRequest) {
       // hourly cron sweep. Fire-and-forget: ingestion latency stays flat, and
       // closeRunFromSession's own guards (finishedAt, handoff-postdates-start)
       // make a duplicate attempt a no-op.
-      if (updated && p.sessionStatus?.toLowerCase() === "ready") {
+      if (updated && p.sessionStatus?.toLowerCase() === SESSION_STATUS.READY) {
         void closeOpenRunsForProject(userId, p.tab).catch((err) =>
           console.error("[runtime-state] run close from handoff failed:", err),
         );

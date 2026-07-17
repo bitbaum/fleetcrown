@@ -18,6 +18,7 @@ import { NextResponse } from "next/server";
 import { getSessionUserId } from "@/lib/session";
 import { getProjects } from "@/db/queries/projects";
 import { getProjectStatesByUserId } from "@/db/queries/project-states";
+import { SESSION_STATUS } from "@/lib/constants/statuses";
 
 export type SessionSnapshotItem = {
   id: string;
@@ -55,8 +56,8 @@ function derivePhase(
 ): SessionSnapshotItem["state"]["phase"] {
   if (state.closedAt) return "closed";
   if (state.agentRunning) return "working";
-  if (state.sessionStatus === "ready") return "ready";
-  if (state.sessionStatus === "working") return "working";
+  if (state.sessionStatus === SESSION_STATUS.READY) return "ready";
+  if (state.sessionStatus === SESSION_STATUS.WORKING) return "working";
 
   const age = Date.now() - state.updatedAt.getTime();
   if (age > 5 * 60 * 1000) return "offline";

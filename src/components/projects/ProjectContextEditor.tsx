@@ -9,39 +9,43 @@ import { ProjectResources } from "./ProjectResources";
 import { BusinessPlanSection } from "./BusinessPlanSection";
 import { AddAttrInline, AttrRow } from "./project-overview-helpers";
 import { getProjectLinks, type ProjectResource } from "./project-detail-types";
+import { PROJECT_ATTR } from "@/config/project-attrs";
 
 const CONTEXT_GROUPS = [
   {
     title: "Purpose",
     fields: [
-      { key: "mission", label: "Mission", placeholder: "Why this project exists now" },
-      { key: "vision", label: "Vision", placeholder: "The future this project should create" },
-      { key: "customers", label: "People served", placeholder: "Who uses it and what they need" },
+      { key: PROJECT_ATTR.MISSION, label: "Mission", placeholder: "Why this project exists now" },
+      { key: PROJECT_ATTR.VISION, label: "Vision", placeholder: "The future this project should create" },
+      { key: PROJECT_ATTR.CUSTOMERS, label: "People served", placeholder: "Who uses it and what they need" },
     ],
   },
   {
     title: "Product",
     fields: [
-      { key: "problem", label: "Problem", placeholder: "The concrete problem worth solving" },
-      { key: "solution", label: "Solution", placeholder: "How this project solves the problem" },
+      { key: PROJECT_ATTR.PROBLEM, label: "Problem", placeholder: "The concrete problem worth solving" },
+      { key: PROJECT_ATTR.SOLUTION, label: "Solution", placeholder: "How this project solves the problem" },
     ],
   },
   {
     title: "Build contract",
     fields: [
-      { key: "stack", label: "Stack", placeholder: "Languages, frameworks, and infrastructure" },
-      { key: "architecture", label: "Architecture", placeholder: "Main modules, stores, and integrations" },
-      { key: "conventions", label: "Conventions", placeholder: "Patterns and rules every agent must follow" },
+      { key: PROJECT_ATTR.STACK, label: "Stack", placeholder: "Languages, frameworks, and infrastructure" },
+      { key: PROJECT_ATTR.ARCHITECTURE, label: "Architecture", placeholder: "Main modules, stores, and integrations" },
+      { key: PROJECT_ATTR.CONVENTIONS, label: "Conventions", placeholder: "Patterns and rules every agent must follow" },
     ],
   },
 ] as const;
 
 const CONTEXT_KEYS = new Set<string>(CONTEXT_GROUPS.flatMap((group) => group.fields.map((field) => field.key)));
+/** Known attrs that are NOT free-form context — rendered by dedicated UI elsewhere. */
 const NON_CONTEXT_KEYS = new Set<string>([
-  "status", "maturity", "next_step", "definition_of_done", "goal_max_turns",
-  "description", "owner", "production_url", "url", "repo", "github_repo",
-  "security_vulnerability", "broken_features", "deployment_issue",
-  "business_plan", "business_actions", "business_plan_updated_at",
+  PROJECT_ATTR.STATUS, PROJECT_ATTR.MATURITY, PROJECT_ATTR.NEXT_STEP,
+  PROJECT_ATTR.DEFINITION_OF_DONE, PROJECT_ATTR.GOAL_MAX_TURNS,
+  PROJECT_ATTR.DESCRIPTION, PROJECT_ATTR.OWNER, PROJECT_ATTR.PRODUCTION_URL,
+  PROJECT_ATTR.URL, PROJECT_ATTR.REPO, PROJECT_ATTR.GITHUB_REPO,
+  PROJECT_ATTR.SECURITY_VULNERABILITY, PROJECT_ATTR.BROKEN_FEATURES, PROJECT_ATTR.DEPLOYMENT_ISSUE,
+  PROJECT_ATTR.BUSINESS_PLAN, PROJECT_ATTR.BUSINESS_ACTIONS, PROJECT_ATTR.BUSINESS_PLAN_UPDATED_AT,
 ]);
 
 export function ProjectContextEditor({

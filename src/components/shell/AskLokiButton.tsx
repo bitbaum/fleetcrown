@@ -12,6 +12,7 @@ import {
 import { LOKI_PROACTIVE_STARTERS } from "@/config/loki-suggested-actions";
 import { useProjectDispatch, DispatchedNote, type ProjectDispatchKind } from "@/components/projects/ProjectActionButtons";
 import { postJson } from "@/lib/api/fetch";
+import { LOKI_OPEN_EVENT } from "@/lib/client-events";
 
 type Turn = { role: "user" | "loki"; text: string };
 
@@ -100,8 +101,8 @@ export function AskLokiButton() {
       setOpen(true);
       if (prompt.trim()) setInput(prompt.trim());
     };
-    window.addEventListener("loki:open", eventHandler);
-    return () => window.removeEventListener("loki:open", eventHandler);
+    window.addEventListener(LOKI_OPEN_EVENT, eventHandler);
+    return () => window.removeEventListener(LOKI_OPEN_EVENT, eventHandler);
   }, []);
 
   useEffect(() => {
@@ -163,7 +164,7 @@ export function AskLokiButton() {
             <div className="flex shrink-0 items-center gap-1">
               <Link
                 href={context ? `/loki?project=${encodeURIComponent(context.workspaceKey)}` : "/loki"}
-                className="inline-flex min-h-8 items-center gap-1 rounded-md px-2 text-xs text-text-tertiary transition-colors hover:bg-surface-raised hover:text-text-secondary"
+                className="ui-btn-ghost min-h-8 gap-1 px-2 text-xs"
                 title="Continue in the full Loki workspace"
               >
                 Full Loki <ArrowUpRight className="h-3 w-3" aria-hidden="true" />

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { CheckCircle, Send } from "lucide-react";
 import { FEEDBACK_SHORT_MS } from "@/lib/constants/timings";
+import { LOKI_OPEN_EVENT } from "@/lib/client-events";
 
 export function LokiDispatchButton({
   prompt,
@@ -18,7 +19,7 @@ export function LokiDispatchButton({
   const [sent, setSent] = useState(false);
 
   const handleSend = () => {
-    window.dispatchEvent(new CustomEvent("loki:open", { detail: { prompt } }));
+    window.dispatchEvent(new CustomEvent(LOKI_OPEN_EVENT, { detail: { prompt } }));
     setSent(true);
     setTimeout(() => setSent(false), FEEDBACK_SHORT_MS);
   };

@@ -18,6 +18,7 @@ import {
 export { inferAdapterFromTabName } from "@/lib/agent-resolution";
 import type { ControlData, ProjectState } from "@/lib/control-types";
 import type { OrchestrationOutcome } from "@/db/schema/orchestration-runs";
+import { isFailingOutcome } from "@/lib/events";
 import { latestActivitySummary } from "./project-activity-ledger";
 import { DAY_MS } from "@/lib/constants/time";
 
@@ -177,8 +178,6 @@ export type FleetPulse = {
   detail: string | null;
 };
 
-const FAILED_OUTCOMES: ReadonlySet<string> = new Set(["error", "hang", "timeout"]);
-
 /**
  * Derive what the fleet is ACTUALLY doing for the hero headline. The label
  * used to be `mode === "on" ? "Building" : "Paused"` — pure aspiration: it
@@ -212,7 +211,7 @@ export function deriveFleetPulse(input: {
   if (input.workingCount > 0) return { key: "building", label: "Building", detail: null };
 
   const recent = input.latestRuns.filter((r) => r.ageMs != null && r.ageMs <= FLEET_PULSE_STALE_MS);
-  const failed = recent.filter((r) => FAILED_OUTCOMES.has(r.outcome)).length;
+  const failed = recent.filter((r) => isFailingOutcome(r.outcome)).length;
   const succeeded = recent.filter((r) => r.outcome === "success" || r.outcome === "partial").length;
   if (failed >= 2 && succeeded === 0) {
     return {

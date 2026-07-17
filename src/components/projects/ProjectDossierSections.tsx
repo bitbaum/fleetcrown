@@ -16,6 +16,7 @@ import { DOSSIER_STALE_MS } from "@/lib/project-display";
 import { APP_LOCALE } from "@/lib/constants";
 import { MINUTE_MS, WEEK_MS } from "@/lib/constants/time";
 import { RunNextStepButton } from "./ProjectActionButtons";
+import { SESSION_STATUS } from "@/lib/constants/statuses";
 
 const OUTCOME_TAG: Record<string, string> = {
   success: "ui-tag ui-tag-positive",
@@ -74,7 +75,7 @@ export function NowSection({
       ? state.currentPromptLabel
         ? `Working — ${state.currentPromptLabel}`
         : "Agent process running"
-      : state?.sessionStatus === "ready"
+      : state?.sessionStatus === SESSION_STATUS.READY
         ? "Ready for the next task"
         : "No live agent";
   const liveActive = !stale && !!state?.agentRunning;

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { persistProjectRuntimeIfNewer } from "@/db/queries/project-states";
-import { readJsonBody, z } from "@/lib/api/route-helpers";
+import { jsonOk, readJsonBody, z } from "@/lib/api/route-helpers";
 import { getApiUserId } from "@/lib/session";
 
 const PatchBody = z.object({
@@ -45,7 +45,10 @@ export async function PATCH(
 
   try {
     const row = await persistProjectRuntimeIfNewer(patch as unknown as Parameters<typeof persistProjectRuntimeIfNewer>[0]);
-    return NextResponse.json({ success: true, data: row });
+    // Envelope matches the app-wide jsonOk convention — this route was the last
+    // `{ success, data }` holdout. No in-repo consumer reads the body (verified
+    // src/ home/ desktop/ scripts/); callers treat the PATCH as fire-and-forget.
+    return jsonOk({ state: row });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ error: msg }, { status: 500 });

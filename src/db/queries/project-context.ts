@@ -13,6 +13,7 @@ import { db } from "@/db";
 import { entities, goals, userProjects } from "@/db/schema";
 import type { Milestone } from "@/db/schema/goals";
 import { ENTITY_TYPE, GOAL_STATUS } from "@/lib/constants/statuses";
+import { PROJECT_ATTR } from "@/config/project-attrs";
 import { renderOperatingPrinciples } from "@/config/operating-principles";
 import { getProjectDossierByProjectKey, renderProjectDossierForAgent } from "./project-dossier";
 import { fetchAttributesByEntityIds } from "./utils";
@@ -25,16 +26,16 @@ const MAX_GOALS = 6;
 // The market-lens fields (competitors, expansion ideas, …) are for the human
 // operator, so they're deliberately excluded to keep the prompt focused + cheap.
 const DRIVING_FIELDS: ReadonlyArray<readonly [string, string]> = [
-  ["mission", "Mission"],
-  ["vision", "Vision"],
-  ["customers", "Customers"],
-  ["problem", "Problem"],
-  ["solution", "Solution"],
-  ["stack", "Stack"],
-  ["next_step", "Next step (owner's highest-priority action right now)"],
-  ["architecture", "Architecture"],
-  ["conventions", "Conventions (how this project is built — follow these)"],
-  ["definition_of_done", "Definition of done (a change isn't finished until this holds)"],
+  [PROJECT_ATTR.MISSION, "Mission"],
+  [PROJECT_ATTR.VISION, "Vision"],
+  [PROJECT_ATTR.CUSTOMERS, "Customers"],
+  [PROJECT_ATTR.PROBLEM, "Problem"],
+  [PROJECT_ATTR.SOLUTION, "Solution"],
+  [PROJECT_ATTR.STACK, "Stack"],
+  [PROJECT_ATTR.NEXT_STEP, "Next step (owner's highest-priority action right now)"],
+  [PROJECT_ATTR.ARCHITECTURE, "Architecture"],
+  [PROJECT_ATTR.CONVENTIONS, "Conventions (how this project is built — follow these)"],
+  [PROJECT_ATTR.DEFINITION_OF_DONE, "Definition of done (a change isn't finished until this holds)"],
 ];
 
 /**

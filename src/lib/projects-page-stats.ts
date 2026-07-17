@@ -1,4 +1,5 @@
 import type { ProjectGridRow } from "@/components/projects/ProjectGridCard";
+import { PROJECT_ATTR } from "@/config/project-attrs";
 
 export type ProjectsPageFilter = null | "attention" | "next-step" | "team";
 
@@ -11,7 +12,11 @@ export interface ProjectsPageStats {
 }
 
 /** Attr keys that flag a project as needing attention on the Projects page. */
-const ATTENTION_KEYS = ["security_vulnerability", "broken_features", "deployment_issue"] as const;
+const ATTENTION_KEYS = [
+  PROJECT_ATTR.SECURITY_VULNERABILITY,
+  PROJECT_ATTR.BROKEN_FEATURES,
+  PROJECT_ATTR.DEPLOYMENT_ISSUE,
+] as const;
 
 export function hasProjectAttention(attrs: Record<string, string>): boolean {
   return ATTENTION_KEYS.some((k) => Boolean(attrs[k]));
@@ -25,7 +30,7 @@ export function computeProjectsPageStats(projects: ProjectGridRow[]): ProjectsPa
   for (const p of projects) {
     if (p.readonly) team += 1;
     if (hasProjectAttention(p.attrs)) attention += 1;
-    if (p.attrs["next_step"]?.trim()) withNextStep += 1;
+    if (p.attrs[PROJECT_ATTR.NEXT_STEP]?.trim()) withNextStep += 1;
   }
 
   return {
@@ -47,7 +52,7 @@ export function filterProjects(
   const result = projects.filter((p) => {
     if (pageFilter === "team" && !p.readonly) return false;
     if (pageFilter === "attention" && !hasProjectAttention(p.attrs)) return false;
-    if (pageFilter === "next-step" && !p.attrs["next_step"]?.trim()) return false;
+    if (pageFilter === "next-step" && !p.attrs[PROJECT_ATTR.NEXT_STEP]?.trim()) return false;
     if (!q) return true;
     return (
       p.name.toLowerCase().includes(q) ||
@@ -60,8 +65,8 @@ export function filterProjects(
     const aHasIssues = hasProjectAttention(a.attrs);
     const bHasIssues = hasProjectAttention(b.attrs);
     if (aHasIssues !== bHasIssues) return aHasIssues ? -1 : 1;
-    const aHasNext = Boolean(a.attrs["next_step"]?.trim());
-    const bHasNext = Boolean(b.attrs["next_step"]?.trim());
+    const aHasNext = Boolean(a.attrs[PROJECT_ATTR.NEXT_STEP]?.trim());
+    const bHasNext = Boolean(b.attrs[PROJECT_ATTR.NEXT_STEP]?.trim());
     if (aHasNext !== bHasNext) return aHasNext ? -1 : 1;
     if (a.readonly !== b.readonly) return a.readonly ? 1 : -1;
     return a.name.localeCompare(b.name);

@@ -20,6 +20,7 @@
 import type { DispatchAction, DispatchResult } from "@/app/api/control/dispatch/route";
 import type { AutoInjectMode } from "@/config/beacon";
 import { SESSION_STATUS } from "@/lib/constants/statuses";
+import { isFailingOutcome } from "@/lib/events";
 
 export type GateInput = {
   status: string;
@@ -36,14 +37,12 @@ export type GateInput = {
 /** How many consecutive most-recent failures trip the failure brake. */
 export const FAILURE_BRAKE_STREAK = 3;
 
-const BRAKE_FAILURES = new Set(["error", "hang", "timeout"]);
-
 /** Leading run of hard failures (user_abort is neutral and breaks the run,
  *  as does any success/partial). */
 export function leadingFailureStreak(outcomes: string[]): number {
   let n = 0;
   for (const o of outcomes) {
-    if (BRAKE_FAILURES.has(o)) n++;
+    if (isFailingOutcome(o)) n++;
     else break;
   }
   return n;

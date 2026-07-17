@@ -1,5 +1,6 @@
 import type { OrchestrationOutcome } from "@/db/schema/orchestration-runs";
 import type { SessionState } from "@/lib/control-types";
+import { isFailingOutcome } from "@/lib/events";
 import { buildOrchestrationSummary } from "./summary";
 import { inferOutcome } from "./infer-outcome";
 import type { OrchestrationTaskSummary } from "./contract";
@@ -52,7 +53,7 @@ export function closeRunFromSession(run: OpenRun, session: SessionState): RunClo
 
   const outcome = inferOutcome({ summary });
   return {
-    state: outcome === "error" || outcome === "hang" || outcome === "timeout" ? "error" : "done",
+    state: isFailingOutcome(outcome) ? "error" : "done",
     outcome,
     summary,
     finishedAt: new Date(),

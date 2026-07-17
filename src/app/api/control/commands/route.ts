@@ -3,6 +3,10 @@ import { claimNextPendingCommand } from "@/db/queries/pending-commands";
 import { getApiUserId } from "@/lib/session";
 import { RUNNER_LONG_POLL_MS } from "@/lib/constants/runner";
 import type { RunnerChannel } from "@/db/schema/pending-commands";
+import { z } from "@/lib/api/route-helpers";
+import { BUILDER_CHANNELS } from "@/lib/constants/statuses";
+
+const Channel = z.enum(BUILDER_CHANNELS);
 
 // Runner polls this to claim the next pending command.
 // Auth: Bearer (env token or ck_* agent token) OR browser session.
@@ -23,15 +27,14 @@ export async function GET(request: NextRequest) {
     ?.split(",")
     .map((type) => type.trim())
     .filter(Boolean);
-  const channelParam = request.nextUrl.searchParams.get("channel");
+  const channelParam = Channel.safeParse(request.nextUrl.searchParams.get("channel"));
   // Legacy-desktop compat: a poller that declares NO channel is an older
   // packaged Fleet Runner (<= 0.8.9, built before channel declaration) —
   // always a user-owned LOCAL machine. Treat it as "local" so channel-pinned
   // dispatches (projectPreferredChannel) still reach it. The shared cloud
   // builder is provisioned by install-box-runner.sh, which has always set
   // FLEETCROWN_RUNNER_PRESENCE_CHANNEL=cloud — it never polls paramless.
-  const runnerChannel: RunnerChannel =
-    channelParam === "cloud" || channelParam === "local" ? channelParam : "local";
+  const runnerChannel: RunnerChannel = channelParam.success ? channelParam.data : "local";
 
   // Long-poll: hold the request until a command arrives or the wait expires.
   const waitMs = Math.min(

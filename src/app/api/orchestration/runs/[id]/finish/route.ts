@@ -6,6 +6,7 @@ import { inferOutcome } from "@/lib/orchestration";
 import { ORCHESTRATION_TASK_SUMMARY_FIELDS } from "@/lib/orchestration";
 import { buildOrchestrationSummary } from "@/lib/orchestration/summary";
 import { ORCHESTRATION_OUTCOMES, type OrchestrationOutcome } from "@/db/schema/orchestration-runs";
+import { isFailingOutcome } from "@/lib/events";
 
 const FinishBody = z.object({
   // Outcome can be supplied directly (e.g. user_abort from a cancel button)
@@ -48,7 +49,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const updated = await updateOrchestrationRun(
     id,
     {
-      state: outcome === "error" || outcome === "hang" || outcome === "timeout" ? "error" : "done",
+      state: isFailingOutcome(outcome) ? "error" : "done",
       outcome,
       summary: summary ?? undefined,
       finishedAt: new Date(),

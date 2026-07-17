@@ -8,6 +8,7 @@ import { setAttr } from "@/lib/api/attrs";
 import { rememberFleetProject } from "@/lib/fleet-context";
 import { HealthScoreBar } from "./HealthScore";
 import type { ProjectHealth } from "@/lib/project-health";
+import { PROJECT_ATTR } from "@/config/project-attrs";
 
 export function ProjectWorkspaceHeader({
   projectId,
@@ -44,7 +45,7 @@ export function ProjectWorkspaceHeader({
           value={currentStatus}
           editable={!readonly}
           onSave={async (next) => {
-            const response = await setAttr(`/api/projects/${projectId}`, "status", next);
+            const response = await setAttr(`/api/projects/${projectId}`, PROJECT_ATTR.STATUS, next);
             if (!response.ok) throw new Error("Failed to save status");
             setCurrentStatus(next);
             refresh();

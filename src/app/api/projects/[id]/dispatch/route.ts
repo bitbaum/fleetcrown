@@ -6,6 +6,7 @@ import { getProjectDossierByOwner, type ProjectDossier } from "@/db/queries/proj
 import { injectPrompt } from "@/lib/inject-core";
 import { HEALTH_SIGNAL_BASE } from "@/components/projects/project-detail-types";
 import { MINUTE_MS } from "@/lib/constants/time";
+import { PROJECT_DISPATCH_KINDS, type ProjectDispatchKind } from "@/lib/project-dispatch";
 
 /**
  * One-click dispatch of a profile-called-out action. The profile states facts
@@ -15,7 +16,7 @@ import { MINUTE_MS } from "@/lib/constants/time";
  */
 
 const DispatchBody = z.object({
-  kind: z.enum(["fix_signal", "next_step", "diagnose_timeouts"]),
+  kind: z.enum(PROJECT_DISPATCH_KINDS),
   /** Required for fix_signal: which attention attr to fix. */
   signalKey: z.enum(
     HEALTH_SIGNAL_BASE.map((s) => s.key) as [string, ...string[]],
@@ -23,7 +24,7 @@ const DispatchBody = z.object({
 });
 
 function composePrompt(
-  kind: "fix_signal" | "next_step" | "diagnose_timeouts",
+  kind: ProjectDispatchKind,
   signalKey: string | undefined,
   dossier: ProjectDossier,
 ): { prompt: string; error?: never } | { prompt?: never; error: string } {

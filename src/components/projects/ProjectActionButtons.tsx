@@ -5,8 +5,10 @@ import Link from "next/link";
 import { Loader2, Play, Wrench } from "lucide-react";
 import { postJson } from "@/lib/api/fetch";
 import { fleetSurfaceHref } from "@/lib/fleet-context";
+import type { ProjectDispatchKind } from "@/lib/project-dispatch";
 
-export type ProjectDispatchKind = "fix_signal" | "next_step" | "diagnose_timeouts";
+// Re-exported for existing importers (AskLokiButton) — SSOT lives in lib/project-dispatch.
+export type { ProjectDispatchKind } from "@/lib/project-dispatch";
 
 type DispatchState =
   | { phase: "idle" }

@@ -14,3 +14,11 @@
  *  its revision so client-side polls refetch in lockstep with the
  *  router.refresh() that drives server-component revalidation. */
 export const FLEETCROWN_REFRESH_EVENT = "fleetcrown:refresh";
+
+/** Fired (with `detail: { prompt }`) to open the floating assistant panel
+ *  prefilled. Producer: LokiDispatchButton. Listener: AskLokiButton. */
+export const LOKI_OPEN_EVENT = "loki:open";
+
+/** Fired (with `detail: { prompt }`) to prefill the Loki workspace composer.
+ *  Listener: LokiWorkspace. */
+export const LOKI_PREFILL_EVENT = "loki:prefill";

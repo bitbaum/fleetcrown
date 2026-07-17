@@ -12,8 +12,12 @@ import { enqueuePeekCommand } from "@/db/queries/pending-commands";
 import type { RunnerChannel } from "@/db/schema/pending-commands";
 import { getExecutionAccess } from "@/lib/execution-access";
 import { SSE_KEEPALIVE_MS } from "@/lib/constants/time";
+import { z } from "@/lib/api/route-helpers";
+import { BUILDER_CHANNELS } from "@/lib/constants/statuses";
 
 export const dynamic = "force-dynamic";
+
+const Channel = z.enum(BUILDER_CHANNELS);
 
 
 function sseEvent(event: string, data: unknown): string {
@@ -26,9 +30,8 @@ export async function GET(req: NextRequest) {
 
   const tab = new URL(req.url).searchParams.get("tab")?.trim();
   if (!tab) return new Response(JSON.stringify({ error: "tab required" }), { status: 400, headers: { "Content-Type": "application/json" } });
-  const channelParam = new URL(req.url).searchParams.get("channel");
-  const runnerChannel: RunnerChannel | undefined =
-    channelParam === "cloud" || channelParam === "local" ? channelParam : undefined;
+  const channelParam = Channel.safeParse(new URL(req.url).searchParams.get("channel"));
+  const runnerChannel: RunnerChannel | undefined = channelParam.success ? channelParam.data : undefined;
   if (runnerChannel === "cloud") {
     const access = await getExecutionAccess(userId);
     if (!access.cloudBuilderAllowed) {
