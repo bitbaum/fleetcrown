@@ -50,6 +50,12 @@ import {
 } from './pty-runtime'
 import { pushNow } from './pusher'
 import { startBridgeSubscriber } from './bridge-subscriber'
+import {
+  WORKTREE_DISPATCH_ENABLED,
+  ensureWorktreeWorkspace,
+  pruneWorktrees,
+  worktreePromptNote,
+} from '@/lib/agent-execution/worktree-workspace'
 
 /** Commands that change the open-tab / agent set → trigger an immediate
  *  runtime-state push so the UI reflects them in ~1s, not at the next heartbeat. */
@@ -66,6 +72,14 @@ import { FLEET_RUNNER_COMMAND_TYPES_PARAM } from '@/lib/pending-command-contract
 const SESSIONS_DIR = fleetSessionsDir()
 
 const DEFAULT_SESSION_NAME = 'fleet'
+
+/** Worktree-per-agent bookkeeping (see @/lib/agent-execution/worktree-workspace).
+ *  Tracks, per tab, the primary checkout and the dir the last dispatch actually
+ *  launched in — so (a) verification (transcript lookup is cwd-keyed) follows
+ *  the agent into its worktree, and (b) close_tab knows where to prune. Runner
+ *  restart empties the map; the next dispatch re-prunes, so nothing leaks. */
+const worktreeByTab = new Map<string, { primaryDir: string; launchDir: string }>()
+
 const COMMAND_DEDUP_DIR = path.join(os.tmpdir())
 function dedupSentinelPath(commandId: string): string {
   return path.join(COMMAND_DEDUP_DIR, `fc-cmd-${commandId}.done`)
@@ -532,6 +546,13 @@ async function handleCommand(
         const { tab } = validation.command.payload
         if (isPtyBacked(tab)) await terminatePty(tab)
         else closeTab(tab)
+        // Worktree cleanup: sweep this tab's CLEAN worktrees (dirty ones are
+        // never touched — an agent's unfinished work outlives its session).
+        const wt = worktreeByTab.get(tab)
+        if (wt) {
+          try { pruneWorktrees(tab, wt.primaryDir) } catch { /* best-effort */ }
+          worktreeByTab.delete(tab)
+        }
         ok = true
         break
       }
@@ -573,18 +594,33 @@ async function handleCommand(
         // The reliable product loop, done where we have ground truth (the
         // local machine): ensure the tab + agent, then inject — and VERIFY,
         // so the cloud/UI learns the real outcome instead of a fake ok.
-        const { tab, dir, agent, model, prompt } = validation.command.payload
+        const { tab, dir, agent, model, prompt, runId } = validation.command.payload
         assertKnownLaunchAgent(agent)
+        // Worktree-per-agent (opt-in via FLEETCROWN_WORKTREE_DISPATCH): a FRESH
+        // dispatch launch runs in its own git worktree so it can never collide
+        // with the primary checkout or another agent on a shared index/HEAD
+        // (the `git add -A` swallow, 2026-07-17). Injecting into an already-live
+        // session never remaps — we follow wherever that session was launched
+        // (worktreeByTab), because verification (transcript lookup) is cwd-keyed.
+        const ptyAlreadyLive = isPtyBacked(tab)
+        let effDir = ptyAlreadyLive ? (worktreeByTab.get(tab)?.launchDir ?? dir) : dir
+        let effPrompt = prompt
+        if (WORKTREE_DISPATCH_ENABLED && runId && !ptyAlreadyLive) {
+          pruneWorktrees(tab, dir) // sweep clean leftovers before adding one
+          effDir = ensureWorktreeWorkspace(tab, dir, runId)
+          if (effDir !== dir) effPrompt = `${worktreePromptNote(runId)}\n\n${prompt}`
+        }
+        worktreeByTab.set(tab, { primaryDir: dir, launchDir: effDir })
         // PTY path when enabled (or already PTY-backed): own the agent's PTY
         // instead of puppeting a (possibly detached → hanging) zellij tab.
-        const usePty = RUNNER_PTY_ENABLED || isPtyBacked(tab)
+        const usePty = RUNNER_PTY_ENABLED || ptyAlreadyLive
         if (usePty) {
-          const ptyAlready = isPtyBacked(tab)
+          const ptyAlready = ptyAlreadyLive
           let launched = false
           let ptyOk = ptyAlready
           if (!ptyAlready) {
             try {
-              await launchAgentPty(tab, dir, agent as AgentOption, model)
+              await launchAgentPty(tab, effDir, agent as AgentOption, model)
               clearHandoffSentinel(tab)
               launched = true
               ptyOk = true
@@ -595,7 +631,7 @@ async function handleCommand(
             }
           }
           if (ptyOk) {
-            injectPty(tab, prompt)
+            injectPty(tab, effPrompt)
             // Verify against the CLI's OWN session status (~/.claude/sessions/
             // <pid>.json): a submitted prompt flips status off "idle". The
             // previous output-activity heuristic (isPtyBusy) was fooled by
@@ -604,20 +640,20 @@ async function handleCommand(
             // kept redrawing, and six agents were acked "injected" while
             // sitting idle at an empty composer (2026-07-02). isPtyBusy stays
             // as the fallback for agents that don't write live status files.
-            verified = await waitForAgentGenerating(dir, tab, 8000)
+            verified = await waitForAgentGenerating(effDir, tab, 8000)
             if (!verified) {
               // Most likely failure: the prompt is SITTING in the composer
               // unsubmitted (paste landed, Enter got swallowed). A bare Enter
               // submits it without duplicating the text; verifiably-idle means
               // it can't interrupt a turn.
               writeRawKey(tab, '\r')
-              verified = await waitForAgentGenerating(dir, tab, 6000)
+              verified = await waitForAgentGenerating(effDir, tab, 6000)
             }
             if (!verified) {
               // Composer was actually empty (boot dialog ate the paste) —
               // re-inject the full prompt once.
-              injectPty(tab, prompt)
-              verified = await waitForAgentGenerating(dir, tab, 8000)
+              injectPty(tab, effPrompt)
+              verified = await waitForAgentGenerating(effDir, tab, 8000)
             }
             ok = true
             workspaceId = runnerWorkspaceId(tab)
@@ -635,7 +671,7 @@ async function handleCommand(
             // never delays the person; on a real success every check is false.
             let authFailed = false
             for (let i = 0; i < 6 && !authFailed; i++) {
-              authFailed = detectAuthFailure(dir)
+              authFailed = detectAuthFailure(effDir)
               if (!authFailed && i < 5) await asleep(2000)
             }
             if (authFailed) {
@@ -652,28 +688,28 @@ async function handleCommand(
           }
           // PTY launch failed → fall through to the zellij path below.
         }
-        const alreadyRunning = resolveRunningAgentsInDir(dir).length > 0
+        const alreadyRunning = resolveRunningAgentsInDir(effDir).length > 0
         let launched = false
         if (!alreadyRunning) {
-          launchAgentInTab(tab, dir, agent as AgentOption, model)
+          launchAgentInTab(tab, effDir, agent as AgentOption, model)
           clearHandoffSentinel(tab)
           launched = true
           // Wait for the agent process to actually come up before pasting —
           // otherwise the prompt lands in a bare login shell. Then settle so
           // the CLI has finished drawing its prompt and accepts paste+enter.
-          if (await waitForAgentInDir(dir, 15000)) await asleep(1800)
+          if (await waitForAgentInDir(effDir, 15000)) await asleep(1800)
         } else {
           focusWorkspaceTab(tab)
         }
         const baseline = readMtimeMs(sessionFilePath(tab))
-        injectIntoTab(tab, prompt)
+        injectIntoTab(tab, effPrompt)
         verified = await waitForSessionFileBump(tab, baseline, 8000)
         if (!verified && launched) {
           // A freshly-launched agent may still be finishing its boot banner —
           // one retry covers the common race without spamming a live agent.
           await asleep(2500)
           const retryBaseline = readMtimeMs(sessionFilePath(tab))
-          injectIntoTab(tab, prompt)
+          injectIntoTab(tab, effPrompt)
           verified = await waitForSessionFileBump(tab, retryBaseline, 6000)
         }
         ok = true
