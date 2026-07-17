@@ -266,7 +266,9 @@ try {
 
 const ignoredConsoleErrors = report.consoleErrors.filter(({ text }) =>
   !/favicon|Failed to load resource.*404|ResizeObserver loop/i.test(text) &&
-  !(isLocal && /bridge\.orangecat\.ch\/sse|ClientFetchError: Failed to fetch|net::ERR_FAILED/i.test(text)),
+  // ClientFetchError minifies to a bare class name in production builds, so
+  // match the stable authjs error URL rather than the constructor name.
+  !(isLocal && /bridge\.orangecat\.ch\/sse|Failed to fetch.*authjs\.dev#autherror|net::ERR_FAILED/i.test(text)),
 );
 
 fs.writeFileSync(path.join(outDir, "report.json"), JSON.stringify(report, null, 2));
