@@ -94,5 +94,10 @@
     "electron-vite": "^2.3.0",
     "typescript": "^5",
     "vite": "^6.0.7"
+  },
+  "overrides": {
+    "@electron/rebuild": {
+      "node-gyp": "^13.0.1"
+    }
   }
 }
