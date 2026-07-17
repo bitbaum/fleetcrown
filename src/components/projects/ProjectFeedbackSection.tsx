@@ -1,0 +1,283 @@
+"use client";
+
+import { useState } from "react";
+import { Archive, Check, Code2, Copy, Loader2, MessageSquare, RefreshCw, Rocket, Undo2, X } from "lucide-react";
+import { useFetch } from "@/hooks/use-fetch";
+import { useClipboard } from "@/hooks/use-clipboard";
+import { deleteJson, patchJson, postJson, throwApiError } from "@/lib/api/fetch";
+import { compactRelativeDate } from "@/lib/dates";
+import { FEEDBACK_STATUS, type FeedbackStatus } from "@/lib/constants/statuses";
+import type { SiteFeedback } from "@/db/schema";
+
+type WidgetTokenInfo = { token: string; snippet: string };
+
+/**
+ * Visitor-feedback inbox for one project — submissions from the embeddable
+ * widget (docs/architecture/feedback-widget.md). The one thing that matters
+ * per row is "Dispatch fix": feedback becomes fleet work without leaving the
+ * row. The empty state IS the widget setup card — discovery and activation
+ * in one place.
+ */
+export function ProjectFeedbackSection({ projectId }: { projectId: string }) {
+  const feedbackFetch = useFetch<{ feedback: SiteFeedback[] }>(`/api/projects/${projectId}/feedback`);
+  const tokenFetch = useFetch<{ token: WidgetTokenInfo | null }>(`/api/projects/${projectId}/widget-token`);
+  const [setupOpen, setSetupOpen] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const items = (feedbackFetch.data?.feedback ?? []).filter(
+    (f) => f.status !== FEEDBACK_STATUS.ARCHIVED,
+  );
+  const newCount = items.filter((f) => f.status === FEEDBACK_STATUS.NEW).length;
+  const token = tokenFetch.data?.token ?? null;
+  const showSetup = setupOpen || (!tokenFetch.loading && !token);
+
+  async function act(id: string, run: () => Promise<Response>, fallback: string) {
+    setBusyId(id);
+    setError(null);
+    try {
+      const res = await run();
+      if (!res.ok) await throwApiError(res, fallback);
+      feedbackFetch.refetch();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : fallback);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  const dispatchFix = (id: string) =>
+    act(id, () => postJson(`/api/feedback/${id}/dispatch`, {}), "Dispatch failed");
+  const setStatus = (id: string, status: FeedbackStatus) =>
+    act(id, () => patchJson(`/api/feedback/${id}`, { status }), "Update failed");
+
+  return (
+    <section className="scroll-mt-28 border-t border-border-subtle pt-7" aria-labelledby="project-feedback-title">
+      <div className="mb-4 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <h2 id="project-feedback-title" className="text-lg font-semibold text-text-primary">
+            Visitor feedback
+          </h2>
+          {newCount > 0 && <span className="ui-badge">{newCount} new</span>}
+        </div>
+        <button type="button" onClick={() => setSetupOpen((v) => !v)} className="ui-btn-secondary gap-1.5">
+          <Code2 className="h-3.5 w-3.5" />
+          Widget
+        </button>
+      </div>
+
+      {showSetup && (
+        <WidgetSetupCard
+          projectId={projectId}
+          token={token}
+          loading={tokenFetch.loading}
+          onChanged={() => {
+            // Keep the card open across the refetch — right after "Enable
+            // widget" the whole point is showing the snippet to copy.
+            setSetupOpen(true);
+            tokenFetch.refetch();
+          }}
+          onClose={token ? () => setSetupOpen(false) : undefined}
+        />
+      )}
+
+      {error && <p className="mb-3 ui-error">{error}</p>}
+
+      {feedbackFetch.loading ? (
+        <div className="flex items-center gap-2 py-6 text-sm text-text-tertiary">
+          <Loader2 className="ui-spinner-xs" /> Loading feedback…
+        </div>
+      ) : items.length === 0 ? (
+        token && (
+          <p className="py-4 text-sm text-text-muted">
+            No feedback yet. Once the widget is on your site, visitor submissions land here.
+          </p>
+        )
+      ) : (
+        <div className="divide-y divide-border-subtle">
+          {items.map((f) => (
+            <FeedbackRow
+              key={f.id}
+              feedback={f}
+              busy={busyId === f.id}
+              onDispatch={() => dispatchFix(f.id)}
+              onResolve={() => setStatus(f.id, FEEDBACK_STATUS.RESOLVED)}
+              onArchive={() => setStatus(f.id, FEEDBACK_STATUS.ARCHIVED)}
+              onReopen={() => setStatus(f.id, FEEDBACK_STATUS.NEW)}
+            />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function FeedbackRow({
+  feedback: f,
+  busy,
+  onDispatch,
+  onResolve,
+  onArchive,
+  onReopen,
+}: {
+  feedback: SiteFeedback;
+  busy: boolean;
+  onDispatch: () => void;
+  onResolve: () => void;
+  onArchive: () => void;
+  onReopen: () => void;
+}) {
+  const meta = [
+    f.page || f.url,
+    f.scope,
+    f.contact,
+    compactRelativeDate(f.createdAt),
+  ].filter(Boolean);
+
+  return (
+    <div className="flex flex-col gap-2 py-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+      <div className="min-w-0 flex-1">
+        <div className="flex items-start gap-2">
+          <span
+            className={
+              f.status === FEEDBACK_STATUS.NEW
+                ? "ui-dot-warning mt-1.5"
+                : f.status === FEEDBACK_STATUS.RESOLVED
+                  ? "ui-dot-positive mt-1.5"
+                  : "ui-dot-neutral mt-1.5"
+            }
+            aria-label={`Status: ${f.status}`}
+          />
+          <p className="text-sm leading-relaxed text-text-primary">{f.suggestion}</p>
+        </div>
+        <p className="mt-1 pl-4 text-xs text-text-tertiary">{meta.join(" · ")}</p>
+        {f.selectedElements && f.selectedElements.length > 0 && (
+          <p className="mt-0.5 truncate pl-4 font-mono text-micro text-text-muted">
+            {f.selectedElements.map((el) => el.selector).join("  ")}
+          </p>
+        )}
+      </div>
+      <div className="flex shrink-0 items-center gap-1.5 pl-4 sm:pl-0">
+        {f.status === FEEDBACK_STATUS.DISPATCHED ? (
+          <>
+            <span className="ui-tag">dispatched</span>
+            <button type="button" onClick={onResolve} disabled={busy} className="ui-btn-secondary gap-1" title="Mark resolved">
+              <Check className="h-3 w-3" /> Resolve
+            </button>
+          </>
+        ) : f.status === FEEDBACK_STATUS.RESOLVED ? (
+          <span className="ui-tag-positive">resolved</span>
+        ) : (
+          <>
+            <button type="button" onClick={onDispatch} disabled={busy} className="ui-btn-save gap-1.5" title="Send to an agent as a fix task">
+              {busy ? <Loader2 className="ui-spinner-xs" /> : <Rocket className="h-3 w-3" />}
+              Dispatch fix
+            </button>
+            <button type="button" onClick={onResolve} disabled={busy} className="ui-btn-icon" title="Mark resolved" aria-label="Mark resolved">
+              <Check className="h-3.5 w-3.5" />
+            </button>
+          </>
+        )}
+        {f.status === FEEDBACK_STATUS.RESOLVED ? (
+          <button type="button" onClick={onReopen} disabled={busy} className="ui-btn-icon" title="Reopen" aria-label="Reopen">
+            <Undo2 className="h-3.5 w-3.5" />
+          </button>
+        ) : (
+          <button type="button" onClick={onArchive} disabled={busy} className="ui-btn-icon" title="Archive" aria-label="Archive">
+            <Archive className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function WidgetSetupCard({
+  projectId,
+  token,
+  loading,
+  onChanged,
+  onClose,
+}: {
+  projectId: string;
+  token: WidgetTokenInfo | null;
+  loading: boolean;
+  onChanged: () => void;
+  onClose?: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { copied, copy } = useClipboard();
+
+  async function mutate(run: () => Promise<Response>, fallback: string) {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await run();
+      if (!res.ok) await throwApiError(res, fallback);
+      onChanged();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : fallback);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const create = () => mutate(() => postJson(`/api/projects/${projectId}/widget-token`, {}), "Could not create widget token");
+  const rotate = () => mutate(() => postJson(`/api/projects/${projectId}/widget-token`, { rotate: true }), "Could not rotate widget token");
+  const revoke = () => mutate(() => deleteJson(`/api/projects/${projectId}/widget-token`), "Could not disable widget");
+
+  return (
+    <div className="ui-card-shell mb-4 p-4 sm:p-5">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
+            <MessageSquare className="h-4 w-4" />
+            Feedback widget
+          </div>
+          <p className="mt-1 text-xs leading-relaxed text-text-muted">
+            One script tag on your site adds a feedback button — visitors can point at the exact
+            element that&apos;s broken, and submissions land in this inbox ready to dispatch.
+          </p>
+        </div>
+        {onClose && (
+          <button type="button" onClick={onClose} className="ui-btn-icon" aria-label="Close widget setup">
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+
+      {loading ? (
+        <div className="mt-3 flex items-center gap-2 text-xs text-text-tertiary">
+          <Loader2 className="ui-spinner-xs" /> Loading…
+        </div>
+      ) : token ? (
+        <>
+          <div className="mt-3 overflow-x-auto rounded-lg border border-border-subtle bg-surface-base p-3">
+            <code className="whitespace-pre font-mono text-micro text-text-secondary">{token.snippet}</code>
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <button type="button" onClick={() => copy(token.snippet)} className="ui-btn-save gap-1.5">
+              {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+              {copied ? "Copied" : "Copy snippet"}
+            </button>
+            <button type="button" onClick={rotate} disabled={busy} className="ui-btn-secondary gap-1.5" title="Mint a new token; the old snippet stops working">
+              <RefreshCw className="h-3.5 w-3.5" /> Rotate
+            </button>
+            <button type="button" onClick={revoke} disabled={busy} className="ui-btn-danger">
+              Disable
+            </button>
+          </div>
+        </>
+      ) : (
+        <div className="mt-3">
+          <button type="button" onClick={create} disabled={busy} className="ui-btn-save gap-1.5">
+            {busy ? <Loader2 className="ui-spinner-xs" /> : <Code2 className="h-3.5 w-3.5" />}
+            Enable widget
+          </button>
+        </div>
+      )}
+      {error && <p className="mt-2 ui-error">{error}</p>}
+    </div>
+  );
+}

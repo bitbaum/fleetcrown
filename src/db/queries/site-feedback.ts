@@ -1,6 +1,6 @@
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { siteFeedback, type SiteFeedback, type NewSiteFeedback } from "@/db/schema";
+import { entities, siteFeedback, type SiteFeedback, type NewSiteFeedback } from "@/db/schema";
 import { type FeedbackStatus } from "@/lib/constants/statuses";
 
 export async function insertSiteFeedback(values: NewSiteFeedback): Promise<SiteFeedback | null> {
@@ -15,6 +15,20 @@ export async function listProjectFeedback(userId: string, projectId: string, lim
     orderBy: [desc(siteFeedback.createdAt)],
     limit,
   });
+}
+
+/** One feedback item + its project's name (dispatch needs the tab name). */
+export async function getFeedbackWithProject(
+  userId: string,
+  id: string,
+): Promise<{ feedback: SiteFeedback; projectName: string } | null> {
+  const [row] = await db
+    .select({ feedback: siteFeedback, projectName: entities.name })
+    .from(siteFeedback)
+    .innerJoin(entities, eq(siteFeedback.projectId, entities.id))
+    .where(and(eq(siteFeedback.id, id), eq(siteFeedback.userId, userId)))
+    .limit(1);
+  return row ?? null;
 }
 
 /** Status transition (triage). Ownership enforced via userId in the WHERE. */

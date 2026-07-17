@@ -5,6 +5,7 @@ import { ProjectWorkspaceHeader } from "./ProjectWorkspaceHeader";
 import { ProjectContextEditor } from "./ProjectContextEditor";
 import { ProjectPlanSection } from "./ProjectPlanSection";
 import { ProjectSettingsPanel } from "./ProjectSettingsPanel";
+import { ProjectFeedbackSection } from "./ProjectFeedbackSection";
 import { DoneSection, NextSection, NowSection } from "./ProjectDossierSections";
 import { OrangeCatPublishButton } from "./OrangeCatPublishButton";
 import { getProjectLinks } from "./project-detail-types";
@@ -174,6 +175,8 @@ export function ProjectWorkspaceView({
         <h2 id="project-activity-title" className="mb-4 text-lg font-semibold text-text-primary">Activity and evidence</h2>
         <DoneSection dossier={dossier} />
       </section>
+
+      {!dossier.readonly && <ProjectFeedbackSection projectId={project.id} />}
 
       {!dossier.readonly && (
         <ProjectSettingsPanel
