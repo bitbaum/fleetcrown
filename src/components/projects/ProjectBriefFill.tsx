@@ -10,6 +10,7 @@ import { useState } from "react";
 import { GitBranch, ListChecks, Loader2, Mic, Sparkles, Square } from "lucide-react";
 import { postJson } from "@/lib/api/fetch";
 import { useVoiceInput } from "@/hooks/use-voice-input";
+import { LONG_TEXT_MAX } from "@/lib/constants";
 
 type AppliedFields = Record<string, string>;
 
@@ -96,7 +97,7 @@ export function ProjectBriefFill({
             onChange={(e) => setText(e.target.value)}
             autoFocus
             rows={4}
-            maxLength={8000}
+            maxLength={LONG_TEXT_MAX}
             placeholder="Free form — what is this project, who is it for, what should it become, what's next? Paste notes, dictate, anything. AI sorts it into the profile."
             className="ui-input w-full text-base leading-relaxed sm:text-xs"
             onKeyDown={(e) => { if (e.key === "Escape") setOpen(false); }}

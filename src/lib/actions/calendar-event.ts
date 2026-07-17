@@ -12,10 +12,9 @@
 import type { ActionPayload } from "@/db/schema/actions";
 import { runToolArgs } from "@/lib/tools";
 import { callGroqText, GROQ_FAST_MODEL } from "@/lib/groq";
+import { DAY_MS, HOUR_MS } from "@/lib/constants/time";
 
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
-const HOUR_MS = 60 * 60 * 1000;
-const DAY_MS = 24 * HOUR_MS;
 const DEFAULT_CALENDAR = "primary";
 
 export type ResolvedEventTimes = {

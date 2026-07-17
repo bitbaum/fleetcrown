@@ -3,11 +3,11 @@ import { executor } from "@/lib/agent-execution";
 import { ownsWorkspace } from "@/lib/agent-execution/ownership";
 import { getApiUserId } from "@/lib/session";
 import { decideWorkspaceAccess } from "@/lib/workspace-access";
+import { SSE_KEEPALIVE_MS } from "@/lib/constants/time";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const KEEPALIVE_MS = 15_000;
 
 /** GET /api/workspaces/[id]/stream — SSE of the workspace's event stream.
  *  Replays retained history first (the browser sends Last-Event-ID on reconnect
@@ -40,7 +40,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       unsubscribe = executor.subscribe(id, sinceSeq, (event) => {
         safeEnqueue(`id: ${event.seq}\ndata: ${JSON.stringify(event)}\n\n`);
       });
-      keepalive = setInterval(() => safeEnqueue(": ping\n\n"), KEEPALIVE_MS);
+      keepalive = setInterval(() => safeEnqueue(": ping\n\n"), SSE_KEEPALIVE_MS);
       req.signal.addEventListener("abort", () => {
         if (keepalive) clearInterval(keepalive);
         unsubscribe();

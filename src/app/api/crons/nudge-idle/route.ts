@@ -33,6 +33,7 @@ import { getUserProjects } from "@/db/queries/user-projects";
 import { getRecentOutcomes } from "@/db/queries/orchestration-runs";
 import { FAILURE_BRAKE_STREAK, leadingFailureStreak } from "@/lib/orchestration/dispatch-gates";
 import { injectPrompt } from "@/lib/inject-core";
+import { HOUR_MS } from "@/lib/constants/time";
 
 const IDLE_WINDOW_HOURS = 2;
 const RENUDGE_COOLDOWN_HOURS = 6;
@@ -93,8 +94,8 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    const idleCutoff = new Date(Date.now() - IDLE_WINDOW_HOURS * 3_600_000);
-    const cooldownMs = RENUDGE_COOLDOWN_HOURS * 3_600_000;
+    const idleCutoff = new Date(Date.now() - IDLE_WINDOW_HOURS * HOUR_MS);
+    const cooldownMs = RENUDGE_COOLDOWN_HOURS * HOUR_MS;
     const now = Date.now();
 
     for (const { userId } of activeUsers) {

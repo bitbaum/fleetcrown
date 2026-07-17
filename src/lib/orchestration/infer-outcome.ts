@@ -1,6 +1,7 @@
 import { ORCHESTRATION_OUTCOME, type OrchestrationOutcome } from "@/db/schema/orchestration-runs";
 import type { OrchestrationTaskSummary } from "./contract";
 import { SESSION_STATUS } from "@/lib/constants/statuses";
+import { MINUTE_MS } from "@/lib/constants/time";
 
 export type InferOutcomeInput = {
   summary?: OrchestrationTaskSummary | null;
@@ -9,7 +10,7 @@ export type InferOutcomeInput = {
   userAbort?: boolean;
 };
 
-const THIRTY_MINUTES_MS = 30 * 60 * 1000;
+const THIRTY_MINUTES_MS = 30 * MINUTE_MS;
 
 function contains(haystack: string | undefined | null, needle: string): boolean {
   return !!haystack && haystack.toLowerCase().includes(needle);

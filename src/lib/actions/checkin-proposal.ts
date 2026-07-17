@@ -17,6 +17,7 @@
  */
 import { ACTION_TYPE } from "@/lib/constants/statuses";
 import { toLocalDateStr } from "@/lib/dates";
+import { DAY_MS } from "@/lib/constants/time";
 import type { ProposeActionInput } from "@/db/queries/actions";
 
 /** Shared with the query layer (queue-pressure/cooldown filters) and the UI
@@ -37,14 +38,14 @@ export type CheckinCandidate = {
 /** Whole days since the last logged interaction, or null if never interacted. */
 export function daysSinceInteraction(lastInteraction: Date | null, nowMs: number): number | null {
   if (!lastInteraction) return null;
-  return Math.floor((nowMs - lastInteraction.getTime()) / 86_400_000);
+  return Math.floor((nowMs - lastInteraction.getTime()) / DAY_MS);
 }
 
 /** Shape one contact into a draft-action proposal. Pure — no DB, no clock. */
 export function buildCheckinProposal(contact: CheckinCandidate, nowMs: number): ProposeActionInput {
   const days = daysSinceInteraction(contact.lastInteraction, nowMs);
   const sincePhrase = days === null ? "a long time" : `${days} days`;
-  const dueDate = toLocalDateStr(new Date(nowMs + REACH_OUT_DUE_DAYS * 86_400_000));
+  const dueDate = toLocalDateStr(new Date(nowMs + REACH_OUT_DUE_DAYS * DAY_MS));
   return {
     type: ACTION_TYPE.CREATE_COMMITMENT,
     title: `${CHECKIN_TITLE_PREFIX}${contact.name}`,
@@ -86,7 +87,7 @@ function selfTest(): void {
   };
 
   const NOW = Date.UTC(2026, 6, 14, 12, 0, 0); // fixed clock — deterministic
-  const daysAgo = (n: number) => new Date(NOW - n * 86_400_000);
+  const daysAgo = (n: number) => new Date(NOW - n * DAY_MS);
 
   // daysSinceInteraction
   check("null interaction ⇒ null days", daysSinceInteraction(null, NOW) === null);

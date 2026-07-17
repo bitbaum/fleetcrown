@@ -6,11 +6,12 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { PRIVATE_ZONE_COOKIE, LEGACY_PRIVATE_ZONE_COOKIE } from "@/config/brand-storage";
+import { MINUTE_MS } from "@/lib/constants/time";
 
 export { PRIVATE_ZONE_COOKIE } from "@/config/brand-storage";
 
 /** Matches client sessionStorage TTL in use-private-zone.ts */
-export const PRIVATE_ZONE_TTL_MS = 30 * 60 * 1000;
+export const PRIVATE_ZONE_TTL_MS = 30 * MINUTE_MS;
 
 /**
  * Resolve the effective PIN hash for a user.

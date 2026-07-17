@@ -1,6 +1,7 @@
 import { db } from "@/db";
 import { debugLogs, type NewDebugLog } from "@/db/schema/debug-logs";
 import { and, desc, eq, lt, or, sql } from "drizzle-orm";
+import { DAY_MS } from "@/lib/constants/time";
 
 /**
  * Fire-and-forget logger. Never throws — a telemetry failure must not break
@@ -43,8 +44,8 @@ export async function pruneDebugLogs({
   errorOlderThanDays = 90,
 }: { nonErrorOlderThanDays?: number; errorOlderThanDays?: number } = {}): Promise<number> {
   const now = Date.now();
-  const nonErrorCutoff = new Date(now - nonErrorOlderThanDays * 86_400_000);
-  const errorCutoff = new Date(now - errorOlderThanDays * 86_400_000);
+  const nonErrorCutoff = new Date(now - nonErrorOlderThanDays * DAY_MS);
+  const errorCutoff = new Date(now - errorOlderThanDays * DAY_MS);
 
   const deleted = await db.delete(debugLogs).where(
     or(

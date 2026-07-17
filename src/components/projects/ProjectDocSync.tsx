@@ -8,6 +8,7 @@
 import { useState } from "react";
 import { Loader2, RefreshCw, Check, X, Plus } from "lucide-react";
 import { postJson } from "@/lib/api/fetch";
+import { LONG_TEXT_MAX } from "@/lib/constants";
 
 type Update = { key: string; current: string | null; proposed: string };
 type NewAttr = { key: string; label: string; value: string };
@@ -88,7 +89,7 @@ export function ProjectDocSync({ projectId, onReload }: { projectId: string; onR
             onChange={(e) => setText(e.target.value)}
             autoFocus
             rows={4}
-            maxLength={8000}
+            maxLength={LONG_TEXT_MAX}
             placeholder="Paste the updated concept or spec. AI diffs it against the current fields and shows you exactly what would change before anything is saved."
             className="ui-input w-full text-base leading-relaxed sm:text-xs"
             onKeyDown={(e) => { if (e.key === "Escape") setOpen(false); }}

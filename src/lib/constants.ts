@@ -44,3 +44,8 @@ export const SUBSCRIPTIONS_UPCOMING_DAYS = 14;
 
 /** How many days before an invitation link expires. */
 export const INVITATION_EXPIRY_DAYS = 7;
+
+/** Shared cap for long free-text inputs (project briefs, roadmap/reconcile
+ *  pastes, captured prompts). The UI `maxLength` and the API zod `.max` must
+ *  agree — both import this so they can't drift. */
+export const LONG_TEXT_MAX = 8_000;

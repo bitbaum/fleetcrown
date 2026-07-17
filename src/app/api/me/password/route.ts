@@ -4,12 +4,13 @@ import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { getUserById, updateUserPasswordHash } from "@/db/queries/users";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { RATE_LIMIT_WINDOW_LONG_MS } from "@/lib/constants/time";
 
 // Shared budget for any password mutation (change OR initial-set) per client.
 // Both paths verify or establish the account credential, so they share one
 // bucket — an attacker can't dodge the limit by switching between them.
 const LIMIT = 10;
-const WINDOW = 60 * 60_000; // per hour
+const WINDOW = RATE_LIMIT_WINDOW_LONG_MS;
 
 const ChangeBody = z.object({
   currentPassword: z.string().min(1, "Current password is required."),

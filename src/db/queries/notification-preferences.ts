@@ -5,6 +5,7 @@ import {
   type DigestCadence,
 } from "@/db/schema/notification-preferences";
 import { users } from "@/db/schema/users";
+import { DAY_MS, HOUR_MS } from "@/lib/constants/time";
 
 export async function getNotificationPreferences(userId: string) {
   const [row] = await db
@@ -43,9 +44,9 @@ export async function upsertNotificationPreferences(
 // check. Slight under-shoot on the longer cadences (6.5d / 29d) so a clock-
 // drifted cron run still picks up users at the rate they asked for.
 const MIN_INTERVAL_MS: Record<Exclude<DigestCadence, "none">, number> = {
-  daily:   23 * 60 * 60 * 1000,
-  weekly:  6.5 * 24 * 60 * 60 * 1000,
-  monthly: 29 * 24 * 60 * 60 * 1000,
+  daily:   23 * HOUR_MS,
+  weekly:  6.5 * DAY_MS,
+  monthly: 29 * DAY_MS,
 };
 
 export type DueDigestRow = {

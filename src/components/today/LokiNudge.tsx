@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import { Sparkles } from "lucide-react";
 import { postJson } from "@/lib/api/fetch";
+import { HOUR_MS } from "@/lib/constants/time";
 
 const CACHE_PREFIX = "fleetcrown-loki-nudge-v1:";
-const CACHE_TTL_MS = 60 * 60 * 1000; // one hour
+const CACHE_TTL_MS = HOUR_MS;
 
 type CacheEntry = { composed: string; expiresAt: number };
 

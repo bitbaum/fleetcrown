@@ -19,6 +19,7 @@ export { inferAdapterFromTabName } from "@/lib/agent-resolution";
 import type { ControlData, ProjectState } from "@/lib/control-types";
 import type { OrchestrationOutcome } from "@/db/schema/orchestration-runs";
 import { latestActivitySummary } from "./project-activity-ledger";
+import { DAY_MS } from "@/lib/constants/time";
 
 export type RuntimeSyncContext = {
   /** True when the cloud has never received a runner runtime-state push. */
@@ -197,7 +198,7 @@ const FAILED_OUTCOMES: ReadonlySet<string> = new Set(["error", "hang", "timeout"
  * outcome was a two-week-old timeout, so `failed` stayed high while the fleet
  * was merely idle. "Stalled" must mean "failing now", not "last failed once".
  */
-export const FLEET_PULSE_STALE_MS = 24 * 60 * 60 * 1000;
+export const FLEET_PULSE_STALE_MS = DAY_MS;
 
 export function deriveFleetPulse(input: {
   automationMode: string;
@@ -644,7 +645,7 @@ export function buildProjectOperationsSnapshot(
     latestActivity.kind === "dispatch" &&
     latestActivityAgeS !== null &&
     latestActivityAgeS >= 0 &&
-    latestActivityAgeS < 30 * 60
+    latestActivityAgeS < STALE_PROMPT_S
       ? `Last dispatch ${timeAgo(new Date(latestActivity.at).getTime())}`
       : null;
 

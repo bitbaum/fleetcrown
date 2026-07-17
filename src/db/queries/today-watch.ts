@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { goals, events, commitments, subscriptions } from "@/db/schema";
 import { GOAL_STATUS, COMMITMENT_STATUS, EVENT_STATUS, ENTITY_TYPE } from "@/lib/constants/statuses";
 import { HEALTH_FADING_DAYS } from "@/lib/constants/people";
+import { DAY_MS } from "@/lib/constants/time";
 import { getTodayHabits } from "@/db/queries/habits";
 
 // A streak this long carries real psychological momentum — surfacing the
@@ -50,8 +51,8 @@ export type WatchData = {
  */
 export async function getTodayWatch(userId: string): Promise<WatchData> {
   const now = new Date();
-  const imminentBy = new Date(now.getTime() + IMMINENT_DAYS * 24 * 60 * 60 * 1000);
-  const stalledBy = new Date(now.getTime() - STALLED_DAYS * 24 * 60 * 60 * 1000);
+  const imminentBy = new Date(now.getTime() + IMMINENT_DAYS * DAY_MS);
+  const stalledBy = new Date(now.getTime() - STALLED_DAYS * DAY_MS);
 
   const [
     overdueCommitmentRows,
@@ -179,7 +180,7 @@ function pickFocus(
 ): WatchFocus | null {
   const c = overdueCommitments[0];
   if (c) {
-    const daysOverdue = c.dueDate ? Math.floor((now.getTime() - new Date(c.dueDate).getTime()) / 86_400_000) : null;
+    const daysOverdue = c.dueDate ? Math.floor((now.getTime() - new Date(c.dueDate).getTime()) / DAY_MS) : null;
     return {
       kind: "overdue-commitment",
       title: c.description,
@@ -191,7 +192,7 @@ function pickFocus(
 
   const g = overdueGoals[0];
   if (g) {
-    const daysOverdue = g.targetDate ? Math.floor((now.getTime() - new Date(g.targetDate).getTime()) / 86_400_000) : null;
+    const daysOverdue = g.targetDate ? Math.floor((now.getTime() - new Date(g.targetDate).getTime()) / DAY_MS) : null;
     const progress = g.progress ?? 0;
     return {
       kind: "overdue-goal",
@@ -215,7 +216,7 @@ function pickFocus(
 
   const b = imminentBills[0];
   if (b) {
-    const daysUntil = b.nextBilling ? Math.ceil((new Date(b.nextBilling).getTime() - now.getTime()) / 86_400_000) : null;
+    const daysUntil = b.nextBilling ? Math.ceil((new Date(b.nextBilling).getTime() - now.getTime()) / DAY_MS) : null;
     return {
       kind: "imminent-bill",
       title: b.name,
@@ -227,7 +228,7 @@ function pickFocus(
 
   const e = imminentEvents[0];
   if (e) {
-    const daysUntil = e.deadline ? Math.ceil((new Date(e.deadline).getTime() - now.getTime()) / 86_400_000) : null;
+    const daysUntil = e.deadline ? Math.ceil((new Date(e.deadline).getTime() - now.getTime()) / DAY_MS) : null;
     return {
       kind: "imminent-event",
       title: e.name,
@@ -240,7 +241,7 @@ function pickFocus(
   const sc = staleContacts[0];
   if (sc) {
     const lastDate = sc.last_interaction ? new Date(sc.last_interaction) : null;
-    const daysSince = lastDate ? Math.floor((now.getTime() - lastDate.getTime()) / 86_400_000) : null;
+    const daysSince = lastDate ? Math.floor((now.getTime() - lastDate.getTime()) / DAY_MS) : null;
     const firstName = sc.name.split(/\s+/)[0] ?? sc.name;
     return {
       kind: "stale-contact",
@@ -253,7 +254,7 @@ function pickFocus(
 
   const s = stalledGoals[0];
   if (s) {
-    const daysIdle = Math.floor((now.getTime() - new Date(s.updatedAt).getTime()) / 86_400_000);
+    const daysIdle = Math.floor((now.getTime() - new Date(s.updatedAt).getTime()) / DAY_MS);
     const progress = s.progress ?? 0;
     return {
       kind: "stalled-goal",

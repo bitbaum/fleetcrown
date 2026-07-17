@@ -5,6 +5,7 @@ import { PLAN_VALUES } from "@/db/schema/users";
 import { getUserByOrangeCatActorId, updateUserBilling } from "@/db/queries/users";
 import { recordOcBillingGrant } from "@/db/queries/billing-grants";
 import { logDebug } from "@/db/queries/debug-logs";
+import { DAY_MS } from "@/lib/constants/time";
 
 /**
  * OrangeCat-rail entitlement webhook — the settlement signal (scope §4a).
@@ -75,7 +76,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, granted: false, reason: "no-linked-user" });
     }
 
-    const expiresAt = new Date(Date.now() + periodDays * 24 * 60 * 60 * 1000);
+    const expiresAt = new Date(Date.now() + periodDays * DAY_MS);
     const grant = await recordOcBillingGrant({
       userId: user.id,
       externalId,

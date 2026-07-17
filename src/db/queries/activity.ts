@@ -7,6 +7,7 @@ import { runStatus, toPromptDisplayFields } from "@/lib/activity-status";
 import type { StatusTone } from "@/lib/constants/statuses";
 import { getIntentLabel } from "@/config/control-intents";
 import type { OrchestrationEventType } from "@/lib/orchestration";
+import { DAY_MS } from "@/lib/constants/time";
 
 /**
  * Unified per-project activity — the SSOT read-model for "what happened" on a
@@ -189,7 +190,7 @@ export async function getProjectActivity(
   projectKey: string,
   { days = 7, limit = 100 }: { days?: number; limit?: number } = {},
 ): Promise<ProjectActivityEvent[]> {
-  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  const since = new Date(Date.now() - days * DAY_MS);
 
   const [dispatches, runs, events] = await Promise.all([
     db
@@ -263,7 +264,7 @@ export async function getProjectActivityBatch(
 ): Promise<Map<string, ProjectActivityEvent[]>> {
   const result = new Map<string, ProjectActivityEvent[]>();
   if (projectKeys.length === 0) return result;
-  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  const since = new Date(Date.now() - days * DAY_MS);
 
   const [dispatches, runs, events] = await Promise.all([
     db

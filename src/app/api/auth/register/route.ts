@@ -5,6 +5,7 @@ import { createEmailVerificationToken } from "@/db/queries/emailVerification";
 import { hashPassword } from "@/lib/password";
 import { sendEmailFire, verifyEmailTemplate, welcomeEmailTemplate, appUrl } from "@/lib/email";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { RATE_LIMIT_WINDOW_LONG_MS } from "@/lib/constants/time";
 
 const Body = z.object({
   name:     z.string().trim().min(2, "Name must be at least 2 characters."),
@@ -13,7 +14,7 @@ const Body = z.object({
 });
 
 const LIMIT  = 10;           // max registrations
-const WINDOW = 60 * 60_000; // per hour
+const WINDOW = RATE_LIMIT_WINDOW_LONG_MS;
 
 export async function POST(req: NextRequest) {
   if (!checkRateLimit(`register:${getClientIp(req)}`, LIMIT, WINDOW)) {

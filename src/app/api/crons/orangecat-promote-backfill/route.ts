@@ -17,6 +17,7 @@ import { db } from "@/db";
 import { userProjects } from "@/db/schema";
 import type { DevLogEntry } from "@/db/schema/user-projects";
 import { requireCronAuth } from "@/lib/cron-auth";
+import { DAY_MS } from "@/lib/constants/time";
 import { logDebug } from "@/db/queries/debug-logs";
 import {
   promoteDevLogEntry,
@@ -33,7 +34,7 @@ export async function GET(req: NextRequest) {
   const denied = requireCronAuth(req);
   if (denied) return denied;
 
-  const cutoff = new Date(Date.now() - BACKFILL_WINDOW_DAYS * 24 * 60 * 60 * 1000)
+  const cutoff = new Date(Date.now() - BACKFILL_WINDOW_DAYS * DAY_MS)
     .toISOString()
     .slice(0, 10);
 

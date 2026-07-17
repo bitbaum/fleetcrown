@@ -9,11 +9,12 @@ import { getHealthShort } from "@/lib/constants/control";
 import { LokiDispatchButton } from "@/components/shared/LokiDispatchButton";
 import { ControlDispatchButton } from "@/components/shared/ControlDispatchButton";
 import { NAV } from "@/config/navigation";
+import { HOUR_MS } from "@/lib/constants/time";
 
 // Adjacent runs on the same project that finished within this window collapse
 // into a single row (with a "× N" badge). 1 hour matches the rough duration
 // of a back-to-back session burst — anything longer feels like distinct work.
-const CLUSTER_WINDOW_MS = 60 * 60 * 1000;
+const CLUSTER_WINDOW_MS = HOUR_MS;
 
 export async function RecentRunsCard() {
   const userId = await requirePageUserId();

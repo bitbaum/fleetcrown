@@ -11,10 +11,10 @@ import { sseBus, peekChannel, addPeekViewer, removePeekViewer, type PeekFrame } 
 import { enqueuePeekCommand } from "@/db/queries/pending-commands";
 import type { RunnerChannel } from "@/db/schema/pending-commands";
 import { getExecutionAccess } from "@/lib/execution-access";
+import { SSE_KEEPALIVE_MS } from "@/lib/constants/time";
 
 export const dynamic = "force-dynamic";
 
-const KEEPALIVE_MS = 15_000;
 
 function sseEvent(event: string, data: unknown): string {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
       const onFrame = (payload: PeekFrame) => send(sseEvent("frame", payload));
       sseBus.on(channel, onFrame);
 
-      const keepalive = setInterval(() => send(": keepalive\n\n"), KEEPALIVE_MS);
+      const keepalive = setInterval(() => send(": keepalive\n\n"), SSE_KEEPALIVE_MS);
 
       // Cleanup on disconnect — last viewer stops the runner's loop.
       req.signal.addEventListener("abort", () => {

@@ -11,6 +11,7 @@ import {
   STATUS_RANK,
 } from "@/lib/activity-status";
 import type { StatusTone } from "@/lib/constants/statuses";
+import { DAY_MS, HOUR_MS, WEEK_MS } from "@/lib/constants/time";
 
 // Re-export pure helpers so existing consumers keep working without changing
 // imports. New code should prefer @/lib/activity-status.
@@ -140,11 +141,10 @@ export type ProjectDigest = {
 
 function windowStart(window: DigestWindow): Date {
   const now = Date.now();
-  const HOUR = 60 * 60 * 1000;
-  if (window === "hour") return new Date(now - HOUR);
-  if (window === "day") return new Date(now - 24 * HOUR);
-  if (window === "week") return new Date(now - 7 * 24 * HOUR);
-  return new Date(now - 30 * 24 * HOUR);
+  if (window === "hour") return new Date(now - HOUR_MS);
+  if (window === "day") return new Date(now - DAY_MS);
+  if (window === "week") return new Date(now - WEEK_MS);
+  return new Date(now - 30 * DAY_MS);
 }
 
 function normalizeWindow(value: string | null | undefined): DigestWindow {

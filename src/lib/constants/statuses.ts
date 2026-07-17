@@ -1,3 +1,5 @@
+import { DAY_MS } from "@/lib/constants/time";
+
 /** Canonical goal status values — used across GoalCard, goals page, ProjectGoalsTab, API routes */
 export const GOAL_STATUS = {
   ACTIVE: "active",
@@ -117,7 +119,7 @@ export function isHabitScheduled(frequency: HabitFrequency, dow: number): boolea
 export function scheduledDays(frequency: HabitFrequency, days: number): number {
   let count = 0;
   for (let i = 0; i < days; i++) {
-    const dow = new Date(Date.now() - i * 86_400_000).getDay();
+    const dow = new Date(Date.now() - i * DAY_MS).getDay();
     if (isHabitScheduled(frequency, dow)) count++;
   }
   return Math.max(1, count);

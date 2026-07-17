@@ -6,6 +6,7 @@ import { Eye, MessagesSquare, Loader2 } from "lucide-react";
 import { useFetch } from "@/hooks/use-fetch";
 import { useBuilderPresence } from "@/hooks/use-builder-presence";
 import { cn } from "@/lib/utils";
+import { MINUTE_MS } from "@/lib/constants/time";
 import type { AgentMessage, MessageType } from "@/lib/agent-comms";
 
 type CommsResp = { messages: AgentMessage[]; unavailable?: { code: string; message: string } };
@@ -33,7 +34,7 @@ function tsToMs(ts: string): number {
   return new Date(+y, +mo - 1, +d, +h, +mi).getTime();
 }
 
-const ACTIVE_WINDOW_MS = 20 * 60 * 1000;
+const ACTIVE_WINDOW_MS = 20 * MINUTE_MS;
 
 export function AgentsCockpit() {
   const { data: comms, loading: commsLoading } = useFetch<CommsResp>("/api/agents/comms", { intervalMs: 10_000 });

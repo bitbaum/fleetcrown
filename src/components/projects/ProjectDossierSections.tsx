@@ -14,6 +14,7 @@ import { GoalEditor } from "@/components/projects/GoalEditor";
 import { timeAgo, shortTimeAgo, formatDurationMinutes } from "@/lib/dates";
 import { DOSSIER_STALE_MS } from "@/lib/project-display";
 import { APP_LOCALE } from "@/lib/constants";
+import { MINUTE_MS, WEEK_MS } from "@/lib/constants/time";
 import { RunNextStepButton } from "./ProjectActionButtons";
 
 const OUTCOME_TAG: Record<string, string> = {
@@ -39,7 +40,7 @@ function SectionShell({ kicker, title, children }: { kicker: string; title: stri
 
 function runDuration(run: ProjectRunRow): string | null {
   if (!run.finishedAt) return null;
-  const mins = Math.round((run.finishedAt.getTime() - run.startedAt.getTime()) / 60_000);
+  const mins = Math.round((run.finishedAt.getTime() - run.startedAt.getTime()) / MINUTE_MS);
   return formatDurationMinutes(mins);
 }
 
@@ -109,7 +110,7 @@ export function NowSection({
         </p>
         {(() => {
           if (!dossier.commits?.length) return null;
-          const weekAgo = dossier.builtAtMs - 7 * 24 * 3_600_000;
+          const weekAgo = dossier.builtAtMs - WEEK_MS;
           const weekCount = dossier.commits.filter((c) => c.atMs >= weekAgo).length;
           if (weekCount === 0) return null;
           return (

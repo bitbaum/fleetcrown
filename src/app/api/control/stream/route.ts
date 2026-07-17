@@ -10,6 +10,7 @@ import { getZellijTabs } from "@/lib/zellij";
 import { getSessionUserId } from "@/lib/session";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { NOTIFY_CHANNEL } from "@/db/setup-notify-trigger";
+import { SSE_KEEPALIVE_MS } from "@/lib/constants/time";
 import type { FastProjectState } from "@/lib/control-fast-state";
 import { sseBus } from "@/lib/sse-bus";
 import { resolveProjectSession, dbRowToSession, isRuntimeObservationFresh } from "@/lib/project-session";
@@ -18,7 +19,6 @@ import postgres from "postgres";
 
 export const dynamic = "force-dynamic";
 
-const KEEPALIVE_MS = 15_000;
 
 // Map DB state rows to the FastProjectState shape the SSE client expects.
 // Used on the cloud host where /proc and /tmp are unavailable — runner keeps DB current.
@@ -198,7 +198,7 @@ export async function GET() {
         keepaliveTimer = setTimeout(() => {
           send(": keepalive\n\n");
           scheduleKeepalive();
-        }, KEEPALIVE_MS);
+        }, SSE_KEEPALIVE_MS);
       };
 
       // Initial snapshot

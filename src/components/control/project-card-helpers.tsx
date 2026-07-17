@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { secondsAgo, formatElapsedSeconds } from "@/lib/dates";
 import { getIntentLabel, getAdapterLabel } from "@/config/control-intents";
 import type { ProjectState } from "@/lib/control-types";
+import { MINUTE_MS } from "@/lib/constants/time";
 
 export function ClosedBanner({
   session,
@@ -143,7 +144,7 @@ const RUN_STATE_TAG: Record<string, string> = {
 // "running" warning tag for up to an hour. This panel is the "previous"
 // (finished) run — a genuinely-live run shows in the project header instead —
 // so a "running" row older than this cap is treated as interrupted.
-const STALE_RUNNING_MS = 30 * 60 * 1000;
+const STALE_RUNNING_MS = 30 * MINUTE_MS;
 
 export function LatestOrchestrationPanel({
   run,

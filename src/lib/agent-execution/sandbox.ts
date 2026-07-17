@@ -23,9 +23,9 @@ import type {
   WorkspaceId,
   WorkspaceSpec,
 } from "./types";
+import { MAX_BUFFERED_EVENTS } from "./local-pty";
 
 const IDLE_MS = 1500;
-const MAX_BUFFERED_EVENTS = 5000;
 
 export type SandboxNetwork = "none" | "bridge";
 export type SandboxUser = "current" | "root";

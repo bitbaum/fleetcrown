@@ -16,9 +16,10 @@ import { insertPromptHistory } from "@/db/queries/prompt-history";
 import { db } from "@/db";
 import { userProjects } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
+import { LONG_TEXT_MAX } from "@/lib/constants";
 
 const MIN_PROMPT_CHARS = 8;       // skip "yes" / "ok" / "continue" noise
-const MAX_PROMPT_CHARS = 8000;    // hard cap mirrors prompt_history.custom_prompt + headroom
+const MAX_PROMPT_CHARS = LONG_TEXT_MAX; // hard cap mirrors prompt_history.custom_prompt + headroom
 
 const Body = z.object({
   prompt: z.string().min(1).max(MAX_PROMPT_CHARS),

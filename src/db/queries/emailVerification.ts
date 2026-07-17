@@ -2,12 +2,13 @@ import { eq, and, gt, isNull } from "drizzle-orm";
 import { randomBytes } from "crypto";
 import { db } from "@/db";
 import { emailVerificationTokens, users } from "@/db/schema";
+import { HOUR_MS } from "@/lib/constants/time";
 
 const EXPIRY_HOURS = 24;
 
 export async function createEmailVerificationToken(userId: string): Promise<string> {
   const token = randomBytes(32).toString("hex");
-  const expiresAt = new Date(Date.now() + EXPIRY_HOURS * 60 * 60 * 1000);
+  const expiresAt = new Date(Date.now() + EXPIRY_HOURS * HOUR_MS);
 
   // Invalidate any previous unused tokens for this user
   await db

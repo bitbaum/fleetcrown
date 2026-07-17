@@ -14,6 +14,7 @@ import { GOAL_STATUS, SUB_STATUS, COMMITMENT_STATUS, ACTION_STATUS, ALERT_SEVERI
 import { READY_WINDOW_S, PROMPT_RUNNING_WINDOW_S, getHealthShort, isHealthPoor } from "@/lib/constants/control";
 import { toPromptDisplayFields } from "@/lib/activity-status";
 import { z } from "zod";
+import { DAY_MS, HOUR_MS } from "@/lib/constants/time";
 
 export const CreateCommitmentBody = z.object({
   description: z.string().trim().min(1, "description is required"),
@@ -74,7 +75,7 @@ export async function fulfillCommitment(id: string, userId: string) {
  *  time-sensitive obligations. Soonest first; capped so a long list can't bloat
  *  the prompt. */
 export async function listUpcomingCommitments(userId: string, days = 14, limit = 8) {
-  const until = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+  const until = new Date(Date.now() + days * DAY_MS);
   return db
     .select({ description: commitments.description, dueDate: commitments.dueDate })
     .from(commitments)
@@ -148,7 +149,7 @@ export async function getTodaySummary(userId: string) {
   const eventsSoon = new Date();
   eventsSoon.setDate(eventsSoon.getDate() + EVENTS_DUE_SOON_DAYS);
 
-  const staleGoalsAt = new Date(Date.now() - STALE_GOALS_DAYS * 24 * 60 * 60 * 1000);
+  const staleGoalsAt = new Date(Date.now() - STALE_GOALS_DAYS * DAY_MS);
 
   const [
     [goalStats],
@@ -298,7 +299,7 @@ export async function getFleetSummary(userId: string) {
 }
 
 export async function getStuckGoals(userId: string, days = STALE_GOALS_DAYS) {
-  const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  const cutoff = new Date(Date.now() - days * DAY_MS);
   return db
     .select({
       id: goals.id,
@@ -319,7 +320,7 @@ export async function getStuckGoals(userId: string, days = STALE_GOALS_DAYS) {
 }
 
 export async function getRecentOrchestrationRuns(userId: string, hours = RECENT_RUNS_HOURS, limit = RECENT_RUNS_LIMIT) {
-  const since = new Date(Date.now() - hours * 60 * 60 * 1000);
+  const since = new Date(Date.now() - hours * HOUR_MS);
   return db
     .select({
       id: orchestrationRuns.id,
@@ -346,7 +347,7 @@ export async function getRecentOrchestrationRuns(userId: string, hours = RECENT_
 // library / Send box) sees "No agent runs in the past 24 hours" even though
 // they queued five injects today, which destroys trust in the dashboard.
 export async function getRecentDispatches(userId: string, hours = RECENT_RUNS_HOURS, limit = RECENT_RUNS_LIMIT) {
-  const since = new Date(Date.now() - hours * 60 * 60 * 1000);
+  const since = new Date(Date.now() - hours * HOUR_MS);
   const rows = await db
     .select({
       id: promptHistory.id,

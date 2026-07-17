@@ -2,6 +2,7 @@ import { randomBytes } from "crypto";
 import { db } from "@/db";
 import { agentTokens, type AgentToken } from "@/db/schema";
 import { eq, and, or, gt, isNull, lt, desc, sql } from "drizzle-orm";
+import { DAY_MS, WEEK_MS } from "@/lib/constants/time";
 
 export function generateToken(): string {
   return "ck_" + randomBytes(32).toString("hex");
@@ -52,7 +53,7 @@ export async function deleteAgentToken(id: string, userId: string): Promise<void
  */
 export async function getReusableEventStreamToken(
   userId: string,
-  maxIdleMs: number = 7 * 24 * 60 * 60 * 1000,
+  maxIdleMs: number = WEEK_MS,
 ): Promise<{ token: string; record: AgentToken } | null> {
   const now = new Date();
   // ISO string + explicit ::timestamptz cast: a bare JS Date inside a raw sql
@@ -86,7 +87,7 @@ export async function getReusableEventStreamToken(
  * removing them would break the runner silently.
  */
 export async function deleteStaleEventStreamTokens(
-  olderThanMs: number = 30 * 24 * 60 * 60 * 1000,
+  olderThanMs: number = 30 * DAY_MS,
 ): Promise<number> {
   const cutoff = new Date(Date.now() - olderThanMs);
   const result = await db

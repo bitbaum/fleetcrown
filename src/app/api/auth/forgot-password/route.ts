@@ -4,13 +4,14 @@ import { getUserByEmail } from "@/db/queries/users";
 import { createPasswordReset } from "@/db/queries/passwordResets";
 import { sendEmail, resetPasswordEmailTemplate, appUrl } from "@/lib/email";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { RATE_LIMIT_WINDOW_SHORT_MS } from "@/lib/constants/time";
 
 const Body = z.object({
   email: z.string().trim().email().toLowerCase(),
 });
 
 const LIMIT  = 5;            // max reset requests
-const WINDOW = 15 * 60_000; // per 15 minutes
+const WINDOW = RATE_LIMIT_WINDOW_SHORT_MS;
 
 export async function POST(req: NextRequest) {
   if (!checkRateLimit(`forgot:${getClientIp(req)}`, LIMIT, WINDOW)) {

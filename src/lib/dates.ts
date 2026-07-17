@@ -1,9 +1,10 @@
 import { isPast, formatDistanceToNow } from "date-fns";
 import { FREQUENCY } from "@/config/subscriptions";
+import { DAY_MS, MINUTE_MS } from "@/lib/constants/time";
 
 /** "just now" / "5m ago" / "2h ago" — minute-precision, from epoch ms */
 export function timeAgo(ms: number): string {
-  const diff = Math.round((Date.now() - ms) / 60000);
+  const diff = Math.round((Date.now() - ms) / MINUTE_MS);
   if (diff < 1) return "just now";
   if (diff < 60) return `${diff}m ago`;
   return `${Math.round(diff / 60)}h ago`;
@@ -47,7 +48,7 @@ export function toLocalDateStr(d: Date): string {
 export function compactRelativeDate(date: Date | string): string {
   const d = date instanceof Date ? date : new Date(date);
   const diffMs = Date.now() - d.getTime();
-  const diffDays = Math.floor(diffMs / 86_400_000);
+  const diffDays = Math.floor(diffMs / DAY_MS);
   if (diffDays === 0) return "today";
   if (diffDays === 1) return "yesterday";
   if (diffDays < 7) return `${diffDays}d ago`;

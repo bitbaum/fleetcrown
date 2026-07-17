@@ -9,13 +9,14 @@ import { ENTITY_TYPE } from "@/lib/constants/statuses";
 import { fetchAttributesByEntityIds, upsertEntityAttribute } from "@/db/queries/utils";
 import { patchProject } from "@/db/queries/projects";
 import { reconcileProfile } from "@/lib/project-brief";
+import { LONG_TEXT_MAX } from "@/lib/constants";
 
 // Sync-from-doc. Two phases so nothing is silently overwritten:
 //   POST { text }                    → PREVIEW: diff the doc against current fields,
 //                                       return { updates, newAttributes } (no writes)
 //   POST { apply: { updates, newAttributes } } → APPLY only what the user approved.
 
-const PreviewBody = z.object({ text: z.string().trim().min(10).max(8000) });
+const PreviewBody = z.object({ text: z.string().trim().min(10).max(LONG_TEXT_MAX) });
 const ApplyBody = z.object({
   apply: z.object({
     updates: z.record(z.string(), z.string().trim().max(500)).default({}),

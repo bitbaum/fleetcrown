@@ -24,8 +24,9 @@ import { agentTokens } from "@/db/schema/agent-tokens";
 import { runtimeSnapshots } from "@/db/schema/runtime-snapshots";
 import { userProjects } from "@/db/schema/user-projects";
 import { and, count, eq, gte, isNotNull, isNull, max, sql } from "drizzle-orm";
+import { DAY_MS } from "@/lib/constants/time";
 
-const HOURS_24_MS = 24 * 60 * 60 * 1000;
+const HOURS_24_MS = DAY_MS;
 
 /** Dispatch pipeline health for the last 24h. */
 export async function getDispatchMetrics(userId: string) {

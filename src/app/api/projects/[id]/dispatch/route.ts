@@ -5,6 +5,7 @@ import { isValidUuid } from "@/lib/utils";
 import { getProjectDossierByOwner, type ProjectDossier } from "@/db/queries/project-dossier";
 import { injectPrompt } from "@/lib/inject-core";
 import { HEALTH_SIGNAL_BASE } from "@/components/projects/project-detail-types";
+import { MINUTE_MS } from "@/lib/constants/time";
 
 /**
  * One-click dispatch of a profile-called-out action. The profile states facts
@@ -55,7 +56,7 @@ function composePrompt(
   const timedOut = dossier.runs
     .filter((run) => run.finishedAt && run.outcome === "timeout")
     .slice(0, 5)
-    .map((run) => `- ${run.startedAt.toISOString().slice(0, 10)}: "${run.intent}" ran ~${Math.round(((run.finishedAt as Date).getTime() - run.startedAt.getTime()) / 60_000)}m then timed out`);
+    .map((run) => `- ${run.startedAt.toISOString().slice(0, 10)}: "${run.intent}" ran ~${Math.round(((run.finishedAt as Date).getTime() - run.startedAt.getTime()) / MINUTE_MS)}m then timed out`);
   if (timedOut.length === 0) return { error: "No timed-out runs to diagnose." };
   return {
     prompt: `Diagnose why dispatched agent runs for ${name} keep timing out instead of finishing:\n\n${timedOut.join("\n")}\n\nInvestigate the workspace state (does the checkout exist and build? are handoffs being written? is the agent stalling on a prompt?), identify the most likely root cause, and fix what you can. ${closing}`,

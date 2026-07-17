@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getApiUserId } from "@/lib/session";
 import { generateDigest } from "@/lib/digest-generator";
 import { z, readJsonBody } from "@/lib/api/route-helpers";
+import { MINUTE_MS } from "@/lib/constants/time";
 
 const Body = z.object({
   window: z.string().optional(),
@@ -26,7 +27,7 @@ const WINDOW_LABELS: Record<string, string> = {
 };
 
 type CacheEntry = { generatedAt: number; markdown: string; model: string };
-const CACHE_TTL_MS = 10 * 60 * 1000;
+const CACHE_TTL_MS = 10 * MINUTE_MS;
 const cache = new Map<string, CacheEntry>();
 
 function cacheKey(userId: string, window: string, project: string | null) {

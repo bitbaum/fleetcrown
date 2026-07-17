@@ -23,8 +23,9 @@ import type {
 
 /** Quiet period after which a workspace flips running -> idle (≈ "awaiting input"). */
 const IDLE_MS = 1500;
-/** Retained events per workspace for reconnect replay (ring buffer). */
-const MAX_BUFFERED_EVENTS = 5000;
+/** Retained events per workspace for reconnect replay (ring buffer).
+ *  Exported so SandboxExecutor uses the same replay depth. */
+export const MAX_BUFFERED_EVENTS = 5000;
 
 interface WorkspaceState {
   handle: WorkspaceHandle;

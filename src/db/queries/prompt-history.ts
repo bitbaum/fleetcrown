@@ -2,6 +2,7 @@ import { and, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { promptHistory, type NewPromptHistoryRow } from "@/db/schema/prompt-history";
 import { toPromptDisplayFields, type PromptDisplayFields } from "@/lib/activity-status";
+import { HOUR_MS } from "@/lib/constants/time";
 
 export async function insertPromptHistory(userId: string, row: Omit<NewPromptHistoryRow, "id" | "userId" | "dispatchedAt">) {
   await db.insert(promptHistory).values({ ...row, userId });
@@ -141,7 +142,7 @@ export async function getPromptHistory(userId: string, limit = 200): Promise<His
 }
 
 export async function getRecentActivity(userId: string, hours = 24, limit = 30): Promise<ActivityItem[]> {
-  const since = new Date(Date.now() - hours * 60 * 60 * 1000);
+  const since = new Date(Date.now() - hours * HOUR_MS);
   const rows = await db
     .select(DISPATCH_COLS)
     .from(promptHistory)

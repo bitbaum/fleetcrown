@@ -2,13 +2,14 @@ import { NextResponse } from "next/server";
 import { runTool } from "@/lib/tools";
 import { TOOLS_DIR } from "@/lib/constants";
 import { isRuntimeAvailable } from "@/lib/runtime";
+import { DAY_MS } from "@/lib/constants/time";
 import { getApiUserId } from "@/lib/session";
 import { getUserPreferences, getActiveCity } from "@/db/queries/user-preferences";
 
 type GeoResult = { latitude: number; longitude: number; timezone: string };
 
 const geocodeCache = new Map<string, { geo: GeoResult; ts: number }>();
-const GEO_TTL_MS = 24 * 60 * 60 * 1000; // 24 h — city coords don't change
+const GEO_TTL_MS = DAY_MS; // 24 h — city coords don't change
 
 async function geocodeCity(city: string): Promise<GeoResult | null> {
   const cached = geocodeCache.get(city);
