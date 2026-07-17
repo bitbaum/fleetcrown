@@ -8,7 +8,10 @@ import { ProjectSettingsPanel } from "./ProjectSettingsPanel";
 import { DoneSection, NextSection, NowSection } from "./ProjectDossierSections";
 import { OrangeCatPublishButton } from "./OrangeCatPublishButton";
 import { getProjectLinks } from "./project-detail-types";
-import { getHealthSignals } from "./project-badges";
+import { getHealthSignals, HEALTH_SIGNAL_CONFIG } from "./project-badges";
+import { computeProjectHealth } from "@/lib/project-health";
+import { FixSignalButton } from "./ProjectActionButtons";
+import { AssistantContextBridge } from "./AssistantContextBridge";
 
 const SECTIONS = [
   { href: "#overview", label: "Overview" },
@@ -30,9 +33,40 @@ export function ProjectWorkspaceView({
   const workspaceKey = userProject?.name ?? project.name;
   const links = getProjectLinks(attrs, userProject?.gitUrl ?? project.gitUrl);
   const healthSignals = getHealthSignals(attrs);
+  const health = computeProjectHealth({
+    description: project.description,
+    gitUrl: userProject?.gitUrl ?? project.gitUrl,
+    dirPath: userProject?.dirPath,
+    attrs,
+  });
+  // ≥2 consecutive most-recent finished runs timing out is a pattern worth a
+  // one-click diagnosis, not something the user should discover by scrolling.
+  const finishedRuns = dossier.runs.filter((run) => run.finishedAt);
+  let timeoutStreak = 0;
+  for (const run of finishedRuns) {
+    if (run.outcome !== "timeout") break;
+    timeoutStreak += 1;
+  }
+  const latestDevLogEntry = [...(detail.devLog ?? [])].reverse()[0] ?? null;
+  const nextStep = latestDevLogEntry?.next?.trim() || attrs.next_step?.trim() || null;
 
   return (
     <div className="app-page max-w-5xl space-y-6">
+      <AssistantContextBridge
+        context={{
+          projectId: project.id,
+          name: project.name,
+          workspaceKey,
+          signals: healthSignals.map((signal) => ({
+            key: HEALTH_SIGNAL_CONFIG.find((c) => c.kind === signal.kind)?.key ?? signal.kind,
+            label: signal.label,
+            value: signal.value,
+          })),
+          nextStep,
+          timeoutStreak,
+          readonly: dossier.readonly,
+        }}
+      />
       <Link
         href="/projects"
         className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-text-secondary transition-colors hover:text-text-primary"
@@ -48,7 +82,7 @@ export function ProjectWorkspaceView({
             workspaceKey={workspaceKey}
             description={project.description}
             status={attrs.status ?? null}
-            maturity={attrs.maturity ?? null}
+            health={health}
             readonly={dossier.readonly}
           />
           <div className="flex shrink-0 flex-wrap items-center gap-2">
@@ -99,17 +133,23 @@ export function ProjectWorkspaceView({
         <h2 id="project-overview-title" className="sr-only">Overview</h2>
         {healthSignals.length > 0 && (
           <div className="mb-5 divide-y divide-border-subtle border-y border-border-subtle">
-            {healthSignals.map((signal) => (
-              <div key={signal.kind} className="flex flex-col gap-1 py-3 sm:flex-row sm:gap-3">
-                <span className="shrink-0 text-sm font-medium text-status-warning">{signal.label}</span>
-                <span className="text-sm leading-relaxed text-text-secondary">{signal.value}</span>
-              </div>
-            ))}
+            {healthSignals.map((signal) => {
+              const signalKey = HEALTH_SIGNAL_CONFIG.find((c) => c.kind === signal.kind)?.key;
+              return (
+                <div key={signal.kind} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-baseline sm:gap-3">
+                  <span className="shrink-0 text-sm font-medium text-status-warning">{signal.label}</span>
+                  <span className="flex-1 text-sm leading-relaxed text-text-secondary">{signal.value}</span>
+                  {!dossier.readonly && signalKey && (
+                    <FixSignalButton projectId={project.id} workspaceKey={workspaceKey} signalKey={signalKey} />
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
         <div className="grid gap-5 lg:grid-cols-2">
           <NowSection dossier={dossier} interactive={false} showBrief={false} />
-          <NextSection dossier={dossier} interactive={false} showGoals={false} />
+          <NextSection dossier={dossier} interactive={false} showGoals={false} dispatchable={!dossier.readonly} />
         </div>
       </section>
 

@@ -2,11 +2,29 @@
 
 Notable, user-facing changes. Older history lives in the git log (conventional commits).
 
-**Last modified:** 2026-07-17 - one canonical, mobile-first project workspace.
+**Last modified:** 2026-07-17 - every profile fact is actionable, traceable, and true.
 
 ## 2026-07-17
 
 ### Changed
+- **Every called-out issue is fixable in one click.** Security risks, broken
+  features, and deploy issues on a project profile now carry a Fix button that
+  dispatches a scoped agent run through the standard channel-routed pipeline;
+  the Next card gained "Run next step". Both confirm inline with a link to
+  watch the run in Terminal.
+- **The health score is derived, not typed.** The hand-set "N/10" maturity
+  number is retired; the score is now the count of ten named checks (brief,
+  mission, code, live URL, stage, no open callouts, next step, definition of
+  done). Click it for the breakdown that answers "why 9 and not 10" — the same
+  derivation feeds the catalog, the profile, and agent context.
+- **Activity stops ignoring the repo.** Profiles fetch recent GitHub commits
+  (owner's linked token), so "Idle · last active 1mo ago" can no longer appear
+  while commits land daily. Now shows last-commit recency + a commits-this-week
+  line; Activity lists the recent commits as evidence.
+- **The floating Loki bubble is a context-aware assistant.** On a project page
+  it proposes the concrete actions the profile calls out (fix an issue, run
+  the next step, diagnose a timeout streak — all one click) and holds a
+  project-scoped conversation inline; elsewhere it offers fleet-wide starters.
 - **Projects now has one clear job.** `/projects` is the portfolio for finding and
   prioritizing work; `/projects/[id]` is the one canonical project workspace. The
   duplicate right-side profile drawer is gone, old `?open=` links redirect to the

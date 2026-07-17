@@ -14,6 +14,7 @@ import { GoalEditor } from "@/components/projects/GoalEditor";
 import { timeAgo, shortTimeAgo, formatDurationMinutes } from "@/lib/dates";
 import { DOSSIER_STALE_MS } from "@/lib/project-display";
 import { APP_LOCALE } from "@/lib/constants";
+import { RunNextStepButton } from "./ProjectActionButtons";
 
 const OUTCOME_TAG: Record<string, string> = {
   success: "ui-tag ui-tag-positive",
@@ -61,6 +62,11 @@ export function NowSection({
   // checks as current) once it's stale — say idle + when it was last active.
   const handoffMs = state?.sessionUpdatedAt?.getTime() ?? null;
   const stale = handoffMs != null && dossier.builtAtMs - handoffMs > DOSSIER_STALE_MS;
+  // "Last active" must not ignore the repo: work landing as commits (outside
+  // FleetCrown-dispatched sessions) is activity. A profile once claimed
+  // "Idle · last active 1mo ago" while 17 commits landed in two days.
+  const lastCommitMs = dossier.commits?.[0]?.atMs ?? null;
+  const commitFresher = lastCommitMs != null && (handoffMs == null || lastCommitMs > handoffMs);
   const liveLabel = stale
     ? "Idle"
     : state?.agentRunning
@@ -91,12 +97,27 @@ export function NowSection({
         <p className="text-sm text-text-primary">
           <span className={liveActive ? "ui-dot ui-dot-positive mr-1.5" : "ui-dot ui-dot-neutral mr-1.5"} aria-hidden="true" />
           {liveLabel}
-          {handoffMs != null && (
+          {commitFresher ? (
+            <span className="text-xs text-text-muted">
+              {" · "}last commit {shortTimeAgo(lastCommitMs)} ago
+            </span>
+          ) : handoffMs != null ? (
             <span className="text-xs text-text-muted">
               {" · "}{stale ? `last active ${shortTimeAgo(handoffMs)} ago` : `handoff ${timeAgo(handoffMs)}`}
             </span>
-          )}
+          ) : null}
         </p>
+        {(() => {
+          if (!dossier.commits?.length) return null;
+          const weekAgo = dossier.builtAtMs - 7 * 24 * 3_600_000;
+          const weekCount = dossier.commits.filter((c) => c.atMs >= weekAgo).length;
+          if (weekCount === 0) return null;
+          return (
+            <p className="text-xs text-text-muted">
+              Repo active — {weekCount} commit{weekCount > 1 ? "s" : ""} in the last 7 days
+            </p>
+          );
+        })()}
         {/* The last handoff's checks describe THAT run — only current if the
             handoff is recent. A week-old "health good" is not a live signal. */}
         {!stale && latest && (latest.tests || latest.health) && (
@@ -133,10 +154,13 @@ export function NextSection({
   dossier,
   interactive = true,
   showGoals = true,
+  dispatchable = false,
 }: {
   dossier: ProjectDossier;
   interactive?: boolean;
   showGoals?: boolean;
+  /** Owner view: render the one-click "Run next step" dispatch. */
+  dispatchable?: boolean;
 }) {
   const latest = latestDevLog(dossier);
   const goals = dossier.detail.linkedGoals;
@@ -154,10 +178,18 @@ export function NextSection({
   return (
     <SectionShell kicker="Next" title="What happens next">
       {next ? (
-        <p className="text-sm leading-relaxed text-text-primary">
-          <span className="font-medium text-accent-text">→ </span>
-          {next}
-        </p>
+        <div className="space-y-2.5">
+          <p className="text-sm leading-relaxed text-text-primary">
+            <span className="font-medium text-accent-text">→ </span>
+            {next}
+          </p>
+          {dispatchable && (
+            <RunNextStepButton
+              projectId={dossier.detail.project.id}
+              workspaceKey={dossier.userProject?.name ?? dossier.detail.project.name}
+            />
+          )}
+        </div>
       ) : (
         <p className="text-sm text-text-muted">No queued next step — dispatch one from Control.</p>
       )}
@@ -198,13 +230,29 @@ export function DoneSection({ dossier }: { dossier: ProjectDossier }) {
 
   return (
     <SectionShell kicker="Done" title="Report — what has shipped">
-      {entries.length === 0 && runs.length === 0 && (
+      {entries.length === 0 && runs.length === 0 && (dossier.commits?.length ?? 0) === 0 && (
         <p className="text-sm text-text-muted">
           Nothing recorded yet. Dispatches and finished agent sessions land here automatically.
         </p>
       )}
-      {entries.length > 0 && (
+      {(dossier.commits?.length ?? 0) > 0 && (
         <div className="space-y-2">
+          <p className="text-xs font-medium text-text-tertiary">Recent commits</p>
+          <ul className="space-y-1">
+            {dossier.commits!.slice(0, 5).map((commit) => (
+              <li key={commit.sha} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs">
+                <span className="text-text-muted tabular-nums">{shortTimeAgo(commit.atMs)} ago</span>
+                <span className="font-mono text-text-tertiary">{commit.sha}</span>
+                <span className="min-w-0 flex-1 truncate text-text-secondary" title={commit.message}>
+                  {commit.message}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {entries.length > 0 && (
+        <div className="space-y-2 border-t border-border-subtle pt-3">
           <p className="text-xs font-medium text-text-tertiary">Changelog</p>
           <DevLogList entries={entries} />
         </div>

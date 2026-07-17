@@ -39,28 +39,8 @@ export function getHealthSignals(attrs: Record<string, string>): HealthSignal[] 
   return signals;
 }
 
-export function MaturityBar({ value }: { value: string }) {
-  const match = value.match(/^(\d+)\/10/);
-  const score = match ? parseInt(match[1]) : null;
-  if (score === null) return <span className="text-text-secondary text-xs">{value}</span>;
-  return (
-    <div className="flex items-center gap-1.5">
-      <div className="flex gap-0.5">
-        {Array.from({ length: 10 }, (_, i) => (
-          <div
-            key={i}
-            className={`h-1 w-2 rounded-sm ${
-              i < score
-                ? score >= 8 ? "bg-status-positive" : score >= 5 ? "bg-status-warning" : "bg-status-negative"
-                : "bg-surface-overlay"
-            }`}
-          />
-        ))}
-      </div>
-      <span className="text-xs text-text-tertiary">{score}/10</span>
-    </div>
-  );
-}
+// MaturityBar is retired: the score is derived from named checks now — see
+// HealthScoreBar (HealthScore.tsx) + computeProjectHealth (lib/project-health.ts).
 
 const STATUS_COLOR_MAP: Record<string, string> = {
   active:        "bg-status-positive-subtle text-status-positive border-status-positive/25",

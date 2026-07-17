@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { DescriptionEditor, MaturityEditor, StatusEditor } from "./ProjectInlineEditors";
+import { DescriptionEditor, StatusEditor } from "./ProjectInlineEditors";
 import { patchJson } from "@/lib/api/fetch";
 import { setAttr } from "@/lib/api/attrs";
 import { rememberFleetProject } from "@/lib/fleet-context";
+import { HealthScoreBar } from "./HealthScore";
+import type { ProjectHealth } from "@/lib/project-health";
 
 export function ProjectWorkspaceHeader({
   projectId,
@@ -13,7 +15,7 @@ export function ProjectWorkspaceHeader({
   workspaceKey,
   description,
   status,
-  maturity,
+  health,
   readonly,
 }: {
   projectId: string;
@@ -21,13 +23,13 @@ export function ProjectWorkspaceHeader({
   workspaceKey: string;
   description: string | null;
   status: string | null;
-  maturity: string | null;
+  /** Derived, traceable score — not the retired hand-typed attrs.maturity. */
+  health: ProjectHealth;
   readonly: boolean;
 }) {
   const router = useRouter();
   const [currentDescription, setCurrentDescription] = useState(description);
   const [currentStatus, setCurrentStatus] = useState(status);
-  const [currentMaturity, setCurrentMaturity] = useState(maturity);
 
   useEffect(() => {
     rememberFleetProject(workspaceKey);
@@ -48,16 +50,7 @@ export function ProjectWorkspaceHeader({
             refresh();
           }}
         />
-        <MaturityEditor
-          value={currentMaturity}
-          editable={!readonly}
-          onSave={async (next) => {
-            const response = await setAttr(`/api/projects/${projectId}`, "maturity", next);
-            if (!response.ok) throw new Error("Failed to save maturity");
-            setCurrentMaturity(next);
-            refresh();
-          }}
-        />
+        <HealthScoreBar health={health} interactive />
         {readonly && <span className="ui-tag ui-tag-neutral">Team project</span>}
       </div>
 

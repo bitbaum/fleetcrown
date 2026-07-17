@@ -31,6 +31,9 @@ import type { orchestrationRuns } from "@/db/schema/orchestration-runs";
 import type { ProjectShare } from "@/db/schema/project-shares";
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
 import { renderOperatingPrinciples } from "@/config/operating-principles";
+import { getGithubToken } from "@/lib/github-token";
+import { fetchRecentGithubCommits, type RepoCommit } from "@/lib/github-commits";
+import { computeProjectHealth, describeProjectHealth } from "@/lib/project-health";
 
 export type ProjectRunRow = typeof orchestrationRuns.$inferSelect;
 
@@ -45,6 +48,9 @@ export type ProjectDossier = {
   outcomes: RecentOutcome[];
   /** The runtime row (devLog lives on detail; this adds gitUrl/dirPath/OC link). */
   userProject: UserProject | null;
+  /** Recent repo commits — evidence of real work even when no FleetCrown run
+   *  produced it. null when the project has no GitHub repo or no linked token. */
+  commits: RepoCommit[] | null;
   /** Wall-clock at build time — the ONE `now` the render uses to age handoffs
    *  and run outcomes, so components stay pure (no Date.now() in render). */
   builtAtMs: number;
@@ -72,6 +78,13 @@ export async function getProjectDossier(
     getUserProjectByEntityId(ownerId, projectId).catch(() => null),
   ]);
 
+  const gitUrl = userProject?.gitUrl ?? detail.project.gitUrl;
+  const commits = gitUrl
+    ? await getGithubToken(ownerId)
+        .then((token) => (token ? fetchRecentGithubCommits(gitUrl, token) : null))
+        .catch(() => null)
+    : null;
+
   return {
     detail,
     ownerId,
@@ -81,6 +94,7 @@ export async function getProjectDossier(
     runs,
     outcomes,
     userProject,
+    commits,
     builtAtMs: Date.now(),
   };
 }
@@ -146,7 +160,13 @@ export function renderProjectDossierForAgent(dossier: ProjectDossier): string {
     ["Problem", attrs.problem],
     ["Solution", attrs.solution],
     ["Status", attrs.status],
-    ["Maturity", attrs.maturity],
+    // Derived, traceable health — replaces the hand-typed attrs.maturity score.
+    ["Health", describeProjectHealth(computeProjectHealth({
+      description: detail.project.description,
+      gitUrl: userProject?.gitUrl ?? detail.project.gitUrl,
+      dirPath: userProject?.dirPath,
+      attrs,
+    }))],
     ["Stack", attrs.stack ?? userProject?.stack],
     ["Architecture", attrs.architecture],
     ["Conventions", attrs.conventions],
@@ -196,6 +216,13 @@ export function renderProjectDossierForAgent(dossier: ProjectDossier): string {
         const meta = [r.kind, r.visibility ?? "private", r.sensitivity ?? "normal", r.url, r.notes].filter(Boolean).join(" — ");
         lines.push(`- ${r.title}${meta ? ` (${meta})` : ""}`);
       }
+    }
+  }
+
+  if (dossier.commits?.length) {
+    lines.push("## Recent repo commits");
+    for (const c of dossier.commits.slice(0, 8)) {
+      lines.push(`- ${new Date(c.atMs).toISOString().slice(0, 10)} ${c.sha}: ${c.message}`);
     }
   }
 

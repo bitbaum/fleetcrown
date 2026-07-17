@@ -6,13 +6,14 @@ import {
   ChevronRight,
 } from "lucide-react";
 import {
-  MaturityBar,
   StatusBadge,
   HealthBadge,
   getHealthSignals,
 } from "./project-badges";
 import { cn } from "@/lib/utils";
 import { deriveProjectLoopReadiness } from "@/lib/project-loop-readiness";
+import { computeProjectHealth } from "@/lib/project-health";
+import { HealthScoreBar } from "./HealthScore";
 
 export type ProjectGridRow = {
   id: string;
@@ -32,7 +33,12 @@ export function ProjectGridCard({
 }) {
   const { attrs } = project;
   const description = project.description ?? attrs["description"] ?? null;
-  const maturity = attrs["maturity"];
+  const health = computeProjectHealth({
+    description: project.description,
+    gitUrl: project.gitUrl,
+    dirPath: project.dirPath,
+    attrs,
+  });
   const status = attrs["status"];
   const nextStep = attrs["next_step"]?.trim() ?? null;
   const signals = getHealthSignals(attrs);
@@ -76,11 +82,9 @@ export function ProjectGridCard({
           <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-text-muted transition-transform group-hover:translate-x-0.5 group-hover:text-text-secondary" aria-hidden="true" />
         </div>
 
-        {maturity && (
-          <div className="mt-3">
-            <MaturityBar value={maturity} />
-          </div>
-        )}
+        <div className="mt-3">
+          <HealthScoreBar health={health} />
+        </div>
 
         {signals.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-1.5">

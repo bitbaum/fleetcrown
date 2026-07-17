@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2, Pencil } from "lucide-react";
-import { MaturityBar, StatusBadge } from "./project-badges";
+import { StatusBadge } from "./project-badges";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
 import { cn } from "@/lib/utils";
 
@@ -132,56 +132,5 @@ export function StatusEditor({
   );
 }
 
-/** Inline-editable maturity score (1–10 slider). */
-export function MaturityEditor({
-  value,
-  editable = true,
-  onSave,
-}: {
-  value: string | null;
-  editable?: boolean;
-  onSave: (next: string) => Promise<void>;
-}) {
-  const ie = useInlineEdit<number>(5);
-
-  const start = () => {
-    const match = value?.match(/^(\d+)\/10/);
-    ie.start(match ? parseInt(match[1]) : 5);
-  };
-
-  if (!editable) {
-    return value ? <MaturityBar value={value} /> : null;
-  }
-
-  if (ie.editing) {
-    return (
-      <div className="flex items-center gap-2">
-        <input
-          type="range"
-          min={1}
-          max={10}
-          value={ie.draft}
-          onChange={(e) => ie.setDraft(Number(e.target.value))}
-          className="min-h-11 w-24 ui-range-accent"
-        />
-        <span className="w-8 text-xs text-text-secondary">{ie.draft}/10</span>
-        <button
-          onClick={() => ie.commit(() => onSave(`${ie.draft}/10`))}
-          disabled={ie.saving}
-          className="ui-btn-confirm min-h-11 rounded px-2 text-xs transition-colors disabled:opacity-40 sm:min-h-0"
-        >
-          {ie.saving ? <Loader2 className="ui-spinner-xs" /> : "Save"}
-        </button>
-        <button onClick={ie.cancel} className="min-h-11 text-xs text-text-muted hover:text-text-secondary sm:min-h-0">Cancel</button>
-      </div>
-    );
-  }
-
-  return (
-    <button onClick={start} title="Edit maturity" className="flex min-h-11 items-center">
-      {value
-        ? <MaturityBar value={value} />
-        : <span className="ui-add-chip">+ maturity</span>}
-    </button>
-  );
-}
+// MaturityEditor (the 1–10 slider) is retired: the health score is now derived
+// from named checks (src/lib/project-health.ts) instead of hand-typed.
