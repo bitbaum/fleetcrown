@@ -107,6 +107,16 @@ trap report_deploy_status EXIT
 
 git_head() { git -C "$PROJECT_DIR" rev-parse HEAD 2>/dev/null || echo unknown; }
 
+# Schema BEFORE build (same order as scripts/hetzner/deploy.sh): guarded,
+# forward-only drizzle migrations from ./drizzle via the shared applier — the
+# first run baselines the existing file set against the live fleetcrown DB.
+# NB: drizzle/meta journal is desynced (idx 34 vs files to 0039 — legacy
+# push-then-hand-number workflow); the applier is filename-based and immune,
+# but a future `drizzle-kit generate` will mint colliding numbers until the
+# journal is reconciled. Number new migration files by hand (0040+) meanwhile.
+bash "$SCRIPT_DIR/hetzner/apply-schema.sh" fleetcrown "$PROJECT_DIR" fleetcrown "." \
+  || { echo "✗ schema step failed — deploy aborted (no code shipped)" >&2; exit 1; }
+
 if [ -n "$NO_BUILD" ]; then
   :  # reuse the existing $STANDALONE
 elif [ -n "$REF" ]; then
