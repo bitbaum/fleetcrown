@@ -29,9 +29,12 @@ button { cursor: pointer; border: none; background: none; }
 .fab {
   position: fixed; right: 16px; bottom: 16px; z-index: 2147483000;
   width: 48px; height: 48px; border-radius: 50%;
-  background: #1c1917; color: #fff;
+  /* Accent bg + white ring: must stay visible on light AND dark host sites
+     (a dark FAB vanished on dark pages — found dogfooding on FleetCrown). */
+  background: ${ACCENT}; color: #fff;
+  border: 2px solid rgba(255,255,255,.85);
   display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 2px 12px rgba(0,0,0,.25);
+  box-shadow: 0 2px 12px rgba(0,0,0,.35);
   transition: transform .15s ease;
 }
 .fab:hover { transform: scale(1.08); }
@@ -93,7 +96,15 @@ input { margin-bottom: 10px; }
   font-size: 12px; max-width: calc(100vw - 24px);
 }
 .pickbar .go { flex: none; padding: 6px 12px; font-size: 12px; }
-.pickbar .ghost { color: #d6d3d1; border-color: #44403c; padding: 6px 12px; font-size: 12px; }
+.pickbar .ghost { color: #d6d3d1; border-color: #44403c; padding: 6px 12px; font-size: 12px; white-space: nowrap; }
+.pickbar span { flex: 1; min-width: 0; }
+@media (max-width: 480px) {
+  .pickbar { left: 12px; right: 12px; transform: none; max-width: none; }
+}
+/* Keyboard hints are noise on touch-only devices. */
+@media (hover: none) and (pointer: coarse) {
+  .keys { display: none; }
+}
 `;
 
 /** Injected into document.head — the only styling that must reach host elements. */
