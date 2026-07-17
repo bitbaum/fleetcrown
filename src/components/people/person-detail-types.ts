@@ -35,7 +35,7 @@ export function formatKey(key: string): string {
   return key.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
 }
 
-// Strip storage format prefixes from channel values: "e164:+41763217721" → "+41763217721"
+// Strip storage format prefixes from channel values: "e164:+41790000000" → "+41790000000"
 export function formatChannelValue(value: string): string {
   return value.replace(/^e164:/, "");
 }

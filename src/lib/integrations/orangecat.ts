@@ -25,6 +25,10 @@ import { OrangeCatClient, OrangeCatError } from "@orangecat/sdk";
 import { db } from "@/db";
 import { subscriptions } from "@/db/schema";
 
+/** SSOT fallback for the OrangeCat origin when the env override is unset
+ *  (ORANGECAT_API_BASE / ORANGECAT_OAUTH_ISSUER). */
+export const ORANGECAT_BASE_FALLBACK = "https://orangecat.ch";
+
 interface SubscriptionForSync {
   id: string;
   name: string;
@@ -53,7 +57,7 @@ export function getOrangeCatClient(): OrangeCatClient | null {
   }
   cached = new OrangeCatClient({
     apiKey,
-    baseUrl: process.env.ORANGECAT_API_BASE ?? "https://orangecat.ch",
+    baseUrl: process.env.ORANGECAT_API_BASE ?? ORANGECAT_BASE_FALLBACK,
     userAgent: `fleetcrown/${process.env.npm_package_version ?? "0.1.0"} (+sdk)`,
   });
   return cached;

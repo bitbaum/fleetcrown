@@ -1,6 +1,6 @@
 import { Resend } from "resend";
 import { ROUTES } from "@/config/auth";
-import { APP_NAME, APP_EMAIL_FROM, APP_TAGLINE } from "@/config/brand";
+import { APP_NAME, APP_EMAIL_FROM, APP_TAGLINE, LOCAL_DEV_URL } from "@/config/brand";
 import { logDebug } from "@/db/queries/debug-logs";
 
 // Record every send outcome to debug_logs so "did the reset/verify email
@@ -25,7 +25,7 @@ function getResend(): Resend {
 const FROM = process.env.EMAIL_FROM ?? APP_EMAIL_FROM;
 
 export function appUrl(): string {
-  return process.env.NEXTAUTH_URL ?? process.env.APP_URL ?? "http://localhost:3000";
+  return process.env.NEXTAUTH_URL ?? process.env.APP_URL ?? LOCAL_DEV_URL;
 }
 
 // Fire-and-forget — callers don't await

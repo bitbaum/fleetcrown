@@ -190,7 +190,7 @@ You → Loki composer → resolveCommand / fleet fast paths
 - Loki is connected to the **builder queue**, not to the xterm WebSocket. Terminal is a **view**
   of whichever machine is executing that project's session.
 
-## 6. Open questions (need George's call before building)
+## 6. Open questions (need Mao's call before building)
 
 1. **Chat vs command vs both.** Is a Loki message primarily *talking about* projects (Loki
    answers) or *commanding* agents (work runs), or both in one thread? (Leaning: both, with

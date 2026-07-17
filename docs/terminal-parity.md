@@ -12,7 +12,7 @@ peek-stream SSE → xterm) and echoed in the prompt box. Killing the test agent 
 green (0 restarts) — PTY isolation confirmed. **P4 (wrapper merge) DONE** — the two xterm
 wrappers are now one transport-parameterized view (see Consolidation below).
 
-George's complaint (2026-06-18): the in-app terminal is "abysmal — I cannot easily type
+Mao's complaint (2026-06-18): the in-app terminal is "abysmal — I cannot easily type
 commands there, it's slow and awful, and there's no parity between the server and machine
 terminals."
 

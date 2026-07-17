@@ -145,7 +145,7 @@ export function RepoMultiPicker({ onSelectionChange, filter = "" }: Props) {
                   }`}
                   aria-hidden
                 >
-                  {isSelected && <Check className="h-3 w-3 text-white" />}
+                  {isSelected && <Check className="h-3 w-3 text-accent-foreground" />}
                 </span>
                 {repo.private && <Lock className="ui-auth-icon-faint" />}
                 <span className="ui-auth-repo-name">{repo.name}</span>

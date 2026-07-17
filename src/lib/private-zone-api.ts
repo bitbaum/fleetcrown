@@ -22,10 +22,10 @@ export async function requirePrivateApiAccess(): Promise<Ok | NextResponse> {
 
 /**
  * Like requirePrivateApiAccess, but ALSO accepts a `ck_*` agent bearer token
- * (used by Loki's `loki_propose` plugin). A valid per-user token IS George's own
- * credential, so it bypasses the interactive PIN (an agent can't unlock the
+ * (used by Loki's `loki_propose` plugin). A valid per-user token IS the operator's
+ * own credential, so it bypasses the interactive PIN (an agent can't unlock the
  * private zone). Proposing only creates a DRAFT — nothing executes without
- * George's explicit approval (IRON RULE), so the action queue stays the gate.
+ * the operator's explicit approval (IRON RULE), so the action queue stays the gate.
  */
 export async function requirePrivateApiAccessWithBearer(): Promise<Ok | NextResponse> {
   const authHeader = (await headers()).get("authorization") ?? "";

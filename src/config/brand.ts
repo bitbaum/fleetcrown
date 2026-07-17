@@ -42,6 +42,8 @@ export const APP_DESCRIPTION = "Command your agents, projects, and personal syst
 
 // Helpers — never hardcode these patterns in components.
 export const APP_URL         = `https://${APP_DOMAIN}`;
+// Dev fallback when NEXTAUTH_URL is unset (local dev server).
+export const LOCAL_DEV_URL   = "http://localhost:3000";
 export const APP_PROFILE_URL = (username: string) => `${APP_DOMAIN}/u/${username}`;
 
 // Bridge — the Hetzner SSE fan-out service that delivers fc:state events to

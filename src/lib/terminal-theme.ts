@@ -6,6 +6,8 @@ import type { ITheme } from "@xterm/xterm";
 // exception, like Recharts/canvas) rather than as semantic CSS vars. Tuned to a
 // near-black, low-glare dark scheme that sits next to the public surface.
 export const TERMINAL_THEME: ITheme = {
+  // MUST match --surface-terminal in src/app/globals.css (xterm needs a JS
+  // literal here — it can't read CSS vars). Change both together.
   background: "#0a0a0a",
   foreground: "#e4e4e7",
   cursor: "#e4e4e7",

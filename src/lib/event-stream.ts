@@ -8,7 +8,7 @@
 // just returns "I have no live stream" and existing 30-second polling
 // keeps working.
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BRIDGE_URL } from "@/config/brand";
 import type { ChangeEvent } from "./event-stream-types";
 
@@ -151,21 +151,4 @@ function bridgeUrl(): string {
   const override = (process.env.NEXT_PUBLIC_FLEETCROWN_BRIDGE_URL ?? "").trim();
   cachedUrl = override.length > 0 ? override : BRIDGE_URL;
   return cachedUrl;
-}
-
-/** Memoizable helper that filters which tables a caller cares about.
- *  Most components only care about a subset. Cheaper to filter once at
- *  the dispatch site than to do it inside every onChange handler. */
-export function useFilteredChangeHandler(opts: {
-  tables: string[];
-  onChange: (event: BridgeChangeEvent) => void;
-}) {
-  const { tables, onChange } = opts;
-  const tableSet = useMemo(() => new Set(tables), [tables]);
-  return useMemo(
-    () => (event: BridgeChangeEvent) => {
-      if (tableSet.has(event.t)) onChange(event);
-    },
-    [tableSet, onChange],
-  );
 }

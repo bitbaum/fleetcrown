@@ -105,7 +105,7 @@ export function RunningBanner({ label, promptKey, startedAt }: { label: string; 
   return (
     <div className="border-t border-accent-primary/25 bg-accent-primary/[0.05] px-5 py-3.5">
       <div className="flex items-start gap-2.5">
-        <Loader2 className="ui-spinner-sm mt-[3px] text-accent-text shrink-0" />
+        <Loader2 className="ui-spinner-sm ui-icon-nudge text-accent-text shrink-0" />
         <div className="min-w-0 flex-1">
           <p className="text-micro font-semibold uppercase tracking-caps text-accent-text/60">
             Working
@@ -126,7 +126,7 @@ export function RunningBanner({ label, promptKey, startedAt }: { label: string; 
             {label}
           </p>
         </div>
-        <span className={cn("shrink-0 pt-[3px] text-xs tabular-nums", timerClass)}>{elapsedStr}</span>
+        <span className={cn("ui-icon-nudge-p shrink-0 text-xs tabular-nums", timerClass)}>{elapsedStr}</span>
       </div>
     </div>
   );

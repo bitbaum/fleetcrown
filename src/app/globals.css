@@ -77,6 +77,9 @@
   --color-status-neutral:         var(--status-neutral);
   /* Public/editorial surface — always near-black regardless of app theme */
   --color-surface-public:  var(--surface-public);
+  /* Theme-invariant surfaces/fills */
+  --color-surface-terminal: var(--surface-terminal);
+  --color-toggle-knob:      var(--toggle-knob);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -88,9 +91,11 @@
   --radius-pill: calc(var(--radius) * 3.5);  /* floating nav pill: 1.75rem at default scale */
   --text-micro: var(--text-micro);
   --text-nano: var(--text-nano);
+  --text-compact: var(--text-compact);
   --tracking-display: var(--tracking-display);
   --tracking-label: var(--tracking-label);
   --tracking-caps: var(--tracking-caps);
+  --tracking-pin: var(--tracking-pin);
   --shadow-panel: var(--shadow-panel);
   --shadow-panel-strong: var(--shadow-panel-strong);
   --modal-max-height: var(--modal-max-height);
@@ -144,13 +149,19 @@
   --font-mono: var(--font-geist-mono);
   --text-micro: 0.625rem; /* 10px — compact widget/metadata text */
   --text-nano: 0.5rem;    /* 8px — micro heatmap labels, tightest readable size */
+  --text-compact: 0.8rem; /* 12.8px — small button/control text between xs and sm */
   --modal-max-height: 85vh;  /* standard tall-modal cap */
   --page-min-height: 60vh;   /* error / empty / placeholder page min */
   --tracking-display: -0.03em;
   --tracking-label: 0.10em;
   --tracking-caps: 0.16em;
+  --tracking-pin: 0.4em;  /* wide digit spacing for PIN entry fields */
   --shadow-panel: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04);
   --shadow-panel-strong: 0 2px 6px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.06);
+  /* Theme-invariant tokens — same value in light and dark (inherited by .dark) */
+  --scrim: rgb(0 0 0 / 0.45);      /* overlay backdrop behind modals/drawers/sheets */
+  --toggle-knob: oklch(1 0 0);     /* switch knob — stays light in both themes (sits on a colored/overlay track) */
+  --surface-terminal: #0a0a0a;     /* MUST match TERMINAL_THEME.background in src/lib/terminal-theme.ts (xterm needs a JS literal, it can't read CSS vars) */
   --shell-max: 90rem;
   /* Mobile chrome — bottom nav + safe area (Layer 1) */
   --mobile-nav-height: 3.25rem;
@@ -760,6 +771,9 @@
   }
   .ui-changelog-tag {
     @apply font-mono text-nano uppercase tracking-[0.1em] text-white/30;
+  }
+  .ui-changelog-code {
+    @apply font-mono text-white;
   }
   .ui-public-release-section-heading {
     @apply mb-2 mt-4 text-micro uppercase tracking-caps text-white/40;
@@ -1849,6 +1863,12 @@
     @apply flex gap-2;
   }
 
+  /* Optical baseline nudge — aligns small icons/markers with the first text
+     line of an adjacent multi-line block. -p variant for elements that need
+     padding instead of margin (e.g. inline timers). */
+  .ui-icon-nudge   { margin-top: 3px; }
+  .ui-icon-nudge-p { padding-top: 3px; }
+
   /* Loading spinners — applied to Loader2 icon className */
   .ui-spinner      { @apply h-4 w-4 animate-spin; }
   .ui-spinner-sm   { @apply h-3.5 w-3.5 animate-spin; }
@@ -2098,6 +2118,12 @@
     @apply rounded-lg border border-border-default bg-surface-overlay px-2.5 py-1.5 text-xs text-text-primary placeholder:text-text-muted outline-none transition-colors;
   }
   .ui-input-tight:focus { @apply border-accent-primary; }
+  /* PIN entry — mono digits with wide spacing (settings, unlock, private gate).
+     Digit cap lives in src/lib/constants/auth.ts (PIN_MAX_DIGITS). */
+  .ui-pin-input {
+    letter-spacing: var(--tracking-pin);
+    @apply font-mono;
+  }
   /* Inline-edit inputs — click-to-edit on raised surfaces. Caller adds px/py/text-size/width. */
   .ui-input-inline {
     @apply bg-surface-raised border border-border-default rounded outline-none transition-colors;
@@ -2296,6 +2322,17 @@
   .ui-empty-page {
     min-height: var(--page-min-height);
     @apply flex flex-col items-center justify-center;
+  }
+
+  /* Overlay backdrop — the click-to-dismiss scrim behind modals, drawers and
+     mobile sheets. Strong variant blurs more for focal modals. */
+  .ui-backdrop {
+    background: var(--scrim);
+    @apply backdrop-blur-sm;
+  }
+  .ui-backdrop-strong {
+    background: var(--scrim);
+    @apply backdrop-blur-md;
   }
 
   /* Override modal height cap + keep whole-panel scroll (simple modals without sticky header/footer) */

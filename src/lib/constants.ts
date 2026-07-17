@@ -10,8 +10,11 @@ export const TOOLS_DIR = `${WORKSPACE_DIR}/tools`;
 export const CRON_FILE = path.join(HOME, ".openclaw", "cron", "jobs.json");
 
 export const DEFAULT_USER_NAME = envAlias("DEFAULT_USER_NAME", "Mao");
-/** External ID of the owner entity — used to exclude the user from people queries */
-export const DEFAULT_USER_EXTERNAL_ID = envAlias("DEFAULT_USER_EXTERNAL_ID", "george");
+/** External ID of the owner entity — used to exclude the user from people
+ *  queries. "self" is the neutral marker; DBs seeded before 2026-07-17 were
+ *  migrated from the legacy value with
+ *  `UPDATE entities SET external_id='self' WHERE external_id='george'`. */
+export const DEFAULT_USER_EXTERNAL_ID = envAlias("DEFAULT_USER_EXTERNAL_ID", "self");
 export const TELEGRAM_CHAT_ID = envAlias("TELEGRAM_CHAT_ID");
 export const OPENCLAW_GATEWAY_URL = process.env.OPENCLAW_GATEWAY_URL ?? "http://127.0.0.1:18789";
 

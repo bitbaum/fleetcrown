@@ -23,6 +23,7 @@ import { join } from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { commandExistsInPath } from "@/lib/agents/helpers";
+import { GITHUB_API_BASE } from "@/lib/github-api";
 
 const run = promisify(execFile);
 
@@ -41,7 +42,7 @@ async function openPr(opts: {
   owner: string; repo: string; token: string; head: string; base: string; title: string; body: string;
 }): Promise<string | null> {
   try {
-    const res = await fetch(`https://api.github.com/repos/${opts.owner}/${opts.repo}/pulls`, {
+    const res = await fetch(`${GITHUB_API_BASE}/repos/${opts.owner}/${opts.repo}/pulls`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${opts.token}`,

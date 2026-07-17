@@ -15,6 +15,7 @@ import { createProject } from "@/db/queries/projects";
 import { getGithubToken } from "@/lib/github-token";
 import type { GitHubRepo } from "@/app/api/github/repos/route";
 import { scheduleProjectProfileReindexByEntityId } from "@/lib/rag/reindex-project-profile";
+import { GITHUB_API_BASE } from "@/lib/github-api";
 
 const BulkBody = z.object({
   repoIds: z.array(z.number().int().positive()).min(1).max(100),
@@ -40,7 +41,7 @@ export async function POST(req: NextRequest) {
   // metadata); the ID is the trust anchor — we look up the canonical name
   // and description from GitHub via the user's own token.
   const res = await fetch(
-    "https://api.github.com/user/repos?sort=updated&per_page=100&affiliation=owner",
+    `${GITHUB_API_BASE}/user/repos?sort=updated&per_page=100&affiliation=owner`,
     {
       headers: {
         Authorization: `Bearer ${token}`,

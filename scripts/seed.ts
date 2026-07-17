@@ -32,7 +32,7 @@ function safeDateRequired(v: string | null | undefined): Date {
 }
 const SQLITE_PATH = `${HOME}/.openclaw/knowledge.sqlite`;
 const CONTACTS_PATH = `${HOME}/.openclaw/workspace/data/contact-resolver.json`;
-const GEORGE_USER_ID = "00000000-0000-0000-0000-000000000001";
+const OWNER_USER_ID = "00000000-0000-0000-0000-000000000001";
 
 async function main() {
   console.log("Connecting to Postgres...");
@@ -46,9 +46,10 @@ async function main() {
   // Create default user
   console.log("Creating default user...");
   await db.insert(schema.users).values({
-    id: GEORGE_USER_ID,
+    id: OWNER_USER_ID,
     name: "Mao Nakamoto", // pseudonym — never seed the operator's real name (it surfaces on the public /u/ profile)
-    email: "butaeff@gmail.com",
+    // Real login email comes from SEED_OWNER_EMAIL so it is never committed.
+    email: process.env.SEED_OWNER_EMAIL ?? "mao@orangecat.ch",
     isDefault: true,
   });
 
@@ -66,7 +67,7 @@ async function main() {
   console.log(`Importing ${sqliteEntities.length} entities...`);
   for (const e of sqliteEntities) {
     const [inserted] = await db.insert(schema.entities).values({
-      userId: GEORGE_USER_ID,
+      userId: OWNER_USER_ID,
       name: e.name,
       // Sqlite is the legacy boundary; types are validated upstream of the import.
       type: e.type as EntityType,
@@ -88,7 +89,7 @@ async function main() {
     const entityId = idMap.get(a.entity_id);
     if (!entityId) continue;
     await db.insert(schema.attributes).values({
-      userId: GEORGE_USER_ID,
+      userId: OWNER_USER_ID,
       entityId,
       key: a.key,
       value: a.value,
@@ -113,7 +114,7 @@ async function main() {
     const toId = idMap.get(r.to_entity_id);
     if (!fromId || !toId) continue;
     await db.insert(schema.entityRelations).values({
-      userId: GEORGE_USER_ID,
+      userId: OWNER_USER_ID,
       fromEntityId: fromId,
       toEntityId: toId,
       type: r.relation,
@@ -135,7 +136,7 @@ async function main() {
   for (const c of sqliteCommitments) {
     const entityId = c.entity_id ? idMap.get(c.entity_id) : null;
     await db.insert(schema.commitments).values({
-      userId: GEORGE_USER_ID,
+      userId: OWNER_USER_ID,
       entityId: entityId ?? null,
       description: c.description,
       dueDate: safeDate(c.due_date),
@@ -158,7 +159,7 @@ async function main() {
   for (const s of sqliteSubs) {
     const entityId = s.entity_id ? idMap.get(s.entity_id) : null;
     await db.insert(schema.subscriptions).values({
-      userId: GEORGE_USER_ID,
+      userId: OWNER_USER_ID,
       entityId: entityId ?? null,
       name: s.name,
       vendor: s.vendor,
@@ -186,7 +187,7 @@ async function main() {
   console.log(`Importing ${sqliteEvents.length} events...`);
   for (const e of sqliteEvents) {
     await db.insert(schema.events).values({
-      userId: GEORGE_USER_ID,
+      userId: OWNER_USER_ID,
       name: e.name,
       type: e.type,
       description: e.description,
@@ -236,7 +237,7 @@ async function main() {
     if (!entityId) {
       // Create new person entity
       const [inserted] = await db.insert(schema.entities).values({
-        userId: GEORGE_USER_ID,
+        userId: OWNER_USER_ID,
         name: contact.displayName,
         type: "person",
         externalId: contact.id,
@@ -255,7 +256,7 @@ async function main() {
     // Add aliases as attribute
     if (contact.aliases && contact.aliases.length > 0) {
       await db.insert(schema.attributes).values({
-        userId: GEORGE_USER_ID,
+        userId: OWNER_USER_ID,
         entityId,
         key: "aliases",
         value: JSON.stringify(contact.aliases),
@@ -268,7 +269,7 @@ async function main() {
       for (const [channel, data] of Object.entries(contact.channels)) {
         const value = Object.entries(data).map(([k, v]) => `${k}:${v}`).join(",");
         await db.insert(schema.attributes).values({
-          userId: GEORGE_USER_ID,
+          userId: OWNER_USER_ID,
           entityId,
           key: `channel:${channel}`,
           value,

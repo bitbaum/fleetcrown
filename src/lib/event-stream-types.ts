@@ -103,10 +103,3 @@ export interface ResizeEvent {
 }
 
 export type FastLaneEvent = RawKeyEvent | ResizeEvent;
-
-/** True for fast-lane events (carry a `kind`); ChangeEvents never do. */
-export function isFastLaneEvent(e: unknown): e is FastLaneEvent {
-  if (!e || typeof e !== "object") return false;
-  const k = (e as { kind?: unknown }).kind;
-  return k === "rawkey" || k === "resize";
-}

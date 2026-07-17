@@ -3,6 +3,7 @@ import { stripe, STRIPE_PRICE_IDS, isStripeReady } from "@/lib/stripe";
 import { getSessionUserId } from "@/lib/session";
 import { getUserById, updateUserBilling } from "@/db/queries/users";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
+import { LOCAL_DEV_URL } from "@/config/brand";
 
 const CheckoutBody = z.object({
   plan:    z.enum(["personal", "pro", "team"] as const),
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest) {
     await updateUserBilling(userId, { stripeCustomerId: customerId });
   }
 
-  const origin = req.headers.get("origin") ?? process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+  const origin = req.headers.get("origin") ?? process.env.NEXTAUTH_URL ?? LOCAL_DEV_URL;
 
   const session = await stripe.checkout.sessions.create({
     mode:        "subscription",

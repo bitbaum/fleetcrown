@@ -65,7 +65,7 @@ export function UnlockForm({ next, areas }: { next: string; areas: Area[] }) {
             value={pin}
             onChange={(e) => setPin(e.target.value)}
             disabled={loading}
-            className="ui-input w-full text-center text-2xl tracking-[0.5em]"
+            className="ui-input ui-pin-input w-full text-center text-2xl"
             aria-label="Private zone PIN"
           />
           {error && <p className="ui-error">{error}</p>}

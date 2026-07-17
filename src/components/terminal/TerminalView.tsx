@@ -442,7 +442,7 @@ export function TerminalView({
           </button>
         </div>
       )}
-      <div className={`relative w-full overflow-hidden rounded-md bg-black ${fill ? "min-h-0 flex-1" : compactChrome ? "min-h-0 flex-1" : "h-72"}`}>
+      <div className={`relative w-full overflow-hidden rounded-md bg-surface-terminal ${fill ? "min-h-0 flex-1" : compactChrome ? "min-h-0 flex-1" : "h-72"}`}>
         <div ref={hostRef} className="h-full w-full" />
         {stalled && <TerminalStalledOverlay message={stallMessage} />}
       </div>

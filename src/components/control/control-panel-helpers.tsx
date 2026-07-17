@@ -10,29 +10,6 @@ type AgentEntry = ControlData["agentRegistry"]["agents"][number];
 type ActivityItem = ControlData["recentActivity"][number];
 type TabResult = { status: string; tab?: string; reason?: string; error?: string };
 
-export function ControlMetricCard({
-  icon: Icon,
-  label,
-  value,
-  note,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  value: React.ReactNode;
-  note?: React.ReactNode;
-}) {
-  return (
-    <div className="ui-control-metric-card">
-      <div className="ui-control-metric-label">
-        <Icon className="h-3.5 w-3.5" />
-        {label}
-      </div>
-      <div className="ui-control-metric-value">{value}</div>
-      {note != null && <p className="ui-control-metric-note">{note}</p>}
-    </div>
-  );
-}
-
 export function ActivityLogPanel({
   activities,
   open,

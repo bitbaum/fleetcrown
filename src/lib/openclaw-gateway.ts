@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import { WebSocket, type RawData } from "ws";
+import { OPENCLAW_GATEWAY_URL } from "@/lib/constants";
 
 /**
  * Drives the OpenClaw gateway `agent` method over WebSocket so FleetCrown's
@@ -37,8 +38,7 @@ function loadDeviceIdentity(): DeviceIdentity | null {
 }
 
 function gatewayWsUrl(): string {
-  const url = process.env.OPENCLAW_GATEWAY_URL ?? "http://127.0.0.1:18789";
-  return url.replace(/^http/, "ws");
+  return OPENCLAW_GATEWAY_URL.replace(/^http/, "ws");
 }
 
 export type GatewayAgentResult = { ok: boolean; text?: string; model?: string; durationMs?: number; error?: string };

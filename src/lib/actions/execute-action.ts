@@ -180,8 +180,8 @@ export async function executeAction(userId: string, action: Action): Promise<Exe
 
       case ACTION_TYPE.SEND_MESSAGE: {
         // External + irreversible. Telegram only. The QUEUE APPROVAL is the gate now —
-        // George approved this exact message + recipient — so we send to payload.to
-        // (the approved recipient); empty recipient defaults to George himself.
+        // the operator approved this exact message + recipient — so we send to payload.to
+        // (the approved recipient); empty recipient defaults to the operator.
         const payload = action.payload ?? {};
         const channel =
           (typeof payload.channel === "string" && payload.channel.trim()) || "telegram";
@@ -224,7 +224,7 @@ export async function executeAction(userId: string, action: Action): Promise<Exe
 
       case ACTION_TYPE.SEND_EMAIL: {
         // External + irreversible. Sent via Resend (FleetCrown's email) on approval.
-        // (From a FleetCrown address, not George's Gmail — gog sends are blocked by
+        // (From a FleetCrown address, not the operator's Gmail — gog sends are blocked by
         // design; a true from-Gmail path is a later enhancement.)
         const payload = action.payload ?? {};
         if (!process.env.RESEND_API_KEY) {

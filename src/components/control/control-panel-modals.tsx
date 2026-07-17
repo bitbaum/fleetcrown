@@ -57,7 +57,7 @@ export function NewProjectModal({
         <input
           value={dir}
           onChange={(e) => onDirChange(e.target.value)}
-          placeholder="Local path — e.g. /home/g/dev/homeharmony"
+          placeholder="Local path — e.g. ~/dev/my-project"
           className="ui-input w-full"
         />
         <input

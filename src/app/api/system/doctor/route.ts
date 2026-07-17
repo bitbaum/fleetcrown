@@ -8,6 +8,7 @@ import { db } from "@/db";
 import { validateAgentToken } from "@/db/queries/agent-tokens";
 import { getApiUserId } from "@/lib/session";
 import { isRuntimeAvailable } from "@/lib/runtime";
+import { APP_URL } from "@/config/brand";
 
 const execp = promisify(exec);
 
@@ -156,7 +157,7 @@ export async function GET() {
     token && envToken === token ? "daemon.env matches fleet-runner-token." : "daemon.env and fleet-runner-token differ.",
   ));
 
-  const remoteBase = (env.FLEETCROWN_BASE_URL || "https://fleetcrown.orangecat.ch").replace(/\/$/, "");
+  const remoteBase = (env.FLEETCROWN_BASE_URL || APP_URL).replace(/\/$/, "");
   if (token) {
     try {
       const res = await fetch(`${remoteBase}/api/beacon-settings`, {

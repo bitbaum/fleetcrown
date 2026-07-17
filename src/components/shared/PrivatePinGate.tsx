@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { postJson, deleteJson } from "@/lib/api/fetch";
+import { PIN_MAX_DIGITS } from "@/lib/constants/auth";
 
 type PinStatus = {
   configured: boolean;
@@ -79,7 +80,7 @@ export function PrivatePinGate({ children }: { children?: React.ReactNode }) {
             className="ui-input text-center text-xl tracking-widest"
             disabled={loading}
             autoComplete="one-time-code"
-            maxLength={20}
+            maxLength={PIN_MAX_DIGITS}
           />
           {error && (
             <p className="ui-error text-center">{error}</p>

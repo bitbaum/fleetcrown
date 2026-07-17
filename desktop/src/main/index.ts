@@ -331,7 +331,7 @@ function buildAppMenu(): Menu {
       defaultId: 1,
       cancelId: 1,
     }).then(({ response }) => {
-      if (response === 0) void shell.openExternal('https://fleetcrown.orangecat.ch')
+      if (response === 0) void shell.openExternal(APP_URL)
     })
   }
 
@@ -417,14 +417,14 @@ function buildAppMenu(): Menu {
     {
       label: 'Help',
       submenu: [
-        { label: 'FleetCrown Website', click: openExternal('https://fleetcrown.orangecat.ch') },
-        { label: 'Quickstart Docs', click: openExternal('https://fleetcrown.orangecat.ch/docs/quickstart') },
+        { label: 'FleetCrown Website', click: openExternal(APP_URL) },
+        { label: 'Quickstart Docs', click: openExternal(`${APP_URL}/docs/quickstart`) },
         { label: 'Report an Issue', click: openExternal('https://github.com/maonakamoto/fleetcrown/issues/new') },
         { label: 'View Releases', click: openExternal('https://github.com/maonakamoto/fleetcrown-releases/releases') },
         { type: 'separator' },
-        { label: 'Privacy', click: openExternal('https://fleetcrown.orangecat.ch/privacy') },
-        { label: 'Terms', click: openExternal('https://fleetcrown.orangecat.ch/terms') },
-        { label: 'License', click: openExternal('https://fleetcrown.orangecat.ch/license') },
+        { label: 'Privacy', click: openExternal(`${APP_URL}/privacy`) },
+        { label: 'Terms', click: openExternal(`${APP_URL}/terms`) },
+        { label: 'License', click: openExternal(`${APP_URL}/license`) },
         ...(isMac ? [] : [
           { type: 'separator' as const },
           { label: 'About Fleet Runner', click: showAbout },
@@ -881,7 +881,7 @@ app.whenReady().then(async () => {
     applicationName: 'Fleet Runner',
     applicationVersion: app.getVersion(),
     copyright: '© 2026 Mao Nakamoto · FleetCrown',
-    website: 'https://fleetcrown.orangecat.ch',
+    website: APP_URL,
     credits: 'Bundled Zellij, deep-link auth, auto-update.\nPart of the FleetCrown agent-fleet platform.',
   })
 

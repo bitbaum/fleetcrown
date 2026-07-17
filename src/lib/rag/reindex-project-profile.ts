@@ -36,14 +36,6 @@ export async function reindexProjectProfileByEntityId(userId: string, entityId: 
   await reindexProjectProfile(userId, row.name);
 }
 
-/** Schedule a profile reindex without blocking the caller. */
-export function scheduleProjectProfileReindex(userId: string, projectKey: string): void {
-  if (!embeddingsEnabled()) return;
-  void reindexProjectProfile(userId, projectKey).catch((err) => {
-    console.error("[reindex-project-profile] failed:", err instanceof Error ? err.message : err);
-  });
-}
-
 export function scheduleProjectProfileReindexByEntityId(userId: string, entityId: string): void {
   if (!embeddingsEnabled()) return;
   void reindexProjectProfileByEntityId(userId, entityId).catch((err) => {

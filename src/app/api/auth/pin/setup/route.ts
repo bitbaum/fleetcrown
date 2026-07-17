@@ -4,9 +4,9 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { getSessionUserId } from "@/lib/session";
+import { PIN_MAX_DIGITS } from "@/lib/constants/auth";
 
 const PIN_MIN_LENGTH = 4;
-const PIN_MAX_LENGTH = 12;
 
 async function getCurrentHash(userId: string): Promise<string | null> {
   const rows = await db
@@ -21,8 +21,8 @@ function validatePin(value: unknown): { ok: true; pin: string } | { ok: false; e
   const pin = String(value ?? "").trim();
   if (!pin) return { ok: false, error: "PIN required" };
   if (!/^\d+$/.test(pin)) return { ok: false, error: "PIN must be digits only" };
-  if (pin.length < PIN_MIN_LENGTH || pin.length > PIN_MAX_LENGTH) {
-    return { ok: false, error: `PIN must be ${PIN_MIN_LENGTH}–${PIN_MAX_LENGTH} digits` };
+  if (pin.length < PIN_MIN_LENGTH || pin.length > PIN_MAX_DIGITS) {
+    return { ok: false, error: `PIN must be ${PIN_MIN_LENGTH}–${PIN_MAX_DIGITS} digits` };
   }
   return { ok: true, pin };
 }

@@ -53,14 +53,6 @@ export function readCurrentPrompt(tab: string): CurrentPrompt | null {
   return null;
 }
 
-export function getAgentCwds(processMatchers: string[]): string[] {
-  return getAgentProcesses(processMatchers.map((matcher) => ({
-    id: matcher,
-    processMatchers: [matcher],
-    capabilities: { sessionLifecycleSignals: true },
-  }))).map((process) => process.cwd);
-}
-
 export type AgentProcess = {
   agentId: string;
   cwd: string;

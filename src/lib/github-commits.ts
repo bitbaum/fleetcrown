@@ -7,6 +7,8 @@
  * the page.
  */
 
+import { GITHUB_API_BASE } from "@/lib/github-api";
+
 export type RepoCommit = {
   sha: string;
   message: string;
@@ -31,7 +33,7 @@ export async function fetchRecentGithubCommits(
   if (!parsed) return null;
   try {
     const res = await fetch(
-      `https://api.github.com/repos/${parsed.owner}/${parsed.repo}/commits?per_page=${limit}`,
+      `${GITHUB_API_BASE}/repos/${parsed.owner}/${parsed.repo}/commits?per_page=${limit}`,
       {
         headers: {
           Authorization: `Bearer ${token}`,

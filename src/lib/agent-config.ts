@@ -17,6 +17,7 @@
  *   claude-stop-active-<TAB>      Lock: stop-hook popup is open; notification.sh must wait
  */
 import fs from "fs";
+import { homedir } from "node:os";
 import path from "path";
 import { APP_SLUG } from "@/config/brand";
 import { fleetSessionsDir, legacyClaudeSessionsDir } from "@/lib/session-paths";
@@ -25,7 +26,7 @@ import { fleetSessionsDir, legacyClaudeSessionsDir } from "@/lib/session-paths";
 // Module-level path.join(process.env.HOME, …) causes Turbopack's NFT tracer
 // to walk from HOME (the parent of the project root) and accidentally include
 // next.config.ts in the route bundle.
-const home = () => process.env.HOME ?? "/home/g";
+const home = () => process.env.HOME ?? homedir();
 
 const PROJECTS_CONF = () => process.env.AGENT_PROJECTS_CONF ?? path.join(/*turbopackIgnore: true*/ home(), ".config", "agent-projects.conf");
 const CLAUDE_PROJECTS_CONF = () => path.join(/*turbopackIgnore: true*/ home(), ".config", "claude-projects.conf");

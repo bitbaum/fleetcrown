@@ -5,7 +5,7 @@
  *
  * Usage:
  *   node scripts/machine-dogfood.mjs
- *   SMOKE_PRIVATE_PIN=55550 FLEETCROWN_SESSION_TOKEN=… HEADLESS=1 node scripts/machine-dogfood.mjs
+ *   SMOKE_PRIVATE_PIN=<pin> FLEETCROWN_SESSION_TOKEN=… HEADLESS=1 node scripts/machine-dogfood.mjs
  */
 import fs from "node:fs";
 import path from "node:path";

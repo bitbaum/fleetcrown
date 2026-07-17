@@ -5,6 +5,7 @@ import Link from "next/link";
 import { X, Radio, WifiOff, Sparkles, Download, Terminal, Cpu, Loader2 } from "lucide-react";
 import { timeAgo } from "@/lib/dates";
 import { EXECUTOR_COPY } from "@/config/executor-copy";
+import { APP_URL } from "@/config/brand";
 import { postJson } from "@/lib/api/fetch";
 import "@/components/desktop/types"; // declare global window.fleetRunner
 import { useInsideFleetRunner } from "@/hooks/use-inside-fleet-runner";
@@ -240,7 +241,7 @@ export function RunnerStatusBanner({
                   and paste this in a terminal:
                 </p>
                 <pre className="ui-card-shell p-2 overflow-x-auto text-xs">
-                  <code>curl -fsSL https://fleetcrown.orangecat.ch/api/agent/install | node - init --token ck_xxxxxxxx</code>
+                  <code>{`curl -fsSL ${APP_URL}/api/agent/install | node - init --token ck_xxxxxxxx`}</code>
                 </pre>
               </div>
             </details>

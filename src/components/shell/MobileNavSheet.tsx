@@ -62,7 +62,7 @@ export function MobileNavSheet({
   return (
     <>
       <div
-        className="fixed inset-0 z-30 bg-black/48 backdrop-blur-sm md:hidden"
+        className="fixed inset-0 z-30 ui-backdrop md:hidden"
         onClick={onClose}
         aria-hidden="true"
       />

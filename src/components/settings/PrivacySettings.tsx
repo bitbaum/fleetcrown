@@ -5,13 +5,13 @@ import { Lock, ShieldCheck, ShieldOff } from "lucide-react";
 import { useFetch } from "@/hooks/use-fetch";
 import { usePrivateZone } from "@/hooks/use-private-zone";
 import { postJson, deleteJson } from "@/lib/api/fetch";
+import { PIN_MAX_DIGITS } from "@/lib/constants/auth";
 
 type PinStatus = { configured: boolean; unlocked: boolean };
 
 type Mode = "view" | "set" | "change" | "disable";
 
 const PIN_DIGITS_MIN = 4;
-const PIN_DIGITS_MAX = 12;
 
 export function PrivacySettings() {
   const { data, refetch } = useFetch<PinStatus>("/api/auth/pin");
@@ -166,13 +166,13 @@ function PinInput({
         inputMode="numeric"
         autoComplete="off"
         pattern="[0-9]*"
-        maxLength={PIN_DIGITS_MAX}
+        maxLength={PIN_MAX_DIGITS}
         value={value}
         onChange={(e) => onChange(e.target.value.replace(/\D/g, ""))}
         placeholder={placeholder}
         disabled={disabled}
         autoFocus={autoFocus}
-        className="ui-input w-full text-center text-xl tracking-[0.4em]"
+        className="ui-input ui-pin-input w-full text-center text-xl"
       />
     </label>
   );

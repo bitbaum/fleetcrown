@@ -75,7 +75,7 @@ function JobRow({
         title={job.enabled ? "Disable" : "Enable"}
       >
         <span
-          className={`absolute top-0.5 h-3 w-3 rounded-full bg-white transition-transform ${
+          className={`absolute top-0.5 h-3 w-3 rounded-full bg-toggle-knob transition-transform ${
             job.enabled ? "translate-x-3.5" : "translate-x-0.5"
           }`}
         />

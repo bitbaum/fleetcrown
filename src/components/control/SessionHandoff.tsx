@@ -14,15 +14,6 @@ export type SessionHandoffData = {
   facts: string[];
 };
 
-type ParsedBeaconSession = {
-  next: string[];
-  in_progress: string[];
-  done: string[];
-  tests: string;
-  todos: string;
-  health: string;
-};
-
 export function buildSessionHandoffFromProjectSession(
   session: ProjectState["session"],
 ): SessionHandoffData | null {
@@ -35,19 +26,6 @@ export function buildSessionHandoffFromProjectSession(
       tests: session.tests,
       todos: session.todos,
       health: session.health,
-    }),
-  });
-}
-
-export function buildSessionHandoffFromBeaconSession(parsed: ParsedBeaconSession): SessionHandoffData | null {
-  return compactHandoff({
-    next: parsed.next,
-    inProgress: parsed.in_progress,
-    completed: parsed.done,
-    facts: buildFactRows({
-      tests: parsed.tests,
-      todos: parsed.todos,
-      health: parsed.health,
     }),
   });
 }

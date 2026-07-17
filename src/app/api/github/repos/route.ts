@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionUserId } from "@/lib/session";
 import { getGithubToken } from "@/lib/github-token";
+import { GITHUB_API_BASE } from "@/lib/github-api";
 
 export type GitHubRepo = {
   id: number;
@@ -31,7 +32,7 @@ export async function GET() {
   // GitHub hiccup would otherwise stall a new user's first project.
   try {
     const res = await fetch(
-      "https://api.github.com/user/repos?sort=updated&per_page=50&affiliation=owner",
+      `${GITHUB_API_BASE}/user/repos?sort=updated&per_page=50&affiliation=owner`,
       {
         headers: {
           Authorization: `Bearer ${token}`,

@@ -31,7 +31,7 @@ export default function ReleasesPage() {
           <h1 className="ui-changelog-title">Fleet Runner</h1>
           <p className="ui-changelog-lede">
             Every version of Fleet Runner that shipped, what changed, and why. The latest is{" "}
-            <span className="font-mono text-white">v{CURRENT_RELEASE.version}</span>, published{" "}
+            <span className="ui-changelog-code">v{CURRENT_RELEASE.version}</span>, published{" "}
             {formatDate(CURRENT_RELEASE.date)}.
           </p>
           <div className="ui-changelog-foot">

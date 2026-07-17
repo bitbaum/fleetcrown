@@ -2,7 +2,7 @@
 # Optional production UI dogfood on git push when SMOKE_PRIVATE_PIN is set.
 #
 #   git push                                  # auto when SMOKE_PRIVATE_PIN is in .env.local
-#   SMOKE_PRIVATE_PIN=55550 git push          # explicit override
+#   SMOKE_PRIVATE_PIN=<pin> git push          # explicit override
 #   DOGFOOD_LOKI_ON_PUSH=1 … git push         # force loki dogfood even when builder offline
 #
 # Requires AUTH_SECRET + HETZNER_IP (or FLEETCROWN_SESSION_TOKEN) for JWT mint.

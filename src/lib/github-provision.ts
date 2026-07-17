@@ -4,6 +4,7 @@
 // /api/projects/[id]/provision (link a repo to an existing project).
 
 import { TEMPLATES, renderTemplate, type TemplateId } from "@/lib/project-templates";
+import { GITHUB_API_BASE } from "@/lib/github-api";
 
 export type ProvisionedRepo = {
   id: number;
@@ -45,7 +46,7 @@ export async function seedTemplate(
   if (!template || Object.keys(template.files).length === 0) return true;
 
   const gh = (path: string, init?: RequestInit) =>
-    fetch(`https://api.github.com${path}`, {
+    fetch(`${GITHUB_API_BASE}${path}`, {
       ...init,
       // Each step is a small metadata call — a hung one would eat the route's
       // whole maxDuration budget. Time out fast; the catch below makes it
@@ -114,7 +115,7 @@ export async function provisionGithubRepo(
   const description = opts.description ?? `Started from FleetCrown · ${opts.name}`;
   let res: Response;
   try {
-    res = await fetch("https://api.github.com/user/repos", {
+    res = await fetch(`${GITHUB_API_BASE}/user/repos`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -164,7 +165,7 @@ export async function deprovisionGithubRepo(
   if (!parsed) return { ok: false, status: 400, error: "Linked repo is not a GitHub repository URL." };
   let res: Response;
   try {
-    res = await fetch(`https://api.github.com/repos/${parsed.owner}/${parsed.repo}`, {
+    res = await fetch(`${GITHUB_API_BASE}/repos/${parsed.owner}/${parsed.repo}`, {
       method: mode === "delete" ? "DELETE" : "PATCH",
       headers: {
         Authorization: `Bearer ${token}`,

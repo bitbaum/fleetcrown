@@ -9,6 +9,8 @@
  * route through src/lib/integrations/orangecat-publish.ts, which consults this.
  */
 
+import { APP_URL } from "./brand";
+
 /** OC-side event types the bus accepts (ceiling defined on the OC side). */
 export type OrangeCatPublishEventType =
   | "project_updated"
@@ -28,4 +30,4 @@ export const PROMOTE_POLICY = {
 export type PromotableMoment = keyof typeof PROMOTE_POLICY;
 
 /** Public FleetCrown URL used for deep-links back from the OrangeCat wall. */
-export const FLEETCROWN_PUBLIC_ORIGIN = "https://fleetcrown.orangecat.ch";
+export const FLEETCROWN_PUBLIC_ORIGIN = APP_URL;

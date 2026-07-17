@@ -57,7 +57,7 @@ export function Modal({
   return (
     <div className={cn("fixed inset-0 z-[60] flex justify-center p-4", containerPos)}>
       <div
-        className="absolute inset-0 bg-black/48 backdrop-blur-md"
+        className="absolute inset-0 ui-backdrop-strong"
         onClick={disableClose ? undefined : onClose}
       />
       <div
@@ -103,7 +103,7 @@ export function Drawer({
   return (
     <div className="fixed inset-0 z-[60] flex justify-end" role="presentation">
       <div
-        className="absolute inset-0 bg-black/42 backdrop-blur-sm"
+        className="absolute inset-0 ui-backdrop"
         onClick={disableClose ? undefined : onClose}
         aria-hidden="true"
       />

@@ -3,7 +3,7 @@
  *
  * Usage:
  *   node scripts/ui-flow-dogfood.mjs
- *   SMOKE_PRIVATE_PIN=55550 BASE=https://fleetcrown.orangecat.ch HEADLESS=1 node scripts/ui-flow-dogfood.mjs
+ *   SMOKE_PRIVATE_PIN=<pin> BASE=https://fleetcrown.orangecat.ch HEADLESS=1 node scripts/ui-flow-dogfood.mjs
  *   FLEETCROWN_SESSION_TOKEN=… node scripts/ui-flow-dogfood.mjs
  */
 import fs from "node:fs";

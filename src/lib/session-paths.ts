@@ -3,7 +3,6 @@ import os from "os";
 import path from "path";
 
 export const FLEET_SESSIONS_DISPLAY_PATH = "~/.fleetcrown/sessions";
-export const LEGACY_CLAUDE_SESSIONS_DISPLAY_PATH = "~/.claude/sessions";
 
 export function fleetSessionsDir(homeDir = os.homedir()): string {
   return process.env.APP_SESSIONS_DIR ?? path.join(homeDir, ".fleetcrown", "sessions");

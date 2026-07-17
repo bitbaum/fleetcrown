@@ -3,7 +3,7 @@
  *
  * Each adapter is free to do its own thing, but these utilities are
  * the common building blocks: "is this command on PATH", "read a TOML
- * field", "dedupe a string list". Centralized so an adapter that
+ * field". Centralized so an adapter that
  * forgets to handle a malformed config doesn't crash the whole
  * /control page render.
  */
@@ -59,9 +59,4 @@ export function commandExistsInPath(command: string): boolean {
 export function parseTomlStringField(raw: string, key: string): string | null {
   const match = raw.match(new RegExp(`^\\s*${key}\\s*=\\s*"([^"\\n]+)"`, "m"));
   return match?.[1]?.trim() || null;
-}
-
-/** Drop empty strings + dedupe while preserving first-seen order. */
-export function dedupeStrings(values: string[]): string[] {
-  return values.filter((value, index) => value && values.indexOf(value) === index);
 }

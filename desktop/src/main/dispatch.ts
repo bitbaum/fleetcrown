@@ -46,8 +46,9 @@
 
 import { loadToken } from './token-store'
 import type { Handoff } from '@/lib/events'
+import { APP_URL } from '@/config/brand'
 
-const BASE_URL = (process.env.FLEETCROWN_WEB_URL || '').trim() || 'https://fleetcrown.orangecat.ch'
+const BASE_URL = (process.env.FLEETCROWN_WEB_URL || '').trim() || APP_URL
 const COOLDOWN_MS = Number(process.env.FLEETCROWN_AUTOPILOT_COOLDOWN_S || 300) * 1000
 const MAX_ATTEMPTS = 3
 const BACKOFF_MS = [0, 1000, 4000]

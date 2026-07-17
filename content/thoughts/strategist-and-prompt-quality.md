@@ -37,7 +37,7 @@ One thing. Done and committed.
 
 Two templates, same intent ID, slightly different text. Cursor's audit caught it; this doc is the migration plan.
 
-The user's own custom prompts in `prompt_history` look nothing like either ladder. They name the bug verbatim ("Failed to load chunk … and butaeff@gmail.com / password doesn't work"), they include constraints ("auth first, not release yet"), they often correct the orchestration system itself ("why was `continue` injected — is this SSOT?"). The auto-inject text is a generic triage scan that fires on a timer and produces work that drifts away from whatever the user last cared about.
+The user's own custom prompts in `prompt_history` look nothing like either ladder. They name the bug verbatim ("Failed to load chunk … and the login email / password doesn't work"), they include constraints ("auth first, not release yet"), they often correct the orchestration system itself ("why was `continue` injected — is this SSOT?"). The auto-inject text is a generic triage scan that fires on a timer and produces work that drifts away from whatever the user last cared about.
 
 The system has two halves and only one of them is intelligent.
 

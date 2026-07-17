@@ -58,7 +58,7 @@ export function QueueItemRow({
         onClick={onToggleSelect}
         title={selected ? "Deselect" : "Select"}
         className={cn(
-          "mt-[3px] shrink-0 p-0.5 transition-colors",
+          "ui-icon-nudge shrink-0 p-0.5 transition-colors",
           selected ? "text-accent-text" : "text-border-default hover:text-text-muted",
         )}
       >
@@ -69,18 +69,18 @@ export function QueueItemRow({
       {dragHandleProps ? (
         <button
           {...dragHandleProps}
-          className="mt-[3px] shrink-0 cursor-grab touch-none text-text-muted hover:text-text-secondary active:cursor-grabbing"
+          className="ui-icon-nudge shrink-0 cursor-grab touch-none text-text-muted hover:text-text-secondary active:cursor-grabbing"
         >
           <GripVertical className="h-3.5 w-3.5" />
         </button>
       ) : (
-        <div className="mt-[3px] w-3.5 shrink-0" />
+        <div className="ui-icon-nudge w-3.5 shrink-0" />
       )}
 
       {/* Position indicator */}
       <span
         className={cn(
-          "mt-[3px] shrink-0 text-micro font-bold tabular-nums",
+          "ui-icon-nudge shrink-0 text-micro font-bold tabular-nums",
           isFirst ? "text-accent-text" : "text-text-muted",
         )}
       >

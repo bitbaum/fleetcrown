@@ -17,6 +17,7 @@ import { isValidUuid } from "@/lib/utils";
 import { verifyTicket } from "@/lib/x-oauth1";
 import { findOrCreateTwitterUser } from "@/db/queries/oauth-x";
 import { getEnabledAuthProviders } from "@/lib/auth-providers";
+import { ORANGECAT_BASE_FALLBACK } from "@/lib/integrations/orangecat";
 
 // Enabled-provider predicates, shared with the sign-in page (src/app/sign-in)
 // so a rendered button can never drift from the mounted provider.
@@ -221,7 +222,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       id: "orangecat",
       name: "OrangeCat",
       type: "oidc" as const,
-      issuer: process.env.ORANGECAT_OAUTH_ISSUER ?? "https://orangecat.ch",
+      issuer: process.env.ORANGECAT_OAUTH_ISSUER ?? ORANGECAT_BASE_FALLBACK,
       clientId: process.env.ORANGECAT_OAUTH_CLIENT_ID!,
       clientSecret: process.env.ORANGECAT_OAUTH_CLIENT_SECRET!,
       // OrangeCat's token endpoint only supports client_secret_post (creds in
