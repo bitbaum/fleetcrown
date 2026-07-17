@@ -63,7 +63,11 @@ jobs:
               desktop/dist/Fleet-Runner-mac-*.dmg
               desktop/dist/Fleet-Runner-mac-*.zip
               desktop/dist/latest-mac.yml
-          - os: windows-latest
+          # windows-2022 (not -latest): node-pty is rebuilt from source by
+          # @electron/rebuild's node-gyp 9, which can't detect the VS the
+          # newer images ship. The image rotated under us after v0.8.0 and
+          # every release build since died at "Install desktop deps".
+          - os: windows-2022
             dist_script: dist:win
             artifact_glob: |
               desktop/dist/Fleet-Runner-win-*.exe
@@ -83,6 +87,14 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 22
+
+      # node-gyp 9 (via @electron/rebuild) needs Python with distutils —
+      # removed in Python 3.12, which macos/ubuntu images now default to.
+      # Pin 3.11 so the proven dep set keeps building from source.
+      - name: Setup Python 3.11 (node-gyp needs distutils)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
       # Top-level install — the web app's package.json is needed so
       # @home/* + @/* imports in the desktop main process resolve (those

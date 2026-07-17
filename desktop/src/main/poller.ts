@@ -56,6 +56,7 @@ import {
   pruneWorktrees,
   worktreePromptNote,
 } from '@/lib/agent-execution/worktree-workspace'
+import { isDerivedRunTab } from '@/lib/run-tab'
 
 /** Commands that change the open-tab / agent set → trigger an immediate
  *  runtime-state push so the UI reflects them in ~1s, not at the next heartbeat. */
@@ -605,7 +606,10 @@ async function handleCommand(
         const ptyAlreadyLive = isPtyBacked(tab)
         let effDir = ptyAlreadyLive ? (worktreeByTab.get(tab)?.launchDir ?? dir) : dir
         let effPrompt = prompt
-        if (WORKTREE_DISPATCH_ENABLED && runId && !ptyAlreadyLive) {
+        // Derived run-tabs ("<project>~<runId8>", same-project parallel dispatch)
+        // FORCE worktree isolation regardless of the env flag — two agents in one
+        // checkout is the incident this feature exists to kill.
+        if ((WORKTREE_DISPATCH_ENABLED || isDerivedRunTab(tab)) && runId && !ptyAlreadyLive) {
           pruneWorktrees(tab, dir) // sweep clean leftovers before adding one
           effDir = ensureWorktreeWorkspace(tab, dir, runId)
           if (effDir !== dir) effPrompt = `${worktreePromptNote(runId)}\n\n${prompt}`

@@ -14,6 +14,11 @@ export type OrchestrationRunPayload = {
   raw?: string;
   durationMs?: number;
   error?: string;
+  /** Derived tab alias ("<project>~<runId8>") for same-project PARALLEL runs
+   *  (phase 2 of worktree-per-agent). The run's session handoff lives under
+   *  this tab; close matching keys on it (closeOpenRunBySessionTab). Absent
+   *  for ordinary runs. */
+  sessionTab?: string;
 };
 
 /** Canonical run outcome values — SSOT for the column type, the finish-route

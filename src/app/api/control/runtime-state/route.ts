@@ -8,7 +8,8 @@ import { isRuntimeAvailable } from "@/lib/runtime";
 import { emitStateChanged } from "@/lib/sse-bus";
 import { writePromptQueueMirror } from "@/lib/prompt-queue-mirror";
 import { isCloudRunnerVersion } from "@/lib/builder-presence";
-import { closeOpenRunsForProject } from "@/lib/orchestration/close-sweep";
+import { closeOpenRunsForProject, closeOpenRunBySessionTab } from "@/lib/orchestration/close-sweep";
+import { isDerivedRunTab } from "@/lib/run-tab";
 import { SESSION_STATUS } from "@/lib/constants/statuses";
 
 function sanitizePanes(raw: unknown[]): PaneRecord[] {
@@ -108,6 +109,28 @@ export async function POST(req: NextRequest) {
   const projects = body.projects as ProjectRuntimePatch[];
 
   await Promise.all(projects.map(async (p) => {
+    // Parallel-run alias tab (phase 2 worktree-per-agent, "<project>~<runId8>"):
+    // deliberately NOT persisted as a project_states row — it would render as a
+    // ghost project card and its runtime facts (agentRunning/closedAt) would
+    // clobber the base project's. The alias exists only to close its own run:
+    // a READY handoff closes exactly the run whose payload.sessionTab matches,
+    // using the pushed session fields directly.
+    if (isDerivedRunTab(p.tab)) {
+      if (p.sessionUpdatedAt != null && p.sessionStatus?.toLowerCase() === SESSION_STATUS.READY) {
+        void closeOpenRunBySessionTab(userId, p.tab, {
+          status: p.sessionStatus,
+          done: p.sessionDone ?? "",
+          next: p.sessionNext ?? "",
+          tests: p.sessionTests ?? "",
+          todos: p.sessionTodos ?? "",
+          health: p.sessionHealth ?? "",
+          ...(p.sessionBlockReason !== undefined && { blockReason: p.sessionBlockReason }),
+          ...(p.sessionNoOpCount !== undefined && { noOpCount: p.sessionNoOpCount }),
+          mtime: p.sessionUpdatedAt * 1000,
+        }).catch((err) => console.error("[runtime-state] parallel run close failed:", err));
+      }
+      return;
+    }
     const projectObservedAt = typeof p.observedAt === "number" && Number.isFinite(p.observedAt)
       ? new Date(p.observedAt)
       : observedAt;

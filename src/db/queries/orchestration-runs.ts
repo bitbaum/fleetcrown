@@ -115,6 +115,9 @@ export async function listOpenRuns(minAgeMinutes = 5) {
       projectKey: orchestrationRuns.projectKey,
       startedAt: orchestrationRuns.startedAt,
       finishedAt: orchestrationRuns.finishedAt,
+      // Parallel runs (phase 2 worktree-per-agent) carry their derived tab in
+      // payload.sessionTab — the close path matches pushed handoffs on it.
+      payload: orchestrationRuns.payload,
     })
     .from(orchestrationRuns)
     .where(
