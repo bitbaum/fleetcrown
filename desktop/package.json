@@ -96,8 +96,6 @@
     "vite": "^6.0.7"
   },
   "overrides": {
-    "@electron/rebuild": {
-      "node-gyp": "^13.0.1"
-    }
+    "@electron/rebuild": "^4.2.0"
   }
 }
