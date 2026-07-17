@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
@@ -90,4 +91,15 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// Sentry build options — safe without env: sourcemap upload only runs when
+// SENTRY_AUTH_TOKEN is set, so builds never fail on a missing token. The SDK
+// itself is env-gated at runtime via NEXT_PUBLIC_SENTRY_DSN (see
+// sentry.server.config.ts / sentry.edge.config.ts / src/instrumentation-client.ts).
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: true,
+  sourcemaps: { disable: !process.env.SENTRY_AUTH_TOKEN },
+  telemetry: false,
+});

@@ -1,7 +1,16 @@
 // Next.js server startup hook — runs once per process on boot.
-// Installs the Postgres NOTIFY trigger and starts the /tmp file watcher (local only).
+// Initializes Sentry (env-gated — no-op without NEXT_PUBLIC_SENTRY_DSN), then
+// installs the Postgres NOTIFY trigger and starts the /tmp file watcher (local only).
+import * as Sentry from "@sentry/nextjs";
+
 export async function register() {
+  if (process.env.NEXT_RUNTIME === "edge") {
+    await import("../sentry.edge.config");
+    return;
+  }
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
+
+  await import("../sentry.server.config");
 
   // Boot-time env sanity check — converts silent config rot (missing /
   // whitespace-corrupted secrets, half-set provider pairs) into a loud signal
@@ -37,12 +46,12 @@ export async function register() {
 // builds strip from the client. Lands the row in debug_logs keyed by the
 // same digest the client logs, so server + client records correlate. The
 // host's logs are unreliable from our env, so we persist to the DB; this is
-// the durable substitute.
+// the durable substitute. Also forwards to Sentry (no-op without a DSN).
 export async function onRequestError(
-  error: unknown,
-  request: { path: string; method: string },
-  context: { routePath: string; routeType: string },
+  ...args: Parameters<typeof Sentry.captureRequestError>
 ): Promise<void> {
+  Sentry.captureRequestError(...args);
+  const [error, request, context] = args;
   try {
     const e = error as { message?: string; stack?: string; digest?: string };
     const { logDebug } = await import("@/db/queries/debug-logs");
