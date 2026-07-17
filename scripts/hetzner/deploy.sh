@@ -70,7 +70,11 @@ box "set -e
   if [ -d /opt/$NAME/app ] && [ ! -L /opt/$NAME/app ]; then
     [ -f /opt/$NAME/shared/.env ]      || cp -p /opt/$NAME/app/.env /opt/$NAME/shared/.env 2>/dev/null || true
     [ -f /opt/$NAME/shared/launch.sh ] || cp -p /opt/$NAME/app/launch.sh /opt/$NAME/shared/launch.sh 2>/dev/null || true
-  fi"
+  fi
+  # launch.sh must resolve its dir PHYSICALLY: /opt/<name>/app is a symlink in
+  # the releases layout, and \\`find\\` does not descend a logical symlink path —
+  # vitareba crash-looped on the first release-deploy until pwd -P (2026-07-17).
+  [ -f /opt/$NAME/shared/launch.sh ] && sed -i 's|&& pwd)\"|\&\& pwd -P)\"|' /opt/$NAME/shared/launch.sh"
 
 if [ "$FORCE_ENV" = "--env" ] || ! box "test -f /opt/$NAME/shared/.env"; then
   [ -f "$SRC/.env.selfhost.local" ] || { echo "ERROR: $SRC/.env.selfhost.local missing"; exit 1; }
@@ -100,9 +104,18 @@ box "set -e
   fi
   ln -sfn '$RELDIR' /opt/$NAME/app.new && mv -T /opt/$NAME/app.new /opt/$NAME/app
   sudo systemctl restart $NAME-app"
-sleep 4
-status=$(box "systemctl is-active $NAME-app || true")
-code=$(box "curl -s -o /dev/null -w '%{http_code}' --max-time 10 http://localhost:$PORT/ || echo 000")
+# Poll for health up to 60s — a Next standalone cold boot routinely needs >4s;
+# a single early sample read 'activating/000' and (correctly) failed a healthy
+# deploy. Break on the first good sample; keep the last sample for the verdict.
+status=inactive; code=000
+for _ in $(seq 1 15); do
+  sleep 4
+  status=$(box "systemctl is-active $NAME-app 2>/dev/null" || true)
+  code=$(box "curl -s -o /dev/null -w '%{http_code}' --max-time 10 http://localhost:$PORT/ 2>/dev/null" || true)
+  code="${code:-000}"
+  [ "$status" = "active" ] && [ "$code" -ge 200 ] 2>/dev/null && [ "$code" -lt 400 ] && break
+  [ "$status" = "failed" ] && break   # crash-loop: no point waiting the full window
+done
 echo "RESULT $NAME: systemd=$status http=$code release=$REL"
 
 if [ "$status" = "active" ] && [ "$code" -ge 200 ] && [ "$code" -lt 400 ]; then
