@@ -3,7 +3,7 @@ import { sql } from "drizzle-orm";
 import { embedText, embedTexts, toVectorLiteral, embeddingsEnabled } from "@/lib/rag/embeddings";
 
 export type KnowledgeSourceType =
-  | "project_profile" | "dev_log" | "goal" | "orchestration_outcome" | "decision" | "entity" | "commitment" | "thought";
+  | "project_profile" | "dev_log" | "goal" | "orchestration_outcome" | "decision" | "entity" | "commitment" | "thought" | "repo_doc";
 
 export type KnowledgeItem = {
   sourceType: KnowledgeSourceType;

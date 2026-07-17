@@ -10,6 +10,9 @@
 // Idempotent — upserts on (user_id, source_type, source_id). Safe to re-run.
 // Later phases can add orchestration_outcome / decision / entity / commitment.
 
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { getAllDistinctUserIds, getUserProjects } from "@/db/queries/user-projects";
 import { getProjectContext } from "@/db/queries/project-context";
 import { getProjectDossierByProjectKey, renderProjectDossierForAgent } from "@/db/queries/project-dossier";
@@ -21,6 +24,50 @@ import { chunkMarkdown } from "@/lib/rag/chunk";
 import { embeddingsEnabled } from "@/lib/rag/embeddings";
 import type { DevLogEntry } from "@/db/schema/user-projects";
 import type { Milestone } from "@/db/schema/goals";
+
+// repo_doc caps: bound embed cost per run. README first, then docs/ markdown.
+const MAX_DOC_FILES = 15;
+const MAX_CHUNKS_PER_FILE = 30;
+const MAX_DOC_CHUNKS_PER_PROJECT = 120;
+
+/**
+ * A project's own README + docs/ markdown from the local checkout
+ * ($FLEETCROWN_REPOS_DIR or ~/dev/<project>). This is the product-level
+ * knowledge (what the app does, how its features work) that profiles and
+ * dev logs never contain — without it Loki answered "how does X work in
+ * <project>" questions with generic filler (2026-07-17: revampit time
+ * cards, while the repo had a complete Zeiterfassung feature).
+ */
+function readRepoDocs(project: string): Array<{ rel: string; body: string }> {
+  const base = process.env.FLEETCROWN_REPOS_DIR || path.join(os.homedir(), "dev");
+  const repo = path.join(base, project);
+  if (!fs.existsSync(path.join(repo, ".git"))) return [];
+  const files: string[] = [];
+  for (const name of ["README.md", "readme.md"]) {
+    if (fs.existsSync(path.join(repo, name))) { files.push(name); break; }
+  }
+  const docsDir = path.join(repo, "docs");
+  if (fs.existsSync(docsDir)) {
+    const walk = (dir: string, depth: number) => {
+      if (depth > 2 || files.length >= MAX_DOC_FILES) return;
+      for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+        if (files.length >= MAX_DOC_FILES) return;
+        const full = path.join(dir, e.name);
+        if (e.isDirectory() && !e.name.startsWith(".") && e.name !== "node_modules") walk(full, depth + 1);
+        else if (e.isFile() && e.name.endsWith(".md")) files.push(path.relative(repo, full));
+      }
+    };
+    walk(docsDir, 0);
+  }
+  const out: Array<{ rel: string; body: string }> = [];
+  for (const rel of files) {
+    try {
+      const body = fs.readFileSync(path.join(repo, rel), "utf8");
+      if (body.trim()) out.push({ rel, body });
+    } catch { /* unreadable file — skip, never fail the reindex */ }
+  }
+  return out;
+}
 
 /** Flatten the goal tree (parents + nested children) into one list. */
 function flattenGoals(nodes: GoalWithChildren[]): GoalWithChildren[] {
@@ -56,6 +103,17 @@ async function main() {
       const recent = log.slice(-8).map((e) => `${e.date}: ${e.done}${e.next ? ` → next: ${e.next}` : ""}`).join("\n");
       if (recent.trim()) {
         items.push({ sourceType: "dev_log", sourceId: `${p.name}:devlog`, chunk: `Dev log for ${p.name}:\n${recent}`.slice(0, 6000), metadata: { project: p.name } });
+      }
+      // repo_doc: the project's own README/docs — see readRepoDocs.
+      let docChunks = 0;
+      for (const doc of readRepoDocs(p.name)) {
+        if (docChunks >= MAX_DOC_CHUNKS_PER_PROJECT) break;
+        const passages = chunkMarkdown(doc.body, { maxChars: 1400, prefix: `${p.name} docs — ${doc.rel}` });
+        for (const [i, chunk] of passages.slice(0, MAX_CHUNKS_PER_FILE).entries()) {
+          if (docChunks >= MAX_DOC_CHUNKS_PER_PROJECT) break;
+          items.push({ sourceType: "repo_doc", sourceId: `${p.name}:doc:${doc.rel}#${i}`, chunk: chunk.slice(0, 2000), metadata: { project: p.name, file: doc.rel } });
+          docChunks++;
+        }
       }
     }
 
@@ -94,7 +152,7 @@ async function main() {
     // would empty the index whenever the embed step fails (learned the hard way).
     const n = await upsertKnowledgeBatch(userId, items);
     if (n > 0) {
-      await pruneKnowledgeToIds(userId, ["project_profile", "dev_log", "goal", "thought"], items.map((i) => i.sourceId));
+      await pruneKnowledgeToIds(userId, ["project_profile", "dev_log", "goal", "thought", "repo_doc"], items.map((i) => i.sourceId));
     }
     totalChunks += n;
     console.log(`[reindex] user ${userId.slice(0, 8)}…: ${n}/${items.length} chunks (${projects.length} projects)`);

@@ -76,6 +76,7 @@ User=root
 WorkingDirectory=/opt/fleetcrown/runner
 Environment=HOME=/root
 Environment=PATH=/usr/local/bin:/usr/bin:/bin
+Environment=FLEETCROWN_REPOS_DIR=/home/ubuntu/dev
 EnvironmentFile=/opt/fleetcrown/runner/.env
 ExecStart=/opt/fleetcrown/runner/node_modules/.bin/tsx scripts/reindex-knowledge.ts
 TimeoutStartSec=900
