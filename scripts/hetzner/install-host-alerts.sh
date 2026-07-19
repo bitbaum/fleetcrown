@@ -57,11 +57,27 @@ LIB
 cat > "$MON/notify-failure.sh" <<'NF'
 #!/usr/bin/env bash
 # $1 = the failed unit name (passed as %i from the template).
+# Recovery-aware: a long-running service (Type != oneshot) that is back active
+# a few seconds after the failure was a DEPLOY RESTART or a Restart=-recovered
+# blip, not an outage — journal-only, no Telegram (kills the alert fatigue that
+# fired on every deploy: a Next proc SIGKILLed after TimeoutStopSec marks the
+# unit failed → OnFailure, even though the new version is healthy). Only PAGE
+# when it stays down. oneshot units (appcron jobs) never go "active", so a
+# failed cron always pages — a failed job is a real signal. Sustained crash
+# loops are also caught by host-check's `systemctl --failed` sweep.
 set -uo pipefail
 . /opt/monitoring/lib-alert.sh
 unit="${1:-unknown.unit}"
+utype=$(systemctl show "$unit" -p Type --value 2>/dev/null)
+if [ "$utype" != "oneshot" ]; then
+  sleep 8
+  if systemctl is-active --quiet "$unit"; then
+    logger -t watchdog "unit ${unit} failed but recovered (restart/transient) — not paging"
+    exit 0
+  fi
+fi
 tail=$(journalctl -u "$unit" -n 4 --no-pager -o cat 2>/dev/null | tr '\n' ' ' | cut -c1-300)
-alert "🔴" "UNIT FAILED: ${unit} — ${tail:-<no log>}"
+alert "🔴" "UNIT DOWN: ${unit} — ${tail:-<no log>}"
 NF
 chmod +x "$MON/notify-failure.sh"
 
