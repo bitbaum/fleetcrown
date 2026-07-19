@@ -21,6 +21,7 @@ const KIND_LABEL: Record<ActivityKind, string> = {
   task_failed: "Failed",
   input_requested: "Waiting",
   session_closed: "Closed",
+  funding: "Funded",
 };
 
 const SOURCE_LABEL: Record<string, string> = {

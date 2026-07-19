@@ -163,6 +163,18 @@ export async function getUserProjectByEntityId(userId: string, entityProjectId: 
 }
 
 /**
+ * Reverse lookup across the FC↔OC link: the project a published OrangeCat
+ * entity belongs to. Cross-user by design — OC webhooks identify the project,
+ * not the operator; the row carries the owning userId.
+ */
+export async function getUserProjectByOrangeCatProjectId(orangecatProjectId: string): Promise<UserProject | null> {
+  const row = await db.query.userProjects.findFirst({
+    where: eq(userProjects.orangecatProjectId, orangecatProjectId),
+  });
+  return row ?? null;
+}
+
+/**
  * Keep the projects-page one-liner (user_projects.description) in sync with the
  * entity brief. A project has two description homes — the entity (dossier / RAG)
  * and the user_projects row (the fleet-index one-liner). When a brief write

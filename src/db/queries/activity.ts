@@ -33,6 +33,7 @@ export const ACTIVITY_KINDS = [
   "task_failed",
   "input_requested",
   "session_closed",
+  "funding",
 ] as const;
 export type ActivityKind = (typeof ACTIVITY_KINDS)[number];
 
@@ -58,11 +59,12 @@ export type ProjectActivityEvent = {
 // Lifecycle signals the dispatch/run rows don't already express. task_failed is
 // included so local/direct-mode failures (which never create a run row) still
 // surface; cross-source de-dup removes the cloud-mode overlap with runs.
-const SIGNAL_EVENT_TYPES: OrchestrationEventType[] = ["input_requested", "session_closed", "task_failed"];
+const SIGNAL_EVENT_TYPES: OrchestrationEventType[] = ["input_requested", "session_closed", "task_failed", "funding"];
 
 const EVENT_TITLES: Partial<Record<OrchestrationEventType, string>> = {
   input_requested: "Input requested",
   session_closed: "Session closed",
+  funding: "Funding settled",
   task_failed: "Task failed",
 };
 

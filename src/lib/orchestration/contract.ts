@@ -36,6 +36,7 @@ export const ORCHESTRATION_EVENTS = [
   "close_requested",
   "session_closed",
   "task_failed",
+  "funding",
 ] as const;
 
 export type OrchestrationEventType = (typeof ORCHESTRATION_EVENTS)[number];
