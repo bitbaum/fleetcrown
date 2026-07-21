@@ -294,22 +294,60 @@ echo "  ✓ fleetcrown-bridge active"
 # so poller/pty-runtime fixes reach the always-on executor.
 RUNNER_DIR="/opt/fleetcrown/runner"
 echo "→ sync box-runner code → $HOST:$RUNNER_DIR"
-rsync -az --no-perms --omit-dir-times -e "$RSYNC_SSH" \
-  "$PROJECT_DIR/src/" "$HOST:$RUNNER_DIR/src/"
-rsync -az --no-perms --omit-dir-times -e "$RSYNC_SSH" \
-  "$PROJECT_DIR/desktop/src/" "$HOST:$RUNNER_DIR/desktop/src/"
-rsync -az --no-perms --omit-dir-times -e "$RSYNC_SSH" \
-  "$PROJECT_DIR/home/" "$HOST:$RUNNER_DIR/home/"
-rsync -az --no-perms --omit-dir-times -e "$RSYNC_SSH" \
-  "$PROJECT_DIR/scripts/box-runner.ts" \
+
+# Track whether runner code actually changed. A systemd restart of the runner
+# kills its whole cgroup — including any claude/hermes the runner launched for a
+# live dispatch (a review run died this way, and every app-only deploy used to
+# restart the runner for nothing). So: only restart when runner code moved, and
+# drain in-flight agents first when it did.
+RUNNER_CHANGED=0
+sync_runner() {
+  local out
+  out=$(rsync -azi --no-perms --omit-dir-times -e "$RSYNC_SSH" "$@" 2>/dev/null) || return 0
+  grep -qE '^[<>ch]f' <<<"$out" && RUNNER_CHANGED=1
+  return 0
+}
+sync_runner "$PROJECT_DIR/src/" "$HOST:$RUNNER_DIR/src/"
+sync_runner "$PROJECT_DIR/desktop/src/" "$HOST:$RUNNER_DIR/desktop/src/"
+sync_runner "$PROJECT_DIR/home/" "$HOST:$RUNNER_DIR/home/"
+sync_runner "$PROJECT_DIR/scripts/box-runner.ts" \
   "$PROJECT_DIR/scripts/mint-box-runner-token.ts" \
   "$PROJECT_DIR/scripts/reindex-knowledge.ts" \
   "$HOST:$RUNNER_DIR/scripts/"
-rsync -a -e "$RSYNC_SSH" "$PROJECT_DIR/tsconfig.json" "$HOST:$RUNNER_DIR/tsconfig.json"
+sync_runner "$PROJECT_DIR/tsconfig.json" "$HOST:$RUNNER_DIR/tsconfig.json"
 ssh "$HOST" "chown -R $RUNNER_OWNER:$RUNNER_OWNER $RUNNER_DIR/src $RUNNER_DIR/desktop $RUNNER_DIR/home $RUNNER_DIR/scripts $RUNNER_DIR/tsconfig.json"
 
-echo "→ restart fleetcrown-box-runner (cloud builder)"
-ssh "$HOST" "systemctl restart fleetcrown-box-runner \
-  && sleep 4 \
-  && systemctl is-active fleetcrown-box-runner >/dev/null"
-echo "  ✓ fleetcrown-box-runner active (cloud builder)"
+# Wait for in-flight agent PTYs to finish before restarting the runner. Idle
+# runner drains instantly (its cgroup holds only the two node processes);
+# capped so a genuine runner-code fix still lands. Best-effort, never fails.
+drain_box_runner_agents() {
+  local max="${FLEETCROWN_RUNNER_DRAIN_SECS:-480}" waited=0 n
+  while [ "$waited" -lt "$max" ]; do
+    n=$(ssh -o ConnectTimeout=10 "$HOST" '
+      cg=/sys/fs/cgroup/system.slice/fleetcrown-box-runner.service/cgroup.procs
+      [ -r "$cg" ] || { echo 0; exit 0; }
+      c=0
+      for p in $(cat "$cg"); do
+        case "$(cat /proc/$p/comm 2>/dev/null)" in
+          claude|hermes|codex|cursor-agent|grok) c=$((c+1));;
+        esac
+      done
+      echo "$c"' 2>/dev/null || echo 0)
+    [ "${n:-0}" -eq 0 ] 2>/dev/null && return 0
+    echo "  ⏳ ${n} agent(s) in-flight on the runner — waiting to drain (${waited}s/${max}s)…"
+    sleep 20; waited=$((waited + 20))
+  done
+  echo "  ⚠ drain timed out after ${max}s — restarting anyway so the runner code fix lands" >&2
+  return 0
+}
+
+if [ "$RUNNER_CHANGED" = 1 ]; then
+  echo "→ runner code changed — draining in-flight agents, then restart"
+  drain_box_runner_agents
+  ssh "$HOST" "systemctl restart fleetcrown-box-runner \
+    && sleep 4 \
+    && systemctl is-active fleetcrown-box-runner >/dev/null"
+  echo "  ✓ fleetcrown-box-runner restarted (cloud builder)"
+else
+  echo "  ✓ runner code unchanged — restart skipped (in-flight agents undisturbed)"
+fi
