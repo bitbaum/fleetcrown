@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { PageLayout } from "@/components/ui/page-layout";
 import { SystemStats } from "@/components/system/SystemStats";
+import { RevenueCard } from "@/components/system/RevenueCard";
 import { ScheduledJobsCard } from "@/components/system/ScheduledJobsCard";
 import { MemorySummaryCard } from "@/components/system/MemorySummaryCard";
 import { RecentFailuresCard } from "@/components/system/RecentFailuresCard";
@@ -13,6 +14,7 @@ import { PullToRefresh } from "@/components/shared/PullToRefresh";
 import { AutoRefresh } from "@/components/shared/AutoRefresh";
 import { REFRESH_CADENCE } from "@/config/refresh";
 import { requirePageUserId } from "@/lib/session";
+import { getUserById } from "@/db/queries/users";
 import { listCronJobsForUser } from "@/db/queries/cron-jobs";
 
 export const metadata = { title: "System" };
@@ -34,10 +36,21 @@ export default async function SystemPage() {
     console.error("[system/page] listCronJobsForUser failed:", err);
   }
 
+  // Platform revenue is founder-only — a regular tenant must never see
+  // fleet-wide MRR. getUserById is defensive: a failure hides the card
+  // rather than crashing the page.
+  const viewer = await getUserById(userId).catch(() => null);
+  const isFounder = viewer?.isDefault === true;
+
   return (
     <PullToRefresh>
       <PageLayout title="System" subtitle="Infrastructure health and scheduled jobs">
         <SystemStats />
+        {isFounder && (
+          <Suspense fallback={<CardSkeleton />}>
+            <RevenueCard />
+          </Suspense>
+        )}
         <FleetDoctorCard />
         <Suspense fallback={<CardSkeleton />}>
           <FrontierProposalsCard userId={userId} />
