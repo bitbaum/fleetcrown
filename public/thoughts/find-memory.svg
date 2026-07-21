@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 560" width="1200" height="560" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+  <defs>
+    <marker id="fm-in" markerWidth="12" markerHeight="12" refX="9" refY="4" orient="auto">
+      <path d="M3,1 L9,4 L3,7" fill="none" stroke="var(--status-positive)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="fm-stop" markerWidth="12" markerHeight="12" refX="5" refY="4" orient="auto">
+      <path d="M2,1 L8,4 L2,7" fill="none" stroke="var(--status-negative)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <!-- THE INDEX -->
+  <rect x="720" y="90" width="410" height="400" rx="18" fill="var(--surface-base)" stroke="var(--border-default)"/>
+  <text x="925" y="140" fill="var(--text-primary)" font-size="22" font-weight="600" text-anchor="middle">Meaning-space index</text>
+  <text x="925" y="168" fill="var(--text-tertiary)" font-size="14" text-anchor="middle">what search can actually find</text>
+  <g font-size="17">
+    <rect x="760" y="205" width="330" height="52" rx="10" fill="var(--surface-raised)" stroke="var(--border-subtle)"/>
+    <text x="784" y="238" fill="var(--text-primary)">Products</text>
+    <rect x="760" y="273" width="330" height="52" rx="10" fill="var(--surface-raised)" stroke="var(--border-subtle)"/>
+    <text x="784" y="306" fill="var(--text-primary)">Services</text>
+    <rect x="760" y="341" width="330" height="52" rx="10" fill="var(--surface-raised)" stroke="var(--border-subtle)"/>
+    <text x="784" y="374" fill="var(--text-primary)">Causes</text>
+  </g>
+
+  <!-- SUPPLY feeding in (green) -->
+  <g font-size="17">
+    <text x="90" y="235" fill="var(--text-secondary)">Products</text>
+    <text x="90" y="303" fill="var(--text-secondary)">Services</text>
+    <text x="90" y="371" fill="var(--text-secondary)">Causes</text>
+  </g>
+  <path d="M300,230 L716,230" fill="none" stroke="var(--status-positive)" stroke-opacity="0.8" stroke-width="1.6" marker-end="url(#fm-in)"/>
+  <path d="M300,298 L716,298" fill="none" stroke="var(--status-positive)" stroke-opacity="0.8" stroke-width="1.6" marker-end="url(#fm-in)"/>
+  <path d="M300,366 L716,366" fill="none" stroke="var(--status-positive)" stroke-opacity="0.8" stroke-width="1.6" marker-end="url(#fm-in)"/>
+
+  <!-- DEMAND dropped (red, stops short) -->
+  <rect x="70" y="410" width="240" height="66" rx="12" fill="none" stroke="var(--status-negative)" stroke-opacity="0.6" stroke-dasharray="6 6"/>
+  <text x="92" y="440" fill="var(--text-primary)" font-size="17" font-weight="500">Wishlists</text>
+  <text x="92" y="463" fill="var(--text-tertiary)" font-size="13.5">a need — captured, then dropped</text>
+  <path d="M310,443 L560,443" fill="none" stroke="var(--status-negative)" stroke-opacity="0.7" stroke-width="1.6" stroke-dasharray="6 6" marker-end="url(#fm-stop)"/>
+  <g transform="translate(600,443)">
+    <circle r="15" fill="var(--status-negative)" fill-opacity="0.12"/>
+    <path d="M-5,-5 L5,5 M5,-5 L-5,5" stroke="var(--status-negative)" stroke-width="2.2" stroke-linecap="round"/>
+  </g>
+
+  <text x="600" y="524" fill="var(--text-secondary)" font-size="16.5" text-anchor="middle">Supply is remembered. The need was <tspan fill="var(--status-negative)">captured, then dropped</tspan> — until we added one word to the list.</text>
+</svg>

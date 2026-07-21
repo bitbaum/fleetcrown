@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 600" width="1200" height="600" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+  <defs>
+    <marker id="fw-arr" markerWidth="12" markerHeight="12" refX="6" refY="4" orient="auto">
+      <path d="M2,1 L9,4 L2,7" fill="none" stroke="var(--status-positive)" stroke-opacity="0.85" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <!-- clockwise arcs between the nodes -->
+  <g fill="none" stroke="var(--status-positive)" stroke-opacity="0.55" stroke-width="1.8">
+    <path d="M647,86 A195,195 0 0 1 740,139" marker-end="url(#fw-arr)"/>
+    <path d="M787,221 A195,195 0 0 1 787,329" marker-end="url(#fw-arr)"/>
+    <path d="M740,410 A195,195 0 0 1 647,464" marker-end="url(#fw-arr)"/>
+    <path d="M553,464 A195,195 0 0 1 460,410" marker-end="url(#fw-arr)"/>
+    <path d="M413,329 A195,195 0 0 1 413,221" marker-end="url(#fw-arr)"/>
+    <path d="M460,140 A195,195 0 0 1 553,86" marker-end="url(#fw-arr)"/>
+  </g>
+
+  <!-- center -->
+  <text x="600" y="268" fill="var(--text-primary)" font-size="19" font-weight="600" text-anchor="middle">The flywheel</text>
+  <text x="600" y="292" fill="var(--text-tertiary)" font-size="13.5" text-anchor="middle">a need summons its supply</text>
+
+  <!-- nodes -->
+  <g font-size="14.5" font-weight="500">
+    <rect x="520" y="57" width="160" height="46" rx="12" fill="var(--surface-raised)" stroke="var(--border-default)"/>
+    <text x="600" y="85" fill="var(--text-primary)" text-anchor="middle">Need posted</text>
+
+    <rect x="689" y="154" width="160" height="46" rx="12" fill="var(--surface-raised)" stroke="var(--border-default)"/>
+    <text x="769" y="182" fill="var(--text-primary)" text-anchor="middle">Indexed · unmet</text>
+
+    <rect x="689" y="350" width="160" height="46" rx="12" fill="var(--surface-raised)" stroke="var(--border-default)"/>
+    <text x="769" y="378" fill="var(--text-primary)" text-anchor="middle">Build — the fleet</text>
+
+    <rect x="520" y="447" width="160" height="46" rx="12" fill="var(--surface-raised)" stroke="var(--border-default)"/>
+    <text x="600" y="475" fill="var(--text-primary)" text-anchor="middle">Publish back</text>
+
+    <rect x="351" y="350" width="160" height="46" rx="12" fill="var(--surface-raised)" stroke="var(--border-default)"/>
+    <text x="431" y="378" fill="var(--text-primary)" text-anchor="middle">Match — both told</text>
+
+    <rect x="351" y="154" width="160" height="46" rx="12" fill="var(--status-positive)" fill-opacity="0.1" stroke="var(--status-positive)" stroke-opacity="0.5"/>
+    <text x="431" y="182" fill="var(--status-positive)" text-anchor="middle">Settle ₿</text>
+  </g>
+
+  <text x="600" y="560" fill="var(--text-secondary)" font-size="16.5" text-anchor="middle">A need is posted, found unmet, built for, published, matched back to the person who wanted it — and the settlement funds the next build.</text>
+</svg>
