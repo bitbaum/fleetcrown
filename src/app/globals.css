@@ -3123,3 +3123,18 @@
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border-default); border-radius: 2px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
+
+/* ─── Reduced-motion catch-all ────────────────────────────────────────────────
+   Respect the OS-level `prefers-reduced-motion` for every remaining animation.
+   Individual components guard their own entrances above; this backstop covers
+   the infinite pulses/waves (fleet-live-pulse, ui-voice-pulse/-wave,
+   ui-palette-mic-pulse, sidebar-tooltip-in) so nothing loops for users who
+   asked the platform to reduce motion. Near-zero (not 0) keeps final states. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

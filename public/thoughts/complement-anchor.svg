@@ -1,40 +1,40 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 560" width="1200" height="560" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
   <defs>
     <marker id="loop-arr" markerWidth="12" markerHeight="12" refX="5" refY="4" orient="auto">
-      <path d="M2,1 L9,4 L2,7" fill="none" stroke="#cf5a4e" stroke-opacity="0.75" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M2,1 L9,4 L2,7" fill="none" stroke="var(--status-negative)" stroke-opacity="0.75" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
     </marker>
   </defs>
 
   <!-- LEFT: FleetCrown capability loop (self-scored, fakeable) -->
-  <text x="300" y="52" fill="#ededed" font-size="20" font-weight="600" text-anchor="middle">FleetCrown · capability</text>
-  <path d="M300,92 A83,83 0 1 1 291,92.5" fill="none" stroke="#cf5a4e" stroke-opacity="0.5" stroke-width="2" stroke-dasharray="7 7" marker-end="url(#loop-arr)"/>
-  <text x="300" y="170" fill="#c4c4c4" font-size="16" font-weight="500" text-anchor="middle">scores itself</text>
-  <text x="300" y="196" fill="#7c7c7c" font-size="13" text-anchor="middle">handoffs · tests-passed · &#8220;done&#8221;</text>
-  <text x="300" y="300" fill="#cf5a4e" font-size="13.5" text-anchor="middle" font-style="italic">an optimizer can fake this</text>
+  <text x="300" y="52" fill="var(--text-primary)" font-size="20" font-weight="600" text-anchor="middle">FleetCrown · capability</text>
+  <path d="M300,92 A83,83 0 1 1 291,92.5" fill="none" stroke="var(--status-negative)" stroke-opacity="0.5" stroke-width="2" stroke-dasharray="7 7" marker-end="url(#loop-arr)"/>
+  <text x="300" y="170" fill="var(--text-primary)" font-size="16" font-weight="500" text-anchor="middle">scores itself</text>
+  <text x="300" y="196" fill="var(--text-tertiary)" font-size="13" text-anchor="middle">handoffs · tests-passed · &#8220;done&#8221;</text>
+  <text x="300" y="300" fill="var(--status-negative)" font-size="13.5" text-anchor="middle" font-style="italic">an optimizer can fake this</text>
 
   <!-- anchor line down to the ground fact -->
-  <line x1="300" y1="316" x2="300" y2="392" stroke="#5a5a5a" stroke-width="1.6"/>
-  <circle cx="300" cy="316" r="4" fill="#5a5a5a"/>
+  <line x1="300" y1="316" x2="300" y2="392" stroke="var(--text-muted)" stroke-width="1.6"/>
+  <circle cx="300" cy="316" r="4" fill="var(--text-muted)"/>
 
   <!-- RIGHT: OrangeCat economy catalog (promises, unverified) -->
-  <text x="900" y="52" fill="#ededed" font-size="20" font-weight="600" text-anchor="middle">OrangeCat · economy</text>
-  <path d="M900,92 A83,83 0 1 1 891,92.5" fill="none" stroke="#cf5a4e" stroke-opacity="0.5" stroke-width="2" stroke-dasharray="7 7" marker-end="url(#loop-arr)"/>
-  <text x="900" y="170" fill="#c4c4c4" font-size="16" font-weight="500" text-anchor="middle">lists promises</text>
-  <text x="900" y="196" fill="#7c7c7c" font-size="13" text-anchor="middle">services · funding · wishes</text>
-  <text x="900" y="300" fill="#cf5a4e" font-size="13.5" text-anchor="middle" font-style="italic">unverifiable from inside the catalog</text>
+  <text x="900" y="52" fill="var(--text-primary)" font-size="20" font-weight="600" text-anchor="middle">OrangeCat · economy</text>
+  <path d="M900,92 A83,83 0 1 1 891,92.5" fill="none" stroke="var(--status-negative)" stroke-opacity="0.5" stroke-width="2" stroke-dasharray="7 7" marker-end="url(#loop-arr)"/>
+  <text x="900" y="170" fill="var(--text-primary)" font-size="16" font-weight="500" text-anchor="middle">lists promises</text>
+  <text x="900" y="196" fill="var(--text-tertiary)" font-size="13" text-anchor="middle">services · funding · wishes</text>
+  <text x="900" y="300" fill="var(--status-negative)" font-size="13.5" text-anchor="middle" font-style="italic">unverifiable from inside the catalog</text>
 
-  <line x1="900" y1="316" x2="900" y2="392" stroke="#5a5a5a" stroke-width="1.6"/>
-  <circle cx="900" cy="316" r="4" fill="#5a5a5a"/>
+  <line x1="900" y1="316" x2="900" y2="392" stroke="var(--text-muted)" stroke-width="1.6"/>
+  <circle cx="900" cy="316" r="4" fill="var(--text-muted)"/>
 
-  <!-- GROUND-TRUTH facts (solid, green) -->
-  <rect x="120" y="392" width="360" height="86" rx="13" fill="#151d17" stroke="#56b981" stroke-opacity="0.5"/>
-  <text x="300" y="426" fill="#7fd3a1" font-size="18" font-weight="600" text-anchor="middle">Settled payment</text>
-  <text x="300" y="452" fill="#8a8a8a" font-size="13" text-anchor="middle">a fact, not a status field &#183; from OrangeCat</text>
+  <!-- GROUND-TRUTH facts (solid, positive) -->
+  <rect x="120" y="392" width="360" height="86" rx="13" fill="var(--status-positive)" fill-opacity="0.1" stroke="var(--status-positive)" stroke-opacity="0.5"/>
+  <text x="300" y="426" fill="var(--status-positive)" font-size="18" font-weight="600" text-anchor="middle">Settled payment</text>
+  <text x="300" y="452" fill="var(--text-secondary)" font-size="13" text-anchor="middle">a fact, not a status field &#183; from OrangeCat</text>
 
-  <rect x="720" y="392" width="360" height="86" rx="13" fill="#151d17" stroke="#56b981" stroke-opacity="0.5"/>
-  <text x="900" y="426" fill="#7fd3a1" font-size="18" font-weight="600" text-anchor="middle">Delivered work</text>
-  <text x="900" y="452" fill="#8a8a8a" font-size="13" text-anchor="middle">it either shipped or it didn&#8217;t &#183; from FleetCrown</text>
+  <rect x="720" y="392" width="360" height="86" rx="13" fill="var(--status-positive)" fill-opacity="0.1" stroke="var(--status-positive)" stroke-opacity="0.5"/>
+  <text x="900" y="426" fill="var(--status-positive)" font-size="18" font-weight="600" text-anchor="middle">Delivered work</text>
+  <text x="900" y="452" fill="var(--text-secondary)" font-size="13" text-anchor="middle">it either shipped or it didn&#8217;t &#183; from FleetCrown</text>
 
   <!-- caption -->
-  <text x="600" y="524" fill="#8a8a8a" font-size="16.5" text-anchor="middle">Alone, each loop scores itself. The other supplies the one fact it cannot fake.</text>
+  <text x="600" y="524" fill="var(--text-secondary)" font-size="16.5" text-anchor="middle">Alone, each loop scores itself. The other supplies the one fact it cannot fake.</text>
 </svg>

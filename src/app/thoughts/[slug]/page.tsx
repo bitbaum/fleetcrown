@@ -1,3 +1,5 @@
+import fs from "fs";
+import path from "path";
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
@@ -8,6 +10,19 @@ import { PublicHeaderActions } from "@/components/public/PublicHeaderActions";
 import { ThoughtArticleNav } from "@/components/thoughts/ThoughtArticleNav";
 import { MermaidDiagram } from "@/components/thoughts/MermaidDiagram";
 import { getAdjacentThoughts, getRelatedThoughts, getThought, parseThoughtBlocks } from "@/lib/thoughts-content";
+
+// Read a repo-authored SVG diagram from /public so it can be inlined into the
+// DOM (see the "image" block renderer). Only same-origin absolute paths under
+// /thoughts are allowed — the content is trusted committed markdown, never user
+// input — and any miss falls back to the <img> path. Returns null on any failure.
+function readLocalSvg(src: string): string | null {
+  if (!src.startsWith("/") || src.includes("..")) return null;
+  try {
+    return fs.readFileSync(path.join(process.cwd(), "public", src), "utf-8");
+  } catch {
+    return null;
+  }
+}
 
 // Splits a string on bold, italic, inline-code, and link patterns then
 // returns an array of strings and React elements. Used for paragraph text,
@@ -137,10 +152,27 @@ export default async function ThoughtArticlePage({
                   </p>
                 );
               case "image": {
-                // Diagrams (SVG) render at their natural aspect, uncropped, and
-                // bypass the optimizer (which can't resize SVG); photos keep the
-                // 16:9 cover crop. Both flip cleanly on the dark essay surface.
-                const isSvg = block.src.endsWith(".svg");
+                // Local SVG diagrams are inlined into the DOM (not <img>) so their
+                // fill/stroke can reference design tokens (var(--*)) and flip with
+                // the theme — an external <img> SVG can't read page CSS vars and
+                // would be frozen to whatever hex it hardcodes. Photos and remote
+                // images keep next/image (16:9 cover crop / optimizer).
+                const inlineSvg = block.src.endsWith(".svg") ? readLocalSvg(block.src) : null;
+                if (inlineSvg) {
+                  return (
+                    <figure key={i} className="my-8 space-y-2">
+                      <div
+                        role="img"
+                        aria-label={block.alt || undefined}
+                        className="[&>svg]:h-auto [&>svg]:w-full"
+                        dangerouslySetInnerHTML={{ __html: inlineSvg }}
+                      />
+                      {block.alt && (
+                        <figcaption className="text-center text-sm text-text-muted">{block.alt}</figcaption>
+                      )}
+                    </figure>
+                  );
+                }
                 return (
                   <figure key={i} className="my-8 space-y-2">
                     <Image
@@ -148,8 +180,8 @@ export default async function ThoughtArticlePage({
                       alt={block.alt}
                       width={1200}
                       height={675}
-                      className={isSvg ? "h-auto w-full" : "w-full rounded-xl object-cover"}
-                      unoptimized={block.src.startsWith("http") || isSvg}
+                      className="w-full rounded-xl object-cover"
+                      unoptimized={block.src.startsWith("http")}
                     />
                     {block.alt && (
                       <figcaption className="text-center text-sm text-text-muted">{block.alt}</figcaption>
