@@ -53,6 +53,61 @@ export async function fetchOpenDemand(): Promise<OpenDemand | null> {
   }
 }
 
+export interface EconomyMatch {
+  type: string;
+  title: string;
+  description: string;
+  url: string;
+  similarity?: number;
+}
+
+/**
+ * Query-scoped semantic search over OrangeCat's economy. OrangeCat embeds the
+ * text with its own model server-side (GET /api/v1/search), so FleetCrown never
+ * needs a shared vector space — it just sends the operator's words and gets
+ * meaning-ranked matches back. Best-effort; "[]" on any failure.
+ */
+export async function searchEconomy(query: string): Promise<EconomyMatch[]> {
+  const q = query.trim();
+  if (q.length < 8) {
+    return [];
+  }
+  try {
+    const res = await fetch(
+      `${OC_BASE}/api/v1/search?q=${encodeURIComponent(q.slice(0, 200))}`,
+      { signal: AbortSignal.timeout(6000) }
+    );
+    if (!res.ok) {
+      return [];
+    }
+    const json = await res.json();
+    const data = (json?.data ?? json) as { results?: EconomyMatch[] } | undefined;
+    return Array.isArray(data?.results) ? data.results : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Format strong (semantic-only) economy matches as a Loki block ("" if none).
+ *  Keyword-fallback hits (no similarity) are dropped so unrelated turns stay
+ *  clean — the block appears only when the operator's message truly matches. */
+export function buildEconomySearchBlock(matches: EconomyMatch[]): string {
+  const strong = (matches ?? [])
+    .filter((m) => typeof m.similarity === "number" && m.similarity >= 0.4)
+    .slice(0, 6);
+  if (strong.length === 0) {
+    return "";
+  }
+  const lines = strong.map(
+    (m) =>
+      `- [${m.type}] ${m.title}: ${(m.description || "").replace(/\s+/g, " ").slice(0, 140)} (${m.url})`
+  );
+  return [
+    "### Relevant on OrangeCat right now (semantic matches to the operator's message — needs, offerings, projects, or people they could act on or build for)",
+    ...lines,
+  ].join("\n");
+}
+
 /** Format the demand feed as a compact Loki context block ("" if empty). */
 export function buildDemandBlock(d: OpenDemand | null): string {
   if (!d) {

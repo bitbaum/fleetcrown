@@ -18,7 +18,7 @@ import { getUserProjects } from "@/db/queries/user-projects";
 import { searchKnowledge, type KnowledgeHit } from "@/db/queries/knowledge-embeddings";
 import { embeddingsEnabled } from "@/lib/rag/embeddings";
 import { buildFleetIndex } from "@/lib/loki-fleet-index";
-import { fetchOpenDemand, buildDemandBlock } from "@/lib/integrations/orangecat-demand";
+import { fetchOpenDemand, buildDemandBlock, searchEconomy, buildEconomySearchBlock } from "@/lib/integrations/orangecat-demand";
 import type { UserProject } from "@/db/schema/user-projects";
 
 const RAG_K = 6;
@@ -83,17 +83,20 @@ export async function buildLokiFleetContext(userId: string, query: string): Prom
   // Fleet breadth + RAG depth (the operator's own work) alongside live economy
   // demand from OrangeCat (what to build for). Demand is best-effort — a slow or
   // down OrangeCat degrades to plain fleet context, never blocks the turn.
-  const [detail, demand] = await Promise.all([
+  const [detail, demand, econMatches] = await Promise.all([
     buildRetrievedDetail(userId, query),
     fetchOpenDemand().then(buildDemandBlock).catch(() => ""),
+    searchEconomy(query).catch(() => []),
   ]);
   const index = buildFleetIndex(projects);
-  if (!index && !detail && !demand) return "";
+  const econSearch = buildEconomySearchBlock(econMatches);
+  if (!index && !detail && !demand && !econSearch) return "";
   return [
     "## Fleet context (read-only background — the operator's current projects)",
     "Use this to answer accurately and specifically about the operator's work. It is current state, NOT part of the conversation — and NOT something to repeat back. Never restate, summarise, or list this context to the user; answer their actual question directly and concisely, citing specific projects. If a question falls outside this context, say so rather than guessing.",
     index,
     detail,
+    econSearch,
     demand,
   ].filter(Boolean).join("\n\n");
 }
