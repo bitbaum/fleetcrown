@@ -136,22 +136,27 @@ export default async function ThoughtArticlePage({
                     {ri(block.text)}
                   </p>
                 );
-              case "image":
+              case "image": {
+                // Diagrams (SVG) render at their natural aspect, uncropped, and
+                // bypass the optimizer (which can't resize SVG); photos keep the
+                // 16:9 cover crop. Both flip cleanly on the dark essay surface.
+                const isSvg = block.src.endsWith(".svg");
                 return (
-                  <figure key={i} className="space-y-2">
+                  <figure key={i} className="my-8 space-y-2">
                     <Image
                       src={block.src}
                       alt={block.alt}
                       width={1200}
                       height={675}
-                      className="w-full rounded-xl object-cover"
-                      unoptimized={block.src.startsWith("http")}
+                      className={isSvg ? "h-auto w-full" : "w-full rounded-xl object-cover"}
+                      unoptimized={block.src.startsWith("http") || isSvg}
                     />
                     {block.alt && (
                       <figcaption className="text-center text-sm text-text-muted">{block.alt}</figcaption>
                     )}
                   </figure>
                 );
+              }
               case "code":
                 return block.lang === "mermaid" ? (
                   <MermaidDiagram key={i} chart={block.text} />

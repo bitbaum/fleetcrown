@@ -27,6 +27,8 @@ OrangeCat is the mirror image. It knows, in exhaustive detail, how to move and m
 
 Read those two paragraphs back to back and the shape is unmistakable. FleetCrown has recurring pricing and no metering. OrangeCat has metering and no recurring product. Each one built, to completion, precisely the half the other was missing. Neither did it on purpose. Neither was reading the other's roadmap. They arrived at complementary halves the way two puzzle pieces arrive at a fit — not by negotiation, but by both being cut from the same picture.
 
+![](/thoughts/complement-two-halves.svg)
+
 ## Why the halves are clean
 
 The reason the fit is clean is that the seams are *refusals*, and the refusals are principled.
@@ -46,6 +48,8 @@ A pass is a product with a tag that names a plan and a duration. A settlement is
 - FleetCrown gets paid: a `fleetcrown-plan:pro` product on OrangeCat settles; OrangeCat signs a webhook to FleetCrown; FleetCrown grants the subscription. FleetCrown collects Bitcoin revenue without ever building a payment rail.
 - OrangeCat gets a subscription: a `supporter-plan` product settles; the very same settlement hook grants an OrangeCat plan in its own tables. OrangeCat gets a recurring product without inventing one.
 
+![](/thoughts/complement-pattern-both-ways.svg)
+
 Same three moves. The only difference is where the grant lands — across an HTTP boundary in one case, in a local table in the other. When I built OrangeCat's Supporter checkout this week, the honest description of the work is that I ported a file. The function that grants a FleetCrown pass and the function that grants a Supporter plan are the same function wearing a different destination.
 
 There is a lesson in that for anyone building two things meant to relate: the sign that the relationship is real is that the integration code is *boring*. If connecting two products needs a novel protocol, they were not actually complementary — they were two systems being forced to shake hands. If it needs copying a pattern one of them already had, the complement was structural all along, and you are merely exposing it.
@@ -63,6 +67,8 @@ Money is the exception. A payment that settled in a wallet is the one measuremen
 And it runs the other way, too. OrangeCat, alone, is a catalog of promises: services listed, projects funded, wishes posted — every one a description of work that happens somewhere else, unverifiable from inside the catalog. A funded project that no one builds is a promise the economy cannot keep. FleetCrown is what turns OrangeCat's listings into delivered work. Each product keeps the other honest: OrangeCat grounds FleetCrown's loops in settled money; FleetCrown grounds OrangeCat's economy in performed work.
 
 That is not a convenience. That is the whole reason to have two.
+
+![](/thoughts/complement-anchor.svg)
 
 ## What is true, and what is not yet
 
