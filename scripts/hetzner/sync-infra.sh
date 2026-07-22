@@ -101,3 +101,10 @@ sudo mkdir -p /opt/$NAME/uploads && sudo chown ubuntu:ubuntu /opt/$NAME/uploads"
 done
 
 box 'sudo caddy validate --config /etc/caddy/Caddyfile >/dev/null && sudo systemctl reload caddy && echo "caddy reloaded OK"'
+
+# Keep the watchdog's monitored targets in lockstep with apps.conf. targets.conf
+# is SSOT-derived from apps.conf, but by a SEPARATE script — so a newly-synced
+# public app was NOT monitored until someone re-ran install-watchdog by hand.
+# solon was deployed but never added to targets → externally dark for weeks with
+# no alert (2026-07). Refreshing here makes "provisioned" imply "monitored".
+bash "$HERE/install-watchdog.sh"
