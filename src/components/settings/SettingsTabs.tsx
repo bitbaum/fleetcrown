@@ -86,29 +86,45 @@ export function SettingsTabs({ user, userPrefs, projects, teamProjects, projectL
   const [activeTab, setActiveTab] = useState<TabId>(resolveInitialTab);
 
   return (
-    <div>
-      {/* Tab nav — ScrollAffordance handles the mobile chevron-outside-fade
-          pattern. The outer border + horizontal padding/margin stay on the
-          wrapper so the border-bottom spans the full width even when scrolled. */}
-      <div className="border-b border-border-subtle -mx-4 px-4 mb-6">
-        <ScrollAffordance childCount={TABS.length} threshold={4}>
-          <div className="overflow-x-auto ui-scroll-fade-right [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-            <div className="flex min-w-max">
-              {TABS.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`ui-tab ${activeTab === tab.id ? "ui-tab-active" : ""}`}
-                >
-                  {tab.label}
-                </button>
-              ))}
+    <div className="lg:grid lg:grid-cols-[180px_minmax(0,1fr)] lg:gap-8">
+      {/* Nav: a vertical left rail on lg+ (all 11 sections visible — the old
+          horizontal bar overflowed 4 off-screen), falling back to the
+          horizontal scroll bar under lg. */}
+      <nav className="lg:self-start">
+        {/* Mobile / tablet: horizontal scroll bar */}
+        <div className="border-b border-border-subtle -mx-4 px-4 mb-6 lg:hidden">
+          <ScrollAffordance childCount={TABS.length} threshold={4}>
+            <div className="overflow-x-auto ui-scroll-fade-right [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+              <div className="flex min-w-max">
+                {TABS.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`ui-tab ${activeTab === tab.id ? "ui-tab-active" : ""}`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        </ScrollAffordance>
-      </div>
+          </ScrollAffordance>
+        </div>
+        {/* Desktop: vertical rail */}
+        <div className="hidden lg:flex lg:flex-col lg:gap-0.5">
+          {TABS.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`ui-settings-navitem ${activeTab === tab.id ? "ui-settings-navitem-active" : ""}`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </nav>
 
       {/* Tab content */}
+      <div className="min-w-0">
       {activeTab === "profile" && (
         <ProfileSettings user={{ id: user.id, name: user.name, username: user.username, image: user.image }} />
       )}
@@ -157,6 +173,7 @@ export function SettingsTabs({ user, userPrefs, projects, teamProjects, projectL
           />
         </Suspense>
       )}
+      </div>
     </div>
   );
 }

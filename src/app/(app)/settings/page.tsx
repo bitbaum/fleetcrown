@@ -28,7 +28,7 @@ export default async function SettingsPage() {
   if (!user) redirect(ROUTES.SIGN_IN);
 
   return (
-    <PageLayout title="Settings" maxWidth="max-w-2xl">
+    <PageLayout title="Settings" maxWidth="max-w-4xl">
       <SettingsTabs
         user={{
           id: user.id,

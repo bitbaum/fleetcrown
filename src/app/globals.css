@@ -1728,7 +1728,7 @@
     @apply space-y-5 rounded-2xl border border-border-subtle bg-surface-base p-6 sm:p-8 backdrop-blur-[12px];
   }
   .ui-auth-submit-btn {
-    @apply w-full rounded-xl bg-text-primary py-3 text-sm font-semibold text-text-inverted transition-opacity hover:opacity-90 active:opacity-70 disabled:opacity-35;
+    @apply w-full rounded-xl bg-text-primary py-3 text-sm font-semibold text-text-inverted transition-colors hover:opacity-90 active:opacity-70 disabled:bg-surface-raised disabled:text-text-muted disabled:cursor-not-allowed;
   }
   .ui-auth-title {
     font-size: clamp(var(--auth-title-min), var(--auth-title-preferred), var(--auth-title-max));
@@ -2157,7 +2157,10 @@
      iOS HIG) while keeping the desktop py-2 (≈36px) compact look. Same trick
      already used by ui-btn-add, ui-chip-toggle, ui-link-subtle. */
   .ui-btn-primary {
-    @apply inline-flex items-center justify-center gap-2 min-h-11 sm:min-h-0 rounded-lg bg-accent-warm px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-warm-hover active:opacity-90 disabled:opacity-40;
+    /* Disabled is NEUTRAL (muted surface), not a faded orange: opacity-40 of the
+       warm accent read as a washed-out "is this clickable?" button. A neutral
+       disabled state makes the enabled orange CTA unmistakable. */
+    @apply inline-flex items-center justify-center gap-2 min-h-11 sm:min-h-0 rounded-lg bg-accent-warm px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-warm-hover active:opacity-90 disabled:bg-surface-raised disabled:text-text-muted disabled:cursor-not-allowed;
   }
   .ui-btn-secondary {
     @apply inline-flex items-center justify-center gap-2 min-h-11 sm:min-h-0 rounded-lg border border-border-default px-4 py-2 text-sm font-medium text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary disabled:opacity-40;
@@ -2215,6 +2218,15 @@
   .ui-tab-badge-active {
     @apply bg-status-positive-subtle text-status-positive;
   }
+  /* Settings left-rail nav (lg+) — vertical section switcher beside the content
+     pane. Fills the horizontal space an 11-tab bar overflowed off-screen; under
+     lg the settings view falls back to the horizontal ui-tab bar. */
+  .ui-settings-navitem {
+    @apply w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-text-tertiary transition-colors hover:bg-surface-raised hover:text-text-primary;
+  }
+  .ui-settings-navitem-active {
+    @apply bg-surface-raised text-text-primary;
+  }
   /* Text + icon "add" link button.
      min-h-11 (44px) on mobile gives a real WCAG 2.5.5 tap target;
      sm:min-h-0 collapses to natural line height on desktop where hover is reliable. */
@@ -2228,11 +2240,11 @@
   }
   /* Full-width accent submit button (modal forms) */
   .ui-btn-submit {
-    @apply flex w-full items-center justify-center gap-2 rounded-lg bg-accent-primary px-4 py-3 text-sm font-medium text-text-inverted transition-colors hover:bg-accent-hover disabled:opacity-40;
+    @apply flex w-full items-center justify-center gap-2 rounded-lg bg-accent-primary px-4 py-3 text-sm font-medium text-text-inverted transition-colors hover:bg-accent-hover disabled:bg-surface-raised disabled:text-text-muted disabled:cursor-not-allowed;
   }
   /* Large card-level CTA buttons (control panel intent / action rows) */
   .ui-btn-lg {
-    @apply rounded-xl bg-accent-primary px-4 py-3 text-sm font-medium text-text-inverted transition-colors hover:bg-accent-hover disabled:opacity-50;
+    @apply rounded-xl bg-accent-primary px-4 py-3 text-sm font-medium text-text-inverted transition-colors hover:bg-accent-hover disabled:bg-surface-raised disabled:text-text-muted disabled:cursor-not-allowed;
   }
   /* Compact ready-banner action buttons (py-2.5 vs py-3 for lg) */
   .ui-btn-ready-primary {
@@ -3015,7 +3027,7 @@
     @apply inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border-subtle bg-surface-raised text-text-secondary transition-colors hover:border-border-default hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-45;
   }
   .ui-loki-send-btn {
-    @apply inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-primary text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40;
+    @apply inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-primary text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:bg-surface-raised disabled:text-text-muted;
   }
   .ui-loki-suggest-row {
     @apply flex min-w-0 flex-1 gap-1.5 overflow-x-auto pr-1 sm:flex-none sm:justify-end;
