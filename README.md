@@ -172,3 +172,4 @@ for the full matrix of browser-only vs local-runtime workflows.
 - Dependency audit runs daily and high+ findings block the audit workflow.
 
 See [SECURITY.md](SECURITY.md) for reporting and operational expectations.
+> Hosted autonomous runs are powered by the FleetCrown Hermes runner.
