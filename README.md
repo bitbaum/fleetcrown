@@ -19,6 +19,9 @@ Production: https://fleetcrown.orangecat.ch
   lifecycle signals, git state, and saved context are visible in one place.
 - **Builder life OS**: goals, people, habits, events, money, prompts, and
   thoughts live beside the work system rather than in disconnected apps.
+- **Economy-aware**: Loki pulls open demand from sibling product OrangeCat and
+  searches the economy by meaning (OrangeCat embeds the query server-side), so
+  finding what already exists and building what's missing is one flow.
 - **Operational trust**: runtime signals are persisted, versioned, and
   explained in the UI so users can tell the difference between active work,
   an open terminal, and historical handoff context.

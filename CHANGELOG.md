@@ -2,7 +2,49 @@
 
 Notable, user-facing changes. Older history lives in the git log (conventional commits).
 
-**Last modified:** 2026-07-17 - every profile fact is actionable, traceable, and true.
+**Last modified:** 2026-07-22 - the fleet coordinates, the economy is one query away, and every page tells you what it's doing.
+
+## 2026-07-22
+
+### Added
+- **`/agents` is a fleet coordination cockpit.** The page was a dead two-pane
+  view whose inter-agent message feed only ever read the builder's local files —
+  so on the hosted app it was permanently empty. It's now one glanceable column:
+  a fleet-status strip (builder presence, project / active / message counts), a
+  roster of your registered projects with live open/idle dots and one-tap
+  **Watch** (→ Terminal) and **Dispatch** (→ Control), and a coordination feed
+  that streams agent-to-agent messages — handoffs, questions, escalations — with
+  type-filter chips. A new cloud transport (`agent_messages`) carries those
+  messages off the builder's machine so the feed works in the hosted app.
+- **Loki knows the economy.** Ask about what people need and Loki now pulls
+  OrangeCat's open demand (wishlists + projects) straight into its context, and
+  can search the whole economy by meaning — OrangeCat embeds the query
+  server-side, so a match comes back without FleetCrown holding a copy of the
+  index. Find-what-exists and build-what's-missing are one conversation now.
+- **OrangeCat funding events land in the project timeline.** Money moving on the
+  economy side shows up in the fleet's Activity — the two products share one story.
+- **A founder revenue card + sustainability gates.** `/system` shows real MRR and
+  the break-even math; `docs/sustainability-gates.md` freezes the three spend
+  gates so the cost of running the fleet stays honest.
+- **Each project's README and `docs/` feed fleet knowledge.** The RAG layer now
+  indexes repo docs (`repo_doc`), so agents answer from what a project actually
+  documents, not just its database rows.
+
+### Changed
+- **The feedback widget grew teeth.** It's dogfooded on FleetCrown's own public
+  pages, an agent can file page-review findings straight through its API, and a
+  project's feedback inbox turns any report into a one-click, scoped agent run.
+  FAB contrast, dark-site polish, and a `data-fc-bottom` offset for host sites
+  that already have their own floating button round it off.
+- **Diagrams respect your theme and your motion settings.** The essay SVGs are
+  theme-aware and honor `prefers-reduced-motion`.
+
+### Fixed
+- **Deploys stop killing working agents.** The box-runner restart now drains
+  in-flight agents first, and a red CI blocks the deploy instead of shipping it —
+  atomic releases with automatic rollback if the box schema doesn't match.
+- **Cloud dispatch prep no longer dies on an ESM-only SDK import**, and box
+  alerting is push-based (no Grafana) with recovery-aware noise suppression.
 
 ## 2026-07-17
 
