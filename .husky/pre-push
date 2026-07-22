@@ -33,14 +33,25 @@ echo "→ test:pre-push-prod-dogfood"
 npm run test:pre-push-prod-dogfood
 
 # >>> fleetcrown push-deploy >>>
-# Pushing main deploys to the Hetzner box (background; see /tmp/push-deploy-fleetcrown.log)
-if git symbolic-ref --short HEAD 2>/dev/null | grep -qx main; then
-  # Pin the deploy to the SHA at push time. The deploy runs detached (sleep 5),
-  # by which point HEAD may have moved to another branch — building the floating
-  # tree then would ship the WRONG ref. --ref makes deploy-hetzner build this
-  # exact commit in an isolated worktree instead.
-  DEPLOY_SHA="$(git rev-parse HEAD)"
-  ( sleep 5 && env -u CI -u VERCEL bash /home/g/dev/fleetcrown/scripts/deploy-hetzner.sh --ref "$DEPLOY_SHA" ) >> /tmp/push-deploy-fleetcrown.log 2>&1 & disown 2>/dev/null || true
-  echo "[push-deploy] fleetcrown: deploy of $(printf %.12s "$DEPLOY_SHA") started in background → /tmp/push-deploy-fleetcrown.log"
+# Pushing the repo's default branch deploys to the Hetzner box
+# (background; see /tmp/push-deploy-fleetcrown.log). Repos differ: some use
+# 'main', some still use 'master' — match either so push-to-deploy fires
+# regardless of the repo's branch convention.
+# CI GATE: the background deploy first waits for GitHub CI on the pushed
+# commit and is BLOCKED on a red — prod only receives what CI verified
+# (ci-gate.sh; repos without CI pass after a short grace window).
+if git symbolic-ref --short HEAD 2>/dev/null | grep -qxE 'main|master'; then
+  ( sleep 5
+    _sha=$(git rev-parse HEAD)
+    _nwo=$(git remote get-url origin 2>/dev/null | sed -E 's#(git@github.com:|https://github.com/)##; s#\.git$##')
+    if [ -n "$_nwo" ] && ! bash "/home/g/dev/fleetcrown/scripts/hetzner/ci-gate.sh" "$_nwo" "$_sha"; then
+      echo "[push-deploy] fleetcrown: BLOCKED by CI gate for ${_sha} — fix CI, then re-push or deploy manually"
+    else
+      # --ref pins the build to the pushed SHA — a backgrounded deploy must not
+      # build whatever branch the tree has since switched to (see deploy-hetzner.sh)
+      env -u CI bash /home/g/dev/fleetcrown/scripts/deploy-hetzner.sh --ref "$_sha"
+    fi
+  ) >> /tmp/push-deploy-fleetcrown.log 2>&1 & disown 2>/dev/null || true
+  echo "[push-deploy] fleetcrown: CI-gated deploy started in background → /tmp/push-deploy-fleetcrown.log"
 fi
 # <<< fleetcrown push-deploy <<<

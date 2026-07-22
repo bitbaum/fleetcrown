@@ -18,8 +18,10 @@ import { DAY_MS } from "@/lib/constants/time";
  * uses means a BTC-granted plan is identical to a card-granted one.
  *
  * Fail-closed: no shared secret configured → 503 (can't verify, so refuse).
- * The OC side that sends this is not built yet; this endpoint is inert-but-ready
- * until ORANGECAT_WEBHOOK_SECRET is set on both products.
+ * The OC emitter IS built — `src/services/fleetcrown/entitlement-notify.ts` in
+ * the orangecat repo signs and POSTs here from handlePaymentConfirmed. Both ends
+ * stay inert until the shared ORANGECAT_WEBHOOK_SECRET is set on both boxes; once
+ * it is, a settled BTC payment on OrangeCat grants the plan here automatically.
  */
 const Body = z.object({
   actorId: z.string().uuid(),
