@@ -166,6 +166,22 @@ echo "✓ wrote /opt/monitoring/targets.conf"
 # Prime state + show the first read (currently-down targets alert on next tick).
 ssh -o BatchMode=yes "$HOST" '/opt/monitoring/watch.sh; echo "→ first watchdog pass done (journalctl -t watchdog for any alerts)"'
 
+# LOUD if delivery is dark. All the detection in the world is worthless if the
+# alerts reach nobody: telegram.env shipped as a commented template and stayed
+# that way for months — every alert went to the journal, which no one tails at
+# 04:00. Surface it every run until a real token is present.
+if ssh -o BatchMode=yes "$HOST" 'grep -qE "^TELEGRAM_BOT_TOKEN=.+" /opt/monitoring/telegram.env 2>/dev/null'; then
+  echo "✓ Telegram delivery ACTIVE (token present)."
+else
+  cat <<'DARK'
+
+⚠️  ⚠️  ⚠️  ALERTS ARE JOURNAL-ONLY — YOU WILL NOT BE NOTIFIED  ⚠️  ⚠️  ⚠️
+   /opt/monitoring/telegram.env has no active TELEGRAM_BOT_TOKEN, so every
+   watchdog / OnFailure / host-check alert is written to the journal and
+   delivered to NOBODY. The detection is real; the delivery is dark.
+DARK
+fi
+
 cat <<'NOTE'
 
 ── To activate alerts ─────────────────────────────────────────────────────────
