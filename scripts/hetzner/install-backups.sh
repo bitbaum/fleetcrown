@@ -74,14 +74,84 @@ for db in "${DBS[@]}"; do
   fi
 done
 
+# Supabase stack lives in a SEPARATE Postgres (the supabase-db container, port 5433) that
+# the box-system loop above CANNOT see — OrangeCat + any Supabase-stack app live in its
+# `postgres` DB. Without this they had NO backup (the system "orangecat" DB was an empty
+# stub). Dump the container DBs too.
+if docker ps --format "{{.Names}}" 2>/dev/null | grep -qx supabase-db; then
+  for sdb in postgres _supabase; do
+    if docker exec supabase-db pg_dump -U postgres -Fc "$sdb" > "$DEST/supabase-${sdb}-$STAMP.dump" 2>/dev/null; then
+      log "ok supabase/$sdb ($(du -h "$DEST/supabase-${sdb}-$STAMP.dump" | cut -f1))"
+    else
+      log "FAIL supabase/$sdb"; rm -f "$DEST/supabase-${sdb}-$STAMP.dump"; fail=1
+    fi
+  done
+  # Cluster globals (roles/grants) of the CONTAINER cluster — pg_dump alone omits them;
+  # without this a from-scratch pg_restore errors on supabase_realtime_admin /
+  # supabase_functions_admin etc. (found by the 2026-07-03 restore drill).
+  if docker exec supabase-db pg_dumpall -U supabase_admin --globals-only 2>/dev/null | gzip > "$DEST/supabase-globals-$STAMP.sql.gz" && [ -s "$DEST/supabase-globals-$STAMP.sql.gz" ]; then
+    log "ok supabase/globals"
+  else
+    log "FAIL supabase/globals"; rm -f "$DEST/supabase-globals-$STAMP.sql.gz"; fail=1
+  fi
+fi
+
+# Config + secrets snapshot (Phase 2b). The DB dumps alone CANNOT rebuild the box: a
+# from-scratch restore also needs the Supabase stack .env (JWT_SECRET / ANON / SERVICE_ROLE
+# / DB password), the app .env, the Caddyfile and the compose files. If those secrets are
+# lost, a fresh Supabase mints NEW keys that won't match the restored app → auth breaks.
+# Stage them with 600 perms into a dir that restic also pushes (encrypted at rest).
+# See docs/operations/DISASTER_RECOVERY.md.
+# SSOT-DISCOVERED from the filesystem (what's actually deployed), so it can't
+# drift from a hand-maintained list. The old list captured only orangecat +
+# supabase, so ~15 apps' .env secrets (NEXTAUTH/CRON/API keys — non-regenerable)
+# were UNBACKED and the box was not rebuildable (found 2026-07-22).
+CFG=/opt/backups/config
+rm -rf "$CFG"; mkdir -p "$CFG"; chmod 700 "$CFG"   # clean so a removed app doesn't linger
+stage(){ [ -e "$1" ] && install -D -m 600 "$1" "$2" && log "cfg ${2#"$CFG"/}"; }
+
+# Every deployed app's LIVE secrets (releases layout → shared/.env; legacy → app/.env).
+for name in $(ls -1 /opt 2>/dev/null); do
+  for e in "/opt/$name/shared/.env" "/opt/$name/app/.env"; do
+    [ -e "$e" ] && { install -D -m 600 "$e" "$CFG/apps/${name}.env"; log "cfg apps/${name}.env"; break; }
+  done
+done
+# Non-app service envs
+stage /opt/supabase/docker/.env    "$CFG/supabase.env"
+stage /opt/fleetcrown/runner/.env  "$CFG/fleetcrown-runner.env"
+# Caddy (main config + every app vhost)
+stage /etc/caddy/Caddyfile "$CFG/caddy/Caddyfile"
+for v in /etc/caddy/apps.d/*.caddy; do stage "$v" "$CFG/caddy/$(basename "$v")"; done
+# Every fleetcrown-generated unit + drop-in + timer + launch script (regenerable
+# from apps.conf, but cheap to snapshot so a restore is turnkey).
+for u in /etc/systemd/system/*-app.service /etc/systemd/system/appcron-*.service /etc/systemd/system/appcron-*.timer; do
+  stage "$u" "$CFG/systemd/$(basename "$u")"
+done
+for d in /etc/systemd/system/*-app.service.d/*.conf; do
+  [ -e "$d" ] && stage "$d" "$CFG/systemd/$(basename "$(dirname "$d")").d__$(basename "$d")"
+done
+for l in /opt/*/shared/launch.sh /opt/*/app/launch.sh; do
+  [ -e "$l" ] && { n=$(echo "$l" | sed -E 's#/opt/([^/]+)/.*#\1#'); stage "$l" "$CFG/apps/${n}-launch.sh"; }
+done
+# Monitoring config (telegram token is a secret → CFG is 700 + restic-encrypted).
+for m in /opt/monitoring/targets.conf /opt/monitoring/telegram.env; do
+  stage "$m" "$CFG/monitoring/$(basename "$m")"
+done
+# Supabase stack topology
+for f in /opt/supabase/docker/docker-compose*.yml; do stage "$f" "$CFG/$(basename "$f")"; done
+
 # Local retention (same disk — Phase 1 safety net only).
 find "$DEST" -type f \( -name '*.dump' -o -name '*.sql.gz' \) -mtime "+$KEEP_DAYS" -delete
 
-# Off-box push (Phase 2 — only when configured).
+# Off-box push (Phase 2 — only when configured). Pushes BOTH the DB dumps ($DEST) and the
+# config/secret snapshot ($CFG) in one encrypted snapshot.
 if [ -f /opt/backups/restic.env ]; then
   set -a; . /opt/backups/restic.env; set +a
   if restic snapshots >/dev/null 2>&1 || restic init >/dev/null 2>&1; then
-    if restic backup "$DEST" --tag pg --host bitbaum >/dev/null 2>&1; then
+    # DB dumps + config/secrets + USER UPLOADS (medical docs, pet photos — on
+    # local disk, previously NOT in any backup).
+    BPATHS=("$DEST" "$CFG"); for u in /opt/*/uploads; do [ -d "$u" ] && BPATHS+=("$u"); done
+    if restic backup "${BPATHS[@]}" --tag pg --host bitbaum >/dev/null 2>&1; then
       log "restic push ok → $RESTIC_REPOSITORY"
       restic forget --keep-daily 14 --keep-weekly 8 --keep-monthly 12 --prune >/dev/null 2>&1 || true
     else
@@ -166,3 +236,4 @@ Restore drill (do this once so you trust it):
      sudo -u postgres pg_restore -d <db> --clean /tmp/restore/opt/backups/pg/<db>-*.dump
 ────────────────────────────────────────────────────────────────────────────
 NEXT
+
