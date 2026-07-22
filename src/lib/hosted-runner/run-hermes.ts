@@ -93,7 +93,20 @@ export async function runHermesTask(input: {
     const slug = task.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 32) || "task";
     const branch = `hermes/${slug}-${Date.now().toString(36)}`;
 
-    const prompt = projectContext ? `${projectContext}\n\nTask:\n${task}` : task;
+    // Guardrails: this runs unattended and the diff goes straight to a PR. The
+    // dominant failure mode is an agent that "helpfully" reformats, installs
+    // deps, or edits unrelated files (observed 2026-07-22: gpt-4o redacted a
+    // README placeholder + touched package-lock.json for a one-line docs task).
+    // Constrain it to a minimal, reviewable change.
+    const GUARDRAILS = [
+      "Constraints for this run (follow exactly):",
+      "- Make the SMALLEST change that accomplishes the task. Edit only the files the task requires.",
+      "- Do NOT install, add, upgrade, or remove dependencies, and do NOT modify lockfiles (package-lock.json, pnpm-lock.yaml, yarn.lock).",
+      "- Do NOT reformat, lint, or rewrite code you were not explicitly asked to change.",
+      "- Do NOT alter configuration, secrets, or placeholder values you were not asked to change.",
+      "- If the task is ambiguous or cannot be done safely, make no changes and explain why.",
+    ].join("\n");
+    const prompt = [projectContext, `Task:\n${task}`, GUARDRAILS].filter(Boolean).join("\n\n");
     const modelArgs = model && model !== "auto" ? ["-m", model] : [];
 
     // Headless agentic run. --yolo bypasses approval prompts (we're in a throwaway

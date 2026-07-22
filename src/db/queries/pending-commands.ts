@@ -157,6 +157,14 @@ export async function retryFailedCommand(userId: string, id: string): Promise<st
 // 90s crash-recovery lease without duplicating live dispatches.
 const STALE_CLAIM_SECONDS = 90;
 
+// Hosted runs (Hermes clone→edit→PR) legitimately hold a claim for MINUTES —
+// run-hermes has a 15-min timeout. The 90s local-dispatch lease would reclaim a
+// healthy in-flight Hermes run, and a second drainer tick then re-runs it →
+// duplicate branches/PRs (observed 2026-07-22). Give hosted command types a
+// lease longer than the run timeout so only a genuinely dead run is reclaimed.
+const HOSTED_STALE_CLAIM_SECONDS = 20 * 60;
+const HOSTED_COMMAND_TYPES = ["hosted_dispatch", "hosted_analyze"] as const;
+
 // Commands queued while the runner was offline go stale fast: executing a
 // days-old "inject into tab X" / "launch agent in Y" against a Zellij that has
 // since changed just fails noisily and clutters Control. Purge unclaimed,
@@ -198,7 +206,12 @@ export async function reclaimStalePendingCommands(userIds: string[]): Promise<nu
       userFilter,
       isNotNull(pendingCommands.claimedAt),
       isNull(pendingCommands.executedAt),
-      sql`${pendingCommands.claimedAt} < NOW() - INTERVAL '1 second' * ${STALE_CLAIM_SECONDS}`,
+      // Type-aware lease: hosted (Hermes) runs get a much longer grace so a
+      // healthy multi-minute run is never reclaimed mid-flight and double-run.
+      sql`${pendingCommands.claimedAt} < NOW() - INTERVAL '1 second' * (
+        CASE WHEN ${pendingCommands.type} IN (${sql.join(HOSTED_COMMAND_TYPES.map((t) => sql`${t}`), sql`, `)})
+             THEN ${HOSTED_STALE_CLAIM_SECONDS} ELSE ${STALE_CLAIM_SECONDS} END
+      )`,
     ))
     .returning({ id: pendingCommands.id });
   return reclaimed.length;
