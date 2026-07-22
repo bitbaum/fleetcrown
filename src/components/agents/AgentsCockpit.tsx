@@ -122,7 +122,7 @@ export function AgentsCockpit({ registeredProjects }: { registeredProjects: Rost
                     title={`Watch ${r.name} live`}
                   >
                     <Eye className="h-3.5 w-3.5" />
-                    Watch
+                    <span className="hidden sm:inline">Watch</span>
                   </Link>
                   <Link
                     href={`/control?project=${encodeURIComponent(r.name)}`}
@@ -130,7 +130,7 @@ export function AgentsCockpit({ registeredProjects }: { registeredProjects: Rost
                     title={`Dispatch to ${r.name}`}
                   >
                     <Rocket className="h-3 w-3" />
-                    Dispatch
+                    <span className="hidden sm:inline">Dispatch</span>
                   </Link>
                 </div>
               </li>
