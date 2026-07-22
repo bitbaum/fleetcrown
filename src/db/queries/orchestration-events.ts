@@ -20,6 +20,42 @@ export async function createOrchestrationEventOnce(event: NewOrchestrationEvent,
   return created ?? null;
 }
 
+export type RecentProjectActivity = {
+  eventType: OrchestrationEventType;
+  detail: string | null;
+  adapter: string | null;
+  happenedAt: Date;
+};
+
+/** Recent meaningful activity for one project, newest first — the "what was just
+ *  done" signal fed to a hosted dispatch so the agent doesn't repeat or collide
+ *  with work already completed. Filtered to outcome-bearing lifecycle types with
+ *  a human-readable detail (skips the bare continue/close_requested chatter). */
+export async function getRecentProjectActivity(
+  userId: string,
+  projectKey: string,
+  limit = 8,
+): Promise<RecentProjectActivity[]> {
+  const rows = await db
+    .select({
+      eventType: orchestrationEvents.eventType,
+      detail: orchestrationEvents.detail,
+      adapter: orchestrationEvents.adapter,
+      happenedAt: orchestrationEvents.happenedAt,
+    })
+    .from(orchestrationEvents)
+    .where(
+      and(
+        eq(orchestrationEvents.userId, userId),
+        eq(orchestrationEvents.projectKey, projectKey),
+        inArray(orchestrationEvents.eventType, ["task_completed", "task_failed"]),
+      ),
+    )
+    .orderBy(desc(orchestrationEvents.happenedAt))
+    .limit(limit);
+  return rows.filter((r) => r.detail && r.detail.trim());
+}
+
 export async function getLatestEventsByProjectKeys(
   userId: string,
   projectKeys: string[],

@@ -72,10 +72,13 @@ export async function runHermesTask(input: {
   gitUrl: string;
   task: string;
   projectContext?: string | null;
+  /** Compact "what was just done" block (recent completed/failed work) so the
+   *  agent doesn't repeat or collide with it. Assembled by the consumer. */
+  recentActivity?: string | null;
   token?: string | null;
   model?: string;
 }): Promise<HermesRunResult> {
-  const { gitUrl, task, projectContext, token, model } = input;
+  const { gitUrl, task, projectContext, recentActivity, token, model } = input;
 
   // Orchestrate, don't assume: if the runtime isn't present, say so clearly.
   if (!commandExistsInPath("hermes")) {
@@ -110,7 +113,7 @@ export async function runHermesTask(input: {
       "- If a file you were asked to CREATE already exists, do NOT overwrite or wholesale-replace it — append or make a minimal edit, or report the conflict and change nothing.",
       "- If the task is ambiguous or cannot be done safely, make no changes and explain why.",
     ].join("\n");
-    const prompt = [projectContext, `Task:\n${task}`, GUARDRAILS].filter(Boolean).join("\n\n");
+    const prompt = [projectContext, recentActivity, `Task:\n${task}`, GUARDRAILS].filter(Boolean).join("\n\n");
     const modelArgs = model && model !== "auto" ? ["-m", model] : [];
 
     // Headless agentic run. --yolo bypasses approval prompts (we're in a throwaway

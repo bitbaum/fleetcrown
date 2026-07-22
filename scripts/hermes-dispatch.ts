@@ -11,14 +11,17 @@
  * sandbox → commit on a branch → open a PR. Nothing auto-merges — you review it.
  * Progress is visible in Activity (source="hosted-runner", adapter="hermes").
  *
+ * Resolution + enqueue + Activity attribution are shared with the API route via
+ * dispatchToHostedRunner — this script only supplies the owner userId (the box
+ * has no session) and prints the result.
+ *
  * Usage:
  *   DATABASE_URL=… npx tsx scripts/hermes-dispatch.ts <projectKey> "<task>" [model]
  * Example:
  *   … scripts/hermes-dispatch.ts fleetcrown "Add a CONTRIBUTING.md with build + test steps"
  */
 import { getSelfImprovementTarget } from "@/db/queries/frontier";
-import { getUserProjects } from "@/db/queries/user-projects";
-import { enqueueHostedDispatchCommand } from "@/db/queries/pending-commands";
+import { dispatchToHostedRunner } from "@/lib/hosted-runner/dispatch";
 
 async function main() {
   const [projectKey, task, model] = process.argv.slice(2);
@@ -29,28 +32,15 @@ async function main() {
   const target = await getSelfImprovementTarget();
   if (!target) { console.error("No FleetCrown owner resolved — nothing to dispatch for."); process.exit(1); }
 
-  const projects = await getUserProjects(target.userId);
-  const key = projectKey.toLowerCase();
-  const project = projects.find(
-    (p) => p.name?.toLowerCase() === key || (p.gitUrl ?? "").toLowerCase().includes(`/${key}`),
-  );
-  if (!project) {
-    console.error(`No project matching "${projectKey}". Known: ${projects.map((p) => p.name).filter(Boolean).join(", ")}`);
-    process.exit(1);
-  }
-  if (!project.gitUrl) {
-    console.error(`Project "${project.name}" has no gitUrl — set one (Projects → edit) so Hermes can clone it.`);
+  const res = await dispatchToHostedRunner({ userId: target.userId, projectKey, task, ...(model ? { model } : {}) });
+  if (!res.ok) {
+    console.error(`✗ ${res.error}`);
+    if (res.knownProjects?.length) console.error(`  Known projects: ${res.knownProjects.join(", ")}`);
     process.exit(1);
   }
 
-  const id = await enqueueHostedDispatchCommand(target.userId, {
-    projectKey,
-    gitUrl: project.gitUrl,
-    task,
-    ...(model ? { model } : {}),
-  });
-  console.log(`✓ queued hosted Hermes dispatch ${id}`);
-  console.log(`  project: ${project.name}   repo: ${project.gitUrl}`);
+  console.log(`✓ queued hosted Hermes dispatch ${res.hostedDispatchId}`);
+  console.log(`  project: ${res.projectName}   repo: ${res.gitUrl}`);
   console.log(`  task:    ${task}`);
   console.log(`  Drained by fleetcrown-hosted-runner.timer (~≤1 min) → clone → Hermes → PR (never auto-merged).`);
   console.log(`  Watch:   journalctl -u fleetcrown-hosted-runner -f    |    Activity (source=hosted-runner)`);

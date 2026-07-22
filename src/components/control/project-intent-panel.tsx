@@ -14,6 +14,7 @@ import { useBuilderPresence } from "@/hooks/use-builder-presence";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import type { ProjectState } from "@/lib/control-types";
 import { PromptInput } from "./prompt-input";
+import { HostedDispatchButton } from "./HostedDispatchButton";
 import { QueueList } from "./queue-list";
 import { ProjectPromptLibrary } from "./ProjectPromptLibrary";
 import { haptic } from "@/lib/haptics";
@@ -293,6 +294,10 @@ export function IntentButtonPanel({
                   Clear context
                 </button>
               )}
+              {/* Explicit hosted-runner path: works regardless of local-runner
+                  state (the composer's Send only auto-routes to Hermes when the
+                  runner is OFFLINE). Prefills from the current composer text. */}
+              <HostedDispatchButton projectTab={project.tab} projectName={project.tab} initialTask={custom} />
             </div>
           )}
         </div>

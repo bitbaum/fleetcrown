@@ -16,6 +16,7 @@
 import { setRunnerConnected } from "@/db/queries/runner-presence";
 import { claimNextPendingCommand, markCommandExecuted, type HostedAnalyzePayload, type HostedDispatchPayload } from "@/db/queries/pending-commands";
 import { getProjectContext } from "@/db/queries/project-context";
+import { getRecentProjectActivity, type RecentProjectActivity } from "@/db/queries/orchestration-events";
 import { getSelfImprovementTarget } from "@/db/queries/frontier";
 import { getGithubToken } from "@/lib/github-token";
 import { appendProjectDevLog } from "@/db/queries/user-projects";
@@ -35,6 +36,29 @@ const POLL_MS = 5_000;
 // to a sandboxed coding agent (Hermes, Phase 1). Local-runner dispatch/inject
 // commands are deliberately NOT claimed here.
 const HOSTED_TYPES = ["hosted_analyze", "hosted_dispatch"];
+
+/** Compact "what was just done" block so Hermes doesn't repeat or collide with
+ *  recent work. Consumer-side because it enriches EVERY hosted dispatch (auto-
+ *  routed or intentional) at the single choke point, not per trigger. */
+function renderRecentActivity(rows: RecentProjectActivity[]): string | null {
+  if (!rows.length) return null;
+  const now = Date.now();
+  const ago = (d: Date) => {
+    const mins = Math.max(1, Math.round((now - d.getTime()) / 60_000));
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.round(mins / 60);
+    return hrs < 48 ? `${hrs}h ago` : `${Math.round(hrs / 24)}d ago`;
+  };
+  const lines = rows.map((r) => {
+    const who = r.adapter ? `${r.adapter}: ` : "";
+    const mark = r.eventType === "task_failed" ? "✗" : "✓";
+    return `- ${ago(r.happenedAt)} ${mark} ${who}${(r.detail ?? "").slice(0, 160)}`;
+  });
+  return [
+    "Recent activity on this project (newest first — already done, do NOT repeat or undo it):",
+    ...lines,
+  ].join("\n");
+}
 
 async function logResult(userId: string, projectKey: string, label: string, text: string) {
   await appendProjectDevLog(userId, projectKey, {
@@ -88,7 +112,14 @@ async function tick(userId: string): Promise<boolean> {
       console.log(`[hosted-runner] dispatch→hermes ${p.projectKey}: ${p.task.slice(0, 60)}`);
       void emitHostedEvent(userId, p.projectKey, "task_started", `Hermes dispatch — ${p.task.slice(0, 120)}`, HERMES_ADAPTER);
       const model = (cmd.payload as HostedDispatchPayload).model;
-      const res = await runHermesTask({ gitUrl: p.gitUrl, task: p.task, projectContext: ctx, token, model });
+      // Recent-activity context: give Hermes the "what was just done" signal so it
+      // doesn't repeat or undo recent work. Single choke point — every hosted
+      // dispatch (auto-routed or intentional) gets it here, not per trigger.
+      const recent = await getRecentProjectActivity(userId, p.projectKey).catch(() => []);
+      const res = await runHermesTask({
+        gitUrl: p.gitUrl, task: p.task, projectContext: ctx,
+        recentActivity: renderRecentActivity(recent), token, model,
+      });
       if (res.ok) {
         const summary = res.noChanges
           ? `${res.output}\n\n(Hermes made no file changes.)`
