@@ -1,0 +1,49 @@
+<svg viewBox="0 0 760 412" xmlns="http://www.w3.org/2000/svg" font-family="Geist, ui-sans-serif, system-ui, -apple-system, sans-serif">
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--text-tertiary)"/>
+    </marker>
+    <marker id="ahA" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#f97316"/>
+    </marker>
+  </defs>
+
+  <!-- intent -->
+  <rect x="278" y="14" width="204" height="42" rx="21" fill="var(--surface-raised)" stroke="var(--border-default)" stroke-width="1.5"/>
+  <text x="380" y="40" text-anchor="middle" font-size="14" fill="var(--text-secondary)">intent · any channel</text>
+
+  <!-- intent -> captain -->
+  <line x1="380" y1="56" x2="380" y2="90" stroke="var(--text-tertiary)" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- captain (accent) -->
+  <rect x="200" y="92" width="360" height="82" rx="14" fill="var(--surface-raised)" stroke="#f97316" stroke-width="2.5"/>
+  <text x="380" y="124" text-anchor="middle" font-size="17" font-weight="600" fill="var(--text-primary)">FleetCrown — the captain</text>
+  <text x="380" y="148" text-anchor="middle" font-size="13" fill="var(--text-secondary)">govern · dispatch · verify across lineages</text>
+
+  <!-- captain <-> workers -->
+  <line x1="296" y1="174" x2="212" y2="262" stroke="var(--text-tertiary)" stroke-width="1.5" marker-end="url(#ah)"/>
+  <text x="196" y="214" text-anchor="middle" font-size="11" fill="var(--text-muted)">dispatch</text>
+  <line x1="178" y1="262" x2="262" y2="176" stroke="var(--text-tertiary)" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#ah)"/>
+  <text x="288" y="236" text-anchor="middle" font-size="11" fill="var(--text-muted)">verify</text>
+
+  <!-- captain <-> economy -->
+  <line x1="464" y1="174" x2="548" y2="262" stroke="#f97316" stroke-width="1.5" marker-end="url(#ahA)"/>
+  <text x="566" y="214" text-anchor="middle" font-size="11" fill="var(--text-muted)">value</text>
+  <line x1="582" y1="262" x2="498" y2="176" stroke="var(--text-tertiary)" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#ah)"/>
+  <text x="474" y="236" text-anchor="middle" font-size="11" fill="var(--text-muted)">demand</text>
+
+  <!-- workers (neutral, swappable) -->
+  <rect x="24" y="264" width="336" height="86" rx="14" fill="var(--surface-raised)" stroke="var(--border-default)" stroke-width="1.5"/>
+  <text x="192" y="295" text-anchor="middle" font-size="15" font-weight="600" fill="var(--text-primary)">swappable workers</text>
+  <text x="192" y="318" text-anchor="middle" font-size="12" fill="var(--text-secondary)">Hermes · Claude Code · Codex</text>
+  <text x="192" y="336" text-anchor="middle" font-size="12" fill="var(--text-secondary)">Grok · OpenClaw</text>
+
+  <!-- economy (accent) -->
+  <rect x="400" y="264" width="336" height="86" rx="14" fill="var(--surface-raised)" stroke="#f97316" stroke-width="2.5"/>
+  <text x="568" y="295" text-anchor="middle" font-size="15" font-weight="600" fill="var(--text-primary)">OrangeCat — the economy</text>
+  <text x="568" y="318" text-anchor="middle" font-size="12" fill="var(--text-secondary)">meter · price · settle in BTC</text>
+  <text x="568" y="336" text-anchor="middle" font-size="12" fill="var(--text-secondary)">remembers need, not only supply</text>
+
+  <!-- caption -->
+  <text x="380" y="386" text-anchor="middle" font-size="12" fill="var(--text-muted)">The accent marks the two layers a single worker cannot be: its own verifier, and its own market.</text>
+</svg>

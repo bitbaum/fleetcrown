@@ -53,24 +53,7 @@ Price is not a property of the work; it is a relation between the work and someo
 
 These two impossibilities are the entire argument. Verification-by-another and value-that-moves both demand something a single worker is without by definition: plurality, and a ledger. Name the first governance and the second economy. They are not features you add to an agent once it is good enough. They are the two things an agent, however good, cannot be.
 
-```mermaid
-flowchart TB
-    Intent["intent — any channel"]
-    Cap["FleetCrown · the captain<br/>govern → dispatch → verify across lineages"]
-    Ships["Hermes · Claude Code · Codex · Grok · OpenClaw<br/>swappable workers"]
-    Econ["OrangeCat · the economy<br/>meter → price → settle in BTC"]
-
-    Intent --> Cap
-    Cap --> Ships
-    Ships -->|"result"| Cap
-    Cap -->|"value that moves"| Econ
-    Econ -->|"real demand · the FIND→BUILD wire"| Cap
-
-    style Cap stroke:#f97316,stroke-width:3px
-    style Econ stroke:#f97316,stroke-width:3px
-    style Ships stroke:#6b7280,stroke-width:1px
-    style Intent stroke:#6b7280,stroke-width:1px
-```
+![The FleetCrown stack: intent enters through any channel; the captain (FleetCrown) governs, dispatches to swappable workers, and verifies their output across model lineages; the economy (OrangeCat) meters, prices, and settles the result and feeds real demand back. The accent marks the two durable layers — the verifier and the market — that a single worker cannot be.](/thoughts/fleet-stack.svg)
 
 ## Our tools, specifically
 
