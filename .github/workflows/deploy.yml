@@ -62,7 +62,7 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha }}  # deploy the exact CI-green commit
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
