@@ -17,6 +17,17 @@ import { DAY_MS, HOUR_MS, HTTP_TIMEOUT_SHORT_MS } from "@/lib/constants/time";
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 const DEFAULT_CALENDAR = "primary";
 
+/**
+ * Which `gog` binary to invoke. Defaults to `gog` on PATH — on the box that is a
+ * safety shim that refuses calendar writes and tells the agent to route through
+ * the approval queue. The post-approval calendar drain (the ONE sanctioned
+ * executor) sets GOG_BIN=/usr/local/bin/gog.real to reach the real binary,
+ * bypassing the shim for approved events only. Kept as an env override (not a
+ * PATH/symlink trick) so the bypass is scoped to that single process and never
+ * re-opens the shim for the OpenClaw gateway running as the same user.
+ */
+const GOG_BIN = process.env.GOG_BIN?.trim() || "gog";
+
 export type ResolvedEventTimes = {
   /** RFC3339 instant, or YYYY-MM-DD when allDay. */
   from: string;
@@ -165,7 +176,7 @@ export async function bookCalendarEvent(
   const args = await resolveGogCreateArgs(payload, fallbackTitle);
   if (!args) return { ok: false, error: "missing title or date/time in event payload" };
 
-  const res = await runToolArgs("gog", args, 20000);
+  const res = await runToolArgs(GOG_BIN, args, 20000);
   if (!res.ok) return { ok: false, error: res.error ?? "gog calendar create failed" };
 
   // gog --json returns the created event; surface id/link for the audit trail.
