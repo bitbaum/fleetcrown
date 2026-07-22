@@ -92,7 +92,7 @@
     "electron": "^33.2.1",
     "electron-builder": "^25.1.8",
     "electron-vite": "^2.3.0",
-    "typescript": "^5",
+    "typescript": "^7",
     "vite": "^6.0.7"
   }
 }
