@@ -104,6 +104,7 @@ export async function runHermesTask(input: {
       "- Do NOT install, add, upgrade, or remove dependencies, and do NOT modify lockfiles (package-lock.json, pnpm-lock.yaml, yarn.lock).",
       "- Do NOT reformat, lint, or rewrite code you were not explicitly asked to change.",
       "- Do NOT alter configuration, secrets, or placeholder values you were not asked to change.",
+      "- If a file you were asked to CREATE already exists, do NOT overwrite or wholesale-replace it — append or make a minimal edit, or report the conflict and change nothing.",
       "- If the task is ambiguous or cannot be done safely, make no changes and explain why.",
     ].join("\n");
     const prompt = [projectContext, `Task:\n${task}`, GUARDRAILS].filter(Boolean).join("\n\n");
