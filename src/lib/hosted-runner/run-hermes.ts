@@ -6,12 +6,15 @@
 // Captain Needs a Ship"): we don't out-build Nous's runtime; we point it at a
 // project the same way we point claude/grok.
 //
-// Invocation (verified live on the box, 2026-06-25):
-//   hermes -z "<task>" --yolo            # one-shot; --yolo bypasses approval stalls
-//   Model + Nous-Portal creds come from ~/.hermes/config.yaml (provider: nous,
-//   default: qwen/qwen3-coder-next). We do NOT pass --ignore-user-config — that
-//   bypasses the config and falls back to a built-in default that doesn't work.
-//   Run inside the cloned repo dir; Hermes' terminal.backend=local edits CWD.
+// Invocation (verified live on the box, 2026-07-22):
+//   hermes -z "<task>" --yolo [-m <model>]   # one-shot; --yolo bypasses approval stalls
+//   Provider + default model come from ~/.hermes/config.yaml (provider: copilot,
+//   default: gpt-4.1 — GitHub Models, FREE via the injected GITHUB_TOKEN). gpt-4.1
+//   is the reliable everyday coder with generous free-tier limits; pass a per-task
+//   `model` (e.g. gpt-5) to trade limits for peak quality on high-value tasks.
+//   We do NOT pass --ignore-user-config — that bypasses the config and falls back
+//   to a built-in default that doesn't work. Run inside the cloned repo dir;
+//   Hermes' terminal.backend=local edits CWD.
 //
 // The agent's work is PRESERVED: after it edits, we commit on a fresh branch,
 // push, and open a PR — so an offline dispatch lands reviewable changes instead
