@@ -33,25 +33,35 @@ echo "→ test:pre-push-prod-dogfood"
 npm run test:pre-push-prod-dogfood
 
 # >>> fleetcrown push-deploy >>>
-# Pushing the repo's default branch deploys to the Hetzner box
-# (background; see /tmp/push-deploy-fleetcrown.log). Repos differ: some use
-# 'main', some still use 'master' — match either so push-to-deploy fires
-# regardless of the repo's branch convention.
-# CI GATE: the background deploy first waits for GitHub CI on the pushed
-# commit and is BLOCKED on a red — prod only receives what CI verified
-# (ci-gate.sh; repos without CI pass after a short grace window).
+# Pushing the repo's default branch deploys to the Hetzner box (background).
+# Each deploy writes its OWN log — /tmp/push-deploy-fleetcrown-<sha>.log — so a
+# monitor never matches a stale line from a previous deploy (that false-match
+# bit us repeatedly). `npm run deploy:status` finds and tails the right one.
+# Repos differ: some use 'main', some 'master' — match either.
+# CI GATE (ci-gate.sh): the deploy waits for GitHub CI on the pushed commit.
+#   green  → ship;  red/timeout → block (alarm);  superseded → skip quietly
+#   (a newer commit cancelled this one's CI and carries its own deploy).
 if git symbolic-ref --short HEAD 2>/dev/null | grep -qxE 'main|master'; then
+  _sha=$(git rev-parse HEAD)
+  _log="/tmp/push-deploy-fleetcrown-${_sha}.log"
+  ln -sf "$_log" /tmp/push-deploy-fleetcrown-latest.log 2>/dev/null || true
   ( sleep 5
-    _sha=$(git rev-parse HEAD)
     _nwo=$(git remote get-url origin 2>/dev/null | sed -E 's#(git@github.com:|https://github.com/)##; s#\.git$##')
-    if [ -n "$_nwo" ] && ! bash "/home/g/dev/fleetcrown/scripts/hetzner/ci-gate.sh" "$_nwo" "$_sha"; then
-      echo "[push-deploy] fleetcrown: BLOCKED by CI gate for ${_sha} — fix CI, then re-push or deploy manually"
+    if [ -n "$_nwo" ]; then
+      bash "/home/g/dev/fleetcrown/scripts/hetzner/ci-gate.sh" "$_nwo" "$_sha"; _rc=$?
     else
+      _rc=0  # no remote to gate against
+    fi
+    if [ "$_rc" -eq 0 ]; then
       # --ref pins the build to the pushed SHA — a backgrounded deploy must not
       # build whatever branch the tree has since switched to (see deploy-hetzner.sh)
       env -u CI bash /home/g/dev/fleetcrown/scripts/deploy-hetzner.sh --ref "$_sha"
+    elif [ "$_rc" -eq 3 ]; then
+      echo "[push-deploy] fleetcrown: ${_sha} superseded — newer commit will deploy; skipping (not an error)"
+    else
+      echo "[push-deploy] fleetcrown: BLOCKED by CI gate for ${_sha} — fix CI, then re-push or deploy manually"
     fi
-  ) >> /tmp/push-deploy-fleetcrown.log 2>&1 & disown 2>/dev/null || true
-  echo "[push-deploy] fleetcrown: CI-gated deploy started in background → /tmp/push-deploy-fleetcrown.log"
+  ) >> "$_log" 2>&1 & disown 2>/dev/null || true
+  echo "[push-deploy] fleetcrown: CI-gated deploy started → ${_log} (or: npm run deploy:status)"
 fi
 # <<< fleetcrown push-deploy <<<
