@@ -109,13 +109,28 @@ git_head() { git -C "$PROJECT_DIR" rev-parse HEAD 2>/dev/null || echo unknown; }
 
 # Schema BEFORE build (same order as scripts/hetzner/deploy.sh): guarded,
 # forward-only drizzle migrations from ./drizzle via the shared applier — the
-# first run baselines the existing file set against the live fleetcrown DB.
-# NB: drizzle/meta journal was desynced (files to 0039, journal to 0035) and is
-# now reconciled via bootstrap-migration-ledger.ts --write-journal; the applier
-# is filename-based and immune either way. drizzle/meta still has NO snapshots,
-# so `drizzle-kit generate` can't diff — keep numbering new files by hand (0040+).
+# first run baselines the existing file set against the live fleetcrown DB. The
+# applier is filename-based, so it's immune to journal/snapshot state.
+# drizzle/meta now HAS a current-schema snapshot (0039) with an idx-aligned
+# journal, so `npm run db:generate` diffs and emits the next 0040+ migration
+# automatically — no more hand-written DDL (that reflex caused the box-DDL
+# ownership rollbacks; see scripts/db/apply-box.sh).
 bash "$SCRIPT_DIR/hetzner/apply-schema.sh" fleetcrown "$PROJECT_DIR" fleetcrown "." \
   || { echo "✗ schema step failed — deploy aborted (no code shipped)" >&2; exit 1; }
+
+# Ownership self-heal: apply-schema.sh (shared infra) runs DDL as the postgres
+# superuser, so a freshly-migrated table would be owned by postgres and thus
+# INVISIBLE to the fleetcrown app role (privilege-filtered information_schema) —
+# the exact class that rolled back deploys. Idempotent reassignment: on a healthy
+# box this touches zero tables; when a new migration created a postgres-owned
+# object, it hands ownership to the app role before the drift-check runs.
+DBURL_OWN=$(ssh "$HOST" "grep -oP '^DATABASE_URL=\K.*' /opt/fleetcrown/app/.env 2>/dev/null | head -1 | tr -d '\"'")
+if [ -n "$DBURL_OWN" ]; then
+  APP_ROLE=$(printf '%s' "$DBURL_OWN" | sed -E 's#^[^/]*//([^:]+):.*#\1#')
+  ssh "$HOST" "sudo -u postgres psql -d fleetcrown -v ON_ERROR_STOP=1 -q -c \"DO \\\$\\\$ DECLARE r record; n int := 0; BEGIN FOR r IN SELECT tablename FROM pg_tables WHERE schemaname='public' AND tableowner <> '${APP_ROLE}' LOOP EXECUTE format('ALTER TABLE public.%I OWNER TO ${APP_ROLE}', r.tablename); n := n + 1; END LOOP; IF n > 0 THEN RAISE NOTICE 'reassigned % table(s) to ${APP_ROLE}', n; END IF; END \\\$\\\$;\"" \
+    && echo "  ✓ table ownership reconciled to ${APP_ROLE}" \
+    || echo "  ⚠ ownership reconcile skipped (non-fatal)"
+fi
 
 if [ -n "$NO_BUILD" ]; then
   :  # reuse the existing $STANDALONE
