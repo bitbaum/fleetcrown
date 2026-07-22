@@ -1,18 +1,29 @@
 #!/usr/bin/env sh
-# Run the home/ inline self-tests every push (~14s, no external deps),
-# plus the dev-server smoke when the server is already up.
+# Before code leaves this machine: run the SAME `npm run verify` bundle CI runs
+# (tsc + lint + check:design + test:unit + test:home) — one definition of
+# "verified", so a `git commit --no-verify` can't slip a red past the local gate.
+# Then the deploy-safety extras: schema-drift guard, dev-server smoke (if up),
+# and the prod dogfood.
 # To run fully authenticated: FLEETCROWN_SESSION_TOKEN=<token> git push
 
 set -e
 
-echo "→ test:home"
-npm run test:home
+# Branch deletions carry no commits to verify (git sends an all-zero local sha),
+# yet the full suite used to run for ~2min on every `git push --delete`. If every
+# ref in this push is a deletion, skip the checks. (Only skip when we actually
+# saw refs and none had commits — an empty stdin must NOT short-circuit.)
+_saw_ref=""; _has_commits=""
+while read -r _lref _lsha _rref _rsha; do
+  _saw_ref=1
+  case "$_lsha" in *[!0]*) _has_commits=1 ;; esac
+done
+if [ -n "$_saw_ref" ] && [ -z "$_has_commits" ]; then
+  echo "→ pre-push: branch deletion only — skipping checks"
+  exit 0
+fi
 
-# All pure unit tests via the glob runner — same suite CI runs, so a green
-# push and a green CI can't diverge. (Replaces the hand-listed test:* calls;
-# new scripts/test/*.ts are picked up automatically.)
-echo "→ test:unit"
-npm run test:unit
+echo "→ verify (tsc + lint + check:design + test:unit + test:home) — same bundle as CI"
+npm run verify
 
 echo "→ check:schema (drift guard — skips if DB unreachable)"
 npm run check:schema

@@ -24,23 +24,13 @@ jobs:
 
       - run: npm ci
 
-      - name: Type check
-        run: npx tsc --noEmit
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Design system guard
-        run: npm run check:design
-
-      # All pure unit tests, discovered by glob (scripts/test-unit.ts). A new
-      # scripts/test/*.ts is picked up automatically — no more born-dead tests.
-      # Infra-dependent tests are skipped there with a reason.
-      - name: Unit tests
-        run: npm run test:unit
-
-      - name: Local orchestration tests
-        run: npm run test:home
+      # ONE canonical bundle — the exact `npm run verify` you run locally
+      # (tsc + lint + check:design + test:unit + test:home). CI calls it
+      # VERBATIM, so a green local verify can't diverge from a green CI. The
+      # unit suite is glob-discovered (scripts/test-unit.ts), so a new
+      # scripts/test/*.ts is picked up for free — no more born-dead tests.
+      - name: Verify
+        run: npm run verify
 
       # `next build` is intentionally NOT here — the App-Router pages do
       # DB queries during static pre-render, so a real Postgres would

@@ -17,6 +17,7 @@
     "check:schema": "npx tsx scripts/check-schema-drift.ts",
     "lint": "eslint src/ home/",
     "check:design": "bash scripts/check-design-system.sh",
+    "verify": "tsc --noEmit && npm run lint && npm run check:design && npm run test:unit && npm run test:home",
     "smoke": "bash scripts/smoke.sh",
     "test:home": "bash scripts/test-home.sh",
     "test:executor": "npx tsx scripts/test/executor.ts",
