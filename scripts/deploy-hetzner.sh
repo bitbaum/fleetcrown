@@ -313,6 +313,7 @@ sync_runner "$PROJECT_DIR/home/" "$HOST:$RUNNER_DIR/home/"
 sync_runner "$PROJECT_DIR/scripts/box-runner.ts" \
   "$PROJECT_DIR/scripts/mint-box-runner-token.ts" \
   "$PROJECT_DIR/scripts/reindex-knowledge.ts" \
+  "$PROJECT_DIR/scripts/hosted-runner.ts" \
   "$HOST:$RUNNER_DIR/scripts/"
 sync_runner "$PROJECT_DIR/tsconfig.json" "$HOST:$RUNNER_DIR/tsconfig.json"
 ssh "$HOST" "chown -R $RUNNER_OWNER:$RUNNER_OWNER $RUNNER_DIR/src $RUNNER_DIR/desktop $RUNNER_DIR/home $RUNNER_DIR/scripts $RUNNER_DIR/tsconfig.json"

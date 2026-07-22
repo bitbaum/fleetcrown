@@ -10,14 +10,14 @@
  * This path is autopilot-critical — keep it behavior-preserving.
  */
 import { ensureUserProjectEntityLinks, getOrgProjects } from "@/db/queries/user-projects";
-import { ORCHESTRATION_ADAPTER_IDS, ORCHESTRATION_TASK_INTENT_IDS, DEFAULT_ADAPTER_ID, renderProjectContextBlock, type OrchestrationTaskIntentId } from "@/lib/orchestration";
+import { ORCHESTRATION_ADAPTER_IDS, ORCHESTRATION_TASK_INTENT_IDS, DEFAULT_ADAPTER_ID, renderProjectContextBlock, type OrchestrationTaskIntentId, type AdapterId } from "@/lib/orchestration";
 import { getProjectContext } from "@/db/queries/project-context";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { ORCH_STATE } from "@/lib/orchestration/contract";
 import { workspaceIdFor } from "@/lib/agent-execution/ownership";
 import { executeInject } from "@/lib/executor";
 import { projectPreferredChannel } from "@/lib/execution-access";
-import { createOrchestrationEvent } from "@/db/queries/orchestration-events";
+import { createOrchestrationEvent, createOrchestrationEventOnce } from "@/db/queries/orchestration-events";
 import { createOrchestrationRun, isProjectBusy } from "@/db/queries/orchestration-runs";
 import { emitRunEvent } from "@/db/queries/run-events";
 import { insertPromptHistory } from "@/db/queries/prompt-history";
@@ -547,6 +547,22 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
       console.error("[inject] hosted-dispatch enqueue failed:", err);
       return undefined;
     });
+    // Make the offline→hosted routing decision visible in Activity, not just a
+    // response flag — same orchestration_events stream, attributed to the real
+    // executor (Hermes). Deduped by command id so a retry can't double-count.
+    if (hostedDispatchId) {
+      void createOrchestrationEventOnce({
+        userId,
+        projectId,
+        projectKey: canonical,
+        eventType: "continue_requested",
+        source: "hosted-runner",
+        adapter: "hermes" as AdapterId,
+        intent: eventIntent,
+        detail: "Auto-routed to hosted runner (Hermes) — local runner offline",
+        happenedAt: new Date(),
+      }, `hosted-dispatch:${hostedDispatchId}`).catch((err) => console.error("[inject] hosted event emit failed:", err));
+    }
   }
 
   return {

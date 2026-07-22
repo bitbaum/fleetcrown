@@ -19,8 +19,16 @@ import { getProjectContext } from "@/db/queries/project-context";
 import { getSelfImprovementTarget } from "@/db/queries/frontier";
 import { getGithubToken } from "@/lib/github-token";
 import { appendProjectDevLog } from "@/db/queries/user-projects";
+import { createOrchestrationEvent } from "@/db/queries/orchestration-events";
+import type { AdapterId, OrchestrationEventType } from "@/lib/orchestration";
 import { analyzeRepo } from "@/lib/hosted-runner/analyze";
 import { runHermesTask } from "@/lib/hosted-runner/run-hermes";
+
+// The real executor id for a hosted coding dispatch. Hermes is a legitimate
+// agent id (ALL_ADAPTERS) but intentionally NOT in the dispatchable
+// ORCHESTRATION_ADAPTER_IDS, so record it with a localized cast — the same
+// pattern close-sweep already uses for adapter strings outside that set.
+const HERMES_ADAPTER = "hermes" as AdapterId;
 
 const POLL_MS = 5_000;
 // Both hosted classes: read-only analysis (Groq, Phase 0) + write-class dispatch
@@ -35,6 +43,29 @@ async function logResult(userId: string, projectKey: string, label: string, text
     next: text.slice(0, 2_000),
     tests: "", todos: "", health: "good",
   }).catch((e) => console.error("[hosted-runner] devlog append failed:", e));
+}
+
+/** Emit a lifecycle event into orchestration_events — the SAME stream inject-core
+ *  writes and Activity reads — so hosted (Hermes/analysis) runs are observable in
+ *  the product instead of only in console logs. Fire-and-forget: telemetry must
+ *  never fail the run. `adapter` records the true executor ("hermes" for a coding
+ *  dispatch; null for read-only analysis). */
+async function emitHostedEvent(
+  userId: string,
+  projectKey: string,
+  eventType: OrchestrationEventType,
+  detail: string,
+  adapter?: AdapterId,
+) {
+  await createOrchestrationEvent({
+    userId,
+    projectKey,
+    eventType,
+    source: "hosted-runner",
+    adapter: adapter ?? null,
+    detail: detail.slice(0, 500),
+    happenedAt: new Date(),
+  }).catch((e) => console.error("[hosted-runner] event emit failed:", e));
 }
 
 /** Claim + execute one hosted command (analyze or dispatch). False when queue empty. */
@@ -55,6 +86,7 @@ async function tick(userId: string): Promise<boolean> {
     if (cmd.type === "hosted_dispatch") {
       // Phase 1: write-class task → Hermes in its own sandbox (orchestrate, not out-build).
       console.log(`[hosted-runner] dispatch→hermes ${p.projectKey}: ${p.task.slice(0, 60)}`);
+      void emitHostedEvent(userId, p.projectKey, "task_started", `Hermes dispatch — ${p.task.slice(0, 120)}`, HERMES_ADAPTER);
       const model = (cmd.payload as HostedDispatchPayload).model;
       const res = await runHermesTask({ gitUrl: p.gitUrl, task: p.task, projectContext: ctx, token, model });
       if (res.ok) {
@@ -63,26 +95,40 @@ async function tick(userId: string): Promise<boolean> {
           : `${res.output}\n\n— changed:\n${res.diff || "(no diff)"}${res.prUrl ? `\n\nPR: ${res.prUrl}` : res.branch ? `\n\nPushed branch: ${res.branch}` : ""}`;
         await markCommandExecuted(cmd.id, userId, { ok: true, text: summary });
         await logResult(userId, p.projectKey, `Hosted dispatch (Hermes) — ${p.task.slice(0, 70)}`, summary);
+        void emitHostedEvent(userId, p.projectKey, "task_completed",
+          res.prUrl ? `Hermes → PR ${res.prUrl}` : res.noChanges ? "Hermes: no file changes" : `Hermes pushed ${res.branch ?? "a branch"}`,
+          HERMES_ADAPTER);
         console.log(`[hosted-runner] ✓ ${p.projectKey} (hermes/${res.model})${res.prUrl ? ` → ${res.prUrl}` : ""}`);
       } else {
         await markCommandExecuted(cmd.id, userId, { ok: false, error: res.error });
+        // Failures used to vanish into console only — log + emit so a broken hosted
+        // path is visible in the project dev log and Activity, not archaeology.
+        await logResult(userId, p.projectKey, `Hosted dispatch (Hermes) FAILED — ${p.task.slice(0, 60)}`, res.error);
+        void emitHostedEvent(userId, p.projectKey, "task_failed", `Hermes failed — ${res.error}`, HERMES_ADAPTER);
         console.log(`[hosted-runner] ✗ ${p.projectKey}: ${res.error}`);
       }
     } else {
       // Phase 0: read-only analysis via Groq.
       console.log(`[hosted-runner] analyze ${p.projectKey}: ${p.task.slice(0, 60)}`);
+      void emitHostedEvent(userId, p.projectKey, "task_started", `Hosted analysis — ${p.task.slice(0, 120)}`);
       const res = await analyzeRepo({ gitUrl: p.gitUrl, task: p.task, projectContext: ctx, token });
       if (res.ok) {
         await markCommandExecuted(cmd.id, userId, { ok: true, text: res.report });
         await logResult(userId, p.projectKey, `Hosted analysis — ${p.task.slice(0, 80)}`, res.report);
+        void emitHostedEvent(userId, p.projectKey, "task_completed", `Hosted analysis complete (${res.model})`);
         console.log(`[hosted-runner] ✓ ${p.projectKey} (${res.model})`);
       } else {
         await markCommandExecuted(cmd.id, userId, { ok: false, error: res.error });
+        await logResult(userId, p.projectKey, `Hosted analysis FAILED — ${p.task.slice(0, 60)}`, res.error);
+        void emitHostedEvent(userId, p.projectKey, "task_failed", `Hosted analysis failed — ${res.error}`);
         console.log(`[hosted-runner] ✗ ${p.projectKey}: ${res.error}`);
       }
     }
   } catch (e) {
-    await markCommandExecuted(cmd.id, userId, { ok: false, error: e instanceof Error ? e.message : "hosted run failed" });
+    const msg = e instanceof Error ? e.message : "hosted run failed";
+    await markCommandExecuted(cmd.id, userId, { ok: false, error: msg });
+    void emitHostedEvent(userId, p.projectKey, "task_failed", `Hosted run threw — ${msg}`,
+      cmd.type === "hosted_dispatch" ? HERMES_ADAPTER : undefined);
   }
   return true;
 }

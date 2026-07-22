@@ -21,13 +21,23 @@ import { cursorAdapter } from "./cursor";
 import { codexAdapter } from "./codex";
 import { openclawAdapter } from "./openclaw";
 import { geminiAdapter } from "./gemini";
-// Hermes adapter PARKED (2026-06-25): dormant spike, not pulling weight —
-// `runHermesTask` is unwired (zero call sites), Hermes isn't in
-// ORCHESTRATION_ADAPTER_IDS, and the `hermes` CLI isn't installed anywhere, so
-// it only surfaced as a broken/unavailable runtime. The strategic bet (adopt
-// Hermes's sandboxed hosted execution) is intact — re-add `import { hermesAdapter }
-// from "./hermes"` + the ALL_ADAPTERS entry when the hosted runner (Phase 1)
-// actually ships. Files preserved: ./hermes.ts + ./hosted-runner/run-hermes.ts.
+// Hermes is deliberately NOT an interactive adapter, but it IS a wired hosted
+// executor — two different things, so keep the distinction straight:
+//   • The interactive adapter (`hermesAdapter`, ./hermes.ts) is intentionally
+//     kept OUT of ALL_ADAPTERS and ORCHESTRATION_ADAPTER_IDS. FleetCrown does
+//     not offer "drive Hermes in a terminal tab" the way it offers claude/codex/
+//     grok. That adapter file is preserved for a future interactive path; it is
+//     not selectable today.
+//   • The HOSTED path IS live and wired: `runHermesTask` (./hosted-runner/
+//     run-hermes.ts) has a real call site in scripts/hosted-runner.ts, which the
+//     `fleetcrown-hosted-runner.timer` drains (`hosted_dispatch` command type →
+//     clone → Hermes in its sandbox → PR). The `hermes` CLI IS installed on the
+//     box (/usr/local/bin/hermes, v0.17.0). inject-core auto-routes an offline
+//     coding dispatch to it (hostedRunner:"hermes").
+// Status (2026-07-22): hosted path plumbed + polling, but lightly exercised —
+// one real Hermes PR to date (spike, 2026-06-25). It is observable now: hosted
+// runs emit orchestration_events (source="hosted-runner", adapter="hermes"),
+// visible in Activity. Not yet proven under volume.
 
 export type { AgentAdapter, AgentCapabilities, AgentAvailability, AgentRuntimeConfig } from "./types";
 
