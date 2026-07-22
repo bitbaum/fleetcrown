@@ -17,14 +17,12 @@ import { and, eq, or } from "drizzle-orm";
 import { db } from "@/db";
 import { userProjects, type DevLogEntry } from "@/db/schema";
 import { getOrangeCatLink } from "./orangecat-identity";
-import { ORANGECAT_BASE_FALLBACK } from "./orangecat";
+import { OC_BASE } from "./orangecat";
 import {
   PROMOTE_POLICY,
   FLEETCROWN_PUBLIC_ORIGIN,
   type PromotableMoment,
 } from "@/config/orangecat-publish";
-
-const OC_BASE = process.env.ORANGECAT_API_BASE ?? ORANGECAT_BASE_FALLBACK;
 
 export interface PublishResult {
   ok: boolean;

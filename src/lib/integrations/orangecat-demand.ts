@@ -10,10 +10,14 @@
  * Best-effort and cached: a slow/failed OrangeCat never blocks or breaks a Loki
  * turn — it just falls back to the last good feed, or to plain fleet context.
  */
-import { ORANGECAT_BASE_FALLBACK } from "./orangecat";
+import { OC_BASE } from "./orangecat";
 
-const OC_BASE = process.env.ORANGECAT_API_BASE ?? ORANGECAT_BASE_FALLBACK;
 const TTL_MS = 10 * 60 * 1000;
+/** Below this length a query is too vague to search the economy usefully. */
+const MIN_QUERY_LEN = 8;
+/** Only inject economy matches at least this semantically close — keeps
+ *  unrelated Loki turns clean (keyword-fallback hits have no similarity). */
+const MIN_ECONOMY_SIMILARITY = 0.4;
 
 export interface DemandNeed {
   id: string;
@@ -28,29 +32,33 @@ export interface OpenDemand {
 
 let cache: { at: number; data: OpenDemand } | null = null;
 
+/** GET an OrangeCat v1 endpoint, unwrapping the { data } envelope. Returns null
+ *  on any failure (non-2xx, timeout, parse) — every FC→OC read is best-effort. */
+async function ocGet<T>(path: string): Promise<T | null> {
+  try {
+    const res = await fetch(`${OC_BASE}${path}`, { signal: AbortSignal.timeout(6000) });
+    if (!res.ok) {
+      return null;
+    }
+    const json = await res.json();
+    return (json?.data ?? json) as T;
+  } catch {
+    return null;
+  }
+}
+
 /** Fetch the open-demand feed (cached ~10min). Returns null if unavailable and
  *  there's no cached copy — callers must treat demand as optional. */
 export async function fetchOpenDemand(): Promise<OpenDemand | null> {
   if (cache && Date.now() - cache.at < TTL_MS) {
     return cache.data;
   }
-  try {
-    const res = await fetch(`${OC_BASE}/api/v1/demand?limit=15`, {
-      signal: AbortSignal.timeout(6000),
-    });
-    if (!res.ok) {
-      return cache?.data ?? null;
-    }
-    const json = await res.json();
-    const data = (json?.data ?? json) as OpenDemand | undefined;
-    if (!data || !Array.isArray(data.needs)) {
-      return cache?.data ?? null;
-    }
-    cache = { at: Date.now(), data };
-    return data;
-  } catch {
+  const data = await ocGet<OpenDemand>("/api/v1/demand?limit=15");
+  if (!data || !Array.isArray(data.needs)) {
     return cache?.data ?? null;
   }
+  cache = { at: Date.now(), data };
+  return data;
 }
 
 export interface EconomyMatch {
@@ -69,23 +77,13 @@ export interface EconomyMatch {
  */
 export async function searchEconomy(query: string): Promise<EconomyMatch[]> {
   const q = query.trim();
-  if (q.length < 8) {
+  if (q.length < MIN_QUERY_LEN) {
     return [];
   }
-  try {
-    const res = await fetch(
-      `${OC_BASE}/api/v1/search?q=${encodeURIComponent(q.slice(0, 200))}`,
-      { signal: AbortSignal.timeout(6000) }
-    );
-    if (!res.ok) {
-      return [];
-    }
-    const json = await res.json();
-    const data = (json?.data ?? json) as { results?: EconomyMatch[] } | undefined;
-    return Array.isArray(data?.results) ? data.results : [];
-  } catch {
-    return [];
-  }
+  const data = await ocGet<{ results?: EconomyMatch[] }>(
+    `/api/v1/search?q=${encodeURIComponent(q.slice(0, 200))}`
+  );
+  return Array.isArray(data?.results) ? data.results : [];
 }
 
 /** Format strong (semantic-only) economy matches as a Loki block ("" if none).
@@ -93,7 +91,7 @@ export async function searchEconomy(query: string): Promise<EconomyMatch[]> {
  *  clean — the block appears only when the operator's message truly matches. */
 export function buildEconomySearchBlock(matches: EconomyMatch[]): string {
   const strong = (matches ?? [])
-    .filter((m) => typeof m.similarity === "number" && m.similarity >= 0.4)
+    .filter((m) => typeof m.similarity === "number" && m.similarity >= MIN_ECONOMY_SIMILARITY)
     .slice(0, 6);
   if (strong.length === 0) {
     return "";

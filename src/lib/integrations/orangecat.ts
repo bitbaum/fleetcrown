@@ -29,6 +29,10 @@ import { subscriptions } from "@/db/schema";
  *  (ORANGECAT_API_BASE / ORANGECAT_OAUTH_ISSUER). */
 export const ORANGECAT_BASE_FALLBACK = "https://orangecat.ch";
 
+/** SSOT for the OrangeCat origin FleetCrown calls (env override, else fallback).
+ *  Every FC→OC integration imports this instead of re-deriving it. */
+export const OC_BASE = process.env.ORANGECAT_API_BASE ?? ORANGECAT_BASE_FALLBACK;
+
 interface SubscriptionForSync {
   id: string;
   name: string;
@@ -68,7 +72,7 @@ export async function getOrangeCatClient(): Promise<OrangeCatClient | null> {
   errorClass = sdk.OrangeCatError;
   cached = new sdk.OrangeCatClient({
     apiKey,
-    baseUrl: process.env.ORANGECAT_API_BASE ?? ORANGECAT_BASE_FALLBACK,
+    baseUrl: OC_BASE,
     userAgent: `fleetcrown/${process.env.npm_package_version ?? "0.1.0"} (+sdk)`,
   });
   return cached;
