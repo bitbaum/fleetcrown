@@ -50,10 +50,10 @@ and an A record wherever its DNS lands.
   source of truth for ports, domains, repos, DBs.
 - `sync-infra.sh [app…]` — generates launch.sh + systemd unit + Caddy vhost
   (in /etc/caddy/apps.d/*.caddy) from the manifest. Idempotent.
-- `gen-env.sh <app>` — builds `<repo>/<app_dir>/.env.selfhost.local` from a
-  fresh `vercel env pull` (fallback ~/dev/vercel-env-backup), rewrites DB URL
-  to the box role, points AUTH_URL/site URLs at the new domain, adds
-  AUTH_TRUST_HOST.
+- `gen-env.sh <app>` — builds `<repo>/<app_dir>/.env.selfhost.local` from the
+  captured per-app env backup (`$ENV_BACKUP_DIR`, default ~/dev/env-backup),
+  strips host-runner vars, rewrites DB URL to the box role, points
+  AUTH_URL/site URLs at the new domain, adds AUTH_TRUST_HOST.
 - `deploy.sh <app> [--env]` — builds (standalone, env sourced, build-time DB
   over an SSH tunnel on 127.0.0.1:15432), stages static+public, rsyncs to
   /opt/<app>/app, restarts, health-checks. `--env` force-uploads the env file

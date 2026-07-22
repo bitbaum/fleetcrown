@@ -3,9 +3,9 @@
  * @fleetcrown/agent — CLI to enroll a local machine with the FleetCrown cloud control plane.
  *
  * Usage while the npm package is unpublished:
- *   curl -fsSL https://fleetcrown.vercel.app/api/agent/install | node - init
- *   curl -fsSL https://fleetcrown.vercel.app/api/agent/install | node - init --token ck_...
- *   curl -fsSL https://fleetcrown.vercel.app/api/agent/install | node - init --base-url https://fleetcrown.vercel.app
+ *   curl -fsSL https://fleetcrown.orangecat.ch/api/agent/install | node - init
+ *   curl -fsSL https://fleetcrown.orangecat.ch/api/agent/install | node - init --token ck_...
+ *   curl -fsSL https://fleetcrown.orangecat.ch/api/agent/install | node - init --base-url https://fleetcrown.orangecat.ch
  */
 
 const fs = require("fs");
@@ -13,7 +13,7 @@ const path = require("path");
 const os = require("os");
 const readline = require("readline");
 
-const DEFAULT_BASE_URL = "https://fleetcrown.vercel.app";
+const DEFAULT_BASE_URL = "https://fleetcrown.orangecat.ch";
 const CONFIG_DIR = path.join(os.homedir(), ".config", "fleetcrown");
 const ENV_FILE = path.join(CONFIG_DIR, "daemon.env");
 const DAEMON_DIR = path.join(os.homedir(), ".local", "share", "fleetcrown");

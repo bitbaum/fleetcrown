@@ -132,7 +132,7 @@ export async function POST(req: NextRequest) {
     db === "postgres"
       ? `4. Create a Postgres database on the self-hosted box (a new DB or schema on the shared Postgres) and set DATABASE_URL in \`.env.local\`.`
       : `4. If you need a database, create one on the self-hosted Postgres and set DATABASE_URL in \`.env.local\`.`,
-    `5. Deploy via the self-hosted flow (build → rsync → restart on the box); there is no Vercel.`,
+    `5. Deploy via the self-hosted flow: build → rsync to the Hetzner box → restart the systemd service behind Caddy.`,
     `6. Commit after each milestone. Keep a session summary.`,
     ``,
     `Start immediately. No questions needed — use your judgment on implementation details.`,
