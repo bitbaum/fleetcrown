@@ -129,7 +129,7 @@ npm run dev
 Minimum local `.env.local`:
 
 ```bash
-DATABASE_URL=postgresql://fleetcrown:changeme@localhost:5432/fleetcrown
+DATABASE_URL=postgresql://fleetcrown:***@localhost:5432/fleetcrown
 AUTH_SECRET=replace-me
 GITHUB_CLIENT_ID=replace-me
 GITHUB_CLIENT_SECRET=replace-me
@@ -172,3 +172,5 @@ for the full matrix of browser-only vs local-runtime workflows.
 - Dependency audit runs daily and high+ findings block the audit workflow.
 
 See [SECURITY.md](SECURITY.md) for reporting and operational expectations.
+
+> Hosted autonomous runs are powered by the FleetCrown Hermes runner.
