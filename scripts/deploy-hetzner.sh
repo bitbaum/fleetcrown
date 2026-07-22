@@ -257,20 +257,26 @@ fi
 # columns here, fetch the box's tables/columns over ssh, and diff — fail LOUDLY
 # instead of trusting a half-broken deploy.
 echo "→ schema-drift check (box DB)"
-DECLARED=$(cd "$PROJECT_DIR" && npx tsx scripts/check-schema-drift.ts --print 2>/dev/null | sort)
-DECLARED_COLUMNS=$(cd "$PROJECT_DIR" && npx tsx scripts/check-schema-drift.ts --print-columns 2>/dev/null | sort)
-BOX_TABLES=$(ssh "$HOST" 'LC_ALL=C bash -s' <<'REMOTE' | sort
+# LC_ALL=C on EVERY sort and comm below: `comm` requires its inputs sorted in
+# the same collation it verifies with, and glibc UTF-8 locales (e.g. de_CH.UTF-8)
+# order some `table.column` strings inconsistently — `sort` produces output that
+# `comm` then rejects as "not in sorted order", exit 1. Under set -euo pipefail
+# that aborted the whole deploy (skipping the bridge sync) even though the box
+# schema was fine. Byte-order collation is deterministic and self-consistent.
+DECLARED=$(cd "$PROJECT_DIR" && npx tsx scripts/check-schema-drift.ts --print 2>/dev/null | LC_ALL=C sort)
+DECLARED_COLUMNS=$(cd "$PROJECT_DIR" && npx tsx scripts/check-schema-drift.ts --print-columns 2>/dev/null | LC_ALL=C sort)
+BOX_TABLES=$(ssh "$HOST" 'LC_ALL=C bash -s' <<'REMOTE' | LC_ALL=C sort
 DBURL=$(grep -oP '^DATABASE_URL=\K.*' /opt/fleetcrown/app/.env 2>/dev/null | head -1 | tr -d '"')
 psql "$DBURL" -t -A -c "select table_name from information_schema.tables where table_schema = 'public'" 2>/dev/null
 REMOTE
 )
-BOX_COLUMNS=$(ssh "$HOST" 'LC_ALL=C bash -s' <<'REMOTE' | sort
+BOX_COLUMNS=$(ssh "$HOST" 'LC_ALL=C bash -s' <<'REMOTE' | LC_ALL=C sort
 DBURL=$(grep -oP '^DATABASE_URL=\K.*' /opt/fleetcrown/app/.env 2>/dev/null | head -1 | tr -d '"')
 psql "$DBURL" -t -A -c "select table_name || '.' || column_name from information_schema.columns where table_schema = 'public'" 2>/dev/null
 REMOTE
 )
-MISSING=$(comm -23 <(printf '%s\n' "$DECLARED") <(printf '%s\n' "$BOX_TABLES"))
-MISSING_COLUMNS=$(comm -23 <(printf '%s\n' "$DECLARED_COLUMNS") <(printf '%s\n' "$BOX_COLUMNS"))
+MISSING=$(LC_ALL=C comm -23 <(printf '%s\n' "$DECLARED") <(printf '%s\n' "$BOX_TABLES"))
+MISSING_COLUMNS=$(LC_ALL=C comm -23 <(printf '%s\n' "$DECLARED_COLUMNS") <(printf '%s\n' "$BOX_COLUMNS"))
 if [ -n "$MISSING" ] || [ -n "$MISSING_COLUMNS" ]; then
   echo "  ✗ box DB is missing declared tables:"
   [ -n "$MISSING" ] && printf '%s\n' "$MISSING" | sed 's/^/    - /' || echo "    - none"
