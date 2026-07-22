@@ -14,11 +14,19 @@ import type { FrontierItem } from "./types";
 const MAX_CANDIDATES = 26; // cap what we send the model
 const TARGET_PICKS = 8;
 
+const MIN_NON_ARXIV = 2; // guarantee industry/community signal, not an arXiv-only feed
+
 const SYSTEM_PROMPT = `You are the editor of FleetCrown's daily frontier digest: the latest and most significant developments in AI, robotics, and adjacent frontier technology, written for a technical audience of builders.
 
 From the numbered candidate items you are given, select the ${TARGET_PICKS} MOST significant and genuinely newsworthy. Prefer substantive research results, real capability breakthroughs, major model/product releases, and robotics milestones. Demote incremental papers, promotional posts, opinion pieces, and anything not actually about frontier technology.
 
-For each pick, write ONE sharp sentence on why it matters — concrete, no hype, no emojis. Also write a one-line "headline" naming the day's dominant theme, and a 2-sentence "intro".
+BALANCE THE SOURCES. The candidates are labelled with their source (e.g. "arXiv cs.AI", "Hacker News", "Lobsters"). Do NOT return an all-arXiv list: include AT LEAST ${MIN_NON_ARXIV} items whose source is NOT arXiv (industry news, tools, releases the builder community is rating right now), as long as such candidates exist. A digest that ignores what's shipping in industry is failing its readers.
+
+For each pick, write ONE sharp sentence on why it matters. CRITICAL: the sentence must ADD information that is not already obvious from the title — the specific result, number, method, or capability, and what a builder could now do with it. NEVER just restate or paraphrase the title. Concrete, active voice, no hype, no emojis, no "is proposed"/"is presented"/"is explored" filler.
+Bad (restates title): "FARO introduces feasibility-aware robot motion optimization, enabling fast planning."
+Good (adds substance): "FARO plans dynamically feasible motions for unseen tasks without per-task tuning, cutting the setup that normally gates deploying a new robot behavior."
+
+Also write a one-line "headline" naming the day's dominant theme, and a 2-sentence "intro".
 
 Return STRICT JSON only, no prose around it, in exactly this shape:
 {"headline":"...","intro":"...","picks":[{"index":<number>,"summary":"..."}]}
@@ -48,11 +56,15 @@ function fallback(candidates: FrontierCandidate[]): FrontierDigestResult {
 }
 
 function buildUserPrompt(candidates: FrontierCandidate[]): string {
+  // Feed the full trimmed abstract (ingest caps it at 600) — the model needs
+  // the concrete result to write a summary that isn't just the title again.
   const lines = candidates.map(
-    (c, i) => `[${i}] (${c.source}) ${c.title}${c.excerpt ? ` — ${c.excerpt.slice(0, 200)}` : ""}`,
+    (c, i) => `[${i}] (${c.source}) ${c.title}${c.excerpt ? ` — ${c.excerpt}` : ""}`,
   );
   return `Candidate items:\n${lines.join("\n")}`;
 }
+
+const isArxiv = (source: string): boolean => source.startsWith("arXiv");
 
 // Pull the first balanced {...} object out of a model response that may be
 // fenced or have stray prose around it.
@@ -112,6 +124,24 @@ export async function generateFrontierDigest(
   }
 
   if (items.length === 0) return fallback(candidates);
+
+  // Diversity floor: the ranker reliably over-picks arXiv and drops every
+  // industry/community item, turning the public digest into an arXiv scraper.
+  // If it left us short on non-arXiv items, swap the lowest-ranked arXiv picks
+  // for the top unpicked non-arXiv candidates (round-robin order already ranks
+  // them). Swapped-in items use their excerpt — honest, if less polished than
+  // an LLM line — because the model never wrote a summary for them.
+  const nonArxivPool = candidates
+    .map((c, i) => ({ c, i }))
+    .filter(({ c, i }) => !isArxiv(c.source) && !seen.has(i));
+  let haveNonArxiv = items.filter((it) => !isArxiv(it.source)).length;
+  for (let pos = items.length - 1; pos >= 0 && haveNonArxiv < MIN_NON_ARXIV && nonArxivPool.length > 0; pos--) {
+    if (!isArxiv(items[pos].source)) continue; // only displace arXiv picks
+    const { c, i } = nonArxivPool.shift()!;
+    seen.add(i);
+    items[pos] = candidateToItem(c, c.excerpt ? c.excerpt.slice(0, 200) : "Notable industry development on the AI / robotics frontier.");
+    haveNonArxiv++;
+  }
 
   const headline = typeof parsed.headline === "string" && parsed.headline.trim()
     ? parsed.headline.trim()

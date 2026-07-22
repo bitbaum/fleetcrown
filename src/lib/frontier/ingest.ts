@@ -69,7 +69,10 @@ async function ingestRss(src: Extract<FrontierSource, { kind: "rss" }>): Promise
       url,
       source: src.name,
       category: src.category,
-      excerpt: stripTags(tag(block, "description")).slice(0, 320),
+      // Keep enough abstract for the editor to distill a concrete "why it
+      // matters" (the first ~200 chars of an arXiv abstract often just echo the
+      // title — the substance is further in).
+      excerpt: stripTags(tag(block, "description")).slice(0, 600),
       score: 0,
     });
   }
@@ -100,7 +103,7 @@ async function ingestHn(
       url,
       source: src.name,
       category: src.category,
-      excerpt: (h.story_text ? stripTags(h.story_text) : "").slice(0, 320),
+      excerpt: (h.story_text ? stripTags(h.story_text) : "").slice(0, 600),
       score: h.points ?? 0,
     });
   }

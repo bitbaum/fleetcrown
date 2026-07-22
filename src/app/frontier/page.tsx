@@ -23,15 +23,35 @@ function formatDate(ymd: string): string {
   });
 }
 
-function FrontierItemRow({ item }: { item: FrontierItem }) {
+function FrontierMeta({ item }: { item: FrontierItem }) {
+  return (
+    <div className="ui-frontier-item-meta-row">
+      <span className="ui-frontier-cat">{FRONTIER_CATEGORY_LABEL[item.category]}</span>
+      <span className="ui-frontier-item-source">{item.source}</span>
+    </div>
+  );
+}
+
+function FrontierLead({ item }: { item: FrontierItem }) {
+  return (
+    <a href={item.url} target="_blank" rel="noopener noreferrer" className="ui-frontier-lead">
+      <div className="ui-frontier-lead-rank">01 · Lead</div>
+      <FrontierMeta item={item} />
+      <div className="ui-frontier-lead-title">{item.title}</div>
+      <p className="ui-frontier-lead-summary">{item.summary}</p>
+    </a>
+  );
+}
+
+function FrontierItemRow({ item, rank }: { item: FrontierItem; rank: number }) {
   return (
     <a href={item.url} target="_blank" rel="noopener noreferrer" className="ui-frontier-item">
-      <div className="ui-frontier-item-meta-row">
-        <span className="ui-frontier-cat">{FRONTIER_CATEGORY_LABEL[item.category]}</span>
-        <span className="ui-frontier-item-source">{item.source}</span>
+      <span className="ui-frontier-rank">{String(rank).padStart(2, "0")}</span>
+      <div className="ui-frontier-item-body">
+        <FrontierMeta item={item} />
+        <div className="ui-frontier-item-title">{item.title}</div>
+        <p className="ui-frontier-item-summary">{item.summary}</p>
       </div>
-      <div className="ui-frontier-item-title">{item.title}</div>
-      <p className="ui-frontier-item-summary">{item.summary}</p>
     </a>
   );
 }
@@ -69,8 +89,9 @@ export default async function FrontierPage() {
             </div>
 
             <div className="ui-frontier-list">
-              {digest.items.map((item) => (
-                <FrontierItemRow key={item.url} item={item} />
+              {digest.items[0] && <FrontierLead item={digest.items[0]} />}
+              {digest.items.slice(1).map((item, i) => (
+                <FrontierItemRow key={item.url} item={item} rank={i + 2} />
               ))}
             </div>
 
