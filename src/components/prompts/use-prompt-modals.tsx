@@ -7,9 +7,10 @@ import type { PromptTemplate } from "@/config/prompt-library";
 import type { Project } from "./types";
 
 /**
- * Wires up the Run + Schedule modals for a prompt template card. Both
- * PromptRow and FeaturedCard need the same pair of toggles plus the
- * matching <RunModal> / <ScheduleModal> renders, so collapse them here.
+ * Wires up the Run + Schedule modals for a prompt template card. PromptCard
+ * (defaults) and UserPromptsSection (saved prompts) need the same pair of
+ * toggles plus the matching <RunModal> / <ScheduleModal> renders, so collapse
+ * them here.
  *
  * Usage:
  *   const { openRun, openSchedule, modals } = usePromptModals(template, projects);

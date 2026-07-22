@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Search, Star } from "lucide-react";
-import { CATEGORY_META, type PromptTemplate, type PromptCategory } from "@/config/prompt-library";
-import { PromptRow } from "./PromptRow";
-import { FeaturedCard } from "./FeaturedCard";
-import { CategoryBar } from "./CategoryBar";
-import { ALL_CATEGORIES } from "@/config/prompt-library";
+import { Search } from "lucide-react";
+import {
+  groupForCategory,
+  type PromptTemplate,
+  type PromptGroup,
+} from "@/config/prompt-library";
+import { PromptCard } from "./PromptCard";
+import { GroupBar } from "./GroupBar";
 import { UserPromptsSection, type UserPromptCard } from "./UserPromptsSection";
 import type { Project } from "./types";
 import { useEscapeKey } from "@/hooks/use-escape-key";
@@ -23,15 +25,13 @@ export function PromptLibraryClient({
   userPrompts?: UserPromptCard[];
 }) {
   const [search, setSearch] = useState("");
-  const [activeCategory, setActiveCategory] = useState<PromptCategory | "all">("all");
+  const [activeGroup, setActiveGroup] = useState<PromptGroup | "all">("all");
   const [activeScope, setActiveScope] = useState<"all" | "global" | "project">("all");
 
-  useEscapeKey(() => { setSearch(""); setActiveCategory("all"); setActiveScope("all"); });
-
-  const isFiltered = search.length > 0 || activeCategory !== "all" || activeScope !== "all";
+  useEscapeKey(() => { setSearch(""); setActiveGroup("all"); setActiveScope("all"); });
 
   const filtered = templates.filter((t) => {
-    if (activeCategory !== "all" && t.category !== activeCategory) return false;
+    if (activeGroup !== "all" && groupForCategory(t.category) !== activeGroup) return false;
     if (activeScope !== "all" && t.scope !== activeScope) return false;
     if (search) {
       const q = search.toLowerCase();
@@ -44,20 +44,17 @@ export function PromptLibraryClient({
     return true;
   });
 
-  const featured = templates.filter((t) => t.featured);
-  const categoriesWithTemplates = ALL_CATEGORIES.filter((cat) =>
-    filtered.some((t) => t.category === cat),
-  );
+  // Featured first, otherwise the config's category order is preserved (stable
+  // sort), so cards still cluster by category within each band.
+  const ordered = [...filtered].sort((a, b) => Number(b.featured ?? false) - Number(a.featured ?? false));
 
   return (
-    <div className="space-y-8">
-      {/* v2.1 — user-owned prompts section. Above FC defaults because the
-          user's own prompts grow with use and become more relevant than
-          the seed catalog. When the user has no prompts yet, this section
-          renders a "build your library" CTA + the New button. */}
+    <div className="space-y-6">
+      {/* User-owned prompts render first — they grow with use and become more
+          relevant than the seed catalog. */}
       <UserPromptsSection prompts={userPrompts} projects={projects} />
 
-      <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row">
         <div className="relative flex-1">
           <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-text-muted" />
           <input
@@ -68,7 +65,7 @@ export function PromptLibraryClient({
             className="ui-input pl-12"
           />
         </div>
-        <div className="flex gap-1.5 shrink-0">
+        <div className="flex shrink-0 gap-1.5">
           {(["all", "global", "project"] as const).map((scope) => (
             <button
               key={scope}
@@ -81,9 +78,9 @@ export function PromptLibraryClient({
         </div>
       </div>
 
-      <CategoryBar active={activeCategory} templates={templates} onSelect={setActiveCategory} />
+      <GroupBar active={activeGroup} templates={templates} onSelect={setActiveGroup} />
 
-      {filtered.length === 0 ? (
+      {ordered.length === 0 ? (
         <div className="ui-empty-panel py-12 text-text-secondary">
           <Search className="h-8 w-8 text-text-muted" />
           <div className="text-lg font-medium text-text-primary">No prompts match your filters</div>
@@ -91,71 +88,11 @@ export function PromptLibraryClient({
             Try a broader search or clear one of the active filters.
           </div>
         </div>
-      ) : isFiltered ? (
-        <div className="space-y-6">
-          {categoriesWithTemplates.map((cat) => {
-            const group = filtered.filter((t) => t.category === cat);
-            const meta = CATEGORY_META[cat];
-            return (
-              <section key={cat}>
-                <div className="flex items-center gap-2 mb-3">
-                  <span className={`ui-chip ${meta.color}`}>
-                    {meta.label}
-                  </span>
-                  <span className="text-sm text-text-tertiary">
-                    {group.length} prompt{group.length !== 1 ? "s" : ""}
-                  </span>
-                </div>
-                <div className="space-y-2">
-                  {group.map((t) => (
-                    <PromptRow key={t.id} template={t} projects={projects} />
-                  ))}
-                </div>
-              </section>
-            );
-          })}
-        </div>
       ) : (
-        /* Default view: featured row + all categories */
-        <div className="space-y-8">
-          {featured.length > 0 && (
-            <section>
-              <div className="flex items-center gap-2 mb-3">
-                <Star className="h-4 w-4 text-status-warning/80" />
-                <span className="ui-kicker text-text-secondary">Quick Access</span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {featured.map((t) => (
-                  <FeaturedCard key={t.id} template={t} projects={projects} />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {ALL_CATEGORIES.filter((cat) => templates.some((t) => t.category === cat)).map((cat) => {
-            const group = templates.filter((t) => t.category === cat);
-            const meta = CATEGORY_META[cat];
-            return (
-              <section key={cat}>
-                <div className="flex items-center gap-2 mb-3">
-                  <span className={`ui-chip ${meta.color}`}>
-                    {meta.label}
-                  </span>
-                  <button
-                    onClick={() => setActiveCategory(cat)}
-                    className="ml-auto text-sm font-medium text-text-tertiary transition-colors hover:text-text-primary"
-                  >
-                    Filter
-                  </button>
-                </div>
-                <div className="space-y-2">
-                  {group.map((t) => (
-                    <PromptRow key={t.id} template={t} projects={projects} />
-                  ))}
-                </div>
-              </section>
-            );
-          })}
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+          {ordered.map((t) => (
+            <PromptCard key={t.id} template={t} projects={projects} />
+          ))}
         </div>
       )}
     </div>

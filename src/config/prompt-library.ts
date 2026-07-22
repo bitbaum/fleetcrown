@@ -933,7 +933,7 @@ Worked examples (read these once; they replace 200 lines of edge-case rules):
     tags: ["autopilot", "control", "loop"],
   },
   {
-    id: "test-and-fix",
+    id: "autopilot-test-and-fix",
     name: "Test & fix",
     description: "Run the test suite, walk affected flows in the browser, fix every failure to root cause.",
     category: "control",
@@ -1109,6 +1109,44 @@ Next loop iteration: next_best Setup detects the file, Rule 0 surfaces it, and o
 ];
 
 export const ALL_CATEGORIES = Object.keys(CATEGORY_META) as PromptCategory[];
+
+// ── Category groups ──────────────────────────────────────────────────────────
+// The library has 14 fine-grained categories — too many to scan as a filter bar.
+// Collapse them into a handful of top-level GROUPS for the /prompts filter, while
+// each card still shows its fine-grained CATEGORY_META chip. This is a pure
+// grouping layer over the SSOT categories (no prompt is re-tagged).
+export type PromptGroup = "fleet" | "engineering" | "security" | "design" | "growth" | "personal";
+
+export const GROUP_META: Record<PromptGroup, { label: string }> = {
+  fleet:       { label: "Fleet & Control" },
+  engineering: { label: "Engineering" },
+  security:    { label: "Security" },
+  design:      { label: "Design" },
+  growth:      { label: "Growth" },
+  personal:    { label: "Personal" },
+};
+
+/** Display order for the group filter bar. */
+export const PROMPT_GROUPS = Object.keys(GROUP_META) as PromptGroup[];
+
+export const CATEGORY_TO_GROUP: Record<PromptCategory, PromptGroup> = {
+  fleet:       "fleet",
+  control:     "fleet",
+  engineering: "engineering",
+  frontend:    "engineering",
+  backend:     "engineering",
+  database:    "engineering",
+  devops:      "engineering",
+  security:    "security",
+  design:      "design",
+  business:    "growth",
+  marketing:   "growth",
+  research:    "growth",
+  content:     "growth",
+  personal:    "personal",
+};
+
+export const groupForCategory = (c: PromptCategory): PromptGroup => CATEGORY_TO_GROUP[c];
 
 export const GLOBAL_PROMPTS = PROMPT_TEMPLATES.filter((t) => t.scope === "global");
 
