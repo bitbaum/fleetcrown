@@ -92,7 +92,7 @@ jobs:
       # removed in Python 3.12, which macos/ubuntu images now default to.
       # Pin 3.11 so the proven dep set keeps building from source.
       - name: Setup Python 3.11 (node-gyp needs distutils)
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.11'
 
