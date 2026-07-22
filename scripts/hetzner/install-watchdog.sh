@@ -140,16 +140,31 @@ Unit=watchdog.service
 WantedBy=timers.target
 TIMER
 
-# telegram.env template (only if absent — never clobber a real token).
-if [ ! -f /opt/monitoring/telegram.env ]; then
-  cat > /opt/monitoring/telegram.env <<'ENVT'
+# Alert delivery — inherit the bot fleetcrown/openclaw ALREADY use on this box,
+# so alerting is delivery-active by default instead of shipping a dead template
+# that stays journal-only for months (which is exactly what happened until
+# 2026-07-22). Only when no active token exists (here OR in fleetcrown's env) do
+# we fall back to the commented template + the LOUD warning below.
+if ! grep -qE '^TELEGRAM_BOT_TOKEN=.+' /opt/monitoring/telegram.env 2>/dev/null; then
+  FC_ENV=/opt/fleetcrown/app/.env
+  fc_tok=$(grep -m1 '^TELEGRAM_BOT_TOKEN=' "$FC_ENV" 2>/dev/null | cut -d= -f2- | tr -d '"'"'"'"' | tr -d '\r')
+  fc_chat=$(grep -m1 '^APP_TELEGRAM_CHAT_ID=' "$FC_ENV" 2>/dev/null | cut -d= -f2- | tr -d '"'"'"'"' | tr -d '\r')
+  if [ -n "$fc_tok" ] && [ -n "$fc_chat" ]; then
+    { echo "# Inherited from fleetcrown's bot (same box) so delivery is active by default."
+      echo "TELEGRAM_BOT_TOKEN=$fc_tok"
+      echo "TELEGRAM_CHAT_ID=$fc_chat"; } > /opt/monitoring/telegram.env
+    chmod 600 /opt/monitoring/telegram.env
+    echo "[watchdog] inherited fleetcrown's Telegram bot — alert delivery ACTIVE"
+  else
+    cat > /opt/monitoring/telegram.env <<'ENVT'
 # Drop your bot token + chat id here to activate Telegram alerts.
 # TELEGRAM_BOT_TOKEN=123456:ABC...
 # TELEGRAM_CHAT_ID=987654321
 # Optional dead-man's-switch (catches box-death off-box), e.g. healthchecks.io:
 # HEARTBEAT_URL=https://hc-ping.com/your-uuid
 ENVT
-  chmod 600 /opt/monitoring/telegram.env
+    chmod 600 /opt/monitoring/telegram.env
+  fi
 fi
 
 systemctl daemon-reload
