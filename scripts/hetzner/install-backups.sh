@@ -133,9 +133,15 @@ done
 for l in /opt/*/shared/launch.sh /opt/*/app/launch.sh; do
   [ -e "$l" ] && { n=$(echo "$l" | sed -E 's#/opt/([^/]+)/.*#\1#'); stage "$l" "$CFG/apps/${n}-launch.sh"; }
 done
-# Monitoring config (telegram token is a secret → CFG is 700 + restic-encrypted).
-for m in /opt/monitoring/targets.conf /opt/monitoring/telegram.env; do
-  stage "$m" "$CFG/monitoring/$(basename "$m")"
+# Whole monitoring stack — scripts + config + secrets (hcloud/telegram tokens are
+# secrets → CFG is 700 + restic-encrypted). Filesystem-discovered so any new
+# watcher/alert script is captured without editing this list. Restores turnkey:
+# alerting + rescale-availability watch survive a full box rebuild.
+for m in /opt/monitoring/*.sh /opt/monitoring/*.env /opt/monitoring/*.conf; do
+  [ -e "$m" ] && stage "$m" "$CFG/monitoring/$(basename "$m")"
+done
+for u in /etc/systemd/system/host-check.* /etc/systemd/system/hcloud-availability.* /etc/systemd/system/notify-failure@.service; do
+  [ -e "$u" ] && stage "$u" "$CFG/systemd/$(basename "$u")"
 done
 # Supabase stack topology
 for f in /opt/supabase/docker/docker-compose*.yml; do stage "$f" "$CFG/$(basename "$f")"; done
