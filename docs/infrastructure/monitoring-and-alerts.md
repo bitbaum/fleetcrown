@@ -12,8 +12,15 @@ All alerts flow through the watchdog's Telegram channel (`/opt/monitoring/telegr
 | Disk >85% · mem<400MB & swap>90% · failed units present · postgres down | `host-check.sh` on a 5-min timer, transition-only | `install-host-alerts.sh` |
 | Any app URL down (4xx/5xx/unreachable) | `watch.sh` on a timer, transition-only | `install-watchdog.sh` |
 | The box itself dies | external dead-man's-switch ping in `watch.sh` | `install-watchdog.sh` |
+| A bigger Hetzner tier (cx43/cx53) opens for rescale in fsn1 | `hcloud-availability.sh` polls the API's `available_for_migration` on a 10-min timer, transition-only | `install-hcloud-watch.sh` |
 
 Transition-only = you're pinged on the up→down and down→up edges, never every tick.
+
+The rescale watcher exists because Falkenstein is capacity-blocked: the Hetzner
+console *lists* cx43/cx53 as valid rescale targets ("supported"), but the API's
+`available_for_migration` is empty, so a rescale actually fails. The watcher
+polls the real signal and pings the moment a window opens — they can be brief.
+Needs a read-only API token in `/opt/monitoring/hcloud.env`.
 
 ## Resource guards
 
