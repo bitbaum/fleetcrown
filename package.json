@@ -116,7 +116,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/web-push": "^3.6.4",
-    "better-sqlite3": "^12.8.0",
+    "better-sqlite3": "^13.0.1",
     "drizzle-kit": "^0.31.10",
     "esbuild": "^0.28.1",
     "eslint": "^9",
