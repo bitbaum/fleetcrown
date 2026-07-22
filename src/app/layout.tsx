@@ -8,7 +8,7 @@ import { APP_DESCRIPTION, APP_NAME, APP_URL } from "@/config/brand";
 import { PALETTE } from "@/lib/palette";
 import "./globals.css";
 
-// Geist (Vercel's technical grotesk) + Geist Mono — the x.ai / grok / modern
+// Geist (a modern technical grotesk) + Geist Mono — the x.ai / grok / modern
 // product typeface. Self-hosted by the `geist` package; exposes the CSS vars
 // --font-geist-sans / --font-geist-mono which globals.css maps to
 // --font-sans / --font-mono (SSOT).
