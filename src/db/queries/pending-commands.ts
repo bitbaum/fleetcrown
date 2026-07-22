@@ -1,7 +1,7 @@
 import { db } from "@/db";
 import { ORCH_STATE } from "@/lib/orchestration/contract";
 import { pendingCommands, type NewPendingCommand, type InjectPayload, type DispatchPayload, type SwitchAgentPayload, type AutoContinuePayload, type TabPayload, type LaunchAgentPayload, type RunnerChannel } from "@/db/schema/pending-commands";
-import { eq, isNull, isNotNull, and, inArray, desc, sql } from "drizzle-orm";
+import { eq, isNull, isNotNull, and, inArray, notInArray, desc, sql } from "drizzle-orm";
 import type { FailedCommand } from "@/lib/control-types";
 import { STALE_RUN_MINUTES } from "./orchestration-runs";
 
@@ -199,22 +199,28 @@ export async function reclaimStalePendingCommands(userIds: string[]): Promise<nu
   const userFilter = userIds.length === 1
     ? eq(pendingCommands.userId, userIds[0])
     : inArray(pendingCommands.userId, userIds);
-  const reclaimed = await db
-    .update(pendingCommands)
-    .set({ claimedAt: null })
-    .where(and(
-      userFilter,
-      isNotNull(pendingCommands.claimedAt),
-      isNull(pendingCommands.executedAt),
-      // Type-aware lease: hosted (Hermes) runs get a much longer grace so a
-      // healthy multi-minute run is never reclaimed mid-flight and double-run.
-      sql`${pendingCommands.claimedAt} < NOW() - INTERVAL '1 second' * (
-        CASE WHEN ${pendingCommands.type} IN (${sql.join(HOSTED_COMMAND_TYPES.map((t) => sql`${t}`), sql`, `)})
-             THEN ${HOSTED_STALE_CLAIM_SECONDS} ELSE ${STALE_CLAIM_SECONDS} END
-      )`,
-    ))
-    .returning({ id: pendingCommands.id });
-  return reclaimed.length;
+  // Type-aware lease in two typed batches (a CASE around the lease param leaves
+  // it type-unknown → `interval * unknown` → 42883). Hosted (Hermes) runs get a
+  // much longer grace so a healthy multi-minute run is never reclaimed mid-flight
+  // and double-run; local dispatch keeps the short lease.
+  const hostedTypes = [...HOSTED_COMMAND_TYPES];
+  const reclaimBatch = (typeCond: ReturnType<typeof inArray>, seconds: number) =>
+    db
+      .update(pendingCommands)
+      .set({ claimedAt: null })
+      .where(and(
+        userFilter,
+        isNotNull(pendingCommands.claimedAt),
+        isNull(pendingCommands.executedAt),
+        typeCond,
+        sql`${pendingCommands.claimedAt} < NOW() - INTERVAL '1 second' * ${seconds}`,
+      ))
+      .returning({ id: pendingCommands.id });
+  const [hosted, local] = await Promise.all([
+    reclaimBatch(inArray(pendingCommands.type, hostedTypes), HOSTED_STALE_CLAIM_SECONDS),
+    reclaimBatch(notInArray(pendingCommands.type, hostedTypes), STALE_CLAIM_SECONDS),
+  ]);
+  return hosted.length + local.length;
 }
 
 export async function claimNextPendingCommand(userIds: string[], types?: string[], runnerChannel?: RunnerChannel) {
