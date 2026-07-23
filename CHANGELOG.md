@@ -2,7 +2,36 @@
 
 Notable, user-facing changes. Older history lives in the git log (conventional commits).
 
-**Last modified:** 2026-07-22 - the fleet coordinates, the economy is one query away, and every page tells you what it's doing.
+**Last modified:** 2026-07-23 - the two products are one bridge, the public surface is filled in, and the fleet dispatches on purpose.
+
+## 2026-07-23
+
+### Added
+- **OrangeCat fund-to-build integration.** FleetCrown and its sibling product
+  OrangeCat are now one typed, two-way bridge. A project can carry several
+  typed edges to the economy side — origin, public profile, funding, offering,
+  community — instead of a single opaque link, and a signed, ten-minute,
+  one-use handoff token lets you jump from an OrangeCat entity straight into
+  building it here. Cross-product URLs and ids live in one SSOT
+  (`config/ecosystem.ts`).
+- **The public surface is filled in.** New `/blog`, `/docs`, `/changelog`, and
+  `/support` pages, and the footer is regrouped into Product / Learn / Support /
+  Ecosystem / Legal so the marketing site actually leads somewhere.
+
+### Changed
+- **The fleet dispatches on purpose.** Hosted-runner dispatch is now a single
+  source of truth with a UI trigger and recent-activity context, so a run
+  starts intentionally instead of by side effect.
+- **Prompts is one filterable grid**, and **Settings** moved to a left-rail
+  layout with a neutral (not muddy-orange) disabled state on primary buttons.
+- **Frontier** reads like ranked editorial judgment rather than a raw feed.
+
+### Fixed
+- **The agent install command pointed at a dead host.** `fleetcrown-agent`
+  still told users to `curl https://fleetcrown.vercel.app/...` months after the
+  Vercel exit; it now points at `https://fleetcrown.orangecat.ch`.
+- Pinned `LC_ALL=C` in the deploy schema-drift check so a locale-sorted `comm`
+  stops false-failing an otherwise-live deploy.
 
 ## 2026-07-22
 
