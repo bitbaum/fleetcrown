@@ -36,7 +36,13 @@ assert.equal(valid.iss, "orangecat");
 assert.equal(valid.aud, "fleetcrown");
 assert.equal(valid.exp - valid.iat, 600);
 
-assert.throws(() => verifyOrangeCatBuildIntent(`${sign().slice(0, -1)}x`));
+const signed = sign();
+const [signedHeader, signedPayload, signedSignature] = signed.split(".");
+const tamperedSignature =
+  `${signedSignature[0] === "A" ? "B" : "A"}${signedSignature.slice(1)}`;
+assert.throws(() =>
+  verifyOrangeCatBuildIntent(`${signedHeader}.${signedPayload}.${tamperedSignature}`),
+);
 assert.throws(() => verifyOrangeCatBuildIntent(sign({ exp: 1 })));
 assert.throws(() =>
   verifyOrangeCatBuildIntent(sign({
