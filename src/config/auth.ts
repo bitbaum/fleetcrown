@@ -43,39 +43,37 @@ export type PublicNavEntry =
 export const PUBLIC_NAV: PublicNavEntry[] = [
   {
     kind: "menu",
-    label: "Platform",
+    label: "Product",
     sections: [
       {
-        title: "Operate",
-        items: [
-          { label: "Fleet control", href: "/", description: "Web command center for agent operations" },
-          { label: "Fleet Runner", href: "/download", description: "Local desktop execution layer" },
-          { label: "Roadmap", href: "/roadmap", description: "Desktop, mobile, teams, and robotics" },
-        ],
-      },
-      {
-        title: "Install",
-        items: [
-          { label: "Download", href: "/download", description: "Linux app, dependencies, and setup path" },
-          { label: "Whitepaper", href: "/whitepaper", description: "Architecture and control-plane details" },
-          { label: "Thoughts", href: "/thoughts", description: "Technical essays and product thinking" },
-          { label: "Frontier", href: "/frontier", description: "Daily AI & robotics frontier digest" },
-        ],
-      },
-      {
-        title: "Company",
+        title: "Understand",
         items: [
           { label: "Mission", href: "/mission", description: "Why FleetCrown exists" },
-          { label: "Philosophy", href: "/philosophy", description: "Principles we build by" },
-          { label: "Investors", href: "/investors", description: "The market and operating thesis" },
+          { label: "Roadmap", href: "/roadmap", description: "What works now and what comes next" },
+          { label: "Changelog", href: "/changelog", description: "Every shipped release" },
+          { label: "Docs", href: "/docs", description: "Install, connect, and operate your fleet" },
+          { label: "Whitepaper", href: "/whitepaper", description: "Architecture and product thesis" },
+        ],
+      },
+      {
+        title: "Use",
+        items: [
+          { label: "Download", href: "/download", description: "Linux app, dependencies, and setup path" },
+          { label: "Pricing", href: "/pricing", description: "Plans for operators and teams" },
+          { label: "Frontier", href: "/frontier", description: "Daily AI & robotics frontier digest" },
         ],
       },
     ],
   },
   {
     kind: "link",
-    label: "Pricing",
-    href: "/pricing",
+    label: "Blog",
+    href: "/blog",
+  },
+  {
+    kind: "link",
+    label: "Support",
+    href: "/support",
   },
   {
     kind: "external",

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { FLEET_RUNNER_RELEASES, CURRENT_RELEASE } from "@/config/changelog";
-import { APP_NAME } from "@/config/brand";
+import { PublicSurface } from "@/components/public/PublicSurface";
+import { PublicHeaderActions } from "@/components/public/PublicHeaderActions";
 
 export const metadata = {
   title: "Changelog",
@@ -20,11 +21,8 @@ function formatDate(iso: string): string {
 
 export default function ReleasesPage() {
   return (
-    <div className="ui-changelog-root">
-      <nav className="ui-changelog-nav">
-        <Link href="/" className="ui-changelog-brand">{APP_NAME}</Link>
-        <Link href="/sign-in" className="ui-changelog-nav-link">Sign in →</Link>
-      </nav>
+    <PublicSurface right={<PublicHeaderActions />}>
+      <div className="ui-changelog-root">
       <div className="ui-changelog-page">
         <header>
           <div className="ui-changelog-eyebrow">Changelog</div>
@@ -104,6 +102,7 @@ export default function ReleasesPage() {
           ))}
         </div>
       </div>
-    </div>
+      </div>
+    </PublicSurface>
   );
 }

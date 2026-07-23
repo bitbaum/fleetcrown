@@ -235,10 +235,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           scope: "openid profile email project.read project.write timeline.write wallet.read",
         },
       },
-      // Same policy as GitHub/Google below: OrangeCat verifies emails
-      // (Supabase/GoTrue), so linking an OC sign-in to an existing FC user
-      // with the same email is safe and matches user expectation.
-      allowDangerousEmailAccountLinking: true,
+      // Actor `sub`, not email, is the cross-product identity boundary.
+      // Do not silently attach an OrangeCat actor to an existing FleetCrown
+      // account merely because the email strings happen to match.
     }] : []),
     // Conditionally mounted (like Google/X) so a missing key pair cleanly
     // drops the provider instead of mounting it with empty-string creds that

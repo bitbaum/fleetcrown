@@ -34,6 +34,9 @@ import { renderOperatingPrinciples } from "@/config/operating-principles";
 import { getGithubToken } from "@/lib/github-token";
 import { fetchRecentGithubCommits, type RepoCommit } from "@/lib/github-commits";
 import { computeProjectHealth, describeProjectHealth } from "@/lib/project-health";
+import { getOrangeCatLinksForProject } from "./orangecat-links";
+import type { OrangeCatEntityLink } from "@/db/schema";
+import { fetchOrangeCatFundingSummary, type OrangeCatFundingSummary } from "@/lib/integrations/orangecat-funding";
 
 export type ProjectRunRow = typeof orchestrationRuns.$inferSelect;
 
@@ -48,6 +51,9 @@ export type ProjectDossier = {
   outcomes: RecentOutcome[];
   /** The runtime row (devLog lives on detail; this adds gitUrl/dirPath/OC link). */
   userProject: UserProject | null;
+  /** Typed public/economic edges into OrangeCat. */
+  orangecatLinks: OrangeCatEntityLink[];
+  orangecatFunding: OrangeCatFundingSummary | null;
   /** Recent repo commits — evidence of real work even when no FleetCrown run
    *  produced it. null when the project has no GitHub repo or no linked token. */
   commits: RepoCommit[] | null;
@@ -79,6 +85,13 @@ export async function getProjectDossier(
   ]);
 
   const gitUrl = userProject?.gitUrl ?? detail.project.gitUrl;
+  const orangecatLinks = userProject
+    ? await getOrangeCatLinksForProject(ownerId, userProject.id).catch(() => [])
+    : [];
+  const fundingLink = orangecatLinks.find((link) => link.role === "funding")
+    ?? orangecatLinks.find((link) => link.role === "public_profile")
+    ?? orangecatLinks[0];
+  const orangecatFunding = await fetchOrangeCatFundingSummary(fundingLink);
   const commits = gitUrl
     ? await getGithubToken(ownerId)
         .then((token) => (token ? fetchRecentGithubCommits(gitUrl, token) : null))
@@ -94,6 +107,8 @@ export async function getProjectDossier(
     runs,
     outcomes,
     userProject,
+    orangecatLinks,
+    orangecatFunding,
     commits,
     builtAtMs: Date.now(),
   };

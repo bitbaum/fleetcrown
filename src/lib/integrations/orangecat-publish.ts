@@ -23,6 +23,8 @@ import {
   FLEETCROWN_PUBLIC_ORIGIN,
   type PromotableMoment,
 } from "@/config/orangecat-publish";
+import { linkOrangeCatEntity } from "@/db/queries/orangecat-links";
+import { ECOSYSTEM } from "@/config/ecosystem";
 
 export interface PublishResult {
   ok: boolean;
@@ -90,6 +92,16 @@ export async function publishProjectToOrangeCat(
       .update(userProjects)
       .set({ orangecatProjectId: ocProjectId, updatedAt: new Date() })
       .where(eq(userProjects.id, project.id));
+
+    await linkOrangeCatEntity({
+      userId,
+      projectId: project.id,
+      entityType: "project",
+      entityId: ocProjectId,
+      role: "funding",
+      publicUrl: new URL(`/projects/${ocProjectId}`, ECOSYSTEM.orangeCat.siteUrl).toString(),
+      title: project.name,
+    });
 
     // First moment on the wall: the project went public.
     void promoteMomentToOrangeCat(userId, project.id, "project_published", {

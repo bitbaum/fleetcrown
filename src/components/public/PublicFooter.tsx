@@ -4,6 +4,7 @@ import Link from "next/link";
 import { CURRENT_RELEASE } from "@/config/changelog";
 import { useInsideFleetRunner } from "@/hooks/use-inside-fleet-runner";
 import { APP_NAME } from "@/config/brand";
+import { ECOSYSTEM, ECOSYSTEM_LINKS } from "@/config/ecosystem";
 
 // PublicFooter — links to legal pages and support surfaces on every
 // unauthenticated marketing page. Rendered by PublicSurface so individual
@@ -20,9 +21,31 @@ const FOOTER_GROUPS = [
       { label: "Pricing", href: "/pricing" },
       { label: "Download", href: "/download" },
       { label: "Sign in", href: "/sign-in" },
-      { label: "Docs", href: "/docs/quickstart" },
       { label: "Roadmap", href: "/roadmap" },
-      { label: "Releases", href: "/releases" },
+      { label: "Changelog", href: "/changelog" },
+    ],
+  },
+  {
+    heading: "Learn",
+    links: [
+      { label: "Docs", href: "/docs" },
+      { label: "Whitepaper", href: "/whitepaper" },
+      { label: "Blog", href: "/blog" },
+      { label: "Frontier", href: "/frontier" },
+    ],
+  },
+  {
+    heading: "Support",
+    links: [
+      { label: "Support FleetCrown", href: "/support" },
+      { label: "GitHub issues", href: "https://github.com/maonakamoto/fleetcrown/issues", external: true },
+    ],
+  },
+  {
+    heading: "Ecosystem",
+    links: [
+      { label: "OrangeCat", href: ECOSYSTEM.orangeCat.siteUrl, external: true },
+      { label: "FleetCrown on OrangeCat", href: ECOSYSTEM_LINKS.fleetCrown, external: true },
     ],
   },
   {
@@ -31,14 +54,6 @@ const FOOTER_GROUPS = [
       { label: "Privacy", href: "/privacy" },
       { label: "Terms", href: "/terms" },
       { label: "License", href: "/license" },
-    ],
-  },
-  {
-    heading: "Source",
-    links: [
-      { label: "GitHub", href: "https://github.com/maonakamoto/fleetcrown", external: true },
-      { label: "GitHub releases", href: "https://github.com/maonakamoto/fleetcrown-releases/releases", external: true },
-      { label: "Issues", href: "https://github.com/maonakamoto/fleetcrown/issues", external: true },
     ],
   },
 ] as const;
@@ -80,7 +95,7 @@ export function PublicFooter() {
       </div>
       <div className="ui-public-footer-bottom">
         <div>© {new Date().getFullYear()} {APP_NAME} · Mao Nakamoto</div>
-        <Link href="/releases" className="ui-public-link font-mono">
+        <Link href="/changelog" className="ui-public-link font-mono">
           Fleet Runner v{CURRENT_RELEASE.version}
         </Link>
       </div>

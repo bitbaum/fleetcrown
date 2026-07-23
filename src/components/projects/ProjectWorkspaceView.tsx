@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, ExternalLink, GitBranch, Globe } from "lucide-react";
+import { ArrowLeft, Cat, ExternalLink, GitBranch, Globe } from "lucide-react";
 import type { ProjectDossier } from "@/db/queries/project-dossier";
 import { ProjectWorkspaceHeader } from "./ProjectWorkspaceHeader";
 import { ProjectContextEditor } from "./ProjectContextEditor";
@@ -50,6 +50,9 @@ export function ProjectWorkspaceView({
   }
   const latestDevLogEntry = [...(detail.devLog ?? [])].reverse()[0] ?? null;
   const nextStep = latestDevLogEntry?.next?.trim() || attrs.next_step?.trim() || null;
+  const primaryOrangeCatLink = dossier.orangecatLinks.find((link) => link.role === "funding")
+    ?? dossier.orangecatLinks.find((link) => link.role === "public_profile")
+    ?? dossier.orangecatLinks[0];
 
   return (
     <div className="app-page max-w-5xl space-y-6">
@@ -98,22 +101,48 @@ export function ProjectWorkspaceView({
               </a>
             )}
             {!dossier.readonly && <OrangeCatPublishButton projectId={project.id} />}
-            {userProject?.orangecatProjectId && (
+            {primaryOrangeCatLink && (
               <a
-                href={`https://orangecat.ch/projects/${userProject.orangecatProjectId}`}
+                href={primaryOrangeCatLink.publicUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="ui-icon-action min-h-11 min-w-11"
-                title="Open on OrangeCat"
-                aria-label="Open project on OrangeCat"
+                className="ui-btn-secondary min-h-11 gap-1.5"
+                title="View, share, and fund this project on OrangeCat"
               >
-                <ExternalLink className="h-4 w-4" />
+                <Cat className="h-4 w-4 text-accent-text" aria-hidden />
+                View and fund
+                <ExternalLink className="h-3.5 w-3.5" aria-hidden />
               </a>
             )}
             {shareAction}
           </div>
         </div>
       </header>
+
+      {primaryOrangeCatLink && dossier.orangecatFunding && (
+        <section className="flex flex-col gap-3 rounded-xl border border-border-subtle bg-surface-base p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="text-xs font-medium uppercase tracking-[0.14em] text-text-muted">
+              Confirmed on OrangeCat
+            </div>
+            <div className="mt-1 text-xl font-semibold text-text-primary">
+              {dossier.orangecatFunding.totalBtc.toFixed(8).replace(/\.?0+$/, "") || "0"} BTC
+            </div>
+            <div className="mt-1 text-sm text-text-secondary">
+              {dossier.orangecatFunding.contributorCount} confirmed{" "}
+              {dossier.orangecatFunding.contributorCount === 1 ? "contribution" : "contributions"}
+            </div>
+          </div>
+          <a
+            href={primaryOrangeCatLink.publicUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="ui-btn-secondary min-h-11 gap-1.5"
+          >
+            Share and fund <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+          </a>
+        </section>
+      )}
 
       <nav
         aria-label="Project profile sections"

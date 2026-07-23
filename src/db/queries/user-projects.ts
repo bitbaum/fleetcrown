@@ -7,6 +7,7 @@ import { ENTITY_TYPE } from "@/lib/constants/statuses";
 import { getOrgPeerIds } from "./utils";
 import { findProjectEntityByName } from "./project-merge";
 import { isPublicTestArtifact } from "@/lib/project-display";
+import { getProjectByOrangeCatEntity } from "./orangecat-links";
 
 export async function getUserProjects(userId: string): Promise<UserProject[]> {
   return db
@@ -168,6 +169,8 @@ export async function getUserProjectByEntityId(userId: string, entityProjectId: 
  * not the operator; the row carries the owning userId.
  */
 export async function getUserProjectByOrangeCatProjectId(orangecatProjectId: string): Promise<UserProject | null> {
+  const linked = await getProjectByOrangeCatEntity("project", orangecatProjectId);
+  if (linked?.project) return linked.project;
   const row = await db.query.userProjects.findFirst({
     where: eq(userProjects.orangecatProjectId, orangecatProjectId),
   });

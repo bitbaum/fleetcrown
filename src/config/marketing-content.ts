@@ -220,15 +220,15 @@ export const ROADMAP = {
     {
       marker: "ECONOMY",
       title: "OrangeCat integration — the transaction half",
-      summary: "Pair FleetCrown's production layer with OrangeCat's economic layer. The two halves of the individual singularity, settled to the same operator on the same terms.",
+      summary: "Make it natural to fund what people build and build what people choose to fund, without pretending the full loop is already automated.",
       bullets: [
-        "Identity bridge — FleetCrown users connect their OrangeCat actor through OAuth. One identity, two products, one settlement layer.",
-        "Publish to OrangeCat — a project or agent output becomes a product or service listing with Lightning payments in one click.",
-        "Agent costs as outflows — compute, API tokens, and third-party services route through the operator's OrangeCat Cat. The economy of the fleet becomes legible and auditable per project.",
-        "Subscriptions as assets — FleetCrown's Money tab knows what the operator pays for; OrangeCat coordinates funding, lending, and shared-asset ownership so dragging subscriptions can be refinanced or sublet without leaving the platform.",
-        "FleetCrown pricing on Lightning rails — FleetCrown's own revenue settles through OrangeCat. No Stripe in the path. Pseudonymous customers welcome.",
+        "One OrangeCat identity across both products through the existing OIDC bridge.",
+        "Typed links connect a FleetCrown project to any OrangeCat entity acting as its origin, public profile, funding page, offering, or community.",
+        "A signed, ten-minute OrangeCat handoff can prefill a FleetCrown project and Loki plan; the owner approves before anything is created or dispatched.",
+        "OrangeCat remains the share, promotion, and Bitcoin funding surface. FleetCrown shows its confirmed funding summary read-only.",
+        "Automatic work orders, milestone-triggered dispatch, smart-contract escrow, fiat, privacy coins, and full Nostr identity stay later-roadmap work.",
       ],
-      note: "The pieces exist in production today on both platforms (fleetcrown.orangecat.ch and orangecat.ch). FleetCrown is a customer of OrangeCat (via typed stakeholder 'customer' edge in the shared graph). See the live projects 'OrangeCat' and 'FleetCrown' on orangecat.ch under Mao Nakamoto. The integration is engineering, not invention. See the Thoughts essay \"The Two Halves of the Individual Singularity\" for the full strategic argument.",
+      note: "Bitcoin is the first live settlement rail because confirmed transfers can be independently audited. Fiat relies on private bank reconciliation; privacy coins deliberately remove the public trail. Neither is presented as available today.",
     },
     {
       marker: "ROBOTICS",
@@ -549,28 +549,6 @@ export const START_PATHS = [
   },
 ] as const;
 
-// OrangeCat integration for FleetCrown (SSOT for cross-product customer story)
-// FleetCrown (production/AI fleet) is a paying customer of OrangeCat (economic layer).
-// Both OrangeCat and FleetCrown are live projects/profiles on orangecat.ch under Mao Nakamoto.
-// Shared BTC wallet, typed "customer" stakeholder edge via stakeholder_relationships.
-// This demonstrates the full stack; scales to other customers.
-export const ORANGECAT_INTEGRATION = {
-  customer: "FleetCrown",
-  owner: "Mao Nakamoto",
-  orangeCat: {
-    title: "OrangeCat",
-    projectUrl: "https://www.orangecat.ch/projects/cb093f00-8745-4579-98df-050ebfb37181",
-    profile: "https://www.orangecat.ch/profile/mao-nakamoto",
-  },
-  fleetCrown: {
-    title: "FleetCrown",
-    projectUrl: "https://www.orangecat.ch/projects/8130c927-114a-45b7-8cc2-99efd5224025",
-    site: "https://fleetcrown.orangecat.ch",
-  },
-  wallet: {
-    btc: "bc1q3hh4yklcmwtpnqmxyksw36yedg7zyfy6tzzqwz",
-    lightning: "orangecat@getalby.com",
-  },
-  relation: "FleetCrown is 'customer' of OrangeCat via the shared stakeholder graph.",
-  note: "See stakeholder_relationships table (migration applied) and live data on orangecat.ch. One is customer of the other.",
-};
+// Kept as a re-export for existing imports. New public integration surfaces
+// should import from config/ecosystem directly.
+export { ORANGECAT_INTEGRATION } from "./ecosystem";
