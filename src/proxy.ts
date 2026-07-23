@@ -28,6 +28,8 @@ export const config = {
      *   forgot-password, reset-password, verify-email, setup, invite
      *   download                    – public install/discovery page
      *   whitepaper, thoughts       – public content
+     *   docs, blog, changelog,     – public marketing surface (docs subsumes docs/quickstart)
+     *   support
      *   frontier                   – daily AI/robotics frontier digest (public)
      *   mission, philosophy,       – public marketing pages
      *   investors, roadmap, pricing
@@ -51,6 +53,6 @@ export const config = {
      *   import-from-local\.sh      – public bash one-liner users curl-pipe into their terminal
      *                                to scan ~/dev and POST detected repos to /api/projects/import-from-local
      */
-    "/((?!_next/static|_next/image|favicon\\.ico|icon\\.svg|manifest\\.json|opengraph-image|twitter-image|robots\\.txt|sitemap\\.xml|sign-in|sign-up|forgot-password|reset-password|verify-email|setup|invite|download|whitepaper|thoughts|frontier|mission|philosophy|investors|roadmap|pricing|releases|privacy|terms|license|docs/quickstart|u/|share/project/|beacon|import-from-local\\.sh|api/auth|api/agent/install|api/agent/daemon|api/health|api/setup|api/crons|api/system|api/beacon|api/invitations/|api/stripe/webhook|api/orangecat/|api/feedback|widget\\.js).+)",
+    "/((?!_next/static|_next/image|favicon\\.ico|icon\\.svg|manifest\\.json|opengraph-image|twitter-image|robots\\.txt|sitemap\\.xml|sign-in|sign-up|forgot-password|reset-password|verify-email|setup|invite|download|whitepaper|thoughts|frontier|mission|philosophy|investors|roadmap|pricing|releases|privacy|terms|license|docs|blog|changelog|support|u/|share/project/|beacon|import-from-local\\.sh|api/auth|api/agent/install|api/agent/daemon|api/health|api/setup|api/crons|api/system|api/beacon|api/invitations/|api/stripe/webhook|api/orangecat/|api/feedback|widget\\.js).+)",
   ],
 };
