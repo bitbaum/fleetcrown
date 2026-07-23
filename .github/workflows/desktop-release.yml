@@ -136,7 +136,7 @@ jobs:
       # running via workflow_dispatch (no GH Release will exist) and as a
       # backup for the tagged release path.
       - name: Upload workflow artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: fleet-runner-${{ matrix.os }}
           path: ${{ matrix.artifact_glob }}
