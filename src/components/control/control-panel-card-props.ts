@@ -5,7 +5,13 @@ import type { AutoInjectMode } from "@/config/beacon";
 import { TOAST_LONG_MS } from "@/lib/constants/timings";
 import { EXECUTOR_COPY } from "@/config/executor-copy";
 
-type RegistryEntry = { id: string; label: string; modelSuggestions: string[] };
+type RegistryEntry = {
+  id: string;
+  label: string;
+  modelSuggestions: string[];
+  available?: boolean;
+  availabilityReason?: string;
+};
 
 type Deps = {
   prompts: PromptMeta[];
@@ -40,11 +46,15 @@ type Deps = {
  * both surfaces — keep both calls in any future edits.
  */
 export function buildCardProps(deps: Deps) {
-  const availableAgents = deps.switchableRegistry.map(({ id, label, modelSuggestions }) => ({
-    id,
-    label,
-    modelSuggestions,
-  }));
+  const availableAgents = deps.switchableRegistry.map(
+    ({ id, label, modelSuggestions, available, availabilityReason }) => ({
+      id,
+      label,
+      modelSuggestions,
+      available,
+      availabilityReason,
+    }),
+  );
 
   return (project: ProjectState) => ({
     project,
