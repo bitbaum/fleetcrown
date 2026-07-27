@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createHmac, timingSafeEqual } from "crypto";
 import { z } from "zod";
 import { getProjectsByOrangeCatEntity } from "@/db/queries/orangecat-links";
 import { createOrchestrationEventOnce } from "@/db/queries/orchestration-events";
 import { logDebug } from "@/db/queries/debug-logs";
+import { verifyOrangeCatWebhookSignature } from "@/lib/integrations/orangecat-webhook";
 
 /**
  * OrangeCat event webhook — economic signals flowing back into the fleet.
@@ -23,15 +23,6 @@ const Body = z.object({
   externalId: z.string().trim().min(1).max(200),
 });
 
-function verifySignature(raw: string, header: string | null, secret: string): boolean {
-  if (!header) return false;
-  const expected = createHmac("sha256", secret).update(raw).digest("hex");
-  const got = header.startsWith("sha256=") ? header.slice(7) : header;
-  const a = Buffer.from(got, "hex");
-  const b = Buffer.from(expected, "hex");
-  return a.length === b.length && timingSafeEqual(a, b);
-}
-
 export async function POST(req: NextRequest) {
   const secret = process.env.ORANGECAT_WEBHOOK_SECRET;
   if (!secret) {
@@ -39,7 +30,7 @@ export async function POST(req: NextRequest) {
   }
 
   const raw = await req.text();
-  if (!verifySignature(raw, req.headers.get("x-orangecat-signature"), secret)) {
+  if (!verifyOrangeCatWebhookSignature(raw, req.headers.get("x-orangecat-signature"), secret)) {
     return NextResponse.json({ error: "invalid signature" }, { status: 401 });
   }
 
