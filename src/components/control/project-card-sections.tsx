@@ -12,6 +12,7 @@ import { postJson } from "@/lib/api/fetch";
 import type { ProjectState } from "@/lib/control-types";
 import { buildSessionHandoffFromProjectSession, SessionHandoff } from "./SessionHandoff";
 import { ProjectStatusChips } from "./ProjectStatusChips";
+import type { AgentEntry } from "./agent-switcher-popover";
 import { OutcomeStreak } from "./OutcomeStreak";
 import { STATE_DEFINITIONS, type ProjectStateKey } from "@/lib/control-states";
 
@@ -52,7 +53,7 @@ export function ProjectCardHeader({
   onProfileToggle: () => void;
   onCollapse?: () => void;
   onFocus?: () => void;
-  availableAgents?: { id: string; label: string; modelSuggestions: string[] }[];
+  availableAgents?: AgentEntry[];
   localAgentId?: string | null;
   switchingAgent?: boolean;
   onSwitchAgent?: (agentId: string | null) => void;
