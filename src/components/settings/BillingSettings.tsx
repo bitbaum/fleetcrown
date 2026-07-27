@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { postJson } from "@/lib/api/fetch";
-import { LANDING_PRICING } from "@/config/marketing";
+import { PRICING_PLANS, PRICING_CURRENCY, PRICING_BILLING_NOTE } from "@/config/plans";
 import type { Plan } from "@/db/schema/users";
 
 const PLAN_LABEL: Record<Plan, string> = {
@@ -33,7 +33,6 @@ export function BillingSettings({ plan, planStatus, stripeReady, hasSubscription
   const router        = useRouter();
   const pathname      = usePathname();
   const didProcess    = useRef(false);
-  const [billing, setBilling] = useState<"monthly" | "annual">("annual");
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState<{ text: string; type: "success" | "info" | "error" } | null>(null);
@@ -55,7 +54,7 @@ export function BillingSettings({ plan, planStatus, stripeReady, hasSubscription
     setError("");
     setLoading(targetPlan);
     try {
-      const res = await postJson("/api/stripe/checkout", { plan: targetPlan, billing });
+      const res = await postJson("/api/stripe/checkout", { plan: targetPlan, billing: "annual" });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Failed to start checkout."); return; }
       if (data.url) window.location.href = data.url;
@@ -108,49 +107,25 @@ export function BillingSettings({ plan, planStatus, stripeReady, hasSubscription
 
       {stripeReady && plan === "free" && (
         <>
-          <div className="flex items-center gap-1 rounded-lg bg-surface-raised p-1 w-fit">
-            <button
-              onClick={() => setBilling("monthly")}
-              className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
-                billing === "monthly"
-                  ? "bg-surface-overlay text-text-primary"
-                  : "text-text-tertiary hover:text-text-secondary"
-              }`}
-            >
-              Monthly
-            </button>
-            <button
-              onClick={() => setBilling("annual")}
-              className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
-                billing === "annual"
-                  ? "bg-surface-overlay text-text-primary"
-                  : "text-text-tertiary hover:text-text-secondary"
-              }`}
-            >
-              Annual <span className="text-status-positive">–17%</span>
-            </button>
-          </div>
-
           <div className="grid gap-3 sm:grid-cols-3">
-            {LANDING_PRICING.map((tier) => {
-              const tierPlan = tier.name.toLowerCase() as "personal" | "pro" | "team";
-              const price = billing === "annual"
-                ? `$${Math.round(tier.annual / 12)}/mo`
-                : `$${tier.monthly}/mo`;
+            {PRICING_PLANS.filter((tier) => tier.key !== "free").map((tier) => {
+              const tierPlan = tier.key as "personal" | "pro" | "team";
               return (
                 <div
-                  key={tier.name}
-                  className={`ui-panel rounded-xl p-4 space-y-3 ${tier.highlighted ? "border-accent-primary/40" : ""}`}
+                  key={tier.key}
+                  className={`ui-panel rounded-xl p-4 space-y-3 ${tier.featured ? "border-accent-primary/40" : ""}`}
                 >
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-widest text-text-muted">{tier.name}</p>
-                    <p className="text-2xl font-bold text-text-primary mt-1">{price}</p>
+                    <p className="text-2xl font-bold text-text-primary mt-1">
+                      {PRICING_CURRENCY} {tier.priceMonthly}<span className="text-sm font-normal text-text-tertiary">/mo</span>
+                    </p>
                     <p className="text-xs text-text-tertiary">{tier.tagline}</p>
                   </div>
                   <button
                     onClick={() => handleUpgrade(tierPlan)}
                     disabled={!!loading}
-                    className={tier.highlighted ? "ui-btn-primary w-full" : "ui-btn-secondary w-full"}
+                    className={tier.featured ? "ui-btn-primary w-full" : "ui-btn-secondary w-full"}
                   >
                     {loading === tierPlan ? "Redirecting…" : tier.cta}
                   </button>
@@ -158,6 +133,7 @@ export function BillingSettings({ plan, planStatus, stripeReady, hasSubscription
               );
             })}
           </div>
+          <p className="text-xs text-text-muted">{PRICING_BILLING_NOTE}</p>
         </>
       )}
 
