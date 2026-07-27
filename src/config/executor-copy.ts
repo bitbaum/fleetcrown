@@ -59,8 +59,8 @@ export const EXECUTOR_COPY = {
       body: "Create projects, keep strategy and context, and connect a builder before dispatching agent work.",
     },
     desktopPath: {
-      title: "Optional — also run on this computer",
-      body: `Install ${APP_NAME} desktop to dispatch agents against local folders and your own CLI logins. It uses your account token, so your queue stays tenant-scoped.`,
+      title: "Run agents on this computer",
+      body: `This is how agent work actually runs: install ${APP_NAME} desktop to dispatch agents against local folders and your own CLI logins. It uses your account token, so your queue stays tenant-scoped.`,
       cta: "Get the desktop app",
       href: "/download",
     },
@@ -74,7 +74,7 @@ export const EXECUTOR_COPY = {
         ? `Builder offline · last seen ${lastSeen} — work stays queued`
         : "Builder offline — work stays queued",
     reconnect: "How to reconnect",
-    neverSeenTitle: "Optional — use this computer too",
+    neverSeenTitle: "Connect a builder to run agents",
     offlineTitle: "Builder offline",
     neverSeenBody:
       "Connect Fleet Runner on this computer to execute agent work for this account. Hosted cloud builders are private beta.",
