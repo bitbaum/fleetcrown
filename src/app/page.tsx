@@ -168,7 +168,7 @@ export default async function LandingPage() {
         <div className="mx-auto max-w-6xl px-6">
           <div className="grid gap-12 md:grid-cols-[1fr_1.2fr] md:items-start">
             <div>
-              <div className="ui-public-eyebrow">LIVE SURFACE</div>
+              <div className="ui-public-eyebrow">THE SURFACE</div>
               <h2 className="ui-public-display-md mt-4">Built around the state real agent work produces.</h2>
               <p className="ui-public-section-lede mt-6">
                 The product is not a chat box. It is an operational surface for sessions, queues, handoffs, and machine-local execution.
@@ -178,7 +178,7 @@ export default async function LandingPage() {
             <div className="ui-public-terminal-demo">
               <div className="ui-public-terminal-row">
                 <span>projects/main</span>
-                <span>Continuous</span>
+                <span>Illustrative</span>
               </div>
               <div className="ui-public-terminal-line">❯ migrate auth from sessions to jwt</div>
               <div className="ui-public-terminal-muted">read_file src/proxy.ts · inspect callbackUrl · patch matcher</div>
