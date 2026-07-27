@@ -116,6 +116,18 @@ jobs:
           # Publish only on a real tag — on workflow_dispatch we leave artifacts
           # in dist/ for the upload-artifact step to grab.
           PUBLISH_FOR_RELEASE: ${{ startsWith(github.ref, 'refs/tags/fleet-runner-v') && !inputs.dry_run }}
+          # ── Code-signing (gated: empty when the secret is unset → unsigned build,
+          # exactly as today). electron-builder reads these directly: set CSC_LINK
+          # (base64 Developer ID .p12) + CSC_KEY_PASSWORD to sign macOS; WIN_CSC_LINK
+          # + WIN_CSC_KEY_PASSWORD for Windows. Notarization also needs the mac.notarize
+          # config + entitlements — see docs/development/desktop-signing.md.
+          CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         shell: bash
         run: |
           if [ "$PUBLISH_FOR_RELEASE" = "true" ]; then
@@ -125,7 +137,7 @@ jobs:
             npx electron-vite build
             case "${{ matrix.os }}" in
               macos-latest)    npx electron-builder --mac    --publish always ;;
-              windows-latest)  npx electron-builder --win    --publish always ;;
+              windows-2022)    npx electron-builder --win    --publish always ;;
               ubuntu-latest)   npx electron-builder --linux  --publish always ;;
             esac
           else
