@@ -25,6 +25,13 @@ const PKG_VERSION = (() => {
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // Pin file tracing to the project dir. Without this, a build run inside a
+  // nested git worktree (.claude/worktrees/*) walks up to the outer checkout's
+  // lockfile as the inferred workspace root: server.js lands nested inside
+  // standalone/ and the traced externals (require-in-the-middle, node-pty)
+  // become symlinks that escape the tree — both shipped a broken standalone
+  // on 2026-07-28. `npm run build` always runs from the project dir.
+  outputFileTracingRoot: process.cwd(),
   // node-pty is a native addon (compiled .node) — it must stay external, never
   // bundled by Turbopack/webpack, and only runs in the Node runtime. It backs
   // the LocalPtyExecutor (FleetCrown-owned agent PTYs). See
