@@ -45,7 +45,11 @@ export function useCommandPaletteHotkey(api: CommandPaletteApi): void {
         api.toggle();
         return;
       }
-      if (e.key === "/" && !isTypingTarget(e.target)) {
+      // composedPath()[0] is the true innermost target even when the event
+      // originated inside a shadow root (e.g. an embedded widget's textarea),
+      // where e.target is retargeted to the shadow host and the guard would
+      // otherwise misread a text field as "not typing" and steal the keystroke.
+      if (e.key === "/" && !isTypingTarget(e.composedPath()[0] ?? e.target)) {
         e.preventDefault();
         api.setOpen(true);
       }

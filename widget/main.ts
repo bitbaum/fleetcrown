@@ -298,8 +298,19 @@ function h<K extends keyof HTMLElementTagNameMap>(
     }
 
     function onKeydown(e: KeyboardEvent) {
+      // The panel is a modal overlay rendered in a shadow root. Host pages bind
+      // global hotkeys (⌘K command palette, "/" search, "?" help, digit
+      // shortcuts) on window/document. Because the event retargets to the shadow
+      // HOST element when it crosses the boundary, the host's own
+      // "is the user typing?" guard reads the wrong node and fires anyway —
+      // stealing keystrokes while the user types feedback (observed on both
+      // orangecat.ch and fleetcrown.orangecat.ch, which embed this same widget).
+      // While the panel is open we own the keyboard: stop every keystroke at the
+      // shadow boundary so nothing leaks to the host's global shortcuts. This is
+      // standard modal keyboard-trap behaviour and is the single fix that covers
+      // every embedding host at once.
+      e.stopPropagation();
       if (e.key === "Escape") {
-        e.stopPropagation();
         if (picking) stopPicking();
         else closePanel();
       } else if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
