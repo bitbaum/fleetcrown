@@ -13,7 +13,7 @@
     "postbuild": "bash scripts/deploy-local.sh",
     "start": "next start",
     "install-app": "bash scripts/install-fleetcrown-app.sh",
-    "migrate": "drizzle-kit push",
+    "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
     "check:schema": "npx tsx scripts/check-schema-drift.ts",
     "lint": "eslint src/ home/",

@@ -185,7 +185,8 @@ grep -rn "text-gray-\|text-slate-\|text-zinc-\|text-blue-\|text-green-\|text-red
 
 ### Database
 - Connection: `DATABASE_URL` env var (required, fail-fast if missing)
-- Schema push: `DATABASE_URL=... npx drizzle-kit push`
+- Schema change flow: edit `src/db/schema/` → `npm run db:generate` (versioned `drizzle/NNNN_*.sql`) → review the SQL in the PR → the deploy applies it forward-only (`scripts/hetzner/apply-schema.sh`, guarded + rollback-on-drift). See `docs/infrastructure/migration-strategy.md`.
+- `npm run db:push` (`drizzle-kit push`) is for a **throwaway local/scratch DB only** — never a shared or production database (it diff-applies with no reviewable file and can drop data).
 - Seed: `DATABASE_URL=... npx tsx scripts/seed.ts`
 - Every table has `user_id` for multi-user prep
 - UUIDs for all primary keys
@@ -210,7 +211,8 @@ npm run dev          # Start dev server (default port 3000)
 npm run build        # Production build
 npm run smoke        # Curl every page route on localhost:3000 and assert 2xx/3xx
 npm run test:home    # Run all eight home/ inline self-test suites (~14s)
-npx drizzle-kit push # Push schema changes to Postgres
+npm run db:generate  # Generate a versioned migration file from schema changes
+npm run db:push      # drizzle-kit push — LOCAL/scratch DB only, never shared/prod
 npx tsx scripts/seed.ts  # Re-seed database from knowledge.sqlite + contacts
 npx tsx home/worker.ts --start  # Run a single home/ piece for iteration
                                 # (Fleet Runner desktop is the real executor)

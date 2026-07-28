@@ -86,7 +86,7 @@ Point each app at its own database name on the same host via its `DATABASE_URL`.
 DATABASE_URL="$OLD_DIRECT_URL" ./scripts/db/dump.sh fleetcrown-pre-migrate.sql.gz
 
 # 2. Create empty DB on new host, push schema
-DATABASE_URL="$NEW_DIRECT_URL" npm run migrate
+DATABASE_URL="$NEW_DIRECT_URL" npm run db:push
 
 # 3. Restore
 DATABASE_URL="$NEW_DIRECT_URL" ./scripts/db/restore.sh fleetcrown-pre-migrate.sql.gz
@@ -107,7 +107,7 @@ SOURCE_DATABASE_URL="$OLD" TARGET_DATABASE_URL="$NEW" TARGET_USER_ID="<uuid>" \
 
 - [ ] `DATABASE_URL` (direct) and `DATABASE_POOL_URL` (pool, if used) set in the app env
 - [ ] Local `.env.local` still points at Docker — not new prod
-- [ ] `npm run migrate` succeeds against new direct URL
+- [ ] `npm run db:push` succeeds against new direct URL
 - [ ] Auth sign-in works
 - [ ] Control SSE / runner push updates `runtime_snapshots`
 - [ ] Decommission old host after 7 days (keep a cold dump for 30)

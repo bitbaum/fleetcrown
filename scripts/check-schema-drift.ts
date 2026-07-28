@@ -113,7 +113,7 @@ async function main() {
       console.error(`✗ schema-drift: ${missingColumns.length} column(s) declared in src/db/schema are MISSING from the database:`);
     }
     for (const c of missingColumns) console.error(`    - ${c}`);
-    console.error("  Run `npm run migrate` (drizzle-kit push) to create them before pushing.");
+    console.error("  On a local/scratch DB, run `npm run db:push` (drizzle-kit push) to create them before pushing.");
     process.exit(1);
   }
 

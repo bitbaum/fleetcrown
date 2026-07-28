@@ -122,7 +122,7 @@ Production deploys to the Hetzner box run via `scripts/deploy-hetzner.sh`
 npm install
 docker compose up db -d
 cp .env.example .env.local
-npm run migrate
+npm run db:push   # local scratch DB only — never a shared/prod database
 npm run dev
 ```
 
