@@ -62,7 +62,7 @@ function groupSimilarActions(
   return { groups, standalone };
 }
 
-export async function ActionQueueCard() {
+export async function ActionQueueCard({ emptyState = null }: { emptyState?: React.ReactNode } = {}) {
   const userId = await requirePageUserId();
   // Actions reference contacts ("Check in with X") and other private-zone
   // entities. Hide the whole card when the zone is locked.
@@ -74,7 +74,7 @@ export async function ActionQueueCard() {
     getRecentActions(userId, 5),
   ]);
 
-  if (pending.length === 0 && recent.length === 0) return null;
+  if (pending.length === 0 && recent.length === 0) return emptyState;
 
   if (pending.length === 0) {
     return (
