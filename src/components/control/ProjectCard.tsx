@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Play } from "lucide-react";
+import { Play, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { postJson, patchJson } from "@/lib/api/fetch";
 import type { ProjectState } from "@/lib/control-types";
@@ -57,7 +57,7 @@ export function ProjectCard({
   zellijTabs: string[];
   currentAdapter: string;
   availableAgents: { id: string; label: string; modelSuggestions: string[] }[];
-  onInject: (tab: string, promptKey?: string, customPrompt?: string) => Promise<void>;
+  onInject: (tab: string, promptKey?: string, customPrompt?: string) => Promise<{ commandId?: string | null } | void>;
   onRunWithBrain: (project: ProjectState, intent: OrchestrationTaskIntentId) => Promise<void>;
   onRunCustomPrompt: (project: ProjectState, prompt: string, agent: string) => Promise<void>;
   onCollapse?: () => void;
@@ -205,7 +205,7 @@ export function ProjectCard({
 
   const {
     sending, justSent, custom, setCustom, customFocused, setCustomFocused,
-    merging, sendError, clearSendError,
+    merging, sendError, clearSendError, dispatchStatus, clearDispatchStatus,
     sendCustom, sendText, sessionHealthBlocksQueue, sendIntent, send,
     handleAutoInject, handleSendFromQueue, handleMergeQueue,
   } = useProjectCardActions({
@@ -289,6 +289,43 @@ export function ProjectCard({
             onDismiss={() => setCapacityDismissed(true)}
           />
         ) : null
+      )}
+
+      {/* Honest dispatch status — the REAL lifecycle of the last queued
+          dispatch (queued → picked up → ran / failed / unconfirmed), polled
+          from the command row. Replaces the old silent "it 200'd, assume it's
+          working" gap where a runner focus_tab failure never reached the card. */}
+      {dispatchStatus && (
+        <div
+          role="status"
+          aria-live="polite"
+          className={cn(
+            "flex items-start gap-2 border-b px-4 py-2 text-xs",
+            dispatchStatus.tone === "negative"
+              ? "border-status-negative/25 bg-status-negative/[0.05] text-status-negative"
+              : dispatchStatus.tone === "warning"
+              ? "border-status-warning/25 bg-status-warning/[0.05] text-status-warning"
+              : dispatchStatus.tone === "positive"
+              ? "border-status-positive/25 bg-status-positive/[0.03] text-text-secondary"
+              : "border-border-subtle bg-surface-base text-text-secondary"
+          )}
+        >
+          <span className="min-w-0 flex-1">
+            <span className="font-medium">{dispatchStatus.label}</span>
+            {dispatchStatus.detail && (
+              <span className="text-text-tertiary"> — {dispatchStatus.detail}</span>
+            )}
+          </span>
+          {dispatchStatus.terminal && (
+            <button
+              onClick={clearDispatchStatus}
+              aria-label="Dismiss dispatch status"
+              className="ui-btn-icon shrink-0"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
+        </div>
       )}
 
       <ProjectCardHeader

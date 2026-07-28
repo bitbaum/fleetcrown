@@ -18,7 +18,7 @@ type Deps = {
   zellijTabs: string[];
   selectedAgent: string;
   switchableRegistry: RegistryEntry[];
-  inject: (tab: string, promptKey?: string, customPrompt?: string) => Promise<{ mode: "queued" | "direct"; runnerConnected: boolean | null }>;
+  inject: (tab: string, promptKey?: string, customPrompt?: string) => Promise<{ mode: "queued" | "direct"; runnerConnected: boolean | null; commandId: string | null }>;
   runWithBrain: (project: ProjectState, intent: OrchestrationTaskIntentId) => Promise<void>;
   runCustomPrompt: (project: ProjectState, prompt: string, agent: string) => Promise<void>;
   setError: (error: string | null) => void;
@@ -64,7 +64,7 @@ export function buildCardProps(deps: Deps) {
     availableAgents,
     onInject: async (tab: string, promptKey?: string, customPrompt?: string) => {
       try {
-        const { mode, runnerConnected } = await deps.inject(tab, promptKey, customPrompt);
+        const { mode, runnerConnected, commandId } = await deps.inject(tab, promptKey, customPrompt);
         if (mode === "queued") {
           const msg =
             runnerConnected === false
@@ -73,6 +73,9 @@ export function buildCardProps(deps: Deps) {
           deps.setQueuedNotice(`${msg} (${tab})`);
           setTimeout(() => deps.setQueuedNotice(null), TOAST_LONG_MS);
         }
+        // Hand the queued command id back so the card can track its real
+        // lifecycle. Without this the card only ever saw the ambient dir state.
+        return { commandId };
       } catch (err) {
         deps.setError(err instanceof Error ? err.message : "Injection failed");
         throw err;
