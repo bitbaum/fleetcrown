@@ -2,11 +2,13 @@ import { and, desc, eq, gt, inArray, isNotNull, isNull, lt, sql } from "drizzle-
 import { db } from "@/db";
 import { ORCH_STATE } from "@/lib/orchestration/contract";
 import {
+  ORCHESTRATION_OUTCOME,
   orchestrationRuns,
   type NewOrchestrationRun,
   type OrchestrationOutcome,
 } from "@/db/schema/orchestration-runs";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
+import { resolveFeedbackForRun } from "@/lib/feedback/close-loop";
 
 export const STALE_RUN_MINUTES = 60;
 
@@ -31,6 +33,13 @@ export async function updateOrchestrationRun(
     .set(patch)
     .where(condition)
     .returning();
+
+  // Every success-producing close path (runner finish route, gate-and-close)
+  // funnels through here — the reaper bypasses it but never stamps success.
+  // Fire-and-forget: closing the feedback loop must not slow or fail the close.
+  if (updated && patch.finishedAt && patch.outcome === ORCHESTRATION_OUTCOME.SUCCESS) {
+    void resolveFeedbackForRun(updated.id);
+  }
 
   return updated;
 }

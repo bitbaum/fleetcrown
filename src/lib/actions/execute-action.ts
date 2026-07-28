@@ -10,6 +10,7 @@ import { sendTelegramMessage, selfTelegramTarget } from "@/lib/actions/telegram-
 import { sendEmail } from "@/lib/email";
 import { bookCalendarEvent } from "@/lib/actions/calendar-event";
 import { isRuntimeAvailable } from "@/lib/runtime";
+import { injectPrompt } from "@/lib/inject-core";
 
 export type ExecuteActionResult = {
   /** true only when a real-world effect happened and the row reached status='executed'. */
@@ -142,6 +143,41 @@ export async function executeAction(userId: string, action: Action): Promise<Exe
           return { executed: false, error: "not-approved-at-execute-time" };
         }
         await recordActionAuditEvent(userId, action, "executed");
+        return { executed: true };
+      }
+
+      case ACTION_TYPE.DISPATCH_PROMPT: {
+        // Approve → run: inject the exact prompt the operator approved into
+        // the project, through the same injectPrompt SSOT as every manual
+        // dispatch. The approval IS the gate — proposals carry the full prompt
+        // in the payload so the operator reviews precisely what will run.
+        const payload = action.payload ?? {};
+        const projectKey = typeof payload.projectKey === "string" ? payload.projectKey.trim() : "";
+        const prompt = typeof payload.body === "string" ? payload.body.trim() : "";
+        if (!projectKey || !prompt) {
+          await recordActionAuditEvent(userId, action, "failed", {
+            reason: "dispatch_prompt payload missing projectKey or body",
+          });
+          return { executed: false, error: "invalid dispatch_prompt payload" };
+        }
+
+        const { status, body } = await injectPrompt({ tab: projectKey, customPrompt: prompt }, userId);
+        if (status >= 400) {
+          const reason = typeof body.error === "string" ? body.error : `dispatch failed (${status})`;
+          await recordActionAuditEvent(userId, action, "failed", { reason });
+          return { executed: false, error: reason };
+        }
+
+        const done = await markActionExecuted(action.id, userId);
+        if (!done) {
+          await recordActionAuditEvent(userId, action, "failed", {
+            reason: "dispatched but action was not in 'approved' state to mark executed",
+          });
+          return { executed: false, error: "not-approved-at-execute-time" };
+        }
+        await recordActionAuditEvent(userId, action, "executed", {
+          meta: { runId: typeof body.runId === "string" ? body.runId : null },
+        });
         return { executed: true };
       }
 

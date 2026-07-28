@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readIdParam, jsonError } from "@/lib/api/route-helpers";
+import { readIdParam, readJsonBody, jsonError, z } from "@/lib/api/route-helpers";
 import { getApiUserId } from "@/lib/session";
 import { getFeedbackWithProject, setFeedbackStatus } from "@/db/queries/site-feedback";
 import { injectPrompt } from "@/lib/inject-core";
@@ -13,10 +13,13 @@ import type { SiteFeedback } from "@/db/schema";
  * lives under it), so the auth check below is the only gate — do not remove.
  */
 
-function composePrompt(feedback: SiteFeedback, projectName: string): string {
+function composePrompt(feedback: SiteFeedback, projectName: string, note?: string): string {
   const lines = [
     `Fix this visitor feedback on ${projectName}.`,
     "",
+    // The operator's note leads: it's the captain's steer on HOW to act on the
+    // visitor's report, so it outranks the raw feedback below it.
+    ...(note ? [`OPERATOR INSTRUCTION: ${note}`, ""] : []),
     `FEEDBACK: "${feedback.suggestion}"`,
     `Page: ${feedback.url ?? feedback.page ?? "unknown"}`,
   ];
@@ -35,11 +38,18 @@ function composePrompt(feedback: SiteFeedback, projectName: string): string {
   return lines.join("\n");
 }
 
-export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+const DispatchBody = z.object({
+  /** Optional operator steer, prepended to the composed prompt. */
+  note: z.string().trim().max(500).optional(),
+});
+
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const userId = await getApiUserId();
   if (!userId) return jsonError("Unauthorized", 401);
   const idOrResp = await readIdParam(params);
   if (idOrResp instanceof NextResponse) return idOrResp;
+  const dataOrResp = await readJsonBody(req, DispatchBody);
+  if (dataOrResp instanceof NextResponse) return dataOrResp;
 
   const row = await getFeedbackWithProject(userId, idOrResp);
   if (!row) return jsonError("Not found", 404);
@@ -48,7 +58,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   }
 
   const { status, body } = await injectPrompt(
-    { tab: row.projectName, customPrompt: composePrompt(row.feedback, row.projectName) },
+    { tab: row.projectName, customPrompt: composePrompt(row.feedback, row.projectName, dataOrResp.note || undefined) },
     userId,
   );
   if (status < 400) {

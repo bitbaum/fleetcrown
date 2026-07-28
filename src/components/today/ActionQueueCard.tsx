@@ -1,4 +1,4 @@
-import { Inbox, Send, Calendar, CheckCircle, MessageCircle, Users, Check, X } from "lucide-react";
+import { Inbox, Send, Calendar, CheckCircle, MessageCircle, Rocket, Users, Check, X } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { getPendingActions, getRecentActions, type ActionRow } from "@/db/queries/actions";
 import { requirePageUserId } from "@/lib/session";
@@ -17,6 +17,7 @@ const TYPE_ICONS: Record<ActionType, typeof Send> = {
   [ACTION_TYPE.CREATE_EVENT]:      Calendar,
   [ACTION_TYPE.CREATE_COMMITMENT]: CheckCircle,
   [ACTION_TYPE.FOLLOW_UP]:         MessageCircle,
+  [ACTION_TYPE.DISPATCH_PROMPT]:   Rocket,
   [ACTION_TYPE.OTHER]:             Inbox,
 };
 

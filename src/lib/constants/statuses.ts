@@ -58,6 +58,8 @@ export const ACTION_TYPE = {
   CREATE_EVENT:      "create_event",
   CREATE_COMMITMENT: "create_commitment",
   FOLLOW_UP:         "follow_up",
+  /** Approve → injectPrompt a prepared prompt into a project (feedback digester). */
+  DISPATCH_PROMPT:   "dispatch_prompt",
   OTHER:             "other",
 } as const;
 export type ActionType = (typeof ACTION_TYPE)[keyof typeof ACTION_TYPE];

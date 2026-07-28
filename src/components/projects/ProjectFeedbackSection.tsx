@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Archive, Check, Code2, Copy, Loader2, MessageSquare, Pause, Play, RefreshCw, Rocket, ScanEye, Undo2, X } from "lucide-react";
+import { Archive, Check, Code2, Copy, Layers, Loader2, MessageSquare, Pause, PenLine, Play, RefreshCw, Rocket, ScanEye, Undo2, X } from "lucide-react";
 import { useFetch } from "@/hooks/use-fetch";
 import { useClipboard } from "@/hooks/use-clipboard";
 import { deleteJson, patchJson, postJson, throwApiError } from "@/lib/api/fetch";
@@ -32,6 +32,8 @@ export function ProjectFeedbackSection({ projectId }: { projectId: string }) {
   const [reviewOpen, setReviewOpen] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [synthesizing, setSynthesizing] = useState(false);
+  const [synthesized, setSynthesized] = useState(false);
 
   const items = (feedbackFetch.data?.feedback ?? []).filter(
     (f) => f.status !== FEEDBACK_STATUS.ARCHIVED,
@@ -54,13 +56,29 @@ export function ProjectFeedbackSection({ projectId }: { projectId: string }) {
     }
   }
 
-  const dispatchFix = (id: string) =>
-    act(id, () => postJson(`/api/feedback/${id}/dispatch`, {}), "Dispatch failed");
+  const dispatchFix = (id: string, note?: string) =>
+    act(id, () => postJson(`/api/feedback/${id}/dispatch`, note ? { note } : {}), "Dispatch failed");
+
+  // High-volume inbox: shift the unit of action from item to theme. An agent
+  // clusters the NEW items into briefs and files them back into this inbox.
+  async function synthesize() {
+    setSynthesizing(true);
+    setError(null);
+    try {
+      const res = await postJson(`/api/projects/${projectId}/feedback/synthesize`, {});
+      if (!res.ok) await throwApiError(res, "Synthesize failed");
+      setSynthesized(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Synthesize failed");
+    } finally {
+      setSynthesizing(false);
+    }
+  }
   const setStatus = (id: string, status: FeedbackStatus) =>
     act(id, () => patchJson(`/api/feedback/${id}`, { status }), "Update failed");
 
   return (
-    <section className="scroll-mt-28 border-t border-border-subtle pt-7" aria-labelledby="project-feedback-title">
+    <section id="feedback" className="scroll-mt-28 border-t border-border-subtle pt-7" aria-labelledby="project-feedback-title">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <h2 id="project-feedback-title" className="text-lg font-semibold text-text-primary">
@@ -69,6 +87,18 @@ export function ProjectFeedbackSection({ projectId }: { projectId: string }) {
           {newCount > 0 && <span className="ui-badge">{newCount} new</span>}
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
+          {token && newCount >= 5 && (
+            <button
+              type="button"
+              onClick={synthesize}
+              disabled={synthesizing || synthesized}
+              className="ui-btn-secondary gap-1.5"
+              title="Dispatch an agent to cluster the new items into structured briefs, filed back into this inbox"
+            >
+              {synthesizing ? <Loader2 className="ui-spinner-xs" /> : <Layers className="h-3.5 w-3.5" />}
+              {synthesized ? "Synthesis dispatched" : "Synthesize"}
+            </button>
+          )}
           {token && (
             <button type="button" onClick={() => setReviewOpen((v) => !v)} className="ui-btn-secondary gap-1.5" title="Dispatch an agent to visually review a page and file findings here">
               <ScanEye className="h-3.5 w-3.5" />
@@ -124,7 +154,7 @@ export function ProjectFeedbackSection({ projectId }: { projectId: string }) {
               key={f.id}
               feedback={f}
               busy={busyId === f.id}
-              onDispatch={() => dispatchFix(f.id)}
+              onDispatch={(note) => dispatchFix(f.id, note)}
               onResolve={() => setStatus(f.id, FEEDBACK_STATUS.RESOLVED)}
               onArchive={() => setStatus(f.id, FEEDBACK_STATUS.ARCHIVED)}
               onReopen={() => setStatus(f.id, FEEDBACK_STATUS.NEW)}
@@ -146,11 +176,15 @@ function FeedbackRow({
 }: {
   feedback: SiteFeedback;
   busy: boolean;
-  onDispatch: () => void;
+  onDispatch: (note?: string) => void;
   onResolve: () => void;
   onArchive: () => void;
   onReopen: () => void;
 }) {
+  // "Comment then implement" without a comment thread: the note IS an edit to
+  // the dispatch prompt. Plain Dispatch stays one-click.
+  const [noteOpen, setNoteOpen] = useState(false);
+  const [note, setNote] = useState("");
   const meta = [
     f.page || f.url,
     f.scope,
@@ -159,7 +193,8 @@ function FeedbackRow({
   ].filter(Boolean);
 
   return (
-    <div className="flex flex-col gap-2 py-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+    <div className="flex flex-col gap-2 py-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
       <div className="min-w-0 flex-1">
         <div className="flex items-start gap-2">
           <span
@@ -193,9 +228,20 @@ function FeedbackRow({
           <span className="ui-tag-positive">resolved</span>
         ) : (
           <>
-            <button type="button" onClick={onDispatch} disabled={busy} className="ui-btn-save gap-1.5" title="Send to an agent as a fix task">
+            <button type="button" onClick={() => onDispatch()} disabled={busy} className="ui-btn-save gap-1.5" title="Send to an agent as a fix task">
               {busy ? <Loader2 className="ui-spinner-xs" /> : <Rocket className="h-3 w-3" />}
               Dispatch fix
+            </button>
+            <button
+              type="button"
+              onClick={() => setNoteOpen((v) => !v)}
+              disabled={busy}
+              className="ui-btn-icon"
+              title="Add an instruction to the dispatch"
+              aria-label="Add an instruction to the dispatch"
+              aria-expanded={noteOpen}
+            >
+              <PenLine className="h-3.5 w-3.5" />
             </button>
             <button type="button" onClick={onResolve} disabled={busy} className="ui-btn-icon" title="Mark resolved" aria-label="Mark resolved">
               <Check className="h-3.5 w-3.5" />
@@ -212,6 +258,31 @@ function FeedbackRow({
           </button>
         )}
       </div>
+      </div>
+      {noteOpen && f.status !== FEEDBACK_STATUS.DISPATCHED && f.status !== FEEDBACK_STATUS.RESOLVED && (
+        <div className="flex items-center gap-2 pl-4">
+          <input
+            type="text"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            maxLength={500}
+            placeholder="Instruction for the agent, e.g. 'only fix the mobile layout'"
+            className="ui-input-compact flex-1"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && note.trim()) onDispatch(note.trim());
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => onDispatch(note.trim() || undefined)}
+            disabled={busy}
+            className="ui-btn-save gap-1.5"
+          >
+            {busy ? <Loader2 className="ui-spinner-xs" /> : <Rocket className="h-3 w-3" />}
+            Dispatch
+          </button>
+        </div>
+      )}
     </div>
   );
 }

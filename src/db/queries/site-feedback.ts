@@ -1,7 +1,7 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq, max, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { entities, siteFeedback, type SiteFeedback, type NewSiteFeedback } from "@/db/schema";
-import { type FeedbackStatus } from "@/lib/constants/statuses";
+import { FEEDBACK_STATUS, type FeedbackStatus } from "@/lib/constants/statuses";
 
 export async function insertSiteFeedback(values: NewSiteFeedback): Promise<SiteFeedback | null> {
   const [created] = await db.insert(siteFeedback).values(values).returning();
@@ -15,6 +15,39 @@ export async function listProjectFeedback(userId: string, projectId: string, lim
     orderBy: [desc(siteFeedback.createdAt)],
     limit,
   });
+}
+
+export type ProjectFeedbackSummary = {
+  projectId: string;
+  projectName: string;
+  newCount: number;
+  latestAt: string;
+};
+
+/**
+ * Fleet-wide lens over the per-project inboxes: projects with NEW feedback,
+ * busiest first. Deliberately a QUERY, not a second store — the token binds
+ * every row to its project and that stays the only source of truth.
+ */
+export async function listFeedbackSummary(userId: string): Promise<ProjectFeedbackSummary[]> {
+  const rows = await db
+    .select({
+      projectId: siteFeedback.projectId,
+      projectName: entities.name,
+      newCount: count(siteFeedback.id),
+      latestAt: max(siteFeedback.createdAt),
+    })
+    .from(siteFeedback)
+    .innerJoin(entities, eq(siteFeedback.projectId, entities.id))
+    .where(and(eq(siteFeedback.userId, userId), eq(siteFeedback.status, FEEDBACK_STATUS.NEW)))
+    .groupBy(siteFeedback.projectId, entities.name)
+    .orderBy(desc(count(siteFeedback.id)), desc(sql`max(${siteFeedback.createdAt})`));
+  return rows.map((r) => ({
+    projectId: r.projectId,
+    projectName: r.projectName,
+    newCount: Number(r.newCount),
+    latestAt: (r.latestAt ?? new Date()).toISOString(),
+  }));
 }
 
 /** One feedback item + its project's name (dispatch needs the tab name). */
