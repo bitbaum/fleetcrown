@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Archive, Check, Code2, Copy, Loader2, MessageSquare, RefreshCw, Rocket, ScanEye, Undo2, X } from "lucide-react";
+import { Archive, Check, Code2, Copy, Loader2, MessageSquare, Pause, Play, RefreshCw, Rocket, ScanEye, Undo2, X } from "lucide-react";
 import { useFetch } from "@/hooks/use-fetch";
 import { useClipboard } from "@/hooks/use-clipboard";
 import { deleteJson, patchJson, postJson, throwApiError } from "@/lib/api/fetch";
@@ -9,7 +9,14 @@ import { compactRelativeDate } from "@/lib/dates";
 import { FEEDBACK_STATUS, type FeedbackStatus } from "@/lib/constants/statuses";
 import type { SiteFeedback } from "@/db/schema";
 
-type WidgetTokenInfo = { token: string; snippet: string };
+type WidgetTokenInfo = {
+  token: string;
+  snippet: string;
+  status: string;
+  origins: string[] | null;
+  lastSeenAt: string | null;
+  lastSeenOrigin: string | null;
+};
 
 /**
  * Visitor-feedback inbox for one project — submissions from the embeddable
@@ -243,6 +250,10 @@ function WidgetSetupCard({
   const create = () => mutate(() => postJson(`/api/projects/${projectId}/widget-token`, {}), "Could not create widget token");
   const rotate = () => mutate(() => postJson(`/api/projects/${projectId}/widget-token`, { rotate: true }), "Could not rotate widget token");
   const revoke = () => mutate(() => deleteJson(`/api/projects/${projectId}/widget-token`), "Could not disable widget");
+  const setTokenStatus = (status: "active" | "paused") =>
+    mutate(() => postJson(`/api/projects/${projectId}/widget-token`, { status }), "Could not update widget");
+
+  const paused = token?.status === "paused";
 
   return (
     <div className="ui-card-shell mb-4 p-4 sm:p-5">
@@ -270,6 +281,7 @@ function WidgetSetupCard({
         </div>
       ) : token ? (
         <>
+          <WidgetLiveStatus token={token} paused={paused} />
           <div className="mt-3 overflow-x-auto rounded-lg border border-border-subtle bg-surface-base p-3">
             <code className="whitespace-pre font-mono text-micro text-text-secondary">{token.snippet}</code>
           </div>
@@ -277,6 +289,16 @@ function WidgetSetupCard({
             <button type="button" onClick={() => copy(token.snippet)} className="ui-btn-save gap-1.5">
               {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
               {copied ? "Copied" : "Copy snippet"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setTokenStatus(paused ? "active" : "paused")}
+              disabled={busy}
+              className="ui-btn-secondary gap-1.5"
+              title={paused ? "Show the widget on your site again" : "Hide the widget on your site instantly — no deploy needed"}
+            >
+              {paused ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
+              {paused ? "Resume" : "Pause"}
             </button>
             <button type="button" onClick={rotate} disabled={busy} className="ui-btn-secondary gap-1.5" title="Mint a new token; the old snippet stops working">
               <RefreshCw className="h-3.5 w-3.5" /> Rotate
@@ -296,6 +318,37 @@ function WidgetSetupCard({
       )}
       {error && <p className="mt-2 ui-error">{error}</p>}
     </div>
+  );
+}
+
+/**
+ * Observed truth only: "Live" means the widget's boot heartbeat actually
+ * arrived from the site — never that we handed out a snippet. Every state
+ * names its one next action.
+ */
+function WidgetLiveStatus({ token, paused }: { token: WidgetTokenInfo; paused: boolean }) {
+  const site = token.lastSeenOrigin ?? token.origins?.[0] ?? null;
+  if (paused) {
+    return (
+      <p className="mt-3 flex items-center gap-2 text-xs text-text-secondary">
+        <span className="ui-dot-warning" aria-hidden="true" />
+        Paused — the widget is hidden on your site. Resume to show it again.
+      </p>
+    );
+  }
+  if (!token.lastSeenAt) {
+    return (
+      <p className="mt-3 flex items-center gap-2 text-xs text-text-secondary">
+        <span className="ui-dot-warning" aria-hidden="true" />
+        Waiting for the first page load{site ? ` on ${site}` : ""} — add the snippet below to your site.
+      </p>
+    );
+  }
+  return (
+    <p className="mt-3 flex items-center gap-2 text-xs text-text-secondary">
+      <span className="ui-dot-positive" aria-hidden="true" />
+      Live{site ? ` on ${site}` : ""} · last seen {compactRelativeDate(new Date(token.lastSeenAt))}
+    </p>
   );
 }
 

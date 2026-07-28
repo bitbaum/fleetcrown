@@ -87,6 +87,16 @@ export const FEEDBACK_SCOPE_VALUES = ["element", "page", "site"] as const;
 export type FeedbackScope = (typeof FEEDBACK_SCOPE_VALUES)[number];
 
 /**
+ * Widget-token remote state. The embed's boot call gates rendering on ACTIVE,
+ * so pausing takes effect on the customer site without any deploy.
+ */
+export const WIDGET_TOKEN_STATUS = {
+  ACTIVE: "active",
+  PAUSED: "paused",
+} as const;
+export type WidgetTokenStatus = (typeof WIDGET_TOKEN_STATUS)[keyof typeof WIDGET_TOKEN_STATUS];
+
+/**
  * Display tone for a status dot/badge — severity semantics shared by the
  * activity classifier (lib/activity-status.ts) and the dispatch live status
  * (lib/dispatch-status.ts). NOTE: distinct from EVENT_STATUS above, which is

@@ -20,6 +20,13 @@ export const widgetTokens = pgTable("widget_tokens", {
   /** Origin allowlist for submissions. NULL or empty = accept any origin
    *  (rate limiting + revocation are the spam backstops). */
   origins:   jsonb("origins").$type<string[]>(),
+  /** Remote kill switch: the widget's boot call renders nothing unless this is
+   *  'active'. Pausing needs no customer deploy — the snippet is a pointer. */
+  status:    text("status").notNull().default("active"),
+  /** Heartbeat from the widget's boot call — the UI's "Live ✓" is this
+   *  observed truth, never install intent. */
+  lastSeenAt:     timestamp("last_seen_at", { withTimezone: true }),
+  lastSeenOrigin: text("last_seen_origin"),
   revokedAt: timestamp("revoked_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 }, (t) => [

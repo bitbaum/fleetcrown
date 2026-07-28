@@ -443,6 +443,22 @@ function h<K extends keyof HTMLElementTagNameMap>(
     }
   };
 
-  if (document.body) mount();
-  else document.addEventListener("DOMContentLoaded", mount);
+  // Boot gate — the server decides whether to render at all. This makes the
+  // FleetCrown token row a remote kill switch: pausing/revoking hides the FAB
+  // on the customer site within the cache window, no deploy needed. It also
+  // doubles as the heartbeat behind the setup UI's "Live" state. Fail closed:
+  // if FleetCrown is unreachable, submissions couldn't land anyway — don't
+  // render a dead FAB.
+  const boot = async () => {
+    try {
+      const res = await fetch(`${apiBase}/api/widget-boot?token=${encodeURIComponent(token)}`);
+      const body = (await res.json()) as { active?: boolean };
+      if (body.active !== true) return;
+    } catch {
+      return;
+    }
+    if (document.body) mount();
+    else document.addEventListener("DOMContentLoaded", mount);
+  };
+  void boot();
 })();

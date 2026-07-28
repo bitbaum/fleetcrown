@@ -14,6 +14,7 @@ import type { WidgetToken } from "@/db/schema";
 
 const TokenBody = z.object({
   origins: z.array(z.string().url().max(200)).max(10).optional(),
+  status: z.enum(["active", "paused"]).optional(),
   rotate: z.boolean().default(false),
 });
 
@@ -44,6 +45,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const token = await upsertWidgetToken(userId, idOrResp, {
     origins: dataOrResp.origins?.map((o) => new URL(o).origin),
+    status: dataOrResp.status,
     rotate: dataOrResp.rotate,
   });
   if (!token) return jsonError("Project not found", 404);
