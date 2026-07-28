@@ -44,8 +44,20 @@ const FeedbackBody = z.object({
   })).max(10).optional(),
 });
 
-export function OPTIONS() {
-  return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+export function OPTIONS(req: NextRequest) {
+  // Reflect whatever headers the browser asks for: customer sites monkey-patch
+  // window.fetch and stamp extra headers (e.g. a csrf header) onto EVERY POST,
+  // including the widget's cross-origin one — a hardcoded allowlist fails their
+  // preflight and silently kills ingest. Header names are not a security
+  // boundary here; the Origin allowlist check in POST is.
+  const requested = req.headers.get("access-control-request-headers");
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      ...CORS_HEADERS,
+      ...(requested ? { "Access-Control-Allow-Headers": requested } : {}),
+    },
+  });
 }
 
 export async function POST(req: NextRequest) {
