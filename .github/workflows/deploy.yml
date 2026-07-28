@@ -67,7 +67,11 @@ jobs:
           node-version: 22
           cache: npm
 
+      # Root deps AND the bridge subpackage — bridge/ is its own npm package with
+      # its own lockfile (pg, @types/pg). The build step below runs `tsc` in it,
+      # so without this the bridge build fails with "Cannot find module 'pg'".
       - run: npm ci
+      - run: npm --prefix bridge ci
 
       - name: Push schema to CI Postgres (build needs it)
         run: npx drizzle-kit push
