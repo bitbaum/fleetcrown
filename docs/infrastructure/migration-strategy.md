@@ -1,9 +1,12 @@
-# Database Migration Strategy — Proposal
+# Database Migration Strategy
 
-> **Status:** PROPOSAL awaiting owner decision. Nothing in this document is
-> implemented by adding it. It describes current behavior, the residual risk,
-> and a recommended hardening. Migrating the mechanism is a deliberate change
-> the owner should approve.
+> **Status:** The ergonomic hardening in §3 is **implemented** — the
+> `migrate` script has been renamed to `db:push` (scratch-only) and the docs
+> (`CLAUDE.md`, `README.md`) now teach the generate → review → forward-apply
+> loop. The deploy mechanism itself was already sound and is deliberately
+> **unchanged**. The one remaining item (an optional CI guard) is deferred with
+> reasoning in §3 — it collides with the unreconciled raw-SQL path (§1c) and
+> would false-positive until that split is unified.
 
 ## TL;DR
 
@@ -11,13 +14,14 @@ The **production deploy is already safe** — it does **not** run `drizzle-kit p
 against the box. It applies versioned migration **files** forward-only through a
 guarded applier that refuses destructive statements and rolls back on drift.
 
-The residual risk is **ergonomic, not the deploy path**: `npm run migrate` is
-still aliased to `drizzle-kit push`, and `CLAUDE.md` documents `drizzle-kit push`
-as "the" schema command. That trains a habit (and an agent muscle-memory) that
-can diff-apply an unreviewed schema straight to prod if `DATABASE_URL` happens to
-point at the box, and it lets schema changes exist without a reviewable migration
-file. The recommendation is to demote `push` to a local-scratch-only tool and
-make the generate → review → forward-apply loop the single documented path.
+The residual risk was **ergonomic, not the deploy path**: `npm run migrate` used
+to be aliased to `drizzle-kit push`, and `CLAUDE.md` documented `drizzle-kit push`
+as "the" schema command. That trained a habit (and an agent muscle-memory) that
+could diff-apply an unreviewed schema straight to prod if `DATABASE_URL` happened
+to point at the box, and it let schema changes exist without a reviewable
+migration file. **Fixed:** `push` is now demoted to a local-scratch-only tool
+(renamed `db:push`), and the generate → review → forward-apply loop is the single
+documented path.
 
 ---
 
@@ -27,7 +31,7 @@ make the generate → review → forward-apply loop the single documented path.
 
 | Location | Target DB | Prod risk? |
 |---|---|---|
-| `package.json` → `"migrate": "drizzle-kit push"` | Whatever `DATABASE_URL` is set to | **Yes, if pointed at the box.** This is the footgun. |
+| `package.json` → `"db:push": "drizzle-kit push"` (was `"migrate"`) | Whatever `DATABASE_URL` is set to | **Yes, if pointed at the box** — but the name no longer *reads* as the normal workflow, and the docs now forbid it against shared DBs. |
 | `.github/workflows/deploy.yml` line 73 | Ephemeral CI Postgres service (`postgres:ci@localhost:5432`) | No — throwaway DB, exists only so `npm run build` can static-pre-render. |
 | `docker-compose.yml` line 24 | Local dev container Postgres | No — local only. |
 | `CLAUDE.md` → "Schema push: `DATABASE_URL=… npx drizzle-kit push`" | Documentation | Indirect — it teaches `push` as the normal workflow. |
@@ -108,8 +112,9 @@ when hand-applied via `db:apply-box` ahead of the deploy.
 - **No rollback point.** Because nothing is versioned, you cannot revert to
   "schema at commit X." Recovery means a restore from backup.
 - **Environment-coupled.** `push` does exactly what its `DATABASE_URL` says.
-  `npm run migrate` with a box URL in the shell = unreviewed prod DDL. This is
-  the single realistic route by which FleetCrown could still auto-mutate prod.
+  `npm run db:push` with a box URL in the shell = unreviewed prod DDL. This is
+  the single realistic route by which FleetCrown could still auto-mutate prod —
+  now named and documented so it reads as the forbidden path, not the default.
 - **Schema can exist with no migration file.** A change applied by `push` never
   produces a `drizzle/NNNN_*.sql`. It won't be in the reviewed PR, and it won't
   ship through `apply-schema.sh` — the deploy drift-gate would then **roll back**
@@ -159,21 +164,31 @@ genuinely intended, do it deliberately and out-of-band:
 This keeps "the automated deploy never runs a `DROP`" as an invariant while
 still allowing intentional, reviewed, supervised destructive changes.
 
-### Proposed script / doc changes (owner to approve — NOT applied here)
+### Script / doc changes — status
 
 Small, mechanical, close the footgun:
 
-- **`package.json`:** rename `"migrate": "drizzle-kit push"` →
-  `"db:push": "drizzle-kit push"` and reserve `"db:migrate"` for the
-  forward-only applier. Rationale: nothing safe should be named `migrate` while
-  meaning `push`; the name is the trap.
-- **`CLAUDE.md` → Database section:** replace "Schema push: `… drizzle-kit push`"
-  with the generate → review → forward-apply loop above, and state explicitly:
-  **`drizzle-kit push` is for a throwaway local/scratch DB only — never a shared
-  or production database.**
-- **(optional) CI guard:** a check that fails a PR which changed
-  `src/db/schema/` but produced no new `drizzle/NNNN_*.sql` — closes the
-  "schema change with no reviewable file" class permanently (Never-Twice rule).
+- ✅ **`package.json` — DONE:** renamed `"migrate": "drizzle-kit push"` →
+  `"db:push": "drizzle-kit push"`. Rationale: nothing safe should be named
+  `migrate` while meaning `push`; the name was the trap. No `"db:migrate"` alias
+  was added — there is no *local* forward-only applier to point it at (the deploy
+  owns forward-apply via `apply-schema.sh`), so a hollow `db:migrate` would be a
+  new landmine (YAGNI).
+- ✅ **`CLAUDE.md` / `README.md` / call-sites — DONE:** the Database section now
+  documents the generate → review → forward-apply loop and states explicitly
+  that **`npm run db:push` is for a throwaway local/scratch DB only — never a
+  shared or production database.** Every `npm run migrate` reference
+  (`README.md`, `scripts/check-schema-drift.ts`, `scripts/db/deploy-host.sh`,
+  `scripts/deploy-local.sh`, `docs/infrastructure/postgres-portability.md`) was
+  updated to `npm run db:push` with the scratch-only caveat.
+- ⏸️ **(optional) CI guard — DEFERRED, with reason:** a check that fails a PR
+  which changed `src/db/schema/` but produced no new `drizzle/NNNN_*.sql` would
+  close the "schema change with no reviewable file" class (Never-Twice). It is
+  **not** safe to add yet: the raw-SQL path (§1c) legitimately changes the
+  Drizzle schema (for `$inferSelect` types) *without* a `drizzle/` file — so the
+  guard would false-positive on every `scripts/db/migrations/NNN_*.sql` change
+  until the two paths are unified. Adopt this guard **after** reconciling the
+  split into one forward-applied path; until then it fights the workflow.
 
 ---
 
@@ -213,11 +228,12 @@ it — and stop reaching for `push` against anything shared.
 | Prod deploy auto-runs `drizzle-kit push` | **No** — uses forward-only `apply-schema.sh`. |
 | Destructive diff can ship automatically | **No** — refused + deploy aborts. |
 | Rollback on schema drift | **Yes** — post-apply gate rolls back. |
-| Versioned migration files reviewed in PR | Partially — files exist; making `generate` the *required*, `push` the *forbidden-on-shared* path is the gap. |
-| `npm run migrate` = `drizzle-kit push` footgun | **Open** — recommend rename + doc fix (§3). |
+| Versioned migration files reviewed in PR | **Done** — `generate` is the documented path; `push` is renamed `db:push` and marked forbidden-on-shared. |
+| `npm run migrate` = `drizzle-kit push` footgun | **Closed** — renamed `db:push`, docs + all call-sites updated (§3). |
 | First-migration recreate problem | **Solved** — ledger baselined; snapshot current (§4). |
+| CI guard: schema change without a reviewable file | **Deferred** — collides with the raw-SQL path (§1c) until the split is unified. |
 
-The deploy mechanism is sound and should **not** be changed. The proposal is to
-finish the job at the ergonomics layer: rename the `push` script, correct the
-docs, and (optionally) add a CI guard so a schema change without a reviewable
-file can't merge.
+The deploy mechanism is sound and was **not** changed. The ergonomics layer is
+now fixed: the `push` script is renamed and demoted, the docs teach
+generate → review → forward-apply, and the only open item (the CI guard) is
+deferred until the dual migration path is reconciled.

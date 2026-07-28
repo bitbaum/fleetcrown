@@ -81,7 +81,7 @@ fi
 # no restart — so the check is fully isolated behind `|| true`.
 DRIFT_OUT="$(npm run --silent check:schema 2>&1 || true)"
 if printf '%s' "$DRIFT_OUT" | grep -q "MISSING"; then
-  echo "→ deploy: ⚠ SCHEMA DRIFT DETECTED — run \`npm run migrate\` (drizzle-kit push):"
+  echo "→ deploy: ⚠ SCHEMA DRIFT DETECTED — on a local/scratch DB run \`npm run db:push\` (drizzle-kit push):"
   printf '%s\n' "$DRIFT_OUT" | sed 's/^/    /'
 fi
 

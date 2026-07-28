@@ -33,4 +33,4 @@ docker compose -f "$HOST_DIR/docker-compose.yml" --env-file "$HOST_DIR/.env" up 
 
 echo ""
 echo "Postgres host is up (localhost-only ports bound — open firewall or tunnel for remote access)."
-echo "Next: set DATABASE_URL in the app .env → push schema with npm run migrate"
+echo "Next: set DATABASE_URL in the app .env → push schema with npm run db:push"
