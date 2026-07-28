@@ -18,6 +18,16 @@ import os from "os";
 import path from "path";
 import { execFileSync } from "child_process";
 
+// SAFETY: when git runs hooks (husky pre-push), it exports GIT_DIR — absolute
+// when pushing from a linked worktree. Our git child processes inherit it, and
+// an absolute GIT_DIR overrides `git -C <sandbox>`, silently redirecting every
+// "throwaway repo" operation at the REAL repository (stray test@test "init"
+// commits on real branches, real worktrees pruned). Strip all repo-targeting
+// git env before any git subprocess runs so the sandbox stays a sandbox.
+for (const k of ["GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR", "GIT_OBJECT_DIRECTORY", "GIT_PREFIX"]) {
+  delete process.env[k];
+}
+
 // Point the module's worktree root into the sandbox BEFORE importing it
 // (module-level const reads the env at import time → dynamic import below).
 const SANDBOX = fs.mkdtempSync(path.join(os.tmpdir(), "fc-wt-test-"));

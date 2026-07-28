@@ -29,16 +29,13 @@ export type AgentOption = Agent | "openclaw";
 
 export { ALL_AGENT_IDS, AGENT_LABELS, type AnyAgentId } from "./agent-labels";
 
-/** Pre-refactor public default-model map. Still used in a handful of
+/** Pre-refactor public default-model map, derived from the adapter SSOT
+ *  (each adapter's `defaultModel`). Still used in a handful of
  *  config-resolution paths; long-term those callers should read from the
  *  adapter directly. */
-export const AGENT_DEFAULT_MODELS: Record<Agent, string> = {
-  claude: "sonnet",
-  codex:  "gpt-5.4",
-  gemini: "auto",
-  cursor: "auto",
-  grok:   "auto",
-};
+export const AGENT_DEFAULT_MODELS: Record<Agent, string> = Object.fromEntries(
+  AGENT_IDS.map((id) => [id, findAdapter(id)!.defaultModel]),
+) as Record<Agent, string>;
 
 export type AgentRegistryEntry = {
   id: AgentOption;
