@@ -767,12 +767,50 @@ function extractTokenFromUrl(url: string): string | null {
   }
 }
 
-function handleDeepLinkUrl(url: string) {
+async function handleDeepLinkUrl(url: string) {
   const tok = extractTokenFromUrl(url)
   if (!tok) {
     console.warn('[desktop] ignored malformed deep-link:', url)
     return
   }
+
+  // SECURITY: a fleetcrown:// deep-link can originate from ANY page the user
+  // visits (a link, a redirect, an <img>/<iframe> src) — the OS hands us the
+  // URL with no proof the user meant it. Saving the token + restarting the
+  // poller re-points this machine at whatever account owns that token, and the
+  // runner then types that account's dispatched commands into local terminals.
+  // Without a gate, a malicious page doing `location.href =
+  // 'fleetcrown://auth?token=<attacker>'` silently converts this machine into
+  // the attacker's executor (drive-by RCE). So we NEVER persist a deep-link
+  // token without an explicit, human, per-link confirmation. The legitimate
+  // flow (user clicks "Connect this machine" in their own FleetCrown settings)
+  // costs one extra click; the attack costs the whole exploit.
+  if (mainWindow) {
+    if (!mainWindow.isVisible()) mainWindow.show()
+    mainWindow.focus()
+  }
+  const confirmOptions = {
+    type: 'warning' as const,
+    buttons: ['Cancel', 'Connect this machine'],
+    defaultId: 0,
+    cancelId: 0,
+    title: 'Connect Fleet Runner?',
+    message: 'Connect this machine to a FleetCrown account?',
+    detail:
+      'A link just asked to sign this Fleet Runner in. Only continue if YOU ' +
+      'just started this from your own FleetCrown settings.\n\n' +
+      'After connecting, this machine will run AI-agent commands dispatched ' +
+      'to that account. If you did not initiate this, click Cancel.',
+    noLink: true,
+  }
+  const { response } = mainWindow
+    ? await dialog.showMessageBox(mainWindow, confirmOptions)
+    : await dialog.showMessageBox(confirmOptions)
+  if (response !== 1) {
+    console.warn('[desktop] deep-link auth declined by user — token NOT saved')
+    return
+  }
+
   // Persist via the shared token-store, so there's only one code path for
   // "token reached this machine" — same as save-token IPC + auto-mint flow.
   const result = saveToken(tok)
@@ -783,10 +821,6 @@ function handleDeepLinkUrl(url: string) {
   restartPoller()
   restartPusher()
   restartCalendarDrain()
-  if (mainWindow) {
-    if (!mainWindow.isVisible()) mainWindow.show()
-    mainWindow.focus()
-  }
   console.log('[desktop] deep-link auth: token saved, poller + pusher restarted')
 }
 
@@ -794,7 +828,7 @@ function handleDeepLinkUrl(url: string) {
 // Buffer it until the window exists.
 app.on('open-url', (event, url) => {
   event.preventDefault()
-  if (mainWindow) handleDeepLinkUrl(url)
+  if (mainWindow) void handleDeepLinkUrl(url)
   else pendingDeepLink = url
 })
 
@@ -830,7 +864,7 @@ if (!gotLock) {
   terminateStaleRunnerInstances()
   app.on('second-instance', (_event, argv) => {
     const url = argv.find((a) => a.startsWith('fleetcrown://'))
-    if (url) handleDeepLinkUrl(url)
+    if (url) void handleDeepLinkUrl(url)
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore()
       mainWindow.show()
@@ -914,7 +948,7 @@ app.whenReady().then(async () => {
   // Apply any deep-link captured before the window existed (mac open-url
   // pre-whenReady, or Linux/Win argv URL). Token gets saved + poller restarts.
   if (pendingDeepLink) {
-    handleDeepLinkUrl(pendingDeepLink)
+    void handleDeepLinkUrl(pendingDeepLink)
     pendingDeepLink = null
   }
 
