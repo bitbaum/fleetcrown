@@ -1,13 +1,18 @@
 # FleetCrown Feedback Widget
 
-**Status**: Phases 1–4 implemented 2026-07-17 — four `feat(feedback):` commits
-(ingest spine, embed bundle, inbox + dispatch, self-dogfood); find them with
-`git log --oneline --grep 'feat(feedback)'` (hashes not pinned here — a
-concurrent session rewrote history once already on implementation day).
-Remaining: revampit cutover (customer #1, lives in the revampit repo) and prod
-activation — run the widget_tokens/site_feedback DDL on the box (drizzle push
-is TTY-blocked by the pre-existing agent_tokens prompt), then mint a
-fleetcrown-project token and set FEEDBACK_WIDGET_TOKEN in the app env.
+**Status**: COMPLETE 2026-07-28. Phases 1–4 implemented 2026-07-17 — four
+`feat(feedback):` commits (ingest spine, embed bundle, inbox + dispatch,
+self-dogfood); find them with `git log --oneline --grep 'feat(feedback)'`.
+Prod activation done 2026-07-17 (box DDL + FEEDBACK_WIDGET_TOKEN). Customer #1
+cutover done 2026-07-28: revampit/evig prod (revampit.orangecat.ch) loads the
+embed via `FleetCrownFeedbackEmbed` (revampit main 90bfb3497; retired React
+widget deleted in 6341ac7f1), verified e2e — a prod submission lands in this
+inbox. Hardening learned from the cutover: the OPTIONS preflight reflects
+`Access-Control-Request-Headers`, because customer sites monkey-patch
+window.fetch and stamp extra headers (revampit stamped x-csrf-token) onto the
+widget's cross-origin POST — a hardcoded allowlist silently drops submissions.
+The per-token Origin allowlist in POST remains the security boundary. Embed
+supports `data-fc-bottom` to offset the FAB above a host site's own FAB.
 **Origin**: Extract revampit's visitor-feedback FAB (`src/components/feedback/`, ~900 lines,
 modular, survived the Hirn deletion intentionally) into a FleetCrown-owned embeddable
 widget. Any registered project drops one script tag on its site; visitor feedback flows
