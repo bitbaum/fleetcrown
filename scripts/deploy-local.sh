@@ -11,13 +11,12 @@
 
 set -euo pipefail
 
-# Hosted CI (GitHub Actions) must not run the local standalone-copy + systemd
-# restart path — there's no systemd there, so any failure surfaces as a
-# misleading "Command npm run build exited with 1". Skip cleanly when CI is set.
-if [ -n "${CI:-}" ]; then
-  echo "→ deploy: CI detected — skipping local standalone+systemd path"
-  exit 0
-fi
+# Hosted CI (GitHub Actions, deploy.yml) DOES need the standalone assembly below —
+# it ships that assembled tree to the box via `deploy-hetzner.sh --no-build`, which
+# hard-fails if `.next/static` isn't inside `.next/standalone`. What CI must NOT run
+# is the LOCAL-only tail (schema warning + `systemctl --user restart`): there's no
+# local service or local prod to keep consistent there. So we fall through to the
+# asset assembly and exit right before that tail (the `${CI:-}` guard below).
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -71,6 +70,15 @@ NODE_PTY_DEST="$STANDALONE/node_modules/node-pty/build"
 if [ -d "$NODE_PTY_SRC" ] && [ -d "$STANDALONE/node_modules/node-pty" ]; then
   swap_dir "$NODE_PTY_SRC" "$NODE_PTY_DEST"
   echo "→ deploy: node-pty native binary swapped into standalone (atomic)"
+fi
+
+# Hosted CI stops here: the standalone is fully assembled (all deploy-hetzner.sh
+# --no-build needs), and everything below is local-machine-only (a schema warning
+# against the local DB, and restarting the local systemd service — neither of
+# which exists on a GitHub runner shipping to a remote box).
+if [ -n "${CI:-}" ]; then
+  echo "→ deploy: CI — standalone assembled; skipping local schema-warning + systemd restart"
+  exit 0
 fi
 
 # ── Schema-drift warning (non-fatal, read-only) ───────────────────────────────
