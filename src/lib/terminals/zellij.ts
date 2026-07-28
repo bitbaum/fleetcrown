@@ -77,7 +77,12 @@ export function getZellijSessionsSync(): string[] {
       encoding: "utf-8",
       timeout: 2000,
     });
-    return stdout
+    // Strip ANSI before parsing: some zellij builds/envs colorize even with
+    // --no-formatting (e.g. when CLICOLOR_FORCE is set). An un-stripped color
+    // code leaks into the session name, so every subsequent `--session <name>`
+    // shellout fails and tab resolution reports "tab not found". This is the
+    // one session-parse that used to skip the stripAnsi every sibling applies.
+    return stripAnsi(stdout)
       .split("\n")
       .map((line) => line.trim().split(/\s+/)[0])
       .filter(Boolean);
