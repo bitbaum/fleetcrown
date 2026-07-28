@@ -25,6 +25,7 @@ PAGE_ROUTES=(
   "/pricing"
   "/whitepaper"
   "/today"
+  "/approvals"
   "/control"
   "/projects"
   "/goals"
