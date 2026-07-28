@@ -9,6 +9,7 @@ import { mapClaudePromptToIntent } from "@/lib/orchestration";
 import type { DispatchResult } from "@/app/api/control/dispatch/route";
 import { clearDraft, getDraft, setDraft } from "@/lib/draft-storage";
 import { FEEDBACK_MEDIUM_MS } from "@/lib/constants/timings";
+import type { DispatchLiveView } from "@/lib/dispatch-status";
 
 export function useProjectCardActions({
   project,
@@ -27,7 +28,7 @@ export function useProjectCardActions({
   queue: string[];
   removeFromQueue: (index: number) => void;
   clearQueue: () => void;
-  onInject: (tab: string, promptKey?: string, customPrompt?: string) => Promise<void>;
+  onInject: (tab: string, promptKey?: string, customPrompt?: string) => Promise<{ commandId?: string | null } | void>;
   onRunWithBrain: (project: ProjectState, intent: OrchestrationTaskIntentId) => Promise<void>;
   setDismissed: (v: boolean) => void;
   isReadyNow: boolean;
@@ -70,6 +71,54 @@ export function useProjectCardActions({
   // means a failed send is impossible to miss.
   const [sendError, setSendError] = useState<string | null>(null);
   const clearSendError = useCallback(() => setSendError(null), []);
+
+  // Honest dispatch status. A queued dispatch used to vanish into the ambient
+  // dir-scoped guess — the card showed a green "working" the moment /api/inject
+  // returned 200, even when the runner then failed to focus the tab and the
+  // prompt never ran. We now poll the command's REAL lifecycle
+  // (queued → picked up → ran / failed / unconfirmed) via
+  // GET /api/control/commands/:id (SSOT: deriveDispatchLiveStatus) and surface
+  // it on the card, so a failed dispatch is impossible to miss.
+  const [dispatchStatus, setDispatchStatus] = useState<DispatchLiveView | null>(null);
+  const clearDispatchStatus = useCallback(() => setDispatchStatus(null), []);
+  // Cancellation token for the in-flight poll: a new dispatch (or unmount)
+  // cancels the previous poll so two dispatches never fight over the banner.
+  const pollRef = useRef<{ cancelled: boolean } | null>(null);
+  const trackDispatch = useCallback((commandId: string) => {
+    if (pollRef.current) pollRef.current.cancelled = true;
+    const token = { cancelled: false };
+    pollRef.current = token;
+    setDispatchStatus(null);
+    let attempts = 0;
+    const MAX_ATTEMPTS = 40; // ~2 min at 3s — long enough to see a runner pick-up + run
+    const poll = async () => {
+      if (token.cancelled) return;
+      attempts += 1;
+      try {
+        const res = await fetch(`/api/control/commands/${commandId}`);
+        if (res.ok) {
+          const view = (await res.json()) as DispatchLiveView;
+          if (token.cancelled) return;
+          setDispatchStatus(view);
+          if (view.terminal) return; // settled — stop polling
+        }
+      } catch { /* transient network error — keep polling */ }
+      if (attempts >= MAX_ATTEMPTS || token.cancelled) return;
+      setTimeout(() => { void poll(); }, 3000);
+    };
+    void poll();
+  }, []);
+  useEffect(() => () => { if (pollRef.current) pollRef.current.cancelled = true; }, []);
+
+  // Single funnel for user-initiated sends: fire the inject, then track the
+  // returned command id. All the send* handlers below route through this so
+  // tracking lives in exactly one place.
+  const doInject = useCallback(async (tab: string, promptKey?: string, customPrompt?: string) => {
+    const result = await onInject(tab, promptKey, customPrompt);
+    const commandId = result && "commandId" in result ? result.commandId : null;
+    if (commandId) trackDispatch(commandId);
+    return result;
+  }, [onInject, trackDispatch]);
 
   // Pre-fetch dispatch decision as soon as the ready banner appears.
   // Note 2026-05-20: previously gated on queue.length > 0, which short-
@@ -129,7 +178,7 @@ export function useProjectCardActions({
       // Mirror the smartEnqueue special case: if the user is deliberately sending
       // a handoff-controlled prompt (the exact workflow they use to drive the agent
       // from the UI), prefer direct execution over queueing.
-      await onInject(project.tab, undefined, trimmed);
+      await doInject(project.tab, undefined, trimmed);
       setCustom("");
       markSent("custom");
     } catch (err) {
@@ -145,7 +194,7 @@ export function useProjectCardActions({
     setSendError(null);
     setDismissed(true);
     try {
-      await onInject(project.tab, undefined, text.trim());
+      await doInject(project.tab, undefined, text.trim());
       // Belt-and-suspenders: sendText bypasses setCustom (the draft auto-clear
       // path), so explicit clearDraft after successful send.
       clearDraft(project.tab);
@@ -155,7 +204,7 @@ export function useProjectCardActions({
     } finally {
       setSending(null);
     }
-  }, [project.tab, onInject, setDismissed, markSent]);
+  }, [project.tab, doInject, setDismissed, markSent]);
 
   const sendIntent = async (intent: OrchestrationTaskIntentId) => {
     if (intent === "next_best" && !sessionHealthBlocksQueue()) {
@@ -165,7 +214,7 @@ export function useProjectCardActions({
         setSendError(null);
         setDismissed(true);
         try {
-          await onInject(project.tab, undefined, queued);
+          await doInject(project.tab, undefined, queued);
           removeFromQueue(0);
           markSent(intent);
         }
@@ -194,14 +243,14 @@ export function useProjectCardActions({
     setDismissed(true);
     try {
       if (customPrompt) {
-        await onInject(project.tab, undefined, customPrompt);
+        await doInject(project.tab, undefined, customPrompt);
       } else if (promptKey) {
         const intent = mapClaudePromptToIntent(promptKey);
         if (intent) {
           if (intent === "next_best") {
             const queued = queue[0];
             if (queued) {
-              await onInject(project.tab, undefined, queued);
+              await doInject(project.tab, undefined, queued);
               removeFromQueue(0);
             } else {
               await onRunWithBrain(project, intent);
@@ -210,7 +259,7 @@ export function useProjectCardActions({
             await onRunWithBrain(project, intent);
           }
         } else {
-          await onInject(project.tab, promptKey);
+          await doInject(project.tab, promptKey);
         }
       }
       // Only clear input on confirmed-successful custom send. setCustom("")
@@ -278,14 +327,14 @@ export function useProjectCardActions({
     setSendError(null);
     setDismissed(true);
     try {
-      await onInject(project.tab, undefined, item);
+      await doInject(project.tab, undefined, item);
       removeFromQueue(index);
     } catch (err) {
       setSendError(err instanceof Error ? err.message : "Send failed");
     } finally {
       setSending(null);
     }
-  }, [queue, removeFromQueue, project.tab, onInject, setDismissed]);
+  }, [queue, removeFromQueue, project.tab, doInject, setDismissed]);
 
   const handleMergeQueue = useCallback(async () => {
     if (queue.length < 2) return;
@@ -340,6 +389,8 @@ export function useProjectCardActions({
     preloadedDispatch,
     sendError,
     clearSendError,
+    dispatchStatus,
+    clearDispatchStatus,
     sendCustom,
     sendText,
     sessionHealthBlocksQueue,

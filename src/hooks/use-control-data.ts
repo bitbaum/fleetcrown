@@ -35,7 +35,7 @@ export interface ControlDataHook {
    *  to heartbeat age. true/false = authoritative live signal. */
   runnerConnected: boolean | null;
   refresh: (manual?: boolean) => Promise<void>;
-  inject: (tab: string, promptKey?: string, customPrompt?: string) => Promise<{ mode: "direct" | "queued"; runnerConnected: boolean | null }>;
+  inject: (tab: string, promptKey?: string, customPrompt?: string) => Promise<{ mode: "direct" | "queued"; runnerConnected: boolean | null; commandId: string | null }>;
   launchProject: (tab: string, dir: string, agent?: string, model?: string, initialPrompt?: string) => Promise<void>;
   runWithBrain: (project: ProjectState, intent: OrchestrationTaskIntentId) => Promise<void>;
   runCustomPrompt: (project: ProjectState, prompt: string, ag: string) => Promise<void>;
@@ -244,7 +244,7 @@ export function useControlData(): ControlDataHook {
     return () => clearTimeout(id);
   }, [lastTabResultsAt]);
 
-  const inject = async (tab: string, promptKey?: string, customPrompt?: string): Promise<{ mode: "direct" | "queued"; runnerConnected: boolean | null }> => {
+  const inject = async (tab: string, promptKey?: string, customPrompt?: string): Promise<{ mode: "direct" | "queued"; runnerConnected: boolean | null; commandId: string | null }> => {
     // Same-machine fast path (POST localhost:3001/api/inject → home/server.ts
     // → bash inject_prompt) was retired in Session 4 of killing-the-bash-
     // runner (2026-06-11). Every inject now goes through the cloud
@@ -262,6 +262,10 @@ export function useControlData(): ControlDataHook {
     return {
       mode: body.mode === "queued" ? "queued" : "direct",
       runnerConnected: typeof body.runnerConnected === "boolean" ? body.runnerConnected : null,
+      // The queued path returns the pending_command id so the card can poll its
+      // real lifecycle (queued → picked up → ran/failed) instead of the ambient
+      // dir-scoped guess. Direct mode ran in-process — no command row to track.
+      commandId: typeof body.commandId === "string" ? body.commandId : null,
     };
   };
 
