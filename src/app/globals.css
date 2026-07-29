@@ -1197,7 +1197,7 @@
     @apply max-w-2xl text-xl text-text-secondary;
   }
   .ui-public-step-num {
-    @apply w-8 shrink-0 font-mono text-sm text-text-muted;
+    @apply w-8 shrink-0 font-mono text-sm text-text-secondary;
   }
   .ui-public-prose-strong {
     @apply font-medium text-text-primary;
@@ -1212,7 +1212,7 @@
     @apply flex min-h-[320px] flex-col rounded-2xl border border-border-subtle bg-surface-base p-6 text-left;
   }
   .ui-public-surface-card-label {
-    @apply mb-8 font-mono text-xs uppercase tracking-[0.18em] text-text-muted;
+    @apply mb-8 font-mono text-xs uppercase tracking-[0.18em] text-text-secondary;
   }
   .ui-public-surface-card-title {
     @apply text-2xl font-semibold leading-tight text-text-primary;
