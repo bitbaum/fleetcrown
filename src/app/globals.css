@@ -1138,7 +1138,7 @@
     @apply font-mono text-sm text-text-secondary;
   }
   .ui-public-hero-console-note {
-    @apply ml-auto truncate pl-3 font-mono text-xs text-text-muted;
+    @apply ml-auto truncate pl-3 font-mono text-xs text-text-secondary;
   }
   .ui-public-hero-console-metrics {
     @apply mt-4 grid grid-cols-3 gap-3 border-t border-border-subtle pt-4;
