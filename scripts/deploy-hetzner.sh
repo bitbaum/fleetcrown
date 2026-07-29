@@ -46,6 +46,13 @@ while [ $# -gt 0 ]; do
   esac
 done
 
+# Normalize --ref to a full SHA: git_head returns 40 chars, and the pinned-deploy
+# guard compares literally, so a short ref would always "mismatch" and skip.
+if [ -n "$REF" ]; then
+  REF="$(git -C "$PROJECT_DIR" rev-parse --verify --quiet "${REF}^{commit}")" \
+    || { echo "✗ --ref does not resolve to a commit: $REF" >&2; exit 1; }
+fi
+
 # Alert the operator (Telegram) when a deploy fails or rolls back. A silently
 # broken ship + a silent rollback both left the box in an unknown state with
 # nobody told; this closes that loop. Reads the box's own bot creds and sends
