@@ -302,7 +302,25 @@ function WidgetSetupCard({
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // One-click install/uninstall: dispatches an agent to land/remove the embed
+  // in the project's own repo. Tracks which mode was dispatched this session.
+  const [agentBusy, setAgentBusy] = useState(false);
+  const [agentDone, setAgentDone] = useState<"install" | "uninstall" | null>(null);
   const { copied, copy } = useClipboard();
+
+  async function dispatchAgent(mode: "install" | "uninstall") {
+    setAgentBusy(true);
+    setError(null);
+    try {
+      const res = await postJson(`/api/projects/${projectId}/widget-token/install`, { mode });
+      if (!res.ok) await throwApiError(res, `Could not dispatch the ${mode}`);
+      setAgentDone(mode);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : `Could not dispatch the ${mode}`);
+    } finally {
+      setAgentBusy(false);
+    }
+  }
 
   async function mutate(run: () => Promise<Response>, fallback: string) {
     setBusy(true);
@@ -360,6 +378,26 @@ function WidgetSetupCard({
             <button type="button" onClick={() => copy(token.snippet)} className="ui-btn-save gap-1.5">
               {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
               {copied ? "Copied" : "Copy snippet"}
+            </button>
+            <button
+              type="button"
+              onClick={() => dispatchAgent("install")}
+              disabled={agentBusy || agentDone === "install"}
+              className="ui-btn-secondary gap-1.5"
+              title="Dispatch an agent to add the snippet to this project's codebase and ship it"
+            >
+              {agentBusy ? <Loader2 className="ui-spinner-xs" /> : agentDone === "install" ? <Check className="h-3.5 w-3.5" /> : <Rocket className="h-3.5 w-3.5" />}
+              {agentDone === "install" ? "Install dispatched" : "Install via agent"}
+            </button>
+            <button
+              type="button"
+              onClick={() => dispatchAgent("uninstall")}
+              disabled={agentBusy || agentDone === "uninstall"}
+              className="ui-btn-secondary gap-1.5"
+              title="Dispatch an agent to remove the embed from this project's codebase (Pause hides it instantly without a deploy)"
+            >
+              {agentDone === "uninstall" ? <Check className="h-3.5 w-3.5" /> : <Undo2 className="h-3.5 w-3.5" />}
+              {agentDone === "uninstall" ? "Removal dispatched" : "Remove via agent"}
             </button>
             <button
               type="button"
