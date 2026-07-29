@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FLEET_RUNNER_RELEASES, CURRENT_RELEASE } from "@/config/changelog";
+import { FLEET_RUNNER_RELEASES, CURRENT_RELEASE, PLATFORM_CHANGELOG } from "@/config/changelog";
 import { PublicSurface } from "@/components/public/PublicSurface";
 import { PublicHeaderActions } from "@/components/public/PublicHeaderActions";
 
@@ -26,9 +26,10 @@ export default function ReleasesPage() {
       <div className="ui-changelog-page">
         <header>
           <div className="ui-changelog-eyebrow">Changelog</div>
-          <h1 className="ui-changelog-title">Fleet Runner</h1>
+          <h1 className="ui-changelog-title">FleetCrown</h1>
           <p className="ui-changelog-lede">
-            Every version of Fleet Runner that shipped, what changed, and why. The latest is{" "}
+            What shipped, what changed, and why — platform milestones and every Fleet Runner
+            version. The latest runner is{" "}
             <span className="ui-changelog-code">v{CURRENT_RELEASE.version}</span>, published{" "}
             {formatDate(CURRENT_RELEASE.date)}.
           </p>
@@ -47,7 +48,43 @@ export default function ReleasesPage() {
           </div>
         </header>
 
+        {PLATFORM_CHANGELOG.length > 0 && (
+          <div className="ui-changelog-feed">
+            <h2 className="ui-changelog-title">Platform</h2>
+            {PLATFORM_CHANGELOG.map((entry, idx) => (
+              <article key={`${entry.date}-${entry.title}`} className="ui-changelog-entry">
+                <div className="ui-changelog-meta">
+                  <time className="ui-changelog-date" dateTime={entry.date}>
+                    {formatDate(entry.date)}
+                  </time>
+                  {idx === 0 && <span className="ui-changelog-current">Latest</span>}
+                </div>
+
+                <h3 className="ui-changelog-entry-title">{entry.title}</h3>
+
+                <ul className="ui-changelog-list">
+                  {entry.highlights.map((line) => (
+                    <li key={line} className="ui-changelog-item">
+                      <span className="ui-changelog-bullet" aria-hidden />
+                      <span>{line}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                {entry.link && (
+                  <div className="ui-changelog-foot">
+                    <Link href={entry.link.href} className="ui-changelog-link">
+                      {entry.link.label} →
+                    </Link>
+                  </div>
+                )}
+              </article>
+            ))}
+          </div>
+        )}
+
         <div className="ui-changelog-feed">
+          <h2 className="ui-changelog-title">Fleet Runner</h2>
           {FLEET_RUNNER_RELEASES.map((release, idx) => (
             <article key={release.tag} className="ui-changelog-entry">
               <div className="ui-changelog-meta">

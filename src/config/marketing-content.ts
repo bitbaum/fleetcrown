@@ -526,6 +526,18 @@ export const PRODUCT_SURFACES = [
     body: "Fleet-wide play/pause with per-project queues and overrides — each project asks for oversight only when the next decision actually needs you.",
     meta: "Approvals · voice intent · remote command",
   },
+  {
+    label: "Terminal",
+    title: "Watch and drive any agent live.",
+    body: "An embedded terminal per project — see exactly what the cloud builder or your local runner is typing, and type into it yourself when the moment calls for hands on the wheel.",
+    meta: "Live PTY · cloud + local · per-project tabs",
+  },
+  {
+    label: "Feedback",
+    title: "Your visitors file the work.",
+    body: "One script tag puts a feedback button on any site you run. Reports land in a per-project inbox, one click dispatches an agent to fix them, and when the fix ships the reporter gets an email.",
+    meta: "Embeddable widget · agent dispatch · closed loop",
+  },
 ] as const;
 
 export const START_PATHS = [

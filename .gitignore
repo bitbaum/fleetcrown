@@ -39,5 +39,8 @@ desktop/resources/bin/
 # committed so packaged binaries include them without a generation step).
 !desktop/resources/*.png
 
+# Thoughts essay assets — product screenshots referenced by content/thoughts/*.md.
+!public/thoughts/*.png
+
 .env.vercel.production.snapshot.OLD
 /public/widget.js
