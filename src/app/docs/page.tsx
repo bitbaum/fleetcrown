@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BookOpen, Download, Network, ShieldCheck } from "lucide-react";
+import { BookOpen, Download, MessageSquare, Network, ShieldCheck } from "lucide-react";
 import { PublicHeaderActions } from "@/components/public/PublicHeaderActions";
 import { PublicSurface } from "@/components/public/PublicSurface";
 
@@ -20,6 +20,12 @@ const guides = [
     body: "Connect the local execution layer that lets agents work in your repositories.",
     href: "/download",
     icon: Download,
+  },
+  {
+    title: "Feedback widget",
+    body: "Put a feedback button on any site you run — reports become dispatchable fleet work.",
+    href: "/docs/feedback-widget",
+    icon: MessageSquare,
   },
   {
     title: "Architecture",

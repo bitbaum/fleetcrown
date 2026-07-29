@@ -295,3 +295,36 @@ export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
 
 /** Most-recent release — used by the footer pill / 'current version' badges. */
 export const CURRENT_RELEASE: ReleaseEntry = FLEET_RUNNER_RELEASES[0];
+
+/**
+ * FleetCrown platform changelog — user-facing changes to the hosted web
+ * platform (as opposed to Fleet Runner desktop releases above). The platform
+ * ships continuously, so entries are dated milestones, not versions: add one
+ * when a feature is complete and verified in production, not per deploy.
+ * Same editing rules as releases: plain-English bullets for the person who
+ * uses the product, no commit-message slang.
+ */
+export interface PlatformChangeEntry {
+  date: string;        // ISO 8601 date the feature was live + verified
+  title: string;       // feature name, e.g. "Feedback widget"
+  highlights: string[];
+  /** Optional deep link (docs page or Thoughts essay) for the full story. */
+  link?: { href: string; label: string };
+}
+
+/** Newest first. */
+export const PLATFORM_CHANGELOG: PlatformChangeEntry[] = [
+  {
+    date: "2026-07-29",
+    title: "Feedback widget — visitor reports become fleet work",
+    highlights: [
+      "One script tag puts a feedback button on any site you run. Visitors point at the exact element that's broken; reports land in a per-project inbox.",
+      "One click dispatches an agent to fix a report — with an optional instruction of yours prepended to the prompt.",
+      "Remote control without deploys: pause, resume, rotate, or revoke the widget from FleetCrown and the customer site follows within seconds. Live status comes from a real heartbeat, not install intent.",
+      "Install and uninstall are one click too: an agent adds or removes the embed in your repo and ships it through your normal review flow.",
+      "At volume, Synthesize clusters new reports into structured briefs, and a daily digest files themes as draft actions on Approvals — nothing executes without your approval.",
+      "The loop closes itself: when a dispatched fix deploys, the report auto-resolves and the visitor who left an email hears their feedback shipped.",
+    ],
+    link: { href: "/docs/feedback-widget", label: "Docs: feedback widget" },
+  },
+];
