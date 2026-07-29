@@ -11,6 +11,7 @@ import { sendEmail } from "@/lib/email";
 import { bookCalendarEvent } from "@/lib/actions/calendar-event";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { injectPrompt } from "@/lib/inject-core";
+import { markFeedbackDispatchedBulk } from "@/db/queries/site-feedback";
 
 export type ExecuteActionResult = {
   /** true only when a real-world effect happened and the row reached status='executed'. */
@@ -168,6 +169,23 @@ export async function executeAction(userId: string, action: Action): Promise<Exe
           return { executed: false, error: reason };
         }
 
+        const runId = typeof body.runId === "string" ? body.runId : null;
+        // Digester proposals carry the clustered feedback ids: flip them to
+        // 'dispatched' with the run id so close-the-loop can auto-resolve them
+        // when the run succeeds. Best-effort — the dispatch already happened,
+        // so a linkage failure must not fail the action.
+        const feedbackIds = Array.isArray(payload.feedbackIds)
+          ? payload.feedbackIds.filter((x): x is string => typeof x === "string")
+          : [];
+        let feedbackLinked = 0;
+        if (feedbackIds.length > 0) {
+          try {
+            feedbackLinked = await markFeedbackDispatchedBulk(userId, feedbackIds, runId ?? undefined);
+          } catch {
+            /* audited via feedbackLinked=0 below */
+          }
+        }
+
         const done = await markActionExecuted(action.id, userId);
         if (!done) {
           await recordActionAuditEvent(userId, action, "failed", {
@@ -176,7 +194,7 @@ export async function executeAction(userId: string, action: Action): Promise<Exe
           return { executed: false, error: "not-approved-at-execute-time" };
         }
         await recordActionAuditEvent(userId, action, "executed", {
-          meta: { runId: typeof body.runId === "string" ? body.runId : null },
+          meta: { runId, feedbackLinked },
         });
         return { executed: true };
       }

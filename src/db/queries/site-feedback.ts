@@ -1,4 +1,4 @@
-import { and, count, desc, eq, max, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, max, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { entities, siteFeedback, type SiteFeedback, type NewSiteFeedback } from "@/db/schema";
 import { FEEDBACK_STATUS, type FeedbackStatus } from "@/lib/constants/statuses";
@@ -62,6 +62,30 @@ export async function getFeedbackWithProject(
     .where(and(eq(siteFeedback.id, id), eq(siteFeedback.userId, userId)))
     .limit(1);
   return row ?? null;
+}
+
+/**
+ * Bulk NEW→dispatched with run linkage — used when a digester DISPATCH_PROMPT
+ * executes, so close-the-loop can auto-resolve the clustered items when the
+ * run succeeds. Only rows still 'new' flip (an item the operator triaged in
+ * the meantime is not clobbered).
+ */
+export async function markFeedbackDispatchedBulk(
+  userId: string,
+  ids: string[],
+  runId?: string,
+): Promise<number> {
+  if (ids.length === 0) return 0;
+  const rows = await db
+    .update(siteFeedback)
+    .set({ status: FEEDBACK_STATUS.DISPATCHED, ...(runId ? { dispatchedRunId: runId } : {}) })
+    .where(and(
+      eq(siteFeedback.userId, userId),
+      inArray(siteFeedback.id, ids),
+      eq(siteFeedback.status, FEEDBACK_STATUS.NEW),
+    ))
+    .returning({ id: siteFeedback.id });
+  return rows.length;
 }
 
 /** Status transition (triage). Ownership enforced via userId in the WHERE. */

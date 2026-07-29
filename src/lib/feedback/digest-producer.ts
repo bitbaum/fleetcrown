@@ -112,11 +112,17 @@ export async function digestFeedback(userId: string): Promise<DigestResult> {
 
     for (const theme of themes) {
       if (proposed >= MAX_PROPOSALS_PER_USER) break;
+      // Carry the clustered item ids so the executor can flip them to
+      // 'dispatched' with the run id — that linkage is what lets
+      // close-the-loop auto-resolve them when the run succeeds.
+      const feedbackIds = theme.itemIndexes
+        .map((i) => items[i]?.id)
+        .filter((id): id is string => typeof id === "string");
       const created = await proposeAction(userId, {
         type: ACTION_TYPE.DISPATCH_PROMPT,
         title: `Fix visitor feedback: ${theme.title.slice(0, 120)} — ${s.projectName}`,
         description: `${theme.itemIndexes.length} submissions point at the same problem. Approving dispatches the prompt below to ${s.projectName}.`,
-        payload: { projectKey: s.projectName, body: composeThemePrompt(theme, items, s.projectName) },
+        payload: { projectKey: s.projectName, body: composeThemePrompt(theme, items, s.projectName), feedbackIds },
         reasoning: `Clustered from ${items.length} new feedback items on ${s.projectName}; theme evidence: ${theme.itemIndexes.length} independent reports.`,
         entityId: s.projectId,
         expiresAt: new Date(Date.now() + PROPOSAL_TTL_DAYS * 24 * 60 * 60 * 1000),
