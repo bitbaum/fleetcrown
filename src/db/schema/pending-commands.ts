@@ -1,4 +1,5 @@
 import { pgTable, uuid, text, timestamp, jsonb, index } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { users } from "./users";
 import type { BuilderChannel } from "@/lib/constants/statuses";
 
@@ -16,6 +17,10 @@ export const pendingCommands = pgTable("pending_commands", {
 }, (table) => [
   index("idx_pending_commands_user_id").on(table.userId),
   index("idx_pending_commands_created_at").on(table.createdAt),
+  // The claim gate, purge exemption, and close-sweep undelivered check all
+  // probe unexecuted commands by payload.runId — partial expression index so
+  // those stay cheap as the table grows.
+  index("idx_pending_commands_open_run").on(sql`((payload->>'runId'))`).where(sql`executed_at IS NULL`),
 ]);
 
 export type PendingCommand    = typeof pendingCommands.$inferSelect;

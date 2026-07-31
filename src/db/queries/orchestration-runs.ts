@@ -10,6 +10,7 @@ import {
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import { resolveFeedbackForRun } from "@/lib/feedback/close-loop";
 import { correctTimeoutReapsWithRepoEvidence } from "@/lib/orchestration/reap-evidence";
+import { emitRunEvent } from "./run-events";
 
 export const STALE_RUN_MINUTES = 60;
 
@@ -43,6 +44,53 @@ export async function updateOrchestrationRun(
   }
 
   return updated;
+}
+
+/**
+ * Delivery stamp: the runner ack'd this run's prompt as actually typed into the
+ * session. Recorded on payload (NEVER on startedAt — (started_at, id) is the
+ * serialization order in the claim gate and isProjectBusy; re-stamping it would
+ * flip blocking direction mid-flight). The close paths use deliveredAt as the
+ * handoff-freshness floor, so a stale ready re-push from before delivery can
+ * never close this run.
+ */
+export async function stampRunDelivered(runId: string, userId: string): Promise<void> {
+  await db
+    .update(orchestrationRuns)
+    .set({
+      payload: sql`jsonb_set(COALESCE(payload, '{}'), '{deliveredAt}', ${JSON.stringify(new Date().toISOString())}::jsonb)`,
+    })
+    .where(and(
+      eq(orchestrationRuns.id, runId),
+      eq(orchestrationRuns.userId, userId),
+      isNull(orchestrationRuns.finishedAt),
+    ));
+}
+
+/**
+ * The runner nack'd the dispatch — the prompt never landed, so the run can
+ * never produce a handoff. Close it as error IMMEDIATELY: leaving it open would
+ * head-of-line block the project's queued dispatches for up to
+ * STALE_RUN_MINUTES. Outcome ≠ success, so close-the-loop never fires off it.
+ */
+export async function closeRunUndelivered(runId: string, userId: string, reason: string): Promise<void> {
+  const [closed] = await db
+    .update(orchestrationRuns)
+    .set({
+      state: ORCH_STATE.ERROR,
+      outcome: ORCHESTRATION_OUTCOME.ERROR,
+      finishedAt: new Date(),
+      payload: sql`jsonb_set(COALESCE(payload, '{}'), '{error}', to_jsonb(${`Dispatch failed before the prompt reached the agent: ${reason}`}::text))`,
+    })
+    .where(and(
+      eq(orchestrationRuns.id, runId),
+      eq(orchestrationRuns.userId, userId),
+      isNull(orchestrationRuns.finishedAt),
+    ))
+    .returning({ id: orchestrationRuns.id });
+  if (closed) {
+    void emitRunEvent(runId, userId, "closed", { outcome: ORCHESTRATION_OUTCOME.ERROR, by: "runner-nack", reason });
+  }
 }
 
 export async function getOrchestrationRunById(userId: string, id: string) {

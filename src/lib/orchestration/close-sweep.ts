@@ -13,6 +13,7 @@
  * node-only (the claude seam pulls in fs) — import from route handlers only.
  */
 import { listOpenRuns } from "@/db/queries/orchestration-runs";
+import { hasUndeliveredCommandForRun } from "@/db/queries/pending-commands";
 import { getProjectState } from "@/db/queries/project-states";
 import type { SessionState } from "@/lib/control-types";
 import { getRecentOutcomes } from "@/db/queries/orchestration-runs";
@@ -40,6 +41,11 @@ function runSessionTab(run: OpenRunRow): string | null {
  *  outcome, or null when the run stays open. */
 async function tryCloseRun(run: OpenRunRow, sessionOverride?: SessionState): Promise<string | null> {
   if (closingRuns.has(run.id)) return null; // another close is in flight
+  // A run whose dispatch command is still queued (gate-held behind an older
+  // run, or runner offline) never had its prompt delivered — no handoff can be
+  // its work. Without this, run A's ready handoff swept run B closed with an
+  // identical summary and close-the-loop resolved B's feedback off A's work.
+  if (await hasUndeliveredCommandForRun(run.userId, run.id).catch(() => false)) return null;
   let session = sessionOverride ?? null;
   if (!session) {
     // A parallel run's handoff lives under its DERIVED tab, not the project's

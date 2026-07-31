@@ -19,6 +19,13 @@ export type OrchestrationRunPayload = {
    *  this tab; close matching keys on it (closeOpenRunBySessionTab). Absent
    *  for ordinary runs. */
   sessionTab?: string;
+  /** ISO time the runner ack'd the prompt as actually typed into the session
+   *  (stampRunDelivered). The close paths use it as the handoff-freshness
+   *  floor so a handoff from before delivery can never close this run. */
+  deliveredAt?: string;
+  /** Repo-side work evidence attached when the reaper corrects a timeout
+   *  verdict (reap-evidence.ts). */
+  evidence?: { kind: string; url: string; title: string; atMs: number };
 };
 
 /** Canonical run outcome values — SSOT for the column type, the finish-route

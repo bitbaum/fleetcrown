@@ -6,7 +6,28 @@ import { inferOutcome } from "./infer-outcome";
 import type { OrchestrationTaskSummary } from "./contract";
 
 /** The subset of an orchestration run this decision needs. */
-export type OpenRun = { startedAt: Date | null; finishedAt: Date | null };
+export type OpenRun = {
+  startedAt: Date | null;
+  finishedAt: Date | null;
+  /** Run payload — carries deliveredAt (runner-ack time of the prompt) when present. */
+  payload?: { deliveredAt?: string } | null;
+};
+
+/**
+ * The freshness floor a closing handoff must post-date. `deliveredAt` (stamped
+ * by the runner ack) beats `startedAt` (dispatch-creation time): a run can sit
+ * queued behind an older run for many minutes, and a stale ready re-push from
+ * before its prompt was even delivered must never close it — that is how run
+ * B used to get closed (and its feedback auto-resolved) off run A's handoff.
+ */
+export function runEffectiveStartMs(run: OpenRun): number {
+  const delivered = run.payload?.deliveredAt;
+  if (typeof delivered === "string") {
+    const ms = Date.parse(delivered);
+    if (Number.isFinite(ms)) return ms;
+  }
+  return run.startedAt?.getTime() ?? 0;
+}
 
 export type RunClosePatch = {
   state: "done" | "error";
@@ -37,8 +58,8 @@ export type RunClosePatch = {
 export function closeRunFromSession(run: OpenRun, session: SessionState): RunClosePatch | null {
   if (run.finishedAt) return null; // already closed
   if (session.status?.toLowerCase() !== "ready") return null; // agent not done
-  const startedMs = run.startedAt?.getTime() ?? 0;
-  if (session.mtime <= startedMs) return null; // handoff predates this run
+  const startedMs = runEffectiveStartMs(run);
+  if (session.mtime <= startedMs) return null; // handoff predates this run (or its delivery)
 
   const summary = buildOrchestrationSummary({
     status: session.status,

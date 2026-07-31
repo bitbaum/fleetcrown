@@ -1,0 +1,1 @@
+CREATE INDEX "idx_pending_commands_open_run" ON "pending_commands" USING btree (((payload->>'runId'))) WHERE executed_at IS NULL;
