@@ -85,6 +85,16 @@ textarea { resize: none; min-height: 74px; }
 textarea:focus, input:focus { outline: 2px solid ${ACCENT}; outline-offset: -1px; border-color: transparent; }
 .cnt { font-size: 10px; color: #a8a29e; text-align: right; margin: 3px 0 8px; }
 input { margin-bottom: 10px; }
+.attachrow { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.attach { font-size: 12px; color: #57534e; padding: 6px 10px; border: 1px dashed #d6d3d1; border-radius: 8px; }
+.attach:hover { border-color: ${ACCENT}; color: ${ACCENT}; }
+.shot { position: relative; display: inline-flex; }
+.shot img { height: 44px; max-width: 88px; object-fit: cover; border-radius: 6px; border: 1px solid #e7e5e4; }
+.shot .rm {
+  position: absolute; top: -6px; right: -6px; width: 18px; height: 18px;
+  border-radius: 50%; background: #1c1917; color: #fff; font-size: 11px; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+}
 .row { display: flex; gap: 8px; }
 .go {
   flex: 1; background: ${ACCENT}; color: #fff; font-size: 13px; font-weight: 600;
@@ -121,6 +131,33 @@ const DOC_CSS = `
 .fcw-hover { outline: 2px dashed ${ACCENT} !important; outline-offset: 2px !important; cursor: crosshair !important; }
 .fcw-selected { outline: 2px solid ${ACCENT} !important; outline-offset: 2px !important; }
 `;
+
+/** Client-side downscale so a phone photo never ships megabytes: longest edge
+ *  ≤1280px, JPEG, quality stepped down until it fits the ingest cap. */
+const MAX_SHOT_CHARS = 590_000; // ingest caps the data URL at 600k chars
+function downscaleImage(file: Blob): Promise<string | null> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const scale = Math.min(1, 1280 / Math.max(img.width, img.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(img.width * scale));
+      canvas.height = Math.max(1, Math.round(img.height * scale));
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return resolve(null);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      for (const quality of [0.8, 0.6, 0.4]) {
+        const out = canvas.toDataURL("image/jpeg", quality);
+        if (out.length <= MAX_SHOT_CHARS) return resolve(out);
+      }
+      resolve(null);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+    img.src = url;
+  });
+}
 
 const PENCIL_SVG =
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>';
@@ -251,6 +288,49 @@ function h<K extends keyof HTMLElementTagNameMap>(
     contact.placeholder = "Name / email (optional)";
     contact.autocomplete = "off";
 
+    // ---- image attach (file picker + paste; client-downscaled) ----
+    let shot: string | null = null;
+    const attachRow = h("div", "attachrow");
+    const fileInput = h("input");
+    fileInput.type = "file";
+    fileInput.accept = "image/*";
+    fileInput.style.display = "none";
+    const attachBtn = h("button", "attach", "Attach image");
+    attachBtn.setAttribute("aria-label", "Attach an image (or paste one)");
+    attachBtn.addEventListener("click", () => fileInput.click());
+    const shotWrap = h("span", "shot");
+    shotWrap.style.display = "none";
+    const shotImg = h("img");
+    shotImg.alt = "Attached image";
+    const shotRm = h("button", "rm", "✕");
+    shotRm.setAttribute("aria-label", "Remove attached image");
+    shotRm.addEventListener("click", () => setShot(null));
+    shotWrap.append(shotImg, shotRm);
+    attachRow.append(attachBtn, shotWrap, fileInput);
+
+    function setShot(dataUrl: string | null) {
+      shot = dataUrl;
+      shotWrap.style.display = dataUrl ? "" : "none";
+      attachBtn.style.display = dataUrl ? "none" : "";
+      if (dataUrl) shotImg.src = dataUrl;
+      else shotImg.removeAttribute("src");
+    }
+    async function attachFile(file: Blob | null | undefined) {
+      if (!file || !file.type.startsWith("image/")) return;
+      const dataUrl = await downscaleImage(file);
+      if (dataUrl) setShot(dataUrl);
+      else errEl.textContent = "Could not attach that image — try a smaller one";
+    }
+    fileInput.addEventListener("change", () => {
+      void attachFile(fileInput.files?.[0]);
+      fileInput.value = "";
+    });
+    // Paste a screenshot straight into the panel (desktop muscle memory).
+    panel.addEventListener("paste", (e: ClipboardEvent) => {
+      const item = Array.from(e.clipboardData?.items ?? []).find((i) => i.type.startsWith("image/"));
+      if (item) { e.preventDefault(); void attachFile(item.getAsFile()); }
+    });
+
     const row = h("div", "row");
     const sendBtn = h("button", "go", "Send");
     sendBtn.disabled = true;
@@ -262,7 +342,7 @@ function h<K extends keyof HTMLElementTagNameMap>(
     const errEl = h("div", "err");
     const keys = h("div", "keys", "Esc closes · Ctrl+Enter sends");
 
-    panel.append(hdr, chips, hint, textarea, cnt, contact, row, errEl, keys);
+    panel.append(hdr, chips, hint, textarea, cnt, contact, attachRow, row, errEl, keys);
 
     // ---- element-pick bar ----
     const pickbar = h("div", "pickbar");
@@ -307,6 +387,7 @@ function h<K extends keyof HTMLElementTagNameMap>(
       scope = "page";
       textarea.value = "";
       contact.value = "";
+      setShot(null);
       cnt.textContent = `0/${MAX_LEN}`;
       errEl.textContent = "";
       sendBtn.disabled = true;
@@ -430,6 +511,7 @@ function h<K extends keyof HTMLElementTagNameMap>(
             url: location.href.slice(0, 1000),
             pageTitle: document.title.slice(0, 300) || undefined,
             scope,
+            screenshot: shot ?? undefined,
             selectedElements: selected.length ? selected : undefined,
           }),
         });
@@ -456,7 +538,7 @@ function h<K extends keyof HTMLElementTagNameMap>(
         closePanel();
         // Rebuild the form for the next open (success view replaced it).
         panel.textContent = "";
-        panel.append(hdr, chips, hint, textarea, cnt, contact, row, errEl, keys);
+        panel.append(hdr, chips, hint, textarea, cnt, contact, attachRow, row, errEl, keys);
       }, 2200);
     }
   };

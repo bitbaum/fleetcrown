@@ -28,13 +28,80 @@ export async function bumpDuplicateFeedback(projectId: string, contentHash: stri
   return bumped?.id ?? null;
 }
 
+/** Inbox row: everything except the screenshot bytes (kept out of list
+ *  payloads), plus a flag so the UI can offer the image on demand. */
+export type FeedbackListItem = Omit<SiteFeedback, "screenshot"> & { hasScreenshot: boolean };
+
 /** Inbox for one project, newest first. Owner-scoped by userId. */
-export async function listProjectFeedback(userId: string, projectId: string, limit = 200): Promise<SiteFeedback[]> {
+export async function listProjectFeedback(userId: string, projectId: string, limit = 200): Promise<FeedbackListItem[]> {
   return db.query.siteFeedback.findMany({
     where: and(eq(siteFeedback.userId, userId), eq(siteFeedback.projectId, projectId)),
     orderBy: [desc(siteFeedback.createdAt)],
     limit,
+    columns: { screenshot: false },
+    extras: { hasScreenshot: sql<boolean>`(${siteFeedback.screenshot} IS NOT NULL)`.as("has_screenshot") },
   });
+}
+
+/**
+ * The feedback loop in numbers: how much lands, how much ships, and how fast
+ * report becomes fix. Median (not avg) via percentile_cont so one slow outlier
+ * can't wreck the story. On-demand aggregate — no metrics infrastructure.
+ */
+export type FeedbackLoopMetrics = {
+  total: number;
+  open: number;
+  resolved: number;
+  resolved30d: number;
+  medianResolutionHours: number | null;
+};
+
+export async function getFeedbackLoopMetrics(userId: string, projectId?: string): Promise<FeedbackLoopMetrics> {
+  const where = projectId
+    ? and(eq(siteFeedback.userId, userId), eq(siteFeedback.projectId, projectId))
+    : eq(siteFeedback.userId, userId);
+  const [row] = await db
+    .select({
+      total: sql<number>`count(*)::int`,
+      open: sql<number>`count(*) filter (where ${siteFeedback.status} in (${FEEDBACK_STATUS.NEW}, ${FEEDBACK_STATUS.DISPATCHED}))::int`,
+      resolved: sql<number>`count(*) filter (where ${siteFeedback.status} = ${FEEDBACK_STATUS.RESOLVED})::int`,
+      resolved30d: sql<number>`count(*) filter (where ${siteFeedback.status} = ${FEEDBACK_STATUS.RESOLVED} and ${siteFeedback.resolvedAt} > now() - interval '30 days')::int`,
+      medianResolutionHours: sql<number | null>`extract(epoch from percentile_cont(0.5) within group (order by (${siteFeedback.resolvedAt} - ${siteFeedback.createdAt})) filter (where ${siteFeedback.resolvedAt} is not null)) / 3600`,
+    })
+    .from(siteFeedback)
+    .where(where);
+  return {
+    total: row?.total ?? 0,
+    open: row?.open ?? 0,
+    resolved: row?.resolved ?? 0,
+    resolved30d: row?.resolved30d ?? 0,
+    medianResolutionHours: row?.medianResolutionHours != null ? Number(row.medianResolutionHours) : null,
+  };
+}
+
+/** Operator curation toggle for the public strip — resolved rows only. */
+export async function setFeedbackFeatured(userId: string, id: string, featured: boolean): Promise<boolean> {
+  const [updated] = await db
+    .update(siteFeedback)
+    .set({ featuredAt: featured ? new Date() : null })
+    .where(and(
+      eq(siteFeedback.id, id),
+      eq(siteFeedback.userId, userId),
+      eq(siteFeedback.status, FEEDBACK_STATUS.RESOLVED),
+    ))
+    .returning({ id: siteFeedback.id });
+  return !!updated;
+}
+
+/** The screenshot bytes for one row (owner-scoped) — the ONLY reader of the
+ *  screenshot column. */
+export async function getFeedbackScreenshot(userId: string, id: string): Promise<string | null> {
+  const [row] = await db
+    .select({ screenshot: siteFeedback.screenshot })
+    .from(siteFeedback)
+    .where(and(eq(siteFeedback.id, id), eq(siteFeedback.userId, userId)))
+    .limit(1);
+  return row?.screenshot ?? null;
 }
 
 export type ProjectFeedbackSummary = {

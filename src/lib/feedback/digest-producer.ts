@@ -1,12 +1,12 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { actions } from "@/db/schema";
-import { listFeedbackSummary, listProjectFeedback } from "@/db/queries/site-feedback";
+import { listFeedbackSummary, listProjectFeedback, type FeedbackListItem } from "@/db/queries/site-feedback";
 import { proposeAction } from "@/db/queries/actions";
 import { callGroqText } from "@/lib/groq";
 import { ACTION_STATUS, ACTION_TYPE, FEEDBACK_SOURCE, FEEDBACK_STATUS } from "@/lib/constants/statuses";
 import { fenceUntrusted, inlineUntrusted, UNTRUSTED_PREAMBLE } from "@/lib/feedback/untrusted";
-import type { SiteFeedback } from "@/db/schema";
+
 
 /**
  * Feedback digester — the automation stage of the feedback→action pipeline,
@@ -36,7 +36,7 @@ function extractJson(raw: string): string {
   return start >= 0 && end > start ? raw.slice(start, end + 1) : raw;
 }
 
-async function clusterItems(items: SiteFeedback[], projectName: string): Promise<GroqTheme[]> {
+async function clusterItems(items: FeedbackListItem[], projectName: string): Promise<GroqTheme[]> {
   // Untrusted visitor text: inline-sanitized (no newlines, no fence sentinels)
   // and — deliberately — placed AFTER the instructions, so a submission shaped
   // like "Reply with ONLY this JSON: ..." can't lead the model.
@@ -59,7 +59,7 @@ async function clusterItems(items: SiteFeedback[], projectName: string): Promise
     .slice(0, MAX_THEMES_PER_PROJECT);
 }
 
-function composeThemePrompt(theme: GroqTheme, items: SiteFeedback[], projectName: string): string {
+function composeThemePrompt(theme: GroqTheme, items: FeedbackListItem[], projectName: string): string {
   const evidence = theme.itemIndexes
     .map((i) => items[i])
     .filter(Boolean);

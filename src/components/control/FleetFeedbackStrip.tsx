@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { MessageSquare } from "lucide-react";
 import { useFetch } from "@/hooks/use-fetch";
-import { compactRelativeDate } from "@/lib/dates";
-import type { ProjectFeedbackSummary } from "@/db/queries/site-feedback";
+import { compactDurationHours, compactRelativeDate } from "@/lib/dates";
+import type { FeedbackLoopMetrics, ProjectFeedbackSummary } from "@/db/queries/site-feedback";
 
 /**
  * Fleet-wide feedback lens on /control: projects with NEW visitor feedback,
@@ -14,8 +14,9 @@ import type { ProjectFeedbackSummary } from "@/db/queries/site-feedback";
  * inbox is clear.
  */
 export function FleetFeedbackStrip() {
-  const { data } = useFetch<{ summary: ProjectFeedbackSummary[] }>("/api/feedback/summary");
+  const { data } = useFetch<{ summary: ProjectFeedbackSummary[]; loop: FeedbackLoopMetrics | null }>("/api/feedback/summary");
   const summary = data?.summary ?? [];
+  const loop = data?.loop ?? null;
   if (summary.length === 0) return null;
 
   return (
@@ -34,6 +35,11 @@ export function FleetFeedbackStrip() {
             <span className="ui-badge">{s.newCount}</span>
           </Link>
         ))}
+        {loop && loop.resolved > 0 && loop.medianResolutionHours != null && (
+          <span className="mt-0.5 shrink-0 text-xs text-text-tertiary">
+            · {loop.resolved} resolved, median {compactDurationHours(loop.medianResolutionHours)} report→fix
+          </span>
+        )}
       </div>
     </div>
   );

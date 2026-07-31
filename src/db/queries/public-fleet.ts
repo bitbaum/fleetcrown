@@ -57,3 +57,65 @@ export async function getHeroFleetSnapshot(userId: string): Promise<HeroFleetSna
     ],
   };
 }
+
+// ---------------------------------------------------------------------------
+// "Shipped thanks to feedback" — the reverse rail of the feedback widget.
+// Same doctrine as the hero snapshot: real data, public-safe by construction.
+// Raw visitor text NEVER auto-publishes — only rows the operator explicitly
+// featured (featured_at, resolved rows only) surface here, excerpted; the
+// aggregate counts carry the story even before anything is featured.
+// ---------------------------------------------------------------------------
+
+import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
+import { db } from "@/db";
+import { entities, siteFeedback } from "@/db/schema";
+import { getFeedbackLoopMetrics } from "./site-feedback";
+import { FEEDBACK_STATUS } from "@/lib/constants/statuses";
+
+export type ShippedFeedbackEntry = {
+  excerpt: string;
+  page: string | null;
+  project: string;
+  resolvedAt: string;
+};
+export type ShippedFeedbackSnapshot = {
+  resolvedCount: number;
+  medianResolutionHours: number | null;
+  entries: ShippedFeedbackEntry[];
+};
+
+const STRIP_MAX_ENTRIES = 3;
+const EXCERPT_LEN = 140;
+
+export async function getShippedFromFeedbackSnapshot(userId: string): Promise<ShippedFeedbackSnapshot> {
+  const [loop, rows] = await Promise.all([
+    getFeedbackLoopMetrics(userId),
+    db
+      .select({
+        suggestion: siteFeedback.suggestion,
+        page: siteFeedback.page,
+        project: entities.name,
+        resolvedAt: siteFeedback.resolvedAt,
+      })
+      .from(siteFeedback)
+      .innerJoin(entities, eq(siteFeedback.projectId, entities.id))
+      .where(and(
+        eq(siteFeedback.userId, userId),
+        eq(siteFeedback.status, FEEDBACK_STATUS.RESOLVED),
+        isNotNull(siteFeedback.featuredAt),
+      ))
+      .orderBy(desc(sql`${siteFeedback.featuredAt}`))
+      .limit(STRIP_MAX_ENTRIES),
+  ]);
+
+  return {
+    resolvedCount: loop.resolved,
+    medianResolutionHours: loop.medianResolutionHours,
+    entries: rows.map((r) => ({
+      excerpt: r.suggestion.length > EXCERPT_LEN ? `${r.suggestion.slice(0, EXCERPT_LEN)}…` : r.suggestion,
+      page: r.page,
+      project: r.project,
+      resolvedAt: (r.resolvedAt ?? new Date()).toISOString(),
+    })),
+  };
+}

@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Archive, Check, Code2, Copy, Layers, Loader2, MessageSquare, Pause, PenLine, Play, RefreshCw, Rocket, ScanEye, Undo2, X } from "lucide-react";
+import { Archive, Check, Code2, Copy, Layers, Loader2, MessageSquare, Pause, PenLine, Play, RefreshCw, Rocket, ScanEye, Star, Undo2, X } from "lucide-react";
 import { useFetch } from "@/hooks/use-fetch";
 import { useClipboard } from "@/hooks/use-clipboard";
 import { deleteJson, patchJson, postJson, throwApiError } from "@/lib/api/fetch";
-import { compactRelativeDate } from "@/lib/dates";
+import { compactDurationHours, compactRelativeDate } from "@/lib/dates";
 import { FEEDBACK_SOURCE, FEEDBACK_STATUS, type FeedbackStatus } from "@/lib/constants/statuses";
-import type { SiteFeedback } from "@/db/schema";
+import type { FeedbackListItem, FeedbackLoopMetrics } from "@/db/queries/site-feedback";
 
 type WidgetTokenInfo = {
   token: string;
@@ -26,7 +26,7 @@ type WidgetTokenInfo = {
  * in one place.
  */
 export function ProjectFeedbackSection({ projectId }: { projectId: string }) {
-  const feedbackFetch = useFetch<{ feedback: SiteFeedback[] }>(`/api/projects/${projectId}/feedback`);
+  const feedbackFetch = useFetch<{ feedback: FeedbackListItem[]; metrics: FeedbackLoopMetrics | null }>(`/api/projects/${projectId}/feedback`);
   const tokenFetch = useFetch<{ token: WidgetTokenInfo | null }>(`/api/projects/${projectId}/widget-token`);
   const [setupOpen, setSetupOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
@@ -38,6 +38,7 @@ export function ProjectFeedbackSection({ projectId }: { projectId: string }) {
   const items = (feedbackFetch.data?.feedback ?? []).filter(
     (f) => f.status !== FEEDBACK_STATUS.ARCHIVED,
   );
+  const metrics = feedbackFetch.data?.metrics ?? null;
   const newCount = items.filter((f) => f.status === FEEDBACK_STATUS.NEW).length;
   const token = tokenFetch.data?.token ?? null;
   const showSetup = setupOpen || (!tokenFetch.loading && !token);
@@ -80,11 +81,17 @@ export function ProjectFeedbackSection({ projectId }: { projectId: string }) {
   return (
     <section id="feedback" className="scroll-mt-28 border-t border-border-subtle pt-7" aria-labelledby="project-feedback-title">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-baseline gap-2">
           <h2 id="project-feedback-title" className="text-lg font-semibold text-text-primary">
             Visitor feedback
           </h2>
           {newCount > 0 && <span className="ui-badge">{newCount} new</span>}
+          {metrics && metrics.resolved > 0 && (
+            <span className="text-xs text-text-tertiary">
+              {metrics.resolved} resolved
+              {metrics.medianResolutionHours != null && ` · median ${compactDurationHours(metrics.medianResolutionHours)} report→fix`}
+            </span>
+          )}
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           {token && newCount >= 5 && (
@@ -158,6 +165,7 @@ export function ProjectFeedbackSection({ projectId }: { projectId: string }) {
               onResolve={() => setStatus(f.id, FEEDBACK_STATUS.RESOLVED)}
               onArchive={() => setStatus(f.id, FEEDBACK_STATUS.ARCHIVED)}
               onReopen={() => setStatus(f.id, FEEDBACK_STATUS.NEW)}
+              onFeature={() => act(f.id, () => patchJson(`/api/feedback/${f.id}`, { featured: !f.featuredAt }), "Update failed")}
             />
           ))}
         </div>
@@ -173,13 +181,15 @@ function FeedbackRow({
   onResolve,
   onArchive,
   onReopen,
+  onFeature,
 }: {
-  feedback: SiteFeedback;
+  feedback: FeedbackListItem;
   busy: boolean;
   onDispatch: (note?: string) => void;
   onResolve: () => void;
   onArchive: () => void;
   onReopen: () => void;
+  onFeature: () => void;
 }) {
   // "Comment then implement" without a comment thread: the note IS an edit to
   // the dispatch prompt. Plain Dispatch stays one-click.
@@ -227,6 +237,23 @@ function FeedbackRow({
             {f.selectedElements.map((el) => el.selector).join("  ")}
           </p>
         )}
+        {f.hasScreenshot && (
+          <a
+            href={`/api/feedback/${f.id}/screenshot`}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-1.5 inline-block pl-4"
+            title="Open the visitor's screenshot"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element -- dynamic auth'd API image, not a static asset */}
+            <img
+              src={`/api/feedback/${f.id}/screenshot`}
+              alt="Visitor screenshot (click to open)"
+              className="h-14 w-auto rounded-md border border-border-subtle"
+              loading="lazy"
+            />
+          </a>
+        )}
       </div>
       <div className="flex shrink-0 items-center gap-1.5 pl-4 sm:pl-0">
         {f.status === FEEDBACK_STATUS.DISPATCHED ? (
@@ -237,7 +264,20 @@ function FeedbackRow({
             </button>
           </>
         ) : f.status === FEEDBACK_STATUS.RESOLVED ? (
-          <span className="ui-tag-positive">resolved</span>
+          <>
+            <span className="ui-tag-positive">resolved</span>
+            <button
+              type="button"
+              onClick={onFeature}
+              disabled={busy}
+              className="ui-btn-icon"
+              title={f.featuredAt ? "Remove from the public 'shipped thanks to feedback' strip" : "Feature on the public 'shipped thanks to feedback' strip"}
+              aria-label={f.featuredAt ? "Unfeature" : "Feature publicly"}
+              aria-pressed={!!f.featuredAt}
+            >
+              <Star className="h-3.5 w-3.5" fill={f.featuredAt ? "currentColor" : "none"} />
+            </button>
+          </>
         ) : (
           <>
             <button type="button" onClick={() => onDispatch()} disabled={busy} className="ui-btn-save gap-1.5" title="Send to an agent as a fix task">

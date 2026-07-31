@@ -2,7 +2,7 @@ import Link from "next/link";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { getUserCount, getDefaultUser } from "@/db/queries/users";
-import { getHeroFleetSnapshot, type HeroFleetSnapshot } from "@/db/queries/public-fleet";
+import { getHeroFleetSnapshot, getShippedFromFeedbackSnapshot, type HeroFleetSnapshot, type ShippedFeedbackSnapshot } from "@/db/queries/public-fleet";
 import { PublicSurface } from "@/components/public/PublicSurface";
 import { PublicHeaderActions } from "@/components/public/PublicHeaderActions";
 import { DesktopDownload } from "@/components/public/DesktopDownload";
@@ -47,6 +47,13 @@ export default async function LandingPage() {
   const fleet: HeroFleetSnapshot = owner
     ? await getHeroFleetSnapshot(owner.id).catch(() => ({ isLive: false, projects: [], metrics: [] }))
     : { isLive: false, projects: [], metrics: [] };
+  // "Shipped thanks to feedback" — operator-featured resolved reports only
+  // (raw visitor text never auto-publishes). Renders nothing until real
+  // entries exist, per the same never-fabricate doctrine as the hero.
+  const emptyShipped: ShippedFeedbackSnapshot = { resolvedCount: 0, medianResolutionHours: null, entries: [] };
+  const shipped: ShippedFeedbackSnapshot = owner
+    ? await getShippedFromFeedbackSnapshot(owner.id).catch(() => emptyShipped)
+    : emptyShipped;
 
   return (
     <PublicSurface right={<PublicHeaderActions />}>
@@ -140,6 +147,34 @@ export default async function LandingPage() {
           </div>
         </div>
       </div>
+
+      {shipped.entries.length > 0 && (
+        <div className="py-24">
+          <div className="mx-auto max-w-6xl px-6">
+            <div className="grid gap-10 md:grid-cols-[0.9fr_1.1fr] md:items-end">
+              <div>
+                <div className="ui-public-eyebrow">SHIPPED BECAUSE A VISITOR ASKED</div>
+                <h2 className="ui-public-display-md mt-4">The feedback loop, in production.</h2>
+              </div>
+              <p className="ui-public-section-lede md:justify-self-end">
+                Real reports from the feedback widget, fixed by the fleet and deployed
+                {shipped.resolvedCount > 0 && ` — ${shipped.resolvedCount} resolved so far`}.
+              </p>
+            </div>
+            <div className="mt-12 grid gap-4 sm:grid-cols-3">
+              {shipped.entries.map((entry) => (
+                <section key={`${entry.project}-${entry.resolvedAt}`} className="ui-public-surface-card !min-h-0">
+                  <div className="ui-public-surface-card-label">{entry.project}</div>
+                  <p className="ui-public-surface-card-body">“{entry.excerpt}”</p>
+                  <div className="ui-public-surface-card-meta">
+                    {entry.page ? `${entry.page} · ` : ""}shipped {new Date(entry.resolvedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                  </div>
+                </section>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="py-24">
         <div className="mx-auto max-w-6xl px-6">

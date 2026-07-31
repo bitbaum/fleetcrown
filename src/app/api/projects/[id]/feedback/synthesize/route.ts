@@ -8,7 +8,7 @@ import { injectPrompt } from "@/lib/inject-core";
 import { appUrl } from "@/lib/email";
 import { FEEDBACK_SOURCE, FEEDBACK_STATUS } from "@/lib/constants/statuses";
 import { fenceUntrusted, UNTRUSTED_PREAMBLE } from "@/lib/feedback/untrusted";
-import type { SiteFeedback } from "@/db/schema";
+import type { FeedbackListItem } from "@/db/queries/site-feedback";
 
 /**
  * "Synthesize": when the inbox is noisy, shift the unit of action from item to
@@ -24,7 +24,7 @@ export const SYNTHESIZER_CONTACT = "FleetCrown synthesizer";
 const MIN_ITEMS = 3;
 const MAX_ITEMS = 60;
 
-function renderItem(f: SiteFeedback): string {
+function renderItem(f: FeedbackListItem): string {
   const times = f.duplicateCount > 1 ? ` (reported ${f.duplicateCount}×)` : "";
   const parts = [
     `- [${f.id.slice(0, 8)}]${times}`,
@@ -37,7 +37,7 @@ function renderItem(f: SiteFeedback): string {
   return parts.join("\n");
 }
 
-function composeSynthesizePrompt(items: SiteFeedback[], projectName: string, widgetToken: string): string {
+function composeSynthesizePrompt(items: FeedbackListItem[], projectName: string, widgetToken: string): string {
   const ingestUrl = `${appUrl().replace(/\/$/, "")}/api/feedback`;
   const siteOrigin = (() => {
     const withUrl = items.find((f) => f.url);
