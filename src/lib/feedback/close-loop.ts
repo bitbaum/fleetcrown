@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { entities, siteFeedback } from "@/db/schema";
-import { FEEDBACK_STATUS } from "@/lib/constants/statuses";
+import { FEEDBACK_SOURCE, FEEDBACK_STATUS } from "@/lib/constants/statuses";
 import { sendEmailFire } from "@/lib/email";
 
 /**
@@ -31,9 +31,14 @@ export async function resolveFeedbackForRun(runId: string): Promise<void> {
         suggestion: siteFeedback.suggestion,
         page: siteFeedback.page,
         projectId: siteFeedback.projectId,
+        source: siteFeedback.source,
       });
 
     for (const row of resolved) {
+      // Only real visitors get the "your feedback shipped" email — agent-filed
+      // rows (AI review / synthesizer) have no one to notify. Explicit guard;
+      // the EMAIL_RE check below also catches the legacy contact strings.
+      if (row.source && row.source !== FEEDBACK_SOURCE.VISITOR) continue;
       const contact = row.contact?.trim();
       if (!contact || !EMAIL_RE.test(contact)) continue;
       const [project] = await db

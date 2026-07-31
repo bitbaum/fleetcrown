@@ -8,6 +8,26 @@ export async function insertSiteFeedback(values: NewSiteFeedback): Promise<SiteF
   return created ?? null;
 }
 
+/**
+ * Ingest dedupe: if an OPEN row (new/dispatched — not resolved, not archived)
+ * with the same content hash exists for the project, bump its duplicate_count
+ * and return its id; the caller then skips the insert. A complaint re-filed
+ * AFTER its fix resolved the row is a fresh report (maybe a regression) and
+ * gets a new row.
+ */
+export async function bumpDuplicateFeedback(projectId: string, contentHash: string): Promise<string | null> {
+  const [bumped] = await db
+    .update(siteFeedback)
+    .set({ duplicateCount: sql`${siteFeedback.duplicateCount} + 1` })
+    .where(and(
+      eq(siteFeedback.projectId, projectId),
+      eq(siteFeedback.contentHash, contentHash),
+      inArray(siteFeedback.status, [FEEDBACK_STATUS.NEW, FEEDBACK_STATUS.DISPATCHED]),
+    ))
+    .returning({ id: siteFeedback.id });
+  return bumped?.id ?? null;
+}
+
 /** Inbox for one project, newest first. Owner-scoped by userId. */
 export async function listProjectFeedback(userId: string, projectId: string, limit = 200): Promise<SiteFeedback[]> {
   return db.query.siteFeedback.findMany({

@@ -5,6 +5,7 @@ import { getProjectCore } from "@/db/queries/projects";
 import { getActiveWidgetToken } from "@/db/queries/widget-tokens";
 import { injectPrompt } from "@/lib/inject-core";
 import { appUrl } from "@/lib/email";
+import { FEEDBACK_SOURCE } from "@/lib/constants/statuses";
 
 /**
  * "AI review this page": dispatch an agent to visually review a live page and
@@ -38,7 +39,7 @@ function composeReviewPrompt(pageUrl: string, projectName: string, widgetToken: 
     `curl -s -X POST ${ingestUrl} \\`,
     '  -H "Content-Type: application/json" \\',
     `  -H "Origin: ${pageOrigin}" \\`,
-    `  -d '{"token":"${widgetToken}","suggestion":"<one concrete issue + where + why it matters, <=2000 chars>","contact":"${AI_REVIEWER_CONTACT}","page":"<pathname>","url":"${pageUrl}","pageTitle":"<title>","scope":"element","selectedElements":[{"elementType":"<tag>","elementText":"<visible text, <=100 chars>","selector":"<real CSS selector from the live DOM>"}]}'`,
+    `  -d '{"token":"${widgetToken}","suggestion":"<one concrete issue + where + why it matters, <=2000 chars>","contact":"${AI_REVIEWER_CONTACT}","source":"${FEEDBACK_SOURCE.AI_REVIEW}","page":"<pathname>","url":"${pageUrl}","pageTitle":"<title>","scope":"element","selectedElements":[{"elementType":"<tag>","elementText":"<visible text, <=100 chars>","selector":"<real CSS selector from the live DOM>"}]}'`,
     "```",
     `Use scope "page" (and omit selectedElements) only when an issue has no single element. Verify each POST returns ok:true.`,
     "4. HANDOFF: end with a one-line summary per filed finding and the count submitted. If the page is genuinely clean, file nothing and say so.",

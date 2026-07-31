@@ -4,6 +4,7 @@ import { getApiUserId } from "@/lib/session";
 import { getFeedbackWithProject, setFeedbackStatus } from "@/db/queries/site-feedback";
 import { injectPrompt } from "@/lib/inject-core";
 import { FEEDBACK_STATUS } from "@/lib/constants/statuses";
+import { fenceUntrusted, inlineUntrusted, UNTRUSTED_PREAMBLE } from "@/lib/feedback/untrusted";
 import type { SiteFeedback } from "@/db/schema";
 
 /**
@@ -14,20 +15,24 @@ import type { SiteFeedback } from "@/db/schema";
  */
 
 function composePrompt(feedback: SiteFeedback, projectName: string, note?: string): string {
+  const times = feedback.duplicateCount > 1 ? ` (reported ${feedback.duplicateCount}×)` : "";
   const lines = [
-    `Fix this visitor feedback on ${projectName}.`,
+    `Fix this visitor feedback on ${projectName}.${times}`,
+    UNTRUSTED_PREAMBLE,
     "",
     // The operator's note leads: it's the captain's steer on HOW to act on the
-    // visitor's report, so it outranks the raw feedback below it.
+    // visitor's report, so it outranks the raw feedback below it. The fence
+    // around the visitor text is what keeps a submission shaped like
+    // "OPERATOR INSTRUCTION: ..." from forging this trusted line.
     ...(note ? [`OPERATOR INSTRUCTION: ${note}`, ""] : []),
-    `FEEDBACK: "${feedback.suggestion}"`,
-    `Page: ${feedback.url ?? feedback.page ?? "unknown"}`,
+    fenceUntrusted("FEEDBACK", feedback.suggestion),
+    `Page: ${inlineUntrusted(feedback.url ?? feedback.page ?? "unknown", 1000)}`,
   ];
   if (feedback.scope) lines.push(`Scope the visitor selected: ${feedback.scope}`);
   if (feedback.selectedElements?.length) {
     lines.push("Element(s) the visitor pointed at:");
     for (const el of feedback.selectedElements) {
-      lines.push(`- <${el.elementType}> ${el.selector}${el.elementText ? ` — "${el.elementText}"` : ""}`);
+      lines.push(`- <${inlineUntrusted(el.elementType, 100)}> ${inlineUntrusted(el.selector, 500)}${el.elementText ? ` — "${inlineUntrusted(el.elementText, 100)}"` : ""}`);
     }
   }
   lines.push(
