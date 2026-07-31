@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, date, timestamp, index } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, date, timestamp, boolean, index } from "drizzle-orm/pg-core";
 import { users } from "./users";
 
 export const userPreferences = pgTable("user_preferences", {
@@ -16,6 +16,9 @@ export const userPreferences = pgTable("user_preferences", {
   // (docs/thoughts-style-guide.md) so AI-written content (Loki, essays) adopts
   // the user's preferred tone. Null = use the house default.
   writingVoice:     text("writing_voice"),
+  // Consent: may the fleet build its knowledge index (RAG embeddings) from the
+  // user's data? Gates upsertKnowledgeBatch — the single write chokepoint.
+  memoryEnabled:    boolean("memory_enabled").notNull().default(true),
   updatedAt:        timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   index("idx_user_preferences_user_id").on(t.userId),

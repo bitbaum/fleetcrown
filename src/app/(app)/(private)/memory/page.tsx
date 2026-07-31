@@ -12,6 +12,7 @@ import { ProgressBar } from "@/components/ui/progress-bar";
 import { PullToRefresh } from "@/components/shared/PullToRefresh";
 import { AutoRefresh } from "@/components/shared/AutoRefresh";
 import { REFRESH_CADENCE } from "@/config/refresh";
+import { MemoryEntityList, ForgetAllMemory } from "@/components/memory/MemoryControls";
 
 export const metadata = { title: "Memory" };
 
@@ -105,29 +106,18 @@ export default async function MemoryPage() {
       {/* Recent activity + recent additions side by side */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-        {/* Recently added entities */}
+        {/* Recently added entities — with per-entity forget (data controls) */}
         <Card>
-          <CardHeader icon={Zap} title="Recently Added" />
-          {recent.length === 0 ? (
-            <EmptyState>Nothing added yet</EmptyState>
-          ) : (
-            <div className="space-y-2">
-              {recent.map((e) => (
-                <div key={e.id} className="flex items-start gap-2.5">
-                  <TypeBadge type={e.type} />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-base truncate text-text-primary">{e.name}</div>
-                    {e.description && (
-                      <div className="mt-1 truncate text-sm text-text-secondary">{e.description}</div>
-                    )}
-                  </div>
-                  <span className="shrink-0 pt-0.5 text-xs text-text-tertiary">
-                    {compactRelativeDate(e.createdAt)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
+          <div className="flex items-center justify-between">
+            <CardHeader icon={Zap} title="Recently Added" />
+            <ForgetAllMemory />
+          </div>
+          <MemoryEntityList
+            entities={recent.map((e) => ({
+              ...e,
+              badgeClass: TYPE_COLOR[e.type] ?? "bg-surface-overlay text-text-tertiary border-border-subtle",
+            }))}
+          />
         </Card>
 
         {/* Recent interactions */}

@@ -1,6 +1,28 @@
 import { db } from "@/db";
 import { sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
+import { userPreferences } from "@/db/schema";
 import { embedText, embedTexts, toVectorLiteral, embeddingsEnabled } from "@/lib/rag/embeddings";
+
+/**
+ * Consent gate for the knowledge index. Only an explicit memory_enabled=false
+ * turns indexing off — a missing preferences row or a failed read must never
+ * silently disable it (an indexing gap is worse to debug than the toggle is
+ * worth). Exported for tests.
+ */
+export async function memoryIndexingAllowed(userId: string): Promise<boolean> {
+  try {
+    const row = await db
+      .select({ memoryEnabled: userPreferences.memoryEnabled })
+      .from(userPreferences)
+      .where(eq(userPreferences.userId, userId))
+      .limit(1)
+      .then((r) => r[0] ?? null);
+    return row?.memoryEnabled !== false;
+  } catch {
+    return true;
+  }
+}
 
 export type KnowledgeSourceType =
   | "project_profile" | "dev_log" | "goal" | "orchestration_outcome" | "decision" | "entity" | "commitment" | "thought" | "repo_doc";
@@ -23,6 +45,7 @@ export type KnowledgeHit = {
 /** Embed + upsert a batch of chunks for one user. Returns how many landed. */
 export async function upsertKnowledgeBatch(userId: string, items: KnowledgeItem[]): Promise<number> {
   if (!embeddingsEnabled() || items.length === 0) return 0;
+  if (!(await memoryIndexingAllowed(userId))) return 0;
   const vecs = await embedTexts(items.map((i) => i.chunk));
   let n = 0;
   for (let i = 0; i < items.length; i++) {

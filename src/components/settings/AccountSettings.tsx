@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { signIn, signOut } from "next-auth/react";
 import { Loader2, GitBranch, X as XIcon, Globe, Trash2, Cat } from "lucide-react";
 import { patchJson, postJson, deleteJson } from "@/lib/api/fetch";
+import { Modal } from "@/components/ui/modal";
 import { useFetch } from "@/hooks/use-fetch";
 import { TOAST_MEDIUM_MS } from "@/lib/constants/timings";
 
@@ -200,6 +201,28 @@ export function AccountSettings({ user, orangecatEnabled }: Props) {
   const [pwdError, setPwdError] = useState("");
   const [pwdSaved, setPwdSaved] = useState(false);
 
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    setDeleteError("");
+    try {
+      const res = await deleteJson("/api/me", { confirm: deleteConfirm.trim() });
+      if (!res.ok) {
+        const j = await res.json().catch(() => null);
+        throw new Error(j?.error ?? `Delete failed (${res.status})`);
+      }
+      // Account is gone — end the (now orphaned) session and land on the homepage.
+      await signOut({ callbackUrl: "/" });
+    } catch (e) {
+      setDeleteError(e instanceof Error ? e.message : "Delete failed");
+      setDeleting(false);
+    }
+  };
+
   const pwdMismatch = confirmPwd.length > 0 && newPwd !== confirmPwd;
   const pwdTooShort = newPwd.length > 0 && newPwd.length < 8;
   const canSavePwd = !!currentPwd && newPwd.length >= 8 && newPwd === confirmPwd;
@@ -304,16 +327,52 @@ export function AccountSettings({ user, orangecatEnabled }: Props) {
       <div className="border-t border-border-subtle pt-4">
         <h3 className="text-sm font-medium text-status-negative/80 mb-2">Danger zone</h3>
         <p className="text-xs text-text-muted mb-3">
-          Account deletion requires cancelling any active subscriptions. Contact support to proceed.
+          Permanently delete your account and everything it owns — projects, runs, memory,
+          feedback, chat history. This cannot be undone.
         </p>
         <button
-          disabled
-          className="text-xs text-status-negative/50 border border-status-negative/20 rounded-lg px-3 py-1.5 cursor-not-allowed"
-          title="Contact support to delete your account"
+          onClick={() => setDeleteOpen(true)}
+          className="text-xs text-status-negative border border-status-negative/40 rounded-lg px-3 py-1.5 hover:bg-status-negative/10"
         >
           Delete account
         </button>
       </div>
+
+      {deleteOpen && (
+        <Modal onClose={() => !deleting && setDeleteOpen(false)} disableClose={deleting}>
+          <h3 className="text-base font-semibold text-status-negative">Delete account</h3>
+          <p className="text-sm text-text-secondary">
+            This permanently deletes your account and all data it owns. There is no undo and no
+            grace period. Type <span className="font-mono text-text-primary">{user.email ?? "your email"}</span> to confirm.
+          </p>
+          <input
+            type="text"
+            value={deleteConfirm}
+            onChange={(e) => setDeleteConfirm(e.target.value)}
+            placeholder={user.email ?? "you@example.com"}
+            className="ui-input w-full"
+            autoComplete="off"
+          />
+          {deleteError && <p className="text-xs text-status-negative">{deleteError}</p>}
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => setDeleteOpen(false)}
+              disabled={deleting}
+              className="ui-btn-secondary"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleDeleteAccount}
+              disabled={deleting || deleteConfirm.trim().toLowerCase() !== (user.email ?? "").toLowerCase()}
+              className="ui-btn-danger"
+            >
+              {deleting && <Loader2 className="ui-spinner" />}
+              Delete forever
+            </button>
+          </div>
+        </Modal>
+      )}
     </section>
   );
 }
