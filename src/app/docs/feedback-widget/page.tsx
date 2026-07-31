@@ -62,8 +62,15 @@ export default function FeedbackWidgetDocsPage() {
             A small button on every page. Opening it, the visitor picks a scope —{" "}
             <em>Element</em> (they click the exact thing that&apos;s broken; the widget records its
             CSS selector and visible text), <em>This page</em>, or <em>Whole site</em> — writes
-            what should be improved, and optionally leaves a name or email. The widget renders in
-            a Shadow DOM, so your styles and the widget&apos;s can&apos;t interfere with each other.
+            what should be improved, optionally attaches an image (file picker or paste; the
+            widget downscales it client-side so a phone photo never ships megabytes), and
+            optionally leaves a name or email. The widget renders in a Shadow DOM, so your styles
+            and the widget&apos;s can&apos;t interfere with each other.
+          </p>
+          <p>
+            Repeat reports don&apos;t pile up: the same complaint filed again bumps a counter on
+            the existing inbox row (shown as <em>×N</em>) instead of creating a duplicate — the
+            volume signal survives, the noise doesn&apos;t.
           </p>
         </section>
 

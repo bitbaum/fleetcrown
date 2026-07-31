@@ -118,12 +118,19 @@ export const siteFeedback = pgTable("site_feedback", {
   scope:            text("scope"),                       // element | page | site
   selectedElements: jsonb("selected_elements").$type<Array<{elementType: string; elementText: string; selector: string}>>(),
   userAgent:        text("user_agent"),
+  source:           text("source"),                      // visitor | ai_review | synthesizer (null = legacy = visitor)
+  contentHash:      text("content_hash"),                // sha256(normalized suggestion + page) — ingest dedupe key
+  duplicateCount:   integer("duplicate_count").notNull().default(1),  // repeat submissions bump this instead of new rows
+  screenshot:       text("screenshot"),                  // optional visitor-attached image (data URL ≤600k chars); excluded from list queries, served via GET /api/feedback/[id]/screenshot
   status:           text("status").notNull().default("new"),  // new | dispatched | resolved | archived
   dispatchedRunId:  uuid("dispatched_run_id"),           // link to orchestration run once dispatched
+  resolvedAt:       timestamp("resolved_at", { withTimezone: true }),  // resolution evidence (close-the-loop or manual)
+  featuredAt:       timestamp("featured_at", { withTimezone: true }),  // operator curation for the public "shipped thanks to feedback" strip
   createdAt:        timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 }, (t) => [
   index("idx_site_feedback_project").on(t.projectId, t.status),
   index("idx_site_feedback_user").on(t.userId, t.status),
+  index("idx_site_feedback_dedupe").on(t.projectId, t.contentHash),
 ]);
 ```
 

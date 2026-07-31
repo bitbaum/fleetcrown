@@ -315,6 +315,19 @@ export interface PlatformChangeEntry {
 /** Newest first. */
 export const PLATFORM_CHANGELOG: PlatformChangeEntry[] = [
   {
+    date: "2026-07-31",
+    title: "Feedback pipeline — honest attribution, image attach, and the loop made visible",
+    highlights: [
+      "Every dispatch now gets its own attributed run: a second dispatch to a busy project waits until the current run finishes, so summaries, outcomes, and \"your feedback shipped\" emails can never credit the wrong work.",
+      "Visitors can attach an image to a report (file picker or paste, downscaled client-side); it shows as a thumbnail in the inbox.",
+      "Repeat reports dedupe at ingest into a ×N counter on one row — volume signal without inbox noise.",
+      "Agent-filed rows (AI review findings, synthesized briefs) are typed and badged, briefs are never re-clustered by the daily digest, and visitor text is fenced as data in every composed prompt.",
+      "The loop in numbers: resolved count and median report→fix time on each inbox and the fleet strip.",
+      "Resolved reports you feature appear on the landing page — \"shipped because a visitor asked\", with real excerpts only you curate.",
+    ],
+    link: { href: "/docs/feedback-widget", label: "Docs: feedback widget" },
+  },
+  {
     date: "2026-07-29",
     title: "Feedback widget — visitor reports become fleet work",
     highlights: [

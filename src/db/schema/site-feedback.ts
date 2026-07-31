@@ -48,6 +48,14 @@ export const siteFeedback = pgTable("site_feedback", {
    *  A repeat submission increments duplicateCount instead of a new row. */
   contentHash: text("content_hash"),
   duplicateCount: integer("duplicate_count").notNull().default(1),
+  /** Optional visitor-attached image as a jpeg/png/webp data URL (≤600k chars,
+   *  client-downscaled). EXCLUDED from list queries — fetched only via
+   *  GET /api/feedback/[id]/screenshot. */
+  screenshot: text("screenshot"),
+  /** Operator curation for the public "shipped thanks to feedback" strip —
+   *  only featured resolved rows ever surface publicly (raw visitor text
+   *  never auto-publishes). */
+  featuredAt: timestamp("featured_at", { withTimezone: true }),
 
   status: text("status").$type<FeedbackStatus>().notNull().default(FEEDBACK_STATUS.NEW),
   /** Orchestration run created when the operator dispatched a fix for this item. */

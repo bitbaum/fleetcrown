@@ -111,3 +111,11 @@ export function advanceDueDate(current: string | null, frequency: string | null)
   }
   return base.toISOString();
 }
+
+/** Compact human duration from hours: "45m", "3h", "2d". Feedback-loop
+ *  metrics ("median 2d report→fix") and any other latency display. */
+export function compactDurationHours(hours: number): string {
+  if (hours < 1) return `${Math.max(1, Math.round(hours * 60))}m`;
+  if (hours < 48) return `${Math.round(hours)}h`;
+  return `${Math.round(hours / 24)}d`;
+}
