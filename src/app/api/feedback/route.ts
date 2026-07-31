@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { RATE_LIMIT_WINDOW_SHORT_MS, RATE_LIMIT_WINDOW_LONG_MS } from "@/lib/constants/time";
-import { FEEDBACK_SCOPE_VALUES } from "@/lib/constants/statuses";
+import { FEEDBACK_SCOPE_VALUES, FEEDBACK_SOURCE, FEEDBACK_SOURCE_VALUES } from "@/lib/constants/statuses";
 import { getWidgetTokenByToken } from "@/db/queries/widget-tokens";
-import { insertSiteFeedback } from "@/db/queries/site-feedback";
+import { bumpDuplicateFeedback, insertSiteFeedback } from "@/db/queries/site-feedback";
+import { feedbackContentHash } from "@/lib/feedback/content-hash";
 
 /**
  * Public ingest for the embeddable feedback widget (docs/architecture/
@@ -37,6 +38,10 @@ const FeedbackBody = z.object({
   url: z.string().max(1000).optional(),
   pageTitle: z.string().max(300).optional(),
   scope: z.enum(FEEDBACK_SCOPE_VALUES).optional(),
+  // Who filed it — the widget omits this (→ visitor); the AI reviewer and
+  // synthesizer declare themselves. Self-asserted via the public token, so a
+  // routing hint, not a trust boundary.
+  source: z.enum(FEEDBACK_SOURCE_VALUES).optional(),
   selectedElements: z.array(z.object({
     elementType: z.string().max(100),
     elementText: z.string().max(300),
@@ -86,6 +91,13 @@ export async function POST(req: NextRequest) {
     return corsError("Too many submissions, try again later", 429);
   }
 
+  // Dedupe at ingest: the same complaint filed again bumps the existing open
+  // row's duplicate_count instead of creating a new row — volume signal kept,
+  // inbox noise dropped. Idempotent for the visitor (they still see success).
+  const contentHash = feedbackContentHash(data.suggestion, data.page ?? null);
+  const bumped = await bumpDuplicateFeedback(token.projectId, contentHash);
+  if (bumped) return NextResponse.json({ ok: true, duplicateOf: bumped }, { headers: CORS_HEADERS });
+
   const created = await insertSiteFeedback({
     projectId: token.projectId,
     userId: token.userId,
@@ -96,6 +108,8 @@ export async function POST(req: NextRequest) {
     url: data.url ?? null,
     pageTitle: data.pageTitle ?? null,
     scope: data.scope ?? null,
+    source: data.source ?? FEEDBACK_SOURCE.VISITOR,
+    contentHash,
     selectedElements: data.selectedElements ?? null,
     userAgent: req.headers.get("user-agent")?.slice(0, 300) ?? null,
   });

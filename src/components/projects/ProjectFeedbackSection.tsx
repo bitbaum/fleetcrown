@@ -6,7 +6,7 @@ import { useFetch } from "@/hooks/use-fetch";
 import { useClipboard } from "@/hooks/use-clipboard";
 import { deleteJson, patchJson, postJson, throwApiError } from "@/lib/api/fetch";
 import { compactRelativeDate } from "@/lib/dates";
-import { FEEDBACK_STATUS, type FeedbackStatus } from "@/lib/constants/statuses";
+import { FEEDBACK_SOURCE, FEEDBACK_STATUS, type FeedbackStatus } from "@/lib/constants/statuses";
 import type { SiteFeedback } from "@/db/schema";
 
 type WidgetTokenInfo = {
@@ -185,10 +185,15 @@ function FeedbackRow({
   // the dispatch prompt. Plain Dispatch stays one-click.
   const [noteOpen, setNoteOpen] = useState(false);
   const [note, setNote] = useState("");
+  // Agent-filed rows get a typed badge instead of their magic contact string.
+  const agentBadge =
+    f.source === FEEDBACK_SOURCE.AI_REVIEW ? "AI review"
+    : f.source === FEEDBACK_SOURCE.SYNTHESIZER ? "brief"
+    : null;
   const meta = [
     f.page || f.url,
     f.scope,
-    f.contact,
+    !agentBadge && f.contact,
     compactRelativeDate(f.createdAt),
     // Resolution evidence: WHAT closed this row, not just that it's green.
     f.status === FEEDBACK_STATUS.RESOLVED && f.resolvedAt && `resolved ${compactRelativeDate(f.resolvedAt)}`,
@@ -210,7 +215,11 @@ function FeedbackRow({
             }
             aria-label={`Status: ${f.status}`}
           />
-          <p className="text-sm leading-relaxed text-text-primary">{f.suggestion}</p>
+          <p className="min-w-0 text-sm leading-relaxed text-text-primary">{f.suggestion}</p>
+          {agentBadge && <span className="ui-tag shrink-0">{agentBadge}</span>}
+          {f.duplicateCount > 1 && (
+            <span className="ui-badge shrink-0" title={`Reported ${f.duplicateCount} times`}>×{f.duplicateCount}</span>
+          )}
         </div>
         <p className="mt-1 pl-4 text-xs text-text-tertiary">{meta.join(" · ")}</p>
         {f.selectedElements && f.selectedElements.length > 0 && (

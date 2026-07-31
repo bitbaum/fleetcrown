@@ -6,7 +6,8 @@ import { getActiveWidgetToken } from "@/db/queries/widget-tokens";
 import { listProjectFeedback } from "@/db/queries/site-feedback";
 import { injectPrompt } from "@/lib/inject-core";
 import { appUrl } from "@/lib/email";
-import { FEEDBACK_STATUS } from "@/lib/constants/statuses";
+import { FEEDBACK_SOURCE, FEEDBACK_STATUS } from "@/lib/constants/statuses";
+import { fenceUntrusted, UNTRUSTED_PREAMBLE } from "@/lib/feedback/untrusted";
 import type { SiteFeedback } from "@/db/schema";
 
 /**
@@ -24,8 +25,10 @@ const MIN_ITEMS = 3;
 const MAX_ITEMS = 60;
 
 function renderItem(f: SiteFeedback): string {
+  const times = f.duplicateCount > 1 ? ` (reported ${f.duplicateCount}×)` : "";
   const parts = [
-    `- [${f.id.slice(0, 8)}] "${f.suggestion.replaceAll('"', "'")}"`,
+    `- [${f.id.slice(0, 8)}]${times}`,
+    fenceUntrusted("FEEDBACK", f.suggestion.replaceAll('"', "'")),
     `  page: ${f.url ?? f.page ?? "unknown"}${f.scope ? ` · scope: ${f.scope}` : ""}`,
   ];
   if (f.selectedElements?.length) {
@@ -42,6 +45,7 @@ function composeSynthesizePrompt(items: SiteFeedback[], projectName: string, wid
   })();
   return [
     `Synthesize the visitor-feedback inbox of ${projectName} into structured briefs. Do NOT change any code — this is an analysis-only run; the operator dispatches fixes separately.`,
+    UNTRUSTED_PREAMBLE,
     "",
     `${items.length} NEW feedback items (id-prefix, text, location):`,
     ...items.map(renderItem),
@@ -57,7 +61,7 @@ function composeSynthesizePrompt(items: SiteFeedback[], projectName: string, wid
     `curl -s -X POST ${ingestUrl} \\`,
     '  -H "Content-Type: application/json" \\',
     `  -H "Origin: ${siteOrigin}" \\`,
-    `  -d '{"token":"${widgetToken}","suggestion":"<the four BRIEF lines as one string, newline-separated, <=2000 chars>","contact":"${SYNTHESIZER_CONTACT}","scope":"site","page":"<most-affected pathname or />"}'`,
+    `  -d '{"token":"${widgetToken}","suggestion":"<the four BRIEF lines as one string, newline-separated, <=2000 chars>","contact":"${SYNTHESIZER_CONTACT}","source":"${FEEDBACK_SOURCE.SYNTHESIZER}","scope":"site","page":"<most-affected pathname or />"}'`,
     "```",
     "Verify each POST returns ok:true.",
     "4. HANDOFF: one line per filed brief (theme + evidence count) and how many items stayed un-clustered. If nothing clusters, file nothing and say so.",
@@ -75,8 +79,12 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   const token = await getActiveWidgetToken(userId, idOrResp);
   if (!token) return jsonError("Enable the feedback widget first — briefs are filed through the widget API", 400);
 
+  // Briefs (source=synthesizer) are this agent's own output — re-synthesizing
+  // them would compound aggregates. The contact check keeps legacy rows out.
   const items = (await listProjectFeedback(userId, idOrResp))
-    .filter((f) => f.status === FEEDBACK_STATUS.NEW && f.contact !== SYNTHESIZER_CONTACT)
+    .filter((f) => f.status === FEEDBACK_STATUS.NEW
+      && f.source !== FEEDBACK_SOURCE.SYNTHESIZER
+      && f.contact !== SYNTHESIZER_CONTACT)
     .slice(0, MAX_ITEMS);
   if (items.length < MIN_ITEMS) {
     return jsonError(`Nothing to synthesize — needs at least ${MIN_ITEMS} new items`, 400);

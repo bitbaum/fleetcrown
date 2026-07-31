@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, jsonb, timestamp, index } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, jsonb, timestamp, index, integer } from "drizzle-orm/pg-core";
 import { users } from "./users";
 import { entities } from "./entities";
 import { widgetTokens } from "./widget-tokens";
@@ -6,6 +6,7 @@ import {
   FEEDBACK_STATUS,
   type FeedbackStatus,
   type FeedbackScope,
+  type FeedbackSource,
 } from "@/lib/constants/statuses";
 
 /** One element captured by the widget's element-scope picker. */
@@ -39,6 +40,14 @@ export const siteFeedback = pgTable("site_feedback", {
   scope:      text("scope").$type<FeedbackScope>(),
   selectedElements: jsonb("selected_elements").$type<FeedbackSelectedElement[]>(),
   userAgent:  text("user_agent"),
+  /** Who filed it (visitor | ai_review | synthesizer). Null = legacy row =
+   *  visitor. Synthesizer rows are aggregate briefs — excluded from digester
+   *  clustering and from close-the-loop email. */
+  source:     text("source").$type<FeedbackSource>(),
+  /** sha256 over normalized (suggestion + page) — the ingest dedupe key.
+   *  A repeat submission increments duplicateCount instead of a new row. */
+  contentHash: text("content_hash"),
+  duplicateCount: integer("duplicate_count").notNull().default(1),
 
   status: text("status").$type<FeedbackStatus>().notNull().default(FEEDBACK_STATUS.NEW),
   /** Orchestration run created when the operator dispatched a fix for this item. */
@@ -51,6 +60,7 @@ export const siteFeedback = pgTable("site_feedback", {
 }, (t) => [
   index("idx_site_feedback_project").on(t.projectId, t.status),
   index("idx_site_feedback_user").on(t.userId, t.status),
+  index("idx_site_feedback_dedupe").on(t.projectId, t.contentHash),
 ]);
 
 export type SiteFeedback = typeof siteFeedback.$inferSelect;

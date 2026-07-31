@@ -89,6 +89,21 @@ export const FEEDBACK_SCOPE_VALUES = ["element", "page", "site"] as const;
 export type FeedbackScope = (typeof FEEDBACK_SCOPE_VALUES)[number];
 
 /**
+ * Who filed a feedback row: a real visitor (widget), the AI page reviewer, or
+ * the inbox synthesizer (whose rows are aggregate BRIEFs, not reports —
+ * the digester must not re-cluster them). Self-asserted via the public write
+ * token, so treat as a routing hint, not a trust boundary; worst case a
+ * visitor mislabels their own report.
+ */
+export const FEEDBACK_SOURCE_VALUES = ["visitor", "ai_review", "synthesizer"] as const;
+export type FeedbackSource = (typeof FEEDBACK_SOURCE_VALUES)[number];
+export const FEEDBACK_SOURCE = {
+  VISITOR: "visitor",
+  AI_REVIEW: "ai_review",
+  SYNTHESIZER: "synthesizer",
+} as const satisfies Record<string, FeedbackSource>;
+
+/**
  * Widget-token remote state. The embed's boot call gates rendering on ACTIVE,
  * so pausing takes effect on the customer site without any deploy.
  */
