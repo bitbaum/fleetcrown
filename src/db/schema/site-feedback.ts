@@ -43,6 +43,9 @@ export const siteFeedback = pgTable("site_feedback", {
   status: text("status").$type<FeedbackStatus>().notNull().default(FEEDBACK_STATUS.NEW),
   /** Orchestration run created when the operator dispatched a fix for this item. */
   dispatchedRunId: uuid("dispatched_run_id"),
+  /** When the item was resolved (close-the-loop or manual). Cleared on reopen —
+   *  together with dispatchedRunId this is the row's resolution evidence. */
+  resolvedAt: timestamp("resolved_at", { withTimezone: true }),
 
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 }, (t) => [

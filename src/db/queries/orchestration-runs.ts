@@ -9,6 +9,7 @@ import {
 } from "@/db/schema/orchestration-runs";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import { resolveFeedbackForRun } from "@/lib/feedback/close-loop";
+import { correctTimeoutReapsWithRepoEvidence } from "@/lib/orchestration/reap-evidence";
 
 export const STALE_RUN_MINUTES = 60;
 
@@ -106,7 +107,16 @@ export async function cleanupStaleOrchestrationRuns(userId?: string) {
     // No userId (the cron janitor) → reap across ALL users; the page-load call
     // sites keep passing their own userId for scope hygiene.
     .where(userId ? and(eq(orchestrationRuns.userId, userId), staleWhere) : staleWhere)
-    .returning({ id: orchestrationRuns.id, projectKey: orchestrationRuns.projectKey, userId: orchestrationRuns.userId, outcome: orchestrationRuns.outcome });
+    .returning({ id: orchestrationRuns.id, projectKey: orchestrationRuns.projectKey, userId: orchestrationRuns.userId, outcome: orchestrationRuns.outcome, startedAt: orchestrationRuns.startedAt });
+
+  // Honesty backstop: a `timeout` verdict means "no evidence of work", but the
+  // handoff check above only sees project_states — a box agent that pushed a
+  // branch/PR and died before writing a handoff looks identical to a dead run.
+  // Check the repo itself and correct such verdicts to `partial`. Fire-and-
+  // forget: GitHub lookups must never slow a reap (page-load call sites).
+  if (reaped.some((r) => r.outcome === ORCHESTRATION_OUTCOME.TIMEOUT)) {
+    void correctTimeoutReapsWithRepoEvidence(reaped);
+  }
   return reaped;
 }
 

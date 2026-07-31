@@ -1,0 +1,1 @@
+ALTER TABLE "site_feedback" ADD COLUMN "resolved_at" timestamp with time zone;

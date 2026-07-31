@@ -35,10 +35,19 @@ button { cursor: pointer; border: none; background: none; }
   border: 2px solid rgba(255,255,255,.85);
   display: flex; align-items: center; justify-content: center;
   box-shadow: 0 2px 12px rgba(0,0,0,.35);
-  transition: transform .15s ease;
+  transition: transform .15s ease, opacity .2s ease;
 }
 .fab:hover { transform: scale(1.08); }
 .fab svg { width: 20px; height: 20px; }
+@media (max-width: 480px) {
+  /* Narrow viewports: content spans the full width, so a fixed launcher sits
+     on whatever scrolls into its corner (observed covering a pricing CTA at
+     320px). Shrink it, and get out of the way while the page is scrolling —
+     taps during scroll-reading never hit the FAB instead of the page. */
+  .fab { width: 40px; height: 40px; right: 12px; bottom: 12px; }
+  .fab svg { width: 18px; height: 18px; }
+  .fab.scrolling { opacity: .3; pointer-events: none; }
+}
 .backdrop {
   position: fixed; inset: 0; z-index: 2147483001;
   background: rgba(0,0,0,.25);
@@ -180,6 +189,15 @@ function h<K extends keyof HTMLElementTagNameMap>(
     fab.setAttribute("aria-haspopup", "dialog");
     fab.addEventListener("click", openPanel);
     root.appendChild(fab);
+
+    // Scroll-fade companion to the narrow-viewport CSS above: the class is
+    // toggled on every viewport, but only the ≤480px media query styles it.
+    let scrollSettle = 0;
+    window.addEventListener("scroll", () => {
+      fab.classList.add("scrolling");
+      clearTimeout(scrollSettle);
+      scrollSettle = window.setTimeout(() => fab.classList.remove("scrolling"), 350);
+    }, { passive: true });
 
     // ---- panel (built once, shown on demand) ----
     const backdrop = h("div", "backdrop");
