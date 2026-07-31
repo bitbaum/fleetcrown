@@ -190,6 +190,9 @@ function FeedbackRow({
     f.scope,
     f.contact,
     compactRelativeDate(f.createdAt),
+    // Resolution evidence: WHAT closed this row, not just that it's green.
+    f.status === FEEDBACK_STATUS.RESOLVED && f.resolvedAt && `resolved ${compactRelativeDate(f.resolvedAt)}`,
+    f.status === FEEDBACK_STATUS.RESOLVED && f.dispatchedRunId && `by run ${f.dispatchedRunId.slice(0, 8)}`,
   ].filter(Boolean);
 
   return (

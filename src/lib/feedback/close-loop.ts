@@ -20,7 +20,7 @@ export async function resolveFeedbackForRun(runId: string): Promise<void> {
   try {
     const resolved = await db
       .update(siteFeedback)
-      .set({ status: FEEDBACK_STATUS.RESOLVED })
+      .set({ status: FEEDBACK_STATUS.RESOLVED, resolvedAt: new Date() })
       .where(and(
         eq(siteFeedback.dispatchedRunId, runId),
         eq(siteFeedback.status, FEEDBACK_STATUS.DISPATCHED),

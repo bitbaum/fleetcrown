@@ -97,7 +97,15 @@ export async function setFeedbackStatus(
 ): Promise<SiteFeedback | null> {
   const [updated] = await db
     .update(siteFeedback)
-    .set({ status, ...(dispatchedRunId ? { dispatchedRunId } : {}) })
+    .set({
+      status,
+      ...(dispatchedRunId ? { dispatchedRunId } : {}),
+      // Resolution evidence: stamp when the row resolves, clear on reopen so a
+      // re-resolved row never shows a stale date.
+      resolvedAt: status === FEEDBACK_STATUS.RESOLVED ? new Date()
+        : status === FEEDBACK_STATUS.NEW ? null
+        : undefined,
+    })
     .where(and(eq(siteFeedback.id, id), eq(siteFeedback.userId, userId)))
     .returning();
   return updated ?? null;
