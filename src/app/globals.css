@@ -593,12 +593,12 @@
     @apply rounded-full border border-border-default px-5 py-2 text-sm font-medium text-text-tertiary transition-all hover:border-border-strong hover:text-text-secondary;
   }
   .ui-public-nav-link {
-    @apply rounded-lg px-4 py-2 text-sm text-text-tertiary transition-colors hover:text-text-secondary;
+    @apply rounded-lg px-4 py-2 text-sm text-text-secondary transition-colors hover:text-text-primary;
   }
   /* Mega-menu trigger button — looks like a nav link, but with a chevron and
      hover/expanded affordances. */
   .ui-public-nav-trigger {
-    @apply inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm text-text-tertiary transition-colors hover:text-text-primary;
+    @apply inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm text-text-secondary transition-colors hover:text-text-primary;
   }
   /* Dropdown panel anchored to the trigger — grid of label + description per
      destination. */
@@ -1910,7 +1910,7 @@
   /* Typography */
   .ui-kicker {
     font-size: 0.75rem;
-    @apply font-semibold uppercase text-text-tertiary;
+    @apply font-semibold uppercase text-text-secondary;
     letter-spacing: var(--tracking-label);
   }
   /* Micro-kicker for compact data cells — 10px caps */
