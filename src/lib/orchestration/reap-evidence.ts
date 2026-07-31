@@ -13,7 +13,7 @@
 
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { entities } from "@/db/schema";
+import { entities, userProjects } from "@/db/schema";
 import { ORCHESTRATION_OUTCOME, orchestrationRuns } from "@/db/schema/orchestration-runs";
 import { ORCH_STATE } from "@/lib/orchestration/contract";
 import { emitRunEvent } from "@/db/queries/run-events";
@@ -40,6 +40,10 @@ export async function correctTimeoutReapsWithRepoEvidence(reaped: ReapedRunForEv
 
   for (const run of timeouts) {
     try {
+      // The repo URL lives in TWO places (two-tier creation gap): the project
+      // entity, and the user_projects registration whose name IS the run's
+      // projectKey. Real fleets (fleetcrown itself) have it only on the
+      // latter — check both.
       const project = await db.query.entities.findFirst({
         where: and(
           eq(entities.userId, run.userId),
@@ -48,12 +52,20 @@ export async function correctTimeoutReapsWithRepoEvidence(reaped: ReapedRunForEv
         ),
         columns: { gitUrl: true },
       });
-      if (!project?.gitUrl) continue;
+      const registration = project?.gitUrl ? null : await db.query.userProjects.findFirst({
+        where: and(
+          eq(userProjects.userId, run.userId),
+          sql`lower(${userProjects.name}) = lower(${run.projectKey})`,
+        ),
+        columns: { gitUrl: true },
+      });
+      const gitUrl = project?.gitUrl ?? registration?.gitUrl;
+      if (!gitUrl) continue;
 
       const token = await getGithubToken(run.userId);
       if (!token) continue;
 
-      const evidence = await findRepoWorkEvidence(project.gitUrl, token, run.startedAt.getTime());
+      const evidence = await findRepoWorkEvidence(gitUrl, token, run.startedAt.getTime());
       if (!evidence) continue;
 
       const [corrected] = await db
