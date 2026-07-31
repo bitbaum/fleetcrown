@@ -309,6 +309,13 @@
       "when": 1785491429289,
       "tag": "0044_dizzy_hex",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1785493125187,
+      "tag": "0045_acoustic_timeslip",
+      "breakpoints": true
     }
   ]
 }

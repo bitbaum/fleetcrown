@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionUserId } from "@/lib/session";
 import { normalizeUsername } from "@/lib/username";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
-import { getUserById, getUserByUsername, updateUser } from "@/db/queries/users";
+import {
+  getUserById,
+  getUserByUsername,
+  updateUser,
+  deleteUserAccount,
+} from "@/db/queries/users";
 
 const PatchBody = z.object({
   username: z.preprocess(
@@ -40,4 +45,44 @@ export async function PATCH(req: NextRequest) {
   });
 
   return NextResponse.json(updated);
+}
+
+const DeleteBody = z.object({
+  // The user must type their exact email (or username) — a deliberate,
+  // unambiguous confirmation for an irreversible action.
+  confirm: z.string().trim().min(1).max(200),
+});
+
+export async function DELETE(req: NextRequest) {
+  const userId = await getSessionUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const dataOrResp = await readJsonBody(req, DeleteBody);
+  if (dataOrResp instanceof NextResponse) return dataOrResp;
+
+  const user = await getUserById(userId);
+  if (!user) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  const typed = dataOrResp.confirm.toLowerCase();
+  const matches =
+    (user.email && typed === user.email.toLowerCase()) ||
+    (user.username && typed === user.username.toLowerCase());
+  if (!matches) {
+    return NextResponse.json(
+      { error: "Confirmation does not match your email or username" },
+      { status: 400 },
+    );
+  }
+
+  // The platform's seeded default user is load-bearing (owns shared fixtures);
+  // deleting it would brick the instance.
+  if (user.isDefault) {
+    return NextResponse.json(
+      { error: "The default account cannot be deleted" },
+      { status: 403 },
+    );
+  }
+
+  await deleteUserAccount(userId);
+  return NextResponse.json({ ok: true });
 }

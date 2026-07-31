@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Lock, ShieldCheck, ShieldOff } from "lucide-react";
+import { Lock, ShieldCheck, ShieldOff, Download, Loader2 } from "lucide-react";
 import { useFetch } from "@/hooks/use-fetch";
 import { usePrivateZone } from "@/hooks/use-private-zone";
-import { postJson, deleteJson } from "@/lib/api/fetch";
+import { postJson, deleteJson, patchJson } from "@/lib/api/fetch";
+import { ACCOUNT_EXPORT_FILENAME } from "@/lib/account-export";
 import { PIN_MAX_DIGITS } from "@/lib/constants/auth";
 
 type PinStatus = { configured: boolean; unlocked: boolean };
@@ -107,9 +108,14 @@ export function PrivacySettings() {
           <h2 className="text-lg font-semibold text-text-primary">Data</h2>
           <p className="mt-1 text-sm text-text-tertiary">
             Your private data — contacts, goals, habits, events, money, and the derived knowledge graph —
-            lives on the same database as your account. Export and full-deletion controls are on the roadmap.
+            lives on the same database as your account. It&apos;s yours: index it or not, take it with you,
+            delete it (memory on the Memory page, everything under Account → Danger zone).
           </p>
         </div>
+
+        <MemoryConsentToggle />
+
+        <ExportDataButton />
       </div>
     </div>
   );
@@ -314,5 +320,95 @@ function DisablePinForm({ onCancel, onSuccess }: { onCancel: () => void; onSucce
         <button type="button" onClick={onCancel} className="ui-btn-secondary">Cancel</button>
       </div>
     </form>
+  );
+}
+
+/** "Build fleet memory from my data" — gates knowledge-index writes (upsertKnowledgeBatch). */
+function MemoryConsentToggle() {
+  const { data, refetch } = useFetch<{ memoryEnabled: boolean }>("/api/me/preferences");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const enabled = data?.memoryEnabled !== false;
+
+  const toggle = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await patchJson("/api/me/preferences", { memoryEnabled: !enabled });
+      if (!res.ok) throw new Error(`Save failed (${res.status})`);
+      refetch();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Save failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="mt-4 flex items-start justify-between gap-4">
+      <div>
+        <div className="text-sm font-medium text-text-primary">Build fleet memory from my data</div>
+        <p className="mt-0.5 text-xs text-text-tertiary">
+          Off = the fleet stops indexing your projects and notes into the knowledge index
+          (RAG). Existing memory stays until you delete it on the Memory page.
+        </p>
+        {error && <p className="mt-1 text-xs text-status-negative">{error}</p>}
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={enabled}
+        aria-label="Build fleet memory from my data"
+        onClick={toggle}
+        disabled={saving || !data}
+        className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50 ${
+          enabled ? "bg-accent-primary" : "bg-surface-overlay border border-border-subtle"
+        }`}
+      >
+        <span
+          className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+            enabled ? "translate-x-[22px]" : "translate-x-0.5"
+          }`}
+        />
+      </button>
+    </div>
+  );
+}
+
+/** Download everything the platform stores about you as JSON (GDPR right of access). */
+function ExportDataButton() {
+  const [exporting, setExporting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const exportData = async () => {
+    setExporting(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/me/export");
+      if (!res.ok) throw new Error(`Export failed (${res.status})`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = ACCOUNT_EXPORT_FILENAME;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Export failed");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  return (
+    <div className="mt-4">
+      <button type="button" onClick={exportData} disabled={exporting} className="ui-btn-secondary">
+        {exporting ? <Loader2 className="ui-spinner" /> : <Download className="w-4 h-4" />}
+        Export my data
+      </button>
+      {error && <p className="mt-1 text-xs text-status-negative">{error}</p>}
+    </div>
   );
 }

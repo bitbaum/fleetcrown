@@ -12,6 +12,7 @@ export type UserPreferencesData = {
   currentTimezone:  string | null;
   currentCityUntil: string | null;
   writingVoice:     string | null;
+  memoryEnabled:    boolean;
 };
 
 export function getActiveCity(prefs: UserPreferencesData | null): string {
@@ -42,7 +43,7 @@ export async function getUserPreferences(userId: string): Promise<UserPreference
     .limit(1)
     .then((r) => r[0] ?? null);
 
-  if (!row) return { homeCity: null, homeTimezone: null, homeLocale: null, currentCity: null, currentTimezone: null, currentCityUntil: null, writingVoice: null };
+  if (!row) return { homeCity: null, homeTimezone: null, homeLocale: null, currentCity: null, currentTimezone: null, currentCityUntil: null, writingVoice: null, memoryEnabled: true };
 
   return {
     homeCity:         row.homeCity,
@@ -52,6 +53,7 @@ export async function getUserPreferences(userId: string): Promise<UserPreference
     currentTimezone:  row.currentTimezone,
     currentCityUntil: row.currentCityUntil,
     writingVoice:     row.writingVoice,
+    memoryEnabled:    row.memoryEnabled,
   };
 }
 
@@ -82,5 +84,6 @@ function toRow(d: UserPreferencesData) {
     currentTimezone:  d.currentTimezone,
     currentCityUntil: d.currentCityUntil,
     writingVoice:     d.writingVoice,
+    memoryEnabled:    d.memoryEnabled,
   };
 }
