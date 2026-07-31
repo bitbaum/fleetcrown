@@ -44,7 +44,7 @@ import { getBuilderPresence } from "@/db/queries/runner-presence";
 import { isAgentId, listAgentRegistry } from "@/lib/agent-registry";
 import { inferAdapterFromTabName } from "@/components/control/control-presenter";
 import type { ProjectProfile, CurrentPrompt, ProjectState, SessionState, GitState, ControlData, FailedCommand } from "@/lib/control-types";
-import { getRecentFailedCommands } from "@/db/queries/pending-commands";
+import { getRecentFailedCommands, hasUndeliveredCommandForRun } from "@/db/queries/pending-commands";
 import { getRuntimeSnapshot } from "@/db/queries/runtime-snapshots";
 import { writePromptQueueMirror } from "@/lib/prompt-queue-mirror";
 import { fetchAllGitStates } from "@/lib/git-state";
@@ -283,7 +283,14 @@ export async function GET() {
       // more than once for the same run.
       if (closePatch && !closingRuns.has(latestRun.id)) {
         closingRuns.add(latestRun.id);
-        gateAndCloseRun(latestRun.id, closePatch, ownerUserId, tab, recentOutcomesMap.get(tab) ?? [], latestRun.adapter)
+        // A run whose dispatch command is still queued (gate-held behind an
+        // older run) never had its prompt delivered — this handoff cannot be
+        // its work; skip the close and let its own delivery + handoff close it.
+        hasUndeliveredCommandForRun(ownerUserId, latestRun.id)
+          .catch(() => false)
+          .then((undelivered) => undelivered
+            ? undefined
+            : gateAndCloseRun(latestRun.id, closePatch, ownerUserId, tab, recentOutcomesMap.get(tab) ?? [], latestRun.adapter))
           .catch((err) => console.error("[control] run close failed:", err))
           .finally(() => closingRuns.delete(latestRun.id));
       }

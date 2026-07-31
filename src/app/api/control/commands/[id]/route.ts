@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCommandById, markCommandExecuted } from "@/db/queries/pending-commands";
-import { getOrchestrationRunById } from "@/db/queries/orchestration-runs";
+import { closeRunUndelivered, getOrchestrationRunById, stampRunDelivered } from "@/db/queries/orchestration-runs";
 import { emitRunEvent } from "@/db/queries/run-events";
 import { getApiUserId } from "@/lib/session";
 import { deriveDispatchLiveStatus, type CommandLiveInput } from "@/lib/dispatch-status";
@@ -72,9 +72,18 @@ export async function PATCH(
     const command = await getCommandById(id);
     const runId = (command?.payload as { runId?: string } | null)?.runId;
     if (runId) {
-      if (!ok) void emitRunEvent(runId, userId, "blocked", { reason: error ?? "runner error", workspaceId });
-      else if (warning) void emitRunEvent(runId, userId, "blocked", { reason: warning, workspaceId });
-      else void emitRunEvent(runId, userId, "submitted", { text, workspaceId });
+      if (!ok) {
+        void emitRunEvent(runId, userId, "blocked", { reason: error ?? "runner error", workspaceId });
+        // The prompt never landed — the run can't produce a handoff. Close it
+        // now so it doesn't head-of-line block the project's queued dispatches.
+        await closeRunUndelivered(runId, userId, error ?? "runner error").catch(() => {});
+      } else {
+        if (warning) void emitRunEvent(runId, userId, "blocked", { reason: warning, workspaceId });
+        else void emitRunEvent(runId, userId, "submitted", { text, workspaceId });
+        // Delivery stamp: the close paths use payload.deliveredAt as the
+        // handoff-freshness floor for per-run attribution.
+        await stampRunDelivered(runId, userId).catch(() => {});
+      }
     }
   } catch { /* telemetry only — never fail the ack */ }
 

@@ -1,5 +1,4 @@
 import { db } from "@/db";
-import { ORCH_STATE } from "@/lib/orchestration/contract";
 import { pendingCommands, type NewPendingCommand, type InjectPayload, type DispatchPayload, type SwitchAgentPayload, type AutoContinuePayload, type TabPayload, type LaunchAgentPayload, type RunnerChannel } from "@/db/schema/pending-commands";
 import { eq, isNull, isNotNull, and, inArray, notInArray, desc, sql } from "drizzle-orm";
 import type { FailedCommand } from "@/lib/control-types";
@@ -72,6 +71,22 @@ export async function hasOpenPendingForProject(userId: string, projectKey: strin
         )`,
       ),
     )
+    .limit(1);
+  return !!row;
+}
+
+/** True when this run's dispatch/inject command is still queued (gate-held or
+ *  runner offline) — the prompt was never delivered, so no session handoff can
+ *  be this run's work. The close sweep uses this to skip such runs. */
+export async function hasUndeliveredCommandForRun(userId: string, runId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ id: pendingCommands.id })
+    .from(pendingCommands)
+    .where(and(
+      eq(pendingCommands.userId, userId),
+      isNull(pendingCommands.executedAt),
+      sql`${pendingCommands.payload}->>'runId' = ${runId}`,
+    ))
     .limit(1);
   return !!row;
 }
@@ -188,6 +203,21 @@ export async function purgeStalePendingCommands(userIds: string[]): Promise<numb
       isNull(pendingCommands.claimedAt),
       isNull(pendingCommands.executedAt),
       sql`${pendingCommands.createdAt} < NOW() - INTERVAL '1 minute' * ${STALE_COMMAND_MAX_AGE_MINUTES}`,
+      // A dispatch/inject held by the per-project serialization gate is NOT an
+      // offline backlog — it is legitimately waiting for the older run to close
+      // (up to STALE_RUN_MINUTES). Purging it at 20 min would silently drop the
+      // work AND leave its own open run wedging the project. It becomes
+      // purgeable again the moment its run closes or goes stale.
+      sql`NOT (
+        ${pendingCommands.type} IN ('dispatch','inject')
+        AND ${pendingCommands.payload}->>'runId' IS NOT NULL
+        AND EXISTS (
+          SELECT 1 FROM orchestration_runs own
+          WHERE own.id = (${pendingCommands.payload}->>'runId')::uuid
+            AND own.finished_at IS NULL
+            AND own.started_at > NOW() - INTERVAL '1 minute' * ${STALE_RUN_MINUTES}
+        )
+      )`,
     ))
     .returning({ id: pendingCommands.id });
   return deleted.length;
@@ -260,24 +290,29 @@ export async function claimNextPendingCommand(userIds: string[], types?: string[
         // SKIP LOCKED tx (correct under concurrent pollers); the started_at floor
         // mirrors cleanupStaleOrchestrationRuns so a crashed run can't wedge a
         // project past STALE_RUN_MINUTES.
+        //
+        // An older open run blocks until it CLOSES (finished_at), not until its
+        // prompt is delivered — releasing on delivery merged two dispatches into
+        // one agent session sharing one summary, and close-the-loop then resolved
+        // feedback item B off item A's handoff. Exceptions, both directions:
+        // derived-tab runs (payload.sessionTab, parallel worktree-per-agent) own
+        // an isolated tab, so they neither block base-tab commands nor wait on them.
         sql`(
           ${pendingCommands.type} NOT IN ('dispatch','inject')
           OR ${pendingCommands.payload}->>'projectKey' IS NULL
           OR ${pendingCommands.payload}->>'runId' IS NULL
+          OR EXISTS (
+            SELECT 1 FROM orchestration_runs own
+            WHERE own.id = (${pendingCommands.payload}->>'runId')::uuid
+              AND own.payload->>'sessionTab' IS NOT NULL
+          )
           OR NOT EXISTS (
 	            SELECT 1 FROM orchestration_runs r
 	            WHERE r.user_id = ${pendingCommands.userId}
 	              AND r.project_key = ${pendingCommands.payload}->>'projectKey'
 	              AND r.finished_at IS NULL
 	              AND r.started_at > NOW() - INTERVAL '1 minute' * ${STALE_RUN_MINUTES}
-	              AND (
-	                r.state <> ${ORCH_STATE.WAITING}
-	                OR EXISTS (
-	                  SELECT 1 FROM pending_commands blocker
-	                  WHERE blocker.payload->>'runId' = r.id::text
-	                    AND blocker.executed_at IS NULL
-	                )
-	              )
+	              AND r.payload->>'sessionTab' IS NULL
 	              AND (r.started_at, r.id) < (
 	                SELECT own.started_at, own.id FROM orchestration_runs own
 	                WHERE own.id = (${pendingCommands.payload}->>'runId')::uuid

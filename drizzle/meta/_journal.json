@@ -288,6 +288,13 @@
       "when": 1785481422709,
       "tag": "0041_normal_ezekiel_stane",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1785489749681,
+      "tag": "0042_stiff_sprite",
+      "breakpoints": true
     }
   ]
 }
