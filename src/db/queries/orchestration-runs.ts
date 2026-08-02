@@ -10,6 +10,8 @@ import {
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import { resolveFeedbackForRun } from "@/lib/feedback/close-loop";
 import { promoteRunClose } from "@/lib/integrations/orangecat-publish";
+import { isFailingOutcome } from "@/lib/events";
+import { advanceEscalation, resolveEscalation } from "./run-escalations";
 import { correctTimeoutReapsWithRepoEvidence } from "@/lib/orchestration/reap-evidence";
 import { emitRunEvent } from "./run-events";
 
@@ -46,6 +48,22 @@ export async function updateOrchestrationRun(
     // OC-published projects. Idempotent (external_id = run id) and re-sent by
     // the daily promote backfill, so a dropped emit here is never lost.
     void promoteRunClose(updated);
+    // A success closes the project's open escalation ladder, if any.
+    void resolveEscalation(updated.userId, updated.projectKey, "success");
+  }
+
+  // Escalation ladder: every failing close advances the project one rung
+  // (retry → patch → replan → human). isFailingOutcome is the same predicate
+  // the failure brake uses, so ladder rungs and brake streak count the same
+  // events. Fire-and-forget — bookkeeping never fails a close.
+  if (updated && patch.finishedAt && isFailingOutcome(patch.outcome)) {
+    void advanceEscalation({
+      userId: updated.userId,
+      projectKey: updated.projectKey,
+      runId: updated.id,
+      outcome: patch.outcome ?? "error",
+      error: updated.payload?.error ?? null,
+    });
   }
 
   return updated;
@@ -196,6 +214,22 @@ export async function cleanupStaleOrchestrationRuns(userId?: string) {
   // forget: GitHub lookups must never slow a reap (page-load call sites).
   if (reaped.some((r) => r.outcome === ORCHESTRATION_OUTCOME.TIMEOUT)) {
     void correctTimeoutReapsWithRepoEvidence(reaped);
+  }
+  // Reaped closes bypass updateOrchestrationRun, so advance ladders here.
+  // Only genuinely failing outcomes count (timeout yes, partial no — same
+  // isFailingOutcome predicate as the funnel and the brake). Note the evidence
+  // corrector above may later flip a timeout→partial; that correction doesn't
+  // rewind the ladder — a success resolves it, which is the honest reset.
+  for (const r of reaped) {
+    if (isFailingOutcome(r.outcome)) {
+      void advanceEscalation({
+        userId: r.userId,
+        projectKey: r.projectKey,
+        runId: r.id,
+        outcome: r.outcome ?? "timeout",
+        error: "Timed out — run exceeded maximum duration and was cleaned up",
+      });
+    }
   }
   return reaped;
 }

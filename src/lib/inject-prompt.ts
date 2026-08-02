@@ -15,6 +15,7 @@ import {
 import { getProjectContext } from "@/db/queries/project-context";
 import { retrieveFleetContextBlock } from "@/db/queries/knowledge-embeddings";
 import { buildOperatorContextSection } from "@/lib/dispatch-operator-context";
+import { getOpenEscalationBlock } from "@/db/queries/run-escalations";
 import { PROMPT_TEMPLATES } from "@/config/prompt-library";
 import { getOrchestrationIntent } from "@/lib/orchestration/intents";
 import { sessionHandoffContract } from "@/lib/agent-config";
@@ -59,7 +60,7 @@ export async function assembleInjectPrompt(
   }
 
   const ragQuery = customPrompt ?? promptKey ?? "";
-  const [projectContextRaw, fleetBlock, operatorBlock] = await Promise.all([
+  const [projectContextRaw, fleetBlock, operatorBlock, escalationBlock] = await Promise.all([
     getProjectContext(userId, projectKey).catch(() => null),
     ragQuery
       ? retrieveFleetContextBlock(userId, ragQuery, { excludeProject: projectKey }).catch(() => "")
@@ -67,6 +68,10 @@ export async function assembleInjectPrompt(
     // The life-OS half of context: the operator's top-level goals + near-term
     // deadlines, so fleet work serves the captain's actual objectives.
     buildOperatorContextSection(userId).catch(() => ""),
+    // Open escalation ladder (retry → patch → replan): the objection from the
+    // last failing run goes back to the AGENT first — humans are only alerted
+    // at the top rung. Best-effort like every block.
+    getOpenEscalationBlock(userId, projectKey).catch(() => ""),
   ]);
   const projectContext = projectContextRaw ?? undefined;
 
@@ -96,6 +101,10 @@ export async function assembleInjectPrompt(
       preamble,
       operatorBlock || null,
       fleetBlock ? `## Background context from your other projects (read-only)\n${fleetBlock}` : null,
+      // Escalation directly above the task: it MODIFIES how the task is to be
+      // approached (rung-specific instruction + last failure), so it must read
+      // as operator instruction, not background.
+      escalationBlock || null,
       body,
       exitContract,
     ].filter(Boolean).join("\n\n");

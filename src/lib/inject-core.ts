@@ -30,6 +30,7 @@ import { EXECUTOR_COPY } from "@/config/executor-copy";
 import { retrieveFleetContextBlock } from "@/db/queries/knowledge-embeddings";
 import { assembleInjectPrompt } from "@/lib/inject-prompt";
 import { buildOperatorContextSection } from "@/lib/dispatch-operator-context";
+import { getOpenEscalationBlock } from "@/db/queries/run-escalations";
 
 type ResolvedAdapter = (typeof ORCHESTRATION_ADAPTER_IDS)[number];
 
@@ -167,16 +168,20 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
     // near-term deadlines, so local dispatches serve the captain's objectives
     // too, not just the per-project task. Both best-effort; both mirror the
     // cloud assembleInjectPrompt path so local and remote dispatch match.
-    const [projectContext, fleetBlock, operatorSection] = await Promise.all([
+    const [projectContext, fleetBlock, operatorSection, escalationBlock] = await Promise.all([
       getProjectContext(userId, canonical).catch(() => null),
       ragQuery
         ? retrieveFleetContextBlock(userId, ragQuery, { excludeProject: canonical }).catch(() => "")
         : Promise.resolve(""),
       buildOperatorContextSection(userId).catch(() => ""),
+      // Open escalation ladder — the last failure fed back to the agent with a
+      // rung-specific instruction. Mirrors assembleInjectPrompt.
+      getOpenEscalationBlock(userId, canonical).catch(() => ""),
     ]);
     const contextBlock = renderProjectContextBlock(projectContext ?? undefined);
     const withContext = (body: string) =>
-      [contextBlock || null, operatorSection || null, fleetBlock || null, body].filter(Boolean).join("\n\n");
+      [contextBlock || null, operatorSection || null, fleetBlock || null, escalationBlock || null, body]
+        .filter(Boolean).join("\n\n");
 
     if (customPrompt) {
       prompt = withContext(customPrompt);
