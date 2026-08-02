@@ -14,8 +14,26 @@
 // the loop — a missed gate is recoverable, a stuck loop is not.
 
 import { callGroqText } from "@/lib/groq";
+import { ESCALATION_HUMAN_STREAK } from "./escalation-ladder";
 import type { RunClosePatch } from "./close-from-session";
 import type { OrchestrationTaskSummary } from "./contract";
+
+/**
+ * The goal loop's default bound, used when a project sets no `goal_max_turns`.
+ *
+ * It used to be "no cap = loop until met", and NO project had ever set the
+ * attribute — so every goal-mode project looped forever. That is worse than it
+ * sounds: because `partial` is not a failing outcome, an endless partial streak
+ * is invisible to BOTH the failure brake and the escalation ladder. datacat
+ * re-closed `partial` a dozen times against the same gap ("client-side Zod
+ * validation still missing") and nothing ever told a human. An unbounded goal
+ * loop is indistinguishable from a stuck one, so the bound must be the default
+ * rather than the opt-in.
+ *
+ * SSOT'd to the escalation ladder's top rung: the same number of tries
+ * autopilot gets anywhere else before a human is brought in.
+ */
+export const DEFAULT_GOAL_MAX_TURNS = ESCALATION_HUMAN_STREAK;
 
 /** The default cross-model judge — a different lineage from the workers
  *  (claude/llama/grok), so its blind spots don't overlap theirs. Exported so the

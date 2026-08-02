@@ -16,6 +16,47 @@ import { verifyDefinitionOfDone, applyDoDGate, DOD_JUDGE_MODEL } from "@/lib/orc
 import type { RunClosePatch } from "@/lib/orchestration/close-from-session";
 import type { OrchestrationOutcome } from "@/db/schema/orchestration-runs";
 import { ORCHESTRATION_OUTCOME } from "@/db/schema/orchestration-runs";
+import { insertActiveAlertOnce } from "@/db/queries/alerts";
+import { selfTelegramTarget, sendTelegramMessage } from "@/lib/actions/telegram-send";
+import { logDebug } from "@/db/queries/debug-logs";
+
+/**
+ * Tell a human that a goal loop stopped at its cap without meeting its bar.
+ * Same shape as the escalation ladder's human rung — one alert while it stays
+ * open, plus a push — because "autopilot gave up on this goal" is exactly as
+ * actionable as "autopilot failed N times", and neither the failure brake nor
+ * the ladder can see it (a partial streak is not a failure streak).
+ */
+async function reportCappedGoal(input: {
+  userId: string;
+  projectKey: string;
+  attempts: number;
+  gap: string;
+}): Promise<void> {
+  try {
+    const created = await insertActiveAlertOnce({
+      userId: input.userId,
+      type: "goal_capped",
+      severity: "warning",
+      title: `${input.projectKey}: goal stopped after ${input.attempts} attempts`,
+      description: `The definition of done was not met and autopilot stopped re-looping. Still missing: ${input.gap}`,
+    });
+    if (!created) return; // already open — don't re-notify every close
+    const target = selfTelegramTarget();
+    if (target) {
+      await sendTelegramMessage(
+        target,
+        `⏸ ${input.projectKey}: goal stopped after ${input.attempts} attempts.\nStill missing: ${input.gap}`,
+      ).catch(() => {});
+    }
+  } catch (e) {
+    void logDebug({
+      source: "orchestration/gate-and-close",
+      level: "warn",
+      message: `Failed to report capped goal for ${input.projectKey}: ${(e as Error).message}`,
+    });
+  }
+}
 
 /** Runs whose close is being gated/persisted right now — prevents the DoD judge
  *  from firing more than once per run while a fire-and-forget close is in flight.
@@ -47,6 +88,19 @@ export async function gateAndCloseRun(
       let priorPartials = 0;
       for (const o of recentOutcomes) { if (o === ORCHESTRATION_OUTCOME.PARTIAL) priorPartials++; else break; }
       patch = applyDoDGate(closePatch, verdict, { maxTurns, priorPartials });
+      // The cap stopped the loop → say so out loud. applyDoDGate deliberately
+      // keeps the SUCCESS outcome so the continue-loop halts, which means the
+      // ledger alone would show a success and nobody would learn the goal was
+      // abandoned short of its bar. A cap that only writes itself into `next`
+      // is a silent cap.
+      if (!verdict.met && maxTurns != null && priorPartials >= maxTurns) {
+        void reportCappedGoal({
+          userId,
+          projectKey,
+          attempts: maxTurns,
+          gap: verdict.gap || "the stated bar is not evidenced in the handoff",
+        });
+      }
       // Record the cross-model verdict on the run so Activity can show that a
       // DIFFERENT model lineage judged the worker's handoff — the moat made
       // visible ("worker did it, judge checked it, here's the verdict").
