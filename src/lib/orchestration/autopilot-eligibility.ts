@@ -37,27 +37,52 @@ import type { DispatchResult } from "@/app/api/control/dispatch/route";
  * process, the claim is treated as unknown and the project is dispatchable
  * again.
  *
- * `blocked` deliberately does NOT expire: it is a standing DECISION about the
- * world ("waiting on a human to merge PR #7"), not a claim about a running
- * process, and it is cleared when the agent next reports anything else.
+ * `blocked` is a standing DECISION about the world rather than a claim about a
+ * process, so it gets the much longer BLOCKED_RECHECK_TTL_MS instead.
  */
 export const WORKING_CLAIM_TTL_MS = 60 * MINUTE_MS;
 
 /**
- * The status a scheduler should act on — the reported one, except that a STALE
- * `working` claim with no live agent process decays to unknown. See
- * WORKING_CLAIM_TTL_MS for why `blocked` is exempt.
+ * How long a `blocked` decision is trusted before the agent is sent back to
+ * RE-VERIFY it.
+ *
+ * A block cannot be permanent, because a blocked project is gated — and a gated
+ * agent can never notice that the world moved. Both blockers found on
+ * 2026-08-02 had already resolved while their projects sat waiting on them:
+ *
+ *   - truthseeker: "GROQ_API_KEY expired" — the key had been rotated weeks
+ *     earlier; only the runner's copy was stale. Three consecutive nightly
+ *     cycles did nothing but re-surface a dead blocker.
+ *   - surf-your-life: "autopilot stays off until a human merges PR #7" — PR #7
+ *     was merged, and nothing was going to tell the project.
+ *
+ * So a blocker is trusted for a day, then the project gets ONE dispatch whose
+ * job is to re-check it. Still blocked? The agent writes `blocked` again with a
+ * fresh timestamp and the clock restarts — self-limiting at one run per day,
+ * which is a cheap price for never again spending weeks waiting on something
+ * that already happened. Blockers must be re-verified, not trusted forever.
+ */
+export const BLOCKED_RECHECK_TTL_MS = 24 * 60 * MINUTE_MS;
+
+/**
+ * The status a scheduler should act on — the reported one, except that a claim
+ * old enough to be doubted decays to unknown (= dispatchable). Two different
+ * clocks, because the two statuses claim different things: `working` asserts a
+ * live process (WORKING_CLAIM_TTL_MS), `blocked` asserts a fact about the world
+ * that has to be re-checked eventually (BLOCKED_RECHECK_TTL_MS).
  */
 function effectiveStatus(
   state: Pick<ProjectState, "sessionStatus" | "agentRunning" | "sessionUpdatedAt"> | null,
   nowMs: number,
 ): string {
   const status = state?.sessionStatus ?? "";
-  if (status !== SESSION_STATUS.WORKING) return status;
-  if (state?.agentRunning) return status; // a process really is running — honor it
+  if (status !== SESSION_STATUS.WORKING && status !== SESSION_STATUS.BLOCKED) return status;
+  // A process really is running — never interrupt it, whatever the clock says.
+  if (state?.agentRunning) return status;
   const writtenMs = state?.sessionUpdatedAt?.getTime();
-  if (writtenMs != null && nowMs - writtenMs > WORKING_CLAIM_TTL_MS) return "";
-  return status;
+  if (writtenMs == null) return status;
+  const ttl = status === SESSION_STATUS.WORKING ? WORKING_CLAIM_TTL_MS : BLOCKED_RECHECK_TTL_MS;
+  return nowMs - writtenMs > ttl ? "" : status;
 }
 
 /**

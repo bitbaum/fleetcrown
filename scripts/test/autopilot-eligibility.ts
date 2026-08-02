@@ -17,6 +17,7 @@ import {
   evaluateScheduledDispatch,
   gateInputFromState,
   WORKING_CLAIM_TTL_MS,
+  BLOCKED_RECHECK_TTL_MS,
 } from "@/lib/orchestration/autopilot-eligibility";
 import { evaluateDispatchGates, FAILURE_BRAKE_STREAK } from "@/lib/orchestration/dispatch-gates";
 import { MINUTE_MS } from "@/lib/constants/time";
@@ -94,18 +95,48 @@ function runTests(): void {
     assert(d?.action === "off", "a live agent must never be interrupted, however long its turn");
   });
 
-  check("'blocked' does NOT expire — it is a decision, not a liveness claim", () => {
+  check("'blocked' outlasts the working TTL — it is a decision, not a liveness claim", () => {
     // surf-your-life's handoff: "autopilot stays off until a human merges PR #7".
-    // That must hold for as long as it takes, not 60 minutes.
+    // That must hold for far longer than a working claim does.
     const d = evaluateScheduledDispatch(
       state({
         sessionStatus: "blocked",
         agentRunning: false,
-        sessionUpdatedAt: new Date(NOW - 30 * 24 * 60 * MINUTE_MS),
+        sessionUpdatedAt: new Date(NOW - WORKING_CLAIM_TTL_MS - MINUTE_MS),
       }),
       { mode: "on", recentOutcomes: [], nowMs: NOW },
     );
-    assert(d?.action === "off", "a month-old block must still gate");
+    assert(d?.action === "off", "a block must not expire on the working clock");
+  });
+
+  check("a DAY-OLD block is re-checked, not trusted forever", () => {
+    // The deadlock this closes: a blocked project is gated, and a gated agent
+    // can never notice the world moved. Both blockers found on 2026-08-02 had
+    // already resolved — the Groq key was rotated, PR #7 was merged — while
+    // their projects sat waiting on them. One dispatch per day to re-verify.
+    const d = evaluateScheduledDispatch(
+      state({
+        sessionStatus: "blocked",
+        agentRunning: false,
+        sessionUpdatedAt: new Date(NOW - BLOCKED_RECHECK_TTL_MS - MINUTE_MS),
+      }),
+      { mode: "on", recentOutcomes: [], nowMs: NOW },
+    );
+    assert(d?.action !== "off", "a stale block must earn one re-check dispatch");
+  });
+
+  check("a live agent is never interrupted, blocked or not", () => {
+    for (const s of ["blocked", "working"]) {
+      const d = evaluateScheduledDispatch(
+        state({
+          sessionStatus: s,
+          agentRunning: true,
+          sessionUpdatedAt: new Date(NOW - BLOCKED_RECHECK_TTL_MS * 10),
+        }),
+        { mode: "on", recentOutcomes: [], nowMs: NOW },
+      );
+      assert(d?.action === "off", `${s} + live process must never be interrupted`);
+    }
   });
 
   check("the no-op fuse stops a scheduler too", () => {
