@@ -31,7 +31,11 @@ import { MAX_CONCURRENT_BUILDING } from "@/lib/constants/control";
 import { getFleetAutopilotUserIds } from "@/db/queries/beacon-settings";
 import { getUserProjects } from "@/db/queries/user-projects";
 import { getRecentOutcomes } from "@/db/queries/orchestration-runs";
-import { FAILURE_BRAKE_STREAK, leadingFailureStreak } from "@/lib/orchestration/dispatch-gates";
+import { getProjectState } from "@/db/queries/project-states";
+import { getBeaconSettings } from "@/db/queries/beacon-settings";
+import { DEFAULT_AUTO_INJECT_MODE } from "@/lib/constants/control";
+import type { AutoInjectMode } from "@/config/beacon";
+import { evaluateScheduledDispatch } from "@/lib/orchestration/autopilot-eligibility";
 import { injectPrompt } from "@/lib/inject-core";
 import { HOUR_MS } from "@/lib/constants/time";
 
@@ -51,7 +55,9 @@ interface Skips {
   recent_activity: number;
   has_pending_command: number;
   recent_nudge: number;
-  failing_streak: number;
+  /** Refused by the SSOT dispatch gates (agent working/blocked, no-op fuse,
+   *  failure brake, autopilot off) — see autopilot-eligibility. */
+  gated: number;
   inject_failed: number;
 }
 
@@ -65,10 +71,13 @@ export async function GET(req: NextRequest) {
     recent_activity: 0,
     has_pending_command: 0,
     recent_nudge: 0,
-    failing_streak: 0,
+    gated: 0,
     inject_failed: 0,
   };
   const nudgedRows: Array<{ userId: string; projectId: string; projectName: string }> = [];
+  /** Why each gated project was refused — surfaced in the tick log so a silent
+   *  fleet is always explainable without re-deriving the decision by hand. */
+  const gatedRows: Array<{ projectName: string; source: string; reason: string }> = [];
 
   try {
     // 1. Users with fleet autopilot enabled — via the SSOT helper, which counts
@@ -101,6 +110,9 @@ export async function GET(req: NextRequest) {
     for (const { userId } of activeUsers) {
       if (nudgedRows.length >= MAX_NUDGES_PER_TICK) break;
 
+      const settings = await getBeaconSettings(userId).catch(() => null);
+      const userMode = (settings?.auto_inject_mode ?? DEFAULT_AUTO_INJECT_MODE) as AutoInjectMode;
+
       const [projects, executableProjects] = await Promise.all([
         db
         .select({
@@ -118,7 +130,9 @@ export async function GET(req: NextRequest) {
       for (const proj of projects) {
         if (nudgedRows.length >= MAX_NUDGES_PER_TICK) break;
 
-        // (a) Per-project pause.
+        // (a) Per-project pause. Kept as its own counter because "the human
+        // switched this project off" is a different story from "the agent said
+        // it isn't available"; the SSOT gates below would also refuse it.
         if (proj.autoInjectModeOverride === "off") {
           skipped.paused_per_project++;
           continue;
@@ -173,14 +187,29 @@ export async function GET(req: NextRequest) {
           continue;
         }
 
-        // (e) Failure brake — the July outage burned a WEEK of daily next_best
-        // timeouts per project because nothing here checked whether the last
-        // nudges ever succeeded. If the most recent runs are all hard failures,
-        // re-nudging is guaranteed waste: skip until a run succeeds (a manual
-        // dispatch resets the streak).
-        const outcomes = await getRecentOutcomes(userId, proj.name, { limit: FAILURE_BRAKE_STREAK + 2 }).catch(() => []);
-        if (leadingFailureStreak(outcomes.map((o) => o.outcome)) >= FAILURE_BRAKE_STREAK) {
-          skipped.failing_streak++;
+        // (e) The SSOT safety gates — the SAME ones /api/control/dispatch
+        // enforces, applied to persisted state (see autopilot-eligibility).
+        // Until 2026-08-02 this cron hand-rolled only the failure brake, so it
+        // woke agents that had reported `status: working|blocked` and agents
+        // stuck in a no-op loop. Such a nudge cannot succeed: the agent
+        // correctly declines to act, writes no fresh handoff, and the run is
+        // reaped an hour later as partial/timeout. Refusing to dispatch is what
+        // turns those guaranteed failures into no run at all.
+        const [state, outcomes] = await Promise.all([
+          getProjectState(userId, proj.name).catch(() => null),
+          getRecentOutcomes(userId, proj.name, { limit: 8 }).catch(() => []),
+        ]);
+        const decision = evaluateScheduledDispatch(state, {
+          mode: (proj.autoInjectModeOverride as AutoInjectMode | null) ?? userMode,
+          recentOutcomes: outcomes.map((o) => o.outcome),
+        });
+        if (!decision || decision.action === "off") {
+          skipped.gated++;
+          gatedRows.push({
+            projectName: proj.name,
+            source: decision?.source ?? "unknown",
+            reason: decision?.reason ?? "no dispatch decision",
+          });
           continue;
         }
 
@@ -207,7 +236,7 @@ export async function GET(req: NextRequest) {
       source: "api/crons/nudge-idle",
       level: "info",
       message: `Nudged ${nudgedRows.length} idle project(s) across ${activeUsers.length} autopilot-on user(s)`,
-      meta: { nudged: nudgedRows, skipped, capped: nudgedRows.length >= MAX_NUDGES_PER_TICK },
+      meta: { nudged: nudgedRows, skipped, gated: gatedRows, capped: nudgedRows.length >= MAX_NUDGES_PER_TICK },
     });
 
     return NextResponse.json({
@@ -216,6 +245,7 @@ export async function GET(req: NextRequest) {
       nudged: nudgedRows.length,
       skipped,
       details: nudgedRows,
+      gated: gatedRows,
     });
   } catch (e) {
     const msg = (e as Error).message;
