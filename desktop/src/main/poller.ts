@@ -49,6 +49,8 @@ import {
   resizePty,
 } from './pty-runtime'
 import { pushNow } from './pusher'
+import { trackRunUsage } from './usage-reporter'
+import { claudeProjectSlug } from '@/lib/usage/claude-transcript-usage'
 import { startBridgeSubscriber } from './bridge-subscriber'
 import {
   WORKTREE_DISPATCH_ENABLED,
@@ -392,8 +394,11 @@ async function waitForSessionFileBump(tab: string, baselineMtime: number, timeou
  */
 function detectAuthFailure(dir: string): boolean {
   try {
-    const slug = dir.replace(/\//g, '-')
-    const projDir = `${process.env.HOME}/.claude/projects/${slug}`
+    // claudeProjectSlug replaces "." as well as "/" — the old inline
+    // `replace(/\//g,'-')` silently missed dotted paths, so worktree
+    // dispatches (under .claude/worktrees/) never matched their transcript
+    // dir and auth failures there were undetectable.
+    const projDir = `${process.env.HOME}/.claude/projects/${claudeProjectSlug(dir)}`
     const newest = fs.readdirSync(projDir)
       .filter((f) => f.endsWith('.jsonl'))
       .map((f) => ({ f, m: fs.statSync(`${projDir}/${f}`).mtimeMs }))
@@ -491,6 +496,9 @@ async function handleCommand(
   // the command — today derived from the tab, later an opaque id; consumers
   // address by this, not by name.
   let workspaceId: string | undefined
+  // Token accounting: set by the dispatch case when a Claude run is delivered;
+  // consumed after the ack so tracking only starts for commands that landed.
+  let usageTrack: { runId: string; dir: string; deliveredAtMs: number } | null = null
 
   // Idempotency dedup. If the PATCH ack timed out on a previous run, the
   // server will hand us the same command again. Without this, the prompt
@@ -615,6 +623,11 @@ async function handleCommand(
           if (effDir !== dir) effPrompt = `${worktreePromptNote(runId)}\n\n${prompt}`
         }
         worktreeByTab.set(tab, { primaryDir: dir, launchDir: effDir })
+        // Token accounting window opens at delivery. Claude-only: the usage
+        // collector reads ~/.claude transcripts, which other agents don't write.
+        if (runId && agent === 'claude') {
+          usageTrack = { runId, dir: effDir, deliveredAtMs: Date.now() }
+        }
         // PTY path when enabled (or already PTY-backed): own the agent's PTY
         // instead of puppeting a (possibly detached → hanging) zellij tab.
         const usePty = RUNNER_PTY_ENABLED || ptyAlreadyLive
@@ -795,6 +808,10 @@ async function handleCommand(
   }
 
   await ackCommand(base, token, command, { ok, error, verified, warning, text, workspaceId })
+
+  // Only start metering runs whose prompt actually landed — a nacked dispatch
+  // is closed server-side and would never answer done:true.
+  if (ok && usageTrack) trackRunUsage(usageTrack)
 
   if (ok) {
     console.log(`[poller] handled ${command.type} command ${command.id}`)

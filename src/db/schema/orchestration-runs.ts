@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, jsonb, index } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, jsonb, index, bigint, doublePrecision } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { users } from "./users";
 import { entities } from "./entities";
@@ -64,6 +64,18 @@ export const orchestrationRuns = pgTable("orchestration_runs", {
   startedAt: timestamp("started_at", { withTimezone: true }).defaultNow().notNull(),
   finishedAt: timestamp("finished_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  // Token/cost accounting — reported by the runner from the agent's own
+  // transcript (window [deliveredAt, close]), priced box-side at ingest
+  // (src/app/api/orchestration/runs/[id]/usage). Null = never reported
+  // (non-Claude adapter, runner predates the reporter, or zero usage).
+  tokensIn: bigint("tokens_in", { mode: "number" }),
+  tokensOut: bigint("tokens_out", { mode: "number" }),
+  tokensCacheRead: bigint("tokens_cache_read", { mode: "number" }),
+  tokensCacheWrite: bigint("tokens_cache_write", { mode: "number" }),
+  /** Estimated USD at API list rates (subscription runs: comparable unit, not an invoice). */
+  costUsd: doublePrecision("cost_usd"),
+  usageDetail: jsonb("usage_detail").$type<OrchestrationRunUsageDetail>(),
+  usageUpdatedAt: timestamp("usage_updated_at", { withTimezone: true }),
 }, (table) => [
   index("idx_orchestration_runs_user_id").on(table.userId),
   index("idx_orchestration_runs_org_id").on(table.orgId),
@@ -73,6 +85,22 @@ export const orchestrationRuns = pgTable("orchestration_runs", {
   // Powers getRecentOutcomes(userId, projectKey) — finishedAt DESC, partial-indexed to skip running rows
   index("idx_orchestration_runs_recent_outcomes").on(table.userId, table.projectKey, sql`finished_at DESC`),
 ]);
+
+/** Non-column usage context stored alongside the token counters. */
+export type OrchestrationRunUsageDetail = {
+  /** Per-model token breakdown (pricing input — see src/config/model-pricing.ts). */
+  models?: Record<string, { input: number; output: number; cacheRead: number; cacheWrite: number }>;
+  /** Claude session ids that contributed usage in the run's window. */
+  sessionIds?: string[];
+  /** Model ids whose tokens had no pricing entry (cost is partial). */
+  unpricedModels?: string[];
+  /** ISO end of the last counted window (runner-side "as of"). */
+  windowTo?: string;
+  /** Set on the first accepted report after the run closed — later reports
+   *  are refused so a long-lived session's NEXT run can't leak tokens into
+   *  this one. */
+  final?: boolean;
+};
 
 export type OrchestrationRun = typeof orchestrationRuns.$inferSelect;
 export type NewOrchestrationRun = typeof orchestrationRuns.$inferInsert;

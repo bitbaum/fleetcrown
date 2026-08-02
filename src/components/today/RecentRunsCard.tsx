@@ -10,6 +10,7 @@ import { LokiDispatchButton } from "@/components/shared/LokiDispatchButton";
 import { ControlDispatchButton } from "@/components/shared/ControlDispatchButton";
 import { NAV } from "@/config/navigation";
 import { HOUR_MS } from "@/lib/constants/time";
+import { formatRunUsage } from "@/lib/usage/format";
 
 // Adjacent runs on the same project that finished within this window collapse
 // into a single row (with a "× N" badge). 1 hour matches the rough duration
@@ -131,6 +132,17 @@ export async function RecentRunsCard() {
                     {tagCls && healthShort && (
                       <span className={tagCls}>{healthShort}</span>
                     )}
+                    {(() => {
+                      const usageLine = formatRunUsage(run);
+                      return usageLine ? (
+                        <span
+                          className="text-micro text-text-muted tabular-nums"
+                          title="Tokens (input incl. cache reads → output) · estimated cost at API list rates"
+                        >
+                          {usageLine}
+                        </span>
+                      ) : null;
+                    })()}
                     <span className="ml-auto text-xs text-text-muted shrink-0">
                       {run.finishedAt ? timeAgo(run.finishedAt.getTime()) : ""}
                     </span>

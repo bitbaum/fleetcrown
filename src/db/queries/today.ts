@@ -328,6 +328,10 @@ export async function getRecentOrchestrationRuns(userId: string, hours = RECENT_
       state: orchestrationRuns.state,
       summary: orchestrationRuns.summary,
       finishedAt: orchestrationRuns.finishedAt,
+      tokensIn: orchestrationRuns.tokensIn,
+      tokensOut: orchestrationRuns.tokensOut,
+      tokensCacheRead: orchestrationRuns.tokensCacheRead,
+      costUsd: orchestrationRuns.costUsd,
     })
     .from(orchestrationRuns)
     .where(

@@ -392,6 +392,10 @@ export async function GET() {
       startedAt: latestRun.startedAt?.toISOString?.() ?? String(latestRun.startedAt),
       finishedAt: latestRun.finishedAt ? (latestRun.finishedAt.toISOString?.() ?? String(latestRun.finishedAt)) : null,
       summary: latestRun.summary ?? null,
+      tokensIn: latestRun.tokensIn ?? null,
+      tokensOut: latestRun.tokensOut ?? null,
+      tokensCacheRead: latestRun.tokensCacheRead ?? null,
+      costUsd: latestRun.costUsd ?? null,
       payload: latestRun.payload ? {
         resultText: latestRun.payload.resultText,
         error: latestRun.payload.error,
