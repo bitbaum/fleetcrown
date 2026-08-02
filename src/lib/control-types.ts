@@ -103,6 +103,12 @@ export type ProjectState = {
     startedAt: string;
     finishedAt: string | null;
     summary: OrchestrationTaskSummary | null;
+    // Token accounting (runner-reported, box-priced). Null until the first
+    // usage report lands — older runs stay null forever.
+    tokensIn: number | null;
+    tokensOut: number | null;
+    tokensCacheRead: number | null;
+    costUsd: number | null;
     payload: {
       resultText?: string;
       error?: string;

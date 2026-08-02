@@ -5,6 +5,7 @@ import { CheckCircle2, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { secondsAgo, formatElapsedSeconds } from "@/lib/dates";
 import { getIntentLabel, getAdapterLabel } from "@/config/control-intents";
+import { formatRunUsage } from "@/lib/usage/format";
 import type { ProjectState } from "@/lib/control-types";
 import { MINUTE_MS } from "@/lib/constants/time";
 import { ORCH_STATE } from "@/lib/orchestration/contract";
@@ -199,6 +200,17 @@ export function LatestOrchestrationPanel({
         </span>
         <span className="ui-tag ui-tag-neutral">{getAdapterLabel(run.adapter)} · {getIntentLabel(run.intent)}</span>
         <span className={stateClass}>{displayState}</span>
+        {(() => {
+          const usageLine = formatRunUsage(run);
+          return usageLine ? (
+            <span
+              className="ui-tag ui-tag-neutral tabular-nums"
+              title="Tokens this run consumed (input incl. cache reads → output) · estimated cost at API list rates"
+            >
+              {usageLine}
+            </span>
+          ) : null;
+        })()}
         {committed && (
           <span className="ui-tag ui-tag-neutral font-mono" title="Commit produced by this run">
             ↪ {commitRaw}
