@@ -4,6 +4,18 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 fail=0
+checks_run=0
+
+# This gate silently passed for its entire life: `rg` is not installed on the
+# GitHub runner, so every `if rg ...` saw exit 127 — indistinguishable from
+# "no matches" — and the script printed "ok" while scanning nothing. A gate
+# that cannot tell "tool missing" from "clean" is worse than no gate, because
+# it manufactures confidence. Fail loudly instead.
+if ! command -v rg >/dev/null 2>&1; then
+  echo "design-system check FAILED: ripgrep (rg) is not installed." >&2
+  echo "This gate scans nothing without it. Install ripgrep in CI and locally." >&2
+  exit 1
+fi
 
 check_none() {
   local label="$1"
@@ -11,9 +23,21 @@ check_none() {
   shift 2
   local files=("$@")
 
-  if rg -n "$pattern" "${files[@]}"; then
+  checks_run=$((checks_run + 1))
+
+  # rg exits 0 on match, 1 on no-match, >1 on error. Only exit 1 means clean —
+  # anything else (bad glob, unreadable path) must not read as a pass.
+  local out status
+  out="$(rg -n "$pattern" "${files[@]}" 2>&1)" && status=0 || status=$?
+
+  if [[ "$status" -eq 0 ]]; then
+    echo "$out"
     echo
     echo "design-system check failed: $label"
+    fail=1
+  elif [[ "$status" -ne 1 ]]; then
+    echo "design-system check ERRORED (rg exit $status) on: $label" >&2
+    echo "$out" >&2
     fail=1
   fi
 }
@@ -32,4 +56,6 @@ if [[ "$fail" -ne 0 ]]; then
   exit 1
 fi
 
-echo "design-system check: ok"
+# Print what was actually scanned: "0 checks run" must look different from
+# "0 violations found" at a glance.
+echo "design-system check: ok ($checks_run checks run)"
