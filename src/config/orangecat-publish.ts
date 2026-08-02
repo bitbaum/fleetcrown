@@ -25,6 +25,10 @@ export const PROMOTE_POLICY = {
   devlog_entry: { enabled: true, eventType: "project_updated" as OrangeCatPublishEventType },
   /** The project was first published to OrangeCat. */
   project_published: { enabled: true, eventType: "project_published" as OrangeCatPublishEventType },
+  /** An orchestration run closed successfully (the run→wall loop). Success-only
+   *  by design: failed/reaped runs stay FleetCrown-private — the wall is a
+   *  curated projection, not a mirror of the event spine. */
+  run_closed: { enabled: true, eventType: "project_updated" as OrangeCatPublishEventType },
 } as const;
 
 export type PromotableMoment = keyof typeof PROMOTE_POLICY;

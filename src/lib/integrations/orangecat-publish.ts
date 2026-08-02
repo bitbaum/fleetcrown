@@ -25,6 +25,9 @@ import {
 } from "@/config/orangecat-publish";
 import { linkOrangeCatEntity } from "@/db/queries/orangecat-links";
 import { ECOSYSTEM } from "@/config/ecosystem";
+import { buildRunMoment, type RunPromoteInput } from "./orangecat-run-moment";
+
+export type { RunPromoteInput } from "./orangecat-run-moment";
 
 export interface PublishResult {
   ok: boolean;
@@ -218,6 +221,34 @@ export function promoteDevLogEntry(
       .join("\n\n"),
     content: { health: entry.health, date: entry.date },
   });
+}
+
+/**
+ * Promote a successfully closed orchestration run onto the OrangeCat wall
+ * (ledger-and-loop item 2: run work becomes visible economic activity).
+ * Fire-and-forget contract like every promote: never throws, "skipped" when
+ * the project isn't OC-published or the user isn't linked; a dropped emit is
+ * re-sent by the daily backfill janitor.
+ */
+export async function promoteRunClose(run: RunPromoteInput): Promise<PromoteOutcome> {
+  try {
+    // runs carry projectKey (= user_projects.name, the tab identifier);
+    // the promote layer addresses projects by their user_projects row.
+    const project = await db.query.userProjects.findFirst({
+      where: and(eq(userProjects.userId, run.userId), eq(userProjects.name, run.projectKey)),
+      columns: { id: true, name: true, orangecatProjectId: true },
+    });
+    if (!project?.orangecatProjectId) return "skipped";
+    return await promoteMomentToOrangeCat(
+      run.userId,
+      project.id,
+      "run_closed",
+      buildRunMoment(project.name, run),
+    );
+  } catch (err) {
+    console.warn("[orangecat-publish] run promote errored (non-fatal)", { runId: run.id, err });
+    return "failed";
+  }
 }
 
 function firstLine(s: string | undefined): string {

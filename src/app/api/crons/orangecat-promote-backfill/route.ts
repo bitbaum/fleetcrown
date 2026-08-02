@@ -22,8 +22,10 @@ import { logDebug } from "@/db/queries/debug-logs";
 import {
   promoteDevLogEntry,
   promoteMomentToOrangeCat,
+  promoteRunClose,
   type PromoteOutcome,
 } from "@/lib/integrations/orangecat-publish";
+import { getRecentSuccessfulRuns } from "@/db/queries/orchestration-runs";
 
 /** Only re-emit devlog entries this recent — older wall history is settled. */
 const BACKFILL_WINDOW_DAYS = 14;
@@ -68,6 +70,13 @@ export async function GET(req: NextRequest) {
       ...((project.devLog ?? []) as DevLogEntry[])
         .filter((entry) => entry.date >= cutoff)
         .map((entry) => () => promoteDevLogEntry(project.userId, project.id, project.name, entry)),
+      // Run→wall reconcile: re-emit recent successful runs — same idempotent
+      // external ids as the close-time fire-and-forget emit.
+      ...(await getRecentSuccessfulRuns(
+        project.userId,
+        project.name,
+        new Date(Date.now() - BACKFILL_WINDOW_DAYS * DAY_MS),
+      )).map((run) => () => promoteRunClose(run)),
     ];
 
     // Sequential on purpose: this is a janitor, not a hot path — one in-flight

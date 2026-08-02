@@ -9,6 +9,7 @@ import {
 } from "@/db/schema/orchestration-runs";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import { resolveFeedbackForRun } from "@/lib/feedback/close-loop";
+import { promoteRunClose } from "@/lib/integrations/orangecat-publish";
 import { correctTimeoutReapsWithRepoEvidence } from "@/lib/orchestration/reap-evidence";
 import { emitRunEvent } from "./run-events";
 
@@ -41,6 +42,10 @@ export async function updateOrchestrationRun(
   // Fire-and-forget: closing the feedback loop must not slow or fail the close.
   if (updated && patch.finishedAt && patch.outcome === ORCHESTRATION_OUTCOME.SUCCESS) {
     void resolveFeedbackForRun(updated.id);
+    // Run→wall loop: successful agent work surfaces as OrangeCat activity for
+    // OC-published projects. Idempotent (external_id = run id) and re-sent by
+    // the daily promote backfill, so a dropped emit here is never lost.
+    void promoteRunClose(updated);
   }
 
   return updated;
@@ -91,6 +96,33 @@ export async function closeRunUndelivered(runId: string, userId: string, reason:
   if (closed) {
     void emitRunEvent(runId, userId, "closed", { outcome: ORCHESTRATION_OUTCOME.ERROR, by: "runner-nack", reason });
   }
+}
+
+/**
+ * Recent successful runs for one project — feeds the OC promote backfill so a
+ * dropped run→wall emit self-heals (external ids are deterministic, OC
+ * reconciles on them). Uses idx_orchestration_runs_recent_outcomes.
+ */
+export async function getRecentSuccessfulRuns(
+  userId: string,
+  projectKey: string,
+  since: Date,
+  limit = 10,
+) {
+  return db
+    .select()
+    .from(orchestrationRuns)
+    .where(
+      and(
+        eq(orchestrationRuns.userId, userId),
+        eq(orchestrationRuns.projectKey, projectKey),
+        eq(orchestrationRuns.outcome, ORCHESTRATION_OUTCOME.SUCCESS),
+        isNotNull(orchestrationRuns.finishedAt),
+        gt(orchestrationRuns.finishedAt, since),
+      ),
+    )
+    .orderBy(desc(orchestrationRuns.finishedAt))
+    .limit(limit);
 }
 
 export async function getOrchestrationRunById(userId: string, id: string) {
