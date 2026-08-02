@@ -1,6 +1,7 @@
 // Self-test for the definition-of-done stop-gate decision (pure part).
 // Run: npx tsx scripts/test/dod-gate.ts
-import { applyDoDGate } from "@/lib/orchestration/dod-gate";
+import { applyDoDGate, DEFAULT_GOAL_MAX_TURNS } from "@/lib/orchestration/dod-gate";
+import { ESCALATION_HUMAN_STREAK } from "@/lib/orchestration/escalation-ladder";
 import type { RunClosePatch } from "@/lib/orchestration/close-from-session";
 
 let pass = 0, fail = 0;
@@ -52,9 +53,29 @@ ok("unmet + at cap → next records the cap + escalation", !!r7.summary.next && 
 const r8 = applyDoDGate(base("success"), { met: true, gap: "" }, { maxTurns: 3, priorPartials: 5 });
 ok("met + over cap → stays success, no cap note", r8.outcome === "success" && !r8.summary.next);
 
-// 9. no cap (maxTurns null) → original behavior regardless of priorPartials
+// 9. no cap (maxTurns null) → loops forever. Reachable ONLY via an explicit
+// goal_max_turns=0 now that the default is bounded; see DEFAULT_GOAL_MAX_TURNS.
 const r9 = applyDoDGate(base("success"), { met: false, gap: "x" }, { maxTurns: null, priorPartials: 99 });
-ok("unmet + no cap → downgrades forever (original behavior)", r9.outcome === "partial");
+ok("unmet + explicit no-cap → downgrades forever (opt-in only)", r9.outcome === "partial");
+
+// 10. The default bound exists and is the ladder's human rung — an unbounded
+// goal loop is invisible to the failure brake AND the escalation ladder
+// (a partial streak is not a failure streak), so "loop forever" must not be
+// what a project gets by saying nothing.
+ok("default goal cap is bounded", Number.isFinite(DEFAULT_GOAL_MAX_TURNS) && DEFAULT_GOAL_MAX_TURNS > 0);
+ok("default goal cap is SSOT'd to the ladder's human rung", DEFAULT_GOAL_MAX_TURNS === ESCALATION_HUMAN_STREAK);
+
+// 11. A project that has been looping at the default cap stops looping.
+const r11 = applyDoDGate(
+  base("success"),
+  { met: false, gap: "five integrity layers still missing" },
+  { maxTurns: DEFAULT_GOAL_MAX_TURNS, priorPartials: DEFAULT_GOAL_MAX_TURNS },
+);
+ok("unmet at default cap → stops looping (success, flagged)", r11.outcome === "success");
+ok(
+  "capped close names the gap so the human alert is actionable",
+  !!r11.summary.next && r11.summary.next.includes("five integrity layers still missing"),
+);
 
 console.log(`\n${fail === 0 ? "✓" : "✗"} dod-gate: ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

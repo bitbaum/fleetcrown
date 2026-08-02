@@ -17,6 +17,7 @@ import { PROJECT_ATTR } from "@/config/project-attrs";
 import { renderOperatingPrinciples } from "@/config/operating-principles";
 import { getProjectDossierByProjectKey, renderProjectDossierForAgent } from "./project-dossier";
 import { fetchAttributesByEntityIds } from "./utils";
+import { DEFAULT_GOAL_MAX_TURNS } from "@/lib/orchestration/dod-gate";
 
 const MAX_GOALS = 6;
 
@@ -122,9 +123,8 @@ export async function getProjectDefinitionOfDone(userId: string, projectKey: str
 
 /**
  * The goal config that drives the DoD stop-gate for a project: the bar itself
- * (`definition_of_done`) plus an optional turn cap (`goal_max_turns`) that bounds
- * how many times the loop re-tries before escalating. maxTurns null = loop until
- * met (unchanged behavior). One attribute fetch.
+ * (`definition_of_done`) plus the turn cap (`goal_max_turns`) that bounds how
+ * many times the loop re-tries before escalating. One attribute fetch.
  */
 export async function getProjectGoalConfig(
   userId: string,
@@ -139,8 +139,14 @@ export async function getProjectGoalConfig(
   const attrs = (await fetchAttributesByEntityIds([entity.id])).get(entity.id) ?? {};
   const dod = attrs["definition_of_done"]?.trim() || null;
   const rawTurns = parseInt(attrs["goal_max_turns"] ?? "", 10);
-  // Clamp to a sane range; ignore garbage. No cap unless a valid positive value.
-  const maxTurns = Number.isFinite(rawTurns) && rawTurns > 0 ? Math.min(rawTurns, 20) : null;
+  // Clamp to a sane range; ignore garbage. An explicit 0 is the escape hatch
+  // for "genuinely loop until met" — deliberate, not the accidental default.
+  const maxTurns =
+    Number.isFinite(rawTurns) && rawTurns > 0
+      ? Math.min(rawTurns, 20)
+      : rawTurns === 0
+        ? null
+        : DEFAULT_GOAL_MAX_TURNS;
   return { definitionOfDone: dod, maxTurns };
 }
 
