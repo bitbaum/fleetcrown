@@ -24,6 +24,14 @@ jobs:
 
       - run: npm ci
 
+      # check:design scans with ripgrep, which is NOT preinstalled on the
+      # runner. Without this the script exited 127 on every pattern, read that
+      # as "no matches", and reported ok while scanning nothing — the gate was
+      # decorative for its entire life. The script now hard-fails when rg is
+      # absent, so this step is what keeps the gate able to run at all.
+      - name: Install ripgrep (required by check:design)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ripgrep
+
       # ONE canonical bundle — the exact `npm run verify` you run locally
       # (tsc + lint + check:design + test:unit + test:home). CI calls it
       # VERBATIM, so a green local verify can't diverge from a green CI. The
