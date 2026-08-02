@@ -50,8 +50,8 @@ export const WORKING_CLAIM_TTL_MS = 60 * MINUTE_MS;
  * agent can never notice that the world moved. Both blockers found on
  * 2026-08-02 had already resolved while their projects sat waiting on them:
  *
- *   - truthseeker: "GROQ_API_KEY expired" — the key had been rotated weeks
- *     earlier; only the runner's copy was stale. Three consecutive nightly
+ *   - truthseeker: "GROQ_API_KEY expired" — a valid key was already sitting in
+ *     the app env; only the runner's copy was stale. Three consecutive nightly
  *     cycles did nothing but re-surface a dead blocker.
  *   - surf-your-life: "autopilot stays off until a human merges PR #7" — PR #7
  *     was merged, and nothing was going to tell the project.
