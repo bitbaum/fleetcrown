@@ -46,5 +46,6 @@ export * from "./site-feedback";
 export * from "./orangecat-links";
 
 export * from "./knowledge-embeddings";
+export * from "./run-escalations";
 export * from "./run-events";
 export * from "./agent-messages";

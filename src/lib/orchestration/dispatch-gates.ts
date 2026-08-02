@@ -20,6 +20,7 @@
 import type { DispatchAction, DispatchResult } from "@/app/api/control/dispatch/route";
 import type { AutoInjectMode } from "@/config/beacon";
 import { SESSION_STATUS } from "@/lib/constants/statuses";
+import { ESCALATION_HUMAN_STREAK } from "@/lib/orchestration/escalation-ladder";
 import { isFailingOutcome } from "@/lib/events";
 
 export type GateInput = {
@@ -34,8 +35,15 @@ export type GateInput = {
   recentOutcomes?: string[];
 };
 
-/** How many consecutive most-recent failures trip the failure brake. */
-export const FAILURE_BRAKE_STREAK = 3;
+/**
+ * How many consecutive most-recent failures trip the failure brake.
+ * SSOT'd to the escalation ladder's top rung: rungs 1–3 (retry → patch →
+ * replan) each get one prompt-shaped autopilot attempt, and the brake fires
+ * exactly when the ladder reaches 'human' — "autopilot stops" and "operator
+ * is alerted" are the same event by construction. (Was a bare 3 before the
+ * ladder existed; the extra bounded attempt is the replan rung.)
+ */
+export const FAILURE_BRAKE_STREAK = ESCALATION_HUMAN_STREAK;
 
 /** Leading run of hard failures (user_abort is neutral and breaks the run,
  *  as does any success/partial). */
