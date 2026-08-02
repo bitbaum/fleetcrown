@@ -14,8 +14,17 @@ import { isFailingOutcome } from "@/lib/events";
 import { advanceEscalation, resolveEscalation } from "./run-escalations";
 import { correctTimeoutReapsWithRepoEvidence } from "@/lib/orchestration/reap-evidence";
 import { emitRunEvent } from "./run-events";
+import { RUNNER_OFFLINE_THRESHOLD_MS } from "@/lib/constants/runner";
 
 export const STALE_RUN_MINUTES = 60;
+
+/**
+ * Absolute ceiling on how long a run may stay open, even with a live agent
+ * heartbeat. Real autopilot turns do run for hours (datacat worked 04:00→11:00
+ * on 2026-08-02), so the ceiling has to clear that comfortably; past it, a
+ * "still running" claim is far more likely a wedged process than progress.
+ */
+export const MAX_RUN_HOURS = 12;
 
 export async function createOrchestrationRun(run: NewOrchestrationRun) {
   const [created] = await db.insert(orchestrationRuns).values(run).returning();
@@ -160,20 +169,36 @@ export async function cleanupStaleOrchestrationRuns(userId?: string) {
   // no evidence of work is a real timeout. (2026-07-11: reaping working agents as
   // timeout was inflating the fleet-pulse "Stalled" — truthseeker generated at
   // 05:00:43 yet its run was stamped timeout at 05:00:02.)
+  // Same freshness floor the CLOSER uses (runEffectiveStartMs): `deliveredAt`
+  // — the runner's ack of the prompt — beats `started_at`, which is merely when
+  // the row was created and can precede delivery by a minute or more. When the
+  // two disagreed, a handoff landing in that window counted as work HERE
+  // (→ 'partial') while closeRunFromSession rightly judged it stale and left the
+  // run open — so the run was reaped with a partial verdict and a NULL summary,
+  // recording a failure whose reason nobody could read. One floor, both paths.
+  const effectiveStart = sql`COALESCE((${orchestrationRuns.payload}->>'deliveredAt')::timestamptz, ${orchestrationRuns.startedAt})`;
   const wroteAfterStart = sql`EXISTS (
     SELECT 1 FROM project_states ps
     WHERE ps.user_id = ${orchestrationRuns.userId}
       AND lower(ps.project_key) = lower(${orchestrationRuns.projectKey})
-      AND GREATEST(ps.ready_at, ps.session_updated_at) > ${orchestrationRuns.startedAt}
+      AND GREATEST(ps.ready_at, ps.session_updated_at) > ${effectiveStart}
   )`;
-  // Alive and recently active = a long task, not a dead run. Don't reap it; it
-  // closes from its own handoff, or a later tick reaps it once it goes quiet.
+  // Alive = a long task, not a dead run. Don't reap it; it closes from its own
+  // handoff, or a later tick reaps it once it goes quiet.
+  //
+  // Liveness must come from the runner's HEARTBEAT (`runtime_observed_at`), not
+  // from handoff freshness (`session_updated_at`): a handoff is written at the
+  // END of a turn, so a genuinely working agent looks dead the whole time it is
+  // working. That inversion is why datacat's run was stamped `timeout` at 05:00
+  // on 2026-08-02 while its agent went on writing until 11:01 — the run record
+  // called a healthy agent dead. `agent_running` is the runner's claim that a
+  // process exists; the heartbeat is what makes that claim still trustworthy.
   const liveNow = sql`EXISTS (
     SELECT 1 FROM project_states ps
     WHERE ps.user_id = ${orchestrationRuns.userId}
       AND lower(ps.project_key) = lower(${orchestrationRuns.projectKey})
       AND ps.agent_running = true
-      AND ps.session_updated_at > NOW() - INTERVAL '20 minutes'
+      AND ps.runtime_observed_at > NOW() - ${sql.raw(`INTERVAL '${Math.round(RUNNER_OFFLINE_THRESHOLD_MS / 1000)} seconds'`)}
   )`;
 
   const staleWhere = and(
@@ -184,7 +209,9 @@ export async function cleanupStaleOrchestrationRuns(userId?: string) {
     // otherwise linger open forever — reap it like a dead runner.
     inArray(orchestrationRuns.state, [ORCH_STATE.WAITING, ORCH_STATE.RUNNING]),
     lt(orchestrationRuns.startedAt, new Date(Date.now() - STALE_RUN_MINUTES * 60 * 1000)),
-    sql`NOT ${liveNow}`,
+    // Live agents are spared — but only up to a hard ceiling, so a wedged
+    // process that keeps its heartbeat alive can't hold a run open forever.
+    sql`(NOT ${liveNow} OR ${orchestrationRuns.startedAt} < NOW() - ${sql.raw(`INTERVAL '${MAX_RUN_HOURS} hours'`)})`,
   );
   const reaped = await db
     .update(orchestrationRuns)
