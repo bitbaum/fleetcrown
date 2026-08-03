@@ -15,6 +15,10 @@ source "$HERE/lib.sh"
 
 app_lookup "${1:?usage: deploy.sh <app> [--env]}"
 FORCE_ENV="${2:-}"
+# apps.conf records the LAPTOP checkout path. A CI runner has the same repo at a
+# different path, so REPO_OVERRIDE re-points just that field — name/port/domains/
+# app_dir/db still come from the manifest, which stays the single source of truth.
+REPO="${REPO_OVERRIDE:-$REPO}"
 SRC="$REPO/$APP_DIR"
 
 [ -d "$SRC" ] || { echo "ERROR: $SRC missing"; exit 1; }
