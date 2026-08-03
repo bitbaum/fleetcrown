@@ -4,7 +4,7 @@
 # WHY: the push-deploy hook used to fire deploy.sh IN PARALLEL with GitHub CI,
 # so prod shipped before the CI verdict existed; the only gate was local
 # pre-push hooks (bypassable with --no-verify, and different per repo). This
-# waits for the pushed commit's check runs and blocks the deploy on a red.
+# waits for the pushed commit's own workflow runs and blocks the deploy on a red.
 #
 # CANCELLED != FAILED. GitHub CI runs with `cancel-in-progress: true`, so a
 # second push (a parallel session, a quick follow-up) CANCELS the earlier
@@ -29,16 +29,26 @@ GRACE_S="${CI_GATE_GRACE_S:-90}"       # window for CI to register at all
 TIMEOUT_S="${CI_GATE_TIMEOUT_S:-1500}" # 25 min ceiling for slow suites
 POLL_S=20
 
-# When the gate runs INSIDE a GitHub Actions deploy job, that job is itself a
-# check run on this SHA — and it can never complete while it waits for itself.
-# The caller passes its own check-suite id here so the gate ignores it. Empty
-# (the laptop push-deploy hook) means "count every check run", as before.
-EXCLUDE_SUITE="${CI_GATE_EXCLUDE_SUITE:-}"
-if [ -n "$EXCLUDE_SUITE" ]; then
-  SELF_FILTER="select(.check_suite.id != ${EXCLUDE_SUITE})"
-else
-  SELF_FILTER="."
-fi
+# WHAT COUNTS AS "CI". Only workflow runs defined in the repository —
+# .github/workflows/*. Everything else that reports against a commit is noise
+# for this purpose:
+#
+#   * Dependabot's updater runs report as workflow runs with event=dynamic and
+#     path=dynamic/dependabot/dependabot-updates. A failed dependency-graph
+#     update is not a statement about whether the code works, but it blocked
+#     solon and reparaturbonus-zh from deploying commits whose `verify` was
+#     green. (Filtering by app slug does NOT separate them — Dependabot runs
+#     under github-actions too. The workflow PATH is the discriminator.)
+#   * Third-party check apps (Snyk) can sit pending forever and deadlock a gate
+#     that waits for every check on the commit.
+#
+# Hence: the workflow-runs API filtered to real repo workflows, not the
+# check-runs API.
+EXCLUDE_RUN="${CI_GATE_EXCLUDE_RUN:-0}"   # the deploy's own run id; it must not wait on itself
+RUN_FILTER='[.workflow_runs[]
+  | select(.path | startswith(".github/workflows/"))
+  | select(.id != '"${EXCLUDE_RUN:-0}"')]'
+
 
 command -v gh >/dev/null 2>&1 || { echo "[ci-gate] gh not installed — passing open"; exit 0; }
 
@@ -61,15 +71,15 @@ while :; do
   # total|completed|hard_failed|cancelled
   #   hard_failed = conclusions that ALWAYS block (a real red)
   #   cancelled   = superseded runs, judged separately below
-  counts=$(gh api "repos/$NWO/commits/$SHA/check-runs" --paginate \
-    --jq "[.check_runs[] | $SELF_FILTER] | \"\(length)|\([.[] | select(.status == \"completed\")] | length)|\([.[] | select(.conclusion | IN(\"failure\",\"timed_out\",\"action_required\"))] | length)|\([.[] | select(.conclusion == \"cancelled\")] | length)\"" \
+  counts=$(gh api "repos/$NWO/actions/runs?head_sha=$SHA&per_page=100" --paginate \
+    --jq "$RUN_FILTER | \"\(length)|\([.[] | select(.status == \"completed\")] | length)|\([.[] | select(.conclusion | IN(\"failure\",\"timed_out\",\"action_required\"))] | length)|\([.[] | select(.conclusion == \"cancelled\")] | length)\"" \
     2>/dev/null) || { echo "[ci-gate] $NWO@$SHA: API unreachable — passing open (network, not verdict)"; exit 0; }
 
   IFS='|' read -r total completed hard_failed cancelled <<<"$counts"
 
   # A genuine red always blocks, tip or not.
   if [ "${hard_failed:-0}" -gt 0 ]; then
-    echo "[ci-gate] $NWO@${SHA:0:8}: CI FAILED ($hard_failed failing check(s)) — deploy blocked"
+    echo "[ci-gate] $NWO@${SHA:0:8}: CI FAILED ($hard_failed failing workflow(s)) — deploy blocked"
     exit 1
   fi
 
@@ -77,7 +87,7 @@ while :; do
     [ "$elapsed" -ge "$GRACE_S" ] && { echo "[ci-gate] $NWO@${SHA:0:8}: no CI configured — passing"; exit 0; }
   elif [ "$completed" -eq "$total" ]; then
     if [ "${cancelled:-0}" -eq 0 ]; then
-      echo "[ci-gate] $NWO@${SHA:0:8}: CI green ($total check(s)) — deploy may proceed"
+      echo "[ci-gate] $NWO@${SHA:0:8}: CI green ($total workflow(s)) — deploy may proceed"
       exit 0
     fi
     # Runs completed but some were cancelled. Cancellation only happens when a

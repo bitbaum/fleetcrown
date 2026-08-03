@@ -238,10 +238,9 @@ jobs:
           # +e on purpose: exit 3 ("superseded") is a normal outcome to branch on,
           # and the default `bash -e` shell would abort the step before we read it.
           set +e
-          # This deploy job is itself a check run on this SHA; without excluding
-          # its own check suite the gate would wait forever for itself.
-          suite=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" --jq '.check_suite_id' 2>/dev/null || echo "")
-          CI_GATE_EXCLUDE_SUITE="$suite" bash "$TOOLING/ci-gate.sh" "$GITHUB_REPOSITORY" "$GITHUB_SHA"
+          # This deploy is itself a workflow run on this SHA; without excluding
+          # its own run id the gate would wait forever for itself.
+          CI_GATE_EXCLUDE_RUN="$GITHUB_RUN_ID" bash "$TOOLING/ci-gate.sh" "$GITHUB_REPOSITORY" "$GITHUB_SHA"
           rc=$?
           case "$rc" in
             0) echo "proceed=true"  >> "$GITHUB_OUTPUT" ;;
