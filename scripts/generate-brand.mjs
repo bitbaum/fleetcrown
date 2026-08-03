@@ -52,6 +52,17 @@ await png(svgIcon, 1024, join(ROOT, "desktop/resources/icon.png"));
 await png(svgGlyph, 22, join(ROOT, "desktop/resources/tray-icon.png"));
 await png(svgGlyph, 44, join(ROOT, "desktop/resources/tray-icon@2x.png"));
 
+// Linux installer icon set. electron-builder hands `linux.icon` to fpm
+// verbatim: given one PNG it installs that single file at its own resolution,
+// so a lone 1024px icon lands only in hicolor/1024x1024 — a size no desktop
+// panel looks in, which is why Fleet Runner showed a blank launcher on KDE.
+// Given a DIRECTORY it installs every <size>x<size>.png into the matching
+// hicolor bucket. Rasterized from the SVG at each size rather than downscaled
+// from icon.png, so the 16px glyph stays legible.
+for (const size of [16, 24, 32, 48, 64, 128, 256, 512, 1024]) {
+  await png(svgIcon, size, join(ROOT, `desktop/resources/icons/${size}x${size}.png`));
+}
+
 // Previews for visual review (dark bg behind the transparent glyph too).
 await png(svgIcon, 256, join(ROOT, ".tmp/brand-preview-icon.png"));
 await png(brandMarkSvg({ stroke: INK, background: CANVAS, radius: 22 }), 64, join(ROOT, ".tmp/brand-preview-64.png"));
