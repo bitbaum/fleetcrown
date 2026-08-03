@@ -27,7 +27,12 @@ on:
         type: string
         default: '20'
       install-flags:
-        description: 'Extra flags for npm ci (e.g. --legacy-peer-deps)'
+        description: 'Extra flags for the install command (e.g. --legacy-peer-deps)'
+        required: false
+        type: string
+        default: ''
+      package-manager:
+        description: 'Override lockfile detection: npm | pnpm | yarn'
         required: false
         type: string
         default: ''
@@ -129,25 +134,68 @@ jobs:
           [ "${vars:-0}" -gt 0 ] || { echo "::error::$src has no variables"; exit 1; }
           echo "pulled $src → $APP_DIR/.env.selfhost.local ($vars variables)"
 
+      # The fleet is mixed: eight apps are npm, four are pnpm. Detect from the
+      # lockfile rather than asking every caller to declare it — the lockfile is
+      # already the source of truth for which manager can install this tree.
+      - name: Detect package manager
+        id: pm
+        env:
+          OVERRIDE: ${{ inputs.package-manager }}
+        run: |
+          set -euo pipefail
+          if [ -n "$OVERRIDE" ]; then mgr="$OVERRIDE"
+          elif [ -f pnpm-lock.yaml ]; then mgr=pnpm
+          elif [ -f yarn.lock ];      then mgr=yarn
+          elif [ -f package-lock.json ]; then mgr=npm
+          else
+            echo "::error::no lockfile at the repo root — cannot install reproducibly"
+            exit 1
+          fi
+          echo "manager=$mgr" >> "$GITHUB_OUTPUT"
+          echo "package manager: $mgr"
+
+      # Must precede setup-node: its pnpm/yarn cache lookup needs the binary.
+      - name: Enable corepack
+        if: steps.pm.outputs.manager != 'npm'
+        run: |
+          set -euo pipefail
+          corepack enable
+          # Only kivvi pins packageManager; the other pnpm apps ship
+          # lockfileVersion 9, so pin pnpm 9 rather than drifting onto latest.
+          if ! node -p "require('./package.json').packageManager||''" 2>/dev/null | grep -q .; then
+            corepack prepare pnpm@9 --activate
+          fi
+
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ inputs.node-version }}
-          cache: npm
+          cache: ${{ steps.pm.outputs.manager }}
 
       - name: Install dependencies
         env:
           APP_DIR: ${{ steps.app.outputs.app_dir }}
+          MGR: ${{ steps.pm.outputs.manager }}
           INSTALL_FLAGS: ${{ inputs.install-flags }}
-          # Deploys build from a lockfile that CI already verified; a repo whose
-          # lockfile has drifted should fail in CI, not silently here.
+          # Deploys build from a lockfile CI already verified; a drifted lockfile
+          # should fail in CI, not be silently papered over here.
           NPM_CONFIG_FUND: 'false'
           NPM_CONFIG_AUDIT: 'false'
         run: |
           set -euo pipefail
-          # Monorepos install at the root; single-app repos next to the app.
-          if [ -f "$APP_DIR/package-lock.json" ]; then dir="$APP_DIR"; else dir="."; fi
-          echo "npm ci in ./$dir $INSTALL_FLAGS"
-          ( cd "$dir" && npm ci $INSTALL_FLAGS )
+          case "$MGR" in
+            npm)  install="npm ci" ;;
+            pnpm) install="pnpm install --frozen-lockfile" ;;
+            yarn) install="yarn install --immutable" ;;
+          esac
+          # Always install at the repo root (workspaces live there). Then install
+          # again inside the app dir only when it carries its OWN lockfile — a
+          # nested standalone project, as in sbb-lost-found and datacat.
+          echo "→ $install in ./"
+          $install $INSTALL_FLAGS
+          if [ "$APP_DIR" != "." ] && [ -f "$APP_DIR/package-lock.json" -o -f "$APP_DIR/pnpm-lock.yaml" -o -f "$APP_DIR/yarn.lock" ]; then
+            echo "→ $install in ./$APP_DIR (nested project with its own lockfile)"
+            ( cd "$APP_DIR" && $install $INSTALL_FLAGS )
+          fi
 
       # Prod only ever receives code CI has verified. Exit 3 = this commit was
       # superseded by a newer push, whose own deploy will ship — skip quietly.
