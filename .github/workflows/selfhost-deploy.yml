@@ -157,19 +157,49 @@ jobs:
       # Must precede setup-node: its pnpm/yarn cache lookup needs the binary.
       - name: Enable corepack
         if: steps.pm.outputs.manager != 'npm'
+        env:
+          MGR: ${{ steps.pm.outputs.manager }}
         run: |
           set -euo pipefail
           corepack enable
-          # Only kivvi pins packageManager; the other pnpm apps ship
-          # lockfileVersion 9, so pin pnpm 9 rather than drifting onto latest.
-          if ! node -p "require('./package.json').packageManager||''" 2>/dev/null | grep -q .; then
-            corepack prepare pnpm@9 --activate
+          # The repo's own packageManager field is the source of truth for its
+          # toolchain. Guessing a version from lockfileVersion does not work —
+          # pnpm 9, 10 and 11 all write lockfileVersion 9.0, and pinning 9
+          # against a pnpm-10-style pnpm-workspace.yaml breaks the install.
+          if node -p "require('./package.json').packageManager||''" 2>/dev/null | grep -q .; then
+            echo "using declared toolchain: $(node -p "require('./package.json').packageManager")"
+          else
+            echo "::warning::$GITHUB_REPOSITORY does not declare packageManager in package.json — falling back to $MGR@latest, which can change under you. Declare it."
+            corepack prepare "$MGR@latest" --activate
+          fi
+
+      # A dependency cache is an optimisation. Probing it first means a broken
+      # cache lookup degrades to a slower deploy instead of failing one — the
+      # pnpm store probe reads pnpm-workspace.yaml and errors on configs it
+      # does not understand, which took vitareba's first deploy down.
+      - name: Probe dependency cache
+        id: cache
+        env:
+          MGR: ${{ steps.pm.outputs.manager }}
+        run: |
+          set +e
+          case "$MGR" in
+            npm)  ok=0 ;;
+            pnpm) pnpm store path >/dev/null 2>&1; ok=$? ;;
+            yarn) yarn config get cacheFolder >/dev/null 2>&1; ok=$? ;;
+          esac
+          if [ "$ok" -eq 0 ]; then
+            echo "use=$MGR" >> "$GITHUB_OUTPUT"
+            echo "dependency cache: $MGR"
+          else
+            echo "use=" >> "$GITHUB_OUTPUT"
+            echo "::warning::$MGR cache unavailable — deploying without it (slower, not broken)"
           fi
 
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ inputs.node-version }}
-          cache: ${{ steps.pm.outputs.manager }}
+          cache: ${{ steps.cache.outputs.use }}
 
       - name: Install dependencies
         env:
