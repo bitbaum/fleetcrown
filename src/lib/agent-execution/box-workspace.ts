@@ -16,11 +16,12 @@ import { execFileSync } from "child_process";
 import { getUserProjects } from "@/db/queries/user-projects";
 import { getSelfImprovementTarget } from "@/db/queries/frontier";
 
-const DEV_ROOT = process.env.FLEETCROWN_BOX_DEV_ROOT || path.join(os.homedir(), "dev");
-
-function sanitizeKey(tab: string): string {
-  return tab.toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "workspace";
-}
+// Path derivation lives in the pure module so the poller (transcript lookups)
+// and this file (cloning) can never disagree about where a project is.
+import {
+  BOX_DEV_ROOT as DEV_ROOT,
+  sanitizeWorkspaceKey as sanitizeKey,
+} from "@/lib/agent-execution/box-workspace-path";
 
 // Re-exported for existing importers; the implementation is the shared pure
 // module so dispatch routing and workspace prep can never disagree.

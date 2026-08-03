@@ -30,6 +30,9 @@ type TrackedRun = {
   runId: string
   dir: string
   deliveredAtMs: number
+  /** Set once we've warned that no transcript exists under `dir`, so a genuine
+   *  misconfiguration is audible without the retry loop shouting every tick. */
+  warnedNoTranscript?: boolean
 }
 
 const ledger = new Map<string, TrackedRun>()
@@ -63,7 +66,21 @@ export async function reportAll(now = Date.now()): Promise<void> {
       const usage = collectClaudeUsage(entry.dir, entry.deliveredAtMs, now)
       // No transcript dir yet (agent still booting) — keep tracking, retry
       // next tick. Zero-usage windows still report: an honest 0 beats null.
-      if (!usage) continue
+      if (!usage) {
+        // …but say so once. This branch is also what a MISCONFIGURED dir looks
+        // like, and its silence is why #145 went a full day unnoticed: every
+        // run tracked the dispatch's laptop path, no transcript could ever
+        // match it, and the reporter skipped without a word. A metering path
+        // that fails quietly reads exactly like a fleet that spent nothing.
+        if (!entry.warnedNoTranscript) {
+          entry.warnedNoTranscript = true
+          console.warn(
+            `[usage] no Claude transcript under ${entry.dir} for run ${entry.runId.slice(0, 8)} — ` +
+              `still retrying; if this persists the tracked dir is wrong, not the agent slow.`,
+          )
+        }
+        continue
+      }
       const resp = await fetch(`${BASE_URL}/api/orchestration/runs/${entry.runId}/usage`, {
         method: 'POST',
         headers: {
