@@ -1,0 +1,204 @@
+name: Self-host deploy
+
+# Reusable CD for every app on bitbaum. Call it from an app repo with a 12-line
+# shim (see docs/infrastructure/self-host-cd.md); all the logic lives here so
+# there is exactly ONE deploy pipeline to fix, audit, or improve.
+#
+# What it does, in order:
+#   1. wait for the pushed commit's own CI to go green (ci-gate.sh — a red blocks)
+#   2. pull the app's runtime .env FROM THE BOX (the box stays the env SSOT;
+#      no prod secrets are duplicated into GitHub)
+#   3. build + rsync + atomic symlink swap + health check + auto-rollback
+#      (scripts/hetzner/deploy.sh — the same script laptop deploys use)
+#   4. verify the PUBLIC url returns 2xx/3xx before calling the deploy done
+#
+# The only secret an app repo needs is HETZNER_SSH_PRIVATE_KEY (ubuntu@bitbaum).
+
+on:
+  workflow_call:
+    inputs:
+      app:
+        description: 'Key in scripts/hetzner/apps.conf — SSOT for port, domain, app dir and database'
+        required: true
+        type: string
+      node-version:
+        description: 'Node version to build with'
+        required: false
+        type: string
+        default: '20'
+      install-flags:
+        description: 'Extra flags for npm ci (e.g. --legacy-peer-deps)'
+        required: false
+        type: string
+        default: ''
+    secrets:
+      HETZNER_SSH_PRIVATE_KEY:
+        required: true
+
+jobs:
+  deploy:
+    name: ${{ inputs.app }} → bitbaum
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    # Never cancel a deploy in flight: the swap is atomic but a half-finished
+    # rsync leaves a junk release dir. Queue instead.
+    concurrency:
+      group: selfhost-deploy-${{ inputs.app }}
+      cancel-in-progress: false
+
+    steps:
+      # A missing secret must FAIL, not skip. A deploy job that silently does
+      # nothing and reports green is the exact failure mode this pipeline exists
+      # to remove — prod would drift from main with no signal anywhere.
+      - name: Require deploy key
+        env:
+          SSH_KEY: ${{ secrets.HETZNER_SSH_PRIVATE_KEY }}
+        run: |
+          if [ -z "$SSH_KEY" ]; then
+            echo "::error::HETZNER_SSH_PRIVATE_KEY is not set on this repository — ${{ inputs.app }} cannot deploy."
+            exit 1
+          fi
+          echo "deploy key present"
+
+      - name: Checkout app
+        uses: actions/checkout@v7
+
+      # Cloned rather than checked out: actions/checkout can only write inside
+      # the workspace, and a second repo there would end up inside the app's own
+      # build/lint globs.
+      - name: Fetch fleet tooling
+        run: |
+          git clone --quiet --depth 1 https://github.com/maonakamoto/fleetcrown.git "$RUNNER_TEMP/fleet-tooling"
+          echo "tooling at $(git -C "$RUNNER_TEMP/fleet-tooling" rev-parse --short HEAD)"
+
+      - name: Resolve app from manifest
+        id: app
+        run: |
+          set -euo pipefail
+          TOOLING="$RUNNER_TEMP/fleet-tooling/scripts/hetzner"
+          # lib.sh sets NAME PORT DOMAINS REPO APP_DIR DB, and exits non-zero on
+          # an unknown app — a typo in the caller shim fails here, not in prod.
+          source "$TOOLING/lib.sh"
+          app_lookup "${{ inputs.app }}"
+          {
+            echo "name=$NAME"
+            echo "port=$PORT"
+            echo "app_dir=$APP_DIR"
+            echo "domain=${DOMAINS%%,*}"
+            echo "ip=$HETZNER_IP"
+            echo "tooling=$TOOLING"
+          } >> "$GITHUB_OUTPUT"
+          echo "resolved $NAME → port $PORT, dir '$APP_DIR', domain ${DOMAINS%%,*}, db $DB"
+
+      - name: Setup SSH
+        env:
+          SSH_KEY: ${{ secrets.HETZNER_SSH_PRIVATE_KEY }}
+          IP: ${{ steps.app.outputs.ip }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$IP" >> ~/.ssh/known_hosts 2>/dev/null
+          ssh -o BatchMode=yes "ubuntu@$IP" 'echo "ssh to $(hostname) ok"'
+
+      # The box holds the authoritative runtime env (NEXT_PUBLIC_* is baked in at
+      # build time, so the builder needs it too). Pulling it keeps ONE copy of
+      # every prod secret instead of forking it into N GitHub secret stores.
+      - name: Pull runtime env from the box
+        env:
+          NAME: ${{ steps.app.outputs.name }}
+          APP_DIR: ${{ steps.app.outputs.app_dir }}
+          IP: ${{ steps.app.outputs.ip }}
+        run: |
+          set -euo pipefail
+          src=""
+          for cand in "/opt/$NAME/shared/.env" "/opt/$NAME/app/.env"; do
+            if ssh -o BatchMode=yes "ubuntu@$IP" "test -f '$cand'"; then src="$cand"; break; fi
+          done
+          if [ -z "$src" ]; then
+            echo "::error::no runtime .env found on the box for $NAME (looked in shared/ and app/)"
+            exit 1
+          fi
+          dest="$GITHUB_WORKSPACE/$APP_DIR/.env.selfhost.local"
+          scp -q -o BatchMode=yes "ubuntu@$IP:$src" "$dest"
+          chmod 600 "$dest"
+          # Count, never a bare "ok": an empty file would otherwise sail through
+          # and produce a build with every env var silently undefined.
+          vars=$(grep -cE '^[A-Za-z_][A-Za-z0-9_]*=' "$dest" || true)
+          [ "${vars:-0}" -gt 0 ] || { echo "::error::$src has no variables"; exit 1; }
+          echo "pulled $src → $APP_DIR/.env.selfhost.local ($vars variables)"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: npm
+
+      - name: Install dependencies
+        env:
+          APP_DIR: ${{ steps.app.outputs.app_dir }}
+          INSTALL_FLAGS: ${{ inputs.install-flags }}
+          # Deploys build from a lockfile that CI already verified; a repo whose
+          # lockfile has drifted should fail in CI, not silently here.
+          NPM_CONFIG_FUND: 'false'
+          NPM_CONFIG_AUDIT: 'false'
+        run: |
+          set -euo pipefail
+          # Monorepos install at the root; single-app repos next to the app.
+          if [ -f "$APP_DIR/package-lock.json" ]; then dir="$APP_DIR"; else dir="."; fi
+          echo "npm ci in ./$dir $INSTALL_FLAGS"
+          ( cd "$dir" && npm ci $INSTALL_FLAGS )
+
+      # Prod only ever receives code CI has verified. Exit 3 = this commit was
+      # superseded by a newer push, whose own deploy will ship — skip quietly.
+      - name: Wait for CI to pass on this commit
+        id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TOOLING: ${{ steps.app.outputs.tooling }}
+        run: |
+          # +e on purpose: exit 3 ("superseded") is a normal outcome to branch on,
+          # and the default `bash -e` shell would abort the step before we read it.
+          set +e
+          # This deploy job is itself a check run on this SHA; without excluding
+          # its own check suite the gate would wait forever for itself.
+          suite=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" --jq '.check_suite_id' 2>/dev/null || echo "")
+          CI_GATE_EXCLUDE_SUITE="$suite" bash "$TOOLING/ci-gate.sh" "$GITHUB_REPOSITORY" "$GITHUB_SHA"
+          rc=$?
+          case "$rc" in
+            0) echo "proceed=true"  >> "$GITHUB_OUTPUT" ;;
+            3) echo "proceed=false" >> "$GITHUB_OUTPUT"
+               echo "::notice::commit superseded — a newer push will deploy" ;;
+            *) echo "::error::CI is not green for $GITHUB_SHA — deploy blocked"; exit 1 ;;
+          esac
+
+      - name: Deploy
+        if: steps.gate.outputs.proceed == 'true'
+        env:
+          REPO_OVERRIDE: ${{ github.workspace }}
+          TOOLING: ${{ steps.app.outputs.tooling }}
+        run: bash "$TOOLING/deploy.sh" "${{ inputs.app }}"
+
+      # deploy.sh already health-checks localhost and auto-rolls-back. This
+      # checks what a USER actually hits — through Caddy, TLS and DNS — because
+      # "the service is up" and "the site works" are different claims.
+      - name: Verify public URL
+        if: steps.gate.outputs.proceed == 'true'
+        env:
+          DOMAIN: ${{ steps.app.outputs.domain }}
+        run: |
+          set -uo pipefail
+          if [ "$DOMAIN" = "-" ]; then
+            echo "::notice::${{ inputs.app }} is internal-only — no public URL to check"
+            exit 0
+          fi
+          for attempt in $(seq 1 10); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 "https://$DOMAIN/" || echo 000)
+            if [ "$code" -ge 200 ] 2>/dev/null && [ "$code" -lt 400 ]; then
+              echo "https://$DOMAIN → $code (attempt $attempt)"
+              exit 0
+            fi
+            sleep 6
+          done
+          echo "::error::https://$DOMAIN returned $code after the deploy"
+          exit 1

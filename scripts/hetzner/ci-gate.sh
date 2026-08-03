@@ -29,6 +29,17 @@ GRACE_S="${CI_GATE_GRACE_S:-90}"       # window for CI to register at all
 TIMEOUT_S="${CI_GATE_TIMEOUT_S:-1500}" # 25 min ceiling for slow suites
 POLL_S=20
 
+# When the gate runs INSIDE a GitHub Actions deploy job, that job is itself a
+# check run on this SHA — and it can never complete while it waits for itself.
+# The caller passes its own check-suite id here so the gate ignores it. Empty
+# (the laptop push-deploy hook) means "count every check run", as before.
+EXCLUDE_SUITE="${CI_GATE_EXCLUDE_SUITE:-}"
+if [ -n "$EXCLUDE_SUITE" ]; then
+  SELF_FILTER="select(.check_suite.id != ${EXCLUDE_SUITE})"
+else
+  SELF_FILTER="."
+fi
+
 command -v gh >/dev/null 2>&1 || { echo "[ci-gate] gh not installed — passing open"; exit 0; }
 
 # The branch tip decides whether a cancelled run means "superseded" (skip) or
@@ -51,7 +62,7 @@ while :; do
   #   hard_failed = conclusions that ALWAYS block (a real red)
   #   cancelled   = superseded runs, judged separately below
   counts=$(gh api "repos/$NWO/commits/$SHA/check-runs" --paginate \
-    --jq '[.check_runs[]] | "\(length)|\([.[] | select(.status == "completed")] | length)|\([.[] | select(.conclusion | IN("failure","timed_out","action_required"))] | length)|\([.[] | select(.conclusion == "cancelled")] | length)"' \
+    --jq "[.check_runs[] | $SELF_FILTER] | \"\(length)|\([.[] | select(.status == \"completed\")] | length)|\([.[] | select(.conclusion | IN(\"failure\",\"timed_out\",\"action_required\"))] | length)|\([.[] | select(.conclusion == \"cancelled\")] | length)\"" \
     2>/dev/null) || { echo "[ci-gate] $NWO@$SHA: API unreachable — passing open (network, not verdict)"; exit 0; }
 
   IFS='|' read -r total completed hard_failed cancelled <<<"$counts"
