@@ -44,10 +44,15 @@ POLL_S=20
 #
 # Hence: the workflow-runs API filtered to real repo workflows, not the
 # check-runs API.
-EXCLUDE_RUN="${CI_GATE_EXCLUDE_RUN:-0}"   # the deploy's own run id; it must not wait on itself
+# Exclude the DEPLOY workflow itself — every run of it, not just the current
+# one. A retry after a failed deploy lands on the SAME SHA as the failure, so
+# counting past deploy runs makes the second attempt permanently unreachable:
+# the gate reads its own earlier failure as "CI is red". solon hit exactly this.
+EXCLUDE_PATH="${CI_GATE_EXCLUDE_PATH:-}"
+_path_clause=""
+[ -n "$EXCLUDE_PATH" ] && _path_clause="| select(.path != \"$EXCLUDE_PATH\")"
 RUN_FILTER='[.workflow_runs[]
-  | select(.path | startswith(".github/workflows/"))
-  | select(.id != '"${EXCLUDE_RUN:-0}"')]'
+  | select(.path | startswith(".github/workflows/")) '"$_path_clause"']'
 
 
 command -v gh >/dev/null 2>&1 || { echo "[ci-gate] gh not installed — passing open"; exit 0; }
