@@ -1,7 +1,7 @@
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
 import { db } from "@/db";
 import { entities, entityRelations, interactions, goals, userProjects, orgMemberships, orgs } from "@/db/schema";
-import { eq, and, desc, inArray, ilike, or } from "drizzle-orm";
+import { eq, and, asc, desc, inArray, ilike, or } from "drizzle-orm";
 import { fetchAttributesByEntityIds, getOrgPeerIds } from "./utils";
 import { findProjectEntityByName } from "./project-merge";
 import { z } from "zod";
@@ -316,10 +316,15 @@ export async function getProjectDetail(userId: string, id: string) {
           progress: goals.progress,
           targetDate: goals.targetDate,
           milestones: goals.milestones,
+          createdAt: goals.createdAt,
         })
         .from(goals)
         .where(and(eq(goals.entityId, id), eq(goals.userId, userId)))
-        .orderBy(desc(goals.progress));
+        // Progress orders the list, creation breaks ties: a generated roadmap
+        // is all-zero on day one, and without the tiebreaker its build order
+        // came back in whatever order the DB felt like — so "milestone 1" was
+        // not reproducibly milestone 1.
+        .orderBy(desc(goals.progress), asc(goals.createdAt));
 
   const [attrMap, relations, recentInteractions, linkedGoals, userProject] = await Promise.all([
     fetchAttributesByEntityIds([id]),

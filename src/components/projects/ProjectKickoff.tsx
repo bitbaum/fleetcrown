@@ -1,0 +1,274 @@
+"use client";
+
+/**
+ * "Make it happen" — the one control that starts a project.
+ *
+ * Everything this runs already existed on the page, scattered: AI profile fill
+ * (a chip in Context), milestone generation (a second chip inside that chip's
+ * drawer), repo provisioning (inside a collapsed Project settings block), and
+ * dispatch (a link to another page). A person with an idea and a paragraph
+ * describing it had to find four controls and know their order. This runs them
+ * in that order, from the description they already wrote, and reports each one
+ * as it lands — so a partial failure still says exactly what got done.
+ *
+ * The plan comes from lib/project-kickoff, the same module that decides whether
+ * this hero renders at all, so the button can never do more or less than the
+ * page claims it will.
+ */
+
+import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { AlertCircle, Check, Loader2, Rocket, Zap } from "lucide-react";
+import { postJson } from "@/lib/api/fetch";
+import { fleetSurfaceHref } from "@/lib/fleet-context";
+import { LONG_TEXT_MAX } from "@/lib/constants";
+import {
+  KICKOFF_STEP_LABEL,
+  hasKickoffSource,
+  planKickoff,
+  type KickoffStepId,
+} from "@/lib/project-kickoff";
+
+type StepState = "pending" | "running" | "done" | "failed";
+type StepRun = { id: KickoffStepId; state: StepState; note?: string };
+
+export function ProjectKickoff({
+  projectId,
+  projectName,
+  workspaceKey,
+  description,
+  attrs,
+  goalCount,
+  hasRepo,
+  needed,
+}: {
+  projectId: string;
+  projectName: string;
+  workspaceKey: string;
+  /** The project's own description — the brief an agent gets briefed from. */
+  description: string | null;
+  attrs: Record<string, string>;
+  goalCount: number;
+  hasRepo: boolean;
+  /** Server-computed needsKickoff. Once a run has started this card stays put
+   *  regardless: the refresh that follows a successful kickoff flips `needed`
+   *  to false, and unmounting would take the result and the "watch it work"
+   *  link with it. */
+  needed: boolean;
+}) {
+  const router = useRouter();
+  const [text, setText] = useState("");
+  const [wantRepo, setWantRepo] = useState(true);
+  const [visibility, setVisibility] = useState<"private" | "public">("private");
+  const [steps, setSteps] = useState<StepRun[] | null>(null);
+  const [running, setRunning] = useState(false);
+  const [finished, setFinished] = useState(false);
+
+  const source = (description?.trim() || text.trim()) || null;
+  const plan = planKickoff({ attrs, goalCount, hasRepo, wantRepo: !hasRepo && wantRepo });
+  const needsSource = plan.includes("profile") || plan.includes("milestones");
+  const ready = !needsSource || hasKickoffSource(source);
+
+  function mark(id: KickoffStepId, state: StepState, note?: string) {
+    setSteps((prev) => (prev ?? []).map((s) => (s.id === id ? { ...s, state, note } : s)));
+  }
+
+  /** POST a step's route; returns its JSON body, or null with the step marked failed. */
+  async function step(
+    id: KickoffStepId,
+    path: string,
+    body: Record<string, unknown>,
+  ): Promise<Record<string, unknown> | null> {
+    mark(id, "running");
+    try {
+      const res = await postJson(`/api/projects/${projectId}/${path}`, body);
+      const json = (await res.json()) as Record<string, unknown>;
+      if (!res.ok || !json.ok) {
+        mark(id, "failed", typeof json.error === "string" ? json.error : `HTTP ${res.status}`);
+        return null;
+      }
+      return json;
+    } catch {
+      mark(id, "failed", "Network error");
+      return null;
+    }
+  }
+
+  async function run() {
+    setRunning(true);
+    setFinished(false);
+    setSteps(plan.map((id) => ({ id, state: "pending" })));
+
+    // Profile and milestones read the same text and don't depend on each other.
+    // Run them together — serialising two 25s model calls is 25s of nothing.
+    await Promise.all(
+      plan
+        .filter((id) => id === "profile" || id === "milestones")
+        .map(async (id) => {
+          const json = await step(id, id === "profile" ? "brief" : "roadmap", { text: source });
+          if (!json) return;
+          if (id === "profile") {
+            const count = Object.keys((json.applied as object) ?? {}).length;
+            mark(id, "done", `${count} field${count === 1 ? "" : "s"} filled`);
+          } else {
+            const created = (json.created as string[]) ?? [];
+            mark(id, "done", `${created.length} milestone${created.length === 1 ? "" : "s"}`);
+          }
+        }),
+    );
+
+    // Repo second: "auto" resolves the starter from the stack the profile step
+    // just wrote, so this only picks well once that has landed.
+    if (plan.includes("repo")) {
+      const json = await step("repo", "provision", { template: "auto", visibility });
+      if (json) {
+        const repo = json.repo as { full_name?: string } | undefined;
+        mark("repo", "done", repo?.full_name ?? "created");
+      }
+    }
+
+    // Dispatch last, and unconditionally: a kickoff that sets everything up and
+    // then puts nobody to work is the same dead end in a new costume. The
+    // prompt is composed server-side from whatever actually landed above.
+    const dispatched = await step("dispatch", "dispatch", { kind: "kickoff" });
+    if (dispatched) mark("dispatch", "done", "agent working");
+
+    setRunning(false);
+    setFinished(true);
+    // Bring the page in line with what just landed (profile, milestones, repo)
+    // without unmounting this card — the result summary and the link to watch
+    // it work are the only place the run is reported.
+    router.refresh();
+  }
+
+  const failures = (steps ?? []).filter((s) => s.state === "failed");
+  const dispatchOk = (steps ?? []).some((s) => s.id === "dispatch" && s.state === "done");
+
+  if (!needed && !steps) return null;
+
+  return (
+    <section className="ui-card-shell space-y-4 p-4 sm:p-5" aria-labelledby="project-kickoff-title">
+      <div>
+        <p className="ui-kicker">Start</p>
+        <h2 id="project-kickoff-title" className="text-lg font-semibold text-text-primary">
+          Make it happen
+        </h2>
+        {!steps && (
+          <p className="mt-1 text-sm leading-relaxed text-text-secondary">
+            One click does the setup: {plan.map((id) => KICKOFF_STEP_LABEL[id].toLowerCase()).join(", ")}
+            . You can edit anything it writes afterwards.
+          </p>
+        )}
+      </div>
+
+      {!steps && needsSource && !hasKickoffSource(description) && (
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          rows={4}
+          maxLength={LONG_TEXT_MAX}
+          disabled={running}
+          placeholder={`What is ${projectName}, who is it for, and what should exist at the end? A paragraph is plenty — everything else is derived from it.`}
+          className="ui-input w-full text-base leading-relaxed sm:text-sm"
+        />
+      )}
+
+      {!steps && !hasRepo && (
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border-subtle bg-surface-raised p-3">
+          <label className="flex items-center gap-2 text-sm text-text-secondary">
+            <input
+              type="checkbox"
+              checked={wantRepo}
+              disabled={running}
+              onChange={(e) => setWantRepo(e.target.checked)}
+              className="h-5 w-5 shrink-0"
+            />
+            Create the GitHub repository too
+          </label>
+          {wantRepo && (
+            <select
+              className="ui-input-compact"
+              value={visibility}
+              disabled={running}
+              onChange={(e) => setVisibility(e.target.value as "private" | "public")}
+              aria-label="Repository visibility"
+            >
+              <option value="private">Private</option>
+              <option value="public">Public</option>
+            </select>
+          )}
+          <span className="text-xs text-text-muted">
+            {wantRepo
+              ? "Starter picked from your stack. Without a repo an agent has nowhere to build."
+              : "Skipped — an agent can still plan, but it has nowhere to write code."}
+          </span>
+        </div>
+      )}
+
+      {!finished && (
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={run}
+            disabled={running || !ready}
+            className="ui-btn-primary gap-2 px-5 py-3 text-base"
+          >
+            {running ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Zap className="h-4 w-4" aria-hidden="true" />}
+            {running ? "Making it happen…" : "Make it happen"}
+          </button>
+          {!ready && (
+            <span className="text-xs text-text-muted">
+              Write a sentence about the project first — that is the whole brief.
+            </span>
+          )}
+        </div>
+      )}
+
+      {steps && (
+        <ol className="space-y-1.5 border-t border-border-subtle pt-3">
+          {steps.map((s) => (
+            <li key={s.id} className="flex items-center gap-2 text-sm">
+              <StepIcon state={s.state} />
+              <span className={s.state === "failed" ? "text-text-secondary" : "text-text-primary"}>
+                {KICKOFF_STEP_LABEL[s.id]}
+              </span>
+              {s.note && (
+                <span className={s.state === "failed" ? "ui-error text-xs" : "text-xs text-text-muted"}>
+                  {s.note}
+                </span>
+              )}
+            </li>
+          ))}
+        </ol>
+      )}
+
+      {finished && (
+        <div className="space-y-2 border-t border-border-subtle pt-3">
+          {dispatchOk ? (
+            <Link href={fleetSurfaceHref("terminal", workspaceKey)} className="ui-btn-primary gap-2">
+              <Rocket className="h-4 w-4" aria-hidden="true" /> Watch it work
+            </Link>
+          ) : (
+            <button type="button" onClick={run} className="ui-btn-secondary gap-2">
+              Try again
+            </button>
+          )}
+          {failures.length > 0 && (
+            <p className="text-xs text-text-muted">
+              {failures.length} step{failures.length === 1 ? "" : "s"} did not complete — everything above
+              them landed and is editable on this page.
+            </p>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function StepIcon({ state }: { state: StepState }) {
+  if (state === "running") return <Loader2 className="h-4 w-4 shrink-0 animate-spin text-accent-text" aria-hidden="true" />;
+  if (state === "done") return <Check className="h-4 w-4 shrink-0 text-status-positive" aria-hidden="true" />;
+  if (state === "failed") return <AlertCircle className="h-4 w-4 shrink-0 text-status-negative" aria-hidden="true" />;
+  return <span className="ui-dot ui-dot-neutral mx-1.5 shrink-0" aria-hidden="true" />;
+}

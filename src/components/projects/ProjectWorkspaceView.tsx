@@ -12,7 +12,10 @@ import { getProjectLinks } from "./project-detail-types";
 import { getHealthSignals, HEALTH_SIGNAL_CONFIG } from "./project-badges";
 import { computeProjectHealth } from "@/lib/project-health";
 import { FixSignalButton } from "./ProjectActionButtons";
+import { ProjectKickoff } from "./ProjectKickoff";
 import { AssistantContextBridge } from "./AssistantContextBridge";
+import { needsKickoff } from "@/lib/project-kickoff";
+import { cleanDescription } from "@/lib/project-display";
 
 const SECTIONS = [
   { href: "#overview", label: "Overview" },
@@ -158,6 +161,24 @@ export function ProjectWorkspaceView({
           </a>
         ))}
       </nav>
+
+      {!dossier.readonly && (
+        <ProjectKickoff
+          projectId={project.id}
+          projectName={project.name}
+          workspaceKey={workspaceKey}
+          description={cleanDescription(project.description)}
+          attrs={attrs}
+          goalCount={detail.linkedGoals.length}
+          hasRepo={Boolean(links.repo)}
+          needed={needsKickoff({
+            attrs,
+            goalCount: detail.linkedGoals.length,
+            hasRepo: Boolean(links.repo),
+            agentRunning: Boolean(dossier.state?.agentRunning),
+          })}
+        />
+      )}
 
       <section id="overview" className="scroll-mt-28" aria-labelledby="project-overview-title">
         <h2 id="project-overview-title" className="sr-only">Overview</h2>

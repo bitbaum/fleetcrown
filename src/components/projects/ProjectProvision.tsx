@@ -8,20 +8,13 @@
 import { useState } from "react";
 import { Loader2, Rocket, GitBranch } from "lucide-react";
 import { postJson } from "@/lib/api/fetch";
-
-const TEMPLATES = [
-  { id: "nextjs-tailwind", label: "Next.js + Tailwind" },
-  { id: "python-fastapi", label: "Python + FastAPI" },
-  { id: "hono-cloudflare", label: "Hono + Cloudflare" },
-  { id: "html-tailwind", label: "Static HTML + Tailwind" },
-  { id: "bare", label: "Bare (README only)" },
-] as const;
+import { DEFAULT_PROVISION_TEMPLATE, PROVISION_TEMPLATES } from "@/config/project-templates";
 
 type Done = { repo: { full_name: string; gitUrl: string }; dirPath: string };
 
 export function ProjectProvision({ projectId, onReload }: { projectId: string; onReload: () => void }) {
   const [open, setOpen] = useState(false);
-  const [template, setTemplate] = useState<string>("nextjs-tailwind");
+  const [template, setTemplate] = useState<string>(DEFAULT_PROVISION_TEMPLATE);
   const [visibility, setVisibility] = useState<"private" | "public">("private");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,7 +59,7 @@ export function ProjectProvision({ projectId, onReload }: { projectId: string; o
           <p className="text-xs text-text-secondary">Creates a GitHub repo, seeds a starter, and links it so this project is dispatchable in Control.</p>
           <div className="flex flex-wrap items-center gap-2">
             <select className="ui-input-compact" value={template} onChange={(e) => setTemplate(e.target.value)} aria-label="Starter template">
-              {TEMPLATES.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
+              {PROVISION_TEMPLATES.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
             </select>
             <select className="ui-input-compact" value={visibility} onChange={(e) => setVisibility(e.target.value as "private" | "public")} aria-label="Repo visibility">
               <option value="private">Private</option>

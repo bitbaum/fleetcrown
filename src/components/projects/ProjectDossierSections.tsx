@@ -193,7 +193,13 @@ export function NextSection({
           )}
         </div>
       ) : (
-        <p className="text-sm text-text-muted">No queued next step — dispatch one from Control.</p>
+        // The old copy here sent people to another page to do the one thing
+        // this page exists for. Point at the controls that are already on it.
+        <p className="text-sm text-text-muted">
+          {dispatchable
+            ? "No queued next step yet — set one under Plan, or let Make it happen derive one from the description."
+            : "No queued next step recorded."}
+        </p>
       )}
       {showGoals && goals.length > 0 && (
         <div className="space-y-2.5 border-t border-border-subtle pt-3">
