@@ -196,9 +196,32 @@ jobs:
             echo "::warning::$MGR cache unavailable — deploying without it (slower, not broken)"
           fi
 
+      # The build must run on the SAME Node the repo's CI verified with. npm 10
+      # and 11 disagree about optional platform deps, so a lockfile npm 11 wrote
+      # reads as "out of sync" to npm 10 — that is how hirnli's CI passed on
+      # Node 24 while its deploy failed `npm ci` on Node 20. A committed .nvmrc
+      # is the one declaration both sides read; the input is the fallback.
+      - name: Resolve Node version
+        id: node
+        env:
+          FALLBACK: ${{ inputs.node-version }}
+        run: |
+          set -euo pipefail
+          for f in .nvmrc .node-version; do
+            if [ -f "$f" ]; then
+              echo "file=$f" >> "$GITHUB_OUTPUT"
+              echo "Node version from $f: $(tr -d 'v \n' < "$f")"
+              exit 0
+            fi
+          done
+          echo "file=" >> "$GITHUB_OUTPUT"
+          echo "version=$FALLBACK" >> "$GITHUB_OUTPUT"
+          echo "::notice::no .nvmrc — building on Node $FALLBACK. If this repo's CI uses a different major, commit a .nvmrc both can read."
+
       - uses: actions/setup-node@v4
         with:
-          node-version: ${{ inputs.node-version }}
+          node-version: ${{ steps.node.outputs.version }}
+          node-version-file: ${{ steps.node.outputs.file }}
           cache: ${{ steps.cache.outputs.use }}
 
       - name: Install dependencies
