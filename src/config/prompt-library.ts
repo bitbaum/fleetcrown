@@ -88,6 +88,29 @@ export const CATEGORY_META: Record<PromptCategory, { label: string; color: strin
   content:     { label: "Content",       color: "ui-cat-marketing" },
 };
 
+/**
+ * The closing half of the autopilot contract — what a turn owes before it may
+ * call itself done.
+ *
+ * Why this text exists (2026-08-02): when a project declares a
+ * `definition_of_done`, a DIFFERENT model grades the handoff against that bar
+ * and downgrades the run to `partial` when the bar isn't evidenced. The worker
+ * was never told this. The bar reached it only as one line of background in the
+ * project-context block, among Mission / Vision / Stack / Conventions — so
+ * agents did good work, wrote `status: ready`, and were graded against a
+ * contract they had never been shown. Two clean runs closed `partial` on
+ * literally "No evidence that tests were run and passed".
+ *
+ * The judge sees ONLY the handoff, so an unevidenced claim is indistinguishable
+ * from work not done — which is exactly the Ralph-Wiggum property the gate
+ * exists to defend, and why the answer is to tell the worker the contract
+ * rather than to soften the judge. Stating it here costs a paragraph and makes
+ * both halves grade the same thing.
+ */
+const HANDOFF_CLOSE_CONTRACT = `Close (what you owe before writing \`status: ready\`):
+This project's "Definition of done" (in the project context above) is not advice — a different model reads your handoff against it and downgrades the run to \`partial\` if the bar isn't evidenced, which loops you back onto the same task. That reviewer sees ONLY what you wrote, so run the checks the bar names and record the actual result in the handoff fields (\`tests:\`, \`tsc:\`, \`lint:\`, \`health:\`, \`commit:\`). "Tests pass" with no run behind it is worse than useless.
+If a required check genuinely cannot run — no suite exists, no deploy target, credentials missing — write that in the field verbatim ("no suite", "deploy not configured") rather than omitting it. Silence reads as skipped; an honest impossibility is information the reviewer and the founder can both act on, and it names the next piece of work.`;
+
 export const PROMPT_TEMPLATES: PromptTemplate[] = [
   // ─── Fleet Control ────────────────────────────────────────────────────────
   {
@@ -914,6 +937,8 @@ AskUserQuestion ONLY when crossing the gravity well: overriding a specific sessi
 
 Scope: one user-visible outcome. >3 commits → split sessions. Pivot at commit boundaries only — never mid-commit.
 
+${HANDOFF_CLOSE_CONTRACT}
+
 Optional: append mid-session observations under "## Proposed" in ~/.fleetcrown/sessions/<P>.roadmap.md.
 
 Worked examples (read these once; they replace 200 lines of edge-case rules):
@@ -942,6 +967,8 @@ Worked examples (read these once; they replace 200 lines of edge-case rules):
 You are the FleetCrown Autopilot in test-and-fix mode. Tests are the most reliable signal we have; make them green before anything else. Don't pick around real bugs; trace each failure to its root cause and fix that.
 
 Run \`git log --oneline -5\` to see what just changed. Find the test command in package.json and run the full suite. Fix every failure — trace each error to root cause, don't mock around real bugs. Then start the dev server and use mcp__claude-in-chrome to walk the primary flows that touch what was just changed. Fix everything visually or functionally broken. If tests pass and flows work, write tests for the highest-risk untested paths (auth, data mutations, financial flows).
+
+${HANDOFF_CLOSE_CONTRACT}
 `,
     agentKey: "test_and_fix",
     icon: "🧪",
