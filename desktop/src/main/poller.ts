@@ -33,6 +33,7 @@ import { launchAgentInTab } from '@/lib/agent-runtime'
 import { startPeek, stopPeek } from './peek-streamer'
 import { getAgentInstallCommand, isAgentId, listAgentRegistry, type Agent, type AgentOption } from '@/lib/agent-registry'
 import { resolveOutgoingAgentForDir, resolveRunningAgentsInDir } from '@/lib/agent-process-scan'
+import { resolveRunnerWorkspaceDir } from '@/lib/agent-execution/box-workspace-path'
 import { findMatchingTab } from '@/lib/tab-match'
 import { readClaudeLiveSessions, claudeLiveSessionForDir } from '@/lib/control-fast-state'
 import {
@@ -625,8 +626,20 @@ async function handleCommand(
         worktreeByTab.set(tab, { primaryDir: dir, launchDir: effDir })
         // Token accounting window opens at delivery. Claude-only: the usage
         // collector reads ~/.claude transcripts, which other agents don't write.
+        //
+        // Track the dir the agent will REALLY run in. `effDir` is still the
+        // dispatch's laptop path on the box; the box-local resolution happens
+        // later inside launchAgentPty and never came back out, so this recorded
+        // `/home/g/dev/<p>` → slug `-home-g-dev-<p>` → a transcript directory
+        // that cannot exist on the box → every report silently skipped. That is
+        // why the first day of token accounting wrote zero rows (#145).
+        // Identity on the laptop, where the requested dir exists.
         if (runId && agent === 'claude') {
-          usageTrack = { runId, dir: effDir, deliveredAtMs: Date.now() }
+          usageTrack = {
+            runId,
+            dir: resolveRunnerWorkspaceDir(tab, effDir),
+            deliveredAtMs: Date.now(),
+          }
         }
         // PTY path when enabled (or already PTY-backed): own the agent's PTY
         // instead of puppeting a (possibly detached → hanging) zellij tab.
@@ -687,8 +700,13 @@ async function handleCommand(
             // background ack, not the operator's initial feedback, so the wait
             // never delays the person; on a real success every check is false.
             let authFailed = false
+            // Resolved dir, not the dispatch's: on the box `effDir` is still the
+            // laptop path, whose transcript slug can't exist there — so this
+            // canary silently never fired on the very runner whose dead
+            // credentials it was written for (2026-07-02/03).
+            const transcriptDir = resolveRunnerWorkspaceDir(tab, effDir)
             for (let i = 0; i < 6 && !authFailed; i++) {
-              authFailed = detectAuthFailure(effDir)
+              authFailed = detectAuthFailure(transcriptDir)
               if (!authFailed && i < 5) await asleep(2000)
             }
             if (authFailed) {
