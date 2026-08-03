@@ -145,6 +145,42 @@ check("'12 pass - 0 fail' is a pass, not a false failure match", () => {
   assert(outcome === ORCHESTRATION_OUTCOME.SUCCESS, `expected success, got ${outcome}`);
 });
 
+// Honesty must not be punished. Since the close contract started asking agents
+// to explain checks they could not run, the `tests:` field carries prose — and
+// a bare-word sniff over the whole field turned solon's truthful handoff into a
+// false "failing tests" verdict, which skipped the DoD gate entirely (the gate
+// only grades a SUCCESS close). Verbatim from the 2026-08-03 run:
+check("an explanation containing 'failure' is not a failing-test verdict", () => {
+  const outcome = inferOutcome({
+    summary: {
+      ...HEALTHY,
+      tests:
+        "no suite — manually verified end-to-end with a headless browser; the vote POST still 500s " +
+        "because no Postgres is provisioned here, and that failure occurs before signature verification runs",
+    },
+  });
+  assert(outcome === ORCHESTRATION_OUTCOME.SUCCESS, `expected success, got ${outcome}`);
+});
+
+check("'no suite' is an absence, not a failure — the DoD judge decides if it's enough", () => {
+  const outcome = inferOutcome({ summary: { ...HEALTHY, tests: "no suite" } });
+  assert(outcome === ORCHESTRATION_OUTCOME.SUCCESS, `expected success, got ${outcome}`);
+});
+
+check("a real failure in the VERDICT clause still demotes to partial", () => {
+  const outcome = inferOutcome({
+    summary: { ...HEALTHY, tests: "failing — 2 specs broke after the schema change" },
+  });
+  assert(outcome === ORCHESTRATION_OUTCOME.PARTIAL, `expected partial, got ${outcome}`);
+});
+
+check("explicit failure counts win wherever they appear, even mid-prose", () => {
+  const outcome = inferOutcome({
+    summary: { ...HEALTHY, tests: "ran the suite — 3 failed after the refactor, tracing now" },
+  });
+  assert(outcome === ORCHESTRATION_OUTCOME.PARTIAL, `expected partial, got ${outcome}`);
+});
+
 check("status:ready + done evidence earns success without a health field", () => {
   const outcome = inferOutcome({ summary: { ...HEALTHY, health: "", status: "ready" } });
   assert(outcome === ORCHESTRATION_OUTCOME.SUCCESS, `expected success, got ${outcome}`);
