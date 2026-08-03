@@ -261,9 +261,14 @@ jobs:
           # +e on purpose: exit 3 ("superseded") is a normal outcome to branch on,
           # and the default `bash -e` shell would abort the step before we read it.
           set +e
-          # This deploy is itself a workflow run on this SHA; without excluding
-          # its own run id the gate would wait forever for itself.
-          CI_GATE_EXCLUDE_RUN="$GITHUB_RUN_ID" bash "$TOOLING/ci-gate.sh" "$GITHUB_REPOSITORY" "$GITHUB_SHA"
+          # Exclude this deploy workflow from what counts as CI — every run of
+          # it. It is a workflow run on the same SHA, so without this the gate
+          # waits on itself, and a retry after a failed deploy reads that
+          # earlier failure as a red CI and can never succeed.
+          # GITHUB_WORKFLOW_REF is owner/repo/.github/workflows/x.yml@refs/...
+          wf="${GITHUB_WORKFLOW_REF#*/*/}"; wf="${wf%%@*}"
+          echo "not counting $wf as CI"
+          CI_GATE_EXCLUDE_PATH="$wf" bash "$TOOLING/ci-gate.sh" "$GITHUB_REPOSITORY" "$GITHUB_SHA"
           rc=$?
           case "$rc" in
             0) echo "proceed=true"  >> "$GITHUB_OUTPUT" ;;
