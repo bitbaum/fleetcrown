@@ -167,6 +167,34 @@ grep -rn "text-gray-\|text-slate-\|text-zinc-\|text-blue-\|text-green-\|text-red
 # Zero output = compliant.
 ```
 
+### AI form assist (fleet standard)
+
+Every create form is fillable from prose and changeable by talking to it.
+Shared implementation: [`@fleet/ai-forms`](https://github.com/maonakamoto/ai-forms)
+(headless — it ships no markup, so this repo keeps its own `ui-*` styling).
+
+Adding assistance to a form is two edits:
+
+1. Register the form in `src/config/ai-forms.ts` (`AI_FORMS` is the SSOT — the
+   API route accepts those keys and no others; derive option lists from the
+   existing constants, never retype an enum). Mark ids and ownership columns
+   `aiExcluded` so the model can neither see nor write them.
+2. In the component, replace the per-field `useState` with `useAiForm(...)` and
+   pass `assist={form}` to `<ModalForm>`. The bar, undo, and the per-field `AI`
+   marker come for free.
+
+`/api/ai/form-assist` serves every form; it never needs changing. Intent is
+inferred — an empty form is filled, a filled one is refined — so `fill` protects
+what the user typed while `refine` lets the model win on the fields it returns.
+
+While a form is open it registers in `src/lib/active-form.ts`, so the floating
+Loki assistant writes into it instead of describing which fields to type in.
+Loki also receives a `pageContext` excerpt of the rendered `<main>`, with an
+explicit rule to admit when something is not in that excerpt.
+
+`npm run test:ai-forms` exercises fill + follow-up refine against the live model
+(needs `GROQ_API_KEY`; not part of `verify`).
+
 ### SSOT Rules
 - **User ID**: `getCurrentUserId()` from `lib/session.ts` in API routes; `DEFAULT_USER_ID` is fallback only
 - **Username normalization**: `normalizeUsername()` from `lib/username.ts` — used in forms, API, DB queries

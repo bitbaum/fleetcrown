@@ -1,32 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useAiForm } from "@fleet/ai-forms/react";
 import type { GoalWithChildren } from "@/db/queries/goals";
 import { createGoal } from "@/lib/api/goals";
 import { GOAL_STATUS } from "@/lib/constants/statuses";
+import { GOAL_FORM } from "@/config/ai-forms";
 import { Field } from "@/components/ui/form";
 import { ModalForm } from "@/components/ui/modal-form";
 import { useCreateMutation } from "@/hooks/use-create-mutation";
 
 export function NewGoalButton({ goals }: { goals: GoalWithChildren[] }) {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [targetDate, setTargetDate] = useState("");
-  const [parentGoalId, setParentGoalId] = useState("");
+  // One store for the whole form. The user types into it and the assistant
+  // writes into it — which is what makes "now move the target date" work.
+  const form = useAiForm({ target: GOAL_FORM.key, fields: GOAL_FORM.fields });
   const { create, saving, error, setError } = useCreateMutation({
     request: createGoal,
     errorLabel: "goal",
   });
 
   const onReset = () => {
-    setTitle(""); setDescription(""); setTargetDate(""); setParentGoalId(""); setError(null);
+    form.reset();
+    setError(null);
   };
 
   const onSubmit = () => create({
-    title: title.trim(),
-    description: description.trim() || undefined,
-    targetDate: targetDate || undefined,
-    parentGoalId: parentGoalId || undefined,
+    title: form.text("title").trim(),
+    description: form.text("description").trim() || undefined,
+    targetDate: form.text("targetDate") || undefined,
+    parentGoalId: form.text("parentGoalId") || undefined,
   });
 
   // Flatten goal tree for parent selector (exclude completed goals)
@@ -48,38 +49,40 @@ export function NewGoalButton({ goals }: { goals: GoalWithChildren[] }) {
       submitLabel="Create Goal"
       savingLabel="Creating…"
       size="md"
-      canSubmit={!!title.trim()}
+      canSubmit={!!form.text("title").trim()}
       saving={saving}
       error={error}
       onSubmit={onSubmit}
       onReset={onReset}
+      assist={form}
+      assistPlaceholder="Describe the goal and I'll fill this in…"
     >
-      <Field label="Title" required>
+      <Field label="Title" required aiTouched={form.isAiTouched("title")}>
         <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
+          value={form.text("title")}
+          onChange={(e) => form.setValue("title", e.target.value)}
           placeholder="What are you working toward?"
           autoFocus
           className="ui-input"
         />
       </Field>
 
-      <Field label="Description">
+      <Field label="Description" aiTouched={form.isAiTouched("description")}>
         <textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          value={form.text("description")}
+          onChange={(e) => form.setValue("description", e.target.value)}
           placeholder="Optional context or motivation"
           rows={2}
-          className={`ui-input resize-none`}
+          className="ui-input resize-none"
         />
       </Field>
 
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Target Date">
+        <Field label="Target Date" aiTouched={form.isAiTouched("targetDate")}>
           <input
             type="date"
-            value={targetDate}
-            onChange={(e) => setTargetDate(e.target.value)}
+            value={form.text("targetDate")}
+            onChange={(e) => form.setValue("targetDate", e.target.value)}
             className="ui-input"
           />
         </Field>
@@ -87,8 +90,8 @@ export function NewGoalButton({ goals }: { goals: GoalWithChildren[] }) {
         {flatGoals.length > 0 && (
           <Field label="Parent Goal">
             <select
-              value={parentGoalId}
-              onChange={(e) => setParentGoalId(e.target.value)}
+              value={form.text("parentGoalId")}
+              onChange={(e) => form.setValue("parentGoalId", e.target.value)}
               className="ui-input"
             >
               <option value="">— None —</option>

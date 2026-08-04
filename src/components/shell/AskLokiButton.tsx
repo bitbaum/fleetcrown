@@ -3,12 +3,14 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowUpRight, Loader2, MessageSquare, Play, Stethoscope, Wrench, X } from "lucide-react";
+import { ArrowUpRight, Loader2, MessageSquare, Play, Sparkles, Stethoscope, Wrench, X } from "lucide-react";
+import { readPageContext } from "@fleet/ai-forms/react";
 import {
   readAssistantContext,
   subscribeAssistantContext,
   type AssistantProjectContext,
 } from "@/lib/assistant-context";
+import { readActiveForm, subscribeActiveForm } from "@/lib/active-form";
 import { LOKI_PROACTIVE_STARTERS } from "@/config/loki-suggested-actions";
 import { useProjectDispatch, DispatchedNote, type ProjectDispatchKind } from "@/components/projects/ProjectActionButtons";
 import { postJson } from "@/lib/api/fetch";
@@ -81,6 +83,8 @@ export function AskLokiButton() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const context = useSyncExternalStore(subscribeContext, readAssistantContext, () => null);
+  // When a form is open, the assistant edits it instead of answering about it.
+  const activeForm = useSyncExternalStore(subscribeActiveForm, readActiveForm, () => null);
 
   useEffect(() => {
     const keyHandler = (e: KeyboardEvent) => {
@@ -120,12 +124,33 @@ export function AskLokiButton() {
     setAskError(null);
     setTurns((prev) => [...prev, { role: "user", text: message }]);
     setAsking(true);
+
+    // A form is open: write into it. Telling the user which fields to type in
+    // would be a worse answer than just filling them.
+    const form = activeForm?.getAssist();
+    if (form) {
+      try {
+        const result = await form.ask(message);
+        setTurns((prev) => [
+          ...prev,
+          { role: "loki", text: result.ok ? result.message : result.error },
+        ]);
+      } finally {
+        setAsking(false);
+      }
+      return;
+    }
+
     try {
       const projectKey = context?.workspaceKey ?? null;
       // Send the heavy project context once per project thread per page life.
       const includeContext = projectKey != null && sentContextRef.current !== projectKey;
+      // What the user can actually see, read from the rendered page — so the
+      // answer is grounded in this screen rather than in route metadata.
+      const pageContext = readPageContext();
       const res = await postJson("/api/loki", {
         message,
+        ...(pageContext ? { pageContext } : {}),
         ...(projectKey ? { projectKey, includeContext } : {}),
       });
       const body = (await res.json()) as { ok?: boolean; text?: string; error?: string };
@@ -140,17 +165,22 @@ export function AskLokiButton() {
     } finally {
       setAsking(false);
     }
-  }, [input, asking, context?.workspaceKey]);
+  }, [input, asking, context?.workspaceKey, activeForm]);
 
   if (pathname === "/loki") return null;
 
   const canAct = context != null && !context.readonly;
 
+  // Modals render at z-[60]. While a form is open the assistant has to sit
+  // above it — otherwise the one moment it can fill a form is the one moment
+  // the user cannot reach it.
+  const layer = activeForm ? "z-[70]" : "z-40";
+
   return (
     <>
       {open && (
         <div
-          className="fixed bottom-24 right-4 z-40 flex max-h-[70vh] w-96 max-w-[calc(100vw-2rem)] flex-col rounded-xl border border-border-default bg-surface-overlay shadow-panel-strong sm:right-7"
+          className={`fixed bottom-24 right-4 ${layer} flex max-h-[70vh] w-96 max-w-[calc(100vw-2rem)] flex-col rounded-xl border border-border-default bg-surface-overlay shadow-panel-strong sm:right-7`}
           role="dialog"
           aria-label="Loki assistant"
         >
@@ -181,8 +211,19 @@ export function AskLokiButton() {
           </div>
 
           <div ref={transcriptRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-3">
+            {/* A form is open — say so, because what the assistant does next is
+                edit that form rather than answer a question about the fleet. */}
+            {activeForm && (
+              <div className="ui-assist-row rounded-lg border border-border-subtle bg-surface-raised px-2.5 py-2">
+                <Sparkles className="h-3.5 w-3.5 shrink-0 text-accent-text" aria-hidden="true" />
+                <span className="min-w-0 grow truncate text-xs text-text-secondary">
+                  Filling <span className="text-text-primary">{activeForm.title}</span>
+                </span>
+              </div>
+            )}
+
             {/* Page-aware proposals: everything the page called out, one click each. */}
-            <div className="space-y-2">
+            <div className={activeForm ? "hidden" : "space-y-2"}>
               <p className="ui-micro-label">{context ? "Proposed for this project" : "Start somewhere"}</p>
               <div className="flex flex-wrap gap-1.5">
                 {canAct && context.signals.map((signal) => (
@@ -257,7 +298,13 @@ export function AskLokiButton() {
               ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={context ? `Ask about ${context.name}…` : "Ask across your fleet…"}
+              placeholder={
+                activeForm
+                  ? `Describe or change ${activeForm.title}…`
+                  : context
+                    ? `Ask about ${context.name}…`
+                    : "Ask across your fleet…"
+              }
               className="ui-input-compact min-w-0 flex-1"
               aria-label="Ask Loki"
             />
@@ -270,7 +317,7 @@ export function AskLokiButton() {
 
       <button
         onClick={() => setOpen((v) => !v)}
-        className="ui-fab fixed bottom-7 right-7 z-40 hidden h-14 w-14 items-center justify-center active:scale-95 md:flex focus-visible:ring-2 focus-visible:ring-accent-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        className={`ui-fab fixed bottom-7 right-7 ${layer} hidden h-14 w-14 items-center justify-center active:scale-95 md:flex focus-visible:ring-2 focus-visible:ring-accent-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background`}
         title={open ? "Close Loki (press ?)" : "Open Loki (press ?)"}
         aria-label={open ? "Close Loki assistant" : "Open Loki assistant"}
         aria-expanded={open}
