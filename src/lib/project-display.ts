@@ -20,6 +20,35 @@ export function cleanDescription(desc: string | null | undefined): string | null
 }
 
 /**
+ * Non-answers a profile field can hold — the same "dead text, not signal"
+ * problem as PLACEHOLDER_DESCRIPTIONS, one layer down.
+ *
+ * A model asked to fill 17 named fields from a two-line description writes
+ * "Unknown" for the ones it cannot infer rather than omitting them (the
+ * extraction prompt only says "omit if unknown" on 3 of them). HamsterCheek is
+ * the live case: `stack: "Unknown"`, `competitors: "Unknown"`. Those are
+ * truthy, so every "is this filled?" check counted them — health scored a point
+ * for a field that says nothing, the context header claimed a field complete,
+ * and the kickoff planner skipped the profile step for a project whose profile
+ * was not actually filled in.
+ */
+const PLACEHOLDER_ANSWERS = new Set([
+  "unknown", "n/a", "na", "none", "nil", "null", "tbd", "to be determined",
+  "not specified", "not applicable", "not known", "unspecified", "-", "—", "?",
+]);
+
+/**
+ * Does this attribute hold a real answer? Use everywhere a field's presence
+ * decides something — a placeholder must never earn a health point, satisfy a
+ * gate, or brief an agent with "STACK: Unknown".
+ */
+export function hasAnswer(value: string | null | undefined): boolean {
+  const v = value?.trim();
+  if (!v) return false;
+  return !PLACEHOLDER_ANSWERS.has(v.toLowerCase().replace(/[.!]+$/, ""));
+}
+
+/**
  * A short lead for a dossier/card header — the first sentence(s) up to ~maxChars.
  * Descriptions are frequently the entire CLAUDE.md dumped in (400+ words); the
  * header wants a summary, not an essay. Prefers whole-sentence boundaries and

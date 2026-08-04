@@ -9,7 +9,7 @@
  * dossier (entity + attrs + code paths) so the same number renders everywhere
  * — a score that differed between the list and the profile would be a new lie.
  */
-import { cleanDescription } from "@/lib/project-display";
+import { cleanDescription, hasAnswer } from "@/lib/project-display";
 import { HEALTH_SIGNAL_BASE } from "@/components/projects/project-detail-types";
 
 export type ProjectHealthInput = {
@@ -53,8 +53,8 @@ export function computeProjectHealth(input: ProjectHealthInput): ProjectHealth {
     {
       key: "mission",
       label: "Mission stated",
-      pass: Boolean(attrs["mission"]?.trim()),
-      detail: attrs["mission"]?.trim()
+      pass: hasAnswer(attrs["mission"]),
+      detail: hasAnswer(attrs["mission"])
         ? truncate(attrs["mission"])
         : "State the mission in Context — agents build toward it.",
     },
@@ -71,37 +71,37 @@ export function computeProjectHealth(input: ProjectHealthInput): ProjectHealth {
     {
       key: "live",
       label: "Live URL",
-      pass: Boolean(liveUrl?.trim()),
-      detail: liveUrl?.trim() ? truncate(liveUrl) : "Add a production URL when something is deployed.",
+      pass: hasAnswer(liveUrl),
+      detail: hasAnswer(liveUrl) ? truncate(liveUrl) : "Add a production URL when something is deployed.",
     },
     {
       key: "stage",
       label: "Stage declared",
-      pass: Boolean(attrs["status"]?.trim()),
-      detail: attrs["status"]?.trim() ? attrs["status"] : "Set the lifecycle stage (planning / development / production).",
+      pass: hasAnswer(attrs["status"]),
+      detail: hasAnswer(attrs["status"]) ? attrs["status"] : "Set the lifecycle stage (planning / development / production).",
     },
     // The three attention signals: an open callout costs a point until fixed.
     ...HEALTH_SIGNAL_BASE.map((signal) => ({
       key: signal.key,
       label: `No ${signal.label.toLowerCase()}`,
-      pass: !attrs[signal.key]?.trim(),
-      detail: attrs[signal.key]?.trim()
+      pass: !hasAnswer(attrs[signal.key]),
+      detail: hasAnswer(attrs[signal.key])
         ? truncate(attrs[signal.key])
         : `No open ${signal.label.toLowerCase()} recorded.`,
     })),
     {
       key: "next",
       label: "Next step queued",
-      pass: Boolean(attrs["next_step"]?.trim()),
-      detail: attrs["next_step"]?.trim()
+      pass: hasAnswer(attrs["next_step"]),
+      detail: hasAnswer(attrs["next_step"])
         ? truncate(attrs["next_step"])
         : "Queue the next step so work can be dispatched in one click.",
     },
     {
       key: "done",
       label: "Definition of done",
-      pass: Boolean(attrs["definition_of_done"]?.trim()),
-      detail: attrs["definition_of_done"]?.trim()
+      pass: hasAnswer(attrs["definition_of_done"]),
+      detail: hasAnswer(attrs["definition_of_done"])
         ? truncate(attrs["definition_of_done"])
         : "Define when a change counts as done — agents verify against it.",
     },
