@@ -10,6 +10,7 @@ import { BusinessPlanSection } from "./BusinessPlanSection";
 import { AddAttrInline, AttrRow } from "./project-overview-helpers";
 import { getProjectLinks, type ProjectResource } from "./project-detail-types";
 import { PROJECT_ATTR } from "@/config/project-attrs";
+import { hasAnswer } from "@/lib/project-display";
 
 const CONTEXT_GROUPS = [
   {
@@ -69,7 +70,7 @@ export function ProjectContextEditor({
   const refresh = () => router.refresh();
   const fieldCount = CONTEXT_GROUPS.reduce((total, group) => total + group.fields.length, 0);
   const filledCount = CONTEXT_GROUPS.reduce(
-    (total, group) => total + group.fields.filter((field) => attrs[field.key]?.trim()).length,
+    (total, group) => total + group.fields.filter((field) => hasAnswer(attrs[field.key])).length,
     0,
   );
   const extraAttrs = useMemo(

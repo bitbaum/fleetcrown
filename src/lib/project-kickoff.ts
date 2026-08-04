@@ -13,6 +13,7 @@
  * disagree with the readiness check that decides whether to show it.
  */
 import { PROJECT_ATTR } from "@/config/project-attrs";
+import { hasAnswer } from "@/lib/project-display";
 
 export const KICKOFF_STEPS = ["profile", "milestones", "repo", "dispatch"] as const;
 export type KickoffStepId = (typeof KICKOFF_STEPS)[number];
@@ -49,7 +50,9 @@ export type KickoffSetupInput = {
 /** The setup steps this project is still missing (never includes dispatch). */
 export function missingKickoffSetup(input: KickoffSetupInput): KickoffStepId[] {
   const steps: KickoffStepId[] = [];
-  if (KICKOFF_CORE_PROFILE_KEYS.some((key) => !input.attrs[key]?.trim())) steps.push("profile");
+  // hasAnswer, not truthiness: a field holding "Unknown" is a field the
+  // extractor could not fill, so the profile step is exactly what it needs.
+  if (KICKOFF_CORE_PROFILE_KEYS.some((key) => !hasAnswer(input.attrs[key]))) steps.push("profile");
   if (input.goalCount === 0) steps.push("milestones");
   if (!input.hasRepo) steps.push("repo");
   return steps;

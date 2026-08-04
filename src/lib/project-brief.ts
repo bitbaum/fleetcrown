@@ -8,6 +8,7 @@ import { patchProject } from "@/db/queries/projects";
 import { syncUserProjectDescription } from "@/db/queries/user-projects";
 import { scheduleProjectProfileReindexByEntityId } from "@/lib/rag/reindex-project-profile";
 import { PROJECT_ATTR } from "@/config/project-attrs";
+import { hasAnswer } from "@/lib/project-display";
 
 /**
  * AI-powered project profile extraction — the "no forms" path.
@@ -88,12 +89,21 @@ function parseModelJson(raw: string): unknown {
 }
 
 /** Clamp every string field to its schema max instead of rejecting — the
- *  model occasionally runs a few chars over and a hard fail wastes the call. */
+ *  model occasionally runs a few chars over and a hard fail wastes the call.
+ *
+ *  Also drops non-answers. Asked for 17 named fields from a thin description,
+ *  the model fills the ones it cannot infer with "Unknown" instead of omitting
+ *  them — the prompt only says "omit if unknown" on three. A stored "Unknown"
+ *  is worse than an absent field: it is truthy, so it satisfies every
+ *  "is this filled?" check downstream and briefs agents with "STACK: Unknown".
+ *  Dropping it here means no prompt wording has to be trusted for the data to
+ *  stay honest. */
 function clampFields(value: unknown): unknown {
   if (typeof value !== "object" || value === null) return value;
   const limits: Record<string, number> = { status: 60 };
   const out: Record<string, unknown> = {};
   for (const [key, v] of Object.entries(value as Record<string, unknown>)) {
+    if (typeof v === "string" && !hasAnswer(v)) continue;
     out[key] = typeof v === "string" ? v.slice(0, limits[key] ?? FIELD_LIMIT) : v;
   }
   return out;

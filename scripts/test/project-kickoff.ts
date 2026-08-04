@@ -19,6 +19,7 @@ import {
   inferProvisionTemplate,
 } from "@/config/project-templates";
 import { TEMPLATES } from "@/lib/project-templates";
+import { hasAnswer } from "@/lib/project-display";
 
 let pass = 0;
 let fail = 0;
@@ -81,6 +82,27 @@ for (const setup of [
   const plan = planKickoff({ ...setup, wantRepo: true });
   eq(shown && plan.length > 1, true, `hero shown ⇒ real work planned (${JSON.stringify(plan)})`);
 }
+
+// ── Placeholder answers are not answers ─────────────────────────────────────
+// HamsterCheek, live on prod 2026-08-04: the extractor wrote `stack: "Unknown"`
+// because the prompt only says "omit if unknown" on 3 of its 17 fields. That
+// string is truthy, so the planner skipped the profile step for a project whose
+// profile was not filled in — and the agent would have been briefed with
+// "STACK: Unknown".
+eq(hasAnswer("Unknown"), false, "'Unknown' is a non-answer");
+eq(hasAnswer("unknown."), false, "matching ignores case and trailing punctuation");
+eq(hasAnswer("N/A"), false, "'N/A' is a non-answer");
+eq(hasAnswer("TBD"), false, "'TBD' is a non-answer");
+eq(hasAnswer("  —  "), false, "a dash is a non-answer");
+eq(hasAnswer(""), false, "empty is a non-answer");
+eq(hasAnswer(undefined), false, "absent is a non-answer");
+eq(hasAnswer("Next.js"), true, "a real value is an answer");
+eq(hasAnswer("No known competitors yet"), true, "a real sentence that mentions not-knowing is still an answer");
+eq(
+  missingKickoffSetup({ attrs: { ...FULL_ATTRS, stack: "Unknown" }, goalCount: 5, hasRepo: true }),
+  ["profile"],
+  "the HamsterCheek case: a placeholder stack still needs the profile step",
+);
 
 eq(hasKickoffSource("too short"), false, "9 chars is below the brief route's floor");
 eq(hasKickoffSource("a hiding box"), true, "a sentence is enough of a brief");
