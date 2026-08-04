@@ -26,6 +26,7 @@ import { LONG_TEXT_MAX } from "@/lib/constants";
 import {
   KICKOFF_STEP_LABEL,
   hasKickoffSource,
+  isThinBrief,
   planKickoff,
   type KickoffStepId,
 } from "@/lib/project-kickoff";
@@ -58,14 +59,20 @@ export function ProjectKickoff({
   needed: boolean;
 }) {
   const router = useRouter();
-  const [text, setText] = useState("");
+  // Seeded with the project's own description, and editable from here. It used
+  // to be hidden whenever a description existed, which meant a one-sentence
+  // description became the entire brief with no way to improve it on the page
+  // that runs on it — HamsterCheek's real brief had to be written straight to
+  // the database. Everything below is derived from this text, so this text is
+  // the thing to put in front of the person, not behind a length check.
+  const [text, setText] = useState(description ?? "");
   const [wantRepo, setWantRepo] = useState(true);
   const [visibility, setVisibility] = useState<"private" | "public">("private");
   const [steps, setSteps] = useState<StepRun[] | null>(null);
   const [running, setRunning] = useState(false);
   const [finished, setFinished] = useState(false);
 
-  const source = (description?.trim() || text.trim()) || null;
+  const source = text.trim() || null;
   const plan = planKickoff({ attrs, goalCount, hasRepo, wantRepo: !hasRepo && wantRepo });
   const needsSource = plan.includes("profile") || plan.includes("milestones");
   const ready = !needsSource || hasKickoffSource(source);
@@ -177,16 +184,28 @@ export function ProjectKickoff({
         )}
       </div>
 
-      {!steps && needsSource && !hasKickoffSource(description) && (
-        <textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          rows={4}
-          maxLength={LONG_TEXT_MAX}
-          disabled={running}
-          placeholder={`What is ${projectName}, who is it for, and what should exist at the end? A paragraph is plenty — everything else is derived from it.`}
-          className="ui-input w-full text-base leading-relaxed sm:text-sm"
-        />
+      {!steps && needsSource && (
+        <div className="space-y-1.5">
+          <label htmlFor="project-kickoff-brief" className="ui-micro-label">
+            The brief — everything below is written from this
+          </label>
+          <textarea
+            id="project-kickoff-brief"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            rows={5}
+            maxLength={LONG_TEXT_MAX}
+            disabled={running}
+            placeholder={`What is ${projectName}, who is it for, and what should exist at the end? A paragraph is plenty — everything else is derived from it.`}
+            className="ui-input w-full text-base leading-relaxed sm:text-sm"
+          />
+          {isThinBrief(text) && (
+            <p className="text-xs text-text-muted">
+              That is about a sentence. It will run, but the profile and milestones can only be as
+              specific as this is — say who it is for and what should exist at the end.
+            </p>
+          )}
+        </div>
       )}
 
       {!steps && !hasRepo && (
