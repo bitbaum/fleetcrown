@@ -5,9 +5,10 @@
 #
 # Why this exists: electron-builder's GH provider can only publish to the
 # workflow's own repo using the default GITHUB_TOKEN (cross-repo writes need
-# a PAT). Marketing URLs point at maonakamoto/fleetcrown-releases tagged
-# `fleet-runner-v<version>`; the build publishes a draft on
-# maonakamoto/fleetcrown tagged `v<version>`. This script reconciles them.
+# a PAT), and it derives its tag from package.json as `v<version>`. Marketing
+# URLs point at maonakamoto/fleetcrown-releases tagged `fleet-runner-v<version>`.
+# So the build job publishes nothing at all, and this script assembles the
+# release from the build artifacts under the tag we actually want.
 #
 # Source: workflow artifacts on the latest successful desktop-release run.
 # (Earlier versions of this script read from the draft release, but that
@@ -15,9 +16,10 @@
 # leave assets missing. Workflow artifacts always contain everything that
 # was built, per-OS.)
 #
-# Until a cross-repo PAT secret is wired into the workflow, this is the
-# documented post-build step for every release. Run it once after the
-# Desktop release workflow turns green.
+# The `mirror` job in .github/workflows/desktop-release.yml calls this
+# automatically on every `fleet-runner-v*` tag push, using the
+# RELEASES_REPO_TOKEN secret. Running it by hand is now only a rescue path
+# (e.g. re-publishing after fixing a release), not a required release step.
 #
 # Usage:
 #   scripts/mirror-desktop-release.sh <version> [<workflow-run-id>]
@@ -121,6 +123,3 @@ fi
 echo
 echo "==> mirror complete: https://github.com/${DST_REPO}/releases/tag/${DST_TAG}"
 echo "    Marketing /releases/latest/download/... URLs now serve v${VERSION}."
-echo
-echo "Optional cleanup — delete the (likely incomplete) draft on ${SRC_REPO}:"
-echo "  gh release delete v${VERSION} --repo ${SRC_REPO} --yes"
