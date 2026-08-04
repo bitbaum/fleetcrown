@@ -139,7 +139,21 @@ jobs:
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         shell: bash
-        run: npm run ${{ matrix.dist_script }}
+        run: |
+          # An unset GitHub secret still DEFINES its env var, as an empty
+          # string — and electron-builder tests for presence, not truthiness.
+          # So an empty CSC_LINK reads as "sign this build", it resolves ""
+          # against projectDir, and the run dies with `⨯ <projectDir> not a
+          # file`. The signing block below was added as "gated" on 2026-07-27
+          # (#100), but that gate never gated: every macOS build has failed
+          # since, which is the other half of why no complete release shipped.
+          # Dropping the empties restores the intended behaviour — no
+          # certificate configured means an unsigned build, not a broken one.
+          for v in CSC_LINK CSC_KEY_PASSWORD WIN_CSC_LINK WIN_CSC_KEY_PASSWORD \
+                   APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; do
+            if [ -z "${!v:-}" ]; then unset "$v"; fi
+          done
+          npm run ${{ matrix.dist_script }}
 
       # These artifacts ARE the release — the mirror job publishes exactly what
       # lands here. `error` (not `warn`) on missing files is the point: a
