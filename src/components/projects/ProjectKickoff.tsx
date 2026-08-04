@@ -132,7 +132,22 @@ export function ProjectKickoff({
     // then puts nobody to work is the same dead end in a new costume. The
     // prompt is composed server-side from whatever actually landed above.
     const dispatched = await step("dispatch", "dispatch", { kind: "kickoff" });
-    if (dispatched) mark("dispatch", "done", "agent working");
+    if (dispatched) {
+      // `ok: true` is not the same as "an agent is working". injectPrompt
+      // answers 200/ok when it REFUSED because the user was mid-keystroke in
+      // the target tab, and when it queued a command with no runner connected
+      // to collect it. Both are flagged on purpose ("so the UI can warn instead
+      // of pretending it's running"), and this card exists to report what
+      // actually landed — so neither gets laundered into "agent working".
+      if (dispatched.blocked) {
+        // Nothing was sent; "Try again" is the useful affordance, not "Watch it work".
+        mark("dispatch", "failed", "not sent — you were typing in that tab");
+      } else if (dispatched.warning === "runner-offline") {
+        mark("dispatch", "done", "queued — starts when a runner connects");
+      } else {
+        mark("dispatch", "done", "agent working");
+      }
+    }
 
     setRunning(false);
     setFinished(true);
