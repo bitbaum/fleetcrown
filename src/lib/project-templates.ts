@@ -13,13 +13,11 @@
 // limits and the choice list stays scannable.
 
 import { APP_URL } from "@/config/brand";
+import { PROVISION_TEMPLATES, type ProvisionTemplateId } from "@/config/project-templates";
 
-export type TemplateId =
-  | "bare"
-  | "nextjs-tailwind"
-  | "python-fastapi"
-  | "hono-cloudflare"
-  | "html-tailwind";
+/** Ids + labels come from the light config so pickers can import them without
+ *  pulling every starter's file bodies into their bundle. */
+export type TemplateId = ProvisionTemplateId;
 
 export interface TemplateMeta {
   id: TemplateId;
@@ -511,20 +509,17 @@ node_modules
 
 // ── Registry ──────────────────────────────────────────────────────────────
 
-export const TEMPLATES: Record<TemplateId, TemplateMeta> = {
+/** What a starter actually seeds — the half too heavy for a picker to import. */
+type TemplateBuild = Pick<TemplateMeta, "files" | "infra" | "firstTask">;
+
+const TEMPLATE_BUILDS: Record<TemplateId, TemplateBuild> = {
   bare: {
-    id: "bare",
-    label: "Empty (just a README)",
-    description: "Just a README. Bring your own stack.",
     files: {}, // empty — the GitHub auto_init flag already creates README.md
     infra: ["Stack chosen to fit the goal", "Dependencies installed", "Dev server running"],
     firstTask:
       "This is a fresh empty repo for \"{{NAME}}\". Set it up from scratch: pick the simplest stack that fits the project goal, scaffold it, install dependencies, set up any database the project needs (a local Postgres or SQLite — your call, create a .env with the connection string and keep secrets out of git), and get a dev server running. Then tell me the stack you chose and the exact command + URL to run it.",
   },
   "nextjs-tailwind": {
-    id: "nextjs-tailwind",
-    label: "Next.js 15 + Tailwind v4",
-    description: "App Router, TypeScript, Tailwind v4. `npm install && npm run dev` and you're live.",
     files: {
       "package.json": NEXTJS_PACKAGE_JSON,
       "tsconfig.json": NEXTJS_TSCONFIG,
@@ -541,9 +536,6 @@ export const TEMPLATES: Record<TemplateId, TemplateMeta> = {
       "Set up this Next.js 15 project \"{{NAME}}\" end to end so it runs locally: run `npm install`; if the project needs persistence, add a database (Drizzle ORM + a local Postgres, or SQLite for a quick start), define an initial schema and migration, and create a `.env.local` with the connection string (never commit it); then start the dev server with `npm run dev`. Confirm it builds and renders at http://localhost:3000, then summarize what you set up and how to run it.",
   },
   "python-fastapi": {
-    id: "python-fastapi",
-    label: "Python + FastAPI (uv)",
-    description: "Async API in Python. uv handles deps. `uv run uvicorn src.main:app --reload`.",
     files: {
       "pyproject.toml": FASTAPI_PYPROJECT,
       "src/main.py": FASTAPI_MAIN,
@@ -555,9 +547,6 @@ export const TEMPLATES: Record<TemplateId, TemplateMeta> = {
       "Set up this FastAPI project \"{{NAME}}\" so it runs locally: run `uv sync`; if it needs persistence, add a database layer (SQLModel + a local Postgres via asyncpg, or SQLite to start), wire an initial model + migration, and put the connection string in a `.env` (keep it out of git); then start the server with `uv run uvicorn src.main:app --reload`. Confirm http://localhost:8000/health and /docs respond, then summarize what you set up.",
   },
   "hono-cloudflare": {
-    id: "hono-cloudflare",
-    label: "Hono + Cloudflare Workers",
-    description: "Edge-serverless TypeScript. 100k free requests/day, ms-scale cold starts.",
     files: {
       "package.json": HONO_PACKAGE,
       "wrangler.toml": HONO_WRANGLER,
@@ -571,9 +560,6 @@ export const TEMPLATES: Record<TemplateId, TemplateMeta> = {
       "Set up this Hono + Cloudflare Workers project \"{{NAME}}\" so it runs locally: run `npm install`; if it needs persistence, create a D1 database (`npx wrangler d1 create`), bind it in `wrangler.toml`, and add a first table/migration; then run `npm run dev`. Confirm http://localhost:8787 responds, then summarize what you set up and the deploy command.",
   },
   "html-tailwind": {
-    id: "html-tailwind",
-    label: "Plain HTML + Tailwind (no build)",
-    description: "One HTML file. Open in a browser. Perfect for a landing page or quick demo.",
     files: {
       "index.html": HTML_INDEX,
       "main.js": HTML_MAIN,
@@ -585,6 +571,19 @@ export const TEMPLATES: Record<TemplateId, TemplateMeta> = {
       "Serve this static site \"{{NAME}}\" locally (`npx serve .`) and confirm it renders in a browser. No database is needed yet — if the project later needs a backend, say so and recommend the Hono + Cloudflare Workers stack alongside it. Summarize how to run it.",
   },
 };
+
+/** The full registry: light metadata (config) + what it seeds (above). */
+export const TEMPLATES: Record<TemplateId, TemplateMeta> = Object.fromEntries(
+  PROVISION_TEMPLATES.map((template) => [
+    template.id,
+    {
+      id: template.id,
+      label: template.label,
+      description: template.description,
+      ...TEMPLATE_BUILDS[template.id],
+    },
+  ]),
+) as Record<TemplateId, TemplateMeta>;
 
 /**
  * Substitute {{NAME}} / {{DESCRIPTION}} placeholders in a file body.
