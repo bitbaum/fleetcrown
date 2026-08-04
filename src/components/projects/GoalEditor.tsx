@@ -77,14 +77,14 @@ export function GoalEditor({
   return (
     <div className="space-y-2">
         <dt className="flex items-center gap-1.5 text-xs font-medium text-text-muted">
-        <Target className="h-3 w-3" /> Definition of done — a run isn&apos;t done until this holds
+        <Target className="h-3 w-3" /> Definition of done — one turn&apos;s bar, checkable from the handoff alone
       </dt>
       <textarea
         className="ui-input w-full"
         rows={2}
         value={dod}
         onChange={(e) => setDod(e.target.value)}
-        placeholder="e.g. tsc + lint clean, tests pass, deploy verified"
+        placeholder="e.g. `npm run verify` passes, with its real output in the handoff; work committed and pushed"
         maxLength={300}
         aria-label="Definition of done"
       />

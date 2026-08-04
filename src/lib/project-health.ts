@@ -37,6 +37,26 @@ export type ProjectHealth = {
 const truncate = (value: string, n = 80) =>
   value.length > n ? `${value.slice(0, n - 1)}…` : value;
 
+/**
+ * A definition_of_done earns its point only if a turn can EVIDENCE it.
+ *
+ * The grader reads the handoff and nothing else, so the bar has to name
+ * something an agent can run and report. Anything phrased as a property of the
+ * finished product is unfalsifiable per turn and silently converts good work
+ * into `partial` — which is indistinguishable, from the outside, from an agent
+ * that did nothing.
+ *
+ * Deliberately a keyword check and not an LLM call: this renders on every
+ * project card, and a cheap heuristic that catches "money is not a float" is
+ * worth far more than a perfect judgment nobody can afford to run.
+ */
+const CHECKABLE_DONE_MARKERS =
+  /\b(verify|test|tests|tsc|typecheck|type-check|lint|build|deploy|deploys|deployed|ci|green|commit|committed|pushed|passes|passing|health)\b/i;
+
+export function isCheckableDoneBar(value: string | undefined | null): boolean {
+  return hasAnswer(value) && CHECKABLE_DONE_MARKERS.test(value!);
+}
+
 export function computeProjectHealth(input: ProjectHealthInput): ProjectHealth {
   const attrs = input.attrs;
   const description = cleanDescription(input.description ?? attrs["description"] ?? null);
@@ -100,10 +120,18 @@ export function computeProjectHealth(input: ProjectHealthInput): ProjectHealth {
     {
       key: "done",
       label: "Definition of done",
-      pass: hasAnswer(attrs["definition_of_done"]),
-      detail: hasAnswer(attrs["definition_of_done"])
-        ? truncate(attrs["definition_of_done"])
-        : "Define when a change counts as done — agents verify against it.",
+      // Present is not enough — it has to be CHECKABLE. A different model grades
+      // each handoff against this bar, and it sees only what the agent wrote. A
+      // bar describing the finished product ("outcomes are tracked to improve
+      // future recommendations") can never be evidenced in one turn, so every
+      // run closes `partial` no matter how good the work was. That was the state
+      // of 10 of 19 projects on 2026-08-04: 26 partial / 3 success in a week.
+      pass: isCheckableDoneBar(attrs["definition_of_done"]),
+      detail: !hasAnswer(attrs["definition_of_done"])
+        ? "Define when a change counts as done — agents verify against it."
+        : isCheckableDoneBar(attrs["definition_of_done"])
+          ? truncate(attrs["definition_of_done"])
+          : `Not checkable from a handoff — name a command (verify, test, lint, build, deploy) instead of describing the finished product. Currently: ${truncate(attrs["definition_of_done"])}`,
     },
   ];
 

@@ -67,7 +67,7 @@ Respond with ONLY a JSON object — no prose, no markdown fences. Allowed keys:
 - "next_step": the owner's single most important next build/business action (max 300 chars) — never installation or usage instructions aimed at readers
 - "architecture": the key building blocks and how they fit — main modules/services, data stores, external integrations (max 400 chars). Only from the text/README; omit if unknown.
 - "conventions": how this project is built — patterns, rules, do's and don'ts an engineer must follow (e.g. "Drizzle not Prisma", "server components by default", "never edit generated files") (max 400 chars). Only from the text/README; omit if unknown.
-- "definition_of_done": the bar a change must clear to be finished — e.g. "tsc + lint clean, tests pass, deploys green" (max 300 chars). Only from the text/README; omit if unknown.
+- "definition_of_done": the bar ONE TURN of work must clear to be finished, phrased so a reviewer reading only the handoff can tell whether it was met — e.g. "\`npm run verify\` passes, with its real output in the handoff; work committed and pushed" (max 300 chars). It must name checkable actions, never describe the finished product ("outcomes are tracked", "money is not a float", "live and profitable" are all WRONG — no single turn can evidence them, so every run gets graded a failure). Prefer naming the repo's own verify/test command over listing individual tools. Only from the text/README; omit if unknown.
 - "problem": the concrete problem being solved, from the user's point of view (max 400 chars)
 - "solution": how this project solves that problem — the offered approach (max 400 chars)
 - "current_alternatives": how people solve this problem today without the project (max 400 chars)
