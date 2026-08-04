@@ -1,6 +1,7 @@
 // Self-test for the definition-of-done stop-gate decision (pure part).
 // Run: npx tsx scripts/test/dod-gate.ts
 import { applyDoDGate, DEFAULT_GOAL_MAX_TURNS } from "@/lib/orchestration/dod-gate";
+import { isCheckableDoneBar } from "@/lib/project-health";
 import { ESCALATION_HUMAN_STREAK } from "@/lib/orchestration/escalation-ladder";
 import type { RunClosePatch } from "@/lib/orchestration/close-from-session";
 
@@ -76,6 +77,36 @@ ok(
   "capped close names the gap so the human alert is actionable",
   !!r11.summary.next && r11.summary.next.includes("five integrity layers still missing"),
 );
+
+// ── Is the BAR itself gradeable? ───────────────────────────────────────────
+// Everything above tests what happens once a bar is judged unmet. This tests
+// the upstream failure that made that path fire constantly: bars written as
+// descriptions of the finished product. On 2026-08-04, 10 of 19 projects had
+// one, and the fleet closed 26 partial / 10 timeout / 3 success in a week —
+// the agents were fine, the bar was ungradeable.
+const PRODUCT_DESCRIPTIONS = [
+  "Placement decisions are made with compatibility scores, and outcomes are tracked to improve future recommendations",
+  "Transactions are atomic, money is not a float, Swiss law governs, data belongs to its owner",
+  "Not explicitly defined, but implies that a product is done when it is live, profitable, and meets its targets",
+  "Clean, readable code, no wasted space, every pixel earns its place",
+  "Five layers of data integrity: client-side validation, server route validation, constraints, property-based checks",
+];
+for (const bar of PRODUCT_DESCRIPTIONS) {
+  ok(`ungradeable bar rejected: "${bar.slice(0, 42)}…"`, !isCheckableDoneBar(bar));
+}
+
+const CHECKABLE_BARS = [
+  "`npm run verify` passes, with its real output in the handoff (lint:/tsc:/tests:). Work is committed and pushed.",
+  "`pnpm verify` passes. If the change is user-visible: merged, and Deploy green for that commit.",
+  "tsc + lint clean, tests pass, deploys green",
+  "The change is applied to the box and proven: the affected unit is active and its health check passes.",
+];
+for (const bar of CHECKABLE_BARS) {
+  ok(`gradeable bar accepted: "${bar.slice(0, 42)}…"`, isCheckableDoneBar(bar));
+}
+
+ok("empty bar is not gradeable", !isCheckableDoneBar(""));
+ok("missing bar is not gradeable", !isCheckableDoneBar(undefined));
 
 console.log(`\n${fail === 0 ? "✓" : "✗"} dod-gate: ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

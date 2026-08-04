@@ -36,7 +36,9 @@ const risky = computeProjectHealth({
   gitUrl: "https://github.com/x/y",
   attrs: {
     mission: "m", production_url: "u", status: "production",
-    next_step: "n", definition_of_done: "d",
+    // Not a one-letter placeholder like its neighbours: the done-check now
+    // demands a bar a turn can actually evidence, so it needs a real command.
+    next_step: "n", definition_of_done: "`npm run verify` passes",
     security_vulnerability: "Email verification bypass",
   },
 });
@@ -46,6 +48,24 @@ eq(
   risky.checks.find((c) => c.key === "security_vulnerability")?.detail,
   "Email verification bypass",
   "failing check carries the issue text",
+);
+
+// A definition_of_done that describes the finished product is not gradeable:
+// the run-grader sees only the handoff, so such a bar downgrades every run to
+// `partial` forever. Present must not be mistaken for usable.
+const vagueBar = computeProjectHealth({
+  description: "Brief",
+  gitUrl: "https://github.com/x/y",
+  attrs: {
+    mission: "m", production_url: "u", status: "production", next_step: "n",
+    definition_of_done: "Placement decisions are made with compatibility scores",
+  },
+});
+eq(vagueBar.checks.find((c) => c.key === "done")?.pass, false, "product-description bar fails the done check");
+eq(
+  vagueBar.checks.find((c) => c.key === "done")?.detail.includes("Not checkable"),
+  true,
+  "failing done check explains why, not just that",
 );
 
 // The bulk-import placeholder description does not count as a brief.
