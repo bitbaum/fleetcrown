@@ -13,7 +13,18 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const RES = join(__dirname, "..", "resources");
-const required = ["icon.png", "tray-icon.png", "tray-icon@2x.png"];
+
+// icons/ is the Linux installer icon set (build.linux.icon points at it). Each
+// size becomes a /usr/share/icons/hicolor/<size>x<size>/apps entry in the .deb;
+// if the directory is missing, electron-builder silently falls back to a single
+// oversized icon and the launcher renders blank on KDE/GNOME.
+const ICON_SIZES = [16, 24, 32, 48, 64, 128, 256, 512, 1024];
+const required = [
+  "icon.png",
+  "tray-icon.png",
+  "tray-icon@2x.png",
+  ...ICON_SIZES.map((s) => `icons/${s}x${s}.png`),
+];
 
 const missing = required.filter((f) => !existsSync(join(RES, f)));
 if (missing.length) {
