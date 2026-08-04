@@ -41,6 +41,24 @@ export const KICKOFF_CORE_PROFILE_KEYS = [
 /** Mirrors the brief route's floor — below this there is nothing to extract. */
 export const KICKOFF_MIN_DESCRIPTION = 10;
 
+/**
+ * Long enough to brief an agent with. NOT a gate — an advisory.
+ *
+ * The floor above is 10 characters, which "a hiding box" clears. HamsterCheek
+ * sat at one sentence and every derived thing was thin in exactly that way:
+ * the extractor could not infer a stack from it and wrote "Unknown" instead.
+ * Everything the button produces is a function of this text, so a brief that
+ * clears the floor but says almost nothing deserves to be pointed at rather
+ * than silently accepted. Roughly two sentences.
+ */
+export const KICKOFF_THIN_DESCRIPTION = 200;
+
+/** Enough to run, but thin enough that the results will show it. */
+export function isThinBrief(text: string | null | undefined): boolean {
+  const t = (text ?? "").trim();
+  return t.length >= KICKOFF_MIN_DESCRIPTION && t.length < KICKOFF_THIN_DESCRIPTION;
+}
+
 export type KickoffSetupInput = {
   attrs: Record<string, string>;
   goalCount: number;

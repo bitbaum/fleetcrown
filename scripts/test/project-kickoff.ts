@@ -11,6 +11,8 @@ import {
   needsKickoff,
   planKickoff,
   hasKickoffSource,
+  isThinBrief,
+  KICKOFF_THIN_DESCRIPTION,
 } from "@/lib/project-kickoff";
 import {
   DEFAULT_PROVISION_TEMPLATE,
@@ -102,6 +104,24 @@ eq(
   missingKickoffSetup({ attrs: { ...FULL_ATTRS, stack: "Unknown" }, goalCount: 5, hasRepo: true }),
   ["profile"],
   "the HamsterCheek case: a placeholder stack still needs the profile step",
+);
+
+// ── Thin briefs are flagged, never blocked ──────────────────────────────────
+// HamsterCheek's original description was one sentence. It cleared the 10-char
+// floor, so the hero hid the editor and that sentence silently became the whole
+// brief — which is why the extractor had nothing to infer a stack from.
+eq(isThinBrief("HamsterCheek allows people to hide physical items in various locations."), true,
+  "one sentence runs, but is flagged as thin");
+eq(isThinBrief("short"), false, "below the floor is not 'thin', it's unusable — `ready` already blocks it");
+eq(isThinBrief(""), false, "empty is not thin");
+eq(isThinBrief(null), false, "absent is not thin");
+eq(isThinBrief("x".repeat(KICKOFF_THIN_DESCRIPTION)), false, "at the threshold it is no longer thin");
+eq(isThinBrief("x".repeat(KICKOFF_THIN_DESCRIPTION - 1)), true, "one char under is still thin");
+// The advisory must never become a gate: a thin brief still starts the project.
+eq(
+  hasKickoffSource("HamsterCheek allows people to hide physical items in various locations."),
+  true,
+  "a thin brief is still a valid source — flagged, not refused",
 );
 
 eq(hasKickoffSource("too short"), false, "9 chars is below the brief route's floor");
