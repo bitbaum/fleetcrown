@@ -21,6 +21,12 @@ on:
   workflow_run:
     workflows: ["CI"]        # the job in ci.yml
     types: [completed]
+  # Ships whatever is on main right now. Required, not a convenience: a CI run
+  # that GITHUB_TOKEN started (the auto-merge re-arm) emits NO workflow_run
+  # event, so the chain above never fires for an auto-merged PR — observed
+  # 2026-08-05 with three merges live on main and none of them deployed. The
+  # sweep dispatches this directly instead. See scripts/ci/auto-merge-sweep.sh.
+  workflow_dispatch: {}
 
 # One deploy at a time; never cancel a ship mid-flight.
 concurrency:
@@ -29,15 +35,17 @@ concurrency:
 
 jobs:
   deploy:
-    # Only on a GREEN CI run that was on main.
+    # Chained: only a GREEN CI run that was on main. Dispatched: the caller is
+    # responsible for the gate (the sweep checks main's CI before dispatching).
     # Kill switch: dormant until you set repo variable DEPLOY_VIA_CI=true. This
     # lets the workflow live on main (green PR, reviewed) WITHOUT deploying until
     # you've added HETZNER_SSH_KEY and disabled the local push-deploy hook. Unset
     # variable → '' → never runs.
     if: >
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.head_branch == 'main' &&
-      vars.DEPLOY_VIA_CI == 'true'
+      vars.DEPLOY_VIA_CI == 'true' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.head_branch == 'main'))
     runs-on: ubuntu-latest
 
     # Build does DB queries during static pre-render, so give it a schema-only
@@ -60,7 +68,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}  # deploy the exact CI-green commit
+          # Chained: the exact CI-green commit. Dispatched: the tip of the ref
+          # it was dispatched on. Never an empty string — that silently checks
+          # out the default branch and would ship something nobody verified.
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - uses: actions/setup-node@v7
         with:

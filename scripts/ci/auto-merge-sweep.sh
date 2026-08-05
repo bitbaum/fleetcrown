@@ -33,13 +33,21 @@
 # running. Red main => stop adding changes until it is fixed; running CI => the
 # answer is not in yet. Both simply defer to the next sweep.
 #
-# THE CD RE-ARM (do not remove)
-#   A push made with the default GITHUB_TOKEN does NOT trigger workflows. CI
-#   runs on push-to-main and Deploy chains off CI (workflow_run), so a merge
-#   from this script would otherwise land on main and never deploy. The explicit
-#   workflow_dispatch of CI at the end restores that chain: CI runs on main ->
-#   Deploy fires -> the box gets the new build. Silent no-deploy is the failure
-#   mode this guards against, and it is the sharpest edge in the whole setup.
+# HOW THE MERGE ACTUALLY REACHES THE BOX (do not remove)
+#   A push made with the default GITHUB_TOKEN does NOT trigger workflows, so a
+#   merge from this script lands on main without starting CI. Dispatching CI at
+#   the end fixes the *verification* half — but not the deploy half: GitHub does
+#   not emit a `workflow_run` event for a run that GITHUB_TOKEN started either,
+#   so Deploy never chains off it. Observed 2026-08-05: three PRs auto-merged,
+#   main green, and none of them deployed — the re-arm dispatch looked like it
+#   was working because CI itself did run.
+#
+#   So deployment is a RECONCILER, not a chain (see "Reconcile" below): every
+#   sweep compares main's tip against the last successful Deploy and dispatches
+#   deploy.yml directly when they differ. Self-healing by construction — a
+#   missed or failed deploy is retried on the next sweep rather than leaving a
+#   commit merged-but-not-live. Silent no-deploy is the failure mode all of this
+#   guards against, and it is the sharpest edge in the whole setup.
 
 set -euo pipefail
 
@@ -80,6 +88,35 @@ else
   if [ "$main_conclusion" != "success" ]; then
     echo "[auto-merge] ${BASE_BRANCH} CI is ${main_conclusion} — refusing to merge onto a broken base" >&2
     exit 0
+  fi
+fi
+
+# ── Reconcile: green main must be what is live ──────────────────────────────
+# Reaching here means main's CI is green FOR MAIN'S CURRENT TIP (every other
+# case exited above), so this commit is deployable. Ship it if it is not already
+# shipped.
+#
+# This is a reconciler, not a trigger: it compares desired state (main's tip)
+# with actual state (the last successful Deploy) and closes the gap. That makes
+# it self-healing — a deploy that never fired, or fired and failed, is picked up
+# by the next sweep instead of sitting merged-but-not-live forever. It is the
+# only thing that actually ships, because the workflow_run chain cannot:
+# GITHUB_TOKEN-started runs emit no workflow_run event (see the header note
+# "HOW THE MERGE ACTUALLY REACHES THE BOX").
+if [ -n "${main_ci:-}" ]; then
+  running=$(gh run list --repo "$REPO" --workflow deploy.yml --limit 5 \
+    --json status --jq '[.[] | select(.status != "completed")] | length')
+  deployed_sha=$(gh run list --repo "$REPO" --workflow deploy.yml --branch "$BASE_BRANCH" \
+    --status success --limit 1 --json headSha --jq '.[0].headSha // ""')
+
+  if [ "${running:-0}" -gt 0 ]; then
+    echo "[auto-merge] a deploy is already in flight — not dispatching another"
+  elif [ "$deployed_sha" = "$main_sha" ]; then
+    echo "[auto-merge] ${BASE_BRANCH} ${main_sha:0:8} is already deployed"
+  else
+    last_label="${deployed_sha:0:8}"
+    echo "[auto-merge] ${BASE_BRANCH} is at ${main_sha:0:8}; last successful deploy was ${last_label:-none} — shipping"
+    gh workflow run deploy.yml --repo "$REPO" --ref "$BASE_BRANCH"
   fi
 fi
 
@@ -185,8 +222,11 @@ for number in $(printf '%s' "$prs_json" | jq -r '.[].number'); do
 done
 
 if [ "$merged_any" -eq 1 ]; then
-  echo "[auto-merge] re-arming CI on ${BASE_BRANCH} so Deploy ships the merge"
+  # Verification only. The deploy happens in the reconciler at the top of the
+  # NEXT sweep, once this CI run has proved the merge on main — dispatching
+  # Deploy here would ship a commit whose main-CI has not finished.
+  echo "[auto-merge] re-arming CI on ${BASE_BRANCH} to verify the merge"
   gh workflow run ci.yml --repo "$REPO" --ref "$BASE_BRANCH"
 else
-  echo "[auto-merge] nothing merged; Deploy not triggered"
+  echo "[auto-merge] nothing merged"
 fi
