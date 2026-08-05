@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Load-bearing for CD: a merge made by auto-merge.yml uses the default
+  # GITHUB_TOKEN, and a push made with that token does NOT trigger workflows.
+  # Deploy chains off CI via workflow_run, so without a way to dispatch CI on
+  # main by hand, every automated merge would land and silently never ship.
+  workflow_dispatch: {}
 
 # Cancel in-progress runs of the same workflow on the same branch — saves
 # minutes when commits land in quick succession.

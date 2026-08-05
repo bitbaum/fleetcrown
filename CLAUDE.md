@@ -204,6 +204,23 @@ See `docs/development/cloud-local-workflows.md` — SSOT for which workflows run
 
 See `docs/development/responsive-design.md` — SSOT for mobile chrome tokens, shell layout, viewport-height panes, and responsive component patterns. All pages must work at 320px+ without horizontal scroll.
 
+## Shipping: nobody merges by hand
+
+A green, non-draft PR merges and deploys itself. `.github/workflows/auto-merge.yml`
+squash-merges it, then dispatches CI on `main` so Deploy fires and the box gets
+the build. Policy lives in `scripts/ci/auto-merge-sweep.sh` — read that file
+before changing anything here.
+
+- **Hold work back** with a **draft** PR (waits forever) or a `hold` /
+  `no-automerge` / `do-not-merge` / `wip` label.
+- **Corollary: never open a non-draft PR you would not want deployed.** Marking
+  a PR ready for review *is* the decision to ship it.
+- One PR merges per sweep, and only onto a green `main` — a PR's checks prove it
+  against the `main` it branched from, not against the other queued PRs.
+- The CD re-arm at the end of the sweep is load-bearing: a push made with the
+  default `GITHUB_TOKEN` does not trigger workflows, so without it merges land
+  and silently never deploy. `ci.yml` carries `workflow_dispatch` for this.
+
 ## Dev Commands
 
 ```bash
