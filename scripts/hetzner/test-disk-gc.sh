@@ -159,22 +159,36 @@ check "safe_rm refuses a path outside its allowed prefix" \
 # the second pass must bail out instead of racing.
 if command -v flock >/dev/null 2>&1; then
   seed
-  # A slow first pass (the du-based df stub is deliberately unhurried) holds the
-  # lock while a second pass is launched at the same instant.
-  env DISK_GC_DEV_ROOT="$FAKE_FS/dev" DISK_GC_OPT_ROOT="$FAKE_FS/opt" \
-      DISK_GC_IDLE_DAYS=14 DISK_GC_KEEP_RELEASES=2 \
-      DISK_GC_HIGH_PCT=20 DISK_GC_TARGET_PCT=1 \
-      bash "$TMP/disk-gc.sh" >/dev/null 2>&1 &
-  first=$!
+  # Hold the lock from OUTSIDE for a fixed window, so the assertion does not
+  # depend on two processes happening to overlap (that raced green locally and
+  # only failed in CI). Inside the window a pass must skip cleanly.
+  ( flock 9; sleep 3 ) 9>"$TMP/state/.disk-gc.lock" &
+  holder=$!
+  sleep 0.5
+  set +e
   env DISK_GC_DEV_ROOT="$FAKE_FS/dev" DISK_GC_OPT_ROOT="$FAKE_FS/opt" \
       DISK_GC_IDLE_DAYS=14 DISK_GC_KEEP_RELEASES=2 \
       DISK_GC_HIGH_PCT=20 DISK_GC_TARGET_PCT=1 \
       bash "$TMP/disk-gc.sh" >"$TMP/second.log" 2>&1
-  second_rc=$?
-  wait "$first" 2>/dev/null || true
-  check "concurrent pass exits cleanly instead of racing (rc=$second_rc)" \
-    "$([ "$second_rc" -eq 0 ] && echo 0 || echo 1)"
-  check "concurrent pass did not corrupt the result (hot repo still protected)" \
+  blocked_rc=$?
+  set -e
+  check "lock held: pass exits 0 (a busy lock is normal, not a failure) (rc=$blocked_rc)" \
+    "$([ "$blocked_rc" -eq 0 ] && echo 0 || echo 1)"
+  check "lock held: pass deleted nothing" \
+    "$([ -d "$FAKE_FS/dev/coldrepo/node_modules" ] && echo 0 || echo 1)"
+  wait "$holder" 2>/dev/null || true
+
+  # Lock released → the very same command must now do its job.
+  set +e
+  env DISK_GC_DEV_ROOT="$FAKE_FS/dev" DISK_GC_OPT_ROOT="$FAKE_FS/opt" \
+      DISK_GC_IDLE_DAYS=14 DISK_GC_KEEP_RELEASES=2 \
+      DISK_GC_HIGH_PCT=20 DISK_GC_TARGET_PCT=1 \
+      bash "$TMP/disk-gc.sh" >/dev/null 2>&1
+  free_rc=$?
+  set -e
+  check "lock free: same pass runs and reclaims (rc=$free_rc)" \
+    "$([ "$free_rc" -eq 0 ] && [ ! -d "$FAKE_FS/dev/coldrepo/node_modules" ] && echo 0 || echo 1)"
+  check "lock free: hot repo still protected" \
     "$([ -d "$FAKE_FS/dev/hotrepo/node_modules" ] && echo 0 || echo 1)"
 else
   echo "  - flock unavailable, skipping concurrency test"

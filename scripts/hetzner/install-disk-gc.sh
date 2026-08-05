@@ -42,15 +42,22 @@ set -uo pipefail
 
 # Single-instance guard. Two GC passes running at once race on the same
 # directories (observed on install: the timer's catch-up run overlapped the
-# initial one and both tried to remove the same node_modules). Harmless here
+# initial one and both tried to remove the same node_modules). Harmless there
 # because safe_rm is idempotent, but a GC that can run concurrently with itself
 # will eventually delete something another pass is mid-way through reading.
-# flock is advisory and released automatically when the process exits.
+#
+# Hold the lock on a dedicated FD rather than `exec flock -n … "$0"`: exec
+# REPLACES this shell, so the script's exit status becomes flock's — a busy lock
+# then surfaced as exit 1 (a failed unit / red CI) even though "another pass is
+# already running" is a perfectly normal outcome. The `||` after an exec can
+# never run either. The lock releases automatically when the process exits.
 # DISK_GC_NO_LOCK=1 lets the test suite drive the logic directly.
-if [ "${DISK_GC_NO_LOCK:-0}" != "1" ] && [ -z "${DISK_GC_LOCKED:-}" ]; then
-  export DISK_GC_LOCKED=1
-  exec flock -n "${MON:-/opt/monitoring}/state/.disk-gc.lock" "$0" "$@" || {
-    logger -t disk-gc "another GC pass is already running — skipping"; exit 0; }
+if [ "${DISK_GC_NO_LOCK:-0}" != "1" ] && command -v flock >/dev/null 2>&1; then
+  exec 9>"${MON:-/opt/monitoring}/state/.disk-gc.lock" 2>/dev/null || true
+  if ! flock -n 9 2>/dev/null; then
+    logger -t disk-gc "another GC pass is already running — skipping"
+    exit 0
+  fi
 fi
 
 # Tunables (env-overridable so the test suite can drive them).
