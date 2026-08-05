@@ -43,9 +43,22 @@ const PLACEHOLDER_ANSWERS = new Set([
  * gate, or brief an agent with "STACK: Unknown".
  */
 export function hasAnswer(value: string | null | undefined): boolean {
+  return answer(value) !== null;
+}
+
+/**
+ * The real answer this attribute holds, or null — the value-returning twin of
+ * `hasAnswer`, and what `cleanDescription` is to descriptions.
+ *
+ * It exists because `attrs.x?.trim()` reads as "the value, if any" but is not:
+ * it happily returns "Unknown". Both shapes are needed (a boolean for gates, a
+ * value for display and prompts) and they must agree, so both come from here.
+ * An eslint rule bans the raw `attrs.x?.trim()` form to keep it that way.
+ */
+export function answer(value: string | null | undefined): string | null {
   const v = value?.trim();
-  if (!v) return false;
-  return !PLACEHOLDER_ANSWERS.has(v.toLowerCase().replace(/[.!]+$/, ""));
+  if (!v) return null;
+  return PLACEHOLDER_ANSWERS.has(v.toLowerCase().replace(/[.!]+$/, "")) ? null : v;
 }
 
 /**

@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { deriveProjectLoopReadiness } from "@/lib/project-loop-readiness";
 import { computeProjectHealth } from "@/lib/project-health";
 import { HealthScoreBar } from "./HealthScore";
+import { answer } from "@/lib/project-display";
 
 export type ProjectGridRow = {
   id: string;
@@ -40,7 +41,7 @@ export function ProjectGridCard({
     attrs,
   });
   const status = attrs["status"];
-  const nextStep = attrs["next_step"]?.trim() ?? null;
+  const nextStep = answer(attrs["next_step"]);
   const signals = getHealthSignals(attrs);
   const hasIssues = signals.length > 0;
   const loopReadiness = deriveProjectLoopReadiness(project);

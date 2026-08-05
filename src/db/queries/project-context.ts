@@ -18,6 +18,7 @@ import { renderOperatingPrinciples } from "@/config/operating-principles";
 import { getProjectDossierByProjectKey, renderProjectDossierForAgent } from "./project-dossier";
 import { fetchAttributesByEntityIds } from "./utils";
 import { DEFAULT_GOAL_MAX_TURNS } from "@/lib/orchestration/dod-gate";
+import { answer } from "@/lib/project-display";
 
 const MAX_GOALS = 6;
 
@@ -84,7 +85,7 @@ export async function getProjectContext(userId: string, projectKey: string): Pro
     // these, "next best" is judged on description + goals alone; with them, the
     // agent knows the stack, architecture, conventions, and what "done" means.
     for (const [key, label] of DRIVING_FIELDS) {
-      const v = attrs[key]?.trim();
+      const v = answer(attrs[key]);
       if (v) projectLines.push(`${label}: ${v}`);
     }
     const notes = runtimeProject?.notes?.trim();
@@ -137,7 +138,7 @@ export async function getProjectGoalConfig(
   const entity = rows.find((e) => e.name.toLowerCase() === projectKey.toLowerCase());
   if (!entity) return { definitionOfDone: null, maxTurns: null };
   const attrs = (await fetchAttributesByEntityIds([entity.id])).get(entity.id) ?? {};
-  const dod = attrs["definition_of_done"]?.trim() || null;
+  const dod = answer(attrs["definition_of_done"]);
   const rawTurns = parseInt(attrs["goal_max_turns"] ?? "", 10);
   // Clamp to a sane range; ignore garbage. An explicit 0 is the escape hatch
   // for "genuinely loop until met" — deliberate, not the accidental default.

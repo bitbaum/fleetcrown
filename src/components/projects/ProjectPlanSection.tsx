@@ -8,6 +8,7 @@ import type { ProjectDossier } from "@/db/queries/project-dossier";
 import { GoalEditor } from "./GoalEditor";
 import { AddAttrInline, AttrRow } from "./project-overview-helpers";
 import { GoalProgressBar } from "@/components/shared/GoalProgressBar";
+import { answer } from "@/lib/project-display";
 
 type LinkedGoal = ProjectDossier["detail"]["linkedGoals"][number];
 
@@ -29,7 +30,7 @@ export function ProjectPlanSection({
   const refresh = () => router.refresh();
   const rawMaxTurns = Number.parseInt(attrs.goal_max_turns ?? "", 10);
   const maxTurns = Number.isFinite(rawMaxTurns) && rawMaxTurns > 0 ? Math.min(rawMaxTurns, 20) : null;
-  const nextStep = attrs.next_step?.trim();
+  const nextStep = answer(attrs.next_step);
 
   return (
     <section id="plan" className="scroll-mt-28 border-t border-border-subtle pt-7" aria-labelledby="project-plan-title">
@@ -85,7 +86,7 @@ export function ProjectPlanSection({
               <div>
                 <dt className="text-sm font-medium text-text-primary">Definition of done</dt>
                 <dd className="mt-1 text-sm leading-relaxed text-text-secondary">
-                  {attrs.definition_of_done?.trim() || "No completion contract is recorded."}
+                  {answer(attrs.definition_of_done) ?? "No completion contract is recorded."}
                 </dd>
               </div>
             ) : (
