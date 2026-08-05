@@ -1,0 +1,213 @@
+#!/usr/bin/env bash
+# Disk garbage collection for the box — the fix for "we keep running out".
+#
+# Why this exists: the box went 40GB → 75GB and still filled up. The deployed
+# apps are NOT the problem (all of /opt/*/app/node_modules is ~190MB, thanks to
+# Next standalone output). The disk is eaten by DEVELOPMENT CHECKOUTS: ~13 repos
+# under /home/ubuntu/dev, each carrying its own ~1GB node_modules — about 12GB,
+# and it grows by ~1GB every time a repo joins the fleet. Cleaning by hand just
+# resets the clock; this reclaims automatically.
+#
+# Design: a real garbage collector, not a cron that deletes things.
+#   - Below HIGH_PCT it does NOTHING (no cost when there is room).
+#   - Above it, it frees in increasing order of cost and STOPS the moment the
+#     disk is back under TARGET_PCT. Cheap, regenerable things go first.
+#       tier 1  journal + apt cache          (pure cache, zero cost)
+#       tier 2  npm caches                   (re-downloaded on demand)
+#       tier 3  release dirs beyond KEEP     (older rollback targets)
+#       tier 4  node_modules of IDLE repos   (restored by `npm ci`)
+#   - Everything it removes is reconstructible. It never touches app data,
+#     databases, /var/lib/containerd (the live Supabase stack), or a repo that
+#     has been touched within IDLE_DAYS or has a process running inside it.
+#
+# Reports what it freed through the watchdog's Telegram channel (lib-alert.sh),
+# and only when it actually did something — no "ran and did nothing" noise.
+#
+# Idempotent: re-run any time. Logic is covered by
+# scripts/hetzner/test-disk-gc.sh (npm run test:ops).
+#
+# Usage: install-disk-gc.sh
+set -euo pipefail
+source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
+
+ssh -o BatchMode=yes "$BOX" 'sudo bash -s' <<'REMOTE'
+set -euo pipefail
+MON=/opt/monitoring
+mkdir -p "$MON/state"
+
+cat > "$MON/disk-gc.sh" <<'GC'
+#!/usr/bin/env bash
+set -uo pipefail
+. "${MON:-/opt/monitoring}/lib-alert.sh"
+
+# Single-instance guard. Two GC passes running at once race on the same
+# directories (observed on install: the timer's catch-up run overlapped the
+# initial one and both tried to remove the same node_modules). Harmless here
+# because safe_rm is idempotent, but a GC that can run concurrently with itself
+# will eventually delete something another pass is mid-way through reading.
+# flock is advisory and released automatically when the process exits.
+# DISK_GC_NO_LOCK=1 lets the test suite drive the logic directly.
+if [ "${DISK_GC_NO_LOCK:-0}" != "1" ] && [ -z "${DISK_GC_LOCKED:-}" ]; then
+  export DISK_GC_LOCKED=1
+  exec flock -n "${MON:-/opt/monitoring}/state/.disk-gc.lock" "$0" "$@" || {
+    logger -t disk-gc "another GC pass is already running — skipping"; exit 0; }
+fi
+
+# Tunables (env-overridable so the test suite can drive them).
+# HIGH_PCT sits BELOW the host-check disk alarm (85%) on purpose: the GC's job
+# is to keep the disk off the alarm, so it must act before the alarm fires.
+HIGH_PCT="${DISK_GC_HIGH_PCT:-80}"        # start reclaiming above this
+TARGET_PCT="${DISK_GC_TARGET_PCT:-70}"    # stop once at or below this
+IDLE_DAYS="${DISK_GC_IDLE_DAYS:-14}"      # a repo untouched this long is cold
+KEEP_RELEASES="${DISK_GC_KEEP_RELEASES:-2}"
+DEV_ROOT="${DISK_GC_DEV_ROOT:-/home/ubuntu/dev}"
+OPT_ROOT="${DISK_GC_OPT_ROOT:-/opt}"
+DRY_RUN="${DISK_GC_DRY_RUN:-0}"
+
+pct()  { df --output=pcent / 2>/dev/null | tail -1 | tr -dc '0-9'; }
+usedk() { df --output=used  / 2>/dev/null | tail -1 | tr -dc '0-9'; }
+done_yet() { [ "$(pct)" -le "$TARGET_PCT" ]; }
+
+FREED_LOG=""
+note() { FREED_LOG="${FREED_LOG}${FREED_LOG:+, }$1"; }
+
+# Guarded recursive delete. Refuses anything that is not a real directory
+# beneath the root it was told to work in — a GC that can rm -rf / is worse
+# than a full disk.
+safe_rm() { # <path> <required-prefix>
+  local path="$1" prefix="$2"
+  case "$path" in
+    "$prefix"/*) ;;                      # must live under the prefix
+    *) logger -t disk-gc "REFUSED (outside $prefix): $path"; return 1 ;;
+  esac
+  case "$path" in
+    *..*) logger -t disk-gc "REFUSED (traversal): $path"; return 1 ;;
+  esac
+  [ -d "$path" ] || return 1
+  if [ "$DRY_RUN" = "1" ]; then echo "DRY rm -rf $path"; return 0; fi
+  rm -rf -- "$path"
+}
+
+# Is any running process working inside this directory? Cheap /proc scan; stops
+# the GC from pulling node_modules out from under a build or a live agent.
+in_use() { # <dir>
+  local dir="$1" link
+  for link in /proc/[0-9]*/cwd; do
+    link=$(readlink "$link" 2>/dev/null) || continue
+    case "$link" in "$dir"|"$dir"/*) return 0 ;; esac
+  done
+  return 1
+}
+
+start_pct=$(pct); start_used=$(usedk)
+[ -n "${start_pct:-}" ] || exit 0
+if [ "$start_pct" -le "$HIGH_PCT" ]; then
+  logger -t disk-gc "disk ${start_pct}% <= ${HIGH_PCT}% — nothing to do"
+  exit 0
+fi
+logger -t disk-gc "disk ${start_pct}% > ${HIGH_PCT}% — reclaiming down to ${TARGET_PCT}%"
+
+# ── Tier 1: pure caches (free, regenerate themselves) ───────────────────────
+if ! done_yet; then
+  before=$(usedk)
+  [ "$DRY_RUN" = "1" ] || { journalctl --vacuum-size=200M >/dev/null 2>&1; apt-get clean >/dev/null 2>&1; }
+  after=$(usedk); d=$(( (before - after) / 1024 ))
+  [ "$d" -gt 0 ] && note "journal/apt ${d}MB"
+fi
+
+# ── Tier 2: npm caches (re-downloaded on demand) ────────────────────────────
+if ! done_yet; then
+  before=$(usedk)
+  for u in ubuntu openclaw root; do
+    id "$u" >/dev/null 2>&1 || continue
+    [ "$DRY_RUN" = "1" ] || sudo -u "$u" npm cache clean --force >/dev/null 2>&1
+  done
+  after=$(usedk); d=$(( (before - after) / 1024 ))
+  [ "$d" -gt 0 ] && note "npm cache ${d}MB"
+fi
+
+# ── Tier 3: release dirs beyond KEEP_RELEASES (older rollback targets) ──────
+if ! done_yet; then
+  before=$(usedk); n=0
+  for reldir in "$OPT_ROOT"/*/releases; do
+    [ -d "$reldir" ] || continue
+    # Newest first; anything past the keep-count is a stale rollback target.
+    ls -1t "$reldir" 2>/dev/null | tail -n +$((KEEP_RELEASES + 1)) | while read -r old; do
+      [ -n "$old" ] || continue
+      safe_rm "$reldir/$old" "$OPT_ROOT" && logger -t disk-gc "removed release $reldir/$old"
+    done
+    done_yet && break
+  done
+  after=$(usedk); d=$(( (before - after) / 1024 ))
+  [ "$d" -gt 0 ] && note "old releases ${d}MB"
+fi
+
+# ── Tier 4: node_modules of cold dev checkouts (restored by `npm ci`) ───────
+# Coldest first, so the repo you are most likely to touch next survives longest.
+if ! done_yet && [ -d "$DEV_ROOT" ]; then
+  before=$(usedk); now=$(date +%s)
+  # Emit "<idle-seconds> <repo-dir>" for each checkout, coldest first. Activity
+  # = newest source file EXCLUDING node_modules (an npm install would otherwise
+  # make every repo look permanently fresh).
+  while read -r _idle repo; do
+    [ -n "$repo" ] || continue
+    done_yet && break
+    nm="$repo/node_modules"
+    [ -d "$nm" ] || continue
+    if in_use "$repo"; then logger -t disk-gc "skip (in use): $repo"; continue; fi
+    safe_rm "$nm" "$DEV_ROOT" && logger -t disk-gc "removed $nm"
+  done <<EOF
+$(for d in "$DEV_ROOT"/*/; do
+    [ -d "$d" ] || continue
+    d="${d%/}"
+    newest=$(find "$d" -maxdepth 3 -name node_modules -prune -o -type f -printf '%T@\n' 2>/dev/null \
+             | sort -rn | head -1 | cut -d. -f1)
+    newest="${newest:-0}"
+    idle=$(( (now - newest) / 86400 ))
+    [ "$idle" -ge "$IDLE_DAYS" ] && printf '%s %s\n' "$idle" "$d"
+  done | sort -rn)
+EOF
+  after=$(usedk); d=$(( (before - after) / 1024 ))
+  [ "$d" -gt 0 ] && note "cold node_modules ${d}MB"
+fi
+
+end_pct=$(pct); end_used=$(usedk)
+total=$(( (start_used - end_used) / 1024 ))
+if [ "$total" -gt 0 ]; then
+  alert "🧹" "DISK GC: freed ${total}MB (${start_pct}% → ${end_pct}%) — ${FREED_LOG:-n/a}"
+else
+  # Above the mark but nothing safe left to reclaim: that is a real capacity
+  # problem and the operator needs to know it, not a silent no-op.
+  logger -t disk-gc "nothing reclaimable; still ${end_pct}%"
+  alert_transition diskgc bad "🚨" "DISK GC could not free space — still ${end_pct}% and every safe tier is exhausted. Needs a bigger volume or fewer checkouts."
+fi
+[ "$total" -gt 0 ] && alert_transition diskgc ok "" ""
+exit 0
+GC
+chmod +x "$MON/disk-gc.sh"
+
+cat > /etc/systemd/system/disk-gc.service <<'SVC'
+[Unit]
+Description=Reclaim disk on the box (caches, old releases, cold node_modules)
+After=network-online.target
+[Service]
+Type=oneshot
+ExecStart=/opt/monitoring/disk-gc.sh
+SVC
+cat > /etc/systemd/system/disk-gc.timer <<'TIMER'
+[Unit]
+Description=Run disk GC hourly (no-op unless the disk is actually under pressure)
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=1h
+Persistent=true
+Unit=disk-gc.service
+[Install]
+WantedBy=timers.target
+TIMER
+
+systemctl daemon-reload
+systemctl enable --now disk-gc.timer >/dev/null 2>&1 || true
+echo "[disk-gc] installed; timer active"
+REMOTE
+echo "[disk-gc] installed on $BOX"
