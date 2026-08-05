@@ -21,7 +21,7 @@ import {
   inferProvisionTemplate,
 } from "@/config/project-templates";
 import { TEMPLATES } from "@/lib/project-templates";
-import { hasAnswer } from "@/lib/project-display";
+import { answer, hasAnswer } from "@/lib/project-display";
 
 let pass = 0;
 let fail = 0;
@@ -100,6 +100,14 @@ eq(hasAnswer(""), false, "empty is a non-answer");
 eq(hasAnswer(undefined), false, "absent is a non-answer");
 eq(hasAnswer("Next.js"), true, "a real value is an answer");
 eq(hasAnswer("No known competitors yet"), true, "a real sentence that mentions not-knowing is still an answer");
+// answer() is the value-returning twin — the two must never disagree, which is
+// the whole reason hasAnswer delegates to it.
+eq(answer("Unknown"), null, "answer() drops a placeholder");
+eq(answer("  Next.js  "), "Next.js", "answer() returns the trimmed value");
+eq(answer(undefined), null, "answer() of absent is null");
+for (const v of ["Unknown", "n/a", "", "  ", "Next.js", "No known competitors yet", "-", "TBD."]) {
+  eq(hasAnswer(v), answer(v) !== null, `hasAnswer and answer agree on ${JSON.stringify(v)}`);
+}
 eq(
   missingKickoffSetup({ attrs: { ...FULL_ATTRS, stack: "Unknown" }, goalCount: 5, hasRepo: true }),
   ["profile"],

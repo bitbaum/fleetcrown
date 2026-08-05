@@ -12,7 +12,7 @@ import { DevLogList } from "@/components/shared/DevLogList";
 import { GoalProgressBar } from "@/components/shared/GoalProgressBar";
 import { GoalEditor } from "@/components/projects/GoalEditor";
 import { timeAgo, shortTimeAgo, formatDurationMinutes } from "@/lib/dates";
-import { DOSSIER_STALE_MS } from "@/lib/project-display";
+import { DOSSIER_STALE_MS, answer } from "@/lib/project-display";
 import { APP_LOCALE } from "@/lib/constants";
 import { MINUTE_MS, WEEK_MS } from "@/lib/constants/time";
 import { RunNextStepButton } from "./ProjectActionButtons";
@@ -174,7 +174,7 @@ export function NextSection({
   const topOpenGoal = goals.find((g) => (g.progress ?? 0) < 100);
   const next =
     (staleHandoff ? null : latest?.next?.trim()) ||
-    dossier.detail.attrs.next_step?.trim() ||
+    answer(dossier.detail.attrs.next_step) ||
     (topOpenGoal ? `Advance: ${topOpenGoal.title}` : null);
 
   return (

@@ -32,6 +32,20 @@ const eslintConfig = defineConfig([
           message:
             "Pass the composed-path leaf to isTypingTarget (e.composedPath()[0] ?? e.target), not a bare e.target — a bare .target is shadow-DOM-blind and reintroduces the keystroke-hijack bug.",
         },
+        // Close the placeholder-answer class (2026-08 dogfood, second
+        // occurrence): the profile extractor writes the literal "Unknown" for
+        // fields it cannot infer, so `attrs.x?.trim()` reads as "the value, if
+        // any" while actually returning a non-answer. That scored health
+        // points, satisfied gates, and briefed agents with "STACK: Unknown".
+        // hasAnswer(attrs.x) for the boolean, answer(attrs.x) for the value —
+        // both from lib/project-display, so they can never disagree.
+        ...["callee.object.object.name='attrs'", "callee.object.object.property.name='attrs'"].map(
+          (attrsRef) => ({
+            selector: `CallExpression[callee.property.name='trim'][${attrsRef}]`,
+            message:
+              "Don't trim a project attribute directly — use answer(attrs.x) for the value or hasAnswer(attrs.x) for the check (@/lib/project-display). A raw .trim() treats the extractor's literal \"Unknown\" as a filled field.",
+          }),
+        ),
       ],
     },
   },

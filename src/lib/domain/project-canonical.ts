@@ -1,5 +1,6 @@
 import type { ProjectGridRow } from "@/components/projects/ProjectGridCard";
 import { hasProjectAttention } from "@/lib/projects-page-stats";
+import { hasAnswer } from "@/lib/project-display";
 
 /** Case-insensitive grouping key for project names within one user. */
 export function projectNameKey(name: string): string {
@@ -23,7 +24,7 @@ export function scoreProjectEntity(row: ProjectEntityScoreInput): number {
   if (row.gitUrl) score += 5;
   if (row.dirPath) score += 3;
   if (hasProjectAttention(row.attrs)) score += 4;
-  if (row.attrs["next_step"]?.trim()) score += 2;
+  if (hasAnswer(row.attrs["next_step"])) score += 2;
   score += Object.keys(row.attrs).length;
   if (!row.readonly) score += 20;
   return score;

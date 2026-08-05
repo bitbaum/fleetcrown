@@ -10,7 +10,7 @@ import { BusinessPlanSection } from "./BusinessPlanSection";
 import { AddAttrInline, AttrRow } from "./project-overview-helpers";
 import { getProjectLinks, type ProjectResource } from "./project-detail-types";
 import { PROJECT_ATTR } from "@/config/project-attrs";
-import { hasAnswer } from "@/lib/project-display";
+import { answer, hasAnswer } from "@/lib/project-display";
 
 const CONTEXT_GROUPS = [
   {
@@ -107,7 +107,7 @@ export function ProjectContextEditor({
             <h3 className="ui-projects-section-label mb-1">{group.title}</h3>
             <div className="border-y border-border-subtle">
               {group.fields.map((field) => {
-                const value = attrs[field.key]?.trim();
+                const value = answer(attrs[field.key]);
                 if (value) {
                   return (
                     <AttrRow

@@ -15,7 +15,7 @@ import { FixSignalButton } from "./ProjectActionButtons";
 import { ProjectKickoff } from "./ProjectKickoff";
 import { AssistantContextBridge } from "./AssistantContextBridge";
 import { needsKickoff } from "@/lib/project-kickoff";
-import { cleanDescription } from "@/lib/project-display";
+import { answer, cleanDescription } from "@/lib/project-display";
 
 const SECTIONS = [
   { href: "#overview", label: "Overview" },
@@ -52,7 +52,7 @@ export function ProjectWorkspaceView({
     timeoutStreak += 1;
   }
   const latestDevLogEntry = [...(detail.devLog ?? [])].reverse()[0] ?? null;
-  const nextStep = latestDevLogEntry?.next?.trim() || attrs.next_step?.trim() || null;
+  const nextStep = answer(latestDevLogEntry?.next) ?? answer(attrs.next_step);
   const primaryOrangeCatLink = dossier.orangecatLinks.find((link) => link.role === "funding")
     ?? dossier.orangecatLinks.find((link) => link.role === "public_profile")
     ?? dossier.orangecatLinks[0];
