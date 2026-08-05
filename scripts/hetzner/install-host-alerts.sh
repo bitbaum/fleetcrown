@@ -8,8 +8,12 @@
 #      with the last journal lines. This is what turns "5 units failed silently
 #      for weeks" (the audit finding) into "you knew within a minute".
 #   2. Host checks — /opt/monitoring/host-check.sh (own timer) alerts, on
-#      TRANSITION only, on: disk >85%, mem-available <400MB OR swap >90%,
+#      TRANSITION only, on: disk >85% (recovering only under 80%, so a disk
+#      parked on the mark can't flap), mem-available <400MB OR swap >90%,
 #      `systemctl --failed` non-empty, postgres not accepting connections.
+#
+# Logic here is covered by scripts/hetzner/test-host-alerts.sh (npm run test:ops),
+# which extracts the heredoc payloads below and drives them with stubbed tools.
 #
 # Idempotent: re-run any time (after adding apps/crons) to (re)wire drop-ins.
 # Alert target: /opt/monitoring/telegram.env (already present), else journal.
@@ -30,7 +34,9 @@ cat > "$MON/lib-alert.sh" <<'LIB'
 #   alert <emoji> <text>              — send now (Telegram if configured, always journal)
 #   alert_transition <key> <state> <emoji> <up-or-down-text>
 #       — send only when <key> flips state (state file under $MON/state)
-MON=/opt/monitoring
+# MON is overridable so test-host-alerts.sh can exercise this exact code against
+# a temp dir; prod never sets it and gets /opt/monitoring.
+MON="${MON:-/opt/monitoring}"
 [ -f "$MON/telegram.env" ] && . "$MON/telegram.env" || true
 alert() {
   local text="$1 $2"
@@ -48,8 +54,15 @@ alert_transition() {  # key state emoji text
   local prev="ok"; [ -f "$sf" ] && prev=$(cat "$sf")
   [ "$state" = "$prev" ] && return 0
   printf '%s' "$state" > "$sf"
-  [ "$state" = "bad" ] && alert "$emoji" "$text"
-  [ "$state" = "ok" ]  && alert "✅" "RECOVERED: $key"
+  if [ "$state" = "bad" ]; then alert "$emoji" "$text"; else alert "✅" "RECOVERED: $key"; fi
+  # MUST return 0 unconditionally. A trailing `[ "$state" = "ok" ] && alert ...`
+  # here returned 1 on the bad path, so a caller written as
+  #   check && alert_transition k bad ... || alert_transition k ok ...
+  # ran the `ok` branch immediately after alerting — resetting the state file and
+  # re-alerting every tick (the 2026-08-05 disk-alert storm: 40 alert/RECOVERED
+  # pairs in 3h). Callers must never be able to read a branch's exit status as
+  # "the check failed".
+  return 0
 }
 LIB
 
@@ -94,16 +107,32 @@ SVC
 cat > "$MON/host-check.sh" <<'HC'
 #!/usr/bin/env bash
 set -uo pipefail
-. /opt/monitoring/lib-alert.sh
+. "${MON:-/opt/monitoring}/lib-alert.sh"
 
-# Disk (root fs) — bad >85%
+# Disk (root fs) — bad above DISK_BAD_PCT, recovers only below DISK_OK_PCT.
+# The gap is deliberate hysteresis: a disk parked exactly on a single threshold
+# would otherwise flip state on normal churn (log write, tmp file) and page on
+# every flip. Between the two marks we hold whatever state we were already in.
+DISK_BAD_PCT=85
+DISK_OK_PCT=80
 dp=$(df --output=pcent / | tail -1 | tr -dc '0-9')
-[ "${dp:-0}" -gt 85 ] && alert_transition disk bad "💾" "DISK ${dp}% on / (>85%)" || alert_transition disk ok "" ""
+if [ "${dp:-0}" -gt "$DISK_BAD_PCT" ]; then
+  alert_transition disk bad "💾" "DISK ${dp}% on / (>${DISK_BAD_PCT}%)"
+elif [ "${dp:-100}" -lt "$DISK_OK_PCT" ]; then
+  alert_transition disk ok "" ""
+fi
 
 # Memory — bad when available <400MB AND swap >90% (both = real pressure, not
 # just healthy cache use / idle pages parked in swap).
-read -r _ _ _ _ _ avail <<<"$(free -m | awk '/^Mem:/')"
-read -r _ st su _        <<<"$(free -m | awk '/^Swap:/')"
+# Pull the exact columns by index. The previous `read -r _ _ _ _ _ avail` gave
+# six variables for the Mem line's SEVEN fields, so the trailing `avail` absorbed
+# both buff/cache AND available ("3490 3283"). Every `[ "$avail" -lt 400 ]` then
+# died with "integer expected", the `if` fell through to the else, and the memory
+# check silently reported ok on every run since it was written — it could never
+# have paged. Positional $N is immune to that whole class.
+avail=$(free -m | awk '/^Mem:/{print $7}')
+st=$(free -m | awk '/^Swap:/{print $2}')
+su=$(free -m | awk '/^Swap:/{print $3}')
 swpct=0; [ "${st:-0}" -gt 0 ] && swpct=$(( su * 100 / st ))
 if [ "${avail:-9999}" -lt 400 ] && [ "$swpct" -gt 90 ]; then
   alert_transition mem bad "🧠" "MEM tight: ${avail}MB avail, swap ${swpct}%"

@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { PageLayout } from "@/components/ui/page-layout";
 import { SystemStats } from "@/components/system/SystemStats";
+import { HetznerCapacityCard } from "@/components/system/HetznerCapacityCard";
 import { RevenueCard } from "@/components/system/RevenueCard";
 import { ScheduledJobsCard } from "@/components/system/ScheduledJobsCard";
 import { MemorySummaryCard } from "@/components/system/MemorySummaryCard";
@@ -46,6 +47,9 @@ export default async function SystemPage() {
     <PullToRefresh>
       <PageLayout title="System" subtitle="Infrastructure health and scheduled jobs">
         <SystemStats />
+        {/* Directly under the host stats: when disk/RAM are tight, the next
+            question is always "can I upgrade yet?" */}
+        <HetznerCapacityCard />
         {isFounder && (
           <Suspense fallback={<CardSkeleton />}>
             <RevenueCard />
