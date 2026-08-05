@@ -185,8 +185,20 @@ for number in $(printf '%s' "$prs_json" | jq -r '.[].number'); do
 done
 
 if [ "$merged_any" -eq 1 ]; then
-  echo "[auto-merge] re-arming CI on ${BASE_BRANCH} so Deploy ships the merge"
-  gh workflow run ci.yml --repo "$REPO" --ref "$BASE_BRANCH"
+  # BOTH of these are required, and Deploy is the non-obvious one.
+  #
+  # The GITHUB_TOKEN "no cascade" rule applies one level deeper than it first
+  # appears. Dispatching CI here restores the CI run — but that run was itself
+  # created by GITHUB_TOKEN, so ITS completion fires no workflow_run event
+  # either, and Deploy (which listens for exactly that) never wakes. Observed
+  # live on 2026-08-05: #161 merged, the re-armed CI went green on 6f82f691,
+  # and zero Deploy runs were created. The merge landed and silently never
+  # shipped. Deploy must therefore be dispatched directly, not chained.
+  for wf in ci.yml deploy.yml; do
+    echo "[auto-merge] re-arming ${wf} on ${BASE_BRANCH}"
+    gh workflow run "$wf" --repo "$REPO" --ref "$BASE_BRANCH" \
+      || echo "[auto-merge] could not dispatch ${wf} — is workflow_dispatch declared?" >&2
+  done
 else
   echo "[auto-merge] nothing merged; Deploy not triggered"
 fi

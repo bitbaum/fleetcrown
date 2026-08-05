@@ -21,6 +21,13 @@ on:
   workflow_run:
     workflows: ["CI"]        # the job in ci.yml
     types: [completed]
+    branches: [main]         # a PR's CI is not a ship signal
+  # Required for automated merges, not a convenience. auto-merge-sweep.sh
+  # dispatches this directly after it merges, because the CI run it re-arms is
+  # itself GITHUB_TOKEN-created and therefore fires no workflow_run event of its
+  # own — chaining off CI would mean every automated merge silently never ships.
+  # Also doubles as the manual "redeploy current main" button.
+  workflow_dispatch: {}
 
 # One deploy at a time; never cancel a ship mid-flight.
 concurrency:
@@ -34,10 +41,14 @@ jobs:
     # lets the workflow live on main (green PR, reviewed) WITHOUT deploying until
     # you've added HETZNER_SSH_KEY and disabled the local push-deploy hook. Unset
     # variable → '' → never runs.
+    # The kill switch guards BOTH paths — a manual or swept dispatch is still
+    # inert while DEPLOY_VIA_CI is unset. On workflow_dispatch the workflow_run
+    # context is null, so that leg is checked only when it exists.
     if: >
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.head_branch == 'main' &&
-      vars.DEPLOY_VIA_CI == 'true'
+      vars.DEPLOY_VIA_CI == 'true' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.head_branch == 'main'))
     runs-on: ubuntu-latest
 
     # Build does DB queries during static pre-render, so give it a schema-only

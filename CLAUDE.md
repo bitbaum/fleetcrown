@@ -248,6 +248,14 @@ before changing anything here.
 - The CD re-arm at the end of the sweep is load-bearing: a push made with the
   default `GITHUB_TOKEN` does not trigger workflows, so without it merges land
   and silently never deploy. `ci.yml` carries `workflow_dispatch` for this.
+- **The rule applies one level deeper than you expect.** The re-armed CI run is
+  itself GITHUB_TOKEN-created, so *its* completion fires no `workflow_run`
+  either. Anything chained off CI must be dispatched **directly** by the sweep —
+  `deploy.yml` is, and carries `workflow_dispatch` for exactly that reason.
+  Chaining it off CI looks correct and fails silently: on 2026-08-05 #161 merged,
+  the re-armed CI went green, and zero Deploy runs were ever created.
+  Corollary: never add a workflow that only triggers on `workflow_run` of CI and
+  assume automated merges will reach it — add it to the sweep's dispatch list.
 
 ## Dev Commands
 
