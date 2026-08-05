@@ -114,6 +114,39 @@ eq(
   "the HamsterCheek case: a placeholder stack still needs the profile step",
 );
 
+// ── Hidden is not empty ─────────────────────────────────────────────────────
+// HamsterCheek, live on prod 2026-08-05: getProjectDetail returns linkedGoals
+// []` whenever the private zone is PIN-locked, so a project with five
+// milestones read as a project with none. The page said "No goals are linked to
+// this project" and the hero offered to plan the milestones — one press would
+// have written a second roadmap on top of the first.
+eq(
+  missingKickoffSetup({ attrs: FULL_ATTRS, goalCount: 0, hasRepo: true, goalsLocked: true }),
+  [],
+  "locked goals are unknown, not missing — never plan milestones over a roadmap we cannot see",
+);
+eq(
+  missingKickoffSetup({ attrs: FULL_ATTRS, goalCount: 0, hasRepo: true, goalsLocked: false }),
+  ["milestones"],
+  "genuinely zero goals still earns the milestones step",
+);
+eq(
+  needsKickoff({ attrs: FULL_ATTRS, goalCount: 0, hasRepo: true, goalsLocked: true, agentRunning: false }),
+  false,
+  "a set-up project does not sprout a kickoff hero just because the zone is locked",
+);
+eq(
+  planKickoff({ attrs: FULL_ATTRS, goalCount: 0, hasRepo: true, goalsLocked: true, wantRepo: true }),
+  ["dispatch"],
+  "locked + otherwise complete means there is nothing to set up, only work to do",
+);
+// Locking must never SUPPRESS a step that is genuinely needed for another reason.
+eq(
+  missingKickoffSetup({ attrs: {}, goalCount: 0, hasRepo: false, goalsLocked: true }),
+  ["profile", "repo"],
+  "the lock hides only the milestones question — profile and repo still answer for themselves",
+);
+
 // ── Thin briefs are flagged, never blocked ──────────────────────────────────
 // HamsterCheek's original description was one sentence. It cleared the 10-char
 // floor, so the hero hid the editor and that sentence silently became the whole

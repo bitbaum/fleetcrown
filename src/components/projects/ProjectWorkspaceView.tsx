@@ -170,10 +170,12 @@ export function ProjectWorkspaceView({
           description={cleanDescription(project.description)}
           attrs={attrs}
           goalCount={detail.linkedGoals.length}
+          goalsLocked={detail.goalsLocked}
           hasRepo={Boolean(links.repo)}
           needed={needsKickoff({
             attrs,
             goalCount: detail.linkedGoals.length,
+            goalsLocked: detail.goalsLocked,
             hasRepo: Boolean(links.repo),
             agentRunning: Boolean(dossier.state?.agentRunning),
           })}
@@ -217,6 +219,7 @@ export function ProjectWorkspaceView({
         projectId={project.id}
         projectName={project.name}
         attrs={attrs}
+        goalsLocked={detail.goalsLocked}
         goals={detail.linkedGoals}
         readonly={dossier.readonly}
       />

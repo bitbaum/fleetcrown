@@ -138,6 +138,28 @@ ok(
   "a description with no roadmap still dispatches, aimed at first-runnable",
 );
 
+// ── A hidden roadmap is not an absent roadmap ───────────────────────────────
+// linkedGoals comes back `[]` when the private zone is locked. Dispatching on
+// that would aim the agent at "first working, runnable state" — rebuilding
+// milestone one — for a project that may be most of the way done.
+{
+  const locked = { ...dossier({ goals: [] }) };
+  (locked.detail as unknown as { goalsLocked: boolean }).goalsLocked = true;
+  eq(
+    composeDispatchPrompt("kickoff", undefined, locked).error,
+    "Unlock the private zone first — this project's milestones are hidden, so an agent would be briefed without them.",
+    "a locked zone refuses the dispatch instead of briefing a blind agent",
+  );
+  const lockedButVisible = { ...dossier({ goals: [{ title: "Map picker" }] }) };
+  (lockedButVisible.detail as unknown as { goalsLocked: boolean }).goalsLocked = true;
+  ok(
+    /YOUR TARGET THIS RUN: Map picker/.test(
+      composeDispatchPrompt("kickoff", undefined, lockedButVisible).prompt ?? "",
+    ),
+    "if a target is visible anyway, the lock does not block the dispatch",
+  );
+}
+
 // ── next_step prefers the freshest handoff ──────────────────────────────────
 
 ok(

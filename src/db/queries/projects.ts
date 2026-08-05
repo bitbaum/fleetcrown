@@ -381,6 +381,10 @@ export async function getProjectDetail(userId: string, id: string) {
       occurredAt: i.occurredAt,
     })),
     linkedGoals,
+    // An empty list means "no goals"; this flag means "goals exist or not, you
+    // are not being shown them". Callers that decide something from goal count
+    // (the kickoff plan, the roadmap dispatch) must not read locked as empty.
+    goalsLocked: privateLocked,
     devLog: userProject?.devLog ?? null,
     resources: userProject?.resources ?? [],
     notes: userProject?.notes ?? null,

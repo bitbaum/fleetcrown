@@ -63,6 +63,13 @@ export function composeDispatchPrompt(
       (a, b) => (a.createdAt?.getTime() ?? 0) - (b.createdAt?.getTime() ?? 0),
     );
     const target = milestones.find((goal) => (goal.progress ?? 0) < 100) ?? null;
+    // A locked private zone empties linkedGoals. Dispatching anyway would brief
+    // the agent with no roadmap and aim it at "first runnable state" — i.e.
+    // rebuild milestone one — for a project that may be four milestones in.
+    // Refuse: the fix is one PIN away, and a wrong dispatch costs a whole run.
+    if (!target && dossier.detail.goalsLocked) {
+      return { error: "Unlock the private zone first — this project's milestones are hidden, so an agent would be briefed without them." };
+    }
     if (!description && !target) {
       return { error: "Describe the project first — there is nothing to brief an agent with." };
     }
