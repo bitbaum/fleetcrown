@@ -108,12 +108,20 @@ export function HetznerCapacityCard() {
 
       <ul className="mt-3 space-y-2">
         {data.targets.map((t) => (
-          <li key={t.id} className="flex items-baseline justify-between gap-3 text-sm">
-            <span className="text-text-primary">
-              {t.name ?? `type ${t.id}`}
-              <span className="ml-2 text-xs text-text-tertiary">{specLine(t)}</span>
+          // Narrow screens drop the spec line onto its own row (order-3 + w-full)
+          // so it can wrap freely instead of flowing underneath the status word.
+          <li key={t.id} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-sm">
+            <span className="text-text-primary">{t.name ?? `type ${t.id}`}</span>
+            <span className="order-3 w-full text-xs text-text-tertiary sm:order-none sm:w-auto">
+              {specLine(t)}
             </span>
-            <span className={t.available ? "shrink-0 text-status-positive" : "shrink-0 text-text-tertiary"}>
+            <span
+              className={
+                t.available
+                  ? "order-2 ml-auto shrink-0 text-status-positive"
+                  : "order-2 ml-auto shrink-0 text-text-tertiary"
+              }
+            >
               {t.available ? "available now" : "blocked"}
             </span>
           </li>
