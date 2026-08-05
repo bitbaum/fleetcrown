@@ -218,7 +218,7 @@ jobs:
           echo "version=$FALLBACK" >> "$GITHUB_OUTPUT"
           echo "::notice::no .nvmrc — building on Node $FALLBACK. If this repo's CI uses a different major, commit a .nvmrc both can read."
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: ${{ steps.node.outputs.version }}
           node-version-file: ${{ steps.node.outputs.file }}
