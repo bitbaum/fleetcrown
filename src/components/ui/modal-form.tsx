@@ -1,8 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Plus, X, Loader2 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
+import { AiAssistBar } from "@/components/ui/ai-assist-bar";
+import { setActiveForm } from "@/lib/active-form";
+import type { UseAiForm } from "@fleet/ai-forms/react";
 
 interface Props {
   /** Trigger button label shown next to Plus icon. Default: "Add". */
@@ -31,6 +34,14 @@ interface Props {
    * Use this to reset local field state and clear errors.
    */
   onReset: () => void;
+  /**
+   * Pass a `useAiForm` handle to put the "describe it / change it" bar above
+   * the fields. Every form built on ModalForm gets assistance by adding this
+   * one prop — there is no per-form UI to write.
+   */
+  assist?: UseAiForm;
+  /** Prompt shown in the assist bar while the form is still empty. */
+  assistPlaceholder?: string;
   /** Form fields rendered inside the modal. */
   children: React.ReactNode;
 }
@@ -47,13 +58,33 @@ export function ModalForm({
   error,
   onSubmit,
   onReset,
+  assist,
+  assistPlaceholder,
   children,
 }: Props) {
   const [open, setOpen] = useState(defaultOpen);
 
+  // Kept in a ref and read at call time: `useAiForm` returns a new object every
+  // render, so publishing it directly would notify subscribers on every
+  // keystroke. Only open/close changes the published handle.
+  const assistRef = useRef<UseAiForm | undefined>(assist);
+  useEffect(() => {
+    assistRef.current = assist;
+  });
+
+  const hasAssist = assist !== undefined;
+  useEffect(() => {
+    if (!open || !hasAssist) return;
+    setActiveForm({ title, getAssist: () => assistRef.current });
+    return () => setActiveForm(null);
+  }, [open, hasAssist, title]);
+
   const close = () => {
     setOpen(false);
     onReset();
+    // Clear the conversation too — reopening the modal starts a new thing, and
+    // stale turns would let a follow-up refer to a form that no longer exists.
+    assist?.reset();
   };
 
   const handleSubmit = async () => {
@@ -84,6 +115,8 @@ export function ModalForm({
                 <X className="h-4 w-4" />
               </button>
             </div>
+
+            {assist && <AiAssistBar assist={assist} fillPlaceholder={assistPlaceholder} />}
 
             <div className="space-y-3">{children}</div>
 

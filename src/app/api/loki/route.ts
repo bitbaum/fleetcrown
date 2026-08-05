@@ -14,6 +14,9 @@ const AskLokiBody = z.object({
   // the first message of a project thread, false after (the agent's session
   // memory carries it forward).
   includeContext: z.boolean().default(false),
+  // Text the user can actually see, read from the rendered page. Grounds
+  // answers about "this" in what is on screen instead of guessing from a route.
+  pageContext: z.string().trim().max(2000).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -45,6 +48,13 @@ export async function POST(req: NextRequest) {
         message = `You are Loki, acting as a reasoning partner on the owner's project "${dataOrResp.projectKey}". Here is its current context — use it to give specific, grounded answers:\n\n${ctx}\n\n---\n\nThe owner says:\n${dataOrResp.message}`;
       }
     }
+  }
+
+  // Ground the turn in what the operator is looking at. The closing rule
+  // matters as much as the excerpt: without it the model answers confidently
+  // about parts of the page that were never in the excerpt.
+  if (dataOrResp.pageContext) {
+    message = `Visible on the operator's screen right now:\n\n"""\n${dataOrResp.pageContext}\n"""\n\nUse this only when it is relevant. If they ask about something on the page that is not in the text above, say you cannot see it rather than guessing.\n\n---\n\n${message}`;
   }
 
   // Answer the turn AND, in parallel, detect whether the operator asked Loki to

@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useAiForm } from "@fleet/ai-forms/react";
 import { Field } from "@/components/ui/form";
 import { ModalForm } from "@/components/ui/modal-form";
 import { useCreateMutation } from "@/hooks/use-create-mutation";
 import { postJson } from "@/lib/api/fetch";
+import { PROJECT_FORM } from "@/config/ai-forms";
 import type { CreateProjectInput } from "@/db/queries/projects";
 
 interface Props {
@@ -15,8 +17,11 @@ interface Props {
 }
 
 export function NewProjectButton({ autoOpen = false, initialName = "" }: Props) {
-  const [name, setName] = useState(initialName);
-  const [description, setDescription] = useState("");
+  const form = useAiForm({
+    target: PROJECT_FORM.key,
+    fields: PROJECT_FORM.fields,
+    initialValues: { name: initialName },
+  });
   const { create, saving, error, setError } = useCreateMutation<CreateProjectInput>({
     request: (body) => postJson("/api/projects", body),
     errorLabel: "project",
@@ -32,9 +37,12 @@ export function NewProjectButton({ autoOpen = false, initialName = "" }: Props) 
     window.history.replaceState(null, "", url.toString());
   }, [autoOpen]);
 
-  const onReset = () => { setName(""); setDescription(""); setError(null); };
+  const onReset = () => { form.reset(); setError(null); };
 
-  const onSubmit = () => create({ name: name.trim(), description: description.trim() || undefined });
+  const onSubmit = () => create({
+    name: form.text("name").trim(),
+    description: form.text("description").trim() || undefined,
+  });
 
   return (
     <ModalForm
@@ -42,25 +50,27 @@ export function NewProjectButton({ autoOpen = false, initialName = "" }: Props) 
       submitLabel="Add Project"
       savingLabel="Adding…"
       defaultOpen={autoOpen}
-      canSubmit={!!name.trim()}
+      canSubmit={!!form.text("name").trim()}
       saving={saving}
       error={error}
       onSubmit={onSubmit}
       onReset={onReset}
+      assist={form}
+      assistPlaceholder="Describe the project and I'll fill this in…"
     >
-      <Field label="Name" required>
+      <Field label="Name" required aiTouched={form.isAiTouched("name")}>
         <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
+          value={form.text("name")}
+          onChange={(e) => form.setValue("name", e.target.value)}
           placeholder="e.g. OrangeCat"
           autoFocus
           className="ui-input"
         />
       </Field>
-      <Field label="Description">
+      <Field label="Description" aiTouched={form.isAiTouched("description")}>
         <input
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          value={form.text("description")}
+          onChange={(e) => form.setValue("description", e.target.value)}
           placeholder="e.g. Bitcoin marketplace"
           className="ui-input"
         />
