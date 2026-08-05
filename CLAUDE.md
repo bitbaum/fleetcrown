@@ -248,6 +248,20 @@ before changing anything here.
 - The CD re-arm at the end of the sweep is load-bearing: a push made with the
   default `GITHUB_TOKEN` does not trigger workflows, so without it merges land
   and silently never deploy. `ci.yml` carries `workflow_dispatch` for this.
+- **The `GITHUB_TOKEN` no-cascade rule applies one level deeper than you
+  expect.** The re-armed CI run is *itself* `GITHUB_TOKEN`-created, so its
+  completion fires no `workflow_run` event either. Anything that listens for CI
+  therefore never wakes on an automated merge. Observed 2026-08-05: three PRs
+  merged onto a green `main` and zero Deploy runs were created — invisible,
+  because CI itself ran and went green.
+- **Deployment is a reconciler, not a trigger.** Each sweep compares `main`'s tip
+  against the last successful Deploy and dispatches `deploy.yml` directly when
+  they differ, so a deploy that never fired *or* failed is retried next sweep
+  instead of sitting merged-but-not-live. Never add a workflow that only
+  triggers on `workflow_run` of CI and assume automated merges reach it — give
+  it `workflow_dispatch` and drive it from the sweep.
+- **After merging, confirm the commit is LIVE, not just merged.** Green CI plus
+  a merge is not a deploy; check the running site.
 
 ## Dev Commands
 
