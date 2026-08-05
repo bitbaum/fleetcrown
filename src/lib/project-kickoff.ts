@@ -63,6 +63,13 @@ export type KickoffSetupInput = {
   attrs: Record<string, string>;
   goalCount: number;
   hasRepo: boolean;
+  /**
+   * Goals are hidden behind the private-zone PIN, so `goalCount` is unknown
+   * rather than zero. getProjectDetail returns `[]` when locked; believing that
+   * offered to "plan the milestones" for HamsterCheek, which already had five —
+   * and one press would have written a second roadmap on top of the first.
+   */
+  goalsLocked?: boolean;
 };
 
 /** The setup steps this project is still missing (never includes dispatch). */
@@ -71,7 +78,8 @@ export function missingKickoffSetup(input: KickoffSetupInput): KickoffStepId[] {
   // hasAnswer, not truthiness: a field holding "Unknown" is a field the
   // extractor could not fill, so the profile step is exactly what it needs.
   if (KICKOFF_CORE_PROFILE_KEYS.some((key) => !hasAnswer(input.attrs[key]))) steps.push("profile");
-  if (input.goalCount === 0) steps.push("milestones");
+  // Only "no goals" earns this step — never "goals I am not allowed to see".
+  if (!input.goalsLocked && input.goalCount === 0) steps.push("milestones");
   if (!input.hasRepo) steps.push("repo");
   return steps;
 }

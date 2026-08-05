@@ -41,6 +41,7 @@ export function ProjectKickoff({
   description,
   attrs,
   goalCount,
+  goalsLocked,
   hasRepo,
   needed,
 }: {
@@ -51,6 +52,8 @@ export function ProjectKickoff({
   description: string | null;
   attrs: Record<string, string>;
   goalCount: number;
+  /** Goals hidden by the private-zone PIN — unknown, not zero. */
+  goalsLocked?: boolean;
   hasRepo: boolean;
   /** Server-computed needsKickoff. Once a run has started this card stays put
    *  regardless: the refresh that follows a successful kickoff flips `needed`
@@ -73,7 +76,7 @@ export function ProjectKickoff({
   const [finished, setFinished] = useState(false);
 
   const source = text.trim() || null;
-  const plan = planKickoff({ attrs, goalCount, hasRepo, wantRepo: !hasRepo && wantRepo });
+  const plan = planKickoff({ attrs, goalCount, goalsLocked, hasRepo, wantRepo: !hasRepo && wantRepo });
   const needsSource = plan.includes("profile") || plan.includes("milestones");
   const ready = !needsSource || hasKickoffSource(source);
 
