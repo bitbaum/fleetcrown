@@ -21,6 +21,8 @@ on:
   workflow_run:
     workflows: ["CI"]        # the job in ci.yml
     types: [completed]
+    branches: [main]         # a PR's CI is not a ship signal — filter it out
+                             # here rather than creating a run that only skips
   # Ships whatever is on main right now. Required, not a convenience: a CI run
   # that GITHUB_TOKEN started (the auto-merge re-arm) emits NO workflow_run
   # event, so the chain above never fires for an auto-merged PR — observed
