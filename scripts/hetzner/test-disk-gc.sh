@@ -194,6 +194,41 @@ else
   echo "  - flock unavailable, skipping concurrency test"
 fi
 
+# ── The docker tier must never touch the HOST running the tests ─────────────
+# It is the one tier with no sandbox: `docker image prune` always talks to the
+# real daemon. Running this suite on a developer machine once pruned that
+# machine's own images. The guard is "only when the roots are the box's roots",
+# and these tests redirect the roots — so a fake `docker` placed first on PATH
+# must never be called.
+seed
+mkdir -p "$TMP/bin"
+cat > "$TMP/bin/docker" <<'FAKE'
+#!/usr/bin/env bash
+echo "$@" >> "$DOCKER_CALL_LOG"
+FAKE
+chmod +x "$TMP/bin/docker"
+: > "$TMP/docker-calls.log"
+env PATH="$TMP/bin:$PATH" DOCKER_CALL_LOG="$TMP/docker-calls.log" \
+    DISK_GC_DEV_ROOT="$FAKE_FS/dev" DISK_GC_OPT_ROOT="$FAKE_FS/opt" \
+    DISK_GC_IDLE_DAYS=14 DISK_GC_KEEP_RELEASES=2 DISK_GC_NO_LOCK=1 \
+    DISK_GC_HIGH_PCT=20 DISK_GC_TARGET_PCT=1 \
+    bash "$TMP/disk-gc.sh" >/dev/null 2>&1 || true
+check "sandboxed roots: docker is NEVER invoked (no pruning the dev's images)" \
+  "$([ ! -s "$TMP/docker-calls.log" ] && echo 0 || echo 1)"
+# ...and the guard is what stops it, not the absence of docker: with the box's
+# own roots the same pass does reach the tier. Re-seed first — the pass above
+# emptied the fake filesystem, and a GC with nothing to reclaim exits at the
+# high-water check before any tier runs.
+seed
+: > "$TMP/docker-calls.log"
+env PATH="$TMP/bin:$PATH" DOCKER_CALL_LOG="$TMP/docker-calls.log" \
+    DISK_GC_DEV_ROOT="/home/ubuntu/dev" DISK_GC_OPT_ROOT="/opt" \
+    DISK_GC_IDLE_DAYS=14 DISK_GC_KEEP_RELEASES=99999 DISK_GC_NO_LOCK=1 \
+    DISK_GC_HIGH_PCT=20 DISK_GC_TARGET_PCT=1 \
+    bash "$TMP/disk-gc.sh" >/dev/null 2>&1 || true
+check "box roots: the tier does run (guard is the gate, not a missing docker)" \
+  "$(grep -q 'image prune' "$TMP/docker-calls.log" && echo 0 || echo 1)"
+
 echo
 echo "  ${pass} passed, ${fail} failed"
 [ "$fail" -eq 0 ]
