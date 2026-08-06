@@ -59,23 +59,81 @@ export async function markActionExecuted(id: string, userId: string): Promise<Ac
   return updated ?? null;
 }
 
+/** What a claiming drain needs to do the booking — nothing more. */
+export type ClaimedAction = { id: string; title: string; payload: ActionPayload | null };
+
 /**
- * Approved-but-not-yet-executed actions of a given type, oldest first.
+ * CLAIM approved-but-unexecuted actions of a type, oldest first.
  *
  * The local runtime's calendar drain calls this (type=create_event) to find
- * events approved on the cloud control plane — where `gog` isn't present — so it
- * can book them locally. `markActionExecuted` (guarded on status='approved')
- * remains the only path to 'executed', so this list naturally drains as each is
- * booked and is safe to re-poll (a booked row drops out on its next pass).
+ * events approved on the cloud control plane — where `gog` isn't present — so
+ * it can book them locally.
+ *
+ * This must be a claim, not a read. `markActionExecuted` only fires AFTER the
+ * booking succeeds, so between handing a row out and hearing back there is a
+ * window in which the row still looks approved-and-unbooked to everybody. A
+ * plain SELECT hands the same event to every caller in that window, and each
+ * one books it — a duplicate entry in the operator's real calendar. One drain
+ * runs today, but home/calendar-drain.ts's own usage line tells you to start
+ * another, so the seam has to be safe for N of them by construction.
+ *
+ * Two mechanisms, doing different jobs:
+ *   - FOR UPDATE SKIP LOCKED makes CONCURRENT claims disjoint. Two drains
+ *     asking at the same instant get different rows instead of blocking or
+ *     colliding.
+ *   - `leaseMinutes` handles the drain that takes a row and then DIES. Its
+ *     claim ages out and the row is offered again, so a crash costs a delay
+ *     rather than an event that is never booked. Too short re-books a slow
+ *     `gog` call; too long strands the work. Minutes, not seconds.
+ *
+ * `batchLimit` exists so a claim cannot outlive its own lease. The drain books
+ * the batch one at a time, so claiming more rows than fit in `leaseMinutes`
+ * would let the tail of the batch go stale while the drain is still working on
+ * it — and a second drain would then legitimately claim rows the first is about
+ * to book. Keep batchLimit × (booking time) comfortably under the lease.
+ *
+ * Idempotency still rests on markActionExecuted's status='approved' guard —
+ * the claim narrows the race, it does not replace the guard.
  */
-export async function getApprovedActionsByType(userId: string, type: ActionType) {
-  return db
-    .select()
-    .from(actions)
-    .where(
-      and(eq(actions.userId, userId), eq(actions.status, ACTION_STATUS.APPROVED), eq(actions.type, type)),
+export async function claimApprovedActionsByType(
+  userId: string,
+  type: ActionType,
+  leaseMinutes: number,
+  batchLimit: number,
+): Promise<ClaimedAction[]> {
+  const result = await db.execute(sql`
+    UPDATE ${actions} SET claimed_at = now()
+    WHERE id IN (
+      SELECT id FROM ${actions}
+      WHERE user_id = ${userId}
+        AND status = ${ACTION_STATUS.APPROVED}
+        AND type = ${type}
+        AND (claimed_at IS NULL OR claimed_at < now() - make_interval(mins => ${leaseMinutes}))
+      ORDER BY created_at
+      LIMIT ${batchLimit}
+      FOR UPDATE SKIP LOCKED
     )
-    .orderBy(actions.createdAt);
+    RETURNING id, title, payload
+  `);
+  const rows = (result as unknown as { rows?: unknown[] }).rows ?? (result as unknown as unknown[]);
+  return (rows as Array<{ id: string; title: string; payload: ActionPayload | null }>).map((r) => ({
+    id: r.id,
+    title: r.title,
+    payload: r.payload ?? null,
+  }));
+}
+
+/**
+ * Hand a claimed row straight back, because the booking failed. The lease would
+ * release it eventually anyway; releasing it now means a transient `gog` error
+ * costs one poll interval instead of the whole lease. Scoped to still-approved
+ * rows so it can never disturb one that has since executed.
+ */
+export async function releaseActionClaim(id: string, userId: string): Promise<void> {
+  await db
+    .update(actions)
+    .set({ claimedAt: null })
+    .where(and(eq(actions.id, id), eq(actions.userId, userId), eq(actions.status, ACTION_STATUS.APPROVED)));
 }
 
 /**

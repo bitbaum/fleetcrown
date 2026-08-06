@@ -337,6 +337,13 @@
       "when": 1786004725472,
       "tag": "0048_colossal_maria_hill",
       "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1786016449335,
+      "tag": "0049_tearful_mandrill",
+      "breakpoints": true
     }
   ]
 }
