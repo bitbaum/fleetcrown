@@ -34,6 +34,18 @@ export type SessionState = {
   tests: string;
   todos: string;
   health: string;
+  /** The rest of the evidence the handoff contract asks for. Optional only for
+   *  back-compat with handoffs written before a runner shipped them — NOT
+   *  optional in intent: the DoD judge is explicitly prompted to look for
+   *  typecheck, lint and commit evidence, so a path that silently omits them
+   *  makes a fully-verified run indistinguishable from an unverified one.
+   *  That was the state of the world until 2026-08-06 (0 of 56 runs carried
+   *  any of the three). Whoever adds a field to the handoff contract must
+   *  carry it through here too — `scripts/test/handoff-evidence.ts` fails if
+   *  an evidence field goes missing between the handoff and the judge. */
+  tsc?: string;
+  lint?: string;
+  commit?: string;
   /** Why the agent is blocked, when status: 'blocked' OR the agent's last
    *  turn was a no-op pending user input. SSOT for the "Needs input" chip.
    *  Sourced from `block-reason:` line in session.md. Optional because

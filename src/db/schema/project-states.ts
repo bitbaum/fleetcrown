@@ -25,6 +25,16 @@ export const projectStates = pgTable("project_states", {
   sessionTests:           text("session_tests"),
   sessionTodos:           text("session_todos"),
   sessionHealth:          text("session_health"),
+  // 2026-08-06 — the rest of the evidence the handoff contract asks workers to
+  // write. They existed in ORCHESTRATION_TASK_SUMMARY_FIELDS and in the DoD
+  // judge's prompt, but had no column here, so the pushed path dropped them
+  // between the agent and the judge: 56 runs, `tests` filled 55 times, these
+  // three filled ZERO times. The judge was told to check typecheck/lint/commit
+  // evidence and was structurally never shown any — which is most of why good
+  // work kept closing `partial`.
+  sessionTsc:             text("session_tsc"),
+  sessionLint:            text("session_lint"),
+  sessionCommit:          text("session_commit"),      // resulting HEAD short SHA, or 'none'
   // 2026-06-08 — explicit loop-control fields added so the autopilot decision
   // (skip vs. fire) reads structured data instead of content-sniffing the
   // free-text done:/health: strings. See src/lib/orchestration/contract.ts.
