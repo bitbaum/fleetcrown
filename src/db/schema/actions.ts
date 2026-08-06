@@ -71,6 +71,18 @@ export const actions = pgTable("actions", {
   // Link to related entity (person, project, etc.)
   entityId: uuid("entity_id"),
 
+  // Execution lease — NOT a status.
+  //
+  // An approved action still has to be carried out by a runtime that owns the
+  // hands for it (calendar events need `gog`, which lives only on the operator's
+  // machine). The drain seam handed the same approved row to every caller that
+  // asked, so a second drain instance would book the event a second time. This
+  // column is the claim: a drain takes the row, and only rows that are unclaimed
+  // — or whose claim has gone stale, because the drain died mid-booking — are
+  // handed out again. The status enum is untouched; the IRON RULE still says
+  // only 'approved' executes. This is who is doing it right now, not what it is.
+  claimedAt: timestamp("claimed_at", { withTimezone: true }),
+
   // Timestamps
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
