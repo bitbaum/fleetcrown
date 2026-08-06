@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ExternalLink, GitBranch, Pencil, Check, X, ImageOff } from "lucide-react";
-import { shortTimeAgo } from "@/lib/dates";
+import { agoLabel } from "@/lib/atlas/format";
 import { cn } from "@/lib/utils";
 import type { AtlasRow } from "@/db/queries/atlas";
 
@@ -179,7 +179,7 @@ export function AtlasCard({
         <div className="mt-auto flex items-center justify-between gap-2 pt-2 text-xs text-text-tertiary">
           <span>
             {snap
-              ? `Checked ${shortTimeAgo(new Date(snap.checkedAt).getTime())} ago${snap.responseMs ? ` · ${snap.responseMs}ms` : ""}`
+              ? `Checked ${agoLabel(new Date(snap.checkedAt).getTime())}${snap.responseMs ? ` · ${snap.responseMs}ms` : ""}`
               : "Never checked"}
           </span>
           <span className="flex items-center gap-2">
