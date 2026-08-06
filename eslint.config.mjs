@@ -17,6 +17,24 @@ const eslintConfig = defineConfig([
   ]),
   {
     rules: {
+      // An unused import is a warning by default, which means it prints on
+      // every commit and never blocks one. `os` sat unused in box-workspace.ts
+      // long enough that every pre-commit hook run ended in "✖ 1 problem" —
+      // and a lint output that always ends in a problem trains you to stop
+      // reading it, which is how a real warning gets missed. Make it an error
+      // so the count is zero and any future one is impossible to ignore.
+      // `_`-prefixed names stay legal: that is the way to say "deliberately
+      // unused" (a required positional arg, a destructured field you are
+      // dropping) instead of deleting something you actually need.
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
+
       // Close the keystroke-hijack class (2026-07 dogfood): a global keyboard
       // shortcut's "is the user typing?" guard must inspect the COMPOSED path
       // leaf, not e.target. When a keystroke crosses a shadow-DOM boundary
