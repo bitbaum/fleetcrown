@@ -21,6 +21,7 @@ export type AtlasRow = {
     description: string | null;
     previewImageUrl: string | null;
     outboundHosts: string[];
+    internalPaths: string[];
     error: string | null;
     checkedAt: Date;
   } | null;
@@ -48,6 +49,7 @@ export async function getAtlasRows(userId: string): Promise<AtlasRow[]> {
       snapDescription: siteSnapshots.description,
       snapImage: siteSnapshots.previewImageUrl,
       snapHosts: siteSnapshots.outboundHosts,
+      snapPaths: siteSnapshots.internalPaths,
       snapError: siteSnapshots.error,
       snapCheckedAt: siteSnapshots.checkedAt,
     })
@@ -73,6 +75,7 @@ export async function getAtlasRows(userId: string): Promise<AtlasRow[]> {
           description: r.snapDescription,
           previewImageUrl: r.snapImage,
           outboundHosts: r.snapHosts ?? [],
+          internalPaths: r.snapPaths ?? [],
           error: r.snapError,
           checkedAt: r.snapCheckedAt,
         }
@@ -106,6 +109,7 @@ export async function saveSiteSnapshot(
     description: probe.description,
     previewImageUrl: probe.previewImageUrl,
     outboundHosts: probe.outboundHosts,
+    internalPaths: probe.internalPaths,
     error: probe.error,
     checkedAt: new Date(),
   };
@@ -127,4 +131,11 @@ export async function setProjectLiveUrl(
     .where(and(eq(userProjects.id, projectId), eq(userProjects.userId, userId)))
     .returning({ id: userProjects.id });
   return updated.length > 0;
+}
+
+/** One project's Atlas row. Reuses getAtlasRows so the detail page and the grid
+ *  can never disagree about what a row contains. */
+export async function getAtlasRow(userId: string, projectId: string): Promise<AtlasRow | null> {
+  const rows = await getAtlasRows(userId);
+  return rows.find((r) => r.projectId === projectId) ?? null;
 }

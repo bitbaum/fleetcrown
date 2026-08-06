@@ -41,6 +41,10 @@ export const siteSnapshots = pgTable("site_snapshots", {
    *  declared ones, so the graph can say "nothing links here". */
   outboundHosts: jsonb("outbound_hosts").$type<string[]>().notNull().default([]),
 
+  /** The site's own pages, read off its navigation. Self-maintaining: a page
+   *  that ships appears on the next check, a page that goes away disappears. */
+  internalPaths: jsonb("internal_paths").$type<string[]>().notNull().default([]),
+
   /** Populated only when the probe itself failed (DNS, TLS, timeout). */
   error: text("error"),
 
