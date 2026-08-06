@@ -120,6 +120,15 @@ jobs:
         working-directory: desktop
         run: npm ci
 
+      # electron-vite builds with esbuild, which STRIPS types rather than
+      # checking them — so a type error here does not fail the build, it ships
+      # a runtime bug inside a signed binary. Nothing else typechecks desktop/
+      # (the root `verify` covers src/ and home/ only), so this is the only
+      # gate it gets. It was green when added.
+      - name: Typecheck
+        working-directory: desktop
+        run: npm run typecheck
+
       # Build only — never publish from here. The `mirror` job below owns
       # publishing, so this step behaves identically for a tag push and a
       # dry run, and there is no token/permission coupling to get wrong.
