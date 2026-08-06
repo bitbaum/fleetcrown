@@ -6,6 +6,7 @@ import { isPrivateZoneLocked } from "@/lib/private-zone";
 import { type ActionPayload } from "@/db/schema/actions";
 import { ACTION_TYPE, ACTION_STATUS, type ActionType } from "@/lib/constants/statuses";
 import { ActionButtons } from "./ActionButtons";
+import { ActionDecideButton } from "./ActionDecideButton";
 import { ApproveGroupButton } from "./ApproveGroupButton";
 import { HEALTH_ACTIVE_DAYS } from "@/lib/constants/people";
 import { CHECKIN_TITLE_PREFIX } from "@/lib/actions/checkin-proposal";
@@ -63,7 +64,15 @@ function groupSimilarActions(
   return { groups, standalone };
 }
 
-export async function ActionQueueCard({ emptyState = null }: { emptyState?: React.ReactNode } = {}) {
+export async function ActionQueueCard({
+  emptyState = null,
+  autoOpenTop = false,
+}: {
+  emptyState?: React.ReactNode;
+  /** Open the decision popup for the top proposal on mount. Set on /approvals,
+   *  where reviewing is why you came; never on /today, where it would ambush. */
+  autoOpenTop?: boolean;
+} = {}) {
   const userId = await requirePageUserId();
   // Actions reference contacts ("Check in with X") and other private-zone
   // entities. Hide the whole card when the zone is locked.
@@ -160,7 +169,7 @@ export async function ActionQueueCard({ emptyState = null }: { emptyState?: Reac
           ))}
 
           {/* Standalone actions */}
-          {standalone.map((action) => {
+          {standalone.map((action, index) => {
             const Icon = TYPE_ICONS[action.type] ?? Inbox;
             const payload = action.payload;
 
@@ -190,17 +199,26 @@ export async function ActionQueueCard({ emptyState = null }: { emptyState?: Reac
                       </div>
                     )}
 
+                    {/* The prompt body is what an agent would receive, not what
+                        a triager needs to read — the Decide popup summarises it.
+                        Collapsed so the card stays scannable but the exact text
+                        stays one click away (nothing is approved blind). */}
                     {(payload?.body != null || payload?.subject != null) && (
-                      <div className="mt-2 p-2 rounded bg-surface-base border border-border-subtle">
-                        {payload?.subject != null && (
-                          <div className="text-xs font-medium text-text-secondary mb-1">
-                            {"Subject: "}{String(payload.subject)}
-                          </div>
-                        )}
-                        <pre className="text-xs text-text-secondary whitespace-pre-wrap">
-                          {String(payload?.body ?? "")}
-                        </pre>
-                      </div>
+                      <details className="mt-2 rounded bg-surface-base border border-border-subtle">
+                        <summary className="cursor-pointer px-2 py-1.5 text-xs text-text-tertiary">
+                          Show the exact text that would be sent
+                        </summary>
+                        <div className="px-2 pb-2">
+                          {payload?.subject != null && (
+                            <div className="text-xs font-medium text-text-secondary mb-1">
+                              {"Subject: "}{String(payload.subject)}
+                            </div>
+                          )}
+                          <pre className="text-xs text-text-secondary whitespace-pre-wrap">
+                            {String(payload?.body ?? "")}
+                          </pre>
+                        </div>
+                      </details>
                     )}
 
                     {action.reasoning && (
@@ -209,7 +227,13 @@ export async function ActionQueueCard({ emptyState = null }: { emptyState?: Reac
                       </div>
                     )}
 
-                    <ActionButtons actionId={action.id} />
+                    <div className="flex items-center gap-2 mt-3 flex-wrap">
+                      <ActionDecideButton
+                        actionId={action.id}
+                        autoOpen={autoOpenTop && index === 0}
+                      />
+                      <ActionButtons actionId={action.id} compact />
+                    </div>
                   </div>
                 </div>
               </div>
