@@ -68,6 +68,14 @@ export function closeRunFromSession(run: OpenRun, session: SessionState): RunClo
     tests: session.tests,
     todos: session.todos,
     health: session.health,
+    // The evidence fields the DoD judge is prompted to check. Omitting them
+    // here was silent: `buildOrchestrationSummary` defaults every unlisted
+    // field to "", `summaryForJudge` then filters empty fields out, and the
+    // judge saw a handoff with no typecheck/lint/commit line at all — so it
+    // graded "no evidence" and downgraded the run, exactly as instructed.
+    tsc: session.tsc,
+    lint: session.lint,
+    commit: session.commit,
     "block-reason": session.blockReason,
     "no-op-count": session.noOpCount != null ? String(session.noOpCount) : undefined,
   });
