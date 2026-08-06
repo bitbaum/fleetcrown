@@ -172,6 +172,7 @@ export async function prependProjectPrompt(
 type SessionFields = Pick<
   NewProjectState,
   "workspaceId" | "sessionStatus" | "sessionDone" | "sessionNext" | "sessionTests" | "sessionTodos" | "sessionHealth" |
+    "sessionTsc" | "sessionLint" | "sessionCommit" |
     "sessionBlockReason" | "sessionNoOpCount"
 >;
 
@@ -238,6 +239,7 @@ export async function persistProjectSessionIfNewer(
   for (const key of [
     "projectId", "workspaceId", "tabName", "sessionStatus", "sessionDone", "sessionNext",
     "sessionTests", "sessionTodos", "sessionHealth",
+    "sessionTsc", "sessionLint", "sessionCommit",
     "sessionBlockReason", "sessionNoOpCount",
   ] as const) {
     const value = patch[key];

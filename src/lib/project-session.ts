@@ -36,6 +36,9 @@ export function dbRowToSession(r: DbProjectState | null | undefined): SessionSta
     tests: r.sessionTests ?? "",
     todos: r.sessionTodos ?? "",
     health: r.sessionHealth ?? "",
+    ...(r.sessionTsc ? { tsc: r.sessionTsc } : {}),
+    ...(r.sessionLint ? { lint: r.sessionLint } : {}),
+    ...(r.sessionCommit ? { commit: r.sessionCommit } : {}),
     ...(r.sessionBlockReason ? { blockReason: r.sessionBlockReason } : {}),
     ...(r.sessionNoOpCount !== null && r.sessionNoOpCount !== undefined
       ? { noOpCount: r.sessionNoOpCount }

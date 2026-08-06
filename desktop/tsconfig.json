@@ -10,6 +10,7 @@
     "forceConsistentCasingInFileNames": true,
     "types": ["react", "react-dom"],
     "paths": {
+      "@renderer/*": ["./src/renderer/src/*"],
       "@home/*": ["../home/*"],
       "@/*": ["../src/*"]
     }

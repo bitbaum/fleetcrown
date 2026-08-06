@@ -56,6 +56,15 @@ export function ProjectWorkspaceView({
   const primaryOrangeCatLink = dossier.orangecatLinks.find((link) => link.role === "funding")
     ?? dossier.orangecatLinks.find((link) => link.role === "public_profile")
     ?? dossier.orangecatLinks[0];
+  // Computed once: the hero and the "Run next step" button below it must never
+  // both offer themselves as the way to start this project.
+  const showKickoff = !dossier.readonly && needsKickoff({
+    attrs,
+    goalCount: detail.linkedGoals.length,
+    goalsLocked: detail.goalsLocked,
+    hasRepo: Boolean(links.repo),
+    agentRunning: Boolean(dossier.state?.agentRunning),
+  });
 
   return (
     <div className="app-page max-w-5xl space-y-6">
@@ -87,7 +96,7 @@ export function ProjectWorkspaceView({
             projectId={project.id}
             name={project.name}
             workspaceKey={workspaceKey}
-            description={project.description}
+            description={cleanDescription(project.description)}
             status={attrs.status ?? null}
             health={health}
             readonly={dossier.readonly}
@@ -172,13 +181,7 @@ export function ProjectWorkspaceView({
           goalCount={detail.linkedGoals.length}
           goalsLocked={detail.goalsLocked}
           hasRepo={Boolean(links.repo)}
-          needed={needsKickoff({
-            attrs,
-            goalCount: detail.linkedGoals.length,
-            goalsLocked: detail.goalsLocked,
-            hasRepo: Boolean(links.repo),
-            agentRunning: Boolean(dossier.state?.agentRunning),
-          })}
+          needed={showKickoff}
         />
       )}
 
@@ -202,7 +205,7 @@ export function ProjectWorkspaceView({
         )}
         <div className="grid gap-5 lg:grid-cols-2">
           <NowSection dossier={dossier} interactive={false} showBrief={false} />
-          <NextSection dossier={dossier} interactive={false} showGoals={false} dispatchable={!dossier.readonly} />
+          <NextSection dossier={dossier} interactive={false} showGoals={false} dispatchable={!dossier.readonly && !showKickoff} />
         </div>
       </section>
 

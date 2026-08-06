@@ -7,7 +7,7 @@ import { shortProjectStatus } from "@/lib/projects-display";
 import type { ProjectGridRow } from "./ProjectGridCard";
 import { cn } from "@/lib/utils";
 import { deriveProjectLoopReadiness } from "@/lib/project-loop-readiness";
-import { answer } from "@/lib/project-display";
+import { answer, cleanDescription } from "@/lib/project-display";
 
 export function ProjectListRow({
   project,
@@ -18,7 +18,7 @@ export function ProjectListRow({
   const status = attrs["status"];
   const statusLabel = shortProjectStatus(status);
   const nextStep = answer(attrs["next_step"]);
-  const description = project.description ?? attrs["description"] ?? null;
+  const description = cleanDescription(project.description) ?? answer(attrs["description"]);
   const signals = getHealthSignals(attrs);
   const line = nextStep ?? description;
   const loopReadiness = deriveProjectLoopReadiness(project);

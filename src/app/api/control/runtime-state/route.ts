@@ -51,6 +51,11 @@ interface ProjectRuntimePatch {
   sessionTests?: string;
   sessionTodos?: string;
   sessionHealth?: string;
+  /** Typecheck / lint result and the resulting HEAD sha. The DoD judge is
+   *  prompted to check all three; before 2026-08-06 no layer carried them. */
+  sessionTsc?: string;
+  sessionLint?: string;
+  sessionCommit?: string;
   /** Structured loop-control fields. See ProjectRuntimePayload in
    *  desktop/src/main/pusher.ts and src/lib/orchestration/contract.ts. */
   sessionBlockReason?: string;
@@ -124,6 +129,9 @@ export async function POST(req: NextRequest) {
           tests: p.sessionTests ?? "",
           todos: p.sessionTodos ?? "",
           health: p.sessionHealth ?? "",
+          ...(p.sessionTsc !== undefined && { tsc: p.sessionTsc }),
+          ...(p.sessionLint !== undefined && { lint: p.sessionLint }),
+          ...(p.sessionCommit !== undefined && { commit: p.sessionCommit }),
           ...(p.sessionBlockReason !== undefined && { blockReason: p.sessionBlockReason }),
           ...(p.sessionNoOpCount !== undefined && { noOpCount: p.sessionNoOpCount }),
           mtime: p.sessionUpdatedAt * 1000,
@@ -171,6 +179,9 @@ export async function POST(req: NextRequest) {
         ...(p.sessionTests !== undefined && { sessionTests: p.sessionTests }),
         ...(p.sessionTodos !== undefined && { sessionTodos: p.sessionTodos }),
         ...(p.sessionHealth !== undefined && { sessionHealth: p.sessionHealth }),
+        ...(p.sessionTsc !== undefined && { sessionTsc: p.sessionTsc }),
+        ...(p.sessionLint !== undefined && { sessionLint: p.sessionLint }),
+        ...(p.sessionCommit !== undefined && { sessionCommit: p.sessionCommit }),
         ...(p.sessionBlockReason !== undefined && { sessionBlockReason: p.sessionBlockReason }),
         ...(p.sessionNoOpCount !== undefined && { sessionNoOpCount: p.sessionNoOpCount }),
       }).catch((err) => {

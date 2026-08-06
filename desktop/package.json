@@ -14,6 +14,7 @@
     "prebuild": "node scripts/generate-tray-icon.mjs && node scripts/download-zellij.mjs",
     "dev": "node scripts/generate-tray-icon.mjs && electron-vite dev",
     "build": "electron-vite build",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
     "preview": "electron-vite preview",
     "postinstall": "electron-builder install-app-deps",
     "dist": "electron-vite build && electron-builder --publish=never",
@@ -93,6 +94,6 @@
     "electron-builder": "^25.1.8",
     "electron-vite": "^5.0.0",
     "typescript": "^7",
-    "vite": "^6.0.7"
+    "vite": "^8.2.0"
   }
 }

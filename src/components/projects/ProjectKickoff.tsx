@@ -19,7 +19,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertCircle, Check, Loader2, Rocket, Zap } from "lucide-react";
+import { AlertCircle, Check, Loader2, Lock, Rocket, Zap } from "lucide-react";
 import { postJson } from "@/lib/api/fetch";
 import { fleetSurfaceHref } from "@/lib/fleet-context";
 import { LONG_TEXT_MAX } from "@/lib/constants";
@@ -27,6 +27,7 @@ import {
   KICKOFF_STEP_LABEL,
   hasKickoffSource,
   isThinBrief,
+  kickoffBlockedReason,
   planKickoff,
   type KickoffStepId,
 } from "@/lib/project-kickoff";
@@ -77,8 +78,12 @@ export function ProjectKickoff({
 
   const source = text.trim() || null;
   const plan = planKickoff({ attrs, goalCount, goalsLocked, hasRepo, wantRepo: !hasRepo && wantRepo });
-  const needsSource = plan.includes("profile") || plan.includes("milestones");
-  const ready = !needsSource || hasKickoffSource(source);
+  // The brief is always shown: every step reads it, dispatch included, so a
+  // project whose plan is only "repo + dispatch" still deserves a say in what
+  // gets built. It is only *required* by the steps that are extracted from it.
+  const requiresSource = plan.includes("profile") || plan.includes("milestones");
+  const ready = !requiresSource || hasKickoffSource(source);
+  const blocked = kickoffBlockedReason({ goalsLocked });
 
   function mark(id: KickoffStepId, state: StepState, note?: string) {
     setSteps((prev) => (prev ?? []).map((s) => (s.id === id ? { ...s, state, note } : s)));
@@ -179,7 +184,7 @@ export function ProjectKickoff({
         <h2 id="project-kickoff-title" className="text-lg font-semibold text-text-primary">
           Make it happen
         </h2>
-        {!steps && (
+        {!steps && !blocked && (
           <p className="mt-1 text-sm leading-relaxed text-text-secondary">
             One click does the setup: {plan.map((id) => KICKOFF_STEP_LABEL[id].toLowerCase()).join(", ")}
             . You can edit anything it writes afterwards.
@@ -187,7 +192,22 @@ export function ProjectKickoff({
         )}
       </div>
 
-      {!steps && needsSource && (
+      {/* Refuse up front. The old code ran the plan, created a real GitHub
+          repository, and only then hit the dispatch refusal — leaving an empty
+          repo and no agent. Nothing here is knowable only at the end. */}
+      {!steps && blocked === "goals-locked" && (
+        <div className="space-y-2 rounded-lg border border-border-subtle bg-surface-raised p-3">
+          <p className="text-sm leading-relaxed text-text-secondary">
+            This project&apos;s milestones are behind your PIN, so an agent would be briefed
+            without them — and a run that ignores the roadmap redoes work that is already done.
+          </p>
+          <Link href="/unlock" className="ui-btn-primary gap-2">
+            <Lock className="h-4 w-4" aria-hidden="true" /> Unlock to start
+          </Link>
+        </div>
+      )}
+
+      {!steps && !blocked && (
         <div className="space-y-1.5">
           <label htmlFor="project-kickoff-brief" className="ui-micro-label">
             The brief — everything below is written from this
@@ -203,7 +223,7 @@ export function ProjectKickoff({
             className="ui-input w-full text-base leading-relaxed sm:text-sm"
           />
           {isThinBrief(text) && (
-            <p className="text-xs text-text-muted">
+            <p className="text-xs text-text-secondary">
               That is about a sentence. It will run, but the profile and milestones can only be as
               specific as this is — say who it is for and what should exist at the end.
             </p>
@@ -211,7 +231,7 @@ export function ProjectKickoff({
         </div>
       )}
 
-      {!steps && !hasRepo && (
+      {!steps && !blocked && !hasRepo && (
         <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border-subtle bg-surface-raised p-3">
           <label className="flex items-center gap-2 text-sm text-text-secondary">
             <input
@@ -235,7 +255,7 @@ export function ProjectKickoff({
               <option value="public">Public</option>
             </select>
           )}
-          <span className="text-xs text-text-muted">
+          <span className="text-xs text-text-secondary">
             {wantRepo
               ? "Starter picked from your stack. Without a repo an agent has nowhere to build."
               : "Skipped — an agent can still plan, but it has nowhere to write code."}
@@ -243,7 +263,7 @@ export function ProjectKickoff({
         </div>
       )}
 
-      {!finished && (
+      {!finished && !blocked && (
         <div className="flex flex-wrap items-center gap-3">
           <button
             type="button"
@@ -255,7 +275,7 @@ export function ProjectKickoff({
             {running ? "Making it happen…" : "Make it happen"}
           </button>
           {!ready && (
-            <span className="text-xs text-text-muted">
+            <span className="text-xs text-text-secondary">
               Write a sentence about the project first — that is the whole brief.
             </span>
           )}
@@ -271,7 +291,7 @@ export function ProjectKickoff({
                 {KICKOFF_STEP_LABEL[s.id]}
               </span>
               {s.note && (
-                <span className={s.state === "failed" ? "ui-error text-xs" : "text-xs text-text-muted"}>
+                <span className={s.state === "failed" ? "ui-error text-xs" : "text-xs text-text-secondary"}>
                   {s.note}
                 </span>
               )}
@@ -292,7 +312,7 @@ export function ProjectKickoff({
             </button>
           )}
           {failures.length > 0 && (
-            <p className="text-xs text-text-muted">
+            <p className="text-xs text-text-secondary">
               {failures.length} step{failures.length === 1 ? "" : "s"} did not complete — everything above
               them landed and is editable on this page.
             </p>

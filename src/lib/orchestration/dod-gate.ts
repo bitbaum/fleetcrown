@@ -49,21 +49,38 @@ A change is done ONLY if the handoff shows the Definition of Done is actually sa
 
 Return STRICT JSON only: {"met": <true|false>, "gap": "<if not met, the single most important thing still required, one sentence; else empty>"}`;
 
-function summaryForJudge(s: OrchestrationTaskSummary): string {
-  // Only the fields that evidence completion — keep the judge prompt tight.
-  const pick: Array<[keyof OrchestrationTaskSummary, string]> = [
-    ["done", "What the agent says it did"],
-    ["tests", "Tests"],
-    ["tsc", "Typecheck"],
-    ["lint", "Lint"],
-    // The resulting HEAD sha (or "none"). DoDs routinely say "committed"/"shipped",
-    // so the judge must SEE whether the agent actually committed — without this it
-    // false-negatives a fully-evidenced handoff for "no commit evidence".
-    ["commit", "Commit (resulting HEAD sha, or 'none' if no commit)"],
-    ["health", "Health"],
-    ["next", "Agent's stated next step"],
-  ];
-  return pick
+/**
+ * The fields the judge is shown — i.e. everything that can count as evidence.
+ * Exported because it is the SSOT for "what the grader can possibly see", and
+ * every layer between the agent and here must carry all of it.
+ *
+ * That is not a theoretical requirement. `tsc`, `lint` and `commit` sat in this
+ * list (and in the worker's contract) while NO layer in between carried them:
+ * no column on `project_states`, no field on `SessionState`, not passed by
+ * `closeRunFromSession`, not sent by the desktop pusher. Across 56 runs with a
+ * summary, `tests` was filled 55 times and these three exactly ZERO — the
+ * judge was asked to check evidence it could never be shown, so it correctly
+ * answered "not met" and downgraded good work to `partial`.
+ *
+ * `scripts/test/handoff-evidence.ts` walks this list and fails if a field
+ * cannot survive the trip from handoff to judge. Add a field here and the test
+ * tells you every layer you still owe.
+ */
+export const DOD_EVIDENCE_FIELDS: Array<[keyof OrchestrationTaskSummary, string]> = [
+  ["done", "What the agent says it did"],
+  ["tests", "Tests"],
+  ["tsc", "Typecheck"],
+  ["lint", "Lint"],
+  // The resulting HEAD sha (or "none"). DoDs routinely say "committed"/"shipped",
+  // so the judge must SEE whether the agent actually committed — without this it
+  // false-negatives a fully-evidenced handoff for "no commit evidence".
+  ["commit", "Commit (resulting HEAD sha, or 'none' if no commit)"],
+  ["health", "Health"],
+  ["next", "Agent's stated next step"],
+];
+
+export function summaryForJudge(s: OrchestrationTaskSummary): string {
+  return DOD_EVIDENCE_FIELDS
     .map(([k, label]) => [label, (s as Record<string, unknown>)[k as string]])
     .filter(([, v]) => typeof v === "string" && (v as string).trim())
     .map(([label, v]) => `${label}: ${v}`)

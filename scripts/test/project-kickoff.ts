@@ -12,6 +12,7 @@ import {
   planKickoff,
   hasKickoffSource,
   isThinBrief,
+  kickoffBlockedReason,
   KICKOFF_THIN_DESCRIPTION,
 } from "@/lib/project-kickoff";
 import {
@@ -146,6 +147,24 @@ eq(
   ["profile", "repo"],
   "the lock hides only the milestones question — profile and repo still answer for themselves",
 );
+
+// ── Refuse before the irreversible step, not after ──────────────────────────
+// Observed on prod 2026-08-05 with `printcraft`: the plan was
+// ["repo","dispatch"], the repo step CREATED A REAL GITHUB REPOSITORY, and the
+// dispatch then returned 409 because the locked zone hides the roadmap. The
+// only irreversible step ran, the step that mattered did not.
+eq(kickoffBlockedReason({ goalsLocked: true }), "goals-locked", "a locked zone blocks the run up front");
+eq(kickoffBlockedReason({ goalsLocked: false }), null, "an unlocked zone does not block");
+eq(kickoffBlockedReason({}), null, "absent means unlocked — never block by default");
+// The contract with the dispatch route: whenever the hero would let a kickoff
+// run, composeDispatchPrompt must not refuse it for a reason the hero could
+// have known. Locked is exactly that reason, so the two must agree.
+for (const goalsLocked of [true, false]) {
+  const heroWouldRun = kickoffBlockedReason({ goalsLocked }) === null;
+  const dispatchWouldRefuse = Boolean(goalsLocked); // locked ⇒ linkedGoals [] ⇒ no target
+  eq(heroWouldRun && dispatchWouldRefuse, false,
+    `hero never starts a run the dispatch will refuse (goalsLocked=${goalsLocked})`);
+}
 
 // ── Thin briefs are flagged, never blocked ──────────────────────────────────
 // HamsterCheek's original description was one sentence. It cleared the 10-char
