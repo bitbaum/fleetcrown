@@ -52,6 +52,7 @@ export default async function ApprovalsPage() {
   return (
     <PageLayout title="Approvals" subtitle="Review & approve actions Loki proposed">
       <ActionQueueCard
+        autoOpenTop
         emptyState={
           <div className="ui-empty-page">
             <Inbox className="h-5 w-5 text-text-tertiary" />

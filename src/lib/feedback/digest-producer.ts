@@ -6,6 +6,7 @@ import { proposeAction } from "@/db/queries/actions";
 import { callGroqText } from "@/lib/groq";
 import { ACTION_STATUS, ACTION_TYPE, FEEDBACK_SOURCE, FEEDBACK_STATUS } from "@/lib/constants/statuses";
 import { fenceUntrusted, inlineUntrusted, UNTRUSTED_PREAMBLE } from "@/lib/feedback/untrusted";
+import { isLowSignalFeedbackText } from "@/lib/actions/advice-rules";
 
 
 /**
@@ -110,8 +111,14 @@ export async function digestFeedback(userId: string): Promise<DigestResult> {
     // brief's "EVIDENCE: 9 submissions" into a phantom single report and loops
     // noise back into the digest. AI-review findings stay clusterable (they
     // are element-level reports like visitor ones).
+    // Our own loop/smoke submissions are not reports. Left in, they inflate the
+    // "N independent reports" count that makes something a theme at all — a
+    // test plus one real bug becomes a 2-report cluster and reads as corroborated
+    // when it is not. Dropped here so the noise never reaches the operator.
     const items = (await listProjectFeedback(userId, s.projectId))
-      .filter((f) => f.status === FEEDBACK_STATUS.NEW && f.source !== FEEDBACK_SOURCE.SYNTHESIZER)
+      .filter((f) => f.status === FEEDBACK_STATUS.NEW
+        && f.source !== FEEDBACK_SOURCE.SYNTHESIZER
+        && !isLowSignalFeedbackText(f.suggestion))
       .slice(0, MAX_ITEMS_TO_GROQ);
     if (items.length < MIN_ITEMS_PER_PROJECT) continue;
 

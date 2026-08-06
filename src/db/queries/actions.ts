@@ -275,6 +275,21 @@ export async function approveAction(id: string, userId: string) {
     .returning();
 }
 
+/**
+ * Rewrite a draft's payload before approving it — used by the advisor's
+ * "dispatch trimmed" path, which strips non-report submissions out of the
+ * composed prompt. Restricted to drafts on purpose: the payload of an action
+ * that already ran is the record of what ran, and must stay immutable.
+ */
+export async function updateDraftPayload(id: string, userId: string, payload: ActionPayload) {
+  const [row] = await db
+    .update(actions)
+    .set({ payload })
+    .where(and(eq(actions.id, id), eq(actions.userId, userId), eq(actions.status, ACTION_STATUS.DRAFT)))
+    .returning();
+  return row ?? null;
+}
+
 export async function rejectAction(id: string, userId: string) {
   return db
     .update(actions)

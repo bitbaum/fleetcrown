@@ -10,6 +10,13 @@ export const STUCK_GOALS_LIMIT = 5;
 export const RECENT_RUNS_HOURS = 24;
 export const RECENT_RUNS_LIMIT = 6;
 
+/**
+ * Grace period before the Approval Queue advisor applies its recommendation on
+ * its own. Long enough to read the headline and hit Hold, short enough that a
+ * queue of noise clears itself while you watch.
+ */
+export const ADVICE_AUTO_APPLY_SECONDS = 8;
+
 // How many days ahead the calendar tool fetches.
 export const CALENDAR_LOOKAHEAD_DAYS = 2;
 
