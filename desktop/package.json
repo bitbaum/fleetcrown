@@ -87,7 +87,7 @@
   },
   "devDependencies": {
     "@electron-toolkit/preload": "^3.0.1",
-    "@electron-toolkit/tsconfig": "^1.0.1",
+    "@electron-toolkit/tsconfig": "^2.0.0",
     "@electron-toolkit/utils": "^4.0.0",
     "@types/node": "^26",
     "electron": "^33.2.1",
