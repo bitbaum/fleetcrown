@@ -297,6 +297,21 @@ jobs:
             echo "::notice::${{ inputs.app }} is internal-only — no public URL to check"
             exit 0
           fi
+          # Resolve BEFORE curling. A hostname with no DNS record and an app
+          # that is genuinely down both make curl print 000, so reporting only
+          # the status code sends you to read service logs for a box that is
+          # perfectly healthy. solon burned this: every deploy since 2026-08-03
+          # failed here, the app was running the whole time, and the actual
+          # cause was that solon.orangecat.ch was never created at the
+          # registrar. Retrying an NXDOMAIN 10 times cannot help either — DNS
+          # is not going to appear during the sleep.
+          if ! getent hosts "$DOMAIN" >/dev/null 2>&1; then
+            echo "::error::$DOMAIN does not resolve — this is a DNS gap, NOT a broken deploy."
+            echo "::error::The app was deployed and Caddy is configured for it; the hostname simply does not exist."
+            echo "::error::Fix: create an A record $DOMAIN → 167.233.22.31 at the DNS provider (orangecat.ch is on Infomaniak), then re-run this workflow."
+            exit 1
+          fi
+
           for attempt in $(seq 1 10); do
             code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 "https://$DOMAIN/" || echo 000)
             if [ "$code" -ge 200 ] 2>/dev/null && [ "$code" -lt 400 ]; then
@@ -305,5 +320,9 @@ jobs:
             fi
             sleep 6
           done
-          echo "::error::https://$DOMAIN returned $code after the deploy"
+          if [ "$code" = "000" ]; then
+            echo "::error::$DOMAIN resolves but nothing answered on https — check Caddy (TLS cert issuance) and the app service on the box."
+          else
+            echo "::error::https://$DOMAIN returned $code after the deploy"
+          fi
           exit 1
