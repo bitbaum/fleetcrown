@@ -1,12 +1,17 @@
 #!/usr/bin/env bash
 # Disk garbage collection for the box — the fix for "we keep running out".
 #
-# Why this exists: the box went 40GB → 75GB and still filled up. The deployed
-# apps are NOT the problem (all of /opt/*/app/node_modules is ~190MB, thanks to
-# Next standalone output). The disk is eaten by DEVELOPMENT CHECKOUTS: ~13 repos
-# under /home/ubuntu/dev, each carrying its own ~1GB node_modules — about 12GB,
-# and it grows by ~1GB every time a repo joins the fleet. Cleaning by hand just
-# resets the clock; this reclaims automatically.
+# Why this exists: the box went 40GB → 75GB and still filled up. It did not get
+# fatter doing the same job — it took on new jobs. Measured 2026-08-06 at 55G used:
+#
+#     /home/ubuntu/dev  12G   ~13 dev checkouts, ~1GB node_modules each
+#     /opt              12G   12 deployed apps (the apps themselves are small)
+#     /var/lib/containerd 9.8G  Docker images — the live Supabase stack + strays
+#     caches/toolchains ~9G   two users each with their own .nvm/.npm/.cache
+#     /usr 5.6G  ·  /swapfile 4.1G  ·  the rest ~2G
+#
+# At 40GB the box hosted a couple of Next apps and none of the above existed.
+# Cleaning by hand just resets the clock; this reclaims automatically.
 #
 # Design: a real garbage collector, not a cron that deletes things.
 #   - Below HIGH_PCT it does NOTHING (no cost when there is room).
@@ -15,10 +20,16 @@
 #       tier 1  journal + apt cache          (pure cache, zero cost)
 #       tier 2  npm caches                   (re-downloaded on demand)
 #       tier 3  release dirs beyond KEEP     (older rollback targets)
-#       tier 4  node_modules of IDLE repos   (restored by `npm ci`)
+#       tier 4  container images NO container references (docker re-pulls)
+#       tier 5  node_modules of IDLE repos   (restored by `npm ci`)
 #   - Everything it removes is reconstructible. It never touches app data,
-#     databases, /var/lib/containerd (the live Supabase stack), or a repo that
-#     has been touched within IDLE_DAYS or has a process running inside it.
+#     databases, any image a container actually uses (the live Supabase stack),
+#     or a repo touched within IDLE_DAYS / with a process running inside it.
+#
+# NOT automated, deliberately: ~/.cache (3.4GB across the two users). It mixes
+# free-to-refetch junk with things that only come back via an explicit command
+# — ~/.cache/ms-playwright is the prod-dogfood browser set, and silently
+# deleting it would break the smoke suite with no signal. Reclaim it by hand.
 #
 # Reports what it freed through the watchdog's Telegram channel (lib-alert.sh),
 # and only when it actually did something — no "ran and did nothing" noise.
@@ -67,6 +78,9 @@ HIGH_PCT="${DISK_GC_HIGH_PCT:-80}"        # start reclaiming above this
 TARGET_PCT="${DISK_GC_TARGET_PCT:-70}"    # stop once at or below this
 IDLE_DAYS="${DISK_GC_IDLE_DAYS:-14}"      # a repo untouched this long is cold
 KEEP_RELEASES="${DISK_GC_KEEP_RELEASES:-2}"
+# An image pulled more recently than this is left alone — a fresh pull is
+# probably a deploy mid-flight, not garbage.
+DOCKER_KEEP_HOURS="${DISK_GC_DOCKER_KEEP_HOURS:-168}"
 DEV_ROOT="${DISK_GC_DEV_ROOT:-/home/ubuntu/dev}"
 OPT_ROOT="${DISK_GC_OPT_ROOT:-/opt}"
 DRY_RUN="${DISK_GC_DRY_RUN:-0}"
@@ -149,7 +163,30 @@ if ! done_yet; then
   [ "$d" -gt 0 ] && note "old releases ${d}MB"
 fi
 
-# ── Tier 4: node_modules of cold dev checkouts (restored by `npm ci`) ───────
+# ── Tier 4: container images no container references (docker re-pulls) ──────
+# /var/lib/containerd is the second-largest thing on the disk (9.8GB), and most
+# of it is the live Supabase stack — which is why the tier is scoped by what
+# Docker itself considers unreferenced. `prune -a` keeps every image belonging
+# to a container that exists, running or stopped; it removes only the strays
+# (measured: ~2.2GB of build base images no container ever used). Recovery is a
+# re-pull Docker performs on its own, so nothing needs a human afterwards.
+#
+# GUARD — this tier is global by nature: docker has no --root to point at a
+# sandbox, so unlike every other tier it cannot be aimed at a fake filesystem.
+# Running the GC's own test suite on a developer machine therefore pruned the
+# developer's images (2026-08-06, local Supabase dev stack; volumes survived,
+# `npx supabase start` re-pulled). So it runs only when the roots are the BOX's
+# roots — which means any test that redirects them disables this tier for free,
+# without having to know it exists.
+if ! done_yet && [ "$DEV_ROOT" = "/home/ubuntu/dev" ] && [ "$OPT_ROOT" = "/opt" ] \
+   && command -v docker >/dev/null 2>&1; then
+  before=$(usedk)
+  [ "$DRY_RUN" = "1" ] || docker image prune -af --filter "until=${DOCKER_KEEP_HOURS}h" >/dev/null 2>&1 || true
+  after=$(usedk); d=$(( (before - after) / 1024 ))
+  [ "$d" -gt 0 ] && note "unused container images ${d}MB"
+fi
+
+# ── Tier 5: node_modules of cold dev checkouts (restored by `npm ci`) ───────
 # Coldest first, so the repo you are most likely to touch next survives longest.
 if ! done_yet && [ -d "$DEV_ROOT" ]; then
   before=$(usedk); now=$(date +%s)
