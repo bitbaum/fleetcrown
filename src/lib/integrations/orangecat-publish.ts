@@ -27,6 +27,7 @@ import { linkOrangeCatEntity } from "@/db/queries/orangecat-links";
 import { ECOSYSTEM } from "@/config/ecosystem";
 import { cleanDescription } from "@/lib/project-display";
 import { buildRunMoment, type RunPromoteInput } from "./orangecat-run-moment";
+import { buildOrangeCatProjectPayload } from "./orangecat-project-payload";
 
 export type { RunPromoteInput } from "./orangecat-run-moment";
 
@@ -70,14 +71,7 @@ export async function publishProjectToOrangeCat(
         Authorization: `Bearer ${link.accessToken}`,
         "Idempotency-Key": `fleetcrown_project_${project.id}`,
       },
-      body: JSON.stringify({
-        title: project.name,
-        description: cleanDescription(project.description) ?? `Built in public with FleetCrown.`,
-        // Deliberately lossy mapping (bridge spec Part C): OC gets the public
-        // projection; gitUrl/dirPath/agent prefs stay FleetCrown-private.
-        website_url: `${FLEETCROWN_PUBLIC_ORIGIN}/projects`,
-        status: "active",
-      }),
+      body: JSON.stringify(buildOrangeCatProjectPayload(project)),
       signal: AbortSignal.timeout(15_000),
     });
     if (!res.ok) {
