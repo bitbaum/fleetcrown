@@ -31,6 +31,25 @@ set -a; source "$SRC/.env.selfhost.local"; set +a
 STAGE=""
 TUNNEL_SOCK=$(mktemp -u /tmp/deploy-tunnel.XXXXXX)
 ssh -o BatchMode=yes -f -N -M -S "$TUNNEL_SOCK" -L 15432:localhost:5432 "$BOX"
+# `ssh -f` returns as soon as it backgrounds itself, which is BEFORE the
+# forwarded port is necessarily accepting connections. prisma then connects to
+# nothing and the deploy aborts at the schema step with a bare P1001 that reads
+# like "the box's Postgres is down" — it is not, the tunnel just was not up yet.
+# Intermittent by nature: it depends on how fast the box answers, so it passes
+# on a quiet box and fails on a loaded one. Wait for the port to actually accept.
+tunnel_up=false
+for _ in $(seq 1 40); do
+  if (exec 3<>/dev/tcp/127.0.0.1/15432) 2>/dev/null; then
+    exec 3<&- 3>&-; tunnel_up=true; break
+  fi
+  sleep 0.25
+done
+if ! $tunnel_up; then
+  echo "ERROR: DB tunnel to $BOX never started listening on 127.0.0.1:15432 (waited 10s)."
+  echo "       Check SSH access to $BOX; the box's Postgres itself may be fine."
+  ssh -S "$TUNNEL_SOCK" -O exit "$BOX" 2>/dev/null || true
+  exit 1
+fi
 trap 'ssh -S "$TUNNEL_SOCK" -O exit "$BOX" 2>/dev/null; [ -n "$STAGE" ] && rm -rf "$STAGE"' EXIT
 [ -n "${DATABASE_URL:-}" ] && export DATABASE_URL="${DATABASE_URL/@localhost:5432/@127.0.0.1:15432}"
 [ -n "${DIRECT_URL:-}" ] && export DIRECT_URL="${DIRECT_URL/@localhost:5432/@127.0.0.1:15432}"
