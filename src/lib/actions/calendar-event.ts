@@ -68,6 +68,30 @@ export function resolveEventTimes(payload: ActionPayload | null | undefined): Re
 }
 
 /**
+ * Has this event's slot already gone by? Pure, so the rule that RETIRES rows
+ * can be asserted directly instead of trusted.
+ *
+ * Used by the approval-queue reaper (api/crons/check-pending-approvals): a
+ * draft calendar event whose end has passed is not a pending decision — booking
+ * it would put an event in the past. The two "false" cases are the important
+ * ones: an unparseable time and a payload with no structured time at all both
+ * mean *we do not know*, and unknown must never be treated as expired. Those
+ * rows age out on the queue's ordinary time limit instead.
+ *
+ * All-day events resolve to an EXCLUSIVE end date (a one-day event on the 5th
+ * ends on the 6th), so "today" is correctly still live.
+ */
+export function isEventSlotPassed(
+  payload: ActionPayload | null | undefined,
+  nowMs: number = Date.now(),
+): boolean {
+  const times = resolveEventTimes(payload);
+  if (!times) return false;
+  const endMs = Date.parse(times.to);
+  return !Number.isNaN(endMs) && endMs < nowMs;
+}
+
+/**
  * Build the `gog calendar create` argv for an event. Pure (no I/O) so it can be
  * asserted directly in tests. Returns null when the payload can't be booked
  * (no title or no usable time).

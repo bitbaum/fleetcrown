@@ -46,7 +46,7 @@ import {
   getUserIdsWithActiveAlertType,
 } from "@/db/queries/alerts";
 import { recordActionAuditEvent } from "@/db/queries/control-audit-events";
-import { resolveEventTimes } from "@/lib/actions/calendar-event";
+import { isEventSlotPassed, resolveEventTimes } from "@/lib/actions/calendar-event";
 import { sendTelegramMessage, selfTelegramTarget } from "@/lib/actions/telegram-send";
 import { ACTION_TYPE } from "@/lib/constants/statuses";
 import { APP_URL } from "@/config/brand";
@@ -99,15 +99,12 @@ export async function GET(req: NextRequest) {
   let expiredPastDated = 0;
   const now = Date.now();
   for (const row of await getDraftsByType(ACTION_TYPE.CREATE_EVENT)) {
-    const times = resolveEventTimes(row.payload);
-    if (!times) continue;
-    const endMs = Date.parse(times.to);
-    if (Number.isNaN(endMs) || endMs >= now) continue;
+    if (!isEventSlotPassed(row.payload, now)) continue;
     const closed = await expireDraft(row.id);
     if (!closed) continue;
     expiredPastDated++;
     await recordActionAuditEvent(row.userId, closed, "expired", {
-      reason: `event slot already passed (${times.to})`,
+      reason: `event slot already passed (${resolveEventTimes(row.payload)?.to ?? "unknown end"})`,
     });
   }
 
