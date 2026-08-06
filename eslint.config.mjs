@@ -46,6 +46,16 @@ const eslintConfig = defineConfig([
               "Don't trim a project attribute directly — use answer(attrs.x) for the value or hasAnswer(attrs.x) for the check (@/lib/project-display). A raw .trim() treats the extractor's literal \"Unknown\" as a filled field.",
           }),
         ),
+        // Same class, one level up: the bulk GitHub import stamped projects with
+        // the description "Local repository", which PLACEHOLDER_DESCRIPTIONS is
+        // meant to swallow. Handing the raw field to a prop skips that — it was
+        // printing under the project title on prod 2026-08-05, and shipping to
+        // a PUBLIC OrangeCat profile from orangecat-publish.
+        ...["object.name='project'", "object.property.name='project'"].map((projectRef) => ({
+          selector: `JSXExpressionContainer > MemberExpression[property.name='description'][${projectRef}]`,
+          message:
+            "Pass cleanDescription(project.description), not the raw field — the import placeholder (\"Local repository\") is not a description and must never render or publish.",
+        })),
       ],
     },
   },

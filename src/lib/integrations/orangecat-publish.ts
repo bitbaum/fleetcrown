@@ -25,6 +25,7 @@ import {
 } from "@/config/orangecat-publish";
 import { linkOrangeCatEntity } from "@/db/queries/orangecat-links";
 import { ECOSYSTEM } from "@/config/ecosystem";
+import { cleanDescription } from "@/lib/project-display";
 import { buildRunMoment, type RunPromoteInput } from "./orangecat-run-moment";
 
 export type { RunPromoteInput } from "./orangecat-run-moment";
@@ -71,7 +72,7 @@ export async function publishProjectToOrangeCat(
       },
       body: JSON.stringify({
         title: project.name,
-        description: project.description ?? `Built in public with FleetCrown.`,
+        description: cleanDescription(project.description) ?? `Built in public with FleetCrown.`,
         // Deliberately lossy mapping (bridge spec Part C): OC gets the public
         // projection; gitUrl/dirPath/agent prefs stay FleetCrown-private.
         website_url: `${FLEETCROWN_PUBLIC_ORIGIN}/projects`,
@@ -110,7 +111,7 @@ export async function publishProjectToOrangeCat(
     void promoteMomentToOrangeCat(userId, project.id, "project_published", {
       externalId: `fleetcrown_project_published_${project.id}`,
       title: `${project.name} is now building in public`,
-      description: project.description ?? undefined,
+      description: cleanDescription(project.description) ?? undefined,
       subjectId: ocProjectId,
     });
 

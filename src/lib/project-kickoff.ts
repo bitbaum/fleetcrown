@@ -95,6 +95,23 @@ export function planKickoff(input: KickoffSetupInput & { wantRepo: boolean }): K
   return [...setup, "dispatch"];
 }
 
+/** Why a kickoff cannot run right now — checked BEFORE the first step. */
+export type KickoffBlock = "goals-locked";
+
+/**
+ * A kickoff must be refused up front, not half-way through.
+ *
+ * The plan's irreversible step (creating the GitHub repository) runs before
+ * dispatch, so a dispatch that was always going to refuse leaves a real empty
+ * repository behind and no agent — observed on prod 2026-08-05 with `printcraft`.
+ * A locked private zone empties `linkedGoals`, so the kickoff dispatch can never
+ * find a target milestone and always refuses; that is knowable before anything
+ * is created, which makes it the hero's job to say so.
+ */
+export function kickoffBlockedReason(input: { goalsLocked?: boolean }): KickoffBlock | null {
+  return input.goalsLocked ? "goals-locked" : null;
+}
+
 /** Is there enough written down to brief an agent with? */
 export function hasKickoffSource(description: string | null | undefined): boolean {
   return (description ?? "").trim().length >= KICKOFF_MIN_DESCRIPTION;
