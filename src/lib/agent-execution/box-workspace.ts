@@ -10,7 +10,6 @@
  * from pty-runtime — keeps @/db + git out of the desktop Electron bundle.
  */
 import fs from "fs";
-import os from "os";
 import path from "path";
 import { execFileSync } from "child_process";
 import { getUserProjects } from "@/db/queries/user-projects";
