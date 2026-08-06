@@ -38,10 +38,16 @@ jobs:
         run: sudo apt-get update -qq && sudo apt-get install -y -qq ripgrep
 
       # ONE canonical bundle — the exact `npm run verify` you run locally
-      # (tsc + lint + check:design + test:unit + test:home). CI calls it
-      # VERBATIM, so a green local verify can't diverge from a green CI. The
-      # unit suite is glob-discovered (scripts/test-unit.ts), so a new
-      # scripts/test/*.ts is picked up for free — no more born-dead tests.
+      # (tsc + lint + check:design + check:desktop + test:unit + test:home +
+      # test:ops). CI calls it VERBATIM, so a green local verify can't diverge
+      # from a green CI. The unit suite is glob-discovered
+      # (scripts/test-unit.ts), so a new scripts/test/*.ts is picked up for
+      # free — no more born-dead tests.
+      #
+      # check:desktop is deliberately IN the bundle rather than a parallel job:
+      # a separate job would be faster in wall-clock but would break "green
+      # local verify => green CI", and desktop/ is precisely the area where
+      # nobody was running anything locally. See scripts/check-desktop.sh.
       - name: Verify
         run: npm run verify
 

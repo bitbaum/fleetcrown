@@ -270,6 +270,9 @@ npm run dev          # Start dev server (default port 3000)
 npm run build        # Production build
 npm run smoke        # Curl every page route on localhost:3000 and assert 2xx/3xx
 npm run test:home    # Run all eight home/ inline self-test suites (~14s)
+npm run check:desktop # Typecheck + build desktop/ (Fleet Runner). Part of `verify`.
+                      # Runs on EVERY PR, not just desktop ones: desktop/src/main
+                      # bundles ../src and ../home, so a src/ change can break it.
 npm run db:generate  # Generate a versioned migration file from schema changes
 npm run db:push      # drizzle-kit push — LOCAL/scratch DB only, never shared/prod
 npx tsx scripts/seed.ts  # Re-seed database from knowledge.sqlite + contacts

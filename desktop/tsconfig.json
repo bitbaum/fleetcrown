@@ -8,10 +8,8 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "baseUrl": ".",
     "types": ["react", "react-dom"],
     "paths": {
-      "@renderer/*": ["src/renderer/src/*"],
       "@home/*": ["../home/*"],
       "@/*": ["../src/*"]
     }
