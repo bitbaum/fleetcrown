@@ -31,6 +31,11 @@ export const userProjects = pgTable("user_projects", {
   name:        text("name").notNull(),          // display name + zellij tab identifier
   dirPath:     text("dir_path"),                // absolute local path (null = cloud-only)
   gitUrl:      text("git_url"),                 // GitHub / GitLab URL
+  // Where this project lives on the public web. FleetCrown knew every project's
+  // REPO but never its SITE, so "give me the link" was a question only a human
+  // (or an agent with ssh) could answer. This is the SSOT for that answer;
+  // site_snapshots holds what probing the URL actually found.
+  liveUrl:     text("live_url"),                // public site URL (null = not deployed)
   description: text("description"),
   stack:       text("stack"),
   agentPref:   text("agent_pref"),              // per-project agent override

@@ -344,6 +344,13 @@
       "when": 1786016449335,
       "tag": "0049_tearful_mandrill",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1786023816401,
+      "tag": "0050_burly_harry_osborn",
+      "breakpoints": true
     }
   ]
 }
