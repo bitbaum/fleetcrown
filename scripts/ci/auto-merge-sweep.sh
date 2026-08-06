@@ -21,13 +21,16 @@
 # a red or pending PR simply waits, and a draft waits forever. To hold a ready
 # PR back, mark it a draft or add one of the hold labels below.
 #
-# ONE PR PER SWEEP, AND ONLY ONTO A GREEN MAIN
-# --------------------------------------------
+# ONE PR PER SWEEP, OLDEST FIRST, AND ONLY ONTO A GREEN MAIN
+# ----------------------------------------------------------
 # A PR's checks prove *that PR against the main it branched from* — not against
 # the other PRs sitting next to it. Merging a batch in one pass would put a
 # combination onto main that nothing ever built. So this script merges at most
 # one PR, then hands control back to CI: the merge train advances one car per
 # sweep, and every car is verified on main before the next one couples.
+#
+# Cars couple in the order they arrived. See the sort in the loop below — a
+# newest-first train starves its oldest car when PRs keep arriving.
 #
 # For the same reason it refuses to merge while main's CI is red or still
 # running. Red main => stop adding changes until it is fixed; running CI => the
@@ -131,7 +134,19 @@ fi
 
 merged_any=0
 
-for number in $(printf '%s' "$prs_json" | jq -r '.[].number'); do
+# OLDEST FIRST. `gh pr list` returns newest-first, and this loop merges the
+# first eligible PR and stops — so the newest green PR won every sweep and an
+# older one could wait indefinitely. That is not theoretical: on 2026-08-06 the
+# sweep merged #181 and #180 on consecutive passes while #155 (green since that
+# morning), #176 and #178 sat untouched and were never even evaluated. With
+# several agent sessions opening PRs continuously, "newest wins" is starvation,
+# and the starved PR is the one that has been rebased against the most
+# now-stale main.
+#
+# PR numbers increase monotonically with creation, so sorting by number ascending
+# is FIFO. The ordering was never a decision — it was whatever gh happened to
+# return — so make it one.
+for number in $(printf '%s' "$prs_json" | jq -r 'sort_by(.number) | .[].number'); do
   pr=$(printf '%s' "$prs_json" | jq -c --argjson n "$number" '.[] | select(.number == $n)')
   title=$(printf '%s' "$pr" | jq -r '.title')
 
