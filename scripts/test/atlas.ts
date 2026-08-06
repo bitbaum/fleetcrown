@@ -35,6 +35,25 @@ eq(full.title, "Kivvi &mdash; Circular tech", "og:title wins over <title>");
 eq(full.description, "Repair, reuse & rehome hardware.", "entities decoded in description");
 eq(full.previewImageUrl, "https://kivvi.orangecat.ch/opengraph-image.png", "relative og:image absolutized");
 eq(full.outboundHosts, ["orangecat.ch", "www.orangecat.ch"], "external hosts only, deduped + sorted");
+eq(full.internalPaths, ["/internal"], "same-site links become paths; mailto ignored");
+
+// The page map must be a list of DESTINATIONS. Assets, queries, fragments and
+// trailing slashes all collapse — otherwise one page appears four times.
+const mapNoise = parseSiteHtml(
+  `<body>
+     <a href="/pricing">p</a>
+     <a href="/pricing/">p slash</a>
+     <a href="/pricing?ref=x">p query</a>
+     <a href="/pricing#plans">p hash</a>
+     <a href="/logo.png">img</a>
+     <a href="/styles.css">css</a>
+     <a href="/feed.xml">feed</a>
+     <a href="/docs/quickstart">docs</a>
+     <a href="/">home</a>
+   </body>`,
+  BASE,
+);
+eq(mapNoise.internalPaths, ["/", "/docs/quickstart", "/pricing"], "paths deduped; assets dropped; query/hash/slash normalized");
 
 // Attribute order must not matter — plenty of real sites put content first.
 const reversed = parseSiteHtml(
@@ -58,6 +77,7 @@ const selfOnly = parseSiteHtml(
   BASE,
 );
 eq(selfOnly.outboundHosts, [], "own host excluded");
+eq(selfOnly.internalPaths, ["/a", "/b"], "own-host links are the site map, not outbound");
 
 // Single-quoted and unquoted attributes still parse.
 const quoting = parseSiteHtml(

@@ -194,6 +194,9 @@ export function AtlasCard({
                 <GitBranch className="h-3.5 w-3.5" aria-hidden />
               </a>
             )}
+            <Link href={`/atlas/${row.projectId}`} className="hover:text-text-secondary">
+              Pages &amp; guides
+            </Link>
             {row.entityId && (
               <Link href={`/projects/${row.entityId}`} className="hover:text-text-secondary">
                 Profile

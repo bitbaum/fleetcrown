@@ -17,6 +17,17 @@ export type ParsedSite = {
   previewImageUrl: string | null;
   /** Distinct external hosts linked from this page, lowercased, no port. */
   outboundHosts: string[];
+  /**
+   * Distinct same-site paths linked from this page — the site's own navigation,
+   * read off the page rather than hand-listed. This is what makes a site map
+   * self-maintaining: ship a new page with a nav link and it appears here on the
+   * next check; delete one and it disappears. A hand-written list rots silently.
+   *
+   * One level deep by design: the homepage's own links are the site's answer to
+   * "where can you go from here", which is exactly what a guide needs. Crawling
+   * further would turn a 15-site check into thousands of requests.
+   */
+  internalPaths: string[];
 };
 
 export type SiteProbeResult = ParsedSite & {
@@ -72,6 +83,27 @@ function absolutize(value: string | null, base: string): string | null {
   }
 }
 
+/** Assets are not destinations — a site map full of .png and .css is noise. */
+const ASSET_EXT = /\.(png|jpe?g|gif|svg|webp|avif|ico|css|js|mjs|json|xml|txt|pdf|zip|woff2?|ttf|mp4|webm|rss)$/i;
+const MAX_PATHS = 120;
+
+/**
+ * Same-site path, normalized to what a person would call "a page": no query, no
+ * fragment, no trailing slash. `/pricing?ref=x#plans` and `/pricing/` are the
+ * same destination, and listing them separately would triple the map.
+ */
+function pathOf(value: string, base: string): string | null {
+  try {
+    const url = new URL(value, base);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+    if (ASSET_EXT.test(url.pathname)) return null;
+    const path = url.pathname.replace(/\/+$/, "");
+    return path === "" ? "/" : path;
+  } catch {
+    return null;
+  }
+}
+
 function hostOf(value: string, base: string): string | null {
   try {
     const url = new URL(value, base);
@@ -114,12 +146,16 @@ export function parseSiteHtml(html: string, baseUrl: string): ParsedSite {
 
   const ownHost = hostOf(baseUrl, baseUrl);
   const hosts = new Set<string>();
+  const paths = new Set<string>();
   const anchorRe = /<a\b[^>]*>/gi;
   while ((m = anchorRe.exec(html)) !== null) {
     const href = parseAttributes(m[0])["href"];
     if (!href) continue;
     const host = hostOf(href, baseUrl);
-    if (host && host !== ownHost) hosts.add(host);
+    if (!host) continue;
+    if (host !== ownHost) { hosts.add(host); continue; }
+    const path = pathOf(href, baseUrl);
+    if (path) paths.add(path);
   }
 
   return {
@@ -127,6 +163,7 @@ export function parseSiteHtml(html: string, baseUrl: string): ParsedSite {
     description,
     previewImageUrl,
     outboundHosts: [...hosts].sort(),
+    internalPaths: [...paths].sort().slice(0, MAX_PATHS),
   };
 }
 
@@ -142,6 +179,7 @@ export async function probeSite(url: string): Promise<SiteProbeResult> {
     description: null,
     previewImageUrl: null,
     outboundHosts: [],
+    internalPaths: [],
     error: null,
   };
 
