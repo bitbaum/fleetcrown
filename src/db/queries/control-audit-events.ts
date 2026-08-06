@@ -12,7 +12,8 @@ export type ActionAuditLifecycle =
   | "executed"
   | "rejected"
   | "deferred"
-  | "failed";
+  | "failed"
+  | "expired";
 
 export function promptFingerprint(prompt: string | null | undefined) {
   const text = prompt?.trim();

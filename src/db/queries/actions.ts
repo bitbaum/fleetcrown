@@ -1,7 +1,7 @@
 import { db } from "@/db";
 import { actions } from "@/db/schema";
 import type { ActionPayload, NewAction } from "@/db/schema/actions";
-import { eq, and, desc, ne, sql, gt, like, isNotNull } from "drizzle-orm";
+import { eq, and, desc, ne, sql, gt, lt, like, isNotNull, isNull, or } from "drizzle-orm";
 import { ACTION_STATUS, type ActionType } from "@/lib/constants/statuses";
 import { CHECKIN_TITLE_PREFIX } from "@/lib/actions/checkin-proposal";
 
@@ -76,6 +76,111 @@ export async function getApprovedActionsByType(userId: string, type: ActionType)
       and(eq(actions.userId, userId), eq(actions.status, ACTION_STATUS.APPROVED), eq(actions.type, type)),
     )
     .orderBy(actions.createdAt);
+}
+
+/**
+ * Retire drafts that can no longer be decided: past their own `expiresAt`, or
+ * simply never answered within `maxAgeDays`.
+ *
+ * A proposal is time-bound. "Check in with Anja", proposed 121 days ago, is not
+ * a decision the operator still owes an answer to — it is landfill, and keeping
+ * it in the queue makes the queue itself untrustworthy (the 2026-08-06 prod
+ * queue held 15 drafts, four of them calendar events whose dates had already
+ * passed). Expired rows are kept, not deleted: the history of what Loki
+ * proposed and what lapsed unanswered is worth more than the row is worth
+ * costing.
+ *
+ * `reviewedAt` is stamped because expiry IS the closing decision — made by
+ * policy rather than by a human — and without it these rows sort as NULLs
+ * ahead of real reviews in getRecentActions.
+ */
+export async function expireDeadDrafts(maxAgeDays: number): Promise<ActionRow[]> {
+  return db
+    .update(actions)
+    .set({ status: ACTION_STATUS.EXPIRED, reviewedAt: new Date() })
+    .where(
+      and(
+        eq(actions.status, ACTION_STATUS.DRAFT),
+        or(
+          and(isNotNull(actions.expiresAt), lt(actions.expiresAt, sql`now()`)),
+          lt(actions.createdAt, sql`now() - make_interval(days => ${maxAgeDays})`),
+        ),
+      ),
+    )
+    .returning();
+}
+
+/** Every pending draft of one type, oldest first — the set a payload-aware
+ *  expiry rule has to inspect in TS because the answer lives in JSONB, not in
+ *  a column. Bounded: an approval queue this long is itself the problem. */
+export async function getDraftsByType(type: ActionType, limit = 500): Promise<ActionRow[]> {
+  return db
+    .select()
+    .from(actions)
+    .where(and(eq(actions.status, ACTION_STATUS.DRAFT), eq(actions.type, type)))
+    .orderBy(actions.createdAt)
+    .limit(limit);
+}
+
+/** Retire one draft. Guarded on status='draft' so it can never overwrite a
+ *  decision the operator already made (idempotent: a second call returns null). */
+export async function expireDraft(id: string): Promise<ActionRow | null> {
+  const [updated] = await db
+    .update(actions)
+    .set({ status: ACTION_STATUS.EXPIRED, reviewedAt: new Date() })
+    .where(and(eq(actions.id, id), eq(actions.status, ACTION_STATUS.DRAFT)))
+    .returning();
+  return updated ?? null;
+}
+
+/** One user's un-reviewed backlog: how many drafts are waiting and since when. */
+export type StaleDraftSummary = {
+  userId: string;
+  pending: number;
+  oldestTitle: string;
+  oldestAgeSeconds: number;
+};
+
+/**
+ * Drafts that have been waiting longer than `olderThanMinutes`, grouped by user.
+ *
+ * A draft is Loki asking a question, and until it is answered nothing happens —
+ * so a draft nobody sees is a dropped ball, not a queued task. Observed
+ * 2026-08-04: a calendar event sat unapproved for 6h47m while the operator,
+ * unaware anything was pending, asked the assistant why it hadn't happened.
+ * The reminder cron (api/crons/check-pending-approvals) reads this and raises
+ * the flag so the queue announces itself instead of waiting to be discovered.
+ *
+ * Already-expired drafts are excluded — they are dead weight, not a pending
+ * decision, and nagging about them would train the operator to ignore the alert.
+ */
+export async function getStaleDraftSummaries(olderThanMinutes: number): Promise<StaleDraftSummary[]> {
+  const rows = await db
+    .select({
+      userId: actions.userId,
+      pending: sql<number>`count(*)::int`,
+      // Oldest-first ordering inside the aggregate, so [1] is the one that has
+      // been waiting longest — the item worth naming in the alert.
+      oldestTitle: sql<string>`(array_agg(${actions.title} order by ${actions.createdAt}))[1]`,
+      // Age computed in SQL: one clock (the database's), no driver timezone games.
+      oldestAgeSeconds: sql<number>`extract(epoch from now() - min(${actions.createdAt}))::int`,
+    })
+    .from(actions)
+    .where(
+      and(
+        eq(actions.status, ACTION_STATUS.DRAFT),
+        lt(actions.createdAt, sql`now() - make_interval(mins => ${olderThanMinutes})`),
+        or(isNull(actions.expiresAt), gt(actions.expiresAt, sql`now()`)),
+      ),
+    )
+    .groupBy(actions.userId);
+
+  return rows.map((r) => ({
+    userId: r.userId,
+    pending: Number(r.pending),
+    oldestTitle: r.oldestTitle,
+    oldestAgeSeconds: Number(r.oldestAgeSeconds),
+  }));
 }
 
 export async function getActionById(userId: string, id: string): Promise<ActionRow | null> {
