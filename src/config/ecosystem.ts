@@ -53,6 +53,12 @@ export const ECOSYSTEM = {
   },
 } as const;
 
+/** Public page for any OrangeCat project id — one definition, so surfaces that
+ *  link to a published project cannot disagree about the URL shape. */
+export function orangeCatProjectUrl(projectId: string): string {
+  return orangeCatPage(`/projects/${projectId}`);
+}
+
 export const ECOSYSTEM_LINKS = {
   mao: ECOSYSTEM.orangeCat.profileUrl,
   orangeCat: orangeCatPage(`/projects/${ECOSYSTEM.orangeCat.projectId}`),

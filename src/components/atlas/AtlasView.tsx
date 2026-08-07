@@ -33,6 +33,13 @@ export function AtlasView({ initialRows }: { initialRows: AtlasRow[] }) {
     [rows],
   );
 
+  // Sites that exist publicly but have no OrangeCat presence. Counted over
+  // sites only: a project with no live URL has nothing to publish yet.
+  const notPublic = useMemo(
+    () => rows.filter((r) => r.liveUrl && !r.orangecatProjectId).length,
+    [rows],
+  );
+
   const graph = useMemo(
     () =>
       buildAtlasGraph(
@@ -110,6 +117,12 @@ export function AtlasView({ initialRows }: { initialRows: AtlasRow[] }) {
             <span className="text-status-warning">
               <span className="font-semibold">{previewGap}</span>{" "}
               <span className="text-text-tertiary">share as a blank preview</span>
+            </span>
+          )}
+          {notPublic > 0 && (
+            <span className="text-status-warning">
+              <span className="font-semibold">{notPublic}</span>{" "}
+              <span className="text-text-tertiary">not on OrangeCat</span>
             </span>
           )}
         </div>

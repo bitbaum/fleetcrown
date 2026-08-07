@@ -12,6 +12,10 @@ export type AtlasRow = {
   description: string | null;
   liveUrl: string | null;
   gitUrl: string | null;
+  /** The OrangeCat project this was published to, or null if it has no public
+   *  presence yet. Atlas is where "does this exist publicly" belongs — the
+   *  capability already existed but nothing showed whether it had been used. */
+  orangecatProjectId: string | null;
   snapshot: {
     finalUrl: string | null;
     statusCode: number | null;
@@ -42,6 +46,7 @@ export async function getAtlasRows(userId: string): Promise<AtlasRow[]> {
       description: userProjects.description,
       liveUrl: userProjects.liveUrl,
       gitUrl: userProjects.gitUrl,
+      orangecatProjectId: userProjects.orangecatProjectId,
       snapFinalUrl: siteSnapshots.finalUrl,
       snapStatus: siteSnapshots.statusCode,
       snapOk: siteSnapshots.ok,
@@ -67,6 +72,7 @@ export async function getAtlasRows(userId: string): Promise<AtlasRow[]> {
     description: r.description,
     liveUrl: r.liveUrl,
     gitUrl: r.gitUrl,
+    orangecatProjectId: r.orangecatProjectId,
     snapshot: r.snapCheckedAt
       ? {
           finalUrl: r.snapFinalUrl,
