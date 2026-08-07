@@ -2,7 +2,33 @@
 
 Notable, user-facing changes. Older history lives in the git log (conventional commits).
 
-**Last modified:** 2026-07-23 - the two products are one bridge, the public surface is filled in, and the fleet dispatches on purpose.
+**Last modified:** 2026-08-07 - the roadmap gains a learning phase, and an audit explains why the fleet has never learned from its own runs.
+
+## 2026-08-07
+
+### Added
+- **A learning phase on the roadmap.** FleetCrown grades every agent run against
+  a definition of done and then forgets the verdict. The new `LEARNING` phase
+  commits to closing that loop: storing each dispatch with the prompt that
+  produced it and the outcome it earned, reporting per-intent failure and cost,
+  and proposing prompt improvements from real run history behind the same
+  accept-or-dismiss human gate the Frontier loop already uses.
+- **An internal self-improvement plan** (`docs/self-improvement-plan.md`) —
+  phased, with an explicit kill criterion on every phase, including one that
+  says to abandon the whole effort if the measurement phase shows failures are
+  infrastructure noise rather than instruction quality.
+- **Thoughts: "The Fleet Learns From What It Reads, Not What It Does."** The
+  audit behind the plan. FleetCrown's only self-improvement loop reads arXiv and
+  Hacker News every morning to propose how the product should evolve, while the
+  prompt-and-outcome record it generates from thousands of its own runs is read
+  by display surfaces only. The essay covers what the 2026 literature has
+  settled, the four documented ways these loops fail, and why no learned change
+  will ever apply itself here.
+
+### Note
+- Nothing in the learning loop is built yet. This release documents a direction
+  and the evidence for it; the first phase is a schema and write-ordering fix
+  that has not started.
 
 ## 2026-07-23
 

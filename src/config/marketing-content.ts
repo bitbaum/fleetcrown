@@ -181,6 +181,19 @@ export const ROADMAP = {
       ],
     },
     {
+      marker: "LEARNING",
+      title: "The fleet learns from its own runs",
+      summary: "Today FleetCrown grades every run and forgets what it learned. The same evidence that decides whether a run was done should decide how the next one is briefed.",
+      bullets: [
+        "Every dispatch is stored with the exact prompt that produced it and the graded outcome it earned — one joinable record instead of two disconnected logs.",
+        "A per-intent report shows which kinds of work fail, how much they cost, and the most common reason a reviewer rejected them.",
+        "Prompt improvements are proposed from real run history and reviewed by a human before they land — the same accept-or-dismiss gate the Frontier loop already uses.",
+        "Per-project lessons carry forward as references the agent may consult, never as rules it must obey.",
+        "Every learned change stays in version control, so any improvement can be read, questioned, and reverted.",
+      ],
+      note: "The judge that grades a run is a different model lineage from the agent that did the work, and no learned change applies itself. A harness that grades its own trajectory and edits itself unsupervised is how self-improving systems learn to game their own scoring — the human gate is the feature, not the friction. Detailed sequencing lives in the internal self-improvement plan.",
+    },
+    {
       marker: "TEAMS",
       title: "Team and multi-machine surfaces",
       summary: "Same control plane, multiple operators, multiple machines.",
