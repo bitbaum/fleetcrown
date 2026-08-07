@@ -5,6 +5,7 @@ import { CURRENT_RELEASE } from "@/config/changelog";
 import { useInsideFleetRunner } from "@/hooks/use-inside-fleet-runner";
 import { APP_NAME } from "@/config/brand";
 import { ECOSYSTEM, ECOSYSTEM_LINKS } from "@/config/ecosystem";
+import { FLEET_SITES } from "@/config/fleet-sites";
 
 // PublicFooter — links to legal pages and support surfaces on every
 // unauthenticated marketing page. Rendered by PublicSurface so individual
@@ -92,6 +93,27 @@ export function PublicFooter() {
             )}
           </div>
         ))}
+      </div>
+      {/* The fleet. Every site here had no inbound link from anywhere else on
+          the fleet until this block existed — see config/fleet-sites.ts. Plain
+          anchors, not next/link: these are other origins, and the point is that
+          a crawler follows them. */}
+      <div className="ui-public-footer-fleet">
+        <div className="ui-public-footer-heading">The fleet</div>
+        <div className="ui-public-footer-fleet-grid">
+          {FLEET_SITES.map((site) => (
+            <a
+              key={site.url}
+              href={site.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex flex-col"
+            >
+              <span className="ui-public-footer-fleet-name">{site.name}</span>
+              <span className="ui-public-footer-fleet-blurb">{site.blurb}</span>
+            </a>
+          ))}
+        </div>
       </div>
       <div className="ui-public-footer-bottom">
         <div>© {new Date().getFullYear()} {APP_NAME} · Mao Nakamoto</div>
