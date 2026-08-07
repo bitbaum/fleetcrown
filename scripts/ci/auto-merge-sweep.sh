@@ -90,6 +90,32 @@ else
   fi
   if [ "$main_conclusion" != "success" ]; then
     echo "[auto-merge] ${BASE_BRANCH} CI is ${main_conclusion} — refusing to merge onto a broken base" >&2
+
+    # A red base is usually transient. It becomes a DEADLOCK when the only PR
+    # that repairs it is sitting in the queue: the guard blocks the fix for the
+    # very thing the guard is blocking on, and nothing on either side can move.
+    # Observed 2026-08-07 on aoz-housing — a green PR fixing master's E2E seed
+    # waited while every sweep exited 0 on the line above, so from the outside
+    # the automation looked healthy and idle. That is the third time in this
+    # fleet that a permanent stall was indistinguishable from an ordinary skip.
+    #
+    # We deliberately do NOT merge onto a red base to break the cycle — that
+    # guard is correct and load-bearing. We make the stall loud instead, and
+    # name the candidates, so it reads as "needs a decision" rather than
+    # "nothing to do". Breaking the tie stays a human/agent call.
+    ready=$(gh pr list --repo "$REPO" --state open --base "$BASE_BRANCH" --limit 50 \
+      --json number,title,isDraft,mergeStateStatus,labels \
+      --jq "[ .[]
+              | select(.isDraft | not)
+              | select(.mergeStateStatus == \"CLEAN\")
+              | select([.labels[].name] - ${HOLD_LABELS} == [.labels[].name])
+              | \"  #\(.number) \(.title)\" ] | .[]" 2>/dev/null)
+
+    if [ -n "$ready" ]; then
+      echo "[auto-merge] ⚠ DEADLOCK: ${BASE_BRANCH} is red and these green PRs cannot land — one of them may be the fix:" >&2
+      printf '%s\n' "$ready" >&2
+      echo "[auto-merge] unstick by merging the PR that repairs ${BASE_BRANCH}, or by making ${BASE_BRANCH} green directly" >&2
+    fi
     exit 0
   fi
 fi
