@@ -71,7 +71,10 @@ echo "[auto-merge] sweeping open PRs against ${BASE_BRANCH} in ${REPO}"
 # batching this script exists to prevent.
 main_sha=$(gh api "repos/${REPO}/commits/${BASE_BRANCH}" --jq '.sha')
 main_ci=$(gh run list --repo "$REPO" --workflow ci.yml --branch "$BASE_BRANCH" --limit 1 \
-  --json status,conclusion,headSha --jq '.[0] // empty')
+  --json databaseId,status,conclusion,headSha --jq '.[0] // empty')
+
+# Declared before the branch that can skip it (`set -u`; the merge site reads it).
+main_red_jobs=""
 
 if [ -z "$main_ci" ]; then
   echo "[auto-merge] no CI history for ${BASE_BRANCH} — proceeding"
@@ -116,7 +119,21 @@ else
       printf '%s\n' "$ready" >&2
       echo "[auto-merge] unstick by merging the PR that repairs ${BASE_BRANCH}, or by making ${BASE_BRANCH} green directly" >&2
     fi
-    exit 0
+
+    # ...and then actually unstick it, rather than only naming it. Reporting the
+    # deadlock was half the fix; a human still had to break the tie, which is
+    # the step this queue exists to remove. A PR whose own checks pass every job
+    # the base fails is provably safe: those checks run on the MERGE result
+    # (refs/pull/N/merge), so green there says the post-merge base is better
+    # than the pre-merge base. Anything not covering them is refused below.
+    main_run_id=$(printf '%s' "$main_ci" | jq -r '.databaseId')
+    main_red_jobs=$(gh run view "${main_run_id}" --repo "$REPO" --json jobs \
+      --jq '[.jobs[] | select(.conclusion == "failure") | .name] | .[]' 2>/dev/null || true)
+    if [ -z "${main_red_jobs}" ]; then
+      echo "[auto-merge] no failing job could be identified — refusing to merge onto a broken base" >&2
+      exit 0
+    fi
+    echo "[auto-merge] ${BASE_BRANCH} fails: $(printf '%s' "${main_red_jobs}" | tr '\n' ' ') — a PR green on those exact jobs may still merge" >&2
   fi
 fi
 
@@ -285,6 +302,26 @@ for number in $(printf '%s' "$prs_json" | jq -r 'sort_by(.number) | .[].number')
       echo "[auto-merge] #${number} update-branch failed — leaving for the next sweep" >&2
     fi
     break
+  fi
+
+  # Red base: this PR merges only if it proves every failing job green.
+  if [ -n "${main_red_jobs}" ]; then
+    pr_green=$(printf '%s' "$pr" | jq -r '
+      [ .statusCheckRollup[]?
+        | select(((.conclusion // .state // "") | test("^(SUCCESS|NEUTRAL|SKIPPED)$")))
+        | (.name // .context) ] | .[]')
+    uncovered=""
+    while IFS= read -r job; do
+      [ -z "$job" ] && continue
+      printf '%s\n' "$pr_green" | grep -Fxq "$job" || uncovered="${uncovered}${job}; "
+    done <<INNER_EOF
+${main_red_jobs}
+INNER_EOF
+    if [ -n "$uncovered" ]; then
+      echo "[auto-merge] #${number} skip: ${BASE_BRANCH} is red on [${uncovered%; }] and this PR does not prove those green — ${title}"
+      continue
+    fi
+    echo "[auto-merge] #${number} is green on every job ${BASE_BRANCH} fails — merging it to repair the base: ${title}" >&2
   fi
 
   echo "[auto-merge] #${number} green and ready — merging: ${title}"
