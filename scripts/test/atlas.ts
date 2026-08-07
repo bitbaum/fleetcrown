@@ -5,6 +5,7 @@
 import { parseSiteHtml, isImageResponse } from "@/lib/atlas/probe";
 import { buildAtlasGraph, type AtlasSiteInput } from "@/lib/atlas/graph";
 import { suggestFleetLinks } from "@/lib/atlas/suggest";
+import { FLEET_SITES } from "@/config/fleet-sites";
 
 let pass = 0;
 let fail = 0;
@@ -213,6 +214,34 @@ eq(
   "a project with no site yields no suggestions",
 );
 eq(suggestFleetLinks([]), [], "empty fleet suggests nothing");
+
+// ── FLEET_SITES ─────────────────────────────────────────────────────────────
+// The list that ANSWERS the graph above: the public footer's outbound links.
+// Pinned because this file rots silently — a typo'd or relative href still
+// renders as a link, still looks fixed on the page, and quietly restores the
+// isolation Atlas exists to detect.
+const hosts = FLEET_SITES.map((s) => new URL(s.url).hostname);
+
+eq(
+  FLEET_SITES.filter((s) => !s.url.startsWith("https://")).map((s) => s.name),
+  [],
+  "every fleet link is absolute https — a relative href reaches nothing off-site",
+);
+eq(
+  hosts.filter((h, i) => hosts.indexOf(h) !== i),
+  [],
+  "no host is listed twice",
+);
+eq(
+  hosts.filter((h) => h === "fleetcrown.orangecat.ch"),
+  [],
+  "FleetCrown does not link to itself",
+);
+eq(
+  FLEET_SITES.filter((s) => !s.name.trim() || !s.blurb.trim()).map((s) => s.url),
+  [],
+  "every entry carries a name and a blurb",
+);
 
 console.log(`${pass}/${pass + fail} atlas cases passed`);
 if (fail > 0) process.exit(1);
