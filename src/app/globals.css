@@ -1577,6 +1577,12 @@
   .ui-term-tab-label {
     @apply whitespace-nowrap tracking-tight;
   }
+  /* The Alt+N ordinal, shown dimmed before the tab name so the keyboard
+     shortcut is discoverable from the strip itself. */
+  .ui-term-tab-index {
+    @apply text-nano tabular-nums text-text-muted;
+  }
+  .ui-term-tab-active .ui-term-tab-index { @apply text-text-tertiary; }
   .ui-term-tab-input {
     @apply w-28 rounded bg-transparent text-xs text-text-primary outline-none;
     font-family: var(--font-mono);

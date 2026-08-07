@@ -129,8 +129,12 @@ export const EXECUTOR_COPY = {
   },
 
   terminal: {
+    // Names the two switches the mode bar exposes, because they are the whole
+    // point of the page: one shell, and you choose where it runs and how you
+    // talk to it. The old subtitle described only typing, which was the single
+    // thing the terminal could already do.
     pageSubtitle:
-      "Full interactive terminals — type directly into cloud or desktop agent sessions, like Cursor.",
+      "One terminal for every session. Switch source (cloud · this computer · shell), agent, and how you drive it — type, prompt, or voice.",
     cloudLabel: "Cloud",
     cloudLabelLocalHost: "Cloud (this server)",
     thisComputerLabel: "This computer",
