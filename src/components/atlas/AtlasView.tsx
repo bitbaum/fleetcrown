@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { RefreshCw, ArrowRight, ArrowLeftRight, Unlink } from "lucide-react";
-import { AtlasCard, siteState, type SiteState } from "./AtlasCard";
+import { AtlasCard, siteState, previewState, type SiteState } from "./AtlasCard";
 import { buildAtlasGraph } from "@/lib/atlas/graph";
 import type { AtlasRow } from "@/db/queries/atlas";
 
@@ -23,6 +23,13 @@ export function AtlasView({ initialRows }: { initialRows: AtlasRow[] }) {
     for (const row of rows) tally.set(siteState(row), (tally.get(siteState(row)) ?? 0) + 1);
     return tally;
   }, [rows]);
+
+  // Counted only over sites we actually checked: a site nobody probed has no
+  // preview evidence either way, and guessing would inflate the number.
+  const previewGap = useMemo(
+    () => rows.filter((r) => r.snapshot && previewState(r) !== "ok").length,
+    [rows],
+  );
 
   const graph = useMemo(
     () =>
@@ -84,6 +91,12 @@ export function AtlasView({ initialRows }: { initialRows: AtlasRow[] }) {
               <span className="text-text-tertiary">{label}</span>
             </span>
           ))}
+          {previewGap > 0 && (
+            <span className="text-status-warning">
+              <span className="font-semibold">{previewGap}</span>{" "}
+              <span className="text-text-tertiary">share as a blank preview</span>
+            </span>
+          )}
         </div>
         <button
           type="button"

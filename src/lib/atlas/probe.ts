@@ -36,12 +36,25 @@ export type SiteProbeResult = ParsedSite & {
   statusCode: number | null;
   ok: boolean;
   responseMs: number;
+  /**
+   * Whether `previewImageUrl` actually serves an image.
+   *
+   * `null` when the page declares no preview at all — the three states are
+   * "none declared", "declared and works", "declared and broken", and they need
+   * different fixes. Reading the tag alone conflates the last two: four fleet
+   * sites pointed og:image at a domain with no DNS record, so they advertised a
+   * preview and shared as a blank rectangle, and every check that only looked
+   * for the tag called them fine.
+   */
+  previewOk: boolean | null;
   error: string | null;
 };
 
 /** Only the <head> matters for metadata, and bodies can be megabytes. */
 const MAX_BYTES = 512 * 1024;
 const TIMEOUT_MS = 10_000;
+/** The preview check is a secondary fact — never let it dominate a run. */
+const PREVIEW_TIMEOUT_MS = 8_000;
 
 /** Parse `key="value"` / `key='value'` / `key=value` pairs from one tag. */
 function parseAttributes(tag: string): Record<string, string> {
@@ -167,6 +180,45 @@ export function parseSiteHtml(html: string, baseUrl: string): ParsedSite {
   };
 }
 
+/**
+ * Does this response actually hand a crawler an image?
+ *
+ * Pure, so the rule is testable without a network. Deliberately strict about
+ * the content type: Slack, Telegram and the Facebook/OpenGraph scrapers all
+ * discard a preview whose response is not `image/*`, so a 200 that returns an
+ * HTML error page is a broken preview even though the fetch "succeeded" — which
+ * is exactly how one fleet site hid a 404 behind a healthy-looking tag.
+ */
+export function isImageResponse(status: number, contentType: string | null): boolean {
+  if (status < 200 || status >= 400) return false;
+  return (contentType ?? "").trim().toLowerCase().startsWith("image/");
+}
+
+/**
+ * Fetch the declared preview far enough to learn whether it is really an image.
+ * Ranged so a large PNG costs a few bytes; servers that ignore Range just send
+ * the body and the timeout caps the damage.
+ */
+export async function verifyPreviewImage(imageUrl: string): Promise<boolean> {
+  try {
+    const response = await fetch(imageUrl, {
+      redirect: "follow",
+      signal: AbortSignal.timeout(PREVIEW_TIMEOUT_MS),
+      headers: {
+        "user-agent": "FleetCrownAtlas/1.0 (+https://fleetcrown.orangecat.ch)",
+        range: "bytes=0-0",
+      },
+      cache: "no-store",
+    });
+    // Cancel the body: we only needed the status line and headers.
+    await response.body?.cancel();
+    return isImageResponse(response.status, response.headers.get("content-type"));
+  } catch {
+    // DNS failure, TLS error, timeout — all mean a crawler gets nothing.
+    return false;
+  }
+}
+
 export async function probeSite(url: string): Promise<SiteProbeResult> {
   const started = Date.now();
   const base: SiteProbeResult = {
@@ -178,6 +230,7 @@ export async function probeSite(url: string): Promise<SiteProbeResult> {
     title: null,
     description: null,
     previewImageUrl: null,
+    previewOk: null,
     outboundHosts: [],
     internalPaths: [],
     error: null,
@@ -214,7 +267,12 @@ export async function probeSite(url: string): Promise<SiteProbeResult> {
 
   try {
     const html = (await response.text()).slice(0, MAX_BYTES);
-    return { ...result, ...parseSiteHtml(html, result.finalUrl ?? url) };
+    const parsed = parseSiteHtml(html, result.finalUrl ?? url);
+    // A declared preview is a claim, not a fact — check it before repeating it.
+    const previewOk = parsed.previewImageUrl
+      ? await verifyPreviewImage(parsed.previewImageUrl)
+      : null;
+    return { ...result, ...parsed, previewOk };
   } catch (e) {
     return { ...result, error: e instanceof Error ? e.message : "body read failed" };
   }

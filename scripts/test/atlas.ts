@@ -2,7 +2,7 @@
 // and the observed link graph (src/lib/atlas/graph.ts). Both run without a
 // network or a DB — the fragile parts are the ones worth pinning.
 // Run: npx tsx scripts/test/atlas.ts
-import { parseSiteHtml } from "@/lib/atlas/probe";
+import { parseSiteHtml, isImageResponse } from "@/lib/atlas/probe";
 import { buildAtlasGraph, type AtlasSiteInput } from "@/lib/atlas/graph";
 
 let pass = 0;
@@ -126,6 +126,21 @@ eq(oneWay.unlinked.map((s) => s.name), ["A"], "A has no inbound link");
 
 // An empty fleet must not throw.
 eq(buildAtlasGraph([]), { edges: [], unlinked: [], deadEnds: [] }, "empty input");
+
+// ── isImageResponse ─────────────────────────────────────────────────────────
+// A preview is only real if a crawler gets image bytes back. These cases are
+// the exact shapes found live across the fleet, so a regression here would let
+// a blank-sharing site read as fine again.
+eq(isImageResponse(200, "image/png"), true, "200 + image/png is a real preview");
+eq(isImageResponse(200, "image/jpeg; charset=binary"), true, "parameters after the type are ignored");
+eq(isImageResponse(200, "IMAGE/PNG"), true, "content-type match is case-insensitive");
+eq(isImageResponse(200, " image/webp"), true, "leading whitespace tolerated");
+eq(isImageResponse(404, "image/png"), false, "404 is broken even with an image type");
+eq(isImageResponse(500, "image/png"), false, "5xx is broken");
+eq(isImageResponse(200, "text/html; charset=utf-8"), false, "an HTML error page is NOT a preview");
+eq(isImageResponse(200, null), false, "missing content-type is not assumed to be an image");
+eq(isImageResponse(200, ""), false, "empty content-type is not an image");
+eq(isImageResponse(301, "image/png"), true, "a followed redirect still counts");
 
 console.log(`${pass}/${pass + fail} atlas cases passed`);
 if (fail > 0) process.exit(1);

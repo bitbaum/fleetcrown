@@ -20,6 +20,7 @@ export type AtlasRow = {
     title: string | null;
     description: string | null;
     previewImageUrl: string | null;
+    previewOk: boolean | null;
     outboundHosts: string[];
     internalPaths: string[];
     error: string | null;
@@ -48,6 +49,7 @@ export async function getAtlasRows(userId: string): Promise<AtlasRow[]> {
       snapTitle: siteSnapshots.title,
       snapDescription: siteSnapshots.description,
       snapImage: siteSnapshots.previewImageUrl,
+      snapPreviewOk: siteSnapshots.previewOk,
       snapHosts: siteSnapshots.outboundHosts,
       snapPaths: siteSnapshots.internalPaths,
       snapError: siteSnapshots.error,
@@ -74,6 +76,7 @@ export async function getAtlasRows(userId: string): Promise<AtlasRow[]> {
           title: r.snapTitle,
           description: r.snapDescription,
           previewImageUrl: r.snapImage,
+          previewOk: r.snapPreviewOk,
           outboundHosts: r.snapHosts ?? [],
           internalPaths: r.snapPaths ?? [],
           error: r.snapError,
@@ -108,6 +111,7 @@ export async function saveSiteSnapshot(
     title: probe.title,
     description: probe.description,
     previewImageUrl: probe.previewImageUrl,
+    previewOk: probe.previewOk,
     outboundHosts: probe.outboundHosts,
     internalPaths: probe.internalPaths,
     error: probe.error,
