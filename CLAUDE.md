@@ -29,7 +29,13 @@ src/
 │   ├── control/   → ControlPanel, ProjectCard, ProjectTile, ProjectProfile (fleet command)
 │   ├── agents/    → AgentsCockpit (roster + inter-agent comms feed, parses ~/.claude/cross-project/inbox-*.md)
 │   ├── loki/      → LokiWorkspace, Transcript, Composer, ConversationList (chat assistant)
-│   ├── terminal/  → TerminalWorkspace, BuilderAgentView, TabVoiceMic (live embedded terminal, cloud + local PTY)
+│   ├── terminal/  → TerminalSurface (the ONE shell: tab strip + mode bar +
+│   │                 session + composer), TerminalTabStrip, TerminalModeBar,
+│   │                 TerminalComposer, ShellWorkspace (server-owned bash PTYs,
+│   │                 local/sandbox only), TerminalView (the one xterm),
+│   │                 terminal-transport (substrate seam), TabVoiceMic.
+│   │                 Modes are SSOT in config/terminal-modes.ts; never add a
+│   │                 second terminal shell — add a transport.
 │   ├── activity/  → ActivityView, EventStream, DigestPanel (fleet activity timeline + digests)
 │   ├── today/     → CalendarCard, WeatherCard, CommitmentsCard, SubscriptionsCard, HabitsList
 │   ├── people/    → PeopleGrid, PersonCard, PersonDetail

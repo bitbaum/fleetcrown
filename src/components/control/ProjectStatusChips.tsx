@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { GitBranch, Terminal, ChevronDown, Loader2, UploadCloud, Check } from "lucide-react";
+import Link from "next/link";
+import { GitBranch, Terminal, ChevronDown, Loader2, SquareTerminal, UploadCloud, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { postJson } from "@/lib/api/fetch";
 import type { ProjectState } from "@/lib/control-types";
@@ -279,6 +280,26 @@ export function ProjectStatusChips({
           {!compact && (wsState === "working" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Terminal className="h-3.5 w-3.5" />)}
           {wsState === "done" ? "Focused ✓" : wsState === "error" ? "Failed" : "Focus terminal"}
         </button>
+      )}
+
+      {/* Two different terminals, so two different chips. "Focus terminal"
+          raises the window on the user's own machine and needs Fleet Runner;
+          this one opens the session inside FleetCrown, which works from any
+          device. Control could reach the first but never the second — the
+          fastest path from a project card to watching its agent was to
+          navigate to /terminal and find the tab by hand. */}
+      {clickableWorkspace && (
+        <Link
+          href={`/terminal?tab=${encodeURIComponent(workspaceTab)}`}
+          onClick={(event) => event.stopPropagation()}
+          title={`Open ${workspaceTab}'s session in FleetCrown's terminal — works from any device, no Fleet Runner needed.`}
+          className={compact
+            ? "text-text-tertiary transition-colors hover:text-text-primary"
+            : statusChipClass("neutral", true)}
+        >
+          {!compact && <SquareTerminal className="h-3.5 w-3.5" />}
+          Open here
+        </Link>
       )}
 
       {git && compact && (

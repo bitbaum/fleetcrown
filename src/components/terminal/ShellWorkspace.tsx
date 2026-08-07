@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Plus, X } from "lucide-react";
+import { Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TerminalLeaf } from "./TerminalLeaf";
+import { TerminalTabStrip } from "./TerminalTabStrip";
 import {
   closeLeaf,
   computeLayout,
@@ -20,10 +21,21 @@ type Tab = { id: string; title: string; root: TermNode; activeLeafId: string };
 
 const uid = () => crypto.randomUUID();
 
-export function TerminalWorkspace() {
+/**
+ * Server-owned shell: bash PTYs in tabs and drag-resizable splits.
+ *
+ * Reachable only where FleetCrown may provision its own PTYs (the local runtime
+ * host, or an explicit sandbox executor) — the hosted control plane must not
+ * spawn shells, so `TerminalSurface` does not offer this source there.
+ *
+ * It renders the SAME `TerminalTabStrip` as agent sessions. That is the point:
+ * this workspace used to draw its own tab bar while agent sessions used a side
+ * list, so the two halves of one page navigated differently. Only the contents
+ * of the panes differ now.
+ */
+export function ShellWorkspace() {
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string>("");
-  const [editingTabId, setEditingTabId] = useState<string | null>(null);
   const counter = useRef(0);
   const areaRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
@@ -116,44 +128,15 @@ export function TerminalWorkspace() {
 
   return (
     <div className="ui-term-shell">
-      {/* Tab bar */}
-      <div className="ui-term-tabbar">
-        {tabs.map((t) => (
-          <div
-            key={t.id}
-            className={cn("group ui-term-tab", t.id === activeTabId && "ui-term-tab-active")}
-            onMouseDown={() => setActiveTabId(t.id)}
-            onDoubleClick={() => setEditingTabId(t.id)}
-          >
-            {editingTabId === t.id ? (
-              <input
-                autoFocus
-                defaultValue={t.title}
-                className="ui-term-tab-input"
-                onBlur={(e) => {
-                  const v = e.target.value.trim();
-                  setTabs((prev) => prev.map((x) => (x.id === t.id ? { ...x, title: v || x.title } : x)));
-                  setEditingTabId(null);
-                }}
-                onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); if (e.key === "Escape") setEditingTabId(null); }}
-              />
-            ) : (
-              <span className="ui-term-tab-label">{t.title}</span>
-            )}
-            <button
-              type="button"
-              className="ui-term-tab-close"
-              title="Close tab"
-              onMouseDown={(e) => { e.stopPropagation(); closeTab(t.id); }}
-            >
-              <X className="h-3 w-3" />
-            </button>
-          </div>
-        ))}
-        <button type="button" className="ui-term-newtab" title="New terminal" onClick={addTab}>
-          <Plus className="h-4 w-4" />
-        </button>
-      </div>
+      <TerminalTabStrip
+        tabs={tabs.map((t) => ({ id: t.id, label: t.title }))}
+        activeId={activeTabId}
+        onSelect={setActiveTabId}
+        onClose={closeTab}
+        onNew={addTab}
+        onRename={(id, title) => setTabs((prev) => prev.map((t) => (t.id === id ? { ...t, title } : t)))}
+        newLabel="New shell"
+      />
 
       {/* Canvases — every tab stays mounted (hidden when inactive) so switching
           tabs or splitting never tears down a live PTY. */}

@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Check, Copy, FolderOpen, Loader2, X, Zap } from "lucide-react";
+import { Check, Copy, FolderOpen, Loader2, SquareTerminal, X, Zap } from "lucide-react";
 import type { PromptTemplate } from "@/config/prompt-library";
 import type { Project } from "./types";
 import { Modal } from "@/components/ui/modal";
 import { postJson } from "@/lib/api/fetch";
 import { useClipboard } from "@/hooks/use-clipboard";
+import { useFetch } from "@/hooks/use-fetch";
 
 export function RunModal({
   template,
@@ -27,12 +28,42 @@ export function RunModal({
   const [error, setError] = useState<string | null>(null);
   const { copied, copy } = useClipboard();
 
+  // Live agent sessions, so a template can be sent to the thing that will run
+  // it. Until now the library's only verb was "Run with Loki" — a chat
+  // completion that answers in a modal and touches no repo — so every prompt
+  // meant for an agent had to be copied out of this page by hand.
+  const { data: tabsData } = useFetch<{ tabs: string[] }>("/api/control/open-tabs");
+  const openTabs = tabsData?.tabs ?? [];
+  const [dispatching, setDispatching] = useState(false);
+  const [dispatchedTo, setDispatchedTo] = useState<string | null>(null);
+
   const resolvedMessage =
     template.scope === "project" && projectName
       ? template.template.replaceAll("{{project_name}}", projectName)
       : template.template;
 
   const canRun = template.scope === "global" || !!projectId;
+
+  // Prefer the tab matching the chosen project; otherwise the only open one.
+  // Never guess between several unrelated sessions — dispatching into the wrong
+  // agent is not a recoverable mistake.
+  const targetTab =
+    openTabs.find((tab) => tab.toLowerCase() === projectName.toLowerCase())
+    ?? (openTabs.length === 1 ? openTabs[0] : null);
+
+  const handleSendToTerminal = async () => {
+    if (!targetTab || dispatching) return;
+    setDispatching(true);
+    setError(null);
+    try {
+      await postJson("/api/control/tab-inject", { tab: targetTab, prompt: resolvedMessage });
+      setDispatchedTo(targetTab);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setDispatching(false);
+    }
+  };
 
   const handleRun = async () => {
     if (!canRun || running) return;
@@ -146,18 +177,51 @@ export function RunModal({
           )}
         </div>
 
-        <div className="shrink-0 border-t border-border-subtle p-6">
-          <button
-            onClick={handleRun}
-            disabled={!canRun || running}
-            className="ui-btn-submit"
-          >
-            {running ? (
-              <><Loader2 className="ui-spinner" /> Running…</>
-            ) : (
-              <><Zap className="h-4 w-4" /> Run with Loki</>
-            )}
-          </button>
+        <div className="shrink-0 space-y-2 border-t border-border-subtle p-6">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={handleRun}
+              disabled={!canRun || running}
+              className="ui-btn-submit"
+            >
+              {running ? (
+                <><Loader2 className="ui-spinner" /> Running…</>
+              ) : (
+                <><Zap className="h-4 w-4" /> Run with Loki</>
+              )}
+            </button>
+            <button
+              onClick={handleSendToTerminal}
+              disabled={!canRun || !targetTab || dispatching}
+              title={
+                !targetTab
+                  ? openTabs.length === 0
+                    ? "No agent session is open. Dispatch one from Control first."
+                    : "Pick the project whose session this should run in."
+                  : `Dispatch into the “${targetTab}” session`
+              }
+              className="ui-btn-secondary disabled:pointer-events-none disabled:opacity-40"
+            >
+              {dispatching
+                ? <><Loader2 className="ui-spinner" /> Sending…</>
+                : <><SquareTerminal className="h-4 w-4" /> Send to terminal</>}
+            </button>
+          </div>
+          {/* "Run with Loki" answers in this modal; "Send to terminal" hands the
+              prompt to an agent that can actually change the repo. Saying so
+              here is cheaper than a user discovering it by picking wrong. */}
+          <p className="text-xs text-text-muted">
+            Loki answers here. Send to terminal dispatches into a live agent session — assembled with project
+            context, and queued if the builder is offline.
+          </p>
+          {dispatchedTo && (
+            <p className="text-xs text-status-positive">
+              Sent to {dispatchedTo}.{" "}
+              <Link href={`/terminal?tab=${encodeURIComponent(dispatchedTo)}`} className="underline">
+                Watch it in Terminal →
+              </Link>
+            </p>
+          )}
         </div>
       </Modal>
     </>
