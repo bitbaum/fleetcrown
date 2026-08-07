@@ -124,7 +124,7 @@ if [ -n "${main_ci:-}" ]; then
 fi
 
 prs_json=$(gh pr list --repo "$REPO" --state open --base "$BASE_BRANCH" --limit 50 \
-  --json number,title,isDraft,mergeable,mergeStateStatus,labels,statusCheckRollup)
+  --json number,title,isDraft,mergeable,mergeStateStatus,labels,statusCheckRollup,createdAt)
 
 count=$(printf '%s' "$prs_json" | jq 'length')
 if [ "$count" -eq 0 ]; then
@@ -175,6 +175,17 @@ for number in $(printf '%s' "$prs_json" | jq -r 'sort_by(.number) | .[].number')
   if [ "$verdict" != "merge" ]; then
     echo "[auto-merge] #${number} ${verdict} — ${title}"
 
+    # "No checks reported yet" is transient for a PR opened seconds ago and
+    # PERMANENT for an old one: GitHub does not retroactively run workflows on
+    # a PR nobody has pushed to, so it will sit here forever looking patient.
+    # Report it; only a push, or a close/reopen, will ever produce checks.
+    if [ "$verdict" = "skip: no checks reported yet" ] && [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+      created=$(printf '%s' "$pr" | jq -r '.createdAt // ""')
+      if [ -n "$created" ] && [ "$created" \< "$(date -u -d '2 hours ago' +%Y-%m-%dT%H:%M:%SZ)" ]; then
+        echo "- ⚠️ #${number} has no checks and is over 2h old — it will never gain any on its own — ${title}" >> "$GITHUB_STEP_SUMMARY"
+      fi
+    fi
+
     # A CANCELLED check is not a verdict, it is noise: ci.yml uses
     # `concurrency: cancel-in-progress: true`, so an unrelated newer run on the
     # same ref can kill a PR's build. Nothing ever re-runs it, the PR is never
@@ -218,9 +229,36 @@ for number in $(printf '%s' "$prs_json" | jq -r 'sort_by(.number) | .[].number')
     sleep 5
   done
 
+  # A conflicted PR is not "not ready yet" — it is stuck, and nothing else will
+  # unstick it. Skipping it quietly is how a PR sits DIRTY while the base moves
+  # on: every sweep passes over it in silence and no signal ever reaches a
+  # human. Say it loudly, and put it in the job summary where it is seen.
+  if [ "$mergeable" = "CONFLICTING" ]; then
+    echo "[auto-merge] #${number} CONFLICTS with ${BASE_BRANCH} and will never merge itself — ${title}" >&2
+    if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+      echo "- ⚠️ #${number} conflicts with \`${BASE_BRANCH}\` and needs resolving — ${title}" >> "$GITHUB_STEP_SUMMARY"
+    fi
+    continue
+  fi
+
   if [ "$mergeable" != "MERGEABLE" ]; then
     echo "[auto-merge] #${number} skip: not mergeable (${mergeable}/${state}) — ${title}"
     continue
+  fi
+
+  # Keep the branch current instead of merging a PR that was proven against an
+  # older base. This is also how conflicts surface EARLY: a branch updated on
+  # the sweep after the merge that broke it fails here, minutes later, rather
+  # than hours later when someone finally looks. One update per sweep, for the
+  # same reason only one PR is merged per sweep.
+  if [ "$state" = "BEHIND" ]; then
+    echo "[auto-merge] #${number} is behind ${BASE_BRANCH} — updating it before merging: ${title}"
+    if gh api -X PUT "repos/${REPO}/pulls/${number}/update-branch" --silent 2>/dev/null; then
+      echo "[auto-merge] #${number} updated; its checks now run against current ${BASE_BRANCH}"
+    else
+      echo "[auto-merge] #${number} update-branch failed — leaving for the next sweep" >&2
+    fi
+    break
   fi
 
   echo "[auto-merge] #${number} green and ready — merging: ${title}"
