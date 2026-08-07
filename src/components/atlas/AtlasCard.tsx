@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ExternalLink, GitBranch, Pencil, Check, X, ImageOff } from "lucide-react";
+import { ExternalLink, GitBranch, Pencil, Check, X, ImageOff, Globe } from "lucide-react";
 import { agoLabel } from "@/lib/atlas/format";
+import { orangeCatProjectUrl } from "@/config/ecosystem";
 import { cn } from "@/lib/utils";
 import type { AtlasRow } from "@/db/queries/atlas";
 
@@ -60,6 +61,31 @@ export function AtlasCard({
   const [value, setValue] = useState(row.liveUrl ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [publishing, setPublishing] = useState(false);
+  const [publishedId, setPublishedId] = useState<string | null>(row.orangecatProjectId);
+
+  /**
+   * Publishing is a deliberate, per-project action and stays that way. Atlas
+   * only makes the state visible — the capability already existed behind a
+   * route, but nothing showed whether a project had a public presence, so 18
+   * of 20 projects silently had none.
+   */
+  async function publish() {
+    setPublishing(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/user-projects/${row.projectId}/publish-orangecat`, {
+        method: "POST",
+      });
+      const json = (await res.json()) as { orangecatProjectId?: string; error?: string };
+      if (!res.ok) throw new Error(json.error ?? "Publish failed");
+      if (json.orangecatProjectId) setPublishedId(json.orangecatProjectId);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Publish failed");
+    } finally {
+      setPublishing(false);
+    }
+  }
 
   const state = siteState(row);
   const preview = previewState(row);
@@ -222,6 +248,31 @@ export function AtlasCard({
               >
                 <GitBranch className="h-3.5 w-3.5" aria-hidden />
               </a>
+            )}
+            {publishedId ? (
+              <a
+                href={orangeCatProjectUrl(publishedId)}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 hover:text-text-secondary"
+                title="Public on OrangeCat"
+              >
+                <Globe className="h-3.5 w-3.5" aria-hidden />
+                Public
+              </a>
+            ) : (
+              row.liveUrl && (
+                <button
+                  type="button"
+                  onClick={() => void publish()}
+                  disabled={publishing}
+                  className="inline-flex items-center gap-1 hover:text-text-secondary disabled:opacity-50"
+                  aria-label={`Publish ${row.name} to OrangeCat`}
+                >
+                  <Globe className="h-3.5 w-3.5" aria-hidden />
+                  {publishing ? "Publishing…" : "Publish"}
+                </button>
+              )
             )}
             <Link href={`/atlas/${row.projectId}`} className="hover:text-text-secondary">
               Pages &amp; guides

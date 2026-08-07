@@ -4,6 +4,7 @@
 // Run: npx tsx scripts/test/atlas.ts
 import { parseSiteHtml, isImageResponse } from "@/lib/atlas/probe";
 import { buildAtlasGraph, type AtlasSiteInput } from "@/lib/atlas/graph";
+import { suggestFleetLinks } from "@/lib/atlas/suggest";
 
 let pass = 0;
 let fail = 0;
@@ -141,6 +142,77 @@ eq(isImageResponse(200, "text/html; charset=utf-8"), false, "an HTML error page 
 eq(isImageResponse(200, null), false, "missing content-type is not assumed to be an image");
 eq(isImageResponse(200, ""), false, "empty content-type is not an image");
 eq(isImageResponse(301, "image/png"), true, "a followed redirect still counts");
+
+// ── suggestFleetLinks ───────────────────────────────────────────────────────
+// Every suggestion must be backed by an observation. These cases pin that the
+// engine proposes nothing it cannot justify — a wall of plausible guesses would
+// be worse than the empty state it replaces.
+const S = (id: string, hosts: string[]): AtlasSiteInput => ({
+  projectId: id, name: id, liveUrl: `https://${id}.test`, outboundHosts: hosts,
+});
+
+const recip = suggestFleetLinks([S("a", ["b.test"]), S("b", [])]);
+eq(recip.length, 1, "one suggestion for a one-way edge");
+eq(recip[0].kind, "reciprocate", "an existing one-way link suggests linking back");
+eq(recip[0].fromName, "b", "the suggestion is addressed to the site that does NOT link back");
+eq(recip[0].toName, "a", "...pointing at the one that already links to it");
+
+// A link that already exists in both directions is not a suggestion.
+eq(suggestFleetLinks([S("a", ["b.test"]), S("b", ["a.test"])]), [], "reciprocal pair suggests nothing");
+
+// Shared audience: a rare third-party host both sites point at.
+const shared = suggestFleetLinks([S("a", ["partner.test"]), S("b", ["partner.test"]), S("c", []), S("d", []), S("e", []), S("f", [])]);
+eq(
+  shared.filter((s) => s.kind === "shared-audience").map((s) => `${s.fromName}->${s.toName}`),
+  ["a->b", "b->a"],
+  "a rare shared host suggests a link both ways",
+);
+eq(
+  shared.some((s) => s.kind === "shared-audience" && s.reason.includes("partner.test")),
+  true,
+  "the shared host is named in the reason, so the claim is auditable",
+);
+
+// ...but a host almost everyone links to is plumbing, not an audience. Without
+// this guard every pair would "share an audience" via github.com.
+const plumbing = suggestFleetLinks([S("a", ["github.com"]), S("b", ["github.com"]), S("c", ["github.com"])]);
+eq(
+  plumbing.some((s) => s.kind === "shared-audience"),
+  false,
+  "a host most of the fleet links to is NOT treated as a shared audience",
+);
+
+// Regression from real fleet data: github.com alone produced 18 of 28
+// suggestions. Even shared by exactly two sites it must never be a signal.
+eq(
+  suggestFleetLinks([S("a", ["github.com"]), S("b", ["github.com"])]).some(
+    (s) => s.kind === "shared-audience",
+  ),
+  false,
+  "github.com is never audience evidence, even when only two sites link it",
+);
+
+// The rarity rule must also reject a non-infrastructure host once it is common.
+const common = Array.from({ length: 16 }, (_, i) => S(`s${i}`, ["everywhere.test"]));
+eq(
+  suggestFleetLinks(common).some((s) => s.kind === "shared-audience"),
+  false,
+  "a host linked by the whole fleet is not discriminating, denylist or not",
+);
+
+// Orphans get a concrete host for the link rather than a bare complaint.
+const orphan = suggestFleetLinks([S("a", ["b.test"]), S("b", ["a.test"]), S("lonely", [])]);
+const forLonely = orphan.filter((s) => s.toName === "lonely");
+eq(forLonely.length, 1, "an isolated site gets exactly one suggested home");
+eq(forLonely[0].kind, "orphan", "...classified as unreachable");
+
+// A site with no live URL is not part of the fleet graph at all.
+eq(
+  suggestFleetLinks([{ projectId: "x", name: "x", liveUrl: null, outboundHosts: [] }]),
+  [],
+  "a project with no site yields no suggestions",
+);
+eq(suggestFleetLinks([]), [], "empty fleet suggests nothing");
 
 console.log(`${pass}/${pass + fail} atlas cases passed`);
 if (fail > 0) process.exit(1);
