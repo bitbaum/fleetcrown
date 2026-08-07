@@ -33,6 +33,22 @@ const STATE_LABEL: Record<SiteState, string> = {
   "no-site": "No site",
 };
 
+/**
+ * What a link to this site looks like when it is pasted somewhere.
+ *
+ * "broken" is its own state, not a flavour of "missing": a site that declares
+ * an og:image pointing at a dead host looks configured to every reader and
+ * still shares as a blank rectangle. Telling them apart is the whole point —
+ * one needs an image added, the other needs a URL corrected.
+ */
+export type PreviewState = "ok" | "broken" | "missing";
+
+export function previewState(row: AtlasRow): PreviewState {
+  const snap = row.snapshot;
+  if (!snap?.previewImageUrl) return "missing";
+  return snap.previewOk === false ? "broken" : "ok";
+}
+
 export function AtlasCard({
   row,
   onSaved,
@@ -46,6 +62,7 @@ export function AtlasCard({
   const [error, setError] = useState<string | null>(null);
 
   const state = siteState(row);
+  const preview = previewState(row);
   const snap = row.snapshot;
   const displayTitle = snap?.title ?? row.name;
   const displayDescription = snap?.description ?? row.description;
@@ -73,7 +90,7 @@ export function AtlasCard({
   return (
     <article className="flex flex-col overflow-hidden rounded-2xl border border-border-subtle bg-surface-raised">
       <div className="relative aspect-[1200/630] w-full overflow-hidden border-b border-border-subtle bg-surface-overlay">
-        {snap?.previewImageUrl ? (
+        {preview === "ok" && snap?.previewImageUrl ? (
           /* Previews come from arbitrary user-owned hosts; next/image would need
              every one allow-listed in next.config, which defeats the point. */
           // eslint-disable-next-line @next/next/no-img-element
@@ -84,11 +101,23 @@ export function AtlasCard({
             loading="lazy"
           />
         ) : (
-          <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-text-tertiary">
-            <ImageOff className="h-5 w-5" aria-hidden />
-            <span className="text-xs">
-              {state === "no-site" ? "No site registered" : "No preview image"}
+          <div className="flex h-full w-full flex-col items-center justify-center gap-2 px-4 text-center text-text-tertiary">
+            <ImageOff
+              className={cn("h-5 w-5", preview === "broken" && "text-status-warning")}
+              aria-hidden
+            />
+            <span className={cn("text-xs", preview === "broken" && "text-status-warning")}>
+              {state === "no-site"
+                ? "No site registered"
+                : preview === "broken"
+                  ? "Preview link is broken"
+                  : "No preview image"}
             </span>
+            {preview === "broken" && snap?.previewImageUrl && (
+              <span className="max-w-full truncate text-nano text-text-tertiary" title={snap.previewImageUrl}>
+                {hostLabel(snap.previewImageUrl)}
+              </span>
+            )}
           </div>
         )}
         <span

@@ -35,6 +35,11 @@ export const siteSnapshots = pgTable("site_snapshots", {
   title:            text("title"),
   description:      text("description"),
   previewImageUrl:  text("preview_image_url"),
+  /** Whether that preview URL actually serves an image. NULL = none declared.
+   *  Stored separately from the URL because "declares a preview" and "has a
+   *  working preview" are different facts, and only the second one is what a
+   *  link posted to Slack or Telegram will show. */
+  previewOk:        boolean("preview_ok"),
 
   /** Distinct external hosts this page links to. The synergy graph is built by
    *  intersecting these with the fleet's own hosts — observed connections, not
