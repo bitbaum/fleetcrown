@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import { RefreshCw, ArrowRight, ArrowLeftRight, Unlink } from "lucide-react";
 import { AtlasCard, siteState, previewState, type SiteState } from "./AtlasCard";
 import { buildAtlasGraph } from "@/lib/atlas/graph";
+import { suggestFleetLinks } from "@/lib/atlas/suggest";
+import { LinkSuggestions } from "./LinkSuggestions";
 import type { AtlasRow } from "@/db/queries/atlas";
 
 const SUMMARY: { state: SiteState; label: string; className: string }[] = [
@@ -34,6 +36,19 @@ export function AtlasView({ initialRows }: { initialRows: AtlasRow[] }) {
   const graph = useMemo(
     () =>
       buildAtlasGraph(
+        rows.map((r) => ({
+          projectId: r.projectId,
+          name: r.name,
+          liveUrl: r.liveUrl,
+          outboundHosts: r.snapshot?.outboundHosts ?? [],
+        })),
+      ),
+    [rows],
+  );
+
+  const suggestions = useMemo(
+    () =>
+      suggestFleetLinks(
         rows.map((r) => ({
           projectId: r.projectId,
           name: r.name,
@@ -116,6 +131,8 @@ export function AtlasView({ initialRows }: { initialRows: AtlasRow[] }) {
           <AtlasCard key={row.projectId} row={row} onSaved={handleSaved} />
         ))}
       </div>
+
+      <LinkSuggestions suggestions={suggestions} />
 
       <section aria-labelledby="atlas-graph-title" className="rounded-2xl border border-border-subtle bg-surface-raised p-5">
         <h2 id="atlas-graph-title" className="text-base font-semibold text-text-primary">
