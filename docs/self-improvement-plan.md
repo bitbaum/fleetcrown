@@ -1,7 +1,8 @@
 # Self-Improvement Plan — Closing FleetCrown's Learning Loop
 
 **Date**: 2026-08-07
-**Status**: Plan — Phase 0 not started
+**Status**: Phase 1 MEASURED (see §3a) → Phase 3 **parked**, Phase 0 **deferred**,
+root-cause fix **shipped**
 **Owner**: orchestration
 **Related**: [architecture-first-principles.md](architecture-first-principles.md), [sustainability-gates.md](sustainability-gates.md), Thoughts essay "The Fleet Learns From What It Reads, Not What It Does"
 
@@ -125,6 +126,68 @@ run history as training data.
    → **Repair the rubrics before Phase 2. This is C1 in practice.**
 
 ---
+
+## 3a. Phase 1 result — measured against prod, 2026-08-07
+
+Ran read-only against `orchestration_runs`. It needed **no `runId` FK and no
+schema change** — intent, outcome, cost, evidence and the DoD `gap` all live on
+that one table. Phase 1 therefore did not depend on Phase 0 at all, which is the
+first thing the measurement corrected.
+
+- **254 runs, only 57 evidence-present (23%).** A run that times out never writes
+  a handoff, so the populations are disjoint: 197 have no summary (121 timeout,
+  27 user_abort, 14 open).
+- Among finished runs: **48 partial / 9 success**; DoD **met 3, not met 48**
+  (5.9%).
+- **64.6% of every rejection reason was "work not evidenced in the handoff"**,
+  not "work is wrong."
+- **48 gap rows, 48 distinct sentences — zero repetition.**
+- Timeout is 47.6% all-time but self-correcting: 89.5% (Jun) → 51.1% (Jul) →
+  **24.2% (Aug)**.
+
+### The root cause, and why it was not what the plan assumed
+
+The plan assumed vague rubrics. **The dominant bar is not vague** — 46 of 51
+graded runs ran against `` `npm run verify` passes, with its real output in the
+handoff (lint:/tsc:/tests:). Work is committed and pushed. `` That is precise and
+mechanically checkable.
+
+The actual cause is one line of prompt authoring. Measured over every handoff:
+`tests:` was filled **97%** of the time; `tsc:` and `lint:` were filled **3 times
+in total, zero before August**. The difference was not diligence — `tests:`
+appeared in an explicit `field: <hint>` list the agent could copy, while
+tsc/lint/commit were named only inside a paragraph. **Agents write the shape they
+are shown.** The work was being done; the fields it had to land in were never
+requested.
+
+### Consequences (these override §4 as originally written)
+
+1. **Phase 3 (GEPA) is PARKED.** 48 graded examples, 3 intents ever used, 94% one
+   label, and *zero* sentence-level repetition is not an optimisation signal.
+   The phase's own kill criterion would fire on cycle one. Revisit at ~1000
+   evidence-present runs — stated so it is a threshold, not a silent cap.
+2. **Phase 0 (the `runId` FK) is DEFERRED.** Its only consumer is the parked
+   phase. Keep logging so the corpus grows; add the column when Phase 3 revives.
+3. **The fix was one prompt change, not a learning loop.** `HANDOFF_FIELD_BLOCK`
+   in `config/prompt-library.ts` is now the single canonical handoff shape and
+   includes the evidence fields, and `orchestration/evidence-precheck.ts` turns
+   the dominant rejection into a deterministic check with a stable `gapCode`.
+4. **Phase 2 partially lands early, in a different form.** The bars did not need
+   rewriting; the *instruction* did. The rubric-quality check remains open.
+
+### What this bought — and the one thing it changes about learning
+
+The free-text `gap` was a snowflake: 48 rejections, 48 distinct sentences, which
+is precisely *why* the corpus was unlearnable. The pre-check emits a stable
+`gapCode` instead. Replayed over the 51 graded runs, the entire history collapses
+to **two** categories (`evidence:lint+tsc+commit` ×46, `evidence:lint+tsc` ×2).
+Categorical gaps are countable, and countable is the precondition for Phase 3
+ever being viable. It also skips a model call on 94% of historical rejections.
+
+Replay honesty: the pre-check agreed with the model judge on 47 of 48 and
+disagreed once — a run the judge passed with `lint:` and `tsc:` both blank
+against a bar naming them. That disagreement is in the direction the gate exists
+to enforce and was deliberately not softened.
 
 ## 4. Phases
 

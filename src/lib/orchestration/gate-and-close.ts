@@ -13,6 +13,7 @@ import { getProjectGoalConfig } from "@/db/queries/project-context";
 import { updateOrchestrationRun } from "@/db/queries/orchestration-runs";
 import { emitRunEvent } from "@/db/queries/run-events";
 import { verifyDefinitionOfDone, applyDoDGate, DOD_JUDGE_MODEL } from "@/lib/orchestration/dod-gate";
+import { precheckEvidence, EVIDENCE_PRECHECK_ID } from "@/lib/orchestration/evidence-precheck";
 import type { RunClosePatch } from "@/lib/orchestration/close-from-session";
 import type { OrchestrationOutcome } from "@/db/schema/orchestration-runs";
 import { ORCHESTRATION_OUTCOME } from "@/db/schema/orchestration-runs";
@@ -82,7 +83,16 @@ export async function gateAndCloseRun(
   if (closePatch.outcome === ORCHESTRATION_OUTCOME.SUCCESS) {
     const { definitionOfDone: dod, maxTurns } = await getProjectGoalConfig(userId, projectKey).catch(() => ({ definitionOfDone: null, maxTurns: null }));
     if (dod) {
-      const verdict = await verifyDefinitionOfDone(dod, closePatch.summary);
+      // Deterministic first: when the bar demands a check whose handoff field is
+      // simply blank, a string test reaches the same `met: false` the judge's own
+      // "Missing evidence = not done" rule would — without spending a model call,
+      // and with a groupable gapCode instead of another one-off sentence. Prod
+      // 2026-08-07: this is 64.6% of all rejections. Falls through to the judge
+      // whenever it cannot decide, so nothing is ever approved by a rule.
+      const precheck = precheckEvidence(dod, closePatch.summary);
+      const verdict = precheck
+        ? { met: false, gap: precheck.gap }
+        : await verifyDefinitionOfDone(dod, closePatch.summary);
       // priorPartials = consecutive partial closes so far = how many times the
       // goal has already re-looped (recentOutcomes is most-recent-first).
       let priorPartials = 0;
@@ -108,7 +118,13 @@ export async function gateAndCloseRun(
         ...patch,
         summary: {
           ...patch.summary,
-          verification: { judge: DOD_JUDGE_MODEL, worker: workerAdapter, met: verdict.met, gap: verdict.gap || undefined },
+          verification: {
+            judge: precheck ? EVIDENCE_PRECHECK_ID : DOD_JUDGE_MODEL,
+            worker: workerAdapter,
+            met: verdict.met,
+            gap: verdict.gap || undefined,
+            gapCode: precheck?.gapCode,
+          },
         },
       };
     }

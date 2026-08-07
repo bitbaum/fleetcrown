@@ -25,10 +25,32 @@ Notable, user-facing changes. Older history lives in the git log (conventional c
   settled, the four documented ways these loops fail, and why no learned change
   will ever apply itself here.
 
+### Fixed
+- **Agents were never asked for the evidence they were graded on.** The fleet's
+  definition of done demands the real output of `npm run verify`
+  (`lint:`/`tsc:`/`tests:`) in the handoff, and **64.6% of every rejection was
+  "not evidenced"** — but the prompts only ever listed `tests:` as a field to
+  fill. Measured across every handoff ever written: `tests:` filled 97% of the
+  time, `tsc:` and `lint:` filled three times in total. Agents write the shape
+  they are shown, and the shape omitted the evidence fields. There is now one
+  canonical handoff block, used by every close path, that asks for all of them.
+- **A blank evidence field no longer costs a model call to detect.** A
+  deterministic pre-check runs before the cross-model reviewer and, when the
+  bar demands a check whose field is simply empty, returns the same verdict for
+  free — with a stable reason code instead of a one-off sentence. Replayed over
+  every graded run in production it would have skipped 94% of reviewer calls.
+  It can only ever reject, never approve, and it defers to the reviewer the
+  moment it cannot decide.
+- A regression test pins the two together: a field the gate can reject you for
+  leaving blank must be a field the prompts actually request. The trap that
+  produced this bug can no longer be re-armed by adding a field to one side.
+
 ### Note
-- Nothing in the learning loop is built yet. This release documents a direction
-  and the evidence for it; the first phase is a schema and write-ordering fix
-  that has not started.
+- The measurement phase did its job and **cancelled work**: prompt optimisation
+  is parked (48 graded runs produced 48 distinct rejection sentences — no
+  repeating signal to learn from) and the schema change that would have fed it
+  is deferred, since its only consumer is parked. One read-only query replaced a
+  migration, a dispatch-path refactor, and an optimiser build.
 
 ## 2026-07-23
 
