@@ -1,12 +1,12 @@
 ---
 title: The Fleet Learns From What It Reads, Not What It Does
-summary: An audit of FleetCrown against the 2026 self-improvement literature found the loop pointed the wrong way — it improves from papers it ingests, never from the thousands of runs it grades. Here is the finding, why it happened, and the plan to fix it without building something that quietly learns to cheat.
-excerpt: FleetCrown reads arXiv every morning and proposes how it should evolve. It also grades every agent run against a definition of done, records the exact prompt, the outcome, and a one-sentence critique of what went wrong — and then reads none of it. We built the hard half of a self-improvement loop and skipped the easy half.
+summary: An audit of FleetCrown against the 2026 self-improvement literature found the loop pointed the wrong way — it improves from papers it ingests, never from the thousands of runs it grades. Then the first measurement overturned the plan: the fleet's dominant failure was never a learning problem, it was a prompt that forgot to ask for the evidence it graded.
+excerpt: FleetCrown reads arXiv every morning and proposes how it should evolve. It also grades every agent run against a definition of done and then reads none of it. We built the hard half of a self-improvement loop and skipped the easy half — and when we finally measured, one query cancelled the optimizer we were about to build.
 publishedAt: 2026-08-07
 tags: architecture,orchestration,self-improvement,evaluation,autonomy,research
 featured: true
 author: g
-readingTimeMin: 13
+readingTimeMin: 16
 ---
 
 ## An Audit That Found the Loop Pointed Backwards
@@ -100,6 +100,28 @@ The full plan lives in the repo. The shape of it:
 **Then optimize, offline and gated.** Candidates generated from real run history, using the judge's critique sentence as the reflection signal, scored by the existing cross-lineage judge, output as a proposed diff to the prompt library that a human accepts or dismisses — the same gate the frontier loop already uses. Learned context stored as bullets with incremental deltas, so brevity bias can't quietly delete the specifics. Nothing auto-applies, at any phase, with no planned expiry on that rule.
 
 **And carry lessons per project, as references rather than rules.** Memory is the largest and most proven family in the literature, and the phrasing matters — it is the cheapest known defence against the self-reinforcing error loop.
+
+## Postscript: What Happened When We Measured
+
+I wrote everything above before running the query. Then I ran it, and it changed the plan — which is the entire reason that phase exists, so it is worth reporting rather than quietly editing.
+
+Two things were wrong.
+
+**The measurement did not need the schema fix.** I had sequenced "make the corpus joinable" first. It turns out every number the measurement phase asks for — intent, outcome, cost, and the judge's critique — already lives on a single table. The riskiest work in the plan, the one touching the hot dispatch path, was scheduled before the query that would tell us whether to do it at all.
+
+**And the failures were not what I assumed.** Of 254 runs, only 57 ever produced a handoff — a run that times out never writes one, so the healthy and unhealthy populations are disjoint. Among those that finished, the definition of done was met three times out of fifty-one. And 64.6% of every rejection said the same thing: the work is not evidenced. Not wrong. Not incomplete. Unevidenced.
+
+I had assumed vague rubrics, because an earlier audit found plenty of them. The dominant bar turned out to be precise: *`npm run verify` passes, with its real output in the handoff.* You cannot ask for much less ambiguity than that.
+
+The real cause was one line of prompt authoring. Across every handoff ever written, the `tests:` field was filled 97% of the time. The `tsc:` and `lint:` fields were filled three times in total. The difference was not agent diligence — `tests:` appeared in an explicit list of fields the agent could copy, and the others were named only inside a paragraph of prose. Agents write the shape they are shown. The work was being done. The fields it had to land in were never requested.
+
+So the fix was not machine learning. It was asking for the fields.
+
+There is a second-order result that matters more for the long run. Those 48 rejections produced 48 distinct sentences — every one a unique piece of free text written by a model. That is precisely why the corpus could not be learned from: an optimizer needs recurring signal, and there was none. Replacing the dominant case with a deterministic check that emits a stable reason code collapses that entire history into two categories. Countable failures are the precondition for ever learning from them, and we did not have countable failures until today.
+
+The prompt optimizer is parked. The schema change is deferred, because its only consumer was the parked work. One read-only query replaced a migration, a refactor of the dispatch path, and an optimizer build — and found a fix that took an afternoon.
+
+That is not a disappointing outcome. That is the measurement phase doing exactly the job it was put there to do, on its first run.
 
 ## The Part Worth Being Excited About
 
