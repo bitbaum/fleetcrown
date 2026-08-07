@@ -829,6 +829,18 @@
   .ui-public-footer-bottom {
     @apply flex flex-wrap items-center justify-between gap-4 text-xs text-white/40;
   }
+  .ui-public-footer-fleet {
+    @apply mb-8 border-t border-white/10 pt-8;
+  }
+  .ui-public-footer-fleet-grid {
+    @apply grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2 lg:grid-cols-3;
+  }
+  .ui-public-footer-fleet-name {
+    @apply text-sm text-text-secondary;
+  }
+  .ui-public-footer-fleet-blurb {
+    @apply text-xs text-white/40;
+  }
   .ui-public-prose-divider {
     @apply mb-10 space-y-4 border-t border-white/10 pt-4;
   }
