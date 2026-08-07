@@ -2,7 +2,55 @@
 
 Notable, user-facing changes. Older history lives in the git log (conventional commits).
 
-**Last modified:** 2026-07-23 - the two products are one bridge, the public surface is filled in, and the fleet dispatches on purpose.
+**Last modified:** 2026-08-07 - the roadmap gains a learning phase, and an audit explains why the fleet has never learned from its own runs.
+
+## 2026-08-07
+
+### Added
+- **A learning phase on the roadmap.** FleetCrown grades every agent run against
+  a definition of done and then forgets the verdict. The new `LEARNING` phase
+  commits to closing that loop: storing each dispatch with the prompt that
+  produced it and the outcome it earned, reporting per-intent failure and cost,
+  and proposing prompt improvements from real run history behind the same
+  accept-or-dismiss human gate the Frontier loop already uses.
+- **An internal self-improvement plan** (`docs/self-improvement-plan.md`) —
+  phased, with an explicit kill criterion on every phase, including one that
+  says to abandon the whole effort if the measurement phase shows failures are
+  infrastructure noise rather than instruction quality.
+- **Thoughts: "The Fleet Learns From What It Reads, Not What It Does."** The
+  audit behind the plan. FleetCrown's only self-improvement loop reads arXiv and
+  Hacker News every morning to propose how the product should evolve, while the
+  prompt-and-outcome record it generates from thousands of its own runs is read
+  by display surfaces only. The essay covers what the 2026 literature has
+  settled, the four documented ways these loops fail, and why no learned change
+  will ever apply itself here.
+
+### Fixed
+- **Agents were never asked for the evidence they were graded on.** The fleet's
+  definition of done demands the real output of `npm run verify`
+  (`lint:`/`tsc:`/`tests:`) in the handoff, and **64.6% of every rejection was
+  "not evidenced"** — but the prompts only ever listed `tests:` as a field to
+  fill. Measured across every handoff ever written: `tests:` filled 97% of the
+  time, `tsc:` and `lint:` filled three times in total. Agents write the shape
+  they are shown, and the shape omitted the evidence fields. There is now one
+  canonical handoff block, used by every close path, that asks for all of them.
+- **A blank evidence field no longer costs a model call to detect.** A
+  deterministic pre-check runs before the cross-model reviewer and, when the
+  bar demands a check whose field is simply empty, returns the same verdict for
+  free — with a stable reason code instead of a one-off sentence. Replayed over
+  every graded run in production it would have skipped 94% of reviewer calls.
+  It can only ever reject, never approve, and it defers to the reviewer the
+  moment it cannot decide.
+- A regression test pins the two together: a field the gate can reject you for
+  leaving blank must be a field the prompts actually request. The trap that
+  produced this bug can no longer be re-armed by adding a field to one side.
+
+### Note
+- The measurement phase did its job and **cancelled work**: prompt optimisation
+  is parked (48 graded runs produced 48 distinct rejection sentences — no
+  repeating signal to learn from) and the schema change that would have fed it
+  is deferred, since its only consumer is parked. One read-only query replaced a
+  migration, a dispatch-path refactor, and an optimiser build.
 
 ## 2026-07-23
 

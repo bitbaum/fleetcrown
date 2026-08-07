@@ -107,9 +107,40 @@ export const CATEGORY_META: Record<PromptCategory, { label: string; color: strin
  * rather than to soften the judge. Stating it here costs a paragraph and makes
  * both halves grade the same thing.
  */
+/**
+ * The exact handoff shape, written out field by field.
+ *
+ * Prose was not enough, and prod proved it. Measured 2026-08-07 over every run
+ * that produced a handoff: `tests:` was filled **97%** of the time while `tsc:`
+ * and `lint:` were filled **0 times before August and 3 times in total**. The
+ * difference was not agent diligence — it was that `tests:` appeared in an
+ * explicit `field: <hint>` list the agent could copy, whereas tsc/lint/commit
+ * were only named inside a paragraph. Agents write the shape they are shown.
+ *
+ * That single omission is the mechanical cause of the fleet's dominant failure:
+ * 64.6% of all DoD rejections were "the work is not evidenced in the handoff",
+ * against a bar that explicitly asks for lint:/tsc:/tests: output. The work was
+ * being done; the fields it had to land in were never requested.
+ *
+ * Kept as ONE constant used by every close block, and pinned by
+ * scripts/test/handoff-fields.ts to the evidence fields the DoD pre-check can
+ * demand — so a field can never again be enforceable but unrequested.
+ */
+const HANDOFF_FIELD_BLOCK = `done: <one sentence: what you completed>
+next: <one sentence: what remains>
+tests: <N pass · N fail, or 'no suite'>
+tsc: <clean, or the actual error count/output>
+lint: <clean, or the actual error count/output>
+commit: <short sha + pushed | not committed, and why>
+todos: <count> TODOs
+health: <good | needs attention | critical>`;
+
 const HANDOFF_CLOSE_CONTRACT = `Close (what you owe before writing \`status: ready\`):
 This project's "Definition of done" (in the project context above) is not advice — a different model reads your handoff against it and downgrades the run to \`partial\` if the bar isn't evidenced, which loops you back onto the same task. That reviewer sees ONLY what you wrote, so run the checks the bar names and record the actual result in the handoff fields (\`tests:\`, \`tsc:\`, \`lint:\`, \`health:\`, \`commit:\`). "Tests pass" with no run behind it is worse than useless.
-If a required check genuinely cannot run — no suite exists, no deploy target, credentials missing — write that in the field verbatim ("no suite", "deploy not configured") rather than omitting it. Silence reads as skipped; an honest impossibility is information the reviewer and the founder can both act on, and it names the next piece of work.`;
+If a required check genuinely cannot run — no suite exists, no deploy target, credentials missing — write that in the field verbatim ("no suite", "deploy not configured") rather than omitting it. Silence reads as skipped; an honest impossibility is information the reviewer and the founder can both act on, and it names the next piece of work.
+
+Write every one of these fields. A blank evidence field is read as "not done" by a deterministic check that runs before the reviewer, so leaving \`tsc:\`/\`lint:\`/\`commit:\` empty loops you back onto this task even when the work is finished:
+${HANDOFF_FIELD_BLOCK}`;
 
 export const PROMPT_TEMPLATES: PromptTemplate[] = [
   // ─── Fleet Control ────────────────────────────────────────────────────────
@@ -136,11 +167,7 @@ Pick ONE task using this triage order:
 Execute the task completely. Don't plan or draft — build, fix, ship.
 
 When done, update the session file:
-done: <one sentence what you completed>
-next: <one sentence what remains>
-tests: <N pass · N fail, or 'no suite'>
-todos: <count> TODOs
-health: <good | needs attention | critical>`,
+${HANDOFF_FIELD_BLOCK}`,
     tags: ["autonomous", "agent", "execution"],
   },
   {

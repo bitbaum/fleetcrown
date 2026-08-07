@@ -166,10 +166,17 @@ export type OrchestrationTaskSummary = {
    *  single-agent runtime structurally cannot do — its judge would be itself).
    *  Surfaced in Activity so "done" visibly means a second mind agreed. */
   verification?: {
-    judge: string;    // the judging model (different lineage from the worker)
+    judge: string;    // the judging model, or EVIDENCE_PRECHECK_ID when decided deterministically
     worker: string;   // the adapter that did the work
     met: boolean;     // did the handoff evidence the stated Definition of Done?
     gap?: string;     // when not met, the single most important thing still required
+    /** Stable category for the gap (e.g. `evidence:lint+tsc`), set only by the
+     *  deterministic pre-check. Free-text `gap` from the model judge is a
+     *  snowflake — prod 2026-08-07 had 48 distinct sentences across 48
+     *  rejections, which is precisely why the corpus could not be learned from.
+     *  This field is the groupable counterpart: absent means "a model judged
+     *  this", present means "a rule did, and here is which rule". */
+    gapCode?: string;
   };
 };
 
