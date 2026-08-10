@@ -91,7 +91,7 @@
     "@electron-toolkit/utils": "^4.0.0",
     "@types/node": "^26",
     "electron": "^33.2.1",
-    "electron-builder": "^25.1.8",
+    "electron-builder": "^26.15.3",
     "electron-vite": "^5.0.0",
     "typescript": "^7",
     "vite": "^8.2.1"
