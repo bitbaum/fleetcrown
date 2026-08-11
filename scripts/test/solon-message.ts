@@ -42,4 +42,21 @@ assert.ok(!verifySolonWebhookSignature(body, `sha256=${"0".repeat(64)}`, secret)
 assert.ok(!verifySolonWebhookSignature(`${body} `, `sha256=${hex}`, secret), "tampered body accepted");
 assert.ok(!verifySolonWebhookSignature(body, null, secret), "missing header accepted");
 
-console.log("solon-message: signing vector + webhook verification OK");
+// Webhook receivers authenticate via HMAC, not a session — the auth middleware
+// matcher MUST exclude them, or NextAuth 401s the POST before the route runs.
+// This exact omission shipped once (Solon doorbell unreachable in prod until a
+// signed replay caught it): pin every self-authenticating receiver here.
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+const proxySource = readFileSync(join(__dirname, "../../src/proxy.ts"), "utf8");
+const matcherExclusion = proxySource.match(/"\/\(\(\?!(.+)\)\.\+\)"/)?.[1];
+assert.ok(matcherExclusion, "proxy.ts matcher exclusion pattern not found");
+for (const receiver of ["api/orangecat/", "api/solon/", "api/stripe/webhook"]) {
+  assert.ok(
+    matcherExclusion.split("|").includes(receiver.replace(/\./g, "\\.")) ||
+      matcherExclusion.split("|").includes(receiver),
+    `auth middleware must exclude ${receiver} (HMAC-authenticated receiver)`,
+  );
+}
+
+console.log("solon-message: signing vector + webhook verification + middleware exclusion OK");
