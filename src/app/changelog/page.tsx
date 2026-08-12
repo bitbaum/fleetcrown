@@ -1,8 +1,8 @@
-import ReleasesPage from "@/app/releases/page";
+import { redirect } from "next/navigation";
 
-export const metadata = {
-  title: "Changelog",
-  description: "Every FleetCrown and Fleet Runner release, newest first.",
-};
-
-export default ReleasesPage;
+// /changelog used to re-export the Releases page wholesale, serving identical
+// content on two URLs. /releases is the canonical URL; this route only
+// forwards so old links and bookmarks keep working.
+export default function ChangelogRedirect() {
+  redirect("/releases");
+}

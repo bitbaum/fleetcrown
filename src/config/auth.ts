@@ -49,8 +49,9 @@ export const PUBLIC_NAV: PublicNavEntry[] = [
         title: "Understand",
         items: [
           { label: "Mission", href: "/mission", description: "Why FleetCrown exists" },
+          { label: "Philosophy", href: "/philosophy", description: "The principles behind the product" },
           { label: "Roadmap", href: "/roadmap", description: "What works now and what comes next" },
-          { label: "Changelog", href: "/changelog", description: "Every shipped release" },
+          { label: "Changelog", href: "/releases", description: "Every shipped release" },
           { label: "Docs", href: "/docs", description: "Install, connect, and operate your fleet" },
           { label: "Whitepaper", href: "/whitepaper", description: "Architecture and product thesis" },
         ],
@@ -66,26 +67,31 @@ export const PUBLIC_NAV: PublicNavEntry[] = [
     ],
   },
   {
+    // Label matches the destination page's own title ("Thoughts") — the old
+    // "Blog" label landed on a page that never calls itself a blog. /blog now
+    // redirects here so the canonical URL is the one the nav shows.
     kind: "link",
-    label: "Blog",
-    href: "/blog",
+    label: "Thoughts",
+    href: "/thoughts",
   },
   {
     kind: "link",
     label: "Support",
     href: "/support",
   },
+  // Dropdown descriptions stay to one short sentence — the essay-length
+  // context lives in the Thoughts essays, not in a hover.
   {
     kind: "external",
     label: "OrangeCat",
     href: "https://orangecat.ch",
-    description: "The economic pillar of the stack — Bitcoin-native funding, entities, and the public timeline. FleetCrown is the engineering pillar; OrangeCat is where what gets built is funded and shared. See the Thoughts essay The Two Halves of the Individual Singularity for the joint architecture.",
+    description: "The economic pillar of the stack — Bitcoin-native funding and public entities.",
   },
   {
     kind: "external",
     label: "Solon",
     href: "https://solon.orangecat.ch",
-    description: "The governance pillar of the stack — Bitcoin-signed proposals and votes. FleetCrown's agent Loki is a registered voting member there, signing from its own environment.",
+    description: "The governance pillar of the stack — Bitcoin-signed proposals and votes.",
   },
 ];
 

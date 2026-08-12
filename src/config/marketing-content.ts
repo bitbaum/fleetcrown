@@ -100,7 +100,14 @@ export const INVESTORS = {
     "The same control patterns transfer to physical robotics. The market has not yet appreciated this.",
   ],
   built: "A web command center coordinates fleets of AI agents across projects. A native Fleet Runner desktop app — same React tree as the web, plus tray and OS notifications — runs them directly in the operator's terminal environment via Zellij. Per-project autonomy controls, reliable handoff systems, queue management, and truthful status surfaces are live and in daily use. Signed multi-OS installers ship from a single CI matrix on every release tag.",
-  traction: "FleetCrown runs its own creator's entire operation: a live fleet of projects dispatched, monitored, and governed daily through the product itself. Every surface is proven in continuous real-world self-use before it ships — the operator is the first and most demanding user. The bet is that the same workflow generalizes to anyone running many agents at once.",
+  // Scannable bullets, not a prose wall — the page pairs these with the live
+  // fleet snapshot (same real data source as the homepage hero).
+  traction: [
+    "FleetCrown runs its creator's entire operation — a live fleet of projects dispatched, monitored, and governed daily through the product itself.",
+    "Every surface is proven in continuous real-world self-use before it ships; the operator is the first and most demanding user.",
+    "The homepage hero and this page render the same live snapshot of that fleet — real data, never fabricated numbers.",
+    "The bet: the same workflow generalizes to anyone running many agents at once.",
+  ],
   ask: "We are raising to productize the local fleet runner, harden the remote control plane, expand open-model support, and lay groundwork for robotic orchestration.",
 };
 
@@ -109,152 +116,163 @@ export const INVESTOR_DETAILS = {
   contact: "mao@orangecat.ch",
 };
 
-// Roadmap — multi-phase, with concrete bullets and cross-cutting throughlines
-export const ROADMAP = {
+// Roadmap — three honest buckets ("Shipping now" / "Next" / "Research") with
+// one-liner items. Detail bullets render collapsed; strategy-essay sections
+// keep a short summary plus a link to the full Thoughts essay instead of
+// re-printing the argument on the roadmap.
+export type RoadmapItem = {
+  title: string;
+  /** One line — what this is and why it matters. */
+  line: string;
+  /** Optional detail bullets, rendered inside a collapsed <details>. */
+  details?: string[];
+  /** Optional pointer to the Thoughts essay carrying the full argument. */
+  essay?: { label: string; href: string };
+};
+export type RoadmapBucket = {
+  title: string;
+  summary: string;
+  items: RoadmapItem[];
+};
+
+export const ROADMAP: {
+  eyebrow: string;
+  title: string;
+  lede: string;
+  buckets: RoadmapBucket[];
+  throughlines: {
+    eyebrow: string;
+    title: string;
+    lede: string;
+    items: { title: string; body: string }[];
+  };
+  closer: string;
+} = {
   eyebrow: "PRODUCT DIRECTION",
   title: "Roadmap",
   lede: "Building the operating system for people running serious AI agent operations — and for the robotic fleets that come next.",
-  phases: [
+  buckets: [
     {
-      marker: "NOW",
-      title: "Foundation",
+      title: "Shipping now",
       summary: "Live in production. The system already coordinates real fleets across real projects.",
-      bullets: [
-        "Web command center coordinates fleets of AI agents across projects.",
-        "One-button fleet autopilot: pause all, or build all — agents drain each project's queue, then pick the next-best task.",
-        "One local execution path: the Fleet Runner desktop app owns Zellij, agent launching, and state sync (the legacy bash runner was retired by deletion).",
-        "Reliable handoff system between agent sessions, with truthful card status surfaces.",
-        "Per-project pause / resume / direct-send semantics with per-project autopilot overrides.",
-        "Multi-user SaaS foundation — GitHub OAuth, organizations, team invites, agent tokens.",
-        "Native Fleet Runner desktop app — loads the same React tree the web serves (one UI, two surfaces) plus tray icon, OS notifications on agent idle, and an embedded Zellij watcher for fire-and-walk-away dispatch.",
-        "Multi-OS release pipeline. One tag push produces signed macOS, Windows, and Linux installers from a shared CI matrix.",
-      ],
-      note: "The architecture is proven. The next phase is finishing distribution and auto-update so non-technical operators can install without touching a terminal.",
-    },
-    {
-      marker: "NEXT",
-      title: "Distribution and auto-update",
-      summary: "Make Fleet Runner trivial to install and keep current on every platform — including for builders who never open a terminal.",
-      bullets: [
-        "Public macOS (.dmg, signed + notarized) and Windows (.exe) builds landing on every tagged release alongside the existing Linux AppImage / .deb.",
-        "Auto-update via electron-builder's GitHub provider so users never download a stale binary.",
-        "Native package channels where they exist — Homebrew tap for macOS, winget for Windows, .deb apt repo for Linux.",
-        "Clean window.fleetRunner IPC bridge so the web React tree can detect 'I am running inside the desktop app' and surface desktop-only affordances coherently.",
-        "Headless CLI agent install path for servers, CI runners, and operators who prefer a pure terminal flow.",
-      ],
-      note: "Cursor, Claude Code, and Grok Build all converged on the same pattern — local client owns execution as a real application, not a service that polls a queue. Fleet Runner takes one extra step: the app and the web run the same React tree, so there is exactly one product surface to design and one codebase to keep at parity.",
-    },
-    {
-      marker: "AFTER",
-      title: "Remote control channel",
-      summary: "Web and mobile become genuine remote control surfaces — not eventually-consistent dashboards.",
-      bullets: [
-        "The local app opens an authenticated outbound WebSocket to the control plane when remote control is enabled.",
-        "Commands flow: surface → backend → that user's specific local app, over the open connection.",
-        "Status flows back the same way, with low latency.",
-        "Falls back to the existing queue when the local app is offline.",
-        "Scoped credentials via the existing agent token system. Outbound-only connections — easy to firewall.",
-        "All execution of dangerous actions stays on the user's machine. The backend never sees raw file contents unless the user explicitly shares them.",
+      items: [
+        {
+          title: "Fleet command center",
+          line: "The web control plane coordinates fleets of AI agents across projects, with one-button autopilot: pause all, or build all.",
+          details: [
+            "Agents drain each project's queue, then pick the next-best task.",
+            "Per-project pause / resume / direct-send semantics with per-project autopilot overrides.",
+            "Reliable handoff system between agent sessions, with truthful card status surfaces.",
+            "Multi-user SaaS foundation — GitHub OAuth, organizations, team invites, agent tokens.",
+          ],
+        },
+        {
+          title: "Fleet Runner desktop app",
+          line: "One local execution path: the desktop app owns Zellij, agent launching, and state sync — the same React tree the web serves.",
+          details: [
+            "Tray icon, OS notifications on agent idle, and an embedded Zellij watcher for fire-and-walk-away dispatch.",
+            "The legacy bash runner was retired by deletion — one path, not two.",
+            "Multi-OS release pipeline: one tag push produces signed installers from a shared CI matrix.",
+          ],
+        },
       ],
     },
     {
-      marker: "THEN",
-      title: "Mobile fleet control",
-      summary: "Steering a fleet from your phone should feel native, not like a phone-sized web page.",
-      bullets: [
-        "Native iOS and Android apps on the same remote control channel.",
-        "Optimized for steering and approval, not authoring.",
-        "Push notifications for Beacon mode and Mission checkpoints.",
-        "Swipe actions for approving or rejecting agent outputs at the moments that actually need a human.",
-        "Voice capture for the autopilot intent ladder — direct the fleet while walking.",
+      title: "Next",
+      summary: "Concrete engineering, in sequence: distribution first, then the remote control channel, then mobile on top of it.",
+      items: [
+        {
+          title: "Distribution and auto-update",
+          line: "Make Fleet Runner trivial to install and keep current on every platform — including for builders who never open a terminal.",
+          details: [
+            "Public macOS (.dmg, signed + notarized) and Windows (.exe) builds landing on every tagged release alongside the existing Linux AppImage / .deb.",
+            "Auto-update via electron-builder's GitHub provider so users never download a stale binary.",
+            "Native package channels where they exist — Homebrew tap for macOS, winget for Windows, .deb apt repo for Linux.",
+            "Headless CLI agent install path for servers, CI runners, and operators who prefer a pure terminal flow.",
+          ],
+        },
+        {
+          title: "Remote control channel",
+          line: "Web and mobile become genuine remote control surfaces — not eventually-consistent dashboards.",
+          details: [
+            "The local app opens an authenticated outbound WebSocket to the control plane when remote control is enabled; commands flow surface → backend → that user's specific local app.",
+            "Falls back to the existing queue when the local app is offline.",
+            "Scoped credentials via the existing agent token system. Outbound-only connections — easy to firewall.",
+            "All execution of dangerous actions stays on the user's machine. The backend never sees raw file contents unless the user explicitly shares them.",
+          ],
+        },
+        {
+          title: "Mobile fleet control",
+          line: "Native iOS and Android apps on the remote control channel — optimized for steering and approval, not authoring.",
+          details: [
+            "Push notifications for Beacon mode and Mission checkpoints.",
+            "Swipe actions for approving or rejecting agent outputs at the moments that actually need a human.",
+            "Voice capture for the autopilot intent ladder — direct the fleet while walking.",
+          ],
+        },
       ],
     },
     {
-      marker: "LATER",
-      title: "Cloud agents as a complementary mode",
-      summary: "When the local machine is unavailable, parallel cloud agents take over — with explicit handoff.",
-      bullets: [
-        "Cloud agents for long-running, highly parallel work that does not fit on one laptop.",
-        "Explicit handoff between local and cloud sessions — the same agent identity continues across substrates.",
-        "A complement to local execution, never the default for hosted users.",
-        "Useful for builders running 8–12 agents at once who need extra parallelism or 24-hour availability.",
+      title: "Research",
+      summary: "Directions we are committed to that are design and strategy work today. Nothing here is presented as available.",
+      items: [
+        {
+          title: "Cloud agents as a complementary mode",
+          line: "When the local machine is unavailable, parallel cloud agents take over — with explicit handoff, never as the default.",
+          details: [
+            "Cloud agents for long-running, highly parallel work that does not fit on one laptop.",
+            "Explicit handoff between local and cloud sessions — the same agent identity continues across substrates.",
+            "Useful for builders running 8–12 agents at once who need extra parallelism or 24-hour availability.",
+          ],
+        },
+        {
+          title: "The fleet learns from its own runs",
+          line: "The same evidence that decides whether a run was done should decide how the next one is briefed — with a human gate on every learned change.",
+          details: [
+            "Every dispatch is stored with the exact prompt that produced it and the graded outcome it earned — one joinable record instead of two disconnected logs.",
+            "Prompt improvements are proposed from real run history and reviewed by a human before they land.",
+            "Per-project lessons carry forward as references the agent may consult, never as rules it must obey; every learned change stays in version control.",
+            "The judge that grades a run is a different model lineage from the agent that did the work — an unsupervised self-grading harness learns to game its own scoring, so the human gate is the feature, not the friction.",
+          ],
+        },
+        {
+          title: "Team and multi-machine surfaces",
+          line: "Same control plane, multiple operators, multiple machines — shared fleet views, per-operator permissions, per-project autonomy ceilings.",
+          details: [
+            "Coordination when several people steer the same fleet without stepping on each other.",
+            "Multi-machine orchestration for power users running across desktop, laptop, and remote box.",
+          ],
+        },
+        {
+          title: "One agent per user",
+          line: "Loki (FleetCrown) and Cat (OrangeCat) converge into one agent over one memory graph, one autonomy dial, and one approval inbox — the surfaces stay as engineering boundaries, the user perceives \"my agent.\"",
+          essay: { label: "Read the essay: From Two AIs to One", href: "/thoughts/from-two-ais-to-one" },
+        },
+        {
+          title: "Stakeholder graph",
+          line: "Track each project's surrounding relationships — competitors, collaborators, investors, customers — as typed edges in OrangeCat's entity graph, surfaced on FleetCrown for the agent to act on. Competitors ship first as the most automatable category.",
+          essay: { label: "Read the essay: Where Stakeholders Live", href: "/thoughts/where-stakeholders-live" },
+        },
+        {
+          title: "OrangeCat integration — the transaction half",
+          line: "Make it natural to fund what people build and build what people choose to fund, without pretending the full loop is already automated.",
+          details: [
+            "One OrangeCat identity across both products through the existing OIDC bridge.",
+            "Typed links connect a FleetCrown project to any OrangeCat entity acting as its origin, public profile, funding page, offering, or community.",
+            "A signed, ten-minute OrangeCat handoff can prefill a FleetCrown project and Loki plan; the owner approves before anything is created or dispatched.",
+            "OrangeCat remains the share, promotion, and Bitcoin funding surface. FleetCrown shows its confirmed funding summary read-only.",
+            "Bitcoin is the first live settlement rail because confirmed transfers can be independently audited. Automatic work orders, escrow, fiat, and privacy coins stay research — none is presented as available today.",
+          ],
+        },
+        {
+          title: "Physical robotic fleets",
+          line: "The same control patterns — autonomy dial, handoff, queues, visibility, override — applied to a different execution substrate. Not a separate product line bolted on later.",
+          details: [
+            "Per-fleet autonomy — the same dial: Manual → Queue → Beacon → Continuous → Mission.",
+            "The person who today directs a fleet of agents building software is developing the muscles that will let them direct a fleet of robots building physical things.",
+          ],
+        },
       ],
-    },
-    {
-      marker: "LEARNING",
-      title: "The fleet learns from its own runs",
-      summary: "Today FleetCrown grades every run and forgets what it learned. The same evidence that decides whether a run was done should decide how the next one is briefed.",
-      bullets: [
-        "Every dispatch is stored with the exact prompt that produced it and the graded outcome it earned — one joinable record instead of two disconnected logs.",
-        "A per-intent report shows which kinds of work fail, how much they cost, and the most common reason a reviewer rejected them.",
-        "Prompt improvements are proposed from real run history and reviewed by a human before they land — the same accept-or-dismiss gate the Frontier loop already uses.",
-        "Per-project lessons carry forward as references the agent may consult, never as rules it must obey.",
-        "Every learned change stays in version control, so any improvement can be read, questioned, and reverted.",
-      ],
-      note: "The judge that grades a run is a different model lineage from the agent that did the work, and no learned change applies itself. A harness that grades its own trajectory and edits itself unsupervised is how self-improving systems learn to game their own scoring — the human gate is the feature, not the friction. Detailed sequencing lives in the internal self-improvement plan.",
-    },
-    {
-      marker: "TEAMS",
-      title: "Team and multi-machine surfaces",
-      summary: "Same control plane, multiple operators, multiple machines.",
-      bullets: [
-        "Shared fleet views across machines and across team members.",
-        "Per-operator permissions. Per-project autonomy ceilings.",
-        "Coordination when several people steer the same fleet without stepping on each other.",
-        "Multi-machine orchestration for power users running across desktop, laptop, and remote box.",
-      ],
-    },
-    {
-      marker: "CONVERGE",
-      title: "One agent per user — the surface merge",
-      summary: "Today's Loki (FleetCrown) and Cat (OrangeCat) become one agent that sees the user's whole life. Two AIs is engineering convenience; one agent per user is the only interaction model that scales to nine billion builders.",
-      bullets: [
-        "Memory layer unifies — the user's contacts, projects, goals, transactions, listings, and decisions live in one graph the agent reasons against.",
-        "Reasoning loop unifies — when the user says \"do X,\" the agent decomposes X across whatever surfaces are involved without the user choosing the surface.",
-        "Autonomy ladder unifies — Manual → Queue → Beacon → Continuous → Mission applies across both products as one dial.",
-        "Approval queue unifies — FleetCrown's Action Queue and OrangeCat's pending Cat actions become one inbox. The user lives in this queue.",
-        "Surfaces (FleetCrown, OrangeCat) stay as engineering boundaries but stop being user-facing concepts. The user perceives \"my agent.\"",
-      ],
-      note: "See the Thoughts essay \"From Two AIs to One\" for the strategic argument. Convergence is engineering on top of two products that already work standalone, not a rewrite.",
-    },
-    {
-      marker: "STAKEHOLDERS",
-      title: "Stakeholder graph — the concrete first convergence",
-      summary: "Every project has eight surrounding relationships — competitors, collaborators, investors, customers, employees, acquirers, acquisition targets, in-house dev projects. Track them as typed edges in OrangeCat's entity graph; surface them on FleetCrown; let the agent act on them.",
-      bullets: [
-        "Storage in OrangeCat. The eight categories are edges between entities OrangeCat already has (projects, actors, groups, products, services, investments). One typed-edge schema covers all eight — no new entity tables.",
-        "Operations in FleetCrown. /projects renders the eight stakeholder lanes per project, read from OrangeCat via the identity bridge. The Watch on /today surfaces signals derived from the graph.",
-        "Ship competitors first — the most automatable category. Landing-page diffs, RSS, funding-event detection, hiring-page diffs. The other seven follow with the same primitives.",
-        "Action loop: signal → Watch focus → \"Brief Loki on this\" → agent drafts a response (pricing tweak, positioning post, feature pull-forward) → approve / disapprove.",
-        "No second graph. FleetCrown does not duplicate OrangeCat's entity model. Two graphs are always wrong.",
-      ],
-      note: "First concrete instance of the convergence — same data, two surfaces, one agent reasoning across both. See the Thoughts essay \"Where Stakeholders Live\" for the full design.",
-    },
-    {
-      marker: "ECONOMY",
-      title: "OrangeCat integration — the transaction half",
-      summary: "Make it natural to fund what people build and build what people choose to fund, without pretending the full loop is already automated.",
-      bullets: [
-        "One OrangeCat identity across both products through the existing OIDC bridge.",
-        "Typed links connect a FleetCrown project to any OrangeCat entity acting as its origin, public profile, funding page, offering, or community.",
-        "A signed, ten-minute OrangeCat handoff can prefill a FleetCrown project and Loki plan; the owner approves before anything is created or dispatched.",
-        "OrangeCat remains the share, promotion, and Bitcoin funding surface. FleetCrown shows its confirmed funding summary read-only.",
-        "Automatic work orders, milestone-triggered dispatch, smart-contract escrow, fiat, privacy coins, and full Nostr identity stay later-roadmap work.",
-      ],
-      note: "Bitcoin is the first live settlement rail because confirmed transfers can be independently audited. Fiat relies on private bank reconciliation; privacy coins deliberately remove the public trail. Neither is presented as available today.",
-    },
-    {
-      marker: "ROBOTICS",
-      title: "Physical robotic fleets",
-      summary: "The same control patterns, applied to a different substrate.",
-      bullets: [
-        "Per-fleet autonomy — the same dial: Manual → Queue → Beacon → Continuous → Mission.",
-        "Handoff between human and robotic initiative.",
-        "Queues, visibility, override — everything we shipped for software agents transfers.",
-        "Robotics is a different execution surface bound to the same control plane.",
-        "Not a separate product line bolted on later. The continuity is the point.",
-      ],
-      note: "The person who today directs a fleet of agents building software is developing the muscles that will let them direct a fleet of robots building physical things.",
     },
   ],
   throughlines: {

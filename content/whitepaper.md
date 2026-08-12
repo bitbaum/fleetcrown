@@ -1,8 +1,8 @@
 ---
 title: The Builder's Operating System
 subtitle: A technical architecture for sustained autonomous execution across many projects simultaneously
-publishedAt: 2026-05-15
-version: 0.1
+publishedAt: 2026-08-12
+version: 0.2
 ---
 
 ## The Execution Gap
@@ -135,7 +135,9 @@ FleetCrown makes this visible together so operators can reason about their actua
 
 ## Subscription Tiers
 
-FleetCrown is offered as a hosted SaaS product with three subscription levels.
+FleetCrown is offered as a hosted SaaS product with four subscription levels: a free tier and three paid tiers.
+
+**Free** — for commanding your first projects. The full captain dashboard with your own runner and agent keys, limited in project count — enough to see the whole loop working before paying anything.
 
 **Personal** — for solo builders managing up to 5 projects. Local runtime with cloud backup and remote access via the daemon bridge. Full project/agent/life OS features. Designed for the individual operator who wants to run the full system without self-hosting.
 

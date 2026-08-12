@@ -58,6 +58,22 @@ export function ThoughtsLibrary({
     featured && filtered.some((a) => a.slug === featured.slug) ? featured : null;
   const rest = filtered.filter((a) => a.slug !== featuredVisible?.slug);
 
+  // 63 full-abstract cards in one wall buries everything below the fold.
+  // Lead with the most recent essays (clamped abstracts), then collapse the
+  // archive into per-year <details> sections — native disclosure, no JS
+  // needed to open them, and every link stays in the DOM for crawlers.
+  // listThoughts() already sorts newest-first.
+  const RECENT_COUNT = 10;
+  const recent = rest.slice(0, RECENT_COUNT);
+  const archive = rest.slice(RECENT_COUNT);
+  const archiveByYear = new Map<string, ThoughtArticle[]>();
+  for (const article of archive) {
+    const year = article.publishedAt.slice(0, 4) || "Undated";
+    const group = archiveByYear.get(year);
+    if (group) group.push(article);
+    else archiveByYear.set(year, [article]);
+  }
+
   return (
     <div className="space-y-6">
       {/* Featured essay — leads the page, first thing visible */}
@@ -149,19 +165,45 @@ export function ThoughtsLibrary({
           </p>
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
-          {rest.map((article) => (
-            <Link
-              key={article.slug}
-              href={`/thoughts/${article.slug}`}
-              className="ui-card-shell-raised block space-y-2 p-5 transition hover:bg-surface-raised md:p-6"
-            >
-              <span className="ui-badge">{formatMeta(article)}</span>
-              <h3 className="text-xl font-medium text-text-primary">{article.title}</h3>
-              <p className="text-sm text-text-secondary">{article.summary}</p>
-            </Link>
-          ))}
-        </div>
+        <>
+          <div className="grid gap-4 md:grid-cols-2">
+            {recent.map((article) => (
+              <Link
+                key={article.slug}
+                href={`/thoughts/${article.slug}`}
+                className="ui-card-shell-raised block space-y-2 p-5 transition hover:bg-surface-raised md:p-6"
+              >
+                <span className="ui-badge">{formatMeta(article)}</span>
+                <h3 className="text-xl font-medium text-text-primary">{article.title}</h3>
+                <p className="line-clamp-2 text-sm text-text-secondary">{article.summary}</p>
+              </Link>
+            ))}
+          </div>
+
+          {archive.length > 0 && (
+            <div className="space-y-4 border-t border-border-subtle pt-6">
+              {[...archiveByYear.entries()].map(([year, group]) => (
+                <details key={year} className="ui-public-archive">
+                  <summary className="ui-public-archive-summary">
+                    {year} — {group.length} {group.length === 1 ? "essay" : "essays"}
+                  </summary>
+                  <div className="mt-3 grid gap-2 md:grid-cols-2">
+                    {group.map((article) => (
+                      <Link
+                        key={article.slug}
+                        href={`/thoughts/${article.slug}`}
+                        className="ui-public-archive-item"
+                      >
+                        <span className="text-text-primary">{article.title}</span>
+                        <span className="ui-public-archive-item-meta">{formatMeta(article)}</span>
+                      </Link>
+                    ))}
+                  </div>
+                </details>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

@@ -35,6 +35,15 @@ function renderInline(text: string): string {
     .replace(/`(.+?)`/g, "<code>$1</code>");
 }
 
+// Stable anchor ids for H2 sections — feeds both the ToC links and the
+// heading ids, so the two can never drift.
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 export default function WhitepaperPage() {
   const raw = fs.readFileSync(path.join(process.cwd(), "content", "whitepaper.md"), "utf-8");
   const { meta, body } = parseFrontmatter(raw);
@@ -43,6 +52,9 @@ export default function WhitepaperPage() {
   const subtitle = meta.subtitle ?? "";
   const version = meta.version ?? "0.1";
   const publishedAt = meta.publishedAt ?? "";
+  const toc = blocks.flatMap((block) =>
+    block.type === "h2" ? [{ text: block.text, id: slugify(block.text) }] : [],
+  );
 
   return (
     <PublicSurface right={<PublicHeaderActions />}>
@@ -61,11 +73,31 @@ export default function WhitepaperPage() {
           )}
         </div>
 
-        <article className="ui-public-prose">
+        {toc.length > 1 && (
+          <nav className="ui-public-doc-toc" aria-label="Table of contents">
+            <div className="ui-public-doc-toc-title">Contents</div>
+            <ol className="ui-public-doc-toc-list">
+              {toc.map((item, i) => (
+                <li key={item.id}>
+                  <a href={`#${item.id}`} className="ui-public-doc-toc-link">
+                    <span className="ui-public-doc-toc-num">{String(i + 1).padStart(2, "0")}</span>
+                    <span>{item.text}</span>
+                  </a>
+                </li>
+              ))}
+            </ol>
+          </nav>
+        )}
+
+        <article className="ui-public-prose ui-public-prose-doc">
           {blocks.map((block, i) => {
             switch (block.type) {
               case "h2":
-                return <h2 key={i} className="ui-public-prose-h2">{block.text}</h2>;
+                return (
+                  <h2 key={i} id={slugify(block.text)} className="ui-public-prose-h2 scroll-mt-24">
+                    {block.text}
+                  </h2>
+                );
               case "h3":
                 return <h3 key={i} className="ui-public-prose-h3">{block.text}</h3>;
               case "p":

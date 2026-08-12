@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { PublicSurface } from "@/components/public/PublicSurface";
 import { PublicHeaderActions } from "@/components/public/PublicHeaderActions";
 import { FinalCta } from "@/components/public/FinalCta";
@@ -17,25 +18,40 @@ export default function RoadmapPage() {
         <p className="ui-public-lede mt-6 max-w-2xl">{ROADMAP.lede}</p>
       </div>
 
-      <div className="mx-auto max-w-4xl px-6 pb-24 space-y-24">
-        {ROADMAP.phases.map((phase) => (
-          <section key={phase.marker} className="border-t border-border-subtle pt-16">
-            <div className="ui-public-eyebrow">{phase.marker}</div>
-            <h2 className="ui-public-display-md mt-4">{phase.title}</h2>
-            <p className="ui-public-section-lede mt-6">{phase.summary}</p>
+      <div className="mx-auto max-w-4xl px-6 pb-24 space-y-20">
+        {ROADMAP.buckets.map((bucket) => (
+          <section key={bucket.title} className="border-t border-border-subtle pt-16">
+            <h2 className="ui-public-display-md">{bucket.title}</h2>
+            <p className="ui-public-section-lede mt-4">{bucket.summary}</p>
 
-            <ul className="mt-10 max-w-2xl space-y-4">
-              {phase.bullets.map((bullet, j) => (
-                <li key={j} className="ui-public-prose-li">
-                  <span className="ui-public-prose-bullet" />
-                  <span>{bullet}</span>
-                </li>
+            <div className="mt-12 space-y-10">
+              {bucket.items.map((item) => (
+                <div key={item.title} className="max-w-2xl">
+                  <div className="ui-public-prose-strong text-lg">{item.title}</div>
+                  <p className="ui-public-prose-muted mt-2">{item.line}</p>
+                  {item.essay && (
+                    <Link href={item.essay.href} className="ui-public-link mt-3 inline-block text-sm">
+                      {item.essay.label} →
+                    </Link>
+                  )}
+                  {item.details && item.details.length > 0 && (
+                    <details className="mt-3">
+                      <summary className="ui-public-disclosure-summary">
+                        Details ({item.details.length})
+                      </summary>
+                      <ul className="mt-4 space-y-3">
+                        {item.details.map((detail, j) => (
+                          <li key={j} className="ui-public-prose-li">
+                            <span className="ui-public-prose-bullet" />
+                            <span>{detail}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  )}
+                </div>
               ))}
-            </ul>
-
-            {"note" in phase && phase.note ? (
-              <p className="ui-public-meta mt-10 max-w-2xl italic">{phase.note}</p>
-            ) : null}
+            </div>
           </section>
         ))}
       </div>
