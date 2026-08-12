@@ -45,7 +45,8 @@ const FOOTER_GROUPS = [
   {
     heading: "Ecosystem",
     links: [
-      { label: "OrangeCat", href: ECOSYSTEM.orangeCat.siteUrl, external: true },
+      { label: "OrangeCat — Economy", href: ECOSYSTEM.orangeCat.siteUrl, external: true },
+      { label: "Solon — Governance", href: ECOSYSTEM.solon.siteUrl, external: true },
       { label: "FleetCrown on OrangeCat", href: ECOSYSTEM_LINKS.fleetCrown, external: true },
     ],
   },

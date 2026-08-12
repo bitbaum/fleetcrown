@@ -1,7 +1,20 @@
 # FleetCrown
 
 FleetCrown is an execution operating system for builders who run many projects at
-once. FleetCrown is a customer of sibling product OrangeCat (economic layer). Both have profiles as projects on orangecat.ch for Mao Nakamoto, with FleetCrown as "customer" via stakeholder graph, shared BTC wallet. The integration makes OrangeCat + FleetCrown the complete stack (production + economy).
+once. It is the **engineering pillar** of a three-pillar stack:
+
+| Pillar | Product | Role |
+| --- | --- | --- |
+| Economy | [OrangeCat](https://orangecat.ch) | Bitcoin-native funding, entities, and the public timeline |
+| Engineering | **FleetCrown** (this repo) | Agent fleets, project execution, and the deploy pipeline for the whole stack |
+| Governance | [Solon](https://solon.orangecat.ch) | Bitcoin-signed proposals, votes, and self-verifying decisions |
+
+The ties are real: FleetCrown is OrangeCat's customer #1 (OIDC login, publish
+bus, stakeholder graph, shared BTC wallet); FleetCrown's agent Loki is a
+registered voting member in Solon, casting Bitcoin-signed votes from its own
+box (`scripts/solon/cast-vote.ts`) with decision webhooks landing at
+`/api/solon/events`; and `.github/workflows/selfhost-deploy.yml` is the shared
+CD pipeline that ships all three products to production.
 
 The product thesis is simple: AI agents are becoming cheap execution capacity,
 but serious users still need a trustworthy command center. FleetCrown provides the

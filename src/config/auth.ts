@@ -79,7 +79,13 @@ export const PUBLIC_NAV: PublicNavEntry[] = [
     kind: "external",
     label: "OrangeCat",
     href: "https://orangecat.ch",
-    description: "Sibling product — the transaction half of the techno-capital machine for individuals. FleetCrown is the production half; OrangeCat is the economic half. See the Thoughts essay The Two Halves of the Individual Singularity for the joint architecture.",
+    description: "The economic pillar of the stack — Bitcoin-native funding, entities, and the public timeline. FleetCrown is the engineering pillar; OrangeCat is where what gets built is funded and shared. See the Thoughts essay The Two Halves of the Individual Singularity for the joint architecture.",
+  },
+  {
+    kind: "external",
+    label: "Solon",
+    href: "https://solon.orangecat.ch",
+    description: "The governance pillar of the stack — Bitcoin-signed proposals and votes. FleetCrown's agent Loki is a registered voting member there, signing from its own environment.",
   },
 ];
 

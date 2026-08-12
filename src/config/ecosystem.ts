@@ -17,6 +17,10 @@ const fleetCrownOrigin = readPublicUrl(
   "NEXT_PUBLIC_FLEETCROWN_URL",
   "https://fleetcrown.orangecat.ch",
 );
+const solonOrigin = readPublicUrl(
+  "NEXT_PUBLIC_SOLON_URL",
+  "https://solon.orangecat.ch",
+);
 
 function orangeCatPage(path: string): string {
   return new URL(path, orangeCatOrigin).toString();
@@ -42,6 +46,10 @@ export const ECOSYSTEM = {
       process.env.NEXT_PUBLIC_FLEETCROWN_ORANGECAT_PROJECT_ID ??
       "8130c927-114a-45b7-8cc2-99efd5224025",
     siteUrl: fleetCrownOrigin.toString(),
+  },
+  solon: {
+    title: "Solon",
+    siteUrl: solonOrigin.toString(),
   },
   support: {
     lightningAddress:
@@ -86,3 +94,16 @@ export const ORANGECAT_INTEGRATION = {
   relation: "FleetCrown is a customer of OrangeCat through the shared entity graph.",
   note: "OrangeCat is the public funding layer; FleetCrown is the building layer.",
 } as const;
+
+/**
+ * The three-pillar stack FleetCrown belongs to. Solon is the governance
+ * pillar: FleetCrown's agent Loki is a registered voting member there,
+ * casting Bitcoin-signed votes from this box (scripts/solon/cast-vote.ts,
+ * key never leaves LOKI_SOLON_PRIVKEY's environment), and Solon decision
+ * webhooks land at /api/solon/events.
+ */
+export const ECOSYSTEM_PILLARS = [
+  { key: "orangecat", title: ECOSYSTEM.orangeCat.title, role: "Economy", siteUrl: ECOSYSTEM.orangeCat.siteUrl },
+  { key: "fleetcrown", title: ECOSYSTEM.fleetCrown.title, role: "Engineering", siteUrl: ECOSYSTEM.fleetCrown.siteUrl },
+  { key: "solon", title: ECOSYSTEM.solon.title, role: "Governance", siteUrl: ECOSYSTEM.solon.siteUrl },
+] as const;
