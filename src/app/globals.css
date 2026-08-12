@@ -780,6 +780,26 @@
   .ui-changelog-code {
     @apply font-mono text-white;
   }
+  /* Compact version index under the changelog header. */
+  .ui-changelog-index {
+    @apply mt-10 flex flex-wrap gap-x-4 gap-y-2;
+  }
+  .ui-changelog-index-link {
+    @apply font-mono text-xs text-white/45 transition-colors hover:text-white;
+  }
+  /* Collapsed minor-line groups — everything below the current minor. */
+  .ui-changelog-archive {
+    @apply border-t border-white/[0.12] py-6;
+  }
+  .ui-changelog-archive-summary {
+    @apply flex cursor-pointer list-none flex-wrap items-baseline gap-x-4 gap-y-1 text-sm font-medium text-white/60 transition-colors hover:text-white;
+  }
+  .ui-changelog-archive-summary::-webkit-details-marker {
+    display: none;
+  }
+  .ui-changelog-archive-range {
+    @apply text-xs font-normal text-white/40;
+  }
   .ui-public-release-section-heading {
     @apply mb-2 mt-4 text-micro uppercase tracking-caps text-white/40;
   }
@@ -962,6 +982,23 @@
   }
   .ui-public-doc-toc-num {
     @apply shrink-0 font-mono text-xs text-text-muted;
+  }
+  /* Collapsed archive sections on public index pages (thoughts, releases) —
+     native <details>, opens without JS, links stay crawlable. */
+  .ui-public-archive {
+    @apply rounded-2xl border border-border-subtle bg-surface-base px-5 py-4;
+  }
+  .ui-public-archive-summary {
+    @apply cursor-pointer list-none text-sm font-medium text-text-secondary transition-colors hover:text-text-primary;
+  }
+  .ui-public-archive-summary::-webkit-details-marker {
+    display: none;
+  }
+  .ui-public-archive-item {
+    @apply flex flex-col gap-0.5 rounded-lg px-2 py-1.5 text-sm transition-colors hover:bg-surface-raised;
+  }
+  .ui-public-archive-item-meta {
+    @apply text-xs text-text-tertiary;
   }
   /* Long-document variant — the whitepaper is ~15 sections of continuous
      prose; at the default text-2xl the section headings barely separate from
