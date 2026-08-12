@@ -5,8 +5,7 @@ import { getUserCount, getDefaultUser } from "@/db/queries/users";
 import { getHeroFleetSnapshot, getShippedFromFeedbackSnapshot, type HeroFleetSnapshot, type ShippedFeedbackSnapshot } from "@/db/queries/public-fleet";
 import { PublicSurface } from "@/components/public/PublicSurface";
 import { PublicHeaderActions } from "@/components/public/PublicHeaderActions";
-import { DesktopDownload } from "@/components/public/DesktopDownload";
-import { PRODUCT_SURFACES, START_PATHS, HOME_HERO_CONSOLE } from "@/config/marketing-content";
+import { PRODUCT_SURFACES, START_PATHS, HOME_HERO_CONSOLE, DESKTOP_DOWNLOAD } from "@/config/marketing-content";
 import {
   APP_NAME,
   MARKETING_TAGLINE,
@@ -273,13 +272,43 @@ export default async function LandingPage() {
         </div>
       </div>
 
-      {!insideRunner && <DesktopDownload />}
+      {/* Short download band — the full DesktopDownload embed (platform picker,
+          comparison table, setup steps, prerequisites) duplicated /download
+          wholesale and made the homepage endless. Two lines and a link. */}
+      {!insideRunner && (
+        <div className="ui-public-band py-20 text-center">
+          <div className="mx-auto max-w-3xl px-6">
+            <div className="ui-public-eyebrow">DESKTOP APP</div>
+            <h2 className="ui-public-display-md mt-4">{DESKTOP_DOWNLOAD.title}</h2>
+            <p className="ui-public-section-lede mx-auto mt-6">{DESKTOP_DOWNLOAD.lede}</p>
+            <p className="ui-public-meta mt-4">
+              {DESKTOP_DOWNLOAD.platforms.filter((p) => p.status === "ready").map((p) => p.label).join(" · ")} today
+              {DESKTOP_DOWNLOAD.platforms.some((p) => p.status !== "ready") &&
+                ` · ${DESKTOP_DOWNLOAD.platforms.filter((p) => p.status !== "ready").map((p) => p.label).join(" and ")} coming soon`}
+            </p>
+            <div className="mt-8">
+              <Link href="/download" className="ui-public-cta">
+                Download Fleet Runner
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
 
+      {/* One closing section — "Choose your entry point" and "Not another
+          coding agent" were two back-to-back closers making the same pitch;
+          the differentiation points also repeated the EXECUTION/CONTROL and
+          SURFACE sections above. Merged: one differentiating line, then the
+          three concrete entry paths. */}
       <div className="py-24">
         <div className="mx-auto max-w-6xl px-6">
           <div className="text-center">
             <div className="ui-public-eyebrow">GET STARTED</div>
-            <h2 className="ui-public-display-lg mt-4">Choose your entry point.</h2>
+            <h2 className="ui-public-display-lg mt-4">Not another coding agent.</h2>
+            <p className="ui-public-section-lede mx-auto mt-4">
+              Most tools help you write code faster in one file or one project. FleetCrown is for
+              running real agent operations at fleet scale — choose your entry point.
+            </p>
           </div>
 
           <div className="mt-14 grid gap-4 md:grid-cols-3">
@@ -294,31 +323,6 @@ export default async function LandingPage() {
                 </Link>
               </section>
             ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="border-t border-border-subtle py-20">
-        <div className="mx-auto max-w-4xl px-6">
-          <div className="ui-public-eyebrow">THE DIFFERENCE</div>
-          <h2 className="ui-public-display-lg mt-4">Not another coding agent.</h2>
-          <p className="ui-public-section-lede mt-4">
-            Most tools help you write code faster in one file or one project. We help serious builders run and orchestrate real agent operations at fleet scale.
-          </p>
-
-          <div className="ui-public-body-lg mt-12 space-y-10">
-            <div>
-              <div className="ui-public-prose-strong">Local execution is the foundation</div>
-              <p className="ui-public-prose-muted mt-2">Your agents run on your machines with full access to your environment. We do not force everything through remote sandboxes.</p>
-            </div>
-            <div>
-              <div className="ui-public-prose-strong">Fleet orchestration, not single-agent assistance</div>
-              <p className="ui-public-prose-muted mt-2">Built for people already running many agents across many projects. Explicit per-project autonomy levels instead of one generic agent.</p>
-            </div>
-            <div>
-              <div className="ui-public-prose-strong">Local runner + web command center</div>
-              <p className="ui-public-prose-muted mt-2">The desktop application executes. The web portal gives you fleet visibility and remote control. Two surfaces, one system.</p>
-            </div>
           </div>
         </div>
       </div>
