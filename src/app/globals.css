@@ -1000,6 +1000,14 @@
   .ui-public-archive-item-meta {
     @apply text-xs text-text-tertiary;
   }
+  /* Bare inline disclosure trigger — for collapsed detail bullets inside
+     prose sections (roadmap items). */
+  .ui-public-disclosure-summary {
+    @apply cursor-pointer list-none text-sm text-text-tertiary transition-colors hover:text-text-primary;
+  }
+  .ui-public-disclosure-summary::-webkit-details-marker {
+    display: none;
+  }
   /* Long-document variant — the whitepaper is ~15 sections of continuous
      prose; at the default text-2xl the section headings barely separate from
      body copy. Scoped here so short thought posts keep the tighter scale. */
