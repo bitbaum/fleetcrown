@@ -23,7 +23,7 @@ const FOOTER_GROUPS = [
       { label: "Download", href: "/download" },
       { label: "Sign in", href: "/sign-in" },
       { label: "Roadmap", href: "/roadmap" },
-      { label: "Changelog", href: "/changelog" },
+      { label: "Changelog", href: "/releases" },
     ],
   },
   {
@@ -31,8 +31,9 @@ const FOOTER_GROUPS = [
     links: [
       { label: "Docs", href: "/docs" },
       { label: "Whitepaper", href: "/whitepaper" },
-      { label: "Blog", href: "/blog" },
+      { label: "Thoughts", href: "/thoughts" },
       { label: "Frontier", href: "/frontier" },
+      { label: "Investors", href: "/investors" },
     ],
   },
   {
@@ -98,10 +99,14 @@ export function PublicFooter() {
       {/* The fleet. Every site here had no inbound link from anywhere else on
           the fleet until this block existed — see config/fleet-sites.ts. Plain
           anchors, not next/link: these are other origins, and the point is that
-          a crawler follows them. */}
-      <div className="ui-public-footer-fleet">
-        <div className="ui-public-footer-heading">The fleet</div>
-        <div className="ui-public-footer-fleet-grid">
+          a crawler follows them. Collapsed by default so the three product
+          pillars above stay the footer's primary content — the links remain in
+          the DOM for crawlers whether or not a human ever opens the disclosure. */}
+      <details className="ui-public-footer-fleet">
+        <summary className="ui-public-footer-fleet-summary">
+          Part of the fleet — {FLEET_SITES.length} more sites
+        </summary>
+        <div className="ui-public-footer-fleet-grid mt-4">
           {FLEET_SITES.map((site) => (
             <a
               key={site.url}
@@ -115,10 +120,10 @@ export function PublicFooter() {
             </a>
           ))}
         </div>
-      </div>
+      </details>
       <div className="ui-public-footer-bottom">
         <div>© {new Date().getFullYear()} {APP_NAME} · Mao Nakamoto</div>
-        <Link href="/changelog" className="ui-public-link font-mono">
+        <Link href="/releases" className="ui-public-link font-mono">
           Fleet Runner v{CURRENT_RELEASE.version}
         </Link>
       </div>

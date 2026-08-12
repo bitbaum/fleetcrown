@@ -1,8 +1,8 @@
-import ThoughtsPage from "@/app/thoughts/page";
+import { redirect } from "next/navigation";
 
-export const metadata = {
-  title: "Blog",
-  description: "FleetCrown essays on agents, execution systems, and building in public.",
-};
-
-export default ThoughtsPage;
+// /blog used to re-export the Thoughts page wholesale, serving identical
+// content on two URLs under two different names. /thoughts is the canonical
+// URL (it is what the page calls itself); this route only forwards.
+export default function BlogRedirect() {
+  redirect("/thoughts");
+}

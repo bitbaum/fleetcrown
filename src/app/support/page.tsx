@@ -1,13 +1,43 @@
 import Link from "next/link";
-import { ArrowUpRight, Bitcoin, Bot, Cat } from "lucide-react";
+import { ArrowUpRight, Bitcoin, BookOpen, Bot, Bug, Cat, Mail } from "lucide-react";
 import { PublicHeaderActions } from "@/components/public/PublicHeaderActions";
 import { PublicSurface } from "@/components/public/PublicSurface";
 import { ECOSYSTEM_LINKS } from "@/config/ecosystem";
+import { INVESTOR_DETAILS } from "@/config/marketing-content";
 
 export const metadata = {
   title: "Support",
-  description: "Support FleetCrown, OrangeCat, or Mao directly through their OrangeCat pages.",
+  description: "Get help with FleetCrown — docs, GitHub issues, email — or fund the work directly.",
 };
+
+// The nav says "Support", so getting help comes first. Funding the work is a
+// different intent and lives below under its own heading.
+const helpChannels = [
+  {
+    title: "Documentation",
+    body: "Install Fleet Runner, connect your machines, and operate your fleet — setup and troubleshooting guides.",
+    href: "/docs",
+    cta: "Read the docs",
+    external: false,
+    icon: BookOpen,
+  },
+  {
+    title: "GitHub issues",
+    body: "Found a bug or a missing behavior? File it where the fleet actually picks work up.",
+    href: "https://github.com/maonakamoto/fleetcrown/issues",
+    cta: "Open an issue",
+    external: true,
+    icon: Bug,
+  },
+  {
+    title: "Email",
+    body: "For anything that doesn't fit a public issue — account questions, security reports, everything else.",
+    href: `mailto:${INVESTOR_DETAILS.contact}`,
+    cta: INVESTOR_DETAILS.contact,
+    external: true,
+    icon: Mail,
+  },
+] as const;
 
 const supportTargets = [
   {
@@ -35,30 +65,68 @@ export default function SupportPage() {
     <PublicSurface right={<PublicHeaderActions />}>
       <main className="mx-auto max-w-5xl px-6 py-20 sm:py-28">
         <div className="ui-public-eyebrow">Support</div>
-        <h1 className="ui-public-page-title mt-4">Fund the work on OrangeCat</h1>
+        <h1 className="ui-public-page-title mt-4">Get help</h1>
         <p className="ui-public-lede mt-6 max-w-2xl">
-          OrangeCat is the public funding surface for both sibling products. Choose what you want
-          to support, then pay the entity directly in Bitcoin. An OrangeCat account is not required
-          to scan a payment request.
+          Stuck on setup, hit a bug, or need a human? Start with the docs, file an issue, or write
+          directly.
         </p>
         <div className="mt-14 grid gap-4 md:grid-cols-3">
-          {supportTargets.map(({ title, body, href, icon: Icon }) => (
-            <a
-              key={title}
-              href={href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="ui-public-surface-card !min-h-0"
-            >
-              <Icon className="h-5 w-5 text-text-secondary" aria-hidden />
-              <h2 className="ui-public-prose-strong mt-5 text-lg">{title}</h2>
-              <p className="ui-public-surface-card-body">{body}</p>
-              <span className="ui-public-link mt-5 inline-flex items-center gap-1">
-                Open on OrangeCat <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
-              </span>
-            </a>
-          ))}
+          {helpChannels.map(({ title, body, href, cta, external, icon: Icon }) => {
+            const inner = (
+              <>
+                <Icon className="h-5 w-5 text-text-secondary" aria-hidden />
+                <h2 className="ui-public-prose-strong mt-5 text-lg">{title}</h2>
+                <p className="ui-public-surface-card-body">{body}</p>
+                <span className="ui-public-link mt-5 inline-flex items-center gap-1">
+                  {cta} <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
+                </span>
+              </>
+            );
+            return external ? (
+              <a
+                key={title}
+                href={href}
+                target={href.startsWith("mailto:") ? undefined : "_blank"}
+                rel={href.startsWith("mailto:") ? undefined : "noopener noreferrer"}
+                className="ui-public-surface-card !min-h-0"
+              >
+                {inner}
+              </a>
+            ) : (
+              <Link key={title} href={href} className="ui-public-surface-card !min-h-0">
+                {inner}
+              </Link>
+            );
+          })}
         </div>
+
+        <section className="mt-20 border-t border-border-subtle pt-12">
+          <h2 className="ui-public-display-md">Fund the work</h2>
+          <p className="ui-public-body-lg mt-4 max-w-2xl">
+            OrangeCat is the public funding surface for both sibling products. Choose what you want
+            to support, then pay the entity directly in Bitcoin. An OrangeCat account is not
+            required to scan a payment request.
+          </p>
+          <div className="mt-10 grid gap-4 md:grid-cols-3">
+            {supportTargets.map(({ title, body, href, icon: Icon }) => (
+              <a
+                key={title}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="ui-public-surface-card !min-h-0"
+              >
+                <Icon className="h-5 w-5 text-text-secondary" aria-hidden />
+                <h3 className="ui-public-prose-strong mt-5 text-lg">{title}</h3>
+                <p className="ui-public-surface-card-body">{body}</p>
+                <span className="ui-public-link mt-5 inline-flex items-center gap-1">
+                  Open on OrangeCat <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
+                </span>
+              </a>
+            ))}
+          </div>
+        </section>
+
         <section className="mt-16 border-t border-border-subtle pt-10">
           <h2 className="ui-public-display-md">Why Bitcoin only today?</h2>
           <p className="ui-public-body-lg mt-4 max-w-3xl">

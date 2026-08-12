@@ -837,6 +837,12 @@
   .ui-public-footer-fleet {
     @apply mb-8 border-t border-white/10 pt-8;
   }
+  .ui-public-footer-fleet-summary {
+    @apply cursor-pointer list-none text-micro font-semibold uppercase tracking-caps text-white/40 transition-colors hover:text-white/70;
+  }
+  .ui-public-footer-fleet-summary::-webkit-details-marker {
+    display: none;
+  }
   .ui-public-footer-fleet-grid {
     @apply grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2 lg:grid-cols-3;
   }
