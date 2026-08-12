@@ -271,7 +271,10 @@
   --text-primary:      oklch(0.92 0 0);
   --text-secondary:    oklch(0.65 0 0);
   --text-tertiary:     oklch(0.48 0 0);
-  --text-muted:        oklch(0.34 0 0);
+  /* 0.55 (was 0.34) — 0.34 on the 0.07 page surface was ~2:1 contrast, an
+     unreadable WCAG failure for text that carries real copy (pricing
+     features, doc metadata). Keep "muted" muted, but keep it legible. */
+  --text-muted:        oklch(0.55 0 0);
   --text-inverted:     oklch(0.07 0 0);
   --surface-page:      oklch(0.07 0 0);
   --surface-base:      oklch(0.10 0 0);
@@ -732,11 +735,13 @@
   .ui-changelog-meta {
     @apply flex flex-wrap items-center gap-x-3 gap-y-1;
   }
+  /* white/60 (was /40) — dates and version numbers are primary scanning
+     targets on a changelog, not decoration; /40 failed WCAG AA on black. */
   .ui-changelog-date {
-    @apply text-micro font-medium uppercase tracking-[0.16em] text-white/40;
+    @apply text-micro font-medium uppercase tracking-[0.16em] text-white/60;
   }
   .ui-changelog-version {
-    @apply font-mono text-micro uppercase text-white/40;
+    @apply font-mono text-micro uppercase text-white/60;
   }
   .ui-changelog-current {
     @apply rounded-full border border-white/15 px-2 py-0.5 text-nano font-medium uppercase tracking-[0.12em] text-white/75;
@@ -839,7 +844,7 @@
     @apply text-sm text-text-secondary;
   }
   .ui-public-footer-fleet-blurb {
-    @apply text-xs text-white/40;
+    @apply text-xs text-white/55;
   }
   .ui-public-prose-divider {
     @apply mb-10 space-y-4 border-t border-white/10 pt-4;
@@ -929,7 +934,9 @@
     letter-spacing: -0.03em;
   }
   .ui-public-doc-subtitle {
-    @apply text-lg leading-relaxed text-text-muted sm:text-xl;
+    /* text-secondary, not text-muted — the subtitle is the one-line pitch of
+       the whole document; it must not be the faintest text on the page. */
+    @apply text-lg leading-relaxed text-text-secondary sm:text-xl;
   }
   .ui-public-prose {
     @apply space-y-8;
@@ -1205,6 +1212,14 @@
       min-height: 84vh;
     }
   }
+  /* Compact variant — statement pages (mission) pair the fold with body copy
+     directly below; the full 84vh fold forces ~700px of empty black between
+     statement and body. Declared after the base rules so it wins the cascade
+     at equal specificity. */
+  .ui-public-hero-fold-compact {
+    @apply pb-16 pt-24 sm:pb-20 sm:pt-32;
+    min-height: 0;
+  }
   .ui-public-section-lede {
     @apply max-w-2xl text-xl text-text-secondary;
   }
@@ -1221,7 +1236,10 @@
     @apply border-t border-border-default bg-surface-page;
   }
   .ui-public-surface-card {
-    @apply flex min-h-[320px] flex-col rounded-2xl border border-border-subtle bg-surface-base p-6 text-left;
+    /* min-h 200px (was 320px) — typical card content is ~120px tall, so 320px
+       painted ~200px of dead space per card; 200px keeps rows aligned without
+       the void. */
+    @apply flex min-h-[200px] flex-col rounded-2xl border border-border-subtle bg-surface-base p-6 text-left;
   }
   .ui-public-surface-card-label {
     @apply mb-8 font-mono text-xs uppercase tracking-[0.18em] text-text-secondary;
