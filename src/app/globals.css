@@ -947,6 +947,31 @@
   .ui-public-prose {
     @apply space-y-8;
   }
+  /* Anchored table of contents for long documents (whitepaper). */
+  .ui-public-doc-toc {
+    @apply mb-14 rounded-2xl border border-border-subtle bg-surface-base p-6;
+  }
+  .ui-public-doc-toc-title {
+    @apply mb-4 text-micro font-semibold uppercase tracking-caps text-text-tertiary;
+  }
+  .ui-public-doc-toc-list {
+    @apply grid gap-x-8 gap-y-2.5 sm:grid-cols-2;
+  }
+  .ui-public-doc-toc-link {
+    @apply flex items-baseline gap-2.5 text-sm text-text-secondary transition-colors hover:text-text-primary;
+  }
+  .ui-public-doc-toc-num {
+    @apply shrink-0 font-mono text-xs text-text-muted;
+  }
+  /* Long-document variant — the whitepaper is ~15 sections of continuous
+     prose; at the default text-2xl the section headings barely separate from
+     body copy. Scoped here so short thought posts keep the tighter scale. */
+  .ui-public-prose-doc .ui-public-prose-h2 {
+    @apply pt-10 text-3xl;
+  }
+  .ui-public-prose-doc .ui-public-prose-h3 {
+    @apply pt-4 text-xl;
+  }
   .ui-public-prose-h2 {
     @apply pt-6 text-2xl font-semibold tracking-tight text-text-primary;
     letter-spacing: -0.02em;
