@@ -5,11 +5,10 @@ import { getUserCount, getDefaultUser } from "@/db/queries/users";
 import { getHeroFleetSnapshot, getShippedFromFeedbackSnapshot, type HeroFleetSnapshot, type ShippedFeedbackSnapshot } from "@/db/queries/public-fleet";
 import { PublicSurface } from "@/components/public/PublicSurface";
 import { PublicHeaderActions } from "@/components/public/PublicHeaderActions";
-import { PRODUCT_SURFACES, START_PATHS, HOME_HERO_CONSOLE, DESKTOP_DOWNLOAD } from "@/config/marketing-content";
+import { HOME_PRODUCT_SURFACES, START_PATHS, HOME_HERO_CONSOLE } from "@/config/marketing-content";
 import {
   APP_NAME,
   MARKETING_TAGLINE,
-  MARKETING_SUBTITLE,
   MARKETING_HERO_PRIMARY,
   MARKETING_HERO_SECONDARY,
   MARKETING_POSITIONING,
@@ -69,10 +68,6 @@ export default async function LandingPage() {
 
           <p className="ui-public-hero-lede">
             {MARKETING_TAGLINE}
-          </p>
-
-          <p className="ui-public-hero-sublede">
-            {MARKETING_SUBTITLE}
           </p>
 
           <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
@@ -135,7 +130,7 @@ export default async function LandingPage() {
           </div>
 
           <div className="mt-14 grid gap-4 sm:grid-cols-2">
-            {PRODUCT_SURFACES.map((surface) => (
+            {HOME_PRODUCT_SURFACES.map((surface) => (
               <section key={surface.label} className="ui-public-surface-card">
                 <div className="ui-public-surface-card-label">{surface.label}</div>
                 <h3 className="ui-public-surface-card-title">{surface.title}</h3>
@@ -175,131 +170,6 @@ export default async function LandingPage() {
         </div>
       )}
 
-      <div className="py-24">
-        <div className="mx-auto max-w-6xl px-6">
-          <div className="grid gap-x-16 gap-y-20 md:grid-cols-2">
-            <div>
-              <div className="ui-public-eyebrow">EXECUTION</div>
-              <h3 className="ui-public-display-md mt-3">The work happens locally.</h3>
-              <p className="ui-public-section-lede mt-6">
-                Your agents run on your machines with full access to your environment, tools, and context.
-                No remote sandbox limitations.
-              </p>
-            </div>
-            <div>
-              <div className="ui-public-eyebrow">CONTROL</div>
-              <h3 className="ui-public-display-md mt-3">Command from anywhere.</h3>
-              <p className="ui-public-section-lede mt-6">
-                The web portal gives you complete visibility and control over your entire fleet —
-                whether your laptop is open or not.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="ui-public-band py-20">
-        <div className="mx-auto max-w-6xl px-6">
-          <div className="grid gap-12 md:grid-cols-[1fr_1.2fr] md:items-start">
-            <div>
-              <div className="ui-public-eyebrow">THE SURFACE</div>
-              <h2 className="ui-public-display-md mt-4">Built around the state real agent work produces.</h2>
-              <p className="ui-public-section-lede mt-6">
-                The product is not a chat box. It is an operational surface for sessions, queues, handoffs, and machine-local execution.
-              </p>
-            </div>
-
-            <div className="ui-public-terminal-demo">
-              <div className="ui-public-terminal-row">
-                <span>projects/main</span>
-                <span>Illustrative</span>
-              </div>
-              <div className="ui-public-terminal-line">❯ migrate auth from sessions to jwt</div>
-              <div className="ui-public-terminal-muted">read_file src/proxy.ts · inspect callbackUrl · patch matcher</div>
-              <div className="ui-public-terminal-grid">
-                <div>
-                  <div className="ui-public-terminal-stat">11</div>
-                  <div className="ui-public-terminal-label">active projects</div>
-                </div>
-                <div>
-                  <div className="ui-public-terminal-stat">4</div>
-                  <div className="ui-public-terminal-label">agents running</div>
-                </div>
-                <div>
-                  <div className="ui-public-terminal-stat">7</div>
-                  <div className="ui-public-terminal-label">queued intents</div>
-                </div>
-              </div>
-              <div className="ui-public-terminal-footer">local runner connected · remote command enabled</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="mx-auto max-w-4xl px-6 py-24 text-center">
-        <div className="ui-public-eyebrow">HOW IT WORKS</div>
-        <h2 className="ui-public-display-lg mt-4">One system. Two surfaces.</h2>
-
-        <div className="ui-public-body-lg mx-auto mt-16 max-w-3xl space-y-16 text-left">
-          <div className="flex gap-8">
-            <div className="ui-public-step-num">01</div>
-            <div>
-              <div className="ui-public-prose-strong">Install the local runner</div>
-              <div className="ui-public-prose-muted mt-2">
-                A native application on your machines that actually executes agents in your terminal environment (Zellij, Claude, Grok, Codex, etc.).
-                {insideRunner ? (
-                  <span className="ml-1 text-text-tertiary">You&apos;re running it now.</span>
-                ) : (
-                  <a href="/download" className="ui-public-link ml-1">Download →</a>
-                )}
-              </div>
-            </div>
-          </div>
-          <div className="flex gap-8">
-            <div className="ui-public-step-num">02</div>
-            <div>
-              <div className="ui-public-prose-strong">Control from the web</div>
-              <div className="ui-public-prose-muted mt-2">The portal gives you fleet overview, per-project autonomy controls, queues, handoffs, and the ability to steer agents from anywhere.</div>
-            </div>
-          </div>
-          <div className="flex gap-8">
-            <div className="ui-public-step-num">03</div>
-            <div>
-              <div className="ui-public-prose-strong">One source of truth</div>
-              <div className="ui-public-prose-muted mt-2">Your local machines do the work. The web orchestrates. Both surfaces reflect the same reality.</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Short download band — the full DesktopDownload embed (platform picker,
-          comparison table, setup steps, prerequisites) duplicated /download
-          wholesale and made the homepage endless. Two lines and a link. */}
-      {!insideRunner && (
-        <div className="ui-public-band py-20 text-center">
-          <div className="mx-auto max-w-3xl px-6">
-            <div className="ui-public-eyebrow">DESKTOP APP</div>
-            <h2 className="ui-public-display-md mt-4">{DESKTOP_DOWNLOAD.title}</h2>
-            <p className="ui-public-section-lede mx-auto mt-6">{DESKTOP_DOWNLOAD.lede}</p>
-            <p className="ui-public-meta mt-4">
-              {DESKTOP_DOWNLOAD.platforms.filter((p) => p.status === "ready").map((p) => p.label).join(" · ")} today
-              {DESKTOP_DOWNLOAD.platforms.some((p) => p.status !== "ready") &&
-                ` · ${DESKTOP_DOWNLOAD.platforms.filter((p) => p.status !== "ready").map((p) => p.label).join(" and ")} coming soon`}
-            </p>
-            <div className="mt-8">
-              <Link href="/download" className="ui-public-cta">
-                Download Fleet Runner
-              </Link>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* One closing section — "Choose your entry point" and "Not another
-          coding agent" were two back-to-back closers making the same pitch;
-          the differentiation points also repeated the EXECUTION/CONTROL and
-          SURFACE sections above. Merged: one differentiating line, then the
-          three concrete entry paths. */}
       <div className="py-24">
         <div className="mx-auto max-w-6xl px-6">
           <div className="text-center">
