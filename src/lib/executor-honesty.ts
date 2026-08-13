@@ -22,6 +22,13 @@ export type ExecutorHonestyInput = {
   needsGitHub?: boolean;
   /** Loki chat path needs OpenClaw gateway (not Groq fallback). */
   needsGateway?: boolean;
+  /**
+   * Which builder this surface is scoped to. When set, connectivity labels
+   * name it explicitly ("Cloud builder online" / "This computer offline") —
+   * a bare "Builder online" next to a Cloud/This computer switch reads as a
+   * third mode, and says nothing about WHICH builder it describes.
+   */
+  scope?: "cloud" | "machine";
 };
 
 /** SSOT for short honesty chips on Control / Loki / Terminal actions. */
@@ -48,14 +55,24 @@ export function deriveExecutorHonestyLabel(
   if (input.runnerConnected === true) {
     return {
       kind: "builder-starting",
-      label: EXECUTOR_COPY.honesty.builderStarting,
+      label:
+        input.scope === "machine"
+          ? EXECUTOR_COPY.builder.localComputerOnline
+          : input.scope === "cloud"
+            ? EXECUTOR_COPY.builder.cloudOnline
+            : EXECUTOR_COPY.honesty.builderStarting,
       title: EXECUTOR_COPY.queuedWithBuilderOnlineLong,
     };
   }
   if (input.runnerConnected === false || input.runnerConnected === null) {
     return {
       kind: "needs-builder",
-      label: EXECUTOR_COPY.honesty.needsBuilder,
+      label:
+        input.scope === "machine"
+          ? EXECUTOR_COPY.builder.localComputerOffline
+          : input.scope === "cloud"
+            ? EXECUTOR_COPY.builder.cloudOffline
+            : EXECUTOR_COPY.honesty.needsBuilder,
       title: EXECUTOR_COPY.queuedWhenOfflineLong,
     };
   }
