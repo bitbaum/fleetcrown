@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ExternalLink, ListChecks, Loader2, Monitor, Sparkles, TerminalSquare } from "lucide-react";
+import { ExternalLink, ListChecks, Loader2, Monitor, TerminalSquare } from "lucide-react";
 import { MarkdownText } from "@/components/ui/markdown-text";
 import type { LokiMessage } from "./types";
 import { dispatchStatusLabel, type DispatchLiveView } from "@/lib/dispatch-status";
@@ -50,8 +50,6 @@ function useDispatchLiveStatus(commandId: string | null, runId: string | null): 
   }, [commandId, runId]);
   return view;
 }
-import { LOKI_PROACTIVE_STARTERS } from "@/config/loki-suggested-actions";
-
 /** Human-readable label for an assistant turn's kind badge. SSOT for the
  *  small set of kinds the messages route emits. */
 const KIND_LABEL: Record<string, string> = {
@@ -192,14 +190,11 @@ export function Transcript({
   loading = false,
   sending,
   onPickProject,
-  onStart,
 }: {
   messages: LokiMessage[];
   loading?: boolean;
   sending: boolean;
   onPickProject?: (project: string, pendingText: string) => void;
-  /** Send a full prompt (proactive starters on the empty state). */
-  onStart?: (prompt: string) => void;
 }) {
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -216,32 +211,9 @@ export function Transcript({
     );
   }
 
-  // Empty transcript — instead of a passive "nothing here", Loki proactively
-  // offers to look across the whole fleet. One tap runs a fleet-wide review from
-  // its full context; it surfaces what needs attention and asks what it needs.
-  if (messages.length === 0 && !sending) {
-    return (
-      <div className="flex min-h-0 flex-1 items-center justify-center">
-        <div className="w-full max-w-md text-center">
-          <Sparkles className="ui-empty-icon mx-auto" />
-          <p className="ui-empty-title">Loki is watching your whole fleet</p>
-          <p className="ui-empty-helper">
-            Ask anything — or let it look across your projects and tell you what needs you.
-          </p>
-          {onStart && LOKI_PROACTIVE_STARTERS[0] && (
-            <button
-              type="button"
-              onClick={() => onStart(LOKI_PROACTIVE_STARTERS[0].prompt)}
-              className="ui-btn-primary mx-auto mt-4 justify-center gap-2 px-5"
-            >
-              <Sparkles className="h-4 w-4" />
-              {LOKI_PROACTIVE_STARTERS[0].label}
-            </button>
-          )}
-        </div>
-      </div>
-    );
-  }
+  // Empty start lives in the workspace (centered composer). Transcript stays
+  // out of the way so the input is the only decision on screen.
+  if (messages.length === 0 && !sending) return null;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto py-2">

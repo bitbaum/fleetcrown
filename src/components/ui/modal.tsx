@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useOverlayLock } from "@/hooks/use-overlay-lock";
 
@@ -94,6 +94,13 @@ export function Drawer({
 }) {
   useEscapeToClose(onClose, disableClose);
   useOverlayLock(true);
+  // The opener often sits under this full-screen backdrop. Ignore the
+  // leftover click from the same gesture so the drawer does not open+close.
+  const [backdropArmed, setBackdropArmed] = useState(false);
+  useEffect(() => {
+    const id = window.setTimeout(() => setBackdropArmed(true), 250);
+    return () => window.clearTimeout(id);
+  }, []);
   const surfaceClass =
     surface === "drawer"
       ? "bg-surface-drawer"
@@ -104,7 +111,7 @@ export function Drawer({
     <div className="fixed inset-0 z-[60] flex justify-end" role="presentation">
       <div
         className="absolute inset-0 ui-backdrop"
-        onClick={disableClose ? undefined : onClose}
+        onClick={disableClose || !backdropArmed ? undefined : onClose}
         aria-hidden="true"
       />
       <div

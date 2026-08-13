@@ -54,7 +54,10 @@ export function FleetSurfaceGuide() {
     if (routeProject) rememberFleetProject(routeProject);
   }, [pathname]);
 
-  if (currentIndex === -1) return null;
+  // Loki is the start/continue surface, not a project-workspace tab. The
+  // Profile/Chat/Control/Terminal strip duplicates the bottom nav on phones
+  // and answers a question the composer already answers.
+  if (pathname === "/loki" || currentIndex === -1) return null;
 
   return (
     <nav

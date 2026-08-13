@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { Send, Mic, MicOff, Check, Loader2, Paperclip, X, ImageIcon, FolderKanban, Plus } from "lucide-react";
 import { useVoiceInput } from "@/hooks/use-voice-input";
 import { getJson } from "@/lib/api/fetch";
@@ -11,7 +12,11 @@ import {
   isImageMime,
   type StagedAttachment,
 } from "@/lib/loki/attachments";
-import { LOKI_SUGGESTED_ACTIONS, fillSuggestedAction } from "@/config/loki-suggested-actions";
+import {
+  composerChips,
+  fillSuggestedAction,
+  type LokiComposerChip,
+} from "@/config/loki-suggested-actions";
 import { ExecutorHonestyChip } from "@/components/executor/ExecutorHonestyChip";
 import type { ExecutorHonestyLabel } from "@/lib/executor-honesty";
 import type { Attachment, LokiAgent, LokiProject, ModelChoice } from "./types";
@@ -35,6 +40,7 @@ export function Composer({
   onSend,
   defaultText = "",
   selectedProjects = [],
+  projectCount = 0,
   selectedGoal = null,
   onRemoveProject,
   onOpenProjects,
@@ -42,10 +48,16 @@ export function Composer({
 }: {
   disabled: boolean;
   sending: boolean;
-  onSend: (text: string, choice: ModelChoice, attachments: Attachment[]) => void;
+  onSend: (
+    text: string,
+    choice: ModelChoice,
+    attachments: Attachment[],
+    opts?: { chatOnly?: boolean },
+  ) => void;
   defaultText?: string;
   /** Selected projects from the project pane — visible inside the composer. */
   selectedProjects?: string[];
+  projectCount?: number;
   selectedGoal?: LokiProject["topGoal"];
   onRemoveProject?: (name: string) => void;
   onOpenProjects?: () => void;
@@ -212,22 +224,46 @@ export function Composer({
 
   const canSend = (text.trim().length > 0 || attachments.length > 0) && !sending;
   const scopedProjectForTemplate = selectedProjects.length === 1 ? selectedProjects[0] : null;
-  const suggestedActions = selectedGoal && scopedProjectForTemplate
-    ? [
-        {
-          id: "active_goal",
-          label: "Advance top goal",
-          template: `Move ${scopedProjectForTemplate} toward its active goal: ${selectedGoal.title}. Inspect the current state and complete the highest-impact next step you can verify.`,
-        },
-        ...LOKI_SUGGESTED_ACTIONS.filter((action) => action.id !== "next_best"),
-      ]
-    : LOKI_SUGGESTED_ACTIONS;
+  const chips = composerChips({
+    projectCount,
+    selectedProjects,
+    selectedGoal,
+  });
 
-  const sendSuggested = (template: string) => {
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 240)}px`;
+  }, [text]);
+
+  const runChip = (chip: LokiComposerChip) => {
     if (disabled || sending) return;
+    if (chip.kind === "open_projects") {
+      onOpenProjects?.();
+      return;
+    }
+    if (chip.kind === "href") return;
+    const template = chip.template ?? "";
     const prompt = fillSuggestedAction(template, scopedProjectForTemplate);
-    onSend(prompt, parseChoice(choiceKey), []);
+    if (!prompt) return;
+    if (chip.kind === "prefill") {
+      setText(prompt);
+      textareaRef.current?.focus();
+      return;
+    }
+    onSend(prompt, parseChoice(choiceKey), [], chip.chatOnly ? { chatOnly: true } : undefined);
   };
+
+  const placeholder = recording
+    ? "Listening…"
+    : scopedProjectForTemplate
+      ? `Ask or dispatch on ${scopedProjectForTemplate}…`
+      : selectedProjects.length > 1
+        ? `Ask or dispatch on ${selectedProjects.length} projects…`
+        : projectCount === 0
+          ? "Name a new project, or ask anything…"
+          : "Start a project, open one, or ask…";
 
   return (
     <div className="ui-loki-composer-wrap">
@@ -260,7 +296,10 @@ export function Composer({
         )}
         <div className="ui-loki-composer">
           <div className="ui-loki-composer-scope-row">
-            {selectedProjects.length === 0 && onOpenProjects && (
+            {selectedProjects.length === 0 &&
+              projectCount > 0 &&
+              onOpenProjects &&
+              (text.trim() || !chips.some((chip) => chip.kind === "open_projects")) && (
               <button type="button" className="ui-btn-chip" onClick={onOpenProjects}>
                 <FolderKanban className="h-3.5 w-3.5" /> Project
               </button>
@@ -293,34 +332,50 @@ export function Composer({
             )}
           </div>
 
-          {!text.trim() && (
+          {!text.trim() && chips.length > 0 && (
             <div className="ui-loki-suggest-row">
-              {suggestedActions.slice(0, 5).map((action) => (
-                <button
-                  key={action.id}
-                  type="button"
-                  className="ui-loki-suggest-chip"
-                  disabled={disabled || sending}
-                  onClick={() => sendSuggested(action.template)}
-                  title={`Run: ${fillSuggestedAction(action.template, scopedProjectForTemplate)}`}
-                >
-                  {action.label}
-                </button>
-              ))}
+              {chips.map((chip) => {
+                const title =
+                  chip.kind === "href"
+                    ? chip.label
+                    : chip.kind === "open_projects"
+                      ? "Choose a project"
+                      : fillSuggestedAction(chip.template ?? "", scopedProjectForTemplate);
+                if (chip.kind === "href" && chip.href) {
+                  return (
+                    <Link
+                      key={chip.id}
+                      href={chip.href}
+                      className="ui-loki-suggest-chip"
+                      title={title}
+                    >
+                      {chip.label}
+                    </Link>
+                  );
+                }
+                return (
+                  <button
+                    key={chip.id}
+                    type="button"
+                    className="ui-loki-suggest-chip"
+                    disabled={disabled || sending}
+                    onClick={() => runChip(chip)}
+                    title={title}
+                  >
+                    {chip.label}
+                  </button>
+                );
+              })}
             </div>
           )}
 
           <textarea
             ref={textareaRef}
             className="ui-loki-composer-input"
-            rows={4}
+            rows={2}
             value={text}
             disabled={disabled || voice.status === "transcribing"}
-            placeholder={
-              voice.status === "recording"
-                ? "Listening…"
-                : "Ask, dispatch, or paste a screenshot…"
-            }
+            placeholder={placeholder}
             onChange={(e) => setText(e.target.value)}
             onPaste={handlePaste}
             onKeyDown={(e) => {
@@ -416,7 +471,7 @@ export function Composer({
               )}
             </div>
             <div className="ui-loki-composer-submit-row">
-              <ExecutorHonestyChip honesty={dispatchHonesty} />
+              {selectedProjects.length > 0 && <ExecutorHonestyChip honesty={dispatchHonesty} />}
               <button
                 type="button"
                 className="ui-loki-send-btn"

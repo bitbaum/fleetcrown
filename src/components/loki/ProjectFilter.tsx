@@ -1,7 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { Check, Search } from "lucide-react";
+import { LOKI_IMPORT_PROJECT_HREF, LOKI_NEW_PROJECT_HREF } from "@/config/loki-suggested-actions";
 import { LokiPaneBody } from "./LokiPaneBody";
 import type { LokiProject } from "./types";
 
@@ -39,6 +41,9 @@ export function ProjectFilter({
           Projects{selected.length > 0 ? ` · ${selected.length}` : ""}
         </h2>
         <div className="flex items-center gap-1">
+          <Link href={LOKI_NEW_PROJECT_HREF} className="ui-btn-xs">
+            New
+          </Link>
           {onSelectMany && filtered.length > 0 && (
             <button
               type="button"
@@ -73,7 +78,15 @@ export function ProjectFilter({
       <div className="min-h-0 flex-1 overflow-y-auto">
         <LokiPaneBody loading={loading} error={error} onRetry={onRetry}>
           {projects.length === 0 ? (
-            <p className="ui-loki-convo-meta">No projects yet.</p>
+            <div className="flex flex-col gap-3 px-1">
+              <p className="ui-loki-convo-meta">No projects yet. Start one, or import one you already have.</p>
+              <Link href={LOKI_NEW_PROJECT_HREF} className="ui-btn-primary justify-center">
+                New project
+              </Link>
+              <Link href={LOKI_IMPORT_PROJECT_HREF} className="ui-btn-secondary justify-center">
+                I have one
+              </Link>
+            </div>
           ) : filtered.length === 0 ? (
             <p className="ui-loki-convo-meta">No projects match “{query}”.</p>
           ) : (
