@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { entities, siteFeedback } from "@/db/schema";
 import { FEEDBACK_SOURCE, FEEDBACK_STATUS } from "@/lib/constants/statuses";
-import { sendEmailFire } from "@/lib/email";
+import { feedbackShippedTemplate, sendEmailFire } from "@/lib/email";
 
 /**
  * Close the feedback loop: when a dispatched fix-run finishes successfully,
@@ -48,12 +48,8 @@ export async function resolveFeedbackForRun(runId: string): Promise<void> {
         .limit(1);
       const site = project?.name ?? "the site";
       const excerpt = row.suggestion.length > 140 ? `${row.suggestion.slice(0, 140)}…` : row.suggestion;
-      sendEmailFire(
-        contact,
-        `Your feedback on ${site} shipped`,
-        `<p>You reported: “${excerpt}”</p><p>A fix just went live${row.page ? ` on ${row.page}` : ""}. Thanks for pointing it out.</p>`,
-        `You reported: "${excerpt}"\n\nA fix just went live${row.page ? ` on ${row.page}` : ""}. Thanks for pointing it out.`,
-      );
+      const mail = feedbackShippedTemplate({ site, excerpt, page: row.page });
+      sendEmailFire(contact, mail.subject, mail.html, mail.text);
     }
   } catch (err) {
     // The run-close path must survive a feedback hiccup untouched.

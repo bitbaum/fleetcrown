@@ -5,20 +5,7 @@ import { Mail, Check, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { DIGEST_CADENCES, type DigestCadence } from "@/db/schema/notification-preferences";
-
-const CADENCE_LABEL: Record<DigestCadence, string> = {
-  none:    "Off",
-  daily:   "Daily",
-  weekly:  "Weekly",
-  monthly: "Monthly",
-};
-
-const CADENCE_DESCRIPTION: Record<DigestCadence, string> = {
-  none:    "Don't send digest emails.",
-  daily:   "One email each morning summarizing the last 24 hours.",
-  weekly:  "One email a week summarizing the last 7 days.",
-  monthly: "One email a month summarizing the last 30 days.",
-};
+import { COMMS_COPY, DIGEST_CADENCE_COPY } from "@/config/comms";
 
 export function NotificationSettings() {
   const [cadence, setCadence] = useState<DigestCadence>("none");
@@ -68,9 +55,9 @@ export function NotificationSettings() {
       <div className="flex items-start gap-3">
         <Mail className="h-5 w-5 text-text-secondary mt-0.5" />
         <div className="space-y-1">
-          <h2 className="text-base font-semibold text-text-primary">Activity digest emails</h2>
+          <h2 className="text-base font-semibold text-text-primary">{COMMS_COPY.digestSettingsTitle}</h2>
           <p className="text-sm text-text-tertiary">
-            What ran, what broke, what moved. This is the mail FleetCrown sends — not a canary ping. Opt in for the cadence you want.
+            {COMMS_COPY.digestSettingsBody}
           </p>
         </div>
       </div>
@@ -101,8 +88,8 @@ export function NotificationSettings() {
                 ) : null}
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-medium text-text-primary">{CADENCE_LABEL[c]}</p>
-                <p className="text-xs text-text-tertiary">{CADENCE_DESCRIPTION[c]}</p>
+                <p className="text-sm font-medium text-text-primary">{DIGEST_CADENCE_COPY[c].label}</p>
+                <p className="text-xs text-text-tertiary">{DIGEST_CADENCE_COPY[c].description}</p>
               </div>
             </button>
           );

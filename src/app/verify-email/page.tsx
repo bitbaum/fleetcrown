@@ -9,7 +9,7 @@ import {
   AuthFooterLink, AuthHeading,
 } from "@/components/auth/AuthShell";
 import { postJson } from "@/lib/api/fetch";
-import { ROUTES } from "@/config/auth";
+import { AUTH_COPY, ROUTES } from "@/config/auth";
 import { APP_NAME } from "@/config/brand";
 
 function VerifyEmailInner() {
@@ -45,8 +45,8 @@ function VerifyEmailInner() {
     return (
       <AuthShell>
         <AuthHeading
-          title="Email verified ✓"
-          description="Your email address has been confirmed. You're all set."
+          title={AUTH_COPY.verify.successTitle}
+          description={AUTH_COPY.verify.successDescription}
         />
         <AuthFooterLink href={ROUTES.APP_HOME}>Go to {APP_NAME} →</AuthFooterLink>
       </AuthShell>
@@ -57,8 +57,8 @@ function VerifyEmailInner() {
     return (
       <AuthShell>
         <AuthHeading
-          title="Link expired"
-          description="This verification link is invalid or has expired. Enter your email to get a new one."
+          title={AUTH_COPY.verify.expiredTitle}
+          description={AUTH_COPY.verify.expiredDescription}
         />
         {sent ? (
           <p className="ui-auth-hint-emphasis">
@@ -96,8 +96,8 @@ function VerifyEmailInner() {
   return (
     <AuthShell>
       <AuthHeading
-        title="Check your inbox"
-        description="We sent you a verification link. Click it to activate your account."
+        title={AUTH_COPY.verify.title}
+        description={AUTH_COPY.verify.description}
       />
       {sent ? (
         <p className="ui-auth-hint-emphasis">

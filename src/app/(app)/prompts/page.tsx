@@ -1,4 +1,5 @@
 import { PageLayout } from "@/components/ui/page-layout";
+import { NAV } from "@/config/navigation";
 import { PROMPT_TEMPLATES } from "@/config/prompt-library";
 import { PromptLibraryClient } from "@/components/prompts/PromptLibraryClient";
 import { requirePageUserId } from "@/lib/session";
@@ -41,7 +42,7 @@ export default async function PromptsPage() {
     : `${PROMPT_TEMPLATES.length} templates · fleet control, security, engineering, design, business`;
 
   return (
-    <PageLayout title="Prompt Library" subtitle={subtitle}>
+    <PageLayout title={NAV.prompts.label} subtitle={subtitle}>
       <PromptLibraryClient
         templates={PROMPT_TEMPLATES}
         projects={projects}

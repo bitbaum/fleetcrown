@@ -17,6 +17,39 @@ export const ROUTES = {
   APP_HOME: "/today",
 } as const;
 
+/** Headings for every auth surface — pages import these, they do not invent copy. */
+export const AUTH_COPY = {
+  signIn: {
+    title: "Welcome back",
+    description: (appName: string) => `Sign in to your ${appName} account.`,
+  },
+  signUp: {
+    title: "Create your account",
+    description: "Free to start. Add projects, launch agents, track everything.",
+  },
+  forgot: {
+    title: "Reset your password",
+    description: "Enter your email and we'll send a reset link.",
+    sentTitle: "Check your email",
+    sentDescription: (email: string) =>
+      `If an account exists for ${email}, we've sent a reset link. Check your inbox (and spam folder).`,
+  },
+  reset: {
+    title: "Choose a new password",
+    description: "Use at least 8 characters.",
+    doneTitle: "Password updated",
+    doneDescription: "Your password has been reset. Redirecting to sign in…",
+  },
+  verify: {
+    title: "Check your inbox",
+    description: "We sent you a verification link. Click it to confirm your email.",
+    successTitle: "Email verified",
+    successDescription: "Your email address has been confirmed. You're all set.",
+    expiredTitle: "Link expired",
+    expiredDescription: "This verification link is invalid or has expired. Enter your email to get a new one.",
+  },
+} as const;
+
 // ─── Public marketing nav — platform-wide content only.
 //
 // A deliberate architectural boundary lives here: every entry must apply to

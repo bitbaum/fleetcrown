@@ -31,7 +31,8 @@ export const PALETTE = {
     /** ≈ --text-tertiary (dark) */
     textTertiary: "#666666",
   },
-  /** Tailwind zinc-scale mirrors — OG-card greys, email chrome, xterm base. */
+  /** Tailwind zinc-scale mirrors — OG-card greys and xterm. Email chrome
+   *  lives in EMAIL_THEME (src/config/comms.ts) and maps to brand tokens. */
   zinc: {
     /** zinc-100 — email body background */
     100: "#f4f4f5",
