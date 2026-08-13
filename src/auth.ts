@@ -389,7 +389,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       // query that joins on a uuid column trips PostgreSQL — which Auth.js wraps as
       // AccessDenied. Resolve to the DB user via email before any uuid-typed write.
       // Org bootstrap (which needs the real UUID) lives in events.signIn below.
-      if (account?.type === "oauth" && user.email) {
+      // "oidc" too: OrangeCat's provider type is oidc, and gating on "oauth"
+      // alone silently skipped this backfill for every OrangeCat sign-in.
+      if ((account?.type === "oauth" || account?.type === "oidc") && user.email) {
         const existingUser = await getUserByEmail(user.email);
         if (existingUser) {
           const patch: UpdateUserInput = {};

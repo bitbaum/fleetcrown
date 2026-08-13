@@ -35,9 +35,10 @@ function ConnectedAccountsSection({ hasPassword, orangecatEnabled }: { hasPasswo
   const connectOrangeCat = async () => {
     setConnecting(true);
     setError(null);
-    // Auth.js links by verified-email match (allowDangerousEmailAccountLinking);
-    // an OC account with a DIFFERENT email signs into that other FC user
-    // instead of linking — same behavior as the sign-in page button.
+    // The orangecat provider deliberately has NO allowDangerousEmailAccountLinking
+    // (actor sub, not email, is the identity boundary — see src/auth.ts). From a
+    // live session Auth.js links the OC account to THIS user regardless of email;
+    // from the sign-in page an email collision yields OAuthAccountNotLinked instead.
     await signIn("orangecat", { callbackUrl: "/settings#account" });
   };
 
