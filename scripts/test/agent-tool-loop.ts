@@ -20,7 +20,7 @@ import { z } from "zod";
 import { parseTextToolCalls, stripToolCallLines, type ModelTurn } from "../../src/lib/agent/llm";
 import { defineTool, renderToolCatalog, toOpenAITools, type ToolRegistry } from "../../src/lib/agent/tools/registry";
 import { runLokiTurn } from "../../src/lib/agent/loop";
-import { makeFact } from "../../src/lib/agent/core/facts";
+import { makeFact, assignFactIds } from "../../src/lib/agent/core/facts";
 
 const NAMES = ["search_people", "list_projects", "propose_action"];
 
@@ -273,7 +273,59 @@ async function main() {
   );
 }
 
-  console.log("✓ agent tool loop: 10 checks passed (protocol tolerance, catalog shape, no-execute boundary, fact accumulation, repair, bounds)");
+// ── 11. A too-large prompt sheds facts instead of abandoning the loop ────────
+// Observed in production: the big model rate-limited, the 429 handler stepped
+// down to the 8B model as designed, and the 8B model then returned 413 because
+// a prompt sized for a 128k context does not fit a small one. The loop gave up
+// and fell back to weaker retrieval, so the step-down achieved nothing.
+{
+  const manyFacts = assignFactIds(
+    Array.from({ length: 40 }, (_, i) =>
+      makeFact({ kind: "project", subject: `proj-${i}`, source: "projects table", values: { name: `proj-${i}` } }),
+    ),
+  );
+  const sizes: number[] = [];
+  let calls = 0;
+  const model = (async (input: { messages: Array<{ content: string }> }) => {
+    calls++;
+    // Count rendered records to observe the shed.
+    sizes.push((input.messages[1]?.content.match(/^\[F\d+\]/gm) ?? []).length);
+    if (calls <= 2) throw new Error("groq 413: Request too large for model");
+    return { text: "Answered with what fits.", toolCalls: [], model: "stub" };
+  }) as never;
+
+  const r = await runLokiTurn({
+    userId: "u1",
+    message: "what am I working on?",
+    registry: STUB_REGISTRY,
+    callModel: model,
+    seed: { facts: manyFacts, directives: [] },
+  });
+  assert.equal(r.text, "Answered with what fits.", "a 413 must not fail the turn");
+  assert.ok(sizes.length >= 3, `expected retries, saw ${sizes.length} attempt(s)`);
+  assert.ok(sizes[1] < sizes[0], `facts must shrink on 413: ${sizes.join(" -> ")}`);
+  assert.ok(sizes[2] < sizes[1], `facts must shrink again: ${sizes.join(" -> ")}`);
+
+  // A non-413 error must NOT be retried — retrying a 401 or a 500 just burns
+  // the operator's latency for a guaranteed second failure.
+  let other = 0;
+  const failing = (async () => {
+    other++;
+    throw new Error("groq 401: invalid api key");
+  }) as never;
+  await runLokiTurn({
+    userId: "u1",
+    message: "hi",
+    registry: STUB_REGISTRY,
+    callModel: failing,
+    seed: { facts: manyFacts, directives: [] },
+  }).then(
+    () => assert.fail("a 401 must propagate"),
+    () => assert.equal(other, 1, "a non-413 error must not be retried"),
+  );
+}
+
+  console.log("✓ agent tool loop: 11 checks passed (protocol tolerance, catalog shape, no-execute boundary, fact accumulation, repair, bounds, 413 shedding)");
 }
 
 main().catch((e) => {

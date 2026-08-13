@@ -201,21 +201,50 @@ export async function runLokiTurn(input: {
     const grounded = buildGroundedContext({ facts, directives, renderedFacts: renderFacts(facts) });
     const voiceLine = input.voice?.trim() ? `\n\nAdopt this writing voice: ${input.voice.trim()}` : "";
 
-    const messages: ChatMessage[] = [
-      { role: "system", content: systemPrompt(registry) + voiceLine },
-      { role: "user", content: `${grounded}\n\n---\n\n${input.message}` },
-      ...conversation,
-    ];
-
     // The last round must produce an answer, so stop advertising tools — a weak
     // model handed tools will keep calling them, and the operator would get a
     // dangling tool call instead of a reply.
     const lastRound = round === MAX_ROUNDS - 1;
-    const turn = await callModel({
-      messages,
-      tools: lastRound ? [] : nativeTools,
-      validToolNames: lastRound ? [] : names,
-    });
+
+    // Shed context rather than abandon the loop when the prompt is too big.
+    //
+    // Observed in production: the big model rate-limited, the 429 handler
+    // stepped down to the 8B model as designed — and the 8B model then returned
+    // 413, because a prompt sized for a 128k context does not fit a small one.
+    // The loop gave up and fell back to a path with weaker retrieval, so the
+    // step-down that was supposed to keep tools working achieved nothing.
+    //
+    // Facts are the elastic part (projects + accumulated tool results), and the
+    // first ones are the most relevant, so halving keeps the head. Two attempts
+    // take 40 facts → 20 → 10, which fits every model in the chain.
+    const turn = await (async () => {
+      let budget = facts.length;
+      for (let attempt = 0; ; attempt++) {
+        const trimmed = budget >= facts.length ? facts : facts.slice(0, budget);
+        const ctx =
+          budget >= facts.length
+            ? grounded
+            : buildGroundedContext({ facts: trimmed, directives, renderedFacts: renderFacts(trimmed) });
+        try {
+          return await callModel({
+            messages: [
+              { role: "system", content: systemPrompt(registry) + voiceLine },
+              { role: "user", content: `${ctx}\n\n---\n\n${input.message}` },
+              ...conversation,
+            ],
+            tools: lastRound ? [] : nativeTools,
+            validToolNames: lastRound ? [] : names,
+          });
+        } catch (e) {
+          const tooLarge = /\b413\b|too large|context length|reduce the length/i.test(
+            e instanceof Error ? e.message : String(e),
+          );
+          if (!tooLarge || attempt >= 2 || budget <= 4) throw e;
+          budget = Math.max(4, Math.floor(budget / 2));
+          console.warn(`[loki] prompt too large, retrying with ${budget} facts`);
+        }
+      }
+    })();
     model = turn.model;
     text = turn.text;
 
