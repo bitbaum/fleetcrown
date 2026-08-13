@@ -77,7 +77,8 @@
     "doctor": "bash scripts/doctor.sh",
     "git:prune": "bash scripts/git/prune-merged.sh",
     "ship": "git push origin main",
-    "prepare": "husky"
+    "prepare": "husky",
+    "sync:agent-core": "tsx scripts/sync-agent-core.ts"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.3",
