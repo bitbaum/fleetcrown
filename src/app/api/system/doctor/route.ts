@@ -148,22 +148,34 @@ export async function GET() {
   const captureScript = `${homedir()}/.claude/hooks/fleetcrown-capture.sh`;
   const claudeSettingsPath = `${homedir()}/.claude/settings.json`;
   let captureRegistered = false;
+  let legacyCaptureRegistered = false;
   try {
     const settings = JSON.parse(readFileSync(/*turbopackIgnore: true*/ claudeSettingsPath, "utf8")) as {
       hooks?: { UserPromptSubmit?: Array<{ hooks?: Array<{ command?: string }> }> };
     };
-    captureRegistered = (settings.hooks?.UserPromptSubmit ?? []).some((entry) =>
-      (entry.hooks ?? []).some((h) => typeof h.command === "string" && h.command.includes("fleetcrown-capture.sh")),
+    const submitHooks = (settings.hooks?.UserPromptSubmit ?? []).flatMap((entry) => entry.hooks ?? []);
+    captureRegistered = submitHooks.some(
+      (h) => typeof h.command === "string" && h.command.includes("fleetcrown-capture.sh"),
+    );
+    // The June-era hook posts to localhost:3000 and silently drops every
+    // prompt on a normal setup. If it is still registered the sensor LOOKS
+    // wired but records nothing — the exact failure that went unnoticed for
+    // two months. Fleet Runner ≥0.8.12 deregisters it on startup.
+    legacyCaptureRegistered = submitHooks.some(
+      (h) => typeof h.command === "string" && h.command.includes("fleet-user-prompt.sh"),
     );
   } catch { /* missing or unparseable settings.json → not registered */ }
   const captureScriptExists = existsSync(/*turbopackIgnore: true*/ captureScript);
+  const captureHealthy = captureRegistered && captureScriptExists && !legacyCaptureRegistered;
   checks.push(check(
     "hooks-capture",
     "Claude prompt-capture hook",
-    captureRegistered && captureScriptExists ? "pass" : "warn",
-    captureRegistered && captureScriptExists
+    captureHealthy ? "pass" : "warn",
+    captureHealthy
       ? "UserPromptSubmit hook installed — directly-typed prompts reach Activity."
-      : "Not installed — directly-typed Claude prompts won't appear in Activity. Start Fleet Runner (it installs the hook once a token is saved).",
+      : legacyCaptureRegistered
+        ? "Legacy fleet-user-prompt.sh is still registered — it posts to localhost and drops prompts. Restart Fleet Runner (≥0.8.12) to migrate to fleetcrown-capture.sh."
+        : "Not installed — directly-typed Claude prompts won't appear in Activity. Start Fleet Runner (it installs the hook once a token is saved).",
   ));
 
   const token = readTokenFile();

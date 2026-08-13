@@ -38,6 +38,12 @@ const HOOKS_DIR = join(CLAUDE_DIR, 'hooks')
 const HOOK_SCRIPT = join(HOOKS_DIR, 'fleetcrown-capture.sh')
 const SETTINGS_FILE = join(CLAUDE_DIR, 'settings.json')
 
+// Pre-runner capture hook (June 2026 era): posted to localhost:3000, where
+// nothing listens on a normal setup — every typed prompt was silently dropped
+// for months. One capture hook is the SSOT; if both stayed registered, every
+// prompt would fire two capture POSTs. Deregistered on sight.
+const LEGACY_HOOK_MARKER = 'fleet-user-prompt.sh'
+
 /** Same base-URL resolution as poller/pusher: dev override, else brand SSOT. */
 function baseUrl(): string {
   return ((process.env.FLEETCROWN_WEB_URL || '').trim() || APP_URL).replace(/\/$/, '')
@@ -90,18 +96,38 @@ export function ensureCaptureHook(): void {
       }
     }
     const hooks = (settings.hooks ?? {}) as Record<string, unknown>
-    const entries: HookEntry[] = Array.isArray(hooks.UserPromptSubmit)
+    let entries: HookEntry[] = Array.isArray(hooks.UserPromptSubmit)
       ? (hooks.UserPromptSubmit as HookEntry[])
       : []
+    let changed = false
+
+    // Strip the dead legacy hook wherever it appears; drop entries emptied out.
+    entries = entries.flatMap((entry) => {
+      const before = entry.hooks ?? []
+      const kept = before.filter(
+        (h) => !(typeof h.command === 'string' && h.command.includes(LEGACY_HOOK_MARKER)),
+      )
+      if (kept.length !== before.length) {
+        changed = true
+        console.log('[capture-hook] deregistered legacy fleet-user-prompt.sh hook')
+        if (kept.length === 0) return []
+        return [{ ...entry, hooks: kept }]
+      }
+      return [entry]
+    })
+
     const registered = entries.some((entry) =>
       (entry.hooks ?? []).some((h) => typeof h.command === 'string' && h.command.includes('fleetcrown-capture.sh')),
     )
     if (!registered) {
       entries.push({ hooks: [{ type: 'command', command: HOOK_SCRIPT }] })
+      changed = true
+      console.log('[capture-hook] registered UserPromptSubmit hook in ~/.claude/settings.json')
+    }
+    if (changed) {
       hooks.UserPromptSubmit = entries
       settings.hooks = hooks
       writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2) + '\n', 'utf8')
-      console.log('[capture-hook] registered UserPromptSubmit hook in ~/.claude/settings.json')
     }
   } catch (e) {
     // Best-effort: a failed install must never break runner startup.
