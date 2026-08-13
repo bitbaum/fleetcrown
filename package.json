@@ -79,7 +79,7 @@
     "ship": "git push origin main",
     "prepare": "husky",
     "sync:agent-core": "tsx scripts/sync-agent-core.ts",
-    "probe:loki-models": "tsx scripts/probe-loki-models.ts"
+    "probe:models": "tsx scripts/probe-models.ts"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.3",
