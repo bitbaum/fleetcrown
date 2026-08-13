@@ -60,8 +60,22 @@ const VIEWPORTS = [
   { name: "1440", width: 1440, height: 900, touch: false },
 ];
 
-/** Authenticated surfaces the operator actually uses daily. */
-const PAGES = ["/loki", "/today", "/control", "/projects", "/approvals"];
+/**
+ * Every authenticated surface reachable from the nav, plus the sub-routes that
+ * carry their own layout. Auditing five pages proved the harness; auditing the
+ * whole app is what actually protects it — a rule enforced on a sample is a rule
+ * with holes exactly where nobody looked.
+ *
+ * Public/marketing routes are excluded: they render for signed-out visitors and
+ * belong to `npm run smoke`, which already covers them at no session cost.
+ */
+const PAGES = [
+  "/today", "/loki", "/control", "/projects", "/approvals",
+  "/terminal", "/prompts", "/activity", "/system", "/agents",
+  "/atlas", "/thoughts", "/settings", "/frontier", "/digests",
+  "/decisions", "/history", "/integrations/orangecat/build",
+  "/control/import", "/control/new-from-scratch",
+];
 
 const MIN_TOUCH_PX = 44;
 
@@ -152,7 +166,46 @@ function measurePage(minTouch) {
     }))
     .slice(0, 6);
 
-  return { vw, scrollWidth: de.scrollWidth, overflow: de.scrollWidth > vw + 1, offenders, small };
+  // Text clipped by a fixed-height box: content the operator simply cannot
+  // read, and invisible to an overflow check because the container itself fits.
+  const clipped = [...document.querySelectorAll('body *')]
+    .filter((el) => {
+      if (el.children.length > 0) return false;
+      const t = (el.textContent || '').trim();
+      if (t.length < 12) return false;
+      const cs = getComputedStyle(el);
+      if (cs.overflow === 'visible' || cs.visibility === 'hidden') return false;
+      // Ellipsis is a deliberate design choice; genuine vertical clipping is not.
+      if (cs.textOverflow === 'ellipsis' && el.scrollWidth > el.clientWidth) return false;
+      return el.scrollHeight > el.clientHeight + 2;
+    })
+    .map((el) => ({ tag: el.tagName.toLowerCase(), text: (el.textContent || '').trim().slice(0, 30), hidden: el.scrollHeight - el.clientHeight }))
+    .slice(0, 5);
+
+  // Content trapped under fixed chrome (mobile bottom nav). Reachable only if
+  // the page scrolls far enough; on a short page it is permanently covered.
+  const bars = [...document.querySelectorAll('body *')].filter((el) => {
+    const cs = getComputedStyle(el);
+    const r = el.getBoundingClientRect();
+    return cs.position === 'fixed' && r.height > 24 && r.width > vw * 0.6 && r.bottom >= de.clientHeight - 2;
+  });
+  const barTop = bars.length ? Math.min(...bars.map((b) => b.getBoundingClientRect().top)) : Infinity;
+  const buried = bars.length === 0 ? [] : [...document.querySelectorAll('button, a[href], input, select')]
+    .filter((el) => {
+      const r = el.getBoundingClientRect();
+      if (r.height === 0 || getComputedStyle(el).position === 'fixed') return false;
+      // Intersects the bar AND the page cannot scroll further to free it.
+      return r.bottom > barTop && r.top < de.clientHeight && de.scrollHeight <= de.clientHeight + 2;
+    })
+    .map((el) => ({ tag: el.tagName.toLowerCase(), label: (el.getAttribute('aria-label') || el.textContent || '').trim().slice(0, 24) }))
+    .slice(0, 4);
+
+  const brokenImages = [...document.querySelectorAll('img')]
+    .filter((img) => img.complete && img.naturalWidth === 0 && (img.getAttribute('src') || '').length > 0)
+    .map((img) => (img.getAttribute('src') || '').slice(0, 60))
+    .slice(0, 4);
+
+  return { vw, scrollWidth: de.scrollWidth, overflow: de.scrollWidth > vw + 1, offenders, small, clipped, buried, brokenImages };
 }
 
 async function main() {
@@ -185,6 +238,14 @@ async function main() {
 
     for (const route of pages) {
       const page = await ctx.newPage();
+      // Console + network failures are free to collect while the page is open
+      // and are the cheapest signal that a surface is quietly broken — an audit
+      // that only measures boxes will pass a page whose data never loaded.
+      const consoleErrors = [];
+      page.on("console", (m) => { if (m.type() === "error") consoleErrors.push(m.text().slice(0, 120)); });
+      page.on("pageerror", (e) => consoleErrors.push(`uncaught: ${String(e.message).slice(0, 120)}`));
+      const httpFailures = [];
+      page.on("response", (r) => { if (r.status() >= 500) httpFailures.push(`${r.status()} ${r.url().replace(BASE, "").slice(0, 70)}`); });
       try {
         await page.goto(`${BASE}${route}`, { waitUntil: "networkidle", timeout: 45_000 });
         // Let late layout (fonts, async panes) settle before measuring — a
@@ -197,12 +258,19 @@ async function main() {
         const shot = path.join(OUT, `${route.replace(/\//g, "") || "root"}-${vp.name}.png`);
         await page.screenshot({ path: shot, fullPage: false });
 
+        // HARD failures: the page is broken, not merely imperfect.
         if (r.overflow) {
           failures.push(
             `${route} @${vp.name}: horizontal overflow ${r.scrollWidth}px > ${r.vw}px\n` +
               r.offenders.map((o) => `      ${o.tag}.${o.cls} (right=${o.right}, w=${o.width})`).join("\n"),
           );
           console.log(`  ✗ ${route} @${vp.name}px — overflow ${r.scrollWidth} > ${r.vw}`);
+        } else if (httpFailures.length > 0) {
+          failures.push(`${route} @${vp.name}: server error(s) — ${httpFailures.slice(0, 3).join("; ")}`);
+          console.log(`  ✗ ${route} @${vp.name}px — ${httpFailures[0]}`);
+        } else if (r.buried.length > 0) {
+          failures.push(`${route} @${vp.name}: control(s) trapped under fixed chrome on an unscrollable page — ${r.buried.map((b) => `${b.tag}"${b.label}"`).join(", ")}`);
+          console.log(`  ✗ ${route} @${vp.name}px — ${r.buried.length} control(s) buried under the bottom bar`);
         } else if (vp.touch && r.small.length > 0) {
           // Reported, not failed: the 44px rule has legitimate exceptions
           // (inline text links), and failing on it would bury the overflow
@@ -211,6 +279,10 @@ async function main() {
         } else {
           console.log(`  ✓ ${route} @${vp.name}px`);
         }
+        // Soft signals, always reported alongside the verdict above.
+        if (r.clipped.length > 0) console.log(`     ⚠ clipped text: ${r.clipped.map((c) => `"${c.text}" (-${c.hidden}px)`).join(", ")}`);
+        if (r.brokenImages.length > 0) console.log(`     ⚠ broken image(s): ${r.brokenImages.join(", ")}`);
+        if (consoleErrors.length > 0) console.log(`     ⚠ console: ${[...new Set(consoleErrors)].slice(0, 2).join(" | ")}`);
       } catch (e) {
         failures.push(`${route} @${vp.name}: ${e instanceof Error ? e.message.slice(0, 120) : e}`);
         console.log(`  ✗ ${route} @${vp.name}px — ${e instanceof Error ? e.message.slice(0, 80) : e}`);
