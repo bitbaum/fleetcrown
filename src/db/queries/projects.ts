@@ -1,6 +1,6 @@
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
 import { db } from "@/db";
-import { entities, entityRelations, interactions, goals, userProjects, orgMemberships, orgs } from "@/db/schema";
+import { entities, entityRelations, interactions, goals, userProjects, orgMemberships, orgs, siteSnapshots } from "@/db/schema";
 import { eq, and, asc, desc, inArray, ilike, or } from "drizzle-orm";
 import { fetchAttributesByEntityIds, getOrgPeerIds } from "./utils";
 import { findProjectEntityByName } from "./project-merge";
@@ -176,19 +176,43 @@ export async function deleteProject(userId: string, id: string) {
 // concrete context instead of just a clickable title.
 async function fetchRuntimeMetaByEntityIds(
   entityIds: string[],
-): Promise<Map<string, { dirPath: string | null; agentPref: string | null }>> {
-  const out = new Map<string, { dirPath: string | null; agentPref: string | null }>();
+): Promise<Map<string, {
+  dirPath: string | null;
+  agentPref: string | null;
+  userProjectId: string;
+  liveUrl: string | null;
+  siteOk: boolean | null;
+}>> {
+  const out = new Map<string, {
+    dirPath: string | null;
+    agentPref: string | null;
+    userProjectId: string;
+    liveUrl: string | null;
+    siteOk: boolean | null;
+  }>();
   if (entityIds.length === 0) return out;
   const rows = await db
     .select({
       entityProjectId: userProjects.entityProjectId,
+      userProjectId: userProjects.id,
       dirPath: userProjects.dirPath,
       agentPref: userProjects.agentPref,
+      liveUrl: userProjects.liveUrl,
+      siteOk: siteSnapshots.ok,
     })
     .from(userProjects)
+    .leftJoin(siteSnapshots, eq(siteSnapshots.projectId, userProjects.id))
     .where(inArray(userProjects.entityProjectId, entityIds));
   for (const r of rows) {
-    if (r.entityProjectId) out.set(r.entityProjectId, { dirPath: r.dirPath, agentPref: r.agentPref });
+    if (r.entityProjectId) {
+      out.set(r.entityProjectId, {
+        dirPath: r.dirPath,
+        agentPref: r.agentPref,
+        userProjectId: r.userProjectId,
+        liveUrl: r.liveUrl,
+        siteOk: r.siteOk,
+      });
+    }
   }
   return out;
 }
@@ -212,12 +236,15 @@ export async function getProjects(userId: string) {
   ]);
 
   return projects.map((p) => {
-    const runtime = runtimeByEntity.get(p.id) ?? { dirPath: null, agentPref: null };
+    const runtime = runtimeByEntity.get(p.id);
     return {
       ...p,
       attrs: attrsByEntity.get(p.id) ?? {},
-      dirPath: runtime.dirPath,
-      agentPref: runtime.agentPref,
+      dirPath: runtime?.dirPath ?? null,
+      agentPref: runtime?.agentPref ?? null,
+      userProjectId: runtime?.userProjectId ?? null,
+      liveUrl: runtime?.liveUrl ?? null,
+      siteOk: runtime?.siteOk ?? null,
     };
   });
 }
@@ -239,12 +266,15 @@ export async function getOrgEntityProjects(userId: string): Promise<(ProjectRow 
     fetchRuntimeMetaByEntityIds(ids),
   ]);
   return projects.map((p) => {
-    const runtime = runtimeByEntity.get(p.id) ?? { dirPath: null, agentPref: null };
+    const runtime = runtimeByEntity.get(p.id);
     return {
       ...p,
       attrs: attrsByEntity.get(p.id) ?? {},
-      dirPath: runtime.dirPath,
-      agentPref: runtime.agentPref,
+      dirPath: runtime?.dirPath ?? null,
+      agentPref: runtime?.agentPref ?? null,
+      userProjectId: runtime?.userProjectId ?? null,
+      liveUrl: runtime?.liveUrl ?? null,
+      siteOk: runtime?.siteOk ?? null,
       readonly: true as const,
     };
   });

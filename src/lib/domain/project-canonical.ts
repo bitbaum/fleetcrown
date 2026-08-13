@@ -15,6 +15,8 @@ export interface ProjectEntityScoreInput {
   attrs: Record<string, string>;
   readonly?: boolean;
   dirPath?: string | null;
+  liveUrl?: string | null;
+  siteOk?: boolean | null;
 }
 
 /** Higher score wins when merging duplicate project entities. */
@@ -23,7 +25,7 @@ export function scoreProjectEntity(row: ProjectEntityScoreInput): number {
   if (row.description?.trim()) score += 10;
   if (row.gitUrl) score += 5;
   if (row.dirPath) score += 3;
-  if (hasProjectAttention(row.attrs)) score += 4;
+  if (hasProjectAttention(row)) score += 4;
   if (hasAnswer(row.attrs["next_step"])) score += 2;
   score += Object.keys(row.attrs).length;
   if (!row.readonly) score += 20;

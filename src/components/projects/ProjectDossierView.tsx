@@ -28,7 +28,7 @@ export function ProjectDossierView({
   const { detail, userProject } = dossier;
   const attrs = detail.attrs;
   const name = detail.project.name;
-  const links = getProjectLinks(attrs, userProject?.gitUrl ?? detail.project.gitUrl);
+  const links = getProjectLinks(attrs, userProject?.gitUrl ?? detail.project.gitUrl, userProject?.liveUrl);
   // Header lead = a SHORT summary. Descriptions are often the whole CLAUDE.md.
   const description =
     summarizeDescription(detail.project.description) ??

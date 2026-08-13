@@ -4,6 +4,7 @@ import {
   mergeDuplicateProjectRows,
 } from "../../src/lib/domain/project-canonical";
 import { shortProjectStatus } from "../../src/lib/projects-display";
+import { hasProjectAttention, isSiteDown } from "../../src/lib/projects-page-stats";
 import type { ProjectGridRow } from "../../src/components/projects/ProjectGridCard";
 
 function row(partial: Partial<ProjectGridRow> & Pick<ProjectGridRow, "id" | "name">): ProjectGridRow {
@@ -32,5 +33,11 @@ const merged = mergeDuplicateProjectRows([
 ]);
 assert.equal(merged.length, 1);
 assert.equal(merged[0]!.id, "2");
+
+const down = row({ id: "3", name: "site", liveUrl: "https://x.test", siteOk: false });
+assert.equal(isSiteDown(down), true);
+assert.equal(hasProjectAttention(down), true, "a down site needs attention");
+assert.equal(hasProjectAttention(row({ id: "4", name: "ok", liveUrl: "https://x.test", siteOk: true })), false);
+assert.equal(hasProjectAttention(row({ id: "5", name: "none" })), false, "no URL is not an alarm");
 
 console.log("✓ projects-display tests passed");

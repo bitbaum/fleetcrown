@@ -17,7 +17,7 @@ assert.deepEqual(
   "Work is the four daily surfaces — destinations do not share that seat",
 );
 
-for (const id of ["terminal", "agents", "atlas", "approvals", "prompts", "activity", "system", "thoughts"] as const) {
+for (const id of ["terminal", "approvals", "prompts", "activity", "system", "thoughts"] as const) {
   assert.ok(
     more.items.some((i) => i.id === id),
     `${id} stays reachable under More`,
@@ -26,8 +26,12 @@ for (const id of ["terminal", "agents", "atlas", "approvals", "prompts", "activi
     NAV_ITEMS.some((i) => i.id === id),
     `${id} stays in NAV_ITEMS (palette + titles)`,
   );
-  assert.ok(NAV[id], `${id} route is not deleted`);
 }
+
+const listed = new Set(SIDEBAR_SECTIONS.flatMap((s) => s.items.map((i) => i.id)));
+assert.equal(listed.has("agents"), false, "Agents is Control, not a nav peer");
+assert.equal(listed.has("atlas"), false, "Atlas is Projects, not a nav peer");
+assert.ok(NAV.agents && NAV.atlas, "retired routes stay named so redirects stay honest");
 
 assert.ok(
   FLEET_SURFACES.some((s) => s.id === "terminal"),

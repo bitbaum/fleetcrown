@@ -16,6 +16,8 @@ export type ProjectHealthInput = {
   description: string | null;
   gitUrl?: string | null;
   dirPath?: string | null;
+  /** First-class live_url on user_projects. Attrs are the fallback. */
+  liveUrl?: string | null;
   attrs: Record<string, string>;
 };
 
@@ -60,7 +62,7 @@ export function isCheckableDoneBar(value: string | undefined | null): boolean {
 export function computeProjectHealth(input: ProjectHealthInput): ProjectHealth {
   const attrs = input.attrs;
   const description = cleanDescription(input.description ?? attrs["description"] ?? null);
-  const liveUrl = attrs["production_url"] ?? attrs["url"];
+  const liveUrl = input.liveUrl || attrs["production_url"] || attrs["url"];
   const repo = input.gitUrl || attrs["repo"] || attrs["github_repo"];
 
   const checks: ProjectHealthCheck[] = [

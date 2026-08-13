@@ -47,10 +47,10 @@ export const NAV = {
   loki:       { id: "loki",     label: "Loki",     description: "Talk to your fleet — ask or dispatch in plain language", href: "/loki",       icon: MessageSquare, active: true, mobile: true  },
   approvals:  { id: "approvals", label: "Approvals", description: "Review & approve actions Loki proposed", href: "/approvals",  icon: Inbox,        active: true,  mobile: false },
   terminal:   { id: "terminal", label: "Terminal", description: "Type directly into a live agent — cloud or this computer", href: "/terminal",   icon: SquareTerminal, active: true, mobile: false },
-  agents:     { id: "agents",   label: "Agents",   description: "Fleet roster & inter-agent messages", href: "/agents",     icon: Network,      active: true,  mobile: false },
+  agents:     { id: "agents",   label: "Agents",   description: "Folded into Control — roster and escalations live there", href: "/control",     icon: Network,      active: true,  mobile: false },
   control:    { id: "control",  label: "Control",  description: "Command deck — live agent status, dispatch work", href: "/control",    icon: Terminal,     active: true,  mobile: true  },
   projects:   { id: "projects", label: "Projects", description: "Your project catalog — health, context & goals", href: "/projects",   icon: FolderKanban, active: true,  mobile: false },
-  atlas:      { id: "atlas",    label: "Atlas",    description: "Every site you run — status, preview & how they link", href: "/atlas", icon: Globe, active: true, mobile: false },
+  atlas:      { id: "atlas",    label: "Atlas",    description: "Folded into Projects — live URL and down-state live there", href: "/projects", icon: Globe, active: true, mobile: false },
   prompts:    { id: "prompts",  label: "Prompts",  description: "Agent prompt library & scheduler",  href: "/prompts",    icon: Zap,          active: true,  mobile: false },
   activity:   { id: "activity", label: "Activity", description: "Project status and event timeline",  href: "/activity", icon: Newspaper,    active: true,  mobile: false },
   system:     { id: "system",   label: "System",   description: "Runtime health & scheduled jobs",   href: "/system",     icon: Server,       active: true,  mobile: false },
@@ -91,8 +91,8 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
     id: "work",
     // Daily surfaces only. A page earns this seat if you open it with no
     // context: queue (Today), command (Loki), live state (Control), catalog
-    // (Projects). Destinations — Terminal after a live job, Atlas after a
-    // URL, Agents as a second roster — live in "more".
+    // (Projects). Destinations live in "more". Agents and Atlas are not
+    // pages — roster/escalations sit on Control, live URL on Projects.
     label: "Work",
     items: [NAV.today, NAV.loki, NAV.control, NAV.projects],
   },
@@ -101,7 +101,7 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
     // Reachable from Menu, command palette, FleetSurfaceGuide, and deep
     // links. Not a daily peer of Work — opening them empty is a dead page.
     label: "More",
-    items: [NAV.approvals, NAV.terminal, NAV.agents, NAV.atlas, NAV.prompts, NAV.activity, NAV.system, NAV.thoughts],
+    items: [NAV.approvals, NAV.terminal, NAV.prompts, NAV.activity, NAV.system, NAV.thoughts],
   },
   {
     id: "private",
