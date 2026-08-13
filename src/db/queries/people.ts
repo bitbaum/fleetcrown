@@ -32,6 +32,8 @@ export { SORT_MODE, type SortMode };
 export const CreatePersonBody = z.object({
   name: z.string().trim().min(1, "name is required"),
   description: z.string().trim().optional(),
+  source: z.string().trim().optional(),
+  externalId: z.string().trim().optional(),
 });
 
 export type CreatePersonInput = z.infer<typeof CreatePersonBody>;
@@ -240,10 +242,17 @@ export async function getPersonDetail(userId: string, id: string) {
   };
 }
 
-export async function createPerson(userId: string, { name, description }: CreatePersonInput) {
+export async function createPerson(userId: string, { name, description, source, externalId }: CreatePersonInput) {
   const [created] = await db
     .insert(entities)
-    .values({ userId, name, type: ENTITY_TYPE.PERSON, description: description || null, source: SOURCE_FLEETCROWN_UI })
+    .values({
+      userId,
+      name,
+      type: ENTITY_TYPE.PERSON,
+      description: description || null,
+      source: source || SOURCE_FLEETCROWN_UI,
+      externalId: externalId || null,
+    })
     .returning({ id: entities.id, name: entities.name });
   return created;
 }

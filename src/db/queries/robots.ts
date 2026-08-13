@@ -2,10 +2,12 @@ import { SOURCE_FLEETCROWN_UI } from "@/lib/constants";
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
 import {
   CreateRobotBody,
+  DEFAULT_VACUUMS,
   MARKET_ATTR,
   MARKET_OFFERS,
   PatchRobotBody,
   ROBOT_ATTR,
+  ROBOT_CLASS,
   assertCanMarket,
   parseMarketFlags,
   parseRobotClass,
@@ -210,7 +212,37 @@ export async function patchRobot(userId: string, id: string, data: z.infer<typeo
     market: data.market,
   });
 
-  return getRobotDetail(userId, id);
+  const detail = await getRobotDetail(userId, id);
+  if (detail && (detail.market.book || detail.market.rent || detail.market.sell) && !detail.orangecatAssetId) {
+    const { publishRobotAsset } = await import("@/lib/integrations/orangecat-asset");
+    await publishRobotAsset(userId, detail);
+    return getRobotDetail(userId, id);
+  }
+  return detail;
+}
+
+export async function ensureDefaultVacuums(userId: string): Promise<RobotWithAttributes[]> {
+  const created: RobotWithAttributes[] = [];
+  for (const spec of DEFAULT_VACUUMS) {
+    const existing = await db
+      .select({ id: entities.id })
+      .from(entities)
+      .where(and(eq(entities.userId, userId), eq(entities.type, ENTITY_TYPE.ROBOT), eq(entities.name, spec.name)))
+      .limit(1);
+    if (existing[0]) {
+      const detail = await getRobotDetail(userId, existing[0].id);
+      if (detail) created.push(detail);
+      continue;
+    }
+    const robot = await createRobot(userId, {
+      name: spec.name,
+      class: ROBOT_CLASS.VACUUM,
+      description: spec.description,
+    });
+    const detail = await getRobotDetail(userId, robot.id);
+    if (detail) created.push(detail);
+  }
+  return created;
 }
 
 export async function deleteRobot(userId: string, id: string) {

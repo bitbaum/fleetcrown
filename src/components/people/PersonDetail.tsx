@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { X, Link2, Loader2 } from "lucide-react";
 import { LokiDispatchButton } from "@/components/shared/LokiDispatchButton";
 import { DeleteButton } from "@/components/ui/delete-button";
@@ -21,11 +21,13 @@ export function PersonDetail({
   onClose,
   onInteractionLogged,
   onDeleted,
+  variant = "drawer",
 }: {
   personId: string;
   onClose: () => void;
   onInteractionLogged?: (personId: string, at: Date) => void;
   onDeleted?: (personId: string) => void;
+  variant?: "drawer" | "page";
 }) {
   const [data, setData] = useState<PersonDetailData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -93,8 +95,15 @@ export function PersonDetail({
     }
   };
 
+  const shell = variant === "page"
+    ? ({ children }: { children: ReactNode }) => <div className="space-y-0">{children}</div>
+    : ({ children }: { children: ReactNode }) => (
+      <Drawer onClose={onClose} size="md" surface="background">{children}</Drawer>
+    );
+  const Shell = shell;
+
   return (
-    <Drawer onClose={onClose} size="md" surface="background">
+    <Shell>
       <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border-subtle bg-surface-page/95 p-4 sm:p-5 backdrop-blur">
         <div className="flex min-w-0 items-center gap-2">
           {nameEdit.editing ? (
@@ -293,6 +302,6 @@ export function PersonDetail({
           )}
         </div>
       )}
-    </Drawer>
+    </Shell>
   );
 }

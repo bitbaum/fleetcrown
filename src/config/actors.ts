@@ -67,6 +67,22 @@ export const ROBOT_CLASS = {
 export type RobotClass = (typeof ROBOT_CLASS)[keyof typeof ROBOT_CLASS];
 export const ROBOT_CLASSES = Object.values(ROBOT_CLASS) as [RobotClass, ...RobotClass[]];
 
+/** OrangeCat already has robot / drone / vehicle asset types. Map class → listing type. */
+export const ROBOT_CLASS_TO_OC_ASSET: Record<RobotClass, string> = {
+  [ROBOT_CLASS.HUMANOID]: "robot",
+  [ROBOT_CLASS.VACUUM]: "robot",
+  [ROBOT_CLASS.DRONE]: "drone",
+  [ROBOT_CLASS.INDUSTRIAL]: "robot",
+  [ROBOT_CLASS.VEHICLE]: "vehicle",
+  [ROBOT_CLASS.COMPANION]: "robot",
+  [ROBOT_CLASS.OTHER]: "robot",
+};
+
+export const DEFAULT_VACUUMS = [
+  { name: "Kitchen vacuum", class: ROBOT_CLASS.VACUUM, description: "Robot vacuum — kitchen and ground floor." },
+  { name: "Hallway vacuum", class: ROBOT_CLASS.VACUUM, description: "Robot vacuum — hallway and upstairs." },
+] as const;
+
 export const ROBOT_CLASS_LABEL: Record<RobotClass, string> = {
   [ROBOT_CLASS.HUMANOID]: "Humanoid",
   [ROBOT_CLASS.VACUUM]: "Vacuum",

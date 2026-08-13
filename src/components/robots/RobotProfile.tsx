@@ -145,8 +145,14 @@ export function RobotProfile({ robot }: { robot: RobotWithAttributes }) {
             );
           })}
         </div>
-        {robot.orangecatAssetId && (
-          <p className="text-sm text-text-tertiary">OrangeCat asset {robot.orangecatAssetId}</p>
+        {robot.orangecatAssetId ? (
+          <p className="text-sm text-text-secondary">
+            Listed on OrangeCat as asset {robot.orangecatAssetId}.
+          </p>
+        ) : (
+          <p className="text-sm text-text-tertiary">
+            Flip an offer on to publish this machine as an OrangeCat asset. People cannot be listed.
+          </p>
         )}
       </section>
 

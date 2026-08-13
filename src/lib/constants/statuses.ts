@@ -60,6 +60,12 @@ export const ACTION_TYPE = {
   FOLLOW_UP:         "follow_up",
   /** Approve → injectPrompt a prepared prompt into a project (feedback digester). */
   DISPATCH_PROMPT:   "dispatch_prompt",
+  /** Accept a parsed contact into this user's private book. Never a scrape. */
+  IMPORT_PERSON:     "import_person",
+  /** Accept a field proposal onto an existing person. Never silent. */
+  ENRICH_PERSON:     "enrich_person",
+  /** Collapse two person rows that are the same human. Robots stay out. */
+  MERGE_PEOPLE:      "merge_people",
   OTHER:             "other",
 } as const;
 export type ActionType = (typeof ACTION_TYPE)[keyof typeof ACTION_TYPE];

@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Search, ArrowUpDown, Users } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { PersonCard } from "./PersonCard";
-import { PersonDetail } from "./PersonDetail";
 import { NewPersonButton } from "./NewPersonButton";
+import { PeopleBookPanel } from "./PeopleBookPanel";
 import { type PersonWithAttributes } from "@/db/queries/people";
 import { getJson } from "@/lib/api/fetch";
 import { SORT_MODE, SORT_LABELS, type SortMode } from "@/lib/constants/statuses";
@@ -30,7 +31,7 @@ export function PeopleGrid({
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortMode>(SORT_MODE.RECENT);
   const [healthFilter, setHealthFilter] = useState<RelationshipHealth[]>(initialHealthFilter);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState(false);
   const [offset, setOffset] = useState(0);
@@ -39,8 +40,8 @@ export function PeopleGrid({
 
   useEffect(() => {
     const open = new URLSearchParams(window.location.search).get("open");
-    if (open) setSelectedId(open);
-  }, []);
+    if (open) router.replace(`/people/${open}`);
+  }, [router]);
 
   // Keep URL bar in sync with health filter so the link is bookmarkable/shareable.
   // Uses replaceState (not router.replace) to avoid triggering a server re-render.
@@ -152,6 +153,8 @@ export function PeopleGrid({
         <NewPersonButton onCreated={() => search(query, sort, healthFilter, 0)} />
       </div>
 
+      <PeopleBookPanel onChanged={() => search(query, sort, healthFilter, 0)} />
+
       <div className="flex flex-wrap gap-2">
         {HEALTH_FILTERS.map(({ value, label }) => {
           const active = healthFilter.includes(value);
@@ -210,7 +213,7 @@ export function PeopleGrid({
             <PersonCard
               key={person.id}
               person={person}
-              onClick={() => setSelectedId(person.id)}
+              onClick={() => router.push(`/people/${person.id}`)}
               onLogged={handleLogged}
             />
           ))}
@@ -227,18 +230,6 @@ export function PeopleGrid({
         </button>
       )}
 
-      {selectedId && (
-        <PersonDetail
-          personId={selectedId}
-          onClose={() => setSelectedId(null)}
-          onInteractionLogged={handleLogged}
-          onDeleted={(id) => {
-            setPeople((prev) => prev.filter((p) => p.id !== id));
-            setTotal((t) => t - 1);
-            setSelectedId(null);
-          }}
-        />
-      )}
     </>
   );
 }
