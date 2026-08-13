@@ -17,12 +17,15 @@ const InjectBody = z.object({
   customPrompt: z.string().max(4000).optional(),
   adapter:      z.enum(ORCHESTRATION_ADAPTER_IDS).optional(),
   runId:        z.string().uuid().optional(),
+  // Chat-originated dispatches (Loki's fleet skill) ask for the outcome to be
+  // pushed back to chat on close — see lib/orchestration/notify-close.ts.
+  notifyOnClose: z.boolean().optional(),
 }).refine((d) => d.promptKey || d.customPrompt, { message: "promptKey or customPrompt required" });
 
 export async function POST(req: NextRequest) {
   const dataOrResp = await readJsonBody(req, InjectBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
-  const { tab, promptKey, customPrompt, adapter, runId } = dataOrResp;
+  const { tab, promptKey, customPrompt, adapter, runId, notifyOnClose } = dataOrResp;
 
   const userId = await getApiUserId();
   if (!userId) {
@@ -50,6 +53,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { status, body } = await injectPrompt({ tab, promptKey, customPrompt, adapter, runId }, userId);
+  const { status, body } = await injectPrompt({ tab, promptKey, customPrompt, adapter, runId, notifyOnClose }, userId);
   return NextResponse.json(body, { status });
 }

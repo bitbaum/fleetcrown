@@ -26,6 +26,11 @@ export type OrchestrationRunPayload = {
   /** Repo-side work evidence attached when the reaper corrects a timeout
    *  verdict (reap-evidence.ts). */
   evidence?: { kind: string; url: string; title: string; atMs: number };
+  /** Push a chat notification (Telegram) when this run closes. Set by
+   *  dispatches that originate in chat (Loki's fleet skill) so the answer
+   *  comes back to where the ask was made; absent for UI dispatches, which
+   *  the operator watches in Control. */
+  notifyOnClose?: boolean;
 };
 
 /** Canonical run outcome values — SSOT for the column type, the finish-route
