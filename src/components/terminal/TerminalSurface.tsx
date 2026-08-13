@@ -135,8 +135,8 @@ export function TerminalSurface({
   const presence = useBuilderPresence();
   const honesty = deriveExecutorHonestyLabel(
     source === "machine"
-      ? { runnerConnected: presence.builderPresence?.local ?? presence.runnerConnected, runtimeAvailable: false }
-      : { runnerConnected: presence.runnerConnected, runtimeAvailable: local || presence.runtimeAvailable },
+      ? { runnerConnected: presence.builderPresence?.local ?? presence.runnerConnected, runtimeAvailable: false, scope: "machine" }
+      : { runnerConnected: presence.runnerConnected, runtimeAvailable: local || presence.runtimeAvailable, scope: "cloud" },
   );
 
   // Agent roster + tab→dir, on the same cadence as the tab list.

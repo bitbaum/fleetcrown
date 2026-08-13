@@ -206,13 +206,21 @@ try {
     const visiblePane = [...document.querySelectorAll(".absolute.inset-0")].find(
       (el) => !el.classList.contains("hidden"),
     );
-    const emptyText = visiblePane?.querySelector(".ui-empty-page")?.textContent?.trim() ?? "";
-    const hasPane = Boolean(visiblePane?.querySelector(".ui-term-pane-active, .xterm"));
+    // The empty state renders in normal flow (not inside the absolute pane),
+    // and a machine tab with no live agent shows a bracket notice inside the
+    // terminal view — accept evidence from either place.
+    const emptyText = document.querySelector(".ui-empty-page")?.textContent?.trim() ?? "";
+    const bodyText = (document.body.innerText || "").slice(0, 8000);
+    const hasNoAgentNotice = bodyText.includes("no live agent in");
+    const hasPane = Boolean(
+      (visiblePane ?? document).querySelector(".ui-term-pane-active, .xterm"),
+    );
     return {
       url: location.href,
       machineActive,
       emptyText: emptyText.slice(0, 200),
       hasPane,
+      hasNoAgentNotice,
       hasErrorBoundary: document.body.textContent?.includes("Something went wrong") ?? false,
     };
   });
@@ -236,6 +244,7 @@ try {
     machineAudit.machineActive &&
     !machineAudit.hasErrorBoundary &&
     (machineAudit.hasPane ||
+      machineAudit.hasNoAgentNotice ||
       machineAudit.emptyText.includes("No agents on this computer") ||
       machineAudit.emptyText.includes("Fleet Runner"));
 
