@@ -41,15 +41,17 @@ async function defaultRegistry(): Promise<ToolRegistry> {
 }
 
 async function defaultSeed(userId: string, message: string): Promise<{ facts: Fact[]; directives: Directive[] }> {
-  const [{ projectFacts }, { buildDailyBrief }] = await Promise.all([
+  const [{ projectFacts, peopleFacts }, { buildDailyBrief }] = await Promise.all([
     import("@/lib/agent/sources"),
     import("@/lib/agent/brief"),
   ]);
-  const [facts, directives] = await Promise.all([
+  const [people, projects, directives] = await Promise.all([
+    peopleFacts(userId, message).catch(() => [] as Fact[]),
     projectFacts(userId).catch(() => [] as Fact[]),
     PLANNING_CUES.test(message) ? buildDailyBrief(userId).catch(() => [] as Directive[]) : Promise.resolve([] as Directive[]),
   ]);
-  return { facts, directives };
+  // People first: a 40-fact cap would otherwise drop the person the operator just named.
+  return { facts: [...people, ...projects], directives };
 }
 
 /** Model turns per request. 3 covers plan→gather→answer; more is usually a loop. */
@@ -188,8 +190,8 @@ export async function runLokiTurn(input: {
   const nativeTools = toOpenAITools(registry);
   const ctx = { userId: input.userId, message: input.message };
 
-  // Seed. Projects are cheap and almost always relevant; the brief is only
-  // worth its tokens on planning questions.
+  // Seed. Named people first (the question is often about one of them),
+  // then projects. The brief is only worth its tokens on planning questions.
   const seed = input.seed ?? (await defaultSeed(input.userId, input.message));
   const seedFacts = seed.facts;
   const directives = seed.directives;

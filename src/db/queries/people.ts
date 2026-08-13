@@ -76,6 +76,7 @@ export async function searchPeople(
             AND (
               (a.key = 'aliases' AND a.value ILIKE ${like})
               OR (a.key LIKE 'channel:%' AND a.value ILIKE ${like})
+              OR (a.key IN ('company','profession','location','relationship') AND a.value ILIKE ${like})
             )
         )
       )`

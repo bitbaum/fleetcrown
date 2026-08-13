@@ -82,6 +82,20 @@ assert.equal(google[0]!.attrs[BOOK_ATTR.LOCATION], "London, UK");
 assert.ok(google[0]!.attrs[BOOK_ATTR.ALIASES]?.includes("A.L."));
 assert.equal(google[0]!.description, "Notes here");
 
+assert.equal(
+  matchImportedContact(
+    { name: "George", attrs: {} },
+    [{ id: "g", name: "George", attrs: {} }],
+  ),
+  null,
+);
+assert.equal(
+  matchImportedContact(
+    { name: "Elena Weber", attrs: {} },
+    [{ id: "e", name: "Elena Weber", attrs: {} }],
+  )?.id,
+  "e",
+);
 assert.equal(shouldPreferImportedName("Aaron", "Aaron Brooks"), true);
 assert.equal(shouldPreferImportedName("Aaron Brooks", "Aaron"), false);
 assert.equal(shouldPreferImportedName("Manu", "Manuel Riegner"), false);

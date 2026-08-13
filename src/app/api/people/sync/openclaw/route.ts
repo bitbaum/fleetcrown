@@ -13,32 +13,27 @@ function resolverPath(): string {
     || `${homedir()}/.openclaw/workspace/data/contact-resolver.json`;
 }
 
-function knowledgePath(): string {
-  return process.env.OPENCLAW_KNOWLEDGE_PATH?.trim()
-    || `${homedir()}/.openclaw/knowledge.sqlite`;
+function knowledgeJsonPath(): string {
+  return process.env.OPENCLAW_KNOWLEDGE_JSON?.trim()
+    || `${homedir()}/.openclaw/workspace/data/knowledge-people.json`;
 }
 
 async function readKnowledgePeople(): Promise<ImportedContact[]> {
+  // JSON only — better-sqlite3 is a native module and crashed the
+  // standalone Node process on the box the first time we imported it.
   try {
-    const Database = (await import("better-sqlite3")).default;
-    const sqlite = new Database(knowledgePath(), { readonly: true });
-    try {
-      const rows = sqlite.prepare(
-        "SELECT id, name FROM entities WHERE type = 'person'",
-      ).all() as Array<{ id: number; name: string }>;
-      const attrs = sqlite.prepare(
-        "SELECT entity_id, key, value FROM attributes",
-      ).all() as Array<{ entity_id: number; key: string; value: string }>;
-      const byId = new Map<number, Record<string, string>>();
-      for (const a of attrs) {
-        const bag = byId.get(a.entity_id) ?? {};
-        bag[a.key] = a.value;
-        byId.set(a.entity_id, bag);
-      }
-      return parseKnowledgePeople(rows.map((r) => ({ name: r.name, attrs: byId.get(r.id) ?? {} })));
-    } finally {
-      sqlite.close();
-    }
+    const text = await readFile(knowledgeJsonPath(), "utf8");
+    const parsed = JSON.parse(text) as unknown;
+    const rows = Array.isArray(parsed)
+      ? parsed
+      : Array.isArray((parsed as { people?: unknown }).people)
+        ? (parsed as { people: unknown[] }).people
+        : [];
+    return parseKnowledgePeople(
+      rows.filter((r): r is { name: string; attrs?: Record<string, string> } =>
+        Boolean(r && typeof r === "object" && typeof (r as { name?: unknown }).name === "string"),
+      ),
+    );
   } catch {
     return [];
   }
