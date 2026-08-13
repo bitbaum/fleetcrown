@@ -3087,8 +3087,13 @@
   .ui-loki-toolbar-dot {
     @apply absolute right-1 top-1.5 h-1.5 w-1.5 rounded-full bg-accent-primary;
   }
+  /* Reading measure for the conversation. Widens in steps on large displays:
+     max-w-2xl (672px) was capping content at 63% of the available column on a
+     1680px screen — measured 672px used of 1072px, 400px unused — while the
+     surface routinely renders lists of projects and goals that want the room.
+     The steps keep a sane line length on laptops and stop wasting a desktop. */
   .ui-loki-stage {
-    @apply mx-auto flex min-h-0 w-full max-w-2xl flex-1 flex-col;
+    @apply mx-auto flex min-h-0 w-full max-w-2xl flex-1 flex-col lg:max-w-3xl xl:max-w-4xl;
   }
   .ui-loki-stage-empty {
     @apply justify-center gap-3 pb-16 sm:pb-24;
