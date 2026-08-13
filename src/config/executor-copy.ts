@@ -134,18 +134,15 @@ export const EXECUTOR_COPY = {
     // talk to it. The old subtitle described only typing, which was the single
     // thing the terminal could already do.
     pageSubtitle:
-      "One terminal for every session. Switch source (cloud · this computer · shell), agent, and how you drive it — type, prompt, or voice.",
+      "The live agent session. Type into it the same way you would locally.",
     cloudLabel: "Cloud",
     cloudLabelLocalHost: "Cloud (this server)",
     thisComputerLabel: "This computer",
     cloudHelp:
       "Agents on the cloud builder (box-runner). Pick a project tab, click to focus, and type — keystrokes go straight to the agent PTY. Ctrl+C, arrows, and paste work.",
     cloudLoading: "Looking for agents on the cloud builder…",
-    cloudEmpty: "No agents on the cloud builder right now.",
-    // Online + idle: the builder is up, nothing is running — actionable, not a
-    // gate. (The "private for this account" gate message comes from the API's
-    // `unavailable` payload for non-allowed users, and is shown instead.)
-    cloudEmptyHint: "The cloud builder is online — dispatch an agent from Control and it shows up here live.",
+    cloudEmpty: "Nothing running on the cloud builder.",
+    cloudEmptyHint: "Start work in Loki. When an agent is running, it appears here so you can type into it.",
     cloudOfflineHint: "The cloud builder (box-runner on Hetzner) is offline right now.",
     // Connected to the peek stream but no screen frames arrived → the runner is
     // wedged (e.g. its outbound fetch is failing). Honest, actionable — not a
@@ -154,8 +151,8 @@ export const EXECUTOR_COPY = {
     thisComputerStalledHint: "Connected, but Fleet Runner on this computer isn't streaming output — it may be stuck. Quit it from the menu bar and reopen.",
     thisComputerHelp:
       "Interactive view of agents on this computer via the desktop app. Same keystroke path as Cloud — click the terminal and type.",
-    thisComputerEmpty: "No agents on this computer right now.",
-    thisComputerEmptyHint: "Dispatch from Control or Loki and it shows up here.",
+    thisComputerEmpty: "Nothing running on this computer.",
+    thisComputerEmptyHint: "Start work in Loki. The live session shows up here.",
     thisComputerOfflineHint: "Connect Fleet Runner on this computer to this account.",
     thisComputerLoading: "Looking for agents on this computer…",
   },

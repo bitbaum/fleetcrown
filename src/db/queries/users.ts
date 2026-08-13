@@ -61,6 +61,7 @@ export interface UpdateUserInput {
   email?: string | null;
   image?: string | null;
   onboardedAt?: Date;
+  emailVerified?: Date | null;
 }
 
 export interface UpdateUserBillingInput {
@@ -120,6 +121,7 @@ export async function updateUser(id: string, patch: UpdateUserInput) {
       ...(patch.email !== undefined && { email: patch.email }),
       ...(patch.image !== undefined && { image: patch.image }),
       ...(patch.onboardedAt !== undefined && { onboardedAt: patch.onboardedAt }),
+      ...(patch.emailVerified !== undefined && { emailVerified: patch.emailVerified }),
       updatedAt: new Date(),
     })
     .where(eq(users.id, id))

@@ -70,7 +70,7 @@ export function NotificationSettings() {
         <div className="space-y-1">
           <h2 className="text-base font-semibold text-text-primary">Activity digest emails</h2>
           <p className="text-sm text-text-tertiary">
-            Reader-friendly summaries of what your fleet has been doing. Opt in for the cadence you want; opt out any time.
+            What ran, what broke, what moved. This is the mail FleetCrown sends — not a canary ping. Opt in for the cadence you want.
           </p>
         </div>
       </div>

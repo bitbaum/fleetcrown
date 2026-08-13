@@ -27,7 +27,7 @@ export function SidebarBrand({
         <button
           type="button"
           onClick={onToggleCollapsed}
-          className="ui-btn-icon hidden xl:inline-flex"
+          className="ui-btn-icon hidden md:inline-flex"
           title={toggleLabel}
           aria-label={toggleLabel}
         >

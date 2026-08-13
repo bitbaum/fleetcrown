@@ -43,21 +43,7 @@ export function SidebarNavItem({
         aria-label={collapsed ? item.label : undefined}
       >
         <Icon className="h-5 w-5 shrink-0" />
-        {!collapsed && (
-          <div className="min-w-0">
-            <span className="block">{item.label}</span>
-            {/* Description is calm at rest, revealed on hover or when current.
-                Always rendered so row height never jumps. */}
-            <span
-              className={cn(
-                "mt-0.5 block text-xs text-text-tertiary transition-opacity duration-150",
-                current ? "opacity-100" : "opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100",
-              )}
-            >
-              {item.description}
-            </span>
-          </div>
-        )}
+        {!collapsed && <span className="min-w-0 truncate">{item.label}</span>}
         {!collapsed && !item.active && <span className="ml-auto ui-micro-label">soon</span>}
       </Link>
       {collapsed && tooltipPos && createPortal(

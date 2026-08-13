@@ -3069,6 +3069,15 @@
   .ui-loki-workspace {
     @apply flex min-h-0 flex-1 flex-col;
   }
+  .ui-loki-workspace-split {
+    @apply md:flex-row md:gap-4;
+  }
+  .ui-loki-history-rail {
+    @apply hidden min-h-0 w-60 shrink-0 flex-col border-r border-border-subtle pr-3 md:flex;
+  }
+  .ui-loki-main {
+    @apply flex min-h-0 min-w-0 flex-1 flex-col;
+  }
   .ui-loki-toolbar {
     @apply flex shrink-0 items-center gap-1;
   }
@@ -3188,6 +3197,12 @@
   .ui-loki-tool-btn {
     @apply inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border-subtle bg-surface-raised text-text-secondary transition-colors hover:border-border-default hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-45;
   }
+  .ui-loki-tool-btn-rec {
+    @apply border-status-negative bg-status-negative-subtle text-status-negative;
+  }
+  .ui-loki-rec-stop {
+    @apply block h-3 w-3 rounded-sm bg-status-negative;
+  }
   .ui-loki-send-btn {
     @apply inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-primary text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:bg-surface-raised disabled:text-text-muted;
   }
@@ -3240,7 +3255,7 @@
     @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-text-muted transition-colors hover:bg-surface-raised hover:text-text-primary;
   }
   .ui-voice-stop {
-    @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent-primary text-accent-foreground transition-transform active:scale-95;
+    @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-status-negative text-white transition-transform active:scale-95;
   }
   @keyframes ui-voice-wave {
     0%, 100% { transform: scaleY(0.25); }
