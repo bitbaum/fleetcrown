@@ -3,7 +3,7 @@
 import { signIn } from "next-auth/react";
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ROUTES } from "@/config/auth";
+import { AUTH_COPY, ROUTES } from "@/config/auth";
 import { APP_NAME } from "@/config/brand";
 import {
   AuthShell, AuthCard, AuthField, AuthInput, AuthSubmitButton,
@@ -121,8 +121,8 @@ function FormInner({
   return (
     <AuthShell>
       <AuthHeading
-        title="Welcome back"
-        description={`Sign in to your ${APP_NAME} account.`}
+        title={AUTH_COPY.signIn.title}
+        description={AUTH_COPY.signIn.description(APP_NAME)}
       />
 
       {/* Mode tabs — only show owner key tab when LOCAL_AUTH_PASSWORD is configured */}

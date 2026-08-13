@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { MailWarning, X } from "lucide-react";
 import { ROUTES } from "@/config/auth";
+import { COMMS_COPY } from "@/config/comms";
 import { postJson } from "@/lib/api/fetch";
 
 // localStorage (not sessionStorage): an OPTIONAL reminder that the user chose to
@@ -55,7 +56,7 @@ export function EmailVerificationBanner() {
     <div className="ui-callout-accent mx-3 mb-2 mt-2 flex items-center gap-2 py-1.5 text-xs text-text-secondary sm:mx-4">
       <MailWarning className="h-3.5 w-3.5 shrink-0 text-text-tertiary" />
       <span className="min-w-0 flex-1 truncate">
-        {sent ? "Verification link sent — check your inbox." : "Verify your email for account recovery (optional)."}
+        {sent ? COMMS_COPY.verifySent : COMMS_COPY.verifyBanner}
       </span>
       {!sent && (
         <button type="button" className="ui-btn-ghost ui-btn-xs shrink-0" disabled={sending} onClick={() => void resend()}>

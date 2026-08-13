@@ -8,7 +8,7 @@ import {
   AuthFooterLink, AuthHeading,
 } from "@/components/auth/AuthShell";
 import { postJson } from "@/lib/api/fetch";
-import { ROUTES } from "@/config/auth";
+import { AUTH_COPY, ROUTES } from "@/config/auth";
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -47,8 +47,8 @@ export default function SignUpPage() {
   return (
     <AuthShell>
       <AuthHeading
-        title="Create your account"
-        description="Free to start. Add projects, launch agents, track everything."
+        title={AUTH_COPY.signUp.title}
+        description={AUTH_COPY.signUp.description}
       />
 
       <AuthCard>

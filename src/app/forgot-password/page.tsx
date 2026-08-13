@@ -7,7 +7,7 @@ import {
   AuthFooterLink, AuthHeading,
 } from "@/components/auth/AuthShell";
 import { postJson } from "@/lib/api/fetch";
-import { ROUTES } from "@/config/auth";
+import { AUTH_COPY, ROUTES } from "@/config/auth";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail]       = useState("");
@@ -33,8 +33,8 @@ export default function ForgotPasswordPage() {
     return (
       <AuthShell>
         <AuthHeading
-          title="Check your email"
-          description={`If an account exists for ${email}, we've sent a reset link. Check your inbox (and spam folder).`}
+          title={AUTH_COPY.forgot.sentTitle}
+          description={AUTH_COPY.forgot.sentDescription(email)}
         />
         <AuthFooterLink href={ROUTES.SIGN_IN}>← Back to sign in</AuthFooterLink>
       </AuthShell>
@@ -44,8 +44,8 @@ export default function ForgotPasswordPage() {
   return (
     <AuthShell>
       <AuthHeading
-        title="Forgot your password?"
-        description="Enter your email and we'll send you a reset link."
+        title={AUTH_COPY.forgot.title}
+        description={AUTH_COPY.forgot.description}
       />
 
       <AuthCard>

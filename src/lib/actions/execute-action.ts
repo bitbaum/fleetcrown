@@ -7,7 +7,7 @@ import { patchProject } from "@/db/queries/projects";
 import { upsertEntityAttribute } from "@/db/queries/utils";
 import { scheduleProjectProfileReindexByEntityId } from "@/lib/rag/reindex-project-profile";
 import { sendTelegramMessage, selfTelegramTarget } from "@/lib/actions/telegram-send";
-import { sendEmail } from "@/lib/email";
+import { operatorMailTemplate, sendEmail } from "@/lib/email";
 import { bookCalendarEvent } from "@/lib/actions/calendar-event";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { injectPrompt } from "@/lib/inject-core";
@@ -297,10 +297,8 @@ export async function executeAction(userId: string, action: Action): Promise<Exe
         const subject = (typeof payload.subject === "string" && payload.subject.trim()) || action.title;
         const text =
           (typeof payload.body === "string" && payload.body.trim()) || action.description || action.title;
-        const html = text
-          .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>");
-
-        await sendEmail(to, subject, html, text); // throws on Resend error → caught below
+        const mail = operatorMailTemplate({ subject, body: text });
+        await sendEmail(to, mail.subject, mail.html, mail.text);
         const done = await markActionExecuted(action.id, userId);
         if (!done) {
           await recordActionAuditEvent(userId, action, "failed", {

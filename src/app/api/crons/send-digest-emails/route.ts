@@ -14,12 +14,12 @@ import { getUsersDueForDigest, markDigestSent } from "@/db/queries/notification-
 import { generateDigest } from "@/lib/digest-generator";
 import { appUrl, digestEmailTemplate, sendEmail } from "@/lib/email";
 import { ensureOwnerWeeklyDigest } from "@/lib/email-owner-digest";
+import { DIGEST_CADENCE_COPY } from "@/config/comms";
 
-// Map cadence → digest window + human-readable labels.
-const CADENCE_MAP = {
-  daily:   { window: "day",   windowLabel: "the last 24 hours" },
-  weekly:  { window: "week",  windowLabel: "the last 7 days"   },
-  monthly: { window: "month", windowLabel: "the last 30 days"  },
+const DIGEST_WINDOW = {
+  daily: "day",
+  weekly: "week",
+  monthly: "month",
 } as const;
 
 export async function GET(req: NextRequest) {
@@ -38,7 +38,8 @@ export async function GET(req: NextRequest) {
   // of headroom even at a few hundred opted-in users.
   for (const row of due) {
     try {
-      const { window, windowLabel } = CADENCE_MAP[row.cadence];
+      const window = DIGEST_WINDOW[row.cadence];
+      const windowLabel = DIGEST_CADENCE_COPY[row.cadence].windowLabel;
       const generated = await generateDigest({
         userId: row.userId,
         window,

@@ -8,7 +8,7 @@ import {
   AuthHeading,
 } from "@/components/auth/AuthShell";
 import { postJson } from "@/lib/api/fetch";
-import { ROUTES } from "@/config/auth";
+import { AUTH_COPY, ROUTES } from "@/config/auth";
 
 export default function ResetPasswordPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
@@ -43,8 +43,8 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ token:
     return (
       <AuthShell>
         <AuthHeading
-          title="Password updated"
-          description="Your password has been reset. Redirecting to sign in…"
+          title={AUTH_COPY.reset.doneTitle}
+          description={AUTH_COPY.reset.doneDescription}
         />
       </AuthShell>
     );
@@ -53,8 +53,8 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ token:
   return (
     <AuthShell>
       <AuthHeading
-        title="Set a new password"
-        description="Choose a strong password for your account."
+        title={AUTH_COPY.reset.title}
+        description={AUTH_COPY.reset.description}
       />
 
       <AuthCard>
