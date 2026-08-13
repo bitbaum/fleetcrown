@@ -16,7 +16,8 @@ import {
   LEGACY_SIDEBAR_SECTIONS_STORAGE_KEY,
 } from "@/config/brand-storage";
 const DEFAULT_EXPANDED: Record<string, boolean> = {
-  work: true,      // operational items the user is in every day
+  work: true,      // the four daily surfaces
+  more: false,     // destinations — Terminal, Agents, Atlas, …
   private: false,  // hidden until the user explicitly opens it
   site: false,     // marketing pages — least-used inside the app shell
 };
@@ -84,8 +85,13 @@ export function SidebarNav({
   return (
     <nav className={collapsed ? "px-2 py-4 space-y-4" : "px-3 py-4 space-y-3"}>
       {SIDEBAR_SECTIONS.map((section) => {
-        // Icon-only sidebar shows every item regardless of section expansion
-        // (toggling has no visual meaning without labels).
+        // Collapsed rail is the daily surface: Work only. More/site stay
+        // behind expand + Menu + palette. Private still needs the lock.
+        if (collapsed && section.id !== "work" && !(section.private && privateLocked)) {
+          return null;
+        }
+        // Icon-only sidebar shows every remaining item regardless of section
+        // expansion (toggling has no visual meaning without labels).
         const isExpanded = collapsed || expanded[section.id] !== false;
         return (
           <SidebarNavSection

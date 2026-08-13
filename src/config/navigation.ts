@@ -89,11 +89,19 @@ export type SidebarSection = {
 export const SIDEBAR_SECTIONS: SidebarSection[] = [
   {
     id: "work",
-    // Operational + editorial output: the daily fleet view, agent dispatch,
-    // project state, prompt library, audit log, system health, and the
-    // Thoughts essays the user authors and publishes from inside the app.
+    // Daily surfaces only. A page earns this seat if you open it with no
+    // context: queue (Today), command (Loki), live state (Control), catalog
+    // (Projects). Destinations — Terminal after a live job, Atlas after a
+    // URL, Agents as a second roster — live in "more".
     label: "Work",
-    items: [NAV.today, NAV.loki, NAV.approvals, NAV.terminal, NAV.agents, NAV.control, NAV.projects, NAV.atlas, NAV.prompts, NAV.activity, NAV.system, NAV.thoughts],
+    items: [NAV.today, NAV.loki, NAV.control, NAV.projects],
+  },
+  {
+    id: "more",
+    // Reachable from Menu, command palette, FleetSurfaceGuide, and deep
+    // links. Not a daily peer of Work — opening them empty is a dead page.
+    label: "More",
+    items: [NAV.approvals, NAV.terminal, NAV.agents, NAV.atlas, NAV.prompts, NAV.activity, NAV.system, NAV.thoughts],
   },
   {
     id: "private",
