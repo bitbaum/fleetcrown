@@ -50,6 +50,18 @@ export function Avatar({
         height={dim}
         className={`${sizeCls} shrink-0 rounded-full ${className}`}
         onError={() => setFailed(true)}
+        // Avatars come from whichever identity provider the user signed in
+        // with — GitHub, Google, X, OrangeCat — and the optimizer refuses any
+        // host not in next.config's remotePatterns. There were no patterns at
+        // all, so EVERY remote avatar 400ed ("url parameter is not allowed")
+        // and quietly fell back to initials: nobody's photo has ever rendered,
+        // and nothing surfaced it because the fallback looks intentional.
+        //
+        // Unoptimized rather than an allowlist because the host set is not
+        // ours to enumerate — it grows every time a provider is added, and the
+        // breakage is invisible by construction. These are 32-72px images that
+        // the optimizer would save nothing on.
+        unoptimized
       />
     );
   }

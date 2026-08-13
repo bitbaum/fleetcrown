@@ -48,6 +48,14 @@ const BASE = (process.env.AUDIT_BASE ?? "https://fleetcrown.orangecat.ch").repla
 const OUT = ".tmp/responsive-audit";
 
 /**
+ * React's hydration failures, in both shapes.
+ * Production ships minified errors, so #418/#423/#425 is all you get and the
+ * number IS the message; dev builds print prose instead. Matching only one form
+ * means the check works in exactly the environment you are not auditing.
+ */
+const HYDRATION_ERROR = /Minified React error #(418|419|421|422|423|425)|[Hh]ydration failed|did not match the server|Text content does not match/;
+
+/**
  * Widths that represent real failure classes, not a sweep.
  * 320 is the narrowest phone still in use and the stated floor; 390 is a modern
  * iPhone; 768 is the tablet/sidebar boundary; 1440 is the laptop most of this
@@ -152,17 +160,35 @@ function measurePage(minTouch) {
     .sort((a, b) => b.right - a.right)
     .slice(0, 5);
 
+  // What the FINGER hits, which is not always the control. A checkbox or radio
+  // wrapped in a <label> is 13px of input inside a 60px card, and the whole card
+  // is clickable — reporting 13px there is a false positive, and a report with
+  // false positives is a report people stop reading. Same for a control whose
+  // <label for> points at it. So measure the label's box when there is one.
+  const hitBox = (el) => {
+    const own = el.getBoundingClientRect();
+    const isFormControl = /^(input|select|textarea)$/i.test(el.tagName);
+    if (!isFormControl) return own;
+    let lab = el.closest('label');
+    if (!lab && el.id) {
+      try { lab = document.querySelector(`label[for="${CSS.escape(el.id)}"]`); } catch { lab = null; }
+    }
+    if (!lab) return own;
+    const lr = lab.getBoundingClientRect();
+    return lr.height > own.height ? lr : own;
+  };
+
   const small = [...document.querySelectorAll('button, a[href], [role="button"], input, select')]
     .filter((el) => {
       const r = el.getBoundingClientRect();
       if (r.width === 0 || r.height === 0) return false;
       if (getComputedStyle(el).visibility === 'hidden') return false;
-      return r.height < minTouch - 0.5;
+      return hitBox(el).height < minTouch - 0.5;
     })
     .map((el) => ({
       tag: el.tagName.toLowerCase(),
       label: (el.getAttribute('aria-label') || el.textContent || '').trim().slice(0, 28),
-      h: Math.round(el.getBoundingClientRect().height),
+      h: Math.round(hitBox(el).height),
     }))
     .slice(0, 6);
 
@@ -245,7 +271,22 @@ async function main() {
       page.on("console", (m) => { if (m.type() === "error") consoleErrors.push(m.text().slice(0, 120)); });
       page.on("pageerror", (e) => consoleErrors.push(`uncaught: ${String(e.message).slice(0, 120)}`));
       const httpFailures = [];
-      page.on("response", (r) => { if (r.status() >= 500) httpFailures.push(`${r.status()} ${r.url().replace(BASE, "").slice(0, 70)}`); });
+      // 4xx is tracked SEPARATELY and by URL. The first run of this audit
+      // reported "400 responses on /settings and /thoughts" and that was all it
+      // could say, because a 4xx only reached the log as the browser's generic
+      // "Failed to load resource" console line — truncated, with no path. A
+      // request your own app made and your own server rejected is a bug you
+      // cannot act on without knowing which one it was.
+      // Same-origin only: a 4xx from a third party is their problem, and 404s
+      // for things like favicons are noise, not findings.
+      const badRequests = [];
+      page.on("response", (r) => {
+        const s = r.status();
+        const url = r.url();
+        if (!url.startsWith(BASE)) return;
+        if (s >= 500) httpFailures.push(`${s} ${url.replace(BASE, "").slice(0, 70)}`);
+        else if (s >= 400 && s !== 404) badRequests.push(`${s} ${url.replace(BASE, "").slice(0, 70)}`);
+      });
       try {
         await page.goto(`${BASE}${route}`, { waitUntil: "networkidle", timeout: 45_000 });
         // Let late layout (fonts, async panes) settle before measuring — a
@@ -282,6 +323,14 @@ async function main() {
         // Soft signals, always reported alongside the verdict above.
         if (r.clipped.length > 0) console.log(`     ⚠ clipped text: ${r.clipped.map((c) => `"${c.text}" (-${c.hidden}px)`).join(", ")}`);
         if (r.brokenImages.length > 0) console.log(`     ⚠ broken image(s): ${r.brokenImages.join(", ")}`);
+        if (badRequests.length > 0) console.log(`     ⚠ rejected request(s): ${[...new Set(badRequests)].slice(0, 4).join(" | ")}`);
+        // Hydration errors get their own line rather than being one of two
+        // truncated console strings. They are never cosmetic: the server sent
+        // markup the browser disagreed with, so SOMETHING on the page rendered
+        // from state the server could not have — a clock, a locale, a random
+        // id, a width. The user sees the wrong content before React repairs it.
+        const hydration = [...new Set(consoleErrors)].filter((m) => HYDRATION_ERROR.test(m));
+        if (hydration.length > 0) console.log(`     ⚠ HYDRATION MISMATCH: ${hydration[0]}`);
         if (consoleErrors.length > 0) console.log(`     ⚠ console: ${[...new Set(consoleErrors)].slice(0, 2).join(" | ")}`);
       } catch (e) {
         failures.push(`${route} @${vp.name}: ${e instanceof Error ? e.message.slice(0, 120) : e}`);
