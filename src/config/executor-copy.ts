@@ -20,11 +20,6 @@ export const EXECUTOR_COPY = {
     building: "Building",
     setupOptional: "Browser only",
     uncertain: "Status uncertain",
-    stalledTitle: "Builder stalled",
-    stalledShort: (n: number) =>
-      `Builder stalled — ${n} job${n === 1 ? "" : "s"} queued (restart the desktop app or check cloud logs)`,
-    stalledDetail: (n: number, seconds: number) =>
-      `Builder is connected but not executing (${n} queued ${seconds}s). Restart the desktop app or check the cloud builder service.`,
     staleSync: "Cached value — builder hasn't pushed fresh state",
     versionPrefix: "builder",
   },

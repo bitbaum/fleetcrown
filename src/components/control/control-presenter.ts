@@ -173,9 +173,10 @@ export type ControlDashboardState = {
 
 /** Truthful fleet-pulse for the Control hero. */
 export type FleetPulse = {
-  key: "paused" | "building" | "waiting" | "failing";
+  key: "paused" | "building" | "waiting" | "failing" | "stalled";
   label: string;
-  /** Secondary sentence for the failing state (rendered with an Activity link). */
+  /** Secondary sentence for the failing/stalled states ("failing" renders
+   *  with an Activity link; "stalled" names the stuck projects inline). */
   detail: string | null;
 };
 
@@ -207,8 +208,25 @@ export function deriveFleetPulse(input: {
    *  ago it finished; null = unknown age (open/newer run) → excluded from the
    *  stall signal since an active project isn't "stalled". */
   latestRuns: Array<{ outcome: OrchestrationOutcome; ageMs: number | null }>;
+  /** Execution health from getRunnerExecutionStall — already filtered to
+   *  GENUINE stalls (serialized/in-flight commands don't count). */
+  executionStall?: { stalled: boolean; stalledCount: number; oldestSeconds: number; tabs?: string[] } | null;
 }): FleetPulse {
   if (input.automationMode === "off") return { key: "paused", label: "Paused", detail: null };
+  // A genuine execution stall outranks "Building": an observed terminal
+  // process doesn't prove the dispatch pipeline works, and showing a pulsing
+  // green "Building · 1 agent active" directly above "N queued for Xm" was
+  // the exact contradiction the 2026-08-13 review flagged.
+  const stall = input.executionStall;
+  if (stall?.stalled) {
+    const mins = Math.max(1, Math.round(stall.oldestSeconds / 60));
+    const who = stall.tabs && stall.tabs.length > 0 ? ` (${stall.tabs.join(", ")})` : "";
+    return {
+      key: "stalled",
+      label: "Stalled",
+      detail: `${stall.stalledCount} dispatch${stall.stalledCount === 1 ? "" : "es"} queued for ${mins}m${who} — the builder is connected but not executing them. Restart the desktop app or check the cloud builder if this persists.`,
+    };
+  }
   if (input.workingCount > 0) return { key: "building", label: "Building", detail: null };
 
   const recent = input.latestRuns.filter((r) => r.ageMs != null && r.ageMs <= FLEET_PULSE_STALE_MS);
@@ -676,15 +694,31 @@ export function buildProjectOperationsSnapshot(
   // "Idle" which describes the OBSERVABLE state for the human, not the
   // internal-data state for the system. The recency is shown separately by
   // the row's timestamp column, so the prefix doesn't need to duplicate it.
+  // Historical evidence: name the FRESHEST recorded signal, not a blanket
+  // "Idle". Sessions no longer run in named zellij tabs (kitty, unnamed,
+  // multi-project), so live process detection misses real work — but runs and
+  // dispatches still land in FleetCrown. "orangecat — Idle today" while its
+  // last run finished 40 minutes ago (2026-08-13) read as a dead project;
+  // "Last run 40m ago" is what actually happened.
+  const lastRunAt = project.latestOrchestrationRun?.finishedAt
+    ? Date.parse(project.latestOrchestrationRun.finishedAt)
+    : 0;
+  const lastDispatchAt = latestActivity?.at ? Date.parse(latestActivity.at) : 0;
+  const historicalAt = Math.max(handoffAt ?? 0, lastRunAt, lastDispatchAt);
+  const historicalLabel = historicalAt === 0
+    ? "No recent activity"
+    : historicalAt === lastRunAt && lastRunAt > 0
+      ? "Last run"
+      : historicalAt === lastDispatchAt && lastDispatchAt > 0
+        ? "Last dispatch"
+        : "Idle";
   const evidenceLabel = !runtimeStateKnown
     ? "Live status unavailable"
     : syncStale && claimsLiveObservation
       ? staleSyncLabel(lastSyncedAt)
       : liveObserved
         ? liveEvidenceLabel
-        : handoffAt
-          ? "Idle"
-          : "No recent activity";
+        : historicalLabel;
 
   return {
     project,
@@ -693,8 +727,11 @@ export function buildProjectOperationsSnapshot(
     evidenceLabel,
     // A stale live-claim's only honest timestamp is the sync time (already in
     // the label) — attaching handoffAt here is what produced "Awaiting input
-    // 1w ago".
-    evidenceAt: liveObserved || (syncStale && claimsLiveObservation) ? null : handoffAt,
+    // 1w ago". Historical rows carry the timestamp of the signal the label
+    // names (run finish / dispatch / handoff), not always the handoff.
+    evidenceAt: liveObserved || (syncStale && claimsLiveObservation)
+      ? null
+      : historicalAt > 0 ? historicalAt : null,
     evidenceKind: !runtimeStateKnown ? "unknown" : syncStale ? "historical" : liveObserved ? "live" : "historical",
     contextSummary,
     attentionReason: attention.score > 0 ? attention.reason : null,

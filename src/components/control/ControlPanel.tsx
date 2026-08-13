@@ -10,6 +10,7 @@ import { useLaunchModal } from "@/hooks/use-launch-modal";
 import { useCreateProject } from "@/hooks/use-create-project";
 import { buildControlPageState, buildProjectOperationsSnapshots, buildLiveTabRows, deriveFleetPulse } from "./control-presenter";
 import { rememberFleetProject } from "@/lib/fleet-context";
+import { STATE_DEFINITIONS } from "@/lib/control-states";
 import { ControlFleetStatus } from "./ControlFleetStatus";
 import { AttentionBar } from "./AttentionBar";
 import { AgentEscalations } from "./AgentEscalations";
@@ -133,6 +134,9 @@ export function ControlPanel() {
   const fleetPulse = deriveFleetPulse({
     automationMode: automationPolicy.mode,
     workingCount: dashboard?.runningCount ?? 0,
+    // Genuine execution stalls (serialized/in-flight commands already filtered
+    // out server-side) outrank "Building" — see deriveFleetPulse.
+    executionStall: data?.runnerExecutionStall ?? null,
     // Pair each project's latest outcome with how long ago its latest run
     // finished, so a stale outage doesn't read as "currently stalled".
     latestRuns: (data?.projects ?? [])
@@ -364,6 +368,14 @@ export function ControlPanel() {
         onRefresh={() => refresh(true)}
         onAutomationChange={handleAutomationChange}
         onNewProject={() => (runtimeAvailable ? setBootstrapOpen(true) : setNewProjectOpen(true))}
+        onFocusCategory={(category) => {
+          const match = snapshots?.find(
+            (s) => STATE_DEFINITIONS[s.phase].counterCategory === category,
+          );
+          if (!match) return;
+          setSelectedTab(match.project.tab);
+          document.getElementById("control-projects")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }}
         projectOverrideCount={projectOverrideCount}
       />}
 

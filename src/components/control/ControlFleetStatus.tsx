@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Plus, RefreshCw, Radio, WifiOff, Zap, AlertTriangle } from "lucide-react";
+import { Plus, RefreshCw, Radio, WifiOff, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { timeAgo } from "@/lib/dates";
 import type { ControlDashboardState, FleetPulse } from "./control-presenter";
@@ -50,6 +50,10 @@ type Props = {
   /** Opens the new-project flow. Lives here (next to refresh) so the page
    *  needs no separate header row for a single button. */
   onNewProject?: () => void;
+  /** Makes the working/awaiting-input counter chips actionable: selects the
+   *  first project in that bucket and scrolls the workspace into view. A
+   *  count you can't follow to its subject is noise, not status. */
+  onFocusCategory?: (category: "working" | "waiting") => void;
   projectOverrideCount?: number;
 };
 
@@ -73,6 +77,7 @@ export function ControlFleetStatus({
   onRefresh,
   onAutomationChange,
   onNewProject,
+  onFocusCategory,
   projectOverrideCount = 0,
 }: Props) {
   // Vocabulary AND arithmetic reconciled with ProjectOperationsView's rail.
@@ -117,7 +122,12 @@ export function ControlFleetStatus({
   const runnerDetail = [syncDetail, versionDetail, presenceDetail].filter(Boolean).join(" · ") || null;
 
   const RunnerIcon = runnerStateKey === "setup_needed" || runnerStateKey === "offline" ? WifiOff : Radio;
-  const runnerTone = runnerStateKey === "connected"
+  // A connected runner with a genuine execution stall must not read plain
+  // green: "online · sync just now" is the push channel, and it being healthy
+  // is exactly how a hung command loop masquerades as fine. The pulse below
+  // carries the full stall story; this line just stops contradicting it.
+  const executionStalled = Boolean(runnerExecutionStall?.stalled);
+  const runnerTone = runnerStateKey === "connected" && !executionStalled
     ? "ui-control-fleet-runner-ok"
     : "ui-control-fleet-runner-warn";
 
@@ -148,6 +158,7 @@ export function ControlFleetStatus({
         >
           <RunnerIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
           <span className="font-medium">{compactLabel}</span>
+          {executionStalled && <span className="font-medium">· not executing</span>}
           {runnerDetail && <span className="text-text-muted">· {runnerDetail}</span>}
         </div>
         <div className="ui-control-fleet-actions">
@@ -188,7 +199,7 @@ export function ControlFleetStatus({
             {fleetPulse.key === "waiting" && (
               <span className="ui-dot ui-dot-neutral shrink-0" aria-hidden="true" />
             )}
-            {fleetPulse.key === "failing" && (
+            {(fleetPulse.key === "failing" || fleetPulse.key === "stalled") && (
               <span className="ui-dot ui-dot-negative shrink-0" aria-hidden="true" />
             )}
             <span className="font-medium text-text-primary">{fleetPulse.label}</span>
@@ -202,12 +213,14 @@ export function ControlFleetStatus({
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-xs text-status-negative">{fleetPulse.detail}</p>
               {/* When the fleet is failing, reviewing the failures IS the next
-                  action — it gets a real button. Before, the only button in
-                  sight was "Pause fleet" while the fix path hid in a tiny
-                  inline link. */}
-              <Link href="/activity?window=week" className="ui-btn-secondary shrink-0 px-2.5 py-1 text-xs">
-                Review failures
-              </Link>
+                  action — it gets a real button. For an execution stall the
+                  detail already names the stuck projects; /activity has
+                  nothing to add, so no misleading link. */}
+              {fleetPulse.key === "failing" && (
+                <Link href="/activity?window=week" className="ui-btn-secondary shrink-0 px-2.5 py-1 text-xs">
+                  Review failures
+                </Link>
+              )}
             </div>
           )}
         </div>
@@ -219,27 +232,11 @@ export function ControlFleetStatus({
         />
       </div>
 
-      {runnerExecutionStall?.stalled && (
-        <div
-          className="ui-control-fleet-chip ui-control-fleet-chip-attention ui-control-fleet-chip-alert"
-          role="alert"
-          title={EXECUTOR_COPY.builder.stalledDetail(
-            runnerExecutionStall.stalledCount,
-            runnerExecutionStall.oldestSeconds,
-          )}
-        >
-          <AlertTriangle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-          <span className="sm:hidden">
-            {EXECUTOR_COPY.builder.stalledShort(runnerExecutionStall.stalledCount)}
-          </span>
-          <span className="hidden sm:inline">
-            {EXECUTOR_COPY.builder.stalledDetail(
-              runnerExecutionStall.stalledCount,
-              runnerExecutionStall.oldestSeconds,
-            )}
-          </span>
-        </div>
-      )}
+      {/* The execution-stall story lives in the fleet pulse above ("Stalled —
+          N dispatches queued for Xm (projects)…"). The separate alert chip here
+          duplicated it one line lower — and before the pulse knew about
+          stalls, the two contradicted each other ("Building" + "not
+          executing" on adjacent lines). */}
 
       <div className="ui-control-fleet-metrics">
         {attention > 0 && (
@@ -252,13 +249,36 @@ export function ControlFleetStatus({
             {attention} need{attention === 1 ? "s" : ""} you
           </button>
         )}
-        <span className={cn("ui-control-fleet-chip", staleClass)} title={staleTitle}>
-          {working > 0 && <span className="ui-dot ui-dot-positive shrink-0 mr-1" aria-hidden="true" />}
-          {working} working
-        </span>
-        <span className={cn("ui-control-fleet-chip", staleClass)} title={staleTitle}>
-          {ready} awaiting input
-        </span>
+        {working > 0 && onFocusCategory ? (
+          <button
+            type="button"
+            onClick={() => onFocusCategory("working")}
+            className={cn("ui-control-fleet-chip cursor-pointer transition-opacity hover:opacity-80", staleClass)}
+            title={staleTitle ?? "Jump to the working project"}
+          >
+            <span className="ui-dot ui-dot-positive shrink-0 mr-1" aria-hidden="true" />
+            {working} working
+          </button>
+        ) : (
+          <span className={cn("ui-control-fleet-chip", staleClass)} title={staleTitle}>
+            {working > 0 && <span className="ui-dot ui-dot-positive shrink-0 mr-1" aria-hidden="true" />}
+            {working} working
+          </span>
+        )}
+        {ready > 0 && onFocusCategory ? (
+          <button
+            type="button"
+            onClick={() => onFocusCategory("waiting")}
+            className={cn("ui-control-fleet-chip cursor-pointer transition-opacity hover:opacity-80", staleClass)}
+            title={staleTitle ?? "Jump to the project waiting on you"}
+          >
+            {ready} awaiting input
+          </button>
+        ) : (
+          <span className={cn("ui-control-fleet-chip", staleClass)} title={staleTitle}>
+            {ready} awaiting input
+          </span>
+        )}
         <span className={cn("ui-control-fleet-chip", staleClass)} title={staleTitle}>
           {idle} idle
         </span>

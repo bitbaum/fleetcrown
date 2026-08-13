@@ -23,16 +23,59 @@ export async function getRunnerExecutionStall(userId: string, graceSeconds = 120
     .select({
       stalledCount: sql<number>`count(*)::int`,
       oldestSeconds: sql<number>`coalesce(extract(epoch from (now() - min(created_at)))::int, 0)`,
+      // Which projects the stuck commands target — so the banner can say
+      // "2 dispatches for orangecat" instead of an untraceable count.
+      tabs: sql<string[]>`coalesce(array_agg(distinct coalesce(payload->>'projectKey', payload->>'tab')) filter (where coalesce(payload->>'projectKey', payload->>'tab') is not null), '{}')`,
     })
     .from(pendingCommands)
     .where(and(
       eq(pendingCommands.userId, userId),
       isNull(pendingCommands.executedAt),
+      // In-flight, not stalled: a claimed command is being executed right now
+      // (local dispatch legitimately holds its claim 20-35s; hosted Hermes
+      // runs for minutes). Genuinely dead claims are reclaimed to unclaimed
+      // by reclaimStalePendingCommands and then count again.
+      isNull(pendingCommands.claimedAt),
       sql`created_at < now() - interval '1 second' * ${graceSeconds}`,
       sql`created_at > now() - interval '2 hours'`,
+      // Serialized, not stalled: a dispatch/inject whose project has an OLDER
+      // open run is deliberately gate-held by per-project FIFO (see
+      // claimNextPendingCommand) — the builder is working exactly as designed.
+      // Counting these produced "Builder is connected but not executing
+      // (2 queued 469s). Restart the desktop app…" while an agent was mid-run
+      // on the same project (observed 2026-08-13), directly under a hero that
+      // said "Building". Mirror of the claim gate, including the
+      // derived-tab (sessionTab) exceptions.
+      sql`NOT (
+        ${pendingCommands.type} IN ('dispatch','inject')
+        AND ${pendingCommands.payload}->>'projectKey' IS NOT NULL
+        AND ${pendingCommands.payload}->>'runId' IS NOT NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM orchestration_runs own
+          WHERE own.id = (${pendingCommands.payload}->>'runId')::uuid
+            AND own.payload->>'sessionTab' IS NOT NULL
+        )
+        AND EXISTS (
+          SELECT 1 FROM orchestration_runs r
+          WHERE r.user_id = ${pendingCommands.userId}
+            AND r.project_key = ${pendingCommands.payload}->>'projectKey'
+            AND r.finished_at IS NULL
+            AND r.started_at > NOW() - INTERVAL '1 minute' * ${STALE_RUN_MINUTES}
+            AND r.payload->>'sessionTab' IS NULL
+            AND (r.started_at, r.id) < (
+              SELECT own.started_at, own.id FROM orchestration_runs own
+              WHERE own.id = (${pendingCommands.payload}->>'runId')::uuid
+            )
+        )
+      )`,
     ));
   const stalledCount = row?.stalledCount ?? 0;
-  return { stalled: stalledCount > 0, stalledCount, oldestSeconds: row?.oldestSeconds ?? 0 };
+  return {
+    stalled: stalledCount > 0,
+    stalledCount,
+    oldestSeconds: row?.oldestSeconds ?? 0,
+    tabs: (row?.tabs ?? []).slice(0, 5),
+  };
 }
 
 export async function enqueuePendingCommand(

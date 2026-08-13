@@ -156,6 +156,40 @@ function runTests(): void {
     assert(snapshot.evidenceKind === "historical", "handoff provenance must be historical");
   });
 
+  check("a finished run fresher than the handoff names itself in the evidence", () => {
+    // Sessions no longer run in named zellij tabs, so a project that ran via
+    // dispatch 40 minutes ago has NO live signal — but "Idle today" (from a
+    // stale handoff) reads as a dead project. The freshest recorded signal
+    // must win: "Last run <when>". (orangecat, 2026-08-13.)
+    const nowS = 1_700_000_000;
+    const snapshot = buildProjectOperationsSnapshot(stubProject({
+      tab: "orangecat",
+      session: { done: "old", next: "", tests: "", todos: "", health: "", mtime: (nowS - 86_400) * 1000 },
+      latestOrchestrationRun: {
+        adapter: "claude", intent: "custom", state: "done",
+        startedAt: new Date((nowS - 3_000) * 1000).toISOString(),
+        finishedAt: new Date((nowS - 2_400) * 1000).toISOString(),
+        summary: null, tokensIn: null, tokensOut: null, tokensCacheRead: null, costUsd: null, payload: null,
+      },
+    }), [], nowS);
+    assert(snapshot.evidenceLabel === "Last run", `freshest signal must be named, got '${snapshot.evidenceLabel}'`);
+    assert(snapshot.evidenceAt === (nowS - 2_400) * 1000, "evidence timestamp must be the run finish, not the handoff");
+  });
+
+  check("a dispatch fresher than run and handoff names itself in the evidence", () => {
+    const nowS = 1_700_000_000;
+    const snapshot = buildProjectOperationsSnapshot(stubProject({
+      tab: "orangecat",
+      session: { done: "old", next: "", tests: "", todos: "", health: "", mtime: (nowS - 86_400) * 1000 },
+      recentActivity: [{
+        id: "a1", projectKey: "orangecat", at: new Date((nowS - 600) * 1000).toISOString(),
+        kind: "dispatch", source: "user", displayText: "fix feedback", runId: null,
+      } as ProjectState["recentActivity"][number]],
+    }), [], nowS);
+    assert(snapshot.evidenceLabel === "Last dispatch", `freshest signal must be named, got '${snapshot.evidenceLabel}'`);
+    assert(snapshot.evidenceAt === (nowS - 600) * 1000, "evidence timestamp must be the dispatch time");
+  });
+
   check("open session is labeled 'Awaiting input' to match the summary chip", () => {
     const nowS = 1_700_000_000;
     const project = stubProject({ tab: "FleetCrown", agentRunning: true });
@@ -307,6 +341,33 @@ function runTests(): void {
   check("fleet pulse: user_abort is neutral, not a systemic failure", () => {
     const pulse = deriveFleetPulse({ automationMode: "on", workingCount: 0, latestRuns: runs(["user_abort", "timeout"]) });
     assert(pulse.key === "waiting", "aborts are human choices — only real failures stall the hero");
+  });
+
+  check("fleet pulse: genuine execution stall outranks Building", () => {
+    // 2026-08-13: "Building · 1 agent active" rendered directly above
+    // "Builder is connected but not executing (2 queued 469s)" — both cannot
+    // be true. An observed terminal process doesn't prove the dispatch
+    // pipeline works; a real stall (already filtered of serialized/in-flight
+    // commands server-side) must own the headline.
+    const pulse = deriveFleetPulse({
+      automationMode: "on",
+      workingCount: 1,
+      latestRuns: runs(["success"]),
+      executionStall: { stalled: true, stalledCount: 2, oldestSeconds: 469, tabs: ["orangecat"] },
+    });
+    assert(pulse.key === "stalled", "stalled execution must not read as Building");
+    assert(!!pulse.detail && pulse.detail.includes("orangecat"), "stall detail names the stuck projects");
+    assert(!!pulse.detail && pulse.detail.includes("8m"), "stall detail states the queue age in minutes");
+  });
+
+  check("fleet pulse: non-stalled execution health leaves Building untouched", () => {
+    const pulse = deriveFleetPulse({
+      automationMode: "on",
+      workingCount: 1,
+      latestRuns: runs(["success"]),
+      executionStall: { stalled: false, stalledCount: 0, oldestSeconds: 0, tabs: [] },
+    });
+    assert(pulse.key === "building", "healthy execution with a working agent is Building");
   });
 
   console.log(`\n${passed}/${passed} passed`);
