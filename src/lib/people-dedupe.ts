@@ -43,21 +43,6 @@ export function extractPhones(text: string): string[] {
   return [...new Set(digits)];
 }
 
-function emailsOf(p: DedupePerson): string[] {
-  const blob = [p.attrs["channel:email"], p.attrs.email, p.attrs.mail].filter(Boolean).join(" ");
-  return extractEmails(blob);
-}
-
-function phonesOf(p: DedupePerson): string[] {
-  const blob = [
-    p.attrs["channel:phone"],
-    p.attrs["channel:whatsapp"],
-    p.attrs.phone,
-    p.attrs.mobile,
-  ].filter(Boolean).join(" ");
-  return extractPhones(blob);
-}
-
 export function clusterPeople(people: DedupePerson[]): DuplicateCluster[] {
   const byEmail = new Map<string, DedupePerson[]>();
   const byPhone = new Map<string, DedupePerson[]>();
@@ -105,4 +90,46 @@ function uniqueById(people: DedupePerson[]): DedupePerson[] {
   const map = new Map<string, DedupePerson>();
   for (const p of people) map.set(p.id, p);
   return [...map.values()];
+}
+
+export function emailsOf(p: DedupePerson): string[] {
+  const blob = [p.attrs["channel:email"], p.attrs.email, p.attrs.mail].filter(Boolean).join(" ");
+  return extractEmails(blob);
+}
+
+export function phonesOf(p: DedupePerson): string[] {
+  const blob = [
+    p.attrs["channel:phone"],
+    p.attrs["channel:whatsapp"],
+    p.attrs.phone,
+    p.attrs.mobile,
+  ].filter(Boolean).join(" ");
+  return extractPhones(blob);
+}
+
+/** Prefer the richer row — more attrs, then longer name. */
+export function pickCanonicalPerson(members: DedupePerson[]): DedupePerson {
+  return [...members].sort((a, b) => {
+    const score = (p: DedupePerson) => Object.keys(p.attrs).filter((k) => p.attrs[k]).length * 10 + p.name.length;
+    return score(b) - score(a);
+  })[0]!;
+}
+
+/** Match an imported contact to a person already in the book. Email, then phone, then name. */
+export function matchImportedContact(
+  contact: { name: string; attrs: Record<string, string> },
+  people: DedupePerson[],
+): DedupePerson | null {
+  const emails = extractEmails(Object.values(contact.attrs).join(" "));
+  if (emails.length > 0) {
+    const hit = people.find((p) => emailsOf(p).some((e) => emails.includes(e)));
+    if (hit) return hit;
+  }
+  const phones = extractPhones(Object.values(contact.attrs).join(" "));
+  if (phones.length > 0) {
+    const hit = people.find((p) => phonesOf(p).some((ph) => phones.includes(ph)));
+    if (hit) return hit;
+  }
+  const name = normalizeName(contact.name);
+  return people.find((p) => normalizeName(p.name) === name) ?? null;
 }

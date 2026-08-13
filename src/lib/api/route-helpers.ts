@@ -111,12 +111,14 @@ export function handleDuplicateEntityNameError(
  * instead of a 500.
  */
 export function isUniqueViolation(e: unknown): boolean {
-  return (
-    !!e &&
-    typeof e === "object" &&
-    "code" in e &&
-    (e as { code?: string }).code === "23505"
-  );
+  let cur: unknown = e;
+  for (let i = 0; i < 4 && cur && typeof cur === "object"; i++) {
+    const rec = cur as { code?: string; cause?: unknown; message?: string };
+    if (rec.code === "23505") return true;
+    if (typeof rec.message === "string" && rec.message.includes("uq_entities_user_name_type")) return true;
+    cur = rec.cause;
+  }
+  return false;
 }
 
 // Re-export zod so route files don't have to import from "zod" + this

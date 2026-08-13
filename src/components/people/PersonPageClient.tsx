@@ -4,12 +4,12 @@ import { useRouter } from "next/navigation";
 import { PageLayout } from "@/components/ui/page-layout";
 import { PersonDetail } from "./PersonDetail";
 
-export function PersonPageClient({ personId }: { personId: string }) {
+export function PersonPageClient({ personId, name }: { personId: string; name: string }) {
   const router = useRouter();
   const back = () => router.push("/people");
 
   return (
-    <PageLayout title="Person" maxWidth="max-w-xl">
+    <PageLayout title={name} subtitle="Private profile — your notes, not a public listing" maxWidth="max-w-xl">
       <PersonDetail
         personId={personId}
         variant="page"

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getJson, postJson, throwApiError } from "@/lib/api/fetch";
 import { BOOK_ATTR_LABEL, IMPORT_SOURCE_LABEL } from "@/config/book";
+import { pickCanonicalPerson, type DedupePerson } from "@/lib/people-dedupe";
 
 type Proposal = {
   id: string;
@@ -15,7 +16,7 @@ type Proposal = {
 type Cluster = {
   key: string;
   reason: "email" | "phone" | "name";
-  members: { id: string; name: string }[];
+  members: DedupePerson[];
 };
 
 export function PeopleBookPanel({ onChanged }: { onChanged?: () => void }) {
@@ -185,16 +186,20 @@ export function PeopleBookPanel({ onChanged }: { onChanged?: () => void }) {
                   </span>
                 ))}
               </div>
-              {c.members.length >= 2 && (
-                <button
-                  type="button"
-                  disabled={busy !== null}
-                  onClick={() => void merge(c.members[0]!.id, c.members[1]!.id)}
-                  className="ui-btn-chip"
-                >
-                  Keep {c.members[0]!.name}, merge {c.members[1]!.name}
-                </button>
-              )}
+              {c.members.length >= 2 && (() => {
+                const keep = pickCanonicalPerson(c.members);
+                const drop = c.members.find((m) => m.id !== keep.id)!;
+                return (
+                  <button
+                    type="button"
+                    disabled={busy !== null}
+                    onClick={() => void merge(keep.id, drop.id)}
+                    className="ui-btn-chip"
+                  >
+                    Keep {keep.name}, merge {drop.name}
+                  </button>
+                );
+              })()}
             </div>
           ))}
         </div>

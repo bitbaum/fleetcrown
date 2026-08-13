@@ -7,13 +7,15 @@ import { createPerson } from "./people";
 import { upsertEntityAttribute, fetchAttributesByEntityIds } from "./utils";
 import {
   BOOK_ACTION_TYPES,
+  ENRICH_SCAN_CAP,
   IMPORT_BATCH_CAP,
   enrichDraftTitle,
   importDraftTitle,
   isBookAttrKey,
   type ImportSource,
 } from "@/config/book";
-import { normalizeName } from "@/lib/people-dedupe";
+import { matchImportedContact } from "@/lib/people-dedupe";
+import { isUniqueViolation } from "@/lib/api/route-helpers";
 import { proposeEnrichments } from "@/lib/people-enrich";
 import type { ImportedContact } from "@/lib/people-import";
 import { canImportSocial } from "@/config/actors";
@@ -37,12 +39,28 @@ export async function applyImportedContact(
   if (!canImportSocial(ENTITY_TYPE.PERSON)) {
     throw new Error("This actor kind cannot be imported into the people book");
   }
-  const created = await createPerson(userId, {
-    name: contact.name,
-    description: contact.description,
-    source: contact.source,
-    externalId: contact.externalId,
-  });
+  let created: { id: string; name: string };
+  try {
+    created = await createPerson(userId, {
+      name: contact.name,
+      description: contact.description,
+      source: contact.source,
+      externalId: contact.externalId,
+    });
+  } catch (e) {
+    if (!isUniqueViolation(e)) throw e;
+    const [existing] = await db
+      .select({ id: entities.id, name: entities.name })
+      .from(entities)
+      .where(and(
+        eq(entities.userId, userId),
+        eq(entities.type, ENTITY_TYPE.PERSON),
+        eq(entities.name, contact.name),
+      ))
+      .limit(1);
+    if (!existing) throw e;
+    created = existing;
+  }
   for (const [key, value] of Object.entries(contact.attrs)) {
     if (!isBookAttrKey(key) && !key.startsWith("channel:")) continue;
     if (!value.trim()) continue;
@@ -69,16 +87,16 @@ export async function enqueueImport(userId: string, contacts: ImportedContact[],
     .select({ id: entities.id, name: entities.name })
     .from(entities)
     .where(and(eq(entities.userId, userId), eq(entities.type, ENTITY_TYPE.PERSON)));
-  const byName = new Map(existing.map((e) => [normalizeName(e.name), e]));
   const existingIds = existing.map((e) => e.id);
   const attrsById = await fetchAttributesByEntityIds(existingIds);
+  const book = existing.map((e) => ({ id: e.id, name: e.name, attrs: attrsById.get(e.id) ?? {} }));
 
   let imported = 0;
   let enrich = 0;
   let skipped = 0;
 
   for (const contact of contacts.slice(0, IMPORT_BATCH_CAP)) {
-    const match = byName.get(normalizeName(contact.name));
+    const match = matchImportedContact(contact, book);
     if (!match) {
       const created = await proposeAction(userId, {
         type: ACTION_TYPE.IMPORT_PERSON,
@@ -128,12 +146,14 @@ export async function enqueueEnrichmentScan(userId: string) {
   const attrsById = await fetchAttributesByEntityIds(existing.map((e) => e.id));
   let proposed = 0;
   for (const person of existing) {
+    if (proposed >= ENRICH_SCAN_CAP) break;
     const proposals = proposeEnrichments({
       name: person.name,
       description: person.description,
       attrs: attrsById.get(person.id) ?? {},
     });
     for (const p of proposals) {
+      if (proposed >= ENRICH_SCAN_CAP) break;
       const created = await proposeAction(userId, {
         type: ACTION_TYPE.ENRICH_PERSON,
         title: enrichDraftTitle(person.name, p.key),
@@ -144,5 +164,5 @@ export async function enqueueEnrichmentScan(userId: string) {
       if (created) proposed += 1;
     }
   }
-  return { proposed };
+  return { proposed, capped: proposed >= ENRICH_SCAN_CAP };
 }
