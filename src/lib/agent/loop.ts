@@ -25,6 +25,7 @@
  * "answer with what you have" rather than to an error.
  */
 import { assignFactIds, renderFacts, type Fact } from "@/lib/agent/core/facts";
+import { trimFactsToBudget, mergeFactsWithCap } from "@/lib/agent/fact-budget";
 import { buildGroundedContext, buildContract, directiveId, NO_BASIS, type Directive } from "@/lib/agent/core/contract";
 import { verifyAnswer, buildRepairPrompt, type Violation } from "@/lib/agent/core/verify";
 import { callModelWithTools, type ChatMessage, type ToolCall } from "@/lib/agent/llm";
@@ -221,13 +222,14 @@ export async function runLokiTurn(input: {
     // The loop gave up and fell back to a path with weaker retrieval, so the
     // step-down that was supposed to keep tools working achieved nothing.
     //
-    // Facts are the elastic part (projects + accumulated tool results), and the
-    // first ones are the most relevant, so halving keeps the head. Two attempts
-    // take 40 facts → 20 → 10, which fits every model in the chain.
+    // Facts are the elastic part (projects + accumulated tool results). Both
+    // shedding policies live in fact-budget.ts — the invariant they encode is
+    // that tool results (the facts the model just asked for) always survive.
+    // Two attempts take 40 facts → 20 → 10, which fits every model in the chain.
     const turn = await (async () => {
       let budget = facts.length;
       for (let attempt = 0; ; attempt++) {
-        const trimmed = budget >= facts.length ? facts : facts.slice(0, budget);
+        const trimmed = budget >= facts.length ? facts : trimFactsToBudget(facts, budget);
         const ctx =
           budget >= facts.length
             ? grounded
@@ -260,7 +262,7 @@ export async function runLokiTurn(input: {
     const executed = await runToolCalls(turn.toolCalls, registry, ctx);
     used.push(...executed.used);
     if (executed.facts.length > 0) {
-      facts = assignFactIds([...facts, ...executed.facts].slice(0, MAX_FACTS));
+      facts = assignFactIds(mergeFactsWithCap(facts, executed.facts, MAX_FACTS));
     }
     conversation.push(
       { role: "assistant", content: turn.text || `(called ${executed.used.join(", ") || "tools"})` },

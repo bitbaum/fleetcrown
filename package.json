@@ -40,6 +40,7 @@
     "test:orchestration-summary": "npx tsx scripts/test/orchestration-summary.ts",
     "test:dispatch-gates": "npx tsx scripts/test/dispatch-gates.ts",
     "test:notify-close": "npx tsx scripts/test/notify-close.ts",
+    "test:fact-budget": "npx tsx scripts/test/fact-budget.ts",
     "test:prompt-history": "npx tsx scripts/test/prompt-history.ts",
     "test:desktop-command-validator": "npx tsx scripts/test/desktop-command-validator.ts",
     "test:tab-match": "npx tsx scripts/test/tab-match.ts",
