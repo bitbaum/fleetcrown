@@ -180,23 +180,73 @@ function pathClaims(text: string): string[] {
 }
 
 /**
+ * How strictly to treat unattested names — the one real difference between the
+ * two assistants that use this harness.
+ *
+ * `closed-world` (Loki): the assistant's entire job is reporting the operator's
+ * records, so ANY unattested proper noun is a fabrication. One operator, one
+ * data set, no legitimate outside knowledge in scope.
+ *
+ * `entity-attribution` (Cat): the assistant also answers general questions —
+ * how Lightning works, which payment rails exist in Switzerland — where naming
+ * Twint or Bitcoin is correct and required. Flagging those would make Cat
+ * useless. So the check narrows to what actually goes wrong: attributes
+ * attached to one of the USER'S OWN records. A sentence naming a known subject
+ * is checked; a sentence of general explanation is not.
+ *
+ * The narrower mode is genuinely weaker, and that is a real trade, not a
+ * loophole: Cat can still invent a fact about the wider world. It can no longer
+ * invent an employer for someone in your contacts, which is the failure that
+ * actually destroys trust in a personal assistant.
+ */
+export type VerifyMode = "closed-world" | "entity-attribution";
+
+/** Does this sentence talk about one of the user's own records? */
+function mentionsSubject(sentence: string, subjects: string[]): boolean {
+  const s = norm(sentence);
+  return subjects.some((sub) => {
+    const n = norm(sub);
+    return n.length > 2 && s.includes(n);
+  });
+}
+
+/**
  * Verify an answer against the facts it was supposed to come from.
  *
  * `extraEvidence` lets a caller admit sources outside the fact set — computed
  * directive output, a tool result the model legitimately saw this turn.
  * Anything not in facts, the user's message, or extraEvidence is unsupported
  * by construction.
+ *
+ * `subjects` (entity-attribution mode) names the user's own records, so the
+ * check can tell "your contact Elena works at X" from "Lightning is instant".
  */
 export function verifyAnswer(input: {
   answer: string;
   facts: Fact[];
   userMessage: string;
   extraEvidence?: string[];
+  mode?: VerifyMode;
+  subjects?: string[];
 }): VerifyResult {
   const { answer, facts, userMessage } = input;
+  const mode: VerifyMode = input.mode ?? "closed-world";
+  const subjects = input.subjects ?? facts.map((f) => f.subject);
   const evidence = buildEvidence(facts, userMessage, input.extraEvidence ?? []);
   const legalIds = new Set(facts.map((f) => f.id.toUpperCase()));
   const violations: Violation[] = [];
+
+  /**
+   * In entity-attribution mode, only sentences about the user's own records are
+   * subject to the name check. Built once so the per-token loop stays cheap.
+   */
+  const attributionScope =
+    mode === "entity-attribution"
+      ? answer
+          .split(/(?<=[.!?:\n])\s+/)
+          .filter((s) => mentionsSubject(s, subjects))
+          .join(" ")
+      : answer;
 
   // 1. Citations must resolve. A citation to a record that does not exist is
   //    the strongest possible signal of fabrication — it invents its own proof.
@@ -213,7 +263,7 @@ export function verifyAnswer(input: {
 
   // 2. Named entities must be traceable. This is the anti-"UZH" rule.
   const seen = new Set<string>();
-  for (const run of properNounRuns(answer)) {
+  for (const run of properNounRuns(attributionScope)) {
     const n = norm(run);
     if (!n || seen.has(n)) continue;
     seen.add(n);

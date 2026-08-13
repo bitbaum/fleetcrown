@@ -30,7 +30,7 @@ import {
   unrecordedFields,
   NOT_RECORDED,
 } from "../../src/lib/agent/core/facts";
-import { buildContract, buildGroundedContext, renderDirectives, NO_BASIS } from "../../src/lib/agent/core/contract";
+import { buildContract, buildGroundedContext, renderDirectives, buildAssistantRules, NO_BASIS } from "../../src/lib/agent/core/contract";
 import { verifyAnswer, buildRepairPrompt } from "../../src/lib/agent/core/verify";
 
 // ── The real records, exactly as FleetCrown stores them ──────────────────────
@@ -214,4 +214,57 @@ const USER_MSG = "Plan my day. Who should I reach out to and why?";
   assert.ok(repair.includes(NO_BASIS), "repair prompt must offer the refusal phrase as the substitute");
 }
 
-console.log("✓ agent grounding: 10 adversarial checks passed (UZH, invented bio, invented paths, fake citations, correction path)");
+// ── 11. entity-attribution mode: Cat keeps general knowledge, loses invention ──
+// Cat answers "how do I get paid in Switzerland" as well as "who owes me money".
+// A closed-world check would flag Twint and Lightning as fabrications and make
+// Cat useless, so the narrower mode only polices sentences about the user's own
+// records. Both halves are asserted, because a check that is too strict gets
+// switched off and then protects nothing.
+{
+  const general = verifyAnswer({
+    answer:
+      "You can receive Bitcoin over the Lightning Network, or use Twint if your counterparty is in Switzerland. PayPal works internationally.",
+    facts: FACTS,
+    userMessage: "how can I get paid?",
+    mode: "entity-attribution",
+  });
+  assert.equal(
+    general.ok,
+    true,
+    `general economic knowledge must pass in entity-attribution mode, got: ${JSON.stringify(general.violations)}`,
+  );
+
+  const attributed = verifyAnswer({
+    answer: "Ask Elena Weber SINGA Switzerland — she is the Program Manager at Impact Hub Zurich.",
+    facts: FACTS,
+    userMessage: "who can help me with funding?",
+    mode: "entity-attribution",
+  });
+  assert.equal(attributed.ok, false, "an invented affiliation for a known contact must still be caught");
+  assert.ok(
+    attributed.violations.some((v) => /Impact Hub/i.test(v.text)),
+    "the fabricated employer must be named in the violation",
+  );
+
+  // The same general sentence IS flagged under closed-world, which is correct
+  // for Loki: reporting the operator's fleet has no need to name new companies.
+  const strict = verifyAnswer({
+    answer: "You can receive Bitcoin over the Lightning Network, or use Twint.",
+    facts: FACTS,
+    userMessage: "how can I get paid?",
+    mode: "closed-world",
+  });
+  assert.equal(strict.ok, false, "closed-world mode must be strictly stronger than entity-attribution");
+}
+
+// ── 12. The fact-free rules block still forbids the invention ────────────────
+{
+  const rules = buildAssistantRules({ subjectNoun: "contacts and entities" });
+  assert.match(rules, /not their employer/i, "the anti-affiliation-inference rule must survive");
+  assert.match(rules, /have not browsed the web/i, "the no-research rule must survive");
+  assert.match(rules, /General knowledge/, "general knowledge must be explicitly permitted");
+  assert.ok(rules.includes(NO_BASIS), "the refusal phrase must be supplied");
+  assert.doesNotMatch(rules, /\[F1\]/, "no citation ids exist without a fact set — none must be promised");
+}
+
+console.log("✓ agent grounding: 12 adversarial checks passed (UZH, invented bio, invented paths, fake citations, correction path, mode scoping)");

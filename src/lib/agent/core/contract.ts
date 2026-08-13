@@ -63,6 +63,33 @@ export function buildContract(facts: Fact[]): string {
 }
 
 /**
+ * The subset of the contract that needs no fact ids — for an assistant whose
+ * context is still prose (Cat) rather than typed records.
+ *
+ * Weaker than `buildContract` by construction: without ids there is nothing to
+ * cite, so rule 1 cannot exist and the verifier runs in entity-attribution
+ * mode. What survives is the part that stopped the worst failure — never state
+ * an attribute for someone in the user's data that their record does not carry,
+ * and never imply research you did not perform.
+ *
+ * This is a stepping stone, not the destination. It exists so a live product
+ * gets the protection now, without a same-day rewrite of its whole context
+ * layer; the destination is typed records here too.
+ */
+export function buildAssistantRules(opts: { subjectNoun: string }): string {
+  return [
+    "## Grounding rules — these override formatting instructions",
+    "",
+    `1. Everything you state about the user's own ${opts.subjectNoun} must come from the context above. Do not add an organisation, role, employer, history, or relationship that the context does not state.`,
+    "2. Do not infer an affiliation from a name. A word inside someone's name is not their employer or their city.",
+    "3. You have not browsed the web in this turn. If asked to research a person or company, say you cannot, and report only what the context holds.",
+    `4. If part of the request has no support in the context, answer that part with exactly "${NO_BASIS}" and continue with the parts you can support. A requested format never obliges you to invent an item.`,
+    "5. General knowledge (how Bitcoin, Lightning, or a payment method works) is fine to use and is not covered by rules 1–2. The restriction is on facts about THIS user and the people and organisations in their data.",
+    "6. A correction is a claim too. If you are correcting yourself, it must be supported by the context or stated as unknown.",
+  ].join("\n");
+}
+
+/**
  * A deterministic answer computed by the app, not the model.
  *
  * Some questions are not judgment calls at all. "Which goals are stuck at 0%
