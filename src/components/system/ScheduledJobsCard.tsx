@@ -69,7 +69,7 @@ function JobRow({
 
       <button
         onClick={(e) => { e.stopPropagation(); onToggle(job.id, !job.enabled); }}
-        className={`relative shrink-0 h-4 w-7 rounded-full transition-colors ${
+        className={`ui-tap-overlay shrink-0 h-4 w-7 rounded-full transition-colors ${
           job.enabled ? "bg-status-positive" : "bg-surface-overlay"
         }`}
         title={job.enabled ? "Disable" : "Enable"}

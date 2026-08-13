@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 export function ControlDispatchButton({
   tab,
-  className = "flex items-center gap-1 text-text-muted hover:text-accent-text transition-colors",
+  className = "ui-tap flex items-center gap-1 text-text-muted hover:text-accent-text transition-colors",
 }: {
   tab: string;
   className?: string;

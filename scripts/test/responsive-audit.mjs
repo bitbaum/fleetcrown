@@ -188,9 +188,12 @@ function measurePage(minTouch) {
     .map((el) => ({
       tag: el.tagName.toLowerCase(),
       label: (el.getAttribute('aria-label') || el.textContent || '').trim().slice(0, 28),
+      // The class is what you actually fix. Without it every finding needs a
+      // reverse hunt from a truncated label back to a component.
+      cls: ((el.className || '').toString().match(/ui-[\w-]+/g) || []).join('.') || (el.className || '').toString().slice(0, 40),
       h: Math.round(hitBox(el).height),
     }))
-    .slice(0, 6);
+    .slice(0, 12);
 
   // Text clipped by a fixed-height box: content the operator simply cannot
   // read, and invisible to an overflow check because the container itself fits.
@@ -203,9 +206,20 @@ function measurePage(minTouch) {
       if (cs.overflow === 'visible' || cs.visibility === 'hidden') return false;
       // Ellipsis is a deliberate design choice; genuine vertical clipping is not.
       if (cs.textOverflow === 'ellipsis' && el.scrollWidth > el.clientWidth) return false;
+      // line-clamp is the VERTICAL ellipsis and is just as deliberate. Without
+      // this the audit reported every summary card in the app as clipped —
+      // "(-1014px)" on a line-clamp-2 prompt preview, which is the feature
+      // working. That noise is what made the clipped-text section unreadable,
+      // and an unreadable section hides the real clipping underneath it.
+      if (cs.webkitLineClamp && cs.webkitLineClamp !== 'none') return false;
       return el.scrollHeight > el.clientHeight + 2;
     })
-    .map((el) => ({ tag: el.tagName.toLowerCase(), text: (el.textContent || '').trim().slice(0, 30), hidden: el.scrollHeight - el.clientHeight }))
+    .map((el) => ({
+      tag: el.tagName.toLowerCase(),
+      text: (el.textContent || '').trim().slice(0, 30),
+      cls: ((el.className || '').toString().match(/ui-[\w-]+/g) || []).join('.') || (el.className || '').toString().slice(0, 40),
+      hidden: el.scrollHeight - el.clientHeight,
+    }))
     .slice(0, 5);
 
   // Content trapped under fixed chrome (mobile bottom nav). Reachable only if
@@ -316,12 +330,12 @@ async function main() {
           // Reported, not failed: the 44px rule has legitimate exceptions
           // (inline text links), and failing on it would bury the overflow
           // signal that actually breaks a page.
-          console.log(`  ⚠ ${route} @${vp.name}px — ${r.small.length} target(s) under ${MIN_TOUCH_PX}px: ${r.small.map((s) => `${s.tag}"${s.label}"=${s.h}px`).join(", ")}`);
+          console.log(`  ⚠ ${route} @${vp.name}px — ${r.small.length} target(s) under ${MIN_TOUCH_PX}px: ${r.small.map((s) => `${s.tag}"${s.label}"[${s.cls}]=${s.h}px`).join(", ")}`);
         } else {
           console.log(`  ✓ ${route} @${vp.name}px`);
         }
         // Soft signals, always reported alongside the verdict above.
-        if (r.clipped.length > 0) console.log(`     ⚠ clipped text: ${r.clipped.map((c) => `"${c.text}" (-${c.hidden}px)`).join(", ")}`);
+        if (r.clipped.length > 0) console.log(`     ⚠ clipped text: ${r.clipped.map((c) => `"${c.text}"[${c.cls}] (-${c.hidden}px)`).join(", ")}`);
         if (r.brokenImages.length > 0) console.log(`     ⚠ broken image(s): ${r.brokenImages.join(", ")}`);
         if (badRequests.length > 0) console.log(`     ⚠ rejected request(s): ${[...new Set(badRequests)].slice(0, 4).join(" | ")}`);
         // Hydration errors get their own line rather than being one of two

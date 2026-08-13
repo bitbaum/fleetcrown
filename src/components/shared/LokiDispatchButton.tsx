@@ -8,7 +8,7 @@ import { LOKI_OPEN_EVENT } from "@/lib/client-events";
 export function LokiDispatchButton({
   prompt,
   title = "Ask Loki",
-  className = "shrink-0 p-0.5 rounded text-text-muted hover:text-status-positive transition-colors",
+  className = "ui-tap-icon shrink-0 p-0.5 rounded text-text-muted hover:text-status-positive transition-colors",
   label,
 }: {
   prompt: string;
