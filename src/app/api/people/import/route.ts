@@ -4,7 +4,7 @@ import { requirePrivateApiAccess } from "@/lib/private-zone-api";
 import { readJsonBody } from "@/lib/api/route-helpers";
 import { IMPORT_SOURCES } from "@/config/book";
 import { detectImportSource, parseImport } from "@/lib/people-import";
-import { enqueueImport } from "@/db/queries/people-book";
+import { applyImportedBook } from "@/db/queries/people-book";
 import { canImportSocial } from "@/config/actors";
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
 
@@ -12,6 +12,7 @@ const Body = z.object({
   text: z.string().min(1).max(1_000_000),
   filename: z.string().trim().optional(),
   source: z.enum(IMPORT_SOURCES).optional(),
+  offset: z.number().int().min(0).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -28,6 +29,6 @@ export async function POST(req: NextRequest) {
   if (contacts.length === 0) {
     return NextResponse.json({ error: "No contacts found in that file" }, { status: 422 });
   }
-  const result = await enqueueImport(access.userId, contacts, source);
-  return NextResponse.json({ ok: true, source, parsed: contacts.length, ...result });
+  const result = await applyImportedBook(access.userId, contacts, dataOrResp.offset ?? 0);
+  return NextResponse.json({ ok: true, source, ...result });
 }

@@ -75,13 +75,43 @@ export function PeopleBookPanel({ onChanged }: { onChanged?: () => void }) {
     setImportNote(null);
     try {
       const text = await file.text();
-      const res = await postJson("/api/people/import", { text, filename: file.name });
-      const data = await res.json() as { ok?: boolean; error?: string; imported?: number; enrich?: number; skipped?: number; parsed?: number; source?: string };
-      if (!res.ok) throw new Error(data.error ?? "Import failed");
+      let offset = 0;
+      let created = 0;
+      let enriched = 0;
+      let skipped = 0;
+      let parsed = 0;
+      let source = "";
+      let done = false;
+      while (!done) {
+        const res = await postJson("/api/people/import", { text, filename: file.name, offset });
+        const data = await res.json() as {
+          ok?: boolean;
+          error?: string;
+          created?: number;
+          enriched?: number;
+          skipped?: number;
+          parsed?: number;
+          source?: string;
+          nextOffset?: number;
+          done?: boolean;
+        };
+        if (!res.ok) throw new Error(data.error ?? "Import failed");
+        created += data.created ?? 0;
+        enriched += data.enriched ?? 0;
+        skipped += data.skipped ?? 0;
+        parsed = data.parsed ?? parsed;
+        source = data.source ?? source;
+        offset = data.nextOffset ?? offset;
+        done = Boolean(data.done);
+        setImportNote(
+          `Writing ${IMPORT_SOURCE_LABEL[source as keyof typeof IMPORT_SOURCE_LABEL] ?? source}: ${offset}/${parsed}…`,
+        );
+      }
       setImportNote(
-        `${data.parsed} parsed from ${IMPORT_SOURCE_LABEL[data.source as keyof typeof IMPORT_SOURCE_LABEL] ?? data.source}. ${data.imported} new, ${data.enrich} enrichments, ${data.skipped} already current.`,
+        `${parsed} from ${IMPORT_SOURCE_LABEL[source as keyof typeof IMPORT_SOURCE_LABEL] ?? source}. ${created} new, ${enriched} enriched, ${skipped} already current.`,
       );
       await refresh();
+      onChanged?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Import failed");
     } finally {
@@ -96,10 +126,10 @@ export function PeopleBookPanel({ onChanged }: { onChanged?: () => void }) {
     setImportNote(null);
     try {
       const res = await postJson("/api/people/sync/openclaw", {});
-      const data = await res.json() as { ok?: boolean; error?: string; imported?: number; enrich?: number; skipped?: number; parsed?: number };
+      const data = await res.json() as { ok?: boolean; error?: string; created?: number; enriched?: number; skipped?: number; parsed?: number; knowledge?: number };
       if (!res.ok) throw new Error(data.error ?? "OpenClaw sync failed");
       setImportNote(
-        `OpenClaw book: ${data.parsed} contacts. ${data.imported} new, ${data.enrich} enrichments, ${data.skipped} already current.`,
+        `OpenClaw: ${data.parsed} contacts${data.knowledge ? ` (${data.knowledge} from knowledge)` : ""}. ${data.created ?? 0} new, ${data.enriched ?? 0} enriched, ${data.skipped ?? 0} already current.`,
       );
       await refresh();
       onChanged?.();

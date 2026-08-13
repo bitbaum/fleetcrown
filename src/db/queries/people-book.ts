@@ -3,18 +3,19 @@ import { actions, entities } from "@/db/schema";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { ACTION_STATUS, ACTION_TYPE, ENTITY_TYPE } from "@/lib/constants/statuses";
 import { proposeAction } from "./actions";
-import { createPerson } from "./people";
+import { createPerson, patchPerson } from "./people";
 import { upsertEntityAttribute, fetchAttributesByEntityIds } from "./utils";
 import {
   BOOK_ACTION_TYPES,
   ENRICH_SCAN_CAP,
+  IMPORT_APPLY_CAP,
   IMPORT_BATCH_CAP,
   enrichDraftTitle,
   importDraftTitle,
   isBookAttrKey,
   type ImportSource,
 } from "@/config/book";
-import { matchImportedContact } from "@/lib/people-dedupe";
+import { matchImportedContact, shouldPreferImportedName } from "@/lib/people-dedupe";
 import { isUniqueViolation } from "@/lib/api/route-helpers";
 import { proposeEnrichments } from "@/lib/people-enrich";
 import type { ImportedContact } from "@/lib/people-import";
@@ -136,6 +137,90 @@ export async function enqueueImport(userId: string, contacts: ImportedContact[],
   }
 
   return { imported, enrich, skipped, capped: contacts.length > IMPORT_BATCH_CAP };
+}
+
+/**
+ * Write the file the operator just handed us. Selecting the file is the
+ * approval — inferred scan enrichments still go through accept/discard.
+ */
+export async function applyImportedBook(
+  userId: string,
+  contacts: ImportedContact[],
+  offset = 0,
+  cap = IMPORT_APPLY_CAP,
+) {
+  const existing = await db
+    .select({ id: entities.id, name: entities.name, description: entities.description })
+    .from(entities)
+    .where(and(eq(entities.userId, userId), eq(entities.type, ENTITY_TYPE.PERSON)));
+  const existingIds = existing.map((e) => e.id);
+  const attrsById = await fetchAttributesByEntityIds(existingIds);
+  const book = existing.map((e) => ({
+    id: e.id,
+    name: e.name,
+    description: e.description,
+    attrs: attrsById.get(e.id) ?? {},
+  }));
+
+  let created = 0;
+  let enriched = 0;
+  let skipped = 0;
+  const slice = contacts.slice(offset, offset + cap);
+
+  for (const contact of slice) {
+    const match = matchImportedContact(contact, book);
+    if (!match) {
+      const row = await applyImportedContact(userId, contact);
+      book.push({
+        id: row.id,
+        name: row.name,
+        description: contact.description ?? null,
+        attrs: { ...contact.attrs },
+      });
+      created += 1;
+      continue;
+    }
+
+    let wrote = false;
+    const current = attrsById.get(match.id) ?? {};
+    for (const [key, value] of Object.entries(contact.attrs)) {
+      if (!value.trim()) continue;
+      if (!isBookAttrKey(key) && !key.startsWith("channel:")) continue;
+      if (current[key]) continue;
+      await applyEnrichment(userId, match.id, key, value);
+      current[key] = value;
+      wrote = true;
+    }
+    const matched = book.find((p) => p.id === match.id);
+    if (matched && shouldPreferImportedName(matched.name, contact.name)) {
+      try {
+        await patchPerson(userId, match.id, { name: contact.name });
+        matched.name = contact.name;
+        wrote = true;
+      } catch (e) {
+        if (!isUniqueViolation(e)) throw e;
+      }
+    }
+    if (contact.description && matched && !matched.description) {
+      await patchPerson(userId, match.id, { description: contact.description });
+      matched.description = contact.description;
+      wrote = true;
+    }
+    attrsById.set(match.id, current);
+    if (matched) matched.attrs = current;
+    if (wrote) enriched += 1;
+    else skipped += 1;
+  }
+
+  const nextOffset = offset + slice.length;
+  return {
+    created,
+    enriched,
+    skipped,
+    parsed: contacts.length,
+    nextOffset,
+    done: nextOffset >= contacts.length,
+  };
 }
 
 export async function enqueueEnrichmentScan(userId: string) {
