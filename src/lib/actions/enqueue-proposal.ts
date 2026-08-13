@@ -11,9 +11,11 @@
  * only ever inserts status='draft'; the operator approves before anything runs.
  */
 import type { ActionType } from "@/lib/constants/statuses";
+import { ACTION_TYPE } from "@/lib/constants/statuses";
 import { extractActionProposal } from "@/lib/actions/extract-proposal";
 import { proposeAction } from "@/db/queries/actions";
 import { recordActionAuditEvent } from "@/db/queries/control-audit-events";
+import { enrichReachPayload, reachFromPerson, resolvePersonToReach } from "@/lib/people-resolve";
 
 export type QueuedActionSummary = { id: string; type: ActionType; title: string };
 
@@ -31,12 +33,26 @@ export async function enqueueProposalFromMessage(
   const proposal = await extractActionProposal(rawMessage, nowISO).catch(() => null);
   if (!proposal) return null;
 
+  const hint = typeof proposal.payload?.to === "string" ? proposal.payload.to : undefined;
+  const person =
+    proposal.type === ACTION_TYPE.SEND_MESSAGE || proposal.type === ACTION_TYPE.SEND_EMAIL
+      ? await resolvePersonToReach(userId, hint, rawMessage).catch(() => null)
+      : null;
+  const reach = person ? reachFromPerson(person) : null;
+
   const action = await proposeAction(userId, {
     type: proposal.type,
-    title: proposal.title,
+    title:
+      person && (proposal.type === ACTION_TYPE.SEND_MESSAGE || proposal.type === ACTION_TYPE.SEND_EMAIL)
+        ? `Message ${person.name}`.slice(0, 200)
+        : proposal.title,
     description: proposal.description,
-    payload: proposal.payload,
-    reasoning: proposal.reasoning ?? "Proposed by Loki from chat — approve to run it.",
+    payload: enrichReachPayload(proposal.payload, reach),
+    reasoning:
+      person
+        ? `Matched ${person.name}${reach ? ` on ${reach.channel}` : ""}.`
+        : (proposal.reasoning ?? "Proposed by Loki from chat — approve to run it."),
+    entityId: person?.id ?? null,
   });
   // proposeAction dedupes an already-pending draft title to null.
   if (!action) return null;

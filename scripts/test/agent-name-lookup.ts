@@ -21,6 +21,7 @@
  */
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { nameCandidates } from "../../src/lib/people-names";
 
 const SRC = readFileSync("src/lib/agent/sources.ts", "utf8");
 
@@ -31,7 +32,7 @@ const SRC = readFileSync("src/lib/agent/sources.ts", "utf8");
     /searchPeople\(userId,\s*query\.trim\(\)\.slice/,
     "peopleFacts must not pass the raw message as a name filter — that was the bug",
   );
-  assert.match(SRC, /function nameCandidates/, "name extraction must exist");
+  assert.match(SRC, /import \{ nameCandidates \} from "@\/lib\/people-names"/, "name extraction must exist");
   assert.match(
     SRC,
     /for \(const name of candidates\)/,
@@ -39,44 +40,8 @@ const SRC = readFileSync("src/lib/agent/sources.ts", "utf8");
   );
 }
 
-// ── Extraction behaviour, mirroring nameCandidates ───────────────────────────
 function candidates(message: string): string[] {
-  const stop = new Set([
-    "who", "what", "when", "where", "why", "how", "the", "and", "but", "for", "with",
-    "my", "me", "i", "is", "are", "was", "in", "on", "at", "to", "of", "do", "does",
-    "also", "please", "can", "you", "your", "contacts", "contact", "affiliation",
-    "research", "linkedin", "etc", "about", "tell", "give", "find", "show", "reach",
-    "out", "him", "her", "them", "his", "their", "a", "an", "it",
-  ]);
-  const out: string[] = [];
-  const seen = new Set<string>();
-  for (const sentence of message.split(/(?<=[.!?])\s+/)) {
-    // Tokenise EVERY word, not just capitalised ones. Matching only capitals
-    // makes the lowercase words between two names invisible, so "Ilya Grün the
-    // same person as Jean-Luc" merges into one nonsense run that matches
-    // nothing and eats a candidate slot.
-    const tokens = sentence.match(/[\p{L}][\p{L}'’-]*/gu) ?? [];
-    let run: string[] = [];
-    const flush = () => {
-      if (run.length > 0) {
-        for (const cand of [run.join(" "), ...(run.length > 1 ? run : [])]) {
-          const key = cand.toLowerCase();
-          if (cand.length > 2 && !seen.has(key)) {
-            seen.add(key);
-            out.push(cand);
-          }
-        }
-      }
-      run = [];
-    };
-    for (const tok of tokens) {
-      const isName = /^\p{Lu}/u.test(tok) && !stop.has(tok.toLowerCase());
-      if (isName) run.push(tok);
-      else flush();
-    }
-    flush();
-  }
-  return out.slice(0, 6);
+  return nameCandidates(message);
 }
 
 // The exact message that produced the false negative in production.
@@ -110,6 +75,12 @@ function candidates(message: string): string[] {
 // contacts rather than searching for junk.
 {
   assert.deepEqual(candidates("what should i do first today?"), [], "no capitalised names → no candidates");
+}
+
+{
+  const c = candidates("write manu about this saturday");
+  assert.ok(c.some((n) => n.toLowerCase() === "manu"), `lowercase write-target must extract, got ${JSON.stringify(c)}`);
+  assert.ok(!c.some((n) => /saturday/i.test(n)), `weekday must not be a name, got ${JSON.stringify(c)}`);
 }
 
 // Accented and hyphenated names must survive — "Ilya Grün" is in the real table.

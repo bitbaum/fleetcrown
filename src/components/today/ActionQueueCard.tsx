@@ -8,7 +8,9 @@ import { ActionButtons } from "./ActionButtons";
 import { ActionDecideButton } from "./ActionDecideButton";
 import { CheckinGroup } from "./CheckinGroup";
 import { CheckinPersonRow, type CheckinPerson } from "./CheckinPersonRow";
+import { MessageReachCard } from "./MessageReachCard";
 import { getPeopleSummaries, type PersonSummary } from "@/db/queries/people";
+import { resolvePersonToReach } from "@/lib/people-resolve";
 import { CHECKIN_TITLE_PREFIX } from "@/lib/actions/checkin-proposal";
 import { compactRelativeDate } from "@/lib/dates";
 
@@ -90,10 +92,25 @@ export async function ActionQueueCard({
     getPendingActions(userId),
     getRecentActions(userId, 5),
   ]);
-  const checkinEntityIds = pending
-    .filter((a) => a.title.startsWith(CHECKIN_TITLE_PREFIX) && a.entityId)
+  const linkedIds = pending
+    .filter((a) => a.entityId)
     .map((a) => a.entityId as string);
-  const people = await getPeopleSummaries(userId, checkinEntityIds);
+  const people = await getPeopleSummaries(userId, linkedIds);
+  const resolvedByAction = new Map<string, PersonSummary>();
+  for (const a of pending) {
+    if (a.entityId) continue;
+    if (a.type !== ACTION_TYPE.SEND_MESSAGE && a.type !== ACTION_TYPE.SEND_EMAIL) continue;
+    const hint = typeof a.payload?.to === "string" ? a.payload.to : "";
+    const hit = await resolvePersonToReach(userId, hint || undefined, `${hint} ${a.title}`).catch(() => null);
+    if (!hit) continue;
+    resolvedByAction.set(a.id, {
+      id: hit.id,
+      name: hit.name,
+      description: hit.description,
+      attrs: hit.attrs,
+      lastInteraction: hit.lastInteraction,
+    });
+  }
 
   if (pending.length === 0 && recent.length === 0) return emptyState;
 
@@ -147,6 +164,8 @@ export async function ActionQueueCard({
 
           {/* Standalone actions */}
           {standalone.map((action, index) => {
+            const payload = action.payload;
+
             if (action.title.startsWith(CHECKIN_TITLE_PREFIX)) {
               return (
                 <div
@@ -158,8 +177,36 @@ export async function ActionQueueCard({
               );
             }
 
+            if (action.type === ACTION_TYPE.SEND_MESSAGE || action.type === ACTION_TYPE.SEND_EMAIL) {
+              const person = (action.entityId ? people.get(action.entityId) : undefined)
+                ?? resolvedByAction.get(action.id);
+              const name = person?.name ?? (typeof payload?.to === "string" ? payload.to : action.title);
+              const channel = typeof payload?.channel === "string" ? payload.channel : null;
+              const address =
+                typeof payload?.address === "string"
+                  ? payload.address
+                  : person
+                    ? (person.attrs["channel:whatsapp"] ?? person.attrs["channel:email"] ?? person.attrs["channel:phone"] ?? null)
+                    : null;
+              return (
+                <div
+                  key={action.id}
+                  className="border border-border-subtle rounded-md p-3 bg-surface-base"
+                >
+                  <MessageReachCard
+                    actionId={action.id}
+                    name={name}
+                    personId={person?.id ?? action.entityId}
+                    channel={channel}
+                    address={address ? String(address).replace(/^e164:/, "") : null}
+                    body={typeof payload?.body === "string" ? payload.body : ""}
+                    profession={person?.attrs["profession"] ?? person?.attrs["role"] ?? null}
+                  />
+                </div>
+              );
+            }
+
             const Icon = TYPE_ICONS[action.type] ?? Inbox;
-            const payload = action.payload;
 
             return (
               <div
@@ -216,10 +263,12 @@ export async function ActionQueueCard({
                     )}
 
                     <div className="flex items-center gap-2 mt-3 flex-wrap">
-                      <ActionDecideButton
-                        actionId={action.id}
-                        autoOpen={autoOpenTop && index === 0}
-                      />
+                      {action.type === ACTION_TYPE.DISPATCH_PROMPT && (
+                        <ActionDecideButton
+                          actionId={action.id}
+                          autoOpen={autoOpenTop && index === 0}
+                        />
+                      )}
                       <ActionButtons actionId={action.id} compact />
                     </div>
                   </div>

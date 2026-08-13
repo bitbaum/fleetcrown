@@ -15,6 +15,8 @@ import { searchKnowledge, type KnowledgeHit } from "@/db/queries/knowledge-embed
 import { embeddingsEnabled } from "@/lib/rag/embeddings";
 import { cleanDescription } from "@/lib/project-display";
 import { makeFact, type Fact } from "@/lib/agent/core/facts";
+import { isChannelAttrKey, stripChannelPrefix } from "@/config/channels";
+import { nameCandidates } from "@/lib/people-names";
 import type { DevLogEntry, UserProject } from "@/db/schema/user-projects";
 
 const PEOPLE_LIMIT = 12;
@@ -45,9 +47,6 @@ const PERSON_ATTR_MAP: Record<string, string> = {
   context: "how_we_met",
 };
 
-/** Channel-ish attribute keys, collapsed into the single `channels` field. */
-const CHANNEL_KEYS = new Set(["phone", "whatsapp", "telegram", "email", "signal", "mobile"]);
-
 function personToFact(p: PersonWithAttributes): Fact {
   const values: Record<string, string | null> = {
     name: p.name,
@@ -66,8 +65,8 @@ function personToFact(p: PersonWithAttributes): Fact {
     const key = rawKey.toLowerCase().trim();
     const val = String(rawVal ?? "").trim();
     if (!val) continue;
-    if (CHANNEL_KEYS.has(key)) {
-      channels.push(`${key} ${val}`);
+    if (isChannelAttrKey(key) || key === "phone" || key === "mobile" || key === "email") {
+      channels.push(`${stripChannelPrefix(key)} ${val.replace(/^e164:/, "")}`);
       continue;
     }
     const mapped = PERSON_ATTR_MAP[key];
@@ -124,57 +123,6 @@ export async function peopleFacts(userId: string, query: string): Promise<Fact[]
   // question like "who should I reach out to" still has something to work with.
   const recent = await searchPeople(userId, "", PEOPLE_LIMIT).catch(() => null);
   return (recent?.people ?? []).map(personToFact);
-}
-
-/**
- * Pull likely person names out of a free-text message.
- *
- * Capitalised runs, minus a stopword list of sentence-initial and structural
- * words. Deliberately generous: an extra candidate costs one indexed ILIKE,
- * while a missed one costs a false "Not in your data" — and those are not
- * symmetric. Single capitalised tokens are included because most contacts are
- * asked about by first name alone ("what's Elena's number").
- */
-function nameCandidates(message: string): string[] {
-  const stop = new Set([
-    "who", "what", "when", "where", "why", "how", "the", "and", "but", "for", "with",
-    "my", "me", "i", "is", "are", "was", "in", "on", "at", "to", "of", "do", "does",
-    "also", "please", "can", "you", "your", "contacts", "contact", "affiliation",
-    "research", "linkedin", "etc", "about", "tell", "give", "find", "show", "reach",
-    "out", "him", "her", "them", "his", "their", "a", "an", "it",
-  ]);
-  const out: string[] = [];
-  const seen = new Set<string>();
-
-  for (const sentence of message.split(/(?<=[.!?])\s+/)) {
-    // Tokenise EVERY word, not just capitalised ones. Matching only capitals
-    // makes the lowercase words between two names invisible, so "Ilya Grün the
-    // same person as Jean-Luc" merges into one nonsense run that matches
-    // nothing and eats a candidate slot.
-    const tokens = sentence.match(/[\p{L}][\p{L}'’-]*/gu) ?? [];
-    let run: string[] = [];
-    const flush = () => {
-      if (run.length > 0) {
-        for (const cand of [run.join(" "), ...(run.length > 1 ? run : [])]) {
-          const key = cand.toLowerCase();
-          if (cand.length > 2 && !seen.has(key)) {
-            seen.add(key);
-            out.push(cand);
-          }
-        }
-      }
-      run = [];
-    };
-    for (const tok of tokens) {
-      const isName = /^\p{Lu}/u.test(tok) && !stop.has(tok.toLowerCase());
-      if (isName) run.push(tok);
-      else flush();
-    }
-    flush();
-  }
-  // Full runs first ("Ilya Druzhnikov") before their parts ("Ilya"), so the
-  // precise match wins the limited slots.
-  return out.slice(0, 6);
 }
 
 function latestDevLog(project: UserProject): string | null {

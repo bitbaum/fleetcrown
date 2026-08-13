@@ -1,6 +1,6 @@
 "use server";
 
-import { approveAction, rejectAction, getActionById, updateDraftPayload } from "@/db/queries/actions";
+import { approveAction, rejectAction, getActionById, updateDraftPayload, markActionExecuted } from "@/db/queries/actions";
 import type { ActionRow } from "@/db/queries/actions";
 import { setFeedbackStatus } from "@/db/queries/site-feedback";
 import { planTrim } from "@/lib/actions/advisor";
@@ -59,6 +59,28 @@ export async function handleApproveAll(ids: string[]): Promise<{ count: number }
   const approved = results.flat();
   await Promise.all(approved.map((action) => finalizeApproved(userId, action)));
   return { count: approved.length };
+}
+
+/** Operator sent the WhatsApp/email themselves. Log it and close the draft. */
+export async function handleConfirmSent(id: string): Promise<{ ok: boolean; error?: string }> {
+  const userId = await requirePageUserId();
+  const action = await getActionById(userId, id);
+  if (!action) return { ok: false, error: "not-found" };
+  const [approved] = action.status === "draft" ? await approveAction(id, userId) : [action];
+  if (!approved) return { ok: false, error: "not-found" };
+  if (approved.entityId) {
+    await createInteraction(userId, {
+      entityId: approved.entityId,
+      channel: String(approved.payload?.channel ?? "other"),
+      direction: INTERACTION_DIRECTION.OUTBOUND,
+      summary: approved.title,
+    });
+  }
+  await recordActionAuditEvent(userId, approved, "approved");
+  const done = await markActionExecuted(id, userId);
+  if (!done) return { ok: false, error: "could-not-close" };
+  await recordActionAuditEvent(userId, approved, "executed", { meta: { sentByOperator: true } });
+  return { ok: true };
 }
 
 export async function handleReject(id: string) {
