@@ -2353,6 +2353,13 @@
       min-height: 2.75rem;
       min-width: 2.75rem;
     }
+    /* Full-width rows: a height floor only. Forcing min-width here would fight
+       the sidebar's own width and is meaningless for a row that already spans
+       its container. */
+    .ui-sidebar-utility,
+    .ui-sidebar-section-toggle {
+      min-height: 2.75rem;
+    }
   }
   /* Small icon row-action button (rounded, surface-raised hover) — for edit/action icons on list rows */
   .ui-btn-row-action {
