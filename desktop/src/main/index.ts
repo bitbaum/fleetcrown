@@ -23,6 +23,7 @@ import { dispatchAutopilot } from './dispatch'
 import { ensureZellijReady } from '@/lib/zellij-bootstrap'
 import type { PaneRecord } from '@/db/schema/runtime-snapshots'
 import { loadToken, saveToken, clearToken, tokenDir } from './token-store'
+import { ensureCaptureHook } from './capture-hook'
 
 // v0.7.4 — bundled renderer removed; one UI surface only.
 //
@@ -554,6 +555,9 @@ function createWindow(): void {
       restartPoller()
       restartPusher()
       restartCalendarDrain()
+      // A token just became usable — install the typed-prompt capture hook
+      // so directly-typed Claude prompts reach the activity ledger.
+      ensureCaptureHook()
     }
     return result
   })
@@ -821,6 +825,7 @@ async function handleDeepLinkUrl(url: string) {
   restartPoller()
   restartPusher()
   restartCalendarDrain()
+  ensureCaptureHook()
   console.log('[desktop] deep-link auth: token saved, poller + pusher restarted')
 }
 
@@ -991,6 +996,10 @@ app.whenReady().then(async () => {
   // No-op if no token is saved yet (auto-mint flow happens later).
   void restoreFleetOnBoot()
   startPoller()
+  // Typed-prompt capture: ensure the Claude UserPromptSubmit hook is installed
+  // so prompts typed directly into a Claude tab (not dispatched through the
+  // platform) still appear in Activity. Idempotent; no-op until a token exists.
+  ensureCaptureHook()
   // Heartbeat to the cloud control plane so the web UI's "Local daemon
   // online" indicator actually reflects reality. v0.4.0–v0.4.3 had the
   // poller (commands cloud → local) but no pusher (state local → cloud),

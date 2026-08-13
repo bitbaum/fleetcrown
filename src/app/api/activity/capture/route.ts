@@ -12,7 +12,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getApiUserId } from "@/lib/session";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import path from "node:path";
-import { insertPromptHistory } from "@/db/queries/prompt-history";
+import { insertPromptHistory, hasRecentIdenticalPrompt } from "@/db/queries/prompt-history";
 import { db } from "@/db";
 import { userProjects } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
@@ -76,6 +76,13 @@ export async function POST(req: NextRequest) {
   }
 
   const project = await resolveProject(userId, parsed.cwd, parsed.projectKey);
+
+  // UserPromptSubmit fires for injected prompts too — the CLI can't tell
+  // FleetCrown's keystrokes from the human's. If this exact text was just
+  // recorded by a dispatch path, this hook fire is that dispatch's echo.
+  if (await hasRecentIdenticalPrompt(userId, project.projectKey, prompt)) {
+    return NextResponse.json({ skipped: "dispatch_echo" });
+  }
 
   await insertPromptHistory(userId, {
     projectId: project.projectId,

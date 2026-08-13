@@ -140,6 +140,32 @@ export async function GET() {
         : "stop.sh is a no-op (correct post-migration state).",
   ));
 
+  // Typed-prompt capture: without the UserPromptSubmit hook, prompts typed
+  // directly into a Claude tab never reach /api/activity/capture, so Activity
+  // only shows dispatched work. Fleet Runner installs it on startup
+  // (desktop/src/main/capture-hook.ts); warn — not fail — because dispatch-only
+  // setups work fine without it, they just under-report.
+  const captureScript = `${homedir()}/.claude/hooks/fleetcrown-capture.sh`;
+  const claudeSettingsPath = `${homedir()}/.claude/settings.json`;
+  let captureRegistered = false;
+  try {
+    const settings = JSON.parse(readFileSync(/*turbopackIgnore: true*/ claudeSettingsPath, "utf8")) as {
+      hooks?: { UserPromptSubmit?: Array<{ hooks?: Array<{ command?: string }> }> };
+    };
+    captureRegistered = (settings.hooks?.UserPromptSubmit ?? []).some((entry) =>
+      (entry.hooks ?? []).some((h) => typeof h.command === "string" && h.command.includes("fleetcrown-capture.sh")),
+    );
+  } catch { /* missing or unparseable settings.json → not registered */ }
+  const captureScriptExists = existsSync(/*turbopackIgnore: true*/ captureScript);
+  checks.push(check(
+    "hooks-capture",
+    "Claude prompt-capture hook",
+    captureRegistered && captureScriptExists ? "pass" : "warn",
+    captureRegistered && captureScriptExists
+      ? "UserPromptSubmit hook installed — directly-typed prompts reach Activity."
+      : "Not installed — directly-typed Claude prompts won't appear in Activity. Start Fleet Runner (it installs the hook once a token is saved).",
+  ));
+
   const token = readTokenFile();
   const env = readRunnerEnv();
   const envToken = env.FLEETCROWN_DAEMON_TOKEN ?? "";

@@ -8,6 +8,38 @@ export async function insertPromptHistory(userId: string, row: Omit<NewPromptHis
   await db.insert(promptHistory).values({ ...row, userId });
 }
 
+/**
+ * True when this exact prompt text was already recorded for the project
+ * recently. Claude's UserPromptSubmit hook fires for EVERY prompt the CLI
+ * receives — it cannot distinguish keystrokes FleetCrown injected from
+ * keystrokes the human typed. Dispatch paths (inject-core, tab-inject) record
+ * their prompt_history row at dispatch time, so when the capture hook's
+ * payload matches a fresh dispatch row it is the echo of that dispatch, not
+ * direct typing, and must not be recorded twice. The 10-minute window covers
+ * queued cloud dispatches that the runner delivers late.
+ */
+export async function hasRecentIdenticalPrompt(
+  userId: string,
+  projectKey: string,
+  promptText: string,
+): Promise<boolean> {
+  const [row] = await db
+    .select({ id: promptHistory.id })
+    .from(promptHistory)
+    .where(
+      and(
+        eq(promptHistory.userId, userId),
+        eq(promptHistory.projectKey, projectKey),
+        sql`${promptHistory.dispatchedAt} > now() - interval '10 minutes'`,
+        // btrim both sides: assembled prompts can carry trailing whitespace
+        // that the hook's trimmed payload won't have.
+        sql`(btrim(${promptHistory.resolvedPrompt}) = ${promptText} OR btrim(${promptHistory.customPrompt}) = ${promptText})`,
+      ),
+    )
+    .limit(1);
+  return !!row;
+}
+
 export type RecentCustomPrompt = {
   customPrompt: string;
   count: number;
