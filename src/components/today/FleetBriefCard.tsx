@@ -153,7 +153,7 @@ export async function FleetBriefCard({ userId }: { userId: string }) {
             <ul className="space-y-0.5">
               {stats.topProjectsThisWeek.map((p) => (
                 <li key={p.name} className="flex justify-between text-xs">
-                  <Link href={`/control?focus=${encodeURIComponent(p.name)}`} className="text-text-primary hover:underline truncate">
+                  <Link href={`/control?focus=${encodeURIComponent(p.name)}`} className="ui-tap text-text-primary hover:underline truncate">
                     {p.name}
                   </Link>
                   <span className="text-text-tertiary shrink-0 ml-2">{p.runs} run{p.runs === 1 ? "" : "s"}</span>

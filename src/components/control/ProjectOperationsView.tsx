@@ -183,7 +183,7 @@ export function ProjectOperationsView({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Find project"
-              className="min-w-0 flex-1 bg-transparent text-sm text-text-primary outline-none placeholder:text-text-muted"
+              className="ui-tap min-w-0 flex-1 bg-transparent text-sm text-text-primary outline-none placeholder:text-text-muted"
             />
           </div>
           <div className="mt-2 grid grid-cols-3 gap-1">
@@ -197,7 +197,7 @@ export function ProjectOperationsView({
                 type="button"
                 onClick={() => setSort(id)}
                 className={cn(
-                  "rounded-md px-2 py-1 text-micro transition-colors",
+                  "ui-tap justify-center rounded-md px-2 py-1 text-micro transition-colors",
                   sort === id
                     ? "bg-accent-muted text-accent-text"
                     : "text-text-muted hover:bg-surface-overlay hover:text-text-secondary",
@@ -268,17 +268,19 @@ export function ProjectOperationsView({
                   bulkSelected.has(snapshot.project.tab) && "ring-1 ring-accent-primary/40",
                 )}
               >
-                <input
-                  type="checkbox"
-                  checked={bulkSelected.has(snapshot.project.tab)}
-                  onChange={() => toggleBulk(snapshot.project.tab)}
-                  aria-label={`Select ${snapshot.project.tab} for bulk actions`}
-                  className="mt-1.5 h-3.5 w-3.5 shrink-0"
-                />
+                <label className="ui-checkbox-hit mt-0.5">
+                  <input
+                    type="checkbox"
+                    checked={bulkSelected.has(snapshot.project.tab)}
+                    onChange={() => toggleBulk(snapshot.project.tab)}
+                    aria-label={`Select ${snapshot.project.tab} for bulk actions`}
+                    className="h-3.5 w-3.5 shrink-0"
+                  />
+                </label>
                 <button
                   type="button"
                   onClick={() => onSelect(snapshot.project.tab)}
-                  className="flex min-w-0 flex-1 items-start gap-2 text-left"
+                  className="ui-tap flex min-w-0 flex-1 items-start gap-2 text-left"
                   title={rowTitle}
                 >
                 <span className={cn("mt-1.5 h-2 w-2 shrink-0 rounded-full", dotClass)} />
