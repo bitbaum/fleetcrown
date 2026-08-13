@@ -26,8 +26,8 @@ export const ASSISTANT_STACK = {
 export const CONTACT_IMPORT_GUIDE = [
   {
     id: "google",
-    title: "Google Contacts (best for emails)",
-    how: "contacts.google.com → Export → Google CSV → Import address book on this page.",
+    title: "Google Contacts (best — company, title, phone, email)",
+    how: "contacts.google.com → Export → Google CSV → Import address book. Picking the file writes it. No 3,000 accept clicks.",
   },
   {
     id: "apple",
@@ -36,7 +36,7 @@ export const CONTACT_IMPORT_GUIDE = [
   },
   {
     id: "openclaw",
-    title: "OpenClaw book (already here)",
-    how: "WhatsApp names and aliases from your OpenClaw workspace. Sync to pull any new ones.",
+    title: "OpenClaw book",
+    how: "WhatsApp/Telegram names already here, plus notes from the workspace. Sync writes new fields onto matching people.",
   },
 ] as const;

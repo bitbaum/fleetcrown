@@ -55,6 +55,7 @@ export const BOOK_ATTR = {
   PROFESSION: "profession",
   LOCATION: "location",
   COMPANY: "company",
+  RELATIONSHIP: "relationship",
 } as const;
 
 export const BOOK_ATTR_KEYS = Object.values(BOOK_ATTR);
@@ -68,6 +69,7 @@ export const BOOK_ATTR_LABEL: Record<string, string> = {
   [BOOK_ATTR.PROFESSION]: "Profession",
   [BOOK_ATTR.LOCATION]: "Location",
   [BOOK_ATTR.COMPANY]: "Company",
+  [BOOK_ATTR.RELATIONSHIP]: "Relationship",
 };
 
 const BOOK_ATTR_SET = new Set<string>(BOOK_ATTR_KEYS);
@@ -79,6 +81,11 @@ export function isBookAttrKey(key: string): boolean {
 export const IMPORT_BATCH_CAP = 200;
 /** One scan click must finish. A 1284-person book cannot enqueue unbounded drafts. */
 export const ENRICH_SCAN_CAP = 50;
+/**
+ * Handing us a file is the approval. Apply this many contacts per request
+ * so a 3000-row Google export cannot time out the route. The UI loops.
+ */
+export const IMPORT_APPLY_CAP = 400;
 
 export function importDraftTitle(name: string): string {
   return `Import: ${name}`.slice(0, 200);

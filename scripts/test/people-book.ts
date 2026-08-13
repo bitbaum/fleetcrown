@@ -10,7 +10,8 @@ import {
   mergeDraftTitle,
 } from "../../src/config/book";
 import { canImportSocial, canMarket, DEFAULT_VACUUMS, ROBOT_CLASS, ROBOT_CLASS_TO_OC_ASSET } from "../../src/config/actors";
-import { clusterPeople, extractEmails, extractPhones, matchImportedContact, normalizeName, pickCanonicalPerson } from "../../src/lib/people-dedupe";
+import { clusterPeople, extractEmails, extractPhones, matchImportedContact, normalizeName, phonesCompatible, pickCanonicalPerson, shouldPreferImportedName } from "../../src/lib/people-dedupe";
+import { parseKnowledgePeople } from "../../src/lib/people-import";
 import { ENRICH_SCAN_CAP } from "../../src/config/book";
 import { isUniqueViolation } from "../../src/lib/api/route-helpers";
 import { detectImportSource, parseCsv, parseImport, parseVCard, parseContactResolver } from "../../src/lib/people-import";
@@ -70,14 +71,35 @@ assert.equal(csv[0]!.name, "Manuel");
 assert.equal(csv[0]!.attrs[BOOK_ATTR.EMAIL], "manu@example.com");
 
 const google = parseCsv([
-  "First Name,Last Name,E-mail 1 - Value,Phone 1 - Value,Organization Name,Organization Title,Notes,Extra 1,Extra 2,Extra 3",
-  "Ada,Lovelace,ada@analytical.engine,+44201234,Analytical Engines,Mathematician,Notes here,x,y,z",
+  "First Name,Last Name,Nickname,E-mail 1 - Value,Phone 1 - Value,Organization Name,Organization Title,Notes,Address 1 - City,Address 1 - Country,Extra",
+  "Ada,Lovelace,A.L.,ada@analytical.engine,+44201234,Analytical Engines,Mathematician,Notes here,London,UK,x",
 ].join("\n"));
 assert.equal(google[0]!.name, "Ada Lovelace");
 assert.equal(google[0]!.attrs[BOOK_ATTR.EMAIL], "ada@analytical.engine");
 assert.equal(google[0]!.attrs[BOOK_ATTR.COMPANY], "Analytical Engines");
 assert.equal(google[0]!.attrs[BOOK_ATTR.PROFESSION], "Mathematician");
+assert.equal(google[0]!.attrs[BOOK_ATTR.LOCATION], "London, UK");
+assert.ok(google[0]!.attrs[BOOK_ATTR.ALIASES]?.includes("A.L."));
 assert.equal(google[0]!.description, "Notes here");
+
+assert.equal(shouldPreferImportedName("Aaron", "Aaron Brooks"), true);
+assert.equal(shouldPreferImportedName("Aaron Brooks", "Aaron"), false);
+assert.equal(shouldPreferImportedName("Manu", "Manuel Riegner"), false);
+assert.equal(phonesCompatible("41783226939", "0783226939"), true);
+assert.equal(phonesCompatible("41783226939", "41783226939"), true);
+assert.equal(phonesCompatible("41783226939", "12025550123"), false);
+
+const phoneMatch = matchImportedContact(
+  { name: "George", attrs: { "channel:phone": "078 322 69 39" } },
+  [{ id: "g", name: "George", attrs: { "channel:whatsapp": "e164:+41783226939" } }],
+);
+assert.equal(phoneMatch?.id, "g");
+
+const knowledge = parseKnowledgePeople([
+  { name: "Manuel Riegner", attrs: { profession: "psychiatrist", relationship_to_george: "friend" } },
+]);
+assert.equal(knowledge[0]!.attrs[BOOK_ATTR.PROFESSION], "psychiatrist");
+assert.equal(knowledge[0]!.attrs[BOOK_ATTR.RELATIONSHIP], "friend");
 
 const resolver = parseContactResolver(JSON.stringify({
   contacts: [{
