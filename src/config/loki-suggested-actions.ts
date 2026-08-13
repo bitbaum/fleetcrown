@@ -1,57 +1,111 @@
 /**
- * Quick-action chips above the Loki composer — fill the input for edit/send.
- * Wording mirrors control-intents where possible; project name is appended when
- * one project is selected in the right pane.
+ * Loki start-page chips — SSOT for what the composer offers.
+ *
+ * Three states, three actions each. Dispatch chips only appear once a project
+ * is scoped, because unscoped "move forward" / "code review" cannot run.
  */
-export type LokiSuggestedAction = {
+
+export type LokiChipKind = "send" | "prefill" | "open_projects" | "href";
+
+export type LokiComposerChip = {
   id: string;
   label: string;
-  /** NL sent to the resolver; `{project}` replaced when scoped. */
-  template: string;
+  kind: LokiChipKind;
+  /** NL for send/prefill. `{project}` is replaced when one project is scoped. */
+  template?: string;
+  href?: string;
+  /** Send as chat (no dispatch). Fleet questions, not agent work. */
+  chatOnly?: boolean;
 };
 
-export const LOKI_SUGGESTED_ACTIONS: LokiSuggestedAction[] = [
-  { id: "move_forward", label: "Move forward", template: "move forward on {project}" },
-  { id: "develop_all", label: "Build fleet", template: "develop all my projects" },
-  { id: "next_best", label: "Next best", template: "next best for {project}" },
-  { id: "quality", label: "Code review", template: "code review for {project}" },
-  { id: "test_and_fix", label: "Fix tests", template: "fix types and tests for {project}" },
-  { id: "ux_review", label: "Review UI", template: "review the ui for {project}" },
-  { id: "business_plan", label: "Business plan", template: "generate business plan for {project}" },
+export const LOKI_NEW_PROJECT_HREF = "/control/new-from-scratch";
+export const LOKI_IMPORT_PROJECT_HREF = "/control/import";
+
+export const LOKI_ATTENTION_PROMPT =
+  "Review my whole fleet. Pick the 2–3 projects that most need my attention right now, and for each say in one line why. Then for each, ask me ONE specific question whose answer would most help you move it forward. Cite the project. Don't list every project.";
+
+const NEW_PROJECT_CHIP: LokiComposerChip = {
+  id: "new_project",
+  label: "New project",
+  kind: "href",
+  href: LOKI_NEW_PROJECT_HREF,
+};
+
+const IMPORT_PROJECT_CHIP: LokiComposerChip = {
+  id: "import_project",
+  label: "I have one",
+  kind: "href",
+  href: LOKI_IMPORT_PROJECT_HREF,
+};
+
+const OPEN_PROJECT_CHIP: LokiComposerChip = {
+  id: "open_project",
+  label: "Open a project",
+  kind: "open_projects",
+};
+
+const ATTENTION_CHIP: LokiComposerChip = {
+  id: "attention",
+  label: "What needs me",
+  kind: "send",
+  chatOnly: true,
+  template: LOKI_ATTENTION_PROMPT,
+};
+
+export const LOKI_SCOPED_CHIPS: LokiComposerChip[] = [
+  { id: "move_forward", label: "Move forward", kind: "send", template: "move forward on {project}" },
+  { id: "quality", label: "Review", kind: "send", template: "code review for {project}" },
+  { id: "test_and_fix", label: "Fix tests", kind: "send", template: "fix types and tests for {project}" },
 ];
 
 export function fillSuggestedAction(template: string, projectName: string | null): string {
   if (projectName) return template.replaceAll("{project}", projectName);
-  return template.replace(/\s+for\s+\{project\}/i, "").replace("{project}", "").trim();
+  return template
+    .replace(/\s+(?:on|for|in)\s+\{project\}/gi, "")
+    .replaceAll("{project}", "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
-/**
- * Proactive openers shown on the empty Loki transcript — Loki offers to look
- * across the whole fleet before you type. Each `prompt` is a complete, fleet-
- * wide instruction (no {project}); Loki answers it from its full fleet context
- * (all projects + goals + dev logs + essays), so the intelligence lives in the
- * prompt, not new code. This is what makes Loki proactive: it surfaces what
- * needs attention and asks the questions that would help it move work forward.
- */
+export function composerChips(input: {
+  projectCount: number;
+  selectedProjects: string[];
+  selectedGoal?: { title: string } | null;
+}): LokiComposerChip[] {
+  const selected = input.selectedProjects;
+  if (selected.length === 1) {
+    const name = selected[0];
+    const goal = input.selectedGoal;
+    if (goal?.title) {
+      return [
+        {
+          id: "active_goal",
+          label: "Move forward",
+          kind: "send",
+          template: `Move ${name} toward its active goal: ${goal.title}. Inspect the current state and complete the highest-impact next step you can verify.`,
+        },
+        LOKI_SCOPED_CHIPS[1],
+        LOKI_SCOPED_CHIPS[2],
+      ];
+    }
+    return LOKI_SCOPED_CHIPS;
+  }
+  if (selected.length > 1) {
+    return [
+      { id: "move_forward_many", label: "Move forward", kind: "send", template: "move forward" },
+      { id: "quality_many", label: "Review", kind: "send", template: "code review" },
+      { id: "test_and_fix_many", label: "Fix tests", kind: "send", template: "fix types and tests" },
+    ];
+  }
+  if (input.projectCount === 0) {
+    return [NEW_PROJECT_CHIP, IMPORT_PROJECT_CHIP];
+  }
+  return [NEW_PROJECT_CHIP, OPEN_PROJECT_CHIP, ATTENTION_CHIP];
+}
+
+/** Fleet-wide openers for the floating assistant (other pages). */
 export type LokiProactiveStarter = { id: string; label: string; prompt: string };
 
 export const LOKI_PROACTIVE_STARTERS: LokiProactiveStarter[] = [
-  {
-    id: "attention",
-    label: "What needs my attention?",
-    prompt:
-      "Review my whole fleet. Pick the 2–3 projects that most need my attention right now, and for each say in one line why (e.g. stale, blocked, thin context, no goals set, ready to ship). Then for each, ask me ONE specific question whose answer would most help you move it forward. Cite the project. Don't list every project — only the ones that genuinely need attention.",
-  },
-  {
-    id: "synergies",
-    label: "Find hidden synergies",
-    prompt:
-      "Look across all my projects and name the 2 strongest hidden synergies — which projects each connects and the concrete opportunity. Cite the sources you use.",
-  },
-  {
-    id: "fill_context",
-    label: "Fill a context gap",
-    prompt:
-      "Which of my projects has the thinnest or most out-of-date context (missing goals, stub description, stale dev log)? Pick the one where a short conversation would help you most, then ask me 3 focused questions to fill it in.",
-  },
+  { id: "attention", label: "What needs me", prompt: LOKI_ATTENTION_PROMPT },
 ];

@@ -3062,11 +3062,30 @@
   }
 
   /* ── Loki — conversational command surface ───────────────────────────────── */
-  .ui-loki-workspace {
-    @apply flex min-h-0 flex-1 flex-col gap-2 lg:grid lg:gap-5;
+  /* Start page: one column, composer is the decision. History is a drawer. */
+  .ui-loki-page {
+    @apply py-2 sm:py-3 md:py-4;
   }
-  @media (min-width: 64rem) {
-    .ui-loki-workspace { grid-template-columns: 15rem minmax(0, 1fr); }
+  .ui-loki-workspace {
+    @apply flex min-h-0 flex-1 flex-col;
+  }
+  .ui-loki-toolbar {
+    @apply flex shrink-0 items-center gap-1;
+  }
+  .ui-loki-toolbar-btn {
+    @apply relative inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2.5 text-sm text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary sm:min-h-9;
+  }
+  .ui-loki-toolbar-dot {
+    @apply absolute right-1 top-1.5 h-1.5 w-1.5 rounded-full bg-accent-primary;
+  }
+  .ui-loki-stage {
+    @apply mx-auto flex min-h-0 w-full max-w-2xl flex-1 flex-col;
+  }
+  .ui-loki-stage-empty {
+    @apply justify-center gap-3 pb-16 sm:pb-24;
+  }
+  .ui-loki-stage-chat {
+    @apply gap-2;
   }
   /* Conversation list row (left pane). */
   .ui-loki-convo {
@@ -3150,7 +3169,7 @@
     @apply flex min-h-7 flex-wrap items-center gap-1.5;
   }
   .ui-loki-composer-input {
-    @apply max-h-60 min-h-20 w-full resize-none bg-transparent px-1 py-1 text-base leading-relaxed text-text-primary placeholder:text-text-tertiary outline-none sm:min-h-24;
+    @apply max-h-60 min-h-12 w-full resize-none overflow-y-auto bg-transparent px-1 py-1 text-base leading-relaxed text-text-primary placeholder:text-text-tertiary outline-none sm:min-h-14;
   }
   .ui-loki-composer-actions {
     @apply flex items-center justify-between gap-2 border-t border-border-subtle pt-2;
@@ -3173,7 +3192,7 @@
     @apply inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-primary text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:bg-surface-raised disabled:text-text-muted;
   }
   .ui-loki-suggest-row {
-    @apply flex min-w-0 flex-1 gap-1.5 overflow-x-auto pr-1 sm:flex-none sm:justify-end;
+    @apply flex min-w-0 flex-wrap gap-1.5;
   }
   .ui-loki-suggest-chip {
     @apply inline-flex min-h-9 shrink-0 items-center rounded-full border border-border-subtle bg-surface-raised px-3 text-xs text-text-secondary transition-colors hover:border-border-default hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-45 sm:min-h-8;

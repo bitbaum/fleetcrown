@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { MessagesSquare, Plus } from "lucide-react";
 import { getJson, postJson, deleteJson, throwApiError } from "@/lib/api/fetch";
 import { resolveLokiProjectSelection } from "@/lib/loki/project-selection";
-import { readRememberedFleetProject, rememberFleetProject } from "@/lib/fleet-context";
+import { rememberFleetProject } from "@/lib/fleet-context";
 import { deriveExecutorHonestyLabel } from "@/lib/executor-honesty";
 import { useBuilderPresence } from "@/hooks/use-builder-presence";
 import { Drawer } from "@/components/ui/modal";
@@ -126,7 +126,10 @@ export function LokiWorkspace({
 
   useEffect(() => {
     if (selectionInitialized || projectsLoading || projects.length === 0) return;
-    const requested = searchParams.get("project") ?? readRememberedFleetProject();
+    // Only honor an explicit ?project= — a fresh /loki visit is the start
+    // page (new / open / what needs me). Remembered scope still writes so
+    // Control and Terminal keep the last project.
+    const requested = searchParams.get("project");
     const fromUrl = resolveLokiProjectSelection(projects, requested);
     if (fromUrl.length > 0) setSelectedProjects(fromUrl);
     setSelectionInitialized(true);
@@ -305,15 +308,17 @@ export function LokiWorkspace({
     ? projects.find((project) => project.name === selectedProjects[0])?.topGoal ?? null
     : null;
 
+  const isStart =
+    messages.length === 0 && !transcriptLoading && !sending && !activeId;
+
   const chatBody = (
     <>
-      <div className="flex min-h-0 flex-1 flex-col px-1 sm:px-3">
+      <div className={`flex min-h-0 flex-col ${isStart ? "" : "flex-1"} px-1 sm:px-0`}>
         <Transcript
           messages={messages}
           loading={transcriptLoading}
           sending={sending}
           onPickProject={dispatchWithProject}
-          onStart={(prompt) => void send(prompt, {}, [], { chatOnly: true, selectedProjectsOverride: [] })}
         />
       </div>
       {messages.length > 0 && (
@@ -328,13 +333,16 @@ export function LokiWorkspace({
         key={`${activeId ?? "new"}:${composerPrefill ?? ""}`}
         defaultText={composerPrefill ?? ""}
         selectedProjects={selectedProjects}
+        projectCount={projects.length}
         selectedGoal={selectedGoal}
         onRemoveProject={toggleProject}
         onOpenProjects={() => setFilterOpen(true)}
         disabled={false}
         sending={sending}
         dispatchHonesty={dispatchHonesty}
-        onSend={(t, choice, attachments) => void send(t, choice, attachments)}
+        onSend={(t, choice, attachments, opts) =>
+          void send(t, choice, attachments, { chatOnly: opts?.chatOnly })
+        }
       />
     </>
   );
@@ -352,7 +360,15 @@ export function LokiWorkspace({
               loading={convosLoading}
               error={convosError}
               onRetry={() => void reloadConversations()}
-              onSelect={(id) => { setActiveId(id); setHistoryOpen(false); }}
+              onSelect={(id) => {
+                const convo = conversations.find((c) => c.id === id);
+                if (convo && convo.projectKeys.length > 0) {
+                  const known = convo.projectKeys.filter((k) => projects.some((p) => p.name === k));
+                  setSelectedProjects(known.length > 0 ? known : convo.projectKeys);
+                }
+                setActiveId(id);
+                setHistoryOpen(false);
+              }}
               onNew={() => { startNewConversation(); setHistoryOpen(false); }}
               onDelete={(id) => void deleteConversation(id)}
             />
@@ -379,30 +395,30 @@ export function LokiWorkspace({
   );
 
   return (
-    <div className="ui-loki-workspace mx-auto w-full max-w-5xl">
-      <aside className="hidden min-h-0 border-r border-border-subtle pr-4 lg:block">
-        <ConversationList
-          conversations={visibleConversations}
-          activeId={activeId}
-          loading={convosLoading}
-          error={convosError}
-          onRetry={() => void reloadConversations()}
-          onSelect={setActiveId}
-          onNew={startNewConversation}
-          onDelete={(id) => void deleteConversation(id)}
-        />
-      </aside>
+    <div className="ui-loki-workspace">
+      <div className="ui-loki-toolbar">
+        <button
+          type="button"
+          className="ui-loki-toolbar-btn"
+          onClick={() => setHistoryOpen(true)}
+          aria-label={conversations.length > 0 ? `Open chats (${conversations.length})` : "Open chats"}
+        >
+          <MessagesSquare className="h-4 w-4" />
+          <span>Chats</span>
+          {conversations.length > 0 && <span className="ui-loki-toolbar-dot" aria-hidden />}
+        </button>
+        <button
+          type="button"
+          className="ui-loki-toolbar-btn"
+          onClick={startNewConversation}
+          aria-label="New chat"
+        >
+          <Plus className="h-4 w-4" />
+          <span>New</span>
+        </button>
+      </div>
 
-      <section className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col gap-2">
-        <div className="flex min-h-10 items-center gap-1.5 px-1 sm:px-3 lg:hidden">
-          <button type="button" className="ui-btn-icon" onClick={() => setHistoryOpen(true)} aria-label="Open chats" title="Chats">
-            <MessagesSquare className="h-4 w-4" />
-          </button>
-          <button type="button" className="ui-btn-icon" onClick={startNewConversation} aria-label="New chat" title="New chat">
-            <Plus className="h-4 w-4" />
-          </button>
-        </div>
-
+      <section className={isStart ? "ui-loki-stage ui-loki-stage-empty" : "ui-loki-stage ui-loki-stage-chat"}>
         {chatBody}
       </section>
 

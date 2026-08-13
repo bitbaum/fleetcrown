@@ -6,15 +6,15 @@ import { prefetchLokiWorkspace } from "@/lib/loki/prefetch";
 
 export const metadata: Metadata = { title: "Loki" };
 
-// Loki — the conversational command surface (docs/loki-command-surface.md §4).
-// One composer, a conversation list, a project filter; chat routes to Loki and
-// commands dispatch into the project's agent session via the shared resolver.
+// Loki — start a project or continue one. Composer is the only decision;
+// history and project pick live in drawers. Chat vs dispatch is resolved
+// from the message (docs/loki-command-surface.md).
 export default async function LokiPage() {
   const userId = await getSessionUserId();
   const seed = userId ? await prefetchLokiWorkspace(userId) : null;
 
   return (
-    <div className="app-page app-page-compact app-viewport-pane flex flex-col">
+    <div className="app-page ui-loki-page app-viewport-pane flex flex-col">
       <Suspense fallback={<div className="mx-auto h-full w-full max-w-5xl animate-pulse rounded-lg bg-surface-base" />}>
         <LokiWorkspace
           initialProjects={seed?.projects}
