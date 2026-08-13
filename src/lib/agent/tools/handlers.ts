@@ -21,6 +21,7 @@ import { ACTION_TYPE, type ActionType } from "@/lib/constants/statuses";
 import { askGatewayAgent, isGatewayConfigured } from "@/lib/openclaw-gateway";
 import { makeFact, type Fact } from "@/lib/agent/core/facts";
 import { peopleFacts, projectFacts, documentFacts } from "@/lib/agent/sources";
+import { enrichReachPayload, reachFromPerson, resolvePersonToReach } from "@/lib/people-resolve";
 import { defineTool } from "@/lib/agent/tools/registry";
 import type { ToolRegistry, ToolResult } from "@/lib/agent/tools/registry";
 
@@ -235,11 +236,21 @@ const proposeActionTool = defineTool({
     const a = args as {
       type: ActionType; title: string; reasoning?: string; to?: string; body?: string; dueDate?: string;
     };
+    const person =
+      a.type === ACTION_TYPE.SEND_MESSAGE || a.type === ACTION_TYPE.SEND_EMAIL
+        ? await resolvePersonToReach(ctx.userId, a.to, a.title).catch(() => null)
+        : null;
+    const reach = person ? reachFromPerson(person) : null;
     const created = await proposeAction(ctx.userId, {
       type: a.type ?? ACTION_TYPE.OTHER,
-      title: a.title,
-      reasoning: a.reasoning ?? null,
-      payload: { to: a.to, body: a.body, dueDate: a.dueDate },
+      title: person && (a.type === ACTION_TYPE.SEND_MESSAGE || a.type === ACTION_TYPE.SEND_EMAIL)
+        ? `Message ${person.name}`.slice(0, 160)
+        : a.title,
+      reasoning: person
+        ? `Matched ${person.name}${reach ? ` on ${reach.channel}` : ""}.`
+        : (a.reasoning ?? null),
+      payload: enrichReachPayload({ to: a.to, body: a.body, dueDate: a.dueDate }, reach),
+      entityId: person?.id ?? null,
     }).catch(() => null);
 
     // proposeAction returns null when an identical draft title is already
