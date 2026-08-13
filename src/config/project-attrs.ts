@@ -18,6 +18,11 @@ export const PROJECT_ATTR = {
   STACK: "stack",
   ARCHITECTURE: "architecture",
   CONVENTIONS: "conventions",
+  // Distribution & go-to-market (agent-facing — rendered into dispatch
+  // context like mission/solution, deliberately NOT market-lens: agents must
+  // see how the project reaches people and gets paid)
+  DISTRIBUTION: "distribution",
+  GTM: "gtm",
   // Workflow / metadata
   STATUS: "status",
   MATURITY: "maturity",

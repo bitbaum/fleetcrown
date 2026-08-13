@@ -81,7 +81,12 @@ for (const kind of PROJECT_DISPATCH_KINDS) {
 // ── Placeholders never reach an agent ───────────────────────────────────────
 
 const withUnknowns = composeDispatchPrompt("kickoff", undefined, dossier({
-  attrs: { mission: "Keep valuables out of the house", stack: "Unknown", architecture: "N/A", conventions: "TBD" },
+  attrs: {
+    mission: "Keep valuables out of the house",
+    stack: "Unknown", architecture: "N/A", conventions: "TBD",
+    distribution: "RSS + newsletter",
+    gtm: "Solo builders; first paying customer via OrangeCat",
+  },
   goals: [{ title: "Core data model" }],
 }));
 const kickoffPrompt = withUnknowns.prompt ?? "";
@@ -89,6 +94,8 @@ ok(!/Unknown/.test(kickoffPrompt), "a placeholder stack never reaches the agent"
 ok(!/N\/A/.test(kickoffPrompt), "'N/A' never reaches the agent");
 ok(!/TBD/.test(kickoffPrompt), "'TBD' never reaches the agent");
 ok(/MISSION: Keep valuables out of the house/.test(kickoffPrompt), "the real field is still there");
+ok(/DISTRIBUTION: RSS \+ newsletter/.test(kickoffPrompt), "distribution reaches the kickoff agent");
+ok(/GO-TO-MARKET: Solo builders/.test(kickoffPrompt), "go-to-market reaches the kickoff agent");
 
 eq(
   composeDispatchPrompt("next_step", undefined, dossier({ attrs: { next_step: "Unknown" } })).error,

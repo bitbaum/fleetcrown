@@ -78,6 +78,8 @@ export function composeDispatchPrompt(
       ["Mission", attrs.mission],
       ["Problem", attrs.problem],
       ["Solution", attrs.solution],
+      ["Distribution", attrs.distribution],
+      ["Go-to-market", attrs.gtm],
       ["Stack", attrs.stack],
       ["Architecture", attrs.architecture],
       ["Conventions", attrs.conventions],
