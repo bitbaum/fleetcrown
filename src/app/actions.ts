@@ -1,7 +1,6 @@
 "use server";
 
 import { approveAction, rejectAction, getActionById, updateDraftPayload, markActionExecuted } from "@/db/queries/actions";
-import type { ActionRow } from "@/db/queries/actions";
 import { setFeedbackStatus } from "@/db/queries/site-feedback";
 import { planTrim } from "@/lib/actions/advisor";
 import { RECOMMENDATION, type Recommendation } from "@/lib/actions/advice-rules";
@@ -10,39 +9,16 @@ import { fulfillCommitment } from "@/db/queries/today";
 import { cancelSubscription } from "@/db/queries/money";
 import { createInteraction } from "@/db/queries/people";
 import { patchGoal } from "@/db/queries/goals";
-import { executeAction, type ExecuteActionResult } from "@/lib/actions/execute-action";
+import { finalizeApproved } from "@/lib/actions/finalize-approved";
+import type { ExecuteActionResult } from "@/lib/actions/execute-action";
 import { recordActionAuditEvent } from "@/db/queries/control-audit-events";
 import { requirePageUserId } from "@/lib/session";
 import { isPrivateZoneLocked } from "@/lib/private-zone";
 import { ROUTES } from "@/config/auth";
 import { GOAL_STATUS, FEEDBACK_STATUS } from "@/lib/constants/statuses";
-import { ACTION_TYPE, type ActionType, INTERACTION_DIRECTION } from "@/lib/constants/statuses";
+import { INTERACTION_DIRECTION } from "@/lib/constants/statuses";
 import { revalidatePath } from "next/cache";
 
-const INTERACTION_ACTION_TYPES = new Set<ActionType>([
-  ACTION_TYPE.SEND_MESSAGE,
-  ACTION_TYPE.SEND_EMAIL,
-  ACTION_TYPE.FOLLOW_UP,
-]);
-
-/**
- * Shared post-approval path: log the outbound interaction (for message types),
- * audit the approval, then run the executor. The executor is fail-closed — it
- * only advances the row to 'executed' on a real successful effect; external
- * types are deferred and audited (see lib/actions/execute-action.ts).
- */
-async function finalizeApproved(userId: string, action: ActionRow): Promise<ExecuteActionResult> {
-  if (action.entityId && INTERACTION_ACTION_TYPES.has(action.type)) {
-    await createInteraction(userId, {
-      entityId: action.entityId,
-      channel: String(action.payload?.channel ?? "other"),
-      direction: INTERACTION_DIRECTION.OUTBOUND,
-      summary: action.title,
-    });
-  }
-  await recordActionAuditEvent(userId, action, "approved");
-  return executeAction(userId, action);
-}
 
 export async function handleApprove(id: string): Promise<ExecuteActionResult> {
   const userId = await requirePageUserId();

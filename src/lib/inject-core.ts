@@ -43,6 +43,9 @@ export type InjectParams = {
    *  the project's stored modelPref; the runner reads it on auto-launch. */
   model?: string;
   runId?: string;
+  /** Push the close outcome to chat (Telegram). Set by chat-originated
+   *  dispatches (Loki's fleet skill) — see lib/orchestration/notify-close.ts. */
+  notifyOnClose?: boolean;
 };
 
 export type InjectResult = { status: number; body: Record<string, unknown> };
@@ -280,6 +283,7 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
           projectKey: canonical,
           projectPath: resolvedProjectPath,
           model: eventModel,
+          ...(params.notifyOnClose ? { notifyOnClose: true } : {}),
         },
       });
       runId = run.id;

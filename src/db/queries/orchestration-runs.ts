@@ -12,6 +12,7 @@ import { resolveFeedbackForRun } from "@/lib/feedback/close-loop";
 import { promoteRunClose } from "@/lib/integrations/orangecat-publish";
 import { isFailingOutcome } from "@/lib/events";
 import { advanceEscalation, resolveEscalation } from "./run-escalations";
+import { notifyRunClosed } from "@/lib/orchestration/notify-close";
 import { correctTimeoutReapsWithRepoEvidence } from "@/lib/orchestration/reap-evidence";
 import { emitRunEvent } from "./run-events";
 import { RUNNER_OFFLINE_THRESHOLD_MS } from "@/lib/constants/runner";
@@ -75,6 +76,13 @@ export async function updateOrchestrationRun(
     });
   }
 
+  // Chat-originated runs push their outcome back to chat (opt-in via
+  // payload.notifyOnClose). Both branches above are outcome-specific; this
+  // fires on ANY close so a chat dispatch never ends in silence.
+  if (updated && patch.finishedAt) {
+    void notifyRunClosed(updated);
+  }
+
   return updated;
 }
 
@@ -119,9 +127,13 @@ export async function closeRunUndelivered(runId: string, userId: string, reason:
       eq(orchestrationRuns.userId, userId),
       isNull(orchestrationRuns.finishedAt),
     ))
-    .returning({ id: orchestrationRuns.id });
+    .returning();
   if (closed) {
     void emitRunEvent(runId, userId, "closed", { outcome: ORCHESTRATION_OUTCOME.ERROR, by: "runner-nack", reason });
+    // This path bypasses updateOrchestrationRun, so it must emit its own
+    // chat notification — a chat dispatch that never reached a runner is
+    // exactly the close the operator most needs to hear about.
+    void notifyRunClosed(closed);
   }
 }
 
