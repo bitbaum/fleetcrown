@@ -152,5 +152,10 @@ export function matchImportedContact(
     if (hit) return hit;
   }
   const name = normalizeName(contact.name);
-  return people.find((p) => normalizeName(p.name) === name) ?? null;
+  // Single given names ("George", "Anja") collide too often. Only
+  // name-match when the full name is unique in the book.
+  if (!name.includes(" ")) return null;
+  const nameHits = people.filter((p) => normalizeName(p.name) === name);
+  return nameHits.length === 1 ? nameHits[0]! : null;
 }
+
