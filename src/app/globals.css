@@ -2646,11 +2646,14 @@
   .ui-control-autopilot-state {
     @apply inline-flex flex-wrap items-center gap-2 text-sm text-text-secondary;
   }
+  /* "Start building" earns full-width prominence on phones (it's the positive
+     next step); "Pause fleet" does not — full-width made a fleet-wide stop the
+     single biggest control on the mobile screen. It stays a normal button. */
   .ui-control-autopilot-btn-build {
     @apply inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition-colors disabled:opacity-50 sm:w-auto bg-accent-primary text-text-inverted hover:bg-accent-hover;
   }
   .ui-control-autopilot-btn-pause {
-    @apply inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition-colors disabled:opacity-50 sm:w-auto border border-border-default bg-surface-base text-text-primary hover:border-border-strong hover:bg-surface-overlay;
+    @apply inline-flex min-h-11 w-auto shrink-0 items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition-colors disabled:opacity-50 border border-border-default bg-surface-base text-text-primary hover:border-border-strong hover:bg-surface-overlay;
   }
   .ui-control-project-autopilot-paused {
     @apply shrink-0 text-micro font-medium uppercase tracking-wide text-text-muted;
@@ -2767,12 +2770,20 @@
   .ui-control-workspace {
     @apply grid items-start gap-4 lg:grid-cols-[17.5rem_minmax(0,1fr)];
   }
+  /* Mobile: the selected project card is the primary object — it renders
+     FIRST, with the full project rail below it. Pre-fix the rail's 20+ rows
+     stacked above the card, pushing the one working agent ~3 screens down. */
   .ui-control-project-rail {
-    @apply overflow-hidden rounded-2xl border border-border-subtle bg-surface-raised lg:sticky lg:top-6;
+    @apply order-2 overflow-hidden rounded-2xl border border-border-subtle bg-surface-raised lg:order-none lg:sticky lg:top-6;
     box-shadow: var(--shadow-panel);
   }
+  .ui-control-project-detail {
+    @apply order-1 min-w-0 lg:order-none;
+  }
+  /* The rail list is a capped scroll pane on EVERY breakpoint — on phones an
+     uncapped list rendered all rows full-height (~3 screens of idle projects). */
   .ui-control-project-list {
-    @apply flex flex-col gap-2 p-2 lg:block lg:max-h-[calc(100dvh-20rem)] lg:space-y-1 lg:overflow-y-auto;
+    @apply flex max-h-[50dvh] flex-col gap-2 overflow-y-auto p-2 lg:block lg:max-h-[calc(100dvh-20rem)] lg:space-y-1;
   }
   @media (min-width: 64rem) {
     .ui-control-project-list {

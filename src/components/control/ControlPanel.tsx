@@ -419,14 +419,18 @@ export function ControlPanel() {
         />
       )}
 
+      {/* Section is exactly what its title says now: the agent/model defaults
+          used for new launches. The old "Diagnostics and launch settings"
+          label promised diagnostics it never contained, and the panel carried
+          a second "New project" button no one could find down here — the
+          header's "+ New" is the one CTA for that. */}
       <details className="ui-control-launch-defaults">
         <summary className="ui-control-launch-defaults-summary flex items-center gap-2">
           <Settings2 className="h-3.5 w-3.5" />
-          Diagnostics and launch settings
+          Launch defaults
         </summary>
         <div className="ui-control-launch-defaults-body space-y-5">
           <section>
-            <h3 className="mb-3 text-sm font-medium text-text-secondary">Launch defaults</h3>
             <p className="mb-3 text-xs leading-relaxed text-text-tertiary">
               These choices are used when {APP_NAME} opens a new terminal tab. CLI availability is reported by the connected computer, not by the cloud.
             </p>
@@ -443,7 +447,6 @@ export function ControlPanel() {
                 onModelChange={handleModelChange}
                 onSave={saveAgent}
                 onRequestInstall={requestAgentInstall}
-                onLaunchNew={() => (runtimeAvailable ? setBootstrapOpen(true) : setNewProjectOpen(true))}
               />
           </section>
 

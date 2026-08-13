@@ -239,9 +239,14 @@ export function ControlFleetStatus({
 
       <div className="ui-control-fleet-metrics">
         {attention > 0 && (
-          <span className={cn("ui-control-fleet-chip ui-control-fleet-chip-attention", staleClass)} title={staleTitle}>
+          <button
+            type="button"
+            onClick={() => document.getElementById("control-attention")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+            className={cn("ui-control-fleet-chip ui-control-fleet-chip-attention cursor-pointer transition-opacity hover:opacity-80", staleClass)}
+            title={staleTitle ?? "Failed commands and projects waiting on you — click to jump to the list"}
+          >
             {attention} need{attention === 1 ? "s" : ""} you
-          </span>
+          </button>
         )}
         <span className={cn("ui-control-fleet-chip", staleClass)} title={staleTitle}>
           {working > 0 && <span className="ui-dot ui-dot-positive shrink-0 mr-1" aria-hidden="true" />}
