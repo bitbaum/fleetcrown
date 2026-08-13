@@ -16,7 +16,7 @@ import { getGoals, type GoalWithChildren } from "@/db/queries/goals";
 import { getTodayHabits } from "@/db/queries/habits";
 import { listUpcomingCommitments } from "@/db/queries/today";
 import { getEventsDueSoon } from "@/db/queries/events";
-import { proposeAction } from "@/db/queries/actions";
+import { getPendingActions, proposeAction } from "@/db/queries/actions";
 import { ACTION_TYPE, type ActionType } from "@/lib/constants/statuses";
 import { askGatewayAgent, isGatewayConfigured } from "@/lib/openclaw-gateway";
 import { makeFact, type Fact } from "@/lib/agent/core/facts";
@@ -174,6 +174,36 @@ const listCommitmentsTool = defineTool({
   },
 });
 
+const listPendingApprovalsTool = defineTool({
+  name: "list_pending_approvals",
+  kind: "read",
+  description:
+    "The operator's approval queue — draft actions waiting for their approve/reject. Use when asked what is pending, waiting, or needs a decision. Decisions happen on the Approvals page (or via chat on WhatsApp/Telegram), not here.",
+  params: z.object({}),
+  example: "TOOL: list_pending_approvals\nARGS: {}",
+  handler: async (_args, ctx) => {
+    const rows = await getPendingActions(ctx.userId).catch(() => []);
+    if (rows.length === 0) return empty("The approval queue is empty — nothing is waiting for the operator.");
+    const facts = rows.slice(0, LIST_LIMIT).map((a) =>
+      makeFact({
+        kind: "pending_action",
+        subject: a.title,
+        source: "approval queue (actions table, status=draft)",
+        values: {
+          title: a.title,
+          type: a.type,
+          reasoning: a.reasoning,
+          proposed_on: dateLabel(a.createdAt),
+          // The short prefix is what the operator can quote to decide it from
+          // chat (fc.sh decide <prefix>) — the full uuid is noise to a human.
+          id: a.id.slice(0, 8),
+        },
+      }),
+    );
+    return { facts };
+  },
+});
+
 /**
  * The OpenClaw gateway, demoted from "the brain" to one tool among many.
  *
@@ -281,6 +311,7 @@ export const LOKI_TOOLS: ToolRegistry = Object.fromEntries(
     listGoalsTool,
     listHabitsTool,
     listCommitmentsTool,
+    listPendingApprovalsTool,
     askOpenClawTool,
     proposeActionTool,
   ].map((t) => [t.name, t]),
