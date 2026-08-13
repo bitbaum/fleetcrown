@@ -98,11 +98,83 @@ function personToFact(p: PersonWithAttributes): Fact {
  * narrated as attributes.
  */
 export async function peopleFacts(userId: string, query: string): Promise<Fact[]> {
-  const named = await searchPeople(userId, query.trim().slice(0, 80), PEOPLE_LIMIT).catch(() => null);
-  const rows = named?.people ?? [];
-  if (rows.length > 0) return rows.map(personToFact);
+  const candidates = nameCandidates(query);
+
+  // Search each candidate name separately and union the results. Passing the
+  // WHOLE message was the original bug: searchPeople filters with
+  // `name ILIKE '%q%'`, so a sentence can never match a name column, every
+  // lookup silently fell through to "12 most recent contacts", and Loki then
+  // correctly reported "Not in your data" about someone who was in the table.
+  // A grounded assistant that cannot find real records is not safer than one
+  // that invents them — it is just differently useless.
+  const seen = new Set<string>();
+  const found: PersonWithAttributes[] = [];
+  for (const name of candidates) {
+    if (found.length >= PEOPLE_LIMIT) break;
+    const hit = await searchPeople(userId, name, PEOPLE_LIMIT).catch(() => null);
+    for (const p of hit?.people ?? []) {
+      if (seen.has(p.id)) continue;
+      seen.add(p.id);
+      found.push(p);
+    }
+  }
+  if (found.length > 0) return found.slice(0, PEOPLE_LIMIT).map(personToFact);
+
+  // Nothing named (or nothing matched) — fall back to recent interactions so a
+  // question like "who should I reach out to" still has something to work with.
   const recent = await searchPeople(userId, "", PEOPLE_LIMIT).catch(() => null);
   return (recent?.people ?? []).map(personToFact);
+}
+
+/**
+ * Pull likely person names out of a free-text message.
+ *
+ * Capitalised runs, minus a stopword list of sentence-initial and structural
+ * words. Deliberately generous: an extra candidate costs one indexed ILIKE,
+ * while a missed one costs a false "Not in your data" — and those are not
+ * symmetric. Single capitalised tokens are included because most contacts are
+ * asked about by first name alone ("what's Elena's number").
+ */
+function nameCandidates(message: string): string[] {
+  const stop = new Set([
+    "who", "what", "when", "where", "why", "how", "the", "and", "but", "for", "with",
+    "my", "me", "i", "is", "are", "was", "in", "on", "at", "to", "of", "do", "does",
+    "also", "please", "can", "you", "your", "contacts", "contact", "affiliation",
+    "research", "linkedin", "etc", "about", "tell", "give", "find", "show", "reach",
+    "out", "him", "her", "them", "his", "their", "a", "an", "it",
+  ]);
+  const out: string[] = [];
+  const seen = new Set<string>();
+
+  for (const sentence of message.split(/(?<=[.!?])\s+/)) {
+    // Tokenise EVERY word, not just capitalised ones. Matching only capitals
+    // makes the lowercase words between two names invisible, so "Ilya Grün the
+    // same person as Jean-Luc" merges into one nonsense run that matches
+    // nothing and eats a candidate slot.
+    const tokens = sentence.match(/[\p{L}][\p{L}'’-]*/gu) ?? [];
+    let run: string[] = [];
+    const flush = () => {
+      if (run.length > 0) {
+        for (const cand of [run.join(" "), ...(run.length > 1 ? run : [])]) {
+          const key = cand.toLowerCase();
+          if (cand.length > 2 && !seen.has(key)) {
+            seen.add(key);
+            out.push(cand);
+          }
+        }
+      }
+      run = [];
+    };
+    for (const tok of tokens) {
+      const isName = /^\p{Lu}/u.test(tok) && !stop.has(tok.toLowerCase());
+      if (isName) run.push(tok);
+      else flush();
+    }
+    flush();
+  }
+  // Full runs first ("Ilya Druzhnikov") before their parts ("Ilya"), so the
+  // precise match wins the limited slots.
+  return out.slice(0, 6);
 }
 
 function latestDevLog(project: UserProject): string | null {

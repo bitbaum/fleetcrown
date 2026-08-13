@@ -33,6 +33,13 @@ import { GROQ_FAST_MODEL } from "@/lib/groq";
 
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 
+/**
+ * The step-down model for rate limits. Verified to drive the tool loop via the
+ * text protocol (scripts/probe-models.ts), so degrading to it costs answer
+ * depth but never the ability to call tools.
+ */
+const SMALL_MODEL = "llama-3.1-8b-instant";
+
 export type ChatMessage = {
   role: "system" | "user" | "assistant" | "tool";
   content: string;
@@ -192,6 +199,15 @@ export async function callModelWithTools(input: {
     // failing on them.
     if (res.status === 400 && /tool/i.test(body) && input.tools.length > 0) {
       return callModelWithTools({ ...input, tools: [] });
+    }
+    // A 429 is a CAPACITY problem, not a capability one, and the fallback path
+    // it used to trigger has weaker retrieval than the loop — so a rate limit
+    // on the big model silently degraded answer quality. Step down to the small
+    // model instead: the whole point of the dual protocol is that an 8B model
+    // drives this loop fine (verified — see scripts/probe-models.ts).
+    if (res.status === 429 && model !== SMALL_MODEL) {
+      console.warn(`[loki] ${model} rate-limited, stepping down to ${SMALL_MODEL}`);
+      return callModelWithTools({ ...input, model: SMALL_MODEL });
     }
     throw new Error(`groq ${res.status}${body ? `: ${body.slice(0, 160)}` : ""}`);
   }
