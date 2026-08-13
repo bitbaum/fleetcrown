@@ -5,7 +5,7 @@ import { Bot, Search } from "lucide-react";
 import { RobotCard } from "./RobotCard";
 import { NewRobotButton } from "./NewRobotButton";
 import type { RobotWithAttributes } from "@/db/queries/robots";
-import { getJson } from "@/lib/api/fetch";
+import { getJson, postJson } from "@/lib/api/fetch";
 import { SEARCH_DEBOUNCE_MS } from "@/lib/constants/timings";
 
 export function RobotsGrid({
@@ -67,6 +67,7 @@ export function RobotsGrid({
           </span>
         </div>
         <NewRobotButton onCreated={() => search(query)} />
+        {total === 0 && <AddTwoVacuumsButton onCreated={() => search(query)} />}
       </div>
 
       {fetchError && (
@@ -100,7 +101,10 @@ export function RobotsGrid({
               Clear search
             </button>
           ) : (
-            <NewRobotButton onCreated={() => search("")} />
+            <div className="flex flex-wrap justify-center gap-2">
+              <NewRobotButton onCreated={() => search("")} />
+              <AddTwoVacuumsButton onCreated={() => search("")} />
+            </div>
           )}
         </div>
       ) : (
@@ -115,5 +119,27 @@ export function RobotsGrid({
         <p className="text-sm text-text-tertiary">Updating…</p>
       )}
     </>
+  );
+}
+
+function AddTwoVacuumsButton({ onCreated }: { onCreated: () => void }) {
+  const [saving, setSaving] = useState(false);
+  return (
+    <button
+      type="button"
+      disabled={saving}
+      onClick={async () => {
+        setSaving(true);
+        try {
+          const res = await postJson("/api/robots/defaults", {});
+          if (res.ok) onCreated();
+        } finally {
+          setSaving(false);
+        }
+      }}
+      className="ui-btn-chip"
+    >
+      {saving ? "Adding…" : "Add my two vacuums"}
+    </button>
   );
 }

@@ -11,6 +11,10 @@ import { bookCalendarEvent } from "@/lib/actions/calendar-event";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { injectPrompt } from "@/lib/inject-core";
 import { markFeedbackDispatchedBulk } from "@/db/queries/site-feedback";
+import { applyEnrichment, applyImportedContact } from "@/db/queries/people-book";
+import { mergePeoplePair } from "@/db/queries/people-merge";
+import type { ImportedContact } from "@/lib/people-import";
+import type { ImportSource } from "@/config/book";
 
 export type ExecuteActionResult = {
   /** true only when a real-world effect happened and the row reached status='executed'. */
@@ -234,6 +238,48 @@ export async function executeAction(userId: string, action: Action): Promise<Exe
         return { executed: true };
       }
 
+      case ACTION_TYPE.IMPORT_PERSON: {
+        const payload = action.payload ?? {};
+        const name = typeof payload.name === "string" ? payload.name.trim() : "";
+        if (!name) {
+          await recordActionAuditEvent(userId, action, "failed", { reason: "import missing name" });
+          return { executed: false, error: "invalid import payload" };
+        }
+        const contact: ImportedContact = {
+          name,
+          description: typeof payload.description === "string" ? payload.description : undefined,
+          attrs: isRecord(payload.attrs) ? stringRecord(payload.attrs) : {},
+          externalId: typeof payload.externalId === "string" ? payload.externalId : undefined,
+          source: (typeof payload.source === "string" ? payload.source : "internal") as ImportSource,
+        };
+        await applyImportedContact(userId, contact);
+        return finishExecuted(userId, action);
+      }
+
+      case ACTION_TYPE.ENRICH_PERSON: {
+        const payload = action.payload ?? {};
+        const key = typeof payload.key === "string" ? payload.key : "";
+        const value = typeof payload.value === "string" ? payload.value : "";
+        if (!action.entityId || !key || !value) {
+          await recordActionAuditEvent(userId, action, "failed", { reason: "enrich missing field" });
+          return { executed: false, error: "invalid enrich payload" };
+        }
+        await applyEnrichment(userId, action.entityId, key, value);
+        return finishExecuted(userId, action);
+      }
+
+      case ACTION_TYPE.MERGE_PEOPLE: {
+        const payload = action.payload ?? {};
+        const keepId = typeof payload.keepId === "string" ? payload.keepId : "";
+        const dropId = typeof payload.dropId === "string" ? payload.dropId : "";
+        if (!keepId || !dropId) {
+          await recordActionAuditEvent(userId, action, "failed", { reason: "merge missing ids" });
+          return { executed: false, error: "invalid merge payload" };
+        }
+        await mergePeoplePair(userId, keepId, dropId);
+        return finishExecuted(userId, action);
+      }
+
       case ACTION_TYPE.SEND_MESSAGE:
       case ACTION_TYPE.SEND_EMAIL: {
         await recordActionAuditEvent(userId, action, "deferred", {
@@ -255,4 +301,28 @@ export async function executeAction(userId: string, action: Action): Promise<Exe
     await recordActionAuditEvent(userId, action, "failed", { reason: error });
     return { executed: false, error };
   }
+}
+
+async function finishExecuted(userId: string, action: Action): Promise<ExecuteActionResult> {
+  const done = await markActionExecuted(action.id, userId);
+  if (!done) {
+    await recordActionAuditEvent(userId, action, "failed", {
+      reason: "effect applied but action was not in 'approved' state to mark executed",
+    });
+    return { executed: false, error: "not-approved-at-execute-time" };
+  }
+  await recordActionAuditEvent(userId, action, "executed");
+  return { executed: true };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function stringRecord(value: Record<string, unknown>): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(value)) {
+    if (typeof v === "string" && v.trim()) out[k] = v;
+  }
+  return out;
 }

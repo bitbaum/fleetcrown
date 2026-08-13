@@ -1,8 +1,9 @@
 import { db } from "@/db";
 import { actions } from "@/db/schema";
 import type { ActionPayload, NewAction } from "@/db/schema/actions";
-import { eq, and, desc, ne, sql, gt, lt, like, isNotNull, isNull, or } from "drizzle-orm";
+import { eq, and, desc, ne, sql, gt, lt, like, isNotNull, isNull, or, notInArray } from "drizzle-orm";
 import { ACTION_STATUS, type ActionType } from "@/lib/constants/statuses";
+import { BOOK_ACTION_TYPES } from "@/config/book";
 import { CHECKIN_TITLE_PREFIX } from "@/lib/actions/checkin-proposal";
 
 export type ActionRow = typeof actions.$inferSelect;
@@ -227,6 +228,7 @@ export async function getStaleDraftSummaries(olderThanMinutes: number): Promise<
     .where(
       and(
         eq(actions.status, ACTION_STATUS.DRAFT),
+        notInArray(actions.type, [...BOOK_ACTION_TYPES]),
         lt(actions.createdAt, sql`now() - make_interval(mins => ${olderThanMinutes})`),
         or(isNull(actions.expiresAt), gt(actions.expiresAt, sql`now()`)),
       ),
@@ -254,7 +256,11 @@ export async function getPendingActions(userId: string) {
   return db
     .select()
     .from(actions)
-    .where(and(eq(actions.userId, userId), eq(actions.status, ACTION_STATUS.DRAFT)))
+    .where(and(
+      eq(actions.userId, userId),
+      eq(actions.status, ACTION_STATUS.DRAFT),
+      notInArray(actions.type, [...BOOK_ACTION_TYPES]),
+    ))
     .orderBy(desc(actions.createdAt));
 }
 

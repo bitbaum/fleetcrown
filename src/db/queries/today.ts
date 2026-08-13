@@ -6,9 +6,10 @@ import {
 } from "@/lib/constants";
 import { STALE_GOALS_DAYS, STUCK_GOALS_LIMIT, RECENT_RUNS_HOURS, RECENT_RUNS_LIMIT } from "@/lib/constants/today";
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
+import { BOOK_ACTION_TYPES } from "@/config/book";
 import { db } from "@/db";
 import { commitments, subscriptions, goals, alerts, actions, events, projectStates, orchestrationRuns, entities, promptHistory } from "@/db/schema";
-import { eq, and, lt, lte, isNotNull, gte, desc, sql } from "drizzle-orm";
+import { eq, and, lt, lte, isNotNull, gte, desc, sql, notInArray } from "drizzle-orm";
 import { HEALTH_FADING_DAYS } from "@/lib/constants/people";
 import { GOAL_STATUS, SUB_STATUS, COMMITMENT_STATUS, ACTION_STATUS, ALERT_SEVERITY, EVENT_STATUS, HABIT_FREQUENCY } from "@/lib/constants/statuses";
 import { READY_WINDOW_S, PROMPT_RUNNING_WINDOW_S, getHealthShort, isHealthPoor } from "@/lib/constants/control";
@@ -181,7 +182,11 @@ export async function getTodaySummary(userId: string) {
     db
       .select({ drafts: sql<number>`count(*)` })
       .from(actions)
-      .where(and(eq(actions.userId, userId), eq(actions.status, ACTION_STATUS.DRAFT))),
+      .where(and(
+        eq(actions.userId, userId),
+        eq(actions.status, ACTION_STATUS.DRAFT),
+        notInArray(actions.type, [...BOOK_ACTION_TYPES]),
+      )),
     db
       .select({ count: sql<number>`count(*)` })
       .from(commitments)
