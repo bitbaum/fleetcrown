@@ -36,5 +36,11 @@ export async function DELETE(
     .delete(accounts)
     .where(and(eq(accounts.userId, userId), eq(accounts.provider, provider)));
 
+  // The actor id mirrors the accounts row — leaving it behind made
+  // isOrangeCatLinked() claim "linked" while every OC call failed.
+  if (provider === "orangecat") {
+    await db.update(users).set({ orangecatActorId: null }).where(eq(users.id, userId));
+  }
+
   return NextResponse.json({ ok: true });
 }

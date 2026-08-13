@@ -1873,6 +1873,10 @@
   .ui-auth-secondary-btn-strong {
     @apply border-border-default bg-surface-raised text-text-primary hover:border-border-strong;
   }
+  /* The featured OAuth door — OrangeCat, the stack's identity root. */
+  .ui-auth-oauth-primary {
+    @apply border-accent-warm/40 bg-surface-raised text-text-primary hover:border-accent-warm;
+  }
   .ui-auth-note {
     @apply text-center text-sm text-text-muted;
   }
