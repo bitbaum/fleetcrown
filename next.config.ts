@@ -41,6 +41,12 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_APP_VERSION: PKG_VERSION,
     NEXT_PUBLIC_BUILD_SHA: buildSha(),
   },
+  async redirects() {
+    return [
+      { source: "/agents", destination: "/control", permanent: true },
+      { source: "/atlas", destination: "/projects", permanent: true },
+    ];
+  },
   async headers() {
     return [
       {

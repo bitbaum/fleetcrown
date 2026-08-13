@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, Cat, ExternalLink, GitBranch, Globe } from "lucide-react";
+import { ArrowLeft, Cat, ExternalLink, GitBranch } from "lucide-react";
 import type { ProjectDossier } from "@/db/queries/project-dossier";
 import { ProjectWorkspaceHeader } from "./ProjectWorkspaceHeader";
 import { ProjectContextEditor } from "./ProjectContextEditor";
@@ -8,6 +8,7 @@ import { ProjectSettingsPanel } from "./ProjectSettingsPanel";
 import { ProjectFeedbackSection } from "./ProjectFeedbackSection";
 import { DoneSection, NextSection, NowSection } from "./ProjectDossierSections";
 import { OrangeCatPublishButton } from "./OrangeCatPublishButton";
+import { LiveUrlField } from "./LiveUrlField";
 import { getProjectLinks } from "./project-detail-types";
 import { getHealthSignals, HEALTH_SIGNAL_CONFIG } from "./project-badges";
 import { computeProjectHealth } from "@/lib/project-health";
@@ -35,12 +36,13 @@ export function ProjectWorkspaceView({
   const project = detail.project;
   const attrs = detail.attrs;
   const workspaceKey = userProject?.name ?? project.name;
-  const links = getProjectLinks(attrs, userProject?.gitUrl ?? project.gitUrl);
+  const links = getProjectLinks(attrs, userProject?.gitUrl ?? project.gitUrl, userProject?.liveUrl);
   const healthSignals = getHealthSignals(attrs);
   const health = computeProjectHealth({
     description: project.description,
     gitUrl: userProject?.gitUrl ?? project.gitUrl,
     dirPath: userProject?.dirPath,
+    liveUrl: userProject?.liveUrl,
     attrs,
   });
   // ≥2 consecutive most-recent finished runs timing out is a pattern worth a
@@ -102,11 +104,11 @@ export function ProjectWorkspaceView({
             readonly={dossier.readonly}
           />
           <div className="flex shrink-0 flex-wrap items-center gap-2">
-            {links.prodUrl && (
-              <a href={links.prodUrl} target="_blank" rel="noreferrer" className="ui-btn-secondary min-h-11 gap-1.5">
-                <Globe className="h-4 w-4" aria-hidden="true" /> Live
-              </a>
-            )}
+            <LiveUrlField
+              userProjectId={userProject?.id ?? null}
+              liveUrl={links.prodUrl}
+              readonly={dossier.readonly}
+            />
             {links.repo && (
               <a href={links.repo} target="_blank" rel="noreferrer" className="ui-btn-secondary min-h-11 gap-1.5">
                 <GitBranch className="h-4 w-4" aria-hidden="true" /> Repository

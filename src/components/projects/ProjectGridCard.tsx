@@ -25,6 +25,10 @@ export type ProjectGridRow = {
   readonly?: boolean;
   dirPath?: string | null;
   agentPref?: string | null;
+  userProjectId?: string | null;
+  liveUrl?: string | null;
+  /** Latest probe. null = never checked or no site. */
+  siteOk?: boolean | null;
 };
 
 export function ProjectGridCard({
@@ -38,12 +42,14 @@ export function ProjectGridCard({
     description: project.description,
     gitUrl: project.gitUrl,
     dirPath: project.dirPath,
+    liveUrl: project.liveUrl,
     attrs,
   });
   const status = attrs["status"];
   const nextStep = answer(attrs["next_step"]);
   const signals = getHealthSignals(attrs);
-  const hasIssues = signals.length > 0;
+  const siteDown = Boolean(project.liveUrl) && project.siteOk === false;
+  const hasIssues = signals.length > 0 || siteDown;
   const loopReadiness = deriveProjectLoopReadiness(project);
 
   return (
@@ -64,6 +70,11 @@ export function ProjectGridCard({
               <h3 className="truncate text-base font-semibold text-text-primary">{project.name}</h3>
               {project.readonly && <span className="ui-projects-badge shrink-0">Team</span>}
               {status && <StatusBadge value={status} />}
+              {siteDown && (
+                <span className="ui-projects-badge border-status-negative/30 bg-status-negative/[0.08] text-status-negative">
+                  Down
+                </span>
+              )}
               {/* Only the EXCEPTIONS earn a badge. "Loop-ready" sat on 19/19
                   projects — a label everything carries filters nothing. Show
                   the chip only when something needs the user (no path / paused). */}

@@ -20,6 +20,7 @@ export function ProjectListRow({
   const nextStep = answer(attrs["next_step"]);
   const description = cleanDescription(project.description) ?? answer(attrs["description"]);
   const signals = getHealthSignals(attrs);
+  const siteDown = Boolean(project.liveUrl) && project.siteOk === false;
   const line = nextStep ?? description;
   const loopReadiness = deriveProjectLoopReadiness(project);
 
@@ -28,7 +29,7 @@ export function ProjectListRow({
       href={`/projects/${project.id}`}
       className={cn(
         "ui-projects-row group flex w-full min-h-11 items-center gap-3",
-        signals.length > 0 && "ui-projects-row-flagged",
+        (signals.length > 0 || siteDown) && "ui-projects-row-flagged",
       )}
       aria-label={`Open ${project.name}`}
     >
@@ -37,6 +38,11 @@ export function ProjectListRow({
           <span className="truncate text-sm font-medium text-text-primary">{project.name}</span>
           {project.readonly && <span className="ui-projects-badge shrink-0">Team</span>}
           {statusLabel && <StatusBadge value={statusLabel} />}
+          {siteDown && (
+            <span className="ui-projects-badge border-status-negative/30 bg-status-negative/[0.08] text-status-negative">
+              Down
+            </span>
+          )}
           {loopReadiness.state !== "ready" && (
             <span
               className="ui-projects-badge hidden border-status-warning/30 bg-status-warning/[0.08] text-status-warning sm:inline-flex"

@@ -75,5 +75,14 @@ const placeholder = computeProjectHealth({
 });
 eq(placeholder.checks.find((c) => c.key === "brief")?.pass, false, "placeholder brief earns no point");
 
+// live_url column is the SSOT; attrs are only the fallback.
+const fromColumn = computeProjectHealth({
+  description: "Brief",
+  gitUrl: "https://github.com/x/y",
+  liveUrl: "https://app.example",
+  attrs: { mission: "m", status: "production", next_step: "n", definition_of_done: "tests pass" },
+});
+eq(fromColumn.checks.find((c) => c.key === "live")?.pass, true, "live_url column earns the live point");
+
 if (fail === 0) console.log(`✓ project-health: ${pass} checks passed`);
 else { console.error(`${fail} failed`); process.exit(1); }

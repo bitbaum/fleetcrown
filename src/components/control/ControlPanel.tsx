@@ -12,6 +12,7 @@ import { buildControlPageState, buildProjectOperationsSnapshots, buildLiveTabRow
 import { rememberFleetProject } from "@/lib/fleet-context";
 import { ControlFleetStatus } from "./ControlFleetStatus";
 import { AttentionBar } from "./AttentionBar";
+import { AgentEscalations } from "./AgentEscalations";
 import { FleetFeedbackStrip } from "./FleetFeedbackStrip";
 import { RunnerStatusBanner } from "./RunnerStatusBanner";
 import { APP_NAME } from "@/config/brand";
@@ -367,6 +368,7 @@ export function ControlPanel() {
       />}
 
       <AttentionBar items={attention} failedCommands={data?.failedCommands} onFocusProject={setSelectedTab} />
+      {data.projects.length > 0 && <AgentEscalations />}
 
       <FleetFeedbackStrip />
 

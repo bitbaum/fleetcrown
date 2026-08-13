@@ -4,6 +4,10 @@ import { hasAnswer } from "@/lib/project-display";
 
 export type ProjectsPageFilter = null | "attention" | "next-step" | "team";
 
+export function isSiteDown(project: Pick<ProjectGridRow, "liveUrl" | "siteOk">): boolean {
+  return Boolean(project.liveUrl) && project.siteOk === false;
+}
+
 export interface ProjectsPageStats {
   total: number;
   attention: number;
@@ -19,8 +23,8 @@ const ATTENTION_KEYS = [
   PROJECT_ATTR.DEPLOYMENT_ISSUE,
 ] as const;
 
-export function hasProjectAttention(attrs: Record<string, string>): boolean {
-  return ATTENTION_KEYS.some((k) => Boolean(attrs[k]));
+export function hasProjectAttention(project: Pick<ProjectGridRow, "attrs" | "liveUrl" | "siteOk">): boolean {
+  return ATTENTION_KEYS.some((k) => Boolean(project.attrs[k])) || isSiteDown(project);
 }
 
 export function computeProjectsPageStats(projects: ProjectGridRow[]): ProjectsPageStats {
@@ -30,7 +34,7 @@ export function computeProjectsPageStats(projects: ProjectGridRow[]): ProjectsPa
 
   for (const p of projects) {
     if (p.readonly) team += 1;
-    if (hasProjectAttention(p.attrs)) attention += 1;
+    if (hasProjectAttention(p)) attention += 1;
     if (hasAnswer(p.attrs[PROJECT_ATTR.NEXT_STEP])) withNextStep += 1;
   }
 
@@ -52,7 +56,7 @@ export function filterProjects(
 
   const result = projects.filter((p) => {
     if (pageFilter === "team" && !p.readonly) return false;
-    if (pageFilter === "attention" && !hasProjectAttention(p.attrs)) return false;
+    if (pageFilter === "attention" && !hasProjectAttention(p)) return false;
     if (pageFilter === "next-step" && !hasAnswer(p.attrs[PROJECT_ATTR.NEXT_STEP])) return false;
     if (!q) return true;
     return (
@@ -63,8 +67,8 @@ export function filterProjects(
   });
 
   return result.sort((a, b) => {
-    const aHasIssues = hasProjectAttention(a.attrs);
-    const bHasIssues = hasProjectAttention(b.attrs);
+    const aHasIssues = hasProjectAttention(a);
+    const bHasIssues = hasProjectAttention(b);
     if (aHasIssues !== bHasIssues) return aHasIssues ? -1 : 1;
     const aHasNext = hasAnswer(a.attrs[PROJECT_ATTR.NEXT_STEP]);
     const bHasNext = hasAnswer(b.attrs[PROJECT_ATTR.NEXT_STEP]);
@@ -82,7 +86,7 @@ export function partitionAttentionProjects(projects: ProjectGridRow[]): {
   const rest: ProjectGridRow[] = [];
 
   for (const p of projects) {
-    if (hasProjectAttention(p.attrs)) {
+    if (hasProjectAttention(p)) {
       attention.push(p);
     } else {
       rest.push(p);

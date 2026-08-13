@@ -111,11 +111,12 @@ export type ProjectRuntimeState = {
 export function getProjectLinks(
   attrs: Record<string, string>,
   gitUrl?: string | null,
+  liveUrl?: string | null,
 ): {
   prodUrl: string | null;
   repo: string | null;
 } {
-  const prod = attrs["production_url"] ?? attrs["url"];
+  const prod = liveUrl || attrs["production_url"] || attrs["url"];
   const attrRepo = attrs["repo"] ?? attrs["github_repo"];
   const repo = gitUrl || attrRepo;
   return {

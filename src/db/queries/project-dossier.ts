@@ -180,6 +180,7 @@ export function renderProjectDossierForAgent(dossier: ProjectDossier): string {
       description: detail.project.description,
       gitUrl: userProject?.gitUrl ?? detail.project.gitUrl,
       dirPath: userProject?.dirPath,
+      liveUrl: userProject?.liveUrl,
       attrs,
     }))],
     ["Stack", attrs.stack ?? userProject?.stack],

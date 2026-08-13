@@ -27,7 +27,7 @@ src/
 │   ├── ui/        → Shared primitives (Card, Modal, Drawer, Field, PageLayout)
 │   ├── shell/     → AppShell, Sidebar, MobileNav (Today/Control/Projects + Loki + More), AskLokiButton → /loki
 │   ├── control/   → ControlPanel, ProjectCard, ProjectTile, ProjectProfile (fleet command)
-│   ├── agents/    → AgentsCockpit (roster + inter-agent comms feed, parses ~/.claude/cross-project/inbox-*.md)
+│   ├── agents/    → AgentsCockpit (retired page; unread escalations render on Control)
 │   ├── loki/      → LokiWorkspace, Transcript, Composer, ConversationList (chat assistant)
 │   ├── terminal/  → TerminalSurface (the ONE shell: tab strip + mode bar +
 │   │                 session + composer), TerminalTabStrip, TerminalModeBar,
