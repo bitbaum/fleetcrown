@@ -81,7 +81,8 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
   const isError = status === "expired" || status === "used";
 
   return (
-    <AuthShell>
+    <div data-route-loading={status === "loading" ? "true" : undefined}>
+      <AuthShell>
       <AuthHeading
         badge={<AuthIconBadge>✦</AuthIconBadge>}
         title={heading}
@@ -164,6 +165,7 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
           </form>
         </AuthCard>
       )}
-    </AuthShell>
+      </AuthShell>
+    </div>
   );
 }

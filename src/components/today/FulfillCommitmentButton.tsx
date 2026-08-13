@@ -26,7 +26,7 @@ export function FulfillCommitmentButton({ commitmentId }: { commitmentId: string
       <button
         onClick={onClick}
         disabled={busy}
-        className="p-1.5 rounded text-text-muted hover:text-status-positive transition-colors disabled:opacity-50 shrink-0"
+        className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded text-text-muted transition-colors hover:bg-surface-raised hover:text-status-positive disabled:opacity-50 sm:h-auto sm:w-auto sm:p-1.5"
         title="Mark fulfilled"
       >
         {busy

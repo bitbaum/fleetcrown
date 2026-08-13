@@ -144,7 +144,7 @@ export function AttrRow({
           <>
             <button
               onClick={() => setEditing(true)}
-              className="ui-icon-action -my-2 min-h-10 min-w-10 shrink-0 text-text-muted hover:text-text-secondary"
+              className="ui-icon-action -my-2 min-h-11 min-w-11 shrink-0 text-text-muted hover:text-text-secondary sm:min-h-10 sm:min-w-10"
               title="Edit"
               aria-label={`Edit ${label}`}
             >
@@ -153,7 +153,7 @@ export function AttrRow({
             <button
               onClick={deleteAttr}
               disabled={deleting}
-              className="ui-icon-action -my-2 min-h-10 min-w-10 shrink-0 text-text-muted hover:text-status-negative disabled:opacity-30"
+              className="ui-icon-action -my-2 min-h-11 min-w-11 shrink-0 text-text-muted hover:text-status-negative disabled:opacity-30 sm:min-h-10 sm:min-w-10"
               title="Delete attribute"
               aria-label={`Delete ${label}`}
             >

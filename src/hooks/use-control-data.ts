@@ -105,9 +105,16 @@ export function useControlData(): ControlDataHook {
       inFlight.current = false;
     };
 
-    // Always fetch on mount — bypass visibility so background-opened tabs load data.
-    inFlight.current = true;
-    refresh().finally(() => { inFlight.current = false; });
+    // Always fetch on mount — bypass visibility so background-opened tabs load
+    // data. Guard the initial call as well as later triggers: React Strict Mode
+    // intentionally runs an effect setup twice in development, and this used
+    // to launch two copies of the most expensive dashboard query in parallel.
+    // The second request made both slower and left users on the skeleton for
+    // up to ~18s during local dogfood.
+    if (!inFlight.current) {
+      inFlight.current = true;
+      refresh().finally(() => { inFlight.current = false; });
+    }
 
     // Three triggers for refetch after mount, all event-driven — no setInterval:
     //   1. visibilitychange: tab comes back to foreground (covers backgrounded

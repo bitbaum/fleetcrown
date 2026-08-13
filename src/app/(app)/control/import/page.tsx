@@ -97,6 +97,7 @@ export default function ImportFromGithubPage() {
 
           <input
             type="search"
+            aria-label="Filter repositories"
             placeholder="Filter by name or description…"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}

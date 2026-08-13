@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
  *  - granted/default/denied → muted bell. Click to subscribe (or open OS settings).
  *  - unsupported → hidden entirely.
  */
-export function NotificationsPill() {
+export function NotificationsPill({ className }: { className?: string }) {
   const push = usePushSubscription();
 
   if (push.status === "unsupported") return null;
@@ -36,6 +36,7 @@ export function NotificationsPill() {
       className={cn(
         "inline-flex h-9 w-9 items-center justify-center rounded-full text-text-tertiary transition-colors hover:bg-surface-raised hover:text-text-secondary",
         isSubscribed && "text-accent-text",
+        className,
       )}
       title={
         push.publicKeyMissing

@@ -72,6 +72,7 @@ export function PrivatePinGate({ children }: { children?: React.ReactNode }) {
           <input
             ref={inputRef}
             type="password"
+            aria-label="Private zone PIN"
             inputMode="numeric"
             pattern="[0-9]*"
             placeholder="PIN"

@@ -52,7 +52,7 @@ export function ProposalRow({ proposal }: { proposal: FrontierProposalRow }) {
         <div className="mb-3 flex flex-wrap gap-2">
           {proposal.sourceUrls.map((url) => (
             <a key={url} href={url} target="_blank" rel="noopener noreferrer"
-               className="inline-flex items-center gap-1 font-mono text-micro uppercase tracking-wider text-text-muted hover:text-text-secondary">
+               className="inline-flex min-h-11 items-center gap-1 font-mono text-micro uppercase tracking-wider text-text-muted hover:text-text-secondary sm:min-h-0">
               <ExternalLink className="h-3 w-3" /> source
             </a>
           ))}

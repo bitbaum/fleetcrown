@@ -61,6 +61,7 @@ export default async function FrontierPage() {
 
   return (
     <PublicSurface right={<PublicHeaderActions />}>
+      <main>
       <div className="relative z-10 mx-auto max-w-4xl px-6 pb-24 pt-16 sm:px-10">
         <div className="ui-public-doc-header">
           <div className="ui-public-doc-meta-row">
@@ -104,6 +105,7 @@ export default async function FrontierPage() {
       </div>
 
       <FinalCta />
+      </main>
     </PublicSurface>
   );
 }

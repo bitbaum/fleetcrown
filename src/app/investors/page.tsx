@@ -11,6 +11,7 @@ export const metadata = {
 export default function InvestorsPage() {
   return (
     <PublicSurface right={<PublicHeaderActions />}>
+      <main>
       <div className="mx-auto max-w-4xl px-6 py-24 sm:py-32">
         <div className="ui-public-eyebrow">{INVESTORS.eyebrow}</div>
         <h1 className="ui-public-page-title mt-4">{INVESTORS.headline}</h1>
@@ -50,7 +51,7 @@ export default function InvestorsPage() {
           <p className="ui-public-section-lede mt-6">{INVESTORS.ask}</p>
 
           <div className="mt-16 flex flex-col gap-2">
-            <a href={`mailto:${INVESTOR_DETAILS.contact}`} className="ui-public-prose-strong text-lg underline-offset-4 hover:underline">
+            <a href={`mailto:${INVESTOR_DETAILS.contact}`} className="ui-public-prose-strong inline-flex min-h-11 items-center text-lg underline-offset-4 hover:underline sm:min-h-0">
               {INVESTOR_DETAILS.contact}
             </a>
             <p className="ui-public-meta">{INVESTOR_DETAILS.deck}</p>
@@ -59,6 +60,7 @@ export default function InvestorsPage() {
       </div>
 
       <FinalCta />
+      </main>
     </PublicSurface>
   );
 }

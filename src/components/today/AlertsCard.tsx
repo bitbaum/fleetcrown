@@ -28,7 +28,7 @@ export async function AlertsCard() {
         <Card>
           <CardHeader icon={Bell} title="Alerts" right={<span className="text-xs text-status-positive font-medium">All clear</span>} />
           <div className="flex items-center gap-2 text-sm text-text-muted">
-            <CheckCircle2 className="h-4 w-4 text-status-positive/70 shrink-0" />
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-status-positive" />
             No active alerts.
           </div>
         </Card>
@@ -70,7 +70,7 @@ export async function AlertsCard() {
                   {alert.actionUrl && (
                     <Link
                       href={alert.actionUrl}
-                      className={`inline-flex items-center gap-1 text-xs mt-1 ${config.color} opacity-70 hover:opacity-100 transition-opacity`}
+                      className={`mt-1 inline-flex min-h-11 min-w-11 items-center gap-1 text-xs transition-colors sm:min-h-0 sm:min-w-0 ${config.color}`}
                     >
                       View <ArrowRight className="h-3 w-3" />
                     </Link>

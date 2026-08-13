@@ -145,7 +145,7 @@ export function SubscriptionActions({
         <div className="flex items-center gap-1.5">
           <span className="text-xs text-text-tertiary">Reactivate?</span>
           <button onClick={onReactivate} disabled={reactivating}
-            className="text-xs text-status-positive hover:text-status-positive transition-colors px-1 disabled:opacity-50">
+            className="inline-flex min-h-11 items-center px-1 text-xs text-status-positive transition-colors hover:text-status-positive disabled:opacity-50 sm:min-h-0">
             {reactivating ? <Loader2 className="ui-spinner-2xs inline" /> : "Yes"}
           </button>
           <button onClick={() => { setConfirmReactivate(false); setReactivateError(null); }}
@@ -155,7 +155,7 @@ export function SubscriptionActions({
         </div>
       ) : (
         <button onClick={() => { setConfirmReactivate(true); setReactivateError(null); }}
-          className="ui-btn-xs border-status-positive/20 text-status-positive/60 hover:text-status-positive hover:bg-status-positive/5">
+          className="ui-btn-xs border-status-positive/30 text-status-positive hover:bg-status-positive-subtle hover:text-status-positive">
           <RotateCcw className="h-2.5 w-2.5" />
           Reactivate
         </button>
@@ -172,7 +172,7 @@ export function SubscriptionActions({
         <DeleteButton
           onDelete={onDeleteRecord}
           label="Delete record?"
-          triggerClassName="flex items-center gap-1 text-xs text-text-muted hover:text-status-negative transition-colors"
+          triggerClassName="inline-flex h-11 w-11 items-center justify-center rounded text-text-muted transition-colors hover:bg-surface-raised hover:text-status-negative sm:h-auto sm:w-auto sm:p-1.5"
         />
       </div>
     );
@@ -185,13 +185,13 @@ export function SubscriptionActions({
         <button
           onClick={onMarkPaid}
           disabled={markingPaid}
-          className="ui-btn-xs border-status-positive/20 text-status-positive/60 hover:text-status-positive hover:bg-status-positive/5"
+          className="ui-btn-xs border-status-positive/30 text-status-positive hover:bg-status-positive-subtle hover:text-status-positive"
         >
           {markingPaid ? <Loader2 className="ui-spinner-2xs" /> : <CheckCheck className="h-2.5 w-2.5" />}
           Mark paid
         </button>
       )}
-      {paid && <span className="text-xs text-status-positive/50">Next due updated</span>}
+      {paid && <span className="text-xs text-status-positive">Next due updated</span>}
       {paidError && <span className="ui-error-xs">{paidError}</span>}
 
       {/* Inline edit for amount/currency/notes */}
@@ -209,7 +209,7 @@ export function SubscriptionActions({
       <LokiDispatchButton
         prompt={lokiPrompt}
         title="Ask Loki about this subscription"
-        className="p-1 rounded text-text-muted hover:text-status-positive transition-colors"
+        className="inline-flex h-11 w-11 items-center justify-center rounded text-text-muted transition-colors hover:bg-surface-raised hover:text-status-positive sm:h-auto sm:w-auto sm:p-1"
       />
 
       {/* Cancel at provider — only when meta is configured */}
@@ -218,7 +218,7 @@ export function SubscriptionActions({
           href={meta.cancelUrl}
           target="_blank"
           rel="noreferrer"
-          className="ui-btn-xs border-status-negative/20 text-status-negative/70 hover:text-status-negative hover:bg-status-negative/5"
+          className="ui-btn-xs border-status-negative/30 text-status-negative hover:bg-status-negative-subtle hover:text-status-negative"
         >
           <ExternalLink className="h-2.5 w-2.5" />
           Cancel at {new URL(meta.cancelUrl).hostname.replace("www.", "")}
@@ -231,7 +231,7 @@ export function SubscriptionActions({
         <div className="flex items-center gap-1.5">
           <span className="text-xs text-text-tertiary">Mark cancelled?</span>
           <button onClick={onCancel} disabled={cancelling}
-            className="text-xs text-status-negative hover:text-status-negative transition-colors px-1 disabled:opacity-50">
+            className="inline-flex min-h-11 items-center px-1 text-xs text-status-negative transition-colors hover:text-status-negative disabled:opacity-50 sm:min-h-0">
             {cancelling ? <Loader2 className="ui-spinner-2xs inline" /> : "Yes"}
           </button>
           <button onClick={() => { setConfirmCancel(false); setCancelError(null); }}
@@ -252,7 +252,7 @@ export function SubscriptionActions({
         onDelete={onDeleteRecord}
         label="Delete record?"
         triggerTitle="Delete subscription record"
-        triggerClassName="ui-btn-xs hover:text-status-negative hover:bg-status-negative/5"
+        triggerClassName="ui-btn-xs min-w-11 justify-center hover:bg-status-negative-subtle hover:text-status-negative"
       />
 
       {editing && (
@@ -267,7 +267,7 @@ export function SubscriptionActions({
       {meta && !meta.essential && meta.alternatives.length > 0 && (
         <button
           onClick={() => setShowAlternatives(!showAlternatives)}
-          className="ui-btn-xs border-status-positive/20 text-status-positive/60 hover:text-status-positive hover:bg-status-positive/5"
+          className="ui-btn-xs border-status-positive/30 text-status-positive hover:bg-status-positive-subtle hover:text-status-positive"
         >
           <Lightbulb className="h-2.5 w-2.5" />
           Free alternatives
@@ -276,8 +276,8 @@ export function SubscriptionActions({
       )}
 
       {showAlternatives && meta && (
-        <div className="w-full mt-1 p-2 rounded bg-status-positive/5 border border-status-positive/10">
-          <div className="text-xs text-status-positive/60 font-medium mb-1">Alternatives:</div>
+        <div className="mt-1 w-full rounded border border-status-positive/20 bg-status-positive-subtle p-2">
+          <div className="mb-1 text-xs font-medium text-status-positive">Alternatives:</div>
           {meta.alternatives.map((alt, i) => (
             <div key={i} className="text-xs text-text-tertiary">• {alt}</div>
           ))}

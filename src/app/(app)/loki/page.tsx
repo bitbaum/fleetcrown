@@ -15,6 +15,7 @@ export default async function LokiPage() {
 
   return (
     <div className="app-page app-page-compact app-viewport-pane flex flex-col">
+      <h1 className="sr-only">Loki</h1>
       <Suspense fallback={<div className="mx-auto h-full w-full max-w-5xl animate-pulse rounded-lg bg-surface-base" />}>
         <LokiWorkspace
           initialProjects={seed?.projects}

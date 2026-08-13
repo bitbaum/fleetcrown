@@ -102,6 +102,7 @@ export function PromptInput({
       )}
       <div className="relative">
           <textarea
+            aria-label="Agent instruction"
             ref={textareaRef}
             rows={1}
             value={custom}

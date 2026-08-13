@@ -23,8 +23,9 @@ export function ActivityLogPanel({
   return (
     <div className="space-y-3 border-t border-border-subtle pt-4">
       <button
+        type="button"
         onClick={onToggle}
-        className="flex items-center gap-1 text-sm text-text-secondary transition-colors hover:text-text-primary"
+        className="flex min-h-11 items-center gap-1 text-sm text-text-secondary transition-colors hover:text-text-primary sm:min-h-6"
       >
         <span className="ui-kicker">Recent activity</span>
         <span className="text-text-tertiary">({activities.length})</span>
@@ -156,6 +157,7 @@ export function BrainConfigPanel({
             ))}
           </div>
           <input
+            aria-label="Agent model"
             list={`model-options-${selectedAgent}`}
             value={model}
             onChange={(e) => onModelChange(e.target.value)}

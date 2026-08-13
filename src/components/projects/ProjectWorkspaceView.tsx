@@ -16,6 +16,7 @@ import { ProjectKickoff } from "./ProjectKickoff";
 import { AssistantContextBridge } from "./AssistantContextBridge";
 import { needsKickoff } from "@/lib/project-kickoff";
 import { answer, cleanDescription } from "@/lib/project-display";
+import { ScrollAffordance } from "@/components/ui/scroll-affordance";
 
 const SECTIONS = [
   { href: "#overview", label: "Overview" },
@@ -147,20 +148,25 @@ export function ProjectWorkspaceView({
         </section>
       )}
 
-      <nav
-        aria-label="Project profile sections"
-        className="sticky top-0 z-20 -mx-4 flex gap-1 overflow-x-auto border-y border-border-subtle bg-surface-page/95 px-4 py-2 backdrop-blur-sm sm:mx-0 sm:rounded-lg sm:border sm:px-2"
+      <ScrollAffordance
+        childCount={SECTIONS.length}
+        className="sticky top-0 z-20 -mx-4 sm:mx-0"
       >
-        {SECTIONS.map((section) => (
-          <a
-            key={section.href}
-            href={section.href}
-            className="inline-flex min-h-11 shrink-0 items-center rounded-md px-3 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary sm:min-h-9"
-          >
-            {section.label}
-          </a>
-        ))}
-      </nav>
+        <nav
+          aria-label="Project profile sections"
+          className="flex gap-1 overflow-x-auto ui-scroll-fade-right border-y border-border-subtle bg-surface-page/95 px-4 py-2 pr-7 backdrop-blur-sm [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:rounded-lg sm:border sm:px-2 sm:pr-2"
+        >
+          {SECTIONS.map((section) => (
+            <a
+              key={section.href}
+              href={section.href}
+              className="inline-flex min-h-11 shrink-0 items-center rounded-md px-3 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary sm:min-h-9"
+            >
+              {section.label}
+            </a>
+          ))}
+        </nav>
+      </ScrollAffordance>
 
       {!dossier.readonly && (
         <ProjectKickoff

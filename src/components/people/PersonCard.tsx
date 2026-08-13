@@ -172,7 +172,7 @@ export function PersonCard({
             <LokiDispatchButton
               prompt={lokiPrompt}
               title="Ask Loki about this person"
-              className="opacity-100 transition-opacity sm:opacity-70 sm:group-hover:opacity-100 p-1.5 rounded text-text-muted hover:text-status-positive transition-colors"
+              className="inline-flex h-11 w-11 items-center justify-center rounded text-text-muted opacity-100 transition-all hover:bg-surface-raised hover:text-status-positive sm:h-auto sm:w-auto sm:p-1.5 sm:opacity-70 sm:group-hover:opacity-100"
             />
             <button
               onClick={openLog}
@@ -200,7 +200,7 @@ export function PersonCard({
                 <select
                   value={channel}
                   onChange={(e) => setChannel(e.target.value)}
-                  className="ui-input-tight"
+                  className="min-h-11 ui-input-tight sm:min-h-0"
                 >
                   {CHANNEL_NAMES.map((ch) => (
                     <option key={ch} value={ch}>{ch}</option>
@@ -211,7 +211,7 @@ export function PersonCard({
                     <button
                       key={d}
                       onClick={(e) => { e.stopPropagation(); setDirection(d); }}
-                      className={`px-3 py-1.5 transition-colors ${
+                      className={`min-h-11 px-3 py-1.5 transition-colors sm:min-h-0 ${
                         direction === d
                           ? "bg-accent-muted text-accent-text"
                           : "text-text-tertiary hover:text-text-primary"
@@ -238,7 +238,7 @@ export function PersonCard({
                 <button
                   onClick={submitLog}
                   disabled={saving}
-                  className="flex items-center gap-1 rounded-xl bg-accent-primary px-3 py-2 text-xs font-medium text-text-inverted transition-colors hover:bg-accent-hover disabled:opacity-30"
+                  className="flex min-h-11 items-center gap-1 rounded-xl bg-accent-primary px-3 py-2 text-xs font-medium text-text-inverted transition-colors hover:bg-accent-hover disabled:opacity-30 sm:min-h-0"
                 >
                   {saving ? <Loader2 className="ui-spinner-xs" /> : <Check className="h-3 w-3" />}
                   Log

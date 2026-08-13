@@ -91,7 +91,7 @@ export function UnlockForm({ next, areas }: { next: string; areas: Area[] }) {
                   <span className="text-sm font-medium text-text-primary">{area.label}</span>
                   {typeof area.count === "number" && area.count > 0 && (
                     <span className="text-xs font-mono text-text-tertiary shrink-0">
-                      {area.count.toLocaleString()} {area.unit ?? ""}
+                      {new Intl.NumberFormat("en-US").format(area.count)} {area.unit ?? ""}
                     </span>
                   )}
                 </div>

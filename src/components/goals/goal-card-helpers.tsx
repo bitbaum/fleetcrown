@@ -110,15 +110,16 @@ export function DateInput({
       <div className="flex items-center gap-1">
         <button
           onClick={() => ie.start(toDateStr(initial))}
-          className={`text-xs transition-colors hover:text-text-secondary ${overdue ? "text-status-negative" : "text-text-tertiary"}`}
+          className={`min-h-11 text-xs transition-colors hover:text-text-secondary sm:min-h-0 ${overdue ? "text-status-negative" : "text-text-tertiary"}`}
           title="Click to change deadline"
         >
           {deadlineText}
         </button>
         <button
           onClick={() => commit("")}
-          className="text-text-muted hover:text-text-secondary transition-colors ui-hover-reveal"
+          className="inline-flex h-11 w-11 shrink-0 items-center justify-center text-text-muted transition-colors hover:text-text-secondary ui-hover-reveal sm:h-auto sm:w-auto"
           title="Clear deadline"
+          aria-label="Clear deadline"
         >
           <X className="h-2.5 w-2.5" />
         </button>
@@ -129,7 +130,7 @@ export function DateInput({
   return (
     <button
       onClick={() => ie.start("")}
-      className="ui-link-muted"
+      className="min-h-11 ui-link-muted sm:min-h-0"
       title="Set deadline"
     >
       Set deadline

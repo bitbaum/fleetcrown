@@ -58,6 +58,7 @@ export function PromptLibraryClient({
         <div className="relative flex-1">
           <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-text-muted" />
           <input
+            aria-label="Search prompts"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Escape") { setSearch(""); (e.target as HTMLInputElement).blur(); } }}

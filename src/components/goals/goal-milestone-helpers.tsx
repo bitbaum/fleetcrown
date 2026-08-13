@@ -161,23 +161,24 @@ export function MilestoneRow({
   };
 
   return (
-    <div className="text-xs md:text-sm group">
-      <div className="flex items-center gap-2">
+    <div className="group min-w-0 text-xs md:text-sm">
+      <div className="flex min-w-0 items-center gap-2">
         <button
           onClick={toggle}
           disabled={toggling}
           className="shrink-0 h-11 w-11 flex items-center justify-center disabled:opacity-50 rounded"
+          aria-label={`${milestone.done ? "Mark incomplete" : "Mark complete"}: ${milestone.title}`}
         >
           {toggling ? (
             <Loader2 className="ui-spinner-sm text-text-muted" />
           ) : milestone.done ? (
-            <CheckCircle className="h-4 w-4 text-status-positive/70 hover:text-status-positive transition-colors" />
+            <CheckCircle className="h-4 w-4 text-status-positive transition-colors hover:text-status-positive" />
           ) : (
             <div className="h-4 w-4 rounded-full border border-border-strong hover:border-border-interactive transition-colors" />
           )}
         </button>
         {editing ? (
-          <div className="flex flex-1 items-center gap-1">
+          <div className="flex min-w-0 flex-1 items-center gap-1">
             <input
               value={editTitle}
               onChange={(e) => setEditTitle(e.target.value)}
@@ -187,7 +188,7 @@ export function MilestoneRow({
                 if (e.key === "Escape") { setEditing(false); setEditTitle(milestone.title); }
               }}
               autoFocus
-              className="flex-1 ui-input-tight text-xs"
+              className="min-w-0 flex-1 ui-input-tight text-xs"
             />
             {savingEdit && <Loader2 className="ui-spinner-xs shrink-0 text-text-muted" />}
           </div>
@@ -195,7 +196,7 @@ export function MilestoneRow({
           <>
             <span
               onClick={() => setEditing(true)}
-              className={`flex-1 cursor-text ${milestone.done ? "text-text-tertiary line-through" : "text-text-secondary"}`}
+              className={`min-w-0 flex-1 break-words cursor-text ${milestone.done ? "text-text-tertiary line-through" : "text-text-secondary"}`}
               title="Click to rename"
             >
               {milestone.title}
@@ -204,7 +205,7 @@ export function MilestoneRow({
               onDelete={deleteMilestone}
               label="Remove?"
               triggerTitle="Remove milestone"
-              triggerClassName="ui-hover-reveal ui-icon-btn transition-all shrink-0 p-1 rounded hover:text-status-negative text-text-muted"
+              triggerClassName="ui-hover-reveal inline-flex h-11 w-11 shrink-0 items-center justify-center rounded text-text-muted transition-all hover:text-status-negative sm:h-auto sm:w-auto sm:p-1"
             />
           </>
         )}

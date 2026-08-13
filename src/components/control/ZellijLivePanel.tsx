@@ -128,7 +128,7 @@ export function ZellijLivePanel({
             <button
               type="button"
               onClick={repairHelper}
-              className="ui-btn-ghost ui-btn-xs gap-1 text-micro"
+              className="ui-btn-ghost ui-btn-xs min-w-11 gap-1 text-micro sm:min-w-0"
               title="Re-install / repair the local helper"
             >
               <Wrench className="h-3 w-3" />
@@ -139,7 +139,7 @@ export function ZellijLivePanel({
             type="button"
             onClick={onRefresh}
             disabled={refreshing}
-            className="ui-btn-ghost ui-btn-xs gap-1 text-micro"
+            className="ui-btn-ghost ui-btn-xs min-w-11 gap-1 text-micro sm:min-w-0"
             title="Refresh"
           >
             <RefreshCw className={cn("h-3 w-3", refreshing && "animate-spin")} />

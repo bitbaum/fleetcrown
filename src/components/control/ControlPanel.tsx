@@ -269,6 +269,26 @@ export function ControlPanel() {
   const livePanel = <ZellijLivePanel {...livePanelProps} embedded />;
 
   if (!data) {
+    if (error) {
+      return (
+        <div className="ui-panel flex flex-col items-start gap-3" role="alert">
+          <div>
+            <p className="text-sm font-semibold text-text-primary">Fleet state is unavailable</p>
+            <p className="mt-1 text-sm text-text-secondary">
+              The latest project state could not be loaded. Your projects and queued work are unchanged.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="ui-btn-primary"
+            disabled={refreshing}
+            onClick={() => void refresh(true)}
+          >
+            {refreshing ? "Retrying…" : "Retry now"}
+          </button>
+        </div>
+      );
+    }
     return (
       <div className="space-y-6" aria-busy="true" aria-label="Loading live fleet state">
         <div className="ui-panel h-36 animate-pulse bg-surface-base" />

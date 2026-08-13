@@ -2,8 +2,8 @@
 
 ---
 created_date: 2026-07-04
-last_modified_date: 2026-07-08
-last_modified_summary: Added public /pricing page (Stripe-aware CTAs, gated until keys land); registered in smoke.sh.
+last_modified_date: 2026-08-12
+last_modified_summary: Added the filesystem-backed 62-page inventory, persona journeys, and mobile/desktop browser-audit contract.
 ---
 
 SSOT for **every user-facing flow implied by the UI**, with a working-status grade per flow. Use this for QA planning, onboarding honesty, and prioritising fixes.
@@ -12,8 +12,76 @@ SSOT for **every user-facing flow implied by the UI**, with a working-status gra
 
 - [Cloud vs local workflows](./cloud-local-workflows.md) — builder vs browser; local CLI tools (`runTool`)
 - [Responsive design](./responsive-design.md) — mobile shell constraints
-- `scripts/smoke.sh` — automated route health (not flow completeness)
+- `scripts/page-route-catalog.mjs` — filesystem-derived page-pattern SSOT
+- `scripts/responsive-audit.mjs` — every resolvable page at 320, 375, 390, and 1440 pixels
+- `scripts/smoke.sh` — generated route health plus runtime dynamic fixtures
 - `src/config/navigation.ts` — sidebar route SSOT
+
+## Current page inventory (2026-08-12)
+
+The App Router filesystem is authoritative. `node scripts/page-route-catalog.mjs --markdown` regenerates the detailed route/source/fixture table; tests fail if the catalog loses a required surface. The current snapshot contains **62 page patterns**:
+
+| Surface | Count | Page patterns |
+|---|---:|---|
+| Public | 24 | `/`, `/blog`, `/changelog`, `/docs`, `/docs/feedback-widget`, `/docs/quickstart`, `/download`, `/frontier`, `/investors`, `/license`, `/mission`, `/philosophy`, `/pricing`, `/privacy`, `/releases`, `/roadmap`, `/share/project/[token]`, `/support`, `/terms`, `/thoughts`, `/thoughts/[slug]`, `/u/[username]`, `/whitepaper`, `/x-login/complete` |
+| Auth | 7 | `/forgot-password`, `/invite/[token]`, `/reset-password/[token]`, `/sign-in`, `/sign-up`, `/verify-email`, `/verify-email/[token]` |
+| First-run | 2 | `/setup`, `/onboarding` |
+| Member | 23 | `/activity`, `/agents`, `/approvals`, `/control`, `/control/import`, `/control/import-local`, `/control/new-from-scratch`, `/control/workspace`, `/decisions`, `/digests`, `/duet`, `/history`, `/integrations/orangecat/build`, `/loki`, `/projects`, `/projects/[id]`, `/prompts`, `/settings`, `/sign-out`, `/system`, `/terminal`, `/today`, `/unlock` |
+| Private zone | 6 | `/events`, `/goals`, `/habits`, `/memory`, `/money`, `/people` |
+
+Expected compatibility routes are kept deliberately: `/blog` renders Thoughts; `/changelog` renders Releases; `/decisions` and `/history` lead to Activity; `/digests` leads to Activity with the digest view; `/duet` leads to Agents. The audit records requested and final URLs so these intentional outcomes are distinguishable from broken navigation.
+
+Dynamic route evidence is non-mutating by default. The catalog uses deterministic invalid-token states for invitation, reset, and email verification; the audit discovers an existing project, public username, and active share token from authenticated read APIs. Any missing data-owned fixture fails the audit instead of being silently skipped. A local-only `AUDIT_CREATE_TEMP_FIXTURES=1` mode may create a project-share fixture and always revokes it in cleanup.
+
+## Persona and outcome journeys
+
+This is the top-level path matrix. The numbered flow sections below decompose every interaction within these journeys.
+
+| User/state | Entry and path | Value outcome | Required variants |
+|---|---|---|---|
+| Anonymous evaluator | `/` → product proof → `/docs`, `/thoughts`, `/frontier`, `/roadmap`, `/pricing` → `/sign-up` | Understand the local-runner/web-control model and choose a credible next step | 320–390 mobile, desktop; menu and footer; signed-in header variant |
+| Content reader | `/blog` or `/thoughts` → search/tag filter → `/thoughts/[slug]` → previous/next/related → CTA | Find useful thinking without reading the full library first | Empty query, no-result query, long article, code/diagram overflow |
+| First self-hosted owner | `/` with zero users → `/setup` → owner sign-in → `/onboarding` → connect/create/import → `/today` | Establish the first account and reach a useful fleet state | Owner key enabled/disabled; runner online/offline |
+| New hosted account | `/sign-up` → verify email → `/onboarding` → username/project/runner → `/today` | Create an identity and first actionable workspace | Email/password and enabled OAuth providers; skipped project/runner |
+| Returning member | `/sign-in` → `/today` → `/control` or `/loki` → `/terminal`/`/activity` | See what needs attention, act, and verify the result | Owner/admin/member; desktop/mobile; notification permission states |
+| Recovering account | `/forgot-password` → mail token → `/reset-password/[token]` → `/sign-in` | Regain access with clear invalid/expired/success states | Valid, invalid, expired, reused token |
+| Invitee | `/invite/[token]` → sign-in/sign-up → invite acceptance → shortened onboarding → shared projects | Join the correct organization without creating duplicate setup | Existing/new account; valid/invalid/expired/already-used invite |
+| Fleet operator | `/today` alert → `/control` → project dispatch/autopilot → `/terminal`/`/agents` → `/activity`/`/approvals` | Move work from attention to execution to supervised completion | Runner live/stale/offline; queued/running/failed/approval-needed |
+| Project creator | `/control` → import GitHub, import local, new-from-scratch, or manual create → `/projects/[id]` | Create one canonical project and know the next action | GitHub connected/missing; local runner online/offline; plan limit |
+| Loki user | `/loki` → select project/conversation → ask or dispatch → inspect Terminal/Control | Turn intent into a traceable response or project action | Chat vs command; attachment/voice; project selected/missing; fallback model |
+| Local Fleet Runner user | `/download` → platform choice/prerequisites → `/docs/quickstart` → pair → `/terminal?source=local` | Install, connect, and operate against local repositories | Linux ready; macOS/Windows coming-soon; browser vs inside-runner page |
+| Hosted workspace user | `/control/workspace` → provision or honest unavailable state → Control/Terminal escape route | Understand where execution happens and recover when cloud PTY is unavailable | Allowed, cloud-disabled, private-beta gate, provisioning error |
+| Private-life user | `/unlock` → People/Goals/Habits/Events/Money/Memory → lock | Use sensitive tools without leaking data into locked shell or APIs | PIN unset, locked, wrong PIN, unlocked, relocked, session expiry |
+| Team owner/admin | `/settings#team` → create/copy/revoke invite → member arrives | Grow the organization with visible role and invite state | Owner/admin/member authorization; duplicate/revoked invite |
+| Billing user | `/pricing` or project limit → `/settings#billing` → checkout/portal → return | Understand the plan and complete or recover from billing | Free/paid; Stripe ready/unavailable; success/cancel/error return |
+| Project sharer/visitor | `/projects/[id]` → enable share → `/share/project/[token]` → project/profile CTA | Share a safe public view and lead the visitor toward the right outcome | Active/revoked/invalid token; signed out/in; mobile/desktop |
+| Public-profile visitor | `/u/[username]` → project/essay links → sign-up/open app | Evaluate a real builder and follow credible work | Existing/missing/private username; empty/full profile |
+| OrangeCat referral | Signed `/integrations/orangecat/build` intent → choose existing/new project → Control | Convert a funded/shared idea into supervised execution | Valid/invalid/expired intent; signed out/in; project limit/conflict |
+| Support/feedback visitor | `/support` or `/docs/feedback-widget` → submit contextual feedback → operator review | Get help or create a traceable improvement request | Widget configured/unavailable; success/network/error; sensitive-data guard |
+
+## Responsive browser-audit contract
+
+`scripts/responsive-audit.mjs` renders every resolvable pattern in its catalogued public or authenticated context at **320×720**, **375×812**, **390×844**, and **1440×1000**. It writes viewport screenshots and `.tmp/responsive-audit/report.json`, then fails on:
+
+- navigation exceptions, unexpected redirects, HTTP 4xx/5xx, page/console errors, visible framework overlays, app error boundaries, or accidental not-found pages;
+- unresolved route/control skeletons after a bounded wait;
+- document-level horizontal overflow, clipped or obscured controls, or interactive scrollers without a fade/chevron affordance;
+- anything other than one page-level `h1` and one `main` landmark;
+- WCAG contrast failures, including empty-field placeholder text;
+- sub-44px mobile targets (except inline prose links), unnamed controls, missing image alternatives, or broken same-origin links tested with their source page's access context.
+
+When the private zone is configured, the audit saves a locked authenticated state for `/unlock`, then establishes and verifies a separate unlocked state before capturing People, Goals, Habits, Events, Money, and Memory. A non-local run requires `SMOKE_PRIVATE_PIN`. A local run may instead mint a short-lived audit-only cookie with the existing local `AUTH_SECRET`; this changes no PIN or application data. It fails instead of counting six copies of the PIN gate as six covered page interiors. Keep the PIN in local environment configuration; never commit it.
+
+Intentional code-block scrollers remain in the report but are not treated as missing an interaction affordance. Every page is inspected in vertical viewport segments; representative outcome surfaces also receive fresh full-page captures. Dynamic fixtures are listed separately so coverage can never appear complete when test data is absent.
+
+Re-run locally:
+
+```bash
+node scripts/page-route-catalog.mjs --markdown
+BASE=http://localhost:3100 node scripts/responsive-audit.mjs
+BASE=http://localhost:3100 npm run smoke
+npm run verify
+```
 
 ## Glossary — Ivy vs Loki (not the same rename)
 

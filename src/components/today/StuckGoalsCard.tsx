@@ -43,21 +43,27 @@ export async function StuckGoalsCard() {
           {items.map((goal) => {
             const idle = idleDaysSince(goal.updatedAt);
             return (
-              <div key={goal.id} className="flex items-center gap-3">
+              <div key={goal.id} className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-text-secondary truncate" title={goal.title}>
                     {goal.title}
                   </p>
                 </div>
-                <span className="shrink-0 text-xs text-text-muted">{idle}d idle</span>
-                <LokiDispatchButton
-                  prompt={`Goal: ${goal.title}\nProgress: 0%\nIdle for ${idle} days with no progress.\n\nThis goal has been completely stalled. What is the single smallest concrete step I can take right now to get it moving?`}
-                  title="Ask Loki to unblock this goal"
-                />
-                {goal.entityName && (
-                  <ControlDispatchButton tab={goal.entityName} />
-                )}
-                <AbandonGoalButton goalId={goal.id} />
+                <div className="flex flex-wrap items-center justify-end gap-1">
+                  <span className="mr-1 shrink-0 text-xs text-text-muted">{idle}d idle</span>
+                  <LokiDispatchButton
+                    prompt={`Goal: ${goal.title}\nProgress: 0%\nIdle for ${idle} days with no progress.\n\nThis goal has been completely stalled. What is the single smallest concrete step I can take right now to get it moving?`}
+                    title="Ask Loki to unblock this goal"
+                    className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded text-text-muted transition-colors hover:bg-surface-raised hover:text-status-positive sm:h-auto sm:w-auto sm:p-0.5"
+                  />
+                  {goal.entityName && (
+                    <ControlDispatchButton
+                      tab={goal.entityName}
+                      className="flex min-h-11 items-center gap-1 text-text-muted transition-colors hover:text-accent-text sm:min-h-0"
+                    />
+                  )}
+                  <AbandonGoalButton goalId={goal.id} />
+                </div>
               </div>
             );
           })}

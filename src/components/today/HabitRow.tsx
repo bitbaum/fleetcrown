@@ -85,7 +85,11 @@ export function HabitRow({
           >
             {ie.saving ? <Loader2 className="ui-spinner-xs" /> : <Check className="h-3 w-3" />}
           </button>
-          <button onClick={ie.cancel} className="p-1 rounded text-text-muted hover:text-text-secondary transition-colors shrink-0">
+          <button
+            onClick={ie.cancel}
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded text-text-muted transition-colors hover:text-text-secondary sm:h-auto sm:w-auto sm:p-1"
+            aria-label="Cancel habit edit"
+          >
             <X className="h-3 w-3" />
           </button>
         </div>
@@ -119,7 +123,7 @@ export function HabitRow({
 
           <div className="flex items-center gap-1 shrink-0">
             {habit.streak >= 2 && (
-              <span className="flex items-center gap-0.5 text-xs text-status-warning/60" title={`${habit.streak}-day streak`}>
+              <span className="flex items-center gap-0.5 text-xs text-status-warning" title={`${habit.streak}-day streak`}>
                 <Flame className="h-3 w-3" />
                 {habit.streak}
               </span>
@@ -134,7 +138,7 @@ export function HabitRow({
             </button>
             <button
               onClick={() => onRemove(habit.id)}
-              className="p-1.5 rounded text-text-muted hover:text-status-negative/60 hover:bg-status-negative/5 transition-colors ui-hover-reveal"
+              className="inline-flex h-11 w-11 items-center justify-center rounded text-text-muted transition-colors hover:bg-status-negative-subtle hover:text-status-negative ui-hover-reveal sm:h-auto sm:w-auto sm:p-1.5"
               title="Remove habit"
               aria-label="Remove habit"
             >

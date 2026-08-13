@@ -201,8 +201,8 @@
   /* Semantic tokens — light */
   --text-primary:      oklch(0.10 0 0);
   --text-secondary:    oklch(0.40 0 0);
-  --text-tertiary:     oklch(0.58 0 0);
-  --text-muted:        oklch(0.72 0 0);
+  --text-tertiary:     oklch(0.52 0 0);
+  --text-muted:        oklch(0.54 0 0);
   --text-inverted:     oklch(0.98 0 0);
   --surface-page:      oklch(0.97 0 0);
   --surface-base:      oklch(1 0 0);
@@ -223,6 +223,7 @@
      focus rings. Darker hover for the light theme. SSOT for warm = here. */
   --accent-warm:       oklch(0.66 0.21 41);
   --accent-warm-hover: oklch(0.60 0.21 40);
+  --accent-warm-foreground: oklch(0.07 0 0);
   /* Status — light */
   --status-positive:        oklch(0.44 0.16 145);
   --status-positive-subtle: oklch(0.44 0.16 145 / 8%);
@@ -269,9 +270,9 @@
   --sidebar-ring: oklch(0.92 0 0 / 30%);
   /* Semantic tokens — dark */
   --text-primary:      oklch(0.92 0 0);
-  --text-secondary:    oklch(0.65 0 0);
-  --text-tertiary:     oklch(0.48 0 0);
-  --text-muted:        oklch(0.34 0 0);
+  --text-secondary:    oklch(0.72 0 0);
+  --text-tertiary:     oklch(0.62 0 0);
+  --text-muted:        oklch(0.58 0 0);
   --text-inverted:     oklch(0.07 0 0);
   --surface-page:      oklch(0.07 0 0);
   --surface-base:      oklch(0.10 0 0);
@@ -290,6 +291,7 @@
   /* Warm brand accent (x.ai/grok #ff5c00) — lighter hover for dark. */
   --accent-warm:       oklch(0.69 0.21 41);
   --accent-warm-hover: oklch(0.75 0.19 43);
+  --accent-warm-foreground: oklch(0.07 0 0);
   /* Status — dark */
   --status-positive:        oklch(0.72 0.14 145);
   --status-positive-subtle: oklch(0.72 0.14 145 / 12%);
@@ -590,7 +592,7 @@
     @apply relative z-40 flex items-center justify-between border-b border-border-subtle px-4 py-4 sm:px-10 sm:py-5;
   }
   .ui-public-nav-action {
-    @apply rounded-full border border-border-default px-5 py-2 text-sm font-medium text-text-tertiary transition-all hover:border-border-strong hover:text-text-secondary;
+    @apply inline-flex min-h-11 items-center justify-center rounded-full border border-border-default px-5 py-2 text-sm font-medium text-text-tertiary transition-all hover:border-border-strong hover:text-text-secondary sm:min-h-0;
   }
   .ui-public-nav-link {
     @apply rounded-lg px-4 py-2 text-sm text-text-secondary transition-colors hover:text-text-primary;
@@ -627,7 +629,7 @@
   }
   /* Mobile drawer toggle (hamburger / close) — square button on the public nav. */
   .ui-public-nav-toggle {
-    @apply inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border-subtle text-text-secondary transition-colors hover:border-border-default hover:text-text-primary;
+    @apply inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border-subtle text-text-secondary transition-colors hover:border-border-default hover:text-text-primary;
   }
   /* Full-screen drawer for the mobile public nav. Background colour is set
      directly (not via bg-background) so it stays fully opaque on top of the
@@ -654,6 +656,9 @@
   }
   .ui-public-drawer-item {
     @apply block rounded-xl px-4 py-3 transition-colors hover:bg-surface-raised;
+  }
+  .ui-public-drawer-actions {
+    @apply flex items-center gap-2 border-t border-border-subtle pt-6;
   }
   .ui-public-badge {
     @apply inline-flex items-center gap-2 rounded-full border border-border-subtle bg-surface-raised px-4 py-1.5 text-xs font-medium tracking-[0.02em] text-text-tertiary;
@@ -767,7 +772,7 @@
     @apply mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm;
   }
   .ui-changelog-link {
-    @apply text-white/45 underline-offset-4 transition-colors hover:text-white;
+    @apply inline-flex min-h-11 items-center text-white/45 underline-offset-4 transition-colors hover:text-white sm:min-h-0;
   }
   .ui-changelog-tag {
     @apply font-mono text-nano uppercase tracking-[0.1em] text-white/30;
@@ -800,7 +805,7 @@
     @apply text-text-muted;
   }
   .ui-public-primary-action {
-    @apply rounded-full bg-text-primary px-8 py-3 text-sm font-semibold text-text-inverted transition-opacity hover:opacity-85;
+    @apply inline-flex min-h-11 items-center justify-center rounded-full bg-text-primary px-8 py-3 text-sm font-semibold text-text-inverted transition-opacity hover:opacity-85 sm:min-h-0;
   }
   .ui-public-feature-card {
     @apply rounded-2xl border border-border-subtle bg-surface-base p-6 text-left;
@@ -820,14 +825,17 @@
   .ui-public-link {
     @apply text-text-secondary;
   }
+  .ui-public-footer-link {
+    @apply inline-flex min-h-11 items-center text-text-secondary sm:min-h-0;
+  }
   .ui-public-footer-grid {
     @apply mb-8 grid grid-cols-2 gap-8 border-t border-white/10 pt-8 sm:grid-cols-3 sm:gap-12;
   }
   .ui-public-footer-heading {
-    @apply mb-1 text-micro font-semibold uppercase tracking-caps text-white/40;
+    @apply mb-1 text-micro font-semibold uppercase tracking-caps text-white/60;
   }
   .ui-public-footer-bottom {
-    @apply flex flex-wrap items-center justify-between gap-4 text-xs text-white/40;
+    @apply flex flex-wrap items-center justify-between gap-4 text-xs text-white/60;
   }
   .ui-public-prose-divider {
     @apply mb-10 space-y-4 border-t border-white/10 pt-4;
@@ -851,7 +859,7 @@
     @apply border-border-default bg-surface-raised;
   }
   .ui-public-primary-action-compact {
-    @apply rounded-full bg-text-primary !py-2 !px-5 text-sm font-semibold text-text-inverted transition-opacity hover:opacity-85;
+    @apply inline-flex min-h-11 items-center justify-center rounded-full bg-text-primary !py-2 !px-5 text-sm font-semibold text-text-inverted transition-opacity hover:opacity-85 sm:min-h-0;
   }
   .ui-public-section-kicker {
     @apply mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-text-muted;
@@ -1032,7 +1040,19 @@
     @apply text-xs uppercase tracking-[0.18em] text-text-tertiary;
   }
   .ui-public-hero-badge {
-    @apply mb-8 inline-flex items-center gap-2.5 rounded-full border border-border-subtle bg-white/[0.03] px-4 py-1.5 text-xs uppercase tracking-[0.15em] text-text-secondary backdrop-blur-sm;
+    @apply mb-8 inline-flex items-center gap-2.5 rounded-full border border-border-subtle bg-white/[0.03] px-4 py-1.5 text-[0.625rem] uppercase tracking-[0.13em] text-text-secondary backdrop-blur-sm sm:text-xs sm:tracking-[0.15em];
+  }
+  .ui-public-hero-badge-copy {
+    @apply flex flex-col items-center leading-relaxed sm:flex-row sm:gap-2;
+  }
+  .ui-public-hero-badge-closer::before {
+    content: none;
+  }
+  @media (min-width: 640px) {
+    .ui-public-hero-badge-closer::before {
+      content: "·";
+      margin-right: 0.5rem;
+    }
   }
   /* Live status dot leading the hero badge — warm accent with a soft halo. */
   .ui-public-hero-badge::before {
@@ -1049,10 +1069,16 @@
   }
   .ui-public-hero-title {
     @apply font-heading font-semibold text-text-primary;
-    font-size: clamp(3.25rem, 8.5vw, 5.75rem);
-    line-height: 0.9;
+    font-size: clamp(2.3rem, 11.5vw, 5.75rem);
+    line-height: 0.94;
     letter-spacing: -0.042em;
     animation: ui-public-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  @media (min-width: 640px) {
+    .ui-public-hero-title {
+      font-size: clamp(3.25rem, 8.5vw, 5.75rem);
+      line-height: 0.9;
+    }
   }
   /* Second line of the hero headline. A deliberate two-tone display: line one
      reads at full brightness, line two steps down — but to a still-legible
@@ -1317,13 +1343,13 @@
     color: rgba(255, 255, 255, 0.6);
   }
   .ui-public-download-secondary {
-    @apply inline-flex items-center rounded-full border border-white/20 px-4 py-2 text-xs font-medium text-white/70 transition-colors hover:border-white/40 hover:text-white;
+    @apply inline-flex min-h-11 items-center rounded-full border border-white/20 px-4 py-2 text-xs font-medium text-white/70 transition-colors hover:border-white/40 hover:text-white;
   }
   .ui-public-download-platform-bar {
     @apply flex justify-center gap-1.5 mb-12;
   }
   .ui-public-download-platform {
-    @apply text-xs tracking-[1.5px] px-4 py-1.5 rounded-full border transition-all;
+    @apply min-h-11 text-xs tracking-[1.5px] px-4 py-1.5 rounded-full border transition-all;
   }
   .ui-public-download-platform-active {
     @apply border-white bg-white text-black shadow-sm;
@@ -1347,7 +1373,7 @@
     @apply flex-1 block whitespace-pre-wrap break-all font-mono text-xs leading-relaxed text-white/85;
   }
   .ui-public-download-command-copy {
-    @apply inline-flex shrink-0 items-center gap-1.5 rounded-md border border-white/15 bg-white/10 px-2.5 py-1.5 text-xs font-medium text-white/80 transition hover:border-white/30 hover:bg-white/15 hover:text-white;
+    @apply inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-md border border-white/15 bg-white/10 px-2.5 py-1.5 text-xs font-medium text-white/80 transition hover:border-white/30 hover:bg-white/15 hover:text-white;
   }
   .ui-public-download-prereqs {
     @apply mb-10 border-t border-white/10 pt-9 text-left;
@@ -1371,7 +1397,7 @@
     @apply mt-3 block whitespace-pre-wrap break-words rounded-lg border border-white/10 bg-black/30 px-3 py-2 font-mono text-xs text-white/65;
   }
   .ui-public-download-prereq-link {
-    @apply mt-3 inline-flex text-xs font-medium text-white underline underline-offset-4;
+    @apply mt-3 inline-flex min-h-11 items-center text-xs font-medium text-white underline underline-offset-4;
   }
   .ui-public-download-fallback {
     @apply border-t border-white/10 pt-9 text-center text-sm;
@@ -1582,11 +1608,11 @@
     font-family: var(--font-mono);
   }
   .ui-term-tab-close {
-    @apply rounded p-0.5 text-text-muted opacity-0 transition-all hover:bg-surface-overlay hover:text-text-primary group-hover:opacity-100;
+    @apply inline-flex h-11 w-11 items-center justify-center rounded text-text-muted opacity-0 transition-all hover:bg-surface-overlay hover:text-text-primary group-hover:opacity-100 sm:h-6 sm:w-6;
   }
   .ui-term-tab-active .ui-term-tab-close { @apply opacity-60; }
   .ui-term-newtab {
-    @apply shrink-0 rounded-md p-1.5 text-text-tertiary transition-colors hover:bg-surface-raised hover:text-text-primary;
+    @apply inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-text-tertiary transition-colors hover:bg-surface-raised hover:text-text-primary sm:h-7 sm:w-7;
   }
   .ui-term-stage {
     @apply relative min-h-0 flex-1;
@@ -1834,7 +1860,7 @@
     @apply mb-6 flex rounded-xl border border-border-subtle bg-surface-base p-1;
   }
   .ui-auth-mode-tab {
-    @apply flex-1 rounded-lg py-2 text-sm font-medium text-text-muted transition-colors hover:text-text-secondary;
+    @apply min-h-11 flex-1 rounded-lg py-2 text-sm font-medium text-text-muted transition-colors hover:text-text-secondary;
   }
   .ui-auth-mode-tab-active {
     @apply bg-surface-raised text-text-primary;
@@ -2157,7 +2183,7 @@
 
   /* Inputs */
   .ui-input {
-    @apply w-full rounded-lg border border-border-default bg-surface-base px-3 py-2.5 text-sm text-text-primary placeholder:text-text-muted outline-none transition-colors;
+    @apply min-h-11 w-full rounded-lg border border-border-default bg-surface-base px-3 py-2.5 text-sm text-text-primary placeholder:text-text-muted outline-none transition-colors sm:min-h-0;
   }
   .ui-input:focus {
     @apply border-border-strong;
@@ -2191,7 +2217,8 @@
     /* Disabled is NEUTRAL (muted surface), not a faded orange: opacity-40 of the
        warm accent read as a washed-out "is this clickable?" button. A neutral
        disabled state makes the enabled orange CTA unmistakable. */
-    @apply inline-flex items-center justify-center gap-2 min-h-11 sm:min-h-0 rounded-lg bg-accent-warm px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-warm-hover active:opacity-90 disabled:bg-surface-raised disabled:text-text-muted disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 min-h-11 sm:min-h-0 rounded-lg bg-accent-warm px-4 py-2 text-sm font-medium transition-colors hover:bg-accent-warm-hover active:opacity-90 disabled:bg-surface-raised disabled:text-text-muted disabled:cursor-not-allowed;
+    color: var(--accent-warm-foreground);
   }
   .ui-btn-secondary {
     @apply inline-flex items-center justify-center gap-2 min-h-11 sm:min-h-0 rounded-lg border border-border-default px-4 py-2 text-sm font-medium text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary disabled:opacity-40;
@@ -2201,7 +2228,7 @@
   }
   /* Small overlay button — card action chips (e.g. PersonCard quick-log) */
   .ui-btn-chip {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-border-default bg-surface-overlay px-3 py-3 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary disabled:opacity-40;
+    @apply inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-xl border border-border-default bg-surface-overlay px-3 py-3 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary disabled:opacity-40 sm:min-h-0 sm:min-w-0;
   }
   /* Inline-edit cancel/close — paired next to ui-btn-confirm-icon in
      edit rows; lifted to 44px tall on mobile so both buttons in the
@@ -2211,7 +2238,7 @@
   }
   /* Small inline text cancel link (no bg, no border, px-1 spacing) */
   .ui-btn-text-cancel {
-    @apply px-1 text-xs text-text-muted transition-colors hover:text-text-secondary;
+    @apply inline-flex min-h-11 items-center justify-center px-1 text-xs text-text-muted transition-colors hover:text-text-secondary sm:min-h-0;
   }
   /* Icon-only square button */
   .ui-btn-icon {
@@ -2223,15 +2250,15 @@
   }
   /* Compact xs outlined action button — tight rows (subscription actions, inline toolbars) */
   .ui-btn-xs {
-    @apply inline-flex items-center gap-1 rounded border border-border-subtle px-2 py-1 text-xs text-text-muted transition-colors hover:bg-surface-raised hover:text-text-secondary disabled:opacity-40;
+    @apply inline-flex min-h-11 items-center gap-1 rounded border border-border-subtle px-2 py-1 text-xs text-text-muted transition-colors hover:bg-surface-raised hover:text-text-secondary disabled:opacity-40 sm:min-h-0;
   }
   /* Accent icon button — caller adds padding (p-1 or p-1.5) */
   .ui-btn-icon-accent {
-    @apply shrink-0 rounded-lg bg-accent-primary text-text-inverted transition-colors hover:bg-accent-hover disabled:opacity-30;
+    @apply inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg bg-accent-primary text-text-inverted transition-colors hover:bg-accent-hover disabled:opacity-30 sm:min-h-0 sm:min-w-0;
   }
   /* Inline-edit save button */
   .ui-btn-save {
-    @apply flex items-center gap-1 rounded px-2.5 py-1.5 text-xs font-medium text-text-inverted transition-colors;
+    @apply inline-flex min-h-11 items-center justify-center gap-1 rounded px-2.5 py-1.5 text-xs font-medium text-text-inverted transition-colors sm:min-h-0;
     background-color: color-mix(in oklch, var(--accent-primary) 80%, transparent);
   }
   .ui-btn-save:hover { background-color: var(--accent-primary); }
@@ -2285,7 +2312,7 @@
      solid slab). Extracted from inline utilities so the recurring pattern lives
      in one place and inherits the warm brand accent. */
   .ui-btn-nextbest {
-    @apply w-full rounded-xl border border-accent-warm/40 bg-accent-warm/[0.10] px-4 py-2.5 text-sm font-semibold text-accent-warm transition-colors hover:border-accent-warm/60 hover:bg-accent-warm/[0.16] disabled:opacity-50;
+    @apply min-h-11 w-full rounded-xl border border-accent-warm/40 bg-accent-warm/[0.10] px-4 py-2.5 text-sm font-semibold text-accent-warm transition-colors hover:border-accent-warm/60 hover:bg-accent-warm/[0.16] disabled:opacity-50;
   }
   .ui-btn-ready-action {
     @apply inline-flex min-h-11 sm:min-h-0 items-center rounded-lg border border-border-default bg-surface-overlay px-3 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-surface-raised;
@@ -2302,7 +2329,7 @@
 
   /* Icon/content overlay button — border + surface-overlay bg, caller adds padding */
   .ui-btn-overlay {
-    @apply rounded-xl border border-border-subtle bg-surface-overlay text-text-tertiary transition-colors hover:border-border-default hover:text-text-primary;
+    @apply min-h-11 min-w-11 rounded-xl border border-border-subtle bg-surface-overlay text-text-tertiary transition-colors hover:border-border-default hover:text-text-primary;
   }
 
   /* Filter/tab toggle pill */
@@ -2839,7 +2866,7 @@
     @apply rounded-full bg-text-primary text-text-inverted transition-opacity hover:opacity-90;
   }
   .ui-quick-actions-row {
-    @apply flex gap-2 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden;
+    @apply flex flex-wrap gap-2;
   }
 
   /* Misc */
@@ -3055,16 +3082,16 @@
     @apply h-9 max-w-36 rounded-full border border-border-subtle bg-surface-raised px-3 text-xs text-text-secondary outline-none transition-colors hover:border-border-default focus:border-accent-primary sm:max-w-44;
   }
   .ui-loki-tool-btn {
-    @apply inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border-subtle bg-surface-raised text-text-secondary transition-colors hover:border-border-default hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-45;
+    @apply inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border-subtle bg-surface-raised text-text-secondary transition-colors hover:border-border-default hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-45 sm:h-9 sm:w-9;
   }
   .ui-loki-send-btn {
-    @apply inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-primary text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:bg-surface-raised disabled:text-text-muted;
+    @apply inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent-primary text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:bg-surface-raised disabled:text-text-muted sm:h-10 sm:w-10;
   }
   .ui-loki-suggest-row {
-    @apply flex min-w-0 flex-1 gap-1.5 overflow-x-auto pr-1 sm:flex-none sm:justify-end;
+    @apply flex min-w-0 flex-1 gap-1.5 overflow-x-auto pr-5 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:flex-none sm:justify-end sm:pr-1;
   }
   .ui-loki-suggest-chip {
-    @apply inline-flex min-h-9 shrink-0 items-center rounded-full border border-border-subtle bg-surface-raised px-3 text-xs text-text-secondary transition-colors hover:border-border-default hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-45 sm:min-h-8;
+    @apply inline-flex min-h-11 shrink-0 items-center rounded-full border border-border-subtle bg-surface-raised px-3 text-xs text-text-secondary transition-colors hover:border-border-default hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-45 sm:min-h-8;
   }
   /* Drawer scroll body — safe-area padding on phones */
   .ui-drawer-body {
@@ -3139,10 +3166,10 @@
     @apply inline-flex max-w-44 items-center gap-1 rounded-full border border-accent-primary/30 bg-accent-muted px-2.5 py-1 text-xs font-medium text-accent-text;
   }
   .ui-loki-scope-remove {
-    @apply -mr-1 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-accent-text/70 transition-colors hover:bg-accent-primary/15 hover:text-accent-text;
+    @apply -mr-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-accent-text/70 transition-colors hover:bg-accent-primary/15 hover:text-accent-text sm:h-8 sm:w-8;
   }
   .ui-loki-scope-add {
-    @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border-subtle bg-surface-raised text-text-tertiary transition-colors hover:border-border-default hover:text-text-primary;
+    @apply inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border-subtle bg-surface-raised text-text-tertiary transition-colors hover:border-border-default hover:text-text-primary sm:h-8 sm:w-8;
   }
   .ui-loki-scope-hint {
     @apply text-xs text-text-tertiary;

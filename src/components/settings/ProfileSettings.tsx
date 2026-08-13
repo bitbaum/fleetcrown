@@ -44,8 +44,9 @@ export function ProfileSettings({ user }: Props) {
 
       <div className="space-y-3">
         <div className="space-y-1.5">
-          <label className="ui-kicker">Display name</label>
+          <label className="ui-kicker" htmlFor="profile-display-name">Display name</label>
           <input
+            id="profile-display-name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="ui-input"
@@ -53,13 +54,14 @@ export function ProfileSettings({ user }: Props) {
           />
         </div>
         <div className="space-y-1.5">
-          <label className="ui-kicker">Username</label>
-          <div className="flex items-center gap-2 rounded-lg border border-border-default bg-surface-base px-3 py-2.5">
-            <span className="text-sm text-text-tertiary">{APP_DOMAIN}/u/</span>
+          <label className="ui-kicker" htmlFor="profile-username">Username</label>
+          <div className="flex min-w-0 items-center gap-2 rounded-lg border border-border-default bg-surface-base px-3 py-2.5">
+            <span className="shrink-0 text-sm text-text-tertiary">{APP_DOMAIN}/u/</span>
             <input
+              id="profile-username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="flex-1 bg-transparent text-sm text-text-primary outline-none placeholder:text-text-muted"
+              className="min-h-6 min-w-0 flex-1 bg-transparent text-sm text-text-primary outline-none placeholder:text-text-muted"
               placeholder="yourname"
             />
           </div>

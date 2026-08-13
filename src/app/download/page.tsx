@@ -21,7 +21,7 @@ export default async function DownloadPage() {
   if (insideRunner) {
     return (
       <PublicSurface right={<PublicHeaderActions />}>
-        <div className="mx-auto max-w-2xl px-6 py-32 text-center">
+        <main className="mx-auto max-w-2xl px-6 py-32 text-center">
           <div className="ui-public-eyebrow flex items-center justify-center gap-2">
             <Cpu className="h-3.5 w-3.5" />
             Fleet Runner
@@ -39,24 +39,27 @@ export default async function DownloadPage() {
               Quickstart
             </Link>
           </div>
-        </div>
+        </main>
       </PublicSurface>
     );
   }
 
   return (
     <PublicSurface right={<PublicHeaderActions />}>
-      <DesktopDownload />
+      <main>
+        <h1 className="sr-only">Download Fleet Runner</h1>
+        <DesktopDownload />
 
-      <div className="mx-auto max-w-3xl px-6 pb-20 pt-4 text-center ui-public-meta">
-        <Link href="/" className="ui-public-link text-sm">
-          ← Back to homepage
-        </Link>
-        <span className="mx-3 text-border-strong">·</span>
-        <Link href="/sign-in" className="ui-public-link text-sm">
-          Sign in to the web app
-        </Link>
-      </div>
+        <div className="mx-auto max-w-3xl px-6 pb-20 pt-4 text-center ui-public-meta">
+          <Link href="/" className="ui-public-link text-sm">
+            ← Back to homepage
+          </Link>
+          <span className="mx-3 text-border-strong">·</span>
+          <Link href="/sign-in" className="ui-public-link text-sm">
+            Sign in to the web app
+          </Link>
+        </div>
+      </main>
     </PublicSurface>
   );
 }

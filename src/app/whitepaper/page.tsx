@@ -46,7 +46,7 @@ export default function WhitepaperPage() {
 
   return (
     <PublicSurface right={<PublicHeaderActions />}>
-      <div className="relative z-10 mx-auto max-w-3xl px-6 pb-32 pt-16 sm:px-10">
+      <main className="relative z-10 mx-auto max-w-3xl px-6 pb-32 pt-16 sm:px-10">
         <div className="ui-public-doc-header">
           <div className="ui-public-doc-meta-row">
             <span className="ui-public-doc-badge">WHITEPAPER</span>
@@ -135,7 +135,7 @@ export default function WhitepaperPage() {
             </Link>
           </div>
         </div>
-      </div>
+      </main>
     </PublicSurface>
   );
 }

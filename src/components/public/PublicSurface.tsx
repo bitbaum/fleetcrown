@@ -31,9 +31,9 @@ export function PublicSurface({
           <Link href={homeHref} className="rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-border-interactive">
             <BrandMark />
           </Link>
-          {showNav && <PublicNav />}
+          {showNav && <PublicNav drawerActions={right} />}
         </div>
-        <div className="flex items-center gap-2">
+        <div className={`flex items-center gap-2 ${showNav ? "max-[359px]:hidden" : ""}`}>
           {right}
         </div>
       </nav>

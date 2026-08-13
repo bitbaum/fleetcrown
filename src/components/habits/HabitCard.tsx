@@ -123,7 +123,7 @@ export function HabitCard({
   };
 
   return (
-    <Card className={active ? "" : "opacity-50"}>
+    <Card className={active ? "" : "bg-surface-page"}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
@@ -146,7 +146,11 @@ export function HabitCard({
                   <button onClick={commitTitle} className="ui-btn-confirm-icon shrink-0">
                     <Check className="h-2.5 w-2.5" />
                   </button>
-                  <button onClick={titleEdit.cancel} className="p-1.5 text-text-muted hover:text-text-secondary shrink-0">
+                  <button
+                    onClick={titleEdit.cancel}
+                    className="inline-flex h-11 w-11 shrink-0 items-center justify-center text-text-muted hover:text-text-secondary sm:h-auto sm:w-auto sm:p-1.5"
+                    aria-label="Cancel title edit"
+                  >
                     <X className="h-2.5 w-2.5" />
                   </button>
                 </div>
@@ -154,7 +158,7 @@ export function HabitCard({
             ) : (
               <button
                 onClick={() => titleEdit.start(displayTitle)}
-                className="text-base font-medium text-text-primary hover:text-accent-text transition-colors text-left"
+                className="inline-flex min-h-11 min-w-11 items-center text-left text-base font-medium text-text-primary transition-colors hover:text-accent-text sm:min-h-0 sm:min-w-0"
                 title="Click to edit title"
               >
                 {displayTitle}
@@ -181,8 +185,8 @@ export function HabitCard({
                 disabled={savingFreq}
                 className={
                   frequency === f
-                    ? "ui-chip-filter-active text-xs px-2 py-0.5 disabled:opacity-50"
-                    : "ui-chip-filter text-xs px-2 py-0.5 disabled:opacity-50"
+                    ? "ui-chip-filter-active min-h-11 px-2 py-0.5 text-xs disabled:opacity-50 sm:min-h-0"
+                    : "ui-chip-filter min-h-11 px-2 py-0.5 text-xs disabled:opacity-50 sm:min-h-0"
                 }
               >
                 {f}
@@ -194,12 +198,12 @@ export function HabitCard({
           <HabitGoalLinks habitId={habit.id} linked={linkedGoals} allGoals={activeGoals} />
         </div>
 
-      <div className="flex flex-wrap items-start justify-end gap-2 shrink-0 max-sm:w-full max-sm:justify-between">
+        <div className="flex shrink-0 flex-wrap items-start justify-end gap-2 max-sm:w-full max-sm:justify-between">
           <button
             onClick={handleToggleDone}
             disabled={togglingDone || !active}
             title={doneToday ? "Unmark done today" : "Mark done today"}
-            className="mt-0.5 h-9 w-9 flex items-center justify-center rounded transition-colors hover:bg-surface-raised disabled:opacity-50"
+            className="mt-0.5 flex h-11 w-11 items-center justify-center rounded transition-colors hover:bg-surface-raised disabled:opacity-50 sm:h-9 sm:w-9"
           >
             {togglingDone ? (
               <Loader2 className="h-4 w-4 animate-spin text-text-muted" />
@@ -221,7 +225,7 @@ export function HabitCard({
             onClick={handleToggleActive}
             disabled={togglingActive}
             title={active ? "Deactivate habit" : "Activate habit"}
-            className="mt-0.5 p-1.5 rounded transition-colors hover:bg-surface-raised text-text-muted hover:text-text-secondary disabled:opacity-50"
+            className="mt-0.5 inline-flex h-11 min-w-11 items-center justify-center rounded text-text-muted transition-colors hover:bg-surface-raised hover:text-text-secondary disabled:opacity-50 sm:h-auto sm:min-w-0 sm:p-1.5"
           >
             {togglingActive
               ? <Loader2 className="h-4 w-4 animate-spin" />
@@ -234,7 +238,7 @@ export function HabitCard({
           <LokiDispatchButton
             prompt={lokiPrompt}
             title="Ask Loki about this habit"
-            className="mt-0.5 p-1.5 rounded text-text-muted hover:text-status-positive transition-colors"
+            className="mt-0.5 inline-flex h-11 w-11 items-center justify-center rounded text-text-muted transition-colors hover:bg-surface-raised hover:text-status-positive sm:h-auto sm:w-auto sm:p-1.5"
           />
 
           <div className="mt-0.5">
@@ -242,7 +246,7 @@ export function HabitCard({
               onDelete={handleDelete}
               label="Delete?"
               triggerTitle="Delete habit"
-              triggerClassName="p-1.5 rounded transition-colors hover:bg-surface-raised text-text-muted hover:text-status-negative"
+              triggerClassName="inline-flex h-11 w-11 items-center justify-center rounded text-text-muted transition-colors hover:bg-surface-raised hover:text-status-negative sm:h-auto sm:w-auto sm:p-1.5"
             />
           </div>
         </div>

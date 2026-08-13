@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { FolderKanban, MessageSquare, SlidersHorizontal, SquareTerminal } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ScrollAffordance } from "@/components/ui/scroll-affordance";
 import { FLEET_SURFACES } from "@/config/navigation";
 import {
   FLEET_PROJECT_EVENT,
@@ -59,35 +60,39 @@ export function FleetSurfaceGuide() {
   return (
     <nav
       aria-label="Project workspace views"
-      className="mx-3 mt-2 flex max-w-6xl shrink-0 items-center gap-2 overflow-hidden sm:mx-4 xl:mx-auto xl:w-full"
+      className="mx-3 mt-2 max-w-6xl shrink-0 sm:mx-4 xl:mx-auto xl:w-full"
     >
-      <div className="inline-flex max-w-full items-center rounded-lg border border-border-subtle bg-surface-base p-1">
-        {FLEET_SURFACES.map((s, i) => {
-          const active = i === currentIndex;
-          const Icon = ICONS[s.id];
-          return (
-            <Link
-              key={s.href}
-              href={fleetSurfaceHref(s.id, project)}
-              className={cn(
-                "inline-flex min-h-11 items-center gap-1.5 rounded-md px-2 text-xs font-medium transition-colors sm:min-h-8 sm:px-3",
-                active
-                  ? "bg-surface-raised text-text-primary shadow-sm"
-                  : "text-text-tertiary hover:text-text-secondary",
-              )}
-              aria-current={active ? "page" : undefined}
-            >
-              <Icon className="h-3.5 w-3.5 max-[350px]:hidden" aria-hidden="true" />
-              {s.label}
-            </Link>
-          );
-        })}
-      </div>
-      {project && (
-        <span className="min-w-0 truncate text-xs text-text-tertiary" title={project}>
-          {project}
-        </span>
-      )}
+      <ScrollAffordance childCount={FLEET_SURFACES.length} threshold={4}>
+        <div className="flex max-w-full items-center gap-2 overflow-x-auto ui-scroll-fade-right pb-1 pr-5 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:pr-0">
+          <div className="inline-flex shrink-0 items-center rounded-lg border border-border-subtle bg-surface-base p-1">
+            {FLEET_SURFACES.map((s, i) => {
+              const active = i === currentIndex;
+              const Icon = ICONS[s.id];
+              return (
+                <Link
+                  key={s.href}
+                  href={fleetSurfaceHref(s.id, project)}
+                  className={cn(
+                    "inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 rounded-md px-2 text-xs font-medium transition-colors sm:min-h-8 sm:min-w-0 sm:px-3",
+                    active
+                      ? "bg-surface-raised text-text-primary shadow-sm"
+                      : "text-text-tertiary hover:text-text-secondary",
+                  )}
+                  aria-current={active ? "page" : undefined}
+                >
+                  <Icon className="h-3.5 w-3.5 max-[350px]:hidden" aria-hidden="true" />
+                  {s.label}
+                </Link>
+              );
+            })}
+          </div>
+          {project && (
+            <span className="shrink-0 text-xs text-text-secondary" title={project}>
+              {project}
+            </span>
+          )}
+        </div>
+      </ScrollAffordance>
     </nav>
   );
 }

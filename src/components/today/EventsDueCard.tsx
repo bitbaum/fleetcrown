@@ -48,7 +48,7 @@ export async function EventsDueCard() {
                     {format(deadline, "d MMM")}
                   </span>
                   {event.category && (
-                    <span className="text-xs uppercase tracking-caps text-status-positive/60 font-medium">
+                    <span className="text-xs font-medium uppercase tracking-caps text-status-positive">
                       {event.category}
                     </span>
                   )}
@@ -62,14 +62,15 @@ export async function EventsDueCard() {
                         href={event.url}
                         target="_blank"
                         rel="noreferrer"
-                        className="shrink-0 text-text-muted hover:text-text-secondary transition-colors mt-0.5"
+                        className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded text-text-muted transition-colors hover:bg-surface-raised hover:text-text-secondary sm:mt-0.5 sm:h-auto sm:w-auto"
                         title="Open link"
+                        aria-label={`Open ${event.name} source`}
                       >
                         <ExternalLink className="h-3 w-3" />
                       </a>
                     )}
                   </div>
-                  <div className={`flex items-center gap-1 text-xs mt-0.5 ${overdue ? "text-status-negative" : "text-status-warning/70"}`}>
+                  <div className={`mt-0.5 flex items-center gap-1 text-xs ${overdue ? "text-status-negative" : "text-status-warning"}`}>
                     <Clock className="h-3 w-3 shrink-0" />
                     {deadlineText}
                   </div>
@@ -88,6 +89,7 @@ export async function EventsDueCard() {
                     `This deadline is ${overdue ? "overdue" : "approaching"}. What should I do about it? What are the key next steps?`,
                   ].filter(Boolean).join("\n")}
                   title="Ask Loki about this deadline"
+                  className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded text-text-muted transition-colors hover:bg-surface-raised hover:text-status-positive sm:h-auto sm:w-auto sm:p-0.5"
                 />
               </div>
             );

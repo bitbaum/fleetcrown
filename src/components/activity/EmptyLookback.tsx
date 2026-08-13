@@ -42,7 +42,7 @@ export function EmptyLookback({
           <span>·</span>
           <Link
             href={activityHref({ window: suggestedWindow, density })}
-            className="text-accent-primary hover:underline"
+            className="inline-flex min-h-11 items-center text-accent-primary hover:underline sm:min-h-0"
           >
             {suggestionLabel}
           </Link>

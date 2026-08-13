@@ -80,12 +80,12 @@ export function PublicFooter() {
                   href={link.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="ui-public-link text-sm"
+                  className="ui-public-footer-link text-sm"
                 >
                   {link.label}
                 </a>
               ) : (
-                <Link key={link.label} href={link.href} className="ui-public-link text-sm">
+                <Link key={link.label} href={link.href} className="ui-public-footer-link text-sm">
                   {link.label}
                 </Link>
               ),
@@ -95,7 +95,7 @@ export function PublicFooter() {
       </div>
       <div className="ui-public-footer-bottom">
         <div>© {new Date().getFullYear()} {APP_NAME} · Mao Nakamoto</div>
-        <Link href="/changelog" className="ui-public-link font-mono">
+        <Link href="/changelog" className="ui-public-footer-link font-mono">
           Fleet Runner v{CURRENT_RELEASE.version}
         </Link>
       </div>

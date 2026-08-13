@@ -120,7 +120,7 @@ export function CommitmentItem({ id, description, dueDate, financialImpact }: Co
           </div>
         )}
         {financialImpact && (
-          <div className="text-xs md:text-sm text-status-warning/70">{financialImpact}</div>
+          <div className="text-xs text-status-warning md:text-sm">{financialImpact}</div>
         )}
       </div>
       <FulfillCommitmentButton commitmentId={id} />
@@ -140,7 +140,7 @@ export function CommitmentItem({ id, description, dueDate, financialImpact }: Co
             router.refresh();
           }}
           triggerTitle="Remove commitment"
-          triggerClassName="p-1 rounded text-text-muted hover:text-status-negative/70 transition-colors shrink-0"
+          triggerClassName="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded text-text-muted transition-colors hover:bg-status-negative-subtle hover:text-status-negative sm:h-auto sm:w-auto sm:p-1"
         />
       </div>
     </div>

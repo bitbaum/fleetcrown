@@ -54,7 +54,7 @@ export function GoalEditor({
       <div>
         <dt className="flex items-center gap-1.5 text-xs font-medium text-text-muted">
           <Target className="h-3 w-3" /> Definition of done
-          <button className="ui-btn-xs ml-auto min-h-11 sm:min-h-0" onClick={() => setEditing(true)}>
+          <button className="ui-btn-xs ml-auto min-h-11 min-w-11 sm:min-h-0 sm:min-w-0" onClick={() => setEditing(true)}>
             {definitionOfDone ? "Edit" : "Set"}
           </button>
         </dt>

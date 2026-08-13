@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Plus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TerminalLeaf } from "./TerminalLeaf";
@@ -32,20 +32,6 @@ export function TerminalWorkspace() {
     const lid = uid();
     return { id: uid(), title: `Terminal ${counter.current}`, root: leaf(lid), activeLeafId: lid };
   }
-
-  // Create the first tab after mount. uid() is client-only — a lazy useState
-  // initializer would generate a different id on server vs client and
-  // hydrate-mismatch, so seeding from an effect is the sanctioned pattern here.
-  // The ref guard keeps StrictMode's double-invoke from opening two shells.
-  const seeded = useRef(false);
-  useEffect(() => {
-    if (seeded.current) return;
-    seeded.current = true;
-    const t = makeTab();
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- client-only seed, see above
-    setTabs([t]);
-    setActiveTabId(t.id);
-  }, []);
 
   function addTab() {
     const t = makeTab();

@@ -1,15 +1,12 @@
 // Client-side helpers for connecting to the FleetCrown event bridge.
 //
-// The bridge URL is configured via NEXT_PUBLIC_FLEETCROWN_BRIDGE_URL. When
-// it's set, we open one EventSource per browser session and route incoming
-// change events through a typed dispatch. When it's NOT set (local dev,
-// preview deploys without the bridge), all the SSE-aware code degrades to
-// the legacy polling path — no feature flag, no special cases. The hook
-// just returns "I have no live stream" and existing 30-second polling
-// keeps working.
+// The bridge URL is configured via NEXT_PUBLIC_FLEETCROWN_BRIDGE_URL. The
+// canonical production origin may use the brand default; localhost, preview,
+// and custom origins stay disabled unless explicitly configured. The app's
+// same-origin control stream remains available as the local fallback.
 
 import { useEffect, useRef, useState } from "react";
-import { BRIDGE_URL } from "@/config/brand";
+import { APP_DOMAIN, BRIDGE_URL } from "@/config/brand";
 import type { ChangeEvent } from "./event-stream-types";
 
 /** Re-export under the legacy name to avoid breaking existing call sites
@@ -17,10 +14,8 @@ import type { ChangeEvent } from "./event-stream-types";
  *  event-stream-types.ts and is shared with the desktop subscriber. */
 export type BridgeChangeEvent = ChangeEvent;
 
-// Bridge connection lifecycle. The "disabled" mode that existed when the
-// bridge URL came from env-only is gone — brand.ts now guarantees a URL,
-// so the only states are connecting / connected / reconnecting / no-token.
 export type EventStreamState =
+  | { mode: "disabled" }
   | { mode: "connecting" }
   | { mode: "connected"; serverTime: number }
   | { mode: "reconnecting"; lastError: string | null }
@@ -52,9 +47,12 @@ export function useEventStream(opts: {
   }, [onChange]);
 
   useEffect(() => {
-    // Pin the bridge URL for the inner async closures. brand.ts guarantees
-    // a non-null value; env override is just for local dev.
-    const sseBase: string = bridgeUrl();
+    const resolvedSseBase = bridgeUrl();
+    if (!resolvedSseBase) {
+      setState({ mode: "disabled" });
+      return;
+    }
+    const sseBase: string = resolvedSseBase;
 
     let es: EventSource | null = null;
     let cancelled = false;
@@ -140,15 +138,20 @@ export function useEventStream(opts: {
   return state;
 }
 
-/** Resolve the bridge SSE URL. Env override first (for dev pointing at a
- *  local bridge); otherwise the canonical BRIDGE_URL from brand.ts. Memoized
- *  via the module-level binding so we don't re-read process.env on every
- *  render. Always returns a non-empty string — brand.ts guarantees the
- *  production fallback. */
-let cachedUrl: string | undefined;
-function bridgeUrl(): string {
+/** Resolve the bridge SSE URL. Explicit configuration wins everywhere. The
+ * canonical production host uses the brand default; other origins opt out so
+ * local/preview sessions never mint a token for a cross-origin stream they
+ * cannot consume. */
+let cachedUrl: string | null | undefined;
+function bridgeUrl(): string | null {
   if (cachedUrl !== undefined) return cachedUrl;
   const override = (process.env.NEXT_PUBLIC_FLEETCROWN_BRIDGE_URL ?? "").trim();
-  cachedUrl = override.length > 0 ? override : BRIDGE_URL;
+  if (override.length > 0) {
+    cachedUrl = override;
+    return cachedUrl;
+  }
+  cachedUrl = typeof window !== "undefined" && window.location.hostname === APP_DOMAIN
+    ? BRIDGE_URL
+    : null;
   return cachedUrl;
 }

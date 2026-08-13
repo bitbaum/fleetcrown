@@ -55,6 +55,7 @@ export function MemoryEntityList({ entities }: { entities: RecentEntity[] }) {
           <DeleteButton
             label="Forget?"
             triggerTitle="Forget this entity"
+            triggerClassName="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded text-text-muted transition-colors hover:bg-surface-raised hover:text-status-negative sm:h-auto sm:w-auto sm:p-1.5"
             onDelete={async () => {
               const res = await deleteJson(`/api/memory/entities/${e.id}`);
               if (!res.ok) await throwApiError(res, "Failed to forget entity");
@@ -92,7 +93,7 @@ export function ForgetAllMemory() {
     return (
       <button
         onClick={() => setConfirming(true)}
-        className="text-xs text-text-muted underline hover:text-status-negative"
+        className="inline-flex min-h-11 items-center text-xs text-text-muted underline hover:text-status-negative sm:min-h-0"
       >
         Forget everything
       </button>
@@ -100,14 +101,14 @@ export function ForgetAllMemory() {
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       <span className="text-xs text-status-negative">
         Wipe the whole knowledge graph and RAG index? No undo.
       </span>
       <button
         onClick={forgetAll}
         disabled={busy}
-        className="text-xs text-status-negative px-1 disabled:opacity-50"
+        className="inline-flex min-h-11 items-center px-1 text-xs text-status-negative disabled:opacity-50 sm:min-h-0"
       >
         {busy ? <Loader2 className="ui-spinner-xs" /> : "Yes, forget all"}
       </button>

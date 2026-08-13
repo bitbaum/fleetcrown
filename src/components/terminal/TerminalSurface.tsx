@@ -30,6 +30,13 @@ export function TerminalSurface({
   initialTab?: string | null;
 }) {
   const [source, setSource] = useState<Source>(initialSource ?? "server");
+  const [mountedSources, setMountedSources] = useState<Set<Source>>(
+    () => new Set([initialSource ?? "server"]),
+  );
+  const selectSource = (next: Source) => {
+    setMountedSources((current) => current.has(next) ? current : new Set(current).add(next));
+    setSource(next);
+  };
   const t = EXECUTOR_COPY.terminal;
   const builderPresence = useBuilderPresence();
   const cloudHonesty = deriveExecutorHonestyLabel({
@@ -47,14 +54,14 @@ export function TerminalSurface({
         <div className="flex items-center gap-1">
         <button
           type="button"
-          onClick={() => setSource("server")}
+          onClick={() => selectSource("server")}
           className={source === "server" ? "ui-chip-toggle-active" : "ui-chip-toggle"}
         >
           {local ? t.cloudLabelLocalHost : t.cloudLabel}
         </button>
         <button
           type="button"
-          onClick={() => setSource("machine")}
+          onClick={() => selectSource("machine")}
           className={source === "machine" ? "ui-chip-toggle-active" : "ui-chip-toggle"}
         >
           {t.thisComputerLabel}
@@ -80,16 +87,18 @@ export function TerminalSurface({
       )}
 
       <div className="relative min-h-0 flex-1">
-        <div className={cn("absolute inset-0", source !== "server" && "hidden")}>
-          {local ? (
-            <TerminalWorkspace />
-          ) : (
-            <BuilderAgentView variant="cloud" initialTab={initialTab} immersive={immersive} />
-          )}
-        </div>
-        <div className={cn("absolute inset-0", source !== "machine" && "hidden")}>
-          <LocalMachineView initialTab={initialTab} immersive={immersive} />
-        </div>
+        {mountedSources.has("server") && (
+          <div className={cn("absolute inset-0", source !== "server" && "hidden")}>
+            {local
+              ? <TerminalWorkspace />
+              : <BuilderAgentView variant="cloud" initialTab={initialTab} immersive={immersive} />}
+          </div>
+        )}
+        {mountedSources.has("machine") && (
+          <div className={cn("absolute inset-0", source !== "machine" && "hidden")}>
+            <LocalMachineView initialTab={initialTab} immersive={immersive} />
+          </div>
+        )}
       </div>
     </div>
   );

@@ -66,9 +66,10 @@ export function QuickCaptureButton() {
       <button
         onClick={() => setOpen(true)}
         className="ui-btn-pill-muted"
+        title="Capture a thought"
       >
         <Pencil className="h-3.5 w-3.5" />
-        Capture a thought
+        Capture
       </button>
     );
   }

@@ -76,13 +76,14 @@ export function HabitGoalLinks({
       )}
 
       {items.map((goal) => (
-        <span key={goal.id} className="flex items-center gap-0.5 ui-tag ui-tag-accent group">
+        <span key={goal.id} className="group flex min-h-11 items-center gap-0.5 ui-tag ui-tag-accent sm:min-h-0">
           <span>{goal.title}</span>
           <button
             onClick={() => handleUnlink(goal.id)}
             disabled={saving === goal.id}
-            className="ui-hover-reveal transition-opacity ml-0.5"
+            className="ml-0.5 inline-flex h-11 w-11 items-center justify-center transition-opacity ui-hover-reveal sm:h-auto sm:w-auto"
             title="Unlink"
+            aria-label={`Unlink ${goal.title}`}
           >
             {saving === goal.id
               ? <Loader2 className="h-2.5 w-2.5 animate-spin" />
@@ -99,7 +100,7 @@ export function HabitGoalLinks({
       {unlinked.length > 0 && !picking && (
         <button
           onClick={() => setPicking(true)}
-          className="flex items-center gap-0.5 text-xs text-text-muted hover:text-accent-text transition-colors"
+          className="flex min-h-11 items-center gap-0.5 text-xs text-text-muted transition-colors hover:text-accent-text sm:min-h-0"
           title="Link to a goal"
         >
           <Plus className="h-3 w-3" />
@@ -113,14 +114,15 @@ export function HabitGoalLinks({
             <button
               key={goal.id}
               onClick={() => handleLink(goal)}
-              className="text-xs px-2 py-0.5 rounded bg-surface-raised hover:bg-accent-muted text-text-secondary hover:text-accent-text border border-border-subtle transition-colors"
+              className="min-h-11 rounded border border-border-subtle bg-surface-raised px-2 py-0.5 text-xs text-text-secondary transition-colors hover:bg-accent-muted hover:text-accent-text sm:min-h-0"
             >
               {goal.title}
             </button>
           ))}
           <button
             onClick={() => setPicking(false)}
-            className="p-1 text-text-muted hover:text-text-secondary transition-colors"
+            className="inline-flex h-11 w-11 items-center justify-center text-text-muted transition-colors hover:text-text-secondary sm:h-auto sm:w-auto sm:p-1"
+            aria-label="Cancel goal selection"
           >
             <X className="h-3 w-3" />
           </button>

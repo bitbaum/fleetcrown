@@ -22,7 +22,7 @@ export function AbandonGoalButton({ goalId }: { goalId: string }) {
     <button
       onClick={onClick}
       disabled={busy}
-      className="p-1 rounded hover:bg-surface-overlay text-text-muted hover:text-status-negative transition-colors disabled:opacity-50 shrink-0"
+      className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded text-text-muted transition-colors hover:bg-surface-overlay hover:text-status-negative disabled:opacity-50 sm:h-auto sm:w-auto sm:p-1"
       title="Abandon goal"
     >
       <X className="h-3.5 w-3.5" />

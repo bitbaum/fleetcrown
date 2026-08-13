@@ -87,9 +87,10 @@ export function LogConversationButton() {
       <button
         onClick={() => setOpen(true)}
         className="ui-btn-pill-muted"
+        title="Log a conversation with a person"
       >
         <MessageCircle className="h-3.5 w-3.5" />
-        Log a conversation
+        Log conversation
       </button>
     );
   }

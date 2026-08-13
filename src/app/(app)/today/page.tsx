@@ -94,7 +94,7 @@ export default async function TodayPage() {
             <SummaryBar />
           </div>
         </Suspense>
-        <div className="mt-3 ui-quick-actions-row ui-scroll-fade-right">
+        <div className="mt-3 ui-quick-actions-row" role="group" aria-label="Quick actions">
           {isEvening ? (
             <LokiDispatchButton
               prompt={WRAP_UP_PROMPT}

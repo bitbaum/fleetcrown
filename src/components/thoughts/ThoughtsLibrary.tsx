@@ -60,38 +60,14 @@ export function ThoughtsLibrary({
 
   return (
     <div className="space-y-6">
-      {/* Featured essay — leads the page, first thing visible */}
-      {featuredVisible && (
-        <Link
-          href={`/thoughts/${featuredVisible.slug}`}
-          className="ui-card-shell-raised block space-y-4 p-6 transition hover:bg-surface-raised md:p-8"
-        >
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="ui-kicker">Featured</span>
-            <span className="ui-badge">{formatMeta(featuredVisible)}</span>
-          </div>
-          <h2 className="text-2xl font-medium leading-tight text-text-primary md:text-3xl">
-            {featuredVisible.title}
-          </h2>
-          <p className="text-base leading-relaxed text-text-secondary md:text-lg">
-            {featuredVisible.excerpt}
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {featuredVisible.tags.map((tag) => (
-              <span key={tag} className="ui-tag ui-tag-neutral">
-                {tag}
-              </span>
-            ))}
-          </div>
-        </Link>
-      )}
-
-      {/* Search + count + horizontal-scroll tag strip */}
+      {/* Search is the first action: a returning reader can reach the essay
+          they need without scrolling through editorial promotion first. */}
       <div className="space-y-3">
         <div className="flex items-center gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
             <input
+              aria-label="Search essays"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search essays"
@@ -139,6 +115,33 @@ export function ThoughtsLibrary({
           </div>
         </ScrollAffordance>
       </div>
+
+      {/* Featured essay follows the action layer. It still leads the content,
+          while query/tag changes immediately hide it when it no longer fits. */}
+      {featuredVisible && (
+        <Link
+          href={`/thoughts/${featuredVisible.slug}`}
+          className="ui-card-shell-raised block space-y-4 p-6 transition hover:bg-surface-raised md:p-8"
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="ui-kicker">Featured</span>
+            <span className="ui-badge">{formatMeta(featuredVisible)}</span>
+          </div>
+          <h2 className="text-2xl font-medium leading-tight text-text-primary md:text-3xl">
+            {featuredVisible.title}
+          </h2>
+          <p className="text-base leading-relaxed text-text-secondary md:text-lg">
+            {featuredVisible.excerpt}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {featuredVisible.tags.map((tag) => (
+              <span key={tag} className="ui-tag ui-tag-neutral">
+                {tag}
+              </span>
+            ))}
+          </div>
+        </Link>
+      )}
 
       {filtered.length === 0 ? (
         <div className="ui-empty-panel py-12 text-text-secondary">

@@ -27,7 +27,7 @@ export function FetchErrorState({ message = "Couldn't load data", detail, onRetr
       {onRetry && (
         <button
           onClick={onRetry}
-          className="flex shrink-0 items-center gap-1 text-xs text-text-muted transition-colors hover:text-text-secondary"
+          className="flex min-h-11 shrink-0 items-center gap-1 text-xs text-text-muted transition-colors hover:text-text-secondary sm:min-h-0"
         >
           <RefreshCw className="h-3 w-3" />
           Retry

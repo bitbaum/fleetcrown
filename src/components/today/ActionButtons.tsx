@@ -62,7 +62,7 @@ export function ActionButtons({
         <button
           onClick={onApprove}
           disabled={busy}
-          className="flex items-center justify-center rounded p-3 min-h-11 min-w-11 hover:bg-status-positive/20 text-status-positive/60 hover:text-status-positive transition-colors disabled:opacity-50"
+          className="flex min-h-11 min-w-11 items-center justify-center rounded p-3 text-status-positive transition-colors hover:bg-status-positive/20 hover:text-status-positive disabled:opacity-50"
           title="Done — mark as completed"
           aria-label="Mark action as done"
         >
@@ -96,7 +96,7 @@ export function ActionButtons({
         <button
           onClick={onReject}
           disabled={busy}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-border-subtle hover:bg-surface-raised text-text-secondary transition-colors disabled:opacity-50"
+          className="flex min-h-11 items-center gap-1.5 rounded-md border border-border-subtle px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-raised disabled:opacity-50 sm:min-h-0"
         >
           <X className="h-3 w-3" />
           Skip

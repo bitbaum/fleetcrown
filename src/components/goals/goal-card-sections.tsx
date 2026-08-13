@@ -42,43 +42,47 @@ export function GoalTitleRow({
   goalId: string;
 }) {
   return (
-    <div className="flex items-center gap-2">
-      {titleEdit.editing ? (
-        titleEdit.saving ? (
-          <Loader2 className="ui-spinner text-text-muted" />
+    <div className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+        {titleEdit.editing ? (
+          titleEdit.saving ? (
+            <Loader2 className="ui-spinner text-text-muted" />
+          ) : (
+            <input
+              value={titleEdit.draft}
+              onChange={(e) => titleEdit.setDraft(e.target.value)}
+              onBlur={onCommitTitle}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") onCommitTitle();
+                if (e.key === "Escape") titleEdit.cancel();
+              }}
+              autoFocus
+              className={`ui-input-inline min-w-0 flex-1 border-border-strong px-2 py-0.5 ${depth === 0 ? "text-base md:text-lg font-semibold" : "text-sm md:text-base font-medium"}`}
+            />
+          )
         ) : (
-          <input
-            value={titleEdit.draft}
-            onChange={(e) => titleEdit.setDraft(e.target.value)}
-            onBlur={onCommitTitle}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") onCommitTitle();
-              if (e.key === "Escape") titleEdit.cancel();
-            }}
-            autoFocus
-            className={`ui-input-inline border-border-strong px-2 py-0.5 ${depth === 0 ? "text-base md:text-lg font-semibold" : "text-sm md:text-base font-medium"}`}
-          />
-        )
-      ) : (
-        <div
-          className={`cursor-text hover:text-text-primary transition-colors ${depth === 0 ? "text-base md:text-lg font-semibold" : "text-sm md:text-base font-medium text-text-primary"}`}
-          onClick={() => !isClosed && titleEdit.start(displayTitle)}
-          title={isClosed ? undefined : "Click to edit title"}
-        >
-          {displayTitle}
-        </div>
-      )}
-      {isAbandoned && (
-        <span className="text-xs px-1.5 py-0.5 rounded bg-surface-overlay text-text-tertiary">
-          abandoned
-        </span>
-      )}
-      {isCompleted && (
-        <span className="text-xs px-1.5 py-0.5 rounded bg-surface-overlay text-text-tertiary">
-          completed
-        </span>
-      )}
-      <div className="ml-auto flex items-center gap-0.5">
+          <button
+            type="button"
+            className={`min-h-11 min-w-0 break-words text-left transition-colors hover:text-text-primary disabled:cursor-default sm:min-h-0 ${depth === 0 ? "text-base md:text-lg font-semibold" : "text-sm md:text-base font-medium text-text-primary"}`}
+            onClick={() => titleEdit.start(displayTitle)}
+            disabled={isClosed}
+            title={isClosed ? undefined : "Click to edit title"}
+          >
+            {displayTitle}
+          </button>
+        )}
+        {isAbandoned && (
+          <span className="text-xs px-1.5 py-0.5 rounded bg-surface-overlay text-text-tertiary">
+            abandoned
+          </span>
+        )}
+        {isCompleted && (
+          <span className="text-xs px-1.5 py-0.5 rounded bg-surface-overlay text-text-tertiary">
+            completed
+          </span>
+        )}
+      </div>
+      <div className="flex w-full flex-wrap items-center justify-end gap-0.5 sm:ml-auto sm:w-auto sm:flex-nowrap">
         {!isClosed && (
           <>
             <SendToLokiButton
@@ -161,7 +165,7 @@ export function GoalDescriptionEdit({
   return (
     <button
       onClick={() => !isClosed && descEdit.start(description ?? "")}
-      className={`text-xs md:text-sm mt-1 text-left w-full transition-colors ${
+      className={`mt-1 min-h-11 w-full text-left text-xs transition-colors sm:min-h-0 md:text-sm ${
         isClosed ? "cursor-default" :
         description ? "text-text-tertiary hover:text-text-secondary" : "text-text-muted hover:text-text-muted italic"
       }`}

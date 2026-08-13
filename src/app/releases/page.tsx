@@ -22,7 +22,7 @@ function formatDate(iso: string): string {
 export default function ReleasesPage() {
   return (
     <PublicSurface right={<PublicHeaderActions />}>
-      <div className="ui-changelog-root">
+      <main className="ui-changelog-root">
       <div className="ui-changelog-page">
         <header>
           <div className="ui-changelog-eyebrow">Changelog</div>
@@ -139,7 +139,7 @@ export default function ReleasesPage() {
           ))}
         </div>
       </div>
-      </div>
+      </main>
     </PublicSurface>
   );
 }

@@ -22,6 +22,7 @@ export function ScrollAffordance({
   children,
   childCount,
   threshold = 4,
+  className = "",
 }: {
   /** The scroll container — caller controls overflow + scrollbar-hide + fade. */
   children: React.ReactNode;
@@ -29,9 +30,11 @@ export function ScrollAffordance({
   childCount: number;
   /** Min children before showing the chevron. Default 4 ≈ ~414px overflow. */
   threshold?: number;
+  /** Optional layout classes for the wrapper (for example a sticky tab row). */
+  className?: string;
 }) {
   return (
-    <div className="relative">
+    <div className={`relative ${className}`} data-scroll-affordance>
       {children}
       {childCount >= threshold && (
         <span

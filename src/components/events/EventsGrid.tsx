@@ -8,6 +8,7 @@ import { AddEventForm } from "./AddEventForm";
 import type { EventRow } from "@/db/queries/events";
 import { EVENT_STATUS } from "@/lib/constants/statuses";
 import { useEscapeKey } from "@/hooks/use-escape-key";
+import { ScrollAffordance } from "@/components/ui/scroll-affordance";
 
 export function EventsGrid({
   initialEvents,
@@ -63,6 +64,7 @@ export function EventsGrid({
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
           <input
             type="text"
+            aria-label="Search events"
             placeholder="Search events…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -77,25 +79,27 @@ export function EventsGrid({
 
       {/* Type filter chips */}
       {types.length > 1 && (
-        <div className="flex gap-1.5 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:overflow-x-visible">
-          {types.map((t) => (
-            <button
-              key={t}
-              onClick={() => setTypeFilter(typeFilter === t ? null : t)}
-              className={`shrink-0 ${typeFilter === t ? "ui-chip-filter-active" : "ui-chip-filter"}`}
-            >
-              {t}
-            </button>
-          ))}
-          {typeFilter && (
-            <button
-              onClick={() => setTypeFilter(null)}
-              className="shrink-0 ui-chip-filter"
-            >
-              Clear
-            </button>
-          )}
-        </div>
+        <ScrollAffordance childCount={types.length + (typeFilter ? 1 : 0)} threshold={3}>
+          <div className="flex gap-1.5 overflow-x-auto pr-6 ui-scroll-fade-right [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:overflow-x-visible sm:pr-0">
+            {types.map((t) => (
+              <button
+                key={t}
+                onClick={() => setTypeFilter(typeFilter === t ? null : t)}
+                className={`shrink-0 ${typeFilter === t ? "ui-chip-filter-active" : "ui-chip-filter"}`}
+              >
+                {t}
+              </button>
+            ))}
+            {typeFilter && (
+              <button
+                onClick={() => setTypeFilter(null)}
+                className="shrink-0 ui-chip-filter"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        </ScrollAffordance>
       )}
 
       {/* Active events */}
@@ -137,7 +141,8 @@ export function EventsGrid({
         <div>
           <button
             onClick={() => setShowArchived((v) => !v)}
-            className="flex items-center gap-1.5 ui-link-muted"
+            className="flex min-h-11 items-center gap-1.5 ui-link-muted sm:min-h-0"
+            aria-expanded={showArchived}
           >
             {showArchived ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
             <Archive className="h-3 w-3" />

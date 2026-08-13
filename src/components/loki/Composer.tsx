@@ -13,6 +13,7 @@ import {
 } from "@/lib/loki/attachments";
 import { LOKI_SUGGESTED_ACTIONS, fillSuggestedAction } from "@/config/loki-suggested-actions";
 import { ExecutorHonestyChip } from "@/components/executor/ExecutorHonestyChip";
+import { ScrollAffordance } from "@/components/ui/scroll-affordance";
 import type { ExecutorHonestyLabel } from "@/lib/executor-honesty";
 import type { Attachment, LokiAgent, LokiProject, ModelChoice } from "./types";
 
@@ -294,23 +295,26 @@ export function Composer({
           </div>
 
           {!text.trim() && (
-            <div className="ui-loki-suggest-row">
-              {suggestedActions.slice(0, 5).map((action) => (
-                <button
-                  key={action.id}
-                  type="button"
-                  className="ui-loki-suggest-chip"
-                  disabled={disabled || sending}
-                  onClick={() => sendSuggested(action.template)}
-                  title={`Run: ${fillSuggestedAction(action.template, scopedProjectForTemplate)}`}
-                >
-                  {action.label}
-                </button>
-              ))}
-            </div>
+            <ScrollAffordance childCount={Math.min(suggestedActions.length, 5)} threshold={3}>
+              <div className="ui-loki-suggest-row ui-scroll-fade-right" aria-label="Suggested actions">
+                {suggestedActions.slice(0, 5).map((action) => (
+                  <button
+                    key={action.id}
+                    type="button"
+                    className="ui-loki-suggest-chip"
+                    disabled={disabled || sending}
+                    onClick={() => sendSuggested(action.template)}
+                    title={`Run: ${fillSuggestedAction(action.template, scopedProjectForTemplate)}`}
+                  >
+                    {action.label}
+                  </button>
+                ))}
+              </div>
+            </ScrollAffordance>
           )}
 
           <textarea
+            aria-label="Message Loki"
             ref={textareaRef}
             className="ui-loki-composer-input"
             rows={4}

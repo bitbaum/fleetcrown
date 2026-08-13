@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { ChevronDown, Menu, X, ExternalLink } from "lucide-react";
@@ -19,7 +19,7 @@ import { PUBLIC_NAV, type PublicNavEntry } from "@/config/auth";
  * (e.g. Thoughts) does not live here is enforced by editing that constant
  * alone.
  */
-export function PublicNav() {
+export function PublicNav({ drawerActions }: { drawerActions?: ReactNode }) {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -91,7 +91,12 @@ export function PublicNav() {
         <Menu className="h-5 w-5" />
       </button>
 
-      {drawerOpen && <PublicNavDrawer onClose={() => setDrawerOpen(false)} />}
+      {drawerOpen && (
+        <PublicNavDrawer
+          actions={drawerActions}
+          onClose={() => setDrawerOpen(false)}
+        />
+      )}
     </>
   );
 }
@@ -163,7 +168,13 @@ function PublicNavDropdown({
   );
 }
 
-function PublicNavDrawer({ onClose }: { onClose: () => void }) {
+function PublicNavDrawer({
+  actions,
+  onClose,
+}: {
+  actions?: ReactNode;
+  onClose: () => void;
+}) {
   if (typeof document === "undefined") return null;
   return createPortal(
     <div className="ui-public-drawer" role="dialog" aria-modal="true">
@@ -235,6 +246,11 @@ function PublicNavDrawer({ onClose }: { onClose: () => void }) {
             </Link>
           );
         })}
+        {actions && (
+          <section className="ui-public-drawer-actions" aria-label="Account actions">
+            {actions}
+          </section>
+        )}
       </div>
     </div>,
     document.body,

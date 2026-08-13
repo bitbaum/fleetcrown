@@ -34,7 +34,7 @@ function GoalChildrenSection({
   return (
     <>
       {showSection && (
-        <div className="mt-2 ml-6 pl-5 border-l-2 border-status-positive/20 space-y-2">
+        <div className="mt-2 ml-2 space-y-2 border-l-2 border-status-positive/20 pl-2 sm:ml-6 sm:pl-5">
           {goal.children.map((child) => (
             <GoalCard key={child.id} goal={child} depth={depth + 1} habitsByGoalId={habitsByGoalId} />
           ))}
@@ -69,7 +69,7 @@ function GoalChildrenSection({
       {!isClosed && !addingChild && (
         <button
           onClick={() => onSetAddingChild(true)}
-          className="mt-1 ml-6 flex items-center gap-1 text-xs text-text-secondary hover:text-status-positive transition-colors"
+          className="mt-1 ml-2 flex min-h-11 items-center gap-1 text-xs text-text-secondary transition-colors hover:text-status-positive sm:ml-6 sm:min-h-0"
         >
           <Plus className="h-3 w-3" /> Add sub-goal
         </button>
@@ -106,21 +106,21 @@ export function GoalCard({
     : null;
 
   return (
-    <div>
-      <Card className={`group ${isClosed ? "opacity-60" : ""}`}>
-        <div className="flex items-start gap-3">
+    <div className="min-w-0">
+      <Card className={`group min-w-0 ${isClosed ? "bg-surface-page" : ""}`}>
+        <div className="flex min-w-0 items-start gap-3">
           <button
             onClick={toggleComplete}
             disabled={togglingStatus || isAbandoned}
-            className="shrink-0 mt-0.5 p-1.5 -m-1.5 rounded hover:bg-surface-raised transition-colors disabled:opacity-50"
+            className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded transition-colors hover:bg-surface-raised disabled:opacity-50 sm:-m-1.5 sm:h-auto sm:w-auto sm:p-1.5"
             title={isCompleted ? "Mark active" : isAbandoned ? "Restore to mark completed" : "Mark completed"}
           >
             {togglingStatus ? (
               <Loader2 className="h-5 w-5 animate-spin text-text-muted" />
             ) : isCompleted ? (
-              <CheckCircle className="h-5 w-5 text-status-positive hover:text-status-positive/80 transition-colors" />
+              <CheckCircle className="h-5 w-5 text-status-positive transition-colors hover:text-status-positive" />
             ) : depth === 0 ? (
-              <Target className="h-5 w-5 text-status-positive hover:text-status-positive/80 transition-colors" />
+              <Target className="h-5 w-5 text-status-positive transition-colors hover:text-status-positive" />
             ) : (
               <div className="h-4 w-4 rounded border border-border-strong hover:border-border-interactive transition-colors mt-0.5" />
             )}
@@ -154,17 +154,20 @@ export function GoalCard({
             />
             {descError && <p className="ui-error-xs mt-0.5">{descError}</p>}
             {goal.entityName && goal.entityId && (
-              <div className="flex items-center gap-2 mt-1">
+              <div className="mt-1 flex flex-wrap items-center gap-2">
                 <Link
                   href={`/projects/${goal.entityId}`}
-                  className="flex items-center gap-1 hover:opacity-80 transition-opacity"
+                  className="flex min-h-11 items-center gap-1 transition-opacity hover:opacity-80 sm:min-h-0"
                   title="Open project"
                 >
-                  <FolderKanban className="h-3 w-3 text-status-positive/50" />
-                  <span className="text-xs text-status-positive/60">{goal.entityName}</span>
+                  <FolderKanban className="h-3 w-3 text-status-positive" />
+                  <span className="text-xs text-status-positive">{goal.entityName}</span>
                 </Link>
                 {!isClosed && controlPrompt && (
-                  <ControlDispatchButton tab={goal.entityName!} />
+                  <ControlDispatchButton
+                    tab={goal.entityName!}
+                    className="flex min-h-11 items-center gap-1 text-text-muted transition-colors hover:text-accent-text sm:min-h-0"
+                  />
                 )}
               </div>
             )}
@@ -180,7 +183,7 @@ export function GoalCard({
 
             {!isClosed && (
               <div className="mt-2">
-                <div className="flex items-center justify-between mb-1">
+                <div className="mb-1 flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:justify-between">
                   {hasMilestones ? (
                     <span className="text-xs text-text-tertiary">{progress}%</span>
                   ) : (
@@ -193,7 +196,7 @@ export function GoalCard({
             )}
 
             {(milestoneTotal > 0 || !isClosed) && (
-              <div className="mt-2 space-y-1.5">
+              <div className="mt-2 min-w-0 space-y-1.5">
                 {milestones.map((m, i) => (
                   <MilestoneRow
                     key={i}

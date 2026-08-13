@@ -32,9 +32,9 @@ function SubRow({ sub }: { sub: Awaited<ReturnType<typeof getAllSubscriptions>>[
   const isCancelled = sub.status === SUB_STATUS.CANCELLED;
 
   return (
-    <div className={`flex items-center justify-between py-1 ${isCancelled ? "opacity-40" : ""}`}>
-      <div>
-        <div className="flex items-center gap-1.5">
+    <div className="flex flex-col gap-2 py-1 sm:flex-row sm:items-center sm:justify-between">
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-1.5">
           <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${statusStyle}`}>
             {sub.status}
           </span>
@@ -44,8 +44,9 @@ function SubRow({ sub }: { sub: Awaited<ReturnType<typeof getAllSubscriptions>>[
               href={verifyUrl}
               target="_blank"
               rel="noreferrer"
-              className="text-text-muted transition-colors hover:text-text-primary"
+              className="inline-flex h-11 w-11 items-center justify-center rounded text-text-muted transition-colors hover:bg-surface-raised hover:text-text-primary sm:h-auto sm:w-auto"
               title={`Verify at ${new URL(verifyUrl).hostname}`}
+              aria-label={`Verify ${sub.name} at ${new URL(verifyUrl).hostname}`}
             >
               <ExternalLink className="h-3 w-3" />
             </a>
@@ -80,7 +81,7 @@ function SubRow({ sub }: { sub: Awaited<ReturnType<typeof getAllSubscriptions>>[
           vendor={sub.vendor}
         />
       </div>
-      <div className="text-right shrink-0">
+      <div className="shrink-0 sm:text-right">
         <div className={`text-base font-mono ${isCancelled ? "line-through" : ""}`}>
           {sub.amount != null ? `${sub.amount} ${sub.currency}` : <span className="text-text-tertiary">— {sub.currency}</span>}
         </div>
@@ -99,9 +100,23 @@ export default async function MoneyPage() {
 
   // OrangeCat integration banner for FleetCrown (the customer) - SSOT in marketing-content
   const IntegrationBanner = (
-    <div className="mb-4 p-3 bg-surface-raised border border-border-subtle rounded-lg text-sm">
-      <div className="font-medium">Economic layer: <a href={INTEGRATION.orangeCat.profile} target="_blank" className="ui-link">{INTEGRATION.orangeCat.title} profile ({INTEGRATION.owner})</a></div>
-      <div className="text-text-secondary mt-1">FleetCrown is a paying customer of OrangeCat (via <code>stakeholder_relationships</code> &quot;customer&quot; edge). Shared wallet. <a href={INTEGRATION.orangeCat.projectUrl} target="_blank" className="ui-link">{INTEGRATION.orangeCat.title} project</a> · <a href={INTEGRATION.fleetCrown.projectUrl} target="_blank" className="ui-link">{INTEGRATION.fleetCrown.title} project</a>. Wallet: <code>{INTEGRATION.wallet.btc}</code></div>
+    <div className="mb-4 rounded-lg border border-border-subtle bg-surface-raised p-3 text-sm">
+      <div className="font-medium text-text-primary">Economic layer</div>
+      <p className="mt-1 text-text-secondary">
+        FleetCrown is a paying customer of OrangeCat via the <code>stakeholder_relationships</code> customer edge.
+      </p>
+      <div className="mt-2 flex flex-wrap items-center gap-x-4">
+        <a href={INTEGRATION.orangeCat.profile} target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center ui-link sm:min-h-0">
+          {INTEGRATION.orangeCat.title} profile ({INTEGRATION.owner})
+        </a>
+        <a href={INTEGRATION.orangeCat.projectUrl} target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center ui-link sm:min-h-0">
+          {INTEGRATION.orangeCat.title} project
+        </a>
+        <a href={INTEGRATION.fleetCrown.projectUrl} target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center ui-link sm:min-h-0">
+          {INTEGRATION.fleetCrown.title} project
+        </a>
+      </div>
+      <p className="mt-1 break-all text-text-tertiary">Shared wallet: <code>{INTEGRATION.wallet.btc}</code></p>
     </div>
   );
 

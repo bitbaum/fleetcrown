@@ -49,7 +49,7 @@ export function ProjectActivitySection({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-1.5 ui-link-muted"
+        className="flex min-h-11 w-full items-center gap-1.5 ui-link-muted"
       >
         <Activity className="h-3.5 w-3.5" />
         <span className="font-medium">{PROJECT_ACTIVITY_TITLE}</span>

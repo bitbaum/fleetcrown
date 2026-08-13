@@ -101,6 +101,7 @@ export function GoalsGrid({
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
         <input
           type="text"
+          aria-label="Search goals"
           placeholder="Search goals…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}

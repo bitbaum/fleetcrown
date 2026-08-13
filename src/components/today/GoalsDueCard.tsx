@@ -54,7 +54,7 @@ export async function GoalsDueCard() {
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium truncate" title={goal.title}>{goal.title}</div>
                   {date && (
-                    <div className={`flex items-center gap-1 text-xs mt-0.5 ${overdue ? "text-status-negative" : "text-status-warning/80"}`}>
+                    <div className={`mt-0.5 flex items-center gap-1 text-xs ${overdue ? "text-status-negative" : "text-status-warning"}`}>
                       <Clock className="h-3 w-3 shrink-0" />
                       {deadlineText}
                     </div>
@@ -63,6 +63,7 @@ export async function GoalsDueCard() {
                 <LokiDispatchButton
                   prompt={`Goal: ${goal.title}\nProgress: ${progress}%\nDue: ${deadlineText}\n\nThis goal deadline is approaching${overdue ? " and is overdue" : ""}. What should I focus on right now to hit it? What are the key risks?`}
                   title="Ask Loki about this deadline"
+                  className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded text-text-muted transition-colors hover:bg-surface-raised hover:text-status-positive sm:h-auto sm:w-auto sm:p-0.5"
                 />
               </div>
             );

@@ -129,7 +129,7 @@ export default async function MemoryPage() {
             <div className="space-y-2">
               {activity.map((ix) => (
                 <div key={ix.id} className="flex items-start gap-2.5">
-                  <span className={`text-xs mt-0.5 shrink-0 ${ix.direction === INTERACTION_DIRECTION.INBOUND ? "text-text-muted" : "text-status-positive/60"}`}>
+                  <span className={`mt-0.5 shrink-0 text-xs ${ix.direction === INTERACTION_DIRECTION.INBOUND ? "text-text-muted" : "text-status-positive"}`}>
                     {ix.direction === INTERACTION_DIRECTION.INBOUND ? "←" : "→"}
                   </span>
                   <div className="flex-1 min-w-0">

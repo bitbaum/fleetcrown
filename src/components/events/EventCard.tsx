@@ -153,15 +153,15 @@ export function EventCard({
   }
 
   return (
-    <div className={`group py-3 border-b border-border-subtle last:border-0 ${dimmed ? "opacity-50" : ""}`}>
-      <div className="flex items-start gap-3">
+    <div className={`group py-3 border-b border-border-subtle last:border-0 ${dimmed ? "bg-surface-page" : ""}`}>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
         <div className="flex-1 min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="ui-micro-badge bg-surface-raised border-border-subtle text-text-secondary uppercase tracking-caps">
               {event.type}
             </span>
             {event.category && (
-              <span className="ui-micro-badge bg-status-positive-subtle border-status-positive/20 text-status-positive/70 uppercase tracking-caps">
+              <span className="ui-micro-badge bg-status-positive-subtle border-status-positive/20 text-status-positive uppercase tracking-caps">
                 {event.category}
               </span>
             )}
@@ -180,8 +180,9 @@ export function EventCard({
                 href={event.url}
                 target="_blank"
                 rel="noreferrer"
-                className="shrink-0 text-text-muted hover:text-text-secondary transition-colors mt-0.5"
+                className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded text-text-muted transition-colors hover:bg-surface-raised hover:text-text-secondary sm:mt-0.5 sm:min-h-0 sm:min-w-0"
                 title={event.url}
+                aria-label={`Open ${event.name} source`}
               >
                 <ExternalLink className="h-3 w-3" />
               </a>
@@ -193,12 +194,12 @@ export function EventCard({
           )}
         </div>
 
-        <div className="shrink-0 flex items-center gap-0.5 ui-hover-reveal transition-opacity">
+        <div className="flex shrink-0 items-center justify-end gap-0.5 self-end ui-hover-reveal transition-opacity sm:self-auto">
           {!dimmed && (
             <LokiDispatchButton
               prompt={lokiPrompt}
               title="Ask Loki about this event"
-              className="p-1.5 rounded text-text-muted hover:text-status-positive transition-colors"
+              className="inline-flex h-11 w-11 items-center justify-center rounded text-text-muted transition-colors hover:bg-surface-raised hover:text-status-positive sm:h-auto sm:w-auto sm:p-1.5"
             />
           )}
           {onEdit && !dimmed && (
@@ -215,7 +216,7 @@ export function EventCard({
               onClick={handleArchive}
               disabled={archiving}
               title="Archive event"
-              className="p-1.5 rounded text-text-muted hover:text-status-warning hover:bg-surface-raised transition-colors disabled:opacity-40"
+              className="inline-flex h-11 w-11 items-center justify-center rounded text-text-muted transition-colors hover:bg-surface-raised hover:text-status-warning disabled:opacity-40 sm:h-auto sm:w-auto sm:p-1.5"
             >
               {archiving ? <Loader2 className="ui-spinner-sm" /> : <Archive className="h-3.5 w-3.5" />}
             </button>
@@ -228,7 +229,7 @@ export function EventCard({
             }}
             label=""
             triggerTitle="Delete event"
-            triggerClassName="p-1.5 rounded ui-btn-danger hover:bg-surface-raised transition-colors"
+            triggerClassName="inline-flex h-11 w-11 items-center justify-center rounded ui-btn-danger hover:bg-surface-raised transition-colors sm:h-auto sm:w-auto sm:p-1.5"
           />
         </div>
       </div>

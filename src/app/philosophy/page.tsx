@@ -11,6 +11,7 @@ export const metadata = {
 export default function PhilosophyPage() {
   return (
     <PublicSurface right={<PublicHeaderActions />}>
+      <main>
       <div className="mx-auto max-w-4xl px-6 py-24 sm:py-32">
         <div className="ui-public-eyebrow">{PHILOSOPHY.eyebrow}</div>
         <h1 className="ui-public-page-title mt-4">{PHILOSOPHY.title}</h1>
@@ -32,6 +33,7 @@ export default function PhilosophyPage() {
       </div>
 
       <FinalCta />
+      </main>
     </PublicSurface>
   );
 }

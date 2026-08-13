@@ -118,7 +118,7 @@ export function InteractionsSection({
         <div key={i} className="ui-list-row space-y-0.5">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <span className={`text-xs ${ix.direction === INTERACTION_DIRECTION.INBOUND ? "text-text-tertiary" : "text-status-positive/60"}`}>
+              <span className={`text-xs ${ix.direction === INTERACTION_DIRECTION.INBOUND ? "text-text-tertiary" : "text-status-positive"}`}>
                 {ix.direction === INTERACTION_DIRECTION.INBOUND ? "←" : "→"}
               </span>
               <span className="text-text-secondary">{ix.channel}</span>

@@ -175,7 +175,7 @@ export function PersonDetail({
               triggerTitle="Delete person"
             />
           )}
-          <button onClick={onClose} className="ui-btn-icon">
+          <button onClick={onClose} className="ui-btn-icon" aria-label="Close person details">
             <X className="h-5 w-5" />
           </button>
         </div>

@@ -267,8 +267,9 @@ export default function NewFromScratchPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">Project name</label>
+              <label htmlFor="new-project-name" className="block text-sm font-medium text-text-primary mb-1">Project name</label>
               <input
+                id="new-project-name"
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -281,8 +282,9 @@ export default function NewFromScratchPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">What do you want to build?</label>
+              <label htmlFor="new-project-description" className="block text-sm font-medium text-text-primary mb-1">What do you want to build?</label>
               <textarea
+                id="new-project-description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="A peer-to-peer marketplace where cat owners find trusted sitters nearby."

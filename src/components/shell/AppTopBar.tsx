@@ -44,9 +44,9 @@ export function AppTopBar({
           glance up should confirm it. md+ users see the full sidebar so the
           title is redundant there. */}
       {pageLabel && (
-        <h1 className="truncate text-base font-semibold text-text-primary md:hidden">
+        <span aria-hidden="true" className="min-w-0 flex-1 truncate text-base font-semibold text-text-primary md:hidden">
           {pageLabel}
-        </h1>
+        </span>
       )}
       <button
         type="button"
@@ -58,7 +58,7 @@ export function AppTopBar({
         <span className="ui-app-topbar-search-label">Search prompts, pages, dispatch…</span>
         <kbd className="ui-palette-kbd ml-auto">{platformHint}</kbd>
       </button>
-      <div className="ui-app-topbar-right">
+      <div className="ui-app-topbar-right shrink-0 gap-1 sm:gap-2">
         {/* Mobile-only icon search — same palette, just less chrome. */}
         <button
           type="button"
@@ -73,16 +73,16 @@ export function AppTopBar({
           <button
             type="button"
             onClick={onOpenSessions}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-text-tertiary transition-colors hover:bg-surface-raised hover:text-text-secondary"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full text-text-tertiary transition-colors hover:bg-surface-raised hover:text-text-secondary md:h-9 md:w-9"
             aria-label="Open Sessions drawer"
             title="Sessions"
           >
             <LayoutPanelLeft className="h-4 w-4" aria-hidden="true" />
           </button>
         )}
-        <ThemeToggle />
+        <ThemeToggle className="h-11 min-w-11 max-[400px]:hidden md:h-9 md:min-w-9" />
         <FleetRunnerStatusPill />
-        <NotificationsPill />
+        <NotificationsPill className="h-11 w-11 md:h-9 md:w-9" />
       </div>
     </header>
   );

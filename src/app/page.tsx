@@ -54,18 +54,25 @@ export default async function LandingPage() {
   const shipped: ShippedFeedbackSnapshot = owner
     ? await getShippedFromFeedbackSnapshot(owner.id).catch(() => emptyShipped)
     : emptyShipped;
+  const positioningParts = MARKETING_POSITIONING.split(" · ");
+  const positioningLead = positioningParts.slice(0, -1).join(" · ");
+  const positioningCloser = positioningParts.at(-1) ?? "";
 
   return (
     <PublicSurface right={<PublicHeaderActions />}>
+      <main>
       <div className="ui-public-hero-fold">
         <div className="w-full max-w-5xl">
           <div className="ui-public-hero-badge">
-            {MARKETING_POSITIONING}
+            <span className="ui-public-hero-badge-copy">
+              <span>{positioningLead}</span>
+              <span className="ui-public-hero-badge-closer">{positioningCloser}</span>
+            </span>
           </div>
 
           <h1 className="ui-public-hero-title">
-            {MARKETING_HERO_PRIMARY}<br />
-            <span className="ui-public-hero-title-dim">{MARKETING_HERO_SECONDARY}</span>
+            <span className="block whitespace-nowrap">{MARKETING_HERO_PRIMARY}</span>
+            <span className="ui-public-hero-title-dim block whitespace-nowrap">{MARKETING_HERO_SECONDARY}</span>
           </h1>
 
           <p className="ui-public-hero-lede">
@@ -246,14 +253,14 @@ export default async function LandingPage() {
             <div className="ui-public-step-num">01</div>
             <div>
               <div className="ui-public-prose-strong">Install the local runner</div>
-              <div className="ui-public-prose-muted mt-2">
+              <p className="ui-public-prose-muted mt-2">
                 A native application on your machines that actually executes agents in your terminal environment (Zellij, Claude, Grok, Codex, etc.).
                 {insideRunner ? (
                   <span className="ml-1 text-text-tertiary">You&apos;re running it now.</span>
                 ) : (
                   <a href="/download" className="ui-public-link ml-1">Download →</a>
                 )}
-              </div>
+              </p>
             </div>
           </div>
           <div className="flex gap-8">
@@ -329,6 +336,7 @@ export default async function LandingPage() {
         </Link>
         <p className="ui-public-meta mt-4">For builders running real agent operations.</p>
       </div>
+      </main>
     </PublicSurface>
   );
 }

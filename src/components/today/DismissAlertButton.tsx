@@ -26,7 +26,7 @@ export function DismissAlertButton({ alertId }: { alertId: string }) {
       <button
         onClick={onClick}
         disabled={busy}
-        className="p-1 rounded hover:bg-surface-overlay text-text-muted hover:text-text-secondary transition-colors disabled:opacity-50"
+        className="inline-flex h-11 w-11 items-center justify-center rounded text-text-muted transition-colors hover:bg-surface-overlay hover:text-text-secondary disabled:opacity-50 sm:h-auto sm:w-auto sm:p-1"
         title="Dismiss"
       >
         {busy ? <Loader2 className="ui-spinner" /> : <X className="h-3.5 w-3.5" />}

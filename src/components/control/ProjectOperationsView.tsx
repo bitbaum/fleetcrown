@@ -177,15 +177,16 @@ export function ProjectOperationsView({
           <p className="mt-1 text-xs text-text-tertiary max-md:hidden">
             {workingCount} working · {readyCount} awaiting input · {openIdleCount} idle
           </p>
-          <div className="mt-3 flex items-center gap-2 rounded-lg border border-border-subtle bg-surface-base px-2.5 py-1.5">
+          <label className="mt-3 flex min-h-11 items-center gap-2 rounded-lg border border-border-subtle bg-surface-base px-2.5 py-1.5">
             <Search className="h-3.5 w-3.5 shrink-0 text-text-muted" />
             <input
+              aria-label="Find project"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Find project"
-              className="min-w-0 flex-1 bg-transparent text-sm text-text-primary outline-none placeholder:text-text-muted"
+              className="min-h-6 min-w-0 flex-1 bg-transparent text-sm text-text-primary outline-none placeholder:text-text-muted"
             />
-          </div>
+          </label>
           <div className="mt-2 grid grid-cols-3 gap-1">
             {([
               ["priority", "Priority"],
@@ -197,7 +198,7 @@ export function ProjectOperationsView({
                 type="button"
                 onClick={() => setSort(id)}
                 className={cn(
-                  "rounded-md px-2 py-1 text-micro transition-colors",
+                  "min-h-11 rounded-md px-2 py-1 text-micro transition-colors sm:min-h-0",
                   sort === id
                     ? "bg-accent-muted text-accent-text"
                     : "text-text-muted hover:bg-surface-overlay hover:text-text-secondary",
@@ -268,13 +269,15 @@ export function ProjectOperationsView({
                   bulkSelected.has(snapshot.project.tab) && "ring-1 ring-accent-primary/40",
                 )}
               >
-                <input
-                  type="checkbox"
-                  checked={bulkSelected.has(snapshot.project.tab)}
-                  onChange={() => toggleBulk(snapshot.project.tab)}
-                  aria-label={`Select ${snapshot.project.tab} for bulk actions`}
-                  className="mt-1.5 h-3.5 w-3.5 shrink-0"
-                />
+                <label className="inline-flex h-11 w-11 shrink-0 cursor-pointer items-start justify-start self-start sm:h-6 sm:w-6">
+                  <input
+                    type="checkbox"
+                    checked={bulkSelected.has(snapshot.project.tab)}
+                    onChange={() => toggleBulk(snapshot.project.tab)}
+                    aria-label={`Select ${snapshot.project.tab} for bulk actions`}
+                    className="h-5 w-5 shrink-0"
+                  />
+                </label>
                 <button
                   type="button"
                   onClick={() => onSelect(snapshot.project.tab)}
@@ -298,7 +301,7 @@ export function ProjectOperationsView({
                     </span>
                   </span>
                   <span className="mt-0.5 block truncate text-xs text-text-secondary">{snapshot.display.stateLabel}</span>
-                  {evidence && <span className="mt-0.5 block truncate text-micro text-text-muted">{evidence}</span>}
+                  {evidence && <span className="mt-0.5 block truncate text-micro text-text-tertiary">{evidence}</span>}
                 </span>
                 </button>
               </div>

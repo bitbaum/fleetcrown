@@ -15,8 +15,9 @@ export default function XLoginComplete() {
   }, []);
 
   return (
-    <div className="ui-empty-page">
+    <main className="ui-empty-page">
+      <h1 className="sr-only">Finishing sign-in with X</h1>
       <p className="ui-page-subtitle">Finishing sign-in with X…</p>
-    </div>
+    </main>
   );
 }

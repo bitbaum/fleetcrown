@@ -18,7 +18,8 @@ export function CancelledSubsSection({
     <div className="border-t border-border-subtle pt-3 mt-1">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-secondary transition-colors"
+        className="flex min-h-11 items-center gap-1.5 text-sm text-text-muted transition-colors hover:text-text-secondary sm:min-h-0"
+        aria-expanded={open}
       >
         {open ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
         {open ? "Hide" : "Show"} {count} cancelled

@@ -89,7 +89,7 @@ export default async function ThoughtArticlePage({
 
   return (
     <PublicSurface right={<PublicHeaderActions />}>
-      <div className="relative z-10 mx-auto max-w-5xl space-y-6 px-6 pb-24 pt-16 sm:px-10">
+      <main className="relative z-10 mx-auto max-w-5xl space-y-6 px-6 pb-24 pt-16 sm:px-10">
         <div className="ui-public-doc-header">
           <h1 className="ui-public-doc-title">{article.title}</h1>
           {article.summary && (
@@ -204,7 +204,7 @@ export default async function ThoughtArticlePage({
         </article>
 
         <ThoughtArticleNav previous={previous} next={next} related={related} />
-      </div>
+      </main>
     </PublicSurface>
   );
 }

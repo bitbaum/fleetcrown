@@ -11,6 +11,7 @@ export const metadata = {
 export default function MissionPage() {
   return (
     <PublicSurface right={<PublicHeaderActions />}>
+      <main>
       <div className="ui-public-hero-fold">
         <div className="w-full max-w-5xl">
           <div className="ui-public-eyebrow">{MISSION.eyebrow}</div>
@@ -28,6 +29,7 @@ export default function MissionPage() {
       </div>
 
       <FinalCta />
+      </main>
     </PublicSurface>
   );
 }

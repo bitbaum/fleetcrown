@@ -29,7 +29,7 @@ export const PALETTE = {
     /** ≈ --text-primary (dark) */
     textPrimary: "#e8e8e8",
     /** ≈ --text-tertiary (dark) */
-    textTertiary: "#666666",
+    textTertiary: "#8f8f8f",
   },
   /** Tailwind zinc-scale mirrors — OG-card greys, email chrome, xterm base. */
   zinc: {

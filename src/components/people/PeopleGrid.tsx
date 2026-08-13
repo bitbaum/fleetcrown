@@ -126,6 +126,7 @@ export function PeopleGrid({
           <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
           <input
             type="text"
+            aria-label="Search people"
             placeholder="Search people..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -176,7 +177,7 @@ export function PeopleGrid({
           <span>Failed to load — check your connection and try again.</span>
           <button
             onClick={() => search(query, sort, healthFilter, 0)}
-            className="ml-4 shrink-0 font-medium underline underline-offset-2 hover:opacity-80 transition-opacity"
+            className="ml-4 inline-flex min-h-11 shrink-0 items-center font-medium underline underline-offset-2 transition-opacity hover:opacity-80 sm:min-h-0"
           >
             Retry
           </button>
@@ -193,7 +194,7 @@ export function PeopleGrid({
           {(query || healthFilter.length > 0) && (
             <button
               onClick={() => { setQuery(""); setHealthFilter([]); }}
-              className="text-sm text-accent-text underline underline-offset-2 transition-colors hover:text-accent-hover"
+              className="inline-flex min-h-11 items-center text-sm text-accent-text underline underline-offset-2 transition-colors hover:text-accent-hover sm:min-h-0"
             >
               Clear filters
             </button>
