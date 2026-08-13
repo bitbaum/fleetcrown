@@ -160,17 +160,35 @@ function measurePage(minTouch) {
     .sort((a, b) => b.right - a.right)
     .slice(0, 5);
 
+  // What the FINGER hits, which is not always the control. A checkbox or radio
+  // wrapped in a <label> is 13px of input inside a 60px card, and the whole card
+  // is clickable — reporting 13px there is a false positive, and a report with
+  // false positives is a report people stop reading. Same for a control whose
+  // <label for> points at it. So measure the label's box when there is one.
+  const hitBox = (el) => {
+    const own = el.getBoundingClientRect();
+    const isFormControl = /^(input|select|textarea)$/i.test(el.tagName);
+    if (!isFormControl) return own;
+    let lab = el.closest('label');
+    if (!lab && el.id) {
+      try { lab = document.querySelector(`label[for="${CSS.escape(el.id)}"]`); } catch { lab = null; }
+    }
+    if (!lab) return own;
+    const lr = lab.getBoundingClientRect();
+    return lr.height > own.height ? lr : own;
+  };
+
   const small = [...document.querySelectorAll('button, a[href], [role="button"], input, select')]
     .filter((el) => {
       const r = el.getBoundingClientRect();
       if (r.width === 0 || r.height === 0) return false;
       if (getComputedStyle(el).visibility === 'hidden') return false;
-      return r.height < minTouch - 0.5;
+      return hitBox(el).height < minTouch - 0.5;
     })
     .map((el) => ({
       tag: el.tagName.toLowerCase(),
       label: (el.getAttribute('aria-label') || el.textContent || '').trim().slice(0, 28),
-      h: Math.round(el.getBoundingClientRect().height),
+      h: Math.round(hitBox(el).height),
     }))
     .slice(0, 6);
 

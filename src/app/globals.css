@@ -3378,6 +3378,12 @@
     .ui-icon-action-danger,
     .ui-btn-icon,
     .ui-btn-row-action,
+    /* Its `h-9` is a fixed 36px — min-height still wins, since min-height
+       constrains the used height whatever `height` asked for. This one button
+       was the single most common offender in the audit: it is in the top bar
+       of all 20 authenticated routes, so one missing class name was 20 pages
+       of finding. */
+    .ui-theme-cycle-btn,
     .ui-topbar-btn,
     .ui-loki-convo-delete,
     .ui-loki-toolbar-btn {
@@ -3389,6 +3395,18 @@
        span their container, so a min-width would fight the layout and means
        nothing for a row that is already full-width. */
     .ui-tap,
+    /* A text field is a tap target too — you have to hit it to type in it.
+       These measured 42px: near-misses are still misses, and "nearly" is not a
+       category the finger recognises. */
+    .ui-input,
+    .ui-btn-overlay,
+    .ui-locked-banner,
+    .ui-app-topbar-search,
+    /* The marketing surfaces have their own namespace but not their own
+       fingers. These are the nav on every public page. */
+    .ui-public-nav-link,
+    .ui-public-nav-trigger,
+    .ui-public-nav-action,
     .ui-btn-primary,
     .ui-btn-secondary,
     .ui-btn-ghost,
