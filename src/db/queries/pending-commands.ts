@@ -23,11 +23,19 @@ export async function getRunnerExecutionStall(userId: string, graceSeconds = 120
     .select({
       stalledCount: sql<number>`count(*)::int`,
       oldestSeconds: sql<number>`coalesce(extract(epoch from (now() - min(created_at)))::int, 0)`,
+      // Which projects the stuck commands target — so the banner can say
+      // "2 dispatches for orangecat" instead of an untraceable count.
+      tabs: sql<string[]>`coalesce(array_agg(distinct coalesce(payload->>'projectKey', payload->>'tab')) filter (where coalesce(payload->>'projectKey', payload->>'tab') is not null), '{}')`,
     })
     .from(pendingCommands)
     .where(and(
       eq(pendingCommands.userId, userId),
       isNull(pendingCommands.executedAt),
+      // In-flight, not stalled: a claimed command is being executed right now
+      // (local dispatch legitimately holds its claim 20-35s; hosted Hermes
+      // runs for minutes). Genuinely dead claims are reclaimed to unclaimed
+      // by reclaimStalePendingCommands and then count again.
+      isNull(pendingCommands.claimedAt),
       sql`created_at < now() - interval '1 second' * ${graceSeconds}`,
       sql`created_at > now() - interval '2 hours'`,
       // A dispatch waiting its turn behind an older open run for the same
@@ -40,7 +48,12 @@ export async function getRunnerExecutionStall(userId: string, graceSeconds = 120
       fifoEligibilitySql(),
     ));
   const stalledCount = row?.stalledCount ?? 0;
-  return { stalled: stalledCount > 0, stalledCount, oldestSeconds: row?.oldestSeconds ?? 0 };
+  return {
+    stalled: stalledCount > 0,
+    stalledCount,
+    oldestSeconds: row?.oldestSeconds ?? 0,
+    tabs: (row?.tabs ?? []).slice(0, 5),
+  };
 }
 
 /**

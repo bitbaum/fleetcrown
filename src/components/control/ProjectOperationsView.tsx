@@ -162,7 +162,7 @@ export function ProjectOperationsView({
   }
 
   return (
-    <section className="ui-control-workspace">
+    <section id="control-projects" className="ui-control-workspace scroll-mt-24">
       <aside className="ui-control-project-rail">
         <div className="border-b border-border-subtle px-4 pb-3 pt-4">
           <h2 className="text-sm font-semibold text-text-primary">Projects</h2>

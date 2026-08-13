@@ -6,9 +6,9 @@ import { Archive, Check, ChevronDown, Loader2, MessageSquare, Rocket } from "luc
 import { cn } from "@/lib/utils";
 import { useFetch } from "@/hooks/use-fetch";
 import { patchJson, postJson, throwApiError } from "@/lib/api/fetch";
-import { compactDurationHours, compactRelativeDate } from "@/lib/dates";
+import { compactRelativeDate } from "@/lib/dates";
 import { FEEDBACK_STATUS } from "@/lib/constants/statuses";
-import type { FeedbackListItem, FeedbackLoopMetrics, ProjectFeedbackSummary } from "@/db/queries/site-feedback";
+import type { FeedbackListItem, ProjectFeedbackSummary } from "@/db/queries/site-feedback";
 
 /**
  * Fleet-wide feedback lens on /control: projects with NEW visitor feedback,
@@ -21,9 +21,11 @@ import type { FeedbackListItem, FeedbackLoopMetrics, ProjectFeedbackSummary } fr
  * (screenshots, widget setup, AI review). Renders nothing when clear.
  */
 export function FleetFeedbackStrip() {
-  const { data, refetch } = useFetch<{ summary: ProjectFeedbackSummary[]; loop: FeedbackLoopMetrics | null }>("/api/feedback/summary");
+  // The loop metrics ("13 resolved, median 6d report→fix") were dropped from
+  // this strip 2026-08-13 — vanity stats in an action surface (user: "seems
+  // like noise"). They still render on each project's feedback inbox.
+  const { data, refetch } = useFetch<{ summary: ProjectFeedbackSummary[] }>("/api/feedback/summary");
   const summary = data?.summary ?? [];
-  const loop = data?.loop ?? null;
   const [openProjectId, setOpenProjectId] = useState<string | null>(null);
   if (summary.length === 0) return null;
   const open = summary.find((s) => s.projectId === openProjectId) ?? null;
@@ -51,11 +53,6 @@ export function FleetFeedbackStrip() {
               <ChevronDown className={cn("h-3 w-3 opacity-50 transition-transform", openProjectId === s.projectId && "rotate-180")} />
             </button>
           ))}
-          {loop && loop.resolved > 0 && loop.medianResolutionHours != null && (
-            <span className="mt-0.5 shrink-0 text-xs text-text-tertiary">
-              · {loop.resolved} resolved, median {compactDurationHours(loop.medianResolutionHours)} report→fix
-            </span>
-          )}
         </div>
       </div>
       {open && (
