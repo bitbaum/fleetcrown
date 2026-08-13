@@ -95,6 +95,11 @@ export function RunningBanner({ label, promptKey, startedAt }: { label: string; 
 
   const timerClass = elapsed > 900 ? "text-status-warning" : "text-text-muted";
   const isCustom = promptKey === "custom";
+  // Short labels ("Direct terminal activity") never truncate, so the toggle
+  // flipped more↔less with zero visible change — an inert control. Only offer
+  // expansion when the label is long enough to plausibly clamp (1 line for
+  // canned prompts, 3 lines for custom).
+  const mayTruncate = label.length > (isCustom ? 160 : 48);
 
   // Truncation classes differ per prompt kind; clearing them when expanded
   // lets the full text render with whitespace preserved.
@@ -112,19 +117,21 @@ export function RunningBanner({ label, promptKey, startedAt }: { label: string; 
         <div className="min-w-0 flex-1">
           <p className="text-micro font-semibold uppercase tracking-caps text-accent-text/60">
             Working
-            <button
-              type="button"
-              onClick={() => setExpanded((v) => !v)}
-              className="ml-2 text-accent-text/60 hover:text-accent-text underline-offset-2 hover:underline"
-              aria-label={expanded ? "Collapse prompt" : "Show full prompt"}
-            >
-              {expanded ? "less" : "more"}
-            </button>
+            {mayTruncate && (
+              <button
+                type="button"
+                onClick={() => setExpanded((v) => !v)}
+                className="ml-2 text-accent-text/60 hover:text-accent-text underline-offset-2 hover:underline"
+                aria-label={expanded ? "Collapse prompt" : "Show full prompt"}
+              >
+                {expanded ? "less" : "more"}
+              </button>
+            )}
           </p>
           <p
-            className={cn("cursor-pointer", expanded ? expandedClass : truncatedClass)}
-            onClick={() => setExpanded((v) => !v)}
-            title={expanded ? "Click to collapse" : "Click to expand"}
+            className={cn(mayTruncate && "cursor-pointer", expanded ? expandedClass : truncatedClass)}
+            onClick={mayTruncate ? () => setExpanded((v) => !v) : undefined}
+            title={mayTruncate ? (expanded ? "Click to collapse" : "Click to expand") : undefined}
           >
             {label}
           </p>

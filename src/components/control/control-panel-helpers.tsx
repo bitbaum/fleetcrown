@@ -67,7 +67,6 @@ export function BrainConfigPanel({
   onModelChange,
   onSave,
   onRequestInstall,
-  onLaunchNew,
   headerRight,
 }: {
   selectedAgent: string;
@@ -82,7 +81,6 @@ export function BrainConfigPanel({
   onModelChange: (value: string) => void;
   onSave: (applyToOpenTabs: boolean) => void;
   onRequestInstall?: (agentId: string) => void;
-  onLaunchNew?: () => void;
   headerRight?: React.ReactNode;
 }) {
   const modelSuggestions = selectedDefinition?.modelSuggestions ?? [];
@@ -169,36 +167,28 @@ export function BrainConfigPanel({
           </datalist>
         </div>
 
-        <div className="flex flex-wrap items-start gap-2 lg:justify-end">
-          {hasPendingChange ? (
-            <>
-              <button
-                onClick={() => onSave(false)}
-                disabled={savingAgent || !model.trim()}
-                className="ui-btn-secondary"
-              >
-                Save
-              </button>
-              <button
-                onClick={() => onSave(true)}
-                disabled={savingAgent || !model.trim()}
-                className="ui-btn-primary"
-              >
-                {savingAgent ? "…" : "Apply to open tabs"}
-              </button>
-            </>
-          ) : (
-            onLaunchNew && (
-              <button
-                onClick={onLaunchNew}
-                className="ui-btn-primary"
-                title={`Launch a new project using ${selectedDefinition?.label ?? selectedAgent} · ${model || selectedDefinition?.defaultModel}`}
-              >
-                New project
-              </button>
-            )
-          )}
-        </div>
+        {/* Save actions only appear when something changed. The "New project"
+            button that used to fill this slot duplicated the header's "+ New"
+            CTA in the least discoverable spot on the page (inside a collapsed
+            accordion at the bottom) — removed 2026-08-13. */}
+        {hasPendingChange && (
+          <div className="flex flex-wrap items-start gap-2 lg:justify-end">
+            <button
+              onClick={() => onSave(false)}
+              disabled={savingAgent || !model.trim()}
+              className="ui-btn-secondary"
+            >
+              Save
+            </button>
+            <button
+              onClick={() => onSave(true)}
+              disabled={savingAgent || !model.trim()}
+              className="ui-btn-primary"
+            >
+              {savingAgent ? "…" : "Apply to open tabs"}
+            </button>
+          </div>
+        )}
       </div>
 
       {lastTabResults.length > 0 && (

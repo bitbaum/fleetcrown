@@ -307,7 +307,7 @@ export function ProjectOperationsView({
         </div>
       </aside>
 
-      <div className="min-w-0">
+      <div className="ui-control-project-detail">
         <ProjectCard
           key={selected.project.tab}
           {...cardProps(selected.project)}

@@ -112,6 +112,12 @@ export function ProjectStatusChips({
   // focus the local zellij tab instead; if no agent is running there yet, we
   // launch it first so there's a terminal to focus.
   const [wsState, setWsState] = useState<"idle" | "working" | "done" | "error">("idle");
+  // Focus can only succeed when there is a zellij tab to focus, or when we can
+  // launch one (agent not running yet + dir + agent known). An agent process
+  // running OUTSIDE zellij (e.g. a background CLI session) has no tab — the
+  // runner replies "tab not found" every time, so offering the chip there is a
+  // guaranteed-fail dead end ("Open here" still works from any device).
+  const canFocusTerminal = tabOpen || (!project.agentRunning && Boolean(project.dir) && Boolean(effectiveAgentId));
   const openWorkspace = async (event: React.MouseEvent) => {
     event.stopPropagation();
     if (wsState === "working") return;
@@ -267,7 +273,7 @@ export function ProjectStatusChips({
         </span>
       )}
 
-      {clickableWorkspace && (
+      {clickableWorkspace && canFocusTerminal && (
         <button
           type="button"
           onClick={openWorkspace}

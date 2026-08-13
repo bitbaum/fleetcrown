@@ -80,7 +80,7 @@ export function AttentionBar({
   if (items.length === 0 && groupedFailures.length === 0) return null;
 
   return (
-    <div className="flex flex-col gap-2">
+    <div id="control-attention" className="flex scroll-mt-24 flex-col gap-2">
       {items.length > 0 && (
         <div className="flex items-start gap-3 rounded-2xl border-l-2 border-status-warning border-t border-r border-b border-border-subtle bg-surface-base px-4 py-3">
           <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5 text-status-warning" />
