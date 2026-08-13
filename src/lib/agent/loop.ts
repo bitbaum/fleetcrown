@@ -25,7 +25,7 @@
  * "answer with what you have" rather than to an error.
  */
 import { assignFactIds, renderFacts, type Fact } from "@/lib/agent/core/facts";
-import { buildGroundedContext, buildContract, NO_BASIS, type Directive } from "@/lib/agent/core/contract";
+import { buildGroundedContext, buildContract, directiveId, NO_BASIS, type Directive } from "@/lib/agent/core/contract";
 import { verifyAnswer, buildRepairPrompt, type Violation } from "@/lib/agent/core/verify";
 import { callModelWithTools, type ChatMessage, type ToolCall } from "@/lib/agent/llm";
 import { renderToolCatalog, toOpenAITools, toolNames, type ToolRegistry } from "@/lib/agent/tools/registry";
@@ -74,9 +74,14 @@ const PLANNING_CUES =
  */
 export type ModelCaller = typeof callModelWithTools;
 
+/** A citation the UI can resolve — what [F8] or [D1] actually refers to. */
+export type CitationSource = { id: string; label: string; detail: string };
+
 export type LoopResult = {
   text: string;
   facts: Fact[];
+  /** Resolved citations, so the transcript can render an id as its record. */
+  sources: CitationSource[];
   violations: Violation[];
   /** Tool names actually executed, in order — surfaced so the UI can show work. */
   toolsUsed: string[];
@@ -267,8 +272,9 @@ export async function runLokiTurn(input: {
     ...directives.flatMap((d) => [d.question, ...d.answer]),
     ...conversation.filter((m) => m.role === "user").map((m) => m.content),
   ];
+  const citationIds = directives.map((_, i) => directiveId(i));
   let violations = facts.length
-    ? verifyAnswer({ answer: text, facts, userMessage: input.message, extraEvidence: evidence }).violations
+    ? verifyAnswer({ answer: text, facts, userMessage: input.message, extraEvidence: evidence, extraCitationIds: citationIds }).violations
     : [];
 
   if (violations.length > 0) {
@@ -280,7 +286,7 @@ export async function runLokiTurn(input: {
         {
           role: "user",
           content: [
-            buildContract(facts),
+            buildContract(facts, directives),
             "",
             renderFacts(facts),
             "",
@@ -297,7 +303,7 @@ export async function runLokiTurn(input: {
     }).catch(() => null);
 
     if (repaired?.text) {
-      const second = verifyAnswer({ answer: repaired.text, facts, userMessage: input.message, extraEvidence: evidence });
+      const second = verifyAnswer({ answer: repaired.text, facts, userMessage: input.message, extraEvidence: evidence, extraCitationIds: citationIds });
       // Keep the repair only if it actually improved things. A repair that
       // introduces MORE unsupported claims is a worse answer, and accepting it
       // unconditionally would let the safety pass degrade the turn.
@@ -308,5 +314,21 @@ export async function runLokiTurn(input: {
     }
   }
 
-  return { text, facts, violations, toolsUsed: used, rounds, model };
+  const sources: CitationSource[] = [
+    ...facts.map((f) => ({
+      id: f.id,
+      label: f.subject,
+      detail: [
+        f.source,
+        ...Object.entries(f.fields).filter(([, v]) => v !== null).map(([k, v]) => `${k}: ${v}`),
+      ].join(" · "),
+    })),
+    ...directives.map((d, i) => ({
+      id: directiveId(i),
+      label: d.question,
+      detail: [d.method, ...(d.answer.length ? d.answer : ["(none matched)"])].join(" · "),
+    })),
+  ];
+
+  return { text, facts, sources, violations, toolsUsed: used, rounds, model };
 }

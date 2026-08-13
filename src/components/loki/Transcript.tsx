@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ExternalLink, ListChecks, Loader2, Monitor, TerminalSquare } from "lucide-react";
-import { MarkdownText } from "@/components/ui/markdown-text";
+import { MarkdownText, type CitationMap } from "@/components/ui/markdown-text";
 import type { LokiMessage } from "./types";
 import { dispatchStatusLabel, type DispatchLiveView } from "@/lib/dispatch-status";
 
@@ -61,6 +61,27 @@ const KIND_LABEL: Record<string, string> = {
 /** Outcome footer under a dispatch bubble — tells the operator whether the work
  *  is running, queued, or stuck (runner offline), and links into Control to
  *  watch it. Reads the meta the messages route stamps on dispatch turns. */
+/**
+ * Build the citation resolver for one message from its persisted meta.
+ *
+ * Defensive by design: meta is opaque JSON that predates this field, so every
+ * older message has no `sources` and must render cleanly rather than showing
+ * bare handles. Returning undefined makes MarkdownText drop the markers.
+ */
+function citationsFrom(meta: Record<string, unknown> | null): CitationMap | undefined {
+  const raw = meta?.sources;
+  if (!Array.isArray(raw) || raw.length === 0) return undefined;
+  const map: CitationMap = {};
+  for (const entry of raw) {
+    if (!entry || typeof entry !== "object") continue;
+    const { id, label, detail } = entry as { id?: unknown; label?: unknown; detail?: unknown };
+    if (typeof id === "string" && typeof label === "string") {
+      map[id] = { label, detail: typeof detail === "string" ? detail : "" };
+    }
+  }
+  return Object.keys(map).length > 0 ? map : undefined;
+}
+
 function DispatchFooter({ meta }: { meta: Record<string, unknown> | null }) {
   // Hook first — before any early return — to satisfy rules-of-hooks. commandId
   // is read defensively so it's safe even when meta is null.
@@ -226,7 +247,7 @@ export function Transcript({
           <div key={m.id} className="flex flex-col">
             {m.kind && <span className="ui-loki-kind">{KIND_LABEL[m.kind] ?? m.kind}</span>}
             <div className="ui-loki-bubble ui-loki-bubble-assistant">
-              <MarkdownText text={m.content} className="space-y-2" />
+              <MarkdownText text={m.content} className="space-y-2" citations={citationsFrom(m.meta)} />
             </div>
             {m.kind === "command" && onPickProject && (
               <NeedsProjectPicker meta={m.meta} onPick={onPickProject} />

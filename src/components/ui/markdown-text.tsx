@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 // small hand-rolled subset (no tables/images) — pull in a real markdown lib if a
 // surface needs more. Lives in ui/ so every LLM-output panel (digest, project
 // bios, Loki responses) renders consistently.
-export function MarkdownText({ text, className }: { text: string; className?: string }) {
+export function MarkdownText({ text, className, citations }: { text: string; className?: string; citations?: CitationMap }) {
   const blocks = parseBlocks(text);
   return (
     <div className={className ?? "space-y-2 text-sm leading-relaxed text-text-secondary"}>
@@ -24,7 +24,7 @@ export function MarkdownText({ text, className }: { text: string; className?: st
           return (
             <ul key={i} className="space-y-1 pl-4 list-disc marker:text-text-tertiary">
               {block.items.map((item, j) => (
-                <li key={j}>{renderInline(item)}</li>
+                <li key={j}>{renderInline(item, citations)}</li>
               ))}
             </ul>
           );
@@ -32,11 +32,11 @@ export function MarkdownText({ text, className }: { text: string; className?: st
         if (block.kind === "h") {
           return (
             <h3 key={i} className="text-sm font-semibold text-text-primary mt-2">
-              {renderInline(block.items[0])}
+              {renderInline(block.items[0], citations)}
             </h3>
           );
         }
-        return <p key={i}>{renderInline(block.items[0])}</p>;
+        return <p key={i}>{renderInline(block.items[0], citations)}</p>;
       })}
     </div>
   );
@@ -85,10 +85,35 @@ function parseBlocks(text: string): Block[] {
 
 // Inline spans: `code`, **bold**, and [text](url) links. One split keeps the
 // order they appear; everything else is plain text.
-const INLINE_RE = /(`[^`]+`|\*\*[^*]+\*\*|\[[^\]]+\]\([^)\s]+\))/g;
+const INLINE_RE = /(`[^`]+`|\*\*[^*]+\*\*|\[[^\]]+\]\([^)\s]+\)|\[[FD]\d+(?:,\s*[FD]\d+)*\])/g;
 
-function renderInline(text: string): ReactNode {
+/**
+ * What a grounded answer's [F8] / [D1] handle refers to.
+ *
+ * Citations exist so a claim can be traced, but a raw `[F8]` in a sentence is
+ * internal plumbing wearing the costume of a source — it tells the reader
+ * nothing and makes the prose worse. Given a resolver, each handle renders as a
+ * small numbered marker carrying the record in its tooltip; without one, the
+ * handle is dropped from the text entirely rather than shown bare.
+ */
+export type CitationMap = Record<string, { label: string; detail: string }>;
+
+function renderInline(text: string, citations?: CitationMap): ReactNode {
   return text.split(INLINE_RE).map((part, i) => {
+    const cite = /^\[[FD]\d+(?:,\s*[FD]\d+)*\]$/.exec(part);
+    if (cite) {
+      const ids = part.slice(1, -1).split(/,\s*/);
+      // No resolver (or an unknown id) ⇒ show nothing. A dangling handle is
+      // strictly worse than clean prose: it implies a source the reader
+      // cannot reach.
+      const known = ids.filter((id) => citations?.[id]);
+      if (known.length === 0) return null;
+      return (
+        <sup key={i} className="ui-loki-cite" title={known.map((id) => `${id} — ${citations![id].label}\n${citations![id].detail}`).join("\n\n")}>
+          {known.join(" ")}
+        </sup>
+      );
+    }
     if (part.startsWith("`") && part.endsWith("`")) {
       return (
         <code key={i} className="rounded bg-surface-raised px-1 py-0.5 font-mono text-text-primary">

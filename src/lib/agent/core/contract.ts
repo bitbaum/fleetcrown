@@ -33,8 +33,11 @@ export const NO_BASIS = "Not in your data.";
  * form — with nothing retrieved, EVERY answer must be a refusal, and saying so
  * plainly beats hoping the model notices the context block is empty.
  */
-export function buildContract(facts: Fact[]): string {
-  const ids = facts.map((f) => `[${f.id}]`).join(" ");
+export function buildContract(facts: Fact[], directives: Directive[] = []): string {
+  const ids = [
+    ...facts.map((f) => `[${f.id}]`),
+    ...directives.map((_, i) => `[${directiveId(i)}]`),
+  ].join(" ");
   const gaps = unrecordedFields(facts);
 
   const rules = [
@@ -42,7 +45,7 @@ export function buildContract(facts: Fact[]): string {
     "",
     "You are answering from a fixed set of records. They are the ONLY things you know about the operator.",
     "",
-    facts.length === 0
+    facts.length === 0 && directives.length === 0
       ? `1. NO records were retrieved for this turn. You therefore cannot answer any question about the operator's projects, people, goals, habits, commitments or events. Reply "${NO_BASIS}" and say what you would need.`
       : `1. Every claim about the operator MUST cite a record id. Legal citations this turn, and no others: ${ids}`,
     `2. A field shown as \`${NOT_RECORDED}\` means you DO NOT KNOW it. Never supply a value for it — not from the record's own wording, not from a name that looks like a place or an organisation, not from general knowledge about a similarly-named person. A surname is not an employer.`,
@@ -112,6 +115,19 @@ export type Directive = {
 };
 
 /**
+ * Citation handle for a computed answer, parallel to a Fact's [F1].
+ *
+ * Directives used to be uncitable, and the contract demands a citation for
+ * every claim — so a model reporting a computed result had nothing legal to
+ * point at and wrote "[no record id]" into the user's answer. That is the
+ * harness leaking its own plumbing onto the screen. Give computed answers real
+ * ids and the sentence cites [D1] like anything else.
+ */
+export function directiveId(index: number): string {
+  return `D${index + 1}`;
+}
+
+/**
  * Render computed answers. These are stated as settled, because they are: the
  * model must not re-derive, second-guess, or "improve" them, and an empty
  * result must be reported as an empty result rather than backfilled from the
@@ -119,17 +135,18 @@ export type Directive = {
  */
 export function renderDirectives(directives: Directive[]): string {
   if (directives.length === 0) return "";
-  const blocks = directives.map((d) => {
+  const blocks = directives.map((d, i) => {
     const body =
       d.answer.length > 0
         ? d.answer.map((a) => `     - ${a}`).join("\n")
         : "     (none — the query ran and matched nothing)";
-    return `  ${d.question}   [${d.method}]\n${body}`;
+    return `  [${directiveId(i)}] ${d.question}   [${d.method}]\n${body}`;
   });
   return [
     "## Computed answers — already resolved, do not re-derive",
     "These were computed directly from the database for this turn. They are exact.",
-    "Report them as given. Where the result is empty, say so plainly — do not substitute a plausible item from the records.",
+    "Report them as given and cite their id, exactly as you would a record.",
+    "Where the result is empty, say so plainly — do not substitute a plausible item from the records.",
     "",
     ...blocks,
   ].join("\n");
@@ -148,7 +165,7 @@ export function buildGroundedContext(input: {
   renderedFacts: string;
 }): string {
   return [
-    buildContract(input.facts),
+    buildContract(input.facts, input.directives ?? []),
     renderDirectives(input.directives ?? []),
     input.facts.length > 0
       ? ["## Records", "", input.renderedFacts].join("\n")

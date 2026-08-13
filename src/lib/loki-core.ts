@@ -152,6 +152,10 @@ export async function askLoki(message: string, opts?: { sessionKey?: string; use
             via: "tool-loop",
             toolsUsed: result.toolsUsed,
             rounds: result.rounds,
+            // Sent so the transcript can resolve [F8] to the record it names.
+            // Showing a raw citation id to the operator is worse than showing
+            // none: it is internal plumbing wearing the costume of a source.
+            sources: result.sources,
             grounding: groundingMeta(result.facts.length, result.violations),
           },
         };
