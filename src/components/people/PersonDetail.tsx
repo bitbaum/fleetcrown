@@ -11,6 +11,7 @@ import { DetailAttrs } from "./PersonDetailAttrs";
 import { ChannelsSection } from "./PersonChannelsSection";
 import { Section } from "./PersonDetailHelpers";
 import { parseAliases, type PersonDetailData } from "./person-detail-types";
+import { isChannelAttrKey } from "@/config/channels";
 import { Drawer } from "@/components/ui/modal";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
 import { getJson, patchJson, deleteJson, throwApiError } from "@/lib/api/fetch";
@@ -246,6 +247,12 @@ export function PersonDetail({
             >
               {description ?? <span className="italic text-text-muted">Add a note…</span>}
             </button>
+          )}
+
+          {!Object.keys(attrs).some(isChannelAttrKey) && (
+            <p className="text-sm text-text-secondary">
+              No way to reach them on file. Add an email, phone, or chat below — without that this is only a name.
+            </p>
           )}
 
           <InteractionsSection

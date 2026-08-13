@@ -1,10 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { Check, X } from "lucide-react";
 import { handleApprove, handleReject } from "@/app/actions";
 import { useState } from "react";
 import { ACTION_STATUS } from "@/lib/constants/statuses";
 import { haptic } from "@/lib/haptics";
+import { ACTION_COPY } from "@/config/action-copy";
+import { NAV } from "@/config/navigation";
 
 type DoneStatus = typeof ACTION_STATUS.APPROVED | typeof ACTION_STATUS.REJECTED;
 
@@ -18,13 +21,19 @@ export function ActionButtons({
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<DoneStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [projectKey, setProjectKey] = useState<string | null>(null);
 
   async function onApprove() {
     haptic();
     setBusy(true);
     setError(null);
     try {
-      await handleApprove(actionId);
+      const result = await handleApprove(actionId);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      setProjectKey(result.projectKey ?? null);
       setDone(ACTION_STATUS.APPROVED);
     } catch {
       setError("Failed — try again");
@@ -48,9 +57,19 @@ export function ActionButtons({
   }
 
   if (done) {
+    if (done === ACTION_STATUS.APPROVED && projectKey) {
+      return (
+        <Link
+          href={`${NAV.control.href}?project=${encodeURIComponent(projectKey)}`}
+          className="ui-link-subtle text-xs"
+        >
+          {ACTION_COPY.dispatch.watch}
+        </Link>
+      );
+    }
     return (
       <span className={`text-xs ${done === ACTION_STATUS.APPROVED ? "text-status-positive" : "text-text-muted"}`}>
-        {done === ACTION_STATUS.APPROVED ? "✓" : "✗"}
+        {done === ACTION_STATUS.APPROVED ? ACTION_COPY.checkin.reminded : "Skipped"}
       </span>
     );
   }

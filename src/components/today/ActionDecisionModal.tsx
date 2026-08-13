@@ -7,6 +7,9 @@ import { Modal } from "@/components/ui/modal";
 import { getJson } from "@/lib/api/fetch";
 import { handleApplyAdvice } from "@/app/actions";
 import { haptic } from "@/lib/haptics";
+import { ACTION_COPY } from "@/config/action-copy";
+import { NAV } from "@/config/navigation";
+import Link from "next/link";
 import { ADVICE_AUTO_APPLY_SECONDS } from "@/lib/constants/today";
 import { RECOMMENDATION, REPORT_VERDICT, type Recommendation } from "@/lib/actions/advice-rules";
 import type { ActionAdvice, AdviceReport } from "@/lib/actions/advisor";
@@ -90,6 +93,12 @@ export function ActionDecisionModal({ actionId, onClose }: { actionId: string; o
   const [busy, setBusy] = useState(false);
   const [held, setHeld] = useState(false);
   const [seconds, setSeconds] = useState(ADVICE_AUTO_APPLY_SECONDS);
+  const [result, setResult] = useState<
+    | { kind: "dispatched"; projectKey: string }
+    | { kind: "skipped" }
+    | { kind: "deferred" }
+    | null
+  >(null);
   // localStorage is an external store: useSyncExternalStore reads it without a
   // mount-effect setState, and gives SSR a defined (opt-out) snapshot so the
   // checkbox never hydrates against a different value than it rendered with.
@@ -107,14 +116,30 @@ export function ActionDecisionModal({ actionId, onClose }: { actionId: string; o
     haptic();
     setBusy(true);
     try {
-      await handleApplyAdvice(actionId, option);
-      router.refresh();
-      onClose();
+      const outcome = await handleApplyAdvice(actionId, option);
+      if ("skipped" in outcome) {
+        setResult({ kind: "skipped" });
+        return;
+      }
+      if (outcome.error) {
+        setError(outcome.error);
+        setBusy(false);
+        return;
+      }
+      if (outcome.projectKey) {
+        setResult({ kind: "dispatched", projectKey: outcome.projectKey });
+        return;
+      }
+      if (outcome.deferred) {
+        setResult({ kind: "deferred" });
+        return;
+      }
+      setResult({ kind: "skipped" });
     } catch {
       setError("Failed to apply — try again.");
       setBusy(false);
     }
-  }, [actionId, router, onClose]);
+  }, [actionId]);
 
   // Auto-apply. Skip runs itself (rejecting executes nothing). Dispatch only
   // when the operator has explicitly opted in — approving is the step that
@@ -141,6 +166,49 @@ export function ActionDecisionModal({ actionId, onClose }: { actionId: string; o
     const i = setInterval(() => setSeconds((s) => Math.max(0, s - 1)), 1000);
     return () => clearInterval(i);
   }, [autoEligible]);
+
+  if (result) {
+    const project = result.kind === "dispatched" ? result.projectKey : null;
+    return (
+      <Modal
+        onClose={() => {
+          router.refresh();
+          onClose();
+        }}
+        size="lg"
+      >
+        <div className="space-y-4 p-1">
+          <h2 className="text-base font-semibold text-text-primary">
+            {result.kind === "dispatched" && project
+              ? ACTION_COPY.dispatch.sent(project)
+              : result.kind === "deferred"
+                ? ACTION_COPY.dispatch.deferred
+                : "Skipped. It is off the queue."}
+          </h2>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            {project && (
+              <Link
+                href={`${NAV.control.href}?project=${encodeURIComponent(project)}`}
+                className="ui-btn-primary min-h-11 justify-center"
+              >
+                {ACTION_COPY.dispatch.watch}
+              </Link>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                router.refresh();
+                onClose();
+              }}
+              className="ui-btn-secondary min-h-11 justify-center"
+            >
+              {ACTION_COPY.dispatch.stay}
+            </button>
+          </div>
+        </div>
+      </Modal>
+    );
+  }
 
   return (
     <Modal onClose={onClose} size="2xl" padded={false} disableClose={busy}>

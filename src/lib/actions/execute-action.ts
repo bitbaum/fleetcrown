@@ -20,6 +20,9 @@ export type ExecuteActionResult = {
   deferred?: boolean;
   /** populated when a wired executor threw (row left 'approved' for retry). */
   error?: string;
+  /** Dispatch destination — so the UI can send the operator there. */
+  projectKey?: string;
+  runId?: string | null;
 };
 
 /** Action types whose executor isn't wired yet. Fail-closed: they pass the human
@@ -196,7 +199,7 @@ export async function executeAction(userId: string, action: Action): Promise<Exe
         await recordActionAuditEvent(userId, action, "executed", {
           meta: { runId, feedbackLinked },
         });
-        return { executed: true };
+        return { executed: true, projectKey, runId };
       }
 
       case ACTION_TYPE.CREATE_EVENT: {
