@@ -102,4 +102,4 @@ The two halves of the individual singularity. Both halves, by the same author, w
 
 ---
 
-*This is a strategic positioning piece, not a feature announcement. The integration work is engineering on top of two production platforms (fleetcrown.vercel.app and orangecat.ch) that already work standalone. The first integration ships when the architecture document lands; that is in active discussion now.*
+*This is a strategic positioning piece, not a feature announcement. The integration work is engineering on top of two production platforms (fleetcrown.orangecat.ch and orangecat.ch) that already work standalone. Update, August 2026: the first integrations shipped and were verified live — that story is told in [The Two Halves, Joined](/thoughts/the-two-halves-joined).*
