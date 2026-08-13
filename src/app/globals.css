@@ -3144,6 +3144,18 @@
     @apply w-full self-start px-1 text-text-secondary;
     max-width: 100%;
   }
+  /* Collapsed trigger for the save-to-project-context bar. Quiet by default so
+     the transcript keeps the vertical space; expands to the full picker. */
+  .ui-loki-save-trigger {
+    @apply inline-flex items-center gap-1.5 self-start rounded-md px-1.5 py-1 text-xs text-text-muted transition-colors hover:bg-surface-raised hover:text-text-secondary;
+  }
+  /* Citation marker in a grounded answer — the [F8]/[D1] handle rendered as a
+     quiet superscript whose tooltip carries the actual record. Deliberately
+     recessive: the claim is the content, the source is available on demand.
+     Raw handles in prose read as plumbing and make the sentence worse. */
+  .ui-loki-cite {
+    @apply ml-0.5 cursor-help align-super text-nano font-medium text-text-muted;
+  }
   /* Kind badge above an assistant turn (dispatch / chat / command). */
   .ui-loki-kind {
     @apply mb-1 inline-flex items-center gap-1 self-start text-micro uppercase tracking-wider text-text-muted;

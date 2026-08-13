@@ -598,6 +598,12 @@ export async function POST(
       meta: {
         model: loki.body.model ?? null,
         projectKey: chatProject,
+        // Persisted so a reopened thread can still resolve its citations. A
+        // transcript that renders [F8] as a bare handle after reload would be
+        // showing the operator a source they cannot reach.
+        ...(Array.isArray(loki.body.sources) && loki.body.sources.length > 0
+          ? { sources: loki.body.sources }
+          : {}),
         ...(queued
           ? { queuedActionId: queued.id, queuedActionTitle: queued.title, queuedActionType: queued.type }
           : {}),

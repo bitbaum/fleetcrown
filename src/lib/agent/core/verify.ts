@@ -228,12 +228,22 @@ export function verifyAnswer(input: {
   extraEvidence?: string[];
   mode?: VerifyMode;
   subjects?: string[];
+  /**
+   * Extra legal citation handles beyond the fact ids — the [D1] series for
+   * computed answers. Without these a model that correctly cites a computed
+   * result gets flagged for citing something "that does not exist", which
+   * would train the repair pass to delete true statements.
+   */
+  extraCitationIds?: string[];
 }): VerifyResult {
   const { answer, facts, userMessage } = input;
   const mode: VerifyMode = input.mode ?? "closed-world";
   const subjects = input.subjects ?? facts.map((f) => f.subject);
   const evidence = buildEvidence(facts, userMessage, input.extraEvidence ?? []);
-  const legalIds = new Set(facts.map((f) => f.id.toUpperCase()));
+  const legalIds = new Set([
+    ...facts.map((f) => f.id.toUpperCase()),
+    ...(input.extraCitationIds ?? []).map((id) => id.toUpperCase()),
+  ]);
   const violations: Violation[] = [];
 
   /**
@@ -250,7 +260,7 @@ export function verifyAnswer(input: {
 
   // 1. Citations must resolve. A citation to a record that does not exist is
   //    the strongest possible signal of fabrication — it invents its own proof.
-  for (const cite of answer.match(/\[F\d+\]/g) ?? []) {
+  for (const cite of answer.match(/\[[FD]\d+\]/g) ?? []) {
     const id = cite.slice(1, -1).toUpperCase();
     if (!legalIds.has(id)) {
       violations.push({

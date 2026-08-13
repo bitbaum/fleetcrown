@@ -25,6 +25,7 @@ export function SaveContextBar({
   selectedProject: string | null;
 }) {
   const savable = useMemo(() => projects.filter((p) => p.entityProjectId), [projects]);
+  const [open, setOpen] = useState(false);
 
   // The project this exchange is about: named by Loki in the transcript, else the
   // selected one, else the first savable project.
@@ -67,6 +68,24 @@ export function SaveContextBar({
       setState("error");
       setErr(e instanceof Error ? e.message : "Save failed");
     }
+  }
+
+  // Collapsed by default. This bar used to render in full after EVERY message,
+  // permanently occupying the strip between the transcript and the composer —
+  // on a laptop it clipped the tail of the answer the operator was reading.
+  // Saving to a project is an occasional deliberate act, not a per-turn one, so
+  // it earns a one-line trigger and nothing more until asked for.
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="ui-loki-save-trigger"
+      >
+        <BookmarkPlus className="h-3.5 w-3.5" />
+        {state === "saved" ? "Saved to project context" : "Save this exchange to a project\u2019s context"}
+      </button>
+    );
   }
 
   return (
