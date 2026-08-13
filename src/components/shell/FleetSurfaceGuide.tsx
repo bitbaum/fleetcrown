@@ -73,7 +73,7 @@ export function FleetSurfaceGuide() {
               key={s.href}
               href={fleetSurfaceHref(s.id, project)}
               className={cn(
-                "inline-flex min-h-11 items-center gap-1.5 rounded-md px-2 text-xs font-medium transition-colors sm:min-h-8 sm:px-3",
+                "ui-tap inline-flex items-center gap-1.5 rounded-md px-2 text-xs font-medium transition-colors sm:px-3",
                 active
                   ? "bg-surface-raised text-text-primary shadow-sm"
                   : "text-text-tertiary hover:text-text-secondary",

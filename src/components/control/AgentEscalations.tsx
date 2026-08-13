@@ -27,7 +27,7 @@ export function AgentEscalations() {
             <li key={m.id} className="min-w-0">
               <Link
                 href={`${NAV.control.href}?project=${encodeURIComponent(m.from)}`}
-                className="block min-h-11 text-sm text-text-primary sm:min-h-0"
+                className="block ui-tap text-sm text-text-primary"
               >
                 <span className="font-medium">{m.from}</span>
                 <span className="text-text-muted"> → {m.to}</span>

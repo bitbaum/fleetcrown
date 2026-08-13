@@ -129,7 +129,7 @@ export function PromptInput({
             disabled={processing}
             title={listening ? "Stop recording" : "Voice input (Whisper)"}
             className={cn(
-              "absolute right-2.5 top-2.5 min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 inline-flex items-center justify-center rounded-lg p-1.5 transition-colors",
+              "absolute right-2.5 top-2.5 ui-tap-icon inline-flex items-center justify-center rounded-lg p-1.5 transition-colors",
               listening
                 ? "text-status-negative animate-pulse hover:bg-status-negative/10"
                 : processing
@@ -174,7 +174,7 @@ export function PromptInput({
             disabled={processing}
             title={autoContinueEnabled ? "Pause automatic continuation for this project" : "Allow automatic continuation for this project"}
             className={cn(
-              "shrink-0 min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 inline-flex items-center justify-center rounded-md p-1 transition-colors",
+              "shrink-0 ui-tap-icon inline-flex items-center justify-center rounded-md p-1 transition-colors",
               autoContinueEnabled
                 ? "text-text-muted hover:bg-surface-overlay hover:text-text-secondary"
                 : "text-accent-text hover:bg-surface-overlay",
@@ -204,7 +204,7 @@ export function PromptInput({
             disabled={(!custom.trim() && !listening) || sending !== null}
             title={listening ? "Stop recording and send" : undefined}
             className={cn(
-              "inline-flex shrink-0 min-h-11 sm:min-h-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+              "inline-flex shrink-0 ui-tap items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
               justSent?.id === "custom"
                 ? "bg-status-positive text-text-inverted"
                 : custom.trim() || listening

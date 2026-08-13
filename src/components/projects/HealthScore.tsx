@@ -66,7 +66,7 @@ export function HealthScoreBar({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex min-h-11 items-center gap-1.5 rounded-md px-1 transition-colors hover:bg-surface-raised sm:min-h-8"
+        className="ui-tap flex items-center gap-1.5 rounded-md px-1 transition-colors hover:bg-surface-raised"
         title="Health score — click for the breakdown"
         aria-expanded={open}
         aria-label={`Health ${health.score} of ${health.max} — show breakdown`}
