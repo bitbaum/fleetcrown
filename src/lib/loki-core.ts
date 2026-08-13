@@ -12,7 +12,10 @@
 import { askGatewayAgent, isGatewayConfigured } from "@/lib/openclaw-gateway";
 import { callGroqText, GROQ_FAST_MODEL } from "@/lib/groq";
 import { getUserPreferences } from "@/db/queries/user-preferences";
-import { buildLokiFleetContext } from "@/lib/loki-fleet-context";
+import { buildGroundedTurn, directiveEvidence } from "@/lib/agent/context";
+import { verifyAnswer, buildRepairPrompt, type Violation } from "@/lib/agent/core/verify";
+import { NO_BASIS } from "@/lib/agent/core/contract";
+import type { Fact } from "@/lib/agent/core/facts";
 import { APP_NAME } from "@/config/brand";
 import { HTTP_TIMEOUT_LONG_MS } from "@/lib/constants/time";
 
@@ -80,27 +83,83 @@ async function callGroq(message: string, voice: string | null): Promise<{ text: 
 export type AskLokiResult = { status: number; body: Record<string, unknown> };
 
 /**
+ * Per-turn grounding report, returned to the client alongside the answer.
+ *
+ * Surfaced rather than swallowed on purpose. When a claim survives the repair
+ * pass the operator has to be able to SEE that this turn is suspect — the
+ * failure this harness exists to prevent was not that Loki was wrong, it was
+ * that being wrong looked exactly like being right. A visible flag restores the
+ * distinction even when the model cannot.
+ *
+ * `checked: false` means the turn had no records to check against (e.g. an
+ * anonymous caller), which is honestly different from "checked and clean".
+ */
+function groundingMeta(factCount: number, violations: Violation[]) {
+  return {
+    checked: factCount > 0,
+    ok: violations.length === 0,
+    factCount,
+    unsupported: violations.map((v) => ({ kind: v.kind, text: v.text })),
+  };
+}
+
+/**
  * Ask Loki a question — the real OpenClaw agent via the gateway, with Groq as a
  * labelled degraded fallback. `sessionKey` lets callers keep a per-conversation
  * web thread; all web sessions share the same agent (`main`) and its memory.
  */
 export async function askLoki(message: string, opts?: { sessionKey?: string; userId?: string }): Promise<AskLokiResult> {
-  // Resolve the caller's writing-voice preference + fleet context once. The
-  // fleet context (all projects + RAG detail) is what makes Loki "on top of"
-  // the operator's work rather than a generic chat — see loki-fleet-context.
+  // Resolve the caller's writing-voice preference + the grounded turn once.
+  // The grounded turn (typed records + computed answers + the contract) is what
+  // makes Loki "on top of" the operator's work rather than a generic chat.
   // Both are best-effort: a slow/failed lookup degrades to plain Loki, never a
   // broken turn.
-  const [voice, fleetContext] = await Promise.all([
+  const [voice, grounded] = await Promise.all([
     opts?.userId ? getUserPreferences(opts.userId).then((p) => p.writingVoice).catch(() => null) : Promise.resolve(null),
-    opts?.userId ? buildLokiFleetContext(opts.userId, message).catch(() => "") : Promise.resolve(""),
+    opts?.userId
+      ? buildGroundedTurn(opts.userId, message).catch(() => null)
+      : Promise.resolve(null),
   ]);
 
-  // The message the brain actually sees: capability ground-truth + fleet context
-  // (both read-only background) ahead of the operator's question. Used by the
-  // gateway AND Groq paths so Loki answers with project knowledge and, critically,
-  // never over-claims what it can do — regardless of which one serves the turn.
-  const background = fleetContext ? `${LOKI_CAPABILITIES}\n\n---\n\n${fleetContext}` : LOKI_CAPABILITIES;
+  const facts: Fact[] = grounded?.facts ?? [];
+  const evidence = grounded ? directiveEvidence(grounded.directives) : [];
+
+  // The message the brain actually sees: capability ground-truth + the grounded
+  // context (both read-only background) ahead of the operator's question. Used
+  // by the gateway AND Groq paths so Loki answers from records and, critically,
+  // never over-claims — regardless of which one serves the turn.
+  const background = grounded?.context ? `${LOKI_CAPABILITIES}\n\n---\n\n${grounded.context}` : LOKI_CAPABILITIES;
   const contextualMessage = `${background}\n\n---\n\n${message}`;
+
+  /**
+   * Check an answer and, if it makes unsupported claims, give the model exactly
+   * one chance to delete them.
+   *
+   * One retry, not a loop: the repair asks the model to REMOVE claims, not to
+   * find better ones, so a model that fails twice is not going to succeed on a
+   * third pass — it is going to burn the operator's latency. What survives a
+   * failed repair is returned WITH its violations attached rather than
+   * suppressed, because a wrong answer the operator can see is flagged is
+   * strictly safer than a wrong answer that looks clean.
+   */
+  async function groundOrRepair(
+    text: string,
+    regenerate: (repair: string) => Promise<string>,
+  ): Promise<{ text: string; violations: Violation[] }> {
+    if (facts.length === 0) return { text, violations: [] };
+    const first = verifyAnswer({ answer: text, facts, userMessage: message, extraEvidence: evidence });
+    if (first.ok) return { text, violations: [] };
+
+    console.warn(
+      "[loki] ungrounded claims, repairing:",
+      first.violations.map((v) => `${v.kind}:${v.text}`).join(", ").slice(0, 300),
+    );
+    const repaired = (await regenerate(buildRepairPrompt(first.violations, NO_BASIS)).catch(() => "")).trim();
+    if (!repaired) return { text, violations: first.violations };
+
+    const second = verifyAnswer({ answer: repaired, facts, userMessage: message, extraEvidence: evidence });
+    return { text: repaired, violations: second.violations };
+  }
 
   // Real Loki: the OpenClaw agent (same brain + memory as Telegram). The voice
   // rides in as a one-line preface so the shared `main` agent honours it per-turn
@@ -117,9 +176,22 @@ export async function askLoki(message: string, opts?: { sessionKey?: string; use
     // answer as Loki's. Treat it as a failure and fall back — so Loki stays
     // useful even when the model isn't.
     if (res.ok && !isUnusableGatewayText(text) && !looksLikeFleetEcho(text)) {
+      // Ground the answer before it reaches the operator. The repair re-asks
+      // the SAME agent on the SAME session, so its own prior turn is in scope
+      // and it is editing rather than starting over.
+      const checked = await groundOrRepair(text, async (repair) => {
+        const again = await askGatewayAgent(repair, { sessionKey: opts?.sessionKey });
+        return again.ok ? (again.text ?? "") : "";
+      });
       return {
         status: 200,
-        body: { ok: true, text, model: res.model ?? "openclaw/main", durationMs: res.durationMs ?? 0 },
+        body: {
+          ok: true,
+          text: checked.text,
+          model: res.model ?? "openclaw/main",
+          durationMs: res.durationMs ?? 0,
+          grounding: groundingMeta(facts.length, checked.violations),
+        },
       };
     }
     const reason = !res.ok
@@ -135,10 +207,31 @@ export async function askLoki(message: string, opts?: { sessionKey?: string; use
   }
 
   // Groq fallback — DEGRADED, labelled `via: "groq-fallback"` (not the real Loki brain).
-  // Still gets the fleet context so a degraded Loki is at least project-aware.
+  // Still gets the grounded context, and is still verified: the fallback path is
+  // a SMALLER model, so it is the path most likely to fabricate and the last one
+  // that should skip the check.
   try {
     const { text, model } = await callGroq(contextualMessage, voice);
-    return { status: 200, body: { ok: true, text, model, durationMs: 0, via: "groq-fallback" } };
+    const checked = await groundOrRepair(text, async (repair) => {
+      // Groq is stateless here, so the repair must carry the answer being
+      // repaired — there is no session for it to refer back to.
+      const { text: fixed } = await callGroq(
+        `${contextualMessage}\n\n---\n\nYour previous answer:\n${text}\n\n---\n\n${repair}`,
+        voice,
+      );
+      return fixed;
+    });
+    return {
+      status: 200,
+      body: {
+        ok: true,
+        text: checked.text,
+        model,
+        durationMs: 0,
+        via: "groq-fallback",
+        grounding: groundingMeta(facts.length, checked.violations),
+      },
+    };
   } catch (e) {
     // Surface the actual Groq cause so the user can act (rotate key / wait out
     // the rate limit) instead of a generic "unavailable" wall.
