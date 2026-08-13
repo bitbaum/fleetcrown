@@ -571,6 +571,9 @@ export const PRODUCT_SURFACES = [
   },
 ] as const;
 
+/** Homepage shows the four surfaces a first-time visitor needs. The rest live in-product. */
+export const HOME_PRODUCT_SURFACES = PRODUCT_SURFACES.slice(0, 4);
+
 export const START_PATHS = [
   {
     title: "Run locally",

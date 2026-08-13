@@ -9,7 +9,7 @@
 import { countActiveProjects, getPublicProjects } from "./user-projects";
 import { getFleetSummary, getRecentOrchestrationRuns } from "./today";
 import { getProjectStatesByUserId } from "./project-states";
-import { cleanDescription } from "@/lib/project-display";
+import { isPublicTestArtifact, publicHeroNote } from "@/lib/project-display";
 
 export type HeroFleetRow = { name: string; state: "running" | "queued" | "idle"; note: string };
 export type HeroFleetSnapshot = {
@@ -41,11 +41,14 @@ export async function getHeroFleetSnapshot(userId: string): Promise<HeroFleetSna
     return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
   });
 
-  const projects: HeroFleetRow[] = ordered.slice(0, HERO_PROJECT_ROWS).map((p) => ({
-    name: p.name,
-    state: runningByKey.get(p.name.toLowerCase()) ? "running" : "idle",
-    note: cleanDescription(p.description) ?? "",
-  }));
+  const projects: HeroFleetRow[] = ordered
+    .filter((p) => !isPublicTestArtifact(p.name))
+    .slice(0, HERO_PROJECT_ROWS)
+    .map((p) => ({
+      name: p.name,
+      state: runningByKey.get(p.name.toLowerCase()) ? "running" : "idle",
+      note: publicHeroNote(p.description) ?? "",
+    }));
 
   return {
     isLive: fleet.running > 0,

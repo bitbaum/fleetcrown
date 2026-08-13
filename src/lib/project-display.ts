@@ -19,6 +19,24 @@ export function cleanDescription(desc: string | null | undefined): string | null
   return PLACEHOLDER_DESCRIPTIONS.has(d.toLowerCase()) ? null : d;
 }
 
+// Operator-facing dumps (CLAUDE.md, dogfood notes, seam contracts) must never
+// reach a public hero. The live homepage leaked "KNOWN BUG" + webhook-secret
+// status from project descriptions on 2026-08-13.
+const INTERNAL_DUMP = /known bug|mutual dogfood|webhook_secret|hmac|42501|rls |seam (status|contract)|todo:|fixme:|orangecat_webhook/i;
+
+const HERO_NOTE_MAX = 72;
+
+/**
+ * One public-safe line for the landing hero. Returns null when the text is
+ * empty, a placeholder, an internal dump, or too long to be a label.
+ */
+export function publicHeroNote(desc: string | null | undefined): string | null {
+  const summary = summarizeDescription(desc, HERO_NOTE_MAX);
+  if (!summary) return null;
+  if (INTERNAL_DUMP.test(summary)) return null;
+  return summary;
+}
+
 /**
  * Non-answers a profile field can hold — the same "dead text, not signal"
  * problem as PLACEHOLDER_DESCRIPTIONS, one layer down.
