@@ -170,6 +170,8 @@ export async function callModelWithTools(input: {
   maxTokens?: number;
   temperature?: number;
   timeoutMs?: number;
+  /** Internal: set after the one bounded wait on a bottom-rung 429. */
+  waited429?: boolean;
 }): Promise<ModelTurn> {
   const key = process.env.GROQ_API_KEY;
   if (!key) throw new Error("GROQ_API_KEY not set");
@@ -208,6 +210,18 @@ export async function callModelWithTools(input: {
     if (res.status === 429 && model !== SMALL_MODEL) {
       console.warn(`[loki] ${model} rate-limited, stepping down to ${SMALL_MODEL}`);
       return callModelWithTools({ ...input, model: SMALL_MODEL });
+    }
+    // Bottom rung ALSO 429'd — an org-wide tokens-per-MINUTE window (the fleet's
+    // autopilot shares this Groq org, and its bursts starve interactive chat).
+    // The window is short by definition, so wait it out ONCE, bounded, before
+    // giving up the turn: a 20s-slower right answer beats an instant fallback
+    // to the gateway, which cannot read the tables the question is about.
+    if (res.status === 429 && !input.waited429) {
+      const retryAfter = Number(res.headers.get("retry-after"));
+      const waitS = Math.min(Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : 15, 25);
+      console.warn(`[loki] ${model} rate-limited at the bottom rung — waiting ${waitS}s for the TPM window`);
+      await new Promise((r) => setTimeout(r, waitS * 1000));
+      return callModelWithTools({ ...input, waited429: true });
     }
     throw new Error(`groq ${res.status}${body ? `: ${body.slice(0, 160)}` : ""}`);
   }
