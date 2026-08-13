@@ -3,7 +3,7 @@
  * Dispatch strategist, prompt-merge, and Loki all use this.
  */
 
-import { HTTP_TIMEOUT_SHORT_MS, HTTP_TIMEOUT_LONG_MS, HTTP_TIMEOUT_XL_MS } from "@/lib/constants/time";
+import { HTTP_TIMEOUT_SHORT_MS, HTTP_TIMEOUT_LONG_MS } from "@/lib/constants/time";
 
 export const GROQ_FAST_MODEL = "llama-3.3-70b-versatile";
 export const GROQ_WHISPER_MODEL = "whisper-large-v3-turbo";
