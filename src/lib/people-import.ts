@@ -75,10 +75,21 @@ export function parseVCard(text: string): ImportedContact[] {
   return dedupeImported(out);
 }
 
+/** Google Contacts export uses "E-mail 1 - Value", "Phone 1 - Value", "Organization Name". */
+export function looksLikeGoogleContactsCsv(header: string[]): boolean {
+  const joined = header.join(" | ").toLowerCase();
+  return /e-mail 1|email 1 - value|organization name|first name/.test(joined) && header.length > 8;
+}
+
+function headerIndex(header: string[], re: RegExp): number {
+  return header.findIndex((h) => re.test(h));
+}
+
 export function parseCsv(text: string): ImportedContact[] {
   const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
   if (lines.length === 0) return [];
-  const header = splitCsvLine(lines[0]!).map((h) => h.toLowerCase().trim());
+  const header = splitCsvLine(lines[0]!).map((h) => h.toLowerCase().replace(/[\u2013\u2014]/g, "-").trim());
+  if (looksLikeGoogleContactsCsv(header)) return parseGoogleContactsCsv(header, lines.slice(1));
   const hasHeader = header.some((h) => /name|email|phone|fn|display/.test(h));
   const rows = hasHeader ? lines.slice(1) : lines;
   const nameIdx = hasHeader ? header.findIndex((h) => /^(name|display name|fn|full name)$/.test(h)) : 0;
@@ -109,6 +120,7 @@ export function parseContactResolver(text: string): ImportedContact[] {
     contacts?: Array<{
       id?: string;
       displayName?: string;
+      notes?: string;
       aliases?: string[];
       channels?: Record<string, Record<string, string> | string>;
     }>;
@@ -138,10 +150,46 @@ export function parseContactResolver(text: string): ImportedContact[] {
     }
     out.push({
       name,
+      description: c.notes?.trim() || undefined,
       attrs,
       externalId: c.id,
       source: IMPORT_SOURCE.CONTACT_RESOLVER,
     });
+  }
+  return dedupeImported(out);
+}
+
+function parseGoogleContactsCsv(header: string[], rows: string[]): ImportedContact[] {
+  const first = headerIndex(header, /^first name$/);
+  const last = headerIndex(header, /^last name$/);
+  const fileAs = headerIndex(header, /^file as$/);
+  const nameIdx = headerIndex(header, /^(name|display name)$/);
+  const emailIdx = headerIndex(header, /e-?mail 1.*value|^e-?mail 1$|^email$/);
+  const phoneIdx = headerIndex(header, /phone 1.*value|^phone 1$|^phone$/);
+  const orgIdx = headerIndex(header, /^organization name$|^organisation name$/);
+  const titleIdx = headerIndex(header, /^organization title$|^organisation title$/);
+  const noteIdx = headerIndex(header, /^notes?$/);
+
+  const out: ImportedContact[] = [];
+  for (const line of rows) {
+    const cols = splitCsvLine(line);
+    const name = (
+      (nameIdx >= 0 ? cols[nameIdx] : "")
+      || [first >= 0 ? cols[first] : "", last >= 0 ? cols[last] : ""].filter(Boolean).join(" ")
+      || (fileAs >= 0 ? cols[fileAs] : "")
+    ).trim();
+    if (!name) continue;
+    const attrs: Record<string, string> = {};
+    const email = emailIdx >= 0 ? cols[emailIdx]?.trim() : "";
+    const phone = phoneIdx >= 0 ? cols[phoneIdx]?.trim() : "";
+    const org = orgIdx >= 0 ? cols[orgIdx]?.trim() : "";
+    const title = titleIdx >= 0 ? cols[titleIdx]?.trim() : "";
+    if (email) attrs[BOOK_ATTR.EMAIL] = email;
+    if (phone) attrs[BOOK_ATTR.PHONE] = phone;
+    if (org) attrs[BOOK_ATTR.COMPANY] = org;
+    if (title) attrs[BOOK_ATTR.PROFESSION] = title;
+    const note = noteIdx >= 0 ? cols[noteIdx]?.trim() : "";
+    out.push({ name, description: note || undefined, attrs, source: IMPORT_SOURCE.CSV });
   }
   return dedupeImported(out);
 }

@@ -166,3 +166,28 @@ export async function enqueueEnrichmentScan(userId: string) {
   }
   return { proposed, capped: proposed >= ENRICH_SCAN_CAP };
 }
+
+/** Merge 2-person clusters that share an email or phone — not a name-only guess. */
+export async function mergeObviousTwins(userId: string): Promise<{ merged: number; skipped: number }> {
+  const { findDuplicatePeople } = await import("./people-merge");
+  const { mergePeoplePair } = await import("./people-merge");
+  const { pickCanonicalPerson } = await import("@/lib/people-dedupe");
+  const clusters = await findDuplicatePeople(userId);
+  let merged = 0;
+  let skipped = 0;
+  for (const c of clusters) {
+    if (c.reason === "name" || c.members.length !== 2) {
+      skipped += 1;
+      continue;
+    }
+    const keep = pickCanonicalPerson(c.members);
+    const drop = c.members.find((m) => m.id !== keep.id);
+    if (!drop) {
+      skipped += 1;
+      continue;
+    }
+    await mergePeoplePair(userId, keep.id, drop.id);
+    merged += 1;
+  }
+  return { merged, skipped };
+}

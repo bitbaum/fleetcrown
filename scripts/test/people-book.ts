@@ -69,6 +69,16 @@ const csv = parseCsv("Name,Email\nManuel,manu@example.com\n");
 assert.equal(csv[0]!.name, "Manuel");
 assert.equal(csv[0]!.attrs[BOOK_ATTR.EMAIL], "manu@example.com");
 
+const google = parseCsv([
+  "First Name,Last Name,E-mail 1 - Value,Phone 1 - Value,Organization Name,Organization Title,Notes,Extra 1,Extra 2,Extra 3",
+  "Ada,Lovelace,ada@analytical.engine,+44201234,Analytical Engines,Mathematician,Notes here,x,y,z",
+].join("\n"));
+assert.equal(google[0]!.name, "Ada Lovelace");
+assert.equal(google[0]!.attrs[BOOK_ATTR.EMAIL], "ada@analytical.engine");
+assert.equal(google[0]!.attrs[BOOK_ATTR.COMPANY], "Analytical Engines");
+assert.equal(google[0]!.attrs[BOOK_ATTR.PROFESSION], "Mathematician");
+assert.equal(google[0]!.description, "Notes here");
+
 const resolver = parseContactResolver(JSON.stringify({
   contacts: [{
     id: "c1",
