@@ -28,7 +28,7 @@ export default async function PeoplePage({
   return (
     <PageLayout
       title="People"
-      subtitle={`Your social graph — ${total} contacts with context`}
+      subtitle={`${total} private profiles. Enrich and merge first — nothing is sent.`}
       maxWidth="max-w-5xl"
     >
       <PeopleGrid
