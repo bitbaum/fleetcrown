@@ -2,7 +2,7 @@
 
 import { useInsideFleetRunner } from "@/hooks/use-inside-fleet-runner";
 import Link from "next/link";
-import { GitBranch, Plus, Monitor, Terminal, Sparkles } from "lucide-react";
+import { GitBranch, Sparkles } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
 
 // Empty-state welcome for /control when the user has zero projects.
@@ -57,74 +57,52 @@ export function EmptyStateWelcome({
   return (
     <section className="ui-card-shell-raised p-6 md:p-8">
       <div className="space-y-1 mb-5">
-        <h2 className="ui-page-title">Start your first project</h2>
-        <p className="ui-page-subtitle">Pick a path — every option is one click away from a working fleet.</p>
+        <h2 className="ui-page-title">Add a project</h2>
+        <p className="ui-page-subtitle">New, or one you already have.</p>
       </div>
 
-      <div className={`grid gap-3 md:grid-cols-2 ${insideFleetRunner ? "lg:grid-cols-4" : "lg:grid-cols-5"}`}>
+      <div className="grid gap-3 sm:grid-cols-2">
         {onBootstrap ? (
           <WelcomeCard
             icon={Sparkles}
-            title="Start a new idea"
-            body="Describe it once. AI writes the brief, creates the repo + folder, launches the agent."
-            cta="Bootstrap →"
+            title="New"
+            body="Describe it. We create the repo and start the agent."
+            cta="Start →"
             onClick={onBootstrap}
           />
         ) : (
           <WelcomeCard
             icon={Sparkles}
-            title="Start a new project"
-            body={
-              <>
-                Type a name. We create the GitHub repo + project record. You{" "}
-                <code className="px-1 rounded bg-surface-base text-xs">git clone</code> when ready.
-              </>
-            }
-            cta="Recommended →"
+            title="New"
+            body="Name it. We make the GitHub repo. Clone when you want."
+            cta="Start →"
             href="/control/new-from-scratch"
           />
         )}
 
         <WelcomeCard
           icon={GitBranch}
-          title="Import from GitHub"
-          body="Pick repos to manage. Multi-select."
-          cta="Recommended →"
+          title="I already have one"
+          body="Import from GitHub, or from a folder on this machine."
+          cta="Import →"
           href="/control/import"
         />
-
-        <WelcomeCard
-          icon={Terminal}
-          title="Import from ~/dev"
-          body="Paste one terminal line. Scans for git repos, imports them all."
-          cta="One-liner →"
-          href="/control/import-local"
-        />
-
-        <WelcomeCard
-          icon={Plus}
-          title="Add a project"
-          body="Type a name. One-off, no GitHub needed."
-          cta="Add manually →"
-          variant="secondary"
-          onClick={onAddManual}
-        />
-
-        {!insideFleetRunner && (
-          <WelcomeCard
-            icon={Monitor}
-            title="Install Fleet Runner"
-            body="Desktop app — detect ~/dev folders and dispatch agents."
-            cta="Download →"
-            variant="secondary"
-            href="/download"
-          />
-        )}
       </div>
 
-      <p className="text-xs text-text-tertiary mt-5">
-        You can add more projects any time from the toolbar above.
-      </p>
+      <div className="mt-5 flex flex-wrap gap-x-4 gap-y-2 text-sm">
+        <button type="button" onClick={onAddManual} className="min-h-11 text-text-secondary hover:text-text-primary">
+          Add without git
+        </button>
+        {insideFleetRunner ? (
+          <Link href="/control/import-local" className="inline-flex min-h-11 items-center text-text-secondary hover:text-text-primary">
+            Import from this computer
+          </Link>
+        ) : (
+          <Link href="/download" className="inline-flex min-h-11 items-center text-text-secondary hover:text-text-primary">
+            Get Fleet Runner
+          </Link>
+        )}
+      </div>
     </section>
   );
 }
