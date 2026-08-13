@@ -2,9 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Send, Mic, MicOff, Check, Loader2, Paperclip, X, ImageIcon, FolderKanban, Plus } from "lucide-react";
+import { Send, Mic, Check, Loader2, Paperclip, X, ImageIcon, FolderKanban, Plus } from "lucide-react";
 import { useVoiceInput } from "@/hooks/use-voice-input";
-import { getJson } from "@/lib/api/fetch";
 import {
   MAX_ATTACHMENTS,
   MAX_ATTACHMENT_CHARS,
@@ -19,10 +18,8 @@ import {
 } from "@/config/loki-suggested-actions";
 import { ExecutorHonestyChip } from "@/components/executor/ExecutorHonestyChip";
 import type { ExecutorHonestyLabel } from "@/lib/executor-honesty";
-import type { Attachment, LokiAgent, LokiProject, ModelChoice } from "./types";
+import type { Attachment, LokiProject, ModelChoice } from "./types";
 
-const AUTO = "";
-const SEP = "::";
 const IMAGE_ONLY_DEFAULT = "What's wrong here and what should we change?";
 
 function stripDataUrlBase64(dataUrl: string): string {
@@ -65,8 +62,6 @@ export function Composer({
   dispatchHonesty?: ExecutorHonestyLabel | null;
 }) {
   const [text, setText] = useState(defaultText);
-  const [agents, setAgents] = useState<LokiAgent[]>([]);
-  const [choiceKey, setChoiceKey] = useState<string>(AUTO);
   const [attachments, setAttachments] = useState<StagedAttachment[]>([]);
   const [attachNote, setAttachNote] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -91,12 +86,6 @@ export function Composer({
   }, [recording]);
   const fmtTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
-  useEffect(() => {
-    getJson<{ agents: LokiAgent[] }>("/api/agents")
-      .then((d) => setAgents(d.agents))
-      .catch(() => { /* Auto-only */ });
-  }, []);
-
   const previewUrlsRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     const previewUrls = previewUrlsRef.current;
@@ -105,12 +94,6 @@ export function Composer({
       previewUrls.clear();
     };
   }, []);
-
-  const parseChoice = (key: string): ModelChoice => {
-    if (key === AUTO) return {};
-    const [agent, model] = key.split(SEP);
-    return { agent, model: model || undefined };
-  };
 
   const addAttachment = (item: StagedAttachment) => {
     setAttachments((prev) => {
@@ -210,7 +193,7 @@ export function Composer({
     const hasAttach = attachments.length > 0;
     if ((!trimmed && !hasAttach) || sending) return;
     const outgoing = trimmed || (hasAttach ? IMAGE_ONLY_DEFAULT : "");
-    onSend(outgoing, parseChoice(choiceKey), toWire(attachments));
+    onSend(outgoing, {}, toWire(attachments));
     setText("");
     for (const a of attachments) {
       if (a.previewUrl) {
@@ -252,7 +235,7 @@ export function Composer({
       textareaRef.current?.focus();
       return;
     }
-    onSend(prompt, parseChoice(choiceKey), [], chip.chatOnly ? { chatOnly: true } : undefined);
+    onSend(prompt, {}, [], chip.chatOnly ? { chatOnly: true } : undefined);
   };
 
   const placeholder = recording
@@ -415,25 +398,6 @@ export function Composer({
 
           <div className="ui-loki-composer-actions">
             <div className="ui-loki-composer-tools">
-              {agents.length > 0 && (
-                <select
-                  className="ui-loki-composer-select"
-                  value={choiceKey}
-                  disabled={disabled}
-                  onChange={(e) => setChoiceKey(e.target.value)}
-                  aria-label="Agent and model"
-                >
-                  <option value={AUTO}>Auto</option>
-                  {agents.map((a) => {
-                    const models = a.modelSuggestions.length > 0 ? a.modelSuggestions : [a.defaultModel];
-                    return models.map((m) => (
-                      <option key={`${a.id}${SEP}${m}`} value={`${a.id}${SEP}${m}`}>
-                        {a.label} · {m}
-                      </option>
-                    ));
-                  })}
-                </select>
-              )}
               <input
                 ref={fileInputRef}
                 type="file"
@@ -455,7 +419,7 @@ export function Composer({
               {voice.isSupported && (
                 <button
                   type="button"
-                  className="ui-loki-tool-btn"
+                  className={recording ? "ui-loki-tool-btn ui-loki-tool-btn-rec" : "ui-loki-tool-btn"}
                   disabled={disabled || voice.status === "transcribing"}
                   onClick={voice.status === "recording" ? voice.stop : () => void voice.start()}
                   aria-label={voice.status === "recording" ? "Stop recording" : "Voice input"}
@@ -463,7 +427,7 @@ export function Composer({
                   {voice.status === "transcribing" ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : voice.status === "recording" ? (
-                    <MicOff className="h-4 w-4" />
+                    <span className="ui-loki-rec-stop" aria-hidden />
                   ) : (
                     <Mic className="h-4 w-4" />
                   )}
@@ -472,15 +436,17 @@ export function Composer({
             </div>
             <div className="ui-loki-composer-submit-row">
               {selectedProjects.length > 0 && <ExecutorHonestyChip honesty={dispatchHonesty} />}
-              <button
-                type="button"
-                className="ui-loki-send-btn"
-                disabled={disabled || !canSend}
-                onClick={submit}
-                aria-label="Send"
-              >
-                <Send className="h-4 w-4" />
-              </button>
+              {!recording && (
+                <button
+                  type="button"
+                  className="ui-loki-send-btn"
+                  disabled={disabled || !canSend}
+                  onClick={submit}
+                  aria-label="Send"
+                >
+                  <Send className="h-4 w-4" />
+                </button>
+              )}
             </div>
           </div>
         </div>

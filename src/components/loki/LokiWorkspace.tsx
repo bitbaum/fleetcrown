@@ -8,6 +8,7 @@ import { resolveLokiProjectSelection } from "@/lib/loki/project-selection";
 import { rememberFleetProject } from "@/lib/fleet-context";
 import { deriveExecutorHonestyLabel } from "@/lib/executor-honesty";
 import { useBuilderPresence } from "@/hooks/use-builder-presence";
+import { useLocalStorageState } from "@/hooks/use-local-storage-state";
 import { Drawer } from "@/components/ui/modal";
 import { ConversationList } from "./ConversationList";
 import { Transcript } from "./Transcript";
@@ -18,6 +19,9 @@ import type { Attachment, ConversationSummary, LokiMessage, LokiProject, ModelCh
 import { LOKI_PREFILL_EVENT } from "@/lib/client-events";
 
 const REFETCH_TIMEOUT_MS = 15_000;
+const HISTORY_PIN_KEY = "loki:history-pinned";
+const pinSerialize = (v: boolean) => (v ? "1" : "0");
+const pinDeserialize = (raw: string) => raw === "1";
 
 async function fetchJson<T>(url: string): Promise<T> {
   const controller = new AbortController();
@@ -69,6 +73,12 @@ export function LokiWorkspace({
   const [error, setError] = useState<string | null>(null);
   // Compact slide-overs keep secondary lists out of the primary chat.
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyPinned, setHistoryPinned] = useLocalStorageState(
+    HISTORY_PIN_KEY,
+    true,
+    pinSerialize,
+    pinDeserialize,
+  );
   const [filterOpen, setFilterOpen] = useState(false);
   const builderPresence = useBuilderPresence();
   const dispatchHonesty = deriveExecutorHonestyLabel({
@@ -347,6 +357,27 @@ export function LokiWorkspace({
     </>
   );
 
+  const historyList = (
+    <ConversationList
+      conversations={visibleConversations}
+      activeId={activeId}
+      loading={convosLoading}
+      error={convosError}
+      onRetry={() => void reloadConversations()}
+      onSelect={(id) => {
+        const convo = conversations.find((c) => c.id === id);
+        if (convo && convo.projectKeys.length > 0) {
+          const known = convo.projectKeys.filter((k) => projects.some((p) => p.name === k));
+          setSelectedProjects(known.length > 0 ? known : convo.projectKeys);
+        }
+        setActiveId(id);
+        setHistoryOpen(false);
+      }}
+      onNew={() => { startNewConversation(); setHistoryOpen(false); }}
+      onDelete={(id) => void deleteConversation(id)}
+    />
+  );
+
   // History + project-scope slide-overs back the compact toolbar on phones and
   // keep project inventory out of the primary chat on every breakpoint.
   const drawers = (
@@ -354,24 +385,7 @@ export function LokiWorkspace({
       {historyOpen && (
         <Drawer onClose={() => setHistoryOpen(false)} size="md">
           <div className="flex min-h-0 flex-1 flex-col p-3">
-            <ConversationList
-              conversations={visibleConversations}
-              activeId={activeId}
-              loading={convosLoading}
-              error={convosError}
-              onRetry={() => void reloadConversations()}
-              onSelect={(id) => {
-                const convo = conversations.find((c) => c.id === id);
-                if (convo && convo.projectKeys.length > 0) {
-                  const known = convo.projectKeys.filter((k) => projects.some((p) => p.name === k));
-                  setSelectedProjects(known.length > 0 ? known : convo.projectKeys);
-                }
-                setActiveId(id);
-                setHistoryOpen(false);
-              }}
-              onNew={() => { startNewConversation(); setHistoryOpen(false); }}
-              onDelete={(id) => void deleteConversation(id)}
-            />
+            {historyList}
           </div>
         </Drawer>
       )}
@@ -395,13 +409,27 @@ export function LokiWorkspace({
   );
 
   return (
-    <div className="ui-loki-workspace">
+    <div className={historyPinned ? "ui-loki-workspace ui-loki-workspace-split" : "ui-loki-workspace"}>
+      {historyPinned && (
+        <aside className="ui-loki-history-rail" aria-label="Chats">
+          {historyList}
+        </aside>
+      )}
+
+      <div className="ui-loki-main">
       <div className="ui-loki-toolbar">
         <button
           type="button"
           className="ui-loki-toolbar-btn"
-          onClick={() => setHistoryOpen(true)}
+          onClick={() => {
+            if (typeof window !== "undefined" && window.matchMedia("(min-width: 768px)").matches) {
+              setHistoryPinned((open) => !open);
+              return;
+            }
+            setHistoryOpen(true);
+          }}
           aria-label={conversations.length > 0 ? `Open chats (${conversations.length})` : "Open chats"}
+          aria-pressed={historyPinned}
         >
           <MessagesSquare className="h-4 w-4" />
           <span>Chats</span>
@@ -423,6 +451,7 @@ export function LokiWorkspace({
       </section>
 
       {drawers}
+      </div>
     </div>
   );
 }

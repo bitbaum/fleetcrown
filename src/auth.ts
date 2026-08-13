@@ -9,7 +9,7 @@ import { sql } from "drizzle-orm";
 import { db } from "@/db";
 import { users, accounts, sessions, verificationTokens } from "@/db/schema";
 import { verifyPassword } from "@/lib/password";
-import { getDefaultUser, getUserById, getUserByEmail, updateUser, setUserOrangeCatActorId } from "@/db/queries/users";
+import { getDefaultUser, getUserById, getUserByEmail, updateUser, setUserOrangeCatActorId, type UpdateUserInput } from "@/db/queries/users";
 import { getOrgMembershipCount, createPersonalOrg } from "@/db/queries/orgs";
 import { logDebug } from "@/db/queries/debug-logs";
 import { healReturningUserOnboarding, onboardingCompleteFlag } from "@/lib/onboarding-heal";
@@ -392,10 +392,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (account?.type === "oauth" && user.email) {
         const existingUser = await getUserByEmail(user.email);
         if (existingUser) {
-          const patch: Record<string, string | null | undefined> = {};
+          const patch: UpdateUserInput = {};
           const oauthImage = (user as { image?: string | null }).image;
           if (!existingUser.image && oauthImage) patch.image = oauthImage;
           if (!existingUser.name  && user.name)  patch.name  = user.name;
+          // GitHub/Google only hand us an email they have already verified.
+          if (!existingUser.emailVerified) patch.emailVerified = new Date();
           if (Object.keys(patch).length > 0) {
             await updateUser(existingUser.id, patch);
           }
@@ -424,6 +426,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           // operator renamed to a pseudonym) both fall through to refresh, so
           // the session — and the public /u/<username> it links to — self-heal.
           if (u && (u.username ?? null) === (token.username ?? null) && (u.name ?? null) === (token.name ?? null)) {
+            // emailVerified can change without a name/username edit (the
+            // verify-email link). Stamp it from the row we already loaded so
+            // the optional recovery banner disappears without a sign-out.
+            token.emailVerified = u.emailVerified ?? null;
             return token;
           }
         }

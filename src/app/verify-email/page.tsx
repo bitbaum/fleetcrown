@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import { useSession } from "next-auth/react";
 import {
   AuthShell, AuthCard, AuthField, AuthInput, AuthSubmitButton,
   AuthFooterLink, AuthHeading,
@@ -34,6 +35,11 @@ function VerifyEmailInner() {
       setLoading(false);
     }
   }
+
+  const { update } = useSession();
+  useEffect(() => {
+    if (success) void update();
+  }, [success, update]);
 
   if (success) {
     return (

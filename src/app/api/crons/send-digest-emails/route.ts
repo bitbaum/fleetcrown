@@ -13,6 +13,7 @@ import { requireCronAuth } from "@/lib/cron-auth";
 import { getUsersDueForDigest, markDigestSent } from "@/db/queries/notification-preferences";
 import { generateDigest } from "@/lib/digest-generator";
 import { appUrl, digestEmailTemplate, sendEmail } from "@/lib/email";
+import { ensureOwnerWeeklyDigest } from "@/lib/email-owner-digest";
 
 // Map cadence → digest window + human-readable labels.
 const CADENCE_MAP = {
@@ -26,6 +27,7 @@ export async function GET(req: NextRequest) {
   if (denied) return denied;
 
   const startedAt = new Date();
+  await ensureOwnerWeeklyDigest();
   const due = await getUsersDueForDigest(startedAt);
 
   const results: Array<{ userId: string; status: "sent" | "skipped_empty" | "error"; error?: string }> = [];

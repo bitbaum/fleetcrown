@@ -33,7 +33,7 @@ export function SidebarFooter({
         type="button"
         onClick={onToggleCollapsed}
         className={cn(
-          "xl:hidden",
+          "md:hidden",
           collapsed ? "ui-btn-icon mx-auto flex" : "ui-sidebar-utility w-full",
         )}
         title={collapsed ? "Expand sidebar" : "Collapse sidebar"}

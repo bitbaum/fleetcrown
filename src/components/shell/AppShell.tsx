@@ -18,10 +18,7 @@ import {
   useCommandPaletteHotkey,
   useCommandPaletteState,
 } from "@/hooks/use-command-palette";
-import {
-  SIDEBAR_COLLAPSE_BREAKPOINT,
-  SIDEBAR_COLLAPSE_STORAGE_KEY,
-} from "@/config/shell";
+import { SIDEBAR_COLLAPSE_STORAGE_KEY } from "@/config/shell";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -36,7 +33,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       if (stored !== null) {
         setSidebarCollapsed(stored === "true"); // eslint-disable-line react-hooks/set-state-in-effect
       } else {
-        setSidebarCollapsed(window.innerWidth < SIDEBAR_COLLAPSE_BREAKPOINT);
+        setSidebarCollapsed(true);
       }
     } catch { /* ignore */ }
   }, []);

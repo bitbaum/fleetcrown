@@ -228,7 +228,10 @@ export function TerminalSurface({
           </p>
           <p className="max-w-md text-center text-xs text-text-muted">{hint}</p>
           {!gatedMessage && !offline && (
-            <Link href="/control" className="ui-btn-secondary mt-1">Dispatch from Control</Link>
+            <div className="mt-2 flex flex-wrap justify-center gap-2">
+              <Link href="/loki" className="ui-btn-primary">Ask Loki</Link>
+              <Link href="/control" className="ui-btn-secondary">Control</Link>
+            </div>
           )}
         </div>
       );
@@ -256,15 +259,17 @@ export function TerminalSurface({
         activeId={activeTab}
         onSelect={setSelected}
       />
-      <TerminalSessionBar
-        inputMode={inputMode}
-        onInputModeChange={setInputMode}
-        agents={agents}
-        activeAgentId={activeAgentId}
-        onSwitchAgent={(id) => void switchAgent(id)}
-        switchingAgent={switchingAgent}
-        agentSwitchDisabledReason={agentSwitchDisabledReason}
-      />
+      {tabs.length > 0 && (
+        <TerminalSessionBar
+          inputMode={inputMode}
+          onInputModeChange={setInputMode}
+          agents={agents}
+          activeAgentId={activeAgentId}
+          onSwitchAgent={(id) => void switchAgent(id)}
+          switchingAgent={switchingAgent}
+          agentSwitchDisabledReason={agentSwitchDisabledReason}
+        />
+      )}
       <div className={cn("min-h-0 flex-1", immersive && "min-h-0")}>{body()}</div>
       {activeTab && inputMode === "prompt" && <TerminalComposer tab={activeTab} />}
       {activeTab && inputMode === "voice" && (
