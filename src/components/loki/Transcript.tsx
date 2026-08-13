@@ -237,7 +237,17 @@ export function Transcript({
   if (messages.length === 0 && !sending) return null;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto py-2">
+    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto py-2">
+      {/*
+        Messages hug the composer instead of the top of the pane.
+        Measured on a short answer: 398px of dead space sat between the last
+        line and the input, because the scroll container is flex-1 (correct —
+        it must own the scroll) while the content stacked from the top. An
+        `mt-auto` inner column pushes a short transcript down to meet the
+        composer and is inert once the content overflows, so long conversations
+        still scroll normally.
+      */}
+      <div className="mt-auto flex flex-col gap-3">
       {messages.map((m) =>
         m.role === "user" ? (
           <div key={m.id} className="ui-loki-bubble ui-loki-bubble-user">
@@ -263,6 +273,7 @@ export function Transcript({
         </div>
       )}
       <div ref={endRef} />
+      </div>
     </div>
   );
 }
