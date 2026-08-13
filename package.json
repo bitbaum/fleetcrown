@@ -79,7 +79,8 @@
     "ship": "git push origin main",
     "prepare": "husky",
     "sync:agent-core": "tsx scripts/sync-agent-core.ts",
-    "probe:models": "tsx scripts/probe-models.ts"
+    "probe:models": "tsx scripts/probe-models.ts",
+    "audit:responsive": "node scripts/test/responsive-audit.mjs"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.3",
