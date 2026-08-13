@@ -15,6 +15,8 @@ export const EXECUTOR_COPY = {
   bothOnline: "Cloud + this computer online",
   cloudOnlyDetail: "This computer offline — cloud builder runs the queue",
   localOnlyDetail: "Cloud builder offline — this computer runs the queue",
+  cloudOffline: "Cloud builder offline",
+  localComputerOffline: "This computer offline",
     offline: "Builder offline",
     queued: "Queued",
     building: "Building",

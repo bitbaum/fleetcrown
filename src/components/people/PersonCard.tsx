@@ -21,8 +21,19 @@ export function PersonCard({
   onLogged?: (personId: string, at: Date) => void;
 }) {
   const channels = Object.keys(person.attrs).filter(isChannelAttrKey);
-  const profession = person.attrs["profession"] ?? person.attrs["role"];
+  const profession = person.attrs["profession"] ?? person.attrs["role"] ?? person.attrs["company"];
   const location = person.attrs["location"] ?? person.attrs["home_location"];
+  let aliasHint = "";
+  try {
+    const raw = person.attrs.aliases;
+    const aliases = raw ? JSON.parse(raw) as unknown : [];
+    if (Array.isArray(aliases)) {
+      aliasHint = aliases
+        .filter((a): a is string => typeof a === "string" && a.trim().length > 0 && a.trim().toLowerCase() !== person.name.toLowerCase())
+        .slice(0, 2)
+        .join(" · ");
+    }
+  } catch { /* stored as plain text */ }
 
   const quickChannel = channels[0] ?? CHANNEL_NAMES[0] ?? "other";
 
@@ -116,9 +127,9 @@ export function PersonCard({
             />
             <div className="min-w-0">
               <div className="truncate text-lg font-medium text-text-primary md:text-xl" title={person.name}>{person.name}</div>
-              {(profession || location) && (
-                <div className="mt-1 truncate text-base text-text-secondary" title={[profession, location].filter(Boolean).join(" · ")}>
-                  {[profession, location].filter(Boolean).join(" · ")}
+              {(profession || location || aliasHint) && (
+                <div className="mt-1 truncate text-base text-text-secondary" title={[profession, location, aliasHint].filter(Boolean).join(" · ")}>
+                  {[profession, location, aliasHint].filter(Boolean).join(" · ")}
                 </div>
               )}
               <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-text-tertiary">

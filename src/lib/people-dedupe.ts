@@ -43,6 +43,19 @@ export function extractPhones(text: string): string[] {
   return [...new Set(digits)];
 }
 
+/**
+ * Same number across formats: +41 78 322 69 39 vs 078 322 69 39.
+ * Last 8 digits is the national significant part for most mobiles.
+ * Used for import matching only — clustering still requires exact digits
+ * so two people in different countries cannot collapse on a coincidence.
+ */
+export function phonesCompatible(a: string, b: string): boolean {
+  if (a === b) return true;
+  const short = a.length <= b.length ? a : b;
+  const long = a.length <= b.length ? b : a;
+  return short.length >= 8 && long.endsWith(short.slice(-8));
+}
+
 export function clusterPeople(people: DedupePerson[]): DuplicateCluster[] {
   const byEmail = new Map<string, DedupePerson[]>();
   const byPhone = new Map<string, DedupePerson[]>();
@@ -107,6 +120,14 @@ export function phonesOf(p: DedupePerson): string[] {
   return extractPhones(blob);
 }
 
+/** Upgrade "Aaron" → "Aaron Brooks" when the imported name is the same person, longer. */
+export function shouldPreferImportedName(current: string, imported: string): boolean {
+  const a = normalizeName(current);
+  const b = normalizeName(imported);
+  if (!a || !b || a === b) return false;
+  return b.startsWith(`${a} `) && b.length >= a.length + 3;
+}
+
 /** Prefer the richer row — more attrs, then longer name. */
 export function pickCanonicalPerson(members: DedupePerson[]): DedupePerson {
   return [...members].sort((a, b) => {
@@ -127,7 +148,7 @@ export function matchImportedContact(
   }
   const phones = extractPhones(Object.values(contact.attrs).join(" "));
   if (phones.length > 0) {
-    const hit = people.find((p) => phonesOf(p).some((ph) => phones.includes(ph)));
+    const hit = people.find((p) => phonesOf(p).some((ph) => phones.some((imp) => phonesCompatible(ph, imp))));
     if (hit) return hit;
   }
   const name = normalizeName(contact.name);

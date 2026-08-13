@@ -42,7 +42,7 @@ const searchPeopleTool = defineTool({
   name: "search_people",
   kind: "read",
   description:
-    "Look up the operator's contacts by name. Returns only what is stored — most contacts have a name and a channel and NOTHING else, no employer or role.",
+    "Look up the operator's contacts by name, alias, email, or phone. Returns only stored fields — company, title, location, channels, notes when present. Never invent a job or affiliation.",
   params: z.object({ query: z.string().max(80).describe("name fragment, or empty for recent contacts") }),
   example: 'TOOL: search_people\nARGS: {"query": "Elena"}',
   handler: async ({ query }, ctx) => {

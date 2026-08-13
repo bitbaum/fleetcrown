@@ -38,36 +38,14 @@ export async function getRunnerExecutionStall(userId: string, graceSeconds = 120
       isNull(pendingCommands.claimedAt),
       sql`created_at < now() - interval '1 second' * ${graceSeconds}`,
       sql`created_at > now() - interval '2 hours'`,
-      // Serialized, not stalled: a dispatch/inject whose project has an OLDER
-      // open run is deliberately gate-held by per-project FIFO (see
-      // claimNextPendingCommand) — the builder is working exactly as designed.
-      // Counting these produced "Builder is connected but not executing
-      // (2 queued 469s). Restart the desktop app…" while an agent was mid-run
-      // on the same project (observed 2026-08-13), directly under a hero that
-      // said "Building". Mirror of the claim gate, including the
-      // derived-tab (sessionTab) exceptions.
-      sql`NOT (
-        ${pendingCommands.type} IN ('dispatch','inject')
-        AND ${pendingCommands.payload}->>'projectKey' IS NOT NULL
-        AND ${pendingCommands.payload}->>'runId' IS NOT NULL
-        AND NOT EXISTS (
-          SELECT 1 FROM orchestration_runs own
-          WHERE own.id = (${pendingCommands.payload}->>'runId')::uuid
-            AND own.payload->>'sessionTab' IS NOT NULL
-        )
-        AND EXISTS (
-          SELECT 1 FROM orchestration_runs r
-          WHERE r.user_id = ${pendingCommands.userId}
-            AND r.project_key = ${pendingCommands.payload}->>'projectKey'
-            AND r.finished_at IS NULL
-            AND r.started_at > NOW() - INTERVAL '1 minute' * ${STALE_RUN_MINUTES}
-            AND r.payload->>'sessionTab' IS NULL
-            AND (r.started_at, r.id) < (
-              SELECT own.started_at, own.id FROM orchestration_runs own
-              WHERE own.id = (${pendingCommands.payload}->>'runId')::uuid
-            )
-        )
-      )`,
+      // A dispatch waiting its turn behind an older open run for the same
+      // project is QUEUED, not stalled — the claim gate skips it on purpose.
+      // Counting those had Control shouting "Restart the desktop app" every
+      // time a project ran longer than the grace window with a follow-up
+      // queued (any 2-minute run + one queued dispatch = false alarm). Only a
+      // command the runner was ALLOWED to claim and didn't is evidence of a
+      // hung execution loop.
+      fifoEligibilitySql(),
     ));
   const stalledCount = row?.stalledCount ?? 0;
   return {
@@ -76,6 +54,50 @@ export async function getRunnerExecutionStall(userId: string, graceSeconds = 120
     oldestSeconds: row?.oldestSeconds ?? 0,
     tabs: (row?.tabs ?? []).slice(0, 5),
   };
+}
+
+/**
+ * Per-project serialization gate (FIFO by run age) — SSOT, used by BOTH the
+ * claim query and the stall detector so "waiting its turn" can never be
+ * mistaken for "stalled". A dispatch/inject is eligible only when its own run
+ * is the OLDEST open run for the project — i.e. NO open run is older (by
+ * started_at, then id) than the run its payload.runId points to. Gating on age
+ * (not mere existence) is what avoids deadlock: every queued dispatch opens its
+ * own run, so "any other open run = busy" would have them block each other;
+ * "oldest wins" drains them in order. Commands with no projectKey/runId
+ * (focus_tab, peek, lifecycle — which open no run) are never blocked. The
+ * started_at floor mirrors cleanupStaleOrchestrationRuns so a crashed run
+ * can't wedge a project past STALE_RUN_MINUTES.
+ *
+ * An older open run blocks until it CLOSES (finished_at), not until its
+ * prompt is delivered — releasing on delivery merged two dispatches into one
+ * agent session sharing one summary. Derived-tab runs (payload.sessionTab,
+ * parallel worktree-per-agent) own an isolated tab, so they neither block
+ * base-tab commands nor wait on them.
+ */
+function fifoEligibilitySql() {
+  return sql`(
+    ${pendingCommands.type} NOT IN ('dispatch','inject')
+    OR ${pendingCommands.payload}->>'projectKey' IS NULL
+    OR ${pendingCommands.payload}->>'runId' IS NULL
+    OR EXISTS (
+      SELECT 1 FROM orchestration_runs own
+      WHERE own.id = (${pendingCommands.payload}->>'runId')::uuid
+        AND own.payload->>'sessionTab' IS NOT NULL
+    )
+    OR NOT EXISTS (
+      SELECT 1 FROM orchestration_runs r
+      WHERE r.user_id = ${pendingCommands.userId}
+        AND r.project_key = ${pendingCommands.payload}->>'projectKey'
+        AND r.finished_at IS NULL
+        AND r.started_at > NOW() - INTERVAL '1 minute' * ${STALE_RUN_MINUTES}
+        AND r.payload->>'sessionTab' IS NULL
+        AND (r.started_at, r.id) < (
+          SELECT own.started_at, own.id FROM orchestration_runs own
+          WHERE own.id = (${pendingCommands.payload}->>'runId')::uuid
+        )
+    )
+  )`;
 }
 
 export async function enqueuePendingCommand(
@@ -320,48 +342,11 @@ export async function claimNextPendingCommand(userIds: string[], types?: string[
         typeFilter,
         channelFilter,
         isNull(pendingCommands.claimedAt),
-        // Per-project serialization (FIFO by run age): a dispatch/inject is
-        // eligible only when its own run is the OLDEST open run for the project —
-        // i.e. NO open run is older (by started_at, then id) than the run its
-        // payload.runId points to. Gating on age (not mere existence) is what
-        // avoids deadlock: every queued dispatch opens its own run, so "any other
-        // open run = busy" would have them block each other; "oldest wins" drains
-        // them in order. Commands with no projectKey/runId (focus_tab, peek,
-        // lifecycle hard_stop/close_session — which open no run) are never blocked.
-        // A busy project's rows are skipped so a different project's row is claimed
-        // → cross-project parallelism intact. The check runs INSIDE the FOR UPDATE
-        // SKIP LOCKED tx (correct under concurrent pollers); the started_at floor
-        // mirrors cleanupStaleOrchestrationRuns so a crashed run can't wedge a
-        // project past STALE_RUN_MINUTES.
-        //
-        // An older open run blocks until it CLOSES (finished_at), not until its
-        // prompt is delivered — releasing on delivery merged two dispatches into
-        // one agent session sharing one summary, and close-the-loop then resolved
-        // feedback item B off item A's handoff. Exceptions, both directions:
-        // derived-tab runs (payload.sessionTab, parallel worktree-per-agent) own
-        // an isolated tab, so they neither block base-tab commands nor wait on them.
-        sql`(
-          ${pendingCommands.type} NOT IN ('dispatch','inject')
-          OR ${pendingCommands.payload}->>'projectKey' IS NULL
-          OR ${pendingCommands.payload}->>'runId' IS NULL
-          OR EXISTS (
-            SELECT 1 FROM orchestration_runs own
-            WHERE own.id = (${pendingCommands.payload}->>'runId')::uuid
-              AND own.payload->>'sessionTab' IS NOT NULL
-          )
-          OR NOT EXISTS (
-	            SELECT 1 FROM orchestration_runs r
-	            WHERE r.user_id = ${pendingCommands.userId}
-	              AND r.project_key = ${pendingCommands.payload}->>'projectKey'
-	              AND r.finished_at IS NULL
-	              AND r.started_at > NOW() - INTERVAL '1 minute' * ${STALE_RUN_MINUTES}
-	              AND r.payload->>'sessionTab' IS NULL
-	              AND (r.started_at, r.id) < (
-	                SELECT own.started_at, own.id FROM orchestration_runs own
-	                WHERE own.id = (${pendingCommands.payload}->>'runId')::uuid
-	              )
-	          )
-        )`,
+        // A busy project's rows are skipped so a different project's row is
+        // claimed → cross-project parallelism intact. Runs INSIDE the FOR
+        // UPDATE SKIP LOCKED tx (correct under concurrent pollers). Full gate
+        // semantics documented on fifoEligibilitySql.
+        fifoEligibilitySql(),
       ))
       .orderBy(pendingCommands.createdAt)
       .limit(1)

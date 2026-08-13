@@ -42,6 +42,8 @@ const PERSON_ATTR_MAP: Record<string, string> = {
   role: "role",
   title: "role",
   job: "role",
+  profession: "role",
+  relationship: "how_we_met",
   met: "how_we_met",
   how_we_met: "how_we_met",
   context: "how_we_met",

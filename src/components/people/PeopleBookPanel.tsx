@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getJson, postJson, throwApiError } from "@/lib/api/fetch";
 import { BOOK_ATTR_LABEL, IMPORT_SOURCE_LABEL } from "@/config/book";
+import { ASSISTANT_STACK, CONTACT_IMPORT_GUIDE } from "@/config/assistant-stack";
 import { pickCanonicalPerson, type DedupePerson } from "@/lib/people-dedupe";
 
 type Proposal = {
@@ -74,18 +75,85 @@ export function PeopleBookPanel({ onChanged }: { onChanged?: () => void }) {
     setImportNote(null);
     try {
       const text = await file.text();
-      const res = await postJson("/api/people/import", { text, filename: file.name });
-      const data = await res.json() as { ok?: boolean; error?: string; imported?: number; enrich?: number; skipped?: number; parsed?: number; source?: string };
-      if (!res.ok) throw new Error(data.error ?? "Import failed");
+      let offset = 0;
+      let created = 0;
+      let enriched = 0;
+      let skipped = 0;
+      let parsed = 0;
+      let source = "";
+      let done = false;
+      while (!done) {
+        const res = await postJson("/api/people/import", { text, filename: file.name, offset });
+        const data = await res.json() as {
+          ok?: boolean;
+          error?: string;
+          created?: number;
+          enriched?: number;
+          skipped?: number;
+          parsed?: number;
+          source?: string;
+          nextOffset?: number;
+          done?: boolean;
+        };
+        if (!res.ok) throw new Error(data.error ?? "Import failed");
+        created += data.created ?? 0;
+        enriched += data.enriched ?? 0;
+        skipped += data.skipped ?? 0;
+        parsed = data.parsed ?? parsed;
+        source = data.source ?? source;
+        offset = data.nextOffset ?? offset;
+        done = Boolean(data.done);
+        setImportNote(
+          `Writing ${IMPORT_SOURCE_LABEL[source as keyof typeof IMPORT_SOURCE_LABEL] ?? source}: ${offset}/${parsed}…`,
+        );
+      }
       setImportNote(
-        `${data.parsed} parsed from ${IMPORT_SOURCE_LABEL[data.source as keyof typeof IMPORT_SOURCE_LABEL] ?? data.source}. ${data.imported} new, ${data.enrich} enrichments, ${data.skipped} already current.`,
+        `${parsed} from ${IMPORT_SOURCE_LABEL[source as keyof typeof IMPORT_SOURCE_LABEL] ?? source}. ${created} new, ${enriched} enriched, ${skipped} already current.`,
       );
       await refresh();
+      onChanged?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Import failed");
     } finally {
       setBusy(null);
       if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+
+  async function syncOpenClaw() {
+    setBusy("openclaw");
+    setError(null);
+    setImportNote(null);
+    try {
+      const res = await postJson("/api/people/sync/openclaw", {});
+      const data = await res.json() as { ok?: boolean; error?: string; created?: number; enriched?: number; skipped?: number; parsed?: number; knowledge?: number };
+      if (!res.ok) throw new Error(data.error ?? "OpenClaw sync failed");
+      setImportNote(
+        `OpenClaw: ${data.parsed} contacts${data.knowledge ? ` (${data.knowledge} from knowledge)` : ""}. ${data.created ?? 0} new, ${data.enriched ?? 0} enriched, ${data.skipped ?? 0} already current.`,
+      );
+      await refresh();
+      onChanged?.();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "OpenClaw sync failed");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function mergeObvious() {
+    setBusy("twins");
+    setError(null);
+    try {
+      const res = await postJson("/api/people/merge-obvious", {});
+      const data = await res.json() as { ok?: boolean; merged?: number; skipped?: number; error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Merge failed");
+      setImportNote(`Merged ${data.merged ?? 0} obvious twins (same email or phone). Skipped ${data.skipped ?? 0} name-only guesses.`);
+      await refresh();
+      onChanged?.();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Merge failed");
+    } finally {
+      setBusy(null);
     }
   }
 
@@ -107,6 +175,16 @@ export function PeopleBookPanel({ onChanged }: { onChanged?: () => void }) {
 
   return (
     <section className="space-y-4">
+      <p className="text-sm text-text-secondary">
+        {ASSISTANT_STACK.fleetcrown.name} is the book. {ASSISTANT_STACK.loki.name} talks to it.
+        {" "}{ASSISTANT_STACK.openclaw.name} is the WhatsApp/Telegram workspace that filled most of these names.
+        {" "}{ASSISTANT_STACK.hermes.name} is a task CLI — not a contact book. Nothing is sent.
+      </p>
+      <ul className="space-y-1 text-sm text-text-tertiary">
+        {CONTACT_IMPORT_GUIDE.map((g) => (
+          <li key={g.id}><span className="text-text-secondary">{g.title}.</span> {g.how}</li>
+        ))}
+      </ul>
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
         <input
           ref={fileRef}
@@ -123,13 +201,18 @@ export function PeopleBookPanel({ onChanged }: { onChanged?: () => void }) {
         >
           {busy === "import" ? "Reading…" : "Import address book"}
         </button>
+        <button type="button" onClick={() => void syncOpenClaw()} disabled={busy !== null} className="ui-btn-chip">
+          {busy === "openclaw" ? "Syncing…" : "Sync OpenClaw book"}
+        </button>
         <button type="button" onClick={() => void scan()} disabled={busy !== null} className="ui-btn-chip">
           {busy === "scan" ? "Scanning…" : "Propose enrichments"}
         </button>
+        {clusters.some((c) => c.reason !== "name" && c.members.length === 2) && (
+          <button type="button" onClick={() => void mergeObvious()} disabled={busy !== null} className="ui-btn-chip">
+            {busy === "twins" ? "Merging…" : "Merge obvious twins"}
+          </button>
+        )}
       </div>
-      <p className="text-xs text-text-tertiary">
-        vCard, CSV, or contact-resolver JSON you already have. Accept or discard each row. Nothing is scraped. Nothing is sent.
-      </p>
       {importNote && <p className="text-sm text-text-secondary">{importNote}</p>}
       {error && <p className="ui-error-xs">{error}</p>}
 
