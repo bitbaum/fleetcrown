@@ -763,6 +763,26 @@ async function runSettingsSystemProbes(
   const doctor = await apiJson(cookieHeader, "/api/system/doctor", "GET");
   push("SY02 GET /api/system/doctor", "GET", doctor.status, doctor.status === 200);
 
+  // AC10 — typed-prompt capture, CLOSED LOOP. The June-2026 capture hook died
+  // silently for two months because nothing verified the path end-to-end
+  // (checks tested existence, not function). Two POSTs prove insert AND
+  // read-back with no extra read API: the first must record the marker
+  // ({ok:true} = row inserted); the immediate second must be rejected as a
+  // dispatch echo — which the route can only decide by FINDING the first row
+  // in prompt_history. A dead insert path fails step 1; a dead dedupe lookup
+  // fails step 2.
+  const captureMarker = `[${tag}] capture closed-loop probe — ignore`;
+  const cap1 = await apiJson(cookieHeader, "/api/activity/capture", "POST", {
+    prompt: captureMarker, cwd: "/tmp/smoke",
+  });
+  push("AC10 POST /api/activity/capture records", "POST", cap1.status,
+    cap1.status === 200 && cap1.json?.ok === true);
+  const cap2 = await apiJson(cookieHeader, "/api/activity/capture", "POST", {
+    prompt: captureMarker, cwd: "/tmp/smoke",
+  });
+  push("AC11 capture echo-dedupe reads row back", "POST", cap2.status,
+    cap2.status === 200 && cap2.json?.skipped === "dispatch_echo");
+
   const meGet = await apiJson(cookieHeader, "/api/me", "GET");
   if (meGet.status === 200 && typeof meGet.json?.name === "string") {
     const mePatch = await apiJson(cookieHeader, "/api/me", "PATCH", { name: meGet.json.name });
