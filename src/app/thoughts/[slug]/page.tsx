@@ -5,9 +5,12 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { APP_URL } from "@/config/brand";
 import { PublicSurface } from "@/components/public/PublicSurface";
 import { PublicHeaderActions } from "@/components/public/PublicHeaderActions";
 import { ThoughtArticleNav } from "@/components/thoughts/ThoughtArticleNav";
+import { ShareBar } from "@/components/thoughts/ShareBar";
+import { NewsletterSignup } from "@/components/thoughts/NewsletterSignup";
 import { MermaidDiagram } from "@/components/thoughts/MermaidDiagram";
 import { getAdjacentThoughts, getRelatedThoughts, getThought, parseThoughtBlocks } from "@/lib/thoughts-content";
 
@@ -60,6 +63,9 @@ export async function generateMetadata({
   return {
     title: article.title,
     description: article.summary,
+    alternates: {
+      types: { "application/rss+xml": "/rss.xml" },
+    },
     openGraph: {
       type: "article",
       title: article.title,
@@ -104,6 +110,9 @@ export default async function ThoughtArticlePage({
           {article.tags.map((tag) => (
             <span key={tag} className="ui-tag ui-tag-neutral">{tag}</span>
           ))}
+          <div className="ml-auto">
+            <ShareBar url={`${APP_URL}/thoughts/${slug}`} title={article.title} />
+          </div>
         </div>
 
         <article className="ui-card-shell-raised space-y-6 p-6 md:p-8">
@@ -202,6 +211,8 @@ export default async function ThoughtArticlePage({
             }
           })}
         </article>
+
+        <NewsletterSignup source={slug} />
 
         <ThoughtArticleNav previous={previous} next={next} related={related} />
       </div>
