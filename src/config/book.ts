@@ -77,6 +77,8 @@ export function isBookAttrKey(key: string): boolean {
 }
 
 export const IMPORT_BATCH_CAP = 200;
+/** One scan click must finish. A 1284-person book cannot enqueue unbounded drafts. */
+export const ENRICH_SCAN_CAP = 50;
 
 export function importDraftTitle(name: string): string {
   return `Import: ${name}`.slice(0, 200);

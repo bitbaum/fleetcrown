@@ -10,7 +10,9 @@ import {
   mergeDraftTitle,
 } from "../../src/config/book";
 import { canImportSocial, canMarket, DEFAULT_VACUUMS, ROBOT_CLASS, ROBOT_CLASS_TO_OC_ASSET } from "../../src/config/actors";
-import { clusterPeople, extractEmails, extractPhones, normalizeName } from "../../src/lib/people-dedupe";
+import { clusterPeople, extractEmails, extractPhones, matchImportedContact, normalizeName, pickCanonicalPerson } from "../../src/lib/people-dedupe";
+import { ENRICH_SCAN_CAP } from "../../src/config/book";
+import { isUniqueViolation } from "../../src/lib/api/route-helpers";
 import { detectImportSource, parseCsv, parseImport, parseVCard, parseContactResolver } from "../../src/lib/people-import";
 import { proposeEnrichments } from "../../src/lib/people-enrich";
 
@@ -33,6 +35,22 @@ const clusters = clusterPeople([
 ]);
 assert.ok(clusters.some((c) => c.reason === "email" && c.members.length === 2));
 assert.ok(clusters.some((c) => c.reason === "name" && c.members.map((m) => m.id).includes("1")));
+
+const emailMatch = matchImportedContact(
+  { name: "J. Smith", attrs: { "channel:email": "jane@x.com" } },
+  clusters.flatMap((c) => c.members),
+);
+assert.ok(emailMatch && emailMatch.attrs["channel:email"] === "jane@x.com");
+
+const richer = pickCanonicalPerson([
+  { id: "thin", name: "Jane", attrs: {} },
+  { id: "rich", name: "Jane Smith", attrs: { "channel:email": "jane@x.com", profession: "dev" } },
+]);
+assert.equal(richer.id, "rich");
+assert.ok(ENRICH_SCAN_CAP <= 50);
+assert.equal(isUniqueViolation({ code: "23505" }), true);
+assert.equal(isUniqueViolation({ cause: { code: "23505" } }), true);
+assert.equal(isUniqueViolation(new Error("nope")), false);
 
 const vcf = `BEGIN:VCARD
 VERSION:3.0

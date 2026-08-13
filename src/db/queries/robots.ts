@@ -39,6 +39,7 @@ export type RobotWithAttributes = {
   model: string | null;
   market: Record<MarketOffer, boolean>;
   orangecatAssetId: string | null;
+  listing?: { assetId: string | null; published: boolean; reason?: string };
 };
 
 function hydrate(row: {
@@ -213,10 +214,13 @@ export async function patchRobot(userId: string, id: string, data: z.infer<typeo
   });
 
   const detail = await getRobotDetail(userId, id);
-  if (detail && (detail.market.book || detail.market.rent || detail.market.sell) && !detail.orangecatAssetId) {
+  if (!detail) return null;
+  if (detail.market.book || detail.market.rent || detail.market.sell) {
     const { publishRobotAsset } = await import("@/lib/integrations/orangecat-asset");
-    await publishRobotAsset(userId, detail);
-    return getRobotDetail(userId, id);
+    const listing = await publishRobotAsset(userId, detail);
+    const next = await getRobotDetail(userId, id);
+    if (next) next.listing = listing;
+    return next;
   }
   return detail;
 }

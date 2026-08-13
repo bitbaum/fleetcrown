@@ -26,6 +26,11 @@ export function RobotProfile({ robot }: { robot: RobotWithAttributes }) {
   const [saving, setSaving] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [listingNote, setListingNote] = useState<string | null>(
+    robot.orangecatAssetId
+      ? `Listed on OrangeCat as ${robot.orangecatAssetId}.`
+      : null,
+  );
 
   async function save(patch: Record<string, unknown>): Promise<boolean> {
     setSaving(true);
@@ -33,6 +38,19 @@ export function RobotProfile({ robot }: { robot: RobotWithAttributes }) {
     try {
       const res = await patchJson(`/api/robots/${robot.id}`, patch);
       if (!res.ok) await throwApiError(res, "Failed to update robot");
+      const data = await res.json() as {
+        robot?: { orangecatAssetId?: string | null; listing?: { published?: boolean; reason?: string; assetId?: string | null } };
+      };
+      const listing = data.robot?.listing;
+      if (listing) {
+        if (listing.published && listing.assetId) {
+          setListingNote(`Listed on OrangeCat as ${listing.assetId}.`);
+        } else if (listing.reason === "orangecat-not-configured") {
+          setListingNote("Offer saved here. OrangeCat is not connected — listing is not public yet.");
+        } else if (listing.reason) {
+          setListingNote(`Offer saved here. OrangeCat listing failed: ${listing.reason}`);
+        }
+      }
       router.refresh();
       return true;
     } catch (err) {
@@ -145,15 +163,12 @@ export function RobotProfile({ robot }: { robot: RobotWithAttributes }) {
             );
           })}
         </div>
-        {robot.orangecatAssetId ? (
-          <p className="text-sm text-text-secondary">
-            Listed on OrangeCat as asset {robot.orangecatAssetId}.
-          </p>
-        ) : (
-          <p className="text-sm text-text-tertiary">
-            Flip an offer on to publish this machine as an OrangeCat asset. People cannot be listed.
-          </p>
-        )}
+        <p className="text-sm text-text-secondary">
+          {listingNote
+            ?? (robot.orangecatAssetId
+              ? `Listed on OrangeCat as ${robot.orangecatAssetId}.`
+              : "Flip an offer on to list this machine on OrangeCat. People cannot be listed.")}
+        </p>
       </section>
 
       {error && <p className="ui-error-xs">{error}</p>}

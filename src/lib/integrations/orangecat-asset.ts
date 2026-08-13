@@ -6,7 +6,7 @@
  * listing intent on the robot and returns null.
  */
 
-import { getOrangeCatClient } from "@/lib/integrations/orangecat";
+import { getOrangeCatClient, OC_BASE } from "@/lib/integrations/orangecat";
 import {
   ROBOT_ATTR,
   ROBOT_CLASS_TO_OC_ASSET,
@@ -39,16 +39,21 @@ export async function publishRobotAsset(
     robot.market.rent && "rentable",
     robot.market.sell && "sellable",
   ].filter(Boolean).join(", ");
+  const body = {
+    title: robot.name,
+    description: [robot.description, spec && `Spec: ${spec}`, `Offers: ${offers}`].filter(Boolean).join("\n"),
+    type: ROBOT_CLASS_TO_OC_ASSET[robotClass],
+    is_for_rent: robot.market.book || robot.market.rent,
+    is_for_sale: robot.market.sell,
+  };
 
   try {
+    if (robot.orangecatAssetId) {
+      await updateOrangeCatAsset(robot.orangecatAssetId, body);
+      return { assetId: robot.orangecatAssetId, published: true };
+    }
     const asset = await client.assets.create(
-      {
-        title: robot.name,
-        description: [robot.description, spec && `Spec: ${spec}`, `Offers: ${offers}`].filter(Boolean).join("\n"),
-        type: ROBOT_CLASS_TO_OC_ASSET[robotClass],
-        is_for_rent: robot.market.book || robot.market.rent,
-        is_for_sale: robot.market.sell,
-      } as Parameters<typeof client.assets.create>[0],
+      body as Parameters<typeof client.assets.create>[0],
       { idempotencyKey: `fleetcrown_robot_${robot.id}` },
     );
     await upsertEntityAttribute(userId, robot.id, ROBOT_ATTR.ORANGECAT_ASSET_ID, asset.id);
@@ -57,5 +62,23 @@ export async function publishRobotAsset(
     const reason = err instanceof Error ? err.message : "orangecat-publish-failed";
     console.warn("[orangecat] robot asset publish failed", { robotId: robot.id, reason });
     return { assetId: robot.orangecatAssetId, published: false, reason };
+  }
+}
+
+async function updateOrangeCatAsset(assetId: string, body: Record<string, unknown>): Promise<void> {
+  const apiKey = process.env.ORANGECAT_API_KEY;
+  if (!apiKey) throw new Error("orangecat-not-configured");
+  const res = await fetch(`${OC_BASE}/api/v1/assets/${assetId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+      "X-OrangeCat-Key": apiKey,
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`orangecat-update-${res.status}${text ? `: ${text.slice(0, 180)}` : ""}`);
   }
 }
