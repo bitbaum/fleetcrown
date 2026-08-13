@@ -132,9 +132,13 @@ export type StatusTone = "negative" | "warning" | "positive" | "neutral";
 export const BUILDER_CHANNELS = ["cloud", "local"] as const;
 export type BuilderChannel = (typeof BUILDER_CHANNELS)[number];
 
-/** Entity type values — used in people queries, projects queries, and API routes */
+/** Entity type values — used in people queries, projects queries, and API routes.
+ *  `robot` is an actor (see src/config/actors.ts). Humans and robots share the
+ *  entities table; capability (check-in vs market) is decided by that SSOT,
+ *  never by a parallel robots table. */
 export const ENTITY_TYPE = {
   PERSON:  "person",
+  ROBOT:   "robot",
   PROJECT: "project",
   COMPANY: "company",
   GOAL:    "goal",

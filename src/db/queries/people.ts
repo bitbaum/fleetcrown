@@ -193,7 +193,7 @@ export async function getPersonDetail(userId: string, id: string) {
   const [person] = await db
     .select()
     .from(entities)
-    .where(and(eq(entities.id, id), eq(entities.userId, userId)));
+    .where(and(eq(entities.id, id), eq(entities.userId, userId), eq(entities.type, ENTITY_TYPE.PERSON)));
 
   if (!person) return null;
 
@@ -255,7 +255,7 @@ export async function patchPerson(userId: string, id: string, data: z.infer<type
   const [updated] = await db
     .update(entities)
     .set(patch)
-    .where(and(eq(entities.id, id), eq(entities.userId, userId)))
+    .where(and(eq(entities.id, id), eq(entities.userId, userId), eq(entities.type, ENTITY_TYPE.PERSON)))
     .returning({ id: entities.id });
   return updated ?? null;
 }
@@ -263,7 +263,7 @@ export async function patchPerson(userId: string, id: string, data: z.infer<type
 export async function deletePerson(userId: string, id: string) {
   const [deleted] = await db
     .delete(entities)
-    .where(and(eq(entities.id, id), eq(entities.userId, userId)))
+    .where(and(eq(entities.id, id), eq(entities.userId, userId), eq(entities.type, ENTITY_TYPE.PERSON)))
     .returning({ id: entities.id });
   return deleted ?? null;
 }

@@ -4,6 +4,7 @@ import { alias } from "drizzle-orm/pg-core";
 import { and, eq, inArray, ne } from "drizzle-orm";
 import { SOURCE_FLEETCROWN_UI } from "@/lib/constants";
 import { INTERACTION_DIRECTION, type InteractionDirection } from "@/lib/constants/statuses";
+import { assertAttrAllowed } from "@/config/actors";
 import { z } from "zod";
 
 /** Shared validator for the two `/api/<entity>/[id]/interactions` POST routes. */
@@ -66,17 +67,20 @@ export async function upsertEntityAttribute(
   value: string,
 ): Promise<boolean> {
   const [owner] = await db
-    .select({ id: entities.id })
+    .select({ id: entities.id, type: entities.type })
     .from(entities)
     .where(and(eq(entities.id, entityId), eq(entities.userId, userId)));
   if (!owner) return false;
+
+  const normalizedKey = key.toLowerCase().replace(/\s+/g, "_");
+  assertAttrAllowed(owner.type, normalizedKey);
 
   await db
     .insert(attributes)
     .values({
       userId,
       entityId,
-      key: key.toLowerCase().replace(/\s+/g, "_"),
+      key: normalizedKey,
       value,
       source: SOURCE_FLEETCROWN_UI,
     })
