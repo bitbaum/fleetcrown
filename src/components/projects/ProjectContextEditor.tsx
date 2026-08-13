@@ -29,6 +29,13 @@ const CONTEXT_GROUPS = [
     ],
   },
   {
+    title: "Reach",
+    fields: [
+      { key: PROJECT_ATTR.DISTRIBUTION, label: "Distribution", placeholder: "Channels that exist today — RSS, newsletter, social queue, OG cards" },
+      { key: PROJECT_ATTR.GTM, label: "Go-to-market", placeholder: "ICP, path to first paying customer, monetization state" },
+    ],
+  },
+  {
     title: "Build contract",
     fields: [
       { key: PROJECT_ATTR.STACK, label: "Stack", placeholder: "Languages, frameworks, and infrastructure" },

@@ -42,6 +42,10 @@ export const ExtractedProfileSchema = z.object({
   architecture: z.string().trim().min(1).max(FIELD_LIMIT).optional(),
   conventions: z.string().trim().min(1).max(FIELD_LIMIT).optional(),
   definition_of_done: z.string().trim().min(1).max(FIELD_LIMIT).optional(),
+  // Distribution & go-to-market — how the project reaches people and gets
+  // paid. First-class agent context (dossier + DRIVING_FIELDS), not market lens.
+  distribution: z.string().trim().min(1).max(FIELD_LIMIT).optional(),
+  gtm: z.string().trim().min(1).max(FIELD_LIMIT).optional(),
   // Market lens — the "nerd out on your project" dimensions. Same storage
   // (attributes table), so they're inline-editable like everything else.
   problem: z.string().trim().min(1).max(FIELD_LIMIT).optional(),
@@ -68,6 +72,8 @@ Respond with ONLY a JSON object — no prose, no markdown fences. Allowed keys:
 - "architecture": the key building blocks and how they fit — main modules/services, data stores, external integrations (max 400 chars). Only from the text/README; omit if unknown.
 - "conventions": how this project is built — patterns, rules, do's and don'ts an engineer must follow (e.g. "Drizzle not Prisma", "server components by default", "never edit generated files") (max 400 chars). Only from the text/README; omit if unknown.
 - "definition_of_done": the bar ONE TURN of work must clear to be finished, phrased so a reviewer reading only the handoff can tell whether it was met — e.g. "\`npm run verify\` passes, with its real output in the handoff; work committed and pushed" (max 300 chars). It must name checkable actions, never describe the finished product ("outcomes are tracked", "money is not a float", "live and profitable" are all WRONG — no single turn can evidence them, so every run gets graded a failure). Prefer naming the repo's own verify/test command over listing individual tools. Only from the text/README; omit if unknown.
+- "distribution": the channels through which this project reaches people TODAY — RSS/newsletter, social accounts or queues, OG cards/SEO, marketplaces (max 400 chars). Only from the text; omit if unknown.
+- "gtm": go-to-market — ideal customer profile, path to the first paying customer, current monetization state, key metrics if stated (max 400 chars). Only from the text; omit if unknown.
 - "problem": the concrete problem being solved, from the user's point of view (max 400 chars)
 - "solution": how this project solves that problem — the offered approach (max 400 chars)
 - "current_alternatives": how people solve this problem today without the project (max 400 chars)
@@ -284,6 +290,7 @@ export async function applyProjectProfile(
     PROJECT_ATTR.MISSION, PROJECT_ATTR.VISION, PROJECT_ATTR.CUSTOMERS,
     PROJECT_ATTR.STACK, PROJECT_ATTR.STATUS, PROJECT_ATTR.NEXT_STEP,
     PROJECT_ATTR.ARCHITECTURE, PROJECT_ATTR.CONVENTIONS, PROJECT_ATTR.DEFINITION_OF_DONE,
+    PROJECT_ATTR.DISTRIBUTION, PROJECT_ATTR.GTM,
     PROJECT_ATTR.PROBLEM, PROJECT_ATTR.SOLUTION, PROJECT_ATTR.CURRENT_ALTERNATIVES,
     PROJECT_ATTR.COMPETITORS, PROJECT_ATTR.COMPLEMENTS_SUBSTITUTES, PROJECT_ATTR.PARTNERSHIPS,
     PROJECT_ATTR.POTENTIAL_CUSTOMERS, PROJECT_ATTR.EXPANSION_IDEAS,

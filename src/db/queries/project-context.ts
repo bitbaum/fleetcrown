@@ -27,12 +27,16 @@ const MAX_GOALS = 6;
 // mission, stack, architecture, conventions, and bar for "done", not generics.
 // The market-lens fields (competitors, expansion ideas, …) are for the human
 // operator, so they're deliberately excluded to keep the prompt focused + cheap.
-const DRIVING_FIELDS: ReadonlyArray<readonly [string, string]> = [
+// Distribution and go-to-market are deliberately INCLUDED — they drive what
+// agents build toward (who it must reach and how it earns), unlike market lens.
+export const DRIVING_FIELDS: ReadonlyArray<readonly [string, string]> = [
   [PROJECT_ATTR.MISSION, "Mission"],
   [PROJECT_ATTR.VISION, "Vision"],
   [PROJECT_ATTR.CUSTOMERS, "Customers"],
   [PROJECT_ATTR.PROBLEM, "Problem"],
   [PROJECT_ATTR.SOLUTION, "Solution"],
+  [PROJECT_ATTR.DISTRIBUTION, "Distribution (channels this project reaches people through today)"],
+  [PROJECT_ATTR.GTM, "Go-to-market (ICP, path to first paying customer, monetization state)"],
   [PROJECT_ATTR.STACK, "Stack"],
   [PROJECT_ATTR.NEXT_STEP, "Next step (owner's highest-priority action right now)"],
   [PROJECT_ATTR.ARCHITECTURE, "Architecture"],

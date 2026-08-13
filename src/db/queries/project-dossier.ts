@@ -174,6 +174,8 @@ export function renderProjectDossierForAgent(dossier: ProjectDossier): string {
     ["Customers", attrs.customers],
     ["Problem", attrs.problem],
     ["Solution", attrs.solution],
+    ["Distribution", attrs.distribution],
+    ["Go-to-market", attrs.gtm],
     ["Status", attrs.status],
     // Derived, traceable health — replaces the hand-typed attrs.maturity score.
     ["Health", describeProjectHealth(computeProjectHealth({
