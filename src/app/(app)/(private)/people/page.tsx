@@ -28,7 +28,7 @@ export default async function PeoplePage({
   return (
     <PageLayout
       title="People"
-      subtitle={`${total} private profiles. Enrich and merge first — nothing is sent.`}
+      subtitle={`${total} in your book — not a shared directory. Enrich and merge first. Nothing is sent.`}
       maxWidth="max-w-5xl"
     >
       <PeopleGrid

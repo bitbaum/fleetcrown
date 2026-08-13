@@ -6,6 +6,7 @@ import {
   SetAttrBody,
   DeleteAttrBody,
 } from "@/db/queries/utils";
+import { getRobotDetail } from "@/db/queries/robots";
 import { requirePrivateApiAccess } from "@/lib/private-zone-api";
 import { isActorCapabilityError } from "@/config/actors";
 
@@ -18,6 +19,9 @@ export async function POST(
   const { userId } = access;
   const idOrResp = await readIdParam(params);
   if (idOrResp instanceof NextResponse) return idOrResp;
+
+  const robot = await getRobotDetail(userId, idOrResp);
+  if (!robot) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const dataOrResp = await readJsonBody(req, SetAttrBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
@@ -43,6 +47,9 @@ export async function DELETE(
   const { userId } = access;
   const idOrResp = await readIdParam(params);
   if (idOrResp instanceof NextResponse) return idOrResp;
+
+  const robot = await getRobotDetail(userId, idOrResp);
+  if (!robot) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const dataOrResp = await readJsonBody(req, DeleteAttrBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;

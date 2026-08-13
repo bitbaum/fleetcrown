@@ -28,7 +28,7 @@ export function PrivacySettings() {
         <div>
           <h2 className="text-lg font-semibold text-text-primary">Private zone</h2>
           <p className="mt-1 text-sm text-text-tertiary">
-            Memory, People, Goals, Habits, Events, and Money sit behind a PIN gate.
+            Memory, People, Robots, Goals, Habits, Events, and Money sit behind a PIN gate.
             Once you enter the right PIN, the zone stays unlocked for 30 minutes of activity.
           </p>
         </div>

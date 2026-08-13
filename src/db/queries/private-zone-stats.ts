@@ -13,6 +13,7 @@ import { ENTITY_TYPE } from "@/lib/constants/statuses";
 export type PrivateZoneStats = {
   memoryEntities: number;
   people: number;
+  robots: number;
   goals: number;
   habits: number;
   events: number;
@@ -32,6 +33,7 @@ export async function getPrivateZoneStats(userId: string): Promise<PrivateZoneSt
   const [
     memoryEntitiesRow,
     peopleRow,
+    robotsRow,
     goalsRow,
     habitsRow,
     eventsRow,
@@ -40,6 +42,7 @@ export async function getPrivateZoneStats(userId: string): Promise<PrivateZoneSt
   ] = await Promise.all([
     db.select({ n: count() }).from(entities).where(eq(entities.userId, userId)),
     db.select({ n: count() }).from(entities).where(and(eq(entities.userId, userId), eq(entities.type, ENTITY_TYPE.PERSON))),
+    db.select({ n: count() }).from(entities).where(and(eq(entities.userId, userId), eq(entities.type, ENTITY_TYPE.ROBOT))),
     db.select({ n: count() }).from(goals).where(eq(goals.userId, userId)),
     db.select({ n: count() }).from(habits).where(eq(habits.userId, userId)),
     db.select({ n: count() }).from(events).where(eq(events.userId, userId)),
@@ -50,6 +53,7 @@ export async function getPrivateZoneStats(userId: string): Promise<PrivateZoneSt
   return {
     memoryEntities: memoryEntitiesRow[0]?.n ?? 0,
     people: peopleRow[0]?.n ?? 0,
+    robots: robotsRow[0]?.n ?? 0,
     goals: goalsRow[0]?.n ?? 0,
     habits: habitsRow[0]?.n ?? 0,
     events: eventsRow[0]?.n ?? 0,

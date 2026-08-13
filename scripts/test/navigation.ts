@@ -44,4 +44,18 @@ assert.equal(
   "no nav item is listed in two sections",
 );
 
+const priv = SIDEBAR_SECTIONS.find((s) => s.id === "private");
+assert.ok(priv, "private section exists");
+assert.ok(priv.private, "private section is PIN-gated");
+assert.ok(
+  priv.items.some((i) => i.id === "people"),
+  "People stays in the private book",
+);
+assert.ok(
+  priv.items.some((i) => i.id === "robots"),
+  "Robots sit next to People — same book, different law",
+);
+assert.equal(NAV.robots.href, "/robots", "Robots has its own route");
+assert.equal(NAV.people.href, "/people", "People is not mixed with robots");
+
 console.log("✓ navigation IA tests passed");

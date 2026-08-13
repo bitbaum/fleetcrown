@@ -21,6 +21,7 @@ export const metadata = { title: "Memory" };
 // All entity types use the same monochrome accent badge — this app is intentionally achromatic.
 const TYPE_COLOR: Record<EntityType, string> = {
   [ENTITY_TYPE.PERSON]:  "bg-accent-muted text-accent-text border-accent-primary/20",
+  [ENTITY_TYPE.ROBOT]:   "bg-accent-muted text-accent-text border-accent-primary/20",
   [ENTITY_TYPE.PROJECT]: "bg-accent-muted text-accent-text border-accent-primary/20",
   [ENTITY_TYPE.GOAL]:    "bg-accent-muted text-accent-text border-accent-primary/20",
   [ENTITY_TYPE.COMPANY]: "bg-accent-muted text-accent-text border-accent-primary/20",

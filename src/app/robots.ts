@@ -20,6 +20,7 @@ export default function robots(): MetadataRoute.Robots {
           "/memory",
           "/goals",
           "/people",
+          "/robots",
           "/money",
           "/habits",
           "/events",

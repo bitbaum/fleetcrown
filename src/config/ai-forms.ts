@@ -12,6 +12,7 @@
 
 import { defineFields, type FormTarget } from "@fleet/ai-forms";
 import { HABIT_FREQUENCY } from "@/lib/constants/statuses";
+import { ROBOT_CLASSES, ROBOT_CLASS_LABEL } from "@/config/actors";
 import { VALID_CURRENCIES, VALID_FREQUENCIES } from "@/config/subscriptions";
 
 /** Turn a constant tuple/record of string values into assistant field options. */
@@ -84,6 +85,36 @@ export const PERSON_FORM: FormTarget = {
   ],
 };
 
+export const ROBOT_FORM: FormTarget = {
+  key: "robot",
+  name: "Robot",
+  fields: defineFields([
+    { name: "name", label: "Name", type: "text", required: true, maxLength: 80, placeholder: "e.g. Kitchen Roomba" },
+    {
+      name: "class",
+      label: "Class",
+      type: "select",
+      required: true,
+      options: ROBOT_CLASSES.map((value) => ({ value, label: ROBOT_CLASS_LABEL[value] })),
+    },
+    { name: "make", label: "Make", type: "text", maxLength: 80, placeholder: "e.g. iRobot" },
+    { name: "model", label: "Model", type: "text", maxLength: 80, placeholder: "e.g. Roomba j7+" },
+    {
+      name: "description",
+      label: "Notes",
+      type: "textarea",
+      maxLength: 600,
+      placeholder: "e.g. Lives under the kitchen sink. Maps the ground floor.",
+      hint: "What it does and where it lives. Not a listing blurb.",
+    },
+  ]),
+  instructions: [
+    "A robot is a machine the user owns — vacuum, humanoid, drone, industrial. Never a person.",
+    "Class must be one of the provided options. Prefer 'vacuum' over inventing a new class.",
+    "Never invent a make or model. Record only what the user said.",
+  ],
+};
+
 export const HABIT_FORM: FormTarget = {
   key: "habit",
   name: "Habit",
@@ -144,6 +175,7 @@ export const AI_FORMS: FormTarget[] = [
   GOAL_FORM,
   PROJECT_FORM,
   PERSON_FORM,
+  ROBOT_FORM,
   HABIT_FORM,
   SUBSCRIPTION_FORM,
 ];
