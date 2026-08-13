@@ -34,7 +34,7 @@ export function NotificationsPill() {
       onClick={onClick}
       disabled={isWorking}
       className={cn(
-        "inline-flex h-9 w-9 items-center justify-center rounded-full text-text-tertiary transition-colors hover:bg-surface-raised hover:text-text-secondary",
+        "ui-topbar-btn",
         isSubscribed && "text-accent-text",
       )}
       title={

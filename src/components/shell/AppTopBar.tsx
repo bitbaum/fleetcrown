@@ -73,7 +73,7 @@ export function AppTopBar({
           <button
             type="button"
             onClick={onOpenSessions}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-text-tertiary transition-colors hover:bg-surface-raised hover:text-text-secondary"
+            className="ui-topbar-btn"
             aria-label="Open Sessions drawer"
             title="Sessions"
           >

@@ -2333,6 +2333,27 @@
   .ui-btn-icon {
     @apply inline-flex min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 items-center justify-center rounded-lg p-1.5 text-text-tertiary transition-colors hover:bg-surface-overlay hover:text-text-primary disabled:opacity-40;
   }
+  /* Top-bar icon button (sessions, theme, notifications, command palette).
+     Was an inline `h-9 w-9` string repeated across the shell — a Layer-4
+     violation, and 36px, which the responsive audit flags as under the 44px
+     touch minimum on every phone and tablet. */
+  .ui-topbar-btn {
+    @apply inline-flex h-9 w-9 items-center justify-center rounded-full text-text-tertiary transition-colors hover:bg-surface-raised hover:text-text-secondary;
+  }
+
+  /* THE TOUCH FLOOR.
+     Keyed on pointer type, not viewport width. Width was the wrong predicate:
+     `sm:min-h-0` drops the 44px minimum at 640px, so a TABLET — a touch device
+     — inherited desktop sizing and the audit found 28-32px targets at 768px.
+     A finger is the same size whatever the screen is. */
+  @media (pointer: coarse) {
+    .ui-btn-icon,
+    .ui-topbar-btn,
+    .ui-loki-toolbar-btn {
+      min-height: 2.75rem;
+      min-width: 2.75rem;
+    }
+  }
   /* Small icon row-action button (rounded, surface-raised hover) — for edit/action icons on list rows */
   .ui-btn-row-action {
     @apply inline-flex min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 items-center justify-center p-1.5 rounded text-text-muted transition-colors hover:text-text-secondary hover:bg-surface-raised;
