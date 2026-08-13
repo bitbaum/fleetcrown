@@ -165,7 +165,7 @@ export function PersonCard({
             ) : quickSaving ? (
               <><Loader2 className="ui-spinner-xs" /> …</>
             ) : (
-              <>→ Reached out</>
+              <>Log talk</>
             )}
           </button>
           <div className="flex items-center gap-1.5">

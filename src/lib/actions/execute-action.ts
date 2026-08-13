@@ -6,8 +6,7 @@ import { recordActionAuditEvent } from "@/db/queries/control-audit-events";
 import { patchProject } from "@/db/queries/projects";
 import { upsertEntityAttribute } from "@/db/queries/utils";
 import { scheduleProjectProfileReindexByEntityId } from "@/lib/rag/reindex-project-profile";
-import { sendTelegramMessage, selfTelegramTarget } from "@/lib/actions/telegram-send";
-import { operatorMailTemplate, sendEmail } from "@/lib/email";
+
 import { bookCalendarEvent } from "@/lib/actions/calendar-event";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { injectPrompt } from "@/lib/inject-core";
@@ -235,82 +234,12 @@ export async function executeAction(userId: string, action: Action): Promise<Exe
         return { executed: true };
       }
 
-      case ACTION_TYPE.SEND_MESSAGE: {
-        // External + irreversible. Telegram only. The QUEUE APPROVAL is the gate now —
-        // the operator approved this exact message + recipient — so we send to payload.to
-        // (the approved recipient); empty recipient defaults to the operator.
-        const payload = action.payload ?? {};
-        const channel =
-          (typeof payload.channel === "string" && payload.channel.trim()) || "telegram";
-        if (channel !== "telegram") {
-          await recordActionAuditEvent(userId, action, "deferred", {
-            reason: `send channel not enabled: ${channel}`,
-          });
-          return { executed: false, deferred: true };
-        }
-
-        const target = (typeof payload.to === "string" && payload.to.trim()) || selfTelegramTarget();
-        if (!target) {
-          await recordActionAuditEvent(userId, action, "failed", {
-            reason: "no telegram recipient and no self target configured",
-          });
-          return { executed: false, error: "no-target" };
-        }
-
-        const text = (typeof payload.body === "string" && payload.body.trim()) || action.title;
-        const sent = await sendTelegramMessage(target, text);
-        if (!sent.ok) {
-          await recordActionAuditEvent(userId, action, "failed", {
-            reason: sent.error ?? "telegram send failed",
-          });
-          return { executed: false, error: sent.error };
-        }
-
-        const done = await markActionExecuted(action.id, userId);
-        if (!done) {
-          await recordActionAuditEvent(userId, action, "failed", {
-            reason: "telegram sent but action was not in 'approved' state to mark executed",
-          });
-          return { executed: false, error: "not-approved-at-execute-time" };
-        }
-        await recordActionAuditEvent(userId, action, "executed", {
-          meta: { channel, to: target, messageId: sent.messageId ?? null },
-        });
-        return { executed: true };
-      }
-
+      case ACTION_TYPE.SEND_MESSAGE:
       case ACTION_TYPE.SEND_EMAIL: {
-        // External + irreversible. Sent via Resend (FleetCrown's email) on approval.
-        // (From a FleetCrown address, not the operator's Gmail — gog sends are blocked by
-        // design; a true from-Gmail path is a later enhancement.)
-        const payload = action.payload ?? {};
-        if (!process.env.RESEND_API_KEY) {
-          await recordActionAuditEvent(userId, action, "deferred", {
-            reason: "email not configured (no RESEND_API_KEY)",
-          });
-          return { executed: false, deferred: true };
-        }
-        const to = typeof payload.to === "string" ? payload.to.trim() : "";
-        if (!to.includes("@")) {
-          await recordActionAuditEvent(userId, action, "failed", {
-            reason: `invalid email recipient: ${to || "(none)"}`,
-          });
-          return { executed: false, error: "invalid-recipient" };
-        }
-        const subject = (typeof payload.subject === "string" && payload.subject.trim()) || action.title;
-        const text =
-          (typeof payload.body === "string" && payload.body.trim()) || action.description || action.title;
-        const mail = operatorMailTemplate({ subject, body: text });
-        await sendEmail(to, mail.subject, mail.html, mail.text);
-        const done = await markActionExecuted(action.id, userId);
-        if (!done) {
-          await recordActionAuditEvent(userId, action, "failed", {
-            reason: "email sent but action was not in 'approved' state to mark executed",
-          });
-          return { executed: false, error: "not-approved-at-execute-time" };
-        }
-        await recordActionAuditEvent(userId, action, "executed", { meta: { channel: "email", to } });
-        return { executed: true };
+        await recordActionAuditEvent(userId, action, "deferred", {
+          reason: "outbound send frozen — profiles first, no messages while the book is being built",
+        });
+        return { executed: false, deferred: true };
       }
 
       default: {
