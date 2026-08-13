@@ -30,6 +30,7 @@ const SKIP: Record<string, string> = {
   "rag-retrieval.ts": "needs EMBEDDINGS_BASE_URL (fastembed service)",
   "push-notifications.ts": "needs push/web-push env — run manually",
   "inject-prompt.ts": "needs a live DB (only passes locally via .env.local)",
+  "orangecat-entitlement-e2e.ts": "needs a live DB (only passes locally via .env.local)",
   "verify-project-brief.ts": "needs a live DB + Groq API (network + GROQ_API_KEY)",
 };
 

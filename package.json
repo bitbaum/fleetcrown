@@ -63,6 +63,7 @@
     "test:digest": "npx tsx scripts/test/digest.ts",
     "test:auth": "npx tsx scripts/test/auth.ts",
     "test:orangecat-integration": "npx tsx scripts/test/orangecat-integration.ts",
+    "test:orangecat-entitlement-e2e": "npx tsx scripts/test/orangecat-entitlement-e2e.ts",
     "generate:brand": "npx tsx scripts/generate-brand.mjs",
     "generate:agent-prompts": "npx tsx scripts/generate-agent-prompts.ts",
     "ingest:history": "npx tsx scripts/ingest-claude-code-history.ts",
