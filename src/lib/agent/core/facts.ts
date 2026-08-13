@@ -73,6 +73,7 @@ export const FACT_KINDS: Record<string, readonly string[]> = {
   commitment: ["title", "due", "counterparty", "status"],
   event: ["name", "type", "deadline", "url", "status"],
   document: ["title", "source", "excerpt"],
+  pending_action: ["title", "type", "reasoning", "proposed_on", "id"],
 };
 
 /** Field list for a kind; unknown kinds fall back to whatever the fact carries. */
