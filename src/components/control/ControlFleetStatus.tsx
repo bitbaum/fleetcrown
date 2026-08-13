@@ -199,12 +199,16 @@ export function ControlFleetStatus({
             )}
           </p>
           {fleetPulse.detail && (
-            <p className="text-xs text-status-negative">
-              {fleetPulse.detail}{" "}
-              <Link href="/activity?window=week" className="underline underline-offset-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-xs text-status-negative">{fleetPulse.detail}</p>
+              {/* When the fleet is failing, reviewing the failures IS the next
+                  action — it gets a real button. Before, the only button in
+                  sight was "Pause fleet" while the fix path hid in a tiny
+                  inline link. */}
+              <Link href="/activity?window=week" className="ui-btn-secondary shrink-0 px-2.5 py-1 text-xs">
                 Review failures
               </Link>
-            </p>
+            </div>
           )}
         </div>
         <AutomationPolicyControl

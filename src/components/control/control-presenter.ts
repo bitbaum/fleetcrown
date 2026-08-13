@@ -668,7 +668,7 @@ export function buildProjectOperationsSnapshot(
             ? recentDispatchSuffix
               ? `Workspace tab open · ${recentDispatchSuffix}`
               : "Workspace tab open"
-            : "No live observation";
+            : "No recent activity";
 
   // "Saved agent context" was the prior wording — flagged in browser dogfood
   // 2026-05-31 as opaque jargon that reads like an internal-data label (the
@@ -684,7 +684,7 @@ export function buildProjectOperationsSnapshot(
         ? liveEvidenceLabel
         : handoffAt
           ? "Idle"
-          : "No live observation";
+          : "No recent activity";
 
   return {
     project,

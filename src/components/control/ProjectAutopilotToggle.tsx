@@ -130,7 +130,10 @@ export function ProjectAutopilotToggle({
         {building && (
           <span aria-hidden="true" className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-accent-primary" />
         )}
-        <span>{building ? "Building" : "Paused"}</span>
+        {/* Say what the control IS, not a state word. "Building" next to the
+            card's own state badge ("Awaiting input") read as two contradicting
+            statuses — this is the autopilot toggle, so name it that. */}
+        <span>{building ? "Autopilot on" : "Autopilot paused"}</span>
       </button>
       {overridden && (
         <button

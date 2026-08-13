@@ -238,6 +238,12 @@ export function IntentButtonPanel({
                 ? `✓ Dispatched`
                 : `${primary.label} →`}
           </button>
+          {/* What the button DOES, visible — first-time users had to hover
+              the tooltip (or find the prompt-library card) to learn that
+              this dispatches immediately with no preview. */}
+          <p className="text-micro leading-relaxed text-text-muted">
+            The agent re-reads the repo&apos;s ground truth, picks the highest-impact task, and runs it — dispatches immediately.
+          </p>
 
           {/* Secondary intents: compact chips + More toggle */}
           <div className="flex flex-wrap gap-1.5">

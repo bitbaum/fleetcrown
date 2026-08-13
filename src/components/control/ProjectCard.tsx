@@ -362,15 +362,19 @@ export function ProjectCard({
         />
         {/* What pressing play is FOR — the profile's next step, visible
             without opening the profile. Play/pause means nothing if you
-            can't see what the fleet intends to do next. */}
+            can't see what the fleet intends to do next. Clicking it puts the
+            step into the composer: the clearest "what do I do here" on the
+            card was previously a dead, truncated line of text. */}
         {project.profile?.attrs?.["next_step"] && (
-          <p
-            className="mt-1.5 truncate text-xs text-text-tertiary"
-            title={project.profile.attrs["next_step"]}
+          <button
+            type="button"
+            onClick={() => setCustom(project.profile!.attrs!["next_step"]!)}
+            className="ui-link-subtle-button mt-1.5 block w-full truncate px-0 text-left"
+            title={`${project.profile.attrs["next_step"]}\n\nClick to use as the prompt below — edit, then Send.`}
           >
             <span className="font-medium text-text-secondary">Next:</span>{" "}
             {project.profile.attrs["next_step"]}
-          </p>
+          </button>
         )}
       </div>
 
