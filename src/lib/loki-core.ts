@@ -13,6 +13,7 @@ import { askGatewayAgent, isGatewayConfigured } from "@/lib/openclaw-gateway";
 import { callGroqText, GROQ_FAST_MODEL } from "@/lib/groq";
 import { getUserPreferences } from "@/db/queries/user-preferences";
 import { buildGroundedTurn, directiveEvidence } from "@/lib/agent/context";
+import { runLokiTurn } from "@/lib/agent/loop";
 import { verifyAnswer, buildRepairPrompt, type Violation } from "@/lib/agent/core/verify";
 import { NO_BASIS } from "@/lib/agent/core/contract";
 import type { Fact } from "@/lib/agent/core/facts";
@@ -104,11 +105,71 @@ function groundingMeta(factCount: number, violations: Violation[]) {
 }
 
 /**
- * Ask Loki a question — the real OpenClaw agent via the gateway, with Groq as a
- * labelled degraded fallback. `sessionKey` lets callers keep a per-conversation
- * web thread; all web sessions share the same agent (`main`) and its memory.
+ * Loki's own tool loop is the primary brain when the caller is a known user.
+ *
+ * It is skipped for anonymous callers (no userId → no tables to read, so a loop
+ * over them is pure latency) and can be forced off with LOKI_TOOL_LOOP=0, which
+ * exists as an operational escape hatch rather than a feature flag: if the loop
+ * misbehaves in production the gateway path is still there, one env var away.
+ */
+function toolLoopEnabled(userId?: string): boolean {
+  return Boolean(userId) && process.env.LOKI_TOOL_LOOP !== "0" && Boolean(process.env.GROQ_API_KEY);
+}
+
+/**
+ * Ask Loki a question.
+ *
+ * Order of preference, and the reasoning behind it:
+ *
+ *   1. IN-APP TOOL LOOP — Loki reads FleetCrown's own tables through its own
+ *      tools, and every result lands as a verifiable Fact. This is the only
+ *      path where grounding is actually enforceable, because it is the only one
+ *      where we own retrieval.
+ *   2. GATEWAY — the OpenClaw agent, kept as a fallback for when the loop
+ *      cannot run (no Groq key, loop disabled, loop threw). It answers with its
+ *      own memory and its own workspace files, so it gets the grounded context
+ *      and the same post-hoc verification, but its retrieval is outside our
+ *      control. That is precisely why it is no longer first.
+ *   3. GROQ single-shot — last resort, clearly labelled.
+ *
+ * `sessionKey` keeps a per-conversation thread on the gateway path.
  */
 export async function askLoki(message: string, opts?: { sessionKey?: string; userId?: string }): Promise<AskLokiResult> {
+  if (toolLoopEnabled(opts?.userId)) {
+    try {
+      const voicePref = await getUserPreferences(opts!.userId!)
+        .then((p) => p.writingVoice)
+        .catch(() => null);
+      const result = await runLokiTurn({ userId: opts!.userId!, message, voice: voicePref });
+      if (result.text.trim()) {
+        return {
+          status: 200,
+          body: {
+            ok: true,
+            text: result.text,
+            model: `loki/${result.model}`,
+            durationMs: 0,
+            via: "tool-loop",
+            toolsUsed: result.toolsUsed,
+            rounds: result.rounds,
+            grounding: groundingMeta(result.facts.length, result.violations),
+          },
+        };
+      }
+      console.warn("[loki] tool loop produced no text — falling back to gateway");
+    } catch (e) {
+      // Never let the loop take the turn down with it. A fallback that answers
+      // is better than an error that does not, and the gateway path below is
+      // fully grounded too — just not tool-driven.
+      console.error("[loki] tool loop failed:", e instanceof Error ? e.message : e);
+    }
+  }
+
+  return askLokiViaGateway(message, opts);
+}
+
+/** The pre-tool-loop path: grounded context + gateway/Groq, kept as fallback. */
+async function askLokiViaGateway(message: string, opts?: { sessionKey?: string; userId?: string }): Promise<AskLokiResult> {
   // Resolve the caller's writing-voice preference + the grounded turn once.
   // The grounded turn (typed records + computed answers + the contract) is what
   // makes Loki "on top of" the operator's work rather than a generic chat.
