@@ -65,8 +65,20 @@ export async function searchPeople(
   health: RelationshipHealth[] = [],
 ): Promise<{ people: PersonWithAttributes[]; total: number }> {
   // User input — parameterized via sql tagged template (never string-interpolated)
-  const nameFilter: SQL = query.trim()
-    ? sql`AND e.name ILIKE ${"%" + escapeLike(query.trim()) + "%"}`
+  const q = query.trim();
+  const like = q ? "%" + escapeLike(q) + "%" : "";
+  const nameFilter: SQL = q
+    ? sql`AND (
+        e.name ILIKE ${like}
+        OR EXISTS (
+          SELECT 1 FROM attributes a
+          WHERE a.entity_id = e.id AND a.user_id = ${userId}
+            AND (
+              (a.key = 'aliases' AND a.value ILIKE ${like})
+              OR (a.key LIKE 'channel:%' AND a.value ILIKE ${like})
+            )
+        )
+      )`
     : sql``;
   const having: SQL = buildHealthHaving(health);
 

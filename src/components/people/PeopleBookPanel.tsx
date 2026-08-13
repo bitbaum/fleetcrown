@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getJson, postJson, throwApiError } from "@/lib/api/fetch";
 import { BOOK_ATTR_LABEL, IMPORT_SOURCE_LABEL } from "@/config/book";
+import { ASSISTANT_STACK, CONTACT_IMPORT_GUIDE } from "@/config/assistant-stack";
 import { pickCanonicalPerson, type DedupePerson } from "@/lib/people-dedupe";
 
 type Proposal = {
@@ -89,6 +90,43 @@ export function PeopleBookPanel({ onChanged }: { onChanged?: () => void }) {
     }
   }
 
+  async function syncOpenClaw() {
+    setBusy("openclaw");
+    setError(null);
+    setImportNote(null);
+    try {
+      const res = await postJson("/api/people/sync/openclaw", {});
+      const data = await res.json() as { ok?: boolean; error?: string; imported?: number; enrich?: number; skipped?: number; parsed?: number };
+      if (!res.ok) throw new Error(data.error ?? "OpenClaw sync failed");
+      setImportNote(
+        `OpenClaw book: ${data.parsed} contacts. ${data.imported} new, ${data.enrich} enrichments, ${data.skipped} already current.`,
+      );
+      await refresh();
+      onChanged?.();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "OpenClaw sync failed");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function mergeObvious() {
+    setBusy("twins");
+    setError(null);
+    try {
+      const res = await postJson("/api/people/merge-obvious", {});
+      const data = await res.json() as { ok?: boolean; merged?: number; skipped?: number; error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Merge failed");
+      setImportNote(`Merged ${data.merged ?? 0} obvious twins (same email or phone). Skipped ${data.skipped ?? 0} name-only guesses.`);
+      await refresh();
+      onChanged?.();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Merge failed");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function scan() {
     setBusy("scan");
     setError(null);
@@ -107,6 +145,16 @@ export function PeopleBookPanel({ onChanged }: { onChanged?: () => void }) {
 
   return (
     <section className="space-y-4">
+      <p className="text-sm text-text-secondary">
+        {ASSISTANT_STACK.fleetcrown.name} is the book. {ASSISTANT_STACK.loki.name} talks to it.
+        {" "}{ASSISTANT_STACK.openclaw.name} is the WhatsApp/Telegram workspace that filled most of these names.
+        {" "}{ASSISTANT_STACK.hermes.name} is a task CLI — not a contact book. Nothing is sent.
+      </p>
+      <ul className="space-y-1 text-sm text-text-tertiary">
+        {CONTACT_IMPORT_GUIDE.map((g) => (
+          <li key={g.id}><span className="text-text-secondary">{g.title}.</span> {g.how}</li>
+        ))}
+      </ul>
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
         <input
           ref={fileRef}
@@ -123,13 +171,18 @@ export function PeopleBookPanel({ onChanged }: { onChanged?: () => void }) {
         >
           {busy === "import" ? "Reading…" : "Import address book"}
         </button>
+        <button type="button" onClick={() => void syncOpenClaw()} disabled={busy !== null} className="ui-btn-chip">
+          {busy === "openclaw" ? "Syncing…" : "Sync OpenClaw book"}
+        </button>
         <button type="button" onClick={() => void scan()} disabled={busy !== null} className="ui-btn-chip">
           {busy === "scan" ? "Scanning…" : "Propose enrichments"}
         </button>
+        {clusters.some((c) => c.reason !== "name" && c.members.length === 2) && (
+          <button type="button" onClick={() => void mergeObvious()} disabled={busy !== null} className="ui-btn-chip">
+            {busy === "twins" ? "Merging…" : "Merge obvious twins"}
+          </button>
+        )}
       </div>
-      <p className="text-xs text-text-tertiary">
-        vCard, CSV, or contact-resolver JSON you already have. Accept or discard each row. Nothing is scraped. Nothing is sent.
-      </p>
       {importNote && <p className="text-sm text-text-secondary">{importNote}</p>}
       {error && <p className="ui-error-xs">{error}</p>}
 

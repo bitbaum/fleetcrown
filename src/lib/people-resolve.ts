@@ -16,6 +16,8 @@ function scorePerson(p: PersonWithAttributes, q: string): number {
   if (n.startsWith(query)) return 80;
   if (n.split(/\s+/).some((w) => w.startsWith(query))) return 70;
   if (n.includes(query)) return 50;
+  const aliases = (p.attrs.aliases ?? "").toLowerCase();
+  if (aliases && (aliases.includes(`"${query}"`) || aliases.includes(query))) return 65;
   return 10;
 }
 
