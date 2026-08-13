@@ -117,7 +117,7 @@ export function TerminalComposer({ tab }: { tab: string }) {
             onClick={() => void send()}
             disabled={!text.trim() || sending}
             className={cn(
-              "inline-flex shrink-0 min-h-11 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors sm:min-h-0",
+              "inline-flex shrink-0 ui-tap items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
               sent
                 ? "bg-status-positive text-text-inverted"
                 : text.trim()

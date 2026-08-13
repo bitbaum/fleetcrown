@@ -41,7 +41,7 @@ export function CheckinGroup({ people }: { people: CheckinPerson[] }) {
                         ? `${NAV.people.href}?open=${encodeURIComponent(p.personId)}`
                         : NAV.people.href
                     }
-                    className="ui-link-subtle min-h-11 text-sm sm:min-h-0"
+                    className="ui-link-subtle ui-tap text-sm"
                   >
                     {ACTION_COPY.checkin.open} {p.name}
                   </Link>

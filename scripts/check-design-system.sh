@@ -52,6 +52,21 @@ check_none "raw subtle link text recipe outside primitive" 'text-xs text-text-te
 check_none "raw palette colors in components" 'text-gray-|text-slate-|text-zinc-|text-blue-|text-green-|text-red-|text-purple-|text-yellow-|text-orange-|text-cyan-|text-violet-|bg-gray-|bg-blue-|bg-green-|bg-red-|bg-\[#|text-\[#|text-\[1[0-9]px\]|text-\[8px\]' src/components src/app -g '*.tsx' -g '!**/opengraph-image.tsx'
 check_none "raw white opacity utilities in JSX" 'text-white/|bg-white/|border-white/' src/components src/app -g '*.tsx' -g '!**/opengraph-image.tsx'
 
+# THE TOUCH FLOOR is declared once, in globals.css, keyed on `pointer: coarse`.
+# `min-h-11 sm:min-h-0` (and sm:min-h-7/-8/-9, lg:min-h-0 …) is the OLD form and
+# is a bug, not a style preference: it drops the 44px minimum at a viewport
+# WIDTH, so a tablet — a touch device that happens to be 768px wide — inherits
+# desktop sizing. The audit measured 23-32px targets there. Width never told you
+# whether the user has a finger or a mouse; `pointer` does.
+# Fix: delete the min-h/min-w pair and add the class to the floor in globals.css,
+# or put `ui-tap` / `ui-tap-icon` on a one-off control.
+# Matches only the defective SHAPE: a 44px base paired with a responsive
+# override. Plain responsive sizing (a textarea that grows on wide screens) is
+# not a touch target and is deliberately not flagged.
+check_none "viewport-keyed touch target (use the pointer:coarse floor in globals.css)" \
+  'min-(h|w)-11[^"]*(sm|md|lg|xl):min-(h|w)-[0-9]|(sm|md|lg|xl):min-(h|w)-[0-9][^"]*min-(h|w)-11' \
+  src/components src/app
+
 if [[ "$fail" -ne 0 ]]; then
   exit 1
 fi

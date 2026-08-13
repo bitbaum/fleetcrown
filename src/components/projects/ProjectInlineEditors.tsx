@@ -116,7 +116,7 @@ export function StatusEditor({
           onBlur={commit}
           autoFocus
           placeholder="e.g. Production"
-          className="ui-input-inline min-h-11 w-36 border-border-strong px-2 py-2 text-base text-text-primary placeholder:text-text-muted sm:min-h-0 sm:py-0.5 sm:text-xs"
+          className="ui-input-inline ui-tap w-36 border-border-strong px-2 py-2 text-base text-text-primary placeholder:text-text-muted sm:py-0.5 sm:text-xs"
         />
         {ie.saving && <Loader2 className="ui-spinner-xs text-text-muted shrink-0" />}
       </div>

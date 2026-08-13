@@ -54,7 +54,7 @@ export function GoalEditor({
       <div>
         <dt className="flex items-center gap-1.5 text-xs font-medium text-text-muted">
           <Target className="h-3 w-3" /> Definition of done
-          <button className="ui-btn-xs ml-auto min-h-11 sm:min-h-0" onClick={() => setEditing(true)}>
+          <button className="ui-btn-xs ml-auto ui-tap" onClick={() => setEditing(true)}>
             {definitionOfDone ? "Edit" : "Set"}
           </button>
         </dt>
@@ -104,10 +104,10 @@ export function GoalEditor({
       </div>
       {error && <p className="ui-error">{error}</p>}
       <div className="flex items-center gap-2">
-        <button className="ui-btn-primary ui-btn-xs inline-flex min-h-11 items-center gap-1.5 sm:min-h-0" onClick={save} disabled={saving}>
+        <button className="ui-btn-primary ui-btn-xs inline-flex ui-tap items-center gap-1.5" onClick={save} disabled={saving}>
           {saving ? <Loader2 className="ui-spinner-sm" /> : <Check className="h-3.5 w-3.5" />} Save
         </button>
-        <button className="ui-btn-ghost ui-btn-xs inline-flex min-h-11 items-center gap-1.5 sm:min-h-0" onClick={() => setEditing(false)} disabled={saving}>
+        <button className="ui-btn-ghost ui-btn-xs inline-flex ui-tap items-center gap-1.5" onClick={() => setEditing(false)} disabled={saving}>
           <X className="h-3.5 w-3.5" /> Cancel
         </button>
       </div>

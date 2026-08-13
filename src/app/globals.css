@@ -876,7 +876,7 @@
     @apply mb-10 space-y-4 border-t border-white/10 pt-4;
   }
   .ui-icon-btn {
-    @apply inline-flex min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 items-center justify-center;
+    @apply inline-flex items-center justify-center;
   }
   /* Touch-friendly variant — keeps the 44×44 tap target through tablet
      widths (iPad portrait 768×1024 has no mouse). Only collapses at lg+
@@ -885,7 +885,7 @@
      command surfaces, where the regular ui-icon-btn collapses to 18×18
      on sm+ and becomes hard to tap. */
   .ui-icon-btn-touch {
-    @apply inline-flex min-h-11 min-w-11 lg:min-h-0 lg:min-w-0 items-center justify-center;
+    @apply inline-flex items-center justify-center;
   }
   .ui-public-pricing-card {
     @apply rounded-2xl border border-border-subtle bg-surface-base p-7 text-left;
@@ -2154,25 +2154,25 @@
     @apply flex flex-wrap items-center gap-1.5;
   }
   .ui-icon-action {
-    @apply inline-flex min-h-11 min-w-11 sm:min-h-9 sm:min-w-9 items-center justify-center rounded-xl p-2 text-text-muted transition-colors hover:bg-surface-overlay hover:text-text-primary;
+    @apply inline-flex items-center justify-center rounded-xl p-2 text-text-muted transition-colors hover:bg-surface-overlay hover:text-text-primary;
   }
   /* Destructive variant — for the inline "Close tab" action, set apart from the
      safe peek/focus/expand actions so it never reads as just another gray icon. */
   .ui-icon-action-danger {
-    @apply inline-flex min-h-11 min-w-11 sm:min-h-9 sm:min-w-9 items-center justify-center rounded-xl p-2 text-text-muted transition-colors hover:bg-status-negative/10 hover:text-status-negative;
+    @apply inline-flex items-center justify-center rounded-xl p-2 text-text-muted transition-colors hover:bg-status-negative/10 hover:text-status-negative;
   }
   .ui-chip-action-compact {
-    @apply inline-flex min-h-11 sm:min-h-0 items-center rounded-xl border border-border-subtle bg-surface-overlay px-3 py-1.5 text-xs text-text-secondary transition-colors hover:border-border-default hover:text-text-primary disabled:opacity-40;
+    @apply inline-flex items-center rounded-xl border border-border-subtle bg-surface-overlay px-3 py-1.5 text-xs text-text-secondary transition-colors hover:border-border-default hover:text-text-primary disabled:opacity-40;
   }
   .ui-chip-truncate-label {
-    @apply inline-flex min-h-11 max-w-[18rem] items-center truncate rounded-xl border border-border-subtle bg-surface-overlay px-3 py-1.5 text-left text-xs text-text-tertiary transition-colors hover:border-border-default hover:text-text-secondary sm:min-h-0 disabled:opacity-40;
+    @apply inline-flex max-w-[18rem] items-center truncate rounded-xl border border-border-subtle bg-surface-overlay px-3 py-1.5 text-left text-xs text-text-tertiary transition-colors hover:border-border-default hover:text-text-secondary disabled:opacity-40;
   }
   /* Pill action button — Today page quick-action chips (Log, Capture, Plan day, etc.) */
   .ui-btn-pill {
-    @apply flex items-center gap-1.5 rounded-full border border-border-subtle bg-surface-raised px-3 py-1.5 text-xs text-text-secondary transition-colors hover:bg-surface-overlay min-h-11 sm:min-h-0;
+    @apply flex items-center gap-1.5 rounded-full border border-border-subtle bg-surface-raised px-3 py-1.5 text-xs text-text-secondary transition-colors hover:bg-surface-overlay;
   }
-  .ui-btn-pill-muted    { @apply flex shrink-0 items-center gap-1.5 rounded-full border border-border-subtle bg-surface-raised px-3 py-1.5 text-xs text-text-secondary transition-colors hover:bg-surface-overlay hover:text-text-primary min-h-11 sm:min-h-0; }
-  .ui-btn-pill-positive { @apply flex shrink-0 items-center gap-1.5 rounded-full border border-border-subtle bg-surface-raised px-3 py-1.5 text-xs text-text-secondary transition-colors hover:bg-surface-overlay hover:text-status-positive hover:border-status-positive/30 min-h-11 sm:min-h-0; }
+  .ui-btn-pill-muted    { @apply flex shrink-0 items-center gap-1.5 rounded-full border border-border-subtle bg-surface-raised px-3 py-1.5 text-xs text-text-secondary transition-colors hover:bg-surface-overlay hover:text-text-primary; }
+  .ui-btn-pill-positive { @apply flex shrink-0 items-center gap-1.5 rounded-full border border-border-subtle bg-surface-raised px-3 py-1.5 text-xs text-text-secondary transition-colors hover:bg-surface-overlay hover:text-status-positive hover:border-status-positive/30; }
   .ui-empty-panel {
     @apply flex flex-col items-center gap-3 rounded-2xl border border-border-subtle bg-surface-base py-14 text-center text-text-tertiary;
     box-shadow: var(--shadow-panel);
@@ -2218,11 +2218,11 @@
   .ui-code-surface {
     @apply max-h-56 overflow-y-auto whitespace-pre-wrap rounded-xl border border-border-subtle bg-surface-overlay p-4 font-mono text-sm leading-relaxed text-text-secondary;
   }
-  /* Card-header "→" links and small secondary links.
-     inline-flex items-center + min-h-11 sm:min-h-0 gives a 44px tap target on
-     mobile (WCAG 2.5.5 / iOS HIG) while keeping the desktop one-liner tight. */
+  /* Card-header "→" links and small secondary links. inline-flex items-center
+     keeps the desktop one-liner tight; the 44px tap target comes from THE TOUCH
+     FLOOR below (WCAG 2.5.5 / iOS HIG), not from a size stated here. */
   .ui-link-subtle {
-    @apply inline-flex items-center min-h-11 sm:min-h-0 text-xs text-text-tertiary transition-colors hover:text-text-secondary;
+    @apply inline-flex items-center text-xs text-text-tertiary transition-colors hover:text-text-secondary;
   }
   .ui-link-subtle-button {
     @apply px-1 text-xs text-text-tertiary transition-colors hover:text-text-secondary;
@@ -2299,21 +2299,20 @@
   }
   .ui-input-inline:focus { @apply border-border-strong; }
 
-  /* Buttons.
-     min-h-11 sm:min-h-0 gives a real 44px tap target on mobile (WCAG 2.5.5 /
-     iOS HIG) while keeping the desktop py-2 (≈36px) compact look. Same trick
-     already used by ui-btn-add, ui-chip-toggle, ui-link-subtle. */
+  /* Buttons. These declare padding only — py-2 (≈36px) is the compact desktop
+     look. The 44px touch minimum is NOT stated per-button; it comes from THE
+     TOUCH FLOOR below, which is keyed on pointer type. */
   .ui-btn-primary {
     /* Disabled is NEUTRAL (muted surface), not a faded orange: opacity-40 of the
        warm accent read as a washed-out "is this clickable?" button. A neutral
        disabled state makes the enabled orange CTA unmistakable. */
-    @apply inline-flex items-center justify-center gap-2 min-h-11 sm:min-h-0 rounded-lg bg-accent-warm px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-warm-hover active:opacity-90 disabled:bg-surface-raised disabled:text-text-muted disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-accent-warm px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-warm-hover active:opacity-90 disabled:bg-surface-raised disabled:text-text-muted disabled:cursor-not-allowed;
   }
   .ui-btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 min-h-11 sm:min-h-0 rounded-lg border border-border-default px-4 py-2 text-sm font-medium text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary disabled:opacity-40;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-border-default px-4 py-2 text-sm font-medium text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary disabled:opacity-40;
   }
   .ui-btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 min-h-11 sm:min-h-0 rounded-lg px-3 py-2 text-sm text-text-tertiary transition-colors hover:bg-surface-raised hover:text-text-secondary disabled:opacity-40;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm text-text-tertiary transition-colors hover:bg-surface-raised hover:text-text-secondary disabled:opacity-40;
   }
   /* Small overlay button — card action chips (e.g. PersonCard quick-log) */
   .ui-btn-chip {
@@ -2323,7 +2322,7 @@
      edit rows; lifted to 44px tall on mobile so both buttons in the
      pair are equally thumb-sized. */
   .ui-btn-inline-cancel {
-    @apply inline-flex items-center justify-center shrink-0 min-h-11 sm:min-h-0 rounded p-1.5 text-text-muted transition-colors hover:text-text-secondary;
+    @apply inline-flex items-center justify-center shrink-0 rounded p-1.5 text-text-muted transition-colors hover:text-text-secondary;
   }
   /* Small inline text cancel link (no bg, no border, px-1 spacing) */
   .ui-btn-text-cancel {
@@ -2331,7 +2330,7 @@
   }
   /* Icon-only square button */
   .ui-btn-icon {
-    @apply inline-flex min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 items-center justify-center rounded-lg p-1.5 text-text-tertiary transition-colors hover:bg-surface-overlay hover:text-text-primary disabled:opacity-40;
+    @apply inline-flex items-center justify-center rounded-lg p-1.5 text-text-tertiary transition-colors hover:bg-surface-overlay hover:text-text-primary disabled:opacity-40;
   }
   /* Top-bar icon button (sessions, theme, notifications, command palette).
      Was an inline `h-9 w-9` string repeated across the shell — a Layer-4
@@ -2341,29 +2340,9 @@
     @apply inline-flex h-9 w-9 items-center justify-center rounded-full text-text-tertiary transition-colors hover:bg-surface-raised hover:text-text-secondary;
   }
 
-  /* THE TOUCH FLOOR.
-     Keyed on pointer type, not viewport width. Width was the wrong predicate:
-     `sm:min-h-0` drops the 44px minimum at 640px, so a TABLET — a touch device
-     — inherited desktop sizing and the audit found 28-32px targets at 768px.
-     A finger is the same size whatever the screen is. */
-  @media (pointer: coarse) {
-    .ui-btn-icon,
-    .ui-topbar-btn,
-    .ui-loki-toolbar-btn {
-      min-height: 2.75rem;
-      min-width: 2.75rem;
-    }
-    /* Full-width rows: a height floor only. Forcing min-width here would fight
-       the sidebar's own width and is meaningless for a row that already spans
-       its container. */
-    .ui-sidebar-utility,
-    .ui-sidebar-section-toggle {
-      min-height: 2.75rem;
-    }
-  }
   /* Small icon row-action button (rounded, surface-raised hover) — for edit/action icons on list rows */
   .ui-btn-row-action {
-    @apply inline-flex min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 items-center justify-center p-1.5 rounded text-text-muted transition-colors hover:text-text-secondary hover:bg-surface-raised;
+    @apply inline-flex items-center justify-center p-1.5 rounded text-text-muted transition-colors hover:text-text-secondary hover:bg-surface-raised;
   }
   /* Compact xs outlined action button — tight rows (subscription actions, inline toolbars) */
   .ui-btn-xs {
@@ -2382,7 +2361,7 @@
   .ui-btn-save:disabled { opacity: 0.4; }
   /* Drawer tab bar — shared by all entity detail drawers */
   .ui-tab {
-    @apply flex min-h-11 items-center justify-center gap-1.5 border-b-2 border-transparent px-4 py-3 text-xs font-medium text-text-tertiary transition-colors hover:border-border-strong hover:text-text-secondary sm:min-h-0 sm:px-5 sm:py-2.5;
+    @apply flex items-center justify-center gap-1.5 border-b-2 border-transparent px-4 py-3 text-xs font-medium text-text-tertiary transition-colors hover:border-border-strong hover:text-text-secondary sm:px-5 sm:py-2.5;
   }
   .ui-tab-active {
     @apply border-status-positive text-text-primary;
@@ -2402,16 +2381,15 @@
   .ui-settings-navitem-active {
     @apply bg-surface-raised text-text-primary;
   }
-  /* Text + icon "add" link button.
-     min-h-11 (44px) on mobile gives a real WCAG 2.5.5 tap target;
-     sm:min-h-0 collapses to natural line height on desktop where hover is reliable. */
+  /* Text + icon "add" link button. Natural line height where a pointer is
+     reliable; THE TOUCH FLOOR raises it to 44px wherever the pointer is coarse. */
   .ui-btn-add {
-    @apply flex items-center gap-1.5 min-h-11 sm:min-h-0 text-xs text-text-muted transition-colors hover:text-accent-text;
+    @apply flex items-center gap-1.5 text-xs text-text-muted transition-colors hover:text-accent-text;
   }
   /* Same shape, but achievement-flavored sites (habits, commitments, milestones, goals)
      hover green to read as "create something good" rather than generic accent. */
   .ui-btn-add-success {
-    @apply flex items-center gap-1.5 min-h-11 sm:min-h-0 text-xs text-text-tertiary transition-colors hover:text-status-positive;
+    @apply flex items-center gap-1.5 text-xs text-text-tertiary transition-colors hover:text-status-positive;
   }
   /* Full-width accent submit button (modal forms) */
   .ui-btn-submit {
@@ -2423,7 +2401,7 @@
   }
   /* Compact ready-banner action buttons (py-2.5 vs py-3 for lg) */
   .ui-btn-ready-primary {
-    @apply inline-flex min-h-11 sm:min-h-0 items-center rounded-lg bg-accent-warm px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-warm-hover;
+    @apply inline-flex items-center rounded-lg bg-accent-warm px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-warm-hover;
   }
   /* "Next best" primary CTA — full-width, warm-tinted (soft x.ai accent, not a
      solid slab). Extracted from inline utilities so the recurring pattern lives
@@ -2432,10 +2410,10 @@
     @apply w-full rounded-xl border border-accent-warm/40 bg-accent-warm/[0.10] px-4 py-2.5 text-sm font-semibold text-accent-warm transition-colors hover:border-accent-warm/60 hover:bg-accent-warm/[0.16] disabled:opacity-50;
   }
   .ui-btn-ready-action {
-    @apply inline-flex min-h-11 sm:min-h-0 items-center rounded-lg border border-border-default bg-surface-overlay px-3 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-surface-raised;
+    @apply inline-flex items-center rounded-lg border border-border-default bg-surface-overlay px-3 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-surface-raised;
   }
   .ui-btn-ready-more {
-    @apply inline-flex min-h-11 sm:min-h-0 items-center rounded-md border border-border-subtle bg-surface-overlay px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary disabled:opacity-50;
+    @apply inline-flex items-center rounded-md border border-border-subtle bg-surface-overlay px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary disabled:opacity-50;
   }
   /* Hover-reveal: hidden on desktop until parent .group hovers; always visible on mobile */
   .ui-hover-reveal { @apply sm:opacity-0 sm:group-hover:opacity-100; }
@@ -2456,23 +2434,22 @@
   .ui-chip-filter-active {
     @apply rounded-xl border border-accent-primary/30 bg-accent-muted px-4 py-3 text-sm font-medium text-text-primary transition-colors;
   }
-  /* Rounded-pill toggle — agent/health/category selector chips.
-     inline-flex + min-h-11 sm:min-h-0 enforces a 44px mobile tap target
-     (WCAG 2.5.5 / iOS HIG) while staying compact on desktop. */
+  /* Rounded-pill toggle — agent/health/category selector chips. Compact by
+     default; THE TOUCH FLOOR gives it a 44px target on coarse pointers. */
   .ui-chip-toggle {
-    @apply inline-flex items-center min-h-11 sm:min-h-0 rounded-full border border-border-subtle px-3 py-1.5 text-sm font-medium text-text-secondary transition-colors hover:border-border-default hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-40;
+    @apply inline-flex items-center rounded-full border border-border-subtle px-3 py-1.5 text-sm font-medium text-text-secondary transition-colors hover:border-border-default hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-40;
   }
   .ui-chip-toggle-active {
-    @apply inline-flex items-center min-h-11 sm:min-h-0 rounded-full border border-accent-primary/30 bg-accent-muted px-3 py-1.5 text-sm font-medium text-text-primary transition-colors;
+    @apply inline-flex items-center rounded-full border border-accent-primary/30 bg-accent-muted px-3 py-1.5 text-sm font-medium text-text-primary transition-colors;
   }
   /* Compact variant — tighter padding + text-xs for dense pickers like
      the per-project LLM model selector (sonnet/haiku/opus). Same
      mobile-tap-target trick keeps it usable on touch. */
   .ui-chip-toggle-compact {
-    @apply inline-flex items-center min-h-11 sm:min-h-0 rounded-full border border-border-subtle px-2.5 py-1 text-xs text-text-tertiary transition-colors hover:text-text-secondary;
+    @apply inline-flex items-center rounded-full border border-border-subtle px-2.5 py-1 text-xs text-text-tertiary transition-colors hover:text-text-secondary;
   }
   .ui-chip-toggle-compact-active {
-    @apply inline-flex items-center min-h-11 sm:min-h-0 rounded-full border border-accent-primary bg-accent-muted px-2.5 py-1 text-xs text-text-primary transition-colors;
+    @apply inline-flex items-center rounded-full border border-accent-primary bg-accent-muted px-2.5 py-1 text-xs text-text-primary transition-colors;
   }
   /* Inline category/scope chip — shape only; caller adds color classes */
   .ui-chip {
@@ -2737,7 +2714,7 @@
     @apply border-t border-border-subtle px-4 py-3;
   }
   .ui-projects-filter-chip {
-    @apply inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-surface-base px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:border-border-default hover:bg-surface-raised hover:text-text-primary min-h-11 sm:min-h-0;
+    @apply inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-surface-base px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:border-border-default hover:bg-surface-raised hover:text-text-primary;
   }
   .ui-projects-filter-chip-active {
     @apply border-accent-primary/40 bg-accent-muted text-text-primary ring-1 ring-accent-primary/30;
@@ -3055,13 +3032,12 @@
     border: 1px solid color-mix(in oklch, var(--status-positive) 20%, transparent);
   }
 
-  /* Confirm/destructive action buttons.
-     min-h-11 sm:min-h-0 gives a 44px mobile tap target while keeping the
-     compact py-1.5 desktop look. Icon-only sibling (ui-btn-confirm-icon)
-     is intentionally not lifted — adding min-w-11 there would push adjacent
-     inputs in inline-edit rows; track separately. */
+  /* Confirm/destructive action buttons. Compact py-1.5 by default; THE TOUCH
+     FLOOR supplies the 44px target on coarse pointers. The icon-only sibling
+     (ui-btn-confirm-icon) takes the HEIGHT floor only — a min-width there
+     pushes the adjacent input in inline-edit rows. */
   .ui-btn-confirm {
-    @apply inline-flex items-center justify-center gap-2 min-h-11 sm:min-h-0 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-40;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-40;
     color: var(--status-positive);
     background-color: var(--status-positive-subtle);
     border: 1px solid color-mix(in oklch, var(--status-positive) 25%, transparent);
@@ -3070,7 +3046,7 @@
     background-color: color-mix(in oklch, var(--status-positive) 18%, transparent);
   }
   .ui-btn-confirm-sm {
-    @apply inline-flex items-center justify-center gap-1.5 min-h-11 sm:min-h-0 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-40;
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-40;
     color: var(--status-positive);
     background-color: var(--status-positive-subtle);
     border: 1px solid color-mix(in oklch, var(--status-positive) 25%, transparent);
@@ -3086,7 +3062,7 @@
      control strip vertically thumb-sized; the narrow icon width is fine
      when the height is right. */
   .ui-btn-confirm-icon {
-    @apply inline-flex items-center justify-center min-h-11 sm:min-h-0 rounded-lg p-1.5 transition-colors disabled:opacity-40;
+    @apply inline-flex items-center justify-center rounded-lg p-1.5 transition-colors disabled:opacity-40;
     color: var(--status-positive);
     background-color: var(--status-positive-subtle);
     border: 1px solid color-mix(in oklch, var(--status-positive) 25%, transparent);
@@ -3095,7 +3071,7 @@
     background-color: color-mix(in oklch, var(--status-positive) 18%, transparent);
   }
   .ui-btn-danger {
-    @apply inline-flex items-center justify-center gap-2 min-h-11 sm:min-h-0 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-40;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-40;
     color: var(--status-negative);
     background-color: var(--status-negative-subtle);
     border: 1px solid color-mix(in oklch, var(--status-negative) 25%, transparent);
@@ -3125,7 +3101,7 @@
     @apply flex shrink-0 items-center gap-1;
   }
   .ui-loki-toolbar-btn {
-    @apply relative inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2.5 text-sm text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary sm:min-h-9;
+    @apply relative inline-flex items-center gap-1.5 rounded-lg px-2.5 text-sm text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary;
   }
   .ui-loki-toolbar-dot {
     @apply absolute right-1 top-1.5 h-1.5 w-1.5 rounded-full bg-accent-primary;
@@ -3164,7 +3140,7 @@
      row hover or keyboard focus so it never crowds the title yet stays reachable.
      The confirm state turns destructive to signal "click again to delete". */
   .ui-loki-convo-delete {
-    @apply absolute right-1 top-1/2 inline-flex min-h-11 min-w-11 sm:min-h-8 sm:min-w-8 -translate-y-1/2 items-center justify-center rounded p-1.5 text-text-muted opacity-0 transition-all hover:bg-surface-overlay hover:text-status-negative focus-visible:opacity-100;
+    @apply absolute right-1 top-1/2 inline-flex -translate-y-1/2 items-center justify-center rounded p-1.5 text-text-muted opacity-0 transition-all hover:bg-surface-overlay hover:text-status-negative focus-visible:opacity-100;
   }
   .ui-loki-convo-delete-armed {
     @apply opacity-100 text-status-negative bg-status-negative-subtle;
@@ -3364,6 +3340,86 @@
   /* The active goal each project is aiming at, shown under its name. */
   .ui-loki-project-goal {
     @apply mt-0.5 block truncate text-xs text-text-tertiary;
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════
+     THE TOUCH FLOOR — the ONE place the 44px minimum is declared.
+
+     Keyed on POINTER TYPE, not viewport width. Width was the wrong predicate:
+     every interactive class used to pair a 44px base with a responsive
+     override (sm:min-h-0, and the -7 / -8 / -9 variants), which drops the
+     minimum at 640px — so a TABLET, a touch device
+     with a desktop-width screen, inherited desktop sizing and the audit
+     measured 23-32px targets at 768px. A finger is the same size whatever the
+     screen is.
+
+     The corollary the old form got backwards: a MOUSE at a narrow window is
+     not a finger, and used to get inflated 44px rows for nothing.
+
+     LAST in @layer components ON PURPOSE. These are single-class selectors, so
+     a later component rule setting min-height would simply win. Keeping the
+     floor at the end means nothing in this file can silently undercut it.
+
+     Adding an interactive class? Add it to a list here. Nothing else may state
+     a tap minimum: `npm run check:design` fails on the `sm:min-h-*` form, and
+     `npm run audit:responsive` measures every real target in a real browser.
+     ══════════════════════════════════════════════════════════════════════ */
+  @media (pointer: coarse) {
+    /* `ui-tap` / `ui-tap-icon` are markers with no styling of their own — they
+       exist ONLY here, so a bespoke control (a one-off Link or button) can opt
+       into the floor without JSX ever restating the 44px number. They set no
+       display, so the element keeps whatever flex/block/inline-flex it had. */
+
+    /* Icon-only controls: square, so both axes. */
+    .ui-tap-icon,
+    .ui-icon-btn,
+    .ui-icon-btn-touch,
+    .ui-icon-action,
+    .ui-icon-action-danger,
+    .ui-btn-icon,
+    .ui-btn-row-action,
+    .ui-topbar-btn,
+    .ui-loki-convo-delete,
+    .ui-loki-toolbar-btn {
+      min-height: 2.75rem;
+      min-width: 2.75rem;
+    }
+
+    /* Everything with a label. Height only: these size to their content or
+       span their container, so a min-width would fight the layout and means
+       nothing for a row that is already full-width. */
+    .ui-tap,
+    .ui-btn-primary,
+    .ui-btn-secondary,
+    .ui-btn-ghost,
+    .ui-btn-add,
+    .ui-btn-add-success,
+    .ui-btn-confirm,
+    .ui-btn-confirm-sm,
+    /* Height only, deliberately: a min-width here pushes the adjacent input in
+       inline-edit rows — see the note at .ui-btn-confirm-icon. */
+    .ui-btn-confirm-icon,
+    .ui-btn-danger,
+    .ui-btn-inline-cancel,
+    .ui-btn-pill,
+    .ui-btn-pill-muted,
+    .ui-btn-pill-positive,
+    .ui-btn-ready-primary,
+    .ui-btn-ready-action,
+    .ui-btn-ready-more,
+    .ui-chip-action-compact,
+    .ui-chip-truncate-label,
+    .ui-chip-toggle,
+    .ui-chip-toggle-active,
+    .ui-chip-toggle-compact,
+    .ui-chip-toggle-compact-active,
+    .ui-projects-filter-chip,
+    .ui-link-subtle,
+    .ui-tab,
+    .ui-sidebar-utility,
+    .ui-sidebar-section-toggle {
+      min-height: 2.75rem;
+    }
   }
 }
 

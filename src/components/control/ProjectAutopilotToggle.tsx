@@ -116,7 +116,7 @@ export function ProjectAutopilotToggle({
         disabled={saving}
         onClick={toggle}
         className={cn(
-          "inline-flex min-h-11 sm:min-h-0 items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-colors disabled:opacity-60",
+          "inline-flex ui-tap items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-colors disabled:opacity-60",
           building ? "ui-btn-secondary" : "ui-btn-primary",
         )}
       >

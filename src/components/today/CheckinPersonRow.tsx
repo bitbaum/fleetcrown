@@ -67,7 +67,7 @@ export function CheckinPersonRow({ person }: { person: CheckinPerson }) {
       <div className="flex flex-col gap-1 rounded-md bg-surface-base p-2.5">
         <p className="text-sm font-medium text-text-primary">{person.name}</p>
         <p className="text-xs text-text-secondary">{ACTION_COPY.checkin.reminded}</p>
-        <Link href={profileHref} className="ui-link-subtle min-h-11 text-sm sm:min-h-0">
+        <Link href={profileHref} className="ui-link-subtle ui-tap text-sm">
           {ACTION_COPY.checkin.open} {person.name}
         </Link>
       </div>
@@ -107,14 +107,14 @@ export function CheckinPersonRow({ person }: { person: CheckinPerson }) {
         {error && <p className="ui-error-xs mt-1">{error}</p>}
       </div>
       <div className="flex shrink-0 flex-wrap items-center gap-1.5">
-        <Link href={profileHref} className="ui-btn-secondary min-h-11 text-xs sm:min-h-0">
+        <Link href={profileHref} className="ui-btn-secondary ui-tap text-xs">
           {ACTION_COPY.checkin.open}
         </Link>
         <button
           type="button"
           onClick={() => void remind()}
           disabled={busy}
-          className="ui-btn-confirm-sm min-h-11 sm:min-h-0"
+          className="ui-btn-confirm-sm ui-tap"
         >
           {ACTION_COPY.checkin.remind}
         </button>
@@ -122,7 +122,7 @@ export function CheckinPersonRow({ person }: { person: CheckinPerson }) {
           type="button"
           onClick={() => void skip()}
           disabled={busy}
-          className="ui-btn-ghost min-h-11 text-xs sm:min-h-0"
+          className="ui-btn-ghost ui-tap text-xs"
         >
           {ACTION_COPY.checkin.skip}
         </button>

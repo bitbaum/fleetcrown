@@ -131,7 +131,7 @@ export function ReadyBanner({
                 : <Play className="h-3.5 w-3.5" />}
             </button>
           )}
-          <button onClick={onDismiss} className="inline-flex min-h-11 sm:min-h-0 items-center px-1 text-sm text-text-secondary transition-colors hover:text-text-primary">
+          <button onClick={onDismiss} className="inline-flex ui-tap items-center px-1 text-sm text-text-secondary transition-colors hover:text-text-primary">
             dismiss
           </button>
         </div>
