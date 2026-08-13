@@ -23,6 +23,13 @@ export const CALENDAR_LOOKAHEAD_DAYS = 2;
 // Location used by the weather widget.
 export const WEATHER_CITY = "Zurich";
 
+/** Zero-project Today: one action, no empty-card wall. */
+export const FIRST_RUN = {
+  title: "Add a project.",
+  body: "Then you can tell the fleet what to do.",
+  cta: "Open Control",
+} as const;
+
 export const PLAN_DAY_PROMPT = `Plan my day.
 
 Check in ${APP_NAME} and the codebase:
