@@ -21,10 +21,10 @@ import { StuckGoalsCard } from "@/components/today/StuckGoalsCard";
 import { LockedZoneBanner } from "@/components/today/LockedZoneBanner";
 import { TodayWatch } from "@/components/today/TodayWatch";
 import { LayoutGrid } from "lucide-react";
-import { LokiDispatchButton } from "@/components/shared/LokiDispatchButton";
+import { DayPhaseDispatch } from "@/components/today/DayPhaseDispatch";
 import { requirePageUserId, getCurrentUserName } from "@/lib/session";
 import { getUserProjects, getOrgProjects } from "@/db/queries/user-projects";
-import { FIRST_RUN, PLAN_DAY_PROMPT, WRAP_UP_PROMPT } from "@/lib/constants/today";
+import { FIRST_RUN } from "@/lib/constants/today";
 import { PullToRefresh } from "@/components/shared/PullToRefresh";
 import { AutoRefresh } from "@/components/shared/AutoRefresh";
 import { REFRESH_CADENCE } from "@/config/refresh";
@@ -67,8 +67,6 @@ async function loadTodayInputs() {
 export default async function TodayPage() {
   const { name, userId, projects, orgProjects } = await loadTodayInputs();
   const isFirstRun = projects.length === 0 && orgProjects.length === 0;
-  const hour = new Date().getHours();
-  const isEvening = hour >= 17;
   return (
     <PullToRefresh>
     <div className="app-page max-w-4xl space-y-6">
@@ -80,7 +78,7 @@ export default async function TodayPage() {
             <div className="min-w-0 flex-1">
               <p className="font-medium text-text-primary">{FIRST_RUN.title}</p>
               <p className="mt-0.5 text-sm text-text-secondary">{FIRST_RUN.body}</p>
-              <Link href={NAV.control.href} className="mt-3 inline-flex items-center min-h-11 sm:min-h-0 gap-1.5 text-sm font-medium text-accent-text hover:opacity-80 transition-opacity">
+              <Link href={NAV.control.href} className="mt-3 inline-flex items-center ui-tap gap-1.5 text-sm font-medium text-accent-text hover:opacity-80 transition-opacity">
                 {FIRST_RUN.cta} →
               </Link>
             </div>
@@ -94,21 +92,7 @@ export default async function TodayPage() {
           </div>
         </Suspense>
         <div className="mt-3 ui-quick-actions-row ui-scroll-fade-right">
-          {isEvening ? (
-            <LokiDispatchButton
-              prompt={WRAP_UP_PROMPT}
-              label="Wrap up day"
-              title="Ask Loki to run your end-of-day review"
-              className="ui-btn-pill-positive"
-            />
-          ) : (
-            <LokiDispatchButton
-              prompt={PLAN_DAY_PROMPT}
-              label="Plan my day"
-              title="Ask Loki to plan your day"
-              className="ui-btn-pill-positive"
-            />
-          )}
+          <DayPhaseDispatch />
           <LogConversationButton />
           <QuickCaptureButton />
         </div>

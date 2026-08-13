@@ -72,7 +72,7 @@ export function AgentSwitcherPopover({
               onClose();
             }}
             className={cn(
-              "flex min-h-11 w-full flex-col justify-center px-3 py-1.5 text-xs transition-colors sm:min-h-0",
+              "flex ui-tap w-full flex-col justify-center px-3 py-1.5 text-xs transition-colors",
               unavailable
                 ? "cursor-not-allowed text-text-muted opacity-60"
                 : "hover:bg-surface-raised",

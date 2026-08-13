@@ -127,7 +127,7 @@ export function BusinessPlanSection({
       {open && (
         <div className="mt-3 space-y-4">
           {editable && (
-            <button onClick={generate} disabled={generating} className="ui-btn-chip min-h-11 gap-1.5 px-3 text-xs sm:min-h-0">
+            <button onClick={generate} disabled={generating} className="ui-btn-chip ui-tap gap-1.5 px-3 text-xs">
               {generating
                 ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 : plan ? <RefreshCw className="h-3.5 w-3.5 text-accent-text" /> : <Sparkles className="h-3.5 w-3.5 text-accent-text" />}
@@ -151,7 +151,7 @@ export function BusinessPlanSection({
                     <button
                       onClick={() => queueAction(action)}
                       disabled={queuedTitles.has(action.title)}
-                      className="ui-btn-chip min-h-11 shrink-0 gap-1 px-2 text-xs sm:min-h-0"
+                      className="ui-btn-chip ui-tap shrink-0 gap-1 px-2 text-xs"
                       title="Add to this project's prompt queue — the autopilot executes it"
                     >
                       {queuedTitles.has(action.title)

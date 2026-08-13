@@ -112,7 +112,7 @@ export function TabVoiceMic({
         title={recording ? "Stop recording and send" : `Voice input → ${tab ?? "tab"}`}
         aria-label={recording ? "Stop recording and send" : "Record voice command"}
         className={cn(
-          "inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg p-1.5 transition-colors sm:min-h-0 sm:min-w-0",
+          "inline-flex ui-tap-icon shrink-0 items-center justify-center rounded-lg p-1.5 transition-colors",
           recording
             ? "animate-pulse text-status-negative hover:bg-status-negative/10"
             : busy

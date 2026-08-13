@@ -166,7 +166,7 @@ export function ProjectWorkspaceView({
           <a
             key={section.href}
             href={section.href}
-            className="inline-flex min-h-11 shrink-0 items-center rounded-md px-3 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary sm:min-h-9"
+            className="ui-tap inline-flex shrink-0 items-center rounded-md px-3 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary"
           >
             {section.label}
           </a>

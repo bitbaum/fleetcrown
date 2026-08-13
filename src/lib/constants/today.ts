@@ -23,6 +23,9 @@ export const CALENDAR_LOOKAHEAD_DAYS = 2;
 // Location used by the weather widget.
 export const WEATHER_CITY = "Zurich";
 
+/** Local hour from which Today offers "wrap up" instead of "plan". */
+export const EVENING_FROM_HOUR = 17;
+
 /** Zero-project Today: one action, no empty-card wall. */
 export const FIRST_RUN = {
   title: "Add a project.",

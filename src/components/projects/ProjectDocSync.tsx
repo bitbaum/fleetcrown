@@ -74,7 +74,7 @@ export function ProjectDocSync({ projectId, onReload }: { projectId: string; onR
       {!open && (
         <button
           onClick={() => { setOpen(true); setDoneMsg(null); }}
-          className="ui-btn-chip min-h-11 gap-1.5 px-3 text-xs sm:min-h-0"
+          className="ui-btn-chip ui-tap gap-1.5 px-3 text-xs"
           title="Paste an updated concept/spec — AI updates only the fields that changed and proposes new ones. You review before it applies."
         >
           <RefreshCw className="h-3.5 w-3.5 text-accent-text" />
@@ -95,11 +95,11 @@ export function ProjectDocSync({ projectId, onReload }: { projectId: string; onR
             onKeyDown={(e) => { if (e.key === "Escape") setOpen(false); }}
           />
           <div className="flex flex-wrap items-center gap-2">
-            <button onClick={runPreview} disabled={busy !== null || text.trim().length < 10} className="ui-btn-save min-h-11 gap-1.5 sm:min-h-0">
+            <button onClick={runPreview} disabled={busy !== null || text.trim().length < 10} className="ui-btn-save ui-tap gap-1.5">
               {busy === "preview" ? <Loader2 className="ui-spinner-xs" /> : <RefreshCw className="h-3.5 w-3.5" />}
               Preview changes
             </button>
-            <button onClick={() => { setOpen(false); setError(null); }} className="ui-btn-text-cancel min-h-11 sm:min-h-0">Cancel</button>
+            <button onClick={() => { setOpen(false); setError(null); }} className="ui-btn-text-cancel ui-tap">Cancel</button>
           </div>
         </div>
       )}
@@ -137,11 +137,11 @@ export function ProjectDocSync({ projectId, onReload }: { projectId: string; onR
           <p className="text-micro text-text-muted">{preview.unchangedCount} field{preview.unchangedCount === 1 ? "" : "s"} untouched.</p>
 
           <div className="flex flex-wrap items-center gap-2">
-            <button onClick={apply} disabled={busy !== null} className="ui-btn-save min-h-11 gap-1.5 sm:min-h-0">
+            <button onClick={apply} disabled={busy !== null} className="ui-btn-save ui-tap gap-1.5">
               {busy === "apply" ? <Loader2 className="ui-spinner-xs" /> : <Check className="h-3.5 w-3.5" />}
               Apply changes
             </button>
-            <button onClick={() => setPreview(null)} disabled={busy !== null} className="ui-btn-text-cancel inline-flex min-h-11 items-center gap-1 sm:min-h-0">
+            <button onClick={() => setPreview(null)} disabled={busy !== null} className="ui-btn-text-cancel inline-flex ui-tap items-center gap-1">
               <X className="h-3.5 w-3.5" /> Discard
             </button>
           </div>

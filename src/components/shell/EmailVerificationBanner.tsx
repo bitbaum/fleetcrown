@@ -63,7 +63,7 @@ export function EmailVerificationBanner() {
           {sending ? "Sending…" : "Resend"}
         </button>
       )}
-      <Link href={ROUTES.VERIFY_EMAIL} className="inline-flex min-h-11 shrink-0 items-center text-accent underline sm:min-h-0">
+      <Link href={ROUTES.VERIFY_EMAIL} className="inline-flex ui-tap shrink-0 items-center text-accent underline">
         Learn more
       </Link>
       <button type="button" className="ui-btn-icon shrink-0" onClick={dismiss} aria-label="Dismiss">

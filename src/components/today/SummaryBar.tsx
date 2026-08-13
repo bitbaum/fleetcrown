@@ -130,7 +130,7 @@ export async function SummaryBar() {
           prompt={todayBriefPrompt}
           title="Brief Loki on today"
           label="Brief Loki"
-          className="inline-flex items-center gap-1.5 rounded-full border border-status-positive/30 bg-status-positive-subtle/40 px-3 py-2 text-xs font-semibold text-status-positive hover:bg-status-positive-subtle transition-colors min-h-11 sm:min-h-0 shrink-0"
+          className="inline-flex items-center gap-1.5 rounded-full border border-status-positive/30 bg-status-positive-subtle/40 px-3 py-2 text-xs font-semibold text-status-positive hover:bg-status-positive-subtle transition-colors ui-tap shrink-0"
         />
       </div>
     </ScrollAffordance>
@@ -167,7 +167,7 @@ function Pill({
 
   if (href) {
     return (
-      <Link href={href} className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-medium transition-opacity hover:opacity-80 min-h-11 sm:min-h-0 shrink-0 ${colors}`}>
+      <Link href={href} className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-medium transition-opacity hover:opacity-80 ui-tap shrink-0 ${colors}`}>
         {inner}
       </Link>
     );
