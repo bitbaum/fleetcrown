@@ -238,6 +238,15 @@ See `docs/development/cloud-local-workflows.md` — SSOT for which workflows run
 
 See `docs/development/responsive-design.md` — SSOT for mobile chrome tokens, shell layout, viewport-height panes, and responsive component patterns. All pages must work at 320px+ without horizontal scroll.
 
+That rule now has a check behind it. `npm run audit:responsive` drives the
+AUTHENTICATED pages through real viewports (320/390/768/1440) in headless
+Chromium, fails on horizontal overflow, reports touch targets under 44px, and
+writes a screenshot per page/viewport to `.tmp/responsive-audit/`. It needs a
+session: set `FLEETCROWN_SESSION_TOKEN`, or `AUDIT_DATABASE_URL` + `AUTH_SECRET`
+— and since prod Postgres is firewalled to the box, `eval "$(bash
+scripts/db-tunnel.sh)"` opens an SSH tunnel and exports the right URL. Not part
+of `npm run verify` (needs network, a session, and a browser download).
+
 ## Shipping: nobody merges by hand
 
 A green, non-draft PR merges and deploys itself. `.github/workflows/auto-merge.yml`
