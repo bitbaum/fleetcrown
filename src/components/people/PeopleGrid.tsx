@@ -37,6 +37,11 @@ export function PeopleGrid({
   const LIMIT = 50;
   const skipInitialFetch = useRef(true);
 
+  useEffect(() => {
+    const open = new URLSearchParams(window.location.search).get("open");
+    if (open) setSelectedId(open);
+  }, []);
+
   // Keep URL bar in sync with health filter so the link is bookmarkable/shareable.
   // Uses replaceState (not router.replace) to avoid triggering a server re-render.
   useEffect(() => {

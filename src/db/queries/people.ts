@@ -2,7 +2,7 @@ import { DEFAULT_USER_EXTERNAL_ID, SOURCE_FLEETCROWN_UI } from "@/lib/constants"
 import { ENTITY_TYPE, SORT_MODE, type InteractionDirection, type SortMode } from "@/lib/constants/statuses";
 import { db } from "@/db";
 import { entities, attributes, entityRelations, interactions } from "@/db/schema";
-import { eq, and, sql, desc, type SQL } from "drizzle-orm";
+import { eq, and, sql, desc, inArray, type SQL } from "drizzle-orm";
 import { fetchAttributesByEntityIds } from "./utils";
 import { deriveRelationshipHealth, type RelationshipHealth, HEALTH_ACTIVE_DAYS, HEALTH_FADING_DAYS } from "@/lib/constants/people";
 import { z } from "zod";
@@ -133,6 +133,60 @@ export async function searchPeople(
     }),
     total: Number(countResult[0].count),
   };
+}
+
+/** Lightweight contact facts for the action queue — not the full dossier. */
+export type PersonSummary = {
+  id: string;
+  name: string;
+  description: string | null;
+  attrs: Record<string, string>;
+  lastInteraction: Date | null;
+};
+
+export async function getPeopleSummaries(
+  userId: string,
+  ids: string[],
+): Promise<Map<string, PersonSummary>> {
+  const out = new Map<string, PersonSummary>();
+  if (ids.length === 0) return out;
+
+  const rows = await db
+    .select({
+      id: entities.id,
+      name: entities.name,
+      description: entities.description,
+    })
+    .from(entities)
+    .where(and(
+      eq(entities.userId, userId),
+      eq(entities.type, ENTITY_TYPE.PERSON),
+      inArray(entities.id, ids),
+    ));
+
+  const [attrsByEntity, lastByEntity] = await Promise.all([
+    fetchAttributesByEntityIds(rows.map((r) => r.id)),
+    db
+      .select({
+        entityId: interactions.entityId,
+        last: sql<Date>`max(${interactions.occurredAt})`,
+      })
+      .from(interactions)
+      .where(and(eq(interactions.userId, userId), inArray(interactions.entityId, ids)))
+      .groupBy(interactions.entityId),
+  ]);
+
+  const lastMap = new Map(lastByEntity.map((r) => [r.entityId, r.last ? new Date(r.last) : null]));
+  for (const r of rows) {
+    out.set(r.id, {
+      id: r.id,
+      name: r.name,
+      description: r.description,
+      attrs: attrsByEntity.get(r.id) ?? {},
+      lastInteraction: lastMap.get(r.id) ?? null,
+    });
+  }
+  return out;
 }
 
 export async function getPersonDetail(userId: string, id: string) {

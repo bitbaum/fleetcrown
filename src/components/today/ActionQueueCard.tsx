@@ -1,14 +1,14 @@
-import { Inbox, Send, Calendar, CheckCircle, MessageCircle, Rocket, Users, Check, X } from "lucide-react";
+import { Inbox, Send, Calendar, CheckCircle, MessageCircle, Rocket, Check, X } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { getPendingActions, getRecentActions, type ActionRow } from "@/db/queries/actions";
 import { requirePageUserId } from "@/lib/session";
 import { isPrivateZoneLocked } from "@/lib/private-zone";
-import { type ActionPayload } from "@/db/schema/actions";
 import { ACTION_TYPE, ACTION_STATUS, type ActionType } from "@/lib/constants/statuses";
 import { ActionButtons } from "./ActionButtons";
 import { ActionDecideButton } from "./ActionDecideButton";
-import { ApproveGroupButton } from "./ApproveGroupButton";
-import { HEALTH_ACTIVE_DAYS } from "@/lib/constants/people";
+import { CheckinGroup } from "./CheckinGroup";
+import { CheckinPersonRow, type CheckinPerson } from "./CheckinPersonRow";
+import { getPeopleSummaries, type PersonSummary } from "@/db/queries/people";
 import { CHECKIN_TITLE_PREFIX } from "@/lib/actions/checkin-proposal";
 import { compactRelativeDate } from "@/lib/dates";
 
@@ -24,12 +24,24 @@ const TYPE_ICONS: Record<ActionType, typeof Send> = {
 
 type ActionGroup = {
   type: string;
-  reasoning: string;
-  actions: Array<{ id: string; title: string; payload: ActionPayload | null }>;
+  actions: CheckinPerson[];
 };
+
+function toCheckinPerson(action: ActionRow, people: Map<string, PersonSummary>): CheckinPerson {
+  const person = action.entityId ? people.get(action.entityId) : undefined;
+  return {
+    actionId: action.id,
+    name: action.title.replace(CHECKIN_TITLE_PREFIX, ""),
+    personId: action.entityId,
+    description: person?.description ?? null,
+    lastInteraction: person?.lastInteraction ?? null,
+    attrs: person?.attrs ?? {},
+  };
+}
 
 function groupSimilarActions(
   actions: ActionRow[],
+  people: Map<string, PersonSummary>,
 ): { groups: ActionGroup[]; standalone: ActionRow[] } {
   // Group "Check in with X" actions (same type + same reasoning pattern)
   const checkins: ActionRow[] = [];
@@ -50,12 +62,7 @@ function groupSimilarActions(
   if (checkins.length > 1) {
     groups.push({
       type: checkins[0].type,
-      reasoning: `No interaction in ${HEALTH_ACTIVE_DAYS}+ days. Maintaining relationships matters.`,
-      actions: checkins.map((a) => ({
-        id: a.id,
-        title: a.title.replace(CHECKIN_TITLE_PREFIX, ""),
-        payload: a.payload,
-      })),
+      actions: checkins.map((a) => toCheckinPerson(a, people)),
     });
   } else {
     standalone.push(...checkins);
@@ -83,6 +90,10 @@ export async function ActionQueueCard({
     getPendingActions(userId),
     getRecentActions(userId, 5),
   ]);
+  const checkinEntityIds = pending
+    .filter((a) => a.title.startsWith(CHECKIN_TITLE_PREFIX) && a.entityId)
+    .map((a) => a.entityId as string);
+  const people = await getPeopleSummaries(userId, checkinEntityIds);
 
   if (pending.length === 0 && recent.length === 0) return emptyState;
 
@@ -114,7 +125,7 @@ export async function ActionQueueCard({
     );
   }
 
-  const { groups, standalone } = groupSimilarActions(pending);
+  const { groups, standalone } = groupSimilarActions(pending, people);
 
   return (
     <div id="actions" className="md:col-span-2">
@@ -131,45 +142,22 @@ export async function ActionQueueCard({
         <div className="space-y-3">
           {/* Grouped check-ins */}
           {groups.map((group, gi) => (
-            <div
-              key={`group-${gi}`}
-              className="border border-border-subtle rounded-md p-3 bg-surface-base"
-            >
-              <div className="flex items-start gap-3">
-                <Users className="h-4 w-4 text-text-tertiary shrink-0 mt-1" />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="text-sm md:text-base font-medium">
-                      Check in with {group.actions.length} people
-                    </div>
-                    <ApproveGroupButton ids={group.actions.map((a) => a.id)} />
-                  </div>
-                  <div className="mt-2 space-y-1.5">
-                    {group.actions.map((a) => {
-                      const body = a.payload?.body ? String(a.payload.body) : null;
-                      return (
-                        <div key={a.id} className="flex items-center justify-between gap-2 p-2 rounded bg-surface-base">
-                          <div className="min-w-0">
-                            <span className="text-sm md:text-base">{a.title}</span>
-                            {body && (
-                              <div className="text-xs text-text-secondary mt-0.5">{body}</div>
-                            )}
-                          </div>
-                          <ActionButtons actionId={a.id} compact />
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <div className="text-xs md:text-sm text-text-secondary mt-2 italic">
-                    Loki: {group.reasoning}
-                  </div>
-                </div>
-              </div>
-            </div>
+            <CheckinGroup key={`group-${gi}`} people={group.actions} />
           ))}
 
           {/* Standalone actions */}
           {standalone.map((action, index) => {
+            if (action.title.startsWith(CHECKIN_TITLE_PREFIX)) {
+              return (
+                <div
+                  key={action.id}
+                  className="border border-border-subtle rounded-md p-3 bg-surface-base"
+                >
+                  <CheckinPersonRow person={toCheckinPerson(action, people)} />
+                </div>
+              );
+            }
+
             const Icon = TYPE_ICONS[action.type] ?? Inbox;
             const payload = action.payload;
 

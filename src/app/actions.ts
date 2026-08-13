@@ -10,7 +10,7 @@ import { fulfillCommitment } from "@/db/queries/today";
 import { cancelSubscription } from "@/db/queries/money";
 import { createInteraction } from "@/db/queries/people";
 import { patchGoal } from "@/db/queries/goals";
-import { executeAction } from "@/lib/actions/execute-action";
+import { executeAction, type ExecuteActionResult } from "@/lib/actions/execute-action";
 import { recordActionAuditEvent } from "@/db/queries/control-audit-events";
 import { requirePageUserId } from "@/lib/session";
 import { isPrivateZoneLocked } from "@/lib/private-zone";
@@ -31,7 +31,7 @@ const INTERACTION_ACTION_TYPES = new Set<ActionType>([
  * only advances the row to 'executed' on a real successful effect; external
  * types are deferred and audited (see lib/actions/execute-action.ts).
  */
-async function finalizeApproved(userId: string, action: ActionRow): Promise<void> {
+async function finalizeApproved(userId: string, action: ActionRow): Promise<ExecuteActionResult> {
   if (action.entityId && INTERACTION_ACTION_TYPES.has(action.type)) {
     await createInteraction(userId, {
       entityId: action.entityId,
@@ -41,24 +41,24 @@ async function finalizeApproved(userId: string, action: ActionRow): Promise<void
     });
   }
   await recordActionAuditEvent(userId, action, "approved");
-  await executeAction(userId, action);
+  return executeAction(userId, action);
 }
 
-export async function handleApprove(id: string) {
+export async function handleApprove(id: string): Promise<ExecuteActionResult> {
   const userId = await requirePageUserId();
   const [action] = await approveAction(id, userId);
-  if (action) await finalizeApproved(userId, action);
-  revalidatePath(ROUTES.APP_HOME);
-  revalidatePath("/people");
+  if (!action) return { executed: false, error: "not-found" };
+  // Caller refreshes when the result is on screen. Immediate revalidate
+  // deletes the card before the operator sees where the work went.
+  return finalizeApproved(userId, action);
 }
 
-export async function handleApproveAll(ids: string[]) {
+export async function handleApproveAll(ids: string[]): Promise<{ count: number }> {
   const userId = await requirePageUserId();
   const results = await Promise.all(ids.map((id) => approveAction(id, userId)));
   const approved = results.flat();
   await Promise.all(approved.map((action) => finalizeApproved(userId, action)));
-  revalidatePath(ROUTES.APP_HOME);
-  revalidatePath("/people");
+  return { count: approved.length };
 }
 
 export async function handleReject(id: string) {
@@ -88,13 +88,16 @@ async function archiveFeedback(userId: string, ids: string[]): Promise<void> {
  * approval itself still goes through approveAction + finalizeApproved, so the
  * IRON RULE holds — draft → approved → executed, no bypass.
  */
-export async function handleApplyAdvice(id: string, option: Recommendation) {
+export async function handleApplyAdvice(
+  id: string,
+  option: Recommendation,
+): Promise<ExecuteActionResult | { executed: false; skipped: true }> {
   const userId = await requirePageUserId();
 
-  if (option === RECOMMENDATION.REVIEW) return; // "leave it" — the popup just closes
+  if (option === RECOMMENDATION.REVIEW) return { executed: false, skipped: true };
 
   const action = await getActionById(userId, id);
-  if (!action) return;
+  if (!action) return { executed: false, error: "not-found" };
   const feedbackIds = Array.isArray(action.payload?.feedbackIds)
     ? (action.payload.feedbackIds as unknown[]).filter((v): v is string => typeof v === "string")
     : [];
@@ -102,7 +105,7 @@ export async function handleApplyAdvice(id: string, option: Recommendation) {
   if (option === RECOMMENDATION.SKIP) {
     await handleReject(id);
     await archiveFeedback(userId, feedbackIds);
-    return;
+    return { executed: false, skipped: true };
   }
 
   if (option === RECOMMENDATION.DISPATCH_TRIMMED) {
@@ -127,7 +130,7 @@ export async function handleApplyAdvice(id: string, option: Recommendation) {
     }
   }
 
-  await handleApprove(id);
+  return handleApprove(id);
 }
 
 export async function handleDismissAlert(id: string) {
