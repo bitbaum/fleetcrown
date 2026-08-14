@@ -1,6 +1,34 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { NextRequest, NextResponse } from "next/server";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { checkEnv, envHealthy } from "@/lib/env";
+
+/**
+ * The commit this build was made from, stamped into the artifact by
+ * `scripts/record-build-ref.sh` at build time so it rides every deploy path.
+ *
+ * Until this existed, nothing anywhere could say what production was running:
+ * `version` below is `npm_package_version`, which is null under systemd. A
+ * hand-run deploy ships whatever branch the worktree is on and has rolled prod
+ * back three times; each time it presented as an application bug, because the
+ * only way to check was to ssh in and grep the compiled bundle.
+ *
+ * Read once — the file cannot change without a restart, since a deploy rsyncs
+ * then restarts. Absent (dev server, non-standalone build) is reported as null,
+ * never guessed.
+ */
+const BUILD_COMMIT: string | null = (() => {
+  for (const p of [".build-ref", ".next/standalone/.build-ref"]) {
+    try {
+      const sha = readFileSync(join(process.cwd(), p), "utf8").trim();
+      if (sha) return sha;
+    } catch {
+      // Next candidate; a missing marker is a known state, not an error.
+    }
+  }
+  return null;
+})();
 
 // force-dynamic: env read must happen at request time, not build time.
 export const dynamic = "force-dynamic";
@@ -21,6 +49,8 @@ export async function GET(req: NextRequest) {
       ok: healthy,
       runtime: isRuntimeAvailable(),
       version: process.env.npm_package_version ?? null,
+      // The one field that answers "is prod running main?" without an ssh session.
+      commit: BUILD_COMMIT,
       env: {
         healthy,
         issueCount: issues.length,
