@@ -10,7 +10,7 @@
     "prebuild": "npx tsx scripts/generate-bash-state-vocab.ts && npm run build:widget",
     "build:widget": "esbuild widget/main.ts --bundle --minify --format=iife --outfile=public/widget.js --log-level=warning",
     "build": "next build",
-    "postbuild": "bash scripts/deploy-local.sh",
+    "postbuild": "bash scripts/record-build-ref.sh && bash scripts/deploy-local.sh",
     "start": "next start",
     "install-app": "bash scripts/install-fleetcrown-app.sh",
     "db:push": "drizzle-kit push",

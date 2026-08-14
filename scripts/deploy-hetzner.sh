@@ -306,6 +306,29 @@ if [ -n "$MISSING" ] || [ -n "$MISSING_COLUMNS" ]; then
 fi
 echo "  ✓ schema: all $(printf '%s\n' "$DECLARED" | grep -c .) declared tables and $(printf '%s\n' "$DECLARED_COLUMNS" | grep -c .) declared columns present on box"
 
+# Does the LIVE box report the commit we just shipped? Everything above proves
+# the box is healthy; nothing above proves it is running THIS build. A stale
+# rsync, a rotated-back app dir, or a second deploy landing behind this one all
+# leave a green verification and the wrong code serving — which is exactly how
+# the same build got rolled back three times without anyone noticing. The
+# marker comes from scripts/record-build-ref.sh via /api/health.
+SHIPPED_SHA="$(git -C "$PROJECT_DIR" rev-parse "${REF:-HEAD}" 2>/dev/null || echo "")"
+LIVE_SHA="$(ssh "$HOST" "curl -s --max-time 5 http://127.0.0.1:4002/api/health" 2>/dev/null \
+  | sed -n 's/.*"commit":"\([0-9a-f]*\)".*/\1/p')"
+if [ -z "$LIVE_SHA" ]; then
+  # Pre-marker builds report no commit. Warn, never block: a deploy that is
+  # otherwise verified must not fail because the PREVIOUS build lacked a stamp.
+  echo "  ⚠ live build reports no commit — build-ref marker absent (pre-#279 build?)"
+elif [ "$LIVE_SHA" != "$SHIPPED_SHA" ]; then
+  echo "  ✗ live build is ${LIVE_SHA:0:12}, but this deploy shipped ${SHIPPED_SHA:0:12}" >&2
+  echo "    The box is NOT running what was just built — another deploy raced this one," >&2
+  echo "    or the rsync did not take. Check: curl -s https://fleetcrown.orangecat.ch/api/health" >&2
+  rollback_box "live commit ${LIVE_SHA:0:12} != shipped ${SHIPPED_SHA:0:12}"
+  exit 1
+else
+  echo "  ✓ live build is ${LIVE_SHA:0:12} — the commit this deploy shipped"
+fi
+
 echo "✓ deployed $(git -C "$PROJECT_DIR" rev-parse --short "${REF:-HEAD}") to Hetzner — verified"
 
 # Event bridge — separate from the Next app and runner, but part of the same
