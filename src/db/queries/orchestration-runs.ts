@@ -173,6 +173,16 @@ export async function getOrchestrationRunById(userId: string, id: string) {
   return row ?? null;
 }
 
+/** Batch lookup for feedback work-phase enrichment. */
+export async function getOrchestrationRunsByIds(userId: string, ids: string[]) {
+  if (ids.length === 0) return new Map<string, typeof orchestrationRuns.$inferSelect>();
+  const rows = await db
+    .select()
+    .from(orchestrationRuns)
+    .where(and(eq(orchestrationRuns.userId, userId), inArray(orchestrationRuns.id, ids)));
+  return new Map(rows.map((r) => [r.id, r]));
+}
+
 export async function cleanupStaleOrchestrationRuns(userId?: string) {
   // Did this run's project produce a handoff AFTER the run started? project_states
   // holds the box-pushed session state; a ready_at / session_updated_at newer

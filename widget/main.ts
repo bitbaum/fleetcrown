@@ -162,15 +162,56 @@ function downscaleImage(file: Blob): Promise<string | null> {
 const PENCIL_SVG =
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>';
 
-/** id-first CSS selector for a clicked element (ported from revampit's
- *  element-selector.ts; hardened for SVG where className isn't a string). */
+/**
+ * Prefer the thing the visitor meant (link/button/card) over decorative
+ * children (img/svg/path/rect). Empty elementText on bare <img> / <rect> made
+ * OrangeCat "make this clickable" reports useless for Dispatch fix.
+ */
+function resolvePickTarget(el: Element): Element {
+  const interactive = el.closest(
+    'a, button, [role="button"], [role="link"], summary, label, [tabindex]:not([tabindex="-1"])',
+  );
+  if (interactive instanceof Element) return interactive;
+
+  let cur: Element | null = el;
+  while (cur && /^(path|rect|circle|line|polyline|polygon|g)$/i.test(cur.tagName)) {
+    cur = cur.parentElement;
+  }
+  if (cur && cur.tagName.toLowerCase() === "svg") {
+    const wrap = cur.parentElement;
+    if (wrap && wrap !== document.body) return wrap;
+    return cur;
+  }
+  if (el.tagName.toLowerCase() === "img") {
+    const wrap = el.closest("a, button, figure, [role='button'], article, li");
+    if (wrap instanceof Element) return wrap;
+  }
+  return el;
+}
+
+function elementLabel(el: Element): string {
+  const aria = el.getAttribute("aria-label")?.trim();
+  if (aria) return aria.slice(0, 100);
+  const alt = el.getAttribute("alt")?.trim();
+  if (alt) return alt.slice(0, 100);
+  const title = el.getAttribute("title")?.trim();
+  if (title) return title.slice(0, 100);
+  const text = (el.textContent ?? "").replace(/\s+/g, " ").trim();
+  if (text) return text.slice(0, 100);
+  return `<${el.tagName.toLowerCase()}>`;
+}
+
+/** id / data-testid first; else tag + up to 2 classes (skip fcw-*). */
 function generateSelector(el: Element): string {
-  if (el.id) return `#${el.id}`;
+  if (el.id) return `#${CSS.escape(el.id)}`;
+  const testId = el.getAttribute("data-testid");
+  if (testId) return `[data-testid="${CSS.escape(testId)}"]`;
+  const tag = el.tagName.toLowerCase();
   const cls = (el.getAttribute("class") ?? "")
     .split(/\s+/)
     .filter((c) => c && !c.startsWith("fcw-"));
-  if (cls.length > 0) return `${el.tagName.toLowerCase()}.${cls.slice(0, 2).join(".")}`;
-  return el.tagName.toLowerCase();
+  if (cls.length > 0) return `${tag}.${cls.slice(0, 2).map((c) => CSS.escape(c)).join(".")}`;
+  return tag;
 }
 
 function h<K extends keyof HTMLElementTagNameMap>(
@@ -417,25 +458,44 @@ function h<K extends keyof HTMLElementTagNameMap>(
       }
     }
 
-    // -- element picking: listeners are document-level + capture so the host
-    //    page can't swallow them; our own UI is skipped via composedPath.
-    function isOwnUi(e: Event): boolean {
-      return e.composedPath().includes(host);
+    // Full-viewport shield: blocks host navigation/handlers during pick.
+    // Target resolution uses elementsFromPoint so we still hit the real DOM
+    // under the shield (capture-only listeners on the host page were not
+    // enough — some Next Link clicks still navigated mid-pick).
+    const pickShield = h("div");
+    pickShield.id = "fcw-pick-shield";
+    pickShield.setAttribute("aria-hidden", "true");
+    Object.assign(pickShield.style, {
+      position: "fixed",
+      inset: "0",
+      zIndex: "2147482999",
+      cursor: "crosshair",
+      background: "transparent",
+    } as CSSStyleDeclaration);
+
+    function targetUnderPoint(x: number, y: number): Element | null {
+      const stack = document.elementsFromPoint(x, y);
+      for (const node of stack) {
+        if (node === pickShield || node === host || host.contains(node)) continue;
+        if (node instanceof Element) return resolvePickTarget(node);
+      }
+      return null;
     }
 
     function onPickMove(e: MouseEvent) {
-      if (isOwnUi(e)) return;
-      const target = e.target as Element;
+      const target = targetUnderPoint(e.clientX, e.clientY);
+      if (!target) return;
       if (hoverNode && hoverNode !== target) hoverNode.classList.remove("fcw-hover");
       hoverNode = target;
       target.classList.add("fcw-hover");
     }
 
     function onPickClick(e: MouseEvent) {
-      if (isOwnUi(e)) return;
       e.preventDefault();
       e.stopPropagation();
-      const target = e.target as Element;
+      e.stopImmediatePropagation();
+      const target = targetUnderPoint(e.clientX, e.clientY);
+      if (!target) return;
       const selector = generateSelector(target);
       const idx = selected.findIndex((s) => s.selector === selector);
       if (idx > -1) {
@@ -445,7 +505,7 @@ function h<K extends keyof HTMLElementTagNameMap>(
       } else if (selected.length < MAX_ELEMENTS) {
         selected.push({
           elementType: target.tagName.toLowerCase(),
-          elementText: (target.textContent ?? "").trim().slice(0, 100),
+          elementText: elementLabel(target),
           selector,
         });
         selectedNodes.push(target);
@@ -455,9 +515,18 @@ function h<K extends keyof HTMLElementTagNameMap>(
     }
 
     function syncPickbar() {
-      pickMsg.textContent = selected.length
-        ? `${selected.length} selected — click more or Done`
-        : "Click the element your feedback is about";
+      if (selected.length === 0) {
+        pickMsg.textContent = "Click the element your feedback is about";
+        pickDone.disabled = true;
+        return;
+      }
+      const last = selected[selected.length - 1];
+      const label = last.elementText || last.selector;
+      pickMsg.textContent =
+        selected.length === 1
+          ? `Selected: ${label} — click more or Done`
+          : `${selected.length} selected (last: ${label}) — Done when ready`;
+      pickDone.disabled = false;
     }
 
     function startPicking() {
@@ -466,17 +535,25 @@ function h<K extends keyof HTMLElementTagNameMap>(
       document.head.appendChild(docStyle);
       backdrop.remove();
       panel.remove();
-      root.appendChild(pickbar);
+      // Shield lives in the shadow root under the pickbar so Done/Cancel stay
+      // clickable; fixed positioning still covers the host page viewport.
+      root.append(pickShield, pickbar);
       syncPickbar();
-      document.addEventListener("mousemove", onPickMove, true);
-      document.addEventListener("click", onPickClick, true);
+      pickShield.addEventListener("mousemove", onPickMove, true);
+      pickShield.addEventListener("click", onPickClick, true);
+      // Also swallow pointerdown so Next <Link> / button handlers never fire.
+      pickShield.addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }, true);
     }
 
     function stopPicking() {
       if (!picking) return;
       picking = false;
-      document.removeEventListener("mousemove", onPickMove, true);
-      document.removeEventListener("click", onPickClick, true);
+      pickShield.removeEventListener("mousemove", onPickMove, true);
+      pickShield.removeEventListener("click", onPickClick, true);
+      pickShield.remove();
       hoverNode?.classList.remove("fcw-hover");
       hoverNode = null;
       pickbar.remove();

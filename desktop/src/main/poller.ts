@@ -717,7 +717,13 @@ async function handleCommand(
                 `${agent} is not authenticated (401 / login required) — the prompt was delivered but the agent can't run. ` +
                 `On the runner host, remove any stale ~/.claude/.credentials.json and set CLAUDE_CODE_OAUTH_TOKEN (claude setup-token).`
             } else if (!verified) {
-              warning = `${text}, but the agent isn't generating yet — it may still be booting or already idle`
+              // Unverified inject is a soft failure for the captain loop: "Install
+              // dispatched" with no generation is how botsmann stayed Not live
+              // while Activity looked busy. Prefer Failed over fake success.
+              ok = false
+              warning = undefined
+              error =
+                `${text}, but the agent isn't generating yet — inject did not stick (booting, idle, or hung). Retry, or switch the project agent away from grok if this repeats.`
             }
             break
           }

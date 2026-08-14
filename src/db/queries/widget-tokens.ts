@@ -1,24 +1,18 @@
 import { randomBytes } from "node:crypto";
 import { and, eq, isNull, lt, or, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { entities, widgetTokens, type WidgetToken } from "@/db/schema";
+import { entities, userProjects, widgetTokens, type WidgetToken } from "@/db/schema";
 import { ENTITY_TYPE, WIDGET_TOKEN_STATUS, type WidgetTokenStatus } from "@/lib/constants/statuses";
 import { fetchAttributesByEntityIds } from "./utils";
+import { resolveProjectPublicOrigin } from "@/lib/feedback/project-site";
 
 /**
- * Default a new token's origin allowlist from the project's registered prod
- * URL — the user made this decision once when they registered the project;
- * don't ask again at enable time. Same attr precedence as getProjectLinks.
+ * Default a new token's origin allowlist from the project's live site
+ * (user_projects.liveUrl first — Hetzner SSOT — then legacy attrs).
  */
-async function defaultOriginsFromProject(projectId: string): Promise<string[] | null> {
-  const attrs = (await fetchAttributesByEntityIds([projectId])).get(projectId) ?? {};
-  const raw = attrs["production_url"] ?? attrs["url"];
-  if (!raw) return null;
-  try {
-    return [new URL(raw.startsWith("http") ? raw : `https://${raw}`).origin];
-  } catch {
-    return null;
-  }
+async function defaultOriginsFromProject(userId: string, projectId: string): Promise<string[] | null> {
+  const origin = await resolveProjectPublicOrigin(userId, projectId);
+  return origin ? [origin] : null;
 }
 
 /** Token prefix — makes a leaked string instantly identifiable as a
@@ -82,7 +76,7 @@ export async function upsertWidgetToken(userId: string, projectId: string, input
   const existing = await getActiveWidgetToken(userId, projectId);
   const origins = input.origins?.filter(Boolean)
     ?? existing?.origins
-    ?? await defaultOriginsFromProject(projectId);
+    ?? await defaultOriginsFromProject(userId, projectId);
   const status = input.status ?? existing?.status ?? WIDGET_TOKEN_STATUS.ACTIVE;
 
   if (existing && !input.rotate) {
@@ -111,3 +105,91 @@ export async function revokeWidgetToken(userId: string, projectId: string): Prom
     .returning({ id: widgetTokens.id });
   return Boolean(revoked);
 }
+
+const LIVE_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+
+export type WidgetCoverageItem = {
+  projectId: string;
+  projectName: string;
+  hasToken: boolean;
+  tokenStatus: string | null;
+  lastSeenAt: string | null;
+  lastSeenOrigin: string | null;
+  productionUrl: string | null;
+  gitUrl: string | null;
+  /** Boot heartbeat within the last 7 days. */
+  live: boolean;
+  /** Missing token, paused, or never/not recently seen on a site-like project. */
+  needsAttention: boolean;
+};
+
+/**
+ * Fleet lens: which public sites should carry the feedback widget, and which
+ * are missing / not live. Site-like = has user_projects.liveUrl or legacy
+ * production_url/url — never gitUrl alone. Prefer liveUrl (Hetzner) over
+ * stale entity attrs.
+ */
+export async function listWidgetCoverage(userId: string): Promise<WidgetCoverageItem[]> {
+  const projects = await db
+    .select({ id: entities.id, name: entities.name, gitUrl: entities.gitUrl })
+    .from(entities)
+    .where(and(eq(entities.userId, userId), eq(entities.type, ENTITY_TYPE.PROJECT)));
+
+  if (projects.length === 0) return [];
+
+  const [tokens, ups] = await Promise.all([
+    db
+      .select()
+      .from(widgetTokens)
+      .where(and(eq(widgetTokens.userId, userId), isNull(widgetTokens.revokedAt))),
+    db
+      .select({
+        entityProjectId: userProjects.entityProjectId,
+        liveUrl: userProjects.liveUrl,
+        gitUrl: userProjects.gitUrl,
+      })
+      .from(userProjects)
+      .where(eq(userProjects.userId, userId)),
+  ]);
+  const tokenByProject = new Map(tokens.map((t) => [t.projectId, t]));
+  const upByEntity = new Map(
+    ups.filter((u) => u.entityProjectId).map((u) => [u.entityProjectId!, u]),
+  );
+  const attrs = await fetchAttributesByEntityIds(projects.map((p) => p.id));
+  const now = Date.now();
+
+  return projects
+    .map((p) => {
+      const t = tokenByProject.get(p.id);
+      const up = upByEntity.get(p.id);
+      const a = attrs.get(p.id) ?? {};
+      const raw = up?.liveUrl ?? a.production_url ?? a.url ?? null;
+      let productionUrl: string | null = null;
+      if (raw) {
+        try {
+          productionUrl = new URL(raw.startsWith("http") ? raw : `https://${raw}`).origin;
+        } catch {
+          productionUrl = null;
+        }
+      }
+      const live = !!(t?.lastSeenAt && now - t.lastSeenAt.getTime() < LIVE_WINDOW_MS);
+      const siteLike = !!productionUrl;
+      const needsAttention =
+        siteLike && (!t || t.status !== WIDGET_TOKEN_STATUS.ACTIVE || !live);
+      return {
+        projectId: p.id,
+        projectName: p.name,
+        hasToken: !!t,
+        tokenStatus: t?.status ?? null,
+        lastSeenAt: t?.lastSeenAt?.toISOString() ?? null,
+        lastSeenOrigin: t?.lastSeenOrigin ?? null,
+        productionUrl,
+        gitUrl: up?.gitUrl ?? p.gitUrl ?? null,
+        live,
+        needsAttention,
+      };
+    })
+    .filter((p) => !!p.productionUrl)
+    .sort((a, b) => Number(b.needsAttention) - Number(a.needsAttention) || a.projectName.localeCompare(b.projectName));
+}
+

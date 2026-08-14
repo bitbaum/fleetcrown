@@ -1,8 +1,8 @@
 # Responsive Design — FleetCrown Web App
 
 **Created:** 2026-06-27  
-**Last modified:** 2026-06-27  
-**Last modified summary:** Mobile overlay lock for drawers; project drawer header + tab tap targets; mobile pages audit script.
+**Last modified:** 2026-08-14  
+**Last modified summary:** Cross-link branding-design app-shell layout SSOT debt (PageLayout / max-width drift).
 
 FleetCrown is **mobile-first and dark-first**. Every authenticated route must be usable on a 320px-wide phone without horizontal page scroll, with primary actions reachable above the floating bottom nav.
 
@@ -41,6 +41,11 @@ Defined in `src/app/globals.css` `:root`:
 .app-page-compact         Tighter vertical padding for chat/terminal pages
 .app-viewport-pane        Full remaining viewport height
 ```
+
+Authenticated pages should still enter through `PageLayout` (see
+`docs/branding-design.md` → App-shell layout SSOT). Mixing raw `app-page max-w-*`
+with bespoke wrappers is the main source of inconsistent positioning across
+routes.
 
 Navigation:
 

@@ -190,6 +190,9 @@ export function IntentButtonPanel({
     if (t.startsWith("setup (run, read outputs)")) continue;
     if (t.includes("picked ") && t.includes(" (t")) continue; // the accountability line
     if (/\bwaiting for instructions\b/.test(t)) continue;
+    // Nav / marketing chrome accidentally captured as "prompts" — not reusable intent.
+    if (/\b(features|how it works|pricing|for pros|adopt|sign in|log in)\b/.test(t) && t.length < 120) continue;
+    if (/^used \d+×/.test(t)) continue;
     cleanedCounts.set(clean, (cleanedCounts.get(clean) ?? 0) + r.count);
   }
   const recentPrompts = [...cleanedCounts.entries()]
@@ -207,7 +210,7 @@ export function IntentButtonPanel({
 
   return (
     <div className="space-y-3 ui-card-section">
-      <PromptInput {...inputProps} placeholder={isRunning ? "Send interrupt…" : "What should the agent work on? e.g. summarize this repo"} />
+      <PromptInput {...inputProps} placeholder={isRunning ? "Send interrupt…" : "What should the agent work on?"} />
       {queue.length > 0 && (
         <QueueList queue={queue} blockedReason={queueBlockedReason} onSend={onSendFromQueue} onRemove={onRemoveFromQueue} onReorder={onReorderInQueue} onEdit={onEditInQueue} onMerge={onMergeQueue} merging={merging} onMergeItems={onMergeItemsInQueue} />
       )}
@@ -238,12 +241,6 @@ export function IntentButtonPanel({
                 ? `✓ Dispatched`
                 : `${primary.label} →`}
           </button>
-          {/* What the button DOES, visible — first-time users had to hover
-              the tooltip (or find the prompt-library card) to learn that
-              this dispatches immediately with no preview. */}
-          <p className="text-micro leading-relaxed text-text-muted">
-            The agent re-reads the repo&apos;s ground truth, picks the highest-impact task, and runs it — dispatches immediately.
-          </p>
 
           {/* Secondary intents: compact chips + More toggle */}
           <div className="flex flex-wrap gap-1.5">

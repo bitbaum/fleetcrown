@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Plus, RefreshCw, Radio, WifiOff, Zap } from "lucide-react";
+import { Plus, RefreshCw, Radio, WifiOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { timeAgo } from "@/lib/dates";
 import type { ControlDashboardState, FleetPulse } from "./control-presenter";
@@ -14,19 +14,6 @@ import {
 import { builderCompactLabel, builderPresenceDetail } from "@/lib/builder-presence";
 import type { BuilderChannelPresence } from "@/lib/builder-presence";
 import { EXECUTOR_COPY } from "@/config/executor-copy";
-
-// Single-line hint shown under the fleet chips when this mode is active.
-// Binary autopilot since the 2026-06-11 collapse. Plain language only — no
-// internal template names (next_best) or handoff-field jargon (status:working).
-// Split into primary + secondary so the space-constrained mobile card shows
-// only the essential sentence; the caveat rides along on sm+ where there's room.
-const AUTOMATION_HINTS: Record<AutoInjectMode, { primary: string; secondary?: string }> = {
-  off: { primary: "Autopilot off — agents stop when a task ends; you dispatch every next step yourself." },
-  on:  {
-    primary: "Autopilot on — agents work through each project's queue, then pick the next-best task automatically.",
-    secondary: "Busy agents, blockers, and failing health checks still pause dispatch.",
-  },
-};
 
 type Props = {
   dashboard: ControlDashboardState | null;
@@ -54,7 +41,6 @@ type Props = {
    *  first project in that bucket and scrolls the workspace into view. A
    *  count you can't follow to its subject is noise, not status. */
   onFocusCategory?: (category: "working" | "waiting") => void;
-  projectOverrideCount?: number;
 };
 
 /** Fleet pulse + trust layer — the first thing you see on Control (especially mobile). */
@@ -78,7 +64,6 @@ export function ControlFleetStatus({
   onAutomationChange,
   onNewProject,
   onFocusCategory,
-  projectOverrideCount = 0,
 }: Props) {
   // Vocabulary AND arithmetic reconciled with ProjectOperationsView's rail.
   // The triad is "X working · Y awaiting input · Z idle" — three
@@ -279,8 +264,14 @@ export function ControlFleetStatus({
             {ready} awaiting input
           </span>
         )}
-        <span className={cn("ui-control-fleet-chip", staleClass)} title={staleTitle}>
-          {idle} idle
+        <span
+          className={cn("ui-control-fleet-chip", staleClass)}
+          title={
+            staleTitle
+            ?? "How many fleet projects have no agent session right now. Unrelated to Cloud/builder online — that is the runner, not project work."
+          }
+        >
+          {idle} projects idle
         </span>
         {/* "All clear" only when nothing needs you and nothing is live — and
             never while stale, when 0/0/0 means "the runner stopped reporting",
@@ -291,22 +282,6 @@ export function ControlFleetStatus({
           </span>
         )}
       </div>
-
-      <p className="ui-control-fleet-hint">
-        <Zap className="inline h-3 w-3 shrink-0 text-accent-text" aria-hidden="true" />
-        {" "}
-        {AUTOMATION_HINTS[automationMode].primary}
-        {AUTOMATION_HINTS[automationMode].secondary && (
-          <span className="hidden sm:inline"> {AUTOMATION_HINTS[automationMode].secondary}</span>
-        )}
-        {projectOverrideCount > 0 && (
-          <span className="ml-1 text-accent-text">
-            {projectOverrideCount === 1
-              ? "1 project uses its own autopilot setting."
-              : `${projectOverrideCount} projects use their own autopilot settings.`}
-          </span>
-        )}
-      </p>
     </section>
   );
 }
