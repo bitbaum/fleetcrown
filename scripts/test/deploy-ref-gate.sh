@@ -14,6 +14,10 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GATE="$SCRIPT_DIR/../ci/check-deploy-ref.sh"
 TMP="$(mktemp -d)"
+# An empty TMP would make every fixture path absolute-from-root ("/a/work") AND
+# would still satisfy a "$TMP"/* pattern match, so the containment check below
+# is only meaningful once this holds.
+[ -n "$TMP" ] && [ -d "$TMP" ] || { echo "  ✗ mktemp -d produced no usable dir" >&2; exit 1; }
 trap 'rm -rf "$TMP"' EXIT
 
 PASSED=0
@@ -25,9 +29,23 @@ ok()   { PASSED=$((PASSED + 1)); echo "  ✓ $1"; }
 # global git config still runs the suite.
 setup_repo() {
   local root="$1"
+  # Every command below MUTATES a git repo — it commits, and it renames a branch
+  # to `main`. Aimed at a real checkout that is exactly a repo-destroying script,
+  # so refuse to proceed unless the fixture really is a fresh dir under $TMP.
+  # This suite runs from `verify` on every push, in parallel sessions, so "the
+  # paths are obviously fine" is not a property worth assuming.
+  case "$root" in
+    "$TMP"/*) ;;
+    *) fail "setup_repo refused: '$root' is not under the temp dir '$TMP'" ;;
+  esac
   rm -rf "$root"; mkdir -p "$root"
   git init -q --bare "$root/origin.git"
   git clone -q "$root/origin.git" "$root/work" 2>/dev/null
+  # A failed clone would leave the -C target missing; git then errors per command
+  # while the suite (no `set -e`) marches on. Assert the fixture exists and is
+  # its OWN repo, so a mutation can never be redirected at a surrounding one.
+  [ "$(git -C "$root/work" rev-parse --show-toplevel 2>/dev/null)" = "$root/work" ] \
+    || fail "fixture clone did not produce a repo at $root/work"
   git -C "$root/work" config user.email t@t.t
   git -C "$root/work" config user.name t
   # Throwaway fixtures must not run the machine's global hooks (a secret scanner

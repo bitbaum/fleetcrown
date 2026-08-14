@@ -30,6 +30,7 @@
  */
 import { HTTP_TIMEOUT_LONG_MS } from "@/lib/constants/time";
 import { GROQ_FAST_MODEL } from "@/lib/groq";
+import { classifyGroqLimit } from "@/lib/agent/groq-error";
 
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 
@@ -202,11 +203,20 @@ export async function callModelWithTools(input: {
     if (res.status === 400 && /tool/i.test(body) && input.tools.length > 0) {
       return callModelWithTools({ ...input, tools: [] });
     }
-    // A 429 is a CAPACITY problem, not a capability one, and the fallback path
-    // it used to trigger has weaker retrieval than the loop — so a rate limit
-    // on the big model silently degraded answer quality. Step down to the small
-    // model instead: the whole point of the dual protocol is that an 8B model
-    // drives this loop fine (verified — see scripts/probe-models.ts).
+    // A 429 that means "this ONE request is bigger than the whole per-minute
+    // allowance" must not be retried or stepped down: waiting cannot help (the
+    // window never grows that big) and the cheaper model has HALF the ceiling
+    // (70B = 12000 TPM, 8B = 6000). Surface it immediately, worded so the tool
+    // loop's shed ladder recognises it and retries with fewer facts — which is
+    // the only thing that actually fixes an oversized prompt.
+    if (res.status === 429 && classifyGroqLimit(body) === "size") {
+      throw new Error(`groq 429 request too large: ${body.slice(0, 200)}`);
+    }
+    // A capacity 429 is not a capability problem, and the fallback path it used
+    // to trigger has weaker retrieval than the loop — so a rate limit on the big
+    // model silently degraded answer quality. Step down to the small model
+    // instead: the whole point of the dual protocol is that an 8B model drives
+    // this loop fine (verified — see scripts/probe-models.ts).
     if (res.status === 429 && model !== SMALL_MODEL) {
       console.warn(`[loki] ${model} rate-limited, stepping down to ${SMALL_MODEL}`);
       return callModelWithTools({ ...input, model: SMALL_MODEL });
