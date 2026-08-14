@@ -3369,133 +3369,6 @@
     @apply mt-0.5 block truncate text-xs text-text-tertiary;
   }
 
-  /* ══════════════════════════════════════════════════════════════════════
-     THE TOUCH FLOOR — the ONE place the 44px minimum is declared.
-
-     Keyed on POINTER TYPE, not viewport width. Width was the wrong predicate:
-     every interactive class used to pair a 44px base with a responsive
-     override (sm:min-h-0, and the -7 / -8 / -9 variants), which drops the
-     minimum at 640px — so a TABLET, a touch device
-     with a desktop-width screen, inherited desktop sizing and the audit
-     measured 23-32px targets at 768px. A finger is the same size whatever the
-     screen is.
-
-     The corollary the old form got backwards: a MOUSE at a narrow window is
-     not a finger, and used to get inflated 44px rows for nothing.
-
-     LAST in @layer components ON PURPOSE. These are single-class selectors, so
-     a later component rule setting min-height would simply win. Keeping the
-     floor at the end means nothing in this file can silently undercut it.
-
-     Adding an interactive class? Add it to a list here. Nothing else may state
-     a tap minimum: `npm run check:design` fails on the `sm:min-h-*` form, and
-     `npm run audit:responsive` measures every real target in a real browser.
-     ══════════════════════════════════════════════════════════════════════ */
-  @media (pointer: coarse) {
-    /* `ui-tap` / `ui-tap-icon` are markers with no styling of their own — they
-       exist ONLY here, so a bespoke control (a one-off Link or button) can opt
-       into the floor without JSX ever restating the 44px number. They set no
-       display, so the element keeps whatever flex/block/inline-flex it had. */
-
-    /* Icon-only controls: square, so both axes. */
-    .ui-tap-icon,
-    .ui-icon-btn,
-    .ui-icon-btn-touch,
-    .ui-icon-action,
-    .ui-icon-action-danger,
-    .ui-btn-icon,
-    .ui-btn-row-action,
-    .ui-loki-tool-btn,
-    .ui-loki-send-btn,
-    /* A checkbox is 14px of native control. It cannot grow without looking
-       like a different widget, so the LABEL around it carries the hit area —
-       which is also what a finger actually lands on. */
-    .ui-checkbox-hit,
-    /* Its `h-9` is a fixed 36px — min-height still wins, since min-height
-       constrains the used height whatever `height` asked for. This one button
-       was the single most common offender in the audit: it is in the top bar
-       of all 20 authenticated routes, so one missing class name was 20 pages
-       of finding. */
-    .ui-theme-cycle-btn,
-    .ui-topbar-btn,
-    .ui-loki-convo-delete,
-    .ui-loki-toolbar-btn {
-      min-height: 2.75rem;
-      min-width: 2.75rem;
-    }
-
-    /* Everything with a label. Height only: these size to their content or
-       span their container, so a min-width would fight the layout and means
-       nothing for a row that is already full-width. */
-    .ui-tap,
-    /* A text field is a tap target too — you have to hit it to type in it.
-       These measured 42px: near-misses are still misses, and "nearly" is not a
-       category the finger recognises. */
-    .ui-input,
-    .ui-btn-overlay,
-    .ui-locked-banner,
-    .ui-app-topbar-search,
-    /* The marketing surfaces have their own namespace but not their own
-       fingers. These are the nav on every public page. */
-    .ui-public-nav-link,
-    .ui-public-nav-trigger,
-    .ui-public-nav-action,
-    .ui-public-nav-toggle,
-    .ui-public-link,
-    .ui-public-primary-action,
-    .ui-app-footer-cell,
-    .ui-loki-suggest-chip,
-    .ui-control-fleet-chip,
-    .ui-control-live-select,
-    .ui-control-live-input,
-    .ui-btn-nextbest,
-    .ui-link-subtle-button,
-    .ui-link-muted,
-    .ui-btn-primary,
-    .ui-btn-secondary,
-    .ui-btn-ghost,
-    .ui-btn-add,
-    .ui-btn-add-success,
-    .ui-btn-confirm,
-    .ui-btn-confirm-sm,
-    /* Height only, deliberately: a min-width here pushes the adjacent input in
-       inline-edit rows — see the note at .ui-btn-confirm-icon. */
-    .ui-btn-confirm-icon,
-    .ui-btn-danger,
-    .ui-btn-inline-cancel,
-    .ui-btn-pill,
-    .ui-btn-pill-muted,
-    .ui-btn-pill-positive,
-    .ui-btn-ready-primary,
-    .ui-btn-ready-action,
-    .ui-btn-ready-more,
-    .ui-chip-action-compact,
-    .ui-chip-truncate-label,
-    .ui-chip-toggle,
-    .ui-chip-toggle-active,
-    .ui-chip-toggle-compact,
-    .ui-chip-toggle-compact-active,
-    .ui-projects-filter-chip,
-    .ui-link-subtle,
-    .ui-tab,
-    .ui-sidebar-utility,
-    .ui-sidebar-section-toggle {
-      min-height: 2.75rem;
-    }
-
-    /* Shape-preserving variant: the hit area grows, the control does not. */
-    .ui-tap-overlay::after {
-      content: "";
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 100%;
-      height: 100%;
-      min-width: 2.75rem;
-      min-height: 2.75rem;
-      transform: translate(-50%, -50%);
-    }
-  }
 }
 
 /* ─── Sidebar portal tooltip (outside @layer to avoid Tailwind 4 keyframe issue) ── */
@@ -3538,5 +3411,203 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   THE TOUCH FLOOR — the ONE place the 44px minimum is declared.
+
+   Keyed on POINTER TYPE, not viewport width. Width was the wrong predicate:
+   every interactive class used to pair a 44px base with a responsive
+   override (sm:min-h-0, and the -7 / -8 / -9 variants), which drops the
+   minimum at 640px — so a TABLET, a touch device
+   with a desktop-width screen, inherited desktop sizing and the audit
+   measured 23-32px targets at 768px. A finger is the same size whatever the
+   screen is.
+
+   The corollary the old form got backwards: a MOUSE at a narrow window is
+   not a finger, and used to get inflated 44px rows for nothing.
+
+   UNLAYERED ON PURPOSE — this is the part that took two tries to get right.
+
+   It used to live at the end of @layer components, on the reasoning that a
+   later rule in the same layer would otherwise win. True, and not enough:
+   Tailwind's utilities are their own layer, and @layer utilities beats
+   @layer components outright. So `className="ui-btn-secondary min-h-9"` in
+   JSX silently undercut the floor — 13 controls did exactly that, and the
+   audit caught one of them only because /loki happened to render it at 768px.
+
+   Unlayered rules beat every layer. That is not a trick, it is the accurate
+   statement of what this is: a tap minimum is a CONSTRAINT, not a component
+   style, and a layout utility must not be able to argue with it. Deliberately
+   overriding it still works — `!min-h-*` wins — so the escape hatch is loud
+   instead of accidental.
+
+   Note this does NOT inflate desktop: the media query still gates everything,
+   so a mouse keeps its compact 32px buttons.
+
+   Adding an interactive class? You no longer have to do anything — THE
+   DEFAULT at the bottom of this block covers any control the markup already
+   identifies as one, and the named lists here only refine it. Nothing else
+   may state a tap minimum: `npm run check:design` fails on the `sm:min-h-*`
+   form, and `npm run audit:responsive` measures every real target in a real
+   browser.
+   ══════════════════════════════════════════════════════════════════════ */
+@media (pointer: coarse) {
+  /* `ui-tap` / `ui-tap-icon` are markers with no styling of their own — they
+     exist ONLY here, so a bespoke control (a one-off Link or button) can opt
+     into the floor without JSX ever restating the 44px number. They set no
+     display, so the element keeps whatever flex/block/inline-flex it had. */
+
+  /* Icon-only controls: square, so both axes. */
+  .ui-tap-icon,
+  .ui-icon-btn,
+  .ui-icon-btn-touch,
+  .ui-icon-action,
+  .ui-icon-action-danger,
+  .ui-btn-icon,
+  .ui-btn-row-action,
+  .ui-loki-tool-btn,
+  .ui-loki-send-btn,
+  /* A checkbox is 14px of native control. It cannot grow without looking
+     like a different widget, so the LABEL around it carries the hit area —
+     which is also what a finger actually lands on. */
+  .ui-checkbox-hit,
+  /* Its `h-9` is a fixed 36px — min-height still wins, since min-height
+     constrains the used height whatever `height` asked for. This one button
+     was the single most common offender in the audit: it is in the top bar
+     of all 20 authenticated routes, so one missing class name was 20 pages
+     of finding. */
+  .ui-theme-cycle-btn,
+  .ui-topbar-btn,
+  .ui-loki-convo-delete,
+  .ui-loki-toolbar-btn {
+    min-height: 2.75rem;
+    min-width: 2.75rem;
+  }
+
+  /* Everything with a label. Height only: these size to their content or
+     span their container, so a min-width would fight the layout and means
+     nothing for a row that is already full-width. */
+  .ui-tap,
+  /* A text field is a tap target too — you have to hit it to type in it.
+     These measured 42px: near-misses are still misses, and "nearly" is not a
+     category the finger recognises. */
+  .ui-input,
+  .ui-btn-overlay,
+  .ui-locked-banner,
+  .ui-app-topbar-search,
+  /* The marketing surfaces have their own namespace but not their own
+     fingers. These are the nav on every public page. */
+  .ui-public-nav-link,
+  .ui-public-nav-trigger,
+  .ui-public-nav-action,
+  .ui-public-nav-toggle,
+  .ui-public-link,
+  .ui-public-primary-action,
+  .ui-app-footer-cell,
+  .ui-loki-suggest-chip,
+  .ui-control-fleet-chip,
+  .ui-control-live-select,
+  .ui-control-live-input,
+  .ui-btn-nextbest,
+  .ui-link-subtle-button,
+  .ui-link-muted,
+  .ui-btn-primary,
+  .ui-btn-secondary,
+  .ui-btn-ghost,
+  .ui-btn-add,
+  .ui-btn-add-success,
+  .ui-btn-confirm,
+  .ui-btn-confirm-sm,
+  /* Height only, deliberately: a min-width here pushes the adjacent input in
+     inline-edit rows — see the note at .ui-btn-confirm-icon. */
+  .ui-btn-confirm-icon,
+  .ui-btn-danger,
+  .ui-btn-inline-cancel,
+  .ui-btn-pill,
+  .ui-btn-pill-muted,
+  .ui-btn-pill-positive,
+  .ui-btn-ready-primary,
+  .ui-btn-ready-action,
+  .ui-btn-ready-more,
+  .ui-chip-action-compact,
+  .ui-chip-truncate-label,
+  .ui-chip-toggle,
+  .ui-chip-toggle-active,
+  .ui-chip-toggle-compact,
+  .ui-chip-toggle-compact-active,
+  .ui-projects-filter-chip,
+  .ui-link-subtle,
+  .ui-tab,
+  .ui-sidebar-utility,
+  .ui-sidebar-section-toggle {
+    min-height: 2.75rem;
+  }
+
+  /* Shape-preserving variant: the hit area grows, the control does not. */
+  .ui-tap-overlay::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100%;
+    height: 100%;
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+    transform: translate(-50%, -50%);
+  }
+
+  /* ── THE DEFAULT ─────────────────────────────────────────────────────
+     Everything above is opt-in: a control is compliant because someone
+     remembered to name it. That predicate is wrong for the same reason
+     viewport width was wrong. "Needs a 44px target" is not "someone added
+     a class" — it is "this is a control", which the markup already says.
+     Five separate passes fixed 60+ individual controls by hand and a sweep
+     still found more, because the audit can only measure what happened to
+     be RENDERED: a button inside a closed modal or an empty state is
+     invisible to it and ships undersized.
+
+     So the floor is the default and exemption is explicit. A new button is
+     now compliant before anyone reviews it.
+
+     Element selectors on purpose (0,0,1): every ui-* rule outranks these,
+     so the named lists above still own their controls and this only
+     catches the bespoke ones that never had a class.
+
+     Inline links in prose are exempt — and exempt themselves, at no cost:
+     min-height is inert on a non-replaced inline box, so an <a> in a
+     sentence is untouched while an <a> laid out as a row gets the floor.
+     That is exactly WCAG 2.5.8's inline exception, for free. */
+  button,
+  summary,
+  select,
+  textarea,
+  [role="button"],
+  [role="switch"],
+  [role="tab"],
+  a[href],
+  input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]) {
+    min-height: 2.75rem;
+  }
+
+  /* An icon-only control has no text to widen it, so height alone leaves a
+     44x24 sliver. `:has()` reads "its only child is an icon" — the same
+     thing a human means by "icon button". */
+  button:has(> svg:only-child),
+  a[href]:has(> svg:only-child),
+  [role="button"]:has(> svg:only-child) {
+    min-width: 2.75rem;
+  }
+
+  /* The opt-out, for the one case where growing the box is the wrong answer:
+     a control whose shape carries meaning. A switch reads as a switch because
+     it is a small pill; inflating it to 44px makes it a lozenge. It uses
+     .ui-tap-overlay above to grow the HIT AREA instead, so the finger gets
+     its 44px and the eye keeps the switch.
+     A class (0,1,0) outranks the element rules (0,0,1) whatever the order. */
+  .ui-tap-overlay {
+    min-height: 0;
+    min-width: 0;
   }
 }

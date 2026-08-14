@@ -46,6 +46,10 @@ config({ path: ".env.local", quiet: true });
 
 const BASE = (process.env.AUDIT_BASE ?? "https://fleetcrown.orangecat.ch").replace(/\/$/, "");
 const OUT = ".tmp/responsive-audit";
+/** Optional CSS injected into every page before measuring — see the call site. */
+const EXTRA_CSS = process.env.AUDIT_EXTRA_CSS
+  ? fs.readFileSync(process.env.AUDIT_EXTRA_CSS, "utf8")
+  : null;
 
 /**
  * React's hydration failures, in both shapes.
@@ -77,11 +81,22 @@ const VIEWPORTS = [
  * Public/marketing routes are excluded: they render for signed-out visitors and
  * belong to `npm run smoke`, which already covers them at no session cost.
  */
+/**
+ * FIVE of the twenty entries that used to be here were `redirect()` stubs:
+ * /agents and /atlas (retired, → /control and /projects), /digests, /decisions
+ * and /history (→ /activity). So a "20 route" report was really 15 pages, four
+ * of them measured twice under a name they no longer own — a 25% coverage
+ * overstatement that nothing surfaced, because a redirect renders a real page
+ * and passes. Two of them did worse than lie: the redirect raced the
+ * measurement, and one run hung while another reported the context destroyed.
+ *
+ * The `landed elsewhere` note in the report is the detector, so the next
+ * retirement shows up as a line of output instead of silent double-counting.
+ */
 const PAGES = [
   "/today", "/loki", "/control", "/projects", "/approvals",
-  "/terminal", "/prompts", "/activity", "/system", "/agents",
-  "/atlas", "/thoughts", "/settings", "/frontier", "/digests",
-  "/decisions", "/history", "/integrations/orangecat/build",
+  "/terminal", "/prompts", "/activity", "/system", "/thoughts",
+  "/settings", "/frontier", "/integrations/orangecat/build",
   "/control/import", "/control/new-from-scratch",
 ];
 
@@ -297,6 +312,7 @@ async function main() {
   fs.mkdirSync(OUT, { recursive: true });
   const browser = await chromium.launch();
   const failures = [];
+  const notes = [];
   let checks = 0;
 
   for (const vp of VIEWPORTS) {
@@ -336,13 +352,44 @@ async function main() {
       });
       try {
         await page.goto(`${BASE}${route}`, { waitUntil: "networkidle", timeout: 45_000 });
+        // AUDIT_EXTRA_CSS: measure a stylesheet change against PRODUCTION
+        // markup, before shipping it. A design-system rule is only correct in
+        // contact with real pages in real states, and the alternatives are both
+        // bad: ship it and find out (this file exists because that cost a full
+        // production run), or stand up a local build — which measures a
+        // different database, and, on the day this was added, silently measured
+        // a DIFFERENT APP because another process already held the port.
+        // Injecting into the live page changes exactly one variable.
+        if (EXTRA_CSS) await page.addStyleTag({ content: EXTRA_CSS });
         // Let late layout (fonts, async panes) settle before measuring — a
         // measurement taken mid-hydration reports overflow that never reaches a
         // human eye, and a flaky gate is a disabled gate.
         await page.waitForTimeout(1200);
 
-        const r = await page.evaluate(measurePage, MIN_TOUCH_PX);
+        // A page that navigates AFTER networkidle — an auth refresh, an
+        // onboarding guard, a client-side redirect — destroys the execution
+        // context mid-measurement, and the run reports the route as a failure
+        // it is not. Seen on /history and then on /decisions: the route moved
+        // between runs, which is the signature of a race rather than a layout
+        // fault. Settle and measure once more; a gate that cries wolf is a gate
+        // someone learns to ignore.
+        let r;
+        try {
+          r = await page.evaluate(measurePage, MIN_TOUCH_PX);
+        } catch (err) {
+          if (!/Execution context was destroyed/.test(String(err?.message))) throw err;
+          await page.waitForLoadState("networkidle", { timeout: 20_000 }).catch(() => undefined);
+          await page.waitForTimeout(1200);
+          if (EXTRA_CSS) await page.addStyleTag({ content: EXTRA_CSS });
+          r = await page.evaluate(measurePage, MIN_TOUCH_PX);
+        }
         checks++;
+        // A route that lands somewhere else is measuring a page it does not
+        // name. Not a failure — redirects are legitimate — but it must be SAID,
+        // or the list rots into aliases and the report credits coverage it
+        // never had.
+        const landed = new URL(page.url()).pathname;
+        if (landed !== route) notes.push(`${route} @${vp.name}: landed on ${landed}`);
         const shot = path.join(OUT, `${route.replace(/\//g, "") || "root"}-${vp.name}.png`);
         await page.screenshot({ path: shot, fullPage: false });
 
@@ -391,6 +438,10 @@ async function main() {
   await browser.close();
 
   console.log(`\n${checks} check(s) across ${VIEWPORTS.length} viewports · screenshots in ${OUT}/`);
+  if (notes.length > 0) {
+    console.log(`\nnote — ${notes.length} route(s) did not measure what they name:`);
+    for (const n of notes) console.log(`  · ${n}`);
+  }
   if (failures.length > 0) {
     console.error(`\n✗ ${failures.length} responsive failure(s):\n`);
     for (const f of failures) console.error(`  - ${f}`);
