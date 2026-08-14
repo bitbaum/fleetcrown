@@ -4,7 +4,7 @@ import { getBuilderPresence } from "@/db/queries/runner-presence";
 import type { ProjectState as DbProjectState } from "@/db/schema/project-states";
 import { readAgentPreferences, resolveAgentConfig } from "@/lib/agent-preferences";
 import { buildSwitchableAgentCatalog } from "@/lib/agent-catalog";
-import { resolveEffectiveTab } from "@/lib/agent-config";
+import { resolveEffectiveTab, normalizeTabName } from "@/lib/agent-config";
 import { getAgentProcesses, readFastState } from "@/lib/control-fast-state";
 import { getZellijTabs } from "@/lib/zellij";
 import { getSessionUserId } from "@/lib/session";
@@ -27,10 +27,12 @@ function dbToFastState(
   dbRows: DbProjectState[]
 ): FastProjectState[] {
   // Key by (ownerUserId, projectKey) so two users with the same project name
-  // don't collide when an org peer is viewing a team project.
-  const byKey = new Map(dbRows.map((r) => [`${r.userId}:${r.projectKey.toLowerCase()}`, r]));
+  // don't collide when an org peer is viewing a team project. normalizeTabName
+  // so "Prime tower" finds the runner's "prime-tower" row — same join fix as
+  // /api/control's dbStateMap.
+  const byKey = new Map(dbRows.map((r) => [`${r.userId}:${normalizeTabName(r.projectKey)}`, r]));
   return confProjects.map(({ tab, ownerUserId }) => {
-    const r = byKey.get(`${ownerUserId}:${tab.toLowerCase()}`);
+    const r = byKey.get(`${ownerUserId}:${normalizeTabName(tab)}`);
     if (!r) return { tab, workspaceId: null, agentRunning: false, tabOpen: false, activeAgents: [], session: null, currentPrompt: null, readyAt: null, lockAt: null, closingAt: null, closedAt: null };
     // Runtime liveness claims expire when the runner stops reporting this
     // project (see isRuntimeObservationFresh) — session handoffs do not.
@@ -131,9 +133,9 @@ export async function GET() {
     // hit only happens when some session came back null (rare), not every tick.
     if (!fast.some((p) => p.session === null)) return fast;
     const dbRows = await getProjectStatesByUserIds(ownerIds).catch((): DbProjectState[] => []);
-    const byKey = new Map(dbRows.map((r) => [`${r.userId}:${r.projectKey.toLowerCase()}`, r]));
+    const byKey = new Map(dbRows.map((r) => [`${r.userId}:${normalizeTabName(r.projectKey)}`, r]));
     return fast.map((p, i) => {
-      const dbRow = byKey.get(`${confProjects[i].ownerUserId}:${confProjects[i].tab.toLowerCase()}`);
+      const dbRow = byKey.get(`${confProjects[i].ownerUserId}:${normalizeTabName(confProjects[i].tab)}`);
       return {
         ...p,
         workspaceId: p.workspaceId ?? dbRow?.workspaceId ?? null,

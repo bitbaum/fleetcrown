@@ -161,8 +161,13 @@ export type ControlData = {
   zellijTabs: string[];
   recentActivity: import("@/db/queries/prompt-history").ActivityItem[];
   runtimeAvailable: boolean;
+  /** Latest RUNTIME push from any of this user's builders. Runtime pushes
+   *  only — never bumped by web-originated writes or teammates' runners. */
   runnerLastPushedAt: string | null;
   runnerVersion: string | null;
+  /** Per-channel builder versions — two builders can be online at once, so a
+   *  single version string cannot describe the fleet. null on local runtime. */
+  builderVersions: { cloud: string | null; local: string | null } | null;
   /** Cloud vs local builder SSE channels (bridge). null on local runtime host. */
   builderPresence: { cloud: boolean; local: boolean; any: boolean } | null;
   /** Execution health: a runner can push snapshots while its command loop is

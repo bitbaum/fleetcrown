@@ -48,6 +48,12 @@ function staleSyncLabel(lastSyncedAt: string | null | undefined): string {
  */
 const STALE_PROMPT_S = 30 * 60;
 
+/** How recent a dispatch/run must be for an otherwise-idle project to show
+ *  "Active recently" instead of "Not running". 3h: long enough to cover a
+ *  working session between hook-captured dispatches, short enough that
+ *  yesterday's work doesn't read as current. */
+export const RECENTLY_ACTIVE_WINDOW_MS = 3 * 60 * 60 * 1000;
+
 /**
  * True when the recorded currentPrompt is no longer trustworthy. Layered
  * signals (positive → time-based fallback):
@@ -204,6 +210,10 @@ export const FLEET_PULSE_STALE_MS = DAY_MS;
 export function deriveFleetPulse(input: {
   automationMode: string;
   workingCount: number;
+  /** Projects awaiting the USER (ready / open_idle buckets). Lets the quiet
+   *  state say the truthful thing — "Waiting on you" — instead of implying
+   *  the system is about to act. */
+  waitingCount?: number;
   /** Latest run per project (projects with any finished run). `ageMs` = how long
    *  ago it finished; null = unknown age (open/newer run) → excluded from the
    *  stall signal since an active project isn't "stalled". */
@@ -239,7 +249,20 @@ export function deriveFleetPulse(input: {
       detail: `The latest run on ${failed} project${failed === 1 ? "" : "s"} failed and nothing is currently building.`,
     };
   }
-  return { key: "waiting", label: "Waiting to dispatch", detail: null };
+  // Nothing is working and nothing failed recently. "Waiting to dispatch"
+  // was the old catch-all here — it implied the system was about to act even
+  // when the queue was empty and the only thing anyone was waiting on was
+  // the HUMAN (1 project sat "Awaiting input" under a hero promising
+  // imminent dispatch, 2026-08-13 review). Say which quiet state it is.
+  if ((input.waitingCount ?? 0) > 0) {
+    const n = input.waitingCount!;
+    return {
+      key: "waiting",
+      label: "Waiting on you",
+      detail: `${n} project${n === 1 ? "" : "s"} awaiting your input — autopilot doesn't interrupt a session that's waiting on you.`,
+    };
+  }
+  return { key: "waiting", label: "Idle — nothing queued", detail: null };
 }
 
 export type AttentionItem = {
@@ -275,6 +298,7 @@ const LIVE_TAB_RANK: Record<LiveTabRankLabel, number> = {
   Closing: 2,
   Completed: 3,
   "Not running": 4,
+  "Active recently": 4,
   "Tab open": 4,
   Open: 5,
 };
@@ -567,10 +591,24 @@ export function getProjectDisplayState(
     closed: "completed",
     idle: "not_running",
   };
+  // "Not running" is a claim the recorded facts can contradict: sessions run
+  // in unnamed kitty tabs FleetCrown can't observe, but their hook-captured
+  // dispatches and orchestration runs still land here. A project whose last
+  // dispatch/run is recent gets "Active recently" instead of asserting death.
+  const lastDispatchMs = project.recentActivity?.[0]?.at
+    ? Date.parse(project.recentActivity[0].at)
+    : 0;
+  const lastRunFinishMs = project.latestOrchestrationRun?.finishedAt
+    ? Date.parse(project.latestOrchestrationRun.finishedAt)
+    : 0;
+  const recentlyActive =
+    nowS * 1000 - Math.max(lastDispatchMs, lastRunFinishMs) < RECENTLY_ACTIVE_WINDOW_MS;
   const stateKey: ProjectStateKey =
     tone === "idle" && tabOpen && !isSessionOpen
       ? "tab_open"
-      : TONE_TO_STATE_KEY[tone];
+      : tone === "idle" && recentlyActive
+        ? "recently_active"
+        : TONE_TO_STATE_KEY[tone];
 
   // Runner sync is stale (cloud path, last push older than the offline
   // threshold): every runtime flag above was derived from that stale push and
@@ -711,7 +749,11 @@ export function buildProjectOperationsSnapshot(
       ? "Last run"
       : historicalAt === lastDispatchAt && lastDispatchAt > 0
         ? "Last dispatch"
-        : "Idle";
+        // Name the SIGNAL, like the two branches above. "Idle" described a
+        // state while its siblings named their evidence, so the same row slot
+        // read as two different kinds of fact ("Idle 1mo ago" vs "Last run
+        // 1w ago") — the handoff file is what this timestamp comes from.
+        : "Last handoff";
   const evidenceLabel = !runtimeStateKnown
     ? "Live status unavailable"
     : syncStale && claimsLiveObservation

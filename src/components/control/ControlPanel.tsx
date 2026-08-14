@@ -134,6 +134,7 @@ export function ControlPanel() {
   const fleetPulse = deriveFleetPulse({
     automationMode: automationPolicy.mode,
     workingCount: dashboard?.runningCount ?? 0,
+    waitingCount: dashboard?.waitingCount ?? 0,
     // Genuine execution stalls (serialized/in-flight commands already filtered
     // out server-side) outrank "Building" — see deriveFleetPulse.
     executionStall: data?.runnerExecutionStall ?? null,
@@ -251,12 +252,16 @@ export function ControlPanel() {
     runtimeAvailable,
     runtimeStateKnown,
     runnerSyncStale,
+    executionStalled: Boolean(data?.runnerExecutionStall?.stalled),
     automationMode: automationPolicy.mode,
     countdownSeconds: automationPolicy.countdownSeconds,
   });
 
   const livePanelProps = {
     rows: liveTabRows,
+    // Total tabs the builders report, so the panel can admit how many it
+    // filtered out instead of presenting a filtered list as "open tabs".
+    openTabCount: data?.zellijTabs.length ?? 0,
     runnerNeverSeen,
     runnerSyncStale,
     refreshing,
@@ -358,10 +363,12 @@ export function ControlPanel() {
         runnerStateUnknown={runnerNeverSeen}
         runnerLastPushedAt={runnerLastPushedAt}
         runnerVersion={runnerVersion}
+        builderVersions={data.builderVersions}
         builderPresence={builderPresence}
         runnerExecutionStall={data.runnerExecutionStall}
         lastUpdated={lastUpdated}
         automationMode={automationPolicy.mode}
+        automationModeLoaded={automationPolicy.loaded}
         fleetPulse={fleetPulse}
         automationSaving={automationPolicy.saving}
         refreshing={refreshing}

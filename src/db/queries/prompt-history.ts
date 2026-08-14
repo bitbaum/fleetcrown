@@ -1,6 +1,7 @@
 import { and, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { promptHistory, type NewPromptHistoryRow } from "@/db/schema/prompt-history";
+import { excludeSmokeDispatchesSql } from "./smoke-filter";
 import { toPromptDisplayFields, type PromptDisplayFields } from "@/lib/activity-status";
 import { HOUR_MS } from "@/lib/constants/time";
 
@@ -65,6 +66,7 @@ export async function getRecentCustomPromptsByProjectKey(
         eq(promptHistory.projectKey, projectKey),
         eq(promptHistory.intent, "custom"),
         sql`custom_prompt is not null`,
+        excludeSmokeDispatchesSql(),
       ),
     )
     .groupBy(promptHistory.customPrompt)
@@ -97,6 +99,7 @@ export async function getRecentCustomPromptsByProjectKeys(
         inArray(promptHistory.projectKey, projectKeys),
         eq(promptHistory.intent, "custom"),
         sql`custom_prompt is not null`,
+        excludeSmokeDispatchesSql(),
       ),
     )
     .groupBy(promptHistory.projectKey, promptHistory.customPrompt)
@@ -167,7 +170,7 @@ export async function getPromptHistory(userId: string, limit = 200): Promise<His
   const rows = await db
     .select(DISPATCH_COLS)
     .from(promptHistory)
-    .where(eq(promptHistory.userId, userId))
+    .where(and(eq(promptHistory.userId, userId), excludeSmokeDispatchesSql()))
     .orderBy(desc(promptHistory.dispatchedAt))
     .limit(limit);
   return rows.map(toHistoryItem);
@@ -178,7 +181,7 @@ export async function getRecentActivity(userId: string, hours = 24, limit = 30):
   const rows = await db
     .select(DISPATCH_COLS)
     .from(promptHistory)
-    .where(and(eq(promptHistory.userId, userId), gte(promptHistory.dispatchedAt, since)))
+    .where(and(eq(promptHistory.userId, userId), gte(promptHistory.dispatchedAt, since), excludeSmokeDispatchesSql()))
     .orderBy(desc(promptHistory.dispatchedAt))
     .limit(limit);
   return rows.map(toActivityItem);
@@ -192,7 +195,7 @@ export async function getLastPromptByProjectKey(userId: string, projectKey: stri
   const [row] = await db
     .select(DISPATCH_COLS)
     .from(promptHistory)
-    .where(and(eq(promptHistory.userId, userId), sql`lower(${promptHistory.projectKey}) = lower(${projectKey})`))
+    .where(and(eq(promptHistory.userId, userId), sql`lower(${promptHistory.projectKey}) = lower(${projectKey})`, excludeSmokeDispatchesSql()))
     .orderBy(desc(promptHistory.dispatchedAt))
     .limit(1);
   return row ? toActivityItem(row) : null;
@@ -202,7 +205,7 @@ export async function getProjectPromptActivity(userId: string, projectId: string
   const rows = await db
     .select(DISPATCH_COLS)
     .from(promptHistory)
-    .where(and(eq(promptHistory.userId, userId), eq(promptHistory.projectId, projectId)))
+    .where(and(eq(promptHistory.userId, userId), eq(promptHistory.projectId, projectId), excludeSmokeDispatchesSql()))
     .orderBy(desc(promptHistory.dispatchedAt))
     .limit(limit);
   return rows.map(toActivityItem);

@@ -1,6 +1,7 @@
 import { and, desc, eq, gte, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { promptHistory } from "@/db/schema/prompt-history";
+import { excludeSmokeDispatchesSql } from "./smoke-filter";
 import { orchestrationEvents } from "@/db/schema/orchestration-events";
 import { orchestrationRuns } from "@/db/schema/orchestration-runs";
 import { runStatus, toPromptDisplayFields } from "@/lib/activity-status";
@@ -206,7 +207,7 @@ export async function getProjectActivity(
         dispatchedAt: promptHistory.dispatchedAt,
       })
       .from(promptHistory)
-      .where(and(eq(promptHistory.userId, userId), eq(promptHistory.projectKey, projectKey), gte(promptHistory.dispatchedAt, since)))
+      .where(and(eq(promptHistory.userId, userId), eq(promptHistory.projectKey, projectKey), gte(promptHistory.dispatchedAt, since), excludeSmokeDispatchesSql()))
       .orderBy(desc(promptHistory.dispatchedAt))
       .limit(limit),
     db
@@ -280,7 +281,7 @@ export async function getProjectActivityBatch(
         dispatchedAt: promptHistory.dispatchedAt,
       })
       .from(promptHistory)
-      .where(and(eq(promptHistory.userId, userId), inArray(promptHistory.projectKey, projectKeys), gte(promptHistory.dispatchedAt, since)))
+      .where(and(eq(promptHistory.userId, userId), inArray(promptHistory.projectKey, projectKeys), gte(promptHistory.dispatchedAt, since), excludeSmokeDispatchesSql()))
       .orderBy(desc(promptHistory.dispatchedAt)),
     db
       .select({

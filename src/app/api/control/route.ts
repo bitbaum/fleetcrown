@@ -12,6 +12,7 @@ import { readAgentPreferences, resolveAgentConfig } from "@/lib/agent-preference
 import { buildSwitchableAgentCatalog, type AgentAvailabilityOverride, type AgentCatalog } from "@/lib/agent-catalog";
 import {
   resolveEffectiveTab,
+  normalizeTabName,
   readPromptMeta,
   type PromptMeta,
 } from "@/lib/agent-config";
@@ -45,7 +46,8 @@ import { isAgentId, listAgentRegistry } from "@/lib/agent-registry";
 import { inferAdapterFromTabName } from "@/components/control/control-presenter";
 import type { ProjectProfile, CurrentPrompt, ProjectState, SessionState, GitState, ControlData, FailedCommand } from "@/lib/control-types";
 import { getRecentFailedCommands, hasUndeliveredCommandForRun } from "@/db/queries/pending-commands";
-import { getRuntimeSnapshot } from "@/db/queries/runtime-snapshots";
+import { getRuntimeSnapshots } from "@/db/queries/runtime-snapshots";
+import { RUNNER_OFFLINE_THRESHOLD_MS } from "@/lib/constants/runner";
 import { writePromptQueueMirror } from "@/lib/prompt-queue-mirror";
 import { fetchAllGitStates } from "@/lib/git-state";
 import { matchProfile, matchProfileById, resolveAutoInjectOverride } from "@/lib/project-profile-match";
@@ -69,6 +71,10 @@ type SlowCache = {
   runtimeSnapshotUpdatedAt: Date | null;
   installedAgents: string[];
   runnerVersion: string | null;
+  /** Per-channel builder versions. Two builders can be online at once — one
+   *  version string cannot describe both, and last-writer-wins between the
+   *  channel rows made the hero flip between "box-0.8.9" and "dev". */
+  builderVersions: { cloud: string | null; local: string | null };
 };
 
 let slowCache: SlowCache | null = null;
@@ -76,28 +82,53 @@ let cacheRefreshing = false;
 const CACHE_TTL_MS = 20_000; // 20s — stale after one 10s poll misses, triggers refresh
 
 async function buildSlowData(userId: string, dirs: string[], key: string): Promise<SlowCache> {
-  const [gitMap, zellijTabsLocal, dbStates, runtimeSnapshot] = await Promise.all([
+  const [gitMap, zellijTabsLocal, dbStates, runtimeSnapshots] = await Promise.all([
     fetchAllGitStates(dirs),
     isRuntimeAvailable() ? getZellijTabs() : Promise.resolve([] as string[]),
     isRuntimeAvailable() ? Promise.resolve([] as DbProjectState[]) : getProjectStatesByUserId(userId).catch((e): DbProjectState[] => { console.error("[control/slowData] projectStates failed:", e); return []; }),
-    isRuntimeAvailable() ? Promise.resolve(null) : getRuntimeSnapshot(userId).catch((e) => { console.error("[control/slowData] runtimeSnapshot failed:", e); return null; }),
+    isRuntimeAvailable() ? Promise.resolve([]) : getRuntimeSnapshots(userId).catch((e) => { console.error("[control/slowData] runtimeSnapshots failed:", e); return []; }),
   ]);
-  // Locally: live Zellij query. On cloud: runner-pushed openTabs (full session list),
-  // falling back to per-project tabOpen flags from project_states.
+  // Cloud + local builders each push their OWN channel row. The tab list must
+  // be the UNION of fresh channels — reading only the last-written row made
+  // the laptop's open tabs vanish every time the cloud box pushed (and vice
+  // versa), so "prime-tower" flapped between "Tab open" and "Not running" on
+  // a ~5min cycle. Stale channels are excluded: a machine that stopped
+  // pushing must not keep its tabs "open" forever.
+  const nowMs = Date.now();
+  const freshSnapshots = runtimeSnapshots.filter(
+    (s) => s.observedAt && nowMs - s.observedAt.getTime() < RUNNER_OFFLINE_THRESHOLD_MS,
+  );
+  const localSnapshot = runtimeSnapshots.find((s) => s.channel === "local") ?? null;
+  const cloudSnapshot = runtimeSnapshots.find((s) => s.channel === "cloud") ?? null;
+  const unionTabs = [...new Set(freshSnapshots.flatMap((s) => s.openTabs ?? []))];
+  // Locally: live Zellij query. On cloud: union of fresh runner-pushed tab
+  // lists, falling back to per-project tabOpen flags from project_states —
+  // gated on observation freshness so a dead runner's frozen rows can't
+  // resurrect tabs it stopped reporting.
   const zellijTabs = isRuntimeAvailable()
     ? zellijTabsLocal
-    : (runtimeSnapshot?.openTabs?.length
-      ? runtimeSnapshot.openTabs
-      : dbStates.filter((s) => s.tabOpen).map((s) => s.tabName));
+    : (unionTabs.length
+      ? unionTabs
+      : dbStates.filter((s) => s.tabOpen && isRuntimeObservationFresh(s)).map((s) => s.tabName));
+  const latestObservedAt = runtimeSnapshots.reduce<Date | null>(
+    (max, s) => (s.observedAt && (!max || s.observedAt > max) ? s.observedAt : max),
+    null,
+  );
   return {
     key,
     gitMap,
     zellijTabs,
     dirs,
     builtAt: Date.now(),
-    runtimeSnapshotUpdatedAt: runtimeSnapshot?.updatedAt ?? null,
-    installedAgents: runtimeSnapshot?.installedAgents ?? [],
-    runnerVersion: runtimeSnapshot?.runnerVersion ?? null,
+    runtimeSnapshotUpdatedAt: latestObservedAt,
+    // CLI availability describes the OPERATOR'S machine — the local channel is
+    // authoritative when present; the cloud box's list is the fallback.
+    installedAgents: localSnapshot?.installedAgents ?? cloudSnapshot?.installedAgents ?? [],
+    runnerVersion: cloudSnapshot?.runnerVersion ?? localSnapshot?.runnerVersion ?? null,
+    builderVersions: {
+      cloud: cloudSnapshot?.runnerVersion ?? null,
+      local: localSnapshot?.runnerVersion ?? null,
+    },
   };
 }
 
@@ -152,7 +183,7 @@ export async function GET() {
   const dirs = projects.map((p) => p.dir);
 
   // Slow data (git + DB) served from cache — no fork needed for CWD check
-  const { gitMap, zellijTabs, runtimeSnapshotUpdatedAt, installedAgents, runnerVersion } = await getSlowData(userId, dirs);
+  const { gitMap, zellijTabs, runtimeSnapshotUpdatedAt, installedAgents, runnerVersion, builderVersions } = await getSlowData(userId, dirs);
   const runtimeAvailable = isRuntimeAvailable();
   // Pull the canonical agent ID list straight from the registry — same source
   // buildSwitchableAgentCatalog reads from one line below. Pre-fix this was
@@ -198,11 +229,15 @@ export async function GET() {
   // permission prompt; the work had succeeded). One reaper, one ordering.
   // Key by (ownerUserId, projectKey) — two users in the same org may both have a
   // project with the same key, and we want each card to read its own owner's row.
-  const dbStateMap = new Map(dbStatesArr.map((s) => [`${s.userId}:${s.projectKey.toLowerCase()}`, s]));
+  // normalizeTabName, not .toLowerCase(): the runner keys its pushes by the
+  // live tab name ("prime-tower"), the registry by the display name ("Prime
+  // tower") — a case-only join left such projects permanently detached from
+  // their runtime rows (agentRunning stuck false forever).
+  const dbStateMap = new Map(dbStatesArr.map((s) => [`${s.userId}:${normalizeTabName(s.projectKey)}`, s]));
 
   const states: ProjectState[] = projects.map(({ id, projectId, tab, dir, agentPref, modelPref, ownerUserId, readonly }) => {
     const latestRun = latestRuns.get(dir);
-    const dbState = dbStateMap.get(`${ownerUserId}:${tab.toLowerCase()}`);
+    const dbState = dbStateMap.get(`${ownerUserId}:${normalizeTabName(tab)}`);
 
     // Resolve live Zellij tab first — session files and /tmp sentinels all use the live name.
     // e.g. canonical "FleetCrown" may run as "FleetCrown Claude", so sessions/FleetCrown Claude.md wins.
@@ -429,16 +464,26 @@ export async function GET() {
       zellijTabs,
       recentActivity: recentActivity ?? [],
       runtimeAvailable: isRuntimeAvailable(),
+      // "sync Xm ago" must mean A RUNNER PUSHED Xm ago — nothing else. This
+      // used to max() in project_states.updatedAt, which web-originated writes
+      // (queueing a prompt, toggling auto-continue) also bump, and which
+      // includes TEAMMATES' rows: queueing from the browser made a dead runner
+      // read "online · sync just now", and the same laundered timestamp fed
+      // offline detection. Only runtime observation times count now, and only
+      // the current user's rows — a teammate's runner is not your sync.
       runnerLastPushedAt: !isRuntimeAvailable()
         ? (() => {
             let maxAt: Date | null = runtimeSnapshotUpdatedAt;
             for (const s of dbStatesArr) {
-              if (!maxAt || s.updatedAt > maxAt) maxAt = s.updatedAt;
+              if (s.userId !== userId) continue;
+              const t = s.runtimeObservedAt;
+              if (t && (!maxAt || t > maxAt)) maxAt = t;
             }
             return maxAt?.toISOString() ?? null;
           })()
         : null,
       runnerVersion: !isRuntimeAvailable() ? runnerVersion : null,
+      builderVersions: !isRuntimeAvailable() ? builderVersions : null,
       builderPresence: !isRuntimeAvailable()
         ? await getBuilderPresence(userId, runnerVersion).catch(() => null)
         : null,

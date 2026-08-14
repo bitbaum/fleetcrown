@@ -52,3 +52,18 @@ export async function getRuntimeSnapshot(userId: string, channel?: RunnerChannel
   const [row] = await query;
   return row ?? null;
 }
+
+/**
+ * All channel rows for a user (cloud + local push their OWN row every ~5min).
+ * Callers that describe "the fleet" must read BOTH — the channel-less
+ * getRuntimeSnapshot above returns whichever channel pushed last, so a
+ * cloud push silently erased the laptop's open tabs (and vice versa) from
+ * any consumer that treated one row as the whole truth.
+ */
+export async function getRuntimeSnapshots(userId: string) {
+  return db
+    .select()
+    .from(runtimeSnapshots)
+    .where(eq(runtimeSnapshots.userId, userId))
+    .orderBy(desc(runtimeSnapshots.updatedAt));
+}

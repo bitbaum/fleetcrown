@@ -37,10 +37,14 @@ type Props = {
   runnerStateUnknown: boolean;
   runnerLastPushedAt: string | null;
   runnerVersion?: string | null;
+  builderVersions?: { cloud: string | null; local: string | null } | null;
   builderPresence?: BuilderChannelPresence | null;
   runnerExecutionStall: { stalled: boolean; stalledCount: number; oldestSeconds: number } | null;
   lastUpdated: number | null;
   automationMode: AutoInjectMode;
+  /** False until /api/beacon-settings answers — the hint must not assert
+   *  "Autopilot on" from an optimistic client-side default. */
+  automationModeLoaded?: boolean;
   /** Truthful hero headline — deriveFleetPulse(), computed by ControlPanel. */
   fleetPulse: FleetPulse;
   automationSaving: boolean;
@@ -67,10 +71,12 @@ export function ControlFleetStatus({
   runnerStateUnknown,
   runnerLastPushedAt,
   runnerVersion,
+  builderVersions,
   builderPresence,
   runnerExecutionStall,
   lastUpdated,
   automationMode,
+  automationModeLoaded = true,
   fleetPulse,
   automationSaving,
   refreshing,
@@ -110,10 +116,19 @@ export function ControlFleetStatus({
     : lastUpdated
       ? `page ${timeAgo(lastUpdated)}`
       : null;
-  // Append the connected runner's reported version so the user can confirm
-  // which Fleet Runner build is live (helps diagnose stale-runner bugs).
-  const versionDetail = runnerStateKey === "connected" && runnerVersion
-    ? `${EXECUTOR_COPY.builder.versionPrefix} v${runnerVersion}`
+  // Append the connected builders' reported versions so the user can confirm
+  // which builds are live (helps diagnose stale-runner bugs). Per channel:
+  // two builders can be online at once, and collapsing them to one string
+  // rendered whichever pushed last — the hero flipped between "builder
+  // vbox-0.8.9" and the semver-shaped lie "vdev". A genuine dev build is
+  // labeled honestly instead of dressed up as a version number.
+  const fmtVersion = (v: string) => (v === "dev" ? "dev build" : `v${v.replace(/^box-/, "")}`);
+  const versionDetail = runnerStateKey === "connected"
+    ? [
+        builderVersions?.cloud ? `cloud ${fmtVersion(builderVersions.cloud)}` : null,
+        builderVersions?.local ? `app ${fmtVersion(builderVersions.local)}` : null,
+      ].filter(Boolean).join(" · ")
+      || (runnerVersion ? `${EXECUTOR_COPY.builder.versionPrefix} ${fmtVersion(runnerVersion)}` : null)
     : null;
   const compactLabel = builderCompactLabel(runnerStateKey, runnerVersion, builderPresence);
   const presenceDetail = builderPresence && runnerStateKey === "connected"
@@ -211,7 +226,14 @@ export function ControlFleetStatus({
           </p>
           {fleetPulse.detail && (
             <div className="flex flex-wrap items-center gap-2">
-              <p className="text-xs text-status-negative">{fleetPulse.detail}</p>
+              {/* Red is for problems. "Waiting on you" is a normal state — a
+                  red sentence under a neutral dot read as a contradiction. */}
+              <p className={cn(
+                "text-xs",
+                fleetPulse.key === "failing" || fleetPulse.key === "stalled"
+                  ? "text-status-negative"
+                  : "text-text-muted",
+              )}>{fleetPulse.detail}</p>
               {/* When the fleet is failing, reviewing the failures IS the next
                   action — it gets a real button. For an execution stall the
                   detail already names the stuck projects; /activity has
@@ -295,8 +317,13 @@ export function ControlFleetStatus({
       <p className="ui-control-fleet-hint">
         <Zap className="inline h-3 w-3 shrink-0 text-accent-text" aria-hidden="true" />
         {" "}
-        {AUTOMATION_HINTS[automationMode].primary}
-        {AUTOMATION_HINTS[automationMode].secondary && (
+        {/* Don't state the autopilot mode until the server has confirmed it —
+            the client seeds "on" optimistically, so a paused fleet used to
+            read "Autopilot on" until (or forever, if the fetch failed). */}
+        {automationModeLoaded
+          ? AUTOMATION_HINTS[automationMode].primary
+          : "Checking autopilot setting…"}
+        {automationModeLoaded && AUTOMATION_HINTS[automationMode].secondary && (
           <span className="hidden sm:inline"> {AUTOMATION_HINTS[automationMode].secondary}</span>
         )}
         {projectOverrideCount > 0 && (
