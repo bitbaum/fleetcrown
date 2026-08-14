@@ -8,7 +8,12 @@
  *
  * Run: npm run test:fact-budget
  */
-import { trimFactsToBudget, mergeFactsWithCap } from "@/lib/agent/fact-budget";
+import {
+  trimFactsToBudget,
+  mergeFactsWithCap,
+  fitFactsToBudget,
+  estimateTokens,
+} from "@/lib/agent/fact-budget";
 import type { Fact } from "@/lib/agent/core/facts";
 
 function assert(condition: boolean, message: string): void {
@@ -62,6 +67,56 @@ function runTests(): void {
   check("trim to odd budget still totals the budget", () => {
     const out = trimFactsToBudget(range("f", 40), 5);
     assert(out.length === 5, `got ${out.length}`);
+  });
+
+  check("trim to zero means zero — slice(-0) would return EVERYTHING", () => {
+    assert(trimFactsToBudget(range("f", 40), 0).length === 0, "budget 0 kept facts");
+    assert(trimFactsToBudget(range("f", 40), -3).length === 0, "negative budget kept facts");
+  });
+
+  // ── fitting the prompt to a per-call token budget ──────────────────────────
+  // Each rendered fact below is 100 chars = 25 estimated tokens, so the maths in
+  // these cases is checkable by hand rather than by trusting the estimator.
+  const render = (fs: Fact[]) => fs.map((f) => f.subject.padEnd(100, ".")).join("");
+
+  check("a prompt that already fits is returned untouched", () => {
+    const all = range("f", 10);
+    assert(fitFactsToBudget(all, render, 0, 10_000) === all, "no copy when it already fits");
+  });
+
+  check("an oversized prompt is cut to what the budget allows", () => {
+    // 40 facts = 4000 chars = 1000 tokens. Budget 300 ⇒ ~12 facts.
+    const out = fitFactsToBudget(range("f", 40), render, 0, 300);
+    assert(out.length > 0 && out.length <= 12, `expected ≤12 facts, got ${out.length}`);
+    assert(estimateTokens(render(out)) <= 300, "result still busts the budget");
+  });
+
+  check("the fit is the LARGEST that fits, not merely a safe one", () => {
+    const all = range("f", 40);
+    const out = fitFactsToBudget(all, render, 0, 300);
+    const oneMore = trimFactsToBudget(all, out.length + 1);
+    assert(estimateTokens(render(oneMore)) > 300, `${out.length + 1} facts would also have fit`);
+  });
+
+  check("overhead is charged before facts — a growing conversation sheds more", () => {
+    const all = range("f", 40);
+    const roomy = fitFactsToBudget(all, render, 0, 400);
+    const cramped = fitFactsToBudget(all, render, 1200 /* chars = 300 tok */, 400);
+    assert(cramped.length < roomy.length, `overhead ignored: ${cramped.length} vs ${roomy.length}`);
+  });
+
+  check("tool results survive the fit (the invariant, at the token layer)", () => {
+    const all = [...range("seed", 35), ...range("tool", 5)];
+    const out = fitFactsToBudget(all, render, 0, 300);
+    const tools = out.filter((f) => f.subject.startsWith("tool"));
+    assert(tools.length > 0, "fitting the budget deleted every tool result");
+    assert(out[out.length - 1]!.subject === "tool4", "freshest tool fact must survive at the tail");
+  });
+
+  check("overhead alone busting the budget yields no facts, not a wrong answer", () => {
+    // Nothing can be shed to fix this; returning facts anyway would hide it.
+    const out = fitFactsToBudget(range("f", 40), render, 8000 /* = 2000 tok */, 300);
+    assert(out.length === 0, `expected 0 facts, got ${out.length}`);
   });
 
   console.log(`\n${passed} passed`);

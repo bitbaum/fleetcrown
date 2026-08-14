@@ -25,7 +25,7 @@
  * "answer with what you have" rather than to an error.
  */
 import { assignFactIds, renderFacts, type Fact } from "@/lib/agent/core/facts";
-import { trimFactsToBudget, mergeFactsWithCap } from "@/lib/agent/fact-budget";
+import { trimFactsToBudget, mergeFactsWithCap, fitFactsToBudget } from "@/lib/agent/fact-budget";
 import { buildGroundedContext, buildContract, directiveId, NO_BASIS, type Directive } from "@/lib/agent/core/contract";
 import { verifyAnswer, buildRepairPrompt, type Violation } from "@/lib/agent/core/verify";
 import { callModelWithTools, type ChatMessage, type ToolCall } from "@/lib/agent/llm";
@@ -61,6 +61,23 @@ const MAX_ROUNDS = 3;
 const MAX_CALLS_PER_ROUND = 4;
 /** Total facts carried. Past this, small models answer about the wrong record. */
 const MAX_FACTS = 40;
+
+/**
+ * Token ceiling for ONE call, so a whole turn fits the provider's per-minute
+ * allowance.
+ *
+ * Groq charges the entire request against a tokens-per-MINUTE budget — 12000 on
+ * the 70B, 6000 on the 8B step-down — and a turn spends MAX_ROUNDS calls inside
+ * that same minute. A full 40-fact prompt measured ~15000 tokens on its own, so
+ * every turn exceeded the whole minute's allowance on its FIRST call and the
+ * loop never completed a single round in production; answers came from the
+ * toolless fallback instead, which cannot read the tables being asked about.
+ *
+ * Budgeting per call is what makes the loop possible at all: 12000 × 0.8 for
+ * headroom, split across the rounds. The margin covers the estimator's slop and
+ * the model's own reply, which is charged too.
+ */
+const CALL_TOKEN_BUDGET = Math.floor((12000 * 0.8) / MAX_ROUNDS);
 
 const PLANNING_CUES =
   /\b(plan|today|day|urgent|priorit|attention|focus|stuck|due|deadline|overdue|next|habit|commit|risk|blocked|first)\b/i;
@@ -234,12 +251,31 @@ export async function runLokiTurn(input: {
     // therefore ran out of attempts while still too large and abandoned the loop
     // on EVERY question. It halves further now, which is cheap because a size
     // 429 no longer costs a 25s wait per attempt (see groq-error.ts).
+    // Everything charged besides facts. It GROWS as the loop proceeds — the
+    // conversation carries each round's tool results — so the fit is recomputed
+    // per round rather than once per turn.
+    const overheadChars =
+      systemPrompt(registry).length +
+      voiceLine.length +
+      input.message.length +
+      (lastRound ? 0 : JSON.stringify(nativeTools).length) +
+      conversation.reduce((n, m) => n + m.content.length, 0);
+    const fitted = fitFactsToBudget(
+      facts,
+      (f) => buildGroundedContext({ facts: f, directives, renderedFacts: renderFacts(f) }),
+      overheadChars,
+      CALL_TOKEN_BUDGET,
+    );
+    if (fitted.length < facts.length) {
+      console.warn(`[loki] round ${rounds}: ${facts.length} facts exceed the call budget — sending ${fitted.length}`);
+    }
+
     const turn = await (async () => {
-      let budget = facts.length;
+      let budget = fitted.length;
       for (let attempt = 0; ; attempt++) {
-        const trimmed = budget >= facts.length ? facts : trimFactsToBudget(facts, budget);
+        const trimmed = budget >= fitted.length ? fitted : trimFactsToBudget(fitted, budget);
         const ctx =
-          budget >= facts.length
+          budget >= fitted.length && fitted.length === facts.length
             ? grounded
             : buildGroundedContext({ facts: trimmed, directives, renderedFacts: renderFacts(trimmed) });
         try {
