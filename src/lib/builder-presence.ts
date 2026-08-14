@@ -1,4 +1,5 @@
 import { EXECUTOR_COPY } from "@/config/executor-copy";
+import { RUNNER_OFFLINE_THRESHOLD_MS } from "@/lib/constants/runner";
 import type { RunnerStateKey } from "@/lib/control-states";
 
 export type BuilderChannelPresence = {
@@ -6,6 +7,53 @@ export type BuilderChannelPresence = {
   local: boolean;
   any: boolean;
 };
+
+/** A channel's last heartbeat — the only liveness signal that carries a time. */
+export type ChannelHeartbeat = {
+  channel: string;
+  observedAt: Date | null;
+};
+
+/**
+ * Is this channel's heartbeat still fresh? SSOT for the snapshot-freshness
+ * rule that /api/control applies to tabs, versions, and installed agents.
+ *
+ * Safe to demand a heartbeat: the runner pushes a runtime snapshot every
+ * RUNNER_HEARTBEAT_MS whether or not anything changed (and once immediately
+ * at launch), so silence past the threshold means the channel stopped
+ * reporting — not that the fleet was quiet.
+ */
+export function isHeartbeatFresh(observedAt: Date | null | undefined, nowMs = Date.now()): boolean {
+  const t = observedAt?.getTime();
+  return t != null && nowMs - t < RUNNER_OFFLINE_THRESHOLD_MS;
+}
+
+/**
+ * Expire connection-based presence that the heartbeat no longer corroborates.
+ *
+ * `runner_presence` is written by the bridge on SSE connect/disconnect and has
+ * NO expiry of its own: `markDisconnect` is fire-and-forget, so a disconnect
+ * lost to a DB blip — or a half-open socket the bridge never sees close —
+ * pins `connected = true` until the bridge process restarts. Every other
+ * liveness claim on Control expires (tabs, versions, runtime observations);
+ * this one outlived its evidence and could assert "this computer online" for
+ * a laptop that had been shut for days.
+ *
+ * AND, not OR: a runner that posts snapshots while its SSE channel is down
+ * cannot receive dispatches, so it is not online either. Both signals must
+ * agree before we claim a builder can execute.
+ */
+export function applyHeartbeatExpiry(
+  connection: BuilderChannelPresence,
+  heartbeats: ChannelHeartbeat[],
+  nowMs = Date.now(),
+): BuilderChannelPresence {
+  const fresh = (channel: string) =>
+    heartbeats.some((h) => h.channel === channel && isHeartbeatFresh(h.observedAt, nowMs));
+  const cloud = connection.cloud && fresh("cloud");
+  const local = connection.local && fresh("local");
+  return { cloud, local, any: cloud || local };
+}
 
 /** True when the last runtime-state push came from the headless box-runner. */
 export function isCloudRunnerVersion(version: string | null | undefined): boolean {
