@@ -137,7 +137,7 @@ export function ProjectPlanSection({
           <p className="py-4 text-sm text-text-muted">
             {goalsLocked ? (
               <>
-                <Link href="/unlock" className="ui-tap text-accent-text underline-offset-2 hover:underline">
+                <Link href="/unlock" className="text-accent-text underline-offset-2 hover:underline">
                   Unlock the private zone
                 </Link>{" "}
                 to see this project&apos;s milestones. They are hidden, not missing.

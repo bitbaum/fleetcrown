@@ -18,7 +18,7 @@ export async function PrivateZoneDataGate({
   if (await isPrivateZoneLocked(userId)) {
     return (
       <EmptyState>
-        <Link href="/unlock" className="ui-tap text-accent-text underline-offset-2 hover:underline">
+        <Link href="/unlock" className="text-accent-text underline-offset-2 hover:underline">
           Unlock the private zone
         </Link>
         {" "}to view {label}.

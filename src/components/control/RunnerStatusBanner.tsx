@@ -103,7 +103,7 @@ export function RunnerStatusBanner({
         </button>
         <button
           onClick={() => setDismissed(true)}
-          className="shrink-0 rounded p-0.5 text-text-muted transition-colors hover:text-text-primary"
+          className="ui-tap-icon shrink-0 rounded p-0.5 text-text-muted transition-colors hover:text-text-primary"
           aria-label="Dismiss"
         >
           <X className="h-3 w-3" />
@@ -294,7 +294,7 @@ export function RunnerStatusBanner({
 
       <button
         onClick={() => setDismissed(true)}
-        className="shrink-0 rounded p-1 text-text-muted transition-colors hover:text-text-primary"
+        className="ui-tap-icon shrink-0 rounded p-1 text-text-muted transition-colors hover:text-text-primary"
         aria-label="Dismiss"
       >
         <X className="h-3.5 w-3.5" />

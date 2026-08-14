@@ -71,7 +71,7 @@ export function OutcomeStreak({
   return (
     <Link
       href={`/activity?window=week&project=${encodeURIComponent(projectKey)}`}
-      className={cn("flex items-center gap-1 rounded transition-opacity hover:opacity-75", className)}
+      className={cn("ui-tap flex items-center gap-1 rounded transition-opacity hover:opacity-75", className)}
       aria-label={`Recent run outcomes for ${projectKey} — open in Activity`}
       title="Recent run outcomes — click to review in Activity"
     >

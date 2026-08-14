@@ -113,7 +113,7 @@ export function PublicFooter() {
               href={site.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex flex-col"
+              className="ui-tap flex flex-col justify-center"
             >
               <span className="ui-public-footer-fleet-name">{site.name}</span>
               <span className="ui-public-footer-fleet-blurb">{site.blurb}</span>
