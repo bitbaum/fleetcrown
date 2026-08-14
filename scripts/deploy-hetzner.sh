@@ -114,6 +114,12 @@ trap report_deploy_status EXIT
 
 git_head() { git -C "$PROJECT_DIR" rev-parse HEAD 2>/dev/null || echo unknown; }
 
+# Off-main gate — prod may only ever run a commit contained in origin/main.
+# Runs FIRST, before the schema step mutates anything: a refused deploy must
+# leave the box exactly as it found it. See the script for the two incidents
+# that made this an enforced invariant rather than a remembered rule.
+bash "$SCRIPT_DIR/ci/check-deploy-ref.sh" "$PROJECT_DIR" "${REF:-HEAD}"
+
 # Schema BEFORE build (same order as scripts/hetzner/deploy.sh): guarded,
 # forward-only drizzle migrations from ./drizzle via the shared applier — the
 # first run baselines the existing file set against the live fleetcrown DB. The

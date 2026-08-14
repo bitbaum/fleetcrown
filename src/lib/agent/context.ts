@@ -28,24 +28,24 @@
  */
 import { assignFactIds, renderFacts, type Fact } from "@/lib/agent/core/facts";
 import { buildGroundedContext, type Directive } from "@/lib/agent/core/contract";
-import { peopleFacts, projectFacts, documentFacts, economyFacts } from "@/lib/agent/sources";
+import {
+  peopleFacts,
+  projectFacts,
+  documentFacts,
+  economyFacts,
+  pendingApprovalFacts,
+} from "@/lib/agent/sources";
 import { buildDailyBrief } from "@/lib/agent/brief";
+import { PLANNING_CUES, APPROVAL_CUES } from "@/lib/agent/cues";
 
 /** Retrieved-document budget. Small models degrade past roughly this many. */
 const DOC_K = 6;
 /** External (OrangeCat) items per kind — a supporting signal, not the subject. */
 const ECON_K = 3;
 
-/**
- * Cues that the turn is a planning/triage question, which is when the computed
- * brief is worth its tokens. Everything else skips it — a brief on every turn
- * would push the records out of the window on small-context models.
- *
- * Matched loosely on purpose: a false positive costs tokens, a false negative
- * costs a fabricated answer, and those are not symmetric.
- */
-const PLANNING_CUES =
-  /\b(plan|today|day|urgent|priorit|attention|focus|stuck|due|deadline|overdue|next|habit|commit|risk|blocked|first)\b/i;
+/** Approval-queue items to seed. The queue is short by design; a long one is a
+ *  backlog to open the Approvals page for, not to recite in chat. */
+const APPROVAL_K = 8;
 
 export type GroundedTurn = {
   /** The full block to prepend to the model's input. */
@@ -65,19 +65,25 @@ export type GroundedTurn = {
  */
 export async function buildGroundedTurn(userId: string, message: string): Promise<GroundedTurn> {
   const wantsBrief = PLANNING_CUES.test(message);
+  const wantsApprovals = APPROVAL_CUES.test(message);
 
-  const [people, projects, docs, economy, directives] = await Promise.all([
+  const [people, projects, docs, economy, approvals, directives] = await Promise.all([
     peopleFacts(userId, message).catch(() => [] as Fact[]),
     projectFacts(userId).catch(() => [] as Fact[]),
     documentFacts(userId, message, DOC_K).catch(() => [] as Fact[]),
     economyFacts(message, ECON_K).catch(() => [] as Fact[]),
+    wantsApprovals
+      ? pendingApprovalFacts(userId, APPROVAL_K).catch(() => [] as Fact[])
+      : Promise.resolve([] as Fact[]),
     wantsBrief ? buildDailyBrief(userId).catch(() => [] as Directive[]) : Promise.resolve([] as Directive[]),
   ]);
 
   // Order matters for attention: deterministic records first (they are simply
   // true), then retrieved documents, then external signal (ranked guesses about
-  // relevance, from another system entirely).
-  const facts = assignFactIds([...projects, ...people, ...docs, ...economy]);
+  // relevance, from another system entirely). Approvals lead when they were
+  // asked for — they are the subject of the turn, and the tail of a long fact
+  // list is what gets shed when the prompt has to shrink.
+  const facts = assignFactIds([...approvals, ...projects, ...people, ...docs, ...economy]);
 
   return {
     facts,

@@ -20,18 +20,12 @@ import { getPendingActions, proposeAction } from "@/db/queries/actions";
 import { ACTION_TYPE, type ActionType } from "@/lib/constants/statuses";
 import { askGatewayAgent, isGatewayConfigured } from "@/lib/openclaw-gateway";
 import { makeFact, type Fact } from "@/lib/agent/core/facts";
-import { peopleFacts, projectFacts, documentFacts } from "@/lib/agent/sources";
+import { peopleFacts, projectFacts, documentFacts, pendingApprovalFacts, dateLabel } from "@/lib/agent/sources";
 import { enrichReachPayload, reachFromPerson, resolvePersonToReach } from "@/lib/people-resolve";
 import { defineTool } from "@/lib/agent/tools/registry";
 import type { ToolRegistry, ToolResult } from "@/lib/agent/tools/registry";
 
 const LIST_LIMIT = 12;
-
-function dateLabel(d: Date | string | null | undefined): string | null {
-  if (!d) return null;
-  const date = typeof d === "string" ? new Date(d) : d;
-  return Number.isNaN(date.getTime()) ? null : date.toISOString().slice(0, 10);
-}
 
 /** Empty-but-successful result. The note makes "none" legible as an answer. */
 function empty(note: string): ToolResult {
@@ -182,24 +176,8 @@ const listPendingApprovalsTool = defineTool({
   params: z.object({}),
   example: "TOOL: list_pending_approvals\nARGS: {}",
   handler: async (_args, ctx) => {
-    const rows = await getPendingActions(ctx.userId).catch(() => []);
-    if (rows.length === 0) return empty("The approval queue is empty — nothing is waiting for the operator.");
-    const facts = rows.slice(0, LIST_LIMIT).map((a) =>
-      makeFact({
-        kind: "pending_action",
-        subject: a.title,
-        source: "approval queue (actions table, status=draft)",
-        values: {
-          title: a.title,
-          type: a.type,
-          reasoning: a.reasoning,
-          proposed_on: dateLabel(a.createdAt),
-          // The short prefix is what the operator can quote to decide it from
-          // chat (fc.sh decide <prefix>) — the full uuid is noise to a human.
-          id: a.id.slice(0, 8),
-        },
-      }),
-    );
+    const facts = await pendingApprovalFacts(ctx.userId, LIST_LIMIT);
+    if (facts.length === 0) return empty("The approval queue is empty — nothing is waiting for the operator.");
     return { facts };
   },
 });

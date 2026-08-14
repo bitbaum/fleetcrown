@@ -11,6 +11,7 @@
 import { fetchOpenDemand, searchEconomy } from "@/lib/integrations/orangecat-demand";
 import { searchPeople, type PersonWithAttributes } from "@/db/queries/people";
 import { getUserProjects } from "@/db/queries/user-projects";
+import { getPendingActions } from "@/db/queries/actions";
 import { searchKnowledge, type KnowledgeHit } from "@/db/queries/knowledge-embeddings";
 import { embeddingsEnabled } from "@/lib/rag/embeddings";
 import { cleanDescription } from "@/lib/project-display";
@@ -22,6 +23,17 @@ import type { DevLogEntry, UserProject } from "@/db/schema/user-projects";
 const PEOPLE_LIMIT = 12;
 const PROJECT_LIMIT = 40;
 const DOC_CHUNK_MAX = 400;
+
+/**
+ * Date rendered for a fact value: calendar day, no time, no locale guessing.
+ * A fact carries what was stored, and a timestamp's clock component is noise
+ * the model will otherwise try to reason about.
+ */
+export function dateLabel(d: Date | string | null | undefined): string | null {
+  if (!d) return null;
+  const date = typeof d === "string" ? new Date(d) : d;
+  return Number.isNaN(date.getTime()) ? null : date.toISOString().slice(0, 10);
+}
 
 /**
  * Attribute keys that map onto a declared `person` field. Anything not listed
@@ -55,7 +67,7 @@ function personToFact(p: PersonWithAttributes): Fact {
     affiliation: null,
     role: null,
     how_we_met: null,
-    last_interaction: p.lastInteraction ? new Date(p.lastInteraction).toISOString().slice(0, 10) : null,
+    last_interaction: dateLabel(p.lastInteraction),
     notes: p.description,
     channels: null,
   };
@@ -152,6 +164,38 @@ export async function projectFacts(userId: string): Promise<Fact[]> {
         description: cleanDescription(p.description),
         latest_dev_log: latestDevLog(p),
         repo: p.gitUrl,
+      },
+    }),
+  );
+}
+
+/**
+ * The operator's approval queue — draft actions waiting on an approve/reject.
+ *
+ * Lives here, not only behind a tool, because a tool call requires a healthy
+ * model AND spare rate limit, and this question must survive losing both. When
+ * Groq's org-wide TPM window is exhausted the tool loop dies entirely and Loki
+ * answers from the seed context on a toolless fallback model — at which point a
+ * queue reachable only by tool call is invisible, and "what's pending for
+ * approval?" gets the honest, useless answer "Not in your data." That is exactly
+ * what production served (2026-08-14). The approval queue is the governance
+ * surface FleetCrown exists to provide, so it is seeded like projects are.
+ */
+export async function pendingApprovalFacts(userId: string, limit: number): Promise<Fact[]> {
+  const rows = await getPendingActions(userId).catch(() => []);
+  return rows.slice(0, limit).map((a) =>
+    makeFact({
+      kind: "pending_action",
+      subject: a.title,
+      source: "approval queue (actions table, status=draft)",
+      values: {
+        title: a.title,
+        type: a.type,
+        reasoning: a.reasoning,
+        proposed_on: dateLabel(a.createdAt),
+        // The short prefix is what the operator can quote to decide it from
+        // chat (fc.sh decide <prefix>) — the full uuid is noise to a human.
+        id: a.id.slice(0, 8),
       },
     }),
   );
