@@ -43,7 +43,7 @@ export function FleetFeedbackStrip() {
               onClick={() => setOpenProjectId((v) => (v === s.projectId ? null : s.projectId))}
               aria-expanded={openProjectId === s.projectId}
               className={cn(
-                "flex shrink-0 items-center gap-1.5 text-xs font-medium text-text-primary underline-offset-2 transition-colors hover:underline",
+                "ui-tap flex shrink-0 items-center gap-1.5 text-xs font-medium text-text-primary underline-offset-2 transition-colors hover:underline",
                 openProjectId === s.projectId && "text-accent-text",
               )}
               title={`Latest ${compactRelativeDate(s.latestAt)} — triage ${s.projectName}'s new reports right here`}

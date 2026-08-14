@@ -63,7 +63,7 @@ export function HetznerCapacityCard() {
       href={data.radarUrl}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-flex items-center gap-1 text-text-secondary underline underline-offset-2 hover:text-text-primary"
+      className="ui-tap inline-flex items-center gap-1 text-text-secondary underline underline-offset-2 hover:text-text-primary"
     >
       availability history <ExternalLink className="h-3 w-3" />
     </a>

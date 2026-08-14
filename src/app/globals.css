@@ -1689,6 +1689,17 @@
     @apply text-nano tabular-nums text-text-muted;
   }
   .ui-term-tab-active .ui-term-tab-index { @apply text-text-tertiary; }
+  /* The live-agent chip after the tab name — what is actually running in this
+     tab (claude, grok, …), from the runner's pane topology. */
+  .ui-term-tab-badge {
+    @apply rounded-sm bg-surface-overlay px-1 py-px text-nano uppercase tracking-caps text-text-muted;
+  }
+  .ui-term-tab-active .ui-term-tab-badge { @apply text-text-secondary; }
+  /* One-line honesty note above the session, e.g. a ?tab= deep link that
+     matched nothing on the selected builder. */
+  .ui-term-notice {
+    @apply px-1 text-xs text-status-warning;
+  }
   .ui-term-tab-input {
     @apply w-28 rounded bg-transparent text-xs text-text-primary outline-none;
     font-family: var(--font-mono);
@@ -2340,6 +2351,22 @@
     @apply inline-flex h-9 w-9 items-center justify-center rounded-full text-text-tertiary transition-colors hover:bg-surface-raised hover:text-text-secondary;
   }
 
+  /* For controls whose SHAPE is the meaning — a 16x28 switch pill, a tiny
+     dot — where growing the box to 44px would turn it into a different widget.
+     An overlay child extends only the hit area, which is the WCAG target-offset
+     technique. Use sparingly and never in a dense row: the overlay reaches
+     ~14px past a 16px control on each side and will happily eat a neighbour's
+     clicks. When there is room to just grow the control, grow it. */
+  .ui-tap-overlay {
+    @apply relative;
+  }
+  /* Label wrapper that gives a native checkbox a finger-sized hit area without
+     resizing the box itself (a scaled-up checkbox stops reading as a
+     checkbox). Collapses to the control's own size on a fine pointer; THE
+     TOUCH FLOOR expands it on a coarse one. */
+  .ui-checkbox-hit {
+    @apply inline-flex shrink-0 items-center justify-center;
+  }
   /* Small icon row-action button (rounded, surface-raised hover) — for edit/action icons on list rows */
   .ui-btn-row-action {
     @apply inline-flex items-center justify-center p-1.5 rounded text-text-muted transition-colors hover:text-text-secondary hover:bg-surface-raised;
@@ -3378,6 +3405,12 @@
     .ui-icon-action-danger,
     .ui-btn-icon,
     .ui-btn-row-action,
+    .ui-loki-tool-btn,
+    .ui-loki-send-btn,
+    /* A checkbox is 14px of native control. It cannot grow without looking
+       like a different widget, so the LABEL around it carries the hit area —
+       which is also what a finger actually lands on. */
+    .ui-checkbox-hit,
     /* Its `h-9` is a fixed 36px — min-height still wins, since min-height
        constrains the used height whatever `height` asked for. This one button
        was the single most common offender in the audit: it is in the top bar
@@ -3407,6 +3440,11 @@
     .ui-public-nav-link,
     .ui-public-nav-trigger,
     .ui-public-nav-action,
+    .ui-public-nav-toggle,
+    .ui-public-link,
+    .ui-app-footer-cell,
+    .ui-loki-suggest-chip,
+    .ui-control-fleet-chip,
     .ui-btn-primary,
     .ui-btn-secondary,
     .ui-btn-ghost,
@@ -3437,6 +3475,19 @@
     .ui-sidebar-utility,
     .ui-sidebar-section-toggle {
       min-height: 2.75rem;
+    }
+
+    /* Shape-preserving variant: the hit area grows, the control does not. */
+    .ui-tap-overlay::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 100%;
+      height: 100%;
+      min-width: 2.75rem;
+      min-height: 2.75rem;
+      transform: translate(-50%, -50%);
     }
   }
 }

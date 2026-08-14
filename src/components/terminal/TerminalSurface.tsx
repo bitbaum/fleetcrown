@@ -22,6 +22,7 @@ import { TerminalView } from "./TerminalView";
 import { TerminalTabStrip } from "./TerminalTabStrip";
 import { TerminalSessionBar, TerminalSourceBar } from "./TerminalModeBar";
 import { TerminalComposer } from "./TerminalComposer";
+import { TerminalLaunch } from "./TerminalLaunch";
 import { TabVoiceMic } from "./TabVoiceMic";
 import { ShellWorkspace } from "./ShellWorkspace";
 import { runnerTransport } from "./terminal-transport";
@@ -172,13 +173,33 @@ export function TerminalSurface({
     finally { setSwitchingAgent(false); }
   }, [activeTab, tabContext?.dir, activeAgentId]);
 
+  // The strip tells the truth about each tab: the project it resolves to (by
+  // name, or by pane cwd for generically named tabs) and the agent CLI actually
+  // running in it — so "Tab #1 · claude" and "Tab #2 · grok" are distinguishable
+  // without clicking through.
   const stripTabs = useMemo(
-    () => tabs.map((tab) => ({
-      id: tab,
-      label: tab,
-      dot: tab === activeTab ? "ui-dot-positive" : undefined,
-    })),
-    [tabs, activeTab],
+    () => tabs.map((tab) => {
+      const ctx = context?.tabs.find((t) => t.tab === tab);
+      const badge = ctx?.liveAgents.length ? ctx.liveAgents.join("+") : undefined;
+      const label = ctx?.projectName ?? tab;
+      return {
+        id: tab,
+        label,
+        badge,
+        title: [label !== tab ? tab : null, badge].filter(Boolean).join(" — ") || undefined,
+        dot: tab === activeTab ? "ui-dot-positive" : undefined,
+      };
+    }),
+    [tabs, activeTab, context],
+  );
+
+  // A ?tab= deep link that matches nothing on this builder must say so — the
+  // silent fallback to the first tab read as "your session is gone".
+  const sourceLabel = source === "machine"
+    ? EXECUTOR_COPY.terminal.thisComputerLabel
+    : EXECUTOR_COPY.terminal.cloudLabel;
+  const deepLinkMiss = Boolean(
+    initialTab && !loading && selected === initialTab && !tabs.includes(initialTab),
   );
 
   // Constant across substrates: scope on top, then the tab strip, then the
@@ -228,10 +249,18 @@ export function TerminalSurface({
           </p>
           <p className="max-w-md text-center text-xs text-text-muted">{hint}</p>
           {!gatedMessage && !offline && (
-            <div className="mt-2 flex flex-wrap justify-center gap-2">
-              <Link href="/loki" className="ui-btn-primary">Ask Loki</Link>
-              <Link href="/control" className="ui-btn-secondary">Control</Link>
-            </div>
+            <>
+              <TerminalLaunch
+                projects={context?.launchable ?? []}
+                agents={agents}
+                defaultAgent={context?.agents.defaultAgent ?? null}
+                channel={channel}
+              />
+              <div className="mt-2 flex flex-wrap justify-center gap-2">
+                <Link href="/loki" className="ui-btn-secondary">Ask Loki</Link>
+                <Link href="/control" className="ui-btn-secondary">Control</Link>
+              </div>
+            </>
           )}
         </div>
       );
@@ -259,6 +288,12 @@ export function TerminalSurface({
         activeId={activeTab}
         onSelect={setSelected}
       />
+      {deepLinkMiss && (
+        <p className="ui-term-notice" role="status">
+          No “{initialTab}” session on {sourceLabel}
+          {activeTab ? <> — showing “{activeTab}” instead</> : null}.
+        </p>
+      )}
       {tabs.length > 0 && (
         <TerminalSessionBar
           inputMode={inputMode}

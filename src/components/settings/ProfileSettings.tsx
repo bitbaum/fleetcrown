@@ -59,7 +59,7 @@ export function ProfileSettings({ user }: Props) {
             <input
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="flex-1 bg-transparent text-sm text-text-primary outline-none placeholder:text-text-muted"
+              className="ui-tap flex-1 bg-transparent text-sm text-text-primary outline-none placeholder:text-text-muted"
               placeholder="yourname"
             />
           </div>
@@ -67,7 +67,7 @@ export function ProfileSettings({ user }: Props) {
             <Link
               href={`/u/${normalizeUsername(username)}`}
               target="_blank"
-              className="inline-flex items-center gap-1 text-xs text-accent-text hover:text-accent-hover transition-colors"
+              className="ui-tap inline-flex items-center gap-1 text-xs text-accent-text hover:text-accent-hover transition-colors"
             >
               <ExternalLink className="h-3 w-3" />
               View public profile

@@ -93,7 +93,7 @@ export function PromptPicker({
           }}
           placeholder="Search the prompt library…"
           aria-label="Search the prompt library"
-          className="min-w-0 flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-muted outline-none"
+          className="ui-tap min-w-0 flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-muted outline-none"
         />
         <span className="shrink-0 text-micro text-text-muted">↑↓ · Enter · Esc</span>
       </div>

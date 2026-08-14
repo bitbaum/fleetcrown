@@ -45,13 +45,13 @@ import { fleetSessionsDir, legacyClaudeSessionsDir } from '@/lib/session-paths'
 // Runner version is reported in the runtime-state heartbeat. The desktop sets
 // FLEETCROWN_RUNNER_VERSION from app.getVersion() inside app.whenReady() (so
 // this module stays Electron-free and importable by the headless box-runner);
-// the box-runner sets it from systemd. Read at CALL time, not import time:
-// this module is statically imported before whenReady() runs, so a
-// module-level const captured the env before the desktop set it — every
-// packaged desktop reported version "dev" to the fleet header forever.
-function runnerVersion(): string {
-  return process.env.FLEETCROWN_RUNNER_VERSION ?? 'dev'
-}
+// the box-runner derives it from its deployed package at startup.
+// Read lazily so hosts that set the version after this module is imported
+// still win over a stale value. Both failure modes were observed: every
+// packaged desktop reported "dev" (whenReady runs after the static import),
+// and the box unit carried a hardcoded box-0.8.9 for three releases — both
+// because this was a load-time const.
+const runnerVersion = (): string => process.env.FLEETCROWN_RUNNER_VERSION ?? 'dev'
 
 const DEFAULT_SESSION_NAME = 'fleet'
 
