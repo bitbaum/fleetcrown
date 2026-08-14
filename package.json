@@ -44,6 +44,7 @@
     "test:deploy-ref-gate": "bash scripts/test/deploy-ref-gate.sh",
     "test:approval-cues": "npx tsx scripts/test/approval-cues.ts",
     "test:groq-error": "npx tsx scripts/test/groq-error.ts",
+    "test:answering-prompt": "npx tsx scripts/test/answering-prompt.ts",
     "test:prompt-history": "npx tsx scripts/test/prompt-history.ts",
     "test:desktop-command-validator": "npx tsx scripts/test/desktop-command-validator.ts",
     "test:tab-match": "npx tsx scripts/test/tab-match.ts",

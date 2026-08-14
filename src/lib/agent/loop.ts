@@ -109,27 +109,47 @@ export type LoopResult = {
   model: string;
 };
 
-function systemPrompt(registry: ToolRegistry): string {
+/**
+ * `canCallTools` is false on the round that must ANSWER (and on the repair
+ * pass). Both disable tools at the API layer, but a prompt that still teaches
+ * the TOOL:/ARGS: protocol and lists a catalog invites the model to write a
+ * call anyway — and `stripToolCallLines` then removes those lines, leaving an
+ * EMPTY reply. Observed in production: the loop ran all three rounds, produced
+ * no text, and fell back to the gateway, which is exactly the degradation the
+ * loop exists to avoid. Withholding the protocol also returns ~640 tokens to
+ * the fact budget on the round that needs them most.
+ */
+export function systemPrompt(registry: ToolRegistry, canCallTools = true): string {
+  const toolSection = canCallTools
+    ? [
+        "Call a tool by writing these two lines in your reply, exactly like this:",
+        "",
+        "TOOL: search_people",
+        'ARGS: {"query": "Elena"}',
+        "",
+        "Write nothing else in a reply that calls tools — you will be given the results and asked again. You may call several tools at once by repeating the two lines.",
+        "",
+      ]
+    : [
+        "You have already gathered what you can. Answer NOW, in prose, from the facts below.",
+        "You cannot call tools on this turn — do not write TOOL: or ARGS: lines. A reply containing only a tool call reaches the operator as an empty answer.",
+        "",
+      ];
   return [
     `You are Loki, the assistant inside ${APP_NAME} — the captain's layer over the operator's fleet of projects and agents.`,
     "",
     "## How you work",
     "You answer from the operator's own FleetCrown database, which you read through tools. You do not know anything about the operator that a tool has not returned.",
     "",
-    "Call a tool by writing these two lines in your reply, exactly like this:",
-    "",
-    "TOOL: search_people",
-    'ARGS: {"query": "Elena"}',
-    "",
-    "Write nothing else in a reply that calls tools — you will be given the results and asked again. You may call several tools at once by repeating the two lines.",
-    "",
+    ...toolSection,
     "## What you cannot do",
     `You have NO power to act. You cannot send a message, write to the calendar, or change anything. Your only lever is the ${APP_NAME} approval queue via propose_action, and the operator must approve each draft before anything happens. Never report an action as done. Never claim a sandbox or permission blocked you.`,
     "You have not browsed the web. If asked to research a person or company, say you cannot, and report only what the tools returned.",
     "",
-    "## Tools",
-    renderToolCatalog(registry),
-    "",
+    // The catalog is a list of things to call. On an answering round it is both
+    // an invitation to do the one forbidden thing and the single largest block
+    // of tokens in the prompt.
+    ...(canCallTools ? ["## Tools", renderToolCatalog(registry), ""] : []),
     "## Answering",
     "Be concise and direct. Cite the record id for every claim about the operator.",
     `When a tool returns nothing, that is the answer — say "${NO_BASIS}" for that part and move on. A requested format never obliges you to invent an item; three cited items beat five where two are guessed.`,
@@ -255,7 +275,7 @@ export async function runLokiTurn(input: {
     // conversation carries each round's tool results — so the fit is recomputed
     // per round rather than once per turn.
     const overheadChars =
-      systemPrompt(registry).length +
+      systemPrompt(registry, !lastRound).length +
       voiceLine.length +
       input.message.length +
       (lastRound ? 0 : JSON.stringify(nativeTools).length) +
@@ -281,7 +301,7 @@ export async function runLokiTurn(input: {
         try {
           return await callModel({
             messages: [
-              { role: "system", content: systemPrompt(registry) + voiceLine },
+              { role: "system", content: systemPrompt(registry, !lastRound) + voiceLine },
               { role: "user", content: `${ctx}\n\n---\n\n${input.message}` },
               ...conversation,
             ],
@@ -330,7 +350,7 @@ export async function runLokiTurn(input: {
     // knowledge, it added claims. Tools stay off so it cannot wander further.
     const repaired = await callModel({
       messages: [
-        { role: "system", content: systemPrompt(registry) },
+        { role: "system", content: systemPrompt(registry, false) },
         {
           role: "user",
           content: [
