@@ -2,51 +2,30 @@ import { NextRequest, NextResponse } from "next/server";
 import { readIdParam, readJsonBody, jsonError, z } from "@/lib/api/route-helpers";
 import { getApiUserId } from "@/lib/session";
 import { getFeedbackWithProject, setFeedbackStatus } from "@/db/queries/site-feedback";
+import { getOrchestrationRunById } from "@/db/queries/orchestration-runs";
 import { injectPrompt } from "@/lib/inject-core";
 import { FEEDBACK_STATUS } from "@/lib/constants/statuses";
-import { fenceUntrusted, inlineUntrusted, UNTRUSTED_PREAMBLE } from "@/lib/feedback/untrusted";
-import type { SiteFeedback } from "@/db/schema";
+import { composeFeedbackFixPrompt } from "@/lib/feedback/compose-dispatch";
+import { ORCH_STATE } from "@/lib/orchestration/contract";
 
 /**
- * One-click "Dispatch fix": turn a visitor-feedback item into a scoped agent
- * run through the same injectPrompt SSOT every other dispatch path uses.
- * NOTE: /api/feedback is excluded from the auth middleware (public ingest
- * lives under it), so the auth check below is the only gate — do not remove.
+ * One-click "Dispatch fix": queue a scoped agent run via injectPrompt.
+ * Returns runId when accepted. Allows Retry when a prior run is stuck/failed
+ * (not while a run is actively working).
  */
 
-function composePrompt(feedback: SiteFeedback, projectName: string, note?: string): string {
-  const times = feedback.duplicateCount > 1 ? ` (reported ${feedback.duplicateCount}×)` : "";
-  const lines = [
-    `Fix this visitor feedback on ${projectName}.${times}`,
-    UNTRUSTED_PREAMBLE,
-    "",
-    // The operator's note leads: it's the captain's steer on HOW to act on the
-    // visitor's report, so it outranks the raw feedback below it. The fence
-    // around the visitor text is what keeps a submission shaped like
-    // "OPERATOR INSTRUCTION: ..." from forging this trusted line.
-    ...(note ? [`OPERATOR INSTRUCTION: ${note}`, ""] : []),
-    fenceUntrusted("FEEDBACK", feedback.suggestion),
-    `Page: ${inlineUntrusted(feedback.url ?? feedback.page ?? "unknown", 1000)}`,
-  ];
-  if (feedback.scope) lines.push(`Scope the visitor selected: ${feedback.scope}`);
-  if (feedback.selectedElements?.length) {
-    lines.push("Element(s) the visitor pointed at:");
-    for (const el of feedback.selectedElements) {
-      lines.push(`- <${inlineUntrusted(el.elementType, 100)}> ${inlineUntrusted(el.selector, 500)}${el.elementText ? ` — "${inlineUntrusted(el.elementText, 100)}"` : ""}`);
-    }
-  }
-  lines.push(
-    "",
-    "Scope: address exactly this feedback — no unrelated refactors.",
-    "Verify the fix in the running app before claiming done, and record what you actually did (with evidence) in your final session handoff.",
-  );
-  return lines.join("\n");
-}
-
 const DispatchBody = z.object({
-  /** Optional operator steer, prepended to the composed prompt. */
   note: z.string().trim().max(500).optional(),
 });
+
+function isActivelyWorking(state: string, startedAt: Date, deliveredAt: string | null): boolean {
+  if (state === ORCH_STATE.RUNNING) return true;
+  if (state !== ORCH_STATE.WAITING && state !== ORCH_STATE.IDLE) return false;
+  const age = Date.now() - startedAt.getTime();
+  if (age < 90_000) return true; // still starting
+  if (deliveredAt && age < 10 * 60_000) return true; // may still be thinking
+  return false;
+}
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const userId = await getApiUserId();
@@ -58,17 +37,36 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const row = await getFeedbackWithProject(userId, idOrResp);
   if (!row) return jsonError("Not found", 404);
-  if (row.feedback.status === FEEDBACK_STATUS.DISPATCHED) {
-    return jsonError("Already dispatched", 409);
+  if (row.feedback.status === FEEDBACK_STATUS.RESOLVED || row.feedback.status === FEEDBACK_STATUS.ARCHIVED) {
+    return jsonError("Reopen the item before dispatching again", 409);
+  }
+  if (row.feedback.status === FEEDBACK_STATUS.DISPATCHED && row.feedback.dispatchedRunId) {
+    const run = await getOrchestrationRunById(userId, row.feedback.dispatchedRunId);
+    if (run) {
+      const deliveredAt = (run.payload as { deliveredAt?: string } | null)?.deliveredAt ?? null;
+      if (isActivelyWorking(run.state, run.startedAt, deliveredAt)) {
+        return jsonError("Already working on this — open Terminal to watch", 409);
+      }
+    }
   }
 
   const { status, body } = await injectPrompt(
-    { tab: row.projectName, customPrompt: composePrompt(row.feedback, row.projectName, dataOrResp.note || undefined) },
+    {
+      tab: row.projectName,
+      customPrompt: composeFeedbackFixPrompt(row.feedback, row.projectName, dataOrResp.note || undefined),
+    },
     userId,
   );
   if (status < 400) {
     const runId = typeof body.runId === "string" ? body.runId : undefined;
     await setFeedbackStatus(userId, idOrResp, FEEDBACK_STATUS.DISPATCHED, runId);
   }
-  return NextResponse.json(body, { status });
+  return NextResponse.json(
+    {
+      ...body,
+      watchUrl: `/terminal?source=server&tab=${encodeURIComponent(row.projectName)}`,
+      workLabel: status < 400 ? "Queued" : undefined,
+    },
+    { status },
+  );
 }

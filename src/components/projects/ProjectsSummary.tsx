@@ -11,15 +11,18 @@ const FILTERS: {
   tone?: "warning";
   count: (stats: ProjectsPageStats) => number;
   hidden?: (stats: ProjectsPageStats) => boolean;
+  title?: string;
 }[] = [
   { id: null, label: "All", icon: FolderKanban, count: (s) => s.total },
   {
     id: "attention",
-    label: "Attention",
+    label: "Site issues",
     icon: AlertTriangle,
     tone: "warning",
     count: (s) => s.attention,
     hidden: (s) => s.attention === 0,
+    title:
+      "Live URL down, or attrs: security_vulnerability / broken_features / deployment_issue. Not a general “needs work” list.",
   },
   {
     id: "next-step",
@@ -66,6 +69,7 @@ export function ProjectsSummary({
               type="button"
               onClick={() => onFilter(active ? null : chip.id)}
               aria-pressed={active}
+              title={chip.title}
               className={cn(
                 "ui-projects-filter-chip",
                 active && "ui-projects-filter-chip-active",

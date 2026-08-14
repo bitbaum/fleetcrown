@@ -8,6 +8,7 @@ import { injectPrompt } from "@/lib/inject-core";
 import { appUrl } from "@/lib/email";
 import { FEEDBACK_SOURCE, FEEDBACK_STATUS } from "@/lib/constants/statuses";
 import { fenceUntrusted, UNTRUSTED_PREAMBLE } from "@/lib/feedback/untrusted";
+import { SYNTHESIZE_MIN_ITEMS } from "@/lib/feedback/compose-dispatch";
 import type { FeedbackListItem } from "@/db/queries/site-feedback";
 
 /**
@@ -18,10 +19,12 @@ import type { FeedbackListItem } from "@/db/queries/site-feedback";
  * / edit-and-dispatch / archive) as any row. 9 reports of one broken button
  * become one brief with "evidence: 9 submissions". Review-only run: the
  * operator still triages; nothing auto-dispatches.
+ *
+ * Prefer Dispatch-all-as-one (`dispatch-batch`) when you want one fix run now
+ * without a second triage gate. Synthesize when volume is high and themes help.
  */
 
 export const SYNTHESIZER_CONTACT = "FleetCrown synthesizer";
-const MIN_ITEMS = 3;
 const MAX_ITEMS = 60;
 
 function renderItem(f: FeedbackListItem): string {
@@ -86,8 +89,8 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
       && f.source !== FEEDBACK_SOURCE.SYNTHESIZER
       && f.contact !== SYNTHESIZER_CONTACT)
     .slice(0, MAX_ITEMS);
-  if (items.length < MIN_ITEMS) {
-    return jsonError(`Nothing to synthesize — needs at least ${MIN_ITEMS} new items`, 400);
+  if (items.length < SYNTHESIZE_MIN_ITEMS) {
+    return jsonError(`Nothing to synthesize — needs at least ${SYNTHESIZE_MIN_ITEMS} new items`, 400);
   }
 
   const { status, body } = await injectPrompt(

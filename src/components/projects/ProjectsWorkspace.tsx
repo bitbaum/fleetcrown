@@ -109,10 +109,13 @@ export function ProjectsWorkspace({ projects }: { projects: ProjectGridRow[] }) 
       ) : (
         <div className="space-y-4">
           {showAttentionCards && (
-            <section className="space-y-2" aria-label="Projects needing attention">
+            <section className="space-y-2" aria-label="Projects with site or risk flags">
               {attention.length > 1 && (
-                <h2 className="ui-projects-section-label">Needs attention</h2>
+                <h2 className="ui-projects-section-label">Site / risk flags</h2>
               )}
+              <p className="text-xs text-text-tertiary">
+                Only projects with a down live URL or an explicit flag (security / broken feature / deploy issue). Not a general priority list.
+              </p>
               <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
                 {attention.map((project) => (
                   <ProjectGridCard key={project.id} project={project} />
@@ -125,7 +128,7 @@ export function ProjectsWorkspace({ projects }: { projects: ProjectGridRow[] }) 
             <section aria-label="All projects">
               {showAttentionCards && (
                 <h2 className="ui-projects-section-label mb-2">
-                  {pageFilter || debouncedQuery ? "Matching projects" : "All others"}
+                  {pageFilter || debouncedQuery ? "Matching projects" : "Fleet"}
                 </h2>
               )}
               <div className="ui-projects-list flex flex-col">

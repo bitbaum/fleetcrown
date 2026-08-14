@@ -324,8 +324,14 @@ export function ControlFleetStatus({
             {ready} awaiting input
           </span>
         )}
-        <span className={cn("ui-control-fleet-chip", staleClass)} title={staleTitle ?? COUNT_SCOPE_TITLE}>
-          {idle} idle
+        <span
+          className={cn("ui-control-fleet-chip", staleClass)}
+          title={
+            staleTitle
+            ?? "How many fleet projects have no agent session right now. Unrelated to Cloud/builder online — that is the runner, not project work."
+          }
+        >
+          {idle} projects idle
         </span>
         {/* "All clear" only when nothing needs you and nothing is live — and
             never while stale, when 0/0/0 means "the runner stopped reporting",

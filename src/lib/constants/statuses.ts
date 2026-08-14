@@ -81,6 +81,10 @@ export type EventStatus = (typeof EVENT_STATUS)[keyof typeof EVENT_STATUS];
  * Site-feedback inbox status — visitor feedback via the embeddable widget.
  * Nothing auto-dispatches; the operator triages.
  * Flow: new → dispatched → resolved, or new → archived.
+ *
+ * UI must NOT show the word "dispatched" as if work finished. Derive
+ * FeedbackWorkView (lib/feedback/work-phase.ts): Not started / Queued /
+ * Working now / Not running / Failed / Done.
  */
 export const FEEDBACK_STATUS = {
   NEW: "new",

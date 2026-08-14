@@ -234,7 +234,7 @@ export function ProjectWorkspaceView({
         <DoneSection dossier={dossier} />
       </section>
 
-      {!dossier.readonly && <ProjectFeedbackSection projectId={project.id} />}
+      {!dossier.readonly && <ProjectFeedbackSection projectId={project.id} projectName={project.name} />}
 
       {!dossier.readonly && (
         <ProjectSettingsPanel

@@ -114,7 +114,9 @@ export function AttentionBar({
 
       {groupedFailures.map((group) => {
         const f = group.representative;
-        const verb = f.unverified ? "delivered" : "failed";
+        // "delivered" was polite fiction when verified=false — the prompt hit a
+        // PTY but the agent never generated. Say that plainly.
+        const verb = f.unverified ? "queued, not confirmed working" : "failed";
         return (
           <div key={f.id} className="ui-callout-negative justify-between">
             <div className="flex items-start gap-3 min-w-0">
@@ -133,6 +135,15 @@ export function AttentionBar({
               </span>
             </div>
             <div className="flex shrink-0 items-center gap-2">
+              {f.tab !== "unknown" && (
+                <a
+                  href={`/control?focus=${encodeURIComponent(f.tab)}`}
+                  className="ui-btn-ghost ui-btn-xs text-micro"
+                  title={`Focus ${f.tab} on Control — Terminal stays empty unless a session is actually running`}
+                >
+                  Open on Control
+                </a>
+              )}
               <button
                 onClick={() => retry(group)}
                 disabled={retrying.has(f.id)}

@@ -1,5 +1,9 @@
 # FleetCrown Feedback Widget
 
+**Created:** 2026-07-17  
+**Last modified:** 2026-08-14  
+**Last modified summary:** Widget card uses ui-panel / ui-callout (no ad-hoc shadow); snippet collapsed when Live; botsmann boot confirmed 2026-08-14 from https://botsmann.orangecat.ch; CSP must allow the FleetCrown origin.
+
 **Status**: COMPLETE 2026-07-28. Phases 1–4 implemented 2026-07-17 — four
 `feat(feedback):` commits (ingest spine, embed bundle, inbox + dispatch,
 self-dogfood); find them with `git log --oneline --grep 'feat(feedback)'`.
@@ -13,6 +17,62 @@ window.fetch and stamp extra headers (revampit stamped x-csrf-token) onto the
 widget's cross-origin POST — a hardcoded allowlist silently drops submissions.
 The per-token Origin allowlist in POST remains the security boundary. Embed
 supports `data-fc-bottom` to offset the FAB above a host site's own FAB.
+
+## Captain loop (one-click north star)
+
+```
+Enable & install (Control coverage / project Widget)
+        ↓
+Visitor FAB on every managed site  →  POST /api/feedback
+        ↓
+Control strip (auto-expands)
+        ↓
+  1 item  →  Dispatch fix
+  2+      →  Dispatch all as one   (preferred for a single coherent pass)
+  3+      →  Synthesize themes    (optional second triage gate)
+        ↓
+injectPrompt SSOT  →  local Fleet Runner if connected, else cloud builder
+        ↓
+Run succeeds  →  feedback auto-resolves (+ optional reporter email)
+```
+
+**You do not choose a terminal.** Dispatch never targets “this Cursor chat” or
+“FleetCrown’s Terminal page” directly. It injects into the **project’s agent
+session** through `injectPrompt` (`src/lib/inject-core.ts`): PTY / Fleet Runner
+when online, otherwise the hosted cloud builder queue (Hermes when local is
+offline). Control / Terminal / Loki are captain surfaces that *also* call the
+same SSOT — feedback Dispatch is that path with a composed prompt.
+
+### Surfaces
+
+| Action | Where |
+| --- | --- |
+| Enable & install (token + agent embed) | Control coverage strip; project Widget card |
+| Review open reports | Control feedback strip (new + in-progress); `/projects/{id}#feedback` |
+| Implement / Retry | Same rows — status is **Not started → Queued → Working now → Done** (or **Not running / Failed**) |
+| Watch live output | Only while **Working now** → Terminal. Otherwise **Open on Control** (empty Terminal ≠ progress) |
+| Pause widget (instant, no deploy) | Project Widget card |
+
+**Enable & install preflight** (`POST …/widget-token/install`):
+
+1. **No git URL and no local dir** → `422 no_repo` — agent cannot land the snippet; copy from Widget card instead.
+2. **Live site unreachable** (probe of `user_projects.liveUrl`, else legacy attrs) → `422 site_unreachable` — widget cannot appear until the Hetzner host responds; token may already exist.
+3. Only then queue `injectPrompt` (Fleet Runner on this computer if connected, else cloud box-runner). Response points to `/control?focus=…`. Terminal is empty until a session is actually running.
+
+**One-click captain loop (intended):**
+
+1. **Enable & install** → agent edits repo → push/deploy on Hetzner → widget boots → coverage shows Live.
+2. Visitor reports → inbox → **Implement** → same inject path → agent works → **Watch** only while Working (Terminal) / otherwise Control.
+3. Done when work phase is Done (or you Resolve); not when the API said “queued.”
+
+Status vocabulary is SSOT in `lib/feedback/work-phase.ts`. The DB may still store
+`dispatched`; the UI never presents that word as “finished.” **Queued / Install queued
+is not proof of work** — prove it with Working now, Failed/Not running, or Attention Retry.
+
+Dogfood check 2026-08-14: botsmann.orangecat.ch boots `fcw_73518de7…` (`last_seen_origin`
+https://botsmann.orangecat.ch, `/api/widget-boot` `{active:true}`). Earlier “waiting for
+first page load” was CSP (`script-src` blocked widget.js) after Next tree-shook an empty
+build-time token — not a dead ingest pipe.
 **Origin**: Extract revampit's visitor-feedback FAB (`src/components/feedback/`, ~900 lines,
 modular, survived the Hirn deletion intentionally) into a FleetCrown-owned embeddable
 widget. Any registered project drops one script tag on its site; visitor feedback flows
@@ -148,6 +208,10 @@ queue's philosophy: nothing auto-dispatches; the operator triages.
 | `GET /api/projects/[id]/feedback` + `PATCH /api/feedback/[id]` | session | Inbox list + status transitions (archive, resolve). |
 
 Gotchas already known:
+- **CSP on the host site**: `script-src` and `connect-src` must allow the FleetCrown
+  origin (`https://fleetcrown.orangecat.ch`). Botsmann shipped the tag but stayed
+  “Waiting for the first page load” because CSP blocked `widget.js` (2026-08-14).
+  Coverage Live = boot heartbeat after the script actually runs, not after HTML contains the tag.
 - **proxy.ts allowlist** (Next 16 middleware): `api/feedback` and `widget.js` must be
   added to the matcher exclusions or anonymous submissions bounce to /sign-in
   (same class as the OC-rail `proxy.ts` lesson).

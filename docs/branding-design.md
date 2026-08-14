@@ -1,8 +1,8 @@
 # FleetCrown Branding & Design System
 
 **Created:** 2026-03-01  
-**Last modified:** 2026-07-04  
-**Last modified summary:** Document brand-storage.ts; clarify COCKPIT_* as legacy env migration only.
+**Last modified:** 2026-08-14  
+**Last modified summary:** Note app-shell layout SSOT drift (PageLayout / max-width / ad-hoc panels) as known debt alongside the four-layer visual SSOT.
 
 **Decision: We are using FleetCrown.**
 
@@ -170,6 +170,26 @@ All changes serve the core: making the builder feel more in control, with cleare
 **Rationale (first principles):** Esthetics must serve the user — make fleet state instantly scannable and the act of commanding feel powerful yet calm. Subtle animations (pulse, hovers, lifts) communicate 'alive system' without distraction. Consistent rounding/shadows reinforce premium infrastructure feel for serious builders.
 
 Further polish possible in public landing hero or Today cards if needed.
+
+## App-shell layout SSOT (known debt)
+
+Visual tokens already have a four-layer SSOT (`CLAUDE.md` + `globals.css`). **Page
+chrome does not yet:** authenticated routes mix `PageLayout` (`app-page` +
+`ui-page-header`, default `max-w-4xl`), raw `app-page max-w-*`, and bespoke
+wrappers (Control, project workspace, Loki, Terminal, Decisions, Agents, …).
+That produces the “every page sits differently” feel (gutters, title row,
+max-width, panel chrome).
+
+**Rule going forward:**
+
+1. Default app pages → `PageLayout` (only override `maxWidth` with a documented
+   reason).
+2. Recurring panels → `ui-panel` / `ui-list-row` / existing `ui-*` — not one-off
+   `rounded-2xl border …` stacks.
+3. Full-bleed tools (Loki, Terminal) → `.app-viewport-pane` only.
+
+Tracked as incremental cleanup, not a big-bang redesign. Feedback Control strip
+(2026-08-14) moved onto `ui-panel` as a small example.
 
 ## Recent Name Evaluations (shadefleet / shadyfleet etc.)
 
