@@ -139,7 +139,7 @@ export const EXECUTOR_COPY = {
       "Agents on the cloud builder (box-runner). Pick a project tab, click to focus, and type — keystrokes go straight to the agent PTY. Ctrl+C, arrows, and paste work.",
     cloudLoading: "Looking for agents on the cloud builder…",
     cloudEmpty: "Nothing running on the cloud builder.",
-    cloudEmptyHint: "Start work in Loki. When an agent is running, it appears here so you can type into it.",
+    cloudEmptyHint: "Start an agent below, or dispatch from Loki — running sessions appear here so you can type into them.",
     cloudOfflineHint: "The cloud builder (box-runner on Hetzner) is offline right now.",
     // Connected to the peek stream but no screen frames arrived → the runner is
     // wedged (e.g. its outbound fetch is failing). Honest, actionable — not a
@@ -149,7 +149,7 @@ export const EXECUTOR_COPY = {
     thisComputerHelp:
       "Interactive view of agents on this computer via the desktop app. Same keystroke path as Cloud — click the terminal and type.",
     thisComputerEmpty: "Nothing running on this computer.",
-    thisComputerEmptyHint: "Start work in Loki. The live session shows up here.",
+    thisComputerEmptyHint: "Start an agent below, or dispatch from Loki — the live session shows up here.",
     thisComputerOfflineHint: "Connect Fleet Runner on this computer to this account.",
     thisComputerLoading: "Looking for agents on this computer…",
   },

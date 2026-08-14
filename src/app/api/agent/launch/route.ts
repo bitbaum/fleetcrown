@@ -5,6 +5,7 @@ import { provisionAgentWorkspace, writeInitialPromptWhenReady } from "@/lib/agen
 import { listAgentRegistry } from "@/lib/agent-registry";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { getApiUserId } from "@/lib/session";
+import { BUILDER_CHANNELS } from "@/lib/constants/statuses";
 import { enqueueLaunchAgentCommand } from "@/db/queries/pending-commands";
 import { persistProjectRuntimeIfNewer } from "@/db/queries/project-states";
 import { stateFile } from "@/lib/agent-config";
@@ -17,6 +18,9 @@ const LaunchAgentBody = z.object({
   agent: z.string().trim().min(1).max(40),
   model: z.string().trim().max(160).optional(),
   initialPrompt: z.string().trim().max(4000).optional(),
+  /** Pin the builder that should run this launch (the terminal launches into
+   *  whichever source the user is looking at). Absent → routing decides. */
+  channel: z.enum(BUILDER_CHANNELS).optional(),
 });
 
 /**
@@ -81,7 +85,7 @@ export async function POST(req: NextRequest) {
   const dataOrResp = await readJsonBody(req, LaunchAgentBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
-  const { tab, dir, agent, model, initialPrompt } = dataOrResp;
+  const { tab, dir, agent, model, initialPrompt, channel } = dataOrResp;
   const registry = listAgentRegistry();
   const exactEntry = registry.find((candidate) => candidate.id === agent);
   if (!exactEntry) {
@@ -95,7 +99,10 @@ export async function POST(req: NextRequest) {
   }
 
   if (!isRuntimeAvailable()) {
-    const execution = await resolveQueuedExecution(userId, { defaultChannel: "cloud" });
+    const execution = await resolveQueuedExecution(userId, {
+      requestedChannel: channel ?? null,
+      defaultChannel: "cloud",
+    });
     if (!execution.ok) {
       return NextResponse.json(executionAccessErrorBody(execution), { status: execution.status });
     }

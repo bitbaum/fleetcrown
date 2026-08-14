@@ -15,13 +15,35 @@
  * HTTP + a ck_ runner token, no direct DB. Run via tsx from
  * /opt/fleetcrown/runner. See docs/architecture/box-owned-pty-executor.md.
  */
+import { readFileSync } from "fs";
+import { dirname, join } from "path";
+import { fileURLToPath } from "url";
 import { startPoller, stopPoller, onPollerStatus, formatTrayTooltip } from "../desktop/src/main/poller";
 import { pushNow, startPusher, stopPusher } from "../desktop/src/main/pusher";
 import { loadToken } from "../desktop/src/main/token-store";
 import { APP_URL } from "@/config/brand";
 import { startWatcher } from "../home/watcher";
 
-const VERSION = process.env.FLEETCROWN_RUNNER_VERSION ?? "box";
+/**
+ * Version comes from the deployed code itself (desktop/package.json — the
+ * modules this runner actually executes), never from a hand-maintained env.
+ * The systemd unit pinned FLEETCROWN_RUNNER_VERSION=box-0.8.9 and nobody
+ * bumped it across three releases, so Settings showed a version the box was
+ * not running. Env stays as fallback only for the odd manual invocation.
+ */
+function boxRunnerVersion(): string {
+  try {
+    const pkgPath = join(dirname(fileURLToPath(import.meta.url)), "..", "desktop", "package.json");
+    const pkg = JSON.parse(readFileSync(pkgPath, "utf8")) as { version?: string };
+    if (pkg.version) return `box-${pkg.version}`;
+  } catch { /* fall through to env */ }
+  return process.env.FLEETCROWN_RUNNER_VERSION ?? "box";
+}
+
+const VERSION = boxRunnerVersion();
+// The pusher reports whatever this env holds (lazily) — publish the derived
+// version so the heartbeat and Settings agree with the log line below.
+process.env.FLEETCROWN_RUNNER_VERSION = VERSION;
 const WEB = (process.env.FLEETCROWN_WEB_URL || "").trim() || APP_URL;
 
 function log(msg: string): void {

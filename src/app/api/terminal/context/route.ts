@@ -41,11 +41,25 @@ export type TerminalTabContext = {
   dir: string | null;
   /** Preferred agent for this tab, if the project records one. */
   agentPref: string | null;
+  /** Registered project this tab resolves to — by name, else by pane cwd. */
+  projectName: string | null;
+  /** Agent CLIs actually running in this tab's panes ("claude", "grok", …),
+   *  from the runner's pane topology. Empty when unknown or shell-only. */
+  liveAgents: string[];
+};
+
+/** A project the terminal can start an agent in, when nothing is running. */
+export type TerminalLaunchProject = {
+  name: string;
+  dir: string;
+  agentPref: string | null;
 };
 
 export type TerminalContext = {
   agents: AgentCatalog;
   tabs: TerminalTabContext[];
+  /** Same eligibility rule as Control's launch modal: a linked directory. */
+  launchable: TerminalLaunchProject[];
 };
 
 export async function GET(req: Request) {
@@ -77,12 +91,36 @@ export async function GET(req: Request) {
   const agents = buildSwitchableAgentCatalog(preferences.models, agentConfig.agent, availability);
 
   // Tab names are matched case-insensitively against project names — the same
-  // rule /api/control/tab-inject uses to resolve a tab to a project.
+  // rule /api/control/tab-inject uses to resolve a tab to a project. When the
+  // tab is generically named ("Tab #1"), the runner's pane topology still knows
+  // the working directory, so a cwd→dirPath match recovers the project — and
+  // with it the strip label, the agent switcher, and the composer target.
   const byName = new Map(projects.map((p) => [p.name.toLowerCase(), p]));
+  const panes = snapshot?.panes ?? [];
+  const projectForCwd = (cwd: string | undefined) =>
+    cwd
+      ? projects.find((p) => p.dirPath && (cwd === p.dirPath || cwd.startsWith(`${p.dirPath}/`)))
+      : undefined;
   const tabs: TerminalTabContext[] = (snapshot?.openTabs ?? []).map((tab) => {
-    const project = byName.get(tab.toLowerCase());
-    return { tab, dir: project?.dirPath ?? null, agentPref: project?.agentPref ?? null };
+    const tabPanes = panes.filter((p) => p.tab.toLowerCase() === tab.toLowerCase());
+    const project =
+      byName.get(tab.toLowerCase()) ??
+      tabPanes.map((p) => projectForCwd(p.cwd)).find(Boolean);
+    const liveAgents = [...new Set(
+      tabPanes.map((p) => p.agentCli).filter((a): a is string => Boolean(a)),
+    )];
+    return {
+      tab,
+      dir: project?.dirPath ?? null,
+      agentPref: project?.agentPref ?? null,
+      projectName: project?.name ?? null,
+      liveAgents,
+    };
   });
 
-  return NextResponse.json({ agents, tabs } satisfies TerminalContext);
+  const launchable: TerminalLaunchProject[] = projects
+    .filter((p) => p.dirPath)
+    .map((p) => ({ name: p.name, dir: p.dirPath!, agentPref: p.agentPref ?? null }));
+
+  return NextResponse.json({ agents, tabs, launchable } satisfies TerminalContext);
 }
