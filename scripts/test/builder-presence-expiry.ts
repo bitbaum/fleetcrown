@@ -104,4 +104,28 @@ check("getBuilderPresence routes connection flags through the expiry", () => {
   );
 });
 
+check("presence heartbeats are read at request time, never from the slow cache", () => {
+  // The other direction of the same lie, found on prod: /api/control's SlowCache
+  // has a 20s TTL but SERVES STALE while refreshing in the background, so the
+  // first request after an idle spell gets a cache built minutes ago. Handing
+  // those timestamps to the expiry aged a live runner past the threshold and
+  // reported a heartbeating builder as offline. An age is only meaningful
+  // against the clock it is compared to — read the timestamp now, or not at all.
+  const route = readFileSync(join(root, "src/app/api/control/route.ts"), "utf8");
+  assert(
+    !/channelHeartbeats/.test(route),
+    "/api/control must not carry heartbeat timestamps through its slow cache",
+  );
+  assert(
+    /getBuilderPresence\(userId, runnerVersion\)/.test(route),
+    "/api/control must call getBuilderPresence without pre-loaded heartbeats",
+  );
+  const q = readFileSync(join(root, "src/db/queries/runner-presence.ts"), "utf8");
+  const sig = q.slice(q.indexOf("export async function getBuilderPresence"));
+  assert(
+    !/heartbeats\??:/.test(sig.slice(0, sig.indexOf("{"))),
+    "getBuilderPresence must not accept caller-supplied heartbeats — they may be arbitrarily old",
+  );
+});
+
 console.log(`\n${passed}/${passed} passed`);

@@ -42,7 +42,7 @@ import { gateAndCloseRun, closingRuns } from "@/lib/orchestration/gate-and-close
 import { getSessionUserId } from "@/lib/session";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { getBuilderPresence } from "@/db/queries/runner-presence";
-import { isHeartbeatFresh, type ChannelHeartbeat } from "@/lib/builder-presence";
+import { isHeartbeatFresh } from "@/lib/builder-presence";
 import { isAgentId, listAgentRegistry } from "@/lib/agent-registry";
 import { inferAdapterFromTabName } from "@/components/control/control-presenter";
 import type { ProjectProfile, CurrentPrompt, ProjectState, SessionState, GitState, ControlData, FailedCommand } from "@/lib/control-types";
@@ -75,8 +75,6 @@ type SlowCache = {
    *  version string cannot describe both, and last-writer-wins between the
    *  channel rows made the hero flip between "box-0.8.9" and "dev". */
   builderVersions: { cloud: string | null; local: string | null };
-  /** Last heartbeat per channel — what expires a connection-presence claim. */
-  channelHeartbeats: ChannelHeartbeat[];
 };
 
 let slowCache: SlowCache | null = null;
@@ -132,9 +130,6 @@ async function buildSlowData(userId: string, dirs: string[], key: string): Promi
       cloud: cloudSnapshot?.runnerVersion ?? null,
       local: localSnapshot?.runnerVersion ?? null,
     },
-    // Deliberately the UNFILTERED rows: freshness is decided against `now` at
-    // read time, so a cached stale row still expires on schedule.
-    channelHeartbeats: runtimeSnapshots.map((s) => ({ channel: s.channel, observedAt: s.observedAt })),
   };
 }
 
@@ -189,7 +184,7 @@ export async function GET() {
   const dirs = projects.map((p) => p.dir);
 
   // Slow data (git + DB) served from cache — no fork needed for CWD check
-  const { gitMap, zellijTabs, runtimeSnapshotUpdatedAt, installedAgents, runnerVersion, builderVersions, channelHeartbeats } = await getSlowData(userId, dirs);
+  const { gitMap, zellijTabs, runtimeSnapshotUpdatedAt, installedAgents, runnerVersion, builderVersions } = await getSlowData(userId, dirs);
   const runtimeAvailable = isRuntimeAvailable();
   // Pull the canonical agent ID list straight from the registry — same source
   // buildSwitchableAgentCatalog reads from one line below. Pre-fix this was
@@ -491,7 +486,10 @@ export async function GET() {
       runnerVersion: !isRuntimeAvailable() ? runnerVersion : null,
       builderVersions: !isRuntimeAvailable() ? builderVersions : null,
       builderPresence: !isRuntimeAvailable()
-        ? await getBuilderPresence(userId, runnerVersion, channelHeartbeats).catch(() => null)
+        // Read at request time, NOT from the slow cache above: that cache is
+        // served stale while it refreshes, so cached heartbeat timestamps age
+        // out and report a live builder as offline.
+        ? await getBuilderPresence(userId, runnerVersion).catch(() => null)
         : null,
       // Execution health (≠ push heartbeat): a runner can keep pushing snapshots
       // while its command loop is hung, so dispatches silently queue forever.

@@ -18,17 +18,24 @@ export async function getRunnerConnected(userId: string): Promise<boolean> {
  * Cloud vs local builder channels (A4). Falls back when migration not applied yet.
  *
  * The connection flags alone are NOT the answer — they never expire (see
- * `applyHeartbeatExpiry`). Callers that already loaded the user's runtime
- * snapshots should pass them as `heartbeats` to avoid a second read.
+ * `applyHeartbeatExpiry`).
+ *
+ * Both reads happen HERE, at request time, and no caller may hand in
+ * heartbeats it loaded earlier. An age is only meaningful against the clock it
+ * is compared to: /api/control's slow cache has a 20s TTL but serves stale
+ * while it refreshes in the background, so on an idle site the first request
+ * gets a cache built minutes ago. Passing those timestamps in aged a live
+ * runner past the offline threshold and reported a heartbeating builder as
+ * offline — the same lie, in the other direction. Two small indexed reads on
+ * two-row tables are cheaper than a false liveness claim.
  */
 export async function getBuilderPresence(
   userId: string,
   runnerVersion?: string | null,
-  heartbeats?: ChannelHeartbeat[],
 ): Promise<BuilderChannelPresence> {
   const [connection, beats] = await Promise.all([
     readConnectionFlags(userId, runnerVersion),
-    heartbeats ? Promise.resolve(heartbeats) : readChannelHeartbeats(userId),
+    readChannelHeartbeats(userId),
   ]);
   return applyHeartbeatExpiry(connection, beats);
 }
