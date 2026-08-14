@@ -42,12 +42,12 @@ import { gateAndCloseRun, closingRuns } from "@/lib/orchestration/gate-and-close
 import { getSessionUserId } from "@/lib/session";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { getBuilderPresence } from "@/db/queries/runner-presence";
+import { isHeartbeatFresh, type ChannelHeartbeat } from "@/lib/builder-presence";
 import { isAgentId, listAgentRegistry } from "@/lib/agent-registry";
 import { inferAdapterFromTabName } from "@/components/control/control-presenter";
 import type { ProjectProfile, CurrentPrompt, ProjectState, SessionState, GitState, ControlData, FailedCommand } from "@/lib/control-types";
 import { getRecentFailedCommands, hasUndeliveredCommandForRun } from "@/db/queries/pending-commands";
 import { getRuntimeSnapshots } from "@/db/queries/runtime-snapshots";
-import { RUNNER_OFFLINE_THRESHOLD_MS } from "@/lib/constants/runner";
 import { writePromptQueueMirror } from "@/lib/prompt-queue-mirror";
 import { fetchAllGitStates } from "@/lib/git-state";
 import { matchProfile, matchProfileById, resolveAutoInjectOverride } from "@/lib/project-profile-match";
@@ -75,6 +75,8 @@ type SlowCache = {
    *  version string cannot describe both, and last-writer-wins between the
    *  channel rows made the hero flip between "box-0.8.9" and "dev". */
   builderVersions: { cloud: string | null; local: string | null };
+  /** Last heartbeat per channel — what expires a connection-presence claim. */
+  channelHeartbeats: ChannelHeartbeat[];
 };
 
 let slowCache: SlowCache | null = null;
@@ -95,9 +97,7 @@ async function buildSlowData(userId: string, dirs: string[], key: string): Promi
   // a ~5min cycle. Stale channels are excluded: a machine that stopped
   // pushing must not keep its tabs "open" forever.
   const nowMs = Date.now();
-  const freshSnapshots = runtimeSnapshots.filter(
-    (s) => s.observedAt && nowMs - s.observedAt.getTime() < RUNNER_OFFLINE_THRESHOLD_MS,
-  );
+  const freshSnapshots = runtimeSnapshots.filter((s) => isHeartbeatFresh(s.observedAt, nowMs));
   // Freshness-gated for the same reason the tabs are: a channel that stopped
   // pushing must stop making claims. An unfiltered find() would keep printing
   // "app dev build" for a laptop that has been shut for a week.
@@ -132,6 +132,9 @@ async function buildSlowData(userId: string, dirs: string[], key: string): Promi
       cloud: cloudSnapshot?.runnerVersion ?? null,
       local: localSnapshot?.runnerVersion ?? null,
     },
+    // Deliberately the UNFILTERED rows: freshness is decided against `now` at
+    // read time, so a cached stale row still expires on schedule.
+    channelHeartbeats: runtimeSnapshots.map((s) => ({ channel: s.channel, observedAt: s.observedAt })),
   };
 }
 
@@ -186,7 +189,7 @@ export async function GET() {
   const dirs = projects.map((p) => p.dir);
 
   // Slow data (git + DB) served from cache — no fork needed for CWD check
-  const { gitMap, zellijTabs, runtimeSnapshotUpdatedAt, installedAgents, runnerVersion, builderVersions } = await getSlowData(userId, dirs);
+  const { gitMap, zellijTabs, runtimeSnapshotUpdatedAt, installedAgents, runnerVersion, builderVersions, channelHeartbeats } = await getSlowData(userId, dirs);
   const runtimeAvailable = isRuntimeAvailable();
   // Pull the canonical agent ID list straight from the registry — same source
   // buildSwitchableAgentCatalog reads from one line below. Pre-fix this was
@@ -488,7 +491,7 @@ export async function GET() {
       runnerVersion: !isRuntimeAvailable() ? runnerVersion : null,
       builderVersions: !isRuntimeAvailable() ? builderVersions : null,
       builderPresence: !isRuntimeAvailable()
-        ? await getBuilderPresence(userId, runnerVersion).catch(() => null)
+        ? await getBuilderPresence(userId, runnerVersion, channelHeartbeats).catch(() => null)
         : null,
       // Execution health (≠ push heartbeat): a runner can keep pushing snapshots
       // while its command loop is hung, so dispatches silently queue forever.
