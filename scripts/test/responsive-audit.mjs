@@ -163,29 +163,43 @@ function measurePage(minTouch) {
   // What the FINGER hits, which is repeatedly NOT the control's own box:
   //   • a 14px checkbox inside a 60px <label> — the whole label is clickable
   //   • a 16x28 switch with an ::after overlay extending the hit area to 44px
-  //   • anything given room by padding on a wrapper
-  // Measuring the element's rect reported all three as failures. So HIT-TEST
-  // instead: probe the four points of a 44px cross centred on the control and
-  // ask the document what is actually there. That measures the real thing
-  // rather than one of the several techniques for achieving it, and it catches
-  // the opposite error too — a nominally tall control covered by something else.
-  const hitAreaOk = (el) => {
-    const r = el.getBoundingClientRect();
-    const cx = r.left + r.width / 2;
-    const cy = r.top + r.height / 2;
-    const reach = minTouch / 2 - 1;
-    const lab = /^(input|select|textarea)$/i.test(el.tagName) ? el.closest('label') : null;
-    const mine = (hit) => !!hit && (hit === el || el.contains(hit) || (lab !== null && (hit === lab || lab.contains(hit))));
-    return [[cx, cy - reach], [cx, cy + reach], [cx - reach, cy], [cx + reach, cy]].every(([x, y]) => {
-      // Off-screen points are not reachable, so they cannot count as hit area.
-      if (x < 0 || y < 0 || x > window.innerWidth || y > window.innerHeight) return false;
-      return mine(document.elementFromPoint(x, y));
-    });
+  // Measuring only the element's rect reported both as failures.
+  //
+  // The obvious fix — document.elementFromPoint on a 44px cross — is WRONG, and
+  // shipping it cost a full production run: elementFromPoint is viewport-only,
+  // so every control below the fold returned null and the report filled up with
+  // 44px, 55px and 65px "offenders". A measurement that depends on scroll
+  // position is not a measurement. So resolve the hit area from geometry, which
+  // is what the two real techniques above actually change.
+  const overlayBox = (el) => {
+    for (const pseudo of ['::after', '::before']) {
+      const cs = getComputedStyle(el, pseudo);
+      if (!cs || cs.content === 'none' || (cs.position !== 'absolute' && cs.position !== 'fixed')) continue;
+      const h = Math.max(parseFloat(cs.height) || 0, parseFloat(cs.minHeight) || 0);
+      const w = Math.max(parseFloat(cs.width) || 0, parseFloat(cs.minWidth) || 0);
+      if (h > 0 || w > 0) return { height: h, width: w };
+    }
+    return null;
   };
 
-  // The reported number stays the element's own height: it is what a human
-  // recognises when they go looking for the control on screen.
-  const hitBox = (el) => el.getBoundingClientRect();
+  const hitBox = (el) => {
+    const own = el.getBoundingClientRect();
+    let best = { height: own.height, width: own.width };
+    // A wrapping <label> (or one pointing here with `for`) IS the hit area.
+    if (/^(input|select|textarea)$/i.test(el.tagName)) {
+      let lab = el.closest('label');
+      if (!lab && el.id) {
+        try { lab = document.querySelector(`label[for="${CSS.escape(el.id)}"]`); } catch { lab = null; }
+      }
+      if (lab) {
+        const lr = lab.getBoundingClientRect();
+        if (lr.height > best.height) best = { height: lr.height, width: lr.width };
+      }
+    }
+    const ov = overlayBox(el);
+    if (ov && ov.height > best.height) best = ov;
+    return best;
+  };
 
   const small = [...document.querySelectorAll('button, a[href], [role="button"], input, select')]
     .filter((el) => {
@@ -202,7 +216,7 @@ function measurePage(minTouch) {
         const ownText = (el.textContent || '').trim().length;
         if (parentText > ownText + 12) return false;
       }
-      return !hitAreaOk(el);
+      return hitBox(el).height < minTouch - 0.5;
     })
     .map((el) => ({
       tag: el.tagName.toLowerCase(),
