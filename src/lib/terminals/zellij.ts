@@ -21,7 +21,7 @@
 
 import fs from "fs";
 import { join } from "path";
-import { tmpdir } from "os";
+import { tmpdir, homedir } from "os";
 import { exec, execSync, execFileSync } from "child_process";
 import { promisify } from "util";
 import { APP_SLUG } from "@/config/brand";
@@ -62,6 +62,101 @@ function resolveZellijExecutable(): string {
  * created by the user's newer terminal zellij. */
 export function zellijExecutableForShell(): string {
   return shellEscape(resolveZellijExecutable());
+}
+
+/**
+ * Map zellij pane id → tab name for a session, read from zellij's own
+ * on-disk session metadata (~/.cache/zellij/<version>/session_info/<session>/
+ * session-metadata.kdl).
+ *
+ * This is the join that lets the UI say "claude is in Tab #4, grok is in
+ * Tab #5". Nothing else exposes it: `dump-layout` emits bare panes with no
+ * cwd or command, and a default-named tab shares no string with the project
+ * directory. The metadata file has `panes { pane { id N ... tab_position T } }`
+ * plus `tabs { tab { position T name "..." } }`, so pane id joins to a name
+ * via tab_position. Callers pair it with a process's inherited
+ * ZELLIJ_PANE_ID (see getAgentProcesses).
+ *
+ * Read-only and cheap: one small file, no shellout. Returns an empty map when
+ * zellij isn't installed, the session is unknown, or the format ever changes —
+ * an empty map degrades to "no badge", never to a wrong badge.
+ */
+export function getZellijPaneTabMap(session: string): Map<number, string> {
+  const out = new Map<number, string>();
+  if (!session) return out;
+  try {
+    const root = join(homedir(), ".cache", "zellij");
+    // Version dir varies with the installed zellij; pick whichever holds this
+    // session, newest first so a stale older copy never shadows the live one.
+    const versions = fs
+      .readdirSync(root)
+      .filter((v) => fs.existsSync(join(root, v, "session_info", session, "session-metadata.kdl")))
+      .sort()
+      .reverse();
+    const file = versions
+      .map((v) => join(root, v, "session_info", session, "session-metadata.kdl"))
+      .find((p) => fs.existsSync(p));
+    if (!file) return out;
+
+    const text = fs.readFileSync(file, "utf8");
+    const positionToName = new Map<number, string>();
+    const paneToPosition = new Map<number, number>();
+
+    // The file is regular and shallow; a block-scanner beats a KDL dependency.
+    let section: "tabs" | "panes" | null = null;
+    let inBlock = false;
+    let blockPosition: number | undefined;
+    let blockName: string | undefined;
+    let blockPaneId: number | undefined;
+    let blockTabPosition: number | undefined;
+    let blockIsPlugin = false;
+
+    for (const raw of text.split("\n")) {
+      const line = raw.trim();
+      if (line === "tabs {") { section = "tabs"; continue; }
+      if (line === "panes {") { section = "panes"; continue; }
+      if (!section) continue;
+
+      if (line === "tab {" || line === "pane {") {
+        inBlock = true;
+        blockPosition = blockName = blockPaneId = blockTabPosition = undefined;
+        blockIsPlugin = false;
+        continue;
+      }
+      if (inBlock && line === "}") {
+        inBlock = false;
+        if (section === "tabs" && blockPosition !== undefined && blockName !== undefined) {
+          positionToName.set(blockPosition, blockName);
+        } else if (section === "panes" && !blockIsPlugin && blockPaneId !== undefined && blockTabPosition !== undefined) {
+          // Skip plugin panes (tab-bar, status-bar) — they host no agent.
+          paneToPosition.set(blockPaneId, blockTabPosition);
+        }
+        continue;
+      }
+      if (!inBlock) {
+        // A closing brace outside a tab/pane block ends the section.
+        if (line === "}") section = null;
+        continue;
+      }
+
+      if (section === "tabs") {
+        if (line.startsWith("position ")) blockPosition = Number(line.slice("position ".length));
+        else if (line.startsWith("name ")) blockName = line.slice("name ".length).replace(/^"|"$/g, "");
+      } else {
+        if (line.startsWith("id ")) blockPaneId = Number(line.slice("id ".length));
+        else if (line.startsWith("tab_position ")) blockTabPosition = Number(line.slice("tab_position ".length));
+        else if (line === "is_plugin true") blockIsPlugin = true;
+      }
+    }
+
+    for (const [paneId, position] of paneToPosition) {
+      const name = positionToName.get(position);
+      if (name) out.set(paneId, name);
+    }
+  } catch {
+    // Cache dir missing / unreadable — no mapping, no badge.
+  }
+  return out;
 }
 
 function cleanZellijLines(stdout: string): string[] {
