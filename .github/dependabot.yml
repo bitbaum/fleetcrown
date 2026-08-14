@@ -13,6 +13,23 @@ updates:
     groups:
       minor-and-patch:
         update-types: ["minor", "patch"]
+    ignore:
+      # ESLint 10 is blocked upstream, not by anything in this repo. ESLint 10
+      # removed `context.getFilename()`; eslint-plugin-react still calls it, so
+      # `npm run lint` dies on the first .tsx file with
+      #   "Error while loading rule 'react/display-name'".
+      # 7.37.5 is the newest release of that plugin and its peer range stops at
+      # `^9.7`, so there is nothing to upgrade *to* — and eslint-config-next
+      # pins `^7.37.0`, which puts the whole Next lint chain on ESLint 9.
+      # (eslint-config-next's own peer says `>=9.0.0`, which is why this looks
+      # installable right up until it runs.)
+      #
+      # Without this, dependabot reopens the same un-mergeable red PR every
+      # Monday. LIFT IT when eslint-plugin-react publishes a release whose peer
+      # range admits ESLint 10 — check with:
+      #   npm view eslint-plugin-react peerDependencies
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "npm"
     directory: "/desktop"
