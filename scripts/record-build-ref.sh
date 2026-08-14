@@ -25,12 +25,19 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUT="$ROOT/.next/standalone/.build-ref"
 
-# Precedence: the pinned ref a deploy asked for, then CI's SHA, then the working
-# tree. FLEETCROWN_DEPLOY_REF comes first because deploy-hetzner.sh pins it and
-# HEAD can drift mid-build.
+# Precedence: the pinned ref a deploy asked for, then the CHECKED-OUT commit,
+# and only then CI's env.
+#
+# FLEETCROWN_DEPLOY_REF first because deploy-hetzner.sh pins it and HEAD can
+# drift mid-build. Git HEAD before GITHUB_SHA because HEAD is literally what was
+# compiled: on the `workflow_run` path deploy.yml checks out
+# `workflow_run.head_sha`, which is NOT always the `GITHUB_SHA` of the run.
+# Trusting the env there would stamp a commit that was never built — a marker
+# that lies is worse than no marker, since the deploy compares against it.
+# GITHUB_SHA stays as the last resort for checkouts with no .git.
 SHA="${FLEETCROWN_DEPLOY_REF:-}"
-[ -z "$SHA" ] && SHA="${GITHUB_SHA:-}"
 [ -z "$SHA" ] && SHA="$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || echo "")"
+[ -z "$SHA" ] && SHA="${GITHUB_SHA:-}"
 
 if [ -z "$SHA" ]; then
   echo "  ⚠ build-ref not recorded — no FLEETCROWN_DEPLOY_REF, GITHUB_SHA, or git HEAD"

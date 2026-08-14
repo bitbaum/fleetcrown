@@ -76,23 +76,39 @@ check("a build with no resolvable commit does not fail the build", () => {
   }
 });
 
-check("the pinned deploy ref wins over the working tree", () => {
-  // deploy-hetzner.sh pins --ref and HEAD can drift mid-build; the stamp must
-  // describe what was BUILT, not where the checkout wandered to.
+function stampIn(env: Record<string, string>): string {
   const dir = mkdtempSync(join(tmpdir(), "buildref-"));
   try {
     mkdirSync(join(dir, "scripts"), { recursive: true });
     mkdirSync(join(dir, ".next", "standalone"), { recursive: true });
     writeFileSync(join(dir, "scripts", "record-build-ref.sh"), readFileSync(join(root, "scripts/record-build-ref.sh")));
     execFileSync("bash", [join(dir, "scripts", "record-build-ref.sh")], {
-      env: { PATH: process.env.PATH ?? "", HOME: dir, FLEETCROWN_DEPLOY_REF: "deadbeef", GITHUB_SHA: "cafe1234" },
+      env: { PATH: process.env.PATH ?? "", HOME: dir, ...env },
       encoding: "utf8",
     });
-    const written = readFileSync(join(dir, ".next", "standalone", ".build-ref"), "utf8").trim();
-    assert(written === "deadbeef", `FLEETCROWN_DEPLOY_REF must win, got '${written}'`);
+    return readFileSync(join(dir, ".next", "standalone", ".build-ref"), "utf8").trim();
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+}
+
+check("the pinned deploy ref wins over everything", () => {
+  // deploy-hetzner.sh pins --ref and HEAD can drift mid-build; the stamp must
+  // describe what was BUILT, not where the checkout wandered to.
+  const written = stampIn({ FLEETCROWN_DEPLOY_REF: "deadbeef", GITHUB_SHA: "cafe1234" });
+  assert(written === "deadbeef", `FLEETCROWN_DEPLOY_REF must win, got '${written}'`);
+});
+
+check("GITHUB_SHA never overrides the commit that was actually checked out", () => {
+  // deploy.yml's workflow_run path checks out `workflow_run.head_sha`, which is
+  // not always the run's GITHUB_SHA. Stamping the env value there would record a
+  // commit that was never compiled — and since the deploy compares the live
+  // marker against the shipped ref, a lying marker manufactures a false alarm.
+  const script = readFileSync(join(root, "scripts/record-build-ref.sh"), "utf8");
+  const headAt = script.indexOf("rev-parse HEAD");
+  const envAt = script.indexOf('SHA="${GITHUB_SHA:-}"');
+  assert(headAt !== -1 && envAt !== -1, "expected both git HEAD and GITHUB_SHA fallbacks");
+  assert(headAt < envAt, "git HEAD must be consulted BEFORE GITHUB_SHA");
 });
 
 check("/api/health reports the commit, and never guesses one", () => {
@@ -107,13 +123,16 @@ check("the deploy asserts the LIVE box runs the commit it just shipped", () => {
   const deploy = readFileSync(join(root, "scripts/deploy-hetzner.sh"), "utf8");
   assert(deploy.includes("LIVE_SHA"), "deploy must read the live commit back from the box");
   assert(
-    /LIVE_SHA.*!=.*SHIPPED_SHA|"\$LIVE_SHA" != "\$SHIPPED_SHA"/.test(deploy),
+    /"\$LIVE_SHA" != "\$SHIPPED_SHA"/.test(deploy),
     "deploy must compare the live commit against the shipped one",
   );
-  assert(
-    /rollback_box "live commit/.test(deploy),
-    "a box serving a different commit than was shipped must roll back, not pass verification",
-  );
+  // Reported, NOT rolled back. The realistic cause of a mismatch is a second
+  // deploy landing behind this one, and reverting to app.prev would discard the
+  // NEWER build — manufacturing the very incident this check exists to catch.
+  // What was missing was ever being told; that is what this must guarantee.
+  const block = deploy.slice(deploy.indexOf("SHIPPED_SHA="), deploy.indexOf("✓ deployed"));
+  assert(/⚠ live build is/.test(block), "a mismatch must be announced");
+  assert(!/rollback_box/.test(block), "a commit mismatch must NOT roll back — it would discard the newer build");
 });
 
 console.log(`\n${passed}/${passed} passed`);

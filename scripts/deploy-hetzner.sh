@@ -320,11 +320,17 @@ if [ -z "$LIVE_SHA" ]; then
   # otherwise verified must not fail because the PREVIOUS build lacked a stamp.
   echo "  ⚠ live build reports no commit — build-ref marker absent (pre-#279 build?)"
 elif [ "$LIVE_SHA" != "$SHIPPED_SHA" ]; then
-  echo "  ✗ live build is ${LIVE_SHA:0:12}, but this deploy shipped ${SHIPPED_SHA:0:12}" >&2
-  echo "    The box is NOT running what was just built — another deploy raced this one," >&2
-  echo "    or the rsync did not take. Check: curl -s https://fleetcrown.orangecat.ch/api/health" >&2
-  rollback_box "live commit ${LIVE_SHA:0:12} != shipped ${SHIPPED_SHA:0:12}"
-  exit 1
+  # Loud, but NOT a rollback. The realistic cause is another deploy landing
+  # behind this one — and reverting to app.prev would then throw away the newer
+  # build, turning a benign race into the exact incident this check exists to
+  # catch. The app is up and healthy; what was missing before was ever being
+  # TOLD that the box is serving something else. Now it says so, and
+  # /api/health answers it afterwards without an ssh session.
+  echo "  ⚠ live build is ${LIVE_SHA:0:12}, but this deploy shipped ${SHIPPED_SHA:0:12}" >&2
+  echo "    The box is not serving what was just built — another deploy raced this one," >&2
+  echo "    or the rsync did not take. Confirm before trusting prod:" >&2
+  echo "      curl -s https://fleetcrown.orangecat.ch/api/health" >&2
+  echo "      git log --oneline -1 ${LIVE_SHA:0:12}" >&2
 else
   echo "  ✓ live build is ${LIVE_SHA:0:12} — the commit this deploy shipped"
 fi
