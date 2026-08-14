@@ -225,7 +225,15 @@ export async function runLokiTurn(input: {
     // Facts are the elastic part (projects + accumulated tool results). Both
     // shedding policies live in fact-budget.ts — the invariant they encode is
     // that tool results (the facts the model just asked for) always survive.
-    // Two attempts take 40 facts → 20 → 10, which fits every model in the chain.
+    //
+    // The ladder used to stop after two halvings, on the assumption that 40 → 20
+    // → 10 facts fits every model in the chain. It does not: Groq's ceiling is
+    // per-MINUTE tokens for the whole request (12000 on the 70B, 6000 on the 8B
+    // step-down), and the fixed overhead — system prompt plus every tool's JSON
+    // schema — is charged before a single fact. A turn that started too large
+    // therefore ran out of attempts while still too large and abandoned the loop
+    // on EVERY question. It halves further now, which is cheap because a size
+    // 429 no longer costs a 25s wait per attempt (see groq-error.ts).
     const turn = await (async () => {
       let budget = facts.length;
       for (let attempt = 0; ; attempt++) {
@@ -248,7 +256,7 @@ export async function runLokiTurn(input: {
           const tooLarge = /\b413\b|too large|context length|reduce the length/i.test(
             e instanceof Error ? e.message : String(e),
           );
-          if (!tooLarge || attempt >= 2 || budget <= 4) throw e;
+          if (!tooLarge || attempt >= 5 || budget <= 4) throw e;
           budget = Math.max(4, Math.floor(budget / 2));
           console.warn(`[loki] prompt too large, retrying with ${budget} facts`);
         }
