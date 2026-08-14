@@ -183,39 +183,61 @@ type ProjectRuntimePayload = {
 }
 
 /**
- * Build the per-pane topology for the cold-start restore path. For each
- * project (tab + dir) in agent-projects.conf, find every live agent process
- * with cwd inside that dir and emit one PaneRecord per process. paneIndex
- * is the array position within the tab — stable for sort but doesn't
- * correspond to zellij's internal pane index (we can't query that cheaply
- * without a dump-layout shellout per tab). Stable order is the contract.
+ * Build the per-pane topology: for every live agent process, emit one
+ * PaneRecord naming the tab it belongs to and the agent CLI running in it.
+ * This is what lets the UI label a tab "claude" vs "grok" instead of guessing.
+ * paneIndex is the array position within the tab — stable for sort but doesn't
+ * correspond to zellij's internal pane index (zellij's dump-layout emits bare
+ * panes with no cwd or command, so there is nothing cheaper to read).
+ * Stable order is the contract.
  *
- * Non-project tabs (scratch, logs, ssh) are intentionally not captured —
- * we have no way to know what command was running there without zellij's
- * own serialization, and those tabs are typically transient anyway.
+ * Tab resolution walks two sources, in order:
+ *   1. agent-projects.conf, which names the tab for a dir explicitly.
+ *   2. the process's own cwd basename — because conf is a LEGACY laptop
+ *      dotfile. The headless box never had one (it clones on demand), and
+ *      laptops have stopped maintaining it, so a conf-only walk emitted ZERO
+ *      panes on both channels and the agent badge could never populate. This
+ *      is the same trap projectEntries() below already learned; the running
+ *      processes are the ground truth this payload exists to report.
+ *
+ * A tab whose name matches no live agent process stays uncaptured — most
+ * often a default-named zellij tab ("Tab #3"), where nothing on the system
+ * ties the tab to a process. Emitting a guess there would be worse than
+ * emitting nothing: the UI would name the wrong agent.
  */
 function buildPaneTopology(openTabs: string[]): PaneRecord[] {
   const registry = listAgentRegistry()
   const agentProcesses = getAgentProcesses(registry)
   const conf = parseProjectsConf()
+
+  const byTab = new Map<string, typeof agentProcesses>()
+  for (const p of agentProcesses) {
+    const confEntry = conf.find(({ dir }) => p.cwd === dir || p.cwd.startsWith(`${dir}/`))
+    const rawTab = confEntry?.tab ?? (p.cwd.split('/').filter(Boolean).pop() ?? p.cwd)
+    const resolvedTab = resolveEffectiveTab(rawTab, openTabs)
+    const openTab = openTabs.find((t) => t.toLowerCase() === resolvedTab.toLowerCase())
+    if (!openTab) continue
+    // Key on the tab name as the UI knows it, so records join cleanly.
+    const list = byTab.get(openTab) ?? []
+    list.push(p)
+    byTab.set(openTab, list)
+  }
+
   const records: PaneRecord[] = []
-  for (const { tab, dir } of conf) {
-    const resolvedTab = resolveEffectiveTab(tab, openTabs)
-    if (!openTabs.some((t) => t.toLowerCase() === resolvedTab.toLowerCase())) continue
-    const matches = agentProcesses
-      .filter((p) => p.cwd === dir || p.cwd.startsWith(`${dir}/`))
-      // Stable sort by (agentId, cwd) so paneIndex doesn't churn between
-      // heartbeats. AgentProcess has no pid field; this is the next best key.
+  for (const [tab, matches] of byTab) {
+    // Stable sort by (agentId, cwd) so paneIndex doesn't churn between
+    // heartbeats. AgentProcess has no pid field; this is the next best key.
+    matches
       .sort((a, b) => (a.agentId + a.cwd).localeCompare(b.agentId + b.cwd))
-    matches.forEach((p, i) => {
-      records.push({
-        tab: resolvedTab,
-        paneIndex: i,
-        agentCli: p.agentId,
-        cwd: p.cwd,
-        sessionName: DEFAULT_SESSION_NAME,
+      .forEach((p, i) => {
+        records.push({
+          tab,
+          paneIndex: i,
+          agentCli: p.agentId,
+          cwd: p.cwd,
+          sessionName: DEFAULT_SESSION_NAME,
+        })
       })
-    })
   }
   return records
 }
