@@ -24,7 +24,7 @@ export function ActivityLogPanel({
     <div className="space-y-3 border-t border-border-subtle pt-4">
       <button
         onClick={onToggle}
-        className="flex items-center gap-1 text-sm text-text-secondary transition-colors hover:text-text-primary"
+        className="ui-tap flex items-center gap-1 text-sm text-text-secondary transition-colors hover:text-text-primary"
       >
         <span className="ui-kicker">Recent activity</span>
         <span className="text-text-tertiary">({activities.length})</span>

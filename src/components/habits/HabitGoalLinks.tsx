@@ -120,7 +120,7 @@ export function HabitGoalLinks({
           ))}
           <button
             onClick={() => setPicking(false)}
-            className="p-1 text-text-muted hover:text-text-secondary transition-colors"
+            className="ui-tap-icon p-1 text-text-muted hover:text-text-secondary transition-colors"
           >
             <X className="h-3 w-3" />
           </button>

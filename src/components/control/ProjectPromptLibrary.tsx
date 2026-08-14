@@ -25,7 +25,7 @@ export function ProjectPromptLibrary({
       <button
         onClick={() => onOpenChange(!open)}
         title="Open reusable prompt templates for common project work."
-        className="flex w-full items-center justify-between rounded-lg px-1 py-1 text-xs text-text-muted transition-colors hover:text-text-secondary"
+        className="ui-tap flex w-full items-center justify-between rounded-lg px-1 py-1 text-xs text-text-muted transition-colors hover:text-text-secondary"
       >
         <span className="flex items-center gap-1.5 font-medium">
           <BookOpen className="h-3 w-3" />
