@@ -144,7 +144,7 @@ export function AttentionBar({
               </button>
               <button
                 onClick={() => group.dismissIds.forEach(dismiss)}
-                className="text-text-muted hover:text-text-secondary transition-colors"
+                className="ui-tap-icon text-text-muted hover:text-text-secondary transition-colors"
                 aria-label="Dismiss"
               >
                 <X className="h-3.5 w-3.5" />

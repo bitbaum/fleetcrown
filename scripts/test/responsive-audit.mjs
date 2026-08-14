@@ -160,30 +160,49 @@ function measurePage(minTouch) {
     .sort((a, b) => b.right - a.right)
     .slice(0, 5);
 
-  // What the FINGER hits, which is not always the control. A checkbox or radio
-  // wrapped in a <label> is 13px of input inside a 60px card, and the whole card
-  // is clickable — reporting 13px there is a false positive, and a report with
-  // false positives is a report people stop reading. Same for a control whose
-  // <label for> points at it. So measure the label's box when there is one.
-  const hitBox = (el) => {
-    const own = el.getBoundingClientRect();
-    const isFormControl = /^(input|select|textarea)$/i.test(el.tagName);
-    if (!isFormControl) return own;
-    let lab = el.closest('label');
-    if (!lab && el.id) {
-      try { lab = document.querySelector(`label[for="${CSS.escape(el.id)}"]`); } catch { lab = null; }
-    }
-    if (!lab) return own;
-    const lr = lab.getBoundingClientRect();
-    return lr.height > own.height ? lr : own;
+  // What the FINGER hits, which is repeatedly NOT the control's own box:
+  //   • a 14px checkbox inside a 60px <label> — the whole label is clickable
+  //   • a 16x28 switch with an ::after overlay extending the hit area to 44px
+  //   • anything given room by padding on a wrapper
+  // Measuring the element's rect reported all three as failures. So HIT-TEST
+  // instead: probe the four points of a 44px cross centred on the control and
+  // ask the document what is actually there. That measures the real thing
+  // rather than one of the several techniques for achieving it, and it catches
+  // the opposite error too — a nominally tall control covered by something else.
+  const hitAreaOk = (el) => {
+    const r = el.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    const reach = minTouch / 2 - 1;
+    const lab = /^(input|select|textarea)$/i.test(el.tagName) ? el.closest('label') : null;
+    const mine = (hit) => !!hit && (hit === el || el.contains(hit) || (lab !== null && (hit === lab || lab.contains(hit))));
+    return [[cx, cy - reach], [cx, cy + reach], [cx - reach, cy], [cx + reach, cy]].every(([x, y]) => {
+      // Off-screen points are not reachable, so they cannot count as hit area.
+      if (x < 0 || y < 0 || x > window.innerWidth || y > window.innerHeight) return false;
+      return mine(document.elementFromPoint(x, y));
+    });
   };
+
+  // The reported number stays the element's own height: it is what a human
+  // recognises when they go looking for the control on screen.
+  const hitBox = (el) => el.getBoundingClientRect();
 
   const small = [...document.querySelectorAll('button, a[href], [role="button"], input, select')]
     .filter((el) => {
       const r = el.getBoundingClientRect();
       if (r.width === 0 || r.height === 0) return false;
-      if (getComputedStyle(el).visibility === 'hidden') return false;
-      return hitBox(el).height < minTouch - 0.5;
+      const cs = getComputedStyle(el);
+      if (cs.visibility === 'hidden' || cs.opacity === '0' || cs.pointerEvents === 'none') return false;
+      // WCAG 2.5.8's inline exception: a link INSIDE a sentence cannot be given
+      // a 44px box without wrecking the paragraph, and the surrounding text is
+      // what makes it findable. Only genuinely inline links in flowing text —
+      // a link that is a flex item has been blockified and is not this.
+      if (el.tagName === 'A' && cs.display === 'inline') {
+        const parentText = (el.parentElement?.textContent || '').trim().length;
+        const ownText = (el.textContent || '').trim().length;
+        if (parentText > ownText + 12) return false;
+      }
+      return !hitAreaOk(el);
     })
     .map((el) => ({
       tag: el.tagName.toLowerCase(),

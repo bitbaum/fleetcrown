@@ -96,7 +96,7 @@ export function AgentsCockpit({ registeredProjects }: { registeredProjects: Rost
         {roster.length === 0 ? (
           <p className="text-sm text-text-muted">
             No registered projects yet. Add one on{" "}
-            <Link href="/projects" className="ui-tap text-accent-text underline-offset-2 hover:underline">
+            <Link href="/projects" className="text-accent-text underline-offset-2 hover:underline">
               Projects
             </Link>{" "}
             to command its agents from here.
