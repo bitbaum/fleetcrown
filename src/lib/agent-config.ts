@@ -197,7 +197,11 @@ export function resolveEffectiveTab(canonical: string, activeTabs: string[]): st
   return aliasEntry ? (findAlive(aliasEntry.tab) ?? canonical) : canonical;
 }
 
-function normalizeTabName(value: string): string {
+/** Punctuation/casing-insensitive tab key ("Prime tower" ≡ "prime-tower").
+ *  Exported so DB-state joins keyed by project name use the SAME equivalence
+ *  as live-tab resolution — a raw `.toLowerCase()` join left "Prime tower"
+ *  permanently detached from the runner's "prime-tower" row. */
+export function normalizeTabName(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 

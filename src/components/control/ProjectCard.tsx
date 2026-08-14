@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Play, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { timeAgo } from "@/lib/dates";
+import { answer } from "@/lib/project-display";
 import { postJson, patchJson } from "@/lib/api/fetch";
 import type { ProjectState } from "@/lib/control-types";
 import type { PromptMeta } from "@/lib/agent-config";
@@ -48,6 +50,7 @@ export function ProjectCard({
   runtimeAvailable = true,
   runtimeStateKnown = true,
   runnerSyncStale = false,
+  executionStalled = false,
   snapshot,
   automationMode = "on",
   countdownSeconds,
@@ -68,6 +71,9 @@ export function ProjectCard({
   runtimeStateKnown?: boolean;
   /** True when cloud view is showing last-known runner state (sync >90s old). */
   runnerSyncStale?: boolean;
+  /** Builder is connected but not executing queued dispatches (fleet-wide).
+   *  The card's autopilot copy must not claim an empty queue over it. */
+  executionStalled?: boolean;
   snapshot?: ProjectOperationsSnapshot;
   automationMode?: AutoInjectMode;
   countdownSeconds?: number;
@@ -192,6 +198,26 @@ export function ProjectCard({
   // head-first; nextbest fills in when the queue runs dry. Auto-continue
   // remains a per-project pause/resume toggle independent of the mode.
   const automaticContinuationEnabled = autoContinueEnabled && automationMode === "on";
+  // The card's "next" line, with its source named. Handoff (dated, written by
+  // the agent when it stopped) beats the profile's undated LLM next_step.
+  const handoffNext = project.session?.next?.trim();
+  // answer(), not .trim(): the enricher writes literal "Unknown" into unfilled
+  // attributes, and a card that prints "Next: Unknown" is worse than no line.
+  const profileNext = answer(project.profile?.attrs?.["next_step"]);
+  const handoffAgeLabel = project.session?.mtime ? timeAgo(project.session.mtime) : null;
+  const nextStep = handoffNext
+    ? {
+        text: handoffNext,
+        label: handoffAgeLabel ? `Next (agent, ${handoffAgeLabel}):` : "Next (agent):",
+        sourceTitle: "From this project's latest agent handoff.",
+      }
+    : profileNext
+      ? {
+          text: profileNext,
+          label: "Suggested next (profile):",
+          sourceTitle: "From the project profile — written during enrichment, not by a recent run.",
+        }
+      : null;
   const tabOpenUntracked = display.tone === "idle" && display.tabOpen && !display.isRunning;
   const automationStatusLabel = tabOpenUntracked
     ? "Tab open on your computer — focus the workspace to check the agent, or send a prompt below."
@@ -201,7 +227,12 @@ export function ProjectCard({
         ? "Automatic continuation paused for this project."
         : queue.length > 0
           ? "Autopilot on: the next queued instruction will send when the agent waits."
-          : "Autopilot on: queue is empty, so FleetCrown picks the next-best task when the agent waits.";
+          // "Queue" here is the PROMPT queue only. Saying "queue is empty"
+          // while dispatches sit unexecuted in pending_commands contradicted
+          // the hero's own stall banner one screen up.
+          : executionStalled
+            ? "Autopilot on, but dispatches are queued and not executing — see the builder status above."
+            : "Autopilot on: queue is empty, so FleetCrown picks the next-best task when the agent waits.";
 
   const {
     sending, justSent, custom, setCustom, customFocused, setCustomFocused,
@@ -360,20 +391,27 @@ export function ProjectCard({
           currentOverride={project.autoInjectModeOverride}
           inheritedMode={automationMode}
         />
-        {/* What pressing play is FOR — the profile's next step, visible
-            without opening the profile. Play/pause means nothing if you
-            can't see what the fleet intends to do next. Clicking it puts the
-            step into the composer: the clearest "what do I do here" on the
-            card was previously a dead, truncated line of text. */}
-        {project.profile?.attrs?.["next_step"] && (
+        {/* What pressing play is FOR — visible without opening the profile.
+            Play/pause means nothing if you can't see what the fleet intends
+            to do next. Clicking it puts the step into the composer.
+
+            TWO sources claim "next", and they disagree: the agent's own
+            handoff (dated, written when it stopped) and the profile's
+            next_step (LLM-generated during enrich, UNDATED). This line used
+            to show the profile attr unconditionally — petvity advertised
+            "configure GOOGLE_CLIENT_ID…" from a months-old enrich while the
+            agent's handoff said something else entirely and 7 real dispatches
+            that day ignored both. The agent's handoff wins when there is one,
+            and each source is NAMED so a suggestion can't pass as a fact. */}
+        {nextStep && (
           <button
             type="button"
-            onClick={() => setCustom(project.profile!.attrs!["next_step"]!)}
+            onClick={() => setCustom(nextStep.text)}
             className="ui-link-subtle-button mt-1.5 block w-full truncate px-0 text-left"
-            title={`${project.profile.attrs["next_step"]}\n\nClick to use as the prompt below — edit, then Send.`}
+            title={`${nextStep.text}\n\n${nextStep.sourceTitle}\nClick to use as the prompt below — edit, then Send.`}
           >
-            <span className="font-medium text-text-secondary">Next:</span>{" "}
-            {project.profile.attrs["next_step"]}
+            <span className="font-medium text-text-secondary">{nextStep.label}</span>{" "}
+            {nextStep.text}
           </button>
         )}
       </div>

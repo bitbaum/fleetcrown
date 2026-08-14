@@ -152,8 +152,41 @@ function runTests(): void {
       session: { done: "Done earlier", next: "Continue later", tests: "", todos: "", health: "", mtime: (nowS - 300) * 1000 },
     }), [], nowS);
     assert(snapshot.phase === "not_running", "handoff must not imply a running agent");
-    assert(snapshot.evidenceLabel === "Idle", "handoff must be labeled Idle (was 'Saved agent context' until the 2026-05-31 wording rewrite)");
+    // Names the SIGNAL, like its "Last run" / "Last dispatch" siblings — "Idle"
+    // described a state while the other two named their evidence.
+    assert(snapshot.evidenceLabel === "Last handoff", `handoff evidence must name the handoff, got '${snapshot.evidenceLabel}'`);
     assert(snapshot.evidenceKind === "historical", "handoff provenance must be historical");
+  });
+
+  check("a recent dispatch beats 'Not running' — work happens in tabs FleetCrown can't see", () => {
+    // The user runs 5-10 parallel sessions in kitty with unnamed tabs, so
+    // live process detection sees nothing — yet hook-captured dispatches
+    // prove the project was worked on. "Not running" contradicted the
+    // recorded facts on the same card (fleetcrown, 2026-08-13).
+    const nowS = 1_700_000_000;
+    const state = getProjectDisplayState(stubProject({
+      tab: "fleetcrown",
+      recentActivity: [{
+        id: "d1", projectKey: "fleetcrown", at: new Date((nowS - 2_640) * 1000).toISOString(),
+        kind: "dispatch", source: "user", adapter: "claude", intent: "custom",
+        title: "keep going", detail: null, status: "neutral",
+      }],
+    }), [], nowS);
+    assert(state.stateKey === "recently_active", `recent dispatch must not read as dead, got '${state.stateKey}'`);
+    assert(state.stateLabel === "Active recently", "badge names the honest state");
+  });
+
+  check("an old dispatch does NOT keep a project looking active", () => {
+    const nowS = 1_700_000_000;
+    const state = getProjectDisplayState(stubProject({
+      tab: "kivvi",
+      recentActivity: [{
+        id: "d2", projectKey: "kivvi", at: new Date((nowS - 30 * 86_400) * 1000).toISOString(),
+        kind: "dispatch", source: "user", adapter: "claude", intent: "custom",
+        title: "old work", detail: null, status: "neutral",
+      }],
+    }), [], nowS);
+    assert(state.stateKey === "not_running", `a month-old dispatch is not recent activity, got '${state.stateKey}'`);
   });
 
   check("a finished run fresher than the handoff names itself in the evidence", () => {
@@ -333,9 +366,20 @@ function runTests(): void {
     assert(pulse.key === "waiting", "a single failing project must not panic the hero");
   });
 
-  check("fleet pulse: 0 working, no history → Waiting to dispatch", () => {
-    const pulse = deriveFleetPulse({ automationMode: "on", workingCount: 0, latestRuns: [] });
+  check("fleet pulse: 0 working, nothing queued, nobody waiting → Idle, not 'about to dispatch'", () => {
+    const pulse = deriveFleetPulse({ automationMode: "on", workingCount: 0, waitingCount: 0, latestRuns: [] });
     assert(pulse.key === "waiting", "quiet fleet with autopilot on is waiting, not building");
+    assert(pulse.label === "Idle — nothing queued", "an empty quiet fleet must not promise an imminent dispatch");
+  });
+
+  check("fleet pulse: projects awaiting input → 'Waiting on you', not 'Waiting to dispatch'", () => {
+    // 2026-08-13: the hero read "Waiting to dispatch" while the queue was
+    // empty and the only thing anyone waited on was the human — autopilot
+    // deliberately does NOT interrupt a session that's awaiting input, so
+    // the promised dispatch could never come.
+    const pulse = deriveFleetPulse({ automationMode: "on", workingCount: 0, waitingCount: 1, latestRuns: [] });
+    assert(pulse.label === "Waiting on you", "the hero must name who is actually blocking");
+    assert(!!pulse.detail && pulse.detail.includes("1 project"), "detail counts the projects awaiting input");
   });
 
   check("fleet pulse: user_abort is neutral, not a systemic failure", () => {

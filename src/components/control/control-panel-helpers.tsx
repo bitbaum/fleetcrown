@@ -10,6 +10,10 @@ type AgentEntry = ControlData["agentRegistry"]["agents"][number];
 type ActivityItem = ControlData["recentActivity"][number];
 type TabResult = { status: string; tab?: string; reason?: string; error?: string };
 
+/** Rows the Recent activity panel renders. The header count is clamped to
+ *  this so it never advertises rows the panel won't show. */
+const RECENT_ACTIVITY_ROWS = 20;
+
 export function ActivityLogPanel({
   activities,
   open,
@@ -27,12 +31,15 @@ export function ActivityLogPanel({
         className="flex items-center gap-1 text-sm text-text-secondary transition-colors hover:text-text-primary"
       >
         <span className="ui-kicker">Recent activity</span>
-        <span className="text-text-tertiary">({activities.length})</span>
+        {/* Count what this list SHOWS. The header printed the fetched total
+            (30) over a 20-row body with no "show more" — ten dispatches the
+            user was told about but could never see. */}
+        <span className="text-text-tertiary">({Math.min(activities.length, RECENT_ACTIVITY_ROWS)})</span>
         {open ? <ChevronUp className="h-3 w-3 ml-1" /> : <ChevronDown className="h-3 w-3 ml-1" />}
       </button>
       {open && (
         <div className="space-y-2">
-          {activities.slice(0, 20).map((item) => (
+          {activities.slice(0, RECENT_ACTIVITY_ROWS).map((item) => (
             <div key={item.id} className="ui-control-activity-item">
               <div className="flex items-center gap-2 text-sm">
                 <span className="shrink-0 font-medium text-text-primary">{item.projectKey}</span>

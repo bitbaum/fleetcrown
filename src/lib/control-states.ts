@@ -29,6 +29,7 @@ import { SESSION_STATUS } from "@/lib/constants/statuses";
 export const PROJECT_STATES = [
   "offline",              // Runner has not pushed state — we genuinely don't know.
   "not_running",          // No agent process and no tab — nothing exists for this project.
+  "recently_active",      // No live process visible, but a dispatch/run landed recently.
   "tab_open",             // Zellij tab open, no agent process detected in it.
   "open_idle",            // Agent process detected, no recent lifecycle signal — likely at prompt.
   "working",              // Agent mid-turn (lock sentinel fresh OR current prompt active).
@@ -107,6 +108,20 @@ export const STATE_DEFINITIONS: Record<ProjectStateKey, ProjectStateDefinition> 
     label: "Not running",
     description: "No agent process and no terminal tab detected for this project.",
     dotClass: "bg-border-default",
+    tagClass: "ui-tag ui-tag-neutral",
+    counterCategory: "idle",
+    problem: null,
+  },
+  // Sessions no longer run in named zellij tabs (kitty, unnamed tabs,
+  // multi-project sessions), so live process detection misses real work.
+  // Hook-captured dispatches and orchestration runs still land in FleetCrown —
+  // when one is recent, "Not running" is a lie the recorded facts contradict.
+  // Counts as idle (it is NOT a live-process claim), but the badge stops
+  // asserting death the evidence disproves.
+  recently_active: {
+    label: "Active recently",
+    description: "No live agent process is visible to FleetCrown, but a dispatch or run landed for this project recently — work likely happened in a terminal FleetCrown can't observe.",
+    dotClass: "bg-status-positive",
     tagClass: "ui-tag ui-tag-neutral",
     counterCategory: "idle",
     problem: null,

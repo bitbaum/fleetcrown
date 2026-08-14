@@ -12,6 +12,7 @@ import { useInsideFleetRunner } from "@/hooks/use-inside-fleet-runner";
 
 export function ZellijLivePanel({
   rows,
+  openTabCount,
   runnerNeverSeen,
   runnerSyncStale = false,
   refreshing,
@@ -23,6 +24,10 @@ export function ZellijLivePanel({
   embedded = false,
 }: {
   rows: LiveTabRow[];
+  /** Total open tabs the builders reported, including ones this panel filters
+   *  out (tabs that match no registered project). Without it the caption
+   *  claimed to list "open tabs from Zellij" while silently hiding them. */
+  openTabCount?: number;
   runnerNeverSeen: boolean;
   runnerSyncStale?: boolean;
   refreshing: boolean;
@@ -46,6 +51,7 @@ export function ZellijLivePanel({
   const [sendingPrompt, setSendingPrompt] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const tabOptions = useMemo(() => rows.map((row) => row.tabName), [rows]);
+  const hiddenTabCount = Math.max(0, (openTabCount ?? rows.length) - rows.length);
   const effectiveTarget = targetTab || tabOptions[0] || "";
 
   const focusTab = async (tabName: string) => {
@@ -116,7 +122,9 @@ export function ZellijLivePanel({
             <p className="mt-0.5 text-micro text-text-tertiary">
               {runnerSyncStale
                 ? "Showing last-known workspace state — Fleet Runner sync is stale."
-                : "Open tabs come from Zellij. Working and awaiting input come from live agent/process signals."}
+                : hiddenTabCount > 0
+                  ? `Tabs whose name matches a registered project (${rows.length} of ${openTabCount} open). Agents in unnamed or unmatched tabs run unseen here — their dispatches still show on the project cards.`
+                  : "Tabs whose name matches a registered project. Agents in unnamed or unmatched tabs run unseen here — their dispatches still show on the project cards."}
             </p>
           )}
         </div>

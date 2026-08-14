@@ -28,6 +28,8 @@ type Deps = {
   runtimeAvailable: boolean;
   runtimeStateKnown: boolean;
   runnerSyncStale: boolean;
+  /** Fleet-wide: builder connected but queued dispatches aren't executing. */
+  executionStalled: boolean;
   automationMode: AutoInjectMode;
   countdownSeconds: number | undefined;
 };
@@ -101,6 +103,7 @@ export function buildCardProps(deps: Deps) {
     runtimeAvailable: deps.runtimeAvailable,
     runtimeStateKnown: deps.runtimeStateKnown,
     runnerSyncStale: deps.runnerSyncStale,
+    executionStalled: deps.executionStalled,
     automationMode: deps.automationMode,
     countdownSeconds: deps.countdownSeconds,
   });

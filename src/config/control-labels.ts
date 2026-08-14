@@ -35,9 +35,15 @@ export const ALL_ACTIVITY_LINK = "All activity →";
 /** Collapsed activity section toggle */
 export const PROJECT_ACTIVITY_TITLE = "Activity";
 
-/** Chip on collapsed activity row */
+/** Chip on collapsed activity row. The exact count is already in hand (the
+ *  ledger fetches up to PROJECT_ACTIVITY_FETCH_CAP per project) — clamping at
+ *  "5+" threw away a number we had: 7 real dispatches today read as "5+". Only
+ *  the FETCH cap is a genuine unknown, so only it gets a "+". */
+export const PROJECT_ACTIVITY_FETCH_CAP = 8;
 export function recentDispatchChip(count: number): string {
-  return count >= 5 ? "5+ dispatched" : `${count} dispatched`;
+  return count >= PROJECT_ACTIVITY_FETCH_CAP
+    ? `${PROJECT_ACTIVITY_FETCH_CAP}+ dispatched`
+    : `${count} dispatched`;
 }
 
 /** Prompt composer footer hints (local auto-send gate, not fleet autopilot) */

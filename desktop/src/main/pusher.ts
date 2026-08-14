@@ -43,10 +43,15 @@ import { listPtyTabs, runnerWorkspaceId } from './pty-runtime'
 import { fleetSessionsDir, legacyClaudeSessionsDir } from '@/lib/session-paths'
 
 // Runner version is reported in the runtime-state heartbeat. The desktop sets
-// FLEETCROWN_RUNNER_VERSION from app.getVersion() before starting the pusher
-// (so this module stays Electron-free and importable by the headless
-// box-runner); the box-runner sets it from systemd. Fallback keeps it defined.
-const RUNNER_VERSION = process.env.FLEETCROWN_RUNNER_VERSION ?? 'dev'
+// FLEETCROWN_RUNNER_VERSION from app.getVersion() inside app.whenReady() (so
+// this module stays Electron-free and importable by the headless box-runner);
+// the box-runner sets it from systemd. Read at CALL time, not import time:
+// this module is statically imported before whenReady() runs, so a
+// module-level const captured the env before the desktop set it — every
+// packaged desktop reported version "dev" to the fleet header forever.
+function runnerVersion(): string {
+  return process.env.FLEETCROWN_RUNNER_VERSION ?? 'dev'
+}
 
 const DEFAULT_SESSION_NAME = 'fleet'
 
@@ -113,7 +118,7 @@ async function pushOnce(): Promise<void> {
         installedAgents,
         projects,
         panes,
-        runnerVersion: RUNNER_VERSION,
+        runnerVersion: runnerVersion(),
         observedAt: Date.now(),
       }),
       // Bound the push. Without this, a single hung runtime-state request never
@@ -233,6 +238,15 @@ function buildPaneTopology(openTabs: string[]): PaneRecord[] {
  * successes). A project with a session handoff on disk is therefore always
  * included, agent running or not.
  */
+/** Map a process cwd inside a `.claude/worktrees/<name>` checkout back to the
+ *  repo root that owns it. A worktree is an execution detail of its project,
+ *  never a project of its own. */
+function resolveProjectRoot(cwd: string): string {
+  const marker = '/.claude/worktrees/'
+  const i = cwd.indexOf(marker)
+  return i === -1 ? cwd : cwd.slice(0, i)
+}
+
 function projectEntries(agentProcesses: ReturnType<typeof getAgentProcesses>): { tab: string; dir: string }[] {
   const seen = new Set<string>()
   const out: { tab: string; dir: string }[] = []
@@ -242,7 +256,15 @@ function projectEntries(agentProcesses: ReturnType<typeof getAgentProcesses>): {
     out.push({ tab, dir })
   }
   for (const entry of parseProjectsConf()) add(entry.tab, entry.dir)
-  for (const p of agentProcesses) add(p.cwd.split('/').filter(Boolean).pop() ?? p.cwd, p.cwd)
+  // Sessions auto-enter isolated worktrees (<repo>/.claude/worktrees/<name>),
+  // so a process's cwd basename is the WORKTREE name, not the project. Keying
+  // by it pushed ghost rows ("control-truth") while the real project's row
+  // froze and expired — fleetcrown read "Not running" with an agent actively
+  // working in it (2026-08-13). Resolve the repo root before deriving the tab.
+  for (const p of agentProcesses) {
+    const root = resolveProjectRoot(p.cwd)
+    add(root.split('/').filter(Boolean).pop() ?? root, root)
+  }
   // Projects whose agent already exited but whose handoff awaits pushing.
   // parseSession reads by tab name, so the dir here is only used for process
   // matching — the dev-root convention path is correct on both box and laptop,

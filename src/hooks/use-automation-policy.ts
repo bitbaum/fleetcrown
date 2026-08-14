@@ -16,6 +16,12 @@ import type { FleetKickResult } from "@/lib/fleet-kick";
  */
 export function useAutomationPolicy() {
   const [mode, setMode] = useState<AutoInjectMode>(DEFAULT_AUTO_INJECT_MODE);
+  // Has the server's answer actually arrived? Before it does, `mode` is only
+  // an optimistic default — and a swallowed fetch error left it looking
+  // authoritative forever, so a user who had PAUSED the fleet read "Autopilot
+  // on" with a "Pause fleet" button under it. Consumers gate their claims on
+  // this instead of asserting a default as fact.
+  const [loaded, setLoaded] = useState(false);
   const [countdownSeconds, setCountdownSeconds] = useState(DEFAULT_BEACON_COUNTDOWN_S);
   const [saving, setSaving] = useState(false);
 
@@ -24,6 +30,7 @@ export function useAutomationPolicy() {
       .then((settings) => {
         setMode(settings.auto_inject_mode);
         setCountdownSeconds(settings.countdown_seconds);
+        setLoaded(true);
       })
       .catch(() => {});
   }, []);
@@ -62,5 +69,5 @@ export function useAutomationPolicy() {
     }
   }, [mode, saving]);
 
-  return { mode, countdownSeconds, saving, updateMode };
+  return { mode, loaded, countdownSeconds, saving, updateMode };
 }
