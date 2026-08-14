@@ -11,7 +11,8 @@ import {
   solonVoteMessage,
 } from "../../src/lib/integrations/solon-message";
 import { verifySolonWebhookSignature } from "../../src/lib/integrations/solon-webhook";
-import { createHmac } from "node:crypto";
+import { createHash, createHmac, createPublicKey, createVerify } from "node:crypto";
+import bs58check from "bs58check";
 
 const PRIV = "1111111111111111111111111111111111111111111111111111111111111111";
 const ADDRESS = "1Q1pE5vPGEEMqRcVRMbtBK842Y6Pzo6nK9";
@@ -31,6 +32,104 @@ assert.strictEqual(
 
 // Deterministic signature matches Solon's signer byte-for-byte.
 assert.strictEqual(signBitcoinMessage(MESSAGE, PRIV), SIGNATURE, "signature drifted from Solon's signer");
+
+// ---------------------------------------------------------------------------
+// Foreign witness — OpenSSL, not @noble, verifies the pinned signature.
+//
+// Everything above is one library checking itself: the same code produces the
+// bytes and consumes them, so a change that moves the wire format on BOTH
+// sides passes every assertion while invalidating every signature real wallets
+// produce and every vote already in Solon's audit trail. node:crypto is
+// OpenSSL and speaks secp256k1, so it is the one check here that a
+// @noble/secp256k1 upgrade cannot quietly satisfy.
+//
+// Written and passing against v2 BEFORE the v3 bump. That ordering is the
+// whole technique — a vector added after a migration is fitted to the new
+// output rather than guarding against it.
+
+// Pinned on v2, and anchored two lines down to Solon's ADDRESS so this literal
+// can never decay into "whatever the current library happens to return".
+const PUBKEY_UNCOMPRESSED =
+  "044f355bdcb7cc0af728ef3cceb9615d90684bb5b2ca5f859ab0f0b704075871aa" +
+  "385b6b1b8ead809ca67454d9683fcf2ba03456d6fe2c4abe2b07f0fbdbb2f1c1";
+
+const pubUncompressed = Buffer.from(PUBKEY_UNCOMPRESSED, "hex");
+assert.strictEqual(pubUncompressed.length, 65, "uncompressed point must be 65 bytes");
+assert.strictEqual(pubUncompressed[0], 0x04, "uncompressed point must start with 0x04");
+
+// Compress by y-parity — no EC math, so this stays true independent of any
+// library. hash160 + base58check must then reproduce Solon's address, which
+// pins the key material to a value this repo did not generate.
+const pubCompressed = Buffer.concat([
+  Buffer.of((pubUncompressed[64] & 1) === 1 ? 0x03 : 0x02),
+  pubUncompressed.subarray(1, 33),
+]);
+const hash160 = createHash("ripemd160")
+  .update(createHash("sha256").update(pubCompressed).digest())
+  .digest();
+assert.strictEqual(
+  bs58check.encode(Buffer.concat([Buffer.of(0x00), hash160])),
+  ADDRESS,
+  "pinned public key no longer derives Solon's address",
+);
+
+// Rebuild the signed preimage here instead of importing it, so the magic
+// string and the varint construction are checked too.
+const MAGIC = Buffer.from("Bitcoin Signed Message:\n", "utf8");
+const msgBytes = Buffer.from(MESSAGE, "utf8");
+assert.ok(msgBytes.length < 0xfd, "vector must exercise the single-byte varint path");
+const preimage = Buffer.concat([
+  Buffer.of(MAGIC.length),
+  MAGIC,
+  Buffer.of(msgBytes.length),
+  msgBytes,
+]);
+
+// OpenSSL applies its own sha256 on top of what it is given, so feed it the
+// SINGLE hash to arrive at Bitcoin's double-sha256.
+const inner = createHash("sha256").update(preimage).digest();
+
+const sigBytes = Buffer.from(SIGNATURE, "base64");
+assert.strictEqual(sigBytes.length, 65, "signature must be header || r || s");
+assert.ok(
+  sigBytes[0] >= 31 && sigBytes[0] <= 34,
+  `compressed-key recovery header out of band: ${sigBytes[0]}`,
+);
+
+// Minimal DER: strip leading zeros, then re-pad if the high bit would read as
+// a negative integer.
+const derInt = (raw: Buffer): Buffer => {
+  let i = 0;
+  while (i < raw.length - 1 && raw[i] === 0) i++;
+  const v = raw.subarray(i);
+  const body = v[0] & 0x80 ? Buffer.concat([Buffer.of(0x00), v]) : v;
+  return Buffer.concat([Buffer.of(0x02, body.length), body]);
+};
+const rDer = derInt(sigBytes.subarray(1, 33));
+const sDer = derInt(sigBytes.subarray(33, 65));
+const derSig = Buffer.concat([Buffer.of(0x30, rDer.length + sDer.length), rDer, sDer]);
+
+// SPKI wrapper for an uncompressed secp256k1 point.
+const spki = Buffer.concat([
+  Buffer.from("3056301006072a8648ce3d020106052b8104000a034200", "hex"),
+  pubUncompressed,
+]);
+const publicKey = createPublicKey({ key: spki, format: "der", type: "spki" });
+
+// NB: crypto.verify(null, digest, …) returns false for EC keys — the
+// null-algorithm form is Ed25519-only, and that false is not a bad signature.
+assert.ok(
+  createVerify("sha256").update(inner).verify(publicKey, derSig),
+  "OpenSSL rejected the signature @noble produced — the wire format drifted",
+);
+
+// A witness that cannot fail proves nothing: flip a byte and require rejection.
+const tamperedDigest = Buffer.from(inner);
+tamperedDigest[0] ^= 0xff;
+assert.ok(
+  !createVerify("sha256").update(tamperedDigest).verify(publicKey, derSig),
+  "OpenSSL accepted a tampered digest — the foreign witness is not actually checking",
+);
 
 // Webhook HMAC verification: accepts the correctly signed body, both header forms.
 const secret = "test-secret";

@@ -15,8 +15,12 @@ import { hmac } from "@noble/hashes/hmac.js";
 import { ripemd160 } from "@noble/hashes/legacy.js";
 import bs58check from "bs58check";
 
-// @noble/secp256k1 v2 needs an HMAC-SHA256 for RFC6979 deterministic signing.
-secp.etc.hmacSha256Sync = (key, ...msgs) => hmac(sha256, key, secp.etc.concatBytes(...msgs));
+// RFC6979 deterministic signing needs HMAC-SHA256 supplied. v3 moved this from
+// `etc.hmacSha256Sync` (varargs) to `hashes.*` (a single message), and leaving
+// it unset throws at sign time rather than at import — so it is wired here, not
+// discovered in prod.
+secp.hashes.sha256 = (msg) => sha256(msg);
+secp.hashes.hmacSha256 = (key, msg) => hmac(sha256, key, msg);
 
 const MAGIC = new TextEncoder().encode("Bitcoin Signed Message:\n");
 
@@ -34,16 +38,23 @@ function messageDigest(message: string): Uint8Array {
 
 /** Mainnet P2PKH address for a private key — how Loki knows its own identity. */
 export function addressFromPrivateKey(privateKeyHex: string): string {
-  const pub = secp.getPublicKey(privateKeyHex, true);
+  const pub = secp.getPublicKey(secp.etc.hexToBytes(privateKeyHex), true);
   return bs58check.encode(secp.etc.concatBytes(Uint8Array.of(0x00), ripemd160(sha256(pub))));
 }
 
 /** Standard base64 Bitcoin message signature (compressed key, header 31–34). */
 export function signBitcoinMessage(message: string, privateKeyHex: string): string {
   const digest = messageDigest(message);
-  const sig = secp.sign(digest, privateKeyHex);
-  const header = 27 + (sig.recovery ?? 0) + 4;
-  return Buffer.from(secp.etc.concatBytes(Uint8Array.of(header), sig.toCompactRawBytes())).toString("base64");
+  // `prehash: false` is load-bearing: `digest` is already Bitcoin's
+  // double-SHA256, and letting v3 hash it again would sign the wrong value —
+  // silently, since the result is still a structurally valid signature.
+  // `format: "recovered"` returns 65 bytes laid out as recovery || r || s.
+  const sig = secp.sign(digest, secp.etc.hexToBytes(privateKeyHex), {
+    prehash: false,
+    format: "recovered",
+  });
+  const header = 27 + sig[0] + 4;
+  return Buffer.from(secp.etc.concatBytes(Uint8Array.of(header), sig.subarray(1))).toString("base64");
 }
 
 /** Canonical Solon vote message — byte-identical to Solon's voteMessage(). */
