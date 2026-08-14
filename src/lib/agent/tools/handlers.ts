@@ -16,7 +16,7 @@ import { getGoals, type GoalWithChildren } from "@/db/queries/goals";
 import { getTodayHabits } from "@/db/queries/habits";
 import { listUpcomingCommitments } from "@/db/queries/today";
 import { getEventsDueSoon } from "@/db/queries/events";
-import { getPendingActions, proposeAction } from "@/db/queries/actions";
+import { proposeAction } from "@/db/queries/actions";
 import { ACTION_TYPE, type ActionType } from "@/lib/constants/statuses";
 import { askGatewayAgent, isGatewayConfigured } from "@/lib/openclaw-gateway";
 import { makeFact, type Fact } from "@/lib/agent/core/facts";
