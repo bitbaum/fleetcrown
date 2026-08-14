@@ -32,6 +32,7 @@ import { readdirSync } from 'fs'
 import { homedir } from 'os'
 import { join } from 'path'
 import { getZellijTabs } from '@/lib/zellij'
+import { getZellijPaneTabMap } from '@/lib/terminals/zellij'
 import { APP_URL } from '@/config/brand'
 import { DAEMON_HEARTBEAT_MS } from '@/lib/constants/daemon'
 import { parseProjectsConf, resolveEffectiveTab } from '@/lib/agent-config'
@@ -191,29 +192,43 @@ type ProjectRuntimePayload = {
  * panes with no cwd or command, so there is nothing cheaper to read).
  * Stable order is the contract.
  *
- * Tab resolution walks two sources, in order:
- *   1. agent-projects.conf, which names the tab for a dir explicitly.
- *   2. the process's own cwd basename — because conf is a LEGACY laptop
+ * Tab resolution walks three sources, in order:
+ *   1. zellij's own pane→tab map, joined via the ZELLIJ_PANE_ID each agent
+ *      process inherits. This is the only source that works for a
+ *      DEFAULT-NAMED tab ("Tab #3"), which shares no string with the project
+ *      dir — i.e. the common case of "claude in one tab, grok in another".
+ *   2. agent-projects.conf, which names the tab for a dir explicitly.
+ *   3. the process's own cwd basename — because conf is a LEGACY laptop
  *      dotfile. The headless box never had one (it clones on demand), and
  *      laptops have stopped maintaining it, so a conf-only walk emitted ZERO
  *      panes on both channels and the agent badge could never populate. This
  *      is the same trap projectEntries() below already learned; the running
  *      processes are the ground truth this payload exists to report.
  *
- * A tab whose name matches no live agent process stays uncaptured — most
- * often a default-named zellij tab ("Tab #3"), where nothing on the system
- * ties the tab to a process. Emitting a guess there would be worse than
- * emitting nothing: the UI would name the wrong agent.
+ * A process we cannot tie to an open tab by any of the three is dropped.
+ * Emitting a guess would be worse than emitting nothing: the UI would
+ * confidently name the wrong agent.
  */
 function buildPaneTopology(openTabs: string[]): PaneRecord[] {
   const registry = listAgentRegistry()
   const agentProcesses = getAgentProcesses(registry)
   const conf = parseProjectsConf()
 
+  // One metadata read per zellij session present among the live processes.
+  const paneMaps = new Map<string, Map<number, string>>()
+  for (const p of agentProcesses) {
+    if (p.zellijSession && !paneMaps.has(p.zellijSession)) {
+      paneMaps.set(p.zellijSession, getZellijPaneTabMap(p.zellijSession))
+    }
+  }
+
   const byTab = new Map<string, typeof agentProcesses>()
   for (const p of agentProcesses) {
+    const viaPane = p.zellijSession && p.zellijPaneId !== undefined
+      ? paneMaps.get(p.zellijSession)?.get(p.zellijPaneId)
+      : undefined
     const confEntry = conf.find(({ dir }) => p.cwd === dir || p.cwd.startsWith(`${dir}/`))
-    const rawTab = confEntry?.tab ?? (p.cwd.split('/').filter(Boolean).pop() ?? p.cwd)
+    const rawTab = viaPane ?? confEntry?.tab ?? (p.cwd.split('/').filter(Boolean).pop() ?? p.cwd)
     const resolvedTab = resolveEffectiveTab(rawTab, openTabs)
     const openTab = openTabs.find((t) => t.toLowerCase() === resolvedTab.toLowerCase())
     if (!openTab) continue

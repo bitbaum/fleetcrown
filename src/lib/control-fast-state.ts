@@ -57,7 +57,47 @@ export type AgentProcess = {
   agentId: string;
   cwd: string;
   sessionLifecycleSignals: boolean;
+  /** OS pid. Lets callers key a process stably and read its /proc entry. */
+  pid: number;
+  /**
+   * Zellij's own pane id for the pane this process runs in, read from the
+   * inherited ZELLIJ_PANE_ID. This is the ONLY reliable way to say which tab
+   * an agent is in: zellij's dump-layout emits bare panes with no cwd or
+   * command, and a default-named tab ("Tab #3") shares no string with the
+   * project dir. Joined against the session's pane→tab_position map.
+   * Undefined when the process wasn't started inside zellij.
+   */
+  zellijPaneId?: number;
+  /** Zellij session the pane belongs to — pane ids are only unique within one. */
+  zellijSession?: string;
 };
+
+/**
+ * Read the zellij pane a process belongs to from its inherited environment.
+ * Zellij exports ZELLIJ_PANE_ID / ZELLIJ_SESSION_NAME into every pane's shell,
+ * and children (the agent CLI) inherit them — so this survives the agent being
+ * launched through wrappers like `systemd-inhibit`.
+ */
+function readZellijPane(pid: string): { paneId: number; session: string } | null {
+  try {
+    const env = fs.readFileSync(`/proc/${pid}/environ`, "utf-8");
+    let paneId: number | undefined;
+    let session: string | undefined;
+    for (const pair of env.split("\0")) {
+      if (pair.startsWith("ZELLIJ_PANE_ID=")) {
+        const n = Number(pair.slice("ZELLIJ_PANE_ID=".length));
+        if (Number.isInteger(n)) paneId = n;
+      } else if (pair.startsWith("ZELLIJ_SESSION_NAME=")) {
+        session = pair.slice("ZELLIJ_SESSION_NAME=".length);
+      }
+    }
+    if (paneId === undefined || !session) return null;
+    return { paneId, session };
+  } catch {
+    // Not readable (permissions, process gone) — caller treats as unknown.
+    return null;
+  }
+}
 
 export function getAgentProcesses(
   agents: Array<{
@@ -89,10 +129,14 @@ export function getAgentProcesses(
         );
         if (!agent) continue;
         const cwd = fs.readlinkSync(`/proc/${entry}/cwd`);
+        const zellij = readZellijPane(entry);
         processes.push({
           agentId: agent.id,
           cwd,
           sessionLifecycleSignals: agent.capabilities.sessionLifecycleSignals,
+          pid: Number(entry),
+          zellijPaneId: zellij?.paneId,
+          zellijSession: zellij?.session,
         });
       } catch {
         // process disappeared mid-scan
