@@ -41,7 +41,13 @@ export async function callGroqText(prompt: string, options: GroqOptions = {}): P
     signal: AbortSignal.timeout(timeoutMs),
   });
 
-  if (!res.ok) throw new Error(`groq ${res.status}`);
+  // Keep the body: Groq's 429 says WHICH limit was hit (tokens-per-minute vs
+  // per-day) and how long to wait. Without it a rate-limited caller cannot tell
+  // "retry in 12s" from "you are out for the day".
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`groq ${res.status}${body ? `: ${body.slice(0, 300)}` : ""}`);
+  }
   const data = await res.json() as { choices?: Array<{ message?: { content?: string } }> };
   return (data?.choices?.[0]?.message?.content ?? "").trim();
 }

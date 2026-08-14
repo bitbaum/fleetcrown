@@ -60,6 +60,11 @@ export const ExtractedProfileSchema = z.object({
 
 export type ExtractedProfile = z.infer<typeof ExtractedProfileSchema>;
 
+// The two reach keys are named once and reused by both the full profile prompt
+// and the narrow reach-only extraction, so their definition can never drift.
+const DISTRIBUTION_KEY_SPEC = `- "distribution": the channels through which this project reaches people TODAY — RSS/newsletter, social accounts or queues, OG cards/SEO, marketplaces (max 400 chars). Only from the text; omit if unknown.`;
+const GTM_KEY_SPEC = `- "gtm": go-to-market — ideal customer profile, path to the first paying customer, current monetization state, key metrics if stated (max 400 chars). Only from the text; omit if unknown.`;
+
 const SYSTEM_PROMPT = `You turn free-form notes about a software/business project into a structured profile.
 Respond with ONLY a JSON object — no prose, no markdown fences. Allowed keys:
 - "description": what the project is, 1-2 plain sentences (max 400 chars)
@@ -72,8 +77,8 @@ Respond with ONLY a JSON object — no prose, no markdown fences. Allowed keys:
 - "architecture": the key building blocks and how they fit — main modules/services, data stores, external integrations (max 400 chars). Only from the text/README; omit if unknown.
 - "conventions": how this project is built — patterns, rules, do's and don'ts an engineer must follow (e.g. "Drizzle not Prisma", "server components by default", "never edit generated files") (max 400 chars). Only from the text/README; omit if unknown.
 - "definition_of_done": the bar ONE TURN of work must clear to be finished, phrased so a reviewer reading only the handoff can tell whether it was met — e.g. "\`npm run verify\` passes, with its real output in the handoff; work committed and pushed" (max 300 chars). It must name checkable actions, never describe the finished product ("outcomes are tracked", "money is not a float", "live and profitable" are all WRONG — no single turn can evidence them, so every run gets graded a failure). Prefer naming the repo's own verify/test command over listing individual tools. Only from the text/README; omit if unknown.
-- "distribution": the channels through which this project reaches people TODAY — RSS/newsletter, social accounts or queues, OG cards/SEO, marketplaces (max 400 chars). Only from the text; omit if unknown.
-- "gtm": go-to-market — ideal customer profile, path to the first paying customer, current monetization state, key metrics if stated (max 400 chars). Only from the text; omit if unknown.
+${DISTRIBUTION_KEY_SPEC}
+${GTM_KEY_SPEC}
 - "problem": the concrete problem being solved, from the user's point of view (max 400 chars)
 - "solution": how this project solves that problem — the offered approach (max 400 chars)
 - "current_alternatives": how people solve this problem today without the project (max 400 chars)
@@ -148,6 +153,35 @@ export async function extractProjectProfile(projectName: string, sourceText: str
 // The brief flow fills flat fields; this turns a spec into an ordered build
 // roadmap the caller creates as project goals. This is the "decompose the doc"
 // half of spec ingestion.
+
+const REACH_SYSTEM_PROMPT = `You extract how a software/business project reaches people and makes money.
+Respond with ONLY a JSON object — no prose, no markdown fences. Allowed keys:
+${DISTRIBUTION_KEY_SPEC}
+${GTM_KEY_SPEC}
+NEVER invent facts that are not in the text. If the text says a channel does not exist yet, say so plainly rather than describing it as if it did.
+Omit any key you have no basis for. Write in the same language as the source text uses for prose (default English).`;
+
+/**
+ * Extract ONLY distribution + go-to-market.
+ *
+ * A backfill that writes two fields should not pay for twenty: the full profile
+ * prompt costs ~5x the tokens per project in and out, and Groq's free tier caps
+ * tokens PER DAY — one whole-fleet pass on the full prompt exhausts the day's
+ * budget on its own. Same key definitions, same clamping, same schema subset.
+ */
+export async function extractReachProfile(projectName: string, sourceText: string): Promise<ExtractedProfile> {
+  const prompt = `Project name: ${projectName}\n\nSource text:\n${sourceText.slice(0, 12_000)}`;
+  const raw = await callGroqText(prompt, {
+    systemPrompt: REACH_SYSTEM_PROMPT,
+    maxTokens: 300,
+    temperature: 0.2,
+    timeoutMs: 25_000,
+  });
+  const parsed = ExtractedProfileSchema.pick({ distribution: true, gtm: true })
+    .safeParse(clampFields(parseModelJson(raw)));
+  if (!parsed.success) throw new Error(`model output failed validation: ${parsed.error.issues[0]?.message ?? "unknown"}`);
+  return parsed.data;
+}
 
 export const RoadmapSchema = z.object({
   milestones: z
