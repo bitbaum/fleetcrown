@@ -98,8 +98,11 @@ async function buildSlowData(userId: string, dirs: string[], key: string): Promi
   const freshSnapshots = runtimeSnapshots.filter(
     (s) => s.observedAt && nowMs - s.observedAt.getTime() < RUNNER_OFFLINE_THRESHOLD_MS,
   );
-  const localSnapshot = runtimeSnapshots.find((s) => s.channel === "local") ?? null;
-  const cloudSnapshot = runtimeSnapshots.find((s) => s.channel === "cloud") ?? null;
+  // Freshness-gated for the same reason the tabs are: a channel that stopped
+  // pushing must stop making claims. An unfiltered find() would keep printing
+  // "app dev build" for a laptop that has been shut for a week.
+  const localSnapshot = freshSnapshots.find((s) => s.channel === "local") ?? null;
+  const cloudSnapshot = freshSnapshots.find((s) => s.channel === "cloud") ?? null;
   const unionTabs = [...new Set(freshSnapshots.flatMap((s) => s.openTabs ?? []))];
   // Locally: live Zellij query. On cloud: union of fresh runner-pushed tab
   // lists, falling back to per-project tabOpen flags from project_states —
