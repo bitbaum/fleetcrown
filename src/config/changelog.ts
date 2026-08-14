@@ -29,6 +29,30 @@ export interface ReleaseEntry {
 /** Newest first. */
 export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
   {
+    version: "0.8.12",
+    tag: "fleet-runner-v0.8.12",
+    date: "2026-08-14T11:00:00Z",
+    highlights: [
+      "The terminal tab strip now names the agent running in each tab, including tabs you never renamed. A machine with Claude in one tab and Grok in another reads \"Tab #3 GROK\" and \"Tab #4 CLAUDE\" instead of five identical labels.",
+      "Tabs also show the project they belong to, read from the live agent process rather than from a config file.",
+      "When the tab cannot be identified, no badge is shown at all — a wrong badge would aim a dispatched prompt at the wrong agent.",
+    ],
+    breaking: [],
+    notes: "Local counterpart to the web-side tab-truth work. The join reads the ZELLIJ_PANE_ID that zellij exports into each pane and the agent CLI inherits (via /proc/<pid>/environ), then resolves it against the session's own metadata — pane id to tab position to tab name. This replaces name-matching, which cannot work for a default-named tab: \"Tab #3\" shares no text with the project directory, so every match fell through silently and the runner published an empty pane list. Resolution order is pane id, then config entry, then directory basename, and any parse failure yields an empty map. Needed a release because the web deploy updates the cloud builder but cannot update a desktop app.",
+  },
+  {
+    version: "0.8.11",
+    tag: "fleet-runner-v0.8.11",
+    date: "2026-08-04T14:15:31Z",
+    highlights: [
+      "macOS and Windows installers are published again, alongside Linux.",
+      "The Linux build ships a usable application icon.",
+      "Per-run cost metering now measures the directory the agent actually runs in, so worktree-isolated dispatches are attributed to the right project.",
+    ],
+    breaking: [],
+    notes: "Recorded here after the fact: this release shipped on 2026-08-04 but was never added to the timeline, so /releases and the footer version pill both kept claiming 0.8.9 while operators were running 0.8.11. The release itself restored the full three-platform matrix (#157) after a period when only Linux was being produced.",
+  },
+  {
     version: "0.8.9",
     tag: "fleet-runner-v0.8.9",
     date: "2026-06-18T17:09:04Z",
