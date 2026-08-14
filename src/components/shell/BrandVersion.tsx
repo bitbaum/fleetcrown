@@ -48,7 +48,7 @@ export function BrandVersion() {
     <Link
       href="/releases"
       title={tooltip}
-      className="mt-1.5 block truncate text-micro text-text-muted transition-colors hover:text-text-secondary"
+      className="ui-tap mt-1.5 flex w-full truncate text-micro text-text-muted transition-colors hover:text-text-secondary"
     >
       {label}
     </Link>
