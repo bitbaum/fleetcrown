@@ -307,12 +307,13 @@ Smoke is opt-in (needs the dev server running) — run before opening a PR.
 | View | Route | Status |
 |------|-------|--------|
 | Control | /control | Fleet command center: dispatch intents to AI agents, real-time SSE status, per-project cards, git sync guard |
-| Agents | /agents | Fleet roster (open tabs + presence/active dots) beside a live inter-agent comms feed parsed from ~/.claude/cross-project/inbox-*.md; message-type badges (task/result/question/escalation) |
+| Agents | /agents | RETIRED — redirects to /control. Control already is the roster; escalations land there |
 | Loki | /loki | Chat assistant workspace — conversations, project-scoped dispatch, save-to-memory |
 | Approvals | /approvals | The Approval Queue as a destination — review/approve Loki's proposed actions; locked-zone state shows pending count + unlock CTA |
 | Terminal | /terminal | Live embedded terminal — watch/drive the cloud builder or local Fleet Runner PTY per project tab |
-| Activity | /activity | Fleet activity timeline — digests, event stream, per-project status strip across windows (hour/day/week/month) |
-| Duet | /duet | RETIRED — redirects to /agents (side-by-side prompt view earned nothing over Terminal + Agents) |
+| Activity | /activity | Fleet activity timeline — digests, event stream, per-project status strip across windows (hour/day/week/month). `/digests`, `/decisions` and `/history` are redirect stubs onto this page |
+| Atlas | /atlas | RETIRED — redirects to /projects. Live URL and down-state live on Projects |
+| Duet | /duet | RETIRED — redirects to /agents, which now redirects on to /control (side-by-side prompt view earned nothing over Terminal + Control) |
 | Today | /today | Calendar, weather, commitments, bills, daily habit check-off, log conversation |
 | People | /people | Contacts, search, detail panel, inline name/notes edit |
 | Money | /money | Subscriptions, monthly burn |
