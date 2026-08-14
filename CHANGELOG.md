@@ -2,7 +2,49 @@
 
 Notable, user-facing changes. Older history lives in the git log (conventional commits).
 
-**Last modified:** 2026-08-07 - the roadmap gains a learning phase, and an audit explains why the fleet has never learned from its own runs.
+**Last modified:** 2026-08-14 - the terminal can finally say which agent is in which tab, and Fleet Runner 0.8.12 carries it to your own machine.
+
+## 2026-08-14
+
+### Added
+- **The terminal tab strip names its agents.** Each tab now shows the project it
+  belongs to and the agent actually running in it — `surf-your-life CLAUDE`,
+  `Tab #3 GROK` — read from the live process rather than guessed from a label.
+  Before this, an operator running Claude in one tab and Grok in another saw
+  five identical `Tab #N` labels and had to go back to the physical terminal to
+  tell them apart, which defeats the point of a remote command center.
+- **Launching an agent from the terminal's empty state.** A tab with nothing in
+  it now offers the projects you can start, instead of only explaining that
+  nothing is running.
+
+### Fixed
+- **Deep links that match no tab say so.** `/terminal?tab=X` for a tab that does
+  not exist used to silently show a different session. It now states what it
+  could not find and what it fell back to: *No "X" session on This computer —
+  showing "Tab #3" instead.*
+- **The agent badge had no data to render.** Pane topology was read from a
+  legacy `claude-projects.conf` that nothing had written to in months, so the
+  runner published an empty pane list on every push — indistinguishable from
+  "no agents running". It is now derived from live processes.
+- **Default-named tabs can be resolved at all.** Matching an agent to its tab by
+  name is impossible when the tab is called `Tab #3`, which shares no text with
+  the project directory — every match fell through silently. The join now uses
+  the `ZELLIJ_PANE_ID` that the terminal multiplexer exports into each pane and
+  the agent process inherits. Any failure yields *no* badge rather than a wrong
+  one, because a mislabelled tab aims a dispatched prompt at the wrong agent.
+- **The runner version label stopped drifting.** The box reported a version
+  pinned at install time, so it claimed `box-0.8.9` across three releases. It
+  now reports what it is actually running, and the release timeline lists
+  0.8.11 and 0.8.12, which had shipped without being recorded.
+
+### Changed
+- **Fleet Runner 0.8.12.** The pane-id join runs on the operator's own machine,
+  so local tabs get the same naming the cloud builder already had. A web deploy
+  cannot update a desktop app — this needed a release.
+- **Thoughts: "You Cannot Direct What You Cannot Name."** Why an unnamed tab is
+  a mission-level bug rather than a cosmetic one: if human direction is the
+  bottleneck, the number of agents one person can command is bounded by how
+  many they can distinguish.
 
 ## 2026-08-07
 
