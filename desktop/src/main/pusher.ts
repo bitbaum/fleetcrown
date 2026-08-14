@@ -45,8 +45,11 @@ import { fleetSessionsDir, legacyClaudeSessionsDir } from '@/lib/session-paths'
 // Runner version is reported in the runtime-state heartbeat. The desktop sets
 // FLEETCROWN_RUNNER_VERSION from app.getVersion() before starting the pusher
 // (so this module stays Electron-free and importable by the headless
-// box-runner); the box-runner sets it from systemd. Fallback keeps it defined.
-const RUNNER_VERSION = process.env.FLEETCROWN_RUNNER_VERSION ?? 'dev'
+// box-runner); the box-runner derives it from its deployed package at startup.
+// Read lazily so hosts that compute the version in main() (after this module
+// is imported) still win over a stale value — the box unit carried a hardcoded
+// box-0.8.9 for three desktop releases because this was a load-time const.
+const runnerVersion = (): string => process.env.FLEETCROWN_RUNNER_VERSION ?? 'dev'
 
 const DEFAULT_SESSION_NAME = 'fleet'
 
@@ -113,7 +116,7 @@ async function pushOnce(): Promise<void> {
         installedAgents,
         projects,
         panes,
-        runnerVersion: RUNNER_VERSION,
+        runnerVersion: runnerVersion(),
         observedAt: Date.now(),
       }),
       // Bound the push. Without this, a single hung runtime-state request never

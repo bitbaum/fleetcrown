@@ -7,6 +7,8 @@ import { cn } from "@/lib/utils";
 export type TerminalTab = {
   id: string;
   label: string;
+  /** Live agent CLI(s) in this tab — "claude", "grok", "claude+codex". */
+  badge?: string;
   /** Dot class (`ui-dot-positive` etc). Omit for no status dot. */
   dot?: string;
   title?: string;
@@ -119,7 +121,10 @@ export function TerminalTabStrip({
                 }}
               />
             ) : (
-              <span className="ui-term-tab-label">{tab.label}</span>
+              <>
+                <span className="ui-term-tab-label">{tab.label}</span>
+                {tab.badge && <span className="ui-term-tab-badge">{tab.badge}</span>}
+              </>
             )}
             {onClose && (
               <button

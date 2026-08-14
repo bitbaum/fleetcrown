@@ -337,6 +337,8 @@ sync_runner() {
 }
 sync_runner "$PROJECT_DIR/src/" "$HOST:$RUNNER_DIR/src/"
 sync_runner "$PROJECT_DIR/desktop/src/" "$HOST:$RUNNER_DIR/desktop/src/"
+# box-runner reads its version from desktop/package.json — ship it alongside.
+sync_runner "$PROJECT_DIR/desktop/package.json" "$HOST:$RUNNER_DIR/desktop/"
 sync_runner "$PROJECT_DIR/home/" "$HOST:$RUNNER_DIR/home/"
 sync_runner "$PROJECT_DIR/scripts/box-runner.ts" \
   "$PROJECT_DIR/scripts/mint-box-runner-token.ts" \

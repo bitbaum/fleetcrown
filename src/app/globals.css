@@ -1689,6 +1689,17 @@
     @apply text-nano tabular-nums text-text-muted;
   }
   .ui-term-tab-active .ui-term-tab-index { @apply text-text-tertiary; }
+  /* The live-agent chip after the tab name — what is actually running in this
+     tab (claude, grok, …), from the runner's pane topology. */
+  .ui-term-tab-badge {
+    @apply rounded-sm bg-surface-overlay px-1 py-px text-nano uppercase tracking-caps text-text-muted;
+  }
+  .ui-term-tab-active .ui-term-tab-badge { @apply text-text-secondary; }
+  /* One-line honesty note above the session, e.g. a ?tab= deep link that
+     matched nothing on the selected builder. */
+  .ui-term-notice {
+    @apply px-1 text-xs text-status-warning;
+  }
   .ui-term-tab-input {
     @apply w-28 rounded bg-transparent text-xs text-text-primary outline-none;
     font-family: var(--font-mono);

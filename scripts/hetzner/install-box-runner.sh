@@ -68,7 +68,6 @@ Environment=FLEETCROWN_BOX_PREPARE=true
 Environment=FLEETCROWN_RUNNER_PRESENCE_CHANNEL=cloud
 Environment=FLEETCROWN_RUNNER_UNATTENDED=true
 Environment=FLEETCROWN_WEB_URL=https://fleetcrown.orangecat.ch
-Environment=FLEETCROWN_RUNNER_VERSION=box-0.8.9
 ExecStart=/opt/fleetcrown/runner/node_modules/.bin/tsx scripts/box-runner.ts
 Restart=always
 RestartSec=5
