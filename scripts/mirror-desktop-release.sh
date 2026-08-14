@@ -43,6 +43,33 @@ if [[ -z "$VERSION" ]]; then
   exit 64
 fi
 
+# A release that ships but is never recorded makes the product lie about itself.
+# FLEET_RUNNER_RELEASES in src/config/changelog.ts is the SSOT for /releases AND
+# the sidebar/footer version pill, and it is hand-maintained with nothing
+# enforcing it. 0.8.11 shipped 2026-08-04 and was never added, so for ten days
+# the app told every operator it was running v0.8.9 — the same class of stale
+# version claim as the box-runner pin fixed in #267, which is why this is a
+# check and not a reminder.
+#
+# Ordering this imposes: land the changelog entry on main FIRST, then push the
+# tag. That is the correct order anyway — the entry describes what you are about
+# to ship, and writing it is when you notice you cannot say what changed.
+RELEASES_TS="$(dirname "$0")/../src/config/changelog.ts"
+if [[ -f "$RELEASES_TS" ]]; then
+  if ! grep -q "version: \"${VERSION}\"" "$RELEASES_TS"; then
+    echo "error: no FLEET_RUNNER_RELEASES entry for ${VERSION} in src/config/changelog.ts" >&2
+    echo "       Publishing would leave /releases and the footer version pill" >&2
+    echo "       claiming an older version than operators are actually running." >&2
+    echo "       Add the entry (version/tag/date/highlights), merge it, re-run." >&2
+    exit 1
+  fi
+  echo "==> release ${VERSION} is recorded in src/config/changelog.ts"
+else
+  # Rescue path: script run from outside a checkout. Say so rather than
+  # silently skipping the guard.
+  echo "warning: ${RELEASES_TS} not found — skipping the recorded-release check" >&2
+fi
+
 SRC_REPO="maonakamoto/fleetcrown"
 SRC_TAG="fleet-runner-v${VERSION}"   # git tag the workflow ran against
 DST_REPO="maonakamoto/fleetcrown-releases"
