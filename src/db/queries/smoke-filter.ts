@@ -21,6 +21,12 @@ export const SMOKE_MARKER_PREFIX = "[smoke-";
 
 /** WHERE fragment for prompt_history reads: drop smoke-probe rows. */
 export function excludeSmokeDispatchesSql() {
+  // CONTAINS, not starts-with. Two shapes of the same dispatch reach this
+  // column: the bare task line (`[smoke-…] probe — ignore`) and the fully
+  // assembled operator envelope, which buries the same marker hundreds of
+  // lines down under "## Your task". A prefix-anchored LIKE matched only the
+  // first, so the envelope form still served from /api/control after the
+  // filter shipped (caught by probing the live payload, not the tests).
   // '[' is not a LIKE metacharacter in Postgres — no escaping needed.
-  return sql`(${promptHistory.customPrompt} IS NULL OR ${promptHistory.customPrompt} NOT LIKE ${SMOKE_MARKER_PREFIX + "%"})`;
+  return sql`(${promptHistory.customPrompt} IS NULL OR ${promptHistory.customPrompt} NOT LIKE ${"%" + SMOKE_MARKER_PREFIX + "%"})`;
 }

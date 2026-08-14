@@ -11,7 +11,7 @@
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { SMOKE_MARKER_PREFIX } from "../../src/db/queries/smoke-filter";
+import { SMOKE_MARKER_PREFIX, excludeSmokeDispatchesSql } from "../../src/db/queries/smoke-filter";
 
 const root = join(__dirname, "..", "..");
 let passed = 0;
@@ -41,6 +41,22 @@ check("every smoke probe prompt starts with the filtered marker", () => {
       `probe prompt uses [\${${v}}] but ${v} is not a smoke-<ts> tag — the activity filter would not match it`,
     );
   }
+});
+
+check("the filter matches the marker ANYWHERE in the prompt", () => {
+  // The same probe reaches prompt_history in two shapes: the bare task line,
+  // and the assembled operator envelope with the marker buried under
+  // "## Your task". A starts-with LIKE only caught the first — it shipped that
+  // way and the envelope form still served from /api/control in prod.
+  const frag = excludeSmokeDispatchesSql() as unknown as { queryChunks: unknown[] };
+  const literals = frag.queryChunks
+    .map((c) => (c && typeof c === "object" && "value" in c ? (c as { value: unknown }).value : c))
+    .filter((v): v is string => typeof v === "string");
+  assert(
+    literals.some((v) => v.includes(`%${SMOKE_MARKER_PREFIX}%`)),
+    "excludeSmokeDispatchesSql must LIKE-match '%[smoke-%' (contains), not '[smoke-%' (starts-with) — " +
+      "the assembled dispatch envelope carries the marker mid-string",
+  );
 });
 
 check("the filter prefix matches what the smoke script writes", () => {
