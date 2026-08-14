@@ -235,6 +235,15 @@ async function main() {
         break;
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
+        // A per-DAY limit is not transient: no amount of waiting inside this run
+        // recovers it, and grinding 5 retries x 22 projects turns a dead budget
+        // into nine hours of pretending. Stop, say so, and be re-run tomorrow.
+        if (msg.includes("tokens per day") || msg.includes("(TPD)")) {
+          const wait = /try again in ([^"]+?)\./.exec(msg)?.[1] ?? "?";
+          console.log(`\n✗ Groq daily token budget exhausted (retry in ${wait}). Stopping after ${enriched} project(s).`);
+          console.log(`  Resume with: npx tsx scripts/enrich-prod-profiles.ts --apply${UPDATE_GTM ? " --update-gtm" : ""} <names…>`);
+          process.exit(1);
+        }
         const transient = msg.includes("fetch failed") || msg.includes("429") || msg.includes("groq 5");
         if (!transient || attempt >= 4) {
           console.log(`✗ ${p.name}: extraction failed (${msg.slice(0, 160)})`);
