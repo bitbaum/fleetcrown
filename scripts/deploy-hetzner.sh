@@ -423,40 +423,38 @@ sync_runner "$PROJECT_DIR/scripts/box-runner.ts" \
   "$PROJECT_DIR/scripts/hosted-runner.ts" \
   "$PROJECT_DIR/scripts/hermes-dispatch.ts" \
   "$HOST:$RUNNER_DIR/scripts/"
+# The deferred-restart script must reach the box BEFORE it is invoked below.
+sync_runner "$PROJECT_DIR/scripts/hetzner/drain-and-restart-runner.sh" \
+  "$HOST:$RUNNER_DIR/scripts/"
 sync_runner "$PROJECT_DIR/tsconfig.json" "$HOST:$RUNNER_DIR/tsconfig.json"
 ssh "$HOST" "chown -R $RUNNER_OWNER:$RUNNER_OWNER $RUNNER_DIR/src $RUNNER_DIR/desktop $RUNNER_DIR/home $RUNNER_DIR/scripts $RUNNER_DIR/tsconfig.json"
 
-# Wait for in-flight agent PTYs to finish before restarting the runner. Idle
-# runner drains instantly (its cgroup holds only the two node processes);
-# capped so a genuine runner-code fix still lands. Best-effort, never fails.
-drain_box_runner_agents() {
-  local max="${FLEETCROWN_RUNNER_DRAIN_SECS:-480}" waited=0 n
-  while [ "$waited" -lt "$max" ]; do
-    n=$(ssh -o ConnectTimeout=10 "$HOST" '
-      cg=/sys/fs/cgroup/system.slice/fleetcrown-box-runner.service/cgroup.procs
-      [ -r "$cg" ] || { echo 0; exit 0; }
-      c=0
-      for p in $(cat "$cg"); do
-        case "$(cat /proc/$p/comm 2>/dev/null)" in
-          claude|hermes|codex|cursor-agent|grok) c=$((c+1));;
-        esac
-      done
-      echo "$c"' 2>/dev/null || echo 0)
-    [ "${n:-0}" -eq 0 ] 2>/dev/null && return 0
-    echo "  ⏳ ${n} agent(s) in-flight on the runner — waiting to drain (${waited}s/${max}s)…"
-    sleep 20; waited=$((waited + 20))
-  done
-  echo "  ⚠ drain timed out after ${max}s — restarting anyway so the runner code fix lands" >&2
-  return 0
-}
-
+# The runner restart waits for in-flight agents — but it waits ON THE BOX, in a
+# detached transient unit, not here.
+#
+# This loop used to run inside the deploy: 480 of the ship step's 570 seconds
+# were spent watching one agent that never finished, after which it restarted
+# anyway. The web app had been live and verified for eight minutes by then. Two
+# separate systems with opposite needs were sharing one job's wall-clock: the
+# app wants to be live now, the runner wants to not kill anyone's work.
+#
+# Decoupled, both get what they want. The deploy ends when the app is verified;
+# the box waits as long as it needs (30m cap, not 8) and restarts when the
+# runner is genuinely idle. `systemd-run` detaches it into its own cgroup, so it
+# survives this ssh closing and cannot be killed by the restart it performs.
+step "scheduling runner restart"
 if [ "$RUNNER_CHANGED" = 1 ]; then
-  echo "→ runner code changed — draining in-flight agents, then restart"
-  drain_box_runner_agents
-  ssh "$HOST" "systemctl restart fleetcrown-box-runner \
-    && sleep 4 \
-    && systemctl is-active fleetcrown-box-runner >/dev/null"
-  echo "  ✓ fleetcrown-box-runner restarted (cloud builder)"
+  echo "→ runner code changed — scheduling a drain-then-restart on the box"
+  # Newest intent wins: a previous deploy's pending restart is superseded by
+  # this one, which is already syncing newer code.
+  ssh "$HOST" "
+    systemctl stop fleetcrown-runner-restart.service 2>/dev/null || true
+    systemctl reset-failed fleetcrown-runner-restart.service 2>/dev/null || true
+    systemd-run --unit=fleetcrown-runner-restart --collect --quiet \
+      --description='FleetCrown: restart box-runner once agents drain' \
+      /bin/bash $RUNNER_DIR/scripts/drain-and-restart-runner.sh
+  " && echo "  ✓ restart scheduled — runs when the runner goes idle (journal: -t fleetcrown-drain)" \
+    || echo "  ⚠ could not schedule the runner restart — runner keeps old code until the next deploy" >&2
 else
   echo "  ✓ runner code unchanged — restart skipped (in-flight agents undisturbed)"
 fi
