@@ -89,6 +89,22 @@ jobs:
       - name: Push schema to CI Postgres (build needs it)
         run: npx drizzle-kit push
 
+      # Next's incremental compiler cache. Every deploy compiled the whole app
+      # from cold because the runner is ephemeral — the one part of the pipeline
+      # that is genuinely WORK rather than waiting, so it is worth making
+      # smaller. Keyed on the lockfile plus the sources, with a lockfile-only
+      # fallback so a normal source change still starts from a warm cache.
+      # `.next/cache` is compiler state, not output: what ships is
+      # `.next/standalone`, rebuilt every run either way.
+      - name: Cache Next.js build cache
+        uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: ${{ runner.os }}-next-${{ hashFiles('package-lock.json') }}-${{ hashFiles('src/**/*.ts', 'src/**/*.tsx') }}
+          restore-keys: |
+            ${{ runner.os }}-next-${{ hashFiles('package-lock.json') }}-
+            ${{ runner.os }}-next-
+
       - name: Build (app + bridge)
         run: |
           npm run build

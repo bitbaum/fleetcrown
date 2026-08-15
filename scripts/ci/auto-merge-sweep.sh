@@ -338,10 +338,17 @@ INNER_EOF
 done
 
 if [ "$merged_any" -eq 1 ]; then
-  # Verification only. The deploy happens in the reconciler at the top of the
-  # NEXT sweep, once this CI run has proved the merge on main — dispatching
-  # Deploy here would ship a commit whose main-CI has not finished.
-  echo "[auto-merge] re-arming CI on ${BASE_BRANCH} to verify the merge"
+  # Verification AND, now, the ship signal. Dispatching Deploy from here would
+  # ship a commit whose main-CI has not finished — so it still must not happen
+  # here. Instead ci.yml's `ship` job dispatches Deploy the moment this run goes
+  # green, which is the earliest correct moment.
+  #
+  # The reconciler at the top of the next sweep stays as the safety net: it now
+  # catches only a deploy that never fired or that failed, rather than being the
+  # normal path. That is the difference between polling for "did something get
+  # missed?" (right) and polling for "did something just happen?" (up to ten
+  # minutes late — 18.6 of #284's 26.8-minute merge→live).
+  echo "[auto-merge] re-arming CI on ${BASE_BRANCH} to verify the merge (ci.yml ships it when green)"
   gh workflow run ci.yml --repo "$REPO" --ref "$BASE_BRANCH"
 else
   echo "[auto-merge] nothing merged"
