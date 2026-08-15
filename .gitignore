@@ -48,3 +48,7 @@ desktop/resources/bin/
 
 .env.vercel.production.snapshot.OLD
 /public/widget.js
+
+# Scratch files used to compose commit messages and PR bodies (never content).
+.commitmsg
+.prbody
