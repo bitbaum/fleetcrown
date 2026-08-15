@@ -16,6 +16,7 @@ import { buildGroundedTurn, directiveEvidence } from "@/lib/agent/context";
 import { runLokiTurn } from "@/lib/agent/loop";
 import { verifyAnswer, buildRepairPrompt, type Violation } from "@/lib/agent/core/verify";
 import { NO_BASIS } from "@/lib/agent/core/contract";
+import { rateLimitMessage } from "@/lib/agent/groq-error";
 import type { Fact } from "@/lib/agent/core/facts";
 import { APP_NAME } from "@/config/brand";
 import { HTTP_TIMEOUT_LONG_MS } from "@/lib/constants/time";
@@ -302,7 +303,7 @@ async function askLokiViaGateway(message: string, opts?: { sessionKey?: string; 
     // the rate limit) instead of a generic "unavailable" wall.
     const raw = e instanceof Error ? e.message : String(e);
     const hint = /\b401\b|invalid.api.key/i.test(raw) ? "Groq API key is invalid"
-              : /\b429\b/.test(raw)                  ? "Groq rate-limited — try again shortly"
+              : /\b429\b/.test(raw)                  ? rateLimitMessage(raw)
               : /\b5\d\d\b/.test(raw)                ? "Groq server error"
               : /timeout|abort/i.test(raw)           ? "Groq timed out"
               : `Loki is unavailable right now (${raw.slice(0, 80)})`;

@@ -30,7 +30,7 @@
  */
 import { HTTP_TIMEOUT_LONG_MS } from "@/lib/constants/time";
 import { GROQ_FAST_MODEL } from "@/lib/groq";
-import { classifyGroqLimit } from "@/lib/agent/groq-error";
+import { classifyGroqLimit, groqRetryAfterSeconds, humanizeWait } from "@/lib/agent/groq-error";
 
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 
@@ -211,6 +211,19 @@ export async function callModelWithTools(input: {
     // the only thing that actually fixes an oversized prompt.
     if (res.status === 429 && classifyGroqLimit(body) === "size") {
       throw new Error(`groq 429 request too large: ${body.slice(0, 200)}`);
+    }
+    // The DAY's budget is gone. Both recoveries below are not merely useless
+    // here but harmful: the step-down model draws on the SAME org-wide daily
+    // budget, and the bounded ~25s wait is measured against a reset that Groq
+    // reports in tens of minutes. Doing them anyway costs the operator two dead
+    // round trips and ~25s of latency on every turn for the rest of the day, to
+    // reach the identical failure. Give up now and say when it is worth asking
+    // again — the wait is the only actionable thing in the whole error.
+    if (res.status === 429 && classifyGroqLimit(body) === "daily") {
+      const wait = humanizeWait(groqRetryAfterSeconds(body));
+      throw new Error(
+        `groq 429 daily quota exhausted${wait ? ` (retry in ${wait})` : ""}: ${body.slice(0, 200)}`,
+      );
     }
     // A capacity 429 is not a capability problem, and the fallback path it used
     // to trigger has weaker retrieval than the loop — so a rate limit on the big
