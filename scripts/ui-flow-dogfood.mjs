@@ -306,11 +306,18 @@ try {
   }
   if (smokePin) await unlockPin(page);
 
-  report.flows.PE11 = await runPe11(page);
+  // PE11 (people) and H05 (habits) both live behind the private-zone PIN. With
+  // no SMOKE_PRIVATE_PIN the pages render locked and empty, so running them
+  // reports "no person cards" / "0 heatmap cells" — an environment gap dressed
+  // up as a product failure, which is how a red run stops meaning anything.
+  // G07 and M04 below already skip explicitly; do the same here.
+  const pinSkip = { ok: true, skipped: "private zone locked — set SMOKE_PRIVATE_PIN" };
+
+  report.flows.PE11 = smokePin ? await runPe11(page) : pinSkip;
   await page.screenshot({ path: path.join(outDir, "pe11-loki.png") });
 
   if (smokePin) await unlockPin(page);
-  report.flows.H05 = await runH05(page);
+  report.flows.H05 = smokePin ? await runH05(page) : pinSkip;
   await page.screenshot({ path: path.join(outDir, "h05-heatmap.png") });
 
   if (smokePin) await unlockPin(page);
@@ -334,6 +341,16 @@ try {
 
   console.log(JSON.stringify(report, null, 2));
   console.log(`screenshots → ${outDir}`);
+
+  // Name what did not run. "ok: true" for a flow that was skipped is only
+  // honest if the skip is said out loud — otherwise the run claims coverage of
+  // people and habits it never exercised.
+  const skippedFlows = Object.entries(report.flows)
+    .filter(([, f]) => f.skipped)
+    .map(([id, f]) => `${id} (${f.skipped})`);
+  if (skippedFlows.length > 0) {
+    console.log(`⚠ ${skippedFlows.length} flow(s) skipped: ${skippedFlows.join("; ")}`);
+  }
   if (!report.ok) process.exitCode = 1;
 } finally {
   await context?.close().catch(() => {});

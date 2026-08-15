@@ -39,6 +39,19 @@ type ProbeResult = {
   status: number;
   ok: boolean;
   note?: string;
+  /**
+   * The probe did not run because this ENVIRONMENT could not run it (no
+   * SMOKE_PRIVATE_PIN, so the private zone stays locked) — not because
+   * production misbehaved.
+   *
+   * These used to be reported as failures, which made the suite exit 1 on a
+   * perfectly healthy prod and left no way to tell "the pin is missing" from
+   * "people CRUD is broken". A red that does not mean broken is a red people
+   * learn to skip past. Skips are counted and printed separately and never
+   * set the exit code; the closing summary still names them so the coverage
+   * gap cannot hide behind a green tick.
+   */
+  skipped?: boolean;
 };
 
 type Report = {
@@ -48,6 +61,7 @@ type Report = {
   privateZoneLocked: boolean;
   passed: number;
   failed: number;
+  skipped: number;
   probes: ProbeResult[];
 };
 
@@ -754,8 +768,15 @@ async function runSettingsSystemProbes(
   privateZoneLocked: boolean,
 ): Promise<ProbeResult[]> {
   const out: ProbeResult[] = [];
-  const push = (label: string, method: HttpMethod, status: number, ok: boolean, note?: string) => {
-    out.push({ route: label, method, status, ok, note });
+  const push = (
+    label: string,
+    method: HttpMethod,
+    status: number,
+    ok: boolean,
+    note?: string,
+    skipped?: boolean,
+  ) => {
+    out.push({ route: label, method, status, ok, note, skipped });
   };
 
   const tag = `smoke-${Date.now()}`;
@@ -879,8 +900,8 @@ async function runSettingsSystemProbes(
   }
 
   if (privateZoneLocked) {
-    push("SY03 frontier proposals", "GET", 0, false, "skipped — PIN locked");
-    push("ME02 GET /api/memory/rag-stats", "GET", 0, false, "skipped — PIN locked");
+    push("SY03 frontier proposals", "GET", 0, false, "skipped — PIN locked", true);
+    push("ME02 GET /api/memory/rag-stats", "GET", 0, false, "skipped — PIN locked", true);
   } else {
     const frontier = await apiJson(cookieHeader, "/api/frontier/proposals", "GET");
     push("SY03 GET /api/frontier/proposals", "GET", frontier.status, frontier.status === 200);
@@ -1256,6 +1277,7 @@ async function main(): Promise<void> {
       status: 0,
       ok: false,
       note: "skipped — set SMOKE_PRIVATE_PIN",
+      skipped: true,
     });
   } else {
     probes.push(...await runPrivateZoneCrudProbes(cookieHeader));
@@ -1267,13 +1289,18 @@ async function main(): Promise<void> {
 
   let passed = 0;
   let failed = 0;
+  let skipped = 0;
   for (const p of probes) {
-    if (p.ok) {
+    const extra = p.note ? `  (${p.note})` : "";
+    if (p.skipped) {
+      // Not run, and not a verdict on production — see ProbeResult.skipped.
+      skipped += 1;
+      console.log(`  SKIP  --  ${p.route}${extra}`);
+    } else if (p.ok) {
       passed += 1;
       console.log(`  ok   ${String(p.status).padStart(3)}  ${p.route}`);
     } else {
       failed += 1;
-      const extra = p.note ? `  (${p.note})` : "";
       console.log(`  FAIL ${String(p.status).padStart(3)}  ${p.route}${extra}`);
     }
   }
@@ -1285,6 +1312,7 @@ async function main(): Promise<void> {
     privateZoneLocked,
     passed,
     failed,
+    skipped,
     probes,
   };
 
@@ -1293,11 +1321,19 @@ async function main(): Promise<void> {
   writeFileSync(resolve(outDir, "authenticated-smoke-report.json"), JSON.stringify(report, null, 2));
 
   console.log("");
+  // Always name the skips, pass or fail. A suite that reports "all ok" while
+  // silently not running the private zone is claiming coverage it does not have.
+  if (skipped > 0) {
+    console.log(
+      `⚠ ${skipped} probe(s) SKIPPED — the private zone is locked. ` +
+        `Set SMOKE_PRIVATE_PIN to cover people/goals/habits/events/subscriptions/prompts CRUD.`,
+    );
+  }
   if (failed > 0) {
     console.log(`✗ ${failed}/${probes.length} authenticated probe(s) failed`);
     process.exit(1);
   }
-  console.log(`✓ all ${probes.length} authenticated probes ok`);
+  console.log(`✓ ${passed} authenticated probes ok${skipped > 0 ? `, ${skipped} skipped` : ""}`);
 }
 
 main().catch((e) => {
