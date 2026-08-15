@@ -1,9 +1,0 @@
-# Override: expose Postgres + PgBouncer on all interfaces (Oracle/Hetzner public IP).
-# Used by scripts/db/oracle-cutover.sh — protect with strong POSTGRES_PASSWORD + firewall.
-services:
-  postgres:
-    ports:
-      - "0.0.0.0:5432:5432"
-  pgbouncer:
-    ports:
-      - "0.0.0.0:6432:5432"

@@ -1,1 +1,0 @@
-ALTER TABLE "site_snapshots" ADD COLUMN "preview_ok" boolean;
