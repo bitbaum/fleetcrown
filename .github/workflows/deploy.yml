@@ -97,7 +97,7 @@ jobs:
       # `.next/cache` is compiler state, not output: what ships is
       # `.next/standalone`, rebuilt every run either way.
       - name: Cache Next.js build cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .next/cache
           key: ${{ runner.os }}-next-${{ hashFiles('package-lock.json') }}-${{ hashFiles('src/**/*.ts', 'src/**/*.tsx') }}
