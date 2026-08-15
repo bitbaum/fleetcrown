@@ -50,7 +50,13 @@ RestartSec=3
 # Bound the stop phase so a `systemctl restart` can't block on a slow-draining
 # Next process (default 90s). KillMode=mixed SIGTERMs the main proc then SIGKILLs
 # the cgroup, freeing the port fast for the new process.
-TimeoutStopSec=15
+#
+# 3s, not 15: a Next standalone server closes its listener on SIGTERM and then
+# waits on keep-alive connections the proxy never closes, so the drain never
+# finishes and the whole timeout is served as 502s. Measured on fleetcrown
+# (2026-08-14): ~13s of refused connections per deploy. Cut the wait; the
+# matching lb_try_duration below hides what is left.
+TimeoutStopSec=3
 KillMode=mixed
 # Memory ceiling: a leaking/runaway Next process is OOM-killed (and restarted)
 # alone instead of taking the whole small box down. MemoryHigh throttles first.
@@ -89,6 +95,12 @@ $caddy_domains {
   }
   reverse_proxy 127.0.0.1:$PORT {
     flush_interval -1
+    # Re-dial across a restart instead of returning 502 the moment the upstream
+    # refuses. A deploy takes the port down for a few seconds; without this that
+    # window is served to users as errors. Only the dial is retried, so a request
+    # that already reached the app is never replayed.
+    lb_try_duration 20s
+    lb_try_interval 250ms
   }
 }
 EOF

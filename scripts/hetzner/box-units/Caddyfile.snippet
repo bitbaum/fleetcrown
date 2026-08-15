@@ -8,6 +8,15 @@
 # reaches the origin and presence goes stale. It must have `flush_interval -1`
 # so each event frame is flushed immediately. verify.sh asserts the bridge
 # block stays encode-free.
+#
+# RESTART RULE (load-bearing): every block needs `lb_try_duration`, or a deploy
+# is a user-visible outage. Without it Caddy 502s the instant the upstream
+# refuses a connection, and a `systemctl restart` refuses for several seconds —
+# 784 502s in 7 days, every one inside a restart window. With it, Caddy re-dials
+# for the duration and the restart becomes a brief delay instead of an error.
+# Retries here are safe: Caddy only retries when the *dial* failed, so the
+# request never reached the app and a POST cannot be applied twice.
+# verify.sh asserts every proxied block keeps it.
 
 # Bridge (4001) — SSE only (presence, rawkey, peek). encode deliberately absent.
 bridge.orangecat.ch {
@@ -15,6 +24,10 @@ bridge.orangecat.ch {
 	reverse_proxy 127.0.0.1:4001 {
 		# SSE needs each frame flushed immediately.
 		flush_interval -1
+		# Ride out a restart instead of 502ing. Governs the initial dial only,
+		# so a live SSE stream is unaffected.
+		lb_try_duration 20s
+		lb_try_interval 250ms
 	}
 }
 
@@ -26,5 +39,8 @@ fleetcrown.orangecat.ch {
 	encode zstd gzip
 	reverse_proxy 127.0.0.1:4002 {
 		flush_interval -1
+		# Ride out the ~3s restart window (TimeoutStopSec=3) instead of 502ing.
+		lb_try_duration 20s
+		lb_try_interval 250ms
 	}
 }
