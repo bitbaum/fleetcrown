@@ -32,6 +32,38 @@ export function mergeFactsWithCap(existing: Fact[], fresh: Fact[], cap: number):
 }
 
 /**
+ * Say out loud that records were withheld.
+ *
+ * Shedding facts to fit a call is silent to the model: it receives a shorter
+ * list and no indication that a longer one exists, so a question about "how
+ * many" is answered by counting what happens to be in front of it. Asked how
+ * many projects it was tracking, Loki answered "You are tracking 5 projects"
+ * and named them, with citations, while the operator's account held 22 — the
+ * five were simply the tail of the list that survived `trimFactsToBudget`.
+ * Nothing in the answer marked it as partial, which makes it worse than a
+ * refusal: a wrong count that cites sources reads as a checked one.
+ *
+ * This is the same principle as `<not recorded>` in facts.ts — absence has to
+ * be *stated* to be resistible — applied to the records dropped by the budget
+ * rather than the fields missing from a record.
+ */
+export function omissionNotice(total: number, sent: number): string {
+  const omitted = total - sent;
+  if (omitted <= 0) return "";
+  return [
+    "## Withheld records — the list below is INCOMPLETE",
+    "",
+    `${omitted} of ${total} retrieved records did not fit this request and were withheld.`,
+    `You can see ${sent}. You cannot see the other ${omitted}, and they are not described anywhere in this prompt.`,
+    "",
+    "Therefore: do not state a total, do not say how many there are, and do not",
+    "present the records below as a complete list. If the question asks for a",
+    `count or "all" of something, answer that you can see ${sent} of ${total} retrieved`,
+    "records and give those, rather than counting what is in front of you.",
+  ].join("\n");
+}
+
+/**
  * Rough token count. Deliberately crude — ~4 characters per token is close
  * enough for English prose, and the alternative (shipping a tokenizer for the
  * provider of the week) buys precision this decision does not need: the budget
