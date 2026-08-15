@@ -11,9 +11,18 @@ import { getProjectContext } from "@/db/queries/project-context";
 import { getProjectDossierByProjectKey, renderProjectDossierForAgent } from "@/db/queries/project-dossier";
 import { deleteKnowledgeSource, upsertKnowledge } from "@/db/queries/knowledge-embeddings";
 import { embeddingsEnabled } from "@/lib/rag/embeddings";
+import { skipForDemo } from "@/lib/demo-guard";
 
 async function reindexProjectProfile(userId: string, projectKey: string): Promise<void> {
   if (!embeddingsEnabled()) return;
+  // The demo may create and edit projects — that is most of what makes it worth
+  // exploring — and each save schedules this. Embedding costs money per call, so
+  // the demo skips it. SKIPS, not throws: this is fire-and-forget on the save
+  // path, and a visitor who did nothing wrong should not see an error because a
+  // background index declined to run. The single narrow cost of that: demo
+  // projects are absent from RAG search, which the seed compensates for by
+  // indexing its own fixtures once.
+  if (await skipForDemo(userId)) return;
   const dossier = await getProjectDossierByProjectKey(userId, projectKey).catch(() => null);
   const ctx = dossier ? renderProjectDossierForAgent(dossier) : await getProjectContext(userId, projectKey).catch(() => null);
   if (!ctx?.trim()) return;

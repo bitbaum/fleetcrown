@@ -4,6 +4,7 @@ import { getUserByEmail } from "@/db/queries/users";
 import { createPasswordReset } from "@/db/queries/passwordResets";
 import { sendEmail, resetPasswordEmailTemplate, appUrl } from "@/lib/email";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { isDemoEmailBlocked } from "@/lib/demo-guard";
 import { RATE_LIMIT_WINDOW_SHORT_MS } from "@/lib/constants/time";
 
 const Body = z.object({
@@ -24,6 +25,17 @@ export async function POST(req: NextRequest) {
   const dataOrResp = await readJsonBody(req, Body);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
   const { email } = dataOrResp;
+
+  // The demo account is shared and its password is published on the sign-in
+  // page, so a reset would lock every future visitor out of the demo — the
+  // whole point of which is that it always works. Answered with the same
+  // opaque 200 as an unknown address, because a distinguishable response here
+  // would leak which address is the demo before the page tells you.
+  //
+  // This lives in the handler, not in the demo route policy: /api/auth/* is
+  // excluded from the proxy matcher (it has to answer before a session
+  // exists), so the middleware gate never sees this path.
+  if (isDemoEmailBlocked(email)) return NextResponse.json({ ok: true });
 
   // Always return 200 — don't reveal whether the email exists.
   const user = await getUserByEmail(email);
