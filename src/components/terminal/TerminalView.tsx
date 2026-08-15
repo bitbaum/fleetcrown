@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { AlertTriangle } from "lucide-react";
 import "@xterm/xterm/css/xterm.css";
 import type { AgentLifecycle } from "@/lib/agent-execution/types";
+import { ptyResizeToPublish, type PtyGeometry } from "@/lib/terminal-viewport";
 import type { TerminalTransport } from "./terminal-transport";
 
 const URL_RE = /https?:\/\/[^\s"'`<>\\)\]}]+/g;
@@ -325,9 +326,16 @@ export function TerminalView({
 
       // ResizeObserver tracks both viewport and container changes — keeps the
       // remote PTY (interactive substrates) sized to what the viewer sees.
+      // Filtered through ptyResizeToPublish: a collapsed host measures 1 row,
+      // and publishing that reflows the real session an agent is working in.
+      let lastPublished: PtyGeometry | null = null;
       const syncSize = () => {
         try { fit.fit(); } catch { /* container not laid out yet */ }
-        if (interactive) transport.sendResize(term.cols, term.rows);
+        if (!interactive) return;
+        const next = ptyResizeToPublish({ cols: term.cols, rows: term.rows }, lastPublished);
+        if (!next) return;
+        lastPublished = next;
+        transport.sendResize(next.cols, next.rows);
       };
       const resizeObserver = new ResizeObserver(syncSize);
       resizeObserver.observe(host);

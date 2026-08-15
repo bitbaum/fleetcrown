@@ -17,6 +17,7 @@ import { executor } from "@/lib/agent-execution";
 import { workspaceIdFor } from "@/lib/agent-execution/ownership";
 import { publishFastLaneEvent } from "@/lib/bridge-publish";
 import { getExecutionAccess } from "@/lib/execution-access";
+import { clampPtyGeometry } from "@/lib/terminal-viewport";
 import { BUILDER_CHANNELS } from "@/lib/constants/statuses";
 
 const Channel = z.enum(BUILDER_CHANNELS);
@@ -45,14 +46,20 @@ export async function POST(req: NextRequest) {
   if (dataOrResp instanceof NextResponse) return dataOrResp;
   const body = dataOrResp;
 
+  // A resize is the one payload here that changes the SESSION rather than
+  // feeding it — a viewer with a collapsed pane must not reflow a running TUI
+  // to one row. Floored at the boundary, not in the client, so an old bundle or
+  // any other caller is bound by the same rule.
+  const geometry = body.kind === "resize" ? clampPtyGeometry(body) : null;
+
   // Same-box live PTY (local dev): drive the executor directly — lowest latency,
   // no transport hop.
   const wsId = workspaceIdFor(userId, body.tab);
   const wsHandle = isRuntimeAvailable() ? executor.get(wsId) : null;
   if (wsHandle && wsHandle.status !== "exited") {
     if (body.kind === "key") executor.write(wsId, body.data);
-    else executor.resize(wsId, body.cols, body.rows);
-    return NextResponse.json({ ok: true, mode: "pty", tab: body.tab });
+    else if (geometry) executor.resize(wsId, geometry.cols, geometry.rows);
+    return NextResponse.json({ ok: true, mode: "pty", tab: body.tab, ...(geometry?.clamped ? { clamped: true } : {}) });
   }
 
   // Otherwise fan out to the runner via the bridge fast lane. Routed by userId,
@@ -67,8 +74,8 @@ export async function POST(req: NextRequest) {
   }
   if (body.kind === "key") {
     await publishFastLaneEvent({ kind: "rawkey", u: userId, tab: body.tab, b: body.data, ...(ch ? { ch } : {}) });
-  } else {
-    await publishFastLaneEvent({ kind: "resize", u: userId, tab: body.tab, c: body.cols, r: body.rows, ...(ch ? { ch } : {}) });
+  } else if (geometry) {
+    await publishFastLaneEvent({ kind: "resize", u: userId, tab: body.tab, c: geometry.cols, r: geometry.rows, ...(ch ? { ch } : {}) });
   }
-  return NextResponse.json({ ok: true, mode: "bridge", tab: body.tab });
+  return NextResponse.json({ ok: true, mode: "bridge", tab: body.tab, ...(geometry?.clamped ? { clamped: true } : {}) });
 }
