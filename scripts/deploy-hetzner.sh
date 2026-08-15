@@ -93,13 +93,21 @@ fi
 # desktop notification (best-effort), and a row in the box debug_logs so a
 # failed deploy surfaces on /system instead of being invisible until a 503.
 DEPLOY_REF_SHORT="$(git -C "$PROJECT_DIR" rev-parse --short "${REF:-HEAD}" 2>/dev/null || echo unknown)"
+
+# Which phase we are in, so `set -e` killing a silent command still says where.
+# A deploy died on a redirected one-line assignment and the only trace was
+# "deploy FAILED (exit 1)" plus a path to a log on an ephemeral CI runner —
+# which is no diagnosis at all. Naming the step costs one variable.
+DEPLOY_STEP="starting"
+step() { DEPLOY_STEP="$1"; }
+
 report_deploy_status() {
   local code=$?
   local level msg
   if [ "$code" = 0 ]; then
     level=info; msg="deploy OK: ${DEPLOY_REF_SHORT} to Hetzner"
   else
-    level=error; msg="deploy FAILED (exit ${code}): ${DEPLOY_REF_SHORT} — see /tmp/push-deploy-fleetcrown.log"
+    level=error; msg="deploy FAILED (exit ${code}) during [${DEPLOY_STEP}]: ${DEPLOY_REF_SHORT} — see /tmp/push-deploy-fleetcrown.log"
   fi
   echo "→ ${msg}"
   command -v notify-send >/dev/null 2>&1 && notify-send "FleetCrown deploy" "$msg" >/dev/null 2>&1 || true
@@ -118,6 +126,7 @@ git_head() { git -C "$PROJECT_DIR" rev-parse HEAD 2>/dev/null || echo unknown; }
 # Runs FIRST, before the schema step mutates anything: a refused deploy must
 # leave the box exactly as it found it. See the script for the two incidents
 # that made this an enforced invariant rather than a remembered rule.
+step "off-main gate"
 bash "$SCRIPT_DIR/ci/check-deploy-ref.sh" "$PROJECT_DIR" "${REF:-HEAD}"
 
 # Schema BEFORE build (same order as scripts/hetzner/deploy.sh): guarded,
@@ -128,6 +137,7 @@ bash "$SCRIPT_DIR/ci/check-deploy-ref.sh" "$PROJECT_DIR" "${REF:-HEAD}"
 # journal, so `npm run db:generate` diffs and emits the next 0040+ migration
 # automatically — no more hand-written DDL (that reflex caused the box-DDL
 # ownership rollbacks; see scripts/db/apply-box.sh).
+step "schema migration"
 bash "$SCRIPT_DIR/hetzner/apply-schema.sh" fleetcrown "$PROJECT_DIR" fleetcrown "." \
   || { echo "✗ schema step failed — deploy aborted (no code shipped)" >&2; exit 1; }
 
@@ -194,8 +204,24 @@ fi
 # Anything else moves production backwards, or sideways onto an unrelated
 # branch, and is refused. ALLOW_ROLLBACK=1 is the deliberate override for a
 # genuine rollback.
+step "reading the live build marker"
 SHIPPING_SHA="$(git -C "$PROJECT_DIR" rev-parse "${REF:-HEAD}" 2>/dev/null || echo "")"
-LIVE_REF_NOW="$(ssh "$HOST" "cat '$APP_DIR/.build-ref' 2>/dev/null" 2>/dev/null | tr -d '[:space:]')"
+# `|| true` is load-bearing, not defensive noise. `cat` on a box with no marker
+# exits 1, ssh returns that 1, and under `set -euo pipefail` a bare assignment
+# adopts its command substitution's status — so this line ABORTED THE DEPLOY,
+# silently (both streams go to /dev/null), before check-not-behind.sh could run
+# its "no marker → warn and allow" path.
+#
+# That is precisely the case the guard promises to survive: "this gate must
+# never be the reason a box that is already broken cannot be repaired." It could
+# not keep that promise from here, because the deploy died fetching the input.
+#
+# Observed 2026-08-15: an off-main hand deploy put a pre-marker build on the box,
+# which erased .build-ref — so every subsequent deploy from main failed on this
+# line with no message, and production sat on unreviewed off-main code with CD
+# unable to replace it. An absent marker is a KNOWN state (every build before
+# #279 lacks one); it must read as empty, never as failure.
+LIVE_REF_NOW="$(ssh "$HOST" "cat '$APP_DIR/.build-ref' 2>/dev/null" 2>/dev/null | tr -d '[:space:]' || true)"
 bash "$PROJECT_DIR/scripts/ci/check-not-behind.sh" "$LIVE_REF_NOW" "$SHIPPING_SHA" "$PROJECT_DIR" || exit 1
 
 # Snapshot the current box build for one-command rollback (fix: in-place rsync
@@ -230,6 +256,7 @@ rollback_box() {
 # reachable). ServerAlive drops the channel after ~90s of silence so the deploy
 # fails fast and can be rerun, rather than hanging past every timeout below.
 RSYNC_SSH="ssh -o ConnectTimeout=10 -o ServerAliveInterval=15 -o ServerAliveCountMax=6"
+step "rsync to box"
 echo "→ rsync standalone → $HOST:$APP_DIR"
 rsync -az --delete -e "$RSYNC_SSH" \
   --exclude '.env' \

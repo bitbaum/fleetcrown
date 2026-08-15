@@ -135,4 +135,44 @@ check("the deploy asserts the LIVE box runs the commit it just shipped", () => {
   assert(!/rollback_box/.test(block), "a commit mismatch must NOT roll back — it would discard the newer build");
 });
 
+check("reading the live marker can never abort the deploy", () => {
+  // A box with no marker is a KNOWN state — every build before the marker
+  // existed lacks one, and an off-main hand deploy can put such a build back on
+  // the box at any time. So `cat .build-ref` exits 1, ssh returns that 1, and
+  // under `set -euo pipefail` a bare assignment adopts its command
+  // substitution's status. On 2026-08-15 that killed every deploy from main,
+  // silently — both streams are redirected — leaving production on unreviewed
+  // off-main code that CD could not replace.
+  //
+  // The absent marker must read as EMPTY. check-not-behind.sh already handles
+  // empty ("no marker → warn and allow"); it just never got the chance.
+  const deploy = readFileSync(join(root, "scripts/deploy-hetzner.sh"), "utf8");
+  const line = deploy.split("\n").find((l) => l.startsWith("LIVE_REF_NOW="));
+  assert(Boolean(line), "deploy must read the live build-ref into LIVE_REF_NOW");
+  assert(
+    /\|\|\s*true\s*\)"\s*$/.test(line!),
+    "LIVE_REF_NOW must tolerate a missing marker (|| true) — otherwise set -e aborts the deploy before the guard runs",
+  );
+
+  // And the guard it feeds must treat empty as allow, not refuse.
+  const guard = readFileSync(join(root, "scripts/ci/check-not-behind.sh"), "utf8");
+  const emptyBranch = guard.slice(guard.indexOf('if [ -z "$LIVE" ]'));
+  assert(
+    /exit 0/.test(emptyBranch.slice(0, 200)),
+    "check-not-behind.sh must allow when the box reports no marker",
+  );
+});
+
+check("a deploy that dies mid-script cannot do so silently", () => {
+  // The failure above cost real time because the only output was the EXIT
+  // trap's generic line pointing at a log file that lives on an ephemeral CI
+  // runner. The trap must at least name the step that was running.
+  const deploy = readFileSync(join(root, "scripts/deploy-hetzner.sh"), "utf8");
+  assert(/trap report_deploy_status EXIT/.test(deploy), "deploy must report its outcome on exit");
+  assert(
+    /DEPLOY_STEP/.test(deploy),
+    "deploy must track which step it is on so a silent abort still says where it died",
+  );
+});
+
 console.log(`\n${passed}/${passed} passed`);
