@@ -175,14 +175,36 @@ fi
 ok "unresolvable ref is refused"
 
 # ── 8. the isolation itself holds ────────────────────────────────────────────
-# The guard that was missing. `g` must REFUSE a directory that is not its own
-# repo rather than letting git walk up — the failure that published fixture
-# commits to GitHub. Run in a subshell so the expected `fail` cannot exit here.
-mkdir -p "$TMP/not-a-repo"
-if ( g "$TMP/not-a-repo" rev-parse HEAD ) >/dev/null 2>&1; then
-  fail "g() operated on a directory that is not a fixture repo — isolation is broken"
+# `g` must REFUSE a directory that is not its own repo rather than letting git
+# walk up — the failure that published fixture commits to GitHub.
+#
+# THE PROBE'S SHAPE IS THE WHOLE TEST, and the obvious shape proves nothing.
+# Measured 2026-08-15, each with the assertion removed entirely:
+#
+#   bare "$TMP/not-a-repo"              → refused anyway. Nothing above $TMP is a
+#                                         repo, so git finds nothing whether or
+#                                         not any defence exists. PASSES WITH NO
+#                                         GUARD AT ALL — decorative.
+#   nested in a repo with NO commit     → refused anyway. `rev-parse HEAD` fails
+#                                         in an empty repo too, so an escape is
+#                                         indistinguishable from a refusal.
+#   nested in a repo WITH a commit      → escapes, exit 0, returns the enclosing
+#                                         repo's sha. Only this shape bites.
+#
+# That is the same mistake as the tautological `case` this file was written to
+# remove, one level up: a guard is not a guard until it has been run against the
+# thing it forbids and observed to FAIL.
+ENCLOSING="$TMP/enclosing"
+git init -q "$ENCLOSING" || fail "could not init the enclosing probe repo"
+echo enclosing > "$ENCLOSING/f"
+g "$ENCLOSING" add -A
+g "$ENCLOSING" commit -qm "enclosing"
+mkdir -p "$ENCLOSING/inner/not-a-repo"
+# Subshell: the expected `fail` must not exit the suite.
+if ( g "$ENCLOSING/inner/not-a-repo" rev-parse HEAD ) >/dev/null 2>&1; then
+  fail "g() walked UP into '$ENCLOSING' instead of refusing — isolation is broken"
 fi
-ok "git calls refuse a target that is not the fixture repo"
+ok "git calls refuse a target that is not the fixture repo (probe verified to bite)"
 
 echo ""
 echo "$PASSED passed"
