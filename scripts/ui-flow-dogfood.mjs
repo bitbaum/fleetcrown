@@ -35,6 +35,11 @@ const base = (process.env.BASE ?? "https://fleetcrown.orangecat.ch").replace(/\/
 const headless = process.env.HEADLESS !== "0";
 const sessionToken = (process.env.FLEETCROWN_SESSION_TOKEN ?? process.env.COCKPIT_SESSION_TOKEN)?.trim();
 const smokePin = process.env.SMOKE_PRIVATE_PIN?.trim();
+// `name=value` from scripts/test/print-private-zone-cookie.ts. Without it the
+// private pages (/people, /habits, /money, /events) render their lock screen,
+// and flows that look for real content — a person card, a heatmap cell — fail
+// as if the feature were broken. Two such "failures" were exactly this.
+const privateZoneCookie = process.env.FLEETCROWN_PRIVATE_ZONE_COOKIE?.trim();
 const fullDispatchEnabled = process.env.UI_FLOW_FULL_DISPATCH !== "0";
 
 const report = {
@@ -73,6 +78,21 @@ async function launchContext() {
         sameSite: "Lax",
       },
     ]);
+  }
+  if (privateZoneCookie) {
+    const eq = privateZoneCookie.indexOf("=");
+    if (eq > 0) {
+      await context.addCookies([
+        {
+          name: privateZoneCookie.slice(0, eq),
+          value: privateZoneCookie.slice(eq + 1),
+          url: base,
+          secure: true,
+          httpOnly: true,
+          sameSite: "Lax",
+        },
+      ]);
+    }
   }
   return context;
 }

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useOverlayLock } from "@/hooks/use-overlay-lock";
+import { useEscapeToClose } from "@/hooks/use-escape-to-close";
 
 const SIZE_CLASSES = {
   sm: "max-w-sm",
@@ -13,15 +14,6 @@ const SIZE_CLASSES = {
 } as const;
 
 type Size = keyof typeof SIZE_CLASSES;
-
-function useEscapeToClose(onClose: () => void, disabled: boolean) {
-  useEffect(() => {
-    if (disabled) return;
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [onClose, disabled]);
-}
 
 /** Centered modal dialog with backdrop + Esc-to-close. */
 export function Modal({

@@ -24,6 +24,7 @@ import { config } from "dotenv";
 
 import { smokeSessionToken } from "@/lib/brand-env";
 import { SUBSCRIPTION_META } from "@/config/subscriptions";
+import { privateZoneCookiePair } from "@/lib/private-zone-token";
 
 config({ path: ".env.local" });
 config({ path: ".env.hetzner.local" });
@@ -224,6 +225,18 @@ async function tryMintJwtSession(isProdBase: boolean): Promise<{ token: string; 
   } finally {
     await sql.end({ timeout: 5 }).catch(() => undefined);
   }
+}
+
+/** Whoever this session actually is — asked of the server, never assumed. */
+async function resolveUserId(cookieHeader: string): Promise<string> {
+  const res = await fetch(`${BASE}/api/me`, {
+    headers: { Cookie: cookieHeader },
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!res.ok) throw new Error(`/api/me returned ${res.status}`);
+  const me = (await res.json()) as { id?: string };
+  if (!me.id) throw new Error("/api/me returned no user id");
+  return me.id;
 }
 
 async function resolveSessionToken(): Promise<{ token: string; source: string }> {
@@ -1078,12 +1091,41 @@ async function main(): Promise<void> {
     } else {
       console.log(`  warn PIN unlock failed (${unlockRes.status}) — private APIs may 403`);
     }
-  } else if (privateZoneLocked) {
-    console.log("  note private zone locked — set SMOKE_PRIVATE_PIN to probe private APIs");
   }
 
   const probes: ProbeResult[] = [];
   probes.push(pinStatus);
+
+  // No PIN to hand? Mint the unlock from AUTH_SECRET — the same secret that
+  // minted this session. Before doing so, PROVE the gate is real: a session
+  // without the unlock must be refused. Skipping the private half of the app
+  // (as this suite did on every run) tests nothing; asserting the 403 and then
+  // walking through the gate tests both the lock and what it protects.
+  if (privateZoneLocked) {
+    probes.push(
+      await probe(cookieHeader, "/api/people", {
+        expectStatus: [403],
+        label: "PZ00 private zone refuses a session without the unlock",
+      }),
+    );
+    try {
+      const unlockCookie = privateZoneCookiePair(await resolveUserId(cookieHeader));
+      cookieHeader = `${cookieHeader}; ${unlockCookie}`;
+      const verify = await fetch(`${BASE}/api/auth/pin`, {
+        headers: { Cookie: cookieHeader },
+        signal: AbortSignal.timeout(15_000),
+      });
+      const state = verify.ok ? ((await verify.json()) as { unlocked?: boolean }) : {};
+      privateZoneLocked = !state.unlocked;
+      console.log(
+        privateZoneLocked
+          ? "  warn minted unlock rejected — private APIs will 403"
+          : "  ok   PZ01 unlock minted from AUTH_SECRET — private zone probes enabled",
+      );
+    } catch (e) {
+      console.log(`  warn could not mint private-zone unlock (${e instanceof Error ? e.message : e})`);
+    }
+  }
 
   const pageRoutes = [
     "/today",
@@ -1255,7 +1297,7 @@ async function main(): Promise<void> {
       method: "POST",
       status: 0,
       ok: false,
-      note: "skipped — set SMOKE_PRIVATE_PIN",
+      note: "skipped — private zone still locked (AUTH_SECRET missing?)",
     });
   } else {
     probes.push(...await runPrivateZoneCrudProbes(cookieHeader));

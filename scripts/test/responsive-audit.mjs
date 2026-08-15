@@ -93,11 +93,25 @@ const VIEWPORTS = [
  * The `landed elsewhere` note in the report is the detector, so the next
  * retirement shows up as a line of output instead of silent double-counting.
  */
+/**
+ * The private-zone pages (/people, /money, /habits, /events, /goals, /memory)
+ * were missing from this list, and from the smoke's probes, and from the UI
+ * dogfood's flows. One cause behind all three: they sit behind the PIN, so
+ * measuring them without an unlock measures a lock screen, and each check quietly
+ * dropped them instead. A rule enforced on the pages that happened to be
+ * reachable is a rule with holes exactly where nobody looked — which is the
+ * comment above this list, so the list has to earn it.
+ *
+ * FLEETCROWN_PRIVATE_ZONE_COOKIE (scripts/test/print-private-zone-cookie.ts)
+ * supplies the unlock. Without it these pages still render — as their lock
+ * screen — so the audit degrades to what it measured before rather than failing.
+ */
 const PAGES = [
   "/today", "/loki", "/control", "/projects", "/approvals",
   "/terminal", "/prompts", "/activity", "/system", "/thoughts",
   "/settings", "/frontier", "/integrations/orangecat/build",
   "/control/import", "/control/new-from-scratch",
+  "/people", "/money", "/habits", "/events", "/goals", "/memory",
 ];
 
 const MIN_TOUCH_PX = 44;
@@ -321,9 +335,22 @@ async function main() {
       hasTouch: vp.touch,
       deviceScaleFactor: 1,
     });
-    await ctx.addCookies([
+    const cookies = [
       { name: cookieName(), value: token, domain: new URL(BASE).hostname, path: "/", httpOnly: true, secure: BASE.startsWith("https://") },
-    ]);
+    ];
+    const pz = process.env.FLEETCROWN_PRIVATE_ZONE_COOKIE?.trim();
+    const pzEq = pz ? pz.indexOf("=") : -1;
+    if (pzEq > 0) {
+      cookies.push({
+        name: pz.slice(0, pzEq),
+        value: pz.slice(pzEq + 1),
+        domain: new URL(BASE).hostname,
+        path: "/",
+        httpOnly: true,
+        secure: BASE.startsWith("https://"),
+      });
+    }
+    await ctx.addCookies(cookies);
 
     for (const route of pages) {
       const page = await ctx.newPage();
