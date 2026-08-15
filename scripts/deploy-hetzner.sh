@@ -93,13 +93,23 @@ fi
 # desktop notification (best-effort), and a row in the box debug_logs so a
 # failed deploy surfaces on /system instead of being invisible until a 503.
 DEPLOY_REF_SHORT="$(git -C "$PROJECT_DIR" rev-parse --short "${REF:-HEAD}" 2>/dev/null || echo unknown)"
+
+# Which phase we are in, so a deploy killed by `set -e` on a SILENT command
+# still says where it died. #289 fixed one such command; this makes the next
+# one diagnosable instead of a fresh investigation. The marker read failed with
+# both streams redirected to /dev/null, so the entire trace was
+# "deploy FAILED (exit 1)" plus a path to a log on an ephemeral CI runner —
+# which is not a diagnosis. Naming the step costs one variable.
+DEPLOY_STEP="starting"
+step() { DEPLOY_STEP="$1"; }
+
 report_deploy_status() {
   local code=$?
   local level msg
   if [ "$code" = 0 ]; then
     level=info; msg="deploy OK: ${DEPLOY_REF_SHORT} to Hetzner"
   else
-    level=error; msg="deploy FAILED (exit ${code}): ${DEPLOY_REF_SHORT} — see /tmp/push-deploy-fleetcrown.log"
+    level=error; msg="deploy FAILED (exit ${code}) during [${DEPLOY_STEP}]: ${DEPLOY_REF_SHORT} — see /tmp/push-deploy-fleetcrown.log"
   fi
   echo "→ ${msg}"
   command -v notify-send >/dev/null 2>&1 && notify-send "FleetCrown deploy" "$msg" >/dev/null 2>&1 || true
@@ -118,6 +128,7 @@ git_head() { git -C "$PROJECT_DIR" rev-parse HEAD 2>/dev/null || echo unknown; }
 # Runs FIRST, before the schema step mutates anything: a refused deploy must
 # leave the box exactly as it found it. See the script for the two incidents
 # that made this an enforced invariant rather than a remembered rule.
+step "off-main gate"
 bash "$SCRIPT_DIR/ci/check-deploy-ref.sh" "$PROJECT_DIR" "${REF:-HEAD}"
 
 # Schema BEFORE build (same order as scripts/hetzner/deploy.sh): guarded,
@@ -128,6 +139,7 @@ bash "$SCRIPT_DIR/ci/check-deploy-ref.sh" "$PROJECT_DIR" "${REF:-HEAD}"
 # journal, so `npm run db:generate` diffs and emits the next 0040+ migration
 # automatically — no more hand-written DDL (that reflex caused the box-DDL
 # ownership rollbacks; see scripts/db/apply-box.sh).
+step "schema migration"
 bash "$SCRIPT_DIR/hetzner/apply-schema.sh" fleetcrown "$PROJECT_DIR" fleetcrown "." \
   || { echo "✗ schema step failed — deploy aborted (no code shipped)" >&2; exit 1; }
 
@@ -203,6 +215,7 @@ fi
 # `|| true` on BOTH sides (remote command and local substitution) keeps an
 # unanswerable question from becoming a failed deploy; check-not-behind.sh
 # already treats an empty marker as "cannot tell — ship anyway".
+step "reading the live build marker"
 SHIPPING_SHA="$(git -C "$PROJECT_DIR" rev-parse "${REF:-HEAD}" 2>/dev/null || echo "")"
 LIVE_REF_NOW="$(ssh "$HOST" "cat '$APP_DIR/.build-ref' 2>/dev/null || true" 2>/dev/null | tr -d '[:space:]' || true)"
 bash "$PROJECT_DIR/scripts/ci/check-not-behind.sh" "$LIVE_REF_NOW" "$SHIPPING_SHA" "$PROJECT_DIR" || exit 1
@@ -239,6 +252,7 @@ rollback_box() {
 # reachable). ServerAlive drops the channel after ~90s of silence so the deploy
 # fails fast and can be rerun, rather than hanging past every timeout below.
 RSYNC_SSH="ssh -o ConnectTimeout=10 -o ServerAliveInterval=15 -o ServerAliveCountMax=6"
+step "rsync to box"
 echo "→ rsync standalone → $HOST:$APP_DIR"
 rsync -az --delete -e "$RSYNC_SSH" \
   --exclude '.env' \
