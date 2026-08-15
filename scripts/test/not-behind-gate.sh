@@ -26,9 +26,35 @@ fail() { echo "  ✗ $1" >&2; exit 1; }
 ok()   { PASSED=$((PASSED + 1)); echo "  ✓ $1"; }
 
 REPO="$TMP/repo"
-case "$REPO" in "$TMP"/*) ;; *) fail "refusing: fixture '$REPO' is not under '$TMP'" ;; esac
+
+# ── The fixture must not be able to reach the real repository ────────────────
+#
+# `git -C <dir>` does NOT confine git to <dir>. If <dir> is not itself a repo,
+# git walks UP the directory tree until it finds one — and from a checkout, the
+# one it finds is the real project. Every mutating command below then aims at
+# it: `checkout --orphan`, `rm -rq --cached .`, `checkout --detach`.
+#
+# That is not hypothetical. On 2026-08-15 the sibling suite deploy-ref-gate.sh
+# did exactly this from the husky pre-push hook: the fixture ran against the
+# real checkout, renamed a feature branch to `main`, and its final
+# `push -q origin main` sent the fixture's single-file tree to GitHub, replacing
+# the whole codebase on the default branch.
+#
+# The check that was supposed to prevent it — `case "$REPO" in "$TMP"/*)` — is
+# TAUTOLOGICAL: REPO is built as "$TMP/repo", so the pattern cannot fail. It
+# reads like containment and enforces nothing. This suite had inherited the same
+# non-check.
+#
+# Two real defences instead of one fake one:
+#   1. GIT_CEILING_DIRECTORIES stops the upward search at $TMP, so a fallthrough
+#      finds no repo at all rather than finding the wrong one. Kills the class.
+#   2. An assertion on the actual toplevel, which is a fact about the fixture
+#      rather than a fact about how its path was spelled.
+export GIT_CEILING_DIRECTORIES="$TMP"
 
 git init -q "$REPO"
+[ "$(git -C "$REPO" rev-parse --show-toplevel 2>/dev/null)" = "$REPO" ] \
+  || fail "fixture is not its own repo at '$REPO' — refusing to run mutating git commands"
 git -C "$REPO" config user.email t@example.com
 git -C "$REPO" config user.name t
 # The fixture must not inherit the machine's global hooks: a commit here is a
