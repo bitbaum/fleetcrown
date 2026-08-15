@@ -7,7 +7,6 @@ import { cn } from "@/lib/utils";
 import { postJson } from "@/lib/api/fetch";
 import { EXECUTOR_COPY } from "@/config/executor-copy";
 import { deriveExecutorHonestyLabel } from "@/lib/executor-honesty";
-import { useBuilderPresence } from "@/hooks/use-builder-presence";
 import { useFetch } from "@/hooks/use-fetch";
 import { useLocalStorageState } from "@/hooks/use-local-storage-state";
 import { rememberFleetProject } from "@/lib/fleet-context";
@@ -123,7 +122,7 @@ export function TerminalSurface({
 
   const channel = channelFor(source);
   const copy = COPY[source === "machine" ? "machine" : "cloud"];
-  const { tabs, loading, gatedMessage, offline } = useTerminalTabs(channel);
+  const { tabs, loading, gatedMessage, offline, presence } = useTerminalTabs(channel);
 
   const [selected, setSelected] = useState<string | null>(initialTab ?? null);
   const activeTab = selected && tabs.includes(selected) ? selected : (tabs[0] ?? null);
@@ -133,7 +132,6 @@ export function TerminalSurface({
   // profile follow you here instead of resetting.
   useEffect(() => { if (activeTab) rememberFleetProject(activeTab); }, [activeTab]);
 
-  const presence = useBuilderPresence();
   const honesty = deriveExecutorHonestyLabel(
     source === "machine"
       ? { runnerConnected: presence.builderPresence?.local ?? presence.runnerConnected, runtimeAvailable: false, scope: "machine" }

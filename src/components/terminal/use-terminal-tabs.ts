@@ -1,7 +1,7 @@
 "use client";
 
 import { usePoll } from "@/hooks/use-poll";
-import { useBuilderPresence } from "@/hooks/use-builder-presence";
+import { useBuilderPresence, type BuilderPresenceSnapshot } from "@/hooks/use-builder-presence";
 import type { BuilderChannel } from "@/lib/event-stream-types";
 
 export type TerminalTabsState = {
@@ -11,6 +11,13 @@ export type TerminalTabsState = {
   gatedMessage: string | null;
   /** True when this builder is allowed but not currently connected. */
   offline: boolean;
+  /**
+   * The presence snapshot this hook already polls for `offline`. Returned so a
+   * caller that also needs it does not mount a SECOND poller against the same
+   * endpoint — TerminalSurface did, and /terminal hit /api/builder/presence
+   * twice per interval for one page.
+   */
+  presence: BuilderPresenceSnapshot;
 };
 
 /**
@@ -33,5 +40,6 @@ export function useTerminalTabs(channel: BuilderChannel): TerminalTabsState {
     loading,
     gatedMessage: data?.unavailable?.message ?? null,
     offline: connected === false,
+    presence,
   };
 }
