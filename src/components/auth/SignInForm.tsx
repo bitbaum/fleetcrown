@@ -4,6 +4,7 @@ import { signIn } from "next-auth/react";
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AUTH_COPY, ROUTES } from "@/config/auth";
+import { DEMO_EMAIL, DEMO_PASSWORD } from "@/config/demo";
 import { APP_NAME } from "@/config/brand";
 import {
   AuthShell, AuthCard, AuthField, AuthInput, AuthSubmitButton,
@@ -16,12 +17,14 @@ type Mode = "email" | "owner";
 
 function FormInner({
   githubEnabled, googleEnabled, twitterEnabled, orangecatEnabled, localAuthEnabled,
+  demoEnabled,
 }: {
   githubEnabled: boolean;
   googleEnabled: boolean;
   twitterEnabled: boolean;
   orangecatEnabled: boolean;
   localAuthEnabled: boolean;
+  demoEnabled: boolean;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -43,6 +46,7 @@ function FormInner({
   const [ownerPwd, setOwnerPwd] = useState("");
   const [error, setError]   = useState(urlErrorMsg);
   const [loading, setLoading] = useState(false);
+  const [demoLoading, setDemoLoading] = useState(false);
 
   async function handleEmailPassword(e: React.FormEvent) {
     e.preventDefault();
@@ -70,6 +74,21 @@ function FormInner({
     }
   }
 
+  // The demo is the same email+password provider as everyone else — no special
+  // sign-in path to keep secure, and the credentials are public by design (they
+  // are printed below the button). What makes the demo safe is the sandbox in
+  // src/config/demo.ts, not secrecy about how to get in.
+  async function handleDemo() {
+    setError("");
+    setDemoLoading(true);
+    const res = await signIn("email-password", {
+      email: DEMO_EMAIL, password: DEMO_PASSWORD, redirect: false,
+    });
+    setDemoLoading(false);
+    if (res?.ok) router.push(safeCallback);
+    else setError("The demo is being reset — try again in a moment.");
+  }
+
   function switchMode(next: Mode) {
     setMode(next);
     setError("");
@@ -94,6 +113,27 @@ function FormInner({
           active={mode}
           onChange={(id) => switchMode(id as Mode)}
         />
+      )}
+
+      {/* The demo sits ABOVE the form on purpose: a visitor who arrived from an
+          essay has no account and no reason to make one yet, and the login wall
+          is where they bounce. Give them the product first. */}
+      {demoEnabled && mode === "email" && (
+        <div className="ui-auth-demo">
+          <button
+            type="button"
+            onClick={handleDemo}
+            disabled={demoLoading}
+            className="ui-btn-primary w-full"
+          >
+            {demoLoading ? "Opening the demo…" : "Explore the demo — no account needed"}
+          </button>
+          <p className="ui-auth-demo-note">
+            A sandboxed fleet with real history. Dispatching agents, terminals and
+            outbound messages are off; everything else is live. Resets nightly.
+          </p>
+          <AuthDivider label="or sign in" />
+        </div>
       )}
 
       {mode === "email" ? (
@@ -187,12 +227,14 @@ function FormInner({
 
 export function SignInForm({
   githubEnabled, googleEnabled, twitterEnabled, orangecatEnabled, localAuthEnabled,
+  demoEnabled,
 }: {
   githubEnabled: boolean;
   googleEnabled: boolean;
   twitterEnabled: boolean;
   orangecatEnabled: boolean;
   localAuthEnabled: boolean;
+  demoEnabled: boolean;
 }) {
   return (
     <Suspense>
@@ -202,6 +244,7 @@ export function SignInForm({
         twitterEnabled={twitterEnabled}
         orangecatEnabled={orangecatEnabled}
         localAuthEnabled={localAuthEnabled}
+        demoEnabled={demoEnabled}
       />
     </Suspense>
   );

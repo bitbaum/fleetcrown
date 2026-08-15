@@ -9,6 +9,8 @@
  * Server-only: reads non-public env vars. Never import from a client component
  * (the values would be undefined in the client bundle).
  */
+import { isDemoEnabled } from "@/config/demo";
+
 export type EnabledAuthProviders = {
   /** GitHub OAuth (NextAuth provider). */
   github: boolean;
@@ -26,6 +28,12 @@ export type EnabledAuthProviders = {
    * packaged installs with no env password. Don't collapse the two.
    */
   localOwnerKeyTab: boolean;
+  /**
+   * Whether to show the "Explore the demo" button. Same reason the other flags
+   * live here: the button must never appear on an instance where the demo user
+   * was never seeded, which is a server-side fact the client cannot read.
+   */
+  demo: boolean;
 };
 
 export function getEnabledAuthProviders(): EnabledAuthProviders {
@@ -39,5 +47,6 @@ export function getEnabledAuthProviders(): EnabledAuthProviders {
       process.env.ORANGECAT_OAUTH_CLIENT_ID && process.env.ORANGECAT_OAUTH_CLIENT_SECRET,
     ),
     localOwnerKeyTab: Boolean(process.env.LOCAL_AUTH_PASSWORD) && process.env.ENABLE_OWNER_KEY === "1",
+    demo: isDemoEnabled(),
   };
 }

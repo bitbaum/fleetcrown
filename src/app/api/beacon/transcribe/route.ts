@@ -9,6 +9,7 @@ import { randomUUID } from "crypto";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { callGroqTranscribe } from "@/lib/groq";
 import { getApiUserId } from "@/lib/session";
+import { denyDemoInHandler } from "@/lib/demo-guard";
 import { getBeaconSettings } from "@/db/queries/beacon-settings";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
@@ -184,6 +185,11 @@ export async function POST(req: NextRequest) {
   if (!checkRateLimit(`transcribe:${getClientIp(req)}`, RATE_LIMIT, RATE_WINDOW_MS)) {
     return NextResponse.json({ error: "Too many transcription requests — slow down." }, { status: 429 });
   }
+
+  // Every call bills Groq Whisper or spawns local Whisper. Matcher-excluded
+  // path, so the gate lives here — see DEMO_HANDLER_ENFORCED in config/demo.ts.
+  const demoDenied = await denyDemoInHandler(await getApiUserId(), "spend");
+  if (demoDenied) return demoDenied;
 
   const form = await req.formData();
   const audio = form.get("audio") as File | null;

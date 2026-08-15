@@ -2011,6 +2011,13 @@
   .ui-auth-owner-note {
     @apply text-sm text-text-muted;
   }
+  /* The "explore without an account" block above the sign-in form. */
+  .ui-auth-demo {
+    @apply mb-2 space-y-2;
+  }
+  .ui-auth-demo-note {
+    @apply text-center text-xs leading-relaxed text-text-muted;
+  }
   .ui-auth-row-actions {
     @apply flex gap-2;
   }

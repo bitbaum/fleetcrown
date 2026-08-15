@@ -17,6 +17,7 @@ export default function SignInPage() {
       twitterEnabled={providers.x}
       orangecatEnabled={providers.orangecat}
       localAuthEnabled={providers.localOwnerKeyTab}
+      demoEnabled={providers.demo}
     />
   );
 }

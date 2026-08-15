@@ -75,6 +75,13 @@ declare module "next-auth" {
       onboardedAt: Date | null;
       onboardingComplete?: boolean;
       emailVerified?: Date | null;
+      /**
+       * Set in the session callback from the JWT's own email claim rather than
+       * read off session.user.email at the call site — the demo gate in
+       * authorized() must not depend on NextAuth's internal population order,
+       * because a gate whose subject is silently undefined enforces nothing.
+       */
+      isDemo?: boolean;
     };
   }
 }

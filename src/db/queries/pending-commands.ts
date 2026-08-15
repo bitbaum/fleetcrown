@@ -3,6 +3,7 @@ import { pendingCommands, type NewPendingCommand, type InjectPayload, type Dispa
 import { eq, isNull, isNotNull, and, inArray, notInArray, desc, sql } from "drizzle-orm";
 import type { FailedCommand } from "@/lib/control-types";
 import { STALE_RUN_MINUTES } from "./orchestration-runs";
+import { requireNotDemo } from "@/lib/demo-guard";
 
 export async function getCommandById(id: string) {
   const [row] = await db.select().from(pendingCommands).where(eq(pendingCommands.id, id)).limit(1);
@@ -103,6 +104,14 @@ function fifoEligibilitySql() {
 export async function enqueuePendingCommand(
   command: Omit<NewPendingCommand, "id" | "createdAt">,
 ): Promise<string> {
+  // Layer 2 of the demo sandbox (src/lib/demo-guard.ts). This row is the ONLY
+  // way anything reaches the machine — Fleet Runner polls this table and types
+  // the payload into a real shell. Guarding here rather than at the routes
+  // means every present and future caller inherits it: a new dispatch endpoint,
+  // a server action, a queue drain, a retry. The route policy can be widened by
+  // mistake; this cannot be bypassed without deleting this line.
+  await requireNotDemo(command.userId, command.type === "inject" ? "terminal" : "dispatch");
+
   const [row] = await db.insert(pendingCommands).values(command).returning({ id: pendingCommands.id });
   return row.id;
 }

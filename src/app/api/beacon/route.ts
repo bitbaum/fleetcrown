@@ -18,6 +18,7 @@ import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { isAgentId, looksLikeAgentCapacityIssue, resolveNextAvailableAgent, type Agent } from "@/lib/agent-registry";
 import { DEFAULT_BEACON_COUNTDOWN_S, DEFAULT_POPUP_MODE } from "@/lib/constants/control";
 import { getApiUserId } from "@/lib/session";
+import { denyDemoInHandler } from "@/lib/demo-guard";
 import { getBeaconSettings } from "@/db/queries/beacon-settings";
 import { getProjectAutopilotOverride } from "@/db/queries/projects";
 import { getUserProjects } from "@/db/queries/user-projects";
@@ -144,6 +145,12 @@ export async function POST(req: NextRequest) {
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  // Beacon escalates to a real agent on a real machine. /api/beacon is
+  // matcher-excluded (the popup polls it pre-session), so the demo gate has to
+  // live here — see DEMO_HANDLER_ENFORCED in src/config/demo.ts.
+  const demoDenied = await denyDemoInHandler(userId, "dispatch");
+  if (demoDenied) return demoDenied;
 
   const { countdownSeconds, popupMode } = await readConfiguredSettings(userId);
 

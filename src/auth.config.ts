@@ -1,5 +1,6 @@
 import type { NextAuthConfig } from "next-auth";
 import { ROUTES } from "@/config/auth";
+import { DEMO_DENIAL_COPY, demoDenialFor, isDemoEmail, isDemoEnabled } from "@/config/demo";
 
 function sessionOnboardingDone(user: {
   onboardingComplete?: boolean;
@@ -25,9 +26,19 @@ export const authConfig = {
     // The jwt() callback in auth.ts stores this field on every sign-in/token refresh.
     session({ session, token }) {
       if (session.user) {
+        // Copied EXPLICITLY rather than relying on NextAuth's default population:
+        // the demo gate below keys off this field, and a gate that reads
+        // undefined fails OPEN — the demo account would silently get the run of
+        // the box. An explicit assignment makes that impossible to lose to a
+        // future change in provider or adapter defaults.
+        session.user.email = (token.email as string | null | undefined) ?? session.user.email;
         session.user.username = (token.username as string | null) ?? null;
         session.user.onboardedAt = (token.onboardedAt as Date | null) ?? null;
         session.user.onboardingComplete = token.onboardingComplete === true;
+        // Derived from the JWT's own email claim, which NextAuth always sets,
+        // rather than from session.user.email — see the note on Session.user
+        // in src/auth.ts. The demo gate below reads this and nothing else.
+        session.user.isDemo = isDemoEmail(token.email);
       }
       return session;
     },
@@ -96,6 +107,25 @@ export const authConfig = {
         const host = request.headers.get("x-forwarded-host") ?? request.nextUrl.host;
         const proto = request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol.replace(":", "");
         return Response.redirect(new URL(ROUTES.ONBOARDING, `${proto}://${host}`));
+      }
+
+      // Demo sandbox (layer 1 — see src/config/demo.ts). Every authenticated
+      // request already passes through here, which makes this the one place a
+      // route family can be denied without asking each handler to remember.
+      // Effect-level asserts in src/lib/demo-guard.ts back it up, so a mistake
+      // in the path list below still cannot reach the box.
+      if (isDemoEnabled() && auth.user.isDemo) {
+        // Every denied prefix is an /api path, so a JSON 403 is the only shape
+        // this can return — no page-redirect branch, because there is no page
+        // it could fire on. Server actions POST to page paths and are therefore
+        // NOT gated here; that is what the layer-2 effect asserts are for.
+        const reason = demoDenialFor(pathname, request.method);
+        if (reason) {
+          return new Response(
+            JSON.stringify({ error: DEMO_DENIAL_COPY[reason], demoBlocked: true, reason }),
+            { status: 403, headers: { "Content-Type": "application/json" } },
+          );
+        }
       }
 
       return true;

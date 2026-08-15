@@ -3,6 +3,7 @@ import { getSessionUserId } from "@/lib/session";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { getUserById, updateUserPasswordHash } from "@/db/queries/users";
 import { hashPassword, verifyPassword } from "@/lib/password";
+import { denyDemoInHandler } from "@/lib/demo-guard";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { RATE_LIMIT_WINDOW_LONG_MS } from "@/lib/constants/time";
 
@@ -35,6 +36,13 @@ function rateLimited(req: NextRequest, userId: string): NextResponse | null {
 export async function PATCH(req: NextRequest) {
   const userId = await getSessionUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // The demo account's password is published on the sign-in page; changing it
+  // would lock out every future visitor. The route policy already blocks this
+  // path, but a credential mutation is worth guarding where it happens rather
+  // than only where it is routed.
+  const demoDenied = await denyDemoInHandler(userId, "credentials");
+  if (demoDenied) return demoDenied;
 
   const limited = rateLimited(req, userId);
   if (limited) return limited;
@@ -75,6 +83,13 @@ export async function PATCH(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const userId = await getSessionUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // The demo account's password is published on the sign-in page; changing it
+  // would lock out every future visitor. The route policy already blocks this
+  // path, but a credential mutation is worth guarding where it happens rather
+  // than only where it is routed.
+  const demoDenied = await denyDemoInHandler(userId, "credentials");
+  if (demoDenied) return demoDenied;
 
   const limited = rateLimited(req, userId);
   if (limited) return limited;
