@@ -194,8 +194,17 @@ fi
 # Anything else moves production backwards, or sideways onto an unrelated
 # branch, and is refused. ALLOW_ROLLBACK=1 is the deliberate override for a
 # genuine rollback.
+# Every command here must be non-fatal under `set -euo pipefail`. Reading the
+# marker is a QUESTION, not a step of the deploy: if the box has no .build-ref
+# then `cat` exits 1, `pipefail` makes the whole substitution non-zero, and
+# `set -e` kills the deploy — with no message at all, because the guard that
+# would have explained itself never ran. That is exactly what happened: two
+# deploys died silently between "table ownership reconciled" and the snapshot.
+# `|| true` on BOTH sides (remote command and local substitution) keeps an
+# unanswerable question from becoming a failed deploy; check-not-behind.sh
+# already treats an empty marker as "cannot tell — ship anyway".
 SHIPPING_SHA="$(git -C "$PROJECT_DIR" rev-parse "${REF:-HEAD}" 2>/dev/null || echo "")"
-LIVE_REF_NOW="$(ssh "$HOST" "cat '$APP_DIR/.build-ref' 2>/dev/null" 2>/dev/null | tr -d '[:space:]')"
+LIVE_REF_NOW="$(ssh "$HOST" "cat '$APP_DIR/.build-ref' 2>/dev/null || true" 2>/dev/null | tr -d '[:space:]' || true)"
 bash "$PROJECT_DIR/scripts/ci/check-not-behind.sh" "$LIVE_REF_NOW" "$SHIPPING_SHA" "$PROJECT_DIR" || exit 1
 
 # Snapshot the current box build for one-command rollback (fix: in-place rsync
