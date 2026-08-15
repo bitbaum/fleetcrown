@@ -179,6 +179,25 @@ if [ ! -d "$STANDALONE/.next/static" ]; then
   exit 1
 fi
 
+# ── Regression guard: never ship a commit that is BEHIND what is already live ──
+#
+# This script ships whatever the working tree is on, and the box accepts it
+# without question — so a deploy run from a stale checkout silently rolls
+# production back. It has done so repeatedly (see the comment in
+# src/app/api/health/route.ts). Most recently on 2026-08-15: CI shipped and
+# verified main at 09:48, and ten minutes later a hand-run deploy replaced it
+# with a tree ~25 commits old. The build-ref marker made that *visible* — it is
+# how this was found — but visibility after the fact is not prevention.
+#
+# The box's marker is the SSOT for what is running. If that commit is an
+# ancestor of what we are about to ship, this is a fast-forward and safe.
+# Anything else moves production backwards, or sideways onto an unrelated
+# branch, and is refused. ALLOW_ROLLBACK=1 is the deliberate override for a
+# genuine rollback.
+SHIPPING_SHA="$(git -C "$PROJECT_DIR" rev-parse "${REF:-HEAD}" 2>/dev/null || echo "")"
+LIVE_REF_NOW="$(ssh "$HOST" "cat '$APP_DIR/.build-ref' 2>/dev/null" 2>/dev/null | tr -d '[:space:]')"
+bash "$PROJECT_DIR/scripts/ci/check-not-behind.sh" "$LIVE_REF_NOW" "$SHIPPING_SHA" "$PROJECT_DIR" || exit 1
+
 # Snapshot the current box build for one-command rollback (fix: in-place rsync
 # left no way back from a broken restart). Excludes backups/ so we don't copy
 # the dump store every deploy; .env + launch.sh ARE snapshotted so a rollback
