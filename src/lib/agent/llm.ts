@@ -29,17 +29,8 @@
  * weakest model expected to run it, not the strongest.
  */
 import { HTTP_TIMEOUT_LONG_MS } from "@/lib/constants/time";
-import { GROQ_FAST_MODEL } from "@/lib/groq";
 import { classifyGroqLimit, groqRetryAfterSeconds, humanizeWait } from "@/lib/agent/groq-error";
-
-const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
-
-/**
- * The step-down model for rate limits. Verified to drive the tool loop via the
- * text protocol (scripts/probe-models.ts), so degrading to it costs answer
- * depth but never the ability to call tools.
- */
-const SMALL_MODEL = "llama-3.1-8b-instant";
+import { chainFrom, type ChatLink } from "@/config/chat-models";
 
 export type ChatMessage = {
   role: "system" | "user" | "assistant" | "tool";
@@ -159,11 +150,7 @@ export function stripToolCallLines(text: string): string {
 
 type NativeToolCall = { id?: string; function?: { name?: string; arguments?: string } };
 
-/**
- * One model turn. `tools` are advertised natively; the text protocol is always
- * parsed regardless, so a model that ignores the native field still works.
- */
-export async function callModelWithTools(input: {
+export type ModelCallInput = {
   messages: ChatMessage[];
   tools: Array<Record<string, unknown>>;
   validToolNames: string[];
@@ -171,23 +158,45 @@ export async function callModelWithTools(input: {
   maxTokens?: number;
   temperature?: number;
   timeoutMs?: number;
-  /** Internal: set after the one bounded wait on a bottom-rung 429. */
-  waited429?: boolean;
-}): Promise<ModelTurn> {
-  const key = process.env.GROQ_API_KEY;
-  if (!key) throw new Error("GROQ_API_KEY not set");
-  const model = input.model ?? process.env.LOKI_MODEL?.trim() ?? GROQ_FAST_MODEL;
+};
 
-  const res = await fetch(GROQ_API_URL, {
+/**
+ * Why one link refused, in the only terms the walker can act on.
+ *
+ * `size` and `daily` are separated from ordinary `capacity` because they demand
+ * different moves, and conflating them has broken this loop twice — see
+ * `groq-error.ts` for the full account.
+ */
+type FailureKind = "size" | "daily" | "capacity" | "other";
+
+class LinkError extends Error {
+  constructor(
+    readonly kind: FailureKind,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
+/** One request to one (provider, model). Throws LinkError; never retries. */
+async function callOneLink(
+  link: ChatLink,
+  input: ModelCallInput,
+  tools: Array<Record<string, unknown>>,
+): Promise<ModelTurn> {
+  const key = process.env[link.provider.keyEnv];
+  if (!key) throw new LinkError("other", `${link.provider.keyEnv} not set`);
+
+  const res = await fetch(`${link.provider.baseUrl}/chat/completions`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
     body: JSON.stringify({
-      model,
+      model: link.model,
       messages: input.messages,
       // Advertised, not depended on. Providers that reject an unknown field are
-      // handled by the retry below rather than by feature-detection tables that
-      // would go stale the moment a provider ships a change.
-      ...(input.tools.length > 0 ? { tools: input.tools, tool_choice: "auto" } : {}),
+      // handled by the retry in the walker rather than by feature-detection
+      // tables that would go stale the moment a provider ships a change.
+      ...(tools.length > 0 ? { tools, tool_choice: "auto" } : {}),
       max_tokens: input.maxTokens ?? 1400,
       temperature: input.temperature ?? 0.2,
     }),
@@ -196,57 +205,30 @@ export async function callModelWithTools(input: {
 
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    // A 400 mentioning tools means this model cannot take the native field.
-    // Retry once WITHOUT it: the text protocol is in the prompt already, so the
-    // turn still works. This is why the loop degrades to weak models instead of
-    // failing on them.
-    if (res.status === 400 && /tool/i.test(body) && input.tools.length > 0) {
-      return callModelWithTools({ ...input, tools: [] });
+    // A 400 mentioning tools means this model cannot take the native field. The
+    // walker retries the SAME link without it — the text protocol is already in
+    // the prompt, so the turn still works. This is why the loop degrades to weak
+    // models instead of failing on them.
+    if (res.status === 400 && /tool/i.test(body) && tools.length > 0) {
+      throw new LinkError("other", `native tools rejected: ${body.slice(0, 120)}`);
     }
-    // A 429 that means "this ONE request is bigger than the whole per-minute
-    // allowance" must not be retried or stepped down: waiting cannot help (the
-    // window never grows that big) and the cheaper model has HALF the ceiling
-    // (70B = 12000 TPM, 8B = 6000). Surface it immediately, worded so the tool
-    // loop's shed ladder recognises it and retries with fewer facts — which is
-    // the only thing that actually fixes an oversized prompt.
-    if (res.status === 429 && classifyGroqLimit(body) === "size") {
-      throw new Error(`groq 429 request too large: ${body.slice(0, 200)}`);
-    }
-    // The DAY's budget is gone. Both recoveries below are not merely useless
-    // here but harmful: the step-down model draws on the SAME org-wide daily
-    // budget, and the bounded ~25s wait is measured against a reset that Groq
-    // reports in tens of minutes. Doing them anyway costs the operator two dead
-    // round trips and ~25s of latency on every turn for the rest of the day, to
-    // reach the identical failure. Give up now and say when it is worth asking
-    // again — the wait is the only actionable thing in the whole error.
-    if (res.status === 429 && classifyGroqLimit(body) === "daily") {
+    if (res.status === 429) {
+      const kind = classifyGroqLimit(body);
       const wait = humanizeWait(groqRetryAfterSeconds(body));
-      throw new Error(
-        `groq 429 daily quota exhausted${wait ? ` (retry in ${wait})` : ""}: ${body.slice(0, 200)}`,
-      );
+      // Keep the wording the shed ladder greps for — `loop.ts` recognises
+      // "request too large" and retries with fewer facts.
+      if (kind === "size") {
+        throw new LinkError("size", `${link.model} 429 request too large: ${body.slice(0, 160)}`);
+      }
+      if (kind === "daily") {
+        throw new LinkError(
+          "daily",
+          `${link.provider.id} 429 daily quota exhausted${wait ? ` (retry in ${wait})` : ""}: ${body.slice(0, 160)}`,
+        );
+      }
+      throw new LinkError("capacity", `${link.model} 429 rate-limited${wait ? ` (retry in ${wait})` : ""}`);
     }
-    // A capacity 429 is not a capability problem, and the fallback path it used
-    // to trigger has weaker retrieval than the loop — so a rate limit on the big
-    // model silently degraded answer quality. Step down to the small model
-    // instead: the whole point of the dual protocol is that an 8B model drives
-    // this loop fine (verified — see scripts/probe-models.ts).
-    if (res.status === 429 && model !== SMALL_MODEL) {
-      console.warn(`[loki] ${model} rate-limited, stepping down to ${SMALL_MODEL}`);
-      return callModelWithTools({ ...input, model: SMALL_MODEL });
-    }
-    // Bottom rung ALSO 429'd — an org-wide tokens-per-MINUTE window (the fleet's
-    // autopilot shares this Groq org, and its bursts starve interactive chat).
-    // The window is short by definition, so wait it out ONCE, bounded, before
-    // giving up the turn: a 20s-slower right answer beats an instant fallback
-    // to the gateway, which cannot read the tables the question is about.
-    if (res.status === 429 && !input.waited429) {
-      const retryAfter = Number(res.headers.get("retry-after"));
-      const waitS = Math.min(Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : 15, 25);
-      console.warn(`[loki] ${model} rate-limited at the bottom rung — waiting ${waitS}s for the TPM window`);
-      await new Promise((r) => setTimeout(r, waitS * 1000));
-      return callModelWithTools({ ...input, waited429: true });
-    }
-    throw new Error(`groq ${res.status}${body ? `: ${body.slice(0, 160)}` : ""}`);
+    throw new LinkError("other", `${link.model} ${res.status}${body ? `: ${body.slice(0, 120)}` : ""}`);
   }
 
   const data = (await res.json()) as {
@@ -274,5 +256,101 @@ export async function callModelWithTools(input: {
     return true;
   });
 
-  return { text: stripToolCallLines(rawText), toolCalls: [...native, ...fromText], model };
+  return {
+    text: stripToolCallLines(rawText),
+    toolCalls: [...native, ...fromText],
+    model: `${link.provider.id}/${link.model}`,
+  };
+}
+
+/**
+ * One link, with NO fallback — for probes and diagnostics.
+ *
+ * Production uses the chain walker below. This exists because a walk cannot give
+ * a verdict PER MODEL: it reports whoever answered, so probing "is gemma usable?"
+ * through it would happily return a Groq success and call gemma fine. Pinning a
+ * model into the chain on that evidence is how free-model rot goes unnoticed.
+ */
+export async function callModelLinkOnce(link: ChatLink, input: ModelCallInput): Promise<ModelTurn> {
+  try {
+    return await callOneLink(link, input, input.tools);
+  } catch (e) {
+    if (e instanceof LinkError && /native tools rejected/.test(e.message) && input.tools.length > 0) {
+      return callOneLink(link, input, []);
+    }
+    throw e;
+  }
+}
+
+/**
+ * One model turn, taken by the first link in the chain that answers.
+ *
+ * The walk encodes what each refusal actually means:
+ *
+ *   size     — this prompt exceeds THIS vendor's per-request allowance. Another
+ *              vendor may have a far larger window (Groq meters ~12k tokens per
+ *              minute; the OpenRouter free models carry 128k–1M context), so the
+ *              walk continues. Only when EVERY link says size is the size error
+ *              surfaced — that is the signal `loop.ts` sheds facts on, and it
+ *              must not fire while a link that could have answered remains.
+ *   daily    — this VENDOR is done until its budget resets. Every remaining
+ *              model of that vendor draws on the same exhausted pool, so they
+ *              are skipped wholesale rather than tried one by one.
+ *   capacity — a momentary window. Advance; a different model or vendor has its
+ *              own window.
+ *
+ * If the whole chain refuses on capacity alone, the windows are short by
+ * definition, so wait ONCE, bounded, and walk it again: a 20s-slower right
+ * answer beats falling back to a path that cannot read the tables the question
+ * is about.
+ */
+export async function callModelWithTools(
+  input: ModelCallInput & { /** Internal: set after the one bounded wait. */ waited429?: boolean },
+): Promise<ModelTurn> {
+  const chain = chainFrom(input.model ?? process.env.LOKI_MODEL);
+  if (chain.length === 0) {
+    throw new Error("no chat provider configured (set GROQ_API_KEY or OPENROUTER_API_KEY)");
+  }
+
+  const failures: string[] = [];
+  const kinds = new Set<FailureKind>();
+  const drained = new Set<string>();
+
+  for (const link of chain) {
+    if (drained.has(link.provider.id)) continue;
+    // Two attempts at most: the second drops the native `tools` field for a
+    // model that rejected it.
+    for (const tools of [input.tools, [] as Array<Record<string, unknown>>]) {
+      try {
+        const turn = await callOneLink(link, input, tools);
+        if (failures.length > 0) {
+          console.warn(`[loki] answered on ${turn.model} after ${failures.length} refusal(s): ${failures.join("; ")}`);
+        }
+        return turn;
+      } catch (e) {
+        const err = e instanceof LinkError ? e : new LinkError("other", e instanceof Error ? e.message : String(e));
+        // Retry this same link without native tools, once.
+        if (err.kind === "other" && /native tools rejected/.test(err.message) && tools.length > 0) continue;
+        failures.push(err.message);
+        kinds.add(err.kind);
+        if (err.kind === "daily") drained.add(link.provider.id);
+        break;
+      }
+    }
+  }
+
+  // Every link refused on a momentary window — the one case where waiting is
+  // the right move rather than a wasted 25 seconds.
+  if (!input.waited429 && kinds.has("capacity") && !kinds.has("size")) {
+    console.warn(`[loki] whole chain rate-limited — waiting 15s for a window`);
+    await new Promise((r) => setTimeout(r, 15_000));
+    return callModelWithTools({ ...input, waited429: true });
+  }
+
+  // Surface the most ACTIONABLE failure, not the last one. Only `size` gives the
+  // caller something to do (shed facts and retry), so it wins when present.
+  const summary = failures.join("; ");
+  if (kinds.has("size")) throw new Error(`request too large on every model: ${summary}`);
+  if (kinds.has("daily")) throw new Error(`daily quota exhausted: ${summary}`);
+  throw new Error(`no chat model answered: ${summary}`);
 }
