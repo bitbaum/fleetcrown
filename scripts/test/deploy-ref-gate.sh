@@ -6,6 +6,32 @@
 # back at the same time. It runs only at deploy time, which is exactly the kind
 # of code that rots unnoticed — so it gets tests.
 #
+# ── THIS SUITE ONCE DESTROYED THE REPO IT RUNS IN ────────────────────────────
+# 2026-08-15: it ran from the husky pre-push hook, its fixtures fell through to
+# the REAL checkout, and because pre-push runs BEFORE the transfer, git then
+# pushed what the fixture had just mangled. `refs/heads/main` on GitHub was left
+# pointing at a fixture commit whose tree is a single file named `f`. It also
+# wrote `core.hooksPath=/dev/null` into the SHARED .git/config, silently
+# disabling every hook for every worktree.
+#
+# The mechanism was `git -C <dir>`: when <dir> is not a repo, git WALKS UP the
+# directory tree and happily operates on whatever repo it finds — here, the real
+# one. `setup_repo` then ran `git branch -M main` and `git push origin main` on
+# it. A previous "fix" added `case "$root" in "$TMP"/*)`, which is tautological
+# ($root is built as "$TMP/a") and enforced precisely nothing.
+#
+# The isolation below is therefore built so that NO single failure can reach a
+# real repo:
+#   1. GIT_CEILING_DIRECTORIES stops git's upward search at $TMP — the walk-up
+#      that caused this cannot physically happen.
+#   2. Every git call goes through `g`, which asserts the target really is the
+#      fixture repo before running. No bare `git -C` anywhere below.
+#   3. Pushes name an explicit PATH, never the remote `origin` — so even a
+#      fallthrough has nowhere to publish.
+#   4. Identity and hook suppression come from ENV, never `git config` — a
+#      config write is what corrupted the shared config, and env cannot leak.
+#   5. $TMP is refused if it sits inside a git repo at all.
+#
 # Builds throwaway repos in a temp dir; touches nothing real, hits no network.
 # Run: npm run test:deploy-ref-gate
 
@@ -13,49 +39,65 @@ set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GATE="$SCRIPT_DIR/../ci/check-deploy-ref.sh"
-TMP="$(mktemp -d)"
-# An empty TMP would make every fixture path absolute-from-root ("/a/work") AND
-# would still satisfy a "$TMP"/* pattern match, so the containment check below
-# is only meaningful once this holds.
-[ -n "$TMP" ] && [ -d "$TMP" ] || { echo "  ✗ mktemp -d produced no usable dir" >&2; exit 1; }
-trap 'rm -rf "$TMP"' EXIT
 
 PASSED=0
 fail() { echo "  ✗ $1" >&2; exit 1; }
 ok()   { PASSED=$((PASSED + 1)); echo "  ✓ $1"; }
 
+TMP="$(mktemp -d)"
+[ -n "$TMP" ] && [ -d "$TMP" ] || { echo "  ✗ mktemp -d produced no usable dir" >&2; exit 1; }
+trap 'rm -rf "$TMP"' EXIT
+
+# A temp dir INSIDE a repo would put every fixture within that repo's reach.
+# Checked rather than assumed: TMPDIR is inherited, and some runners point it at
+# the workspace.
+if git -C "$TMP" rev-parse --show-toplevel >/dev/null 2>&1; then
+  fail "refusing to run: temp dir '$TMP' is inside a git repo ($(git -C "$TMP" rev-parse --show-toplevel))"
+fi
+
+# The structural guarantee. Git will not search for a repository above $TMP, so
+# a missing/broken fixture errors instead of silently retargeting a real repo.
+export GIT_CEILING_DIRECTORIES="$TMP"
+# Identity + hook suppression WITHOUT `git config` — nothing here can write to a
+# real config file, and no global config is read.
+export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null
+export GIT_AUTHOR_NAME=fixture GIT_AUTHOR_EMAIL=fixture@invalid
+export GIT_COMMITTER_NAME=fixture GIT_COMMITTER_EMAIL=fixture@invalid
+
+# Assert <dir> is its OWN repo at exactly that path, then run git there.
+# Every git invocation in this file goes through this. `--show-toplevel` is
+# compared against the physical path so a symlinked TMPDIR does not read as a
+# mismatch — and a walk-up would resolve somewhere else entirely and be caught.
+g() {
+  local dir="$1"; shift
+  local top want
+  top="$(git -C "$dir" rev-parse --show-toplevel 2>/dev/null)" || fail "not a git repo: $dir"
+  want="$(cd "$dir" 2>/dev/null && pwd -P)" || fail "fixture dir vanished: $dir"
+  [ "$(cd "$top" && pwd -P)" = "$want" ] \
+    || fail "REFUSING: git in '$dir' resolved to '$top' — a real repo, not the fixture"
+  git -c core.hooksPath=/dev/null -C "$dir" "$@"
+}
+
 # A bare "origin" plus a clone, so origin/main is a real remote-tracking ref.
-# --no-tags/-q keep output clean; identity is set locally so a machine without
-# global git config still runs the suite.
 setup_repo() {
   local root="$1"
-  # Every command below MUTATES a git repo — it commits, and it renames a branch
-  # to `main`. Aimed at a real checkout that is exactly a repo-destroying script,
-  # so refuse to proceed unless the fixture really is a fresh dir under $TMP.
-  # This suite runs from `verify` on every push, in parallel sessions, so "the
-  # paths are obviously fine" is not a property worth assuming.
-  case "$root" in
-    "$TMP"/*) ;;
-    *) fail "setup_repo refused: '$root' is not under the temp dir '$TMP'" ;;
-  esac
   rm -rf "$root"; mkdir -p "$root"
-  git init -q --bare "$root/origin.git"
-  git clone -q "$root/origin.git" "$root/work" 2>/dev/null
-  # A failed clone would leave the -C target missing; git then errors per command
-  # while the suite (no `set -e`) marches on. Assert the fixture exists and is
-  # its OWN repo, so a mutation can never be redirected at a surrounding one.
-  [ "$(git -C "$root/work" rev-parse --show-toplevel 2>/dev/null)" = "$root/work" ] \
-    || fail "fixture clone did not produce a repo at $root/work"
-  git -C "$root/work" config user.email t@t.t
-  git -C "$root/work" config user.name t
-  # Throwaway fixtures must not run the machine's global hooks (a secret scanner
-  # here just floods the suite's output with irrelevant PASS lines).
-  git -C "$root/work" config core.hooksPath /dev/null
+  git init -q --bare "$root/origin.git" || fail "could not create fixture remote at $root/origin.git"
+  git clone -q "$root/origin.git" "$root/work" 2>/dev/null \
+    || fail "fixture clone failed at $root/work"
   echo one > "$root/work/f"
-  git -C "$root/work" add -A
-  git -C "$root/work" commit -qm "one"
-  git -C "$root/work" branch -M main
-  git -C "$root/work" push -q origin main
+  g "$root/work" add -A
+  g "$root/work" commit -qm "one"
+  g "$root/work" branch -M main
+  # Explicit PATH, not the name `origin`: a fallthrough must have nowhere to go.
+  g "$root/work" push -q "$root/origin.git" main
+  # The clone's `origin` must point at the fixture bare repo for the gate to read
+  # origin/main. Verified rather than trusted, since that is the exact property
+  # whose absence published fixture commits to GitHub.
+  local remote
+  remote="$(g "$root/work" remote get-url origin 2>/dev/null)"
+  [ "$remote" = "$root/origin.git" ] \
+    || fail "fixture origin is '$remote', expected '$root/origin.git'"
 }
 
 # ── 1. a commit that IS origin/main passes ───────────────────────────────────
@@ -68,10 +110,10 @@ fi
 
 # ── 2. an ANCESTOR of origin/main passes (redeploying an older main) ─────────
 setup_repo "$TMP/b"
-OLD="$(git -C "$TMP/b/work" rev-parse HEAD)"
+OLD="$(g "$TMP/b/work" rev-parse HEAD)"
 echo two > "$TMP/b/work/f"
-git -C "$TMP/b/work" commit -qam "two"
-git -C "$TMP/b/work" push -q origin main
+g "$TMP/b/work" commit -qam "two"
+g "$TMP/b/work" push -q "$TMP/b/origin.git" main
 if bash "$GATE" "$TMP/b/work" "$OLD" >/dev/null 2>&1; then
   ok "ancestor of origin/main is allowed"
 else
@@ -80,9 +122,9 @@ fi
 
 # ── 3. THE INCIDENT: an off-main feature branch is refused ───────────────────
 setup_repo "$TMP/c"
-git -C "$TMP/c/work" checkout -qb feature
+g "$TMP/c/work" checkout -qb feature
 echo feat > "$TMP/c/work/f"
-git -C "$TMP/c/work" commit -qam "unreviewed work"
+g "$TMP/c/work" commit -qam "unreviewed work"
 OUT="$(bash "$GATE" "$TMP/c/work" HEAD 2>&1)"; RC=$?
 [ $RC -eq 0 ] && fail "gate ALLOWED an off-main branch — the exact production incident"
 grep -q "REFUSED" <<<"$OUT" || fail "refusal message missing 'REFUSED': $OUT"
@@ -92,13 +134,13 @@ ok "off-main feature branch is refused (the production incident)"
 # A deploy from a stale branch reverts main. If the message doesn't say so, the
 # reader treats it as a lint warning and reaches for the override.
 setup_repo "$TMP/d"
-STALE="$(git -C "$TMP/d/work" rev-parse HEAD)"
+STALE="$(g "$TMP/d/work" rev-parse HEAD)"
 echo merged > "$TMP/d/work/f"
-git -C "$TMP/d/work" commit -qam "merged since branching"
-git -C "$TMP/d/work" push -q origin main
-git -C "$TMP/d/work" checkout -q -b stale "$STALE"
+g "$TMP/d/work" commit -qam "merged since branching"
+g "$TMP/d/work" push -q "$TMP/d/origin.git" main
+g "$TMP/d/work" checkout -q -b stale "$STALE"
 echo local > "$TMP/d/work/f"
-git -C "$TMP/d/work" commit -qam "local only"
+g "$TMP/d/work" commit -qam "local only"
 OUT="$(bash "$GATE" "$TMP/d/work" HEAD 2>&1)"; RC=$?
 [ $RC -eq 0 ] && fail "gate allowed a stale branch that would roll main back"
 grep -q "ROLLED BACK" <<<"$OUT" || fail "refusal does not warn about rollback: $OUT"
@@ -113,14 +155,14 @@ ok "explicit override permits the deploy and says so"
 
 # ── 6. no origin/main (shallow CI checkout) warns but does not block ─────────
 # Hard-failing here would break the hosted pipeline this gate exists to protect.
+# This fixture has NO remote at all, which is why it must be its own repo: when
+# it was not, the gate resolved the REAL origin/main and this test failed —
+# the first visible symptom of the incident above.
 rm -rf "$TMP/e"; mkdir -p "$TMP/e"
-git init -q "$TMP/e"
-git -C "$TMP/e" config user.email t@t.t
-git -C "$TMP/e" config user.name t
-git -C "$TMP/e" config core.hooksPath /dev/null
+git init -q "$TMP/e" || fail "could not init fixture at $TMP/e"
 echo x > "$TMP/e/f"
-git -C "$TMP/e" add -A
-git -C "$TMP/e" commit -qm "solo"
+g "$TMP/e" add -A
+g "$TMP/e" commit -qm "solo"
 OUT="$(bash "$GATE" "$TMP/e" HEAD 2>&1)"; RC=$?
 [ $RC -ne 0 ] && fail "gate blocked a checkout with no origin/main — would break CI"
 grep -q "skipped" <<<"$OUT" || fail "skip was silent: $OUT"
@@ -131,6 +173,16 @@ if bash "$GATE" "$TMP/a/work" no-such-ref >/dev/null 2>&1; then
   fail "gate allowed a ref that does not resolve"
 fi
 ok "unresolvable ref is refused"
+
+# ── 8. the isolation itself holds ────────────────────────────────────────────
+# The guard that was missing. `g` must REFUSE a directory that is not its own
+# repo rather than letting git walk up — the failure that published fixture
+# commits to GitHub. Run in a subshell so the expected `fail` cannot exit here.
+mkdir -p "$TMP/not-a-repo"
+if ( g "$TMP/not-a-repo" rev-parse HEAD ) >/dev/null 2>&1; then
+  fail "g() operated on a directory that is not a fixture repo — isolation is broken"
+fi
+ok "git calls refuse a target that is not the fixture repo"
 
 echo ""
 echo "$PASSED passed"
