@@ -22,6 +22,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { nameCandidates } from "../../src/lib/people-names";
+import { CHAT_CHAIN } from "../../src/config/chat-models";
 
 const SRC = readFileSync("src/lib/agent/sources.ts", "utf8");
 
@@ -96,8 +97,21 @@ function candidates(message: string): string[] {
 {
   const LLM = readFileSync("src/lib/agent/llm.ts", "utf8");
   assert.match(LLM, /res\.status === 429/, "a 429 must be handled explicitly");
-  assert.match(LLM, /SMALL_MODEL/, "a 429 must step down to the small model");
-  assert.match(LLM, /llama-3\.1-8b-instant/, "the step-down target must be a model verified to drive the loop");
+  // The step-down used to be one hardcoded smaller model AT THE SAME VENDOR,
+  // which is no step-down at all once that vendor's daily budget is spent —
+  // every "fallback" drew on the same exhausted pool. It is now a walk down
+  // CHAT_CHAIN, which spans vendors, so a 429 still has somewhere to go.
+  assert.match(LLM, /chainFrom/, "a 429 must advance through the model chain, not abandon the tools");
+  const CHAIN = readFileSync("src/config/chat-models.ts", "utf8");
+  assert.match(CHAIN, /llama-3\.1-8b-instant/, "the chain must keep a model verified to drive the loop");
 }
 
-console.log("✓ agent name lookup: extraction + 429 step-down checks passed");
+// ── The chain must outlive any one vendor ────────────────────────────────────
+// Guards the property that makes the chain worth having: links at two or more
+// DIFFERENT vendors. A chain within one vendor dies all at once.
+{
+  const vendors = new Set(CHAT_CHAIN.map((p) => p.id));
+  assert.ok(vendors.size >= 2, `chain must span 2+ vendors, got: ${[...vendors].join(", ")}`);
+}
+
+console.log("✓ agent name lookup: extraction + 429 chain-walk checks passed");
