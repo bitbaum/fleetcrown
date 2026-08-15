@@ -45,28 +45,43 @@ REPO="$TMP/repo"
 # reads like containment and enforces nothing. This suite had inherited the same
 # non-check.
 #
-# Two real defences instead of one fake one:
+# Three real defences instead of one fake one:
 #   1. GIT_CEILING_DIRECTORIES stops the upward search at $TMP, so a fallthrough
 #      finds no repo at all rather than finding the wrong one. Kills the class.
-#   2. An assertion on the actual toplevel, which is a fact about the fixture
-#      rather than a fact about how its path was spelled.
+#   2. NOTHING is ever written with `git config`. That is the write which
+#      escaped a single branch: the sibling fixture's
+#      `config core.hooksPath /dev/null` landed in the SHARED
+#      /home/g/dev/fleetcrown/.git/config, silently disabling husky for the main
+#      checkout and every worktree — so for part of that day `--no-verify` was a
+#      no-op because there was no hook left to skip. Identity and hook
+#      suppression come from the environment and from per-command `-c`, neither
+#      of which can persist into a config file the rest of the fleet reads.
+#   3. Every git call goes through g(), which re-asserts that the directory it
+#      is about to mutate really is the fixture. Checked per command, not once
+#      at setup, because the property that matters is "this command writes
+#      here", not "this path looked right earlier".
 export GIT_CEILING_DIRECTORIES="$TMP"
+export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null
+export GIT_AUTHOR_NAME=fixture GIT_AUTHOR_EMAIL=fixture@invalid
+export GIT_COMMITTER_NAME=fixture GIT_COMMITTER_EMAIL=fixture@invalid
 
 git init -q "$REPO"
-[ "$(git -C "$REPO" rev-parse --show-toplevel 2>/dev/null)" = "$REPO" ] \
-  || fail "fixture is not its own repo at '$REPO' — refusing to run mutating git commands"
-git -C "$REPO" config user.email t@example.com
-git -C "$REPO" config user.name t
-# The fixture must not inherit the machine's global hooks: a commit here is a
-# test fixture, not a change worth scanning, and a slow or failing global hook
-# would make this suite fail for reasons that have nothing to do with the gate.
-git -C "$REPO" config core.hooksPath /dev/null
+
+# `-C` alone does not confine git; this does. Physical paths on both sides so a
+# symlinked TMPDIR (/tmp -> /private/tmp and friends) is not a false mismatch.
+g() {
+  local top
+  top="$(git -C "$REPO" rev-parse --show-toplevel 2>/dev/null)" || top=""
+  [ -n "$top" ] && [ "$(cd "$top" 2>/dev/null && pwd -P)" = "$(cd "$REPO" 2>/dev/null && pwd -P)" ] \
+    || fail "refusing '$*': '$REPO' is not its own repo (git would have written to '${top:-<walked up>}')"
+  git -c core.hooksPath=/dev/null -C "$REPO" "$@"
+}
 
 commit() { # message -> echoes sha
   echo "$1" > "$REPO/file.txt"
-  git -C "$REPO" add file.txt
-  git -C "$REPO" commit -q -m "$1"
-  git -C "$REPO" rev-parse HEAD
+  g add file.txt
+  g commit -q -m "$1"
+  g rev-parse HEAD
 }
 
 OLD="$(commit old)"
@@ -74,10 +89,10 @@ MID="$(commit mid)"
 NEW="$(commit new)"
 
 # A genuinely unrelated line of history — the "sideways" case.
-git -C "$REPO" checkout -q --orphan other
-git -C "$REPO" rm -rq --cached . 2>/dev/null || true
+g checkout -q --orphan other
+g rm -rq --cached . 2>/dev/null || true
 OTHER="$(commit other-root)"
-git -C "$REPO" checkout -q --detach "$NEW"
+g checkout -q --detach "$NEW"
 
 run() { bash "$GATE" "$1" "$2" "$REPO" >/dev/null 2>&1; }
 
@@ -162,6 +177,41 @@ ok "a failed marker read yields an empty answer instead of aborting the script"
 # And an empty marker must reach the "ship anyway" path, not the refusal.
 run "" "$NEW" || fail "an empty marker (failed read) refused the deploy"
 ok "an unreadable marker ships rather than blocking (fails OPEN, by design)"
+
+# ── the isolation is itself under test ─────────────────────────────────────
+# The previous guard was never exercised against the case it claimed to
+# prevent, which is exactly why nobody noticed it could not fail.
+#
+# The shape has to match reality or the test is decorative too. A bare
+# "$TMP/not-a-repo" proves nothing: $TMP is under /tmp, nothing above it is a
+# repo, so git finds no repo whether or not any defence is in place — it passes
+# for the wrong reason. (First version of this assert did exactly that.)
+#
+# The real-world shape is a fixture directory sitting INSIDE a repository —
+# which is what a TMPDIR under a checkout gives you, and how the sibling suite
+# came to mutate the real project. Build that, and the refusal is load-bearing.
+# The enclosing repo needs a COMMIT, or the probe below succeeds for the wrong
+# reason: `rev-parse HEAD` fails in an empty repo whether or not the escape
+# happened, so an unguarded g() would look like a refusal. (Second version of
+# this assert did exactly that.) With a commit, an escape returns a real sha and
+# exit 0 — so the assert fires precisely when the isolation is gone.
+git init -q "$TMP/enclosing"
+echo enclosing > "$TMP/enclosing/marker.txt"
+git -C "$TMP/enclosing" add marker.txt
+git -C "$TMP/enclosing" commit -q -m "enclosing repo has history"
+mkdir -p "$TMP/enclosing/inner"
+( REPO="$TMP/enclosing/inner"; g rev-parse HEAD ) >/dev/null 2>&1 \
+  && fail "g() accepted a non-repo dir nested in a repo — it would have mutated the ENCLOSING repo"
+ok "g() refuses a non-repo directory nested inside another repo (would have hit the enclosing one)"
+
+# And the fixture must never persist config, since that is the write that
+# reached beyond a branch into the shared /home/g/dev/fleetcrown/.git/config.
+# Anchored to COMMAND position: a line that merely mentions the words (this one
+# does) is prose, while a line that starts with `git`/`g` and reaches `config`
+# is the write that caused the damage.
+grep -qE '^[[:space:]]*(git|g)[[:space:]].*\bconfig\b' "$0" \
+  && fail "this suite writes git config — use env + per-command -c so nothing can persist"
+ok "the fixture writes no git config (identity and hooks come from the environment)"
 
 echo ""
 echo "$PASSED passed"
