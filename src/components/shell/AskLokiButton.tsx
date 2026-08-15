@@ -15,6 +15,7 @@ import { LOKI_PROACTIVE_STARTERS } from "@/config/loki-suggested-actions";
 import { useProjectDispatch, DispatchedNote, type ProjectDispatchKind } from "@/components/projects/ProjectActionButtons";
 import { postJson } from "@/lib/api/fetch";
 import { LOKI_OPEN_EVENT } from "@/lib/client-events";
+import { useEscapeToClose } from "@/hooks/use-escape-to-close";
 
 type Turn = { role: "user" | "loki"; text: string };
 
@@ -85,6 +86,11 @@ export function AskLokiButton() {
   const context = useSyncExternalStore(subscribeContext, readAssistantContext, () => null);
   // When a form is open, the assistant edits it instead of answering about it.
   const activeForm = useSyncExternalStore(subscribeActiveForm, readActiveForm, () => null);
+
+  // A dialog you can open with a key and not close with one. `?` toggles this
+  // panel open, and Escape did nothing — the same gap the command palette was
+  // fixed for once already.
+  useEscapeToClose(useCallback(() => setOpen(false), []), !open);
 
   useEffect(() => {
     const keyHandler = (e: KeyboardEvent) => {

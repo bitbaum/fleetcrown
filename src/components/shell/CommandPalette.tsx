@@ -7,6 +7,7 @@ import { AGENT_LABELS, type AnyAgentId } from "@/lib/agent-labels";
 import { useFetch } from "@/hooks/use-fetch";
 import { useCommandPalette } from "@/hooks/use-command-palette";
 import { useVoiceInput } from "@/hooks/use-voice-input";
+import { useOverlayLock } from "@/hooks/use-overlay-lock";
 import { NAV_ITEMS, type NavItem } from "@/config/navigation";
 import { PROMPT_TEMPLATES, type PromptTemplate } from "@/config/prompt-library";
 import type { AgentPrompt } from "@/app/api/prompts/agent/route";
@@ -41,6 +42,9 @@ export function CommandPalette() {
   const [query, setQuery] = useState("");
   const [highlight, setHighlight] = useState(0);
   const [recent, setRecent] = useState<string[]>([]);
+
+  // Full-screen overlay: freeze the page under it, same as every other one.
+  useOverlayLock(open);
   // Composer state (Loki Phase 1): busy = resolving/dispatching; pending = a
   // command whose project we still need to ask for; note = inline status/error.
   const [busy, setBusy] = useState(false);

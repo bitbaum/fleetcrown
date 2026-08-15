@@ -14,6 +14,8 @@ import { isCurrentPath } from "@/lib/navigation";
 import { ROUTES } from "@/config/auth";
 import { cn } from "@/lib/utils";
 import { usePrivateZone } from "@/hooks/use-private-zone";
+import { useEscapeToClose } from "@/hooks/use-escape-to-close";
+import { useOverlayLock } from "@/hooks/use-overlay-lock";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
 
 const TAB_IDS = new Set(MOBILE_NAV_ITEMS.map((item) => item.id));
@@ -58,6 +60,12 @@ export function MobileNavSheet({
 }) {
   const { configured, unlocked } = usePrivateZone();
   const privateLocked = configured && !unlocked;
+
+  // This is a dialog covering the app, so it owes the same two things every
+  // other overlay here provides. Verified against prod before this line existed:
+  // Escape left the sheet open, and the page kept scrolling behind it.
+  useEscapeToClose(onClose);
+  useOverlayLock(true);
 
   return (
     <>

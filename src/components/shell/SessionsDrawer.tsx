@@ -22,6 +22,7 @@ import { X, GitBranch, Circle, RefreshCw } from "lucide-react";
 import { timeAgo } from "@/lib/dates";
 import { getJson } from "@/lib/api/fetch";
 import type { SessionSnapshot, SessionSnapshotItem } from "@/app/api/sessions/snapshot/route";
+import { useOverlayLock } from "@/hooks/use-overlay-lock";
 
 const POLL_INTERVAL_MS = 30_000;
 
@@ -55,6 +56,10 @@ export function SessionsDrawer({
   const [snapshot, setSnapshot] = useState<SessionSnapshot | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Covers the app behind a full-screen backdrop, so the page must stop
+  // scrolling under it — otherwise a phone swipe moves something invisible.
+  useOverlayLock(open);
 
   // Fetch on open + on poll. Stop polling when closed to save tokens.
   useEffect(() => {
