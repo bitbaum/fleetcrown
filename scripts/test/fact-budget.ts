@@ -13,6 +13,7 @@ import {
   mergeFactsWithCap,
   fitFactsToBudget,
   estimateTokens,
+  omissionNotice,
 } from "@/lib/agent/fact-budget";
 import type { Fact } from "@/lib/agent/core/facts";
 
@@ -117,6 +118,46 @@ function runTests(): void {
     // Nothing can be shed to fix this; returning facts anyway would hide it.
     const out = fitFactsToBudget(range("f", 40), render, 8000 /* = 2000 tok */, 300);
     assert(out.length === 0, `expected 0 facts, got ${out.length}`);
+  });
+
+  // ── shedding must be announced ────────────────────────────────────────────
+  // Loki reported "You are tracking 5 projects" against an account holding 22:
+  // the five were the tail that survived the trim, and nothing told the model a
+  // longer list existed. A count drawn from a silently shortened list is worse
+  // than a refusal, because it arrives with citations.
+
+  check("nothing withheld ⇒ no notice (a notice that always fires is ignored)", () => {
+    assert(omissionNotice(40, 40) === "", "notice emitted when the whole set was sent");
+    assert(omissionNotice(0, 0) === "", "notice emitted for an empty fact set");
+  });
+
+  check("withholding states BOTH the sent count and the true total", () => {
+    const notice = omissionNotice(22, 5);
+    // The true total is the number the wrong answer got wrong — it has to appear.
+    assert(notice.includes("22"), "notice omits the true total");
+    assert(notice.includes("5"), "notice omits how many were sent");
+    assert(notice.includes("17"), "notice omits how many were withheld");
+  });
+
+  check("the notice forbids the specific move that caused the bug", () => {
+    const notice = omissionNotice(22, 5).toLowerCase();
+    assert(notice.includes("incomplete"), "notice does not say the list is incomplete");
+    assert(
+      notice.includes("do not state a total") && notice.includes("complete list"),
+      "notice does not forbid stating a total / presenting a complete list",
+    );
+  });
+
+  check("the notice is sized INSIDE the fit, so reporting shedding cannot cause it", () => {
+    // Render exactly as loop.ts does: context plus the notice for what was cut.
+    const all = range("f", 40);
+    const withNotice = (fs: Fact[]) => render(fs) + omissionNotice(all.length, fs.length);
+    const out = fitFactsToBudget(all, withNotice, 0, 300);
+    assert(out.length > 0, "fit shed everything once the notice was charged");
+    assert(
+      estimateTokens(withNotice(out)) <= 300,
+      "prompt busts the budget once the notice is included — the notice was not charged",
+    );
   });
 
   console.log(`\n${passed} passed`);

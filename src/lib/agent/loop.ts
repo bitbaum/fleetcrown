@@ -25,7 +25,12 @@
  * "answer with what you have" rather than to an error.
  */
 import { assignFactIds, renderFacts, type Fact } from "@/lib/agent/core/facts";
-import { trimFactsToBudget, mergeFactsWithCap, fitFactsToBudget } from "@/lib/agent/fact-budget";
+import {
+  trimFactsToBudget,
+  mergeFactsWithCap,
+  fitFactsToBudget,
+  omissionNotice,
+} from "@/lib/agent/fact-budget";
 import { buildGroundedContext, buildContract, directiveId, NO_BASIS, type Directive } from "@/lib/agent/core/contract";
 import { verifyAnswer, buildRepairPrompt, type Violation } from "@/lib/agent/core/verify";
 import { callModelWithTools, type ChatMessage, type ToolCall } from "@/lib/agent/llm";
@@ -280,12 +285,17 @@ export async function runLokiTurn(input: {
       input.message.length +
       (lastRound ? 0 : JSON.stringify(nativeTools).length) +
       conversation.reduce((n, m) => n + m.content.length, 0);
-    const fitted = fitFactsToBudget(
-      facts,
-      (f) => buildGroundedContext({ facts: f, directives, renderedFacts: renderFacts(f) }),
-      overheadChars,
-      CALL_TOKEN_BUDGET,
-    );
+    // The notice is measured as part of the fit, not bolted on afterwards —
+    // otherwise the very prompt that reports the shedding is what busts the
+    // budget and triggers more of it.
+    const withNotice = (f: Fact[]) =>
+      [
+        buildGroundedContext({ facts: f, directives, renderedFacts: renderFacts(f) }),
+        omissionNotice(facts.length, f.length),
+      ]
+        .filter(Boolean)
+        .join("\n\n---\n\n");
+    const fitted = fitFactsToBudget(facts, withNotice, overheadChars, CALL_TOKEN_BUDGET);
     if (fitted.length < facts.length) {
       console.warn(`[loki] round ${rounds}: ${facts.length} facts exceed the call budget — sending ${fitted.length}`);
     }
@@ -297,7 +307,7 @@ export async function runLokiTurn(input: {
         const ctx =
           budget >= fitted.length && fitted.length === facts.length
             ? grounded
-            : buildGroundedContext({ facts: trimmed, directives, renderedFacts: renderFacts(trimmed) });
+            : withNotice(trimmed);
         try {
           return await callModel({
             messages: [
