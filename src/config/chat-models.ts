@@ -43,6 +43,16 @@ export type ChatProvider = {
   modelsEnv: string;
   /** Models to try for this provider, in order. */
   models: string[];
+  /**
+   * Tokens this vendor's FREE tier grants per day, summed into the pool that
+   * fair-share rations. An ESTIMATE, and deliberately conservative: handing out
+   * shares of capacity that turns out not to exist produces the exact wall the
+   * rationing exists to prevent, only later in the day and harder to diagnose.
+   * Override per box once measured.
+   */
+  dailyTokens: number;
+  /** Env var overriding `dailyTokens` at call time. */
+  dailyTokensEnv: string;
 };
 
 /** Split a comma/space separated env override into model ids. */
@@ -106,6 +116,11 @@ export const CHAT_CHAIN: ChatProvider[] = [
     keyEnv: "GROQ_API_KEY",
     modelsEnv: "LOKI_GROQ_MODELS",
     models: [GROQ_FAST_MODEL, "llama-3.1-8b-instant"],
+    // Not a guess: Groq's own TPD refusal names it — "on tokens per day (TPD):
+    // Limit 100000". Org-wide, so the dispatch strategist and form-assist draw
+    // from this same pool.
+    dailyTokens: 100_000,
+    dailyTokensEnv: "LOKI_GROQ_DAILY_TOKENS",
   },
   {
     id: "openrouter",
@@ -121,8 +136,33 @@ export const CHAT_CHAIN: ChatProvider[] = [
       "cohere/north-mini-code:free",
       "openrouter/free",
     ],
+    // OpenRouter meters its free tier in REQUESTS per day, not tokens, and the
+    // cap depends on the account's credit balance — so this is a translation,
+    // not a published figure. Set at the low end on purpose: under-promising
+    // rations a little tightly, over-promising hands out shares of capacity
+    // that does not exist. Calibrate with LOKI_OPENROUTER_DAILY_TOKENS.
+    dailyTokens: 100_000,
+    dailyTokensEnv: "LOKI_OPENROUTER_DAILY_TOKENS",
   },
 ];
+
+/**
+ * The day's total budget: every provider we hold a key for.
+ *
+ * Only KEYED providers count. A vendor whose key is absent contributes nothing
+ * however generous its tier, and counting it would ration users against
+ * capacity that cannot be reached — the same failure as an optimistic estimate,
+ * just with an obvious cause.
+ */
+export function dayCapacityTokens(): number {
+  let total = 0;
+  for (const provider of CHAT_CHAIN) {
+    if (!process.env[provider.keyEnv]?.trim()) continue;
+    const override = Number(process.env[provider.dailyTokensEnv]);
+    total += Number.isFinite(override) && override >= 0 ? override : provider.dailyTokens;
+  }
+  return total;
+}
 
 export type ChatLink = { provider: ChatProvider; model: string };
 

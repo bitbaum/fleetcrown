@@ -53,6 +53,16 @@ export type ModelTurn = {
   /** Calls found via either protocol, de-duplicated. */
   toolCalls: ToolCall[];
   model: string;
+  /**
+   * Tokens this call actually cost, as the PROVIDER counted them.
+   *
+   * Reported rather than estimated because the budget being rationed is the
+   * provider's, and our own char/4 estimate is only good enough for deciding
+   * what fits in a prompt — billing a user's daily share against a guess would
+   * drift a little every turn and a lot by evening. 0 when the provider omits
+   * `usage`, which reads as "unknown", never as "free".
+   */
+  usageTokens: number;
 };
 
 /**
@@ -233,6 +243,7 @@ async function callOneLink(
 
   const data = (await res.json()) as {
     choices?: Array<{ message?: { content?: string; tool_calls?: NativeToolCall[] } }>;
+    usage?: { total_tokens?: number };
   };
   const msg = data.choices?.[0]?.message;
   const rawText = (msg?.content ?? "").trim();
@@ -260,6 +271,7 @@ async function callOneLink(
     text: stripToolCallLines(rawText),
     toolCalls: [...native, ...fromText],
     model: `${link.provider.id}/${link.model}`,
+    usageTokens: Math.max(0, Math.round(data.usage?.total_tokens ?? 0)),
   };
 }
 

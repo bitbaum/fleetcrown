@@ -17,6 +17,7 @@ import { runLokiTurn } from "@/lib/agent/loop";
 import { verifyAnswer, buildRepairPrompt, type Violation } from "@/lib/agent/core/verify";
 import { NO_BASIS } from "@/lib/agent/core/contract";
 import { rateLimitMessage } from "@/lib/agent/groq-error";
+import { checkAiBudget, recordAiSpend } from "@/lib/ai-budget/gate";
 import type { Fact } from "@/lib/agent/core/facts";
 import { APP_NAME } from "@/config/brand";
 import { HTTP_TIMEOUT_LONG_MS } from "@/lib/constants/time";
@@ -136,12 +137,36 @@ function toolLoopEnabled(userId?: string): boolean {
  * `sessionKey` keeps a per-conversation thread on the gateway path.
  */
 export async function askLoki(message: string, opts?: { sessionKey?: string; userId?: string }): Promise<AskLokiResult> {
+  // Ration BEFORE any provider is called, and only for identified users —
+  // an anonymous caller has no ledger to charge, and the paths they can reach
+  // do not draw on the rationed pool.
+  //
+  // The whole turn is gated once, not each path: every route below ends at a
+  // model, so admitting a turn here and refusing it three fallbacks later would
+  // burn the budget it was meant to protect and still say no.
+  if (opts?.userId) {
+    const verdict = await checkAiBudget(opts.userId);
+    if (!verdict.allowed) {
+      return {
+        status: 429,
+        body: {
+          error: verdict.message,
+          ...(verdict.retryAfterSeconds !== undefined ? { retryAfterSeconds: verdict.retryAfterSeconds } : {}),
+        },
+      };
+    }
+  }
+
   if (toolLoopEnabled(opts?.userId)) {
     try {
       const voicePref = await getUserPreferences(opts!.userId!)
         .then((p) => p.writingVoice)
         .catch(() => null);
       const result = await runLokiTurn({ userId: opts!.userId!, message, voice: voicePref });
+      // Booked whether or not the turn produced usable text: the tokens were
+      // spent either way, and only charging for successes would let a run of
+      // empty answers drain the day for free.
+      await recordAiSpend(opts!.userId!, result.usageTokens);
       if (result.text.trim()) {
         return {
           status: 200,
@@ -278,6 +303,11 @@ async function askLokiViaGateway(message: string, opts?: { sessionKey?: string; 
   // that should skip the check.
   try {
     const { text, model } = await callGroq(contextualMessage, voice);
+    // This path draws on the SAME rationed pool as the tool loop, so it must be
+    // booked too — otherwise a user degraded onto the fallback would spend the
+    // shared day for free, and the ledger would quietly understate the drain.
+    // `callGroqText` does not surface a usage count, so 0 books the estimate.
+    if (opts?.userId) await recordAiSpend(opts.userId, 0);
     const checked = await groundOrRepair(text, async (repair) => {
       // Groq is stateless here, so the repair must carry the answer being
       // repaired — there is no session for it to refer back to.

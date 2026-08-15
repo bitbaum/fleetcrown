@@ -42,6 +42,7 @@
     "test:notify-close": "npx tsx scripts/test/notify-close.ts",
     "test:fact-budget": "npx tsx scripts/test/fact-budget.ts",
     "test:fair-share": "npx tsx scripts/test/fair-share.ts",
+    "test:ai-budget-gate": "npx tsx scripts/test/ai-budget-gate.ts",
     "test:deploy-ref-gate": "bash scripts/test/deploy-ref-gate.sh",
     "test:not-behind-gate": "bash scripts/test/not-behind-gate.sh",
     "test:approval-cues": "npx tsx scripts/test/approval-cues.ts",

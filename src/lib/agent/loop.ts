@@ -112,6 +112,12 @@ export type LoopResult = {
   toolsUsed: string[];
   rounds: number;
   model: string;
+  /**
+   * Tokens this whole turn cost, summed across every round AND the repair pass.
+   * A turn is several calls; billing only the last one would under-count the
+   * expensive turns by the most — exactly the ones worth rationing.
+   */
+  usageTokens: number;
 };
 
 /**
@@ -244,6 +250,8 @@ export async function runLokiTurn(input: {
   const used: string[] = [];
   let text = "";
   let model = "";
+  // Summed across every call this turn makes — rounds AND the repair pass.
+  let usageTokens = 0;
   let rounds = 0;
 
   for (let round = 0; round < MAX_ROUNDS; round++) {
@@ -329,6 +337,7 @@ export async function runLokiTurn(input: {
       }
     })();
     model = turn.model;
+    usageTokens += turn.usageTokens;
     text = turn.text;
 
     if (turn.toolCalls.length === 0) break;
@@ -380,6 +389,11 @@ export async function runLokiTurn(input: {
       validToolNames: [],
     }).catch(() => null);
 
+    // Counted whether or not the repair is KEPT — the tokens were spent either
+    // way, and a turn that quietly bills less than it drew would let the daily
+    // pool drain faster than the ledger says.
+    usageTokens += repaired?.usageTokens ?? 0;
+
     if (repaired?.text) {
       const second = verifyAnswer({ answer: repaired.text, facts, userMessage: input.message, extraEvidence: evidence, extraCitationIds: citationIds });
       // Keep the repair only if it actually improved things. A repair that
@@ -408,5 +422,5 @@ export async function runLokiTurn(input: {
     })),
   ];
 
-  return { text, facts, sources, violations, toolsUsed: used, rounds, model };
+  return { text, facts, sources, violations, toolsUsed: used, rounds, model, usageTokens };
 }
