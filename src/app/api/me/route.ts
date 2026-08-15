@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionUserId } from "@/lib/session";
 import { normalizeUsername } from "@/lib/username";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
+import { toClientUser } from "@/lib/user-client-view";
 import {
   getUserById,
   getUserByUsername,
@@ -22,7 +23,7 @@ export async function GET() {
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = await getUserById(userId);
   if (!user) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json(user);
+  return NextResponse.json(toClientUser(user));
 }
 
 export async function PATCH(req: NextRequest) {
@@ -43,8 +44,9 @@ export async function PATCH(req: NextRequest) {
     username,
     name,
   });
+  if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  return NextResponse.json(updated);
+  return NextResponse.json(toClientUser(updated));
 }
 
 const DeleteBody = z.object({
