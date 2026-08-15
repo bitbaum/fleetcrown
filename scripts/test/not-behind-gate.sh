@@ -104,5 +104,38 @@ case "$out" in
 esac
 ok "refusal names the problem and the way out"
 
+# ── the guard must not be able to KILL a deploy ────────────────────────────
+# Shipped once and broke production deploys immediately. deploy-hetzner.sh runs
+# under `set -euo pipefail`; reading the box's marker is a QUESTION, and if the
+# file is absent `cat` exits 1, pipefail propagates it, and `set -e` kills the
+# deploy — silently, because the guard that would have explained itself never
+# ran. Two deploys died between "table ownership reconciled" and the snapshot
+# with no message at all.
+#
+# Both halves are asserted: the real line must stay fail-safe, and the shape
+# must actually survive a non-zero read.
+DEPLOY_SH="$SCRIPT_DIR/../deploy-hetzner.sh"
+marker_line="$(grep -n 'LIVE_REF_NOW=' "$DEPLOY_SH" | head -1)"
+[ -n "$marker_line" ] || fail "could not find the LIVE_REF_NOW read in deploy-hetzner.sh"
+case "$marker_line" in
+  *'|| true'*) ;;
+  *) fail "the marker read is not fail-safe (needs '|| true'): $marker_line" ;;
+esac
+ok "the box-marker read in deploy-hetzner.sh is guarded against a non-zero ssh"
+
+survived="$(bash -c '
+  set -euo pipefail
+  unreachable() { return 255; }          # an ssh that cannot reach the box
+  V="$(unreachable 2>/dev/null | tr -d "[:space:]" || true)"
+  echo "survived:${V:-empty}"
+' 2>/dev/null)" || survived=""
+[ "$survived" = "survived:empty" ] \
+  || fail "the guarded read still aborts under set -euo pipefail (got '${survived:-<killed>}')"
+ok "a failed marker read yields an empty answer instead of aborting the script"
+
+# And an empty marker must reach the "ship anyway" path, not the refusal.
+run "" "$NEW" || fail "an empty marker (failed read) refused the deploy"
+ok "an unreadable marker ships rather than blocking (fails OPEN, by design)"
+
 echo ""
 echo "$PASSED passed"
