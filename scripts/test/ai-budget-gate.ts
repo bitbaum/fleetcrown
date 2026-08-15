@@ -1,0 +1,166 @@
+/**
+ * Inline tests for the AI budget admission gate (lib/ai-budget/gate.ts) and the
+ * day-capacity SSOT (config/chat-models.ts).
+ *
+ * The policy itself is covered by test:fair-share. What this pins is the part
+ * that decides whether the product works when the plumbing does not:
+ *
+ *   - a ledger error must ADMIT the turn, never refuse it. Rationing is a
+ *     nicety; a database hiccup turning into "Loki is down" is not a trade
+ *     anyone would choose, and the guard-that-reads-state failure mode has
+ *     already cost this fleet a day of blocked deploys.
+ *   - capacity counts only providers we hold a key for, or users are rationed
+ *     against tokens that cannot be reached.
+ *   - the two refusals keep their distinct meanings all the way out to the
+ *     message the user reads.
+ *
+ * Run: npm run test:ai-budget-gate
+ */
+import { checkAiBudget, ESTIMATED_TURN_TOKENS } from "@/lib/ai-budget/gate";
+import { dayCapacityTokens, CHAT_CHAIN } from "@/config/chat-models";
+
+function assert(condition: boolean, message: string): void {
+  if (!condition) throw new Error(message);
+}
+
+let passed = 0;
+const check = async (label: string, fn: () => void | Promise<void>) => {
+  await fn();
+  passed += 1;
+  console.log(`  ✓ ${label}`);
+};
+
+function withEnv(vars: Record<string, string | undefined>, fn: () => void): void {
+  const before: Record<string, string | undefined> = {};
+  for (const [k, v] of Object.entries(vars)) {
+    before[k] = process.env[k];
+    if (v === undefined) delete process.env[k];
+    else process.env[k] = v;
+  }
+  try {
+    fn();
+  } finally {
+    for (const [k, v] of Object.entries(before)) {
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+    }
+  }
+}
+
+const NOON = new Date("2026-08-15T12:00:00Z");
+const KEYS: Record<string, string | undefined> = {
+  GROQ_API_KEY: undefined,
+  OPENROUTER_API_KEY: undefined,
+  LOKI_GROQ_DAILY_TOKENS: undefined,
+  LOKI_OPENROUTER_DAILY_TOKENS: undefined,
+};
+
+async function main() {
+  // ── capacity SSOT ──────────────────────────────────────────────────────────
+  await check("capacity counts ONLY providers we hold a key for", () => {
+    withEnv({ ...KEYS }, () => {
+      assert(dayCapacityTokens() === 0, "unkeyed providers contributed capacity");
+    });
+    withEnv({ ...KEYS, GROQ_API_KEY: "x" }, () => {
+      const groq = CHAT_CHAIN.find((p) => p.id === "groq")!;
+      assert(dayCapacityTokens() === groq.dailyTokens, `expected ${groq.dailyTokens}`);
+    });
+  });
+
+  await check("capacity is the SUM across keyed vendors — that is the point of the chain", () => {
+    withEnv({ ...KEYS, GROQ_API_KEY: "x", OPENROUTER_API_KEY: "y" }, () => {
+      const expected = CHAT_CHAIN.reduce((n, p) => n + p.dailyTokens, 0);
+      assert(dayCapacityTokens() === expected, `expected ${expected}, got ${dayCapacityTokens()}`);
+    });
+  });
+
+  await check("an env override recalibrates a vendor's budget without a deploy", () => {
+    withEnv({ ...KEYS, GROQ_API_KEY: "x", LOKI_GROQ_DAILY_TOKENS: "12345" }, () => {
+      assert(dayCapacityTokens() === 12_345, `got ${dayCapacityTokens()}`);
+    });
+    withEnv({ ...KEYS, GROQ_API_KEY: "x", LOKI_GROQ_DAILY_TOKENS: "nonsense" }, () => {
+      const groq = CHAT_CHAIN.find((p) => p.id === "groq")!;
+      assert(dayCapacityTokens() === groq.dailyTokens, "a junk override must fall back, not zero the budget");
+    });
+  });
+
+  // ── the gate ───────────────────────────────────────────────────────────────
+  const plenty = () => 1_000_000;
+
+  await check("a user well inside their share is admitted", async () => {
+    const v = await checkAiBudget("u1", NOON, {
+      capacity: plenty,
+      readUsage: async () => ({ userSpentTokens: 0, activeUsers: 1 }),
+    });
+    assert(v.allowed, "refused a turn with a million tokens available");
+  });
+
+  await check("A LEDGER ERROR ADMITS THE TURN — rationing must never become an outage", async () => {
+    const v = await checkAiBudget("u1", NOON, {
+      capacity: plenty,
+      readUsage: async () => {
+        throw new Error("connection refused");
+      },
+    });
+    assert(v.allowed, "a database error refused the turn — this is the fail-closed trap");
+  });
+
+  await check("a capacity of zero refuses, and says there is nothing to draw on", async () => {
+    const v = await checkAiBudget("u1", NOON, {
+      capacity: () => 0,
+      readUsage: async () => ({ userSpentTokens: 0, activeUsers: 1 }),
+    });
+    assert(!v.allowed, "admitted a turn with no capacity");
+    assert(!v.allowed && /no ai provider/i.test(v.message), `unhelpful message: ${!v.allowed && v.message}`);
+  });
+
+  await check("'paced' offers a retry and explains WHY there is a wait", async () => {
+    // Two users sharing 100k; this one has taken 40k of their 50k by noon.
+    const v = await checkAiBudget("u1", NOON, {
+      capacity: () => 100_000,
+      readUsage: async () => ({ userSpentTokens: 40_000, activeUsers: 2 }),
+    });
+    assert(!v.allowed, "expected a refusal");
+    if (v.allowed) return;
+    assert(typeof v.retryAfterSeconds === "number", "paced refusal must carry a retry");
+    // "so everyone gets a turn" is the difference between a reason a person
+    // accepts and an unexplained refusal that reads as breakage.
+    assert(/everyone/i.test(v.message), `message does not explain the rationing: ${v.message}`);
+  });
+
+  await check("'share-spent' promises NO retry — waiting cannot help today", async () => {
+    const v = await checkAiBudget("u1", NOON, {
+      capacity: () => 100_000,
+      readUsage: async () => ({ userSpentTokens: 99_000, activeUsers: 2 }),
+    });
+    assert(!v.allowed, "expected a refusal");
+    if (v.allowed) return;
+    assert(v.retryAfterSeconds === undefined, "offered a retry that cannot succeed today");
+    assert(/resets at midnight/i.test(v.message), `message must say when it resets: ${v.message}`);
+  });
+
+  await check("a newcomer among many users still gets their first turn", async () => {
+    // Four users on a 100k day → 25k each, and a turn is estimated at 10k.
+    // The share covers it, so admission must not depend on the time of day.
+    for (const at of ["2026-08-15T00:01:00Z", "2026-08-15T12:00:00Z", "2026-08-15T23:00:00Z"]) {
+      const v = await checkAiBudget("newcomer", new Date(at), {
+        capacity: () => 100_000,
+        readUsage: async () => ({ userSpentTokens: 0, activeUsers: 4 }),
+      });
+      assert(v.allowed, `newcomer refused at ${at}`);
+    }
+  });
+
+  await check("the admission estimate is conservative, not free", () => {
+    // Admitting on a zero estimate would let any number of turns through before
+    // the first one is booked.
+    assert(ESTIMATED_TURN_TOKENS > 0, "a zero estimate admits everything");
+  });
+
+  console.log(`\n${passed} passed`);
+}
+
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});
