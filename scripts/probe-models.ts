@@ -31,15 +31,10 @@
 import { config } from "dotenv";
 config({ path: ".env.local" });
 
-import { callModelWithTools } from "../src/lib/agent/llm";
+import { callModelLinkOnce } from "../src/lib/agent/llm";
 import { analyzeImages } from "../src/lib/vision";
 import { usableVisionChain } from "../src/config/vision-models";
-
-const DEFAULT_MODELS = [
-  "llama-3.3-70b-versatile",
-  "llama-3.1-8b-instant",
-  "gemma2-9b-it",
-];
+import { usableChatChain, CHAT_CHAIN, type ChatLink } from "../src/config/chat-models";
 
 const TOOLS = [
   {
@@ -65,24 +60,41 @@ const SYSTEM = [
   "Write nothing else in a reply that calls a tool.",
 ].join("\n");
 
+/**
+ * Resolve what to probe. No args → the whole configured chain, which is the
+ * question that actually matters ("is every fallback I ship real?"). Explicit
+ * model ids → those, matched against the chain so they carry their provider,
+ * falling back to the first keyed provider for an id nobody advertises yet.
+ */
+function linksToProbe(): ChatLink[] {
+  const chain = usableChatChain();
+  const wanted = process.argv.slice(2);
+  if (wanted.length === 0) return chain;
+  const host = chain[0]?.provider ?? CHAT_CHAIN[0];
+  return wanted.map((model) => chain.find((l) => l.model === model) ?? { provider: host, model });
+}
+
 async function main() {
-  if (!process.env.GROQ_API_KEY) {
-    console.error("GROQ_API_KEY not set (put it in .env.local) — nothing to probe.");
+  const links = linksToProbe();
+  if (links.length === 0) {
+    console.error("No chat provider configured — set GROQ_API_KEY or OPENROUTER_API_KEY in .env.local.");
     process.exit(2);
   }
-  const models = process.argv.slice(2).length > 0 ? process.argv.slice(2) : DEFAULT_MODELS;
   let usable = 0;
 
-  for (const model of models) {
+  console.log(`Chat chain (${links.length} link(s)) — can each one actually drive the loop?\n`);
+  for (const link of links) {
+    const label = `${link.provider.id}/${link.model}`;
     try {
-      const turn = await callModelWithTools({
+      // callModelLinkOnce, NOT the chain walker: a walk reports whoever
+      // answered, which would credit this model with another link's success.
+      const turn = await callModelLinkOnce(link, {
         messages: [
           { role: "system", content: SYSTEM },
           { role: "user", content: "Who is Ilya in my contacts?" },
         ],
         tools: TOOLS,
         validToolNames: ["search_people"],
-        model,
         maxTokens: 300,
       });
       const call = turn.toolCalls[0];
@@ -90,14 +102,15 @@ async function main() {
       const ok = call?.name === "search_people" && typeof call.args.query === "string";
       if (ok) usable++;
       console.log(
-        `${ok ? "✓" : "✗"} ${model.padEnd(40)} calls=${turn.toolCalls.length} via=${protocol.padEnd(6)} args=${JSON.stringify(call?.args ?? {})}`,
+        `${ok ? "✓" : "✗"} ${label.padEnd(48)} calls=${turn.toolCalls.length} via=${protocol.padEnd(6)} args=${JSON.stringify(call?.args ?? {})}`,
       );
     } catch (e) {
-      console.log(`✗ ${model.padEnd(40)} ERROR ${e instanceof Error ? e.message.slice(0, 80) : String(e)}`);
+      console.log(`✗ ${label.padEnd(48)} ERROR ${e instanceof Error ? e.message.slice(0, 90) : String(e)}`);
     }
   }
 
-  console.log(`\n${usable}/${models.length} chat model(s) can drive the loop.`);
+  console.log(`\n${usable}/${links.length} chat link(s) can drive the loop.`);
+  if (usable === 0) console.log("  ✗ NO chat model answered — Loki's tool loop is DOWN, not degraded.");
 
   // ── Vision chain ───────────────────────────────────────────────────────────
   // A 2x2 solid-red PNG. Tiny, but it proves the model actually READ the image
