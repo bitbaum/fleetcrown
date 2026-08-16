@@ -31,11 +31,32 @@
 #   4. Identity and hook suppression come from ENV, never `git config` — a
 #      config write is what corrupted the shared config, and env cannot leak.
 #   5. $TMP is refused if it sits inside a git repo at all.
+#   6. The ambient git environment is unset (below) — see why.
+#
+# ── AND IT INHERITED A HANDLE TO THE REAL REPO ───────────────────────────────
+# The husky pre-push hook exports GIT_DIR (for a worktree push, e.g.
+# `.git/worktrees/<name>`). An explicit GIT_DIR is not a search path, so
+# GIT_CEILING_DIRECTORIES does not constrain it — and `g` could not catch it
+# either: with GIT_DIR set and no work tree, `git -C <fixture> rev-parse
+# --show-toplevel` answers `<fixture>`, matching the assertion exactly while
+# every object and ref operation lands in the REAL repo. Guard 5 was the only
+# thing left standing, which is why pushing from a worktree failed with the
+# confusing "temp dir is inside a git repo": with GIT_DIR set, an empty
+# mktemp dir reads as a repo root.
+#
+# So the git environment is cleared before anything else runs. This is not a
+# workaround for guard 5 — it removes the inherited handle that made guards 1-4
+# unable to see the danger.
 #
 # Builds throwaway repos in a temp dir; touches nothing real, hits no network.
 # Run: npm run test:deploy-ref-gate
 
 set -uo pipefail
+
+# Nothing below may inherit a pointer to a real repository. `git rev-parse
+# --local-env-vars` is git's own list, so this cannot fall behind a new variable.
+for _v in $(git rev-parse --local-env-vars 2>/dev/null); do unset "$_v"; done
+unset GIT_PREFIX
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GATE="$SCRIPT_DIR/../ci/check-deploy-ref.sh"
@@ -205,6 +226,28 @@ if ( g "$ENCLOSING/inner/not-a-repo" rev-parse HEAD ) >/dev/null 2>&1; then
   fail "g() walked UP into '$ENCLOSING' instead of refusing — isolation is broken"
 fi
 ok "git calls refuse a target that is not the fixture repo (probe verified to bite)"
+
+# ── 9. an inherited GIT_DIR (the hook environment) cannot retarget the suite ──
+# Run the whole suite again with GIT_DIR pointing at a decoy repo, exactly as
+# the pre-push hook sets it, and assert two things: the run still passes, and
+# the decoy is byte-for-byte unchanged. Without the unset at the top of this
+# file the decoy's HEAD moves — the fixtures commit into it.
+if [ -z "${DEPLOY_REF_GATE_CHILD:-}" ]; then
+  DECOY="$TMP/decoy"
+  git init -q "$DECOY" || fail "could not init the decoy repo"
+  echo decoy > "$DECOY/f"
+  g "$DECOY" add -A
+  g "$DECOY" commit -qm "decoy"
+  BEFORE="$(g "$DECOY" rev-parse HEAD):$(g "$DECOY" for-each-ref --format='%(refname)%(objectname)' | sort | md5sum)"
+
+  DEPLOY_REF_GATE_CHILD=1 GIT_DIR="$DECOY/.git" bash "${BASH_SOURCE[0]}" >/dev/null 2>&1 \
+    || fail "suite fails when GIT_DIR is inherited — the hook environment breaks it"
+
+  AFTER="$(g "$DECOY" rev-parse HEAD):$(g "$DECOY" for-each-ref --format='%(refname)%(objectname)' | sort | md5sum)"
+  [ "$BEFORE" = "$AFTER" ] \
+    || fail "fixtures WROTE to the repo named by an inherited GIT_DIR — isolation is broken"
+  ok "an inherited GIT_DIR cannot retarget the fixtures (probe verified to bite)"
+fi
 
 echo ""
 echo "$PASSED passed"
