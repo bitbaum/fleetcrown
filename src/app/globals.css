@@ -67,6 +67,14 @@
   --color-accent-text:     var(--accent-text);
   --color-accent-warm:       var(--accent-warm);
   --color-accent-warm-hover: var(--accent-warm-hover);
+  /* The label colour for text sitting ON accent-warm. White on the warm
+     accent is ~3.0:1 — below the 4.5 AA floor — which put "Launch agent",
+     the fleet's most-used button, under it. Near-black is ~6:1. Paired with
+     the background it belongs to so nobody has to remember which ink an
+     orange button takes. Mirrors --on-accent in @fleet/design-tokens v1.1.0
+     (SSOT for Solon and OrangeCat); FleetCrown still declares its ramp
+     locally, so the value is kept in step by hand. */
+  --color-on-accent:         var(--on-accent);
   /* Status tokens — the only chromatic colors in the system */
   --color-status-positive:        var(--status-positive);
   --color-status-positive-subtle: var(--status-positive-subtle);
@@ -222,6 +230,7 @@
   /* Warm brand accent (x.ai/grok #ff5c00) — used sparingly on primary CTAs +
      focus rings. Darker hover for the light theme. SSOT for warm = here. */
   --accent-warm:       oklch(0.66 0.21 41);
+  --on-accent:         oklch(0.18 0 0);
   --accent-warm-hover: oklch(0.60 0.21 40);
   /* Status — light */
   --status-positive:        oklch(0.44 0.16 145);
@@ -267,14 +276,26 @@
   --sidebar-accent-foreground: oklch(0.92 0 0);
   --sidebar-border: oklch(1 0 0 / 8%);
   --sidebar-ring: oklch(0.92 0 0 / 30%);
-  /* Semantic tokens — dark */
+  /* Semantic tokens — dark
+     ─────────────────────────────────────────────────────────────────────────
+     Every step clears WCAG AA (4.5:1) against the DARKEST surface the app
+     paints on — surface-overlay at 0.16 — not merely against the page. A ramp
+     tuned to the page background silently fails on every card and drawer
+     stacked above it, which is exactly what happened here.
+
+     Measured before this: tertiary rendered #5d5d5d = 2.95–3.17:1 and muted
+     #717171 = 3.98–4.28:1. Between them they coloured the project tab strip
+     (Profile / Chat / Terminal), the command-palette search, the footer,
+     Settings, Sign out, Refresh and Prompt library — the app's navigation,
+     not its decoration.
+
+     The steps stay ~0.07 apart so the hierarchy still reads; the whole ramp
+     simply moves up into the range a near-black surface leaves usable. On the
+     worst surface: secondary 8.0:1, muted 6.0:1, tertiary 4.9:1. */
   --text-primary:      oklch(0.92 0 0);
-  --text-secondary:    oklch(0.65 0 0);
-  --text-tertiary:     oklch(0.48 0 0);
-  /* 0.55 (was 0.34) — 0.34 on the 0.07 page surface was ~2:1 contrast, an
-     unreadable WCAG failure for text that carries real copy (pricing
-     features, doc metadata). Keep "muted" muted, but keep it legible. */
-  --text-muted:        oklch(0.55 0 0);
+  --text-secondary:    oklch(0.72 0 0);
+  --text-muted:        oklch(0.65 0 0);
+  --text-tertiary:     oklch(0.59 0 0);
   --text-inverted:     oklch(0.07 0 0);
   --surface-page:      oklch(0.07 0 0);
   --surface-base:      oklch(0.10 0 0);
@@ -2324,7 +2345,7 @@
     /* Disabled is NEUTRAL (muted surface), not a faded orange: opacity-40 of the
        warm accent read as a washed-out "is this clickable?" button. A neutral
        disabled state makes the enabled orange CTA unmistakable. */
-    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-accent-warm px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-warm-hover active:opacity-90 disabled:bg-surface-raised disabled:text-text-muted disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-accent-warm px-4 py-2 text-sm font-medium text-on-accent transition-colors hover:bg-accent-warm-hover active:opacity-90 disabled:bg-surface-raised disabled:text-text-muted disabled:cursor-not-allowed;
   }
   .ui-btn-secondary {
     @apply inline-flex items-center justify-center gap-2 rounded-lg border border-border-default px-4 py-2 text-sm font-medium text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary disabled:opacity-40;
@@ -2435,7 +2456,7 @@
   }
   /* Compact ready-banner action buttons (py-2.5 vs py-3 for lg) */
   .ui-btn-ready-primary {
-    @apply inline-flex items-center rounded-lg bg-accent-warm px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-warm-hover;
+    @apply inline-flex items-center rounded-lg bg-accent-warm px-3 py-2 text-sm font-medium text-on-accent transition-colors hover:bg-accent-warm-hover;
   }
   /* "Next best" primary CTA — full-width, warm-tinted (soft x.ai accent, not a
      solid slab). Extracted from inline utilities so the recurring pattern lives
