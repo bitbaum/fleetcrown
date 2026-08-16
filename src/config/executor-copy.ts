@@ -1,4 +1,5 @@
 import { APP_NAME } from "@/config/brand";
+import type { BuilderChannel } from "@/lib/constants/statuses";
 
 /**
  * SSOT for user-facing execution copy.
@@ -31,6 +32,23 @@ export const EXECUTOR_COPY = {
 
   /** Cloud = hosted builder channel (private beta until per-tenant sandboxes ship) */
   cloud: "Cloud",
+
+  /**
+   * The builder named MID-SENTENCE — "Running now on this computer".
+   *
+   * Deliberately separate from `thisComputer` / `cloud` above, which are
+   * standalone chip labels and title-cased; dropping those into a sentence
+   * reads as "Running now on This computer". Same concept, different
+   * grammatical position, so both spellings are legitimate.
+   *
+   * Typed Record<BuilderChannel, …> on purpose: a new channel cannot ship
+   * without a name, because the alternative is a dispatch label that silently
+   * says nothing about where the work went — which is the whole gap this closes.
+   */
+  ranOn: {
+    local: "this computer",
+    cloud: "the cloud builder",
+  } as Record<BuilderChannel, string>,
 
   desktopApp: `${APP_NAME} desktop`,
 
