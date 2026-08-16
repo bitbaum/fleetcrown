@@ -1,6 +1,7 @@
 export * from "./users";
 export * from "./notification-preferences";
 export * from "./orgs";
+export * from "./agent-sessions";
 export * from "./agent-tokens";
 export * from "./ai-spend";
 export * from "./entities";

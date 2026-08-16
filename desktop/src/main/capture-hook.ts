@@ -36,6 +36,7 @@ import { loadToken, tokenPath } from './token-store'
 const CLAUDE_DIR = join(homedir(), '.claude')
 const HOOKS_DIR = join(CLAUDE_DIR, 'hooks')
 const HOOK_SCRIPT = join(HOOKS_DIR, 'fleetcrown-capture.sh')
+const END_HOOK_SCRIPT = join(HOOKS_DIR, 'fleetcrown-session-end.sh')
 const SETTINGS_FILE = join(CLAUDE_DIR, 'settings.json')
 
 // Pre-runner capture hook (June 2026 era): posted to localhost:3000, where
@@ -49,10 +50,16 @@ function baseUrl(): string {
   return ((process.env.FLEETCROWN_WEB_URL || '').trim() || APP_URL).replace(/\/$/, '')
 }
 
-function hookScriptBody(): string {
+/**
+ * Both hooks are the same six lines pointed at different endpoints: drain
+ * stdin, forward it verbatim, never block the user. Generated from one
+ * template so the capture and session-end scripts cannot drift in the parts
+ * that matter (timeout, backgrounding, exit 0, token read at call time).
+ */
+function hookScriptBody(event: string, endpoint: string, purpose: string): string {
   return `#!/usr/bin/env bash
-# FleetCrown UserPromptSubmit hook — managed by Fleet Runner (capture-hook.ts).
-# Forwards directly-typed Claude prompts to the FleetCrown activity ledger.
+# FleetCrown ${event} hook — managed by Fleet Runner (capture-hook.ts).
+# ${purpose}
 # Do not edit; Fleet Runner rewrites this file on startup.
 TOKEN_FILE="${tokenPath}"
 payload="$(cat)"
@@ -61,7 +68,7 @@ payload="$(cat)"
     -H "Authorization: Bearer $(cat "$TOKEN_FILE")" \\
     -H "Content-Type: application/json" \\
     --data-binary @- \\
-    "${baseUrl()}/api/activity/capture" >/dev/null 2>&1 & )
+    "${baseUrl()}${endpoint}" >/dev/null 2>&1 & )
 exit 0
 `
 }
@@ -77,13 +84,33 @@ export function ensureCaptureHook(): void {
   if (!loadToken()) return
   try {
     if (!existsSync(HOOKS_DIR)) mkdirSync(HOOKS_DIR, { recursive: true })
-    const body = hookScriptBody()
+    const body = hookScriptBody(
+      'UserPromptSubmit',
+      '/api/activity/capture',
+      'Forwards directly-typed Claude prompts to the FleetCrown activity ledger,',
+    )
     const current = existsSync(HOOK_SCRIPT) ? readFileSync(HOOK_SCRIPT, 'utf8') : null
     if (current !== body) {
       writeFileSync(HOOK_SCRIPT, body, 'utf8')
       console.log(`[capture-hook] wrote ${HOOK_SCRIPT}`)
     }
     chmodSync(HOOK_SCRIPT, 0o755)
+
+    // The closing edge of the same turn. Without it a session reports that it
+    // STARTED work and never that it stopped, so Control would show every
+    // project that ever ran an agent as permanently "working" until the TTL
+    // expired — a lie in the opposite direction from the "0 working" it fixes.
+    const endBody = hookScriptBody(
+      'Stop',
+      '/api/activity/session-end',
+      'Closes the agent turn opened by the capture hook, so Control can show what is working NOW,',
+    )
+    const endCurrent = existsSync(END_HOOK_SCRIPT) ? readFileSync(END_HOOK_SCRIPT, 'utf8') : null
+    if (endCurrent !== endBody) {
+      writeFileSync(END_HOOK_SCRIPT, endBody, 'utf8')
+      console.log(`[capture-hook] wrote ${END_HOOK_SCRIPT}`)
+    }
+    chmodSync(END_HOOK_SCRIPT, 0o755)
 
     let settings: Record<string, unknown> = {}
     if (existsSync(SETTINGS_FILE)) {
@@ -127,6 +154,24 @@ export function ensureCaptureHook(): void {
     if (changed) {
       hooks.UserPromptSubmit = entries
       settings.hooks = hooks
+    }
+
+    // Stop: append to whatever the user already runs there, never replace it.
+    // ~/.claude/settings.json is the user's file — this installer owns exactly
+    // its own two commands and nothing else in it.
+    let stopEntries: HookEntry[] = Array.isArray(hooks.Stop) ? (hooks.Stop as HookEntry[]) : []
+    const endRegistered = stopEntries.some((entry) =>
+      (entry.hooks ?? []).some((h) => typeof h.command === 'string' && h.command.includes('fleetcrown-session-end.sh')),
+    )
+    if (!endRegistered) {
+      stopEntries = [...stopEntries, { hooks: [{ type: 'command', command: END_HOOK_SCRIPT }] }]
+      hooks.Stop = stopEntries
+      settings.hooks = hooks
+      changed = true
+      console.log('[capture-hook] registered Stop hook in ~/.claude/settings.json')
+    }
+
+    if (changed) {
       writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2) + '\n', 'utf8')
     }
   } catch (e) {

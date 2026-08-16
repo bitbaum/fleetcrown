@@ -14,6 +14,9 @@ import {
   isProjectTabOpen,
   isCurrentPromptStale,
 } from "@/components/control/control-presenter";
+// From lib/, NOT db/queries — importing the query module would pull in the
+// database connection and fail this suite at import time with no DATABASE_URL.
+import { bucketTurnsByProject } from "@/lib/agent-turns";
 import type { ProjectState } from "@/lib/control-types";
 
 function stubProject(overrides: Partial<ProjectState> & Pick<ProjectState, "tab">): ProjectState {
@@ -38,8 +41,18 @@ function stubProject(overrides: Partial<ProjectState> & Pick<ProjectState, "tab"
     recentCustomPrompts: [],
     recentActivity: [],
     recentOutcomes: [],
+    liveAgentTurns: null,
     latestOrchestrationRun: null,
     ...overrides,
+  };
+}
+
+/** An agent that reported a turn start `minutesAgo` and no end. */
+function openTurn(minutesAgo: number, count = 1) {
+  return {
+    count,
+    startedAt: new Date(Date.now() - minutesAgo * 60_000).toISOString(),
+    cwds: ["/tmp/proj"],
   };
 }
 
@@ -412,6 +425,85 @@ function runTests(): void {
       executionStall: { stalled: false, stalledCount: 0, oldestSeconds: 0, tabs: [] },
     });
     assert(pulse.key === "building", "healthy execution with a working agent is Building");
+  });
+
+  // ── Hook-reported agent turns ───────────────────────────────────────────
+  // The regression: Control read "0 working · 21 idle" while eight agents were
+  // mid-task, because every "working" signal required FleetCrown to have
+  // dispatched the run or the runner to recognise a zellij tab name. A session
+  // started any other way was structurally invisible.
+
+  check("an open agent turn alone makes a project working", () => {
+    const state = getProjectDisplayState(
+      stubProject({ tab: "petvity", liveAgentTurns: openTurn(3) }),
+      [],
+      Math.floor(Date.now() / 1000),
+    );
+    assert(state.isRunning, "an agent that reported a turn start is working");
+    assert(state.tone === "running", `expected tone running, got ${state.tone}`);
+  });
+
+  check("no open turn leaves the old behaviour untouched", () => {
+    const state = getProjectDisplayState(
+      stubProject({ tab: "petvity", liveAgentTurns: null }),
+      [],
+      Math.floor(Date.now() / 1000),
+    );
+    assert(!state.isRunning, "no turn, no dispatch, no tab → not running");
+    assert(state.tone === "idle", `expected tone idle, got ${state.tone}`);
+  });
+
+  check("a count of 0 is not a live turn", () => {
+    // The bucket only ever exists with count >= 1, but a future caller that
+    // sends an empty bucket must not light the card up.
+    const state = getProjectDisplayState(
+      stubProject({ tab: "petvity", liveAgentTurns: { count: 0, startedAt: new Date().toISOString(), cwds: [] } }),
+      [],
+      Math.floor(Date.now() / 1000),
+    );
+    assert(!state.isRunning, "count 0 must not read as working");
+  });
+
+  check("an open turn outranks a recent ready stamp", () => {
+    // readyAt says the agent finished a turn; a new turn means it is working
+    // again. Without this the card sits on "Ready" through the whole next turn
+    // and the project lands in the awaiting-you bucket while an agent edits it.
+    const nowS = Math.floor(Date.now() / 1000);
+    const state = getProjectDisplayState(
+      stubProject({ tab: "vitareba", readyAt: nowS - 5, liveAgentTurns: openTurn(1) }),
+      [],
+      nowS,
+    );
+    assert(!state.isReady, "a started turn cancels the ready state");
+    assert(state.tone === "running", `expected running, got ${state.tone}`);
+  });
+
+  check("a ready stamp still wins when no turn is open", () => {
+    const nowS = Math.floor(Date.now() / 1000);
+    const state = getProjectDisplayState(
+      stubProject({ tab: "vitareba", readyAt: nowS - 5, liveAgentTurns: null }),
+      [],
+      nowS,
+    );
+    assert(state.isReady, "ready must survive when nothing is running");
+  });
+
+  check("bucketTurnsByProject: counts, oldest start, deduped cwds", () => {
+    const iso = (m: number) => new Date(Date.UTC(2026, 7, 16, 12, m));
+    const bucketed = bucketTurnsByProject([
+      { projectKey: "fleetcrown", cwd: "/dev/fleetcrown/.claude/worktrees/a", startedAt: iso(30) },
+      { projectKey: "fleetcrown", cwd: "/dev/fleetcrown/.claude/worktrees/b", startedAt: iso(10) },
+      { projectKey: "fleetcrown", cwd: "/dev/fleetcrown/.claude/worktrees/a", startedAt: iso(50) },
+      { projectKey: "petvity", cwd: "/dev/petvity", startedAt: iso(20) },
+    ]);
+    assert(bucketed.fleetcrown.count === 3, "three open turns on fleetcrown");
+    assert(
+      bucketed.fleetcrown.startedAt === iso(10).toISOString(),
+      "the OLDEST open turn is reported, not the newest",
+    );
+    assert(bucketed.fleetcrown.cwds.length === 2, "repeated cwds are deduped");
+    assert(bucketed.petvity.count === 1, "petvity counted separately");
+    assert(Object.keys(bucketed).length === 2, "no phantom projects");
   });
 
   console.log(`\n${passed}/${passed} passed`);
