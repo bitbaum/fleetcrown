@@ -372,12 +372,14 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
   // Project-aware channel affinity: a dirPath-only project (no cloneable repo)
   // can only execute on the machine that has the directory — pin the queued
   // command to "local" so the cloud builder can never claim it and invent an
-  // empty workspace (the 2026-07-14 BiasLens misroute). Cloneable projects
-  // keep the executor's own default (any/cloud).
-  const pinnedChannel = projectPreferredChannel(dbMatch, null);
+  // empty workspace (the 2026-07-14 BiasLens misroute). Cloneable projects take
+  // DEFAULT_BUILDER_CHANNEL. This used to fall back to `null`, which reads as
+  // "any/cloud" but actually means "every runner may claim it" — so the desktop
+  // routinely won the race and a closed lid killed the dispatch.
+  const pinnedChannel = projectPreferredChannel(dbMatch);
 
   const result = await executeInject(
-    { tab: effectiveTab, prompt, promptKey, promptLabel, adapter: eventAdapter, model: eventModel, projectId, projectKey: canonical, runId, dir: projectPath, projectBusy, ...(pinnedChannel ? { channel: pinnedChannel } : {}) },
+    { tab: effectiveTab, prompt, promptKey, promptLabel, adapter: eventAdapter, model: eventModel, projectId, projectKey: canonical, runId, dir: projectPath, projectBusy, channel: pinnedChannel },
     userId,
     injectFn ?? (() => Promise.reject(new Error("Runtime unavailable"))),
   );

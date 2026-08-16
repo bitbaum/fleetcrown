@@ -179,7 +179,7 @@ export async function POST(req: NextRequest) {
   // Project-aware default: a dirPath-only project (no cloneable repo) can only
   // execute where the directory exists — pin it to the local runner instead of
   // letting the cloud builder invent an empty workspace (BiasLens, 2026-07-14).
-  const execution = await resolveQueuedExecution(userId, { defaultChannel: projectPreferredChannel(project, "cloud") });
+  const execution = await resolveQueuedExecution(userId, { defaultChannel: projectPreferredChannel(project) });
   if (!execution.ok) {
     return NextResponse.json(executionAccessErrorBody(execution), { status: execution.status });
   }

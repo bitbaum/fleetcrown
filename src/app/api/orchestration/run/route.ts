@@ -139,7 +139,7 @@ export async function POST(req: NextRequest) {
       ...(await getUserProjects(userId).catch(() => [])),
       ...(await getOrgProjects(userId).catch(() => [])),
     ].find((p) => p.name.toLowerCase() === request.projectKey.toLowerCase());
-    const execution = await resolveQueuedExecution(userId, { defaultChannel: projectPreferredChannel(registryMatch, "cloud") });
+    const execution = await resolveQueuedExecution(userId, { defaultChannel: projectPreferredChannel(registryMatch) });
     if (!execution.ok) {
       return NextResponse.json(executionAccessErrorBody(execution), { status: execution.status });
     }
@@ -326,7 +326,7 @@ export async function POST(req: NextRequest) {
       ...(await getUserProjects(userId).catch(() => [])),
       ...(await getOrgProjects(userId).catch(() => [])),
     ].find((p) => p.name.toLowerCase() === request.projectKey.toLowerCase());
-    const pinnedChannel = projectPreferredChannel(busyMatch, null);
+    const pinnedChannel = projectPreferredChannel(busyMatch);
 
     // Phase 2 of worktree-per-agent: same-project PARALLEL dispatch. With
     // checkout isolation in place (each run gets its own git worktree), the
@@ -356,7 +356,7 @@ export async function POST(req: NextRequest) {
         `${resolvedPromptBody}\n\n## Exit contract (operator requirement)\nBefore stopping, create ${sessionFileRef}.\n${sessionHandoffContract(sessionFileRef)}`;
       const commandId = await enqueueDispatchCommand(userId, {
         tab: runTab,
-        ...(pinnedChannel ? { channel: pinnedChannel } : {}),
+        channel: pinnedChannel,
         dir: request.projectPath,
         agent: request.adapter,
         prompt: parallelPrompt,
@@ -373,7 +373,7 @@ export async function POST(req: NextRequest) {
 
     const commandId = await enqueueDispatchCommand(userId, {
       tab: request.projectKey,
-      ...(pinnedChannel ? { channel: pinnedChannel } : {}),
+      channel: pinnedChannel,
       dir: request.projectPath,
       agent: request.adapter,
       prompt: resolvedPromptBody,
