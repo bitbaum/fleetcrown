@@ -15,13 +15,19 @@ import {
 } from "@/config/brand";
 import { ROUTES } from "@/config/auth";
 import { isFleetRunnerRequest } from "@/lib/fleet-runner";
+import { landingRedirect } from "@/lib/landing-destination";
 
-export default async function LandingPage() {
+export default async function LandingPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   if ((await getUserCount()) === 0) redirect("/setup");
 
   // Inside the desktop app the visitor already has the runner — pitching them
   // a download is circular. Drop every "Download Fleet Runner" CTA in that case.
   const insideRunner = await isFleetRunnerRequest();
+  const params = await searchParams;
 
   const session = await auth();
   // Onboarding is an unfinished flow — keep the redirect so the user finishes it.
@@ -36,6 +42,13 @@ export default async function LandingPage() {
     if (!done) redirect(ROUTES.ONBOARDING);
     signedIn = true;
   }
+
+  // Fleet Runner launches at OS startup and loads APP_URL with no path, so a
+  // signed-in operator's first sight of the day was the marketing hero — a
+  // pitch aimed at a stranger, which suggests nothing to do and costs a click
+  // before any agent can be launched. See landingRedirect for the full rule.
+  const elsewhere = landingRedirect({ insideRunner, signedIn, params });
+  if (elsewhere) redirect(elsewhere);
 
   // Real fleet snapshot for the hero console — the OWNER's actual fleet (founder
   // dogfooding), public-safe fields only. Never fabricated. Falls back to an
