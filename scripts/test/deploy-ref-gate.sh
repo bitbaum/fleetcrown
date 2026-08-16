@@ -31,6 +31,22 @@
 #   4. Identity and hook suppression come from ENV, never `git config` — a
 #      config write is what corrupted the shared config, and env cannot leak.
 #   5. $TMP is refused if it sits inside a git repo at all.
+#   6. The ambient git environment is unset (below) — see why.
+#
+# ── AND IT INHERITED A HANDLE TO THE REAL REPO ───────────────────────────────
+# The husky pre-push hook exports GIT_DIR (for a worktree push, e.g.
+# `.git/worktrees/<name>`). An explicit GIT_DIR is not a search path, so
+# GIT_CEILING_DIRECTORIES does not constrain it — and `g` could not catch it
+# either: with GIT_DIR set and no work tree, `git -C <fixture> rev-parse
+# --show-toplevel` answers `<fixture>`, matching the assertion exactly while
+# every object and ref operation lands in the REAL repo. Guard 5 was the only
+# thing left standing, which is why pushing from a worktree failed with the
+# confusing "temp dir is inside a git repo": with GIT_DIR set, an empty
+# mktemp dir reads as a repo root.
+#
+# So the git environment is cleared before anything else runs. This is not a
+# workaround for guard 5 — it removes the inherited handle that made guards 1-4
+# unable to see the danger.
 #
 # Builds throwaway repos in a temp dir; touches nothing real, hits no network.
 # Run: npm run test:deploy-ref-gate
@@ -48,21 +64,10 @@ TMP="$(mktemp -d)"
 [ -n "$TMP" ] && [ -d "$TMP" ] || { echo "  ✗ mktemp -d produced no usable dir" >&2; exit 1; }
 trap 'rm -rf "$TMP"' EXIT
 
-# A temp dir INSIDE a repo would put every fixture within that repo's reach.
-# Checked rather than assumed: TMPDIR is inherited, and some runners point it at
-# the workspace.
-if git -C "$TMP" rev-parse --show-toplevel >/dev/null 2>&1; then
-  fail "refusing to run: temp dir '$TMP' is inside a git repo ($(git -C "$TMP" rev-parse --show-toplevel))"
-fi
-
-# The structural guarantee. Git will not search for a repository above $TMP, so
-# a missing/broken fixture errors instead of silently retargeting a real repo.
-export GIT_CEILING_DIRECTORIES="$TMP"
-# Identity + hook suppression WITHOUT `git config` — nothing here can write to a
-# real config file, and no global config is read.
-export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null
-export GIT_AUTHOR_NAME=fixture GIT_AUTHOR_EMAIL=fixture@invalid
-export GIT_COMMITTER_NAME=fixture GIT_COMMITTER_EMAIL=fixture@invalid
+# Guards 1-5 above live in one file, shared with not-behind-gate.sh — they had
+# already drifted apart once.
+# shellcheck source=lib/git-fixture-env.sh
+source "$SCRIPT_DIR/lib/git-fixture-env.sh"
 
 # Assert <dir> is its OWN repo at exactly that path, then run git there.
 # Every git invocation in this file goes through this. `--show-toplevel` is
@@ -205,6 +210,28 @@ if ( g "$ENCLOSING/inner/not-a-repo" rev-parse HEAD ) >/dev/null 2>&1; then
   fail "g() walked UP into '$ENCLOSING' instead of refusing — isolation is broken"
 fi
 ok "git calls refuse a target that is not the fixture repo (probe verified to bite)"
+
+# ── 9. an inherited GIT_DIR (the hook environment) cannot retarget the suite ──
+# Run the whole suite again with GIT_DIR pointing at a decoy repo, exactly as
+# the pre-push hook sets it, and assert two things: the run still passes, and
+# the decoy is byte-for-byte unchanged. Without the unset at the top of this
+# file the decoy's HEAD moves — the fixtures commit into it.
+if [ -z "${DEPLOY_REF_GATE_CHILD:-}" ]; then
+  DECOY="$TMP/decoy"
+  git init -q "$DECOY" || fail "could not init the decoy repo"
+  echo decoy > "$DECOY/f"
+  g "$DECOY" add -A
+  g "$DECOY" commit -qm "decoy"
+  BEFORE="$(g "$DECOY" rev-parse HEAD):$(g "$DECOY" for-each-ref --format='%(refname)%(objectname)' | sort | md5sum)"
+
+  DEPLOY_REF_GATE_CHILD=1 GIT_DIR="$DECOY/.git" bash "${BASH_SOURCE[0]}" >/dev/null 2>&1 \
+    || fail "suite fails when GIT_DIR is inherited — the hook environment breaks it"
+
+  AFTER="$(g "$DECOY" rev-parse HEAD):$(g "$DECOY" for-each-ref --format='%(refname)%(objectname)' | sort | md5sum)"
+  [ "$BEFORE" = "$AFTER" ] \
+    || fail "fixtures WROTE to the repo named by an inherited GIT_DIR — isolation is broken"
+  ok "an inherited GIT_DIR cannot retarget the fixtures (probe verified to bite)"
+fi
 
 echo ""
 echo "$PASSED passed"

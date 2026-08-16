@@ -60,10 +60,17 @@ REPO="$TMP/repo"
 #      is about to mutate really is the fixture. Checked per command, not once
 #      at setup, because the property that matters is "this command writes
 #      here", not "this path looked right earlier".
-export GIT_CEILING_DIRECTORIES="$TMP"
-export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null
-export GIT_AUTHOR_NAME=fixture GIT_AUTHOR_EMAIL=fixture@invalid
-export GIT_COMMITTER_NAME=fixture GIT_COMMITTER_EMAIL=fixture@invalid
+#   4. The ambient git environment is cleared. The pre-push hook exports
+#      GIT_DIR, which is not a search path — so defence 1 does not constrain it
+#      and g() cannot see it: git answers with the fixture's own path while
+#      writing into the real repo. This suite's own probe at the bottom caught
+#      exactly that, from the hook, on 2026-08-16.
+#
+# All four now come from one file, shared with deploy-ref-gate.sh, because the
+# two copies had already drifted apart — each hardened against what its own
+# incident taught it, neither against the other's.
+# shellcheck source=lib/git-fixture-env.sh
+source "$SCRIPT_DIR/lib/git-fixture-env.sh"
 
 git init -q "$REPO"
 

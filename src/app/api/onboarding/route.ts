@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionUserId } from "@/lib/session";
 import { getUserById, updateUser } from "@/db/queries/users";
+import { toClientUser } from "@/lib/user-client-view";
 import { isTeamInvitee } from "@/db/queries/orgs";
 import { getRuntimeSnapshot } from "@/db/queries/runtime-snapshots";
 import { getProjectStatesByUserId } from "@/db/queries/project-states";
@@ -79,9 +80,10 @@ export async function POST() {
   }
 
   if (isOnboardingComplete(user)) {
-    return NextResponse.json({ ok: true, user });
+    return NextResponse.json({ ok: true, user: toClientUser(user) });
   }
 
   const updated = await updateUser(userId, { onboardedAt: new Date() });
-  return NextResponse.json({ ok: true, user: updated });
+  if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  return NextResponse.json({ ok: true, user: toClientUser(updated) });
 }
