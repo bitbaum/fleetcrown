@@ -1,27 +1,62 @@
 import { selfTelegramTarget, sendTelegramMessage } from "@/lib/actions/telegram-send";
 import { logDebug } from "@/db/queries/debug-logs";
 import { formatRunCloseMessage } from "@/lib/orchestration/notify-close-format";
+import { pushToUser } from "@/lib/push-fanout";
+import { PUSH_TAG_PREFIX } from "@/config/brand-storage";
 import type { OrchestrationRun } from "@/db/schema/orchestration-runs";
 
 /**
- * Chat-side close notification for runs dispatched from chat.
+ * Tell the operator their dispatch finished.
  *
- * A dispatch made from WhatsApp/Telegram (via Loki's fleet skill) has no
- * Control tab open watching it — without a push, the outcome lands nowhere the
- * operator is looking. Runs opt in via payload.notifyOnClose; UI dispatches
- * stay silent so the fleet's normal churn never spams the phone.
+ * A dispatch is an asynchronous job a human started and then walked away from —
+ * that is the whole point of having an always-on builder. Clicking Send and
+ * receiving nothing back is the failure users describe as "I don't know if it
+ * worked": the run completed, the result exists, and the only way to learn that
+ * was to still be staring at the tab.
+ *
+ * Every CONFIGURED channel is used, not the first one that happens to exist.
+ * This shipped Telegram-only and returned early when TELEGRAM_CHAT_ID was
+ * unset — which it is in production — so the notification silently went
+ * nowhere even for runs that had opted in. Web push is the channel that
+ * reaches the installed PWA on the operator's phone, which is exactly where
+ * someone who dispatched and pocketed the device is looking.
+ *
+ * Runs still opt in via payload.notifyOnClose, so autopilot churn stays silent;
+ * see markHumanInitiated for who sets it.
  *
  * Fire-and-forget by contract: called as `void notifyRunClosed(...)` from the
- * close choke points, must never throw or slow a close. The message logic
- * lives in notify-close-format.ts (pure, unit-tested).
+ * close choke points, must never throw or slow a close. The message logic lives
+ * in notify-close-format.ts (pure, unit-tested).
  */
 export async function notifyRunClosed(run: OrchestrationRun): Promise<void> {
   try {
     const message = formatRunCloseMessage(run);
     if (!message) return;
-    const target = selfTelegramTarget();
-    if (!target) return;
-    await sendTelegramMessage(target, message);
+
+    const [pushResult] = await Promise.all([
+      pushToUser(run.userId, {
+        title: `${run.projectKey} · ${run.outcome ?? "closed"}`,
+        body: message.split("\n").slice(1).join(" ").slice(0, 240) || "Run finished",
+        url: `/control?focus=${encodeURIComponent(run.projectKey)}`,
+        tag: `${PUSH_TAG_PREFIX}${run.projectKey}`,
+      }),
+      (async () => {
+        const target = selfTelegramTarget();
+        if (!target) return;
+        await sendTelegramMessage(target, message).catch(() => undefined);
+      })(),
+    ]);
+
+    // A run that opted into being announced and reached NOBODY is a product
+    // failure, not a no-op. Record it so the gap is discoverable from the logs
+    // instead of being inferred from the operator never hearing anything.
+    if (pushResult.sent === 0 && !selfTelegramTarget()) {
+      void logDebug({
+        source: "orchestration/notify-close",
+        level: "warn",
+        message: `run ${run.id} closed with no reachable channel (push: ${pushResult.reason ?? "none"}, telegram: unconfigured)`,
+      });
+    }
   } catch (e) {
     void logDebug({
       source: "orchestration/notify-close",

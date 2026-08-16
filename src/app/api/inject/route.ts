@@ -6,10 +6,11 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { ORCHESTRATION_ADAPTER_IDS } from "@/lib/orchestration";
-import { getApiUserId } from "@/lib/session";
+import { getApiActor } from "@/lib/session";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { logDebug } from "@/db/queries/debug-logs";
 import { injectPrompt } from "@/lib/inject-core";
+import { shouldAnnounceOnClose } from "@/lib/orchestration/notify-close-format";
 
 const InjectBody = z.object({
   tab:          z.string().min(1).max(80),
@@ -27,7 +28,8 @@ export async function POST(req: NextRequest) {
   if (dataOrResp instanceof NextResponse) return dataOrResp;
   const { tab, promptKey, customPrompt, adapter, runId, notifyOnClose } = dataOrResp;
 
-  const userId = await getApiUserId();
+  const actor = await getApiActor();
+  const userId = actor?.userId ?? null;
   if (!userId) {
     // Session-expiry / unauthenticated path. This is the most likely
     // server-side root cause of the "I sent something but it isn't here"
@@ -53,6 +55,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { status, body } = await injectPrompt({ tab, promptKey, customPrompt, adapter, runId, notifyOnClose }, userId);
+  // A person clicked Send and may well close the tab — announce the outcome.
+  // A Bearer token is a runner or a scheduled loop, and announcing every one of
+  // those is what "UI dispatches stay silent" was originally protecting against.
+  // An explicit value in the body still wins, so a caller can opt either way.
+  const announce = shouldAnnounceOnClose(actor, notifyOnClose);
+
+  const { status, body } = await injectPrompt(
+    { tab, promptKey, customPrompt, adapter, runId, notifyOnClose: announce },
+    userId,
+  );
   return NextResponse.json(body, { status });
 }
