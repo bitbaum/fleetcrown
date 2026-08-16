@@ -31,11 +31,11 @@ import { getUserProjects, getOrgProjects } from "@/db/queries/user-projects";
 import { getProjectContext } from "@/db/queries/project-context";
 import { buildOperatorContextSection } from "@/lib/dispatch-operator-context";
 import { enqueueDispatchCommand } from "@/db/queries/pending-commands";
-import { getRunnerConnected } from "@/db/queries/runner-presence";
+import { getBuilderPresence } from "@/db/queries/runner-presence";
 import { logDebug } from "@/db/queries/debug-logs";
 import { APP_SLUG } from "@/config/brand";
 import { writePromptQueueMirror } from "@/lib/prompt-queue-mirror";
-import { executionAccessErrorBody, resolveQueuedExecution, projectPreferredChannel } from "@/lib/execution-access";
+import { executionAccessErrorBody, resolveQueuedExecution, pickDispatchChannel } from "@/lib/execution-access";
 import { workspaceIdFor } from "@/lib/agent-execution/ownership";
 
 /** Same-project parallel dispatch (phase 2 of worktree-per-agent): when a
@@ -139,7 +139,7 @@ export async function POST(req: NextRequest) {
       ...(await getUserProjects(userId).catch(() => [])),
       ...(await getOrgProjects(userId).catch(() => [])),
     ].find((p) => p.name.toLowerCase() === request.projectKey.toLowerCase());
-    const execution = await resolveQueuedExecution(userId, { defaultChannel: projectPreferredChannel(registryMatch) });
+    const execution = await resolveQueuedExecution(userId, { project: registryMatch });
     if (!execution.ok) {
       return NextResponse.json(executionAccessErrorBody(execution), { status: execution.status });
     }
@@ -319,14 +319,16 @@ export async function POST(req: NextRequest) {
   // detached worker (no shared tab/checkout) → not gated. Fail open on DB hiccup.
   if (TAB_ADAPTERS && TRACKABLE_INTENTS
       && (await isProjectBusy(userId, request.projectKey, { excludeRunId: trackedRunId ?? undefined }).catch(() => false))) {
-    const runnerConnected = await getRunnerConnected(userId);
-    // Same project-aware pinning as the cloud branch: a dirPath-only project
-    // must not be claimable by a builder that can't materialize its workspace.
+    // Route the queued row the same way the live branch routes: to whoever is
+    // actually online, preferring the operator's own machine, with a
+    // dirPath-only project still locked to the builder that can materialize it.
+    const presence = await getBuilderPresence(userId).catch(() => ({ cloud: false, local: false, any: false }));
+    const runnerConnected = presence.any;
     const busyMatch = [
       ...(await getUserProjects(userId).catch(() => [])),
       ...(await getOrgProjects(userId).catch(() => [])),
     ].find((p) => p.name.toLowerCase() === request.projectKey.toLowerCase());
-    const pinnedChannel = projectPreferredChannel(busyMatch);
+    const pinnedChannel = pickDispatchChannel(busyMatch, presence);
 
     // Phase 2 of worktree-per-agent: same-project PARALLEL dispatch. With
     // checkout isolation in place (each run gets its own git worktree), the

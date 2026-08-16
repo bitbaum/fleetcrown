@@ -16,7 +16,8 @@ import { isRuntimeAvailable } from "@/lib/runtime";
 import { ORCH_STATE } from "@/lib/orchestration/contract";
 import { workspaceIdFor } from "@/lib/agent-execution/ownership";
 import { executeInject } from "@/lib/executor";
-import { projectPreferredChannel } from "@/lib/execution-access";
+import { pickDispatchChannel } from "@/lib/execution-access";
+import { getBuilderPresence } from "@/db/queries/runner-presence";
 import { createOrchestrationEvent, createOrchestrationEventOnce } from "@/db/queries/orchestration-events";
 import { createOrchestrationRun, isProjectBusy } from "@/db/queries/orchestration-runs";
 import { emitRunEvent } from "@/db/queries/run-events";
@@ -369,14 +370,15 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
   const projectBusy = !lifecycleIntent
     && (await isProjectBusy(userId, canonical, { excludeRunId: runId }).catch(() => false));
 
-  // Project-aware channel affinity: a dirPath-only project (no cloneable repo)
-  // can only execute on the machine that has the directory — pin the queued
-  // command to "local" so the cloud builder can never claim it and invent an
-  // empty workspace (the 2026-07-14 BiasLens misroute). Cloneable projects take
-  // DEFAULT_BUILDER_CHANNEL. This used to fall back to `null`, which reads as
-  // "any/cloud" but actually means "every runner may claim it" — so the desktop
-  // routinely won the race and a closed lid killed the dispatch.
-  const pinnedChannel = projectPreferredChannel(dbMatch);
+  // Name the builder that will run this. A command with no channel is claimable
+  // by EVERY runner at once, so leaving it open is a race the always-on box
+  // loses to whatever desktop is polling — and closing the lid then kills the
+  // work the desktop just claimed. Route to whoever is actually online,
+  // preferring the operator's own machine (their tree, their env, visible while
+  // it happens); a dirPath-only project stays locked to the builder that can
+  // materialize it at all (the 2026-07-14 BiasLens misroute).
+  const presence = await getBuilderPresence(userId).catch(() => ({ cloud: false, local: false, any: false }));
+  const pinnedChannel = pickDispatchChannel(dbMatch, presence);
 
   const result = await executeInject(
     { tab: effectiveTab, prompt, promptKey, promptLabel, adapter: eventAdapter, model: eventModel, projectId, projectKey: canonical, runId, dir: projectPath, projectBusy, channel: pinnedChannel },
