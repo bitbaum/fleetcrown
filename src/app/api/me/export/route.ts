@@ -14,7 +14,7 @@ import { requirePrivateApiAccess } from "@/lib/private-zone-api";
 import {
   ACCOUNT_EXPORT_FILENAME,
   buildExportManifest,
-  redactUserRow,
+  toExportUser,
 } from "@/lib/account-export";
 
 /**
@@ -23,8 +23,9 @@ import {
  *
  * PIN-gated (requirePrivateApiAccess) because the payload spans the private
  * zone: people, goals, habits, money, and the derived knowledge graph. All
- * reads are scoped by the session's userId; the users row is redacted via
- * redactUserRow (no credential hashes, no Stripe internals).
+ * reads are scoped by the session's userId; the users row is projected through
+ * toExportUser — the same schema-exhaustive allow-list `/api/me` uses, minus
+ * billing ids (see user-client-view.ts).
  */
 export async function GET() {
   const access = await requirePrivateApiAccess();
@@ -104,7 +105,7 @@ export async function GET() {
 
   const payload = {
     manifest: buildExportManifest(userId, sections),
-    user: userRows.map(redactUserRow),
+    user: userRows.map(toExportUser),
     preferences: prefs,
     notification_preferences: notifPrefs,
     beacon_settings: beacon,

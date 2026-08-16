@@ -1,12 +1,23 @@
-// Data controls: the account-export redaction (src/lib/account-export.ts) must
-// never leak credential hashes or Stripe internals into the downloaded JSON —
-// the manifest must state exactly what is excluded.
+// Data controls: the account export must never carry credential hashes, and the
+// manifest must state exactly what it withheld.
+//
+// The projection is no longer this module's own deny-list — it is toExportUser,
+// the same schema-exhaustive allow-list /api/me uses (scripts/test/user-client-view.ts
+// is what keeps that list honest as the schema grows). What this file checks is
+// the export-specific part: billing ids are dropped, everything else survives,
+// and the manifest cannot claim an exclusion it did not make.
 // Run: npx tsx scripts/test/account-export.ts
 import {
-  redactUserRow,
+  toExportUser,
   buildExportManifest,
   ACCOUNT_EXPORT_FILENAME,
 } from "@/lib/account-export";
+import {
+  USER_CLIENT_FIELDS,
+  USER_EXPORT_OMITTED_FIELDS,
+  USER_WITHHELD_FIELDS,
+} from "@/lib/user-client-view";
+import type { User } from "@/db/schema/users";
 
 let pass = 0;
 let fail = 0;
@@ -17,35 +28,77 @@ function ok(cond: boolean, label: string) {
 
 const userRow = {
   id: "u-1",
+  name: "G",
   email: "g@example.com",
+  emailVerified: null,
+  image: null,
   username: "g",
-  passwordHash: "bcrypt$secret",
-  privateZonePinHash: "bcrypt$pin",
+  isDefault: false,
+  onboardedAt: null,
+  orangecatActorId: null,
+  plan: "pro",
+  planStatus: "active",
   stripeCustomerId: "cus_123",
   stripeSubscriptionId: "sub_456",
-  plan: "pro",
+  planExpiresAt: null,
+  privateZonePinSetAt: new Date("2026-01-01"),
   fleetSettings: { a: 1 },
-};
+  createdAt: new Date("2026-01-01"),
+  updatedAt: new Date("2026-01-02"),
+  passwordHash: "bcrypt$secret",
+  privateZonePinHash: "scrypt$pin",
+} as unknown as User;
 
-const redacted = redactUserRow(userRow) as Record<string, unknown>;
+const exported = toExportUser(userRow) as Record<string, unknown>;
+const serialized = JSON.stringify(exported);
 
-ok(!("passwordHash" in redacted), "passwordHash stripped");
-ok(!("privateZonePinHash" in redacted), "privateZonePinHash stripped");
-ok(!("stripeCustomerId" in redacted), "stripeCustomerId stripped");
-ok(!("stripeSubscriptionId" in redacted), "stripeSubscriptionId stripped");
-ok(redacted.email === "g@example.com", "email kept");
-ok(redacted.plan === "pro", "plan kept");
-ok(JSON.stringify(redacted.fleetSettings) === JSON.stringify({ a: 1 }), "fleetSettings kept");
-// original object must be untouched (redaction copies, never mutates)
+// Secrets: withheld because they are secret, for every projection.
+for (const field of Object.keys(USER_WITHHELD_FIELDS)) {
+  ok(!(field in exported), `${field} absent from export`);
+}
+ok(!serialized.includes("bcrypt$secret"), "serialized export does not contain the password hash");
+ok(!serialized.includes("scrypt$pin"), "serialized export does not contain the PIN hash");
+
+// Billing ids: withheld from the export specifically.
+for (const field of USER_EXPORT_OMITTED_FIELDS) {
+  ok(!(field in exported), `${field} omitted from export`);
+}
+ok(!serialized.includes("cus_123"), "serialized export does not contain the Stripe customer id");
+
+// Everything else the owner may see must survive — an export that quietly drops
+// data fails its purpose (right of access) as surely as one that leaks.
+const omitted = new Set<string>(USER_EXPORT_OMITTED_FIELDS);
+for (const field of USER_CLIENT_FIELDS) {
+  if (omitted.has(field)) continue;
+  ok(field in exported, `${field} present in export`);
+}
+ok(exported.email === "g@example.com", "email kept");
+ok(exported.plan === "pro", "plan kept");
+ok(JSON.stringify(exported.fleetSettings) === JSON.stringify({ a: 1 }), "fleetSettings kept");
 ok(userRow.passwordHash === "bcrypt$secret", "input row not mutated");
 
+// The manifest is generated from the same lists, so it cannot describe an
+// exclusion that did not happen — assert the linkage, not a copy of the words.
 const manifest = buildExportManifest("u-1", ["a", "b"]);
 ok(manifest.user_id === "u-1", "manifest user_id");
 ok(Array.isArray(manifest.scope) && manifest.scope.length === 2, "manifest scope");
+for (const field of Object.keys(USER_WITHHELD_FIELDS)) {
+  ok(manifest.excluded.some((e) => e.includes(field)), `manifest names ${field} as excluded`);
+}
+for (const field of USER_EXPORT_OMITTED_FIELDS) {
+  ok(manifest.excluded.some((e) => e.includes(field)), `manifest names ${field} as excluded`);
+}
 ok(
-  manifest.excluded.some((e) => e.includes("PIN")) &&
-    manifest.excluded.some((e) => e.includes("Stripe")),
-  "manifest states exclusions",
+  manifest.excluded.every((line) =>
+    line
+      .split(":")
+      .slice(1)
+      .join(":")
+      .split(",")
+      .map((f) => f.trim())
+      .every((f) => !f || !(f in exported)),
+  ),
+  "every field the manifest claims to exclude really is absent",
 );
 ok(ACCOUNT_EXPORT_FILENAME.endsWith(".json"), "filename is json");
 

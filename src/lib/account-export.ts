@@ -1,29 +1,24 @@
 /**
  * Account-export helpers (data controls). Pure functions, unit-tested.
  *
- * The export must never leak secrets the user cannot already read in the UI:
- * password/PIN hashes and Stripe internals are stripped from the users row.
+ * This file used to carry its own REDACTED_USER_FIELDS deny-list — a second,
+ * independent answer to "which user columns may leave the server". Two answers
+ * to one question is one answer too many: a secret column added later would be
+ * withheld by `/api/me` (allow-list) and shipped by the export (deny-list that
+ * never heard of it). The projection now comes from the single classifier in
+ * `user-client-view.ts`, whose halves are exhaustive over the schema.
+ *
+ * The manifest's `excluded` lines are generated from that same source, so the
+ * document describing what was withheld cannot drift from what actually was.
  */
+import {
+  USER_EXPORT_OMITTED_FIELDS,
+  USER_WITHHELD_FIELDS,
+} from "@/lib/user-client-view";
 
 export const ACCOUNT_EXPORT_FILENAME = "fleetcrown-account-export.json";
 
-const REDACTED_USER_FIELDS = [
-  "passwordHash",
-  "privateZonePinHash",
-  "stripeCustomerId",
-  "stripeSubscriptionId",
-] as const;
-
-/** Strip credential hashes + billing internals from a users row. */
-export function redactUserRow<T extends Record<string, unknown>>(
-  user: T,
-): Omit<T, (typeof REDACTED_USER_FIELDS)[number]> {
-  const copy: Record<string, unknown> = { ...user };
-  for (const field of REDACTED_USER_FIELDS) {
-    delete copy[field];
-  }
-  return copy as Omit<T, (typeof REDACTED_USER_FIELDS)[number]>;
-}
+export { toExportUser } from "@/lib/user-client-view";
 
 export function buildExportManifest(userId: string, sections: string[]) {
   return {
@@ -32,8 +27,8 @@ export function buildExportManifest(userId: string, sections: string[]) {
     user_id: userId,
     scope: sections,
     excluded: [
-      "password and private-zone PIN hashes",
-      "Stripe customer/subscription ids",
+      `never leaves the server: ${Object.keys(USER_WITHHELD_FIELDS).join(", ")}`,
+      `withheld from this export: ${USER_EXPORT_OMITTED_FIELDS.join(", ")}`,
       "agent tokens and session tokens",
       "knowledge_embeddings vectors (chunk text and metadata are included)",
     ],

@@ -55,3 +55,30 @@ export function toClientUser(user: User): ClientUser {
   for (const field of USER_CLIENT_FIELDS) out[field] = user[field];
   return out as ClientUser;
 }
+
+/**
+ * Billing identifiers are safe for the owner's own page — Settings renders plan
+ * state from them — but the account export deliberately leaves them out: it is a
+ * file that gets saved, mailed and pasted, and a Stripe id is a handle into a
+ * third-party account rather than data the user authored.
+ *
+ * This is the only difference between the two projections. It is a *policy*
+ * narrowing of the allow-list, never a second answer to what is secret — that
+ * question has one answer, USER_WITHHELD_FIELDS, and both projections inherit it.
+ */
+export const USER_EXPORT_OMITTED_FIELDS = [
+  "stripeCustomerId",
+  "stripeSubscriptionId",
+] as const satisfies ReadonlyArray<(typeof USER_CLIENT_FIELDS)[number]>;
+
+export type ExportUser = Omit<ClientUser, (typeof USER_EXPORT_OMITTED_FIELDS)[number]>;
+
+/** Project a user row down to what may leave the server in a downloaded file. */
+export function toExportUser(user: User): ExportUser {
+  const omitted = new Set<string>(USER_EXPORT_OMITTED_FIELDS);
+  const out = {} as Record<string, unknown>;
+  for (const field of USER_CLIENT_FIELDS) {
+    if (!omitted.has(field)) out[field] = user[field];
+  }
+  return out as ExportUser;
+}
