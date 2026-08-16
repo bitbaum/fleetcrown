@@ -92,7 +92,8 @@
     "sync:agent-core": "tsx scripts/sync-agent-core.ts",
     "probe:models": "tsx scripts/probe-models.ts",
     "audit:responsive": "node scripts/test/responsive-audit.mjs",
-    "audit:mobile": "node scripts/test/mobile-interaction-audit.mjs"
+    "audit:mobile": "node scripts/test/mobile-interaction-audit.mjs",
+    "audit:contrast": "node scripts/test/contrast-audit.mjs"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.3",
