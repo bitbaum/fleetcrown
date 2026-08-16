@@ -1,5 +1,5 @@
 import type { RunnerChannel } from "@/db/schema/pending-commands";
-import type { BuilderChannelPresence } from "@/lib/builder-presence";
+import type { BuilderChannelPresence, BuilderDurability } from "@/lib/builder-presence";
 import { isCloneableGitUrl } from "@/lib/git-url";
 import { DEFAULT_BUILDER_CHANNEL } from "@/lib/constants/statuses";
 
@@ -22,6 +22,8 @@ export type ExecutionAccess = {
   userId: string;
   cloudBuilderAllowed: boolean;
   presence: BuilderChannelPresence;
+  /** Whether the operator's own machine is a dependable host right now. */
+  localDurability: BuilderDurability;
 };
 
 export type QueuedExecutionDecision =
@@ -40,17 +42,22 @@ export type QueuedExecutionDecision =
     };
 
 export async function getExecutionAccess(userId: string): Promise<ExecutionAccess> {
-  const [{ getUserById }, { getBuilderPresence }] = await Promise.all([
+  const [{ getUserById }, { getBuilderFitness }] = await Promise.all([
     import("@/db/queries/users"),
     import("@/db/queries/runner-presence"),
   ]);
-  const [user, presence] = await Promise.all([
+  const [user, fitness] = await Promise.all([
     getUserById(userId),
-    getBuilderPresence(userId).catch(() => ({ cloud: false, local: false, any: false })),
+    getBuilderFitness(userId).catch(() => ({
+      presence: { cloud: false, local: false, any: false },
+      // A failed read is not evidence about power. Unknown keeps routing on
+      // presence alone, exactly as it behaved before durability existed.
+      localDurability: "unknown" as const,
+    })),
   ]);
   const cloudBuilderAllowed =
     !!user?.isDefault || cloudBuilderAllowlist().has(userId);
-  return { userId, cloudBuilderAllowed, presence };
+  return { userId, cloudBuilderAllowed, presence: fitness.presence, localDurability: fitness.localDurability };
 }
 
 /**
@@ -87,7 +94,10 @@ export function decideQueuedExecution(
 ): QueuedExecutionDecision {
   const requested = options.requestedChannel ?? null;
   const defaultChannel =
-    options.defaultChannel ?? ("project" in options ? pickDispatchChannel(options.project, access.presence) : undefined);
+    options.defaultChannel
+    ?? ("project" in options
+      ? pickDispatchChannel(options.project, access.presence, access.localDurability)
+      : undefined);
 
   if (!access.cloudBuilderAllowed) {
     if (requested === "cloud") {
@@ -186,11 +196,27 @@ export function projectChannelLock(project: ProjectLocus): RunnerChannel | null 
 export function pickDispatchChannel(
   project: ProjectLocus,
   presence: BuilderChannelPresence,
+  localDurability: BuilderDurability = "unknown",
 ): RunnerChannel {
+  // 1. Physics. Only one machine can materialize this project.
   const lock = projectChannelLock(project);
   if (lock) return lock;
-  if (presence.local) return "local";
+
+  // 2. The operator's own machine, unless we KNOW it is running down a battery.
+  //    "presence.local" alone was the bug: it reads as "the operator is at the
+  //    laptop", but a dispatch sent from a phone while the laptop happens to be
+  //    awake lands on a machine nobody is watching and that sleeps the instant
+  //    the lid shuts. Battery is the honest proxy for "not a dependable host".
+  if (presence.local && localDurability !== "ephemeral") return "local";
+
+  // 3. Away, or the laptop is on battery — the always-on box.
   if (presence.cloud) return "cloud";
+
+  // 4. A battery-powered laptop still beats nothing. Reached only when the box
+  //    is unavailable, so the alternative here is queueing for a builder that
+  //    does not exist, not a safer host.
+  if (presence.local) return "local";
+
   return DEFAULT_BUILDER_CHANNEL;
 }
 

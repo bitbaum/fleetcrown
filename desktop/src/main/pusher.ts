@@ -34,6 +34,7 @@ import { join } from 'path'
 import { getZellijTabs } from '@/lib/zellij'
 import { getZellijPaneTabMap } from '@/lib/terminals/zellij'
 import { APP_URL } from '@/config/brand'
+import { readPowerSource } from './power-source'
 import { DAEMON_HEARTBEAT_MS } from '@/lib/constants/daemon'
 import { parseProjectsConf, resolveEffectiveTab } from '@/lib/agent-config'
 import { getAgentProcesses, readFastState } from '@/lib/control-fast-state'
@@ -107,6 +108,10 @@ async function pushOnce(): Promise<void> {
     console.warn('[pusher] project runtime snapshot failed:', (err as Error).message)
   }
 
+  // Deliberately outside the try above: a power probe must not be able to take
+  // the project payload down with it, and readPowerSource never throws anyway.
+  const powerSource = readPowerSource()
+
   try {
     const resp = await fetch(`${BASE_URL}/api/control/runtime-state`, {
       method: 'POST',
@@ -120,6 +125,11 @@ async function pushOnce(): Promise<void> {
         projects,
         panes,
         runnerVersion: runnerVersion(),
+        // Rides the heartbeat so it expires with it: a stale "ac" must never
+        // vouch for a laptop that has since gone to sleep. Omitted entirely
+        // when undeterminable — the server reads absence as UNKNOWN, and
+        // routing only ever acts on positive knowledge.
+        ...(powerSource ? { powerSource } : {}),
         observedAt: Date.now(),
       }),
       // Bound the push. Without this, a single hung runtime-state request never

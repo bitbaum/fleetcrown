@@ -31,7 +31,7 @@ import { getUserProjects, getOrgProjects } from "@/db/queries/user-projects";
 import { getProjectContext } from "@/db/queries/project-context";
 import { buildOperatorContextSection } from "@/lib/dispatch-operator-context";
 import { enqueueDispatchCommand } from "@/db/queries/pending-commands";
-import { getBuilderPresence } from "@/db/queries/runner-presence";
+import { getBuilderFitness } from "@/db/queries/runner-presence";
 import { logDebug } from "@/db/queries/debug-logs";
 import { APP_SLUG } from "@/config/brand";
 import { writePromptQueueMirror } from "@/lib/prompt-queue-mirror";
@@ -322,13 +322,16 @@ export async function POST(req: NextRequest) {
     // Route the queued row the same way the live branch routes: to whoever is
     // actually online, preferring the operator's own machine, with a
     // dirPath-only project still locked to the builder that can materialize it.
-    const presence = await getBuilderPresence(userId).catch(() => ({ cloud: false, local: false, any: false }));
-    const runnerConnected = presence.any;
+    const fitness = await getBuilderFitness(userId).catch(() => ({
+      presence: { cloud: false, local: false, any: false },
+      localDurability: "unknown" as const,
+    }));
+    const runnerConnected = fitness.presence.any;
     const busyMatch = [
       ...(await getUserProjects(userId).catch(() => [])),
       ...(await getOrgProjects(userId).catch(() => [])),
     ].find((p) => p.name.toLowerCase() === request.projectKey.toLowerCase());
-    const pinnedChannel = pickDispatchChannel(busyMatch, presence);
+    const pinnedChannel = pickDispatchChannel(busyMatch, fitness.presence, fitness.localDurability);
 
     // Phase 2 of worktree-per-agent: same-project PARALLEL dispatch. With
     // checkout isolation in place (each run gets its own git worktree), the

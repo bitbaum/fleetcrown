@@ -3,15 +3,27 @@ import { db } from "@/db";
 import { runtimeSnapshots, type PaneRecord } from "@/db/schema/runtime-snapshots";
 import type { RunnerChannel } from "@/db/schema/pending-commands";
 
-export async function upsertRuntimeSnapshotIfNewer(
-  userId: string,
-  channel: RunnerChannel,
-  openTabs: string[],
-  observedAt: Date,
-  installedAgents?: string[],
-  panes?: PaneRecord[],
-  runnerVersion?: string,
-) {
+/**
+ * Named fields rather than positionals. This was seven positional parameters,
+ * four of them optional and three of them string-ish — a call site that
+ * transposed two would have compiled silently and written the runner version
+ * into the agent list. Adding an eighth was the point to fix it, not the point
+ * to make it worse.
+ */
+export type RuntimeSnapshotUpsert = {
+  userId: string;
+  channel: RunnerChannel;
+  openTabs: string[];
+  observedAt: Date;
+  installedAgents?: string[];
+  panes?: PaneRecord[];
+  runnerVersion?: string;
+  /** Absent = the runner could not tell us. Stored as NULL, read as UNKNOWN. */
+  powerSource?: "ac" | "battery";
+};
+
+export async function upsertRuntimeSnapshotIfNewer(input: RuntimeSnapshotUpsert) {
+  const { userId, channel, openTabs, observedAt, installedAgents, panes, runnerVersion, powerSource } = input;
   const snapshot = {
     userId,
     channel,
@@ -21,6 +33,7 @@ export async function upsertRuntimeSnapshotIfNewer(
     ...(installedAgents ? { installedAgents } : {}),
     ...(panes ? { panes } : {}),
     ...(runnerVersion ? { runnerVersion } : {}),
+    ...(powerSource ? { powerSource } : {}),
   };
   const [inserted] = await db
     .insert(runtimeSnapshots)

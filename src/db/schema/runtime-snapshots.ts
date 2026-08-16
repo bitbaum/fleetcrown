@@ -37,6 +37,24 @@ export const runtimeSnapshots = pgTable("runtime_snapshots", {
    * array means no panes observed (legacy snapshots upgrade transparently).
    */
   panes: jsonb("panes").$type<PaneRecord[]>().notNull().default([]),
+  /**
+   * Wall power vs battery, as the runner last observed it.
+   *
+   * Not trivia — it is the only signal that says whether this builder will
+   * still exist in twenty minutes. A laptop on wall power stays awake (its lid
+   * action is "do nothing" on AC); the same laptop on battery sleeps the moment
+   * the lid shuts and dies when the charge runs out. Dispatching a long agent
+   * run to it from a phone is a coin flip.
+   *
+   * NULLABLE, and null means UNKNOWN — never "battery". Runners predating this
+   * field report nothing, and demoting them would silently stop every
+   * un-upgraded desktop from receiving work (fatal for accounts with no cloud
+   * builder to fall back to). Routing may only act on positive knowledge.
+   *
+   * Freshness comes free: this rides the same row as `observedAt`, so a stale
+   * "ac" expires with the heartbeat instead of vouching for a sleeping laptop.
+   */
+  powerSource: text("power_source").$type<"ac" | "battery">(),
   observedAt: timestamp("observed_at", { withTimezone: true }),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [

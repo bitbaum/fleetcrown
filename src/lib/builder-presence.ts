@@ -12,7 +12,45 @@ export type BuilderChannelPresence = {
 export type ChannelHeartbeat = {
   channel: string;
   observedAt: Date | null;
+  /** Null = the runner never told us. Never conflate with "battery". */
+  powerSource?: "ac" | "battery" | null;
 };
+
+/**
+ * Is a builder DEPENDABLE, as opposed to merely connected?
+ *
+ * Presence answers "can this builder take work right now". That is a different
+ * question from "will it still be here when the agent finishes", and the two
+ * only diverge for one builder: a laptop. On wall power it stays awake; on
+ * battery it sleeps the moment the lid shuts and dies when the charge runs out.
+ * The box is mains-powered by construction.
+ *
+ * Three states, and the third is not a rounding error:
+ *   durable    — affirmatively on wall power
+ *   ephemeral  — affirmatively on battery
+ *   unknown    — the runner did not say, or its heartbeat went stale
+ *
+ * `unknown` MUST behave as "do not demote". Runners predating powerSource
+ * report nothing, and treating silence as battery would stop every
+ * un-upgraded desktop from receiving work — fatal for an account with no cloud
+ * builder to fall back to. Routing may act on positive knowledge only.
+ */
+export type BuilderDurability = "durable" | "ephemeral" | "unknown";
+
+export function channelDurability(
+  channel: string,
+  heartbeats: ChannelHeartbeat[],
+  nowMs = Date.now(),
+): BuilderDurability {
+  const beat = heartbeats.find((h) => h.channel === channel);
+  if (!beat) return "unknown";
+  // A stale "ac" is the dangerous case: it vouches for a laptop that has since
+  // gone to sleep. Expire durability on exactly the same clock as presence.
+  if (!isHeartbeatFresh(beat.observedAt, nowMs)) return "unknown";
+  if (beat.powerSource === "ac") return "durable";
+  if (beat.powerSource === "battery") return "ephemeral";
+  return "unknown";
+}
 
 /**
  * Is this channel's heartbeat still fresh? SSOT for the snapshot-freshness
