@@ -39,6 +39,13 @@ ssh "$HOST" "sudo -u $RUNNER_OWNER -H bash -c '
   fi
 '"
 
+# The agents this runner spawns work in trees the operator never opens. Without
+# a standing contract they have no reason to push, and unpushed work on this box
+# is simply lost. Applied here so a freshly installed runner is never executing
+# dispatches without it.
+echo "→ box-runner: applying agent operating contract"
+bash "$(dirname "$0")/apply-box-agent-contract.sh" "$HOST"
+
 echo "→ box-runner: writing systemd unit"
 ssh "$HOST" "cat > /etc/systemd/system/fleetcrown-box-runner.service" <<'UNIT'
 [Unit]
