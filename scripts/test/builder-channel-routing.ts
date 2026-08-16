@@ -28,6 +28,7 @@
  */
 import { projectPreferredChannel, projectChannelLock, pickDispatchChannel } from "@/lib/execution-access";
 import { BUILDER_CHANNELS, DEFAULT_BUILDER_CHANNEL } from "@/lib/constants/statuses";
+import { channelDurability } from "@/lib/builder-presence";
 
 const CLONEABLE = "https://github.com/maonakamoto/fleetcrown.git";
 
@@ -158,6 +159,88 @@ for (const presence of [BOTH, ONLY_LOCAL, ONLY_CLOUD, NEITHER]) {
       throw new Error(`unrouted: ${JSON.stringify(shape)} @ ${JSON.stringify(presence)} → ${JSON.stringify(channel)}`);
     }
   }
+}
+
+// ── Durability: "connected" is not "dependable" ─────────────────────────────
+//
+// Presence alone read as "the operator is at the laptop". A dispatch sent from
+// a phone while the laptop merely happens to be awake landed on a machine
+// nobody was watching, which sleeps the instant the lid shuts. Battery is the
+// honest proxy for "not a dependable host".
+
+// The case this exists for: laptop awake but on battery, box available → box.
+if (pickDispatchChannel(PORTABLE, BOTH, "ephemeral") !== "cloud") {
+  throw new Error("a battery-powered laptop must not win over the always-on box");
+}
+
+// Plugged in: it IS dependable, and it is where the operator can watch it.
+if (pickDispatchChannel(PORTABLE, BOTH, "durable") !== "local") {
+  throw new Error("a laptop on wall power stays the preferred host");
+}
+
+// THE REGRESSION GUARD. A runner that predates powerSource reports nothing.
+// Treating that silence as "battery" would stop every un-upgraded desktop from
+// receiving work — fatal for an account with no cloud builder to fall back to.
+// Unknown must behave exactly as before durability existed.
+for (const presence of [BOTH, ONLY_LOCAL]) {
+  if (pickDispatchChannel(PORTABLE, presence, "unknown") !== "local") {
+    throw new Error("unknown power must never demote a connected local builder");
+  }
+}
+if (pickDispatchChannel(PORTABLE, BOTH) !== "local") {
+  throw new Error("omitting durability entirely must behave as unknown");
+}
+
+// A battery laptop still beats nothing: demotion is only ever a redirect to a
+// better host, never a refusal to run.
+if (pickDispatchChannel(PORTABLE, ONLY_LOCAL, "ephemeral") !== "local") {
+  throw new Error("with no box available, the battery laptop is still the answer");
+}
+
+// Physics outranks durability too: a laptop-only project on battery still has
+// nowhere else to go, and the cloud would clone-fail into an empty directory.
+if (pickDispatchChannel(LOCKED, BOTH, "ephemeral") !== "local") {
+  throw new Error("a locked project must not be demoted to a builder that cannot materialize it");
+}
+
+// Never unrouted, now across presence × durability.
+for (const presence of [BOTH, ONLY_LOCAL, ONLY_CLOUD, NEITHER]) {
+  for (const durability of ["durable", "ephemeral", "unknown"] as const) {
+    for (const shape of SHAPES) {
+      const channel = pickDispatchChannel(shape, presence, durability);
+      if (!channel || !(BUILDER_CHANNELS as readonly string[]).includes(channel)) {
+        throw new Error(`unrouted: ${JSON.stringify(shape)} @ ${JSON.stringify(presence)}/${durability}`);
+      }
+    }
+  }
+}
+
+// ── Durability derivation: a stale "ac" must not vouch for a sleeping laptop ─
+const FRESH = new Date();
+const STALE = new Date(Date.now() - 60 * 60 * 1000);
+
+if (channelDurability("local", [{ channel: "local", observedAt: FRESH, powerSource: "ac" }]) !== "durable") {
+  throw new Error("fresh ac heartbeat is durable");
+}
+if (channelDurability("local", [{ channel: "local", observedAt: FRESH, powerSource: "battery" }]) !== "ephemeral") {
+  throw new Error("fresh battery heartbeat is ephemeral");
+}
+// The dangerous one: the laptop said "ac" an hour ago and has since slept.
+if (channelDurability("local", [{ channel: "local", observedAt: STALE, powerSource: "ac" }]) !== "unknown") {
+  throw new Error("a stale ac reading must expire to unknown, not keep vouching");
+}
+if (channelDurability("local", [{ channel: "local", observedAt: FRESH }]) !== "unknown") {
+  throw new Error("a heartbeat with no power field is unknown, not battery");
+}
+if (channelDurability("local", [{ channel: "local", observedAt: FRESH, powerSource: null }]) !== "unknown") {
+  throw new Error("an explicit null power field is unknown, not battery");
+}
+if (channelDurability("local", []) !== "unknown") {
+  throw new Error("no heartbeat at all is unknown");
+}
+// Channels must not read each other's power state.
+if (channelDurability("local", [{ channel: "cloud", observedAt: FRESH, powerSource: "ac" }]) !== "unknown") {
+  throw new Error("durability must be per-channel");
 }
 
 console.log("✓ builder channel routing");

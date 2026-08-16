@@ -2,8 +2,8 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { runnerPresence } from "@/db/schema/runner-presence";
 import { runtimeSnapshots } from "@/db/schema/runtime-snapshots";
-import type { BuilderChannelPresence, ChannelHeartbeat } from "@/lib/builder-presence";
-import { applyHeartbeatExpiry, inferBuilderChannelPresence } from "@/lib/builder-presence";
+import type { BuilderChannelPresence, ChannelHeartbeat, BuilderDurability } from "@/lib/builder-presence";
+import { applyHeartbeatExpiry, inferBuilderChannelPresence, channelDurability } from "@/lib/builder-presence";
 
 /**
  * Is any builder connected for this user? Connection-based presence —
@@ -33,11 +33,32 @@ export async function getBuilderPresence(
   userId: string,
   runnerVersion?: string | null,
 ): Promise<BuilderChannelPresence> {
+  return (await getBuilderFitness(userId, runnerVersion)).presence;
+}
+
+/**
+ * Presence AND durability from the same two reads.
+ *
+ * Both answers come out of the same heartbeat rows, so taking them separately
+ * would mean reading those rows twice and — worse — comparing them against two
+ * different `now`s. The comment on getBuilderPresence explains why that matters:
+ * an age is only meaningful against the clock it is measured with, and this
+ * subsystem has already shipped one bug where a liveness answer was computed
+ * from timestamps loaded at a different moment.
+ */
+export async function getBuilderFitness(
+  userId: string,
+  runnerVersion?: string | null,
+): Promise<{ presence: BuilderChannelPresence; localDurability: BuilderDurability }> {
   const [connection, beats] = await Promise.all([
     readConnectionFlags(userId, runnerVersion),
     readChannelHeartbeats(userId),
   ]);
-  return applyHeartbeatExpiry(connection, beats);
+  const now = Date.now();
+  return {
+    presence: applyHeartbeatExpiry(connection, beats, now),
+    localDurability: channelDurability("local", beats, now),
+  };
 }
 
 /** Raw connect/disconnect bookkeeping — a claim with no expiry on its own. */
@@ -75,15 +96,38 @@ async function readConnectionFlags(
   }
 }
 
-/** Last heartbeat per channel. A read failure must not invent liveness. */
+/**
+ * Last heartbeat per channel. A read failure must not invent liveness.
+ *
+ * Two-tier select, same shape as readConnectionFlags above, and for a sharper
+ * reason: the `[]` fallback does not merely lose power state — it makes EVERY
+ * builder read offline, because applyHeartbeatExpiry requires a fresh beat.
+ * So a `power_source` column that has not been migrated yet would take dispatch
+ * down entirely rather than degrade it. The deploy applies migrations before it
+ * rsyncs the new code, so this should never fire; it exists because "should
+ * never" is not a property a production outage respects.
+ */
 async function readChannelHeartbeats(userId: string): Promise<ChannelHeartbeat[]> {
   try {
     return await db
-      .select({ channel: runtimeSnapshots.channel, observedAt: runtimeSnapshots.observedAt })
+      .select({
+        channel: runtimeSnapshots.channel,
+        observedAt: runtimeSnapshots.observedAt,
+        powerSource: runtimeSnapshots.powerSource,
+      })
       .from(runtimeSnapshots)
       .where(eq(runtimeSnapshots.userId, userId));
   } catch {
-    return [];
+    try {
+      // Liveness without durability: every builder keeps working, and routing
+      // reads "unknown" power, which is exactly the pre-durability behavior.
+      return await db
+        .select({ channel: runtimeSnapshots.channel, observedAt: runtimeSnapshots.observedAt })
+        .from(runtimeSnapshots)
+        .where(eq(runtimeSnapshots.userId, userId));
+    } catch {
+      return [];
+    }
   }
 }
 

@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
   const userId = await getApiUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  let body: { projects?: unknown; openTabs?: unknown; installedAgents?: unknown; observedAt?: unknown; panes?: unknown; runnerVersion?: unknown };
+  let body: { projects?: unknown; openTabs?: unknown; installedAgents?: unknown; observedAt?: unknown; panes?: unknown; runnerVersion?: unknown; powerSource?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -98,7 +98,13 @@ export async function POST(req: NextRequest) {
     const panes = Array.isArray(body.panes) ? sanitizePanes(body.panes) : undefined;
     const runnerVersion = typeof body.runnerVersion === "string" ? body.runnerVersion : undefined;
     const channel = isCloudRunnerVersion(runnerVersion) ? "cloud" : "local";
-    await upsertRuntimeSnapshotIfNewer(userId, channel, openTabs, observedAt, installedAgents, panes, runnerVersion)
+    // Narrowed against the union, not trusted as a string: an unrecognised
+    // value must land as UNKNOWN (absent), never be persisted and later read
+    // back as if the runner had told us something.
+    const powerSource = body.powerSource === "ac" || body.powerSource === "battery"
+      ? body.powerSource
+      : undefined;
+    await upsertRuntimeSnapshotIfNewer({ userId, channel, openTabs, observedAt, installedAgents, panes, runnerVersion, powerSource })
       .catch((err) => console.error("[runtime-state] runtime snapshot write failed:", err));
   }
 
