@@ -90,31 +90,63 @@ async function mintToken() {
  * "ReferenceError: __name is not defined" inside the browser context.
  */
 const MEASURE = `(() => {
-  var toRgb = function (color) {
+  // Resolve ANY CSS colour syntax (oklch, lab, color-mix, var) to numeric
+  // straight RGBA. Painting once is not enough: a translucent colour composites
+  // against whatever is already there, so paint it twice over known backdrops
+  // and solve. white - black = 255*(1-a)  =>  a, then un-premultiply.
+  // This matters — the chips are oklch(1 0 0 / 0.04), a 4%-white overlay on a
+  // near-black card. A single paint reports them as SOLID WHITE and the audit
+  // then invents failures on perfectly readable text.
+  var resolve = function (color) {
     var c = document.createElement("canvas"); c.width = c.height = 1;
-    var x = c.getContext("2d"); x.fillStyle = "#000";
-    x.fillRect(0, 0, 1, 1); x.fillStyle = color; x.fillRect(0, 0, 1, 1);
-    var d = x.getImageData(0, 0, 1, 1).data; return [d[0], d[1], d[2]];
+    var x = c.getContext("2d", { willReadFrequently: true });
+    var paint = function (backdrop) {
+      x.globalCompositeOperation = "copy";
+      x.fillStyle = backdrop; x.fillRect(0, 0, 1, 1);
+      x.globalCompositeOperation = "source-over";
+      x.fillStyle = color; x.fillRect(0, 0, 1, 1);
+      return Array.prototype.slice.call(x.getImageData(0, 0, 1, 1).data, 0, 3);
+    };
+    var onBlack = paint("#000"), onWhite = paint("#fff");
+    var alpha = 1 - (onWhite[0] - onBlack[0]) / 255;
+    if (alpha <= 0.0001) return [0, 0, 0, 0];
+    return [onBlack[0] / alpha, onBlack[1] / alpha, onBlack[2] / alpha, alpha];
+  };
+  var over = function (top, bottom) {
+    var a = top[3];
+    return [
+      top[0] * a + bottom[0] * (1 - a),
+      top[1] * a + bottom[1] * (1 - a),
+      top[2] * a + bottom[2] * (1 - a),
+      1
+    ];
   };
   var lum = function (rgb) {
     var f = function (v) { var s = v / 255; return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4); };
     return 0.2126 * f(rgb[0]) + 0.7152 * f(rgb[1]) + 0.0722 * f(rgb[2]);
   };
-  var ratio = function (fg, bg) {
-    var a = lum(toRgb(fg)), b = lum(toRgb(bg));
+  var ratio = function (fgRgba, bgRgb) {
+    // Text can itself be translucent; composite it onto its own backdrop first.
+    var fg = fgRgba[3] < 1 ? over(fgRgba, bgRgb) : fgRgba;
+    var a = lum(fg), b = lum(bgRgb);
     var hi = Math.max(a, b), lo = Math.min(a, b);
     return Math.round(((hi + 0.05) / (lo + 0.05)) * 100) / 100;
   };
-  // Walk ancestors for the first painted background. A transparent chain means
-  // the element sits on the page background, which is what the eye sees.
+  // Composite every translucent layer between the element and the first opaque
+  // ancestor — that stack is what the eye actually sees behind the glyphs.
   var bgOf = function (el) {
-    var n = el;
+    var stack = [], n = el;
     while (n) {
-      var c = getComputedStyle(n).backgroundColor;
-      if (c && c !== "rgba(0, 0, 0, 0)" && c !== "transparent") return c;
+      var c = resolve(getComputedStyle(n).backgroundColor);
+      if (c[3] > 0) stack.push(c);
+      if (c[3] >= 0.999) break;
       n = n.parentElement;
     }
-    return getComputedStyle(document.documentElement).backgroundColor || "rgb(0,0,0)";
+    if (!stack.length) return [0, 0, 0];
+    var base = stack[stack.length - 1];
+    if (base[3] < 1) base = over(base, [0, 0, 0, 1]);
+    for (var i = stack.length - 2; i >= 0; i--) base = over(stack[i], base);
+    return [base[0], base[1], base[2]];
   };
   var sel = 'a, button, summary, [role="button"], [role="link"], [role="tab"]';
   var out = [];
@@ -137,7 +169,7 @@ const MEASURE = `(() => {
       href: el.getAttribute("href") || "",
       fontSize: size,
       large: large,
-      contrast: ratio(cs.color, bgOf(el))
+      contrast: ratio(resolve(cs.color), bgOf(el))
     });
   }
   return out;
