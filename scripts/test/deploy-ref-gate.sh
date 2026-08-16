@@ -53,11 +53,6 @@
 
 set -uo pipefail
 
-# Nothing below may inherit a pointer to a real repository. `git rev-parse
-# --local-env-vars` is git's own list, so this cannot fall behind a new variable.
-for _v in $(git rev-parse --local-env-vars 2>/dev/null); do unset "$_v"; done
-unset GIT_PREFIX
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GATE="$SCRIPT_DIR/../ci/check-deploy-ref.sh"
 
@@ -69,21 +64,10 @@ TMP="$(mktemp -d)"
 [ -n "$TMP" ] && [ -d "$TMP" ] || { echo "  ✗ mktemp -d produced no usable dir" >&2; exit 1; }
 trap 'rm -rf "$TMP"' EXIT
 
-# A temp dir INSIDE a repo would put every fixture within that repo's reach.
-# Checked rather than assumed: TMPDIR is inherited, and some runners point it at
-# the workspace.
-if git -C "$TMP" rev-parse --show-toplevel >/dev/null 2>&1; then
-  fail "refusing to run: temp dir '$TMP' is inside a git repo ($(git -C "$TMP" rev-parse --show-toplevel))"
-fi
-
-# The structural guarantee. Git will not search for a repository above $TMP, so
-# a missing/broken fixture errors instead of silently retargeting a real repo.
-export GIT_CEILING_DIRECTORIES="$TMP"
-# Identity + hook suppression WITHOUT `git config` — nothing here can write to a
-# real config file, and no global config is read.
-export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null
-export GIT_AUTHOR_NAME=fixture GIT_AUTHOR_EMAIL=fixture@invalid
-export GIT_COMMITTER_NAME=fixture GIT_COMMITTER_EMAIL=fixture@invalid
+# Guards 1-5 above live in one file, shared with not-behind-gate.sh — they had
+# already drifted apart once.
+# shellcheck source=lib/git-fixture-env.sh
+source "$SCRIPT_DIR/lib/git-fixture-env.sh"
 
 # Assert <dir> is its OWN repo at exactly that path, then run git there.
 # Every git invocation in this file goes through this. `--show-toplevel` is
