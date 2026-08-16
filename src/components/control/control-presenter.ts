@@ -503,6 +503,15 @@ export function getProjectDisplayState(
   const currentPrompt = project.currentPrompt && !stale ? project.currentPrompt : null;
   const promptRunning = Boolean(currentPrompt);
   const isSessionOpen = project.agentRunning;
+  // An agent that told us it started a turn and never told us it finished is
+  // working — full stop. This outranks every inference below (tab names, /proc
+  // scans, sentinel files) because it is the agent's own report rather than a
+  // guess about the machine it runs on, and it is the ONLY signal that sees a
+  // session started outside FleetCrown — which is how the fleet card read
+  // "0 working · 21 idle" with eight agents mid-task. Staleness is bounded
+  // server-side by OPEN_TURN_TTL_MS; a second time check here would be a
+  // second definition of "too old" for the two to disagree about.
+  const liveTurnRunning = (project.liveAgentTurns?.count ?? 0) > 0;
 
   const isClosed =
     !dismissed &&
@@ -515,11 +524,16 @@ export function getProjectDisplayState(
   // Ready when the stop hook has fired recently AND no prompt is actively running.
   // We do NOT require !agentRunning because the claude process stays alive between
   // turns — using it would permanently suppress the ready state for all active sessions.
+  // `!liveTurnRunning`: readyAt says "the agent finished a turn recently". If it
+  // has since STARTED another one, it is working again — without this the card
+  // would sit on "Ready" through the whole next turn, and the project would be
+  // counted in the awaiting-you bucket while an agent was actively editing it.
   const isReady =
     !dismissed &&
     !isClosed &&
     !isClosing &&
     !currentPrompt &&
+    !liveTurnRunning &&
     withinWindow(project.readyAt, nowS, READY_WINDOW_S);
 
   const isBeaconActive = withinWindow(project.lockAt, nowS, READY_WINDOW_S);
@@ -533,10 +547,11 @@ export function getProjectDisplayState(
     !isClosed &&
     !isClosing &&
     !currentPrompt &&
+    !liveTurnRunning &&
     project.latestOrchestrationRun?.state === ORCH_STATE.DONE &&
     withinWindow(latestFinishedAtS, nowS, READY_WINDOW_S);
 
-  const isRunning = promptRunning;
+  const isRunning = promptRunning || liveTurnRunning;
   // Show the running banner whenever a prompt is actively tracked — don't require
   // isRunning because the process may not yet appear in /proc on the current tick.
   const showRunningBanner = !isClosing && !isReady && Boolean(currentPrompt);

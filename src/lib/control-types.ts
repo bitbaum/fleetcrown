@@ -73,6 +73,18 @@ export type GitState = {
   recentCommits: string[];
 };
 
+/** Open agent turns for one project — see ProjectState.liveAgentTurns. */
+export type LiveAgentTurns = {
+  /** How many distinct agent sessions have an open turn on this project. */
+  count: number;
+  /** ISO start of the OLDEST open turn — "working 40m" should describe the
+   *  longest-running turn, not whichever session pinged most recently. */
+  startedAt: string;
+  /** The working directories involved (worktrees included), so the UI can say
+   *  WHICH checkout is busy when several are. */
+  cwds: string[];
+};
+
 export type ProjectState = {
   id: string | null;
   projectId: string | null;
@@ -104,6 +116,21 @@ export type ProjectState = {
   autoContinueEnabled?: boolean;
   /** Last 5 outcomes for this project, newest first. Powers the streak chip + dispatch reasoner. */
   recentOutcomes: OrchestrationOutcome[];
+  /**
+   * Agent turns open RIGHT NOW, as reported by the agents themselves through
+   * the Claude UserPromptSubmit → Stop hook pair (table: agent_sessions).
+   *
+   * This is the only "working" signal that does not depend on FleetCrown having
+   * dispatched the run or on the runner recognising a zellij tab name — which
+   * is why the fleet card could read "0 working" with eight agents mid-task.
+   * `null` means no open turn; it does NOT mean nothing is running, because a
+   * machine without the hooks installed reports nothing at all.
+   *
+   * REQUIRED, not optional: an optional field lets a route that forgets to
+   * select it compile clean and silently render "idle" forever — the exact
+   * class that hid this bug for months.
+   */
+  liveAgentTurns: LiveAgentTurns | null;
   /** Per-project autopilot mode override. NULL = inherit the user-level
    *  beacon_settings.auto_inject_mode. Set by the per-project pause/resume
    *  toggle on ProjectCard. Read by /api/control/dispatch (v0.7+). */

@@ -45,8 +45,9 @@ import { getBuilderPresence } from "@/db/queries/runner-presence";
 import { isHeartbeatFresh } from "@/lib/builder-presence";
 import { isAgentId, listAgentRegistry } from "@/lib/agent-registry";
 import { inferAdapterFromTabName } from "@/components/control/control-presenter";
-import type { ProjectProfile, CurrentPrompt, ProjectState, SessionState, GitState, ControlData, FailedCommand } from "@/lib/control-types";
+import type { ProjectProfile, CurrentPrompt, ProjectState, SessionState, GitState, ControlData, FailedCommand, LiveAgentTurns } from "@/lib/control-types";
 import { getRecentFailedCommands, hasUndeliveredCommandForRun } from "@/db/queries/pending-commands";
+import { getOpenAgentTurnsByProject } from "@/db/queries/agent-sessions";
 import { getRuntimeSnapshots } from "@/db/queries/runtime-snapshots";
 import { writePromptQueueMirror } from "@/lib/prompt-queue-mirror";
 import { fetchAllGitStates } from "@/lib/git-state";
@@ -204,7 +205,7 @@ export async function GET() {
   // Fetch DB states for own user + all team project owners so session progress is visible.
   const teamOwnerIds = [...new Set(dbTeamProjects.map((p) => p.userId))];
   const allOwnerIds = [userId, ...teamOwnerIds];
-  const [latestRuns, recentPromptsMap, recentOutcomesMap, activityByProject, recentActivity, dbStatesArr, latestLifecycleEvents, effectiveDbProjects, failedCommands] = await Promise.all([
+  const [latestRuns, recentPromptsMap, recentOutcomesMap, activityByProject, recentActivity, dbStatesArr, latestLifecycleEvents, effectiveDbProjects, failedCommands, openAgentTurns] = await Promise.all([
     getLatestRunsByProjectPaths(userId, dirs),
     getRecentCustomPromptsByProjectKeys(userId, projectKeys).catch((e) => { console.error("[control/GET] recentPromptsMap failed:", e); return new Map<string, RecentCustomPrompt[]>(); }),
     getRecentOutcomesByProjectKeys(userId, projectKeys, 5).catch((e) => { console.error("[control/GET] recentOutcomesMap failed:", e); return new Map<string, import("@/db/schema/orchestration-runs").OrchestrationOutcome[]>(); }),
@@ -221,6 +222,10 @@ export async function GET() {
     // always sees their own profile data regardless of who last built the git cache.
     Promise.all(allOwnerIds.map((oid) => getProjects(oid).catch((e) => { console.error("[control/GET] getProjects failed for", oid, e); return [] as ProjectRow[]; }))).then((arrs) => arrs.flat()),
     getRecentFailedCommands([userId]).catch((e): FailedCommand[] => { console.error("[control/GET] failedCommands failed:", e); return []; }),
+    // Agent turns the agents themselves reported open (hook-driven). Scoped to
+    // `userId`, not allOwnerIds: the hooks run on THIS user's machine, so a
+    // teammate's live sessions are not ours to claim on their card.
+    getOpenAgentTurnsByProject(userId).catch((e): Record<string, LiveAgentTurns> => { console.error("[control/GET] openAgentTurns failed:", e); return {}; }),
   ]);
   // Stale-run reaping moved EXCLUSIVELY to the reap-stale-runs cron (hourly),
   // which runs the close-from-handoff sweep FIRST. Reaping on page load raced
@@ -418,6 +423,10 @@ export async function GET() {
     recentCustomPrompts: recentPromptsMap.get(tab) ?? [],
     recentActivity: activityByProject.get(tab) ?? [],
     recentOutcomes: recentOutcomesMap.get(tab) ?? [],
+    // Turns the agents reported open themselves. Keyed on the registry name,
+    // which is exactly what /api/activity/capture resolves a cwd to — including
+    // a worktree, which resolves to its parent project's row.
+    liveAgentTurns: openAgentTurns[tab] ?? null,
     // Stream-aligned per-tab fields so the first render carries what the SSE
     // patches will keep fresh — replaces per-card polling on mount.
     promptQueue: dbState?.promptQueue ?? [],
