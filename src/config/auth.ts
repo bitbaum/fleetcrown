@@ -15,7 +15,19 @@ export const ROUTES = {
   SIGN_OUT: "/sign-out",
   // Post-auth default
   APP_HOME: "/today",
+  // Where the Fleet Runner desktop shell lands a signed-in operator. The
+  // runner opens at OS startup and points at APP_URL (no path), so without
+  // this it drops the owner on the marketing hero every morning — a pitch
+  // page, not a command deck. Control is the surface that answers "what do I
+  // do now": live agent state, per-project Launch agent, and Build selected
+  // across many projects at once.
+  RUNNER_HOME: "/control",
 } as const;
+
+/** Query flag that lets a Fleet Runner operator open the public marketing
+ *  homepage on purpose (reviewing their own hero) instead of being bounced to
+ *  RUNNER_HOME. Without it the landing page is unreachable inside the app. */
+export const SITE_PREVIEW_PARAM = "site";
 
 /** Headings for every auth surface — pages import these, they do not invent copy. */
 export const AUTH_COPY = {
