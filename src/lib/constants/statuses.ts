@@ -139,6 +139,17 @@ export const BUILDER_CHANNELS = ["cloud", "local"] as const;
 export type BuilderChannel = (typeof BUILDER_CHANNELS)[number];
 
 /**
+ * Narrow an untrusted value to a channel. Needed wherever a channel crosses a
+ * boundary that TypeScript cannot vouch for — a JSON response body, or
+ * persisted message metadata replayed months after it was written. An unknown
+ * string would otherwise index the copy map to `undefined` and silently drop
+ * the builder's name from the label.
+ */
+export function isBuilderChannel(value: unknown): value is BuilderChannel {
+  return typeof value === "string" && (BUILDER_CHANNELS as readonly string[]).includes(value);
+}
+
+/**
  * Where a dispatch runs when nothing else decides it.
  *
  * This must be a named constant, not a literal at each call site. A queued

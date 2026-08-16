@@ -584,6 +584,9 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
       ok: true,
       tab: effectiveTab,
       mode: result.mode,
+      // Which builder this went to. The operator should never have to guess
+      // which machine has their work — especially when it queues.
+      channel: pinnedChannel,
       ...(result.mode === "queued" && {
         commandId: (result as { commandId: string }).commandId,
         runnerConnected: (result as { runnerConnected?: boolean }).runnerConnected ?? null,

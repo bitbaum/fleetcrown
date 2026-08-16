@@ -6,6 +6,7 @@ import { ExternalLink, ListChecks, Loader2, Monitor, TerminalSquare } from "luci
 import { MarkdownText, type CitationMap } from "@/components/ui/markdown-text";
 import type { LokiMessage } from "./types";
 import { dispatchStatusLabel, type DispatchLiveView } from "@/lib/dispatch-status";
+import { isBuilderChannel } from "@/lib/constants/statuses";
 
 const DISPATCH_DOT: Record<DispatchLiveView["tone"], string> = {
   positive: "ui-dot-positive",
@@ -104,6 +105,9 @@ function DispatchFooter({ meta }: { meta: Record<string, unknown> | null }) {
     mode: typeof meta.mode === "string" ? meta.mode : null,
     warning: typeof meta.warning === "string" ? meta.warning : null,
     runnerConnected,
+    // Messages written before routing was recorded have no channel; those keep
+    // the unnamed copy rather than being attributed to a guessed machine.
+    channel: isBuilderChannel(meta.channel) ? meta.channel : null,
   });
   // Live status supersedes the frozen snapshot once the runner acts on the
   // command and keeps following the associated run through its real outcome.

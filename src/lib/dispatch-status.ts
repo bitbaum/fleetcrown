@@ -1,5 +1,5 @@
 import { EXECUTOR_COPY } from "@/config/executor-copy";
-import type { StatusTone } from "@/lib/constants/statuses";
+import type { StatusTone, BuilderChannel } from "@/lib/constants/statuses";
 import { ORCH_STATE } from "@/lib/orchestration/contract";
 
 export type DispatchStatusInput = {
@@ -7,23 +7,49 @@ export type DispatchStatusInput = {
   mode?: string | null;
   warning?: string | null;
   runnerConnected?: boolean | null;
+  /**
+   * Which builder took it. Optional because older persisted messages predate
+   * routing being recorded — those still render the unnamed copy rather than
+   * guessing a machine they were never dispatched to.
+   */
+  channel?: BuilderChannel | null;
 };
+
+/**
+ * The builder named for a sentence, or null when we genuinely don't know.
+ *
+ * Never guess. A label that names the wrong machine is worse than one that
+ * names none: the operator goes looking for their work on a computer that
+ * never had it.
+ */
+function builderName(channel: BuilderChannel | null | undefined): string | null {
+  return channel ? EXECUTOR_COPY.ranOn[channel] ?? null : null;
+}
 
 /** SSOT for dispatch outcome copy — Loki footer, Control toasts, etc. */
 export function dispatchStatusLabel(input: DispatchStatusInput): { label: string; warn: boolean } {
   if (input.ok === false) {
     return { label: "Dispatch failed", warn: true };
   }
+  const on = builderName(input.channel);
   if (input.warning === "runner-offline" || (input.mode === "queued" && input.runnerConnected === false)) {
-    return { label: EXECUTOR_COPY.queuedWhenOffline, warn: true };
+    // The most valuable place to name the builder: this says WHY nothing is
+    // happening and which machine to wake, instead of a generic "offline".
+    return {
+      label: on ? `Queued for ${on} — runs when it's online` : EXECUTOR_COPY.queuedWhenOffline,
+      warn: true,
+    };
   }
   if (input.mode === "direct") {
-    return { label: "Running now", warn: false };
+    return { label: on ? `Running now on ${on}` : "Running now", warn: false };
   }
   if (input.mode === "queued") {
-    return { label: EXECUTOR_COPY.queuedWithBuilderOnline, warn: false };
+    return {
+      label: on ? `With ${on} — starting shortly` : EXECUTOR_COPY.queuedWithBuilderOnline,
+      warn: false,
+    };
   }
-  return { label: "Dispatched", warn: false };
+  return { label: on ? `Dispatched to ${on}` : "Dispatched", warn: false };
 }
 
 export function dispatchAssistantContent(
@@ -34,14 +60,21 @@ export function dispatchAssistantContent(
     return `Could not dispatch to ${projectKey}.`;
   }
   const { label, warn } = dispatchStatusLabel(input);
+  const on = builderName(input.channel);
   if (input.mode === "direct") {
-    return `Running on **${projectKey}** in the agent terminal now.`;
+    return on
+      ? `Running on **${projectKey}** in the agent terminal on ${on} now.`
+      : `Running on **${projectKey}** in the agent terminal now.`;
   }
   if (input.mode === "queued" && !warn) {
-    return `Dispatched **${projectKey}** — ${EXECUTOR_COPY.queuedWithBuilderOnlineLong}`;
+    return on
+      ? `Dispatched **${projectKey}** to ${on} — ${EXECUTOR_COPY.queuedWithBuilderOnlineLong}`
+      : `Dispatched **${projectKey}** — ${EXECUTOR_COPY.queuedWithBuilderOnlineLong}`;
   }
   if (warn) {
-    return `Queued **${projectKey}** — ${EXECUTOR_COPY.queuedWhenOfflineLong}`;
+    return on
+      ? `Queued **${projectKey}** for ${on} — ${EXECUTOR_COPY.queuedWhenOfflineLong}`
+      : `Queued **${projectKey}** — ${EXECUTOR_COPY.queuedWhenOfflineLong}`;
   }
   void label;
   return `Dispatched **${projectKey}**.`;

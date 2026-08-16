@@ -45,6 +45,7 @@ import {
 } from "@/lib/loki/attachments";
 import { describeAttachedImages } from "@/lib/loki/vision";
 import { dispatchAssistantContent } from "@/lib/dispatch-status";
+import { isBuilderChannel } from "@/lib/constants/statuses";
 import { buildLokiChatPrompt, resolveLokiChatProjectKey } from "@/lib/loki/chat-context";
 import {
   formatProjectList,
@@ -150,6 +151,10 @@ async function persistDispatch(opts: DispatchOpts): Promise<ConversationMessage>
     warning: typeof inject.body.warning === "string" ? inject.body.warning : null,
     runnerConnected:
       typeof inject.body.runnerConnected === "boolean" ? inject.body.runnerConnected : null,
+    // Validate against the union rather than trusting the string: meta is
+    // persisted and replayed months later, and an unknown channel would index
+    // the name map to undefined and quietly drop the builder from the label.
+    channel: isBuilderChannel(inject.body.channel) ? inject.body.channel : null,
   };
   // Identifiers the transcript footer polls to show LIVE dispatch status
   // (queued → picked up → ran/failed) instead of a frozen "starting shortly".
@@ -173,6 +178,7 @@ async function persistDispatch(opts: DispatchOpts): Promise<ConversationMessage>
       mode: dispatchInput.mode,
       warning: dispatchInput.warning,
       runnerConnected: dispatchInput.runnerConnected,
+      channel: dispatchInput.channel,
       agent: opts.agent ?? null,
       model: opts.model ?? null,
       commandId,
