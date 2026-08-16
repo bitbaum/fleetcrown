@@ -98,7 +98,16 @@ function runTests(): void {
 
   check("Inject route accepts runner bearer token", () => {
     const route = readFileSync("src/app/api/inject/route.ts", "utf8");
-    assert(/getApiUserId/.test(route), "/api/inject must use getApiUserId for runner auth");
+    // The invariant is "this route accepts a Bearer token", not "it calls one
+    // particular helper". getApiActor resolves the cookie session first and
+    // then delegates to getApiUserId for the Bearer path, so it satisfies the
+    // same requirement while additionally reporting WHICH path matched (used to
+    // decide whether a dispatch announces its outcome). Asserting the literal
+    // name would have failed that refactor while the property still held.
+    assert(
+      /getApiUserId|getApiActor/.test(route),
+      "/api/inject must authenticate via getApiUserId or getApiActor — both accept the runner's Bearer token",
+    );
     assert(!/getSessionUserId/.test(route), "/api/inject must not require browser session only");
   });
 

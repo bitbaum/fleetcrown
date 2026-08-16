@@ -26,10 +26,15 @@ export type OrchestrationRunPayload = {
   /** Repo-side work evidence attached when the reaper corrects a timeout
    *  verdict (reap-evidence.ts). */
   evidence?: { kind: string; url: string; title: string; atMs: number };
-  /** Push a chat notification (Telegram) when this run closes. Set by
-   *  dispatches that originate in chat (Loki's fleet skill) so the answer
-   *  comes back to where the ask was made; absent for UI dispatches, which
-   *  the operator watches in Control. */
+  /** Announce this run's outcome when it closes, on every configured channel
+   *  (web push to the installed PWA, plus Telegram when a chat id is set).
+   *
+   *  Set for dispatches a PERSON initiated — resolved from the auth path, so a
+   *  cookie session opts in and a runner/automation Bearer token does not.
+   *  That keeps autopilot churn silent (the original reason UI dispatches were
+   *  excluded) without assuming the operator is still watching Control: they
+   *  usually dispatched and walked away, which is the entire point of having an
+   *  always-on builder. */
   notifyOnClose?: boolean;
 };
 

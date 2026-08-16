@@ -76,6 +76,27 @@ let warnedDeprecatedDaemonToken = false;
  * the single "default" user, so it must never be used in a multi-tenant
  * deployment.
  */
+/**
+ * Who made this request, and HOW they authenticated.
+ *
+ * The "how" is a real signal, not a heuristic: a cookie session means a person
+ * is sitting in front of the web UI, and a Bearer token means a runner, a hook,
+ * or a scheduled loop. That distinction is what lets a dispatch someone clicked
+ * announce its outcome while autopilot churn stays silent — without maintaining
+ * a hand-kept list of "automated" call sites that a new one silently joins.
+ *
+ * getApiUserId stays the common path; this is for the callers that need to know
+ * whether a human is waiting on the other end.
+ */
+export type ApiActor = { userId: string; via: "session" | "token" };
+
+export async function getApiActor(): Promise<ApiActor | null> {
+  const sessionUserId = await resolveSessionUserId();
+  if (sessionUserId) return { userId: sessionUserId, via: "session" };
+  const userId = await getApiUserId();
+  return userId ? { userId, via: "token" } : null;
+}
+
 export async function getApiUserId(): Promise<string | null> {
   // Cookie-based session (web UI).
   const userId = await resolveSessionUserId();

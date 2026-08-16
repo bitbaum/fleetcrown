@@ -26,7 +26,7 @@ import { createOrchestrationEvent } from "@/db/queries/orchestration-events";
 import { createOrchestrationRun, updateOrchestrationRun, isProjectBusy } from "@/db/queries/orchestration-runs";
 import { insertPromptHistory } from "@/db/queries/prompt-history";
 import { consumeProjectPrompt, getProjectState, persistProjectRuntimeIfNewer, prependProjectPrompt } from "@/db/queries/project-states";
-import { getApiUserId } from "@/lib/session";
+import { getApiActor } from "@/lib/session";
 import { getUserProjects, getOrgProjects } from "@/db/queries/user-projects";
 import { getProjectContext } from "@/db/queries/project-context";
 import { buildOperatorContextSection } from "@/lib/dispatch-operator-context";
@@ -37,6 +37,7 @@ import { APP_SLUG } from "@/config/brand";
 import { writePromptQueueMirror } from "@/lib/prompt-queue-mirror";
 import { executionAccessErrorBody, resolveQueuedExecution, pickDispatchChannel } from "@/lib/execution-access";
 import { workspaceIdFor } from "@/lib/agent-execution/ownership";
+import { shouldAnnounceOnClose } from "@/lib/orchestration/notify-close-format";
 
 /** Same-project parallel dispatch (phase 2 of worktree-per-agent): when a
  *  project is busy, dispatch immediately under a derived tab alias instead of
@@ -86,8 +87,15 @@ export async function POST(req: NextRequest) {
   const dataOrResp = await readJsonBody(req, RunOrchestrationBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
-  const userId = await getApiUserId();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const actor = await getApiActor();
+  if (!actor) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const userId = actor.userId;
+
+  // A person clicked an intent button and may close the tab immediately; a
+  // Bearer token is autopilot, whose churn must stay silent. A real signal,
+  // rather than a hand-kept list of "automated" call sites that a new one
+  // silently joins.
+  const announceOnClose = shouldAnnounceOnClose(actor);
 
   // Resolve projectPath + adapter from the registry when omitted (Loki dispatches
   // by name). Mirrors inject-core's lookup; downstream branches read dataOrResp.
@@ -181,6 +189,11 @@ export async function POST(req: NextRequest) {
             projectKey: request.projectKey,
             projectPath: request.projectPath,
             model: request.model,
+            // Cloud mode: the operator dispatched and will almost certainly
+            // stop watching — announce the outcome when it closes. Autopilot
+            // (Bearer token) stays silent, which is what the original
+            // "UI dispatches stay silent" rule was actually protecting.
+            ...(announceOnClose ? { notifyOnClose: true } : {}),
           },
         });
         cloudRunId = run.id;

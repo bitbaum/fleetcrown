@@ -7,7 +7,7 @@
  *
  * Run: npm run test:notify-close
  */
-import { formatRunCloseMessage } from "@/lib/orchestration/notify-close-format";
+import { formatRunCloseMessage, shouldAnnounceOnClose } from "@/lib/orchestration/notify-close-format";
 
 function assert(condition: boolean, message: string): void {
   if (!condition) throw new Error(message);
@@ -65,6 +65,39 @@ function runTests(): void {
     });
     const body = msg?.split("\n")[1] ?? "";
     assert(body.length === 600 && !msg?.includes("ignored"), `body len ${body.length}`);
+  });
+
+  // ── Who gets told ─────────────────────────────────────────────────────────
+  //
+  // This is the rule that shipped OFF. `notifyOnClose` was plumbed end to end,
+  // unit-tested, and set by nothing but a test fixture — so no dispatch ever
+  // announced itself, and clicking Send produced silence. The gate is now the
+  // auth path: a person gets told, a machine does not.
+
+  check("a browser session announces — a person clicked and may walk away", () => {
+    assert(shouldAnnounceOnClose({ via: "session" }) === true, "session must announce");
+  });
+
+  check("a bearer token stays silent — autopilot churn must not reach the phone", () => {
+    assert(shouldAnnounceOnClose({ via: "token" }) === false, "token must stay silent");
+  });
+
+  check("no actor stays silent", () => {
+    assert(shouldAnnounceOnClose(null) === false, "null actor must not announce");
+    assert(shouldAnnounceOnClose(undefined) === false, "undefined actor must not announce");
+  });
+
+  check("an explicit value wins in BOTH directions", () => {
+    // Chat opts in deliberately even though it authenticates with a token...
+    assert(shouldAnnounceOnClose({ via: "token" }, true) === true, "explicit true must win");
+    // ...and a noisy UI-initiated loop can opt out.
+    assert(shouldAnnounceOnClose({ via: "session" }, false) === false, "explicit false must win");
+  });
+
+  check("only an actual boolean counts as explicit", () => {
+    // A stray undefined must fall through to the actor rule rather than being
+    // read as "false" — that would silently restore the shipped-off behavior.
+    assert(shouldAnnounceOnClose({ via: "session" }, undefined) === true, "undefined is not an opt-out");
   });
 
   console.log(`\n${passed} passed`);
