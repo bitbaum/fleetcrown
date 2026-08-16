@@ -25,13 +25,26 @@ async function ledger() {
  * What a turn is assumed to cost before it runs.
  *
  * Admission has to decide BEFORE the provider reports anything, so this is an
- * estimate — deliberately on the high side. Under-estimating admits turns the
- * budget cannot actually cover, which drains the pool early and produces the
+ * estimate, and it must err HIGH: under-estimating admits turns the budget
+ * cannot actually cover, which drains the pool early and produces the
  * late-in-the-day wall the rationing exists to prevent. The ACTUAL cost is
- * recorded afterwards from the provider's own count, so the estimate only ever
- * governs admission, never the books.
+ * recorded afterwards from the provider's own count, so this only ever governs
+ * admission, never the books.
+ *
+ * MEASURED, not guessed. The first turn to reach the ledger in production cost
+ * 15,839 tokens (one tool call, `list_pending_approvals`, answered on
+ * openrouter/openai/gpt-oss-20b:free). The original 10,000 was written as
+ * "deliberately on the high side" and was in fact ~37% BELOW a single observed
+ * turn — an estimate erring in exactly the wrong direction, and wrong on the
+ * first sample rather than at some tail.
+ *
+ * 20k carries margin over that observation because it is ONE sample of the
+ * cheap shape: a turn that calls several tools, or runs the repair pass, spends
+ * more. The `turns` column in `ai_spend` exists so this can be replaced by a
+ * measured mean once there is enough traffic to compute one — at which point
+ * this constant should become a query, not a better guess.
  */
-export const ESTIMATED_TURN_TOKENS = 10_000;
+export const ESTIMATED_TURN_TOKENS = 20_000;
 
 export type BudgetVerdict =
   | { allowed: true }
