@@ -138,6 +138,24 @@ export type StatusTone = "negative" | "warning" | "positive" | "neutral";
 export const BUILDER_CHANNELS = ["cloud", "local"] as const;
 export type BuilderChannel = (typeof BUILDER_CHANNELS)[number];
 
+/**
+ * Where a dispatch runs when the task itself doesn't force a locus.
+ *
+ * This must be a named constant, not a literal at each call site. A queued
+ * command with NO channel is claimable by EVERY runner (see the claim gate in
+ * db/queries/pending-commands.ts: `channel IS NULL OR channel = mine`), so an
+ * unrouted dispatch is a race between the always-on box-runner and whatever
+ * desktop happens to be polling. The desktop usually won — and closing the lid
+ * then killed exactly the work it had claimed. Two of the four call sites of
+ * projectPreferredChannel passed `null` while their own comments claimed they
+ * matched the cloud-defaulting branch; that drift is what this constant ends.
+ *
+ * "cloud" (the box-runner) is the default because it is the only builder that
+ * is always on. `projectPreferredChannel` still overrides it to "local" for
+ * projects the cloud builder physically cannot materialize.
+ */
+export const DEFAULT_BUILDER_CHANNEL: BuilderChannel = "cloud";
+
 /** Entity type values — used in people queries, projects queries, and API routes.
  *  `robot` is an actor (see src/config/actors.ts). Humans and robots share the
  *  entities table; capability (check-in vs market) is decided by that SSOT,

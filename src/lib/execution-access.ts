@@ -1,6 +1,7 @@
 import type { RunnerChannel } from "@/db/schema/pending-commands";
 import type { BuilderChannelPresence } from "@/lib/builder-presence";
 import { isCloneableGitUrl } from "@/lib/git-url";
+import { DEFAULT_BUILDER_CHANNEL } from "@/lib/constants/statuses";
 
 const CLOUD_BUILDER_PRIVATE_MESSAGE =
   "Cloud builder access is private for this account. Connect Fleet Runner on this computer to run agent work.";
@@ -126,13 +127,21 @@ export function decideQueuedExecution(
  * can only execute on the machine that has the directory — the cloud builder
  * would clone-fail and (before 2026-07-14, silently) invent an empty dir for
  * the agent to "work" in. Locus is a property of the task: pin such dispatches
- * to "local". Projects with a cloneable repo (or no dirPath at all) keep the
- * caller's fallback — any builder can obtain those.
+ * to "local". Projects with a cloneable repo (or no dirPath at all) can be
+ * obtained by any builder, so they take the fallback — DEFAULT_BUILDER_CHANNEL
+ * unless a caller has a specific reason to say otherwise.
+ *
+ * The return type is deliberately NOT nullable. An absent channel does not mean
+ * "any builder, preferably cloud" — it means the row is claimable by ALL of
+ * them concurrently, which is a race the always-on box loses to whichever
+ * desktop is polling. Callers used to spread `...(ch ? {channel: ch} : {})` and
+ * silently emit unrouted commands; making null unrepresentable here is what
+ * stops that from coming back.
  */
-export function projectPreferredChannel<F extends RunnerChannel | null>(
+export function projectPreferredChannel(
   project: { dirPath?: string | null; gitUrl?: string | null } | null | undefined,
-  fallback: F,
-): RunnerChannel | F {
+  fallback: RunnerChannel = DEFAULT_BUILDER_CHANNEL,
+): RunnerChannel {
   if (project?.dirPath && !isCloneableGitUrl(project.gitUrl)) return "local";
   return fallback;
 }
