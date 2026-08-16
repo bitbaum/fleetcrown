@@ -1,19 +1,28 @@
 # Auto-merge — nobody is in the merge loop.
 #
-# Green, ready PRs merge themselves and deploy themselves. The owner does not
-# review PRs, and background-job agent sessions are barred from merging by hand,
-# so the policy lives in scripts/ci/auto-merge-sweep.sh (read it — it defines
-# exactly what "ready" means and how a PR is held back).
+# Green, ready PRs merge themselves and deploy themselves. The policy lives in
+# ONE place for the whole fleet — maonakamoto/dotfiles,
+# scripts/ci/auto-merge-sweep.sh — and this file only says "run it, with these
+# settings".
 #
-# Two triggers, deliberately:
-#   workflow_run — merges within seconds of CI going green (the common path).
-#   schedule     — a safety net. Catches PRs whose checks finished while this
-#                  workflow was failing/disabled, and PRs whose last check was
-#                  an external status that reported after CI. Without it, a PR
-#                  that went green "off-cycle" waits forever.
+# This repo held one of eight drifted copies of that script. Its own unique
+# contribution — the DEPLOY RECONCILER — is now in the canonical, which is why
+# this conversion is finally safe: converting before that landed would have let
+# merges reach main and never reach the box.
+#
+# HOW A MERGE ACTUALLY REACHES THE BOX (do not remove deploy_workflow)
+#   A push made with GITHUB_TOKEN triggers no workflows, and neither does a run
+#   that GITHUB_TOKEN dispatched — so nothing downstream wakes on an automated
+#   merge. Observed 2026-08-05: three PRs merged, main green, ZERO Deploy runs.
+#   The sweep therefore RECONCILES: it compares main's tip against the last
+#   successful deploy and dispatches deploy.yml when they differ, so a deploy
+#   that never fired or fired and failed is retried on the next sweep instead of
+#   leaving a commit merged-but-not-live.
+#
+# The triggers stay here because they are genuinely per-repo: workflow_run must
+# name the CI workflow exactly.
 #
 # To stop all of this: delete this file, or add a `hold` label to a PR.
-
 name: Auto-merge
 
 on:
@@ -24,25 +33,27 @@ on:
     - cron: '*/10 * * * *'
   workflow_dispatch: {}
 
+# Declared on the CALLER as well as inside the reusable workflow: a called
+# workflow's token is capped by what the caller grants, so relying on the
+# callee's block alone can hand it a read-only token — and the sweep would then
+# merge nothing while still exiting 0, which is indistinguishable from having
+# nothing to merge.
 permissions:
   contents: write # merge the PR
   pull-requests: write # read PR state, delete the branch
-  actions: write # dispatch CI on main to re-arm Deploy
-
-# Never let two sweeps merge concurrently — they would race on the same PRs.
-concurrency:
-  group: auto-merge
-  cancel-in-progress: false
+  actions: write # dispatch the re-arm and deploy workflows
+  checks: read # statusCheckRollup — only load-bearing on private repos
+  statuses: read
 
 jobs:
   sweep:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Merge every green, ready PR
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_REPO: ${{ github.repository }}
-        run: bash scripts/ci/auto-merge-sweep.sh
+    uses: maonakamoto/dotfiles/.github/workflows/auto-merge-sweep.yml@master
+    with:
+      base_branch: main
+      ci_workflow: ci.yml
+      # SPACE-separated: the sweep word-splits this. A comma would become one
+      # bogus token, every dispatch would fail, and the only symptom would be
+      # that nothing deploys — while the sweep still reported success.
+      rearm_workflows: 'ci.yml'
+      # The reconciler. Without this, merges land and never ship (see above).
+      deploy_workflow: deploy.yml

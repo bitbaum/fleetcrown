@@ -27,7 +27,11 @@ on:
   # that GITHUB_TOKEN started (the auto-merge re-arm) emits NO workflow_run
   # event, so the chain above never fires for an auto-merged PR — observed
   # 2026-08-05 with three merges live on main and none of them deployed. The
-  # sweep dispatches this directly instead. See scripts/ci/auto-merge-sweep.sh.
+  # sweep dispatches this directly instead — it compares main's tip against the
+  # last successful run here and closes the gap. The sweep now lives in
+  # maonakamoto/dotfiles (scripts/ci/auto-merge-sweep.sh); this repo enables the
+  # reconciler by passing `deploy_workflow: deploy.yml` in auto-merge.yml.
+  # Removing that input makes merges land and never ship.
   workflow_dispatch: {}
 
 # One deploy at a time; never cancel a ship mid-flight.
