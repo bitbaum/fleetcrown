@@ -115,10 +115,16 @@ async function main() {
   });
 
   await check("'paced' offers a retry and explains WHY there is a wait", async () => {
-    // Two users sharing 100k; this one has taken 40k of their 50k by noon.
+    // Expressed in units of ESTIMATED_TURN_TOKENS so recalibrating that constant
+    // cannot silently move this case into the OTHER refusal — which is exactly
+    // what happened when the estimate was corrected from 10k to 20k.
+    //
+    // Two users share 8·EST → 4·EST each. At noon the pace unlocks 0.75 of it,
+    // i.e. 3·EST. Spending 2.5·EST leaves a request of 3.5·EST: past the
+    // unlocked allowance, still inside the day's share. That is `paced`.
     const v = await checkAiBudget("u1", NOON, {
-      capacity: () => 100_000,
-      readUsage: async () => ({ userSpentTokens: 40_000, activeUsers: 2 }),
+      capacity: () => 8 * ESTIMATED_TURN_TOKENS,
+      readUsage: async () => ({ userSpentTokens: 2.5 * ESTIMATED_TURN_TOKENS, activeUsers: 2 }),
     });
     assert(!v.allowed, "expected a refusal");
     if (v.allowed) return;
@@ -129,9 +135,11 @@ async function main() {
   });
 
   await check("'share-spent' promises NO retry — waiting cannot help today", async () => {
+    // Same 8·EST day, same two users — but this one has already spent their
+    // whole 4·EST share, so no amount of waiting unlocks another turn today.
     const v = await checkAiBudget("u1", NOON, {
-      capacity: () => 100_000,
-      readUsage: async () => ({ userSpentTokens: 99_000, activeUsers: 2 }),
+      capacity: () => 8 * ESTIMATED_TURN_TOKENS,
+      readUsage: async () => ({ userSpentTokens: 4 * ESTIMATED_TURN_TOKENS, activeUsers: 2 }),
     });
     assert(!v.allowed, "expected a refusal");
     if (v.allowed) return;
@@ -140,11 +148,14 @@ async function main() {
   });
 
   await check("a newcomer among many users still gets their first turn", async () => {
-    // Four users on a 100k day → 25k each, and a turn is estimated at 10k.
-    // The share covers it, so admission must not depend on the time of day.
+    // Four users sharing 16·EST → 4·EST each, against a turn costing EST. The
+    // share covers it several times over, so admission must not depend on the
+    // time of day: at one minute past midnight the pace has unlocked almost
+    // nothing, and it is exactly then that a new user forms their first
+    // impression. The one-turn floor is what carries this case.
     for (const at of ["2026-08-15T00:01:00Z", "2026-08-15T12:00:00Z", "2026-08-15T23:00:00Z"]) {
       const v = await checkAiBudget("newcomer", new Date(at), {
-        capacity: () => 100_000,
+        capacity: () => 16 * ESTIMATED_TURN_TOKENS,
         readUsage: async () => ({ userSpentTokens: 0, activeUsers: 4 }),
       });
       assert(v.allowed, `newcomer refused at ${at}`);
