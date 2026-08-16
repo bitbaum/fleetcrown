@@ -28,6 +28,22 @@ const AUTOMATION_HINTS: Record<AutoInjectMode, { primary: string; secondary?: st
   },
 };
 
+/**
+ * What the working / awaiting-input / idle chips actually count.
+ *
+ * FleetCrown sees an agent when it dispatched the run itself, or when the
+ * runner tracks a workspace whose name matches a registered project. An agent
+ * started outside FleetCrown — a terminal you opened, a background job — is
+ * invisible to these numbers. So "0 working" means "nothing FleetCrown is
+ * driving", NOT "nothing is happening on this machine", and a bare 0 sitting
+ * next to "21 idle" reads as a fleet-wide claim it is not entitled to make.
+ * The Workspaces panel says the same thing, but it is most of a page further
+ * down — the caveat belongs on the number that provokes the question.
+ */
+const COUNT_SCOPE_TITLE =
+  "Counts agents FleetCrown dispatched, plus workspaces it tracks by project name. " +
+  "Agents you started yourself elsewhere are not counted here.";
+
 type Props = {
   dashboard: ControlDashboardState | null;
   attentionCount: number;
@@ -203,29 +219,36 @@ export function ControlFleetStatus({
 
       <div className="ui-control-hero-autopilot">
         <div className="ui-control-autopilot-status">
-          <p className="ui-control-autopilot-title">Fleet autopilot</p>
+          <p className="ui-control-autopilot-title ui-control-fleet-indent">Fleet autopilot</p>
           {/* Headline = what the fleet is ACTUALLY doing (deriveFleetPulse),
               not what the mode toggle wishes. "Building" + pulsing green once
               rendered over a fleet whose every recent run had failed. */}
           <p className="ui-control-autopilot-state">
-            {fleetPulse.key === "building" && (
-              <span className="ui-dot ui-dot-positive animate-pulse shrink-0" aria-hidden="true" />
-            )}
-            {fleetPulse.key === "waiting" && (
-              <span className="ui-dot ui-dot-neutral shrink-0" aria-hidden="true" />
-            )}
-            {(fleetPulse.key === "failing" || fleetPulse.key === "stalled") && (
-              <span className="ui-dot ui-dot-negative shrink-0" aria-hidden="true" />
-            )}
+            {/* The dot rides in the shared gutter so this line's text starts on
+                the same column as the title, the chips and the hint. */}
+            <span className="ui-control-fleet-gutter" aria-hidden="true">
+              {fleetPulse.key === "building" && (
+                <span className="ui-dot ui-dot-positive animate-pulse shrink-0" />
+              )}
+              {fleetPulse.key === "waiting" && (
+                <span className="ui-dot ui-dot-neutral shrink-0" />
+              )}
+              {(fleetPulse.key === "failing" || fleetPulse.key === "stalled") && (
+                <span className="ui-dot ui-dot-negative shrink-0" />
+              )}
+            </span>
             <span className="font-medium text-text-primary">{fleetPulse.label}</span>
+            {/* Explicit space: the row is no longer a flex with gap-2, and JSX
+                trims the newline before "·", so without this the count would
+                collide with the label. */}
             {fleetPulse.key === "building" && working > 0 && (
               <span className="text-text-muted">
-                · {working} agent{working === 1 ? "" : "s"} active
+                {" "}· {working} agent{working === 1 ? "" : "s"} active
               </span>
             )}
           </p>
           {fleetPulse.detail && (
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="ui-control-fleet-indent flex flex-wrap items-center gap-2">
               {/* Red is for problems. "Waiting on you" is a normal state — a
                   red sentence under a neutral dot read as a contradiction. */}
               <p className={cn(
@@ -276,13 +299,13 @@ export function ControlFleetStatus({
             type="button"
             onClick={() => onFocusCategory("working")}
             className={cn("ui-control-fleet-chip cursor-pointer transition-opacity hover:opacity-80", staleClass)}
-            title={staleTitle ?? "Jump to the working project"}
+            title={staleTitle ?? `Jump to the working project. ${COUNT_SCOPE_TITLE}`}
           >
             <span className="ui-dot ui-dot-positive shrink-0 mr-1" aria-hidden="true" />
             {working} working
           </button>
         ) : (
-          <span className={cn("ui-control-fleet-chip", staleClass)} title={staleTitle}>
+          <span className={cn("ui-control-fleet-chip", staleClass)} title={staleTitle ?? COUNT_SCOPE_TITLE}>
             {working > 0 && <span className="ui-dot ui-dot-positive shrink-0 mr-1" aria-hidden="true" />}
             {working} working
           </span>
@@ -292,31 +315,34 @@ export function ControlFleetStatus({
             type="button"
             onClick={() => onFocusCategory("waiting")}
             className={cn("ui-control-fleet-chip cursor-pointer transition-opacity hover:opacity-80", staleClass)}
-            title={staleTitle ?? "Jump to the project waiting on you"}
+            title={staleTitle ?? `Jump to the project waiting on you. ${COUNT_SCOPE_TITLE}`}
           >
             {ready} awaiting input
           </button>
         ) : (
-          <span className={cn("ui-control-fleet-chip", staleClass)} title={staleTitle}>
+          <span className={cn("ui-control-fleet-chip", staleClass)} title={staleTitle ?? COUNT_SCOPE_TITLE}>
             {ready} awaiting input
           </span>
         )}
-        <span className={cn("ui-control-fleet-chip", staleClass)} title={staleTitle}>
+        <span className={cn("ui-control-fleet-chip", staleClass)} title={staleTitle ?? COUNT_SCOPE_TITLE}>
           {idle} idle
         </span>
         {/* "All clear" only when nothing needs you and nothing is live — and
             never while stale, when 0/0/0 means "the runner stopped reporting",
             not "the fleet is calm". */}
         {!isStale && attention === 0 && working === 0 && ready === 0 && idle === 0 && (
-          <span className={cn("ui-control-fleet-chip ui-control-fleet-chip-clear", staleClass)} title={staleTitle}>
+          <span className={cn("ui-control-fleet-chip ui-control-fleet-chip-clear", staleClass)} title={staleTitle ?? COUNT_SCOPE_TITLE}>
             All clear
           </span>
         )}
       </div>
 
       <p className="ui-control-fleet-hint">
-        <Zap className="inline h-3 w-3 shrink-0 text-accent-text" aria-hidden="true" />
-        {" "}
+        {/* Bolt in the shared gutter (not inline + a space): an inline icon put
+            line 1 at a different x than the wrapped line 2. */}
+        <span className="ui-control-fleet-gutter" aria-hidden="true">
+          <Zap className="h-3 w-3 shrink-0 text-accent-text" />
+        </span>
         {/* Don't state the autopilot mode until the server has confirmed it —
             the client seeds "on" optimistically, so a paused fleet used to
             read "Autopilot on" until (or forever, if the fetch failed). */}

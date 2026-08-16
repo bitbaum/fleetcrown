@@ -160,9 +160,14 @@ function InlineFeedbackTriage({
           ))}
         </div>
       )}
+      {/* text-text-tertiary rendered this at 3.13:1 on the card surface —
+          below the 4.5:1 AA floor for 12px text, and half the contrast of the
+          "New feedback:" label directly above it (6.38:1). It is the ONLY path
+          to a report's screenshot, history and widget setup, so it has to be
+          findable: an action nobody can see is a feature that does not exist. */}
       <Link
         href={`/projects/${projectId}#feedback`}
-        className="mt-1 inline-block text-xs text-text-tertiary underline-offset-2 hover:underline"
+        className="mt-1 inline-block text-xs text-text-secondary underline underline-offset-2 decoration-border-subtle hover:decoration-current"
       >
         Full inbox — screenshots, history, widget setup →
       </Link>
