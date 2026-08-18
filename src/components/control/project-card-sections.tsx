@@ -201,6 +201,7 @@ export function ProjectCardHeader({
               href={`/projects/${project.projectId}`}
               className="ui-icon-action"
               title="Project details"
+              aria-label="Open project details"
             >
               <FolderKanban className="h-4 w-4" />
             </Link>
@@ -211,6 +212,8 @@ export function ProjectCardHeader({
               target="_blank"
               rel="noopener noreferrer"
               className="ui-icon-action"
+              title="Open the live project URL"
+              aria-label="Open the live project URL"
               onClick={(e) => e.stopPropagation()}
             >
               <ExternalLink className="h-4 w-4" />
@@ -219,6 +222,8 @@ export function ProjectCardHeader({
           <button
             onClick={onProfileToggle}
             title={profileOpen ? "Close run setup" : "Agent, model, and prompt setup"}
+            aria-label={profileOpen ? "Close run setup" : "Open agent, model, and prompt setup"}
+            aria-pressed={profileOpen}
             className={cn(
               "ui-icon-action",
               profileOpen ? "text-accent-text" : "text-text-muted",

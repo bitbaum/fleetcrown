@@ -56,6 +56,24 @@ const PLACEHOLDER_ANSWERS = new Set([
 ]);
 
 /**
+ * A `<word>` or `<a few words>` template token the enrichment model never
+ * substituted — e.g. `next_step: "Keep projects/<name>.md accurate"`. Unlike
+ * PLACEHOLDER_ANSWERS this is a substring match: the surrounding sentence can
+ * be real prose and the field still isn't a real answer, because a raw
+ * placeholder in the middle of it is the model quoting its own prompt
+ * template back, not describing this project. Reported from a phone
+ * 2026-08-18: "Suggested next (profile): Keep projects/<name>.md accu…" —
+ * shown as if it were an actionable next step.
+ *
+ * Narrow on purpose: the negative lookbehind requires the `<` NOT be glued to
+ * a preceding word character, so genuine generic-type syntax like `List<T>`
+ * or `Promise<T>` — which always touches its `<` directly — never matches,
+ * while a placeholder always has a space, slash, or line start before it
+ * ("Keep projects/<name>.md", "Wire up the <repo> CI badge").
+ */
+const UNSUBSTITUTED_TEMPLATE_RE = /(?<!\w)<[a-z][a-z0-9 _-]{0,24}>/i;
+
+/**
  * Does this attribute hold a real answer? Use everywhere a field's presence
  * decides something — a placeholder must never earn a health point, satisfy a
  * gate, or brief an agent with "STACK: Unknown".
@@ -76,7 +94,9 @@ export function hasAnswer(value: string | null | undefined): boolean {
 export function answer(value: string | null | undefined): string | null {
   const v = value?.trim();
   if (!v) return null;
-  return PLACEHOLDER_ANSWERS.has(v.toLowerCase().replace(/[.!]+$/, "")) ? null : v;
+  if (PLACEHOLDER_ANSWERS.has(v.toLowerCase().replace(/[.!]+$/, ""))) return null;
+  if (UNSUBSTITUTED_TEMPLATE_RE.test(v)) return null;
+  return v;
 }
 
 /**
