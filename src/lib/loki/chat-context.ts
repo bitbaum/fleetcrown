@@ -5,6 +5,7 @@
 import { getProjectContext } from "@/db/queries/project-context";
 import { renderProjectContextBlock } from "@/lib/orchestration";
 import type { CommandResolution } from "@/lib/command-resolve";
+import { resolveProjectFromContext } from "@/lib/project-mention";
 
 /** Which fleet project this chat turn is about — selection, resolver, or name in text. */
 export function resolveLokiChatProjectKey(
@@ -14,9 +15,7 @@ export function resolveLokiChatProjectKey(
   text: string,
 ): string | null {
   if (resolution.projectKey) return resolution.projectKey;
-  if (selectedProjects[0]) return selectedProjects[0];
-  const lower = text.toLowerCase();
-  return projectNames.find((p) => lower.includes(p.toLowerCase())) ?? null;
+  return resolveProjectFromContext(text, selectedProjects[0], projectNames);
 }
 
 /** Prepend the project brief + goals block when a project is in scope. */

@@ -47,6 +47,7 @@ import { describeAttachedImages } from "@/lib/loki/vision";
 import { dispatchAssistantContent } from "@/lib/dispatch-status";
 import { isBuilderChannel } from "@/lib/constants/statuses";
 import { buildLokiChatPrompt, resolveLokiChatProjectKey } from "@/lib/loki/chat-context";
+import { projectMentionedIn, unknownProjectMention } from "@/lib/project-mention";
 import {
   formatProjectList,
   isBusinessPlanRequest,
@@ -479,8 +480,7 @@ export async function POST(
         userId,
       );
 
-  const namedInText =
-    projectNames.find((p) => text.toLowerCase().includes(p.toLowerCase())) ?? null;
+  const namedInText = projectMentionedIn(text, projectNames);
   const dispatchTargets = resolveDispatchTargets({
     resolution,
     selectedProjects,
@@ -554,15 +554,24 @@ export async function POST(
       });
     }
   } else if (resolution.needsProject) {
+    // Say what we understood before asking for more. An operator who typed a
+    // name and got back an unexplained list of nine other projects has been
+    // told, wrongly, that their message was never read — so when the sentence
+    // contains something that reads like a project we don't have, name it.
+    const unknown = unknownProjectMention(text, projectNames);
+    const content = unknown
+      ? `I don't have a project called **${unknown}**. Pick the right one below, or I can just answer without running anything.`
+      : "Which project should I run that on? Pick one below — or I can just answer instead.";
     assistant = await addMessage(conversationId, {
       role: "assistant",
       kind: "command",
-      content: "Which project should I run that on? Tap one below, use the Project control, or name it in your message.",
+      content,
       meta: {
         needsProject: true,
         intentId: resolution.intentId,
         pendingText: text,
         projectOptions: projectNames,
+        ...(unknown ? { unknownProject: unknown } : {}),
       },
     });
   } else {

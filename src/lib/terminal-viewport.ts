@@ -17,10 +17,28 @@
  */
 
 /**
- * Below any real viewport, above the garbage a collapsed container produces.
- * A 320px phone still measures ~45 cols; a mounting or hidden host measures 1.
+ * The width every agent TUI is built to lay out in. Not a preference: `claude`,
+ * `codex` and friends compose boxes, tables and wrapped prose against roughly
+ * this, and zellij's own status line assumes it. A viewer that renders fewer
+ * columns than the session was drawn for shows torn output — words beginning
+ * mid-syllable, box borders landing inside text — which is exactly what a phone
+ * showed before this constant existed.
  */
-export const TERMINAL_MIN_COLS = 40;
+export const TERMINAL_TARGET_COLS = 80;
+
+/**
+ * Below any real viewport, above the garbage a collapsed container produces.
+ * A mounting or hidden host measures 1 column.
+ *
+ * Raised 40 → 60 on 2026-08-18. 40 was chosen as "a 320px phone still measures
+ * ~45 cols", which quietly made the phone's mangled 44-column view the SESSION's
+ * size: the resize was published, the runner applied it, and a laptop coming
+ * back to that tab found the agent's screen reflowed to 44 columns. No TUI lays
+ * out usefully there. Under 60 the viewer now stays silent and adapts its own
+ * font instead (see TerminalView), so a phone changes what IT shows, never what
+ * the session is.
+ */
+export const TERMINAL_MIN_COLS = 60;
 export const TERMINAL_MIN_ROWS = 6;
 
 export type PtyGeometry = { cols: number; rows: number };
@@ -54,4 +72,79 @@ export function clampPtyGeometry({ cols, rows }: PtyGeometry): PtyGeometry & { c
     rows: Math.max(rows, TERMINAL_MIN_ROWS),
   };
   return { ...next, clamped: next.cols !== cols || next.rows !== rows };
+}
+
+// ── Which session a viewer is attached to ────────────────────────────────────
+
+export type TabAttachment = {
+  /** The tab whose bytes should stream, or null when nothing may be attached. */
+  activeTab: string | null;
+  /** True once we know the requested tab is not on this builder. */
+  deepLinkMiss: boolean;
+};
+
+/**
+ * Resolve a ?tab= deep link against the sessions a builder actually reports.
+ *
+ * The rule this encodes is a safety rule, not a layout one. The previous
+ * behaviour fell through to `tabs[0]` whenever the requested tab was absent and
+ * printed a one-line warning above the terminal. Observed on a phone
+ * 2026-08-18: a Loki link for `orangecat` attached to `sbb-lost-found` while
+ * the input bar underneath promised "keystrokes go straight to the session" —
+ * so every keystroke, Ctrl-C included, was aimed at an unrelated agent by a
+ * page that looked like it had done what was asked.
+ *
+ * A miss therefore attaches to NOTHING until the operator chooses. Note the
+ * `selected === requestedTab` guard: once they pick, `selected` moves off the
+ * requested name and normal resolution resumes, so the miss state cannot trap
+ * them. And while `loading` is true the miss is not yet reported — an empty tab
+ * list mid-fetch is not evidence the session is gone.
+ */
+export function resolveTabAttachment({
+  requestedTab,
+  selected,
+  tabs,
+  loading,
+}: {
+  requestedTab: string | null | undefined;
+  selected: string | null;
+  tabs: string[];
+  loading: boolean;
+}): TabAttachment {
+  const pending = Boolean(requestedTab) && selected === requestedTab && !tabs.includes(requestedTab!);
+  if (pending) return { activeTab: null, deepLinkMiss: !loading };
+  const activeTab = selected && tabs.includes(selected) ? selected : (tabs[0] ?? null);
+  return { activeTab, deepLinkMiss: false };
+}
+
+// ── Fitting a phone to an 80-column screen ───────────────────────────────────
+
+/** Largest font a phone starts from, and the floor it will not go below. */
+export const TERMINAL_MOBILE_MAX_FONT = 13;
+export const TERMINAL_MOBILE_MIN_FONT = 7;
+export const TERMINAL_DESKTOP_FONT = 14;
+
+/**
+ * Next font size to try when `cols` columns fit at `size` but the target needs
+ * more. Returns null when the current size is already good enough, or when the
+ * floor has been reached and no smaller size is available.
+ *
+ * Columns are inversely proportional to font size, so one division lands close
+ * and the caller's ±1 walk finishes the job. This matters because every attempt
+ * costs a real xterm reflow: stepping 13→12→11→10→9→8 is six of them, and this
+ * gets to the same answer in two.
+ */
+export function nextFontSizeForTarget(
+  size: number,
+  cols: number,
+  targetCols: number = TERMINAL_TARGET_COLS,
+  minFont: number = TERMINAL_MOBILE_MIN_FONT,
+): number | null {
+  if (!Number.isFinite(cols) || cols <= 0) return null; // host not laid out
+  if (cols >= targetCols) return null;
+  if (size <= minFont) return null;
+  const estimate = Math.max(minFont, Math.floor((size * cols) / targetCols));
+  // The estimate can round back to the current size on a near miss; step down
+  // by one there so the walk always makes progress and cannot spin.
+  return estimate < size ? estimate : size - 1;
 }

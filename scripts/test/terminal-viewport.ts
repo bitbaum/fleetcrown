@@ -6,6 +6,11 @@
 import {
   ptyResizeToPublish,
   clampPtyGeometry,
+  resolveTabAttachment,
+  nextFontSizeForTarget,
+  TERMINAL_TARGET_COLS,
+  TERMINAL_MOBILE_MAX_FONT,
+  TERMINAL_MOBILE_MIN_FONT,
   TERMINAL_MIN_COLS,
   TERMINAL_MIN_ROWS,
 } from "@/lib/terminal-viewport";
@@ -17,6 +22,10 @@ function eq(actual: unknown, expected: unknown, label: string) {
   const e = JSON.stringify(expected);
   if (a === e) { pass++; }
   else { fail++; console.error(`✗ ${label}: expected ${e}, got ${a}`); }
+}
+function check(label: string, condition: boolean) {
+  if (condition) { pass++; }
+  else { fail++; console.error(`✗ ${label}`); }
 }
 
 // --- what the viewer publishes ------------------------------------------------
@@ -74,6 +83,67 @@ for (const geom of [
     eq(clampPtyGeometry(published).clamped, false, `client-published ${geom.cols}x${geom.rows} is never clamped`);
   }
 }
+
+
+
+// ── Which session the viewer attaches to ─────────────────────────────────────
+// The safety half of the 2026-08-18 phone report: /terminal?tab=orangecat found
+// no such session, silently attached to "sbb-lost-found", and kept telling the
+// operator their keystrokes were going "straight to the session".
+
+const RUNNING = ["sbb-lost-found", "fleetcrown"];
+
+eq(
+  resolveTabAttachment({ requestedTab: "orangecat", selected: "orangecat", tabs: RUNNING, loading: false }),
+  { activeTab: null, deepLinkMiss: true },
+  "a deep link that matches nothing attaches to NOTHING",
+);
+eq(
+  resolveTabAttachment({ requestedTab: "orangecat", selected: "orangecat", tabs: RUNNING, loading: true }),
+  { activeTab: null, deepLinkMiss: false },
+  "mid-fetch is not yet evidence the session is gone",
+);
+eq(
+  resolveTabAttachment({ requestedTab: "orangecat", selected: "fleetcrown", tabs: RUNNING, loading: false }),
+  { activeTab: "fleetcrown", deepLinkMiss: false },
+  "picking a session from the miss state clears it",
+);
+eq(
+  resolveTabAttachment({ requestedTab: "fleetcrown", selected: "fleetcrown", tabs: RUNNING, loading: false }),
+  { activeTab: "fleetcrown", deepLinkMiss: false },
+  "a deep link that hits attaches to what was asked for",
+);
+eq(
+  resolveTabAttachment({ requestedTab: null, selected: null, tabs: RUNNING, loading: false }),
+  { activeTab: "sbb-lost-found", deepLinkMiss: false },
+  "with no deep link, first tab is a fine default",
+);
+eq(
+  resolveTabAttachment({ requestedTab: "orangecat", selected: "orangecat", tabs: [], loading: false }),
+  { activeTab: null, deepLinkMiss: true },
+  "nothing running is still a miss, not a blank live pane",
+);
+
+// ── Fitting a phone to an 80-column screen ───────────────────────────────────
+
+eq(nextFontSizeForTarget(13, 80), null, "already at target — stop");
+eq(nextFontSizeForTarget(13, 120), null, "wider than target — stop");
+eq(nextFontSizeForTarget(13, 0), null, "unlaid-out host — stop rather than divide by nothing");
+eq(nextFontSizeForTarget(TERMINAL_MOBILE_MIN_FONT, 44), null, "at the floor there is nowhere left to go");
+eq(nextFontSizeForTarget(13, 44), 7, "390px phone at 13px (44 cols) lands on the floor in one step");
+eq(nextFontSizeForTarget(12, 76), 11, "a near miss steps down by one instead of standing still");
+check("every step strictly shrinks", (() => {
+  // The property that matters: the walk terminates. Sweep every plausible
+  // (size, cols) pair and assert progress or a stop — never a repeat.
+  for (let size = TERMINAL_MOBILE_MIN_FONT; size <= TERMINAL_MOBILE_MAX_FONT; size++) {
+    for (let cols = 1; cols < TERMINAL_TARGET_COLS; cols++) {
+      const next = nextFontSizeForTarget(size, cols);
+      if (next === null) continue;
+      if (next >= size || next < TERMINAL_MOBILE_MIN_FONT) return false;
+    }
+  }
+  return true;
+})());
 
 console.log(`${pass}/${pass + fail} terminal-viewport cases passed`);
 if (fail > 0) process.exit(1);

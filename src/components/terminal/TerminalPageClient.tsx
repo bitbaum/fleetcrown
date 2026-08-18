@@ -24,11 +24,12 @@ export function TerminalPageClient({ local }: { local: boolean }) {
 
   return (
     <TerminalMobileShell>
-      {({ immersive }) => (
+      {({ immersive, toggleImmersive }) => (
         <TerminalSurface
           key={surfaceKey}
           local={local}
           immersive={immersive}
+          onToggleImmersive={toggleImmersive}
           initialSource={initialSource}
           initialTab={initialTab}
         />

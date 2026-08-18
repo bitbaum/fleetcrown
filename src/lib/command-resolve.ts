@@ -9,14 +9,15 @@
  *   - dispatch is fire-and-forget into the project's session (the caller posts
  *     to /api/inject); this resolver only RESOLVES, it does not dispatch.
  *
- * Resolution is one fast Groq call, with a deterministic fallback (exact
- * project-name substring match, treat as command) when the LLM is unavailable —
- * so the composer degrades to "named project → run", never to a hang.
+ * Resolution is one fast Groq call, with a deterministic fallback (the shared
+ * project-mention matcher, treat as command) when the LLM is unavailable — so
+ * the composer degrades to "named project → run", never to a hang.
  *
  * This is the single resolver shared by /api/command/resolve and the Loki
  * /api/conversations/[id]/messages route — neither keeps its own copy.
  */
 import { callGroqText } from "@/lib/groq";
+import { projectMentionedIn } from "@/lib/project-mention";
 import { ORCHESTRATION_TASK_INTENT_IDS, type OrchestrationTaskIntentId } from "@/lib/orchestration";
 
 export type CommandResolution = {
@@ -52,6 +53,21 @@ const ACTION_VERB_RE =
 const CHAT_QUESTION_RE =
   /^(what|why|how|when|where|who|should|could|would|can you explain|tell me about|describe|compare|summarize|explain|list|show me|is there|are there)\b/i;
 
+/**
+ * Asking to be TOLD something. Not every request phrased as an instruction is
+ * work for an agent — "I want you to tell me what is left to do with X" is a
+ * question wearing an imperative coat, and CHAT_QUESTION_RE misses it because
+ * the sentence opens with "I", not an interrogative.
+ *
+ * This mattered because the fallback at the bottom of looksLikeDispatchTask
+ * treats any sentence over 16 characters containing " for "/" on "/" in " as a
+ * task. That sentence contains "for it", so a plain question was routed to an
+ * agent, and — having no project — came back as a picker instead of an answer.
+ * Read the room before reading the grammar: if they asked to be told, tell them.
+ */
+const INFO_REQUEST_RE =
+  /^\s*(?:so\s+|and\s+|ok(?:ay)?,?\s+)?(?:i\s+(?:just\s+)?(?:want|need|would\s+like|'?d\s+like|wanna)\s+(?:you\s+)?to\s+(?:tell|explain|show|describe|summari[sz]e|list|walk|say)|i\s+(?:want|need|'?d\s+like)\s+to\s+(?:know|understand|see|hear)|(?:can|could|would|will)\s+you\s+(?:please\s+)?(?:tell|explain|show|describe|summari[sz]e|list|walk|remind|give)|tell\s+me|remind\s+me|walk\s+me\s+through|give\s+me\s+(?:a\s+|an\s+|the\s+)?(?:summary|rundown|status|overview|list|sense|picture|breakdown)|any\s+(?:idea|thoughts|update)|status\s+(?:of|on)\b)/i;
+
 function inferIntentFromText(text: string): OrchestrationTaskIntentId | null {
   const t = text.toLowerCase();
   if (/\b(code review|review (?:the )?code)\b/.test(t)) return "quality";
@@ -70,10 +86,18 @@ function inferIntentFromText(text: string): OrchestrationTaskIntentId | null {
 export function looksLikeDispatchTask(text: string): boolean {
   const t = text.trim();
   if (!t) return false;
+  // An explicit build handoff outranks everything — "ok, now please build it".
   if (DEVELOP_READY_RE.test(t)) return true;
   if (CHAT_QUESTION_RE.test(t)) return false;
+  if (INFO_REQUEST_RE.test(t)) return false;
   if (t.endsWith("?") && !ACTION_VERB_RE.test(t)) return false;
   if (ACTION_VERB_RE.test(t)) return true;
+  // Last resort: a bare "<project>: <thing>" or "ship the parser for X" with no
+  // recognised verb. Deliberately narrower than "contains a preposition" — that
+  // version swallowed ordinary sentences whole. The text must still READ as an
+  // instruction, i.e. start with a word that could be a verb, not with a
+  // pronoun or an article.
+  if (/^(i|we|you|it|they|he|she|the|a|an|my|our|this|that|there|here)\b/i.test(t)) return false;
   return t.length >= 16 && /\b(for|on|in)\s+\S/.test(t);
 }
 
@@ -108,8 +132,8 @@ export async function resolveCommand(
   userId?: string,
 ): Promise<CommandResolution> {
   void userId; // reserved for per-user biasing; see doc comment.
-  const lower = text.toLowerCase();
-  const namedInText = projects.find((p) => lower.includes(p.toLowerCase())) ?? null;
+  // Spacing- and case-tolerant: "Orange Cat" resolves the registered `orangecat`.
+  const namedInText = projectMentionedIn(text, projects);
 
   // Fast path — "let's develop it" with a known project should dispatch, not chat.
   if (DEVELOP_READY_RE.test(text)) {

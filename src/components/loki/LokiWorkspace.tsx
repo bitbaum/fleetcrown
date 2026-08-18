@@ -11,6 +11,7 @@ import { useBuilderPresence } from "@/hooks/use-builder-presence";
 import { useLocalStorageState } from "@/hooks/use-local-storage-state";
 import { Drawer } from "@/components/ui/modal";
 import { ConversationList } from "./ConversationList";
+import { LokiStartPanel } from "./LokiStartPanel";
 import { Transcript } from "./Transcript";
 import { Composer } from "./Composer";
 import { SaveContextBar } from "./SaveContextBar";
@@ -304,6 +305,18 @@ export function LokiWorkspace({
     void send(pendingText, {}, [], { selectedProjectsOverride: [projectName], dispatchOnly: true });
   };
 
+  // "Just answer" — the way out of a needs-project prompt the operator never
+  // asked for. dispatchOnly skips the optimistic bubble (their message is
+  // already in the transcript); chatOnly forces the answer path server-side.
+  const answerWithoutProject = (pendingText: string) => {
+    if (!activeId || !pendingText.trim()) return;
+    void send(pendingText, {}, [], {
+      selectedProjectsOverride: [],
+      dispatchOnly: true,
+      chatOnly: true,
+    });
+  };
+
   const toggleProject = (name: string) => {
     setSelectedProjects((prev) =>
       prev.includes(name) ? prev.filter((p) => p !== name) : [...prev, name],
@@ -323,12 +336,27 @@ export function LokiWorkspace({
 
   const chatBody = (
     <>
+      {isStart && (
+        <LokiStartPanel
+          conversations={conversations}
+          loading={convosLoading}
+          onResume={(id) => setActiveId(id)}
+          onBrowseAll={() => {
+            if (typeof window !== "undefined" && window.matchMedia("(min-width: 768px)").matches) {
+              setHistoryPinned(true);
+              return;
+            }
+            setHistoryOpen(true);
+          }}
+        />
+      )}
       <div className={`flex min-h-0 flex-col ${isStart ? "" : "flex-1"} px-1 sm:px-0`}>
         <Transcript
           messages={messages}
           loading={transcriptLoading}
           sending={sending}
           onPickProject={dispatchWithProject}
+          onAnswerAnyway={answerWithoutProject}
         />
       </div>
       {messages.length > 0 && (
@@ -349,6 +377,7 @@ export function LokiWorkspace({
         onOpenProjects={() => setFilterOpen(true)}
         disabled={false}
         sending={sending}
+        showStarters={isStart}
         dispatchHonesty={dispatchHonesty}
         onSend={(t, choice, attachments, opts) =>
           void send(t, choice, attachments, { chatOnly: opts?.chatOnly })
