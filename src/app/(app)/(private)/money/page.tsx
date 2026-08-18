@@ -13,6 +13,7 @@ import {
   calculateMonthlyBurn,
 } from "@/db/queries/money";
 import { requirePageUserId } from "@/lib/session";
+import { getUserById } from "@/db/queries/users";
 import { format, isPast } from "date-fns";
 import { formatMoney } from "@/lib/format";
 import { ORANGECAT_INTEGRATION as INTEGRATION } from "@/config/marketing-content";
@@ -97,13 +98,27 @@ function SubRow({ sub }: { sub: Awaited<ReturnType<typeof getAllSubscriptions>>[
 export default async function MoneyPage() {
   const userId = await requirePageUserId();
 
-  // OrangeCat integration banner for FleetCrown (the customer) - SSOT in marketing-content
-  const IntegrationBanner = (
-    <div className="mb-4 p-3 bg-surface-raised border border-border-subtle rounded-lg text-sm">
+  // OrangeCat integration banner — company-level plumbing (a wallet BTC
+  // address, the internal stakeholder_relationships wiring between FleetCrown
+  // and OrangeCat), not a fact about the signed-in user's own subscriptions.
+  //
+  // Two bugs, not one. It rendered ABOVE the burn total and the subscription
+  // list — the one thing every visitor to /money actually came here for — so
+  // "irrelevant content first" was the mildest problem. The banner is built
+  // from static config (ORANGECAT_INTEGRATION), not scoped by userId at all,
+  // so it rendered identically for every signed-in tenant: any user on this
+  // multi-user SaaS could open /money and read the founder's own wallet
+  // address. RevenueCard on /system already treats "founder-only" as a real
+  // gate (isDefault, "a regular tenant must never see fleet-wide MRR") —
+  // this is the same class of fact and gets the same gate, not just a reorder.
+  const viewer = await getUserById(userId).catch(() => null);
+  const isFounder = viewer?.isDefault === true;
+  const IntegrationBanner = isFounder ? (
+    <div className="mt-6 p-3 bg-surface-raised border border-border-subtle rounded-lg text-sm">
       <div className="font-medium">Economic layer: <a href={INTEGRATION.orangeCat.profile} target="_blank" className="ui-link">{INTEGRATION.orangeCat.title} profile ({INTEGRATION.owner})</a></div>
       <div className="text-text-secondary mt-1">FleetCrown is a paying customer of OrangeCat (via <code>stakeholder_relationships</code> &quot;customer&quot; edge). Shared wallet. <a href={INTEGRATION.orangeCat.projectUrl} target="_blank" className="ui-link">{INTEGRATION.orangeCat.title} project</a> · <a href={INTEGRATION.fleetCrown.projectUrl} target="_blank" className="ui-link">{INTEGRATION.fleetCrown.title} project</a>. Wallet: <code>{INTEGRATION.wallet.btc}</code></div>
     </div>
-  );
+  ) : null;
 
   const [allSubs, commitments] = await Promise.all([
     getAllSubscriptions(userId),
@@ -117,7 +132,6 @@ export default async function MoneyPage() {
 
   return (
     <PageLayout title="Money" subtitle="Subscriptions, bills, and financial commitments" right={<NewSubscriptionButton />}>
-      {IntegrationBanner}
       <StatRow>
         <StatCard
           label="Monthly Burn"
@@ -182,6 +196,7 @@ export default async function MoneyPage() {
           </div>
         </Card>
       )}
+      {IntegrationBanner}
     </PageLayout>
   );
 }

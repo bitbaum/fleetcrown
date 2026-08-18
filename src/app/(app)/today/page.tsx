@@ -112,19 +112,14 @@ export default async function TodayPage() {
         <TodayWatch />
       </Suspense>
 
-      {/* Fleet brief — at-a-glance counts of projects/runs today + this week.
-          Lives above RecentRunsCard because it answers "what happened?"
-          (aggregate) before "what specifically happened?" (timeline). */}
-      <Suspense fallback={<CardSkeleton />}>
-        <FleetBriefCard userId={userId} />
-      </Suspense>
-
-      {/* Recent agent outcomes — what agents shipped since last visit */}
-      <Suspense fallback={<CardSkeleton />}>
-        <RecentRunsCard />
-      </Suspense>
-
-      {/* Actionable first — what needs your decision */}
+      {/* Actionable first — what needs your decision. This has to come before
+          the recap cards below it, not after: ActionQueueCard is the one card
+          on this page with real Approve/Decline buttons, and on a 390px phone
+          "first" is the difference between one thumb-scroll and four. It used
+          to sit here in a comment but not in the layout — FleetBriefCard and
+          RecentRunsCard (both read-only recap) were rendered above it, so a
+          mobile user scrolled past two summaries of what ALREADY happened
+          before reaching the one card asking them to decide something. */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Suspense fallback={<CardSkeleton />}>
           <ActionQueueCard />
@@ -142,6 +137,19 @@ export default async function TodayPage() {
           <StuckGoalsCard />
         </Suspense>
       </div>
+
+      {/* Fleet brief — at-a-glance counts of projects/runs today + this week.
+          Lives above RecentRunsCard because it answers "what happened?"
+          (aggregate) before "what specifically happened?" (timeline). Both
+          are recap, so both come after the decisions above. */}
+      <Suspense fallback={<CardSkeleton />}>
+        <FleetBriefCard userId={userId} />
+      </Suspense>
+
+      {/* Recent agent outcomes — what agents shipped since last visit */}
+      <Suspense fallback={<CardSkeleton />}>
+        <RecentRunsCard />
+      </Suspense>
 
       {/* Context — what's happening today */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

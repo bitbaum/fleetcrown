@@ -2,7 +2,13 @@
  * Inline tests for dispatch queue status copy.
  * Run: npx tsx scripts/test/dispatch-status.ts
  */
-import { deriveDispatchLiveStatus, dispatchAssistantContent, dispatchStatusLabel } from "@/lib/dispatch-status";
+import {
+  deriveDispatchLiveStatus,
+  deriveMultiDispatchView,
+  dispatchAssistantContent,
+  dispatchStatusLabel,
+  dispatchToneDotClass,
+} from "@/lib/dispatch-status";
 import { EXECUTOR_COPY } from "@/config/executor-copy";
 import { BUILDER_CHANNELS } from "@/lib/constants/statuses";
 
@@ -128,6 +134,64 @@ for (const channel of BUILDER_CHANNELS) {
   }
   if (!dispatchStatusLabel({ mode: "direct", channel }).label.includes(name)) {
     throw new Error(`channel ${channel} is not surfaced in its label`);
+  }
+}
+
+// ── Fan-out dispatch badge (2026-08-19) ─────────────────────────────────────
+//
+// Reported: a "develop these 3 projects" dispatch that started 0 of 3 showed
+// the same generic green "Dispatched" chip as one that started 3 of 3 — the
+// footer badge never read the real per-project attempts, only the reply text
+// above it (formatMultiDispatchReply) was honest. deriveMultiDispatchView is
+// the fix: the badge and the text now agree, because they read the same data.
+
+const allStarted = deriveMultiDispatchView([
+  { projectKey: "fleetcrown", ok: true },
+  { projectKey: "orangecat", ok: true },
+]);
+if (allStarted.tone !== "positive" || allStarted.primaryProject !== "fleetcrown") {
+  throw new Error(`all-started must be positive and link the first started project — got ${JSON.stringify(allStarted)}`);
+}
+
+const noneStarted = deriveMultiDispatchView([
+  { projectKey: "fleetcrown", ok: false, skipped: true, reason: "busy" },
+  { projectKey: "orangecat", ok: false, skipped: true, reason: "pending_command" },
+]);
+if (noneStarted.tone !== "negative" || noneStarted.primaryProject !== null) {
+  throw new Error(`0-of-N must be negative with no link to watch — got ${JSON.stringify(noneStarted)}`);
+}
+if (!noneStarted.label.includes("0 of 2")) {
+  throw new Error(`0-of-N label must say so plainly — got "${noneStarted.label}"`);
+}
+
+const partialStarted = deriveMultiDispatchView([
+  { projectKey: "fleetcrown", ok: true },
+  { projectKey: "orangecat", ok: false, skipped: true, reason: "busy" },
+  { projectKey: "datacat", ok: false, skipped: true, reason: "concurrency_cap" },
+]);
+if (partialStarted.tone !== "warning" || partialStarted.primaryProject !== "fleetcrown") {
+  throw new Error(`partial start must warn and link a project that actually started — got ${JSON.stringify(partialStarted)}`);
+}
+if (!partialStarted.label.includes("1 of 3")) {
+  throw new Error(`partial-start label must say how many of how many — got "${partialStarted.label}"`);
+}
+
+// The link must never point at a SKIPPED project just because it happened to
+// be first in the list — that was the second half of the reported bug.
+const skippedFirst = deriveMultiDispatchView([
+  { projectKey: "skipped-one", ok: false, skipped: true, reason: "busy" },
+  { projectKey: "started-one", ok: true },
+]);
+if (skippedFirst.primaryProject !== "started-one") {
+  throw new Error(`link must skip past a failed first attempt to the project that actually started — got ${skippedFirst.primaryProject}`);
+}
+
+// Every tone in the union renders a real dot class — none can fall through to
+// undefined and print "undefined" as a CSS class in the DOM.
+for (const tone of ["positive", "warning", "negative", "neutral"] as const) {
+  const cls = dispatchToneDotClass(tone);
+  if (!cls || !cls.startsWith("ui-dot-")) {
+    throw new Error(`tone ${tone} has no dot class — got "${cls}"`);
   }
 }
 

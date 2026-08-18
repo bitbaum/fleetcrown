@@ -4,6 +4,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { getStuckGoals } from "@/db/queries/today";
 import { requirePageUserId } from "@/lib/session";
 import { isPrivateZoneLocked } from "@/lib/private-zone";
+import { STALE_GOALS_DAYS } from "@/lib/constants/today";
 import { AbandonGoalButton } from "./AbandonGoalButton";
 import { LokiDispatchButton } from "@/components/shared/LokiDispatchButton";
 import { ControlDispatchButton } from "@/components/shared/ControlDispatchButton";
@@ -30,12 +31,15 @@ export async function StuckGoalsCard() {
 
   return (
     <Card id="stuck-goals">
+        {/* The idle threshold was a literal "30+" — agreed with getStuckGoals'
+            default by coincidence, not by reference, so the two would
+            silently drift the moment STALE_GOALS_DAYS ever changed. */}
         <CardHeader
           icon={CirclePause}
           title="Stalled Goals"
           right={
             <span className="text-xs text-status-warning font-medium">
-              0% · 30+ days idle
+              0% · {STALE_GOALS_DAYS}+ days idle
             </span>
           }
         />

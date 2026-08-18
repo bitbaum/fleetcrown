@@ -1,10 +1,12 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AlertCircle, BookOpen, Loader2, Send, X } from "lucide-react";
 import { postJson } from "@/lib/api/fetch";
 import { PromptPicker } from "@/components/prompts/PromptPicker";
 import { cn } from "@/lib/utils";
+import { useDispatchLiveStatus } from "@/hooks/use-dispatch-live-status";
+import { dispatchToneDotClass } from "@/lib/dispatch-status";
 
 /**
  * Prompt-mode composer for the terminal.
@@ -27,16 +29,65 @@ export function TerminalComposer({ tab }: { tab: string }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
+  // Real follow-through on what "Sent ✓" used to claim unconditionally.
+  //
+  // Before this, the button flashed "Sent ✓" for exactly 2 seconds and the
+  // POST's response body was discarded — so a prompt that QUEUED behind an
+  // offline builder (tab-inject's `mode: "dispatch"`/`"queued"`) looked
+  // identical to one that ran immediately, and either way the confirmation
+  // vanished with nothing left on screen to check back on. This composer's
+  // own doc comment claimed the mode-bar hint "makes the difference real" —
+  // it didn't; only the ambient, pre-send honesty chip elsewhere on the page
+  // did, and that says nothing about what THIS send actually did.
+  //
+  // Tracked status now persists (dismissible) below the composer for exactly
+  // the case that needs it — queued/working — and self-clears quickly once a
+  // dispatch is confirmed to have actually started, so a healthy fast-path
+  // send still feels like the old "Sent ✓" blip.
+  const [trackedCommandId, setTrackedCommandId] = useState<string | null>(null);
+  const [trackedRunId, setTrackedRunId] = useState<string | null>(null);
+  const liveDispatch = useDispatchLiveStatus(trackedCommandId, trackedRunId);
+  const clearTracked = () => { setTrackedCommandId(null); setTrackedRunId(null); };
+
+  // The "self-clears quickly once confirmed" half of the comment above: once
+  // the tracked lifecycle settles on a GOOD outcome, the strip has done its
+  // job and gets out of the way on its own — the terminal output right below
+  // is the lasting record. A negative/warning settle (failed, unconfirmed)
+  // stays put; that is exactly the case an auto-vanishing confirmation used
+  // to hide.
+  useEffect(() => {
+    if (!liveDispatch?.terminal) return;
+    if (liveDispatch.tone === "negative" || liveDispatch.tone === "warning") return;
+    const t = window.setTimeout(clearTracked, 4000);
+    return () => window.clearTimeout(t);
+  }, [liveDispatch]);
+
   const send = async () => {
     const prompt = text.trim();
     if (!prompt || sending) return;
     setSending(true);
     setError(null);
     try {
-      await postJson("/api/control/tab-inject", { tab, prompt });
+      const res = await postJson("/api/control/tab-inject", { tab, prompt });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(typeof data.error === "string" ? data.error : `Could not dispatch (HTTP ${res.status}).`);
+        return;
+      }
+      // The runner saw the operator actively typing in this exact session and
+      // refused to interleave keystrokes with an injected prompt — nothing
+      // ran. HTTP still succeeded, so this has to be checked separately from
+      // res.ok or it reads as a send.
+      if (data.blocked) {
+        setError(`Not sent — someone is typing in “${tab}” right now. Wait a moment and try again.`);
+        return;
+      }
       setText("");
       setSent(true);
       window.setTimeout(() => setSent(false), 2000);
+      clearTracked();
+      setTrackedCommandId(typeof data.commandId === "string" ? data.commandId : null);
+      setTrackedRunId(typeof data.runId === "string" ? data.runId : null);
     } catch (e) {
       // The draft is deliberately preserved so a failed send is retryable from
       // the same box instead of retyped.
@@ -128,6 +179,31 @@ export function TerminalComposer({ tab }: { tab: string }) {
             {sending ? <Loader2 className="ui-spinner-sm" /> : sent ? "Sent ✓" : <>Send <Send className="h-3 w-3" /></>}
           </button>
         </div>
+
+        {/* Persists past the 2s "Sent ✓" blip — the honest answer to "did it
+            actually do anything?" for exactly the case that needs one: queued
+            or still working. Terminal output arriving is the real confirmation
+            for a ran-now dispatch, so this stays quiet once liveDispatch settles
+            positive; it's the queued/failed/unconfirmed cases this exists for. */}
+        {(trackedCommandId || trackedRunId) && (
+          <div className="flex items-center gap-2 border-t border-border-subtle px-2.5 py-1.5 text-micro">
+            <span className={dispatchToneDotClass(liveDispatch?.tone ?? "neutral")} />
+            <span className="min-w-0 flex-1 truncate text-text-secondary">
+              {liveDispatch?.label ?? "Checking status…"}
+              {liveDispatch?.detail && (
+                <span className="text-text-tertiary"> — {liveDispatch.detail}</span>
+              )}
+            </span>
+            <button
+              type="button"
+              onClick={clearTracked}
+              aria-label="Dismiss dispatch status"
+              className="ui-icon-action shrink-0"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

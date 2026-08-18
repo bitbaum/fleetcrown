@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Play, X } from "lucide-react";
+import Link from "next/link";
+import { Play, TerminalSquare, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { timeAgo } from "@/lib/dates";
 import { answer } from "@/lib/project-display";
@@ -325,13 +326,21 @@ export function ProjectCard({
       {/* Honest dispatch status — the REAL lifecycle of the last queued
           dispatch (queued → picked up → ran / failed / unconfirmed), polled
           from the command row. Replaces the old silent "it 200'd, assume it's
-          working" gap where a runner focus_tab failure never reached the card. */}
+          working" gap where a runner focus_tab failure never reached the card.
+
+          UX audit gap (2026-08-19): this banner told the operator the truth
+          but gave them nowhere to go act on it — a dismiss (X) was the only
+          button. "Queued — runs when it's online" with no link reads as a
+          dead end on a phone, where the live Zellij panel below isn't even
+          rendered (desktop/local-runtime only). Watch → now goes straight to
+          this project's session on /terminal, same destination Loki's own
+          dispatch footer already offers. */}
       {dispatchStatus && (
         <div
           role="status"
           aria-live="polite"
           className={cn(
-            "flex items-start gap-2 border-b px-4 py-2 text-xs",
+            "flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b px-4 py-2 text-xs",
             dispatchStatus.tone === "negative"
               ? "border-status-negative/25 bg-status-negative/[0.05] text-status-negative"
               : dispatchStatus.tone === "warning"
@@ -347,6 +356,13 @@ export function ProjectCard({
               <span className="text-text-tertiary"> — {dispatchStatus.detail}</span>
             )}
           </span>
+          <Link
+            href={`/terminal?tab=${encodeURIComponent(project.tab)}`}
+            className="ui-dispatch-watch-link shrink-0"
+          >
+            <TerminalSquare className="h-3.5 w-3.5" />
+            Watch
+          </Link>
           {dispatchStatus.terminal && (
             <button
               onClick={clearDispatchStatus}

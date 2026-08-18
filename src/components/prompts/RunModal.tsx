@@ -9,6 +9,8 @@ import { Modal } from "@/components/ui/modal";
 import { postJson } from "@/lib/api/fetch";
 import { useClipboard } from "@/hooks/use-clipboard";
 import { useFetch } from "@/hooks/use-fetch";
+import { useDispatchLiveStatus } from "@/hooks/use-dispatch-live-status";
+import { dispatchStatusLabel, dispatchToneDotClass } from "@/lib/dispatch-status";
 
 export function RunModal({
   template,
@@ -36,6 +38,16 @@ export function RunModal({
   const openTabs = tabsData?.tabs ?? [];
   const [dispatching, setDispatching] = useState(false);
   const [dispatchedTo, setDispatchedTo] = useState<string | null>(null);
+  // What tab-inject's response actually reported — tracked so the confirmation
+  // line can say what really happened instead of the same "Sent to X" whether
+  // the prompt ran immediately or queued behind an offline builder.
+  const [trackedCommandId, setTrackedCommandId] = useState<string | null>(null);
+  const [trackedRunId, setTrackedRunId] = useState<string | null>(null);
+  // Fallback when neither id came back (no dirPath on this project, so no
+  // tracked run was created) — still enough to say ran-now vs queued rather
+  // than defaulting to a bare "Sent" forever.
+  const [trackedMode, setTrackedMode] = useState<string | null>(null);
+  const liveDispatch = useDispatchLiveStatus(trackedCommandId, trackedRunId);
 
   const resolvedMessage =
     template.scope === "project" && projectName
@@ -55,9 +67,32 @@ export function RunModal({
     if (!targetTab || dispatching) return;
     setDispatching(true);
     setError(null);
+    setDispatchedTo(null);
+    setTrackedCommandId(null);
+    setTrackedRunId(null);
     try {
-      await postJson("/api/control/tab-inject", { tab: targetTab, prompt: resolvedMessage });
+      const res = await postJson("/api/control/tab-inject", { tab: targetTab, prompt: resolvedMessage });
+      // postJson never throws on a non-2xx status (it's a bare fetch) — the
+      // previous version skipped this check entirely, so a 401/500 from
+      // tab-inject still flipped the modal to "Sent to X. Watch it in
+      // Terminal →" in green. It hadn't sent anything.
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(typeof data.error === "string" ? data.error : `Could not send (HTTP ${res.status}).`);
+        return;
+      }
+      // The runner detected the operator actively typing in this exact
+      // session and refused to interleave — nothing was injected, but the
+      // HTTP call still succeeded. Showing "Sent" here would be the same lie
+      // this fix exists to remove, just from a different response shape.
+      if (data.blocked) {
+        setError(`Not sent — someone is typing in “${targetTab}” right now. Wait a moment and try again.`);
+        return;
+      }
       setDispatchedTo(targetTab);
+      setTrackedCommandId(typeof data.commandId === "string" ? data.commandId : null);
+      setTrackedRunId(typeof data.runId === "string" ? data.runId : null);
+      setTrackedMode(typeof data.mode === "string" ? data.mode : null);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -143,7 +178,12 @@ export function RunModal({
             </div>
           )}
 
-          {(running || result || error) && (
+          {/* The heading and Copy button belong to the "Run with Loki" flow
+              only — "Send to terminal" errors (blocked, offline, HTTP failure)
+              used to render inside a box labelled "Loki's Response", which is
+              wrong for a failure that has nothing to do with Loki chat. Error
+              is now a standalone slot below, shared by both actions. */}
+          {(running || result) && (
             <div>
               <div className="mb-2 flex items-center justify-between">
                 <span>Loki&apos;s Response</span>
@@ -163,16 +203,16 @@ export function RunModal({
                   Loki is working… (this may take up to 60s)
                 </div>
               )}
-              {error && (
-                <div className="ui-box-error">
-                  {error}
-                </div>
-              )}
               {result && (
                 <pre className="ui-code-surface">
                   {result}
                 </pre>
               )}
+            </div>
+          )}
+          {error && (
+            <div className="ui-box-error">
+              {error}
             </div>
           )}
         </div>
@@ -214,13 +254,27 @@ export function RunModal({
             Loki answers here. Send to terminal dispatches into a live agent session — assembled with project
             context, and queued if the builder is offline.
           </p>
+          {/* Was: a static green "Sent to X. Watch it in Terminal →" regardless
+              of whether tab-inject ran the prompt immediately or queued it
+              behind an offline builder — the response body was discarded.
+              This now shows the real lifecycle (queued/working/failed…) and
+              only turns positive once it's actually confirmed. */}
           {dispatchedTo && (
-            <p className="text-xs text-status-positive">
-              Sent to {dispatchedTo}.{" "}
-              <Link href={`/terminal?tab=${encodeURIComponent(dispatchedTo)}`} className="underline">
-                Watch it in Terminal →
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+              <span className={dispatchToneDotClass(liveDispatch?.tone ?? "neutral")} />
+              <span className="text-text-secondary">
+                {liveDispatch?.label ?? dispatchStatusLabel({ ok: true, mode: trackedMode }).label}
+              </span>
+              {liveDispatch?.detail && (
+                <span className="text-text-tertiary">— {liveDispatch.detail}</span>
+              )}
+              <Link
+                href={`/terminal?tab=${encodeURIComponent(dispatchedTo)}`}
+                className="ui-dispatch-watch-link"
+              >
+                <SquareTerminal className="h-3.5 w-3.5" /> Watch
               </Link>
-            </p>
+            </div>
           )}
         </div>
       </Modal>

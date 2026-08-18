@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { Eraser, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useMicComposer } from "@/hooks/use-mic-composer";
 import { postJson } from "@/lib/api/fetch";
 import { PRIMARY_INTENTS, ACTION_INTENTS, MORE_INTENTS } from "@/config/control-intents";
@@ -245,14 +246,25 @@ export function IntentButtonPanel({
             The agent re-reads the repo&apos;s ground truth, picks the highest-impact task, and runs it — dispatches immediately.
           </p>
 
-          {/* Secondary intents: compact chips + More toggle */}
+          {/* Secondary intents: compact chips + More toggle.
+              On phones, these three (Test & fix / Quality / Commit) plus the
+              primary CTA above plus composer/mic/send below put 8-10 tap
+              targets on screen before scrolling past a single card — the
+              "wall of buttons" the mobile UX audit named as this surface's
+              worst offender. Hidden under `sm` until "More" is tapped, same
+              as MORE_INTENTS already was; one extra tap trades for a card
+              that opens with ONE clear action instead of ten. Unchanged at
+              sm and up, where the room to show them was never the problem. */}
           <div className="flex flex-wrap gap-1.5">
             {ACTION_INTENTS.map(({ id, label }) => (
               <button
                 key={id}
                 onClick={() => handleSendIntent(id)}
                 disabled={sending !== null}
-                className="ui-chip-action-compact text-text-secondary"
+                className={cn(
+                  "ui-chip-action-compact text-text-secondary",
+                  !showMore && "hidden sm:inline-flex",
+                )}
               >
                 {sending === id ? "…" : justSent?.id === id ? "✓" : label}
               </button>

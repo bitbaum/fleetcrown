@@ -5,52 +5,9 @@ import Link from "next/link";
 import { ExternalLink, ListChecks, Loader2, MessageCircle, Monitor, TerminalSquare } from "lucide-react";
 import { MarkdownText, type CitationMap } from "@/components/ui/markdown-text";
 import type { LokiMessage } from "./types";
-import { dispatchStatusLabel, type DispatchLiveView } from "@/lib/dispatch-status";
+import { deriveMultiDispatchView, dispatchStatusLabel, dispatchToneDotClass, type MultiDispatchAttempt } from "@/lib/dispatch-status";
+import { useDispatchLiveStatus } from "@/hooks/use-dispatch-live-status";
 import { isBuilderChannel } from "@/lib/constants/statuses";
-
-const DISPATCH_DOT: Record<DispatchLiveView["tone"], string> = {
-  positive: "ui-dot-positive",
-  warning: "ui-dot-warning",
-  negative: "ui-dot-negative",
-  neutral: "ui-dot-neutral",
-};
-
-/** Poll a dispatch's live status so queued commands and direct terminal runs
- *  both converge on their recorded completion outcome instead of freezing on
- *  the optimistic snapshot. Stops as soon as the tracked lifecycle settles. */
-function useDispatchLiveStatus(commandId: string | null, runId: string | null): DispatchLiveView | null {
-  const [view, setView] = useState<DispatchLiveView | null>(null);
-  useEffect(() => {
-    const statusUrl = commandId
-      ? `/api/control/commands/${commandId}`
-      : runId
-        ? `/api/orchestration/runs/${runId}`
-        : null;
-    if (!statusUrl) return;
-    let active = true;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const poll = async () => {
-      try {
-        const res = await fetch(statusUrl);
-        if (res.ok) {
-          const v = (await res.json()) as DispatchLiveView;
-          if (!active) return;
-          setView(v);
-          if (v.terminal) return;
-        }
-      } catch {
-        /* transient — retry below */
-      }
-      if (active) timer = setTimeout(poll, 2500);
-    };
-    void poll();
-    return () => {
-      active = false;
-      if (timer) clearTimeout(timer);
-    };
-  }, [commandId, runId]);
-  return view;
-}
 /** Human-readable label for an assistant turn's kind badge. SSOT for the
  *  small set of kinds the messages route emits. */
 const KIND_LABEL: Record<string, string> = {
@@ -90,13 +47,32 @@ function DispatchFooter({ meta }: { meta: Record<string, unknown> | null }) {
   const runId = typeof meta?.runId === "string" ? meta.runId : null;
   const live = useDispatchLiveStatus(commandId, runId);
   if (!meta) return null;
+
+  // Fan-out dispatch ("develop these 3 projects") has no single commandId to
+  // poll — it has N real outcomes already settled by the time this message was
+  // written. Those outcomes used to be thrown away here: the badge fell through
+  // to the generic always-green "Dispatched" regardless of how many of the N
+  // actually started, so a 0-of-3 failure and a 3-of-3 success read identically
+  // at a glance. deriveMultiDispatchView reads the real attempts instead.
+  const isMultiDispatch = meta.multiDispatch === true && Array.isArray(meta.attempts);
+  const attempts: MultiDispatchAttempt[] = isMultiDispatch
+    ? (meta.attempts as unknown[]).filter((a): a is MultiDispatchAttempt => {
+        const r = a as Record<string, unknown> | null;
+        return !!r && typeof r.projectKey === "string" && typeof r.ok === "boolean";
+      })
+    : [];
+  const multiView = isMultiDispatch ? deriveMultiDispatchView(attempts) : null;
+
   const projectKey = typeof meta.projectKey === "string" ? meta.projectKey : null;
   const projectKeys = projectKey
     ? [projectKey]
     : Array.isArray(meta.projectKeys)
       ? meta.projectKeys.filter((v): v is string => typeof v === "string")
       : [];
-  const primaryProject = projectKeys[0] ?? null;
+  // A multi-dispatch link points at a project that actually started, never at
+  // "whichever was selected first" — the previous behaviour could link a
+  // failed dispatch's Control/Terminal buttons at a project that was SKIPPED.
+  const primaryProject = multiView ? multiView.primaryProject : (projectKeys[0] ?? null);
   const failed = meta.ok === false;
   const runnerConnected =
     typeof meta.runnerConnected === "boolean" ? meta.runnerConnected : null;
@@ -109,10 +85,14 @@ function DispatchFooter({ meta }: { meta: Record<string, unknown> | null }) {
     // the unnamed copy rather than being attributed to a guessed machine.
     channel: isBuilderChannel(meta.channel) ? meta.channel : null,
   });
-  // Live status supersedes the frozen snapshot once the runner acts on the
-  // command and keeps following the associated run through its real outcome.
-  const status = live ? live.label : staticStatus;
-  const dotClass = live ? DISPATCH_DOT[live.tone] : warn ? "ui-dot-warning" : "ui-dot-positive";
+  // Precedence: real fan-out outcome > live single-command poll > the frozen
+  // snapshot from dispatch time.
+  const status = multiView ? multiView.label : live ? live.label : staticStatus;
+  const dotClass = multiView
+    ? dispatchToneDotClass(multiView.tone)
+    : live
+      ? dispatchToneDotClass(live.tone)
+      : warn ? "ui-dot-warning" : "ui-dot-positive";
   // Only present when the operator pinned a non-default model in the composer.
   const agent = typeof meta.agent === "string" ? meta.agent : null;
   const model = typeof meta.model === "string" ? meta.model : null;
@@ -134,26 +114,26 @@ function DispatchFooter({ meta }: { meta: Record<string, unknown> | null }) {
       </div>
       {primaryProject && (
         <div className="ui-loki-dispatch-actions">
-          <Link href={`/control?focus=${encodeURIComponent(primaryProject)}`} className="ui-loki-dispatch-link">
+          <Link href={`/control?focus=${encodeURIComponent(primaryProject)}`} className="ui-dispatch-watch-link">
             <Monitor className="h-3.5 w-3.5" />
             Control state
           </Link>
           <Link
             href={`/terminal?source=server&tab=${encodeURIComponent(primaryProject)}`}
-            className="ui-loki-dispatch-link"
+            className="ui-dispatch-watch-link"
           >
             <TerminalSquare className="h-3.5 w-3.5" />
             Cloud terminal
           </Link>
           <Link
             href={`/terminal?source=machine&tab=${encodeURIComponent(primaryProject)}`}
-            className="ui-loki-dispatch-link"
+            className="ui-dispatch-watch-link"
           >
             <ExternalLink className="h-3.5 w-3.5" />
             This computer
           </Link>
           {projectKeys.length > 1 && (
-            <Link href="/control" className="ui-loki-dispatch-link">
+            <Link href="/control" className="ui-dispatch-watch-link">
               <Monitor className="h-3.5 w-3.5" />
               All selected
             </Link>

@@ -10,10 +10,10 @@
 
 import Link from "next/link";
 import { and, eq, gte, sql, desc } from "drizzle-orm";
-import { Sparkles, Bot, ScrollText, KeyRound, ArrowRight } from "lucide-react";
+import { Sparkles, Bot, ScrollText, ArrowRight } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { db } from "@/db";
-import { entities, orchestrationRuns, agentTokens } from "@/db/schema";
+import { entities, orchestrationRuns } from "@/db/schema";
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
 
 interface FleetBriefStats {
@@ -22,7 +22,6 @@ interface FleetBriefStats {
   projectsTotal: number;
   runsToday: number;
   runsThisWeek: number;
-  tokensActive: number;
   topProjectsThisWeek: { name: string; runs: number }[];
 }
 
@@ -40,7 +39,7 @@ async function loadStats(userId: string): Promise<FleetBriefStats> {
   const dayStartIso = dayStart.toISOString();
   const weekStartIso = weekStart.toISOString();
 
-  const [projectsAgg, runsAgg, topProjects, tokensAgg] = await Promise.all([
+  const [projectsAgg, runsAgg, topProjects] = await Promise.all([
     db
       .select({
         today: sql<number>`count(*) filter (where ${entities.createdAt} >= ${dayStartIso}::timestamptz)`,
@@ -68,11 +67,6 @@ async function loadStats(userId: string): Promise<FleetBriefStats> {
       .groupBy(orchestrationRuns.projectKey)
       .orderBy(desc(sql`count(*)`))
       .limit(3),
-
-    db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(agentTokens)
-      .where(eq(agentTokens.userId, userId)),
   ]);
 
   return {
@@ -81,7 +75,6 @@ async function loadStats(userId: string): Promise<FleetBriefStats> {
     projectsTotal:    Number(projectsAgg[0]?.total ?? 0),
     runsToday:        Number(runsAgg[0]?.today ?? 0),
     runsThisWeek:     Number(runsAgg[0]?.thisWeek ?? 0),
-    tokensActive:     Number(tokensAgg[0]?.count ?? 0),
     topProjectsThisWeek: topProjects.map((p) => ({ name: p.name, runs: Number(p.runs) })),
   };
 }
@@ -125,8 +118,16 @@ export async function FleetBriefCard({ userId }: { userId: string }) {
         )}
 
         {/* Stat tiles — visible always (even when zero). Mirrors the
-            Total / Active / This-week pattern from SummaryBar. */}
-        <div className="grid grid-cols-3 gap-2 pt-2 border-t border-border-subtle">
+            Total / Active / This-week pattern from SummaryBar.
+            A third tile — "Tokens" — used to sit here showing
+            count(*) FROM agent_tokens: the number of auth credentials
+            registered for connecting a machine (macbook-pro, hetzner-vps),
+            not LLM token usage. Next to "Runs (week)" it read exactly like an
+            API-spend number, and it isn't one — it barely changes and carries
+            no "today"/"this week" split like its neighbors. Removed rather
+            than relabeled: nothing on this page needs "how many CLI tokens do
+            I have" (that's a Settings fact, not a Today one). */}
+        <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border-subtle">
           <StatTile
             icon={Sparkles}
             label="Projects"
@@ -138,12 +139,6 @@ export async function FleetBriefCard({ userId }: { userId: string }) {
             label="Runs (week)"
             value={stats.runsThisWeek}
             sub={stats.runsToday > 0 ? `${stats.runsToday} today` : null}
-          />
-          <StatTile
-            icon={KeyRound}
-            label="Tokens"
-            value={stats.tokensActive}
-            sub={null}
           />
         </div>
 
