@@ -3410,7 +3410,13 @@
   .ui-loki-dispatch-actions {
     @apply mt-2 flex flex-wrap gap-1.5;
   }
-  .ui-loki-dispatch-link {
+  /* "Go watch it" pill — the tap target every dispatch confirmation should
+     offer and, before 2026-08-19, only Loki's did. Shared by Loki's dispatch
+     card, Control's per-project dispatch banner, and the terminal composer's
+     queued-status line, so a dispatch fired from any of the three surfaces
+     ends the same way: a real link to where the work is actually happening,
+     not a bare "Sent" with nothing to follow. */
+  .ui-dispatch-watch-link {
     @apply inline-flex min-h-9 items-center gap-1.5 rounded-full border border-border-subtle bg-surface-raised px-3 text-xs text-text-secondary transition-colors hover:border-border-default hover:text-text-primary;
   }
   .ui-loki-queued-action {

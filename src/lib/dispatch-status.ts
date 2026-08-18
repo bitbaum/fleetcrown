@@ -188,3 +188,64 @@ export function deriveDispatchLiveStatus(cmd: CommandLiveInput): DispatchLiveVie
       };
   }
 }
+
+// ── Shared presentation helpers ───────────────────────────────────────────
+
+/** SSOT for tone → dot class. Loki's transcript, Control's dispatch banner,
+ *  and the terminal composer's status line all render the same four tones —
+ *  this was three separate inline `Record<tone, string>` maps before. */
+export function dispatchToneDotClass(tone: StatusTone): string {
+  switch (tone) {
+    case "positive": return "ui-dot-positive";
+    case "warning": return "ui-dot-warning";
+    case "negative": return "ui-dot-negative";
+    default: return "ui-dot-neutral";
+  }
+}
+
+/** One project's outcome from a fan-out dispatch (loki/multi-dispatch.ts). */
+export type MultiDispatchAttempt = {
+  projectKey: string;
+  ok: boolean;
+  skipped?: boolean;
+  reason?: string;
+  mode?: string | null;
+};
+
+export type MultiDispatchView = {
+  label: string;
+  tone: StatusTone;
+  /** First project that actually started — the one worth linking to. Null
+   *  when nothing started, so the footer offers no "watch it" link to a
+   *  session that was never touched. */
+  primaryProject: string | null;
+};
+
+/**
+ * Honest badge for a fan-out ("develop these 3 projects") dispatch.
+ *
+ * Before this, the footer badge fell through every branch of
+ * dispatchStatusLabel (none of which understand `multiDispatch` meta) to the
+ * generic, always-green "Dispatched" — so 0-of-3 started read identically to
+ * 3-of-3 on the one thing a skimming user actually looks at (the colored
+ * dot), even though the reply text right above it correctly said "Started: none".
+ */
+export function deriveMultiDispatchView(attempts: MultiDispatchAttempt[]): MultiDispatchView {
+  const started = attempts.filter((a) => a.ok);
+  const total = attempts.length;
+  const primaryProject = started[0]?.projectKey ?? null;
+  if (total === 0) {
+    return { label: "Nothing to dispatch", tone: "neutral", primaryProject: null };
+  }
+  if (started.length === 0) {
+    return { label: `Dispatch failed — 0 of ${total} started`, tone: "negative", primaryProject: null };
+  }
+  if (started.length < total) {
+    return {
+      label: `Started ${started.length} of ${total} — ${total - started.length} skipped`,
+      tone: "warning",
+      primaryProject,
+    };
+  }
+  return { label: `Started all ${total}`, tone: "positive", primaryProject };
+}
