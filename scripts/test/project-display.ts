@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+  answer,
   cleanDescription,
   isPublicTestArtifact,
   publicHeroNote,
@@ -31,5 +32,25 @@ const summarized = publicHeroNote(essay);
 assert.ok(summarized);
 assert.ok(summarized!.length <= 80, summarized);
 assert.equal(summarized, summarizeDescription(essay, 72));
+
+// A phone report from 2026-08-18: "Suggested next (profile): Keep
+// projects/<name>.md accu…" — an enrichment template's own placeholder,
+// leaked verbatim as if it were a real next step.
+assert.equal(
+  answer("Keep projects/<name>.md accurate and current."),
+  null,
+  "an unsubstituted <name> placeholder is not a real answer",
+);
+assert.equal(answer("Wire up the <repo> CI badge"), null, "any bare <word> placeholder, not just <name>");
+assert.equal(
+  answer("Ship the parser rewrite for datacat."),
+  "Ship the parser rewrite for datacat.",
+  "real prose with no placeholder passes through unchanged",
+);
+assert.equal(
+  answer("Support generics like List<T> in the parser"),
+  "Support generics like List<T> in the parser",
+  "a real generic-type mention is not mistaken for a placeholder (no bare <word>)",
+);
 
 console.log("✓ project-display tests passed");

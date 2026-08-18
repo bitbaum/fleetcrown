@@ -11,13 +11,21 @@ const OUTCOME_GLYPH: Record<OrchestrationOutcome, string> = {
   user_abort: "✕",
 };
 
+// Paired with the base `.ui-tag` class below — `.ui-tag-*` alone sets only
+// color/background/border-COLOR custom properties, not the border WIDTH,
+// radius or padding that make it read as a chip instead of a bare glyph.
+// Every other place this same outcome data renders (ProjectDossierSections,
+// project-card-helpers) pairs them; this one didn't, so on a phone "~" and
+// "✗" rendered as unstyled floating characters next to the state pill —
+// indistinguishable from a text-rendering glitch, exactly the "noise" a
+// deliberate status widget must not look like.
 const OUTCOME_TONE: Record<OrchestrationOutcome, string> = {
-  success: "ui-tag-positive",
-  partial: "ui-tag-warning",
-  error: "ui-tag-negative",
-  hang: "ui-tag-negative",
-  timeout: "ui-tag-negative",
-  user_abort: "ui-tag-warning",
+  success: "ui-tag ui-tag-positive",
+  partial: "ui-tag ui-tag-warning",
+  error: "ui-tag ui-tag-negative",
+  hang: "ui-tag ui-tag-negative",
+  timeout: "ui-tag ui-tag-negative",
+  user_abort: "ui-tag ui-tag-warning",
 };
 
 const OUTCOME_LABEL: Record<OrchestrationOutcome, string> = {
