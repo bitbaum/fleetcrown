@@ -10,6 +10,7 @@ import { deriveExecutorHonestyLabel } from "@/lib/executor-honesty";
 import { useFetch } from "@/hooks/use-fetch";
 import { useLocalStorageState } from "@/hooks/use-local-storage-state";
 import { rememberFleetProject } from "@/lib/fleet-context";
+import { resolveTabAttachment } from "@/lib/terminal-viewport";
 import type { BuilderChannel } from "@/lib/event-stream-types";
 import {
   TERMINAL_MODE_STORAGE_KEY,
@@ -24,6 +25,8 @@ import { TerminalComposer } from "./TerminalComposer";
 import { TerminalLaunch } from "./TerminalLaunch";
 import { TabVoiceMic } from "./TabVoiceMic";
 import { ShellWorkspace } from "./ShellWorkspace";
+import { TerminalSessionMiss } from "./TerminalSessionMiss";
+import { TerminalMobileBar } from "./TerminalMobileBar";
 import { runnerTransport } from "./terminal-transport";
 import { useTerminalTabs } from "./use-terminal-tabs";
 
@@ -87,11 +90,14 @@ const deserializeMode = (raw: string): TerminalMode => {
 export function TerminalSurface({
   local,
   immersive = false,
+  onToggleImmersive,
   initialSource,
   initialTab,
 }: {
   local: boolean;
   immersive?: boolean;
+  /** Phone full-screen toggle — rendered inside the mobile control bar. */
+  onToggleImmersive?: () => void;
   initialSource?: TerminalSource;
   initialTab?: string | null;
 }) {
@@ -125,7 +131,14 @@ export function TerminalSurface({
   const { tabs, loading, gatedMessage, offline, presence } = useTerminalTabs(channel);
 
   const [selected, setSelected] = useState<string | null>(initialTab ?? null);
-  const activeTab = selected && tabs.includes(selected) ? selected : (tabs[0] ?? null);
+  // A ?tab= deep link that matched nothing must not quietly attach to whatever
+  // else is running — see resolveTabAttachment for the incident this encodes.
+  const { activeTab, deepLinkMiss } = resolveTabAttachment({
+    requestedTab: initialTab,
+    selected,
+    tabs,
+    loading,
+  });
 
   // The terminal is one of the four project surfaces, so the tab you are
   // watching IS the fleet's active project — Control, Loki and the project
@@ -191,23 +204,53 @@ export function TerminalSurface({
     [tabs, activeTab, context],
   );
 
-  // A ?tab= deep link that matches nothing on this builder must say so — the
-  // silent fallback to the first tab read as "your session is gone".
+  // Where we looked, and the one place we haven't — both named in the miss
+  // state, since "not on Cloud" and "nowhere" are very different news.
   const sourceLabel = source === "machine"
     ? EXECUTOR_COPY.terminal.thisComputerLabel
     : EXECUTOR_COPY.terminal.cloudLabel;
-  const deepLinkMiss = Boolean(
-    initialTab && !loading && selected === initialTab && !tabs.includes(initialTab),
-  );
+  const otherSourceLabel =
+    source === "machine"
+      ? sources.includes("cloud")
+        ? EXECUTOR_COPY.terminal.cloudLabel
+        : null
+      : sources.includes("machine")
+        ? EXECUTOR_COPY.terminal.thisComputerLabel
+        : null;
 
   // Constant across substrates: scope on top, then the tab strip, then the
   // controls that act on the selected tab.
   const sourceBar = (
-    <TerminalSourceBar
+    <div className="hidden md:block">
+      <TerminalSourceBar
+        source={source}
+        onSourceChange={setSource}
+        sources={sources}
+        honesty={honesty}
+      />
+    </div>
+  );
+
+  // Phones get a purpose-built two-row bar instead of the desktop stack; see
+  // TerminalMobileBar for why the desktop chrome cannot simply be made smaller.
+  const mobileBar = (
+    <TerminalMobileBar
       source={source}
-      onSourceChange={setSource}
       sources={sources}
+      onSourceChange={setSource}
+      tabs={stripTabs}
+      activeTab={activeTab}
+      onSelectTab={setSelected}
+      inputMode={inputMode}
+      onInputModeChange={setInputMode}
+      agents={agents}
+      activeAgentId={activeAgentId}
+      onSwitchAgent={(id) => void switchAgent(id)}
+      switchingAgent={switchingAgent}
+      agentSwitchDisabledReason={agentSwitchDisabledReason}
       honesty={honesty}
+      immersive={immersive}
+      onToggleImmersive={onToggleImmersive ?? (() => {})}
     />
   );
 
@@ -218,6 +261,21 @@ export function TerminalSurface({
     return (
       <div className="flex h-full min-h-0 flex-col gap-2">
         {sourceBar}
+        <TerminalMobileBar
+          source={source}
+          sources={sources}
+          onSourceChange={setSource}
+          inputMode={inputMode}
+          onInputModeChange={setInputMode}
+          agents={agents}
+          activeAgentId={activeAgentId}
+          onSwitchAgent={(id) => void switchAgent(id)}
+          switchingAgent={switchingAgent}
+          agentSwitchDisabledReason={agentSwitchDisabledReason}
+          honesty={honesty}
+          immersive={immersive}
+          onToggleImmersive={onToggleImmersive ?? (() => {})}
+        />
         <div className="min-h-0 flex-1">
           <ShellWorkspace />
         </div>
@@ -227,6 +285,18 @@ export function TerminalSurface({
 
   // ── Agent sessions ──────────────────────────────────────────────────────
   const body = () => {
+    if (deepLinkMiss) {
+      return (
+        <TerminalSessionMiss
+          requestedTab={initialTab!}
+          sourceLabel={sourceLabel}
+          otherSourceLabel={otherSourceLabel}
+          available={tabs}
+          onAttach={setSelected}
+          onSwitchSource={() => setSource(source === "machine" ? "cloud" : "machine")}
+        />
+      );
+    }
     if (loading && tabs.length === 0) {
       return (
         <div className="flex items-center gap-2 p-6 text-sm text-text-muted">
@@ -281,27 +351,26 @@ export function TerminalSurface({
   return (
     <div className="flex h-full min-h-0 flex-col gap-2">
       {sourceBar}
-      <TerminalTabStrip
-        tabs={stripTabs}
-        activeId={activeTab}
-        onSelect={setSelected}
-      />
-      {deepLinkMiss && (
-        <p className="ui-term-notice" role="status">
-          No “{initialTab}” session on {sourceLabel}
-          {activeTab ? <> — showing “{activeTab}” instead</> : null}.
-        </p>
-      )}
-      {tabs.length > 0 && (
-        <TerminalSessionBar
-          inputMode={inputMode}
-          onInputModeChange={setInputMode}
-          agents={agents}
-          activeAgentId={activeAgentId}
-          onSwitchAgent={(id) => void switchAgent(id)}
-          switchingAgent={switchingAgent}
-          agentSwitchDisabledReason={agentSwitchDisabledReason}
+      {mobileBar}
+      <div className="hidden md:block">
+        <TerminalTabStrip
+          tabs={stripTabs}
+          activeId={activeTab}
+          onSelect={setSelected}
         />
+      </div>
+      {activeTab && (
+        <div className="hidden md:block">
+          <TerminalSessionBar
+            inputMode={inputMode}
+            onInputModeChange={setInputMode}
+            agents={agents}
+            activeAgentId={activeAgentId}
+            onSwitchAgent={(id) => void switchAgent(id)}
+            switchingAgent={switchingAgent}
+            agentSwitchDisabledReason={agentSwitchDisabledReason}
+          />
+        </div>
       )}
       <div className={cn("min-h-0 flex-1", immersive && "min-h-0")}>{body()}</div>
       {activeTab && inputMode === "prompt" && <TerminalComposer tab={activeTab} />}

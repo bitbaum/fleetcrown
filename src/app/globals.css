@@ -1823,6 +1823,75 @@
   .ui-term-linkbar-dismiss {
     @apply shrink-0 rounded p-0.5 text-text-muted transition-colors hover:bg-surface-raised hover:text-text-primary;
   }
+  /* Collapsed link bar on phones — one row that says how many, not four rows
+     of URL + Copy + Open stacked under a terminal that had no height to spare. */
+  .ui-term-linkbar-toggle {
+    @apply flex min-h-11 w-full items-center gap-2 rounded-lg border border-border-subtle bg-surface-base px-2.5 text-xs text-text-secondary transition-colors hover:border-border-default hover:text-text-primary;
+  }
+
+  /* Status line above the grid: what the stream is doing, how wide the grid
+     actually is, and the size stepper. One row, and the only chrome the mobile
+     full-screen terminal keeps. */
+  .ui-term-statusrow {
+    @apply flex shrink-0 items-center gap-2;
+  }
+  .ui-term-cols {
+    @apply shrink-0 rounded-sm bg-surface-overlay px-1 py-px text-nano tabular-nums tracking-caps text-text-muted;
+  }
+  .ui-term-cols-warn {
+    @apply bg-status-warning-subtle text-status-warning;
+  }
+  .ui-term-font-btn {
+    @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border-subtle text-text-secondary transition-colors hover:border-border-default hover:text-text-primary;
+  }
+  .ui-term-font-reset {
+    @apply inline-flex h-8 shrink-0 items-center rounded-md px-2 text-nano uppercase tracking-caps text-text-muted transition-colors hover:text-text-primary;
+  }
+
+  /* Mobile terminal control bar — source, session, agent, input mode, expand.
+     Two rows on a phone; the desktop chrome is hidden below md. */
+  .ui-term-mbar {
+    @apply flex shrink-0 flex-col gap-1.5;
+  }
+  .ui-term-mbar-row {
+    @apply flex items-center gap-1.5;
+  }
+  .ui-term-mbar-select {
+    @apply h-11 min-w-0 shrink rounded-lg border border-border-subtle bg-surface-raised px-2 text-xs text-text-secondary outline-none transition-colors hover:border-border-default focus:border-accent-primary disabled:opacity-50;
+  }
+  .ui-term-mbar-select-grow {
+    @apply min-w-0 flex-1;
+  }
+  .ui-term-mbar-spacer {
+    @apply flex-1;
+  }
+  .ui-term-mbar-btn {
+    @apply inline-flex h-11 min-w-11 shrink-0 items-center justify-center rounded-lg border border-border-subtle bg-surface-raised text-xs text-text-secondary transition-colors hover:border-border-default hover:text-text-primary disabled:cursor-not-allowed;
+  }
+
+  /* Deep-link miss — a session that isn't here. Occupies the terminal's slot
+     rather than sitting above someone else's live session. */
+  .ui-term-miss {
+    @apply flex h-full min-h-0 flex-col items-center justify-center gap-2 overflow-y-auto rounded-md border border-border-subtle bg-surface-base p-4 text-center;
+  }
+  .ui-term-miss-title {
+    @apply text-sm font-medium text-text-primary;
+  }
+  .ui-term-miss-body {
+    @apply text-xs text-text-muted;
+  }
+  .ui-term-miss-options {
+    @apply mt-2 flex w-full max-w-md flex-col items-center gap-1.5;
+  }
+  .ui-term-miss-grid {
+    @apply grid w-full grid-cols-2 gap-1.5 sm:grid-cols-3;
+  }
+  .ui-term-miss-chip {
+    @apply flex min-h-11 items-center justify-center truncate rounded-lg border border-border-subtle bg-surface-raised px-2 text-xs text-text-secondary transition-colors hover:border-border-interactive hover:text-text-primary;
+  }
+  .ui-term-miss-actions {
+    @apply mt-3 flex flex-wrap items-center justify-center gap-2;
+  }
 
   /* Mobile terminal full-screen — covers app chrome so xterm is usable on phones */
   body.fc-terminal-fullscreen {
@@ -3207,11 +3276,64 @@
   .ui-loki-stage {
     @apply mx-auto flex min-h-0 w-full max-w-2xl flex-1 flex-col lg:max-w-3xl xl:max-w-4xl;
   }
+  /* Start screen. On a phone the composer docks to the bottom — it is the one
+     control on the page, and the bottom third is the only part of a 6" screen a
+     thumb reaches without regripping. Centring it (the previous rule) put the
+     single interactive element in the middle of ~1000px of empty grey. From sm
+     up the pair is centred again, where reach is not a constraint. */
   .ui-loki-stage-empty {
-    @apply justify-center gap-3 pb-16 sm:pb-24;
+    @apply justify-end gap-3 pb-1 sm:justify-center sm:gap-4 sm:pb-16;
   }
   .ui-loki-stage-chat {
     @apply gap-2;
+  }
+
+  /* Resume rail above the start composer — the recent threads, one tap in. */
+  .ui-loki-start {
+    @apply flex min-h-0 shrink flex-col gap-2 overflow-y-auto;
+  }
+  .ui-loki-start-lede {
+    @apply px-1 text-sm text-text-tertiary;
+  }
+  .ui-loki-start-list {
+    @apply flex flex-col gap-1;
+  }
+  .ui-loki-start-row {
+    @apply flex min-h-11 w-full items-center gap-3 rounded-xl border border-border-subtle bg-surface-base px-3 py-2 text-left transition-colors hover:border-border-default hover:bg-surface-raised;
+  }
+  .ui-loki-start-row-icon {
+    @apply h-4 w-4 shrink-0 text-text-muted;
+  }
+  .ui-loki-start-row-text {
+    @apply flex min-w-0 flex-1 flex-col;
+  }
+  .ui-loki-start-row-title {
+    @apply truncate text-sm text-text-primary;
+  }
+  .ui-loki-start-row-meta {
+    @apply flex min-w-0 items-center gap-2 text-xs text-text-muted;
+  }
+  .ui-loki-start-row-go {
+    @apply h-4 w-4 shrink-0 text-text-muted;
+  }
+  .ui-loki-start-more {
+    @apply min-h-11 self-start rounded-lg px-1 text-xs text-text-tertiary transition-colors hover:text-text-primary;
+  }
+
+  /* Needs-project picker. A grid, not a wrapped chip cloud: nine variable-width
+     chips reflow into a ragged block that reads as noise on a phone, and the
+     one thing the operator needs — find my project, or leave — is buried in it. */
+  .ui-loki-picker {
+    @apply mt-2 flex max-w-full flex-col gap-2;
+  }
+  .ui-loki-picker-grid {
+    @apply grid grid-cols-2 gap-1.5 sm:grid-cols-3;
+  }
+  .ui-loki-picker-chip {
+    @apply flex min-h-11 items-center justify-center truncate rounded-xl border border-border-subtle bg-surface-base px-2 text-xs text-text-secondary transition-colors hover:border-border-interactive hover:text-text-primary;
+  }
+  .ui-loki-picker-answer {
+    @apply inline-flex min-h-11 items-center gap-1.5 self-start rounded-full px-2 text-xs text-text-tertiary transition-colors hover:text-text-primary;
   }
   /* Conversation list row (left pane). */
   .ui-loki-convo {

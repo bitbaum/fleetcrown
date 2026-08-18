@@ -11,10 +11,13 @@ export default function TerminalPage() {
   const local = isRuntimeAvailable();
   return (
     <div className="app-page app-page-compact app-viewport-pane flex flex-col gap-3 md:gap-4">
-      <div className="ui-page-header">
+      {/* Both children are mobile-hidden (the top bar already says "Terminal",
+          the subtitle starts at sm), so on a phone this block contributed
+          nothing but the parent flex gap above a pane fighting for every row. */}
+      <div className="ui-page-header hidden sm:flex">
         <div>
           <PageTitle title="Terminal" />
-          <p className="ui-page-subtitle hidden sm:block">
+          <p className="ui-page-subtitle">
             {EXECUTOR_COPY.terminal.pageSubtitle}
           </p>
         </div>

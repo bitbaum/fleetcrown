@@ -5,6 +5,7 @@
  */
 import type { UserProject } from "@/db/schema";
 import { normalizeProjectName } from "@/lib/project-name";
+import { resolveProjectFromContext } from "@/lib/project-mention";
 
 const LIST_PROJECTS_RE =
   /\b(list|show|name|tell me)\b.*\b(my )?(projects?|fleet)\b|\b(what|which)\s+projects?\b|\bprojects?\s+do\s+i\s+have\b/i;
@@ -69,9 +70,7 @@ export function resolveFleetCommandProjectKey(
   selectedProject: string | undefined,
   projectNames: string[],
 ): string | null {
-  if (selectedProject) return selectedProject;
-  const lower = text.toLowerCase();
-  return projectNames.find((p) => lower.includes(p.toLowerCase())) ?? null;
+  return resolveProjectFromContext(text, selectedProject, projectNames);
 }
 
 const BUSINESS_PLAN_VERB_RE =

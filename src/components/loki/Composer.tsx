@@ -42,6 +42,7 @@ export function Composer({
   onRemoveProject,
   onOpenProjects,
   dispatchHonesty = null,
+  showStarters = true,
 }: {
   disabled: boolean;
   sending: boolean;
@@ -60,6 +61,11 @@ export function Composer({
   onOpenProjects?: () => void;
   /** Shown beside Send when dispatches queue without a live builder. */
   dispatchHonesty?: ExecutorHonestyLabel | null;
+  /** Start-screen chips ("New project", "What needs me"). False mid-conversation:
+   *  they are openers, and on a phone they were eating a third of the transcript
+   *  to re-offer a decision the operator had already made. Project-scoped action
+   *  chips are not starters and stay. */
+  showStarters?: boolean;
 }) {
   const [text, setText] = useState(defaultText);
   const [attachments, setAttachments] = useState<StagedAttachment[]>([]);
@@ -207,11 +213,22 @@ export function Composer({
 
   const canSend = (text.trim().length > 0 || attachments.length > 0) && !sending;
   const scopedProjectForTemplate = selectedProjects.length === 1 ? selectedProjects[0] : null;
-  const chips = composerChips({
+  const allChips = composerChips({
     projectCount,
     selectedProjects,
     selectedGoal,
   });
+  // Mid-conversation only the scoped action chips survive; the openers do not.
+  const chips = showStarters || selectedProjects.length > 0 ? allChips : [];
+  // The scope row used to render unconditionally with a min-height, reserving
+  // 28px of a phone screen to display nothing. It appears when it has something
+  // in it: a scope pill, or the button that adds one.
+  const offersProjectButton =
+    selectedProjects.length === 0 &&
+    projectCount > 0 &&
+    Boolean(onOpenProjects) &&
+    (Boolean(text.trim()) || !chips.some((chip) => chip.kind === "open_projects"));
+  const showScopeRow = selectedProjects.length > 0 || offersProjectButton;
 
   useEffect(() => {
     const el = textareaRef.current;
@@ -278,6 +295,7 @@ export function Composer({
           </div>
         )}
         <div className="ui-loki-composer">
+          {showScopeRow && (
           <div className="ui-loki-composer-scope-row">
             {selectedProjects.length === 0 &&
               projectCount > 0 &&
@@ -314,6 +332,7 @@ export function Composer({
               </button>
             )}
           </div>
+          )}
 
           {!text.trim() && chips.length > 0 && (
             <div className="ui-loki-suggest-row">

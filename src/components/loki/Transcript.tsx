@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ExternalLink, ListChecks, Loader2, Monitor, TerminalSquare } from "lucide-react";
+import { ExternalLink, ListChecks, Loader2, MessageCircle, Monitor, TerminalSquare } from "lucide-react";
 import { MarkdownText, type CitationMap } from "@/components/ui/markdown-text";
 import type { LokiMessage } from "./types";
 import { dispatchStatusLabel, type DispatchLiveView } from "@/lib/dispatch-status";
@@ -179,33 +179,76 @@ function QueuedActionFooter({ meta }: { meta: Record<string, unknown> | null }) 
   );
 }
 
-/** One-tap project pick when a command needs a target project. */
+/** How many projects can sit in the chip grid before it needs a filter. Nine
+ *  chips fill a phone screen; past that, scanning beats reading. */
+const PICKER_FILTER_THRESHOLD = 8;
+
+/**
+ * One-tap project pick when a command needs a target project.
+ *
+ * Two things this must never be: a wall of chips with no way through, and a
+ * dead end. A question that arrived without a project is still a question —
+ * "Just answer" re-sends the same text as chat, so the operator is never
+ * forced to name a project in order to be spoken to.
+ */
 function NeedsProjectPicker({
   meta,
   onPick,
+  onAnswerAnyway,
 }: {
   meta: Record<string, unknown> | null;
   onPick: (project: string, pendingText: string) => void;
+  onAnswerAnyway?: (pendingText: string) => void;
 }) {
-  if (!meta?.needsProject) return null;
-  const pendingText = typeof meta.pendingText === "string" ? meta.pendingText : "";
-  const options = Array.isArray(meta.projectOptions)
+  const [query, setQuery] = useState("");
+  const pendingText = typeof meta?.pendingText === "string" ? meta.pendingText : "";
+  const options = Array.isArray(meta?.projectOptions)
     ? meta.projectOptions.filter((v): v is string => typeof v === "string")
     : [];
+  if (!meta?.needsProject) return null;
   if (!pendingText || options.length === 0) return null;
 
+  const needle = query.trim().toLowerCase();
+  const shown = needle
+    ? options.filter((name) => name.toLowerCase().includes(needle))
+    : options;
+
   return (
-    <div className="mt-2 flex flex-wrap gap-1.5">
-      {options.map((name) => (
+    <div className="ui-loki-picker">
+      {options.length > PICKER_FILTER_THRESHOLD && (
+        <input
+          className="ui-input-compact w-full"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={`Filter ${options.length} projects…`}
+          aria-label="Filter projects"
+        />
+      )}
+      <div className="ui-loki-picker-grid">
+        {shown.map((name) => (
+          <button
+            key={name}
+            type="button"
+            className="ui-loki-picker-chip"
+            onClick={() => onPick(name, pendingText)}
+          >
+            {name}
+          </button>
+        ))}
+        {shown.length === 0 && (
+          <p className="text-xs text-text-muted">No project matches “{query}”.</p>
+        )}
+      </div>
+      {onAnswerAnyway && (
         <button
-          key={name}
           type="button"
-          className="ui-btn-chip"
-          onClick={() => onPick(name, pendingText)}
+          className="ui-loki-picker-answer"
+          onClick={() => onAnswerAnyway(pendingText)}
         >
-          {name}
+          <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />
+          Just answer — don’t run anything
         </button>
-      ))}
+      )}
     </div>
   );
 }
@@ -215,11 +258,14 @@ export function Transcript({
   loading = false,
   sending,
   onPickProject,
+  onAnswerAnyway,
 }: {
   messages: LokiMessage[];
   loading?: boolean;
   sending: boolean;
   onPickProject?: (project: string, pendingText: string) => void;
+  /** Re-send the pending text as chat, so "needs project" is never a dead end. */
+  onAnswerAnyway?: (pendingText: string) => void;
 }) {
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -264,7 +310,11 @@ export function Transcript({
               <MarkdownText text={m.content} className="space-y-2" citations={citationsFrom(m.meta)} />
             </div>
             {m.kind === "command" && onPickProject && (
-              <NeedsProjectPicker meta={m.meta} onPick={onPickProject} />
+              <NeedsProjectPicker
+                meta={m.meta}
+                onPick={onPickProject}
+                onAnswerAnyway={onAnswerAnyway}
+              />
             )}
             {m.kind === "dispatch" && <DispatchFooter meta={m.meta} />}
             {m.kind === "chat" && <QueuedActionFooter meta={m.meta} />}

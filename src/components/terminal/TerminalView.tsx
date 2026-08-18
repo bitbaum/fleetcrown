@@ -1,11 +1,50 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { AlertTriangle } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { AlertTriangle, ChevronDown, ChevronUp, Link2, Minus, Plus } from "lucide-react";
 import "@xterm/xterm/css/xterm.css";
 import type { AgentLifecycle } from "@/lib/agent-execution/types";
-import { ptyResizeToPublish, type PtyGeometry } from "@/lib/terminal-viewport";
+import {
+  TERMINAL_DESKTOP_FONT,
+  TERMINAL_MOBILE_MAX_FONT,
+  TERMINAL_MOBILE_MIN_FONT,
+  TERMINAL_TARGET_COLS,
+  nextFontSizeForTarget,
+  ptyResizeToPublish,
+  type PtyGeometry,
+} from "@/lib/terminal-viewport";
 import type { TerminalTransport } from "./terminal-transport";
+
+/**
+ * Font sizing on a phone is a column-count problem wearing a typography mask.
+ *
+ * A 390px-wide device at the old fixed 13px measured ~44 columns. An 80-column
+ * agent screen streamed into a 44-column grid is not "smaller", it is WRONG:
+ * absolute cursor moves land in the wrong cell, wrapped rows overlay each other,
+ * and the operator reads sentences that start halfway through a word. That is
+ * the torn "irst. Telling it which repos you trust" seen on 2026-08-18.
+ *
+ * So the phone picks the largest font at which TERMINAL_TARGET_COLS still fits,
+ * rather than the most readable font at any width. Small and correct beats
+ * comfortable and lying — and the A−/A+ stepper hands the trade back to the
+ * operator, who can spend columns on legibility whenever they only need to read.
+ */
+const FONT_SIZE_KEY = "fleetcrown:terminal-font-size";
+const MOBILE_QUERY = "(max-width: 767px)";
+
+function isNarrowViewport(): boolean {
+  return typeof window !== "undefined" && window.matchMedia(MOBILE_QUERY).matches;
+}
+
+function readStoredFontSize(): number | null {
+  try {
+    const raw = window.localStorage.getItem(FONT_SIZE_KEY);
+    const n = raw ? Number(raw) : NaN;
+    return Number.isFinite(n) && n >= TERMINAL_MOBILE_MIN_FONT && n <= 24 ? n : null;
+  } catch {
+    return null;
+  }
+}
 
 const URL_RE = /https?:\/\/[^\s"'`<>\\)\]}]+/g;
 
@@ -44,6 +83,11 @@ function extractUrlsFromBuffer(term: import("@xterm/xterm").Terminal): string[] 
  *  terminal height. */
 function LinkBar({ links, onDismiss }: { links: string[]; onDismiss: () => void }) {
   const [copied, setCopied] = useState<string | null>(null);
+  // Collapsed by default on phones. Four detected URLs render as four rows of
+  // url + Copy + Open — ~190px measured, taken from a terminal that only had
+  // ~300px to begin with. A link you might want later must not outrank the
+  // session you are watching now.
+  const [open, setOpen] = useState(false);
   if (links.length === 0) return null;
   const copy = (url: string) => {
     navigator.clipboard?.writeText(url).then(() => {
@@ -52,7 +96,20 @@ function LinkBar({ links, onDismiss }: { links: string[]; onDismiss: () => void 
     }).catch(() => {});
   };
   return (
-    <div className="ui-term-linkbar">
+    <>
+      <button
+        type="button"
+        className="ui-term-linkbar-toggle md:hidden"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+      >
+        <Link2 className="h-3.5 w-3.5" aria-hidden="true" />
+        {links.length} link{links.length === 1 ? "" : "s"}
+        {open
+          ? <ChevronDown className="ml-auto h-3.5 w-3.5" aria-hidden="true" />
+          : <ChevronUp className="ml-auto h-3.5 w-3.5" aria-hidden="true" />}
+      </button>
+    <div className={open ? "ui-term-linkbar" : "ui-term-linkbar hidden md:flex"}>
       <span className="ui-term-linkbar-label">Links</span>
       <div className="ui-term-linkbar-list">
         {links.map((url) => (
@@ -73,6 +130,7 @@ function LinkBar({ links, onDismiss }: { links: string[]; onDismiss: () => void 
         ✕
       </button>
     </div>
+    </>
   );
 }
 
@@ -149,6 +207,26 @@ export function TerminalView({
   const [sending, setSending] = useState(false);
   // URLs detected in the terminal output stream — surfaced by <LinkBar/>.
   const [links, setLinks] = useState<string[]>([]);
+  // Live grid geometry, mirrored into React so the chrome can report it. The
+  // operator is entitled to know how many columns they are actually reading —
+  // it is the difference between "the agent wrote nonsense" and "my screen is
+  // narrower than the screen this was drawn for".
+  const [geometry, setGeometry] = useState<PtyGeometry | null>(null);
+  const [narrow, setNarrow] = useState(false);
+  // null = auto-fit to TERMINAL_TARGET_COLS. A number means the operator used
+  // the stepper and their choice outranks the fit.
+  const [fontOverride, setFontOverride] = useState<number | null>(null);
+  const termRef = useRef<import("@xterm/xterm").Terminal | null>(null);
+  const fitRef = useRef<import("@xterm/addon-fit").FitAddon | null>(null);
+  /** Re-runs the mount effect's measure/fit/publish pass from outside it. */
+  const resyncRef = useRef<(() => void) | null>(null);
+  const fontOverrideRef = useRef<number | null>(null);
+  fontOverrideRef.current = fontOverride;
+
+  useEffect(() => {
+    setNarrow(isNarrowViewport());
+    setFontOverride(readStoredFontSize());
+  }, []);
 
   const stallMessage = stalledHint ??
     "Connected, but no output arrived — the session may be unresponsive. Reopen it, or restart the executor.";
@@ -191,13 +269,14 @@ export function TerminalView({
         .filter(Boolean)
         .join(", ");
 
+      const mobile = isNarrowViewport();
       const term = new Terminal({
         convertEol: transport.convertEol,
         cursorBlink: interactive,
         // Read-only peeks keep stdin disabled so the view never swallows page input.
         disableStdin: !interactive,
         fontFamily,
-        fontSize: typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches ? 13 : 14,
+        fontSize: fontOverrideRef.current ?? (mobile ? TERMINAL_MOBILE_MAX_FONT : TERMINAL_DESKTOP_FONT),
         lineHeight: 1.2,
         letterSpacing: 0,
         scrollback: 5000,
@@ -205,6 +284,8 @@ export function TerminalView({
       });
       const fit = new FitAddon();
       term.loadAddon(fit);
+      termRef.current = term;
+      fitRef.current = fit;
       // Clickable URLs that survive wrapping. The stock web-links addon detects
       // per visual row, so a URL wrapped across rows (ink TUIs hard-wrap to the
       // width) is clickable only on row 1 and opens a TRUNCATED link — the
@@ -329,9 +410,44 @@ export function TerminalView({
       // Filtered through ptyResizeToPublish: a collapsed host measures 1 row,
       // and publishing that reflows the real session an agent is working in.
       let lastPublished: PtyGeometry | null = null;
+
+      /**
+       * Shrink the font until TERMINAL_TARGET_COLS fits, or the floor is hit.
+       *
+       * Columns scale as 1/fontSize, so one estimate lands within a step or two
+       * of the answer and the walk finishes it — cheaper than stepping down from
+       * 13px one pixel at a time, since every attempt costs a real fit() reflow.
+       * Skipped entirely when the operator has set a size: their choice is the
+       * point of the stepper.
+       */
+      const fitFontToTarget = () => {
+        if (fontOverrideRef.current !== null || !isNarrowViewport()) {
+          try { fit.fit(); } catch { /* not laid out yet */ }
+          return;
+        }
+        let size = TERMINAL_MOBILE_MAX_FONT;
+        term.options.fontSize = size;
+        try { fit.fit(); } catch { return; }
+        // nextFontSizeForTarget owns the arithmetic (and the "always make
+        // progress" guarantee); this loop only applies and re-measures. The
+        // bound is belt-and-braces against a host whose width changes under us.
+        for (let attempt = 0; attempt < 8; attempt++) {
+          const next = nextFontSizeForTarget(size, term.cols);
+          if (next === null) return;
+          size = next;
+          term.options.fontSize = size;
+          try { fit.fit(); } catch { return; }
+        }
+      };
+
       const syncSize = () => {
-        try { fit.fit(); } catch { /* container not laid out yet */ }
+        fitFontToTarget();
+        setGeometry({ cols: term.cols, rows: term.rows });
         if (!interactive) return;
+        // A narrow viewer adapts ITSELF (font above) rather than reflowing the
+        // session — see the note on TERMINAL_MIN_COLS. ptyResizeToPublish is the
+        // enforcement point; this returns null below the floor, so a phone that
+        // cannot reach 60 columns simply never speaks.
         const next = ptyResizeToPublish({ cols: term.cols, rows: term.rows }, lastPublished);
         if (!next) return;
         lastPublished = next;
@@ -339,6 +455,7 @@ export function TerminalView({
       };
       const resizeObserver = new ResizeObserver(syncSize);
       resizeObserver.observe(host);
+      resyncRef.current = syncSize;
       syncSize();
 
       // Scan the rendered buffer for URLs (newest first, capped) and surface them
@@ -388,6 +505,9 @@ export function TerminalView({
       });
 
       cleanupTerm = () => {
+        termRef.current = null;
+        fitRef.current = null;
+        resyncRef.current = null;
         if (scanTimer) window.clearTimeout(scanTimer);
         clearStallTimer();
         linkProvider.dispose();
@@ -405,6 +525,33 @@ export function TerminalView({
     // Re-run only when the substrate identity or interactivity changes; the
     // transport object itself is read through transportRef inside the effect.
   }, [transport.key, interactive]);
+
+  // Apply an operator-chosen size to the live terminal without tearing down the
+  // stream. Clearing the choice hands the grid back to the auto-fit.
+  useEffect(() => {
+    const term = termRef.current;
+    const fit = fitRef.current;
+    if (!term || !fit) return;
+    if (fontOverride === null) {
+      resyncRef.current?.();
+      return;
+    }
+    term.options.fontSize = fontOverride;
+    try { fit.fit(); } catch { /* not laid out yet */ }
+    setGeometry({ cols: term.cols, rows: term.rows });
+  }, [fontOverride]);
+
+  const stepFont = useCallback((delta: number) => {
+    const current = termRef.current?.options.fontSize ?? TERMINAL_MOBILE_MAX_FONT;
+    const next = Math.min(24, Math.max(TERMINAL_MOBILE_MIN_FONT, current + delta));
+    setFontOverride(next);
+    try { window.localStorage.setItem(FONT_SIZE_KEY, String(next)); } catch { /* private mode */ }
+  }, []);
+
+  const resetFont = useCallback(() => {
+    setFontOverride(null);
+    try { window.localStorage.removeItem(FONT_SIZE_KEY); } catch { /* private mode */ }
+  }, []);
 
   if (bare) {
     return (
@@ -425,31 +572,73 @@ export function TerminalView({
     try { await onSend(text); setLine(""); } finally { setSending(false); }
   };
 
+  const statusLabel = stalled
+    ? "not responding"
+    : connected
+      ? interactive
+        ? narrow ? "live · tap to type" : "live · click to focus, type directly"
+        : "live"
+      : "connecting…";
+  // Below the target the grid is narrower than the screen the agent drew, so
+  // wide output WILL wrap oddly. Saying which is which costs one chip and turns
+  // "the agent is broken" back into "my phone is 390px wide".
+  const belowTarget = Boolean(geometry && geometry.cols < TERMINAL_TARGET_COLS);
+
   return (
     <div className={`flex flex-col gap-2 ${fill ? "h-full min-h-0" : ""}`}>
-      {!compactChrome && (
-        <div className="flex items-center justify-between gap-2">
-          <span className={`ui-micro-label ${stalled ? "text-status-warning" : ""}`}>
-            {stalled
-              ? "not responding"
-              : connected
-                ? (interactive ? "live · click to focus, type directly" : "live")
-                : "connecting…"}
+      <div className="ui-term-statusrow">
+        <span className={`ui-micro-label ${stalled ? "text-status-warning" : ""}`}>
+          {statusLabel}
+        </span>
+        {narrow && geometry && geometry.cols > 0 && (
+          <span
+            className={belowTarget ? "ui-term-cols ui-term-cols-warn" : "ui-term-cols"}
+            title={
+              belowTarget
+                ? `${geometry.cols} columns — this screen is narrower than the ${TERMINAL_TARGET_COLS} an agent TUI draws for, so wide output may wrap. Tap A− for more columns.`
+                : `${geometry.cols}×${geometry.rows} — wide enough for standard agent output.`
+            }
+          >
+            {geometry.cols}c
           </span>
+        )}
+        <div className="ml-auto flex items-center gap-1">
+          {narrow && (
+            <>
+              <button
+                type="button"
+                className="ui-term-font-btn"
+                onClick={() => stepFont(-1)}
+                aria-label="Smaller text, more columns"
+              >
+                <Minus className="h-3.5 w-3.5" aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                className="ui-term-font-btn"
+                onClick={() => stepFont(1)}
+                aria-label="Larger text, fewer columns"
+              >
+                <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+              </button>
+              {fontOverride !== null && (
+                <button type="button" className="ui-term-font-reset" onClick={resetFont}>
+                  Auto
+                </button>
+              )}
+            </>
+          )}
           {onSend && !interactive && (
-            <button type="button" className="ui-btn-xs" onClick={() => setSendOpen((v) => !v)}>
+            <button
+              type="button"
+              className={compactChrome ? "ui-btn-xs min-h-11" : "ui-btn-xs"}
+              onClick={() => setSendOpen((v) => !v)}
+            >
               {sendOpen ? "Cancel" : "Send a line"}
             </button>
           )}
         </div>
-      )}
-      {compactChrome && onSend && !interactive && (
-        <div className="flex justify-end">
-          <button type="button" className="ui-btn-xs min-h-11" onClick={() => setSendOpen((v) => !v)}>
-            {sendOpen ? "Cancel" : "Send a line"}
-          </button>
-        </div>
-      )}
+      </div>
       <div className={`relative w-full overflow-hidden rounded-md bg-surface-terminal ${fill ? "min-h-0 flex-1" : compactChrome ? "min-h-0 flex-1" : "h-72"}`}>
         <div ref={hostRef} className="h-full w-full" />
         {stalled && <TerminalStalledOverlay message={stallMessage} />}
