@@ -117,6 +117,7 @@
     "date-fns": "^4.4.0",
     "drizzle-orm": "^0.45.2",
     "geist": "^1.7.2",
+    "limitkit": "github:maonakamoto/limitkit#v0.1.0",
     "lucide-react": "^1.31.0",
     "mermaid": "^11.16.1",
     "next": "16.3.1",
