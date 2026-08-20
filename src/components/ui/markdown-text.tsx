@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 
 // Renderer for plain LLM output: paragraphs, list bullets, headings, **bold**,
 // `inline code`, [links](url), and ```fenced code blocks```. Deliberately a
@@ -126,8 +127,19 @@ function renderInline(text: string, citations?: CitationMap): ReactNode {
     }
     const link = part.match(/^\[([^\]]+)\]\(([^)\s]+)\)$/);
     if (link) {
+      const linkClass = "text-accent-text underline underline-offset-2 hover:text-text-primary";
+      // An in-app route must navigate in place — a new tab strands the reader
+      // outside the app they are already in (observed on the phone: tapping
+      // "Review on Today" in a Loki reply opened a second browser tab).
+      if (link[2].startsWith("/")) {
+        return (
+          <Link key={i} href={link[2]} className={linkClass}>
+            {link[1]}
+          </Link>
+        );
+      }
       return (
-        <a key={i} href={link[2]} target="_blank" rel="noopener noreferrer" className="text-accent-text underline underline-offset-2 hover:text-text-primary">
+        <a key={i} href={link[2]} target="_blank" rel="noopener noreferrer" className={linkClass}>
           {link[1]}
         </a>
       );
