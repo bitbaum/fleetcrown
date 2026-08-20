@@ -78,6 +78,12 @@ import {
   screenshotDispatchPrompt,
 } from "@/lib/loki/screenshot-dispatch";
 import { getProjectLimit } from "@/lib/plan";
+import {
+  parseStickyNoteRequest,
+  formatStickyAddReply,
+  formatStickyListReply,
+} from "@/lib/loki/sticky-note";
+import { createCapture, listCaptures, countCaptures } from "@/db/queries/captures";
 
 const Body = z
   .object({
@@ -250,6 +256,31 @@ export async function POST(
       kind: "chat",
       content: formatProjectList(projects),
       meta: { source: "fleet-list" },
+    });
+    return NextResponse.json({ message: assistant });
+  }
+
+  // Sticky-note fast path — "add X to my list" / "note that X" / "what's on my
+  // list" is a task for the OPERATOR, not an agent. It must land on the sticky
+  // note (captures, rendered on /today), never be misread as a dispatch.
+  const sticky = chatOnly ? null : parseStickyNoteRequest(text);
+  if (sticky) {
+    let content: string;
+    if (sticky.kind === "add") {
+      await createCapture(userId, sticky.body);
+      content = formatStickyAddReply(sticky.body, await countCaptures(userId));
+    } else {
+      const [items, total] = await Promise.all([
+        listCaptures(userId, 10),
+        countCaptures(userId),
+      ]);
+      content = formatStickyListReply(items, total);
+    }
+    const assistant = await addMessage(conversationId, {
+      role: "assistant",
+      kind: "chat",
+      content,
+      meta: { source: "sticky-note" },
     });
     return NextResponse.json({ message: assistant });
   }
