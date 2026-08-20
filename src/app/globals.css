@@ -873,13 +873,13 @@
     @apply mb-1 text-micro font-semibold uppercase tracking-caps text-white/40;
   }
   .ui-public-footer-bottom {
-    @apply flex flex-wrap items-center justify-between gap-4 text-xs text-white/40;
+    @apply flex flex-wrap items-center justify-between gap-4 text-xs text-white/50;
   }
   .ui-public-footer-fleet {
     @apply mb-8 border-t border-white/10 pt-8;
   }
   .ui-public-footer-fleet-summary {
-    @apply cursor-pointer list-none text-micro font-semibold uppercase tracking-caps text-white/40 transition-colors hover:text-white/70;
+    @apply cursor-pointer list-none text-micro font-semibold uppercase tracking-caps text-white/50 transition-colors hover:text-white/70;
   }
   .ui-public-footer-fleet-summary::-webkit-details-marker {
     display: none;
