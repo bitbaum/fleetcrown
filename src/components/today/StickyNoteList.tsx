@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Loader2, Plus } from "lucide-react";
 import { postJson, deleteJson } from "@/lib/api/fetch";
@@ -16,6 +16,16 @@ export function StickyNoteList({
 }) {
   const router = useRouter();
   const [items, setItems] = useState<Item[]>(initial);
+
+  // The card streams in behind a Suspense boundary, so the browser's native
+  // #sticky-note anchor resolution runs before the element exists and scrolls
+  // nowhere (observed live: /today#sticky-note loaded at scrollY 0). Finish
+  // the job once the card has actually mounted.
+  useEffect(() => {
+    if (window.location.hash === "#sticky-note") {
+      document.getElementById("sticky-note")?.scrollIntoView({ block: "start" });
+    }
+  }, []);
   const [draft, setDraft] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);

@@ -16,7 +16,7 @@ export async function StickyNoteCard() {
   ]);
 
   return (
-    <div id="sticky-note">
+    <div id="sticky-note" className="scroll-mt-20">
       <Card>
         <CardHeader
           icon={StickyNote}

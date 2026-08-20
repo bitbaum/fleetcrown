@@ -54,6 +54,7 @@ const listReply = formatStickyListReply([{ body: "a" }, { body: "b" }], 12);
 ok(listReply.includes("12 items open"), "list reply honest total");
 ok(listReply.includes("…and 10 more"), "list reply names the hidden remainder");
 ok(listReply.includes("- a"), "list reply bullets items");
+ok(formatStickyListReply([{ body: "a" }], 1).includes("/today#sticky-note"), "list reply always links Today");
 
 console.log(`${pass}/${pass + fail} sticky-note assertions passed`);
 if (fail > 0) process.exit(1);

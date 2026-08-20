@@ -67,7 +67,14 @@ export function formatStickyListReply(items: StickyNoteItem[], total: number): s
   if (total === 0) return "Your sticky note is clear.";
   const shown = items.slice(0, LIST_REPLY_CAP);
   const lines = shown.map((i) => `- ${i.body}`);
-  if (total > shown.length) lines.push(`…and ${total - shown.length} more on [Today](/today#sticky-note).`);
+  const hidden = total - shown.length;
+  // Same destination as the add reply — every sticky reply hands you the way
+  // back to where the list is reviewed and checked off.
+  lines.push(
+    hidden > 0
+      ? `…and ${hidden} more on [Today](/today#sticky-note).`
+      : `Review on [Today](/today#sticky-note).`,
+  );
   const count = total === 1 ? "1 item" : `${total} items`;
   return [`**Sticky note — ${count} open**`, ...lines].join("\n");
 }
