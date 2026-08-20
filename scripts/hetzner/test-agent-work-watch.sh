@@ -19,6 +19,11 @@ CHECK="$HERE/agent-work-check.sh"
 
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
+# Fixture isolation is not optional: the husky pre-push hook exports GIT_DIR,
+# which hands every git call in this suite the REAL repo (observed 2026-08-20:
+# the seed commit below landed on the operator's branch and emptied its tree).
+# The sourced env clears inherited git vars and fences the fixture into $TMP.
+source "$HERE/../test/lib/git-fixture-env.sh"
 DEV="$TMP/dev"; mkdir -p "$DEV"
 
 # core.hooksPath=/dev/null is a safety requirement, not tidiness. A fixture that

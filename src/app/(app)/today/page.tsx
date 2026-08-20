@@ -13,7 +13,7 @@ import { WeatherCard } from "@/components/today/WeatherCard";
 import { CommitmentsCard } from "@/components/today/CommitmentsCard";
 import { SubscriptionsCard } from "@/components/today/SubscriptionsCard";
 import { LogConversationButton } from "@/components/today/LogConversationButton";
-import { QuickCaptureButton } from "@/components/today/QuickCaptureButton";
+import { StickyNoteCard } from "@/components/today/StickyNoteCard";
 import { HabitsCard } from "@/components/today/HabitsCard";
 import { RecentRunsCard } from "@/components/today/RecentRunsCard";
 import { FleetBriefCard } from "@/components/today/FleetBriefCard";
@@ -94,7 +94,6 @@ export default async function TodayPage() {
         <div className="mt-3 ui-quick-actions-row ui-scroll-fade-right">
           <DayPhaseDispatch />
           <LogConversationButton />
-          <QuickCaptureButton />
         </div>
           </>
         )}
@@ -121,6 +120,9 @@ export default async function TodayPage() {
           mobile user scrolled past two summaries of what ALREADY happened
           before reaching the one card asking them to decide something. */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Suspense fallback={<CardSkeleton />}>
+          <StickyNoteCard />
+        </Suspense>
         <Suspense fallback={<CardSkeleton />}>
           <ActionQueueCard />
         </Suspense>

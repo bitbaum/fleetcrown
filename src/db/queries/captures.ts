@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { captures } from "@/db/schema";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, count } from "drizzle-orm";
 
 export async function createCapture(userId: string, body: string) {
   const [capture] = await db
@@ -17,6 +17,14 @@ export async function listCaptures(userId: string, limit = 20) {
     .where(eq(captures.userId, userId))
     .orderBy(desc(captures.createdAt))
     .limit(limit);
+}
+
+export async function countCaptures(userId: string) {
+  const [row] = await db
+    .select({ n: count() })
+    .from(captures)
+    .where(eq(captures.userId, userId));
+  return row?.n ?? 0;
 }
 
 export async function deleteCapture(userId: string, id: string) {

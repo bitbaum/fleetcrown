@@ -27,7 +27,6 @@ src/
 │   ├── ui/        → Shared primitives (Card, Modal, Drawer, Field, PageLayout)
 │   ├── shell/     → AppShell, Sidebar, MobileNav (Today/Control/Projects + Loki + More), AskLokiButton → /loki
 │   ├── control/   → ControlPanel, ProjectCard, ProjectTile, ProjectProfile (fleet command)
-│   ├── agents/    → AgentsCockpit (retired page; unread escalations render on Control)
 │   ├── loki/      → LokiWorkspace, Transcript, Composer, ConversationList (chat assistant)
 │   ├── terminal/  → TerminalSurface (the ONE shell: tab strip + mode bar +
 │   │                 session + composer), TerminalTabStrip, TerminalModeBar,
@@ -37,7 +36,7 @@ src/
 │   │                 Modes are SSOT in config/terminal-modes.ts; never add a
 │   │                 second terminal shell — add a transport.
 │   ├── activity/  → ActivityView, EventStream, DigestPanel (fleet activity timeline + digests)
-│   ├── today/     → CalendarCard, WeatherCard, CommitmentsCard, SubscriptionsCard, HabitsList
+│   ├── today/     → StickyNoteCard (captures; Loki "add X to my list"), CalendarCard, WeatherCard, CommitmentsCard, SubscriptionsCard, HabitsList
 │   ├── people/    → PeopleGrid, PersonCard, PersonDetail
 │   ├── projects/  → ProjectGrid, ProjectDetail (split into header/tabs/inline-editors)
 │   ├── goals/     → GoalCard, GoalsGrid, NewGoalButton
