@@ -19,7 +19,7 @@ This week one did. And the act that mattered was not building the bridge. It was
 
 ## The login that failed for an honest reason
 
-The first thing to cross was identity. Sign in to FleetCrown with OrangeCat, and the two accounts link by verified email — one person, two products, one wallet.
+The first thing to cross was identity. Sign in to FleetCrown with OrangeCat, and the two accounts bind by OrangeCat actor id (`id_token.sub`), not by email — one person, two products, one wallet path. (Earlier wording here said "verified email"; that was wrong relative to `src/auth.ts`.)
 
 It failed on the first try. Not a deep failure: the consent screen sat open too long while the process paused, and by the time the grant came back the state cookie that guards the OAuth handshake had expired. The callback had nothing to check the redirect against, so it refused. A fresh attempt, completed in seconds, went straight through. The actor id persisted; the access and refresh tokens landed in the accounts table.
 

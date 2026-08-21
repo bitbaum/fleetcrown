@@ -78,6 +78,10 @@ export default function RoadmapPage() {
 
       <div className="mx-auto max-w-4xl px-6 pb-24">
         <p className="ui-public-meta border-t border-border-subtle pt-12 max-w-2xl">{ROADMAP.closer}</p>
+        <div className="mt-8 flex flex-wrap gap-3">
+          <Link href="/thoughts" className="ui-btn-chip">Thoughts</Link>
+          <Link href="/releases" className="ui-btn-chip">Changelog</Link>
+        </div>
       </div>
 
       <FinalCta />

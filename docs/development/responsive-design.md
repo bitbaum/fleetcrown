@@ -1,8 +1,8 @@
 # Responsive Design — FleetCrown Web App
 
 **Created:** 2026-06-27  
-**Last modified:** 2026-08-18  
-**Last modified summary:** Loki start screen docks the composer to the thumb zone; /terminal chrome collapses to one mobile bar; xterm auto-fits its font to 80 columns instead of tearing 80-column output into a 44-column grid.
+**Last modified:** 2026-08-20  
+**Last modified summary:** PublicSurface no longer always-dark; theme toggle on public nav (THEME_OPTIONS SSOT).
 
 FleetCrown is **mobile-first and dark-first**. Every authenticated route must be usable on a 320px-wide phone without horizontal page scroll, with primary actions reachable above the floating bottom nav.
 
@@ -42,6 +42,11 @@ Defined in `src/app/globals.css` `:root`:
 .app-viewport-pane        Full remaining viewport height
 ```
 
+Authenticated pages should still enter through `PageLayout` (see
+`docs/branding-design.md` → App-shell layout SSOT). Mixing raw `app-page max-w-*`
+with bespoke wrappers is the main source of inconsistent positioning across
+routes.
+
 Navigation:
 
 - **Desktop (`md+`)**: `Sidebar` + full `AppTopBar` search + theme cycle in top bar and sidebar footer
@@ -62,12 +67,12 @@ Navigation:
 
 ## Public / auth surfaces
 
-Always-dark subtree (`PublicSurface` + `ui-public-*` classes):
+`PublicSurface` + `ui-public-*` follow the same `THEME_OPTIONS` (Light / Dark / Auto) as the app shell — do not pin `.dark` on the public subtree. Theme cycle lives in `PublicHeaderActions`.
 
 - Hero fold uses shorter `min-height` on narrow viewports
 - Hero lede scales `text-lg` → `sm:text-2xl`
 - Header brand row: `ui-public-nav-brand-row` (`gap-3 sm:gap-8`)
-- Signed-out CTA: compact "Get started" visible on all widths
+- Signed-out CTA: compact "Get started" visible on all widths; theme toggle beside it
 
 ## Audit commands
 
@@ -87,8 +92,8 @@ grep -rn "min-w-\[" src/components src/app --include="*.tsx"
 Before shipping UI changes, verify at **375×667** and **320×568**:
 
 1. `/today`, `/control`, `/projects` — no horizontal scroll; bottom nav never covers primary CTAs
-2. `/loki` — composer docked at the bottom on the start screen; Send visible; history/filter drawers full width
-3. `/terminal` — mobile bar is two rows; xterm fills the rest; column readout reports ≥60
+2. `/loki` — composer Send visible; history/filter drawers full width
+3. `/terminal` — xterm fills pane; "My machine" tabs scroll horizontally above terminal
 4. Modals (bootstrap project, run prompt) — actions above bottom nav
 5. `/people` detail drawer — scroll + safe area
 6. Landing `/` — hero readable; public nav drawer opens
@@ -97,29 +102,9 @@ Run `npm run smoke` with dev server up for route health; Playwright viewport tes
 
 ## Terminal page (`/terminal`)
 
-**One mobile bar, not five stacked blocks.** The desktop chrome — source segment, tab strip, session bar with its agent chip, input segment and hint paragraph — measured 331px on a 390×844 phone, above a terminal that got four visible lines. Below `md` all of it is hidden and `TerminalMobileBar` renders instead: two rows of `<select>` (source · session, then agent · input mode) plus the full-screen toggle. Segmented chip rows are a desktop idiom; a phone's one-of-N control is the native picker.
-
-**Expand** (`TerminalMobileShell`) switches to `.ui-term-mobile-fullscreen`: fixed `100svh`, hides mobile nav and top bar, body class `fc-terminal-fullscreen` locks scroll. The toggle lives in the mobile bar — the shell no longer renders a header row explaining that the pane is too small.
-
-**Column fidelity beats font size.** xterm's grid must match the width the agent drew for, or absolute cursor moves land in the wrong cell and text arrives torn mid-word. At a fixed 13px a 390px phone measured ~44 columns against `TERMINAL_TARGET_COLS` (80), so `TerminalView` now auto-fits the font down (floor 7px) until 80 columns fit, and offers an A−/A+ stepper (persisted in `fleetcrown:terminal-font-size`) plus a live column readout that turns warning-toned below target.
-
-**A narrow viewer never reshapes the session.** `TERMINAL_MIN_COLS` is 60 (was 40): under that, `ptyResizeToPublish` stays silent rather than publishing a phone-sized geometry that the runner would apply to the live tab.
-
-**A deep link that misses attaches to nothing.** `resolveTabAttachment` returns `activeTab: null` when `?tab=` names a session this builder does not have; `TerminalSessionMiss` fills the terminal's slot with the alternatives. The previous fall-through to `tabs[0]` aimed keystrokes at an unrelated agent under a bar promising they went "straight to the session".
-
-Deep link after Loki dispatch: `/terminal?source=machine&tab=<projectKey>`.
-
-## Overlays
+On phones the default viewport pane leaves too little height for xterm (top bar + bottom nav + page header + source toggle). **Expand** (`TerminalMobileShell`) switches to `.ui-term-mobile-fullscreen`: fixed `100svh`, hides mobile nav and top bar, body class `fc-terminal-fullscreen` locks scroll. **My machine** agent tabs use a `<select>` on `<md`; desktop keeps the vertical chip list. Deep link after Loki dispatch: `/terminal?source=machine&tab=<projectKey>`.
 
 **Overlays (drawers/modals):** opening any `Drawer` or `Modal` sets `body.fc-overlay-open` — hides bottom nav and top bar so full-screen project profiles and Loki slide-overs are not obscured. Audit: `node scripts/mobile-pages-audit.mjs`.
-
-## Loki page (`/loki`)
-
-The start screen docks the composer to the **bottom** on phones (`.ui-loki-stage-empty` is `justify-end`, `sm:justify-center`) — centring put the page's only control in the middle of ~1000px of empty grey, out of thumb reach. `LokiStartPanel` spends that space on the recent threads, one tap from resuming.
-
-Composer chips are start-screen openers: `showStarters` is false once a conversation has messages, so they stop taking a third of the transcript to re-offer a decision already made. The scope row renders only when it has content instead of reserving a `min-h-7` strip for nothing.
-
-The needs-project picker (`.ui-loki-picker`) is a two-column grid with a filter past eight projects and a "Just answer" escape — a question that arrived without a project is still a question.
 
 ## Projects page layout
 
