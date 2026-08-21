@@ -31,6 +31,18 @@ export const PALETTE = {
     /** ≈ --text-tertiary (dark) */
     textTertiary: "#666666",
   },
+  /** Approximate light-token fallbacks for Mermaid when CSS vars cannot resolve. */
+  lightFallback: {
+    /** ≈ --surface-base (light) */
+    surfaceBase: "#f7f7f7",
+    /** ≈ --surface-raised (light) */
+    surfaceRaised: "#ffffff",
+    /** ≈ --text-primary (light) */
+    textPrimary: "#171717",
+    /** ≈ --text-tertiary (light) */
+    textTertiary: "#737373",
+  },
+
   /** Tailwind zinc-scale mirrors — OG-card greys and xterm. Email chrome
    *  lives in EMAIL_THEME (src/config/comms.ts) and maps to brand tokens. */
   zinc: {

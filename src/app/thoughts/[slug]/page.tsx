@@ -12,6 +12,7 @@ import { ThoughtArticleNav } from "@/components/thoughts/ThoughtArticleNav";
 import { ShareBar } from "@/components/thoughts/ShareBar";
 import { NewsletterSignup } from "@/components/thoughts/NewsletterSignup";
 import { MermaidDiagram } from "@/components/thoughts/MermaidDiagram";
+import { ThoughtVideoEmbed } from "@/components/thoughts/ThoughtVideoEmbed";
 import { getAdjacentThoughts, getRelatedThoughts, getThought, parseThoughtBlocks } from "@/lib/thoughts-content";
 
 // Read a repo-authored SVG diagram from /public so it can be inlined into the
@@ -206,6 +207,31 @@ export default async function ThoughtArticlePage({
                     <code>{block.text}</code>
                   </pre>
                 );
+              case "table":
+                return (
+                  <div key={i} className="overflow-x-auto rounded-xl border border-border-subtle">
+                    <table className="w-full text-left text-sm text-text-secondary">
+                      <thead>
+                        <tr className="border-b border-border-default">
+                          {block.headers.map((header, j) => (
+                            <th key={j} className="px-4 py-2 font-medium text-text-primary">{ri(header)}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {block.rows.map((row, j) => (
+                          <tr key={j} className="border-b border-border-subtle last:border-b-0">
+                            {row.map((cell, k) => (
+                              <td key={k} className="px-4 py-2">{ri(cell)}</td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              case "embed":
+                return <ThoughtVideoEmbed key={i} url={block.url} />;
               default:
                 return null;
             }

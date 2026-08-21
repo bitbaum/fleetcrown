@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { parseContentBlocks, parseFrontmatter, type ContentBlock } from "bip-kit";
 
 const THOUGHTS_DIR = path.join(process.cwd(), "content", "thoughts");
 
@@ -15,38 +16,12 @@ export type ThoughtMeta = {
   readingTimeMin: number;
 };
 
-export type ThoughtBlock =
-  | { type: "h2"; text: string }
-  | { type: "h3"; text: string }
-  | { type: "ul"; items: string[] }
-  | { type: "ol"; items: string[] }
-  | { type: "blockquote"; text: string[] }
-  | { type: "p"; text: string }
-  | { type: "image"; alt: string; src: string }
-  | { type: "code"; lang: string; text: string };
-
-function parseFrontmatter(raw: string): { meta: Record<string, string>; body: string } {
-  if (!raw.startsWith("---\n")) return { meta: {}, body: raw };
-  const end = raw.indexOf("\n---\n", 4);
-  if (end === -1) return { meta: {}, body: raw };
-  const header = raw.slice(4, end);
-  const body = raw.slice(end + 5);
-  const meta: Record<string, string> = {};
-  for (const line of header.split("\n")) {
-    const idx = line.indexOf(":");
-    if (idx <= 0) continue;
-    let value = line.slice(idx + 1).trim();
-    // YAML-quoted values ('...' / "...") rendered their quotes LITERALLY on
-    // the page ("2026-05-18" · "Prompts, Timing, and Orchestration…") because
-    // this homegrown parser never stripped them. Authors quote titles that
-    // contain colons — support that instead of forbidding it.
-    if (value.length >= 2 && ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'")))) {
-      value = value.slice(1, -1);
-    }
-    meta[line.slice(0, idx).trim()] = value;
-  }
-  return { meta, body };
-}
+/**
+ * The block union, frontmatter, and body parser live in `bip-kit` — the
+ * open-source extract of exactly this file's former inline parser. This repo
+ * dogfoods the package; the alias keeps the Thoughts UI's vocabulary.
+ */
+export type ThoughtBlock = ContentBlock;
 
 export function listThoughts(): Array<ThoughtMeta & { body: string }> {
   if (!fs.existsSync(THOUGHTS_DIR)) return [];
@@ -110,102 +85,5 @@ export function getRelatedThoughts(slug: string, limit = 3) {
     .map((entry) => entry.article);
 }
 
-export function parseThoughtBlocks(body: string): ThoughtBlock[] {
-  const lines = body.replace(/\r\n/g, "\n").split("\n");
-  const blocks: ThoughtBlock[] = [];
-  let i = 0;
-
-  const isBlank = (line: string) => line.trim().length === 0;
-
-  while (i < lines.length) {
-    const line = lines[i];
-
-    if (isBlank(line)) {
-      i += 1;
-      continue;
-    }
-
-    if (line.startsWith("## ")) {
-      blocks.push({ type: "h2", text: line.replace(/^##\s+/, "").trim() });
-      i += 1;
-      continue;
-    }
-
-    if (line.startsWith("### ")) {
-      blocks.push({ type: "h3", text: line.replace(/^###\s+/, "").trim() });
-      i += 1;
-      continue;
-    }
-
-    if (line.startsWith("- ")) {
-      const items: string[] = [];
-      while (i < lines.length && lines[i].startsWith("- ")) {
-        items.push(lines[i].replace(/^-\s+/, "").trim());
-        i += 1;
-      }
-      blocks.push({ type: "ul", items });
-      continue;
-    }
-
-    if (/^\d+\.\s+/.test(line)) {
-      const items: string[] = [];
-      while (i < lines.length && /^\d+\.\s+/.test(lines[i])) {
-        items.push(lines[i].replace(/^\d+\.\s+/, "").trim());
-        i += 1;
-      }
-      blocks.push({ type: "ol", items });
-      continue;
-    }
-
-    if (line.startsWith("> ")) {
-      const quote: string[] = [];
-      while (i < lines.length && lines[i].startsWith("> ")) {
-        quote.push(lines[i].replace(/^>\s+/, "").trim());
-        i += 1;
-      }
-      blocks.push({ type: "blockquote", text: quote });
-      continue;
-    }
-
-    // Fenced code block: ```lang\n...\n```
-    if (line.startsWith("```")) {
-      const lang = line.slice(3).trim();
-      const codeLines: string[] = [];
-      i += 1;
-      while (i < lines.length && !lines[i].startsWith("```")) {
-        codeLines.push(lines[i]);
-        i += 1;
-      }
-      i += 1; // skip closing ```
-      blocks.push({ type: "code", lang, text: codeLines.join("\n") });
-      continue;
-    }
-
-    // Standalone image: ![alt](src)
-    const imgMatch = line.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
-    if (imgMatch) {
-      blocks.push({ type: "image", alt: imgMatch[1], src: imgMatch[2] });
-      i += 1;
-      continue;
-    }
-
-    const paragraph: string[] = [];
-    while (
-      i < lines.length &&
-      !isBlank(lines[i]) &&
-      !lines[i].startsWith("## ") &&
-      !lines[i].startsWith("### ") &&
-      !lines[i].startsWith("- ") &&
-      !/^\d+\.\s+/.test(lines[i]) &&
-      !lines[i].startsWith("> ") &&
-      !lines[i].startsWith("```") &&
-      !lines[i].match(/^!\[/)
-    ) {
-      paragraph.push(lines[i].trim());
-      i += 1;
-    }
-    blocks.push({ type: "p", text: paragraph.join(" ") });
-  }
-
-  return blocks;
-}
+/** Parse an essay body into typed blocks — delegates to bip-kit. */
+export const parseThoughtBlocks = parseContentBlocks;
