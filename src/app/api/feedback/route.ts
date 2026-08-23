@@ -6,6 +6,7 @@ import { FEEDBACK_SCOPE_VALUES, FEEDBACK_SOURCE, FEEDBACK_SOURCE_VALUES } from "
 import { getWidgetTokenByToken } from "@/db/queries/widget-tokens";
 import { bumpDuplicateFeedback, insertSiteFeedback } from "@/db/queries/site-feedback";
 import { feedbackContentHash } from "@/lib/feedback/content-hash";
+import { notifyFeedbackReceived } from "@/lib/feedback/notify-new";
 
 /**
  * Public ingest for the embeddable feedback widget (docs/architecture/
@@ -118,6 +119,11 @@ export async function POST(req: NextRequest) {
     userAgent: req.headers.get("user-agent")?.slice(0, 300) ?? null,
   });
   if (!created) return corsError("Could not store feedback, try again later", 500);
+
+  // Persist-first, announce second (the doc's "optional notification later",
+  // finally): fire-and-forget so a notify hiccup can never fail the ingest.
+  // Duplicate bumps above stay silent — the row announced when first filed.
+  void notifyFeedbackReceived(created);
 
   return NextResponse.json({ ok: true }, { headers: CORS_HEADERS });
 }

@@ -9,11 +9,13 @@ import type { OrchestrationState } from "@/lib/orchestration/contract";
 
 export type FeedbackListItemWithWork = FeedbackListItem & { work: FeedbackWorkView };
 
-/** Attach honest work-phase to inbox rows from linked orchestration runs. */
-export async function attachFeedbackWork(
+/** Attach honest work-phase to inbox rows from linked orchestration runs.
+ *  Generic so callers with wider rows (e.g. the cross-project inbox, which
+ *  carries projectName) keep their extra fields in the result type. */
+export async function attachFeedbackWork<T extends FeedbackListItem>(
   userId: string,
-  items: FeedbackListItem[],
-): Promise<FeedbackListItemWithWork[]> {
+  items: T[],
+): Promise<(T & { work: FeedbackWorkView })[]> {
   const runIds = [...new Set(items.map((i) => i.dispatchedRunId).filter((id): id is string => !!id))];
   const runs = await getOrchestrationRunsByIds(userId, runIds);
 

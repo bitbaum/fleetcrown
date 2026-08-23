@@ -41,7 +41,7 @@ export function NotificationsPill() {
         push.publicKeyMissing
           ? "Push not configured — set NEXT_PUBLIC_VAPID_PUBLIC_KEY"
           : isSubscribed
-            ? "Push notifications on — click to turn off"
+            ? "Push notifications on (run finished · new feedback) — click to turn off"
             : push.status === "denied"
               ? "Permission denied in browser — enable in site settings"
               : "Enable push notifications"

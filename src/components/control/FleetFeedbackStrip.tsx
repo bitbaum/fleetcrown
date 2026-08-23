@@ -280,8 +280,10 @@ function InlineFeedbackTriage({
           "New feedback:" label directly above it (6.38:1). It is the ONLY path
           to a report's screenshot, history and widget setup, so it has to be
           findable: an action nobody can see is a feature that does not exist. */}
+      {/* SoC: the feedback product's own surface is /feedback (cross-project,
+          filtered to this project) — Control stays operations. */}
       <Link
-        href={`/projects/${projectId}#feedback`}
+        href={`/feedback?project=${encodeURIComponent(projectName)}`}
         className="mt-1 inline-block text-xs text-text-secondary underline underline-offset-2 decoration-border-subtle hover:decoration-current"
       >
         Full inbox →

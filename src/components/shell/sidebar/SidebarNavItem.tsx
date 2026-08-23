@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import type { NavItem } from "@/config/navigation";
 import { cn } from "@/lib/utils";
+import { FeedbackNavCount } from "@/components/feedback/FeedbackNavCount";
 
 export function SidebarNavItem({
   item,
@@ -35,7 +36,7 @@ export function SidebarNavItem({
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         className={cn(
-          "group ui-nav-item ui-sidebar-nav-item",
+          "group relative ui-nav-item ui-sidebar-nav-item",
           collapsed ? "justify-center px-2 py-3" : "",
           current && "ui-nav-item-active",
           !item.active && "opacity-40",
@@ -45,6 +46,9 @@ export function SidebarNavItem({
         <Icon className="h-5 w-5 shrink-0" />
         {!collapsed && <span className="min-w-0 truncate">{item.label}</span>}
         {!collapsed && !item.active && <span className="ml-auto ui-micro-label">soon</span>}
+        {/* Live counts stay per-item components (a query, not nav config) —
+            the nav item itself remains a static definition. */}
+        {item.id === "feedback" && <FeedbackNavCount collapsed={collapsed} />}
       </Link>
       {collapsed && tooltipPos && createPortal(
         <span className="ui-sidebar-portal-tooltip" style={{ top: tooltipPos.top, left: tooltipPos.left }}>

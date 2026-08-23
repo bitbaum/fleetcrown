@@ -25,6 +25,7 @@ import {
   Network,
   Inbox,
   Globe,
+  MessagesSquare,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -51,6 +52,7 @@ export const NAV = {
   agents:     { id: "agents",   label: "Agents",   description: "Folded into Control — roster and escalations live there", href: "/control",     icon: Network,      active: true,  mobile: false },
   control:    { id: "control",  label: "Control",  description: "Command deck — live agent status, dispatch work", href: "/control",    icon: Terminal,     active: true,  mobile: true  },
   projects:   { id: "projects", label: "Projects", description: "Your project catalog — health, context & goals", href: "/projects",   icon: FolderKanban, active: true,  mobile: false },
+  feedback:   { id: "feedback", label: "Feedback", description: "Visitor & review reports across your fleet — triage and implement", href: "/feedback", icon: MessagesSquare, active: true, mobile: false },
   atlas:      { id: "atlas",    label: "Atlas",    description: "Folded into Projects — live URL and down-state live there", href: "/projects", icon: Globe, active: true, mobile: false },
   prompts:    { id: "prompts",  label: "Prompts",  description: "Agent prompt library & scheduler",  href: "/prompts",    icon: Zap,          active: true,  mobile: false },
   activity:   { id: "activity", label: "Activity", description: "Project status and event timeline",  href: "/activity", icon: Newspaper,    active: true,  mobile: false },
@@ -93,10 +95,11 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
     id: "work",
     // Daily surfaces only. A page earns this seat if you open it with no
     // context: queue (Today), command (Loki), live state (Control), catalog
-    // (Projects). Destinations live in "more". Agents and Atlas are not
-    // pages — roster/escalations sit on Control, live URL on Projects.
+    // (Projects), inbound reports (Feedback). Destinations live in "more".
+    // Agents and Atlas are not pages — roster/escalations sit on Control,
+    // live URL on Projects.
     label: "Work",
-    items: [NAV.today, NAV.loki, NAV.control, NAV.projects],
+    items: [NAV.today, NAV.loki, NAV.control, NAV.projects, NAV.feedback],
   },
   {
     id: "more",
