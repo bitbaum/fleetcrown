@@ -33,10 +33,19 @@ BASE="${COCKPIT_URL:-http://localhost:3000}"
 # No early exit here: the push-deploy block appended below must still run.
 # (A previous `exit 0` in this branch silently disabled push-to-deploy
 # whenever the local dev server was down.)
-if ! curl -sf --max-time 2 "$BASE/api/health" >/dev/null 2>&1; then
+#
+# Identity check, not just liveness: several apps share this laptop and any of
+# them can hold :3000. FleetCrown's /api/health returns {"ok":...,"commit":...};
+# OrangeCat's returns {"success":...,"data":...}. Smoking a foreign app read as
+# 41/46 routes FAILED and blocked an unrelated push — a wrong server must skip
+# exactly like a missing one.
+_health=$(curl -sf --max-time 2 "$BASE/api/health" 2>/dev/null || true)
+if [ -z "$_health" ]; then
   echo "→ smoke: server not running at $BASE — skipping (start with npm run dev or install-app)"
+elif ! printf '%s' "$_health" | grep -q '"commit"'; then
+  echo "→ smoke: server at $BASE is NOT FleetCrown (health payload lacks \"commit\") — skipping"
 else
-  echo "→ smoke: server detected at $BASE"
+  echo "→ smoke: FleetCrown server detected at $BASE"
   npm run smoke
 fi
 

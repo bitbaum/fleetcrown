@@ -5,6 +5,7 @@ import { getProjectCore } from "@/db/queries/projects";
 import { getActiveWidgetToken, upsertWidgetToken } from "@/db/queries/widget-tokens";
 import { injectPrompt } from "@/lib/inject-core";
 import { injectWatchUrls } from "@/lib/fleet-context";
+import { EXECUTOR_COPY } from "@/config/executor-copy";
 import { appUrl } from "@/lib/email";
 import {
   resolveProjectPublicOrigin,
@@ -148,22 +149,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const liveOrigin = await resolveProjectPublicOrigin(userId, idOrResp);
 
   let token = await getActiveWidgetToken(userId, idOrResp);
-  if (dataOrResp.mode === "install" && !token) {
-    token = await upsertWidgetToken(userId, idOrResp, {
-      origins: liveOrigin ? [liveOrigin] : undefined,
-    });
-  } else if (
-    dataOrResp.mode === "install"
-    && token
-    && liveOrigin
-    && (!token.origins?.length || token.origins.every((o) => /\.vercel\.app$/i.test(new URL(o).hostname)))
-  ) {
-    // Replace stale legacy hosts with the Hetzner live URL so ingest/boot work.
-    token = await upsertWidgetToken(userId, idOrResp, {
-      origins: [liveOrigin],
-    });
-  }
 
+  // Probe BEFORE minting or mutating anything: a failed install must not leave
+  // a fresh active token (or a rewritten allowlist) behind as a side effect.
   const siteProbe = dataOrResp.mode === "install" ? await probeSite(liveOrigin) : null;
 
   if (
@@ -183,6 +171,28 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       },
       { status: 422 },
     );
+  }
+
+  if (dataOrResp.mode === "install" && !token) {
+    token = await upsertWidgetToken(userId, idOrResp, {
+      origins: liveOrigin ? [liveOrigin] : undefined,
+    });
+  } else if (
+    dataOrResp.mode === "install"
+    && token
+    && liveOrigin
+    && token.origins?.length
+    && !token.origins.includes(liveOrigin)
+  ) {
+    // MERGE the live origin into the allowlist — never replace it. The old
+    // "all origins look like vercel.app → overwrite" heuristic silently broke
+    // ingest for widgets legitimately still served from a matched host: the
+    // running embed's POSTs started failing the allowlist (the documented
+    // security boundary) and visitor feedback dropped on the floor. A union
+    // can only widen where the widget may live, never break where it does.
+    token = await upsertWidgetToken(userId, idOrResp, {
+      origins: [...token.origins, liveOrigin],
+    });
   }
 
   const siteNote = siteProbe && !siteProbe.ok ? siteProbe.message : null;
@@ -209,7 +219,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       ...watch,
       nextStep:
         status < 400
-          ? "Queued for this project. Watch Control and Activity. Terminal only shows a session once the agent is actually running. You get a notification when the run finishes."
+          ? `Queued for this project. Watch Control and Activity. Terminal only shows a session once the agent is actually running. ${EXECUTOR_COPY.honesty.notificationWhenDone}`
           : undefined,
     },
     { status },

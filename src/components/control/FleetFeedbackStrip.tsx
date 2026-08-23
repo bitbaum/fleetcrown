@@ -7,12 +7,13 @@ import { cn } from "@/lib/utils";
 import { useFetch } from "@/hooks/use-fetch";
 import { patchJson, postJson, throwApiError } from "@/lib/api/fetch";
 import { compactRelativeDate } from "@/lib/dates";
-import { FEEDBACK_STATUS } from "@/lib/constants/statuses";
+import { FEEDBACK_SOURCE, FEEDBACK_STATUS } from "@/lib/constants/statuses";
 import { SYNTHESIZE_MIN_ITEMS } from "@/lib/feedback/compose-dispatch";
 import { deriveFeedbackWork, FEEDBACK_WORK_PHASE } from "@/lib/feedback/work-phase";
 import type { FeedbackListItemWithWork } from "@/lib/feedback/attach-work";
 import type { ProjectFeedbackSummary } from "@/db/queries/site-feedback";
 import { FeedbackWorkBadge } from "@/components/feedback/FeedbackWorkBadge";
+import { fleetSurfaceHref } from "@/lib/fleet-context";
 
 /**
  * Fleet-wide feedback lens on /control. Shows NEW + in-progress (not resolved)
@@ -48,10 +49,12 @@ export function FleetFeedbackStrip() {
                 "ui-tap flex shrink-0 items-center gap-1.5 text-xs font-medium text-text-primary underline-offset-2 transition-colors hover:underline",
                 openProjectId === s.projectId && "text-accent-text",
               )}
-              title={`Latest ${compactRelativeDate(s.latestAt)} — ${s.newCount} new`}
+              title={`Latest ${compactRelativeDate(s.latestAt)} — ${s.newCount} new, ${s.openCount} open`}
             >
               <span>{s.projectName}</span>
-              <span className="ui-badge">{s.newCount} new</span>
+              {/* Lead with what needs the operator; while fixes are merely in
+                  flight the chip stays visible as "N open" instead of vanishing. */}
+              <span className="ui-badge">{s.newCount > 0 ? `${s.newCount} new` : `${s.openCount} open`}</span>
               <ChevronDown className={cn("h-3 w-3 opacity-50 transition-transform", openProjectId === s.projectId && "rotate-180")} />
             </button>
           ))}
@@ -89,9 +92,13 @@ function InlineFeedbackTriage({
   const items = (feedbackFetch.data?.feedback ?? [])
     .filter((f) => f.status === FEEDBACK_STATUS.NEW || f.status === FEEDBACK_STATUS.DISPATCHED)
     .map((f) => ({ ...f, work: f.work ?? deriveFeedbackWork(f.status, null) }));
-  const newItems = items.filter((f) => f.status === FEEDBACK_STATUS.NEW);
-  const controlHref = `/control?focus=${encodeURIComponent(projectName)}`;
-  const terminalHref = `/terminal?source=server&tab=${encodeURIComponent(projectName)}`;
+  // Mirror the batch routes' filter (NEW, non-synthesizer) so the buttons
+  // only render when a click can actually succeed.
+  const newItems = items.filter(
+    (f) => f.status === FEEDBACK_STATUS.NEW && f.source !== FEEDBACK_SOURCE.SYNTHESIZER,
+  );
+  const controlHref = fleetSurfaceHref("control", projectName);
+  const terminalHref = fleetSurfaceHref("terminal", projectName);
 
   useEffect(() => {
     const live = items.some(

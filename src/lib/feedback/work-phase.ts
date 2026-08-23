@@ -8,6 +8,7 @@
 import { FEEDBACK_STATUS, type FeedbackStatus } from "@/lib/constants/statuses";
 import { ORCH_STATE, type OrchestrationState } from "@/lib/orchestration/contract";
 import { ORCHESTRATION_OUTCOME } from "@/lib/orchestration/contract";
+import { EXECUTOR_COPY } from "@/config/executor-copy";
 
 export const FEEDBACK_WORK_PHASE = {
   NOT_STARTED: "not_started",
@@ -59,12 +60,17 @@ export function deriveFeedbackWork(
     };
   }
 
-  // status === dispatched
+  // status === dispatched, but no run record. The run row is created BEFORE
+  // the row flips to dispatched, so "no record" never means "still starting" —
+  // it means run-create failed or the run was pruned. Calling this QUEUED made
+  // it a phase with no exit: both surfaces polled it every 8s forever and the
+  // QUEUED action set has no Retry. STUCK is the honest phase, and it carries
+  // the Retry affordance.
   if (!run) {
     return {
-      phase: FEEDBACK_WORK_PHASE.QUEUED,
-      label: "Queued",
-      detail: "Prompt accepted — no run record yet. Watch Control or Activity.",
+      phase: FEEDBACK_WORK_PHASE.STUCK,
+      label: "Not running",
+      detail: "No run record for this fix — it isn't executing. Retry to queue it again.",
     };
   }
 
@@ -72,7 +78,7 @@ export function deriveFeedbackWork(
     return {
       phase: FEEDBACK_WORK_PHASE.WORKING,
       label: "Working now",
-      detail: "Agent is generating. Watch Terminal for live output. You get a notification when the run finishes.",
+      detail: `Agent is generating. Watch Terminal for live output. ${EXECUTOR_COPY.honesty.notificationWhenDone}`,
     };
   }
 
@@ -114,7 +120,7 @@ export function deriveFeedbackWork(
     return {
       phase: FEEDBACK_WORK_PHASE.QUEUED,
       label: "Queued",
-      detail: "Starting — waiting for the agent to pick it up. You get a notification when the run finishes.",
+      detail: `Starting — waiting for the agent to pick it up. ${EXECUTOR_COPY.honesty.notificationWhenDone}`,
     };
   }
   if (ageMs > THINKING_MS) {
@@ -127,6 +133,6 @@ export function deriveFeedbackWork(
   return {
     phase: FEEDBACK_WORK_PHASE.WORKING,
     label: "Working now",
-    detail: "Prompt delivered — agent may still be thinking. Watch Terminal. You get a notification when the run finishes.",
+    detail: `Prompt delivered — agent may still be thinking. Watch Terminal. ${EXECUTOR_COPY.honesty.notificationWhenDone}`,
   };
 }

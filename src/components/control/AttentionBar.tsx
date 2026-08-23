@@ -8,6 +8,7 @@ import { HEALTH_TAG_STYLE } from "@/config/ui";
 import { timeAgo } from "@/lib/dates";
 import { postJson } from "@/lib/api/fetch";
 import { CONTROL_DISMISSED_FAILURES_KEY } from "@/config/brand-storage";
+import { fleetSurfaceHref } from "@/lib/fleet-context";
 
 /** Group consecutive failures that match on (type, tab, error). Stops the
  *  "three identical error rows" stacking that happens when the user clicks
@@ -137,7 +138,7 @@ export function AttentionBar({
             <div className="flex shrink-0 items-center gap-2">
               {f.tab !== "unknown" && (
                 <a
-                  href={`/control?focus=${encodeURIComponent(f.tab)}`}
+                  href={fleetSurfaceHref("control", f.tab)}
                   className="ui-btn-ghost ui-btn-xs text-micro"
                   title={`Focus ${f.tab} on Control — Terminal stays empty unless a session is actually running`}
                 >

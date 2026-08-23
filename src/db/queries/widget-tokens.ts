@@ -117,6 +117,10 @@ export type WidgetCoverageItem = {
   lastSeenOrigin: string | null;
   productionUrl: string | null;
   gitUrl: string | null;
+  /** The install agent can land the snippet: a git URL to clone OR a local
+   *  runner directory. The install route 422s only when BOTH are missing —
+   *  the UI must not gate harder than the route it calls. */
+  canInstall: boolean;
   /** Boot heartbeat within the last 7 days. */
   live: boolean;
   /** Missing token, paused, or never/not recently seen on a site-like project. */
@@ -147,6 +151,7 @@ export async function listWidgetCoverage(userId: string): Promise<WidgetCoverage
         entityProjectId: userProjects.entityProjectId,
         liveUrl: userProjects.liveUrl,
         gitUrl: userProjects.gitUrl,
+        dirPath: userProjects.dirPath,
       })
       .from(userProjects)
       .where(eq(userProjects.userId, userId)),
@@ -185,6 +190,7 @@ export async function listWidgetCoverage(userId: string): Promise<WidgetCoverage
         lastSeenOrigin: t?.lastSeenOrigin ?? null,
         productionUrl,
         gitUrl: up?.gitUrl ?? p.gitUrl ?? null,
+        canInstall: !!(up?.gitUrl || p.gitUrl || up?.dirPath),
         live,
         needsAttention,
       };

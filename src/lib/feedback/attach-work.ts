@@ -21,17 +21,34 @@ export async function attachFeedbackWork<T extends FeedbackListItem>(
 
   return items.map((item) => {
     const row = item.dispatchedRunId ? runs.get(item.dispatchedRunId) : undefined;
-    const snap: FeedbackRunSnapshot | null = row
-      ? {
-          id: row.id,
-          state: row.state as OrchestrationState,
-          outcome: row.outcome ?? null,
-          startedAt: row.startedAt,
-          finishedAt: row.finishedAt,
-          deliveredAt: (row.payload as { deliveredAt?: string } | null)?.deliveredAt ?? null,
-          error: (row.payload as { error?: string } | null)?.error ?? null,
-        }
-      : null;
-    return { ...item, work: deriveFeedbackWork(item.status, snap) };
+    return { ...item, work: deriveFeedbackWork(item.status, runToFeedbackSnapshot(row)) };
   });
+}
+
+/** Run row → the snapshot shape deriveFeedbackWork consumes. Shared with the
+ *  dispatch route's duplicate-guard so "is the agent working" has ONE source
+ *  of truth (the route used to re-implement the thresholds inline). */
+export function runToFeedbackSnapshot(
+  row:
+    | {
+        id: string;
+        state: string;
+        outcome: string | null;
+        startedAt: Date;
+        finishedAt: Date | null;
+        payload: unknown;
+      }
+    | null
+    | undefined,
+): FeedbackRunSnapshot | null {
+  if (!row) return null;
+  return {
+    id: row.id,
+    state: row.state as OrchestrationState,
+    outcome: row.outcome ?? null,
+    startedAt: row.startedAt,
+    finishedAt: row.finishedAt,
+    deliveredAt: (row.payload as { deliveredAt?: string } | null)?.deliveredAt ?? null,
+    error: (row.payload as { error?: string } | null)?.error ?? null,
+  };
 }

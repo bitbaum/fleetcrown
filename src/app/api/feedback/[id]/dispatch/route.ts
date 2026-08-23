@@ -6,26 +6,18 @@ import { getOrchestrationRunById } from "@/db/queries/orchestration-runs";
 import { injectPrompt } from "@/lib/inject-core";
 import { FEEDBACK_STATUS } from "@/lib/constants/statuses";
 import { composeFeedbackFixPrompt } from "@/lib/feedback/compose-dispatch";
-import { ORCH_STATE } from "@/lib/orchestration/contract";
+import { deriveFeedbackWork, FEEDBACK_WORK_PHASE } from "@/lib/feedback/work-phase";
+import { runToFeedbackSnapshot } from "@/lib/feedback/attach-work";
 
 /**
  * One-click Implement: queue a scoped agent run via injectPrompt.
  * Returns runId when accepted. Allows Retry when a prior run is stuck/failed
- * (not while a run is actively working).
+ * (not while a run is queued or actively working).
  */
 
 const DispatchBody = z.object({
   note: z.string().trim().max(500).optional(),
 });
-
-function isActivelyWorking(state: string, startedAt: Date, deliveredAt: string | null): boolean {
-  if (state === ORCH_STATE.RUNNING) return true;
-  if (state !== ORCH_STATE.WAITING && state !== ORCH_STATE.IDLE) return false;
-  const age = Date.now() - startedAt.getTime();
-  if (age < 90_000) return true; // still starting
-  if (deliveredAt && age < 10 * 60_000) return true; // may still be thinking
-  return false;
-}
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const userId = await getApiUserId();
@@ -40,13 +32,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (row.feedback.status === FEEDBACK_STATUS.RESOLVED || row.feedback.status === FEEDBACK_STATUS.ARCHIVED) {
     return jsonError("Reopen the item before dispatching again", 409);
   }
-  if (row.feedback.status === FEEDBACK_STATUS.DISPATCHED && row.feedback.dispatchedRunId) {
-    const run = await getOrchestrationRunById(userId, row.feedback.dispatchedRunId);
-    if (run) {
-      const deliveredAt = (run.payload as { deliveredAt?: string } | null)?.deliveredAt ?? null;
-      if (isActivelyWorking(run.state, run.startedAt, deliveredAt)) {
-        return jsonError("Already working on this — open Control to watch", 409);
-      }
+  if (row.feedback.status === FEEDBACK_STATUS.DISPATCHED) {
+    // Same derivation the badges render — the gate and the UI can't disagree.
+    // QUEUED/WORKING → refuse the duplicate; STUCK/FAILED (including a
+    // dispatched row whose run record is missing) → allow the retry.
+    const run = row.feedback.dispatchedRunId
+      ? await getOrchestrationRunById(userId, row.feedback.dispatchedRunId)
+      : null;
+    const work = deriveFeedbackWork(row.feedback.status, runToFeedbackSnapshot(run));
+    if (work.phase === FEEDBACK_WORK_PHASE.QUEUED || work.phase === FEEDBACK_WORK_PHASE.WORKING) {
+      return jsonError("Already working on this — open Control to watch", 409);
     }
   }
 

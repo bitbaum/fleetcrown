@@ -7,7 +7,7 @@ import { useFetch } from "@/hooks/use-fetch";
 import { useClipboard } from "@/hooks/use-clipboard";
 import { deleteJson, postJson, throwApiError } from "@/lib/api/fetch";
 import { compactDurationHours, compactRelativeDate } from "@/lib/dates";
-import { FEEDBACK_STATUS } from "@/lib/constants/statuses";
+import { FEEDBACK_SOURCE, FEEDBACK_STATUS } from "@/lib/constants/statuses";
 import { SYNTHESIZE_MIN_ITEMS } from "@/lib/feedback/compose-dispatch";
 import { FEEDBACK_WORK_PHASE } from "@/lib/feedback/work-phase";
 import type { FeedbackLoopMetrics } from "@/db/queries/site-feedback";
@@ -49,6 +49,11 @@ export function ProjectFeedbackSection({ projectId, projectName }: { projectId: 
   );
   const metrics = feedbackFetch.data?.metrics ?? null;
   const newCount = items.filter((f) => f.status === FEEDBACK_STATUS.NEW).length;
+  // What the batch routes will actually accept: NEW, non-synthesizer. Gating
+  // the buttons on anything wider renders a button whose every click 400s.
+  const batchable = items.filter(
+    (f) => f.status === FEEDBACK_STATUS.NEW && f.source !== FEEDBACK_SOURCE.SYNTHESIZER,
+  ).length;
   const token = tokenFetch.data?.token ?? null;
   const showSetup = setupOpen || (!tokenFetch.loading && !token);
 
@@ -109,7 +114,7 @@ export function ProjectFeedbackSection({ projectId, projectName }: { projectId: 
           )}
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
-          {token && items.length >= 2 && (
+          {token && batchable >= 2 && (
             <button
               type="button"
               onClick={dispatchAll}
@@ -121,7 +126,7 @@ export function ProjectFeedbackSection({ projectId, projectName }: { projectId: 
               Implement all as one
             </button>
           )}
-          {token && newCount >= SYNTHESIZE_MIN_ITEMS && (
+          {token && batchable >= SYNTHESIZE_MIN_ITEMS && (
             <button
               type="button"
               onClick={synthesize}
