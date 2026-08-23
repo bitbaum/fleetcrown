@@ -93,11 +93,17 @@ function fifoEligibilitySql() {
         AND r.finished_at IS NULL
         AND r.started_at > NOW() - INTERVAL '1 minute' * ${STALE_RUN_MINUTES}
         AND r.payload->>'sessionTab' IS NULL
-        -- Orphan open runs (no unexecuted pending command) must not block the
-        -- queue forever — that was the "Install queued → empty Terminal" wedge.
+        -- Orphan open runs must not block the queue: a run with NO pending
+        -- command row at all was never enqueued (or its command was deleted) —
+        -- that was the "Install queued → empty Terminal" wedge. But a run
+        -- whose command was EXECUTED is an agent session that owns the tab:
+        -- it must keep blocking until the run CLOSES (finished_at) or goes
+        -- stale via the started_at floor above. Releasing on ack (executed_at)
+        -- reintroduced the documented merged-sessions regression: dispatch B's
+        -- prompt typed into A's still-working PTY.
         AND EXISTS (
           SELECT 1 FROM pending_commands pc
-          WHERE pc.executed_at IS NULL
+          WHERE pc.user_id = r.user_id
             AND pc.payload->>'runId' = r.id::text
         )
         AND (r.started_at, r.id) < (

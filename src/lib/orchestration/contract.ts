@@ -27,6 +27,29 @@ export const ORCH_STATE = {
   ERROR: "error",
 } as const satisfies Record<string, OrchestrationState>;
 
+/** Canonical run outcome values — SSOT for the column type, the finish-route
+ *  validator (ORCHESTRATION_OUTCOMES tuple), and outcome inference. Lives here
+ *  (not in the drizzle schema) because client components value-import these —
+ *  a schema value import drags drizzle pg-core into the browser bundle. The
+ *  schema module re-exports them for server callers. */
+export const ORCHESTRATION_OUTCOME = {
+  SUCCESS: "success",
+  PARTIAL: "partial",
+  ERROR: "error",
+  HANG: "hang",
+  USER_ABORT: "user_abort",
+  TIMEOUT: "timeout",
+} as const;
+export const ORCHESTRATION_OUTCOMES = [
+  ORCHESTRATION_OUTCOME.SUCCESS,
+  ORCHESTRATION_OUTCOME.PARTIAL,
+  ORCHESTRATION_OUTCOME.ERROR,
+  ORCHESTRATION_OUTCOME.HANG,
+  ORCHESTRATION_OUTCOME.USER_ABORT,
+  ORCHESTRATION_OUTCOME.TIMEOUT,
+] as const;
+export type OrchestrationOutcome = (typeof ORCHESTRATION_OUTCOMES)[number];
+
 export const ORCHESTRATION_EVENTS = [
   "task_started",
   "input_requested",

@@ -7,7 +7,7 @@
  */
 import { FEEDBACK_STATUS, type FeedbackStatus } from "@/lib/constants/statuses";
 import { ORCH_STATE, type OrchestrationState } from "@/lib/orchestration/contract";
-import { ORCHESTRATION_OUTCOME } from "@/db/schema/orchestration-runs";
+import { ORCHESTRATION_OUTCOME } from "@/lib/orchestration/contract";
 
 export const FEEDBACK_WORK_PHASE = {
   NOT_STARTED: "not_started",
