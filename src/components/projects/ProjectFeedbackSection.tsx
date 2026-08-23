@@ -2,17 +2,18 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Archive, Check, Code2, Copy, ExternalLink, Layers, Loader2, Pause, PenLine, Play, RefreshCw, Rocket, ScanEye, Star, Undo2, X } from "lucide-react";
+import { Check, Code2, Copy, ExternalLink, Layers, Loader2, Pause, Play, RefreshCw, Rocket, ScanEye, Undo2, X } from "lucide-react";
 import { useFetch } from "@/hooks/use-fetch";
 import { useClipboard } from "@/hooks/use-clipboard";
-import { deleteJson, patchJson, postJson, throwApiError } from "@/lib/api/fetch";
+import { deleteJson, postJson, throwApiError } from "@/lib/api/fetch";
 import { compactDurationHours, compactRelativeDate } from "@/lib/dates";
-import { FEEDBACK_SOURCE, FEEDBACK_STATUS, type FeedbackStatus } from "@/lib/constants/statuses";
+import { FEEDBACK_STATUS } from "@/lib/constants/statuses";
 import { SYNTHESIZE_MIN_ITEMS } from "@/lib/feedback/compose-dispatch";
-import { deriveFeedbackWork, FEEDBACK_WORK_PHASE } from "@/lib/feedback/work-phase";
-import type { FeedbackListItem, FeedbackLoopMetrics } from "@/db/queries/site-feedback";
+import { FEEDBACK_WORK_PHASE } from "@/lib/feedback/work-phase";
+import type { FeedbackLoopMetrics } from "@/db/queries/site-feedback";
 import type { FeedbackListItemWithWork } from "@/lib/feedback/attach-work";
-import { FeedbackWorkBadge } from "@/components/feedback/FeedbackWorkBadge";
+import { FeedbackItemRow } from "@/components/feedback/FeedbackItemRow";
+import { useFeedbackActions } from "@/components/feedback/use-feedback-actions";
 import { fleetSurfaceHref } from "@/lib/fleet-context";
 import { EXECUTOR_COPY } from "@/config/executor-copy";
 import { DispatchedNote } from "@/components/projects/ProjectActionButtons";
@@ -38,8 +39,7 @@ export function ProjectFeedbackSection({ projectId, projectName }: { projectId: 
   const tokenFetch = useFetch<{ token: WidgetTokenInfo | null }>(`/api/projects/${projectId}/widget-token`);
   const [setupOpen, setSetupOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
-  const [busyId, setBusyId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { busyId, error, setError, dispatchFix, setStatus, feature } = useFeedbackActions(feedbackFetch.refetch);
   const [synthesizing, setSynthesizing] = useState(false);
   const [synthesized, setSynthesized] = useState(false);
   const [batchBusy, setBatchBusy] = useState(false);
@@ -63,23 +63,6 @@ export function ProjectFeedbackSection({ projectId, projectName }: { projectId: 
     return () => window.clearInterval(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps -- poll while any row is live; refetch identity is stable enough
   }, [items.map((f) => ("work" in f && f.work ? f.work.phase : f.status)).join("|")]);
-
-  async function act(id: string, run: () => Promise<Response>, fallback: string) {
-    setBusyId(id);
-    setError(null);
-    try {
-      const res = await run();
-      if (!res.ok) await throwApiError(res, fallback);
-      feedbackFetch.refetch();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : fallback);
-    } finally {
-      setBusyId(null);
-    }
-  }
-
-  const dispatchFix = (id: string, note?: string) =>
-    act(id, () => postJson(`/api/feedback/${id}/dispatch`, note ? { note } : {}), "Could not queue the fix");
 
   // High-volume inbox: shift the unit of action from item to theme. An agent
   // clusters the NEW items into briefs and files them back into this inbox.
@@ -110,9 +93,6 @@ export function ProjectFeedbackSection({ projectId, projectName }: { projectId: 
       setBatchBusy(false);
     }
   }
-  const setStatus = (id: string, status: FeedbackStatus) =>
-    act(id, () => patchJson(`/api/feedback/${id}`, { status }), "Update failed");
-
   return (
     <section id="feedback" className="scroll-mt-28 border-t border-border-subtle pt-7" aria-labelledby="project-feedback-title">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
@@ -212,7 +192,7 @@ export function ProjectFeedbackSection({ projectId, projectName }: { projectId: 
       ) : (
         <div className="divide-y divide-border-subtle">
           {items.map((f) => (
-            <FeedbackRow
+            <FeedbackItemRow
               key={f.id}
               feedback={f}
               projectName={projectName}
@@ -221,210 +201,12 @@ export function ProjectFeedbackSection({ projectId, projectName }: { projectId: 
               onResolve={() => setStatus(f.id, FEEDBACK_STATUS.RESOLVED)}
               onArchive={() => setStatus(f.id, FEEDBACK_STATUS.ARCHIVED)}
               onReopen={() => setStatus(f.id, FEEDBACK_STATUS.NEW)}
-              onFeature={() => act(f.id, () => patchJson(`/api/feedback/${f.id}`, { featured: !f.featuredAt }), "Update failed")}
+              onFeature={() => feature(f.id, !f.featuredAt)}
             />
           ))}
         </div>
       )}
     </section>
-  );
-}
-
-function FeedbackRow({
-  feedback: f,
-  projectName,
-  busy,
-  onDispatch,
-  onResolve,
-  onArchive,
-  onReopen,
-  onFeature,
-}: {
-  feedback: FeedbackListItemWithWork | FeedbackListItem;
-  projectName: string;
-  busy: boolean;
-  onDispatch: (note?: string) => void;
-  onResolve: () => void;
-  onArchive: () => void;
-  onReopen: () => void;
-  onFeature: () => void;
-}) {
-  // "Comment then implement" without a comment thread: the note IS an edit to
-  // the dispatch prompt. Plain Dispatch stays one-click.
-  const [noteOpen, setNoteOpen] = useState(false);
-  const [note, setNote] = useState("");
-  const work = "work" in f && f.work ? f.work : deriveFeedbackWork(f.status, null);
-  const controlHref = fleetSurfaceHref("control", projectName);
-  const terminalHref = fleetSurfaceHref("terminal", projectName);
-  const watchLive = work.phase === FEEDBACK_WORK_PHASE.WORKING;
-  const progressHref = watchLive ? terminalHref : controlHref;
-  const progressLabel = watchLive ? "Watch" : "Open on Control";
-  const progressTitle = watchLive
-    ? (work.detail ?? "Live agent session")
-    : "Open this project on Control — Terminal is empty until a session is actually running";
-  // Agent-filed rows get a typed badge instead of their magic contact string.
-  const agentBadge =
-    f.source === FEEDBACK_SOURCE.AI_REVIEW ? "AI review"
-    : f.source === FEEDBACK_SOURCE.SYNTHESIZER ? "brief"
-    : null;
-  const meta = [
-    f.page || f.url,
-    f.scope,
-    !agentBadge && f.contact,
-    compactRelativeDate(f.createdAt),
-    f.status === FEEDBACK_STATUS.RESOLVED && f.resolvedAt && `resolved ${compactRelativeDate(f.resolvedAt)}`,
-    f.status === FEEDBACK_STATUS.RESOLVED && f.dispatchedRunId && `by run ${f.dispatchedRunId.slice(0, 8)}`,
-  ].filter(Boolean);
-
-  const dotClass =
-    work.phase === FEEDBACK_WORK_PHASE.WORKING || work.phase === FEEDBACK_WORK_PHASE.DONE
-      ? "ui-dot-positive mt-1.5"
-      : work.phase === FEEDBACK_WORK_PHASE.FAILED || work.phase === FEEDBACK_WORK_PHASE.STUCK
-        ? "ui-dot-negative mt-1.5"
-        : work.phase === FEEDBACK_WORK_PHASE.QUEUED || work.phase === FEEDBACK_WORK_PHASE.NOT_STARTED
-          ? "ui-dot-warning mt-1.5"
-          : "ui-dot-neutral mt-1.5";
-
-  return (
-    <div className="flex flex-col gap-2 py-3">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-      <div className="min-w-0 flex-1">
-        <div className="flex items-start gap-2">
-          <span className={dotClass} aria-label={work.label} />
-          <p className="min-w-0 text-sm leading-relaxed text-text-primary">{f.suggestion}</p>
-          <FeedbackWorkBadge work={work} />
-          {agentBadge && <span className="ui-tag shrink-0">{agentBadge}</span>}
-          {f.duplicateCount > 1 && (
-            <span className="ui-badge shrink-0" title={`Reported ${f.duplicateCount} times`}>×{f.duplicateCount}</span>
-          )}
-        </div>
-        <p className="mt-1 pl-4 text-xs text-text-tertiary">{meta.join(" · ")}</p>
-        {work.detail && (
-          <p className="mt-0.5 pl-4 text-xs text-text-secondary">{work.detail}</p>
-        )}
-        {f.selectedElements && f.selectedElements.length > 0 && (
-          <p className="mt-0.5 truncate pl-4 font-mono text-micro text-text-muted">
-            {f.selectedElements.map((el) => el.selector).join("  ")}
-          </p>
-        )}
-        {f.hasScreenshot && (
-          <a
-            href={`/api/feedback/${f.id}/screenshot`}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-1.5 inline-block pl-4"
-            title="Open the visitor's screenshot"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element -- dynamic auth'd API image, not a static asset */}
-            <img
-              src={`/api/feedback/${f.id}/screenshot`}
-              alt="Visitor screenshot (click to open)"
-              className="h-14 w-auto rounded-md border border-border-subtle"
-              loading="lazy"
-            />
-          </a>
-        )}
-      </div>
-      <div className="flex shrink-0 items-center gap-1.5 pl-4 sm:pl-0">
-        {work.phase === FEEDBACK_WORK_PHASE.NOT_STARTED ? (
-          <>
-            <button type="button" onClick={() => onDispatch()} disabled={busy} className="ui-btn-save gap-1.5" title="Ask the agent to fix this">
-              {busy ? <Loader2 className="ui-spinner-xs" /> : <Rocket className="h-3 w-3" />}
-              Implement
-            </button>
-            <button
-              type="button"
-              onClick={() => setNoteOpen((v) => !v)}
-              disabled={busy}
-              className="ui-btn-icon"
-              title="Add an instruction, then implement"
-              aria-label="Add an instruction"
-              aria-expanded={noteOpen}
-            >
-              <PenLine className="h-3.5 w-3.5" />
-            </button>
-            <button type="button" onClick={onResolve} disabled={busy} className="ui-btn-icon" title="Mark resolved" aria-label="Mark resolved">
-              <Check className="h-3.5 w-3.5" />
-            </button>
-          </>
-        ) : work.phase === FEEDBACK_WORK_PHASE.QUEUED || work.phase === FEEDBACK_WORK_PHASE.WORKING ? (
-          <>
-            <a href={progressHref} className="ui-btn-save gap-1" title={progressTitle}>
-              {progressLabel}
-            </a>
-            <button type="button" onClick={onResolve} disabled={busy} className="ui-btn-secondary gap-1" title="Mark resolved">
-              <Check className="h-3 w-3" /> Resolve
-            </button>
-          </>
-        ) : work.phase === FEEDBACK_WORK_PHASE.STUCK || work.phase === FEEDBACK_WORK_PHASE.FAILED ? (
-          <>
-            <a href={progressHref} className="ui-btn-secondary gap-1" title={progressTitle}>{progressLabel}</a>
-            <button type="button" onClick={() => onDispatch()} disabled={busy} className="ui-btn-save gap-1.5" title="Queue again">
-              {busy ? <Loader2 className="ui-spinner-xs" /> : <Rocket className="h-3 w-3" />}
-              Retry
-            </button>
-            <button type="button" onClick={onResolve} disabled={busy} className="ui-btn-icon" title="Mark resolved" aria-label="Mark resolved">
-              <Check className="h-3.5 w-3.5" />
-            </button>
-          </>
-        ) : work.phase === FEEDBACK_WORK_PHASE.DONE && f.status !== FEEDBACK_STATUS.RESOLVED ? (
-          <>
-            <button type="button" onClick={onResolve} disabled={busy} className="ui-btn-save gap-1">
-              <Check className="h-3 w-3" /> Resolve
-            </button>
-            <a href={progressHref} className="ui-btn-secondary gap-1" title={progressTitle}>{progressLabel}</a>
-          </>
-        ) : f.status === FEEDBACK_STATUS.RESOLVED ? (
-          <>
-            <button
-              type="button"
-              onClick={onFeature}
-              disabled={busy}
-              className="ui-btn-icon"
-              title={f.featuredAt ? "Remove from the public 'shipped thanks to feedback' strip" : "Feature on the public 'shipped thanks to feedback' strip"}
-              aria-label={f.featuredAt ? "Unfeature" : "Feature publicly"}
-              aria-pressed={!!f.featuredAt}
-            >
-              <Star className="h-3.5 w-3.5" fill={f.featuredAt ? "currentColor" : "none"} />
-            </button>
-          </>
-        ) : null}
-        {f.status === FEEDBACK_STATUS.RESOLVED ? (
-          <button type="button" onClick={onReopen} disabled={busy} className="ui-btn-icon" title="Reopen" aria-label="Reopen">
-            <Undo2 className="h-3.5 w-3.5" />
-          </button>
-        ) : (
-          <button type="button" onClick={onArchive} disabled={busy} className="ui-btn-icon" title="Archive" aria-label="Archive">
-            <Archive className="h-3.5 w-3.5" />
-          </button>
-        )}
-      </div>
-      </div>
-      {noteOpen && work.phase === FEEDBACK_WORK_PHASE.NOT_STARTED && (
-        <div className="flex items-center gap-2 pl-4">
-          <input
-            type="text"
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            maxLength={500}
-            placeholder="Instruction for the agent, e.g. 'only fix the mobile layout'"
-            className="ui-input-compact flex-1"
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && note.trim()) onDispatch(note.trim());
-            }}
-          />
-          <button
-            type="button"
-            onClick={() => onDispatch(note.trim() || undefined)}
-            disabled={busy}
-            className="ui-btn-save gap-1.5"
-          >
-            {busy ? <Loader2 className="ui-spinner-xs" /> : <Rocket className="h-3 w-3" />}
-            Implement
-          </button>
-        </div>
-      )}
-    </div>
   );
 }
 

@@ -266,6 +266,20 @@ matters):
    site-wide crawl review, conversational widget (Loki-in-widget — needs its own
    security model; the fcw_ token stays write-only).
 
+## Since v1 (2026-08-24)
+
+- **Owner notification on ingest** (the "optional email/Telegram notification
+  later" above, finally): `POST /api/feedback` fires `notifyFeedbackReceived`
+  after the insert — web push + Telegram, fire-and-forget, visitor-source rows
+  only (AI-review/synthesizer bursts and duplicate bumps stay silent).
+- **Cross-project inbox at `/feedback`** (nav: Work → Feedback): every
+  project's rows in one surface with honest work phases, grouped
+  Needs you / In progress / Shipped, filterable by project and source. The
+  per-project section and this page share one row component
+  (`src/components/feedback/FeedbackItemRow.tsx`) and one actions hook.
+- The Control strip's "Full inbox" deep-links to `/feedback?project=…`; the
+  sidebar Feedback item carries a NEW-count badge from `/api/feedback/summary`.
+
 ## Out of scope
 
 - Reading anything through the widget token (write-only by construction).

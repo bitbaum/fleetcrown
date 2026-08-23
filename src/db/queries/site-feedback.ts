@@ -1,4 +1,4 @@
-import { and, count, desc, eq, inArray, max, sql } from "drizzle-orm";
+import { and, count, desc, eq, getTableColumns, inArray, max, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { entities, siteFeedback, type SiteFeedback, type NewSiteFeedback } from "@/db/schema";
 import { FEEDBACK_STATUS, type FeedbackStatus } from "@/lib/constants/statuses";
@@ -102,6 +102,29 @@ export async function getFeedbackScreenshot(userId: string, id: string): Promise
     .where(and(eq(siteFeedback.id, id), eq(siteFeedback.userId, userId)))
     .limit(1);
   return row?.screenshot ?? null;
+}
+
+/** Cross-project inbox row: the list shape plus which project it belongs to. */
+export type UserFeedbackListItem = FeedbackListItem & { projectName: string };
+
+/**
+ * Every project's inbox in one read — the lens behind /feedback. Same
+ * screenshot exclusion as the per-project list; the join supplies the project
+ * name so the UI never needs a second lookup. Newest first across the fleet.
+ */
+export async function listUserFeedback(userId: string, limit = 400): Promise<UserFeedbackListItem[]> {
+  const { screenshot: _screenshot, ...cols } = getTableColumns(siteFeedback);
+  return db
+    .select({
+      ...cols,
+      hasScreenshot: sql<boolean>`(${siteFeedback.screenshot} IS NOT NULL)`.as("has_screenshot"),
+      projectName: entities.name,
+    })
+    .from(siteFeedback)
+    .innerJoin(entities, eq(siteFeedback.projectId, entities.id))
+    .where(eq(siteFeedback.userId, userId))
+    .orderBy(desc(siteFeedback.createdAt))
+    .limit(limit);
 }
 
 export type ProjectFeedbackSummary = {
