@@ -13,8 +13,10 @@ assert.ok(more, "more section exists");
 
 assert.deepEqual(
   work.items.map((i) => i.id),
-  ["today", "loki", "control", "projects"],
-  "Work is the four daily surfaces — destinations do not share that seat",
+  ["today", "loki", "control", "projects", "feedback"],
+  "Work is the five daily surfaces — destinations do not share that seat. " +
+    "Feedback earned the seat 2026-08-24: an inbox is opened with no context, " +
+    "and burying inbound reports under Control/Projects is how they went unseen.",
 );
 
 for (const id of ["terminal", "approvals", "prompts", "activity", "system", "thoughts"] as const) {
