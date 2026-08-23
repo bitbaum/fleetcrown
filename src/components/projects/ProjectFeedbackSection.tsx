@@ -1,13 +1,21 @@
 "use client";
 
-import { useState } from "react";
-import { Archive, Check, Code2, Copy, Layers, Loader2, MessageSquare, Pause, PenLine, Play, RefreshCw, Rocket, ScanEye, Star, Undo2, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { Archive, Check, Code2, Copy, ExternalLink, Layers, Loader2, Pause, PenLine, Play, RefreshCw, Rocket, ScanEye, Star, Undo2, X } from "lucide-react";
 import { useFetch } from "@/hooks/use-fetch";
 import { useClipboard } from "@/hooks/use-clipboard";
 import { deleteJson, patchJson, postJson, throwApiError } from "@/lib/api/fetch";
 import { compactDurationHours, compactRelativeDate } from "@/lib/dates";
 import { FEEDBACK_SOURCE, FEEDBACK_STATUS, type FeedbackStatus } from "@/lib/constants/statuses";
+import { SYNTHESIZE_MIN_ITEMS } from "@/lib/feedback/compose-dispatch";
+import { deriveFeedbackWork, FEEDBACK_WORK_PHASE } from "@/lib/feedback/work-phase";
 import type { FeedbackListItem, FeedbackLoopMetrics } from "@/db/queries/site-feedback";
+import type { FeedbackListItemWithWork } from "@/lib/feedback/attach-work";
+import { FeedbackWorkBadge } from "@/components/feedback/FeedbackWorkBadge";
+import { fleetSurfaceHref } from "@/lib/fleet-context";
+import { EXECUTOR_COPY } from "@/config/executor-copy";
+import { DispatchedNote } from "@/components/projects/ProjectActionButtons";
 
 type WidgetTokenInfo = {
   token: string;
@@ -21,12 +29,12 @@ type WidgetTokenInfo = {
 /**
  * Visitor-feedback inbox for one project — submissions from the embeddable
  * widget (docs/architecture/feedback-widget.md). The one thing that matters
- * per row is "Dispatch fix": feedback becomes fleet work without leaving the
+ * per row is Implement: feedback becomes fleet work without leaving the
  * row. The empty state IS the widget setup card — discovery and activation
  * in one place.
  */
-export function ProjectFeedbackSection({ projectId }: { projectId: string }) {
-  const feedbackFetch = useFetch<{ feedback: FeedbackListItem[]; metrics: FeedbackLoopMetrics | null }>(`/api/projects/${projectId}/feedback`);
+export function ProjectFeedbackSection({ projectId, projectName }: { projectId: string; projectName: string }) {
+  const feedbackFetch = useFetch<{ feedback: FeedbackListItemWithWork[]; metrics: FeedbackLoopMetrics | null }>(`/api/projects/${projectId}/feedback`);
   const tokenFetch = useFetch<{ token: WidgetTokenInfo | null }>(`/api/projects/${projectId}/widget-token`);
   const [setupOpen, setSetupOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
@@ -34,6 +42,7 @@ export function ProjectFeedbackSection({ projectId }: { projectId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [synthesizing, setSynthesizing] = useState(false);
   const [synthesized, setSynthesized] = useState(false);
+  const [batchBusy, setBatchBusy] = useState(false);
 
   const items = (feedbackFetch.data?.feedback ?? []).filter(
     (f) => f.status !== FEEDBACK_STATUS.ARCHIVED,
@@ -42,6 +51,18 @@ export function ProjectFeedbackSection({ projectId }: { projectId: string }) {
   const newCount = items.filter((f) => f.status === FEEDBACK_STATUS.NEW).length;
   const token = tokenFetch.data?.token ?? null;
   const showSetup = setupOpen || (!tokenFetch.loading && !token);
+
+  // Keep work labels honest while something is in flight.
+  useEffect(() => {
+    const live = items.some((f) => {
+      const w = "work" in f && f.work ? f.work.phase : null;
+      return w === FEEDBACK_WORK_PHASE.QUEUED || w === FEEDBACK_WORK_PHASE.WORKING;
+    });
+    if (!live) return;
+    const t = window.setInterval(() => feedbackFetch.refetch(), 8_000);
+    return () => window.clearInterval(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- poll while any row is live; refetch identity is stable enough
+  }, [items.map((f) => ("work" in f && f.work ? f.work.phase : f.status)).join("|")]);
 
   async function act(id: string, run: () => Promise<Response>, fallback: string) {
     setBusyId(id);
@@ -58,7 +79,7 @@ export function ProjectFeedbackSection({ projectId }: { projectId: string }) {
   }
 
   const dispatchFix = (id: string, note?: string) =>
-    act(id, () => postJson(`/api/feedback/${id}/dispatch`, note ? { note } : {}), "Dispatch failed");
+    act(id, () => postJson(`/api/feedback/${id}/dispatch`, note ? { note } : {}), "Could not queue the fix");
 
   // High-volume inbox: shift the unit of action from item to theme. An agent
   // clusters the NEW items into briefs and files them back into this inbox.
@@ -73,6 +94,20 @@ export function ProjectFeedbackSection({ projectId }: { projectId: string }) {
       setError(e instanceof Error ? e.message : "Synthesize failed");
     } finally {
       setSynthesizing(false);
+    }
+  }
+
+  async function dispatchAll() {
+    setBatchBusy(true);
+    setError(null);
+    try {
+      const res = await postJson(`/api/projects/${projectId}/feedback/dispatch-batch`, {});
+      if (!res.ok) await throwApiError(res, "Implement all failed");
+      feedbackFetch.refetch();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Implement all failed");
+    } finally {
+      setBatchBusy(false);
     }
   }
   const setStatus = (id: string, status: FeedbackStatus) =>
@@ -94,20 +129,32 @@ export function ProjectFeedbackSection({ projectId }: { projectId: string }) {
           )}
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
-          {token && newCount >= 5 && (
+          {token && items.length >= 2 && (
+            <button
+              type="button"
+              onClick={dispatchAll}
+              disabled={batchBusy || busyId !== null}
+              className="ui-btn-save gap-1.5"
+              title="One agent run covering every new report (local Fleet Runner or cloud builder)"
+            >
+              {batchBusy ? <Loader2 className="ui-spinner-xs" /> : <Rocket className="h-3.5 w-3.5" />}
+              Implement all as one
+            </button>
+          )}
+          {token && newCount >= SYNTHESIZE_MIN_ITEMS && (
             <button
               type="button"
               onClick={synthesize}
               disabled={synthesizing || synthesized}
               className="ui-btn-secondary gap-1.5"
-              title="Dispatch an agent to cluster the new items into structured briefs, filed back into this inbox"
+              title="Queue an agent to cluster the new items into structured briefs, filed back into this inbox"
             >
               {synthesizing ? <Loader2 className="ui-spinner-xs" /> : <Layers className="h-3.5 w-3.5" />}
-              {synthesized ? "Synthesis dispatched" : "Synthesize"}
+              {synthesized ? "Synthesis queued" : "Synthesize"}
             </button>
           )}
           {token && (
-            <button type="button" onClick={() => setReviewOpen((v) => !v)} className="ui-btn-secondary gap-1.5" title="Dispatch an agent to visually review a page and file findings here">
+            <button type="button" onClick={() => setReviewOpen((v) => !v)} className="ui-btn-secondary gap-1.5" title="Queue an agent to visually review a page and file findings here">
               <ScanEye className="h-3.5 w-3.5" />
               AI review
             </button>
@@ -122,14 +169,22 @@ export function ProjectFeedbackSection({ projectId }: { projectId: string }) {
       {reviewOpen && token && (
         <AiReviewCard
           projectId={projectId}
+          projectName={projectName}
           defaultUrl={items.find((f) => f.url)?.url ?? ""}
           onClose={() => setReviewOpen(false)}
         />
       )}
 
+      {synthesized && (
+        <p className="mb-3">
+          <DispatchedNote workspaceKey={projectName} />
+        </p>
+      )}
+
       {showSetup && (
         <WidgetSetupCard
           projectId={projectId}
+          projectName={projectName}
           token={token}
           loading={tokenFetch.loading}
           onChanged={() => {
@@ -160,6 +215,7 @@ export function ProjectFeedbackSection({ projectId }: { projectId: string }) {
             <FeedbackRow
               key={f.id}
               feedback={f}
+              projectName={projectName}
               busy={busyId === f.id}
               onDispatch={(note) => dispatchFix(f.id, note)}
               onResolve={() => setStatus(f.id, FEEDBACK_STATUS.RESOLVED)}
@@ -176,6 +232,7 @@ export function ProjectFeedbackSection({ projectId }: { projectId: string }) {
 
 function FeedbackRow({
   feedback: f,
+  projectName,
   busy,
   onDispatch,
   onResolve,
@@ -183,7 +240,8 @@ function FeedbackRow({
   onReopen,
   onFeature,
 }: {
-  feedback: FeedbackListItem;
+  feedback: FeedbackListItemWithWork | FeedbackListItem;
+  projectName: string;
   busy: boolean;
   onDispatch: (note?: string) => void;
   onResolve: () => void;
@@ -195,6 +253,15 @@ function FeedbackRow({
   // the dispatch prompt. Plain Dispatch stays one-click.
   const [noteOpen, setNoteOpen] = useState(false);
   const [note, setNote] = useState("");
+  const work = "work" in f && f.work ? f.work : deriveFeedbackWork(f.status, null);
+  const controlHref = fleetSurfaceHref("control", projectName);
+  const terminalHref = fleetSurfaceHref("terminal", projectName);
+  const watchLive = work.phase === FEEDBACK_WORK_PHASE.WORKING;
+  const progressHref = watchLive ? terminalHref : controlHref;
+  const progressLabel = watchLive ? "Watch" : "Open on Control";
+  const progressTitle = watchLive
+    ? (work.detail ?? "Live agent session")
+    : "Open this project on Control — Terminal is empty until a session is actually running";
   // Agent-filed rows get a typed badge instead of their magic contact string.
   const agentBadge =
     f.source === FEEDBACK_SOURCE.AI_REVIEW ? "AI review"
@@ -205,33 +272,36 @@ function FeedbackRow({
     f.scope,
     !agentBadge && f.contact,
     compactRelativeDate(f.createdAt),
-    // Resolution evidence: WHAT closed this row, not just that it's green.
     f.status === FEEDBACK_STATUS.RESOLVED && f.resolvedAt && `resolved ${compactRelativeDate(f.resolvedAt)}`,
     f.status === FEEDBACK_STATUS.RESOLVED && f.dispatchedRunId && `by run ${f.dispatchedRunId.slice(0, 8)}`,
   ].filter(Boolean);
+
+  const dotClass =
+    work.phase === FEEDBACK_WORK_PHASE.WORKING || work.phase === FEEDBACK_WORK_PHASE.DONE
+      ? "ui-dot-positive mt-1.5"
+      : work.phase === FEEDBACK_WORK_PHASE.FAILED || work.phase === FEEDBACK_WORK_PHASE.STUCK
+        ? "ui-dot-negative mt-1.5"
+        : work.phase === FEEDBACK_WORK_PHASE.QUEUED || work.phase === FEEDBACK_WORK_PHASE.NOT_STARTED
+          ? "ui-dot-warning mt-1.5"
+          : "ui-dot-neutral mt-1.5";
 
   return (
     <div className="flex flex-col gap-2 py-3">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
       <div className="min-w-0 flex-1">
         <div className="flex items-start gap-2">
-          <span
-            className={
-              f.status === FEEDBACK_STATUS.NEW
-                ? "ui-dot-warning mt-1.5"
-                : f.status === FEEDBACK_STATUS.RESOLVED
-                  ? "ui-dot-positive mt-1.5"
-                  : "ui-dot-neutral mt-1.5"
-            }
-            aria-label={`Status: ${f.status}`}
-          />
+          <span className={dotClass} aria-label={work.label} />
           <p className="min-w-0 text-sm leading-relaxed text-text-primary">{f.suggestion}</p>
+          <FeedbackWorkBadge work={work} />
           {agentBadge && <span className="ui-tag shrink-0">{agentBadge}</span>}
           {f.duplicateCount > 1 && (
             <span className="ui-badge shrink-0" title={`Reported ${f.duplicateCount} times`}>×{f.duplicateCount}</span>
           )}
         </div>
         <p className="mt-1 pl-4 text-xs text-text-tertiary">{meta.join(" · ")}</p>
+        {work.detail && (
+          <p className="mt-0.5 pl-4 text-xs text-text-secondary">{work.detail}</p>
+        )}
         {f.selectedElements && f.selectedElements.length > 0 && (
           <p className="mt-0.5 truncate pl-4 font-mono text-micro text-text-muted">
             {f.selectedElements.map((el) => el.selector).join("  ")}
@@ -256,16 +326,56 @@ function FeedbackRow({
         )}
       </div>
       <div className="flex shrink-0 items-center gap-1.5 pl-4 sm:pl-0">
-        {f.status === FEEDBACK_STATUS.DISPATCHED ? (
+        {work.phase === FEEDBACK_WORK_PHASE.NOT_STARTED ? (
           <>
-            <span className="ui-tag">dispatched</span>
+            <button type="button" onClick={() => onDispatch()} disabled={busy} className="ui-btn-save gap-1.5" title="Ask the agent to fix this">
+              {busy ? <Loader2 className="ui-spinner-xs" /> : <Rocket className="h-3 w-3" />}
+              Implement
+            </button>
+            <button
+              type="button"
+              onClick={() => setNoteOpen((v) => !v)}
+              disabled={busy}
+              className="ui-btn-icon"
+              title="Add an instruction, then implement"
+              aria-label="Add an instruction"
+              aria-expanded={noteOpen}
+            >
+              <PenLine className="h-3.5 w-3.5" />
+            </button>
+            <button type="button" onClick={onResolve} disabled={busy} className="ui-btn-icon" title="Mark resolved" aria-label="Mark resolved">
+              <Check className="h-3.5 w-3.5" />
+            </button>
+          </>
+        ) : work.phase === FEEDBACK_WORK_PHASE.QUEUED || work.phase === FEEDBACK_WORK_PHASE.WORKING ? (
+          <>
+            <a href={progressHref} className="ui-btn-save gap-1" title={progressTitle}>
+              {progressLabel}
+            </a>
             <button type="button" onClick={onResolve} disabled={busy} className="ui-btn-secondary gap-1" title="Mark resolved">
               <Check className="h-3 w-3" /> Resolve
             </button>
           </>
+        ) : work.phase === FEEDBACK_WORK_PHASE.STUCK || work.phase === FEEDBACK_WORK_PHASE.FAILED ? (
+          <>
+            <a href={progressHref} className="ui-btn-secondary gap-1" title={progressTitle}>{progressLabel}</a>
+            <button type="button" onClick={() => onDispatch()} disabled={busy} className="ui-btn-save gap-1.5" title="Queue again">
+              {busy ? <Loader2 className="ui-spinner-xs" /> : <Rocket className="h-3 w-3" />}
+              Retry
+            </button>
+            <button type="button" onClick={onResolve} disabled={busy} className="ui-btn-icon" title="Mark resolved" aria-label="Mark resolved">
+              <Check className="h-3.5 w-3.5" />
+            </button>
+          </>
+        ) : work.phase === FEEDBACK_WORK_PHASE.DONE && f.status !== FEEDBACK_STATUS.RESOLVED ? (
+          <>
+            <button type="button" onClick={onResolve} disabled={busy} className="ui-btn-save gap-1">
+              <Check className="h-3 w-3" /> Resolve
+            </button>
+            <a href={progressHref} className="ui-btn-secondary gap-1" title={progressTitle}>{progressLabel}</a>
+          </>
         ) : f.status === FEEDBACK_STATUS.RESOLVED ? (
           <>
-            <span className="ui-tag-positive">resolved</span>
             <button
               type="button"
               onClick={onFeature}
@@ -278,28 +388,7 @@ function FeedbackRow({
               <Star className="h-3.5 w-3.5" fill={f.featuredAt ? "currentColor" : "none"} />
             </button>
           </>
-        ) : (
-          <>
-            <button type="button" onClick={() => onDispatch()} disabled={busy} className="ui-btn-save gap-1.5" title="Send to an agent as a fix task">
-              {busy ? <Loader2 className="ui-spinner-xs" /> : <Rocket className="h-3 w-3" />}
-              Dispatch fix
-            </button>
-            <button
-              type="button"
-              onClick={() => setNoteOpen((v) => !v)}
-              disabled={busy}
-              className="ui-btn-icon"
-              title="Add an instruction to the dispatch"
-              aria-label="Add an instruction to the dispatch"
-              aria-expanded={noteOpen}
-            >
-              <PenLine className="h-3.5 w-3.5" />
-            </button>
-            <button type="button" onClick={onResolve} disabled={busy} className="ui-btn-icon" title="Mark resolved" aria-label="Mark resolved">
-              <Check className="h-3.5 w-3.5" />
-            </button>
-          </>
-        )}
+        ) : null}
         {f.status === FEEDBACK_STATUS.RESOLVED ? (
           <button type="button" onClick={onReopen} disabled={busy} className="ui-btn-icon" title="Reopen" aria-label="Reopen">
             <Undo2 className="h-3.5 w-3.5" />
@@ -311,7 +400,7 @@ function FeedbackRow({
         )}
       </div>
       </div>
-      {noteOpen && f.status !== FEEDBACK_STATUS.DISPATCHED && f.status !== FEEDBACK_STATUS.RESOLVED && (
+      {noteOpen && work.phase === FEEDBACK_WORK_PHASE.NOT_STARTED && (
         <div className="flex items-center gap-2 pl-4">
           <input
             type="text"
@@ -331,7 +420,7 @@ function FeedbackRow({
             className="ui-btn-save gap-1.5"
           >
             {busy ? <Loader2 className="ui-spinner-xs" /> : <Rocket className="h-3 w-3" />}
-            Dispatch
+            Implement
           </button>
         </div>
       )}
@@ -341,12 +430,14 @@ function FeedbackRow({
 
 function WidgetSetupCard({
   projectId,
+  projectName,
   token,
   loading,
   onChanged,
   onClose,
 }: {
   projectId: string;
+  projectName: string;
   token: WidgetTokenInfo | null;
   loading: boolean;
   onChanged: () => void;
@@ -354,21 +445,46 @@ function WidgetSetupCard({
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // One-click install/uninstall: dispatches an agent to land/remove the embed
-  // in the project's own repo. Tracks which mode was dispatched this session.
   const [agentBusy, setAgentBusy] = useState(false);
-  const [agentDone, setAgentDone] = useState<"install" | "uninstall" | null>(null);
+  const [agentPhase, setAgentPhase] = useState<"idle" | "queued" | "failed">("idle");
+  const [agentNote, setAgentNote] = useState<string | null>(null);
+  const [moreOpen, setMoreOpen] = useState(false);
   const { copied, copy } = useClipboard();
+
+  const controlHref = fleetSurfaceHref("control", projectName);
+  const terminalHref = fleetSurfaceHref("terminal", projectName);
+  const activityHref = fleetSurfaceHref("activity", projectName);
+  const site = token?.lastSeenOrigin ?? token?.origins?.[0] ?? null;
+  const live = !!token?.lastSeenAt && token.status !== "paused";
+  const paused = token?.status === "paused";
 
   async function dispatchAgent(mode: "install" | "uninstall") {
     setAgentBusy(true);
     setError(null);
+    setAgentNote(null);
+    setAgentPhase("idle");
     try {
       const res = await postJson(`/api/projects/${projectId}/widget-token/install`, { mode });
-      if (!res.ok) await throwApiError(res, `Could not dispatch the ${mode}`);
-      setAgentDone(mode);
+      const body = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        hint?: string;
+        nextStep?: string;
+        watchUrl?: string;
+      };
+      if (!res.ok) {
+        setAgentPhase("failed");
+        setError([body.error, body.hint].filter(Boolean).join(" ") || `Could not start the ${mode}`);
+        return;
+      }
+      setAgentPhase("queued");
+      setAgentNote(
+        body.nextStep
+        || `${EXECUTOR_COPY.honesty.watchQueued} ${EXECUTOR_COPY.honesty.notificationWhenDone}`,
+      );
+      onChanged();
     } catch (e) {
-      setError(e instanceof Error ? e.message : `Could not dispatch the ${mode}`);
+      setAgentPhase("failed");
+      setError(e instanceof Error ? e.message : `Could not start the ${mode}`);
     } finally {
       setAgentBusy(false);
     }
@@ -394,137 +510,196 @@ function WidgetSetupCard({
   const setTokenStatus = (status: "active" | "paused") =>
     mutate(() => postJson(`/api/projects/${projectId}/widget-token`, { status }), "Could not update widget");
 
-  const paused = token?.status === "paused";
+  const statusCallout = live
+    ? "ui-callout-positive flex-col sm:flex-row sm:items-center"
+    : paused
+      ? "ui-callout-warning flex-col sm:flex-row sm:items-center"
+      : "ui-callout-accent flex-col sm:flex-row sm:items-center";
 
   return (
-    <div className="ui-card-shell mb-4 p-4 sm:p-5">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
-            <MessageSquare className="h-4 w-4" />
-            Feedback widget
+    <section className="ui-panel mb-5 p-5 sm:p-6">
+      <div className="flex flex-col gap-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="ui-page-title text-lg sm:text-xl">Feedback widget</h2>
+            <p className="ui-page-subtitle">
+              Visitors point at the broken element. Reports land here. One click sends the fix to the project agent.
+            </p>
           </div>
-          <p className="mt-1 text-xs leading-relaxed text-text-muted">
-            One script tag on your site adds a feedback button — visitors can point at the exact
-            element that&apos;s broken, and submissions land in this inbox ready to dispatch.
-          </p>
+          {onClose && (
+            <button type="button" onClick={onClose} className="ui-btn-icon shrink-0" aria-label="Close widget setup">
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
-        {onClose && (
-          <button type="button" onClick={onClose} className="ui-btn-icon" aria-label="Close widget setup">
-            <X className="h-3.5 w-3.5" />
-          </button>
-        )}
-      </div>
 
-      {loading ? (
-        <div className="mt-3 flex items-center gap-2 text-xs text-text-tertiary">
-          <Loader2 className="ui-spinner-xs" /> Loading…
-        </div>
-      ) : token ? (
-        <>
-          <WidgetLiveStatus token={token} paused={paused} />
-          <div className="mt-3 overflow-x-auto rounded-lg border border-border-subtle bg-surface-base p-3">
-            <code className="whitespace-pre font-mono text-micro text-text-secondary">{token.snippet}</code>
+        {loading ? (
+          <div className="flex items-center gap-2 text-xs text-text-tertiary">
+            <Loader2 className="ui-spinner-xs" /> Loading…
           </div>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <button type="button" onClick={() => copy(token.snippet)} className="ui-btn-save gap-1.5">
-              {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-              {copied ? "Copied" : "Copy snippet"}
-            </button>
-            <button
-              type="button"
-              onClick={() => dispatchAgent("install")}
-              disabled={agentBusy || agentDone === "install"}
-              className="ui-btn-secondary gap-1.5"
-              title="Dispatch an agent to add the snippet to this project's codebase and ship it"
-            >
-              {agentBusy ? <Loader2 className="ui-spinner-xs" /> : agentDone === "install" ? <Check className="h-3.5 w-3.5" /> : <Rocket className="h-3.5 w-3.5" />}
-              {agentDone === "install" ? "Install dispatched" : "Install via agent"}
-            </button>
-            <button
-              type="button"
-              onClick={() => dispatchAgent("uninstall")}
-              disabled={agentBusy || agentDone === "uninstall"}
-              className="ui-btn-secondary gap-1.5"
-              title="Dispatch an agent to remove the embed from this project's codebase (Pause hides it instantly without a deploy)"
-            >
-              {agentDone === "uninstall" ? <Check className="h-3.5 w-3.5" /> : <Undo2 className="h-3.5 w-3.5" />}
-              {agentDone === "uninstall" ? "Removal dispatched" : "Remove via agent"}
-            </button>
-            <button
-              type="button"
-              onClick={() => setTokenStatus(paused ? "active" : "paused")}
-              disabled={busy}
-              className="ui-btn-secondary gap-1.5"
-              title={paused ? "Show the widget on your site again" : "Hide the widget on your site instantly — no deploy needed"}
-            >
-              {paused ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
-              {paused ? "Resume" : "Pause"}
-            </button>
-            <button type="button" onClick={rotate} disabled={busy} className="ui-btn-secondary gap-1.5" title="Mint a new token; the old snippet stops working">
-              <RefreshCw className="h-3.5 w-3.5" /> Rotate
-            </button>
-            <button type="button" onClick={revoke} disabled={busy} className="ui-btn-danger">
-              Disable
-            </button>
-          </div>
-        </>
-      ) : (
-        <div className="mt-3">
-          <button type="button" onClick={create} disabled={busy} className="ui-btn-save gap-1.5">
-            {busy ? <Loader2 className="ui-spinner-xs" /> : <Code2 className="h-3.5 w-3.5" />}
-            Enable widget
-          </button>
-        </div>
-      )}
-      {error && <p className="mt-2 ui-error">{error}</p>}
-    </div>
+        ) : (
+          <>
+            <div className={statusCallout}>
+              <div className="min-w-0 flex-1">
+                <p className="font-medium text-text-primary">
+                  {paused
+                    ? "Paused on the live site"
+                    : live
+                      ? `Live${site ? ` · ${site.replace(/^https:\/\//, "")}` : ""}`
+                      : token
+                        ? "Token ready — not seen on the live site yet"
+                        : "Not enabled"}
+                </p>
+                <p className="mt-0.5 text-xs text-text-secondary">
+                  {paused
+                    ? "Resume to show the FAB again — no deploy needed."
+                    : live
+                      ? `Last boot ${compactRelativeDate(new Date(token!.lastSeenAt!))}`
+                      : token
+                        ? `The script must run on ${site ?? "the live origin"} (CSP must allow fleetcrown.orangecat.ch). A boot heartbeat is Live — HTML containing the tag is not.`
+                        : "Enable a token, then add the script to the site (copy, or queue an agent)."}
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {!token ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => dispatchAgent("install")}
+                      disabled={agentBusy}
+                      className="ui-btn-save gap-1.5"
+                    >
+                      {agentBusy ? <Loader2 className="ui-spinner-xs" /> : <Rocket className="h-3.5 w-3.5" />}
+                      Enable & install
+                    </button>
+                    <button type="button" onClick={create} disabled={busy} className="ui-btn-secondary gap-1.5">
+                      Enable only
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button type="button" onClick={() => copy(token.snippet)} className="ui-btn-save gap-1.5">
+                      {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                      {copied ? "Copied" : "Copy snippet"}
+                    </button>
+                    {!live && (
+                      <button
+                        type="button"
+                        onClick={() => dispatchAgent("install")}
+                        disabled={agentBusy || agentPhase === "queued"}
+                        className="ui-btn-secondary gap-1.5"
+                        title="Queues an agent on Control. Does not mean the widget is live."
+                      >
+                        {agentBusy ? <Loader2 className="ui-spinner-xs" /> : <Rocket className="h-3.5 w-3.5" />}
+                        {agentPhase === "queued" ? "Install queued" : "Install via agent"}
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+
+            {token && (
+              <details className="ui-list-row" open={!live}>
+                <summary className="cursor-pointer text-xs font-medium text-text-secondary">
+                  Snippet
+                </summary>
+                <code className="mt-2 block overflow-x-auto whitespace-pre font-mono text-micro leading-relaxed text-text-tertiary">
+                  {token.snippet}
+                </code>
+              </details>
+            )}
+
+            {(agentNote || agentPhase === "queued") && (
+              <div className="ui-callout-warning flex-col items-stretch">
+                <p className="text-xs font-medium text-text-primary">
+                  {agentPhase === "queued" ? "Queued — not confirmed working" : "Install"}
+                </p>
+                {agentNote && <p className="mt-1 text-xs leading-relaxed text-text-secondary">{agentNote}</p>}
+                <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs">
+                  <Link href={activityHref} className="inline-flex items-center gap-1 text-accent-text underline-offset-2 hover:underline">
+                    Activity <ExternalLink className="h-3 w-3" />
+                  </Link>
+                  <Link href={controlHref} className="inline-flex items-center gap-1 text-accent-text underline-offset-2 hover:underline">
+                    Control <ExternalLink className="h-3 w-3" />
+                  </Link>
+                  <Link href={terminalHref} className="inline-flex items-center gap-1 text-text-tertiary underline-offset-2 hover:underline">
+                    Terminal · Cloud <ExternalLink className="h-3 w-3" />
+                  </Link>
+                </div>
+                <p className="mt-2 text-micro text-text-muted">
+                  {EXECUTOR_COPY.honesty.watchQueued} {EXECUTOR_COPY.honesty.notificationWhenDone} Activity shows every inject attempt and the real error.
+                </p>
+              </div>
+            )}
+
+            {token && (
+              <div className="flex flex-wrap items-center gap-2 border-t border-border-subtle pt-3">
+                <button
+                  type="button"
+                  onClick={() => setTokenStatus(paused ? "active" : "paused")}
+                  disabled={busy}
+                  className="ui-btn-secondary gap-1.5"
+                >
+                  {paused ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
+                  {paused ? "Resume" : "Pause"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMoreOpen((v) => !v)}
+                  className="ui-btn-ghost text-xs text-text-tertiary"
+                  aria-expanded={moreOpen}
+                >
+                  {moreOpen ? "Fewer actions" : "More"}
+                </button>
+                {moreOpen && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => dispatchAgent("uninstall")}
+                      disabled={agentBusy}
+                      className="ui-btn-secondary gap-1.5"
+                    >
+                      <Undo2 className="h-3.5 w-3.5" />
+                      Remove via agent
+                    </button>
+                    <button type="button" onClick={rotate} disabled={busy} className="ui-btn-secondary gap-1.5">
+                      <RefreshCw className="h-3.5 w-3.5" /> Rotate token
+                    </button>
+                    <button type="button" onClick={revoke} disabled={busy} className="ui-btn-danger">
+                      Disable
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </>
+        )}
+
+        {error && <p className="ui-error">{error}</p>}
+      </div>
+    </section>
   );
 }
 
 /**
  * Observed truth only: "Live" means the widget's boot heartbeat actually
- * arrived from the site — never that we handed out a snippet. Every state
- * names its one next action.
+ * arrived from the site — never that we handed out a snippet.
  */
-function WidgetLiveStatus({ token, paused }: { token: WidgetTokenInfo; paused: boolean }) {
-  const site = token.lastSeenOrigin ?? token.origins?.[0] ?? null;
-  if (paused) {
-    return (
-      <p className="mt-3 flex items-center gap-2 text-xs text-text-secondary">
-        <span className="ui-dot-warning" aria-hidden="true" />
-        Paused — the widget is hidden on your site. Resume to show it again.
-      </p>
-    );
-  }
-  if (!token.lastSeenAt) {
-    return (
-      <p className="mt-3 flex items-center gap-2 text-xs text-text-secondary">
-        <span className="ui-dot-warning" aria-hidden="true" />
-        Waiting for the first page load{site ? ` on ${site}` : ""} — add the snippet below to your site.
-      </p>
-    );
-  }
-  return (
-    <p className="mt-3 flex items-center gap-2 text-xs text-text-secondary">
-      <span className="ui-dot-positive" aria-hidden="true" />
-      Live{site ? ` on ${site}` : ""} · last seen {compactRelativeDate(new Date(token.lastSeenAt))}
-    </p>
-  );
-}
-
 function AiReviewCard({
   projectId,
+  projectName,
   defaultUrl,
   onClose,
 }: {
   projectId: string;
+  projectName: string;
   defaultUrl: string;
   onClose: () => void;
 }) {
   const [url, setUrl] = useState(defaultUrl);
   const [busy, setBusy] = useState(false);
-  const [dispatched, setDispatched] = useState(false);
+  const [queued, setQueued] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function dispatchReview() {
@@ -532,10 +707,10 @@ function AiReviewCard({
     setError(null);
     try {
       const res = await postJson(`/api/projects/${projectId}/feedback/ai-review`, { url });
-      if (!res.ok) await throwApiError(res, "Could not dispatch the review");
-      setDispatched(true);
+      if (!res.ok) await throwApiError(res, "Could not queue the review");
+      setQueued(true);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not dispatch the review");
+      setError(e instanceof Error ? e.message : "Could not queue the review");
     } finally {
       setBusy(false);
     }
@@ -551,7 +726,7 @@ function AiReviewCard({
           </div>
           <p className="mt-1 text-xs leading-relaxed text-text-muted">
             An agent opens the page in a headless browser, reviews it on desktop and mobile,
-            and files each issue into this inbox — you triage and dispatch fixes as usual.
+            and files each issue into this inbox — you triage and implement fixes as usual.
           </p>
         </div>
         <button type="button" onClick={onClose} className="ui-btn-icon" aria-label="Close AI review">
@@ -559,11 +734,10 @@ function AiReviewCard({
         </button>
       </div>
 
-      {dispatched ? (
-        <p className="mt-3 flex items-center gap-1.5 text-xs text-text-secondary">
-          <Check className="h-3.5 w-3.5" />
-          Review dispatched — findings land here when the agent finishes.
-        </p>
+      {queued ? (
+        <div className="mt-3">
+          <DispatchedNote workspaceKey={projectName} />
+        </div>
       ) : (
         <form
           className="mt-3 flex flex-wrap items-center gap-2"

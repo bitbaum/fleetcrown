@@ -2,21 +2,25 @@ import { NextRequest, NextResponse } from "next/server";
 import { readIdParam, readJsonBody, jsonError, z } from "@/lib/api/route-helpers";
 import { getApiUserId } from "@/lib/session";
 import { getProjectCore } from "@/db/queries/projects";
-import { getActiveWidgetToken } from "@/db/queries/widget-tokens";
+import { getActiveWidgetToken, upsertWidgetToken } from "@/db/queries/widget-tokens";
 import { injectPrompt } from "@/lib/inject-core";
+import { injectWatchUrls } from "@/lib/fleet-context";
 import { appUrl } from "@/lib/email";
+import {
+  resolveProjectPublicOrigin,
+  resolveProjectRepoTarget,
+} from "@/lib/feedback/project-site";
 
 /**
- * One-click widget install/uninstall for repo-linked projects (Phase 2 of the
- * widget one-click plan): dispatch an agent to add or remove the embed snippet
- * in the project's own codebase, through the same injectPrompt SSOT as every
- * other dispatch. The snippet is a dumb pointer, so "off instantly" stays the
- * Pause button — this is for actually landing/removing the code, verified and
- * PR'd like any other agent change.
+ * One-click widget install/uninstall. Auto-enables the token when missing.
+ * Uses Hetzner liveUrl (user_projects) as the site of truth — never a stale
+ * legacy host. Refuses when there is no repo/dir for the agent to change.
  */
 
 const InstallBody = z.object({
   mode: z.enum(["install", "uninstall"]).default("install"),
+  /** When true, queue the agent even if the live site probe failed (repo-only). */
+  force: z.boolean().optional(),
 });
 
 function snippetFor(token: string): string {
@@ -24,10 +28,16 @@ function snippetFor(token: string): string {
   return `<script src="${base}/widget.js" data-fc-project="${token}" async></script>`;
 }
 
-function composeInstallPrompt(projectName: string, token: string): string {
+function composeInstallPrompt(
+  projectName: string,
+  token: string,
+  liveOrigin: string | null,
+  siteNote: string | null,
+): string {
   return [
     `Install the FleetCrown feedback widget on ${projectName}'s public site.`,
-    "",
+    liveOrigin ? `\nLIVE SITE (Hetzner): ${liveOrigin}\n` : "",
+    siteNote ? `\nSITE STATUS: ${siteNote}\n` : "",
     "THE SNIPPET (use exactly this — do not alter the token or attributes):",
     "```html",
     snippetFor(token),
@@ -35,13 +45,13 @@ function composeInstallPrompt(projectName: string, token: string): string {
     "",
     "1. If this exact snippet (or an embed referencing the same widget.js + data-fc-project token) is already present anywhere in the codebase, do NOT add a second one — verify it renders and report that in your handoff.",
     "2. Otherwise add it once, in the site's root layout/template so it loads on every public page:",
-    "   - Next.js App Router: a small 'use client' component that appends the script tag in a useEffect (mounted from the root layout), or next/script with strategy=\"afterInteractive\" carrying the same src + data-fc-project attributes.",
+    "   - Next.js App Router: next/script with strategy=\"afterInteractive\" and the SAME data-fc-project token. Bake the token as a string literal (or ensure FLEETCROWN_FEEDBACK_TOKEN is present at `next build`). Runtime-only .env after deploy is NOT enough — Next tree-shakes an empty token and the Script never ships.",
     "   - Plain HTML / other frameworks: the raw tag right before </body> in the base template.",
     "3. If the site already has its own floating action button in the bottom-right corner, add data-fc-bottom=\"88\" to the snippet so the widget FAB stacks above it instead of overlapping.",
-    "4. Verify: run the site locally and confirm the page loads without console errors from the embed. (The FAB itself may stay hidden — rendering is server-gated per token — absence of the button is NOT a failure; absence of errors is the check.)",
-    "5. Ship it the way this repo ships changes (branch + PR if that's the convention). Smallest possible diff — the embed and nothing else.",
-    "6. HANDOFF: state the exact file(s) touched and the verification evidence.",
-  ].join("\n");
+    "4. Verify: run the site locally and confirm the page loads without console errors from the embed. (The FAB itself may stay hidden — rendering is server-gated per token — absence of the button is NOT a failure; absence of errors is the check.) If the host has a Content-Security-Policy, add https://fleetcrown.orangecat.ch to script-src AND connect-src — otherwise the browser blocks widget.js even when the tag is in the HTML.",
+    "5. Ship it the way this repo ships changes (branch + PR if that's the convention). Deploy is on Hetzner — push/merge so the box picks it up. Smallest possible diff — the embed and nothing else.",
+    "6. HANDOFF: state the exact file(s) touched and the verification evidence. If you could not push or the live URL is down, say so plainly — do not claim the widget is live.",
+  ].filter(Boolean).join("\n");
 }
 
 function composeUninstallPrompt(projectName: string, token: string | null): string {
@@ -58,6 +68,55 @@ function composeUninstallPrompt(projectName: string, token: string | null): stri
   ].join("\n");
 }
 
+type SiteProbe = {
+  ok: boolean;
+  status: number | null;
+  message: string;
+};
+
+async function probeSite(origin: string | null): Promise<SiteProbe | null> {
+  if (!origin) return null;
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 8_000);
+    const res = await fetch(origin, {
+      method: "GET",
+      redirect: "follow",
+      signal: ctrl.signal,
+      headers: { Accept: "text/html" },
+    });
+    clearTimeout(timer);
+    if (res.status === 402) {
+      return {
+        ok: false,
+        status: 402,
+        message: "Live site returned HTTP 402 (deployment disabled or unpaid host). The widget cannot appear until the site is reachable again.",
+      };
+    }
+    if (res.status >= 500) {
+      return {
+        ok: false,
+        status: res.status,
+        message: `Live site returned HTTP ${res.status}. Fix hosting before expecting the widget to show.`,
+      };
+    }
+    if (!res.ok && res.status !== 401 && res.status !== 403) {
+      return {
+        ok: false,
+        status: res.status,
+        message: `Live site returned HTTP ${res.status}.`,
+      };
+    }
+    return { ok: true, status: res.status, message: "Live site responded." };
+  } catch {
+    return {
+      ok: false,
+      status: null,
+      message: "Live site did not respond. Widget cannot be verified there until it is reachable.",
+    };
+  }
+}
+
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const userId = await getApiUserId();
   if (!userId) return jsonError("Unauthorized", 401);
@@ -69,19 +128,90 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const project = await getProjectCore(userId, idOrResp);
   if (!project) return jsonError("Project not found", 404);
 
-  // Install needs the token (the snippet embeds it); uninstall works from
-  // generic markers even after a revoke.
-  const token = await getActiveWidgetToken(userId, idOrResp);
+  const watch = injectWatchUrls(project.name);
+  const repo = await resolveProjectRepoTarget(userId, idOrResp);
+  const gitUrl = project.gitUrl || repo.gitUrl;
+  const dirPath = repo.dirPath;
+
+  // Agent needs a repo clone URL and/or a local dir on the runner.
+  if (dataOrResp.mode === "install" && !gitUrl && !dirPath) {
+    return NextResponse.json(
+      {
+        error: "No git URL and no local project directory — Enable & install cannot land the snippet. Add the GitHub URL on the project, or paste the widget snippet manually from the project Widget card.",
+        ...watch,
+        code: "no_repo",
+      },
+      { status: 422 },
+    );
+  }
+
+  const liveOrigin = await resolveProjectPublicOrigin(userId, idOrResp);
+
+  let token = await getActiveWidgetToken(userId, idOrResp);
+  if (dataOrResp.mode === "install" && !token) {
+    token = await upsertWidgetToken(userId, idOrResp, {
+      origins: liveOrigin ? [liveOrigin] : undefined,
+    });
+  } else if (
+    dataOrResp.mode === "install"
+    && token
+    && liveOrigin
+    && (!token.origins?.length || token.origins.every((o) => /\.vercel\.app$/i.test(new URL(o).hostname)))
+  ) {
+    // Replace stale legacy hosts with the Hetzner live URL so ingest/boot work.
+    token = await upsertWidgetToken(userId, idOrResp, {
+      origins: [liveOrigin],
+    });
+  }
+
+  const siteProbe = dataOrResp.mode === "install" ? await probeSite(liveOrigin) : null;
+
+  if (
+    dataOrResp.mode === "install"
+    && siteProbe
+    && !siteProbe.ok
+    && !dataOrResp.force
+  ) {
+    return NextResponse.json(
+      {
+        error: siteProbe.message,
+        siteProbe,
+        ...watch,
+        code: "site_unreachable",
+        tokenReady: !!token,
+        hint: "Fix the live site on the box, then click Enable & install again. Or open the project Widget card and copy the snippet by hand.",
+      },
+      { status: 422 },
+    );
+  }
+
+  const siteNote = siteProbe && !siteProbe.ok ? siteProbe.message : null;
   const prompt =
     dataOrResp.mode === "install"
       ? token
-        ? composeInstallPrompt(project.name, token.token)
+        ? composeInstallPrompt(project.name, token.token, liveOrigin, siteNote)
         : null
       : composeUninstallPrompt(project.name, token?.token ?? null);
   if (!prompt) {
-    return jsonError("Enable the widget first — the install snippet embeds the project token", 400);
+    return jsonError("Could not enable the widget token for this project", 400);
   }
 
-  const { status, body } = await injectPrompt({ tab: project.name, customPrompt: prompt }, userId);
-  return NextResponse.json(body, { status });
+  const { status, body } = await injectPrompt(
+    { tab: project.name, customPrompt: prompt, notifyOnClose: true },
+    userId,
+  );
+  return NextResponse.json(
+    {
+      ...body,
+      tokenCreated: dataOrResp.mode === "install" && !!token,
+      siteProbe,
+      liveOrigin,
+      ...watch,
+      nextStep:
+        status < 400
+          ? "Queued for this project. Watch Control and Activity. Terminal only shows a session once the agent is actually running. You get a notification when the run finishes."
+          : undefined,
+    },
+    { status },
+  );
 }

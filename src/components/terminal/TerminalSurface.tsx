@@ -308,7 +308,15 @@ export function TerminalSurface({
       // Three honest states, in priority order: gated (this account may not use
       // this builder) → offline (allowed, nothing connected) → online-but-idle
       // (allowed and connected, just nothing running → offer the next step).
-      const hint = gatedMessage ?? (offline ? copy.offlineHint : copy.emptyHint);
+      // Deep link ?tab=X with no session is the common Install/Implement Watch
+      // dead-end — say so plainly instead of a generic empty cloud.
+      const tabHint = initialTab && !offline && !gatedMessage
+        ? `No live agent session for “${initialTab}”. If you just clicked Implement or Install, open Control — Attention shows Retry when the prompt never started. Terminal only shows sessions that are actually running.`
+        : null;
+      const hint = gatedMessage ?? (offline ? copy.offlineHint : (tabHint ?? copy.emptyHint));
+      const controlHref = initialTab
+        ? `/control?focus=${encodeURIComponent(initialTab)}`
+        : "/control";
       return (
         <div className="ui-empty-page">
           <MonitorSmartphone className="h-6 w-6 text-text-muted" aria-hidden="true" />
@@ -317,7 +325,7 @@ export function TerminalSurface({
           </p>
           <p className="max-w-md text-center text-xs text-text-muted">{hint}</p>
           {!gatedMessage && !offline && (
-            <>
+<>
               <TerminalLaunch
                 projects={context?.launchable ?? []}
                 agents={agents}
@@ -325,8 +333,8 @@ export function TerminalSurface({
                 channel={channel}
               />
               <div className="mt-2 flex flex-wrap justify-center gap-2">
+                <Link href={controlHref} className="ui-btn-secondary">Open on Control</Link>
                 <Link href="/loki" className="ui-btn-secondary">Ask Loki</Link>
-                <Link href="/control" className="ui-btn-secondary">Control</Link>
               </div>
             </>
           )}

@@ -15,6 +15,7 @@ import { ControlFleetStatus } from "./ControlFleetStatus";
 import { AttentionBar } from "./AttentionBar";
 import { AgentEscalations } from "./AgentEscalations";
 import { FleetFeedbackStrip } from "./FleetFeedbackStrip";
+import { FleetWidgetCoverageStrip } from "./FleetWidgetCoverageStrip";
 import { RunnerStatusBanner } from "./RunnerStatusBanner";
 import { APP_NAME } from "@/config/brand";
 import {
@@ -159,7 +160,6 @@ export function ControlPanel() {
     : null;
 
   const failedCount = data?.failedCommands?.length ?? 0;
-  const projectOverrideCount = data?.projects.filter((project) => project.autoInjectModeOverride !== null).length ?? 0;
 
   useEffect(() => {
     if (!snapshots?.length) return;
@@ -383,12 +383,12 @@ export function ControlPanel() {
           setSelectedTab(match.project.tab);
           document.getElementById("control-projects")?.scrollIntoView({ behavior: "smooth", block: "start" });
         }}
-        projectOverrideCount={projectOverrideCount}
       />}
 
       <AttentionBar items={attention} failedCommands={data?.failedCommands} onFocusProject={setSelectedTab} />
       {data.projects.length > 0 && <AgentEscalations />}
 
+      <FleetWidgetCoverageStrip />
       <FleetFeedbackStrip />
 
       <ProjectOperationsView
@@ -404,18 +404,13 @@ export function ControlPanel() {
         }}
       />
 
-      {/* Workspaces panel — collapsed-by-default on every breakpoint when the
-          runner is offline or never-seen. The Projects grid above already
-          shows every registered project's last-known state; in offline mode
-          this panel duplicates the same fact in a different layout (caught in
-          dogfood: Projects list + Terminal workspaces both rendering FleetCrown
-          with identical status read as broken). When the runner is live the
-          panel auto-opens on desktop so the quick send-to-any-tab affordance
-          stays one click away. */}
+      {/* Workspaces panel — collapsed by default. Projects already shows
+          per-project state; auto-opening this duplicated the same facts in a
+          second layout (dogfood: read as broken / demo chrome). Open when you
+          need Zellij quick-send or peek — not on every Control visit. */}
       <details
         ref={liveDetailsRef}
         className="ui-control-live-details"
-        open={!runnerNeverSeen && !runnerOffline}
       >
         <summary className="ui-control-live-details-summary">
           <span>Workspaces</span>

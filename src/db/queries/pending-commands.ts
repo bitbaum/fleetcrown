@@ -93,6 +93,13 @@ function fifoEligibilitySql() {
         AND r.finished_at IS NULL
         AND r.started_at > NOW() - INTERVAL '1 minute' * ${STALE_RUN_MINUTES}
         AND r.payload->>'sessionTab' IS NULL
+        -- Orphan open runs (no unexecuted pending command) must not block the
+        -- queue forever — that was the "Install queued → empty Terminal" wedge.
+        AND EXISTS (
+          SELECT 1 FROM pending_commands pc
+          WHERE pc.executed_at IS NULL
+            AND pc.payload->>'runId' = r.id::text
+        )
         AND (r.started_at, r.id) < (
           SELECT own.started_at, own.id FROM orchestration_runs own
           WHERE own.id = (${pendingCommands.payload}->>'runId')::uuid

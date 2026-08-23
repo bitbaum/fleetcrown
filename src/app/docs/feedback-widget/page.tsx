@@ -22,8 +22,9 @@ export default function FeedbackWidgetDocsPage() {
           <h2 className="ui-public-prose-h2">1. Enable it on a project</h2>
           <p>
             Open the project&apos;s page in FleetCrown, scroll to <strong>Visitor feedback</strong>,
-            and click <strong>Widget → Enable widget</strong>. That mints a project token and shows
-            the embed snippet:
+            and click <strong>Enable &amp; install via agent</strong> (or from Control, use the
+            fleet coverage strip). That mints a project token and dispatches an agent to embed the
+            snippet. Prefer that one click over copy-paste unless you are wiring a site by hand.
           </p>
           <pre className="ui-public-code-block">
             <code>{`<script src="https://fleetcrown.orangecat.ch/widget.js"
@@ -106,17 +107,22 @@ export default function FeedbackWidgetDocsPage() {
           </p>
           <ul className="list-disc pl-6 space-y-2">
             <li>
-              <strong>Dispatch fix</strong> — composes a scoped prompt from the report (text, URL,
-              selectors) and sends an agent at it. The pencil icon lets you prepend your own
-              instruction to the prompt.
+              <strong>Dispatch fix</strong> — one report → one scoped agent run. Routes through
+              FleetCrown&apos;s <code>injectPrompt</code> SSOT: local Fleet Runner when connected,
+              otherwise the cloud builder. You do not pick a terminal.
+            </li>
+            <li>
+              <strong>Dispatch all as one</strong> (2+ new items) — one agent pass covering the
+              whole pile. Prefer this when you want a single coherent fix run now.
+            </li>
+            <li>
+              <strong>Synthesize themes</strong> (3+ new items) — an agent clusters the pile into
+              structured briefs filed back into the same inbox; you then Dispatch the brief. Use
+              when volume is high and themes help before fixing.
             </li>
             <li>
               <strong>AI review</strong> — an agent opens any page of your site in a headless
               browser (desktop + mobile) and files findings into the same inbox.
-            </li>
-            <li>
-              <strong>Synthesize</strong> (at 5+ new items) — an agent clusters the pile into
-              structured briefs: theme, evidence, proposed change, where.
             </li>
             <li>
               A <strong>daily digest</strong> clusters busy inboxes into themes and files each as a
