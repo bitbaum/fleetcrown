@@ -1,7 +1,8 @@
 export const FLEET_PROJECT_STORAGE_KEY = "fleetcrown:active-project";
 export const FLEET_PROJECT_EVENT = "fleetcrown:project-context";
 
-export type FleetSurfaceId = "profile" | "chat" | "control" | "terminal";
+export type FleetWorkspaceSurfaceId = "profile" | "chat" | "control" | "terminal";
+export type FleetSurfaceId = FleetWorkspaceSurfaceId | "activity";
 
 export function fleetSurfaceHref(surface: FleetSurfaceId, project: string | null): string {
   const value = project?.trim();
@@ -9,6 +10,7 @@ export function fleetSurfaceHref(surface: FleetSurfaceId, project: string | null
     if (surface === "profile") return "/projects";
     if (surface === "chat") return "/loki";
     if (surface === "control") return "/control";
+    if (surface === "activity") return "/activity";
     return "/terminal";
   }
 
@@ -16,7 +18,22 @@ export function fleetSurfaceHref(surface: FleetSurfaceId, project: string | null
   if (surface === "profile") return `/projects?project=${encoded}`;
   if (surface === "chat") return `/loki?project=${encoded}`;
   if (surface === "control") return `/control?focus=${encoded}`;
+  if (surface === "activity") return `/activity?project=${encoded}`;
   return `/terminal?source=server&tab=${encoded}`;
+}
+
+/** Where to watch a queued inject: Control for state, Activity for the ledger,
+ *  Terminal only once a session is actually running. */
+export function injectWatchUrls(projectKey: string): {
+  watchUrl: string;
+  activityUrl: string;
+  terminalUrl: string;
+} {
+  return {
+    watchUrl: fleetSurfaceHref("control", projectKey),
+    activityUrl: fleetSurfaceHref("activity", projectKey),
+    terminalUrl: fleetSurfaceHref("terminal", projectKey),
+  };
 }
 
 export function projectFromFleetRoute(pathname: string, search: URLSearchParams): string | null {
@@ -28,7 +45,9 @@ export function projectFromFleetRoute(pathname: string, search: URLSearchParams)
         ? search.get("focus")
         : pathname.startsWith("/terminal")
           ? search.get("tab")
-          : null;
+          : pathname.startsWith("/activity")
+            ? search.get("project")
+            : null;
   return value?.trim() || null;
 }
 

@@ -8,7 +8,7 @@ import { FEEDBACK_SOURCE, FEEDBACK_STATUS } from "@/lib/constants/statuses";
 import { composeFeedbackBatchFixPrompt } from "@/lib/feedback/compose-dispatch";
 
 /**
- * One-click "Dispatch all as one": collapse every NEW visitor/AI-review item
+ * One-click "Implement all as one": collapse every NEW visitor/AI-review item
  * into a single injectPrompt for this project. Prefer this when N≥2 and you
  * want one agent pass; use Synthesize when N is large and you want theme
  * briefs back in the inbox first. Human gate preserved — nothing runs without
@@ -41,11 +41,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
   if (items.length === 0) return jsonError("No new feedback to dispatch", 400);
   if (items.length === 1) {
-    return jsonError("Use Dispatch fix on the single row — batch is for 2+ items", 400);
+    return jsonError("Use Implement on the single row — batch is for 2+ items", 400);
   }
 
   const prompt = composeFeedbackBatchFixPrompt(items, project.name, dataOrResp.note || undefined);
-  const { status, body } = await injectPrompt({ tab: project.name, customPrompt: prompt }, userId);
+  const { status, body } = await injectPrompt(
+    { tab: project.name, customPrompt: prompt, notifyOnClose: true },
+    userId,
+  );
   if (status < 400) {
     const runId = typeof body.runId === "string" ? body.runId : undefined;
     await markFeedbackDispatchedBulk(userId, items.map((f) => f.id), runId);

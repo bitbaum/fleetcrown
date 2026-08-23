@@ -60,7 +60,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!token) return jsonError("Enable the feedback widget first — the AI reviewer files its findings through the widget API", 400);
 
   const { status, body } = await injectPrompt(
-    { tab: project.name, customPrompt: composeReviewPrompt(dataOrResp.url, project.name, token.token) },
+    {
+      tab: project.name,
+      customPrompt: composeReviewPrompt(dataOrResp.url, project.name, token.token),
+      notifyOnClose: true,
+    },
     userId,
   );
   return NextResponse.json(body, { status });

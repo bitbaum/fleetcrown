@@ -4,6 +4,7 @@ import { getApiUserId } from "@/lib/session";
 import { getProjectCore } from "@/db/queries/projects";
 import { getActiveWidgetToken, upsertWidgetToken } from "@/db/queries/widget-tokens";
 import { injectPrompt } from "@/lib/inject-core";
+import { injectWatchUrls } from "@/lib/fleet-context";
 import { appUrl } from "@/lib/email";
 import {
   resolveProjectPublicOrigin,
@@ -127,7 +128,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const project = await getProjectCore(userId, idOrResp);
   if (!project) return jsonError("Project not found", 404);
 
-  const controlFocus = `/control?focus=${encodeURIComponent(project.name)}`;
+  const watch = injectWatchUrls(project.name);
   const repo = await resolveProjectRepoTarget(userId, idOrResp);
   const gitUrl = project.gitUrl || repo.gitUrl;
   const dirPath = repo.dirPath;
@@ -137,7 +138,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json(
       {
         error: "No git URL and no local project directory — Enable & install cannot land the snippet. Add the GitHub URL on the project, or paste the widget snippet manually from the project Widget card.",
-        watchUrl: controlFocus,
+        ...watch,
         code: "no_repo",
       },
       { status: 422 },
@@ -175,7 +176,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       {
         error: siteProbe.message,
         siteProbe,
-        watchUrl: controlFocus,
+        ...watch,
         code: "site_unreachable",
         tokenReady: !!token,
         hint: "Fix the live site on the box, then click Enable & install again. Or open the project Widget card and copy the snippet by hand.",
@@ -195,17 +196,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return jsonError("Could not enable the widget token for this project", 400);
   }
 
-  const { status, body } = await injectPrompt({ tab: project.name, customPrompt: prompt }, userId);
+  const { status, body } = await injectPrompt(
+    { tab: project.name, customPrompt: prompt, notifyOnClose: true },
+    userId,
+  );
   return NextResponse.json(
     {
       ...body,
       tokenCreated: dataOrResp.mode === "install" && !!token,
       siteProbe,
       liveOrigin,
-      watchUrl: controlFocus,
+      ...watch,
       nextStep:
         status < 400
-          ? "Queued for this project. Open on Control — Terminal only shows a session once the agent is actually running (This computer = Fleet Runner; Cloud = box-runner)."
+          ? "Queued for this project. Watch Control and Activity. Terminal only shows a session once the agent is actually running. You get a notification when the run finishes."
           : undefined,
     },
     { status },

@@ -94,7 +94,11 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   }
 
   const { status, body } = await injectPrompt(
-    { tab: project.name, customPrompt: composeSynthesizePrompt(items, project.name, token.token) },
+    {
+      tab: project.name,
+      customPrompt: composeSynthesizePrompt(items, project.name, token.token),
+      notifyOnClose: true,
+    },
     userId,
   );
   return NextResponse.json(body, { status });
