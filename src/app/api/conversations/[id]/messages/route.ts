@@ -134,12 +134,14 @@ async function persistDispatch(opts: DispatchOpts): Promise<ConversationMessage>
           promptKey: opts.intentId!,
           adapter: opts.agent,
           model: opts.model,
+          notifyOnClose: true,
         }
       : {
           tab: opts.projectKey,
           customPrompt: opts.prompt + opts.attachmentSuffix,
           adapter: opts.agent,
           model: opts.model,
+          notifyOnClose: true,
         },
     opts.userId,
   );
@@ -159,7 +161,7 @@ async function persistDispatch(opts: DispatchOpts): Promise<ConversationMessage>
   const runId = typeof inject.body.runId === "string" ? inject.body.runId : null;
   const content = ok
     ? dispatchAssistantContent(opts.projectKey, dispatchInput)
-    : `Could not dispatch to ${opts.projectKey}: ${
+    : `Could not send work to ${opts.projectKey}: ${
         typeof inject.body.error === "string" ? inject.body.error : "dispatch failed"
       }`;
   const assistant = await addMessage(opts.conversationId, {

@@ -17,7 +17,8 @@ export const ACTION_COPY = {
     skip: "Skip",
   },
   dispatch: {
-    sent: (project: string) => `Sent to ${project}. An agent is picking it up.`,
+    sent: (project: string) =>
+      `Queued on ${project}. Watch Control — you get a notification when the run finishes.`,
     watch: "Watch on Control",
     stay: "Back to the queue",
     failed: "The agent did not start. Try again — the proposal is still here.",

@@ -9,7 +9,7 @@ import { composeFeedbackFixPrompt } from "@/lib/feedback/compose-dispatch";
 import { ORCH_STATE } from "@/lib/orchestration/contract";
 
 /**
- * One-click "Dispatch fix": queue a scoped agent run via injectPrompt.
+ * One-click Implement: queue a scoped agent run via injectPrompt.
  * Returns runId when accepted. Allows Retry when a prior run is stuck/failed
  * (not while a run is actively working).
  */
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (run) {
       const deliveredAt = (run.payload as { deliveredAt?: string } | null)?.deliveredAt ?? null;
       if (isActivelyWorking(run.state, run.startedAt, deliveredAt)) {
-        return jsonError("Already working on this — open Terminal to watch", 409);
+        return jsonError("Already working on this — open Control to watch", 409);
       }
     }
   }
@@ -54,6 +54,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     {
       tab: row.projectName,
       customPrompt: composeFeedbackFixPrompt(row.feedback, row.projectName, dataOrResp.note || undefined),
+      notifyOnClose: true,
     },
     userId,
   );
@@ -64,7 +65,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   return NextResponse.json(
     {
       ...body,
-      watchUrl: `/terminal?source=server&tab=${encodeURIComponent(row.projectName)}`,
       workLabel: status < 400 ? "Queued" : undefined,
     },
     { status },

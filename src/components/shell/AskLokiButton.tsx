@@ -57,7 +57,7 @@ function ProposalChip({
         {state.phase === "sending"
           ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" aria-hidden="true" />
           : <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
-        <span className="max-w-56 truncate">{state.phase === "sending" ? "Dispatching…" : label}</span>
+        <span className="max-w-56 truncate">{state.phase === "sending" ? "Queuing…" : label}</span>
       </button>
       {state.phase === "error" && <span className="ui-error text-xs">{state.message}</span>}
     </span>

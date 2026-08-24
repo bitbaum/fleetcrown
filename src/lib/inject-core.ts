@@ -31,6 +31,7 @@ import { retrieveFleetContextBlock } from "@/db/queries/knowledge-embeddings";
 import { assembleInjectPrompt } from "@/lib/inject-prompt";
 import { buildOperatorContextSection } from "@/lib/dispatch-operator-context";
 import { getOpenEscalationBlock } from "@/db/queries/run-escalations";
+import { injectWatchUrls } from "@/lib/fleet-context";
 
 type ResolvedAdapter = (typeof ORCHESTRATION_ADAPTER_IDS)[number];
 
@@ -43,8 +44,9 @@ export type InjectParams = {
    *  the project's stored modelPref; the runner reads it on auto-launch. */
   model?: string;
   runId?: string;
-  /** Push the close outcome to chat (Telegram). Set by chat-originated
-   *  dispatches (Loki's fleet skill) — see lib/orchestration/notify-close.ts. */
+  /** Push the close outcome (web push + Telegram). Set on captain-initiated
+   *  injects (Control, Loki, Implement, Install). Autopilot must leave this
+   *  unset — see lib/orchestration/notify-close.ts. */
   notifyOnClose?: boolean;
 };
 
@@ -594,6 +596,7 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
         ...(hostedDispatchId && { hostedDispatchId, hostedRunner: "hermes" }),
       }),
       ...(runId && { runId }),
+      ...injectWatchUrls(canonical),
     },
   };
 }

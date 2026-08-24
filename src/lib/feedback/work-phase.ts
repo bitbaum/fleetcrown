@@ -64,7 +64,7 @@ export function deriveFeedbackWork(
     return {
       phase: FEEDBACK_WORK_PHASE.QUEUED,
       label: "Queued",
-      detail: "Prompt accepted — no run record yet. Open Terminal if this stays.",
+      detail: "Prompt accepted — no run record yet. Watch Control or Activity.",
     };
   }
 
@@ -72,7 +72,7 @@ export function deriveFeedbackWork(
     return {
       phase: FEEDBACK_WORK_PHASE.WORKING,
       label: "Working now",
-      detail: "Agent is generating. Watch Terminal for live output.",
+      detail: "Agent is generating. Watch Terminal for live output. You get a notification when the run finishes.",
     };
   }
 
@@ -107,26 +107,26 @@ export function deriveFeedbackWork(
     return {
       phase: FEEDBACK_WORK_PHASE.STUCK,
       label: "Not running",
-      detail: "Queued, but the agent never started generating. Watch Terminal or Retry from Attention.",
+      detail: "Queued, but the agent never started generating. Open Control — Retry if it stays.",
     };
   }
   if (!run.deliveredAt) {
     return {
       phase: FEEDBACK_WORK_PHASE.QUEUED,
       label: "Queued",
-      detail: "Starting — waiting for the agent to pick up the prompt.",
+      detail: "Starting — waiting for the agent to pick it up. You get a notification when the run finishes.",
     };
   }
   if (ageMs > THINKING_MS) {
     return {
       phase: FEEDBACK_WORK_PHASE.STUCK,
       label: "Not running",
-      detail: "Prompt was delivered, but there is no live progress. Watch Terminal.",
+      detail: "Prompt was delivered, but there is no live progress. Open Control.",
     };
   }
   return {
     phase: FEEDBACK_WORK_PHASE.WORKING,
     label: "Working now",
-    detail: "Prompt delivered — agent may still be thinking. Watch Terminal.",
+    detail: "Prompt delivered — agent may still be thinking. Watch Terminal. You get a notification when the run finishes.",
   };
 }

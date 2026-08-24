@@ -7,7 +7,7 @@ routine. Positioning and ICP are already settled in
 re-argue them, it schedules them.
 
 What changed since the master plan: the distribution rail now exists. As of
-2026-08-13 the Thoughts library (64 essays) has an RSS feed (`/rss.xml`),
+2026-08-13 the Thoughts library (65 essays) has an RSS feed (`/rss.xml`),
 share affordances on every essay, newsletter capture (capture-only,
 `newsletter_subscribers` table), and the promised bridge essay
 ([the-two-halves-joined](/thoughts/the-two-halves-joined)) is published —
@@ -25,6 +25,7 @@ the moat; the cadence is what makes them a channel.
 | Any (build) | Ship real work; devlog events auto-promote to the OrangeCat wall (already automatic) | Fleet |
 | +0 | Publish **one essay** to `content/thoughts/` (house voice per [thoughts-style-guide.md](thoughts-style-guide.md)) | Agent drafts, founder approves |
 | +0 | Essay lands in RSS + sitemap automatically on deploy | Automatic |
+| +0 | `npm run test:thoughts-routes` against prod after deploy (all slugs 200) | Agent / deploy hook |
 | +1 | Cross-post: one X post + one LinkedIn variant from `content/social/queue.md` | Founder pastes (or approves send) |
 | +7 | Note what moved (metrics §4) before writing the next essay | Agent |
 

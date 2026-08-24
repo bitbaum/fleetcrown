@@ -3,8 +3,8 @@
  *
  * Three distinct surfaces — keep labels unambiguous:
  * - Saved prompts (/prompts): reusable templates you author
- * - Up next (queue): waiting to dispatch on this project
- * - Recent dispatches / paste from history: already sent to an agent
+ * - Up next (queue): waiting to send on this project
+ * - Recent work / paste from history: already sent to an agent
  * - Prompt library: FleetCrown starter templates on the project card
  */
 
@@ -23,8 +23,8 @@ export function promptQueueHeading(count: number): string {
 export const PROMPT_QUEUE_EMPTY_HINT =
   "Alt+Enter while typing to add to the queue";
 
-/** Collapsed activity drawer — dispatches in the last 24h (up to 5 shown) */
-export const RECENT_DISPATCHES_TITLE = "Recent dispatches";
+/** Collapsed activity drawer — prompts sent in the last 24h (up to 5 shown) */
+export const RECENT_DISPATCHES_TITLE = "Recent work";
 
 /** Chip row — fills the composer from past dispatches */
 export const PASTE_FROM_HISTORY_TITLE = "Paste from history";
@@ -37,7 +37,7 @@ export const PROJECT_ACTIVITY_TITLE = "Activity";
 
 /** Chip on collapsed activity row */
 export function recentDispatchChip(count: number): string {
-  return count >= 5 ? "5+ dispatched" : `${count} dispatched`;
+  return count >= 5 ? "5+ sent" : `${count} sent`;
 }
 
 /** Prompt composer footer hints (local auto-send gate, not fleet autopilot) */

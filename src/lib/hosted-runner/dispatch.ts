@@ -90,7 +90,7 @@ export async function dispatchToHostedRunner(input: {
       eventType: "continue_requested",
       source: "hosted-runner",
       adapter: HERMES_ADAPTER,
-      detail: `Dispatched to hosted runner (Hermes) — ${trimmedTask.slice(0, 120)}`,
+      detail: `Queued on hosted runner (Hermes) — ${trimmedTask.slice(0, 120)}`,
       happenedAt: new Date(),
     },
     `hosted-dispatch:${hostedDispatchId}`,

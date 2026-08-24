@@ -79,4 +79,12 @@ export const COMMS_COPY = {
   digestSettingsTitle: "Activity digest emails",
   digestSettingsBody:
     "What ran, what broke, what moved. This is the mail FleetCrown sends.",
+  pushSettingsTitle: "When a run finishes",
+  pushSettingsBody:
+    "A browser notification when a run you started finishes — Implement, Control, Loki, Install. Autopilot stays silent. Same switch as the bell in the top bar.",
+  pushEnable: "Enable notifications",
+  pushOn: "Notifications on — click to turn off",
+  pushDenied: "Permission denied in the browser — enable notifications for this site in browser settings.",
+  pushUnsupported: "This browser does not support push notifications.",
+  pushNotConfigured: "Push is not available on this server.",
 } as const;

@@ -17,8 +17,8 @@ const InjectBody = z.object({
   customPrompt: z.string().max(4000).optional(),
   adapter:      z.enum(ORCHESTRATION_ADAPTER_IDS).optional(),
   runId:        z.string().uuid().optional(),
-  // Chat-originated dispatches (Loki's fleet skill) ask for the outcome to be
-  // pushed back to chat on close — see lib/orchestration/notify-close.ts.
+  // Captain-initiated injects (Control, palette) set this so the operator
+  // gets a notification when the run finishes. Autopilot must omit it.
   notifyOnClose: z.boolean().optional(),
 }).refine((d) => d.promptKey || d.customPrompt, { message: "promptKey or customPrompt required" });
 

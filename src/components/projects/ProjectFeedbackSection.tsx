@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Archive, Check, Code2, Copy, ExternalLink, Layers, Loader2, MessageSquare, Pause, PenLine, Play, RefreshCw, Rocket, ScanEye, Star, Undo2, X } from "lucide-react";
+import { Archive, Check, Code2, Copy, ExternalLink, Layers, Loader2, Pause, PenLine, Play, RefreshCw, Rocket, ScanEye, Star, Undo2, X } from "lucide-react";
 import { useFetch } from "@/hooks/use-fetch";
 import { useClipboard } from "@/hooks/use-clipboard";
 import { deleteJson, patchJson, postJson, throwApiError } from "@/lib/api/fetch";
@@ -13,6 +13,9 @@ import { deriveFeedbackWork, FEEDBACK_WORK_PHASE } from "@/lib/feedback/work-pha
 import type { FeedbackListItem, FeedbackLoopMetrics } from "@/db/queries/site-feedback";
 import type { FeedbackListItemWithWork } from "@/lib/feedback/attach-work";
 import { FeedbackWorkBadge } from "@/components/feedback/FeedbackWorkBadge";
+import { fleetSurfaceHref } from "@/lib/fleet-context";
+import { EXECUTOR_COPY } from "@/config/executor-copy";
+import { DispatchedNote } from "@/components/projects/ProjectActionButtons";
 
 type WidgetTokenInfo = {
   token: string;
@@ -26,7 +29,7 @@ type WidgetTokenInfo = {
 /**
  * Visitor-feedback inbox for one project — submissions from the embeddable
  * widget (docs/architecture/feedback-widget.md). The one thing that matters
- * per row is "Dispatch fix": feedback becomes fleet work without leaving the
+ * per row is Implement: feedback becomes fleet work without leaving the
  * row. The empty state IS the widget setup card — discovery and activation
  * in one place.
  */
@@ -76,7 +79,7 @@ export function ProjectFeedbackSection({ projectId, projectName }: { projectId: 
   }
 
   const dispatchFix = (id: string, note?: string) =>
-    act(id, () => postJson(`/api/feedback/${id}/dispatch`, note ? { note } : {}), "Dispatch failed");
+    act(id, () => postJson(`/api/feedback/${id}/dispatch`, note ? { note } : {}), "Could not queue the fix");
 
   // High-volume inbox: shift the unit of action from item to theme. An agent
   // clusters the NEW items into briefs and files them back into this inbox.
@@ -99,10 +102,10 @@ export function ProjectFeedbackSection({ projectId, projectName }: { projectId: 
     setError(null);
     try {
       const res = await postJson(`/api/projects/${projectId}/feedback/dispatch-batch`, {});
-      if (!res.ok) await throwApiError(res, "Dispatch all failed");
+      if (!res.ok) await throwApiError(res, "Implement all failed");
       feedbackFetch.refetch();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Dispatch all failed");
+      setError(e instanceof Error ? e.message : "Implement all failed");
     } finally {
       setBatchBusy(false);
     }
@@ -135,7 +138,7 @@ export function ProjectFeedbackSection({ projectId, projectName }: { projectId: 
               title="One agent run covering every new report (local Fleet Runner or cloud builder)"
             >
               {batchBusy ? <Loader2 className="ui-spinner-xs" /> : <Rocket className="h-3.5 w-3.5" />}
-              Dispatch all as one
+              Implement all as one
             </button>
           )}
           {token && newCount >= SYNTHESIZE_MIN_ITEMS && (
@@ -144,14 +147,14 @@ export function ProjectFeedbackSection({ projectId, projectName }: { projectId: 
               onClick={synthesize}
               disabled={synthesizing || synthesized}
               className="ui-btn-secondary gap-1.5"
-              title="Dispatch an agent to cluster the new items into structured briefs, filed back into this inbox"
+              title="Queue an agent to cluster the new items into structured briefs, filed back into this inbox"
             >
               {synthesizing ? <Loader2 className="ui-spinner-xs" /> : <Layers className="h-3.5 w-3.5" />}
-              {synthesized ? "Synthesis dispatched" : "Synthesize"}
+              {synthesized ? "Synthesis queued" : "Synthesize"}
             </button>
           )}
           {token && (
-            <button type="button" onClick={() => setReviewOpen((v) => !v)} className="ui-btn-secondary gap-1.5" title="Dispatch an agent to visually review a page and file findings here">
+            <button type="button" onClick={() => setReviewOpen((v) => !v)} className="ui-btn-secondary gap-1.5" title="Queue an agent to visually review a page and file findings here">
               <ScanEye className="h-3.5 w-3.5" />
               AI review
             </button>
@@ -166,9 +169,16 @@ export function ProjectFeedbackSection({ projectId, projectName }: { projectId: 
       {reviewOpen && token && (
         <AiReviewCard
           projectId={projectId}
+          projectName={projectName}
           defaultUrl={items.find((f) => f.url)?.url ?? ""}
           onClose={() => setReviewOpen(false)}
         />
+      )}
+
+      {synthesized && (
+        <p className="mb-3">
+          <DispatchedNote workspaceKey={projectName} />
+        </p>
       )}
 
       {showSetup && (
@@ -244,8 +254,8 @@ function FeedbackRow({
   const [noteOpen, setNoteOpen] = useState(false);
   const [note, setNote] = useState("");
   const work = "work" in f && f.work ? f.work : deriveFeedbackWork(f.status, null);
-  const controlHref = `/control?focus=${encodeURIComponent(projectName)}`;
-  const terminalHref = `/terminal?source=server&tab=${encodeURIComponent(projectName)}`;
+  const controlHref = fleetSurfaceHref("control", projectName);
+  const terminalHref = fleetSurfaceHref("terminal", projectName);
   const watchLive = work.phase === FEEDBACK_WORK_PHASE.WORKING;
   const progressHref = watchLive ? terminalHref : controlHref;
   const progressLabel = watchLive ? "Watch" : "Open on Control";
@@ -441,9 +451,9 @@ function WidgetSetupCard({
   const [moreOpen, setMoreOpen] = useState(false);
   const { copied, copy } = useClipboard();
 
-  const controlHref = `/control?focus=${encodeURIComponent(projectName)}`;
-  const terminalHref = `/terminal?source=cloud&tab=${encodeURIComponent(projectName)}`;
-  const activityHref = `/activity?project=${encodeURIComponent(projectName)}`;
+  const controlHref = fleetSurfaceHref("control", projectName);
+  const terminalHref = fleetSurfaceHref("terminal", projectName);
+  const activityHref = fleetSurfaceHref("activity", projectName);
   const site = token?.lastSeenOrigin ?? token?.origins?.[0] ?? null;
   const live = !!token?.lastSeenAt && token.status !== "paused";
   const paused = token?.status === "paused";
@@ -469,7 +479,7 @@ function WidgetSetupCard({
       setAgentPhase("queued");
       setAgentNote(
         body.nextStep
-        || "Queued on the cloud builder. Progress: Activity (this project) · Terminal → Cloud only if a session appears · Control Attention if inject fails.",
+        || `${EXECUTOR_COPY.honesty.watchQueued} ${EXECUTOR_COPY.honesty.notificationWhenDone}`,
       );
       onChanged();
     } catch (e) {
@@ -618,7 +628,7 @@ function WidgetSetupCard({
                   </Link>
                 </div>
                 <p className="mt-2 text-micro text-text-muted">
-                  Terminal stays empty until an agent session is actually running. Activity shows every inject attempt and the real error (e.g. Grok launched but never generated).
+                  {EXECUTOR_COPY.honesty.watchQueued} {EXECUTOR_COPY.honesty.notificationWhenDone} Activity shows every inject attempt and the real error.
                 </p>
               </div>
             )}
@@ -678,16 +688,18 @@ function WidgetSetupCard({
  */
 function AiReviewCard({
   projectId,
+  projectName,
   defaultUrl,
   onClose,
 }: {
   projectId: string;
+  projectName: string;
   defaultUrl: string;
   onClose: () => void;
 }) {
   const [url, setUrl] = useState(defaultUrl);
   const [busy, setBusy] = useState(false);
-  const [dispatched, setDispatched] = useState(false);
+  const [queued, setQueued] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function dispatchReview() {
@@ -695,10 +707,10 @@ function AiReviewCard({
     setError(null);
     try {
       const res = await postJson(`/api/projects/${projectId}/feedback/ai-review`, { url });
-      if (!res.ok) await throwApiError(res, "Could not dispatch the review");
-      setDispatched(true);
+      if (!res.ok) await throwApiError(res, "Could not queue the review");
+      setQueued(true);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not dispatch the review");
+      setError(e instanceof Error ? e.message : "Could not queue the review");
     } finally {
       setBusy(false);
     }
@@ -714,7 +726,7 @@ function AiReviewCard({
           </div>
           <p className="mt-1 text-xs leading-relaxed text-text-muted">
             An agent opens the page in a headless browser, reviews it on desktop and mobile,
-            and files each issue into this inbox — you triage and dispatch fixes as usual.
+            and files each issue into this inbox — you triage and implement fixes as usual.
           </p>
         </div>
         <button type="button" onClick={onClose} className="ui-btn-icon" aria-label="Close AI review">
@@ -722,11 +734,10 @@ function AiReviewCard({
         </button>
       </div>
 
-      {dispatched ? (
-        <p className="mt-3 flex items-center gap-1.5 text-xs text-text-secondary">
-          <Check className="h-3.5 w-3.5" />
-          Review dispatched — findings land here when the agent finishes.
-        </p>
+      {queued ? (
+        <div className="mt-3">
+          <DispatchedNote workspaceKey={projectName} />
+        </div>
       ) : (
         <form
           className="mt-3 flex flex-wrap items-center gap-2"

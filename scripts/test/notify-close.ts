@@ -1,13 +1,13 @@
 /**
- * Inline tests for the chat close-notification decision
+ * Inline tests for the close-notification decision
  * (lib/orchestration/notify-close.ts, pure half). The contract under test:
  * ONLY runs that opted in via payload.notifyOnClose ever produce a message —
  * a formatting regression here either spams the phone with the fleet's whole
- * churn or silently swallows chat-dispatch outcomes.
+ * churn or silently swallows captain-initiated outcomes.
  *
  * Run: npm run test:notify-close
  */
-import { formatRunCloseMessage } from "@/lib/orchestration/notify-close-format";
+import { formatRunCloseMessage, formatRunClosePush } from "@/lib/orchestration/notify-close-format";
 
 function assert(condition: boolean, message: string): void {
   if (!condition) throw new Error(message);
@@ -28,7 +28,7 @@ function runTests(): void {
     payload: { projectKey: "orangecat", projectPath: "/x", notifyOnClose: true },
   } as Parameters<typeof formatRunCloseMessage>[0];
 
-  check("no opt-in ⇒ null (UI dispatches stay silent)", () => {
+  check("no opt-in ⇒ null (autopilot stays silent)", () => {
     assert(
       formatRunCloseMessage({ ...base, payload: { projectKey: "orangecat", projectPath: "/x" } }) === null,
       "expected null without notifyOnClose",
@@ -65,6 +65,26 @@ function runTests(): void {
     });
     const body = msg?.split("\n")[1] ?? "";
     assert(body.length === 600 && !msg?.includes("ignored"), `body len ${body.length}`);
+  });
+
+  check("push opt-in success title", () => {
+    const push = formatRunClosePush(base);
+    assert(!!push && push.title === "orangecat · done", `got: ${JSON.stringify(push)}`);
+  });
+
+  check("push no opt-in ⇒ null", () => {
+    assert(
+      formatRunClosePush({ ...base, payload: { projectKey: "orangecat", projectPath: "/x" } }) === null,
+      "expected null without notifyOnClose",
+    );
+  });
+
+  check("push truncates body to 240", () => {
+    const push = formatRunClosePush({
+      ...base,
+      payload: { ...base.payload!, resultText: "P".repeat(1000) },
+    });
+    assert(!!push && push.body.length === 240, `body len ${push?.body.length}`);
   });
 
   console.log(`\n${passed} passed`);

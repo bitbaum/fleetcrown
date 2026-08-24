@@ -249,7 +249,7 @@ try {
       machineAudit.emptyText.includes("Fleet Runner"));
 
   report.ok =
-    afterDispatch.kind === "Dispatched" &&
+    afterDispatch.kind === "Queued" &&
     afterDispatch.dispatchLinks.some((l) => l.href.includes("source=server")) &&
     afterDispatch.dispatchLinks.some((l) => l.href.includes("source=machine")) &&
     !/(failed|error|unconfirmed|not sent)/i.test(afterDispatch.dispatchStatus ?? "") &&

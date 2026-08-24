@@ -13,6 +13,7 @@ import { useState } from "react";
 import { CloudUpload, Loader2, ExternalLink } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { postJson, throwApiError } from "@/lib/api/fetch";
+import { fleetSurfaceHref } from "@/lib/fleet-context";
 
 type DispatchOk = { ok: true; hostedDispatchId: string; projectName: string; gitUrl: string };
 
@@ -81,7 +82,7 @@ export function HostedDispatchButton({
                 dispatch {done.hostedDispatchId}
               </p>
               <a
-                href="/activity"
+                href={fleetSurfaceHref("activity", projectTab)}
                 className="ui-btn-secondary inline-flex items-center gap-1.5"
               >
                 Watch in Activity <ExternalLink className="h-3.5 w-3.5" />

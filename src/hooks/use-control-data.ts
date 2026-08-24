@@ -251,7 +251,13 @@ export function useControlData(): ControlDataHook {
     // /api/inject endpoint; Fleet Runner desktop polls /api/control/commands
     // and types the resulting prompt into zellij. Same end-state, one
     // transport instead of two, no bash anywhere.
-    const res = await postJson("/api/inject", { tab, promptKey, customPrompt, adapter: data?.agentConfig.agent ?? selectedAgent });
+    const res = await postJson("/api/inject", {
+      tab,
+      promptKey,
+      customPrompt,
+      adapter: data?.agentConfig.agent ?? selectedAgent,
+      notifyOnClose: true,
+    });
     if (!res.ok) await throwApiError(res, `HTTP ${res.status}`);
     const body = await res.json().catch(() => ({}));
     // Don't let an offline runner read as success — say it out loud.

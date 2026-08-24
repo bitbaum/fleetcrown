@@ -1,10 +1,18 @@
 # FleetCrown Debt Reduction Roadmap
 
+---
+created_date: 2026-05-21
+last_modified_date: 2026-08-20
+last_modified_summary: Linked the Captain's Refactor essay as strategic SSOT; added Phase 1 engineering checklist (submitCommand spine, run-event truth, UI honesty).
+---
+
 ## Purpose
 
 This document turns the current architectural concerns into an execution
 roadmap for reducing code debt and making FleetCrown viable as a startup-grade
 product.
+
+**Strategic framing (public):** [The Captain's Refactor — Making the Bridge Real](/thoughts/the-captains-refactor-making-the-bridge-real) — codebase forensics, Grok Bot comparison, four-boundary refactor, phased build order. This doc remains the **engineering debt SSOT**; the essay is the narrative and acceptance framing.
 
 The standard is no longer "works for me locally." The standard is:
 
@@ -427,3 +435,19 @@ Before merging any change, ask:
 5. Can a new engineer explain where the truth lives after this change?
 
 If the answers move in the wrong direction, the change should not merge.
+
+## Captain's refactor — Phase 1 checklist
+
+Phase 1 from the essay: **honesty and convergence** — one dispatch spine, run
+events as truth, no user-visible success without a run id. Concrete tickets:
+
+| ID | Task | Primary files | Done when |
+|----|------|---------------|-----------|
+| P1-1 | Extract `submitCommand()` — single entry for Control, Loki, cron, widget | New `src/lib/orchestration/submit-command.ts`; thin `/api/inject`, `conversations/.../messages`, `kickFleet`, `nudge-idle` | All dispatch paths call one function; no duplicate run-create logic |
+| P1-2 | Move run lifecycle transitions out of `inject-core.ts` tail into supervisor | `src/lib/orchestration/supervisor.ts` (new); shrink `inject-core.ts` to assembly + delegate | State transitions live in one module; routes do not mutate `ORCH_STATE` |
+| P1-3 | UI status joins open run — ban tab-only "running" | `src/components/control/*`, `deriveProjectStateKey` consumers | Card "running" requires matching `orchestration_runs` row in `waiting`/`running` |
+| P1-4 | Generate Loki capability preface from policy SSOT | `src/config/loki-capabilities.ts` (new); `loki-core.ts` imports | Adding a capability updates one config file; Loki text cannot drift |
+| P1-5 | Audit user-flow **D** grades — gate or label | `docs/development/user-flow-audit.md`, `executor-copy.ts` | Every D-row has honest chip or route gate; hosted prod doc matches UI |
+| P1-6 | Emit missing run events (`awaiting_approval`, `blocked`) | `src/db/queries/run-events.ts`, approval + block paths | Activity timeline shows approval/block without inferring from chat |
+
+**Exit criterion:** dispatch → `run_events.dispatched` → terminal peek → close with verification — one traceable id, no zellij-specific failure modes on hosted default path.

@@ -1,6 +1,6 @@
 /**
  * Prompt composition for feedback → agent dispatch.
- * SSOT so single-row Dispatch fix and batch "Dispatch all as one" stay aligned.
+ * SSOT so single-row Implement and batch "Implement all as one" stay aligned.
  */
 import { fenceUntrusted, inlineUntrusted, UNTRUSTED_PREAMBLE } from "@/lib/feedback/untrusted";
 

@@ -5,7 +5,7 @@ import { PublicHeaderActions } from "@/components/public/PublicHeaderActions";
 export const metadata = {
   title: "Feedback widget",
   description:
-    "Put a feedback button on any site you run. Reports land in a per-project inbox, one click dispatches an agent to fix them, and shipped fixes notify the reporter.",
+    "Put a feedback button on any site you run. Reports land in a per-project inbox, one click queues an agent to fix them, and shipped fixes notify the reporter.",
 };
 
 export default function FeedbackWidgetDocsPage() {
@@ -23,7 +23,7 @@ export default function FeedbackWidgetDocsPage() {
           <p>
             Open the project&apos;s page in FleetCrown, scroll to <strong>Visitor feedback</strong>,
             and click <strong>Enable &amp; install via agent</strong> (or from Control, use the
-            fleet coverage strip). That mints a project token and dispatches an agent to embed the
+            fleet coverage strip). That mints a project token and queues an agent to embed the
             snippet. Prefer that one click over copy-paste unless you are wiring a site by hand.
           </p>
           <pre className="ui-public-code-block">
@@ -45,10 +45,11 @@ export default function FeedbackWidgetDocsPage() {
               layout, before <code>&lt;/body&gt;</code>. Any framework, any stack.
             </li>
             <li>
-              <strong>Install via agent</strong> — for repo-linked projects, one click dispatches an
+              <strong>Install via agent</strong> — for repo-linked projects, one click queues an
               agent that adds the snippet to your codebase, verifies the page loads cleanly, and
               ships it the way your repo ships changes. It will not add a second embed if one
-              already exists. <strong>Remove via agent</strong> is the symmetric operation.
+              already exists. Watch Control and Activity until it is working; you get a
+              notification when the run finishes. <strong>Remove via agent</strong> is the symmetric operation.
             </li>
           </ul>
           <p>
@@ -107,17 +108,18 @@ export default function FeedbackWidgetDocsPage() {
           </p>
           <ul className="list-disc pl-6 space-y-2">
             <li>
-              <strong>Dispatch fix</strong> — one report → one scoped agent run. Routes through
+              <strong>Implement</strong> — one report → one scoped agent run. Routes through
               FleetCrown&apos;s <code>injectPrompt</code> SSOT: local Fleet Runner when connected,
-              otherwise the cloud builder. You do not pick a terminal.
+              otherwise the cloud builder. Watch Control until the agent is working, then Terminal.
+              You get a notification when the run finishes.
             </li>
             <li>
-              <strong>Dispatch all as one</strong> (2+ new items) — one agent pass covering the
+              <strong>Implement all as one</strong> (2+ new items) — one agent pass covering the
               whole pile. Prefer this when you want a single coherent fix run now.
             </li>
             <li>
               <strong>Synthesize themes</strong> (3+ new items) — an agent clusters the pile into
-              structured briefs filed back into the same inbox; you then Dispatch the brief. Use
+              structured briefs filed back into the same inbox; you then Implement the brief. Use
               when volume is high and themes help before fixing.
             </li>
             <li>

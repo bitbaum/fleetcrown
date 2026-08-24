@@ -25,6 +25,9 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@fleetcrown/bip": [
+        "./packages/bip/src/index.ts"
       ]
     }
   },

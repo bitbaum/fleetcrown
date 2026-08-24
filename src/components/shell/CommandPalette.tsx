@@ -91,7 +91,7 @@ export function CommandPalette() {
       const res = await fetch("/api/inject", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tab: projectKey, customPrompt: prompt }),
+        body: JSON.stringify({ tab: projectKey, customPrompt: prompt, notifyOnClose: true }),
       });
       if (!res.ok) {
         const b = (await res.json().catch(() => ({}))) as { error?: string };

@@ -2,8 +2,8 @@
 
 ---
 created_date: 2026-05-21
-last_modified_date: 2026-07-04
-last_modified_summary: Cross-link to user-flow-audit.md (exhaustive flow grades).
+last_modified_date: 2026-08-15
+last_modified_summary: Web push also fires when a captain-initiated run finishes, not only when an agent is ready.
 ---
 
 FleetCrown is a **hybrid** product: the hosted web app (cloud control plane) owns auth, the database, and the UI. Agents run via the **builder** — the cloud service on Hetzner (box-runner) and/or the optional desktop app on your computer. Users never need to pick; both share one queue.
@@ -104,7 +104,7 @@ Priority stack: `docs/architecture/priority-plan-2026-H2.md`.
 | Voice transcription (default) | Fleet Runner + ffmpeg + Whisper; or Groq in cloud |
 | Run cron job now | Local openclaw |
 | Auto-continue pause from web (cloud) | Queued `auto_continue` command → runner writes `/tmp` sentinel |
-| Push notifications (agent ready) | Browser subscribe + VAPID on server; `/api/push/notify` |
+| Push notifications (run finished + agent ready) | Browser subscribe + VAPID on server; run-close via `notifyRunClosed`, runner via `/api/push/notify` |
 | **Terminal → My machine** (live agent view) | Fleet Runner owns the agent PTY (v0.8.3+); `/terminal` streams it via peek_start → peek-frame → SSE. Requires Fleet Runner v0.8.5+ for reliable peek (no zellij hang on detached sessions). |
 
 ### Terminal page (`/terminal`)
@@ -130,7 +130,7 @@ Loki and Control do **not** connect to Terminal directly. They enqueue `pending_
 | Cron Telegram delivery | `TELEGRAM_CHAT_ID` (optional; jobs save without it) |
 | Private zone PIN | `PRIVATE_ZONE_PIN_HASH` |
 | Scheduled cron janitors (run on the box) | `CRON_SECRET` |
-| Web Push (agent-ready notifications) | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `NEXT_PUBLIC_VAPID_PUBLIC_KEY` |
+| Web Push (run-finished + agent-ready notifications) | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `NEXT_PUBLIC_VAPID_PUBLIC_KEY` |
 
 ## Architecture sketch
 

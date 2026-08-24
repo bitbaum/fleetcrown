@@ -19,7 +19,9 @@ The document landed. The integration shipped. And then — this is the part that
 
 The first thing to cross was a person.
 
-You can now sign in to FleetCrown with an OrangeCat account, in production. The OAuth handshake links the two by verified email: one operator, two products, one actor id persisted on the FleetCrown side, tokens in the accounts table. Not a mockup of a bridge — a login button that works on the live site today.
+You can now sign in to FleetCrown with an OrangeCat account, in production. The OIDC handshake binds the two by **OrangeCat actor id** (`id_token.sub` → `users.orangecat_actor_id`), not by email — email is a weak join key on both sides, and the Auth.js provider deliberately refuses silent email linking. Tokens land on the `accounts` row with capability scopes (`project.write`, `timeline.write`, `wallet.read`, …). Not a mockup of a bridge — a login button that works on the live site today.
+
+*(Corrigendum 2026-08-20: earlier versions of this essay said "verified email." That was wrong relative to the code. See [Connected, Not Joined](/thoughts/connected-not-joined-author-replies-to-muskrat) and [Muskrat's audit](/thoughts/load-through-the-seam-muskrat-and-the-critic-reply).)*
 
 Identity had to go first because everything else rides on it. A project cannot publish across two platforms until both platforms agree on whose project it is. A wallet cannot settle to an operator that each side names differently.
 
@@ -45,11 +47,11 @@ The point of retelling it here is strategic, not forensic: until July, "the two 
 
 ## The load the joint has not carried
 
-Money has not crossed the seam.
+Subscription settlement as a stranger-witnessed loop has not closed yet.
 
-FleetCrown has a pricing page and Stripe plumbing; it is not switched on. OrangeCat has Lightning rails and a credits model; no FleetCrown subscription settles over them. A FleetCrown project page does not yet show the wallet and funding state of its OrangeCat twin. And no external operator — nobody but the founder — has crossed the bridge with their own account.
+FleetCrown's Stripe keys are not on the box — card checkout stays dark. OrangeCat Bitcoin passes, entitlement webhooks, and pay CTAs are largely **wired in code and env**; what is missing is operational proof that a non-founder buy flips `users.plan`. A FleetCrown project page **does** show confirmed OrangeCat funding totals when published (BTC + contributors) — earlier drafts of this essay said otherwise and were wrong. What still lags: entity fields do not sync after the one-shot publish; token refresh can fail quietly; no external operator loop has been published as witnessed.
 
-Those are not footnote caveats; they are the next loads, in order. Show the wallet state where the work happens. Let a stranger cross with their own identity. Then let value settle where identity and work already flow. The June essay called the integration "engineering, not invention" — that is still true, and the remaining engineering is now a shorter list than the shipped one.
+Those are not footnote caveats; they are the next loads, in order. Witness a second human crossing. Prove funding and pass settlement under load. Then the word *joined* earns its keep — until then, **connected** is the honest present tense ([author reply to Muskrat](/thoughts/connected-not-joined-author-replies-to-muskrat)).
 
 ## What joined means
 

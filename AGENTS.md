@@ -1,5 +1,9 @@
 # AGENTS.md — FleetCrown
 
+created_date: 2026-06-01
+last_modified_date: 2026-08-17
+last_modified_summary: Local `.env` cloud URLs (Neon/Vercel) are not production SSOT; the box is.
+
 Operational quick-reference for agents working in this repo. Deep conventions
 (design system, SSOT rules, view map) live in `CLAUDE.md`; read it too.
 
@@ -82,3 +86,6 @@ the dev server is up).
   (`public._deploy_schema_history`), **refuses destructive statements**, single
   transaction. A post-apply schema-drift gate **rolls back** on missing objects.
 - Never commit secrets. Never point `DATABASE_URL` at the box for `push`.
+- A laptop `.env` naming `neon.tech` or a Vercel token is leftover debris, not
+  production. Env SSOT is `/opt/<app>/shared/.env` on bitbaum. See
+  `docs/infrastructure/hetzner-migration.md`.

@@ -9,6 +9,8 @@ import { Modal } from "@/components/ui/modal";
 import { postJson } from "@/lib/api/fetch";
 import { useClipboard } from "@/hooks/use-clipboard";
 import { useFetch } from "@/hooks/use-fetch";
+import { fleetSurfaceHref } from "@/lib/fleet-context";
+import { EXECUTOR_COPY } from "@/config/executor-copy";
 
 export function RunModal({
   template,
@@ -216,10 +218,11 @@ export function RunModal({
           </p>
           {dispatchedTo && (
             <p className="text-xs text-status-positive">
-              Sent to {dispatchedTo}.{" "}
-              <Link href={`/terminal?tab=${encodeURIComponent(dispatchedTo)}`} className="underline">
-                Watch it in Terminal →
-              </Link>
+              Queued on {dispatchedTo}.{" "}
+              <Link href={fleetSurfaceHref("control", dispatchedTo)} className="underline">
+                Watch on Control →
+              </Link>{" "}
+              <span className="text-text-muted">{EXECUTOR_COPY.honesty.notificationWhenDone}</span>
             </p>
           )}
         </div>

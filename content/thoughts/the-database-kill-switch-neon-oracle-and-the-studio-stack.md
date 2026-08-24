@@ -9,6 +9,8 @@ author: g
 readingTimeMin: 22
 ---
 
+> **Historical (written 2026-05; outcome 2026-06-12).** Production Postgres has lived on Hetzner `bitbaum` since then. This essay is why we left Neon. It is not a setup guide. Do not create a Neon project. Do not put `neon.tech` in any `.env`. Live SSOT: `scripts/hetzner/apps.conf`.
+
 ## You Did Not Forget Your Password. The Database Got Turned Off.
 
 One morning FleetCrown stopped letting anyone sign in. The Control page looked like a fresh install: no projects, daemon offline, onboarding banners everywhere. The natural reaction is to blame auth — wrong password, expired session, GitHub OAuth misconfigured.

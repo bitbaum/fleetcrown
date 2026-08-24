@@ -63,12 +63,14 @@ export async function dispatchCommandToProjects(
             promptKey: input.intentId!,
             adapter: input.agent,
             model: input.model,
+            notifyOnClose: true,
           }
         : {
             tab: projectKey,
             customPrompt: input.prompt + input.attachmentSuffix,
             adapter: input.agent,
             model: input.model,
+            notifyOnClose: true,
           },
       input.userId,
     );
@@ -103,8 +105,8 @@ export function formatMultiDispatchReply(
 
   const lines = [
     intentLabel
-      ? `Dispatched **${ok.length}** of **${attempts.length}** selected projects (${intentLabel}).`
-      : `Dispatched **${ok.length}** of **${attempts.length}** selected projects.`,
+      ? `Queued **${ok.length}** of **${attempts.length}** selected projects (${intentLabel}).`
+      : `Queued **${ok.length}** of **${attempts.length}** selected projects.`,
   ];
 
   if (ok.length > 0) {
@@ -113,6 +115,6 @@ export function formatMultiDispatchReply(
   if (skipped.length > 0) {
     lines.push("", "**Skipped:**", ...skipped.map((a) => `- ${a.projectKey}${a.reason ? ` (${a.reason})` : ""}`));
   }
-  lines.push("", "Watch progress on [Control](/control).");
+  lines.push("", "Watch progress on [Control](/control). You get a notification when each run finishes.");
   return lines.join("\n");
 }

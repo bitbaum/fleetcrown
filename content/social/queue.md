@@ -127,3 +127,61 @@ When two sibling products start converging into one user experience — one agen
 The essay works through it as a systems-engineering decision rather than a branding one: where the seam actually is, what each side's invariants are, and why "stay paired, integrate at the identity and settlement layer" beats both fusing and forking. Useful beyond our two products, for anyone maintaining sibling systems.
 
 https://fleetcrown.orangecat.ch/thoughts/two-products-or-one
+
+---
+
+## 7. The Captain's Refactor — Making the Bridge Real
+
+**X**
+
+Grok Bot is a worker: cloud browser, SaaS clicks, routines while you sleep.
+
+FleetCrown is the captain: one dispatch spine, cross-model verification, approval before external writes. The thesis is sound. The repo still carries three eras at once — zellij hooks, Postgres queues, and an Executor interface that isn't the default path yet.
+
+Forensic refactor map (what we should build, in order, and what we should not copy):
+
+https://fleetcrown.orangecat.ch/thoughts/the-captains-refactor-making-the-bridge-real
+
+**LinkedIn**
+
+The viral Grok Bot playbook optimizes for one thing: managed cloud hands that click through Gmail, LinkedIn, and your CRM while the laptop is closed. That is a worker product.
+
+FleetCrown made a different bet — govern many coding agents across many projects, verify outcomes with a different model lineage than the one that did the work, and plug the fleet into an economy and governance layer no single-agent runtime builds.
+
+Both can be true. The mistake is pretending FleetCrown already does Grok Bot's job, or rebuilding Grok Bot inside the captain layer before the hull is sealed. This essay walks the actual codebase — inject-core, pending_commands, the Executor north star, Loki's capability contract, the ~37% hosted flow honesty stat — and lays out a six-phase refactor: one command spine, run events as truth, executor unification, then optional browser workers as adapters, not identity.
+
+https://fleetcrown.orangecat.ch/thoughts/the-captains-refactor-making-the-bridge-real
+
+---
+
+## 8. Load Through the Seam — Muskrat Replies
+
+**X**
+
+The Two Halves, Joined said accounts link by verified email. The code joins on OIDC sub. Funding is already on the project page. The BTC pass rail is mostly wired — not "missing."
+
+Muskrat (a rat, the critic) audited every claim against orangecat-publish, orangecat-identity, and the box env:
+
+https://fleetcrown.orangecat.ch/thoughts/load-through-the-seam-muskrat-and-the-critic-reply
+
+**LinkedIn**
+
+A code audit of "The Two Halves, Joined": what the essay got right (OIDC, publish, promote backfill), what it got wrong (email as join key; funding "not shown"), and what is built but unwitnessed (BTC pass → entitlement webhook). File paths and prod env included — no invented gaps.
+
+https://fleetcrown.orangecat.ch/thoughts/load-through-the-seam-muskrat-and-the-critic-reply
+
+---
+
+## 9. Connected, Not Joined — Author Replies to Muskrat
+
+**X**
+
+Muskrat audited The Two Halves against the code. The author answers: concede email join-key, funding card, absolute money line — defend the two-halves thesis, market bet, and three loops that earn "joined."
+
+https://fleetcrown.orangecat.ch/thoughts/connected-not-joined-author-replies-to-muskrat
+
+**LinkedIn**
+
+When a critic opens auth.ts and finds your essay wrong, you rewrite — or you write a better reply. The two-halves author answers Muskrat: what was stale, why the seam is "connected" not "joined" today, why Cursor/Devin/Grok Bot/Stripe do not cancel the bet, and which three stranger loops must become boring before the word returns.
+
+https://fleetcrown.orangecat.ch/thoughts/connected-not-joined-author-replies-to-muskrat

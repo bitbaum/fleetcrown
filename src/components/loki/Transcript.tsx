@@ -6,6 +6,8 @@ import { ExternalLink, ListChecks, Loader2, Monitor, TerminalSquare } from "luci
 import { MarkdownText, type CitationMap } from "@/components/ui/markdown-text";
 import type { LokiMessage } from "./types";
 import { dispatchStatusLabel, type DispatchLiveView } from "@/lib/dispatch-status";
+import { fleetSurfaceHref } from "@/lib/fleet-context";
+import { EXECUTOR_COPY } from "@/config/executor-copy";
 
 const DISPATCH_DOT: Record<DispatchLiveView["tone"], string> = {
   positive: "ui-dot-positive",
@@ -53,7 +55,7 @@ function useDispatchLiveStatus(commandId: string | null, runId: string | null): 
 /** Human-readable label for an assistant turn's kind badge. SSOT for the
  *  small set of kinds the messages route emits. */
 const KIND_LABEL: Record<string, string> = {
-  dispatch: "Dispatched",
+  dispatch: "Queued",
   chat: "Loki",
   command: "Needs project",
 };
@@ -130,12 +132,16 @@ function DispatchFooter({ meta }: { meta: Record<string, unknown> | null }) {
       </div>
       {primaryProject && (
         <div className="ui-loki-dispatch-actions">
-          <Link href={`/control?focus=${encodeURIComponent(primaryProject)}`} className="ui-loki-dispatch-link">
+          <Link href={fleetSurfaceHref("control", primaryProject)} className="ui-loki-dispatch-link">
             <Monitor className="h-3.5 w-3.5" />
             Control state
           </Link>
+          <Link href={fleetSurfaceHref("activity", primaryProject)} className="ui-loki-dispatch-link">
+            <ListChecks className="h-3.5 w-3.5" />
+            Activity
+          </Link>
           <Link
-            href={`/terminal?source=server&tab=${encodeURIComponent(primaryProject)}`}
+            href={fleetSurfaceHref("terminal", primaryProject)}
             className="ui-loki-dispatch-link"
           >
             <TerminalSquare className="h-3.5 w-3.5" />
@@ -155,6 +161,9 @@ function DispatchFooter({ meta }: { meta: Record<string, unknown> | null }) {
             </Link>
           )}
         </div>
+      )}
+      {!live?.terminal && (
+        <p className="ui-micro-label">{EXECUTOR_COPY.honesty.notificationWhenDone}</p>
       )}
     </div>
   );

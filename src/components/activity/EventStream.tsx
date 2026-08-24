@@ -18,7 +18,7 @@ export function EventStream({
       <div>
         <h2 className="text-sm font-semibold text-text-primary">Events</h2>
         <p className="mt-1 text-xs text-text-tertiary">
-          Every prompt dispatched and run recorded, newest first — what the agent did, what&apos;s next, and how long it took.
+          Every prompt sent and run recorded, newest first — what the agent did, what&apos;s next, and how long it took.
         </p>
       </div>
       <ul className="space-y-1">

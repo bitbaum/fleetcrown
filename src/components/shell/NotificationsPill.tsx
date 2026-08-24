@@ -3,6 +3,7 @@
 import { Bell, BellOff, Loader2 } from "lucide-react";
 import { usePushSubscription } from "@/hooks/use-push-subscription";
 import { cn } from "@/lib/utils";
+import { COMMS_COPY } from "@/config/comms";
 
 /**
  * Quiet status pill in the app top bar. Three resting states:
@@ -39,12 +40,12 @@ export function NotificationsPill() {
       )}
       title={
         push.publicKeyMissing
-          ? "Push not configured — set NEXT_PUBLIC_VAPID_PUBLIC_KEY"
+          ? COMMS_COPY.pushNotConfigured
           : isSubscribed
-            ? "Push notifications on — click to turn off"
+            ? "Notifications on — click to turn off. You get a ping when a run you started finishes."
             : push.status === "denied"
-              ? "Permission denied in browser — enable in site settings"
-              : "Enable push notifications"
+              ? COMMS_COPY.pushDenied
+              : "Enable notifications — ping when a run you started finishes"
       }
       aria-label={isSubscribed ? "Disable push notifications" : "Enable push notifications"}
     >

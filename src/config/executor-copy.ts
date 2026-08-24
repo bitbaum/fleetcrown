@@ -42,7 +42,7 @@ export const EXECUTOR_COPY = {
   /** Cloud web app always queues; this means a live builder will drain it. */
   queuedWithBuilderOnline: "With builder — starting shortly",
   queuedWithBuilderOnlineLong:
-    "a builder is online and will claim it shortly. Use Control for state, or open Cloud terminal / This computer to watch and type in the agent session.",
+    "a builder is online and will claim it shortly. Use Control for state, or open Cloud terminal / This computer to watch and type in the agent session. You get a notification when the run finishes.",
 
   onboarding: {
     stepTitle: "You're ready to build",
@@ -115,6 +115,8 @@ export const EXECUTOR_COPY = {
   /** Short labels on dispatch / terminal actions — honest before click. */
   honesty: {
     queued: "Queued",
+    notificationWhenDone: "Notification when this run finishes.",
+    watchQueued: "Watch Control for state. Terminal only while a session is running.",
     needsBuilder: "Needs builder",
     needsGitHub: "Needs GitHub",
     needsGateway: "Needs Loki gateway",

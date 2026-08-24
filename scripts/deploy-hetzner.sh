@@ -236,25 +236,33 @@ fi
 # rolled back a build that was actually fine. Poll until the server accepts, and
 # only then run the (one-shot) health/provider assertions.
 echo "→ post-deploy verification"
-if ! ssh "$HOST" 'set -e
+LATEST_THOUGHT_SLUG="$(cd "$PROJECT_DIR" && npx tsx -e "import { listThoughts } from './src/lib/thoughts-content'; console.log(listThoughts()[0]?.slug ?? '')" 2>/dev/null || echo "")"
+if ! ssh "$HOST" "set -e
   base=http://127.0.0.1:4002
   code=000
-  for i in $(seq 1 20); do
-    code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "$base/sign-in" || echo 000)
-    [ "$code" = 200 ] && break
+  for i in \$(seq 1 20); do
+    code=\$(curl -s -o /dev/null -w \"%{http_code}\" --max-time 5 \"\$base/sign-in\" || echo 000)
+    [ \"\$code\" = 200 ] && break
     sleep 1
   done
-  echo "  /sign-in: $code"; [ "$code" = 200 ] || { echo "  ✗ sign-in not 200 after 20s"; exit 1; }
+  echo \"  /sign-in: \$code\"; [ \"\$code\" = 200 ] || { echo \"  ✗ sign-in not 200 after 20s\"; exit 1; }
   # /api/health returns 503 when env.ts finds a fatal/error config issue
-  hcode=$(curl -s -o /dev/null -w "%{http_code}" "$base/api/health")
-  echo "  /api/health: $hcode"; [ "$hcode" = 200 ] || { echo "  ✗ env health degraded — see debug_logs source=instrumentation/env"; exit 1; }
+  hcode=\$(curl -s -o /dev/null -w \"%{http_code}\" \"\$base/api/health\")
+  echo \"  /api/health: \$hcode\"; [ \"\$hcode\" = 200 ] || { echo \"  ✗ env health degraded — see debug_logs source=instrumentation/env\"; exit 1; }
   # Expected auth providers must actually be mounted (not just env-gated in the UI)
-  prov=$(curl -s "$base/api/auth/providers")
+  prov=\$(curl -s \"\$base/api/auth/providers\")
   for p in github google x-1a email-password; do
-    echo "$prov" | grep -q "\"$p\"" || { echo "  ✗ auth provider missing: $p"; exit 1; }
+    echo \"\$prov\" | grep -q \"\\\"\$p\\\"\" || { echo \"  ✗ auth provider missing: \$p\"; exit 1; }
   done
-  echo "  ✓ providers mounted: github google x-1a email-password"'; then
-  echo "✗ post-deploy verification failed" >&2; rollback_box "post-deploy verification failed (sign-in / health / providers)"; exit 1
+  echo \"  ✓ providers mounted: github google x-1a email-password\"
+  latest_slug='${LATEST_THOUGHT_SLUG}'
+  if [ -n \"\$latest_slug\" ]; then
+    tcode=\$(curl -s -o /dev/null -w \"%{http_code}\" --max-time 10 \"\$base/thoughts/\$latest_slug\" || echo 000)
+    echo \"  /thoughts/\$latest_slug: \$tcode\"
+    [ \"\$tcode\" = 200 ] || { echo \"  ✗ latest thought not 200 — content/ missing from standalone?\"; exit 1; }
+    echo \"  ✓ thoughts content live\"
+  fi"; then
+  echo "✗ post-deploy verification failed" >&2; rollback_box "post-deploy verification failed (sign-in / health / providers / thoughts)"; exit 1
 fi
 
 # Schema-drift guard against the BOX database. The pre-push check (scripts/

@@ -1,8 +1,8 @@
 # FleetCrown Feedback Widget
 
 **Created:** 2026-07-17  
-**Last modified:** 2026-08-14  
-**Last modified summary:** Widget card uses ui-panel / ui-callout (no ad-hoc shadow); snippet collapsed when Live; botsmann boot confirmed 2026-08-14 from https://botsmann.orangecat.ch; CSP must allow the FleetCrown origin.
+**Last modified:** 2026-08-15  
+**Last modified summary:** Captain-initiated queue returns Control + Activity watch URLs; UI never presents “dispatched” as finished; web push + Telegram fire when that run closes. Settings → Notifications and the top-bar bell are the subscribe path.
 
 **Status**: COMPLETE 2026-07-28. Phases 1–4 implemented 2026-07-17 — four
 `feat(feedback):` commits (ingest spine, embed bundle, inbox + dispatch,
@@ -27,21 +27,24 @@ Visitor FAB on every managed site  →  POST /api/feedback
         ↓
 Control strip (auto-expands)
         ↓
-  1 item  →  Dispatch fix
-  2+      →  Dispatch all as one   (preferred for a single coherent pass)
+  1 item  →  Implement
+  2+      →  Implement all as one   (preferred for a single coherent pass)
   3+      →  Synthesize themes    (optional second triage gate)
         ↓
 injectPrompt SSOT  →  local Fleet Runner if connected, else cloud builder
         ↓
-Run succeeds  →  feedback auto-resolves (+ optional reporter email)
+Run succeeds  →  captain notification (web push + Telegram) + feedback auto-resolves (+ optional reporter email)
 ```
 
-**You do not choose a terminal.** Dispatch never targets “this Cursor chat” or
+**You do not choose a terminal.** Implement never targets “this Cursor chat” or
 “FleetCrown’s Terminal page” directly. It injects into the **project’s agent
 session** through `injectPrompt` (`src/lib/inject-core.ts`): PTY / Fleet Runner
 when online, otherwise the hosted cloud builder queue (Hermes when local is
 offline). Control / Terminal / Loki are captain surfaces that *also* call the
-same SSOT — feedback Dispatch is that path with a composed prompt.
+same SSOT — feedback Implement is that path with a composed prompt.
+
+Successful captain injects set `payload.notifyOnClose`. Close fires web push
+(and Telegram if configured). Autopilot / idle-nudge does **not** opt in.
 
 ### Surfaces
 
@@ -50,14 +53,14 @@ same SSOT — feedback Dispatch is that path with a composed prompt.
 | Enable & install (token + agent embed) | Control coverage strip; project Widget card |
 | Review open reports | Control feedback strip (new + in-progress); `/projects/{id}#feedback` |
 | Implement / Retry | Same rows — status is **Not started → Queued → Working now → Done** (or **Not running / Failed**) |
-| Watch live output | Only while **Working now** → Terminal. Otherwise **Open on Control** (empty Terminal ≠ progress) |
+| Watch live output | Only while **Working now** → Terminal. Otherwise **Open on Control** (empty Terminal ≠ progress). Notification when the run finishes. |
 | Pause widget (instant, no deploy) | Project Widget card |
 
 **Enable & install preflight** (`POST …/widget-token/install`):
 
 1. **No git URL and no local dir** → `422 no_repo` — agent cannot land the snippet; copy from Widget card instead.
 2. **Live site unreachable** (probe of `user_projects.liveUrl`, else legacy attrs) → `422 site_unreachable` — widget cannot appear until the Hetzner host responds; token may already exist.
-3. Only then queue `injectPrompt` (Fleet Runner on this computer if connected, else cloud box-runner). Response points to `/control?focus=…`. Terminal is empty until a session is actually running.
+3. Only then queue `injectPrompt` (Fleet Runner on this computer if connected, else cloud box-runner). Response includes `watchUrl` (Control), `activityUrl`, `terminalUrl`. Terminal is empty until a session is actually running. Captain gets a notification when the run finishes.
 
 **One-click captain loop (intended):**
 
@@ -68,6 +71,8 @@ same SSOT — feedback Dispatch is that path with a composed prompt.
 Status vocabulary is SSOT in `lib/feedback/work-phase.ts`. The DB may still store
 `dispatched`; the UI never presents that word as “finished.” **Queued / Install queued
 is not proof of work** — prove it with Working now, Failed/Not running, or Attention Retry.
+If the UI says queued, Control and Activity are the watch surfaces; Terminal only while
+Working. `notifyOnClose` is the Done/Failed ping.
 
 Dogfood check 2026-08-14: botsmann.orangecat.ch boots `fcw_73518de7…` (`last_seen_origin`
 https://botsmann.orangecat.ch, `/api/widget-boot` `{active:true}`). Earlier “waiting for
@@ -92,7 +97,7 @@ FleetCrown serves a self-contained script (`/widget.js`); the script renders the
 feedback FAB in a Shadow DOM on the customer's page and POSTs submissions to
 `POST /api/feedback` keyed by a per-project widget token; FleetCrown persists first,
 surfaces an inbox on the project detail page, and each item has a one-click
-"Dispatch fix" that routes through the existing `/api/control/dispatch` flow.
+Implement that routes through `injectPrompt`.
 
 ## Decisions (with reasoning)
 
@@ -229,11 +234,11 @@ matters):
 - **ProjectDetail → Feedback tab**: list of `site_feedback` rows for the project,
   `new` first, badge with new-count on the tab. Each row shows suggestion, page,
   scope chip, selected-element selectors, age.
-- **Primary action per row: "Dispatch fix"** — one click composes a dispatch through
-  the existing `/api/control/dispatch` flow with full context baked into the intent
+- **Primary action per row: Implement** — one click composes a prompt through
+  `injectPrompt` with full context baked into the intent
   ("Visitor feedback on {url}: {suggestion}. Element(s): {selectors}"), sets
-  `status=dispatched`, stores `dispatchedRunId`. Feedback becomes fleet work without
-  leaving the row.
+  `status=dispatched` (DB), stores `dispatchedRunId`. UI shows **Queued**, with
+  Control / Activity links and a notification when the run finishes.
 - **Secondary actions**: resolve, archive. Delete only via archive (audit trail).
 - **Widget setup card** on the same tab: generate token → copy-paste snippet
   (one-click copy), origins field, rotate/revoke. Empty state of the Feedback tab IS

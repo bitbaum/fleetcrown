@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Loader2, Play, Wrench } from "lucide-react";
 import { postJson } from "@/lib/api/fetch";
 import { fleetSurfaceHref } from "@/lib/fleet-context";
+import { EXECUTOR_COPY } from "@/config/executor-copy";
 import type { ProjectDispatchKind } from "@/lib/project-dispatch";
 
 // Re-exported for existing importers (AskLokiButton) — SSOT lives in lib/project-dispatch.
@@ -39,17 +40,28 @@ export function useProjectDispatch(projectId: string) {
   return { state, dispatch };
 }
 
-/** Inline confirmation shown after a successful dispatch: where to watch it. */
+/** Inline confirmation after a successful queue: where to watch, and that
+ *  a notification fires when the run finishes. Terminal is not the watch
+ *  surface until a session is actually running. */
 export function DispatchedNote({ workspaceKey }: { workspaceKey: string }) {
   return (
-    <span className="inline-flex items-center gap-1 text-xs text-status-positive">
-      Dispatched
+    <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-status-positive">
+      {EXECUTOR_COPY.honesty.queued}
       <Link
-        href={fleetSurfaceHref("terminal", workspaceKey)}
+        href={fleetSurfaceHref("control", workspaceKey)}
         className="text-accent-text underline-offset-2 hover:underline"
       >
-        watch in Terminal
+        Control
       </Link>
+      <Link
+        href={fleetSurfaceHref("activity", workspaceKey)}
+        className="text-accent-text underline-offset-2 hover:underline"
+      >
+        Activity
+      </Link>
+      <span className="text-text-muted">
+        {EXECUTOR_COPY.honesty.notificationWhenDone} {EXECUTOR_COPY.honesty.watchQueued}
+      </span>
     </span>
   );
 }
@@ -78,7 +90,7 @@ export function FixSignalButton({
         {state.phase === "sending"
           ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
           : <Wrench className="h-3.5 w-3.5" aria-hidden="true" />}
-        {state.phase === "sending" ? "Dispatching…" : "Fix"}
+        {state.phase === "sending" ? "Queuing…" : "Fix"}
       </button>
       {state.phase === "error" && <span className="ui-error text-xs">{state.message}</span>}
     </span>
@@ -107,7 +119,7 @@ export function RunNextStepButton({
         {state.phase === "sending"
           ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
           : <Play className="h-3.5 w-3.5" aria-hidden="true" />}
-        {state.phase === "sending" ? "Dispatching…" : "Run next step"}
+        {state.phase === "sending" ? "Queuing…" : "Run next step"}
       </button>
       {state.phase === "error" && <span className="ui-error text-xs">{state.message}</span>}
     </span>

@@ -60,7 +60,7 @@ async function recordTabDispatch(opts: {
         state: ORCH_STATE.WAITING,
         projectKey,
         projectPath,
-        payload: { projectId, projectKey, projectPath },
+        payload: { projectId, projectKey, projectPath, notifyOnClose: true },
       });
       runId = run.id;
       void emitRunEvent(run.id, userId, "dispatched", {

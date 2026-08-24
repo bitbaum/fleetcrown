@@ -12,6 +12,7 @@ import { ThoughtArticleNav } from "@/components/thoughts/ThoughtArticleNav";
 import { ShareBar } from "@/components/thoughts/ShareBar";
 import { NewsletterSignup } from "@/components/thoughts/NewsletterSignup";
 import { MermaidDiagram } from "@/components/thoughts/MermaidDiagram";
+import { ThoughtVideoEmbed } from "@/components/thoughts/ThoughtVideoEmbed";
 import { getAdjacentThoughts, getRelatedThoughts, getThought, parseThoughtBlocks } from "@/lib/thoughts-content";
 
 // Read a repo-authored SVG diagram from /public so it can be inlined into the
@@ -40,8 +41,22 @@ function ri(text: string): ReactNode {
     if (part.startsWith("`") && part.endsWith("`"))
       return <code key={i} className="rounded bg-surface-raised px-1.5 py-0.5 font-mono text-sm text-text-primary">{part.slice(1, -1)}</code>;
     const link = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
-    if (link)
-      return <a key={i} href={link[2]} target="_blank" rel="noopener noreferrer" className="text-accent-text underline underline-offset-2 hover:text-accent-hover transition-colors">{link[1]}</a>;
+    if (link) {
+      const href = link[2];
+      const label = link[1];
+      if (href.startsWith("/") && !href.startsWith("//")) {
+        return (
+          <Link key={i} href={href} className="text-accent-text underline underline-offset-2 hover:text-accent-hover transition-colors">
+            {label}
+          </Link>
+        );
+      }
+      return (
+        <a key={i} href={href} target="_blank" rel="noopener noreferrer" className="text-accent-text underline underline-offset-2 hover:text-accent-hover transition-colors">
+          {label}
+        </a>
+      );
+    }
     return part;
   });
 }
@@ -206,6 +221,35 @@ export default async function ThoughtArticlePage({
                     <code>{block.text}</code>
                   </pre>
                 );
+              case "table":
+                return (
+                  <div key={i} className="my-6 overflow-x-auto rounded-xl border border-border-subtle">
+                    <table className="w-full min-w-[28rem] border-collapse text-left text-sm md:text-base">
+                      <thead>
+                        <tr className="border-b border-border-default bg-surface-raised">
+                          {block.headers.map((h, j) => (
+                            <th key={j} className="px-3 py-2.5 font-medium text-text-primary">
+                              {ri(h)}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {block.rows.map((row, r) => (
+                          <tr key={r} className="border-b border-border-subtle last:border-0">
+                            {row.map((cell, c) => (
+                              <td key={c} className="px-3 py-2.5 align-top text-text-secondary">
+                                {ri(cell)}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              case "embed":
+                return <ThoughtVideoEmbed key={i} url={block.url} />;
               default:
                 return null;
             }

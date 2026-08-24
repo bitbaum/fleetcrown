@@ -1,8 +1,8 @@
 # Responsive Design — FleetCrown Web App
 
 **Created:** 2026-06-27  
-**Last modified:** 2026-08-14  
-**Last modified summary:** Cross-link branding-design app-shell layout SSOT debt (PageLayout / max-width drift).
+**Last modified:** 2026-08-20  
+**Last modified summary:** PublicSurface no longer always-dark; theme toggle on public nav (THEME_OPTIONS SSOT).
 
 FleetCrown is **mobile-first and dark-first**. Every authenticated route must be usable on a 320px-wide phone without horizontal page scroll, with primary actions reachable above the floating bottom nav.
 
@@ -67,12 +67,12 @@ Navigation:
 
 ## Public / auth surfaces
 
-Always-dark subtree (`PublicSurface` + `ui-public-*` classes):
+`PublicSurface` + `ui-public-*` follow the same `THEME_OPTIONS` (Light / Dark / Auto) as the app shell — do not pin `.dark` on the public subtree. Theme cycle lives in `PublicHeaderActions`.
 
 - Hero fold uses shorter `min-height` on narrow viewports
 - Hero lede scales `text-lg` → `sm:text-2xl`
 - Header brand row: `ui-public-nav-brand-row` (`gap-3 sm:gap-8`)
-- Signed-out CTA: compact "Get started" visible on all widths
+- Signed-out CTA: compact "Get started" visible on all widths; theme toggle beside it
 
 ## Audit commands
 

@@ -76,9 +76,10 @@ export async function updateOrchestrationRun(
     });
   }
 
-  // Chat-originated runs push their outcome back to chat (opt-in via
-  // payload.notifyOnClose). Both branches above are outcome-specific; this
-  // fires on ANY close so a chat dispatch never ends in silence.
+  // Captain-initiated runs push their outcome (web push + Telegram) when they
+  // opted in via payload.notifyOnClose. Autopilot stays silent. Both branches
+  // above are outcome-specific; this fires on ANY close so a captain inject
+  // never ends in silence.
   if (updated && patch.finishedAt) {
     void notifyRunClosed(updated);
   }

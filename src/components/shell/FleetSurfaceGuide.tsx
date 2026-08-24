@@ -12,7 +12,7 @@ import {
   projectFromFleetRoute,
   readRememberedFleetProject,
   rememberFleetProject,
-  type FleetSurfaceId,
+  type FleetWorkspaceSurfaceId,
 } from "@/lib/fleet-context";
 
 const ICONS = {
@@ -20,7 +20,7 @@ const ICONS = {
   chat: MessageSquare,
   control: SlidersHorizontal,
   terminal: SquareTerminal,
-} satisfies Record<FleetSurfaceId, typeof MessageSquare>;
+} satisfies Record<FleetWorkspaceSurfaceId, typeof MessageSquare>;
 
 function subscribeToFleetProject(onStoreChange: () => void) {
   window.addEventListener(FLEET_PROJECT_EVENT, onStoreChange);

@@ -92,7 +92,7 @@ export function IntentButtonPanel({
   isRunning: boolean;
   autoContinueEnabled: boolean;
   sending: string | null;
-  /** Transient "✓ Dispatched" confirmation. Set on confirmed-successful
+  /** Transient "✓ Queued" confirmation. Set on confirmed-successful
    *  send; consumers render the ✓ glyph on the matching button until the
    *  hook auto-clears it. UX audit gap: post-200 silence on every dispatch
    *  read as "did it actually do anything?" — this closes the loop. */
@@ -219,7 +219,7 @@ export function IntentButtonPanel({
       {!bannerActive && primary && (
         <div className="space-y-2 border-t border-border-subtle pt-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="ui-kicker">Quick dispatch</p>
+            <p className="ui-kicker">Send to agent</p>
             <ExecutorHonestyChip honesty={dispatchHonesty} />
           </div>
           {/* Primary CTA: Next best — full width, visually elevated.
@@ -238,7 +238,7 @@ export function IntentButtonPanel({
             {sending === primary.id
               ? "…"
               : justSent?.id === primary.id
-                ? `✓ Dispatched`
+                ? `✓ Queued`
                 : `${primary.label} →`}
           </button>
 

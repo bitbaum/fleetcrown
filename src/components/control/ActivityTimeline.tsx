@@ -10,7 +10,7 @@ import type { ActivityKind, ProjectActivityEvent } from "@/db/queries/activity";
 /**
  * Per-project activity timeline — renders the unified activity SSOT
  * (/api/control/activity → getProjectActivity) as a clean, newest-first feed:
- * every prompt dispatched, every run outcome, every lifecycle signal. This is
+ * every prompt sent, every run outcome, every lifecycle signal. This is
  * the "what has happened" half of the project cockpit (the live terminal is the
  * "now" half). Read-only; auto-refreshes while open so it tracks a working agent.
  */

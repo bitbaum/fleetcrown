@@ -21,8 +21,13 @@ if (direct.warn || direct.label !== "Running now") {
 }
 
 const md = dispatchAssistantContent("fleetcrown", { ok: true, mode: "queued", runnerConnected: true });
-if (!md.includes("fleetcrown") || !md.includes("builder")) {
+if (!md.includes("fleetcrown") || !md.includes("builder") || md.includes("Dispatched")) {
   throw new Error("assistant content");
+}
+
+const fallback = dispatchStatusLabel({});
+if (fallback.label !== EXECUTOR_COPY.honesty.queued) {
+  throw new Error("fallback queued label");
 }
 
 const delivered = deriveDispatchLiveStatus({

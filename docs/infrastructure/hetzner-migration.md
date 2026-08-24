@@ -1,10 +1,14 @@
 # Exit Vercel/Supabase/Neon — everything on the Hetzner box
 
+created_date: 2026-06-12
+last_modified_date: 2026-08-17
+last_modified_summary: Neon/Vercel/hosted Supabase are gone, not a 14-day fallback. Production is bitbaum only.
+
 2026-06-12: full exit completed. Trigger was the Vercel team block (all prods
 402 DEPLOYMENT_DISABLED); decision extended to leaving hosted Supabase and
 Neon entirely. Every real app and every database now lives on the `bitbaum`
-box. Hosted accounts are kept frozen for 14 days as a fallback, then deleted
-(see Decommission below).
+box. Neon is not a fallback. Do not restore `neon.tech` URLs. Do not treat a
+laptop `.env` that still names Neon as production.
 
 ## Box layout (bitbaum · 167.233.22.31 · CX43 8 vCPU / 16 GB · 40 GB disk + 4GB swap)
 
@@ -151,14 +155,11 @@ first resolvable request.
   disk grow: `growpart /dev/sda 1 && resize2fs /dev/sda1`. Hetzner automatic
   backups should also be enabled (console → Backups → Aktivieren).
 
-## Decommission (after 2026-06-26 if stable)
+## Decommission (done)
 
-1. Delete Neon projects (ep-wild-firefly, ep-holy-truth, ep-restless-dream,
-   ep-young-meadow, ep-frosty-mode).
-2. Delete/pause Supabase projects ohkueislstxomdjavyhs + ckpynkpsfnuqndplaapc.
-3. Delete the Vercel projects / let the blocked team rot. fleetcrown.vercel.app
-   etc. are gone regardless (Vercel-owned names).
-4. Final dumps live in /opt/backups/initial/ + /opt/backups/supabase/ — keep.
+Neon projects, hosted Supabase projects, and Vercel apps from the 2026-06 exit
+are gone. They are not a recovery path. Live dumps belong on the box
+(`/opt/backups/`). A URL containing `neon.tech` in a laptop file is debris.
 
 ## Push-to-deploy (added 2026-06-12, evening)
 

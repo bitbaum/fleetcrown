@@ -40,9 +40,9 @@ export const FLEET_SITES: readonly FleetSite[] = [
     blurb: "Fund, lend, invest, and coordinate with any identity.",
   },
   {
-    name: "AOCH Wohnen",
-    url: "https://aoz-wohnen.orangecat.ch",
-    blurb: "Kompatibilitätsbasierte Wohnplatzierung.",
+    name: "AOM",
+    url: "https://aoz.orangecat.ch",
+    blurb: "AOM. Pseudonyme Wohnplatzierung und Begleitung.",
   },
   {
     name: "Botsmann",

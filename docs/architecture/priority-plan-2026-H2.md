@@ -2,8 +2,8 @@
 
 ---
 created_date: 2026-06-30
-last_modified_date: 2026-07-16
-last_modified_summary: Horizon C1-C4 completed: Loki resolves project context from natural language, suggests grounded next commands, sends suggestion chips immediately, shares project context with Control and Terminal, and Control has an honest first-paint skeleton.
+last_modified_date: 2026-08-20
+last_modified_summary: Linked Captain's Refactor essay as post-H2 strategic SSOT; Phase 1 checklist lives in debt-reduction-roadmap.
 ---
 
 **North star:** Borrow the workers, own the bridge — one captain's interface over swappable runtimes, with verification and fleet governance you can trust.
@@ -99,9 +99,10 @@ OrangeCat identity bridge, multi-tenant SaaS launch, `packages/fleetcrown-core` 
 
 ## Related docs
 
+- [The Captain's Refactor — Making the Bridge Real](/thoughts/the-captains-refactor-making-the-bridge-real) — post-H2 strategic refactor (four boundaries, six phases, Grok Bot comparison)
 - `docs/architecture/box-owned-pty-executor.md` — box-runner architecture
 - `docs/architecture/multitenancy-execution-plan.md` — tenant execution boundary + hosted sandbox plan
-- `docs/debt-reduction-roadmap.md` — orchestration SSOT (B1)
+- `docs/debt-reduction-roadmap.md` — orchestration SSOT (B1) + Phase 1 engineering checklist
 - `docs/loki-command-surface.md` — Loki phases
 - `docs/development/cloud-local-workflows.md` — builder vs control plane
 - `scripts/seed-fleetcrown-roadmap.ts` — autopilot goal seeds

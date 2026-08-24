@@ -12,7 +12,7 @@ export type DispatchStatusInput = {
 /** SSOT for dispatch outcome copy — Loki footer, Control toasts, etc. */
 export function dispatchStatusLabel(input: DispatchStatusInput): { label: string; warn: boolean } {
   if (input.ok === false) {
-    return { label: "Dispatch failed", warn: true };
+    return { label: "Could not queue", warn: true };
   }
   if (input.warning === "runner-offline" || (input.mode === "queued" && input.runnerConnected === false)) {
     return { label: EXECUTOR_COPY.queuedWhenOffline, warn: true };
@@ -23,7 +23,7 @@ export function dispatchStatusLabel(input: DispatchStatusInput): { label: string
   if (input.mode === "queued") {
     return { label: EXECUTOR_COPY.queuedWithBuilderOnline, warn: false };
   }
-  return { label: "Dispatched", warn: false };
+  return { label: EXECUTOR_COPY.honesty.queued, warn: false };
 }
 
 export function dispatchAssistantContent(
@@ -31,20 +31,20 @@ export function dispatchAssistantContent(
   input: DispatchStatusInput,
 ): string {
   if (input.ok === false) {
-    return `Could not dispatch to ${projectKey}.`;
+    return `Could not send work to ${projectKey}.`;
   }
   const { label, warn } = dispatchStatusLabel(input);
   if (input.mode === "direct") {
-    return `Running on **${projectKey}** in the agent terminal now.`;
+    return `Running on **${projectKey}** in the agent terminal now. ${EXECUTOR_COPY.honesty.notificationWhenDone}`;
   }
   if (input.mode === "queued" && !warn) {
-    return `Dispatched **${projectKey}** — ${EXECUTOR_COPY.queuedWithBuilderOnlineLong}`;
+    return `Queued **${projectKey}** — ${EXECUTOR_COPY.queuedWithBuilderOnlineLong}`;
   }
   if (warn) {
     return `Queued **${projectKey}** — ${EXECUTOR_COPY.queuedWhenOfflineLong}`;
   }
   void label;
-  return `Dispatched **${projectKey}**.`;
+  return `Queued **${projectKey}**. ${EXECUTOR_COPY.honesty.watchQueued} ${EXECUTOR_COPY.honesty.notificationWhenDone}`;
 }
 
 /** The live lifecycle of a queued dispatch, derived from its pending_command

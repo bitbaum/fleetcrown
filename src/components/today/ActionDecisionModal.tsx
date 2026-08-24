@@ -8,7 +8,7 @@ import { getJson } from "@/lib/api/fetch";
 import { handleApplyAdvice } from "@/app/actions";
 import { haptic } from "@/lib/haptics";
 import { ACTION_COPY } from "@/config/action-copy";
-import { NAV } from "@/config/navigation";
+import { fleetSurfaceHref } from "@/lib/fleet-context";
 import Link from "next/link";
 import { ADVICE_AUTO_APPLY_SECONDS } from "@/lib/constants/today";
 import { RECOMMENDATION, REPORT_VERDICT, type Recommendation } from "@/lib/actions/advice-rules";
@@ -188,7 +188,7 @@ export function ActionDecisionModal({ actionId, onClose }: { actionId: string; o
           <div className="flex flex-col gap-2 sm:flex-row">
             {project && (
               <Link
-                href={`${NAV.control.href}?project=${encodeURIComponent(project)}`}
+                href={fleetSurfaceHref("control", project)}
                 className="ui-btn-primary min-h-11 justify-center"
               >
                 {ACTION_COPY.dispatch.watch}

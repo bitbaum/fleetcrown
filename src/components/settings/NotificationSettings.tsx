@@ -1,13 +1,67 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Mail, Check, Loader2 } from "lucide-react";
+import { Bell, Mail, Check, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { DIGEST_CADENCES, type DigestCadence } from "@/db/schema/notification-preferences";
 import { COMMS_COPY, DIGEST_CADENCE_COPY } from "@/config/comms";
+import { usePushSubscription } from "@/hooks/use-push-subscription";
 
 export function NotificationSettings() {
+  return (
+    <div className="space-y-6">
+      <PushSettingsCard />
+      <DigestSettingsCard />
+    </div>
+  );
+}
+
+function PushSettingsCard() {
+  const push = usePushSubscription();
+  const isSubscribed = push.status === "subscribed";
+  const isWorking = push.status === "registering";
+  const blocked = push.status === "unsupported" || push.publicKeyMissing || push.status === "denied";
+
+  return (
+    <Card className="ui-settings-section">
+      <div className="flex items-start gap-3">
+        <Bell className="mt-0.5 h-5 w-5 text-text-secondary" />
+        <div className="space-y-1">
+          <h2 className="text-base font-semibold text-text-primary">{COMMS_COPY.pushSettingsTitle}</h2>
+          <p className="text-sm text-text-tertiary">{COMMS_COPY.pushSettingsBody}</p>
+        </div>
+      </div>
+
+      <div className="mt-4">
+        {push.status === "unsupported" ? (
+          <p className="text-sm text-text-tertiary">{COMMS_COPY.pushUnsupported}</p>
+        ) : push.publicKeyMissing ? (
+          <p className="text-sm text-text-tertiary">{COMMS_COPY.pushNotConfigured}</p>
+        ) : push.status === "denied" ? (
+          <p className="text-sm text-text-tertiary">{COMMS_COPY.pushDenied}</p>
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              if (isWorking) return;
+              if (isSubscribed) void push.unsubscribe();
+              else void push.subscribe();
+            }}
+            disabled={isWorking || blocked}
+            className={isSubscribed ? "ui-btn-secondary gap-1.5" : "ui-btn-save gap-1.5"}
+          >
+            {isWorking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bell className="h-4 w-4" />}
+            {isSubscribed ? COMMS_COPY.pushOn : COMMS_COPY.pushEnable}
+          </button>
+        )}
+        {push.error && <p className="mt-2 text-xs text-status-negative">{push.error}</p>}
+      </div>
+    </Card>
+  );
+}
+
+function DigestSettingsCard() {
   const [cadence, setCadence] = useState<DigestCadence>("none");
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState<DigestCadence | null>(null);

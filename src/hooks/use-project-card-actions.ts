@@ -37,7 +37,7 @@ export function useProjectCardActions({
   autoContinueEnabled: boolean;
 }) {
   const [sending, setSending] = useState<string | null>(null);
-  // Transient "✓ Dispatched" confirmation per action — set on confirmed-
+  // Transient "✓ Queued" confirmation per action — set on confirmed-
   // successful inject/orchestration call, auto-cleared after FEEDBACK_MS.
   // The user reported (UX audit) that Send / Test & fix / Quality / Commit /
   // Next best return 200 silently — textarea clears, button reverts, no

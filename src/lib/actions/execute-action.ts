@@ -168,7 +168,10 @@ export async function executeAction(userId: string, action: Action): Promise<Exe
           return { executed: false, error: "invalid dispatch_prompt payload" };
         }
 
-        const { status, body } = await injectPrompt({ tab: projectKey, customPrompt: prompt }, userId);
+        const { status, body } = await injectPrompt(
+          { tab: projectKey, customPrompt: prompt, notifyOnClose: true },
+          userId,
+        );
         if (status >= 400) {
           const reason = typeof body.error === "string" ? body.error : `dispatch failed (${status})`;
           await recordActionAuditEvent(userId, action, "failed", { reason });
