@@ -39,6 +39,12 @@ export default async function PricingPage() {
         ? { href: ROUTES.APP_HOME, label: `Open ${APP_NAME}` }
         : { href: ROUTES.SIGN_UP, label: plan.cta };
     }
+    // Price to be announced — no checkout rail may sell this tier yet.
+    if (plan.priceMonthly === null) {
+      return signedIn
+        ? { href: ROUTES.APP_HOME, label: `Open ${APP_NAME}` }
+        : { href: ROUTES.SIGN_UP, label: "Start free" };
+    }
     if (stripeReady) {
       return { href: `/api/checkout/${plan.key}`, label: plan.cta };
     }
@@ -80,11 +86,21 @@ export default async function PricingPage() {
                 </div>
 
                 <div className="mt-4 flex items-baseline gap-1.5">
-                  <span className="ui-public-price-amount">
-                    {plan.priceMonthly === 0 ? "Free" : `${PRICING_CURRENCY} ${plan.priceMonthly}`}
-                  </span>
-                  {plan.priceMonthly > 0 && (
-                    <span className="text-sm text-text-secondary">/ mo</span>
+                  {plan.priceMonthly === null ? (
+                    <span className="text-lg font-semibold text-text-secondary">
+                      Price to be announced
+                    </span>
+                  ) : (
+                    <>
+                      <span className="ui-public-price-amount">
+                        {plan.priceMonthly === 0
+                          ? "Free"
+                          : `${PRICING_CURRENCY} ${plan.priceMonthly}`}
+                      </span>
+                      {plan.priceMonthly > 0 && (
+                        <span className="text-sm text-text-secondary">/ mo</span>
+                      )}
+                    </>
                   )}
                 </div>
 
