@@ -45,6 +45,16 @@ async function tryCloseRun(run: OpenRunRow, sessionOverride?: SessionState): Pro
   // run, or runner offline) never had its prompt delivered — no handoff can be
   // its work. Without this, run A's ready handoff swept run B closed with an
   // identical summary and close-the-loop resolved B's feedback off A's work.
+  //
+  // This check alone is NOT sufficient, and the 2026-08-24 recurrence shows
+  // why: it infers non-delivery from a pending_commands row that another
+  // process deletes. purgeStalePendingCommands drops a gate-held command once
+  // its own run passes STALE_RUN_MINUTES — the same 60-minute boundary at
+  // which this sweep runs — so the row vanishes and its absence reads as
+  // "delivered". Two undelivered runs were closed `success` off a sibling's
+  // handoff, and their visitor feedback was auto-resolved as shipped.
+  // closeRunFromSession therefore gates on the run's OWN durable deliveredAt
+  // stamp; this stays as the cheap early-out.
   if (await hasUndeliveredCommandForRun(run.userId, run.id).catch(() => false)) return null;
   let session = sessionOverride ?? null;
   if (!session) {
