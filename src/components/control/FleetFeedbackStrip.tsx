@@ -21,14 +21,11 @@ import { FeedbackWorkBadge } from "@/components/feedback/FeedbackWorkBadge";
 export function FleetFeedbackStrip() {
   const { data, refetch } = useFetch<{ summary: ProjectFeedbackSummary[] }>("/api/feedback/summary");
   const summary = data?.summary ?? [];
-  const [openProjectId, setOpenProjectId] = useState<string | null>(null);
-  const [didAutoOpen, setDidAutoOpen] = useState(false);
-
-  useEffect(() => {
-    if (didAutoOpen || summary.length === 0) return;
-    setOpenProjectId(summary[0].projectId);
-    setDidAutoOpen(true);
-  }, [summary, didAutoOpen]);
+  // `undefined` means the user has not picked a row yet, so the first one shows
+  // by default. Derived rather than synced in an effect: the default depends on
+  // fetched data, and assigning it via setState mid-effect cascades a render.
+  const [userChoice, setUserChoice] = useState<string | null | undefined>(undefined);
+  const openProjectId = userChoice === undefined ? (summary[0]?.projectId ?? null) : userChoice;
 
   if (summary.length === 0) return null;
   const open = summary.find((s) => s.projectId === openProjectId) ?? null;
@@ -43,7 +40,7 @@ export function FleetFeedbackStrip() {
             <button
               key={s.projectId}
               type="button"
-              onClick={() => setOpenProjectId((v) => (v === s.projectId ? null : s.projectId))}
+              onClick={() => setUserChoice(openProjectId === s.projectId ? null : s.projectId)}
               aria-expanded={openProjectId === s.projectId}
               className={cn(
                 "ui-tap flex shrink-0 items-center gap-1.5 text-xs font-medium text-text-primary underline-offset-2 transition-colors hover:underline",
