@@ -53,3 +53,40 @@ export const PROJECT_ATTR = {
 } as const;
 
 export type ProjectAttrKey = (typeof PROJECT_ATTR)[keyof typeof PROJECT_ATTR];
+
+/** Acronyms and product names that must not be sentence-cased into mush. */
+const ATTR_WORD_OVERRIDES: Record<string, string> = {
+  url: "URL",
+  urls: "URLs",
+  api: "API",
+  ci: "CI",
+  cd: "CD",
+  gtm: "GTM",
+  seo: "SEO",
+  ui: "UI",
+  ux: "UX",
+  id: "ID",
+  db: "DB",
+  btc: "BTC",
+  orangecat: "OrangeCat",
+  github: "GitHub",
+  ai: "AI",
+};
+
+/**
+ * `production_url` → "Production URL". The uncurated attributes rendered as
+ * `key.replace(/_/g, " ")`, so the profile printed raw snake_case database
+ * keys at the reader ("production url", "gtm") — a data dump wearing a label's
+ * clothes. Unknown keys still degrade gracefully to sentence case.
+ */
+export function humanizeAttrKey(key: string): string {
+  const words = key.split(/[_\s]+/).filter(Boolean);
+  if (words.length === 0) return key;
+  return words
+    .map((w, i) => {
+      const override = ATTR_WORD_OVERRIDES[w.toLowerCase()];
+      if (override) return override;
+      return i === 0 ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : w.toLowerCase();
+    })
+    .join(" ");
+}

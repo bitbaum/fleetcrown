@@ -1,4 +1,4 @@
-import type { ProjectGridRow } from "@/components/projects/ProjectGridCard";
+import type { ProjectGridRow } from "@/components/projects/project-grid-row";
 import { hasProjectAttention } from "@/lib/projects-page-stats";
 import { hasAnswer } from "@/lib/project-display";
 

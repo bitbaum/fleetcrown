@@ -2894,28 +2894,26 @@
   .ui-projects-badge {
     @apply inline-flex items-center rounded border border-border-subtle px-2 py-0.5 text-xs font-medium text-text-secondary;
   }
+  /* Named status variants — the negative/warning recipes were hand-composed
+     inline in three row/card components before the list unified on ProjectRow. */
+  .ui-projects-badge-negative {
+    @apply border-status-negative/30 bg-status-negative/[0.08] text-status-negative;
+  }
+  .ui-projects-badge-warning {
+    @apply border-status-warning/30 bg-status-warning/[0.08] text-status-warning;
+  }
   .ui-projects-toolbar {
     @apply flex flex-col gap-3 sm:flex-row sm:items-center;
   }
-  .ui-projects-card {
-    @apply flex flex-col overflow-hidden rounded-2xl border border-border-subtle bg-surface-base;
-    box-shadow: var(--shadow-panel);
+  /* The project profile's one section chrome. Four files repeated this exact
+     hairline recipe verbatim while other blocks on the same page used card
+     shells and <details> — three competing chromes meant no visible hierarchy,
+     so the page read as a scroll of unrelated widgets instead of one document. */
+  .ui-project-section {
+    @apply scroll-mt-28 border-t border-border-subtle pt-7;
   }
-  .ui-projects-card-attention {
-    @apply border-status-warning/25 bg-status-warning-subtle/40;
-  }
-  .ui-projects-card-main {
-    @apply flex w-full flex-col px-4 py-4 text-left transition-colors hover:bg-surface-raised/60 sm:px-5 sm:py-5;
-  }
-  .ui-projects-next-step {
-    @apply mt-3 flex items-start gap-2 rounded-xl border border-status-positive/20 bg-status-positive-subtle px-3 py-2.5;
-  }
-  .ui-projects-card-actions {
-    @apply flex flex-wrap items-center gap-2 border-t border-border-subtle bg-surface-raised/50 px-3 py-2 sm:px-4;
-  }
-  .ui-projects-card-action {
-    @apply inline-flex min-h-11 min-w-11 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-overlay hover:text-text-primary;
-  }
+  /* .ui-projects-card* / -next-step / -card-action* removed 2026-08-24 with the
+     card/row bifurcation — every project renders through ProjectRow now. */
   .ui-projects-ci-panel {
     @apply overflow-hidden rounded-2xl border border-border-subtle bg-surface-base;
     box-shadow: var(--shadow-panel);

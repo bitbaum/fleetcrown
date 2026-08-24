@@ -9,7 +9,7 @@ import { ProjectResources } from "./ProjectResources";
 import { BusinessPlanSection } from "./BusinessPlanSection";
 import { AddAttrInline, AttrRow } from "./project-overview-helpers";
 import { getProjectLinks, type ProjectResource } from "./project-detail-types";
-import { PROJECT_ATTR } from "@/config/project-attrs";
+import { PROJECT_ATTR, humanizeAttrKey } from "@/config/project-attrs";
 import { answer, hasAnswer } from "@/lib/project-display";
 
 const CONTEXT_GROUPS = [
@@ -89,7 +89,7 @@ export function ProjectContextEditor({
   const hasRepo = getProjectLinks(attrs, gitUrl).repo !== null;
 
   return (
-    <section id="context" className="scroll-mt-28 border-t border-border-subtle pt-7" aria-labelledby="project-context-title">
+    <section id="context" className="ui-project-section" aria-labelledby="project-context-title">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
@@ -168,7 +168,7 @@ export function ProjectContextEditor({
             {extraAttrs.map(([key, value]) => (
               <AttrRow
                 key={key}
-                label={key.replace(/_/g, " ")}
+                label={humanizeAttrKey(key)}
                 value={value}
                 projectId={projectId}
                 attrKey={key}

@@ -85,7 +85,7 @@ export function FixSignalButton({
         type="button"
         onClick={() => dispatch("fix_signal", signalKey)}
         disabled={state.phase === "sending"}
-        className="ui-btn-secondary min-h-8 gap-1 px-2.5 text-xs"
+        className="ui-btn-secondary min-h-11 gap-1 px-2.5 text-xs"
       >
         {state.phase === "sending"
           ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
@@ -114,7 +114,7 @@ export function RunNextStepButton({
         type="button"
         onClick={() => dispatch("next_step")}
         disabled={state.phase === "sending"}
-        className="ui-btn-primary min-h-8 gap-1.5 px-3 text-xs"
+        className="ui-btn-primary min-h-11 gap-1.5 px-3 text-xs"
       >
         {state.phase === "sending"
           ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />

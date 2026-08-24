@@ -1,4 +1,4 @@
-import type { ProjectGridRow } from "@/components/projects/ProjectGridCard";
+import type { ProjectGridRow } from "@/components/projects/project-grid-row";
 import { PROJECT_ATTR } from "@/config/project-attrs";
 import { hasAnswer } from "@/lib/project-display";
 
@@ -78,20 +78,3 @@ export function filterProjects(
   });
 }
 
-export function partitionAttentionProjects(projects: ProjectGridRow[]): {
-  attention: ProjectGridRow[];
-  rest: ProjectGridRow[];
-} {
-  const attention: ProjectGridRow[] = [];
-  const rest: ProjectGridRow[] = [];
-
-  for (const p of projects) {
-    if (hasProjectAttention(p)) {
-      attention.push(p);
-    } else {
-      rest.push(p);
-    }
-  }
-
-  return { attention, rest };
-}

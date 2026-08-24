@@ -2,10 +2,11 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { PageLayout } from "@/components/ui/page-layout";
 import { CardSkeleton } from "@/components/ui/card";
-import { getProjects, getOrgEntityProjects } from "@/db/queries/projects";
+import { getProjects, getOrgEntityProjects, getProjectsLastDispatch } from "@/db/queries/projects";
+import { listFeedbackSummary } from "@/db/queries/site-feedback";
 import { ProjectsWorkspace } from "@/components/projects/ProjectsWorkspace";
 import { NewProjectButton } from "@/components/projects/NewProjectButton";
-import type { ProjectGridRow } from "@/components/projects/ProjectGridCard";
+import type { ProjectGridRow } from "@/components/projects/project-grid-row";
 import { requirePageUserId } from "@/lib/session";
 import { PullToRefresh } from "@/components/shared/PullToRefresh";
 import { AutoRefresh } from "@/components/shared/AutoRefresh";
@@ -29,11 +30,16 @@ export default async function ProjectsPage({
   if (params.open && isValidUuid(params.open)) redirect(`/projects/${params.open}`);
   const autoOpenCreate = params.new === "1";
   const prefillName = typeof params.name === "string" ? params.name : undefined;
-  const [ownProjects, orgProjects] = await Promise.all([
+  const [ownProjects, orgProjects, lastDispatchByProject, feedbackSummary] = await Promise.all([
     getProjects(userId),
     getOrgEntityProjects(userId),
+    getProjectsLastDispatch(userId).catch(() => ({}) as Record<string, string>),
+    listFeedbackSummary(userId).catch(() => []),
   ]);
   const projects: ProjectGridRow[] = [...ownProjects, ...orgProjects];
+  const feedbackOpenByProject = Object.fromEntries(
+    feedbackSummary.map((s) => [s.projectId, s.openCount]),
+  );
   if (params.project?.trim()) {
     const requested = params.project.trim();
     const matched = projects.find(
@@ -54,7 +60,11 @@ export default async function ProjectsPage({
         right={<NewProjectButton autoOpen={autoOpenCreate} initialName={prefillName} />}
       >
         <Suspense fallback={<CardSkeleton />}>
-          <ProjectsWorkspace projects={projects} />
+          <ProjectsWorkspace
+            projects={projects}
+            lastDispatchByProject={lastDispatchByProject}
+            feedbackOpenByProject={feedbackOpenByProject}
+          />
         </Suspense>
         <AutoRefresh intervalMs={REFRESH_CADENCE.projects} />
       </PageLayout>

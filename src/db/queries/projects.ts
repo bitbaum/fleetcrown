@@ -1,7 +1,8 @@
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
 import { db } from "@/db";
-import { entities, entityRelations, interactions, goals, userProjects, orgMemberships, orgs, siteSnapshots } from "@/db/schema";
-import { eq, and, asc, desc, inArray, ilike, or } from "drizzle-orm";
+import { entities, entityRelations, interactions, goals, userProjects, orgMemberships, orgs, siteSnapshots, promptHistory } from "@/db/schema";
+import { eq, and, asc, desc, inArray, ilike, or, isNotNull, max } from "drizzle-orm";
+import { excludeSmokeDispatchesSql } from "./smoke-filter";
 import { fetchAttributesByEntityIds, getOrgPeerIds } from "./utils";
 import { findProjectEntityByName } from "./project-merge";
 import { z } from "zod";
@@ -250,6 +251,29 @@ export async function getProjects(userId: string) {
 }
 
 export type ProjectRow = Awaited<ReturnType<typeof getProjects>>[number];
+
+/**
+ * Newest real dispatch per entity project — the list page's "what moved?"
+ * signal. Sourced from prompt_history (has the entity FK and the smoke-marker
+ * filter, so probe traffic can't make an idle project look active). Returned
+ * as a plain Record so a server component can pass it straight to the client.
+ */
+export async function getProjectsLastDispatch(userId: string): Promise<Record<string, string>> {
+  const rows = await db
+    .select({ projectId: promptHistory.projectId, last: max(promptHistory.dispatchedAt) })
+    .from(promptHistory)
+    .where(and(
+      eq(promptHistory.userId, userId),
+      isNotNull(promptHistory.projectId),
+      excludeSmokeDispatchesSql(),
+    ))
+    .groupBy(promptHistory.projectId);
+  return Object.fromEntries(
+    rows
+      .filter((r): r is { projectId: string; last: Date } => !!r.projectId && !!r.last)
+      .map((r) => [r.projectId, r.last.toISOString()]),
+  );
+}
 
 /** Returns entity-level project profiles belonging to org peers (read-only for the viewer). */
 export async function getOrgEntityProjects(userId: string): Promise<(ProjectRow & { readonly: true })[]> {

@@ -10,11 +10,11 @@ import { PROJECTS_LIST_CHUNK } from "@/lib/projects-display";
 import {
   computeProjectsPageStats,
   filterProjects,
-  partitionAttentionProjects,
+  hasProjectAttention,
   type ProjectsPageFilter,
 } from "@/lib/projects-page-stats";
-import { ProjectGridCard, type ProjectGridRow } from "./ProjectGridCard";
-import { ProjectListRow } from "./ProjectListRow";
+import type { ProjectGridRow } from "./project-grid-row";
+import { ProjectRow } from "./ProjectRow";
 import { ProjectsSummary } from "./ProjectsSummary";
 import { ProjectsCiPanel } from "./ProjectsCiPanel";
 
@@ -25,7 +25,23 @@ function parseFilter(raw: string | null): ProjectsPageFilter {
   return null;
 }
 
-export function ProjectsWorkspace({ projects }: { projects: ProjectGridRow[] }) {
+/**
+ * One list, one row shape. Flagged projects sort first and carry their red
+ * badges + warning edge — same grammar as every other row, not a different
+ * component. The chunk fold keeps 30+ fleets scannable; search and the filter
+ * chips work over everything.
+ */
+export function ProjectsWorkspace({
+  projects,
+  lastDispatchByProject = {},
+  feedbackOpenByProject = {},
+}: {
+  projects: ProjectGridRow[];
+  /** entity id → ISO timestamp of the newest real dispatch. */
+  lastDispatchByProject?: Record<string, string>;
+  /** entity id → open (new + dispatched) feedback count. */
+  feedbackOpenByProject?: Record<string, number>;
+}) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
@@ -54,15 +70,20 @@ export function ProjectsWorkspace({ projects }: { projects: ProjectGridRow[] }) 
     [projects, debouncedQuery, pageFilter],
   );
 
-  const { attention, rest } = useMemo(() => partitionAttentionProjects(filtered), [filtered]);
-  const showAttentionCards = attention.length > 0;
-  const listOverflow = rest.length > PROJECTS_LIST_CHUNK;
-  const visibleRest = listExpanded ? rest : rest.slice(0, PROJECTS_LIST_CHUNK);
+  // Never fold a flagged project below the chunk line — attention outranks
+  // the fold. (Sorting already puts them first, so this only matters when
+  // there are more flagged rows than the chunk size.)
+  const flaggedCount = useMemo(() => filtered.filter(hasProjectAttention).length, [filtered]);
+  const chunk = Math.max(PROJECTS_LIST_CHUNK, flaggedCount);
+  const listOverflow = filtered.length > chunk;
+  const visible = listExpanded ? filtered : filtered.slice(0, chunk);
 
   useEscapeKey(() => {
     setQuery("");
     setPageFilter(null);
   });
+
+  const hasAnyProjects = projects.length > 0;
 
   return (
     <div className="space-y-5">
@@ -101,54 +122,41 @@ export function ProjectsWorkspace({ projects }: { projects: ProjectGridRow[] }) 
       </div>
 
       {filtered.length === 0 ? (
-        <EmptyState icon={FolderKanban} title="No projects match">
-          {debouncedQuery
-            ? `Nothing matched “${debouncedQuery}”. Try a shorter term or clear filters.`
-            : "Clear filters to see your full fleet."}
-        </EmptyState>
+        hasAnyProjects ? (
+          <EmptyState icon={FolderKanban} title="No projects match">
+            {debouncedQuery
+              ? `Nothing matched “${debouncedQuery}”. Try a shorter term or clear filters.`
+              : "Clear filters to see your full fleet."}
+          </EmptyState>
+        ) : (
+          <EmptyState icon={FolderKanban} title="No projects yet">
+            Register your first project with “New project” above — connect a repo and the fleet
+            can start working on it.
+          </EmptyState>
+        )
       ) : (
-        <div className="space-y-4">
-          {showAttentionCards && (
-            <section className="space-y-2" aria-label="Projects with site or risk flags">
-              {attention.length > 1 && (
-                <h2 className="ui-projects-section-label">Site / risk flags</h2>
-              )}
-              <p className="text-xs text-text-tertiary">
-                Only projects with a down live URL or an explicit flag (security / broken feature / deploy issue). Not a general priority list.
-              </p>
-              <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-                {attention.map((project) => (
-                  <ProjectGridCard key={project.id} project={project} />
-                ))}
-              </div>
-            </section>
+        <section aria-label="Projects">
+          <div className="ui-projects-list flex flex-col">
+            {visible.map((project) => (
+              <ProjectRow
+                key={project.id}
+                project={project}
+                lastDispatchAt={lastDispatchByProject[project.id] ?? null}
+                feedbackOpen={feedbackOpenByProject[project.id] ?? 0}
+              />
+            ))}
+          </div>
+          {listOverflow && !listExpanded && (
+            <button
+              type="button"
+              onClick={() => setListExpanded(true)}
+              className="ui-projects-show-more mt-2"
+            >
+              <ChevronDown className="h-4 w-4" aria-hidden="true" />
+              Show all {filtered.length} projects
+            </button>
           )}
-
-          {visibleRest.length > 0 && (
-            <section aria-label="All projects">
-              {showAttentionCards && (
-                <h2 className="ui-projects-section-label mb-2">
-                  {pageFilter || debouncedQuery ? "Matching projects" : "Fleet"}
-                </h2>
-              )}
-              <div className="ui-projects-list flex flex-col">
-                {visibleRest.map((project) => (
-                  <ProjectListRow key={project.id} project={project} />
-                ))}
-              </div>
-              {listOverflow && !listExpanded && (
-                <button
-                  type="button"
-                  onClick={() => setListExpanded(true)}
-                  className="ui-projects-show-more"
-                >
-                  <ChevronDown className="h-4 w-4" aria-hidden="true" />
-                  Show all {rest.length} projects
-                </button>
-              )}
-            </section>
-          )}
-        </div>
+        </section>
       )}
 
       <ProjectsCiPanel projects={projects} />

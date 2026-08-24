@@ -52,6 +52,23 @@ export function formatCount(value: number | bigint | string): string {
   return new Intl.NumberFormat(APP_LOCALE).format(n);
 }
 
+/**
+ * "0.0021" / "1.5" — BTC amount with trailing zeros trimmed, never a bare "0".
+ *
+ * Two components had grown their own `toFixed(8).replace(...)` chain; the
+ * project-profile copy printed a bare `0` under a "Confirmed on OrangeCat"
+ * headline when nothing had been funded, because trimming every zero off
+ * "0.00000000" leaves an empty string. Amounts below one satoshi report as
+ * "<0.00000001" rather than rounding down to a confident zero.
+ */
+export function formatBtc(value: number): string {
+  if (!Number.isFinite(value)) return "—";
+  if (value === 0) return "0";
+  if (value < 0.00000001) return "<0.00000001";
+  const trimmed = value.toFixed(8).replace(/0+$/, "").replace(/\.$/, "");
+  return trimmed || "0";
+}
+
 const BYTE_UNITS = ["B", "KiB", "MiB", "GiB", "TiB", "PiB"] as const;
 
 /**

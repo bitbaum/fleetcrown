@@ -17,12 +17,18 @@ import { ProjectKickoff } from "./ProjectKickoff";
 import { AssistantContextBridge } from "./AssistantContextBridge";
 import { needsKickoff } from "@/lib/project-kickoff";
 import { answer, cleanDescription } from "@/lib/project-display";
+import { formatBtc } from "@/lib/format";
 
+// The nav must index the WHOLE page — a jump bar that knows four of seven
+// sections teaches the reader the rest don't exist. Owner-only sections are
+// filtered at render (readonly viewers don't get dead anchors).
 const SECTIONS = [
   { href: "#overview", label: "Overview" },
   { href: "#context", label: "Context" },
   { href: "#plan", label: "Plan" },
   { href: "#activity", label: "Activity" },
+  { href: "#feedback", label: "Feedback", ownerOnly: true },
+  { href: "#settings", label: "Settings", ownerOnly: true },
 ] as const;
 
 export function ProjectWorkspaceView({
@@ -103,14 +109,18 @@ export function ProjectWorkspaceView({
             health={health}
             readonly={dossier.readonly}
           />
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {/* One visual tier only: the header offers destinations, not actions,
+              so everything here is a quiet ghost link. The page's real CTA
+              (Kickoff / Run next step) lives in the content flow below — five
+              identical secondary buttons up here made it invisible. */}
+          <div className="flex shrink-0 flex-wrap items-center gap-1.5">
             <LiveUrlField
               userProjectId={userProject?.id ?? null}
               liveUrl={links.prodUrl}
               readonly={dossier.readonly}
             />
             {links.repo && (
-              <a href={links.repo} target="_blank" rel="noreferrer" className="ui-btn-secondary min-h-11 gap-1.5">
+              <a href={links.repo} target="_blank" rel="noreferrer" className="ui-btn-ghost min-h-11 gap-1.5">
                 <GitBranch className="h-4 w-4" aria-hidden="true" /> Repository
               </a>
             )}
@@ -120,7 +130,7 @@ export function ProjectWorkspaceView({
                 href={primaryOrangeCatLink.publicUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="ui-btn-secondary min-h-11 gap-1.5"
+                className="ui-btn-ghost min-h-11 gap-1.5"
                 title="View, share, and fund this project on OrangeCat"
               >
                 <Cat className="h-4 w-4 text-accent-text" aria-hidden />
@@ -133,36 +143,11 @@ export function ProjectWorkspaceView({
         </div>
       </header>
 
-      {primaryOrangeCatLink && dossier.orangecatFunding && (
-        <section className="flex flex-col gap-3 rounded-xl border border-border-subtle bg-surface-base p-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="text-xs font-medium uppercase tracking-[0.14em] text-text-muted">
-              Confirmed on OrangeCat
-            </div>
-            <div className="mt-1 text-xl font-semibold text-text-primary">
-              {dossier.orangecatFunding.totalBtc.toFixed(8).replace(/\.?0+$/, "") || "0"} BTC
-            </div>
-            <div className="mt-1 text-sm text-text-secondary">
-              {dossier.orangecatFunding.contributorCount} confirmed{" "}
-              {dossier.orangecatFunding.contributorCount === 1 ? "contribution" : "contributions"}
-            </div>
-          </div>
-          <a
-            href={primaryOrangeCatLink.publicUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="ui-btn-secondary min-h-11 gap-1.5"
-          >
-            Share and fund <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-          </a>
-        </section>
-      )}
-
       <nav
         aria-label="Project profile sections"
         className="sticky top-0 z-20 -mx-4 flex gap-1 overflow-x-auto border-y border-border-subtle bg-surface-page/95 px-4 py-2 backdrop-blur-sm sm:mx-0 sm:rounded-lg sm:border sm:px-2"
       >
-        {SECTIONS.map((section) => (
+        {SECTIONS.filter((s) => !("ownerOnly" in s && s.ownerOnly) || !dossier.readonly).map((section) => (
           <a
             key={section.href}
             href={section.href}
@@ -229,12 +214,41 @@ export function ProjectWorkspaceView({
         readonly={dossier.readonly}
       />
 
-      <section id="activity" className="scroll-mt-28 border-t border-border-subtle pt-7" aria-labelledby="project-activity-title">
+      {/* Feedback outranks the historical log: it is inbound work waiting on a
+          decision, the log is the past. It used to sit below Activity, so the
+          densest interactive block on the page was the last thing you found. */}
+      {!dossier.readonly && <ProjectFeedbackSection projectId={project.id} projectName={project.name} />}
+
+      <section id="activity" className="ui-project-section" aria-labelledby="project-activity-title">
         <h2 id="project-activity-title" className="mb-4 text-lg font-semibold text-text-primary">Activity and evidence</h2>
         <DoneSection dossier={dossier} />
+        {/* Funding is evidence, so it reads with the rest of the evidence
+            instead of above the project's own status. Rendered only when money
+            actually arrived — a "0 BTC · 0 contributions" panel was a headline
+            for nothing (the old formatter printed a bare `0` for empty). */}
+        {primaryOrangeCatLink && dossier.orangecatFunding && dossier.orangecatFunding.totalBtc > 0 && (
+          <div className="mt-5 flex flex-col gap-3 rounded-xl border border-border-subtle bg-surface-base p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="ui-micro-label">Confirmed on OrangeCat</div>
+              <div className="mt-1 text-xl font-semibold text-text-primary">
+                {formatBtc(dossier.orangecatFunding.totalBtc)} BTC
+              </div>
+              <div className="mt-1 text-sm text-text-secondary">
+                {dossier.orangecatFunding.contributorCount} confirmed{" "}
+                {dossier.orangecatFunding.contributorCount === 1 ? "contribution" : "contributions"}
+              </div>
+            </div>
+            <a
+              href={primaryOrangeCatLink.publicUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="ui-btn-secondary min-h-11 gap-1.5"
+            >
+              Share and fund <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+            </a>
+          </div>
+        )}
       </section>
-
-      {!dossier.readonly && <ProjectFeedbackSection projectId={project.id} projectName={project.name} />}
 
       {!dossier.readonly && (
         <ProjectSettingsPanel
