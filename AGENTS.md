@@ -45,9 +45,14 @@ npm run test:home  # home/ inline self-test suites (~14s)
 
 ```bash
 npm run verify
-# = tsc --noEmit && npm run lint && npm run check:design
-#   && npm run test:unit && npm run test:home
+# The step list lives in package.json "scripts.verify" and NOWHERE else.
+# Read it there: `jq -r '.scripts.verify' package.json`
 ```
+
+A previous copy of the list was inlined here and silently drifted — it named
+five steps while the gate had grown to nine, so this file taught a weaker bar
+than CI enforces. A doc that restates a machine-readable SSOT will always
+eventually lie about it; point at the source instead.
 
 CI (`.github/workflows/ci.yml`) runs `npm run verify` **verbatim** — green local
 verify ⇒ green CI. Run it before declaring any change done. A husky pre-commit
@@ -66,8 +71,8 @@ the dev server is up).
   auto-apply these — apply them to the box **and** local dev *before* the code
   reaches `main`, or the drift-gate rolls the deploy back.
 - **`drizzle-kit push` is for a throwaway local/scratch DB only** — never a
-  shared or production database. (The `migrate` script currently aliases `push`;
-  a rename is proposed in the migration-strategy doc.)
+  shared or production database. (There is no `migrate` script; the proposed
+  rename was implemented as the `db:generate` flow above.)
 - Every table has `user_id` (multi-user); UUID primary keys; JSONB for metadata.
 
 ## Self-host deploy path

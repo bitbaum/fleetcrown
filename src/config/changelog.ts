@@ -194,7 +194,11 @@ export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
   {
     version: "0.7.5",
     tag: "fleet-runner-v0.7.5",
-    date: new Date().toISOString().split("T")[0] + "T00:00:00Z",
+    // The GitHub release's publishedAt, as this file's own editing rule
+    // requires. It was `new Date()`, computed at render time, so /releases
+    // re-dated a June 2026 release to "today" on every single deploy — a
+    // timeline that silently rewrote its own history.
+    date: "2026-06-08T05:31:25Z",
     highlights: [
       "In-app update banner — when a newer version is detected, /control shows the exact upgrade path with a one-click Copy button.",
       "On .deb installs (Linux), the banner shows the `sudo dpkg -i <path>` command since electron-updater can't escalate sudo. No more silent update failures.",

@@ -99,7 +99,7 @@ export const INVESTORS = {
     "Open and local models are converging on frontier capability. Whoever controls the orchestration layer will be neutral to model choice.",
     "The same control patterns transfer to physical robotics. The market has not yet appreciated this.",
   ],
-  built: "A web command center coordinates fleets of AI agents across projects. A native Fleet Runner desktop app — same React tree as the web, plus tray and OS notifications — runs them directly in the operator's terminal environment via Zellij. Per-project autonomy controls, reliable handoff systems, queue management, and truthful status surfaces are live and in daily use. Signed multi-OS installers ship from a single CI matrix on every release tag.",
+  built: "A web command center coordinates fleets of AI agents across projects. A native Fleet Runner desktop app — same React tree as the web, plus tray and OS notifications — runs them directly in the operator's terminal environment via Zellij. Per-project autonomy controls, reliable handoff systems, queue management, and truthful status surfaces are live and in daily use. Multi-OS installers (Linux, macOS, Windows) ship from a single CI matrix on every release tag.",
   // Scannable bullets, not a prose wall — the page pairs these with the live
   // fleet snapshot (same real data source as the homepage hero).
   traction: [
@@ -369,7 +369,7 @@ export const DESKTOP_DOWNLOAD = {
       number: "01",
       title: "Make it runnable, then open",
       body:
-        "On Linux, downloads start non-executable for safety. Paste the one-line command shown under Download to mark Fleet Runner executable and launch it. On macOS and Windows (coming soon), a normal double-click is enough.",
+        "On Linux, downloads start non-executable for safety. Paste the one-line command shown under Download to mark Fleet Runner executable and launch it. On macOS and Windows, a normal double-click is enough.",
     },
     {
       number: "02",
@@ -423,9 +423,12 @@ export const DESKTOP_DOWNLOAD = {
     {
       id: "mac",
       label: "macOS",
-      // Linux-only ships today (the latest release has no mac asset); surface the
-      // honest release-watch CTA instead of a Download button that 404s.
-      status: "comingSoon" as const,
+      // Shipping since fleet-runner-v0.8.11 (2026-08-04) restored the
+      // three-platform matrix; v0.8.12 carries Fleet-Runner-mac-arm64.dmg and
+      // .zip. The old "the latest release has no mac asset" comment outlived
+      // its truth by ~3 weeks and hid working downloads behind a coming-soon
+      // panel — while /releases said the opposite two files away.
+      status: "ready" as const,
       primary: {
         label: "Download .dmg",
         note: "Apple Silicon · ~98 MB",
@@ -446,9 +449,8 @@ export const DESKTOP_DOWNLOAD = {
     {
       id: "win",
       label: "Windows",
-      // No Windows asset on the latest release yet — show the release-watch CTA
-      // rather than a Download button that 404s.
-      status: "comingSoon" as const,
+      // Shipping since v0.8.11; v0.8.12 carries Fleet-Runner-win-x64.exe.
+      status: "ready" as const,
       primary: {
         label: "Download installer",
         note: "x64 · ~81 MB",
@@ -530,7 +532,18 @@ export const DESKTOP_DOWNLOAD = {
       "Native iOS and Android apps on the same remote control channel — fleet visibility, queues, and dispatch from your phone.",
   },
 };
-export type DesktopDownloadPlatform = (typeof DESKTOP_DOWNLOAD.platforms)[number];
+/**
+ * The status field is widened back to the full union on purpose. It is derived
+ * from the data, so once every platform shipped, `status` narrowed to the
+ * single literal "ready" and TypeScript declared the coming-soon branch
+ * `never` — deleting a correct, still-needed UI state purely because today's
+ * data doesn't exercise it. The union is the contract; the data is just its
+ * current value.
+ */
+type DesktopDownloadPlatformShape = Omit<(typeof DESKTOP_DOWNLOAD.platforms)[number], "status">;
+export type DesktopDownloadPlatform =
+  | (DesktopDownloadPlatformShape & { status: "ready" })
+  | (DesktopDownloadPlatformShape & { status: "comingSoon" });
 
 export const PRODUCT_SURFACES = [
   {

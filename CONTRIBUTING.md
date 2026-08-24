@@ -48,15 +48,9 @@ restating per task.
 Run the relevant subset while developing. Before pushing a broad change, run:
 
 ```bash
-npx tsc --noEmit
-npm run lint
-npm run check:design
-npm run test:control-presenter
-npm run test:home
-npm run test:db-url
-npm run test:orchestration-summary
+npm run verify   # the canonical gate — CI runs exactly this
 npm run build
-npm run smoke
+npm run smoke    # needs the dev server up
 ```
 
 ## Pull Requests

@@ -39,8 +39,13 @@ export function DesktopDownload() {
   const detectedPlatformId = useSyncExternalStore(subscribePlatform, getClientPlatformId, getServerPlatformId);
   const [selectedPlatformId, setSelectedPlatformId] = useState<PlatformId | null>(null);
   const activePlatformId = selectedPlatformId ?? detectedPlatformId;
+  // Typed through the union contract, not the current data: with every
+  // platform shipping today the inferred literal is just "ready", which would
+  // make the coming-soon branch unreachable and delete a UI state we still
+  // need the moment a new platform is announced.
+  const platforms: DesktopDownloadPlatform[] = DESKTOP_DOWNLOAD.platforms;
   const active =
-    DESKTOP_DOWNLOAD.platforms.find((platform) => platform.id === activePlatformId) ?? DESKTOP_DOWNLOAD.platforms[0];
+    platforms.find((platform) => platform.id === activePlatformId) ?? platforms[0];
   const [showDeveloper, setShowDeveloper] = useState(false);
 
   return (
@@ -214,12 +219,14 @@ function ReadyPlatformPanel({ platform }: { platform: Extract<DesktopDownloadPla
 
 function ComingSoonPanel({ platform }: { platform: Extract<DesktopDownloadPlatform, { status: "comingSoon" }> }) {
   // Honest CTA instead of a Download button that 404s: Fleet Runner ships
-  // Linux-only today; mac/Windows builds are in the release pipeline.
+  // Kept for a platform that genuinely has no asset yet. All three ship
+  // today, so this is currently unreachable — do not delete it to "clean up"
+  // unless the config can no longer express a comingSoon platform.
   return (
     <div className="ui-public-download-panel">
       <div className="flex flex-col items-center gap-3 text-center">
         <p className="ui-public-download-lede">
-          The {platform.label} build is coming soon. Fleet Runner ships for Linux today — watch releases to get
+          The {platform.label} build is not published yet — watch releases to get
           the {platform.label} build the moment it lands, or use FleetCrown on the web now.
         </p>
         <div className="flex flex-wrap justify-center gap-2">
