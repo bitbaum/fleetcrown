@@ -62,7 +62,11 @@ export const BRIDGE_URL    = `https://${BRIDGE_DOMAIN}/sse`;
 // Email "From" address. Kept separate from APP_DOMAIN because the email host
 // is usually a different domain than the app host. Override via EMAIL_FROM env var.
 export const APP_EMAIL_FROM = `${APP_NAME} <noreply@${APP_SLUG}.app>`;
-export const APP_TAGLINE    = "your life operating system";
+/** Short lowercase tagline for OG images, profile footers, and email chrome —
+ *  the compact sibling of MARKETING_TAGLINE below. Was "your life operating
+ *  system", which survived the life-OS → agent-fleet pivot and kept shipping
+ *  the old product's promise on every public profile and social card. */
+export const APP_TAGLINE    = "run your agent fleet";
 
 // Marketing / Positioning (SSOT for public copy)
 export const MARKETING_TAGLINE      = "The operating system for people running real AI agents.";

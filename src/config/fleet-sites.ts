@@ -40,9 +40,9 @@ export const FLEET_SITES: readonly FleetSite[] = [
     blurb: "Fund, lend, invest, and coordinate with any identity.",
   },
   {
-    name: "AOCH Wohnen",
+    name: "WG Zuhause",
     url: "https://aoz-wohnen.orangecat.ch",
-    blurb: "Kompatibilitätsbasierte Wohnplatzierung.",
+    blurb: "Gemeinsam wohnen — kompatibilitätsbasierte Wohnplatzierung.",
   },
   {
     name: "Botsmann",
@@ -56,7 +56,9 @@ export const FLEET_SITES: readonly FleetSite[] = [
   },
   {
     name: "evig",
-    url: "https://revampit.orangecat.ch",
+    // revampit.orangecat.ch 301s here; link the canonical host directly so the
+    // registry does not depend on a redirect it does not own.
+    url: "https://evig.orangecat.ch",
     blurb: "Refurbished IT kaufen und Reparaturwerkstätten finden.",
   },
   {
@@ -85,7 +87,7 @@ export const FLEET_SITES: readonly FleetSite[] = [
     blurb: "Transparentes Fundraising: Finanzen, Wirkung, Strategie.",
   },
   {
-    name: "SBB Lost & Found",
+    name: "Nordbahn Lost & Found",
     url: "https://sbb.orangecat.ch",
     blurb: "Verlorene Gegenstände melden — Konzeptdemo.",
   },
@@ -100,8 +102,8 @@ export const FLEET_SITES: readonly FleetSite[] = [
     blurb: "Psychiatry-led burnout recovery in Zürich.",
   },
   {
-    name: "VitaReBa",
+    name: "Vita",
     url: "https://vitareba.orangecat.ch",
-    blurb: "Metabolische Psychiatrie und Longevity, Zürich.",
+    blurb: "Metabolische Psychiatrie und systemische Longevity, Zürich.",
   },
 ] as const;

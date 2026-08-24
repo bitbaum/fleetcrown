@@ -114,14 +114,14 @@ content/                 Public essays and whitepaper content
 
 Every change should preserve:
 
-- `npm run lint`
-- `npx tsc --noEmit`
-- `npm run check:design`
-- `npm run test:control-presenter`
-- `npm run test:home`
-- `npm run test:db-url`
-- `npm run test:orchestration-summary`
+- `npm run verify` — the one canonical gate. CI runs it verbatim, so green
+  local verify means green CI. Its step list lives in `package.json`
+  (`scripts.verify`); this file deliberately does not restate it.
 - `npm run build`
+
+This used to enumerate an ad-hoc subset of test scripts. Every such list
+drifts from the real gate — three docs ended up teaching three different,
+all-weaker bars — so the rule is now: name the gate, never its contents.
 - `npm run smoke`
 
 CI runs type/lint/design/self-test checks on pushes and pull requests. A
