@@ -226,6 +226,28 @@ export async function cleanupStaleOrchestrationRuns(userId?: string) {
       AND ps.runtime_observed_at > NOW() - ${sql.raw(`INTERVAL '${Math.round(RUNNER_OFFLINE_THRESHOLD_MS / 1000)} seconds'`)}
   )`;
 
+  // `agent_running` is "a process exists", not "it is working on MY prompt" —
+  // and an idle agent sitting at a ready prompt has a process too. So liveness
+  // alone let a run nobody had started be sheltered for the full MAX_RUN_HOURS.
+  //
+  // The runner already knows the difference and says so: after typing a prompt
+  // in it re-checks the session, and when the agent never reacted it acks
+  // `verified: false` ("the keystrokes landed but the agent isn't generating").
+  // That is a positive statement about THIS run, so it outranks a project-wide
+  // heartbeat. Only an explicit false counts — a null verdict is "no claim
+  // made" and must not change behaviour.
+  //
+  // Deliberately narrow: a genuinely working agent still writes no handoff
+  // until its turn ends, so liveness must keep sheltering it (datacat wrote
+  // until 11:01 after being stamped `timeout` at 05:00). This disqualifies only
+  // runs the runner itself reported as never having started.
+  const runNeverStarted = sql`EXISTS (
+    SELECT 1 FROM pending_commands pc
+    WHERE pc.payload->>'runId' = ${orchestrationRuns.id}::text
+      AND pc.executed_at IS NOT NULL
+      AND pc.result->>'verified' = 'false'
+  )`;
+
   const staleWhere = and(
     // Both un-terminal states: "running" (runner picked it up) and "waiting"
     // (opened but never closed). The local-runtime path opens runs as
@@ -235,8 +257,9 @@ export async function cleanupStaleOrchestrationRuns(userId?: string) {
     inArray(orchestrationRuns.state, [ORCH_STATE.WAITING, ORCH_STATE.RUNNING]),
     lt(orchestrationRuns.startedAt, new Date(Date.now() - STALE_RUN_MINUTES * 60 * 1000)),
     // Live agents are spared — but only up to a hard ceiling, so a wedged
-    // process that keeps its heartbeat alive can't hold a run open forever.
-    sql`(NOT ${liveNow} OR ${orchestrationRuns.startedAt} < NOW() - ${sql.raw(`INTERVAL '${MAX_RUN_HOURS} hours'`)})`,
+    // process that keeps its heartbeat alive can't hold a run open forever,
+    // and never when the runner has already said this run never started.
+    sql`(NOT ${liveNow} OR ${runNeverStarted} OR ${orchestrationRuns.startedAt} < NOW() - ${sql.raw(`INTERVAL '${MAX_RUN_HOURS} hours'`)})`,
   );
   const reaped = await db
     .update(orchestrationRuns)
