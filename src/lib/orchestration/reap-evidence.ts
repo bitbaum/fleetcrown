@@ -14,6 +14,7 @@
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { entities, userProjects } from "@/db/schema";
+import { pendingCommands } from "@/db/schema/pending-commands";
 import { ORCHESTRATION_OUTCOME, orchestrationRuns } from "@/db/schema/orchestration-runs";
 import { ORCH_STATE } from "@/lib/orchestration/contract";
 import { emitRunEvent } from "@/db/queries/run-events";
@@ -40,6 +41,27 @@ export async function correctTimeoutReapsWithRepoEvidence(reaped: ReapedRunForEv
 
   for (const run of timeouts) {
     try {
+      // Repo evidence is a TIME WINDOW, not an attribution. When several runs
+      // for one project overlap, a single push satisfies all of their windows
+      // — so this loop upgraded three runs to `partial` off one agent's work
+      // (2026-08-24: 03626fa7 / d693460a / f917c891, one push between them).
+      //
+      // A run the runner itself acked `verified: false` never started, so no
+      // commit in its window can be its work. Skipping it keeps the honest
+      // `timeout` — which also matters because `partial` is not a failing
+      // outcome, so an undeserved upgrade silently cancels the escalation
+      // ladder for a run that did nothing.
+      const [unverified] = await db
+        .select({ id: pendingCommands.id })
+        .from(pendingCommands)
+        .where(and(
+          eq(pendingCommands.userId, run.userId),
+          sql`${pendingCommands.payload}->>'runId' = ${run.id}`,
+          sql`${pendingCommands.result}->>'verified' = 'false'`,
+        ))
+        .limit(1);
+      if (unverified) continue;
+
       // The repo URL lives in TWO places (two-tier creation gap): the project
       // entity, and the user_projects registration whose name IS the run's
       // projectKey. Real fleets (fleetcrown itself) have it only on the
