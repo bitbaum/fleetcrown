@@ -50,7 +50,10 @@ export async function updateOrchestrationRun(
     .returning();
 
   // Every success-producing close path (runner finish route, gate-and-close)
-  // funnels through here — the reaper bypasses it but never stamps success.
+  // funnels through here — the reaper bypasses it but never stamps success, so
+  // skipping feedback resolution there is correct. (It does NOT get to skip the
+  // notification; the reaper fires that itself. See the loop in
+  // cleanupStaleOrchestrationRuns.)
   // Fire-and-forget: closing the feedback loop must not slow or fail the close.
   if (updated && patch.finishedAt && patch.outcome === ORCHESTRATION_OUTCOME.SUCCESS) {
     void resolveFeedbackForRun(updated.id);
@@ -254,7 +257,9 @@ export async function cleanupStaleOrchestrationRuns(userId?: string) {
     // No userId (the cron janitor) → reap across ALL users; the page-load call
     // sites keep passing their own userId for scope hygiene.
     .where(userId ? and(eq(orchestrationRuns.userId, userId), staleWhere) : staleWhere)
-    .returning({ id: orchestrationRuns.id, projectKey: orchestrationRuns.projectKey, userId: orchestrationRuns.userId, outcome: orchestrationRuns.outcome, startedAt: orchestrationRuns.startedAt });
+    // Full rows: notifyRunClosed below needs payload (notifyOnClose, error) and
+    // finishedAt, not just the reap bookkeeping columns.
+    .returning();
 
   // Honesty backstop: a `timeout` verdict means "no evidence of work", but the
   // handoff check above only sees project_states — a box agent that pushed a
@@ -279,6 +284,21 @@ export async function cleanupStaleOrchestrationRuns(userId?: string) {
         error: "Timed out — run exceeded maximum duration and was cleaned up",
       });
     }
+    // ...and announce them, for the same reason. The funnel notifies on ANY
+    // close (updateOrchestrationRun), so a run that SUCCEEDS told the operator
+    // while a run that DIED said nothing — failure was the one outcome the
+    // product kept to itself. That asymmetry is how visitor-feedback fixes sat
+    // "in progress" for weeks after their runs had timed out: the inbox looked
+    // busy because the only thing that could have contradicted it was silent.
+    //
+    // Self-gating, so this is not a new noise source: formatRunCloseMessage
+    // returns null unless payload.notifyOnClose is set, which only
+    // human-initiated dispatches carry — autopilot churn stays quiet.
+    //
+    // Deliberately NOT resolveFeedbackForRun: that helper resolves
+    // unconditionally and the reaper never stamps success, so calling it here
+    // would mark feedback "shipped" because its fix run DIED.
+    void notifyRunClosed(r);
   }
   return reaped;
 }
