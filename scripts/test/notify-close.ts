@@ -58,6 +58,24 @@ function runTests(): void {
     assert(!!msg && msg.startsWith("🟡"), `got: ${msg}`);
   });
 
+  // The reaper's verdicts must be announceable. The reaper closes runs with a
+  // raw UPDATE that bypasses updateOrchestrationRun, so it calls notifyRunClosed
+  // itself — if this formatter ever went success-only, a timed-out run would go
+  // silent again, which is exactly how visitor-feedback fixes sat "in progress"
+  // for weeks after their runs had died.
+  check("reaper timeout is announced, not swallowed", () => {
+    const msg = formatRunCloseMessage({
+      ...base,
+      outcome: "timeout",
+      payload: {
+        ...base.payload!,
+        error: "Timed out — run exceeded maximum duration and was cleaned up",
+      },
+    });
+    assert(!!msg && msg.startsWith("❌"), `timeout must produce a message, got: ${msg}`);
+    assert(msg!.includes("Timed out"), `timeout message must carry the reason, got: ${msg}`);
+  });
+
   check("resultText wins over error and is truncated to 600 chars", () => {
     const msg = formatRunCloseMessage({
       ...base,
