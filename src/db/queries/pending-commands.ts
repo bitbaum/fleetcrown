@@ -291,10 +291,20 @@ export async function purgeStalePendingCommands(userIds: string[]): Promise<numb
       isNull(pendingCommands.executedAt),
       sql`${pendingCommands.createdAt} < NOW() - INTERVAL '1 minute' * ${STALE_COMMAND_MAX_AGE_MINUTES}`,
       // A dispatch/inject held by the per-project serialization gate is NOT an
-      // offline backlog — it is legitimately waiting for the older run to close
-      // (up to STALE_RUN_MINUTES). Purging it at 20 min would silently drop the
-      // work AND leave its own open run wedging the project. It becomes
-      // purgeable again the moment its run closes or goes stale.
+      // offline backlog — it is legitimately waiting for the older run to close.
+      // Purging it would silently drop the work AND leave its own open run
+      // wedging the project.
+      //
+      // A queued command lives exactly as long as the run it belongs to, and
+      // not one minute longer: the reaper is what bounds it (60 min for a dead
+      // project, up to MAX_RUN_HOURS while an agent is genuinely alive), so
+      // this needs no second timer of its own. It used to carry one — a flat
+      // STALE_RUN_MINUTES from its own start — which did not match how long a
+      // run may legitimately stay open. Real agent turns run for hours, so the
+      // command was deleted at 60 min while the run ahead was still working
+      // and the run behind it was still open. That dropped the user's work
+      // silently, and the orphaned run then had nothing left to prove it was
+      // undelivered (2026-08-24: four of five feedback fixes lost this way).
       sql`NOT (
         ${pendingCommands.type} IN ('dispatch','inject')
         AND ${pendingCommands.payload}->>'runId' IS NOT NULL
@@ -302,7 +312,6 @@ export async function purgeStalePendingCommands(userIds: string[]): Promise<numb
           SELECT 1 FROM orchestration_runs own
           WHERE own.id = (${pendingCommands.payload}->>'runId')::uuid
             AND own.finished_at IS NULL
-            AND own.started_at > NOW() - INTERVAL '1 minute' * ${STALE_RUN_MINUTES}
         )
       )`,
     ))
