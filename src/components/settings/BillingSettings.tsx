@@ -108,7 +108,8 @@ export function BillingSettings({ plan, planStatus, stripeReady, hasSubscription
       {stripeReady && plan === "free" && (
         <>
           <div className="grid gap-3 sm:grid-cols-3">
-            {PRICING_PLANS.filter((tier) => tier.key !== "free").map((tier) => {
+            {/* Tiers with a null price are to-be-announced — not sellable yet. */}
+            {PRICING_PLANS.filter((tier) => tier.key !== "free" && tier.priceMonthly !== null).map((tier) => {
               const tierPlan = tier.key as "personal" | "pro" | "team";
               return (
                 <div

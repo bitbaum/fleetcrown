@@ -11,16 +11,17 @@ import { PLAN_LIMITS, isUnlimitedProjects } from "@/lib/plan";
 
 export const PRICING_CURRENCY = "CHF";
 
-// Paid plans bill annually (the checkout route wires the annual price id); the
-// figure shown is the per-month equivalent. Stated plainly under the grid.
-export const PRICING_BILLING_NOTE =
-  "Prices are per month, billed annually. Start free — every plan runs on your own machine or box with your own agent keys, so you only pay FleetCrown for the captain layer.";
 
 export type PricingPlan = {
   key: Plan;
   name: string;
-  /** CHF per month (0 = free). Displayed with PRICING_CURRENCY. */
-  priceMonthly: number;
+  /**
+   * CHF per month. 0 = genuinely free; null = price to be announced — the tier
+   * stays visible, no number is shown, and every checkout rail (Stripe and the
+   * OrangeCat Bitcoin passes) is disabled for it until a number is set.
+   * Mirror any change in orangecat's src/config/fleetcrown-passes.ts + re-seed.
+   */
+  priceMonthly: number | null;
   tagline: string;
   /** The tier's real differentiators — led by the enforced project limit. */
   highlights: string[];
@@ -49,7 +50,7 @@ export const PRICING_PLANS: PricingPlan[] = [
   {
     key: "personal",
     name: "Personal",
-    priceMonthly: 15,
+    priceMonthly: null,
     tagline: "For one builder running FleetCrown as a daily operating layer.",
     highlights: [
       projectLimitLabel("personal"),
@@ -61,7 +62,7 @@ export const PRICING_PLANS: PricingPlan[] = [
   {
     key: "pro",
     name: "Pro",
-    priceMonthly: 40,
+    priceMonthly: null,
     tagline: "For operators running many projects at once.",
     highlights: [
       projectLimitLabel("pro"),
@@ -74,7 +75,7 @@ export const PRICING_PLANS: PricingPlan[] = [
   {
     key: "team",
     name: "Team",
-    priceMonthly: 90,
+    priceMonthly: null,
     tagline: "Shared projects and fleet visibility for a studio.",
     highlights: [
       projectLimitLabel("team"),
@@ -84,6 +85,18 @@ export const PRICING_PLANS: PricingPlan[] = [
     cta: "Choose Team",
   },
 ];
+
+/** True once any paid tier has an announced price — flips the copy + rails. */
+export const PRICING_ANNOUNCED = PRICING_PLANS.some(
+  (p) => p.priceMonthly !== null && p.priceMonthly > 0,
+);
+
+// Paid plans bill annually (the checkout route wires the annual price id); the
+// figure shown is the per-month equivalent. Stated plainly under the grid.
+// While prices are to-be-announced the note says so instead.
+export const PRICING_BILLING_NOTE = PRICING_ANNOUNCED
+  ? "Prices are per month, billed annually. Start free — every plan runs on your own machine or box with your own agent keys, so you only pay FleetCrown for the captain layer."
+  : "Pricing is being finalized and will be announced before anything is charged. Start free — every plan runs on your own machine or box with your own agent keys, so you only ever pay FleetCrown for the captain layer.";
 
 // Available on EVERY plan (all shipped today) — the captain layer itself. Listed
 // once, honestly, instead of scattered as per-tier gates the code doesn't apply.

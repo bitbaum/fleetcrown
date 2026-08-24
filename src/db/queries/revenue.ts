@@ -16,8 +16,9 @@ import type { Plan } from "@/db/schema/users";
  * downgrade cron flips lapsed passes back to free, so a non-free row with a
  * null-or-future expiry is genuinely paying right now.
  */
+// A to-be-announced price (null) contributes 0 MRR — nothing is being charged.
 const PRICE_BY_PLAN = Object.fromEntries(
-  PRICING_PLANS.map((p) => [p.key, p.priceMonthly]),
+  PRICING_PLANS.map((p) => [p.key, p.priceMonthly ?? 0]),
 ) as Record<Plan, number>;
 
 export type RevenueByPlan = { plan: Plan; count: number; monthly: number };
