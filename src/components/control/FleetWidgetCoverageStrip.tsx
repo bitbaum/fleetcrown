@@ -103,12 +103,12 @@ export function FleetWidgetCoverageStrip() {
                       <p className="truncate text-xs text-text-tertiary">
                         {[reason, p.productionUrl || p.gitUrl || "no git URL"].filter(Boolean).join(" · ")}
                       </p>
-                      {!p.gitUrl && !p.productionUrl && (
+                      {!p.canInstall && !p.productionUrl && (
                         <p className="mt-0.5 text-xs text-status-negative">
-                          No git URL — one-click install cannot land code. Add the repo URL or paste the snippet from the project Widget card.
+                          No repo URL and no local runner directory — one-click install cannot land code. Add either on the project, or paste the snippet from the Widget card.
                         </p>
                       )}
-                      {!p.gitUrl && p.productionUrl && (
+                      {!p.canInstall && p.productionUrl && (
                         <p className="mt-0.5 text-xs text-status-negative">
                           No git URL on this project — Enable & install needs the repo (or a local dir on the runner). Paste the snippet from the Widget card as a fallback.
                         </p>
@@ -118,12 +118,12 @@ export function FleetWidgetCoverageStrip() {
                       <button
                         type="button"
                         onClick={() => enableAndInstall(p.projectId, p.projectName)}
-                        disabled={busyId === p.projectId || !p.gitUrl}
+                        disabled={busyId === p.projectId || !p.canInstall}
                         className="ui-btn-save gap-1.5"
                         title={
-                          p.gitUrl
-                            ? "Mint token if needed and queue an agent to embed the widget in the repo"
-                            : "Blocked — project has no git URL"
+                          p.canInstall
+                            ? "Mint token if needed and queue an agent to embed the widget in the repo or local directory"
+                            : "Blocked — no repo URL and no local runner directory"
                         }
                       >
                         {busyId === p.projectId ? <Loader2 className="ui-spinner-xs" /> : <Rocket className="h-3 w-3" />}

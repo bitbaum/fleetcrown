@@ -74,7 +74,6 @@ type Props = {
    *  first project in that bucket and scrolls the workspace into view. A
    *  count you can't follow to its subject is noise, not status. */
   onFocusCategory?: (category: "working" | "waiting") => void;
-  projectOverrideCount?: number;
 };
 
 /** Fleet pulse + trust layer — the first thing you see on Control (especially mobile). */
@@ -100,7 +99,6 @@ export function ControlFleetStatus({
   onAutomationChange,
   onNewProject,
   onFocusCategory,
-  projectOverrideCount = 0,
 }: Props) {
   // Vocabulary AND arithmetic reconciled with ProjectOperationsView's rail.
   // The triad is "X working · Y awaiting input · Z idle" — three
@@ -357,13 +355,6 @@ export function ControlFleetStatus({
           : "Checking autopilot setting…"}
         {automationModeLoaded && AUTOMATION_HINTS[automationMode].secondary && (
           <span className="hidden sm:inline"> {AUTOMATION_HINTS[automationMode].secondary}</span>
-        )}
-        {projectOverrideCount > 0 && (
-          <span className="ml-1 text-accent-text">
-            {projectOverrideCount === 1
-              ? "1 project uses its own autopilot setting."
-              : `${projectOverrideCount} projects use their own autopilot settings.`}
-          </span>
         )}
       </p>
     </section>

@@ -38,25 +38,15 @@ export type OrchestrationRunPayload = {
   notifyOnClose?: boolean;
 };
 
-/** Canonical run outcome values — SSOT for the column type, the finish-route
- *  validator (ORCHESTRATION_OUTCOMES tuple), and outcome inference. */
-export const ORCHESTRATION_OUTCOME = {
-  SUCCESS: "success",
-  PARTIAL: "partial",
-  ERROR: "error",
-  HANG: "hang",
-  USER_ABORT: "user_abort",
-  TIMEOUT: "timeout",
-} as const;
-export const ORCHESTRATION_OUTCOMES = [
-  ORCHESTRATION_OUTCOME.SUCCESS,
-  ORCHESTRATION_OUTCOME.PARTIAL,
-  ORCHESTRATION_OUTCOME.ERROR,
-  ORCHESTRATION_OUTCOME.HANG,
-  ORCHESTRATION_OUTCOME.USER_ABORT,
-  ORCHESTRATION_OUTCOME.TIMEOUT,
-] as const;
-export type OrchestrationOutcome = (typeof ORCHESTRATION_OUTCOMES)[number];
+/** Canonical run outcome values live in @/lib/orchestration/contract (client-
+ *  safe — no drizzle imports), re-exported here for server callers so a value
+ *  import of the outcomes never drags pg-core into a client bundle. */
+export {
+  ORCHESTRATION_OUTCOME,
+  ORCHESTRATION_OUTCOMES,
+  type OrchestrationOutcome,
+} from "@/lib/orchestration/contract";
+import type { OrchestrationOutcome } from "@/lib/orchestration/contract";
 
 export const orchestrationRuns = pgTable("orchestration_runs", {
   id: uuid("id").primaryKey().defaultRandom(),

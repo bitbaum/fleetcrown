@@ -131,6 +131,9 @@ export type ProjectFeedbackSummary = {
   projectId: string;
   projectName: string;
   newCount: number;
+  /** new + dispatched — what the Control strip keys on so a project doesn't
+   *  vanish mid-watch the moment its last NEW item is implemented. */
+  openCount: number;
   latestAt: string;
 };
 
@@ -140,22 +143,31 @@ export type ProjectFeedbackSummary = {
  * every row to its project and that stays the only source of truth.
  */
 export async function listFeedbackSummary(userId: string): Promise<ProjectFeedbackSummary[]> {
+  // OPEN rows (new + dispatched), split into both counts in one pass. NEW-only
+  // here made the Control strip's project chip vanish the moment "Implement"
+  // flipped its last NEW row to dispatched — exactly while the operator was
+  // watching the fix run it promised to show.
   const rows = await db
     .select({
       projectId: siteFeedback.projectId,
       projectName: entities.name,
-      newCount: count(siteFeedback.id),
+      newCount: sql<number>`count(*) filter (where ${siteFeedback.status} = ${FEEDBACK_STATUS.NEW})::int`,
+      openCount: count(siteFeedback.id),
       latestAt: max(siteFeedback.createdAt),
     })
     .from(siteFeedback)
     .innerJoin(entities, eq(siteFeedback.projectId, entities.id))
-    .where(and(eq(siteFeedback.userId, userId), eq(siteFeedback.status, FEEDBACK_STATUS.NEW)))
+    .where(and(
+      eq(siteFeedback.userId, userId),
+      inArray(siteFeedback.status, [FEEDBACK_STATUS.NEW, FEEDBACK_STATUS.DISPATCHED]),
+    ))
     .groupBy(siteFeedback.projectId, entities.name)
     .orderBy(desc(count(siteFeedback.id)), desc(sql`max(${siteFeedback.createdAt})`));
   return rows.map((r) => ({
     projectId: r.projectId,
     projectName: r.projectName,
     newCount: Number(r.newCount),
+    openCount: Number(r.openCount),
     latestAt: (r.latestAt ?? new Date()).toISOString(),
   }));
 }
