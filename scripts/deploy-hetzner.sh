@@ -427,7 +427,52 @@ sync_runner "$PROJECT_DIR/scripts/box-runner.ts" \
 sync_runner "$PROJECT_DIR/scripts/hetzner/drain-and-restart-runner.sh" \
   "$HOST:$RUNNER_DIR/scripts/"
 sync_runner "$PROJECT_DIR/tsconfig.json" "$HOST:$RUNNER_DIR/tsconfig.json"
+
+# Dependencies ship WITH the code that imports them. Until now the runner's
+# src/ was re-synced every deploy while its package.json was whatever the
+# original provisioning installed — so the moment a file under src/ gained a
+# new import, the runner broke at its next run and said nothing. Observed
+# 2026-08-24: fleetcrown-reindex had been dying nightly at 03:30 on
+# `Cannot find module 'bip-kit'`, imported via src/lib/thoughts-content.ts,
+# because the box manifest still listed 31 deps and never learned about it.
+RUNNER_MANIFEST_CHANGED=0
+manifest_out=$(rsync -azi --no-perms --omit-dir-times -e "$RSYNC_SSH" \
+  "$PROJECT_DIR/package.json" "$PROJECT_DIR/package-lock.json" \
+  "$HOST:$RUNNER_DIR/" 2>/dev/null) || manifest_out=""
+grep -qE '^[<>ch]f' <<<"$manifest_out" && RUNNER_MANIFEST_CHANGED=1
+# package.json carries `"@orangecat/sdk": "file:vendor/…tgz"`, so the tarball is
+# part of the manifest: bump its version without shipping the file and the
+# install fails on the box for a path that exists only here.
+vendor_out=$(rsync -azi --no-perms --omit-dir-times -e "$RSYNC_SSH" \
+  "$PROJECT_DIR/vendor/" "$HOST:$RUNNER_DIR/vendor/" 2>/dev/null) || vendor_out=""
+grep -qE '^[<>ch]f' <<<"$vendor_out" && RUNNER_MANIFEST_CHANGED=1
+
 ssh "$HOST" "chown -R $RUNNER_OWNER:$RUNNER_OWNER $RUNNER_DIR/src $RUNNER_DIR/desktop $RUNNER_DIR/home $RUNNER_DIR/scripts $RUNNER_DIR/tsconfig.json"
+
+if [ "$RUNNER_MANIFEST_CHANGED" = "1" ]; then
+  echo "→ runner manifest changed — installing dependencies"
+  # `npm install`, deliberately NOT `npm ci`: ci deletes node_modules wholesale,
+  # and for the window that takes, node_modules/.bin/tsx does not exist — which
+  # is the runner's own ExecStart. Incremental install keeps the always-on
+  # executor runnable throughout.
+  #
+  # And NOT --omit=dev: tsx is a devDependency here, so pruning dev deps would
+  # delete the very binary that starts the runner and the reindex timer.
+  step "runner dependencies"
+  # Fail the deploy rather than ship a runner whose imports it may not have.
+  # The alternative — warn and continue — is how this bug stayed invisible for
+  # weeks in the first place: the runner was broken and the deploy said green.
+  # HUSKY=0 is required, not cosmetic: package.json's `prepare` script runs
+  # husky, the runner dir is not a git repo, and without the opt-out the
+  # install exits 127 — which (correctly) would fail every deploy from here on.
+  ssh "$HOST" "cd $RUNNER_DIR && HUSKY=0 npm install --no-audit --no-fund --silent" \
+    || { echo "  ✗ runner dependency install FAILED — refusing to report a green deploy over a runner missing its imports" >&2; exit 1; }
+  ssh "$HOST" "chown -R $RUNNER_OWNER:$RUNNER_OWNER $RUNNER_DIR/node_modules $RUNNER_DIR/package.json $RUNNER_DIR/package-lock.json" || true
+  echo "  ✓ runner dependencies installed"
+  RUNNER_CHANGED=1   # new deps only take effect in a fresh process
+else
+  echo "  ✓ runner manifest unchanged — dependency install skipped"
+fi
 
 # The runner restart waits for in-flight agents — but it waits ON THE BOX, in a
 # detached transient unit, not here.
