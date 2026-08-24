@@ -5,7 +5,7 @@ import { GitBranch, CheckCircle, XCircle, Loader2, Clock, ChevronDown } from "lu
 import { useFetch } from "@/hooks/use-fetch";
 import { REFRESH_CADENCE } from "@/config/refresh";
 import { FetchErrorState } from "@/components/ui/fetch-error-state";
-import type { ProjectGridRow } from "./ProjectGridCard";
+import type { ProjectGridRow } from "./project-grid-row";
 
 type RepoStatus = {
   repo: string;

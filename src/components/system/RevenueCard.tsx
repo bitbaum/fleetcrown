@@ -1,3 +1,4 @@
+import { formatBtc } from "@/lib/format";
 import { CircleDollarSign } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -81,7 +82,7 @@ export async function RevenueCard() {
                 <>
                   {" "}·{" "}
                   <span className="font-medium text-text-primary">
-                    ₿{rev.btcGrantTotal.toFixed(8).replace(/0+$/, "").replace(/\.$/, "")}
+                    ₿{formatBtc(rev.btcGrantTotal)}
                   </span>{" "}
                   total
                 </>
