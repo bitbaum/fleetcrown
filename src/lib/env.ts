@@ -85,6 +85,25 @@ export function checkEnv(): EnvIssue[] {
     issues.push({ level: "warn", key: "GROQ_API_KEY", msg: "unset — chat action-producer and digest generation are disabled" });
   }
 
+  // Telegram is the same half-configured-provider shape as PROVIDER_PAIRS
+  // above, and it was simply never listed. Observed in prod 2026-08-24:
+  // TELEGRAM_BOT_TOKEN set, TELEGRAM_CHAT_ID absent — so selfTelegramTarget()
+  // returned null and EVERY outbound message silently vanished. With zero push
+  // subscriptions registered, that left the product with no delivery channel
+  // at all while its code paths reported success. Feedback-arrival pushes and
+  // run-close announcements were both writing to nowhere.
+  //
+  // warn, not error: a missing chat id must not 503 a healthy app or block the
+  // deploy pipeline — the operator is usually asleep when this trips, and an
+  // outage is a worse answer than a loud signal.
+  if (present("TELEGRAM_BOT_TOKEN") && !present("TELEGRAM_CHAT_ID")) {
+    issues.push({
+      level: "warn",
+      key: "TELEGRAM_CHAT_ID",
+      msg: "unset while TELEGRAM_BOT_TOKEN is set — every Telegram notification (run-close, feedback arrival) is discarded silently",
+    });
+  }
+
   return issues;
 }
 
