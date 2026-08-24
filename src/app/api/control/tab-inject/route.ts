@@ -40,6 +40,11 @@ async function recordTabDispatch(opts: {
   customPrompt: string;
   resolvedPrompt: string;
   promptLabel: string;
+  /** The prompt was already written into a live session before this call (pty
+   *  write / zellij inject). Stamps deliveredAt at creation so the close path
+   *  can read a MISSING stamp as proof the prompt never landed — the queued
+   *  path gets the same stamp later, from the runner ack. */
+  delivered?: boolean;
 }): Promise<string | null> {
   const { userId, tab, project, adapter } = opts;
   const projectId = project?.entityProjectId ?? null;
@@ -60,7 +65,10 @@ async function recordTabDispatch(opts: {
         state: ORCH_STATE.WAITING,
         projectKey,
         projectPath,
-        payload: { projectId, projectKey, projectPath },
+        payload: {
+          projectId, projectKey, projectPath,
+          ...(opts.delivered ? { deliveredAt: new Date().toISOString() } : {}),
+        },
       });
       runId = run.id;
       void emitRunEvent(run.id, userId, "dispatched", {
@@ -140,6 +148,7 @@ export async function POST(req: NextRequest) {
     const runId = await recordTabDispatch({
       userId, tab, project, adapter,
       customPrompt: prompt, resolvedPrompt: promptToSend, promptLabel,
+      delivered: true,
     });
     return NextResponse.json({ ok: true, mode: "pty", tab, ...(runId ? { runId } : {}) });
   }
@@ -166,6 +175,7 @@ export async function POST(req: NextRequest) {
     const runId = await recordTabDispatch({
       userId, tab, project, adapter,
       customPrompt: prompt, resolvedPrompt: promptToSend, promptLabel,
+      delivered: true,
     });
     return NextResponse.json({ ok: true, mode: "direct", tab, ...(runId ? { runId } : {}) });
   }

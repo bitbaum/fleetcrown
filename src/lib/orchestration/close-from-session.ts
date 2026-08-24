@@ -14,11 +14,30 @@ export type OpenRun = {
 };
 
 /**
+ * True when this run's prompt is known to have reached an agent. `deliveredAt`
+ * is stamped on exactly one event — the prompt landing in a session — by the
+ * runner ack for queued dispatches and at inject time for direct ones. So it
+ * has no third state: absent means NOT DELIVERED, never "unknown".
+ *
+ * That distinction is the whole fix. This used to fall back to `startedAt`
+ * when the stamp was missing, which reads an undelivered run as if it had been
+ * delivered at dispatch time — and any later handoff then post-dates it.
+ */
+export function runWasDelivered(run: OpenRun): boolean {
+  const delivered = run.payload?.deliveredAt;
+  return typeof delivered === "string" && Number.isFinite(Date.parse(delivered));
+}
+
+/**
  * The freshness floor a closing handoff must post-date. `deliveredAt` (stamped
- * by the runner ack) beats `startedAt` (dispatch-creation time): a run can sit
- * queued behind an older run for many minutes, and a stale ready re-push from
- * before its prompt was even delivered must never close it — that is how run
- * B used to get closed (and its feedback auto-resolved) off run A's handoff.
+ * when the prompt reached the agent) beats `startedAt` (dispatch-creation
+ * time): a run can sit queued behind an older run for many minutes, and a
+ * stale ready re-push from before its prompt was even delivered must never
+ * close it — that is how run B used to get closed (and its feedback
+ * auto-resolved) off run A's handoff.
+ *
+ * Only ever called for a delivered run (closeRunFromSession rejects the rest),
+ * so the startedAt fallback is unreachable defence, not the undelivered path.
  */
 export function runEffectiveStartMs(run: OpenRun): number {
   const delivered = run.payload?.deliveredAt;
@@ -58,6 +77,12 @@ export type RunClosePatch = {
 export function closeRunFromSession(run: OpenRun, session: SessionState): RunClosePatch | null {
   if (run.finishedAt) return null; // already closed
   if (session.status?.toLowerCase() !== "ready") return null; // agent not done
+  // A run whose prompt never reached an agent cannot have produced this
+  // handoff — somebody else's work did. Closing it here would not merely
+  // mislabel the run: `success` funnels into resolveFeedbackForRun, so the
+  // visitor whose report was never touched is told it shipped. Undelivered
+  // runs belong to the reaper, which stamps the honest `timeout`.
+  if (!runWasDelivered(run)) return null;
   const startedMs = runEffectiveStartMs(run);
   if (session.mtime <= startedMs) return null; // handoff predates this run (or its delivery)
 

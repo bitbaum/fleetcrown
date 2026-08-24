@@ -56,7 +56,13 @@ function session(overrides: Partial<SessionState> = {}): SessionState {
   };
 }
 
-const openRun = { startedAt: new Date(T0), finishedAt: null };
+// Delivered: a handoff can only close a run whose prompt actually reached an
+// agent. Undelivered runs are covered by undelivered-run-close.ts.
+const openRun = {
+  startedAt: new Date(T0),
+  finishedAt: null,
+  payload: { deliveredAt: new Date(T0).toISOString() },
+};
 
 // ── 1. closeRunFromSession — terminal-transition gate ──────────────────────
 
@@ -88,6 +94,14 @@ check("missing status defaults to NOT ready (conservative)", () => {
 check("stale handoff (mtime <= startedAt) cannot close a fresh run", () => {
   assert(closeRunFromSession(openRun, session({ mtime: T0 })) === null, "handoff at run start closed the run");
   assert(closeRunFromSession(openRun, session({ mtime: T0 - 1 })) === null, "pre-run handoff closed the run");
+});
+
+check("an UNDELIVERED run is never closed by a handoff", () => {
+  // No deliveredAt = the prompt never reached an agent, so this handoff is
+  // some other run's work. Closing it here stamps a verdict on work that was
+  // never done — and `success` auto-resolves the visitor's feedback.
+  const undelivered = { startedAt: new Date(T0), finishedAt: null };
+  assert(closeRunFromSession(undelivered, session()) === null, "undelivered run was closed by a handoff");
 });
 
 check("status matching is case-insensitive (Ready closes)", () => {

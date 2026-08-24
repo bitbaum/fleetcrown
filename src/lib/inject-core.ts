@@ -19,7 +19,7 @@ import { executeInject } from "@/lib/executor";
 import { pickDispatchChannel } from "@/lib/execution-access";
 import { getBuilderFitness } from "@/db/queries/runner-presence";
 import { createOrchestrationEvent, createOrchestrationEventOnce } from "@/db/queries/orchestration-events";
-import { createOrchestrationRun, isProjectBusy } from "@/db/queries/orchestration-runs";
+import { createOrchestrationRun, isProjectBusy, stampRunDelivered } from "@/db/queries/orchestration-runs";
 import { emitRunEvent } from "@/db/queries/run-events";
 import { insertPromptHistory } from "@/db/queries/prompt-history";
 import { getProjectState, persistProjectRuntimeIfNewer } from "@/db/queries/project-states";
@@ -474,6 +474,12 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
   }).catch((err) => console.error("[inject] db write failed:", err));
 
   if (result.mode === "direct") {
+    // Direct mode injected straight into the live PTY, so the prompt HAS
+    // reached the agent — there is no runner ack to stamp it later. Without
+    // this, `deliveredAt` would mean "queued and ack'd" rather than simply
+    // "delivered", and the close path could not read its absence as proof of
+    // non-delivery. Same field, one meaning, both transports.
+    if (runId) void stampRunDelivered(runId, userId);
     persistProjectRuntimeIfNewer({
       projectKey: canonical,
       projectId,

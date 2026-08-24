@@ -36,7 +36,14 @@ function ok(name: string, cond: boolean) {
 // generic "ok" could be matched by a neighbouring field's text.
 const sentinel = (field: string) => `EVIDENCE-${field.toUpperCase()}-42`;
 
-const RUN: OpenRun = { startedAt: new Date(1_000), finishedAt: null };
+// deliveredAt is required for any handoff-driven close: an undelivered run
+// cannot have produced the handoff (see undelivered-run-close.ts). This suite
+// tests evidence plumbing, so its run is a delivered one.
+const RUN: OpenRun = {
+  startedAt: new Date(1_000),
+  finishedAt: null,
+  payload: { deliveredAt: new Date(1_000).toISOString() },
+};
 const HANDOFF_MTIME = 2_000; // post-dates the run, so the close is allowed
 
 // ── 1. Handoff file → judge ──────────────────────────────────────────────────
