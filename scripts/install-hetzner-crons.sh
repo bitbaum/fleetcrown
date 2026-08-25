@@ -25,9 +25,32 @@ set -euo pipefail
 ENV_FILE=/opt/fleetcrown/app/.env
 SECRET="$(grep -m1 '^CRON_SECRET=' "$ENV_FILE" | sed 's/^CRON_SECRET=//; s/^"//; s/"$//' | tr -d '\r')"
 NAME="$1"
-curl -fsS -m 120 "http://127.0.0.1:4002/api/crons/${NAME}" \
+# Log the RESPONSE BODY, not just the status. These janitors report what they
+# actually did in their JSON — how many runs they closed, why they skipped, and
+# for frontier-digest the per-judge scores behind every rejected proposal. This
+# used to be `-o /dev/null`, so the only trace of a nightly job was
+# "HTTP 200" and four completely different outcomes (did nothing / drafted
+# nothing / everything rejected / crashed inside a caught block) were
+# indistinguishable in the journal. The frontier loop surfaced no proposal for
+# two months and nobody could say which of those it was.
+#
+# Truncated so a chatty job can't flood the journal, and the status line is kept
+# on its own line so existing log greps still match.
+#
+# --fail-with-body, not -f: plain -f throws the body away on an HTTP error,
+# which would leave the FAILING case — the one worth reading — as silent as it
+# is today. This keeps curl's non-zero exit (so systemd still marks the unit
+# failed) AND the error body. The `|| rc=$?` is what lets the body reach the
+# journal before the script exits with that code; `set -e` would otherwise skip
+# the echo on exactly the runs that need it.
+BODY_FILE="$(mktemp)"
+trap 'rm -f "$BODY_FILE"' EXIT
+rc=0
+curl --fail-with-body -sS -m 120 "http://127.0.0.1:4002/api/crons/${NAME}" \
   -H "Authorization: Bearer ${SECRET}" \
-  -o /dev/null -w "fc-cron ${NAME}: HTTP %{http_code}\n"
+  -o "$BODY_FILE" -w "fc-cron ${NAME}: HTTP %{http_code}\n" || rc=$?
+echo "fc-cron ${NAME}: $(head -c 2000 "$BODY_FILE" | tr -d '\n')"
+exit "$rc"
 SH
 chmod +x /opt/fleetcrown/fc-cron.sh
 
