@@ -233,9 +233,23 @@ Two behaviours worth knowing before you call it:
 - **An already-open panel is left alone.** The visitor may be mid-sentence, and
   silently replacing their text would lose it.
 
-Host pages must use optional-call (`window.FleetCrown?.report`): `widget.js` is
-loaded `async`, so on a slow connection it may not have executed yet. Give the
-UI a static fallback link for that case rather than a dead button.
+**Deciding what your own control should be — read `window.FleetCrown.ready`.**
+Because the stub is published synchronously, `typeof report === "function"` is
+true even when the widget will never render (token paused, boot unreachable). A
+host that treats the stub's existence as "clicking will do something" ships a
+button that silently no-ops — trading one dead end for another. `ready` is false
+until the boot gate has said active AND the panel exists:
+
+```js
+// Always a real link; upgraded in place when the panel can actually open.
+<a href="/feedback" onClick={e => {
+  if (window.FleetCrown?.ready) { e.preventDefault(); window.FleetCrown.report({ ... }); }
+}}>Report this</a>
+```
+
+That shape also survives the two cases a readiness check alone does not: no
+JavaScript, and `widget.js` not executed yet (it is loaded `async`). Prefer it
+over polling for readiness.
 
 ## API surface
 
