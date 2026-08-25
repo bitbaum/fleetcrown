@@ -1,9 +1,23 @@
 /**
- * Shared Groq API client — single source of truth for the model name and call pattern.
- * Dispatch strategist, prompt-merge, and Loki all use this.
+ * Shared text-completion client — SSOT for the default model and call pattern.
+ * Dispatch strategist, prompt-merge, the frontier digest and Loki all use this.
+ *
+ * ── Why this is no longer Groq-only ──────────────────────────────────────────
+ * It kept the name because sixteen call sites import it, but the transport now
+ * walks the SAME cross-vendor chain Loki has used all along (`ai-ration` via
+ * config/chat-models). That is the whole fix for 2026-08-18: Groq retired
+ * `llama-3.3-70b-versatile`, every direct caller here had exactly one vendor
+ * and no fallback, and seven features went dark for eight days. Loki, which
+ * already had the chain, degraded instead of dying.
+ *
+ * The chain is not an abstraction added for this — it already existed, was
+ * already configured, and already had a second vendor keyed with its own
+ * independent free budget. This deletes a special case rather than adding a
+ * layer: there is now ONE way this app reaches a model.
  */
 
 import { HTTP_TIMEOUT_SHORT_MS, HTTP_TIMEOUT_LONG_MS } from "@/lib/constants/time";
+import { chainFrom, type ChatLink } from "@/config/chat-models";
 
 /**
  * The default chat model for every direct Groq call in this app.
@@ -32,8 +46,11 @@ export const GROQ_WHISPER_MODEL = "whisper-large-v3-turbo";
 function supportsReasoningEffort(model: string): boolean {
   return model.startsWith("openai/gpt-oss") || model.startsWith("qwen/");
 }
-const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
-const GROQ_AUDIO_URL = "https://api.groq.com/openai/v1/audio/transcriptions";
+const GROQ_BASE_URL = "https://api.groq.com/openai/v1";
+// Transcription stays Groq-direct: Whisper has no equivalent in the free chat
+// chain, so there is no second vendor to fall through to. Pretending otherwise
+// would be a fallback that cannot fire.
+const GROQ_AUDIO_URL = `${GROQ_BASE_URL}/audio/transcriptions`;
 
 type GroqOptions = {
   maxTokens?: number;
@@ -47,44 +64,117 @@ type GroqOptions = {
    *  tokens come out of `maxTokens`, so "low" is the default: it keeps every
    *  existing caller's budget honest. Raise it only together with maxTokens. */
   reasoningEffort?: "low" | "medium" | "high";
+  /**
+   * Try the next vendor in the chain when this one fails. Default TRUE — the
+   * absence of this behaviour is what made a single vendor's model retirement
+   * a seven-feature outage.
+   *
+   * Pass FALSE when WHICH model answered is part of your contract. The frontier
+   * judge panel is the case that matters: its value comes from uncorrelated
+   * model lineages, so silently substituting judge B's model for judge A would
+   * turn two independent votes into one voter counted twice — while still
+   * reporting two distinct names. An abstaining judge is honest; a duplicated
+   * one is a lie that also disables the veto floor.
+   */
+  fallback?: boolean;
 };
 
-/**
- * Call Groq and return the completion text.
- * Throws if GROQ_API_KEY is missing, the request fails, or the timeout fires.
- */
-export async function callGroqText(prompt: string, options: GroqOptions = {}): Promise<string> {
-  const key = process.env.GROQ_API_KEY;
-  if (!key) throw new Error("GROQ_API_KEY not set");
+/** What answered, alongside what it said. */
+export type TextCompletion = {
+  text: string;
+  /** The model that actually produced this — NOT the one that was requested.
+   *  Callers that record provenance (the frontier digest stores a `model`
+   *  column) must persist this, or a fallback silently makes the record wrong. */
+  model: string;
+  provider: string;
+  /** Links that failed before this one answered. Empty on a first-try success. */
+  attempts: { model: string; error: string }[];
+};
 
-  const {
-    maxTokens = 200, temperature = 0.2, timeoutMs = HTTP_TIMEOUT_SHORT_MS,
-    systemPrompt, model = GROQ_FAST_MODEL, reasoningEffort = "low",
-  } = options;
+async function callOneLink(
+  link: ChatLink,
+  prompt: string,
+  o: Required<Pick<GroqOptions, "maxTokens" | "temperature" | "timeoutMs" | "reasoningEffort">> &
+    Pick<GroqOptions, "systemPrompt">,
+): Promise<string> {
+  const key = process.env[link.provider.keyEnv];
+  if (!key) throw new Error(`${link.provider.keyEnv} not set`);
 
   const messages: Array<{ role: string; content: string }> = [];
-  if (systemPrompt) messages.push({ role: "system", content: systemPrompt });
+  if (o.systemPrompt) messages.push({ role: "system", content: o.systemPrompt });
   messages.push({ role: "user", content: prompt });
 
-  const res = await fetch(GROQ_API_URL, {
+  const res = await fetch(`${link.provider.baseUrl}/chat/completions`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
     body: JSON.stringify({
-      model, messages, max_tokens: maxTokens, temperature,
-      ...(supportsReasoningEffort(model) ? { reasoning_effort: reasoningEffort } : {}),
+      model: link.model, messages, max_tokens: o.maxTokens, temperature: o.temperature,
+      ...(supportsReasoningEffort(link.model) ? { reasoning_effort: o.reasoningEffort } : {}),
     }),
-    signal: AbortSignal.timeout(timeoutMs),
+    signal: AbortSignal.timeout(o.timeoutMs),
   });
 
-  // Keep the body: Groq's 429 says WHICH limit was hit (tokens-per-minute vs
+  // Keep the body: a 429 says WHICH limit was hit (tokens-per-minute vs
   // per-day) and how long to wait. Without it a rate-limited caller cannot tell
   // "retry in 12s" from "you are out for the day".
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    throw new Error(`groq ${res.status}${body ? `: ${body.slice(0, 300)}` : ""}`);
+    throw new Error(`${link.provider.id} ${res.status}${body ? `: ${body.slice(0, 300)}` : ""}`);
   }
   const data = await res.json() as { choices?: Array<{ message?: { content?: string } }> };
-  return (data?.choices?.[0]?.message?.content ?? "").trim();
+  const text = (data?.choices?.[0]?.message?.content ?? "").trim();
+  // A 200 with empty content is a failure for every caller here (they all parse
+  // the text). Treating it as success would spend the fallback budget on
+  // nothing and hand the caller an empty string to misparse.
+  if (!text) throw new Error(`${link.provider.id} returned empty content`);
+  return text;
+}
+
+/**
+ * Call the model chain and return the completion text plus WHAT ANSWERED.
+ *
+ * Throws only when every link failed — and the error names each attempt, so a
+ * total outage reports which vendors were tried and why each refused, instead
+ * of a single vendor's message standing in for the whole chain.
+ */
+export async function callTextDetailed(prompt: string, options: GroqOptions = {}): Promise<TextCompletion> {
+  const {
+    maxTokens = 200, temperature = 0.2, timeoutMs = HTTP_TIMEOUT_SHORT_MS,
+    systemPrompt, model = GROQ_FAST_MODEL, reasoningEffort = "low", fallback = true,
+  } = options;
+
+  const chain = chainFrom(model);
+  // `chainFrom` returns [] when no vendor key is configured at all, and drops
+  // links whose key is absent. Falling back to the requested model keeps the
+  // "no key" error identical to the one callers have always seen.
+  const links: ChatLink[] = chain.length === 0
+    ? [{ provider: { id: "groq", baseUrl: GROQ_BASE_URL, keyEnv: "GROQ_API_KEY", models: [model], dailyTokens: 0 }, model }]
+    : fallback ? chain : [chain[0]];
+
+  const attempts: { model: string; error: string }[] = [];
+  for (const link of links) {
+    try {
+      const text = await callOneLink(link, prompt, {
+        maxTokens, temperature, timeoutMs, systemPrompt, reasoningEffort,
+      });
+      return { text, model: link.model, provider: link.provider.id, attempts };
+    } catch (err) {
+      attempts.push({ model: link.model, error: err instanceof Error ? err.message : String(err) });
+    }
+  }
+
+  throw new Error(
+    `all ${attempts.length} model link(s) failed: ` +
+      attempts.map((a) => `${a.model} → ${a.error}`).join(" | "),
+  );
+}
+
+/**
+ * Call the model chain and return the completion text.
+ * Throws if every link fails, no key is set, or the timeouts fire.
+ */
+export async function callGroqText(prompt: string, options: GroqOptions = {}): Promise<string> {
+  return (await callTextDetailed(prompt, options)).text;
 }
 
 export async function callGroqTranscribe(audio: Blob, mimeType = "audio/webm"): Promise<string> {
