@@ -9,8 +9,11 @@ import { EXECUTOR_COPY } from "@/config/executor-copy";
 import { deriveExecutorHonestyLabel } from "@/lib/executor-honesty";
 import { useFetch } from "@/hooks/use-fetch";
 import { useLocalStorageState } from "@/hooks/use-local-storage-state";
+import { useTerminalFont } from "@/hooks/use-terminal-font";
+import { useTerminalDeck } from "@/hooks/use-terminal-deck";
+import { useKeyboardInset } from "@/hooks/use-keyboard-inset";
 import { rememberFleetProject } from "@/lib/fleet-context";
-import { resolveTabAttachment } from "@/lib/terminal-viewport";
+import { resolveTabAttachment, type PtyGeometry } from "@/lib/terminal-viewport";
 import type { BuilderChannel } from "@/lib/event-stream-types";
 import {
   TERMINAL_MODE_STORAGE_KEY,
@@ -26,7 +29,9 @@ import { TerminalLaunch } from "./TerminalLaunch";
 import { TabVoiceMic } from "./TabVoiceMic";
 import { ShellWorkspace } from "./ShellWorkspace";
 import { TerminalSessionMiss } from "./TerminalSessionMiss";
-import { TerminalMobileBar } from "./TerminalMobileBar";
+import { TerminalMobileHeader, type TerminalLiveState } from "./TerminalMobileHeader";
+import { TerminalSessionSheet } from "./TerminalSessionSheet";
+import { TerminalMobileDock } from "./TerminalMobileDock";
 import { runnerTransport } from "./terminal-transport";
 import { useTerminalTabs } from "./use-terminal-tabs";
 
@@ -52,6 +57,11 @@ const COPY: Record<"cloud" | "machine", {
 };
 
 const channelFor = (source: TerminalSource): BuilderChannel => (source === "machine" ? "local" : "cloud");
+
+/** Comfortably under the 4000-byte cap the raw-key route enforces on one write.
+ *  Multi-byte characters make length-in-chars an under-estimate of bytes, and
+ *  halving the budget is cheaper than counting UTF-8 at every keystroke. */
+const RAW_KEY_CHUNK = 1500;
 
 type TerminalMode = { source: TerminalSource; input: TerminalInputMode };
 
@@ -86,6 +96,22 @@ const deserializeMode = (raw: string): TerminalMode => {
  * Now the chrome is constant: tab strip, mode bar, session, composer. The
  * source picks which transport fills the session; the input mode picks what
  * happens to what you type. Nothing about navigating changes when you switch.
+ *
+ * ── The phone ───────────────────────────────────────────────────────────────
+ * Below `md` the same state drives a different chrome, because the desktop one
+ * had failed on a phone in two ways at once.
+ *
+ * It was too big: title, subtitle, source strip, tab strip, source select,
+ * session select, agent button, mode select, honesty chip, font stepper — 331px
+ * of controls, measured, above a terminal left with four visible lines of an
+ * eighty-column screen. All of it setup, none of it read while an agent works.
+ * It is now one header row and a sheet behind it.
+ *
+ * And it was inert: a phone keyboard has no arrows, no Esc, no Tab and no Ctrl,
+ * which are exactly the keys an agent's questions are answered with. You could
+ * read "[✔] Also scan shell history · ◄ Mixed ► · Continue" and had no way to
+ * say anything back. TerminalKeyDeck is that missing half of the keyboard, and
+ * it is why this page is now something you can work in rather than watch.
  */
 export function TerminalSurface({
   local,
@@ -144,6 +170,37 @@ export function TerminalSurface({
   // watching IS the fleet's active project — Control, Loki and the project
   // profile follow you here instead of resetting.
   useEffect(() => { if (activeTab) rememberFleetProject(activeTab); }, [activeTab]);
+
+  // One transport per attached session, shared by the view that renders it and
+  // the key deck that writes into it. Both need the same PTY; making it here
+  // rather than inline at the view keeps "which session am I typing into"
+  // impossible to get wrong.
+  const transport = useMemo(
+    () => (activeTab ? runnerTransport(activeTab, channel) : null),
+    [activeTab, channel],
+  );
+  // Awaited chunk-by-chunk: /api/control/tab-inject-raw caps one write at 4000
+  // bytes, and the composer will happily hand over a pasted paragraph. Sending
+  // the pieces without awaiting would let them arrive out of order — the same
+  // "echo" → "ehco" reordering TerminalView's own input buffer exists to stop.
+  const sendKey = useCallback((bytes: string) => {
+    if (!transport) return;
+    void (async () => {
+      for (let i = 0; i < bytes.length; i += RAW_KEY_CHUNK) {
+        await transport.sendKey(bytes.slice(i, i + RAW_KEY_CHUNK));
+      }
+    })();
+  }, [transport]);
+
+  // Phone chrome state. Font and stream status are owned here rather than
+  // inside TerminalView because the controls that read them now live outside
+  // it — the header shows the live dot, the sheet steps the font.
+  const font = useTerminalFont();
+  const deck = useTerminalDeck();
+  const keyboardInset = useKeyboardInset();
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [liveState, setLiveState] = useState<TerminalLiveState>("connecting");
+  const [geometry, setGeometry] = useState<PtyGeometry | null>(null);
 
   const honesty = deriveExecutorHonestyLabel(
     source === "machine"
@@ -231,16 +288,41 @@ export function TerminalSurface({
     </div>
   );
 
-  // Phones get a purpose-built two-row bar instead of the desktop stack; see
-  // TerminalMobileBar for why the desktop chrome cannot simply be made smaller.
-  const mobileBar = (
-    <TerminalMobileBar
+  // The phone's one header row. What it names is what changes: which session,
+  // what is running in it, whether it is alive. Everything else is one tap
+  // behind it, in the sheet.
+  const headerTitle = source === "shell"
+    ? "Shell"
+    : (stripTabs.find((t) => t.id === activeTab)?.label ?? activeTab ?? sourceLabel);
+  const headerAgent = source === "shell"
+    ? null
+    : (stripTabs.find((t) => t.id === activeTab)?.badge ?? null);
+  const headerState: TerminalLiveState = !activeTab && source !== "shell" ? "idle" : liveState;
+
+  const mobileHeader = (
+    <TerminalMobileHeader
+      title={headerTitle}
+      agent={headerAgent}
+      state={headerState}
+      onOpenSheet={() => setSheetOpen(true)}
+      immersive={immersive}
+      onToggleImmersive={onToggleImmersive ?? (() => {})}
+    />
+  );
+
+  const sheet = sheetOpen ? (
+    <TerminalSessionSheet
+      onClose={() => setSheetOpen(false)}
       source={source}
       sources={sources}
       onSourceChange={setSource}
-      tabs={stripTabs}
-      activeTab={activeTab}
-      onSelectTab={setSelected}
+      // The shell substrate owns its own tabs and splits, and runs no agent —
+      // so it gets the source and display sections and none of the per-session
+      // ones. Passing the agent path's activeTab through would offer to switch
+      // the agent in a session the shell is not showing.
+      tabs={source === "shell" ? undefined : stripTabs}
+      activeTab={source === "shell" ? null : activeTab}
+      onSelectTab={source === "shell" ? undefined : setSelected}
       inputMode={inputMode}
       onInputModeChange={setInputMode}
       agents={agents}
@@ -249,36 +331,30 @@ export function TerminalSurface({
       switchingAgent={switchingAgent}
       agentSwitchDisabledReason={agentSwitchDisabledReason}
       honesty={honesty}
-      immersive={immersive}
-      onToggleImmersive={onToggleImmersive ?? (() => {})}
+      font={font}
+      columns={geometry?.cols ?? null}
+      liveKeys={deck.liveKeys}
+      onLiveKeysChange={deck.setLiveKeys}
     />
-  );
+  ) : null;
+
+  // Sit the chrome on top of the soft keyboard instead of under it. See
+  // useKeyboardInset: the layout viewport does not shrink when the keyboard
+  // opens, so without this the key deck is drawn behind the keys.
+  const rootStyle = keyboardInset ? { paddingBottom: keyboardInset } : undefined;
 
   // ── Server shell ────────────────────────────────────────────────────────
-  // Its own PTYs, its own tabs and splits — but rendered with the same strip,
+  // Its own PTYs, its own tabs and splits — but rendered with the same chrome,
   // so the only thing that changes is what is inside the panes.
   if (source === "shell") {
     return (
-      <div className="flex h-full min-h-0 flex-col gap-2">
+      <div className="flex h-full min-h-0 flex-col gap-2" style={rootStyle}>
         {sourceBar}
-        <TerminalMobileBar
-          source={source}
-          sources={sources}
-          onSourceChange={setSource}
-          inputMode={inputMode}
-          onInputModeChange={setInputMode}
-          agents={agents}
-          activeAgentId={activeAgentId}
-          onSwitchAgent={(id) => void switchAgent(id)}
-          switchingAgent={switchingAgent}
-          agentSwitchDisabledReason={agentSwitchDisabledReason}
-          honesty={honesty}
-          immersive={immersive}
-          onToggleImmersive={onToggleImmersive ?? (() => {})}
-        />
+        <div className="md:hidden">{mobileHeader}</div>
         <div className="min-h-0 flex-1">
           <ShellWorkspace />
         </div>
+        {sheet}
       </div>
     );
   }
@@ -344,22 +420,28 @@ export function TerminalSurface({
     return (
       <TerminalView
         key={`${channel}:${activeTab}`}
-        transport={runnerTransport(activeTab!, channel)}
+        transport={transport!}
         fill
-        // Only Type mode captures keystrokes. In Prompt and Voice mode the
-        // session stays readable and the page keeps its own keyboard — so
-        // Alt+N tab switching and the composer are not swallowed by the PTY.
-        interactive={inputMode === "type"}
+        // Only Type mode captures keystrokes, and only where the operator
+        // actually wants the canvas to have the keyboard. In Prompt and Voice
+        // mode — and on a phone by default, where typing happens in the dock's
+        // composer — the session stays readable and the page keeps its own
+        // keyboard, so Alt+N tab switching and the composer are not swallowed
+        // by the PTY.
+        interactive={inputMode === "type" && deck.liveKeys}
         compactChrome={immersive}
         stalledHint={copy.stalledHint}
+        font={font}
+        onLive={setLiveState}
+        onGeometry={setGeometry}
       />
     );
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-2">
+    <div className="flex h-full min-h-0 flex-col gap-2" style={rootStyle}>
       {sourceBar}
-      {mobileBar}
+      <div className="md:hidden">{mobileHeader}</div>
       <div className="hidden md:block">
         <TerminalTabStrip
           tabs={stripTabs}
@@ -381,12 +463,31 @@ export function TerminalSurface({
         </div>
       )}
       <div className={cn("min-h-0 flex-1", immersive && "min-h-0")}>{body()}</div>
-      {activeTab && inputMode === "prompt" && <TerminalComposer tab={activeTab} />}
+
+      {/* Desktop composers. The phone's live in the dock below, alongside the
+          key deck, so there is exactly one stack of controls under the screen
+          rather than a composer here and a keyboard somewhere else. */}
+      {activeTab && inputMode === "prompt" && (
+        <div className="hidden md:block"><TerminalComposer tab={activeTab} /></div>
+      )}
       {activeTab && inputMode === "voice" && (
-        <div className="flex shrink-0 items-center">
+        <div className="hidden shrink-0 items-center md:flex">
           <TabVoiceMic tab={activeTab} channel={channel} compact={immersive} />
         </div>
       )}
+
+      {activeTab && (
+        <TerminalMobileDock
+          tab={activeTab}
+          channel={channel}
+          inputMode={inputMode}
+          onKey={sendKey}
+          liveKeys={deck.liveKeys}
+          immersive={immersive}
+        />
+      )}
+
+      {sheet}
     </div>
   );
 }
