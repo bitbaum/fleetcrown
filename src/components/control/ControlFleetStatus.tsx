@@ -114,6 +114,10 @@ export function ControlFleetStatus({
   const ready = dashboard?.waitingCount ?? 0;     // agent done, awaiting next step
   const working = dashboard?.runningCount ?? 0;
   const idle = dashboard?.idleCount ?? 0;         // inert: not_running / tab_open / closing / completed
+  // Before the runner's first push every project reads `offline`, so the triad
+  // is 0/0/0 — which is also exactly the "All clear" condition. Say "checking"
+  // instead of announcing a calm fleet we know nothing about.
+  const countsKnown = dashboard?.countsKnown ?? false;
 
   // SSOT: label/description/problem-CTA all come from RUNNER_STATE_DEFINITIONS
   // (lib/control-states.ts). Hand-rolled label trees that drifted between this
@@ -292,52 +296,63 @@ export function ControlFleetStatus({
             {attention} need{attention === 1 ? "s" : ""} you
           </button>
         )}
-        {working > 0 && onFocusCategory ? (
-          <button
-            type="button"
-            onClick={() => onFocusCategory("working")}
-            className={cn("ui-control-fleet-chip cursor-pointer transition-opacity hover:opacity-80", staleClass)}
-            title={staleTitle ?? `Jump to the working project. ${COUNT_SCOPE_TITLE}`}
+        {!countsKnown ? (
+          <span
+            className={cn("ui-control-fleet-chip", staleClass)}
+            title="Waiting for the runner to report project state. Counts appear once it does."
           >
-            <span className="ui-dot ui-dot-positive shrink-0 mr-1" aria-hidden="true" />
-            {working} working
-          </button>
+            Checking projects&hellip;
+          </span>
         ) : (
-          <span className={cn("ui-control-fleet-chip", staleClass)} title={staleTitle ?? COUNT_SCOPE_TITLE}>
-            {working > 0 && <span className="ui-dot ui-dot-positive shrink-0 mr-1" aria-hidden="true" />}
-            {working} working
-          </span>
-        )}
-        {ready > 0 && onFocusCategory ? (
-          <button
-            type="button"
-            onClick={() => onFocusCategory("waiting")}
-            className={cn("ui-control-fleet-chip cursor-pointer transition-opacity hover:opacity-80", staleClass)}
-            title={staleTitle ?? `Jump to the project waiting on you. ${COUNT_SCOPE_TITLE}`}
-          >
-            {ready} awaiting input
-          </button>
-        ) : (
-          <span className={cn("ui-control-fleet-chip", staleClass)} title={staleTitle ?? COUNT_SCOPE_TITLE}>
-            {ready} awaiting input
-          </span>
-        )}
-        <span
-          className={cn("ui-control-fleet-chip", staleClass)}
-          title={
-            staleTitle
-            ?? "How many fleet projects have no agent session right now. Unrelated to Cloud/builder online — that is the runner, not project work."
-          }
-        >
-          {idle} projects idle
-        </span>
-        {/* "All clear" only when nothing needs you and nothing is live — and
-            never while stale, when 0/0/0 means "the runner stopped reporting",
-            not "the fleet is calm". */}
-        {!isStale && attention === 0 && working === 0 && ready === 0 && idle === 0 && (
-          <span className={cn("ui-control-fleet-chip ui-control-fleet-chip-clear", staleClass)} title={staleTitle ?? COUNT_SCOPE_TITLE}>
-            All clear
-          </span>
+          <>
+            {working > 0 && onFocusCategory ? (
+              <button
+                type="button"
+                onClick={() => onFocusCategory("working")}
+                className={cn("ui-control-fleet-chip cursor-pointer transition-opacity hover:opacity-80", staleClass)}
+                title={staleTitle ?? `Jump to the working project. ${COUNT_SCOPE_TITLE}`}
+              >
+                <span className="ui-dot ui-dot-positive shrink-0 mr-1" aria-hidden="true" />
+                {working} working
+              </button>
+            ) : (
+              <span className={cn("ui-control-fleet-chip", staleClass)} title={staleTitle ?? COUNT_SCOPE_TITLE}>
+                {working > 0 && <span className="ui-dot ui-dot-positive shrink-0 mr-1" aria-hidden="true" />}
+                {working} working
+              </span>
+            )}
+            {ready > 0 && onFocusCategory ? (
+              <button
+                type="button"
+                onClick={() => onFocusCategory("waiting")}
+                className={cn("ui-control-fleet-chip cursor-pointer transition-opacity hover:opacity-80", staleClass)}
+                title={staleTitle ?? `Jump to the project waiting on you. ${COUNT_SCOPE_TITLE}`}
+              >
+                {ready} awaiting input
+              </button>
+            ) : (
+              <span className={cn("ui-control-fleet-chip", staleClass)} title={staleTitle ?? COUNT_SCOPE_TITLE}>
+                {ready} awaiting input
+              </span>
+            )}
+            <span
+              className={cn("ui-control-fleet-chip", staleClass)}
+              title={
+                staleTitle
+                ?? "How many fleet projects have no agent session right now. Unrelated to Cloud/builder online — that is the runner, not project work."
+              }
+            >
+              {idle} projects idle
+            </span>
+            {/* "All clear" only when nothing needs you and nothing is live — and
+                never while stale, when 0/0/0 means "the runner stopped reporting",
+                not "the fleet is calm". */}
+            {!isStale && attention === 0 && working === 0 && ready === 0 && idle === 0 && (
+              <span className={cn("ui-control-fleet-chip ui-control-fleet-chip-clear", staleClass)} title={staleTitle ?? COUNT_SCOPE_TITLE}>
+                All clear
+              </span>
+            )}
+          </>
         )}
       </div>
 

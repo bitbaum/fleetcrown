@@ -3,6 +3,7 @@
  * Run: npm run test:control-presenter
  */
 import {
+  buildControlPageState,
   buildLiveTabRows,
   buildProjectOperationsSnapshot,
   buildProjectOperationsSnapshots,
@@ -504,6 +505,54 @@ function runTests(): void {
     assert(bucketed.fleetcrown.cwds.length === 2, "repeated cwds are deduped");
     assert(bucketed.petvity.count === 1, "petvity counted separately");
     assert(Object.keys(bucketed).length === 2, "no phantom projects");
+  });
+
+  // ---- the fleet triad must never be invented ----
+  //
+  // Without runtime state every project classifies as `offline`, so the triad
+  // reads 0/0/0 — which is byte-for-byte the "All clear" condition. Control
+  // would therefore announce a calm fleet at the exact moment it knows nothing
+  // about it, on the surface whose whole job is saying what needs the operator.
+  // countsKnown is how the derivation layer says "I don't know yet".
+  const controlData = (projects: ProjectState[], zellijTabs: string[] = []) =>
+    ({
+      projects,
+      zellijTabs,
+      inventory: {
+        source: "user_projects",
+        trackedProjectCount: projects.length,
+        controlProjectCount: projects.length,
+        linkedDirectoryCount: 0,
+      },
+    }) as unknown as Parameters<typeof buildControlPageState>[0];
+
+  check("countsKnown is false before the runner has ever reported", () => {
+    const data = controlData([stubProject({ tab: "alpha" }), stubProject({ tab: "beta" })]);
+    const state = buildControlPageState(data, Math.floor(Date.now() / 1000), false, false);
+    assert(state.dashboard.countsKnown === false, "counts must not claim to be known");
+  });
+
+  check("countsKnown is true once runtime state is known", () => {
+    const data = controlData([stubProject({ tab: "alpha" })]);
+    const state = buildControlPageState(data, Math.floor(Date.now() / 1000), true, false);
+    assert(state.dashboard.countsKnown === true, "counts are knowable once the runner reported");
+  });
+
+  check("unknown runtime state yields 0/0/0 — the same shape as 'All clear'", () => {
+    // The reason countsKnown has to exist. With runtime state unknown the triad
+    // is not a partial count, it is indistinguishable from a healthy quiet
+    // fleet. If this ever stops being true, revisit whether countsKnown is
+    // still load-bearing rather than deleting it silently.
+    const projects = [stubProject({ tab: "alpha" }), stubProject({ tab: "beta" }), stubProject({ tab: "gamma" })];
+    const nowS = Math.floor(Date.now() / 1000);
+    const unknown = buildControlPageState(controlData(projects), nowS, false, false).dashboard;
+    assert(unknown.runningCount === 0, "nothing can be known to be working");
+    assert(unknown.waitingCount === 0, "nothing can be known to be waiting");
+    assert(unknown.idleCount === 0, "nothing can be known to be idle either");
+
+    // ...and the same fleet, once known, is NOT all-clear.
+    const known = buildControlPageState(controlData(projects), nowS, true, false).dashboard;
+    assert(known.idleCount === projects.length, "known state buckets them as idle");
   });
 
   console.log(`\n${passed}/${passed} passed`);

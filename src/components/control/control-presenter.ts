@@ -169,6 +169,20 @@ export type ProjectOperationsSnapshot = {
 };
 
 export type ControlDashboardState = {
+  /**
+   * False while the runner has never reported runtime state.
+   *
+   * Without runtime state getProjectDisplayState classifies every project as
+   * `offline`, whose counterCategory is "offline" — so all three live counts
+   * read 0. That is not a partial answer, it is a confident wrong one: the
+   * "All clear" chip fires on exactly `working === 0 && ready === 0 &&
+   * idle === 0`, so Control would tell the operator the fleet is calm at the
+   * precise moment it knows nothing about the fleet.
+   *
+   * Views must say "checking" rather than render the triad while this is false.
+   * A fabricated stat is worse than an absent one, because it gets acted on.
+   */
+  countsKnown: boolean;
   runningCount: number;
   waitingCount: number;
   controlProjectCount: number;
@@ -856,6 +870,8 @@ export function buildControlPageState(
       getProjectDisplayState(project, data.zellijTabs, nowS, false, runtimeStateKnown, syncStale).stateKey
     ].counterCategory,
   );
+  // Not "how many are idle" but "we cannot know yet" — see countsKnown.
+  const countsKnown = runtimeStateKnown;
   const runningCount = categories.filter((c) => c === "working").length;
   const waitingCount = categories.filter((c) => c === "waiting").length;
   const idleCount = categories.filter((c) => c === "idle").length;
@@ -872,6 +888,7 @@ export function buildControlPageState(
   return {
     attention,
     dashboard: {
+      countsKnown,
       runningCount,
       waitingCount,
       controlProjectCount,
