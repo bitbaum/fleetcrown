@@ -49,10 +49,56 @@ POLL_S=20
 # counting past deploy runs makes the second attempt permanently unreachable:
 # the gate reads its own earlier failure as "CI is red". solon hit exactly this.
 EXCLUDE_PATH="${CI_GATE_EXCLUDE_PATH:-}"
-_path_clause=""
-[ -n "$EXCLUDE_PATH" ] && _path_clause="| select(.path != \"$EXCLUDE_PATH\")"
-RUN_FILTER='[.workflow_runs[]
-  | select(.path | startswith(".github/workflows/")) '"$_path_clause"']'
+
+# THE VERDICT IS A PURE FUNCTION of the run list. Everything above is about
+# which runs to look at; this decides what they mean, reads no clock and calls
+# no API, and is driven directly by test-ci-gate.sh. Three separate bugs have
+# been fixed in this judgement by comment alone (dependabot, deploy-self-retry,
+# cancelled-vs-superseded) and each was found in production, on a blocked
+# deploy. A rule you can only exercise by merging to main is a rule nobody
+# re-tests after editing it.
+#
+# LATEST RUN PER WORKFLOW is the load-bearing part. A workflow can run more than
+# once on one SHA — a re-run, or `cancel-in-progress` firing when auto-merge
+# pushes while the PR run is still going. Counting every run then means an
+# earlier cancelled attempt outvotes the green re-run that replaced it, and the
+# commit can never deploy no matter how many times CI passes. printcraft hit
+# exactly this: `verify` was cancelled once and succeeded once on the same SHA,
+# and a security fix sat undeployed. Only a workflow's most recent run states
+# its current verdict.
+#
+# Reads a JSON array of workflow runs on stdin. Prints "VERDICT total".
+#   NONE      no CI defined for this commit
+#   PENDING   at least one workflow has not finished
+#   FAILED    a genuine red
+#   CANCELLED all finished, but a workflow's latest run was cancelled
+#   GREEN     every workflow's latest run succeeded
+ci_verdict() {
+  jq -r --arg exclude "${1:-}" '
+    [ .[]
+      | select(.path | startswith(".github/workflows/"))
+      | select($exclude == "" or .path != $exclude)
+    ]
+    | group_by(.path)
+    | map(max_by(.run_number))
+    | . as $latest
+    | ($latest | length) as $total
+    | if $total == 0 then "NONE 0"
+      elif ($latest | any(.conclusion | IN("failure","timed_out","action_required")))
+        then "FAILED \($total)"
+      elif ($latest | any(.status != "completed"))
+        then "PENDING \($total)"
+      elif ($latest | any(.conclusion == "cancelled"))
+        then "CANCELLED \($total)"
+      else "GREEN \($total)"
+      end
+  '
+}
+
+# Sourced by the tests to get ci_verdict without entering the polling loop.
+if [ -n "${CI_GATE_LIB_ONLY:-}" ]; then
+  return 0 2>/dev/null || exit 0
+fi
 
 
 command -v gh >/dev/null 2>&1 || { echo "[ci-gate] gh not installed — passing open"; exit 0; }
@@ -73,42 +119,40 @@ start=$(date +%s)
 while :; do
   now=$(date +%s); elapsed=$((now - start))
 
-  # total|completed|hard_failed|cancelled
-  #   hard_failed = conclusions that ALWAYS block (a real red)
-  #   cancelled   = superseded runs, judged separately below
-  counts=$(gh api "repos/$NWO/actions/runs?head_sha=$SHA&per_page=100" --paginate \
-    --jq "$RUN_FILTER | \"\(length)|\([.[] | select(.status == \"completed\")] | length)|\([.[] | select(.conclusion | IN(\"failure\",\"timed_out\",\"action_required\"))] | length)|\([.[] | select(.conclusion == \"cancelled\")] | length)\"" \
-    2>/dev/null) || { echo "[ci-gate] $NWO@$SHA: API unreachable — passing open (network, not verdict)"; exit 0; }
+  runs=$(gh api "repos/$NWO/actions/runs?head_sha=$SHA&per_page=100" --paginate \
+    --jq '.workflow_runs[]' 2>/dev/null | jq -s '.') \
+    || { echo "[ci-gate] $NWO@$SHA: API unreachable — passing open (network, not verdict)"; exit 0; }
 
-  IFS='|' read -r total completed hard_failed cancelled <<<"$counts"
+  read -r verdict total <<<"$(printf '%s' "$runs" | ci_verdict "$EXCLUDE_PATH")"
 
-  # A genuine red always blocks, tip or not.
-  if [ "${hard_failed:-0}" -gt 0 ]; then
-    echo "[ci-gate] $NWO@${SHA:0:8}: CI FAILED ($hard_failed failing workflow(s)) — deploy blocked"
-    exit 1
-  fi
-
-  if [ "${total:-0}" -eq 0 ]; then
-    [ "$elapsed" -ge "$GRACE_S" ] && { echo "[ci-gate] $NWO@${SHA:0:8}: no CI configured — passing"; exit 0; }
-  elif [ "$completed" -eq "$total" ]; then
-    if [ "${cancelled:-0}" -eq 0 ]; then
+  case "$verdict" in
+    FAILED)
+      echo "[ci-gate] $NWO@${SHA:0:8}: CI FAILED — deploy blocked"
+      exit 1
+      ;;
+    GREEN)
       echo "[ci-gate] $NWO@${SHA:0:8}: CI green ($total workflow(s)) — deploy may proceed"
       exit 0
-    fi
-    # Runs completed but some were cancelled. Cancellation only happens when a
-    # NEWER push superseded this commit — so if this SHA is no longer the tip,
-    # bow out cleanly (the newer commit carries its own gated deploy).
-    tip=$(resolve_tip)
-    if [ -n "$tip" ] && [ "$tip" != "$SHA" ]; then
-      echo "[ci-gate] $NWO@${SHA:0:8}: superseded by ${tip:0:8} — skipping (newer commit will deploy)"
-      exit 3
-    fi
-    # Still the tip but its CI was cancelled with nothing newer to blame (rare
-    # race). We can't prove green; block with an actionable message rather than
-    # ship unverified code.
-    echo "[ci-gate] $NWO@${SHA:0:8}: tip CI was cancelled unexpectedly — re-push to re-run, or deploy manually"
-    exit 1
-  fi
+      ;;
+    CANCELLED)
+      # A workflow's LATEST run was cancelled, so nothing green replaced it.
+      # Cancellation happens when a newer push supersedes this commit — if this
+      # SHA is no longer the tip, bow out cleanly (the newer commit carries its
+      # own gated deploy).
+      tip=$(resolve_tip)
+      if [ -n "$tip" ] && [ "$tip" != "$SHA" ]; then
+        echo "[ci-gate] $NWO@${SHA:0:8}: superseded by ${tip:0:8} — skipping (newer commit will deploy)"
+        exit 3
+      fi
+      # Still the tip with nothing newer to blame (rare race). We cannot prove
+      # green; block with an actionable message rather than ship unverified code.
+      echo "[ci-gate] $NWO@${SHA:0:8}: tip CI was cancelled unexpectedly — re-push to re-run, or deploy manually"
+      exit 1
+      ;;
+    NONE)
+      [ "$elapsed" -ge "$GRACE_S" ] && { echo "[ci-gate] $NWO@${SHA:0:8}: no CI configured — passing"; exit 0; }
+      ;;
+  esac
 
   if [ "$elapsed" -ge "$TIMEOUT_S" ]; then
     echo "[ci-gate] $NWO@${SHA:0:8}: CI still pending after ${TIMEOUT_S}s — deploy blocked (deploy manually once green)"
