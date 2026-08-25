@@ -197,6 +197,46 @@ export const siteFeedback = pgTable("site_feedback", {
 Status flow: `new → dispatched → resolved`, or `new → archived`. Mirrors the action
 queue's philosophy: nothing auto-dispatches; the operator triages.
 
+## Programmatic reports (`window.FleetCrown.report`)
+
+The FAB assumes the visitor noticed something and went looking for the launcher.
+Errors are the opposite case: the product already knows what broke, and making
+the visitor re-describe it in their own words is both friction and information
+loss. So the widget publishes one host-callable entry point:
+
+```js
+window.FleetCrown?.report({
+  message: "Cat could not update my product: permission denied for entity actions.",
+  diagnostics: { code: "cat_permission_denied", action: "update_product", surface: "cat-chat" },
+});
+```
+
+- **`message`** pre-fills the textarea, caret at the end, so the visitor adds
+  detail instead of facing an empty box. They can edit or clear it — it is a
+  draft, not a fixed payload.
+- **`diagnostics`** is flat `key: value` context that stays OUT of the textarea
+  (the visitor sees "⚙ Technical details attached", full text on hover) and is
+  appended to `suggestion` at submit time. **No ingest change was needed** — no
+  new column, no new inbox renderer.
+- The budgeting rule: diagnostics are reserved first and the prose is trimmed
+  around them, because a clipped sentence still reads while a clipped error code
+  turns a self-routing report back into a human triage job.
+  (`widget/report-payload.ts`, pinned by `scripts/test/widget-report-payload.ts`.)
+
+Two behaviours worth knowing before you call it:
+
+- **The stub is published synchronously**, before the async boot gate resolves,
+  so a host page never has to know whether the widget finished booting. A call
+  that lands early is held (latest wins — a double-click means one panel, not
+  two) and replayed on mount. If the boot gate says inactive, the held report is
+  simply dropped: the widget is off, and the submission could not land anyway.
+- **An already-open panel is left alone.** The visitor may be mid-sentence, and
+  silently replacing their text would lose it.
+
+Host pages must use optional-call (`window.FleetCrown?.report`): `widget.js` is
+loaded `async`, so on a slow connection it may not have executed yet. Give the
+UI a static fallback link for that case rather than a dead button.
+
 ## API surface
 
 | Route | Auth | Purpose |
@@ -267,6 +307,12 @@ matters):
    security model; the fcw_ token stays write-only).
 
 ## Since v1 (2026-08-24)
+
+- **`window.FleetCrown.report(...)`** (see above): host pages can file a report
+  with the error already described and machine-readable context attached, in one
+  click. Built for OrangeCat's AI failure notices, where every dead-end error
+  message now carries a "Report" action instead of leaving the user to find the
+  FAB and re-type what the product already knew.
 
 - **Owner notification on ingest** (the "optional email/Telegram notification
   later" above, finally): `POST /api/feedback` fires `notifyFeedbackReceived`

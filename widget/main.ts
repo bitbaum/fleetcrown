@@ -15,12 +15,29 @@
  *   script's own src, so one snippet works on every deployment.
  */
 
+import {
+  buildSuggestion,
+  formatDiagnostics,
+  type ReportDiagnostics,
+} from "./report-payload";
+
 type Scope = "element" | "page" | "site";
 type SelectedEl = { elementType: string; elementText: string; selector: string };
 
 const ACCENT = "#e0680f";
 const MAX_LEN = 2000;
 const MAX_ELEMENTS = 10;
+
+interface ReportInput {
+  /** Pre-filled first line so the visitor never faces an empty box. */
+  message?: string;
+  diagnostics?: ReportDiagnostics;
+}
+
+interface FleetCrownApi {
+  report(input?: ReportInput): void;
+}
+
 
 const SHADOW_CSS = `
 :host { all: initial; }
@@ -84,6 +101,11 @@ textarea, input {
 textarea { resize: none; min-height: 74px; }
 textarea:focus, input:focus { outline: 2px solid ${ACCENT}; outline-offset: -1px; border-color: transparent; }
 .cnt { font-size: 10px; color: #a8a29e; text-align: right; margin: 3px 0 8px; }
+.diag {
+  font-size: 11px; color: #57534e; background: #f5f5f4;
+  border: 1px solid #e7e5e4; border-radius: 6px;
+  padding: 5px 8px; margin: -4px 0 10px; cursor: help;
+}
 input { margin-bottom: 10px; }
 .attachrow { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
 .attach { font-size: 12px; color: #57534e; padding: 6px 10px; border: 1px dashed #d6d3d1; border-radius: 8px; }
@@ -238,6 +260,22 @@ function h<K extends keyof HTMLElementTagNameMap>(
   const bottomOffset = parseInt(script?.getAttribute("data-fc-bottom") ?? "", 10);
   if (document.getElementById("fleetcrown-feedback-host")) return;
 
+  // Publish the programmatic entry point SYNCHRONOUSLY, before the async boot
+  // gate decides whether to render. A host page that calls report() from an
+  // error toast must not have to know whether the widget has finished booting,
+  // so calls made too early are held (latest wins — a double-click on "Report"
+  // means the second click, not two panels) and replayed once mount() runs.
+  // If the boot gate says inactive, the held report is simply never shown:
+  // the widget is off, and a queued submission could not land anyway.
+  let pendingReport: ReportInput | null = null;
+  let liveReport: ((input: ReportInput) => void) | null = null;
+  (window as unknown as { FleetCrown?: FleetCrownApi }).FleetCrown = {
+    report(input: ReportInput = {}) {
+      if (liveReport) liveReport(input);
+      else pendingReport = input;
+    },
+  };
+
   const mount = () => {
     // ---- state ----
     let scope: Scope = "page";
@@ -319,6 +357,19 @@ function h<K extends keyof HTMLElementTagNameMap>(
     textarea.maxLength = MAX_LEN;
     textarea.placeholder = "What should be improved?";
     const cnt = h("div", "cnt", `0/${MAX_LEN}`);
+
+    // Diagnostics travel with the submission but stay OUT of the textarea: the
+    // visitor should see a clean sentence they can edit, not a wall of context
+    // they have to scroll past or delete.
+    let diagnostics: ReportDiagnostics | null = null;
+    const diagNote = h("div", "diag");
+    function syncDiagnostics() {
+      const text = diagnostics ? formatDiagnostics(diagnostics) : "";
+      diagNote.style.display = text ? "block" : "none";
+      diagNote.textContent = text ? "⚙ Technical details attached" : "";
+      diagNote.title = text;
+    }
+    syncDiagnostics();
     textarea.addEventListener("input", () => {
       cnt.textContent = `${textarea.value.length}/${MAX_LEN}`;
       sendBtn.disabled = !textarea.value.trim();
@@ -383,7 +434,7 @@ function h<K extends keyof HTMLElementTagNameMap>(
     const errEl = h("div", "err");
     const keys = h("div", "keys", "Esc closes · Ctrl+Enter sends");
 
-    panel.append(hdr, chips, hint, textarea, cnt, contact, attachRow, row, errEl, keys);
+    panel.append(hdr, chips, hint, textarea, cnt, diagNote, contact, attachRow, row, errEl, keys);
 
     // ---- element-pick bar ----
     const pickbar = h("div", "pickbar");
@@ -430,6 +481,8 @@ function h<K extends keyof HTMLElementTagNameMap>(
       contact.value = "";
       setShot(null);
       cnt.textContent = `0/${MAX_LEN}`;
+      diagnostics = null;
+      syncDiagnostics();
       errEl.textContent = "";
       sendBtn.disabled = true;
       submitting = false;
@@ -570,6 +623,10 @@ function h<K extends keyof HTMLElementTagNameMap>(
       docStyle.remove();
     }
 
+    function suggestionWithDiagnostics(): string {
+      return buildSuggestion(textarea.value, diagnostics, MAX_LEN);
+    }
+
     async function submit() {
       if (submitting || !textarea.value.trim()) return;
       submitting = true;
@@ -582,7 +639,7 @@ function h<K extends keyof HTMLElementTagNameMap>(
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             token,
-            suggestion: textarea.value.trim().slice(0, MAX_LEN),
+            suggestion: suggestionWithDiagnostics(),
             contact: contact.value.trim() || undefined,
             page: location.pathname,
             url: location.href.slice(0, 1000),
@@ -615,8 +672,33 @@ function h<K extends keyof HTMLElementTagNameMap>(
         closePanel();
         // Rebuild the form for the next open (success view replaced it).
         panel.textContent = "";
-        panel.append(hdr, chips, hint, textarea, cnt, contact, attachRow, row, errEl, keys);
+        panel.append(hdr, chips, hint, textarea, cnt, diagNote, contact, attachRow, row, errEl, keys);
       }, 2200);
+    }
+
+    // Programmatic entry point: open prefilled so "report this" is one click.
+    // An already-open panel is left alone — the visitor may be mid-sentence,
+    // and silently replacing their text would lose it.
+    liveReport = (input: ReportInput) => {
+      if (panel.isConnected) {
+        textarea.focus();
+        return;
+      }
+      openPanel();
+      diagnostics = input.diagnostics ?? null;
+      syncDiagnostics();
+      if (input.message) {
+        textarea.value = input.message.slice(0, MAX_LEN);
+        cnt.textContent = `${textarea.value.length}/${MAX_LEN}`;
+        sendBtn.disabled = !textarea.value.trim();
+        // Caret at the end: the visitor adds detail, never clears boilerplate.
+        textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+      }
+    };
+    if (pendingReport) {
+      const held = pendingReport;
+      pendingReport = null;
+      liveReport(held);
     }
   };
 
