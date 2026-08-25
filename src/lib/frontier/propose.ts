@@ -257,6 +257,15 @@ async function runJudge(drafts: DraftProposal[], judge: Judge): Promise<JudgeRun
       temperature: 0.1,
       timeoutMs: 35_000, // reasoning judges (qwen <think>) need headroom
       model: judge.model,
+      // NO fallback, deliberately. This panel's entire value is that its judges
+      // come from different training lineages, so their errors are uncorrelated.
+      // If a dead judge silently fell through to the other judge's model, two
+      // "independent" votes would become one voter counted twice — while
+      // `verifierScores` still reported two distinct names, and the veto floor
+      // (one lineage can veto what another loves) would quietly stop existing.
+      // An abstaining judge is honest and already handled: it surfaces in
+      // judgeFailures, and a fully abstaining panel sets panelUnreachable.
+      fallback: false,
     });
   } catch (err) {
     return { scores: byIndex, error: err instanceof Error ? err.message : String(err) };

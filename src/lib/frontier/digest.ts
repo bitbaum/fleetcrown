@@ -7,7 +7,7 @@
 // candidates, so a link can never be hallucinated. Falls back to a
 // deterministic top-N (by score) if the model errors or returns junk.
 
-import { callGroqText, GROQ_FAST_MODEL } from "@/lib/groq";
+import { callTextDetailed, GROQ_FAST_MODEL } from "@/lib/groq";
 import type { FrontierCandidate } from "./ingest";
 import type { FrontierItem } from "./types";
 
@@ -90,13 +90,19 @@ export async function generateFrontierDigest(
   }
 
   let raw: string;
+  // The model that ANSWERS, not the one requested — under chain fallback those
+  // differ, and the digest persists this into a `model` column that is supposed
+  // to record what produced the text.
+  let answeredBy: string = GROQ_FAST_MODEL;
   try {
-    raw = await callGroqText(buildUserPrompt(candidates), {
+    const completion = await callTextDetailed(buildUserPrompt(candidates), {
       systemPrompt: SYSTEM_PROMPT,
       maxTokens: 1100,
       temperature: 0.3,
       timeoutMs: 22_000,
     });
+    raw = completion.text;
+    answeredBy = completion.model;
   } catch {
     return fallback(candidates);
   }
@@ -150,5 +156,5 @@ export async function generateFrontierDigest(
     ? parsed.intro.trim()
     : "The most significant AI and robotics developments our sources surfaced today.";
 
-  return { headline, intro, items, model: GROQ_FAST_MODEL };
+  return { headline, intro, items, model: answeredBy };
 }
