@@ -33,8 +33,20 @@ BASE="${COCKPIT_URL:-http://localhost:3000}"
 # No early exit here: the push-deploy block appended below must still run.
 # (A previous `exit 0` in this branch silently disabled push-to-deploy
 # whenever the local dev server was down.)
-if ! curl -sf --max-time 2 "$BASE/api/health" >/dev/null 2>&1; then
+# "Something answers /api/health on :3000" is NOT "fleetcrown is running there".
+# Every app in this fleet is a Next app that defaults to port 3000, so whichever
+# one you started first owns it. On 2026-08-25 orangecat held the port and this
+# gate ran fleetcrown's smoke against it: all 46 fleetcrown routes were absent,
+# so the suite reported 41 failures and blocked a push over a healthy branch.
+# A gate that can be made red by an UNRELATED process is worse than no gate —
+# it teaches --no-verify. So identify the server before trusting it: fleetcrown's
+# health route is the only one that answers with a top-level "ok" and "commit".
+_health="$(curl -sf --max-time 2 "$BASE/api/health" 2>/dev/null)"
+if [ -z "$_health" ]; then
   echo "→ smoke: server not running at $BASE — skipping (start with npm run dev or install-app)"
+elif ! printf '%s' "$_health" | grep -q '"commit"'; then
+  echo "→ smoke: $BASE answers /api/health but is NOT fleetcrown (another app owns the port) — skipping"
+  echo "         run fleetcrown on its own port and re-push with COCKPIT_URL=http://localhost:<port>"
 else
   echo "→ smoke: server detected at $BASE"
   npm run smoke
