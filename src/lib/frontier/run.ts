@@ -4,7 +4,7 @@
 
 import { ingestFrontier } from "./ingest";
 import { generateFrontierDigest } from "./digest";
-import { generateProposals, verifyProposals } from "./propose";
+import { generateProposals, verifyProposals, type GenerationOutcome } from "./propose";
 import {
   upsertFrontierDigest,
   getSelfImprovementTarget,
@@ -47,6 +47,24 @@ export type RunProposalsResult = {
   /** Every draft with its panel verdict — makes the loop observable (you can
    *  see what was proposed and why it did/didn't clear the bar), not a black box. */
   details?: { title: string; score: number; passed: boolean; judges: { model: string; score: number }[] }[];
+  /**
+   * Why the generator produced what it produced. `drafted: 0` used to be the
+   * whole story, and it covered four different faults with four different
+   * fixes — which is why the loop went from 2026-06-24 to 2026-08-25 without
+   * surfacing a proposal and nobody could say what was wrong with it.
+   */
+  generation?: GenerationOutcome;
+  /** Present only when the generator's model call threw. */
+  generationError?: string;
+  /** Proposals the model returned before dedup. `returned > 0` with
+   *  `drafted: 0` means WE discarded them, not that the model had no ideas. */
+  returned?: number;
+  /** Judges that could not vote. A non-empty list means any rejection below
+   *  was reached by a DEGRADED panel — fewer votes than the design assumes. */
+  judgeFailures?: { model: string; error: string }[];
+  /** No judge voted at all. Everything fails closed, correctly, but for a
+   *  reason unrelated to proposal quality. Never read this as a rejection. */
+  panelUnreachable?: boolean;
 };
 
 /** The self-improvement half: draft proposals from a digest, critique them,
@@ -71,18 +89,32 @@ export async function runFrontierProposals(digest: FrontierDigestRow): Promise<R
   // Recently shipped, user-facing features — build on these, don't repropose.
   const recentlyShipped = FLEET_RUNNER_RELEASES.slice(0, 6).flatMap((r) => r.highlights).slice(0, 12);
 
-  const drafts = await generateProposals(digest.items, {
+  const generation = await generateProposals(digest.items, {
     activeGoalTitles: activeGoals.map((g) => g.title),
     consideredTitles,
     openGaps,
     recentlyShipped,
   });
-  if (drafts.length === 0) return { drafted: 0, surfaced: 0, details: [] };
+  const drafts = generation.drafts;
+  if (drafts.length === 0) {
+    return {
+      drafted: 0, surfaced: 0, details: [],
+      generation: generation.outcome,
+      returned: generation.returned,
+      ...(generation.error ? { generationError: generation.error } : {}),
+    };
+  }
 
-  const verified = await verifyProposals(drafts);
+  const { verified, judgeFailures, panelUnreachable } = await verifyProposals(drafts);
   const details = verified.map((p) => ({ title: p.title, score: p.score, passed: p.passed, judges: p.verifierScores }));
   const survivors = verified.filter((p) => p.passed);
-  if (survivors.length === 0) return { drafted: drafts.length, surfaced: 0, details };
+  const panel = {
+    generation: generation.outcome,
+    returned: generation.returned,
+    ...(judgeFailures.length ? { judgeFailures } : {}),
+    ...(panelUnreachable ? { panelUnreachable } : {}),
+  };
+  if (survivors.length === 0) return { drafted: drafts.length, surfaced: 0, details, ...panel };
 
   await insertProposals(survivors.map((p) => ({
     digestDate: digest.digestDate,
@@ -96,5 +128,5 @@ export async function runFrontierProposals(digest: FrontierDigestRow): Promise<R
     status: "proposed",
   })));
 
-  return { drafted: drafts.length, surfaced: survivors.length, details };
+  return { drafted: drafts.length, surfaced: survivors.length, details, ...panel };
 }

@@ -122,11 +122,46 @@ function tooSimilar(a: string, b: string): boolean {
   return inter / union >= 0.6;
 }
 
+/**
+ * Why the generator produced nothing — because "nothing" has four causes with
+ * four different fixes, and they were indistinguishable.
+ *
+ * The frontier loop surfaced no proposal between 2026-06-24 and 2026-08-25.
+ * Two months, every night, and the only recoverable fact was `drafted: 0`.
+ * A dead model, a reply that would not parse, a model that legitimately found
+ * no match, and a dedup filter eating every draft all produced that same zero.
+ * The first needs a repin, the second a prompt change, the third a rethink of
+ * what the loop is fed, the fourth a looser filter — so collapsing them into
+ * one number made the next step unknowable.
+ */
+export type GenerationOutcome =
+  | "drafted"
+  /** The model call threw (dead id, 429, timeout). `error` carries the message. */
+  | "call-failed"
+  /** A reply arrived but no JSON object could be extracted from it. */
+  | "unparseable"
+  /** Valid JSON, and the model deliberately returned an empty proposal list. */
+  | "model-returned-empty"
+  /** The model proposed, and every draft was dropped as a duplicate. */
+  | "all-deduped"
+  /** No digest items to reason about. */
+  | "no-items";
+
+export type GenerationResult = {
+  drafts: DraftProposal[];
+  outcome: GenerationOutcome;
+  /** Present only for `call-failed`. */
+  error?: string;
+  /** How many the model returned before dedup — separates "proposed nothing"
+   *  from "proposed, then we threw it all away". */
+  returned: number;
+};
+
 export async function generateProposals(
   items: FrontierItem[],
   ctx: ProposalContext,
-): Promise<DraftProposal[]> {
-  if (items.length === 0) return [];
+): Promise<GenerationResult> {
+  if (items.length === 0) return { drafts: [], outcome: "no-items", returned: 0 };
   const validUrls = new Set(items.map((it) => it.url));
 
   const user = [
@@ -140,12 +175,18 @@ export async function generateProposals(
   let raw: string;
   try {
     raw = await callGroqText(user, { systemPrompt: GENERATE_SYSTEM, maxTokens: 1100, temperature: 0.4, timeoutMs: 22_000 });
-  } catch {
-    return [];
+  } catch (err) {
+    // Was `catch { return [] }`. For the eight days the default Groq model
+    // 404'd, that turned a hard outage into "the model had no ideas today".
+    return {
+      drafts: [], outcome: "call-failed", returned: 0,
+      error: err instanceof Error ? err.message : String(err),
+    };
   }
 
   const parsed = safeParse<{ proposals?: unknown }>(raw);
-  const list = Array.isArray(parsed?.proposals) ? parsed!.proposals : [];
+  if (!parsed) return { drafts: [], outcome: "unparseable", returned: 0 };
+  const list = Array.isArray(parsed.proposals) ? parsed.proposals : [];
   const drafts: DraftProposal[] = [];
   for (const p of list) {
     if (typeof p !== "object" || !p) continue;
@@ -159,7 +200,14 @@ export async function generateProposals(
     drafts.push({ title, rationale, sourceUrls });
     if (drafts.length >= 3) break;
   }
-  return drafts;
+  // `returned` vs `drafts.length` is the whole point of separating these two:
+  // "the model proposed nothing" and "the model proposed and we discarded all
+  // of it as duplicates" are different problems wearing the same zero.
+  const outcome: GenerationOutcome =
+    drafts.length > 0 ? "drafted"
+      : list.length > 0 ? "all-deduped"
+        : "model-returned-empty";
+  return { drafts, outcome, returned: list.length };
 }
 
 // The judge panel — model lineages DIFFERENT from the generator (Meta llama-3.3)
@@ -188,9 +236,17 @@ function shortModel(id: string): string {
   return id.includes("/") ? id.split("/")[1] : id;
 }
 
+/** A judge's verdict, plus WHY it said nothing when it said nothing. */
+export type JudgeRun = { scores: Map<number, number>; error?: string };
+
 // One judge scores every draft in a single call → Map<draftIndex, score>.
-// A judge that errors or returns junk abstains (empty map) rather than blocking.
-async function runJudge(drafts: DraftProposal[], judge: Judge): Promise<Map<number, number>> {
+// A judge that errors or returns junk abstains rather than blocking — but the
+// abstention now carries its reason. Silent abstention is how a total panel
+// outage came to look exactly like "the panel rejected everything": both end
+// with zero surfaced proposals and, before this, zero explanation. The reason
+// matters because the responses are opposite — repin or retry a broken judge,
+// rethink the proposals a working one rejected.
+async function runJudge(drafts: DraftProposal[], judge: Judge): Promise<JudgeRun> {
   const user = `Proposals to review:\n${drafts.map((d, i) => `[${i}] ${d.title} — ${d.rationale}`).join("\n")}`;
   const byIndex = new Map<number, number>();
   let raw: string;
@@ -202,8 +258,8 @@ async function runJudge(drafts: DraftProposal[], judge: Judge): Promise<Map<numb
       timeoutMs: 35_000, // reasoning judges (qwen <think>) need headroom
       model: judge.model,
     });
-  } catch {
-    return byIndex;
+  } catch (err) {
+    return { scores: byIndex, error: err instanceof Error ? err.message : String(err) };
   }
   const parsed = safeParse<{ scores?: Array<{ index?: unknown; score?: unknown }> }>(raw);
   for (const s of Array.isArray(parsed?.scores) ? parsed!.scores : []) {
@@ -211,21 +267,42 @@ async function runJudge(drafts: DraftProposal[], judge: Judge): Promise<Map<numb
     const sc = Number(s?.score);
     if (Number.isInteger(idx) && Number.isFinite(sc)) byIndex.set(idx, Math.max(0, Math.min(100, Math.round(sc))));
   }
-  return byIndex;
+  // Junk that parsed to no scores is an abstention with no exception to report.
+  return { scores: byIndex };
 }
+
+/** A judge that could not vote, and why. */
+export type JudgeFailure = { model: string; error: string };
+
+export type VerificationResult = {
+  verified: VerifiedProposal[];
+  /** Empty when every judge voted. Non-empty means the panel was DEGRADED —
+   *  a rejection reached on fewer votes than the design assumes. */
+  judgeFailures: JudgeFailure[];
+  /** True when NOT ONE judge voted. Everything fails closed, correctly, but
+   *  for a reason that has nothing to do with proposal quality — the case that
+   *  must never again be mistaken for "the panel rejected them". */
+  panelUnreachable: boolean;
+};
 
 /** Cross-model verification: run the whole panel in parallel, combine by
  *  consensus. A proposal passes only if the panel MEAN clears the bar and no
  *  single diverse judge vetoes it. Stored score is the mean. Judges that error
- *  or return junk simply abstain (they don't block); if none vote, fail closed. */
-export async function verifyProposals(drafts: DraftProposal[]): Promise<VerifiedProposal[]> {
-  if (drafts.length === 0) return [];
+ *  or return junk simply abstain (they don't block); if none vote, fail closed
+ *  — and say so, via `panelUnreachable`, rather than reporting a verdict the
+ *  panel never actually reached. */
+export async function verifyProposals(drafts: DraftProposal[]): Promise<VerificationResult> {
+  if (drafts.length === 0) return { verified: [], judgeFailures: [], panelUnreachable: false };
   const panelResults = await Promise.all(VERIFIER_PANEL.map((j) => runJudge(drafts, j)));
 
-  return drafts.map((d, i) => {
+  const judgeFailures: JudgeFailure[] = panelResults.flatMap((res, k) =>
+    res.error ? [{ model: shortModel(VERIFIER_PANEL[k].model), error: res.error }] : []);
+  const anyVoted = panelResults.some((res) => res.scores.size > 0);
+
+  const verified = drafts.map((d, i) => {
     const verifierScores: VerifierScore[] = [];
     panelResults.forEach((res, k) => {
-      const sc = res.get(i);
+      const sc = res.scores.get(i);
       if (sc !== undefined) verifierScores.push({ model: shortModel(VERIFIER_PANEL[k].model), score: sc });
     });
     const nums = verifierScores.map((v) => v.score);
@@ -233,4 +310,6 @@ export async function verifyProposals(drafts: DraftProposal[]): Promise<Verified
     const passed = nums.length > 0 && mean >= PROPOSAL_SCORE_THRESHOLD && Math.min(...nums) >= PROPOSAL_VETO_FLOOR;
     return { ...d, score: Math.round(mean), passed, verifierScores };
   });
+
+  return { verified, judgeFailures, panelUnreachable: !anyVoted };
 }
