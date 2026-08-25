@@ -107,9 +107,19 @@ function candidates(message: string): string[] {
   // moment the chain moved into `ai-ration` — the property held perfectly and
   // the test failed anyway, because it was reading a source file rather than
   // the thing the source file produces.
+  // …and asserted as a SET rather than one id. The previous anchor was
+  // `llama-3.1-8b-instant` alone, which the vendor retired on 2026-08-18 —
+  // so the guard failed not because the property broke but because its single
+  // example rotted. Anchoring a rot-detector to one pinned id reproduces the
+  // exact failure it is watching for. Any probed model satisfies it.
+  //
+  // Membership here means: called with a real tool definition and observed to
+  // emit a parseable tool call. gpt-oss-120b / gpt-oss-20b probed 2026-08-25
+  // (native tool_call, correct arguments). Do not add a model you have not run.
+  const LOOP_VERIFIED = ["openai/gpt-oss-120b", "openai/gpt-oss-20b"];
   const models = CHAT_CHAIN.flatMap((p) => p.models);
   assert.ok(
-    models.includes("llama-3.1-8b-instant"),
+    models.some((m) => LOOP_VERIFIED.includes(m)),
     `the chain must keep a model verified to drive the loop, got: ${models.join(", ")}`,
   );
 }
