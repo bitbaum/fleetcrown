@@ -35,6 +35,17 @@ interface ReportInput {
 }
 
 interface FleetCrownApi {
+  /**
+   * True once the panel can actually be opened — i.e. the boot gate said
+   * active AND mount() has run.
+   *
+   * A host needs this to decide what its own "Report" control should be. The
+   * stub below is published synchronously and therefore exists even when the
+   * widget will never render (token paused, boot unreachable); a host that
+   * treats "report is a function" as "clicking will do something" ships a
+   * button that silently no-ops. Read `ready` and fall back to a real link.
+   */
+  ready: boolean;
   report(input?: ReportInput): void;
 }
 
@@ -269,12 +280,14 @@ function h<K extends keyof HTMLElementTagNameMap>(
   // the widget is off, and a queued submission could not land anyway.
   let pendingReport: ReportInput | null = null;
   let liveReport: ((input: ReportInput) => void) | null = null;
-  (window as unknown as { FleetCrown?: FleetCrownApi }).FleetCrown = {
+  const api: FleetCrownApi = {
+    ready: false,
     report(input: ReportInput = {}) {
       if (liveReport) liveReport(input);
       else pendingReport = input;
     },
   };
+  (window as unknown as { FleetCrown?: FleetCrownApi }).FleetCrown = api;
 
   const mount = () => {
     // ---- state ----
@@ -695,6 +708,8 @@ function h<K extends keyof HTMLElementTagNameMap>(
         textarea.setSelectionRange(textarea.value.length, textarea.value.length);
       }
     };
+    // Only now can a click actually open something — see FleetCrownApi.ready.
+    api.ready = true;
     if (pendingReport) {
       const held = pendingReport;
       pendingReport = null;
