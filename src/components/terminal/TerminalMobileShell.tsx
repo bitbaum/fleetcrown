@@ -13,8 +13,8 @@ const BODY_CLASS = "fc-terminal-fullscreen";
  * This component used to own a header row too: a sentence explaining that the
  * default pane is too small on phones, next to the Expand button. Telling the
  * operator the layout is bad, in the space that made it bad, is not a fix — the
- * row is gone and the toggle now lives in TerminalMobileBar alongside the other
- * controls, which is also where a thumb already is.
+ * row is gone and the toggle now lives in TerminalMobileHeader, on the same row
+ * as the session name, which is also where a thumb already is.
  */
 export function TerminalMobileShell({
   children,

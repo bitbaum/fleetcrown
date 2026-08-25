@@ -1,13 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AlertTriangle, ChevronDown, ChevronUp, Link2, Minus, Plus } from "lucide-react";
 import "@xterm/xterm/css/xterm.css";
 import type { AgentLifecycle } from "@/lib/agent-execution/types";
+import { useTerminalFont, type TerminalFontControl } from "@/hooks/use-terminal-font";
 import {
   TERMINAL_DESKTOP_FONT,
   TERMINAL_MOBILE_MAX_FONT,
-  TERMINAL_MOBILE_MIN_FONT,
   TERMINAL_TARGET_COLS,
   nextFontSizeForTarget,
   ptyResizeToPublish,
@@ -29,21 +29,10 @@ import type { TerminalTransport } from "./terminal-transport";
  * comfortable and lying — and the A−/A+ stepper hands the trade back to the
  * operator, who can spend columns on legibility whenever they only need to read.
  */
-const FONT_SIZE_KEY = "fleetcrown:terminal-font-size";
 const MOBILE_QUERY = "(max-width: 767px)";
 
 function isNarrowViewport(): boolean {
   return typeof window !== "undefined" && window.matchMedia(MOBILE_QUERY).matches;
-}
-
-function readStoredFontSize(): number | null {
-  try {
-    const raw = window.localStorage.getItem(FONT_SIZE_KEY);
-    const n = raw ? Number(raw) : NaN;
-    return Number.isFinite(n) && n >= TERMINAL_MOBILE_MIN_FONT && n <= 24 ? n : null;
-  } catch {
-    return null;
-  }
 }
 
 const URL_RE = /https?:\/\/[^\s"'`<>\\)\]}]+/g;
@@ -180,6 +169,9 @@ export function TerminalView({
    *  caller knows the substrate (cloud vs this computer) so it supplies the
    *  actionable message; a generic default covers other callers. */
   stalledHint,
+  font: fontProp,
+  onLive,
+  onGeometry,
   className,
 }: {
   transport: TerminalTransport;
@@ -195,6 +187,14 @@ export function TerminalView({
   bare?: boolean;
   compactChrome?: boolean;
   stalledHint?: string;
+  /** Font size, owned by the caller so a control outside this component (the
+   *  phone's session sheet) can drive it. Omitted → this view owns its own. */
+  font?: TerminalFontControl;
+  /** Stream state, for a caller rendering its own status indicator instead of
+   *  the built-in status row (`bare`). */
+  onLive?: (state: "connecting" | "live" | "stalled") => void;
+  /** Live grid size, for a caller that reports columns elsewhere. */
+  onGeometry?: (geometry: PtyGeometry) => void;
   /** Host div class (bare layout). */
   className?: string;
 }) {
@@ -212,10 +212,13 @@ export function TerminalView({
   // it is the difference between "the agent wrote nonsense" and "my screen is
   // narrower than the screen this was drawn for".
   const [geometry, setGeometry] = useState<PtyGeometry | null>(null);
-  const [narrow, setNarrow] = useState(false);
   // null = auto-fit to TERMINAL_TARGET_COLS. A number means the operator used
-  // the stepper and their choice outranks the fit.
-  const [fontOverride, setFontOverride] = useState<number | null>(null);
+  // the stepper and their choice outranks the fit. Owned here only when the
+  // caller does not own it (see the `font` prop) — the hook is called
+  // unconditionally so the rules of hooks hold either way.
+  const ownFont = useTerminalFont();
+  const font = fontProp ?? ownFont;
+  const fontOverride = font.size;
   const termRef = useRef<import("@xterm/xterm").Terminal | null>(null);
   const fitRef = useRef<import("@xterm/addon-fit").FitAddon | null>(null);
   /** Re-runs the mount effect's measure/fit/publish pass from outside it. */
@@ -223,10 +226,16 @@ export function TerminalView({
   const fontOverrideRef = useRef<number | null>(null);
   fontOverrideRef.current = fontOverride;
 
-  useEffect(() => {
-    setNarrow(isNarrowViewport());
-    setFontOverride(readStoredFontSize());
-  }, []);
+  // Mirror the stream state and grid size out to a caller rendering its own
+  // chrome. Effects rather than calls at the setState sites, so a parent that
+  // re-renders on these never does so during this component's render.
+  const liveState = stalled ? "stalled" : connected ? "live" : "connecting";
+  const onLiveRef = useRef(onLive);
+  useEffect(() => { onLiveRef.current = onLive; });
+  useEffect(() => { onLiveRef.current?.(liveState); }, [liveState]);
+  const onGeometryRef = useRef(onGeometry);
+  useEffect(() => { onGeometryRef.current = onGeometry; });
+  useEffect(() => { if (geometry) onGeometryRef.current?.(geometry); }, [geometry]);
 
   const stallMessage = stalledHint ??
     "Connected, but no output arrived — the session may be unresponsive. Reopen it, or restart the executor.";
@@ -541,17 +550,15 @@ export function TerminalView({
     setGeometry({ cols: term.cols, rows: term.rows });
   }, [fontOverride]);
 
-  const stepFont = useCallback((delta: number) => {
-    const current = termRef.current?.options.fontSize ?? TERMINAL_MOBILE_MAX_FONT;
-    const next = Math.min(24, Math.max(TERMINAL_MOBILE_MIN_FONT, current + delta));
-    setFontOverride(next);
-    try { window.localStorage.setItem(FONT_SIZE_KEY, String(next)); } catch { /* private mode */ }
-  }, []);
-
-  const resetFont = useCallback(() => {
-    setFontOverride(null);
-    try { window.localStorage.removeItem(FONT_SIZE_KEY); } catch { /* private mode */ }
-  }, []);
+  // Tell the font owner what is actually on screen, so a step taken while in
+  // auto mode starts from the size the eye is reading rather than from the
+  // theoretical maximum. Auto-fit picks the size inside the effect above; only
+  // the terminal knows where it landed.
+  const fontSync = font.sync;
+  useEffect(() => {
+    const rendered = termRef.current?.options.fontSize;
+    if (rendered) fontSync(rendered);
+  }, [geometry, fontSync]);
 
   if (bare) {
     return (
@@ -575,9 +582,7 @@ export function TerminalView({
   const statusLabel = stalled
     ? "not responding"
     : connected
-      ? interactive
-        ? narrow ? "live · tap to type" : "live · click to focus, type directly"
-        : "live"
+      ? interactive ? "live · click to focus, type directly" : "live"
       : "connecting…";
   // Below the target the grid is narrower than the screen the agent drew, so
   // wide output WILL wrap oddly. Saying which is which costs one chip and turns
@@ -586,11 +591,16 @@ export function TerminalView({
 
   return (
     <div className={`flex flex-col gap-2 ${fill ? "h-full min-h-0" : ""}`}>
-      <div className="ui-term-statusrow">
+      {/* Desktop only. On a phone this row is duplicated by chrome that reads
+          better: the live dot sits in the header next to the session name, and
+          the size stepper is in the session sheet. Two status lines saying the
+          same thing is exactly the kind of stacking that left the phone with
+          four visible terminal rows. */}
+      <div className="ui-term-statusrow hidden md:flex">
         <span className={`ui-micro-label ${stalled ? "text-status-warning" : ""}`}>
           {statusLabel}
         </span>
-        {narrow && geometry && geometry.cols > 0 && (
+        {geometry && geometry.cols > 0 && (
           <span
             className={belowTarget ? "ui-term-cols ui-term-cols-warn" : "ui-term-cols"}
             title={
@@ -603,30 +613,26 @@ export function TerminalView({
           </span>
         )}
         <div className="ml-auto flex items-center gap-1">
-          {narrow && (
-            <>
-              <button
-                type="button"
-                className="ui-term-font-btn"
-                onClick={() => stepFont(-1)}
-                aria-label="Smaller text, more columns"
-              >
-                <Minus className="h-3.5 w-3.5" aria-hidden="true" />
-              </button>
-              <button
-                type="button"
-                className="ui-term-font-btn"
-                onClick={() => stepFont(1)}
-                aria-label="Larger text, fewer columns"
-              >
-                <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-              </button>
-              {fontOverride !== null && (
-                <button type="button" className="ui-term-font-reset" onClick={resetFont}>
-                  Auto
-                </button>
-              )}
-            </>
+          <button
+            type="button"
+            className="ui-term-font-btn"
+            onClick={() => font.step(-1)}
+            aria-label="Smaller text, more columns"
+          >
+            <Minus className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            className="ui-term-font-btn"
+            onClick={() => font.step(1)}
+            aria-label="Larger text, fewer columns"
+          >
+            <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
+          {fontOverride !== null && (
+            <button type="button" className="ui-term-font-reset" onClick={font.reset}>
+              Auto
+            </button>
           )}
           {onSend && !interactive && (
             <button

@@ -35,6 +35,12 @@ src/
 │   │                 terminal-transport (substrate seam), TabVoiceMic.
 │   │                 Modes are SSOT in config/terminal-modes.ts; never add a
 │   │                 second terminal shell — add a transport.
+│   │                 Below md the same state drives phone chrome:
+│   │                 TerminalMobileHeader (one line) + TerminalSessionSheet
+│   │                 (all the setup) + TerminalMobileDock = TerminalKeyDeck
+│   │                 (the arrows/Esc/Tab/Ctrl a soft keyboard lacks — bytes are
+│   │                 SSOT in config/terminal-keys.ts) + TerminalRawComposer.
+│   │                 See docs/development/responsive-design.md.
 │   ├── activity/  → ActivityView, EventStream, DigestPanel (fleet activity timeline + digests)
 │   ├── today/     → StickyNoteCard (captures; Loki "add X to my list"), CalendarCard, WeatherCard, CommitmentsCard, SubscriptionsCard, HabitsList
 │   ├── people/    → PeopleGrid, PersonCard, PersonDetail

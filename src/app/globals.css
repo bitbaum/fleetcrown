@@ -1848,25 +1848,170 @@
     @apply inline-flex h-8 shrink-0 items-center rounded-md px-2 text-nano uppercase tracking-caps text-text-muted transition-colors hover:text-text-primary;
   }
 
-  /* Mobile terminal control bar — source, session, agent, input mode, expand.
-     Two rows on a phone; the desktop chrome is hidden below md. */
-  .ui-term-mbar {
+  /* ── Phone terminal ──────────────────────────────────────────────────────
+     Three pieces, top to bottom: a one-line header, the screen, and the dock
+     (key deck + composer). What used to be here instead was a two-row control
+     bar of selects — better than the desktop stack it replaced, but still
+     chrome measured in rows above a terminal measured in four lines, and still
+     with no way to press an arrow key. */
+
+  /* Header — session identity and liveness, nothing else. */
+  .ui-term-mhead {
+    @apply flex shrink-0 items-center gap-2;
+  }
+  .ui-term-mhead-btn {
+    @apply flex h-11 min-w-0 flex-1 items-center gap-2 rounded-xl border border-border-subtle bg-surface-raised px-3 text-left transition-colors active:bg-surface-overlay;
+  }
+  .ui-term-mhead-title {
+    @apply min-w-0 flex-1 truncate text-sm font-medium text-text-primary;
+  }
+  .ui-term-mhead-agent {
+    @apply shrink-0 rounded bg-surface-overlay px-1.5 py-0.5 text-nano uppercase tracking-caps text-text-secondary;
+  }
+  .ui-term-mhead-icon {
+    @apply inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border-subtle bg-surface-raised text-text-secondary transition-colors active:bg-surface-overlay;
+  }
+
+  /* Liveness dot. Bigger than ui-dot because at arm's length on a phone the
+     1.5px status dot is a smudge, and this one answers the only question that
+     matters before you read anything: is this thing still alive? */
+  .ui-term-live-dot {
+    @apply h-2 w-2 shrink-0 rounded-full;
+    background-color: var(--status-neutral);
+  }
+  .ui-term-live-dot-on { background-color: var(--status-positive); }
+  .ui-term-live-dot-warn { background-color: var(--status-warning); }
+  .ui-term-live-dot-pending {
+    background-color: var(--status-neutral);
+    animation: ui-term-pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes ui-term-pulse {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 1; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ui-term-live-dot-pending { animation: none; }
+  }
+
+  /* ── Key deck ─────────────────────────────────────────────────────────────
+     The half of the keyboard a phone does not have. Keycaps are mono and
+     squared-off so they read as keys rather than as buttons offering opinions;
+     the arrows are one joined control because they are one control. */
+  .ui-term-deck {
     @apply flex shrink-0 flex-col gap-1.5;
   }
-  .ui-term-mbar-row {
-    @apply flex items-center gap-1.5;
+  .ui-term-deck-row {
+    @apply flex items-stretch gap-1.5;
   }
-  .ui-term-mbar-select {
-    @apply h-11 min-w-0 shrink rounded-lg border border-border-subtle bg-surface-raised px-2 text-xs text-text-secondary outline-none transition-colors hover:border-border-default focus:border-accent-primary disabled:opacity-50;
+  .ui-term-key {
+    @apply inline-flex h-11 min-w-11 shrink-0 select-none items-center justify-center rounded-lg border border-border-default bg-surface-raised px-2.5 text-xs text-text-secondary transition-colors;
+    font-family: var(--font-mono);
+    /* A held arrow key must repeat, not select the label or open the OS's
+       text-selection menu on top of the terminal. */
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
   }
-  .ui-term-mbar-select-grow {
-    @apply min-w-0 flex-1;
+  .ui-term-key-held {
+    @apply border-border-interactive bg-surface-overlay text-text-primary;
   }
-  .ui-term-mbar-spacer {
-    @apply flex-1;
+  /* Enter. The only accented key, and the widest — it is the one that answers
+     the question on screen. `text-inverted`, not `accent-text`: accent-text is
+     accent-COLOURED text for use on a normal surface, so pairing it with an
+     accent background is the one combination guaranteed to disappear. */
+  .ui-term-key-accent {
+    @apply flex-1 border-transparent bg-accent-primary text-base font-medium text-text-inverted;
   }
-  .ui-term-mbar-btn {
-    @apply inline-flex h-11 min-w-11 shrink-0 items-center justify-center rounded-lg border border-border-subtle bg-surface-raised text-xs text-text-secondary transition-colors hover:border-border-default hover:text-text-primary disabled:cursor-not-allowed;
+  .ui-term-key-accent.ui-term-key-held { @apply bg-accent-hover; }
+  .ui-term-key-danger { @apply text-status-negative; }
+  /* The d-pad: four caps sharing one border, hairlines between them. */
+  .ui-term-key-cluster {
+    @apply flex shrink-0 overflow-hidden rounded-lg border border-border-default bg-surface-raised;
+  }
+  .ui-term-key-arrow {
+    @apply inline-flex h-11 w-11 select-none items-center justify-center border-l border-border-subtle text-xs text-text-secondary transition-colors first:border-l-0;
+    font-family: var(--font-mono);
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+  .ui-term-key-arrow.ui-term-key-held { @apply bg-surface-overlay text-text-primary; }
+  /* Secondary lane — scrolls sideways, grouped by what the keys do. */
+  .ui-term-key-lane {
+    @apply flex items-center gap-3 overflow-x-auto pb-0.5 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden;
+  }
+  .ui-term-key-group {
+    @apply flex shrink-0 items-center gap-1.5;
+  }
+  .ui-term-key-group-label {
+    @apply shrink-0 text-nano uppercase tracking-caps text-text-muted;
+  }
+
+  /* ── Dock — keys and composer as one block under the screen ─────────────── */
+  .ui-term-dock {
+    @apply flex shrink-0 flex-col gap-2 pt-1;
+  }
+  .ui-term-dock-hint {
+    @apply px-1 text-micro leading-snug text-text-muted;
+  }
+  .ui-term-mcomposer {
+    @apply flex items-end gap-1.5 rounded-xl border border-border-default bg-surface-raised p-1.5;
+  }
+  .ui-term-mcomposer-input {
+    @apply min-h-11 w-full flex-1 resize-none bg-transparent px-2 py-2.5 text-sm leading-snug text-text-primary outline-none placeholder:text-text-muted;
+    font-family: var(--font-mono);
+  }
+  .ui-term-mcomposer-enter {
+    @apply inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border-subtle text-text-muted transition-colors;
+  }
+  .ui-term-mcomposer-enter-on {
+    @apply border-border-interactive bg-surface-overlay text-text-primary;
+  }
+  .ui-term-mcomposer-send {
+    @apply inline-flex h-11 shrink-0 items-center justify-center rounded-lg bg-accent-primary px-4 text-sm font-medium text-text-inverted transition-opacity disabled:opacity-40;
+  }
+
+  /* ── Session sheet — all the setup, one tap behind the session name ─────── */
+  .ui-term-sheet {
+    @apply flex flex-col overflow-hidden;
+    max-height: var(--modal-max-height);
+  }
+  .ui-term-sheet-grip {
+    @apply mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-border-strong;
+  }
+  .ui-term-sheet-body {
+    @apply flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4;
+  }
+  .ui-term-sheet-section {
+    @apply flex flex-col gap-1;
+  }
+  .ui-term-sheet-label {
+    @apply mb-1 text-nano font-semibold uppercase tracking-caps text-text-muted;
+  }
+  .ui-term-sheet-option {
+    @apply flex min-h-11 w-full items-center gap-3 rounded-xl border border-transparent px-3 py-2 text-left transition-colors active:bg-surface-overlay disabled:opacity-40;
+  }
+  .ui-term-sheet-option-active {
+    @apply border-border-interactive bg-surface-raised;
+  }
+  .ui-term-sheet-option-title {
+    @apply block truncate text-sm text-text-primary;
+  }
+  .ui-term-sheet-option-detail {
+    @apply mt-0.5 block text-micro leading-snug text-text-muted;
+  }
+  .ui-term-sheet-empty {
+    @apply px-3 pb-1 text-micro leading-snug text-text-muted;
+  }
+  .ui-term-sheet-row {
+    @apply flex min-h-11 items-center gap-2 px-3;
+  }
+  .ui-term-sheet-foot {
+    @apply shrink-0 border-t border-border-subtle p-4;
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+  .ui-term-font-reset-on {
+    @apply text-text-primary;
   }
 
   /* Deep-link miss — a session that isn't here. Occupies the terminal's slot
