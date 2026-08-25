@@ -142,6 +142,34 @@ async function main() {
     );
   }
 
+  // ── 8. A fallback must not fire silently ──────────────────────────────────
+  // The feature keeps working, so nothing LOOKS wrong while the primary is
+  // dead — exactly how the 2026-08-18 rot survived eight days. And the silence
+  // has to be meaningful in the other direction too: a clean call must stay
+  // quiet, or the warning becomes noise nobody reads.
+  {
+    const realWarn = console.warn;
+    const warnings: string[] = [];
+    console.warn = (...a: unknown[]) => { warnings.push(a.join(" ")); };
+    try {
+      stub(() => ({ status: 200, content: "fine" }));
+      await callTextDetailed("p");
+      assert.equal(warnings.length, 0, "a first-try success must not warn — silence has to mean 'nothing degraded'");
+
+      let first = true;
+      stub(() => {
+        if (first) { first = false; return { status: 404, text: "model_not_found" }; }
+        return { status: 200, content: "rescued" };
+      });
+      await callTextDetailed("p");
+      assert.equal(warnings.length, 1, "a fallback must announce itself exactly once");
+      assert.match(warnings[0], /\[ai\] fallback/, "the warning must be greppable in the journal");
+      assert.match(warnings[0], /404|model_not_found/, "it must name WHY the primary was skipped");
+    } finally {
+      console.warn = realWarn;
+    }
+  }
+
   globalThis.fetch = realFetch;
   console.log(`✓ groq chain fallback: ${chain.length} link(s) across ${vendors.length} vendor(s); provenance + panel isolation hold`);
 }
