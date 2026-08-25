@@ -157,6 +157,16 @@ export async function callTextDetailed(prompt: string, options: GroqOptions = {}
       const text = await callOneLink(link, prompt, {
         maxTokens, temperature, timeoutMs, systemPrompt, reasoningEffort,
       });
+      // A fallback that fires SILENTLY hides the very fault it is compensating
+      // for: the feature still works, so nothing looks wrong, while the primary
+      // is dead. That is how the 2026-08-18 rot survived eight days. Real
+      // traffic already knows — this just makes it say so, at zero token cost.
+      if (attempts.length > 0) {
+        console.warn(
+          `[ai] fallback: ${link.provider.id}/${link.model} answered after ` +
+            `${attempts.length} failed link(s) — ${attempts.map((a) => `${a.model}: ${a.error}`).join(" | ")}`,
+        );
+      }
       return { text, model: link.model, provider: link.provider.id, attempts };
     } catch (err) {
       attempts.push({ model: link.model, error: err instanceof Error ? err.message : String(err) });
