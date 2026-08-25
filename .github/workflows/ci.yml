@@ -19,6 +19,30 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
+
+    # A migrated Postgres, so tests that need one stop being excluded forever.
+    # Six suites were on the permanent skip list for lack of a database, and
+    # the entitlement e2e — signature verification, actor lookup, grant write,
+    # dedupe, expiry sweep — is the BILLING boundary. It had never run in CI.
+    #
+    # pgvector, not plain postgres: src/db/schema/knowledge-embeddings.ts
+    # declares a `vector` column, and drizzle-kit push dies with
+    # `type "vector" does not exist` on a stock image.
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+
     steps:
       - uses: actions/checkout@v7
 
@@ -48,6 +72,20 @@ jobs:
       # a separate job would be faster in wall-clock but would break "green
       # local verify => green CI", and desktop/ is precisely the area where
       # nobody was running anything locally. See scripts/check-desktop.sh.
+      # `drizzle-kit push`, NOT the drizzle/*.sql files. Those do not replay
+      # from empty — 0001_canonical_project_identity.sql references
+      # `user_projects`, which 0000 never creates, and 51 of 56 migrations fail
+      # against a fresh database. The journal is history, not a rebuild recipe.
+      #
+      # push is safe to run non-interactively HERE specifically because the
+      # database is empty: its truncate prompts only fire for tables holding
+      # rows, so there is nothing for it to ask about. Never point this at a
+      # database with data in it.
+      - name: Migrate the CI database
+        run: |
+          psql "$DATABASE_URL" -c 'CREATE EXTENSION IF NOT EXISTS vector;'
+          npx drizzle-kit push --force
+
       - name: Verify
         run: npm run verify
 

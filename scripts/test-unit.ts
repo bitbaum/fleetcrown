@@ -31,9 +31,31 @@ const SKIP: Record<string, string> = {
   "rag-retrieval.ts": "needs EMBEDDINGS_BASE_URL (fastembed service)",
   "push-notifications.ts": "needs push/web-push env — run manually",
   "inject-prompt.ts": "needs a live DB (only passes locally via .env.local)",
-  "orangecat-entitlement-e2e.ts": "needs a live DB (only passes locally via .env.local)",
   "verify-project-brief.ts": "needs a live DB + Groq API (network + GROQ_API_KEY)",
 };
+
+/**
+ * Tests that are skipped ONLY while their prerequisite is absent, rather than
+ * skipped forever.
+ *
+ * The difference matters. An entry in SKIP above is a permanent exclusion, and
+ * six of them had quietly become "this path is verified by nobody": the
+ * entitlement suite — signature verification, actor lookup, grant writes,
+ * dedupe, expiry — is the billing boundary, and it had never once run in CI.
+ * It does not need a SEEDED database, only a migrated one, which CI can now
+ * provide (see .github/workflows/ci.yml). So it runs wherever DATABASE_URL
+ * exists and steps aside politely where it does not, instead of being
+ * excluded on every machine forever because some machines lack a database.
+ */
+const SKIP_UNLESS_ENV: Record<string, string> = {
+  "orangecat-entitlement-e2e.ts": "DATABASE_URL",
+};
+
+for (const [file, envVar] of Object.entries(SKIP_UNLESS_ENV)) {
+  if (!process.env[envVar]) {
+    SKIP[file] = `needs ${envVar} — runs in CI against the migrated service DB`;
+  }
+}
 
 const MAX_PARALLEL = Number(process.env.TEST_UNIT_PARALLEL ?? 2);
 
