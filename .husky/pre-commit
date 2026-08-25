@@ -1,11 +1,31 @@
 #!/usr/bin/env sh
-# Run quick correctness checks on every commit. Smoke runs in pre-push
-# (when the local server is up) — see .husky/pre-push.
+# Commit-time checks run on the STAGED FILES ONLY, and deliberately do less
+# than pre-push.
+#
+# This hook used to run `tsc --noEmit` (40s) plus `eslint src/ home/` (132s)
+# over the whole tree on every commit — 2m52s to record a one-line change.
+# That is not a safety property, it is a tax on committing, and the thing it
+# taxes is exactly the habit that keeps work off a single disk. Measured
+# 2026-08-25: 206 finished files sat uncommitted across the fleet for ten days.
+#
+# The split that makes sense: a COMMIT is local and reversible, so gate it
+# cheaply; a PUSH is shared, so gate it completely. `npm run verify` still runs
+# in full on pre-push and again in CI, so nothing reaches origin unverified —
+# only the local loop got its three minutes back.
+#
+# Whole-program checks (tsc) cannot be scoped to staged files and stay on the
+# push side where the full bundle already lives.
 
 set -e
 
-echo "→ tsc --noEmit"
-npx tsc --noEmit
+# -z/xargs -0 so paths with spaces survive; ACMR skips deletions, which would
+# make eslint fail on a file that is gone by design.
+staged=$(git diff --cached -z --name-only --diff-filter=ACMR -- 'src/**/*.ts' 'src/**/*.tsx' 'home/**/*.ts' 'home/**/*.tsx')
 
-echo "→ eslint src/ home/"
-npx eslint src/ home/
+if [ -z "$staged" ]; then
+  echo "→ pre-commit: no staged TypeScript — nothing to lint"
+  exit 0
+fi
+
+echo "→ eslint (staged files only — full tree runs on push and in CI)"
+printf '%s' "$staged" | xargs -0 npx eslint

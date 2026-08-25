@@ -109,14 +109,34 @@ safe_rm() { # <path> <required-prefix>
   rm -rf -- "$path"
 }
 
-# Is any running process working inside this directory? Cheap /proc scan; stops
-# the GC from pulling node_modules out from under a build or a live agent.
+# Is any running process working inside this directory? Stops the GC from
+# pulling node_modules out from under a build or a live agent.
+#
+# The /proc scan is done ONCE and cached. It used to fork a readlink per PID on
+# every call: with a few hundred processes and one call per candidate directory
+# that is thousands of forks per run. Measured 2026-08-25 on a developer box, a
+# single disk-gc invocation spent ~20s here, and the test that drives it three
+# times was 100s — 22% of the whole `npm run verify` bundle. One `ls -l` pass
+# is one fork total.
+#
+# Caching for the lifetime of the run is safe and is arguably the more correct
+# reading anyway: the answer should be "was this in use when the GC started",
+# not a value that can flip between two tiers of the same sweep.
+_load_proc_cwds() {
+  [ -n "${_PROC_CWDS_LOADED:-}" ] && return 0
+  _PROC_CWDS=$(ls -l /proc/[0-9]*/cwd 2>/dev/null | sed 's/^.* -> //')
+  _PROC_CWDS_LOADED=1
+}
+
 in_use() { # <dir>
   local dir="$1" link
-  for link in /proc/[0-9]*/cwd; do
-    link=$(readlink "$link" 2>/dev/null) || continue
+  _load_proc_cwds
+  while IFS= read -r link; do
+    [ -n "$link" ] || continue
     case "$link" in "$dir"|"$dir"/*) return 0 ;; esac
-  done
+  done <<PROC_CWDS
+$_PROC_CWDS
+PROC_CWDS
   return 1
 }
 

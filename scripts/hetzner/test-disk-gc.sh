@@ -28,10 +28,18 @@ chmod +x "$TMP/disk-gc.sh"
 FAKE_FS="$TMP/fs"
 FAKE_TOTAL_MB=200
 
+# The fake filesystem is built from SPARSE files (truncate, not dd) and the df
+# stub below measures --apparent-size, so a "180MB ballast" costs no disk and
+# no time. Writing these for real cost 110 SECONDS per run — 22% of the whole
+# `npm run verify` bundle, paid on every commit and every push, to move ~300MB
+# of zeros that nothing ever reads. The code under test only ever calls df
+# (see pct()/usedk() in install-disk-gc.sh), which is stubbed here, so it
+# cannot tell a sparse file from a written one.
+
 # df stub: usage derived from the real tree, so rm actually lowers the number.
 cat > "$TMP/bin/df" <<STUB
 #!/usr/bin/env bash
-used_mb=\$(du -sm "$FAKE_FS" 2>/dev/null | cut -f1)
+used_mb=\$(du --apparent-size -sm "$FAKE_FS" 2>/dev/null | cut -f1)
 used_mb=\${used_mb:-0}
 pct=\$(( used_mb * 100 / $FAKE_TOTAL_MB ))
 case "\$*" in
@@ -64,18 +72,18 @@ seed() {
   # Two cold repos and one worked-on-today repo, each with a 20MB node_modules.
   for r in coldrepo olderrepo; do
     mkdir -p "$FAKE_FS/dev/$r/src" "$FAKE_FS/dev/$r/node_modules"
-    dd if=/dev/zero of="$FAKE_FS/dev/$r/node_modules/blob" bs=1M count=20 2>/dev/null
+    truncate -s 20M "$FAKE_FS/dev/$r/node_modules/blob"
     echo "x" > "$FAKE_FS/dev/$r/src/index.ts"
     touch -t "$old_ts" "$FAKE_FS/dev/$r/src/index.ts"
   done
   mkdir -p "$FAKE_FS/dev/hotrepo/src" "$FAKE_FS/dev/hotrepo/node_modules"
-  dd if=/dev/zero of="$FAKE_FS/dev/hotrepo/node_modules/blob" bs=1M count=20 2>/dev/null
+  truncate -s 20M "$FAKE_FS/dev/hotrepo/node_modules/blob"
   echo "x" > "$FAKE_FS/dev/hotrepo/src/index.ts"   # touched now → hot
   # Four releases for one app; only the newest two may survive.
   mkdir -p "$FAKE_FS/opt/someapp/releases"
   for i in 1 2 3 4; do
     mkdir -p "$FAKE_FS/opt/someapp/releases/rel-$i"
-    dd if=/dev/zero of="$FAKE_FS/opt/someapp/releases/rel-$i/blob" bs=1M count=10 2>/dev/null
+    truncate -s 10M "$FAKE_FS/opt/someapp/releases/rel-$i/blob"
     touch -d "2026-01-0$i" "$FAKE_FS/opt/someapp/releases/rel-$i"
   done
 }
@@ -135,7 +143,7 @@ check "cheap tier actually ran: releases trimmed to 2 (got $rels)" \
 # ── 4. Nothing reclaimable while still over the mark must ESCALATE ───────────
 # No dev root, no releases → every tier is a no-op, but the disk is still full.
 rm -rf "$FAKE_FS"; mkdir -p "$FAKE_FS/dev" "$FAKE_FS/opt"
-dd if=/dev/zero of="$FAKE_FS/ballast" bs=1M count=180 2>/dev/null
+truncate -s 180M "$FAKE_FS/ballast"
 : > "$ALERT_LOG"; rm -f "$TMP/state/host_diskgc"
 gc DISK_GC_HIGH_PCT=75 DISK_GC_TARGET_PCT=65
 check "exhausted tiers while still full: escalates, not silent" \
