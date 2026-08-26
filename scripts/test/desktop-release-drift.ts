@@ -34,7 +34,9 @@
  * --------------------------------
  * This check reads git tags, and `actions/checkout` fetches none by default —
  * so the obvious version of this gate passes vacuously in the one place it
- * most needs to run. ci.yml sets `fetch-tags: true`; if that ever regresses,
+ * most needs to run. A shallow checkout with `fetch-tags` is not enough either
+ * — the tagged commit's trees are still missing, so the diff below cannot run.
+ * ci.yml's check job therefore uses `fetch-depth: 0`; if that ever regresses,
  * the absence is reported as a failure rather than quietly counted as clean.
  * A gate that cannot go red is decoration.
  *
@@ -44,6 +46,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
+import { FLEET_RUNNER_RELEASES } from "@/config/changelog";
 
 function assert(condition: boolean, message: string): void {
   if (!condition) throw new Error(message);
@@ -150,6 +153,36 @@ if (changed.length > 0) {
       `publishes the release from it).\n` +
       `Changed: ${changed.slice(0, 12).join(", ")}` +
       (changed.length > 12 ? `, +${changed.length - 12} more` : ""),
+  );
+}
+
+// ── A bump also has to be publishable ───────────────────────────────────────
+//
+// scripts/mirror-desktop-release.sh refuses to publish a version with no
+// FLEET_RUNNER_RELEASES entry, because /releases and the footer version pill
+// would then advertise an older build than operators are running. That refusal
+// is correct, but it arrives at the END of the pipeline: v0.8.13 built cleanly
+// on all three OS runners and died at the publish step, so the whole release
+// was three builds of wasted work and still nothing on any machine.
+//
+// The check belongs where the bump is made. Same rule as the bump itself — a
+// mechanical prerequisite that a person forgets — so it fails in CI on the PR
+// rather than twenty minutes into a matrix build.
+if (compareVersions(currentVersion, releasedVersion) > 0) {
+  const entry = FLEET_RUNNER_RELEASES.find((r) => r.version === currentVersion);
+  assert(
+    entry !== undefined,
+    `desktop/package.json is at ${currentVersion}, but src/config/changelog.ts ` +
+      `has no FLEET_RUNNER_RELEASES entry for it. The release would build on ` +
+      `all three OS runners and then be REFUSED at the publish step, because ` +
+      `/releases would otherwise claim an older version than operators run.\n` +
+      `Fix: add the entry (version/tag/date/highlights) next to the bump.`,
+  );
+  assert(
+    entry!.tag === `${TAG_PREFIX}${currentVersion}`,
+    `changelog entry for ${currentVersion} carries tag "${entry!.tag}", but the ` +
+      `release will be published as "${TAG_PREFIX}${currentVersion}". The ` +
+      `/releases page would link a tag that does not exist.`,
   );
 }
 
