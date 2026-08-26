@@ -297,6 +297,34 @@ export async function extractRoadmap(projectName: string, sourceText: string): P
   return parsed.data;
 }
 
+export type ApplyProfileOptions = {
+  /** Never overwrite a field that already holds text. Off by default. */
+  onlyMissing?: boolean;
+};
+
+/**
+ * Current description + attribute values, keyed the same way an ExtractedProfile
+ * is, so `onlyMissing` can ask one question per field: is this already answered?
+ */
+async function readExistingProfileValues(
+  userId: string,
+  entityId: string,
+): Promise<Record<string, string | null>> {
+  const [[core], rows] = await Promise.all([
+    db
+      .select({ description: entities.description })
+      .from(entities)
+      .where(and(eq(entities.id, entityId), eq(entities.userId, userId))),
+    db
+      .select({ key: attributes.key, value: attributes.value })
+      .from(attributes)
+      .where(and(eq(attributes.userId, userId), eq(attributes.entityId, entityId))),
+  ]);
+  const out: Record<string, string | null> = { description: core?.description ?? null };
+  for (const row of rows) out[row.key] = row.value;
+  return out;
+}
+
 /**
  * Write an extracted profile to the project's SSOT: description on the
  * entity row, everything else as attributes. Returns the applied fields
@@ -307,10 +335,23 @@ export async function applyProjectProfile(
   userId: string,
   entityId: string,
   profile: ExtractedProfile,
+  options: ApplyProfileOptions = {},
 ): Promise<Partial<Record<keyof ExtractedProfile, string>> | null> {
   const applied: Partial<Record<keyof ExtractedProfile, string>> = {};
+  // Nothing is skipped by default — the kickoff flow deliberately rewrites a
+  // profile from a brief the user just edited. `onlyMissing` is for the callers
+  // that fill gaps in a profile someone has already worked on, where silently
+  // replacing their own mission with the model's is the whole risk.
+  const existing = options.onlyMissing
+    ? await readExistingProfileValues(userId, entityId)
+    : null;
+  // hasAnswer, not a bare emptiness test: it is the same predicate
+  // computeProjectHealth uses, so "already answered" means exactly what the
+  // health check means by it. Anything else and a fill could overwrite a field
+  // the score already counted, or skip one it did not.
+  const occupied = (key: string) => Boolean(existing && hasAnswer(existing[key] ?? undefined));
 
-  if (profile.description) {
+  if (profile.description && !occupied("description")) {
     const updated = await patchProject(userId, entityId, { description: profile.description });
     if (!updated) return null;
     applied.description = profile.description;
@@ -332,7 +373,7 @@ export async function applyProjectProfile(
 
   const entries = attrKeys.flatMap((key) => {
     const value = profile[key];
-    return value ? ([[key, value] as const]) : [];
+    return value && !occupied(key) ? ([[key, value] as const]) : [];
   });
 
   if (entries.length > 0) {

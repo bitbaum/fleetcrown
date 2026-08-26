@@ -206,6 +206,16 @@ export function computeProjectHealth(input: ProjectHealthInput): ProjectHealth {
   };
 }
 
+/**
+ * The checks POST /api/projects/{id}/brief can close from the project's own
+ * brief. Everything else is a fact only the person has: where the code lives,
+ * where it is deployed, and whether a flagged problem is actually resolved.
+ *
+ * Listed rather than inferred so the button can say what it will do BEFORE it
+ * runs, instead of reporting a surprise afterwards.
+ */
+export const AI_FILLABLE_CHECKS = new Set(["brief", "mission", "stage", "next", "done"]);
+
 /** One-line agent/tooltip rendering: "7/10 — missing: Live URL, Next step queued". */
 export function describeProjectHealth(health: ProjectHealth): string {
   const missing = health.checks.filter((c) => !c.pass).map((c) => c.label);

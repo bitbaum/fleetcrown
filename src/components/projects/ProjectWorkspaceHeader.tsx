@@ -68,6 +68,7 @@ export function ProjectWorkspaceHeader({
           interactive
           projectId={readonly ? undefined : projectId}
           userProjectId={userProjectId}
+          brief={currentDescription}
         />
         {readonly && <span className="ui-tag ui-tag-neutral">Team project</span>}
       </div>

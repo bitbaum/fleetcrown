@@ -2,11 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, ChevronDown, Loader2, X } from "lucide-react";
+import { Check, ChevronDown, Loader2, Sparkles, X } from "lucide-react";
 import type { ProjectHealth, ProjectHealthCheck } from "@/lib/project-health";
-import { describeProjectHealth } from "@/lib/project-health";
+import { AI_FILLABLE_CHECKS, describeProjectHealth } from "@/lib/project-health";
 import { setAttr, removeAttr } from "@/lib/api/attrs";
-import { patchJson } from "@/lib/api/fetch";
+import { patchJson, postJson } from "@/lib/api/fetch";
 
 function scoreTone(score: number, max: number) {
   const ratio = score / max;
@@ -37,9 +37,13 @@ export function HealthScoreBar({
   interactive = false,
   projectId,
   userProjectId,
+  brief,
 }: {
   health: ProjectHealth;
   interactive?: boolean;
+  /** The project's own description. The AI gap-fill reads this and nothing
+   *  else, so with no brief there is nothing to fill from and no button. */
+  brief?: string | null;
   /** Required for the worklist to write. Without it the panel stays read-only. */
   projectId?: string;
   /** Row on user_projects — the home of the live_url column the Live URL
@@ -54,6 +58,9 @@ export function HealthScoreBar({
   const [draft, setDraft] = useState("");
   const [saving, setSaving] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [filling, setFilling] = useState(false);
+  const [fillResult, setFillResult] = useState<string | null>(null);
+  const [fillError, setFillError] = useState<string | null>(null);
   /** Checks earned in this session — the score moves before the page refetches. */
   const [earned, setEarned] = useState<Set<string>>(new Set());
   const rootRef = useRef<HTMLDivElement>(null);
@@ -121,6 +128,35 @@ export function HealthScoreBar({
     }
   }
 
+  // What the model could close from the brief, right now. Named before the run,
+  // not reported after it: the fields it cannot reach (where the code lives,
+  // where it is deployed, whether a flagged problem is really fixed) are facts
+  // only the person has, and a button that quietly did less than it implied
+  // would be the same magic this whole panel exists to remove.
+  const fillable = failing.filter((c) => AI_FILLABLE_CHECKS.has(c.key));
+  const canFill = canEdit && fillable.length > 0 && Boolean(brief && brief.trim().length >= 10);
+
+  async function fillGaps() {
+    setFilling(true);
+    setFillError(null);
+    setFillResult(null);
+    try {
+      const res = await postJson(`/api/projects/${projectId}/brief`, {
+        text: brief,
+        onlyMissing: true,
+      });
+      const body = (await res.json()) as { ok?: boolean; error?: string; applied?: Record<string, string> };
+      if (!res.ok || !body.ok) throw new Error(body.error ?? "Could not fill the gaps");
+      const names = Object.keys(body.applied ?? {});
+      setFillResult(`Filled ${names.length} field${names.length === 1 ? "" : "s"}: ${names.join(", ")}.`);
+      router.refresh();
+    } catch (e) {
+      setFillError(e instanceof Error ? e.message : "Could not fill the gaps");
+    } finally {
+      setFilling(false);
+    }
+  }
+
   const bar = (
     <span className="ui-health-track" aria-hidden>
       {checks.map((check) => (
@@ -183,6 +219,27 @@ export function HealthScoreBar({
             </p>
           ) : (
             <>
+              {canFill && (
+                <div className="ui-health-fill">
+                  <button
+                    type="button"
+                    onClick={() => void fillGaps()}
+                    disabled={filling}
+                    className="ui-health-fill-btn disabled:opacity-50"
+                  >
+                    {filling ? <Loader2 className="ui-spinner-xs" /> : <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden />}
+                    {filling ? "Writing…" : `Draft ${fillable.length} from the brief`}
+                  </button>
+                  <p className="ui-health-fill-note">
+                    Writes {fillable.map((c) => c.label.toLowerCase()).join(", ")} from
+                    this project&apos;s description. It only fills what is empty —
+                    nothing you have written is touched — and you can edit anything
+                    it writes.
+                  </p>
+                  {fillResult && <p className="mt-1.5 text-xs text-status-positive">{fillResult}</p>}
+                  {fillError && <p className="ui-error-xs">{fillError}</p>}
+                </div>
+              )}
               <p className="ui-health-group-label">{missing} to earn</p>
               <ul className="space-y-1">
                 {failing.map((check) => {

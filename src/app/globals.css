@@ -2604,6 +2604,16 @@
       bottom: auto;
     }
   }
+  /* The one-shot gap fill, offered above the manual worklist. */
+  .ui-health-fill {
+    @apply mt-3 rounded-lg border border-accent-primary/25 bg-accent-muted p-2.5;
+  }
+  .ui-health-fill-btn {
+    @apply flex w-full items-center justify-center gap-2 rounded-md border border-accent-primary bg-surface-overlay px-3 py-2 text-xs font-medium text-accent-text transition-colors hover:bg-surface-raised;
+  }
+  .ui-health-fill-note {
+    @apply mt-2 text-micro leading-relaxed text-text-secondary;
+  }
   /* Group heading inside the health worklist ("4 to earn"). */
   .ui-health-group-label {
     @apply mb-1.5 mt-3 text-micro font-medium uppercase tracking-wide text-text-tertiary;
@@ -4212,6 +4222,7 @@
   .ui-input,
   .ui-btn-overlay,
   .ui-health-fix-btn,
+  .ui-health-fill-btn,
   .ui-health-done-toggle,
   .ui-locked-banner,
   .ui-app-topbar-search,
