@@ -110,34 +110,60 @@ run_sql() {
   fi
 }
 
-# Baselining marks every existing migration as already applied. That is right
-# when the database really is up to date and catastrophic when the applier is
-# pointed at the wrong one: an empty database would be declared current, and
-# every future migration would land somewhere nothing reads while the ledger
-# reported "up to date". This exact mistake was one line away during
-# 2026-08-26's supabase work — the host has an empty database sharing the app's
-# name. A database with no tables and a repo with a pile of migrations is not a
-# fresh install; it is the wrong target.
-guard_wrong_database() {
+# Baselining marks every existing migration as already applied WITHOUT running
+# them. On a genuinely fresh database that is wrong but harmless (there is
+# nothing to baseline). On a populated one it is an assertion nobody checked:
+# "everything in this repo is already in this database". If that assertion is
+# false the missing objects never get created and the ledger reports "up to
+# date" forever.
+#
+# Two ways to get that wrong, both observed on 2026-08-26:
+#
+#   * WRONG DATABASE. The box has a host database named `orangecat` with zero
+#     tables while the real one lives inside the supabase-db container. An
+#     empty database sharing an app's name looks exactly like a fresh install.
+#
+#   * SHARED DATABASE. orangecat and botsmann use the SAME supabase database.
+#     It holds 134 tables, so any "is there anything here?" test passes — while
+#     none of botsmann's own tables exist in it. Table count says nothing about
+#     whether THIS app's schema was applied, and no cheap test does.
+#
+# So the automatic path is the safe one only: an empty database gets its
+# migrations APPLIED, not baselined. Baselining a populated database is a
+# judgement about what is already there, and it now requires a human to say so
+# with SCHEMA_BASELINE_OK=1 after checking.
+guard_baseline() {
   local tables
   tables=$(printf '%s' "SELECT count(*) FROM information_schema.tables WHERE table_schema='public';" | run_sql -qtA)
-  if [ "${tables:-0}" -lt 2 ] && [ "${#MIGS[@]}" -ge 5 ]; then
-    echo "[schema] $NAME: REFUSING — target database has ${tables:-0} table(s) but the repo has ${#MIGS[@]} migrations."
-    echo "         Baselining here would declare an empty database up to date. Check which database"
-    echo "         this app actually uses (SQL_TARGET=$SQL_TARGET, DB=$DB) before retrying."
-    exit 1
+  if [ "${tables:-0}" -lt 2 ]; then
+    BASELINE_MODE="apply"   # fresh database — run them for real
+    return
   fi
+  if [ "${SCHEMA_BASELINE_OK:-}" = "1" ]; then
+    BASELINE_MODE="baseline"
+    echo "[schema] $NAME: SCHEMA_BASELINE_OK=1 — trusting that ${#MIGS[@]} migration(s) are already applied"
+    return
+  fi
+  echo "[schema] $NAME: REFUSING — no ledger yet, and the target database already has ${tables} table(s)."
+  echo "         Baselining would record ${#MIGS[@]} migration(s) as applied without running them."
+  echo "         Check whether THIS app's objects actually exist (a shared database has other"
+  echo "         apps' tables in it), then re-run with SCHEMA_BASELINE_OK=1. Deploy aborted."
+  exit 1
 }
 
 pre_exists=$(printf '%s' "SELECT (to_regclass('public._deploy_schema_history') IS NOT NULL)::int;" | run_sql -qtA)
 printf '%s' "CREATE TABLE IF NOT EXISTS public._deploy_schema_history (tag text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now());" | run_sql -q
 
 if [ "$pre_exists" != "1" ]; then
-  guard_wrong_database
-  vals=$(printf "('%s')," "${MIGS[@]##*/}"); vals=${vals//.sql/}; vals=${vals%,}
-  printf '%s' "INSERT INTO public._deploy_schema_history(tag) VALUES $vals ON CONFLICT DO NOTHING;" | run_sql -q
-  echo "[schema] $NAME: first run — baselined ${#MIGS[@]} existing migration(s), applied none"
-  exit 0
+  guard_baseline
+  if [ "$BASELINE_MODE" = "baseline" ]; then
+    vals=$(printf "('%s')," "${MIGS[@]##*/}"); vals=${vals//.sql/}; vals=${vals%,}
+    printf '%s' "INSERT INTO public._deploy_schema_history(tag) VALUES $vals ON CONFLICT DO NOTHING;" | run_sql -q
+    echo "[schema] $NAME: first run — baselined ${#MIGS[@]} existing migration(s), applied none"
+    exit 0
+  fi
+  # BASELINE_MODE=apply — empty database, so fall through and run them all.
+  echo "[schema] $NAME: first run against an empty database — applying ${#MIGS[@]} migration(s)"
 fi
 
 applied=$(printf '%s' "SELECT tag FROM public._deploy_schema_history;" | run_sql -qtA)
