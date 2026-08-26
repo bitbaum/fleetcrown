@@ -176,6 +176,18 @@ export function deriveDispatchLiveStatus(cmd: CommandLiveInput): DispatchLiveVie
       return { status: "failed", label: "Agent stopped responding", detail: error, tone: "negative", terminal: true };
     case "timeout":
       return { status: "failed", label: "Run timed out", detail: error, tone: "negative", terminal: true };
+    case "undelivered":
+      // Deliberately NOT "Run timed out". The runner acked this command as
+      // never started, so no agent ever saw the prompt — telling the operator
+      // it timed out points them at the agent, which is the one place the
+      // fault is not.
+      return {
+        status: "failed",
+        label: "Prompt never reached the agent",
+        detail: error ?? "The runner reported the dispatch as never started — check the builder, not the project.",
+        tone: "negative",
+        terminal: true,
+      };
     case "error":
       return { status: "failed", label: "Run failed", detail: error, tone: "negative", terminal: true };
     default:

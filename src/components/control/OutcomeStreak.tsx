@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import type { OrchestrationOutcome } from "@/db/schema/orchestration-runs";
+import { isFailingOutcome } from "@/lib/events";
 
 const OUTCOME_GLYPH: Record<OrchestrationOutcome, string> = {
   success: "✓",
@@ -9,6 +10,10 @@ const OUTCOME_GLYPH: Record<OrchestrationOutcome, string> = {
   hang: "✗",
   timeout: "✗",
   user_abort: "✕",
+  // Its own glyph, not "✗": the run failed, but nothing about this PROJECT
+  // did — the prompt never arrived. A streak of these is a delivery problem
+  // wearing a project's name.
+  undelivered: "⇥",
 };
 
 // Paired with the base `.ui-tag` class below — `.ui-tag-*` alone sets only
@@ -26,6 +31,7 @@ const OUTCOME_TONE: Record<OrchestrationOutcome, string> = {
   hang: "ui-tag ui-tag-negative",
   timeout: "ui-tag ui-tag-negative",
   user_abort: "ui-tag ui-tag-warning",
+  undelivered: "ui-tag ui-tag-warning",
 };
 
 const OUTCOME_LABEL: Record<OrchestrationOutcome, string> = {
@@ -35,6 +41,7 @@ const OUTCOME_LABEL: Record<OrchestrationOutcome, string> = {
   hang: "hung",
   timeout: "timed out",
   user_abort: "aborted",
+  undelivered: "never reached the agent",
 };
 
 /**
@@ -58,7 +65,11 @@ const OUTCOME_LABEL: Record<OrchestrationOutcome, string> = {
 /** The sentence the glyphs are encoding. Leads with the bad news when there is
  *  any, because that is the reason to look at all. */
 function summarize(outcomes: OrchestrationOutcome[]): string {
-  const failed = outcomes.filter((o) => o === "error" || o === "hang" || o === "timeout").length;
+  // isFailingOutcome, not a hand-copied list: this was the only remaining
+  // second source of truth for which outcomes count as failures, so adding
+  // `undelivered` to FAILING_OUTCOMES would have left this summary quietly
+  // disagreeing with the brake and the ladder about the same runs.
+  const failed = outcomes.filter((o) => isFailingOutcome(o)).length;
   const partial = outcomes.filter((o) => o === "partial").length;
   const n = outcomes.length;
   if (failed > 0) return `${failed} of last ${n} failed`;
