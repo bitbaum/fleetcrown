@@ -3143,6 +3143,98 @@
     @apply flex gap-2 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden;
   }
 
+  /* ── Activity feed ───────────────────────────────────────────────────────
+     One unit of work per row, readable top-down at any width. The old feed put
+     timestamp/project/title/duration on one wrapping flex line, which on a
+     phone collapsed into a ragged block with no hierarchy. Here each line has
+     one job and the row degrades by dropping lines, never by reflowing them. */
+  .ui-activity-list {
+    @apply divide-y divide-border-subtle;
+  }
+  .ui-activity-row {
+    @apply space-y-1.5 py-3;
+  }
+  /* A failure gets a rail, not a full red wash: it must catch the eye while
+     scrolling without making its own body text harder to read. */
+  .ui-activity-row-alert {
+    @apply -mx-2 border-l-2 border-status-negative bg-status-negative-subtle/40 px-2;
+  }
+  .ui-activity-head {
+    @apply flex flex-wrap items-center gap-x-2 gap-y-1;
+  }
+  .ui-activity-dot {
+    @apply inline-block h-2 w-2 shrink-0 rounded-full;
+  }
+  .ui-activity-project {
+    @apply min-w-0 truncate text-sm font-semibold text-text-primary;
+  }
+  /* Pushed to the far end on wide rows, wraps under on narrow ones. */
+  .ui-activity-meta {
+    @apply ml-auto shrink-0 text-xs tabular-nums text-text-muted;
+  }
+  .ui-activity-sub {
+    @apply text-xs text-text-tertiary;
+  }
+  /* The ask — the line the whole page exists for, so it reads as body copy
+     rather than metadata. */
+  .ui-activity-ask {
+    @apply text-sm leading-relaxed text-text-secondary;
+  }
+  .ui-activity-ask-missing {
+    @apply text-xs italic text-text-muted;
+  }
+  .ui-activity-done {
+    @apply text-sm leading-relaxed text-text-primary;
+  }
+  .ui-activity-error {
+    @apply text-sm leading-relaxed text-status-negative;
+  }
+  .ui-activity-verify {
+    @apply flex items-start gap-1.5 text-xs leading-relaxed;
+  }
+  .ui-activity-next {
+    @apply flex items-start gap-1.5 text-sm leading-relaxed text-text-secondary;
+  }
+  .ui-activity-full {
+    @apply mt-2 rounded-lg border border-border-subtle bg-surface-base p-3;
+  }
+  /* The literal payload that was sent. Wraps rather than scrolls sideways:
+     a phone cannot afford a horizontal scroll inside a vertical feed. */
+  .ui-activity-pre {
+    @apply max-h-96 overflow-y-auto whitespace-pre-wrap break-words text-xs leading-relaxed text-text-secondary;
+    font-family: var(--font-mono);
+  }
+  .ui-activity-actions {
+    @apply flex flex-wrap items-center gap-x-3;
+  }
+  .ui-activity-toggle,
+  .ui-activity-action {
+    @apply inline-flex min-h-11 items-center gap-1.5 text-xs font-medium text-text-tertiary transition-colors hover:text-text-primary;
+  }
+  .ui-activity-day {
+    @apply mb-1 px-1 text-micro font-semibold uppercase tracking-wider text-text-muted;
+  }
+  /* Triage tabs. Horizontally scrollable on a phone instead of wrapping into
+     two rows that push the feed below the fold. */
+  .ui-activity-tabs {
+    @apply -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden;
+  }
+  .ui-activity-tab {
+    @apply inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border border-border-subtle bg-surface-base px-3 text-xs font-medium text-text-secondary transition-colors hover:border-border-default hover:text-text-primary;
+  }
+  .ui-activity-tab-active {
+    @apply border-accent-primary/40 bg-accent-muted text-text-primary;
+  }
+  .ui-activity-tab-alert {
+    @apply border-status-negative/40 text-status-negative;
+  }
+  .ui-activity-tab-count {
+    @apply rounded-full bg-surface-overlay px-1.5 py-px text-nano;
+  }
+  .ui-activity-tab-active .ui-activity-tab-count {
+    @apply bg-surface-base;
+  }
+
   /* Misc */
   /* Status dots — used inline with text for agent/project state */
   .ui-dot          { @apply inline-block h-1.5 w-1.5 rounded-full shrink-0; }

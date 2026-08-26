@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { activityHref, type Density } from "./activity-shared";
+import { activityHref } from "./activity-shared";
 import type { DigestWindow } from "@/db/queries/digests";
 
 // Surfaced under the empty state so the page never lies that there's "nothing"
@@ -13,7 +13,6 @@ export function EmptyLookback({
   distinctProjects,
   suggestedWindow,
   suggestionLabel,
-  density,
 }: {
   ageLabel: string;
   latestPromptProject: string | null;
@@ -22,7 +21,6 @@ export function EmptyLookback({
   suggestedWindow: DigestWindow;
   /** When null the link is hidden — clicking would be a no-op. */
   suggestionLabel: string | null;
-  density: Density;
 }) {
   return (
     <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-xs text-text-tertiary">
@@ -41,7 +39,7 @@ export function EmptyLookback({
         <>
           <span>·</span>
           <Link
-            href={activityHref({ window: suggestedWindow, density })}
+            href={activityHref({ window: suggestedWindow })}
             className="text-accent-primary hover:underline"
           >
             {suggestionLabel}
