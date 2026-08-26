@@ -2908,6 +2908,16 @@
     background-image:
       radial-gradient(circle at top left, color-mix(in oklch, var(--accent-primary) 8%, transparent), transparent 32rem);
   }
+  /* Run-outcome streak: glyphs plus the sentence they encode. The summary is
+     what makes the row readable without a tooltip, which is to say readable at
+     all on a phone. */
+  .ui-streak {
+    @apply inline-flex min-w-0 items-center gap-1.5;
+  }
+  .ui-streak-summary {
+    @apply truncate text-micro text-text-tertiary;
+  }
+
   /* ── Composer attachments ─────────────────────────────────────────────────
      A staged screenshot shows as a thumbnail, not a filename: every phone
      screenshot is called IMG_<timestamp>.jpg, so the name cannot answer "is

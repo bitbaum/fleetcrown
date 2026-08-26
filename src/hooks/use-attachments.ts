@@ -113,22 +113,27 @@ export function useAttachments(): AttachmentsController {
     reader.readAsText(file);
   }, [add]);
 
+  // `count` mirrors attachments.length for the one thing an updater cannot do:
+  // decide how many more files fit, from outside a render. Reading it from a
+  // ref keeps addFiles free of a setState-inside-a-state-updater — a side
+  // effect in a reducer, which React is entitled to run twice.
+  const count = useRef(0);
+  useEffect(() => { count.current = attachments.length; }, [attachments.length]);
+
   const addFiles = useCallback((files: FileList | File[] | null) => {
     if (!files) return;
     setNote(null);
-    const list = Array.from(files);
-    setAttachments((prev) => {
-      const room = MAX_ATTACHMENTS - prev.length;
-      if (room <= 0) {
-        setNote(`Up to ${MAX_ATTACHMENTS} files.`);
-        return prev;
-      }
-      for (const file of list.slice(0, room)) {
-        if (isImageMime(file.type)) stageImage(file);
-        else stageText(file);
-      }
-      return prev; // the stagers append asynchronously once each file is read
-    });
+    const room = MAX_ATTACHMENTS - count.current;
+    if (room <= 0) {
+      setNote(`Up to ${MAX_ATTACHMENTS} files.`);
+      return;
+    }
+    // Each stager appends asynchronously once its FileReader resolves; `add`
+    // enforces the ceiling again there, so a burst cannot overshoot.
+    for (const file of Array.from(files).slice(0, room)) {
+      if (isImageMime(file.type)) stageImage(file);
+      else stageText(file);
+    }
   }, [stageImage, stageText]);
 
   const addFromPaste = useCallback((e: React.ClipboardEvent) => {
