@@ -2,7 +2,8 @@ import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { DigestProjectOption, DigestWindow, ProjectStatus } from "@/db/queries/digests";
-import { activityHref, STATUS_DOT_CLASS, type Density } from "./activity-shared";
+import type { ActivityFilter } from "@/lib/activity-events";
+import { activityHref, STATUS_DOT_CLASS } from "./activity-shared";
 
 // At-a-glance row: every project with activity, colored by its worst event in
 // the window. The projects that need attention sort leftmost. "+ N quiet"
@@ -10,13 +11,15 @@ import { activityHref, STATUS_DOT_CLASS, type Density } from "./activity-shared"
 export function StatusStrip({
   digestWindow,
   projectKey,
-  density,
+  filter,
   statuses,
   inactiveProjects,
 }: {
   digestWindow: DigestWindow;
   projectKey: string | null;
-  density: Density;
+  /** Preserved across project switches — changing project should not silently
+   *  drop the "needs attention" lens the user is currently looking through. */
+  filter: ActivityFilter;
   statuses: ProjectStatus[];
   inactiveProjects: DigestProjectOption[];
 }) {
@@ -25,7 +28,7 @@ export function StatusStrip({
     <Card className="space-y-2">
       <div className="flex flex-wrap items-center gap-1.5">
         <Link
-          href={activityHref({ window: digestWindow, project: null, density })}
+          href={activityHref({ window: digestWindow, project: null, filter })}
           className={cn("ui-chip-filter", projectKey === null && "ui-chip-filter-active")}
         >
           All projects
@@ -34,7 +37,7 @@ export function StatusStrip({
         {statuses.map((s) => (
           <Link
             key={s.key}
-            href={activityHref({ window: digestWindow, project: s.key, density })}
+            href={activityHref({ window: digestWindow, project: s.key, filter })}
             className={cn(
               "ui-chip-filter inline-flex items-center gap-1.5",
               projectKey === s.key && "ui-chip-filter-active",
@@ -62,7 +65,7 @@ export function StatusStrip({
             {inactiveProjects.map((p) => (
               <Link
                 key={p.key}
-                href={activityHref({ window: digestWindow, project: p.key, density })}
+                href={activityHref({ window: digestWindow, project: p.key, filter })}
                 className={cn("ui-chip-filter", projectKey === p.key && "ui-chip-filter-active")}
               >
                 {p.label}

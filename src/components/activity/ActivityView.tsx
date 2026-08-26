@@ -2,34 +2,41 @@ import { FileText } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { getActivitySnapshot, getProjectDigest } from "@/db/queries/digests";
+import { normalizeActivityFilter } from "@/lib/activity-events";
 import { DigestPanel } from "./DigestPanel";
 import { StatusStrip } from "./StatusStrip";
 import { FilterCard } from "./FilterCard";
 import { EventStream } from "./EventStream";
-import { StatsLine } from "./StatsLine";
 import { EmptyLookback } from "./EmptyLookback";
-import { RANGE_LABEL, normalizeDensity } from "./activity-shared";
+import { RANGE_LABEL } from "./activity-shared";
 
 // The single composing view for /activity. Server component — all data comes
-// from getProjectDigest, no client fetch. Sub-views (StatusStrip, FilterCard,
-// EventStream, StatsLine) own their own layout; this just orders them.
+// from getProjectDigest, no client fetch. Sub-views own their own layout; this
+// just orders them.
+//
+// Order is deliberate and answers the page's questions in the order a person
+// asks them: which projects are hot (StatusStrip) → over what period
+// (FilterCard) → what actually happened (EventStream) → summarise it for me
+// (DigestPanel). The raw per-outcome tallies that used to sit between the
+// filter and the feed are gone: the feed's own triage tabs carry those counts
+// AND act on them, so a second static copy was a number you could not follow.
 export async function ActivityView({
   userId,
   window,
   project,
-  density: densityParam,
+  status,
 }: {
   userId: string;
   window?: string;
   project?: string;
-  density?: string;
+  status?: string;
 }) {
   const [digest, snapshot] = await Promise.all([
     getProjectDigest(userId, { window, projectKey: project }),
     getActivitySnapshot(userId),
   ]);
-  const density = normalizeDensity(densityParam);
-  const hasActivity = digest.timeline.length > 0;
+  const filter = normalizeActivityFilter(status);
+  const hasActivity = digest.events.length > 0;
   const inactiveProjects = digest.projects.filter((p) => p.activity === 0);
 
   return (
@@ -37,7 +44,7 @@ export async function ActivityView({
       <StatusStrip
         digestWindow={digest.window}
         projectKey={digest.projectKey}
-        density={density}
+        filter={filter}
         statuses={digest.projectStatuses}
         inactiveProjects={inactiveProjects}
       />
@@ -45,7 +52,7 @@ export async function ActivityView({
       <FilterCard
         digestWindow={digest.window}
         projectKey={digest.projectKey}
-        density={density}
+        filter={filter}
         since={digest.since}
       />
 
@@ -84,18 +91,18 @@ export async function ActivityView({
                 distinctProjects={snapshot.distinctProjects}
                 suggestedWindow={suggestedWindow}
                 suggestionLabel={suggestionLabel}
-                density={density}
               />
             );
           })()}
         </Card>
       ) : (
         <>
-          {/* Facts first: counts, then the raw time-ordered events. The AI
-              narrative is an optional summary at the bottom — handy, but never
-              the source of truth (the user reported it read as vague filler). */}
-          <StatsLine stats={digest.stats} />
-          <EventStream items={digest.timeline} density={density} />
+          <EventStream
+            events={digest.events}
+            filter={filter}
+            digestWindow={digest.window}
+            projectKey={digest.projectKey}
+          />
           <DigestPanel window={digest.window} project={digest.projectKey} />
         </>
       )}
