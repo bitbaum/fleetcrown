@@ -3421,6 +3421,12 @@
   .ui-needs-you-action-quiet {
     @apply inline-flex min-h-11 items-center gap-1.5 text-xs text-text-tertiary transition-colors hover:text-text-primary;
   }
+  /* Inline outcome of a retry — "queued, no builder online" and friends. Wraps
+     under the button on a phone instead of truncating the one sentence that
+     explains why nothing appears to be happening. */
+  .ui-needs-you-note {
+    @apply min-w-0 text-xs text-text-tertiary;
+  }
   .ui-needs-you-more {
     @apply inline-flex min-h-11 items-center gap-1.5 text-xs font-medium text-status-negative transition-opacity hover:opacity-80;
   }

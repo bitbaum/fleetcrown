@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AlertTriangle, ArrowRight } from "lucide-react";
 import type { ActivityEvent } from "@/lib/activity-events";
 import type { DigestWindow } from "@/db/queries/digests";
+import { ActivityRetryButton } from "./ActivityRetryButton";
 import { activityHref, formatClockTime } from "./activity-shared";
 
 /** Past this, the card stops being a triage list and becomes another feed. */
@@ -61,12 +62,18 @@ export function NeedsYouCard({
               </p>
             )}
 
+            {/* The primary action RUNS the work again from here. It used to be
+                a link labelled "Retry from Control", which navigated to a page
+                whose retry acts on a different table and therefore usually did
+                not list this failure at all. Watching stays secondary: reading
+                the session is what you do when re-running did not help. */}
             <div className="ui-needs-you-actions">
-              <Link href={`/terminal?tab=${encodeURIComponent(event.projectKey)}`} className="ui-needs-you-action">
+              <ActivityRetryButton event={event} />
+              <Link
+                href={`/terminal?tab=${encodeURIComponent(event.projectKey)}`}
+                className="ui-needs-you-action-quiet"
+              >
                 Open session <ArrowRight className="h-3 w-3" aria-hidden />
-              </Link>
-              <Link href={`/control?focus=${encodeURIComponent(event.projectKey)}`} className="ui-needs-you-action-quiet">
-                Retry from Control
               </Link>
             </div>
           </li>
