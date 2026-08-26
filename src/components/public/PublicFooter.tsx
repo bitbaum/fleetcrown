@@ -67,7 +67,7 @@ export function PublicFooter() {
   const insideRunner = useInsideFleetRunner();
 
   return (
-    <footer className="ui-public-footer mx-auto max-w-6xl px-6 pb-12">
+    <footer className="ui-public-footer mx-auto max-w-6xl px-4 pb-10 sm:px-6 sm:pb-12">
       <div className="ui-public-footer-grid">
         {FOOTER_GROUPS.map((group) => (
           <div key={group.heading} className="flex flex-col gap-2">

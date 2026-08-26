@@ -10,11 +10,11 @@ export const metadata = {
 export default function QuickstartPage() {
   return (
     <PublicSurface right={<PublicHeaderActions />}>
-      <main className="mx-auto max-w-3xl px-6 py-16 ui-public-prose">
+      <main className="ui-public-prose mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-16">
         <h1 className="ui-public-title mb-2">Quickstart</h1>
-        <p className="ui-public-meta mb-12">From zero to dispatching your first agent in 5 minutes.</p>
+        <p className="ui-public-meta mb-8 sm:mb-12">From zero to dispatching your first agent in 5 minutes.</p>
 
-        <section className="space-y-4 mb-12">
+        <section className="mb-10 space-y-4 sm:mb-12">
           <h2 className="ui-public-prose-h2">1. Decide: web or desktop?</h2>
           <p>
             FleetCrown has two surfaces that share the same account and the
@@ -35,14 +35,14 @@ export default function QuickstartPage() {
           </p>
         </section>
 
-        <section className="space-y-4 mb-12">
+        <section className="mb-10 space-y-4 sm:mb-12">
           <h2 className="ui-public-prose-h2">2. Sign in</h2>
           <p>
             Visit <Link href="/sign-in" className="ui-public-link">/sign-in</Link> and sign in with GitHub. First time only: GitHub asks you to authorize FleetCrown. After that you land on the dashboard.
           </p>
         </section>
 
-        <section className="space-y-4 mb-12">
+        <section className="mb-10 space-y-4 sm:mb-12">
           <h2 className="ui-public-prose-h2">3. Install Fleet Runner (if you want local execution)</h2>
           <ol className="list-decimal pl-6 space-y-3">
             <li>
@@ -70,7 +70,7 @@ export default function QuickstartPage() {
           </ol>
         </section>
 
-        <section className="space-y-4 mb-12">
+        <section className="mb-10 space-y-4 sm:mb-12">
           <h2 className="ui-public-prose-h2">4. Install an agent CLI</h2>
           <p>
             Fleet Runner doesn&apos;t bundle the AI agent itself — it drives
@@ -94,7 +94,7 @@ export default function QuickstartPage() {
           </p>
         </section>
 
-        <section className="space-y-4 mb-12">
+        <section className="mb-10 space-y-4 sm:mb-12">
           <h2 className="ui-public-prose-h2">5. Register a project</h2>
           <p>
             In the dashboard, go to <strong>Projects</strong>. Add a project
@@ -109,7 +109,7 @@ export default function QuickstartPage() {
           </p>
         </section>
 
-        <section className="space-y-4 mb-12">
+        <section className="mb-10 space-y-4 sm:mb-12">
           <h2 className="ui-public-prose-h2">6. Dispatch your first intent</h2>
           <p>
             Go to <strong>Control</strong>. Pick a project. Type a prompt or
@@ -125,7 +125,7 @@ export default function QuickstartPage() {
           </p>
         </section>
 
-        <section className="space-y-4 mb-12">
+        <section className="mb-10 space-y-4 sm:mb-12">
           <h2 className="ui-public-prose-h2">7. Watch from anywhere</h2>
           <p>
             The same dashboard works from your phone (web) while a long agent

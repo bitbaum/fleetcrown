@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { PublicSurface } from "@/components/public/PublicSurface";
 import { PublicHeaderActions } from "@/components/public/PublicHeaderActions";
+import { DocContents } from "@/components/public/DocContents";
 import { parseThoughtBlocks } from "@/lib/thoughts-content";
 import { ROUTES } from "@/config/auth";
 import { APP_NAME } from "@/config/brand";
@@ -58,7 +59,7 @@ export default function WhitepaperPage() {
 
   return (
     <PublicSurface right={<PublicHeaderActions />}>
-      <div className="relative z-10 mx-auto max-w-3xl px-6 pb-32 pt-16 sm:px-10">
+      <div className="relative z-10 mx-auto max-w-3xl px-4 pb-20 pt-10 sm:px-10 sm:pb-32 sm:pt-16">
         <div className="ui-public-doc-header">
           <div className="ui-public-doc-meta-row">
             <span className="ui-public-doc-badge">WHITEPAPER</span>
@@ -73,21 +74,7 @@ export default function WhitepaperPage() {
           )}
         </div>
 
-        {toc.length > 1 && (
-          <nav className="ui-public-doc-toc" aria-label="Table of contents">
-            <div className="ui-public-doc-toc-title">Contents</div>
-            <ol className="ui-public-doc-toc-list">
-              {toc.map((item, i) => (
-                <li key={item.id}>
-                  <a href={`#${item.id}`} className="ui-public-doc-toc-link">
-                    <span className="ui-public-doc-toc-num">{String(i + 1).padStart(2, "0")}</span>
-                    <span>{item.text}</span>
-                  </a>
-                </li>
-              ))}
-            </ol>
-          </nav>
-        )}
+        {toc.length > 1 && <DocContents toc={toc} />}
 
         <article className="ui-public-prose ui-public-prose-doc">
           {blocks.map((block, i) => {
@@ -158,11 +145,11 @@ export default function WhitepaperPage() {
         <div className="ui-public-doc-footer">
           <p className="ui-public-doc-footer-title">Ready to close the execution gap?</p>
           <p className="ui-public-doc-footer-note">Start using {APP_NAME} as your builder operating system.</p>
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            <Link href={ROUTES.SIGN_IN} className="ui-public-primary-action">
+          <div className="mx-auto flex max-w-sm flex-col gap-2.5 sm:max-w-none sm:flex-row sm:flex-wrap sm:items-center sm:justify-center sm:gap-3">
+            <Link href={ROUTES.SIGN_IN} className="ui-public-cta w-full sm:w-auto">
               Get started →
             </Link>
-            <Link href="/" className="ui-public-nav-action px-6 py-2.5 text-sm">
+            <Link href="/" className="ui-public-cta-ghost w-full sm:w-auto">
               ← Back to home
             </Link>
           </div>

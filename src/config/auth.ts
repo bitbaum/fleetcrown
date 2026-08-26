@@ -104,7 +104,9 @@ export const PUBLIC_NAV: PublicNavEntry[] = [
       {
         title: "Use",
         items: [
-          { label: "Download", href: "/download", description: "Linux app, dependencies, and setup path" },
+          // "Linux app" outlived its truth: mac and Windows builds have shipped
+          // from the same CI matrix since v0.8.11.
+          { label: "Download", href: "/download", description: "Fleet Runner for Mac, Windows, and Linux" },
           { label: "Pricing", href: "/pricing", description: "Plans for operators and teams" },
           { label: "Frontier", href: "/frontier", description: "Daily AI & robotics frontier digest" },
         ],

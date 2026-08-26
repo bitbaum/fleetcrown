@@ -1,8 +1,8 @@
 # Responsive Design — FleetCrown Web App
 
 **Created:** 2026-06-27  
-**Last modified:** 2026-08-20  
-**Last modified summary:** PublicSurface no longer always-dark; theme toggle on public nav (THEME_OPTIONS SSOT).
+**Last modified:** 2026-08-26  
+**Last modified summary:** Public marketing surface rebuilt mobile-first — sticky 56px header, drawer owns theme + sign-in, viewport-relative display scale, `ui-public-section`/`ui-public-container` rhythm.
 
 FleetCrown is **mobile-first and dark-first**. Every authenticated route must be usable on a 320px-wide phone without horizontal page scroll, with primary actions reachable above the floating bottom nav.
 
@@ -67,12 +67,37 @@ Navigation:
 
 ## Public / auth surfaces
 
-`PublicSurface` + `ui-public-*` follow the same `THEME_OPTIONS` (Light / Dark / Auto) as the app shell — do not pin `.dark` on the public subtree. Theme cycle lives in `PublicHeaderActions`.
+`PublicSurface` + `ui-public-*` follow the same `THEME_OPTIONS` (Light / Dark / Auto) as the app shell — do not pin `.dark` on the public subtree, and **do not use `text-white/*` or `bg-white/*` outside a surface that is always dark** (`ui-public-download`, `ui-changelog-*`). The footer carried that pattern after the surface became theme-aware and was invisible white-on-white in Light.
 
-- Hero fold uses shorter `min-height` on narrow viewports
-- Hero lede scales `text-lg` → `sm:text-2xl`
-- Header brand row: `ui-public-nav-brand-row` (`gap-3 sm:gap-8`)
-- Signed-out CTA: compact "Get started" visible on all widths; theme toggle beside it
+**Header (`ui-public-nav`).** Sticky at every width; 56px on a phone. Public pages run 3,000–13,000 CSS px tall there, so navigation must not require a flick to the top.
+
+| Piece | Phone (`<md`) | `md+` |
+| --- | --- | --- |
+| Brand | `<BrandMark responsive />` — 36px glyph, one-line 18px wordmark, no kicker | Full stacked lockup |
+| Nav | `PublicNavTrigger` → full-screen drawer | `PublicNav` mega-menu |
+| Theme cycle | inside the drawer footer | in the header |
+| Sign in | inside the drawer | in the header |
+| Primary CTA | always visible, `whitespace-nowrap`, short label ("Open app") | full label |
+
+`PublicHeaderActions` — not `PublicSurface` — mounts the drawer, because it is the only public header piece that can call `auth()`: `PublicSurface` is imported by `AuthShell`, which client pages import, so the shell itself is bundled for the browser.
+
+**Type scale.** Display classes are viewport-relative with a phone-sized floor; the rem ceiling keeps desktop unchanged. Never raise a floor above what 320–390px can render.
+
+| Class | Floor | Ceiling |
+| --- | --- | --- |
+| `ui-public-hero-title` | `2.5rem` | `5.75rem` |
+| `ui-public-page-title` | `2.25rem` | `4.5rem` |
+| `ui-public-display-lg` | `2rem` | `3.75rem` |
+| `ui-public-display-md` | `1.75rem` | `3rem` |
+| `--public-title-min` | `34px` | `108px` |
+
+**Rhythm.** Use `ui-public-section` (`py-14 sm:py-20 lg:py-24`), `ui-public-section-gap`, and `ui-public-container{,-narrow,-mid,-wide}` (16px gutter on phones) rather than ad-hoc `py-24` + `max-w-* px-6`.
+
+**Long pages.** `ui-public-jumpbar` (anchor chip row) on `/roadmap`; `DocContents` renders the whitepaper TOC as a collapsed `<details>` below `sm` and an open `<nav>` above it — `open` is DOM state, so one element cannot be toggled by a breakpoint. `ui-public-code-pre` wraps on phones instead of adding a second scroll axis.
+
+**Handheld content.** Fleet Runner is a desktop binary, so a phone visitor is offered a handoff (open the web app / copy the install link) instead of a `.deb` — `isHandheld()` in `DesktopDownload.tsx`, checked *before* OS sniffing (an Android UA contains "linux"; an iPhone UA contains "Mac"). The hero's secondary CTA is "See how it works" on phones, "Download runner" from `sm` up.
+
+**Tap targets.** The `pointer: coarse` floor in `globals.css` is the only place a 44px minimum is stated — but `min-height` does nothing to an `inline` box. A standalone link needs `inline-flex` (`ui-public-link-standalone`, `ui-auth-hint-link`); links inside a sentence keep `ui-public-link` and are exempt under WCAG 2.5.5. Auth inputs are `text-base` on phones — Safari zooms the viewport for any focused field under 16px.
 
 ## Audit commands
 
@@ -97,6 +122,7 @@ Before shipping UI changes, verify at **375×667** and **320×568**:
 4. Modals (bootstrap project, run prompt) — actions above bottom nav
 5. `/people` detail drawer — scroll + safe area
 6. Landing `/` — hero readable; public nav drawer opens
+7. Public pages in **Light** as well as Dark — the surface follows the theme, and a white-on-white regression is invisible in a dark-only pass
 
 Run `npm run smoke` with dev server up for route health; Playwright viewport tests are planned but not yet in CI.
 

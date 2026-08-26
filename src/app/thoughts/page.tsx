@@ -20,7 +20,7 @@ export default function ThoughtsPage() {
 
   return (
     <PublicSurface right={<PublicHeaderActions />}>
-      <div className="relative z-10 mx-auto max-w-5xl px-6 pb-24 pt-16 sm:px-10">
+      <div className="relative z-10 mx-auto max-w-5xl px-4 pb-14 pt-10 sm:px-10 sm:pb-24 sm:pt-16">
         <div className="ui-public-doc-header">
           <div className="ui-public-doc-meta-row">
             <span className="ui-public-doc-badge">THOUGHTS</span>

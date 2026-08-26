@@ -192,8 +192,11 @@
   --public-glow-secondary:  rgba(0, 0, 0, 0.025);
   --public-accent:          #ff5c00; /* x.ai-style warm orange for download CTAs (band forces dark aesthetic) */
   --public-glow-accent:     rgba(255, 92, 0, 0.06);
-  --public-title-min: 52px;
-  --public-title-preferred: 8vw;
+  /* 34px floor, not 52px. The floor is what a 390px phone actually renders,
+     and 52px put "Feedback widget" on two lines at a size meant for a 27"
+     display. The vw term still reaches the same 108px ceiling on desktop. */
+  --public-title-min: 34px;
+  --public-title-preferred: 9vw;
   --public-title-max: 108px;
   --auth-title-min: 32px;
   --auth-title-preferred: 5vw;
@@ -608,10 +611,14 @@
     -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 70%, transparent 100%);
   }
   .ui-public-nav-brand-row {
-    @apply flex items-center gap-3 sm:gap-8;
+    @apply flex min-w-0 items-center gap-3 sm:gap-8;
   }
+  /* Sticky on every width. Public pages run 3,000–13,000px tall on a phone;
+     without this the only way back to navigation is a two-second flick to the
+     top. `py-2.5` keeps the phone bar at 56px so it costs 6% of an 844px
+     screen instead of the 220px the stacked wordmark used to eat. */
   .ui-public-nav {
-    @apply relative z-40 flex items-center justify-between border-b border-border-subtle px-4 py-4 sm:px-10 sm:py-5;
+    @apply sticky top-0 z-40 flex items-center justify-between gap-2 border-b border-border-subtle bg-background/85 px-4 py-2.5 backdrop-blur-md sm:px-10 sm:py-5;
   }
   .ui-public-nav-action {
     @apply rounded-full border border-border-default px-5 py-2 text-sm font-medium text-text-tertiary transition-all hover:border-border-strong hover:text-text-secondary;
@@ -649,9 +656,11 @@
   .ui-public-nav-panel-item-desc {
     @apply mt-0.5 block text-xs text-text-tertiary;
   }
-  /* Mobile drawer toggle (hamburger / close) — square button on the public nav. */
+  /* Mobile drawer toggle (hamburger / close) — square button on the public nav.
+     44px is the WCAG 2.5.5 floor; the old 36px square failed it on every
+     public page. */
   .ui-public-nav-toggle {
-    @apply inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border-subtle text-text-secondary transition-colors hover:border-border-default hover:text-text-primary;
+    @apply inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border-subtle text-text-secondary transition-colors hover:border-border-default hover:text-text-primary active:scale-[0.97];
   }
   /* Full-screen drawer for the mobile public nav. Background colour is set
      directly (not via bg-background) so it stays fully opaque on top of the
@@ -660,24 +669,42 @@
   .ui-public-drawer {
     @apply fixed inset-0 z-50 flex flex-col;
     background-color: var(--background);
+    padding-bottom: env(safe-area-inset-bottom);
   }
+  /* Brand on the left, close on the right — the drawer keeps the same anchor
+     the header had, so the sheet reads as the header expanding rather than as
+     an unrelated screen. */
   .ui-public-drawer-bar {
-    @apply flex items-center justify-end px-6 py-5;
+    @apply flex shrink-0 items-center justify-between gap-3 border-b border-border-subtle px-4 py-2.5;
   }
   .ui-public-drawer-body {
-    @apply flex-1 overflow-y-auto px-6 pb-12 space-y-10;
+    @apply flex-1 space-y-8 overflow-y-auto px-4 pb-10 pt-5;
+  }
+  /* The two conversion actions, full width and thumb-sized, above the link
+     lists — a visitor who opened the menu to sign up should not have to read
+     past four sections of docs links to find the button. */
+  .ui-public-drawer-actions {
+    @apply flex flex-col gap-2.5;
   }
   .ui-public-drawer-section-label {
-    @apply mb-3 text-micro font-semibold uppercase tracking-caps text-text-muted;
+    @apply mb-2 px-1 text-micro font-semibold uppercase tracking-caps text-text-muted;
   }
   .ui-public-drawer-section {
-    @apply space-y-2;
+    @apply space-y-1;
   }
   .ui-public-drawer-subsection-label {
-    @apply px-4 pt-4 text-micro font-semibold uppercase tracking-caps text-text-muted first:pt-0;
+    @apply px-1 pb-1 pt-4 text-micro font-semibold uppercase tracking-caps text-text-muted first:pt-0;
   }
+  /* min-h-14 (56px) rows: a comfortable phone target, and tall enough to carry
+     the label + its one-line description without the two colliding. */
   .ui-public-drawer-item {
-    @apply block rounded-xl px-4 py-3 transition-colors hover:bg-surface-raised;
+    @apply flex min-h-14 items-center justify-between gap-3 rounded-xl border border-transparent px-3 py-2.5 transition-colors hover:border-border-subtle hover:bg-surface-raised active:bg-surface-raised;
+  }
+  .ui-public-drawer-item-icon {
+    @apply h-4 w-4 shrink-0 text-text-muted;
+  }
+  .ui-public-drawer-footer {
+    @apply flex shrink-0 items-center justify-between gap-3 border-t border-border-subtle px-4 py-3;
   }
   .ui-public-badge {
     @apply inline-flex items-center gap-2 rounded-full border border-border-subtle bg-surface-raised px-4 py-1.5 text-xs font-medium tracking-[0.02em] text-text-tertiary;
@@ -735,7 +762,7 @@
     @apply text-sm text-white/50 transition-colors hover:text-white;
   }
   .ui-changelog-page {
-    @apply mx-auto max-w-3xl px-6 pb-32 pt-12;
+    @apply mx-auto max-w-3xl px-4 pb-20 pt-8 sm:px-6 sm:pb-32 sm:pt-12;
   }
   .ui-changelog-eyebrow {
     @apply text-micro font-medium uppercase tracking-[0.18em] text-white/40;
@@ -745,13 +772,14 @@
     font-family: var(--font-heading);
   }
   .ui-changelog-lede {
-    @apply mt-5 max-w-xl text-base leading-relaxed text-white/55;
+    @apply mt-4 max-w-xl text-base leading-relaxed text-white/55 sm:mt-5;
+    text-wrap: pretty;
   }
   .ui-changelog-feed {
-    @apply mt-20;
+    @apply mt-12 sm:mt-20;
   }
   .ui-changelog-entry {
-    @apply border-t border-white/[0.12] py-14 first:border-t-0 first:pt-0;
+    @apply border-t border-white/[0.12] py-9 first:border-t-0 first:pt-0 sm:py-14;
   }
   .ui-changelog-meta {
     @apply flex flex-wrap items-center gap-x-3 gap-y-1;
@@ -768,17 +796,17 @@
     @apply rounded-full border border-white/15 px-2 py-0.5 text-nano font-medium uppercase tracking-[0.12em] text-white/75;
   }
   .ui-changelog-entry-title {
-    @apply mt-3 text-2xl font-medium tracking-tight text-white;
+    @apply mt-3 text-xl font-medium tracking-tight text-white sm:text-2xl;
     font-family: var(--font-heading);
   }
   .ui-changelog-notes {
     @apply mt-3 max-w-2xl text-sm leading-relaxed text-white/55;
   }
   .ui-changelog-list {
-    @apply mt-7 space-y-3.5;
+    @apply mt-5 space-y-3 sm:mt-7 sm:space-y-3.5;
   }
   .ui-changelog-item {
-    @apply flex gap-3.5 text-base leading-relaxed text-white/80;
+    @apply flex gap-3 text-[15px] leading-relaxed text-white/80 sm:gap-3.5 sm:text-base;
   }
   .ui-changelog-bullet {
     @apply mt-[0.6rem] h-1 w-1 shrink-0 rounded-full bg-white/25;
@@ -790,10 +818,10 @@
     @apply bg-status-warning/60;
   }
   .ui-changelog-foot {
-    @apply mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm;
+    @apply mt-5 flex flex-wrap items-center gap-x-5 text-sm sm:mt-6;
   }
   .ui-changelog-link {
-    @apply text-white/45 underline-offset-4 transition-colors hover:text-white;
+    @apply inline-flex min-h-11 items-center text-white/45 underline-offset-4 transition-colors hover:text-white;
   }
   .ui-changelog-tag {
     @apply font-mono text-nano uppercase tracking-[0.1em] text-white/30;
@@ -802,18 +830,25 @@
     @apply font-mono text-white;
   }
   /* Compact version index under the changelog header. */
+  /* One scrolling row of version chips on a phone. Wrapped, thirty 12px mono
+     links formed a dense block where no single version was a reliable tap
+     target; a chip row keeps them 44px tall and scannable. */
   .ui-changelog-index {
-    @apply mt-10 flex flex-wrap gap-x-4 gap-y-2;
+    @apply -mx-4 mt-8 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:mt-10 sm:flex-wrap sm:gap-2 sm:px-0;
+    scrollbar-width: none;
+  }
+  .ui-changelog-index::-webkit-scrollbar {
+    display: none;
   }
   .ui-changelog-index-link {
-    @apply font-mono text-xs text-white/45 transition-colors hover:text-white;
+    @apply inline-flex min-h-9 shrink-0 items-center whitespace-nowrap rounded-full border border-white/12 px-3 font-mono text-xs text-white/50 transition-colors hover:border-white/30 hover:text-white;
   }
   /* Collapsed minor-line groups — everything below the current minor. */
   .ui-changelog-archive {
     @apply border-t border-white/[0.12] py-6;
   }
   .ui-changelog-archive-summary {
-    @apply flex cursor-pointer list-none flex-wrap items-baseline gap-x-4 gap-y-1 text-sm font-medium text-white/60 transition-colors hover:text-white;
+    @apply flex min-h-11 cursor-pointer list-none flex-wrap items-center gap-x-4 gap-y-0.5 text-sm font-medium text-white/60 transition-colors hover:text-white sm:items-baseline;
   }
   .ui-changelog-archive-summary::-webkit-details-marker {
     display: none;
@@ -861,25 +896,44 @@
     @apply text-sm leading-relaxed text-text-muted;
   }
   .ui-public-footer {
-    @apply mt-16 text-xs tracking-[0.04em] text-text-muted;
+    @apply mt-12 text-xs tracking-[0.04em] text-text-muted sm:mt-16;
   }
+  /* break-words, because these carry bare URLs in the legal pages. An unbroken
+     "github.com/maonakamoto/fleetcrown/issues" is 331px wide — wider than a
+     320px phone — and .ui-public-surface clips overflow, so the tail of the
+     address was not scrolled off, it was gone. */
   .ui-public-link {
-    @apply text-text-secondary;
+    @apply break-words text-text-secondary;
   }
+  /* Standalone variant, for a link that is its own row rather than a word
+     inside a sentence — "Forgot password?", "← Back to homepage".
+     `inline-flex` is the whole point: the pointer:coarse floor sets a
+     min-height on .ui-public-link, and min-height does nothing to an `inline`
+     box, so those links measured 16–21px tall no matter what the floor said.
+     Prose links keep the plain class, where inflating the line box would tear
+     holes in the paragraph. */
+  .ui-public-link-standalone {
+    @apply inline-flex items-center text-text-secondary transition-colors hover:text-text-primary;
+  }
+  /* Theme tokens, not white/opacity. This footer predates PublicSurface
+     honouring Light/Auto: every heading, the fleet disclosure, and the
+     copyright line were white-on-white — invisible on the light theme, which
+     is what a phone in Auto mode shows in daylight. The white/* pattern is
+     only sanctioned inside the surfaces that are always dark. */
   .ui-public-footer-grid {
-    @apply mb-8 grid grid-cols-2 gap-8 border-t border-white/10 pt-8 sm:grid-cols-3 sm:gap-12;
+    @apply mb-8 grid grid-cols-2 gap-x-6 gap-y-8 border-t border-border-subtle pt-8 sm:grid-cols-3 sm:gap-12;
   }
   .ui-public-footer-heading {
-    @apply mb-1 text-micro font-semibold uppercase tracking-caps text-white/40;
+    @apply mb-1 text-micro font-semibold uppercase tracking-caps text-text-tertiary;
   }
   .ui-public-footer-bottom {
-    @apply flex flex-wrap items-center justify-between gap-4 text-xs text-white/50;
+    @apply flex flex-wrap items-center justify-between gap-3 text-xs text-text-tertiary;
   }
   .ui-public-footer-fleet {
-    @apply mb-8 border-t border-white/10 pt-8;
+    @apply mb-8 border-t border-border-subtle pt-8;
   }
   .ui-public-footer-fleet-summary {
-    @apply cursor-pointer list-none text-micro font-semibold uppercase tracking-caps text-white/50 transition-colors hover:text-white/70;
+    @apply inline-flex cursor-pointer list-none items-center text-micro font-semibold uppercase tracking-caps text-text-tertiary transition-colors hover:text-text-secondary;
   }
   .ui-public-footer-fleet-summary::-webkit-details-marker {
     display: none;
@@ -891,7 +945,7 @@
     @apply text-sm text-text-secondary;
   }
   .ui-public-footer-fleet-blurb {
-    @apply text-xs text-white/55;
+    @apply text-xs text-text-muted;
   }
   .ui-public-prose-divider {
     @apply mb-10 space-y-4 border-t border-white/10 pt-4;
@@ -914,8 +968,11 @@
   .ui-public-pricing-card-highlighted {
     @apply border-border-default bg-surface-raised;
   }
+  /* Header CTA. `whitespace-nowrap` + `shrink-0` are load-bearing: without them
+     the label wrapped to two lines and the pill grew past the right edge of a
+     390px viewport, clipping the action the whole header exists to offer. */
   .ui-public-primary-action-compact {
-    @apply rounded-full bg-text-primary !py-2 !px-5 text-sm font-semibold text-text-inverted transition-opacity hover:opacity-85;
+    @apply inline-flex h-11 shrink-0 items-center whitespace-nowrap rounded-full bg-text-primary !px-4 text-sm font-semibold text-text-inverted transition-opacity hover:opacity-85 active:scale-[0.97] sm:!px-5;
   }
   .ui-public-section-kicker {
     @apply mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-text-muted;
@@ -963,10 +1020,10 @@
     @apply mt-0.5 shrink-0 text-text-muted;
   }
   .ui-public-doc-header {
-    @apply mb-16 border-b border-border-subtle pb-12;
+    @apply mb-10 border-b border-border-subtle pb-8 sm:mb-16 sm:pb-12;
   }
   .ui-public-doc-meta-row {
-    @apply mb-6 flex flex-wrap items-center gap-3;
+    @apply mb-4 flex flex-wrap items-center gap-2 sm:mb-6 sm:gap-3;
   }
   .ui-public-doc-badge {
     @apply rounded-full border border-border-subtle bg-surface-raised px-3 py-1 font-mono text-xs text-text-muted;
@@ -975,31 +1032,46 @@
     @apply font-mono text-xs text-text-muted;
   }
   .ui-public-doc-title {
-    @apply mb-5 font-bold tracking-tight text-text-primary;
-    font-size: clamp(2rem, 5vw, 3.25rem);
+    @apply mb-4 font-bold tracking-tight text-text-primary sm:mb-5;
+    font-size: clamp(1.875rem, 8vw, 3.25rem);
     line-height: 1.05;
     letter-spacing: -0.03em;
+    text-wrap: balance;
   }
   .ui-public-doc-subtitle {
     /* text-secondary, not text-muted — the subtitle is the one-line pitch of
        the whole document; it must not be the faintest text on the page. */
-    @apply text-lg leading-relaxed text-text-secondary sm:text-xl;
+    @apply text-base leading-relaxed text-text-secondary sm:text-xl;
+    text-wrap: pretty;
   }
   .ui-public-prose {
     @apply space-y-8;
   }
   /* Anchored table of contents for long documents (whitepaper). */
+  /* A <details> so a phone reader reaches paragraph one immediately. Twelve
+     chapter links at a 44px touch row is 500px of table of contents standing
+     between the title and the document. Open by default from `sm` up, where
+     that list costs one column and no scrolling. */
   .ui-public-doc-toc {
-    @apply mb-14 rounded-2xl border border-border-subtle bg-surface-base p-6;
+    @apply mb-10 rounded-2xl border border-border-subtle bg-surface-base p-4 sm:mb-14 sm:p-6;
   }
   .ui-public-doc-toc-title {
-    @apply mb-4 text-micro font-semibold uppercase tracking-caps text-text-tertiary;
+    @apply flex cursor-pointer list-none items-center justify-between gap-2 text-micro font-semibold uppercase tracking-caps text-text-tertiary sm:mb-4 sm:cursor-auto;
+  }
+  .ui-public-doc-toc-title::-webkit-details-marker {
+    display: none;
+  }
+  .ui-public-doc-toc-caret {
+    @apply h-4 w-4 shrink-0 transition-transform sm:hidden;
+  }
+  details[open] > .ui-public-doc-toc-title .ui-public-doc-toc-caret {
+    @apply rotate-180;
   }
   .ui-public-doc-toc-list {
-    @apply grid gap-x-8 gap-y-2.5 sm:grid-cols-2;
+    @apply mt-3 grid gap-x-8 gap-y-1 sm:mt-0 sm:gap-y-2.5 sm:grid-cols-2;
   }
   .ui-public-doc-toc-link {
-    @apply flex items-baseline gap-2.5 text-sm text-text-secondary transition-colors hover:text-text-primary;
+    @apply flex items-center gap-2.5 py-2 text-sm text-text-secondary transition-colors hover:text-text-primary sm:items-baseline sm:py-0;
   }
   .ui-public-doc-toc-num {
     @apply shrink-0 font-mono text-xs text-text-muted;
@@ -1064,16 +1136,21 @@
     @apply mt-1 shrink-0 font-mono text-xs text-text-muted;
   }
   .ui-public-code-block {
-    @apply overflow-x-auto rounded-xl border border-border-subtle bg-surface-raised p-5;
+    @apply overflow-x-auto rounded-xl border border-border-subtle bg-surface-raised p-4 sm:p-5;
   }
   .ui-public-code-lang {
     @apply mb-3 font-mono text-micro uppercase tracking-widest text-text-muted;
   }
+  /* Wraps on a phone instead of scrolling sideways. A code block that needs a
+     second scroll axis inside a page that already scrolls vertically is a trap
+     on touch — the gesture is ambiguous and readers just skip the block. From
+     `sm` up, where a pointer makes the horizontal scroll usable, alignment
+     wins and the lines stay intact. */
   .ui-public-code-pre {
-    @apply font-mono text-sm leading-relaxed text-text-secondary;
+    @apply whitespace-pre-wrap break-words font-mono text-[13px] leading-relaxed text-text-secondary sm:whitespace-pre sm:text-sm;
   }
   .ui-public-doc-footer {
-    @apply mt-24 border-t border-border-subtle pt-16 text-center;
+    @apply mt-14 border-t border-border-subtle pt-10 text-center sm:mt-24 sm:pt-16;
   }
   .ui-public-doc-footer-title {
     @apply mb-2 text-sm font-medium text-text-secondary;
@@ -1145,10 +1222,14 @@
      and the /mission, /philosophy, /investors, /roadmap subpages. Theme-aware:
      every colour resolves through theme tokens that flip with .dark. */
   .ui-public-eyebrow {
-    @apply text-xs uppercase tracking-[0.18em] text-text-tertiary;
+    @apply text-[11px] uppercase tracking-[0.14em] text-text-tertiary sm:text-xs sm:tracking-[0.18em];
   }
+  /* One line, always. A pill whose label wraps stops reading as a status badge
+     and starts reading as a paragraph someone drew a border around — so the
+     phone gets the short positioning string (see MARKETING_POSITIONING_SHORT)
+     and the tracking steps down with it. */
   .ui-public-hero-badge {
-    @apply mb-8 inline-flex items-center gap-2.5 rounded-full border border-border-subtle bg-white/[0.03] px-4 py-1.5 text-xs uppercase tracking-[0.15em] text-text-secondary backdrop-blur-sm;
+    @apply mb-6 inline-flex max-w-full items-center gap-2 whitespace-nowrap rounded-full border border-border-subtle bg-white/[0.03] px-3.5 py-1.5 text-[11px] uppercase tracking-[0.1em] text-text-secondary backdrop-blur-sm sm:mb-8 sm:gap-2.5 sm:px-4 sm:text-xs sm:tracking-[0.15em];
   }
   /* Live status dot leading the hero badge — warm accent with a soft halo. */
   .ui-public-hero-badge::before {
@@ -1157,18 +1238,30 @@
     background: var(--public-accent);
     box-shadow: 0 0 0 3px color-mix(in oklch, var(--public-accent) 22%, transparent);
   }
+  /* Display sizes are viewport-relative so a phone gets a headline, not a
+     billboard. The old floors (2.75rem / 3.25rem) were tuned on a laptop: at
+     390px they forced three-line headlines with a broken rag and pushed every
+     page's real content a full screen down. The vw term now does the work on
+     phones and the rem ceiling keeps desktop exactly where it was. */
   .ui-public-page-title {
     @apply font-semibold text-text-primary;
-    font-size: clamp(2.75rem, 6vw, 4.5rem);
-    line-height: 1;
-    letter-spacing: -0.035em;
+    font-size: clamp(2.25rem, 9vw, 4.5rem);
+    line-height: 1.02;
+    letter-spacing: -0.03em;
+    text-wrap: balance;
   }
   .ui-public-hero-title {
     @apply font-heading font-semibold text-text-primary;
-    font-size: clamp(3.25rem, 8.5vw, 5.75rem);
-    line-height: 0.9;
-    letter-spacing: -0.042em;
+    font-size: clamp(2.5rem, 11.5vw, 5.75rem);
+    line-height: 0.98;
+    letter-spacing: -0.035em;
     animation: ui-public-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  @media (min-width: 40rem) {
+    .ui-public-hero-title {
+      line-height: 0.9;
+      letter-spacing: -0.042em;
+    }
   }
   /* Second line of the hero headline. A deliberate two-tone display: line one
      reads at full brightness, line two steps down — but to a still-legible
@@ -1177,12 +1270,23 @@
     @apply text-text-secondary;
   }
   .ui-public-hero-lede {
-    @apply mx-auto mt-7 max-w-2xl text-lg leading-snug tracking-tight text-text-secondary sm:text-2xl sm:leading-tight;
+    @apply mx-auto mt-5 max-w-2xl text-[17px] leading-snug tracking-tight text-text-secondary sm:mt-7 sm:text-2xl sm:leading-tight;
+    text-wrap: pretty;
     animation: ui-public-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.08s both;
   }
   .ui-public-hero-sublede {
-    @apply mx-auto mt-5 max-w-xl text-lg text-text-tertiary;
+    @apply mx-auto mt-4 max-w-xl text-base text-text-tertiary sm:mt-5 sm:text-lg;
     animation: ui-public-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.16s both;
+  }
+  /* Hero action row. Full-width stacked buttons on a phone (one thumb target
+     per row, equal weight, no ragged pill widths), the inline pair from `sm`
+     up. `w-full` on the children is what actually stretches them — the buttons
+     are inline-flex. */
+  .ui-public-hero-actions {
+    @apply mt-8 flex w-full max-w-sm flex-col items-stretch gap-2.5 sm:mt-10 sm:max-w-none sm:flex-row sm:flex-wrap sm:items-center sm:justify-center sm:gap-3;
+  }
+  .ui-public-hero-actions > * {
+    @apply w-full sm:w-auto;
   }
   /* x.ai/SpaceX-style entrance: a short, eased rise+fade. Staggered down the
      hero fold. Disabled under reduced-motion. */
@@ -1201,7 +1305,7 @@
      same status language the real Control view uses. Data is sourced from
      HOME_HERO_CONSOLE (marketing-content.ts) — no inline literals. */
   .ui-public-hero-console {
-    @apply relative mx-auto mt-16 w-full max-w-2xl overflow-hidden rounded-2xl border border-border-default bg-surface-raised p-6 text-left;
+    @apply relative mx-auto mt-10 w-full max-w-2xl overflow-hidden rounded-2xl border border-border-default bg-surface-raised p-4 text-left sm:mt-16 sm:p-6;
     box-shadow: var(--shadow-panel-strong), 0 50px 90px -50px rgba(0, 0, 0, 0.85);
     animation: ui-public-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.28s both;
   }
@@ -1212,10 +1316,10 @@
     background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
   }
   .ui-public-hero-console-bar {
-    @apply mb-5 flex items-center justify-between border-b border-border-subtle pb-4;
+    @apply mb-4 flex items-center justify-between gap-2 border-b border-border-subtle pb-3 sm:mb-5 sm:pb-4;
   }
   .ui-public-hero-console-label {
-    @apply font-mono text-xs uppercase tracking-[0.18em] text-text-tertiary;
+    @apply font-mono text-[11px] uppercase tracking-[0.12em] text-text-tertiary sm:text-xs sm:tracking-[0.18em];
   }
   .ui-public-hero-console-live {
     @apply inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.14em] text-text-tertiary;
@@ -1237,8 +1341,15 @@
   .ui-public-hero-console-rows {
     @apply space-y-px overflow-hidden rounded-xl border border-border-subtle;
   }
+  /* Two lines on a phone, one from `sm` up. Squeezing name + description onto
+     one 358px line truncated every description to "Life OS + AI agent …",
+     which tells a visitor nothing — the whole point of showing a real fleet.
+     The dot spans both lines via items-start + a nudge. */
   .ui-public-hero-console-row {
-    @apply flex items-center gap-3 bg-surface-base px-4 py-3;
+    @apply flex flex-col gap-1 bg-surface-base px-3.5 py-3 sm:flex-row sm:items-center sm:gap-3 sm:px-4;
+  }
+  .ui-public-hero-console-row-head {
+    @apply flex items-center gap-2.5 sm:contents;
   }
   .ui-public-hero-console-dot {
     @apply h-2 w-2 shrink-0 rounded-full;
@@ -1254,60 +1365,114 @@
     background: var(--status-neutral);
   }
   .ui-public-hero-console-name {
-    @apply font-mono text-sm text-text-secondary;
+    @apply truncate font-mono text-sm text-text-primary sm:text-text-secondary;
   }
+  /* Phone: its own line under the name, full width, one line clamped. Desktop:
+     right-aligned on the same row, as before. */
   .ui-public-hero-console-note {
-    @apply ml-auto truncate pl-3 font-mono text-xs text-text-secondary;
+    @apply truncate pl-[18px] text-xs text-text-tertiary sm:ml-auto sm:pl-3 sm:font-mono sm:text-text-secondary;
   }
   .ui-public-hero-console-metrics {
-    @apply mt-4 grid grid-cols-3 gap-3 border-t border-border-subtle pt-4;
+    @apply mt-4 grid grid-cols-3 gap-2 border-t border-border-subtle pt-4 sm:gap-3;
   }
   .ui-public-hero-console-metric-num {
-    @apply font-mono text-2xl text-text-primary;
+    @apply font-mono text-xl text-text-primary sm:text-2xl;
   }
   .ui-public-hero-console-metric-label {
-    @apply mt-0.5 text-xs text-text-tertiary;
+    @apply mt-0.5 text-[11px] leading-tight text-text-tertiary sm:text-xs;
   }
   .ui-public-display-lg {
     @apply font-semibold text-text-primary;
-    font-size: clamp(2.5rem, 5vw, 3.75rem);
-    line-height: 1.02;
+    font-size: clamp(2rem, 7.5vw, 3.75rem);
+    line-height: 1.05;
     letter-spacing: -0.025em;
+    text-wrap: balance;
   }
   .ui-public-display-md {
     @apply font-semibold text-text-primary;
-    font-size: clamp(2rem, 4vw, 3rem);
-    line-height: 1.05;
+    font-size: clamp(1.75rem, 6vw, 3rem);
+    line-height: 1.08;
     letter-spacing: -0.02em;
+    text-wrap: balance;
   }
+  /* min-h-12 (48px) on every CTA — the old py-3 gave 44px only while the label
+     stayed on one line, and collapsed below the tap-target floor whenever it
+     didn't. */
   .ui-public-cta {
-    @apply inline-flex items-center justify-center rounded-xl bg-text-primary px-7 py-3 text-[15px] font-medium text-text-inverted transition-all hover:opacity-90 active:scale-[0.98];
+    @apply inline-flex min-h-12 items-center justify-center rounded-xl bg-text-primary px-6 py-3 text-[15px] font-medium text-text-inverted transition-all hover:opacity-90 active:scale-[0.98] sm:px-7;
     box-shadow: 0 1px 0 rgba(255, 255, 255, 0.4) inset, 0 8px 24px -8px rgba(255, 255, 255, 0.25);
   }
   .ui-public-cta-ghost {
-    @apply inline-flex items-center justify-center rounded-xl border border-border-default bg-white/[0.02] px-7 py-3 text-[15px] font-medium text-text-secondary transition-all hover:border-border-strong hover:bg-white/[0.05] hover:text-text-primary active:scale-[0.98];
+    @apply inline-flex min-h-12 items-center justify-center rounded-xl border border-border-default bg-white/[0.02] px-6 py-3 text-[15px] font-medium text-text-secondary transition-all hover:border-border-strong hover:bg-white/[0.05] hover:text-text-primary active:scale-[0.98] sm:px-7;
   }
   .ui-public-cta-lg {
-    @apply inline-flex items-center justify-center rounded-xl bg-text-primary px-9 py-3.5 text-lg font-medium text-text-inverted transition-all hover:opacity-90 active:scale-[0.98];
+    @apply inline-flex min-h-13 items-center justify-center rounded-xl bg-text-primary px-7 py-3.5 text-base font-medium text-text-inverted transition-all hover:opacity-90 active:scale-[0.98] sm:px-9 sm:text-lg;
     box-shadow: 0 1px 0 rgba(255, 255, 255, 0.4) inset, 0 10px 30px -10px rgba(255, 255, 255, 0.3);
   }
   .ui-public-lede {
-    @apply text-lg leading-snug text-text-secondary sm:text-2xl;
+    @apply text-[17px] leading-snug text-text-secondary sm:text-2xl;
+    text-wrap: pretty;
   }
   .ui-public-body-lg {
-    @apply text-lg leading-relaxed text-text-secondary;
+    @apply text-base leading-relaxed text-text-secondary sm:text-lg;
   }
   .ui-public-meta {
     @apply text-sm text-text-tertiary;
   }
+  /* No min-height on a phone. The fold used to reserve 84vh whether or not the
+     content needed it, so the hero console — the one piece of evidence on the
+     page — always started below the fold with a band of empty grid above it.
+     The content is now the height. */
   .ui-public-hero-fold {
-    @apply relative z-10 flex flex-col items-center justify-center px-4 pb-12 pt-8 text-center sm:px-6 sm:pb-16 sm:pt-10;
-    min-height: min(84vh, 100svh);
+    @apply relative z-10 flex flex-col items-center justify-center px-4 pb-10 pt-10 text-center sm:px-6 sm:pb-16 sm:pt-10;
   }
   @media (min-width: 40rem) {
     .ui-public-hero-fold {
       min-height: 84vh;
     }
+  }
+  /* Standard vertical rhythm for a marketing section. Phones get roughly half
+     the desktop padding: at 390px an 80px gap already reads as a hard section
+     break, while the 96px the desktop uses reads as the page having ended. */
+  .ui-public-section {
+    @apply py-14 sm:py-20 lg:py-24;
+  }
+  /* The gap between a section's heading block and its content grid. */
+  .ui-public-section-gap {
+    @apply mt-8 sm:mt-12 lg:mt-14;
+  }
+  /* Standard marketing gutter. 16px on a phone matches the header and the hero
+     fold, so nothing on the page steps in or out as you scroll. */
+  .ui-public-container {
+    @apply mx-auto w-full max-w-6xl px-4 sm:px-6;
+  }
+  .ui-public-container-narrow {
+    @apply mx-auto w-full max-w-3xl px-4 sm:px-6;
+  }
+  .ui-public-container-mid {
+    @apply mx-auto w-full max-w-4xl px-4 sm:px-6;
+  }
+  /* Anchor row for pages that run many screens deep on a phone. Scrolls
+     horizontally rather than wrapping, so the row height stays predictable
+     however many sections a page has. `scroll-mt` on the targets keeps the
+     sticky header from covering the heading you just jumped to. */
+  .ui-public-jumpbar {
+    @apply -mx-4 mt-6 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:mt-8 sm:flex-wrap sm:px-0;
+    scrollbar-width: none;
+  }
+  .ui-public-jumpbar::-webkit-scrollbar {
+    display: none;
+  }
+  .ui-public-jumpbar-link {
+    @apply inline-flex min-h-11 shrink-0 items-center whitespace-nowrap rounded-full border border-border-subtle bg-surface-base px-4 text-sm text-text-secondary transition-colors hover:border-border-default hover:text-text-primary;
+  }
+  /* Scoped to the marketing surface on purpose — a global `[id]` rule would
+     also shift every scrollIntoView inside the app shell (Loki, Terminal). */
+  .ui-public-surface [id] {
+    scroll-margin-top: 5rem;
+  }
+  .ui-public-container-wide {
+    @apply mx-auto w-full max-w-5xl px-4 sm:px-6;
   }
   /* Compact variant — statement pages (mission) pair the fold with body copy
      directly below; the full 84vh fold forces ~700px of empty black between
@@ -1317,8 +1482,11 @@
     @apply pb-16 pt-24 sm:pb-20 sm:pt-32;
     min-height: 0;
   }
+  /* 20px body copy set six lines deep is a wall on a 390px screen. 16px on a
+     phone puts the same sentence in four lines at a comfortable measure. */
   .ui-public-section-lede {
-    @apply max-w-2xl text-xl text-text-secondary;
+    @apply max-w-2xl text-base leading-relaxed text-text-secondary sm:text-xl sm:leading-normal;
+    text-wrap: pretty;
   }
   .ui-public-step-num {
     @apply w-8 shrink-0 font-mono text-sm text-text-secondary;
@@ -1335,20 +1503,29 @@
   .ui-public-surface-card {
     /* min-h 200px (was 320px) — typical card content is ~120px tall, so 320px
        painted ~200px of dead space per card; 200px keeps rows aligned without
-       the void. */
-    @apply flex min-h-[200px] flex-col rounded-2xl border border-border-subtle bg-surface-base p-6 text-left;
+       the void. Phones drop it entirely: cards stack there, so nothing needs
+       aligning and the floor only adds scroll. */
+    @apply flex flex-col rounded-2xl border border-border-subtle bg-surface-base p-5 text-left sm:min-h-[200px] sm:p-6;
   }
   .ui-public-surface-card-label {
-    @apply mb-8 font-mono text-xs uppercase tracking-[0.18em] text-text-secondary;
+    @apply mb-4 font-mono text-[11px] uppercase tracking-[0.14em] text-text-secondary sm:mb-8 sm:text-xs sm:tracking-[0.18em];
   }
   .ui-public-surface-card-title {
-    @apply text-2xl font-semibold leading-tight text-text-primary;
+    @apply text-xl font-semibold leading-tight text-text-primary sm:text-2xl;
+    text-wrap: balance;
   }
   .ui-public-surface-card-body {
-    @apply mt-4 text-sm leading-relaxed text-text-secondary;
+    @apply mt-3 text-sm leading-relaxed text-text-secondary sm:mt-4;
+    text-wrap: pretty;
   }
+  /* Chips, not a mono run-on. "Desktop app · CLI agent fallback · agent
+     tokens" wrapped mid-phrase on a phone and read as broken output; each
+     term now wraps as its own unit. */
   .ui-public-surface-card-meta {
-    @apply mt-auto pt-8 font-mono text-xs text-text-tertiary;
+    @apply mt-auto flex flex-wrap gap-1.5 pt-5 sm:pt-8;
+  }
+  .ui-public-surface-card-meta-chip {
+    @apply inline-flex items-center rounded-md border border-border-subtle px-2 py-1 font-mono text-[11px] text-text-tertiary;
   }
   /* Pricing card — reuses the surface-card shell; the featured variant lifts
      the recommended tier with an accent border + panel shadow. */
@@ -1393,17 +1570,20 @@
   .ui-public-terminal-footer {
     @apply mt-8 rounded-full border border-white/10 px-4 py-2 text-center font-mono text-xs text-white/50;
   }
+  /* The whole card is the tap target on a phone, so it is an <a>, not a card
+     with a small text link inside it that a thumb has to find. */
   .ui-public-start-card {
-    @apply flex min-h-[260px] flex-col rounded-2xl border border-border-subtle bg-surface-base p-6 text-left transition-colors hover:border-border-default;
+    @apply flex flex-col rounded-2xl border border-border-subtle bg-surface-base p-5 text-left transition-colors hover:border-border-default active:border-border-default sm:min-h-[260px] sm:p-6;
   }
   .ui-public-start-card-title {
-    @apply text-xl font-semibold text-text-primary;
+    @apply text-lg font-semibold text-text-primary sm:text-xl;
   }
   .ui-public-start-card-body {
-    @apply mt-4 text-sm leading-relaxed text-text-secondary;
+    @apply mt-2.5 text-sm leading-relaxed text-text-secondary sm:mt-4;
+    text-wrap: pretty;
   }
   .ui-public-start-card-link {
-    @apply mt-auto pt-8 text-sm font-medium text-text-primary underline underline-offset-4;
+    @apply mt-auto inline-flex min-h-11 items-center pt-4 text-sm font-medium text-text-primary sm:pt-8;
   }
 
   /* Desktop Fleet Runner download/install promo — x.ai-style pure-black band for the
@@ -1411,26 +1591,31 @@
      inside these class definitions (per design system Layer 3). JSX uses only the
      semantic names + layout utilities. */
   .ui-public-download {
-    @apply bg-black text-white border-t border-white/10 py-20;
+    @apply border-t border-white/10 bg-black py-14 text-white sm:py-20;
   }
   .ui-public-download-eyebrow {
-    @apply text-micro font-mono tracking-[3.5px] text-white/40 mb-3;
+    @apply mb-3 font-mono text-micro tracking-[2px] text-white/40 sm:tracking-[3.5px];
   }
   .ui-public-download-title {
-    font-size: 56px;
-    line-height: 0.96;
+    font-size: clamp(2rem, 9vw, 3.5rem);
+    line-height: 1.02;
     font-weight: 600;
-    letter-spacing: -0.039em;
+    letter-spacing: -0.035em;
     @apply mb-3 text-white;
+    text-wrap: balance;
   }
   .ui-public-download-lede {
-    @apply text-lg text-white/60 max-w-sm mx-auto;
+    @apply mx-auto max-w-sm text-base text-white/60 sm:text-lg;
+    text-wrap: pretty;
   }
   .ui-public-download-note {
     @apply text-center text-xs text-white/40 tracking-widest mb-8;
   }
+  /* Stacks label over note and goes full width on a phone. Side by side, the
+     ~30-character label and its ~45-character note each wrapped to three lines
+     inside one pill, which read as a paragraph someone had painted white. */
   .ui-public-download-cta {
-    @apply inline-flex items-center rounded-full bg-white px-9 py-[17px] text-[17px] font-medium text-black transition-all active:scale-[0.985];
+    @apply inline-flex w-full flex-col items-center justify-center gap-0.5 rounded-2xl bg-white px-6 py-3.5 text-center text-base font-medium text-black transition-all active:scale-[0.985] sm:w-auto sm:flex-row sm:gap-0 sm:rounded-full sm:px-9 sm:py-[17px] sm:text-[17px];
   }
   .ui-public-download-cta:hover {
     background-color: var(--public-accent);
@@ -1438,19 +1623,19 @@
     box-shadow: 0 4px 12px color-mix(in oklch, var(--public-accent) 20%, transparent);
   }
   .ui-public-download-cta-note {
-    @apply ml-2 text-xs text-black/50 transition-colors;
+    @apply text-xs text-black/50 transition-colors sm:ml-2;
   }
   .ui-public-download-cta:hover .ui-public-download-cta-note {
     color: rgba(255, 255, 255, 0.6);
   }
   .ui-public-download-secondary {
-    @apply inline-flex items-center rounded-full border border-white/20 px-4 py-2 text-xs font-medium text-white/70 transition-colors hover:border-white/40 hover:text-white;
+    @apply inline-flex min-h-11 items-center rounded-full border border-white/20 px-4 py-2 text-xs font-medium text-white/70 transition-colors hover:border-white/40 hover:text-white;
   }
   .ui-public-download-platform-bar {
-    @apply flex justify-center gap-1.5 mb-12;
+    @apply mb-8 flex justify-center gap-1.5 sm:mb-12;
   }
   .ui-public-download-platform {
-    @apply text-xs tracking-[1.5px] px-4 py-1.5 rounded-full border transition-all;
+    @apply inline-flex min-h-11 items-center rounded-full border px-4 text-xs tracking-[1.5px] transition-all;
   }
   .ui-public-download-platform-active {
     @apply border-white bg-white text-black shadow-sm;
@@ -1461,20 +1646,25 @@
   .ui-public-download-command {
     @apply mb-10 rounded-2xl border border-white/10 bg-white/5 p-4 text-left;
   }
+  /* Sentence case at readable size. This slot carries two full sentences of
+     instructions, and tracked 10px uppercase turned them into four lines of
+     shouting that nobody reads before pasting a sudo command. */
   .ui-public-download-command span {
-    @apply mb-2 block text-micro font-semibold uppercase tracking-caps text-white/40;
+    @apply mb-3 block text-sm leading-relaxed text-white/60;
   }
   .ui-public-download-command code {
     @apply block whitespace-pre-wrap break-words font-mono text-xs leading-relaxed text-white/70;
   }
+  /* Command above, Copy below-right on a phone: side by side the copy button
+     stole a third of the width and the command broke every ~22 characters. */
   .ui-public-download-command-row {
-    @apply flex items-start gap-3;
+    @apply flex flex-col items-stretch gap-2 sm:flex-row sm:items-start sm:gap-3;
   }
   .ui-public-download-command-row code {
-    @apply flex-1 block whitespace-pre-wrap break-all font-mono text-xs leading-relaxed text-white/85;
+    @apply block flex-1 whitespace-pre-wrap break-all rounded-lg bg-black/40 p-3 font-mono text-xs leading-relaxed text-white/85 sm:bg-transparent sm:p-0;
   }
   .ui-public-download-command-copy {
-    @apply inline-flex shrink-0 items-center gap-1.5 rounded-md border border-white/15 bg-white/10 px-2.5 py-1.5 text-xs font-medium text-white/80 transition hover:border-white/30 hover:bg-white/15 hover:text-white;
+    @apply inline-flex shrink-0 items-center justify-center gap-1.5 self-end rounded-lg border border-white/15 bg-white/10 px-3.5 py-2.5 text-xs font-medium text-white/80 transition hover:border-white/30 hover:bg-white/15 hover:text-white sm:self-auto sm:rounded-md sm:px-2.5 sm:py-1.5;
   }
   .ui-public-download-prereqs {
     @apply mb-10 border-t border-white/10 pt-9 text-left;
@@ -1564,6 +1754,42 @@
 
   .ui-public-download-panel {
     @apply mb-12 flex flex-col gap-6;
+  }
+
+  /* "You're on a phone" panel. Fleet Runner ships as .deb / .dmg / .exe, so
+     every download CTA on this page is inert on the device most visitors
+     arrive with. Rather than let them tap a 80 MB Debian package into a phone
+     downloads folder, name the situation and give them the two things that do
+     work from here: open the web control plane, or send themselves the link. */
+  .ui-public-download-handoff {
+    @apply mb-10 rounded-2xl border border-white/12 bg-white/[0.06] p-5 text-left sm:p-6;
+  }
+  .ui-public-download-handoff-badge {
+    @apply mb-3 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[10px] font-medium uppercase tracking-[1.5px] text-white/65;
+  }
+  .ui-public-download-handoff-title {
+    @apply text-xl font-semibold leading-snug text-white;
+    text-wrap: pretty;
+  }
+  .ui-public-download-handoff-body {
+    @apply mt-2 text-sm leading-relaxed text-white/60;
+    text-wrap: pretty;
+  }
+  .ui-public-download-handoff-actions {
+    @apply mt-5 flex flex-col gap-2.5;
+  }
+  .ui-public-download-handoff-primary {
+    @apply inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-white px-5 text-[15px] font-medium text-black transition active:scale-[0.985];
+  }
+  .ui-public-download-handoff-secondary {
+    @apply inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-white/20 px-5 text-[15px] font-medium text-white/80 transition hover:border-white/40 hover:text-white active:scale-[0.985];
+  }
+  .ui-public-download-handoff-link {
+    @apply mt-4 block w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-center font-mono text-xs text-white/50;
+  }
+  /* Everything the phone cannot use, behind one deliberate tap. */
+  .ui-public-download-reveal {
+    @apply mb-10 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.02] px-4 text-sm text-white/60 transition-colors hover:border-white/25 hover:text-white;
   }
 
   .ui-public-download-soon {
@@ -1664,6 +1890,10 @@
   }
   .ui-brand-mark-default {
     @apply h-11 w-11;
+  }
+  /* Public header lockup: 36px glyph on a phone, the full 44px from `sm` up. */
+  .ui-brand-mark-responsive {
+    @apply h-9 w-9 sm:h-11 sm:w-11;
   }
   /* The spiral glyph itself. Inline <svg> stroked with currentColor so it
      inherits text color + theme. The animated variant slowly rotates and
@@ -2082,14 +2312,18 @@
   .ui-auth-label {
     @apply block text-sm font-medium text-text-secondary;
   }
+  /* 16px on a phone. Safari zooms the whole page in whenever a focused input
+     is under 16px, so a 14px field made every sign-in start with the layout
+     jumping and the page left scrolled sideways. min-h-12 keeps the field a
+     comfortable target at the larger size. */
   .ui-auth-input {
-    @apply w-full rounded-xl border border-border-subtle bg-surface-raised px-4 py-3 text-sm text-text-primary placeholder:text-text-muted outline-none transition-colors focus:border-border-strong;
+    @apply min-h-12 w-full rounded-xl border border-border-subtle bg-surface-raised px-4 py-3 text-base text-text-primary outline-none transition-colors placeholder:text-text-muted focus:border-border-strong sm:text-sm;
   }
   .ui-auth-card {
     @apply space-y-5 rounded-2xl border border-border-subtle bg-surface-base p-6 sm:p-8 backdrop-blur-[12px];
   }
   .ui-auth-submit-btn {
-    @apply w-full rounded-xl bg-text-primary py-3 text-sm font-semibold text-text-inverted transition-colors hover:opacity-90 active:opacity-70 disabled:bg-surface-raised disabled:text-text-muted disabled:cursor-not-allowed;
+    @apply min-h-12 w-full rounded-xl bg-text-primary py-3 text-sm font-semibold text-text-inverted transition-colors hover:opacity-90 active:opacity-70 disabled:cursor-not-allowed disabled:bg-surface-raised disabled:text-text-muted;
   }
   .ui-auth-title {
     font-size: clamp(var(--auth-title-min), var(--auth-title-preferred), var(--auth-title-max));
@@ -2111,10 +2345,10 @@
     @apply mt-6 text-center text-sm text-text-muted;
   }
   .ui-auth-footer-link {
-    @apply transition-colors hover:text-text-secondary;
+    @apply inline-flex min-h-11 items-center justify-center transition-colors hover:text-text-secondary;
   }
   .ui-auth-secondary-btn {
-    @apply flex w-full items-center justify-center gap-2 rounded-xl border border-border-subtle bg-surface-base py-3 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary disabled:opacity-40;
+    @apply flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-border-subtle bg-surface-base py-3 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary disabled:opacity-40;
   }
   .ui-auth-secondary-btn-strong {
     @apply border-border-default bg-surface-raised text-text-primary hover:border-border-strong;
@@ -2181,7 +2415,7 @@
     @apply flex items-center gap-2 rounded-xl border border-border-default bg-surface-raised px-3.5 py-3 text-sm text-text-secondary;
   }
   .ui-auth-muted-link {
-    @apply text-xs text-text-muted transition-colors hover:text-text-secondary;
+    @apply inline-flex items-center text-xs text-text-muted transition-colors hover:text-text-secondary;
   }
   .ui-auth-hint {
     @apply text-center text-sm text-text-muted;
@@ -2189,20 +2423,22 @@
   .ui-auth-hint-emphasis {
     @apply text-center text-sm text-text-tertiary;
   }
+  /* inline-flex so the pointer:coarse floor can actually apply — an inline
+     box ignores min-height, which is why "Create one free →" measured 18px. */
   .ui-auth-hint-link {
-    @apply text-text-secondary underline underline-offset-2 transition-colors hover:text-text-primary;
+    @apply inline-flex items-center text-text-secondary underline underline-offset-2 transition-colors hover:text-text-primary;
   }
   .ui-auth-mode-tabs {
     @apply mb-6 flex rounded-xl border border-border-subtle bg-surface-base p-1;
   }
   .ui-auth-mode-tab {
-    @apply flex-1 rounded-lg py-2 text-sm font-medium text-text-muted transition-colors hover:text-text-secondary;
+    @apply min-h-11 flex-1 rounded-lg py-2 text-sm font-medium text-text-muted transition-colors hover:text-text-secondary;
   }
   .ui-auth-mode-tab-active {
     @apply bg-surface-raised text-text-primary;
   }
   .ui-auth-prefix-field {
-    @apply flex w-full items-center gap-0 rounded-xl border border-border-subtle bg-surface-raised !py-0 px-4 text-sm text-text-primary outline-none transition-colors focus:border-border-strong;
+    @apply flex min-h-12 w-full items-center gap-0 rounded-xl border border-border-subtle bg-surface-raised px-4 !py-0 text-base text-text-primary outline-none transition-colors focus:border-border-strong sm:text-sm;
   }
   .ui-auth-prefix-label {
     @apply shrink-0 select-none py-3 text-sm text-text-muted;
@@ -3848,6 +4084,10 @@
   .ui-public-nav-action,
   .ui-public-nav-toggle,
   .ui-public-link,
+  .ui-public-link-standalone,
+  .ui-auth-hint-link,
+  .ui-auth-footer-link,
+  .ui-auth-muted-link,
   .ui-public-primary-action,
   .ui-app-footer-cell,
   .ui-loki-suggest-chip,

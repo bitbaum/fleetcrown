@@ -63,22 +63,26 @@ const supportTargets = [
 export default function SupportPage() {
   return (
     <PublicSurface right={<PublicHeaderActions />}>
-      <main className="mx-auto max-w-5xl px-6 py-20 sm:py-28">
+      <main className="ui-public-container-wide py-12 sm:py-20 lg:py-28">
         <div className="ui-public-eyebrow">Support</div>
-        <h1 className="ui-public-page-title mt-4">Get help</h1>
-        <p className="ui-public-lede mt-6 max-w-2xl">
+        <h1 className="ui-public-page-title mt-3 sm:mt-4">Get help</h1>
+        <p className="ui-public-lede mt-4 max-w-2xl sm:mt-6">
           Stuck on setup, hit a bug, or need a human? Start with the docs, file an issue, or write
           directly.
         </p>
-        <div className="mt-14 grid gap-4 md:grid-cols-3">
+        <div className="ui-public-section-gap grid gap-3 sm:gap-4 md:grid-cols-3">
           {helpChannels.map(({ title, body, href, cta, external, icon: Icon }) => {
             const inner = (
               <>
-                <Icon className="h-5 w-5 text-text-secondary" aria-hidden />
-                <h2 className="ui-public-prose-strong mt-5 text-lg">{title}</h2>
+                {/* Icon and title share a row on a phone — stacked, the glyph
+                    cost a full line of height on each of six cards. */}
+                <div className="flex items-center gap-3 sm:block">
+                  <Icon className="h-5 w-5 shrink-0 text-text-secondary" aria-hidden />
+                  <h2 className="ui-public-prose-strong text-lg sm:mt-5">{title}</h2>
+                </div>
                 <p className="ui-public-surface-card-body">{body}</p>
-                <span className="ui-public-link mt-5 inline-flex items-center gap-1">
-                  {cta} <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
+                <span className="ui-public-link mt-4 inline-flex min-h-11 items-center gap-1 break-all sm:mt-5 sm:break-normal">
+                  {cta} <ArrowUpRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
                 </span>
               </>
             );
@@ -100,14 +104,14 @@ export default function SupportPage() {
           })}
         </div>
 
-        <section className="mt-20 border-t border-border-subtle pt-12">
+        <section className="mt-12 border-t border-border-subtle pt-10 sm:mt-20 sm:pt-12">
           <h2 className="ui-public-display-md">Fund the work</h2>
-          <p className="ui-public-body-lg mt-4 max-w-2xl">
+          <p className="ui-public-body-lg mt-3 max-w-2xl sm:mt-4">
             OrangeCat is the public funding surface for both sibling products. Choose what you want
             to support, then pay the entity directly in Bitcoin. An OrangeCat account is not
             required to scan a payment request.
           </p>
-          <div className="mt-10 grid gap-4 md:grid-cols-3">
+          <div className="mt-8 grid gap-3 sm:mt-10 sm:gap-4 md:grid-cols-3">
             {supportTargets.map(({ title, body, href, icon: Icon }) => (
               <a
                 key={title}
@@ -116,26 +120,28 @@ export default function SupportPage() {
                 rel="noopener noreferrer"
                 className="ui-public-surface-card !min-h-0"
               >
-                <Icon className="h-5 w-5 text-text-secondary" aria-hidden />
-                <h3 className="ui-public-prose-strong mt-5 text-lg">{title}</h3>
+                <div className="flex items-center gap-3 sm:block">
+                  <Icon className="h-5 w-5 shrink-0 text-text-secondary" aria-hidden />
+                  <h3 className="ui-public-prose-strong text-lg sm:mt-5">{title}</h3>
+                </div>
                 <p className="ui-public-surface-card-body">{body}</p>
-                <span className="ui-public-link mt-5 inline-flex items-center gap-1">
-                  Open on OrangeCat <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
+                <span className="ui-public-link mt-4 inline-flex min-h-11 items-center gap-1 sm:mt-5">
+                  Open on OrangeCat <ArrowUpRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
                 </span>
               </a>
             ))}
           </div>
         </section>
 
-        <section className="mt-16 border-t border-border-subtle pt-10">
+        <section className="mt-12 border-t border-border-subtle pt-10 sm:mt-16">
           <h2 className="ui-public-display-md">Why Bitcoin only today?</h2>
-          <p className="ui-public-body-lg mt-4 max-w-3xl">
+          <p className="ui-public-body-lg mt-3 max-w-3xl sm:mt-4">
             Bitcoin gives contributors a public, independently verifiable settlement record while
             remaining non-custodial. Fiat rails expose activity to banks without giving the public
             the same audit trail, and privacy coins deliberately hide it. Both remain research
             topics on the roadmap; neither is presented as available now.
           </p>
-          <Link href="/roadmap" className="ui-public-link mt-6 inline-block">
+          <Link href="/roadmap" className="ui-public-link mt-4 inline-flex min-h-11 items-center sm:mt-6">
             Read the roadmap →
           </Link>
         </section>
