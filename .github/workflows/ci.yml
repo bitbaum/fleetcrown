@@ -44,7 +44,16 @@ jobs:
       DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
 
     steps:
+      # fetch-depth: 0, because one check compares against a release TAG.
+      # The default shallow checkout fetches no tags at all, and a shallow one
+      # with `fetch-tags` still lacks the tagged commit's trees — so
+      # `git diff fleet-runner-v* HEAD` could not run, and the desktop-release
+      # drift gate would have passed vacuously in the one place it most needs
+      # to run. It reports that absence as a failure rather than as clean, so
+      # this line is what keeps it able to go green honestly.
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v7
         with:
@@ -130,3 +139,64 @@ jobs:
         run: |
           echo "main is green — dispatching Deploy without waiting for a sweep tick"
           gh workflow run deploy.yml --ref main
+
+  # ---------------------------------------------------------------------------
+  # Mint the Fleet Runner release tag once main is green, so desktop code ships
+  # itself the way server code already does.
+  #
+  # The gap this closes: desktop/ only reaches a machine when a
+  # `fleet-runner-v*` tag exists, and until now a human had to mint it. Nobody
+  # did. Six merged commits sat unreleased after v0.8.12 — a power-source
+  # router, a usage double-billing fix, capture-hook changes — all live on the
+  # server, none on any machine, with nothing anywhere reporting a problem.
+  #
+  # The split of responsibility is deliberate:
+  #   the BUMP is human    — it says "this change is meant to reach machines",
+  #                          and scripts/test/desktop-release-drift.ts fails the
+  #                          build when desktop/ changed without one.
+  #   the TAG is automatic — a purely mechanical step, and therefore exactly the
+  #                          kind of step a person forgets.
+  #
+  # Idempotent by construction: it exits when the tag already exists, so it is a
+  # no-op on every push between version bumps.
+  #
+  # WHY IT DISPATCHES INSTEAD OF RELYING ON THE TAG PUSH: a push made with the
+  # default GITHUB_TOKEN triggers no workflows, and desktop-release.yml fires on
+  # `push: tags`. Pushing the tag from here would therefore create the tag and
+  # build nothing — the same silent no-cascade trap that once left merges
+  # undeployed. So the tag push is treated as bookkeeping and the release is
+  # started explicitly, with `--ref` on the tag so the `mirror` job's
+  # `startsWith(github.ref, 'refs/tags/fleet-runner-v')` guard still holds.
+  # ---------------------------------------------------------------------------
+  release-desktop:
+    needs: check
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Tag and release Fleet Runner if the version moved
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          version="$(node -p "require('./desktop/package.json').version")"
+          tag="fleet-runner-v${version}"
+
+          if git rev-parse -q --verify "refs/tags/${tag}" >/dev/null; then
+            echo "${tag} already exists — nothing to release."
+            exit 0
+          fi
+
+          echo "desktop/package.json is at ${version} with no ${tag} — releasing."
+          git tag "$tag"
+          git push origin "$tag"
+
+          # The tag now exists but nothing is watching it (see the header).
+          gh workflow run desktop-release.yml --ref "$tag"
+          echo "dispatched desktop-release.yml on ${tag}"
