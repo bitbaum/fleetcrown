@@ -13,7 +13,13 @@ export type OrchestrationRunPayload = {
   resultText?: string;
   raw?: string;
   durationMs?: number;
+  /** A genuine failure. The UI renders this in the error style, so it must
+   *  only be set when the run actually failed. */
   error?: string;
+  /** How a run that did NOT fail ended — e.g. the reaper correcting a timeout
+   *  up to `partial`. Kept apart from `error` because both used to land there,
+   *  which rendered a success in red and phrased it in reaper vocabulary. */
+  note?: string;
   /** Derived tab alias ("<project>~<runId8>") for same-project PARALLEL runs
    *  (phase 2 of worktree-per-agent). The run's session handoff lives under
    *  this tab; close matching keys on it (closeOpenRunBySessionTab). Absent
