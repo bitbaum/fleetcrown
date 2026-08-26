@@ -224,4 +224,27 @@ check("consecutive events on one day share a single header", () => {
   assert.equal(groups[1].events.length, 1);
 });
 
+console.log("\nintentId — what a retry replays");
+
+check("the RAW intent id rides along, not just its label", () => {
+  const [event] = buildActivityEvents({ prompts: [prompt()], runs: [run()] });
+  assert.equal(event.intentId, "next_best", "the label alone cannot be handed back to the pipeline");
+  assert.notEqual(event.intentId, event.intentLabel, "label and id are different things");
+});
+
+check("a dispatch with no run keeps its intent id too", () => {
+  const [event] = buildActivityEvents({ prompts: [prompt({ intent: "test_and_fix" })], runs: [] });
+  assert.equal(event.intentId, "test_and_fix");
+});
+
+check("a locally-typed prompt is marked custom and flagged as local", () => {
+  const [event] = buildActivityEvents({
+    prompts: [],
+    runs: [],
+    localChats: [{ id: "c1", projectKey: "a", gitBranch: null, promptText: "hey", occurredAt: T0 }],
+  });
+  assert.equal(event.intentId, "custom");
+  assert.equal(event.isLocalChat, true, "local chat was never dispatched, so it must not offer a re-dispatch");
+});
+
 console.log(`\n${passed}/${passed} activity-events cases passed`);

@@ -148,6 +148,15 @@ export type PromptDisplay = {
   preview: string;
   /** Complete stored prompt, when there is one worth expanding to. */
   full: string | null;
+  /**
+   * The operator's instruction, unwrapped and NOT truncated.
+   *
+   * Distinct from `preview` (shortened for a row) and from `full` (the whole
+   * assembled envelope). This is what a re-dispatch must send: replaying
+   * `full` would hand the pipeline its own preamble to wrap a second time,
+   * and replaying `preview` would silently re-run a truncated instruction.
+   */
+  task: string | null;
   /** True when `full` holds meaningfully more than `preview`. */
   expandable: boolean;
   /** True when no prompt text was ever recorded (not merely hidden). */
@@ -175,6 +184,7 @@ export function promptDisplay(row: PromptBodyInput): PromptDisplay {
     return {
       preview: onePreviewLine(rawCustom),
       full: rawCustom,
+      task: rawCustom,
       expandable: rawCustom.replace(/\s+/g, " ").trim().length > PREVIEW_MAX,
       missing: false,
     };
@@ -188,6 +198,7 @@ export function promptDisplay(row: PromptBodyInput): PromptDisplay {
     return {
       preview,
       full: envelope,
+      task: recovered,
       // The envelope is always worth expanding: it holds the context the agent
       // actually received, which is the whole point of being able to look.
       expandable: true,
@@ -197,7 +208,7 @@ export function promptDisplay(row: PromptBodyInput): PromptDisplay {
 
   // Nothing was recorded. Say so rather than printing the intent slug as if it
   // were the prompt — a body reading "custom" is indistinguishable from a bug.
-  return { preview: "", full: null, expandable: false, missing: true };
+  return { preview: "", full: null, task: null, expandable: false, missing: true };
 }
 
 // The most informative body for a prompt row. Custom text (what the user
