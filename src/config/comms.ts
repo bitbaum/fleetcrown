@@ -54,6 +54,12 @@ export const EMAIL_THEME = {
   muted: PALETTE.darkFallback.textTertiary,
   button: PALETTE.dark.surfacePage,
   buttonInk: PALETTE.dark.textPrimary,
+  /** Digest stat strip. Email is a light surface, so these are the light-mode
+   *  status tokens. Both ship beside a WORD ("needs you" / "shipped") — colour
+   *  alone would be unreadable to a red-green colourblind reader, and email
+   *  clients strip the CSS a page would use to compensate. */
+  alert: PALETTE.light.statusNegative,
+  good: PALETTE.light.statusPositive,
 } as const;
 
 export function mailSubject(kind: MailKind, extra?: string): string {

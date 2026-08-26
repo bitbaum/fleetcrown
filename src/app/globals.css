@@ -3286,6 +3286,145 @@
     @apply flex gap-2 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden;
   }
 
+  /* ── Activity hero ───────────────────────────────────────────────────────
+     The answer, before the evidence. One sentence, one picture, three numbers
+     that are also destinations. */
+  .ui-activity-hero {
+    @apply space-y-3 rounded-2xl border border-border-subtle bg-surface-raised p-4 sm:p-5;
+    box-shadow: var(--shadow-panel);
+  }
+  /* A window containing failures announces itself in the frame, so the state is
+     legible before a single word is read. */
+  .ui-activity-hero-alert {
+    @apply border-status-negative/30;
+  }
+  /* Big enough to be the first thing read at arm's length, and it wraps to two
+     lines on a 320px phone rather than shrinking. */
+  .ui-activity-headline {
+    @apply text-lg font-semibold leading-snug text-text-primary sm:text-xl;
+    text-wrap: balance;
+  }
+  .ui-activity-context {
+    @apply text-xs leading-relaxed text-text-muted;
+  }
+  .ui-activity-kpis {
+    @apply flex flex-wrap gap-2;
+  }
+  /* Each tile is a link into the feed, already filtered — hence the tap floor. */
+  .ui-activity-kpi {
+    @apply inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-xl border border-border-subtle bg-surface-base px-3 text-text-tertiary transition-colors hover:border-border-default hover:text-text-primary;
+    min-width: 6.5rem;
+  }
+  .ui-activity-kpi-alert {
+    @apply border-status-negative/40 bg-status-negative-subtle/50 text-status-negative;
+  }
+  .ui-activity-kpi-good {
+    @apply border-status-positive/30 text-status-positive;
+  }
+  .ui-activity-kpi-value {
+    @apply text-base font-semibold;
+  }
+  .ui-activity-kpi-label {
+    @apply text-xs;
+  }
+
+  /* ── Activity pulse ──────────────────────────────────────────────────────
+     Volume by HEIGHT in a single hue; failures by SHAPE (the tick below the
+     axis) plus a worded legend. Outcome is deliberately never encoded by hue:
+     on the dark surface this app ships by default, --status-positive and
+     --status-negative sit ΔE 3.1 apart under deuteranopia, so a green/red
+     stacked bar would be a solid block of one colour to a red-green colourblind
+     operator. See ActivityPulse.tsx. */
+  .ui-pulse {
+    @apply space-y-1.5;
+  }
+  .ui-pulse-plot {
+    @apply flex h-16 items-end gap-px sm:h-20;
+  }
+  .ui-pulse-slot {
+    @apply flex h-full min-w-0 flex-1 flex-col justify-end gap-1;
+  }
+  .ui-pulse-track {
+    @apply flex min-h-0 flex-1 items-end;
+  }
+  /* Rounded data-end anchored to the baseline; no border between bars — the 1px
+     gap on the flex row is the separator. */
+  .ui-pulse-bar {
+    @apply w-full rounded-t bg-accent-primary/70 transition-colors;
+    min-height: 2px;
+  }
+  .ui-pulse-slot:hover .ui-pulse-bar {
+    @apply bg-accent-primary;
+  }
+  /* The axis rail. A slice with a failure raises a solid tick in the status
+     colour; every other slice keeps a hairline so the baseline stays continuous
+     and the tick reads as a mark ON it, not as a floating dot. */
+  .ui-pulse-tick {
+    @apply h-0.5 w-full shrink-0 rounded-full bg-border-subtle;
+  }
+  .ui-pulse-tick-alert {
+    @apply h-1 bg-status-negative;
+  }
+  .ui-pulse-caption {
+    @apply flex flex-wrap items-center gap-x-3 gap-y-1 text-micro text-text-muted;
+  }
+  .ui-pulse-legend {
+    @apply inline-flex items-center gap-1.5;
+  }
+  .ui-pulse-legend-bar {
+    @apply inline-block h-2.5 w-1.5 rounded-sm bg-accent-primary/70;
+  }
+  .ui-pulse-legend-alert {
+    @apply text-status-negative;
+  }
+  .ui-pulse-peak {
+    @apply ml-auto tabular-nums;
+  }
+
+  /* ── Needs you ───────────────────────────────────────────────────────────
+     Failures hoisted out of the feed, each with a way out. Renders nothing when
+     healthy — a permanent "all clear" panel teaches people to skip the exact
+     spot real alarms appear in. */
+  .ui-needs-you {
+    @apply space-y-3 rounded-2xl border border-status-negative/40 bg-status-negative-subtle/30 p-4 sm:p-5;
+  }
+  .ui-needs-you-title {
+    @apply flex items-center gap-2 text-sm font-semibold text-status-negative;
+  }
+  .ui-needs-you-list {
+    @apply space-y-3;
+  }
+  .ui-needs-you-item {
+    @apply space-y-1.5 border-t border-status-negative/20 pt-3 first:border-t-0 first:pt-0;
+  }
+  .ui-needs-you-head {
+    @apply flex flex-wrap items-center gap-x-2 gap-y-1;
+  }
+  .ui-needs-you-project {
+    @apply text-sm font-semibold text-text-primary;
+  }
+  .ui-needs-you-outcome {
+    @apply rounded-full border border-status-negative/40 px-2 py-px text-micro font-medium text-status-negative;
+  }
+  .ui-needs-you-meta {
+    @apply ml-auto shrink-0 text-xs tabular-nums text-text-muted;
+  }
+  .ui-needs-you-why {
+    @apply text-sm leading-relaxed text-text-secondary;
+  }
+  .ui-needs-you-actions {
+    @apply flex flex-wrap items-center gap-x-4;
+  }
+  .ui-needs-you-action {
+    @apply inline-flex min-h-11 items-center gap-1.5 text-xs font-semibold text-status-negative transition-opacity hover:opacity-80;
+  }
+  .ui-needs-you-action-quiet {
+    @apply inline-flex min-h-11 items-center gap-1.5 text-xs text-text-tertiary transition-colors hover:text-text-primary;
+  }
+  .ui-needs-you-more {
+    @apply inline-flex min-h-11 items-center gap-1.5 text-xs font-medium text-status-negative transition-opacity hover:opacity-80;
+  }
+
   /* ── Activity feed ───────────────────────────────────────────────────────
      One unit of work per row, readable top-down at any width. The old feed put
      timestamp/project/title/duration on one wrapping flex line, which on a
