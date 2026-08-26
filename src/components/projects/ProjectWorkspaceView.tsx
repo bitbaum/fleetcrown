@@ -102,6 +102,7 @@ export function ProjectWorkspaceView({
         <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
           <ProjectWorkspaceHeader
             projectId={project.id}
+            userProjectId={userProject?.id ?? null}
             name={project.name}
             workspaceKey={workspaceKey}
             description={cleanDescription(project.description)}

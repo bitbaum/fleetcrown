@@ -21,6 +21,25 @@ export type ProjectHealthInput = {
   attrs: Record<string, string>;
 };
 
+/**
+ * How a missing point is earned, from wherever the score is shown.
+ *
+ * A breakdown that only NAMES the gap still leaves the person to go find the
+ * right tab and the right field — which is most of the work, and the reason a
+ * score people cannot move is a score people ignore. Every check therefore
+ * carries the write that earns it, so the panel can perform it in place.
+ *
+ *  - `attr`  → POST /api/projects/{id}/attrs  (one text field)
+ *  - `description` → PATCH /api/projects/{id} (first-class column)
+ *  - `clear` → DELETE .../attrs — the three signal checks pass when EMPTY, so
+ *              the point is earned by resolving the problem and clearing it.
+ */
+export type ProjectHealthFix =
+  | { kind: "attr"; attr: string; placeholder: string; multiline?: boolean }
+  | { kind: "description"; placeholder: string; multiline?: boolean }
+  | { kind: "liveUrl"; placeholder: string; multiline?: boolean }
+  | { kind: "clear"; attr: string };
+
 export type ProjectHealthCheck = {
   key: string;
   label: string;
@@ -28,6 +47,10 @@ export type ProjectHealthCheck = {
   /** For failing checks: the concrete action that earns the point.
    *  For passing checks: the fact that earned it. */
   detail: string;
+  /** The exact condition, in words — "how is this calculated" answered on
+   *  screen rather than in this file. Shown next to every check. */
+  rule: string;
+  fix: ProjectHealthFix;
 };
 
 export type ProjectHealth = {
@@ -52,8 +75,16 @@ const truncate = (value: string, n = 80) =>
  * project card, and a cheap heuristic that catches "money is not a float" is
  * worth far more than a perfect judgment nobody can afford to run.
  */
-const CHECKABLE_DONE_MARKERS =
-  /\b(verify|test|tests|tsc|typecheck|type-check|lint|build|deploy|deploys|deployed|ci|green|commit|committed|pushed|passes|passing|health)\b/i;
+// Listed, not inlined into the regex, because the panel SHOWS this list as the
+// rule for the check. A user asked to satisfy a keyword test is owed the
+// keywords; deriving the pattern from the list is what stops the two drifting.
+export const CHECKABLE_DONE_KEYWORDS = [
+  "verify", "test", "tests", "tsc", "typecheck", "type-check", "lint", "build",
+  "deploy", "deploys", "deployed", "ci", "green", "commit", "committed",
+  "pushed", "passes", "passing", "health",
+] as const;
+
+const CHECKABLE_DONE_MARKERS = new RegExp(`\\b(${CHECKABLE_DONE_KEYWORDS.join("|")})\\b`, "i");
 
 export function isCheckableDoneBar(value: string | undefined | null): boolean {
   return hasAnswer(value) && CHECKABLE_DONE_MARKERS.test(value!);
@@ -71,6 +102,8 @@ export function computeProjectHealth(input: ProjectHealthInput): ProjectHealth {
       label: "Brief written",
       pass: Boolean(description),
       detail: description ? truncate(description) : "Write a one-line description of what this project is.",
+      rule: "Passes when the project has a description.",
+      fix: { kind: "description", placeholder: "What is this project, in one line?", multiline: true },
     },
     {
       key: "mission",
@@ -79,6 +112,8 @@ export function computeProjectHealth(input: ProjectHealthInput): ProjectHealth {
       detail: hasAnswer(attrs["mission"])
         ? truncate(attrs["mission"])
         : "State the mission in Context — agents build toward it.",
+      rule: "Passes when Context → Mission is filled in.",
+      fix: { kind: "attr", attr: "mission", placeholder: "What is this project ultimately for?", multiline: true },
     },
     {
       key: "code",
@@ -89,18 +124,29 @@ export function computeProjectHealth(input: ProjectHealthInput): ProjectHealth {
         : input.dirPath
           ? truncate(input.dirPath)
           : "Link a repository or local path so agents can work on it.",
+      rule: "Passes when a repository or a local path is set.",
+      fix: { kind: "attr", attr: "repo", placeholder: "owner/repo, or a full git URL", multiline: false },
     },
     {
       key: "live",
       label: "Live URL",
       pass: hasAnswer(liveUrl),
       detail: hasAnswer(liveUrl) ? truncate(liveUrl) : "Add a production URL when something is deployed.",
+      rule: "Passes when a production URL is set.",
+      // The live_url COLUMN, not the production_url attr, even though this
+      // check reads both. Writing the attr earned the point while the page's
+      // own "Add live URL" field — which reads only the column — went on
+      // saying "add live URL". A point you can earn without the page agreeing
+      // is worse than one you cannot earn at all.
+      fix: { kind: "liveUrl", placeholder: "https://…" },
     },
     {
       key: "stage",
       label: "Stage declared",
       pass: hasAnswer(attrs["status"]),
       detail: hasAnswer(attrs["status"]) ? attrs["status"] : "Set the lifecycle stage (planning / development / production).",
+      rule: "Passes when a lifecycle stage is set.",
+      fix: { kind: "attr", attr: "status", placeholder: "planning / development / production", multiline: false },
     },
     // The three attention signals: an open callout costs a point until fixed.
     ...HEALTH_SIGNAL_BASE.map((signal) => ({
@@ -113,6 +159,8 @@ export function computeProjectHealth(input: ProjectHealthInput): ProjectHealth {
       detail: hasAnswer(attrs[signal.key])
         ? truncate(attrs[signal.key])
         : `Nothing flagged — this point is lost if one is recorded.`,
+      rule: `Passes while no ${signal.label.toLowerCase()} is recorded on this project.`,
+      fix: { kind: "clear" as const, attr: signal.key },
     })),
     {
       key: "next",
@@ -121,6 +169,8 @@ export function computeProjectHealth(input: ProjectHealthInput): ProjectHealth {
       detail: hasAnswer(attrs["next_step"])
         ? truncate(attrs["next_step"])
         : "Queue the next step so work can be dispatched in one click.",
+      rule: "Passes when a next step is written.",
+      fix: { kind: "attr", attr: "next_step", placeholder: "The one thing to do next", multiline: true },
     },
     {
       key: "done",
@@ -137,6 +187,15 @@ export function computeProjectHealth(input: ProjectHealthInput): ProjectHealth {
         : isCheckableDoneBar(attrs["definition_of_done"])
           ? truncate(attrs["definition_of_done"])
           : `Not checkable from a handoff — name a command (verify, test, lint, build, deploy) instead of describing the finished product. Currently: ${truncate(attrs["definition_of_done"])}`,
+      // The one check with a rule you could not guess from its label, so it
+      // states its own keyword list rather than making the field look broken.
+      rule: `Passes when the bar names something an agent can run and report — it must contain one of: ${CHECKABLE_DONE_KEYWORDS.join(", ")}.`,
+      fix: {
+        kind: "attr",
+        attr: "definition_of_done",
+        placeholder: "e.g. npm run verify passes and the change is deployed",
+        multiline: true,
+      },
     },
   ];
 

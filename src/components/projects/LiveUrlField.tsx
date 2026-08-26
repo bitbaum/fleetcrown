@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Globe, Pencil, X } from "lucide-react";
 
 /**
@@ -21,6 +21,19 @@ export function LiveUrlField({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [current, setCurrent] = useState(liveUrl);
+
+  // `useState(prop)` reads its argument once, on mount. When the URL is set
+  // from somewhere else on the page — the health worklist writes this same
+  // column — the value lands in the database and comes back down on
+  // router.refresh(), and this field went on saying "Add live URL" anyway. The
+  // health point was earned while the page disagreed, which is worse than not
+  // being able to earn it. Skipped while editing so a refresh cannot yank the
+  // text out from under someone mid-type.
+  useEffect(() => {
+    if (editing) return;
+    setCurrent(liveUrl);
+    setValue(liveUrl ?? "");
+  }, [liveUrl, editing]);
 
   if (!userProjectId) return null;
 

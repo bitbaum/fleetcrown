@@ -2597,9 +2597,31 @@
   }
   @media (min-width: 40rem) {
     .ui-health-panel {
-      @apply absolute inset-x-auto left-0 top-full mt-1 max-h-none w-80 max-w-[85vw] rounded-lg;
+      /* Stays scrollable above `sm` too: the panel is a worklist now, with a
+         rule and an editor per outstanding check, so it can exceed the screen
+         on a laptop as easily as on a phone. */
+      @apply absolute inset-x-auto left-0 top-full mt-1 max-h-[70vh] w-96 max-w-[85vw] rounded-lg;
       bottom: auto;
     }
+  }
+  /* Group heading inside the health worklist ("4 to earn"). */
+  .ui-health-group-label {
+    @apply mb-1.5 mt-3 text-micro font-medium uppercase tracking-wide text-text-tertiary;
+  }
+  /* One outstanding check: what it is, why it is not passing, and its editor. */
+  .ui-health-row {
+    @apply rounded-lg border border-border-subtle bg-surface-raised p-2.5;
+  }
+  /* The exact condition behind a check — "how is this calculated", on screen. */
+  .ui-health-rule {
+    @apply mt-1 text-micro leading-relaxed text-text-tertiary;
+  }
+  .ui-health-fix-btn {
+    @apply mt-2 inline-flex w-full items-center justify-center rounded-md border border-border-interactive bg-surface-overlay px-3 py-2 text-xs font-medium text-text-primary transition-colors hover:border-accent-primary hover:text-accent-text;
+  }
+  /* Collapsed "already earned" list — the part you are done with. */
+  .ui-health-done-toggle {
+    @apply mt-3 flex w-full items-center gap-1.5 border-t border-border-subtle pt-3 text-xs text-text-tertiary transition-colors hover:text-text-secondary;
   }
   /* Three-up stats row (Goals, Habits, Money, Memory). Two columns on a phone
      so each card can hold its number; the odd card out spans the row instead
@@ -4189,6 +4211,8 @@
      category the finger recognises. */
   .ui-input,
   .ui-btn-overlay,
+  .ui-health-fix-btn,
+  .ui-health-done-toggle,
   .ui-locked-banner,
   .ui-app-topbar-search,
   /* The marketing surfaces have their own namespace but not their own
