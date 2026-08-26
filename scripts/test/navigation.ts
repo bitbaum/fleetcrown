@@ -59,5 +59,11 @@ assert.ok(
 );
 assert.equal(NAV.robots.href, "/robots", "Robots has its own route");
 assert.equal(NAV.people.href, "/people", "People is not mixed with robots");
+assert.ok(
+  priv.items.some((i) => i.id === "crew"),
+  "Crew is PIN-gated with People — its roster IS the address book, and an " +
+    "assignment leaves the private zone only through a share link",
+);
+assert.equal(NAV.crew.href, "/crew", "Crew has its own route");
 
 console.log("✓ navigation IA tests passed");

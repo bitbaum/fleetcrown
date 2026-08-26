@@ -78,6 +78,7 @@ const PUBLIC: Record<string, string> = {
   // — The bearer IS the credential; there is no user to look up first.
   "invitations/[token]": "unguessable invite token in the path is the credential",
   "invitations/[token]/accept": "same token; accepting is what creates the membership",
+  "share/task/[token]": "an assignee has no account by design — the minted share token in the path IS their credential, it is looked up with revoked links excluded, and the only write it permits is accept/decline/deliver on that one assignment",
 
   // — Bootstrap and installers. Deliberately fetchable without an account.
   "setup": "first-run only — returns 409 once any user exists (verified)",

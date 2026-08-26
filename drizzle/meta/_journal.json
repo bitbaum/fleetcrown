@@ -414,6 +414,13 @@
       "when": 1787739704509,
       "tag": "0059_unconfirmed_rename",
       "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1787762744324,
+      "tag": "0060_famous_skin",
+      "breakpoints": true
     }
   ]
 }

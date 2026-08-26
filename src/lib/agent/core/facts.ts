@@ -72,6 +72,12 @@ export const FACT_KINDS: Record<string, readonly string[]> = {
   habit: ["title", "frequency", "current_streak", "last_checked"],
   commitment: ["title", "due", "counterparty", "status"],
   event: ["name", "type", "deadline", "url", "status"],
+  // Humans the operator delegates to, and the work handed to them. Separate
+  // from `person`/`commitment` because the questions are different: a crew
+  // member is asked what they are good FOR, an assignment is asked who has it
+  // and whether they said yes.
+  crew_member: ["name", "role", "skills", "engagement", "rate", "availability", "open_assignments"],
+  assignment: ["title", "assignee", "status", "due", "fee", "why"],
   document: ["title", "source", "excerpt"],
   pending_action: ["title", "type", "reasoning", "proposed_on", "id"],
 };

@@ -3683,6 +3683,79 @@
     @apply bg-surface-base;
   }
 
+  /* ── Crew — assignments handed to humans ──────────────────────────────────
+     The board answers ONE question: who owes me what, and what do I owe them.
+     So a row is scannable in a single line (title · who · when) and only opens
+     into brief/reason/timeline when asked. Everything here is width-agnostic:
+     at 320px a row degrades by dropping its meta line, never by reflowing the
+     title into a ragged block. */
+  .ui-crew-hero {
+    @apply flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-2xl border border-border-subtle bg-surface-base px-4 py-3;
+    box-shadow: var(--shadow-panel);
+  }
+  .ui-crew-hero-answer {
+    @apply text-base font-semibold text-text-primary;
+  }
+  .ui-crew-hero-sub {
+    @apply text-sm text-text-tertiary;
+  }
+  .ui-crew-group {
+    @apply space-y-2;
+  }
+  .ui-crew-group-label {
+    @apply flex items-center gap-2 px-1 text-micro font-semibold uppercase tracking-wider text-text-muted;
+  }
+  .ui-crew-task {
+    @apply rounded-xl border border-border-subtle bg-surface-base px-3 py-2.5 transition-colors hover:border-border-default;
+  }
+  /* Their move, not yours — the row you can scroll past. */
+  .ui-crew-task-waiting {
+    @apply border-dashed;
+  }
+  .ui-crew-task-head {
+    @apply flex w-full items-start gap-2 text-left;
+  }
+  .ui-crew-task-title {
+    @apply min-w-0 flex-1 text-sm font-medium leading-snug text-text-primary;
+  }
+  .ui-crew-task-meta {
+    @apply mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-text-tertiary;
+  }
+  .ui-crew-task-body {
+    @apply mt-3 space-y-3 border-t border-border-subtle pt-3;
+  }
+  .ui-crew-task-prose {
+    @apply whitespace-pre-wrap text-sm leading-relaxed text-text-secondary;
+  }
+  .ui-crew-actions {
+    @apply flex flex-wrap items-center gap-2;
+  }
+  .ui-crew-share {
+    @apply flex flex-wrap items-center gap-2 rounded-lg border border-border-subtle bg-surface-raised px-3 py-2;
+  }
+  .ui-crew-share-url {
+    @apply min-w-0 flex-1 truncate text-xs text-text-tertiary;
+    font-family: var(--font-mono);
+  }
+  .ui-crew-timeline {
+    @apply space-y-1.5 text-xs text-text-tertiary;
+  }
+  .ui-crew-timeline-row {
+    @apply flex flex-wrap items-baseline gap-x-2;
+  }
+  .ui-crew-member {
+    @apply space-y-2 rounded-xl border border-border-subtle bg-surface-base px-3 py-3;
+  }
+  .ui-crew-member-name {
+    @apply text-sm font-medium text-text-primary;
+  }
+  .ui-crew-member-meta {
+    @apply flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-text-tertiary;
+  }
+  .ui-crew-skill {
+    @apply rounded-full border border-border-subtle bg-surface-overlay px-2 py-0.5 text-micro text-text-secondary;
+  }
+
   /* Misc */
   /* Status dots — used inline with text for agent/project state */
   .ui-dot          { @apply inline-block h-1.5 w-1.5 rounded-full shrink-0; }

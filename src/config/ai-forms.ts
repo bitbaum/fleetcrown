@@ -115,6 +115,54 @@ export const ROBOT_FORM: FormTarget = {
   ],
 };
 
+export const ASSIGNMENT_FORM: FormTarget = {
+  key: "assignment",
+  name: "Assignment",
+  fields: defineFields([
+    {
+      name: "title",
+      label: "Ask",
+      type: "text",
+      required: true,
+      maxLength: 160,
+      placeholder: "e.g. Contact the three Basel suppliers",
+    },
+    {
+      name: "brief",
+      label: "Brief",
+      type: "textarea",
+      maxLength: 6000,
+      placeholder: "Who to contact, what to say, what to come back with",
+      hint: "Written for the person doing it — everything they need without asking you",
+    },
+    {
+      name: "reason",
+      label: "Why",
+      type: "textarea",
+      maxLength: 2000,
+      hint: "Why this matters. The half that earns a yes rather than a shrug",
+    },
+    { name: "dueDate", label: "Needed by", type: "date" },
+    { name: "feeAmount", label: "Fee", type: "number", min: 0 },
+    {
+      name: "feeCurrency",
+      label: "Currency",
+      type: "select",
+      options: optionsOf(VALID_CURRENCIES),
+      overridable: true,
+    },
+    // Both are picked from live lists the model cannot see.
+    { name: "assigneeId", label: "Assignee", type: "text", aiExcluded: true },
+    { name: "projectId", label: "Project", type: "text", aiExcluded: true },
+  ]),
+  instructions: [
+    "This is work for a HUMAN, not an agent. Write the brief as instructions a competent stranger could follow without a follow-up question.",
+    "Keep the ask itself one line. Detail belongs in the brief.",
+    "Only set a fee when the user names one. Unpaid help is normal and must not be invented as paid.",
+    "Never invent a company, a contact, or a deadline the user did not give.",
+  ],
+};
+
 export const HABIT_FORM: FormTarget = {
   key: "habit",
   name: "Habit",
@@ -176,6 +224,7 @@ export const AI_FORMS: FormTarget[] = [
   PROJECT_FORM,
   PERSON_FORM,
   ROBOT_FORM,
+  ASSIGNMENT_FORM,
   HABIT_FORM,
   SUBSCRIPTION_FORM,
 ];
