@@ -51,9 +51,14 @@ export function BrandMark({
       {showWordmark && !compact && (
         <div className="min-w-0">
           <p className={responsive ? "ui-kicker hidden sm:block" : "ui-kicker"}>{APP_KICKER}</p>
+          {/* Below 360px the wordmark is dropped and the spiral carries the
+              brand alone. At 320 — the narrowest width this app supports —
+              "FleetCrown" plus the header's CTA and menu button do not fit,
+              and the wordmark was being overlapped by the pill rather than
+              yielding to it. The glyph is the mark; the word is the bonus. */}
           <span
-            className={`block font-medium tracking-display text-text-primary ${
-              responsive ? "text-lg sm:mt-1 sm:text-2xl" : "mt-1 text-2xl"
+            className={`block truncate font-medium tracking-display text-text-primary ${
+              responsive ? "hidden text-lg min-[360px]:block sm:mt-1 sm:text-2xl" : "mt-1 text-2xl"
             }`}
           >
             {APP_NAME}
