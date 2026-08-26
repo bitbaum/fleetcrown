@@ -25,8 +25,26 @@ export type FeedbackWorkView = {
   phase: FeedbackWorkPhase;
   /** Short status word for the badge — never "dispatched". */
   label: string;
-  /** One line of what to do / what happened. */
+  /** One line of what to do / what happened. Written for a human, always.
+   *  Never a raw run error — see `diagnostic`. */
   detail: string | null;
+  /**
+   * The run's raw error, for a disclosure the reader opens on purpose.
+   *
+   * This used to BE `detail`, so whatever an executor happened to write went
+   * straight onto the card as if it were advice to the user. On /control that
+   * printed, verbatim and twice: "Corrected 2026-08-24: repo evidence in the
+   * run window belonged to a sibling run; this run was acked verified:false
+   * and never started." That is an engineer's note to another engineer. It
+   * tells a person looking at their own feedback queue nothing they can act
+   * on, and it is the kind of thing that makes a surface read as debug output
+   * someone forgot to remove.
+   *
+   * Keeping it — behind a disclosure rather than deleted — because when a run
+   * really did fail for a legible reason, that reason is the most useful text
+   * on the row. The fix is where it renders, not whether.
+   */
+  diagnostic?: string | null;
 };
 
 export type FeedbackRunSnapshot = {
@@ -94,7 +112,8 @@ export function deriveFeedbackWork(
     return {
       phase: FEEDBACK_WORK_PHASE.FAILED,
       label: "Failed",
-      detail: run.error?.slice(0, 160) || "The run ended without a successful fix. Retry or Watch Terminal.",
+      detail: "The run ended without a successful fix. Retry or Watch Terminal.",
+      diagnostic: run.error?.slice(0, 400) ?? null,
     };
   }
 
@@ -110,7 +129,8 @@ export function deriveFeedbackWork(
     return {
       phase: FEEDBACK_WORK_PHASE.FAILED,
       label: "Failed",
-      detail: run.error?.slice(0, 160) || "Run finished without success. Retry or Watch Terminal.",
+      detail: "Run finished without success. Retry or Watch Terminal.",
+      diagnostic: run.error?.slice(0, 400) ?? null,
     };
   }
 
