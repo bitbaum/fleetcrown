@@ -11,7 +11,7 @@ import type { DevLogEntry } from "@/db/schema/user-projects";
 import { DevLogList } from "@/components/shared/DevLogList";
 import { GoalProgressBar } from "@/components/shared/GoalProgressBar";
 import { GoalEditor } from "@/components/projects/GoalEditor";
-import { timeAgo, shortTimeAgo, formatDurationMinutes } from "@/lib/dates";
+import { timeAgo, formatDurationMinutes } from "@/lib/dates";
 import { DOSSIER_STALE_MS, answer } from "@/lib/project-display";
 import { APP_LOCALE } from "@/lib/constants";
 import { MINUTE_MS, WEEK_MS } from "@/lib/constants/time";
@@ -101,11 +101,11 @@ export function NowSection({
           {liveLabel}
           {commitFresher ? (
             <span className="text-xs text-text-muted">
-              {" · "}last commit {shortTimeAgo(lastCommitMs)} ago
+              {" · "}last commit {timeAgo(lastCommitMs)}
             </span>
           ) : handoffMs != null ? (
             <span className="text-xs text-text-muted">
-              {" · "}{stale ? `last active ${shortTimeAgo(handoffMs)} ago` : `handoff ${timeAgo(handoffMs)}`}
+              {" · "}{stale ? `last active ${timeAgo(handoffMs)}` : `handoff ${timeAgo(handoffMs)}`}
             </span>
           ) : null}
         </p>
@@ -249,7 +249,7 @@ export function DoneSection({ dossier }: { dossier: ProjectDossier }) {
           <ul className="space-y-1">
             {dossier.commits!.slice(0, 5).map((commit) => (
               <li key={commit.sha} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs">
-                <span className="text-text-muted tabular-nums">{shortTimeAgo(commit.atMs)} ago</span>
+                <span className="text-text-muted tabular-nums">{timeAgo(commit.atMs)}</span>
                 <span className="font-mono text-text-tertiary">{commit.sha}</span>
                 <span className="min-w-0 flex-1 truncate text-text-secondary" title={commit.message}>
                   {commit.message}
