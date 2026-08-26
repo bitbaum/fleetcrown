@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { ORCHESTRATION_ADAPTER_IDS } from "@/lib/orchestration";
 import { getApiActor } from "@/lib/session";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
+import { AttachmentsField, foldAttachmentsIntoPrompt } from "@/lib/composer-attachments";
 import { logDebug } from "@/db/queries/debug-logs";
 import { injectPrompt } from "@/lib/inject-core";
 import { shouldAnnounceOnClose } from "@/lib/orchestration/notify-close-format";
@@ -16,6 +17,9 @@ const InjectBody = z.object({
   tab:          z.string().min(1).max(80),
   promptKey:    z.string().optional(),
   customPrompt: z.string().max(4000).optional(),
+  /** Screenshots and text files staged in the composer — see
+   *  lib/composer-attachments for why an image becomes text before it ships. */
+  attachments:  AttachmentsField,
   adapter:      z.enum(ORCHESTRATION_ADAPTER_IDS).optional(),
   runId:        z.string().uuid().optional(),
   // Chat-originated dispatches (Loki's fleet skill) ask for the outcome to be
@@ -26,7 +30,12 @@ const InjectBody = z.object({
 export async function POST(req: NextRequest) {
   const dataOrResp = await readJsonBody(req, InjectBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
-  const { tab, promptKey, customPrompt, adapter, runId, notifyOnClose } = dataOrResp;
+  const { tab, promptKey, adapter, runId, notifyOnClose, attachments } = dataOrResp;
+  // Screenshots become text before anything downstream sees the prompt, so the
+  // agent, prompt history and Activity all record the same instruction.
+  const customPrompt = dataOrResp.customPrompt
+    ? await foldAttachmentsIntoPrompt(dataOrResp.customPrompt, attachments)
+    : dataOrResp.customPrompt;
 
   const actor = await getApiActor();
   const userId = actor?.userId ?? null;

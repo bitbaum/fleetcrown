@@ -1971,42 +1971,53 @@
     @apply inline-flex h-11 shrink-0 items-center justify-center rounded-lg bg-accent-primary px-4 text-sm font-medium text-text-inverted transition-opacity disabled:opacity-40;
   }
 
-  /* ── Session sheet — all the setup, one tap behind the session name ─────── */
-  .ui-term-sheet {
+  /* ── Bottom sheet ─────────────────────────────────────────────────────────
+     A shared shell, not a terminal thing. Built first for the terminal's
+     session setup; Control's fleet settings needed exactly the same shape a
+     day later, which is the signal to promote rather than copy. Both are the
+     same idea: the controls a surface needs but should not wear — chosen
+     deliberately, changed rarely, never read while work is in flight. */
+  .ui-sheet {
     @apply flex flex-col overflow-hidden;
     max-height: var(--modal-max-height);
   }
-  .ui-term-sheet-grip {
+  .ui-sheet-grip {
     @apply mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-border-strong;
   }
-  .ui-term-sheet-body {
+  .ui-sheet-body {
     @apply flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4;
   }
-  .ui-term-sheet-section {
+  .ui-sheet-section {
     @apply flex flex-col gap-1;
   }
-  .ui-term-sheet-label {
+  .ui-sheet-label {
     @apply mb-1 text-nano font-semibold uppercase tracking-caps text-text-muted;
   }
-  .ui-term-sheet-option {
+  .ui-sheet-option {
     @apply flex min-h-11 w-full items-center gap-3 rounded-xl border border-transparent px-3 py-2 text-left transition-colors active:bg-surface-overlay disabled:opacity-40;
   }
-  .ui-term-sheet-option-active {
+  .ui-sheet-option-active {
     @apply border-border-interactive bg-surface-raised;
   }
-  .ui-term-sheet-option-title {
+  .ui-sheet-option-title {
     @apply block truncate text-sm text-text-primary;
   }
-  .ui-term-sheet-option-detail {
+  .ui-sheet-option-detail {
     @apply mt-0.5 block text-micro leading-snug text-text-muted;
   }
-  .ui-term-sheet-empty {
+  .ui-sheet-empty {
     @apply px-3 pb-1 text-micro leading-snug text-text-muted;
   }
-  .ui-term-sheet-row {
+  .ui-sheet-row {
     @apply flex min-h-11 items-center gap-2 px-3;
   }
-  .ui-term-sheet-foot {
+  .ui-sheet-value {
+    @apply text-sm text-text-primary;
+  }
+  .ui-sheet-hint {
+    @apply mt-0.5 text-xs leading-snug text-text-muted;
+  }
+  .ui-sheet-foot {
     @apply shrink-0 border-t border-border-subtle p-4;
     padding-bottom: max(1rem, env(safe-area-inset-bottom));
   }
@@ -2897,6 +2908,85 @@
     background-image:
       radial-gradient(circle at top left, color-mix(in oklch, var(--accent-primary) 8%, transparent), transparent 32rem);
   }
+  /* ── Composer attachments ─────────────────────────────────────────────────
+     A staged screenshot shows as a thumbnail, not a filename: every phone
+     screenshot is called IMG_<timestamp>.jpg, so the name cannot answer "is
+     that the right picture?" and the picture can. */
+  .ui-attach-strip {
+    @apply flex flex-wrap items-center gap-1.5 px-3 pb-2;
+  }
+  .ui-attach-item {
+    @apply relative shrink-0;
+  }
+  .ui-attach-thumb {
+    @apply h-12 w-12 rounded-lg border border-border-subtle object-cover;
+  }
+  .ui-attach-file {
+    @apply flex h-12 max-w-40 items-center gap-1.5 rounded-lg border border-border-subtle bg-surface-overlay px-2 text-xs text-text-secondary;
+  }
+  /* Sits on the corner of the thumbnail rather than beside it: a 12px square
+     is the whole tile's worth of width on a 320px screen. The touch floor
+     still gives it a real hit area on a coarse pointer. */
+  .ui-attach-remove {
+    @apply absolute -right-1.5 -top-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full border border-border-default bg-surface-overlay text-text-secondary transition-colors hover:text-text-primary;
+  }
+  .ui-attach-note {
+    @apply text-left text-micro leading-snug text-status-warning;
+  }
+
+  /* ── Hero: one answer, one action ─────────────────────────────────────────
+     Mobile-first on purpose, and that is the fix rather than a nicety. Every
+     layout rule on the old Control started at `sm:` (640px), which is above
+     every phone — so a 390px device never got a designed layout, it got the
+     un-styled fallback: flex-col, full width, nothing aligned to anything.
+     These rules describe the PHONE, and `sm:` only relaxes them where a wider
+     screen has room to spare. */
+  .ui-hero-row {
+    @apply flex items-start gap-3;
+  }
+  .ui-hero-answer {
+    @apply min-w-0 flex-1;
+  }
+  /* New-project and settings. Icons, top-right, out of the reading path —
+     they are how you get somewhere else, not part of the answer. */
+  .ui-hero-tools {
+    @apply flex shrink-0 items-center gap-1;
+  }
+  /* The headline is the largest text on the page, because it is the answer to
+     the only question the page exists to answer. It used to be a 14px bold
+     "Fleet autopilot" — a section label, not an answer. */
+  .ui-hero-headline {
+    @apply flex items-center gap-2 text-lg font-semibold leading-tight text-text-primary sm:text-xl;
+  }
+  .ui-hero-sub {
+    @apply mt-1 text-sm leading-snug text-text-secondary;
+  }
+  /* Full-width on a phone — it is the one action, and a thumb should not have
+     to aim. Shrinks to its label where a pointer exists. */
+  .ui-hero-action {
+    @apply mt-3 flex w-full items-center justify-center gap-2 sm:w-auto;
+  }
+  /* Everything the card still owes you but should not say loudly: builder
+     state, the counters, sync age. One wrapping line of small text. */
+  .ui-hero-foot {
+    @apply mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border-subtle pt-3 text-xs;
+  }
+  .ui-hero-runner {
+    @apply inline-flex items-center gap-1.5 font-medium;
+  }
+  .ui-hero-counts {
+    @apply text-text-secondary;
+  }
+  /* A count you can follow. The bare counts stay plain text — a chip that only
+     reports is a button that lies, and the old card drew all four identically
+     whether or not clicking them did anything. */
+  .ui-hero-count-link {
+    @apply underline decoration-border-subtle underline-offset-2 transition-colors hover:decoration-current;
+  }
+  .ui-hero-sync {
+    @apply text-text-muted;
+  }
+
   /* ── Needs-you inbox ──────────────────────────────────────────────────────
      One panel for every small thing waiting on a human. It replaced two
      unbounded strips (widget coverage + feedback) that between them spent

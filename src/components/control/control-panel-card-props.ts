@@ -3,6 +3,7 @@ import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import type { PromptMeta } from "@/lib/agent-config";
 import type { AutoInjectMode } from "@/config/beacon";
 import { TOAST_LONG_MS } from "@/lib/constants/timings";
+import type { Attachment } from "@/lib/loki/attachments";
 import { EXECUTOR_COPY } from "@/config/executor-copy";
 
 type RegistryEntry = {
@@ -18,7 +19,7 @@ type Deps = {
   zellijTabs: string[];
   selectedAgent: string;
   switchableRegistry: RegistryEntry[];
-  inject: (tab: string, promptKey?: string, customPrompt?: string) => Promise<{ mode: "queued" | "direct"; runnerConnected: boolean | null; commandId: string | null }>;
+  inject: (tab: string, promptKey?: string, customPrompt?: string, attachments?: Attachment[]) => Promise<{ mode: "queued" | "direct"; runnerConnected: boolean | null; commandId: string | null }>;
   runWithBrain: (project: ProjectState, intent: OrchestrationTaskIntentId) => Promise<void>;
   runCustomPrompt: (project: ProjectState, prompt: string, agent: string) => Promise<void>;
   setError: (error: string | null) => void;
@@ -64,9 +65,9 @@ export function buildCardProps(deps: Deps) {
     zellijTabs: deps.zellijTabs,
     currentAdapter: deps.selectedAgent,
     availableAgents,
-    onInject: async (tab: string, promptKey?: string, customPrompt?: string) => {
+    onInject: async (tab: string, promptKey?: string, customPrompt?: string, attachments?: Attachment[]) => {
       try {
-        const { mode, runnerConnected, commandId } = await deps.inject(tab, promptKey, customPrompt);
+        const { mode, runnerConnected, commandId } = await deps.inject(tab, promptKey, customPrompt, attachments);
         if (mode === "queued") {
           const msg =
             runnerConnected === false

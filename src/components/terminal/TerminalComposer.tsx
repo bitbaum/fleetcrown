@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { AlertCircle, BookOpen, Loader2, Send, X } from "lucide-react";
 import { postJson } from "@/lib/api/fetch";
 import { PromptPicker } from "@/components/prompts/PromptPicker";
+import { AttachButton, AttachmentStrip } from "@/components/ui/attachment-strip";
+import { useAttachments } from "@/hooks/use-attachments";
 import { cn } from "@/lib/utils";
 import { useDispatchLiveStatus } from "@/hooks/use-dispatch-live-status";
 import { dispatchToneDotClass } from "@/lib/dispatch-status";
@@ -28,6 +30,9 @@ export function TerminalComposer({ tab }: { tab: string }) {
   const [error, setError] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  // Screenshots go with the prompt through the same tab-inject path — the
+  // server turns them into text the agent can act on before dispatch.
+  const attachments = useAttachments();
 
   // Real follow-through on what "Sent ✓" used to claim unconditionally.
   //
@@ -63,12 +68,18 @@ export function TerminalComposer({ tab }: { tab: string }) {
   }, [liveDispatch]);
 
   const send = async () => {
-    const prompt = text.trim();
+    // A screenshot alone is a complete instruction; supply the words the
+    // picture implies rather than refusing the send.
+    const prompt = text.trim()
+      || (attachments.attachments.length ? "Look at the attached screenshot and fix what is wrong." : "");
     if (!prompt || sending) return;
     setSending(true);
     setError(null);
     try {
-      const res = await postJson("/api/control/tab-inject", { tab, prompt });
+      const res = await postJson("/api/control/tab-inject", {
+        tab, prompt,
+        ...(attachments.attachments.length ? { attachments: attachments.toWire() } : {}),
+      });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError(typeof data.error === "string" ? data.error : `Could not dispatch (HTTP ${res.status}).`);
@@ -83,6 +94,7 @@ export function TerminalComposer({ tab }: { tab: string }) {
         return;
       }
       setText("");
+      attachments.clear();
       setSent(true);
       window.setTimeout(() => setSent(false), 2000);
       clearTracked();
@@ -145,13 +157,17 @@ export function TerminalComposer({ tab }: { tab: string }) {
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); }
           }}
+          onPaste={(e) => { if (attachments.addFromPaste(e)) e.preventDefault(); }}
           placeholder={`Describe a task for ${tab} — “/” for the prompt library`}
           aria-label={`Prompt for ${tab}`}
           className="w-full resize-none bg-transparent px-3 py-2.5 text-sm leading-relaxed text-text-primary placeholder:text-text-muted outline-none"
           style={{ fieldSizing: "content", maxHeight: "8rem" } as React.CSSProperties}
         />
 
+        <AttachmentStrip attachments={attachments} />
+
         <div className="flex items-center gap-1.5 border-t border-border-subtle px-2.5 py-1.5">
+          <AttachButton attachments={attachments} />
           <button
             type="button"
             onClick={() => setPickerOpen((open) => !open)}
@@ -166,12 +182,12 @@ export function TerminalComposer({ tab }: { tab: string }) {
           <button
             type="button"
             onClick={() => void send()}
-            disabled={!text.trim() || sending}
+            disabled={(!text.trim() && attachments.attachments.length === 0) || sending}
             className={cn(
               "inline-flex shrink-0 ui-tap items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
               sent
                 ? "bg-status-positive text-text-inverted"
-                : text.trim()
+                : text.trim() || attachments.attachments.length
                   ? "bg-text-primary text-text-inverted hover:opacity-90"
                   : "pointer-events-none bg-surface-overlay text-text-muted opacity-40",
             )}

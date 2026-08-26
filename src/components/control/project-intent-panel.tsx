@@ -15,6 +15,8 @@ import { useBuilderPresence } from "@/hooks/use-builder-presence";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import type { ProjectState } from "@/lib/control-types";
 import { PromptInput } from "./prompt-input";
+import { useAttachments } from "@/hooks/use-attachments";
+import type { Attachment } from "@/lib/loki/attachments";
 import { HostedDispatchButton } from "./HostedDispatchButton";
 import { QueueList } from "./queue-list";
 import { ProjectPromptLibrary } from "./ProjectPromptLibrary";
@@ -109,7 +111,7 @@ export function IntentButtonPanel({
   merging?: boolean;
   onToggleAutoContinue?: () => void;
   onSendIntent: (intent: OrchestrationTaskIntentId) => void;
-  onSendCustom: () => void;
+  onSendCustom: (attachments?: Attachment[]) => void;
   onEnqueueCustom?: (prompt: string) => void;
   onSendFromQueue?: (index: number) => void;
   onRemoveFromQueue?: (index: number) => void;
@@ -145,7 +147,15 @@ export function IntentButtonPanel({
     onEnqueueAfterRecording: (text) => { if (onEnqueueCustom) { onEnqueueCustom(text); onCustomChange(""); } },
   });
 
-  const handleSendCustom = useCallback(() => wrapSend(() => { haptic(); onSendCustom(); }), [wrapSend, onSendCustom]);
+  // The controller lives here, beside the mic, because both are ways of saying
+  // the same thing: this is what I want done. Cleared only after a send is
+  // handed off, so a failed dispatch keeps the screenshot with the draft.
+  const attachments = useAttachments();
+  const handleSendCustom = useCallback(() => wrapSend(() => {
+    haptic();
+    onSendCustom(attachments.attachments.length ? attachments.toWire() : undefined);
+    attachments.clear();
+  }), [wrapSend, onSendCustom, attachments]);
   const handleEnqueue = useCallback(() => wrapEnqueue(() => {
     if (custom.trim() && onEnqueueCustom) { haptic(); onEnqueueCustom(custom.trim()); onCustomChange(""); }
   }), [wrapEnqueue, custom, onEnqueueCustom, onCustomChange]);
@@ -158,6 +168,7 @@ export function IntentButtonPanel({
     showQueue: !!onEnqueueCustom,
     onSendCustom: handleSendCustom,
     onEnqueue: handleEnqueue,
+    attachments,
     autoContinueEnabled,
     onToggleAutoContinue,
     // Short inline hint only — the full offline explanation + how-to-reconnect

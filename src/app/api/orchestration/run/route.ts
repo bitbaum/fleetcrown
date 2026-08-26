@@ -27,6 +27,7 @@ import { createOrchestrationRun, updateOrchestrationRun, isProjectBusy } from "@
 import { insertPromptHistory } from "@/db/queries/prompt-history";
 import { consumeProjectPrompt, getProjectState, persistProjectRuntimeIfNewer, prependProjectPrompt } from "@/db/queries/project-states";
 import { getApiActor } from "@/lib/session";
+import { AttachmentsField, foldAttachmentsIntoPrompt } from "@/lib/composer-attachments";
 import { getUserProjects, getOrgProjects } from "@/db/queries/user-projects";
 import { getProjectContext } from "@/db/queries/project-context";
 import { buildOperatorContextSection } from "@/lib/dispatch-operator-context";
@@ -56,6 +57,9 @@ const RunOrchestrationBody = z.object({
   intent: z.enum(ORCHESTRATION_TASK_INTENT_IDS),
   model: z.string().trim().max(160).optional(),
   customInstructions: z.string().trim().max(4000).optional(),
+  /** Screenshots and text files staged in the composer — see
+   *  lib/composer-attachments for why an image becomes text before it ships. */
+  attachments: AttachmentsField,
   // Optional database-backed queue snapshot from the client. Plumbed into
   // the prompt body via renderTaskForAdapter so the agent
   // can weigh queue items against other candidates. Max 200 items × 4kB
@@ -270,6 +274,21 @@ export async function POST(req: NextRequest) {
     const restored = await prependProjectPrompt(userId, request.projectKey, effectiveKey, consumedQueueItem).catch(() => null);
     if (restored?.applied) writePromptQueueMirror(effectiveKey, restored.queue);
   };
+
+  // Screenshots become text here, before context assembly and before prompt
+  // history is written — so the agent, the ledger and the Activity view all
+  // see the same instruction. Applies only to a custom dispatch: a templated
+  // intent has no free-text field for a description to belong to.
+  // Read from the PARSED BODY, not from `request`: request is cast to
+  // OrchestrationTaskRequest, the adapter-facing shape, which deliberately has
+  // no attachments field — attachments never reach an adapter, only the text
+  // they were turned into does.
+  if (request.intent === "custom" && request.customInstructions) {
+    request.customInstructions = await foldAttachmentsIntoPrompt(
+      request.customInstructions,
+      dataOrResp.attachments,
+    );
+  }
 
   // Aim the agent at the project's roadmap: brief + active goals (getProjectContext).
   request.projectContext = (await getProjectContext(userId, request.projectKey)) ?? undefined;

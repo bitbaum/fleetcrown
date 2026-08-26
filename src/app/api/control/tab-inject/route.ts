@@ -7,6 +7,7 @@ import { isRuntimeAvailable } from "@/lib/runtime";
 import { executor } from "@/lib/agent-execution";
 import { workspaceIdFor } from "@/lib/agent-execution/ownership";
 import { assembleInjectPrompt } from "@/lib/inject-prompt";
+import { AttachmentsField, foldAttachmentsIntoPrompt } from "@/lib/composer-attachments";
 import { executionAccessErrorBody, resolveQueuedExecution } from "@/lib/execution-access";
 import {
   DEFAULT_ADAPTER_ID,
@@ -23,6 +24,9 @@ import type { UserProject } from "@/db/schema";
 const Body = z.object({
   tab: z.string().trim().min(1).max(120),
   prompt: z.string().trim().min(1).max(4000),
+  /** Screenshots and text files staged in the composer — see
+   *  lib/composer-attachments for why an image becomes text before it ships. */
+  attachments: AttachmentsField,
 });
 
 // Every successful tab-inject dispatch enters the same activity ledger as
@@ -112,7 +116,12 @@ export async function POST(req: NextRequest) {
 
   const dataOrResp = await readJsonBody(req, Body);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
-  const { tab, prompt } = dataOrResp;
+  const { tab, prompt, attachments: rawAttachments } = dataOrResp;
+
+  // Fold attachments in BEFORE project context is assembled, so the screenshot
+  // description is part of the task the agent is given rather than a trailer
+  // after the conventions block.
+  const promptWithAttachments = await foldAttachmentsIntoPrompt(prompt, rawAttachments);
   const projects = await getUserProjects(userId);
   const project = projects.find((p) => p.name.toLowerCase() === tab.toLowerCase());
   const adapter: AdapterId =
@@ -126,11 +135,15 @@ export async function POST(req: NextRequest) {
         projectPath: project.dirPath,
         projectId: project.entityProjectId ?? null,
         adapter,
-        customPrompt: prompt,
+        customPrompt: promptWithAttachments,
         model: project.modelPref ?? undefined,
       })
     : null;
-  const promptToSend = assembled?.ok ? assembled.prompt : prompt;
+  const promptToSend = assembled?.ok ? assembled.prompt : promptWithAttachments;
+  // The LABEL stays the words the human typed. An attachment can add thousands
+  // of characters of machine-written description, and labelling the dispatch
+  // with the top of that makes every screenshot-driven task read identically
+  // in Activity and prompt history.
   const promptLabel = assembled?.ok ? assembled.promptLabel : prompt.slice(0, 40);
 
   // A FleetCrown-owned PTY agent is driven directly via the executor — no zellij.

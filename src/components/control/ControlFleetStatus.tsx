@@ -1,12 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Plus, RefreshCw, Radio, WifiOff, Zap } from "lucide-react";
+import { ArrowRight, Plus, Radio, SlidersHorizontal, WifiOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { timeAgo } from "@/lib/dates";
 import type { ControlDashboardState, FleetPulse } from "./control-presenter";
-import type { AutoInjectMode } from "@/config/beacon";
-import { AutomationPolicyControl } from "./AutomationPolicyControl";
 import {
   RUNNER_STATE_DEFINITIONS,
   deriveRunnerStateKey,
@@ -14,19 +12,6 @@ import {
 import { builderCompactLabel, builderPresenceDetail } from "@/lib/builder-presence";
 import type { BuilderChannelPresence } from "@/lib/builder-presence";
 import { EXECUTOR_COPY } from "@/config/executor-copy";
-
-// Single-line hint shown under the fleet chips when this mode is active.
-// Binary autopilot since the 2026-06-11 collapse. Plain language only — no
-// internal template names (next_best) or handoff-field jargon (status:working).
-// Split into primary + secondary so the space-constrained mobile card shows
-// only the essential sentence; the caveat rides along on sm+ where there's room.
-const AUTOMATION_HINTS: Record<AutoInjectMode, { primary: string; secondary?: string }> = {
-  off: { primary: "Autopilot off — agents stop when a task ends; you dispatch every next step yourself." },
-  on:  {
-    primary: "Autopilot on — agents work through each project's queue, then pick the next-best task automatically.",
-    secondary: "Busy agents, blockers, and failing health checks still pause dispatch.",
-  },
-};
 
 /**
  * What the working / awaiting-input / idle chips actually count.
@@ -57,18 +42,16 @@ type Props = {
   builderPresence?: BuilderChannelPresence | null;
   runnerExecutionStall: { stalled: boolean; stalledCount: number; oldestSeconds: number } | null;
   lastUpdated: number | null;
-  automationMode: AutoInjectMode;
-  /** False until /api/beacon-settings answers — the hint must not assert
-   *  "Autopilot on" from an optimistic client-side default. */
-  automationModeLoaded?: boolean;
   /** Truthful hero headline — deriveFleetPulse(), computed by ControlPanel. */
   fleetPulse: FleetPulse;
-  automationSaving: boolean;
-  refreshing: boolean;
-  onRefresh: () => void;
-  onAutomationChange: (mode: AutoInjectMode) => void;
-  /** Opens the new-project flow. Lives here (next to refresh) so the page
-   *  needs no separate header row for a single button. */
+  /** The projects actually waiting on a human, most urgent first. The old card
+   *  had only a COUNT, so "2 need you" could not say which two or take you to
+   *  either — the number was a fact you then had to go hunting for. */
+  attentionProjects: { tab: string; name: string }[];
+  onFocusProject?: (tab: string) => void;
+  /** Opens the fleet settings sheet — autopilot, refresh, builder detail. */
+  onOpenSettings: () => void;
+  /** Opens the new-project flow. */
   onNewProject?: () => void;
   /** Makes the working/awaiting-input counter chips actionable: selects the
    *  first project in that bucket and scrolls the workspace into view. A
@@ -76,7 +59,13 @@ type Props = {
   onFocusCategory?: (category: "working" | "waiting") => void;
 };
 
-/** Fleet pulse + trust layer — the first thing you see on Control (especially mobile). */
+/**
+ * The first card on Control, and the only one that gets to interrupt.
+ *
+ * Its brief is one question — *is anything waiting on me?* — an answer, and at
+ * most one button. See the note above the render for what it used to carry and
+ * why ranking it beat adding to it.
+ */
 export function ControlFleetStatus({
   dashboard,
   attentionCount,
@@ -90,13 +79,10 @@ export function ControlFleetStatus({
   builderPresence,
   runnerExecutionStall,
   lastUpdated,
-  automationMode,
-  automationModeLoaded = true,
   fleetPulse,
-  automationSaving,
-  refreshing,
-  onRefresh,
-  onAutomationChange,
+  attentionProjects,
+  onFocusProject,
+  onOpenSettings,
   onNewProject,
   onFocusCategory,
 }: Props) {
@@ -187,201 +173,133 @@ export function ControlFleetStatus({
       ? EXECUTOR_COPY.builder.staleSync
       : undefined;
 
+  // ── What this card is allowed to say ──────────────────────────────────────
+  //
+  // It used to say five things at once: runner line with build versions, a
+  // refresh and a new-project button, "Fleet autopilot" with its live pulse,
+  // the Pause-fleet control, a four-chip counter row, and a two-sentence
+  // paragraph explaining what autopilot does. Every one of them was true and
+  // the card still failed, because a card that answers five questions answers
+  // none of them first — and the largest, highest-contrast control on it was
+  // Pause fleet, an action a builder takes roughly never.
+  //
+  // Now it answers ONE question — *is anything waiting on me?* — and offers
+  // the single action that follows from the answer. Everything else is either
+  // demoted to the quiet foot line or moved behind the gear. Nothing is
+  // deleted; it is ranked, which is the thing that was never done.
+  //
+  // The states below are ordered by what should interrupt you, most first.
+  // The honesty rules survive intact: an unknown fleet says so rather than
+  // reporting calm, and a stale one dims and explains itself.
+  const attentionNames = attentionProjects.slice(0, 3).map((p) => p.name);
+  const headline = !countsKnown
+    ? { dot: "ui-dot-neutral", text: "Checking projects…", sub: null as string | null }
+    : attention > 0
+      ? {
+          dot: "ui-dot-warning",
+          text: `${attention} ${attention === 1 ? "project needs" : "projects need"} you`,
+          sub: attentionNames.length
+            ? attentionNames.join(" · ") + (attentionProjects.length > 3 ? ` +${attentionProjects.length - 3}` : "")
+            : fleetPulse.detail,
+        }
+      : fleetPulse.key === "failing" || fleetPulse.key === "stalled"
+        ? { dot: "ui-dot-negative", text: fleetPulse.label, sub: fleetPulse.detail }
+        : working > 0
+          ? {
+              dot: "ui-dot-positive animate-pulse",
+              text: fleetPulse.label,
+              sub: `${working} agent${working === 1 ? "" : "s"} working`,
+            }
+          : { dot: "ui-dot-neutral", text: fleetPulse.label, sub: fleetPulse.detail };
+
+  // At most one. A card with two equally-weighted buttons has no primary, and
+  // this card's whole job is to make the next step obvious.
+  const topAttention = attentionProjects[0] ?? null;
+
   return (
     <section className="ui-control-hero">
-      <div className="ui-control-fleet-top">
-        {/* Compact status indicator only. The prominent offline explanation +
-            remediation lives once, in RunnerStatusBanner — this header must not
-            repeat the headline, the "commands queue" sentence, or a second
-            "Action needed" nudge. */}
-        <div
-          className={cn("ui-control-fleet-runner", runnerTone)}
-          title={runnerTitle}
-        >
-          <RunnerIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-          <span className="font-medium">{compactLabel}</span>
-          {executionStalled && <span className="font-medium">· not executing</span>}
-          {runnerDetail && <span className="text-text-muted">· {runnerDetail}</span>}
-          {versionDetail && <span className="hidden text-text-muted sm:inline">· {versionDetail}</span>}
+      <div className="ui-hero-row">
+        <div className="ui-hero-answer">
+          <p className="ui-hero-headline">
+            <span className={cn("ui-dot shrink-0", headline.dot, staleClass)} aria-hidden="true" />
+            <span className={staleClass}>{headline.text}</span>
+          </p>
+          {headline.sub && (
+            <p className={cn("ui-hero-sub", staleClass)} title={staleTitle}>{headline.sub}</p>
+          )}
         </div>
-        <div className="ui-control-fleet-actions">
-          <button
-            type="button"
-            onClick={onRefresh}
-            disabled={refreshing}
-            title="Refresh fleet state"
-            aria-label="Refresh fleet state"
-            className="ui-icon-btn-touch rounded p-1 text-text-tertiary transition-colors hover:text-text-primary disabled:opacity-50"
-          >
-            <RefreshCw className={cn("h-3.5 w-3.5", refreshing && "animate-spin")} />
-          </button>
+        <div className="ui-hero-tools">
           {onNewProject && (
             <button
               type="button"
               onClick={onNewProject}
+              className="ui-btn-icon"
               title="New project"
-              className="ui-icon-btn-touch inline-flex items-center gap-1 rounded p-1 text-text-tertiary transition-colors hover:text-text-primary"
+              aria-label="New project"
             >
-              <Plus className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline text-xs">New</span>
+              <Plus className="h-4 w-4" />
             </button>
           )}
-        </div>
-      </div>
-
-      <div className="ui-control-hero-autopilot">
-        <div className="ui-control-autopilot-status">
-          <p className="ui-control-autopilot-title ui-control-fleet-indent">Fleet autopilot</p>
-          {/* Headline = what the fleet is ACTUALLY doing (deriveFleetPulse),
-              not what the mode toggle wishes. "Building" + pulsing green once
-              rendered over a fleet whose every recent run had failed. */}
-          <p className="ui-control-autopilot-state">
-            {/* The dot rides in the shared gutter so this line's text starts on
-                the same column as the title, the chips and the hint. */}
-            <span className="ui-control-fleet-gutter" aria-hidden="true">
-              {fleetPulse.key === "building" && (
-                <span className="ui-dot ui-dot-positive animate-pulse shrink-0" />
-              )}
-              {fleetPulse.key === "waiting" && (
-                <span className="ui-dot ui-dot-neutral shrink-0" />
-              )}
-              {(fleetPulse.key === "failing" || fleetPulse.key === "stalled") && (
-                <span className="ui-dot ui-dot-negative shrink-0" />
-              )}
-            </span>
-            <span className="font-medium text-text-primary">{fleetPulse.label}</span>
-            {/* Explicit space: the row is no longer a flex with gap-2, and JSX
-                trims the newline before "·", so without this the count would
-                collide with the label. */}
-            {fleetPulse.key === "building" && working > 0 && (
-              <span className="text-text-muted">
-                {" "}· {working} agent{working === 1 ? "" : "s"} active
-              </span>
-            )}
-          </p>
-          {fleetPulse.detail && (
-            <div className="ui-control-fleet-indent flex flex-wrap items-center gap-2">
-              {/* Red is for problems. "Waiting on you" is a normal state — a
-                  red sentence under a neutral dot read as a contradiction. */}
-              <p className={cn(
-                "text-xs",
-                fleetPulse.key === "failing" || fleetPulse.key === "stalled"
-                  ? "text-status-negative"
-                  : "text-text-muted",
-              )}>{fleetPulse.detail}</p>
-              {/* When the fleet is failing, reviewing the failures IS the next
-                  action — it gets a real button. For an execution stall the
-                  detail already names the stuck projects; /activity has
-                  nothing to add, so no misleading link. */}
-              {fleetPulse.key === "failing" && (
-                <Link href="/activity?window=week" className="ui-btn-secondary shrink-0 px-2.5 py-1 text-xs">
-                  Review failures
-                </Link>
-              )}
-            </div>
-          )}
-        </div>
-        <AutomationPolicyControl
-          mode={automationMode}
-          saving={automationSaving}
-          onChange={onAutomationChange}
-          variant="hero"
-        />
-      </div>
-
-      {/* The execution-stall story lives in the fleet pulse above ("Stalled —
-          N dispatches queued for Xm (projects)…"). The separate alert chip here
-          duplicated it one line lower — and before the pulse knew about
-          stalls, the two contradicted each other ("Building" + "not
-          executing" on adjacent lines). */}
-
-      <div className="ui-control-fleet-metrics">
-        {attention > 0 && (
           <button
             type="button"
-            onClick={() => document.getElementById("control-attention")?.scrollIntoView({ behavior: "smooth", block: "start" })}
-            className={cn("ui-control-fleet-chip ui-control-fleet-chip-attention cursor-pointer transition-opacity hover:opacity-80", staleClass)}
-            title={staleTitle ?? "Failed commands and projects waiting on you — click to jump to the list"}
+            onClick={onOpenSettings}
+            className="ui-btn-icon"
+            title="Fleet settings — autopilot, refresh, builder status"
+            aria-label="Fleet settings"
           >
-            {attention} need{attention === 1 ? "s" : ""} you
+            <SlidersHorizontal className="h-4 w-4" />
           </button>
-        )}
-        {!countsKnown ? (
-          <span
-            className={cn("ui-control-fleet-chip", staleClass)}
-            title="Waiting for the runner to report project state. Counts appear once it does."
-          >
-            Checking projects&hellip;
-          </span>
-        ) : (
-          <>
-            {working > 0 && onFocusCategory ? (
-              <button
-                type="button"
-                onClick={() => onFocusCategory("working")}
-                className={cn("ui-control-fleet-chip cursor-pointer transition-opacity hover:opacity-80", staleClass)}
-                title={staleTitle ?? `Jump to the working project. ${COUNT_SCOPE_TITLE}`}
-              >
-                <span className="ui-dot ui-dot-positive shrink-0 mr-1" aria-hidden="true" />
-                {working} working
-              </button>
-            ) : (
-              <span className={cn("ui-control-fleet-chip", staleClass)} title={staleTitle ?? COUNT_SCOPE_TITLE}>
-                {working > 0 && <span className="ui-dot ui-dot-positive shrink-0 mr-1" aria-hidden="true" />}
-                {working} working
-              </span>
-            )}
-            {ready > 0 && onFocusCategory ? (
-              <button
-                type="button"
-                onClick={() => onFocusCategory("waiting")}
-                className={cn("ui-control-fleet-chip cursor-pointer transition-opacity hover:opacity-80", staleClass)}
-                title={staleTitle ?? `Jump to the project waiting on you. ${COUNT_SCOPE_TITLE}`}
-              >
-                {ready} awaiting input
-              </button>
-            ) : (
-              <span className={cn("ui-control-fleet-chip", staleClass)} title={staleTitle ?? COUNT_SCOPE_TITLE}>
-                {ready} awaiting input
-              </span>
-            )}
-            <span
-              className={cn("ui-control-fleet-chip", staleClass)}
-              title={
-                staleTitle
-                ?? "How many fleet projects have no agent session right now. Unrelated to Cloud/builder online — that is the runner, not project work."
-              }
-            >
-              {idle} projects idle
-            </span>
-            {/* "All clear" only when nothing needs you and nothing is live — and
-                never while stale, when 0/0/0 means "the runner stopped reporting",
-                not "the fleet is calm". */}
-            {!isStale && attention === 0 && working === 0 && ready === 0 && idle === 0 && (
-              <span className={cn("ui-control-fleet-chip ui-control-fleet-chip-clear", staleClass)} title={staleTitle ?? COUNT_SCOPE_TITLE}>
-                All clear
-              </span>
-            )}
-          </>
-        )}
+        </div>
       </div>
 
-      <p className="ui-control-fleet-hint">
-        {/* Bolt in the shared gutter (not inline + a space): an inline icon put
-            line 1 at a different x than the wrapped line 2. */}
-        <span className="ui-control-fleet-gutter" aria-hidden="true">
-          <Zap className="h-3 w-3 shrink-0 text-accent-text" />
+      {attention > 0 && topAttention && onFocusProject ? (
+        <button
+          type="button"
+          onClick={() => onFocusProject(topAttention.tab)}
+          className="ui-hero-action ui-btn-primary"
+        >
+          Open {topAttention.name}
+          <ArrowRight className="h-4 w-4" aria-hidden="true" />
+        </button>
+      ) : fleetPulse.key === "failing" ? (
+        <Link href="/activity?window=week" className="ui-hero-action ui-btn-primary">
+          Review failures
+          <ArrowRight className="h-4 w-4" aria-hidden="true" />
+        </Link>
+      ) : null}
+
+      {/* The foot carries what used to be four tappable chips and a runner
+          line. Counts stay clickable where clicking does something; the rest
+          is text, because a chip that only reports is a button that lies. */}
+      <div className="ui-hero-foot">
+        <span className={cn("ui-hero-runner", runnerTone)} title={runnerTitle}>
+          <RunnerIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          {compactLabel}
+          {executionStalled && " · not executing"}
         </span>
-        {/* Don't state the autopilot mode until the server has confirmed it —
-            the client seeds "on" optimistically, so a paused fleet used to
-            read "Autopilot on" until (or forever, if the fetch failed). */}
-        {automationModeLoaded
-          ? AUTOMATION_HINTS[automationMode].primary
-          : "Checking autopilot setting…"}
-        {automationModeLoaded && AUTOMATION_HINTS[automationMode].secondary && (
-          <span className="hidden sm:inline"> {AUTOMATION_HINTS[automationMode].secondary}</span>
+        {countsKnown && (
+          <span className={cn("ui-hero-counts", staleClass)} title={staleTitle ?? COUNT_SCOPE_TITLE}>
+            {working > 0 && onFocusCategory ? (
+              <button type="button" onClick={() => onFocusCategory("working")} className="ui-hero-count-link">
+                {working} working
+              </button>
+            ) : (
+              <>{working} working</>
+            )}
+            {" · "}
+            {ready > 0 && onFocusCategory ? (
+              <button type="button" onClick={() => onFocusCategory("waiting")} className="ui-hero-count-link">
+                {ready} awaiting input
+              </button>
+            ) : (
+              <>{ready} awaiting input</>
+            )}
+            {" · "}{idle} idle
+          </span>
         )}
-      </p>
+        {runnerDetail && <span className="ui-hero-sync">{runnerDetail}</span>}
+        {versionDetail && <span className="ui-hero-sync hidden sm:inline">{versionDetail}</span>}
+      </div>
     </section>
   );
 }

@@ -42,11 +42,11 @@ function OptionRow({
       onClick={onSelect}
       disabled={disabled}
       aria-pressed={active}
-      className={cn("ui-term-sheet-option", active && "ui-term-sheet-option-active")}
+      className={cn("ui-sheet-option", active && "ui-sheet-option-active")}
     >
       <span className="min-w-0 flex-1 text-left">
-        <span className="ui-term-sheet-option-title">{title}</span>
-        {detail && <span className="ui-term-sheet-option-detail">{detail}</span>}
+        <span className="ui-sheet-option-title">{title}</span>
+        {detail && <span className="ui-sheet-option-detail">{detail}</span>}
       </span>
       {busy
         ? <Loader2 className="ui-spinner-sm shrink-0" />
@@ -59,8 +59,8 @@ function OptionRow({
 
 function Section({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <section className="ui-term-sheet-section">
-      <h3 className="ui-term-sheet-label">{label}</h3>
+    <section className="ui-sheet-section">
+      <h3 className="ui-sheet-label">{label}</h3>
       {children}
     </section>
   );
@@ -123,9 +123,9 @@ export function TerminalSessionSheet({
   const sourceOptions = TERMINAL_SOURCES.filter((s) => sources.includes(s.id));
 
   return (
-    <Modal onClose={onClose} position="bottom-mobile" padded={false} size="md" className="ui-term-sheet">
-      <div className="ui-term-sheet-grip" aria-hidden="true" />
-      <div className="ui-term-sheet-body">
+    <Modal onClose={onClose} position="bottom-mobile" padded={false} size="md" className="ui-sheet">
+      <div className="ui-sheet-grip" aria-hidden="true" />
+      <div className="ui-sheet-body">
         <Section label="Where it runs">
           {sourceOptions.map((option) => (
             <OptionRow
@@ -142,7 +142,7 @@ export function TerminalSessionSheet({
         {tabs && onSelectTab && (
           <Section label={tabs.length === 1 ? "Session" : `Sessions · ${tabs.length}`}>
             {tabs.length === 0 && (
-              <p className="ui-term-sheet-empty">
+              <p className="ui-sheet-empty">
                 Nothing is running here yet. Close this and use Start a session.
               </p>
             )}
@@ -161,10 +161,10 @@ export function TerminalSessionSheet({
         {activeTab && agents.length > 0 && (
           <Section label="Agent">
             {agentSwitchDisabledReason && (
-              <p className="ui-term-sheet-empty">{agentSwitchDisabledReason}</p>
+              <p className="ui-sheet-empty">{agentSwitchDisabledReason}</p>
             )}
             {!agentSwitchDisabledReason && (
-              <p className="ui-term-sheet-empty">
+              <p className="ui-sheet-empty">
                 Switching quits the CLI running in this session and relaunches the new one.
               </p>
             )}
@@ -196,10 +196,10 @@ export function TerminalSessionSheet({
         )}
 
         <Section label="Display">
-          <div className="ui-term-sheet-row">
+          <div className="ui-sheet-row">
             <span className="min-w-0 flex-1 text-sm text-text-secondary">
               Text size
-              {columns ? <span className="ui-term-sheet-option-detail">{columns} columns</span> : null}
+              {columns ? <span className="ui-sheet-option-detail">{columns} columns</span> : null}
             </span>
             <button
               type="button"
@@ -244,7 +244,7 @@ export function TerminalSessionSheet({
         </Section>
       </div>
 
-      <div className="ui-term-sheet-foot">
+      <div className="ui-sheet-foot">
         <button type="button" className="ui-btn-secondary w-full" onClick={onClose}>
           Done
         </button>

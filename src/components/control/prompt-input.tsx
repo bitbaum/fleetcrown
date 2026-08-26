@@ -3,6 +3,8 @@
 import { AlertCircle, Loader2, Send, Mic, ListPlus, Pause, Play, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { COMPOSER_HINT } from "@/config/control-labels";
+import { AttachButton, AttachmentStrip } from "@/components/ui/attachment-strip";
+import type { AttachmentsController } from "@/hooks/use-attachments";
 
 export function PromptInput({
   custom,
@@ -21,6 +23,7 @@ export function PromptInput({
   autoContinueEnabled,
   statusLabel,
   textareaRef,
+  attachments,
   onCustomChange,
   onCustomFocusChange,
   onSendCustom,
@@ -50,6 +53,9 @@ export function PromptInput({
   autoContinueEnabled?: boolean;
   statusLabel?: string;
   textareaRef?: React.RefObject<HTMLTextAreaElement | null>;
+  /** Screenshots and files staged for this dispatch. Omitted where a caller
+   *  has no attachment support wired yet — the composer simply shows no clip. */
+  attachments?: AttachmentsController;
   onCustomChange: (v: string) => void;
   onCustomFocusChange?: (f: boolean) => void;
   onSendCustom: () => void;
@@ -57,7 +63,12 @@ export function PromptInput({
   onToggleAutoContinue?: () => void;
   toggleMic: () => void;
 }) {
-  const isComposing = custom.trim().length > 0 || listening || processing;
+  // A screenshot on its own is a complete instruction — "look at this" is what
+  // a picture means. So the composer counts as filled when EITHER words or
+  // attachments are present, and Send unlocks the same way.
+  const hasAttachments = (attachments?.attachments.length ?? 0) > 0;
+  const canSend = Boolean(custom.trim()) || listening || hasAttachments;
+  const isComposing = custom.trim().length > 0 || listening || processing || hasAttachments;
   const status = statusLabel ?? (micError
     ? micError
     : listening
@@ -107,7 +118,7 @@ export function PromptInput({
             value={custom}
             onChange={(e) => onCustomChange(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey && (custom.trim() || listening)) {
+              if (e.key === "Enter" && !e.shiftKey && canSend) {
                 e.preventDefault();
                 if (e.altKey && onEnqueue) onEnqueue();
                 else onSendCustom();
@@ -115,6 +126,9 @@ export function PromptInput({
             }}
             onFocus={() => onCustomFocusChange?.(true)}
             onBlur={() => onCustomFocusChange?.(false)}
+            // Paste-to-attach: on a laptop this is how a screenshot arrives,
+            // and preventDefault only fires when the paste actually held one.
+            onPaste={(e) => { if (attachments?.addFromPaste(e)) e.preventDefault(); }}
             placeholder={listening ? "Recording..." : processing ? "Transcribing..." : placeholder}
             className={cn(
               "w-full resize-none bg-transparent px-4 pb-3 pr-11 pt-3.5 text-sm leading-relaxed text-text-primary placeholder:text-text-muted outline-none",
@@ -145,6 +159,8 @@ export function PromptInput({
           </button>
       </div>
 
+      {attachments && <AttachmentStrip attachments={attachments} />}
+
       {listening && waveformBars && (
         <div className="flex items-center gap-3 px-4 pb-2">
           <div className="flex items-end gap-[2px]" style={{ height: 14 }}>
@@ -168,6 +184,7 @@ export function PromptInput({
       )}
 
       <div className="flex items-center gap-1.5 border-t border-border-subtle px-3 py-2">
+        {attachments && <AttachButton attachments={attachments} />}
         {onToggleAutoContinue && typeof autoContinueEnabled === "boolean" && (
           <button
             onClick={onToggleAutoContinue}
@@ -192,7 +209,7 @@ export function PromptInput({
           {showQueue && onEnqueue && (
             <button
               onClick={onEnqueue}
-              disabled={(!custom.trim() && !listening) || sending !== null}
+              disabled={!canSend || sending !== null}
               title={listening ? "Stop recording and queue (or send now if idle)" : "Queue for later (sends immediately if this project is idle) — Alt+Enter"}
               className="ui-btn-icon shrink-0 disabled:pointer-events-none disabled:opacity-25"
             >
@@ -201,13 +218,13 @@ export function PromptInput({
           )}
           <button
             onClick={onSendCustom}
-            disabled={(!custom.trim() && !listening) || sending !== null}
+            disabled={!canSend || sending !== null}
             title={listening ? "Stop recording and send" : undefined}
             className={cn(
               "inline-flex shrink-0 ui-tap items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
               justSent?.id === "custom"
                 ? "bg-status-positive text-text-inverted"
-                : custom.trim() || listening
+                : canSend
                   ? "bg-text-primary text-text-inverted hover:opacity-90"
                   : "pointer-events-none bg-surface-overlay text-text-muted opacity-40",
             )}
