@@ -145,4 +145,40 @@ assert(
     "and 'it is current' are different answers",
 );
 
+// ── Doctor alone is NOT a production path ──────────────────────────────────
+//
+// Found by probing the live authenticated endpoint after deploying the Doctor
+// check: /api/system/doctor returned HTTP 200 with exactly ONE check, `runtime`.
+// On the hosted box `isRuntimeAvailable()` is false, so the route short-circuits
+// with "runs full checks only on the local install" and executes none of its
+// checks. A check that lives only in Doctor therefore never runs in production
+// — present, plausible, and incapable of firing where it matters.
+//
+// So the clock is the live path, and these assertions stop it being removed as
+// "redundant with Doctor".
+
+const cronRoute = resolvePath(repoRoot, "src/app/api/crons/check-runner-version/route.ts");
+// A CALL, not a mention: the first version of this assertion used
+// .includes("runnerVersionStatus"), which the surviving `import` line satisfied
+// while the call site had been gutted. Comments stripped for the same reason.
+const cronCode = readFileSync(cronRoute, "utf8")
+  .replace(/\/\*[\s\S]*?\*\//g, "")
+  .split("\n")
+  .map((l) => l.replace(/\/\/.*$/, ""))
+  .join("\n");
+assert(
+  /runnerVersionStatus\s*\(\s*\w/.test(cronCode),
+  "a cron target must run this check on the hosted box — Fleet Doctor does not " +
+    "execute its checks there (isRuntimeAvailable() is false), so Doctor alone " +
+    "leaves the check inert in the only environment that matters.",
+);
+
+const sched = readFileSync(resolvePath(repoRoot, "scripts/install-hetzner-crons.sh"), "utf8");
+assert(
+  /\[check-runner-version\]="\d\d:\d\d"/.test(sched),
+  "check-runner-version must be in the SCHED table of install-hetzner-crons.sh. " +
+    "An API route with no timer is a check nothing ever calls — the same " +
+    "not-actually-running failure one layer down.",
+);
+
 console.log("✓ runner version: a published release is not an installed one");
