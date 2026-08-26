@@ -75,19 +75,23 @@ export function toLocalDateStr(d: Date): string {
 }
 
 /**
- * Compact "time ago" phrasing: "today", "yesterday", "5d ago", "2w ago",
- * "3mo ago". Smaller than date-fns formatDistanceToNow's word-based
- * output — used for dense list rows where space matters.
+ * The elapsed ladder with calendar words at the near end: "today",
+ * "yesterday", then "5d ago" / "14d ago" / "3mo ago".
+ *
+ * The calendar tiers are the reason this exists — "today" and "yesterday" are
+ * what a person calls those days, and no elapsed count says it as well. Past
+ * yesterday it delegates to timeAgo rather than counting again, because
+ * counting again is what produced the disagreement it used to carry: its own
+ * tiers had a weeks step, so one list row read "2w ago" while the card beside
+ * it read "14d ago" for the same instant, and it appended the word "ago"
+ * itself — a fourth place that word was written.
  */
 export function compactRelativeDate(date: Date | string): string {
   const d = date instanceof Date ? date : new Date(date);
-  const diffMs = Date.now() - d.getTime();
-  const diffDays = Math.floor(diffMs / DAY_MS);
-  if (diffDays === 0) return "today";
+  const diffDays = Math.floor((Date.now() - d.getTime()) / DAY_MS);
+  if (diffDays <= 0) return "today";
   if (diffDays === 1) return "yesterday";
-  if (diffDays < 7) return `${diffDays}d ago`;
-  if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
-  return `${Math.floor(diffDays / 30)}mo ago`;
+  return timeAgo(d.getTime());
 }
 
 /**

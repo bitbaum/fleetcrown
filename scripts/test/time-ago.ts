@@ -13,7 +13,7 @@
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { timeAgo, shortTimeAgo, elapsedSince } from "../../src/lib/dates";
+import { timeAgo, shortTimeAgo, elapsedSince, compactRelativeDate } from "../../src/lib/dates";
 
 const SEC = 1000, MIN = 60 * SEC, HOUR = 60 * MIN, DAY = 24 * HOUR;
 const ago = (delta: number) => timeAgo(Date.now() - delta);
@@ -69,6 +69,32 @@ for (const delta of [0, 30 * SEC, 5 * MIN, 3 * HOUR, 2 * DAY, 288 * HOUR, 31 * D
 for (const days of [1, 2, 7, 12, 21, 29, 30, 45, 200, 900]) {
   const out = ago(days * DAY);
   assert.ok(/^\d+(d|mo|y) ago$/.test(out), `${days}d rendered as "${out}"`);
+}
+
+// --- compactRelativeDate: the ladder with calendar words at the near end ----
+// It used to count days itself, with a weeks tier the ladder does not have, so
+// one list row said "2w ago" while the card beside it said "14d ago" about the
+// same instant. Both were on /control at once.
+const daysAgo = (n: number) => new Date(Date.now() - n * DAY);
+assert.equal(compactRelativeDate(daysAgo(0)), "today");
+assert.equal(compactRelativeDate(daysAgo(1)), "yesterday");
+assert.equal(compactRelativeDate(daysAgo(14)), "14d ago", "not '2w ago' — one ladder");
+assert.equal(compactRelativeDate(daysAgo(21)), "21d ago");
+assert.equal(compactRelativeDate(daysAgo(40)), "1mo ago");
+assert.equal(
+  compactRelativeDate(new Date(Date.now() + 60 * 60 * 1000)),
+  "today",
+  "a future timestamp is today, not '-1d ago'",
+);
+
+// Past yesterday it must BE timeAgo, not merely resemble it.
+for (const n of [2, 5, 14, 21, 30, 31, 200, 400]) {
+  const d = daysAgo(n);
+  assert.equal(
+    compactRelativeDate(d),
+    timeAgo(d.getTime()),
+    `compactRelativeDate diverges from the ladder at ${n}d`,
+  );
 }
 
 // --- the class, closed --------------------------------------------------
