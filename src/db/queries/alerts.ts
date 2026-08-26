@@ -1,7 +1,8 @@
 import { db } from "@/db";
 import { alerts } from "@/db/schema";
 import type { Alert, NewAlert } from "@/db/schema/alerts";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, notInArray } from "drizzle-orm";
+import { ALERT_TYPE_IDS } from "@/config/alert-types";
 
 /** Insert an alert only if the user has no active (undismissed) alert of the
  *  same type — so a periodic checker (e.g. runner-stall) raises the flag once
@@ -51,6 +52,49 @@ export async function refreshOrInsertActiveAlert(
 
   const [row] = await db.insert(alerts).values(alert).returning();
   return { alert: row ?? null, created: true };
+}
+
+/**
+ * Clear alerts whose TYPE no code can raise any more.
+ *
+ * When a feature is retired, its alert rows are not. Measured 2026-08-26: four
+ * of ten open alerts — `bill_due`, `stale_relationship`, `overdue_commitment`,
+ * `stalled_goal` — were raised between May and June by producers that no longer
+ * exist. Nothing could refresh them and nothing could auto-resolve them, so
+ * they sat for up to 108 days at the top of the surface that also carries "a
+ * telemetry sensor is dead" and "a machine is running old code".
+ *
+ * Safe by construction, and that is the whole argument for doing it
+ * automatically: a type absent from ALERT_TYPES has no producer, so no live
+ * condition can be hidden by clearing it. The only thing being thrown away is
+ * a claim nothing is willing to make any more.
+ *
+ * Deletion as a consequence of the producer being gone, rather than an act of
+ * will by whoever remembers. Returns the types cleared, so the caller can say
+ * what happened instead of tidying up in silence.
+ */
+export async function dismissUnregisteredAlerts(): Promise<{ type: string; count: number }[]> {
+  const cleared = await db
+    .update(alerts)
+    .set({ dismissed: true, dismissedAt: new Date() })
+    .where(and(eq(alerts.dismissed, false), notInArray(alerts.type, ALERT_TYPE_IDS)))
+    .returning({ type: alerts.type });
+
+  const byType = new Map<string, number>();
+  for (const row of cleared) byType.set(row.type, (byType.get(row.type) ?? 0) + 1);
+  return [...byType].map(([type, count]) => ({ type, count }));
+}
+
+/** Open alerts grouped by type — what the surface currently claims, for a
+ *  sweeper that wants to report the state it left behind. */
+export async function countOpenAlertsByType(): Promise<{ type: string; count: number }[]> {
+  const rows = await db
+    .select({ type: alerts.type })
+    .from(alerts)
+    .where(eq(alerts.dismissed, false));
+  const byType = new Map<string, number>();
+  for (const row of rows) byType.set(row.type, (byType.get(row.type) ?? 0) + 1);
+  return [...byType].map(([type, count]) => ({ type, count })).sort((a, b) => b.count - a.count);
 }
 
 /**

@@ -66,7 +66,7 @@ ExecStart=/opt/fleetcrown/fc-cron.sh %i
 SVC
 
 # Times are "HH:MM" (daily) or "*:MM" (hourly) — both expand to OnCalendar=*-*-* <val>:00.
-declare -A SCHED=( [prune-debug-logs]="03:00" [nudge-idle]="04:00" [prune-agent-tokens]="05:00" [email-canary]="06:00" [check-model-ids]="06:30" [check-telemetry]="06:45" [check-runner-version]="06:50" [send-digest-emails]="07:00" [frontier-digest]="08:00" [orangecat-promote-backfill]="09:00" [downgrade-expired-plans]="09:30" [propose-checkins]="09:45" [feedback-digest]="10:15" [reset-demo]="04:20" [reap-stale-runs]="*:15" [check-runner-stall]="*:30" [check-pending-approvals]="*:45" )
+declare -A SCHED=( [prune-debug-logs]="03:00" [nudge-idle]="04:00" [prune-agent-tokens]="05:00" [email-canary]="06:00" [check-model-ids]="06:30" [check-telemetry]="06:45" [check-runner-version]="06:50" [sweep-orphan-alerts]="06:55" [send-digest-emails]="07:00" [frontier-digest]="08:00" [orangecat-promote-backfill]="09:00" [downgrade-expired-plans]="09:30" [propose-checkins]="09:45" [feedback-digest]="10:15" [reset-demo]="04:20" [reap-stale-runs]="*:15" [check-runner-stall]="*:30" [check-pending-approvals]="*:45" )
 for name in "${!SCHED[@]}"; do
   cat > "/etc/systemd/system/fc-cron@${name}.timer" <<TIMER
 [Unit]
