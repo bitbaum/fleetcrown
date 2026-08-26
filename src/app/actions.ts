@@ -5,6 +5,7 @@ import { setFeedbackStatus } from "@/db/queries/site-feedback";
 import { planTrim } from "@/lib/actions/advisor";
 import { RECOMMENDATION, type Recommendation } from "@/lib/actions/advice-rules";
 import { dismissAlert } from "@/db/queries/alerts";
+import { resolveEscalation } from "@/db/queries/run-escalations";
 import { fulfillCommitment } from "@/db/queries/today";
 import { cancelSubscription } from "@/db/queries/money";
 import { createInteraction } from "@/db/queries/people";
@@ -133,7 +134,22 @@ export async function handleApplyAdvice(
 
 export async function handleDismissAlert(id: string) {
   const userId = await requirePageUserId();
-  await dismissAlert(id, userId);
+  const [dismissed] = await dismissAlert(id, userId);
+
+  // Dismissing "project X: 4 consecutive failed runs" IS the operator saying
+  // they have handled it, so it must also close the ladder that raised it.
+  //
+  // Without this, `resolved_by = 'manual'` was declared in the schema and
+  // written by nothing — the only exit from the ladder was a qualifying run
+  // close, so a project that had stopped running could never be cleared by
+  // anyone. Dismissing the alert silenced the symptom and left the state.
+  if (dismissed?.type === "run_escalation") {
+    const projectKey = dismissed.metadata?.projectKey;
+    if (typeof projectKey === "string" && projectKey.length > 0) {
+      await resolveEscalation(userId, projectKey, "manual");
+    }
+  }
+
   revalidatePath(ROUTES.APP_HOME);
 }
 
