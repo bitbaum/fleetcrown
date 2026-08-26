@@ -14,8 +14,7 @@ import { STATE_DEFINITIONS } from "@/lib/control-states";
 import { ControlFleetStatus } from "./ControlFleetStatus";
 import { AttentionBar } from "./AttentionBar";
 import { AgentEscalations } from "./AgentEscalations";
-import { FleetFeedbackStrip } from "./FleetFeedbackStrip";
-import { FleetWidgetCoverageStrip } from "./FleetWidgetCoverageStrip";
+import { ControlInbox } from "./ControlInbox";
 import { RunnerStatusBanner } from "./RunnerStatusBanner";
 import { APP_NAME } from "@/config/brand";
 import {
@@ -388,8 +387,10 @@ export function ControlPanel() {
       <AttentionBar items={attention} failedCommands={data?.failedCommands} onFocusProject={setSelectedTab} />
       {data.projects.length > 0 && <AgentEscalations />}
 
-      <FleetWidgetCoverageStrip />
-      <FleetFeedbackStrip />
+      {/* Was two unbounded strips — widget coverage and feedback — stacked
+          here, one of them auto-expanded. See ControlInbox for what that cost
+          and why they are one queue rather than two features. */}
+      <ControlInbox />
 
       <ProjectOperationsView
         snapshots={snapshots}

@@ -2691,6 +2691,28 @@
   .ui-btn-ready-more {
     @apply inline-flex items-center rounded-md border border-border-subtle bg-surface-overlay px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary disabled:opacity-50;
   }
+  /* ── The missing size axis ────────────────────────────────────────────────
+     Why the button set above sprawled: it had variants but no sizes, so every
+     time a button needed to be smaller than `ui-btn-primary` somebody wrote a
+     NEW variant that baked a size into a fill — `ui-btn-save` (accent fill,
+     rounded, text-xs), `ui-btn-submit` (accent fill, rounded-lg, py-3),
+     `ui-btn-ready-primary` (warm fill, rounded-lg, py-2), `ui-btn-lg` (accent
+     fill, rounded-xl, py-3). Four filled buttons, three radii, two accent
+     colours, all of them "primary" somewhere. On Control they landed on the
+     same screen and the page stopped having a loudest element.
+
+     `ui-btn-xs` looks like it should have solved this, but it is a full
+     variant too — it sets border and `text-text-muted` — and it is defined
+     AFTER `ui-btn-primary`, so `class="ui-btn-primary ui-btn-xs"` silently
+     renders a muted outline button. It is kept for its existing callers.
+
+     This is the axis that composes: geometry only, no colour, no border, no
+     radius. `ui-btn-primary ui-btn-sm` is a small primary and still looks like
+     a primary. New code should reach for variant + size, never a fifth fill. */
+  .ui-btn-sm {
+    @apply gap-1 px-3 py-1.5 text-xs;
+  }
+
   /* Hover-reveal: hidden on desktop until parent .group hovers; always visible on mobile */
   .ui-hover-reveal { @apply sm:opacity-0 sm:group-hover:opacity-100; }
   /* Touch devices have no hover — keep the controls permanently visible there */
@@ -2862,16 +2884,115 @@
   .ui-control-hero {
     @apply relative overflow-hidden rounded-2xl border border-border-subtle bg-surface-raised p-4 sm:p-5 md:p-6;
     box-shadow: var(--shadow-panel);
-    /* High-flier command esthetics: subtle 'mission control' depth with faint data-grid overlay (restrained, token-based, echoes public-backdrop but dialed way down for focus). */
+    /* The 48px data-grid that used to be painted here came from the PUBLIC
+       marketing backdrop (--public-grid-stroke). It is the right texture for a
+       landing page, where the grid sits behind a headline and nothing else. It
+       is the wrong texture behind live operational text: on the light theme it
+       read as a visible checkerboard through the fleet counters, and a status
+       readout that looks like it is rendering incorrectly is indistinguishable
+       from a fleet that is behaving incorrectly.
+
+       What is left is depth only — one soft corner glow. Decoration on an
+       operations surface has to lose every argument with legibility. */
     background-image:
-      radial-gradient(circle at top left, color-mix(in oklch, var(--accent-primary) 12%, transparent), transparent 32rem),
-      linear-gradient(180deg, color-mix(in oklch, var(--surface-overlay) 70%, transparent), transparent),
-      linear-gradient(var(--public-grid-stroke) 1px, transparent 1px),
-      linear-gradient(90deg, var(--public-grid-stroke) 1px, transparent 1px);
-    background-size: auto, auto, 48px 48px, 48px 48px;
-    background-position: 0 0, 0 0, 0 0, 0 0;
-    /* grid is inherently faint via --public-grid-stroke token (no element-level dim needed) */
+      radial-gradient(circle at top left, color-mix(in oklch, var(--accent-primary) 8%, transparent), transparent 32rem);
   }
+  /* ── Needs-you inbox ──────────────────────────────────────────────────────
+     One panel for every small thing waiting on a human. It replaced two
+     unbounded strips (widget coverage + feedback) that between them spent
+     ~1,400px of a 390px phone's scroll on work the operator had not asked to
+     see yet, and that agreed on nothing: different button fills, different
+     radii, different action orders, one of them auto-expanded on mount.
+
+     The layout rule that fixes the alignment complaint: every row is
+     [ text ][ fixed action rail ]. The rail is a fixed-width column, so the
+     primary buttons line up down the page even when their labels differ. The
+     old rows sized their action groups to their content, which is why eight
+     "Enable & install" buttons each found a different left edge. */
+  .ui-inbox {
+    @apply overflow-hidden rounded-2xl border border-border-subtle bg-surface-raised;
+  }
+  .ui-inbox-head {
+    @apply flex items-center gap-2 px-4 py-3;
+  }
+  .ui-inbox-title {
+    @apply min-w-0 flex-1 truncate text-sm font-semibold text-text-primary;
+  }
+  .ui-inbox-total {
+    @apply shrink-0 rounded-full bg-surface-overlay px-2 py-0.5 text-xs font-medium tabular-nums text-text-secondary;
+  }
+  .ui-inbox-group {
+    @apply border-t border-border-subtle;
+  }
+  .ui-inbox-group-btn {
+    @apply flex min-h-11 w-full items-center gap-3 px-4 py-2 text-left transition-colors active:bg-surface-overlay;
+  }
+  .ui-inbox-group-label {
+    @apply min-w-0 flex-1 truncate text-sm text-text-secondary;
+  }
+  .ui-inbox-group-count {
+    @apply shrink-0 text-sm font-medium tabular-nums text-text-primary;
+  }
+  .ui-inbox-group-body {
+    @apply border-t border-border-subtle bg-surface-base px-4 py-3;
+  }
+  /* Project chips inside the feedback group — a filter row, not a nav bar, so
+     they scroll sideways rather than wrapping into a block that pushes the
+     rows they filter off the screen. */
+  .ui-inbox-projects {
+    @apply -mx-1 mb-2 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden;
+  }
+  .ui-inbox-project {
+    @apply inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-full border border-border-subtle px-3 text-xs text-text-secondary transition-colors active:bg-surface-overlay;
+  }
+  .ui-inbox-project-active {
+    @apply border-border-interactive bg-surface-raised text-text-primary;
+  }
+  .ui-inbox-project-count {
+    @apply rounded-full bg-surface-overlay px-1.5 text-nano tabular-nums text-text-tertiary;
+  }
+  .ui-inbox-list {
+    @apply divide-y divide-border-subtle;
+  }
+  .ui-inbox-row {
+    @apply flex flex-col gap-2 py-3 sm:flex-row sm:items-start sm:gap-4;
+  }
+  .ui-inbox-row-main {
+    @apply min-w-0 flex-1;
+  }
+  .ui-inbox-row-title {
+    @apply min-w-0 text-sm leading-snug text-text-primary;
+  }
+  .ui-inbox-row-meta {
+    @apply mt-0.5 truncate text-xs text-text-tertiary;
+  }
+  .ui-inbox-row-detail {
+    @apply mt-1 text-xs leading-snug text-text-secondary;
+  }
+  .ui-inbox-row-blocked {
+    @apply mt-1 text-xs leading-snug text-status-negative;
+  }
+  .ui-inbox-row-ok {
+    @apply mt-1 text-xs leading-snug text-text-secondary;
+  }
+  /* The rail. Right-aligned on a phone (the thumb lives there and the text it
+     acts on is directly above), inline on sm+ where the row is horizontal. */
+  .ui-inbox-actions {
+    @apply flex shrink-0 items-center justify-end gap-1.5 sm:justify-start;
+  }
+  .ui-inbox-batch {
+    @apply mb-2 flex flex-wrap items-center gap-1.5;
+  }
+  .ui-inbox-empty {
+    @apply py-2 text-xs text-text-muted;
+  }
+  .ui-inbox-foot {
+    @apply mt-2 flex flex-wrap items-center gap-x-4 gap-y-1;
+  }
+  .ui-inbox-more {
+    @apply inline-flex min-h-9 items-center text-xs text-text-secondary underline decoration-border-subtle underline-offset-2 transition-colors hover:decoration-current;
+  }
+
   .ui-control-operations-header {
     @apply flex flex-col gap-4 rounded-2xl border border-border-subtle bg-surface-raised p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5;
     box-shadow: var(--shadow-panel);

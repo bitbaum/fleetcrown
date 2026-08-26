@@ -152,7 +152,16 @@ export function ControlFleetStatus({
   const presenceDetail = builderPresence && runnerStateKey === "connected"
     ? builderPresenceDetail(builderPresence)
     : null;
-  const runnerDetail = [syncDetail, versionDetail, presenceDetail].filter(Boolean).join(" · ") || null;
+  // Split, because these two are not the same kind of fact. Sync age and
+  // presence are STATUS — they answer "is what I'm reading true right now?",
+  // which is the first question anyone has about a dashboard. Build versions
+  // are DIAGNOSTICS: load-bearing when a stale runner is suspected (see the
+  // note above), irrelevant every other time, and on a phone they were the
+  // first thing the page said — "· cloud v0.8.12 · app v0.8.12" ahead of a
+  // single word about the fleet. They keep their place on wider screens and
+  // stay in the tooltip everywhere, so nothing is lost, only ranked.
+  const runnerDetail = [syncDetail, presenceDetail].filter(Boolean).join(" · ") || null;
+  const runnerTitle = [runnerDef.description, versionDetail].filter(Boolean).join(" — ");
 
   const RunnerIcon = runnerStateKey === "setup_needed" || runnerStateKey === "offline" ? WifiOff : Radio;
   // A connected runner with a genuine execution stall must not read plain
@@ -187,12 +196,13 @@ export function ControlFleetStatus({
             "Action needed" nudge. */}
         <div
           className={cn("ui-control-fleet-runner", runnerTone)}
-          title={runnerDef.description}
+          title={runnerTitle}
         >
           <RunnerIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
           <span className="font-medium">{compactLabel}</span>
           {executionStalled && <span className="font-medium">· not executing</span>}
           {runnerDetail && <span className="text-text-muted">· {runnerDetail}</span>}
+          {versionDetail && <span className="hidden text-text-muted sm:inline">· {versionDetail}</span>}
         </div>
         <div className="ui-control-fleet-actions">
           <button
