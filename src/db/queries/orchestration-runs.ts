@@ -11,8 +11,8 @@ import {
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import { resolveFeedbackForRun } from "@/lib/feedback/close-loop";
 import { promoteRunClose } from "@/lib/integrations/orangecat-publish";
-import { isFailingOutcome } from "@/lib/events";
 import { advanceEscalation, resolveEscalation } from "./run-escalations";
+import { ladderEffectForClose } from "@/lib/orchestration/escalation-ladder";
 import { notifyRunClosed } from "@/lib/orchestration/notify-close";
 import { correctTimeoutReapsWithRepoEvidence } from "@/lib/orchestration/reap-evidence";
 import { emitRunEvent } from "./run-events";
@@ -62,22 +62,33 @@ export async function updateOrchestrationRun(
     // OC-published projects. Idempotent (external_id = run id) and re-sent by
     // the daily promote backfill, so a dropped emit here is never lost.
     void promoteRunClose(updated);
-    // A success closes the project's open escalation ladder, if any.
-    void resolveEscalation(updated.userId, updated.projectKey, "success");
   }
 
-  // Escalation ladder: every failing close advances the project one rung
-  // (retry → patch → replan → human). isFailingOutcome is the same predicate
-  // the failure brake uses, so ladder rungs and brake streak count the same
-  // events. Fire-and-forget — bookkeeping never fails a close.
-  if (updated && patch.finishedAt && isFailingOutcome(patch.outcome)) {
-    void advanceEscalation({
-      userId: updated.userId,
-      projectKey: updated.projectKey,
-      runId: updated.id,
-      outcome: patch.outcome ?? "error",
-      error: updated.payload?.error ?? null,
-    });
+  // Escalation ladder. ONE predicate decides both directions
+  // (ladderEffectForClose): a failing close advances a rung, and any close
+  // where work landed — `success` OR `partial` — resolves it.
+  //
+  // Resolving used to require `success` while advancing used isFailingOutcome,
+  // so `partial` did neither and a ladder could never be left. Seventeen were
+  // stuck open at once, none with a single success since opening. The brake
+  // never had the bug (leadingFailureStreak stops at the first non-failing
+  // outcome), so this also makes the two agree, which the comment here always
+  // claimed they did.
+  //
+  // Fire-and-forget — bookkeeping never fails a close.
+  if (updated && patch.finishedAt) {
+    const effect = ladderEffectForClose(patch.outcome);
+    if (effect.kind === "advance") {
+      void advanceEscalation({
+        userId: updated.userId,
+        projectKey: updated.projectKey,
+        runId: updated.id,
+        outcome: patch.outcome ?? "error",
+        error: updated.payload?.error ?? null,
+      });
+    } else if (effect.kind === "resolve") {
+      void resolveEscalation(updated.userId, updated.projectKey, effect.by);
+    }
   }
 
   // Chat-originated runs push their outcome back to chat (opt-in via
@@ -302,7 +313,11 @@ export async function cleanupStaleOrchestrationRuns(userId?: string) {
   // corrector above may later flip a timeout→partial; that correction doesn't
   // rewind the ladder — a success resolves it, which is the honest reset.
   for (const r of reaped) {
-    if (isFailingOutcome(r.outcome)) {
+    // Same single predicate as the funnel above. Reaped closes are failing in
+    // practice, but deriving it rather than assuming keeps one rule for what a
+    // close does to a ladder — and `correctTimeoutReapsWithRepoEvidence` above
+    // can flip a timeout to `partial`, which must resolve, not advance.
+    if (ladderEffectForClose(r.outcome).kind === "advance") {
       void advanceEscalation({
         userId: r.userId,
         projectKey: r.projectKey,

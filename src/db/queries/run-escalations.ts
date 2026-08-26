@@ -61,15 +61,49 @@ export async function advanceEscalation(input: {
         })
         .where(eq(runEscalations.id, open.id));
     } else {
-      await db.insert(runEscalations).values({
-        userId: input.userId,
-        projectKey: input.projectKey,
-        level,
-        failStreak,
-        lastRunId: input.runId,
-        lastOutcome: input.outcome,
-        lastError: input.error ?? null,
-      });
+      // Read-then-insert races with itself: the reaper calls this for every
+      // reaped run without awaiting, so two closes for one project can both
+      // see "no open row". The partial unique index now refuses the second
+      // insert instead of letting it create a parallel ladder — and this
+      // catches that refusal and advances the row the winner created, so the
+      // losing close still counts toward the streak rather than vanishing.
+      const inserted = await db
+        .insert(runEscalations)
+        .values({
+          userId: input.userId,
+          projectKey: input.projectKey,
+          level,
+          failStreak,
+          lastRunId: input.runId,
+          lastOutcome: input.outcome,
+          lastError: input.error ?? null,
+        })
+        .onConflictDoNothing({
+          target: [runEscalations.userId, runEscalations.projectKey],
+          // The partial index's predicate — without it Postgres cannot match
+          // the conflict target and the insert raises instead of doing nothing.
+          where: isNull(runEscalations.resolvedAt),
+        })
+        .returning({ id: runEscalations.id });
+
+      if (inserted.length === 0) {
+        const winner = await getOpenEscalation(input.userId, input.projectKey);
+        if (winner) {
+          const merged = winner.failStreak + 1;
+          const mergedLevel = levelForStreak(merged) ?? winner.level;
+          await db
+            .update(runEscalations)
+            .set({
+              failStreak: merged,
+              level: mergedLevel,
+              lastRunId: input.runId,
+              lastOutcome: input.outcome,
+              lastError: input.error ?? null,
+              updatedAt: new Date(),
+            })
+            .where(eq(runEscalations.id, winner.id));
+        }
+      }
     }
 
     // Top rung = the failure brake's trip point (same constant by
@@ -106,11 +140,27 @@ export async function advanceEscalation(input: {
   }
 }
 
-/** A run succeeded (or the operator intervened) — close the open ladder. */
+/**
+ * The project is moving again (or the operator intervened) — close the ladder.
+ *
+ * `by` records WHICH kind of evidence closed it, because the three are not
+ * interchangeable when you later ask whether escalating helped:
+ *   success  — the run met its definition of done
+ *   progress — real work landed without clearing the bar (`partial`). This is
+ *              the common case by a wide margin, and requiring `success` here
+ *              is what left seventeen ladders open with no way out.
+ *   manual   — a human looked at it and closed it. Before this existed the
+ *              value was declared in the type and written by nothing, so
+ *              `resolved_by = 'manual'` read as "humans never intervene" when
+ *              it actually meant "humans cannot".
+ *
+ * Resolves EVERY open row for the project, not just the newest — a concurrent
+ * reap could open more than one (see the unique index in the schema).
+ */
 export async function resolveEscalation(
   userId: string,
   projectKey: string,
-  by: "success" | "manual",
+  by: "success" | "progress" | "manual",
 ): Promise<void> {
   try {
     await db
