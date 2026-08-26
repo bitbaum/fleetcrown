@@ -51,6 +51,13 @@ src/
 │   ├── activity/  → ActivityView, EventStream, DigestPanel (fleet activity timeline + digests)
 │   ├── today/     → StickyNoteCard (captures; Loki "add X to my list"), CalendarCard, WeatherCard, CommitmentsCard, SubscriptionsCard, HabitsList
 │   ├── people/    → PeopleGrid, PersonCard, PersonDetail
+│   ├── crew/      → CrewWorkspace (board + roster), AssignmentCard,
+│   │                 NewAssignmentButton, AddCrewButton, SharedTaskView.
+│   │                 Work for HUMANS: an assignment is a draft until the
+│   │                 operator hands it over, and the assignee answers through
+│   │                 a share link with no account. Who may move a task is
+│   │                 SSOT in config/crew.ts (OPERATOR_MOVES vs ASSIGNEE_MOVES)
+│   │                 — never widen one to "fix" a stuck row.
 │   ├── projects/  → ProjectGrid, ProjectDetail (split into header/tabs/inline-editors)
 │   ├── goals/     → GoalCard, GoalsGrid, NewGoalButton
 │   ├── money/     → SubscriptionActions, NewSubscriptionButton
@@ -59,7 +66,9 @@ src/
 │   ├── prompts/   → PromptRow, FeaturedCard, CategoryBar, RunModal, ScheduleModal
 │   ├── settings/  → TeamSettings (invite flow)
 │   └── system/    → AutopilotCard, JobDetail, SystemStats
-├── config/        → SSOT for navigation, channels, prompt-library, subscriptions
+├── config/        → SSOT for navigation, channels, prompt-library, subscriptions,
+│                    actors (who may be listed vs delegated to) and crew (who
+│                    may move an assignment, and to where)
 ├── db/
 │   ├── schema/    → Drizzle tables (SSOT for all types)
 │   └── queries/   → Data access functions (one file per domain)
@@ -330,6 +339,7 @@ Smoke is opt-in (needs the dev server running) — run before opening a PR.
 | Duet | /duet | RETIRED — redirects to /agents, which now redirects on to /control (side-by-side prompt view earned nothing over Terminal + Control) |
 | Today | /today | Calendar, weather, commitments, bills, daily habit check-off, log conversation |
 | People | /people | Contacts, search, detail panel, inline name/notes edit |
+| Crew | /crew | Humans in the loop + the work you hand them. Draft → hand over (mints a share link) → they accept/decline/deliver → you accept. Paid assignments mirror to OrangeCat as a service; the roster is person entities flagged `crew:member`, never a parallel table |
 | Money | /money | Subscriptions, monthly burn |
 | Goals | /goals | Hierarchical tree, progress, milestones, inline target-date / progress edit |
 | Projects | /projects | registered projects + GitHub CI, inline editors for name/desc/status/maturity; per-project dossier + shareable public link (/share/project/[token], audience-scoped resource visibility) |

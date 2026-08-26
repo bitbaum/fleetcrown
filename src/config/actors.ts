@@ -5,10 +5,16 @@
  * Two kinds, one table (`entities`), different laws:
  *
  *   human  — a relationship. Check in, reach, import from *your* address
- *            book / social accounts. Never list, book, rent, or sell.
+ *            book / social accounts, and DELEGATE work to (see config/crew.ts).
+ *            Never list, book, rent, or sell.
  *   robot  — a machine you own. Humanoid, vacuum, drone, industrial,
  *            whatever. Profile first. Book / rent / sell are legal
  *            because the listing is an OrangeCat *asset*, not a person.
+ *
+ * Delegation is the human-only mirror of market. A person can be ASKED and can
+ * say no; an asset is listed and booked. Keeping both capabilities in this one
+ * kernel is what stops a future "assign this robot to Jane" from quietly
+ * turning a person into inventory — or a robot into a colleague who consents.
  *
  * The book is per-user (`entities.user_id`). Another user's contacts and
  * robots never appear here. Social import is an accept/discard proposal
@@ -33,6 +39,8 @@ export const ACTOR_CAPABILITY = {
   REACH: "reach",
   SOCIAL_IMPORT: "social_import",
   MARKET: "market",
+  /** Ask this actor to do work and track whether they said yes. Humans only. */
+  DELEGATE: "delegate",
 } as const;
 export type ActorCapability = (typeof ACTOR_CAPABILITY)[keyof typeof ACTOR_CAPABILITY];
 
@@ -101,6 +109,27 @@ export const ROBOT_ATTR = {
   ORANGECAT_ASSET_ID: "orangecat_asset_id",
 } as const;
 
+/**
+ * Attribute keys that make a person a member of the crew — the humans in the
+ * loop you actually hand work to. Written only when canDelegate, so a listing
+ * flag and a crew flag can never land on the same actor.
+ *
+ * MEMBER is the roster gate: `"true"` puts the person on /crew. Everything else
+ * is profile detail the assignment surface reads (who they are, what they cost,
+ * where they get paid). The OrangeCat profile URL is the economic hand-off —
+ * FleetCrown decides WHO does the work, OrangeCat settles WHAT it costs.
+ */
+export const CREW_ATTR = {
+  MEMBER: "crew:member",
+  ROLE: "crew:role",
+  SKILLS: "crew:skills",
+  ENGAGEMENT: "crew:engagement",
+  RATE: "crew:rate",
+  CURRENCY: "crew:currency",
+  AVAILABILITY: "crew:availability",
+  ORANGECAT_PROFILE: "crew:orangecat_profile",
+} as const;
+
 /** Attribute keys that record listing intent. Written only when canMarket. */
 export const MARKET_ATTR: Record<MarketOffer, string> = {
   [MARKET_OFFER.BOOK]: "market:book",
@@ -110,9 +139,14 @@ export const MARKET_ATTR: Record<MarketOffer, string> = {
 
 const MARKET_ATTR_VALUES = new Set<string>(Object.values(MARKET_ATTR));
 const ROBOT_ATTR_VALUES = new Set<string>(Object.values(ROBOT_ATTR));
+const CREW_ATTR_VALUES = new Set<string>(Object.values(CREW_ATTR));
 
 export function isMarketAttrKey(key: string): boolean {
   return MARKET_ATTR_VALUES.has(key);
+}
+
+export function isCrewAttrKey(key: string): boolean {
+  return CREW_ATTR_VALUES.has(key);
 }
 
 export function isRobotAttrKey(key: string): boolean {
@@ -142,6 +176,7 @@ export const ACTORS = {
       ACTOR_CAPABILITY.CHECK_IN,
       ACTOR_CAPABILITY.REACH,
       ACTOR_CAPABILITY.SOCIAL_IMPORT,
+      ACTOR_CAPABILITY.DELEGATE,
     ],
     marketOffers: [],
   },
@@ -184,6 +219,10 @@ export function canImportSocial(type: string): boolean {
   return can(type, ACTOR_CAPABILITY.SOCIAL_IMPORT);
 }
 
+export function canDelegate(type: string): boolean {
+  return can(type, ACTOR_CAPABILITY.DELEGATE);
+}
+
 export class ActorCapabilityError extends Error {
   readonly status = 403;
   constructor(
@@ -200,6 +239,9 @@ function capabilityMessage(type: string, capability: ActorCapability): string {
   if (capability === ACTOR_CAPABILITY.MARKET) {
     return "People cannot be listed, booked, rented, or sold.";
   }
+  if (capability === ACTOR_CAPABILITY.DELEGATE) {
+    return "Only people can be asked to do work. Machines are dispatched, not assigned.";
+  }
   return `Actors of type ${type} cannot ${capability.replace("_", " ")}.`;
 }
 
@@ -213,6 +255,12 @@ export function assertCanMarket(type: string): void {
   }
 }
 
+export function assertCanDelegate(type: string): void {
+  if (!canDelegate(type)) {
+    throw new ActorCapabilityError(type, ACTOR_CAPABILITY.DELEGATE);
+  }
+}
+
 /**
  * Attribute writes go through here so a people attrs route cannot smuggle
  * a listing flag onto a human, and a robot class cannot land on a person.
@@ -220,6 +268,10 @@ export function assertCanMarket(type: string): void {
 export function assertAttrAllowed(type: string, key: string): void {
   if (isMarketAttrKey(key)) {
     assertCanMarket(type);
+    return;
+  }
+  if (isCrewAttrKey(key)) {
+    assertCanDelegate(type);
     return;
   }
   if (isRobotAttrKey(key) && type !== ENTITY_TYPE.ROBOT) {

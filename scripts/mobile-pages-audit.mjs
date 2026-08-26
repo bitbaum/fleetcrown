@@ -41,6 +41,7 @@ const ROUTES = [
   "/settings",
   "/memory",
   "/people",
+  "/crew",
   "/goals",
   "/habits",
   "/events",

@@ -41,6 +41,7 @@ const routes = [
   "/system",
   "/settings",
   "/people",
+  "/crew",
   "/goals",
   "/habits",
   "/events",
