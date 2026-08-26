@@ -13,7 +13,7 @@ const OUTCOME_GLYPH: Record<OrchestrationOutcome, string> = {
   // Its own glyph, not "✗": the run failed, but nothing about this PROJECT
   // did — the prompt never arrived. A streak of these is a delivery problem
   // wearing a project's name.
-  undelivered: "⇥",
+  unconfirmed: "⇥",
 };
 
 // Paired with the base `.ui-tag` class below — `.ui-tag-*` alone sets only
@@ -31,7 +31,7 @@ const OUTCOME_TONE: Record<OrchestrationOutcome, string> = {
   hang: "ui-tag ui-tag-negative",
   timeout: "ui-tag ui-tag-negative",
   user_abort: "ui-tag ui-tag-warning",
-  undelivered: "ui-tag ui-tag-warning",
+  unconfirmed: "ui-tag ui-tag-warning",
 };
 
 const OUTCOME_LABEL: Record<OrchestrationOutcome, string> = {
@@ -41,7 +41,7 @@ const OUTCOME_LABEL: Record<OrchestrationOutcome, string> = {
   hang: "hung",
   timeout: "timed out",
   user_abort: "aborted",
-  undelivered: "never reached the agent",
+  unconfirmed: "never seen starting",
 };
 
 /**
@@ -67,7 +67,7 @@ const OUTCOME_LABEL: Record<OrchestrationOutcome, string> = {
 function summarize(outcomes: OrchestrationOutcome[]): string {
   // isFailingOutcome, not a hand-copied list: this was the only remaining
   // second source of truth for which outcomes count as failures, so adding
-  // `undelivered` to FAILING_OUTCOMES would have left this summary quietly
+  // `unconfirmed` to FAILING_OUTCOMES would have left this summary quietly
   // disagreeing with the brake and the ladder about the same runs.
   const failed = outcomes.filter((o) => isFailingOutcome(o)).length;
   const partial = outcomes.filter((o) => o === "partial").length;
