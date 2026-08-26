@@ -9,6 +9,7 @@ import { validateAgentToken } from "@/db/queries/agent-tokens";
 import { getApiUserId } from "@/lib/session";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { APP_URL } from "@/config/brand";
+import { checkTelemetryFreshness, humanizeAge } from "@/lib/telemetry-freshness";
 
 const execp = promisify(exec);
 
@@ -221,6 +222,32 @@ export async function GET() {
   checks.push(check("migration:audit", "Audit migration", auditTable ? "pass" : "fail", auditTable ? "control_audit_events exists." : "control_audit_events is missing."));
   checks.push(check("migration:beacon", "Beacon migration", beaconTable ? "pass" : "fail", beaconTable ? "beacon_sessions exists." : "beacon_sessions is missing."));
   checks.push(check("migration:runtime", "Runtime snapshot migration", installedAgents ? "pass" : "fail", installedAgents ? "runtime_snapshots.installed_agents exists." : "runtime_snapshots.installed_agents is missing."));
+
+  // Existence is not function. The three checks above prove tables EXIST — the
+  // same thing every check proved for 76 days while claude_code_history quietly
+  // stopped receiving rows. These ask the only question that can tell the
+  // difference: is anything still arriving?
+  const freshness = await checkTelemetryFreshness().catch(() => null);
+  if (freshness === null) {
+    checks.push(check("telemetry", "Telemetry freshness", "warn", "Could not query telemetry paths — not the same as healthy."));
+  } else {
+    for (const r of freshness.results.filter((p) => p.monitored)) {
+      const status: DoctorStatus =
+        r.state === "flowing" ? "pass" : r.state === "unchecked" ? "warn" : "fail";
+      checks.push(check(
+        `telemetry:${r.table}`,
+        r.label,
+        status,
+        r.state === "flowing"
+          ? `Last row ${humanizeAge(r.ageHours)} ago (budget ${r.maxSilenceHours}h).`
+          : r.state === "silent"
+            ? `NEVER carried a row. Written by: ${r.writer}`
+            : r.state === "unchecked"
+              ? `Could not read this path — not a pass.`
+              : `STOPPED: last row ${humanizeAge(r.ageHours)} ago, budget ${r.maxSilenceHours}h. Written by: ${r.writer}`,
+      ));
+    }
+  }
 
   const legacyPaths = [
     `${homedir()}/.config/cockpit`,
