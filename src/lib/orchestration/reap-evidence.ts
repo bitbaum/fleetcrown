@@ -21,6 +21,7 @@ import { emitRunEvent } from "@/db/queries/run-events";
 import { getGithubToken } from "@/lib/github-token";
 import { findRepoWorkEvidence } from "@/lib/github-evidence";
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
+import { EXECUTOR_COPY } from "@/config/executor-copy";
 
 export type ReapedRunForEvidence = {
   id: string;
@@ -95,9 +96,13 @@ export async function correctTimeoutReapsWithRepoEvidence(reaped: ReapedRunForEv
         .set({
           state: ORCH_STATE.DONE,
           outcome: ORCHESTRATION_OUTCOME.PARTIAL,
+          // `note`, not `error`: this run is being corrected UP to partial,
+          // which is not a failure, and payload.error renders in the red
+          // error style. Writing the explanation there made a corrected run
+          // look worse than an uncorrected one.
           payload: sql`jsonb_set(
-            jsonb_set(COALESCE(payload, '{}'), '{error}', to_jsonb(
-              'Reaped as timeout, but the repo shows work during the run window — corrected to partial (see evidence)'::text)),
+            jsonb_set(COALESCE(payload, '{}'), '{note}', to_jsonb(
+              ${EXECUTOR_COPY.honesty.reapedButWorkInRepo}::text)),
             '{evidence}', ${JSON.stringify(evidence)}::jsonb)`,
         })
         // Only correct a run that is STILL a timeout — never overwrite a
