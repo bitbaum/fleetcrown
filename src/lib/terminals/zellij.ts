@@ -27,6 +27,8 @@ import { promisify } from "util";
 import { APP_SLUG } from "@/config/brand";
 import { stripAnsi } from "@/lib/ansi";
 import { findMatchingTab } from "@/lib/tab-match";
+import { resolveTabByRunningAgent } from "./tab-by-cwd";
+import { listPaneCandidates } from "@/lib/agent-process-scan";
 import type { TerminalAdapter } from "./types";
 
 const TYPING_FILE_PREFIX = `${APP_SLUG}-typing-`;
@@ -272,6 +274,37 @@ function resolveLiveTabName(session: string | null, tab: string): string | null 
   return findMatchingTab(tab, candidates);
 }
 
+/**
+ * Project key -> the session and live tab name to actually operate on.
+ *
+ * Two answers, tried in that order, because they mean different things:
+ *
+ *   1. A tab NAMED after the project. That is a human's explicit statement of
+ *      intent, so it always wins.
+ *   2. A running agent whose cwd is inside the project. That is what is
+ *      empirically true right now, and it is the only answer available once a
+ *      tab is called "Tab #9" — which is what every tab is called since
+ *      per-project tab renaming was retired.
+ *
+ * Before step 2 existed, focus/inject/peek all reported "tab not found:
+ * <project>" for tabs that were open, and the Retry those errors offered could
+ * never succeed. Null still means null: no name, no running agent, nothing to
+ * focus — a real "it isn't open", which is a different problem with a
+ * different fix.
+ */
+function resolveTargetTab(tab: string): { session: string | null; liveTab: string } | null {
+  const named = findSessionForTab(tab);
+  if (named) return { session: named, liveTab: resolveLiveTabName(named, tab) ?? tab };
+  try {
+    const found = resolveTabByRunningAgent(tab, listPaneCandidates(), getZellijPaneTabMap);
+    if (found) return { session: found.session, liveTab: found.tab };
+  } catch {
+    // /proc or the zellij cache unreadable — fall through to the honest
+    // "not found" rather than turning a resolution miss into a crash.
+  }
+  return null;
+}
+
 /** Higher-order helper: switch focus to `tab`, run `fn`, restore original.
  *  Throws on focus failure within 1s. Looks up the live tab name from
  *  zellij so case mismatches between the DB and zellij are handled
@@ -294,7 +327,7 @@ function buildFocusError(tab: string, session: string | null, allSessions: strin
         return tabs.length ? `${s}: ${tabs.join(", ")}` : `${s}: (no tabs)`;
       })
       .join(" | ");
-    return `Cannot inject into "${tab}": no zellij tab with that name in any active session. Open it (e.g. zellij action new-tab --name "${tab}") or rename an existing tab. Currently open — ${inventory}.`;
+    return `Cannot inject into "${tab}": no zellij tab with that name in any active session, and no running agent with a working directory inside that project. Open the project (e.g. zellij action new-tab --name "${tab}") or start an agent in it. Currently open — ${inventory}.`;
   }
   // Tab is known but focus didn't take. Most common cause: stale zellij
   // server state after a session detach/reattach, or the tab is locked
@@ -303,8 +336,12 @@ function buildFocusError(tab: string, session: string | null, allSessions: strin
 }
 
 function withFocusedTab<T>(tab: string, fn: (session: string | null) => T): T {
-  const session = findSessionForTab(tab);
-  const liveTab = resolveLiveTabName(session, tab) ?? tab;
+  // Same resolution as focusTab, deliberately: inject, peek and dump-screen
+  // all funnel through here, so a tab that focus can reach and inject cannot
+  // would be two answers to one question.
+  const target = resolveTargetTab(tab);
+  const session = target?.session ?? null;
+  const liveTab = target?.liveTab ?? tab;
   const originalTab = getCurrentTab(session);
   execSync(zellijCmd(session, "go-to-tab-name", shellEscape(liveTab)), { timeout: 2000 });
   if (!waitForTabFocus(liveTab, 1000, session)) {
@@ -344,8 +381,9 @@ export const zellijAdapter: TerminalAdapter = {
   },
 
   focusTab(tab: string): void {
-    const session = findSessionForTab(tab);
-    const liveTab = resolveLiveTabName(session, tab) ?? tab;
+    const target = resolveTargetTab(tab);
+    const session = target?.session ?? null;
+    const liveTab = target?.liveTab ?? tab;
     execSync(zellijCmd(session, "go-to-tab-name", shellEscape(liveTab)), { timeout: 2000 });
     if (!waitForTabFocus(liveTab, 1000, session)) {
       throw new Error(buildFocusError(tab, session, getZellijSessionsSync()));
