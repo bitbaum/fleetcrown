@@ -5,8 +5,7 @@ import { Field } from "@/components/ui/form";
 import { ModalForm } from "@/components/ui/modal-form";
 import { useCreateMutation } from "@/hooks/use-create-mutation";
 import { getJson, postJson } from "@/lib/api/fetch";
-import { ENGAGEMENT, ENGAGEMENTS, ENGAGEMENT_LABEL, type EnrolCrewInput } from "@/config/crew";
-import { VALID_CURRENCIES } from "@/config/subscriptions";
+import { ENGAGEMENT, ENGAGEMENTS, ENGAGEMENT_LABEL, TASK_CURRENCIES, type EnrolCrewInput } from "@/config/crew";
 
 type PersonOption = { id: string; name: string };
 
@@ -23,7 +22,7 @@ export function AddCrewButton({ onCreated }: { onCreated?: () => void }) {
   const [skills, setSkills] = useState("");
   const [engagement, setEngagement] = useState<string>(ENGAGEMENT.FREELANCE);
   const [rate, setRate] = useState("");
-  const [currency, setCurrency] = useState<string>(VALID_CURRENCIES[0]);
+  const [currency, setCurrency] = useState<string>(TASK_CURRENCIES[0]);
   const [availability, setAvailability] = useState("");
   const [orangecatProfile, setOrangecatProfile] = useState("");
   const [people, setPeople] = useState<PersonOption[] | null>(null);
@@ -47,7 +46,7 @@ export function AddCrewButton({ onCreated }: { onCreated?: () => void }) {
     setSkills("");
     setEngagement(ENGAGEMENT.FREELANCE);
     setRate("");
-    setCurrency(VALID_CURRENCIES[0]);
+    setCurrency(TASK_CURRENCIES[0]);
     setAvailability("");
     setOrangecatProfile("");
     setError(null);
@@ -147,7 +146,7 @@ export function AddCrewButton({ onCreated }: { onCreated?: () => void }) {
         </Field>
         <Field label="Currency">
           <select value={currency} onChange={(e) => setCurrency(e.target.value)} className="ui-input">
-            {VALID_CURRENCIES.map((value) => (
+            {TASK_CURRENCIES.map((value) => (
               <option key={value} value={value}>{value}</option>
             ))}
           </select>
@@ -162,11 +161,11 @@ export function AddCrewButton({ onCreated }: { onCreated?: () => void }) {
         </Field>
       </div>
 
-      <Field label="OrangeCat profile — where they get paid">
+      <Field label="OrangeCat profile — where they get paid in BTC">
         <input
           value={orangecatProfile}
           onChange={(e) => setOrangecatProfile(e.target.value)}
-          placeholder="https://orangecat.ch/…"
+          placeholder="their handle, or https://orangecat.ch/profiles/…"
           className="ui-input"
         />
       </Field>

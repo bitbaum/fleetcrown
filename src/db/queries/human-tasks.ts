@@ -16,11 +16,12 @@
 import { randomBytes } from "node:crypto";
 import { aliasedTable, and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { entities, humanTaskEvents, humanTasks, users, type HumanTask } from "@/db/schema";
+import { attributes, entities, humanTaskEvents, humanTasks, users, type HumanTask } from "@/db/schema";
 import { ENTITY_TYPE, HUMAN_TASK_STATUS, type HumanTaskStatus } from "@/lib/constants/statuses";
 import {
   ASSIGNEE_ACTION_STATUS,
   CLOSED_HUMAN_TASK_STATUSES,
+  CREW_ATTR,
   TASK_ACTOR,
   TASK_EVENT,
   assigneeActionsFor,
@@ -37,10 +38,19 @@ import { assertAssignablePerson } from "@/db/queries/crew";
 
 const assignee = aliasedTable(entities, "assignee");
 const project = aliasedTable(entities, "project");
+/** The assignee's OrangeCat profile — where the fee is actually paid. */
+const payTo = aliasedTable(attributes, "assignee_pay");
 
 export type HumanTaskRow = HumanTask & {
   assigneeName: string | null;
   projectName: string | null;
+  /**
+   * The assignee's OrangeCat profile, carried on the task so both sides can see
+   * where the money goes. Null means the fee has no destination yet — worth
+   * saying out loud on a paid assignment, because "accepted, no way to pay you"
+   * is a promise the board would otherwise render as complete.
+   */
+  assigneePayUrl: string | null;
   /** Path to the live share link, or null when nothing is currently shared. */
   sharePath: string | null;
 };
@@ -67,6 +77,8 @@ export type SharedTask = {
   feeAmount: number | null;
   feeCurrency: string | null;
   orangecatUrl: string | null;
+  /** Their own OrangeCat profile — the wallet this fee is headed for. */
+  payToUrl: string | null;
   fromName: string;
   assigneeName: string | null;
   projectName: string | null;
@@ -79,12 +91,14 @@ function withDerived(row: {
   task: HumanTask;
   assigneeName: string | null;
   projectName: string | null;
+  assigneePayUrl: string | null;
 }): HumanTaskRow {
   const live = row.task.shareToken && !row.task.revokedAt ? row.task.shareToken : null;
   return {
     ...row.task,
     assigneeName: row.assigneeName,
     projectName: row.projectName,
+    assigneePayUrl: row.assigneePayUrl,
     sharePath: live ? taskSharePath(live) : null,
   };
 }
@@ -93,6 +107,7 @@ const SELECT_TASK = {
   task: humanTasks,
   assigneeName: assignee.name,
   projectName: project.name,
+  assigneePayUrl: payTo.value,
 };
 
 function taskQuery() {
@@ -100,7 +115,15 @@ function taskQuery() {
     .select(SELECT_TASK)
     .from(humanTasks)
     .leftJoin(assignee, eq(assignee.id, humanTasks.assigneeId))
-    .leftJoin(project, eq(project.id, humanTasks.projectId));
+    .leftJoin(project, eq(project.id, humanTasks.projectId))
+    .leftJoin(
+      payTo,
+      and(
+        eq(payTo.entityId, humanTasks.assigneeId),
+        eq(payTo.userId, humanTasks.userId),
+        eq(payTo.key, CREW_ATTR.ORANGECAT_PROFILE),
+      ),
+    );
 }
 
 export async function listHumanTasks(
@@ -431,6 +454,7 @@ export async function getSharedTask(token: string): Promise<SharedTask | null> {
     feeAmount: row.task.feeAmount,
     feeCurrency: row.task.feeCurrency,
     orangecatUrl: row.task.orangecatUrl,
+    payToUrl: row.assigneePayUrl,
     fromName: owner?.name || owner?.username || "FleetCrown",
     assigneeName: row.assigneeName,
     projectName: row.projectName,

@@ -19,7 +19,7 @@ CREATE TABLE "human_tasks" (
 	"reason" text,
 	"status" text DEFAULT 'draft' NOT NULL,
 	"due_date" timestamp with time zone,
-	"fee_amount" real,
+	"fee_amount" numeric(20, 8),
 	"fee_currency" text,
 	"orangecat_service_id" text,
 	"orangecat_url" text,

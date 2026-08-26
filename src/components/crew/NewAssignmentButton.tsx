@@ -6,8 +6,7 @@ import { ModalForm } from "@/components/ui/modal-form";
 import { useCreateMutation } from "@/hooks/use-create-mutation";
 import { postJson } from "@/lib/api/fetch";
 import { ASSIGNMENT_FORM } from "@/config/ai-forms";
-import { VALID_CURRENCIES } from "@/config/subscriptions";
-import type { CreateHumanTaskInput } from "@/config/crew";
+import { TASK_CURRENCIES, type CreateHumanTaskInput } from "@/config/crew";
 import type { CrewMember } from "@/db/queries/crew";
 
 export type ProjectOption = { id: string; name: string };
@@ -38,7 +37,7 @@ export function NewAssignmentButton({
     target: ASSIGNMENT_FORM.key,
     fields: ASSIGNMENT_FORM.fields,
     initialValues: {
-      feeCurrency: VALID_CURRENCIES[0],
+      feeCurrency: TASK_CURRENCIES[0],
       ...(defaultAssigneeId ? { assigneeId: defaultAssigneeId } : {}),
     },
   });
@@ -160,6 +159,9 @@ export function NewAssignmentButton({
           <input
             type="number"
             min={0}
+            // Satoshi-precision: the browser's default step of 1 rejects
+            // 0.0005 BTC outright, which is most of the point of BTC here.
+            step="any"
             value={form.text("feeAmount")}
             onChange={(e) => form.setValue("feeAmount", e.target.value)}
             placeholder="0"
@@ -168,11 +170,11 @@ export function NewAssignmentButton({
         </Field>
         <Field label="Currency" aiTouched={form.isAiTouched("feeCurrency")}>
           <select
-            value={form.text("feeCurrency") || VALID_CURRENCIES[0]}
+            value={form.text("feeCurrency") || TASK_CURRENCIES[0]}
             onChange={(e) => form.setValue("feeCurrency", e.target.value)}
             className="ui-input"
           >
-            {VALID_CURRENCIES.map((currency) => (
+            {TASK_CURRENCIES.map((currency) => (
               <option key={currency} value={currency}>{currency}</option>
             ))}
           </select>

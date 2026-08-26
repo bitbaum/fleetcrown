@@ -1,19 +1,32 @@
 /**
- * Mirror a paid human assignment into OrangeCat — the missing half of the loop.
+ * Mirror a paid assignment into OrangeCat as a service — the engagement's
+ * public record, priced in whatever currency it was agreed in (BTC included).
  *
- * FleetCrown decides WHO does a piece of work and tracks whether they said yes.
- * It deliberately owns no money. OrangeCat is the economic layer, so a task
- * carrying a fee is published there as a `service` and the assignment keeps the
- * pointer — that is the whole seam between the two products, and it runs in one
- * direction only (FC → OC), like the subscription mirror it borrows from.
+ * READ THIS BEFORE TREATING IT AS THE PAYMENT CHANNEL. The service is created
+ * with the studio's integration key, so OrangeCat owns it under the actor that
+ * key is bound to — paying it pays the STUDIO, not the person who did the work.
+ * The SDK's `actor_id` cannot help: it is documented as ignored under
+ * integration-key auth, and there is no API on OrangeCat that creates an actor,
+ * because a profile carries a wallet and a wallet belongs to the human who
+ * holds its keys.
+ *
+ * So the two roles are split, and the split is the honest one:
+ *
+ *   this file          — the listing. What the work was, what it costs, which
+ *                        project it belonged to. A receipt the studio can point
+ *                        at, on the economic layer where such records live.
+ *   the assignee's own — the destination. `crew:orangecat_profile` is their
+ *   OrangeCat profile    OrangeCat page, and its Lightning wallet is theirs.
+ *                        That link is what "pay them in BTC" actually means,
+ *                        and it is carried on the task as `assigneePayUrl`.
  *
  * Everything here is fire-and-forget. A missing key, a network blip, or an
  * OrangeCat outage must never stop the operator handing work to a human: the
  * assignment still exists, the person is still asked, the fee is still written
- * on the row. Only the pay-here link is absent, and it can be minted later.
+ * on the row, and they can still be paid at their profile.
  *
  * Never called for a task without a fee — free help does not belong in a
- * marketplace, and publishing it there would misrepresent both sides.
+ * marketplace, and listing it there would misrepresent both sides.
  */
 
 import { getOrangeCatClient, OC_BASE } from "@/lib/integrations/orangecat";
@@ -59,6 +72,9 @@ export async function publishTaskToOrangeCat(
     task.reason && `Why: ${task.reason}`,
     task.projectName && `Project: ${task.projectName}`,
     task.assigneeName && `Agreed with: ${task.assigneeName}`,
+    // Named in the listing so anyone reading it can see who the work is
+    // actually going to, and where paying them would land.
+    task.assigneePayUrl && `Paid to: ${task.assigneePayUrl}`,
   ]
     .filter(Boolean)
     .join("\n");

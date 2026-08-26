@@ -12,6 +12,7 @@ import {
   HUMAN_TASK_STATUS_TONE,
   TASK_ACTOR,
   formatFee,
+  formatSats,
   type AssigneeAction,
 } from "@/config/crew";
 import type { SharedTask } from "@/db/queries/human-tasks";
@@ -33,6 +34,7 @@ export function SharedTaskView({ token, initialTask }: { token: string; initialT
 
   const due = task.dueDate ? deadlineLabel(task.dueDate) : null;
   const fee = formatFee(task.feeAmount, task.feeCurrency);
+  const sats = formatSats(task.feeAmount, task.feeCurrency);
 
   async function respond(action: AssigneeAction) {
     setBusy(action);
@@ -69,7 +71,7 @@ export function SharedTaskView({ token, initialTask }: { token: string; initialT
           </span>
           {task.projectName && <span>{task.projectName}</span>}
           {due && <span className={due.overdue ? "text-status-negative" : ""}>{due.label}</span>}
-          {fee && <span>{fee}</span>}
+          {fee && <span>{fee}{sats ? ` · ${sats}` : ""}</span>}
         </div>
       </header>
 
@@ -87,11 +89,33 @@ export function SharedTaskView({ token, initialTask }: { token: string; initialT
         </section>
       )}
 
-      {task.orangecatUrl && (
-        <a href={task.orangecatUrl} target="_blank" rel="noreferrer" className="ui-btn-secondary w-fit">
-          <ExternalLink className="h-4 w-4" />
-          Payment terms on OrangeCat
-        </a>
+      {fee && (
+        <section className="space-y-2">
+          <h2 className="ui-kicker">What it pays</h2>
+          {task.payToUrl ? (
+            <p className="text-sm text-text-secondary">
+              {fee}{sats ? ` (${sats})` : ""}, sent to your OrangeCat profile —{" "}
+              <a href={task.payToUrl} target="_blank" rel="noreferrer" className="ui-link">
+                {task.payToUrl.replace(/^https?:\/\//, "")}
+              </a>
+              . {task.fromName} pays it there once the work is accepted.
+            </p>
+          ) : (
+            // Said plainly rather than hidden: agreeing to paid work with no
+            // destination on file is the thing worth knowing BEFORE you say yes.
+            <p className="text-sm text-status-warning">
+              {fee}{sats ? ` (${sats})` : ""} — but {task.fromName} has no OrangeCat
+              profile on file for you, so there is nowhere to send it yet. Send them
+              your profile link before you start.
+            </p>
+          )}
+          {task.orangecatUrl && (
+            <a href={task.orangecatUrl} target="_blank" rel="noreferrer" className="ui-btn-secondary w-fit">
+              <ExternalLink className="h-4 w-4" />
+              This work on OrangeCat
+            </a>
+          )}
+        </section>
       )}
 
       {task.actions.length > 0 ? (

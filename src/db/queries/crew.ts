@@ -21,6 +21,7 @@ import {
   OPEN_HUMAN_TASK_STATUSES,
   isEngagement,
   isWaitingOnAssignee,
+  orangeCatProfileUrl,
   type CrewProfileInput,
   type EnrolCrewInput,
   type Engagement,
@@ -191,6 +192,13 @@ export async function assertAssignablePerson(
 
 /** Write the profile half of a crew record. Absent fields are left alone; empty ones are cleared. */
 async function writeProfile(userId: string, personId: string, input: CrewProfileInput): Promise<void> {
+  // The profile is a payment destination, so it is stored canonical — a handle
+  // and a pasted URL must not become two different-looking records of the same
+  // wallet. The zod body already rejected anything that is neither.
+  const profile = input.orangecatProfile
+    ? orangeCatProfileUrl(input.orangecatProfile) ?? undefined
+    : input.orangecatProfile;
+
   const pairs: Array<[string, string | undefined]> = [
     [CREW_ATTR.ROLE, input.role],
     [CREW_ATTR.SKILLS, input.skills],
@@ -198,7 +206,7 @@ async function writeProfile(userId: string, personId: string, input: CrewProfile
     [CREW_ATTR.RATE, input.rate],
     [CREW_ATTR.CURRENCY, input.currency],
     [CREW_ATTR.AVAILABILITY, input.availability],
-    [CREW_ATTR.ORANGECAT_PROFILE, input.orangecatProfile],
+    [CREW_ATTR.ORANGECAT_PROFILE, profile],
   ];
   for (const [key, value] of pairs) {
     if (value === undefined) continue;

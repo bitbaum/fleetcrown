@@ -13,6 +13,7 @@
 import { defineFields, type FormTarget } from "@fleet/ai-forms";
 import { HABIT_FREQUENCY } from "@/lib/constants/statuses";
 import { ROBOT_CLASSES, ROBOT_CLASS_LABEL } from "@/config/actors";
+import { TASK_CURRENCIES } from "@/config/crew";
 import { VALID_CURRENCIES, VALID_FREQUENCIES } from "@/config/subscriptions";
 
 /** Turn a constant tuple/record of string values into assistant field options. */
@@ -148,7 +149,7 @@ export const ASSIGNMENT_FORM: FormTarget = {
       name: "feeCurrency",
       label: "Currency",
       type: "select",
-      options: optionsOf(VALID_CURRENCIES),
+      options: optionsOf(TASK_CURRENCIES),
       overridable: true,
     },
     // Both are picked from live lists the model cannot see.
@@ -159,6 +160,7 @@ export const ASSIGNMENT_FORM: FormTarget = {
     "This is work for a HUMAN, not an agent. Write the brief as instructions a competent stranger could follow without a follow-up question.",
     "Keep the ask itself one line. Detail belongs in the brief.",
     "Only set a fee when the user names one. Unpaid help is normal and must not be invented as paid.",
+    "A fee in sats is a BTC fee: 50000 sats is feeAmount 0.0005 with feeCurrency BTC. Never convert between currencies — record the one they said.",
     "Never invent a company, a contact, or a deadline the user did not give.",
   ],
 };

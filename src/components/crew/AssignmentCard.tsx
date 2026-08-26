@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, ChevronDown, Copy, ExternalLink, Link2, Trash2, X } from "lucide-react";
+import { Check, ChevronDown, Copy, ExternalLink, Link2, Trash2, Wallet, X } from "lucide-react";
 import { deleteJson, getJson, patchJson, postJson } from "@/lib/api/fetch";
 import { deadlineLabel } from "@/lib/dates";
 import {
@@ -12,6 +12,7 @@ import {
   OPERATOR_MOVES,
   TASK_ACTOR,
   formatFee,
+  formatSats,
   isWaitingOnAssignee,
   type HumanTaskStatus,
 } from "@/config/crew";
@@ -65,6 +66,8 @@ export function AssignmentCard({
   }, [open, detail, task.id]);
   const due = current.dueDate ? deadlineLabel(current.dueDate) : null;
   const fee = formatFee(current.feeAmount, current.feeCurrency);
+  const sats = formatSats(current.feeAmount, current.feeCurrency);
+  const owed = current.feeAmount !== null && current.feeAmount > 0;
   const shareUrl = current.sharePath
     ? `${typeof window === "undefined" ? "" : window.location.origin}${current.sharePath}`
     : null;
@@ -107,7 +110,7 @@ export function AssignmentCard({
             <span>{current.assigneeName ?? "Nobody assigned"}</span>
             {current.projectName && <span>· {current.projectName}</span>}
             {due && <span className={due.overdue ? "text-status-negative" : ""}>· {due.label}</span>}
-            {fee && <span>· {fee}</span>}
+            {fee && <span>· {fee}{sats ? ` (${sats})` : ""}</span>}
             {current.sharePath && <span>· link live</span>}
           </span>
         </span>
@@ -153,10 +156,31 @@ export function AssignmentCard({
             </p>
           )}
 
+          {owed && (
+            current.assigneePayUrl ? (
+              // The money goes to THEIR OrangeCat profile, where their Lightning
+              // wallet lives — never to the studio's listing of the work.
+              <a
+                href={current.assigneePayUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="ui-btn-secondary w-fit"
+              >
+                <Wallet className="h-4 w-4" />
+                Pay {current.assigneeName ?? "them"} {fee}
+              </a>
+            ) : (
+              <p className="text-xs text-status-warning">
+                {current.assigneeName ?? "They"} has no OrangeCat profile on file, so
+                there is nowhere to send {fee}. Add it on their crew card.
+              </p>
+            )
+          )}
+
           {current.orangecatUrl && (
             <a href={current.orangecatUrl} target="_blank" rel="noreferrer" className="ui-btn-xs w-fit">
               <ExternalLink className="h-3.5 w-3.5" />
-              On OrangeCat
+              Listed on OrangeCat
             </a>
           )}
 
@@ -192,7 +216,7 @@ export function AssignmentCard({
                 onClick={() => run(() => postJson(`/api/crew/tasks/${current.id}/publish`, {}))}
                 className="ui-btn-chip"
               >
-                Publish fee to OrangeCat
+                List on OrangeCat
               </button>
             )}
             <button

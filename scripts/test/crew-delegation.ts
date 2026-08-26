@@ -26,8 +26,12 @@ import {
   assigneeActionsFor,
   canAssigneeMove,
   canOperatorMove,
+  BTC,
+  TASK_CURRENCIES,
   canShare,
   formatFee,
+  formatSats,
+  orangeCatProfileUrl,
   isWaitingOnAssignee,
   isWaitingOnOperator,
   taskSharePath,
@@ -156,6 +160,35 @@ ok(formatFee(null, "CHF") === "", "no fee renders as nothing at all");
 ok(formatFee(400, "CHF") === "CHF 400", "whole amounts stay whole");
 ok(formatFee(12.5, "EUR") === "EUR 12.50", "part amounts get two places");
 ok(formatFee(400, null) === "400", "an amount without a currency is not dressed up as one");
+
+// ─── Bitcoin ─────────────────────────────────────────────────────────────────
+// The failure this guards is silent and expensive: two-decimal formatting turns
+// every sub-cent bitcoin fee into "0.00", so the person owed 50,000 sats is
+// shown a fee of nothing on the page where they decide whether to say yes.
+ok(formatFee(0.0005, BTC) === "BTC 0.0005", "a BTC fee keeps its decimals");
+ok(formatFee(0.00000001, BTC) === "BTC 0.00000001", "one satoshi survives formatting");
+ok(formatFee(0.5, BTC) === "BTC 0.5", "no trailing-zero noise on round amounts");
+ok(formatFee(1, BTC) === "BTC 1", "a whole coin does not render as 1.00000000");
+ok(formatSats(0.0005, BTC) === "50,000 sats", "sats are the unit people quote");
+ok(formatSats(0.0005, "CHF") === "", "francs are not satoshis");
+ok(formatSats(null, BTC) === "", "no fee, no sats line");
+// The list must stay exactly what OrangeCat's services API accepts: a currency
+// FleetCrown offers but OrangeCat rejects is a fee that cannot be mirrored.
+ok(TASK_CURRENCIES.includes(BTC), "BTC is assignable — paying a person is the point");
+for (const c of ["USD", "EUR", "CHF", "GBP", "BTC"]) {
+  ok((TASK_CURRENCIES as readonly string[]).includes(c), `${c} matches OrangeCat's enum`);
+}
+
+// The payment destination is normalised, so one wallet cannot be recorded two
+// ways — and anything that is not a profile is refused rather than half-saved.
+const canonical = "https://orangecat.ch/profiles/jana";
+ok(orangeCatProfileUrl("jana") === canonical, "a bare handle resolves");
+ok(orangeCatProfileUrl("@jana") === canonical, "an @handle resolves");
+ok(orangeCatProfileUrl(canonical) === canonical, "a canonical URL is unchanged");
+ok(orangeCatProfileUrl(`${canonical}/`) === canonical, "a trailing slash is not a second wallet");
+ok(orangeCatProfileUrl("https://orangecat.ch/services/abc") === null, "a service is not a person");
+ok(orangeCatProfileUrl("not a url at all") === null, "prose is not a payment destination");
+ok(orangeCatProfileUrl("") === null, "empty is not a payment destination");
 
 // ─── The actor kernel: people are not inventory ──────────────────────────────
 

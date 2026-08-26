@@ -234,17 +234,45 @@ export type TaskEventKind = (typeof TASK_EVENT)[keyof typeof TASK_EVENT];
 const uuid = z.string().uuid();
 const trimmed = (max: number) => z.string().trim().max(max);
 
+/**
+ * What an assignment may be denominated in.
+ *
+ * The fiat four come from the subscriptions SSOT; BTC is added HERE and only
+ * here, because paying a person is the one place in FleetCrown where bitcoin is
+ * the point rather than a curiosity. The list is deliberately identical to the
+ * currency enum OrangeCat's `services.create` accepts — a fee we cannot mirror
+ * is a fee that cannot be paid, and the two lists silently diverging is exactly
+ * how that would happen.
+ */
+export const TASK_CURRENCIES = [...VALID_CURRENCIES, "BTC"] as const;
+export type TaskCurrency = (typeof TASK_CURRENCIES)[number];
+
+export const BTC = "BTC" satisfies TaskCurrency;
+export const SATS_PER_BTC = 100_000_000;
+
+export function isTaskCurrency(value: string): value is TaskCurrency {
+  return (TASK_CURRENCIES as readonly string[]).includes(value);
+}
+
 /** Fee ceiling. Not a business rule — a typo guard at the API boundary. */
 export const MAX_TASK_FEE = 1_000_000;
 
 export const CrewProfileFields = z.object({
-  role:              trimmed(80).optional(),
-  skills:            trimmed(240).optional(),
-  engagement:        z.enum(ENGAGEMENTS).optional(),
-  rate:              trimmed(60).optional(),
-  currency:          z.enum(VALID_CURRENCIES).optional(),
-  availability:      trimmed(120).optional(),
-  orangecatProfile:  z.union([z.string().trim().url().max(300), z.literal("")]).optional(),
+  role:         trimmed(80).optional(),
+  skills:       trimmed(240).optional(),
+  engagement:   z.enum(ENGAGEMENTS).optional(),
+  rate:         trimmed(60).optional(),
+  currency:     z.enum(TASK_CURRENCIES).optional(),
+  availability: trimmed(120).optional(),
+  // A handle or a full profile URL, both accepted; stored canonical. Rejected
+  // rather than silently dropped when it is neither — a payment destination
+  // that quietly did not save is the worst way to find out you were not paid.
+  orangecatProfile: z
+    .union([trimmed(300), z.literal("")])
+    .refine((v) => v === "" || orangeCatProfileUrl(v) !== null, {
+      message: "Use an OrangeCat handle or a https://orangecat.ch/profiles/… link",
+    })
+    .optional(),
 });
 export type CrewProfileInput = z.infer<typeof CrewProfileFields>;
 
@@ -275,7 +303,7 @@ export const CreateHumanTaskBody = z.object({
   projectId:   uuid.optional(),
   dueDate:     trimmed(40).optional(),
   feeAmount:   z.number().min(0).max(MAX_TASK_FEE).optional(),
-  feeCurrency: z.enum(VALID_CURRENCIES).optional(),
+  feeCurrency: z.enum(TASK_CURRENCIES).optional(),
 });
 export type CreateHumanTaskInput = z.infer<typeof CreateHumanTaskBody>;
 
@@ -288,7 +316,7 @@ export const PatchHumanTaskBody = z
     projectId:   uuid.nullable().optional(),
     dueDate:     trimmed(40).nullable().optional(),
     feeAmount:   z.number().min(0).max(MAX_TASK_FEE).nullable().optional(),
-    feeCurrency: z.enum(VALID_CURRENCIES).optional(),
+    feeCurrency: z.enum(TASK_CURRENCIES).optional(),
     status:      z.enum(Object.values(HUMAN_TASK_STATUS) as [HumanTaskStatus, ...HumanTaskStatus[]]).optional(),
     note:        trimmed(1000).optional(),
   })
@@ -316,9 +344,48 @@ export function taskSharePath(token: string): string {
   return `/share/task/${token}`;
 }
 
-/** "CHF 400" / "400" / "" — one formatter, used by the board and the share page. */
+/**
+ * "CHF 400" / "BTC 0.0005" / "400" / "" — one formatter, board and share page.
+ *
+ * Bitcoin gets eight decimals with the trailing zeros trimmed, because
+ * `toFixed(2)` on 0.0005 BTC prints "0.00" — a fee of nothing, shown to the
+ * person owed it. Fiat keeps two.
+ */
 export function formatFee(amount: number | null, currency: string | null): string {
   if (amount === null || amount === undefined) return "";
-  const value = Number.isInteger(amount) ? String(amount) : amount.toFixed(2);
+  const value =
+    currency === BTC
+      ? amount.toFixed(8).replace(/\.?0+$/, "")
+      : Number.isInteger(amount)
+        ? String(amount)
+        : amount.toFixed(2);
   return currency ? `${currency} ${value}` : value;
+}
+
+/**
+ * "50,000 sats" — the unit people actually quote small bitcoin amounts in.
+ * Empty for anything that is not BTC, so callers can render it unconditionally.
+ */
+export function formatSats(amount: number | null, currency: string | null): string {
+  if (currency !== BTC || amount === null || amount === undefined) return "";
+  return `${Math.round(amount * SATS_PER_BTC).toLocaleString("en-US")} sats`;
+}
+
+/**
+ * Where a crew member gets paid, normalised.
+ *
+ * Accepts what a person actually pastes — a full profile URL, or just their
+ * OrangeCat handle — and returns the canonical profile URL, which is where
+ * OrangeCat keeps their Lightning wallet. Returns null for anything that is
+ * neither, so a typo becomes an empty field rather than a dead "pay" button
+ * pointed at nowhere.
+ */
+export function orangeCatProfileUrl(input: string, base = "https://orangecat.ch"): string | null {
+  const value = input.trim().replace(/\/+$/, "");
+  if (!value) return null;
+  const origin = base.replace(/\/+$/, "");
+  const fromUrl = value.match(/^https?:\/\/[^/]+\/profiles\/([A-Za-z0-9_.-]{1,40})$/);
+  if (fromUrl) return `${origin}/profiles/${fromUrl[1]}`;
+  if (/^@?[A-Za-z0-9_.-]{1,40}$/.test(value)) return `${origin}/profiles/${value.replace(/^@/, "")}`;
+  return null;
 }

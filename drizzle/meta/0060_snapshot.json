@@ -1,5 +1,5 @@
 {
-  "id": "4ba3181c-c355-4837-b7b3-7d9cf020387b",
+  "id": "9aa7eff6-5f21-4bc7-b580-a6ea063c50d9",
   "prevId": "262f0216-b1d6-4fc3-b13e-e444dfca2e5c",
   "version": "7",
   "dialect": "postgresql",
@@ -4419,7 +4419,7 @@
         },
         "fee_amount": {
           "name": "fee_amount",
-          "type": "real",
+          "type": "numeric(20, 8)",
           "primaryKey": false,
           "notNull": false
         },

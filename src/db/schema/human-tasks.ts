@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, real, timestamp, index, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, numeric, timestamp, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { users } from "./users";
 import { entities } from "./entities";
@@ -40,7 +40,14 @@ export const humanTasks = pgTable("human_tasks", {
   status: text("status").$type<HumanTaskStatus>().notNull().default(HUMAN_TASK_STATUS.DRAFT),
 
   dueDate:     timestamp("due_date", { withTimezone: true }),
-  feeAmount:   real("fee_amount"),
+  /**
+   * NUMERIC(20,8), not `real`, because a fee can be denominated in BTC and one
+   * satoshi is 0.00000001. float4 carries ~7 significant digits, so it cannot
+   * represent a satoshi at all — 0.00050001 BTC would silently round, and the
+   * amount a human is owed is the last field in this system allowed to drift.
+   * Eight decimals is exactly Bitcoin's precision; fiat fees use two of them.
+   */
+  feeAmount:   numeric("fee_amount", { precision: 20, scale: 8, mode: "number" }),
   feeCurrency: text("fee_currency"),
 
   /** Mirror of this assignment on OrangeCat, where it can be paid. */
