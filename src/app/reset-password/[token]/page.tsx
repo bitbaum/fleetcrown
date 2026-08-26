@@ -95,7 +95,7 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ token:
 
       <p className="mt-4 text-center text-xs text-text-muted">
         Link expired?{" "}
-        <Link href={ROUTES.FORGOT_PASSWORD} className="text-text-secondary underline underline-offset-2 hover:text-text-primary">
+        <Link href={ROUTES.FORGOT_PASSWORD} className="ui-auth-hint-link">
           Request a new one
         </Link>
       </p>

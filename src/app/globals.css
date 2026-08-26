@@ -2187,8 +2187,11 @@
   .ui-term-mcomposer {
     @apply flex items-end gap-1.5 rounded-xl border border-border-default bg-surface-raised p-1.5;
   }
+  /* text-base: this is THE field a phone operator types agent input into, and
+     a sub-16px focus makes Safari zoom the terminal surface out from under the
+     key deck. */
   .ui-term-mcomposer-input {
-    @apply min-h-11 w-full flex-1 resize-none bg-transparent px-2 py-2.5 text-sm leading-snug text-text-primary outline-none placeholder:text-text-muted;
+    @apply min-h-11 w-full flex-1 resize-none bg-transparent px-2 py-2.5 text-base leading-snug text-text-primary outline-none placeholder:text-text-muted sm:text-sm;
     font-family: var(--font-mono);
   }
   .ui-term-mcomposer-enter {
@@ -2444,7 +2447,7 @@
     @apply shrink-0 select-none py-3 text-sm text-text-muted;
   }
   .ui-auth-prefix-input {
-    @apply flex-1 bg-transparent py-3 text-sm text-text-primary outline-none placeholder:text-text-muted;
+    @apply min-w-0 flex-1 bg-transparent py-3 text-base text-text-primary outline-none placeholder:text-text-muted sm:text-sm;
   }
   .ui-auth-loading {
     @apply flex items-center justify-center py-16;
@@ -2524,6 +2527,9 @@
   .ui-error    { @apply text-sm text-status-negative; }
   .ui-error-xs { @apply text-xs text-status-negative; }
   .ui-page-header   { @apply flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4; }
+  /* Back-to-parent affordance above a flow page's title. -ml-2 so the label
+     optically aligns with the title while the tap area still extends left. */
+  .ui-page-back     { @apply -ml-2 inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm text-text-tertiary transition-colors hover:text-text-primary; }
   .ui-page-title    { @apply text-xl sm:text-2xl font-semibold text-text-primary; }
   .ui-page-subtitle { @apply mt-1.5 max-w-2xl text-sm text-text-tertiary; }
 
@@ -2551,8 +2557,10 @@
     @apply flex items-center gap-2.5 px-4 py-3;
     box-shadow: inset 0 -1px 0 oklch(1 0 0 / 0.04);
   }
+  /* text-base on a phone: Safari zooms the viewport for any focused field
+     under 16px, and this one autofocuses the moment the palette opens. */
   .ui-palette-input {
-    @apply flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-tertiary outline-none;
+    @apply min-w-0 flex-1 bg-transparent text-base text-text-primary outline-none placeholder:text-text-tertiary sm:text-sm;
   }
   .ui-palette-kbd {
     @apply inline-flex items-center justify-center rounded-md px-1.5 py-0.5 text-text-tertiary;
@@ -2764,15 +2772,19 @@
   }
 
   /* Inputs */
+  /* text-base below `sm`. Safari zooms the whole viewport in whenever a
+     focused field is under 16px, which on a phone means every search box and
+     every inline edit starts by scaling the page up and leaving it scrolled
+     sideways. The 14px desktop density is kept from `sm` up. */
   .ui-input {
-    @apply w-full rounded-lg border border-border-default bg-surface-base px-3 py-2.5 text-sm text-text-primary placeholder:text-text-muted outline-none transition-colors;
+    @apply w-full rounded-lg border border-border-default bg-surface-base px-3 py-2.5 text-base text-text-primary outline-none transition-colors placeholder:text-text-muted sm:text-sm;
   }
   .ui-input:focus {
     @apply border-border-strong;
     box-shadow: 0 0 0 2px oklch(1 0 0 / 6%);
   }
   .ui-input-compact {
-    @apply rounded-xl border border-border-default bg-surface-overlay px-3 py-2 text-sm text-text-primary placeholder:text-text-muted outline-none transition-colors;
+    @apply rounded-xl border border-border-default bg-surface-overlay px-3 py-2 text-base text-text-primary outline-none transition-colors placeholder:text-text-muted sm:text-sm;
   }
   .ui-input-compact:focus { @apply border-accent-primary; }
   .ui-input-tight {
@@ -4127,6 +4139,7 @@
   .ui-projects-filter-chip,
   .ui-link-subtle,
   .ui-tab,
+  .ui-page-back,
   .ui-sidebar-utility,
   .ui-sidebar-section-toggle {
     min-height: 2.75rem;

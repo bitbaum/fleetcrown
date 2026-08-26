@@ -62,7 +62,8 @@ Navigation:
 | Loki composer | `ui-loki-composer` | Stacks textarea + toolbar row on `<sm` |
 | Control project rail | `ui-control-project-list` | Vertical list on phones; horizontal scroll removed |
 | Horizontal filters | `overflow-x-auto ui-scroll-fade-right` | Today, Projects, Events, Prompts chip rows |
-| Touch targets | `min-h-11 sm:min-h-0` on icon actions | WCAG 2.5.5 on phones |
+| Touch targets | the `pointer: coarse` floor in `globals.css` | Never restate the 44px number in JSX |
+| Flow-page back link | `PageLayout back={{href,label}}` | Renders above the title, not stranded below it |
 | Theme | `ThemeToggle` cycle button (`ui-theme-cycle-btn`) | One control cycles Light → Dark → Auto; select variant in Settings |
 
 ## Public / auth surfaces
@@ -97,7 +98,9 @@ Navigation:
 
 **Handheld content.** Fleet Runner is a desktop binary, so a phone visitor is offered a handoff (open the web app / copy the install link) instead of a `.deb` — `isHandheld()` in `DesktopDownload.tsx`, checked *before* OS sniffing (an Android UA contains "linux"; an iPhone UA contains "Mac"). The hero's secondary CTA is "See how it works" on phones, "Download runner" from `sm` up.
 
-**Tap targets.** The `pointer: coarse` floor in `globals.css` is the only place a 44px minimum is stated — but `min-height` does nothing to an `inline` box. A standalone link needs `inline-flex` (`ui-public-link-standalone`, `ui-auth-hint-link`); links inside a sentence keep `ui-public-link` and are exempt under WCAG 2.5.5. Auth inputs are `text-base` on phones — Safari zooms the viewport for any focused field under 16px.
+**Tap targets.** The `pointer: coarse` floor in `globals.css` is the only place a 44px minimum is stated — but `min-height` does nothing to an `inline` box. A standalone link needs `inline-flex` (`ui-public-link-standalone`, `ui-auth-hint-link`, `ui-link-muted`); links inside a sentence keep `ui-public-link` and are exempt under WCAG 2.5.5.
+
+**16px inputs below `sm`.** Safari zooms the whole viewport in whenever a focused field is under 16px, then leaves the page scrolled sideways. Every field that a phone user actually types into is `text-base sm:text-sm`: `ui-input`, `ui-input-compact`, `ui-auth-input`, `ui-auth-prefix-input`, `ui-palette-input`, `ui-term-mcomposer-input`, and the Loki composer. Adding a new input class? Match that pattern rather than defaulting to `text-sm`.
 
 ## Audit commands
 

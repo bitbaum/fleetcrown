@@ -9,7 +9,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, ArrowLeft, GitBranch } from "lucide-react";
+import { Loader2, GitBranch } from "lucide-react";
 import Link from "next/link";
 import { PageLayout } from "@/components/ui/page-layout";
 import { RepoMultiPicker } from "@/components/onboarding/RepoMultiPicker";
@@ -58,16 +58,9 @@ export default function ImportFromGithubPage() {
   }
 
   return (
-    <PageLayout title="Import from GitHub">
-      <div className="space-y-6 max-w-2xl">
-        <div>
-          <Link href="/control" className="ui-btn-ghost inline-flex items-center gap-1 text-sm">
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Back to Control
-          </Link>
-        </div>
-
-        <div className="ui-card-shell space-y-4 p-6">
+    <PageLayout title="Import from GitHub" back={{ href: "/control", label: "Back to Control" }}>
+      <div className="max-w-2xl space-y-6">
+        <div className="ui-card-shell space-y-4 p-5 sm:p-6">
           <div className="flex items-start gap-3">
             <GitBranch className="h-5 w-5 text-text-secondary mt-0.5" />
             <div className="space-y-1">

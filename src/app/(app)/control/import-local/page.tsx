@@ -3,7 +3,7 @@
 // ~/Projects / ~/Code, finds git repos, and POSTs them as projects.
 
 import Link from "next/link";
-import { ArrowLeft, Terminal, ExternalLink } from "lucide-react";
+import { Terminal, ExternalLink } from "lucide-react";
 import { PageLayout } from "@/components/ui/page-layout";
 import { CopyableCommand } from "@/components/control/CopyableCommand";
 import { APP_URL } from "@/config/brand";
@@ -16,16 +16,9 @@ export default function ImportFromLocalPage() {
   const customRootsCommand = `FC_ROOTS="$HOME/my-stuff:$HOME/work" FC_TOKEN=ck_... bash <(curl -sS ${APP_URL}/import-from-local.sh)`;
 
   return (
-    <PageLayout title="Import from your local dev folder">
-      <div className="space-y-6 max-w-2xl">
-        <div>
-          <Link href="/control" className="ui-btn-ghost inline-flex items-center gap-1 text-sm">
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Back to Control
-          </Link>
-        </div>
-
-        <div className="ui-card-shell space-y-5 p-6">
+    <PageLayout title="Import from your local dev folder" back={{ href: "/control", label: "Back to Control" }}>
+      <div className="max-w-2xl space-y-6">
+        <div className="ui-card-shell space-y-5 p-5 sm:p-6">
           <div className="flex items-start gap-3">
             <Terminal className="h-5 w-5 text-text-secondary mt-0.5" />
             <div className="space-y-1">
