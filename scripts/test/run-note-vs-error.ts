@@ -85,8 +85,15 @@ assert.equal(normalizeRepoWorkEvidence({ ...good, atMs: NaN }), null);
 // the fix cannot depend on the writer alone.
 const card = read("src/components/control/project-card-helpers.tsx");
 assert.ok(
-  /run\.state === ORCH_STATE\.ERROR[\s\S]{0,120}ui-error/.test(card),
-  "the error style must be gated on the run having actually failed",
+  /run\.payload\?\.error && run\.state === ORCH_STATE\.ERROR/.test(card),
+  "payload.error must render only when the run actually failed",
+);
+// Restyling the legacy sentences was not enough: the text itself is reaper
+// vocabulary addressed to nobody, and it was still on the live card after the
+// first attempt. It must not render at all on a non-failed run.
+assert.ok(
+  !/ORCH_STATE\.ERROR\s*\n?\s*\?/.test(card),
+  "a non-failed run must not render payload.error in ANY style",
 );
 
 console.log("✓ run note-vs-error tests passed");
