@@ -31,7 +31,6 @@ const COUNT_SCOPE_TITLE =
 
 type Props = {
   dashboard: ControlDashboardState | null;
-  attentionCount: number;
   failedCount: number;
   runnerNeverSeen: boolean;
   runnerOffline: boolean;
@@ -68,7 +67,6 @@ type Props = {
  */
 export function ControlFleetStatus({
   dashboard,
-  attentionCount,
   failedCount,
   runnerNeverSeen,
   runnerOffline,
@@ -94,9 +92,7 @@ export function ControlFleetStatus({
   // that re-counted the working/awaiting projects whose tabs were also open —
   // so "1 working · … · 1 tabs open" described the SAME project twice and
   // disagreed with the rail's "0 idle". Now header and rail show identical
-  // numbers. An optional "X need you" attention chip leads when there are
-  // failed commands or attention items.
-  const attention = attentionCount + failedCount; // truly user-blocking
+  // numbers.
   const ready = dashboard?.waitingCount ?? 0;     // agent done, awaiting next step
   const working = dashboard?.runningCount ?? 0;
   const idle = dashboard?.idleCount ?? 0;         // inert: not_running / tab_open / closing / completed
@@ -191,17 +187,32 @@ export function ControlFleetStatus({
   // The states below are ordered by what should interrupt you, most first.
   // The honesty rules survive intact: an unknown fleet says so rather than
   // reporting calm, and a stale one dims and explains itself.
+  // Count only what this card can NAME and ACT ON.
+  //
+  // The first version headlined `attentionCount + failedCount` while the names
+  // and the button came from attentionProjects alone — so a fleet with two
+  // failed dispatches and no blocked projects announced "2 projects need you",
+  // named none of them, and offered no button. That is the exact failure this
+  // card was rewritten to remove: a number you then go hunting for. Failed
+  // dispatches are a real and different thing, so they get their own headline
+  // and their own destination rather than being folded into a count of
+  // projects they are not.
+  const needsYou = attentionProjects.length;
   const attentionNames = attentionProjects.slice(0, 3).map((p) => p.name);
   const headline = !countsKnown
     ? { dot: "ui-dot-neutral", text: "Checking projects…", sub: null as string | null }
-    : attention > 0
+    : needsYou > 0
       ? {
           dot: "ui-dot-warning",
-          text: `${attention} ${attention === 1 ? "project needs" : "projects need"} you`,
-          sub: attentionNames.length
-            ? attentionNames.join(" · ") + (attentionProjects.length > 3 ? ` +${attentionProjects.length - 3}` : "")
-            : fleetPulse.detail,
+          text: `${needsYou} ${needsYou === 1 ? "project needs" : "projects need"} you`,
+          sub: attentionNames.join(" · ") + (needsYou > 3 ? ` +${needsYou - 3}` : ""),
         }
+      : failedCount > 0
+        ? {
+            dot: "ui-dot-negative",
+            text: `${failedCount} dispatch${failedCount === 1 ? "" : "es"} failed`,
+            sub: "Retry or dismiss them below.",
+          }
       : fleetPulse.key === "failing" || fleetPulse.key === "stalled"
         ? { dot: "ui-dot-negative", text: fleetPulse.label, sub: fleetPulse.detail }
         : working > 0
@@ -252,13 +263,22 @@ export function ControlFleetStatus({
         </div>
       </div>
 
-      {attention > 0 && topAttention && onFocusProject ? (
+      {needsYou > 0 && topAttention && onFocusProject ? (
         <button
           type="button"
           onClick={() => onFocusProject(topAttention.tab)}
           className="ui-hero-action ui-btn-primary"
         >
           Open {topAttention.name}
+          <ArrowRight className="h-4 w-4" aria-hidden="true" />
+        </button>
+      ) : failedCount > 0 ? (
+        <button
+          type="button"
+          onClick={() => document.getElementById("control-attention")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+          className="ui-hero-action ui-btn-primary"
+        >
+          Review failed dispatches
           <ArrowRight className="h-4 w-4" aria-hidden="true" />
         </button>
       ) : fleetPulse.key === "failing" ? (

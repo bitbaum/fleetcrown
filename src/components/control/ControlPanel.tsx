@@ -361,7 +361,6 @@ export function ControlPanel() {
           exist. */}
       {data && data.projects.length > 0 && <ControlFleetStatus
         dashboard={dashboard}
-        attentionCount={attention.length}
         failedCount={failedCount}
         runnerNeverSeen={runnerNeverSeen}
         runnerOffline={runnerOffline}

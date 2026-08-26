@@ -2934,9 +2934,12 @@
   .ui-attach-file {
     @apply flex h-12 max-w-40 items-center gap-1.5 rounded-lg border border-border-subtle bg-surface-overlay px-2 text-xs text-text-secondary;
   }
-  /* Sits on the corner of the thumbnail rather than beside it: a 12px square
-     is the whole tile's worth of width on a 320px screen. The touch floor
-     still gives it a real hit area on a coarse pointer. */
+  /* Sits on the corner of the thumbnail rather than beside it: a full-size
+     button beside a 48px tile is most of a 320px row. It is listed in THE
+     TOUCH FLOOR so a coarse pointer gets a real 44px hit area around the same
+     20px badge — being in that list is what makes that true, which is why the
+     first version of this comment, which asserted it without the listing, was
+     simply wrong. */
   .ui-attach-remove {
     @apply absolute -right-1.5 -top-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full border border-border-default bg-surface-overlay text-text-secondary transition-colors hover:text-text-primary;
   }
@@ -4123,6 +4126,7 @@
   .ui-icon-action,
   .ui-icon-action-danger,
   .ui-btn-icon,
+  .ui-attach-remove,
   .ui-btn-row-action,
   .ui-loki-tool-btn,
   .ui-loki-send-btn,

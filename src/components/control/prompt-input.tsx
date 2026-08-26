@@ -209,8 +209,19 @@ export function PromptInput({
           {showQueue && onEnqueue && (
             <button
               onClick={onEnqueue}
-              disabled={!canSend || sending !== null}
-              title={listening ? "Stop recording and queue (or send now if idle)" : "Queue for later (sends immediately if this project is idle) — Alt+Enter"}
+              // The prompt queue persists TEXT. A staged screenshot cannot ride
+              // along, and the first version of this let you click Queue with
+              // one attached: with words it silently dropped the picture, with
+              // only a picture it did nothing at all. Refusing out loud beats
+              // both.
+              disabled={!canSend || sending !== null || hasAttachments}
+              title={
+                hasAttachments
+                  ? "Queued prompts are text only — send now to include the screenshot."
+                  : listening
+                    ? "Stop recording and queue (or send now if idle)"
+                    : "Queue for later (sends immediately if this project is idle) — Alt+Enter"
+              }
               className="ui-btn-icon shrink-0 disabled:pointer-events-none disabled:opacity-25"
             >
               <ListPlus className="h-3.5 w-3.5" />
