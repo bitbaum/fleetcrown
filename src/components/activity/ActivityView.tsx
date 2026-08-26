@@ -2,8 +2,16 @@ import { FileText } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { getActivitySnapshot, getProjectDigest } from "@/db/queries/digests";
-import { normalizeActivityFilter } from "@/lib/activity-events";
+import { eventNeedsAttention, normalizeActivityFilter } from "@/lib/activity-events";
+import {
+  buildActivityPulse,
+  computeMomentum,
+  pulseBucketCount,
+  summarizeActivity,
+} from "@/lib/activity-summary";
 import { DigestPanel } from "./DigestPanel";
+import { ActivityHero } from "./ActivityHero";
+import { NeedsYouCard } from "./NeedsYouCard";
 import { StatusStrip } from "./StatusStrip";
 import { FilterCard } from "./FilterCard";
 import { EventStream } from "./EventStream";
@@ -11,15 +19,13 @@ import { EmptyLookback } from "./EmptyLookback";
 import { RANGE_LABEL } from "./activity-shared";
 
 // The single composing view for /activity. Server component — all data comes
-// from getProjectDigest, no client fetch. Sub-views own their own layout; this
-// just orders them.
+// from getProjectDigest, no client fetch.
 //
-// Order is deliberate and answers the page's questions in the order a person
-// asks them: which projects are hot (StatusStrip) → over what period
-// (FilterCard) → what actually happened (EventStream) → summarise it for me
-// (DigestPanel). The raw per-outcome tallies that used to sit between the
-// filter and the feed are gone: the feed's own triage tabs carry those counts
-// AND act on them, so a second static copy was a number you could not follow.
+// The order is the argument. Answer first (hero: one sentence, one picture),
+// then the thing that needs a human (needs-you, hoisted out of the feed), then
+// the evidence (the feed), then the narrative (report). Controls come AFTER the
+// answer, because filtering is what you do second — the previous version opened
+// with two rows of chips and made you scroll to learn anything at all.
 export async function ActivityView({
   userId,
   window,
@@ -39,8 +45,35 @@ export async function ActivityView({
   const hasActivity = digest.events.length > 0;
   const inactiveProjects = digest.projects.filter((p) => p.activity === 0);
 
+  const summary = summarizeActivity(digest.events);
+  const momentum = computeMomentum(digest.events.length, digest.previousCount);
+  const pulse = buildActivityPulse(
+    digest.events,
+    digest.since,
+    digest.until,
+    pulseBucketCount(digest.window),
+  );
+  const attentionEvents = digest.events.filter(eventNeedsAttention);
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
+      {hasActivity && (
+        <>
+          <ActivityHero
+            summary={summary}
+            momentum={momentum}
+            pulse={pulse}
+            digestWindow={digest.window}
+            projectKey={digest.projectKey}
+          />
+          <NeedsYouCard
+            events={attentionEvents}
+            digestWindow={digest.window}
+            projectKey={digest.projectKey}
+          />
+        </>
+      )}
+
       <StatusStrip
         digestWindow={digest.window}
         projectKey={digest.projectKey}

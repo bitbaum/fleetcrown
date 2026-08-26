@@ -10,6 +10,10 @@ export const PALETTE = {
   light: {
     /** --surface-page (light) ≈ oklch(0.97 0 0) — browser-chrome themeColor */
     surfacePage: "#f7f7f7",
+    /** --status-negative (light) ≈ oklch(0.50 0.18 25) — digest-email alert stat */
+    statusNegative: "#b32228",
+    /** --status-positive (light) ≈ oklch(0.44 0.16 145) — digest-email shipped stat */
+    statusPositive: "#006700",
   },
   dark: {
     /** --surface-page (dark) ≈ oklch(0.07 0 0), and exactly --surface-terminal —
