@@ -2,12 +2,37 @@ import { isPast, formatDistanceToNow } from "date-fns";
 import { FREQUENCY } from "@/config/subscriptions";
 import { DAY_MS, MINUTE_MS } from "@/lib/constants/time";
 
-/** "just now" / "5m ago" / "2h ago" — minute-precision, from epoch ms */
+/**
+ * "just now" / "5m ago" / "2h ago" / "12d ago" / "6w ago" — from epoch ms.
+ *
+ * Used to stop at hours, so a twelve-day-old agent handoff rendered on
+ * /control as "Next (agent, 288h ago)". Nobody reads 288h as a fortnight;
+ * it reads as a large meaningless number, which is worse than no timestamp,
+ * because the card is claiming to tell you how current its "Next" is.
+ *
+ * Sub-hour behaviour is unchanged on purpose — 14 callers depend on
+ * "just now" / "5m ago" and those were never the broken part.
+ *
+ * Known duplication, not fixed here: this repo has three relative-time
+ * renderers — `timeAgo`, `shortTimeAgo` below, and `elapsedLabel` in
+ * lib/atlas/format.ts (which exists only because `${shortTimeAgo(t)} ago`
+ * printed "now ago") — plus call sites that append " ago" by hand. That is
+ * why one of them could sit capped at hours without anyone noticing.
+ * Collapsing them changes what unrelated surfaces render (Loki lists and the
+ * dossier would go from "3w" to "21d"), so it is a deliberate separate change
+ * rather than a side effect of this one.
+ */
 export function timeAgo(ms: number): string {
   const diff = Math.round((Date.now() - ms) / MINUTE_MS);
   if (diff < 1) return "just now";
   if (diff < 60) return `${diff}m ago`;
-  return `${Math.round(diff / 60)}h ago`;
+  const hours = Math.round(diff / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.round(hours / 24);
+  // Days all the way to a month: for a stale handoff "12d ago" is the useful
+  // reading and "2w ago" throws away the precision that makes it actionable.
+  if (days <= 30) return `${days}d ago`;
+  return `${Math.round(days / 7)}w ago`;
 }
 
 /** Ultra-compact relative time for dense lists: "now" / "5m" / "3h" / "2d" /
