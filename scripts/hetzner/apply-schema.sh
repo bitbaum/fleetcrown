@@ -63,54 +63,77 @@ if [ -z "$MIG_DIR" ] && [ -d "$REPO/$APP_DIR/prisma/migrations" ]; then
   exit 0
 fi
 
-# A miss here used to print a friendly "no migrations found — skipping" and
-# exit 0, which reads as "this app has no schema to apply". For apps whose
-# migrations live somewhere this script does not probe, that is false, and the
-# deploy shipped code against a schema nobody applied while reporting success.
+# Supabase-layout apps (orangecat: 39 migrations, botsmann: 11) keep their SQL
+# in supabase/migrations. They were skipped for years with a friendly "no
+# migrations found" and exit 0, which reads as "nothing to apply" — a green
+# deploy of code written against a schema nobody applied.
 #
-# supabase/migrations is the live example: orangecat (39 files) and botsmann
-# (11) keep their migrations there, and every deploy of either has been quietly
-# skipping them. No drift had accumulated as of 2026-08-26 only because a human
-# applied them by hand each time.
+# They cannot use the host psql the drizzle path uses. Their database lives
+# INSIDE the supabase-db container and that container publishes no port
+# (`docker port supabase-db` is empty), so `psql -d <app>` on the host reaches
+# a different database entirely. Measured 2026-08-26: the host has a database
+# called `orangecat` with ZERO tables, while the container's `postgres` holds
+# the real 134. Pointing the applier at the host would have baselined an empty
+# database, reported success, and then "applied" every future migration
+# somewhere nothing reads — strictly worse than skipping.
 #
-# This does NOT start applying them. There is no ledger — supabase_migrations.
-# schema_migrations is empty — so "which of these 39 have run?" is currently
-# unanswerable, and replaying them blind is how you drop something. Baselining
-# that ledger is a judgement call about what is already applied, and it belongs
-# to a human who can check.
-#
-# What it does is stop lying about it. The count is named, the deploy annotates
-# itself in the Actions summary, and "skipped" no longer looks like "nothing to
-# do".
+# So supabase apps get the same ledger, the same destructive guard and the same
+# transactional batch, over `docker exec` instead of host psql.
+SQL_TARGET="host"
 if [ -z "$MIG_DIR" ]; then
-  UNAPPLIED_DIR=""
   for cand in "$REPO/$APP_DIR/supabase/migrations" "$REPO/supabase/migrations"; do
-    probe=("$cand"/*.sql)
-    [ "${#probe[@]}" -gt 0 ] && { UNAPPLIED_DIR="$cand"; break; }
+    probe=("$cand"/[0-9]*.sql)
+    [ "${#probe[@]}" -gt 0 ] && { MIG_DIR="$cand"; SQL_TARGET="supabase"; break; }
   done
-  if [ -n "$UNAPPLIED_DIR" ]; then
-    files=("$UNAPPLIED_DIR"/*.sql)
-    msg="$NAME: ${#files[@]} migrations in ${UNAPPLIED_DIR#"$REPO"/} are NOT applied by this deploy (only drizzle/ and prisma/migrations/ are) — apply them by hand and verify against the database"
-    echo "[schema] $msg"
-    # Surfaces on the run summary rather than only in the step log, so a
-    # skipped schema is visible without opening the job.
-    [ -n "${GITHUB_ACTIONS:-}" ] && echo "::warning title=Schema not applied::$msg"
-    exit 0
-  fi
-  echo "[schema] $NAME: no migrations found (drizzle, prisma or supabase) — skipping (generate a baseline first)"
+fi
+
+if [ "$SQL_TARGET" = "supabase" ] \
+   && ! ssh -o BatchMode=yes "$BOX" 'sudo docker ps --format "{{.Names}}" | grep -qx supabase-db'; then
+  msg="$NAME: migrations in ${MIG_DIR#"$REPO"/} need the supabase-db container, which is not running on the box — NOT applied"
+  echo "[schema] $msg"
+  [ -n "${GITHUB_ACTIONS:-}" ] && echo "::warning title=Schema not applied::$msg"
   exit 0
 fi
+
+[ -n "$MIG_DIR" ] || { echo "[schema] $NAME: no migrations found (drizzle, prisma or supabase) — skipping (generate a baseline first)"; exit 0; }
 MIGS=("$MIG_DIR"/[0-9]*.sql)
 [ "${#MIGS[@]}" -gt 0 ] || { echo "[schema] $NAME: no migrations — skipping"; exit 0; }
 IFS=$'\n' MIGS=($(sort <<<"${MIGS[*]}")); unset IFS
 
 # Pipe SQL (stdin) to the box's Postgres superuser. Extra psql args via $@.
-run_sql() { ssh -o BatchMode=yes "$BOX" "export LC_ALL=C LANG=C; sudo -u postgres psql -d '$DB' -v ON_ERROR_STOP=1 $* -f -"; }
+run_sql() {
+  if [ "$SQL_TARGET" = "supabase" ]; then
+    # -i so the heredoc/stdin reaches psql inside the container.
+    ssh -o BatchMode=yes "$BOX" "export LC_ALL=C LANG=C; sudo docker exec -i supabase-db psql -U postgres -d postgres -v ON_ERROR_STOP=1 $* -f -"
+  else
+    ssh -o BatchMode=yes "$BOX" "export LC_ALL=C LANG=C; sudo -u postgres psql -d '$DB' -v ON_ERROR_STOP=1 $* -f -"
+  fi
+}
+
+# Baselining marks every existing migration as already applied. That is right
+# when the database really is up to date and catastrophic when the applier is
+# pointed at the wrong one: an empty database would be declared current, and
+# every future migration would land somewhere nothing reads while the ledger
+# reported "up to date". This exact mistake was one line away during
+# 2026-08-26's supabase work — the host has an empty database sharing the app's
+# name. A database with no tables and a repo with a pile of migrations is not a
+# fresh install; it is the wrong target.
+guard_wrong_database() {
+  local tables
+  tables=$(printf '%s' "SELECT count(*) FROM information_schema.tables WHERE table_schema='public';" | run_sql -qtA)
+  if [ "${tables:-0}" -lt 2 ] && [ "${#MIGS[@]}" -ge 5 ]; then
+    echo "[schema] $NAME: REFUSING — target database has ${tables:-0} table(s) but the repo has ${#MIGS[@]} migrations."
+    echo "         Baselining here would declare an empty database up to date. Check which database"
+    echo "         this app actually uses (SQL_TARGET=$SQL_TARGET, DB=$DB) before retrying."
+    exit 1
+  fi
+}
 
 pre_exists=$(printf '%s' "SELECT (to_regclass('public._deploy_schema_history') IS NOT NULL)::int;" | run_sql -qtA)
 printf '%s' "CREATE TABLE IF NOT EXISTS public._deploy_schema_history (tag text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now());" | run_sql -q
 
 if [ "$pre_exists" != "1" ]; then
+  guard_wrong_database
   vals=$(printf "('%s')," "${MIGS[@]##*/}"); vals=${vals//.sql/}; vals=${vals%,}
   printf '%s' "INSERT INTO public._deploy_schema_history(tag) VALUES $vals ON CONFLICT DO NOTHING;" | run_sql -q
   echo "[schema] $NAME: first run — baselined ${#MIGS[@]} existing migration(s), applied none"
