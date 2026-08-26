@@ -59,11 +59,17 @@ export function DeleteButton({
     );
   }
 
+  // aria-label, not just title: this trigger is a bare trash glyph, so a
+  // `title` was its ONLY name — and a title is announced inconsistently by
+  // screen readers and never shown at all on a touch screen. Nine call sites
+  // shared the gap, one of them "Forget this entity" on /memory. The tap floor
+  // is a marker class, so the 44px number stays stated once in globals.css.
   return (
     <button
       onClick={() => setConfirming(true)}
-      className={triggerClassName}
+      className={`ui-delete-trigger ${triggerClassName}`}
       title={triggerTitle}
+      aria-label={triggerTitle}
     >
       <Trash2 className="h-3.5 w-3.5" />
     </button>

@@ -105,11 +105,14 @@ export function computeProjectHealth(input: ProjectHealthInput): ProjectHealth {
     // The three attention signals: an open callout costs a point until fixed.
     ...HEALTH_SIGNAL_BASE.map((signal) => ({
       key: signal.key,
-      label: `No ${signal.label.toLowerCase()}`,
+      label: signal.clearLabel,
       pass: !hasAnswer(attrs[signal.key]),
+      // Machine-built from `label` this read "No broken" / "No open broken
+      // recorded." — a sentence with its noun missing, on every project page.
+      // The wording is written per signal now (clearLabel) instead of derived.
       detail: hasAnswer(attrs[signal.key])
         ? truncate(attrs[signal.key])
-        : `No open ${signal.label.toLowerCase()} recorded.`,
+        : `Nothing flagged — this point is lost if one is recorded.`,
     })),
     {
       key: "next",

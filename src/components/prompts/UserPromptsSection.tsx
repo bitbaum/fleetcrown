@@ -215,10 +215,14 @@ export function UserPromptsSection({
                   {projectName && <span className="ui-tag" title="Pinned to project">{projectName}</span>}
                   {/* Only shown once a prompt has actually been run. runCount is
                       schema-backed; until run-tracking writes it, this stays
-                      hidden rather than displaying a placeholder 0% metric. */}
+                      hidden rather than displaying a placeholder 0% metric.
+                      "82% · 12 runs" also made the reader guess the numerator —
+                      percent of what, runs started, tokens, time? The word that
+                      answers it costs seven characters, and the hover title
+                      carrying it never reaches a phone. */}
                   {p.runCount > 0 && (
                     <span className="ui-tag" title={`${p.successCount} of ${p.runCount} runs succeeded`}>
-                      {`${Math.round((p.successCount / p.runCount) * 100)}% · ${p.runCount} runs`}
+                      {`${Math.round((p.successCount / p.runCount) * 100)}% success · ${p.runCount} runs`}
                     </span>
                   )}
                   {p.tags.slice(0, 3).map((t) => (

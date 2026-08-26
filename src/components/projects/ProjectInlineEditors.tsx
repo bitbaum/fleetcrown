@@ -115,7 +115,7 @@ export function StatusEditor({
           onKeyDown={(e) => { if (e.key === "Enter") commit(); if (e.key === "Escape") ie.cancel(); }}
           onBlur={commit}
           autoFocus
-          placeholder="e.g. Production"
+          placeholder="planning / development / production"
           className="ui-input-inline ui-tap w-36 border-border-strong px-2 py-2 text-base text-text-primary placeholder:text-text-muted sm:py-0.5 sm:text-xs"
         />
         {ie.saving && <Loader2 className="ui-spinner-xs text-text-muted shrink-0" />}
@@ -124,10 +124,19 @@ export function StatusEditor({
   }
 
   return (
-    <button onClick={() => ie.start(value ?? "")} title="Edit status" className="flex min-h-11 items-center">
+    // "Stage", not "status": the health breakdown two chips away already calls
+    // this field "Stage declared", and the app spends "status" on CI, run and
+    // agent status. Two words for one field, side by side, is the confusion.
+    // The attr key stays `status` — this is vocabulary, not schema.
+    <button
+      onClick={() => ie.start(value ?? "")}
+      title="Edit lifecycle stage"
+      aria-label={value ? `Stage: ${value} — edit` : "Set the lifecycle stage"}
+      className="flex min-h-11 items-center"
+    >
       {value
         ? <StatusBadge value={value} />
-        : <span className="ui-add-chip">+ status</span>}
+        : <span className="ui-add-chip">+ stage</span>}
     </button>
   );
 }

@@ -2553,6 +2553,54 @@
   .ui-error    { @apply text-sm text-status-negative; }
   .ui-error-xs { @apply text-xs text-status-negative; }
   .ui-page-header   { @apply flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4; }
+  /* Bare trash trigger shared by nine call sites. Owns display + centering so
+     that when the pointer:coarse floor inflates it to 44px the glyph stays in
+     the middle; callers layer colour and padding on top via triggerClassName. */
+  .ui-delete-trigger {
+    @apply inline-flex items-center justify-center;
+  }
+  /* Derived project-health chip. A labelled readout, not a bare ratio: the
+     number used to render as ten unlabelled ticks plus "6/10", whose only
+     explanation was a hover tooltip that touch screens never show. */
+  .ui-health-chip {
+    @apply inline-flex items-center gap-1.5 rounded-lg border border-border-subtle px-2 py-1;
+  }
+  .ui-health-chip-interactive {
+    @apply transition-colors hover:border-border-default hover:bg-surface-raised;
+  }
+  .ui-health-label {
+    @apply text-micro font-semibold uppercase tracking-caps text-text-tertiary;
+  }
+  .ui-health-track {
+    @apply flex shrink-0 gap-0.5;
+  }
+  .ui-health-seg {
+    @apply h-1 w-1.5 rounded-sm bg-surface-overlay;
+  }
+  .ui-health-seg-positive { @apply bg-status-positive; }
+  .ui-health-seg-warning  { @apply bg-status-warning; }
+  .ui-health-seg-negative { @apply bg-status-negative; }
+  .ui-health-score {
+    @apply text-xs tabular-nums text-text-secondary;
+  }
+  .ui-health-missing {
+    @apply text-xs text-text-muted;
+  }
+  /* Bottom sheet on a phone, anchored popover from `sm` up. Anchored to the
+     chip it overflowed the right edge — the chip sits mid-row after the status
+     editor, so `left-0` plus a 320px panel ran off a 390px screen. A sheet
+     cannot overflow and lands under the thumb. */
+  .ui-health-panel {
+    @apply fixed inset-x-4 z-40 max-h-[70svh] overflow-y-auto rounded-xl border border-border-default bg-surface-overlay p-3;
+    bottom: calc(var(--mobile-chrome-bottom) + 0.75rem);
+    box-shadow: var(--shadow-panel-strong);
+  }
+  @media (min-width: 40rem) {
+    .ui-health-panel {
+      @apply absolute inset-x-auto left-0 top-full mt-1 max-h-none w-80 max-w-[85vw] rounded-lg;
+      bottom: auto;
+    }
+  }
   /* Three-up stats row (Goals, Habits, Money, Memory). Two columns on a phone
      so each card can hold its number; the odd card out spans the row instead
      of sitting half-width beside a gap. See components/ui/stat-row.tsx. */
@@ -3334,6 +3382,12 @@
   .ui-projects-badge {
     @apply inline-flex items-center rounded border border-border-subtle px-2 py-0.5 text-xs font-medium text-text-secondary;
   }
+  /* The noun in front of a bare value chip. A pill reading only "Production"
+     makes the reader supply the missing noun; "Stage Production" does not.
+     Set quieter and smaller than the value so the value still reads first. */
+  .ui-badge-prefix {
+    @apply mr-1.5 shrink-0 text-micro font-medium uppercase tracking-wide opacity-60;
+  }
   /* Named status variants — the negative/warning recipes were hand-composed
      inline in three row/card components before the list unified on ProjectRow. */
   .ui-projects-badge-negative {
@@ -4105,6 +4159,7 @@
   .ui-icon-action,
   .ui-icon-action-danger,
   .ui-btn-icon,
+  .ui-delete-trigger,
   .ui-btn-row-action,
   .ui-loki-tool-btn,
   .ui-loki-send-btn,
@@ -4184,6 +4239,7 @@
   .ui-link-subtle,
   .ui-tab,
   .ui-page-back,
+  .ui-health-chip-interactive,
   .ui-sidebar-utility,
   .ui-sidebar-section-toggle {
     min-height: 2.75rem;
