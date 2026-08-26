@@ -104,7 +104,7 @@ function candidates(message: string): string[] {
   assert.match(LLM, /chainFrom/, "a 429 must advance through the model chain, not abandon the tools");
   // Asserted against the chain's VALUE, not the text of the file that declares
   // it. This used to grep chat-models.ts for the model id, which broke the
-  // moment the chain moved into `ai-ration` — the property held perfectly and
+  // moment the chain moved into `ai-kit` — the property held perfectly and
   // the test failed anyway, because it was reading a source file rather than
   // the thing the source file produces.
   // …and asserted as a SET rather than one id. The previous anchor was
