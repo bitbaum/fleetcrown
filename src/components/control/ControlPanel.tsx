@@ -366,7 +366,22 @@ export function ControlPanel() {
           and below two chore strips, so "3 projects need you" arrived after a
           runner version string, a last-sync age and a list of sites missing a
           widget. Whatever needs a human goes above whatever merely reports. */}
-      <AttentionBar items={attention} failedCommands={data?.failedCommands} onFocusProject={setSelectedTab} />
+      <AttentionBar
+        items={attention}
+        failedCommands={data?.failedCommands}
+        onFocusProject={setSelectedTab}
+        // A "tab not found" failure is not retryable — the fix is to start the
+        // session it was aiming at. Reuses the launch modal rather than a
+        // second launch path, so agent/model defaults stay one decision.
+        onStartSession={(tab) => {
+          const project = data?.projects.find((p) => p.tab === tab);
+          if (!project) {
+            setError(`No registered project named "${tab}" — add it before starting a session.`);
+            return;
+          }
+          openLaunchModal(project);
+        }}
+      />
       {data.projects.length > 0 && <AgentEscalations />}
 
       {/* ControlFleetStatus shows runner health + working/ready/open counters

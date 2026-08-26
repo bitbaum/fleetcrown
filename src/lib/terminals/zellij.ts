@@ -28,6 +28,7 @@ import { APP_SLUG } from "@/config/brand";
 import { stripAnsi } from "@/lib/ansi";
 import { findMatchingTab } from "@/lib/tab-match";
 import { resolveTabByRunningAgent } from "./tab-by-cwd";
+import { FOCUS_FAILURE_PHRASE } from "./focus-failure";
 import { listPaneCandidates } from "@/lib/agent-process-scan";
 import type { TerminalAdapter } from "./types";
 
@@ -316,7 +317,7 @@ function resolveTargetTab(tab: string): { session: string | null; liveTab: strin
 function buildFocusError(tab: string, session: string | null, allSessions: string[]): string {
   // No zellij at all — surface the install/launch directive.
   if (allSessions.length === 0) {
-    return `Cannot inject into "${tab}": no zellij session is running on the connected computer. Start zellij (or Fleet Runner, which manages it for you) and retry.`;
+    return `Cannot inject into "${tab}": ${FOCUS_FAILURE_PHRASE.NO_TERMINAL}. Start zellij (or Fleet Runner, which manages it for you) and retry.`;
   }
   // Tab not found in any session — list what IS open so the user can see
   // the actual session/tab inventory and either rename or open the target.
@@ -327,12 +328,12 @@ function buildFocusError(tab: string, session: string | null, allSessions: strin
         return tabs.length ? `${s}: ${tabs.join(", ")}` : `${s}: (no tabs)`;
       })
       .join(" | ");
-    return `Cannot inject into "${tab}": no zellij tab with that name in any active session, and no running agent with a working directory inside that project. Open the project (e.g. zellij action new-tab --name "${tab}") or start an agent in it. Currently open — ${inventory}.`;
+    return `Cannot inject into "${tab}": ${FOCUS_FAILURE_PHRASE.NO_SUCH_TARGET}, and no running agent with a working directory inside that project. Open the project (e.g. zellij action new-tab --name "${tab}") or start an agent in it. Currently open — ${inventory}.`;
   }
   // Tab is known but focus didn't take. Most common cause: stale zellij
   // server state after a session detach/reattach, or the tab is locked
   // by a modal. Tell the user the exact remediation.
-  return `Cannot inject into "${tab}": found in session "${session}" but focus did not take within 1s. Reattach (zellij attach ${session}) or restart the session, then retry.`;
+  return `Cannot inject into "${tab}": found in session "${session}" but ${FOCUS_FAILURE_PHRASE.FOCUS_TIMED_OUT} 1s. Reattach (zellij attach ${session}) or restart the session, then retry.`;
 }
 
 function withFocusedTab<T>(tab: string, fn: (session: string | null) => T): T {
