@@ -95,4 +95,21 @@ for (const status of [FEEDBACK_STATUS.NEW, FEEDBACK_STATUS.DISPATCHED, FEEDBACK_
   );
 }
 
+// A detail line must EARN its row: it exists only to say what the badge cannot.
+// "No agent has been asked to fix this yet." said nothing the "Not started"
+// badge and the "Implement" button had not already said, and the fleet strip
+// printed it once per row — five identical sentences on five new items.
+assert.equal(
+  deriveFeedbackWork(FEEDBACK_STATUS.NEW, null).detail,
+  null,
+  "Not started carries no detail — the badge and the Implement button already say it",
+);
+
+// Not generalised on purpose. "Adds information" is a judgement about meaning,
+// and every mechanical proxy tried here (must contain an imperative; must not
+// prefix-match the label) either missed the sentence above or failed honest
+// copy like "Starting — waiting for the agent to pick it up." So this stays a
+// single pin plus a reviewer's eye, rather than a green check that proves
+// nothing.
+
 console.log("✓ feedback work-phase tests passed");

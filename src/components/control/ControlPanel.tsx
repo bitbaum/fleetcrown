@@ -292,14 +292,27 @@ export function ControlPanel() {
 
   return (
     <div className="space-y-6">
-      {/* Hierarchy rewrite 2026-05-31: when the runner is offline or never seen,
-          the banner with Start/Restart buttons OWNS the top viewport — it's
-          the only actionable thing on the page until the user reconnects.
-          When healthy, the banner self-hides and FleetStatus is the first thing
-          the eye lands on. Also removed the verbose "Agent operations / Current
-          work, queued instructions, and saved context by project" section
-          header: that subtitle taught the user nothing they couldn't infer
-          from the table itself. */}
+      {/* ORDERING (the whole page, one rule): Control answers four questions,
+          in this order, and every child below belongs to exactly one tier.
+
+            1. Can I operate at all?   RunnerStatusBanner, MissingCLIsBanner
+            2. What is waiting on me?  AttentionBar, AgentEscalations
+            3. What is the fleet doing? ControlFleetStatus, ProjectOperationsView
+            4. What could I do with slack? widget coverage, visitor feedback,
+                                          Workspaces, activity log, defaults
+
+          Tiers 1 and 2 are about a human being blocked; 3 and 4 are reporting.
+          Reporting never renders above blocking. Before 2026-08-26 the page
+          ran 1 -> 3(status) -> 2 -> 4(strips) -> 3(projects): the count of
+          projects needing attention appeared under a runner version string,
+          and two chore strips sat between that count and the projects
+          themselves. Keep new sections in tier order; if a section does not
+          obviously belong to one tier, that is a sign it is two sections.
+
+          Tier 1 owns the top viewport when the runner is offline or unseen —
+          nothing else on the page is actionable until it reconnects — and
+          self-hides when healthy. The old verbose "Agent operations" section
+          header stays deleted: it taught nothing the table did not. */}
       {/* Suppress the runner banner during the zero-project empty state —
           EmptyStateWelcome below already pitches "Start a project" / "Install
           Fleet Runner" with the full card grid, and rendering both led to
@@ -347,6 +360,15 @@ export function ControlPanel() {
         </>
       )}
 
+      {/* Tier 2 of four — see the ordering note at the top of this return.
+          Anything actually waiting on the captain outranks the description of
+          a fleet that is fine. AttentionBar used to sit BELOW the status panel
+          and below two chore strips, so "3 projects need you" arrived after a
+          runner version string, a last-sync age and a list of sites missing a
+          widget. Whatever needs a human goes above whatever merely reports. */}
+      <AttentionBar items={attention} failedCommands={data?.failedCommands} onFocusProject={setSelectedTab} />
+      {data.projects.length > 0 && <AgentEscalations />}
+
       {/* ControlFleetStatus shows runner health + working/ready/open counters
           + autopilot pill. When the user has 0 projects, all counters are 0
           and the panel reads as noise stacked under the empty-state welcome
@@ -385,12 +407,6 @@ export function ControlPanel() {
         }}
       />}
 
-      <AttentionBar items={attention} failedCommands={data?.failedCommands} onFocusProject={setSelectedTab} />
-      {data.projects.length > 0 && <AgentEscalations />}
-
-      <FleetWidgetCoverageStrip />
-      <FleetFeedbackStrip />
-
       <ProjectOperationsView
         snapshots={snapshots}
         selectedTab={selectedTab}
@@ -403,6 +419,15 @@ export function ControlPanel() {
           void refresh(true);
         }}
       />
+
+      {/* Tier 4 of four — slack-time chores. Neither strip is time-critical:
+          widget coverage is "these sites could have the widget" and the
+          feedback strip is inbound suggestions with an Implement button. They
+          used to render BETWEEN the attention bar and the projects, which put
+          a backlog in the path of the fleet the page exists to show. Still
+          fully present — just no longer in front of the work. */}
+      <FleetWidgetCoverageStrip />
+      <FleetFeedbackStrip />
 
       {/* Workspaces panel — collapsed by default. Projects already shows
           per-project state; auto-opening this duplicated the same facts in a
