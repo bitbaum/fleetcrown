@@ -198,6 +198,7 @@ export async function getOpenEscalationBlock(
       level: open.level,
       failStreak: open.failStreak,
       lastError: open.lastError,
+      lastOutcome: open.lastOutcome,
     }) ?? ""
   );
 }

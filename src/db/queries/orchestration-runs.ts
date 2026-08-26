@@ -279,7 +279,21 @@ export async function cleanupStaleOrchestrationRuns(userId?: string) {
       // done (worked) vs error (dead). A reaped run must record a terminal
       // OUTCOME (not null) so it can't silently vanish from the streak/stats.
       state: sql`CASE WHEN ${wroteAfterStart} THEN 'done' ELSE 'error' END`,
-      outcome: sql`CASE WHEN ${wroteAfterStart} THEN 'partial' ELSE 'timeout' END`,
+      // Three facts, three names. `runNeverStarted` is the runner's own ack
+      // that this command never began — it was already computed above (to
+      // disqualify liveness sheltering) and then THROWN AWAY at stamping time,
+      // so a run no agent ever saw was recorded as "the agent ran out of
+      // time". 29 of 157 timeouts measured 2026-08-26 were provably in this
+      // class, and they advanced the escalation ladders of the projects whose
+      // prompts had gone missing — surf-your-life reached the `human` rung
+      // with ten such runs behind it.
+      //
+      // wroteAfterStart is checked FIRST: evidence that work landed outranks
+      // an ack saying it never started.
+      outcome: sql`CASE
+        WHEN ${wroteAfterStart} THEN 'partial'
+        WHEN ${runNeverStarted} THEN 'undelivered'
+        ELSE 'timeout' END`,
       // Truthful duration: the run ended at the timeout threshold, not when the
       // janitor noticed. (Stamping reap-time once produced "51h" durations.)
       finishedAt: sql`${orchestrationRuns.startedAt} + make_interval(mins => ${STALE_RUN_MINUTES})`,
@@ -287,8 +301,11 @@ export async function cleanupStaleOrchestrationRuns(userId?: string) {
       // (neutral) and a real timeout keeps `error` (red). Both used to land in
       // `error`, which is how a success ended up styled as a failure and
       // phrased in reaper vocabulary.
-      payload: sql`CASE WHEN ${wroteAfterStart}
-        THEN jsonb_set(COALESCE(payload, '{}'), '{note}', to_jsonb(${EXECUTOR_COPY.honesty.reapedButHandoffWritten}::text))
+      payload: sql`CASE
+        WHEN ${wroteAfterStart}
+          THEN jsonb_set(COALESCE(payload, '{}'), '{note}', to_jsonb(${EXECUTOR_COPY.honesty.reapedButHandoffWritten}::text))
+        WHEN ${runNeverStarted}
+          THEN jsonb_set(COALESCE(payload, '{}'), '{error}', to_jsonb(${EXECUTOR_COPY.honesty.dispatchNeverDelivered}::text))
         ELSE jsonb_set(COALESCE(payload, '{}'), '{error}', to_jsonb('Timed out — run exceeded maximum duration and was cleaned up'::text))
       END`,
     })

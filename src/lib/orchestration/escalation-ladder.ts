@@ -113,6 +113,10 @@ export interface EscalationView {
   level: EscalationLevel;
   failStreak: number;
   lastError?: string | null;
+  /** What the most recent failing close actually was. Load-bearing: a streak
+   *  built from undelivered dispatches must not be described to the agent as
+   *  its own failing work. */
+  lastOutcome?: string | null;
 }
 
 /**
@@ -122,6 +126,21 @@ export interface EscalationView {
 export function renderEscalationBlock(esc: EscalationView): string | null {
   if (esc.level === "human") return null;
   const rung = ESCALATION_LEVELS.indexOf(esc.level) + 1;
+
+  // The streak is real, but its cause was not this agent. Every rung's
+  // instruction tells the reader to diagnose, patch or re-plan ITS OWN
+  // previous attempt — advice that is not merely useless when the prompt never
+  // arrived, but actively misleading: it invites an agent to go looking for a
+  // defect in work that was never done, on a project that may be fine.
+  if (esc.lastOutcome === "undelivered") {
+    return [
+      `## Escalation state (operator dispatch pipeline — rung ${rung}/${ESCALATION_LEVELS.length})`,
+      `The previous ${esc.failStreak} dispatch(es) on this project never reached an agent — ` +
+        `the runner reported them as never started, so no work was attempted and nothing failed on your side. ` +
+        `Proceed with the objective normally. Do NOT treat this as a failed prior attempt or go looking for a blocker that caused it.`,
+    ].join("\n");
+  }
+
   const lines = [
     `## Escalation state (operator dispatch pipeline — rung ${rung}/${ESCALATION_LEVELS.length}: ${esc.level.toUpperCase()})`,
     escalationInstruction(esc.level),

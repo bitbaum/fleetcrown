@@ -107,6 +107,15 @@ export function deriveFeedbackWork(
     };
   }
 
+  if (run.outcome === ORCHESTRATION_OUTCOME.UNDELIVERED) {
+    return {
+      phase: FEEDBACK_WORK_PHASE.FAILED,
+      label: "Never started",
+      detail: "The dispatch never reached an agent. Nothing was attempted — this is a builder problem, not a result.",
+      diagnostic: run.error?.slice(0, 400) ?? null,
+    };
+  }
+
   if (run.state === ORCH_STATE.ERROR || run.outcome === ORCHESTRATION_OUTCOME.TIMEOUT
     || run.outcome === ORCHESTRATION_OUTCOME.ERROR || run.outcome === ORCHESTRATION_OUTCOME.HANG) {
     return {

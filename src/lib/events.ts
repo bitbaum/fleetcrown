@@ -56,7 +56,7 @@ export const Handoff = z.object({
 export type Handoff = z.infer<typeof Handoff>;
 
 /** Outcome categories — same union as orchestration_runs.outcome. */
-export const OUTCOMES = ["success", "partial", "error", "hang", "user_abort", "timeout"] as const satisfies readonly OrchestrationOutcome[];
+export const OUTCOMES = ["success", "partial", "error", "hang", "user_abort", "timeout", "undelivered"] as const satisfies readonly OrchestrationOutcome[];
 export const Outcome = z.enum(OUTCOMES);
 export type Outcome = z.infer<typeof Outcome>;
 
@@ -75,7 +75,15 @@ export const OUTCOMES_MATCH_DB_SCHEMA:
  * a human choice is neutral, not a systemic failure.
  */
 export const FAILING_OUTCOMES: ReadonlySet<string> = new Set(
-  ["error", "hang", "timeout"] as const satisfies readonly Outcome[],
+  // `undelivered` is here deliberately, and it is the uncomfortable one. The
+  // run genuinely produced nothing, so the failure brake SHOULD stop firing
+  // dispatches into a delivery path that is dropping them. What it must not do
+  // is silently become the project's problem — see renderEscalationBlock,
+  // which now says "the prompt never reached an agent" instead of telling an
+  // agent to re-plan work it never received. Naming the fact is this change;
+  // routing it to a fleet-level channel instead of the project ladder is the
+  // next one, and needs a channel that does not exist yet.
+  ["error", "hang", "timeout", "undelivered"] as const satisfies readonly Outcome[],
 );
 export function isFailingOutcome(outcome: string | null | undefined): boolean {
   return outcome != null && FAILING_OUTCOMES.has(outcome);

@@ -64,6 +64,11 @@ const OUTCOME_WEIGHT: Record<Outcome, number> = {
   hang:       -2.0,
   timeout:    -1.5,
   user_abort:  0.0,
+  // The dispatch never reached an agent. That says nothing about whether
+  // this project's work is going well, so it must not move confidence —
+  // weighting it like a failure would teach the brain to avoid a project
+  // because the delivery path was broken.
+  undelivered: 0.0,
 };
 
 export function computeConfidence(outcomes: Outcome[]): number {
