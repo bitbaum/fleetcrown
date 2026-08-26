@@ -176,15 +176,16 @@ export function deriveDispatchLiveStatus(cmd: CommandLiveInput): DispatchLiveVie
       return { status: "failed", label: "Agent stopped responding", detail: error, tone: "negative", terminal: true };
     case "timeout":
       return { status: "failed", label: "Run timed out", detail: error, tone: "negative", terminal: true };
-    case "undelivered":
-      // Deliberately NOT "Run timed out". The runner acked this command as
-      // never started, so no agent ever saw the prompt — telling the operator
-      // it timed out points them at the agent, which is the one place the
-      // fault is not.
+    case "unconfirmed":
+      // Deliberately NOT "Run timed out": no agent was ever seen working on
+      // this, so pointing the operator at the agent's runtime is a wild goose
+      // chase. Equally deliberately not "never reached the agent" — the runner
+      // says it injected, and could only fail to confirm. The useful fact is
+      // that nothing ran and a retry is free.
       return {
         status: "failed",
-        label: "Prompt never reached the agent",
-        detail: error ?? "The runner reported the dispatch as never started — check the builder, not the project.",
+        label: "Agent never started",
+        detail: error ?? "The prompt was injected but the agent was never seen picking it up. Nothing ran — safe to retry.",
         tone: "negative",
         terminal: true,
       };

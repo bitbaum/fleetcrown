@@ -47,7 +47,7 @@ export const STATUS_DOT_CLASS: Record<StatusTone, string> = {
  */
 export const OUTCOME_TAG_CLASS: Record<ActivityOutcome, string> = {
   error: "ui-tag-negative",
-  undelivered: "ui-tag-negative",
+  unconfirmed: "ui-tag-negative",
   timeout: "ui-tag-negative",
   hang: "ui-tag-negative",
   user_abort: "ui-tag-warning",

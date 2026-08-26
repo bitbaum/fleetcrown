@@ -279,20 +279,24 @@ export async function cleanupStaleOrchestrationRuns(userId?: string) {
       // done (worked) vs error (dead). A reaped run must record a terminal
       // OUTCOME (not null) so it can't silently vanish from the streak/stats.
       state: sql`CASE WHEN ${wroteAfterStart} THEN 'done' ELSE 'error' END`,
-      // Three facts, three names. `runNeverStarted` is the runner's own ack
-      // that this command never began — it was already computed above (to
-      // disqualify liveness sheltering) and then THROWN AWAY at stamping time,
-      // so a run no agent ever saw was recorded as "the agent ran out of
-      // time". 29 of 157 timeouts measured 2026-08-26 were provably in this
-      // class, and they advanced the escalation ladders of the projects whose
-      // prompts had gone missing — surf-your-life reached the `human` rung
-      // with ten such runs behind it.
+      // Three facts, three names. `runNeverStarted` is the runner's ack that
+      // it injected the prompt but never saw the agent start generating — it
+      // was already computed above (to disqualify liveness sheltering) and
+      // then THROWN AWAY at stamping time, so a run no agent was ever seen
+      // working on got recorded as "the agent ran out of time". 29 of 157
+      // timeouts measured 2026-08-26 were in this class, and they advanced the
+      // escalation ladders of the projects whose prompts went unanswered —
+      // surf-your-life reached the `human` rung with ten such runs behind it.
+      //
+      // `unconfirmed`, not `undelivered`: that name belongs to the stronger
+      // signal (a runner NACK → closeRunUndelivered) and this evidence does
+      // not reach it.
       //
       // wroteAfterStart is checked FIRST: evidence that work landed outranks
       // an ack saying it never started.
       outcome: sql`CASE
         WHEN ${wroteAfterStart} THEN 'partial'
-        WHEN ${runNeverStarted} THEN 'undelivered'
+        WHEN ${runNeverStarted} THEN 'unconfirmed'
         ELSE 'timeout' END`,
       // Truthful duration: the run ended at the timeout threshold, not when the
       // janitor noticed. (Stamping reap-time once produced "51h" durations.)
@@ -305,7 +309,7 @@ export async function cleanupStaleOrchestrationRuns(userId?: string) {
         WHEN ${wroteAfterStart}
           THEN jsonb_set(COALESCE(payload, '{}'), '{note}', to_jsonb(${EXECUTOR_COPY.honesty.reapedButHandoffWritten}::text))
         WHEN ${runNeverStarted}
-          THEN jsonb_set(COALESCE(payload, '{}'), '{error}', to_jsonb(${EXECUTOR_COPY.honesty.dispatchNeverDelivered}::text))
+          THEN jsonb_set(COALESCE(payload, '{}'), '{error}', to_jsonb(${EXECUTOR_COPY.honesty.dispatchNeverConfirmed}::text))
         ELSE jsonb_set(COALESCE(payload, '{}'), '{error}', to_jsonb('Timed out — run exceeded maximum duration and was cleaned up'::text))
       END`,
     })

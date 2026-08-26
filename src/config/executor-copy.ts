@@ -152,12 +152,15 @@ export const EXECUTOR_COPY = {
       "The agent had already saved a handoff when this run was closed, so it counts as partial rather than failed.",
     reapedButWorkInRepo:
       "This run ran out of time, but its work reached the repo — so it counts as partial rather than failed.",
-    // This one IS a failure, so it keeps payload.error — but it names the
-    // right culprit. "Timed out" sends the reader to the agent, which is the
-    // one place the fault is not: the runner acked the command as never
-    // started, so no agent ever received the prompt.
-    dispatchNeverDelivered:
-      "The prompt never reached an agent — the runner reported this dispatch as never started. Check the builder, not the project.",
+    // This one IS a failure, so it keeps payload.error. Note what it does NOT
+    // claim: the runner's ack says "injected", and what it could not establish
+    // is whether the agent picked the prompt up. An earlier draft of this line
+    // asserted the prompt "never reached an agent", which the evidence does
+    // not support — the pane may have been idle with the agent gone, or the
+    // agent may have been wedged. State the observation; the recovery is the
+    // same either way, and nothing was completed.
+    dispatchNeverConfirmed:
+      "The prompt was injected, but the agent was never seen starting work — nothing ran to completion. Safe to retry: no work was recorded for this run.",
     watchQueued: "Watch Control for state. Terminal only while a session is running.",
   },
 

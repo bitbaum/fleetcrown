@@ -107,11 +107,11 @@ export function deriveFeedbackWork(
     };
   }
 
-  if (run.outcome === ORCHESTRATION_OUTCOME.UNDELIVERED) {
+  if (run.outcome === ORCHESTRATION_OUTCOME.UNCONFIRMED) {
     return {
       phase: FEEDBACK_WORK_PHASE.FAILED,
       label: "Never started",
-      detail: "The dispatch never reached an agent. Nothing was attempted — this is a builder problem, not a result.",
+      detail: "The prompt was injected but the agent was never seen picking it up. Nothing ran, so there is no result to read — retry it.",
       diagnostic: run.error?.slice(0, 400) ?? null,
     };
   }

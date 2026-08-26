@@ -30,7 +30,7 @@ export type ActivityOutcome =
   | "timeout"
   | "hang"
   | "user_abort"
-  | "undelivered"
+  | "unconfirmed"
   | "running"
   | "dispatched";
 
@@ -38,7 +38,7 @@ export type ActivityOutcome =
  *  reason anyone opens this page. */
 export const ACTIVITY_OUTCOME_LABEL: Record<ActivityOutcome, string> = {
   error: "Failed",
-  undelivered: "Never started",
+  unconfirmed: "Never confirmed",
   timeout: "Timed out",
   hang: "Hung",
   user_abort: "Stopped",
@@ -127,7 +127,7 @@ export function formatDuration(startMs: number, endMs: number): string | null {
 }
 
 function runOutcome(run: RunSource): ActivityOutcome {
-  const known: ActivityOutcome[] = ["success", "partial", "error", "timeout", "hang", "user_abort", "undelivered"];
+  const known: ActivityOutcome[] = ["success", "partial", "error", "timeout", "hang", "user_abort", "unconfirmed"];
   if (run.outcome && (known as string[]).includes(run.outcome)) return run.outcome as ActivityOutcome;
   if (run.payload?.error) return "error";
   if (!run.finishedAt) return "running";
@@ -295,7 +295,7 @@ const NEEDS_ATTENTION: ReadonlySet<ActivityOutcome> = new Set<ActivityOutcome>([
   // A dispatch that never reached an agent is the most actionable of the lot:
   // nothing will retry it on its own, and the fault is in the delivery path
   // rather than in the work.
-  "undelivered",
+  "unconfirmed",
 ]);
 
 export function eventNeedsAttention(event: ActivityEvent): boolean {

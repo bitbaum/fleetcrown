@@ -68,7 +68,7 @@ const OUTCOME_WEIGHT: Record<Outcome, number> = {
   // this project's work is going well, so it must not move confidence —
   // weighting it like a failure would teach the brain to avoid a project
   // because the delivery path was broken.
-  undelivered: 0.0,
+  unconfirmed: 0.0,
 };
 
 export function computeConfidence(outcomes: Outcome[]): number {
