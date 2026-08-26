@@ -10,14 +10,11 @@
 
 import { GITHUB_API_BASE } from "@/lib/github-api";
 import { parseGithubRepo } from "@/lib/github-commits";
+import type { RepoWorkEvidence } from "@/lib/repo-evidence";
 
-export type RepoWorkEvidence = {
-  kind: "pr" | "push";
-  url: string;
-  title: string;
-  /** When the PR was opened / the push happened, epoch ms. */
-  atMs: number;
-};
+export type { RepoWorkEvidence } from "@/lib/repo-evidence";
+export { normalizeRepoWorkEvidence } from "@/lib/repo-evidence";
+
 
 function ghInit(token: string): RequestInit {
   return {

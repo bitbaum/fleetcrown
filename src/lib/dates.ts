@@ -1,52 +1,61 @@
 import { isPast, formatDistanceToNow } from "date-fns";
 import { FREQUENCY } from "@/config/subscriptions";
-import { DAY_MS, MINUTE_MS } from "@/lib/constants/time";
+import { DAY_MS } from "@/lib/constants/time";
 
 /**
- * "just now" / "5m ago" / "2h ago" / "12d ago" / "6w ago" — from epoch ms.
+ * THE elapsed-time ladder. One definition of how long ago something was; the
+ * renderers below only choose words for it.
  *
- * Used to stop at hours, so a twelve-day-old agent handoff rendered on
- * /control as "Next (agent, 288h ago)". Nobody reads 288h as a fortnight;
- * it reads as a large meaningless number, which is worse than no timestamp,
- * because the card is claiming to tell you how current its "Next" is.
+ * This repo used to carry three: `timeAgo` (capped at hours), `shortTimeAgo`
+ * (kept scaling, and said so in a comment right next to the one that did not),
+ * and `agoLabel` in lib/atlas/format.ts — which existed only because
+ * `${shortTimeAgo(t)} ago` printed the phrase "now ago" during the first
+ * minute after a check, i.e. exactly when someone is looking. Three ladders
+ * produced three bugs: "288h ago" for a twelve-day-old handoff, "now ago" at
+ * three call sites that appended the word by hand, and a silent disagreement
+ * about when weeks begin.
  *
- * Sub-hour behaviour is unchanged on purpose — 14 callers depend on
- * "just now" / "5m ago" and those were never the broken part.
+ * Floors rather than rounds, at every tier: an elapsed label must never claim
+ * more time has passed than actually has. Clamps future timestamps to zero,
+ * because the browser's clock and the box's clock disagree by seconds and a
+ * negative age is not a thing a human can read.
  *
- * Known duplication, not fixed here: this repo has three relative-time
- * renderers — `timeAgo`, `shortTimeAgo` below, and `elapsedLabel` in
- * lib/atlas/format.ts (which exists only because `${shortTimeAgo(t)} ago`
- * printed "now ago") — plus call sites that append " ago" by hand. That is
- * why one of them could sit capped at hours without anyone noticing.
- * Collapsing them changes what unrelated surfaces render (Loki lists and the
- * dossier would go from "3w" to "21d"), so it is a deliberate separate change
- * rather than a side effect of this one.
+ * Days run all the way to 30 before months take over. For a stale handoff
+ * "21d ago" is the actionable reading and "3w ago" throws away the precision
+ * that makes it so.
  */
-export function timeAgo(ms: number): string {
-  const diff = Math.round((Date.now() - ms) / MINUTE_MS);
-  if (diff < 1) return "just now";
-  if (diff < 60) return `${diff}m ago`;
-  const hours = Math.round(diff / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.round(hours / 24);
-  // Days all the way to a month: for a stale handoff "12d ago" is the useful
-  // reading and "2w ago" throws away the precision that makes it actionable.
-  if (days <= 30) return `${days}d ago`;
-  return `${Math.round(days / 7)}w ago`;
+export type ElapsedUnit = "now" | "m" | "h" | "d" | "mo" | "y";
+export type Elapsed = { value: number; unit: ElapsedUnit };
+
+export function elapsedSince(ms: number): Elapsed {
+  const seconds = Math.max(0, Math.floor((Date.now() - ms) / 1000));
+  if (seconds < 60) return { value: 0, unit: "now" };
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return { value: minutes, unit: "m" };
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return { value: hours, unit: "h" };
+  const days = Math.floor(hours / 24);
+  if (days <= 30) return { value: days, unit: "d" };
+  const months = Math.floor(days / 30);
+  if (months < 12) return { value: months, unit: "mo" };
+  return { value: Math.floor(days / 365), unit: "y" };
 }
 
-/** Ultra-compact relative time for dense lists: "now" / "5m" / "3h" / "2d" /
- *  "3w" / "5mo" / "1y" — from epoch ms. Unlike timeAgo it keeps scaling past
- *  hours, so a history rail of same-titled items stays distinguishable. */
+/**
+ * "just now" / "5m ago" / "2h ago" / "12d ago" — the ladder as a sentence
+ * fragment. THE ONLY place the word "ago" is appended: a caller that writes
+ * `${shortTimeAgo(t)} ago` is reintroducing the "now ago" bug.
+ */
+export function timeAgo(ms: number): string {
+  const { value, unit } = elapsedSince(ms);
+  return unit === "now" ? "just now" : `${value}${unit} ago`;
+}
+
+/** The same ladder as a bare token — "now" / "5m" / "12d" — for dense lists
+ *  where the column header already supplies the "ago". */
 export function shortTimeAgo(ms: number): string {
-  const s = Math.max(0, Math.floor((Date.now() - ms) / 1000));
-  if (s < 60) return "now";
-  const m = Math.floor(s / 60); if (m < 60) return `${m}m`;
-  const h = Math.floor(m / 60); if (h < 24) return `${h}h`;
-  const d = Math.floor(h / 24); if (d < 7) return `${d}d`;
-  const w = Math.floor(d / 7); if (w < 5) return `${w}w`;
-  const mo = Math.floor(d / 30); if (mo < 12) return `${mo}mo`;
-  return `${Math.floor(d / 365)}y`;
+  const { value, unit } = elapsedSince(ms);
+  return unit === "now" ? "now" : `${value}${unit}`;
 }
 
 /** Compact elapsed display: "12s" / "3m" / "1h" — from epoch seconds */
@@ -66,19 +75,23 @@ export function toLocalDateStr(d: Date): string {
 }
 
 /**
- * Compact "time ago" phrasing: "today", "yesterday", "5d ago", "2w ago",
- * "3mo ago". Smaller than date-fns formatDistanceToNow's word-based
- * output — used for dense list rows where space matters.
+ * The elapsed ladder with calendar words at the near end: "today",
+ * "yesterday", then "5d ago" / "14d ago" / "3mo ago".
+ *
+ * The calendar tiers are the reason this exists — "today" and "yesterday" are
+ * what a person calls those days, and no elapsed count says it as well. Past
+ * yesterday it delegates to timeAgo rather than counting again, because
+ * counting again is what produced the disagreement it used to carry: its own
+ * tiers had a weeks step, so one list row read "2w ago" while the card beside
+ * it read "14d ago" for the same instant, and it appended the word "ago"
+ * itself — a fourth place that word was written.
  */
 export function compactRelativeDate(date: Date | string): string {
   const d = date instanceof Date ? date : new Date(date);
-  const diffMs = Date.now() - d.getTime();
-  const diffDays = Math.floor(diffMs / DAY_MS);
-  if (diffDays === 0) return "today";
+  const diffDays = Math.floor((Date.now() - d.getTime()) / DAY_MS);
+  if (diffDays <= 0) return "today";
   if (diffDays === 1) return "yesterday";
-  if (diffDays < 7) return `${diffDays}d ago`;
-  if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
-  return `${Math.floor(diffDays / 30)}mo ago`;
+  return timeAgo(d.getTime());
 }
 
 /**

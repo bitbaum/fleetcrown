@@ -1,5 +1,6 @@
 import { and, desc, eq, gt, inArray, isNotNull, isNull, lt, sql } from "drizzle-orm";
 import { db } from "@/db";
+import { EXECUTOR_COPY } from "@/config/executor-copy";
 import { ORCH_STATE } from "@/lib/orchestration/contract";
 import {
   ORCHESTRATION_OUTCOME,
@@ -271,11 +272,14 @@ export async function cleanupStaleOrchestrationRuns(userId?: string) {
       // Truthful duration: the run ended at the timeout threshold, not when the
       // janitor noticed. (Stamping reap-time once produced "51h" durations.)
       finishedAt: sql`${orchestrationRuns.startedAt} + make_interval(mins => ${STALE_RUN_MINUTES})`,
-      payload: sql`jsonb_set(COALESCE(payload, '{}'), '{error}', to_jsonb(
-        CASE WHEN ${wroteAfterStart}
-          THEN 'Reaper closed an open run whose agent had already written a handoff — counted as partial, not a failure'
-          ELSE 'Timed out — run exceeded maximum duration and was cleaned up'
-        END::text))`,
+      // A `partial` run did not fail, so its explanation goes to `note`
+      // (neutral) and a real timeout keeps `error` (red). Both used to land in
+      // `error`, which is how a success ended up styled as a failure and
+      // phrased in reaper vocabulary.
+      payload: sql`CASE WHEN ${wroteAfterStart}
+        THEN jsonb_set(COALESCE(payload, '{}'), '{note}', to_jsonb(${EXECUTOR_COPY.honesty.reapedButHandoffWritten}::text))
+        ELSE jsonb_set(COALESCE(payload, '{}'), '{error}', to_jsonb('Timed out — run exceeded maximum duration and was cleaned up'::text))
+      END`,
     })
     // No userId (the cron janitor) → reap across ALL users; the page-load call
     // sites keep passing their own userId for scope hygiene.

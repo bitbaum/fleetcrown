@@ -270,8 +270,36 @@ export function LatestOrchestrationPanel({
         </div>
       )}
 
+      {/* An error box belongs to a run that failed. `state === "error"` is the
+          SSOT for that — not the mere presence of payload.error, which the
+          reaper used to fill in for `partial` runs too. Runs already in the
+          database carry those old sentences, so the test is on the run's own
+          state: a non-failed run explains itself neutrally, whichever field
+          the sentence happens to live in. */}
       {run.payload?.error && (
-        <p className="ui-error">{run.payload.error}</p>
+        run.state === ORCH_STATE.ERROR
+          ? <p className="ui-error">{run.payload.error}</p>
+          : <p className="text-xs leading-relaxed text-text-muted">{run.payload.error}</p>
+      )}
+
+      {run.payload?.note && (
+        <p className="text-xs leading-relaxed text-text-muted">
+          {run.payload.note}
+          {run.payload.evidence && (
+            <>
+              {" "}
+              <a
+                href={run.payload.evidence.url}
+                target="_blank"
+                rel="noreferrer"
+                className="ui-link-subtle"
+                title={run.payload.evidence.title}
+              >
+                {run.payload.evidence.kind === "pr" ? "See the pull request" : "See the push"}
+              </a>
+            </>
+          )}
+        </p>
       )}
     </div>
   );
