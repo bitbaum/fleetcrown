@@ -102,7 +102,7 @@ export function LocalDevSuggestions() {
   return (
     <section className="ui-card-shell-raised p-4 md:p-5 space-y-3">
       <div className="flex items-start gap-3">
-        <Terminal className="h-5 w-5 text-accent mt-0.5 shrink-0" />
+        <Terminal className="h-5 w-5 text-accent-text mt-0.5 shrink-0" />
         <div className="min-w-0 flex-1">
           <div className="font-medium text-text-primary">
             Import the {projects.length} most-recent repos in your dev folders?

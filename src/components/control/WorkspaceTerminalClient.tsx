@@ -79,7 +79,7 @@ export function WorkspaceTerminalClient() {
             <>This embedded terminal runs on the server hosting FleetCrown.{" "}</>
           )}
           To drive an agent on your computer, use <strong>Focus terminal</strong> / <strong>Dispatch</strong> on a project in{" "}
-          <Link href="/control" className="text-accent underline">Control</Link> — those run through Fleet Runner against your local Zellij.
+          <Link href="/control" className="text-accent-text underline">Control</Link> — those run through Fleet Runner against your local Zellij.
         </div>
       </details>
       <div className="ui-callout-warning hidden md:flex">
@@ -91,7 +91,7 @@ export function WorkspaceTerminalClient() {
             <>This embedded terminal runs on the server hosting FleetCrown.{" "}</>
           )}
           To drive an agent on your computer, use <strong>Focus terminal</strong> / <strong>Dispatch</strong> on a project in{" "}
-          <Link href="/control" className="text-accent underline">Control</Link> — those run through Fleet Runner against your local Zellij.
+          <Link href="/control" className="text-accent-text underline">Control</Link> — those run through Fleet Runner against your local Zellij.
         </div>
       </div>
 

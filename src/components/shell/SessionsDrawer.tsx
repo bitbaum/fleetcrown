@@ -38,7 +38,7 @@ const PHASE_LABELS: Record<SessionSnapshotItem["state"]["phase"], string> = {
 // Status dot colors mirror /control. Kept inline (small palette, used only
 // here); promote to globals.css `ui-phase-dot-*` if reused.
 const PHASE_DOT_CLASS: Record<SessionSnapshotItem["state"]["phase"], string> = {
-  working: "text-accent fill-accent animate-pulse",
+  working: "text-accent-text fill-accent-text animate-pulse",
   ready: "text-status-positive fill-status-positive",
   open_idle: "text-border-strong fill-border-strong",
   closed: "text-text-tertiary fill-text-tertiary",
@@ -147,7 +147,7 @@ export function SessionsDrawer({
           {!loading && !error && projects.length === 0 && (
             <div className="ui-empty-page py-8 text-center space-y-2">
               <p className="text-text-secondary">No projects yet.</p>
-              <Link href="/control" className="text-accent underline text-sm">
+              <Link href="/control" className="text-accent-text underline text-sm">
                 Create your first project →
               </Link>
             </div>
@@ -158,7 +158,7 @@ export function SessionsDrawer({
               key={p.id}
               href={`/control?focus=${encodeURIComponent(p.name)}`}
               onClick={onClose}
-              className="ui-card-shell hover:border-accent transition-colors p-3 flex items-center gap-3 group"
+              className="ui-card-shell hover:border-accent-primary transition-colors p-3 flex items-center gap-3 group"
             >
               <Circle className={`h-2.5 w-2.5 shrink-0 ${PHASE_DOT_CLASS[p.state.phase]}`} />
               <div className="min-w-0 flex-1">

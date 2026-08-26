@@ -97,7 +97,7 @@ export function RunnerStatusBanner({
         </span>
         <button
           onClick={() => setExpanded(true)}
-          className="ml-auto shrink-0 text-accent hover:underline"
+          className="ml-auto shrink-0 text-accent-text hover:underline"
         >
           {EXECUTOR_COPY.runnerBanner.reconnect}
         </button>
@@ -150,16 +150,16 @@ export function RunnerStatusBanner({
               {!hasProjects && (
               <Link
                 href="/control/new-from-scratch"
-                className="ui-card-shell hover:border-accent transition-colors p-3 flex flex-col gap-1 group"
+                className="ui-card-shell hover:border-accent-primary transition-colors p-3 flex flex-col gap-1 group"
               >
                 <div className="flex items-center gap-1.5 font-medium text-text-primary text-sm">
-                  <Sparkles className="h-3.5 w-3.5 text-accent" />
+                  <Sparkles className="h-3.5 w-3.5 text-accent-text" />
                   Start a new project
                 </div>
                 <p className="text-xs text-text-muted">
                   Creates a GitHub repo + project record right from this website. No install. Pick a starter (Next.js, FastAPI, Hono, plain HTML), clone wherever.
                 </p>
-                <span className="text-xs text-accent mt-auto pt-1 group-hover:underline">No install needed →</span>
+                <span className="text-xs text-accent-text mt-auto pt-1 group-hover:underline">No install needed →</span>
               </Link>
               )}
 
@@ -182,7 +182,7 @@ export function RunnerStatusBanner({
                 ) : (
                   <div className="ui-card-shell p-3 flex flex-col gap-2">
                     <div className="flex items-center gap-1.5 font-medium text-text-primary text-sm">
-                      <Cpu className="h-3.5 w-3.5 text-accent" />
+                      <Cpu className="h-3.5 w-3.5 text-accent-text" />
                       Pair this computer
                     </div>
                     <p className="text-xs text-text-muted">
@@ -215,16 +215,16 @@ export function RunnerStatusBanner({
               ) : (
                 <Link
                   href="/download"
-                  className="ui-card-shell hover:border-accent transition-colors p-3 flex flex-col gap-1 group"
+                  className="ui-card-shell hover:border-accent-primary transition-colors p-3 flex flex-col gap-1 group"
                 >
                   <div className="flex items-center gap-1.5 font-medium text-text-primary text-sm">
-                    <Download className="h-3.5 w-3.5 text-accent" />
+                    <Download className="h-3.5 w-3.5 text-accent-text" />
                     Get the desktop app
                   </div>
                   <p className="text-xs text-text-muted">
                     Optional — run agents on this computer with your local folders and CLI tools. Same dashboard as the website.
                   </p>
-                  <span className="text-xs text-accent mt-auto pt-1 group-hover:underline">Download for your OS →</span>
+                  <span className="text-xs text-accent-text mt-auto pt-1 group-hover:underline">Download for your OS →</span>
                 </Link>
               )}
             </div>
@@ -237,7 +237,7 @@ export function RunnerStatusBanner({
               <div className="mt-2 ml-4 space-y-1.5">
                 <p>
                   Mint a token at{" "}
-                  <Link href="/settings" className="text-accent underline">/settings → Agent tokens</Link>{" "}
+                  <Link href="/settings" className="text-accent-text underline">/settings → Agent tokens</Link>{" "}
                   and paste this in a terminal:
                 </p>
                 <pre className="ui-card-shell p-2 overflow-x-auto text-xs">
@@ -253,9 +253,9 @@ export function RunnerStatusBanner({
             </p>
             <p className="text-xs text-text-muted">
               {EXECUTOR_COPY.runnerBanner.reconnectHint}{" "}
-              <Link href="/settings" className="text-accent underline">{EXECUTOR_COPY.runnerBanner.settingsLink}</Link>{" "}
+              <Link href="/settings" className="text-accent-text underline">{EXECUTOR_COPY.runnerBanner.settingsLink}</Link>{" "}
               or{" "}
-              <Link href="/download" className="text-accent underline">{EXECUTOR_COPY.runnerBanner.downloadLink}</Link>.
+              <Link href="/download" className="text-accent-text underline">{EXECUTOR_COPY.runnerBanner.downloadLink}</Link>.
             </p>
           </>
         )}

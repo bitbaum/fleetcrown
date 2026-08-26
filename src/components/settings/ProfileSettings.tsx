@@ -55,11 +55,17 @@ export function ProfileSettings({ user }: Props) {
         <div className="space-y-1.5">
           <label className="ui-kicker">Username</label>
           <div className="flex items-center gap-2 rounded-lg border border-border-default bg-surface-base px-3 py-2.5">
-            <span className="text-sm text-text-tertiary">{APP_DOMAIN}/u/</span>
+            {/* The full host is 26 characters of prefix. On a 390px phone that
+                left ~120px for the field the user is actually here to edit,
+                and the input overflowed the border. The domain is implied on
+                your own settings page — the phone gets the path alone. */}
+            <span className="shrink-0 text-sm text-text-tertiary">
+              <span className="hidden sm:inline">{APP_DOMAIN}</span>/u/
+            </span>
             <input
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="ui-tap flex-1 bg-transparent text-sm text-text-primary outline-none placeholder:text-text-muted"
+              className="ui-tap w-full min-w-0 flex-1 bg-transparent text-base text-text-primary outline-none placeholder:text-text-muted sm:text-sm"
               placeholder="yourname"
             />
           </div>

@@ -102,8 +102,8 @@ export async function FleetBriefCard({ userId }: { userId: string }) {
         {totalEvents === 0 ? (
           <p className="text-sm text-text-muted">
             Nothing happened on your fleet today. {stats.projectsTotal === 0
-              ? <>Start with <Link href="/control/new-from-scratch" className="text-accent underline">your first project →</Link></>
-              : <>Open <Link href="/control" className="text-accent underline">Control</Link> to dispatch an agent.</>
+              ? <>Start with <Link href="/control/new-from-scratch" className="text-accent-text underline">your first project →</Link></>
+              : <>Open <Link href="/control" className="text-accent-text underline">Control</Link> to dispatch an agent.</>
             }
           </p>
         ) : (

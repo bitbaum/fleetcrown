@@ -52,6 +52,21 @@ check_none "raw subtle link text recipe outside primitive" 'text-xs text-text-te
 check_none "raw palette colors in components" 'text-gray-|text-slate-|text-zinc-|text-blue-|text-green-|text-red-|text-purple-|text-yellow-|text-orange-|text-cyan-|text-violet-|bg-gray-|bg-blue-|bg-green-|bg-red-|bg-\[#|text-\[#|text-\[1[0-9]px\]|text-\[8px\]' src/components src/app -g '*.tsx' -g '!**/opengraph-image.tsx'
 check_none "raw white opacity utilities in JSX" 'text-white/|bg-white/|border-white/' src/components src/app -g '*.tsx' -g '!**/opengraph-image.tsx'
 
+# `--accent` / `--accent-foreground` are shadcn's accent SURFACE pair: --accent
+# is a background tone (oklch 0.14 in dark, 0.96 in light), so `text-accent`
+# paints text the same colour as the panel behind it. Measured in a real
+# browser: contrast ratio 1.0 in dark and 1.03 in light — the Control
+# onboarding CTAs ("No install needed →", "Download for your OS →") were
+# literally invisible in both themes. `border-accent` failed the same way as a
+# hover highlight, and `bg-accent` as a selected-checkbox fill.
+# Use the semantic text/line tokens instead: text-accent-text,
+# border-accent-primary, or the filled pair bg-accent-warm + text-on-accent.
+# `bg-accent` as a genuine hover SURFACE is the one legitimate use and is
+# spelled bg-surface-raised here, so nothing needs the bare name.
+check_none "shadcn accent-surface token used as a text/line colour" \
+  '(text|fill|stroke|border|ring|bg)-accent([^a-zA-Z0-9_-]|$)' \
+  src/components src/app -g '*.tsx'
+
 # THE TOUCH FLOOR is declared once, in globals.css, keyed on `pointer: coarse`.
 # `min-h-11 sm:min-h-0` (and sm:min-h-7/-8/-9, lg:min-h-0 …) is the OLD form and
 # is a bug, not a style preference: it drops the 44px minimum at a viewport

@@ -2717,8 +2717,11 @@
     @apply px-1 text-xs text-text-tertiary transition-colors hover:text-text-secondary;
   }
   /* Muted variant — more faded secondary/cancel actions */
+  /* inline-flex so the pointer:coarse floor below can apply — every use is a
+     standalone action (card-header link, inline-edit Cancel), never a word
+     inside a sentence, and min-height is ignored on an `inline` box. */
   .ui-link-muted {
-    @apply text-xs text-text-muted transition-colors hover:text-text-secondary;
+    @apply inline-flex items-center text-xs text-text-muted transition-colors hover:text-text-secondary;
   }
 
   /* Navigation */

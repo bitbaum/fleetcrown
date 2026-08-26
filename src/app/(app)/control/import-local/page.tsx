@@ -70,7 +70,7 @@ export default function ImportFromLocalPage() {
               <div className="font-medium text-text-primary mb-1">3. See them in Control</div>
               <p className="text-text-muted">
                 When the command finishes printing &quot;✓ Imported N project(s)&quot;, refresh{" "}
-                <Link href="/control" className="text-accent underline">/control</Link> — your local repos will appear
+                <Link href="/control" className="text-accent-text underline">/control</Link> — your local repos will appear
                 alongside any GitHub imports.
               </p>
             </li>
@@ -88,7 +88,7 @@ export default function ImportFromLocalPage() {
 
         <p className="text-sm text-text-muted">
           Looking for GitHub instead?{" "}
-          <Link href="/control/import" className="text-accent underline">Import from GitHub →</Link>
+          <Link href="/control/import" className="text-accent-text underline">Import from GitHub →</Link>
         </p>
       </div>
     </PageLayout>

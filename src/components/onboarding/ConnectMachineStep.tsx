@@ -25,9 +25,9 @@ export function ConnectMachineStep({ saving, onComplete }: Props) {
     <div className="space-y-4">
       <p className="ui-auth-body">{copy.intro}</p>
 
-      <div className="ui-auth-inset-panel space-y-3 border-accent/30">
+      <div className="ui-auth-inset-panel space-y-3 border-accent-primary/30">
         <div className="flex items-center gap-2 font-medium text-text-primary">
-          <Globe className="h-4 w-4 text-accent shrink-0" />
+          <Globe className="h-4 w-4 text-accent-text shrink-0" />
           {copy.browserPath.title}
         </div>
         <p className="text-sm text-text-secondary leading-relaxed">

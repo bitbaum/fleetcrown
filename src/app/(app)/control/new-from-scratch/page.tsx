@@ -135,7 +135,7 @@ export default function NewFromScratchPage() {
                   <span>
                     <GitBranch className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />
                     {result.repo.private ? "Private" : "Public"} GitHub repo{" "}
-                    <a href={result.repo.gitUrl} target="_blank" rel="noopener noreferrer" className="text-accent underline break-all">
+                    <a href={result.repo.gitUrl} target="_blank" rel="noopener noreferrer" className="text-accent-text underline break-all">
                       {result.repo.full_name}
                     </a>
                   </span>
@@ -194,7 +194,7 @@ export default function NewFromScratchPage() {
 
               <div className="ui-card-shell p-3 text-xs text-text-muted">
                 The one thing FleetCrown can&apos;t do for you: run code on your machine.{" "}
-                <Link href="/download" className="text-accent underline">Connect Fleet Runner</Link>{" "}
+                <Link href="/download" className="text-accent-text underline">Connect Fleet Runner</Link>{" "}
                 on the machine you&apos;ll build from — it clones the repo and runs this task automatically. No runner yet? The task queues until one connects.
               </div>
 
