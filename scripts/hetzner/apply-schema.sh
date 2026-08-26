@@ -63,7 +63,43 @@ if [ -z "$MIG_DIR" ] && [ -d "$REPO/$APP_DIR/prisma/migrations" ]; then
   exit 0
 fi
 
-[ -n "$MIG_DIR" ] || { echo "[schema] $NAME: no migrations found (drizzle or prisma) — skipping (generate a baseline first)"; exit 0; }
+# A miss here used to print a friendly "no migrations found — skipping" and
+# exit 0, which reads as "this app has no schema to apply". For apps whose
+# migrations live somewhere this script does not probe, that is false, and the
+# deploy shipped code against a schema nobody applied while reporting success.
+#
+# supabase/migrations is the live example: orangecat (39 files) and botsmann
+# (11) keep their migrations there, and every deploy of either has been quietly
+# skipping them. No drift had accumulated as of 2026-08-26 only because a human
+# applied them by hand each time.
+#
+# This does NOT start applying them. There is no ledger — supabase_migrations.
+# schema_migrations is empty — so "which of these 39 have run?" is currently
+# unanswerable, and replaying them blind is how you drop something. Baselining
+# that ledger is a judgement call about what is already applied, and it belongs
+# to a human who can check.
+#
+# What it does is stop lying about it. The count is named, the deploy annotates
+# itself in the Actions summary, and "skipped" no longer looks like "nothing to
+# do".
+if [ -z "$MIG_DIR" ]; then
+  UNAPPLIED_DIR=""
+  for cand in "$REPO/$APP_DIR/supabase/migrations" "$REPO/supabase/migrations"; do
+    probe=("$cand"/*.sql)
+    [ "${#probe[@]}" -gt 0 ] && { UNAPPLIED_DIR="$cand"; break; }
+  done
+  if [ -n "$UNAPPLIED_DIR" ]; then
+    files=("$UNAPPLIED_DIR"/*.sql)
+    msg="$NAME: ${#files[@]} migrations in ${UNAPPLIED_DIR#"$REPO"/} are NOT applied by this deploy (only drizzle/ and prisma/migrations/ are) — apply them by hand and verify against the database"
+    echo "[schema] $msg"
+    # Surfaces on the run summary rather than only in the step log, so a
+    # skipped schema is visible without opening the job.
+    [ -n "${GITHUB_ACTIONS:-}" ] && echo "::warning title=Schema not applied::$msg"
+    exit 0
+  fi
+  echo "[schema] $NAME: no migrations found (drizzle, prisma or supabase) — skipping (generate a baseline first)"
+  exit 0
+fi
 MIGS=("$MIG_DIR"/[0-9]*.sql)
 [ "${#MIGS[@]}" -gt 0 ] || { echo "[schema] $NAME: no migrations — skipping"; exit 0; }
 IFS=$'\n' MIGS=($(sort <<<"${MIGS[*]}")); unset IFS
