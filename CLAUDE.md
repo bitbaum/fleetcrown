@@ -27,6 +27,13 @@ src/
 │   ├── ui/        → Shared primitives (Card, Modal, Drawer, Field, PageLayout)
 │   ├── shell/     → AppShell, Sidebar, MobileNav (Today/Control/Projects + Loki + More), AskLokiButton → /loki
 │   ├── control/   → ControlPanel, ProjectCard, ProjectTile, ProjectProfile (fleet command)
+│   │                 ControlFleetStatus = the hero: ONE question ("is anything
+│   │                 waiting on me?"), the projects by name, at most one button.
+│   │                 ControlInbox = one collapsed queue for every small task
+│   │                 (feedback triage + widget coverage) — add a group, never a
+│   │                 new full-width strip. ControlSettingsSheet = autopilot,
+│   │                 refresh, builder detail (settings, not state).
+│   │                 See docs/development/responsive-design.md.
 │   ├── loki/      → LokiWorkspace, Transcript, Composer, ConversationList (chat assistant)
 │   ├── terminal/  → TerminalSurface (the ONE shell: tab strip + mode bar +
 │   │                 session + composer), TerminalTabStrip, TerminalModeBar,

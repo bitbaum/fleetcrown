@@ -10,12 +10,14 @@ import { useLaunchModal } from "@/hooks/use-launch-modal";
 import { useCreateProject } from "@/hooks/use-create-project";
 import { buildControlPageState, buildProjectOperationsSnapshots, buildLiveTabRows, deriveFleetPulse } from "./control-presenter";
 import { rememberFleetProject } from "@/lib/fleet-context";
-import { STATE_DEFINITIONS } from "@/lib/control-states";
+import { STATE_DEFINITIONS, deriveRunnerStateKey } from "@/lib/control-states";
+import { builderCompactLabel } from "@/lib/builder-presence";
+import { timeAgo } from "@/lib/dates";
 import { ControlFleetStatus } from "./ControlFleetStatus";
 import { AttentionBar } from "./AttentionBar";
 import { AgentEscalations } from "./AgentEscalations";
-import { FleetFeedbackStrip } from "./FleetFeedbackStrip";
-import { FleetWidgetCoverageStrip } from "./FleetWidgetCoverageStrip";
+import { ControlInbox } from "./ControlInbox";
+import { ControlSettingsSheet } from "./ControlSettingsSheet";
 import { RunnerStatusBanner } from "./RunnerStatusBanner";
 import { APP_NAME } from "@/config/brand";
 import {
@@ -68,6 +70,9 @@ export function ControlPanel() {
   const switchToParam = searchParams.get("switchTo")?.trim() ?? null;
   const [switchNotice, setSwitchNotice] = useState<string | null>(null);
   const [bootstrapOpen, setBootstrapOpen] = useState(false);
+  // Fleet settings — autopilot, refresh, builder detail. Everything the hero
+  // used to shout at the top of the page. See ControlSettingsSheet.
+  const [fleetSettingsOpen, setFleetSettingsOpen] = useState(false);
   const liveDetailsRef = useRef<HTMLDetailsElement>(null);
   // eslint-disable-next-line react-hooks/purity
   const nowS = Math.floor(Date.now() / 1000);
@@ -393,7 +398,6 @@ export function ControlPanel() {
           exist. */}
       {data && data.projects.length > 0 && <ControlFleetStatus
         dashboard={dashboard}
-        attentionCount={attention.length}
         failedCount={failedCount}
         runnerNeverSeen={runnerNeverSeen}
         runnerOffline={runnerOffline}
@@ -404,13 +408,18 @@ export function ControlPanel() {
         builderPresence={builderPresence}
         runnerExecutionStall={data.runnerExecutionStall}
         lastUpdated={lastUpdated}
-        automationMode={automationPolicy.mode}
-        automationModeLoaded={automationPolicy.loaded}
         fleetPulse={fleetPulse}
-        automationSaving={automationPolicy.saving}
-        refreshing={refreshing}
-        onRefresh={() => refresh(true)}
-        onAutomationChange={handleAutomationChange}
+        // Names, not just a count. "2 need you" that cannot say WHICH two, or
+        // take you to either, is a fact you then go hunting for by hand.
+        // `tab` IS the project's display name throughout Control (the rail,
+        // the cards and the terminal all key off it) — there is no separate
+        // title to prefer.
+        attentionProjects={attention.map((a) => ({ tab: a.project.tab, name: a.project.tab }))}
+        onFocusProject={(tab) => {
+          setSelectedTab(tab);
+          document.getElementById("control-projects")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }}
+        onOpenSettings={() => setFleetSettingsOpen(true)}
         onNewProject={() => (runtimeAvailable ? setBootstrapOpen(true) : setNewProjectOpen(true))}
         onFocusCategory={(category) => {
           const match = snapshots?.find(
@@ -435,14 +444,15 @@ export function ControlPanel() {
         }}
       />
 
-      {/* Tier 4 of four — slack-time chores. Neither strip is time-critical:
-          widget coverage is "these sites could have the widget" and the
-          feedback strip is inbound suggestions with an Implement button. They
-          used to render BETWEEN the attention bar and the projects, which put
-          a backlog in the path of the fleet the page exists to show. Still
-          fully present — just no longer in front of the work. */}
-      <FleetWidgetCoverageStrip />
-      <FleetFeedbackStrip />
+      {/* Tier 4 of four — slack-time chores. Neither is time-critical: widget
+          coverage is "these sites could have the widget" and feedback is
+          inbound suggestions with an Implement button. Moving them out of the
+          path of the fleet (#367) was half the fix; the other half is that
+          they were two unbounded full-width strips, one auto-expanded, that
+          between them spent ~1,400px of a 390px phone. They are one queue —
+          small things a human has to say yes to — so they are one collapsed
+          section. Add a GROUP to the inbox; never add a third strip here. */}
+      <ControlInbox />
 
       {/* Workspaces panel — collapsed by default. Projects already shows
           per-project state; auto-opening this duplicated the same facts in a
@@ -506,6 +516,37 @@ export function ControlPanel() {
 
         </div>
       </details>
+
+      {fleetSettingsOpen && (
+        <ControlSettingsSheet
+          onClose={() => setFleetSettingsOpen(false)}
+          automationMode={automationPolicy.mode}
+          automationModeLoaded={automationPolicy.loaded}
+          automationSaving={automationPolicy.saving}
+          onAutomationChange={handleAutomationChange}
+          refreshing={refreshing}
+          onRefresh={() => refresh(true)}
+          lastUpdated={lastUpdated}
+          runnerLabel={builderCompactLabel(
+            deriveRunnerStateKey({
+              neverSeen: runnerNeverSeen,
+              offline: runnerOffline,
+              stateUnknown: runnerNeverSeen,
+            }),
+            runnerVersion,
+            builderPresence,
+          )}
+          runnerDetail={
+            runnerLastPushedAt && !runnerNeverSeen
+              ? `Builder sync ${timeAgo(new Date(runnerLastPushedAt).getTime())}`
+              : null
+          }
+          versionDetail={[
+            data?.builderVersions?.cloud ? `cloud v${data.builderVersions.cloud.replace(/^box-/, "")}` : null,
+            data?.builderVersions?.local ? `app v${data.builderVersions.local.replace(/^box-/, "")}` : null,
+          ].filter(Boolean).join(" · ") || null}
+        />
+      )}
 
       {bootstrapOpen && (
         <BootstrapModal
