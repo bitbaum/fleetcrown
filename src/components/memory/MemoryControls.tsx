@@ -90,9 +90,11 @@ export function ForgetAllMemory() {
 
   if (!confirming) {
     return (
+      // inline-flex, not a bare inline link: min-h is inert on an inline box,
+      // so this irreversible action was a 14px-tall tap target.
       <button
         onClick={() => setConfirming(true)}
-        className="text-xs text-text-muted underline hover:text-status-negative"
+        className="inline-flex min-h-11 shrink-0 items-center text-xs text-text-muted underline hover:text-status-negative"
       >
         Forget everything
       </button>
@@ -101,8 +103,10 @@ export function ForgetAllMemory() {
 
   return (
     <div className="flex items-center gap-2">
+      {/* "knowledge graph and RAG index" named two internals for one thing
+          the reader knows by a different name: everything Loki remembers. */}
       <span className="text-xs text-status-negative">
-        Wipe the whole knowledge graph and RAG index? No undo.
+        Erase everything Loki remembers — every person, project and connection. No undo.
       </span>
       <button
         onClick={forgetAll}

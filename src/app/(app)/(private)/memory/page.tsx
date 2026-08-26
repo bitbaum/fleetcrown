@@ -1,6 +1,6 @@
-import { Brain, Database, Link2, Clock, Zap, Search } from "lucide-react";
+import { Database, Clock, Zap, Search } from "lucide-react";
 import { PageLayout } from "@/components/ui/page-layout";
-import { Card, CardHeader } from "@/components/ui/card";
+import { Card, CardHeader, StatCard } from "@/components/ui/card";
 import { StatRow } from "@/components/ui/stat-row";
 import { getEntityStats, getRecentEntities, getRecentInteractions } from "@/db/queries/memory";
 import { getKnowledgeIndexStats } from "@/db/queries/knowledge-index-stats";
@@ -52,33 +52,44 @@ export default async function MemoryPage() {
     <PullToRefresh>
     <PageLayout title="Memory" subtitle="What Loki knows — the knowledge graph">
 
+      {/* "Entities 11 / Relations 0 / Types 2" is the schema's vocabulary, not
+          anybody's. Each tile now says what it counts underneath, and they use
+          the compact StatCard instead of three full cards with an icon header
+          — which spent half a phone screen on three integers. */}
       <StatRow>
-        <Card>
-          <CardHeader icon={Database} title="Entities" />
-          <div className="text-2xl font-bold">{stats.totalEntities.toLocaleString()}</div>
-        </Card>
-        <Card>
-          <CardHeader icon={Link2} title="Relations" />
-          <div className="text-2xl font-bold">{stats.totalRelations.toLocaleString()}</div>
-        </Card>
-        <Card>
-          <CardHeader icon={Brain} title="Types" />
-          <div className="text-2xl font-bold">{stats.entityTypes.length}</div>
-        </Card>
+        <StatCard
+          label="Things remembered"
+          value={stats.totalEntities.toLocaleString()}
+          sub="people, projects, tools, ideas"
+        />
+        <StatCard
+          label="Connections"
+          value={stats.totalRelations.toLocaleString()}
+          sub="links between those things"
+        />
+        <StatCard
+          label="Kinds"
+          value={String(stats.entityTypes.length)}
+          sub="categories in use"
+        />
       </StatRow>
 
       <Card>
-        <CardHeader icon={Search} title="Fleet knowledge (RAG)" />
+        <CardHeader icon={Search} title="Context from your other projects" />
+        {/* Was titled "Fleet knowledge (RAG)", and its two off-states named an
+            environment variable and a script path on the server — instructions
+            for whoever deploys this, shown to whoever uses it. What a user
+            needs from this card is one fact: is my other work being pulled in
+            or not. Operator setup belongs in the docs. */}
         {!rag.enabled ? (
           <p className="text-sm text-text-secondary">
-            Cross-project retrieval is off — set <code className="text-text-primary">EMBEDDINGS_BASE_URL</code> on
-            the server to index project profiles for dispatch context.
+            Off. Agents working on one project cannot see what you have written
+            about the others — each dispatch starts from that project alone.
           </p>
         ) : rag.totalChunks === 0 ? (
           <p className="text-sm text-text-secondary">
-            Embeddings server is up but the index is empty. Run{" "}
-            <code className="text-text-primary">scripts/reindex-knowledge.ts</code> on the box, or edit a project
-            profile to trigger embed-on-write.
+            On, but nothing is indexed yet. Edit any project profile and it starts
+            filling in from there.
           </p>
         ) : (
           <div className="space-y-2 text-sm">
@@ -160,12 +171,13 @@ export default async function MemoryPage() {
             const pct = Math.round((Number(row.count) / stats.totalEntities) * 100);
             return (
               <div key={row.type}>
+                {/* The badge and the label printed the identical word side by
+                    side — "person person". One of them was decoration. */}
                 <div className="flex items-center justify-between text-sm mb-1">
-                  <div className="flex items-center gap-2">
-                    <TypeBadge type={row.type} />
-                    <span className="font-medium">{row.type}</span>
-                  </div>
-                  <span className="text-text-secondary">{Number(row.count).toLocaleString()}</span>
+                  <TypeBadge type={row.type} />
+                  <span className="text-text-secondary">
+                    {Number(row.count).toLocaleString()} of {stats.totalEntities.toLocaleString()}
+                  </span>
                 </div>
                 <ProgressBar value={pct} minPercent={1} tone="accent" className="h-2" />
               </div>
