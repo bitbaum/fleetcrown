@@ -5,6 +5,8 @@ import { Loader2, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { postJson } from "@/lib/api/fetch";
 import { useDispatchLiveStatus } from "@/hooks/use-dispatch-live-status";
+import { dispatchToneDotClass } from "@/lib/dispatch-status";
+import type { StatusTone } from "@/lib/constants/statuses";
 import type { ActivityEvent } from "@/lib/activity-events";
 
 /** The dispatch pipeline caps a custom prompt at 4000 chars (see the zod
@@ -95,11 +97,29 @@ export function ActivityRetryButton({ event }: { event: ActivityEvent }) {
     }
   };
 
+  // The button says what CLICKING does; the line under it says what the last
+  // click led to. Folding the lifecycle into the button label (as this first
+  // shipped) meant a settled run left no way back — and, worse, no colour: a
+  // failed retry read exactly like a working one.
   const label =
     state === "sending" ? "Sending…"
-    : state === "sent" ? (live?.label ?? "Sent — waiting for the builder")
     : state === "error" ? "Try again"
+    : state === "sent" && live && !live.terminal ? "Sent"
     : "Run it again";
+
+  // Errors and refusals come from the POST itself. Once a dispatch is
+  // accepted the polled lifecycle is more current than the message stamped at
+  // accept time, so it takes over — same tone vocabulary the Loki transcript,
+  // the terminal composer and the prompt Run modal already render, because a
+  // retry watched from Activity is the same dispatch watched from anywhere.
+  const note: { tone: StatusTone; text: string } | null =
+    state === "error" && message
+      ? { tone: "warning", text: message }
+      : state === "sent" && live
+        ? { tone: live.tone, text: live.detail ? `${live.label} — ${live.detail}` : live.label }
+        : state === "sent"
+          ? { tone: "neutral", text: message ?? "Checking status…" }
+          : null;
 
   return (
     <span className="inline-flex min-w-0 flex-wrap items-center gap-x-2">
@@ -121,7 +141,12 @@ export function ActivityRetryButton({ event }: { event: ActivityEvent }) {
         )}
         {label}
       </button>
-      {message && <span className="ui-needs-you-note">{message}</span>}
+      {note && (
+        <span className="ui-needs-you-note" role="status" aria-live="polite">
+          <span className={dispatchToneDotClass(note.tone)} />
+          {note.text}
+        </span>
+      )}
     </span>
   );
 }
