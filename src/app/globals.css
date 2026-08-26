@@ -2969,10 +2969,24 @@
      the only question the page exists to answer. It used to be a 14px bold
      "Fleet autopilot" — a section label, not an answer. */
   .ui-hero-headline {
-    @apply flex items-center gap-2 text-lg font-semibold leading-tight text-text-primary sm:text-xl;
+    @apply flex items-start gap-2 text-lg font-semibold leading-tight text-text-primary sm:text-xl;
+  }
+  /* The status dot rides the FIRST line, not the block's centre. `items-center`
+     put it beside the gap between lines once the headline wrapped — which at
+     320px is most of them ("2 projects need you" is two lines there), so the
+     dot appeared to belong to nothing. Margin, not a flex trick: the dot must
+     sit on the first line's optical centre and stay there however many lines
+     follow. */
+  .ui-hero-dot {
+    @apply mt-2 shrink-0 sm:mt-2.5;
   }
   .ui-hero-sub {
     @apply mt-1 text-sm leading-snug text-text-secondary;
+  }
+  /* The staleness caveat, in words. Replaces dimming the headline — see the
+     note at the render. */
+  .ui-hero-stale {
+    @apply mt-1 text-xs leading-snug text-status-warning;
   }
   /* Full-width on a phone — it is the one action, and a thumb should not have
      to aim. Shrinks to its label where a pointer exists. */
@@ -2985,7 +2999,7 @@
     @apply mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border-subtle pt-3 text-xs;
   }
   .ui-hero-runner {
-    @apply inline-flex items-center gap-1.5 font-medium;
+    @apply inline-flex items-start gap-1.5 font-medium;
   }
   .ui-hero-counts {
     @apply text-text-secondary;

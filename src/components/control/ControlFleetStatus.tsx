@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Plus, Radio, SlidersHorizontal, WifiOff } from "lucide-react";
+import { ArrowRight, Plus, Radio, Settings2, WifiOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { timeAgo } from "@/lib/dates";
 import type { ControlDashboardState, FleetPulse } from "./control-presenter";
@@ -231,12 +231,25 @@ export function ControlFleetStatus({
     <section className="ui-control-hero">
       <div className="ui-hero-row">
         <div className="ui-hero-answer">
+          {/* Deliberately NOT dimmed by staleClass.
+              Dimming says "this number may be out of date", which is the right
+              thing to say about the counters and the wrong thing to do to the
+              headline: it rendered "Stalled" — the single most urgent state
+              this card has — as the quietest text on it. Staleness is a caveat
+              about the answer, so it goes next to the answer in words (the
+              "from last sync" line below) rather than making the answer harder
+              to read. */}
           <p className="ui-hero-headline">
-            <span className={cn("ui-dot shrink-0", headline.dot, staleClass)} aria-hidden="true" />
-            <span className={staleClass}>{headline.text}</span>
+            <span className={cn("ui-dot ui-hero-dot", headline.dot)} aria-hidden="true" />
+            <span>{headline.text}</span>
           </p>
-          {headline.sub && (
-            <p className={cn("ui-hero-sub", staleClass)} title={staleTitle}>{headline.sub}</p>
+          {headline.sub && <p className="ui-hero-sub">{headline.sub}</p>}
+          {isStale && (
+            <p className="ui-hero-stale" title={staleTitle}>
+              {runnerLastPushedAt
+                ? `From last sync ${timeAgo(new Date(runnerLastPushedAt).getTime())} — may be out of date`
+                : EXECUTOR_COPY.builder.staleSync}
+            </p>
           )}
         </div>
         <div className="ui-hero-tools">
@@ -258,7 +271,7 @@ export function ControlFleetStatus({
             title="Fleet settings — autopilot, refresh, builder status"
             aria-label="Fleet settings"
           >
-            <SlidersHorizontal className="h-4 w-4" />
+            <Settings2 className="h-4 w-4" />
           </button>
         </div>
       </div>
@@ -292,10 +305,18 @@ export function ControlFleetStatus({
           line. Counts stay clickable where clicking does something; the rest
           is text, because a chip that only reports is a button that lies. */}
       <div className="ui-hero-foot">
+        {/* One text node inside, not sibling flex items. Nesting the sync age
+            as its own child made it a FLEX ITEM of this span, so at 320px —
+            where "Cloud + this computer online" wraps — the age floated into a
+            second column beside the wrapped label and read as a broken
+            two-column layout. As prose it just wraps. */}
         <span className={cn("ui-hero-runner", runnerTone)} title={runnerTitle}>
-          <RunnerIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-          {compactLabel}
-          {executionStalled && " · not executing"}
+          <RunnerIcon className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          <span className="min-w-0">
+            {compactLabel}
+            {executionStalled && " · not executing"}
+            {runnerDetail && <span className="ui-hero-sync"> · {runnerDetail}</span>}
+          </span>
         </span>
         {countsKnown && (
           <span className={cn("ui-hero-counts", staleClass)} title={staleTitle ?? COUNT_SCOPE_TITLE}>
@@ -317,7 +338,6 @@ export function ControlFleetStatus({
             {" · "}{idle} idle
           </span>
         )}
-        {runnerDetail && <span className="ui-hero-sync">{runnerDetail}</span>}
         {versionDetail && <span className="ui-hero-sync hidden sm:inline">{versionDetail}</span>}
       </div>
     </section>
