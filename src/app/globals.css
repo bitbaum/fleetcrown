@@ -3118,95 +3118,15 @@
     @apply space-y-3 rounded-2xl border border-border-subtle bg-surface-raised p-4 sm:p-5;
     box-shadow: var(--shadow-panel);
   }
-  .ui-control-fleet-top {
-    @apply flex flex-wrap items-start justify-between gap-3;
-  }
-  .ui-control-fleet-runner {
-    @apply inline-flex flex-wrap items-center gap-1.5 text-xs sm:text-sm;
-  }
+  /* The two tone modifiers survive the hero rewrite: the new foot line still
+     colours the builder state with them. Everything that used to sit between
+     them here — the fleet-top row, the actions rail, the four-chip metrics
+     row, the shared text-column gutter and the autopilot block — went out with
+     the card that rendered them. Dead ui-* classes are not free: they ship in
+     the stylesheet every visitor downloads, and the next person to read this
+     file cannot tell which of them are still load-bearing. */
   .ui-control-fleet-runner-ok { @apply text-status-positive; }
   .ui-control-fleet-runner-warn { @apply text-status-warning; }
-  .ui-control-fleet-actions {
-    @apply ml-auto flex items-center gap-2;
-  }
-  .ui-control-fleet-metrics {
-    @apply flex flex-wrap gap-2;
-    /* Joins the fleet card's shared text column — see --control-fleet-gutter. */
-    padding-left: var(--control-fleet-gutter);
-  }
-  .ui-control-fleet-chip {
-    @apply inline-flex max-w-full items-center gap-1.5 rounded-full px-2.5 py-1 text-xs text-text-secondary transition-all;
-    background: oklch(1 0 0 / 0.04);
-    box-shadow: inset 0 0 0 1px oklch(1 0 0 / 0.04);
-  }
-  .ui-control-fleet-chip-alert {
-    @apply w-full flex-wrap rounded-xl px-3 py-2 text-left leading-snug;
-  }
-  .ui-control-fleet-chip:hover {
-    background: oklch(1 0 0 / 0.08);
-    box-shadow: inset 0 0 0 1px oklch(1 0 0 / 0.08);
-  }
-  .ui-control-fleet-chip-attention {
-    color: var(--status-warning);
-    background: oklch(from var(--status-warning) l c h / 0.12);
-    box-shadow: inset 0 0 0 1px oklch(from var(--status-warning) l c h / 0.24);
-  }
-  .ui-control-fleet-chip-clear {
-    color: var(--status-positive);
-    background: oklch(from var(--status-positive) l c h / 0.1);
-    box-shadow: inset 0 0 0 1px oklch(from var(--status-positive) l c h / 0.2);
-  }
-  /* ── Fleet card: one text column ───────────────────────────────────────────
-     Every stacked line in the fleet card starts at the SAME x. Icons (the
-     runner radio, the pulse dot, the autopilot bolt) hang in a fixed gutter to
-     the left of that column instead of pushing their own line sideways.
-
-     Measured before this existed: title 369, state 383, chips 369, hint 385 —
-     four rows, three different left edges, plus the wrapped second line of the
-     hint snapping back to 369 because an inline icon gives no hanging indent.
-     That zigzag is what read as "not aligned".
-
-     The gutter is 1.25rem because that is exactly where .ui-control-fleet-runner
-     already puts its label (14px icon + 6px gap), so the runner line and the
-     autopilot block share one column rather than agreeing by luck. */
-  :root {
-    --control-fleet-gutter: 1.25rem;
-  }
-  /* Fixed-width slot that centres whatever annotates a line. Sized once, so a
-     6px dot and a 12px bolt land on the same axis instead of indenting their
-     text by different amounts. */
-  .ui-control-fleet-gutter {
-    @apply inline-flex shrink-0 items-center justify-center;
-    width: var(--control-fleet-gutter);
-  }
-  /* Rows with no icon pay the gutter as padding so they join the text column. */
-  .ui-control-fleet-indent {
-    padding-left: var(--control-fleet-gutter);
-  }
-  .ui-control-fleet-hint {
-    @apply text-xs leading-relaxed text-text-tertiary;
-    /* Hanging indent: the bolt sits in the gutter and every wrapped line lands
-       on the text column, instead of line 2 starting further left than line 1. */
-    padding-left: var(--control-fleet-gutter);
-    text-indent: calc(-1 * var(--control-fleet-gutter));
-  }
-  .ui-control-hero-autopilot {
-    @apply flex flex-col gap-4 border-t border-border-subtle pt-4 sm:flex-row sm:items-center sm:justify-between;
-  }
-  .ui-control-autopilot-status {
-    @apply flex min-w-0 flex-col gap-1;
-  }
-  .ui-control-autopilot-title {
-    @apply text-sm font-semibold text-text-primary;
-  }
-  /* Plain text flow, not a flex row: the dot rides in the gutter span and the
-     same hanging indent as .ui-control-fleet-hint keeps a wrapped state line on
-     the text column. A flex row could not hang its first child. */
-  .ui-control-autopilot-state {
-    @apply text-sm text-text-secondary;
-    padding-left: var(--control-fleet-gutter);
-    text-indent: calc(-1 * var(--control-fleet-gutter));
-  }
   /* "Start building" earns full-width prominence on phones (it's the positive
      next step); "Pause fleet" does not — full-width made a fleet-wide stop the
      single biggest control on the mobile screen. It stays a normal button. */
@@ -4329,7 +4249,6 @@
   .ui-public-primary-action,
   .ui-app-footer-cell,
   .ui-loki-suggest-chip,
-  .ui-control-fleet-chip,
   .ui-control-live-select,
   .ui-control-live-input,
   .ui-btn-nextbest,
