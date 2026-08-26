@@ -270,16 +270,17 @@ export function LatestOrchestrationPanel({
         </div>
       )}
 
-      {/* An error box belongs to a run that failed. `state === "error"` is the
-          SSOT for that — not the mere presence of payload.error, which the
-          reaper used to fill in for `partial` runs too. Runs already in the
-          database carry those old sentences, so the test is on the run's own
-          state: a non-failed run explains itself neutrally, whichever field
-          the sentence happens to live in. */}
-      {run.payload?.error && (
-        run.state === ORCH_STATE.ERROR
-          ? <p className="ui-error">{run.payload.error}</p>
-          : <p className="text-xs leading-relaxed text-text-muted">{run.payload.error}</p>
+      {/* payload.error renders ONLY for a run that actually failed.
+          Every writer of that field sets state = error alongside it
+          (closeRunUndelivered, and the reaper's timeout branch), so an error
+          sitting on a non-failed run is stale data by construction: the
+          pre-2026-08-26 reaper wrote its correction prose there, and rows
+          already in the database still carry sentences like "Reaped as
+          timeout ... corrected to partial (see evidence)". Restyling them
+          was not enough — the text itself is reaper vocabulary addressed to
+          nobody. A non-failed run says what it has to say through `note`. */}
+      {run.payload?.error && run.state === ORCH_STATE.ERROR && (
+        <p className="ui-error">{run.payload.error}</p>
       )}
 
       {run.payload?.note && (
