@@ -127,8 +127,12 @@ export function PeopleGrid({
 
   return (
     <>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap">
-        <div className="relative flex-1">
+      {/* One row on a phone, not three. Stacked full-width, a search box, a
+          sort toggle and Add cost 164px — a fifth of the screen — on a page
+          whose job is to show people. Sort keeps its label from `sm` up and
+          drops to its icon below, where the word "Recent" is not worth 100px. */}
+      <div className="flex items-center gap-2 sm:flex-wrap sm:gap-3">
+        <div className="relative min-w-0 flex-1">
           <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
           <input
             type="text"
@@ -144,25 +148,26 @@ export function PeopleGrid({
         </div>
         <button
           onClick={cycleSort}
-          className="ui-btn-chip shrink-0 rounded-2xl px-4 py-3"
+          className="ui-btn-chip shrink-0 rounded-2xl px-3 py-3 sm:px-4"
           title={`Sort: ${SORT_LABELS[sort]}`}
+          aria-label={`Sort: ${SORT_LABELS[sort]}`}
         >
           <ArrowUpDown className="h-3.5 w-3.5" />
-          Sort: {SORT_LABELS[sort]}
+          <span className="hidden sm:inline">Sort: {SORT_LABELS[sort]}</span>
         </button>
         <NewPersonButton onCreated={() => search(query, sort, healthFilter, 0)} />
       </div>
 
-      <PeopleBookPanel onChanged={() => search(query, sort, healthFilter, 0)} />
-
-      <div className="flex flex-wrap gap-2">
+      {/* One scrolling row rather than a wrapping block: four health chips plus
+          Clear wrapped to two rows and took 96px above the first contact. */}
+      <div className="ui-scroll-fade-right -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 [&::-webkit-scrollbar]:hidden">
         {HEALTH_FILTERS.map(({ value, label }) => {
           const active = healthFilter.includes(value);
           return (
             <button
               key={value}
               onClick={() => toggleHealth(value)}
-              className={`inline-flex items-center gap-2 ${active ? "ui-chip-toggle-active" : "ui-chip-toggle"}`}
+              className={`inline-flex shrink-0 items-center gap-2 ${active ? "ui-chip-toggle-active" : "ui-chip-toggle"}`}
             >
               <span className={`h-1.5 w-1.5 rounded-full ${HEALTH_DOT_COLOR[value]}`} />
               {label}
@@ -172,7 +177,7 @@ export function PeopleGrid({
         {healthFilter.length > 0 && (
           <button
             onClick={() => setHealthFilter([])}
-            className="ui-chip-filter"
+            className="ui-chip-filter shrink-0"
           >
             Clear
           </button>
@@ -230,6 +235,16 @@ export function PeopleGrid({
         </button>
       )}
 
+      {/* Below the list on purpose. Import, sync and enrich are setup you do
+          once; the people are what you opened the page for. It used to sit
+          above the list and cost 482px there — more than half a phone screen
+          of glossary and export recipes before the first contact. Expanded by
+          default only when the book is empty, which is the one time it IS the
+          page. */}
+      <PeopleBookPanel
+        defaultOpen={total === 0}
+        onChanged={() => search(query, sort, healthFilter, 0)}
+      />
     </>
   );
 }

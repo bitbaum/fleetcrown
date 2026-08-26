@@ -2527,6 +2527,10 @@
   .ui-error    { @apply text-sm text-status-negative; }
   .ui-error-xs { @apply text-xs text-status-negative; }
   .ui-page-header   { @apply flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4; }
+  /* Disclosure header for a panel of one-off setup (People → Fill the book). */
+  .ui-book-panel-toggle {
+    @apply flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-raised;
+  }
   /* Back-to-parent affordance above a flow page's title. -ml-2 so the label
      optically aligns with the title while the tap area still extends left. */
   .ui-page-back     { @apply -ml-2 inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm text-text-tertiary transition-colors hover:text-text-primary; }
