@@ -53,10 +53,17 @@ export function deriveFeedbackWork(
     return { phase: FEEDBACK_WORK_PHASE.DONE, label: "Done", detail: null };
   }
   if (status === FEEDBACK_STATUS.NEW) {
+    // No detail. Every other phase's detail earns its line by carrying
+    // something the badge cannot — an error string, a retry instruction,
+    // where to watch. "No agent has been asked to fix this yet." carried
+    // nothing: the badge already reads "Not started" and the row's only
+    // button already reads "Implement". On a strip of five new items it
+    // printed the same sentence five times, which is how a surface that is
+    // supposed to say what needs you ends up mostly saying nothing.
     return {
       phase: FEEDBACK_WORK_PHASE.NOT_STARTED,
       label: "Not started",
-      detail: "No agent has been asked to fix this yet.",
+      detail: null,
     };
   }
 

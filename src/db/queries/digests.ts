@@ -106,6 +106,10 @@ export type ProjectDigest = {
   prompts: string[];
   /** One row per unit of work — dispatch joined to its run. See lib/activity-events. */
   events: ActivityEvent[];
+  /** How many actions the PREVIOUS window of the same length held. Powers the
+   *  momentum line. Counted, not fetched: the comparison needs a magnitude,
+   *  not 200 more rows. */
+  previousCount: number;
 };
 
 // ─── Window resolution ───────────────────────────────────────────────────────
@@ -252,6 +256,46 @@ async function fetchActivityRows(userId: string, since: Date, projectKey: string
   return { projectRows, promptCounts, runCounts, localChatCounts, prompts, runs, localChats };
 }
 
+/**
+ * How many actions the window BEFORE this one held, for the momentum line.
+ *
+ * Deliberately a count and not a fetch: momentum needs one number per window,
+ * and pulling another 200 rows to derive it would double the page's query cost
+ * for a single integer. Prompts and runs are summed the way the event list
+ * joins them (a paired dispatch+run is one action), which slightly
+ * over-counts unpaired halves — acceptable for a "busier / quieter" phrase,
+ * and never shown as a precise figure.
+ */
+async function fetchPreviousWindowCount(
+  userId: string,
+  prevStart: Date,
+  prevEnd: Date,
+  projectKey: string | null,
+): Promise<number> {
+  const promptWhere = [
+    eq(promptHistory.userId, userId),
+    gte(promptHistory.dispatchedAt, prevStart),
+    sql`${promptHistory.dispatchedAt} < ${prevEnd}`,
+  ];
+  if (projectKey) promptWhere.push(eq(promptHistory.projectKey, projectKey));
+
+  const runWhere = [
+    eq(orchestrationRuns.userId, userId),
+    gte(orchestrationRuns.startedAt, prevStart),
+    sql`${orchestrationRuns.startedAt} < ${prevEnd}`,
+  ];
+  if (projectKey) runWhere.push(eq(orchestrationRuns.projectKey, projectKey));
+
+  const [prompts, runs] = await Promise.all([
+    db.select({ n: sql<number>`count(*)::int` }).from(promptHistory).where(and(...promptWhere)),
+    db.select({ n: sql<number>`count(*)::int` }).from(orchestrationRuns).where(and(...runWhere)),
+  ]);
+  // A dispatch that produced a run is ONE action; counting both tables would
+  // roughly double every window. Runs are the better proxy for "work done", so
+  // take the larger of the two rather than their sum.
+  return Math.max(prompts[0]?.n ?? 0, runs[0]?.n ?? 0);
+}
+
 type ActivityRows = Awaited<ReturnType<typeof fetchActivityRows>>;
 type PromptRow = ActivityRows["prompts"][number];
 type RunRow = ActivityRows["runs"][number];
@@ -360,7 +404,11 @@ export async function getProjectDigest(
   const until = new Date();
   const projectKey = opts.projectKey && opts.projectKey !== "all" ? opts.projectKey : null;
 
-  const rows = await fetchActivityRows(userId, since, projectKey);
+  const windowMs = until.getTime() - since.getTime();
+  const [rows, previousCount] = await Promise.all([
+    fetchActivityRows(userId, since, projectKey),
+    fetchPreviousWindowCount(userId, new Date(since.getTime() - windowMs), since, projectKey).catch(() => 0),
+  ]);
 
   const projects = buildProjectsList(rows.projectRows, rows.promptCounts, rows.runCounts, rows.localChatCounts);
   const projectStatuses = buildProjectStatuses(rows.runs, projects);
@@ -394,5 +442,6 @@ export async function getProjectDigest(
     next: compacted.next,
     prompts: compacted.prompts,
     events,
+    previousCount,
   };
 }

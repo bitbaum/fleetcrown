@@ -212,25 +212,78 @@ function renderDigestMarkdown(markdown: string): string {
   return blocks.join("\n");
 }
 
+/** One stat in the digest's header strip. Colour is always paired with the
+ *  label beside it — never the sole carrier of meaning. */
+function digestStat(value: number, label: string, color: string): string {
+  return `<td style="padding:0 14px 0 0;white-space:nowrap;">
+      <span style="font-size:22px;font-weight:700;color:${color};">${value}</span>
+      <span style="font-size:13px;color:${EMAIL_THEME.muted};padding-left:5px;">${label}</span>
+    </td>`;
+}
+
+/**
+ * The digest email.
+ *
+ * It used to be the report markdown under a generic "Daily digest" heading,
+ * with the subject line "FleetCrown daily digest" — identical every single day.
+ * An inbox shows you a subject and maybe a preview line, so a recurring email
+ * whose subject never changes teaches you to archive it unread, no matter how
+ * good the body is.
+ *
+ * Now the subject carries the actual state ("1 needs you · 3 shipped"), and the
+ * body opens with the same numbers as a stat strip so the answer survives the
+ * two seconds someone gives an email on a phone. The report follows, for the
+ * ones who read on.
+ */
 export function digestEmailTemplate({
   markdown,
   cadenceLabel,
   windowLabel,
   activityUrl,
+  stats,
 }: {
   markdown: string;
   cadenceLabel: string; // "daily" | "weekly" | "monthly"
   windowLabel: string;  // "the last 24 hours" / "the last 7 days" / "the last 30 days"
   activityUrl: string;
+  /** Headline counts. Omitted for callers that only have markdown — the email
+   *  then degrades to its previous shape rather than inventing numbers. */
+  stats?: { attention: number; shipped: number; running: number; agentLabel: string | null };
 }) {
-  const subject = mailSubject("digest", `${cadenceLabel} digest`);
+  // A subject that changes with reality. Ordered worst-first, same as the page.
+  const subjectFacts: string[] = [];
+  if (stats) {
+    if (stats.attention > 0) subjectFacts.push(`${stats.attention} needs you`);
+    if (stats.shipped > 0) subjectFacts.push(`${stats.shipped} shipped`);
+    if (subjectFacts.length === 0 && stats.running > 0) subjectFacts.push(`${stats.running} running`);
+  }
+  const subject = mailSubject(
+    "digest",
+    subjectFacts.length > 0 ? subjectFacts.join(" · ") : `${cadenceLabel} digest`,
+  );
+
+  const statStrip = stats
+    ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 20px 0;"><tr>
+        ${stats.attention > 0 ? digestStat(stats.attention, "needs you", EMAIL_THEME.alert) : ""}
+        ${stats.shipped > 0 ? digestStat(stats.shipped, "shipped", EMAIL_THEME.good) : ""}
+        ${stats.running > 0 ? digestStat(stats.running, "running", EMAIL_THEME.ink) : ""}
+      </tr></table>`
+    : "";
+
+  const agentLine = stats?.agentLabel
+    ? p(`Your agents worked <strong style="color:${EMAIL_THEME.ink};">${stats.agentLabel}</strong> in ${windowLabel}.`)
+    : p(`What your fleet did in ${windowLabel}.`);
+
   const html = emailShell(`
-    <h2 style="margin:0 0 4px 0;font-size:22px;font-weight:700;color:${EMAIL_THEME.ink};">${cadenceLabel.charAt(0).toUpperCase() + cadenceLabel.slice(1)} digest</h2>
-    ${p(`What your fleet did in ${windowLabel}.`)}
+    <h2 style="margin:0 0 4px 0;font-size:22px;font-weight:700;color:${EMAIL_THEME.ink};">${cadenceLabel.charAt(0).toUpperCase() + cadenceLabel.slice(1)} report</h2>
+    ${agentLine}
+    ${statStrip}
     ${renderDigestMarkdown(markdown)}
     <div style="text-align:center;">${btn(activityUrl, "Open Activity →")}</div>
     ${small(`You're receiving this because you opted in to ${cadenceLabel} digests in your ${APP_NAME} notification preferences.`)}
   `);
-  const text = `${APP_NAME} ${cadenceLabel} digest — what your fleet did in ${windowLabel}.\n\n${markdown}\n\nOpen Activity: ${activityUrl}`;
+
+  const textStats = subjectFacts.length > 0 ? `${subjectFacts.join(" · ")}\n\n` : "";
+  const text = `${APP_NAME} ${cadenceLabel} report — ${windowLabel}.\n\n${textStats}${markdown}\n\nOpen Activity: ${activityUrl}`;
   return { subject, html, text };
 }

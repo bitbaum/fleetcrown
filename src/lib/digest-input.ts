@@ -6,11 +6,17 @@
 
 import type { ActivityEvent } from "@/lib/activity-events";
 import { eventNeedsAttention, tallyActivityEvents } from "@/lib/activity-events";
+import { computeMomentum, summarizeActivity } from "@/lib/activity-summary";
 
 export type DigestInput = {
   events: ActivityEvent[];
   projectKey: string | null;
   windowLabel: string;
+  /** Actions in the window before this one — lets the report say whether the
+   *  fleet is speeding up or stalling, which is the single most interesting
+   *  thing a recurring report can tell you and the one thing a snapshot
+   *  cannot. */
+  previousCount?: number;
 };
 
 /**
@@ -26,14 +32,30 @@ export type DigestInput = {
  * Now it reads `events` — dispatch joined to run — so each line carries
  * the ask, the outcome, the agent's own done/next, and the real failure cause.
  */
-export function buildDigestUserPrompt({ events, projectKey, windowLabel }: DigestInput): string {
+export function buildDigestUserPrompt({
+  events,
+  projectKey,
+  windowLabel,
+  previousCount,
+}: DigestInput): string {
   const lines: string[] = [];
   lines.push(`Window: last ${windowLabel}${projectKey ? ` · filtered to project "${projectKey}"` : ""}`);
 
   const tallies = tallyActivityEvents(events);
+  const summary = summarizeActivity(events);
   lines.push(
     `Totals: ${tallies.total} actions · ${tallies.done} completed · ${tallies.attention} need attention · ${tallies.running} still running`,
   );
+  if (summary.agentLabel) {
+    lines.push(`Agent time (summed wall-clock of finished runs): ${summary.agentLabel}`);
+  }
+  lines.push(`Projects touched: ${summary.projects}${summary.busiestProject ? ` (busiest: ${summary.busiestProject})` : ""}`);
+  if (typeof previousCount === "number") {
+    const momentum = computeMomentum(tallies.total, previousCount);
+    lines.push(
+      `Previous window: ${previousCount} actions${momentum.label ? ` — ${momentum.label}` : ""}`,
+    );
+  }
   lines.push("");
 
   const trim = (text: string, max: number) => {

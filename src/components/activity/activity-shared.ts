@@ -111,3 +111,17 @@ export function formatDayHeading(day: string, now = new Date()): string {
     month: "short",
   });
 }
+
+/**
+ * The label for one pulse bucket. Granularity follows the window: an hour-long
+ * window is read in minutes, a month in dates. Printing "26 Aug, 04:00" on a
+ * month chart's 30 bars would be noise; printing "04" on a week chart would be
+ * ambiguous.
+ */
+export function formatPulseBucketLabel(iso: string, digestWindow: DigestWindow): string {
+  const date = new Date(iso);
+  if (digestWindow === "hour" || digestWindow === "day") {
+    return date.toLocaleTimeString(APP_LOCALE, { hour: "2-digit", minute: "2-digit" });
+  }
+  return date.toLocaleDateString(APP_LOCALE, { weekday: "short", day: "numeric", month: "short" });
+}

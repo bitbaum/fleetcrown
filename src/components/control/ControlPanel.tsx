@@ -297,14 +297,27 @@ export function ControlPanel() {
 
   return (
     <div className="space-y-6">
-      {/* Hierarchy rewrite 2026-05-31: when the runner is offline or never seen,
-          the banner with Start/Restart buttons OWNS the top viewport — it's
-          the only actionable thing on the page until the user reconnects.
-          When healthy, the banner self-hides and FleetStatus is the first thing
-          the eye lands on. Also removed the verbose "Agent operations / Current
-          work, queued instructions, and saved context by project" section
-          header: that subtitle taught the user nothing they couldn't infer
-          from the table itself. */}
+      {/* ORDERING (the whole page, one rule): Control answers four questions,
+          in this order, and every child below belongs to exactly one tier.
+
+            1. Can I operate at all?   RunnerStatusBanner, MissingCLIsBanner
+            2. What is waiting on me?  AttentionBar, AgentEscalations
+            3. What is the fleet doing? ControlFleetStatus, ProjectOperationsView
+            4. What could I do with slack? widget coverage, visitor feedback,
+                                          Workspaces, activity log, defaults
+
+          Tiers 1 and 2 are about a human being blocked; 3 and 4 are reporting.
+          Reporting never renders above blocking. Before 2026-08-26 the page
+          ran 1 -> 3(status) -> 2 -> 4(strips) -> 3(projects): the count of
+          projects needing attention appeared under a runner version string,
+          and two chore strips sat between that count and the projects
+          themselves. Keep new sections in tier order; if a section does not
+          obviously belong to one tier, that is a sign it is two sections.
+
+          Tier 1 owns the top viewport when the runner is offline or unseen —
+          nothing else on the page is actionable until it reconnects — and
+          self-hides when healthy. The old verbose "Agent operations" section
+          header stays deleted: it taught nothing the table did not. */}
       {/* Suppress the runner banner during the zero-project empty state —
           EmptyStateWelcome below already pitches "Start a project" / "Install
           Fleet Runner" with the full card grid, and rendering both led to
@@ -352,6 +365,30 @@ export function ControlPanel() {
         </>
       )}
 
+      {/* Tier 2 of four — see the ordering note at the top of this return.
+          Anything actually waiting on the captain outranks the description of
+          a fleet that is fine. AttentionBar used to sit BELOW the status panel
+          and below two chore strips, so "3 projects need you" arrived after a
+          runner version string, a last-sync age and a list of sites missing a
+          widget. Whatever needs a human goes above whatever merely reports. */}
+      <AttentionBar
+        items={attention}
+        failedCommands={data?.failedCommands}
+        onFocusProject={setSelectedTab}
+        // A "tab not found" failure is not retryable — the fix is to start the
+        // session it was aiming at. Reuses the launch modal rather than a
+        // second launch path, so agent/model defaults stay one decision.
+        onStartSession={(tab) => {
+          const project = data?.projects.find((p) => p.tab === tab);
+          if (!project) {
+            setError(`No registered project named "${tab}" — add it before starting a session.`);
+            return;
+          }
+          openLaunchModal(project);
+        }}
+      />
+      {data.projects.length > 0 && <AgentEscalations />}
+
       {/* ControlFleetStatus shows runner health + working/ready/open counters
           + autopilot pill. When the user has 0 projects, all counters are 0
           and the panel reads as noise stacked under the empty-state welcome
@@ -394,14 +431,6 @@ export function ControlPanel() {
         }}
       />}
 
-      <AttentionBar items={attention} failedCommands={data?.failedCommands} onFocusProject={setSelectedTab} />
-      {data.projects.length > 0 && <AgentEscalations />}
-
-      {/* Was two unbounded strips — widget coverage and feedback — stacked
-          here, one of them auto-expanded. See ControlInbox for what that cost
-          and why they are one queue rather than two features. */}
-      <ControlInbox />
-
       <ProjectOperationsView
         snapshots={snapshots}
         selectedTab={selectedTab}
@@ -414,6 +443,16 @@ export function ControlPanel() {
           void refresh(true);
         }}
       />
+
+      {/* Tier 4 of four — slack-time chores. Neither is time-critical: widget
+          coverage is "these sites could have the widget" and feedback is
+          inbound suggestions with an Implement button. Moving them out of the
+          path of the fleet (#367) was half the fix; the other half is that
+          they were two unbounded full-width strips, one auto-expanded, that
+          between them spent ~1,400px of a 390px phone. They are one queue —
+          small things a human has to say yes to — so they are one collapsed
+          section. Add a GROUP to the inbox; never add a third strip here. */}
+      <ControlInbox />
 
       {/* Workspaces panel — collapsed by default. Projects already shows
           per-project state; auto-opening this duplicated the same facts in a

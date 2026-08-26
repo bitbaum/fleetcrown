@@ -151,4 +151,29 @@ check("scaffolding-only capture reports missing, not raw harness tags", () => {
   assert.equal(d.missing, true);
 });
 
+console.log("\npromptDisplay.task — what a re-dispatch replays");
+
+check("task is the UNWRAPPED instruction, not the envelope", () => {
+  const envelope = [PREAMBLE, CONTEXT_BLOCK, "Work on the project at /x.\n\nShip the parser.", EXIT].join("\n\n");
+  const d = promptDisplay({ customPrompt: null, resolvedPrompt: envelope, intent: "next_best" });
+  assert.ok(d.task, "expected a replayable task");
+  assert.ok(d.task!.includes("Ship the parser"), d.task!);
+  // Replaying the envelope would hand the pipeline its own preamble to wrap
+  // a second time.
+  assert.ok(!d.task!.includes("FleetCrown operator dispatch"), "envelope leaked into the replay payload");
+  assert.ok(!d.task!.includes("Exit contract"), "exit contract leaked into the replay payload");
+});
+
+check("task is NOT truncated the way preview is", () => {
+  const long = `Fix the thing. ${"detail ".repeat(200)}`.trim();
+  const d = promptDisplay({ customPrompt: long, resolvedPrompt: null, intent: "custom" });
+  assert.ok(d.preview.length < long.length, "preview should be shortened for display");
+  assert.equal(d.task, long, "replaying a truncated instruction would silently change the work");
+});
+
+check("nothing recorded means nothing to replay", () => {
+  const d = promptDisplay({ customPrompt: null, resolvedPrompt: null, intent: "custom" });
+  assert.equal(d.task, null, "a retry button must not offer to re-send an empty prompt");
+});
+
 console.log(`\n${passed}/${passed} activity-prompt-display cases passed`);

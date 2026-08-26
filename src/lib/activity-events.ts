@@ -86,6 +86,9 @@ export type ActivityEvent = {
   projectKey: string;
   agentLabel: string;
   intentLabel: string;
+  /** Raw intent id, as stored — what a re-dispatch replays. The LABEL is for
+   *  reading; only the id can be handed back to the dispatch pipeline. */
+  intentId: string;
   status: StatusTone;
   outcome: ActivityOutcome;
   outcomeLabel: string;
@@ -197,6 +200,7 @@ export function buildActivityEvents(input: {
       projectKey: run.projectKey,
       agentLabel: getAdapterLabel(run.adapter),
       intentLabel: getIntentLabel(run.intent),
+      intentId: run.intent,
       status: runStatus(run),
       outcome,
       outcomeLabel: ACTIVITY_OUTCOME_LABEL[outcome],
@@ -226,6 +230,7 @@ export function buildActivityEvents(input: {
         projectKey: prompt.projectKey,
         agentLabel: getAdapterLabel(prompt.adapter),
         intentLabel: getIntentLabel(prompt.intent),
+        intentId: prompt.intent,
         status: "neutral",
         outcome: "dispatched",
         outcomeLabel: ACTIVITY_OUTCOME_LABEL.dispatched,
@@ -250,6 +255,7 @@ export function buildActivityEvents(input: {
       projectKey: chat.projectKey ?? "(unscoped)",
       agentLabel: "Claude Code",
       intentLabel: chat.gitBranch ? `local chat - ${chat.gitBranch}` : "local chat",
+      intentId: "custom",
       status: "neutral",
       outcome: "dispatched",
       outcomeLabel: "Typed",
