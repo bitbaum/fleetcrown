@@ -3,13 +3,9 @@ import { db } from "@/db";
 import { promptHistory, orchestrationRuns, userProjects, claudeCodeHistory } from "@/db/schema";
 import { splitSessionItems } from "@/lib/session-content";
 import { getBlockedReasonsForRuns } from "@/db/queries/run-events";
-import { getAdapterLabel, getIntentLabel } from "@/config/control-intents";
-import {
-  isErrorRun,
-  promptDisplayBody,
-  runStatus,
-  STATUS_RANK,
-} from "@/lib/activity-status";
+import { getIntentLabel } from "@/config/control-intents";
+import { isErrorRun, runStatus, STATUS_RANK } from "@/lib/activity-status";
+import { buildActivityEvents, type ActivityEvent } from "@/lib/activity-events";
 import type { StatusTone } from "@/lib/constants/statuses";
 import { DAY_MS, HOUR_MS, WEEK_MS } from "@/lib/constants/time";
 
@@ -22,10 +18,10 @@ export { isErrorRun, promptDisplayBody, runStatus } from "@/lib/activity-status"
 // memory and (downstream) LLM token usage. Named here so a change is one edit.
 
 const MAX_RAW_ROWS_PER_QUERY = 200;
-const MAX_PROMPT_SAMPLES_FOR_TIMELINE = 60;
-const MAX_RUN_SAMPLES_FOR_TIMELINE = 60;
-const MAX_LOCAL_CHAT_SAMPLES_FOR_TIMELINE = 60;
-const MAX_TIMELINE_ITEMS = 120;
+const MAX_PROMPT_SAMPLES_FOR_EVENTS = 60;
+const MAX_RUN_SAMPLES_FOR_EVENTS = 60;
+const MAX_LOCAL_CHAT_SAMPLES_FOR_EVENTS = 60;
+const MAX_EVENTS = 120;
 const COMPACT_LIMITS = {
   completed: 10,
   next: 8,
@@ -80,32 +76,6 @@ export type DigestProjectOption = {
   activity: number;
 };
 
-export type DigestTimelineItem = {
-  id: string;
-  occurredAt: string;
-  projectKey: string;
-  title: string;
-  body: string;
-  status: StatusTone;
-  kind: "prompt" | "run" | "local_chat";
-  /** Short right-aligned fact (e.g. a run's duration). Optional. */
-  detail?: string;
-};
-
-/** Human duration between two timestamps, e.g. "2m 14s" / "830ms" / "1h 3m". */
-function formatDuration(startMs: number, endMs: number): string | undefined {
-  const ms = endMs - startMs;
-  if (!Number.isFinite(ms) || ms < 0) return undefined;
-  if (ms < 1000) return `${ms}ms`;
-  const s = Math.round(ms / 1000);
-  if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60);
-  const rem = s % 60;
-  if (m < 60) return rem ? `${m}m ${rem}s` : `${m}m`;
-  const h = Math.floor(m / 60);
-  return `${h}h ${m % 60}m`;
-}
-
 export type ProjectStatus = {
   key: string;
   label: string;
@@ -134,7 +104,8 @@ export type ProjectDigest = {
   completed: string[];
   next: string[];
   prompts: string[];
-  timeline: DigestTimelineItem[];
+  /** One row per unit of work — dispatch joined to its run. See lib/activity-events. */
+  events: ActivityEvent[];
 };
 
 // ─── Window resolution ───────────────────────────────────────────────────────
@@ -284,7 +255,6 @@ async function fetchActivityRows(userId: string, since: Date, projectKey: string
 type ActivityRows = Awaited<ReturnType<typeof fetchActivityRows>>;
 type PromptRow = ActivityRows["prompts"][number];
 type RunRow = ActivityRows["runs"][number];
-type LocalChatRow = ActivityRows["localChats"][number];
 
 // ─── Builders — each one does one thing ─────────────────────────────────────
 
@@ -331,81 +301,6 @@ function buildStats(
     partial: runs.filter((r) => r.outcome === "partial").length,
     error: runs.filter(isErrorRun).length,
   };
-}
-
-function buildPromptTimeline(prompts: PromptRow[]): DigestTimelineItem[] {
-  return prompts.slice(0, MAX_PROMPT_SAMPLES_FOR_TIMELINE).map((prompt) => ({
-    id: `prompt:${prompt.id}`,
-    occurredAt: prompt.dispatchedAt.toISOString(),
-    projectKey: prompt.projectKey,
-    title: `${getAdapterLabel(prompt.adapter)} · ${prompt.intent === "custom" ? "Custom prompt" : getIntentLabel(prompt.intent)}`,
-    body: promptDisplayBody(prompt),
-    status: "neutral",
-    kind: "prompt",
-  }));
-}
-
-function buildLocalChatTimeline(rows: LocalChatRow[]): DigestTimelineItem[] {
-  return rows.slice(0, MAX_LOCAL_CHAT_SAMPLES_FOR_TIMELINE).map((row) => {
-    const branch = row.gitBranch ? ` · ${row.gitBranch}` : "";
-    return {
-      id: `local_chat:${row.id}`,
-      occurredAt: row.occurredAt.toISOString(),
-      projectKey: row.projectKey ?? "(unscoped)",
-      title: `Claude Code · local chat${branch}`,
-      body: row.promptText,
-      status: "neutral" as const,
-      kind: "local_chat" as const,
-    };
-  });
-}
-
-function buildRunTimeline(runs: RunRow[], blockedReasons: Map<string, string>): DigestTimelineItem[] {
-  return runs.slice(0, MAX_RUN_SAMPLES_FOR_TIMELINE).map((run) => {
-    // Show what the agent actually did AND what's next — the two facts that
-    // make the timeline useful — plus the error when it failed.
-    const done = run.summary?.done?.trim();
-    const next = run.summary?.next?.trim();
-    // The REAL cause wins over the reaper's circular "timed out — exceeded max
-    // duration": a blocked-event reason ("agent isn't generating", "not
-    // authenticated (401)") tells you WHY without opening a transcript. Capped
-    // so a long operator-remediation message doesn't flood the timeline.
-    const blocked = blockedReasons.get(run.id);
-    const rawErr = (blocked || run.payload?.error?.trim() || "").trim();
-    const err = rawErr.length > 160 ? `${rawErr.slice(0, 157)}…` : rawErr;
-    const parts: string[] = [];
-    if (done) parts.push(done);
-    // Cross-model verdict — the moat made visible. When a project declares a
-    // definition_of_done, a DIFFERENT model lineage judged this worker's handoff
-    // (see dod-gate.ts). Surface WHO judged and WHAT they caught, so "done"
-    // demonstrably means a second mind agreed — not the agent grading itself.
-    const v = run.summary?.verification;
-    if (v) {
-      const judge = v.judge.includes("/") ? v.judge.split("/").pop() : v.judge;
-      const worker = getAdapterLabel(run.adapter);
-      parts.push(
-        v.met
-          ? `✓ Cross-model check — ${worker} did it, ${judge} verified the definition of done is met`
-          : `✗ Cross-model check — ${worker} did it, ${judge} found the definition of done NOT met${v.gap ? `: ${v.gap}` : ""}`,
-      );
-    }
-    if (next) parts.push(`Next: ${next}`);
-    if (!parts.length && run.payload?.resultText) parts.push(run.payload.resultText);
-    if (err) parts.push(`Error: ${err}`);
-    const detail = run.finishedAt
-      ? formatDuration(run.startedAt.getTime(), run.finishedAt.getTime())
-      : "running";
-    return {
-      id: `run:${run.id}`,
-      occurredAt: (run.finishedAt ?? run.startedAt).toISOString(),
-      projectKey: run.projectKey,
-      title: `${getAdapterLabel(run.adapter)} · ${getIntentLabel(run.intent)} · ${run.outcome ?? run.state}`,
-      body: parts.join(" — "),
-      status: runStatus(run),
-      kind: "run" as const,
-      detail,
-    };
-  });
 }
 
 function buildProjectStatuses(runs: RunRow[], projects: DigestProjectOption[]): ProjectStatus[] {
@@ -475,16 +370,17 @@ export async function getProjectDigest(
   // Real failure causes for the timeline runs, so "why did this fail" is
   // answered right here instead of in a transcript. Batched over the runs the
   // timeline actually shows.
-  const timelineRunIds = rows.runs.slice(0, MAX_RUN_SAMPLES_FOR_TIMELINE).map((r) => r.id);
+  const timelineRunIds = rows.runs.slice(0, MAX_RUN_SAMPLES_FOR_EVENTS).map((r) => r.id);
   const blockedReasons = await getBlockedReasonsForRuns(timelineRunIds);
 
-  const timeline = [
-    ...buildPromptTimeline(rows.prompts),
-    ...buildRunTimeline(rows.runs, blockedReasons),
-    ...buildLocalChatTimeline(rows.localChats),
-  ]
-    .sort((a, b) => b.occurredAt.localeCompare(a.occurredAt))
-    .slice(0, MAX_TIMELINE_ITEMS);
+  // The reader-facing shape: a dispatch and the run it produced are ONE event.
+  // Built from the same capped samples the timeline uses so both agree.
+  const events = buildActivityEvents({
+    prompts: rows.prompts.slice(0, MAX_PROMPT_SAMPLES_FOR_EVENTS),
+    runs: rows.runs.slice(0, MAX_RUN_SAMPLES_FOR_EVENTS),
+    localChats: rows.localChats.slice(0, MAX_LOCAL_CHAT_SAMPLES_FOR_EVENTS),
+    blockedReasons,
+  }).slice(0, MAX_EVENTS);
 
   return {
     window,
@@ -497,6 +393,6 @@ export async function getProjectDigest(
     completed: compacted.completed,
     next: compacted.next,
     prompts: compacted.prompts,
-    timeline,
+    events,
   };
 }

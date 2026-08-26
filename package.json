@@ -16,7 +16,7 @@
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
     "check:schema": "npx tsx scripts/check-schema-drift.ts",
-    "lint": "eslint src/ home/",
+    "lint": "eslint --cache --cache-location node_modules/.cache/eslint src/ home/",
     "check:design": "bash scripts/check-design-system.sh",
     "check:desktop": "bash scripts/check-desktop.sh",
     "verify": "tsc --noEmit && npm run lint && npm run check:design && npm run check:desktop && npm run test:unit && npm run test:home && npm run test:deploy-ref-gate && npm run test:not-behind-gate && npm run test:ops",
@@ -92,6 +92,7 @@
     "sync:agent-core": "tsx scripts/sync-agent-core.ts",
     "probe:models": "tsx scripts/probe-models.ts",
     "check:models": "tsx scripts/check-model-ids.ts",
+    "check:telemetry": "tsx scripts/check-telemetry.ts",
     "audit:responsive": "node scripts/test/responsive-audit.mjs",
     "audit:mobile": "node scripts/test/mobile-interaction-audit.mjs",
     "audit:contrast": "node scripts/test/contrast-audit.mjs"
@@ -157,6 +158,6 @@
     "typescript": "^5"
   },
   "overrides": {
-    "fast-uri": "3.1.2"
+    "fast-uri": "^3.1.6"
   }
 }

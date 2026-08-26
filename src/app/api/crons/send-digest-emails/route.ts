@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
       // Skip empty windows so opted-in users don't get a "nothing happened"
       // email every day they were inactive. Still update the lastDigestSentAt
       // so the cadence clock doesn't drift.
-      const hasActivity = generated.digest.timeline.length > 0;
+      const hasActivity = generated.digest.events.length > 0;
       if (!hasActivity) {
         await markDigestSent(row.userId, startedAt);
         results.push({ userId: row.userId, status: "skipped_empty" });

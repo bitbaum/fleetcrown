@@ -1,11 +1,41 @@
 #!/usr/bin/env sh
-# Run quick correctness checks on every commit. Smoke runs in pre-push
-# (when the local server is up) — see .husky/pre-push.
+# Commit-time checks run on the STAGED FILES ONLY, and deliberately do less
+# than pre-push.
+#
+# This hook used to run `tsc --noEmit` (40s) plus `eslint src/ home/` (132s)
+# over the whole tree on every commit — 2m52s to record a one-line change.
+# That is not a safety property, it is a tax on committing, and the thing it
+# taxes is exactly the habit that keeps work off a single disk. Measured
+# 2026-08-25: 206 finished files sat uncommitted across the fleet for ten days.
+#
+# The split that makes sense: a COMMIT is local and reversible, so gate it
+# cheaply; a PUSH is shared, so gate it completely. `npm run verify` still runs
+# in full on pre-push and again in CI, so nothing reaches origin unverified —
+# only the local loop got its three minutes back.
+#
+# Whole-program checks (tsc) cannot be scoped to staged files and stay on the
+# push side where the full bundle already lives.
 
 set -e
 
-echo "→ tsc --noEmit"
-npx tsc --noEmit
+# -z/xargs -0 so paths with spaces survive; ACMR skips deletions, which would
+# make eslint fail on a file that is gone by design.
+#
+# The list is PIPED, never captured in $(...). Command substitution strips NUL
+# bytes, so `staged=$(git diff -z ...)` silently concatenates every path into
+# one string — "a/route.ts" + "b/route.ts" becomes "a/route.tsb/route.ts" — and
+# `xargs -0` then fails on a filename that does not exist. It works with one
+# staged file and breaks at two, which is why it read as an odd one-off rather
+# than a broken hook. scripts/test/nul-safe-paths.ts now fails on the pattern.
+FILTER="--diff-filter=ACMR"
+GLOBS="src/**/*.ts src/**/*.tsx home/**/*.ts home/**/*.tsx"
 
-echo "→ eslint src/ home/"
-npx eslint src/ home/
+# shellcheck disable=SC2086
+if [ "$(git diff --cached --name-only $FILTER -- $GLOBS | wc -l)" -eq 0 ]; then
+  echo "→ pre-commit: no staged TypeScript — nothing to lint"
+  exit 0
+fi
+
+echo "→ eslint (staged files only — full tree runs on push and in CI)"
+# shellcheck disable=SC2086
+git diff --cached -z --name-only $FILTER -- $GLOBS | xargs -0 -r npx eslint
