@@ -83,7 +83,7 @@ export function LiveUrlField({
   if (current) {
     return (
       <span className="inline-flex items-center gap-1">
-        <a href={current} target="_blank" rel="noreferrer" className="ui-btn-secondary min-h-11 gap-1.5">
+        <a href={current} target="_blank" rel="noreferrer" className="ui-btn-ghost min-h-11 gap-1.5">
           <Globe className="h-4 w-4" aria-hidden="true" /> Live
         </a>
         {!readonly && (
@@ -108,7 +108,7 @@ export function LiveUrlField({
   return (
     <button
       type="button"
-      className="ui-btn-secondary min-h-11 gap-1.5"
+      className="ui-btn-ghost min-h-11 gap-1.5"
       onClick={() => setEditing(true)}
     >
       <Globe className="h-4 w-4" aria-hidden="true" /> Add live URL

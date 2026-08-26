@@ -947,8 +947,34 @@
   .ui-public-footer-fleet-blurb {
     @apply text-xs text-text-muted;
   }
+  /* border-subtle, not border-white/10 — this renders on the theme-aware
+     public surface, where a white hairline is invisible in Light. */
   .ui-public-prose-divider {
-    @apply mb-10 space-y-4 border-t border-white/10 pt-4;
+    @apply mb-10 space-y-4 border-t border-border-subtle pt-4;
+  }
+  /* Quickstart's device map. The steps are a real sequence, but three of them
+     need a computer and three do not — which is the first thing a visitor
+     arriving on a phone has to know, and previously had to read three
+     paragraphs to discover. */
+  .ui-public-steps {
+    @apply mb-10 grid gap-4 rounded-2xl border border-border-subtle bg-surface-base p-4 sm:mb-12 sm:grid-cols-2 sm:p-5;
+  }
+  .ui-public-steps-label {
+    @apply mb-2 flex items-center gap-2 text-micro font-semibold uppercase tracking-caps text-text-tertiary;
+  }
+  .ui-public-steps-list {
+    @apply flex flex-col;
+  }
+  .ui-public-steps-link {
+    @apply -mx-2 flex min-h-11 items-center gap-2.5 rounded-lg px-2 text-sm text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary;
+  }
+  .ui-public-steps-num {
+    @apply w-4 shrink-0 font-mono text-xs text-text-muted;
+  }
+  /* Marker on a heading whose step cannot be done from the device you are
+     probably holding. */
+  .ui-public-step-badge {
+    @apply ml-2 inline-flex translate-y-[-2px] items-center rounded-full border border-border-subtle px-2 py-0.5 align-middle text-micro font-semibold uppercase tracking-caps text-text-tertiary;
   }
   .ui-icon-btn {
     @apply inline-flex items-center justify-center;
@@ -2527,6 +2553,20 @@
   .ui-error    { @apply text-sm text-status-negative; }
   .ui-error-xs { @apply text-xs text-status-negative; }
   .ui-page-header   { @apply flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4; }
+  /* Three-up stats row (Goals, Habits, Money, Memory). Two columns on a phone
+     so each card can hold its number; the odd card out spans the row instead
+     of sitting half-width beside a gap. See components/ui/stat-row.tsx. */
+  .ui-stat-row {
+    @apply grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-4;
+  }
+  .ui-stat-row > :last-child:nth-child(odd) {
+    grid-column: span 2;
+  }
+  @media (min-width: 40rem) {
+    .ui-stat-row > :last-child:nth-child(odd) {
+      grid-column: auto;
+    }
+  }
   /* Disclosure header for a panel of one-off setup (People → Fill the book). */
   .ui-book-panel-toggle {
     @apply flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-raised;
