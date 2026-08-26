@@ -219,8 +219,19 @@ export default async function LandingPage({
               .map((path) => (
               /* The card itself is the link. A 44px text link inside a 260px
                  card is a needle to hit with a thumb; the whole surface is the
-                 target now, and the arrow row is just its label. */
-              <Link key={path.title} href={path.href} className="ui-public-start-card">
+                 target now, and the arrow row is just its label.
+
+                 order-last below `md`: "Run locally" leads on desktop, where
+                 the visitor is plausibly sitting at the machine that would run
+                 the agents. On a phone it is the one entry point they cannot
+                 take, and leading three choices with it makes the list open on
+                 a dead end. The hosted control plane goes first there; the
+                 grid restores config order at `md`. */
+              <Link
+                key={path.title}
+                href={path.href}
+                className={`ui-public-start-card${path.href === "/download" ? " order-last md:order-none" : ""}`}
+              >
                 <h3 className="ui-public-start-card-title">{path.title}</h3>
                 <p className="ui-public-start-card-body">{path.body}</p>
                 <span className="ui-public-start-card-link">

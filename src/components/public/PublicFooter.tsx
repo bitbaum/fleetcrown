@@ -70,7 +70,11 @@ export function PublicFooter() {
     <footer className="ui-public-footer mx-auto max-w-6xl px-4 pb-10 sm:px-6 sm:pb-12">
       <div className="ui-public-footer-grid">
         {FOOTER_GROUPS.map((group) => (
-          <div key={group.heading} className="flex flex-col gap-2">
+          /* No gap on a phone: the pointer:coarse floor already gives each
+             link a 44px row, so the extra 8px made a 52px pitch and the
+             column read as a list with holes punched in it. Desktop keeps
+             the gap, where the rows are only as tall as the text. */
+          <div key={group.heading} className="flex flex-col sm:gap-2">
             <div className="ui-public-footer-heading">
               {group.heading}
             </div>
@@ -83,12 +87,12 @@ export function PublicFooter() {
                   href={link.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="ui-public-link text-sm"
+                  className="ui-public-link-standalone text-sm"
                 >
                   {link.label}
                 </a>
               ) : (
-                <Link key={link.label} href={link.href} className="ui-public-link text-sm">
+                <Link key={link.label} href={link.href} className="ui-public-link-standalone text-sm">
                   {link.label}
                 </Link>
               ),
