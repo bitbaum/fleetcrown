@@ -168,10 +168,14 @@ function FormInner({
                   autoComplete="current-password"
                   required
                 />
-                <div className="text-right">
+                {/* ui-tap + inline-flex, not a bare inline link: this is a
+                    standalone row, and it measured 16px tall — the smallest
+                    real target on the whole signed-out surface, sitting one
+                    line above the password field people mistype into. */}
+                <div className="flex justify-end">
                   <Link
                     href={ROUTES.FORGOT_PASSWORD}
-                    className="text-xs text-text-muted hover:text-text-secondary underline underline-offset-2"
+                    className="ui-tap inline-flex items-center text-xs text-text-muted underline underline-offset-2 hover:text-text-secondary"
                   >
                     Forgot password?
                   </Link>

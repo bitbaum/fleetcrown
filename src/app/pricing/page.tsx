@@ -62,17 +62,17 @@ export default async function PricingPage() {
 
   return (
     <PublicSurface right={<PublicHeaderActions />}>
-      <main className="mx-auto w-full max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
+      <main className="ui-public-container py-12 sm:py-20">
         <div className="mx-auto max-w-2xl text-center">
           <div className="ui-public-eyebrow">Pricing</div>
-          <h1 className="ui-public-section-title mt-4">Pay for the captain, not the crew.</h1>
-          <p className="ui-public-section-lede mx-auto mt-5">
+          <h1 className="ui-public-display-md mt-3 sm:mt-4">Pay for the captain, not the crew.</h1>
+          <p className="ui-public-section-lede mx-auto mt-4 sm:mt-5">
             The agents run on your machine with your own keys. FleetCrown is the one place you
             command, watch, verify, and govern all of them. Start free — scale when your fleet does.
           </p>
         </div>
 
-        <div className="mt-14 grid gap-5 lg:grid-cols-4 sm:grid-cols-2">
+        <div className="ui-public-section-gap grid gap-3 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4">
           {PRICING_PLANS.map((plan) => {
             const cta = ctaFor(plan);
             return (
@@ -115,22 +115,27 @@ export default async function PricingPage() {
                   ))}
                 </ul>
 
-                <Link
-                  href={cta.href}
-                  className={`mt-8 w-full text-center ${plan.featured ? "ui-public-cta" : "ui-public-cta-ghost"}`}
-                >
-                  {cta.label}
-                </Link>
+                {/* mt-auto on the wrapper, so on a phone — where the cards
+                    stack and their feature lists differ in length — every CTA
+                    still sits on the card's bottom edge. */}
+                <div className="mt-auto pt-6">
+                  <Link
+                    href={cta.href}
+                    className={`w-full text-center ${plan.featured ? "ui-public-cta" : "ui-public-cta-ghost"}`}
+                  >
+                    {cta.label}
+                  </Link>
+                </div>
               </div>
             );
           })}
         </div>
 
-        <p className="mx-auto mt-8 max-w-3xl text-center text-sm text-text-secondary">{PRICING_BILLING_NOTE}</p>
+        <p className="mx-auto mt-6 max-w-3xl text-center text-sm text-text-secondary sm:mt-8">{PRICING_BILLING_NOTE}</p>
 
         {/* Every plan includes the captain layer — stated once, honestly, rather
             than faked as per-tier gates the product doesn't enforce. */}
-        <div className="mx-auto mt-16 max-w-3xl rounded-2xl border border-border-subtle bg-surface-base p-6 sm:p-8">
+        <div className="mx-auto mt-10 max-w-3xl rounded-2xl border border-border-subtle bg-surface-base p-5 sm:mt-16 sm:p-8">
           <div className="ui-public-eyebrow">Every plan includes</div>
           <ul className="mt-5 grid gap-3 sm:grid-cols-2">
             {PRICING_INCLUDED.map((item) => (

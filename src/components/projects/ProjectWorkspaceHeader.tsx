@@ -12,6 +12,7 @@ import { PROJECT_ATTR } from "@/config/project-attrs";
 
 export function ProjectWorkspaceHeader({
   projectId,
+  userProjectId,
   name,
   workspaceKey,
   description,
@@ -20,6 +21,8 @@ export function ProjectWorkspaceHeader({
   readonly,
 }: {
   projectId: string;
+  /** Catalog row id — the health worklist writes live_url through it. */
+  userProjectId: string | null;
   name: string;
   workspaceKey: string;
   description: string | null;
@@ -31,6 +34,15 @@ export function ProjectWorkspaceHeader({
   const router = useRouter();
   const [currentDescription, setCurrentDescription] = useState(description);
   const [currentStatus, setCurrentStatus] = useState(status);
+
+  // Re-seed from the server on every refresh. `useState(prop)` only reads its
+  // argument on mount, so anything that wrote these through a different
+  // control — the health worklist writes both — landed in the database, came
+  // back down on router.refresh(), and was ignored here: the header went on
+  // showing "+ stage" for a stage that was already set. A write you cannot see
+  // land is indistinguishable from one that failed.
+  useEffect(() => { setCurrentStatus(status); }, [status]);
+  useEffect(() => { setCurrentDescription(description); }, [description]);
 
   useEffect(() => {
     rememberFleetProject(workspaceKey);
@@ -51,7 +63,13 @@ export function ProjectWorkspaceHeader({
             refresh();
           }}
         />
-        <HealthScoreBar health={health} interactive />
+        <HealthScoreBar
+          health={health}
+          interactive
+          projectId={readonly ? undefined : projectId}
+          userProjectId={userProjectId}
+          brief={currentDescription}
+        />
         {readonly && <span className="ui-tag ui-tag-neutral">Team project</span>}
       </div>
 

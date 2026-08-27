@@ -102,6 +102,7 @@ export function ProjectWorkspaceView({
         <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
           <ProjectWorkspaceHeader
             projectId={project.id}
+            userProjectId={userProject?.id ?? null}
             name={project.name}
             workspaceKey={workspaceKey}
             description={cleanDescription(project.description)}
@@ -112,7 +113,12 @@ export function ProjectWorkspaceView({
           {/* One visual tier only: the header offers destinations, not actions,
               so everything here is a quiet ghost link. The page's real CTA
               (Kickoff / Run next step) lives in the content flow below — five
-              identical secondary buttons up here made it invisible. */}
+              identical secondary buttons up here made it invisible.
+              That was the stated rule but not the rendered one: LiveUrlField
+              drew a bordered secondary button and OrangeCatPublishButton an
+              unlabelled icon, so on a phone — where the row wraps to two lines
+              — it read as four unrelated controls rather than one set. Both
+              are ghost links with labels now. */}
           <div className="flex shrink-0 flex-wrap items-center gap-1.5">
             <LiveUrlField
               userProjectId={userProject?.id ?? null}

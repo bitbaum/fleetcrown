@@ -2,43 +2,76 @@
 
 import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { Check, Copy, ExternalLink } from "lucide-react";
+import { Check, ChevronDown, Copy, ExternalLink, Smartphone } from "lucide-react";
 import { DESKTOP_DOWNLOAD, type DesktopDownloadPlatform } from "@/config/marketing-content";
 import { FEEDBACK_MEDIUM_MS } from "@/lib/constants/timings";
 import { useClipboard } from "@/hooks/use-clipboard";
+import { APP_NAME, APP_URL } from "@/config/brand";
+import { ROUTES } from "@/config/auth";
 
 type PlatformId = DesktopDownloadPlatform["id"];
+
+/** True on phones and tablets. Checked BEFORE the desktop OS sniffing below,
+ *  because that sniffing gets mobile catastrophically wrong: an Android UA
+ *  contains "linux" (so a phone was offered an 80 MB .deb) and an iPhone UA
+ *  contains "like Mac OS X" (so an iPhone was offered an Apple Silicon .dmg).
+ *  Neither device can open either file. */
+function isHandheld(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent;
+  if (/Android|iPhone|iPod|IEMobile|Opera Mini|Mobile/i.test(ua)) return true;
+  // iPadOS 13+ reports a desktop Safari UA; the touch-point count is what
+  // still gives it away.
+  if (/iPad/i.test(ua)) return true;
+  return /Macintosh/i.test(ua) && navigator.maxTouchPoints > 1;
+}
 
 function detectPlatformId(): PlatformId {
   if (typeof navigator === "undefined") return DESKTOP_DOWNLOAD.platforms[0].id;
   const ua = navigator.userAgent.toLowerCase();
   const platform = navigator.platform?.toLowerCase() || "";
   if (platform.includes("win") || ua.includes("windows")) return "win";
+  if (ua.includes("android")) return "linux";
   if (platform.includes("mac") || ua.includes("mac")) return "mac";
   if (platform.includes("linux") || ua.includes("linux")) return "linux";
   return DESKTOP_DOWNLOAD.platforms[0].id;
 }
+
+type Detected = { platformId: PlatformId; handheld: boolean };
 
 function subscribePlatform(onStoreChange: () => void) {
   const timer = window.setTimeout(onStoreChange, 0);
   return () => window.clearTimeout(timer);
 }
 
-function getClientPlatformId() {
-  return detectPlatformId();
+let clientDetected: Detected | null = null;
+function getClientDetected(): Detected {
+  // Cached so useSyncExternalStore sees a stable reference; recomputing built
+  // a new object on every render and looped.
+  clientDetected ??= { platformId: detectPlatformId(), handheld: isHandheld() };
+  return clientDetected;
 }
 
-function getServerPlatformId(): PlatformId {
+const SERVER_DETECTED: Detected = {
   // Server snapshot: pick the one that's actually ready so non-interactive
   // crawlers and the initial paint surface a real link, not a "coming soon"
   // panel that depends on the user's UA.
-  return DESKTOP_DOWNLOAD.platforms.find((p) => p.status === "ready")?.id ?? DESKTOP_DOWNLOAD.platforms[0].id;
+  platformId: DESKTOP_DOWNLOAD.platforms.find((p) => p.status === "ready")?.id ?? DESKTOP_DOWNLOAD.platforms[0].id,
+  handheld: false,
+};
+
+function getServerDetected(): Detected {
+  return SERVER_DETECTED;
 }
 
 export function DesktopDownload() {
-  const detectedPlatformId = useSyncExternalStore(subscribePlatform, getClientPlatformId, getServerPlatformId);
+  const detected = useSyncExternalStore(subscribePlatform, getClientDetected, getServerDetected);
   const [selectedPlatformId, setSelectedPlatformId] = useState<PlatformId | null>(null);
-  const activePlatformId = selectedPlatformId ?? detectedPlatformId;
+  // A handheld visitor gets the handoff panel instead of install instructions
+  // they cannot follow — until they ask for them explicitly.
+  const [installShown, setInstallShown] = useState(false);
+  const showInstall = !detected.handheld || installShown;
+  const activePlatformId = selectedPlatformId ?? detected.platformId;
   // Typed through the union contract, not the current data: with every
   // platform shipping today the inferred literal is just "ready", which would
   // make the coming-soon branch unreachable and delete a UI state we still
@@ -80,24 +113,41 @@ export function DesktopDownload() {
         </div>
         <p className="ui-public-download-compare-note">{DESKTOP_DOWNLOAD.comparison.note}</p>
 
-        {/* Platform switcher */}
-        <div className="ui-public-download-platform-bar">
-          {DESKTOP_DOWNLOAD.platforms.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              onClick={() => setSelectedPlatformId(p.id)}
-              className={`ui-public-download-platform ${active.id === p.id ? "ui-public-download-platform-active" : "ui-public-download-platform-idle"}`}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
+        {detected.handheld && <HandheldHandoff />}
 
-        {active.status === "ready" ? (
-          <ReadyPlatformPanel platform={active} />
-        ) : (
-          <ComingSoonPanel platform={active} />
+        {!showInstall && (
+          <button
+            type="button"
+            onClick={() => setInstallShown(true)}
+            className="ui-public-download-reveal"
+          >
+            Show the desktop downloads anyway
+            <ChevronDown className="h-4 w-4" aria-hidden />
+          </button>
+        )}
+
+        {showInstall && (
+          <>
+            {/* Platform switcher */}
+            <div className="ui-public-download-platform-bar">
+              {DESKTOP_DOWNLOAD.platforms.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => setSelectedPlatformId(p.id)}
+                  className={`ui-public-download-platform ${active.id === p.id ? "ui-public-download-platform-active" : "ui-public-download-platform-idle"}`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+
+            {active.status === "ready" ? (
+              <ReadyPlatformPanel platform={active} />
+            ) : (
+              <ComingSoonPanel platform={active} />
+            )}
+          </>
         )}
 
         {/* 3-step "what happens next" — only relevant once a CTA is in view */}
@@ -186,6 +236,47 @@ export function DesktopDownload() {
       <p className="ui-public-download-footer">
         The desktop app, the web, and your phone all connect to the same fleet. Use whichever surface is in front of you.
       </p>
+    </div>
+  );
+}
+
+/** Shown instead of the install flow when the visitor is on a phone or tablet.
+ *  Names the constraint honestly, then offers the two paths that actually work
+ *  from a handheld: use the web control plane now, or hand the link to the
+ *  machine that can run the binary. */
+function HandheldHandoff() {
+  const { copied, copy } = useClipboard(FEEDBACK_MEDIUM_MS);
+  const link = `${APP_URL}/download`;
+
+  return (
+    <div className="ui-public-download-handoff">
+      <span className="ui-public-download-handoff-badge">
+        <Smartphone className="h-3 w-3" aria-hidden />
+        You&apos;re on a phone
+      </span>
+      <h3 className="ui-public-download-handoff-title">
+        Fleet Runner installs on a computer — but you don&apos;t need it to start.
+      </h3>
+      <p className="ui-public-download-handoff-body">
+        {APP_NAME} on the web is the full control plane: watch every agent, dispatch work,
+        approve decisions, and drive a live terminal from this phone. Fleet Runner is what
+        lets those agents touch files and run commands on your own machine — so install it
+        there, whenever you&apos;re next in front of it.
+      </p>
+      <div className="ui-public-download-handoff-actions">
+        <Link href={ROUTES.SIGN_UP} className="ui-public-download-handoff-primary">
+          Open {APP_NAME} on the web
+        </Link>
+        <button
+          type="button"
+          onClick={() => copy(link)}
+          className="ui-public-download-handoff-secondary"
+        >
+          {copied ? <Check className="h-4 w-4" aria-hidden /> : <Copy className="h-4 w-4" aria-hidden />}
+          {copied ? "Link copied" : "Copy the install link"}
+        </button>
+      </div>
+      <code className="ui-public-download-handoff-link">{link}</code>
     </div>
   );
 }

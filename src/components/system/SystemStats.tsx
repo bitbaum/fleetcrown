@@ -1,6 +1,6 @@
 "use client";
 
-import { Cpu, HardDrive, Clock, Radio } from "lucide-react";
+import { Cpu, HardDrive, Radio } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { FetchErrorState } from "@/components/ui/fetch-error-state";
 import { useFetch } from "@/hooks/use-fetch";
@@ -62,18 +62,26 @@ export function SystemStats() {
   const { mem, swap, disk, uptime, gatewayStatus } = data;
 
   return (
+    // Gateway and Uptime were two full cards, each with an icon header, to
+    // carry one short fact apiece — on a phone that is two screenfuls before
+    // the first reading with any detail in it. They are both "how is the host
+    // doing", so they are two rows of one card now.
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <Card>
-        <CardHeader icon={Radio} title="OpenClaw Gateway" />
-        <div className="flex items-center gap-2">
-          <span className={`h-2 w-2 rounded-full ${gatewayStatus === "ok" ? "bg-status-positive" : "bg-status-negative"}`} />
-          <span className="text-base text-text-primary">{gatewayStatus === "ok" ? "Reachable" : "Unavailable"}</span>
+        <CardHeader icon={Radio} title="Host" />
+        <div className="space-y-2">
+          <div className="ui-label-row">
+            <span>Gateway</span>
+            <span className="flex items-center gap-2 text-text-primary">
+              <span className={`h-2 w-2 shrink-0 rounded-full ${gatewayStatus === "ok" ? "bg-status-positive" : "bg-status-negative"}`} />
+              {gatewayStatus === "ok" ? "Reachable" : "Unavailable"}
+            </span>
+          </div>
+          <div className="ui-label-row">
+            <span>Uptime</span>
+            <span className="text-text-primary">{uptime ?? "not reporting"}</span>
+          </div>
         </div>
-      </Card>
-
-      <Card>
-        <CardHeader icon={Clock} title="Uptime" />
-        <p className="text-base text-text-secondary">{uptime ?? "n/a"}</p>
       </Card>
 
       <Card>

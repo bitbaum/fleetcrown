@@ -59,6 +59,19 @@ FleetCrown is the name because it positions the *product* as the authoritative c
 3. **Layer 3 — globals.css `@layer components`**: Every recurring visual pattern becomes a named `ui-*` class. This is the SSOT for buttons, cards, panels, public/auth bands, download CTAs, sidebars, etc. New patterns that will appear 3+ times go here immediately.
 4. **Layer 4 — JSX**: Only `ui-*` semantic classes + pure layout Tailwind (`flex`, `gap-`, `px-`, `min-h-11`, `rounded-xl`, `col-span-*`, etc.). No palette colors, no hex, no arbitrary `text-[10px]`, no `bg-[#...]`, no `shadow-[...]`, no `text-white/` outside the intentionally centralized `ui-public-*` and `ui-auth-*` definitions (those surfaces are always near-black and the opacities are part of the class contract).
 
+**`--accent` is a SURFACE, not an accent colour** (the one token trap in Layer 2):
+
+`--accent` / `--accent-foreground` are shadcn's *accent surface pair* — a background tone plus the text that sits on it. `--accent` is `oklch(0.14 0 0)` in dark and `oklch(0.96 0 0)` in light, i.e. one step from the page background in each theme. Written as a text or line colour it paints the element the same colour as what is behind it. Measured in a real browser before the 2026-08 fix: **contrast ratio 1.0 in dark and 1.03 in light** — the Control onboarding CTAs ("No install needed →", "Download for your OS →", "Start →", "Import →"), the email-verification "Learn more" link, four card hover borders, and the selected-repo checkbox were literally invisible, in both themes, on the first screen a new user sees.
+
+| Want | Use | Not |
+| --- | --- | --- |
+| Accent text / icon | `text-accent-text` | `text-accent` |
+| Accent border, hover highlight | `border-accent-primary` | `border-accent` |
+| Filled accent control | `bg-accent-warm` + `text-on-accent` | `bg-accent` + `text-accent-foreground` |
+| Subtle raised surface | `bg-surface-raised` | `bg-accent` |
+
+`npm run check:design` now fails on any bare `(text|fill|stroke|border|ring|bg)-accent` in TSX. The general lesson: a token whose name reads like a colour may be half of a surface pair — check its OKLCH lightness against the background it will sit on before using it as ink.
+
 **Brand mark (the geometric logo):**
 - The single source of truth for the mark is the SVG inside `src/components/shell/BrandMark.tsx` (rounded control-window frame + vertical divider + horizontal control bars). It is rendered with `currentColor` + semantic text tokens so it adapts to light/dark and context.
 - `public/icon.svg` (PWA, apple, manifest) and every `opengraph-*.tsx` / `twitter-image.tsx` **must render the identical geometry** (scaled). They duplicate the paths for static/edge reasons but are annotated with "must stay visually identical".

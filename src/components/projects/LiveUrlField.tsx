@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Globe, Pencil, X } from "lucide-react";
 
 /**
@@ -21,6 +21,19 @@ export function LiveUrlField({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [current, setCurrent] = useState(liveUrl);
+
+  // `useState(prop)` reads its argument once, on mount. When the URL is set
+  // from somewhere else on the page — the health worklist writes this same
+  // column — the value lands in the database and comes back down on
+  // router.refresh(), and this field went on saying "Add live URL" anyway. The
+  // health point was earned while the page disagreed, which is worse than not
+  // being able to earn it. Skipped while editing so a refresh cannot yank the
+  // text out from under someone mid-type.
+  useEffect(() => {
+    if (editing) return;
+    setCurrent(liveUrl);
+    setValue(liveUrl ?? "");
+  }, [liveUrl, editing]);
 
   if (!userProjectId) return null;
 
@@ -83,7 +96,7 @@ export function LiveUrlField({
   if (current) {
     return (
       <span className="inline-flex items-center gap-1">
-        <a href={current} target="_blank" rel="noreferrer" className="ui-btn-secondary min-h-11 gap-1.5">
+        <a href={current} target="_blank" rel="noreferrer" className="ui-btn-ghost min-h-11 gap-1.5">
           <Globe className="h-4 w-4" aria-hidden="true" /> Live
         </a>
         {!readonly && (
@@ -108,7 +121,7 @@ export function LiveUrlField({
   return (
     <button
       type="button"
-      className="ui-btn-secondary min-h-11 gap-1.5"
+      className="ui-btn-ghost min-h-11 gap-1.5"
       onClick={() => setEditing(true)}
     >
       <Globe className="h-4 w-4" aria-hidden="true" /> Add live URL

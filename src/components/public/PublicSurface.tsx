@@ -27,12 +27,16 @@ export function PublicSurface({
       <div aria-hidden className="ui-public-backdrop" />
       <nav className="ui-public-nav">
         <div className="ui-public-nav-brand-row">
-          <Link href={homeHref} className="rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-border-interactive">
-            <BrandMark />
+          <Link href={homeHref} className="min-w-0 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-border-interactive">
+            <BrandMark responsive />
           </Link>
+          {/* Desktop mega-menu only. Below `md` the same PUBLIC_NAV renders in
+              the drawer PublicHeaderActions mounts — it owns the session the
+              drawer's CTA needs, and this shell is pulled into client bundles
+              by AuthShell so it cannot read one itself. */}
           {showNav && <PublicNav />}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2">
           {right}
         </div>
       </nav>

@@ -116,7 +116,14 @@ export default async function MoneyPage() {
   const IntegrationBanner = isFounder ? (
     <div className="mt-6 p-3 bg-surface-raised border border-border-subtle rounded-lg text-sm">
       <div className="font-medium">Economic layer: <a href={INTEGRATION.orangeCat.profile} target="_blank" className="ui-link">{INTEGRATION.orangeCat.title} profile ({INTEGRATION.owner})</a></div>
-      <div className="text-text-secondary mt-1">FleetCrown is a paying customer of OrangeCat (via <code>stakeholder_relationships</code> &quot;customer&quot; edge). Shared wallet. <a href={INTEGRATION.orangeCat.projectUrl} target="_blank" className="ui-link">{INTEGRATION.orangeCat.title} project</a> · <a href={INTEGRATION.fleetCrown.projectUrl} target="_blank" className="ui-link">{INTEGRATION.fleetCrown.title} project</a>. Wallet: <code>{INTEGRATION.wallet.btc}</code></div>
+      {/* break-words: a bech32 address has no break opportunity, so it ran off
+          the right edge of a 320px phone. */}
+      {/* Named the database table this relationship is stored in
+          (`stakeholder_relationships`) and then printed a bech32 string with
+          no label — a sentence that is half schema and half unexplained
+          hex. Founder-only or not, it should read like a note, not a dump. */}
+      <div className="mt-1 break-words text-text-secondary">FleetCrown is a paying customer of OrangeCat. <a href={INTEGRATION.orangeCat.projectUrl} target="_blank" className="ui-link">{INTEGRATION.orangeCat.title} project</a> · <a href={INTEGRATION.fleetCrown.projectUrl} target="_blank" className="ui-link">{INTEGRATION.fleetCrown.title} project</a>.</div>
+      <div className="mt-1 text-text-tertiary">Shared BTC wallet <code className="break-all">{INTEGRATION.wallet.btc}</code></div>
     </div>
   ) : null;
 
@@ -129,58 +136,98 @@ export default async function MoneyPage() {
   const visibleSubs = allSubs.filter((s) => s.status !== SUB_STATUS.CANCELLED);
   const cancelledSubs = allSubs.filter((s) => s.status === SUB_STATUS.CANCELLED);
   const unverifiedCount = visibleSubs.filter((s) => s.status === SUB_STATUS.UNVERIFIED).length;
+  const burnByCurrency = [
+    burn.totalChf > 0 ? formatMoney(burn.totalChf, "CHF") : null,
+    burn.totalUsd > 0 ? formatMoney(burn.totalUsd, "USD") : null,
+    burn.totalEur > 0 ? formatMoney(burn.totalEur, "EUR") : null,
+    burn.totalGbp > 0 ? formatMoney(burn.totalGbp, "GBP") : null,
+  ].filter(Boolean) as string[];
+  // The soonest charge still ahead of us — what a person opens a money page to
+  // find out. Anything already past shows as "Overdue" on its own row.
+  const nextCharge = visibleSubs
+    .filter((s) => s.nextDue && !isPast(s.nextDue))
+    .sort((a, b) => a.nextDue!.getTime() - b.nextDue!.getTime())[0] ?? null;
 
   return (
-    <PageLayout title="Money" subtitle="Subscriptions, bills, and financial commitments" right={<NewSubscriptionButton />}>
-      <StatRow>
-        <StatCard
-          label="Monthly Burn"
-          value={[
-            burn.totalChf > 0 ? formatMoney(burn.totalChf, "CHF") : null,
-            burn.totalUsd > 0 ? formatMoney(burn.totalUsd, "USD") : null,
-            burn.totalEur > 0 ? formatMoney(burn.totalEur, "EUR") : null,
-            burn.totalGbp > 0 ? formatMoney(burn.totalGbp, "GBP") : null,
-          ].filter(Boolean).join(" + ") || "—"}
-          sub={`${burn.count} active subscriptions`}
-        />
-        <StatCard
-          label="Unverified"
-          value={String(unverifiedCount)}
-          sub={unverifiedCount > 0 ? "need attention" : "all confirmed"}
-        />
-        <StatCard
-          label="Non-CHF /mo"
-          value={[
-            burn.totalUsd > 0 ? formatMoney(burn.totalUsd, "USD") : null,
-            burn.totalEur > 0 ? formatMoney(burn.totalEur, "EUR") : null,
-            burn.totalGbp > 0 ? formatMoney(burn.totalGbp, "GBP") : null,
-          ].filter(Boolean).join(", ") || "—"}
-          sub="other currencies"
-        />
-      </StatRow>
+    // The header action is suppressed while the list is empty: the empty state
+    // already carries an "Add" button, and two identical buttons a thumb-width
+    // apart is a choice the reader has to think about for no reason.
+    <PageLayout
+      title="Money"
+      subtitle="Subscriptions, bills, and financial commitments"
+      right={visibleSubs.length > 0 ? <NewSubscriptionButton /> : undefined}
+    >
+      {/* The summary is about the subscriptions, so with none there is nothing
+          to summarise. It used to render regardless: "— / 0 active
+          subscriptions", "0 / all confirmed", "— / other currencies" — three
+          tiles and a third of a phone screen spent saying "nothing here",
+          above an empty list with no way in. */}
+      {visibleSubs.length > 0 && (
+        <StatRow>
+          <StatCard
+            label="Monthly burn"
+            value={burnByCurrency.join(" + ") || formatMoney(0, "CHF")}
+            sub={`across ${burn.count} active ${burn.count === 1 ? "subscription" : "subscriptions"}`}
+          />
+          <StatCard
+            label="Next charge"
+            value={nextCharge ? format(nextCharge.nextDue!, "d MMM") : "—"}
+            sub={nextCharge ? nextCharge.name : "no due dates set"}
+          />
+          {/* "Non-CHF /mo" was the third tile, and it printed the very same
+              USD/EUR/GBP figures the burn tile already joins — the same money
+              twice, under a label that reads like a different number. What is
+              actually missing from the burn line is when the next one lands,
+              which is the reason to open a money page in the first place. */}
+          <StatCard
+            label="Unverified"
+            value={String(unverifiedCount)}
+            sub={unverifiedCount > 0 ? "no billing email found" : "all confirmed"}
+          />
+        </StatRow>
+      )}
 
       <Card>
         <CardHeader
           icon={CreditCard}
-          title="Active Subscriptions"
+          title="Subscriptions"
           right={
-            <span className="text-sm text-text-tertiary">
-              Verified against email receipts
-            </span>
+            visibleSubs.length > 0 ? (
+              <span className="text-sm text-text-tertiary">
+                Verified against email receipts
+              </span>
+            ) : undefined
           }
         />
-        <div className="space-y-3">
-          {visibleSubs.map((sub) => <SubRow key={sub.id} sub={sub} />)}
-        </div>
+        {visibleSubs.length > 0 ? (
+          <div className="space-y-3">
+            {visibleSubs.map((sub) => <SubRow key={sub.id} sub={sub} />)}
+          </div>
+        ) : (
+          <div className="ui-empty-block ui-empty-block-md">
+            <CreditCard className="ui-empty-icon" aria-hidden="true" />
+            <p className="ui-empty-title">No subscriptions tracked yet</p>
+            <p className="ui-empty-helper">
+              Add what you pay for each month and this page totals the burn, flags
+              anything with no billing email behind it, and tells you what is due next.
+            </p>
+            <NewSubscriptionButton />
+          </div>
+        )}
         <CancelledSubsSection count={cancelledSubs.length}>
           {cancelledSubs.map((sub) => <SubRow key={sub.id} sub={sub} />)}
         </CancelledSubsSection>
-        <div className="mt-5 flex items-start gap-2 border-t border-border-subtle pt-4 text-sm text-text-tertiary">
-          <HelpCircle className="h-3 w-3 shrink-0 mt-0.5" />
-          <span>
-            Click the arrow icon to verify at the source. Unverified = no billing email found. Ask Loki to re-scan if something looks wrong.
-          </span>
-        </div>
+        {/* The footnote explains the arrow icon on a row and what "unverified"
+            means on a chip. With no rows there is neither, so it explained a UI
+            that was not on the screen. */}
+        {visibleSubs.length > 0 && (
+          <div className="mt-5 flex items-start gap-2 border-t border-border-subtle pt-4 text-sm text-text-tertiary">
+            <HelpCircle className="h-3 w-3 shrink-0 mt-0.5" />
+            <span>
+              Tap the arrow on a row to verify at the source. Unverified = no billing email found. Ask Loki to re-scan if something looks wrong.
+            </span>
+          </div>
+        )}
       </Card>
 
       {commitments.length > 0 && (

@@ -37,6 +37,9 @@ export default async function GoalsPage() {
       subtitle="Where you're going — and how you're getting there"
       right={<NewGoalButton goals={activeGoals} />}
     >
+      {/* Hidden until there is something to summarise — see the note on the
+          same guard in the Habits page. */}
+      {goalTree.length > 0 && (
       <StatRow>
         <StatCard
           label="Active Goals"
@@ -49,6 +52,7 @@ export default async function GoalsPage() {
         <StatCard label="Avg Progress" value={`${stats.avgProgress}%`} sub="across active goals" />
         <StatCard label="Total" value={String(stats.total)} sub="goals tracked" />
       </StatRow>
+      )}
 
       {goalTree.length === 0 ? (
         <Card>

@@ -66,8 +66,16 @@ export function StatusBadge({ value }: { value: string }) {
   // target. Spotted live on Projects mobile: a status like "Strategic
   // planning only - no code, n…" was cutting mid-word with no ellipsis,
   // making the chip look broken.
+  //
+  // The "Stage" prefix is not decoration. This chip is one word — "Production"
+  // — sitting next to the health chip, and a reader has to supply the missing
+  // noun themselves. Worse, the app already spends "status" on CI status, run
+  // status and agent status, so guessing wrong is easy. One word for this
+  // field everywhere: the health check calls it "Stage declared", the editor
+  // says "+ stage", and this says Stage.
   return (
-    <span className={`ui-projects-badge max-w-[180px] overflow-hidden ${cls}`} title={value}>
+    <span className={`ui-projects-badge max-w-[180px] overflow-hidden ${cls}`} title={`Stage: ${value}`}>
+      <span className="ui-badge-prefix">Stage</span>
       <span className="truncate">{value}</span>
     </span>
   );

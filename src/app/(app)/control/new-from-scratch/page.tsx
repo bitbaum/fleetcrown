@@ -10,7 +10,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Loader2, GitBranch, Check, Copy } from "lucide-react";
+import { Loader2, GitBranch, Check, Copy } from "lucide-react";
 import { PageLayout } from "@/components/ui/page-layout";
 import { TEMPLATES, type TemplateId } from "@/lib/project-templates";
 import { setDraft } from "@/lib/draft-storage";
@@ -115,16 +115,9 @@ export default function NewFromScratchPage() {
     const infra = result.infra ?? [];
     const firstTask = result.firstTask ?? "";
     return (
-      <PageLayout title="Project ready">
-        <div className="space-y-6 max-w-2xl">
-          <div>
-            <Link href="/control" className="ui-btn-ghost inline-flex items-center gap-1 text-sm">
-              <ArrowLeft className="h-3.5 w-3.5" />
-              Back to Control
-            </Link>
-          </div>
-
-          <div className="ui-card-shell space-y-5 p-6">
+      <PageLayout title="Project ready" back={{ href: "/control", label: "Back to Control" }}>
+        <div className="max-w-2xl space-y-6">
+          <div className="ui-card-shell space-y-5 p-5 sm:p-6">
             {/* What FleetCrown already did, automatically */}
             <div>
               <h2 className="ui-page-subtitle">{result.project.name}</h2>
@@ -135,7 +128,7 @@ export default function NewFromScratchPage() {
                   <span>
                     <GitBranch className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />
                     {result.repo.private ? "Private" : "Public"} GitHub repo{" "}
-                    <a href={result.repo.gitUrl} target="_blank" rel="noopener noreferrer" className="text-accent underline break-all">
+                    <a href={result.repo.gitUrl} target="_blank" rel="noopener noreferrer" className="text-accent-text underline break-all">
                       {result.repo.full_name}
                     </a>
                   </span>
@@ -194,7 +187,7 @@ export default function NewFromScratchPage() {
 
               <div className="ui-card-shell p-3 text-xs text-text-muted">
                 The one thing FleetCrown can&apos;t do for you: run code on your machine.{" "}
-                <Link href="/download" className="text-accent underline">Connect Fleet Runner</Link>{" "}
+                <Link href="/download" className="text-accent-text underline">Connect Fleet Runner</Link>{" "}
                 on the machine you&apos;ll build from — it clones the repo and runs this task automatically. No runner yet? The task queues until one connects.
               </div>
 
@@ -244,22 +237,16 @@ export default function NewFromScratchPage() {
   // ── Form view ───────────────────────────────────────────────────────────
 
   return (
-    <PageLayout title="Start a new project">
-      <div className="space-y-6 max-w-2xl">
-        <div>
-          <Link href="/control" className="ui-btn-ghost inline-flex items-center gap-1 text-sm">
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Back to Control
-          </Link>
-        </div>
-
-        <div className="ui-card-shell space-y-5 p-6">
-          <div>
-            <h2 className="ui-page-subtitle">Start a new project</h2>
-            <p className="text-sm text-text-muted mt-1">
-              Name it and say what you want to build. FleetCrown creates the GitHub repo and — unless you choose otherwise below — picks the best stack and sets it up for you. No technical decisions required.
-            </p>
-          </div>
+    <PageLayout
+      title="Start a new project"
+      subtitle="Name it and say what you want to build. FleetCrown creates the GitHub repo and — unless you choose otherwise below — picks the best stack and sets it up for you. No technical decisions required."
+      back={{ href: "/control", label: "Back to Control" }}
+    >
+      <div className="max-w-2xl space-y-6">
+        {/* The card carried an h2 reading "Start a new project" directly under
+            the h1 of the same words, then repeated the intro paragraph. Both
+            now live in the page header, where they are said once. */}
+        <div className="ui-card-shell space-y-5 p-5 sm:p-6">
 
           {error && (
             <div className="ui-error p-3 rounded-md text-sm">{error}</div>

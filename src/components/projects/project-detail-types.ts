@@ -15,6 +15,11 @@ export type HealthSignalBase = {
   key: string;
   label: string;
   cardLabel: string;
+  /** The "nothing is wrong" phrasing, for the health breakdown. Machine-built
+   *  from `label` it produced "No broken" / "No open broken recorded." — a
+   *  sentence with the noun missing, shown to every reader of a project. The
+   *  plural and the noun differ per signal, so they are written, not derived. */
+  clearLabel: string;
   badgeCls: string;
   cardBorder: string;
   cardBg: string;
@@ -26,21 +31,21 @@ export type HealthSignalBase = {
 export const HEALTH_SIGNAL_BASE: HealthSignalBase[] = [
   {
     kind: "security", key: "security_vulnerability",
-    label: "Security risk", cardLabel: "Security Risk",
+    label: "Security risk", cardLabel: "Security Risk", clearLabel: "No security risks open",
     badgeCls: "bg-status-negative-subtle text-status-negative border-status-negative/25",
     cardBorder: "border-status-negative/25", cardBg: "bg-status-negative-subtle",
     cardText: "text-status-negative", cardBody: "text-status-negative/70",
   },
   {
     kind: "broken", key: "broken_features",
-    label: "Broken", cardLabel: "Broken Features",
+    label: "Broken", cardLabel: "Broken Features", clearLabel: "No broken features",
     badgeCls: "bg-status-warning-subtle text-status-warning border-status-warning/25",
     cardBorder: "border-status-warning/25", cardBg: "bg-status-warning-subtle",
     cardText: "text-status-warning", cardBody: "text-status-warning/70",
   },
   {
     kind: "deployment", key: "deployment_issue",
-    label: "Deploy issue", cardLabel: "Deployment Issue",
+    label: "Deploy issue", cardLabel: "Deployment Issue", clearLabel: "No deploy issues open",
     badgeCls: "bg-status-warning-subtle text-status-warning border-status-warning/25",
     cardBorder: "border-status-warning/25", cardBg: "bg-status-warning-subtle",
     cardText: "text-status-warning", cardBody: "text-status-warning/70",

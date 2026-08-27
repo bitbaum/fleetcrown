@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ChevronDown } from "lucide-react";
 import { getJson, postJson, throwApiError } from "@/lib/api/fetch";
 import { BOOK_ATTR_LABEL, IMPORT_SOURCE_LABEL } from "@/config/book";
 import { ASSISTANT_STACK, CONTACT_IMPORT_GUIDE } from "@/config/assistant-stack";
@@ -20,7 +21,16 @@ type Cluster = {
   members: DedupePerson[];
 };
 
-export function PeopleBookPanel({ onChanged }: { onChanged?: () => void }) {
+export function PeopleBookPanel({
+  onChanged,
+  /** Start expanded. True when the book is empty — the one moment when
+   *  filling it IS the page rather than setup you already did. */
+  defaultOpen = false,
+}: {
+  onChanged?: () => void;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [clusters, setClusters] = useState<Cluster[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
@@ -173,8 +183,34 @@ export function PeopleBookPanel({ onChanged }: { onChanged?: () => void }) {
     }
   }
 
+  const pending = proposals.length;
+
   return (
-    <section className="space-y-4">
+    <section className="ui-card-shell overflow-hidden">
+      {/* A disclosure, not a banner. Everything below is reference and one-off
+          setup; keeping it open cost 482px above the contact list on every
+          visit, whether or not the book already had people in it. */}
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="ui-book-panel-toggle"
+      >
+        <span className="min-w-0">
+          <span className="block text-sm font-medium text-text-primary">Fill the book</span>
+          <span className="block text-xs text-text-tertiary">
+            Import contacts, sync {ASSISTANT_STACK.openclaw.name}, merge duplicates
+            {pending > 0 ? ` · ${pending} to review` : ""}
+          </span>
+        </span>
+        <ChevronDown
+          aria-hidden
+          className={`h-4 w-4 shrink-0 text-text-tertiary transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      {!open ? null : (
+      <div className="space-y-4 border-t border-border-subtle p-4">
       <p className="text-sm text-text-secondary">
         {ASSISTANT_STACK.fleetcrown.name} is the book. {ASSISTANT_STACK.loki.name} talks to it.
         {" "}{ASSISTANT_STACK.openclaw.name} is the WhatsApp/Telegram workspace that filled most of these names.
@@ -185,6 +221,13 @@ export function PeopleBookPanel({ onChanged }: { onChanged?: () => void }) {
           <li key={g.id}><span className="text-text-secondary">{g.title}.</span> {g.how}</li>
         ))}
       </ul>
+      {/* Two of the three recipes above are desktop export flows. Say so on a
+          phone rather than leaving the reader to work out why the steps do not
+          exist on their device. */}
+      <p className="text-xs text-text-muted sm:hidden">
+        The Google and Apple exports need a computer — do those there, then pick the
+        file up here. Syncing {ASSISTANT_STACK.openclaw.name} works from this phone.
+      </p>
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
         <input
           ref={fileRef}
@@ -286,6 +329,8 @@ export function PeopleBookPanel({ onChanged }: { onChanged?: () => void }) {
             </div>
           ))}
         </div>
+      )}
+      </div>
       )}
     </section>
   );

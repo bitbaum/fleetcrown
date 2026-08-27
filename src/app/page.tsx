@@ -12,6 +12,7 @@ import {
   MARKETING_HERO_PRIMARY,
   MARKETING_HERO_SECONDARY,
   MARKETING_POSITIONING,
+  MARKETING_POSITIONING_SHORT,
 } from "@/config/brand";
 import { ROUTES } from "@/config/auth";
 import { isFleetRunnerRequest } from "@/lib/fleet-runner";
@@ -71,7 +72,8 @@ export default async function LandingPage({
       <div className="ui-public-hero-fold">
         <div className="w-full max-w-5xl">
           <div className="ui-public-hero-badge">
-            {MARKETING_POSITIONING}
+            <span className="sm:hidden">{MARKETING_POSITIONING_SHORT}</span>
+            <span className="hidden sm:inline">{MARKETING_POSITIONING}</span>
           </div>
 
           <h1 className="ui-public-hero-title">
@@ -83,12 +85,21 @@ export default async function LandingPage({
             {MARKETING_TAGLINE}
           </p>
 
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
+          <div className="ui-public-hero-actions mx-auto">
             <Link href={signedIn ? ROUTES.APP_HOME : ROUTES.SIGN_UP} className="ui-public-cta">
               {signedIn ? `Open ${APP_NAME}` : "Start building"}
             </Link>
+            {/* "Download runner" is a dead end on a phone — Fleet Runner is a
+                desktop binary (.deb / .dmg / .exe) and there is nothing a
+                phone visitor can do with that link but lose their place. They
+                get the tour instead; the download keeps its place from `sm`
+                up, where the visitor is plausibly on the machine that would
+                run it. */}
+            <Link href="/docs/quickstart" className="ui-public-cta-ghost sm:hidden">
+              See how it works
+            </Link>
             {!insideRunner && (
-              <Link href="/download" className="ui-public-cta-ghost">
+              <Link href="/download" className="ui-public-cta-ghost hidden sm:inline-flex">
                 Download runner
               </Link>
             )}
@@ -110,8 +121,10 @@ export default async function LandingPage({
                 <div className="ui-public-hero-console-rows">
                   {fleet.projects.map((project) => (
                     <div key={project.name} className="ui-public-hero-console-row">
-                      <span className={`ui-public-hero-console-dot ui-public-hero-console-dot-${project.state}`} />
-                      <span className="ui-public-hero-console-name">{project.name}</span>
+                      <span className="ui-public-hero-console-row-head">
+                        <span className={`ui-public-hero-console-dot ui-public-hero-console-dot-${project.state}`} />
+                        <span className="ui-public-hero-console-name">{project.name}</span>
+                      </span>
                       {project.note && <span className="ui-public-hero-console-note">{project.note}</span>}
                     </div>
                   ))}
@@ -130,25 +143,29 @@ export default async function LandingPage({
         </div>
       </div>
 
-      <div className="ui-public-band py-20">
-        <div className="mx-auto max-w-6xl px-6">
-          <div className="grid gap-10 md:grid-cols-[0.9fr_1.1fr] md:items-end">
+      <div className="ui-public-band ui-public-section">
+        <div className="ui-public-container">
+          <div className="grid gap-4 md:grid-cols-[0.9fr_1.1fr] md:items-end md:gap-10">
             <div>
               <div className="ui-public-eyebrow">PRODUCT</div>
-              <h2 className="ui-public-display-lg mt-4">One control plane. Local execution.</h2>
+              <h2 className="ui-public-display-lg mt-3 sm:mt-4">One control plane. Local execution.</h2>
             </div>
             <p className="ui-public-section-lede md:justify-self-end">
               {APP_NAME} is built for operators already running multiple AI agents across multiple projects. It makes the work visible, steerable, and recoverable.
             </p>
           </div>
 
-          <div className="mt-14 grid gap-4 sm:grid-cols-2">
+          <div className="ui-public-section-gap grid gap-3 sm:grid-cols-2 sm:gap-4">
             {HOME_PRODUCT_SURFACES.map((surface) => (
               <section key={surface.label} className="ui-public-surface-card">
                 <div className="ui-public-surface-card-label">{surface.label}</div>
                 <h3 className="ui-public-surface-card-title">{surface.title}</h3>
                 <p className="ui-public-surface-card-body">{surface.body}</p>
-                <div className="ui-public-surface-card-meta">{surface.meta}</div>
+                <div className="ui-public-surface-card-meta">
+                  {surface.meta.split(" · ").map((term) => (
+                    <span key={term} className="ui-public-surface-card-meta-chip">{term}</span>
+                  ))}
+                </div>
               </section>
             ))}
           </div>
@@ -156,25 +173,27 @@ export default async function LandingPage({
       </div>
 
       {shipped.entries.length > 0 && (
-        <div className="py-24">
-          <div className="mx-auto max-w-6xl px-6">
-            <div className="grid gap-10 md:grid-cols-[0.9fr_1.1fr] md:items-end">
+        <div className="ui-public-section">
+          <div className="ui-public-container">
+            <div className="grid gap-4 md:grid-cols-[0.9fr_1.1fr] md:items-end md:gap-10">
               <div>
                 <div className="ui-public-eyebrow">SHIPPED BECAUSE A VISITOR ASKED</div>
-                <h2 className="ui-public-display-md mt-4">The feedback loop, in production.</h2>
+                <h2 className="ui-public-display-md mt-3 sm:mt-4">The feedback loop, in production.</h2>
               </div>
               <p className="ui-public-section-lede md:justify-self-end">
                 Real reports from the feedback widget, fixed by the fleet and deployed
                 {shipped.resolvedCount > 0 && ` — ${shipped.resolvedCount} resolved so far`}.
               </p>
             </div>
-            <div className="mt-12 grid gap-4 sm:grid-cols-3">
+            <div className="ui-public-section-gap grid gap-3 sm:grid-cols-3 sm:gap-4">
               {shipped.entries.map((entry) => (
                 <section key={`${entry.project}-${entry.resolvedAt}`} className="ui-public-surface-card !min-h-0">
                   <div className="ui-public-surface-card-label">{entry.project}</div>
                   <p className="ui-public-surface-card-body">“{entry.excerpt}”</p>
                   <div className="ui-public-surface-card-meta">
-                    {entry.page ? `${entry.page} · ` : ""}shipped {new Date(entry.resolvedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                    <span className="ui-public-surface-card-meta-chip">
+                      {entry.page ? `${entry.page} · ` : ""}shipped {new Date(entry.resolvedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                    </span>
                   </div>
                 </section>
               ))}
@@ -183,35 +202,49 @@ export default async function LandingPage({
         </div>
       )}
 
-      <div className="py-24">
-        <div className="mx-auto max-w-6xl px-6">
+      <div className="ui-public-section">
+        <div className="ui-public-container">
           <div className="text-center">
             <div className="ui-public-eyebrow">GET STARTED</div>
-            <h2 className="ui-public-display-lg mt-4">Not another coding agent.</h2>
+            <h2 className="ui-public-display-lg mt-3 sm:mt-4">Not another coding agent.</h2>
             <p className="ui-public-section-lede mx-auto mt-4">
               Most tools help you write code faster in one file or one project. FleetCrown is for
               running real agent operations at fleet scale — choose your entry point.
             </p>
           </div>
 
-          <div className="mt-14 grid gap-4 md:grid-cols-3">
+          <div className="ui-public-section-gap grid gap-3 sm:gap-4 md:grid-cols-3">
             {START_PATHS
               .filter((path) => !(insideRunner && path.href === "/download"))
               .map((path) => (
-              <section key={path.title} className="ui-public-start-card">
+              /* The card itself is the link. A 44px text link inside a 260px
+                 card is a needle to hit with a thumb; the whole surface is the
+                 target now, and the arrow row is just its label.
+
+                 order-last below `md`: "Run locally" leads on desktop, where
+                 the visitor is plausibly sitting at the machine that would run
+                 the agents. On a phone it is the one entry point they cannot
+                 take, and leading three choices with it makes the list open on
+                 a dead end. The hosted control plane goes first there; the
+                 grid restores config order at `md`. */
+              <Link
+                key={path.title}
+                href={path.href}
+                className={`ui-public-start-card${path.href === "/download" ? " order-last md:order-none" : ""}`}
+              >
                 <h3 className="ui-public-start-card-title">{path.title}</h3>
                 <p className="ui-public-start-card-body">{path.body}</p>
-                <Link href={path.href} className="ui-public-start-card-link">
+                <span className="ui-public-start-card-link">
                   {path.cta} →
-                </Link>
-              </section>
+                </span>
+              </Link>
             ))}
           </div>
         </div>
       </div>
 
-      <div className="border-t border-border-subtle py-20 text-center">
-        <Link href={signedIn ? ROUTES.APP_HOME : ROUTES.SIGN_UP} className="ui-public-cta-lg">
+      <div className="ui-public-container border-t border-border-subtle py-14 text-center sm:py-20">
+        <Link href={signedIn ? ROUTES.APP_HOME : ROUTES.SIGN_UP} className="ui-public-cta-lg w-full sm:w-auto">
           {signedIn ? `Open ${APP_NAME}` : "Begin"}
         </Link>
         <p className="ui-public-meta mt-4">For builders running real agent operations.</p>

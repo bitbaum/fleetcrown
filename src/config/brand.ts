@@ -74,6 +74,10 @@ export const MARKETING_SUBTITLE     = "Local execution where the work happens. R
 export const MARKETING_HERO_PRIMARY   = "Run your fleet.";
 export const MARKETING_HERO_SECONDARY = "From anywhere.";
 export const MARKETING_POSITIONING  = "Local execution · Remote command · No compromises";
+/** Phone-width variant of the positioning badge. The full string needs ~330px
+ *  of tracked uppercase and wrapped to two lines inside a pill on every phone,
+ *  where a badge that wraps stops reading as a badge. Same claim, two terms. */
+export const MARKETING_POSITIONING_SHORT = "Local execution · Remote command";
 
 // Easy rebrand surface — use this in marketing instead of hardcoding "FleetCrown".
 export const PRODUCT_NAME = APP_NAME;

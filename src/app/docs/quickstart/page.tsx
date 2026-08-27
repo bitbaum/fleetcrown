@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Laptop, Smartphone } from "lucide-react";
 import { PublicSurface } from "@/components/public/PublicSurface";
 import { PublicHeaderActions } from "@/components/public/PublicHeaderActions";
 
@@ -7,14 +8,66 @@ export const metadata = {
   description: "From zero to dispatching your first agent in 5 minutes.",
 };
 
+/** The seven steps, split by the device each one actually needs. The homepage
+ *  sends phone visitors here ("See how it works"), and three of these steps
+ *  are terminal work — so the split is the first thing the page should say,
+ *  not something you infer after reading them. */
+const STEPS = [
+  { n: 1, id: "decide", label: "Decide: web or desktop?", desktop: false },
+  { n: 2, id: "sign-in", label: "Sign in", desktop: false },
+  { n: 3, id: "install-runner", label: "Install Fleet Runner", desktop: true },
+  { n: 4, id: "agent-cli", label: "Install an agent CLI", desktop: true },
+  { n: 5, id: "register-project", label: "Register a project", desktop: true },
+  { n: 6, id: "dispatch", label: "Dispatch your first intent", desktop: false },
+  { n: 7, id: "watch", label: "Watch from anywhere", desktop: false },
+] as const;
+
 export default function QuickstartPage() {
+  const anywhere = STEPS.filter((s) => !s.desktop);
+  const needsComputer = STEPS.filter((s) => s.desktop);
+
   return (
     <PublicSurface right={<PublicHeaderActions />}>
-      <main className="mx-auto max-w-3xl px-6 py-16 ui-public-prose">
+      <main className="ui-public-prose mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-16">
         <h1 className="ui-public-title mb-2">Quickstart</h1>
-        <p className="ui-public-meta mb-12">From zero to dispatching your first agent in 5 minutes.</p>
+        <p className="ui-public-meta mb-6 sm:mb-8">From zero to dispatching your first agent in 5 minutes.</p>
 
-        <section className="space-y-4 mb-12">
+        <nav className="ui-public-steps" aria-label="Steps by device">
+          <div>
+            <p className="ui-public-steps-label">
+              <Smartphone className="h-3.5 w-3.5" aria-hidden />
+              From any device
+            </p>
+            <div className="ui-public-steps-list">
+              {anywhere.map((step) => (
+                <a key={step.id} href={`#${step.id}`} className="ui-public-steps-link">
+                  <span className="ui-public-steps-num">{step.n}</span>
+                  {step.label}
+                </a>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="ui-public-steps-label">
+              <Laptop className="h-3.5 w-3.5" aria-hidden />
+              Needs a computer
+            </p>
+            <div className="ui-public-steps-list">
+              {needsComputer.map((step) => (
+                <a key={step.id} href={`#${step.id}`} className="ui-public-steps-link">
+                  <span className="ui-public-steps-num">{step.n}</span>
+                  {step.label}
+                </a>
+              ))}
+            </div>
+            <p className="mt-2 text-xs text-text-muted">
+              Reading this on a phone? Steps 3&ndash;5 are terminal work. Do 1&ndash;2 now,
+              then pick these up at your machine.
+            </p>
+          </div>
+        </nav>
+
+        <section id="decide" className="mb-10 space-y-4 sm:mb-12">
           <h2 className="ui-public-prose-h2">1. Decide: web or desktop?</h2>
           <p>
             FleetCrown has two surfaces that share the same account and the
@@ -35,15 +88,18 @@ export default function QuickstartPage() {
           </p>
         </section>
 
-        <section className="space-y-4 mb-12">
+        <section id="sign-in" className="mb-10 space-y-4 sm:mb-12">
           <h2 className="ui-public-prose-h2">2. Sign in</h2>
           <p>
             Visit <Link href="/sign-in" className="ui-public-link">/sign-in</Link> and sign in with GitHub. First time only: GitHub asks you to authorize FleetCrown. After that you land on the dashboard.
           </p>
         </section>
 
-        <section className="space-y-4 mb-12">
-          <h2 className="ui-public-prose-h2">3. Install Fleet Runner (if you want local execution)</h2>
+        <section id="install-runner" className="mb-10 space-y-4 sm:mb-12">
+          <h2 className="ui-public-prose-h2">
+            3. Install Fleet Runner
+            <span className="ui-public-step-badge">Needs a computer</span>
+          </h2>
           <ol className="list-decimal pl-6 space-y-3">
             <li>
               Visit <Link href="/download" className="ui-public-link">/download</Link>. The page auto-detects your OS.
@@ -70,8 +126,11 @@ export default function QuickstartPage() {
           </ol>
         </section>
 
-        <section className="space-y-4 mb-12">
-          <h2 className="ui-public-prose-h2">4. Install an agent CLI</h2>
+        <section id="agent-cli" className="mb-10 space-y-4 sm:mb-12">
+          <h2 className="ui-public-prose-h2">
+            4. Install an agent CLI
+            <span className="ui-public-step-badge">Needs a computer</span>
+          </h2>
           <p>
             Fleet Runner doesn&apos;t bundle the AI agent itself — it drives
             whatever agent CLI you install. Pick one:
@@ -94,8 +153,11 @@ export default function QuickstartPage() {
           </p>
         </section>
 
-        <section className="space-y-4 mb-12">
-          <h2 className="ui-public-prose-h2">5. Register a project</h2>
+        <section id="register-project" className="mb-10 space-y-4 sm:mb-12">
+          <h2 className="ui-public-prose-h2">
+            5. Register a project
+            <span className="ui-public-step-badge">Needs a computer</span>
+          </h2>
           <p>
             In the dashboard, go to <strong>Projects</strong>. Add a project
             with a name and the absolute path to its directory on your machine.
@@ -109,7 +171,7 @@ export default function QuickstartPage() {
           </p>
         </section>
 
-        <section className="space-y-4 mb-12">
+        <section id="dispatch" className="mb-10 space-y-4 sm:mb-12">
           <h2 className="ui-public-prose-h2">6. Dispatch your first intent</h2>
           <p>
             Go to <strong>Control</strong>. Pick a project. Type a prompt or
@@ -125,7 +187,7 @@ export default function QuickstartPage() {
           </p>
         </section>
 
-        <section className="space-y-4 mb-12">
+        <section id="watch" className="mb-10 space-y-4 sm:mb-12">
           <h2 className="ui-public-prose-h2">7. Watch from anywhere</h2>
           <p>
             The same dashboard works from your phone (web) while a long agent

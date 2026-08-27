@@ -72,11 +72,11 @@ export function OrangeCatPublishButton({ projectId }: { projectId: string }) {
         href={`https://orangecat.ch/projects/${state.orangecatProjectId}`}
         target="_blank"
         rel="noreferrer"
-        className="ui-icon-action"
+        className="ui-btn-ghost min-h-11 gap-1.5"
         title="Published on OrangeCat — view public page"
         aria-label="View on OrangeCat"
       >
-        <Cat className="h-4 w-4 text-accent-text" />
+        <Cat className="h-4 w-4 text-accent-text" aria-hidden /> Published
       </a>
     );
   }
@@ -88,11 +88,11 @@ export function OrangeCatPublishButton({ projectId }: { projectId: string }) {
         onClick={() => {
           window.location.href = "/sign-in?callbackUrl=" + encodeURIComponent(window.location.pathname);
         }}
-        className="ui-icon-action"
+        className="ui-btn-ghost min-h-11 gap-1.5"
         title="Publish to OrangeCat — connect your OrangeCat account first"
         aria-label="Connect OrangeCat to publish"
       >
-        <Cat className="h-4 w-4" />
+        <Cat className="h-4 w-4" aria-hidden /> Publish
       </button>
     );
   }
@@ -102,11 +102,12 @@ export function OrangeCatPublishButton({ projectId }: { projectId: string }) {
       type="button"
       onClick={publish}
       disabled={state.phase === "publishing"}
-      className="ui-icon-action"
+      className="ui-btn-ghost min-h-11 gap-1.5"
       title="Publish to OrangeCat — public page + wall + funding"
       aria-label="Publish to OrangeCat"
     >
-      <Cat className={`h-4 w-4 ${state.phase === "publishing" ? "animate-pulse" : ""}`} />
+      <Cat className={`h-4 w-4 ${state.phase === "publishing" ? "animate-pulse" : ""}`} aria-hidden />
+      {state.phase === "publishing" ? "Publishing…" : "Publish"}
     </button>
   );
 }

@@ -8,12 +8,19 @@ import { cn } from "@/lib/utils";
  * Quiet status pill in the app top bar. Three resting states:
  *  - subscribed  → ringing-bell, accent dot. Click to unsubscribe.
  *  - granted/default/denied → muted bell. Click to subscribe (or open OS settings).
- *  - unsupported → hidden entirely.
+ *  - unsupported / not configured → hidden entirely.
  */
 export function NotificationsPill() {
   const push = usePushSubscription();
 
-  if (push.status === "unsupported") return null;
+  // Hidden when the deployment has no VAPID key, exactly as when the browser
+  // does not support push: from the user's side those are the same fact —
+  // this button cannot work — and it used to render anyway, tapping through to
+  // a guaranteed failure. Its hover text also read "set
+  // NEXT_PUBLIC_VAPID_PUBLIC_KEY", an environment variable shown to a person
+  // who does not deploy the app and could not act on it. Configuring push is
+  // an operator concern and belongs in the docs, not in the top bar.
+  if (push.status === "unsupported" || push.publicKeyMissing) return null;
 
   const isSubscribed = push.status === "subscribed";
   const isWorking    = push.status === "registering";
@@ -38,13 +45,11 @@ export function NotificationsPill() {
         isSubscribed && "text-accent-text",
       )}
       title={
-        push.publicKeyMissing
-          ? "Push not configured — set NEXT_PUBLIC_VAPID_PUBLIC_KEY"
-          : isSubscribed
-            ? "Push notifications on (run finished · new feedback) — click to turn off"
-            : push.status === "denied"
-              ? "Permission denied in browser — enable in site settings"
-              : "Enable push notifications"
+        isSubscribed
+          ? "Notifications on (run finished · new feedback) — tap to turn off"
+          : push.status === "denied"
+            ? "Notifications blocked for this site — allow them in your browser settings"
+            : "Turn on notifications"
       }
       aria-label={isSubscribed ? "Disable push notifications" : "Enable push notifications"}
     >

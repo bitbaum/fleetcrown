@@ -12,6 +12,12 @@ import { LONG_TEXT_MAX } from "@/lib/constants";
 
 const BriefBody = z.object({
   text: z.string().trim().min(10, "Tell us a bit more — at least a sentence.").max(LONG_TEXT_MAX),
+  // Defaults to false so the kickoff flow is unchanged: there the user has just
+  // edited the brief and means for the profile to be rewritten from it. The
+  // health worklist passes true — it fills gaps in a profile someone has
+  // already worked on, where quietly replacing their own mission with the
+  // model's would be a worse outcome than leaving the point unearned.
+  onlyMissing: z.boolean().optional(),
 });
 
 export async function POST(
@@ -39,10 +45,19 @@ export async function POST(
     );
   }
 
-  const applied = await applyProjectProfile(userId, idOrResp, profile);
+  const applied = await applyProjectProfile(userId, idOrResp, profile, {
+    onlyMissing: dataOrResp.onlyMissing,
+  });
   if (applied === null) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (Object.keys(applied).length === 0) {
-    return NextResponse.json({ error: "The text didn't contain anything to fill the profile with." }, { status: 422 });
+    return NextResponse.json(
+      {
+        error: dataOrResp.onlyMissing
+          ? "Nothing to fill — every field the brief could answer is already written."
+          : "The text didn't contain anything to fill the profile with.",
+      },
+      { status: 422 },
+    );
   }
   return NextResponse.json({ ok: true, applied });
 }

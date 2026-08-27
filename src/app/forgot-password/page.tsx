@@ -75,7 +75,7 @@ export default function ForgotPasswordPage() {
 
       <p className="mt-4 text-center text-xs text-text-muted">
         Remember it?{" "}
-        <Link href={ROUTES.SIGN_IN} className="text-text-secondary underline underline-offset-2 hover:text-text-primary">
+        <Link href={ROUTES.SIGN_IN} className="ui-auth-hint-link">
           Sign in
         </Link>
       </p>

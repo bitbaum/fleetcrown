@@ -398,7 +398,10 @@ export function CommandPalette() {
             ))
           )}
         </ul>
-        <div className="ui-palette-foot">
+        {/* Keyboard hints only where there is a keyboard. On a phone this row
+            was three shortcuts nobody can press, costing a line of the list
+            that is the point of the panel. */}
+        <div className="ui-palette-foot hidden md:flex">
           <span><kbd className="ui-palette-kbd">↑</kbd> <kbd className="ui-palette-kbd">↓</kbd> navigate</span>
           <span><kbd className="ui-palette-kbd">⏎</kbd> open</span>
           <span><kbd className="ui-palette-kbd">⌘K</kbd> toggle</span>

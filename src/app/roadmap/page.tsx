@@ -12,19 +12,31 @@ export const metadata = {
 export default function RoadmapPage() {
   return (
     <PublicSurface right={<PublicHeaderActions />}>
-      <div className="mx-auto max-w-4xl px-6 py-24 sm:py-32">
+      <div className="ui-public-container-mid py-12 sm:py-24 lg:py-32">
         <div className="ui-public-eyebrow">{ROADMAP.eyebrow}</div>
-        <h1 className="ui-public-page-title mt-4">{ROADMAP.title}</h1>
-        <p className="ui-public-lede mt-6 max-w-2xl">{ROADMAP.lede}</p>
+        <h1 className="ui-public-page-title mt-3 sm:mt-4">{ROADMAP.title}</h1>
+        <p className="ui-public-lede mt-4 max-w-2xl sm:mt-6">{ROADMAP.lede}</p>
+
+        {/* Jump links. This page runs seven screens deep on a phone, and its
+            three buckets are exactly the question a visitor arrives with —
+            "what works today vs what is a promise". Anchors answer it in one
+            tap instead of a minute of scrolling. */}
+        <nav className="ui-public-jumpbar" aria-label="Roadmap sections">
+          {ROADMAP.buckets.map((bucket) => (
+            <a key={bucket.title} href={`#${bucketId(bucket.title)}`} className="ui-public-jumpbar-link">
+              {bucket.title}
+            </a>
+          ))}
+        </nav>
       </div>
 
-      <div className="mx-auto max-w-4xl px-6 pb-24 space-y-20">
+      <div className="ui-public-container-mid space-y-12 pb-14 sm:space-y-20 sm:pb-24">
         {ROADMAP.buckets.map((bucket) => (
-          <section key={bucket.title} className="border-t border-border-subtle pt-16">
+          <section key={bucket.title} id={bucketId(bucket.title)} className="border-t border-border-subtle pt-10 sm:pt-16">
             <h2 className="ui-public-display-md">{bucket.title}</h2>
-            <p className="ui-public-section-lede mt-4">{bucket.summary}</p>
+            <p className="ui-public-section-lede mt-3 sm:mt-4">{bucket.summary}</p>
 
-            <div className="mt-12 space-y-10">
+            <div className="mt-8 space-y-8 sm:mt-12 sm:space-y-10">
               {bucket.items.map((item) => (
                 <div key={item.title} className="max-w-2xl">
                   <div className="ui-public-prose-strong text-lg">{item.title}</div>
@@ -56,19 +68,19 @@ export default function RoadmapPage() {
         ))}
       </div>
 
-      <div className="border-t border-border-subtle py-24">
-        <div className="mx-auto max-w-4xl px-6">
+      <div className="ui-public-section border-t border-border-subtle">
+        <div className="ui-public-container-mid">
           <div className="ui-public-eyebrow">{ROADMAP.throughlines.eyebrow}</div>
-          <h2 className="ui-public-display-md mt-4">{ROADMAP.throughlines.title}</h2>
-          <p className="ui-public-section-lede mt-6">{ROADMAP.throughlines.lede}</p>
+          <h2 className="ui-public-display-md mt-3 sm:mt-4">{ROADMAP.throughlines.title}</h2>
+          <p className="ui-public-section-lede mt-4 sm:mt-6">{ROADMAP.throughlines.lede}</p>
 
-          <div className="mt-16 grid gap-12 md:grid-cols-2">
+          <div className="mt-10 grid gap-8 sm:mt-16 sm:gap-12 md:grid-cols-2">
             {ROADMAP.throughlines.items.map((item, i) => (
-              <div key={i} className="flex gap-6">
-                <div className="ui-public-step-num pt-2">{String(i + 1).padStart(2, "0")}</div>
+              <div key={i} className="flex flex-col gap-1.5 sm:flex-row sm:gap-6">
+                <div className="ui-public-step-num sm:pt-2">{String(i + 1).padStart(2, "0")}</div>
                 <div>
                   <div className="ui-public-prose-strong text-lg">{item.title}</div>
-                  <p className="ui-public-body-lg mt-3">{item.body}</p>
+                  <p className="ui-public-body-lg mt-2 sm:mt-3">{item.body}</p>
                 </div>
               </div>
             ))}
@@ -76,9 +88,9 @@ export default function RoadmapPage() {
         </div>
       </div>
 
-      <div className="mx-auto max-w-4xl px-6 pb-24">
-        <p className="ui-public-meta border-t border-border-subtle pt-12 max-w-2xl">{ROADMAP.closer}</p>
-        <div className="mt-8 flex flex-wrap gap-3">
+      <div className="ui-public-container-mid pb-14 sm:pb-24">
+        <p className="ui-public-meta max-w-2xl border-t border-border-subtle pt-8 sm:pt-12">{ROADMAP.closer}</p>
+        <div className="mt-6 flex flex-wrap gap-3 sm:mt-8">
           <Link href="/thoughts" className="ui-btn-chip">Thoughts</Link>
           <Link href="/releases" className="ui-btn-chip">Changelog</Link>
         </div>
@@ -87,4 +99,9 @@ export default function RoadmapPage() {
       <FinalCta />
     </PublicSurface>
   );
+}
+
+/** Stable anchor id for a bucket title ("Shipping now" → "shipping-now"). */
+function bucketId(title: string): string {
+  return title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }

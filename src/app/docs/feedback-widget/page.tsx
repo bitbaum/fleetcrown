@@ -11,14 +11,14 @@ export const metadata = {
 export default function FeedbackWidgetDocsPage() {
   return (
     <PublicSurface right={<PublicHeaderActions />}>
-      <main className="mx-auto max-w-3xl px-6 py-16 ui-public-prose">
+      <main className="ui-public-prose mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-16">
         <h1 className="ui-public-title mb-2">Feedback widget</h1>
-        <p className="ui-public-meta mb-12">
+        <p className="ui-public-meta mb-8 sm:mb-12">
           One script tag on any site you run. Visitor reports become dispatchable fleet work,
           and shipped fixes close the loop automatically.
         </p>
 
-        <section className="space-y-4 mb-12">
+        <section className="mb-10 space-y-4 sm:mb-12">
           <h2 className="ui-public-prose-h2">1. Enable it on a project</h2>
           <p>
             Open the project&apos;s page in FleetCrown, scroll to <strong>Visitor feedback</strong>,
@@ -26,7 +26,7 @@ export default function FeedbackWidgetDocsPage() {
             fleet coverage strip). That mints a project token and dispatches an agent to embed the
             snippet. Prefer that one click over copy-paste unless you are wiring a site by hand.
           </p>
-          <pre className="ui-public-code-block">
+          <pre className="ui-public-code-block ui-public-code-pre">
             <code>{`<script src="https://fleetcrown.orangecat.ch/widget.js"
         data-fc-project="fcw_…" async></script>`}</code>
           </pre>
@@ -37,7 +37,7 @@ export default function FeedbackWidgetDocsPage() {
           </p>
         </section>
 
-        <section className="space-y-4 mb-12">
+        <section className="mb-10 space-y-4 sm:mb-12">
           <h2 className="ui-public-prose-h2">2. Install it — two ways</h2>
           <ul className="list-disc pl-6 space-y-2">
             <li>
@@ -57,7 +57,7 @@ export default function FeedbackWidgetDocsPage() {
           </p>
         </section>
 
-        <section className="space-y-4 mb-12">
+        <section className="mb-10 space-y-4 sm:mb-12">
           <h2 className="ui-public-prose-h2">3. What visitors get</h2>
           <p>
             A small button on every page. Opening it, the visitor picks a scope —{" "}
@@ -75,7 +75,7 @@ export default function FeedbackWidgetDocsPage() {
           </p>
         </section>
 
-        <section className="space-y-4 mb-12">
+        <section className="mb-10 space-y-4 sm:mb-12">
           <h2 className="ui-public-prose-h2">4. Remote control — no deploys</h2>
           <p>
             The snippet is a pointer; all behavior is server-side. On every page load the widget
@@ -98,7 +98,7 @@ export default function FeedbackWidgetDocsPage() {
           </ul>
         </section>
 
-        <section className="space-y-4 mb-12">
+        <section className="mb-10 space-y-4 sm:mb-12">
           <h2 className="ui-public-prose-h2">5. From report to fix</h2>
           <p>
             Submissions land in the project&apos;s <strong>Visitor feedback</strong> inbox, and the{" "}
@@ -137,7 +137,7 @@ export default function FeedbackWidgetDocsPage() {
           </p>
         </section>
 
-        <section className="space-y-4 mb-12">
+        <section className="mb-10 space-y-4 sm:mb-12">
           <h2 className="ui-public-prose-h2">6. The loop closes itself</h2>
           <p>
             Every dispatched report remembers its run. When the run finishes with a verified
@@ -147,7 +147,7 @@ export default function FeedbackWidgetDocsPage() {
           </p>
         </section>
 
-        <section className="space-y-4 mb-12">
+        <section className="mb-10 space-y-4 sm:mb-12">
           <h2 className="ui-public-prose-h2">Security model</h2>
           <ul className="list-disc pl-6 space-y-2">
             <li>Token is write-only and scoped to one project; reading requires your session.</li>

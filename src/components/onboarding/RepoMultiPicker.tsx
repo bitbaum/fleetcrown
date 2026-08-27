@@ -141,11 +141,11 @@ export function RepoMultiPicker({ onSelectionChange, filter = "" }: Props) {
               <div className="flex items-center gap-2">
                 <span
                   className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
-                    isSelected ? "bg-accent border-accent" : "border-border-default"
+                    isSelected ? "border-accent-warm bg-accent-warm" : "border-border-default"
                   }`}
                   aria-hidden
                 >
-                  {isSelected && <Check className="h-3 w-3 text-accent-foreground" />}
+                  {isSelected && <Check className="h-3 w-3 text-on-accent" />}
                 </span>
                 {repo.private && <Lock className="ui-auth-icon-faint" />}
                 <span className="ui-auth-repo-name">{repo.name}</span>

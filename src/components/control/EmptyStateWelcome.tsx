@@ -22,9 +22,9 @@ type WelcomeCardProps = {
 );
 
 function WelcomeCard({ icon: Icon, title, body, cta, variant = "primary", ...rest }: WelcomeCardProps) {
-  const iconClass = variant === "primary" ? "text-accent" : "text-text-secondary";
-  const ctaClass = variant === "primary" ? "text-accent" : "text-text-secondary";
-  const shared = "ui-card-shell hover:border-accent transition-colors p-4 flex flex-col gap-2 group text-left";
+  const iconClass = variant === "primary" ? "text-accent-text" : "text-text-secondary";
+  const ctaClass = variant === "primary" ? "text-accent-text" : "text-text-secondary";
+  const shared = "ui-card-shell hover:border-accent-primary transition-colors p-4 flex flex-col gap-2 group text-left";
   const content = (
     <>
       <Icon className={`h-5 w-5 ${iconClass}`} />

@@ -11,8 +11,11 @@
  * a 390px phone — three bordered, padded StatCards each holding a 2xl bold
  * number, for stats (Active Goals, Avg Progress, Total) that inform no
  * decision on any of the four pages. Two columns below `sm` gives each card
- * room to breathe; the third simply wraps to its own row rather than being
- * squeezed to fit. Unchanged from `sm` up, where the desktop layout was fine.
+ * room to breathe. Unchanged from `sm` up, where the desktop layout was fine.
+ *
+ * The odd card out spans the row rather than sitting half-width beside a gap:
+ * `:last-child:nth-child(odd)` matches only when the total is odd, so three
+ * cards give 2 + 1-wide and four give 2 + 2 with no rule change per page.
  *
  * Extracted after the same pattern was duplicated 4× across pages, in
  * the same iteration the ScrollAffordance refactor (0429728) paid off
@@ -20,5 +23,5 @@
  * occurrence is a one-line wrap.
  */
 export function StatRow({ children }: { children: React.ReactNode }) {
-  return <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-4">{children}</div>;
+  return <div className="ui-stat-row">{children}</div>;
 }

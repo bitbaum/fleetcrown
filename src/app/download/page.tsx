@@ -48,12 +48,12 @@ export default async function DownloadPage() {
     <PublicSurface right={<PublicHeaderActions />}>
       <DesktopDownload />
 
-      <div className="mx-auto max-w-3xl px-6 pb-20 pt-4 text-center ui-public-meta">
-        <Link href="/" className="ui-public-link text-sm">
+      <div className="ui-public-meta mx-auto flex max-w-3xl flex-wrap items-center justify-center gap-x-3 px-4 pb-16 pt-4 sm:px-6 sm:pb-20">
+        <Link href="/" className="ui-public-link-standalone text-sm">
           ← Back to homepage
         </Link>
-        <span className="mx-3 text-border-strong">·</span>
-        <Link href="/sign-in" className="ui-public-link text-sm">
+        <span className="hidden text-border-strong sm:inline">·</span>
+        <Link href="/sign-in" className="ui-public-link-standalone text-sm">
           Sign in to the web app
         </Link>
       </div>

@@ -36,11 +36,17 @@ export default async function HabitsPage() {
       subtitle={`${HABIT_HISTORY_DAYS}-day history — consistency compounds`}
       right={<NewHabitButton />}
     >
-      <StatRow>
-        <StatCard label="Active Habits" value={String(active.length)} sub={`${habits.length} total`} />
-        <StatCard label={`Completions (${HABIT_HISTORY_DAYS}d)`} value={String(totalCompletions)} sub="across all habits" />
-        <StatCard label="Best Streak" value={bestStreak > 0 ? `${bestStreak}d` : "—"} sub="current longest" />
-      </StatRow>
+      {/* A row of zeros summarises nothing — it is the empty state wearing a
+          suit. With no habits the phone screen said "you have none" four
+          times (three stat cards, the empty panel, and New Habit in the
+          header) and filled the fold doing it. */}
+      {habits.length > 0 && (
+        <StatRow>
+          <StatCard label="Active Habits" value={String(active.length)} sub={`${habits.length} total`} />
+          <StatCard label={`Completions (${HABIT_HISTORY_DAYS}d)`} value={String(totalCompletions)} sub="across all habits" />
+          <StatCard label="Best Streak" value={bestStreak > 0 ? `${bestStreak}d` : "—"} sub="current longest" />
+        </StatRow>
+      )}
 
       {habits.length === 0 ? (
         <Card>

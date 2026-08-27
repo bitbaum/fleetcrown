@@ -27,13 +27,13 @@ export function WorkspaceUnavailable({
         <div className="space-y-3 text-sm leading-relaxed text-text-secondary">
           <p>{message}</p>
           <p>
-            Use <Link href="/terminal" className="text-accent underline">Terminal</Link> → Cloud or This computer to watch and type into agent sessions, or dispatch from{" "}
-            <Link href="/control" className="text-accent underline">Control</Link> / <Link href="/loki" className="text-accent underline">Loki</Link>.
+            Use <Link href="/terminal" className="text-accent-text underline">Terminal</Link> → Cloud or This computer to watch and type into agent sessions, or dispatch from{" "}
+            <Link href="/control" className="text-accent-text underline">Control</Link> / <Link href="/loki" className="text-accent-text underline">Loki</Link>.
           </p>
           {code === "cloud-builder-private" && (
             <p>
               Hosted sandboxes are private beta — connect{" "}
-              <Link href="/download" className="text-accent underline">Fleet Runner</Link> on this computer for the default execution path.
+              <Link href="/download" className="text-accent-text underline">Fleet Runner</Link> on this computer for the default execution path.
             </p>
           )}
         </div>

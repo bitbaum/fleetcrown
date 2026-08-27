@@ -7,12 +7,23 @@ export function BrandMark({
   /** Animate the spiral (slow rotation + glow). Default on for the full mark,
    *  off when compact — tiny rotating glyphs read as noise, not brand. */
   animated,
+  /** Collapse the kicker and shrink the wordmark below `sm`. The stacked
+   *  kicker + 24px wordmark is a desktop lockup: on a 390px phone it wrapped
+   *  "PERSONAL SYSTEMS" onto two lines and pushed the public header to 220px —
+   *  a quarter of the screen spent on a logo. One line, 17px, same lockup
+   *  from `sm` up. */
+  responsive = false,
 }: {
   compact?: boolean;
   showWordmark?: boolean;
   animated?: boolean;
+  responsive?: boolean;
 }) {
-  const markSize = compact ? "ui-brand-mark-compact" : "ui-brand-mark-default";
+  const markSize = compact
+    ? "ui-brand-mark-compact"
+    : responsive
+      ? "ui-brand-mark-responsive"
+      : "ui-brand-mark-default";
   const spin = animated ?? !compact;
 
   return (
@@ -39,8 +50,17 @@ export function BrandMark({
       </div>
       {showWordmark && !compact && (
         <div className="min-w-0">
-          <p className="ui-kicker">{APP_KICKER}</p>
-          <span className="mt-1 block text-2xl font-medium tracking-display text-text-primary">
+          <p className={responsive ? "ui-kicker hidden sm:block" : "ui-kicker"}>{APP_KICKER}</p>
+          {/* Below 360px the wordmark is dropped and the spiral carries the
+              brand alone. At 320 — the narrowest width this app supports —
+              "FleetCrown" plus the header's CTA and menu button do not fit,
+              and the wordmark was being overlapped by the pill rather than
+              yielding to it. The glyph is the mark; the word is the bonus. */}
+          <span
+            className={`block truncate font-medium tracking-display text-text-primary ${
+              responsive ? "hidden text-lg min-[360px]:block sm:mt-1 sm:text-2xl" : "mt-1 text-2xl"
+            }`}
+          >
             {APP_NAME}
           </span>
         </div>

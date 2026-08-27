@@ -94,7 +94,10 @@ export function ProjectSharePanel({
 
   return (
     <div className="relative">
-      <button type="button" onClick={() => setOpen((v) => !v)} className="ui-btn-secondary gap-1.5">
+      {/* Ghost, like every other control in the project header — see the note
+          on the action row in ProjectWorkspaceView. As the one bordered button
+          in that row it read as the page's primary action, which it is not. */}
+      <button type="button" onClick={() => setOpen((v) => !v)} className="ui-btn-ghost min-h-11 gap-1.5">
         <Share2 className="h-3.5 w-3.5" />
         {hasShare ? "Shared" : "Share"}
       </button>

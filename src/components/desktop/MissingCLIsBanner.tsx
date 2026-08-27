@@ -131,7 +131,7 @@ export function MissingCLIsBanner() {
         <p className="ui-micro-label text-text-tertiary">
           Each &quot;Install&quot; opens a zellij tab with the installer command pre-typed — review it before pressing Enter.
           {" "}
-          <Link href="/docs/quickstart" className="text-accent underline">
+          <Link href="/docs/quickstart" className="text-accent-text underline">
             Need help?
           </Link>
         </p>
