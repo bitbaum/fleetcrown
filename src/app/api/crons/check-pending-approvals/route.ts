@@ -154,9 +154,21 @@ export async function GET(req: NextRequest) {
   }
 
   const expiredTotal = expired.length + expiredPastDated;
+  // Warn when this RUN did something; info when it merely observed a state.
+  //
+  // This used to warn whenever a stale user existed, which is a fact about the
+  // world rather than about the run — and the world does not change hourly. It
+  // produced 168 identical warnings in seven days, every one of them with
+  // expired/raised/pinged/cleared all zero, on a surface carrying six real
+  // errors. The state itself is not lost: a stale approval already has an open
+  // `pending_approvals` alert, which is the thing designed to represent an
+  // ongoing condition once rather than sixty-eight times.
+  //
+  // The alert records what is true; the log records what happened.
+  const didSomething = expiredTotal > 0 || raised > 0 || pinged > 0 || cleared > 0;
   await logDebug({
     source: "crons/check-pending-approvals",
-    level: stale.length > 0 ? "warn" : "info",
+    level: didSomething ? "warn" : "info",
     message:
       `expired ${expiredTotal} dead draft(s) (${expired.length} aged out, ${expiredPastDated} past-dated); ` +
       `${stale.length} user(s) still waiting >${REMINDER_AFTER_MINUTES}m: ${raised} raised, ${pinged} pinged, ${cleared} cleared`,

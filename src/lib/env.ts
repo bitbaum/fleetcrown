@@ -15,6 +15,8 @@
  * degraded + debug_logs says why", which the deploy gate turns red on.
  */
 
+import { envAlias } from "./brand-env";
+
 export type EnvIssue = { level: "fatal" | "error" | "warn"; key: string; msg: string };
 
 const SECRETS = [
@@ -38,6 +40,10 @@ export function checkEnv(): EnvIssue[] {
   const isProd = process.env.NODE_ENV === "production";
   const val = (k: string) => process.env[k];
   const present = (k: string) => Boolean(val(k)?.trim());
+  // For keys the app resolves through envAlias. Resolution must match the
+  // CONSUMER, per key — a checker reading a different variable than the code
+  // it guards can be wrong in both directions at once.
+  const presentAliased = (k: string) => Boolean(envAlias(k)?.trim());
 
   // 1. Whitespace corruption — the literal "\n in a secret" incident. A value
   //    that differs from its trimmed form will silently mismatch downstream.
@@ -96,11 +102,24 @@ export function checkEnv(): EnvIssue[] {
   // warn, not error: a missing chat id must not 503 a healthy app or block the
   // deploy pipeline — the operator is usually asleep when this trips, and an
   // outage is a worse answer than a loud signal.
-  if (present("TELEGRAM_BOT_TOKEN") && !present("TELEGRAM_CHAT_ID")) {
+  // presentAliased, not present: the app reads this key through envAlias, which
+  // only ever looks at APP_/FLEETCROWN_/COCKPIT_ prefixed names and NEVER the
+  // bare one. Checking the bare name was wrong in both directions:
+  //
+  //   - false alarm  — prod has APP_TELEGRAM_CHAT_ID set and delivery works,
+  //     yet this warned at every boot. 48 of last week's 231 warnings were
+  //     this one line, on a surface where six real errors were sitting.
+  //   - false quiet  — and worse: the fix the message implies is "set
+  //     TELEGRAM_CHAT_ID", which silences the warning while selfTelegramTarget()
+  //     still returns null and every notification still vanishes.
+  //
+  // A checker that resolves a variable differently from the code that consumes
+  // it is not checking that code.
+  if (present("TELEGRAM_BOT_TOKEN") && !presentAliased("TELEGRAM_CHAT_ID")) {
     issues.push({
       level: "warn",
       key: "TELEGRAM_CHAT_ID",
-      msg: "unset while TELEGRAM_BOT_TOKEN is set — every Telegram notification (run-close, feedback arrival) is discarded silently",
+      msg: "unset while TELEGRAM_BOT_TOKEN is set — every Telegram notification (run-close, feedback arrival) is discarded silently. Set APP_TELEGRAM_CHAT_ID (or FLEETCROWN_/COCKPIT_): the bare name is NOT read by the app",
     });
   }
 
