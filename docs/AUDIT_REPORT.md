@@ -41,7 +41,7 @@ lives in git history.
 - **Private-zone PIN `55550`** removed from 3 tracked scripts (usage examples now `<pin>`).
 - **Identity scrub**: seed email now `SEED_OWNER_EMAIL` env (fallback `mao@orangecat.ch`);
   `GEORGE_USER_ID` → `OWNER_USER_ID`; "George" comments → "the operator"/"Mao" in
-  code + docs + a published Thoughts essay; CODEOWNERS `@g-but` → `@maonakamoto`;
+  code + docs + a published Thoughts essay; CODEOWNERS `@g-but` → `@catomean`;
   real phone + author paths anonymized; `/home/g` runtime fallback → `os.homedir()`.
 - **`DEFAULT_USER_EXTERNAL_ID`** default `"george"` → `"self"`, with the entity row
   migrated in BOTH local and box DBs (`UPDATE entities SET external_id='self'`).
@@ -120,7 +120,7 @@ All 16 `/home/ubuntu/dev/*` workspaces reconciled: 7 fast-forwarded (orangecat
 was 107 behind, kivvi 39), surf-your-life (3) + truthseeker (1) real commits
 pushed to origin, 4 diverged/dirty repos preserved on pushed
 `box-checkpoint-2026-07-17` branches then reset clean, 6 remotes canonicalized
-`g-but` → `maonakamoto`. **revampit**: 50 unpushed agent commits checkpointed
+`g-but` → `catomean`. **revampit**: 50 unpushed agent commits checkpointed
 and pushed; its hard reset to origin/main is deferred until the currently
 running security-fix agent finishes (checkpoint makes it safe whenever).
 

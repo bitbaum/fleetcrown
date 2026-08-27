@@ -81,7 +81,7 @@ async function main(): Promise<void> {
         description: `Website at https://${host}`,
         // Owner from the environment, matching _box-env.sh — hardcoding it
         // here is what made a rename touch this file at all.
-        gitUrl: `https://github.com/${process.env.GH_OWNER ?? 'maonakamoto'}/${slug}`,
+        gitUrl: `https://github.com/${process.env.GH_OWNER ?? 'catomean'}/${slug}`,
       },
       'new-site.sh'
     );

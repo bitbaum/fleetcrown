@@ -10,6 +10,11 @@
 # literal in `github:owner/repo#tag` dependencies. Neither accepts a variable,
 # so the owner is unavoidably repeated across the fleet.
 #
+# MATCHING — also learned the hard way. The first version matched "<owner>/"
+# with a trailing slash, so it caught github.com/<owner>/repo but missed a bare
+# "<owner>" in a string, a comment, or <owner>.github.io. Seven source files
+# survived a sweep that reported success. Match the owner, not the owner-slash.
+#
 # SCOPE — learned the hard way. The first version of this script swept only
 # .github/workflows/*.yml. That missed the dependencies in package.json, which
 # is what actually breaks: `npm ci` cannot resolve github:<old-owner>/ai-kit,
@@ -50,7 +55,7 @@ for repo in "$DEV_ROOT"/*/; do
   [ -d "$repo/.github/workflows" ] || continue
   # Everything that can carry a literal owner. node_modules and .git excluded:
   # one is regenerated, the other is not ours to rewrite.
-  files=$(grep -rl "$OLD/" "$repo" \
+  files=$(grep -rl "$OLD" "$repo" \
             --include="*.yml" --include="*.yaml" --include="*.json" \
             --include="*.ts" --include="*.tsx" --include="*.js" --include="*.mjs" \
             --include="*.sh" --include="*.md" --include="*.toml" \
@@ -61,7 +66,7 @@ for repo in "$DEV_ROOT"/*/; do
   n=$(echo "$files" | wc -l | tr -d ' ')
   printf '  %-28s %s file(s)\n' "$(basename "$repo")" "$n"
   if [ "$DRY" = 0 ]; then
-    echo "$files" | while read -r f; do sed -i "s|${OLD}/|${NEW}/|g" "$f"; done
+    echo "$files" | while read -r f; do sed -i "s|${OLD}|${NEW}|g" "$f"; done
     touched=$((touched + n))
     if [ "$COMMIT" = 1 ] && git -C "$repo" rev-parse --git-dir >/dev/null 2>&1; then
       git -C "$repo" add -A >/dev/null 2>&1 || true

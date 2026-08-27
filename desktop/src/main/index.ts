@@ -1053,7 +1053,7 @@ app.whenReady().then(async () => {
       autoUpdater.autoInstallOnAppQuit = true
       autoUpdater.setFeedURL({
         provider: 'github',
-        owner: 'maonakamoto',
+        owner: 'catomean',
         repo: 'fleetcrown-releases',
       })
       autoUpdater.on('error', (err) => {
