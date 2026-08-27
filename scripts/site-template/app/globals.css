@@ -1,0 +1,67 @@
+@import 'tailwindcss';
+
+/**
+ * __TITLE__ — design tokens. The only place a colour, font or radius is defined.
+ *
+ * ⚠️  THESE VALUES ARE A STARTING POINT AND LEAVING THEM UNCHANGED IS A BUG.
+ *
+ * The studio's whole claim is that these are real, bespoke sites — not a
+ * template farm. sinktattoo, annushka, vitareba and petvity look nothing like
+ * each other, and that is the product. A site that ships in the default palette
+ * is a site that looks generated, which is the one thing it must not look.
+ *
+ * So: change the accent, change the type, change the ground. Share the SYSTEM
+ * (semantic token names, spacing scale, accessibility, no webfont fetch) and
+ * let the expression diverge completely.
+ *
+ * Structure, and why:
+ *   Tier 1  primitives — raw values, never used by a component
+ *   Tier 2  semantics  — what components use, always
+ * Retheming is then editing this file and nothing else.
+ */
+@theme {
+  --font-heading: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --tracking-display: -0.02em;
+  --tracking-caps: 0.12em;
+  --spacing-shell: 72rem;
+
+  /* Tier 1 — primitives. Replace these first. */
+  --primitive-ink-950: #101214;
+  --primitive-ink-100: #ecedee;
+  --primitive-ink-500: #6c7377;
+  --primitive-brand-500: #4a6fa5;
+
+  /* Tier 2 — semantics. Components only ever use these. */
+  --color-surface-page: #ffffff;
+  --color-surface-raised: #f7f8f8;
+  --color-fg-primary: var(--primitive-ink-950);
+  --color-fg-secondary: #40474b;
+  --color-fg-muted: var(--primitive-ink-500);
+  --color-border-subtle: #e3e5e6;
+  --color-accent: var(--primitive-brand-500);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --color-surface-page: var(--primitive-ink-950);
+    --color-surface-raised: #171a1c;
+    --color-fg-primary: var(--primitive-ink-100);
+    --color-fg-secondary: #b3b8ba;
+    --color-fg-muted: #7c8286;
+    --color-border-subtle: #262a2d;
+  }
+}
+
+html {
+  color-scheme: light dark;
+}
+
+body {
+  background-color: var(--color-surface-page);
+  color: var(--color-fg-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}

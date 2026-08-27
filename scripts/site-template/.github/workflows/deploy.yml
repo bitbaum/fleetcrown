@@ -1,0 +1,19 @@
+name: Deploy
+
+# Push to main → deploy to bitbaum. All logic lives in one place:
+# maonakamoto/fleetcrown/.github/workflows/selfhost-deploy.yml
+#
+# THIS IS THE ONLY FILE IN THIS REPOSITORY THAT KNOWS ABOUT OUR INFRASTRUCTURE.
+# Delete it and this becomes an ordinary Next app the owner can host anywhere —
+# which is what makes handover a transfer rather than a migration.
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    uses: maonakamoto/fleetcrown/.github/workflows/selfhost-deploy.yml@main
+    with:
+      app: __SLUG__
+    secrets: inherit
