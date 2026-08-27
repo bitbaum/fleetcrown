@@ -182,7 +182,26 @@ export async function generateProposals(
 
   let raw: string;
   try {
-    raw = await callGroqText(user, { systemPrompt: GENERATE_SYSTEM, maxTokens: 1100, temperature: 0.4, timeoutMs: 22_000 });
+    // 3000, not 1100 — this is what made the loop produce nothing for two months.
+    //
+    // gpt-oss-20b is a REASONING model, and on this prompt it narrates its
+    // analysis into `content` before emitting the JSON ("We need to propose up
+    // to 3 gap-anchored matches. Must name specific open gap or subsystem…").
+    // Reasoning tokens come out of the same budget, so at 1100 the reply was
+    // cut off before any '{' ever appeared — extractJson found nothing and
+    // every night landed on `unparseable`. Nothing was wrong with the prompt,
+    // the model id, or the parser; the answer simply never fit.
+    //
+    // The judge panel already carries the same lesson one line below: qwen gets
+    // 3500 "because reasoning models need room for <think>". The generator has
+    // MORE to say than a judge (three proposals with rationales vs three
+    // integers) and had a third of the budget.
+    //
+    // Measured after the change: four spaced samples returned drafted, drafted,
+    // drafted, all-deduped — no unparseable. One nightly call at this size
+    // requests ~5.2k tokens against Groq's 8000 TPM per-model cap, so it fits;
+    // the judges run on different models and so draw on different buckets.
+    raw = await callGroqText(user, { systemPrompt: GENERATE_SYSTEM, maxTokens: 3000, temperature: 0.4, timeoutMs: 35_000 });
   } catch (err) {
     // Was `catch { return [] }`. For the eight days the default Groq model
     // 404'd, that turned a hard outage into "the model had no ideas today".
