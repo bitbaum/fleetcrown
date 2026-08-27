@@ -27,8 +27,24 @@ set -e
 # `xargs -0` then fails on a filename that does not exist. It works with one
 # staged file and breaks at two, which is why it read as an odd one-off rather
 # than a broken hook. scripts/test/nul-safe-paths.ts now fails on the pattern.
+#
+# These are GIT pathspecs, not shell globs, and the ':(glob)' prefix is doing
+# two jobs at once.
+#
+# Without it this read `GLOBS="src/**/*.ts ..."` unquoted, so the SHELL expanded
+# it before git ever saw it — and POSIX sh has no globstar, so `**` collapses to
+# a single level. It became 230 literal paths, every one exactly two levels deep
+# (src/app/actions.ts, src/app/robots.ts, …), and nothing deeper could ever
+# match. Virtually all code here is deeper: src/app/api/*/route.ts,
+# src/components/*/X.tsx, src/lib/*/y.ts. Measured 2026-08-27 on a commit
+# touching 10 TypeScript files, this matched 0 of them and printed
+# "no staged TypeScript — nothing to lint".
+#
+# ':(glob)' makes ** mean "any number of directories" to git, and — because no
+# real file can be named ':(glob)…' — the unquoted expansion below stays
+# literal instead of being replaced by whatever happens to be on disk.
 FILTER="--diff-filter=ACMR"
-GLOBS="src/**/*.ts src/**/*.tsx home/**/*.ts home/**/*.tsx"
+GLOBS=':(glob)src/**/*.ts :(glob)src/**/*.tsx :(glob)home/**/*.ts :(glob)home/**/*.tsx'
 
 # shellcheck disable=SC2086
 if [ "$(git diff --cached --name-only $FILTER -- $GLOBS | wc -l)" -eq 0 ]; then
