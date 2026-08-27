@@ -1,0 +1,53 @@
+name: CI
+
+# WHY THIS FILE EXISTS, AND WHY IT IS NOT OPTIONAL
+#
+# fleetcrown's ci-gate.sh treats "CI green" and "no CI at all" identically —
+# both exit 0 and let the deploy proceed. That is a sane default for a repo
+# that has not set CI up yet, and it means a site WITHOUT this file deploys
+# every push completely unverified while looking exactly like one that passed.
+#
+# Substrata shipped to production that way. So the scaffold emits this file with
+# every new site: the gate has something real to wait for from the first commit.
+#
+# Runs the same bundle as `npm run verify` locally — one definition of verified.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+# A newer push supersedes an older run. ci-gate.sh understands cancelled-and-
+# superseded as a clean skip rather than a failure.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      # `npm ci` not `npm install`: the lockfile is the contract, and a resolution
+      # that drifts from it is exactly how a dependency silently disappears.
+      - run: npm ci
+
+      - name: Type check
+        run: npm run type-check
+
+      - name: Lint
+        run: npm run lint
+
+      # The build is the real test for a content site: a broken import or a bad
+      # config surfaces here and nowhere earlier.
+      - name: Build
+        run: npm run build
