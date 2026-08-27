@@ -3,7 +3,17 @@
 # Spin up a new site: repo → register → box → deploy. One command.
 #
 #   new-site.sh <slug> [--title "Name"] [--owner X] [--kind K] [--status S]
-#               [--public] [--no-deploy] [--dry-run]
+#               [--private] [--no-deploy] [--dry-run]
+#
+# PUBLIC BY DEFAULT, because that is how this studio actually works: 37 of 41
+# repos are public. It is also what makes organisation secrets usable — GitHub
+# Free does not expose org-level secrets to PRIVATE repositories, so a fleet of
+# private repos is a fleet that needs the deploy key copied into every one.
+#
+# Use --private when the repository contains something that is not ours to
+# publish. camille-boulangerie is the example: it holds a scrape manifest of a
+# real bakery's site, and publishing that under an invented brand is a different
+# act from publishing our own code.
 #
 # WHY THIS EXISTS
 #
@@ -35,7 +45,7 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 source "$HERE/lib.sh"
 
 SLUG=""; TITLE=""; OWNER="bitbaum"; KIND="client-site"; STATUS="prospect"
-VISIBILITY="--private"; DEPLOY=1; DRY=0
+VISIBILITY="--public"; DEPLOY=1; DRY=0
 DEV_ROOT="${DEV_ROOT:-/home/g/dev}"
 GH_OWNER="${GH_OWNER:-maonakamoto}"
 BASE_DOMAIN="orangecat.ch"
@@ -46,7 +56,7 @@ while [ $# -gt 0 ]; do
     --owner)  OWNER="$2"; shift 2 ;;
     --kind)   KIND="$2"; shift 2 ;;
     --status) STATUS="$2"; shift 2 ;;
-    --public) VISIBILITY="--public"; shift ;;
+    --private) VISIBILITY="--private"; shift ;;
     --no-deploy) DEPLOY=0; shift ;;
     --dry-run) DRY=1; shift ;;
     -h|--help) sed -n '2,30p' "$0"; exit 0 ;;
