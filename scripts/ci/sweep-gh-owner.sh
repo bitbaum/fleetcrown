@@ -52,7 +52,10 @@ echo "→ $OLD  →  $NEW   (workflows, package manifests, scripts, docs)"
 touched=0; repos=0
 
 for repo in "$DEV_ROOT"/*/; do
-  [ -d "$repo/.github/workflows" ] || continue
+  # Not "has workflows" — bitbaum and camille-boulangerie carry the owner only
+  # in documentation and were silently skipped by that condition. Any git repo
+  # can hold a stale reference.
+  [ -d "$repo/.git" ] || continue
   # Everything that can carry a literal owner. node_modules and .git excluded:
   # one is regenerated, the other is not ours to rewrite.
   files=$(grep -rl "$OLD" "$repo" \

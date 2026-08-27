@@ -29,6 +29,16 @@ export interface ReleaseEntry {
 /** Newest first. */
 export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
   {
+    version: "0.8.14",
+    tag: "fleet-runner-v0.8.14",
+    date: "2026-08-27T19:40:00Z",
+    highlights: [
+      "Fleet Runner now points at the renamed GitHub account, so updates and release downloads resolve again.",
+    ],
+    breaking: [],
+    notes: "The GitHub account this project lives under was renamed, and two files in desktop/ carried the old name — an update URL and a package reference. GitHub redirects repository URLs, but only until somebody else claims the freed name, so a redirect is not something an auto-updater should depend on. Cut as its own release because the check that fails when desktop code changes without a version bump is exactly the check that caught it, four commits after it was written to prevent this.",
+  },
+  {
     version: "0.8.13",
     tag: "fleet-runner-v0.8.13",
     date: "2026-08-26T09:20:00Z",
