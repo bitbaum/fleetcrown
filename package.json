@@ -22,7 +22,7 @@
     "verify": "tsc --noEmit && npm run lint && npm run check:design && npm run check:desktop && npm run test:unit && npm run test:home && npm run test:deploy-ref-gate && npm run test:not-behind-gate && npm run test:ops",
     "smoke": "bash scripts/smoke.sh",
     "test:home": "bash scripts/test-home.sh",
-    "test:ops": "bash scripts/hetzner/test-host-alerts.sh && bash scripts/hetzner/test-disk-gc.sh && bash scripts/hetzner/test-agent-work-watch.sh && bash scripts/hetzner/test-cron-runner.sh && bash scripts/hetzner/test-ci-gate.sh && bash scripts/hetzner/test-apply-schema.sh",
+    "test:ops": "bash scripts/hetzner/test-host-alerts.sh && bash scripts/hetzner/test-disk-gc.sh && bash scripts/hetzner/test-agent-work-watch.sh && bash scripts/hetzner/test-cron-runner.sh && bash scripts/hetzner/test-ci-gate.sh && bash scripts/hetzner/test-apply-schema.sh && bash scripts/hetzner/test-uptime-sweep.sh",
     "test:executor": "npx tsx scripts/test/executor.ts",
     "test:sandbox-executor": "npx tsx scripts/test/sandbox-executor.ts",
     "test:control-presenter": "npx tsx scripts/test/control-presenter.ts",
