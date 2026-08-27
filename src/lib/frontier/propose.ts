@@ -155,6 +155,14 @@ export type GenerationResult = {
   /** How many the model returned before dedup — separates "proposed nothing"
    *  from "proposed, then we threw it all away". */
   returned: number;
+  /**
+   * Present only for `unparseable` — the head of the reply that would not
+   * parse. Without it, "unparseable" is the same "which of several causes?"
+   * question one level down: a refusal, a prose preamble, a fenced block we
+   * mis-handle and a truncated object all fail to parse and each needs a
+   * different fix. Truncated, because this is stored and read by a human.
+   */
+  rawSample?: string;
 };
 
 export async function generateProposals(
@@ -185,7 +193,7 @@ export async function generateProposals(
   }
 
   const parsed = safeParse<{ proposals?: unknown }>(raw);
-  if (!parsed) return { drafts: [], outcome: "unparseable", returned: 0 };
+  if (!parsed) return { drafts: [], outcome: "unparseable", returned: 0, rawSample: raw.slice(0, 400) };
   const list = Array.isArray(parsed.proposals) ? parsed.proposals : [];
   const drafts: DraftProposal[] = [];
   for (const p of list) {

@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
     const deleted = await deleteStaleEventStreamTokens();
     // Heartbeat — same pattern as prune-debug-logs. Fire-and-forget.
     logDebug({
-      source: "api/crons/prune-agent-tokens",
+      source: "crons/prune-agent-tokens",
       level: "info",
       message: `Pruned ${deleted} stale event-stream tokens`,
       meta: { deleted },
@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     logDebug({
-      source: "api/crons/prune-agent-tokens",
+      source: "crons/prune-agent-tokens",
       level: "error",
       message: `Token pruner failed: ${message}`,
       meta: {},

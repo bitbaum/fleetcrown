@@ -56,6 +56,9 @@ export type RunProposalsResult = {
   generation?: GenerationOutcome;
   /** Present only when the generator's model call threw. */
   generationError?: string;
+  /** Present only for `unparseable` — the head of the reply that would not
+   *  parse, so the next fix does not start by reproducing the call. */
+  generationRawSample?: string;
   /** Proposals the model returned before dedup. `returned > 0` with
    *  `drafted: 0` means WE discarded them, not that the model had no ideas. */
   returned?: number;
@@ -102,6 +105,7 @@ export async function runFrontierProposals(digest: FrontierDigestRow): Promise<R
       generation: generation.outcome,
       returned: generation.returned,
       ...(generation.error ? { generationError: generation.error } : {}),
+      ...(generation.rawSample ? { generationRawSample: generation.rawSample } : {}),
     };
   }
 

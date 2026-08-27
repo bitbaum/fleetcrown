@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
     const deleted = await pruneDebugLogs();
     // Fire-and-forget telemetry. Don't await — outcome doesn't depend on it.
     logDebug({
-      source: "api/crons/prune-debug-logs",
+      source: "crons/prune-debug-logs",
       level: "info",
       message: `Pruned ${deleted} rows`,
       meta: { deleted },
@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     logDebug({
-      source: "api/crons/prune-debug-logs",
+      source: "crons/prune-debug-logs",
       level: "error",
       message: `Janitor failed: ${message}`,
       meta: {},

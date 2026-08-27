@@ -10,7 +10,7 @@ import { compactRelativeDate } from "@/lib/dates";
  *   - api/inject               (unknown tab, route-level 401, exec failure)
  *   - api/orchestration/run    (claude/codex/gemini inject + openclaw worker)
  *   - api/control/dispatch     (Groq fallback)
- *   - api/crons/prune-debug-logs (daily janitor heartbeat)
+ *   - crons/prune-debug-logs (daily janitor heartbeat)
  *   - auth                     (Auth.js signIn errors and org-bootstrap fails)
  *
  * Server-component reads — no client poll, no fetch — re-renders whenever

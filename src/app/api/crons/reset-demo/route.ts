@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
     const removedTotal = Object.values(removed).reduce((a, b) => a + b, 0);
 
     logDebug({
-      source: "api/crons/reset-demo",
+      source: "crons/reset-demo",
       level: "info",
       message: `Demo tenant reset — removed ${removedTotal} rows, seeded ${Object.keys(seeded).length} kinds`,
       meta: { userId, removed, seeded },
@@ -64,7 +64,7 @@ export async function GET(req: NextRequest) {
     }
     const message = err instanceof Error ? err.message : String(err);
     logDebug({
-      source: "api/crons/reset-demo",
+      source: "crons/reset-demo",
       level: "error",
       message: `Demo reset failed: ${message}`,
     });
