@@ -106,6 +106,62 @@ function safeParse<T>(text: string): T | null {
   try { return JSON.parse(json) as T; } catch { return null; }
 }
 
+/**
+ * Recover the proposals that DID finish out of a reply that stopped mid-object.
+ *
+ * No token budget can be guaranteed sufficient: the model decides how long a
+ * rationale is, so a big enough answer will always be able to run off the end.
+ * When it does, `extractJson`'s balanced-brace scan finds no closing brace for
+ * the top-level object and returns null — throwing away two complete proposals
+ * because a third was cut in half. Observed in prod at maxTokens 3000, on a
+ * reply whose first proposal was perfectly well-formed:
+ *
+ *   {"proposals":[{"title":"Calendar adapter accelerated with GLM-5.3-Flash…
+ *
+ * So: walk the `proposals` array and keep every element that closed. Returns
+ * null only when there is no array to walk, which is the genuinely unreadable
+ * case — a refusal, or prose with no JSON in it at all. Those need a different
+ * fix from "the answer was too long", which is the whole reason the outcomes
+ * below are separate.
+ */
+export function salvageProposals(raw: string): unknown[] | null {
+  const text = stripReasoning(raw);
+  const key = text.indexOf('"proposals"');
+  if (key === -1) return null;
+  const open = text.indexOf("[", key);
+  if (open === -1) return null;
+
+  const out: unknown[] = [];
+  let depth = 0;
+  let start = -1;
+  let inString = false;
+  let escaped = false;
+
+  for (let i = open + 1; i < text.length; i++) {
+    const c = text[i];
+    // Braces inside a string literal are not structure — a rationale containing
+    // "{" would otherwise unbalance every object after it.
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (c === "\\") escaped = true;
+      else if (c === '"') inString = false;
+      continue;
+    }
+    if (c === '"') { inString = true; continue; }
+    if (c === "{") { if (depth === 0) start = i; depth++; continue; }
+    if (c === "}") {
+      depth--;
+      if (depth === 0 && start !== -1) {
+        try { out.push(JSON.parse(text.slice(start, i + 1))); } catch { /* half-written: drop it */ }
+        start = -1;
+      }
+      continue;
+    }
+    if (c === "]" && depth === 0) break;
+  }
+  return out;
+}
+
 function norm(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
 }
@@ -138,8 +194,12 @@ export type GenerationOutcome =
   | "drafted"
   /** The model call threw (dead id, 429, timeout). `error` carries the message. */
   | "call-failed"
-  /** A reply arrived but no JSON object could be extracted from it. */
+  /** A reply arrived with no JSON in it at all — a refusal, or prose. */
   | "unparseable"
+  /** The reply began valid JSON and stopped mid-object, and nothing complete
+   *  could be salvaged from it. Distinct from `unparseable` because the fix is
+   *  different: the answer was too long, not unreadable. */
+  | "truncated"
   /** Valid JSON, and the model deliberately returned an empty proposal list. */
   | "model-returned-empty"
   /** The model proposed, and every draft was dropped as a duplicate. */
@@ -201,7 +261,7 @@ export async function generateProposals(
     // drafted, all-deduped — no unparseable. One nightly call at this size
     // requests ~5.2k tokens against Groq's 8000 TPM per-model cap, so it fits;
     // the judges run on different models and so draw on different buckets.
-    raw = await callGroqText(user, { systemPrompt: GENERATE_SYSTEM, maxTokens: 3000, temperature: 0.4, timeoutMs: 35_000 });
+    raw = await callGroqText(user, { systemPrompt: GENERATE_SYSTEM, maxTokens: 4000, temperature: 0.4, timeoutMs: 40_000 });
   } catch (err) {
     // Was `catch { return [] }`. For the eight days the default Groq model
     // 404'd, that turned a hard outage into "the model had no ideas today".
@@ -211,9 +271,22 @@ export async function generateProposals(
     };
   }
 
+  // A well-formed reply parses whole. One that ran out of tokens mid-object
+  // still has complete proposals in it, and throwing away two because a third
+  // was cut in half is a worse answer than the model gave us.
   const parsed = safeParse<{ proposals?: unknown }>(raw);
-  if (!parsed) return { drafts: [], outcome: "unparseable", returned: 0, rawSample: raw.slice(0, 400) };
-  const list = Array.isArray(parsed.proposals) ? parsed.proposals : [];
+  let truncated = false;
+  let list: unknown[];
+  if (parsed) {
+    list = Array.isArray(parsed.proposals) ? parsed.proposals : [];
+  } else {
+    const salvaged = salvageProposals(raw);
+    // No array to walk = genuinely unreadable, which needs a different fix from
+    // "too long" and so keeps its own name.
+    if (salvaged === null) return { drafts: [], outcome: "unparseable", returned: 0, rawSample: raw.slice(0, 400) };
+    truncated = true;
+    list = salvaged;
+  }
   const drafts: DraftProposal[] = [];
   for (const p of list) {
     if (typeof p !== "object" || !p) continue;
@@ -232,9 +305,16 @@ export async function generateProposals(
   // of it as duplicates" are different problems wearing the same zero.
   const outcome: GenerationOutcome =
     drafts.length > 0 ? "drafted"
-      : list.length > 0 ? "all-deduped"
-        : "model-returned-empty";
-  return { drafts, outcome, returned: list.length };
+      : truncated ? "truncated"
+        : list.length > 0 ? "all-deduped"
+          : "model-returned-empty";
+  // Keep the head of a truncated reply even when salvage succeeded: the run
+  // worked, but it worked on less than the model tried to say, and that is
+  // worth seeing before it becomes a night that produces nothing.
+  return {
+    drafts, outcome, returned: list.length,
+    ...(truncated ? { rawSample: raw.slice(0, 400) } : {}),
+  };
 }
 
 // The judge panel — model lineages DIFFERENT from the generator (Meta llama-3.3)

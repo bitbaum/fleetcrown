@@ -23,7 +23,7 @@ import { runFrontierDigest, runFrontierProposals, type RunProposalsResult } from
  * have one.
  */
 function outcomeLevel(p: RunProposalsResult): "info" | "warn" | "error" {
-  if (p.generation === "call-failed" || p.generation === "unparseable") return "error";
+  if (p.generation === "call-failed" || p.generation === "unparseable" || p.generation === "truncated") return "error";
   if (p.panelUnreachable) return "error";
   if (p.skipped || p.generation === "no-items" || p.judgeFailures?.length) return "warn";
   return "info";
