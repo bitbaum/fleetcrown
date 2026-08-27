@@ -14,9 +14,15 @@ HETZNER_IP="${HETZNER_IP:-167.233.22.31}"
 BOX_ROOT="root@${HETZNER_IP}"
 BOX_UBUNTU="ubuntu@${HETZNER_IP}"
 
-# GitHub owner for studio repositories. Becomes an org name the day one exists;
-# nothing else should have to change.
+# WHERE NEW SITE REPOS ARE CREATED. Becomes an org the day one exists.
 GH_OWNER="${GH_OWNER:-maonakamoto}"
+
+# WHERE fleetcrown LIVES — the owner every site's deploy.yml points at in its
+# `uses:` line. Deliberately separate from GH_OWNER: these look like the same
+# value today and are about to diverge. Sites will be created under an org
+# (bitbaum) while fleetcrown stays on the personal account, and if that account
+# is ever renamed this changes and GH_OWNER does not.
+WORKFLOW_OWNER="${WORKFLOW_OWNER:-maonakamoto}"
 
 # The domain every site gets a free subdomain on, until it has its own.
 SITES_BASE_DOMAIN="${SITES_BASE_DOMAIN:-orangecat.ch}"

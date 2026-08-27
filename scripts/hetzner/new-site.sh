@@ -115,8 +115,8 @@ if [ "$DRY" = 0 ]; then
   mv "$REPO_DIR/gitignore" "$REPO_DIR/.gitignore"
   # Placeholders are substituted in every text file, so a template file can use
   # them without this script knowing which files exist.
-  grep -rl '__SLUG__\|__TITLE__\|__HOST__' "$REPO_DIR" 2>/dev/null | while read -r f; do
-    sed -i "s|__SLUG__|$SLUG|g; s|__TITLE__|$TITLE|g; s|__HOST__|$SLUG.$BASE_DOMAIN|g" "$f"
+  grep -rl '__SLUG__\|__TITLE__\|__HOST__\|__WORKFLOW_OWNER__' "$REPO_DIR" 2>/dev/null | while read -r f; do
+    sed -i "s|__SLUG__|$SLUG|g; s|__TITLE__|$TITLE|g; s|__HOST__|$SLUG.$BASE_DOMAIN|g; s|__WORKFLOW_OWNER__|$WORKFLOW_OWNER|g" "$f"
   done
   printf '# Runtime env. No secrets belong here — the box is the env SSOT.\nNODE_ENV=production\nNEXT_PUBLIC_APP_URL=https://%s.%s\n' "$SLUG" "$BASE_DOMAIN" > "$REPO_DIR/.env.selfhost.local"
   say "$(find "$REPO_DIR" -type f | wc -l) files"
