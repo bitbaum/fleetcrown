@@ -59,7 +59,15 @@ const REF = process.env.ORANGECAT_REF ?? "origin/main";
  */
 function branchTouchedCanonical(): boolean {
   try {
-    const base = execFileSync("git", ["merge-base", "HEAD", "origin/main"], {
+    // Resolve the default branch rather than assuming "main": three repos in
+    // this fleet use master and two have no origin/HEAD set.
+    let def = "main";
+    try {
+      def = execFileSync("git", ["symbolic-ref", "--short", "refs/remotes/origin/HEAD"], {
+        encoding: "utf8", stdio: ["ignore", "pipe", "ignore"],
+      }).trim().replace(/^origin\//, "") || "main";
+    } catch { /* fall through to main */ }
+    const base = execFileSync("git", ["merge-base", "HEAD", `origin/${def}`], {
       encoding: "utf8", stdio: ["ignore", "pipe", "ignore"],
     }).trim();
     const changed = execFileSync("git", ["diff", "--name-only", `${base}...HEAD`], {

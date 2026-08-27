@@ -54,7 +54,14 @@ npm run verify
 # desktop-release-drift, which is the only check here that has never blocked an
 # unrelated push.
 # ---------------------------------------------------------------------------
-_base=$(git merge-base HEAD origin/main 2>/dev/null || echo "")
+# Resolve the default branch — this repo uses main, but three in the fleet use
+# master and two have no origin/HEAD. Hardcoding it makes the scoping below
+# silently treat every change as schema-touching on those repos.
+_def=$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's|^origin/||')
+[ -z "$_def" ] && for _c in main master; do
+  git rev-parse --verify --quiet "refs/remotes/origin/$_c" >/dev/null 2>&1 && { _def="$_c"; break; }
+done
+_base=$(git merge-base HEAD "origin/${_def:-main}" 2>/dev/null || echo "")
 _touches_schema=""
 if [ -n "$_base" ]; then
   git diff --name-only "$_base"...HEAD 2>/dev/null | grep -qE '^(src/db/|drizzle)' && _touches_schema=1

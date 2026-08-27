@@ -7,6 +7,27 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BOX="$BOX_UBUNTU"
 MANIFEST="$HERE/apps.conf"
 
+# default_branch [repo_dir] — the remote's default branch name, resolved not guessed.
+#
+# 28 repos here use `main`, 3 use `master` (aoz-housing, dotfiles,
+# sbb-lost-found), and 2 have no origin/HEAD set at all. Anything that hardcodes
+# "origin/main" silently does the wrong thing on a fifth of the fleet — a gate
+# that cannot find its base branch either blocks everything or checks nothing.
+#
+# Order: the remote's own answer, then whichever of main/master exists, then
+# fail. Never a hardcoded guess.
+default_branch() {
+  local repo="${1:-.}" b
+  b=$(git -C "$repo" symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null) && { echo "${b#origin/}"; return 0; }
+  for b in main master; do
+    git -C "$repo" rev-parse --verify --quiet "refs/remotes/origin/$b" >/dev/null 2>&1 && { echo "$b"; return 0; }
+  done
+  # origin/HEAD unset and neither name present. Fix with:
+  #   git remote set-head origin -a
+  return 1
+}
+
+
 # app_lookup <name> — sets NAME PORT DOMAINS REPO APP_DIR DB or exits 1
 app_lookup() {
   local line
