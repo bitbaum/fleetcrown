@@ -32,7 +32,7 @@ export type RegisteredModel = {
 };
 
 /** Statically pinned ids. The Loki chat + vision chains are deliberately NOT
- *  here: they live in `ai-ration`, are env-overridable at runtime, and already
+ *  here: they live in `ai-kit`, are env-overridable at runtime, and already
  *  fall through to another vendor. These are the pins with NO fallback — the
  *  ones whose death is a hard outage. */
 export const REGISTERED_MODELS: RegisteredModel[] = [

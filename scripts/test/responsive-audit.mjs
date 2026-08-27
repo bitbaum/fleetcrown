@@ -111,7 +111,7 @@ const PAGES = [
   "/terminal", "/prompts", "/activity", "/system", "/thoughts",
   "/settings", "/frontier", "/integrations/orangecat/build",
   "/control/import", "/control/new-from-scratch",
-  "/people", "/money", "/habits", "/events", "/goals", "/memory",
+  "/people", "/crew", "/money", "/habits", "/events", "/goals", "/memory",
 ];
 
 const MIN_TOUCH_PX = 44;

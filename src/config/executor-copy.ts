@@ -142,6 +142,25 @@ export const EXECUTOR_COPY = {
     // confirmations keep their own "starting shortly" copy where it IS true.
     builderStarting: "Builder online",
     notificationWhenDone: "Notification when this run finishes.",
+
+    // How a run that did NOT fail explains itself. These used to be written
+    // into payload.error by the reaper, so a `partial` run — a success — was
+    // rendered in the red error style, wearing reaper vocabulary: "Reaped as
+    // timeout ... corrected to partial (see evidence)". A person reading their
+    // own project card is not holding the reaper's dictionary.
+    reapedButHandoffWritten:
+      "The agent had already saved a handoff when this run was closed, so it counts as partial rather than failed.",
+    reapedButWorkInRepo:
+      "This run ran out of time, but its work reached the repo — so it counts as partial rather than failed.",
+    // This one IS a failure, so it keeps payload.error. Note what it does NOT
+    // claim: the runner's ack says "injected", and what it could not establish
+    // is whether the agent picked the prompt up. An earlier draft of this line
+    // asserted the prompt "never reached an agent", which the evidence does
+    // not support — the pane may have been idle with the agent gone, or the
+    // agent may have been wedged. State the observation; the recovery is the
+    // same either way, and nothing was completed.
+    dispatchNeverConfirmed:
+      "The prompt was injected, but the agent was never seen starting work — nothing ran to completion. Safe to retry: no work was recorded for this run.",
     watchQueued: "Watch Control for state. Terminal only while a session is running.",
   },
 

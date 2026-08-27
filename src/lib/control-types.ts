@@ -1,6 +1,7 @@
 import type { RecentCustomPrompt } from "@/db/queries/prompt-history";
 import type { OrchestrationTaskSummary } from "@/lib/orchestration";
 import type { OrchestrationOutcome } from "@/db/schema/orchestration-runs";
+import type { RepoWorkEvidence } from "@/lib/repo-evidence";
 
 export type ProjectProfile = {
   description: string;
@@ -150,7 +151,17 @@ export type ProjectState = {
     costUsd: number | null;
     payload: {
       resultText?: string;
+      /** A genuine failure. Rendered in the error style. */
       error?: string;
+      /** How a run that did NOT fail ended — a reaper correction, say.
+       *  Rendered neutrally: a `partial` run is a success, and styling its
+       *  explanation as an error made a corrected run look worse than an
+       *  uncorrected one. */
+      note?: string;
+      /** Repo work found during the run window, which is WHY a timeout was
+       *  corrected to partial. Structured, so the card can link to it instead
+       *  of saying "(see evidence)" and leaving the reader to guess where. */
+      evidence?: RepoWorkEvidence;
       durationMs?: number;
       model?: string;
     } | null;

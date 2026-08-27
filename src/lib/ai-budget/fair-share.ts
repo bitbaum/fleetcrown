@@ -1,5 +1,5 @@
 /**
- * Fair-share rationing — now owned by `ai-ration`.
+ * Fair-share rationing — now owned by `ai-kit`.
  *
  * The policy was always pure (no DB, no clock, no provider), which is exactly
  * what made it liftable: it was written here, proved here, and then extracted so
@@ -20,4 +20,4 @@ export {
   fairShare,
   utcDayElapsed,
   utcDayKey,
-} from "ai-ration";
+} from "ai-kit";

@@ -1139,6 +1139,7 @@ async function main(): Promise<void> {
     "/projects",
     "/goals",
     "/people",
+    "/crew",
     "/habits",
     "/events",
     "/money",

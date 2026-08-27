@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ExternalLink, Search } from "lucide-react";
-import { agoLabel } from "@/lib/atlas/format";
+import { timeAgo } from "@/lib/dates";
 
 function absolute(liveUrl: string, path: string): string {
   try {
@@ -48,7 +48,7 @@ export function SitePages({
         </h2>
         {checkedAt && (
           <span className="text-xs text-text-tertiary">
-            found {agoLabel(new Date(checkedAt).getTime())}
+            found {timeAgo(new Date(checkedAt).getTime())}
           </span>
         )}
       </div>

@@ -1,7 +1,7 @@
 /**
  * SSOT for the CHAT model chain — the models that drive Loki's tool loop.
  *
- * The chain LOGIC now lives in `ai-ration`, extracted after the lesson was paid
+ * The chain LOGIC now lives in `ai-kit`, extracted after the lesson was paid
  * for twice in this repo: four pinned free models rotted out from under the
  * vision half, and the chat half was still pinned to one vendor whose only
  * degradation was a step-down to a smaller model AT THE SAME VENDOR — drawing on
@@ -31,7 +31,7 @@ import {
   chainFrom as chainFromLinks,
   type Provider,
   type Link,
-} from "ai-ration";
+} from "ai-kit";
 
 export type ChatProvider = Provider;
 export type ChatLink = Link;

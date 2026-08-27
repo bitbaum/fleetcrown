@@ -1,5 +1,6 @@
 import { and, desc, eq, gt, inArray, isNotNull, isNull, lt, sql } from "drizzle-orm";
 import { db } from "@/db";
+import { EXECUTOR_COPY } from "@/config/executor-copy";
 import { ORCH_STATE } from "@/lib/orchestration/contract";
 import {
   ORCHESTRATION_OUTCOME,
@@ -10,8 +11,8 @@ import {
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import { resolveFeedbackForRun } from "@/lib/feedback/close-loop";
 import { promoteRunClose } from "@/lib/integrations/orangecat-publish";
-import { isFailingOutcome } from "@/lib/events";
 import { advanceEscalation, resolveEscalation } from "./run-escalations";
+import { ladderEffectForClose } from "@/lib/orchestration/escalation-ladder";
 import { notifyRunClosed } from "@/lib/orchestration/notify-close";
 import { correctTimeoutReapsWithRepoEvidence } from "@/lib/orchestration/reap-evidence";
 import { emitRunEvent } from "./run-events";
@@ -61,22 +62,33 @@ export async function updateOrchestrationRun(
     // OC-published projects. Idempotent (external_id = run id) and re-sent by
     // the daily promote backfill, so a dropped emit here is never lost.
     void promoteRunClose(updated);
-    // A success closes the project's open escalation ladder, if any.
-    void resolveEscalation(updated.userId, updated.projectKey, "success");
   }
 
-  // Escalation ladder: every failing close advances the project one rung
-  // (retry → patch → replan → human). isFailingOutcome is the same predicate
-  // the failure brake uses, so ladder rungs and brake streak count the same
-  // events. Fire-and-forget — bookkeeping never fails a close.
-  if (updated && patch.finishedAt && isFailingOutcome(patch.outcome)) {
-    void advanceEscalation({
-      userId: updated.userId,
-      projectKey: updated.projectKey,
-      runId: updated.id,
-      outcome: patch.outcome ?? "error",
-      error: updated.payload?.error ?? null,
-    });
+  // Escalation ladder. ONE predicate decides both directions
+  // (ladderEffectForClose): a failing close advances a rung, and any close
+  // where work landed — `success` OR `partial` — resolves it.
+  //
+  // Resolving used to require `success` while advancing used isFailingOutcome,
+  // so `partial` did neither and a ladder could never be left. Seventeen were
+  // stuck open at once, none with a single success since opening. The brake
+  // never had the bug (leadingFailureStreak stops at the first non-failing
+  // outcome), so this also makes the two agree, which the comment here always
+  // claimed they did.
+  //
+  // Fire-and-forget — bookkeeping never fails a close.
+  if (updated && patch.finishedAt) {
+    const effect = ladderEffectForClose(patch.outcome);
+    if (effect.kind === "advance") {
+      void advanceEscalation({
+        userId: updated.userId,
+        projectKey: updated.projectKey,
+        runId: updated.id,
+        outcome: patch.outcome ?? "error",
+        error: updated.payload?.error ?? null,
+      });
+    } else if (effect.kind === "resolve") {
+      void resolveEscalation(updated.userId, updated.projectKey, effect.by);
+    }
   }
 
   // Chat-originated runs push their outcome back to chat (opt-in via
@@ -267,15 +279,39 @@ export async function cleanupStaleOrchestrationRuns(userId?: string) {
       // done (worked) vs error (dead). A reaped run must record a terminal
       // OUTCOME (not null) so it can't silently vanish from the streak/stats.
       state: sql`CASE WHEN ${wroteAfterStart} THEN 'done' ELSE 'error' END`,
-      outcome: sql`CASE WHEN ${wroteAfterStart} THEN 'partial' ELSE 'timeout' END`,
+      // Three facts, three names. `runNeverStarted` is the runner's ack that
+      // it injected the prompt but never saw the agent start generating — it
+      // was already computed above (to disqualify liveness sheltering) and
+      // then THROWN AWAY at stamping time, so a run no agent was ever seen
+      // working on got recorded as "the agent ran out of time". 29 of 157
+      // timeouts measured 2026-08-26 were in this class, and they advanced the
+      // escalation ladders of the projects whose prompts went unanswered —
+      // surf-your-life reached the `human` rung with ten such runs behind it.
+      //
+      // `unconfirmed`, not `undelivered`: that name belongs to the stronger
+      // signal (a runner NACK → closeRunUndelivered) and this evidence does
+      // not reach it.
+      //
+      // wroteAfterStart is checked FIRST: evidence that work landed outranks
+      // an ack saying it never started.
+      outcome: sql`CASE
+        WHEN ${wroteAfterStart} THEN 'partial'
+        WHEN ${runNeverStarted} THEN 'unconfirmed'
+        ELSE 'timeout' END`,
       // Truthful duration: the run ended at the timeout threshold, not when the
       // janitor noticed. (Stamping reap-time once produced "51h" durations.)
       finishedAt: sql`${orchestrationRuns.startedAt} + make_interval(mins => ${STALE_RUN_MINUTES})`,
-      payload: sql`jsonb_set(COALESCE(payload, '{}'), '{error}', to_jsonb(
-        CASE WHEN ${wroteAfterStart}
-          THEN 'Reaper closed an open run whose agent had already written a handoff — counted as partial, not a failure'
-          ELSE 'Timed out — run exceeded maximum duration and was cleaned up'
-        END::text))`,
+      // A `partial` run did not fail, so its explanation goes to `note`
+      // (neutral) and a real timeout keeps `error` (red). Both used to land in
+      // `error`, which is how a success ended up styled as a failure and
+      // phrased in reaper vocabulary.
+      payload: sql`CASE
+        WHEN ${wroteAfterStart}
+          THEN jsonb_set(COALESCE(payload, '{}'), '{note}', to_jsonb(${EXECUTOR_COPY.honesty.reapedButHandoffWritten}::text))
+        WHEN ${runNeverStarted}
+          THEN jsonb_set(COALESCE(payload, '{}'), '{error}', to_jsonb(${EXECUTOR_COPY.honesty.dispatchNeverConfirmed}::text))
+        ELSE jsonb_set(COALESCE(payload, '{}'), '{error}', to_jsonb('Timed out — run exceeded maximum duration and was cleaned up'::text))
+      END`,
     })
     // No userId (the cron janitor) → reap across ALL users; the page-load call
     // sites keep passing their own userId for scope hygiene.
@@ -298,7 +334,11 @@ export async function cleanupStaleOrchestrationRuns(userId?: string) {
   // corrector above may later flip a timeout→partial; that correction doesn't
   // rewind the ladder — a success resolves it, which is the honest reset.
   for (const r of reaped) {
-    if (isFailingOutcome(r.outcome)) {
+    // Same single predicate as the funnel above. Reaped closes are failing in
+    // practice, but deriving it rather than assuming keeps one rule for what a
+    // close does to a ladder — and `correctTimeoutReapsWithRepoEvidence` above
+    // can flip a timeout to `partial`, which must resolve, not advance.
+    if (ladderEffectForClose(r.outcome).kind === "advance") {
       void advanceEscalation({
         userId: r.userId,
         projectKey: r.projectKey,

@@ -39,6 +39,20 @@ export const ORCHESTRATION_OUTCOME = {
   HANG: "hang",
   USER_ABORT: "user_abort",
   TIMEOUT: "timeout",
+  /** The prompt was injected, but the agent was never observed starting work
+   *  — the runner acked `verified: false` after its retries. Deliberately NOT
+   *  called "undelivered": that name is already taken by the stronger signal
+   *  (a runner NACK, `ok: false` → closeRunUndelivered), and the evidence here
+   *  does not reach it. The runner's own ack says "injected"; what it could not
+   *  establish is whether the agent picked it up. Both readings stay possible
+   *  — the pane may have been idle with the agent gone, or the agent may have
+   *  been wedged — so the name states the observation, not a conclusion.
+   *
+   *  Distinct from TIMEOUT, which claims an agent ran and ran out of time.
+   *  Conflating them billed infrastructure faults to projects: 29 of 157
+   *  timeouts measured 2026-08-26, and surf-your-life climbed to the ladder's
+   *  `human` rung with ten of them behind it. */
+  UNCONFIRMED: "unconfirmed",
 } as const;
 export const ORCHESTRATION_OUTCOMES = [
   ORCHESTRATION_OUTCOME.SUCCESS,
@@ -47,6 +61,7 @@ export const ORCHESTRATION_OUTCOMES = [
   ORCHESTRATION_OUTCOME.HANG,
   ORCHESTRATION_OUTCOME.USER_ABORT,
   ORCHESTRATION_OUTCOME.TIMEOUT,
+  ORCHESTRATION_OUTCOME.UNCONFIRMED,
 ] as const;
 export type OrchestrationOutcome = (typeof ORCHESTRATION_OUTCOMES)[number];
 

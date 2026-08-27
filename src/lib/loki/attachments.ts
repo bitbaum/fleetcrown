@@ -54,6 +54,14 @@ export function normalizeAttachment(raw: z.infer<typeof AttachmentBodySchema>): 
   return { kind: "text", name: raw.name, content };
 }
 
+/** `data:image/png;base64,AAAA` → `AAAA`. FileReader hands back a data URL;
+ *  the wire format carries raw base64. Lives here rather than in a composer so
+ *  every surface that stages an image encodes it identically. */
+export function stripDataUrlBase64(dataUrl: string): string {
+  const i = dataUrl.indexOf(",");
+  return i >= 0 ? dataUrl.slice(i + 1) : dataUrl;
+}
+
 export function isImageMime(mime: string): boolean {
   return IMAGE_MIME.test(mime);
 }

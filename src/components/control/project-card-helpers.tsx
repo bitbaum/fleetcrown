@@ -270,8 +270,37 @@ export function LatestOrchestrationPanel({
         </div>
       )}
 
-      {run.payload?.error && (
+      {/* payload.error renders ONLY for a run that actually failed.
+          Every writer of that field sets state = error alongside it
+          (closeRunUndelivered, and the reaper's timeout branch), so an error
+          sitting on a non-failed run is stale data by construction: the
+          pre-2026-08-26 reaper wrote its correction prose there, and rows
+          already in the database still carry sentences like "Reaped as
+          timeout ... corrected to partial (see evidence)". Restyling them
+          was not enough — the text itself is reaper vocabulary addressed to
+          nobody. A non-failed run says what it has to say through `note`. */}
+      {run.payload?.error && run.state === ORCH_STATE.ERROR && (
         <p className="ui-error">{run.payload.error}</p>
+      )}
+
+      {run.payload?.note && (
+        <p className="text-xs leading-relaxed text-text-muted">
+          {run.payload.note}
+          {run.payload.evidence && (
+            <>
+              {" "}
+              <a
+                href={run.payload.evidence.url}
+                target="_blank"
+                rel="noreferrer"
+                className="ui-link-subtle"
+                title={run.payload.evidence.title}
+              >
+                {run.payload.evidence.kind === "pr" ? "See the pull request" : "See the push"}
+              </a>
+            </>
+          )}
+        </p>
       )}
     </div>
   );

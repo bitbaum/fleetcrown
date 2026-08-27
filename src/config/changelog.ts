@@ -29,6 +29,19 @@ export interface ReleaseEntry {
 /** Newest first. */
 export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
   {
+    version: "0.8.13",
+    tag: "fleet-runner-v0.8.13",
+    date: "2026-08-26T09:20:00Z",
+    highlights: [
+      "Your machine now tells the fleet whether it is on wall power or on battery, and dispatches stop being routed to a laptop that will sleep when the lid shuts.",
+      "A run that touches the same directory twice is metered once. Long sessions were being billed for the same tokens repeatedly, which inflated the cost shown against a project.",
+      "Dispatched work reports the phase it is actually in instead of sitting on a bare \"dispatched\" chip until it finishes.",
+      "The agent count on Control now counts agents that are genuinely working, not every process that happens to be alive.",
+    ],
+    breaking: [],
+    notes: "Everything here was merged between 14 and 26 August and had been sitting on the server, unreachable by any machine, because a release was never cut. Fleet Runner ships only when a fleet-runner-v tag exists, that tag was minted by hand, and nothing checked that anyone had done it — so seven changed files reported no problem at all while going nowhere. CI now fails when desktop code changes without a version bump, and mints and publishes the tag itself once main is green. This release is the backlog that gap accumulated.",
+  },
+  {
     version: "0.8.12",
     tag: "fleet-runner-v0.8.12",
     date: "2026-08-14T11:00:00Z",

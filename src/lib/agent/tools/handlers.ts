@@ -17,6 +17,9 @@ import { getTodayHabits } from "@/db/queries/habits";
 import { listUpcomingCommitments } from "@/db/queries/today";
 import { getEventsDueSoon } from "@/db/queries/events";
 import { proposeAction } from "@/db/queries/actions";
+import { listCrew } from "@/db/queries/crew";
+import { createHumanTask, listOpenHumanTasks } from "@/db/queries/human-tasks";
+import { HUMAN_TASK_STATUS_LABEL, TASK_ACTOR, formatFee } from "@/config/crew";
 import { ACTION_TYPE, type ActionType } from "@/lib/constants/statuses";
 import { askGatewayAgent, isGatewayConfigured } from "@/lib/openclaw-gateway";
 import { makeFact, type Fact } from "@/lib/agent/core/facts";
@@ -281,6 +284,139 @@ const proposeActionTool = defineTool({
   },
 });
 
+const listCrewTool = defineTool({
+  name: "list_crew",
+  kind: "read",
+  description:
+    "The humans the operator delegates work to, with their role, skills and how many assignments are open with each. Use before proposing an assignment so you name someone who actually exists.",
+  params: z.object({}),
+  example: "TOOL: list_crew\nARGS: {}",
+  handler: async (_args, ctx) => {
+    const crew = await listCrew(ctx.userId).catch(() => []);
+    if (crew.length === 0) {
+      return empty("The operator has nobody in the loop yet — no crew to assign work to.");
+    }
+    const facts = crew.slice(0, LIST_LIMIT).map((member) =>
+      makeFact({
+        kind: "crew_member",
+        subject: member.name,
+        source: "crew roster",
+        values: {
+          name: member.name,
+          role: member.role,
+          skills: member.skills.length ? member.skills.join(", ") : null,
+          engagement: member.engagement,
+          rate: member.rate,
+          availability: member.availability,
+          open_assignments: String(member.openTasks),
+        },
+      }),
+    );
+    return { facts };
+  },
+});
+
+const listHumanTasksTool = defineTool({
+  name: "list_human_tasks",
+  kind: "read",
+  description:
+    "Open assignments handed to people — who has what, whether they accepted, and what is waiting on the operator. Use for 'who owes me what' or 'what did I delegate'. Distinct from agent work.",
+  params: z.object({}),
+  example: "TOOL: list_human_tasks\nARGS: {}",
+  handler: async (_args, ctx) => {
+    const tasks = await listOpenHumanTasks(ctx.userId, LIST_LIMIT).catch(() => []);
+    if (tasks.length === 0) return empty("No assignments are open with anyone right now.");
+    const facts = tasks.map((task) =>
+      makeFact({
+        kind: "assignment",
+        subject: task.title,
+        source: "crew board",
+        values: {
+          title: task.title,
+          assignee: task.assigneeName,
+          status: HUMAN_TASK_STATUS_LABEL[task.status],
+          due: dateLabel(task.dueDate),
+          fee: formatFee(task.feeAmount, task.feeCurrency) || null,
+          why: task.reason,
+        },
+      }),
+    );
+    return { facts };
+  },
+});
+
+/**
+ * Loki's second proposal path — and it is a proposal in exactly the same sense
+ * as the action queue.
+ *
+ * A human assignment is written as a DRAFT: no link is minted, no person is
+ * contacted, nothing leaves FleetCrown. Handing it over is a separate click the
+ * operator makes on /crew. So this tool cannot reach a human any more than
+ * `propose_action` can send a message, which is what makes it safe to give a
+ * small model.
+ */
+const proposeHumanTaskTool = defineTool({
+  name: "propose_human_task",
+  kind: "propose",
+  description:
+    "Draft an assignment for a HUMAN (not an agent) — calls to make, a document to sign, a room to walk into. Saved as a draft on the crew board; the operator hands it over themselves. Never claim the person has been asked.",
+  params: z.object({
+    title: z.string().min(3).max(160).describe("the ask, one line"),
+    brief: z.string().max(4000).optional().describe("what to do, written for the person doing it"),
+    reason: z.string().max(1000).optional().describe("why it matters"),
+    assignee: z.string().max(120).optional().describe("name of someone on the crew, if the operator named one"),
+    dueDate: z.string().max(40).optional(),
+  }),
+  example:
+    'TOOL: propose_human_task\nARGS: {"title": "Call the three Basel suppliers", "brief": "Ask each for a quote on 200 units, delivery before month end.", "reason": "We need a second quote before the board meeting.", "assignee": "Jana Roth"}',
+  handler: async (args, ctx) => {
+    const a = args as { title: string; brief?: string; reason?: string; assignee?: string; dueDate?: string };
+    // Resolve a NAME to a person the operator already has. An unmatched name
+    // leaves the draft unassigned rather than inventing a contact — the
+    // operator picks who does it on the board.
+    const crew = await listCrew(ctx.userId).catch(() => []);
+    const wanted = (a.assignee ?? "").trim().toLowerCase();
+    const match = wanted
+      ? crew.find((m) => m.name.toLowerCase() === wanted)
+        ?? crew.find((m) => m.name.toLowerCase().includes(wanted))
+      : undefined;
+
+    const created = await createHumanTask(
+      ctx.userId,
+      {
+        title: a.title,
+        brief: a.brief,
+        reason: a.reason,
+        assigneeId: match?.id,
+        dueDate: a.dueDate,
+      },
+      TASK_ACTOR.LOKI,
+    ).catch(() => null);
+
+    if (!created) {
+      return empty(`Could not write that assignment down. Nothing was sent to anyone.`);
+    }
+    return {
+      facts: [
+        makeFact({
+          kind: "assignment",
+          subject: created.title,
+          source: "crew board (DRAFT — nobody has been asked yet)",
+          values: {
+            title: created.title,
+            assignee: created.assigneeName,
+            due: a.dueDate ?? null,
+            why: a.reason ?? null,
+            status: wanted && !match
+              ? `draft — nobody matched "${a.assignee}", assign it on the crew board`
+              : "draft — the operator hands it over",
+          },
+        }),
+      ],
+    };
+  },
+});
+
 export const LOKI_TOOLS: ToolRegistry = Object.fromEntries(
   [
     searchPeopleTool,
@@ -291,6 +427,9 @@ export const LOKI_TOOLS: ToolRegistry = Object.fromEntries(
     listCommitmentsTool,
     listPendingApprovalsTool,
     askOpenClawTool,
+    listCrewTool,
+    listHumanTasksTool,
     proposeActionTool,
+    proposeHumanTaskTool,
   ].map((t) => [t.name, t]),
 );

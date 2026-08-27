@@ -25,8 +25,26 @@ export type FeedbackWorkView = {
   phase: FeedbackWorkPhase;
   /** Short status word for the badge — never "dispatched". */
   label: string;
-  /** One line of what to do / what happened. */
+  /** One line of what to do / what happened. Written for a human, always.
+   *  Never a raw run error — see `diagnostic`. */
   detail: string | null;
+  /**
+   * The run's raw error, for a disclosure the reader opens on purpose.
+   *
+   * This used to BE `detail`, so whatever an executor happened to write went
+   * straight onto the card as if it were advice to the user. On /control that
+   * printed, verbatim and twice: "Corrected 2026-08-24: repo evidence in the
+   * run window belonged to a sibling run; this run was acked verified:false
+   * and never started." That is an engineer's note to another engineer. It
+   * tells a person looking at their own feedback queue nothing they can act
+   * on, and it is the kind of thing that makes a surface read as debug output
+   * someone forgot to remove.
+   *
+   * Keeping it — behind a disclosure rather than deleted — because when a run
+   * really did fail for a legible reason, that reason is the most useful text
+   * on the row. The fix is where it renders, not whether.
+   */
+  diagnostic?: string | null;
 };
 
 export type FeedbackRunSnapshot = {
@@ -53,10 +71,17 @@ export function deriveFeedbackWork(
     return { phase: FEEDBACK_WORK_PHASE.DONE, label: "Done", detail: null };
   }
   if (status === FEEDBACK_STATUS.NEW) {
+    // No detail. Every other phase's detail earns its line by carrying
+    // something the badge cannot — an error string, a retry instruction,
+    // where to watch. "No agent has been asked to fix this yet." carried
+    // nothing: the badge already reads "Not started" and the row's only
+    // button already reads "Implement". On a strip of five new items it
+    // printed the same sentence five times, which is how a surface that is
+    // supposed to say what needs you ends up mostly saying nothing.
     return {
       phase: FEEDBACK_WORK_PHASE.NOT_STARTED,
       label: "Not started",
-      detail: "No agent has been asked to fix this yet.",
+      detail: null,
     };
   }
 
@@ -82,12 +107,22 @@ export function deriveFeedbackWork(
     };
   }
 
+  if (run.outcome === ORCHESTRATION_OUTCOME.UNCONFIRMED) {
+    return {
+      phase: FEEDBACK_WORK_PHASE.FAILED,
+      label: "Never started",
+      detail: "The prompt was injected but the agent was never seen picking it up. Nothing ran, so there is no result to read — retry it.",
+      diagnostic: run.error?.slice(0, 400) ?? null,
+    };
+  }
+
   if (run.state === ORCH_STATE.ERROR || run.outcome === ORCHESTRATION_OUTCOME.TIMEOUT
     || run.outcome === ORCHESTRATION_OUTCOME.ERROR || run.outcome === ORCHESTRATION_OUTCOME.HANG) {
     return {
       phase: FEEDBACK_WORK_PHASE.FAILED,
       label: "Failed",
-      detail: run.error?.slice(0, 160) || "The run ended without a successful fix. Retry or Watch Terminal.",
+      detail: "The run ended without a successful fix. Retry or Watch Terminal.",
+      diagnostic: run.error?.slice(0, 400) ?? null,
     };
   }
 
@@ -103,7 +138,8 @@ export function deriveFeedbackWork(
     return {
       phase: FEEDBACK_WORK_PHASE.FAILED,
       label: "Failed",
-      detail: run.error?.slice(0, 160) || "Run finished without success. Retry or Watch Terminal.",
+      detail: "Run finished without success. Retry or Watch Terminal.",
+      diagnostic: run.error?.slice(0, 400) ?? null,
     };
   }
 

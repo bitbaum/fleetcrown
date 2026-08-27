@@ -70,6 +70,147 @@ export function isOperatorEnvelope(text: string): boolean {
   return OPERATOR_ENVELOPE.test(text.slice(0, 200));
 }
 
+// ─── Recovering the human ask from an assembled dispatch ─────────────────────
+
+/**
+ * The background blocks the dispatch pipeline (lib/inject-prompt.ts) wraps
+ * around the operator's actual task, each with the boundary that ends it.
+ *
+ * Boundaries are explicit rather than "split on headings" because the intent
+ * body is NOT a heading — it starts with a bare "Work on the project at …"
+ * line. A naive heading split absorbed it into the preceding context block and
+ * threw the task away with the background, which is the opposite of the point.
+ *
+ * Order matters: the exit contract consumes everything to the end, so it goes
+ * first. Each pattern is anchored to a heading this repo actually emits (see
+ * OPERATOR_CONTEXT_HEADING, renderEscalationBlock, renderProjectContextBlock);
+ * a block that changes upstream stops matching and degrades to "shown, a bit
+ * noisy" rather than "task silently swallowed".
+ */
+const ENVELOPE_BLOCK_PATTERNS: RegExp[] = [
+  // Exit contract is always last and runs to the end of the dispatch.
+  /\n?^##[ \t]*Exit contract\b[\s\S]*$/im,
+  // Preamble: the heading plus its one explanatory paragraph (to a blank line).
+  /^#[ \t]*FleetCrown operator dispatch\b[^\n]*(?:\n(?!\s*$)[^\n]*)*/im,
+  // Heading-delimited background sections. They end at the next heading, or at
+  // the prose-form "Project context & goals" header, whichever comes first.
+  /^##[ \t]*The operator['\u2019]s goals & deadlines\b[\s\S]*?(?=\n#{1,3}[ \t]|\nProject context & goals\b|(?![\s\S]))/im,
+  /^##[ \t]*Background context from your other projects\b[\s\S]*?(?=\n#{1,3}[ \t]|\nProject context & goals\b|(?![\s\S]))/im,
+  /^##[ \t]*Escalation state\b[\s\S]*?(?=\n#{1,3}[ \t]|\nProject context & goals\b|(?![\s\S]))/im,
+  // The project brief block ends with its own sentinel line, not a heading.
+  /^Project context & goals\b[\s\S]*?Favor the next step that most advances these goals\.?/im,
+];
+
+/** The header the pipeline puts directly above a user-typed custom prompt. */
+const TASK_SECTION_RE =
+  /^##[ \t]*Your task \(direct operator instruction\)[ \t]*\n([\s\S]*?)(?=\n#{1,3}[ \t]|$)/im;
+
+/**
+ * The operator's actual instruction, recovered from a fully-assembled dispatch.
+ *
+ * The pipeline wraps every dispatch in ~2,000 words of preamble, context blocks
+ * and an exit contract. Activity used to respond by hiding the whole thing
+ * behind "assembled operator dispatch (… full text hidden)" — which is why the
+ * feed could not answer the one question it exists to answer: what did I ask
+ * for? The text was never missing, only suppressed.
+ *
+ * Two recovery paths, in order of confidence:
+ *   1. A custom prompt is fenced under an explicit "Your task" header — return
+ *      exactly that section.
+ *   2. An intent dispatch has no such header; subtract the known background
+ *      blocks and return what remains (the rendered intent body).
+ *
+ * Returns null when nothing recognisable survives, so callers fall back to the
+ * intent label rather than printing an empty string.
+ */
+export function extractOperatorTask(text: string): string | null {
+  if (!text.trim()) return null;
+
+  const explicit = text.match(TASK_SECTION_RE);
+  if (explicit?.[1]?.trim()) return explicit[1].trim();
+
+  let rest = text;
+  for (const pattern of ENVELOPE_BLOCK_PATTERNS) rest = rest.replace(pattern, "\n");
+  const body = rest.replace(/\n{3,}/g, "\n\n").trim();
+  return body || null;
+}
+
+/**
+ * What a prompt row should show, as a pair: a short line for the collapsed row
+ * and the complete text for the expanded one.
+ *
+ * `full` is deliberately the ORIGINAL stored text, not the extraction — when
+ * someone expands a row they are asking "what exactly was sent", and answering
+ * with a cleaned-up paraphrase would be a different (worse) answer.
+ */
+export type PromptDisplay = {
+  /** One-line-ish summary for the collapsed row. Never empty. */
+  preview: string;
+  /** Complete stored prompt, when there is one worth expanding to. */
+  full: string | null;
+  /**
+   * The operator's instruction, unwrapped and NOT truncated.
+   *
+   * Distinct from `preview` (shortened for a row) and from `full` (the whole
+   * assembled envelope). This is what a re-dispatch must send: replaying
+   * `full` would hand the pipeline its own preamble to wrap a second time,
+   * and replaying `preview` would silently re-run a truncated instruction.
+   */
+  task: string | null;
+  /** True when `full` holds meaningfully more than `preview`. */
+  expandable: boolean;
+  /** True when no prompt text was ever recorded (not merely hidden). */
+  missing: boolean;
+};
+
+const PREVIEW_MAX = 240;
+
+function onePreviewLine(text: string): string {
+  const flat = text.replace(/\s+/g, " ").trim();
+  return flat.length > PREVIEW_MAX ? `${flat.slice(0, PREVIEW_MAX - 1)}…` : flat;
+}
+
+/**
+ * The display pair for one prompt row. This is the function the Activity feed
+ * uses; `promptDisplayBody` stays as the single-string form other surfaces
+ * already consume.
+ */
+export function promptDisplay(row: PromptBodyInput): PromptDisplay {
+  const rawCustom = row.customPrompt ? stripHarnessScaffolding(row.customPrompt) : "";
+  const rawResolved = row.resolvedPrompt ? stripHarnessScaffolding(row.resolvedPrompt) : "";
+
+  // A plain custom prompt (no envelope) is already exactly the human ask.
+  if (rawCustom && !isOperatorEnvelope(rawCustom)) {
+    return {
+      preview: onePreviewLine(rawCustom),
+      full: rawCustom,
+      task: rawCustom,
+      expandable: rawCustom.replace(/\s+/g, " ").trim().length > PREVIEW_MAX,
+      missing: false,
+    };
+  }
+
+  // Otherwise work from whichever field carries the assembled dispatch.
+  const envelope = isOperatorEnvelope(rawCustom) ? rawCustom : rawResolved;
+  if (envelope) {
+    const recovered = isOperatorEnvelope(envelope) ? extractOperatorTask(envelope) : envelope;
+    const preview = recovered ? onePreviewLine(recovered) : getIntentLabel(row.intent);
+    return {
+      preview,
+      full: envelope,
+      task: recovered,
+      // The envelope is always worth expanding: it holds the context the agent
+      // actually received, which is the whole point of being able to look.
+      expandable: true,
+      missing: false,
+    };
+  }
+
+  // Nothing was recorded. Say so rather than printing the intent slug as if it
+  // were the prompt — a body reading "custom" is indistinguishable from a bug.
+  return { preview: "", full: null, task: null, expandable: false, missing: true };
+}
+
 // The most informative body for a prompt row. Custom text (what the user
 // typed) wins; then the rendered intent template (populated for dispatches
 // from 2026-06-10 onward); then the intent label so legacy rows still

@@ -9,6 +9,7 @@ import {
   MAX_ATTACHMENT_CHARS,
   MAX_IMAGE_BYTES,
   isImageMime,
+  stripDataUrlBase64,
   type StagedAttachment,
 } from "@/lib/loki/attachments";
 import {
@@ -21,11 +22,6 @@ import type { ExecutorHonestyLabel } from "@/lib/executor-honesty";
 import type { Attachment, LokiProject, ModelChoice } from "./types";
 
 const IMAGE_ONLY_DEFAULT = "What's wrong here and what should we change?";
-
-function stripDataUrlBase64(dataUrl: string): string {
-  const i = dataUrl.indexOf(",");
-  return i >= 0 ? dataUrl.slice(i + 1) : dataUrl;
-}
 
 function stageKey(a: StagedAttachment): string {
   return `${a.kind}:${a.name}`;

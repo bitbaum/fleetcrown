@@ -43,6 +43,7 @@ const OUTCOME_GLYPH: Record<RecentOutcome["outcome"], string> = {
   hang: "✗",
   timeout: "✗",
   user_abort: "✕",
+  unconfirmed: "⇥",
 };
 function streakLine(outcomes: RecentOutcome[]): string {
   return outcomes.map((o) => OUTCOME_GLYPH[o.outcome]).join("");

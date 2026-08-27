@@ -129,6 +129,61 @@ Before shipping UI changes, verify at **375×667** and **320×568**:
 
 Run `npm run smoke` with dev server up for route health; Playwright viewport tests are planned but not yet in CI.
 
+## Control page (`/control`)
+
+Control's failure mode was never one bad component — it was **twelve sibling
+full-width sections with no hierarchy**, and layout logic that started at `sm:`
+(640px), which is above every phone. A 390px device therefore never got a
+designed layout; it got the fallback (`flex-col`, full width, nothing aligned to
+anything). Both are fixed, and both are easy to undo by accident:
+
+**Write phone rules as the base and relax them at `sm:`/`md:`.** A rule that
+only exists at `sm:` and up does not exist on a phone. The hero (`ui-hero-*`) is
+the reference: base rules describe 320px, `sm:` only spends the extra room.
+
+**The hero answers one question.** *Is anything waiting on me?* — headline,
+the projects by name, and at most ONE button. It previously carried five things
+(runner line + versions, refresh, new project, autopilot pulse, Pause fleet, a
+four-chip counter row, an explanatory paragraph) and its loudest control was
+Pause fleet, which a builder uses roughly never. Counters and builder state live
+in a quiet foot line; autopilot and refresh live in `ControlSettingsSheet`.
+
+**Small tasks are one queue, not many strips.** `ControlInbox` holds feedback
+triage and widget coverage together, collapsed, capped at three rows per group,
+nothing auto-expanding. Adding a third "just one more strip" to the page is the
+regression this replaced — add a group to the inbox instead.
+
+**Row actions are never primaries.** A list of filled buttons has no primary
+whatever its colour. Filled (`ui-btn-primary`) is for the action on a whole
+group; rows get `ui-btn-secondary`. Use the size axis `ui-btn-sm` — never invent
+a fifth filled variant with a size baked into it (that is how `ui-btn-save`,
+`ui-btn-submit`, `ui-btn-lg` and `ui-btn-ready-primary` all came to exist).
+
+**Nothing may rely on hover to be legible.** Phones have none. `OutcomeStreak`
+was five glyphs whose meaning lived in a `title`; it now states its summary in
+words. A `title` is an enhancement, never the only copy of a fact.
+
+## Sheets (`ui-sheet-*`)
+
+Shared bottom-sheet shell — used by the terminal's session setup and Control's
+fleet settings. The rule that decides what belongs in one: **settings, not
+state.** Controls chosen deliberately, changed rarely, and never read while work
+is in flight. State stays on the page.
+
+## Voice and pictures
+
+Both dispatch composers (Control's `PromptInput`, `TerminalComposer`) take voice
+(Whisper, already wired) and images/text files by picker or paste via
+`useAttachments`. A screenshot with no text is a valid send — the picture is the
+instruction.
+
+A terminal agent cannot read pixels, so an image is never forwarded: it is
+described by the vision preflight and folded into the prompt as TEXT, server
+side, in `lib/composer-attachments` — called from `/api/inject`,
+`/api/control/tab-inject` and `/api/orchestration/run`. Do not fold client-side:
+a client that forgets sends a prompt referring to a screenshot nobody looked at,
+and that failure is silent.
+
 ## Terminal page (`/terminal`)
 
 Below `md` the terminal is three pieces and nothing else: a one-line header (`TerminalMobileHeader` — session name, live dot, full-screen toggle), the screen, and the dock (`TerminalMobileDock`). Everything that is *setup* rather than *state* — source, session list, agent, input mode, text size, live-keystrokes — lives in `TerminalSessionSheet`, one tap behind the session name. The desktop chrome (source bar, tab strip, session bar, status row) is `hidden md:block`; there is one `TerminalView` shared by both.

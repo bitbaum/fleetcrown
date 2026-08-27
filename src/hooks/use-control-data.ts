@@ -7,6 +7,7 @@ import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import { getJson, postJson, throwApiError } from "@/lib/api/fetch";
 import { REFRESH_AFTER_DISPATCH_MS, REFRESH_AFTER_LAUNCH_MS, AGENT_COLD_START_MS } from "@/lib/constants/timings";
 import type { Agent } from "@/lib/agent-registry";
+import type { Attachment } from "@/lib/loki/attachments";
 import { FLEETCROWN_REFRESH_EVENT } from "@/lib/client-events";
 import { EXECUTOR_COPY } from "@/config/executor-copy";
 import { useEventStream } from "@/lib/event-stream";
@@ -35,7 +36,7 @@ export interface ControlDataHook {
    *  to heartbeat age. true/false = authoritative live signal. */
   runnerConnected: boolean | null;
   refresh: (manual?: boolean) => Promise<void>;
-  inject: (tab: string, promptKey?: string, customPrompt?: string) => Promise<{ mode: "direct" | "queued"; runnerConnected: boolean | null; commandId: string | null }>;
+  inject: (tab: string, promptKey?: string, customPrompt?: string, attachments?: Attachment[]) => Promise<{ mode: "direct" | "queued"; runnerConnected: boolean | null; commandId: string | null }>;
   launchProject: (tab: string, dir: string, agent?: string, model?: string, initialPrompt?: string) => Promise<void>;
   runWithBrain: (project: ProjectState, intent: OrchestrationTaskIntentId) => Promise<void>;
   runCustomPrompt: (project: ProjectState, prompt: string, ag: string) => Promise<void>;
@@ -244,14 +245,20 @@ export function useControlData(): ControlDataHook {
     return () => clearTimeout(id);
   }, [lastTabResultsAt]);
 
-  const inject = async (tab: string, promptKey?: string, customPrompt?: string): Promise<{ mode: "direct" | "queued"; runnerConnected: boolean | null; commandId: string | null }> => {
+  const inject = async (tab: string, promptKey?: string, customPrompt?: string, attachments?: Attachment[]): Promise<{ mode: "direct" | "queued"; runnerConnected: boolean | null; commandId: string | null }> => {
     // Same-machine fast path (POST localhost:3001/api/inject → home/server.ts
     // → bash inject_prompt) was retired in Session 4 of killing-the-bash-
     // runner (2026-06-11). Every inject now goes through the cloud
     // /api/inject endpoint; Fleet Runner desktop polls /api/control/commands
     // and types the resulting prompt into zellij. Same end-state, one
     // transport instead of two, no bash anywhere.
-    const res = await postJson("/api/inject", { tab, promptKey, customPrompt, adapter: data?.agentConfig.agent ?? selectedAgent });
+    const res = await postJson("/api/inject", {
+      tab, promptKey, customPrompt,
+      adapter: data?.agentConfig.agent ?? selectedAgent,
+      // Screenshots ride along raw; the server turns them into text (it must
+      // not be skippable from here — see lib/composer-attachments).
+      ...(attachments?.length ? { attachments } : {}),
+    });
     if (!res.ok) await throwApiError(res, `HTTP ${res.status}`);
     const body = await res.json().catch(() => ({}));
     // Don't let an offline runner read as success — say it out loud.

@@ -15,6 +15,8 @@ import { useBuilderPresence } from "@/hooks/use-builder-presence";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import type { ProjectState } from "@/lib/control-types";
 import { PromptInput } from "./prompt-input";
+import { useAttachments } from "@/hooks/use-attachments";
+import type { Attachment } from "@/lib/loki/attachments";
 import { HostedDispatchButton } from "./HostedDispatchButton";
 import { QueueList } from "./queue-list";
 import { ProjectPromptLibrary } from "./ProjectPromptLibrary";
@@ -25,6 +27,13 @@ import { stripHarnessScaffolding } from "@/lib/activity-status";
  *  branches of IntentButtonPanel; extracted so the two stay identical.
  *  Only shows with 2+ useful items to avoid a third competing list
  *  (Recent dispatches / Paste from history / Prompt library) crowding the card. */
+/** How much of a prompt a chip shows. Long enough to recognise one you wrote,
+ *  short enough that three fit without becoming the card. */
+const DISPLAY_CHARS = 60;
+/** Five rows of clipped grey text read as noise on a phone — this is a
+ *  convenience, and a convenience does not get to be the tallest thing in the
+ *  card. Three is enough to catch "the one I keep retyping". */
+const MAX_HISTORY_CHIPS = 3;
 function RecentPromptChips({
   prompts,
   onPick,
@@ -32,25 +41,39 @@ function RecentPromptChips({
   prompts: { customPrompt: string; count: number }[];
   onPick: (text: string) => void;
 }) {
-  if (prompts.length < 2) return null;
+  // Dedupe by what the row will actually SAY, not by what it stores.
+  //
+  // The list was already deduped by full text, which is the wrong key when the
+  // display is truncated: two long prompts that differ only past character 60
+  // are distinct entries and identical rows. On 2026-08-26 this rendered as two
+  // adjacent, pixel-identical "You are reviewing a git diff before push. Be
+  // BRIEF (" chips — a list that appears to be malfunctioning. If two rows read
+  // the same they ARE the same as far as choosing between them goes, so the
+  // busier one wins and the other is dropped.
+  const seen = new Map<string, { customPrompt: string; count: number; label: string }>();
+  for (const r of prompts) {
+    const text = r.customPrompt.replace(/\s+/g, " ").trim();
+    const label = text.length > DISPLAY_CHARS ? text.slice(0, DISPLAY_CHARS) + "…" : text;
+    const prior = seen.get(label);
+    if (!prior || r.count > prior.count) seen.set(label, { ...r, label });
+  }
+  const rows = [...seen.values()].slice(0, MAX_HISTORY_CHIPS);
+  if (rows.length < 2) return null;
   return (
     <div className="space-y-1.5">
       <p className="ui-kicker">{PASTE_FROM_HISTORY_TITLE}</p>
       <div className="flex flex-wrap gap-1.5">
-        {prompts.map((r) => {
-          const text = r.customPrompt.replace(/\s+/g, " ").trim();
-          return (
-            <button
-              key={r.customPrompt}
-              onClick={() => onPick(r.customPrompt)}
-              title={`Reuse this prompt: ${r.customPrompt}`}
-              className="ui-chip-truncate-label"
-            >
-              {r.count > 1 && <span className="mr-1.5">used {r.count}×</span>}
-              {text.length > 60 ? text.slice(0, 60) + "…" : text}
-            </button>
-          );
-        })}
+        {rows.map((r) => (
+          <button
+            key={r.label}
+            onClick={() => onPick(r.customPrompt)}
+            title={`Reuse this prompt: ${r.customPrompt}`}
+            className="ui-chip-truncate-label"
+          >
+            {r.count > 1 && <span className="mr-1.5">used {r.count}×</span>}
+            {r.label}
+          </button>
+        ))}
       </div>
     </div>
   );
@@ -109,7 +132,7 @@ export function IntentButtonPanel({
   merging?: boolean;
   onToggleAutoContinue?: () => void;
   onSendIntent: (intent: OrchestrationTaskIntentId) => void;
-  onSendCustom: () => void;
+  onSendCustom: (attachments?: Attachment[]) => void;
   onEnqueueCustom?: (prompt: string) => void;
   onSendFromQueue?: (index: number) => void;
   onRemoveFromQueue?: (index: number) => void;
@@ -145,7 +168,15 @@ export function IntentButtonPanel({
     onEnqueueAfterRecording: (text) => { if (onEnqueueCustom) { onEnqueueCustom(text); onCustomChange(""); } },
   });
 
-  const handleSendCustom = useCallback(() => wrapSend(() => { haptic(); onSendCustom(); }), [wrapSend, onSendCustom]);
+  // The controller lives here, beside the mic, because both are ways of saying
+  // the same thing: this is what I want done. Cleared only after a send is
+  // handed off, so a failed dispatch keeps the screenshot with the draft.
+  const attachments = useAttachments();
+  const handleSendCustom = useCallback(() => wrapSend(() => {
+    haptic();
+    onSendCustom(attachments.attachments.length ? attachments.toWire() : undefined);
+    attachments.clear();
+  }), [wrapSend, onSendCustom, attachments]);
   const handleEnqueue = useCallback(() => wrapEnqueue(() => {
     if (custom.trim() && onEnqueueCustom) { haptic(); onEnqueueCustom(custom.trim()); onCustomChange(""); }
   }), [wrapEnqueue, custom, onEnqueueCustom, onCustomChange]);
@@ -158,6 +189,7 @@ export function IntentButtonPanel({
     showQueue: !!onEnqueueCustom,
     onSendCustom: handleSendCustom,
     onEnqueue: handleEnqueue,
+    attachments,
     autoContinueEnabled,
     onToggleAutoContinue,
     // Short inline hint only — the full offline explanation + how-to-reconnect

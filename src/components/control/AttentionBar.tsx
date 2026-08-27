@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { AlertTriangle, RotateCcw, X } from "lucide-react";
+import { AlertTriangle, RotateCcw, Play, X } from "lucide-react";
+import { remedyForFailure, FAILURE_REMEDY } from "@/lib/terminals/focus-failure";
 import type { AttentionItem } from "./control-presenter";
 import type { FailedCommand } from "@/lib/control-types";
 import { HEALTH_TAG_STYLE } from "@/config/ui";
@@ -38,10 +39,15 @@ export function AttentionBar({
   items,
   failedCommands,
   onFocusProject,
+  onStartSession,
 }: {
   items: AttentionItem[];
   failedCommands?: FailedCommand[];
   onFocusProject?: (tab: string) => void;
+  /** Start a session for a project whose failure cannot be retried into
+   *  existence. Optional: without it the row falls back to showing nothing
+   *  rather than a button that cannot work. */
+  onStartSession?: (tab: string) => void;
 }) {
   const [dismissed, setDismissed] = useState<Set<string>>(() => {
     try {
@@ -118,6 +124,13 @@ export function AttentionBar({
         // "delivered" was polite fiction when verified=false — the prompt hit a
         // PTY but the agent never generated. Say that plainly.
         const verb = f.unverified ? "queued, not confirmed working" : "failed";
+        // A Retry is only offered when repeating the identical command could
+        // produce a different result. "Tab not found" cannot: the target is
+        // identically absent on every attempt, which is how this exact banner
+        // sat on /control for 47 minutes wearing a button that never worked.
+        const remedy = remedyForFailure(f.error);
+        const canStartSession =
+          remedy === FAILURE_REMEDY.START_SESSION && f.tab !== "unknown" && Boolean(onStartSession);
         return (
           <div key={f.id} className="ui-callout-negative justify-between">
             <div className="flex items-start gap-3 min-w-0">
@@ -145,15 +158,28 @@ export function AttentionBar({
                   Open on Control
                 </a>
               )}
-              <button
-                onClick={() => retry(group)}
-                disabled={retrying.has(f.id)}
-                className="ui-btn-ghost ui-btn-xs gap-1 text-micro"
-                aria-label="Retry command"
-              >
-                <RotateCcw className="h-3 w-3" />
-                {retrying.has(f.id) ? "Retrying…" : "Retry"}
-              </button>
+              {canStartSession && (
+                <button
+                  onClick={() => onStartSession!(f.tab)}
+                  className="ui-btn-ghost ui-btn-xs gap-1 text-micro"
+                  aria-label={`Start a session for ${f.tab}`}
+                  title={`${f.tab} has no terminal session — start one, then this command can run`}
+                >
+                  <Play className="h-3 w-3" />
+                  Start session
+                </button>
+              )}
+              {remedy === FAILURE_REMEDY.RETRY && (
+                <button
+                  onClick={() => retry(group)}
+                  disabled={retrying.has(f.id)}
+                  className="ui-btn-ghost ui-btn-xs gap-1 text-micro"
+                  aria-label="Retry command"
+                >
+                  <RotateCcw className="h-3 w-3" />
+                  {retrying.has(f.id) ? "Retrying…" : "Retry"}
+                </button>
+              )}
               <button
                 onClick={() => group.dismissIds.forEach(dismiss)}
                 className="ui-tap-icon text-text-muted hover:text-text-secondary transition-colors"

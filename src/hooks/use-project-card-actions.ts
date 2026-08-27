@@ -10,6 +10,7 @@ import type { DispatchResult } from "@/app/api/control/dispatch/route";
 import { clearDraft, getDraft, setDraft } from "@/lib/draft-storage";
 import { FEEDBACK_MEDIUM_MS } from "@/lib/constants/timings";
 import type { DispatchLiveView } from "@/lib/dispatch-status";
+import type { Attachment } from "@/lib/loki/attachments";
 
 export function useProjectCardActions({
   project,
@@ -28,7 +29,7 @@ export function useProjectCardActions({
   queue: string[];
   removeFromQueue: (index: number) => void;
   clearQueue: () => void;
-  onInject: (tab: string, promptKey?: string, customPrompt?: string) => Promise<{ commandId?: string | null } | void>;
+  onInject: (tab: string, promptKey?: string, customPrompt?: string, attachments?: Attachment[]) => Promise<{ commandId?: string | null } | void>;
   onRunWithBrain: (project: ProjectState, intent: OrchestrationTaskIntentId) => Promise<void>;
   setDismissed: (v: boolean) => void;
   isReadyNow: boolean;
@@ -113,8 +114,8 @@ export function useProjectCardActions({
   // Single funnel for user-initiated sends: fire the inject, then track the
   // returned command id. All the send* handlers below route through this so
   // tracking lives in exactly one place.
-  const doInject = useCallback(async (tab: string, promptKey?: string, customPrompt?: string) => {
-    const result = await onInject(tab, promptKey, customPrompt);
+  const doInject = useCallback(async (tab: string, promptKey?: string, customPrompt?: string, attachments?: Attachment[]) => {
+    const result = await onInject(tab, promptKey, customPrompt, attachments);
     const commandId = result && "commandId" in result ? result.commandId : null;
     if (commandId) trackDispatch(commandId);
     return result;
@@ -162,15 +163,18 @@ export function useProjectCardActions({
     return health.includes("critical") || tests.includes("fail");
   };
 
-  const sendCustom = async () => {
-    if (!custom.trim()) {
+  const sendCustom = async (attachments?: Attachment[]) => {
+    // A screenshot on its own is a complete instruction. Requiring words as
+    // well would make the most natural mobile report — take a picture, send it
+    // — the one thing the composer refuses.
+    if (!custom.trim() && !attachments?.length) {
       // Never no-op silently: when the controlled state is empty while the
       // box LOOKS filled (dictation/autofill/synthetic input that bypassed
       // React onChange), Send previously did nothing with zero feedback.
       setSendError("Nothing to send — the composer is empty. Retype the prompt.");
       return;
     }
-    const trimmed = custom.trim();
+    const trimmed = custom.trim() || "Look at the attached screenshot and fix what is wrong.";
     setSending("custom");
     setSendError(null);
     setDismissed(true);
@@ -178,7 +182,7 @@ export function useProjectCardActions({
       // Mirror the smartEnqueue special case: if the user is deliberately sending
       // a handoff-controlled prompt (the exact workflow they use to drive the agent
       // from the UI), prefer direct execution over queueing.
-      await doInject(project.tab, undefined, trimmed);
+      await doInject(project.tab, undefined, trimmed, attachments);
       setCustom("");
       markSent("custom");
     } catch (err) {

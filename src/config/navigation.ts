@@ -26,6 +26,7 @@ import {
   Inbox,
   Globe,
   MessagesSquare,
+  Handshake,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -63,6 +64,7 @@ export const NAV = {
 
   people:     { id: "people",   label: "People",   description: "Your private address book — every user has their own", href: "/people", icon: Users, active: true,  mobile: false },
   robots:     { id: "robots",   label: "Robots",   description: "Machines you own — profile, book, rent, or sell", href: "/robots", icon: Bot, active: true, mobile: false },
+  crew:       { id: "crew",     label: "Crew",     description: "Humans in the loop — assign the work an agent can't do", href: "/crew", icon: Handshake, active: true, mobile: false },
   goals:      { id: "goals",    label: "Goals",    description: "Active goals & milestones",         href: "/goals",      icon: Target,       active: true,  mobile: false },
   habits:     { id: "habits",   label: "Habits",   description: "Daily streaks & 30-day heatmap",    href: "/habits",     icon: Repeat2,      active: true,  mobile: false },
   events:     { id: "events",   label: "Events",   description: "Deadlines & opportunities",         href: "/events",     icon: Calendar,     active: true,  mobile: false },
@@ -110,12 +112,15 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
   },
   {
     id: "private",
-    // Personal data — the user's people book, robots, goals, habits, events,
-    // money ledger, and the Memory entity graph derived from all of the above.
+    // Personal data — the user's people book, the crew they delegate to,
+    // robots, goals, habits, events, money ledger, and the Memory entity graph
+    // derived from all of the above. Crew sits here rather than in Work because
+    // its roster IS the address book: an assignment leaves the private zone
+    // only through a share link, handed over one at a time on purpose.
     // Hidden behind the PIN gate when configured + locked.
     label: "Private",
     private: true,
-    items: [NAV.memory, NAV.people, NAV.robots, NAV.goals, NAV.habits, NAV.events, NAV.money],
+    items: [NAV.memory, NAV.people, NAV.crew, NAV.robots, NAV.goals, NAV.habits, NAV.events, NAV.money],
   },
   {
     id: "site",

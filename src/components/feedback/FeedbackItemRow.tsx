@@ -107,6 +107,20 @@ export function FeedbackItemRow({
         {work.detail && (
           <p className="mt-0.5 pl-4 text-xs text-text-secondary">{work.detail}</p>
         )}
+        {/* The run's raw error, opened on purpose rather than printed at the
+            reader. It used to be the detail line itself, which is how an
+            engineer's note ("...acked verified:false and never started")
+            ended up addressed to whoever filed the feedback. */}
+        {work.diagnostic && (
+          <details className="mt-0.5 pl-4">
+            <summary className="cursor-pointer text-micro text-text-muted hover:text-text-secondary">
+              Technical details
+            </summary>
+            <p className="mt-1 whitespace-pre-wrap break-words font-mono text-micro text-text-muted">
+              {work.diagnostic}
+            </p>
+          </details>
+        )}
         {f.selectedElements && f.selectedElements.length > 0 && (
           <p className="mt-0.5 pl-4 text-xs text-text-muted">
             {f.selectedElements.map((el, i) => (

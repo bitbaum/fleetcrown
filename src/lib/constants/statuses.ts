@@ -70,6 +70,29 @@ export const ACTION_TYPE = {
 } as const;
 export type ActionType = (typeof ACTION_TYPE)[keyof typeof ACTION_TYPE];
 
+/**
+ * Human assignment lifecycle — work handed to a person, not to an agent.
+ *
+ * The split that matters is WHO may move a row: the operator owns
+ * draft/assigned/done/cancelled, the assignee owns accepted/declined/delivered
+ * (they answer through a share link, never with an account). The legal moves
+ * for each side live in config/crew.ts — this is only the vocabulary.
+ *
+ * `draft` is load-bearing: a proposed assignment, including one Loki wrote,
+ * has told nobody anything. Handing it to a human is always the operator's
+ * explicit act — the same IRON RULE the action queue runs on.
+ */
+export const HUMAN_TASK_STATUS = {
+  DRAFT:     "draft",      // written down; nobody has been asked
+  ASSIGNED:  "assigned",   // handed to a person, awaiting their answer
+  ACCEPTED:  "accepted",   // they said yes and are on it
+  DECLINED:  "declined",   // they said no — reassign or drop
+  DELIVERED: "delivered",  // they say it is done; you have not checked yet
+  DONE:      "done",       // you accepted the work
+  CANCELLED: "cancelled",  // called off
+} as const;
+export type HumanTaskStatus = (typeof HUMAN_TASK_STATUS)[keyof typeof HUMAN_TASK_STATUS];
+
 /** Event status values — used in events API, queries/events.ts, queries/today.ts */
 export const EVENT_STATUS = {
   ACTIVE: "active",

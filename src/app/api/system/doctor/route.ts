@@ -10,6 +10,8 @@ import { getApiUserId } from "@/lib/session";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { APP_URL } from "@/config/brand";
 import { checkTelemetryFreshness, humanizeAge } from "@/lib/telemetry-freshness";
+import { runnerVersionStatus } from "@/lib/runner-version";
+import { getRuntimeSnapshots } from "@/db/queries/runtime-snapshots";
 
 const execp = promisify(exec);
 
@@ -245,6 +247,42 @@ export async function GET() {
             : r.state === "unchecked"
               ? `Could not read this path — not a pass.`
               : `STOPPED: last row ${humanizeAge(r.ageHours)} ago, budget ${r.maxSilenceHours}h. Written by: ${r.writer}`,
+      ));
+    }
+  }
+
+  // Publishing a release is not the same as a machine installing it. Nothing
+  // compared the two until now, so the laptop sat on 0.8.12 for twelve days
+  // while the box ran box-0.8.13 — and 0.8.12 predates the inject-hardening,
+  // so it kept acking unverified injects softly and 29 runs died for it.
+  //
+  // No network and no new data: FLEET_RUNNER_RELEASES already says what
+  // shipped, and every runner reports its version on every heartbeat.
+  const snapshots = await getRuntimeSnapshots(userId).catch(() => null);
+  if (snapshots === null) {
+    checks.push(check(
+      "runner:version",
+      "Runner version",
+      "warn",
+      "Could not read runtime snapshots — whether machines are up to date is UNKNOWN, which is not the same as current.",
+    ));
+  } else if (snapshots.length === 0) {
+    checks.push(check(
+      "runner:version",
+      "Runner version",
+      "warn",
+      "No runner has reported in, so no machine can be confirmed up to date.",
+    ));
+  } else {
+    for (const snap of snapshots) {
+      const v = runnerVersionStatus(snap.runnerVersion);
+      const status: DoctorStatus =
+        v.state === "behind" ? "fail" : v.state === "unknown" ? "warn" : "pass";
+      checks.push(check(
+        `runner:version:${snap.channel ?? "unknown"}`,
+        `Runner version (${snap.channel ?? "unknown"})`,
+        status,
+        v.detail,
       ));
     }
   }

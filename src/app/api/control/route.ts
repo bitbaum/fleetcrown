@@ -54,6 +54,7 @@ import { fetchAllGitStates } from "@/lib/git-state";
 import { matchProfile, matchProfileById, resolveAutoInjectOverride } from "@/lib/project-profile-match";
 import { resolveProjectSession, isRuntimeObservationFresh } from "@/lib/project-session";
 import { workspaceIdFor } from "@/lib/agent-execution/ownership";
+import { normalizeRepoWorkEvidence } from "@/lib/repo-evidence";
 
 export type { ProjectProfile, CurrentPrompt, ProjectState, SessionState, GitState, ControlData, FailedCommand };
 export type { PromptMeta };
@@ -156,6 +157,7 @@ async function getSlowData(userId: string, dirs: string[]): Promise<SlowCache> {
 }
 
 // ── Handler ───────────────────────────────────────────────────────────────────
+
 
 export async function GET() {
   const userId = await getSessionUserId();
@@ -447,6 +449,12 @@ export async function GET() {
       payload: latestRun.payload ? {
         resultText: latestRun.payload.resultText,
         error: latestRun.payload.error,
+        note: typeof latestRun.payload.note === "string" ? latestRun.payload.note : undefined,
+        // Validated, not cast: payload is jsonb, so `kind` arrives as a bare
+        // string and the card renders different words per kind. An unknown
+        // kind drops the whole evidence block rather than shipping a link
+        // labelled by a value nothing checked.
+        evidence: normalizeRepoWorkEvidence(latestRun.payload.evidence) ?? undefined,
         durationMs: latestRun.payload.durationMs,
         model: latestRun.payload.model,
       } : null,

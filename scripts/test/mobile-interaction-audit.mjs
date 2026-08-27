@@ -26,7 +26,7 @@ config({ path: ".env.local", quiet: true });
 const BASE = (process.env.AUDIT_BASE ?? "https://fleetcrown.orangecat.ch").replace(/\/$/, "");
 const OUT = ".tmp/mobile-audit";
 const PAGES = [
-  "/today", "/control", "/loki", "/projects", "/people",
+  "/today", "/control", "/loki", "/projects", "/people", "/crew",
   "/money", "/habits", "/events", "/goals", "/activity",
   "/prompts", "/settings", "/system", "/approvals",
 ];

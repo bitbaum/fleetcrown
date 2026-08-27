@@ -13,6 +13,7 @@ import { requireCronAuth } from "@/lib/cron-auth";
 import { getUsersDueForDigest, markDigestSent } from "@/db/queries/notification-preferences";
 import { generateDigest } from "@/lib/digest-generator";
 import { appUrl, digestEmailTemplate, sendEmail } from "@/lib/email";
+import { summarizeActivity } from "@/lib/activity-summary";
 import { ensureOwnerWeeklyDigest } from "@/lib/email-owner-digest";
 import { DIGEST_CADENCE_COPY } from "@/config/comms";
 
@@ -50,18 +51,27 @@ export async function GET(req: NextRequest) {
       // Skip empty windows so opted-in users don't get a "nothing happened"
       // email every day they were inactive. Still update the lastDigestSentAt
       // so the cadence clock doesn't drift.
-      const hasActivity = generated.digest.timeline.length > 0;
+      const hasActivity = generated.digest.events.length > 0;
       if (!hasActivity) {
         await markDigestSent(row.userId, startedAt);
         results.push({ userId: row.userId, status: "skipped_empty" });
         continue;
       }
 
+      // Same numbers the Activity page leads with, so the email and the page
+      // cannot tell different stories about the same window.
+      const summary = summarizeActivity(generated.digest.events);
       const { subject, html, text } = digestEmailTemplate({
         markdown: generated.markdown,
         cadenceLabel: row.cadence,
         windowLabel,
         activityUrl,
+        stats: {
+          attention: summary.attention,
+          shipped: summary.shipped,
+          running: summary.running,
+          agentLabel: summary.agentLabel,
+        },
       });
       await sendEmail(row.email, subject, html, text);
       await markDigestSent(row.userId, startedAt);

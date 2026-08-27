@@ -95,4 +95,41 @@ for (const status of [FEEDBACK_STATUS.NEW, FEEDBACK_STATUS.DISPATCHED, FEEDBACK_
   );
 }
 
+// A detail line must EARN its row: it exists only to say what the badge cannot.
+// "No agent has been asked to fix this yet." said nothing the "Not started"
+// badge and the "Implement" button had not already said, and the fleet strip
+// printed it once per row — five identical sentences on five new items.
+assert.equal(
+  deriveFeedbackWork(FEEDBACK_STATUS.NEW, null).detail,
+  null,
+  "Not started carries no detail — the badge and the Implement button already say it",
+);
+
+// Not generalised on purpose. "Adds information" is a judgement about meaning,
+// and every mechanical proxy tried here (must contain an imperative; must not
+// prefix-match the label) either missed the sentence above or failed honest
+// copy like "Starting — waiting for the agent to pick it up." So this stays a
+// single pin plus a reviewer's eye, rather than a green check that proves
+// nothing.
+
+// A raw run error is a diagnostic, not advice. /control printed one verbatim,
+// twice: "Corrected 2026-08-24: repo evidence in the run window belonged to a
+// sibling run; this run was acked verified:false and never started." The
+// detail line is written for a human; the executor's text goes behind a
+// disclosure the reader opens on purpose.
+{
+  const note = "Corrected 2026-08-24: repo evidence in the run window belonged to a sibling run";
+  const failed = deriveFeedbackWork(
+    FEEDBACK_STATUS.DISPATCHED,
+    snap({ state: ORCH_STATE.ERROR, error: note }),
+  );
+  assert.equal(failed.phase, FEEDBACK_WORK_PHASE.FAILED);
+  assert.equal(failed.diagnostic, note, "the error is kept — it is the most useful text when a run really did fail");
+  assert.ok(
+    failed.detail && !failed.detail.includes("Corrected"),
+    "...but the line addressed to the reader is written for the reader",
+  );
+  assert.ok(failed.detail!.includes("Retry"), "and it still says what to do next");
+}
+
 console.log("✓ feedback work-phase tests passed");

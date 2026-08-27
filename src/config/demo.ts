@@ -212,14 +212,27 @@ export const DEMO_DENIED_GET_PREFIXES: ReadonlyArray<readonly [string, DemoDenia
  * test turns that silence into a red build.
  */
 export const DEMO_SAFE_FAMILIES: readonly string[] = [
-  "activity", "beacon-settings", "builder", "calendar", "commitments", "crons",
-  "debug-log", "event-stream-token", "events", "feedback", "fleet", "goals",
-  "habits", "health", "me", "metrics", "newsletter",
+  "activity", "beacon-settings", "builder", "calendar", "commitments", "crew",
+  "crons", "debug-log", "event-stream-token", "events", "feedback", "fleet",
+  "goals", "habits", "health", "me", "metrics", "newsletter",
   "notification-preferences", "onboarding", "orangecat", "project",
   "project-states", "projects", "prompts", "robots", "sessions", "setup",
-  "solon", "system", "today", "user-projects", "weather", "widget-boot",
-  "x-login",
+  "share", "solon", "system", "today", "user-projects", "weather",
+  "widget-boot", "x-login",
 ] as const;
+// Two of these deserve their reasoning written down rather than inferred:
+//
+//   crew  — assignments and the roster are the demo's own tenant rows, and
+//           FleetCrown never DELIVERS an assignment: handing one over mints a
+//           link the operator copies themselves, so no inbox is reached. The
+//           one crew effect that does leave the tenant is publishing a fee to
+//           OrangeCat, and that route carries its own denyDemoInHandler call —
+//           it cannot live in DEMO_HANDLER_ENFORCED because the matcher does
+//           reach /api/crew, and this list is for families it excludes.
+//   share — the assignee's endpoint. It answers on a token, before and without
+//           any session, exactly like /api/invitations/<token>. Gating the demo
+//           account on it would protect nothing: a caller holding a share token
+//           is not signed in as anybody.
 
 /** Longest-prefix match over the policy above. Pure — safe on the edge runtime. */
 export function demoDenialFor(pathname: string, method: string): DemoDenialReason | null {

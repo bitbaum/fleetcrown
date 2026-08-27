@@ -2230,42 +2230,53 @@
     @apply inline-flex h-11 shrink-0 items-center justify-center rounded-lg bg-accent-primary px-4 text-sm font-medium text-text-inverted transition-opacity disabled:opacity-40;
   }
 
-  /* ── Session sheet — all the setup, one tap behind the session name ─────── */
-  .ui-term-sheet {
+  /* ── Bottom sheet ─────────────────────────────────────────────────────────
+     A shared shell, not a terminal thing. Built first for the terminal's
+     session setup; Control's fleet settings needed exactly the same shape a
+     day later, which is the signal to promote rather than copy. Both are the
+     same idea: the controls a surface needs but should not wear — chosen
+     deliberately, changed rarely, never read while work is in flight. */
+  .ui-sheet {
     @apply flex flex-col overflow-hidden;
     max-height: var(--modal-max-height);
   }
-  .ui-term-sheet-grip {
+  .ui-sheet-grip {
     @apply mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-border-strong;
   }
-  .ui-term-sheet-body {
+  .ui-sheet-body {
     @apply flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4;
   }
-  .ui-term-sheet-section {
+  .ui-sheet-section {
     @apply flex flex-col gap-1;
   }
-  .ui-term-sheet-label {
+  .ui-sheet-label {
     @apply mb-1 text-nano font-semibold uppercase tracking-caps text-text-muted;
   }
-  .ui-term-sheet-option {
+  .ui-sheet-option {
     @apply flex min-h-11 w-full items-center gap-3 rounded-xl border border-transparent px-3 py-2 text-left transition-colors active:bg-surface-overlay disabled:opacity-40;
   }
-  .ui-term-sheet-option-active {
+  .ui-sheet-option-active {
     @apply border-border-interactive bg-surface-raised;
   }
-  .ui-term-sheet-option-title {
+  .ui-sheet-option-title {
     @apply block truncate text-sm text-text-primary;
   }
-  .ui-term-sheet-option-detail {
+  .ui-sheet-option-detail {
     @apply mt-0.5 block text-micro leading-snug text-text-muted;
   }
-  .ui-term-sheet-empty {
+  .ui-sheet-empty {
     @apply px-3 pb-1 text-micro leading-snug text-text-muted;
   }
-  .ui-term-sheet-row {
+  .ui-sheet-row {
     @apply flex min-h-11 items-center gap-2 px-3;
   }
-  .ui-term-sheet-foot {
+  .ui-sheet-value {
+    @apply text-sm text-text-primary;
+  }
+  .ui-sheet-hint {
+    @apply mt-0.5 text-xs leading-snug text-text-muted;
+  }
+  .ui-sheet-foot {
     @apply shrink-0 border-t border-border-subtle p-4;
     padding-bottom: max(1rem, env(safe-area-inset-bottom));
   }
@@ -3066,6 +3077,28 @@
   .ui-btn-ready-more {
     @apply inline-flex items-center rounded-md border border-border-subtle bg-surface-overlay px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary disabled:opacity-50;
   }
+  /* ── The missing size axis ────────────────────────────────────────────────
+     Why the button set above sprawled: it had variants but no sizes, so every
+     time a button needed to be smaller than `ui-btn-primary` somebody wrote a
+     NEW variant that baked a size into a fill — `ui-btn-save` (accent fill,
+     rounded, text-xs), `ui-btn-submit` (accent fill, rounded-lg, py-3),
+     `ui-btn-ready-primary` (warm fill, rounded-lg, py-2), `ui-btn-lg` (accent
+     fill, rounded-xl, py-3). Four filled buttons, three radii, two accent
+     colours, all of them "primary" somewhere. On Control they landed on the
+     same screen and the page stopped having a loudest element.
+
+     `ui-btn-xs` looks like it should have solved this, but it is a full
+     variant too — it sets border and `text-text-muted` — and it is defined
+     AFTER `ui-btn-primary`, so `class="ui-btn-primary ui-btn-xs"` silently
+     renders a muted outline button. It is kept for its existing callers.
+
+     This is the axis that composes: geometry only, no colour, no border, no
+     radius. `ui-btn-primary ui-btn-sm` is a small primary and still looks like
+     a primary. New code should reach for variant + size, never a fifth fill. */
+  .ui-btn-sm {
+    @apply gap-1 px-3 py-1.5 text-xs;
+  }
+
   /* Hover-reveal: hidden on desktop until parent .group hovers; always visible on mobile */
   .ui-hover-reveal { @apply sm:opacity-0 sm:group-hover:opacity-100; }
   /* Touch devices have no hover — keep the controls permanently visible there */
@@ -3237,16 +3270,221 @@
   .ui-control-hero {
     @apply relative overflow-hidden rounded-2xl border border-border-subtle bg-surface-raised p-4 sm:p-5 md:p-6;
     box-shadow: var(--shadow-panel);
-    /* High-flier command esthetics: subtle 'mission control' depth with faint data-grid overlay (restrained, token-based, echoes public-backdrop but dialed way down for focus). */
+    /* The 48px data-grid that used to be painted here came from the PUBLIC
+       marketing backdrop (--public-grid-stroke). It is the right texture for a
+       landing page, where the grid sits behind a headline and nothing else. It
+       is the wrong texture behind live operational text: on the light theme it
+       read as a visible checkerboard through the fleet counters, and a status
+       readout that looks like it is rendering incorrectly is indistinguishable
+       from a fleet that is behaving incorrectly.
+
+       What is left is depth only — one soft corner glow. Decoration on an
+       operations surface has to lose every argument with legibility. */
     background-image:
-      radial-gradient(circle at top left, color-mix(in oklch, var(--accent-primary) 12%, transparent), transparent 32rem),
-      linear-gradient(180deg, color-mix(in oklch, var(--surface-overlay) 70%, transparent), transparent),
-      linear-gradient(var(--public-grid-stroke) 1px, transparent 1px),
-      linear-gradient(90deg, var(--public-grid-stroke) 1px, transparent 1px);
-    background-size: auto, auto, 48px 48px, 48px 48px;
-    background-position: 0 0, 0 0, 0 0, 0 0;
-    /* grid is inherently faint via --public-grid-stroke token (no element-level dim needed) */
+      radial-gradient(circle at top left, color-mix(in oklch, var(--accent-primary) 8%, transparent), transparent 32rem);
   }
+  /* Run-outcome streak: glyphs plus the sentence they encode. The summary is
+     what makes the row readable without a tooltip, which is to say readable at
+     all on a phone. */
+  .ui-streak {
+    @apply inline-flex min-w-0 items-center gap-1.5;
+  }
+  .ui-streak-summary {
+    @apply truncate text-micro text-text-tertiary;
+  }
+
+  /* ── Composer attachments ─────────────────────────────────────────────────
+     A staged screenshot shows as a thumbnail, not a filename: every phone
+     screenshot is called IMG_<timestamp>.jpg, so the name cannot answer "is
+     that the right picture?" and the picture can. */
+  .ui-attach-strip {
+    @apply flex flex-wrap items-center gap-1.5 px-3 pb-2;
+  }
+  .ui-attach-item {
+    @apply relative shrink-0;
+  }
+  .ui-attach-thumb {
+    @apply h-12 w-12 rounded-lg border border-border-subtle object-cover;
+  }
+  .ui-attach-file {
+    @apply flex h-12 max-w-40 items-center gap-1.5 rounded-lg border border-border-subtle bg-surface-overlay px-2 text-xs text-text-secondary;
+  }
+  /* Sits on the corner of the thumbnail rather than beside it: a full-size
+     button beside a 48px tile is most of a 320px row. It is listed in THE
+     TOUCH FLOOR so a coarse pointer gets a real 44px hit area around the same
+     20px badge — being in that list is what makes that true, which is why the
+     first version of this comment, which asserted it without the listing, was
+     simply wrong. */
+  .ui-attach-remove {
+    @apply absolute -right-1.5 -top-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full border border-border-default bg-surface-overlay text-text-secondary transition-colors hover:text-text-primary;
+  }
+  .ui-attach-note {
+    @apply text-left text-micro leading-snug text-status-warning;
+  }
+
+  /* ── Hero: one answer, one action ─────────────────────────────────────────
+     Mobile-first on purpose, and that is the fix rather than a nicety. Every
+     layout rule on the old Control started at `sm:` (640px), which is above
+     every phone — so a 390px device never got a designed layout, it got the
+     un-styled fallback: flex-col, full width, nothing aligned to anything.
+     These rules describe the PHONE, and `sm:` only relaxes them where a wider
+     screen has room to spare. */
+  .ui-hero-row {
+    @apply flex items-start gap-3;
+  }
+  .ui-hero-answer {
+    @apply min-w-0 flex-1;
+  }
+  /* New-project and settings. Icons, top-right, out of the reading path —
+     they are how you get somewhere else, not part of the answer. */
+  .ui-hero-tools {
+    @apply flex shrink-0 items-center gap-1;
+  }
+  /* The headline is the largest text on the page, because it is the answer to
+     the only question the page exists to answer. It used to be a 14px bold
+     "Fleet autopilot" — a section label, not an answer. */
+  .ui-hero-headline {
+    @apply flex items-start gap-2 text-lg font-semibold leading-tight text-text-primary sm:text-xl;
+  }
+  /* The status dot rides the FIRST line, not the block's centre. `items-center`
+     put it beside the gap between lines once the headline wrapped — which at
+     320px is most of them ("2 projects need you" is two lines there), so the
+     dot appeared to belong to nothing. Margin, not a flex trick: the dot must
+     sit on the first line's optical centre and stay there however many lines
+     follow. */
+  .ui-hero-dot {
+    @apply mt-2 shrink-0 sm:mt-2.5;
+  }
+  .ui-hero-sub {
+    @apply mt-1 text-sm leading-snug text-text-secondary;
+  }
+  /* The staleness caveat, in words. Replaces dimming the headline — see the
+     note at the render. */
+  .ui-hero-stale {
+    @apply mt-1 text-xs leading-snug text-status-warning;
+  }
+  /* Full-width on a phone — it is the one action, and a thumb should not have
+     to aim. Shrinks to its label where a pointer exists. */
+  .ui-hero-action {
+    @apply mt-3 flex w-full items-center justify-center gap-2 sm:w-auto;
+  }
+  /* Everything the card still owes you but should not say loudly: builder
+     state, the counters, sync age. One wrapping line of small text. */
+  .ui-hero-foot {
+    @apply mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border-subtle pt-3 text-xs;
+  }
+  .ui-hero-runner {
+    @apply inline-flex items-start gap-1.5 font-medium;
+  }
+  .ui-hero-counts {
+    @apply text-text-secondary;
+  }
+  /* A count you can follow. The bare counts stay plain text — a chip that only
+     reports is a button that lies, and the old card drew all four identically
+     whether or not clicking them did anything. */
+  .ui-hero-count-link {
+    @apply underline decoration-border-subtle underline-offset-2 transition-colors hover:decoration-current;
+  }
+  .ui-hero-sync {
+    @apply text-text-muted;
+  }
+
+  /* ── Needs-you inbox ──────────────────────────────────────────────────────
+     One panel for every small thing waiting on a human. It replaced two
+     unbounded strips (widget coverage + feedback) that between them spent
+     ~1,400px of a 390px phone's scroll on work the operator had not asked to
+     see yet, and that agreed on nothing: different button fills, different
+     radii, different action orders, one of them auto-expanded on mount.
+
+     The layout rule that fixes the alignment complaint: every row is
+     [ text ][ fixed action rail ]. The rail is a fixed-width column, so the
+     primary buttons line up down the page even when their labels differ. The
+     old rows sized their action groups to their content, which is why eight
+     "Enable & install" buttons each found a different left edge. */
+  .ui-inbox {
+    @apply overflow-hidden rounded-2xl border border-border-subtle bg-surface-raised;
+  }
+  .ui-inbox-head {
+    @apply flex items-center gap-2 px-4 py-3;
+  }
+  .ui-inbox-title {
+    @apply min-w-0 flex-1 truncate text-sm font-semibold text-text-primary;
+  }
+  .ui-inbox-total {
+    @apply shrink-0 rounded-full bg-surface-overlay px-2 py-0.5 text-xs font-medium tabular-nums text-text-secondary;
+  }
+  .ui-inbox-group {
+    @apply border-t border-border-subtle;
+  }
+  .ui-inbox-group-btn {
+    @apply flex min-h-11 w-full items-center gap-3 px-4 py-2 text-left transition-colors active:bg-surface-overlay;
+  }
+  .ui-inbox-group-label {
+    @apply min-w-0 flex-1 truncate text-sm text-text-secondary;
+  }
+  .ui-inbox-group-count {
+    @apply shrink-0 text-sm font-medium tabular-nums text-text-primary;
+  }
+  .ui-inbox-group-body {
+    @apply border-t border-border-subtle bg-surface-base px-4 py-3;
+  }
+  /* Project chips inside the feedback group — a filter row, not a nav bar, so
+     they scroll sideways rather than wrapping into a block that pushes the
+     rows they filter off the screen. */
+  .ui-inbox-projects {
+    @apply -mx-1 mb-2 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden;
+  }
+  .ui-inbox-project {
+    @apply inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-full border border-border-subtle px-3 text-xs text-text-secondary transition-colors active:bg-surface-overlay;
+  }
+  .ui-inbox-project-active {
+    @apply border-border-interactive bg-surface-raised text-text-primary;
+  }
+  .ui-inbox-project-count {
+    @apply rounded-full bg-surface-overlay px-1.5 text-nano tabular-nums text-text-tertiary;
+  }
+  .ui-inbox-list {
+    @apply divide-y divide-border-subtle;
+  }
+  .ui-inbox-row {
+    @apply flex flex-col gap-2 py-3 sm:flex-row sm:items-start sm:gap-4;
+  }
+  .ui-inbox-row-main {
+    @apply min-w-0 flex-1;
+  }
+  .ui-inbox-row-title {
+    @apply min-w-0 text-sm leading-snug text-text-primary;
+  }
+  .ui-inbox-row-meta {
+    @apply mt-0.5 truncate text-xs text-text-tertiary;
+  }
+  .ui-inbox-row-detail {
+    @apply mt-1 text-xs leading-snug text-text-secondary;
+  }
+  .ui-inbox-row-blocked {
+    @apply mt-1 text-xs leading-snug text-status-negative;
+  }
+  .ui-inbox-row-ok {
+    @apply mt-1 text-xs leading-snug text-text-secondary;
+  }
+  /* The rail. Right-aligned on a phone (the thumb lives there and the text it
+     acts on is directly above), inline on sm+ where the row is horizontal. */
+  .ui-inbox-actions {
+    @apply flex shrink-0 items-center justify-end gap-1.5 sm:justify-start;
+  }
+  .ui-inbox-batch {
+    @apply mb-2 flex flex-wrap items-center gap-1.5;
+  }
+  .ui-inbox-empty {
+    @apply py-2 text-xs text-text-muted;
+  }
+  .ui-inbox-foot {
+    @apply mt-2 flex flex-wrap items-center gap-x-4 gap-y-1;
+  }
+  .ui-inbox-more {
+    @apply inline-flex min-h-9 items-center text-xs text-text-secondary underline decoration-border-subtle underline-offset-2 transition-colors hover:decoration-current;
+  }
+
   .ui-control-operations-header {
     @apply flex flex-col gap-4 rounded-2xl border border-border-subtle bg-surface-raised p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5;
     box-shadow: var(--shadow-panel);
@@ -3255,95 +3493,15 @@
     @apply space-y-3 rounded-2xl border border-border-subtle bg-surface-raised p-4 sm:p-5;
     box-shadow: var(--shadow-panel);
   }
-  .ui-control-fleet-top {
-    @apply flex flex-wrap items-start justify-between gap-3;
-  }
-  .ui-control-fleet-runner {
-    @apply inline-flex flex-wrap items-center gap-1.5 text-xs sm:text-sm;
-  }
+  /* The two tone modifiers survive the hero rewrite: the new foot line still
+     colours the builder state with them. Everything that used to sit between
+     them here — the fleet-top row, the actions rail, the four-chip metrics
+     row, the shared text-column gutter and the autopilot block — went out with
+     the card that rendered them. Dead ui-* classes are not free: they ship in
+     the stylesheet every visitor downloads, and the next person to read this
+     file cannot tell which of them are still load-bearing. */
   .ui-control-fleet-runner-ok { @apply text-status-positive; }
   .ui-control-fleet-runner-warn { @apply text-status-warning; }
-  .ui-control-fleet-actions {
-    @apply ml-auto flex items-center gap-2;
-  }
-  .ui-control-fleet-metrics {
-    @apply flex flex-wrap gap-2;
-    /* Joins the fleet card's shared text column — see --control-fleet-gutter. */
-    padding-left: var(--control-fleet-gutter);
-  }
-  .ui-control-fleet-chip {
-    @apply inline-flex max-w-full items-center gap-1.5 rounded-full px-2.5 py-1 text-xs text-text-secondary transition-all;
-    background: oklch(1 0 0 / 0.04);
-    box-shadow: inset 0 0 0 1px oklch(1 0 0 / 0.04);
-  }
-  .ui-control-fleet-chip-alert {
-    @apply w-full flex-wrap rounded-xl px-3 py-2 text-left leading-snug;
-  }
-  .ui-control-fleet-chip:hover {
-    background: oklch(1 0 0 / 0.08);
-    box-shadow: inset 0 0 0 1px oklch(1 0 0 / 0.08);
-  }
-  .ui-control-fleet-chip-attention {
-    color: var(--status-warning);
-    background: oklch(from var(--status-warning) l c h / 0.12);
-    box-shadow: inset 0 0 0 1px oklch(from var(--status-warning) l c h / 0.24);
-  }
-  .ui-control-fleet-chip-clear {
-    color: var(--status-positive);
-    background: oklch(from var(--status-positive) l c h / 0.1);
-    box-shadow: inset 0 0 0 1px oklch(from var(--status-positive) l c h / 0.2);
-  }
-  /* ── Fleet card: one text column ───────────────────────────────────────────
-     Every stacked line in the fleet card starts at the SAME x. Icons (the
-     runner radio, the pulse dot, the autopilot bolt) hang in a fixed gutter to
-     the left of that column instead of pushing their own line sideways.
-
-     Measured before this existed: title 369, state 383, chips 369, hint 385 —
-     four rows, three different left edges, plus the wrapped second line of the
-     hint snapping back to 369 because an inline icon gives no hanging indent.
-     That zigzag is what read as "not aligned".
-
-     The gutter is 1.25rem because that is exactly where .ui-control-fleet-runner
-     already puts its label (14px icon + 6px gap), so the runner line and the
-     autopilot block share one column rather than agreeing by luck. */
-  :root {
-    --control-fleet-gutter: 1.25rem;
-  }
-  /* Fixed-width slot that centres whatever annotates a line. Sized once, so a
-     6px dot and a 12px bolt land on the same axis instead of indenting their
-     text by different amounts. */
-  .ui-control-fleet-gutter {
-    @apply inline-flex shrink-0 items-center justify-center;
-    width: var(--control-fleet-gutter);
-  }
-  /* Rows with no icon pay the gutter as padding so they join the text column. */
-  .ui-control-fleet-indent {
-    padding-left: var(--control-fleet-gutter);
-  }
-  .ui-control-fleet-hint {
-    @apply text-xs leading-relaxed text-text-tertiary;
-    /* Hanging indent: the bolt sits in the gutter and every wrapped line lands
-       on the text column, instead of line 2 starting further left than line 1. */
-    padding-left: var(--control-fleet-gutter);
-    text-indent: calc(-1 * var(--control-fleet-gutter));
-  }
-  .ui-control-hero-autopilot {
-    @apply flex flex-col gap-4 border-t border-border-subtle pt-4 sm:flex-row sm:items-center sm:justify-between;
-  }
-  .ui-control-autopilot-status {
-    @apply flex min-w-0 flex-col gap-1;
-  }
-  .ui-control-autopilot-title {
-    @apply text-sm font-semibold text-text-primary;
-  }
-  /* Plain text flow, not a flex row: the dot rides in the gutter span and the
-     same hanging indent as .ui-control-fleet-hint keeps a wrapped state line on
-     the text column. A flex row could not hang its first child. */
-  .ui-control-autopilot-state {
-    @apply text-sm text-text-secondary;
-    padding-left: var(--control-fleet-gutter);
-    text-indent: calc(-1 * var(--control-fleet-gutter));
-  }
   /* "Start building" earns full-width prominence on phones (it's the positive
      next step); "Pause fleet" does not — full-width made a fleet-wide stop the
      single biggest control on the mobile screen. It stays a normal button. */
@@ -3665,6 +3823,318 @@
   }
   .ui-quick-actions-row {
     @apply flex gap-2 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden;
+  }
+
+  /* ── Activity hero ───────────────────────────────────────────────────────
+     The answer, before the evidence. One sentence, one picture, three numbers
+     that are also destinations. */
+  .ui-activity-hero {
+    @apply space-y-3 rounded-2xl border border-border-subtle bg-surface-raised p-4 sm:p-5;
+    box-shadow: var(--shadow-panel);
+  }
+  /* A window containing failures announces itself in the frame, so the state is
+     legible before a single word is read. */
+  .ui-activity-hero-alert {
+    @apply border-status-negative/30;
+  }
+  /* Big enough to be the first thing read at arm's length, and it wraps to two
+     lines on a 320px phone rather than shrinking. */
+  .ui-activity-headline {
+    @apply text-lg font-semibold leading-snug text-text-primary sm:text-xl;
+    text-wrap: balance;
+  }
+  .ui-activity-context {
+    @apply text-xs leading-relaxed text-text-muted;
+  }
+  .ui-activity-kpis {
+    @apply flex flex-wrap gap-2;
+  }
+  /* Each tile is a link into the feed, already filtered — hence the tap floor. */
+  .ui-activity-kpi {
+    @apply inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-xl border border-border-subtle bg-surface-base px-3 text-text-tertiary transition-colors hover:border-border-default hover:text-text-primary;
+    min-width: 6.5rem;
+  }
+  .ui-activity-kpi-alert {
+    @apply border-status-negative/40 bg-status-negative-subtle/50 text-status-negative;
+  }
+  .ui-activity-kpi-good {
+    @apply border-status-positive/30 text-status-positive;
+  }
+  .ui-activity-kpi-value {
+    @apply text-base font-semibold;
+  }
+  .ui-activity-kpi-label {
+    @apply text-xs;
+  }
+
+  /* ── Activity pulse ──────────────────────────────────────────────────────
+     Volume by HEIGHT in a single hue; failures by SHAPE (the tick below the
+     axis) plus a worded legend. Outcome is deliberately never encoded by hue:
+     on the dark surface this app ships by default, --status-positive and
+     --status-negative sit ΔE 3.1 apart under deuteranopia, so a green/red
+     stacked bar would be a solid block of one colour to a red-green colourblind
+     operator. See ActivityPulse.tsx. */
+  .ui-pulse {
+    @apply space-y-1.5;
+  }
+  .ui-pulse-plot {
+    @apply flex h-16 items-end gap-px sm:h-20;
+  }
+  .ui-pulse-slot {
+    @apply flex h-full min-w-0 flex-1 flex-col justify-end gap-1;
+  }
+  .ui-pulse-track {
+    @apply flex min-h-0 flex-1 items-end;
+  }
+  /* Rounded data-end anchored to the baseline; no border between bars — the 1px
+     gap on the flex row is the separator. */
+  .ui-pulse-bar {
+    @apply w-full rounded-t bg-accent-primary/70 transition-colors;
+    min-height: 2px;
+  }
+  .ui-pulse-slot:hover .ui-pulse-bar {
+    @apply bg-accent-primary;
+  }
+  /* The axis rail. A slice with a failure raises a solid tick in the status
+     colour; every other slice keeps a hairline so the baseline stays continuous
+     and the tick reads as a mark ON it, not as a floating dot. */
+  .ui-pulse-tick {
+    @apply h-0.5 w-full shrink-0 rounded-full bg-border-subtle;
+  }
+  .ui-pulse-tick-alert {
+    @apply h-1 bg-status-negative;
+  }
+  .ui-pulse-caption {
+    @apply flex flex-wrap items-center gap-x-3 gap-y-1 text-micro text-text-muted;
+  }
+  .ui-pulse-legend {
+    @apply inline-flex items-center gap-1.5;
+  }
+  .ui-pulse-legend-bar {
+    @apply inline-block h-2.5 w-1.5 rounded-sm bg-accent-primary/70;
+  }
+  .ui-pulse-legend-alert {
+    @apply text-status-negative;
+  }
+  .ui-pulse-peak {
+    @apply ml-auto tabular-nums;
+  }
+
+  /* ── Needs you ───────────────────────────────────────────────────────────
+     Failures hoisted out of the feed, each with a way out. Renders nothing when
+     healthy — a permanent "all clear" panel teaches people to skip the exact
+     spot real alarms appear in. */
+  .ui-needs-you {
+    @apply space-y-3 rounded-2xl border border-status-negative/40 bg-status-negative-subtle/30 p-4 sm:p-5;
+  }
+  .ui-needs-you-title {
+    @apply flex items-center gap-2 text-sm font-semibold text-status-negative;
+  }
+  .ui-needs-you-list {
+    @apply space-y-3;
+  }
+  .ui-needs-you-item {
+    @apply space-y-1.5 border-t border-status-negative/20 pt-3 first:border-t-0 first:pt-0;
+  }
+  .ui-needs-you-head {
+    @apply flex flex-wrap items-center gap-x-2 gap-y-1;
+  }
+  .ui-needs-you-project {
+    @apply text-sm font-semibold text-text-primary;
+  }
+  .ui-needs-you-outcome {
+    @apply rounded-full border border-status-negative/40 px-2 py-px text-micro font-medium text-status-negative;
+  }
+  .ui-needs-you-meta {
+    @apply ml-auto shrink-0 text-xs tabular-nums text-text-muted;
+  }
+  .ui-needs-you-why {
+    @apply text-sm leading-relaxed text-text-secondary;
+  }
+  .ui-needs-you-actions {
+    @apply flex flex-wrap items-center gap-x-4;
+  }
+  .ui-needs-you-action {
+    @apply inline-flex min-h-11 items-center gap-1.5 text-xs font-semibold text-status-negative transition-opacity hover:opacity-80;
+  }
+  .ui-needs-you-action-quiet {
+    @apply inline-flex min-h-11 items-center gap-1.5 text-xs text-text-tertiary transition-colors hover:text-text-primary;
+  }
+  /* Inline outcome of a retry — "queued, no builder online" and friends. Wraps
+     under the button on a phone instead of truncating the one sentence that
+     explains why nothing appears to be happening. Carries the same tone dot as
+     every other dispatch surface: without it a failed retry and a working one
+     are the same grey sentence, which is the bug this card exists to end. */
+  .ui-needs-you-note {
+    @apply inline-flex min-w-0 basis-full items-center gap-1.5 text-xs text-text-tertiary;
+  }
+  .ui-needs-you-more {
+    @apply inline-flex min-h-11 items-center gap-1.5 text-xs font-medium text-status-negative transition-opacity hover:opacity-80;
+  }
+
+  /* ── Activity feed ───────────────────────────────────────────────────────
+     One unit of work per row, readable top-down at any width. The old feed put
+     timestamp/project/title/duration on one wrapping flex line, which on a
+     phone collapsed into a ragged block with no hierarchy. Here each line has
+     one job and the row degrades by dropping lines, never by reflowing them. */
+  .ui-activity-list {
+    @apply divide-y divide-border-subtle;
+  }
+  .ui-activity-row {
+    @apply space-y-1.5 py-3;
+  }
+  /* A failure gets a rail, not a full red wash: it must catch the eye while
+     scrolling without making its own body text harder to read. */
+  .ui-activity-row-alert {
+    @apply -mx-2 border-l-2 border-status-negative bg-status-negative-subtle/40 px-2;
+  }
+  .ui-activity-head {
+    @apply flex flex-wrap items-center gap-x-2 gap-y-1;
+  }
+  .ui-activity-dot {
+    @apply inline-block h-2 w-2 shrink-0 rounded-full;
+  }
+  .ui-activity-project {
+    @apply min-w-0 truncate text-sm font-semibold text-text-primary;
+  }
+  /* Pushed to the far end on wide rows, wraps under on narrow ones. */
+  .ui-activity-meta {
+    @apply ml-auto shrink-0 text-xs tabular-nums text-text-muted;
+  }
+  .ui-activity-sub {
+    @apply text-xs text-text-tertiary;
+  }
+  /* The ask — the line the whole page exists for, so it reads as body copy
+     rather than metadata. */
+  .ui-activity-ask {
+    @apply text-sm leading-relaxed text-text-secondary;
+  }
+  .ui-activity-ask-missing {
+    @apply text-xs italic text-text-muted;
+  }
+  .ui-activity-done {
+    @apply text-sm leading-relaxed text-text-primary;
+  }
+  .ui-activity-error {
+    @apply text-sm leading-relaxed text-status-negative;
+  }
+  .ui-activity-verify {
+    @apply flex items-start gap-1.5 text-xs leading-relaxed;
+  }
+  .ui-activity-next {
+    @apply flex items-start gap-1.5 text-sm leading-relaxed text-text-secondary;
+  }
+  .ui-activity-full {
+    @apply mt-2 rounded-lg border border-border-subtle bg-surface-base p-3;
+  }
+  /* The literal payload that was sent. Wraps rather than scrolls sideways:
+     a phone cannot afford a horizontal scroll inside a vertical feed. */
+  .ui-activity-pre {
+    @apply max-h-96 overflow-y-auto whitespace-pre-wrap break-words text-xs leading-relaxed text-text-secondary;
+    font-family: var(--font-mono);
+  }
+  .ui-activity-actions {
+    @apply flex flex-wrap items-center gap-x-3;
+  }
+  .ui-activity-toggle,
+  .ui-activity-action {
+    @apply inline-flex min-h-11 items-center gap-1.5 text-xs font-medium text-text-tertiary transition-colors hover:text-text-primary;
+  }
+  .ui-activity-day {
+    @apply mb-1 px-1 text-micro font-semibold uppercase tracking-wider text-text-muted;
+  }
+  /* Triage tabs. Horizontally scrollable on a phone instead of wrapping into
+     two rows that push the feed below the fold. */
+  .ui-activity-tabs {
+    @apply -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden;
+  }
+  .ui-activity-tab {
+    @apply inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border border-border-subtle bg-surface-base px-3 text-xs font-medium text-text-secondary transition-colors hover:border-border-default hover:text-text-primary;
+  }
+  .ui-activity-tab-active {
+    @apply border-accent-primary/40 bg-accent-muted text-text-primary;
+  }
+  .ui-activity-tab-alert {
+    @apply border-status-negative/40 text-status-negative;
+  }
+  .ui-activity-tab-count {
+    @apply rounded-full bg-surface-overlay px-1.5 py-px text-nano;
+  }
+  .ui-activity-tab-active .ui-activity-tab-count {
+    @apply bg-surface-base;
+  }
+
+  /* ── Crew — assignments handed to humans ──────────────────────────────────
+     The board answers ONE question: who owes me what, and what do I owe them.
+     So a row is scannable in a single line (title · who · when) and only opens
+     into brief/reason/timeline when asked. Everything here is width-agnostic:
+     at 320px a row degrades by dropping its meta line, never by reflowing the
+     title into a ragged block. */
+  .ui-crew-hero {
+    @apply flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-2xl border border-border-subtle bg-surface-base px-4 py-3;
+    box-shadow: var(--shadow-panel);
+  }
+  .ui-crew-hero-answer {
+    @apply text-base font-semibold text-text-primary;
+  }
+  .ui-crew-hero-sub {
+    @apply text-sm text-text-tertiary;
+  }
+  .ui-crew-group {
+    @apply space-y-2;
+  }
+  .ui-crew-group-label {
+    @apply flex items-center gap-2 px-1 text-micro font-semibold uppercase tracking-wider text-text-muted;
+  }
+  .ui-crew-task {
+    @apply rounded-xl border border-border-subtle bg-surface-base px-3 py-2.5 transition-colors hover:border-border-default;
+  }
+  /* Their move, not yours — the row you can scroll past. */
+  .ui-crew-task-waiting {
+    @apply border-dashed;
+  }
+  .ui-crew-task-head {
+    @apply flex w-full items-start gap-2 text-left;
+  }
+  .ui-crew-task-title {
+    @apply min-w-0 flex-1 text-sm font-medium leading-snug text-text-primary;
+  }
+  .ui-crew-task-meta {
+    @apply mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-text-tertiary;
+  }
+  .ui-crew-task-body {
+    @apply mt-3 space-y-3 border-t border-border-subtle pt-3;
+  }
+  .ui-crew-task-prose {
+    @apply whitespace-pre-wrap text-sm leading-relaxed text-text-secondary;
+  }
+  .ui-crew-actions {
+    @apply flex flex-wrap items-center gap-2;
+  }
+  .ui-crew-share {
+    @apply flex flex-wrap items-center gap-2 rounded-lg border border-border-subtle bg-surface-raised px-3 py-2;
+  }
+  .ui-crew-share-url {
+    @apply min-w-0 flex-1 truncate text-xs text-text-tertiary;
+    font-family: var(--font-mono);
+  }
+  .ui-crew-timeline {
+    @apply space-y-1.5 text-xs text-text-tertiary;
+  }
+  .ui-crew-timeline-row {
+    @apply flex flex-wrap items-baseline gap-x-2;
+  }
+  .ui-crew-member {
+    @apply space-y-2 rounded-xl border border-border-subtle bg-surface-base px-3 py-3;
+  }
+  .ui-crew-member-name {
+    @apply text-sm font-medium text-text-primary;
+  }
+  .ui-crew-member-meta {
+    @apply flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-text-tertiary;
+  }
+  .ui-crew-skill {
+    @apply rounded-full border border-border-subtle bg-surface-overlay px-2 py-0.5 text-micro text-text-secondary;
   }
 
   /* Misc */
@@ -4191,7 +4661,7 @@
   .ui-icon-action,
   .ui-icon-action-danger,
   .ui-btn-icon,
-  .ui-delete-trigger,
+  .ui-attach-remove,
   .ui-btn-row-action,
   .ui-loki-tool-btn,
   .ui-loki-send-btn,
@@ -4221,9 +4691,6 @@
      category the finger recognises. */
   .ui-input,
   .ui-btn-overlay,
-  .ui-health-fix-btn,
-  .ui-health-fill-btn,
-  .ui-health-done-toggle,
   .ui-locked-banner,
   .ui-app-topbar-search,
   /* The marketing surfaces have their own namespace but not their own
@@ -4240,7 +4707,6 @@
   .ui-public-primary-action,
   .ui-app-footer-cell,
   .ui-loki-suggest-chip,
-  .ui-control-fleet-chip,
   .ui-control-live-select,
   .ui-control-live-input,
   .ui-btn-nextbest,
