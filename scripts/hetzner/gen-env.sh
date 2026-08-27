@@ -19,6 +19,10 @@ BACKUP="${ENV_BACKUP_DIR:-$HOME/dev/env-backup}/$NAME.env"
 [ -s "$RAW" ] || { echo "WARN: no env backup found for $NAME at $BACKUP — writing minimal env"; : > "$RAW"; }
 
 DB_URL=""
+# `supabase:<schema>` names a schema inside the supabase-db container, not a
+# host database — those apps reach it over SUPABASE_URL and have no row in
+# ~/.db-credentials, so building a host DATABASE_URL for them would fail here.
+case "$DB" in supabase:*) DB="-";; esac
 if [ "$DB" != "-" ]; then
   pass=$(box "grep '^$DB|' ~/.db-credentials | cut -d'|' -f2")
   [ -z "$pass" ] && { echo "ERROR: no credentials for db $DB on box"; exit 1; }
