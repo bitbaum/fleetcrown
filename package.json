@@ -19,7 +19,7 @@
     "lint": "eslint --cache --cache-location node_modules/.cache/eslint src/ home/",
     "check:design": "bash scripts/check-design-system.sh",
     "check:desktop": "bash scripts/check-desktop.sh",
-    "verify": "tsc --noEmit && npm run lint && npm run check:design && npm run check:desktop && npm run test:unit && npm run test:home && npm run test:deploy-ref-gate && npm run test:not-behind-gate && npm run test:ops",
+    "verify": "npm run check:deploy-ready && tsc --noEmit && npm run lint && npm run check:design && npm run check:desktop && npm run test:unit && npm run test:home && npm run test:deploy-ref-gate && npm run test:not-behind-gate && npm run test:ops",
     "smoke": "bash scripts/smoke.sh",
     "test:home": "bash scripts/test-home.sh",
     "test:ops": "bash scripts/hetzner/test-host-alerts.sh && bash scripts/hetzner/test-disk-gc.sh && bash scripts/hetzner/test-agent-work-watch.sh && bash scripts/hetzner/test-cron-runner.sh && bash scripts/hetzner/test-ci-gate.sh && bash scripts/hetzner/test-apply-schema.sh",
@@ -95,7 +95,8 @@
     "check:telemetry": "tsx scripts/check-telemetry.ts",
     "audit:responsive": "node scripts/test/responsive-audit.mjs",
     "audit:mobile": "node scripts/test/mobile-interaction-audit.mjs",
-    "audit:contrast": "node scripts/test/contrast-audit.mjs"
+    "audit:contrast": "node scripts/test/contrast-audit.mjs",
+    "check:deploy-ready": "bash scripts/ci/check-deploy-ready.sh"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.3",
