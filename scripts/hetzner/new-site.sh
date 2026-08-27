@@ -24,10 +24,9 @@
 #     what lets CD reach the box, and handling a private key is the operator's
 #     job, not a script's. It prints the command. Better still: put a
 #     self-hosted Actions runner on the box and the secret stops existing.
-#   - It does not create a FleetCrown project or widget token yet. When that
-#     exists, it belongs here, because a site shipped without the widget
-#     generates support requests to the founder — the thing the model exists to
-#     avoid.
+#   - It creates the FleetCrown project and widget token (provision-widget.ts),
+#     but treats failure as non-fatal: a site without a widget is fixable in a
+#     minute, whereas aborting halfway leaves a half-registered site on the box.
 #
 # Every step is idempotent or refuses. Nothing is clobbered.
 set -euo pipefail
@@ -112,6 +111,29 @@ if [ "$DRY" = 0 ]; then
   say "$(find "$REPO_DIR" -type f | wc -l) files"
 else
   say "DRY  would copy $TEMPLATE -> $REPO_DIR and substitute __SLUG__/__TITLE__/__HOST__"
+fi
+
+# ------------------------------------------------------------------- widget
+# Before the repository, so the token is in the first commit's env file rather
+# than arriving as an afterthought nobody deploys.
+#
+# NON-FATAL BY DESIGN. A site without a widget can be fixed in a minute; a
+# scaffold that aborts here leaves a directory, no repo and no register entry,
+# which is the mess this script exists to prevent.
+echo "→ FleetCrown project + widget token"
+WIDGET_TOKEN=""
+if [ "$DRY" = 1 ]; then
+  say "DRY  npx tsx $HERE/../provision-widget.ts $SLUG '$TITLE' $SLUG.$BASE_DOMAIN"
+else
+  WIDGET_TOKEN=$(cd "$HERE/../.." && npx tsx scripts/provision-widget.ts "$SLUG" "$TITLE" "$SLUG.$BASE_DOMAIN" 2>/dev/null || true)
+  if [ -n "$WIDGET_TOKEN" ]; then
+    printf 'NEXT_PUBLIC_FC_WIDGET_TOKEN=%s\n' "$WIDGET_TOKEN" >> "$REPO_DIR/.env.selfhost.local"
+    say "token provisioned and written to .env.selfhost.local"
+  else
+    say "⚠ could not provision a widget token (needs the FleetCrown database)."
+    say "  The site is fine; wire it later with:"
+    say "    npx tsx scripts/provision-widget.ts $SLUG '$TITLE' $SLUG.$BASE_DOMAIN"
+  fi
 fi
 
 # ----------------------------------------------------------------- repository
