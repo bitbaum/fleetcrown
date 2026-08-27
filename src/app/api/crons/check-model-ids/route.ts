@@ -29,7 +29,7 @@ import { logDebug } from "@/db/queries/debug-logs";
 import { refreshOrInsertActiveAlert } from "@/db/queries/alerts";
 import { getDefaultUser } from "@/db/queries/users";
 import { sendTelegramMessage, selfTelegramTarget } from "@/lib/actions/telegram-send";
-import { checkRegisteredModels, describeRot } from "@/lib/model-check";
+import { checkRegisteredModels, describeRot, fetchCatalog, probeCallable } from "@/lib/model-check";
 
 const ALERT_TYPE = "model_rot";
 
@@ -37,12 +37,18 @@ export async function GET(req: NextRequest) {
   const denied = requireCronAuth(req);
   if (denied) return denied;
 
-  const report = await checkRegisteredModels();
+  const report = await checkRegisteredModels(fetchCatalog, probeCallable);
   const rotted = report.missing.length;
   const unchecked = report.uncheckedIds.length;
+  // A pin the provider still lists but REFUSES to serve on the request we build
+  // is dead in exactly the way rot is dead, so it is counted with it. Splitting
+  // them into a softer category is how qwen3.6-27b sat "present" for as long as
+  // it did while the judge panel ran on one lineage.
+  const refused = report.rejected.length;
+  const broken = rotted + refused;
 
   let alerted = false;
-  if (rotted > 0) {
+  if (broken > 0) {
     const owner = await getDefaultUser();
     if (owner) {
       const detail = describeRot(report);
@@ -50,14 +56,17 @@ export async function GET(req: NextRequest) {
         userId: owner.id,
         type: ALERT_TYPE,
         severity: "urgent",
-        title: `${rotted} pinned AI model${rotted === 1 ? "" : "s"} no longer exist${rotted === 1 ? "s" : ""}`,
+        title: `${broken} pinned AI model${broken === 1 ? " is" : "s are"} unusable`,
         description:
-          `The provider has removed ${rotted === 1 ? "a model id" : "model ids"} FleetCrown still calls. ` +
-          `Every feature below is failing now, silently:\n${detail}\n\n` +
-          `Fix: pick a live id, update the constant it comes from, and re-run \`npm run check:models\`.`,
+          `${rotted} removed from the provider, ${refused} still listed but refusing the request ` +
+          `FleetCrown builds. Every feature below is failing now, silently:\n${detail}\n\n` +
+          `Fix: a removed id needs a live one in the constant it comes from; a refused id needs the ` +
+          `request changed — the provider's message above names the parameter. Then re-run ` +
+          `\`npm run check:models\`.`,
         actionUrl: "/system",
         metadata: {
           missing: report.missing.map((m) => ({ id: m.id, provider: m.provider, usedFor: m.usedFor })),
+          rejected: report.rejected.map((r) => ({ id: r.model.id, error: r.error, usedFor: r.model.usedFor })),
           uncheckedIds: report.uncheckedIds,
         },
       });
@@ -68,8 +77,9 @@ export async function GET(req: NextRequest) {
         if (tg) {
           void sendTelegramMessage(
             tg,
-            `🚨 FleetCrown: ${rotted} pinned AI model id(s) GONE from the provider.\n${detail}\n\n` +
-              `These features are dark until the pin is updated.`,
+            `🚨 FleetCrown: ${broken} pinned AI model id(s) unusable ` +
+              `(${rotted} gone, ${refused} refusing our request).\n${detail}\n\n` +
+              `These features are dark until it is fixed.`,
           );
         }
       }
@@ -80,15 +90,18 @@ export async function GET(req: NextRequest) {
   // finds something cannot be distinguished from a checker that never ran.
   await logDebug({
     source: "crons/check-model-ids",
-    level: rotted > 0 ? "error" : unchecked > 0 ? "warn" : "info",
+    level: broken > 0 ? "error" : unchecked > 0 ? "warn" : "info",
     message:
-      rotted > 0
-        ? `MODEL ROT: ${rotted} pinned id(s) gone — ${report.missing.map((m) => m.id).join(", ")}`
+      broken > 0
+        ? `MODEL ROT: ${rotted} pinned id(s) gone, ${refused} present-but-REFUSING our request — ` +
+          [...report.missing.map((m) => m.id), ...report.rejected.map((r) => `${r.model.id} (400)`)].join(", ")
         : unchecked > 0
           ? `${report.presentCount} pinned id(s) present; ${unchecked} UNCHECKED (catalogue unreadable) — not a pass for those`
           : `All ${report.presentCount} pinned model id(s) exist at their provider`,
     meta: {
       rotted,
+      refused,
+      rejected: report.rejected.map((r) => ({ id: r.model.id, error: r.error })),
       unchecked,
       present: report.presentCount,
       providers: report.providers.map((p) => ({ provider: p.provider, reachable: p.reachable })),
@@ -96,12 +109,14 @@ export async function GET(req: NextRequest) {
   });
 
   return NextResponse.json({
-    ok: rotted === 0,
+    ok: broken === 0,
     rotted,
+    refused,
     unchecked,
     present: report.presentCount,
     alerted,
     missing: report.missing.map((m) => ({ id: m.id, provider: m.provider })),
+    rejected: report.rejected.map((r) => ({ id: r.model.id, error: r.error })),
     uncheckedIds: report.uncheckedIds,
   });
 }

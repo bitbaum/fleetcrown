@@ -20,6 +20,7 @@ import {
   type ModelProvider,
   type RegisteredModel,
 } from "@/config/model-registry";
+import { supportsReasoningEffort } from "@/lib/groq";
 
 export const MODEL_ENDPOINTS: Record<ModelProvider, { url: string; keyEnv: string }> = {
   groq: { url: "https://api.groq.com/openai/v1/models", keyEnv: "GROQ_API_KEY" },
@@ -54,6 +55,61 @@ export const fetchCatalog: CatalogReader = async (provider) => {
   }
 };
 
+/**
+ * Is the model callable WITH THE REQUEST THIS APP SENDS?
+ *
+ * The catalogue check above answers "does the id still exist", and on
+ * 2026-08-27 that was not enough. `qwen/qwen3.6-27b` was present in the
+ * catalogue the whole time every call to it 400'd: Groq had narrowed the
+ * `reasoning_effort` values that model accepts to `none`/`default`, and this
+ * app sends `low`. The frontier judge panel's second lineage had been
+ * abstaining, which left proposals judged only by gpt-oss-120b while the
+ * generator is gpt-oss-20b — same lineage marking its own homework — and the
+ * rot check reported `rotted: 0` throughout.
+ *
+ * Existence is not callability. So this posts a ONE-TOKEN completion built from
+ * `supportsReasoningEffort`, the same predicate the real call path uses, because
+ * a probe that decided independently which models get the parameter would be a
+ * second source of truth and would pass while production 400s.
+ *
+ * Cost: a rejected request is refused before inference, and an accepted one is
+ * capped at a single token — so this stays affordable against the 100k/day
+ * org-wide free tier that the zero-token design of the catalogue check exists
+ * to protect.
+ */
+export type CallVerdict = "accepted" | "rejected" | "unknown";
+export type CallProbe = (model: RegisteredModel) => Promise<{ verdict: CallVerdict; error?: string }>;
+
+export const probeCallable: CallProbe = async (model) => {
+  const { keyEnv } = MODEL_ENDPOINTS[model.provider];
+  const key = process.env[keyEnv];
+  if (!key) return { verdict: "unknown", error: `no ${keyEnv}` };
+  try {
+    const res = await fetch(`${MODEL_ENDPOINTS[model.provider].url.replace(/\/models$/, "")}/chat/completions`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: model.id,
+        max_tokens: 1,
+        messages: [{ role: "user", content: "hi" }],
+        ...(supportsReasoningEffort(model.id) ? { reasoning_effort: "low" } : {}),
+      }),
+      signal: AbortSignal.timeout(20_000),
+    });
+    if (res.ok) return { verdict: "accepted" };
+    const body = await res.text().catch(() => "");
+    // 400 = the provider understood us and refused the REQUEST — that is the
+    // fault this probe exists for. 429/5xx/401 are conditions of the moment or
+    // of our credentials, and reporting them as rot would invent an outage out
+    // of a rate limit; they are "could not look", exactly as an unreadable
+    // catalogue is.
+    if (res.status === 400) return { verdict: "rejected", error: body.slice(0, 300) };
+    return { verdict: "unknown", error: `HTTP ${res.status}` };
+  } catch (err) {
+    return { verdict: "unknown", error: err instanceof Error ? err.message : "fetch failed" };
+  }
+};
+
 export type ProviderCheck = {
   provider: ModelProvider;
   /** False = catalogue unreadable; `missing` is then meaningless and empty. */
@@ -70,9 +126,22 @@ export type ModelCheckReport = {
   /** Pins we could not judge either way. Never a pass, never a failure. */
   uncheckedIds: string[];
   presentCount: number;
+  /** Present in the catalogue, but the provider REFUSES the request this app
+   *  builds for it. A dead feature that every existence check calls healthy. */
+  rejected: Array<{ model: RegisteredModel; error: string }>;
 };
 
-export async function checkRegisteredModels(read: CatalogReader = fetchCatalog): Promise<ModelCheckReport> {
+/**
+ * `probe` defaults to null — OFF. The callability probe is the only part of
+ * this module that makes a write-shaped request, so a caller opts into it
+ * explicitly rather than acquiring it by importing. That keeps the unit tests
+ * network-free by default: a check that silently started calling a paid API
+ * from the test suite would be a worse bug than the one it detects.
+ */
+export async function checkRegisteredModels(
+  read: CatalogReader = fetchCatalog,
+  probe: CallProbe | null = null,
+): Promise<ModelCheckReport> {
   const providers = [...new Set(REGISTERED_MODELS.map((m) => m.provider))];
   const results: ProviderCheck[] = [];
 
@@ -91,17 +160,41 @@ export async function checkRegisteredModels(read: CatalogReader = fetchCatalog):
     results.push({ provider, reachable: true, presentIds, missing, uncheckedIds: [] });
   }
 
+  // Probe only ids we CONFIRMED exist and that are chat models. Probing one we
+  // already know is missing would report the same casualty twice under two
+  // names, and probing a transcription id against /chat/completions would 400
+  // for a reason unrelated to the fault being looked for.
+  const presentIds = new Set(results.flatMap((r) => r.presentIds));
+  const rejected: ModelCheckReport["rejected"] = [];
+  if (probe) {
+    const seen = new Set<string>();
+    for (const model of REGISTERED_MODELS) {
+      if (model.kind !== "chat" || !presentIds.has(model.id) || seen.has(model.id)) continue;
+      seen.add(model.id);
+      const { verdict, error } = await probe(model);
+      if (verdict === "rejected") rejected.push({ model, error: error ?? "" });
+    }
+  }
+
   return {
     providers: results,
     missing: results.flatMap((r) => r.missing),
     uncheckedIds: results.flatMap((r) => r.uncheckedIds),
     presentCount: results.reduce((n, r) => n + r.presentIds.length, 0),
+    rejected,
   };
 }
 
-/** One-line-per-casualty text for an alert body: the id, and what it breaks. */
+/** One-line-per-casualty text for an alert body: the id, and what it breaks.
+ *  Refusals are listed alongside removals because the consequence is identical
+ *  — the feature is dead — and only the remedy differs (repin vs fix the
+ *  request). The provider's own message is included: it says which parameter it
+ *  objected to, which is the whole fix. */
 export function describeRot(report: ModelCheckReport): string {
-  return report.missing
-    .map((m) => `${m.provider}/${m.id} — breaks: ${m.usedFor}`)
-    .join("\n");
+  return [
+    ...report.missing.map((m) => `${m.provider}/${m.id} — GONE from the catalogue. Breaks: ${m.usedFor}`),
+    ...report.rejected.map(
+      (r) => `${r.model.provider}/${r.model.id} — present but REFUSES our request: ${r.error}\n    Breaks: ${r.model.usedFor}`,
+    ),
+  ].join("\n");
 }
