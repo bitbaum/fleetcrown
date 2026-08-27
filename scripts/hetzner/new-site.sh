@@ -46,9 +46,10 @@ source "$HERE/lib.sh"
 
 SLUG=""; TITLE=""; OWNER="bitbaum"; KIND="client-site"; STATUS="prospect"
 VISIBILITY="--public"; DEPLOY=1; DRY=0
-DEV_ROOT="${DEV_ROOT:-/home/g/dev}"
-GH_OWNER="${GH_OWNER:-maonakamoto}"
-BASE_DOMAIN="orangecat.ch"
+# DEV_ROOT, GH_OWNER and SITES_BASE_DOMAIN come from _box-env.sh via lib.sh —
+# the studio's env SSOT. Do not redeclare them here; a second copy is how a
+# rename becomes a hunt.
+BASE_DOMAIN="$SITES_BASE_DOMAIN"
 
 while [ $# -gt 0 ]; do
   case "$1" in
