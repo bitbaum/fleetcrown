@@ -406,13 +406,13 @@ export const DESKTOP_DOWNLOAD = {
         // /releases/latest/download/... — GitHub redirects to the current
         // release, so this URL survives future version bumps.
         url:
-          "https://github.com/maonakamoto/fleetcrown-releases/releases/latest/download/Fleet-Runner-linux-amd64.deb",
+          "https://github.com/catomean/fleetcrown-releases/releases/latest/download/Fleet-Runner-linux-amd64.deb",
       },
       secondary: [
         {
           label: "AppImage (other distros)",
           url:
-            "https://github.com/maonakamoto/fleetcrown-releases/releases/latest/download/Fleet-Runner-linux-x86_64.AppImage",
+            "https://github.com/catomean/fleetcrown-releases/releases/latest/download/Fleet-Runner-linux-x86_64.AppImage",
         },
       ],
       afterDownload:
@@ -433,13 +433,13 @@ export const DESKTOP_DOWNLOAD = {
         label: "Download .dmg",
         note: "Apple Silicon · ~98 MB",
         url:
-          "https://github.com/maonakamoto/fleetcrown-releases/releases/latest/download/Fleet-Runner-mac-arm64.dmg",
+          "https://github.com/catomean/fleetcrown-releases/releases/latest/download/Fleet-Runner-mac-arm64.dmg",
       },
       secondary: [
         {
           label: ".zip (no installer)",
           url:
-            "https://github.com/maonakamoto/fleetcrown-releases/releases/latest/download/Fleet-Runner-mac-arm64.zip",
+            "https://github.com/catomean/fleetcrown-releases/releases/latest/download/Fleet-Runner-mac-arm64.zip",
         },
       ],
       afterDownload:
@@ -455,7 +455,7 @@ export const DESKTOP_DOWNLOAD = {
         label: "Download installer",
         note: "x64 · ~81 MB",
         url:
-          "https://github.com/maonakamoto/fleetcrown-releases/releases/latest/download/Fleet-Runner-win-x64.exe",
+          "https://github.com/catomean/fleetcrown-releases/releases/latest/download/Fleet-Runner-win-x64.exe",
       },
       secondary: [],
       afterDownload:
@@ -513,7 +513,7 @@ export const DESKTOP_DOWNLOAD = {
       body:
         "Clone and build a native package for your machine. Useful if you're contributing, want a development build, or are on a platform we don't ship binaries for yet.",
       command:
-        "git clone https://github.com/maonakamoto/fleetcrown.git && cd fleetcrown/desktop && npm install && npm run dist:linux  # or dist:mac / dist:win",
+        "git clone https://github.com/catomean/fleetcrown.git && cd fleetcrown/desktop && npm install && npm run dist:linux  # or dist:mac / dist:win",
     },
     legacyDaemon: {
       label: "Headless CLI agent",

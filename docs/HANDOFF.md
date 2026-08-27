@@ -31,8 +31,8 @@ FleetCrown is a multi-user SaaS for builders who run **multiple AI agents across
 | SSE bridge | `https://bridge.orangecat.ch` | Production, same Hetzner CX43 (8 vCPU / 16 GB, 40 GB disk, €17.29/mo) |
 | DB | `postgresql://fleetcrown@postgresqlbridge.orangecat.ch:5432/fleetcrown` | Postgres 17.10, 10 MB used, 39 tables, all healthy |
 | Desktop app | `Fleet Runner` (Electron 33) | v0.7.5 latest, ships as .deb / .dmg / .exe / AppImage |
-| Releases | `https://github.com/maonakamoto/fleetcrown-releases/releases` | Mirror of build artifacts |
-| Source repo | `https://github.com/maonakamoto/fleetcrown` | Public |
+| Releases | `https://github.com/catomean/fleetcrown-releases/releases` | Mirror of build artifacts |
+| Source repo | `https://github.com/catomean/fleetcrown` | Public |
 | /releases page | `https://fleetcrown.orangecat.ch/releases` | Public changelog (SSOT: `src/config/changelog.ts`) |
 
 ## 3. Architecture in one diagram
@@ -232,15 +232,15 @@ git tag -a fleet-runner-v0.7.Y -m "v0.7.Y — <one line>"
 git push origin fleet-runner-v0.7.Y
 
 # Watch CI build (3-5 min) + mirror script auto-fires after success
-gh run watch --workflow=desktop-release.yml --repo maonakamoto/fleetcrown
+gh run watch --workflow=desktop-release.yml --repo catomean/fleetcrown
 
 # Or use the existing Monitor pattern from earlier sessions:
-until s=$(gh run list --workflow=desktop-release.yml --repo maonakamoto/fleetcrown --branch fleet-runner-v0.7.Y --limit 1 --json status,conclusion --jq '.[0] | "\(.status)/\(.conclusion)"' 2>/dev/null); [ -n "$s" ] && echo "$s" | grep -qE "completed/"; do sleep 30; done; echo "$s"
+until s=$(gh run list --workflow=desktop-release.yml --repo catomean/fleetcrown --branch fleet-runner-v0.7.Y --limit 1 --json status,conclusion --jq '.[0] | "\(.status)/\(.conclusion)"' 2>/dev/null); [ -n "$s" ] && echo "$s" | grep -qE "completed/"; do sleep 30; done; echo "$s"
 # Then on success:
 bash scripts/mirror-desktop-release.sh 0.7.Y
 ```
 
-The mirror script is the bridge between `maonakamoto/fleetcrown` (where CI builds) and `maonakamoto/fleetcrown-releases` (where users download). It uses workflow artifacts as the source, NOT the draft release — the draft race-conditions when matrix jobs all try to push.
+The mirror script is the bridge between `catomean/fleetcrown` (where CI builds) and `catomean/fleetcrown-releases` (where users download). It uses workflow artifacts as the source, NOT the draft release — the draft race-conditions when matrix jobs all try to push.
 
 ## 9. How to dogfood
 

@@ -200,7 +200,7 @@ export default function QuickstartPage() {
           <h2 className="ui-public-prose-h2">Need help?</h2>
           <ul className="list-disc pl-6 space-y-2">
             <li>
-              <a href="https://github.com/maonakamoto/fleetcrown/issues" className="ui-public-link" target="_blank" rel="noopener noreferrer">
+              <a href="https://github.com/catomean/fleetcrown/issues" className="ui-public-link" target="_blank" rel="noopener noreferrer">
                 Open a GitHub issue
               </a>{" "}
               — bugs, feature requests, or questions.

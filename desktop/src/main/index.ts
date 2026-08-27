@@ -420,8 +420,8 @@ function buildAppMenu(): Menu {
       submenu: [
         { label: 'FleetCrown Website', click: openExternal(APP_URL) },
         { label: 'Quickstart Docs', click: openExternal(`${APP_URL}/docs/quickstart`) },
-        { label: 'Report an Issue', click: openExternal('https://github.com/maonakamoto/fleetcrown/issues/new') },
-        { label: 'View Releases', click: openExternal('https://github.com/maonakamoto/fleetcrown-releases/releases') },
+        { label: 'Report an Issue', click: openExternal('https://github.com/catomean/fleetcrown/issues/new') },
+        { label: 'View Releases', click: openExternal('https://github.com/catomean/fleetcrown-releases/releases') },
         { type: 'separator' },
         { label: 'Privacy', click: openExternal(`${APP_URL}/privacy`) },
         { label: 'Terms', click: openExternal(`${APP_URL}/terms`) },
@@ -1033,10 +1033,10 @@ app.whenReady().then(async () => {
   })
 
   // Auto-update — read latest-<platform>.yml from the canonical public
-  // release host (maonakamoto/fleetcrown-releases). We override the feed URL
+  // release host (catomean/fleetcrown-releases). We override the feed URL
   // explicitly instead of relying on desktop/package.json's publish.repo
   // because electron-builder's build pipeline targets a different repo
-  // (maonakamoto/fleetcrown) than where users actually download from. The
+  // (catomean/fleetcrown) than where users actually download from. The
   // mirror script reconciles those.
   //
   // Behavior: silent background check on launch, downloads the newer

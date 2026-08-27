@@ -40,7 +40,7 @@ const FOOTER_GROUPS = [
     heading: "Support",
     links: [
       { label: "Support FleetCrown", href: "/support" },
-      { label: "GitHub issues", href: "https://github.com/maonakamoto/fleetcrown/issues", external: true },
+      { label: "GitHub issues", href: "https://github.com/catomean/fleetcrown/issues", external: true },
     ],
   },
   {

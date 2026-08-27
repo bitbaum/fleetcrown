@@ -81,7 +81,7 @@ for the host setup. Once Postgres is up:
 
 ```bash
 # On the box
-git clone git@github.com:maonakamoto/fleetcrown.git /opt/fleetcrown
+git clone git@github.com:catomean/fleetcrown.git /opt/fleetcrown
 cd /opt/fleetcrown/bridge
 npm ci
 npm run build

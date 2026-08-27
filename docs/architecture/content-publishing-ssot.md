@@ -37,7 +37,7 @@ Style voice: `docs/thoughts-style-guide.md`.
 | **A** | FleetCrown media + public theme | Done |
 | **B** | Docs | Done |
 | **C** | Second consumer (AOZ) on `bip-kit` | AOZ package.json + tests |
-| **D** | OSS | Done — github.com/maonakamoto/bip-kit |
+| **D** | OSS | Done — github.com/catomean/bip-kit |
 
 ## What not to centralize
 

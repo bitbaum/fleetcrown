@@ -24,7 +24,7 @@ const helpChannels = [
   {
     title: "GitHub issues",
     body: "Found a bug or a missing behavior? File it where the fleet actually picks work up.",
-    href: "https://github.com/maonakamoto/fleetcrown/issues",
+    href: "https://github.com/catomean/fleetcrown/issues",
     cta: "Open an issue",
     external: true,
     icon: Bug,

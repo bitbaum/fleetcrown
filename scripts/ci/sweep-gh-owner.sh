@@ -6,9 +6,16 @@
 #
 # WHY THIS EXISTS RATHER THAN A VARIABLE
 #
-# GitHub Actions requires a LITERAL owner/repo in `uses:` — it will not accept
-# `${{ vars.OWNER }}/fleetcrown/...`. So the owner is unavoidably repeated in
-# every repo that calls the shared deploy workflow, currently 41 files.
+# GitHub Actions requires a LITERAL owner/repo in `uses:`, and npm requires a
+# literal in `github:owner/repo#tag` dependencies. Neither accepts a variable,
+# so the owner is unavoidably repeated across the fleet.
+#
+# SCOPE — learned the hard way. The first version of this script swept only
+# .github/workflows/*.yml. That missed the dependencies in package.json, which
+# is what actually breaks: `npm ci` cannot resolve github:<old-owner>/ai-kit,
+# so every install fails, so every gate goes red on code that is fine, so
+# everyone learns to pass --no-verify. A partial sweep is worse than none
+# because it looks finished.
 #
 # A duplication you cannot remove is a duplication you have to OWN. Leaving it
 # as "41 manual edits, remember to do them" is exactly the kind of step that
@@ -36,12 +43,19 @@ done
 OLD="$GH_OWNER"
 [ "$OLD" = "$NEW" ] && { echo "✓ already $NEW — nothing to sweep"; exit 0; }
 
-echo "→ $OLD  →  $NEW   (across $DEV_ROOT/*/.github/workflows)"
+echo "→ $OLD  →  $NEW   (workflows, package manifests, scripts, docs)"
 touched=0; repos=0
 
 for repo in "$DEV_ROOT"/*/; do
   [ -d "$repo/.github/workflows" ] || continue
-  files=$(grep -rl "$OLD/" "$repo/.github/workflows" 2>/dev/null || true)
+  # Everything that can carry a literal owner. node_modules and .git excluded:
+  # one is regenerated, the other is not ours to rewrite.
+  files=$(grep -rl "$OLD/" "$repo" \
+            --include="*.yml" --include="*.yaml" --include="*.json" \
+            --include="*.ts" --include="*.tsx" --include="*.js" --include="*.mjs" \
+            --include="*.sh" --include="*.md" --include="*.toml" \
+            --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=.next \
+            2>/dev/null || true)
   [ -z "$files" ] && continue
   repos=$((repos + 1))
   n=$(echo "$files" | wc -l | tr -d ' ')
@@ -50,7 +64,7 @@ for repo in "$DEV_ROOT"/*/; do
     echo "$files" | while read -r f; do sed -i "s|${OLD}/|${NEW}/|g" "$f"; done
     touched=$((touched + n))
     if [ "$COMMIT" = 1 ] && git -C "$repo" rev-parse --git-dir >/dev/null 2>&1; then
-      git -C "$repo" add .github/workflows >/dev/null 2>&1 || true
+      git -C "$repo" add -A >/dev/null 2>&1 || true
       git -C "$repo" diff --cached --quiet || \
         git -C "$repo" commit -q -m "chore(ci): GitHub owner $OLD -> $NEW" || true
     fi

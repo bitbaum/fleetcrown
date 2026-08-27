@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Mirror a Fleet Runner build from the desktop-release GH Actions workflow
-# to the canonical public release host maonakamoto/fleetcrown-releases,
+# to the canonical public release host catomean/fleetcrown-releases,
 # with the correct fleet-runner-v* tag.
 #
 # Why this exists: electron-builder's GH provider can only publish to the
 # workflow's own repo using the default GITHUB_TOKEN (cross-repo writes need
 # a PAT), and it derives its tag from package.json as `v<version>`. Marketing
-# URLs point at maonakamoto/fleetcrown-releases tagged `fleet-runner-v<version>`.
+# URLs point at catomean/fleetcrown-releases tagged `fleet-runner-v<version>`.
 # So the build job publishes nothing at all, and this script assembles the
 # release from the build artifacts under the tag we actually want.
 #
@@ -70,9 +70,9 @@ else
   echo "warning: ${RELEASES_TS} not found — skipping the recorded-release check" >&2
 fi
 
-SRC_REPO="maonakamoto/fleetcrown"
+SRC_REPO="catomean/fleetcrown"
 SRC_TAG="fleet-runner-v${VERSION}"   # git tag the workflow ran against
-DST_REPO="maonakamoto/fleetcrown-releases"
+DST_REPO="catomean/fleetcrown-releases"
 DST_TAG="fleet-runner-v${VERSION}"
 
 # Resolve the workflow run that built this tag if the caller didn't pass one.

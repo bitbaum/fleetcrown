@@ -197,7 +197,7 @@ grep -rn "text-gray-\|text-slate-\|text-zinc-\|text-blue-\|text-green-\|text-red
 ### AI form assist (fleet standard)
 
 Every create form is fillable from prose and changeable by talking to it.
-Shared implementation: [`@fleet/ai-forms`](https://github.com/maonakamoto/ai-forms)
+Shared implementation: [`@fleet/ai-forms`](https://github.com/catomean/ai-forms)
 (headless — it ships no markup, so this repo keeps its own `ui-*` styling).
 
 Adding assistance to a form is two edits:
@@ -273,7 +273,7 @@ of `npm run verify` (needs network, a session, and a browser download).
 A green, non-draft PR merges and deploys itself. `.github/workflows/auto-merge.yml`
 squash-merges it, then dispatches CI on `main` and reconciles Deploy so the box
 gets the build. The policy is no longer in this repo: it lives once for the whole
-fleet in `maonakamoto/dotfiles`, `scripts/ci/auto-merge-sweep.sh`, and this repo
+fleet in `catomean/dotfiles`, `scripts/ci/auto-merge-sweep.sh`, and this repo
 calls it as a reusable workflow. Read that file before changing anything here —
 and change it THERE, because a fix made here would reach nobody.
 
