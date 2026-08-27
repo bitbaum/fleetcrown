@@ -44,6 +44,35 @@ const OC_REPO = process.env.ORANGECAT_DIR
 const MIRROR_PATH = "src/services/agent-core";
 const REF = process.env.ORANGECAT_REF ?? "origin/main";
 
+
+/**
+ * Did THIS branch touch the canonical agent-core files?
+ *
+ * Drift can arise two ways: you changed canonical and did not sync, or somebody
+ * changed the mirror in the other repository. Only the first is your diff. The
+ * second is ambient — it was already true before you started, and blocking your
+ * push on it is how a gate teaches people to pass --no-verify.
+ *
+ * So: your change → fail. Somebody else's → warn and let the push through, with
+ * the fix printed. `desktop-release-drift` already works this way, which is why
+ * it is the one check in this suite that has never blocked an unrelated push.
+ */
+function branchTouchedCanonical(): boolean {
+  try {
+    const base = execFileSync("git", ["merge-base", "HEAD", "origin/main"], {
+      encoding: "utf8", stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+    const changed = execFileSync("git", ["diff", "--name-only", `${base}...HEAD`], {
+      encoding: "utf8", stdio: ["ignore", "pipe", "ignore"],
+    });
+    return changed.split("\n").some(f => f.startsWith("src/lib/agent/core/"));
+  } catch {
+    // Cannot tell — assume it is yours. A gate that cannot establish innocence
+    // should not grant it.
+    return true;
+  }
+}
+
 const sha = (s: string) => createHash("sha256").update(s).digest("hex").slice(0, 16);
 
 if (!existsSync(join(OC_REPO, ".git"))) {
@@ -84,6 +113,15 @@ for (const f of mirrorFiles) {
 }
 
 if (problems.length > 0) {
+  const yours = branchTouchedCanonical();
+  if (!yours) {
+    console.warn("⚠ agent-core drift detected, but this branch did not touch src/lib/agent/core/ —");
+    console.warn("  the mirror moved in OrangeCat, not here. Not blocking your push.");
+    for (const p of problems) console.warn(`    ${p}`);
+    console.warn("  Fix separately: npm run sync:agent-core, then merge that in OrangeCat.");
+    process.exit(0);
+  }
+
   console.error("✗ agent-core drift detected:");
   for (const p of problems) console.error(`    ${p}`);
   console.error(
