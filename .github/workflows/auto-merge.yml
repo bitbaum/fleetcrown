@@ -1,7 +1,7 @@
 # Auto-merge — nobody is in the merge loop.
 #
 # Green, ready PRs merge themselves and deploy themselves. The policy lives in
-# ONE place for the whole fleet — bitbaum/dotfiles,
+# ONE place for the whole fleet — bitbaum/fleet,
 # scripts/ci/auto-merge-sweep.sh — and this file only says "run it, with these
 # settings".
 #

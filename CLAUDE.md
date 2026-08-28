@@ -273,7 +273,7 @@ of `npm run verify` (needs network, a session, and a browser download).
 A green, non-draft PR merges and deploys itself. `.github/workflows/auto-merge.yml`
 squash-merges it, then dispatches CI on `main` and reconciles Deploy so the box
 gets the build. The policy is no longer in this repo: it lives once for the whole
-fleet in `bitbaum/dotfiles`, `scripts/ci/auto-merge-sweep.sh`, and this repo
+fleet in `bitbaum/fleet`, `scripts/ci/auto-merge-sweep.sh`, and this repo
 calls it as a reusable workflow. Read that file before changing anything here —
 and change it THERE, because a fix made here would reach nobody.
 
