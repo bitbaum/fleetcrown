@@ -34,10 +34,10 @@
  * broken for exactly that reason, and had no auto-merge.yml to notice.
  */
 
+import { retiredHandleMatches, USES } from './fleet-refs-audit-lib.mjs';
+
 const ORG = process.env.FLEET_ORG || 'bitbaum';
 const RETIRED = (process.env.RETIRED_HANDLES || 'maonakamoto').split(',').map(s => s.trim()).filter(Boolean);
-const SELF_REPO = process.env.SELF_REPO || 'fleetcrown';
-const SELF_WORKFLOW = 'fleet-refs-audit.yml';
 const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
 if (!token) { console.log('[fleet-refs-audit] no token — skipping'); process.exit(0); }
 
@@ -48,10 +48,6 @@ const api = async (path) => {
   });
   return { ok: res.ok, status: res.status, body: res.ok ? await res.json() : null };
 };
-
-/** `uses: owner/repo/path@ref` and `uses: owner/repo@ref`. Local (`./…`) and
- *  container (`docker://`) references have no owner to be wrong about. */
-const USES = /^\s*uses:\s*([A-Za-z0-9][\w.-]*)\/([\w.-]+)(?:\/[^@\s]+)?@/gm;
 
 const canonical = new Map();     // "owner/repo" -> canonical full_name | null
 async function resolve(slug) {
@@ -88,19 +84,15 @@ for (const repo of repos) {
     const text = Buffer.from(file.body.content, 'base64').toString('utf8');
     checkedFiles++;
 
-    // Comment lines are stripped first. A workflow that EXPLAINS this outage
-    // names the retired account on purpose, and a gate that fires on its own
-    // documentation is a gate people learn to ignore. What matters is a live
-    // reference — a `uses:`, or a clone/gh call inside a `run:` block.
-    const live = text.split('\n').filter(l => !/^\s*#/.test(l)).join('\n');
-    // This audit's own workflow names the retired handle in RETIRED_HANDLES —
-    // that is its configuration, not a stale reference. Caught the hard way:
-    // the first CI run failed on itself, because the mutation tests had run
-    // against a fleet that did not yet contain the audit.
-    const isSelf = f.name === SELF_WORKFLOW && repo.full_name === `${ORG}/${SELF_REPO}`;
-    for (const h of RETIRED) {
-      if (isSelf) break;
-      if (live.includes(h)) retired.push(`${repo.full_name}/.github/workflows/${f.name} names "${h}" in a live line`);
+    // See fleet-refs-audit-lib.mjs: comments and this audit's own
+    // RETIRED_HANDLES declaration are excluded, because neither is a
+    // reference that needs correcting. Line-level, not file-level: an
+    // earlier version of this fix exempted this whole file by repo+filename
+    // (SELF_REPO/SELF_WORKFLOW), which stops working the moment this
+    // tooling moves to a different repo — already planned, see
+    // bitbaum/fleet — and silently re-opens the exact bug it fixed.
+    for (const h of retiredHandleMatches(text, RETIRED)) {
+      retired.push(`${repo.full_name}/.github/workflows/${f.name} names "${h}" in a live line`);
     }
     for (const [, owner, name] of text.matchAll(USES)) {
       const slug = `${owner}/${name}`;
