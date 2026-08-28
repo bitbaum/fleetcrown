@@ -56,6 +56,10 @@ export type RunProposalsResult = {
   generation?: GenerationOutcome;
   /** Present only when the generator's model call threw. */
   generationError?: string;
+  /** The head of a reply that would not parse whole — set for `unparseable`,
+   *  and also when the reply was TRUNCATED (even if complete proposals were
+   *  salvaged from it), so the next fix does not start by reproducing the call. */
+  generationRawSample?: string;
   /** Proposals the model returned before dedup. `returned > 0` with
    *  `drafted: 0` means WE discarded them, not that the model had no ideas. */
   returned?: number;
@@ -102,6 +106,7 @@ export async function runFrontierProposals(digest: FrontierDigestRow): Promise<R
       generation: generation.outcome,
       returned: generation.returned,
       ...(generation.error ? { generationError: generation.error } : {}),
+      ...(generation.rawSample ? { generationRawSample: generation.rawSample } : {}),
     };
   }
 
@@ -111,6 +116,10 @@ export async function runFrontierProposals(digest: FrontierDigestRow): Promise<R
   const panel = {
     generation: generation.outcome,
     returned: generation.returned,
+    // Present when the reply was cut off but complete proposals were salvaged:
+    // the run WORKED, on less than the model tried to say. Worth seeing before
+    // it becomes a night that yields nothing.
+    ...(generation.rawSample ? { generationRawSample: generation.rawSample } : {}),
     ...(judgeFailures.length ? { judgeFailures } : {}),
     ...(panelUnreachable ? { panelUnreachable } : {}),
   };

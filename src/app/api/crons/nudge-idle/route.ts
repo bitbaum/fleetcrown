@@ -89,7 +89,7 @@ export async function GET(req: NextRequest) {
 
     if (activeUsers.length === 0) {
       logDebug({
-        source: "api/crons/nudge-idle",
+        source: "crons/nudge-idle",
         level: "info",
         message: "Tick: no autopilot-on users with active projects — scheduler idle",
         meta: { skipped },
@@ -233,7 +233,7 @@ export async function GET(req: NextRequest) {
     }
 
     logDebug({
-      source: "api/crons/nudge-idle",
+      source: "crons/nudge-idle",
       level: "info",
       message: `Nudged ${nudgedRows.length} idle project(s) across ${activeUsers.length} autopilot-on user(s)`,
       meta: { nudged: nudgedRows, skipped, gated: gatedRows, capped: nudgedRows.length >= MAX_NUDGES_PER_TICK },
@@ -250,7 +250,7 @@ export async function GET(req: NextRequest) {
   } catch (e) {
     const msg = (e as Error).message;
     logDebug({
-      source: "api/crons/nudge-idle",
+      source: "crons/nudge-idle",
       level: "error",
       message: `Cron failed: ${msg}`,
       meta: { partialNudged: nudgedRows.length, skipped },

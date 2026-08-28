@@ -41,10 +41,29 @@ import { chainFrom, type ChatLink } from "@/config/chat-models";
 export const GROQ_FAST_MODEL = "openai/gpt-oss-20b";
 export const GROQ_WHISPER_MODEL = "whisper-large-v3-turbo";
 
-/** Groq model ids that accept `reasoning_effort`. Sending it to a model that
- *  does not understand it is a 400, so this stays an allow-list. */
-function supportsReasoningEffort(model: string): boolean {
-  return model.startsWith("openai/gpt-oss") || model.startsWith("qwen/");
+/**
+ * Groq model ids that accept the `reasoning_effort` values this app sends
+ * ("low" | "medium" | "high"). Sending it to a model that does not understand
+ * it is a 400, so this stays an allow-list.
+ *
+ * qwen/ was removed 2026-08-27. Groq now answers qwen3.6-27b with
+ * `reasoning_effort must be one of "none" or "default"`, so every call carrying
+ * "low" 400s. That model is the frontier judge panel's SECOND lineage, and a
+ * judge that cannot be called abstains — leaving proposals scored only by
+ * gpt-oss-120b while the GENERATOR is gpt-oss-20b. Same lineage judging its own
+ * output, and the veto floor (one lineage can veto what another loves) silently
+ * stopped existing. The panel's whole value is uncorrelated errors.
+ *
+ * Verified against the live API: with the parameter omitted the model answers
+ * normally and emits its <think> preamble, which stripReasoning already handles
+ * and the judge's 3500-token budget already accommodates.
+ *
+ * Exported because the model-rot probe MUST build its request from this exact
+ * predicate. A probe that decided separately which models get the parameter
+ * would be a second source of truth, and would pass while the real call 400s.
+ */
+export function supportsReasoningEffort(model: string): boolean {
+  return model.startsWith("openai/gpt-oss");
 }
 const GROQ_BASE_URL = "https://api.groq.com/openai/v1";
 // Transcription stays Groq-direct: Whisper has no equivalent in the free chat

@@ -10,6 +10,7 @@
 
 import { type NextRequest, NextResponse } from "next/server";
 import { requireCronAuth } from "@/lib/cron-auth";
+import { logDebug } from "@/db/queries/debug-logs";
 import { getUsersDueForDigest, markDigestSent } from "@/db/queries/notification-preferences";
 import { generateDigest } from "@/lib/digest-generator";
 import { appUrl, digestEmailTemplate, sendEmail } from "@/lib/email";
@@ -82,13 +83,30 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  const sent    = results.filter((r) => r.status === "sent").length;
+  const skipped = results.filter((r) => r.status === "skipped_empty").length;
+  const errors  = results.filter((r) => r.status === "error").length;
+
+  // A failed send is caught per-user so one bad address cannot stop the batch —
+  // which also means the whole batch can fail while the route still answers
+  // `ok: true` and systemd records a success. Persist it, or an email outage is
+  // visible only in a journal that holds a day.
+  await logDebug({
+    source: "crons/send-digest-emails",
+    level: errors > 0 ? "error" : "info",
+    message: errors > 0
+      ? `digest email send FAILED for ${errors}/${due.length} due user(s)`
+      : `${sent} digest email(s) sent, ${skipped} skipped as empty, ${due.length} due`,
+    meta: { consideredAt: startedAt.toISOString(), due: due.length, sent, skipped, errors, details: results },
+  });
+
   return NextResponse.json({
     ok: true,
     consideredAt: startedAt.toISOString(),
     due: due.length,
-    sent:    results.filter((r) => r.status === "sent").length,
-    skipped: results.filter((r) => r.status === "skipped_empty").length,
-    errors:  results.filter((r) => r.status === "error").length,
+    sent,
+    skipped,
+    errors,
     details: results,
   });
 }

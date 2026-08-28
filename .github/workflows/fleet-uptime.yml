@@ -1,0 +1,138 @@
+name: Fleet Uptime
+
+# Watches every app on bitbaum, not just the one that happened to have a monitor.
+#
+# orangecat.ch has had an uptime check for months. The other eighteen services
+# on the same box had none, and it showed: botsmann answered 503 from
+# /api/health for weeks with nobody the wiser, because its homepage kept
+# serving 200 and no check ever asked the database anything.
+#
+# Runs off-box on GitHub's runners, so it still reports when bitbaum is dead —
+# the moment an on-box check tells you nothing. Targets come from
+# scripts/hetzner/apps.conf, the same manifest deploy.sh reads, so registering
+# an app for deployment is what enrols it here. No second list to drift.
+#
+# This does NOT replace orangecat's own uptime.yml: that one additionally
+# reports box-level disk, backup freshness and GoTrue auth, which are properties
+# of the machine rather than of an app. This answers only "is each app serving".
+
+on:
+  schedule:
+    - cron: '*/15 * * * *' # GitHub's minimum is 5 and it runs late under load
+  workflow_dispatch: {}
+
+permissions:
+  issues: write
+
+concurrency:
+  group: fleet-uptime
+  cancel-in-progress: false
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Probe every registered app
+        id: sweep
+        run: |
+          # Human-readable table into the job summary; JSON for the alert step.
+          {
+            echo '## Fleet uptime'
+            echo
+            echo '```'
+            bash scripts/hetzner/uptime-sweep.sh || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          json=$(bash scripts/hetzner/uptime-sweep.sh --json)
+          echo "Result: $json"
+          echo "result=$json" >> "$GITHUB_OUTPUT"
+
+      - name: Alert / resolve one GitHub issue per app
+        uses: actions/github-script@v9
+        env:
+          RESULT: ${{ steps.sweep.outputs.result }}
+          # Same bot orangecat's uptime.yml pages with, so a fleet outage reaches
+          # the channel George actually watches. Absent secrets just skip the
+          # send — the issue still opens.
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        with:
+          script: |
+            const LABEL = 'fleet-uptime';
+            const { owner, repo } = context.repo;
+            const result = JSON.parse(process.env.RESULT || '{"down":[],"counts":{}}');
+            const down = result.down || [];
+            const now = new Date().toISOString();
+
+            const tg = async (text) => {
+              const t = process.env.TELEGRAM_BOT_TOKEN, c = process.env.TELEGRAM_CHAT_ID;
+              if (!t || !c) return;
+              try {
+                await fetch(`https://api.telegram.org/bot${t}/sendMessage`, {
+                  method: 'POST', headers: { 'content-type': 'application/json' },
+                  body: JSON.stringify({ chat_id: c, text }),
+                });
+              } catch (e) { core.warning(`telegram send failed: ${e}`); }
+            };
+
+            // One issue per app, so a second outage cannot hide inside the
+            // first app's thread and recovery is per-app rather than all-or-none.
+            const open = await github.paginate(github.rest.issues.listForRepo, {
+              owner, repo, state: 'open', labels: LABEL, per_page: 100,
+            });
+            const issueFor = (app) => open.find((i) => i.title === `🔴 ${app} is DOWN`);
+
+            for (const d of down) {
+              const existing = issueFor(d.app);
+              const detail = `${d.domain} — ${d.detail}`;
+              if (existing) {
+                await github.rest.issues.createComment({
+                  owner, repo, issue_number: existing.number,
+                  body: `Still down at ${now}: ${detail}`,
+                });
+              } else {
+                // First DOWN transition for this app pages once. The absence of
+                // an open issue IS the "was up" state — no extra bookkeeping.
+                await github.rest.issues.create({
+                  owner, repo, title: `🔴 ${d.app} is DOWN`, labels: [LABEL],
+                  body: [
+                    `${detail}`,
+                    ``,
+                    `Detected ${now} (run ${context.runId}).`,
+                    ``,
+                    `Probed from GitHub, off-box. Reproduce locally:`,
+                    '```',
+                    `bash scripts/hetzner/uptime-sweep.sh`,
+                    '```',
+                    ``,
+                    `If the app serves its homepage but fails here, the failure is`,
+                    `behind the health route — usually the database. That is exactly`,
+                    `how botsmann stayed broken unnoticed.`,
+                  ].join('\n'),
+                });
+                await tg(`🔴 ${d.app} is DOWN (${detail}) as of ${now}`);
+              }
+            }
+
+            const downApps = new Set(down.map((d) => d.app));
+            for (const issue of open) {
+              const app = issue.title.replace(/^🔴 /, '').replace(/ is DOWN$/, '');
+              if (downApps.has(app)) continue;
+              await github.rest.issues.createComment({
+                owner, repo, issue_number: issue.number,
+                body: `✅ Recovered at ${now} — closing.`,
+              });
+              await github.rest.issues.update({
+                owner, repo, issue_number: issue.number, state: 'closed',
+              });
+              await tg(`✅ ${app} RECOVERED at ${now}`);
+            }
+
+            const c = result.counts || {};
+            core.notice(`up=${c.up} limited=${c.limited} down=${c.down}`);
+            // A red X on the run itself, so the workflow list shows the outage
+            // without opening anything.
+            if (down.length) core.setFailed(`DOWN: ${down.map((d) => d.app).join(', ')}`);

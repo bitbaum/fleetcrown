@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
 
   const key = process.env.RESEND_API_KEY?.trim();
   if (!key) {
-    logDebug({ source: "api/crons/email-canary", level: "warn", message: "RESEND_API_KEY unset — email path dark", meta: {} });
+    logDebug({ source: "crons/email-canary", level: "warn", message: "RESEND_API_KEY unset — email path dark", meta: {} });
     return NextResponse.json({ ok: false, skipped: "no RESEND_API_KEY" });
   }
 
@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
     resendOk = res.ok;
     if (!res.ok) {
       logDebug({
-        source: "api/crons/email-canary",
+        source: "crons/email-canary",
         level: "error",
         message: `Resend probe failed: HTTP ${res.status}`,
         meta: { status: res.status },
@@ -36,14 +36,14 @@ export async function GET(req: NextRequest) {
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    logDebug({ source: "api/crons/email-canary", level: "error", message: `Resend probe failed: ${message}`, meta: {} });
+    logDebug({ source: "crons/email-canary", level: "error", message: `Resend probe failed: ${message}`, meta: {} });
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 
   const digestEnabled = await ensureOwnerWeeklyDigest();
 
   logDebug({
-    source: "api/crons/email-canary",
+    source: "crons/email-canary",
     level: resendOk ? "info" : "error",
     message: resendOk ? "Resend probe ok" : "Resend probe failed",
     meta: { resendOk, digestEnabled },

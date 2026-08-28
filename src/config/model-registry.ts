@@ -29,6 +29,10 @@ export type RegisteredModel = {
   provider: ModelProvider;
   /** What breaks when this id stops existing — the text a failure report shows. */
   usedFor: string;
+  /** Which endpoint this id is called on. The callability probe posts a minimal
+   *  chat completion, so it must skip transcription ids — they would 400 for a
+   *  reason that has nothing to do with the fault being looked for. */
+  kind: "chat" | "transcribe";
 };
 
 /** Statically pinned ids. The Loki chat + vision chains are deliberately NOT
@@ -39,6 +43,7 @@ export const REGISTERED_MODELS: RegisteredModel[] = [
   {
     id: GROQ_FAST_MODEL,
     provider: "groq",
+    kind: "chat",
     usedFor:
       "default for every direct callGroqText: frontier digest + proposal generator, " +
       "activity digests, calendar-event extraction, extract-proposal, hosted-runner " +
@@ -47,16 +52,19 @@ export const REGISTERED_MODELS: RegisteredModel[] = [
   {
     id: GROQ_WHISPER_MODEL,
     provider: "groq",
+    kind: "transcribe",
     usedFor: "voice transcription (callGroqTranscribe) — the mic on every composer",
   },
   {
     id: DOD_JUDGE_MODEL,
     provider: "groq",
+    kind: "chat",
     usedFor: "Definition-of-Done judge on run close — decides success vs partial",
   },
   ...VERIFIER_PANEL.map((j) => ({
     id: j.model,
     provider: "groq" as const,
+    kind: "chat" as const,
     usedFor: "frontier proposal judge panel — a dead judge abstains, and a fully abstaining panel fails closed silently",
   })),
 ];
