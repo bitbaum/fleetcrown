@@ -56,7 +56,14 @@ STUB
 cat > "$TMP/bin/systemctl" <<'STUB'
 #!/usr/bin/env bash
 if [ "${1:-}" = "list-units" ]; then
-  for u in ${FAILED_UNITS:-}; do echo "$u loaded failed failed stub"; done
+  # Reproduce systemd's REAL shape: a failed unit is printed with a leading
+  # "●" unless --plain is passed. A stub without it let a bug ship that turned
+  # every unit name into the bullet itself.
+  plain=0; for a in "$@"; do [ "$a" = "--plain" ] && plain=1; done
+  for u in ${FAILED_UNITS:-}; do
+    if [ "$plain" = 1 ]; then echo "$u loaded failed failed stub"
+    else echo "● $u loaded failed failed stub"; fi
+  done
 fi
 exit 0
 STUB
@@ -202,4 +209,16 @@ check "tight memory: no 'integer expected' from field-count drift" \
 
 echo
 echo "  ${pass} passed, ${fail} failed"
+[ "$fail" -eq 0 ]
+
+# ── the bullet: systemd prefixes a failed unit with "●" without --plain -------
+# Shipped once as `FAILED UNIT: ●`, one shared key for every failure. The stub
+# above now emits the bullet, so this is a real regression test.
+run_units "z.service"
+check "units: the unit NAME is alerted, not systemd's bullet" \
+  "$(grep -q 'FAILED UNIT: z.service' "$ALERT_LOG" && ! grep -q 'FAILED UNIT: ●' "$ALERT_LOG" && echo 0 || echo 1)"
+check "units: the state key is derived from the name, not the bullet" \
+  "$([ -e "$TMP/state/host_unit_z_service" ] && echo 0 || echo 1)"
+
+printf '\n  %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
