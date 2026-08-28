@@ -34,7 +34,7 @@
  * broken for exactly that reason, and had no auto-merge.yml to notice.
  */
 
-import { retiredHandleMatches, USES } from './fleet-refs-audit-lib.mjs';
+import { retiredHandleMatches, USES, verdictFor } from './fleet-refs-audit-lib.mjs';
 
 const ORG = process.env.FLEET_ORG || 'bitbaum';
 const RETIRED = (process.env.RETIRED_HANDLES || 'maonakamoto').split(',').map(s => s.trim()).filter(Boolean);
@@ -97,12 +97,9 @@ for (const repo of repos) {
     for (const [, owner, name] of text.matchAll(USES)) {
       const slug = `${owner}/${name}`;
       const real = await resolve(slug);
-      if (real === undefined) { unreadable.push(`${slug} (lookup failed)`); continue; }
-      if (real === null) {
-        stale.push(`${repo.full_name}/.github/workflows/${f.name}: uses ${slug} — DOES NOT EXIST`);
-      } else if (real !== slug) {
-        stale.push(`${repo.full_name}/.github/workflows/${f.name}: uses ${slug} — canonical is ${real} (Actions will NOT follow this)`);
-      }
+      const verdict = verdictFor(slug, real);
+      if (verdict.kind === 'unreadable') unreadable.push(verdict.message);
+      else if (verdict.kind === 'stale') stale.push(`${repo.full_name}/.github/workflows/${f.name}: ${verdict.message}`);
     }
   }
 }
