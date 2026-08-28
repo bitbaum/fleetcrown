@@ -38,11 +38,11 @@ export function retiredHandleMatches(text, retiredHandles) {
  *  The optional leading `- ` matters. A step written in the compact list form
  *  (`- uses: actions/checkout@v5`) is not matched by `^\s*uses:`, so before
  *  2026-08-28 the audit silently skipped it: 59 of 155 workflow files in the
- *  fleet contained at least one reference it never looked at, while reporting
- *  a count that made it look like it had checked everything. Job-level `uses:`
- *  (a mapping key, never a list item) was always matched, which is why no
- *  outage came of it — but a fleet-owned action referenced as a step would
- *  have been invisible to exactly the check built to catch it.
+ *  fleet held at least one reference it never looked at, while printing a ref
+ *  count that made it look complete. Job-level `uses:` is a mapping key and
+ *  never a list item, so the reusable-workflow calls all three outages came
+ *  through were always matched — but a fleet-owned ACTION referenced as a step
+ *  would have been invisible to the very check built to catch it.
  *
  *  LIMITATION, stated rather than assumed: this matches by line shape, not by
  *  YAML structural position. A `run: |` block whose FIRST physical line
@@ -51,7 +51,7 @@ export function retiredHandleMatches(text, retiredHandles) {
  *  `uses:` key. Narrow and not observed in this fleet; a real YAML parse
  *  would close it at the cost of a dependency this script deliberately has
  *  none of. */
-export const USES = /^\s*uses:\s*([A-Za-z0-9][\w.-]*)\/([\w.-]+)((?:\/[^@\s]+)?)@(\S+)/gm;
+export const USES = /^\s*(?:-\s+)?uses:\s*([A-Za-z0-9][\w.-]*)\/([\w.-]+)((?:\/[^@\s]+)?)@(\S+)/gm;
 
 /**
  * This is the actual mechanism that catches the outage: REST resolves a
