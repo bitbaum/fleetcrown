@@ -209,6 +209,18 @@ extra_targets | grep -q "^bridge	bridge.orangecat.ch	/healthz$" \
   || no "extra_targets ignored HEALTH_PATHS"
 
 echo
+echo "cert_verdict — a broken renewal is silent until every site goes dark"
+eq ok       "$(cert_verdict 88)" "88 days: Caddy is renewing normally"
+eq ok       "$(cert_verdict 21)" "21 days is still ok — Caddy renews at 30, so it has had nine days of tries"
+eq warn     "$(cert_verdict 20)" "20 days: renewal should have happened by now"
+eq warn     "$(cert_verdict 7)"  "7 days: still a working week to fix it"
+eq critical "$(cert_verdict 6)"  "under a week is an outage with a date on it"
+eq critical "$(cert_verdict 0)"  "expires today"
+eq critical "$(cert_verdict -3)" "already expired reads critical, not as a huge number"
+eq critical "$(cert_verdict '')" "unreadable is CRITICAL — 'could not check' must never share an outcome with 'fine'"
+eq critical "$(cert_verdict 'x')" "garbage is critical too, for the same reason"
+
+echo
 if [ "$FAIL" -gt 0 ]; then
   echo "FAILED: $FAIL failed, $PASS passed"
   exit 1

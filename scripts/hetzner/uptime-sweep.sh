@@ -41,6 +41,9 @@
 #   uptime-sweep.sh              # report every app
 #   uptime-sweep.sh --check      # exit 1 if any app is DOWN
 #   uptime-sweep.sh --json       # machine-readable, for the alerting workflow
+#   uptime-sweep.sh --certs      # TLS expiry for the same targets; exit 1 if any
+#                                # is critical. Daily, not every 15 minutes — a
+#                                # certificate does not change between sweeps.
 #
 # Env: UPTIME_TRIES (default 3), UPTIME_TIMEOUT secs (default 15),
 #      UPTIME_SLEEP secs between tries (default 5), MANIFEST (default apps.conf)
@@ -228,6 +231,33 @@ same_path_redirect() {
   [ "$got" = "$want" ]
 }
 
+# cert_verdict <days_until_expiry> — how much warning is left?
+#
+# Caddy renews at 30 days remaining and has never missed. That is exactly why
+# nothing watches it, and why a failure would be silent: the first symptom of a
+# broken renewal is every site on the box going dark at once, with no prior
+# signal anywhere. Renewal can break for reasons the app never sees — an ACME
+# rate limit, port 80 closed by a firewall change, a DNS record moved.
+#
+#   ok        >= 21 days. Caddy renews at 30, so it has had nine days of tries.
+#   warn      7-20. Renewal should have happened and did not; look now, while
+#             looking is cheap.
+#   critical  < 7, or unreadable. An outage with a date on it.
+#
+# Unknown is critical, never ok: "we could not read the certificate" and "the
+# certificate is fine" must not share an outcome. That conflation is what let
+# botsmann's 503 read as healthy for weeks.
+cert_verdict() {
+  case "$1" in
+    ''|*[!0-9-]*) echo critical ;;
+    -*)           echo critical ;;
+    *) if   [ "$1" -lt 7  ]; then echo critical
+       elif [ "$1" -lt 21 ]; then echo warn
+       else                       echo ok
+       fi ;;
+  esac
+}
+
 # root_verdict <http_code> — the weaker fallback question: does it serve at all?
 # 3xx counts as serving: several apps redirect `/` to a locale or a canonical
 # host (revampit, petvity, vitareba all do) and that is a working app.
@@ -265,6 +295,7 @@ MODE=report
 case "${1:-}" in
   --check) MODE=check ;;
   --json)  MODE=json ;;
+  --certs) MODE=certs ;;
   "")      MODE=report ;;
   *) echo "unknown argument: $1" >&2; exit 2 ;;
 esac
@@ -330,6 +361,42 @@ probe_app() {
 
   echo "down health:$code"
 }
+
+
+# cert_days <domain> — days until the TLS certificate expires, or empty if we
+# could not read one. Deliberately the SAME target list as the HTTP sweep: a
+# second list of domains is the gap that hid botsmann.
+cert_days() {
+  local end epoch
+  end=$(echo | timeout "$TIMEOUT" openssl s_client -servername "$1" -connect "$1:443" 2>/dev/null \
+        | openssl x509 -noout -enddate 2>/dev/null | cut -d= -f2)
+  [ -n "$end" ] || return 0
+  epoch=$(date -d "$end" +%s 2>/dev/null) || return 0
+  echo $(( (epoch - $(date +%s)) / 86400 ))
+}
+
+if [ "$MODE" = certs ]; then
+  command -v openssl >/dev/null 2>&1 || { echo "openssl not found" >&2; exit 2; }
+  n_ok=0; n_warn=0; n_crit=0; bad=""
+  printf '%-34s %6s  %s\n' DOMAIN DAYS STATE
+  while IFS=$'\t' read -r _name domain _hp; do
+    [ -n "$domain" ] || continue
+    days=$(cert_days "$domain")
+    verdict=$(cert_verdict "$days")
+    printf '%-34s %6s  %s\n' "$domain" "${days:-?}" "$verdict"
+    case "$verdict" in
+      ok)       n_ok=$((n_ok + 1)) ;;
+      warn)     n_warn=$((n_warn + 1)); bad="$bad $domain(${days:-?}d)" ;;
+      critical) n_crit=$((n_crit + 1)); bad="$bad $domain(${days:-?}d)" ;;
+    esac
+  done <<<"$( { manifest_targets "$MANIFEST"; extra_targets; } | sort -u )"
+
+  echo
+  echo "ok=$n_ok  warn=$n_warn  critical=$n_crit"
+  [ -n "$bad" ] && echo "NEEDS A LOOK:$bad"
+  [ "$n_crit" -gt 0 ] && exit 1
+  exit 0
+fi
 
 targets=$( { manifest_targets "$MANIFEST"; extra_targets; } | sort -u )
 [ -n "$targets" ] || { echo "no targets found in $MANIFEST" >&2; exit 2; }
