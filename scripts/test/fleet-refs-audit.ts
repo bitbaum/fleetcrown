@@ -12,7 +12,7 @@
  * exactly the class of breakage the whole tool was built to catch.
  */
 import assert from "node:assert/strict";
-import { retiredHandleMatches, USES, verdictFor } from "../ci/fleet-refs-audit-lib.mjs";
+import { retiredHandleMatches, USES, verdictFor, pathVerdictFor } from "../ci/fleet-refs-audit-lib.mjs";
 
 const RETIRED = ["maonakamoto"];
 
@@ -142,4 +142,59 @@ assert.deepEqual(
   "a failed lookup (rate limit, 5xx) must be unreadable — never reported as clean, never as a false stale"
 );
 
-console.log("OK: 15 assertions passed");
+
+// --- USES now also yields the subpath and ref, so the FILE can be checked ---
+const partsOf = (text: string) =>
+  [...text.matchAll(USES)].map(([, owner, name, subpath, ref]) => ({ slug: `${owner}/${name}`, subpath, ref }));
+
+assert.deepEqual(
+  partsOf("jobs:\n  x:\n    uses: bitbaum/fleet/.github/workflows/auto-merge-sweep.yml@main\n"),
+  [{ slug: "bitbaum/fleet", subpath: "/.github/workflows/auto-merge-sweep.yml", ref: "main" }],
+  "a reusable-workflow reference yields owner/repo, the path, and the ref"
+);
+
+assert.deepEqual(
+  partsOf("jobs:\n  x:\n    uses: actions/checkout@v5\n"),
+  [{ slug: "actions/checkout", subpath: "", ref: "v5" }],
+  "a plain action has no subpath — there is no file to check beyond the repo"
+);
+
+assert.deepEqual(
+  partsOf("jobs:\n  x:\n    uses: bitbaum/fleet/.github/workflows/x.yml@abc1234\n")[0].ref,
+  "abc1234",
+  "a pinned sha is captured as the ref, not the branch name"
+);
+
+// --- pathVerdictFor: the repo can be canonical while the file is gone -------
+// This is the dotfiles shim case. Sixteen repos called
+// bitbaum/dotfiles/.github/workflows/auto-merge-sweep.yml; the shim was deleted
+// once they migrated to bitbaum/fleet. `bitbaum/dotfiles` is and remains the
+// canonical name, so the owner check passes and sees nothing wrong.
+assert.deepEqual(
+  pathVerdictFor("bitbaum/dotfiles", "/.github/workflows/auto-merge-sweep.yml", "master", false),
+  {
+    kind: "stale",
+    message: "uses bitbaum/dotfiles/.github/workflows/auto-merge-sweep.yml@master — the repo exists but THAT FILE DOES NOT (moved or deleted)",
+  },
+  "a deleted reusable workflow in a repo that still exists must be caught"
+);
+
+assert.deepEqual(
+  pathVerdictFor("bitbaum/fleet", "/.github/workflows/auto-merge-sweep.yml", "main", true),
+  { kind: "ok" },
+  "a file that is still there is fine"
+);
+
+assert.deepEqual(
+  pathVerdictFor("actions/checkout", "", "v5", true),
+  { kind: "ok" },
+  "no subpath means there is no file to check — never a finding"
+);
+
+assert.deepEqual(
+  pathVerdictFor("bitbaum/fleet", "/.github/workflows/x.yml", "main", undefined),
+  { kind: "unreadable", message: "bitbaum/fleet/.github/workflows/x.yml@main (path lookup failed)" },
+  "a failed path lookup is unreadable — never clean, and never a false stale"
+);
+
+console.log("OK: 22 assertions passed");

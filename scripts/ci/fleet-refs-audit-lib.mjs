@@ -30,6 +30,11 @@ export function retiredHandleMatches(text, retiredHandles) {
 /** `uses: owner/repo/path@ref` and `uses: owner/repo@ref`. Local (`./…`) and
  *  container (`docker://`) references have no owner to be wrong about.
  *
+ *  Four groups: owner, repo, subpath (empty when there is none), ref. The last
+ *  two exist so the FILE can be checked and not just the repo — see
+ *  pathVerdictFor below. Callers that only want the repo may keep destructuring
+ *  `[, owner, name]`.
+ *
  *  LIMITATION, stated rather than assumed: this matches by line shape, not by
  *  YAML structural position. A `run: |` block whose FIRST physical line
  *  (after indentation) happens to read literally `uses: owner/repo@ref` —
@@ -37,7 +42,7 @@ export function retiredHandleMatches(text, retiredHandles) {
  *  `uses:` key. Narrow and not observed in this fleet; a real YAML parse
  *  would close it at the cost of a dependency this script deliberately has
  *  none of. */
-export const USES = /^\s*uses:\s*([A-Za-z0-9][\w.-]*)\/([\w.-]+)(?:\/[^@\s]+)?@/gm;
+export const USES = /^\s*uses:\s*([A-Za-z0-9][\w.-]*)\/([\w.-]+)((?:\/[^@\s]+)?)@(\S+)/gm;
 
 /**
  * This is the actual mechanism that catches the outage: REST resolves a
@@ -58,5 +63,37 @@ export function verdictFor(slug, real) {
   if (real === undefined) return { kind: 'unreadable', message: `${slug} (lookup failed)` };
   if (real === null) return { kind: 'stale', message: `uses ${slug} — DOES NOT EXIST` };
   if (real !== slug) return { kind: 'stale', message: `uses ${slug} — canonical is ${real} (Actions will NOT follow this)` };
+  return { kind: 'ok' };
+}
+
+/**
+ * Second half of the same failure. `verdictFor` proves the REPO resolves; this
+ * proves the FILE inside it still exists at that ref.
+ *
+ * They are genuinely different failures. A repo rename leaves the file intact
+ * under a new owner; MOVING a shared workflow to a new home and deleting the
+ * old copy leaves the owner perfectly canonical and the file gone. Both kill
+ * the run the same way — it dies before any job exists, zero jobs, no log,
+ * "workflow file issue" — and the caller's PR stays green and mergeable
+ * throughout. Real case: bitbaum/dotfiles kept a forwarding shim at
+ * `.github/workflows/auto-merge-sweep.yml` while sixteen repos migrated to
+ * bitbaum/fleet; deleting the shim afterwards is precisely the shape the
+ * owner check alone cannot see, because `bitbaum/dotfiles` is and remains the
+ * canonical name.
+ *
+ * `exists` is what the caller's contents lookup returned, so this makes no
+ * network call and is fully testable without a token:
+ *   undefined → the lookup itself failed → unreadable, never clean, never stale
+ *   false     → the repo is right and the file is not there
+ *   true      → fine
+ * An empty `subpath` (plain `owner/repo@ref`) has no file to check.
+ */
+export function pathVerdictFor(slug, subpath, ref, exists) {
+  if (!subpath) return { kind: 'ok' };
+  const rel = subpath.replace(/^\//, '');
+  if (exists === undefined) return { kind: 'unreadable', message: `${slug}/${rel}@${ref} (path lookup failed)` };
+  if (exists === false) {
+    return { kind: 'stale', message: `uses ${slug}/${rel}@${ref} — the repo exists but THAT FILE DOES NOT (moved or deleted)` };
+  }
   return { kind: 'ok' };
 }

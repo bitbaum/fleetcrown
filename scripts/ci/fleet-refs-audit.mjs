@@ -34,7 +34,7 @@
  * broken for exactly that reason, and had no auto-merge.yml to notice.
  */
 
-import { retiredHandleMatches, USES, verdictFor } from './fleet-refs-audit-lib.mjs';
+import { retiredHandleMatches, USES, verdictFor, pathVerdictFor } from './fleet-refs-audit-lib.mjs';
 
 const ORG = process.env.FLEET_ORG || 'bitbaum';
 const RETIRED = (process.env.RETIRED_HANDLES || 'maonakamoto').split(',').map(s => s.trim()).filter(Boolean);
@@ -55,6 +55,20 @@ async function resolve(slug) {
   const r = await api(`/repos/${slug}`);
   const v = r.ok ? r.body.full_name : (r.status === 404 ? null : undefined);
   canonical.set(slug, v);
+  return v;
+}
+
+const paths = new Map();      // "owner/repo/path@ref" -> true | false | undefined
+/** Does the referenced file (or action directory) still exist at that ref?
+ *  A directory answers 200 with an array, which is what a composite action
+ *  reference points at, so both shapes work. */
+async function pathExists(slug, subpath, ref) {
+  const rel = subpath.replace(/^\//, '');
+  const key = `${slug}/${rel}@${ref}`;
+  if (paths.has(key)) return paths.get(key);
+  const r = await api(`/repos/${slug}/contents/${rel}?ref=${encodeURIComponent(ref)}`);
+  const v = r.ok ? true : (r.status === 404 ? false : undefined);
+  paths.set(key, v);
   return v;
 }
 
@@ -94,12 +108,17 @@ for (const repo of repos) {
     for (const h of retiredHandleMatches(text, RETIRED)) {
       retired.push(`${repo.full_name}/.github/workflows/${f.name} names "${h}" in a live line`);
     }
-    for (const [, owner, name] of text.matchAll(USES)) {
+    for (const [, owner, name, subpath, ref] of text.matchAll(USES)) {
       const slug = `${owner}/${name}`;
+      const where = `${repo.full_name}/.github/workflows/${f.name}`;
       const real = await resolve(slug);
       const verdict = verdictFor(slug, real);
-      if (verdict.kind === 'unreadable') unreadable.push(verdict.message);
-      else if (verdict.kind === 'stale') stale.push(`${repo.full_name}/.github/workflows/${f.name}: ${verdict.message}`);
+      if (verdict.kind === 'unreadable') { unreadable.push(verdict.message); continue; }
+      if (verdict.kind === 'stale') { stale.push(`${where}: ${verdict.message}`); continue; }
+      // Owner is canonical. Now the other half: is the file still there?
+      const pv = pathVerdictFor(slug, subpath, ref, subpath ? await pathExists(slug, subpath, ref) : true);
+      if (pv.kind === 'unreadable') unreadable.push(pv.message);
+      else if (pv.kind === 'stale') stale.push(`${where}: ${pv.message}`);
     }
   }
 }
@@ -118,7 +137,7 @@ for (const s of stale)   console.log(`::error::${s}`);
 for (const r of retired) console.log(`::error::${r}`);
 
 if (stale.length || retired.length) {
-  console.error(`\nFAIL: ${stale.length} redirect-only reference(s), ${retired.length} retired-handle reference(s).`);
+  console.error(`\nFAIL: ${stale.length} broken reference(s) (wrong owner or missing file), ${retired.length} retired-handle reference(s).`);
   process.exit(1);
 }
-console.log('OK: every workflow reference names its canonical owner.');
+console.log('OK: every workflow reference names its canonical owner, and every referenced file exists.');
