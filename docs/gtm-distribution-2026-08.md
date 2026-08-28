@@ -137,7 +137,7 @@ has run honestly for a few weeks).
 | RSS feed | live | — (channel exists; subscriber counting is best-effort) | `/rss.xml` |
 | Newsletter signups | 0 | first 25 | `newsletter_subscribers` table |
 | Referral traffic to /thoughts | ~0 | measurable weekly stream | Caddy logs |
-| GitHub stars (maonakamoto/fleetcrown) | baseline at start | growing week-over-week | GitHub |
+| GitHub stars (catomean/fleetcrown) | baseline at start | growing week-over-week | GitHub |
 | External users with connected runner | 0 | ≥ 10 | master-plan §5 |
 | Paying customers (any tier) | 0 | ≥ 5 | master-plan §5 |
 

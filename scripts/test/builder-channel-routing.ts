@@ -30,7 +30,7 @@ import { projectPreferredChannel, projectChannelLock, pickDispatchChannel } from
 import { BUILDER_CHANNELS, DEFAULT_BUILDER_CHANNEL } from "@/lib/constants/statuses";
 import { channelDurability } from "@/lib/builder-presence";
 
-const CLONEABLE = "https://github.com/maonakamoto/fleetcrown.git";
+const CLONEABLE = "https://github.com/catomean/fleetcrown.git";
 
 const BOTH = { local: true, cloud: true, any: true };
 const ONLY_LOCAL = { local: true, cloud: false, any: true };
@@ -96,7 +96,7 @@ const SHAPES = [
   { dirPath: "/x" },
   { gitUrl: CLONEABLE },
   { dirPath: "/x", gitUrl: CLONEABLE },
-  { dirPath: "/x", gitUrl: "git@github.com:maonakamoto/fleetcrown.git" },
+  { dirPath: "/x", gitUrl: "git@github.com:catomean/fleetcrown.git" },
 ];
 for (const shape of SHAPES) {
   const channel = projectPreferredChannel(shape);

@@ -44,7 +44,7 @@
 
 set -euo pipefail
 
-RELEASES_REPO="${FLEET_RUNNER_RELEASES_REPO:-maonakamoto/fleetcrown-releases}"
+RELEASES_REPO="${FLEET_RUNNER_RELEASES_REPO:-catomean/fleetcrown-releases}"
 APP_DIR="$HOME/Applications"
 CURRENT_LINK="$APP_DIR/FleetRunner"                # stable — never versioned
 UNIT_DIR="$HOME/.config/systemd/user"

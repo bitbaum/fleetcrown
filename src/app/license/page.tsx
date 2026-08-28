@@ -34,8 +34,8 @@ export default function LicensePage() {
           <ul className="list-disc pl-6 space-y-2">
             <li>
               Read, fork, and modify the source code at{" "}
-              <a href="https://github.com/maonakamoto/fleetcrown" className="ui-public-link" target="_blank" rel="noopener noreferrer">
-                github.com/maonakamoto/fleetcrown
+              <a href="https://github.com/catomean/fleetcrown" className="ui-public-link" target="_blank" rel="noopener noreferrer">
+                github.com/catomean/fleetcrown
               </a>.
             </li>
             <li>Run your own instance for personal use or for use by a team you are part of.</li>
@@ -80,8 +80,8 @@ export default function LicensePage() {
           <p>
             For licensing questions or to request commercial usage rights, open
             an issue at{" "}
-            <a href="https://github.com/maonakamoto/fleetcrown/issues" className="ui-public-link" target="_blank" rel="noopener noreferrer">
-              github.com/maonakamoto/fleetcrown/issues
+            <a href="https://github.com/catomean/fleetcrown/issues" className="ui-public-link" target="_blank" rel="noopener noreferrer">
+              github.com/catomean/fleetcrown/issues
             </a>
             {" "}or email Mao Nakamoto via the address on the GitHub profile.
           </p>

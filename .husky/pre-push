@@ -22,11 +22,60 @@ if [ -n "$_saw_ref" ] && [ -z "$_has_commits" ]; then
   exit 0
 fi
 
+# ---------------------------------------------------------------------------
+# PRECONDITION, NOT A CHECK.
+#
+# A stale node_modules makes tsc report "Cannot find module 'ai-kit'", which
+# reads as a type error in your change and is not one. That exact confusion cost
+# a day: the dependency was unresolvable after a GitHub account rename, every
+# push went red, and the conclusion drawn was "the hook is broken". Fail loudly
+# on the real cause instead, before running anything that would mis-attribute it.
+# ---------------------------------------------------------------------------
+if [ package-lock.json -nt node_modules/.package-lock.json ] 2>/dev/null; then
+  echo "✗ node_modules is older than package-lock.json."
+  echo "  This is an INSTALL problem, not a problem with your change — and left"
+  echo "  alone it surfaces as bogus 'Cannot find module' type errors."
+  echo "  Run: npm ci"
+  exit 1
+fi
+
 echo "→ verify (tsc + lint + check:design + test:unit + test:home) — same bundle as CI"
 npm run verify
 
-echo "→ check:schema (drift guard — skips if DB unreachable)"
-npm run check:schema
+# ---------------------------------------------------------------------------
+# AMBIENT CHECK — scoped to the diff.
+#
+# The schema guard already skips an UNREACHABLE database. It did not skip a
+# reachable but stale one, so a local scratch DB missing columns from somebody
+# else's migration blocked pushes that touched no schema at all.
+#
+# Rule: if this branch changes schema, a mismatch is yours and blocks. If it
+# does not, the mismatch predates you — report it and move on. Same principle as
+# desktop-release-drift, which is the only check here that has never blocked an
+# unrelated push.
+# ---------------------------------------------------------------------------
+# Resolve the default branch — this repo uses main, but three in the fleet use
+# master and two have no origin/HEAD. Hardcoding it makes the scoping below
+# silently treat every change as schema-touching on those repos.
+_def=$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's|^origin/||')
+[ -z "$_def" ] && for _c in main master; do
+  git rev-parse --verify --quiet "refs/remotes/origin/$_c" >/dev/null 2>&1 && { _def="$_c"; break; }
+done
+_base=$(git merge-base HEAD "origin/${_def:-main}" 2>/dev/null || echo "")
+_touches_schema=""
+if [ -n "$_base" ]; then
+  git diff --name-only "$_base"...HEAD 2>/dev/null | grep -qE '^(src/db/|drizzle)' && _touches_schema=1
+else
+  _touches_schema=1   # cannot tell — treat as yours
+fi
+
+if [ -n "$_touches_schema" ]; then
+  echo "→ check:schema (this branch changes schema — a mismatch is yours)"
+  npm run check:schema
+else
+  echo "→ check:schema (branch touches no schema — mismatches are ambient, not blocking)"
+  npm run check:schema || echo "  ⚠ schema mismatch predates this branch. Fix with: npm run db:push"
+fi
 
 BASE="${COCKPIT_URL:-http://localhost:3000}"
 
