@@ -47,7 +47,7 @@ permissions:
 
 jobs:
   sweep:
-    uses: bitbaum/dotfiles/.github/workflows/auto-merge-sweep.yml@master
+    uses: bitbaum/fleet/.github/workflows/auto-merge-sweep.yml@main
     with:
       base_branch: main
       ci_workflow: ci.yml
