@@ -14,22 +14,20 @@
 # not follow it — the run dies before any job exists, with no log, and pull
 # requests stay green and mergeable while nothing ships.
 #
-# So the audit cannot live inside the repos it protects: the workflow that
-# would report the failure is the workflow that cannot start. It runs here, on
-# a schedule, and asks GitHub what every referenced repo is really called.
+# THE SCHEDULE LIVES ON THE BOX, NOT HERE. A red Actions run is a channel
+# nobody watches, so running it here on a timer closed detection and left
+# notification wide open — which is the same "green everywhere and nothing
+# ships" shape the audit exists to catch. The scheduled owner is now
+# fleetcrown-fleet-refs.timer on the Hetzner box, installed by
+# scripts/hetzner/install-fleet-refs-audit.sh: it runs THIS EXACT script every
+# 6h and alerts to Telegram on transition, using the watchdog's existing
+# channel. No secret was added anywhere to do it.
 #
-# LIMITATION, stated rather than assumed: this fails red in Actions, which is
-# not a channel anyone watches. It closes the detection gap, not the
-# notification gap. Routing it through FleetCrown's own alert path (which
-# reaches Telegram) is the follow-up.
+# What remains here is a manual button: same check, same script, for when you
+# want an answer right now without ssh.
 name: Fleet reference audit
 
 on:
-  schedule:
-    # Every 6 hours. A transfer breaks the fleet instantly, so a daily check
-    # would leave up to a day of silent outage — which is roughly how long the
-    # last one lasted before anyone noticed.
-    - cron: '0 */6 * * *'
   workflow_dispatch: {}
 
 permissions:
