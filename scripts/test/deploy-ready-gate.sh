@@ -55,6 +55,12 @@ fake_repo() {
     case "$wf" in
       ci)     printf 'name: CI\non: push\njobs:\n  check:\n    steps:\n      - run: npm run verify\n' > "$dir/.github/workflows/ci.yml" ;;
       deploy) printf 'name: Deploy\non:\n  push:\n    branches: [main]\njobs:\n  deploy:\n    uses: bitbaum/fleetcrown/.github/workflows/selfhost-deploy.yml@main\n' > "$dir/.github/workflows/deploy.yml" ;;
+      supabase-migrations)
+        mkdir -p "$dir/supabase/migrations"
+        printf 'CREATE TABLE IF NOT EXISTS t (id int);\n' > "$dir/supabase/migrations/001_init.sql" ;;
+      drizzle-migrations)
+        mkdir -p "$dir/drizzle"
+        printf 'CREATE TABLE IF NOT EXISTS t (id int);\n' > "$dir/drizzle/0000_init.sql" ;;
     esac
   done
 }
@@ -154,6 +160,51 @@ if [ -d /home/g/dev/petvity ]; then
 else
   ok "drift case not exercised — the fleet is not checked out here (reported, not skipped silently)"
 fi
+
+echo
+echo "migrations with db=- — botsmann's root cause, and printcraft's after it"
+
+# deploy.sh skips apply-schema.sh entirely when db is '-'. An app that ships
+# migrations anyway has SQL that is applied nowhere, and a deploy that goes
+# green because nothing failed — nothing ran.
+G=$(fixture)
+fake_repo "$TMP/app-silent-schema" ci deploy supabase-migrations
+fake_repo "$TMP/app-declared" ci deploy supabase-migrations
+fake_repo "$TMP/app-no-migrations" ci deploy
+{
+  echo "app-silent-schema|5011|d.example.com|$TMP/app-silent-schema|.|-|t|demo|demo|-|-|-"
+  echo "app-declared|5012|e.example.com|$TMP/app-declared|.|supabase:demo|t|demo|demo|-|-|-"
+  echo "app-no-migrations|5013|f.example.com|$TMP/app-no-migrations|.|-|t|demo|demo|-|-|-"
+} > "$TMP/scripts/hetzner/apps.conf"
+echo 0 > "$TMP/scripts/ci/deploy-ready.baseline"
+echo 0 > "$TMP/scripts/ci/deploy-ready-cd.baseline"
+OUT=$("$G" 2>&1); RC=$?
+
+[ "$RC" = 1 ] || fail "migrations behind db=- must FAIL the gate (rc=$RC): $OUT"
+ok "an app shipping migrations while declaring db=- fails the gate"
+
+echo "$OUT" | grep -q "app-silent-schema — migrations in supabase/migrations" \
+  || fail "the offending app and the directory must both be named: $OUT"
+ok "it names the app and where the unapplied migrations are"
+
+echo "$OUT" | grep -q "app-declared" \
+  && fail "an app that DECLARES its database must not be flagged: $OUT"
+ok "declaring a database clears it — the gate is about the lie, not about having SQL"
+
+echo "$OUT" | grep -q "app-no-migrations" \
+  && fail "db=- with no migrations is legitimate and must pass: $OUT"
+ok "db=- with no migrations stays legitimate (4 real apps rely on this)"
+
+# The drizzle layout is a different code path in the applier; both must be seen.
+G=$(fixture)
+fake_repo "$TMP/app-drizzle" ci deploy drizzle-migrations
+echo "app-drizzle|5014|g.example.com|$TMP/app-drizzle|.|-|t|demo|demo|-|-|-" \
+  > "$TMP/scripts/hetzner/apps.conf"
+echo 0 > "$TMP/scripts/ci/deploy-ready.baseline"
+echo 0 > "$TMP/scripts/ci/deploy-ready-cd.baseline"
+OUT=$("$G" 2>&1); RC=$?
+[ "$RC" = 1 ] || fail "a drizzle app with db=- must fail too (rc=$RC): $OUT"
+ok "the drizzle layout is caught as well as supabase"
 
 echo
 echo "OK: $PASSED passed"

@@ -84,6 +84,34 @@ LEDGER=$(ledger_for "$TARGET_SCHEMA")
 
 # Sourced by test-apply-schema.sh to exercise the pure helpers above without a
 # box, a database or a checkout.
+# migration_dirs <layout> <repo> <app_dir> — every directory this applier looks
+# in for that layout, in the order it looks.
+#
+# Pure, and deliberately ABOVE the lib-only return, because TWO things must
+# agree about where migrations live: this applier, and the deploy-ready gate
+# that fails a build when an app ships migrations while declaring `db=-`.
+# botsmann and printcraft both did exactly that; the pipeline never saw a single
+# file and both shipped green for months. A gate carrying its own copy of this
+# list would drift from the applier and start lying in the other direction —
+# so there is one list, and this is it.
+migration_dirs() {
+  local layout="$1" repo="$2" app_dir="${3:-.}"
+  case "$layout" in
+    drizzle)
+      printf '%s\n' \
+        "$repo/packages/database/drizzle" \
+        "$repo/$app_dir/drizzle" \
+        "$repo/$app_dir/src/lib/db/migrations" \
+        "$repo/drizzle" \
+        "$repo/src/lib/db/migrations" ;;
+    prisma)
+      printf '%s\n' "$repo/$app_dir/prisma/migrations" ;;
+    supabase)
+      printf '%s\n' "$repo/$app_dir/supabase/migrations" "$repo/supabase/migrations" ;;
+    *) return 1 ;;
+  esac
+}
+
 if [ -n "${APPLY_SCHEMA_LIB_ONLY:-}" ]; then return 0; fi
 
 # Resolve the migrations dir per app layout. The original hardcoded kivvi's
@@ -95,20 +123,15 @@ if [ -n "${APPLY_SCHEMA_LIB_ONLY:-}" ]; then return 0; fi
 #   <app_dir>/src/lib/db/migrations  revamp-info
 shopt -s nullglob
 MIG_DIR=""
-for cand in \
-  "$REPO/packages/database/drizzle" \
-  "$REPO/$APP_DIR/drizzle" \
-  "$REPO/$APP_DIR/src/lib/db/migrations" \
-  "$REPO/drizzle" \
-  "$REPO/src/lib/db/migrations"; do
+while IFS= read -r cand; do
   probe=("$cand"/[0-9]*.sql)
   [ "${#probe[@]}" -gt 0 ] && { MIG_DIR="$cand"; break; }
-done
+done < <(migration_dirs drizzle "$REPO" "$APP_DIR")
 # Prisma apps: no drizzle dir, but prisma/migrations exists → use Prisma's own
 # forward-only applier (its _prisma_migrations history table, native guardrails).
 # Needs DATABASE_URL (deploy.sh calls us with it tunneled to the box); a
 # standalone invocation without it skips with a warning rather than guessing.
-if [ -z "$MIG_DIR" ] && [ -d "$REPO/$APP_DIR/prisma/migrations" ]; then
+if [ -z "$MIG_DIR" ] && [ -d "$(migration_dirs prisma "$REPO" "$APP_DIR")" ]; then
   if [ -z "${DATABASE_URL:-}" ]; then
     echo "[schema] $NAME: prisma app but DATABASE_URL unset (standalone run?) — skipping"
     exit 0
@@ -139,10 +162,10 @@ fi
 SQL_TARGET="${DECLARED_SUPABASE:+supabase}"
 SQL_TARGET="${SQL_TARGET:-host}"
 if [ -z "$MIG_DIR" ]; then
-  for cand in "$REPO/$APP_DIR/supabase/migrations" "$REPO/supabase/migrations"; do
+  while IFS= read -r cand; do
     probe=("$cand"/[0-9]*.sql)
     [ "${#probe[@]}" -gt 0 ] && { MIG_DIR="$cand"; SQL_TARGET="supabase"; break; }
-  done
+  done < <(migration_dirs supabase "$REPO" "$APP_DIR")
 fi
 
 if [ "$SQL_TARGET" = "supabase" ] \
