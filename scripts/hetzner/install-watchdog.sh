@@ -70,18 +70,20 @@ set -uo pipefail
 MON=/opt/monitoring
 STATE="$MON/state"
 mkdir -p "$STATE"
-[ -f "$MON/telegram.env" ] && . "$MON/telegram.env" || true
-
-alert() {  # $1=emoji $2=message
-  local text="$1 $2"
-  logger -t watchdog "$text"
-  if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
-    curl -fsS -m 10 "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-      --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
-      --data-urlencode "text=${text}" -o /dev/null \
-      || logger -t watchdog "ALERT telegram send failed"
-  fi
-}
+# One delivery point for the whole box. This file used to carry its own byte-
+# identical copy of alert(), which meant every property added to the shared one
+# — the duplicate floor, ALERT_DRY_RUN, the journal-always guarantee — silently
+# did not apply here. A second copy of a send path is how the fleet register
+# check ended up able to page twice in sixty seconds with no state at all:
+# nothing is wrong with the copy on the day it is made, and nothing updates it
+# afterwards. lib-alert.sh is installed by install-host-alerts.sh; if it is
+# somehow absent, fall back to the journal rather than going silent.
+if [ -f "$MON/lib-alert.sh" ]; then
+  . "$MON/lib-alert.sh"
+else
+  [ -f "$MON/telegram.env" ] && . "$MON/telegram.env" || true
+  alert() { logger -t watchdog "$1 $2"; logger -t watchdog "ALERT lib-alert.sh missing — journal only"; }
+fi
 
 check() {  # label url   (targets.conf 3rd field is ignored — redirects are followed)
   local label="$1" url="$2"
