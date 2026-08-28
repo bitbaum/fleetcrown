@@ -29,6 +29,16 @@ export interface ReleaseEntry {
 /** Newest first. */
 export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
   {
+    version: "0.8.15",
+    tag: "fleet-runner-v0.8.15",
+    date: "2026-08-28T07:30:00Z",
+    highlights: [
+      "Fleet Runner now points at the bitbaum organisation, where the studio's repositories live as of today.",
+    ],
+    breaking: [],
+    notes: "The 41-repo fleet moved from the personal catomean account into the bitbaum GitHub org, and desktop carried two literal owner references (the issue-report link, the auto-updater's feed owner) that the sweep updates alongside every other repo. Same shape as 0.8.14 four commits ago: an owner literal in desktop/ changes, the release-drift gate catches it, a release ships. This one is the last time it should be an account name at all — the org is the stable home going forward.",
+  },
+  {
     version: "0.8.14",
     tag: "fleet-runner-v0.8.14",
     date: "2026-08-27T19:40:00Z",

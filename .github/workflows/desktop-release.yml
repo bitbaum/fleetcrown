@@ -3,7 +3,7 @@
 # Trigger: pushing a tag matching `fleet-runner-v*` (e.g. fleet-runner-v0.2.0).
 # Output: installers for macOS (.dmg, .zip), Windows (NSIS .exe), and
 # Linux (.AppImage, .deb), published in one public release on
-# catomean/fleetcrown-releases tagged `fleet-runner-v<version>`.
+# bitbaum/fleetcrown-releases tagged `fleet-runner-v<version>`.
 #
 # Two jobs, and the split is deliberate:
 #
@@ -202,7 +202,7 @@ jobs:
           set -euo pipefail
           if [ -z "${GH_TOKEN:-}" ]; then
             echo "::error::RELEASES_REPO_TOKEN is not set — cannot publish to" \
-                 "catomean/fleetcrown-releases. Add a PAT with repo scope."
+                 "bitbaum/fleetcrown-releases. Add a PAT with repo scope."
             exit 1
           fi
           version="${GITHUB_REF_NAME#fleet-runner-v}"

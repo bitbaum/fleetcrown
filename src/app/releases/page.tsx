@@ -8,7 +8,7 @@ export const metadata = {
   description: "Fleet Runner changelog. Every shipped version, what changed, and why.",
 };
 
-const RELEASES_GH_BASE = "https://github.com/catomean/fleetcrown-releases/releases/tag";
+const RELEASES_GH_BASE = "https://github.com/bitbaum/fleetcrown-releases/releases/tag";
 
 // Full month, uppercased in CSS — matches the x.ai changelog date style.
 function formatDate(iso: string): string {
@@ -113,7 +113,7 @@ export default function ReleasesPage() {
               Download latest →
             </Link>
             <a
-              href="https://github.com/catomean/fleetcrown-releases/releases"
+              href="https://github.com/bitbaum/fleetcrown-releases/releases"
               target="_blank"
               rel="noreferrer"
               className="ui-changelog-link"

@@ -37,7 +37,7 @@ FLEETCROWN_WEB_URL=local npm run dev
 End users should grab a signed installer from the [download page](https://fleetcrown.orangecat.ch/download). For a local build from source:
 
 ```bash
-git clone https://github.com/catomean/fleetcrown.git
+git clone https://github.com/bitbaum/fleetcrown.git
 cd fleetcrown/desktop
 npm install
 npm run dist:linux    # or dist:mac / dist:win on those platforms
@@ -85,11 +85,11 @@ git push --follow-tags
 
 The workflow takes ~10 minutes. Once it's green, the binaries are at:
 
-- `https://github.com/catomean/fleetcrown/releases/latest/download/Fleet-Runner-linux-x86_64.AppImage`
-- `https://github.com/catomean/fleetcrown/releases/latest/download/Fleet-Runner-linux-amd64.deb`
-- `https://github.com/catomean/fleetcrown/releases/latest/download/Fleet-Runner-mac-x64.dmg`
-- `https://github.com/catomean/fleetcrown/releases/latest/download/Fleet-Runner-mac-arm64.dmg`
-- `https://github.com/catomean/fleetcrown/releases/latest/download/Fleet-Runner-win-x64.exe`
+- `https://github.com/bitbaum/fleetcrown/releases/latest/download/Fleet-Runner-linux-x86_64.AppImage`
+- `https://github.com/bitbaum/fleetcrown/releases/latest/download/Fleet-Runner-linux-amd64.deb`
+- `https://github.com/bitbaum/fleetcrown/releases/latest/download/Fleet-Runner-mac-x64.dmg`
+- `https://github.com/bitbaum/fleetcrown/releases/latest/download/Fleet-Runner-mac-arm64.dmg`
+- `https://github.com/bitbaum/fleetcrown/releases/latest/download/Fleet-Runner-win-x64.exe`
 
 To test the workflow without minting a real release, dispatch it manually from
 the Actions tab with `dry_run: true` — it builds on all three runners but

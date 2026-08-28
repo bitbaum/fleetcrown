@@ -73,7 +73,7 @@ jobs:
       # build/lint globs.
       - name: Fetch fleet tooling
         run: |
-          git clone --quiet --depth 1 https://github.com/catomean/fleetcrown.git "$RUNNER_TEMP/fleet-tooling"
+          git clone --quiet --depth 1 https://github.com/bitbaum/fleetcrown.git "$RUNNER_TEMP/fleet-tooling"
           echo "tooling at $(git -C "$RUNNER_TEMP/fleet-tooling" rev-parse --short HEAD)"
 
       - name: Resolve app from manifest

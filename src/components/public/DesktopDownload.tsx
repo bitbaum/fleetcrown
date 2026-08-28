@@ -322,7 +322,7 @@ function ComingSoonPanel({ platform }: { platform: Extract<DesktopDownloadPlatfo
         </p>
         <div className="flex flex-wrap justify-center gap-2">
           <a
-            href="https://github.com/catomean/fleetcrown-releases/releases"
+            href="https://github.com/bitbaum/fleetcrown-releases/releases"
             target="_blank"
             rel="noopener noreferrer"
             className="ui-public-download-cta"
