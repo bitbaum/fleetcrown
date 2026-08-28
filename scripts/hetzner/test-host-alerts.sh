@@ -51,8 +51,13 @@ echo "               total        used        free      shared  buff/cache   ava
 echo "Mem:            7746        4462         264         165        3490        ${MEM_AVAIL:-11000}"
 echo "Swap:           4095        ${SWAP_USED:-0}          14"
 STUB
+# Driven by $FAILED_UNITS so a test can fail specific units. Default empty =
+# a healthy box, which is what every pre-existing test here assumes.
 cat > "$TMP/bin/systemctl" <<'STUB'
 #!/usr/bin/env bash
+if [ "${1:-}" = "list-units" ]; then
+  for u in ${FAILED_UNITS:-}; do echo "$u loaded failed failed stub"; done
+fi
 exit 0
 STUB
 cat > "$TMP/bin/pg_isready" <<'STUB'
@@ -97,6 +102,44 @@ check "86% again: silent on the second tick — no re-alert storm (got $n2)" \
 run_check 86
 n3=$(alerts)
 check "86% third tick: still silent (got $n3)" "$([ "$n3" -eq 0 ] && echo 0 || echo 1)"
+
+# ── 1b. Failed units: a NEW failure must alert even while an OLD one persists ──
+# The six-week outage this replaces: the check asked "is anything failed?" and
+# handed that one boolean to alert_transition. cloud-init-hotplugd failed on
+# 2026-07-22 and never recovered, so the state was pinned at `bad` and NOTHING
+# could transition again — every later failure was silent, including vitareba's
+# crons dying on 2026-08-28. An aggregate over a set containing a permanent
+# member cannot change. These cases pin the per-unit behaviour that fixes it.
+# DISK_PCT is pinned inside the band so the disk check cannot contribute an
+# alert to these counts — an earlier version of this test counted a disk
+# RECOVERED as a unit alert and "failed" on correct behaviour.
+run_units() { : > "$ALERT_LOG"; DISK_PCT=82 FAILED_UNITS="$1" bash "$TMP/host-check.sh" >/dev/null 2>&1 || true; }
+unit_alerts() { grep -c 'FAILED UNIT\|RECOVERED: unit_' "$ALERT_LOG" 2>/dev/null | tr -d "[:space:]" || true; }
+rm -f "$TMP"/state/host_unit_* "$TMP/state/host_units"
+
+run_units "a.service b.service"
+check "units: first failures alert once per unit (got $(unit_alerts))" \
+  "$([ "$(unit_alerts)" -eq 2 ] && echo 0 || echo 1)"
+
+run_units "a.service b.service"
+check "units: identical set is silent — no storm (got $(unit_alerts))" \
+  "$([ "$(unit_alerts)" -eq 0 ] && echo 0 || echo 1)"
+
+# THE regression. A stuck unit must not mask a new one.
+run_units "a.service b.service c.service"
+check "units: a NEW failure alerts while old ones are still failing (got $(unit_alerts))" \
+  "$([ "$(unit_alerts)" -eq 1 ] && grep -q 'c.service' "$ALERT_LOG" && echo 0 || echo 1)"
+
+run_units "b.service c.service"
+check "units: only the recovered unit reports RECOVERED" \
+  "$(grep -q 'RECOVERED: unit_a_service' "$ALERT_LOG" && [ "$(unit_alerts)" -eq 1 ] && echo 0 || echo 1)"
+
+run_units ""
+check "units: the rest recover when the set empties (got $(unit_alerts))" \
+  "$([ "$(unit_alerts)" -eq 2 ] && echo 0 || echo 1)"
+
+check "units: the old aggregate latch file is not recreated" \
+  "$([ ! -e "$TMP/state/host_units" ] && echo 0 || echo 1)"
 
 # ── 2. alert_transition must never leak a branch exit status to a caller ──────
 # This is the property that broke; assert it directly on the shipped function.

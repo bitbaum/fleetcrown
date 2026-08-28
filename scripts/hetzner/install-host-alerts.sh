@@ -141,13 +141,39 @@ else
 fi
 
 # Failed systemd units (excludes our own notifier so an alert can't self-trip)
-failed=$(systemctl list-units --type=service --state=failed --no-legend 2>/dev/null \
-  | awk '{print $1}' | grep -v '^notify-failure@' | tr '\n' ' ')
-if [ -n "$failed" ]; then
-  alert_transition units bad "⚙️" "FAILED UNITS: ${failed}"
-else
-  alert_transition units ok "" ""
-fi
+#
+# PER UNIT, not one boolean over the set. The previous version asked "is
+# anything failed?" and passed that single answer to alert_transition — so once
+# ONE unit failed and stayed failed, the state was pinned at `bad` and the
+# check could never transition again. Every later failure was silent.
+#
+# That is not hypothetical: cloud-init-hotplugd.service failed on 2026-07-22
+# and never recovered, and host_units sat at `bad` from 2026-07-17. For six
+# weeks this check ran every tick, reported healthy machinery, and could not
+# have paged for anything — including vitareba's crons dying on 2026-08-28.
+# An aggregate over a set that contains a permanent member never changes.
+#
+# Keying by unit means a NEW failure is a new key, which always transitions,
+# no matter what else is already broken. A unit that recovers clears its own
+# key. Same alert_transition, same storm-safety, without the shared latch.
+mapfile -t failed_units < <(systemctl list-units --type=service --state=failed --no-legend 2>/dev/null \
+  | awk '{print $1}' | grep -v '^notify-failure@')
+declare -A unit_now=()
+for u in ${failed_units[@]+"${failed_units[@]}"}; do
+  k="unit_$(printf '%s' "$u" | tr -c 'a-zA-Z0-9' '_')"
+  unit_now[$k]=1
+  alert_transition "$k" bad "⚙️" "FAILED UNIT: $u"
+done
+# Anything that was failing and is not in the current set has recovered. Without
+# this the key would stay `bad` and its next genuine failure would be silent —
+# the same latch, one level down.
+for sf in "$MON"/state/host_unit_*; do
+  [ -e "$sf" ] || continue
+  k=$(basename "$sf"); k=${k#host_}
+  [ -n "${unit_now[$k]:-}" ] || alert_transition "$k" ok "" ""
+done
+# Retire the old aggregate latch so it cannot linger at `bad` forever.
+rm -f "$MON/state/host_units"
 
 # Postgres accepting connections
 if pg_isready -q 2>/dev/null; then
