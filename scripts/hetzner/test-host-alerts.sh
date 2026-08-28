@@ -27,9 +27,11 @@ mkdir -p "$TMP/state" "$TMP/bin"
 # ── Extract the shipped payloads (strip the `cat <<'X'` and closing `X`) ──────
 sed -n "/<<'LIB'\$/,/^LIB\$/p" "$SRC" | sed '1d;$d' > "$TMP/lib-alert.sh"
 sed -n "/<<'HC'\$/,/^HC\$/p"   "$SRC" | sed '1d;$d' > "$TMP/host-check.sh"
+sed -n "/<<'NF'\$/,/^NF\$/p"   "$SRC" | sed '1d;$d' > "$TMP/notify-failure.sh"
 [ -s "$TMP/lib-alert.sh" ]  || { echo "FAIL: could not extract lib-alert.sh"; exit 1; }
 [ -s "$TMP/host-check.sh" ] || { echo "FAIL: could not extract host-check.sh"; exit 1; }
-chmod +x "$TMP/host-check.sh"
+[ -s "$TMP/notify-failure.sh" ] || { echo "FAIL: could not extract notify-failure.sh"; exit 1; }
+chmod +x "$TMP/host-check.sh" "$TMP/notify-failure.sh"
 
 # ── Stub the system tools host-check.sh shells out to ────────────────────────
 # `alert` always calls logger, and telegram.env is absent here, so the logger
@@ -55,6 +57,15 @@ STUB
 # a healthy box, which is what every pre-existing test here assumes.
 cat > "$TMP/bin/systemctl" <<'STUB'
 #!/usr/bin/env bash
+# notify-failure.sh asks two things about the failed unit: its Type (oneshot
+# units skip the recovery grace period) and whether it came back. Both are
+# driven by env so a test can stage a crash loop or a deploy blip.
+if [ "${1:-}" = "show" ]; then
+  printf '%s\n' "${UNIT_TYPE:-simple}"; exit 0
+fi
+if [ "${1:-}" = "is-active" ]; then
+  exit "${UNIT_ACTIVE:-1}"   # default 1 = still down, the crash-loop case
+fi
 if [ "${1:-}" = "list-units" ]; then
   # Reproduce systemd's REAL shape: a failed unit is printed with a leading
   # "●" unless --plain is passed. A stub without it let a bug ship that turned
@@ -68,6 +79,16 @@ fi
 exit 0
 STUB
 cat > "$TMP/bin/pg_isready" <<'STUB'
+#!/usr/bin/env bash
+exit 0
+STUB
+cat > "$TMP/bin/journalctl" <<'STUB'
+#!/usr/bin/env bash
+echo "stub journal line"
+STUB
+# The notifier waits 8s before deciding a unit is really down. Tests assert the
+# decision, not the wall clock — stub it out so the suite stays instant.
+cat > "$TMP/bin/sleep" <<'STUB'
 #!/usr/bin/env bash
 exit 0
 STUB
@@ -207,10 +228,6 @@ check "tight memory: reports the available MB as a single number" \
 check "tight memory: no 'integer expected' from field-count drift" \
   "$(! grep -q 'integer expected' "$TMP/stderr.log" && echo 0 || echo 1)"
 
-echo
-echo "  ${pass} passed, ${fail} failed"
-[ "$fail" -eq 0 ]
-
 # ── the bullet: systemd prefixes a failed unit with "●" without --plain -------
 # Shipped once as `FAILED UNIT: ●`, one shared key for every failure. The stub
 # above now emits the bullet, so this is a real regression test.
@@ -219,6 +236,67 @@ check "units: the unit NAME is alerted, not systemd's bullet" \
   "$(grep -q 'FAILED UNIT: z.service' "$ALERT_LOG" && ! grep -q 'FAILED UNIT: ●' "$ALERT_LOG" && echo 0 || echo 1)"
 check "units: the state key is derived from the name, not the bullet" \
   "$([ -e "$TMP/state/host_unit_z_service" ] && echo 0 || echo 1)"
+
+# ── 6. OnFailure notifier: one incident is ONE page, not one per restart ──────
+# On 2026-08-28 vitareba-app could not read its .env (root-owned after a
+# `chown --reference`). Restart=on-failure + RestartSec=3 restarted it 18 times
+# in 60 seconds and every restart fired OnFailure → SIX identical "UNIT DOWN"
+# Telegrams for a single incident. The pre-existing recovery guard could not
+# help: it only silences a unit that comes back, and this one never did. These
+# cases pin the per-unit cooldown that fixes it.
+notify() { : > "$ALERT_LOG"; bash "$TMP/notify-failure.sh" "$1" >/dev/null 2>&1 || true; }
+pages() { grep -c 'UNIT DOWN' "$ALERT_LOG" 2>/dev/null | tr -d "[:space:]" || true; }
+stamp_of() { echo "$TMP/state/paged_$(printf '%s' "$1" | tr -c 'a-zA-Z0-9' '_')"; }
+rm -f "$TMP"/state/paged_*
+
+notify vitareba-app.service
+check "notifier: a unit that stays down pages once (got $(pages))" \
+  "$([ "$(pages)" -eq 1 ] && echo 0 || echo 1)"
+
+# THE storm. Same unit, next restart three seconds later.
+notify vitareba-app.service
+n_loop=$(pages)
+check "notifier: the next crash-loop restart is silent (got $n_loop)" \
+  "$([ "$n_loop" -eq 0 ] && echo 0 || echo 1)"
+notify vitareba-app.service
+check "notifier: and the one after that (got $(pages))" \
+  "$([ "$(pages)" -eq 0 ] && echo 0 || echo 1)"
+
+# Silence in Telegram must not mean silence in the journal — the suppressed
+# restarts still have to be visible to whoever reads the logs afterwards.
+check "notifier: suppressed restarts are still journalled, not dropped" \
+  "$(grep -q 'still failing' "$ALERT_LOG" && echo 0 || echo 1)"
+
+# A different unit is a different incident — one loop must not mute the fleet.
+notify restic-check.service
+check "notifier: a DIFFERENT unit still pages while the first is muted" \
+  "$([ "$(pages)" -eq 1 ] && grep -q 'restic-check' "$ALERT_LOG" && echo 0 || echo 1)"
+
+# Still down when the cooldown expires: re-page as a reminder.
+printf '%s' "$(( $(date +%s) - 4000 ))" > "$(stamp_of vitareba-app.service)"
+notify vitareba-app.service
+check "notifier: re-pages as a reminder once the cooldown expires" \
+  "$([ "$(pages)" -eq 1 ] && echo 0 || echo 1)"
+
+# Recovery: no page, AND the stamp is cleared so the NEXT outage is not muted
+# by the last one's cooldown. Both halves matter — clearing without the guard
+# would restore the storm; guarding without the clearing would swallow a real
+# outage that happened to land inside the window.
+UNIT_ACTIVE=0 notify vitareba-app.service
+check "notifier: a unit that comes back does not page" \
+  "$([ "$(pages)" -eq 0 ] && echo 0 || echo 1)"
+check "notifier: recovery clears the cooldown stamp" \
+  "$([ ! -e "$(stamp_of vitareba-app.service)" ] && echo 0 || echo 1)"
+notify vitareba-app.service
+check "notifier: a fresh outage after a recovery pages immediately" \
+  "$([ "$(pages)" -eq 1 ] && echo 0 || echo 1)"
+
+# oneshot units (appcron jobs) never go active, so they must skip the recovery
+# grace period entirely and page on the first failure.
+rm -f "$TMP"/state/paged_*
+UNIT_TYPE=oneshot notify appcron-vitareba-reminders.service
+check "notifier: a failed oneshot cron pages on the first failure" \
+  "$([ "$(pages)" -eq 1 ] && echo 0 || echo 1)"
 
 printf '\n  %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
