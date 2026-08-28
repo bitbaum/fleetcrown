@@ -114,7 +114,7 @@
     "@xterm/addon-fit": "^0.11.0",
     "@xterm/addon-web-links": "^0.12.0",
     "@xterm/xterm": "^6.0.0",
-    "ai-kit": "github:bitbaum/ai-kit#v0.3.0",
+    "ai-kit": "github:bitbaum/ai-kit#v0.2.1",
     "bip-kit": "^0.1.0",
     "bs58check": "^4.0.0",
     "class-variance-authority": "^0.7.1",
