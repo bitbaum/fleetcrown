@@ -156,5 +156,24 @@ botsmann_db=$(grep '^botsmann|' "$MANIFEST" | cut -d'|' -f6)
 eq "supabase:botsmann" "$botsmann_db" "botsmann is wired to a schema (it was '-', which skipped the step)"
 
 echo
+echo
+echo "migration_dirs — ONE list, shared with the deploy-ready gate"
+# The gate fails a build when an app ships migrations while declaring db=-.
+# It must look exactly where the applier looks, or it starts lying in the other
+# direction: passing an app whose migrations sit in a directory it never checks.
+eq "/r/packages/database/drizzle
+/r/app/drizzle
+/r/app/src/lib/db/migrations
+/r/drizzle
+/r/src/lib/db/migrations" "$(migration_dirs drizzle /r app)" "drizzle candidates, in the applier's own order"
+eq "/r/app/supabase/migrations
+/r/supabase/migrations" "$(migration_dirs supabase /r app)" "supabase candidates — app_dir first, then repo root"
+eq "/r/app/prisma/migrations" "$(migration_dirs prisma /r app)" "prisma has exactly one home"
+eq "/r/./drizzle" "$(migration_dirs drizzle /r . | sed -n 2p)" "an app_dir of '.' still yields a usable path"
+migration_dirs nonsense /r . >/dev/null 2>&1 \
+  && no "an unknown layout must fail, not silently return nothing" \
+  || ok "an unknown layout fails loudly rather than reporting no migrations"
+
+
 printf 'apply-schema: %d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

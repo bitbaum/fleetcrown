@@ -53,6 +53,11 @@ CD_BASELINE_FILE="$SELF_DIR/deploy-ready-cd.baseline"
 
 . "$SELF_DIR/../hetzner/lib.sh"
 
+# For migration_dirs — the applier's OWN list of where migrations live, so this
+# gate cannot drift from the thing it is judging. Dummy args: the script wants
+# four, and the lib-only return fires before any of them are used.
+APPLY_SCHEMA_LIB_ONLY=1 . "$SELF_DIR/../hetzner/apply-schema.sh" gate /nonexistent - .
+
 # ------------------------------------------------- half 1: register integrity
 # In the diff, therefore CI's business. A malformed line here is what makes
 # every downstream script reason about the wrong app.
@@ -85,8 +90,9 @@ echo "✓ register: $total entries, $FIELDS fields each, names and ports unique"
 
 # -------------------------------------------------- half 2: fleet inspection
 # Only meaningful where the sibling checkouts are present.
-missing_ci=""; missing_cd=""; stale=""; present=0
-while IFS='|' read -r name port domains repo appdir rest; do
+missing_ci=""; missing_cd=""; stale=""; silent_schema=""; present=0
+shopt -s nullglob   # so `probe=(dir/[0-9]*.sql)` is EMPTY on no match, not a literal
+while IFS='|' read -r name port domains repo appdir db rest; do
   case "$name" in \#*|"") continue ;; esac
   if [ ! -d "$repo" ]; then stale="$stale $name"; continue; fi
   present=$((present + 1))
@@ -107,6 +113,31 @@ while IFS='|' read -r name port domains repo appdir rest; do
   else
     missing_cd="$missing_cd $name"
   fi
+  # A repo that ships migrations while declaring `db=-` is telling deploy.sh to
+  # skip the schema step entirely — so the SQL is never applied anywhere, and
+  # the deploy goes green because nothing failed. Nothing FAILED; nothing ran.
+  #
+  # botsmann did this for months: eleven migrations, /api/health serving
+  # PGRST205 from a table that did not exist, every deploy green. Then
+  # printcraft did it too — five more the pipeline never saw (#407). Twice is a
+  # class, and the third is what this exists to prevent.
+  #
+  # A zero-check, not a ratchet: no app violates this today, so any occurrence
+  # is a regression rather than inherited debt.
+  case "$db" in
+    -|"")
+      for layout in drizzle prisma supabase; do
+        while IFS= read -r cand; do
+          probe=("$cand"/[0-9]*.sql)
+          if [ "${#probe[@]}" -gt 0 ] || { [ "$layout" = prisma ] && [ -d "$cand" ]; }; then
+            rel="${cand#"$repo"/}"; rel="${rel#./}"   # app_dir "." leaves a ./ that reads as noise
+            silent_schema="$silent_schema $name:$rel"
+            break 2
+          fi
+        done < <(migration_dirs "$layout" "$repo" "$appdir")
+      done
+      ;;
+  esac
 done < <(grep -v '^#' "$MANIFEST")
 
 if [ "$present" = 0 ]; then
@@ -129,6 +160,19 @@ if [ -n "$stale" ]; then
 fi
 
 failed=0
+
+if [ -n "$silent_schema" ]; then
+  echo "✗ app(s) ship migrations but declare db=- , so the schema step never runs:"
+  for m in $silent_schema; do
+    echo "    ${m%%:*} — migrations in ${m#*:}, applied nowhere"
+  done
+  echo
+  echo "  deploy.sh skips apply-schema.sh entirely when db is '-'. The deploy"
+  echo "  then goes green because nothing failed — nothing ran. This is how"
+  echo "  botsmann served PGRST205 for months, and printcraft after it."
+  echo "  Set the db field: a host database name, or supabase:<schema>."
+  failed=1
+fi
 
 ci_count=$(echo $missing_ci | wc -w | tr -d ' ')
 ci_baseline=$(cat "$CI_BASELINE_FILE" 2>/dev/null || echo "$ci_count")
