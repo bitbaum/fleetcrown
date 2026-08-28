@@ -61,10 +61,26 @@ cat > "$TMP/bin/systemctl" <<'STUB'
 # units skip the recovery grace period) and whether it came back. Both are
 # driven by env so a test can stage a crash loop or a deploy blip.
 if [ "${1:-}" = "show" ]; then
-  printf '%s\n' "${UNIT_TYPE:-simple}"; exit 0
+  # Answer the property actually asked for. A stub that returns the same string
+  # for every -p is how a Result check can silently read a Type.
+  prop=""; for a in "$@"; do case "$a" in -p) prop="NEXT";; *) [ "$prop" = "NEXT" ] && { prop="$a"; break; };; esac; done
+  case "$prop" in
+    Type)   printf '%s\n' "${UNIT_TYPE:-simple}" ;;
+    Result) printf '%s\n' "${UNIT_RESULT:-exit-code}" ;;
+    User)   printf '%s\n' "${UNIT_USER:-}" ;;
+    *)      printf '%s\n' "${UNIT_TYPE:-simple}" ;;
+  esac
+  exit 0
 fi
 if [ "${1:-}" = "is-active" ]; then
+  # Print the state as well as exiting with it: --quiet callers ignore stdout,
+  # but the oneshot retry-grace and the env repair both READ this value.
+  [ "${UNIT_ACTIVE:-1}" = 0 ] && echo active || echo failed
   exit "${UNIT_ACTIVE:-1}"   # default 1 = still down, the crash-loop case
+fi
+if [ "${1:-}" = "list-unit-files" ]; then
+  for u in ${APP_UNITS:-}; do echo "$u enabled enabled"; done
+  exit 0
 fi
 if [ "${1:-}" = "list-units" ]; then
   # Reproduce systemd's REAL shape: a failed unit is printed with a leading
@@ -82,6 +98,29 @@ cat > "$TMP/bin/pg_isready" <<'STUB'
 #!/usr/bin/env bash
 exit 0
 STUB
+# DELIVERY capture. logger records what reaches the JOURNAL; curl records what
+# reaches the PHONE. Every suppression in lib-alert.sh is defined as "journal
+# yes, phone no", so a suite that can only observe the journal cannot tell a
+# correctly-suppressed duplicate from a delivered one — and a phone receiving
+# six copies of one fact is the entire bug being fixed here.
+cat > "$TMP/bin/curl" <<'STUB'
+#!/usr/bin/env bash
+for a in "$@"; do case "$a" in text=*) printf '%s\n' "${a#text=}" >> "$SEND_LOG";; esac; done
+exit 0
+STUB
+# Fake creds so the delivery branch is actually entered. The curl stub above is
+# where they land, so nothing leaves this machine.
+printf 'TELEGRAM_BOT_TOKEN=test-token\nTELEGRAM_CHAT_ID=test-chat\n' > "$TMP/telegram.env"
+# host-check asks "can this unit's User read its .env?" via sudo. Here we run as
+# ourselves, so the answer is the real filesystem's — which is the point: the
+# repair is tested against actual permission bits, not against a mock's opinion.
+cat > "$TMP/bin/sudo" <<'STUB'
+#!/usr/bin/env bash
+while [ $# -gt 0 ]; do
+  case "$1" in -n) shift;; -u) shift 2;; *) break;; esac
+done
+exec "$@"
+STUB
 cat > "$TMP/bin/journalctl" <<'STUB'
 #!/usr/bin/env bash
 echo "stub journal line"
@@ -96,7 +135,8 @@ chmod +x "$TMP/bin"/*
 export PATH="$TMP/bin:$PATH"
 export MON="$TMP"
 export ALERT_LOG="$TMP/alerts.log"
-: > "$ALERT_LOG"
+export SEND_LOG="$TMP/sent.log"
+: > "$ALERT_LOG"; : > "$SEND_LOG"
 
 pass=0 fail=0
 check() { # name condition-as-exit-status
@@ -107,6 +147,10 @@ run_check() { : > "$ALERT_LOG"; DISK_PCT="$1" bash "$TMP/host-check.sh" >/dev/nu
 # wc, not `grep -c || echo 0` — grep -c prints 0 *and* exits 1 on no match, so
 # the fallback would emit a second 0 and every numeric compare would blow up.
 alerts()   { wc -l < "$ALERT_LOG" | tr -d '[:space:]'; }
+# What actually reached the phone, as opposed to the journal. Noise assertions
+# must use this one: the journal deliberately keeps a line for every suppressed
+# alert, so counting journal lines scores correct suppression as a message sent.
+sent()     { wc -l < "$SEND_LOG" | tr -d '[:space:]'; }
 disk_state() { cat "$TMP/state/host_disk" 2>/dev/null || echo "<unset>"; }
 
 echo "host-alert transition tests"
@@ -265,7 +309,7 @@ check "notifier: and the one after that (got $(pages))" \
 # Silence in Telegram must not mean silence in the journal — the suppressed
 # restarts still have to be visible to whoever reads the logs afterwards.
 check "notifier: suppressed restarts are still journalled, not dropped" \
-  "$(grep -q 'still failing' "$ALERT_LOG" && echo 0 || echo 1)"
+  "$(grep -q 'ALERT held for vitareba-app.service' "$ALERT_LOG" && echo 0 || echo 1)"
 
 # A different unit is a different incident — one loop must not mute the fleet.
 notify restic-check.service
@@ -297,6 +341,168 @@ rm -f "$TMP"/state/paged_*
 UNIT_TYPE=oneshot notify appcron-vitareba-reminders.service
 check "notifier: a failed oneshot cron pages on the first failure" \
   "$([ "$(pages)" -eq 1 ] && echo 0 || echo 1)"
+
+# ── 7. The duplicate floor: identical text cannot reach the phone twice ──────
+# On 2026-08-28 the fleet register check sent the SAME four-line failure at
+# 22:15 and again at 22:16, because it had its own private Telegram call and no
+# state of any kind. Keyed cooldowns cannot help a caller that passes no key,
+# so lib-alert puts a floor under every unkeyed send. Note what is asserted:
+# delivered ONCE, journalled BOTH times. Suppressed must never mean invisible.
+# export, NOT a `VAR=x . lib.sh` prefix: bash discards assignments made in front
+# of the `.` builtin as soon as it returns, so the library would be sourced with
+# the right values and then RUN with them unset — which under `set -u` kills the
+# call outright and looks exactly like successful suppression. Cost an hour once;
+# it is why the tests below assert the journal as well as the delivery.
+lib() { ( export MON="$TMP" ALERT_DEDUPE_SEC="${DEDUPE:-300}" ALERT_DRY_RUN="${DRY:-}"
+          . "$TMP/lib-alert.sh"; "$@" ) >/dev/null 2>&1 || true; }
+reset_logs() { : > "$ALERT_LOG"; : > "$SEND_LOG"; rm -f "$TMP"/state/dedupe_* "$TMP"/state/paged_*; }
+
+reset_logs
+lib alert "🔴" "register check failed: substrata port 4022 already taken"
+lib alert "🔴" "register check failed: substrata port 4022 already taken"
+check "floor: the same message is delivered once, not twice (got $(sent))" \
+  "$([ "$(sent)" -eq 1 ] && echo 0 || echo 1)"
+check "floor: the suppressed copy is still in the journal" \
+  "$(grep -q 'duplicate suppressed' "$ALERT_LOG" && echo 0 || echo 1)"
+
+# The floor must not become a gag: a DIFFERENT message still gets through.
+reset_logs
+lib alert "🔴" "first thing"
+lib alert "🔴" "a genuinely different thing"
+check "floor: a different message still reaches the phone (got $(sent))" \
+  "$([ "$(sent)" -eq 2 ] && echo 0 || echo 1)"
+
+# And it must expire — same text, window elapsed, is news again.
+reset_logs
+DEDUPE=0 lib alert "🔴" "recurring condition"
+DEDUPE=0 lib alert "🔴" "recurring condition"
+check "floor: expires, so a later recurrence is not swallowed (got $(sent))" \
+  "$([ "$(sent)" -eq 2 ] && echo 0 || echo 1)"
+
+# The floor applies ONLY to the unkeyed path. A keyed sender has already made a
+# deliberate, state-backed decision to speak; running it through the floor too
+# would mean two mechanisms arguing about one message and the quieter one
+# silently winning — e.g. the notifier's still-broken reminder disappearing
+# because the text matched the page from half an hour earlier.
+reset_logs
+lib alert_once svc 1800 "🔴" "UNIT DOWN: identical text"
+lib alert_clear svc
+lib alert_once svc 1800 "🔴" "UNIT DOWN: identical text"
+check "floor: a keyed sender is not gagged by the unkeyed floor (got $(sent))" \
+  "$([ "$(sent)" -eq 2 ] && echo 0 || echo 1)"
+
+# ── 8. ALERT_DRY_RUN: testing the alerter must not page a human ──────────────
+# At 22:14 and 22:15 on 2026-08-28 a one-time test of a new check and a planted
+# zz-audit-probe.service both rang George's real phone — messages about
+# nothing, from work that was going fine. Probes journal; they do not deliver.
+reset_logs
+DRY=1 lib alert "🔴" "one-time test of the new scheduled check"
+check "dry-run: a test send delivers nothing (got $(sent))" \
+  "$([ "$(sent)" -eq 0 ] && echo 0 || echo 1)"
+check "dry-run: but is still visible in the journal" \
+  "$(grep -q 'not delivered' "$ALERT_LOG" && echo 0 || echo 1)"
+
+# ── 9. alert_once / alert_clear contract ─────────────────────────────────────
+reset_logs
+lib alert_once k 1800 "🔴" "x"; lib alert_once k 1800 "🔴" "x"
+check "alert_once: second call inside the cooldown is silent (got $(sent))" \
+  "$([ "$(sent)" -eq 1 ] && echo 0 || echo 1)"
+( set +e
+  MON="$TMP" . "$TMP/lib-alert.sh"
+  alert_once rc 1800 "x" "y"; a=$?
+  alert_once rc 1800 "x" "y"; b=$?
+  alert_clear rc;             c=$?
+  [ "$a" -eq 0 ] && [ "$b" -eq 0 ] && [ "$c" -eq 0 ]
+) >/dev/null 2>&1
+check "alert_once/alert_clear return 0 on every path" $?
+
+# ── 10. A oneshot a retry already fixed is not an incident ───────────────────
+# restic-check failed at 18:41:42 on a 25-day-old stale lock left by the laptop,
+# was re-run at 18:42:28 and finished clean at 18:44:46 — and still paged,
+# because OnFailure fires on the failing run and nothing ever looked again.
+rm -f "$TMP"/state/paged_*
+UNIT_TYPE=oneshot UNIT_ACTIVE=0 notify restic-check.service
+check "oneshot: a retry already running does not page (got $(pages))" \
+  "$([ "$(pages)" -eq 0 ] && echo 0 || echo 1)"
+
+rm -f "$TMP"/state/paged_*
+UNIT_TYPE=oneshot UNIT_ACTIVE=1 UNIT_RESULT=success notify restic-check.service
+check "oneshot: a retry that already succeeded does not page (got $(pages))" \
+  "$([ "$(pages)" -eq 0 ] && echo 0 || echo 1)"
+check "oneshot: the grace path leaves no stamp to mute the next real failure" \
+  "$([ ! -e "$(stamp_of restic-check.service)" ] && echo 0 || echo 1)"
+
+# The half that must survive: a oneshot that is STILL broken after the grace
+# window is a real failure and must page. A guard against noise that swallows
+# the signal is the worse bug of the two.
+rm -f "$TMP"/state/paged_*
+UNIT_TYPE=oneshot UNIT_ACTIVE=1 UNIT_RESULT=exit-code notify restic-check.service
+check "oneshot: one that is still failing after the grace DOES page (got $(pages))" \
+  "$([ "$(pages)" -eq 1 ] && echo 0 || echo 1)"
+
+# ── 11. Unreadable .env: repaired and reported, not asked about ──────────────
+# Twice on 2026-08-28 an app's /opt/<app>/shared/.env ended up root-owned while
+# the unit runs as ubuntu — vitareba at 18:38, botsmann at 20:16. Neither could
+# boot, both crash-looped, and the only signal was a wall of UNIT DOWN messages
+# whose remedy was one deterministic command. The owner is not a guess: it is
+# the unit's own User=. So the check repairs it and reports what it did.
+mkdir -p "$TMP/opt/demo/shared"
+cat > "$TMP/bin/chown" <<'STUB'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >> "$CHOWN_LOG"
+[ -n "${CHOWN_FAIL:-}" ] && exit 1
+exit 0
+STUB
+chmod +x "$TMP/bin/chown"
+export CHOWN_LOG="$TMP/chown.log"
+
+env_run() { # run host-check with only the env check able to say anything
+  : > "$ALERT_LOG"; : > "$SEND_LOG"; : > "$CHOWN_LOG"
+  # Pin the other checks to their quiet state. An earlier section leaves
+  # host_mem at `bad`, and its RECOVERED would otherwise be counted here as a
+  # second message from the env check — the same trap the disk band already
+  # documents above.
+  printf '%s' ok > "$TMP/state/host_mem"; printf '%s' ok > "$TMP/state/host_disk"
+  # Likewise the failed-unit keys: section 1b leaves z.service at `bad`, and an
+  # empty FAILED_UNITS here would emit its RECOVERED into this section's count.
+  rm -f "$TMP"/state/host_unit_*
+  APPROOT="$TMP/opt" APP_UNITS="demo-app.service" UNIT_USER="$(id -un)" \
+    DISK_PCT=82 bash "$TMP/host-check.sh" >/dev/null 2>&1 || true
+}
+
+printf 'SECRET=1\n' > "$TMP/opt/demo/shared/.env"; chmod 000 "$TMP/opt/demo/shared/.env"
+env_run
+check "env: an unreadable .env is repaired, not merely reported" \
+  "$([ -r "$TMP/opt/demo/shared/.env" ] && echo 0 || echo 1)"
+check "env: the repair targets the unit's own User=, not a backup's owner" \
+  "$(grep -q "$(id -un):$(id -un) $TMP/opt/demo/shared/.env" "$CHOWN_LOG" && echo 0 || echo 1)"
+check "env: exactly one message, and it says it is already fixed (got $(sent))" \
+  "$([ "$(sent)" -eq 1 ] && grep -q 'FIXED (no action needed)' "$SEND_LOG" && echo 0 || echo 1)"
+
+# Healthy is silent — the repair must not become its own recurring alert.
+env_run
+check "env: a healthy .env says nothing at all (got $(sent))" \
+  "$([ "$(sent)" -eq 0 ] && echo 0 || echo 1)"
+
+# A recurrence AFTER a healthy pass reports again: the healthy path clears the
+# stamp, so a second corruption is not swallowed by the first repair's cooldown.
+chmod 000 "$TMP/opt/demo/shared/.env"
+env_run
+check "env: a fresh recurrence is reported again, not muted by the last repair" \
+  "$([ "$(sent)" -eq 1 ] && echo 0 || echo 1)"
+
+# When the repair CANNOT be made, it becomes a question — asked once, with the
+# exact command in it, because that is the only case a human is needed for.
+chmod 000 "$TMP/opt/demo/shared/.env"
+: > "$ALERT_LOG"; : > "$SEND_LOG"; : > "$CHOWN_LOG"
+printf '%s' ok > "$TMP/state/host_mem"; printf '%s' ok > "$TMP/state/host_disk"
+rm -f "$TMP"/state/host_unit_*
+rm -f "$TMP"/state/paged_envfix_demo "$TMP"/state/paged_envbad_demo
+CHOWN_FAIL=1 APPROOT="$TMP/opt" APP_UNITS="demo-app.service" UNIT_USER="$(id -un)" \
+  DISK_PCT=82 bash "$TMP/host-check.sh" >/dev/null 2>&1 || true
+check "env: an unrepairable .env asks, and carries the exact fix command" \
+  "$([ "$(sent)" -eq 1 ] && grep -q 'chown .* && systemctl restart demo-app.service' "$SEND_LOG" && echo 0 || echo 1)"
+chmod 600 "$TMP/opt/demo/shared/.env"
 
 printf '\n  %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

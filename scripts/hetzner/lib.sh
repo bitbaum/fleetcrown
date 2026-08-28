@@ -5,7 +5,13 @@ set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$HERE/_box-env.sh"   # SSOT: HETZNER_IP, BOX_ROOT, BOX_UBUNTU
 BOX="$BOX_UBUNTU"
-MANIFEST="$HERE/apps.conf"
+# Overridable so a caller can judge a PRISTINE register instead of the working
+# tree. On the workstation ~15 agent sessions share these checkouts, so the
+# tree is a scratchpad: on 2026-08-28 the daily register check read apps.conf
+# mid-edit (substrata listed twice) and paged about a duplicate port that had
+# never been committed. CI still judges the working tree, which is correct
+# there — in CI the working tree IS the commit under review.
+MANIFEST="${MANIFEST:-$HERE/apps.conf}"
 
 # default_branch [repo_dir] — the remote's default branch name, resolved not guessed.
 #

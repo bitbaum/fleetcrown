@@ -10,7 +10,16 @@
 #   2. Host checks — /opt/monitoring/host-check.sh (own timer) alerts, on
 #      TRANSITION only, on: disk >85% (recovering only under 80%, so a disk
 #      parked on the mark can't flap), mem-available <400MB OR swap >90%,
-#      `systemctl --failed` non-empty, postgres not accepting connections.
+#      each failed unit KEYED SEPARATELY, postgres not accepting connections,
+#      and any app whose .env its own unit User= cannot read — which it repairs
+#      itself and reports, instead of asking a human for the one right answer.
+#
+# The governing rule for everything below: a message is worth sending only if a
+# human must act on it AND nothing else can. One incident is one message
+# (alert_once + a duplicate-text floor in lib-alert.sh); anything with a
+# knowable remedy is applied, not announced; test runs set ALERT_DRY_RUN=1 and
+# reach the journal only. Suppressed is never invisible — the journal always
+# gets every alert.
 #
 # Logic here is covered by scripts/hetzner/test-host-alerts.sh (npm run test:ops),
 # which extracts the heredoc payloads below and drives them with stubbed tools.
@@ -32,29 +41,111 @@ cat > "$MON/lib-alert.sh" <<'LIB'
 #!/usr/bin/env bash
 # Sourced by host-check.sh and notify-failure.sh. Provides:
 #   alert <emoji> <text>              — send now (Telegram if configured, always journal)
+#   alert_once <key> <cooldown> <emoji> <text>
+#       — send at most once per <cooldown> seconds for <key>, so one incident is
+#         one message however many times it is detected
+#   alert_clear <key>                 — forget <key>'s cooldown; call on recovery
 #   alert_transition <key> <state> <emoji> <up-or-down-text>
 #       — send only when <key> flips state (state file under $MON/state)
 # MON is overridable so test-host-alerts.sh can exercise this exact code against
 # a temp dir; prod never sets it and gets /opt/monitoring.
+#
+# DELIVERY vs VISIBILITY. Every function here ALWAYS writes to the journal;
+# only the Telegram send is ever suppressed. Quiet on the phone must never mean
+# invisible in the logs — a suppressed alert nobody can find afterwards is a
+# worse failure than the noise it saved.
 MON="${MON:-/opt/monitoring}"
 [ -f "$MON/telegram.env" ] && . "$MON/telegram.env" || true
-alert() {
-  local text="$1 $2"
+
+_alert_key() { printf '%s' "$1" | tr -c 'a-zA-Z0-9' '_'; }
+
+# Identical-text floor, under every other guard. The keyed cooldowns below are
+# the deliberate mechanism, but they only protect callers that remember to pass
+# a key: on 2026-08-28 the fleet register check sent the same four-line failure
+# twice inside 60 seconds because it had its own private Telegram call and no
+# state at all. This floor means a caller that forgets — today's or one written
+# next year — still cannot repeat itself. Short enough (5 min) that a genuinely
+# new occurrence of the same condition is never swallowed.
+ALERT_DEDUPE_SEC="${ALERT_DEDUPE_SEC:-300}"
+
+# ALERT_DRY_RUN=1 → journal only, nothing delivered. Every test probe and
+# every "does the wiring still work" run MUST set it. On 2026-08-28 a live test
+# of a new check and a planted zz-audit-probe.service both rang George's actual
+# phone at 22:14 — a message about nothing, which is the exact failure this
+# file exists to prevent. Testing the alerter must not page anyone.
+# The one place anything is delivered. Journal first, always — every caller,
+# every path, including the ones that decide not to deliver.
+_alert_deliver() {
+  local text="$1"
   logger -t watchdog "$text"
+  if [ -n "${ALERT_DRY_RUN:-}" ]; then
+    logger -t watchdog "ALERT dry-run, not delivered: $text"
+    return 0
+  fi
   if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
     curl -fsS -m 10 "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
       --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
       --data-urlencode "text=${text}" -o /dev/null \
       || logger -t watchdog "ALERT telegram send failed"
   fi
+  # Unconditional 0, for the same reason alert_transition ends that way.
+  return 0
 }
+
+# Unkeyed send. This is the path with no idea whether it has said this before,
+# so it — and ONLY it — gets the identical-text floor. alert_once and
+# alert_transition have already made a deliberate, state-backed decision to
+# speak; running them through the floor as well would mean two mechanisms
+# arguing about one message, and the quieter one silently winning.
+alert() {
+  local text="$1 $2"
+  mkdir -p "$MON/state"
+  # Expire old dedupe stamps here rather than in a timer: this is the only code
+  # that creates them, so it is the only code that has to remember them.
+  find "$MON/state" -maxdepth 1 -name 'dedupe_*' -mmin +1440 -delete 2>/dev/null || true
+  local h sf now last
+  h=$(printf '%s' "$text" | md5sum | cut -c1-16)
+  sf="$MON/state/dedupe_$h"
+  now=$(date +%s); last=$(cat "$sf" 2>/dev/null | tr -dc '0-9')
+  if [ -n "$last" ] && [ "$((now - last))" -lt "$ALERT_DEDUPE_SEC" ]; then
+    logger -t watchdog "ALERT duplicate suppressed (${ALERT_DEDUPE_SEC}s window): $text"
+    return 0
+  fi
+  printf '%s' "$now" > "$sf"
+  _alert_deliver "$text"
+  return 0
+}
+
+# One incident is one message. The caller names the subject; repeated detections
+# of the SAME subject inside <cooldown> go to the journal only, and a re-page
+# after the cooldown is a deliberate still-broken reminder. alert_clear on
+# recovery is the other half and is load-bearing: without it the next genuine
+# outage of that subject inherits the last one's silence.
+alert_once() {  # key cooldown emoji text
+  local key="$1" cd="$2" emoji="$3" text="$4"
+  local sf="$MON/state/paged_$(_alert_key "$key")"
+  local now last
+  now=$(date +%s); last=$(cat "$sf" 2>/dev/null | tr -dc '0-9')
+  if [ -n "$last" ] && [ "$((now - last))" -lt "$cd" ]; then
+    logger -t watchdog "ALERT held for ${key}: paged $((now - last))s ago, cooldown ${cd}s"
+    return 0
+  fi
+  mkdir -p "$MON/state"
+  printf '%s' "$now" > "$sf"
+  _alert_deliver "$emoji $text"
+  return 0
+}
+alert_clear() { rm -f "$MON/state/paged_$(_alert_key "$1")"; return 0; }
 alert_transition() {  # key state emoji text
   local key="$1" state="$2" emoji="$3" text="$4"
   local sf="$MON/state/host_$(printf '%s' "$key" | tr -c 'a-zA-Z0-9' '_')"
   local prev="ok"; [ -f "$sf" ] && prev=$(cat "$sf")
   [ "$state" = "$prev" ] && return 0
   printf '%s' "$state" > "$sf"
-  if [ "$state" = "bad" ]; then alert "$emoji" "$text"; else alert "✅" "RECOVERED: $key"; fi
+  # A transition IS the deliberate decision, so deliver it directly rather than
+  # through alert()'s floor: a unit that fails, recovers and fails again inside
+  # five minutes is genuinely three events, and the floor would eat the third.
+  if [ "$state" = "bad" ]; then _alert_deliver "$emoji $text"; else _alert_deliver "✅ RECOVERED: $key"; fi
   # MUST return 0 unconditionally. A trailing `[ "$state" = "ok" ] && alert ...`
   # here returned 1 on the bad path, so a caller written as
   #   check && alert_transition k bad ... || alert_transition k ok ...
@@ -84,39 +175,47 @@ MON="${MON:-/opt/monitoring}"
 unit="${1:-unknown.unit}"
 utype=$(systemctl show "$unit" -p Type --value 2>/dev/null)
 
-# Per-unit page cooldown. The recovery guard below only silences a unit that
-# comes BACK; a unit that cannot start at all fires OnFailure on every restart
-# forever, and each one used to be a separate Telegram. On 2026-08-28
-# vitareba-app could not read its .env (root-owned after a chown --reference),
-# so Restart=on-failure + RestartSec=3 produced 18 restarts and SIX identical
-# "UNIT DOWN" messages in 60 seconds — for ONE incident that no amount of
-# paging would fix any faster. A crash loop is not new information every 3
-# seconds: page once, hold for COOLDOWN, then re-page as a reminder while it is
-# still down. Recovery clears the stamp, so the next genuine outage pages
-# immediately instead of inheriting the last one's silence.
+# Per-unit page cooldown, via lib-alert's alert_once. The recovery guard below
+# only silences a unit that comes BACK; a unit that cannot start at all fires
+# OnFailure on every restart forever, and each one used to be a separate
+# Telegram. On 2026-08-28 vitareba-app could not read its .env (root-owned
+# after a chown --reference), so Restart=on-failure + RestartSec=3 produced 18
+# restarts and SIX identical "UNIT DOWN" messages in 60 seconds — for ONE
+# incident that no amount of paging would fix any faster. A crash loop is not
+# new information every 3 seconds: page once, hold for COOLDOWN, then re-page
+# as a reminder while it is still down. alert_clear on recovery is the other
+# half, so the next genuine outage pages immediately instead of inheriting the
+# last one's silence.
 COOLDOWN=${NOTIFY_COOLDOWN_SEC:-1800}
-stamp="$MON/state/paged_$(printf '%s' "$unit" | tr -c 'a-zA-Z0-9' '_')"
 
 if [ "$utype" != "oneshot" ]; then
   sleep 8
   if systemctl is-active --quiet "$unit"; then
-    rm -f "$stamp"
+    alert_clear "$unit"
     logger -t watchdog "unit ${unit} failed but recovered (restart/transient) — not paging"
+    exit 0
+  fi
+else
+  # A oneshot that a retry has ALREADY fixed is not an incident either. The
+  # weekly restic-check failed at 18:41:42 on a 25-day-old stale lock left by
+  # the laptop, was re-run at 18:42:28 and finished clean at 18:44:46 — and
+  # still paged, because OnFailure fires on the failing run and nothing ever
+  # looked again. So look again: wait out a retry window, then ask whether the
+  # unit has since run. A retry in flight or a successful result means the
+  # answer is already on its way and no human is needed. Nothing is lost by
+  # waiting — if the retry fails too, its own OnFailure fires and we page then.
+  sleep "${ONESHOT_GRACE_SEC:-90}"
+  state=$(systemctl is-active "$unit" 2>/dev/null)
+  result=$(systemctl show "$unit" -p Result --value 2>/dev/null)
+  if [ "$state" = "active" ] || [ "$state" = "activating" ] || [ "$result" = "success" ]; then
+    alert_clear "$unit"
+    logger -t watchdog "oneshot ${unit} failed but a later run is active/succeeded — not paging"
     exit 0
   fi
 fi
 
-now=$(date +%s)
-last=$(cat "$stamp" 2>/dev/null | tr -dc '0-9')
-if [ -n "$last" ] && [ "$((now - last))" -lt "$COOLDOWN" ]; then
-  logger -t watchdog "unit ${unit} still failing — paged $((now - last))s ago, holding for ${COOLDOWN}s"
-  exit 0
-fi
-mkdir -p "$MON/state"
-printf '%s' "$now" > "$stamp"
-
 tail=$(journalctl -u "$unit" -n 4 --no-pager -o cat 2>/dev/null | tr '\n' ' ' | cut -c1-300)
-alert "🔴" "UNIT DOWN: ${unit} — ${tail:-<no log>}"
+alert_once "$unit" "$COOLDOWN" "🔴" "UNIT DOWN: ${unit} — ${tail:-<no log>}"
 NF
 chmod +x "$MON/notify-failure.sh"
 
@@ -125,6 +224,12 @@ cat > /etc/systemd/system/notify-failure@.service <<'SVC'
 Description=Telegram alert for failed unit %i
 [Service]
 Type=oneshot
+# The notifier deliberately waits (8s for a service, ONESHOT_GRACE_SEC=90s for a
+# oneshot) before deciding to page. DefaultTimeoutStartSec is 90s, so without an
+# explicit timeout systemd would SIGTERM the notifier inside its own grace window
+# and the page would silently never be sent — an anti-noise guard that turns into
+# an anti-alert bug. Give it room for the longest wait plus the journal read.
+TimeoutStartSec=300
 # %i is the failed unit name (systemd-escaped); notify-failure.sh unescapes for display.
 ExecStart=/opt/monitoring/notify-failure.sh %i
 SVC
@@ -207,6 +312,54 @@ done
 # Retire the old aggregate latch so it cannot linger at `bad` forever.
 rm -f "$MON/state/host_units"
 
+# App .env readability — repair it, don't report it.
+#
+# Every *-app unit runs as User= and sources /opt/<app>/shared/.env at start.
+# If that file is not readable by that user the app cannot boot AT ALL: it
+# crash-loops until a human notices. This happened TWICE on 2026-08-28 —
+# vitareba at 18:38 (root-owned after a `chown --reference` of a root:root
+# backup) and botsmann at 20:16 (root-owned by an ad-hoc edit four hours
+# later). Both times the only signal was a wall of identical UNIT DOWN
+# messages, and both times the remedy was the same one deterministic command.
+#
+# A failure whose correct answer is knowable is not worth a human's attention.
+# The owner here is not a guess — it is the unit's own User=. So fix it, verify
+# the fix, bring the app back, and send ONE message saying what was repaired: a
+# report, not a request. The alert that remains is the one worth having, because
+# it is the only way a recurring corruption ever becomes visible.
+# APPROOT is overridable for the same reason MON is: so test-host-alerts.sh can
+# drive this exact loop against a temp tree. Prod never sets it.
+APPROOT="${APPROOT:-/opt}"
+for unit in $(systemctl list-unit-files --no-legend --plain '*-app.service' 2>/dev/null | awk '{print $1}'); do
+  app=${unit%-app.service}
+  envf="$APPROOT/$app/shared/.env"
+  [ -f "$envf" ] || continue
+  user=$(systemctl show "$unit" -p User --value 2>/dev/null); user=${user:-root}
+  if sudo -n -u "$user" test -r "$envf" 2>/dev/null; then
+    # Healthy: drop any past repair stamp so a recurrence is reported again
+    # rather than inheriting the previous repair's cooldown.
+    alert_clear "envfix_$app"
+    continue
+  fi
+  owner=$(stat -c '%U:%G' "$envf" 2>/dev/null)
+  if chown "$user:$user" "$envf" 2>/dev/null && chmod 600 "$envf" 2>/dev/null \
+     && sudo -n -u "$user" test -r "$envf" 2>/dev/null; then
+    # The app is definitionally down at this point (it cannot have read its own
+    # env), so a restart is not a risk — it is the rest of the repair. Clear the
+    # start-limit first or systemd refuses to try again.
+    systemctl reset-failed "$unit" >/dev/null 2>&1 || true
+    systemctl restart "$unit" >/dev/null 2>&1 || true
+    sleep 5
+    up=$(systemctl is-active "$unit" 2>/dev/null)
+    alert_once "envfix_$app" 3600 "🔧" \
+      "FIXED (no action needed): $envf was $owner, unreadable by $user — re-owned to $user:$user and restarted $unit (now: $up). It could not have booted until this was done."
+  else
+    # Could not repair: this one IS a question, so ask it, once.
+    alert_once "envbad_$app" 3600 "🔑" \
+      "$envf is not readable by $user ($unit) and auto-repair failed — the app cannot start. Fix: chown $user:$user $envf && systemctl restart $unit"
+  fi
+done
+
 # Postgres accepting connections
 if pg_isready -q 2>/dev/null; then
   alert_transition postgres ok "" ""
@@ -246,6 +399,21 @@ OnFailure=notify-failure@%n.service
 EOF
   wired=$((wired+1))
 done
+
+# ── Retire a unit that can only ever be noise ────────────────────────────────
+# cloud-init-hotplugd has been `failed` since 2026-07-22 on a box with no
+# hotplug events to handle. It is not an incident, it never recovers, and it is
+# the member that pinned the OLD aggregate failed-units latch at `bad` for six
+# weeks — hiding every real failure behind it (including vitareba's 25 crons
+# dying). Now that the check is per-unit it re-pages this instead, which is the
+# other failure mode of the same fact. Neither is right: a unit that can only
+# produce noise should not be in the failed set at all. Mask it (reversible
+# with `systemctl unmask`) rather than teach the checker to look away, so that
+# `systemctl --failed` keeps meaning exactly "something is wrong here".
+systemctl stop cloud-init-hotplugd.socket >/dev/null 2>&1 || true
+systemctl mask cloud-init-hotplugd.socket cloud-init-hotplugd.service >/dev/null 2>&1 || true
+systemctl reset-failed cloud-init-hotplugd.service >/dev/null 2>&1 || true
+rm -f "$MON/state/host_unit_cloud_init_hotplugd_service"
 
 systemctl daemon-reload
 systemctl enable --now host-check.timer >/dev/null 2>&1 || true
