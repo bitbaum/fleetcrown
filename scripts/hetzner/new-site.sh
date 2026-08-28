@@ -30,10 +30,15 @@
 #
 # WHAT IT DOES NOT DO
 #
-#   - It does not set HETZNER_SSH_PRIVATE_KEY on the new repo. That secret is
-#     what lets CD reach the box, and handling a private key is the operator's
-#     job, not a script's. It prints the command. Better still: put a
-#     self-hosted Actions runner on the box and the secret stops existing.
+#   - It does not READ the deploy key. It pipes DEPLOY_KEY_PATH straight into
+#     `gh secret set`, so the key never enters a variable, a log or an agent's
+#     context — but the step is automatic. An earlier version printed the
+#     command instead and called that operator hygiene; what it actually
+#     produced was substrata sitting in production for a day deploying only
+#     from a laptop, because a printed instruction is a step that gets skipped.
+#     The secret is set per-repo on purpose: GitHub Free does not expose
+#     org-level secrets to PRIVATE repositories, so an org secret alone would
+#     silently cover only half the fleet.
 #   - It creates the FleetCrown project and widget token (provision-widget.ts),
 #     but treats failure as non-fatal: a site without a widget is fixable in a
 #     minute, whereas aborting halfway leaves a half-registered site on the box.
@@ -44,6 +49,7 @@ set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 source "$HERE/lib.sh"
 
+SECRET_OK=0
 SLUG=""; TITLE=""; OWNER="bitbaum"; KIND="client-site"; STATUS="prospect"
 VISIBILITY="--public"; DEPLOY=1; DRY=0
 # DEV_ROOT, GH_OWNER and SITES_BASE_DOMAIN come from _box-env.sh via lib.sh —
@@ -154,6 +160,25 @@ echo "→ repository"
 run "cd '$REPO_DIR' && git init -q && git add -A && git -c user.name='Mao Nakamoto' -c user.email='georgy.butaev@revamp-it.ch' commit -q -m 'feat: scaffold $TITLE' && git branch -M main"
 run "cd '$REPO_DIR' && gh repo create '$GH_OWNER/$SLUG' $VISIBILITY --source=. --remote=origin --push"
 
+# ----------------------------------------------------------------- ci secret
+# Without this the repo's deploy.yml is decoration: it runs, fails to reach the
+# box, and the site is live only as long as someone's laptop is. Piped, never
+# read. Non-fatal, like the widget: a site that exists beats one that aborted.
+echo "→ ci secret"
+if [ "$DRY" = 1 ]; then
+  say "DRY  gh secret set HETZNER_SSH_PRIVATE_KEY --repo $GH_OWNER/$SLUG < $DEPLOY_KEY_PATH"
+elif [ ! -r "$DEPLOY_KEY_PATH" ]; then
+  SECRET_OK=0
+  say "no key at $DEPLOY_KEY_PATH — CD will not reach the box."
+  say "  set DEPLOY_KEY_PATH, or: gh secret set HETZNER_SSH_PRIVATE_KEY --repo $GH_OWNER/$SLUG < <key>"
+elif gh secret set HETZNER_SSH_PRIVATE_KEY --repo "$GH_OWNER/$SLUG" < "$DEPLOY_KEY_PATH" 2>/dev/null; then
+  SECRET_OK=1
+  say "HETZNER_SSH_PRIVATE_KEY set on $GH_OWNER/$SLUG"
+else
+  SECRET_OK=0
+  say "could not set the secret (gh auth?) — CD will not reach the box until it is set."
+fi
+
 # ------------------------------------------------------------------- register
 echo "→ register"
 LINE="$SLUG|$PORT|$SLUG.$BASE_DOMAIN|$REPO_DIR|.|-|$OWNER|$KIND|$STATUS|-|-|$(date -u +%Y-%m-%d)"
@@ -173,6 +198,9 @@ if [ "$DEPLOY" = 1 ]; then
 fi
 
 # ----------------------------------------------------------------------- next
+if   [ "$DRY" = 1 ];      then SECRET_OK_LABEL="would be set from $DEPLOY_KEY_PATH"
+elif [ "$SECRET_OK" = 1 ]; then SECRET_OK_LABEL="set — push deploys"
+else                            SECRET_OK_LABEL="NOT set — CD cannot reach the box"; fi
 cat <<NEXT
 
 ✓ $TITLE
@@ -181,15 +209,13 @@ cat <<NEXT
   repo      https://github.com/$GH_OWNER/$SLUG
   register  $SLUG|$PORT|... in apps.conf
 
+  ci        deploy key ${SECRET_OK_LABEL}
+
   Still yours to do:
 
-  1. CD needs the deploy key on the new repo — a script does not handle
-     private keys:
-       gh secret set HETZNER_SSH_PRIVATE_KEY --repo $GH_OWNER/$SLUG < <your key>
-
-  2. Change app/globals.css. Shipping in the default palette is the one thing
+  1. Change app/globals.css. Shipping in the default palette is the one thing
      a bespoke site must not do.
 
-  3. Commit the register change:
+  2. Commit the register change:
        cd $(dirname "$MANIFEST") && git add apps.conf && git commit
 NEXT

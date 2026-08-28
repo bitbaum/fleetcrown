@@ -29,3 +29,10 @@ SITES_BASE_DOMAIN="${SITES_BASE_DOMAIN:-orangecat.ch}"
 
 # Where local checkouts live.
 DEV_ROOT="${DEV_ROOT:-/home/g/dev}"
+
+# The SSH key GitHub Actions uses to reach the box. Scripts never READ this
+# file — they pipe it into `gh secret set`, so the key never lands in a shell
+# variable, a log, or an agent's context. One path, because the alternative was
+# a per-repo manual step that got skipped and produced a site that deployed
+# only from a laptop.
+DEPLOY_KEY_PATH="${DEPLOY_KEY_PATH:-$HOME/.ssh/fleetcrown_ci_deploy}"
