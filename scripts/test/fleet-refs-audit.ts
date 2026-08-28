@@ -197,4 +197,33 @@ assert.deepEqual(
   "a failed path lookup is unreadable — never clean, and never a false stale"
 );
 
-console.log("OK: 22 assertions passed");
+
+// --- the compact list form is a `uses:` too --------------------------------
+// `^\s*uses:` does not match `- uses: …`. Steps are routinely written that
+// way, so the audit skipped them while reporting a ref count that looked
+// complete: 59 of 155 files held at least one reference it never checked.
+assert.deepEqual(
+  usesOf("jobs:\n  x:\n    steps:\n      - uses: actions/checkout@v5\n"),
+  ["actions/checkout"],
+  "a step in the compact list form (- uses:) must be matched"
+);
+
+assert.deepEqual(
+  usesOf("jobs:\n  x:\n    steps:\n      - name: Checkout\n        uses: actions/checkout@v5\n"),
+  ["actions/checkout"],
+  "the multi-line step form must still be matched"
+);
+
+assert.deepEqual(
+  partsOf("jobs:\n  x:\n    steps:\n      - uses: bitbaum/fleet/.github/actions/thing@main\n"),
+  [{ slug: "bitbaum/fleet", subpath: "/.github/actions/thing", ref: "main" }],
+  "a fleet-owned action referenced as a step yields its path, so the file is checked too"
+);
+
+assert.deepEqual(
+  usesOf("jobs:\n  x:\n    steps:\n      - run: echo not-a-uses\n"),
+  [],
+  "a list item that is not a uses: must not be matched"
+);
+
+console.log("OK: 26 assertions passed");
