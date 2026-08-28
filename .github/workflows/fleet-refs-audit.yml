@@ -1,0 +1,56 @@
+# Fleet reference audit — catch a broken `uses:` BEFORE it stops the fleet.
+#
+# Three times in three days a rename or a transfer silently stopped every merge
+# and every deploy across the org:
+#
+#   2026-08-26  the account `maonakamoto` was renamed to `catomean`
+#   2026-08-28  the repos moved into the `bitbaum` org
+#   ...and the 2026-08-27 repair, which pointed everything at `catomean`, was
+#      itself killed by the second move about ten hours later.
+#
+# Nothing looked wrong any of those times. GitHub follows a rename or transfer
+# for the REST API and for git, so every way a human normally checks says the
+# reference is fine. Actions' `uses:` resolver is the one consumer that does
+# not follow it — the run dies before any job exists, with no log, and pull
+# requests stay green and mergeable while nothing ships.
+#
+# So the audit cannot live inside the repos it protects: the workflow that
+# would report the failure is the workflow that cannot start. It runs here, on
+# a schedule, and asks GitHub what every referenced repo is really called.
+#
+# LIMITATION, stated rather than assumed: this fails red in Actions, which is
+# not a channel anyone watches. It closes the detection gap, not the
+# notification gap. Routing it through FleetCrown's own alert path (which
+# reaches Telegram) is the follow-up.
+name: Fleet reference audit
+
+on:
+  schedule:
+    # Every 6 hours. A transfer breaks the fleet instantly, so a daily check
+    # would leave up to a day of silent outage — which is roughly how long the
+    # last one lasted before anyone noticed.
+    - cron: '0 */6 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Audit every workflow reference in the org
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FLEET_ORG: bitbaum
+          RETIRED_HANDLES: maonakamoto
+          # A floor, because "0 problems" across 0 repos is not a pass. If the
+          # token ever stops seeing the fleet, that must fail rather than
+          # quietly report clean.
+          MIN_REPOS: '10'
+        run: node scripts/ci/fleet-refs-audit.mjs
