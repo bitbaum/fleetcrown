@@ -35,6 +35,15 @@ export function retiredHandleMatches(text, retiredHandles) {
  *  pathVerdictFor below. Callers that only want the repo may keep destructuring
  *  `[, owner, name]`.
  *
+ *  The optional leading `- ` matters. A step written in the compact list form
+ *  (`- uses: actions/checkout@v5`) is not matched by `^\s*uses:`, so before
+ *  2026-08-28 the audit silently skipped it: 59 of 155 workflow files in the
+ *  fleet contained at least one reference it never looked at, while reporting
+ *  a count that made it look like it had checked everything. Job-level `uses:`
+ *  (a mapping key, never a list item) was always matched, which is why no
+ *  outage came of it — but a fleet-owned action referenced as a step would
+ *  have been invisible to exactly the check built to catch it.
+ *
  *  LIMITATION, stated rather than assumed: this matches by line shape, not by
  *  YAML structural position. A `run: |` block whose FIRST physical line
  *  (after indentation) happens to read literally `uses: owner/repo@ref` —
