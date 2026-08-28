@@ -36,6 +36,8 @@
 
 const ORG = process.env.FLEET_ORG || 'bitbaum';
 const RETIRED = (process.env.RETIRED_HANDLES || 'maonakamoto').split(',').map(s => s.trim()).filter(Boolean);
+const SELF_REPO = process.env.SELF_REPO || 'fleetcrown';
+const SELF_WORKFLOW = 'fleet-refs-audit.yml';
 const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
 if (!token) { console.log('[fleet-refs-audit] no token — skipping'); process.exit(0); }
 
@@ -91,7 +93,13 @@ for (const repo of repos) {
     // documentation is a gate people learn to ignore. What matters is a live
     // reference — a `uses:`, or a clone/gh call inside a `run:` block.
     const live = text.split('\n').filter(l => !/^\s*#/.test(l)).join('\n');
+    // This audit's own workflow names the retired handle in RETIRED_HANDLES —
+    // that is its configuration, not a stale reference. Caught the hard way:
+    // the first CI run failed on itself, because the mutation tests had run
+    // against a fleet that did not yet contain the audit.
+    const isSelf = f.name === SELF_WORKFLOW && repo.full_name === `${ORG}/${SELF_REPO}`;
     for (const h of RETIRED) {
+      if (isSelf) break;
       if (live.includes(h)) retired.push(`${repo.full_name}/.github/workflows/${f.name} names "${h}" in a live line`);
     }
     for (const [, owner, name] of text.matchAll(USES)) {
