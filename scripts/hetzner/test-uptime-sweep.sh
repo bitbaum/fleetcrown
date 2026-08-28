@@ -143,9 +143,70 @@ done <<<"$(extra_targets)"
   || no "now in apps.conf — delete from EXTRA_TARGETS: $dupes"
 
 # And they must actually be covered, or the four apps apps.conf excludes stay
-# exactly as unwatched as they were before this script existed.
-extras="$(extra_targets | grep -c . || true)"
-eq 4 "$extras" "the four pre-existing services apps.conf documents are covered"
+# exactly as unwatched as they were before this script existed. Asserted BY
+# NAME rather than by counting: the list now holds two categories, and a count
+# would go green if one of the four were swapped for something else entirely.
+for svc in bridge fleetcrown orangecat revampit; do
+  extra_targets | grep -q "^${svc}	" \
+    && ok "$svc is covered — apps.conf documents it as deliberately absent" \
+    || no "$svc is in no manifest and now in no hand-list either"
+done
+
+echo
+echo "url_path / url_host — reading a Location header"
+eq /api/health "$(url_path https://aoz.orangecat.ch/api/health)" "a plain path"
+eq /api/health "$(url_path 'https://h/api/health?x=1')"          "the query is not part of the path"
+eq /api/health "$(url_path https://h/api/health/)"               "a trailing slash is not a different route"
+eq /login      "$(url_path 'https://petvity.orangecat.ch/login?returnTo=%2Fapi%2Fhealth')" \
+                                                                 "the auth wall's path is /login, whatever its query smuggles"
+eq /           "$(url_path https://h)"                           "no path at all reads as /"
+eq aoz.orangecat.ch "$(url_host https://aoz.orangecat.ch/api/health)" "the host, for saying where we ended up"
+
+echo
+echo "is_redirect"
+is_redirect 308 && ok "308 is a redirect"     || no "308 should be a redirect"
+is_redirect 307 && ok "307 is a redirect"     || no "307 should be a redirect"
+is_redirect 200 && no "200 is not a redirect" || ok "200 is not a redirect"
+is_redirect 404 && no "404 is not a redirect" || ok "404 is not a redirect"
+
+echo
+echo "same_path_redirect — a host move, or an auth wall wearing the same code?"
+same_path_redirect /api/health https://aoz.orangecat.ch/api/health \
+  && ok "aoz-wohnen -> aoz keeps the path: follow it, the health route is real" \
+  || no "a canonical-host redirect must be followed"
+same_path_redirect /api/health 'https://petvity.orangecat.ch/login?returnTo=%2Fapi%2Fhealth' \
+  && no "petvity's auth wall must NOT be followed — 200 from a login page is a false green" \
+  || ok "an auth wall is not a health route, however inviting its 200 looks"
+same_path_redirect /api/health https://h/api/health/ \
+  && ok "a trailing slash is the same route" || no "trailing slash should match"
+same_path_redirect /api/health https://h/en/api/health \
+  && no "a locale prefix is a different route" || ok "a locale prefix is not the same route"
+same_path_redirect /api/health "" \
+  && no "no Location means nothing to follow" || ok "an empty Location is not a redirect target"
+
+echo
+echo "annushka — served, has a process, and can never be in apps.conf"
+extra_targets | grep -q "^annushka	annushka.orangecat.ch	/api/health$" \
+  && ok "annushka is watched: its static pages serve on while its api dies" \
+  || no "annushka should be in EXTRA_TARGETS"
+
+echo "HEALTH_PATHS — apps that answer somewhere other than /api/health"
+eq /api/healthz "$(health_path_for petvity)" "petvity's real check; /api/health is its pet health-RECORDS api, behind auth"
+eq /healthz     "$(health_path_for bridge)"  "bridge is an SSE service, not a Next app"
+eq /api/health  "$(health_path_for kivvi)"   "an app that follows the convention needs no entry"
+eq /api/health  "$(health_path_for '')"      "an empty name falls back to the default rather than emptying the URL"
+
+# Both target builders must consult the table. manifest_targets passed it to awk
+# as a file-argument assignment, which awk applies only when it REACHES that
+# argument — long after BEGIN built the lookup. bridge (hand-listed, -v) worked;
+# petvity (manifest) silently kept /api/health and stayed blind. Syntax was
+# fine and the sweep still ran; only the emitted path was wrong.
+manifest_targets "$MANIFEST" | grep -q "^petvity	petvity.orangecat.ch	/api/healthz$" \
+  && ok "a MANIFEST app picks up its declared path" \
+  || no "manifest_targets ignored HEALTH_PATHS — check awk gets it via -v, not a file-arg assignment"
+extra_targets | grep -q "^bridge	bridge.orangecat.ch	/healthz$" \
+  && ok "a HAND-LISTED app picks up its declared path" \
+  || no "extra_targets ignored HEALTH_PATHS"
 
 echo
 if [ "$FAIL" -gt 0 ]; then

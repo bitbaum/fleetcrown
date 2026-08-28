@@ -23,9 +23,16 @@
 # Hence: probe /api/health, and treat 5xx as DOWN. An app with no health route
 # can only be asked "do you serve anything at all", which is a weaker question —
 # so it is reported as LIMITED, never as a pass. That distinction is the point.
-# Nine apps have a health route; the rest are monitored with one hand tied, and
-# saying so is what keeps the number honest (see scripts/ci/shared-inventory.sh,
-# which ratchets that health-route count).
+# Twelve targets answer a health route; the rest are monitored with one hand
+# tied, and saying so is what keeps the number honest (see
+# scripts/ci/shared-inventory.sh, which ratchets that health-route count).
+#
+# THREE of those twelve were counted among "the rest" until 2026-08-28, and none
+# of them was ever broken — the sweep was asking the wrong URL and believing the
+# answer. aoz-wohnen and revampit answer on the canonical host they redirect to;
+# petvity answers at /api/healthz, while the /api/health we asked for is its pet
+# health-RECORDS api sitting behind auth. Each looked exactly like an app with
+# no health route, which is the one shape this script must never get wrong.
 #
 # Runs off-box on GitHub's infrastructure, so it still reports when bitbaum is
 # dead — which is exactly when an on-box check tells you nothing.
@@ -61,19 +68,48 @@ DEFAULT_HEALTH_PATH=/api/health
 # test-uptime-sweep.sh fails on the duplicate and forces its removal — a
 # hand-list that cannot quietly outlive its reason.
 #
-# Third field = health path, when the service does not use the fleet's
-# /api/health convention. bridge is a ~300-line SSE fan-out service, not a Next
-# app: it answers /healthz and returns 404 for `/` by design. Probing it the
-# standard way reported a perfectly healthy service as DOWN, which is how a
-# monitor teaches people to ignore it.
+# Health paths for both lists live in HEALTH_PATHS below, so there is one place
+# to look when an app does not follow the convention.
+#
+# annushka is here for a different reason and will NOT die the same way: it is a
+# static concept site with no repo, deployed by hand, so it can never appear in
+# a manifest whose other fields are a repo path and a deploy target. It does
+# have a process — annushka-api on 4030 serves /api/* — which can fall over
+# while the static pages carry on serving perfectly. Exactly botsmann's shape.
 EXTRA_TARGETS='
-bridge|bridge.orangecat.ch|/healthz
+bridge|bridge.orangecat.ch
 fleetcrown|fleetcrown.orangecat.ch
 orangecat|orangecat.ch
 revampit|revampit.orangecat.ch
+annushka|annushka.orangecat.ch
+'
+
+# Apps whose health route is not at the fleet's /api/health. One table for
+# manifest apps and hand-listed ones alike — an app that answers somewhere else
+# is the same problem whichever list it came from.
+#
+# bridge is a ~300-line SSE fan-out service, not a Next app: it answers /healthz
+# and 404s on `/` by design. Probed the standard way it read DOWN — a perfectly
+# healthy service, which is how a monitor teaches people to ignore it.
+#
+# petvity is worse, because its /api/health looks like it exists. That path is
+# the pet HEALTH-RECORDS api, behind auth, so it 307s to /login. The sweep read
+# "no health route" and settled for asking whether the homepage renders — while
+# /api/healthz was there the whole time answering {"ok":true,"db":true}, the
+# database check we actually wanted. Measured 2026-08-28.
+HEALTH_PATHS='
+bridge|/healthz
+petvity|/api/healthz
 '
 
 # ── Pure helpers (no network, no box) — exercised by test-uptime-sweep.sh ─────
+
+# health_path_for <name> — the declared health path, or the fleet default.
+health_path_for() {
+  local declared
+  declared=$(printf '%s\n' "$HEALTH_PATHS" | awk -F'|' -v n="$1" '$1 == n { print $2; exit }')
+  printf '%s' "${declared:-$DEFAULT_HEALTH_PATH}"
+}
 
 # manifest_targets <file> — echo "name<TAB>domain" per monitorable app.
 #
@@ -82,16 +118,23 @@ revampit|revampit.orangecat.ch
 # same way selfhost-deploy.yml resolves ${DOMAINS%%,*} — www aliases are the
 # same app and a second probe would only double the noise.
 manifest_targets() {
-  awk -F'|' '
+  awk -F'|' -v HEALTH="$DEFAULT_HEALTH_PATH" -v PATHS="$HEALTH_PATHS" '
+    BEGIN {
+      n = split(PATHS, lines, "\n")
+      for (i = 1; i <= n; i++) {
+        if (split(lines[i], f, "|") == 2 && f[1] != "") declared[f[1]] = f[2]
+      }
+    }
+    function health_for(name) { return (name in declared) ? declared[name] : HEALTH }
     /^[[:space:]]*#/ || /^[[:space:]]*$/ { next }
     {
       name = $1; domains = $3; status = $9
       if (domains == "-" || domains == "") next
       if (status == "archived" || status == "handed-over") next
       sub(/,.*/, "", domains)
-      print name "\t" domains "\t" HEALTH
+      print name "\t" domains "\t" health_for(name)
     }
-  ' HEALTH="$DEFAULT_HEALTH_PATH" "$1"
+  ' "$1"
 }
 
 # manifest_skipped <file> — echo "name<TAB>reason" for every app NOT probed, so
@@ -110,8 +153,15 @@ manifest_skipped() {
 # extra_targets — the documented-absent four, same "name<TAB>domain" shape.
 extra_targets() {
   printf '%s\n' "$EXTRA_TARGETS" \
-    | awk -F'|' -v HEALTH="$DEFAULT_HEALTH_PATH" \
-        'NF>=2 { print $1 "\t" $2 "\t" (NF>=3 && $3 != "" ? $3 : HEALTH) }'
+    | awk -F'|' -v HEALTH="$DEFAULT_HEALTH_PATH" -v PATHS="$HEALTH_PATHS" '
+    BEGIN {
+      n = split(PATHS, lines, "\n")
+      for (i = 1; i <= n; i++) {
+        if (split(lines[i], f, "|") == 2 && f[1] != "") declared[f[1]] = f[2]
+      }
+    }
+    function health_for(name) { return (name in declared) ? declared[name] : HEALTH }
+        NF>=2 { print $1 "\t" $2 "\t" health_for($1) }'
 }
 
 # health_verdict <http_code> — what /api/health told us.
@@ -127,6 +177,55 @@ health_verdict() {
     5??|000|"")   echo down ;;
     *)            echo absent ;;
   esac
+}
+
+# is_redirect <http_code> — 3xx, the code that means "ask somewhere else".
+is_redirect() { case "$1" in 3??) return 0 ;; *) return 1 ;; esac; }
+
+# url_path <url> — the path, without query or fragment, trailing slash trimmed.
+# `https://h/api/health?x=1` -> `/api/health`; `https://h` -> `/`.
+url_path() {
+  local rest="${1#*://}"
+  case "$rest" in
+    */*) rest="/${rest#*/}" ;;
+    *)   rest="/" ;;
+  esac
+  rest="${rest%%\?*}"
+  rest="${rest%%#*}"
+  [ "$rest" = / ] || rest="${rest%/}"
+  printf '%s' "$rest"
+}
+
+# url_host <url> — the hostname, for saying WHERE we ended up in the report.
+url_host() {
+  local rest="${1#*://}"
+  printf '%s' "${rest%%/*}"
+}
+
+# same_path_redirect <requested_path> <redirect_url> — did this redirect only
+# move HOSTS, keeping the path we asked for?
+#
+# A 3xx on the health path is two different things wearing one status code, and
+# they need opposite treatment:
+#
+#   aoz-wohnen.orangecat.ch 308s to aoz.orangecat.ch — same path, canonical
+#   host. The health route exists and answers 200; we were asking the wrong
+#   hostname and reporting LIMITED for an app that has a working check. Worse,
+#   had its database died the redirect would still have been a 308 and the
+#   sweep would still have said "serving".
+#
+#   petvity 307s /api/health to /login?returnTo=%2Fapi%2Fhealth — an auth wall.
+#   Following that returns 200 from a LOGIN PAGE. A blanket `curl -L` would
+#   report petvity UP on the strength of a form: a false green, which is worse
+#   than the blind spot it set out to fix.
+#
+# So: follow it only when the path survives.
+same_path_redirect() {
+  local want="$1" got
+  [ -n "${2:-}" ] || return 1
+  got="$(url_path "$2")"
+  [ "$want" = / ] || want="${want%/}"
+  [ "$got" = "$want" ]
 }
 
 # root_verdict <http_code> — the weaker fallback question: does it serve at all?
@@ -178,6 +277,11 @@ probe_code() {
   normalize_code "$(curl -sS -o /dev/null -w '%{http_code}' --max-time "$TIMEOUT" "$1" 2>/dev/null || true)"
 }
 
+# probe_redirect <url> — echo the Location this URL redirects to, or nothing.
+probe_redirect() {
+  curl -sS -o /dev/null -w '%{redirect_url}' --max-time "$TIMEOUT" "$1" 2>/dev/null || true
+}
+
 # probe_app <domain> — echo "<state> <detail>".
 #
 # Retries only a NEGATIVE result. A 200 is believed immediately; a failure is
@@ -192,6 +296,25 @@ probe_app() {
     [ "$verdict" = absent ] && break   # no route — retrying cannot create one
     [ "$try" -lt "$TRIES" ] && sleep "$SLEEP"
   done
+
+  # Before giving up on the health route, check whether the 3xx was merely the
+  # canonical host telling us where it lives. Only a path-preserving redirect
+  # counts — see same_path_redirect for why following an auth wall is worse
+  # than not following at all.
+  if [ "$verdict" = absent ] && is_redirect "$code"; then
+    local target
+    target=$(probe_redirect "https://$domain$health_path")
+    if same_path_redirect "$health_path" "$target"; then
+      for (( try = 1; try <= TRIES; try++ )); do
+        code=$(probe_code "$target")
+        verdict=$(health_verdict "$code")
+        [ "$verdict" = up ] && { echo "up health:$code (redirected to $(url_host "$target"))"; return; }
+        [ "$verdict" = absent ] && break
+        [ "$try" -lt "$TRIES" ] && sleep "$SLEEP"
+      done
+      [ "$verdict" = down ] && { echo "down health:$code (redirected to $(url_host "$target"))"; return; }
+    fi
+  fi
 
   if [ "$verdict" = absent ]; then
     local rcode rverdict
