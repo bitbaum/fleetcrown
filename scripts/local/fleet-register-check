@@ -1,0 +1,119 @@
+#!/usr/bin/env bash
+#
+# Runs fleetcrown's own deploy-readiness gate — the half that can ONLY run
+# here, because it needs the actual fleet checkouts under ~/dev, which no CI
+# runner has. Nothing else schedules this: CI can only verify apps.conf's
+# shape, never whether a registered repo_path still points at something real.
+# That gap is exactly what let `sink`'s path go stale (aslan-tattoo -> s-ink)
+# for an unknown number of days until someone happened to run this by hand.
+#
+# Scheduled by the user timer fleet-register-check.timer (daily 09:15).
+# Lived untracked in ~/.local/bin until 2026-08-28 — which is why nothing
+# reviewed either of the two bugs below. ~/.local/bin/fleet-register-check is
+# now a symlink to this file.
+#
+# ── What it judges: the COMMITTED register, not the working tree ─────────────
+#
+# On 2026-08-28 at 22:15 and 22:16 this sent George two identical Telegrams
+# saying `substrata: port 4022 already taken`. Nothing was wrong with the
+# fleet. A different agent session was mid-edit in ~/dev/fleetcrown, and the
+# check read apps.conf from that half-saved working tree. Around fifteen agent
+# sessions share these checkouts, so the working tree here is a scratchpad, not
+# a statement about production — judging it means paging about someone's
+# unsaved keystrokes. The register that describes what actually runs is the one
+# on origin/main, and a genuinely broken register is CI's job to reject in the
+# PR that introduces it.
+#
+# ── How it alerts: at most one message per finding per day ──────────────────
+#
+# The two messages above were also identical, 60 seconds apart, because this
+# script had its own private Telegram call and no state of any kind. The rule
+# on the box (/opt/monitoring/lib-alert.sh) is one incident, one message; the
+# same rule applies here, with a local stamp, because the box's alert state
+# lives behind root and this runs on the laptop as an unprivileged user.
+#
+# --dry-run prints what it would send and delivers nothing. Every "does this
+# still work" run must use it: on 2026-08-28 a bare test of this very script
+# rang George's phone with a message that said, in full, that it was a test.
+set -uo pipefail
+
+DRY_RUN=""
+[ "${1:-}" = "--dry-run" ] && DRY_RUN=1
+
+FLEETCROWN="${FLEETCROWN_DIR:-$HOME/dev/fleetcrown}"
+BOX_SSH="ssh -o ConnectTimeout=8 -i $HOME/.ssh/fleetcrown_ci_deploy ubuntu@167.233.22.31"
+# A dry run keeps its own state dir, so it exercises the cooldown exactly like
+# the real thing (including "same finding, not repeating") without writing the
+# production stamps or delivering anything. A test path that skips the state is
+# a test of something other than what runs.
+STATE="${XDG_STATE_HOME:-$HOME/.local/state}/fleet-register-check${DRY_RUN:+/dry-run}"
+COOLDOWN=${REGISTER_COOLDOWN_SEC:-79200}   # 22h: at most one message per daily run
+mkdir -p "$STATE"
+
+[ -d "$FLEETCROWN" ] || { echo "fleet-register-check: $FLEETCROWN missing, skipping" >&2; exit 0; }
+
+# The committed register, from the remote's default branch. A fetch failure is
+# not fatal — a slightly stale origin/main is still a real commit, whereas the
+# working tree may be nobody's intention at all. Never fall back to the tree.
+TMPD=$(mktemp -d); trap 'rm -rf "$TMPD"' EXIT
+git -C "$FLEETCROWN" fetch --quiet origin main 2>/dev/null || true
+# REGISTER_REF exists so the failure path can actually be exercised against a
+# deliberately broken register; unset, it is origin/main and nothing else.
+REF="${REGISTER_REF:-origin/main}"
+git -C "$FLEETCROWN" rev-parse --verify --quiet "$REF" >/dev/null || REF=HEAD
+git -C "$FLEETCROWN" show "$REF:scripts/hetzner/apps.conf" > "$TMPD/apps.conf" 2>/dev/null || {
+  echo "fleet-register-check: cannot read apps.conf from $REF" >&2; exit 0; }
+
+OUT=$(cd "$FLEETCROWN" && MANIFEST="$TMPD/apps.conf" bash scripts/ci/check-deploy-ready.sh 2>&1)
+RC=$?
+
+echo "$OUT"
+[ "$RC" -eq 0 ] && exit 0
+
+MSG="🔴 fleet register check failed on $(hostname) (register as committed on $REF):
+$(echo "$OUT" | tail -15)"
+
+# One message per distinct finding per cooldown. Keyed on the CONTENT, so a new
+# and different problem is never muted by an old one still standing.
+KEY=$(printf '%s' "$MSG" | md5sum | cut -c1-16)
+STAMP="$STATE/paged_$KEY"
+NOW=$(date +%s)
+LAST=$(cat "$STAMP" 2>/dev/null | tr -dc '0-9')
+if [ -n "$LAST" ] && [ "$((NOW - LAST))" -lt "$COOLDOWN" ]; then
+  echo "fleet-register-check: same finding paged $((NOW - LAST))s ago — not repeating" >&2
+  exit "$RC"
+fi
+find "$STATE" -maxdepth 1 -name 'paged_*' -mtime +7 -delete 2>/dev/null || true
+
+printf '%s' "$NOW" > "$STAMP"
+if [ -n "$DRY_RUN" ]; then
+  echo "fleet-register-check: --dry-run, would have sent:" >&2
+  printf '%s\n' "$MSG" >&2
+  exit "$RC"
+fi
+
+notify-send -u critical -i dialog-warning "Fleet Register Check FAILED" "$(echo "$OUT" | tail -6)" 2>/dev/null || true
+printf '%s' "$MSG" | $BOX_SSH '
+    cd /opt/fleetcrown/app
+    set -a; source .env 2>/dev/null; set +a
+    text=$(cat)
+    # The app deliberately does not read the bare TELEGRAM_CHAT_ID name (see
+    # src/lib/env.ts) — it is namespaced per-app to avoid collisions on a box
+    # that runs several apps in the same env-var space. Check every alias.
+    CHAT_ID="${APP_TELEGRAM_CHAT_ID:-${FLEETCROWN_TELEGRAM_CHAT_ID:-${COCKPIT_TELEGRAM_CHAT_ID:-${TELEGRAM_CHAT_ID:-}}}}"
+    [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "$CHAT_ID" ] || { echo "no telegram creds on box" >&2; exit 0; }
+    python3 - "$text" "$CHAT_ID" <<PY
+import json, os, sys, urllib.request
+token = os.environ["TELEGRAM_BOT_TOKEN"]
+chat = sys.argv[2]
+text = sys.argv[1]
+req = urllib.request.Request(
+    f"https://api.telegram.org/bot{token}/sendMessage",
+    data=json.dumps({"chat_id": chat, "text": text}).encode(),
+    headers={"content-type": "application/json"},
+)
+urllib.request.urlopen(req, timeout=10)
+PY
+  ' 2>&1 || echo "fleet-register-check: telegram send failed" >&2
+
+exit "$RC"

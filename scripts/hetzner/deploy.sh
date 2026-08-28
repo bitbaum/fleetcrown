@@ -104,7 +104,12 @@ box "set -e
 if [ "$FORCE_ENV" = "--env" ] || ! box "test -f /opt/$NAME/shared/.env"; then
   [ -f "$SRC/.env.selfhost.local" ] || { echo "ERROR: $SRC/.env.selfhost.local missing"; exit 1; }
   scp -o BatchMode=yes "$SRC/.env.selfhost.local" "$BOX:/opt/$NAME/shared/.env"
-  box "chmod 600 /opt/$NAME/shared/.env"
+  # Ownership, not just mode. The app sources this file as its unit's User=;
+  # a .env it cannot read is a total outage (twice on 2026-08-28), and the
+  # correct owner is never in doubt. Assert it here as well as in
+  # host-check's repair loop, so the invariant is stated where the file is
+  # written and not only where it is later found broken.
+  box "sudo chown ubuntu:ubuntu /opt/$NAME/shared/.env && chmod 600 /opt/$NAME/shared/.env"
   echo "uploaded .env → shared/"
 fi
 
