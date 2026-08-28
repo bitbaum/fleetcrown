@@ -156,8 +156,14 @@ fi
 # Keying by unit means a NEW failure is a new key, which always transitions,
 # no matter what else is already broken. A unit that recovers clears its own
 # key. Same alert_transition, same storm-safety, without the shared latch.
-mapfile -t failed_units < <(systemctl list-units --type=service --state=failed --no-legend 2>/dev/null \
-  | awk '{print $1}' | grep -v '^notify-failure@')
+# --plain drops the leading "●" that systemd puts in front of a FAILED unit.
+# Without it `awk '{print $1}'` returns the bullet instead of the unit name, so
+# every failure becomes the same key and the same useless message ("FAILED
+# UNIT: ●") — which is how this shipped once already. The sed is belt and
+# braces for systemd builds that ignore --plain. The old aggregate code got
+# away with the bullet because it only tested the string for emptiness.
+mapfile -t failed_units < <(systemctl list-units --type=service --state=failed --no-legend --plain 2>/dev/null \
+  | sed 's/^[^A-Za-z0-9]*//' | awk '{print $1}' | grep -E '\.service$' | grep -v '^notify-failure@')
 declare -A unit_now=()
 for u in ${failed_units[@]+"${failed_units[@]}"}; do
   k="unit_$(printf '%s' "$u" | tr -c 'a-zA-Z0-9' '_')"
