@@ -45,7 +45,7 @@ Two properties worth keeping:
 2. Add the deploy key to the app repo (one secret, nothing else):
 
    ```bash
-   gh secret set HETZNER_SSH_PRIVATE_KEY -R catomean/<repo> < ~/.ssh/fleetcrown_ci_deploy
+   gh secret set HETZNER_SSH_PRIVATE_KEY -R bitbaum/<repo> < ~/.ssh/fleetcrown_ci_deploy
    ```
 
 3. Commit this shim to the app repo as `.github/workflows/deploy.yml`:
@@ -59,7 +59,7 @@ Two properties worth keeping:
 
    jobs:
      deploy:
-       uses: catomean/fleetcrown/.github/workflows/selfhost-deploy.yml@main
+       uses: bitbaum/fleetcrown/.github/workflows/selfhost-deploy.yml@main
        with:
          app: <apps.conf key>
        secrets: inherit

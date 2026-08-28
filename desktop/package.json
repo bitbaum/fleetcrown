@@ -76,7 +76,7 @@
     "afterPack": "./scripts/afterPack.cjs",
     "publish": {
       "provider": "github",
-      "owner": "catomean",
+      "owner": "bitbaum",
       "repo": "fleetcrown-releases"
     }
   },

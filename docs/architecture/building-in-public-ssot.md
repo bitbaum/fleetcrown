@@ -18,7 +18,7 @@ Every public product in the studio ships **three surfaces**:
 
 That triad is **building in public**. Quality must be tremendous: theme SSOT, media when structure demands it, no claims that contradict the code.
 
-The reusable kit is **[`bip-kit`](https://github.com/catomean/bip-kit)** on npm — parser + types. Bring your own design system. Dogfood: FleetCrown Thoughts (flagship), AOZ Wohnen (second consumer).
+The reusable kit is **[`bip-kit`](https://github.com/bitbaum/bip-kit)** on npm — parser + types. Bring your own design system. Dogfood: FleetCrown Thoughts (flagship), AOZ Wohnen (second consumer).
 
 ## Company voice vs user publishing
 
@@ -43,7 +43,7 @@ Roadmap and changelog are structured data (`RoadmapDoc`, `ChangelogEntry` in the
 | **1b** | Document triad + company/UGC | Done |
 | **1c** | Extract + publish `bip-kit`; FC depends on npm | Done |
 | **1d** | Second studio consumer (AOZ) on `bip-kit` | In progress |
-| **2** | Public GitHub + npm | Done — https://github.com/catomean/bip-kit |
+| **2** | Public GitHub + npm | Done — https://github.com/bitbaum/bip-kit |
 
 ## Funnel
 

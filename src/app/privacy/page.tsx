@@ -110,8 +110,8 @@ export default function PrivacyPage() {
           <h2 className="ui-public-prose-h2">Contact</h2>
           <p>
             For privacy questions, open an issue at{" "}
-            <a href="https://github.com/catomean/fleetcrown/issues" className="ui-public-link" target="_blank" rel="noopener noreferrer">
-              github.com/catomean/fleetcrown/issues
+            <a href="https://github.com/bitbaum/fleetcrown/issues" className="ui-public-link" target="_blank" rel="noopener noreferrer">
+              github.com/bitbaum/fleetcrown/issues
             </a>{" "}
             or reach Mao Nakamoto via the address on the GitHub profile.
           </p>

@@ -1,7 +1,7 @@
 name: Deploy
 
 # Push to main → deploy to bitbaum. All logic lives in one place:
-# catomean/fleetcrown/.github/workflows/selfhost-deploy.yml
+# bitbaum/fleetcrown/.github/workflows/selfhost-deploy.yml
 #
 # THIS IS THE ONLY FILE IN THIS REPOSITORY THAT KNOWS ABOUT OUR INFRASTRUCTURE.
 # Delete it and this becomes an ordinary Next app the owner can host anywhere —

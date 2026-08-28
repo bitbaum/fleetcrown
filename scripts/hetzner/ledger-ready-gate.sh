@@ -48,7 +48,7 @@ curl -fsS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage
   -d parse_mode=Markdown \
   -d text="*Run ledger is deep enough — build the nightly improver.*
 ${METERED} metered runs · ${ESCALATIONS} escalations · ${DAYS} days covered.
-Spec + start condition: github.com/catomean/fleetcrown/issues/136" >/dev/null
+Spec + start condition: github.com/bitbaum/fleetcrown/issues/136" >/dev/null
 
 # Only after a delivery actually succeeded (curl -f + set -e) does the gate
 # disarm. Stamping before the send is how a one-shot notification becomes a
