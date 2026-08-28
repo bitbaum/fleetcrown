@@ -45,6 +45,20 @@ fixture() {
 # that cannot exist. This is what CI actually looks like.
 no_checkouts() { sed -i 's#|/home/g/dev/#|/nonexistent/dev/#g' "$TMP/scripts/hetzner/apps.conf"; }
 
+# A fake checkout with exactly the workflow files given, nothing else — lets
+# CI/CD detection be tested directly instead of trusting that the real fleet
+# happens to be fully provisioned right now.
+fake_repo() {
+  local dir="$1"; shift
+  mkdir -p "$dir/.github/workflows"
+  for wf in "$@"; do
+    case "$wf" in
+      ci)     printf 'name: CI\non: push\njobs:\n  check:\n    steps:\n      - run: npm run verify\n' > "$dir/.github/workflows/ci.yml" ;;
+      deploy) printf 'name: Deploy\non:\n  push:\n    branches: [main]\njobs:\n  deploy:\n    uses: bitbaum/fleetcrown/.github/workflows/selfhost-deploy.yml@main\n' > "$dir/.github/workflows/deploy.yml" ;;
+    esac
+  done
+}
+
 echo
 echo "the register half runs everywhere — it is in the diff"
 
@@ -93,9 +107,39 @@ echo "$OUT" | grep -q "register:" \
   || fail "the register half must still run when the fleet is absent: $OUT"
 ok "the register is still checked when the fleet is absent"
 
-echo "$OUT" | grep -q "all 15 deployed apps have CI" \
+echo "$OUT" | grep -q "all 15 deployed apps have it" \
   && fail "a bare environment must never claim the fleet is verified: $OUT"
 ok "a bare environment never claims the fleet passed"
+
+echo
+echo "CI and CD are detected independently — camille had one and not the other"
+
+G=$(fixture)
+fake_repo "$TMP/app-ci-only" ci
+fake_repo "$TMP/app-cd-only" deploy
+fake_repo "$TMP/app-both" ci deploy
+{
+  echo "app-ci-only|5001|a.example.com|$TMP/app-ci-only|.|-|t|demo|demo|-|-|-"
+  echo "app-cd-only|5002|b.example.com|$TMP/app-cd-only|.|-|t|demo|demo|-|-|-"
+  echo "app-both|5003|c.example.com|$TMP/app-both|.|-|t|demo|demo|-|-|-"
+} > "$TMP/scripts/hetzner/apps.conf"
+echo 0 > "$TMP/scripts/ci/deploy-ready.baseline"
+echo 0 > "$TMP/scripts/ci/deploy-ready-cd.baseline"
+OUT=$("$G" 2>&1); RC=$?
+[ "$RC" = 1 ] || fail "an app missing CI or CD must fail the gate (rc=$RC): $OUT"
+ok "an app missing CI or CD fails the gate"
+
+echo "$OUT" | grep -q "app-cd-only — deploys unverified" \
+  || fail "the CI-missing app must be named under CI, not CD: $OUT"
+ok "the app with only a Deploy workflow is flagged for missing CI"
+
+echo "$OUT" | grep -q "app-ci-only — a green push here has never once reached the box" \
+  || fail "the CD-missing app must be named under CD, not CI: $OUT"
+ok "the app with only a CI workflow is flagged for missing CD (camille's exact shape)"
+
+echo "$OUT" | grep -qE "app-both.*(unverified|never once reached)" \
+  && fail "the fully-provisioned app must not be flagged on either dimension: $OUT"
+ok "an app with both CI and CD is flagged on neither"
 
 echo
 echo "drift is distinguished from a bare environment"
