@@ -79,16 +79,42 @@ cat > "$MON/notify-failure.sh" <<'NF'
 # failed cron always pages — a failed job is a real signal. Sustained crash
 # loops are also caught by host-check's `systemctl --failed` sweep.
 set -uo pipefail
-. /opt/monitoring/lib-alert.sh
+MON="${MON:-/opt/monitoring}"
+. "$MON/lib-alert.sh"
 unit="${1:-unknown.unit}"
 utype=$(systemctl show "$unit" -p Type --value 2>/dev/null)
+
+# Per-unit page cooldown. The recovery guard below only silences a unit that
+# comes BACK; a unit that cannot start at all fires OnFailure on every restart
+# forever, and each one used to be a separate Telegram. On 2026-08-28
+# vitareba-app could not read its .env (root-owned after a chown --reference),
+# so Restart=on-failure + RestartSec=3 produced 18 restarts and SIX identical
+# "UNIT DOWN" messages in 60 seconds — for ONE incident that no amount of
+# paging would fix any faster. A crash loop is not new information every 3
+# seconds: page once, hold for COOLDOWN, then re-page as a reminder while it is
+# still down. Recovery clears the stamp, so the next genuine outage pages
+# immediately instead of inheriting the last one's silence.
+COOLDOWN=${NOTIFY_COOLDOWN_SEC:-1800}
+stamp="$MON/state/paged_$(printf '%s' "$unit" | tr -c 'a-zA-Z0-9' '_')"
+
 if [ "$utype" != "oneshot" ]; then
   sleep 8
   if systemctl is-active --quiet "$unit"; then
+    rm -f "$stamp"
     logger -t watchdog "unit ${unit} failed but recovered (restart/transient) — not paging"
     exit 0
   fi
 fi
+
+now=$(date +%s)
+last=$(cat "$stamp" 2>/dev/null | tr -dc '0-9')
+if [ -n "$last" ] && [ "$((now - last))" -lt "$COOLDOWN" ]; then
+  logger -t watchdog "unit ${unit} still failing — paged $((now - last))s ago, holding for ${COOLDOWN}s"
+  exit 0
+fi
+mkdir -p "$MON/state"
+printf '%s' "$now" > "$stamp"
+
 tail=$(journalctl -u "$unit" -n 4 --no-pager -o cat 2>/dev/null | tr '\n' ' ' | cut -c1-300)
 alert "🔴" "UNIT DOWN: ${unit} — ${tail:-<no log>}"
 NF
