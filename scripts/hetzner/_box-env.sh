@@ -14,14 +14,17 @@ HETZNER_IP="${HETZNER_IP:-167.233.22.31}"
 BOX_ROOT="root@${HETZNER_IP}"
 BOX_UBUNTU="ubuntu@${HETZNER_IP}"
 
-# WHERE NEW SITE REPOS ARE CREATED. Becomes an org the day one exists.
+# WHERE NEW SITE REPOS ARE CREATED. The bitbaum org, since 2026-08-28 (all 39
+# eligible repos migrated — see sweep-gh-owner.sh's commit history for the diff).
 GH_OWNER="${GH_OWNER:-bitbaum}"
 
 # WHERE fleetcrown LIVES — the owner every site's deploy.yml points at in its
-# `uses:` line. Deliberately separate from GH_OWNER: these look like the same
-# value today and are about to diverge. Sites will be created under an org
-# (bitbaum) while fleetcrown stays on the personal account, and if that account
-# is ever renamed this changes and GH_OWNER does not.
+# `uses:` line. Kept as a SEPARATE constant from GH_OWNER even though both are
+# 'bitbaum' today: fleetcrown and the sites it spins up are not guaranteed to
+# stay under the same owner forever, and the two meanings (who runs the studio
+# vs. who owns a given client site) are different questions that happen to
+# share an answer right now. Collapsing them into one constant would make a
+# future divergence a rename hunt instead of a one-line edit.
 WORKFLOW_OWNER="${WORKFLOW_OWNER:-bitbaum}"
 
 # The domain every site gets a free subdomain on, until it has its own.
