@@ -1,0 +1,62 @@
+# Is any TLS certificate on the box about to expire?
+#
+# Caddy renews at 30 days remaining and has never missed, which is exactly why
+# nothing watched it. A renewal can break for reasons no app ever sees — an ACME
+# rate limit, port 80 closed by a firewall change, a DNS record moved — and the
+# first symptom is every site on the box going dark at once, with no prior
+# signal anywhere. Weeks of warning exist; nobody was reading them.
+#
+# Daily, not every 15 minutes like the uptime sweep next door: a certificate
+# does not change between sweeps, and 20 TLS handshakes every quarter hour to
+# learn the same number is noise that earns nothing.
+#
+# It probes the SAME targets as the uptime sweep, from the same manifest, via
+# `uptime-sweep.sh --certs`. A second list of domains is the gap that hid
+# botsmann for weeks — there is deliberately no second list.
+name: Fleet certs
+
+on:
+  schedule:
+    # 06:41 UTC. Before the working day, and off the hour to spread fleet load.
+    - cron: '41 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fleet-certs
+  cancel-in-progress: true
+
+jobs:
+  certs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      # Pure helpers, no network. If cert_verdict's boundaries break, the sweep
+      # below would still print a confident table.
+      - name: The verdicts still hold
+        run: bash scripts/hetzner/test-uptime-sweep.sh
+
+      - name: Every certificate has time left
+        run: |
+          set -uo pipefail
+          {
+            echo '## Fleet certs'
+            echo
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          set +e
+          bash scripts/hetzner/uptime-sweep.sh --certs 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
+          rc=${PIPESTATUS[0]}
+          set -e
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          exit "$rc"
+
+      # No issue/Telegram machinery here, deliberately. fleet-uptime.yml owns
+      # that, and copying it would be a second alerting path to keep in step for
+      # a check that fires with three weeks of slack. A red run on a daily
+      # schedule is warning enough; if that ever proves too quiet, call the
+      # existing alerting rather than growing a second one.
