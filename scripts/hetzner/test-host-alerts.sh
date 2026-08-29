@@ -28,10 +28,12 @@ mkdir -p "$TMP/state" "$TMP/bin"
 sed -n "/<<'LIB'\$/,/^LIB\$/p" "$SRC" | sed '1d;$d' > "$TMP/lib-alert.sh"
 sed -n "/<<'HC'\$/,/^HC\$/p"   "$SRC" | sed '1d;$d' > "$TMP/host-check.sh"
 sed -n "/<<'NF'\$/,/^NF\$/p"   "$SRC" | sed '1d;$d' > "$TMP/notify-failure.sh"
+sed -n "/<<'ID'\$/,/^ID\$/p"   "$SRC" | sed '1d;$d' > "$TMP/incident-dispatch.sh"
 [ -s "$TMP/lib-alert.sh" ]  || { echo "FAIL: could not extract lib-alert.sh"; exit 1; }
 [ -s "$TMP/host-check.sh" ] || { echo "FAIL: could not extract host-check.sh"; exit 1; }
 [ -s "$TMP/notify-failure.sh" ] || { echo "FAIL: could not extract notify-failure.sh"; exit 1; }
-chmod +x "$TMP/host-check.sh" "$TMP/notify-failure.sh"
+[ -s "$TMP/incident-dispatch.sh" ] || { echo "FAIL: could not extract incident-dispatch.sh"; exit 1; }
+chmod +x "$TMP/host-check.sh" "$TMP/notify-failure.sh" "$TMP/incident-dispatch.sh"
 
 # ── Stub the system tools host-check.sh shells out to ────────────────────────
 # `alert` always calls logger, and telegram.env is absent here, so the logger
@@ -65,10 +67,11 @@ if [ "${1:-}" = "show" ]; then
   # for every -p is how a Result check can silently read a Type.
   prop=""; for a in "$@"; do case "$a" in -p) prop="NEXT";; *) [ "$prop" = "NEXT" ] && { prop="$a"; break; };; esac; done
   case "$prop" in
-    Type)   printf '%s\n' "${UNIT_TYPE:-simple}" ;;
-    Result) printf '%s\n' "${UNIT_RESULT:-exit-code}" ;;
-    User)   printf '%s\n' "${UNIT_USER:-}" ;;
-    *)      printf '%s\n' "${UNIT_TYPE:-simple}" ;;
+    Type)      printf '%s\n' "${UNIT_TYPE:-simple}" ;;
+    Result)    printf '%s\n' "${UNIT_RESULT:-exit-code}" ;;
+    User)      printf '%s\n' "${UNIT_USER:-}" ;;
+    ExecStart) printf '%s\n' "${UNIT_EXECSTART:-}" ;;
+    *)         printf '%s\n' "${UNIT_TYPE:-simple}" ;;
   esac
   exit 0
 fi
@@ -105,7 +108,23 @@ STUB
 # six copies of one fact is the entire bug being fixed here.
 cat > "$TMP/bin/curl" <<'STUB'
 #!/usr/bin/env bash
-for a in "$@"; do case "$a" in text=*) printf '%s\n' "${a#text=}" >> "$SEND_LOG";; esac; done
+# Two callers share this stub. Telegram sends pass --data-urlencode text=…;
+# incident-dispatch POSTs -d <json> at …/api/inject with -w '%{http_code}' and
+# reads the printed status code. $INJECT_HTTP lets a test make the API refuse.
+body=""; url=""; want_code=0; prev=""
+for a in "$@"; do
+  case "$a" in text=*) printf '%s\n' "${a#text=}" >> "$SEND_LOG";; esac
+  case "$prev" in -d) body="$a";; -w) want_code=1;; esac
+  case "$a" in http://*|https://*) url="$a";; esac
+  prev="$a"
+done
+case "$url" in
+  *api/inject*)
+    printf '%s\n' "$body" | tr '\n' ' ' >> "${DISPATCH_LOG:-/dev/null}"
+    printf '\n' >> "${DISPATCH_LOG:-/dev/null}"
+    [ "$want_code" = 1 ] && printf '%s' "${INJECT_HTTP:-200}"
+    ;;
+esac
 exit 0
 STUB
 # Fake creds so the delivery branch is actually entered. The curl stub above is
@@ -136,7 +155,15 @@ export PATH="$TMP/bin:$PATH"
 export MON="$TMP"
 export ALERT_LOG="$TMP/alerts.log"
 export SEND_LOG="$TMP/sent.log"
-: > "$ALERT_LOG"; : > "$SEND_LOG"
+export DISPATCH_LOG="$TMP/dispatch.log"
+# A fake token file, ALWAYS set: incident-dispatch's default token path exists
+# for real when this suite runs ON the box, and a test that falls through to it
+# would enqueue a real remediation run against the live FleetCrown API — the
+# same global-daemon trap as the docker-prune tier (a sandboxed MON does not
+# sandbox an absolute default). The stubbed curl is belt; this is braces.
+export FLEETCROWN_TOKEN_FILE="$TMP/fc-token.env"
+printf 'FLEETCROWN_AGENT_TOKEN=ck_test\n' > "$FLEETCROWN_TOKEN_FILE"
+: > "$ALERT_LOG"; : > "$SEND_LOG"; : > "$DISPATCH_LOG"
 
 pass=0 fail=0
 check() { # name condition-as-exit-status
@@ -561,6 +588,91 @@ rm -f "$TMP"/state/paged_silent_service        # as if the page had been suppres
 run_units ""
 check "recovery: an UNannounced failure gets no closure either (got $(unit_alerts))" \
   "$([ "$(unit_alerts)" -eq 0 ] && echo 0 || echo 1)"
+
+# ── 14. A page queues its own fix: incident dispatch ─────────────────────────
+# On 2026-08-29 George called the whole channel out: four appcron units
+# re-paged every 30 minutes all morning, every one fixable by an agent, none
+# fixed by one — while the FleetCrown box-runner polled an empty queue on the
+# same machine. The rule these cases pin: whatever is worth PAGING is worth
+# QUEUING a remediation agent for, exactly once per incident, and the page
+# itself must say the fix is in motion so the human knows to wait, not act.
+dispatches() { wc -l < "$DISPATCH_LOG" | tr -d '[:space:]'; }
+reset_dispatch() { rm -f "$TMP"/state/paged_* "$TMP"/state/host_failed_* "$TMP"/state/dedupe_*
+                   : > "$ALERT_LOG"; : > "$SEND_LOG"; : > "$DISPATCH_LOG"; }
+
+reset_dispatch
+notify vitareba-app.service
+check "dispatch: a paged app unit queues exactly one agent (got $(dispatches))" \
+  "$([ "$(dispatches)" -eq 1 ] && echo 0 || echo 1)"
+check "dispatch: an <app>-app unit targets the app's own project" \
+  "$(grep -q '"tab": *"vitareba"' "$DISPATCH_LOG" && echo 0 || echo 1)"
+check "dispatch: the journal excerpt rides inside the prompt" \
+  "$(grep -q 'stub journal line' "$DISPATCH_LOG" && echo 0 || echo 1)"
+check "dispatch: the outcome is requested on run close (notifyOnClose)" \
+  "$(grep -q '"notifyOnClose": *true' "$DISPATCH_LOG" && echo 0 || echo 1)"
+check "dispatch: the page says the fix is in motion" \
+  "$(grep -q 'fix agent dispatched (vitareba)' "$ALERT_LOG" && echo 0 || echo 1)"
+
+# The crash loop: the next restart must not queue a second agent.
+notify vitareba-app.service
+check "dispatch: the next crash-loop restart queues nothing (got $(dispatches))" \
+  "$([ "$(dispatches)" -eq 1 ] && echo 0 || echo 1)"
+check "dispatch: the held dispatch is journalled, not dropped" \
+  "$(grep -q 'DISPATCH held for vitareba-app.service' "$ALERT_LOG" && echo 0 || echo 1)"
+
+# Cross-detector: the sweep seeing the same unit must find the claim taken.
+run_units "vitareba-app.service"
+check "dispatch: the sweep does not double-queue the same incident (got $(dispatches))" \
+  "$([ "$(dispatches)" -eq 1 ] && echo 0 || echo 1)"
+
+# Recovery ends the incident: the next failure is NEW and gets a fresh agent.
+UNIT_ACTIVE=0 notify vitareba-app.service
+notify vitareba-app.service
+check "dispatch: a re-broken unit after recovery gets a fresh agent (got $(dispatches))" \
+  "$([ "$(dispatches)" -eq 2 ] && echo 0 || echo 1)"
+
+# appcron units: the app name can contain dashes (revamp-info), so the project
+# comes from the unit's own ExecStart (run.sh's first argument), never from
+# splitting the unit name.
+reset_dispatch
+UNIT_TYPE=oneshot \
+UNIT_EXECSTART='{ path=/opt/_appcron/run.sh ; argv[]=/opt/_appcron/run.sh revamp-info 4012 /api/cron/deadline-reminder GET ; ignore_errors=no }' \
+  notify appcron-revamp-info-deadline-reminder.service
+check "dispatch: an appcron unit resolves its app from ExecStart (got $(dispatches))" \
+  "$([ "$(dispatches)" -eq 1 ] && grep -q '"tab": *"revamp-info"' "$DISPATCH_LOG" && echo 0 || echo 1)"
+
+# An unmapped unit still dispatches — at the repo that owns this machinery.
+reset_dispatch
+UNIT_TYPE=oneshot notify restic-check.service
+check "dispatch: an infra unit falls back to the fleetcrown project" \
+  "$([ "$(dispatches)" -eq 1 ] && grep -q '"tab": *"fleetcrown"' "$DISPATCH_LOG" && echo 0 || echo 1)"
+
+# API refusal: the page must stand alone (no false 'in motion' claim), nothing
+# is stamped, and the unknown-project retry happens before giving up.
+reset_dispatch
+INJECT_HTTP=500 notify kivvi-app.service
+check "dispatch: an API failure still pages (got $(pages))" \
+  "$([ "$(pages)" -eq 1 ] && echo 0 || echo 1)"
+check "dispatch: a failed dispatch is not claimed on the page" \
+  "$(! grep -q 'fix agent dispatched' "$ALERT_LOG" && echo 0 || echo 1)"
+check "dispatch: a rejected project is retried as fleetcrown before giving up" \
+  "$([ "$(dispatches)" -eq 2 ] && grep -q '"tab": *"fleetcrown"' "$DISPATCH_LOG" && echo 0 || echo 1)"
+check "dispatch: no stamp survives a failure — the next page retries the queue" \
+  "$([ ! -e "$TMP/state/paged_dispatch_kivvi_app_service" ] && echo 0 || echo 1)"
+
+# Dry-run discipline: probing the alerter must not queue real agent work.
+reset_dispatch
+ALERT_DRY_RUN=1 notify zz-audit-probe.service
+check "dispatch: dry-run queues nothing (got $(dispatches))" \
+  "$([ "$(dispatches)" -eq 0 ] && echo 0 || echo 1)"
+check "dispatch: the dry-run decision is journalled" \
+  "$(grep -q 'DISPATCH dry-run' "$ALERT_LOG" && echo 0 || echo 1)"
+
+# A missing token must cost the dispatch, never the page.
+reset_dispatch
+FLEETCROWN_TOKEN_FILE="$TMP/does-not-exist.env" notify solon-app.service
+check "dispatch: a missing token file skips the queue but keeps the page (got $(pages))" \
+  "$([ "$(pages)" -eq 1 ] && [ "$(dispatches)" -eq 0 ] && echo 0 || echo 1)"
 
 printf '\n  %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

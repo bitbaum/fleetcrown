@@ -16,6 +16,28 @@ All alerts flow through the watchdog's Telegram channel (`/opt/monitoring/telegr
 
 Transition-only = you're pinged on the up→down and down→up edges, never every tick.
 
+## What FIXES it (not just alerts)
+
+A page is not the product — the outcome is. Two mechanisms act before a human:
+
+- **Deterministic repairs, in-line**: anything whose correct remedy is knowable
+  is applied and reported, never asked about. Today: an app `.env` its own
+  `User=` cannot read is re-owned, the app restarted, and ONE `🔧 FIXED (no
+  action needed)` message sent (`host-check.sh`).
+- **Agent remediation, queued** (`incident-dispatch.sh`, since 2026-08-29):
+  every unit failure that is worth paging also queues a FleetCrown remediation
+  run — `POST /api/inject` with the journal tail embedded, claimed by
+  `fleetcrown-box-runner` within seconds. The page carries "🤖 fix agent
+  dispatched (<project>)"; the run's close summary (root cause → action →
+  what remains) lands on Telegram via `notifyOnClose`. One incident is one
+  dispatch: a `dispatch:<unit>` stamp (6h) shared by both detectors, cleared
+  on recovery. The agent is sandboxed (no `/opt`, no service control): it fixes
+  repo-shaped causes and PRs them (deploy-on-merge is the repair channel), and
+  reports box-shaped causes as exact commands. Token SSOT: the same `ck_*`
+  agent token Loki's `fc.sh` uses (`/home/openclaw/.openclaw/calendar-drain.env`).
+
+Covered end-to-end by `scripts/hetzner/test-host-alerts.sh` (`npm run test:ops`).
+
 The rescale watcher exists because Falkenstein is capacity-blocked: the Hetzner
 console *lists* cx43/cx53 as valid rescale targets ("supported"), but the API's
 `available_for_migration` is empty, so a rescale actually fails. The watcher
