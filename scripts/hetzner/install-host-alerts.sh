@@ -17,9 +17,11 @@
 # The governing rule for everything below: a message is worth sending only if a
 # human must act on it AND nothing else can. One incident is one message
 # (alert_once + a duplicate-text floor in lib-alert.sh); anything with a
-# knowable remedy is applied, not announced; test runs set ALERT_DRY_RUN=1 and
-# reach the journal only. Suppressed is never invisible — the journal always
-# gets every alert.
+# knowable remedy is applied, not announced; anything ELSE worth paging is also
+# worth queuing a FleetCrown remediation agent for (incident-dispatch.sh — one
+# dispatch per incident, outcome delivered on run close); test runs set
+# ALERT_DRY_RUN=1 and reach the journal only. Suppressed is never invisible —
+# the journal always gets every alert.
 #
 # Logic here is covered by scripts/hetzner/test-host-alerts.sh (npm run test:ops),
 # which extracts the heredoc payloads below and drives them with stubbed tools.
@@ -191,7 +193,7 @@ COOLDOWN=${NOTIFY_COOLDOWN_SEC:-1800}
 if [ "$utype" != "oneshot" ]; then
   sleep 8
   if systemctl is-active --quiet "$unit"; then
-    alert_clear "$unit"
+    alert_clear "$unit"; alert_clear "dispatch:$unit"
     logger -t watchdog "unit ${unit} failed but recovered (restart/transient) — not paging"
     exit 0
   fi
@@ -208,14 +210,20 @@ else
   state=$(systemctl is-active "$unit" 2>/dev/null)
   result=$(systemctl show "$unit" -p Result --value 2>/dev/null)
   if [ "$state" = "active" ] || [ "$state" = "activating" ] || [ "$result" = "success" ]; then
-    alert_clear "$unit"
+    alert_clear "$unit"; alert_clear "dispatch:$unit"
     logger -t watchdog "oneshot ${unit} failed but a later run is active/succeeded — not paging"
     exit 0
   fi
 fi
 
 tail=$(journalctl -u "$unit" -n 4 --no-pager -o cat 2>/dev/null | tr '\n' ' ' | cut -c1-300)
-alert_once "$unit" "$COOLDOWN" "🔴" "UNIT DOWN: ${unit} — ${tail:-<no log>}"
+# A page-worthy failure is also dispatch-worthy: queue the remediation agent
+# BEFORE composing the page, so the page can say the fix is already in motion —
+# that one clause is the difference between "act now" and "read the outcome
+# when it arrives". incident-dispatch has its own per-unit stamp, so the
+# reminder re-page after COOLDOWN does not queue a second agent.
+disp=$("$MON/incident-dispatch.sh" "$unit" 2>/dev/null || true)
+alert_once "$unit" "$COOLDOWN" "🔴" "UNIT DOWN: ${unit} — ${tail:-<no log>}${disp:+ → 🤖 fix agent dispatched (${disp}); outcome follows}"
 NF
 chmod +x "$MON/notify-failure.sh"
 
@@ -233,6 +241,126 @@ TimeoutStartSec=300
 # %i is the failed unit name (systemd-escaped); notify-failure.sh unescapes for display.
 ExecStart=/opt/monitoring/notify-failure.sh %i
 SVC
+
+# ── Incident dispatch: a page should queue its own fix ───────────────────────
+# The alerting above got very good at saying "X is broken" exactly once — and
+# then a human still had to do the fixing. On 2026-08-29 George called that out
+# directly: four appcron units re-paged every 30 minutes all morning (kivvi's
+# USE_NEON leftover, vitareba's sandbox sender, revamp-info's missing
+# CRON_SECRET), every one of them fixable by an agent, none of them fixed by
+# one, because nothing here knew FleetCrown exists. Meanwhile the FleetCrown
+# box-runner sat on this same machine polling an empty queue every 2 seconds.
+#
+# This script is the missing producer: when a unit failure is worth paging, it
+# is also worth queuing a remediation agent for. POST /api/inject (the same
+# call Loki's fc.sh dispatch makes) opens an orchestration run the box-runner
+# claims within seconds; notifyOnClose:true means the run's CLOSE — root cause,
+# what was done, what remains — is what lands on the phone. The page says a
+# thing broke; the next message about it should be the outcome, not an echo.
+#
+# One incident is one dispatch, same discipline as one incident one message:
+# a `dispatch:<unit>` stamp under the shared state dir, cleared by host-check's
+# recovery sweep, so a crash loop queues ONE agent and a re-broken unit queues
+# a fresh one. The dispatched agent runs sandboxed (no /opt, no service
+# control — install-box-runner.sh's InaccessiblePaths): repo-shaped causes it
+# fixes and PRs (deploy-on-merge is the repair channel); box-shaped causes it
+# reports as exact commands. Either way the human reads a conclusion.
+cat > "$MON/incident-dispatch.sh" <<'ID'
+#!/usr/bin/env bash
+# $1 = failed unit. stdout contract: prints the target project name IFF a
+# remediation run was queued (callers may append that fact to their page);
+# every other outcome is journal-only. Never exits non-zero into a caller's
+# page path — a broken dispatcher must not cost the page itself.
+set -uo pipefail
+MON="${MON:-/opt/monitoring}"
+. "$MON/lib-alert.sh"
+unit="${1:?usage: incident-dispatch.sh <failed-unit>}"
+
+# Token SSOT: the same ck_* agent token Loki's fc.sh authenticates with.
+# Reusing the file means rotating the token stays a one-place edit.
+ENV_FILE="${FLEETCROWN_TOKEN_FILE:-/home/openclaw/.openclaw/calendar-drain.env}"
+BASE="${FLEETCROWN_API_URL:-http://127.0.0.1:4002}"
+DISPATCH_COOLDOWN="${INCIDENT_DISPATCH_COOLDOWN_SEC:-21600}"   # 6h per unit
+
+sf="$MON/state/paged_$(_alert_key "dispatch:$unit")"
+now=$(date +%s); last=$(cat "$sf" 2>/dev/null | tr -dc '0-9')
+if [ -n "$last" ] && [ "$((now - last))" -lt "$DISPATCH_COOLDOWN" ]; then
+  logger -t watchdog "DISPATCH held for ${unit}: queued $((now - last))s ago, cooldown ${DISPATCH_COOLDOWN}s"
+  exit 0
+fi
+
+if [ ! -f "$ENV_FILE" ]; then
+  logger -t watchdog "DISPATCH skipped for ${unit}: token file $ENV_FILE missing"
+  exit 0
+fi
+token=$(grep -m1 '^FLEETCROWN_AGENT_TOKEN=' "$ENV_FILE" | cut -d= -f2- | tr -d '"' | tr -d "'")
+if [ -z "$token" ]; then
+  logger -t watchdog "DISPATCH skipped for ${unit}: FLEETCROWN_AGENT_TOKEN not set in $ENV_FILE"
+  exit 0
+fi
+
+# Unit → project. An app name can itself contain dashes (revamp-info), so an
+# appcron unit name cannot be split by field — the unit's own ExecStart names
+# the app as run.sh's first argument, and that is the only place the answer
+# actually lives. Anything unmapped (restic, monitoring itself) goes to
+# fleetcrown, which owns scripts/hetzner and therefore this machinery.
+project=""
+case "$unit" in
+  appcron-*)
+    project=$(systemctl show "$unit" -p ExecStart --value 2>/dev/null \
+      | sed -n 's/.*run\.sh \([^ ;]*\).*/\1/p' | head -1)
+    ;;
+  *-app.service) project="${unit%-app.service}" ;;
+esac
+[ -n "$project" ] || project=fleetcrown
+
+jtail=$(journalctl -u "$unit" -n 30 --no-pager -o cat 2>/dev/null | tail -c 3500)
+
+prompt="Automated incident dispatch from bitbaum's monitoring (incident-dispatch.sh).
+
+systemd unit \`${unit}\` on bitbaum FAILED and is still failed after the notifier's grace window. Journal tail:
+
+${jtail:-<no journal output>}
+
+Diagnose the root cause, then act:
+- Repo-shaped cause (code, config template, workflow, migration, schema): implement the fix in this repo, run its verify gate, commit on a branch, push, and open a PR. Deploy-on-merge is the repair channel.
+- Box-shaped cause (a file under /opt, an env value, a systemd unit) is OUTSIDE your sandbox: do not guess at workarounds — state the exact copy-paste commands that fix it and why they are safe.
+- Already fixed by the time you look (a later run succeeded, the unit is active): say so and stop.
+
+Your run-close summary is delivered to George's phone. One short paragraph: root cause → action taken → what (if anything) remains."
+
+if [ -n "${ALERT_DRY_RUN:-}" ]; then
+  logger -t watchdog "DISPATCH dry-run, not queued: ${unit} -> ${project}"
+  exit 0
+fi
+
+_post() {  # $1 = project tab; prints the HTTP status code
+  local json
+  json=$(jq -n --arg tab "$1" --arg p "$prompt" \
+    '{tab:$tab, customPrompt:$p, notifyOnClose:true}') || return 1
+  curl -sS -m 20 -X POST "$BASE/api/inject" \
+    -H "Authorization: Bearer $token" -H 'Content-Type: application/json' \
+    -d "$json" -o /dev/null -w '%{http_code}' 2>/dev/null
+}
+
+http=$(_post "$project")
+if [ "${http:0:1}" != "2" ] && [ "$project" != "fleetcrown" ]; then
+  # An unregistered project must not cost the dispatch — the fleet repo owner
+  # can still diagnose from the journal excerpt embedded in the prompt.
+  logger -t watchdog "DISPATCH for ${unit}: project '${project}' rejected (HTTP ${http:-none}) — retrying as fleetcrown"
+  project=fleetcrown
+  http=$(_post "$project")
+fi
+if [ "${http:0:1}" = "2" ]; then
+  printf '%s' "$now" > "$sf"
+  logger -t watchdog "DISPATCH queued: ${unit} -> ${project} (outcome arrives on run close)"
+  printf '%s\n' "$project"
+else
+  logger -t watchdog "DISPATCH failed for ${unit}: HTTP ${http:-none} from ${BASE} — the page stands alone"
+fi
+exit 0
+ID
+chmod +x "$MON/incident-dispatch.sh"
 
 # ── Host-resource checks ─────────────────────────────────────────────────────
 cat > "$MON/host-check.sh" <<'HC'
@@ -318,7 +446,11 @@ for u in ${failed_units[@]+"${failed_units[@]}"}; do
   # The state file records WHICH units are known-failed (its content is the unit
   # name, so recovery can name it); alert_once decides whether anyone is told.
   printf '%s' "$u" > "$MON/state/host_$k"
-  alert_once "$u" "$UNIT_COOLDOWN" "⚙️" "FAILED UNIT: $u"
+  # Same dispatch as the OnFailure notifier, same shared `dispatch:` stamp —
+  # whichever detector notices first queues the ONE agent, the other finds the
+  # claim taken. See incident-dispatch.sh for why a page queues its own fix.
+  disp=$("$MON/incident-dispatch.sh" "$u" 2>/dev/null || true)
+  alert_once "$u" "$UNIT_COOLDOWN" "⚙️" "FAILED UNIT: $u${disp:+ → 🤖 fix agent dispatched (${disp}); outcome follows}"
 done
 # Anything that was failing and is not in the current set has recovered. Without
 # this the key would stay set and its next genuine failure would be silent —
@@ -333,7 +465,10 @@ for sf in "$MON"/state/host_failed_*; do
   if [ -n "$u" ] && [ -e "$MON/state/paged_$(printf '%s' "$u" | tr -c 'a-zA-Z0-9' '_')" ]; then
     _alert_deliver "✅ RECOVERED: $u"
   fi
-  [ -n "$u" ] && alert_clear "$u"
+  # Clear the dispatch stamp with the page stamp: a unit that recovers and
+  # breaks again is a NEW incident and deserves a fresh agent, not the last
+  # one's 6h silence.
+  [ -n "$u" ] && alert_clear "$u" && alert_clear "dispatch:$u"
   rm -f "$sf"
 done
 # Retire the old aggregate latch, and the previous per-unit keys whose content
