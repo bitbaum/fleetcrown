@@ -93,6 +93,9 @@ async function recordTabDispatch(opts: {
     intent: "custom",
     customPrompt: opts.customPrompt,
     resolvedPrompt: opts.resolvedPrompt,
+    // The run opened above, when this tab had a registered project; a
+    // project-less tab keeps its auditable prompt row with no run to join.
+    runId,
   }).catch((err) => console.error("[tab-inject] db write failed:", err));
 
   createOrchestrationEvent({

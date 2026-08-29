@@ -299,15 +299,10 @@ export async function POST(req: NextRequest) {
   const withOperator = (body: string) => [operatorSection, body].filter(Boolean).join("\n\n");
   // Log every dispatch regardless of adapter — foundation for reuse suggestions and analytics
   const resolvedPromptBody = withOperator(renderTaskForAdapter(request));
-  insertPromptHistory(userId, {
-    projectId: request.projectId ?? null,
-    projectKey: request.projectKey,
-    projectPath: request.projectPath,
-    adapter: request.adapter as AdapterId,
-    intent: request.intent as OrchestrationTaskIntentId,
-    customPrompt: request.intent === "custom" ? (request.customInstructions ?? null) : null,
-    resolvedPrompt: resolvedPromptBody,
-  }).catch((err) => console.error("[orchestration/run] db write failed:", err));
+  // (Written AFTER the run row below, so the prompt can carry the run's id.
+  // This used to be a fire-and-forget insert placed here, BEFORE the run was
+  // created — which left prompt_history joinable to its outcome only by
+  // time-proximity heuristics, the exact gap self-improvement-plan.md names.)
 
   // Create an orchestration_runs row for tab-injected adapters too — gives every dispatch
   // an outcome to learn from, not just openclaw worker runs. Lifecycle intents (hard_stop /
@@ -341,6 +336,21 @@ export async function POST(req: NextRequest) {
       // Non-fatal — dispatch still proceeds without outcome tracking for this run.
     }
   }
+
+  // The ordered, linked pair: the run exists (or provably could not be
+  // created), so the prompt records which run it became. Still fire-and-forget
+  // — a ledger hiccup must not block a dispatch — but the ORDER is now a
+  // guarantee, not an accident of layout.
+  insertPromptHistory(userId, {
+    projectId: request.projectId ?? null,
+    projectKey: request.projectKey,
+    projectPath: request.projectPath,
+    adapter: request.adapter as AdapterId,
+    intent: request.intent as OrchestrationTaskIntentId,
+    customPrompt: request.intent === "custom" ? (request.customInstructions ?? null) : null,
+    resolvedPrompt: resolvedPromptBody,
+    runId: trackedRunId,
+  }).catch((err) => console.error("[orchestration/run] db write failed:", err));
 
   // Serialize same-project dispatch for tab-injected adapters (claude/codex/
   // gemini/grok) — the ones that share the project's zellij tab + git checkout +

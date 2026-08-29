@@ -467,6 +467,11 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
     adapter: eventAdapter,
     intent: eventIntent ?? "custom",
     customPrompt: customPrompt ?? null,
+    // Link the prompt to the run it became — the run was opened above, so the
+    // id exists by the time the prompt is recorded. Null only when run
+    // creation failed or the intent is untrackable; the prompt row survives
+    // either way (the ledger must not lose a dispatch to a failed join).
+    runId,
     // `prompt` is the fully assembled body — custom text or rendered intent
     // template — that was injected into the agent's tab. Persisting it makes
     // "Next best" rows showable as the actual prompt in the activity view.
