@@ -28,9 +28,16 @@ fi
 
 # Defaults for production server — override in .env.local if needed.
 export PORT="${PORT:-3000}"
-# HOSTNAME is a bash builtin (set to machine name) — unset it so the standalone
-# server defaults to 0.0.0.0 and is reachable at 127.0.0.1 / localhost.
-unset HOSTNAME
+# HOSTNAME is a bash builtin (set to the machine name, e.g. "bitbaum") and
+# Next's standalone server reads it as the bind address. `unset` does NOT
+# make that default to localhost — it makes Next fall back to ITS OWN
+# default, which is 0.0.0.0 (every interface). Found 2026-08-29: this left
+# fleetcrown reachable on all interfaces (mitigated only by ufw's
+# default-deny, which happened to block the port anyway — not something to
+# rely on). Every other app in the fleet already does this correctly via
+# sync-infra.sh's `HOSTNAME=127.0.0.1`; fleetcrown just never matched its
+# own convention because it launches itself outside that shared script.
+export HOSTNAME=127.0.0.1
 # NEXTAUTH_URL must match the local URL so auth callbacks work.
 export NEXTAUTH_URL="${NEXTAUTH_URL:-http://localhost:${PORT}}"
 export NEXTAUTH_SECRET="${NEXTAUTH_SECRET:-${AUTH_SECRET:-}}"
