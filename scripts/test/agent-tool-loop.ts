@@ -20,7 +20,7 @@ import { z } from "zod";
 import { parseTextToolCalls, stripToolCallLines, type ModelTurn } from "../../src/lib/agent/llm";
 import { defineTool, renderToolCatalog, toOpenAITools, type ToolRegistry } from "../../src/lib/agent/tools/registry";
 import { runLokiTurn } from "../../src/lib/agent/loop";
-import { makeFact, assignFactIds } from "../../src/lib/agent/core/facts";
+import { makeFact, assignFactIds } from "ai-kit/grounding";
 
 const NAMES = ["search_people", "list_projects", "propose_action"];
 

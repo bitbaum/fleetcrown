@@ -27,7 +27,7 @@
  *              a refactor.
  */
 import { z } from "zod";
-import type { Fact } from "@/lib/agent/core/facts";
+import type { Fact } from "ai-kit/grounding";
 
 /** Read = lookup. Propose = enqueue a draft for the operator to approve. */
 export type ToolKind = "read" | "propose";
