@@ -113,7 +113,9 @@ jobs:
                     `how botsmann stayed broken unnoticed.`,
                   ].join('\n'),
                 });
-                await tg(`🔴 ${d.app} is DOWN (${detail}) as of ${now}`);
+                // Same voice as the on-box watchdog ("🔴 DOWN: app (…)"), and
+                // no ISO timestamp — Telegram already stamps every message.
+                await tg(`🔴 DOWN: ${d.app} (${detail})`);
               }
             }
 
@@ -128,7 +130,7 @@ jobs:
               await github.rest.issues.update({
                 owner, repo, issue_number: issue.number, state: 'closed',
               });
-              await tg(`✅ ${app} RECOVERED at ${now}`);
+              await tg(`✅ RECOVERED: ${app}`);
             }
 
             const c = result.counts || {};
