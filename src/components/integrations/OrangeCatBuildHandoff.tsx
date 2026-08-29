@@ -18,8 +18,17 @@ export function OrangeCatBuildHandoff({
   intent: OrangeCatBuildIntent;
   projects: ProjectOption[];
 }) {
-  const [mode, setMode] = useState<"new" | "existing">("new");
-  const [projectId, setProjectId] = useState(projects[0]?.id ?? "");
+  // If a project with the exact same name already exists, default to linking
+  // it instead of "new" — the whole point of offering a picker is defeated if
+  // the obvious match still requires the user to notice and switch the radio
+  // themselves. "Bitbaum" on OrangeCat and "Bitbaum" on FleetCrown are almost
+  // certainly the same thing; proposing a second "Bitbaum" project by default
+  // is exactly the duplicate this picker exists to prevent.
+  const exactMatch = projects.find(
+    (project) => project.name.trim().toLowerCase() === intent.entity.title.trim().toLowerCase()
+  );
+  const [mode, setMode] = useState<"new" | "existing">(exactMatch ? "existing" : "new");
+  const [projectId, setProjectId] = useState(exactMatch?.id ?? projects[0]?.id ?? "");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -107,7 +116,14 @@ export function OrangeCatBuildHandoff({
                 className="mt-1"
               />
               <span className="min-w-0 flex-1">
-                <span className="block font-medium text-text-primary">Link an existing project</span>
+                <span className="block font-medium text-text-primary">
+                  Link an existing project
+                  {exactMatch && (
+                    <span className="ml-2 font-normal text-text-muted">
+                      — “{exactMatch.name}” already exists
+                    </span>
+                  )}
+                </span>
                 <select
                   value={projectId}
                   onChange={(event) => setProjectId(event.target.value)}
