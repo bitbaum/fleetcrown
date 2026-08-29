@@ -90,12 +90,21 @@ for dir in /opt/*/; do
   done
 done
 
-# ---- 5. every app unit that exists is actually serving ---------------------
+# ---- 5. every app unit MEANT to run is running -----------------------------
+# Enabled-but-not-active, not merely not-active. aoz-demo is stopped AND
+# disabled with nothing routed to its port — deliberately retired, and flagging
+# it as a fault is how a check earns the reputation that gets it ignored.
+# "Is it supposed to be running?" is a different question from "is it running?".
 for u in /etc/systemd/system/*-app.service; do
   [ -e "$u" ] || continue
   unit="$(basename "$u")"; app="${unit%-app.service}"
+  enabled="$(systemctl is-enabled "$unit" 2>/dev/null)"
+  case "$enabled" in
+    enabled|enabled-runtime|static) ;;
+    *) continue ;;
+  esac
   state="$(systemctl is-active "$unit" 2>/dev/null)"
-  [ "$state" = "active" ] || finding "$app" "unit is $state"
+  [ "$state" = "active" ] || finding "$app" "unit is enabled but $state"
 done
 
 note "checked $(ls -d /opt/*/ 2>/dev/null | wc -l) app dirs on node $BOX_NODE"
