@@ -186,8 +186,8 @@ check "86% third tick: still silent (got $n3)" "$([ "$n3" -eq 0 ] && echo 0 || e
 # alert to these counts — an earlier version of this test counted a disk
 # RECOVERED as a unit alert and "failed" on correct behaviour.
 run_units() { : > "$ALERT_LOG"; DISK_PCT=82 FAILED_UNITS="$1" bash "$TMP/host-check.sh" >/dev/null 2>&1 || true; }
-unit_alerts() { grep -c 'FAILED UNIT\|RECOVERED: unit_' "$ALERT_LOG" 2>/dev/null | tr -d "[:space:]" || true; }
-rm -f "$TMP"/state/host_unit_* "$TMP/state/host_units"
+unit_alerts() { grep -c 'FAILED UNIT\|RECOVERED: ' "$ALERT_LOG" 2>/dev/null | tr -d "[:space:]" || true; }
+rm -f "$TMP"/state/host_failed_* "$TMP/state/host_units" "$TMP"/state/paged_*
 
 run_units "a.service b.service"
 check "units: first failures alert once per unit (got $(unit_alerts))" \
@@ -203,8 +203,8 @@ check "units: a NEW failure alerts while old ones are still failing (got $(unit_
   "$([ "$(unit_alerts)" -eq 1 ] && grep -q 'c.service' "$ALERT_LOG" && echo 0 || echo 1)"
 
 run_units "b.service c.service"
-check "units: only the recovered unit reports RECOVERED" \
-  "$(grep -q 'RECOVERED: unit_a_service' "$ALERT_LOG" && [ "$(unit_alerts)" -eq 1 ] && echo 0 || echo 1)"
+check "units: only the recovered unit reports RECOVERED, by NAME" \
+  "$(grep -q 'RECOVERED: a.service' "$ALERT_LOG" && [ "$(unit_alerts)" -eq 1 ] && echo 0 || echo 1)"
 
 run_units ""
 check "units: the rest recover when the set empties (got $(unit_alerts))" \
@@ -275,11 +275,12 @@ check "tight memory: no 'integer expected' from field-count drift" \
 # ── the bullet: systemd prefixes a failed unit with "●" without --plain -------
 # Shipped once as `FAILED UNIT: ●`, one shared key for every failure. The stub
 # above now emits the bullet, so this is a real regression test.
+rm -f "$TMP"/state/paged_z_service "$TMP"/state/host_failed_z_service
 run_units "z.service"
 check "units: the unit NAME is alerted, not systemd's bullet" \
   "$(grep -q 'FAILED UNIT: z.service' "$ALERT_LOG" && ! grep -q 'FAILED UNIT: ●' "$ALERT_LOG" && echo 0 || echo 1)"
 check "units: the state key is derived from the name, not the bullet" \
-  "$([ -e "$TMP/state/host_unit_z_service" ] && echo 0 || echo 1)"
+  "$([ -e "$TMP/state/host_failed_z_service" ] && echo 0 || echo 1)"
 
 # ── 6. OnFailure notifier: one incident is ONE page, not one per restart ──────
 # On 2026-08-28 vitareba-app could not read its .env (root-owned after a
@@ -465,7 +466,7 @@ env_run() { # run host-check with only the env check able to say anything
   printf '%s' ok > "$TMP/state/host_mem"; printf '%s' ok > "$TMP/state/host_disk"
   # Likewise the failed-unit keys: section 1b leaves z.service at `bad`, and an
   # empty FAILED_UNITS here would emit its RECOVERED into this section's count.
-  rm -f "$TMP"/state/host_unit_*
+  rm -f "$TMP"/state/host_failed_*
   APPROOT="$TMP/opt" APP_UNITS="demo-app.service" UNIT_USER="$(id -un)" \
     DISK_PCT=82 bash "$TMP/host-check.sh" >/dev/null 2>&1 || true
 }
@@ -496,13 +497,70 @@ check "env: a fresh recurrence is reported again, not muted by the last repair" 
 chmod 000 "$TMP/opt/demo/shared/.env"
 : > "$ALERT_LOG"; : > "$SEND_LOG"; : > "$CHOWN_LOG"
 printf '%s' ok > "$TMP/state/host_mem"; printf '%s' ok > "$TMP/state/host_disk"
-rm -f "$TMP"/state/host_unit_*
+rm -f "$TMP"/state/host_failed_*
 rm -f "$TMP"/state/paged_envfix_demo "$TMP"/state/paged_envbad_demo
 CHOWN_FAIL=1 APPROOT="$TMP/opt" APP_UNITS="demo-app.service" UNIT_USER="$(id -un)" \
   DISK_PCT=82 bash "$TMP/host-check.sh" >/dev/null 2>&1 || true
 check "env: an unrepairable .env asks, and carries the exact fix command" \
   "$([ "$(sent)" -eq 1 ] && grep -q 'chown .* && systemctl restart demo-app.service' "$SEND_LOG" && echo 0 || echo 1)"
 chmod 600 "$TMP/opt/demo/shared/.env"
+
+# ── 12. Two detectors, one incident, ONE message ─────────────────────────────
+# 2026-08-29 06:45 `⚙️ FAILED UNIT: orangecat-cat-outcomes.service` from the
+# sweep; 06:46 `🔴 UNIT DOWN: orangecat-cat-outcomes.service` from the OnFailure
+# notifier once its grace expired. Both were correct, and both were correctly
+# deduplicated *against themselves* — which is precisely why this duplicate
+# survived a fix aimed at per-detector storms. Keying per detector lets N
+# detectors send N messages for one fact. The key is the SUBJECT.
+rm -f "$TMP"/state/paged_* "$TMP"/state/host_failed_* "$TMP"/state/dedupe_*
+: > "$ALERT_LOG"; : > "$SEND_LOG"
+
+# The notifier speaks first (this is the real order: OnFailure fires at once,
+# the sweep runs on its 5-minute tick).
+UNIT_TYPE=oneshot notify orangecat-cat-outcomes.service
+check "cross-detector: the notifier pages the failure (got $(pages))" \
+  "$([ "$(pages)" -eq 1 ] && echo 0 || echo 1)"
+run_units "orangecat-cat-outcomes.service"
+check "cross-detector: the sweep then stays silent about the SAME unit (got $(unit_alerts))" \
+  "$([ "$(unit_alerts)" -eq 0 ] && echo 0 || echo 1)"
+check "cross-detector: the sweep's suppression is still journalled" \
+  "$(grep -q 'ALERT held for orangecat-cat-outcomes.service' "$ALERT_LOG" && echo 0 || echo 1)"
+
+# And the reverse order — whichever detector gets there first is the one that
+# speaks; neither needs to know the other exists.
+rm -f "$TMP"/state/paged_* "$TMP"/state/host_failed_* "$TMP"/state/dedupe_*
+run_units "some-cron.service"
+check "cross-detector: the sweep pages when it is first (got $(unit_alerts))" \
+  "$([ "$(unit_alerts)" -eq 1 ] && echo 0 || echo 1)"
+UNIT_TYPE=oneshot notify some-cron.service
+check "cross-detector: the notifier then stays silent (got $(pages))" \
+  "$([ "$(pages)" -eq 0 ] && echo 0 || echo 1)"
+
+# A different unit is still a different incident — sharing the key must not
+# turn one outage into a fleet-wide gag.
+: > "$ALERT_LOG"; : > "$SEND_LOG"
+run_units "some-cron.service another-cron.service"
+check "cross-detector: a DIFFERENT unit still pages while the first is claimed" \
+  "$([ "$(unit_alerts)" -eq 1 ] && grep -q 'another-cron.service' "$ALERT_LOG" && echo 0 || echo 1)"
+
+# ── 13. Closure only for failures that were actually announced ───────────────
+# `✅ RECOVERED: unit____` reached George on 2026-08-28 — closure on a message
+# nobody ever received, naming a key instead of a unit. If nothing was said
+# about the failure, nothing needs saying about its recovery.
+rm -f "$TMP"/state/paged_* "$TMP"/state/host_failed_* "$TMP"/state/dedupe_*
+run_units "quiet.service"                       # pages, stamp claimed
+: > "$ALERT_LOG"; : > "$SEND_LOG"
+run_units ""                                    # recovers
+check "recovery: an announced failure gets closure, named by unit (got $(unit_alerts))" \
+  "$([ "$(unit_alerts)" -eq 1 ] && grep -q 'RECOVERED: quiet.service' "$ALERT_LOG" && echo 0 || echo 1)"
+
+rm -f "$TMP"/state/paged_* "$TMP"/state/host_failed_* "$TMP"/state/dedupe_*
+run_units "silent.service"
+rm -f "$TMP"/state/paged_silent_service        # as if the page had been suppressed
+: > "$ALERT_LOG"; : > "$SEND_LOG"
+run_units ""
+check "recovery: an UNannounced failure gets no closure either (got $(unit_alerts))" \
+  "$([ "$(unit_alerts)" -eq 0 ] && echo 0 || echo 1)"
 
 printf '\n  %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

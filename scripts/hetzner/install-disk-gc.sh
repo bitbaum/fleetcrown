@@ -31,7 +31,8 @@
 # — ~/.cache/ms-playwright is the prod-dogfood browser set, and silently
 # deleting it would break the smoke suite with no signal. Reclaim it by hand.
 #
-# Reports what it freed through the watchdog's Telegram channel (lib-alert.sh),
+# Journals what it freed and pages only when the outcome is NOT routine
+# (still above the warn mark, or nothing left to reclaim) — lib-alert.sh,
 # and only when it actually did something — no "ran and did nothing" noise.
 #
 # Idempotent: re-run any time. Logic is covered by
@@ -238,7 +239,19 @@ fi
 end_pct=$(pct); end_used=$(usedk)
 total=$(( (start_used - end_used) / 1024 ))
 if [ "$total" -gt 0 ]; then
-  alert "🧹" "DISK GC: freed ${total}MB (${start_pct}% → ${end_pct}%) — ${FREED_LOG:-n/a}"
+  # Routine maintenance SUCCEEDING is not news. This fired at 00:02 on
+  # 2026-08-29 — "freed 2296MB (81% → 78%)" — a correct report of the box
+  # looking after itself, requiring nothing from anyone. The disk check already
+  # pages above 85%, so a GC that lands back under the mark has, by definition,
+  # removed the reason to say anything. It goes to the journal.
+  #
+  # It still PAGES when the outcome is not routine: space was reclaimed and the
+  # disk is STILL above the warn mark, which is the trend that ends in a full
+  # volume and is genuinely worth a human's attention.
+  logger -t disk-gc "DISK GC: freed ${total}MB (${start_pct}% → ${end_pct}%) — ${FREED_LOG:-n/a}"
+  if [ "${end_pct:-0}" -gt 85 ]; then
+    alert "🧹" "DISK GC: freed ${total}MB but / is still ${end_pct}% — reclaiming is no longer keeping up. ${FREED_LOG:-n/a}"
+  fi
 else
   # Above the mark but nothing safe left to reclaim: that is a real capacity
   # problem and the operator needs to know it, not a silent no-op.

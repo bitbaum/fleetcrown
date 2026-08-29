@@ -58,6 +58,19 @@ done
 chmod +x "$TMP/bin"/*
 export PATH="$TMP/bin:$PATH"
 export MON="$TMP"
+# logger records the JOURNAL; curl records what reaches the PHONE. Without the
+# second stub, moving a message from alert() to logger() looks identical to
+# leaving it alone — which is how a routine nightly report could go on being
+# "tested" while still ringing a phone every midnight.
+cat > "$TMP/bin/curl" <<'STUB'
+#!/usr/bin/env bash
+for a in "$@"; do case "$a" in text=*) printf '%s\n' "${a#text=}" >> "$SEND_LOG";; esac; done
+exit 0
+STUB
+chmod +x "$TMP/bin/curl"
+printf 'TELEGRAM_BOT_TOKEN=test-token\nTELEGRAM_CHAT_ID=test-chat\n' > "$TMP/telegram.env"
+export SEND_LOG="$TMP/sent.log"
+: > "$SEND_LOG"
 export ALERT_LOG="$TMP/alerts.log"
 
 pass=0 fail=0
@@ -67,7 +80,7 @@ check() { if [ "$2" -eq 0 ]; then pass=$((pass+1)); printf '  ✓ %s\n' "$1"
 # Build a fresh fake filesystem for each scenario.
 seed() {
   rm -rf "$FAKE_FS"; mkdir -p "$FAKE_FS/dev" "$FAKE_FS/opt"
-  : > "$ALERT_LOG"; rm -f "$TMP/state/host_diskgc"
+  : > "$ALERT_LOG"; : > "$SEND_LOG"; rm -f "$TMP/state/host_diskgc"
   local old_ts="202601010000"   # long past → cold
   # Two cold repos and one worked-on-today repo, each with a 20MB node_modules.
   for r in coldrepo olderrepo; do
@@ -123,8 +136,13 @@ check "releases beyond keep-count removed" \
   "$([ ! -d "$FAKE_FS/opt/someapp/releases/rel-1" ] && echo 0 || echo 1)"
 check "newest 2 releases kept" \
   "$([ -d "$FAKE_FS/opt/someapp/releases/rel-4" ] && [ -d "$FAKE_FS/opt/someapp/releases/rel-3" ] && echo 0 || echo 1)"
-check "reports what it freed" \
+check "reports what it freed — to the journal" \
   "$(grep -q 'DISK GC: freed' "$ALERT_LOG" && echo 0 || echo 1)"
+# A successful nightly GC that leaves the disk healthy asks nothing of anyone.
+# It fired at 00:02 on 2026-08-29 ("freed 2296MB, 81% → 78%") purely to say the
+# box had looked after itself. Journal yes, phone no.
+check "a routine successful GC does not reach the phone" \
+  "$([ ! -s "$SEND_LOG" ] && echo 0 || echo 1)"
 
 # ── 3. Stops at the cheapest tier that suffices (does not over-delete) ──────
 # Usage is 50%, target 45%. Dropping two 10MB releases gets there, so the GC
@@ -144,10 +162,15 @@ check "cheap tier actually ran: releases trimmed to 2 (got $rels)" \
 # No dev root, no releases → every tier is a no-op, but the disk is still full.
 rm -rf "$FAKE_FS"; mkdir -p "$FAKE_FS/dev" "$FAKE_FS/opt"
 truncate -s 180M "$FAKE_FS/ballast"
-: > "$ALERT_LOG"; rm -f "$TMP/state/host_diskgc"
+: > "$ALERT_LOG"; : > "$SEND_LOG"; rm -f "$TMP/state/host_diskgc"
 gc DISK_GC_HIGH_PCT=75 DISK_GC_TARGET_PCT=65
 check "exhausted tiers while still full: escalates, not silent" \
   "$(grep -q 'could not free space' "$ALERT_LOG" && echo 0 || echo 1)"
+# The half that must survive quietening the routine case: an outcome the
+# operator has to act on still reaches them. Silencing everything would be the
+# worse bug of the two.
+check "…and that one DOES reach the phone" \
+  "$(grep -q 'could not free space' "$SEND_LOG" && echo 0 || echo 1)"
 
 # ── 5. safe_rm refuses to delete outside the root it was given ───────────────
 mkdir -p "$TMP/outside/precious"
