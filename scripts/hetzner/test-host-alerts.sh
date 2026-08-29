@@ -142,7 +142,9 @@ exec "$@"
 STUB
 cat > "$TMP/bin/journalctl" <<'STUB'
 #!/usr/bin/env bash
-echo "stub journal line"
+# %b expands \n escapes, so a test can stage a multi-line journal via
+# JOURNAL_LINES and exercise the boilerplate filter on realistic output.
+printf '%b\n' "${JOURNAL_LINES:-stub journal line}"
 STUB
 # The notifier waits 8s before deciding a unit is really down. Tests assert the
 # decision, not the wall clock — stub it out so the suite stays instant.
@@ -213,29 +215,42 @@ check "86% third tick: still silent (got $n3)" "$([ "$n3" -eq 0 ] && echo 0 || e
 # alert to these counts — an earlier version of this test counted a disk
 # RECOVERED as a unit alert and "failed" on correct behaviour.
 run_units() { : > "$ALERT_LOG"; DISK_PCT=82 FAILED_UNITS="$1" bash "$TMP/host-check.sh" >/dev/null 2>&1 || true; }
-unit_alerts() { grep -c 'FAILED UNIT\|RECOVERED: ' "$ALERT_LOG" 2>/dev/null | tr -d "[:space:]" || true; }
+unit_alerts() { grep -c 'STILL FAILING\|RECOVERED: ' "$ALERT_LOG" 2>/dev/null | tr -d "[:space:]" || true; }
 rm -f "$TMP"/state/host_failed_* "$TMP/state/host_units" "$TMP"/state/paged_*
 
+# One-tick grace: the sweep's first sighting watches, never pages — the
+# OnFailure notifier owns the instant page, and a unit gone by the next tick
+# was a deploy blip (the 2026-08-29 11:19 orangecat six-pack).
 run_units "a.service b.service"
-check "units: first failures alert once per unit (got $(unit_alerts))" \
-  "$([ "$(unit_alerts)" -eq 2 ] && echo 0 || echo 1)"
+check "units: first sighting is silent — the sweep watches, not pages (got $(unit_alerts))" \
+  "$([ "$(unit_alerts)" -eq 0 ] && grep -q 'first sighting' "$ALERT_LOG" && echo 0 || echo 1)"
+
+# Persistent on the second tick: page — and BOTH units in ONE digest message,
+# not one message per unit (09:32/10:02/10:33 each arrived as triples).
+run_units "a.service b.service"
+check "units: persistent failures page on the second tick (got $(unit_alerts))" \
+  "$([ "$(unit_alerts)" -eq 1 ] && echo 0 || echo 1)"
+check "units: N units in one tick are ONE digest naming both" \
+  "$(grep -q 'STILL FAILING: .*a.*b' "$ALERT_LOG" && echo 0 || echo 1)"
 
 run_units "a.service b.service"
-check "units: identical set is silent — no storm (got $(unit_alerts))" \
+check "units: identical set inside the cooldown is silent — no storm (got $(unit_alerts))" \
   "$([ "$(unit_alerts)" -eq 0 ] && echo 0 || echo 1)"
 
-# THE regression. A stuck unit must not mask a new one.
+# THE regression. A stuck unit must not mask a new one — c pages on ITS second
+# sighting even though a and b are still failing and still muted.
 run_units "a.service b.service c.service"
-check "units: a NEW failure alerts while old ones are still failing (got $(unit_alerts))" \
-  "$([ "$(unit_alerts)" -eq 1 ] && grep -q 'c.service' "$ALERT_LOG" && echo 0 || echo 1)"
+run_units "a.service b.service c.service"
+check "units: a NEW failure pages while old ones are still failing (got $(unit_alerts))" \
+  "$([ "$(unit_alerts)" -eq 1 ] && grep -q 'STILL FAILING: c' "$ALERT_LOG" && echo 0 || echo 1)"
 
 run_units "b.service c.service"
-check "units: only the recovered unit reports RECOVERED, by NAME" \
-  "$(grep -q 'RECOVERED: a.service' "$ALERT_LOG" && [ "$(unit_alerts)" -eq 1 ] && echo 0 || echo 1)"
+check "units: only the recovered unit reports RECOVERED, by NAME (no .service)" \
+  "$(grep -q 'RECOVERED: a$' "$ALERT_LOG" && [ "$(unit_alerts)" -eq 1 ] && echo 0 || echo 1)"
 
 run_units ""
-check "units: the rest recover when the set empties (got $(unit_alerts))" \
-  "$([ "$(unit_alerts)" -eq 2 ] && echo 0 || echo 1)"
+check "units: the rest recover in ONE digest when the set empties (got $(unit_alerts))" \
+  "$([ "$(unit_alerts)" -eq 1 ] && grep -q 'RECOVERED: b; c' "$ALERT_LOG" && echo 0 || echo 1)"
 
 check "units: the old aggregate latch file is not recreated" \
   "$([ ! -e "$TMP/state/host_units" ] && echo 0 || echo 1)"
@@ -304,8 +319,9 @@ check "tight memory: no 'integer expected' from field-count drift" \
 # above now emits the bullet, so this is a real regression test.
 rm -f "$TMP"/state/paged_z_service "$TMP"/state/host_failed_z_service
 run_units "z.service"
+run_units "z.service"
 check "units: the unit NAME is alerted, not systemd's bullet" \
-  "$(grep -q 'FAILED UNIT: z.service' "$ALERT_LOG" && ! grep -q 'FAILED UNIT: ●' "$ALERT_LOG" && echo 0 || echo 1)"
+  "$(grep -q 'STILL FAILING: z' "$ALERT_LOG" && ! grep -q 'STILL FAILING: ●' "$ALERT_LOG" && echo 0 || echo 1)"
 check "units: the state key is derived from the name, not the bullet" \
   "$([ -e "$TMP/state/host_failed_z_service" ] && echo 0 || echo 1)"
 
@@ -317,7 +333,7 @@ check "units: the state key is derived from the name, not the bullet" \
 # help: it only silences a unit that comes back, and this one never did. These
 # cases pin the per-unit cooldown that fixes it.
 notify() { : > "$ALERT_LOG"; bash "$TMP/notify-failure.sh" "$1" >/dev/null 2>&1 || true; }
-pages() { grep -c 'UNIT DOWN' "$ALERT_LOG" 2>/dev/null | tr -d "[:space:]" || true; }
+pages() { grep -c '🔴 DOWN:' "$ALERT_LOG" 2>/dev/null | tr -d "[:space:]" || true; }
 stamp_of() { echo "$TMP/state/paged_$(printf '%s' "$1" | tr -c 'a-zA-Z0-9' '_')"; }
 rm -f "$TMP"/state/paged_*
 
@@ -548,14 +564,17 @@ UNIT_TYPE=oneshot notify orangecat-cat-outcomes.service
 check "cross-detector: the notifier pages the failure (got $(pages))" \
   "$([ "$(pages)" -eq 1 ] && echo 0 || echo 1)"
 run_units "orangecat-cat-outcomes.service"
-check "cross-detector: the sweep then stays silent about the SAME unit (got $(unit_alerts))" \
+run_units "orangecat-cat-outcomes.service"
+check "cross-detector: the sweep (past its grace) stays silent about the SAME unit (got $(unit_alerts))" \
   "$([ "$(unit_alerts)" -eq 0 ] && echo 0 || echo 1)"
 check "cross-detector: the sweep's suppression is still journalled" \
   "$(grep -q 'ALERT held for orangecat-cat-outcomes.service' "$ALERT_LOG" && echo 0 || echo 1)"
 
 # And the reverse order — whichever detector gets there first is the one that
-# speaks; neither needs to know the other exists.
+# speaks; neither needs to know the other exists. (First the sweep's grace
+# tick, then its page.)
 rm -f "$TMP"/state/paged_* "$TMP"/state/host_failed_* "$TMP"/state/dedupe_*
+run_units "some-cron.service"
 run_units "some-cron.service"
 check "cross-detector: the sweep pages when it is first (got $(unit_alerts))" \
   "$([ "$(unit_alerts)" -eq 1 ] && echo 0 || echo 1)"
@@ -565,28 +584,32 @@ check "cross-detector: the notifier then stays silent (got $(pages))" \
 
 # A different unit is still a different incident — sharing the key must not
 # turn one outage into a fleet-wide gag.
+run_units "some-cron.service another-cron.service"
 : > "$ALERT_LOG"; : > "$SEND_LOG"
 run_units "some-cron.service another-cron.service"
 check "cross-detector: a DIFFERENT unit still pages while the first is claimed" \
-  "$([ "$(unit_alerts)" -eq 1 ] && grep -q 'another-cron.service' "$ALERT_LOG" && echo 0 || echo 1)"
+  "$([ "$(unit_alerts)" -eq 1 ] && grep -q 'STILL FAILING: another-cron' "$ALERT_LOG" && echo 0 || echo 1)"
 
 # ── 13. Closure only for failures that were actually announced ───────────────
 # `✅ RECOVERED: unit____` reached George on 2026-08-28 — closure on a message
 # nobody ever received, naming a key instead of a unit. If nothing was said
 # about the failure, nothing needs saying about its recovery.
 rm -f "$TMP"/state/paged_* "$TMP"/state/host_failed_* "$TMP"/state/dedupe_*
+run_units "quiet.service"                       # grace tick
 run_units "quiet.service"                       # pages, stamp claimed
 : > "$ALERT_LOG"; : > "$SEND_LOG"
 run_units ""                                    # recovers
 check "recovery: an announced failure gets closure, named by unit (got $(unit_alerts))" \
-  "$([ "$(unit_alerts)" -eq 1 ] && grep -q 'RECOVERED: quiet.service' "$ALERT_LOG" && echo 0 || echo 1)"
+  "$([ "$(unit_alerts)" -eq 1 ] && grep -q 'RECOVERED: quiet' "$ALERT_LOG" && echo 0 || echo 1)"
 
+# A failure that never got past the grace tick was never announced — a deploy
+# blip that recovers by the next tick produces ZERO messages, failure or
+# closure. This is the whole point of the grace.
 rm -f "$TMP"/state/paged_* "$TMP"/state/host_failed_* "$TMP"/state/dedupe_*
-run_units "silent.service"
-rm -f "$TMP"/state/paged_silent_service        # as if the page had been suppressed
+run_units "silent.service"                      # first sighting only
 : > "$ALERT_LOG"; : > "$SEND_LOG"
 run_units ""
-check "recovery: an UNannounced failure gets no closure either (got $(unit_alerts))" \
+check "recovery: a blip inside the grace gets no closure — zero messages total (got $(unit_alerts))" \
   "$([ "$(unit_alerts)" -eq 0 ] && echo 0 || echo 1)"
 
 # ── 14. A page queues its own fix: incident dispatch ─────────────────────────
@@ -673,6 +696,85 @@ reset_dispatch
 FLEETCROWN_TOKEN_FILE="$TMP/does-not-exist.env" notify solon-app.service
 check "dispatch: a missing token file skips the queue but keeps the page (got $(pages))" \
   "$([ "$(pages)" -eq 1 ] && [ "$(dispatches)" -eq 0 ] && echo 0 || echo 1)"
+
+# ── 15. The page shows the APP's error, not systemd's liturgy ────────────────
+# The 2026-08-29 messages read "appcron-kivvi-dunning.service: Main process
+# exited … Failed with result … Failed to start appcron-kivvi-dunning …
+# Triggering OnFailure" — the unit name four times, the actual error (curl's
+# HTTP 500) pushed out of the 300-char window or drowned. Filter the
+# boilerplate; the evidence is the message.
+reset_dispatch
+JOURNAL_LINES='curl: (22) The requested URL returned error: 500\nappcron kivvi GET /api/cron/dunning: HTTP 500\nMain process exited, code=exited, status=22/n/a\nFailed with result exit-code.\nFailed to start appcron-kivvi-dunning.service.\nTriggering OnFailure= dependencies.' \
+  UNIT_TYPE=oneshot notify appcron-kivvi-dunning.service
+check "page: carries the app's own error line" \
+  "$(grep -q 'curl: (22)' "$ALERT_LOG" && echo 0 || echo 1)"
+check "page: systemd boilerplate is filtered out" \
+  "$(! grep -q 'Triggering OnFailure' "$SEND_LOG" && ! grep -q 'Main process exited' "$SEND_LOG" && echo 0 || echo 1)"
+check "page: says DOWN: with the unit named once, without .service" \
+  "$(grep -q '🔴 DOWN: appcron-kivvi-dunning —' "$ALERT_LOG" && echo 0 || echo 1)"
+
+# ── 16. Recovery names the SUBJECT, never the state key ──────────────────────
+# `✅ RECOVERED: rtc_revampit_configured_host_does_not_resolve__typing_static_nvi`
+# and `✅ RECOVERED: agentwork_reparaturbonus-zh` both reached the phone on
+# 2026-08-29 — closure messages nobody can parse. alert_transition remembers
+# the human subject at bad-time and uses it at recovery.
+reset_logs
+lib alert_transition rtc_revampit_configured_host_does_not_resolve__typing_x bad "🧩" "revampit: configured host does not resolve: typing-static-nvidia-bra.trycloudflare.com"
+lib alert_transition rtc_revampit_configured_host_does_not_resolve__typing_x ok "" ""
+check "transition: recovery names the subject derived from the failure text" \
+  "$(grep -q '✅ RECOVERED: revampit$' "$SEND_LOG" && echo 0 || echo 1)"
+check "transition: the raw state key never reaches the phone" \
+  "$(! grep -q 'rtc_revampit' "$SEND_LOG" && echo 0 || echo 1)"
+
+# An explicit subject wins over derivation.
+reset_logs
+lib alert_transition agentwork_repz bad "🚫" "uncommitted changes older than 48h in reparaturbonus-zh" "reparaturbonus-zh"
+lib alert_transition agentwork_repz ok "" ""
+check "transition: an explicit subject is used verbatim on recovery" \
+  "$(grep -q '✅ RECOVERED: reparaturbonus-zh$' "$SEND_LOG" && echo 0 || echo 1)"
+
+# No colon, no subject → fall back to the key (never the whole failure text).
+reset_logs
+lib alert_transition disk bad "💾" "DISK 86% on / (>85%)"
+lib alert_transition disk ok "" ""
+check "transition: colon-less text falls back to the key on recovery" \
+  "$(grep -q '✅ RECOVERED: disk$' "$SEND_LOG" && echo 0 || echo 1)"
+
+# ── 17. Reminders back off: 30m, 2h, 8h — never every half hour all day ──────
+# The stamp holds "ts count"; each claim quadruples the next wait. The morning
+# of 2026-08-29: identical FAILED messages at 08:01, 08:31, 09:01, 09:32,
+# 10:02, 10:33 — six reminders in 2.5h about a fact the first one carried.
+reset_logs
+now=$(date +%s)
+# Claimed once (count=1), base cooldown elapsed → the FIRST reminder goes out.
+printf '%s %s' "$((now - 2000))" 1 > "$TMP/state/paged_bk"
+lib alert_once bk 1800 "🔴" "backoff probe"
+check "backoff: first reminder after the base cooldown (got $(sent))" \
+  "$([ "$(sent)" -eq 1 ] && echo 0 || echo 1)"
+# Claimed twice (count=2) → the next wait is 4× base; the same age is now held.
+reset_logs
+printf '%s %s' "$((now - 2000))" 2 > "$TMP/state/paged_bk"
+lib alert_once bk 1800 "🔴" "backoff probe"
+check "backoff: after two claims the same age is held — wait is 4x (got $(sent))" \
+  "$([ "$(sent)" -eq 0 ] && grep -q 'ALERT held for bk' "$ALERT_LOG" && echo 0 || echo 1)"
+# …but a 3h age clears the 2h bar.
+reset_logs
+printf '%s %s' "$((now - 10800))" 2 > "$TMP/state/paged_bk"
+lib alert_once bk 1800 "🔴" "backoff probe"
+check "backoff: the 4x reminder still arrives once its wait elapses (got $(sent))" \
+  "$([ "$(sent)" -eq 1 ] && echo 0 || echo 1)"
+# The ladder is capped: even a huge count waits at most a day.
+reset_logs
+printf '%s %s' "$((now - 90000))" 99 > "$TMP/state/paged_bk"
+lib alert_once bk 1800 "🔴" "backoff probe"
+check "backoff: the ladder caps at one day — a broken thing is never silent forever (got $(sent))" \
+  "$([ "$(sent)" -eq 1 ] && echo 0 || echo 1)"
+# alert_clear resets the ladder: after recovery the next outage pages at once.
+reset_logs
+lib alert_clear bk
+lib alert_once bk 1800 "🔴" "fresh outage"
+check "backoff: recovery resets the ladder — a fresh outage pages immediately (got $(sent))" \
+  "$([ "$(sent)" -eq 1 ] && echo 0 || echo 1)"
 
 printf '\n  %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

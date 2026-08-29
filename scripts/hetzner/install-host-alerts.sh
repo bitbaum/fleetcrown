@@ -118,36 +118,76 @@ alert() {
   return 0
 }
 
-# One incident is one message. The caller names the subject; repeated detections
-# of the SAME subject inside <cooldown> go to the journal only, and a re-page
-# after the cooldown is a deliberate still-broken reminder. alert_clear on
-# recovery is the other half and is load-bearing: without it the next genuine
-# outage of that subject inherits the last one's silence.
-alert_once() {  # key cooldown emoji text
-  local key="$1" cd="$2" emoji="$3" text="$4"
+# One incident is one message, and reminders BACK OFF. The stamp holds
+# "ts count": each successful claim quadruples the next reminder's wait
+# (30m → 2h → 8h → daily, capped at a day). On 2026-08-29 George's phone got
+# the same four failing crons every 30 minutes all morning — a thing that has
+# been broken for six hours is not new information twice an hour, and the fix
+# agent (incident-dispatch) already has the journal. alert_clear on recovery
+# resets the ladder, so the next genuine outage pages immediately again.
+#
+# claim_once is the decision without the delivery: callers that want to speak
+# about SEVERAL claimed subjects in one message (the host-check digest) claim
+# each and deliver once. alert_once stays as claim+deliver for the one-subject
+# callers (the OnFailure notifier, the env repair).
+claim_once() {  # key base-cooldown → 0 = claimed (caller may speak), 1 = held
+  local key="$1" cd="$2"
   local sf="$MON/state/paged_$(_alert_key "$key")"
-  local now last
-  now=$(date +%s); last=$(cat "$sf" 2>/dev/null | tr -dc '0-9')
-  if [ -n "$last" ] && [ "$((now - last))" -lt "$cd" ]; then
-    logger -t watchdog "ALERT held for ${key}: paged $((now - last))s ago, cooldown ${cd}s"
-    return 0
+  local now last count exp wait
+  now=$(date +%s); last=""; count=0
+  if [ -f "$sf" ]; then
+    read -r last count < "$sf" 2>/dev/null || true
+    last=$(printf '%s' "$last" | tr -dc '0-9')
+    count=$(printf '%s' "${count:-}" | tr -dc '0-9'); count=${count:-0}
+  fi
+  if [ -n "$last" ]; then
+    exp=0; [ "$count" -gt 0 ] && exp=$((count - 1)); [ "$exp" -gt 3 ] && exp=3
+    wait=$(( cd * 4 ** exp )); [ "$wait" -gt 86400 ] && wait=86400
+    if [ "$((now - last))" -lt "$wait" ]; then
+      logger -t watchdog "ALERT held for ${key}: claimed $((now - last))s ago, next reminder after ${wait}s"
+      return 1
+    fi
   fi
   mkdir -p "$MON/state"
-  printf '%s' "$now" > "$sf"
-  _alert_deliver "$emoji $text"
+  printf '%s %s' "$now" "$((count + 1))" > "$sf"
+  return 0
+}
+alert_once() {  # key cooldown emoji text
+  claim_once "$1" "$2" || return 0
+  _alert_deliver "$3 $4"
   return 0
 }
 alert_clear() { rm -f "$MON/state/paged_$(_alert_key "$1")"; return 0; }
-alert_transition() {  # key state emoji text
-  local key="$1" state="$2" emoji="$3" text="$4"
-  local sf="$MON/state/host_$(printf '%s' "$key" | tr -c 'a-zA-Z0-9' '_')"
+alert_transition() {  # key state emoji text [subject]
+  local key="$1" state="$2" emoji="$3" text="$4" subject="${5:-}"
+  local kk; kk=$(printf '%s' "$key" | tr -c 'a-zA-Z0-9' '_')
+  local sf="$MON/state/host_$kk" subf="$MON/state/subject_$kk"
   local prev="ok"; [ -f "$sf" ] && prev=$(cat "$sf")
   [ "$state" = "$prev" ] && return 0
   printf '%s' "$state" > "$sf"
   # A transition IS the deliberate decision, so deliver it directly rather than
   # through alert()'s floor: a unit that fails, recovers and fails again inside
   # five minutes is genuinely three events, and the floor would eat the third.
-  if [ "$state" = "bad" ]; then _alert_deliver "$emoji $text"; else _alert_deliver "✅ RECOVERED: $key"; fi
+  #
+  # Recovery names the SUBJECT, never the key. `✅ RECOVERED:
+  # rtc_revampit_configured_host_does_not_resolve__typing_static_nvi` and
+  # `✅ RECOVERED: agentwork_reparaturbonus-zh` both reached George's phone on
+  # 2026-08-29 — closure messages nobody can parse, because this function used
+  # to print its own state-file key. The subject is remembered at bad-time
+  # (explicit 5th arg, else the text up to its first colon, else the key) so
+  # the recovery can say the same human name the failure did.
+  if [ "$state" = "bad" ]; then
+    if [ -z "$subject" ]; then
+      subject="${text%%:*}"
+      { [ -z "$subject" ] || [ "$subject" = "$text" ]; } && subject="$key"
+    fi
+    printf '%s' "$subject" | cut -c1-60 > "$subf"
+    _alert_deliver "$emoji $text"
+  else
+    local named=""; [ -f "$subf" ] && named=$(cat "$subf" 2>/dev/null)
+    rm -f "$subf"
+    _alert_deliver "✅ RECOVERED: ${named:-$key}"
+  fi
   # MUST return 0 unconditionally. A trailing `[ "$state" = "ok" ] && alert ...`
   # here returned 1 on the bad path, so a caller written as
   #   check && alert_transition k bad ... || alert_transition k ok ...
@@ -216,14 +256,21 @@ else
   fi
 fi
 
-tail=$(journalctl -u "$unit" -n 4 --no-pager -o cat 2>/dev/null | tr '\n' ' ' | cut -c1-300)
+# The page shows the APP's error, not systemd's liturgy. The old message
+# repeated the unit name four times ("appcron-kivvi-dunning.service: Main
+# process exited … Failed with result … Failed to start appcron-kivvi-dunning
+# … Triggering OnFailure") and buried the one line that mattered — the app's
+# own `curl: (22) … HTTP 500`. Filter the boilerplate, keep the evidence.
+tail=$(journalctl -u "$unit" -n 12 --no-pager -o cat 2>/dev/null \
+  | grep -vE 'Main process exited|Failed with result|Failed to start|Triggering OnFailure|Scheduled restart|Start request repeated|Deactivated successfully|Consumed .* CPU time|^(Starting|Started|Stopping|Stopped) ' \
+  | tail -n 4 | tr '\n' ' ' | cut -c1-300)
 # A page-worthy failure is also dispatch-worthy: queue the remediation agent
 # BEFORE composing the page, so the page can say the fix is already in motion —
 # that one clause is the difference between "act now" and "read the outcome
 # when it arrives". incident-dispatch has its own per-unit stamp, so the
 # reminder re-page after COOLDOWN does not queue a second agent.
 disp=$("$MON/incident-dispatch.sh" "$unit" 2>/dev/null || true)
-alert_once "$unit" "$COOLDOWN" "🔴" "UNIT DOWN: ${unit} — ${tail:-<no log>}${disp:+ → 🤖 fix agent dispatched (${disp}); outcome follows}"
+alert_once "$unit" "$COOLDOWN" "🔴" "DOWN: ${unit%.service} — ${tail:-<no log>}${disp:+ → 🤖 fix agent dispatched (${disp}); outcome follows}"
 NF
 chmod +x "$MON/notify-failure.sh"
 
@@ -440,30 +487,53 @@ UNIT_COOLDOWN=${NOTIFY_COOLDOWN_SEC:-1800}
 mapfile -t failed_units < <(systemctl list-units --type=service --state=failed --no-legend --plain 2>/dev/null \
   | sed 's/^[^A-Za-z0-9]*//' | awk '{print $1}' | grep -E '\.service$' | grep -v '^notify-failure@')
 declare -A unit_now=()
+announce=()
 for u in ${failed_units[@]+"${failed_units[@]}"}; do
   k="failed_$(printf '%s' "$u" | tr -c 'a-zA-Z0-9' '_')"
   unit_now[$k]=1
-  # The state file records WHICH units are known-failed (its content is the unit
-  # name, so recovery can name it); alert_once decides whether anyone is told.
+  # ONE-TICK GRACE. A unit first seen failed is recorded and watched, not
+  # paged: the OnFailure notifier already pages real failures within seconds
+  # (with its own recovery guard), so the sweep's job is the PERSISTENT
+  # failure, and a unit that is gone by the next tick was a deploy blip. On
+  # 2026-08-29 11:19 an orangecat deploy failed three units for under five
+  # minutes and George got six messages (3 FAILED + 3 RECOVERED) about a
+  # non-event the notifier had already correctly declined to page.
+  if [ ! -e "$MON/state/host_$k" ]; then
+    printf '%s' "$u" > "$MON/state/host_$k"
+    logger -t watchdog "sweep: ${u} failed, first sighting — watching, not paging"
+    continue
+  fi
+  # The state file records WHICH units are known-failed (its content is the
+  # unit name, so recovery can name it); claim_once decides whether anyone is
+  # told — the same subject stamp the notifier uses, so whichever detector
+  # speaks first claims the incident, and reminders back off together.
   printf '%s' "$u" > "$MON/state/host_$k"
-  # Same dispatch as the OnFailure notifier, same shared `dispatch:` stamp —
-  # whichever detector notices first queues the ONE agent, the other finds the
-  # claim taken. See incident-dispatch.sh for why a page queues its own fix.
-  disp=$("$MON/incident-dispatch.sh" "$u" 2>/dev/null || true)
-  alert_once "$u" "$UNIT_COOLDOWN" "⚙️" "FAILED UNIT: $u${disp:+ → 🤖 fix agent dispatched (${disp}); outcome follows}"
+  if claim_once "$u" "$UNIT_COOLDOWN"; then
+    # Same dispatch as the OnFailure notifier, same shared `dispatch:` stamp —
+    # whichever detector notices first queues the ONE agent.
+    disp=$("$MON/incident-dispatch.sh" "$u" 2>/dev/null || true)
+    announce+=("${u%.service}${disp:+ (🤖 ${disp})}")
+  fi
 done
+# N failures in one tick are ONE message, not N. The morning of 2026-08-29
+# reads as triples — 09:32, 10:02, 10:33, each three separate messages naming
+# one unit apiece. A digest carries the same facts in a single glance.
+if [ "${#announce[@]}" -gt 0 ]; then
+  _alert_deliver "⚙️ STILL FAILING: $(printf '%s; ' "${announce[@]}" | sed 's/; $//')"
+fi
 # Anything that was failing and is not in the current set has recovered. Without
 # this the key would stay set and its next genuine failure would be silent —
 # the same latch, one level down. Report the recovery only if the failure was
 # actually announced: closure on a message nobody received is just noise, and
 # `✅ RECOVERED: unit____` is how that reads when the key is not a real name.
+recovered=()
 for sf in "$MON"/state/host_failed_*; do
   [ -e "$sf" ] || continue
   k=$(basename "$sf"); k=${k#host_}
   [ -n "${unit_now[$k]:-}" ] && continue
   u=$(cat "$sf" 2>/dev/null)
   if [ -n "$u" ] && [ -e "$MON/state/paged_$(printf '%s' "$u" | tr -c 'a-zA-Z0-9' '_')" ]; then
-    _alert_deliver "✅ RECOVERED: $u"
+    recovered+=("${u%.service}")
   fi
   # Clear the dispatch stamp with the page stamp: a unit that recovers and
   # breaks again is a NEW incident and deserves a fresh agent, not the last
@@ -471,6 +541,11 @@ for sf in "$MON"/state/host_failed_*; do
   [ -n "$u" ] && alert_clear "$u" && alert_clear "dispatch:$u"
   rm -f "$sf"
 done
+# Same digest rule as the failures: closures that land on one tick are one
+# message (10:58 on 2026-08-29 was three separate RECOVERED lines for one fix).
+if [ "${#recovered[@]}" -gt 0 ]; then
+  _alert_deliver "✅ RECOVERED: $(printf '%s; ' "${recovered[@]}" | sed 's/; $//')"
+fi
 # Retire the old aggregate latch, and the previous per-unit keys whose content
 # was a bare ok/bad and whose name could not be turned back into a unit.
 rm -f "$MON/state/host_units" "$MON"/state/host_unit_*
