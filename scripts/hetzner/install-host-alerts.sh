@@ -293,24 +293,52 @@ fi
 # UNIT: ●") — which is how this shipped once already. The sed is belt and
 # braces for systemd builds that ignore --plain. The old aggregate code got
 # away with the bullet because it only tested the string for emptiness.
+#
+# ONE INCIDENT IS ONE MESSAGE ACROSS DETECTORS, not just within one.
+#
+# This sweep and the OnFailure notifier are two independent detectors of the
+# same fact, and on 2026-08-29 they both reported it: `⚙️ FAILED UNIT:
+# orangecat-cat-outcomes.service` at 06:45 from here, `🔴 UNIT DOWN:
+# orangecat-cat-outcomes.service` at 06:46 from notify-failure once its grace
+# window expired. Each was individually correct and correctly deduplicated
+# against itself — which is exactly why the duplicate survived a fix aimed at
+# per-detector storms. Keying per detector still lets N detectors send N
+# messages.
+#
+# So the cooldown key is the SUBJECT (the unit), shared with notify-failure:
+# whichever detector notices first speaks, the other finds the claim already
+# taken and goes to the journal. Neither has to know the other exists.
+UNIT_COOLDOWN=${NOTIFY_COOLDOWN_SEC:-1800}
 mapfile -t failed_units < <(systemctl list-units --type=service --state=failed --no-legend --plain 2>/dev/null \
   | sed 's/^[^A-Za-z0-9]*//' | awk '{print $1}' | grep -E '\.service$' | grep -v '^notify-failure@')
 declare -A unit_now=()
 for u in ${failed_units[@]+"${failed_units[@]}"}; do
-  k="unit_$(printf '%s' "$u" | tr -c 'a-zA-Z0-9' '_')"
+  k="failed_$(printf '%s' "$u" | tr -c 'a-zA-Z0-9' '_')"
   unit_now[$k]=1
-  alert_transition "$k" bad "⚙️" "FAILED UNIT: $u"
+  # The state file records WHICH units are known-failed (its content is the unit
+  # name, so recovery can name it); alert_once decides whether anyone is told.
+  printf '%s' "$u" > "$MON/state/host_$k"
+  alert_once "$u" "$UNIT_COOLDOWN" "⚙️" "FAILED UNIT: $u"
 done
 # Anything that was failing and is not in the current set has recovered. Without
-# this the key would stay `bad` and its next genuine failure would be silent —
-# the same latch, one level down.
-for sf in "$MON"/state/host_unit_*; do
+# this the key would stay set and its next genuine failure would be silent —
+# the same latch, one level down. Report the recovery only if the failure was
+# actually announced: closure on a message nobody received is just noise, and
+# `✅ RECOVERED: unit____` is how that reads when the key is not a real name.
+for sf in "$MON"/state/host_failed_*; do
   [ -e "$sf" ] || continue
   k=$(basename "$sf"); k=${k#host_}
-  [ -n "${unit_now[$k]:-}" ] || alert_transition "$k" ok "" ""
+  [ -n "${unit_now[$k]:-}" ] && continue
+  u=$(cat "$sf" 2>/dev/null)
+  if [ -n "$u" ] && [ -e "$MON/state/paged_$(printf '%s' "$u" | tr -c 'a-zA-Z0-9' '_')" ]; then
+    _alert_deliver "✅ RECOVERED: $u"
+  fi
+  [ -n "$u" ] && alert_clear "$u"
+  rm -f "$sf"
 done
-# Retire the old aggregate latch so it cannot linger at `bad` forever.
-rm -f "$MON/state/host_units"
+# Retire the old aggregate latch, and the previous per-unit keys whose content
+# was a bare ok/bad and whose name could not be turned back into a unit.
+rm -f "$MON/state/host_units" "$MON"/state/host_unit_*
 
 # App .env readability — repair it, don't report it.
 #
