@@ -4,6 +4,11 @@ Push-based, near-zero-RAM. No Grafana/Prometheus — a solo operator needs
 **alerts** (something happened, act now), not dashboards nobody watches at 04:00.
 All alerts flow through the watchdog's Telegram channel (`/opt/monitoring/telegram.env`).
 
+**The SSOT for everything that reaches the operator's Telegram — alerts,
+digests, feedback pings, briefings — is `docs/telegram-notifications.md`**,
+enforced by `scripts/ci/check-telegram-registry.sh` (part of `npm run verify`).
+This file covers only the box-monitoring senders in that registry.
+
 ## What alerts you
 
 | Signal | Mechanism | Installed by |
