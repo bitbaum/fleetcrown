@@ -10,7 +10,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { requireCronAuth } from "@/lib/cron-auth";
 import { logDebug } from "@/db/queries/debug-logs";
-import { runFrontierDigest, runFrontierProposals, type RunProposalsResult } from "@/lib/frontier/run";
+import { runFrontierDigest, runFrontierProposals, type RunFrontierResult, type RunProposalsResult } from "@/lib/frontier/run";
 
 /**
  * How loud each generator outcome is. The distinction that matters: a fault in
@@ -29,6 +29,30 @@ function outcomeLevel(p: RunProposalsResult): "info" | "warn" | "error" {
   return "info";
 }
 
+// Persist the proposals-phase outcome. Until this existed the whole diagnosis
+// lived in the systemd journal, which on this box holds ONE day of this unit —
+// so the loop could (and did) go two months surfacing nothing with no
+// recoverable record of why.
+async function logProposalsOutcome(r: RunFrontierResult, proposals: RunProposalsResult | { error: string }): Promise<void> {
+  await logDebug({
+    source: "crons/frontier-digest",
+    level: "error" in proposals ? "error" : outcomeLevel(proposals),
+    message: "error" in proposals
+      ? `frontier proposals THREW: ${proposals.error}`
+      : proposals.skipped
+        ? `no proposals attempted: ${proposals.skipped}`
+        : `generation=${proposals.generation} returned=${proposals.returned ?? 0} drafted=${proposals.drafted} surfaced=${proposals.surfaced}`,
+    meta: {
+      digestDate: r.saved.digestDate,
+      items: r.itemCount,
+      sourcesOk: r.sourcesOk,
+      sourcesFailed: r.sourcesFailed,
+      model: r.saved.model,
+      proposals,
+    },
+  });
+}
+
 // Ingestion fans out to several external feeds + a Groq call; give it room.
 export const maxDuration = 60;
 
@@ -38,36 +62,25 @@ export async function GET(req: NextRequest) {
 
   try {
     const r = await runFrontierDigest();
-    // Second half: draft + critique self-improvement proposals from the digest.
-    // Best-effort — a proposal failure must not fail the public digest.
-    let proposals: RunProposalsResult | { error: string };
-    try {
-      proposals = await runFrontierProposals(r.saved);
-    } catch (e) {
-      proposals = { error: e instanceof Error ? e.message : "unknown" };
-    }
 
-    // Persist the outcome. Until this existed the whole diagnosis lived in the
-    // systemd journal, which on this box holds ONE day of this unit — so the
-    // loop could (and did) go two months surfacing nothing with no recoverable
-    // record of why. The response body is written once and read by nobody.
-    await logDebug({
-      source: "crons/frontier-digest",
-      level: "error" in proposals ? "error" : outcomeLevel(proposals),
-      message: "error" in proposals
-        ? `frontier proposals THREW: ${proposals.error}`
-        : proposals.skipped
-          ? `no proposals attempted: ${proposals.skipped}`
-          : `generation=${proposals.generation} returned=${proposals.returned ?? 0} drafted=${proposals.drafted} surfaced=${proposals.surfaced}`,
-      meta: {
-        digestDate: r.saved.digestDate,
-        items: r.itemCount,
-        sourcesOk: r.sourcesOk,
-        sourcesFailed: r.sourcesFailed,
-        model: r.saved.model,
-        proposals,
-      },
-    });
+    // Second half: draft + critique self-improvement proposals from the
+    // digest. Best-effort in two senses now — a proposal failure must not
+    // fail the public digest (unchanged), AND a slow model chain must not
+    // hold the cron's HTTP response hostage past fc-cron.sh's `curl -m 120`.
+    // generateProposals and each judge in the panel retry across a
+    // multi-vendor chain (lib/groq.ts's `fallback: true` default), burning
+    // their FULL per-link timeout on every degraded link before moving to
+    // the next — a single sluggish link can push this phase past two
+    // minutes on its own, even though ingest+digest above finish in well
+    // under 30s. Observed 2026-08-30: today's digest saved and served fine,
+    // but fc-cron@frontier-digest.service still failed on a 120s curl
+    // timeout with 0 bytes received — the response was still blocked on
+    // this phase. Not awaited: this is a long-running systemd process, not
+    // serverless, so the promise keeps running after the response is sent
+    // and logs its own outcome via logProposalsOutcome.
+    void runFrontierProposals(r.saved)
+      .catch((e): { error: string } => ({ error: e instanceof Error ? e.message : "unknown" }))
+      .then((proposals) => logProposalsOutcome(r, proposals));
 
     return NextResponse.json({
       ok: true,
@@ -77,7 +90,7 @@ export async function GET(req: NextRequest) {
       sourcesOk: r.sourcesOk,
       sourcesFailed: r.sourcesFailed,
       model: r.saved.model,
-      proposals,
+      proposals: "queued — outcome logged separately (source=crons/frontier-digest)",
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "unknown";
