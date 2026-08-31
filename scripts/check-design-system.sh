@@ -82,6 +82,57 @@ check_none "viewport-keyed touch target (use the pointer:coarse floor in globals
   'min-(h|w)-11[^"]*(sm|md|lg|xl):min-(h|w)-[0-9]|(sm|md|lg|xl):min-(h|w)-[0-9][^"]*min-(h|w)-11' \
   src/components src/app
 
+# The inverse of check_none: some rules are about what MUST be there. A styled
+# active nav item that never announces itself is a highlight only sighted users
+# get, and it is invisible to every check that only looks for forbidden strings.
+check_paired() {
+  local label="$1"
+  local trigger="$2"   # if a file contains this...
+  local required="$3"  # ...it must also contain this
+  shift 3
+
+  checks_run=$((checks_run + 1))
+
+  local triggered status
+  triggered="$(rg -l "$trigger" "$@" 2>&1)" && status=0 || status=$?
+
+  # No file triggers the rule: nothing to check, but say so — a rule that
+  # matches nothing must not read the same as a rule that passed.
+  if [[ "$status" -eq 1 ]]; then
+    echo "design-system check WARNING: no file matches trigger for: $label" >&2
+    return
+  fi
+  if [[ "$status" -ne 0 ]]; then
+    echo "design-system check ERRORED (rg exit $status) on: $label" >&2
+    echo "$triggered" >&2
+    fail=1
+    return
+  fi
+
+  local offenders=()
+  while IFS= read -r file; do
+    [[ -z "$file" ]] && continue
+    rg -q "$required" "$file" || offenders+=("$file")
+  done <<< "$triggered"
+
+  if [[ "${#offenders[@]}" -gt 0 ]]; then
+    printf '%s\n' "${offenders[@]}"
+    echo
+    echo "design-system check failed: $label"
+    fail=1
+  fi
+}
+
+# Styling the active nav item without announcing it means the highlight exists
+# only for people who can see it. This shape is not hypothetical: a fleet-wide
+# nav audit found the desktop sidebar here styling `ui-nav-item-active` and
+# staying silent, while MobileNav, MobileNavSheet and FleetSurfaceGuide all set
+# aria-current correctly. Four surfaces right, one wrong, is what applying a
+# rule by hand looks like — so the rule stops being applied by hand.
+check_paired "active nav styling without aria-current" \
+  'ui-nav-item-active' 'aria-current' \
+  src/components src/app -g '*.tsx'
+
 if [[ "$fail" -ne 0 ]]; then
   exit 1
 fi
