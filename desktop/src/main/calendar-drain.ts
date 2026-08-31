@@ -20,39 +20,39 @@
  * lifecycle; the drain just backs off and lets their restart hooks recover.
  */
 
-import { APP_URL } from "@/config/brand";
-import { drainOnce } from "@home/calendar-drain";
-import { loadToken } from "./token-store";
+import { APP_URL } from '@/config/brand'
+import { drainOnce } from '@home/calendar-drain'
+import { loadToken } from './token-store'
 
 // Slower cadence than the command poller: calendar events aren't latency-
 // sensitive, and each pass shells out to gog. 30s keeps "approve on phone →
 // booked" feeling near-instant without hammering gog's token bucket.
-const DRAIN_INTERVAL_MS = 30_000;
+const DRAIN_INTERVAL_MS = 30_000
 
-const BASE_URL = (process.env.FLEETCROWN_WEB_URL || "").trim() || APP_URL;
+const BASE_URL = (process.env.FLEETCROWN_WEB_URL || '').trim() || APP_URL
 
-let timer: NodeJS.Timeout | null = null;
-let stopped = false;
-let inFlight = false;
+let timer: NodeJS.Timeout | null = null
+let stopped = false
+let inFlight = false
 
 async function drainPass(): Promise<void> {
   // Coalesce: a slow gog booking must never let two passes overlap and double-
   // book. If the previous pass is still running, skip this tick.
-  if (inFlight) return;
-  const token = loadToken();
-  if (!token) return;
-  inFlight = true;
+  if (inFlight) return
+  const token = loadToken()
+  if (!token) return
+  inFlight = true
   try {
-    const { booked, failed } = await drainOnce({ baseUrl: BASE_URL, token });
+    const { booked, failed } = await drainOnce({ baseUrl: BASE_URL, token })
     if (booked || failed) {
-      console.log(`[calendar-drain] pass: booked ${booked}, failed ${failed}`);
+      console.log(`[calendar-drain] pass: booked ${booked}, failed ${failed}`)
     }
   } catch (err) {
     // Network blip, 401, gog missing — non-fatal. Retry next tick. The poller/
     // pusher surface + recover token problems; we stay quiet-but-alive.
-    console.warn("[calendar-drain] pass errored:", (err as Error).message);
+    console.warn('[calendar-drain] pass errored:', (err as Error).message)
   } finally {
-    inFlight = false;
+    inFlight = false
   }
 }
 
@@ -62,24 +62,24 @@ async function drainPass(): Promise<void> {
  * of launch, then every DRAIN_INTERVAL_MS.
  */
 export function startCalendarDrain(): void {
-  if (timer) return;
-  stopped = false;
-  void drainPass();
+  if (timer) return
+  stopped = false
+  void drainPass()
   timer = setInterval(() => {
-    if (!stopped) void drainPass();
-  }, DRAIN_INTERVAL_MS);
+    if (!stopped) void drainPass()
+  }, DRAIN_INTERVAL_MS)
 }
 
 export function stopCalendarDrain(): void {
-  stopped = true;
+  stopped = true
   if (timer) {
-    clearInterval(timer);
-    timer = null;
+    clearInterval(timer)
+    timer = null
   }
 }
 
 /** Called on token change (paste / deep-link auth) and on system wake. */
 export function restartCalendarDrain(): void {
-  stopCalendarDrain();
-  startCalendarDrain();
+  stopCalendarDrain()
+  startCalendarDrain()
 }

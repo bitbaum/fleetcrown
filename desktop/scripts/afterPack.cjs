@@ -24,12 +24,12 @@
 // Scoped to Linux because mac .dmg and Windows .exe don't have the SUID
 // wrinkle (.deb installs handle it via dpkg postinst chmod 4755).
 
-const fs = require("fs");
-const path = require("path");
+const fs = require('fs');
+const path = require('path');
 
 /** @param {import('electron-builder').AfterPackContext} context */
 exports.default = async function afterPack(context) {
-  if (context.electronPlatformName !== "linux") return;
+  if (context.electronPlatformName !== 'linux') return;
 
   // electron-builder copies the Electron binary into appOutDir at the
   // executable name (defaults to product name lowercased and dasherized).
@@ -40,17 +40,13 @@ exports.default = async function afterPack(context) {
   const wrappedBinaryPath = path.join(appOutDir, `${execName}-bin`);
 
   if (!fs.existsSync(realBinaryPath)) {
-    console.warn(
-      `[afterPack] expected Electron binary at ${realBinaryPath} but it's missing — skipping no-sandbox wrap`,
-    );
+    console.warn(`[afterPack] expected Electron binary at ${realBinaryPath} but it's missing — skipping no-sandbox wrap`);
     return;
   }
 
   // Avoid double-wrap if afterPack runs twice (multi-arch build, retries).
   if (fs.existsSync(wrappedBinaryPath)) {
-    console.log(
-      `[afterPack] ${execName} appears already wrapped (${execName}-bin exists) — skipping`,
-    );
+    console.log(`[afterPack] ${execName} appears already wrapped (${execName}-bin exists) — skipping`);
     return;
   }
 
@@ -76,7 +72,5 @@ HERE_DIR="$(dirname "$(readlink -f "$0")")"
 exec "$HERE_DIR/${execName}-bin" --no-sandbox "$@"
 `;
   fs.writeFileSync(realBinaryPath, wrapper, { mode: 0o755 });
-  console.log(
-    `[afterPack] wrapped ${execName} with --no-sandbox stub (real binary moved to ${execName}-bin)`,
-  );
+  console.log(`[afterPack] wrapped ${execName} with --no-sandbox stub (real binary moved to ${execName}-bin)`);
 };

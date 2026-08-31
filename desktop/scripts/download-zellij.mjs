@@ -68,7 +68,7 @@ async function main() {
   }
 
   const binPath = join(RESOURCES_BIN, "zellij");
-  if ((await exists(binPath)) && !process.env.FORCE) {
+  if (await exists(binPath) && !process.env.FORCE) {
     console.log(`[zellij] already present at ${binPath} — skip (set FORCE=1 to re-download)`);
     return;
   }

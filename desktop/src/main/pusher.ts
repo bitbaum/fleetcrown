@@ -28,21 +28,21 @@
  * the pusher's 30s cadence would slip. Two timers, two responsibilities.
  */
 
-import { readdirSync } from "fs";
-import { homedir } from "os";
-import { join } from "path";
-import { getZellijTabs } from "@/lib/zellij";
-import { getZellijPaneTabMap } from "@/lib/terminals/zellij";
-import { APP_URL } from "@/config/brand";
-import { readPowerSource } from "./power-source";
-import { DAEMON_HEARTBEAT_MS } from "@/lib/constants/daemon";
-import { parseProjectsConf, resolveEffectiveTab } from "@/lib/agent-config";
-import { getAgentProcesses, readFastState } from "@/lib/control-fast-state";
-import { listAgentRegistry } from "@/lib/agent-registry";
-import type { PaneRecord } from "@/db/schema/runtime-snapshots";
-import { loadToken, clearToken, isDevBaseOverride } from "./token-store";
-import { listPtyTabs, runnerWorkspaceId } from "./pty-runtime";
-import { fleetSessionsDir, legacyClaudeSessionsDir } from "@/lib/session-paths";
+import { readdirSync } from 'fs'
+import { homedir } from 'os'
+import { join } from 'path'
+import { getZellijTabs } from '@/lib/zellij'
+import { getZellijPaneTabMap } from '@/lib/terminals/zellij'
+import { APP_URL } from '@/config/brand'
+import { readPowerSource } from './power-source'
+import { DAEMON_HEARTBEAT_MS } from '@/lib/constants/daemon'
+import { parseProjectsConf, resolveEffectiveTab } from '@/lib/agent-config'
+import { getAgentProcesses, readFastState } from '@/lib/control-fast-state'
+import { listAgentRegistry } from '@/lib/agent-registry'
+import type { PaneRecord } from '@/db/schema/runtime-snapshots'
+import { loadToken, clearToken, isDevBaseOverride } from './token-store'
+import { listPtyTabs, runnerWorkspaceId } from './pty-runtime'
+import { fleetSessionsDir, legacyClaudeSessionsDir } from '@/lib/session-paths'
 
 // Runner version is reported in the runtime-state heartbeat. The desktop sets
 // FLEETCROWN_RUNNER_VERSION from app.getVersion() inside app.whenReady() (so
@@ -53,9 +53,9 @@ import { fleetSessionsDir, legacyClaudeSessionsDir } from "@/lib/session-paths";
 // packaged desktop reported "dev" (whenReady runs after the static import),
 // and the box unit carried a hardcoded box-0.8.9 for three releases — both
 // because this was a load-time const.
-const runnerVersion = (): string => process.env.FLEETCROWN_RUNNER_VERSION ?? "dev";
+const runnerVersion = (): string => process.env.FLEETCROWN_RUNNER_VERSION ?? 'dev'
 
-const DEFAULT_SESSION_NAME = "fleet";
+const DEFAULT_SESSION_NAME = 'fleet'
 
 // v0.6 — liveness heartbeat ONLY. Actual state changes are pushed via
 // pushNow() the moment the watcher detects an agent file change (wired
@@ -70,23 +70,23 @@ const DEFAULT_SESSION_NAME = "fleet";
 // they were edited independently and disagreed (90s threshold against a
 // 5min heartbeat), causing flicker. Bumping THIS constant auto-bumps the
 // threshold to the right multiple.
-const PUSH_INTERVAL_MS = DAEMON_HEARTBEAT_MS;
+const PUSH_INTERVAL_MS = DAEMON_HEARTBEAT_MS
 
-const BASE_URL = (process.env.FLEETCROWN_WEB_URL || "").trim() || APP_URL;
+const BASE_URL = (process.env.FLEETCROWN_WEB_URL || '').trim() || APP_URL
 
-let timer: NodeJS.Timeout | null = null;
-let stopped = false;
+let timer: NodeJS.Timeout | null = null
+let stopped = false
 
 async function pushOnce(): Promise<void> {
-  const token = loadToken();
-  if (!token) return;
+  const token = loadToken()
+  if (!token) return
 
-  let openTabs: string[] = [];
-  let projects: ReturnType<typeof buildProjectRuntimePayload> = [];
-  let installedAgents: string[] = [];
-  let panes: PaneRecord[] = [];
+  let openTabs: string[] = []
+  let projects: ReturnType<typeof buildProjectRuntimePayload> = []
+  let installedAgents: string[] = []
+  let panes: PaneRecord[] = []
   try {
-    openTabs = await getZellijTabs();
+    openTabs = await getZellijTabs()
   } catch {
     // No Zellij running, tab query failed — push anyway with an empty list
     // so the daemon presence signal still gets through.
@@ -94,31 +94,29 @@ async function pushOnce(): Promise<void> {
   // Tabs backed by a FleetCrown-owned PTY aren't zellij tabs, so merge them in
   // (deduped) — otherwise a PTY-run project reads as "no tab open" in the UI.
   try {
-    openTabs = [...new Set([...openTabs, ...listPtyTabs()])];
-  } catch {
-    /* executor not ready — ignore */
-  }
+    openTabs = [...new Set([...openTabs, ...listPtyTabs()])]
+  } catch { /* executor not ready — ignore */ }
   try {
     installedAgents = listAgentRegistry()
       .filter((entry) => entry.available)
-      .map((entry) => entry.id);
-    projects = buildProjectRuntimePayload(openTabs);
-    panes = buildPaneTopology(openTabs);
+      .map((entry) => entry.id)
+    projects = buildProjectRuntimePayload(openTabs)
+    panes = buildPaneTopology(openTabs)
   } catch (err) {
     // Rich project state is best-effort. Keep the openTabs heartbeat flowing
     // so the web UI can still show the daemon as connected.
-    console.warn("[pusher] project runtime snapshot failed:", (err as Error).message);
+    console.warn('[pusher] project runtime snapshot failed:', (err as Error).message)
   }
 
   // Deliberately outside the try above: a power probe must not be able to take
   // the project payload down with it, and readPowerSource never throws anyway.
-  const powerSource = readPowerSource();
+  const powerSource = readPowerSource()
 
   try {
     const resp = await fetch(`${BASE_URL}/api/control/runtime-state`, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
@@ -139,7 +137,7 @@ async function pushOnce(): Promise<void> {
       // dashboard freezes on stale state (agents stop appearing). Same lesson as
       // the command ack: every runner→cloud fetch must be time-boxed.
       signal: AbortSignal.timeout(12_000),
-    });
+    })
     if (resp.status === 401 || resp.status === 403) {
       // Token is dead — the server doesn't recognize it. Delete the file
       // so FleetRunnerAutoMint can mint a fresh one next time /control loads
@@ -148,56 +146,52 @@ async function pushOnce(): Promise<void> {
       // Dev/preview instances must not delete the SHARED token on 401 — that
       // would log out the production runner sharing this file. See poller.ts.
       if (isDevBaseOverride()) {
-        console.warn(
-          `[pusher] runtime-state token rejected against dev override ${BASE_URL}; NOT clearing the shared production token`,
-        );
+        console.warn(`[pusher] runtime-state token rejected against dev override ${BASE_URL}; NOT clearing the shared production token`)
       } else {
-        console.warn(
-          "[pusher] runtime-state token rejected; clearing stale token + stopping pusher",
-        );
-        clearToken();
+        console.warn('[pusher] runtime-state token rejected; clearing stale token + stopping pusher')
+        clearToken()
       }
-      stopPusher();
-      return;
+      stopPusher()
+      return
     }
     if (!resp.ok) {
       // Transient — log once, keep going on next tick.
-      console.warn(`[pusher] runtime-state POST ${resp.status}`);
+      console.warn(`[pusher] runtime-state POST ${resp.status}`)
     }
   } catch (err) {
     // Network blip, DNS failure, etc. — non-fatal, retry next tick.
-    console.warn("[pusher] runtime-state push failed:", (err as Error).message);
+    console.warn('[pusher] runtime-state push failed:', (err as Error).message)
   }
 }
 
 type ProjectRuntimePayload = {
-  tab: string;
-  workspaceId?: string;
-  observedAt: number;
-  agentRunning: boolean;
-  tabOpen: boolean;
-  activeAgents: string[];
-  currentPromptKey?: string | null;
-  currentPromptLabel?: string | null;
-  currentPromptStartedAt?: number | null;
-  readyAt?: number | null;
-  lockAt?: number | null;
-  closingAt?: number | null;
-  closedAt?: number | null;
-  sessionDone?: string;
-  sessionStatus?: string;
-  sessionNext?: string;
-  sessionTests?: string;
-  sessionTodos?: string;
-  sessionHealth?: string;
+  tab: string
+  workspaceId?: string
+  observedAt: number
+  agentRunning: boolean
+  tabOpen: boolean
+  activeAgents: string[]
+  currentPromptKey?: string | null
+  currentPromptLabel?: string | null
+  currentPromptStartedAt?: number | null
+  readyAt?: number | null
+  lockAt?: number | null
+  closingAt?: number | null
+  closedAt?: number | null
+  sessionDone?: string
+  sessionStatus?: string
+  sessionNext?: string
+  sessionTests?: string
+  sessionTodos?: string
+  sessionHealth?: string
   /** Structured loop-control fields written by the agent itself. See
    *  src/lib/orchestration/contract.ts and the OC 2026-06-08 incident.
    *  Sourced from `block-reason:` and `no-op-count:` lines in session.md;
    *  optional because pre-2026-06-08 sessions don't emit them. */
-  sessionBlockReason?: string;
-  sessionNoOpCount?: number;
-  sessionUpdatedAt?: number | null;
-};
+  sessionBlockReason?: string
+  sessionNoOpCount?: number
+  sessionUpdatedAt?: number | null
+}
 
 /**
  * Build the per-pane topology: for every live agent process, emit one
@@ -226,36 +220,35 @@ type ProjectRuntimePayload = {
  * confidently name the wrong agent.
  */
 function buildPaneTopology(openTabs: string[]): PaneRecord[] {
-  const registry = listAgentRegistry();
-  const agentProcesses = getAgentProcesses(registry);
-  const conf = parseProjectsConf();
+  const registry = listAgentRegistry()
+  const agentProcesses = getAgentProcesses(registry)
+  const conf = parseProjectsConf()
 
   // One metadata read per zellij session present among the live processes.
-  const paneMaps = new Map<string, Map<number, string>>();
+  const paneMaps = new Map<string, Map<number, string>>()
   for (const p of agentProcesses) {
     if (p.zellijSession && !paneMaps.has(p.zellijSession)) {
-      paneMaps.set(p.zellijSession, getZellijPaneTabMap(p.zellijSession));
+      paneMaps.set(p.zellijSession, getZellijPaneTabMap(p.zellijSession))
     }
   }
 
-  const byTab = new Map<string, typeof agentProcesses>();
+  const byTab = new Map<string, typeof agentProcesses>()
   for (const p of agentProcesses) {
-    const viaPane =
-      p.zellijSession && p.zellijPaneId !== undefined
-        ? paneMaps.get(p.zellijSession)?.get(p.zellijPaneId)
-        : undefined;
-    const confEntry = conf.find(({ dir }) => p.cwd === dir || p.cwd.startsWith(`${dir}/`));
-    const rawTab = viaPane ?? confEntry?.tab ?? p.cwd.split("/").filter(Boolean).pop() ?? p.cwd;
-    const resolvedTab = resolveEffectiveTab(rawTab, openTabs);
-    const openTab = openTabs.find((t) => t.toLowerCase() === resolvedTab.toLowerCase());
-    if (!openTab) continue;
+    const viaPane = p.zellijSession && p.zellijPaneId !== undefined
+      ? paneMaps.get(p.zellijSession)?.get(p.zellijPaneId)
+      : undefined
+    const confEntry = conf.find(({ dir }) => p.cwd === dir || p.cwd.startsWith(`${dir}/`))
+    const rawTab = viaPane ?? confEntry?.tab ?? (p.cwd.split('/').filter(Boolean).pop() ?? p.cwd)
+    const resolvedTab = resolveEffectiveTab(rawTab, openTabs)
+    const openTab = openTabs.find((t) => t.toLowerCase() === resolvedTab.toLowerCase())
+    if (!openTab) continue
     // Key on the tab name as the UI knows it, so records join cleanly.
-    const list = byTab.get(openTab) ?? [];
-    list.push(p);
-    byTab.set(openTab, list);
+    const list = byTab.get(openTab) ?? []
+    list.push(p)
+    byTab.set(openTab, list)
   }
 
-  const records: PaneRecord[] = [];
+  const records: PaneRecord[] = []
   for (const [tab, matches] of byTab) {
     // Stable sort by (agentId, cwd) so paneIndex doesn't churn between
     // heartbeats. AgentProcess has no pid field; this is the next best key.
@@ -268,10 +261,10 @@ function buildPaneTopology(openTabs: string[]): PaneRecord[] {
           agentCli: p.agentId,
           cwd: p.cwd,
           sessionName: DEFAULT_SESSION_NAME,
-        });
-      });
+        })
+      })
   }
-  return records;
+  return records
 }
 
 /**
@@ -296,30 +289,28 @@ function buildPaneTopology(openTabs: string[]): PaneRecord[] {
  *  repo root that owns it. A worktree is an execution detail of its project,
  *  never a project of its own. */
 function resolveProjectRoot(cwd: string): string {
-  const marker = "/.claude/worktrees/";
-  const i = cwd.indexOf(marker);
-  return i === -1 ? cwd : cwd.slice(0, i);
+  const marker = '/.claude/worktrees/'
+  const i = cwd.indexOf(marker)
+  return i === -1 ? cwd : cwd.slice(0, i)
 }
 
-function projectEntries(
-  agentProcesses: ReturnType<typeof getAgentProcesses>,
-): { tab: string; dir: string }[] {
-  const seen = new Set<string>();
-  const out: { tab: string; dir: string }[] = [];
+function projectEntries(agentProcesses: ReturnType<typeof getAgentProcesses>): { tab: string; dir: string }[] {
+  const seen = new Set<string>()
+  const out: { tab: string; dir: string }[] = []
   const add = (tab: string, dir: string) => {
-    if (!tab || seen.has(tab.toLowerCase())) return;
-    seen.add(tab.toLowerCase());
-    out.push({ tab, dir });
-  };
-  for (const entry of parseProjectsConf()) add(entry.tab, entry.dir);
+    if (!tab || seen.has(tab.toLowerCase())) return
+    seen.add(tab.toLowerCase())
+    out.push({ tab, dir })
+  }
+  for (const entry of parseProjectsConf()) add(entry.tab, entry.dir)
   // Sessions auto-enter isolated worktrees (<repo>/.claude/worktrees/<name>),
   // so a process's cwd basename is the WORKTREE name, not the project. Keying
   // by it pushed ghost rows ("control-truth") while the real project's row
   // froze and expired — fleetcrown read "Not running" with an agent actively
   // working in it (2026-08-13). Resolve the repo root before deriving the tab.
   for (const p of agentProcesses) {
-    const root = resolveProjectRoot(p.cwd);
-    add(root.split("/").filter(Boolean).pop() ?? root, root);
+    const root = resolveProjectRoot(p.cwd)
+    add(root.split('/').filter(Boolean).pop() ?? root, root)
   }
   // Projects whose agent already exited but whose handoff awaits pushing.
   // parseSession reads by tab name, so the dir here is only used for process
@@ -328,42 +319,37 @@ function projectEntries(
   for (const sessionsDir of [fleetSessionsDir(), legacyClaudeSessionsDir()]) {
     try {
       for (const f of readdirSync(sessionsDir)) {
-        if (!f.endsWith(".md")) continue;
-        const tab = f.slice(0, -3);
-        add(tab, join(homedir(), "dev", tab));
+        if (!f.endsWith('.md')) continue
+        const tab = f.slice(0, -3)
+        add(tab, join(homedir(), 'dev', tab))
       }
-    } catch {
-      /* no sessions dir yet — nothing to merge */
-    }
+    } catch { /* no sessions dir yet — nothing to merge */ }
   }
-  return out;
+  return out
 }
 
 function buildProjectRuntimePayload(openTabs: string[]): ProjectRuntimePayload[] {
-  const agentRegistry = listAgentRegistry();
-  const agentProcesses = getAgentProcesses(agentRegistry);
+  const agentRegistry = listAgentRegistry()
+  const agentProcesses = getAgentProcesses(agentRegistry)
   const projects = projectEntries(agentProcesses).map(({ tab, dir }) => {
-    const resolvedTab = resolveEffectiveTab(tab, openTabs);
-    const projectProcesses = agentProcesses.filter(
-      (p) => p.cwd === dir || p.cwd.startsWith(`${dir}/`),
-    );
-    const activeAgents = [...new Set(projectProcesses.map((p) => p.agentId))];
-    const agentId = activeAgents[0];
-    const registryEntry = agentId ? agentRegistry.find((entry) => entry.id === agentId) : null;
+    const resolvedTab = resolveEffectiveTab(tab, openTabs)
+    const projectProcesses = agentProcesses.filter((p) => p.cwd === dir || p.cwd.startsWith(`${dir}/`))
+    const activeAgents = [...new Set(projectProcesses.map((p) => p.agentId))]
+    const agentId = activeAgents[0]
+    const registryEntry = agentId ? agentRegistry.find((entry) => entry.id === agentId) : null
     return {
       canonicalTab: tab,
       tab: resolvedTab,
       dir,
       activeAgents,
-      sessionLifecycleSignals:
-        projectProcesses.length > 0
-          ? projectProcesses.some((p) => p.sessionLifecycleSignals)
-          : (registryEntry?.capabilities.sessionLifecycleSignals ?? true),
+      sessionLifecycleSignals: projectProcesses.length > 0
+        ? projectProcesses.some((p) => p.sessionLifecycleSignals)
+        : registryEntry?.capabilities.sessionLifecycleSignals ?? true,
       tabOpen: openTabs.some((openTab) => openTab.toLowerCase() === resolvedTab.toLowerCase()),
-    };
-  });
-  const agentCwds = agentProcesses.map((p) => p.cwd);
-  const observedAt = Date.now();
+    }
+  })
+  const agentCwds = agentProcesses.map((p) => p.cwd)
+  const observedAt = Date.now()
   return readFastState(projects, agentCwds).map((state, index) => ({
     tab: projects[index]?.canonicalTab ?? state.tab,
     workspaceId: runnerWorkspaceId(projects[index]?.canonicalTab ?? state.tab),
@@ -390,7 +376,7 @@ function buildProjectRuntimePayload(openTabs: string[]): ProjectRuntimePayload[]
     sessionBlockReason: state.session?.blockReason,
     sessionNoOpCount: state.session?.noOpCount,
     sessionUpdatedAt: state.session?.mtime ? Math.floor(state.session.mtime / 1000) : null,
-  }));
+  }))
 }
 
 /**
@@ -400,21 +386,21 @@ function buildProjectRuntimePayload(openTabs: string[]): ProjectRuntimePayload[]
  * PUSH_INTERVAL_MS.
  */
 export function startPusher(): void {
-  if (timer) return;
-  stopped = false;
+  if (timer) return
+  stopped = false
   // Fire-and-forget: don't await on launch so we don't delay the rest of
   // whenReady. Subsequent pushes are also fire-and-forget.
-  void pushOnce();
+  void pushOnce()
   timer = setInterval(() => {
-    if (!stopped) void pushOnce();
-  }, PUSH_INTERVAL_MS);
+    if (!stopped) void pushOnce()
+  }, PUSH_INTERVAL_MS)
 }
 
 export function stopPusher(): void {
-  stopped = true;
+  stopped = true
   if (timer) {
-    clearInterval(timer);
-    timer = null;
+    clearInterval(timer)
+    timer = null
   }
 }
 
@@ -430,19 +416,19 @@ export function stopPusher(): void {
  * from queuing three round-trips to the cloud — one is enough because
  * the payload sends the whole openTabs list anyway.
  */
-let pushNowInFlight = false;
+let pushNowInFlight = false
 export async function pushNow(): Promise<void> {
-  if (stopped || pushNowInFlight) return;
-  pushNowInFlight = true;
+  if (stopped || pushNowInFlight) return
+  pushNowInFlight = true
   try {
-    await pushOnce();
+    await pushOnce()
   } finally {
-    pushNowInFlight = false;
+    pushNowInFlight = false
   }
 }
 
 /** Called when a new token is saved (paste flow, deep-link auth). */
 export function restartPusher(): void {
-  stopPusher();
-  startPusher();
+  stopPusher()
+  startPusher()
 }

@@ -29,3 +29,15 @@ yarn.lock
 # is where it is most opinionated and least useful, and it would bury the real
 # diff. Remove this line when you want docs formatted too.
 *.md
+
+# desktop/ is deliberately out of scope for THIS pass, not forgotten.
+#
+# Everything under desktop/ is built into Fleet Runner, and desktop-release-drift
+# requires that any change to it ship: bump desktop/package.json AND write a
+# FLEET_RUNNER_RELEASES entry, whose stated audience is "person who installed
+# Fleet Runner and wants to know what changed". For a whitespace-only build the
+# honest answer to that question is "nothing", so the release should not exist.
+#
+# Format desktop/ in the same PR as the next real runner change, where the bump
+# and the release notes are true anyway.
+desktop
