@@ -1,0 +1,31 @@
+# Build output and vendored trees — formatting these is noise.
+node_modules
+.next
+dist
+build
+out
+coverage
+.turbo
+.vercel
+*.min.js
+*.min.css
+
+# Generated during a build, so it is absent locally and present in CI — which
+# makes a clean local --check no evidence at all. Contentlayer's output also
+# uses import assertions, which prettier's parser rejects outright.
+.contentlayer
+.astro
+.svelte-kit
+storybook-static
+test-results
+playwright-report
+
+# Lockfiles are generated; prettier would rewrite them wholesale.
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# Markdown is deliberately out of scope for now. Prettier rewraps prose, which
+# is where it is most opinionated and least useful, and it would bury the real
+# diff. Remove this line when you want docs formatted too.
+*.md

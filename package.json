@@ -22,7 +22,7 @@
     "lint": "eslint --cache --cache-location node_modules/.cache/eslint src/ home/",
     "check:design": "bash scripts/check-design-system.sh",
     "check:desktop": "bash scripts/check-desktop.sh",
-    "verify": "npm run check:deploy-ready && npm run check:telegram-registry && tsc --noEmit && npm run lint && npm run check:design && npm run check:desktop && npm run test:unit && npm run test:home && npm run test:deploy-ref-gate && npm run test:not-behind-gate && npm run test:deploy-ready-gate && npm run test:ops",
+    "verify": "npm run format:check && npm run check:deploy-ready && npm run check:telegram-registry && tsc --noEmit && npm run lint && npm run check:design && npm run check:desktop && npm run test:unit && npm run test:home && npm run test:deploy-ref-gate && npm run test:not-behind-gate && npm run test:deploy-ready-gate && npm run test:ops",
     "check:telegram-registry": "bash scripts/ci/check-telegram-registry.sh",
     "smoke": "bash scripts/smoke.sh",
     "test:home": "bash scripts/test-home.sh",
@@ -101,7 +101,9 @@
     "audit:mobile": "node scripts/test/mobile-interaction-audit.mjs",
     "audit:contrast": "node scripts/test/contrast-audit.mjs",
     "check:deploy-ready": "bash scripts/ci/check-deploy-ready.sh",
-    "test:deploy-ready-gate": "bash scripts/test/deploy-ready-gate.sh"
+    "test:deploy-ready-gate": "bash scripts/test/deploy-ready-gate.sh",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.3",
@@ -159,6 +161,7 @@
     "eslint-config-next": "16.3.2",
     "husky": "^9.1.7",
     "playwright": "^1.62.1",
+    "prettier": "3.9.6",
     "tailwindcss": "^4",
     "tsx": "^4.23.12",
     "typescript": "^5"
