@@ -29,9 +29,9 @@ import {
   renderFacts,
   unrecordedFields,
   NOT_RECORDED,
-} from "../../src/lib/agent/core/facts";
-import { buildContract, buildGroundedContext, renderDirectives, buildAssistantRules, NO_BASIS } from "../../src/lib/agent/core/contract";
-import { verifyAnswer, buildRepairPrompt } from "../../src/lib/agent/core/verify";
+} from "ai-kit/grounding";
+import { buildContract, buildGroundedContext, renderDirectives, buildAssistantRules, NO_BASIS } from "ai-kit/grounding";
+import { verifyAnswer, buildRepairPrompt } from "ai-kit/grounding";
 
 // ── The real records, exactly as FleetCrown stores them ──────────────────────
 const FACTS = assignFactIds([

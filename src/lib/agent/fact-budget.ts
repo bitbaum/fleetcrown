@@ -1,4 +1,4 @@
-import type { Fact } from "@/lib/agent/core/facts";
+import type { Fact } from "ai-kit/grounding";
 
 /**
  * Fact-budget policy for the tool loop — pure, and load-bearing.

@@ -14,11 +14,11 @@ import { callGroqText, GROQ_FAST_MODEL } from "@/lib/groq";
 import { getUserPreferences } from "@/db/queries/user-preferences";
 import { buildGroundedTurn, directiveEvidence } from "@/lib/agent/context";
 import { runLokiTurn } from "@/lib/agent/loop";
-import { verifyAnswer, buildRepairPrompt, type Violation } from "@/lib/agent/core/verify";
-import { NO_BASIS } from "@/lib/agent/core/contract";
+import { verifyAnswer, buildRepairPrompt, type Violation } from "ai-kit/grounding";
+import { NO_BASIS } from "ai-kit/grounding";
 import { rateLimitMessage } from "@/lib/agent/groq-error";
 import { checkAiBudget, recordAiSpend } from "@/lib/ai-budget/gate";
-import type { Fact } from "@/lib/agent/core/facts";
+import type { Fact } from "ai-kit/grounding";
 import { APP_NAME } from "@/config/brand";
 import { HTTP_TIMEOUT_LONG_MS } from "@/lib/constants/time";
 
