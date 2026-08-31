@@ -16,7 +16,24 @@ const eslintConfig = defineConfig([
     "packages/agent/**",
   ]),
   {
+    // eslint-config-next ships eslint-plugin-react with `version: 'detect'`,
+    // which calls context.getFilename — removed in ESLint 10 — and crashes the
+    // whole lint run. Pinning the version skips detection. Placed after the
+    // next configs so their 'detect' cannot win (order matters; a pin placed
+    // before them was overridden in a sibling repo).
+    settings: { react: { version: "19.2.8" } },
     rules: {
+      // ESLint 10 + eslint-config-next 16 enable the compiler-era hooks rules
+      // as errors. They flag 35 long-standing call sites across ten control
+      // components — real findings, but fixing them is a functional refactor
+      // (effect restructuring, ref discipline), not a dependency bump. Kept
+      // visible as warnings so the count is on every lint run; burn it down
+      // in its own PR, then delete these two lines so the rules bind.
+      "react-hooks/set-state-in-effect": "warn",
+      "react-hooks/refs": "warn",
+      "react-hooks/purity": "warn",
+      "react-hooks/immutability": "warn",
+      "react-hooks/preserve-manual-memoization": "warn",
       // An unused import is a warning by default, which means it prints on
       // every commit and never blocks one. `os` sat unused in box-workspace.ts
       // long enough that every pre-commit hook run ended in "✖ 1 problem" —
