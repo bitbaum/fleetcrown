@@ -26,8 +26,8 @@
  * records answers about the wrong one. Cheap deterministic facts (people,
  * projects) are kept whole; retrieved documents are the elastic part.
  */
-import { assignFactIds, renderFacts, type Fact } from "@/lib/agent/core/facts";
-import { buildGroundedContext, type Directive } from "@/lib/agent/core/contract";
+import { assignFactIds, renderFacts, type Fact } from "ai-kit/grounding";
+import { buildGroundedContext, type Directive } from "ai-kit/grounding";
 import {
   peopleFacts,
   projectFacts,

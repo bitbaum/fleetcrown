@@ -15,7 +15,7 @@ import { getPendingActions } from "@/db/queries/actions";
 import { searchKnowledge, type KnowledgeHit } from "@/db/queries/knowledge-embeddings";
 import { embeddingsEnabled } from "@/lib/rag/embeddings";
 import { cleanDescription } from "@/lib/project-display";
-import { makeFact, type Fact } from "@/lib/agent/core/facts";
+import { makeFact, type Fact } from "ai-kit/grounding";
 import { isChannelAttrKey, stripChannelPrefix } from "@/config/channels";
 import { nameCandidates } from "@/lib/people-names";
 import type { DevLogEntry, UserProject } from "@/db/schema/user-projects";

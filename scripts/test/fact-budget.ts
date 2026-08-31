@@ -15,7 +15,7 @@ import {
   estimateTokens,
   omissionNotice,
 } from "@/lib/agent/fact-budget";
-import type { Fact } from "@/lib/agent/core/facts";
+import type { Fact } from "ai-kit/grounding";
 
 function assert(condition: boolean, message: string): void {
   if (!condition) throw new Error(message);

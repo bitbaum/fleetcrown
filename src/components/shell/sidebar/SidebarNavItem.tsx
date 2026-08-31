@@ -42,6 +42,10 @@ export function SidebarNavItem({
           !item.active && "opacity-40",
         )}
         aria-label={collapsed ? item.label : undefined}
+        // MobileNav, MobileNavSheet and FleetSurfaceGuide all announce the
+        // current page; the desktop sidebar styled it and stayed silent. The
+        // active state existed only for people who can see it.
+        aria-current={current ? "page" : undefined}
       >
         <Icon className="h-5 w-5 shrink-0" />
         {!collapsed && <span className="min-w-0 truncate">{item.label}</span>}
