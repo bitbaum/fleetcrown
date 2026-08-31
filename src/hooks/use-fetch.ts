@@ -30,9 +30,9 @@ export function useFetch<T>(
 
   useEffect(() => {
     if (!url) {
-      setLoading(false);
+      setLoading(false); // eslint-disable-line react-hooks/set-state-in-effect
       return;
-    } // eslint-disable-line react-hooks/set-state-in-effect
+    }
     let cancelled = false;
     setLoading(true);
     setError(null);

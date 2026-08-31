@@ -50,8 +50,8 @@ export function QueueList({
 
   // Clear selection when queue length changes (items added/removed/merged).
   useEffect(() => {
-    setSelected(new Set());
-  }, [queue.length]); // eslint-disable-line react-hooks/set-state-in-effect
+    setSelected(new Set()); // eslint-disable-line react-hooks/set-state-in-effect
+  }, [queue.length]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
