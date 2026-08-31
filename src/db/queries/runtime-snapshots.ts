@@ -23,7 +23,16 @@ export type RuntimeSnapshotUpsert = {
 };
 
 export async function upsertRuntimeSnapshotIfNewer(input: RuntimeSnapshotUpsert) {
-  const { userId, channel, openTabs, observedAt, installedAgents, panes, runnerVersion, powerSource } = input;
+  const {
+    userId,
+    channel,
+    openTabs,
+    observedAt,
+    installedAgents,
+    panes,
+    runnerVersion,
+    powerSource,
+  } = input;
   const snapshot = {
     userId,
     channel,
@@ -44,11 +53,13 @@ export async function upsertRuntimeSnapshotIfNewer(input: RuntimeSnapshotUpsert)
   const [updated] = await db
     .update(runtimeSnapshots)
     .set(snapshot)
-    .where(and(
-      eq(runtimeSnapshots.userId, userId),
-      eq(runtimeSnapshots.channel, channel),
-      or(isNull(runtimeSnapshots.observedAt), lt(runtimeSnapshots.observedAt, observedAt)),
-    ))
+    .where(
+      and(
+        eq(runtimeSnapshots.userId, userId),
+        eq(runtimeSnapshots.channel, channel),
+        or(isNull(runtimeSnapshots.observedAt), lt(runtimeSnapshots.observedAt, observedAt)),
+      ),
+    )
     .returning();
   return updated ?? null;
 }
@@ -57,9 +68,11 @@ export async function getRuntimeSnapshot(userId: string, channel?: RunnerChannel
   const query = db
     .select()
     .from(runtimeSnapshots)
-    .where(channel
-      ? and(eq(runtimeSnapshots.userId, userId), eq(runtimeSnapshots.channel, channel))
-      : eq(runtimeSnapshots.userId, userId))
+    .where(
+      channel
+        ? and(eq(runtimeSnapshots.userId, userId), eq(runtimeSnapshots.channel, channel))
+        : eq(runtimeSnapshots.userId, userId),
+    )
     .orderBy(desc(runtimeSnapshots.updatedAt))
     .limit(1);
   const [row] = await query;

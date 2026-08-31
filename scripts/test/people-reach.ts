@@ -3,14 +3,10 @@ import { lastTalkLabel, reachChannels, whatsappHref } from "../../src/lib/people
 import { ACTION_COPY } from "../../src/config/action-copy";
 
 assert.deepEqual(reachChannels({}), []);
-assert.deepEqual(
-  reachChannels({ "channel:email": "derek@x.test", profession: "builder" }),
-  [{ label: "Email", value: "derek@x.test" }],
-);
-assert.equal(
-  reachChannels({ "channel:phone": "e164:+41790000000" })[0]?.value,
-  "+41790000000",
-);
+assert.deepEqual(reachChannels({ "channel:email": "derek@x.test", profession: "builder" }), [
+  { label: "Email", value: "derek@x.test" },
+]);
+assert.equal(reachChannels({ "channel:phone": "e164:+41790000000" })[0]?.value, "+41790000000");
 
 assert.equal(lastTalkLabel(null), ACTION_COPY.checkin.never);
 assert.match(ACTION_COPY.checkin.groupWhy, /does not message/i);

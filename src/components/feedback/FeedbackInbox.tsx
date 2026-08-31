@@ -35,11 +35,14 @@ const SOURCE_FILTERS = [
  * stays behind a toggle.
  */
 export function FeedbackInbox() {
-  const { data, loading, refetch } = useFetch<{ feedback: InboxItem[]; metrics: FeedbackLoopMetrics | null }>(
-    "/api/feedback/inbox",
-  );
+  const { data, loading, refetch } = useFetch<{
+    feedback: InboxItem[];
+    metrics: FeedbackLoopMetrics | null;
+  }>("/api/feedback/inbox");
   const searchParams = useSearchParams();
-  const [projectFilter, setProjectFilter] = useState<string | null>(() => searchParams.get("project"));
+  const [projectFilter, setProjectFilter] = useState<string | null>(() =>
+    searchParams.get("project"),
+  );
   const [sourceFilter, setSourceFilter] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
   const { busyId, error, dispatchFix, setStatus, feature } = useFeedbackActions(refetch);
@@ -51,12 +54,13 @@ export function FeedbackInbox() {
   // keep the phases fresh.
   useEffect(() => {
     const live = all.some(
-      (f) => f.work.phase === FEEDBACK_WORK_PHASE.QUEUED || f.work.phase === FEEDBACK_WORK_PHASE.WORKING,
+      (f) =>
+        f.work.phase === FEEDBACK_WORK_PHASE.QUEUED || f.work.phase === FEEDBACK_WORK_PHASE.WORKING,
     );
     if (!live) return;
     const t = window.setInterval(() => refetch(), 8_000);
     return () => window.clearInterval(t);
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- poll while any row is live; refetch identity is stable enough
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- poll while any row is live; refetch identity is stable enough
   }, [all.map((f) => f.work.phase).join("|")]);
 
   // Project chips come from the data itself — a project appears here exactly
@@ -66,7 +70,8 @@ export function FeedbackInbox() {
     for (const f of all) {
       if (f.status === FEEDBACK_STATUS.ARCHIVED) continue;
       const entry = byName.get(f.projectName) ?? { name: f.projectName, open: 0 };
-      if (f.status === FEEDBACK_STATUS.NEW || f.status === FEEDBACK_STATUS.DISPATCHED) entry.open += 1;
+      if (f.status === FEEDBACK_STATUS.NEW || f.status === FEEDBACK_STATUS.DISPATCHED)
+        entry.open += 1;
       byName.set(f.projectName, entry);
     }
     return [...byName.values()].sort((a, b) => b.open - a.open || a.name.localeCompare(b.name));
@@ -94,10 +99,13 @@ export function FeedbackInbox() {
   if (all.length === 0) {
     return (
       <EmptyState icon={MessagesSquare} title="No feedback yet">
-        Feedback lands here from every project&apos;s widget — visitor reports, AI-review findings, and
-        synthesized briefs, each with the live status of its fix. Enable the widget on a project page
-        (Feedback section → Widget), or read{" "}
-        <Link href="/docs/feedback-widget" className="text-accent-text underline-offset-2 hover:underline">
+        Feedback lands here from every project&apos;s widget — visitor reports, AI-review findings,
+        and synthesized briefs, each with the live status of its fix. Enable the widget on a project
+        page (Feedback section → Widget), or read{" "}
+        <Link
+          href="/docs/feedback-widget"
+          className="text-accent-text underline-offset-2 hover:underline"
+        >
           how the widget works
         </Link>
         .
@@ -111,7 +119,10 @@ export function FeedbackInbox() {
         <button
           type="button"
           onClick={() => setProjectFilter(null)}
-          className={cn("ui-projects-filter-chip", projectFilter === null && "ui-projects-filter-chip-active")}
+          className={cn(
+            "ui-projects-filter-chip",
+            projectFilter === null && "ui-projects-filter-chip-active",
+          )}
         >
           All projects
         </button>
@@ -120,7 +131,10 @@ export function FeedbackInbox() {
             key={p.name}
             type="button"
             onClick={() => setProjectFilter((v) => (v === p.name ? null : p.name))}
-            className={cn("ui-projects-filter-chip", projectFilter === p.name && "ui-projects-filter-chip-active")}
+            className={cn(
+              "ui-projects-filter-chip",
+              projectFilter === p.name && "ui-projects-filter-chip-active",
+            )}
           >
             {p.name}
             {p.open > 0 && <span className="ui-projects-filter-count">{p.open}</span>}
@@ -132,7 +146,10 @@ export function FeedbackInbox() {
             key={s.label}
             type="button"
             onClick={() => setSourceFilter(s.key)}
-            className={cn("ui-projects-filter-chip", sourceFilter === s.key && "ui-projects-filter-chip-active")}
+            className={cn(
+              "ui-projects-filter-chip",
+              sourceFilter === s.key && "ui-projects-filter-chip-active",
+            )}
           >
             {s.label}
           </button>
@@ -151,19 +168,40 @@ export function FeedbackInbox() {
 
       <InboxSection title="Needs you" count={needsYou.length} emptyHint="Nothing waiting on you.">
         {needsYou.map((f) => (
-          <Row key={f.id} f={f} busyId={busyId} dispatchFix={dispatchFix} setStatus={setStatus} feature={feature} />
+          <Row
+            key={f.id}
+            f={f}
+            busyId={busyId}
+            dispatchFix={dispatchFix}
+            setStatus={setStatus}
+            feature={feature}
+          />
         ))}
       </InboxSection>
 
       <InboxSection title="In progress" count={inProgress.length} emptyHint="No fixes in flight.">
         {inProgress.map((f) => (
-          <Row key={f.id} f={f} busyId={busyId} dispatchFix={dispatchFix} setStatus={setStatus} feature={feature} />
+          <Row
+            key={f.id}
+            f={f}
+            busyId={busyId}
+            dispatchFix={dispatchFix}
+            setStatus={setStatus}
+            feature={feature}
+          />
         ))}
       </InboxSection>
 
       <InboxSection title="Shipped" count={shipped.length} emptyHint="Nothing resolved yet.">
         {shipped.map((f) => (
-          <Row key={f.id} f={f} busyId={busyId} dispatchFix={dispatchFix} setStatus={setStatus} feature={feature} />
+          <Row
+            key={f.id}
+            f={f}
+            busyId={busyId}
+            dispatchFix={dispatchFix}
+            setStatus={setStatus}
+            feature={feature}
+          />
         ))}
       </InboxSection>
 
@@ -180,7 +218,14 @@ export function FeedbackInbox() {
           {showArchived && (
             <div className="mt-2 divide-y divide-border-subtle opacity-70">
               {archived.map((f) => (
-                <Row key={f.id} f={f} busyId={busyId} dispatchFix={dispatchFix} setStatus={setStatus} feature={feature} />
+                <Row
+                  key={f.id}
+                  f={f}
+                  busyId={busyId}
+                  dispatchFix={dispatchFix}
+                  setStatus={setStatus}
+                  feature={feature}
+                />
               ))}
             </div>
           )}

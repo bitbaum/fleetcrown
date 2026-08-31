@@ -14,9 +14,17 @@ import { ControlDispatchButton } from "@/components/shared/ControlDispatchButton
 type SupportingHabits = Record<string, { id: string; title: string }[]>;
 
 function GoalChildrenSection({
-  goal, depth, isClosed, habitsByGoalId,
-  addingChild, childTitle, childError, savingChild,
-  onAddChild, onSetAddingChild, onSetChildTitle,
+  goal,
+  depth,
+  isClosed,
+  habitsByGoalId,
+  addingChild,
+  childTitle,
+  childError,
+  savingChild,
+  onAddChild,
+  onSetAddingChild,
+  onSetChildTitle,
 }: {
   goal: GoalWithChildren;
   depth: number;
@@ -36,28 +44,50 @@ function GoalChildrenSection({
       {showSection && (
         <div className="mt-2 ml-6 pl-5 border-l-2 border-status-positive/20 space-y-2">
           {goal.children.map((child) => (
-            <GoalCard key={child.id} goal={child} depth={depth + 1} habitsByGoalId={habitsByGoalId} />
+            <GoalCard
+              key={child.id}
+              goal={child}
+              depth={depth + 1}
+              habitsByGoalId={habitsByGoalId}
+            />
           ))}
           {addingChild && (
             <div className="space-y-1">
               <div className="flex items-center gap-1.5">
                 <input
                   value={childTitle}
-                  onChange={(e) => { onSetChildTitle(e.target.value); }}
+                  onChange={(e) => {
+                    onSetChildTitle(e.target.value);
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") onAddChild();
-                    if (e.key === "Escape") { onSetAddingChild(false); onSetChildTitle(""); }
+                    if (e.key === "Escape") {
+                      onSetAddingChild(false);
+                      onSetChildTitle("");
+                    }
                   }}
                   placeholder="Sub-goal title…"
                   autoFocus
                   className="flex-1 text-sm ui-input-tight"
                 />
-                <button onClick={onAddChild} disabled={!childTitle.trim() || savingChild}
-                  className="ui-btn-confirm-icon shrink-0">
-                  {savingChild ? <Loader2 className="ui-spinner-xs" /> : <Check className="h-3 w-3" />}
+                <button
+                  onClick={onAddChild}
+                  disabled={!childTitle.trim() || savingChild}
+                  className="ui-btn-confirm-icon shrink-0"
+                >
+                  {savingChild ? (
+                    <Loader2 className="ui-spinner-xs" />
+                  ) : (
+                    <Check className="h-3 w-3" />
+                  )}
                 </button>
-                <button onClick={() => { onSetAddingChild(false); onSetChildTitle(""); }}
-                  className="ui-btn-row-action shrink-0">
+                <button
+                  onClick={() => {
+                    onSetAddingChild(false);
+                    onSetChildTitle("");
+                  }}
+                  className="ui-btn-row-action shrink-0"
+                >
                   <X className="h-3 w-3" />
                 </button>
               </div>
@@ -88,13 +118,35 @@ export function GoalCard({
   habitsByGoalId?: SupportingHabits;
 }) {
   const {
-    progress, setProgress, milestones, setMilestones, targetDate, setTargetDate,
-    togglingStatus, abandoningStatus, displayTitle, description,
-    addingChild, childTitle, savingChild, childError,
-    titleEdit, descEdit, isClosed, isCompleted, isAbandoned,
-    titleError, descError, statusError,
-    handleAddChild, commitTitle, commitDesc, toggleComplete, toggleAbandon,
-    setAddingChild, setChildTitle,
+    progress,
+    setProgress,
+    milestones,
+    setMilestones,
+    targetDate,
+    setTargetDate,
+    togglingStatus,
+    abandoningStatus,
+    displayTitle,
+    description,
+    addingChild,
+    childTitle,
+    savingChild,
+    childError,
+    titleEdit,
+    descEdit,
+    isClosed,
+    isCompleted,
+    isAbandoned,
+    titleError,
+    descError,
+    statusError,
+    handleAddChild,
+    commitTitle,
+    commitDesc,
+    toggleComplete,
+    toggleAbandon,
+    setAddingChild,
+    setChildTitle,
   } = useGoalCard(goal);
 
   const supportingHabits = habitsByGoalId[goal.id] ?? [];
@@ -102,7 +154,14 @@ export function GoalCard({
   const milestoneTotal = milestones.length;
   const hasMilestones = milestoneTotal > 0;
   const controlPrompt = goal.entityName
-    ? [`Goal: ${displayTitle}`, ...(description?.trim() ? [`Description: ${description.trim()}`] : []), `Progress: ${progress}%`, `Project: ${goal.entityName}`, "", "Please advance this goal in the codebase. Identify what needs to be done next, implement the concrete next step, and report back."].join("\n")
+    ? [
+        `Goal: ${displayTitle}`,
+        ...(description?.trim() ? [`Description: ${description.trim()}`] : []),
+        `Progress: ${progress}%`,
+        `Project: ${goal.entityName}`,
+        "",
+        "Please advance this goal in the codebase. Identify what needs to be done next, implement the concrete next step, and report back.",
+      ].join("\n")
     : null;
 
   return (
@@ -113,7 +172,13 @@ export function GoalCard({
             onClick={toggleComplete}
             disabled={togglingStatus || isAbandoned}
             className="shrink-0 mt-0.5 p-1.5 -m-1.5 rounded hover:bg-surface-raised transition-colors disabled:opacity-50"
-            title={isCompleted ? "Mark active" : isAbandoned ? "Restore to mark completed" : "Mark completed"}
+            title={
+              isCompleted
+                ? "Mark active"
+                : isAbandoned
+                  ? "Restore to mark completed"
+                  : "Mark completed"
+            }
           >
             {togglingStatus ? (
               <Loader2 className="h-5 w-5 animate-spin text-text-muted" />
@@ -163,9 +228,7 @@ export function GoalCard({
                   <FolderKanban className="h-3 w-3 text-status-positive/50" />
                   <span className="text-xs text-status-positive/60">{goal.entityName}</span>
                 </Link>
-                {!isClosed && controlPrompt && (
-                  <ControlDispatchButton tab={goal.entityName!} />
-                )}
+                {!isClosed && controlPrompt && <ControlDispatchButton tab={goal.entityName!} />}
               </div>
             )}
 
@@ -173,7 +236,9 @@ export function GoalCard({
               <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
                 <Repeat2 className="h-3 w-3 text-text-muted shrink-0" />
                 {supportingHabits.map((h) => (
-                  <span key={h.id} className="ui-tag ui-tag-neutral">{h.title}</span>
+                  <span key={h.id} className="ui-tag ui-tag-neutral">
+                    {h.title}
+                  </span>
                 ))}
               </div>
             )}
@@ -188,7 +253,11 @@ export function GoalCard({
                   )}
                   <DateInput goalId={goal.id} initial={targetDate} onUpdate={setTargetDate} />
                 </div>
-                <GoalProgressBar value={progress} minPercent={1} className="h-1.5 bg-surface-raised" />
+                <GoalProgressBar
+                  value={progress}
+                  minPercent={1}
+                  className="h-1.5 bg-surface-raised"
+                />
               </div>
             )}
 

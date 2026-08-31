@@ -9,10 +9,16 @@ async function main() {
   const { db } = await import("../../src/db");
   const { entities, attributes } = await import("../../src/db/schema");
   const { and, eq } = await import("drizzle-orm");
-  const { extractProjectProfile, applyProjectProfile } = await import("../../src/lib/project-brief");
+  const { extractProjectProfile, applyProjectProfile } =
+    await import("../../src/lib/project-brief");
 
   const [project] = await db
-    .select({ id: entities.id, userId: entities.userId, name: entities.name, description: entities.description })
+    .select({
+      id: entities.id,
+      userId: entities.userId,
+      name: entities.name,
+      description: entities.description,
+    })
     .from(entities)
     .where(and(eq(entities.type, "project"), eq(entities.name, process.argv[2] ?? "fleetcrown")))
     .limit(1);
@@ -49,4 +55,7 @@ free-form text and repos so the fleet always has full context.`;
   process.exit(0);
 }
 
-main().catch((e) => { console.error("FAIL:", e); process.exit(1); });
+main().catch((e) => {
+  console.error("FAIL:", e);
+  process.exit(1);
+});

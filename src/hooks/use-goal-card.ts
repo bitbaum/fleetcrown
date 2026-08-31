@@ -36,7 +36,7 @@ export function useGoalCard(goal: GoalWithChildren) {
     setChildError(null);
     try {
       const res = await createGoal({ title, parentGoalId: goal.id });
-      const data = await res.json() as { ok?: boolean; error?: string };
+      const data = (await res.json()) as { ok?: boolean; error?: string };
       if (data.ok) {
         setChildTitle("");
         setAddingChild(false);
@@ -53,31 +53,38 @@ export function useGoalCard(goal: GoalWithChildren) {
 
   const commitTitle = () => {
     const trimmed = titleEdit.draft.trim();
-    if (!trimmed || trimmed === displayTitle) { titleEdit.cancel(); return; }
+    if (!trimmed || trimmed === displayTitle) {
+      titleEdit.cancel();
+      return;
+    }
     setTitleError(null);
-    titleEdit.commit(async () => {
-      await patchGoal(goal.id, { title: trimmed });
-      setDisplayTitle(trimmed);
-    }).then((saved) => {
-      if (!saved) {
-        setTitleError("Failed to save — try again");
-        setTimeout(() => setTitleError(null), TOAST_MEDIUM_MS);
-      }
-    });
+    titleEdit
+      .commit(async () => {
+        await patchGoal(goal.id, { title: trimmed });
+        setDisplayTitle(trimmed);
+      })
+      .then((saved) => {
+        if (!saved) {
+          setTitleError("Failed to save — try again");
+          setTimeout(() => setTitleError(null), TOAST_MEDIUM_MS);
+        }
+      });
   };
 
   const commitDesc = () => {
     const trimmed = descEdit.draft.trim();
     setDescError(null);
-    descEdit.commit(async () => {
-      await patchGoal(goal.id, { description: trimmed || null });
-      setDescription(trimmed || null);
-    }).then((saved) => {
-      if (!saved) {
-        setDescError("Failed to save — try again");
-        setTimeout(() => setDescError(null), TOAST_MEDIUM_MS);
-      }
-    });
+    descEdit
+      .commit(async () => {
+        await patchGoal(goal.id, { description: trimmed || null });
+        setDescription(trimmed || null);
+      })
+      .then((saved) => {
+        if (!saved) {
+          setDescError("Failed to save — try again");
+          setTimeout(() => setDescError(null), TOAST_MEDIUM_MS);
+        }
+      });
   };
 
   const toggleComplete = async () => {
@@ -119,18 +126,44 @@ export function useGoalCard(goal: GoalWithChildren) {
   const isClosed = isCompleted || isAbandoned;
 
   return {
-    status, progress, setProgress,
-    milestones, setMilestones,
-    targetDate, setTargetDate,
-    togglingStatus, abandoningStatus,
-    displayTitle, description,
-    addingChild, childTitle, savingChild, childError,
-    titleEdit, descEdit,
-    isClosed, isCompleted, isAbandoned,
-    titleError, descError, statusError,
-    handleAddChild, commitTitle, commitDesc,
-    toggleComplete, toggleAbandon,
-    setAddingChild: (v: boolean) => { setAddingChild(v); if (!v) { setChildTitle(""); setChildError(null); } },
-    setChildTitle: (v: string) => { setChildTitle(v); setChildError(null); },
+    status,
+    progress,
+    setProgress,
+    milestones,
+    setMilestones,
+    targetDate,
+    setTargetDate,
+    togglingStatus,
+    abandoningStatus,
+    displayTitle,
+    description,
+    addingChild,
+    childTitle,
+    savingChild,
+    childError,
+    titleEdit,
+    descEdit,
+    isClosed,
+    isCompleted,
+    isAbandoned,
+    titleError,
+    descError,
+    statusError,
+    handleAddChild,
+    commitTitle,
+    commitDesc,
+    toggleComplete,
+    toggleAbandon,
+    setAddingChild: (v: boolean) => {
+      setAddingChild(v);
+      if (!v) {
+        setChildTitle("");
+        setChildError(null);
+      }
+    },
+    setChildTitle: (v: string) => {
+      setChildTitle(v);
+      setChildError(null);
+    },
   };
 }

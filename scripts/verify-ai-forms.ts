@@ -11,8 +11,16 @@ import { runFormAssist } from "@fleet/ai-forms";
 import { GOAL_FORM, SUBSCRIPTION_FORM } from "../src/config/ai-forms";
 import { callGroqText } from "../src/lib/groq";
 
-const complete = ({ system, prompt, maxTokens, temperature }: {
-  system: string; prompt: string; maxTokens: number; temperature: number;
+const complete = ({
+  system,
+  prompt,
+  maxTokens,
+  temperature,
+}: {
+  system: string;
+  prompt: string;
+  maxTokens: number;
+  temperature: number;
 }) => callGroqText(prompt, { systemPrompt: system, maxTokens, temperature, timeoutMs: 30_000 });
 
 let failures = 0;
@@ -44,12 +52,12 @@ async function main() {
   check(
     "targetDate is an ISO calendar date in 2026-03",
     /^2026-03-\d{2}$/.test(String(filled.values.targetDate ?? "")),
-    String(filled.values.targetDate)
+    String(filled.values.targetDate),
   );
   check(
     "excluded field never written",
     filled.values.parentGoalId === undefined || filled.values.parentGoalId === "",
-    String(filled.values.parentGoalId)
+    String(filled.values.parentGoalId),
   );
 
   console.log("\n2. Follow up: change what is already there");
@@ -86,12 +94,12 @@ async function main() {
   check(
     "description actually changed (this is what used to silently no-op)",
     refined.values.description !== seeded.description,
-    `${longDescription.length} chars -> ${String(refined.values.description ?? "").length}`
+    `${longDescription.length} chars -> ${String(refined.values.description ?? "").length}`,
   );
   check(
     "untouched field kept its value",
     refined.values.title === seeded.title,
-    String(refined.values.title)
+    String(refined.values.title),
   );
   check("changed list is honest", refined.changed.length > 0, refined.changed.join(", "));
 
@@ -114,12 +122,12 @@ async function main() {
   check(
     "overridable default replaced by stated currency",
     sub.values.currency === "USD",
-    String(sub.values.currency)
+    String(sub.values.currency),
   );
   check(
     "frequency stayed a legal option value",
     ["monthly", "annual", "quarterly", "weekly", "one-time"].includes(String(sub.values.frequency)),
-    String(sub.values.frequency)
+    String(sub.values.frequency),
   );
 
   console.log(`\n${failures === 0 ? "ALL CHECKS PASSED" : `${failures} CHECK(S) FAILED`}\n`);

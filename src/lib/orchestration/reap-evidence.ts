@@ -35,7 +35,9 @@ export type ReapedRunForEvidence = {
  *  janitor into a rate-limit problem; the next hourly tick gets the rest. */
 const MAX_CHECKS_PER_SWEEP = 5;
 
-export async function correctTimeoutReapsWithRepoEvidence(reaped: ReapedRunForEvidence[]): Promise<void> {
+export async function correctTimeoutReapsWithRepoEvidence(
+  reaped: ReapedRunForEvidence[],
+): Promise<void> {
   const timeouts = reaped
     .filter((r) => r.outcome === ORCHESTRATION_OUTCOME.TIMEOUT)
     .slice(0, MAX_CHECKS_PER_SWEEP);
@@ -55,11 +57,13 @@ export async function correctTimeoutReapsWithRepoEvidence(reaped: ReapedRunForEv
       const [unverified] = await db
         .select({ id: pendingCommands.id })
         .from(pendingCommands)
-        .where(and(
-          eq(pendingCommands.userId, run.userId),
-          sql`${pendingCommands.payload}->>'runId' = ${run.id}`,
-          sql`${pendingCommands.result}->>'verified' = 'false'`,
-        ))
+        .where(
+          and(
+            eq(pendingCommands.userId, run.userId),
+            sql`${pendingCommands.payload}->>'runId' = ${run.id}`,
+            sql`${pendingCommands.result}->>'verified' = 'false'`,
+          ),
+        )
         .limit(1);
       if (unverified) continue;
 
@@ -75,13 +79,15 @@ export async function correctTimeoutReapsWithRepoEvidence(reaped: ReapedRunForEv
         ),
         columns: { gitUrl: true },
       });
-      const registration = project?.gitUrl ? null : await db.query.userProjects.findFirst({
-        where: and(
-          eq(userProjects.userId, run.userId),
-          sql`lower(${userProjects.name}) = lower(${run.projectKey})`,
-        ),
-        columns: { gitUrl: true },
-      });
+      const registration = project?.gitUrl
+        ? null
+        : await db.query.userProjects.findFirst({
+            where: and(
+              eq(userProjects.userId, run.userId),
+              sql`lower(${userProjects.name}) = lower(${run.projectKey})`,
+            ),
+            columns: { gitUrl: true },
+          });
       const gitUrl = project?.gitUrl ?? registration?.gitUrl;
       if (!gitUrl) continue;
 
@@ -107,10 +113,12 @@ export async function correctTimeoutReapsWithRepoEvidence(reaped: ReapedRunForEv
         })
         // Only correct a run that is STILL a timeout — never overwrite a
         // verdict some other close path landed in the meantime.
-        .where(and(
-          eq(orchestrationRuns.id, run.id),
-          eq(orchestrationRuns.outcome, ORCHESTRATION_OUTCOME.TIMEOUT),
-        ))
+        .where(
+          and(
+            eq(orchestrationRuns.id, run.id),
+            eq(orchestrationRuns.outcome, ORCHESTRATION_OUTCOME.TIMEOUT),
+          ),
+        )
         .returning({ id: orchestrationRuns.id });
 
       if (corrected) {

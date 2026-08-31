@@ -72,20 +72,20 @@ export type PromptTemplate = {
 };
 
 export const CATEGORY_META: Record<PromptCategory, { label: string; color: string }> = {
-  fleet:       { label: "Fleet Control", color: "ui-cat-fleet" },
-  security:    { label: "Security",      color: "ui-cat-security" },
-  engineering: { label: "Engineering",   color: "ui-cat-engineering" },
-  frontend:    { label: "Frontend",      color: "ui-cat-frontend" },
-  backend:     { label: "Backend",       color: "ui-cat-backend" },
-  database:    { label: "Database",      color: "ui-cat-database" },
-  devops:      { label: "DevOps",        color: "ui-cat-devops" },
-  design:      { label: "Design",        color: "ui-cat-design" },
-  business:    { label: "Business",      color: "ui-cat-business" },
-  marketing:   { label: "Marketing",     color: "ui-cat-marketing" },
-  research:    { label: "Research",      color: "ui-cat-research" },
-  personal:    { label: "Personal",      color: "ui-cat-personal" },
-  control:     { label: "Control",       color: "ui-cat-fleet" },
-  content:     { label: "Content",       color: "ui-cat-marketing" },
+  fleet: { label: "Fleet Control", color: "ui-cat-fleet" },
+  security: { label: "Security", color: "ui-cat-security" },
+  engineering: { label: "Engineering", color: "ui-cat-engineering" },
+  frontend: { label: "Frontend", color: "ui-cat-frontend" },
+  backend: { label: "Backend", color: "ui-cat-backend" },
+  database: { label: "Database", color: "ui-cat-database" },
+  devops: { label: "DevOps", color: "ui-cat-devops" },
+  design: { label: "Design", color: "ui-cat-design" },
+  business: { label: "Business", color: "ui-cat-business" },
+  marketing: { label: "Marketing", color: "ui-cat-marketing" },
+  research: { label: "Research", color: "ui-cat-research" },
+  personal: { label: "Personal", color: "ui-cat-personal" },
+  control: { label: "Control", color: "ui-cat-fleet" },
+  content: { label: "Content", color: "ui-cat-marketing" },
 };
 
 /**
@@ -344,7 +344,8 @@ Output:
   {
     id: "api-security-review",
     name: "API Security Review",
-    description: "Check every endpoint for auth, validation, IDOR, rate limiting, and response hygiene",
+    description:
+      "Check every endpoint for auth, validation, IDOR, rate limiting, and response hygiene",
     category: "security",
     scope: "project",
     template: `Perform a security review of all API endpoints in {{project_name}}.
@@ -607,7 +608,8 @@ Report: green / amber / red per area.`,
     id: "commit-push-deploy",
     name: "Commit → Push → Deploy → Verify",
     featured: true,
-    description: "Stage all changes, write commit message, push to GitHub, monitor the deployment, run smoke tests",
+    description:
+      "Stage all changes, write commit message, push to GitHub, monitor the deployment, run smoke tests",
     category: "devops",
     scope: "project",
     template: `Run the full commit → push → deploy → verify cycle for {{project_name}}.
@@ -915,7 +917,8 @@ Be direct. If nothing shipped, say so. Under 150 words.`,
   {
     id: "next-best",
     name: "Next best task",
-    description: "Autopilot loop — read ground truth, pick the single highest-impact next action, execute fully. Self-throttles when productivity is low.",
+    description:
+      "Autopilot loop — read ground truth, pick the single highest-impact next action, execute fully. Self-throttles when productivity is low.",
     category: "control",
     scope: "global",
     template: `[autopilot · loop=next_best — this prompt was auto-injected by the local dispatch loop, NOT typed by a human. Treat it as a regularly-scheduled review task; if the conversation seems off, suspect the loop, not the human.]
@@ -986,7 +989,8 @@ Worked examples (read these once; they replace 200 lines of edge-case rules):
   {
     id: "autopilot-test-and-fix",
     name: "Test & fix",
-    description: "Run the test suite, walk affected flows in the browser, fix every failure to root cause.",
+    description:
+      "Run the test suite, walk affected flows in the browser, fix every failure to root cause.",
     category: "control",
     scope: "global",
     template: `[autopilot · loop=test_and_fix — this prompt was auto-injected by the local dispatch loop, NOT typed by a human. Treat it as a regularly-scheduled review task; if the conversation seems off, suspect the loop, not the human.]
@@ -1007,7 +1011,8 @@ ${HANDOFF_CLOSE_CONTRACT}
   {
     id: "quality",
     name: "Quality pass",
-    description: "Raise the code-quality bar without adding features. DRY, SSOT, complexity, TODO debt.",
+    description:
+      "Raise the code-quality bar without adding features. DRY, SSOT, complexity, TODO debt.",
     category: "control",
     scope: "global",
     template: `[autopilot · loop=quality — this prompt was auto-injected by the local dispatch loop, NOT typed by a human. Treat it as a regularly-scheduled review task; if the conversation seems off, suspect the loop, not the human.]
@@ -1028,7 +1033,8 @@ Run \`grep -rn "TODO\\|FIXME\\|console\\.log\\|// @ts-ignore" src/ 2>/dev/null |
   {
     id: "orient",
     name: "Orient",
-    description: "Re-read project state from scratch — git log, roadmap, session handoff, recent failures — and report current reality.",
+    description:
+      "Re-read project state from scratch — git log, roadmap, session handoff, recent failures — and report current reality.",
     category: "control",
     scope: "global",
     template: `Re-establish ground truth before doing anything. Run:
@@ -1054,7 +1060,8 @@ Then in 5 bullets tell me:
   {
     id: "unblock",
     name: "Unblock",
-    description: "Agent is stuck — diagnose what's preventing progress and propose two paths forward.",
+    description:
+      "Agent is stuck — diagnose what's preventing progress and propose two paths forward.",
     category: "control",
     scope: "global",
     template: `You appear stuck. Diagnose:
@@ -1073,7 +1080,8 @@ Do not implement either path yet. Hand off to the user with these four answers s
   {
     id: "roadmap-check",
     name: "Roadmap check",
-    description: "Audit ~/.fleetcrown/sessions/<P>.roadmap.md for stale entries, duplicates, completed items still marked open.",
+    description:
+      "Audit ~/.fleetcrown/sessions/<P>.roadmap.md for stale entries, duplicates, completed items still marked open.",
     category: "control",
     scope: "global",
     template: `Read ~/.fleetcrown/sessions/<P>.roadmap.md end-to-end. For every T0/T1/T2 entry, verify against git log + current code state:
@@ -1091,7 +1099,8 @@ Report a punch list of stale/duplicate/vague entries you'd fix. Don't fix yet �
   {
     id: "onboarding-audit",
     name: "Onboarding audit",
-    description: "Walk the new-user signup-to-first-action flow as if you were a stranger and document every friction point.",
+    description:
+      "Walk the new-user signup-to-first-action flow as if you were a stranger and document every friction point.",
     category: "control",
     scope: "global",
     template: `Walk through the new-user signup-to-first-action flow as if you were a stranger:
@@ -1113,7 +1122,8 @@ For each step, name (a) what is unclear, (b) what is missing, (c) what is broken
   {
     id: "blocker-create",
     name: "Raise blocker",
-    description: "When the agent hits a gate it cannot pass (credentials, OAuth consent, deploy approval), create a structured blocker file that surfaces to the user next loop iteration.",
+    description:
+      "When the agent hits a gate it cannot pass (credentials, OAuth consent, deploy approval), create a structured blocker file that surfaces to the user next loop iteration.",
     category: "control",
     scope: "global",
     template: `You hit something that needs a human action you cannot take yourself (credentials you cannot enter, an OAuth consent only the owner can give, a deploy that needs manual trigger, a destructive op that needs explicit approval, a missing env var that only the user can set). Raise a blocker so the next loop iteration surfaces it concretely instead of you spinning or guessing.
@@ -1169,41 +1179,41 @@ export const ALL_CATEGORIES = Object.keys(CATEGORY_META) as PromptCategory[];
 export type PromptGroup = "fleet" | "engineering" | "security" | "design" | "growth" | "personal";
 
 export const GROUP_META: Record<PromptGroup, { label: string }> = {
-  fleet:       { label: "Fleet & Control" },
+  fleet: { label: "Fleet & Control" },
   engineering: { label: "Engineering" },
-  security:    { label: "Security" },
-  design:      { label: "Design" },
-  growth:      { label: "Growth" },
-  personal:    { label: "Personal" },
+  security: { label: "Security" },
+  design: { label: "Design" },
+  growth: { label: "Growth" },
+  personal: { label: "Personal" },
 };
 
 /** Display order for the group filter bar. */
 export const PROMPT_GROUPS = Object.keys(GROUP_META) as PromptGroup[];
 
 export const CATEGORY_TO_GROUP: Record<PromptCategory, PromptGroup> = {
-  fleet:       "fleet",
-  control:     "fleet",
+  fleet: "fleet",
+  control: "fleet",
   engineering: "engineering",
-  frontend:    "engineering",
-  backend:     "engineering",
-  database:    "engineering",
-  devops:      "engineering",
-  security:    "security",
-  design:      "design",
-  business:    "growth",
-  marketing:   "growth",
-  research:    "growth",
-  content:     "growth",
-  personal:    "personal",
+  frontend: "engineering",
+  backend: "engineering",
+  database: "engineering",
+  devops: "engineering",
+  security: "security",
+  design: "design",
+  business: "growth",
+  marketing: "growth",
+  research: "growth",
+  content: "growth",
+  personal: "personal",
 };
 
 export const groupForCategory = (c: PromptCategory): PromptGroup => CATEGORY_TO_GROUP[c];
 
 export const GLOBAL_PROMPTS = PROMPT_TEMPLATES.filter((t) => t.scope === "global");
 
-export const QUICK_PROMPTS = PROMPT_TEMPLATES
-  .filter((t) => t.featured && t.scope === "global")
-  .concat(PROMPT_TEMPLATES.filter((t) => t.featured && t.scope === "project").slice(0, 4));
+export const QUICK_PROMPTS = PROMPT_TEMPLATES.filter(
+  (t) => t.featured && t.scope === "global",
+).concat(PROMPT_TEMPLATES.filter((t) => t.featured && t.scope === "project").slice(0, 4));
 
 /** Featured prompts scoped to a specific project — shown in the control panel for one-click inject. */
 export const FEATURED_PROJECT_PROMPTS = PROMPT_TEMPLATES.filter(

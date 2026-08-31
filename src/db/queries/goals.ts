@@ -29,7 +29,11 @@ export const PatchGoalBody = z
     status: z.enum(GOAL_STATUSES).optional(),
     milestones: z.array(MilestoneSchema).optional(),
     targetDate: z.string().nullable().optional(),
-    entityId: z.string().refine((v) => v === "" || /^[0-9a-f-]{36}$/i.test(v), { message: "Invalid entityId" }).nullable().optional(),
+    entityId: z
+      .string()
+      .refine((v) => v === "" || /^[0-9a-f-]{36}$/i.test(v), { message: "Invalid entityId" })
+      .nullable()
+      .optional(),
   })
   .refine((v) => Object.keys(v).length > 0, { message: "Nothing to update" });
 
@@ -65,7 +69,9 @@ export async function listTopLevelActiveGoals(userId: string, limit = 6) {
   return db
     .select({ title: goals.title, progress: goals.progress, targetDate: goals.targetDate })
     .from(goals)
-    .where(and(eq(goals.userId, userId), eq(goals.status, GOAL_STATUS.ACTIVE), isNull(goals.entityId)))
+    .where(
+      and(eq(goals.userId, userId), eq(goals.status, GOAL_STATUS.ACTIVE), isNull(goals.entityId)),
+    )
     .orderBy(asc(goals.targetDate))
     .limit(limit);
 }
@@ -80,18 +86,23 @@ export async function listActiveGoalsWithMilestones(userId: string, entityId?: s
   return db
     .select({ title: goals.title, description: goals.description, milestones: goals.milestones })
     .from(goals)
-    .where(and(
-      eq(goals.userId, userId),
-      eq(goals.status, GOAL_STATUS.ACTIVE),
-      entityId ? eq(goals.entityId, entityId) : undefined,
-    ))
+    .where(
+      and(
+        eq(goals.userId, userId),
+        eq(goals.status, GOAL_STATUS.ACTIVE),
+        entityId ? eq(goals.entityId, entityId) : undefined,
+      ),
+    )
     .orderBy(goals.title);
 }
 
 /** Throws if entityId is set but the entity doesn't belong to userId.
  *  Prevents users from linking goals to other tenants' entities, which would
  *  leak the entity name through getGoals' join. */
-async function assertEntityOwnership(userId: string, entityId: string | null | undefined): Promise<void> {
+async function assertEntityOwnership(
+  userId: string,
+  entityId: string | null | undefined,
+): Promise<void> {
   if (!entityId) return;
   const [owned] = await db
     .select({ id: entities.id })
@@ -102,7 +113,10 @@ async function assertEntityOwnership(userId: string, entityId: string | null | u
 }
 
 /** Same idea for parentGoalId — a user can only nest under their own goals. */
-async function assertParentGoalOwnership(userId: string, parentGoalId: string | null | undefined): Promise<void> {
+async function assertParentGoalOwnership(
+  userId: string,
+  parentGoalId: string | null | undefined,
+): Promise<void> {
   if (!parentGoalId) return;
   const [owned] = await db
     .select({ id: goals.id })
@@ -147,10 +161,12 @@ export async function patchGoal(userId: string, id: string, data: z.infer<typeof
   if (data.progress !== undefined) patch.progress = data.progress;
   if (data.status !== undefined) patch.status = data.status;
   if (data.milestones !== undefined) patch.milestones = data.milestones;
-  if (data.targetDate !== undefined) patch.targetDate = data.targetDate ? new Date(data.targetDate) : null;
+  if (data.targetDate !== undefined)
+    patch.targetDate = data.targetDate ? new Date(data.targetDate) : null;
   if (data.entityId !== undefined) patch.entityId = data.entityId || null;
   if (patch.status === GOAL_STATUS.COMPLETED) patch.completedAt = new Date();
-  else if (patch.status === GOAL_STATUS.ACTIVE || patch.status === GOAL_STATUS.ABANDONED) patch.completedAt = null;
+  else if (patch.status === GOAL_STATUS.ACTIVE || patch.status === GOAL_STATUS.ABANDONED)
+    patch.completedAt = null;
   const [updated] = await db
     .update(goals)
     .set(patch)
@@ -160,9 +176,15 @@ export async function patchGoal(userId: string, id: string, data: z.infer<typeof
 }
 
 export async function deleteGoal(userId: string, id: string): Promise<number> {
-  const [owned] = await db.select({ id: goals.id }).from(goals).where(and(eq(goals.id, id), eq(goals.userId, userId)));
+  const [owned] = await db
+    .select({ id: goals.id })
+    .from(goals)
+    .where(and(eq(goals.id, id), eq(goals.userId, userId)));
   if (!owned) return 0;
-  const allGoals = await db.select({ id: goals.id, parentGoalId: goals.parentGoalId }).from(goals).where(eq(goals.userId, userId));
+  const allGoals = await db
+    .select({ id: goals.id, parentGoalId: goals.parentGoalId })
+    .from(goals)
+    .where(eq(goals.userId, userId));
   function collectSubtree(rootId: string): string[] {
     const ids = [rootId];
     for (const g of allGoals) {

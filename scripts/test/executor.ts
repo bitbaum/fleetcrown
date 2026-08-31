@@ -27,7 +27,12 @@ async function main() {
   const events: AgentEvent[] = [];
   const id = "test:roundtrip";
 
-  const handle = await executor.provision({ id, cwd: process.cwd(), command: "bash", args: ["--norc", "--noprofile"] });
+  const handle = await executor.provision({
+    id,
+    cwd: process.cwd(),
+    command: "bash",
+    args: ["--norc", "--noprofile"],
+  });
   check("provision returns a handle with the given id", handle.id === id);
   check("initial status is 'starting'", handle.status === "starting");
 
@@ -35,12 +40,19 @@ async function main() {
 
   // Write a command; the PTY should echo it and run it.
   executor.write(id, "echo HELLO_FLEET_$((6*7))\r");
-  const sawOutput = await waitFor(() => events.some((e) => e.kind === "output" && e.data?.includes("HELLO_FLEET_42")));
+  const sawOutput = await waitFor(() =>
+    events.some((e) => e.kind === "output" && e.data?.includes("HELLO_FLEET_42")),
+  );
   check("output round-trips (command ran in the owned PTY)", sawOutput);
 
-  const wentRunning = await waitFor(() => events.some((e) => e.kind === "status" && e.status === "running"));
+  const wentRunning = await waitFor(() =>
+    events.some((e) => e.kind === "status" && e.status === "running"),
+  );
   check("status transitioned to 'running' on output", wentRunning);
-  check("get() reflects a live status", executor.get(id)?.status === "running" || executor.get(id)?.status === "idle");
+  check(
+    "get() reflects a live status",
+    executor.get(id)?.status === "running" || executor.get(id)?.status === "idle",
+  );
 
   // After the quiet period it should flip to idle (≈ awaiting input).
   const wentIdle = await waitFor(() => executor.get(id)?.status === "idle", 4000);
@@ -54,8 +66,16 @@ async function main() {
   // Reconnect replay: a late subscriber with sinceSeq=0 gets the full retained history.
   const replayed: AgentEvent[] = [];
   executor.subscribe(id, 0, (e) => replayed.push(e));
-  check("late subscriber replays retained history", replayed.some((e) => e.data?.includes("HELLO_FLEET_42")));
-  check("replay only returns events after sinceSeq", executor.subscribe(id, Number.MAX_SAFE_INTEGER, () => { throw new Error("should not fire"); }) !== undefined);
+  check(
+    "late subscriber replays retained history",
+    replayed.some((e) => e.data?.includes("HELLO_FLEET_42")),
+  );
+  check(
+    "replay only returns events after sinceSeq",
+    executor.subscribe(id, Number.MAX_SAFE_INTEGER, () => {
+      throw new Error("should not fire");
+    }) !== undefined,
+  );
 
   // Exit path.
   executor.write(id, "exit\r");
@@ -65,8 +85,13 @@ async function main() {
 
   await executor.terminate(id);
 
-  console.log(failures === 0 ? "\nALL EXECUTOR TESTS PASSED" : `\n${failures} EXECUTOR TEST(S) FAILED`);
+  console.log(
+    failures === 0 ? "\nALL EXECUTOR TESTS PASSED" : `\n${failures} EXECUTOR TEST(S) FAILED`,
+  );
   process.exit(failures === 0 ? 0 : 1);
 }
 
-main().catch((err) => { console.error(err); process.exit(1); });
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

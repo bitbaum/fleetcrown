@@ -115,7 +115,13 @@ export function ForgetAllMemory() {
       >
         {busy ? <Loader2 className="ui-spinner-xs" /> : "Yes, forget all"}
       </button>
-      <button onClick={() => { setConfirming(false); setError(null); }} className="ui-btn-text-cancel">
+      <button
+        onClick={() => {
+          setConfirming(false);
+          setError(null);
+        }}
+        className="ui-btn-text-cancel"
+      >
         Cancel
       </button>
       {error && <span className="ui-error-xs">{error}</span>}

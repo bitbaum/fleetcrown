@@ -31,7 +31,11 @@ export function getHealthSignals(attrs: Record<string, string>): HealthSignal[] 
     if (!attrs[cfg.key]) continue;
     if (cfg.kind === "broken") {
       const count = attrs[cfg.key].split(",").length;
-      signals.push({ kind: cfg.kind, label: `${count} broken feature${count > 1 ? "s" : ""}`, value: attrs[cfg.key] });
+      signals.push({
+        kind: cfg.kind,
+        label: `${count} broken feature${count > 1 ? "s" : ""}`,
+        value: attrs[cfg.key],
+      });
     } else {
       signals.push({ kind: cfg.kind, label: cfg.label, value: attrs[cfg.key] });
     }
@@ -43,23 +47,25 @@ export function getHealthSignals(attrs: Record<string, string>): HealthSignal[] 
 // HealthScoreBar (HealthScore.tsx) + computeProjectHealth (lib/project-health.ts).
 
 const STATUS_COLOR_MAP: Record<string, string> = {
-  active:        "bg-status-positive-subtle text-status-positive border-status-positive/25",
-  production:    "bg-status-positive-subtle text-status-positive border-status-positive/25",
-  live:          "bg-status-positive-subtle text-status-positive border-status-positive/25",
-  launched:      "bg-status-positive-subtle text-status-positive border-status-positive/25",
-  planning:      "bg-status-warning-subtle text-status-warning border-status-warning/25",
-  "pre-launch":  "bg-status-warning-subtle text-status-warning border-status-warning/25",
-  blueprint:     "bg-status-warning-subtle text-status-warning border-status-warning/25",
-  early:         "bg-status-warning-subtle text-status-warning border-status-warning/25",
+  active: "bg-status-positive-subtle text-status-positive border-status-positive/25",
+  production: "bg-status-positive-subtle text-status-positive border-status-positive/25",
+  live: "bg-status-positive-subtle text-status-positive border-status-positive/25",
+  launched: "bg-status-positive-subtle text-status-positive border-status-positive/25",
+  planning: "bg-status-warning-subtle text-status-warning border-status-warning/25",
+  "pre-launch": "bg-status-warning-subtle text-status-warning border-status-warning/25",
+  blueprint: "bg-status-warning-subtle text-status-warning border-status-warning/25",
+  early: "bg-status-warning-subtle text-status-warning border-status-warning/25",
   "in-progress": "bg-accent-muted text-accent-text border-accent-primary/25",
-  development:   "bg-accent-muted text-accent-text border-accent-primary/25",
-  paused:        "bg-surface-raised text-text-muted border-border-default",
-  archived:      "bg-surface-raised text-text-muted border-border-default",
-  deprecated:    "bg-surface-raised text-text-muted border-border-default",
+  development: "bg-accent-muted text-accent-text border-accent-primary/25",
+  paused: "bg-surface-raised text-text-muted border-border-default",
+  archived: "bg-surface-raised text-text-muted border-border-default",
+  deprecated: "bg-surface-raised text-text-muted border-border-default",
 };
 
 export function StatusBadge({ value }: { value: string }) {
-  const cls = STATUS_COLOR_MAP[value.toLowerCase()] ?? "bg-surface-raised text-text-tertiary border-border-subtle";
+  const cls =
+    STATUS_COLOR_MAP[value.toLowerCase()] ??
+    "bg-surface-raised text-text-tertiary border-border-subtle";
   // The badge is inline-flex; truncate on the outer text node won't add
   // an ellipsis because flex layout doesn't apply text-overflow to anonymous
   // children. Wrap the text in a real span so truncate has a block-like
@@ -74,7 +80,10 @@ export function StatusBadge({ value }: { value: string }) {
   // field everywhere: the health check calls it "Stage declared", the editor
   // says "+ stage", and this says Stage.
   return (
-    <span className={`ui-projects-badge max-w-[180px] overflow-hidden ${cls}`} title={`Stage: ${value}`}>
+    <span
+      className={`ui-projects-badge max-w-[180px] overflow-hidden ${cls}`}
+      title={`Stage: ${value}`}
+    >
       <span className="ui-badge-prefix">Stage</span>
       <span className="truncate">{value}</span>
     </span>

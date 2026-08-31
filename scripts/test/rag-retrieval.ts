@@ -23,15 +23,26 @@ async function main() {
   const stats = await getKnowledgeIndexStats(userId);
   console.log("index stats:", stats);
 
-  const block = await retrieveFleetContextBlock(userId, query, { excludeProject: "nonexistent-project" });
+  const block = await retrieveFleetContextBlock(userId, query, {
+    excludeProject: "nonexistent-project",
+  });
   if (stats.totalChunks > 0 && !block.trim()) {
-    console.warn("WARN: index has chunks but query returned no block (threshold may filter all hits)");
+    console.warn(
+      "WARN: index has chunks but query returned no block (threshold may filter all hits)",
+    );
   }
   console.log("query:", query);
   console.log("block length:", block.length);
   if (block) console.log("preview:", block.slice(0, 400));
-  console.log(stats.totalChunks > 0 ? "OK — RAG retrieval path exercised" : "OK — RAG off or empty index (no chunks yet)");
+  console.log(
+    stats.totalChunks > 0
+      ? "OK — RAG retrieval path exercised"
+      : "OK — RAG off or empty index (no chunks yet)",
+  );
   process.exit(0);
 }
 
-main().catch((e) => { console.error("FAIL:", e); process.exit(1); });
+main().catch((e) => {
+  console.error("FAIL:", e);
+  process.exit(1);
+});

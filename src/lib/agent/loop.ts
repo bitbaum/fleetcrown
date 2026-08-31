@@ -31,10 +31,21 @@ import {
   fitFactsToBudget,
   omissionNotice,
 } from "@/lib/agent/fact-budget";
-import { buildGroundedContext, buildContract, directiveId, NO_BASIS, type Directive } from "@/lib/agent/core/contract";
+import {
+  buildGroundedContext,
+  buildContract,
+  directiveId,
+  NO_BASIS,
+  type Directive,
+} from "@/lib/agent/core/contract";
 import { verifyAnswer, buildRepairPrompt, type Violation } from "@/lib/agent/core/verify";
 import { callModelWithTools, type ChatMessage, type ToolCall } from "@/lib/agent/llm";
-import { renderToolCatalog, toOpenAITools, toolNames, type ToolRegistry } from "@/lib/agent/tools/registry";
+import {
+  renderToolCatalog,
+  toOpenAITools,
+  toolNames,
+  type ToolRegistry,
+} from "@/lib/agent/tools/registry";
 import { APP_NAME } from "@/config/brand";
 
 // The concrete registry and the seed fetchers reach the database, and @/db
@@ -46,7 +57,10 @@ async function defaultRegistry(): Promise<ToolRegistry> {
   return (await import("@/lib/agent/tools/handlers")).LOKI_TOOLS;
 }
 
-async function defaultSeed(userId: string, message: string): Promise<{ facts: Fact[]; directives: Directive[] }> {
+async function defaultSeed(
+  userId: string,
+  message: string,
+): Promise<{ facts: Fact[]; directives: Directive[] }> {
   const [{ projectFacts, peopleFacts }, { buildDailyBrief }] = await Promise.all([
     import("@/lib/agent/sources"),
     import("@/lib/agent/brief"),
@@ -54,7 +68,9 @@ async function defaultSeed(userId: string, message: string): Promise<{ facts: Fa
   const [people, projects, directives] = await Promise.all([
     peopleFacts(userId, message).catch(() => [] as Fact[]),
     projectFacts(userId).catch(() => [] as Fact[]),
-    PLANNING_CUES.test(message) ? buildDailyBrief(userId).catch(() => [] as Directive[]) : Promise.resolve([] as Directive[]),
+    PLANNING_CUES.test(message)
+      ? buildDailyBrief(userId).catch(() => [] as Directive[])
+      : Promise.resolve([] as Directive[]),
   ]);
   // People first: a 40-fact cap would otherwise drop the person the operator just named.
   return { facts: [...people, ...projects], directives };
@@ -180,7 +196,10 @@ async function runToolCalls(
   for (const call of calls.slice(0, MAX_CALLS_PER_ROUND)) {
     const tool = registry[call.name];
     if (!tool) {
-      messages.push({ role: "user", content: `[tool ${call.name}] no such tool. Available: ${toolNames(registry).join(", ")}` });
+      messages.push({
+        role: "user",
+        content: `[tool ${call.name}] no such tool. Available: ${toolNames(registry).join(", ")}`,
+      });
       continue;
     }
     const parsed = tool.params.safeParse(call.args);
@@ -257,7 +276,9 @@ export async function runLokiTurn(input: {
   for (let round = 0; round < MAX_ROUNDS; round++) {
     rounds = round + 1;
     const grounded = buildGroundedContext({ facts, directives, renderedFacts: renderFacts(facts) });
-    const voiceLine = input.voice?.trim() ? `\n\nAdopt this writing voice: ${input.voice.trim()}` : "";
+    const voiceLine = input.voice?.trim()
+      ? `\n\nAdopt this writing voice: ${input.voice.trim()}`
+      : "";
 
     // The last round must produce an answer, so stop advertising tools — a weak
     // model handed tools will keep calling them, and the operator would get a
@@ -305,7 +326,9 @@ export async function runLokiTurn(input: {
         .join("\n\n---\n\n");
     const fitted = fitFactsToBudget(facts, withNotice, overheadChars, CALL_TOKEN_BUDGET);
     if (fitted.length < facts.length) {
-      console.warn(`[loki] round ${rounds}: ${facts.length} facts exceed the call budget — sending ${fitted.length}`);
+      console.warn(
+        `[loki] round ${rounds}: ${facts.length} facts exceed the call budget — sending ${fitted.length}`,
+      );
     }
 
     const turn = await (async () => {
@@ -348,7 +371,10 @@ export async function runLokiTurn(input: {
       facts = assignFactIds(mergeFactsWithCap(facts, executed.facts, MAX_FACTS));
     }
     conversation.push(
-      { role: "assistant", content: turn.text || `(called ${executed.used.join(", ") || "tools"})` },
+      {
+        role: "assistant",
+        content: turn.text || `(called ${executed.used.join(", ") || "tools"})`,
+      },
       ...executed.messages,
     );
   }
@@ -361,7 +387,13 @@ export async function runLokiTurn(input: {
   ];
   const citationIds = directives.map((_, i) => directiveId(i));
   let violations = facts.length
-    ? verifyAnswer({ answer: text, facts, userMessage: input.message, extraEvidence: evidence, extraCitationIds: citationIds }).violations
+    ? verifyAnswer({
+        answer: text,
+        facts,
+        userMessage: input.message,
+        extraEvidence: evidence,
+        extraCitationIds: citationIds,
+      }).violations
     : [];
 
   if (violations.length > 0) {
@@ -395,7 +427,13 @@ export async function runLokiTurn(input: {
     usageTokens += repaired?.usageTokens ?? 0;
 
     if (repaired?.text) {
-      const second = verifyAnswer({ answer: repaired.text, facts, userMessage: input.message, extraEvidence: evidence, extraCitationIds: citationIds });
+      const second = verifyAnswer({
+        answer: repaired.text,
+        facts,
+        userMessage: input.message,
+        extraEvidence: evidence,
+        extraCitationIds: citationIds,
+      });
       // Keep the repair only if it actually improved things. A repair that
       // introduces MORE unsupported claims is a worse answer, and accepting it
       // unconditionally would let the safety pass degrade the turn.
@@ -412,7 +450,9 @@ export async function runLokiTurn(input: {
       label: f.subject,
       detail: [
         f.source,
-        ...Object.entries(f.fields).filter(([, v]) => v !== null).map(([k, v]) => `${k}: ${v}`),
+        ...Object.entries(f.fields)
+          .filter(([, v]) => v !== null)
+          .map(([k, v]) => `${k}: ${v}`),
       ].join(" · "),
     })),
     ...directives.map((d, i) => ({

@@ -78,24 +78,29 @@ export const fetchCatalog: CatalogReader = async (provider) => {
  * to protect.
  */
 export type CallVerdict = "accepted" | "rejected" | "unknown";
-export type CallProbe = (model: RegisteredModel) => Promise<{ verdict: CallVerdict; error?: string }>;
+export type CallProbe = (
+  model: RegisteredModel,
+) => Promise<{ verdict: CallVerdict; error?: string }>;
 
 export const probeCallable: CallProbe = async (model) => {
   const { keyEnv } = MODEL_ENDPOINTS[model.provider];
   const key = process.env[keyEnv];
   if (!key) return { verdict: "unknown", error: `no ${keyEnv}` };
   try {
-    const res = await fetch(`${MODEL_ENDPOINTS[model.provider].url.replace(/\/models$/, "")}/chat/completions`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: model.id,
-        max_tokens: 1,
-        messages: [{ role: "user", content: "hi" }],
-        ...(supportsReasoningEffort(model.id) ? { reasoning_effort: "low" } : {}),
-      }),
-      signal: AbortSignal.timeout(20_000),
-    });
+    const res = await fetch(
+      `${MODEL_ENDPOINTS[model.provider].url.replace(/\/models$/, "")}/chat/completions`,
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: model.id,
+          max_tokens: 1,
+          messages: [{ role: "user", content: "hi" }],
+          ...(supportsReasoningEffort(model.id) ? { reasoning_effort: "low" } : {}),
+        }),
+        signal: AbortSignal.timeout(20_000),
+      },
+    );
     if (res.ok) return { verdict: "accepted" };
     const body = await res.text().catch(() => "");
     // 400 = the provider understood us and refused the REQUEST — that is the
@@ -156,7 +161,9 @@ export async function checkRegisteredModels(
 
     const presentIds = ids.filter((id) => live.has(id));
     const deadIds = ids.filter((id) => !live.has(id));
-    const missing = REGISTERED_MODELS.filter((m) => m.provider === provider && deadIds.includes(m.id));
+    const missing = REGISTERED_MODELS.filter(
+      (m) => m.provider === provider && deadIds.includes(m.id),
+    );
     results.push({ provider, reachable: true, presentIds, missing, uncheckedIds: [] });
   }
 
@@ -192,9 +199,12 @@ export async function checkRegisteredModels(
  *  objected to, which is the whole fix. */
 export function describeRot(report: ModelCheckReport): string {
   return [
-    ...report.missing.map((m) => `${m.provider}/${m.id} — GONE from the catalogue. Breaks: ${m.usedFor}`),
+    ...report.missing.map(
+      (m) => `${m.provider}/${m.id} — GONE from the catalogue. Breaks: ${m.usedFor}`,
+    ),
     ...report.rejected.map(
-      (r) => `${r.model.provider}/${r.model.id} — present but REFUSES our request: ${r.error}\n    Breaks: ${r.model.usedFor}`,
+      (r) =>
+        `${r.model.provider}/${r.model.id} — present but REFUSES our request: ${r.error}\n    Breaks: ${r.model.usedFor}`,
     ),
   ].join("\n");
 }

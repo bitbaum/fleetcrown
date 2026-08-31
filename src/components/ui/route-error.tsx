@@ -36,8 +36,8 @@ export function RouteError({
       <Card>
         <CardHeader icon={AlertCircle} title={cardTitle} />
         <p className="text-sm text-text-secondary">
-          Couldn&apos;t load this page&apos;s data. This is usually a transient database hiccup;
-          tap retry. If it persists, the underlying error digest is{" "}
+          Couldn&apos;t load this page&apos;s data. This is usually a transient database hiccup; tap
+          retry. If it persists, the underlying error digest is{" "}
           <code className="rounded bg-surface-raised px-1 py-0.5 font-mono text-xs">
             {error.digest ?? "n/a"}
           </code>

@@ -15,10 +15,17 @@ import os from "node:os";
 import path from "node:path";
 import { getAllDistinctUserIds, getUserProjects } from "@/db/queries/user-projects";
 import { getProjectContext } from "@/db/queries/project-context";
-import { getProjectDossierByProjectKey, renderProjectDossierForAgent } from "@/db/queries/project-dossier";
+import {
+  getProjectDossierByProjectKey,
+  renderProjectDossierForAgent,
+} from "@/db/queries/project-dossier";
 import { getGoals, type GoalWithChildren } from "@/db/queries/goals";
 import { listThoughts } from "@/lib/thoughts-content";
-import { upsertKnowledgeBatch, pruneKnowledgeToIds, type KnowledgeItem } from "@/db/queries/knowledge-embeddings";
+import {
+  upsertKnowledgeBatch,
+  pruneKnowledgeToIds,
+  type KnowledgeItem,
+} from "@/db/queries/knowledge-embeddings";
 import { cleanDescription } from "@/lib/project-display";
 import { chunkMarkdown } from "@/lib/rag/chunk";
 import { embeddingsEnabled } from "@/lib/rag/embeddings";
@@ -44,7 +51,10 @@ function readRepoDocs(project: string): Array<{ rel: string; body: string }> {
   if (!fs.existsSync(path.join(repo, ".git"))) return [];
   const files: string[] = [];
   for (const name of ["README.md", "readme.md"]) {
-    if (fs.existsSync(path.join(repo, name))) { files.push(name); break; }
+    if (fs.existsSync(path.join(repo, name))) {
+      files.push(name);
+      break;
+    }
   }
   const docsDir = path.join(repo, "docs");
   if (fs.existsSync(docsDir)) {
@@ -53,7 +63,8 @@ function readRepoDocs(project: string): Array<{ rel: string; body: string }> {
       for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
         if (files.length >= MAX_DOC_FILES) return;
         const full = path.join(dir, e.name);
-        if (e.isDirectory() && !e.name.startsWith(".") && e.name !== "node_modules") walk(full, depth + 1);
+        if (e.isDirectory() && !e.name.startsWith(".") && e.name !== "node_modules")
+          walk(full, depth + 1);
         else if (e.isFile() && e.name.endsWith(".md")) files.push(path.relative(repo, full));
       }
     };
@@ -64,7 +75,9 @@ function readRepoDocs(project: string): Array<{ rel: string; body: string }> {
     try {
       const body = fs.readFileSync(path.join(repo, rel), "utf8");
       if (body.trim()) out.push({ rel, body });
-    } catch { /* unreadable file — skip, never fail the reindex */ }
+    } catch {
+      /* unreadable file — skip, never fail the reindex */
+    }
   }
   return out;
 }
@@ -92,26 +105,51 @@ async function main() {
     for (const p of projects) {
       // project_profile: the same rich context block we inject per dispatch.
       const dossier = await getProjectDossierByProjectKey(userId, p.name).catch(() => null);
-      const ctx = dossier ? renderProjectDossierForAgent(dossier) : await getProjectContext(userId, p.name).catch(() => null);
+      const ctx = dossier
+        ? renderProjectDossierForAgent(dossier)
+        : await getProjectContext(userId, p.name).catch(() => null);
       // cleanDescription: never embed the bulk-import placeholder as project context.
-      const profile = [p.name, cleanDescription(p.description), p.stack, ctx].filter(Boolean).join("\n");
+      const profile = [p.name, cleanDescription(p.description), p.stack, ctx]
+        .filter(Boolean)
+        .join("\n");
       if (profile.trim()) {
-        items.push({ sourceType: "project_profile", sourceId: p.name, chunk: profile.slice(0, 6000), metadata: { project: p.name } });
+        items.push({
+          sourceType: "project_profile",
+          sourceId: p.name,
+          chunk: profile.slice(0, 6000),
+          metadata: { project: p.name },
+        });
       }
       // dev_log: the recent narrative of what's happening on the project.
       const log = (p.devLog as DevLogEntry[]) ?? [];
-      const recent = log.slice(-8).map((e) => `${e.date}: ${e.done}${e.next ? ` → next: ${e.next}` : ""}`).join("\n");
+      const recent = log
+        .slice(-8)
+        .map((e) => `${e.date}: ${e.done}${e.next ? ` → next: ${e.next}` : ""}`)
+        .join("\n");
       if (recent.trim()) {
-        items.push({ sourceType: "dev_log", sourceId: `${p.name}:devlog`, chunk: `Dev log for ${p.name}:\n${recent}`.slice(0, 6000), metadata: { project: p.name } });
+        items.push({
+          sourceType: "dev_log",
+          sourceId: `${p.name}:devlog`,
+          chunk: `Dev log for ${p.name}:\n${recent}`.slice(0, 6000),
+          metadata: { project: p.name },
+        });
       }
       // repo_doc: the project's own README/docs — see readRepoDocs.
       let docChunks = 0;
       for (const doc of readRepoDocs(p.name)) {
         if (docChunks >= MAX_DOC_CHUNKS_PER_PROJECT) break;
-        const passages = chunkMarkdown(doc.body, { maxChars: 1400, prefix: `${p.name} docs — ${doc.rel}` });
+        const passages = chunkMarkdown(doc.body, {
+          maxChars: 1400,
+          prefix: `${p.name} docs — ${doc.rel}`,
+        });
         for (const [i, chunk] of passages.slice(0, MAX_CHUNKS_PER_FILE).entries()) {
           if (docChunks >= MAX_DOC_CHUNKS_PER_PROJECT) break;
-          items.push({ sourceType: "repo_doc", sourceId: `${p.name}:doc:${doc.rel}#${i}`, chunk: chunk.slice(0, 2000), metadata: { project: p.name, file: doc.rel } });
+          items.push({
+            sourceType: "repo_doc",
+            sourceId: `${p.name}:doc:${doc.rel}#${i}`,
+            chunk: chunk.slice(0, 2000),
+            metadata: { project: p.name, file: doc.rel },
+          });
           docChunks++;
         }
       }
@@ -123,14 +161,22 @@ async function main() {
     const goals = await getGoals(userId).catch(() => [] as GoalWithChildren[]);
     for (const g of flattenGoals(goals)) {
       const ms = ((g.milestones as Milestone[] | null) ?? [])
-        .map((m) => `${m.done ? "✓" : "○"} ${m.title}`).join("; ");
+        .map((m) => `${m.done ? "✓" : "○"} ${m.title}`)
+        .join("; ");
       const chunk = [
         `Goal${g.entityName ? ` for ${g.entityName}` : ""}: ${g.title}`,
         g.description ?? "",
         `Status: ${g.status} · ${g.progress ?? 0}% complete`,
         ms ? `Milestones: ${ms}` : "",
-      ].filter(Boolean).join("\n");
-      items.push({ sourceType: "goal", sourceId: `goal:${g.id}`, chunk: chunk.slice(0, 4000), metadata: { project: g.entityName ?? "", title: g.title } });
+      ]
+        .filter(Boolean)
+        .join("\n");
+      items.push({
+        sourceType: "goal",
+        sourceId: `goal:${g.id}`,
+        chunk: chunk.slice(0, 4000),
+        metadata: { project: g.entityName ?? "", title: g.title },
+      });
     }
 
     // thought: the published strategic essays. This is where the operator has
@@ -143,7 +189,12 @@ async function main() {
       const passages = chunkMarkdown(t.body, { maxChars: 1400, prefix: `Essay: ${t.title}` });
       const chunks = passages.length ? passages : [`Essay: ${t.title}\n${t.summary}`];
       chunks.forEach((chunk, i) => {
-        items.push({ sourceType: "thought", sourceId: `thought:${t.slug}#${i}`, chunk: chunk.slice(0, 2000), metadata: { title: t.title, slug: t.slug } });
+        items.push({
+          sourceType: "thought",
+          sourceId: `thought:${t.slug}#${i}`,
+          chunk: chunk.slice(0, 2000),
+          metadata: { title: t.title, slug: t.slug },
+        });
       });
     }
 
@@ -152,13 +203,22 @@ async function main() {
     // would empty the index whenever the embed step fails (learned the hard way).
     const n = await upsertKnowledgeBatch(userId, items);
     if (n > 0) {
-      await pruneKnowledgeToIds(userId, ["project_profile", "dev_log", "goal", "thought", "repo_doc"], items.map((i) => i.sourceId));
+      await pruneKnowledgeToIds(
+        userId,
+        ["project_profile", "dev_log", "goal", "thought", "repo_doc"],
+        items.map((i) => i.sourceId),
+      );
     }
     totalChunks += n;
-    console.log(`[reindex] user ${userId.slice(0, 8)}…: ${n}/${items.length} chunks (${projects.length} projects)`);
+    console.log(
+      `[reindex] user ${userId.slice(0, 8)}…: ${n}/${items.length} chunks (${projects.length} projects)`,
+    );
   }
   console.log(`[reindex] done — ${totalChunks} chunks indexed across ${userIds.length} user(s)`);
   process.exit(0);
 }
 
-main().catch((e) => { console.error("[reindex] failed:", e); process.exit(1); });
+main().catch((e) => {
+  console.error("[reindex] failed:", e);
+  process.exit(1);
+});

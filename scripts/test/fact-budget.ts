@@ -49,7 +49,10 @@ function runTests(): void {
 
   check("merge with more fresh facts than the cap keeps the first cap of them", () => {
     const out = mergeFactsWithCap(range("seed", 10), range("tool", 50), 40);
-    assert(out.length === 40 && out.every((f) => f.subject.startsWith("tool")), "cap of fresh only");
+    assert(
+      out.length === 40 && out.every((f) => f.subject.startsWith("tool")),
+      "cap of fresh only",
+    );
   });
 
   check("trim under budget is identity", () => {
@@ -61,7 +64,10 @@ function runTests(): void {
     const all = [...range("seed", 35), ...range("tool", 5)];
     const out = trimFactsToBudget(all, 10);
     const tools = out.filter((f) => f.subject.startsWith("tool"));
-    assert(out.length === 10 && tools.length === 5, `kept ${tools.length}/5 tool facts at budget 10`);
+    assert(
+      out.length === 10 && tools.length === 5,
+      `kept ${tools.length}/5 tool facts at budget 10`,
+    );
     assert(out[0]!.subject === "seed0", "head of seed also kept");
   });
 

@@ -78,7 +78,12 @@ export function useWhisperMic(onResult: (text: string) => void) {
   }, []);
 
   // Cleanup on unmount
-  useEffect(() => () => { cleanup(); }, [cleanup]);
+  useEffect(
+    () => () => {
+      cleanup();
+    },
+    [cleanup],
+  );
 
   const startLevelTracking = useCallback((stream: MediaStream) => {
     peakRef.current = 0;
@@ -185,7 +190,11 @@ export function useWhisperMic(onResult: (text: string) => void) {
       form.append("audio", blob, "recording.webm");
       try {
         const res = await fetch("/api/beacon/transcribe", { method: "POST", body: form });
-        const data = (await res.json()) as { text?: string; transcriptionId?: string; error?: string };
+        const data = (await res.json()) as {
+          text?: string;
+          transcriptionId?: string;
+          error?: string;
+        };
         if (!res.ok) {
           setError(data.error ?? "Transcription failed");
           return;
@@ -208,7 +217,9 @@ export function useWhisperMic(onResult: (text: string) => void) {
             onResult(text);
             setError("");
           } else {
-            setError("Transcription took too long — Fleet Runner may be slow or offline. Try again, or upgrade for instant cloud transcription.");
+            setError(
+              "Transcription took too long — Fleet Runner may be slow or offline. Try again, or upgrade for instant cloud transcription.",
+            );
           }
           return;
         }

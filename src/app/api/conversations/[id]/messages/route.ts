@@ -30,7 +30,11 @@ import {
   DEFAULT_CONVERSATION_TITLE,
 } from "@/db/queries/conversations";
 import type { Conversation, ConversationMessage } from "@/db/schema/conversations";
-import { resolveCommand, isGenericDevelopHandoff, type CommandResolution } from "@/lib/command-resolve";
+import {
+  resolveCommand,
+  isGenericDevelopHandoff,
+  type CommandResolution,
+} from "@/lib/command-resolve";
 import { injectPrompt } from "@/lib/inject-core";
 import { askLoki } from "@/lib/loki-core";
 import { enqueueProposalFromMessage } from "@/lib/actions/enqueue-proposal";
@@ -67,10 +71,7 @@ import {
 } from "@/lib/loki/project-mutations";
 import { formatFleetKickReply, kickFleet } from "@/lib/fleet-kick";
 import { resolveDispatchTargets } from "@/lib/loki/dispatch-targets";
-import {
-  dispatchCommandToProjects,
-  formatMultiDispatchReply,
-} from "@/lib/loki/multi-dispatch";
+import { dispatchCommandToProjects, formatMultiDispatchReply } from "@/lib/loki/multi-dispatch";
 import {
   DEFAULT_VISION_QUESTION,
   shouldDispatchScreenshot,
@@ -102,7 +103,11 @@ const Body = z
   .superRefine((data, ctx) => {
     const hasAttach = (data.attachments?.length ?? 0) > 0;
     if (!data.text.trim() && !hasAttach) {
-      ctx.addIssue({ code: "custom", message: "Message text or an attachment is required.", path: ["text"] });
+      ctx.addIssue({
+        code: "custom",
+        message: "Message text or an attachment is required.",
+        path: ["text"],
+      });
     }
   });
 
@@ -125,7 +130,9 @@ async function buildAttachmentSuffix(
   userText: string,
 ): Promise<string> {
   const normalized = attachments ?? [];
-  const images = normalized.filter((a): a is Extract<Attachment, { kind: "image" }> => a.kind === "image");
+  const images = normalized.filter(
+    (a): a is Extract<Attachment, { kind: "image" }> => a.kind === "image",
+  );
   const vision = await describeAttachedImages(images, userText);
   return renderTextAttachments(normalized) + vision;
 }
@@ -201,10 +208,7 @@ async function persistDispatch(opts: DispatchOpts): Promise<ConversationMessage>
   return assistant;
 }
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const userId = await getApiUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -214,10 +218,16 @@ export async function POST(
 
   const dataOrResp = await readJsonBody(req, Body);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
-  const { text: rawText, selectedProjects, agent, model, attachments: rawAttachments, dispatchOnly, chatOnly } = dataOrResp;
-  const text =
-    rawText.trim() ||
-    DEFAULT_VISION_QUESTION;
+  const {
+    text: rawText,
+    selectedProjects,
+    agent,
+    model,
+    attachments: rawAttachments,
+    dispatchOnly,
+    chatOnly,
+  } = dataOrResp;
+  const text = rawText.trim() || DEFAULT_VISION_QUESTION;
   const attachments = rawAttachments?.map(normalizeAttachment);
   const hasImages = (attachments ?? []).some((a) => a.kind === "image");
 
@@ -270,10 +280,7 @@ export async function POST(
       await createCapture(userId, sticky.body);
       content = formatStickyAddReply(sticky.body, await countCaptures(userId));
     } else {
-      const [items, total] = await Promise.all([
-        listCaptures(userId, 10),
-        countCaptures(userId),
-      ]);
+      const [items, total] = await Promise.all([listCaptures(userId, 10), countCaptures(userId)]);
       content = formatStickyListReply(items, total);
     }
     const assistant = await addMessage(conversationId, {
@@ -292,7 +299,7 @@ export async function POST(
       const titled =
         currentTitle !== "" && currentTitle !== DEFAULT_CONVERSATION_TITLE
           ? currentTitle
-          : deriveConversationTitle(text) ?? "";
+          : (deriveConversationTitle(text) ?? "");
       name = projectNameFromConversationTitle(titled);
     }
     if (!name) {
@@ -358,8 +365,7 @@ export async function POST(
   }
 
   if (!chatOnly && isDevelopAllFleetRequest(text)) {
-    const scopeKeys =
-      selectedProjects.length > 0 ? selectedProjects : undefined;
+    const scopeKeys = selectedProjects.length > 0 ? selectedProjects : undefined;
     const outcome = await kickFleet(userId, {
       source: "loki",
       projectKeys: scopeKeys,
@@ -414,17 +420,11 @@ export async function POST(
     return NextResponse.json({ message: assistant });
   }
 
-  const fleetProjectKey = resolveFleetCommandProjectKey(
-    text,
-    selectedProjects[0],
-    projectNames,
-  );
+  const fleetProjectKey = resolveFleetCommandProjectKey(text, selectedProjects[0], projectNames);
 
   if (isBusinessPlanRequest(text)) {
     const outcome = await runLokiBusinessPlan(userId, fleetProjectKey, projects);
-    const content = outcome.ok
-      ? formatBusinessPlanReply(outcome)
-      : outcome.message;
+    const content = outcome.ok ? formatBusinessPlanReply(outcome) : outcome.message;
     const assistant = await addMessage(conversationId, {
       role: "assistant",
       kind: "chat",
@@ -435,10 +435,7 @@ export async function POST(
         entityId: outcome.ok ? outcome.entityId : null,
       },
     });
-    if (
-      outcome.ok &&
-      !existing.conversation.projectKeys.includes(outcome.projectKey)
-    ) {
+    if (outcome.ok && !existing.conversation.projectKeys.includes(outcome.projectKey)) {
       await updateConversationProjects(userId, conversationId, [
         ...existing.conversation.projectKeys,
         outcome.projectKey,
@@ -455,9 +452,7 @@ export async function POST(
       projects,
       profileUpdate,
     );
-    const content = outcome.ok
-      ? formatProfileUpdateReply(outcome)
-      : outcome.message;
+    const content = outcome.ok ? formatProfileUpdateReply(outcome) : outcome.message;
     const assistant = await addMessage(conversationId, {
       role: "assistant",
       kind: "chat",
@@ -468,10 +463,7 @@ export async function POST(
         fieldKey: profileUpdate.fieldKey,
       },
     });
-    if (
-      outcome.ok &&
-      !existing.conversation.projectKeys.includes(outcome.projectKey)
-    ) {
+    if (outcome.ok && !existing.conversation.projectKeys.includes(outcome.projectKey)) {
       await updateConversationProjects(userId, conversationId, [
         ...existing.conversation.projectKeys,
         outcome.projectKey,
@@ -480,11 +472,7 @@ export async function POST(
     return NextResponse.json({ message: assistant });
   }
 
-  const screenshotProject = resolveFleetCommandProjectKey(
-    text,
-    selectedProjects[0],
-    projectNames,
-  );
+  const screenshotProject = resolveFleetCommandProjectKey(text, selectedProjects[0], projectNames);
   if (shouldDispatchScreenshot(text, hasImages, screenshotProject)) {
     const prompt = screenshotDispatchPrompt(text);
     const intentId = screenshotDispatchIntentId(text);
@@ -505,7 +493,14 @@ export async function POST(
   }
 
   const resolution: CommandResolution = chatOnly
-    ? { kind: "chat", projectKey: selectedProjects[0] ?? null, intentId: null, prompt: text, needsProject: false, reason: "forced chat (proactive fleet review)" }
+    ? {
+        kind: "chat",
+        projectKey: selectedProjects[0] ?? null,
+        intentId: null,
+        prompt: text,
+        needsProject: false,
+        reason: "forced chat (proactive fleet review)",
+      }
     : await resolveCommand(
         { text, projects: projectNames, selectedProject: selectedProjects[0] },
         userId,
@@ -521,11 +516,7 @@ export async function POST(
   let assistant;
 
   if (resolution.kind === "command" && dispatchTargets.length > 0) {
-    if (
-      dispatchTargets.length > 1 &&
-      resolution.intentId === "next_best" &&
-      !hasImages
-    ) {
+    if (dispatchTargets.length > 1 && resolution.intentId === "next_best" && !hasImages) {
       const kick = await kickFleet(userId, {
         source: "loki",
         projectKeys: dispatchTargets,
@@ -537,7 +528,9 @@ export async function POST(
         content: formatFleetKickReply(kick),
         meta: { source: "fleet-kick-multi", kicked: kick.kicked },
       });
-      const kickedKeys = kick.details.filter((d) => d.outcome === "kicked").map((d) => d.projectKey);
+      const kickedKeys = kick.details
+        .filter((d) => d.outcome === "kicked")
+        .map((d) => d.projectKey);
       if (kickedKeys.length > 0) {
         const merged = [...new Set([...existing.conversation.projectKeys, ...kickedKeys])];
         await updateConversationProjects(userId, conversationId, merged);
@@ -606,12 +599,7 @@ export async function POST(
       },
     });
   } else {
-    const chatProject = resolveLokiChatProjectKey(
-      resolution,
-      selectedProjects,
-      projectNames,
-      text,
-    );
+    const chatProject = resolveLokiChatProjectKey(resolution, selectedProjects, projectNames, text);
     const chatPrompt = await buildLokiChatPrompt(
       userId,
       resolution.prompt + attachmentSuffix,
@@ -629,7 +617,9 @@ export async function POST(
         // shared ask-session (same as /api/loki) rather than a cold per-conversation
         // session, which on a modest model can echo the injected context instead of
         // answering. Normal chat keeps its own per-thread memory.
-        sessionKey: chatOnly ? `agent:main:web:ask:${userId}` : `agent:main:web:conv:${conversationId}`,
+        sessionKey: chatOnly
+          ? `agent:main:web:ask:${userId}`
+          : `agent:main:web:conv:${conversationId}`,
         userId,
       }),
       enqueueProposalFromMessage(userId, text, new Date().toISOString()).catch(() => null),
@@ -651,14 +641,15 @@ export async function POST(
           ? { sources: loki.body.sources }
           : {}),
         ...(queued
-          ? { queuedActionId: queued.id, queuedActionTitle: queued.title, queuedActionType: queued.type }
+          ? {
+              queuedActionId: queued.id,
+              queuedActionTitle: queued.title,
+              queuedActionType: queued.type,
+            }
           : {}),
       },
     });
-    if (
-      chatProject &&
-      !existing.conversation.projectKeys.includes(chatProject)
-    ) {
+    if (chatProject && !existing.conversation.projectKeys.includes(chatProject)) {
       await updateConversationProjects(userId, conversationId, [
         ...existing.conversation.projectKeys,
         chatProject,

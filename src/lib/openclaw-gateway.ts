@@ -29,7 +29,9 @@ function loadDeviceIdentity(): DeviceIdentity | null {
     const pem = Buffer.from(b64, "base64").toString("utf8");
     const privateKey = crypto.createPrivateKey(pem);
     const publicKey = crypto.createPublicKey(privateKey);
-    const raw = (publicKey.export({ type: "spki", format: "der" }) as Buffer).subarray(ED25519_SPKI_PREFIX_LEN);
+    const raw = (publicKey.export({ type: "spki", format: "der" }) as Buffer).subarray(
+      ED25519_SPKI_PREFIX_LEN,
+    );
     const deviceId = crypto.createHash("sha256").update(raw).digest("hex");
     return (cachedIdentity = { privateKey, deviceId, publicKeyB64Url: b64url(raw) });
   } catch {
@@ -41,7 +43,13 @@ function gatewayWsUrl(): string {
   return OPENCLAW_GATEWAY_URL.replace(/^http/, "ws");
 }
 
-export type GatewayAgentResult = { ok: boolean; text?: string; model?: string; durationMs?: number; error?: string };
+export type GatewayAgentResult = {
+  ok: boolean;
+  text?: string;
+  model?: string;
+  durationMs?: number;
+  error?: string;
+};
 
 /** True when the gateway brain is configured (token + device key present). */
 export function isGatewayConfigured(): boolean {
@@ -80,7 +88,11 @@ export async function askGatewayAgent(
       if (settled) return;
       settled = true;
       if (timerRef.id) clearTimeout(timerRef.id);
-      try { ws.close(); } catch { /* ignore */ }
+      try {
+        ws.close();
+      } catch {
+        /* ignore */
+      }
       resolve(r);
     };
     try {
@@ -93,26 +105,65 @@ export async function askGatewayAgent(
 
     const sendConnect = (nonce: string) => {
       const signedAt = Date.now();
-      const payload = ["v2", identity.deviceId, clientId, clientMode, role, scopes.join(","), String(signedAt), shared, nonce].join("|");
-      const signature = b64url(crypto.sign(null, Buffer.from(payload, "utf8"), identity.privateKey));
-      ws.send(JSON.stringify({
-        type: "req", id: connectId, method: "connect",
-        params: {
-          minProtocol: 3, maxProtocol: 3,
-          client: { id: clientId, displayName: "FleetCrown", version: "1.0.0", platform: "linux", mode: clientMode },
-          auth: { token: shared }, role, scopes,
-          device: { id: identity.deviceId, publicKey: identity.publicKeyB64Url, signature, signedAt, nonce },
-        },
-      }));
+      const payload = [
+        "v2",
+        identity.deviceId,
+        clientId,
+        clientMode,
+        role,
+        scopes.join(","),
+        String(signedAt),
+        shared,
+        nonce,
+      ].join("|");
+      const signature = b64url(
+        crypto.sign(null, Buffer.from(payload, "utf8"), identity.privateKey),
+      );
+      ws.send(
+        JSON.stringify({
+          type: "req",
+          id: connectId,
+          method: "connect",
+          params: {
+            minProtocol: 3,
+            maxProtocol: 3,
+            client: {
+              id: clientId,
+              displayName: "FleetCrown",
+              version: "1.0.0",
+              platform: "linux",
+              mode: clientMode,
+            },
+            auth: { token: shared },
+            role,
+            scopes,
+            device: {
+              id: identity.deviceId,
+              publicKey: identity.publicKeyB64Url,
+              signature,
+              signedAt,
+              nonce,
+            },
+          },
+        }),
+      );
     };
 
     ws.on("error", () => finish({ ok: false, error: "gateway unreachable" }));
     ws.on("close", () => finish({ ok: false, error: "gateway closed before reply" }));
     ws.on("message", (data: RawData) => {
-      let f: Record<string, unknown> & { payload?: Record<string, unknown>; error?: { message?: string }; id?: string; ok?: boolean; event?: string };
+      let f: Record<string, unknown> & {
+        payload?: Record<string, unknown>;
+        error?: { message?: string };
+        id?: string;
+        ok?: boolean;
+        event?: string;
+      };
       try {
         f = JSON.parse(data.toString());
-      } catch { return; }
+      } catch {
+        return;
+      }
 
       if (f.event === "connect.challenge") {
         const nonce = (f.payload as { nonce?: unknown } | undefined)?.nonce;
@@ -122,17 +173,35 @@ export async function askGatewayAgent(
       if (f.id === connectId) {
         const payload = f.payload as { type?: string } | undefined;
         if (f.ok && payload?.type === "hello-ok") {
-          ws.send(JSON.stringify({
-            type: "req", id: agentReqId, method: "agent",
-            params: { message, agentId, sessionKey, idempotencyKey: agentReqId, timeout: Math.floor(timeoutMs / 1000) },
-          }));
+          ws.send(
+            JSON.stringify({
+              type: "req",
+              id: agentReqId,
+              method: "agent",
+              params: {
+                message,
+                agentId,
+                sessionKey,
+                idempotencyKey: agentReqId,
+                timeout: Math.floor(timeoutMs / 1000),
+              },
+            }),
+          );
         } else {
           finish({ ok: false, error: f.error?.message ?? "gateway connect failed" });
         }
         return;
       }
       if (f.id === agentReqId) {
-        const payload = f.payload as { status?: string; result?: { payloads?: Array<{ text?: string }>; meta?: { agentMeta?: { model?: string } } } } | undefined;
+        const payload = f.payload as
+          | {
+              status?: string;
+              result?: {
+                payloads?: Array<{ text?: string }>;
+                meta?: { agentMeta?: { model?: string } };
+              };
+            }
+          | undefined;
         const status = payload?.status;
         if (status === "accepted") return; // wait for final frame
         if (status === "ok") {

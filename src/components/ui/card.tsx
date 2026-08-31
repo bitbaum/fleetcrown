@@ -60,15 +60,7 @@ export function CardSkeleton() {
   );
 }
 
-export function StatCard({
-  label,
-  value,
-  sub,
-}: {
-  label: string;
-  value: string;
-  sub: string;
-}) {
+export function StatCard({ label, value, sub }: { label: string; value: string; sub: string }) {
   return (
     <Card>
       <div className="ui-kicker">{label}</div>

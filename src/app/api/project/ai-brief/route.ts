@@ -49,7 +49,10 @@ export async function POST(req: NextRequest) {
   const userId = await getSessionUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!isRuntimeAvailable()) {
-    return NextResponse.json({ error: "AI brief requires local claude CLI — not available in cloud mode" }, { status: 503 });
+    return NextResponse.json(
+      { error: "AI brief requires local claude CLI — not available in cloud mode" },
+      { status: 503 },
+    );
   }
 
   const dataOrResp = await readJsonBody(req, AiBriefBody);
@@ -63,18 +66,27 @@ export async function POST(req: NextRequest) {
       const child = spawn("claude", [
         "--print",
         "--no-session-persistence",
-        "--output-format", "json",
-        "--json-schema", JSON.stringify(BRIEF_SCHEMA),
+        "--output-format",
+        "json",
+        "--json-schema",
+        JSON.stringify(BRIEF_SCHEMA),
         BRIEF_PROMPT(description),
       ]);
-      child.stdout.on("data", (d: Buffer) => { out += d.toString(); });
-      child.stderr.on("data", (d: Buffer) => { err += d.toString(); });
+      child.stdout.on("data", (d: Buffer) => {
+        out += d.toString();
+      });
+      child.stderr.on("data", (d: Buffer) => {
+        err += d.toString();
+      });
       child.on("close", (code) => {
         if (code === 0) resolve(out);
         else reject(new Error(err || `claude exited with code ${code}`));
       });
       child.on("error", reject);
-      setTimeout(() => { child.kill(); reject(new Error("timeout")); }, 90_000);
+      setTimeout(() => {
+        child.kill();
+        reject(new Error("timeout"));
+      }, 90_000);
     });
 
     const envelope = JSON.parse(stdout.trim());

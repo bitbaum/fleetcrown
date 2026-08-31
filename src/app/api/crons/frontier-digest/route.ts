@@ -10,7 +10,12 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { requireCronAuth } from "@/lib/cron-auth";
 import { logDebug } from "@/db/queries/debug-logs";
-import { runFrontierDigest, runFrontierProposals, type RunFrontierResult, type RunProposalsResult } from "@/lib/frontier/run";
+import {
+  runFrontierDigest,
+  runFrontierProposals,
+  type RunFrontierResult,
+  type RunProposalsResult,
+} from "@/lib/frontier/run";
 
 /**
  * How loud each generator outcome is. The distinction that matters: a fault in
@@ -23,7 +28,12 @@ import { runFrontierDigest, runFrontierProposals, type RunFrontierResult, type R
  * have one.
  */
 function outcomeLevel(p: RunProposalsResult): "info" | "warn" | "error" {
-  if (p.generation === "call-failed" || p.generation === "unparseable" || p.generation === "truncated") return "error";
+  if (
+    p.generation === "call-failed" ||
+    p.generation === "unparseable" ||
+    p.generation === "truncated"
+  )
+    return "error";
   if (p.panelUnreachable) return "error";
   if (p.skipped || p.generation === "no-items" || p.judgeFailures?.length) return "warn";
   return "info";
@@ -33,15 +43,19 @@ function outcomeLevel(p: RunProposalsResult): "info" | "warn" | "error" {
 // lived in the systemd journal, which on this box holds ONE day of this unit —
 // so the loop could (and did) go two months surfacing nothing with no
 // recoverable record of why.
-async function logProposalsOutcome(r: RunFrontierResult, proposals: RunProposalsResult | { error: string }): Promise<void> {
+async function logProposalsOutcome(
+  r: RunFrontierResult,
+  proposals: RunProposalsResult | { error: string },
+): Promise<void> {
   await logDebug({
     source: "crons/frontier-digest",
     level: "error" in proposals ? "error" : outcomeLevel(proposals),
-    message: "error" in proposals
-      ? `frontier proposals THREW: ${proposals.error}`
-      : proposals.skipped
-        ? `no proposals attempted: ${proposals.skipped}`
-        : `generation=${proposals.generation} returned=${proposals.returned ?? 0} drafted=${proposals.drafted} surfaced=${proposals.surfaced}`,
+    message:
+      "error" in proposals
+        ? `frontier proposals THREW: ${proposals.error}`
+        : proposals.skipped
+          ? `no proposals attempted: ${proposals.skipped}`
+          : `generation=${proposals.generation} returned=${proposals.returned ?? 0} drafted=${proposals.drafted} surfaced=${proposals.surfaced}`,
     meta: {
       digestDate: r.saved.digestDate,
       items: r.itemCount,

@@ -42,25 +42,25 @@ type Props = {
 };
 
 const TABS = [
-  { id: "profile",       label: "Profile"       },
-  { id: "account",       label: "Account"       },
+  { id: "profile", label: "Profile" },
+  { id: "account", label: "Account" },
   { id: "notifications", label: "Notifications" },
-  { id: "appearance",    label: "Appearance"    },
-  { id: "voice",         label: "Voice"         },
-  { id: "privacy",       label: "Privacy"       },
-  { id: "location",      label: "Location"      },
-  { id: "agent",         label: "Agent"         },
-  { id: "projects",      label: "Projects"      },
-  { id: "team",          label: "Team"          },
-  { id: "billing",       label: "Billing"       },
+  { id: "appearance", label: "Appearance" },
+  { id: "voice", label: "Voice" },
+  { id: "privacy", label: "Privacy" },
+  { id: "location", label: "Location" },
+  { id: "agent", label: "Agent" },
+  { id: "projects", label: "Projects" },
+  { id: "team", label: "Team" },
+  { id: "billing", label: "Billing" },
 ] as const;
 
-type TabId = typeof TABS[number]["id"];
+type TabId = (typeof TABS)[number]["id"];
 
 // URL-hash aliases for incoming deep links — keeps existing URLs working
 // even if the tab id changes. Direct tab id matches are auto-included.
 const HASH_TO_TAB: Record<string, TabId> = {
-  tokens: "agent",       // /control's RunnerStatusBanner deep-links to #tokens
+  tokens: "agent", // /control's RunnerStatusBanner deep-links to #tokens
   "agent-token": "agent",
   "agent-tokens": "agent",
 };
@@ -77,7 +77,15 @@ function resolveInitialTab(): TabId {
   return HASH_TO_TAB[raw] ?? "profile";
 }
 
-export function SettingsTabs({ user, userPrefs, projects, teamProjects, projectLimit, invitations, orangecatEnabled }: Props) {
+export function SettingsTabs({
+  user,
+  userPrefs,
+  projects,
+  teamProjects,
+  projectLimit,
+  invitations,
+  orangecatEnabled,
+}: Props) {
   // Lazy initializer reads the URL hash once at first render so deep links
   // like /settings#agent or /settings#tokens (from RunnerStatusBanner's
   // onboarding link) open the right tab. Without this, the banner landed
@@ -125,54 +133,47 @@ export function SettingsTabs({ user, userPrefs, projects, teamProjects, projectL
 
       {/* Tab content */}
       <div className="min-w-0">
-      {activeTab === "profile" && (
-        <ProfileSettings user={{ id: user.id, name: user.name, username: user.username, image: user.image }} />
-      )}
-      {activeTab === "account" && (
-        <AccountSettings user={{ email: user.email, hasPassword: user.hasPassword }} orangecatEnabled={orangecatEnabled} />
-      )}
-      {activeTab === "notifications" && (
-        <NotificationSettings />
-      )}
-      {activeTab === "appearance" && (
-        <AppearanceSettings />
-      )}
-      {activeTab === "voice" && (
-        <VoiceSettings initialPrefs={userPrefs} />
-      )}
-      {activeTab === "privacy" && (
-        <PrivacySettings />
-      )}
-      {activeTab === "location" && (
-        <LocationSettings initialPrefs={userPrefs} />
-      )}
-      {activeTab === "agent" && (
-        <div className="space-y-6">
-          <AgentTokenSettings />
-          <FleetLifecycleSettings />
-          <BeaconSettings />
-        </div>
-      )}
-      {activeTab === "projects" && (
-        <ProjectsSettings
-          projects={projects}
-          teamProjects={teamProjects}
-          projectLimit={projectLimit}
-        />
-      )}
-      {activeTab === "team" && (
-        <TeamSettings invitations={invitations} />
-      )}
-      {activeTab === "billing" && (
-        <Suspense>
-          <BillingSettings
-            plan={user.plan}
-            planStatus={user.planStatus}
-            stripeReady={user.stripeReady}
-            hasSubscription={user.hasSubscription}
+        {activeTab === "profile" && (
+          <ProfileSettings
+            user={{ id: user.id, name: user.name, username: user.username, image: user.image }}
           />
-        </Suspense>
-      )}
+        )}
+        {activeTab === "account" && (
+          <AccountSettings
+            user={{ email: user.email, hasPassword: user.hasPassword }}
+            orangecatEnabled={orangecatEnabled}
+          />
+        )}
+        {activeTab === "notifications" && <NotificationSettings />}
+        {activeTab === "appearance" && <AppearanceSettings />}
+        {activeTab === "voice" && <VoiceSettings initialPrefs={userPrefs} />}
+        {activeTab === "privacy" && <PrivacySettings />}
+        {activeTab === "location" && <LocationSettings initialPrefs={userPrefs} />}
+        {activeTab === "agent" && (
+          <div className="space-y-6">
+            <AgentTokenSettings />
+            <FleetLifecycleSettings />
+            <BeaconSettings />
+          </div>
+        )}
+        {activeTab === "projects" && (
+          <ProjectsSettings
+            projects={projects}
+            teamProjects={teamProjects}
+            projectLimit={projectLimit}
+          />
+        )}
+        {activeTab === "team" && <TeamSettings invitations={invitations} />}
+        {activeTab === "billing" && (
+          <Suspense>
+            <BillingSettings
+              plan={user.plan}
+              planStatus={user.planStatus}
+              stripeReady={user.stripeReady}
+              hasSubscription={user.hasSubscription}
+            />
+          </Suspense>
+        )}
       </div>
     </div>
   );

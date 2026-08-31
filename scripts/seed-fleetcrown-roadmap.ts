@@ -151,7 +151,9 @@ async function main() {
   const [entity] = await db
     .select({ id: schema.entities.id, userId: schema.entities.userId, name: schema.entities.name })
     .from(schema.entities)
-    .where(and(eq(schema.entities.type, ENTITY_TYPE.PROJECT), ilike(schema.entities.name, "fleetcrown")))
+    .where(
+      and(eq(schema.entities.type, ENTITY_TYPE.PROJECT), ilike(schema.entities.name, "fleetcrown")),
+    )
     .limit(1);
 
   if (!entity) {

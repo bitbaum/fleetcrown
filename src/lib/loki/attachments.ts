@@ -69,9 +69,7 @@ export function isImageMime(mime: string): boolean {
 /** Human-readable attachment list for the user bubble (filenames only). */
 export function attachmentNoteLabel(attachments: Attachment[] | undefined): string {
   if (!attachments || attachments.length === 0) return "";
-  const names = attachments.map((a) =>
-    a.kind === "image" ? `${a.name} (image)` : a.name,
-  );
+  const names = attachments.map((a) => (a.kind === "image" ? `${a.name} (image)` : a.name));
   return `\n\n[Attached: ${names.join(", ")}]`;
 }
 
@@ -82,9 +80,7 @@ export function attachmentNoteLabel(attachments: Attachment[] | undefined): stri
 export function renderTextAttachments(attachments: Attachment[] | undefined): string {
   const text = attachments?.filter((a): a is TextAttachment => a.kind === "text") ?? [];
   if (text.length === 0) return "";
-  return text
-    .map((a) => `\n\n--- Attached file: ${a.name} ---\n${a.content}`)
-    .join("");
+  return text.map((a) => `\n\n--- Attached file: ${a.name} ---\n${a.content}`).join("");
 }
 
 /** @deprecated use renderTextAttachments — kept for any stale imports during migration */

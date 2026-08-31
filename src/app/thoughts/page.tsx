@@ -24,7 +24,11 @@ export default function ThoughtsPage() {
         <div className="ui-public-doc-header">
           <div className="ui-public-doc-meta-row">
             <span className="ui-public-doc-badge">THOUGHTS</span>
-            <a href="/rss.xml" className="ui-btn-chip inline-flex items-center gap-1.5" aria-label="RSS feed">
+            <a
+              href="/rss.xml"
+              className="ui-btn-chip inline-flex items-center gap-1.5"
+              aria-label="RSS feed"
+            >
               <Rss className="h-3.5 w-3.5" /> RSS
             </a>
           </div>

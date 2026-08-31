@@ -113,7 +113,16 @@ check("reads in units a person thinks in", () => {
 
 console.log("\nactivityHeadline");
 
-const base = { shipped: 0, attention: 0, running: 0, queued: 0, projects: 0, agentMs: 0, agentLabel: null, busiestProject: null };
+const base = {
+  shipped: 0,
+  attention: 0,
+  running: 0,
+  queued: 0,
+  projects: 0,
+  agentMs: 0,
+  agentLabel: null,
+  busiestProject: null,
+};
 
 check("failures lead, always", () => {
   const line = activityHeadline({ ...base, attention: 2, shipped: 5, projects: 3 });
@@ -132,7 +141,10 @@ check("a clean window leads with what shipped", () => {
 });
 
 check("singulars read correctly", () => {
-  assert.equal(activityHeadline({ ...base, shipped: 1, projects: 1 }), "1 task shipped on one project.");
+  assert.equal(
+    activityHeadline({ ...base, shipped: 1, projects: 1 }),
+    "1 task shipped on one project.",
+  );
   assert.equal(activityHeadline({ ...base, attention: 1 }), "1 thing needs you.");
   assert.equal(activityHeadline({ ...base, running: 1 }), "1 agent is working right now.");
 });
@@ -172,7 +184,12 @@ const dayEvents = buildActivityEvents({
   runs: [
     run({ projectKey: "a", startedAt: at(2 * HOUR), finishedAt: at(2 * HOUR + 1000) }),
     run({ projectKey: "b", startedAt: at(2 * HOUR), finishedAt: at(2 * HOUR + 1000) }),
-    run({ projectKey: "c", startedAt: at(5 * HOUR), finishedAt: at(5 * HOUR + 1000), outcome: "error" }),
+    run({
+      projectKey: "c",
+      startedAt: at(5 * HOUR),
+      finishedAt: at(5 * HOUR + 1000),
+      outcome: "error",
+    }),
   ],
 });
 
@@ -203,7 +220,10 @@ check("an event on the far boundary is clamped in, never dropped", () => {
     runs: [run({ startedAt: at(24 * HOUR), finishedAt: at(24 * HOUR + 1) })],
   });
   const pulse = buildActivityPulse(edge, T0.toISOString(), at(24 * HOUR).toISOString(), 24);
-  assert.equal(pulse.buckets.reduce((n, b) => n + b.total, 0), 1);
+  assert.equal(
+    pulse.buckets.reduce((n, b) => n + b.total, 0),
+    1,
+  );
 });
 
 check("a degenerate range yields no chart rather than a divide-by-zero", () => {

@@ -28,8 +28,8 @@ export default async function DownloadPage() {
           </div>
           <h1 className="ui-public-display-lg mt-4">You&apos;re already running Fleet Runner.</h1>
           <p className="ui-public-section-lede mx-auto mt-6 max-w-xl">
-            This is the desktop app — there&apos;s nothing to download. Open Control to
-            pair it and dispatch agents at your local repos.
+            This is the desktop app — there&apos;s nothing to download. Open Control to pair it and
+            dispatch agents at your local repos.
           </p>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
             <Link href={ROUTES.APP_HOME} className="ui-public-cta">

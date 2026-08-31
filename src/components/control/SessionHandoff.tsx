@@ -65,7 +65,12 @@ function BulletList({
   items: string[];
   kind: "next" | "inProgress" | "completed";
 }) {
-  const iconClass = kind === "completed" ? "text-status-positive" : kind === "inProgress" ? "text-status-warning" : "text-accent-text";
+  const iconClass =
+    kind === "completed"
+      ? "text-status-positive"
+      : kind === "inProgress"
+        ? "text-status-warning"
+        : "text-accent-text";
   const textClass = kind === "next" ? "text-text-primary" : "text-text-secondary";
 
   return (
@@ -104,11 +109,12 @@ export function SessionHandoff({
     data.completed.length > 0 ||
     data.facts.length > 0;
   const preview = data.next[0] ?? data.completed[0] ?? data.inProgress[0] ?? data.facts[0] ?? "";
-  const shellClass = surface === "panel"
-    ? "ui-panel rounded-2xl p-5 space-y-4"
-    : surface === "plain"
-    ? "space-y-4"
-    : "ui-card-section space-y-5";
+  const shellClass =
+    surface === "panel"
+      ? "ui-panel rounded-2xl p-5 space-y-4"
+      : surface === "plain"
+        ? "space-y-4"
+        : "ui-card-section space-y-5";
   const labelClass = cn("ui-kicker text-accent-text", microLabels && "text-micro");
 
   if (!expanded) {
@@ -154,22 +160,31 @@ export function SessionHandoff({
       )}
       {data.inProgress.length > 0 && (
         <div className="space-y-2.5">
-          <p className={cn("ui-kicker text-status-warning", microLabels && "text-micro")}>{copy.inProgress}</p>
+          <p className={cn("ui-kicker text-status-warning", microLabels && "text-micro")}>
+            {copy.inProgress}
+          </p>
           <BulletList items={data.inProgress} kind="inProgress" />
         </div>
       )}
       {data.completed.length > 0 && (
         <div className="space-y-2.5">
-          <p className={cn("ui-kicker text-text-muted", microLabels && "text-micro")}>{copy.completed} · {data.completed.length}</p>
+          <p className={cn("ui-kicker text-text-muted", microLabels && "text-micro")}>
+            {copy.completed} · {data.completed.length}
+          </p>
           <BulletList items={data.completed} kind="completed" />
         </div>
       )}
       {data.facts.length > 0 && (
         <div className="space-y-2">
-          <p className={cn("ui-kicker text-text-muted", microLabels && "text-micro")}>{copy.facts}</p>
+          <p className={cn("ui-kicker text-text-muted", microLabels && "text-micro")}>
+            {copy.facts}
+          </p>
           <div className="grid gap-2 sm:grid-cols-3">
             {data.facts.map((fact) => (
-              <div key={fact} className="rounded-lg border border-border-subtle bg-surface-overlay px-3 py-2 text-xs leading-relaxed text-text-tertiary">
+              <div
+                key={fact}
+                className="rounded-lg border border-border-subtle bg-surface-overlay px-3 py-2 text-xs leading-relaxed text-text-tertiary"
+              >
                 {fact}
               </div>
             ))}

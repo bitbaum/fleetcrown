@@ -3,10 +3,7 @@ import { captures } from "@/db/schema";
 import { eq, desc, and, count } from "drizzle-orm";
 
 export async function createCapture(userId: string, body: string) {
-  const [capture] = await db
-    .insert(captures)
-    .values({ userId, body })
-    .returning();
+  const [capture] = await db.insert(captures).values({ userId, body }).returning();
   return capture;
 }
 
@@ -20,10 +17,7 @@ export async function listCaptures(userId: string, limit = 20) {
 }
 
 export async function countCaptures(userId: string) {
-  const [row] = await db
-    .select({ n: count() })
-    .from(captures)
-    .where(eq(captures.userId, userId));
+  const [row] = await db.select({ n: count() }).from(captures).where(eq(captures.userId, userId));
   return row?.n ?? 0;
 }
 

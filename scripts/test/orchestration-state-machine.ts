@@ -70,7 +70,10 @@ check("fresh ready handoff closes the run as done/success", () => {
   const patch = closeRunFromSession(openRun, session());
   assert(patch !== null, "expected a close patch");
   assert(patch!.state === "done", `expected state=done, got ${patch!.state}`);
-  assert(patch!.outcome === ORCHESTRATION_OUTCOME.SUCCESS, `expected success, got ${patch!.outcome}`);
+  assert(
+    patch!.outcome === ORCHESTRATION_OUTCOME.SUCCESS,
+    `expected success, got ${patch!.outcome}`,
+  );
   assert(patch!.finishedAt instanceof Date, "close patch must stamp finishedAt");
 });
 
@@ -80,20 +83,35 @@ check("an already-finished run is NEVER re-closed (idempotency)", () => {
 });
 
 check("status:working must not close the run", () => {
-  assert(closeRunFromSession(openRun, session({ status: "working" })) === null, "working closed the run");
+  assert(
+    closeRunFromSession(openRun, session({ status: "working" })) === null,
+    "working closed the run",
+  );
 });
 
 check("status:blocked must not close the run", () => {
-  assert(closeRunFromSession(openRun, session({ status: "blocked" })) === null, "blocked closed the run");
+  assert(
+    closeRunFromSession(openRun, session({ status: "blocked" })) === null,
+    "blocked closed the run",
+  );
 });
 
 check("missing status defaults to NOT ready (conservative)", () => {
-  assert(closeRunFromSession(openRun, session({ status: undefined })) === null, "missing status closed the run");
+  assert(
+    closeRunFromSession(openRun, session({ status: undefined })) === null,
+    "missing status closed the run",
+  );
 });
 
 check("stale handoff (mtime <= startedAt) cannot close a fresh run", () => {
-  assert(closeRunFromSession(openRun, session({ mtime: T0 })) === null, "handoff at run start closed the run");
-  assert(closeRunFromSession(openRun, session({ mtime: T0 - 1 })) === null, "pre-run handoff closed the run");
+  assert(
+    closeRunFromSession(openRun, session({ mtime: T0 })) === null,
+    "handoff at run start closed the run",
+  );
+  assert(
+    closeRunFromSession(openRun, session({ mtime: T0 - 1 })) === null,
+    "pre-run handoff closed the run",
+  );
 });
 
 check("an UNDELIVERED run is never closed by a handoff", () => {
@@ -101,11 +119,17 @@ check("an UNDELIVERED run is never closed by a handoff", () => {
   // some other run's work. Closing it here stamps a verdict on work that was
   // never done — and `success` auto-resolves the visitor's feedback.
   const undelivered = { startedAt: new Date(T0), finishedAt: null };
-  assert(closeRunFromSession(undelivered, session()) === null, "undelivered run was closed by a handoff");
+  assert(
+    closeRunFromSession(undelivered, session()) === null,
+    "undelivered run was closed by a handoff",
+  );
 });
 
 check("status matching is case-insensitive (Ready closes)", () => {
-  assert(closeRunFromSession(openRun, session({ status: "Ready" })) !== null, "Ready did not close");
+  assert(
+    closeRunFromSession(openRun, session({ status: "Ready" })) !== null,
+    "Ready did not close",
+  );
 });
 
 check("critical-health handoff closes as error state, not done", () => {
@@ -262,7 +286,10 @@ check("ready sentinel emits BOTH input_requested and task_completed", () => {
 
 check("closed sentinel emits session_closed", () => {
   const events = collectRuntimeLifecycleEvents({ ...IDLE, closedAt: NOW_S });
-  assert(events.some((e) => e.type === "session_closed"), "closedAt did not emit session_closed");
+  assert(
+    events.some((e) => e.type === "session_closed"),
+    "closedAt did not emit session_closed",
+  );
 });
 
 check("event persistence is monotonic — older/equal candidates are skipped", () => {

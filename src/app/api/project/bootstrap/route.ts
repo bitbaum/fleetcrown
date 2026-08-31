@@ -18,11 +18,13 @@ const BootstrapBody = z.object({
   targetUser: z.string().max(200).optional(),
   coreProblem: z.string().max(500).optional(),
   coreFeatures: z.array(z.string()).max(10).optional(),
-  stack: z.object({
-    frontend: z.string().optional(),
-    backend: z.string().optional(),
-    db: z.string().optional(),
-  }).optional(),
+  stack: z
+    .object({
+      frontend: z.string().optional(),
+      backend: z.string().optional(),
+      db: z.string().optional(),
+    })
+    .optional(),
   monetization: z.string().max(300).optional(),
   launchStrategy: z.string().max(300).optional(),
   db: z.enum(["postgres", "none"]).default("none"),
@@ -33,20 +35,38 @@ const BootstrapBody = z.object({
 type StepResult = { step: string; ok: boolean; detail?: string };
 
 function slug(name: string): string {
-  return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
 }
 
 export async function POST(req: NextRequest) {
   const userId = await getSessionUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!isRuntimeAvailable()) {
-    return NextResponse.json({ error: "Project bootstrap requires local runtime — not available in cloud mode" }, { status: 503 });
+    return NextResponse.json(
+      { error: "Project bootstrap requires local runtime — not available in cloud mode" },
+      { status: 503 },
+    );
   }
 
   const dataOrResp = await readJsonBody(req, BootstrapBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
-  const { name, tagline, targetUser, coreProblem, coreFeatures, stack, monetization, launchStrategy, db, visibility, githubUser } = dataOrResp;
+  const {
+    name,
+    tagline,
+    targetUser,
+    coreProblem,
+    coreFeatures,
+    stack,
+    monetization,
+    launchStrategy,
+    db,
+    visibility,
+    githubUser,
+  } = dataOrResp;
   const repoSlug = slug(name);
   const devRoot = path.join(os.homedir(), "dev");
   const dir = path.join(devRoot, repoSlug);
@@ -57,7 +77,10 @@ export async function POST(req: NextRequest) {
     fs.mkdirSync(dir, { recursive: true });
     steps.push({ step: "Create directory", ok: true, detail: dir });
   } catch (err) {
-    return NextResponse.json({ error: `Directory creation failed: ${err}`, steps }, { status: 500 });
+    return NextResponse.json(
+      { error: `Directory creation failed: ${err}`, steps },
+      { status: 500 },
+    );
   }
 
   // ── 2. Create GitHub repo ─────────────────────────────────────────────────
@@ -102,7 +125,11 @@ export async function POST(req: NextRequest) {
     await createUserProject({ userId: userId, name, dirPath: dir, gitUrl: gitUrl || undefined });
     steps.push({ step: `Register in ${APP_NAME}`, ok: true });
   } catch {
-    steps.push({ step: `Register in ${APP_NAME}`, ok: false, detail: "Non-fatal — project still created" });
+    steps.push({
+      step: `Register in ${APP_NAME}`,
+      ok: false,
+      detail: "Non-fatal — project still created",
+    });
   }
 
   // ── Build the initial Claude Code brief ───────────────────────────────────
@@ -111,13 +138,13 @@ export async function POST(req: NextRequest) {
     `# ${name} — Project Bootstrap`,
     ``,
     `**What we're building:** ${tagline ?? name}`,
-    targetUser   ? `**For:** ${targetUser}` : null,
-    coreProblem  ? `**Problem:** ${coreProblem}` : null,
+    targetUser ? `**For:** ${targetUser}` : null,
+    coreProblem ? `**Problem:** ${coreProblem}` : null,
     ``,
-    featureList  ? `**Core MVP features:**\n${featureList}` : null,
+    featureList ? `**Core MVP features:**\n${featureList}` : null,
     ``,
     `**Stack:** ${stack?.frontend ?? "Next.js 15 (App Router)"} · ${stack?.backend ?? "TypeScript"} · ${stack?.db ?? "PostgreSQL + Drizzle ORM"} · Tailwind CSS 4`,
-    dbUrl        ? `**Database URL:** ${dbUrl}` : null,
+    dbUrl ? `**Database URL:** ${dbUrl}` : null,
     monetization ? `**Monetisation:** ${monetization}` : null,
     launchStrategy ? `**Launch:** ${launchStrategy}` : null,
     ``,
@@ -136,7 +163,9 @@ export async function POST(req: NextRequest) {
     `6. Commit after each milestone. Keep a session summary.`,
     ``,
     `Start immediately. No questions needed — use your judgment on implementation details.`,
-  ].filter(Boolean).join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   return NextResponse.json({
     ok: true,

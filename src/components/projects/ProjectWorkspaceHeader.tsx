@@ -41,8 +41,12 @@ export function ProjectWorkspaceHeader({
   // back down on router.refresh(), and was ignored here: the header went on
   // showing "+ stage" for a stage that was already set. A write you cannot see
   // land is indistinguishable from one that failed.
-  useEffect(() => { setCurrentStatus(status); }, [status]);
-  useEffect(() => { setCurrentDescription(description); }, [description]);
+  useEffect(() => {
+    setCurrentStatus(status);
+  }, [status]);
+  useEffect(() => {
+    setCurrentDescription(description);
+  }, [description]);
 
   useEffect(() => {
     rememberFleetProject(workspaceKey);
@@ -74,7 +78,9 @@ export function ProjectWorkspaceHeader({
       </div>
 
       <div className="mt-3">
-        <h1 className="break-words text-2xl font-semibold leading-tight text-text-primary sm:text-3xl">{name}</h1>
+        <h1 className="break-words text-2xl font-semibold leading-tight text-text-primary sm:text-3xl">
+          {name}
+        </h1>
       </div>
 
       <div className="mt-2 max-w-3xl text-sm leading-relaxed text-text-secondary sm:text-base">
@@ -85,7 +91,8 @@ export function ProjectWorkspaceHeader({
           onSave={async (next) => {
             const response = await patchJson(`/api/projects/${projectId}`, { description: next });
             const body = (await response.json()) as { ok?: boolean; error?: string };
-            if (!response.ok || !body.ok) throw new Error(body.error ?? "Failed to save description");
+            if (!response.ok || !body.ok)
+              throw new Error(body.error ?? "Failed to save description");
             setCurrentDescription(next || null);
             refresh();
           }}

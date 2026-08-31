@@ -22,16 +22,20 @@ export function EventsGrid({
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
 
-  useEscapeKey(() => { setQuery(""); setTypeFilter(null); });
+  useEscapeKey(() => {
+    setQuery("");
+    setTypeFilter(null);
+  });
 
   const types = [...new Set(items.map((e) => e.type).filter(Boolean))].sort() as string[];
 
   const q = query.trim().toLowerCase();
   const filtered = items.filter((e) => {
-    const matchesQuery = !q
-      || e.name.toLowerCase().includes(q)
-      || e.description?.toLowerCase().includes(q)
-      || e.category?.toLowerCase().includes(q);
+    const matchesQuery =
+      !q ||
+      e.name.toLowerCase().includes(q) ||
+      e.description?.toLowerCase().includes(q) ||
+      e.category?.toLowerCase().includes(q);
     const matchesType = !typeFilter || e.type === typeFilter;
     return matchesQuery && matchesType;
   });
@@ -40,7 +44,8 @@ export function EventsGrid({
   const withoutDeadline = filtered.filter((e) => !e.deadline);
 
   const handleDelete = (id: string) => setItems((prev) => prev.filter((e) => e.id !== id));
-  const handleDeleteArchived = (id: string) => setArchived((prev) => prev.filter((e) => e.id !== id));
+  const handleDeleteArchived = (id: string) =>
+    setArchived((prev) => prev.filter((e) => e.id !== id));
 
   const handleArchive = (id: string) => {
     const event = items.find((e) => e.id === id);
@@ -52,7 +57,7 @@ export function EventsGrid({
     setItems((prev) => prev.map((e) => (e.id === updated.id ? updated : e)));
 
   const handleCreated = (event: EventRow) => {
-    setItems((prev) => event.deadline ? [event, ...prev] : [...prev, event]);
+    setItems((prev) => (event.deadline ? [event, ...prev] : [...prev, event]));
   };
 
   return (
@@ -66,7 +71,12 @@ export function EventsGrid({
             placeholder="Search events…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Escape") { setQuery(""); (e.target as HTMLInputElement).blur(); } }}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") {
+                setQuery("");
+                (e.target as HTMLInputElement).blur();
+              }
+            }}
             className="ui-input pl-10 pr-14"
           />
           <span className="ui-badge absolute right-3 top-1/2 -translate-y-1/2">
@@ -88,10 +98,7 @@ export function EventsGrid({
             </button>
           ))}
           {typeFilter && (
-            <button
-              onClick={() => setTypeFilter(null)}
-              className="shrink-0 ui-chip-filter"
-            >
+            <button onClick={() => setTypeFilter(null)} className="shrink-0 ui-chip-filter">
               Clear
             </button>
           )}
@@ -112,17 +119,29 @@ export function EventsGrid({
             {withDeadline.length > 0 && (
               <div>
                 {withDeadline.map((event) => (
-                  <EventCard key={event.id} event={event} onDelete={handleDelete} onArchive={handleArchive} onEdit={handleEdit} />
+                  <EventCard
+                    key={event.id}
+                    event={event}
+                    onDelete={handleDelete}
+                    onArchive={handleArchive}
+                    onEdit={handleEdit}
+                  />
                 ))}
               </div>
             )}
             {withoutDeadline.length > 0 && (
-              <div className={withDeadline.length > 0 ? "mt-2 pt-2 border-t border-border-subtle" : ""}>
-                {withDeadline.length > 0 && (
-                  <div className="ui-micro-label mb-2">No deadline</div>
-                )}
+              <div
+                className={withDeadline.length > 0 ? "mt-2 pt-2 border-t border-border-subtle" : ""}
+              >
+                {withDeadline.length > 0 && <div className="ui-micro-label mb-2">No deadline</div>}
                 {withoutDeadline.map((event) => (
-                  <EventCard key={event.id} event={event} onDelete={handleDelete} onArchive={handleArchive} onEdit={handleEdit} />
+                  <EventCard
+                    key={event.id}
+                    event={event}
+                    onDelete={handleDelete}
+                    onArchive={handleArchive}
+                    onEdit={handleEdit}
+                  />
                 ))}
               </div>
             )}
@@ -139,7 +158,11 @@ export function EventsGrid({
             onClick={() => setShowArchived((v) => !v)}
             className="flex items-center gap-1.5 ui-link-muted"
           >
-            {showArchived ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+            {showArchived ? (
+              <ChevronDown className="h-3.5 w-3.5" />
+            ) : (
+              <ChevronRight className="h-3.5 w-3.5" />
+            )}
             <Archive className="h-3 w-3" />
             {archived.length} archived
           </button>

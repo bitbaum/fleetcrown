@@ -18,9 +18,19 @@ function assert(condition: boolean, message: string): void {
 // Run checkEnv() against a fully-controlled env snapshot (set every key the
 // validator reads to a clean value, then apply the case's overrides).
 const ENV_KEYS = [
-  "NODE_ENV", "AUTH_SECRET", "RESEND_API_KEY", "CRON_SECRET",
-  "GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET",
-  "X1_CONSUMER_KEY", "X1_CONSUMER_SECRET", "DATABASE_URL", "NEXTAUTH_URL", "EMAIL_FROM",
+  "NODE_ENV",
+  "AUTH_SECRET",
+  "RESEND_API_KEY",
+  "CRON_SECRET",
+  "GITHUB_CLIENT_ID",
+  "GITHUB_CLIENT_SECRET",
+  "GOOGLE_CLIENT_ID",
+  "GOOGLE_CLIENT_SECRET",
+  "X1_CONSUMER_KEY",
+  "X1_CONSUMER_SECRET",
+  "DATABASE_URL",
+  "NEXTAUTH_URL",
+  "EMAIL_FROM",
   "GROQ_API_KEY",
 ] as const;
 const CLEAN_PROD_ENV: Record<string, string> = {
@@ -28,9 +38,12 @@ const CLEAN_PROD_ENV: Record<string, string> = {
   AUTH_SECRET: "s3cret-value",
   RESEND_API_KEY: "re_test",
   CRON_SECRET: "cron_test",
-  GITHUB_CLIENT_ID: "gh_id", GITHUB_CLIENT_SECRET: "gh_sec",
-  GOOGLE_CLIENT_ID: "go_id", GOOGLE_CLIENT_SECRET: "go_sec",
-  X1_CONSUMER_KEY: "x_key", X1_CONSUMER_SECRET: "x_sec",
+  GITHUB_CLIENT_ID: "gh_id",
+  GITHUB_CLIENT_SECRET: "gh_sec",
+  GOOGLE_CLIENT_ID: "go_id",
+  GOOGLE_CLIENT_SECRET: "go_sec",
+  X1_CONSUMER_KEY: "x_key",
+  X1_CONSUMER_SECRET: "x_sec",
   DATABASE_URL: "postgres://x",
   NEXTAUTH_URL: "https://fleetcrown.orangecat.ch",
   EMAIL_FROM: "FleetCrown <noreply@fleetcrown.orangecat.ch>",
@@ -89,15 +102,24 @@ async function runTests(): Promise<void> {
 
   await check("expired ticket is rejected", () => {
     // Craft a ticket with a past exp, signed with the real secret.
-    const payload = Buffer.from(JSON.stringify({ xId: "1", handle: "a", exp: Math.floor(Date.now() / 1000) - 10 })).toString("base64url");
-    const sig = crypto.createHmac("sha256", "test-auth-secret-123").update(payload).digest("base64url");
+    const payload = Buffer.from(
+      JSON.stringify({ xId: "1", handle: "a", exp: Math.floor(Date.now() / 1000) - 10 }),
+    ).toString("base64url");
+    const sig = crypto
+      .createHmac("sha256", "test-auth-secret-123")
+      .update(payload)
+      .digest("base64url");
     assert(verifyTicket(`${payload}.${sig}`) === null, "expired ticket verified");
   });
 
   await check("empty AUTH_SECRET throws (no forgeable empty-key tickets)", () => {
     process.env.AUTH_SECRET = "";
     let threw = false;
-    try { mintTicket({ xId: "1", handle: "a" }); } catch { threw = true; }
+    try {
+      mintTicket({ xId: "1", handle: "a" });
+    } catch {
+      threw = true;
+    }
     process.env.AUTH_SECRET = "test-auth-secret-123";
     assert(threw, "mintTicket did not throw on empty AUTH_SECRET");
   });
@@ -121,35 +143,53 @@ async function runTests(): Promise<void> {
 
   await check("whitespace-corrupted secret is flagged", () => {
     const issues = checkEnvWith({ AUTH_SECRET: "secret\n" });
-    assert(issues.some((i) => i.key === "AUTH_SECRET" && i.level === "error"), "whitespace not flagged");
+    assert(
+      issues.some((i) => i.key === "AUTH_SECRET" && i.level === "error"),
+      "whitespace not flagged",
+    );
   });
 
   await check("half-set provider pair is flagged", () => {
     const issues = checkEnvWith({ GITHUB_CLIENT_SECRET: undefined });
-    assert(issues.some((i) => i.key.includes("GITHUB") && i.level === "error"), "half-set pair not flagged");
+    assert(
+      issues.some((i) => i.key.includes("GITHUB") && i.level === "error"),
+      "half-set pair not flagged",
+    );
     assert(!envHealthy(issues), "half-set pair should be unhealthy");
   });
 
   await check("missing AUTH_SECRET is fatal", () => {
     const issues = checkEnvWith({ AUTH_SECRET: undefined });
-    assert(issues.some((i) => i.key === "AUTH_SECRET" && i.level === "fatal"), "missing AUTH_SECRET not fatal");
+    assert(
+      issues.some((i) => i.key === "AUTH_SECRET" && i.level === "fatal"),
+      "missing AUTH_SECRET not fatal",
+    );
   });
 
   await check("non-https NEXTAUTH_URL flagged in prod", () => {
     const issues = checkEnvWith({ NEXTAUTH_URL: "http://insecure" });
-    assert(issues.some((i) => i.key === "NEXTAUTH_URL" && i.level === "error"), "non-https URL not flagged");
+    assert(
+      issues.some((i) => i.key === "NEXTAUTH_URL" && i.level === "error"),
+      "non-https URL not flagged",
+    );
   });
 
   await check("missing RESEND_API_KEY flagged in prod", () => {
     const issues = checkEnvWith({ RESEND_API_KEY: undefined });
-    assert(issues.some((i) => i.key === "RESEND_API_KEY" && i.level === "error"), "missing RESEND_API_KEY not flagged");
+    assert(
+      issues.some((i) => i.key === "RESEND_API_KEY" && i.level === "error"),
+      "missing RESEND_API_KEY not flagged",
+    );
   });
 
   // ── password hashing ────────────────────────────────────────────────────
   await check("password hash round-trips + rejects wrong password", async () => {
     const hash = await hashPassword("correct horse battery staple");
-    assert(await verifyPassword("correct horse battery staple", hash) === true, "correct password rejected");
-    assert(await verifyPassword("wrong password", hash) === false, "wrong password accepted");
+    assert(
+      (await verifyPassword("correct horse battery staple", hash)) === true,
+      "correct password rejected",
+    );
+    assert((await verifyPassword("wrong password", hash)) === false, "wrong password accepted");
   });
 
   console.log(`✓ ${passed} auth/env self-tests passed`);

@@ -77,18 +77,22 @@ async function handleSse(req: IncomingMessage, res: ServerResponse): Promise<voi
   res.writeHead(200, {
     "Content-Type": "text/event-stream",
     "Cache-Control": "no-cache, no-store, must-revalidate",
-    "Connection": "keep-alive",
+    Connection: "keep-alive",
     "X-Accel-Buffering": "no", // disable nginx buffering if proxied later
     "Access-Control-Allow-Origin": "*",
   });
 
   // Initial "you're connected" frame so the client knows auth succeeded
   // before any actual change event arrives.
-  res.write(`event: hello\ndata: ${JSON.stringify({ userId: auth.userId, serverTime: Date.now() })}\n\n`);
+  res.write(
+    `event: hello\ndata: ${JSON.stringify({ userId: auth.userId, serverTime: Date.now() })}\n\n`,
+  );
 
   // Replay buffered events if the client sent Last-Event-ID.
   const lastIdHeader = req.headers["last-event-id"];
-  const sinceId = lastIdHeader ? parseInt(Array.isArray(lastIdHeader) ? lastIdHeader[0]! : lastIdHeader, 10) : 0;
+  const sinceId = lastIdHeader
+    ? parseInt(Array.isArray(lastIdHeader) ? lastIdHeader[0]! : lastIdHeader, 10)
+    : 0;
   const lastSentId = isFinite(sinceId) ? replayFor(auth.userId, sinceId, res) : 0;
 
   // Periodic heartbeat (SSE comment lines) so proxies and the OS don't
@@ -115,22 +119,33 @@ async function handleSse(req: IncomingMessage, res: ServerResponse): Promise<voi
   // presence write never breaks the SSE stream itself.
   const isRunner = url.searchParams.get("client") === "runner";
   const channelParam = url.searchParams.get("channel");
-  const presenceChannel = channelParam === "cloud" ? "cloud" as const
-    : channelParam === "local" ? "local" as const
-    : "local" as const;
+  const presenceChannel =
+    channelParam === "cloud"
+      ? ("cloud" as const)
+      : channelParam === "local"
+        ? ("local" as const)
+        : ("local" as const);
   if (isRunner) {
-    void presence.markConnect(pool, auth.userId, presenceChannel).catch((err) =>
-      console.warn(`[presence] markConnect failed: ${(err as Error).message}`));
+    void presence
+      .markConnect(pool, auth.userId, presenceChannel)
+      .catch((err) => console.warn(`[presence] markConnect failed: ${(err as Error).message}`));
   }
-  console.log(`[sse] +${sub.userId.slice(0, 8)}${isRunner ? ` (runner:${presenceChannel})` : ""} (replay since=${sinceId}, conns=${subs.stats().connections})`);
+  console.log(
+    `[sse] +${sub.userId.slice(0, 8)}${isRunner ? ` (runner:${presenceChannel})` : ""} (replay since=${sinceId}, conns=${subs.stats().connections})`,
+  );
 
   req.on("close", () => {
     subs.remove(sub);
     if (isRunner) {
-      void presence.markDisconnect(pool, auth.userId, presenceChannel).catch((err) =>
-        console.warn(`[presence] markDisconnect failed: ${(err as Error).message}`));
+      void presence
+        .markDisconnect(pool, auth.userId, presenceChannel)
+        .catch((err) =>
+          console.warn(`[presence] markDisconnect failed: ${(err as Error).message}`),
+        );
     }
-    console.log(`[sse] -${sub.userId.slice(0, 8)}${isRunner ? ` (runner:${presenceChannel})` : ""} (conns=${subs.stats().connections})`);
+    console.log(
+      `[sse] -${sub.userId.slice(0, 8)}${isRunner ? ` (runner:${presenceChannel})` : ""} (conns=${subs.stats().connections})`,
+    );
   });
 }
 
@@ -190,8 +205,9 @@ server.listen(PORT, () => {
   // This fresh process holds zero connections, so clear any presence rows a
   // previous (possibly crashed) bridge left as connected before clients
   // reconnect and re-register. See docs/architecture/connection-presence.md.
-  void presence.resetAll(pool).catch((err) =>
-    console.warn(`[presence] boot resetAll failed: ${(err as Error).message}`));
+  void presence
+    .resetAll(pool)
+    .catch((err) => console.warn(`[presence] boot resetAll failed: ${(err as Error).message}`));
 });
 
 // Fire-and-forget — start() runs forever (or until stop()).

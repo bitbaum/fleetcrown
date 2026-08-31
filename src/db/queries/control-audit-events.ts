@@ -7,13 +7,7 @@ import type { Action } from "@/db/schema/actions";
 /** Lifecycle stages of an action, mirrored into the control audit log so the
  *  whole propose → approve → execute path is visible in RecentControlAuditCard. */
 export type ActionAuditLifecycle =
-  | "proposed"
-  | "approved"
-  | "executed"
-  | "rejected"
-  | "deferred"
-  | "failed"
-  | "expired";
+  "proposed" | "approved" | "executed" | "rejected" | "deferred" | "failed" | "expired";
 
 export function promptFingerprint(prompt: string | null | undefined) {
   const text = prompt?.trim();
@@ -24,15 +18,20 @@ export function promptFingerprint(prompt: string | null | undefined) {
   };
 }
 
-export function recordControlAuditEvent(entry: Omit<NewControlAuditEvent, "id" | "createdAt">): Promise<unknown> {
-  return db.insert(controlAuditEvents).values(entry).catch((err) => {
-    console.error("[control-audit] insert failed:", err, "for entry:", {
-      event: entry.event,
-      source: entry.source,
-      action: entry.action,
-      projectKey: entry.projectKey,
+export function recordControlAuditEvent(
+  entry: Omit<NewControlAuditEvent, "id" | "createdAt">,
+): Promise<unknown> {
+  return db
+    .insert(controlAuditEvents)
+    .values(entry)
+    .catch((err) => {
+      console.error("[control-audit] insert failed:", err, "for entry:", {
+        event: entry.event,
+        source: entry.source,
+        action: entry.action,
+        projectKey: entry.projectKey,
+      });
     });
-  });
 }
 
 /**

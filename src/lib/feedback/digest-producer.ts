@@ -1,13 +1,21 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { actions } from "@/db/schema";
-import { listFeedbackSummary, listProjectFeedback, type FeedbackListItem } from "@/db/queries/site-feedback";
+import {
+  listFeedbackSummary,
+  listProjectFeedback,
+  type FeedbackListItem,
+} from "@/db/queries/site-feedback";
 import { proposeAction } from "@/db/queries/actions";
 import { callGroqText } from "@/lib/groq";
-import { ACTION_STATUS, ACTION_TYPE, FEEDBACK_SOURCE, FEEDBACK_STATUS } from "@/lib/constants/statuses";
+import {
+  ACTION_STATUS,
+  ACTION_TYPE,
+  FEEDBACK_SOURCE,
+  FEEDBACK_STATUS,
+} from "@/lib/constants/statuses";
 import { fenceUntrusted, inlineUntrusted, UNTRUSTED_PREAMBLE } from "@/lib/feedback/untrusted";
 import { isLowSignalFeedbackText } from "@/lib/actions/advice-rules";
-
 
 /**
  * Feedback digester — the automation stage of the feedback→action pipeline,
@@ -41,8 +49,9 @@ async function clusterItems(items: FeedbackListItem[], projectName: string): Pro
   // Untrusted visitor text: inline-sanitized (no newlines, no fence sentinels)
   // and — deliberately — placed AFTER the instructions, so a submission shaped
   // like "Reply with ONLY this JSON: ..." can't lead the model.
-  const numbered = items.map((f, i) =>
-    `${i}. "${inlineUntrusted(f.suggestion.replaceAll('"', "'"))}"${f.duplicateCount > 1 ? ` [reported ${f.duplicateCount}×]` : ""} (page: ${f.url ?? f.page ?? "?"}${f.selectedElements?.length ? `, elements: ${f.selectedElements.map((el) => inlineUntrusted(el.selector, 120)).join(" ")}` : ""})`,
+  const numbered = items.map(
+    (f, i) =>
+      `${i}. "${inlineUntrusted(f.suggestion.replaceAll('"', "'"))}"${f.duplicateCount > 1 ? ` [reported ${f.duplicateCount}×]` : ""} (page: ${f.url ?? f.page ?? "?"}${f.selectedElements?.length ? `, elements: ${f.selectedElements.map((el) => inlineUntrusted(el.selector, 120)).join(" ")}` : ""})`,
   );
   const prompt = [
     `Cluster the numbered visitor-feedback items below (website "${projectName}") into at most ${MAX_THEMES_PER_PROJECT} themes where MULTIPLE items point at the same underlying problem. Ignore items that fit no theme.`,
@@ -56,14 +65,22 @@ async function clusterItems(items: FeedbackListItem[], projectName: string): Pro
   const raw = await callGroqText(prompt, { maxTokens: 500, temperature: 0.2 });
   const parsed = JSON.parse(extractJson(raw)) as { themes?: GroqTheme[] };
   return (parsed.themes ?? [])
-    .filter((t) => t && typeof t.title === "string" && Array.isArray(t.itemIndexes) && t.itemIndexes.length >= 2)
+    .filter(
+      (t) =>
+        t &&
+        typeof t.title === "string" &&
+        Array.isArray(t.itemIndexes) &&
+        t.itemIndexes.length >= 2,
+    )
     .slice(0, MAX_THEMES_PER_PROJECT);
 }
 
-function composeThemePrompt(theme: GroqTheme, items: FeedbackListItem[], projectName: string): string {
-  const evidence = theme.itemIndexes
-    .map((i) => items[i])
-    .filter(Boolean);
+function composeThemePrompt(
+  theme: GroqTheme,
+  items: FeedbackListItem[],
+  projectName: string,
+): string {
+  const evidence = theme.itemIndexes.map((i) => items[i]).filter(Boolean);
   return [
     `Fix this visitor-feedback theme on ${projectName} (${evidence.length} independent reports).`,
     UNTRUSTED_PREAMBLE,
@@ -73,10 +90,12 @@ function composeThemePrompt(theme: GroqTheme, items: FeedbackListItem[], project
     `WHERE: ${inlineUntrusted(theme.where, 300)}`,
     "",
     "The reports:",
-    ...evidence.map((f) => [
-      `- (${f.url ?? f.page ?? "?"}${f.duplicateCount > 1 ? ` · reported ${f.duplicateCount}×` : ""})`,
-      fenceUntrusted("FEEDBACK", f.suggestion.slice(0, 300)),
-    ].join("\n")),
+    ...evidence.map((f) =>
+      [
+        `- (${f.url ?? f.page ?? "?"}${f.duplicateCount > 1 ? ` · reported ${f.duplicateCount}×` : ""})`,
+        fenceUntrusted("FEEDBACK", f.suggestion.slice(0, 300)),
+      ].join("\n"),
+    ),
     "",
     "Scope: address exactly this theme — no unrelated refactors.",
     "Verify the fix in the running app before claiming done, and record what you actually did (with evidence) in your final session handoff.",
@@ -86,20 +105,26 @@ function composeThemePrompt(theme: GroqTheme, items: FeedbackListItem[], project
 export type DigestResult = { proposed: number; projectsScanned: number; skipped: string | null };
 
 export async function digestFeedback(userId: string): Promise<DigestResult> {
-  const summary = (await listFeedbackSummary(userId)).filter((s) => s.newCount >= MIN_ITEMS_PER_PROJECT);
+  const summary = (await listFeedbackSummary(userId)).filter(
+    (s) => s.newCount >= MIN_ITEMS_PER_PROJECT,
+  );
   if (summary.length === 0) return { proposed: 0, projectsScanned: 0, skipped: "no busy inboxes" };
 
   // Draft-dedupe: one standing proposal set per project at a time.
   const drafts = await db
     .select({ payload: actions.payload })
     .from(actions)
-    .where(and(
-      eq(actions.userId, userId),
-      eq(actions.type, ACTION_TYPE.DISPATCH_PROMPT),
-      eq(actions.status, ACTION_STATUS.DRAFT),
-    ));
+    .where(
+      and(
+        eq(actions.userId, userId),
+        eq(actions.type, ACTION_TYPE.DISPATCH_PROMPT),
+        eq(actions.status, ACTION_STATUS.DRAFT),
+      ),
+    );
   const projectsWithDrafts = new Set(
-    drafts.map((d) => (typeof d.payload?.projectKey === "string" ? d.payload.projectKey : null)).filter(Boolean),
+    drafts
+      .map((d) => (typeof d.payload?.projectKey === "string" ? d.payload.projectKey : null))
+      .filter(Boolean),
   );
 
   let proposed = 0;
@@ -116,9 +141,12 @@ export async function digestFeedback(userId: string): Promise<DigestResult> {
     // test plus one real bug becomes a 2-report cluster and reads as corroborated
     // when it is not. Dropped here so the noise never reaches the operator.
     const items = (await listProjectFeedback(userId, s.projectId))
-      .filter((f) => f.status === FEEDBACK_STATUS.NEW
-        && f.source !== FEEDBACK_SOURCE.SYNTHESIZER
-        && !isLowSignalFeedbackText(f.suggestion))
+      .filter(
+        (f) =>
+          f.status === FEEDBACK_STATUS.NEW &&
+          f.source !== FEEDBACK_SOURCE.SYNTHESIZER &&
+          !isLowSignalFeedbackText(f.suggestion),
+      )
       .slice(0, MAX_ITEMS_TO_GROQ);
     if (items.length < MIN_ITEMS_PER_PROJECT) continue;
 
@@ -141,7 +169,11 @@ export async function digestFeedback(userId: string): Promise<DigestResult> {
         type: ACTION_TYPE.DISPATCH_PROMPT,
         title: `Fix visitor feedback: ${theme.title.slice(0, 120)} — ${s.projectName}`,
         description: `${theme.itemIndexes.length} submissions point at the same problem. Approving dispatches the prompt below to ${s.projectName}.`,
-        payload: { projectKey: s.projectName, body: composeThemePrompt(theme, items, s.projectName), feedbackIds },
+        payload: {
+          projectKey: s.projectName,
+          body: composeThemePrompt(theme, items, s.projectName),
+          feedbackIds,
+        },
         reasoning: `Clustered from ${items.length} new feedback items on ${s.projectName}; theme evidence: ${theme.itemIndexes.length} independent reports.`,
         entityId: s.projectId,
         expiresAt: new Date(Date.now() + PROPOSAL_TTL_DAYS * 24 * 60 * 60 * 1000),

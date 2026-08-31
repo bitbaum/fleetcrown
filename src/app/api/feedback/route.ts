@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { RATE_LIMIT_WINDOW_SHORT_MS, RATE_LIMIT_WINDOW_LONG_MS } from "@/lib/constants/time";
-import { FEEDBACK_SCOPE_VALUES, FEEDBACK_SOURCE, FEEDBACK_SOURCE_VALUES } from "@/lib/constants/statuses";
+import {
+  FEEDBACK_SCOPE_VALUES,
+  FEEDBACK_SOURCE,
+  FEEDBACK_SOURCE_VALUES,
+} from "@/lib/constants/statuses";
 import { getWidgetTokenByToken } from "@/db/queries/widget-tokens";
 import { bumpDuplicateFeedback, insertSiteFeedback } from "@/db/queries/site-feedback";
 import { feedbackContentHash } from "@/lib/feedback/content-hash";
@@ -45,12 +49,21 @@ const FeedbackBody = z.object({
   source: z.enum(FEEDBACK_SOURCE_VALUES).optional(),
   /** Visitor-attached image, client-downscaled by the widget. Data URL only;
    *  the char cap bounds storage (~450 KB of image per submission). */
-  screenshot: z.string().regex(/^data:image\/(jpeg|png|webp);base64,/).max(600_000).optional(),
-  selectedElements: z.array(z.object({
-    elementType: z.string().max(100),
-    elementText: z.string().max(300),
-    selector: z.string().max(500),
-  })).max(10).optional(),
+  screenshot: z
+    .string()
+    .regex(/^data:image\/(jpeg|png|webp);base64,/)
+    .max(600_000)
+    .optional(),
+  selectedElements: z
+    .array(
+      z.object({
+        elementType: z.string().max(100),
+        elementText: z.string().max(300),
+        selector: z.string().max(500),
+      }),
+    )
+    .max(10)
+    .optional(),
 });
 
 export function OPTIONS(req: NextRequest) {
@@ -100,7 +113,8 @@ export async function POST(req: NextRequest) {
   // inbox noise dropped. Idempotent for the visitor (they still see success).
   const contentHash = feedbackContentHash(data.suggestion, data.page ?? null);
   const bumped = await bumpDuplicateFeedback(token.projectId, contentHash);
-  if (bumped) return NextResponse.json({ ok: true, duplicateOf: bumped }, { headers: CORS_HEADERS });
+  if (bumped)
+    return NextResponse.json({ ok: true, duplicateOf: bumped }, { headers: CORS_HEADERS });
 
   const created = await insertSiteFeedback({
     projectId: token.projectId,

@@ -44,12 +44,18 @@ function candidateToItem(c: FrontierCandidate, summary: string): FrontierItem {
 }
 
 function fallback(candidates: FrontierCandidate[]): FrontierDigestResult {
-  const items = candidates.slice(0, TARGET_PICKS).map((c) =>
-    candidateToItem(c, c.excerpt ? c.excerpt.slice(0, 160) : "Notable development on the AI / robotics frontier."),
-  );
+  const items = candidates
+    .slice(0, TARGET_PICKS)
+    .map((c) =>
+      candidateToItem(
+        c,
+        c.excerpt ? c.excerpt.slice(0, 160) : "Notable development on the AI / robotics frontier.",
+      ),
+    );
   return {
     headline: "Today on the AI & robotics frontier",
-    intro: "The latest research and releases our sources surfaced today. Ranking was unavailable, so these are the highest-signal items by source score.",
+    intro:
+      "The latest research and releases our sources surfaced today. Ranking was unavailable, so these are the highest-signal items by source score.",
     items,
     model: "fallback",
   };
@@ -86,7 +92,12 @@ export async function generateFrontierDigest(
 ): Promise<FrontierDigestResult> {
   const candidates = allCandidates.slice(0, MAX_CANDIDATES);
   if (candidates.length === 0) {
-    return { headline: "No frontier items today", intro: "Sources returned nothing new in the window.", items: [], model: "static" };
+    return {
+      headline: "No frontier items today",
+      intro: "Sources returned nothing new in the window.",
+      items: [],
+      model: "static",
+    };
   }
 
   let raw: string;
@@ -121,11 +132,17 @@ export async function generateFrontierDigest(
   const seen = new Set<number>();
   const items: FrontierItem[] = [];
   for (const p of picks) {
-    const idx = typeof p === "object" && p && "index" in p ? Number((p as { index: unknown }).index) : NaN;
-    const summary = typeof p === "object" && p && "summary" in p ? String((p as { summary: unknown }).summary) : "";
+    const idx =
+      typeof p === "object" && p && "index" in p ? Number((p as { index: unknown }).index) : NaN;
+    const summary =
+      typeof p === "object" && p && "summary" in p
+        ? String((p as { summary: unknown }).summary)
+        : "";
     if (!Number.isInteger(idx) || idx < 0 || idx >= candidates.length || seen.has(idx)) continue;
     seen.add(idx);
-    items.push(candidateToItem(candidates[idx], summary.trim() || candidates[idx].excerpt.slice(0, 160)));
+    items.push(
+      candidateToItem(candidates[idx], summary.trim() || candidates[idx].excerpt.slice(0, 160)),
+    );
     if (items.length >= TARGET_PICKS) break;
   }
 
@@ -141,20 +158,31 @@ export async function generateFrontierDigest(
     .map((c, i) => ({ c, i }))
     .filter(({ c, i }) => !isArxiv(c.source) && !seen.has(i));
   let haveNonArxiv = items.filter((it) => !isArxiv(it.source)).length;
-  for (let pos = items.length - 1; pos >= 0 && haveNonArxiv < MIN_NON_ARXIV && nonArxivPool.length > 0; pos--) {
+  for (
+    let pos = items.length - 1;
+    pos >= 0 && haveNonArxiv < MIN_NON_ARXIV && nonArxivPool.length > 0;
+    pos--
+  ) {
     if (!isArxiv(items[pos].source)) continue; // only displace arXiv picks
     const { c, i } = nonArxivPool.shift()!;
     seen.add(i);
-    items[pos] = candidateToItem(c, c.excerpt ? c.excerpt.slice(0, 200) : "Notable industry development on the AI / robotics frontier.");
+    items[pos] = candidateToItem(
+      c,
+      c.excerpt
+        ? c.excerpt.slice(0, 200)
+        : "Notable industry development on the AI / robotics frontier.",
+    );
     haveNonArxiv++;
   }
 
-  const headline = typeof parsed.headline === "string" && parsed.headline.trim()
-    ? parsed.headline.trim()
-    : "Today on the AI & robotics frontier";
-  const intro = typeof parsed.intro === "string" && parsed.intro.trim()
-    ? parsed.intro.trim()
-    : "The most significant AI and robotics developments our sources surfaced today.";
+  const headline =
+    typeof parsed.headline === "string" && parsed.headline.trim()
+      ? parsed.headline.trim()
+      : "Today on the AI & robotics frontier";
+  const intro =
+    typeof parsed.intro === "string" && parsed.intro.trim()
+      ? parsed.intro.trim()
+      : "The most significant AI and robotics developments our sources surfaced today.";
 
   return { headline, intro, items, model: answeredBy };
 }

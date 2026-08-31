@@ -2,8 +2,12 @@
 
 import { useState } from "react";
 import {
-  Circle, ExternalLink,
-  SlidersHorizontal, ChevronsDown, Focus, FolderKanban,
+  Circle,
+  ExternalLink,
+  SlidersHorizontal,
+  ChevronsDown,
+  Focus,
+  FolderKanban,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -66,7 +70,7 @@ export function ProjectCardHeader({
   const lastActiveMs = session?.mtime ?? (project.closedAt ? project.closedAt * 1000 : null);
   const lastActiveLabel = lastActiveMs
     ? compactRelativeDate(new Date(lastActiveMs))
-    : git?.lastWhen ?? null;
+    : (git?.lastWhen ?? null);
 
   // The dot color, description (hover), and problem hint all come from the
   // SSOT (STATE_DEFINITIONS) keyed by `stateKey`. Adding a state can never
@@ -98,23 +102,20 @@ export function ProjectCardHeader({
             <Circle className={cn("h-2.5 w-2.5 shrink-0 fill-current", dotColor)} />
             <div className="min-w-0">
               <div className="flex min-w-0 flex-wrap items-center gap-2">
-                <span className="truncate text-base font-semibold text-text-primary sm:text-lg" title={project.tab}>
+                <span
+                  className="truncate text-base font-semibold text-text-primary sm:text-lg"
+                  title={project.tab}
+                >
                   {project.tab}
                 </span>
                 {/* When we have a real handoff with "next", show the actual next step instead of generic "Ready for next step".
                     This reduces the duplicate "Ready for next step ✓ ✓" noise the user reported. */}
-                { (isReady || isOrchReady) && project.session?.next?.trim() ? (
-                  <span
-                    className={cn("gap-1.5", stateTagClass)}
-                    title={stateDescription}
-                  >
-                    Next: {project.session.next.split('\n')[0].slice(0, 60)}
+                {(isReady || isOrchReady) && project.session?.next?.trim() ? (
+                  <span className={cn("gap-1.5", stateTagClass)} title={stateDescription}>
+                    Next: {project.session.next.split("\n")[0].slice(0, 60)}
                   </span>
                 ) : (
-                  <span
-                    className={cn("gap-1.5", stateTagClass)}
-                    title={stateDescription}
-                  >
+                  <span className={cn("gap-1.5", stateTagClass)} title={stateDescription}>
                     {stateLabel}
                   </span>
                 )}
@@ -123,8 +124,8 @@ export function ProjectCardHeader({
                     small action chip the user can click. Honest by
                     construction: only renders when STATE_DEFINITIONS says
                     this state HAS a fix the user should take. */}
-                {stateProblem && (
-                  stateProblem.ctaHref ? (
+                {stateProblem &&
+                  (stateProblem.ctaHref ? (
                     <Link
                       href={stateProblem.ctaHref}
                       className="ui-tag ui-tag-warning gap-1"
@@ -133,29 +134,33 @@ export function ProjectCardHeader({
                       {stateProblem.ctaLabel ?? "Fix"}
                     </Link>
                   ) : (
-                    <span
-                      className="ui-tag ui-tag-warning gap-1"
-                      title={stateProblem.hint}
-                    >
+                    <span className="ui-tag ui-tag-warning gap-1" title={stateProblem.hint}>
                       {stateProblem.ctaLabel ?? "Action needed"}
                     </span>
-                  )
-                )}
+                  ))}
                 <OutcomeStreak outcomes={project.recentOutcomes} projectKey={project.tab} />
               </div>
               {/* Suppress the subtitle when it would just repeat the badge
                   with no timestamp to add ("Awaiting input / Awaiting input"). */}
-              {evidenceLabel && (evidenceLabel !== stateLabel || (evidenceAt && lastActiveLabel)) && (
-                <p
-                  className="mt-0.5 text-xs text-text-muted"
-                  title={evidenceKind === "historical" ? "Historical saved agent context; this is not live activity." : undefined}
-                >
-                  {evidenceLabel}{evidenceAt && lastActiveLabel ? ` ${lastActiveLabel}` : ""}
-                </p>
-              )}
+              {evidenceLabel &&
+                (evidenceLabel !== stateLabel || (evidenceAt && lastActiveLabel)) && (
+                  <p
+                    className="mt-0.5 text-xs text-text-muted"
+                    title={
+                      evidenceKind === "historical"
+                        ? "Historical saved agent context; this is not live activity."
+                        : undefined
+                    }
+                  >
+                    {evidenceLabel}
+                    {evidenceAt && lastActiveLabel ? ` ${lastActiveLabel}` : ""}
+                  </p>
+                )}
               {/* Profile status when no health available (any state) */}
               {profile?.status && !session?.health && (
-                <p className="mt-1 truncate text-sm text-text-tertiary" title={profile.status}>{profile.status}</p>
+                <p className="mt-1 truncate text-sm text-text-tertiary" title={profile.status}>
+                  {profile.status}
+                </p>
               )}
             </div>
           </div>
@@ -224,10 +229,7 @@ export function ProjectCardHeader({
             title={profileOpen ? "Close run setup" : "Agent, model, and prompt setup"}
             aria-label={profileOpen ? "Close run setup" : "Open agent, model, and prompt setup"}
             aria-pressed={profileOpen}
-            className={cn(
-              "ui-icon-action",
-              profileOpen ? "text-accent-text" : "text-text-muted",
-            )}
+            className={cn("ui-icon-action", profileOpen ? "text-accent-text" : "text-text-muted")}
           >
             <SlidersHorizontal className="h-4 w-4" />
           </button>

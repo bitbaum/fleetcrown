@@ -145,10 +145,16 @@ export function HealthScoreBar({
         text: brief,
         onlyMissing: true,
       });
-      const body = (await res.json()) as { ok?: boolean; error?: string; applied?: Record<string, string> };
+      const body = (await res.json()) as {
+        ok?: boolean;
+        error?: string;
+        applied?: Record<string, string>;
+      };
       if (!res.ok || !body.ok) throw new Error(body.error ?? "Could not fill the gaps");
       const names = Object.keys(body.applied ?? {});
-      setFillResult(`Filled ${names.length} field${names.length === 1 ? "" : "s"}: ${names.join(", ")}.`);
+      setFillResult(
+        `Filled ${names.length} field${names.length === 1 ? "" : "s"}: ${names.join(", ")}.`,
+      );
       router.refresh();
     } catch (e) {
       setFillError(e instanceof Error ? e.message : "Could not fill the gaps");
@@ -207,10 +213,12 @@ export function HealthScoreBar({
 
       {open && (
         <div className="ui-health-panel">
-          <p className="ui-micro-label">Health · {score} of {health.max}</p>
+          <p className="ui-micro-label">
+            Health · {score} of {health.max}
+          </p>
           <p className="mt-1 text-xs leading-relaxed text-text-secondary">
-            Ten facts about this project, one point each. Nothing is estimated —
-            each point is a field that is either filled in or not.
+            Ten facts about this project, one point each. Nothing is estimated — each point is a
+            field that is either filled in or not.
           </p>
 
           {missing === 0 ? (
@@ -227,16 +235,21 @@ export function HealthScoreBar({
                     disabled={filling}
                     className="ui-health-fill-btn disabled:opacity-50"
                   >
-                    {filling ? <Loader2 className="ui-spinner-xs" /> : <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden />}
+                    {filling ? (
+                      <Loader2 className="ui-spinner-xs" />
+                    ) : (
+                      <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                    )}
                     {filling ? "Writing…" : `Draft ${fillable.length} from the brief`}
                   </button>
                   <p className="ui-health-fill-note">
-                    Writes {fillable.map((c) => c.label.toLowerCase()).join(", ")} from
-                    this project&apos;s description. It only fills what is empty —
-                    nothing you have written is touched — and you can edit anything
-                    it writes.
+                    Writes {fillable.map((c) => c.label.toLowerCase()).join(", ")} from this
+                    project&apos;s description. It only fills what is empty — nothing you have
+                    written is touched — and you can edit anything it writes.
                   </p>
-                  {fillResult && <p className="mt-1.5 text-xs text-status-positive">{fillResult}</p>}
+                  {fillResult && (
+                    <p className="mt-1.5 text-xs text-status-positive">{fillResult}</p>
+                  )}
                   {fillError && <p className="ui-error-xs">{fillError}</p>}
                 </div>
               )}
@@ -251,7 +264,9 @@ export function HealthScoreBar({
                         <X className="mt-0.5 h-3 w-3 shrink-0 text-status-negative" aria-hidden />
                         <div className="min-w-0 flex-1">
                           <p className="text-xs font-medium text-text-primary">{check.label}</p>
-                          <p className="mt-0.5 text-xs leading-relaxed text-text-muted">{check.detail}</p>
+                          <p className="mt-0.5 text-xs leading-relaxed text-text-muted">
+                            {check.detail}
+                          </p>
                           <p className="ui-health-rule">{check.rule}</p>
                         </div>
                       </div>
@@ -260,8 +275,8 @@ export function HealthScoreBar({
                         <div className="mt-2 space-y-2">
                           {check.fix.kind === "clear" ? (
                             <p className="text-xs leading-relaxed text-text-secondary">
-                              Clearing this says the problem is resolved. It earns the
-                              point and removes the flag from the project.
+                              Clearing this says the problem is resolved. It earns the point and
+                              removes the flag from the project.
                             </p>
                           ) : check.fix.multiline ? (
                             <textarea
@@ -291,11 +306,20 @@ export function HealthScoreBar({
                               disabled={isSaving || (check.fix.kind !== "clear" && !draft.trim())}
                               className="ui-btn-save disabled:opacity-40"
                             >
-                              {isSaving ? <Loader2 className="ui-spinner-xs" /> : check.fix.kind === "clear" ? "Mark resolved" : "Save"}
+                              {isSaving ? (
+                                <Loader2 className="ui-spinner-xs" />
+                              ) : check.fix.kind === "clear" ? (
+                                "Mark resolved"
+                              ) : (
+                                "Save"
+                              )}
                             </button>
                             <button
                               type="button"
-                              onClick={() => { setEditing(null); setError(null); }}
+                              onClick={() => {
+                                setEditing(null);
+                                setError(null);
+                              }}
                               className="ui-btn-text-cancel"
                             >
                               Cancel
@@ -306,7 +330,11 @@ export function HealthScoreBar({
                       ) : (
                         <button
                           type="button"
-                          onClick={() => { setEditing(check.key); setDraft(""); setError(null); }}
+                          onClick={() => {
+                            setEditing(check.key);
+                            setDraft("");
+                            setError(null);
+                          }}
                           className="ui-health-fix-btn"
                         >
                           {check.fix.kind === "clear" ? "Mark resolved" : "Fix this"}

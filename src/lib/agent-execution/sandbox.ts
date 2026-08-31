@@ -63,7 +63,9 @@ export function resolveSandboxConfig(): SandboxExecutorConfig {
   return {
     runtime: "docker",
     image: envValue("FLEETCROWN_SANDBOX_IMAGE", "ubuntu:24.04"),
-    workspaceRoot: path.resolve(envValue("FLEETCROWN_SANDBOX_WORKSPACE_ROOT", path.join(os.homedir(), "dev"))),
+    workspaceRoot: path.resolve(
+      envValue("FLEETCROWN_SANDBOX_WORKSPACE_ROOT", path.join(os.homedir(), "dev")),
+    ),
     network: envValue("FLEETCROWN_SANDBOX_NETWORK", "none") === "bridge" ? "bridge" : "none",
     cpus: envValue("FLEETCROWN_SANDBOX_CPUS", "2"),
     memory: envValue("FLEETCROWN_SANDBOX_MEMORY", "4g"),
@@ -93,8 +95,14 @@ export function buildDockerRunArgs(
   containerName = sandboxContainerName(spec.id),
 ): string[] {
   const cwd = assertSandboxCwdAllowed(spec.cwd, config.workspaceRoot);
-  const userArgs = config.user === "current" ? ["--user", `${process.getuid?.() ?? 1000}:${process.getgid?.() ?? 1000}`] : [];
-  const envArgs = Object.entries(spec.env ?? {}).flatMap(([key, value]) => ["--env", `${key}=${value}`]);
+  const userArgs =
+    config.user === "current"
+      ? ["--user", `${process.getuid?.() ?? 1000}:${process.getgid?.() ?? 1000}`]
+      : [];
+  const envArgs = Object.entries(spec.env ?? {}).flatMap(([key, value]) => [
+    "--env",
+    `${key}=${value}`,
+  ]);
   const mountSuffix = config.mountMode === "ro" ? ":ro" : ":rw";
 
   return [
@@ -189,7 +197,11 @@ export class SandboxExecutor implements Executor {
   resize(id: WorkspaceId, cols: number, rows: number): void {
     const state = this.workspaces.get(id);
     if (state?.pty) {
-      try { state.pty.resize(cols, rows); } catch { /* pty may have just exited */ }
+      try {
+        state.pty.resize(cols, rows);
+      } catch {
+        /* pty may have just exited */
+      }
     }
   }
 
@@ -200,7 +212,9 @@ export class SandboxExecutor implements Executor {
       if (event.seq > sinceSeq) listener(event);
     }
     state.listeners.add(listener);
-    return () => { state.listeners.delete(listener); };
+    return () => {
+      state.listeners.delete(listener);
+    };
   }
 
   get(id: WorkspaceId): WorkspaceHandle | null {
@@ -215,7 +229,11 @@ export class SandboxExecutor implements Executor {
     const state = this.workspaces.get(id);
     if (!state) return;
     if (state.idleTimer) clearTimeout(state.idleTimer);
-    try { state.pty?.kill(); } catch { /* already dead */ }
+    try {
+      state.pty?.kill();
+    } catch {
+      /* already dead */
+    }
     state.pty = null;
     if (state.handle.status !== "exited") {
       state.handle = { ...state.handle, status: "exited" };
@@ -226,12 +244,19 @@ export class SandboxExecutor implements Executor {
     try {
       const { execFile } = await import("node:child_process");
       await new Promise<void>((resolve) => {
-        execFile(this.config.runtime, ["rm", "-f", state.containerName], { timeout: 5000 }, () => resolve());
+        execFile(this.config.runtime, ["rm", "-f", state.containerName], { timeout: 5000 }, () =>
+          resolve(),
+        );
       });
-    } catch { /* docker unavailable or already removed */ }
+    } catch {
+      /* docker unavailable or already removed */
+    }
   }
 
-  private emit(state: WorkspaceState, partial: Omit<AgentEvent, "workspaceId" | "seq" | "at">): void {
+  private emit(
+    state: WorkspaceState,
+    partial: Omit<AgentEvent, "workspaceId" | "seq" | "at">,
+  ): void {
     const event: AgentEvent = {
       workspaceId: state.handle.id,
       seq: ++state.seq,
@@ -239,9 +264,14 @@ export class SandboxExecutor implements Executor {
       ...partial,
     };
     state.buffer.push(event);
-    if (state.buffer.length > MAX_BUFFERED_EVENTS) state.buffer.splice(0, state.buffer.length - MAX_BUFFERED_EVENTS);
+    if (state.buffer.length > MAX_BUFFERED_EVENTS)
+      state.buffer.splice(0, state.buffer.length - MAX_BUFFERED_EVENTS);
     for (const listener of state.listeners) {
-      try { listener(event); } catch { /* listener isolation */ }
+      try {
+        listener(event);
+      } catch {
+        /* listener isolation */
+      }
     }
   }
 

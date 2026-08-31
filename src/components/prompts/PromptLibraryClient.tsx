@@ -2,11 +2,7 @@
 
 import { useState } from "react";
 import { Search } from "lucide-react";
-import {
-  groupForCategory,
-  type PromptTemplate,
-  type PromptGroup,
-} from "@/config/prompt-library";
+import { groupForCategory, type PromptTemplate, type PromptGroup } from "@/config/prompt-library";
 import { PromptCard } from "./PromptCard";
 import { GroupBar } from "./GroupBar";
 import { UserPromptsSection, type UserPromptCard } from "./UserPromptsSection";
@@ -28,7 +24,11 @@ export function PromptLibraryClient({
   const [activeGroup, setActiveGroup] = useState<PromptGroup | "all">("all");
   const [activeScope, setActiveScope] = useState<"all" | "global" | "project">("all");
 
-  useEscapeKey(() => { setSearch(""); setActiveGroup("all"); setActiveScope("all"); });
+  useEscapeKey(() => {
+    setSearch("");
+    setActiveGroup("all");
+    setActiveScope("all");
+  });
 
   const filtered = templates.filter((t) => {
     if (activeGroup !== "all" && groupForCategory(t.category) !== activeGroup) return false;
@@ -46,7 +46,9 @@ export function PromptLibraryClient({
 
   // Featured first, otherwise the config's category order is preserved (stable
   // sort), so cards still cluster by category within each band.
-  const ordered = [...filtered].sort((a, b) => Number(b.featured ?? false) - Number(a.featured ?? false));
+  const ordered = [...filtered].sort(
+    (a, b) => Number(b.featured ?? false) - Number(a.featured ?? false),
+  );
 
   return (
     <div className="space-y-6">
@@ -60,7 +62,12 @@ export function PromptLibraryClient({
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Escape") { setSearch(""); (e.target as HTMLInputElement).blur(); } }}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") {
+                setSearch("");
+                (e.target as HTMLInputElement).blur();
+              }
+            }}
             placeholder="Search prompts…"
             className="ui-input pl-12"
           />

@@ -94,10 +94,7 @@ export function ModalForm({
 
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        className="ui-btn-confirm"
-      >
+      <button onClick={() => setOpen(true)} className="ui-btn-confirm">
         <Plus className="h-4 w-4" />
         {triggerLabel}
       </button>
@@ -106,12 +103,19 @@ export function ModalForm({
         <Modal onClose={close} size={size}>
           {/* form: Enter in any <input> submits natively; textarea doesn't */}
           <form
-            onSubmit={(e) => { e.preventDefault(); if (canSubmit && !saving) handleSubmit(); }}
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (canSubmit && !saving) handleSubmit();
+            }}
             className="contents"
           >
             <div className="flex items-center justify-between">
               <div className="text-sm font-semibold">{title}</div>
-              <button type="button" onClick={close} className="p-1 text-text-tertiary hover:text-text-secondary rounded">
+              <button
+                type="button"
+                onClick={close}
+                className="p-1 text-text-tertiary hover:text-text-secondary rounded"
+              >
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -120,21 +124,17 @@ export function ModalForm({
 
             <div className="space-y-3">{children}</div>
 
-            {error && (
-              <div className="ui-box-error">
-                {error}
-              </div>
-            )}
+            {error && <div className="ui-box-error">{error}</div>}
 
-            <button
-              type="submit"
-              disabled={saving || !canSubmit}
-              className="ui-btn-submit"
-            >
+            <button type="submit" disabled={saving || !canSubmit} className="ui-btn-submit">
               {saving ? (
-                <><Loader2 className="ui-spinner" /> {savingLabel}</>
+                <>
+                  <Loader2 className="ui-spinner" /> {savingLabel}
+                </>
               ) : (
-                <><Plus className="h-4 w-4" /> {submitLabel}</>
+                <>
+                  <Plus className="h-4 w-4" /> {submitLabel}
+                </>
               )}
             </button>
           </form>

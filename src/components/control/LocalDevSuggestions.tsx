@@ -35,9 +35,12 @@ export function LocalDevSuggestions() {
   useEffect(() => {
     const bridge = window.fleetRunner;
     if (!hasIPC(bridge)) return;
-    bridge.getLocalDevProjects()
+    bridge
+      .getLocalDevProjects()
       .then((d) => setProjects(d.projects.slice(0, SUGGESTED_COUNT)))
-      .catch(() => { /* silent — banner just won't render */ });
+      .catch(() => {
+        /* silent — banner just won't render */
+      });
   }, []);
 
   if (projects.length === 0) return null;

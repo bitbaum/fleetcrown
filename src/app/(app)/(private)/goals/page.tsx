@@ -40,18 +40,26 @@ export default async function GoalsPage() {
       {/* Hidden until there is something to summarise — see the note on the
           same guard in the Habits page. */}
       {goalTree.length > 0 && (
-      <StatRow>
-        <StatCard
-          label="Active Goals"
-          value={String(stats.active)}
-          sub={[
-            stats.completed > 0 && `${stats.completed} completed`,
-            stats.abandoned > 0 && `${stats.abandoned} abandoned`,
-          ].filter(Boolean).join(" · ") || "none closed yet"}
-        />
-        <StatCard label="Avg Progress" value={`${stats.avgProgress}%`} sub="across active goals" />
-        <StatCard label="Total" value={String(stats.total)} sub="goals tracked" />
-      </StatRow>
+        <StatRow>
+          <StatCard
+            label="Active Goals"
+            value={String(stats.active)}
+            sub={
+              [
+                stats.completed > 0 && `${stats.completed} completed`,
+                stats.abandoned > 0 && `${stats.abandoned} abandoned`,
+              ]
+                .filter(Boolean)
+                .join(" · ") || "none closed yet"
+            }
+          />
+          <StatCard
+            label="Avg Progress"
+            value={`${stats.avgProgress}%`}
+            sub="across active goals"
+          />
+          <StatCard label="Total" value={String(stats.total)} sub="goals tracked" />
+        </StatRow>
       )}
 
       {goalTree.length === 0 ? (

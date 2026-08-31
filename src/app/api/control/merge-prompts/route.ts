@@ -18,17 +18,18 @@ type AgentResult = {
 // ── Groq (fast path — seconds, free tier) ──────────────────────────────────
 // Set GROQ_API_KEY in .env.local to enable. Falls back to openclaw agent.
 async function mergeViaGroq(message: string): Promise<string> {
-  return callGroqText(message, { maxTokens: 500, temperature: 0.3, timeoutMs: HTTP_TIMEOUT_LONG_MS });
+  return callGroqText(message, {
+    maxTokens: 500,
+    temperature: 0.3,
+    timeoutMs: HTTP_TIMEOUT_LONG_MS,
+  });
 }
 
 // ── openclaw fallback (Claude via gateway, ~20-30s) ────────────────────────
 // Uses the same agent+model as Loki. No additional API keys needed.
 async function mergeViaAgent(message: string): Promise<string> {
   const safe = message.replace(/'/g, "'\\''");
-  const result = await runTool(
-    `openclaw agent --agent main --message '${safe}' --json`,
-    90000,
-  );
+  const result = await runTool(`openclaw agent --agent main --message '${safe}' --json`, 90000);
   if (!result.ok) throw new Error(result.error ?? "agent error");
 
   const data = JSON.parse(result.data ?? "{}") as AgentResult;

@@ -44,7 +44,7 @@ export function PrivatePinGate({ children }: { children?: React.ReactNode }) {
     setError("");
     try {
       const res = await postJson("/api/auth/pin", { pin });
-      const data = await res.json() as { ok: boolean; error?: string };
+      const data = (await res.json()) as { ok: boolean; error?: string };
       if (data.ok) {
         setStatus({ configured: true, unlocked: true });
         router.refresh();
@@ -82,14 +82,8 @@ export function PrivatePinGate({ children }: { children?: React.ReactNode }) {
             autoComplete="one-time-code"
             maxLength={PIN_MAX_DIGITS}
           />
-          {error && (
-            <p className="ui-error text-center">{error}</p>
-          )}
-          <button
-            type="submit"
-            className="ui-btn-primary"
-            disabled={loading || !pin}
-          >
+          {error && <p className="ui-error text-center">{error}</p>}
+          <button type="submit" className="ui-btn-primary" disabled={loading || !pin}>
             {loading ? "Checking…" : "Unlock"}
           </button>
         </form>

@@ -17,16 +17,19 @@ export function NewHabitButton() {
     initialValues: { frequency: HABIT_FREQUENCY.DAILY },
   });
   const { create, saving, error, setError } = useCreateMutation({
-    request: (body: { title: string; frequency: HabitFrequency }) =>
-      postJson("/api/habits", body),
+    request: (body: { title: string; frequency: HabitFrequency }) => postJson("/api/habits", body),
     errorLabel: "habit",
   });
 
-  const onReset = () => { form.reset(); setError(null); };
-  const onSubmit = () => create({
-    title: form.text("title").trim(),
-    frequency: form.text("frequency") as HabitFrequency,
-  });
+  const onReset = () => {
+    form.reset();
+    setError(null);
+  };
+  const onSubmit = () =>
+    create({
+      title: form.text("title").trim(),
+      frequency: form.text("frequency") as HabitFrequency,
+    });
 
   return (
     <ModalForm
@@ -60,7 +63,9 @@ export function NewHabitButton() {
           className="ui-input"
         >
           {Object.values(HABIT_FREQUENCY).map((f) => (
-            <option key={f} value={f}>{f}</option>
+            <option key={f} value={f}>
+              {f}
+            </option>
           ))}
         </select>
       </Field>

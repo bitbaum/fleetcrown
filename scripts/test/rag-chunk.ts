@@ -29,13 +29,17 @@ import { chunkMarkdown } from "../../src/lib/rag/chunk";
   const md = `## Big\n${para}\n\n${para}\n\n${para}\n\n${para}`; // ~1200 chars of body
   const chunks = chunkMarkdown(md, { maxChars: 500 });
   assert.ok(chunks.length >= 2, "oversized section is split");
-  for (const c of chunks) assert.ok(c.length <= 500 + 60, `each chunk near the cap (got ${c.length})`);
+  for (const c of chunks)
+    assert.ok(c.length <= 500 + 60, `each chunk near the cap (got ${c.length})`);
 }
 
 // Prefix is prepended to every chunk (so it stands alone in retrieval).
 {
   const chunks = chunkMarkdown("## A\nbody a\n\n## B\nbody b", { prefix: "Essay: Test" });
-  assert.ok(chunks.every((c) => c.startsWith("Essay: Test\n")), "prefix on every chunk");
+  assert.ok(
+    chunks.every((c) => c.startsWith("Essay: Test\n")),
+    "prefix on every chunk",
+  );
 }
 
 // Empty / whitespace input yields no chunks.

@@ -25,7 +25,11 @@
  * Test:   npx tsx home/calendar-drain.ts --self-test   (pure logic, no I/O)
  */
 import { APP_URL } from "@/config/brand";
-import { bookCalendarEvent, resolveEventTimes, buildGogCreateArgs } from "@/lib/actions/calendar-event";
+import {
+  bookCalendarEvent,
+  resolveEventTimes,
+  buildGogCreateArgs,
+} from "@/lib/actions/calendar-event";
 import type { ActionPayload } from "@/db/schema/actions";
 
 type DrainEvent = { id: string; title: string; payload: ActionPayload | null };
@@ -43,7 +47,10 @@ function baseUrl(cfg?: DrainConfig): string {
 
 function authHeader(cfg?: DrainConfig): Record<string, string> {
   const token = (cfg?.token ?? process.env.FLEETCROWN_AGENT_TOKEN)?.trim();
-  if (!token) throw new Error("FLEETCROWN_AGENT_TOKEN is required (mint a ck_* token at /settings → Agent tokens)");
+  if (!token)
+    throw new Error(
+      "FLEETCROWN_AGENT_TOKEN is required (mint a ck_* token at /settings → Agent tokens)",
+    );
   return { authorization: `Bearer ${token}` };
 }
 
@@ -69,7 +76,9 @@ export async function drainOnce(cfg?: DrainConfig): Promise<{ booked: number; fa
     });
     if (result.ok) {
       booked++;
-      console.log(`[calendar-drain] booked "${ev.title}"${result.htmlLink ? ` → ${result.htmlLink}` : ""}`);
+      console.log(
+        `[calendar-drain] booked "${ev.title}"${result.htmlLink ? ` → ${result.htmlLink}` : ""}`,
+      );
     } else {
       failed++;
       console.error(`[calendar-drain] failed "${ev.title}": ${result.error}`);
@@ -109,7 +118,10 @@ function selfTest(): void {
   check("all-day end is exclusive next day", allDay?.to === "2026-07-15");
 
   // Explicit start+end → precise instants, not all-day.
-  const timed = resolveEventTimes({ eventStart: "2026-07-14T09:00:00+02:00", eventEnd: "2026-07-14T17:00:00+02:00" });
+  const timed = resolveEventTimes({
+    eventStart: "2026-07-14T09:00:00+02:00",
+    eventEnd: "2026-07-14T17:00:00+02:00",
+  });
   check("start+end ⇒ timed", timed?.allDay === false);
   check("timed from preserved as instant", timed?.from === "2026-07-14T07:00:00.000Z");
   check("timed to preserved as instant", timed?.to === "2026-07-14T15:00:00.000Z");
@@ -119,7 +131,10 @@ function selfTest(): void {
   check("start-only ⇒ +1h end", oneHour?.to === "2026-07-14T10:00:00.000Z");
 
   // End before start is ignored → falls back to +1h.
-  const badEnd = resolveEventTimes({ eventStart: "2026-07-14T09:00:00Z", eventEnd: "2026-07-14T08:00:00Z" });
+  const badEnd = resolveEventTimes({
+    eventStart: "2026-07-14T09:00:00Z",
+    eventEnd: "2026-07-14T08:00:00Z",
+  });
   check("end<start ignored ⇒ +1h", badEnd?.to === "2026-07-14T10:00:00.000Z");
 
   // Forced all-day even with a datetime.
@@ -130,15 +145,24 @@ function selfTest(): void {
   check("no date/time ⇒ null", resolveEventTimes({ eventTitle: "x" }) === null);
 
   // Arg builder: summary/from/to present; --all-day + --location appended correctly.
-  const args = buildGogCreateArgs({ eventTitle: "revampit storage", eventDate: "2026-07-14", eventLocation: "Zurich" }, "fallback");
-  check("args start with calendar create primary", args?.slice(0, 3).join(" ") === "calendar create primary");
-  check("args carry --summary", (args?.[args.indexOf("--summary") + 1]) === "revampit storage");
+  const args = buildGogCreateArgs(
+    { eventTitle: "revampit storage", eventDate: "2026-07-14", eventLocation: "Zurich" },
+    "fallback",
+  );
+  check(
+    "args start with calendar create primary",
+    args?.slice(0, 3).join(" ") === "calendar create primary",
+  );
+  check("args carry --summary", args?.[args.indexOf("--summary") + 1] === "revampit storage");
   check("args carry --all-day", args?.includes("--all-day") === true);
-  check("args carry --location", (args?.[args.indexOf("--location") + 1]) === "Zurich");
+  check("args carry --location", args?.[args.indexOf("--location") + 1] === "Zurich");
 
   // Falls back to action title when payload has no eventTitle.
   const argsFb = buildGogCreateArgs({ eventDate: "2026-07-14" }, "Team sync");
-  check("title falls back to action title", (argsFb?.[argsFb.indexOf("--summary") + 1]) === "Team sync");
+  check(
+    "title falls back to action title",
+    argsFb?.[argsFb.indexOf("--summary") + 1] === "Team sync",
+  );
 
   // Unbookable payload → null args.
   check("no time ⇒ null args", buildGogCreateArgs({ eventTitle: "x" }, "") === null);

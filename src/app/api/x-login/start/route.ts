@@ -15,7 +15,9 @@ export async function GET() {
   try {
     const callbackUrl = `${APP_URL}/api/x-login/callback`;
     const { oauth_token, oauth_token_secret } = await requestToken(callbackUrl);
-    const res = NextResponse.redirect(`https://api.x.com/oauth/authenticate?oauth_token=${encodeURIComponent(oauth_token)}`);
+    const res = NextResponse.redirect(
+      `https://api.x.com/oauth/authenticate?oauth_token=${encodeURIComponent(oauth_token)}`,
+    );
     res.cookies.set("x1_req_secret", oauth_token_secret, {
       httpOnly: true,
       secure: true,

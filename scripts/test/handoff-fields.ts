@@ -15,10 +15,16 @@
 import { DEMANDABLE_EVIDENCE_FIELDS } from "@/lib/orchestration/evidence-precheck";
 import { PROMPT_TEMPLATES } from "@/config/prompt-library";
 
-let pass = 0, fail = 0;
+let pass = 0,
+  fail = 0;
 function ok(name: string, cond: boolean) {
-  if (cond) { pass++; console.log(`  ✓ ${name}`); }
-  else { fail++; console.log(`  ✗ ${name}`); }
+  if (cond) {
+    pass++;
+    console.log(`  ✓ ${name}`);
+  } else {
+    fail++;
+    console.log(`  ✗ ${name}`);
+  }
 }
 
 /** Templates the autopilot actually dispatches — these are the ones whose text
@@ -28,14 +34,14 @@ ok("there are dispatchable (agentKey) templates to check", DISPATCHABLE.length >
 
 /** A template "closes" if it tells the agent to write a handoff at all. */
 const CLOSERS = DISPATCHABLE.filter((t) =>
-  /status:\s*ready|update the session file|handoff/i.test(t.template));
+  /status:\s*ready|update the session file|handoff/i.test(t.template),
+);
 ok("at least one dispatchable template writes a handoff", CLOSERS.length > 0);
 
 // Must appear as an actual field LINE the agent can copy — `tsc:` mentioned
 // mid-paragraph is exactly the state that produced the 0-fill rate, so a
 // substring match here would pass on the very bug this test exists to catch.
-const asFieldLine = (body: string, field: string) =>
-  new RegExp(`^${field}:`, "m").test(body);
+const asFieldLine = (body: string, field: string) => new RegExp(`^${field}:`, "m").test(body);
 
 for (const t of CLOSERS) {
   for (const field of DEMANDABLE_EVIDENCE_FIELDS) {

@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer } from "electron";
 
 // `window.fleetRunner` — the IPC bridge from the web shell (Next.js app
 // loaded from fleetcrown.orangecat.ch) into Fleet Runner's main process.
@@ -13,25 +13,25 @@ import { contextBridge, ipcRenderer } from 'electron'
 // getCurrentState/probeCloud/switchToCloud — those were used only by the
 // bundled renderer (now removed). The surviving methods are all consumed
 // by the web shell.
-contextBridge.exposeInMainWorld('fleetRunner', {
+contextBridge.exposeInMainWorld("fleetRunner", {
   // Token persistence — FleetRunnerAutoMint reads/writes this so the
   // signed-in browser session can hand a freshly-minted ck_* down to
   // the local poller + pusher without copy-paste.
-  saveToken: (token: string) => ipcRenderer.invoke('save-token', token),
-  loadToken: () => ipcRenderer.invoke('load-token'),
-  clearToken: () => ipcRenderer.invoke('clear-token'),
-  getConfigDir: () => ipcRenderer.invoke('get-config-dir'),
+  saveToken: (token: string) => ipcRenderer.invoke("save-token", token),
+  loadToken: () => ipcRenderer.invoke("load-token"),
+  clearToken: () => ipcRenderer.invoke("clear-token"),
+  getConfigDir: () => ipcRenderer.invoke("get-config-dir"),
 
   // Command poller status. Renderers either pull a snapshot
   // (`getPollerStatus`) for an immediate read or subscribe via
   // `onPollerStatus` and react to every state transition (the returned
   // function unsubscribes; React effects must call it on cleanup to
   // avoid stacking listeners across re-mounts).
-  getPollerStatus: () => ipcRenderer.invoke('get-poller-status'),
+  getPollerStatus: () => ipcRenderer.invoke("get-poller-status"),
   onPollerStatus: (cb: (status: unknown) => void) => {
-    const handler = (_event: unknown, status: unknown) => cb(status)
-    ipcRenderer.on('poller-status', handler)
-    return () => ipcRenderer.removeListener('poller-status', handler)
+    const handler = (_event: unknown, status: unknown) => cb(status);
+    ipcRenderer.on("poller-status", handler);
+    return () => ipcRenderer.removeListener("poller-status", handler);
   },
 
   // Local prerequisite scan — surfaces whether agent CLIs (claude, codex,
@@ -41,7 +41,7 @@ contextBridge.exposeInMainWorld('fleetRunner', {
   getInstalledCLIs: (): Promise<{
     zellij: boolean;
     agents: Record<string, boolean>;
-  }> => ipcRenderer.invoke('get-installed-clis'),
+  }> => ipcRenderer.invoke("get-installed-clis"),
 
   // Local /dev scan — walks ~/dev, ~/code, ~/Code, ~/Projects (overridable
   // via FLEETCROWN_DEV_ROOTS) for git repos. The web app uses this to
@@ -49,19 +49,19 @@ contextBridge.exposeInMainWorld('fleetRunner', {
   // GitHub-side suggestions on /control. Returns up to 50 most-recent.
   getLocalDevProjects: (): Promise<{
     projects: Array<{ name: string; path: string; mtimeMs: number; remoteUrl: string | null }>;
-  }> => ipcRenderer.invoke('get-local-dev-projects'),
+  }> => ipcRenderer.invoke("get-local-dev-projects"),
 
   // Peek tab — snapshot the visible scrollback of a Zellij tab without
   // requiring the user to switch their focused terminal. Returns plain
   // text with ANSI escapes stripped, ready to render in <pre>. v0.7.2+ —
   // older builds don't expose this, so callers must typeof-check.
   peekTab: (tab: string): Promise<{ ok: true; content: string } | { ok: false; error: string }> =>
-    ipcRenderer.invoke('peek-tab', tab),
+    ipcRenderer.invoke("peek-tab", tab),
 
   // Reload the web shell from the offline page's retry button. Only
   // available on the offline page; the cloud /control surface doesn't
   // need this because it already has standard browser reload.
-  reloadWebShell: (): Promise<boolean> => ipcRenderer.invoke('reload-web-shell'),
+  reloadWebShell: (): Promise<boolean> => ipcRenderer.invoke("reload-web-shell"),
 
   // Auto-update state — used by the UpdateBanner on /control to show
   // "Update available: vX.Y.Z — Restart to install / Run: sudo dpkg -i ..."
@@ -72,11 +72,11 @@ contextBridge.exposeInMainWorld('fleetRunner', {
   // quitAndInstall() applies the downloaded update for self-applying
   // formats (AppImage, dmg, exe). For .deb installs the renderer shows
   // the manual dpkg command instead and this method returns false.
-  getUpdateState: (): Promise<unknown> => ipcRenderer.invoke('get-update-state'),
+  getUpdateState: (): Promise<unknown> => ipcRenderer.invoke("get-update-state"),
   onUpdateState: (cb: (state: unknown) => void) => {
-    const handler = (_event: unknown, state: unknown) => cb(state)
-    ipcRenderer.on('update-state', handler)
-    return () => ipcRenderer.removeListener('update-state', handler)
+    const handler = (_event: unknown, state: unknown) => cb(state);
+    ipcRenderer.on("update-state", handler);
+    return () => ipcRenderer.removeListener("update-state", handler);
   },
-  quitAndInstall: (): Promise<boolean> => ipcRenderer.invoke('quit-and-install'),
-})
+  quitAndInstall: (): Promise<boolean> => ipcRenderer.invoke("quit-and-install"),
+});

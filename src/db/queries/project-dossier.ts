@@ -22,7 +22,11 @@ import { entities, userProjects } from "@/db/schema";
 import { and, eq, ilike } from "drizzle-orm";
 import { getProjectStateByProjectId } from "./project-states";
 import { getProjectActivity, type ProjectActivityEvent } from "./activity";
-import { getProjectOrchestrationRuns, getRecentOutcomes, type RecentOutcome } from "./orchestration-runs";
+import {
+  getProjectOrchestrationRuns,
+  getRecentOutcomes,
+  type RecentOutcome,
+} from "./orchestration-runs";
 import { getUserProjectByEntityId } from "./user-projects";
 import { cleanDescription } from "@/lib/project-display";
 import { getProjectShareByToken } from "./project-shares";
@@ -36,7 +40,10 @@ import { fetchRecentGithubCommits, type RepoCommit } from "@/lib/github-commits"
 import { computeProjectHealth, describeProjectHealth } from "@/lib/project-health";
 import { getOrangeCatLinksForProject } from "./orangecat-links";
 import type { OrangeCatEntityLink } from "@/db/schema";
-import { fetchOrangeCatFundingSummary, type OrangeCatFundingSummary } from "@/lib/integrations/orangecat-funding";
+import {
+  fetchOrangeCatFundingSummary,
+  type OrangeCatFundingSummary,
+} from "@/lib/integrations/orangecat-funding";
 
 export type ProjectRunRow = typeof orchestrationRuns.$inferSelect;
 
@@ -88,9 +95,10 @@ export async function getProjectDossier(
   const orangecatLinks = userProject
     ? await getOrangeCatLinksForProject(ownerId, userProject.id).catch(() => [])
     : [];
-  const fundingLink = orangecatLinks.find((link) => link.role === "funding")
-    ?? orangecatLinks.find((link) => link.role === "public_profile")
-    ?? orangecatLinks[0];
+  const fundingLink =
+    orangecatLinks.find((link) => link.role === "funding") ??
+    orangecatLinks.find((link) => link.role === "public_profile") ??
+    orangecatLinks[0];
   const orangecatFunding = await fetchOrangeCatFundingSummary(fundingLink);
   const commits = gitUrl
     ? await getGithubToken(ownerId)
@@ -128,7 +136,11 @@ export async function getProjectDossierByProjectKey(
 ): Promise<ProjectDossier | null> {
   const [project, runtimeProject] = await Promise.all([
     db.query.entities.findFirst({
-      where: and(eq(entities.userId, ownerUserId), eq(entities.type, ENTITY_TYPE.PROJECT), ilike(entities.name, projectKey)),
+      where: and(
+        eq(entities.userId, ownerUserId),
+        eq(entities.type, ENTITY_TYPE.PROJECT),
+        ilike(entities.name, projectKey),
+      ),
       columns: { id: true },
     }),
     db.query.userProjects.findFirst({
@@ -178,13 +190,18 @@ export function renderProjectDossierForAgent(dossier: ProjectDossier): string {
     ["Go-to-market", attrs.gtm],
     ["Status", attrs.status],
     // Derived, traceable health — replaces the hand-typed attrs.maturity score.
-    ["Health", describeProjectHealth(computeProjectHealth({
-      description: detail.project.description,
-      gitUrl: userProject?.gitUrl ?? detail.project.gitUrl,
-      dirPath: userProject?.dirPath,
-      liveUrl: userProject?.liveUrl,
-      attrs,
-    }))],
+    [
+      "Health",
+      describeProjectHealth(
+        computeProjectHealth({
+          description: detail.project.description,
+          gitUrl: userProject?.gitUrl ?? detail.project.gitUrl,
+          dirPath: userProject?.dirPath,
+          liveUrl: userProject?.liveUrl,
+          attrs,
+        }),
+      ),
+    ],
     ["Stack", attrs.stack ?? userProject?.stack],
     ["Architecture", attrs.architecture],
     ["Conventions", attrs.conventions],
@@ -203,7 +220,8 @@ export function renderProjectDossierForAgent(dossier: ProjectDossier): string {
     lines.push(`- Agent running: ${state.agentRunning ? "yes" : "no"}`);
     if (state.sessionStatus) lines.push(`- Session status: ${state.sessionStatus}`);
     if (state.currentPromptLabel) lines.push(`- Current prompt: ${state.currentPromptLabel}`);
-    if (state.sessionUpdatedAt) lines.push(`- Last handoff: ${state.sessionUpdatedAt.toISOString()}`);
+    if (state.sessionUpdatedAt)
+      lines.push(`- Last handoff: ${state.sessionUpdatedAt.toISOString()}`);
   }
 
   if (latest) {
@@ -219,9 +237,15 @@ export function renderProjectDossierForAgent(dossier: ProjectDossier): string {
     lines.push("## Active roadmap");
     for (const goal of goals) {
       const milestones = Array.isArray(goal.milestones)
-        ? goal.milestones.filter((m) => !m.done).slice(0, 3).map((m) => m.title).join("; ")
+        ? goal.milestones
+            .filter((m) => !m.done)
+            .slice(0, 3)
+            .map((m) => m.title)
+            .join("; ")
         : "";
-      lines.push(`- ${goal.title}${typeof goal.progress === "number" ? ` (${goal.progress}%)` : ""}${milestones ? ` — next: ${milestones}` : ""}`);
+      lines.push(
+        `- ${goal.title}${typeof goal.progress === "number" ? ` (${goal.progress}%)` : ""}${milestones ? ` — next: ${milestones}` : ""}`,
+      );
     }
   }
 
@@ -229,9 +253,13 @@ export function renderProjectDossierForAgent(dossier: ProjectDossier): string {
     lines.push("## Resources");
     for (const r of resources) {
       if (r.kind === "credential" || r.sensitivity === "credential" || r.sensitivity === "secret") {
-        lines.push(`- ${r.title} (${r.sensitivity ?? r.kind} reference; do not expose secret values)${r.notes ? ` — ${r.notes}` : ""}`);
+        lines.push(
+          `- ${r.title} (${r.sensitivity ?? r.kind} reference; do not expose secret values)${r.notes ? ` — ${r.notes}` : ""}`,
+        );
       } else {
-        const meta = [r.kind, r.visibility ?? "private", r.sensitivity ?? "normal", r.url, r.notes].filter(Boolean).join(" — ");
+        const meta = [r.kind, r.visibility ?? "private", r.sensitivity ?? "normal", r.url, r.notes]
+          .filter(Boolean)
+          .join(" — ");
         lines.push(`- ${r.title}${meta ? ` (${meta})` : ""}`);
       }
     }

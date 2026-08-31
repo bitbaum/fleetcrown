@@ -28,7 +28,11 @@ export function useFeedbackActions(refetch: () => void) {
   }
 
   const dispatchFix = (id: string, note?: string) =>
-    act(id, () => postJson(`/api/feedback/${id}/dispatch`, note ? { note } : {}), "Could not queue the fix");
+    act(
+      id,
+      () => postJson(`/api/feedback/${id}/dispatch`, note ? { note } : {}),
+      "Could not queue the fix",
+    );
 
   const setStatus = (id: string, status: FeedbackStatus) =>
     act(id, () => patchJson(`/api/feedback/${id}`, { status }), "Update failed");
@@ -40,5 +44,16 @@ export function useFeedbackActions(refetch: () => void) {
   const feature = (id: string, featured: boolean) =>
     act(id, () => patchJson(`/api/feedback/${id}`, { featured }), "Update failed");
 
-  return { busyId, error, setError, act, dispatchFix, setStatus, resolve, archive, reopen, feature };
+  return {
+    busyId,
+    error,
+    setError,
+    act,
+    dispatchFix,
+    setStatus,
+    resolve,
+    archive,
+    reopen,
+    feature,
+  };
 }

@@ -49,7 +49,9 @@ export function QueueList({
   const editRef = useRef<HTMLTextAreaElement>(null);
 
   // Clear selection when queue length changes (items added/removed/merged).
-  useEffect(() => { setSelected(new Set()); }, [queue.length]); // eslint-disable-line react-hooks/set-state-in-effect
+  useEffect(() => {
+    setSelected(new Set());
+  }, [queue.length]); // eslint-disable-line react-hooks/set-state-in-effect
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -73,7 +75,8 @@ export function QueueList({
   const toggleSelect = (i: number) => {
     setSelected((s) => {
       const next = new Set(s);
-      if (next.has(i)) next.delete(i); else next.add(i);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
       return next;
     });
   };
@@ -126,7 +129,10 @@ export function QueueList({
         <div className="min-w-0">
           <p className="ui-kicker">{promptQueueHeading(queue.length)}</p>
           {blockedReason && (
-            <p className="mt-1 text-micro text-status-warning" title="Next best will stay on recovery work while this gate is active. Use the row send button to run a queued item now.">
+            <p
+              className="mt-1 text-micro text-status-warning"
+              title="Next best will stay on recovery work while this gate is active. Use the row send button to run a queued item now."
+            >
               {blockedReason} · pick an item manually
             </p>
           )}
@@ -156,9 +162,7 @@ export function QueueList({
       </div>
 
       {queue.length === 0 && (
-        <p className="px-4 pb-3 text-micro text-text-muted sm:px-5">
-          {PROMPT_QUEUE_EMPTY_HINT}
-        </p>
+        <p className="px-4 pb-3 text-micro text-text-muted sm:px-5">{PROMPT_QUEUE_EMPTY_HINT}</p>
       )}
 
       <DndContext

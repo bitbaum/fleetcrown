@@ -79,9 +79,25 @@ const truncate = (value: string, n = 80) =>
 // rule for the check. A user asked to satisfy a keyword test is owed the
 // keywords; deriving the pattern from the list is what stops the two drifting.
 export const CHECKABLE_DONE_KEYWORDS = [
-  "verify", "test", "tests", "tsc", "typecheck", "type-check", "lint", "build",
-  "deploy", "deploys", "deployed", "ci", "green", "commit", "committed",
-  "pushed", "passes", "passing", "health",
+  "verify",
+  "test",
+  "tests",
+  "tsc",
+  "typecheck",
+  "type-check",
+  "lint",
+  "build",
+  "deploy",
+  "deploys",
+  "deployed",
+  "ci",
+  "green",
+  "commit",
+  "committed",
+  "pushed",
+  "passes",
+  "passing",
+  "health",
 ] as const;
 
 const CHECKABLE_DONE_MARKERS = new RegExp(`\\b(${CHECKABLE_DONE_KEYWORDS.join("|")})\\b`, "i");
@@ -101,9 +117,15 @@ export function computeProjectHealth(input: ProjectHealthInput): ProjectHealth {
       key: "brief",
       label: "Brief written",
       pass: Boolean(description),
-      detail: description ? truncate(description) : "Write a one-line description of what this project is.",
+      detail: description
+        ? truncate(description)
+        : "Write a one-line description of what this project is.",
       rule: "Passes when the project has a description.",
-      fix: { kind: "description", placeholder: "What is this project, in one line?", multiline: true },
+      fix: {
+        kind: "description",
+        placeholder: "What is this project, in one line?",
+        multiline: true,
+      },
     },
     {
       key: "mission",
@@ -113,7 +135,12 @@ export function computeProjectHealth(input: ProjectHealthInput): ProjectHealth {
         ? truncate(attrs["mission"])
         : "State the mission in Context — agents build toward it.",
       rule: "Passes when Context → Mission is filled in.",
-      fix: { kind: "attr", attr: "mission", placeholder: "What is this project ultimately for?", multiline: true },
+      fix: {
+        kind: "attr",
+        attr: "mission",
+        placeholder: "What is this project ultimately for?",
+        multiline: true,
+      },
     },
     {
       key: "code",
@@ -125,13 +152,20 @@ export function computeProjectHealth(input: ProjectHealthInput): ProjectHealth {
           ? truncate(input.dirPath)
           : "Link a repository or local path so agents can work on it.",
       rule: "Passes when a repository or a local path is set.",
-      fix: { kind: "attr", attr: "repo", placeholder: "owner/repo, or a full git URL", multiline: false },
+      fix: {
+        kind: "attr",
+        attr: "repo",
+        placeholder: "owner/repo, or a full git URL",
+        multiline: false,
+      },
     },
     {
       key: "live",
       label: "Live URL",
       pass: hasAnswer(liveUrl),
-      detail: hasAnswer(liveUrl) ? truncate(liveUrl) : "Add a production URL when something is deployed.",
+      detail: hasAnswer(liveUrl)
+        ? truncate(liveUrl)
+        : "Add a production URL when something is deployed.",
       rule: "Passes when a production URL is set.",
       // The live_url COLUMN, not the production_url attr, even though this
       // check reads both. Writing the attr earned the point while the page's
@@ -144,9 +178,16 @@ export function computeProjectHealth(input: ProjectHealthInput): ProjectHealth {
       key: "stage",
       label: "Stage declared",
       pass: hasAnswer(attrs["status"]),
-      detail: hasAnswer(attrs["status"]) ? attrs["status"] : "Set the lifecycle stage (planning / development / production).",
+      detail: hasAnswer(attrs["status"])
+        ? attrs["status"]
+        : "Set the lifecycle stage (planning / development / production).",
       rule: "Passes when a lifecycle stage is set.",
-      fix: { kind: "attr", attr: "status", placeholder: "planning / development / production", multiline: false },
+      fix: {
+        kind: "attr",
+        attr: "status",
+        placeholder: "planning / development / production",
+        multiline: false,
+      },
     },
     // The three attention signals: an open callout costs a point until fixed.
     ...HEALTH_SIGNAL_BASE.map((signal) => ({
@@ -170,7 +211,12 @@ export function computeProjectHealth(input: ProjectHealthInput): ProjectHealth {
         ? truncate(attrs["next_step"])
         : "Queue the next step so work can be dispatched in one click.",
       rule: "Passes when a next step is written.",
-      fix: { kind: "attr", attr: "next_step", placeholder: "The one thing to do next", multiline: true },
+      fix: {
+        kind: "attr",
+        attr: "next_step",
+        placeholder: "The one thing to do next",
+        multiline: true,
+      },
     },
     {
       key: "done",

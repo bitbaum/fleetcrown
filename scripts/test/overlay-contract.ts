@@ -44,7 +44,7 @@ function walk(dir: string, out: string[] = []): string[] {
   return out;
 }
 
-check("every role=\"dialog\" overlay closes on Escape", () => {
+check('every role="dialog" overlay closes on Escape', () => {
   const files = walk(join(root, "src"));
   const offenders: string[] = [];
 
@@ -68,7 +68,10 @@ check("the Escape hook is shared, not private to one component", () => {
   // The whole reason three overlays missed it: the helper was unreachable.
   const hook = join(root, "src/hooks/use-escape-to-close.ts");
   const src = readFileSync(hook, "utf8");
-  assert(/export function useEscapeToClose/.test(src), "useEscapeToClose must be exported from hooks/");
+  assert(
+    /export function useEscapeToClose/.test(src),
+    "useEscapeToClose must be exported from hooks/",
+  );
 
   const modal = readFileSync(join(root, "src/components/ui/modal.tsx"), "utf8");
   assert(

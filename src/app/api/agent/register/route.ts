@@ -14,10 +14,7 @@ export async function GET() {
   const userId = await getApiUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const [user, memberships] = await Promise.all([
-    getUserById(userId),
-    getOrgsByUserId(userId),
-  ]);
+  const [user, memberships] = await Promise.all([getUserById(userId), getOrgsByUserId(userId)]);
 
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 

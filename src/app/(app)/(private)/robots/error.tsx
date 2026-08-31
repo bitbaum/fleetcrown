@@ -2,7 +2,10 @@
 
 import { RouteError } from "@/components/ui/route-error";
 
-export default function RobotsError(props: { error: Error & { digest?: string }; reset: () => void }) {
+export default function RobotsError(props: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
   return (
     <RouteError
       route="robots"

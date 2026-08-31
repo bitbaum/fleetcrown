@@ -51,7 +51,10 @@ The "actions" array is the point: 4-6 prioritized, immediately executable steps 
 Iterate, don't reset: when a previous plan is provided, keep what still holds, adjust what changed (use recent activity as evidence of progress), and never repeat actions that recent activity shows are already done. Ground every claim in the provided context plus common market knowledge — concrete, zero hype.`;
 
 function parseModelJson(raw: string): unknown {
-  const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "").trim();
+  const cleaned = raw
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/```\s*$/, "")
+    .trim();
   const start = cleaned.indexOf("{");
   const end = cleaned.lastIndexOf("}");
   if (start === -1 || end === -1 || end <= start) throw new Error("model returned no JSON object");
@@ -72,7 +75,9 @@ async function buildContext(userId: string, entityId: string): Promise<string | 
   const siblings = await db
     .select({ name: entities.name, description: entities.description })
     .from(entities)
-    .where(and(eq(entities.userId, userId), eq(entities.type, "project"), ne(entities.id, entityId)));
+    .where(
+      and(eq(entities.userId, userId), eq(entities.type, "project"), ne(entities.id, entityId)),
+    );
 
   const activity = await getProjectPromptActivity(userId, entityId, 12).catch(() => []);
 
@@ -109,7 +114,10 @@ async function buildContext(userId: string, entityId: string): Promise<string | 
  * Generate (or iterate) the plan and persist it. Returns the plan + actions,
  * or null when the entity doesn't exist / isn't the user's.
  */
-export async function generateBusinessPlan(userId: string, entityId: string): Promise<BusinessPlan | null> {
+export async function generateBusinessPlan(
+  userId: string,
+  entityId: string,
+): Promise<BusinessPlan | null> {
   const context = await buildContext(userId, entityId);
   if (context === null) return null;
 
@@ -132,13 +140,25 @@ export async function generateBusinessPlan(userId: string, entityId: string): Pr
 
   const parsed = PlanSchema.safeParse(parseModelJson(raw));
   if (!parsed.success) {
-    throw new Error(`model output failed validation: ${parsed.error.issues[0]?.message ?? "unknown"}`);
+    throw new Error(
+      `model output failed validation: ${parsed.error.issues[0]?.message ?? "unknown"}`,
+    );
   }
 
   const { plan, actions } = parsed.data;
   const ok1 = await upsertEntityAttribute(userId, entityId, "business_plan", plan);
-  const ok2 = await upsertEntityAttribute(userId, entityId, "business_actions", JSON.stringify(actions));
-  const ok3 = await upsertEntityAttribute(userId, entityId, "business_plan_updated_at", new Date().toISOString());
+  const ok2 = await upsertEntityAttribute(
+    userId,
+    entityId,
+    "business_actions",
+    JSON.stringify(actions),
+  );
+  const ok3 = await upsertEntityAttribute(
+    userId,
+    entityId,
+    "business_plan_updated_at",
+    new Date().toISOString(),
+  );
   if (!ok1 || !ok2 || !ok3) return null;
 
   scheduleProjectProfileReindexByEntityId(userId, entityId);

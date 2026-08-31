@@ -7,9 +7,13 @@ import { postJson } from "@/lib/api/fetch";
 import { useClipboard } from "@/hooks/use-clipboard";
 import { FEEDBACK_MEDIUM_MS } from "@/lib/constants/timings";
 import {
-  type Brief, type BootstrapResult,
+  type Brief,
+  type BootstrapResult,
   BRIEF_DEFAULTS,
-  DescribeStep, ReviewStep, CreatingStep, DoneStep,
+  DescribeStep,
+  ReviewStep,
+  CreatingStep,
+  DoneStep,
 } from "./bootstrap-modal-steps";
 
 type Step = "describe" | "review" | "creating" | "done";
@@ -51,7 +55,10 @@ export function BootstrapModal({
         tagline: g.tagline ?? "",
         targetUser: g.targetUser ?? "",
         coreProblem: g.coreProblem ?? "",
-        coreFeatures: Array.isArray(g.coreFeatures) && g.coreFeatures.length > 0 ? g.coreFeatures : ["", "", ""],
+        coreFeatures:
+          Array.isArray(g.coreFeatures) && g.coreFeatures.length > 0
+            ? g.coreFeatures
+            : ["", "", ""],
         stack: {
           frontend: g.stack?.frontend ?? "Next.js 15",
           backend: g.stack?.backend ?? "TypeScript",
@@ -144,14 +151,39 @@ export function BootstrapModal({
       </div>
 
       {step === "describe" && (
-        <DescribeStep idea={idea} generating={generating} genError={genError} onIdeaChange={setIdea} onGenerate={generateBrief} onClose={onClose} />
+        <DescribeStep
+          idea={idea}
+          generating={generating}
+          genError={genError}
+          onIdeaChange={setIdea}
+          onGenerate={generateBrief}
+          onClose={onClose}
+        />
       )}
       {step === "review" && (
-        <ReviewStep brief={brief} setBrief={setBrief} db={db} setDb={setDb} visibility={visibility} setVisibility={setVisibility} createError={createError} creating={creating} onCreate={createProject} onBack={() => setStep("describe")} />
+        <ReviewStep
+          brief={brief}
+          setBrief={setBrief}
+          db={db}
+          setDb={setDb}
+          visibility={visibility}
+          setVisibility={setVisibility}
+          createError={createError}
+          creating={creating}
+          onCreate={createProject}
+          onBack={() => setStep("describe")}
+        />
       )}
       {step === "creating" && <CreatingStep name={brief.name} />}
       {step === "done" && result && (
-        <DoneStep result={result} launching={launching} launchError={launchError} copied={copied} onLaunch={launchClaudeCode} onCopyPrompt={copyPrompt} />
+        <DoneStep
+          result={result}
+          launching={launching}
+          launchError={launchError}
+          copied={copied}
+          onLaunch={launchClaudeCode}
+          onCopyPrompt={copyPrompt}
+        />
       )}
     </Modal>
   );

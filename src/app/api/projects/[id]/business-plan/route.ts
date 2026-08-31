@@ -8,10 +8,7 @@ import { generateBusinessPlan } from "@/lib/business-plan";
 // dispatchable actions as attributes. POST is idempotent in spirit — calling
 // it again iterates the existing plan rather than starting over.
 
-export async function POST(
-  _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const userId = await getSessionUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const idOrResp = await readIdParam(params);
@@ -23,7 +20,10 @@ export async function POST(
     return NextResponse.json({ ok: true, plan: result.plan, actions: result.actions });
   } catch (e) {
     return NextResponse.json(
-      { error: "Plan generation failed — try again in a moment.", details: e instanceof Error ? e.message : String(e) },
+      {
+        error: "Plan generation failed — try again in a moment.",
+        details: e instanceof Error ? e.message : String(e),
+      },
       { status: 502 },
     );
   }

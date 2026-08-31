@@ -7,11 +7,7 @@ import { ROBOT_CLASS_LABEL } from "@/config/actors";
 
 export const metadata = { title: "Robot" };
 
-export default async function RobotPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default async function RobotPage({ params }: { params: Promise<{ id: string }> }) {
   const userId = await requirePageUserId();
   const { id } = await params;
   const robot = await getRobotDetail(userId, id);
@@ -20,11 +16,7 @@ export default async function RobotPage({
   const classLabel = robot.robotClass ? ROBOT_CLASS_LABEL[robot.robotClass] : "Robot";
 
   return (
-    <PageLayout
-      title={robot.name}
-      subtitle={classLabel}
-      maxWidth="max-w-xl"
-    >
+    <PageLayout title={robot.name} subtitle={classLabel} maxWidth="max-w-xl">
       <RobotProfile robot={robot} />
     </PageLayout>
   );

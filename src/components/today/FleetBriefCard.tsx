@@ -70,11 +70,11 @@ async function loadStats(userId: string): Promise<FleetBriefStats> {
   ]);
 
   return {
-    projectsToday:    Number(projectsAgg[0]?.today ?? 0),
+    projectsToday: Number(projectsAgg[0]?.today ?? 0),
     projectsThisWeek: Number(projectsAgg[0]?.thisWeek ?? 0),
-    projectsTotal:    Number(projectsAgg[0]?.total ?? 0),
-    runsToday:        Number(runsAgg[0]?.today ?? 0),
-    runsThisWeek:     Number(runsAgg[0]?.thisWeek ?? 0),
+    projectsTotal: Number(projectsAgg[0]?.total ?? 0),
+    runsToday: Number(runsAgg[0]?.today ?? 0),
+    runsThisWeek: Number(runsAgg[0]?.thisWeek ?? 0),
     topProjectsThisWeek: topProjects.map((p) => ({ name: p.name, runs: Number(p.runs) })),
   };
 }
@@ -89,10 +89,7 @@ export async function FleetBriefCard({ userId }: { userId: string }) {
         icon={ScrollText}
         title="Fleet brief"
         right={
-          <Link
-            href="/activity"
-            className="ui-link-subtle gap-0.5"
-          >
+          <Link href="/activity" className="ui-link-subtle gap-0.5">
             See timeline
             <ArrowRight className="h-3 w-3" />
           </Link>
@@ -101,19 +98,28 @@ export async function FleetBriefCard({ userId }: { userId: string }) {
       <div className="space-y-4 p-4 pt-2">
         {totalEvents === 0 ? (
           <p className="text-sm text-text-muted">
-            Nothing happened on your fleet today. {stats.projectsTotal === 0
-              ? <>Start with <Link href="/control/new-from-scratch" className="text-accent-text underline">your first project →</Link></>
-              : <>Open <Link href="/control" className="text-accent-text underline">Control</Link> to dispatch an agent.</>
-            }
+            Nothing happened on your fleet today.{" "}
+            {stats.projectsTotal === 0 ? (
+              <>
+                Start with{" "}
+                <Link href="/control/new-from-scratch" className="text-accent-text underline">
+                  your first project →
+                </Link>
+              </>
+            ) : (
+              <>
+                Open{" "}
+                <Link href="/control" className="text-accent-text underline">
+                  Control
+                </Link>{" "}
+                to dispatch an agent.
+              </>
+            )}
           </p>
         ) : (
           <>
-            <p className="text-sm text-text-secondary">
-              Today: {summarizeToday(stats)}
-            </p>
-            <p className="text-sm text-text-secondary">
-              This week: {summarizeWeek(stats)}
-            </p>
+            <p className="text-sm text-text-secondary">Today: {summarizeToday(stats)}</p>
+            <p className="text-sm text-text-secondary">This week: {summarizeWeek(stats)}</p>
           </>
         )}
 
@@ -148,10 +154,15 @@ export async function FleetBriefCard({ userId }: { userId: string }) {
             <ul className="space-y-0.5">
               {stats.topProjectsThisWeek.map((p) => (
                 <li key={p.name} className="flex justify-between text-xs">
-                  <Link href={`/control?focus=${encodeURIComponent(p.name)}`} className="ui-tap text-text-primary hover:underline truncate">
+                  <Link
+                    href={`/control?focus=${encodeURIComponent(p.name)}`}
+                    className="ui-tap text-text-primary hover:underline truncate"
+                  >
                     {p.name}
                   </Link>
-                  <span className="text-text-tertiary shrink-0 ml-2">{p.runs} run{p.runs === 1 ? "" : "s"}</span>
+                  <span className="text-text-tertiary shrink-0 ml-2">
+                    {p.runs} run{p.runs === 1 ? "" : "s"}
+                  </span>
                 </li>
               ))}
             </ul>
@@ -164,15 +175,18 @@ export async function FleetBriefCard({ userId }: { userId: string }) {
 
 function summarizeToday(s: FleetBriefStats): string {
   const parts: string[] = [];
-  if (s.projectsToday > 0) parts.push(`${s.projectsToday} new project${s.projectsToday === 1 ? "" : "s"}`);
-  if (s.runsToday > 0)     parts.push(`${s.runsToday} agent run${s.runsToday === 1 ? "" : "s"}`);
+  if (s.projectsToday > 0)
+    parts.push(`${s.projectsToday} new project${s.projectsToday === 1 ? "" : "s"}`);
+  if (s.runsToday > 0) parts.push(`${s.runsToday} agent run${s.runsToday === 1 ? "" : "s"}`);
   return parts.length ? parts.join(" · ") : "no activity";
 }
 
 function summarizeWeek(s: FleetBriefStats): string {
   const parts: string[] = [];
-  if (s.projectsThisWeek > 0) parts.push(`${s.projectsThisWeek} new project${s.projectsThisWeek === 1 ? "" : "s"}`);
-  if (s.runsThisWeek > 0)     parts.push(`${s.runsThisWeek} agent run${s.runsThisWeek === 1 ? "" : "s"}`);
+  if (s.projectsThisWeek > 0)
+    parts.push(`${s.projectsThisWeek} new project${s.projectsThisWeek === 1 ? "" : "s"}`);
+  if (s.runsThisWeek > 0)
+    parts.push(`${s.runsThisWeek} agent run${s.runsThisWeek === 1 ? "" : "s"}`);
   return parts.length ? parts.join(" · ") : "quiet";
 }
 

@@ -28,7 +28,15 @@ export async function RecentRunsCard() {
   if (runs.length === 0 && dispatches.length === 0) {
     return (
       <Card>
-        <CardHeader icon={Bot} title="Recent Agent Work" right={<Link href={NAV.control.href} className="ui-link-subtle">Control →</Link>} />
+        <CardHeader
+          icon={Bot}
+          title="Recent Agent Work"
+          right={
+            <Link href={NAV.control.href} className="ui-link-subtle">
+              Control →
+            </Link>
+          }
+        />
         <p className="text-sm text-text-muted">No agent runs in the past 24 hours.</p>
       </Card>
     );
@@ -40,8 +48,18 @@ export async function RecentRunsCard() {
   if (runs.length === 0) {
     return (
       <Card>
-        <CardHeader icon={Bot} title="Recent Agent Work" right={<Link href={NAV.control.href} className="ui-link-subtle">Control →</Link>} />
-        <p className="text-xs text-text-muted mb-2">No completed orchestration runs yet — showing recent dispatches.</p>
+        <CardHeader
+          icon={Bot}
+          title="Recent Agent Work"
+          right={
+            <Link href={NAV.control.href} className="ui-link-subtle">
+              Control →
+            </Link>
+          }
+        />
+        <p className="text-xs text-text-muted mb-2">
+          No completed orchestration runs yet — showing recent dispatches.
+        </p>
         <div className="space-y-2">
           {dispatches.map((d) => {
             const custom = d.customPrompt?.trim();
@@ -50,7 +68,10 @@ export async function RecentRunsCard() {
             // way in both places — uppercase pill inline with project name,
             // body row reserved for free-form custom prompts only.
             return (
-              <div key={d.id} className="flex items-start gap-3 pb-2 last:pb-0 border-b border-border-subtle/50 last:border-0">
+              <div
+                key={d.id}
+                className="flex items-start gap-3 pb-2 last:pb-0 border-b border-border-subtle/50 last:border-0"
+              >
                 <Send className="h-3 w-3 mt-1 shrink-0 text-accent-text/70" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -64,10 +85,14 @@ export async function RecentRunsCard() {
                         {d.intent.replace(/_/g, " ")}
                       </span>
                     )}
-                    <span className="ml-auto text-xs text-text-muted shrink-0">{timeAgo(d.dispatchedAt.getTime())}</span>
+                    <span className="ml-auto text-xs text-text-muted shrink-0">
+                      {timeAgo(d.dispatchedAt.getTime())}
+                    </span>
                   </div>
                   {custom && (
-                    <p className="mt-0.5 text-xs text-text-tertiary leading-relaxed line-clamp-2">{custom}</p>
+                    <p className="mt-0.5 text-xs text-text-tertiary leading-relaxed line-clamp-2">
+                      {custom}
+                    </p>
                   )}
                 </div>
               </div>
@@ -90,7 +115,8 @@ export async function RecentRunsCard() {
     if (
       last &&
       last.latest.projectKey === run.projectKey &&
-      last.latest.finishedAt && run.finishedAt &&
+      last.latest.finishedAt &&
+      run.finishedAt &&
       last.latest.finishedAt.getTime() - run.finishedAt.getTime() <= CLUSTER_WINDOW_MS
     ) {
       last.count += 1;
@@ -101,71 +127,78 @@ export async function RecentRunsCard() {
 
   return (
     <Card>
-        <CardHeader
-          icon={Bot}
-          title="Recent Agent Work"
-          right={
-            <Link href={NAV.control.href} className="ui-link-subtle">
-              Control →
-            </Link>
-          }
-        />
-        <div className="space-y-2">
-          {clusters.map(({ latest: run, count }) => {
-            const health = run.summary?.health ?? "";
-            const healthShort = health ? getHealthShort(health) : "";
-            const tagCls = HEALTH_TAG_STYLE[healthShort];
-            const done = run.summary?.done ?? "";
-            const next = run.summary?.next ?? "";
+      <CardHeader
+        icon={Bot}
+        title="Recent Agent Work"
+        right={
+          <Link href={NAV.control.href} className="ui-link-subtle">
+            Control →
+          </Link>
+        }
+      />
+      <div className="space-y-2">
+        {clusters.map(({ latest: run, count }) => {
+          const health = run.summary?.health ?? "";
+          const healthShort = health ? getHealthShort(health) : "";
+          const tagCls = HEALTH_TAG_STYLE[healthShort];
+          const done = run.summary?.done ?? "";
+          const next = run.summary?.next ?? "";
 
-            return (
-              <div key={run.id} className="flex items-start gap-3 pb-2 last:pb-0 border-b border-border-subtle/50 last:border-0">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-medium text-text-secondary">{run.projectKey}</span>
-                    {count > 1 && (
-                      <span className="ui-badge inline-flex items-center gap-1" title={`${count} runs clustered`}>
-                        <Repeat className="h-2.5 w-2.5" />
-                        ×{count}
-                      </span>
-                    )}
-                    {tagCls && healthShort && (
-                      <span className={tagCls}>{healthShort}</span>
-                    )}
-                    {(() => {
-                      const usageLine = formatRunUsage(run);
-                      return usageLine ? (
-                        <span
-                          className="text-micro text-text-muted tabular-nums"
-                          title="Tokens (input incl. cache reads → output) · estimated cost at API list rates"
-                        >
-                          {usageLine}
-                        </span>
-                      ) : null;
-                    })()}
-                    <span className="ml-auto text-xs text-text-muted shrink-0">
-                      {run.finishedAt ? timeAgo(run.finishedAt.getTime()) : ""}
+          return (
+            <div
+              key={run.id}
+              className="flex items-start gap-3 pb-2 last:pb-0 border-b border-border-subtle/50 last:border-0"
+            >
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-medium text-text-secondary">{run.projectKey}</span>
+                  {count > 1 && (
+                    <span
+                      className="ui-badge inline-flex items-center gap-1"
+                      title={`${count} runs clustered`}
+                    >
+                      <Repeat className="h-2.5 w-2.5" />×{count}
                     </span>
-                  </div>
-                  {done && (
-                    <p className="mt-0.5 text-xs text-text-tertiary leading-relaxed line-clamp-2">{done}</p>
                   )}
-                  {next && (
-                    <div className="mt-1 flex items-start gap-1">
-                      <ArrowRight className="h-3 w-3 shrink-0 mt-0.5 text-accent-text/80" />
-                      <p className="flex-1 text-xs text-accent-text/80 leading-relaxed line-clamp-2">{next}</p>
-                      <LokiDispatchButton
-                        prompt={`Project: ${run.projectKey}\nAgent recommended next step: ${next}\n\nPlease help me execute this next step.`}
-                        title="Ask Loki to execute this next step"
-                      />
-                      <ControlDispatchButton tab={run.projectKey} />
-                    </div>
-                  )}
+                  {tagCls && healthShort && <span className={tagCls}>{healthShort}</span>}
+                  {(() => {
+                    const usageLine = formatRunUsage(run);
+                    return usageLine ? (
+                      <span
+                        className="text-micro text-text-muted tabular-nums"
+                        title="Tokens (input incl. cache reads → output) · estimated cost at API list rates"
+                      >
+                        {usageLine}
+                      </span>
+                    ) : null;
+                  })()}
+                  <span className="ml-auto text-xs text-text-muted shrink-0">
+                    {run.finishedAt ? timeAgo(run.finishedAt.getTime()) : ""}
+                  </span>
                 </div>
+                {done && (
+                  <p className="mt-0.5 text-xs text-text-tertiary leading-relaxed line-clamp-2">
+                    {done}
+                  </p>
+                )}
+                {next && (
+                  <div className="mt-1 flex items-start gap-1">
+                    <ArrowRight className="h-3 w-3 shrink-0 mt-0.5 text-accent-text/80" />
+                    <p className="flex-1 text-xs text-accent-text/80 leading-relaxed line-clamp-2">
+                      {next}
+                    </p>
+                    <LokiDispatchButton
+                      prompt={`Project: ${run.projectKey}\nAgent recommended next step: ${next}\n\nPlease help me execute this next step.`}
+                      title="Ask Loki to execute this next step"
+                    />
+                    <ControlDispatchButton tab={run.projectKey} />
+                  </div>
+                )}
               </div>
-            );
-          })}
-        </div>
-      </Card>
+            </div>
+          );
+        })}
+      </div>
+    </Card>
   );
 }

@@ -54,6 +54,9 @@ export async function GET() {
     return NextResponse.json({ repos, hasGithub: true });
   } catch (err) {
     console.error("[github/repos] upstream failed:", (err as Error).message);
-    return NextResponse.json({ error: "GitHub is unreachable right now", status: 502 }, { status: 502 });
+    return NextResponse.json(
+      { error: "GitHub is unreachable right now", status: 502 },
+      { status: 502 },
+    );
   }
 }

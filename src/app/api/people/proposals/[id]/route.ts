@@ -10,10 +10,7 @@ const Body = z.object({
   decision: z.enum(["accept", "discard"]),
 });
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const access = await requirePrivateApiAccess();
   if (access instanceof NextResponse) return access;
   const idOrResp = await readIdParam(params);

@@ -1,7 +1,20 @@
 import { db } from "@/db";
 import { actions } from "@/db/schema";
 import type { ActionPayload, NewAction } from "@/db/schema/actions";
-import { eq, and, desc, ne, sql, gt, lt, like, isNotNull, isNull, or, notInArray } from "drizzle-orm";
+import {
+  eq,
+  and,
+  desc,
+  ne,
+  sql,
+  gt,
+  lt,
+  like,
+  isNotNull,
+  isNull,
+  or,
+  notInArray,
+} from "drizzle-orm";
 import { ACTION_STATUS, type ActionType } from "@/lib/constants/statuses";
 import { BOOK_ACTION_TYPES } from "@/config/book";
 import { CHECKIN_TITLE_PREFIX } from "@/lib/actions/checkin-proposal";
@@ -26,7 +39,10 @@ export type ProposeActionInput = {
  * partial unique index idx_actions_unique_draft_title (userId, title WHERE status='draft'):
  * a re-proposal of an already-pending title is a no-op and returns null.
  */
-export async function proposeAction(userId: string, input: ProposeActionInput): Promise<ActionRow | null> {
+export async function proposeAction(
+  userId: string,
+  input: ProposeActionInput,
+): Promise<ActionRow | null> {
   const values: NewAction = {
     userId,
     type: input.type,
@@ -38,11 +54,7 @@ export async function proposeAction(userId: string, input: ProposeActionInput): 
     entityId: input.entityId ?? null,
     expiresAt: input.expiresAt ?? null,
   };
-  const [created] = await db
-    .insert(actions)
-    .values(values)
-    .onConflictDoNothing()
-    .returning();
+  const [created] = await db.insert(actions).values(values).onConflictDoNothing().returning();
   return created ?? null;
 }
 
@@ -55,7 +67,13 @@ export async function markActionExecuted(id: string, userId: string): Promise<Ac
   const [updated] = await db
     .update(actions)
     .set({ status: ACTION_STATUS.EXECUTED, executedAt: new Date() })
-    .where(and(eq(actions.id, id), eq(actions.userId, userId), eq(actions.status, ACTION_STATUS.APPROVED)))
+    .where(
+      and(
+        eq(actions.id, id),
+        eq(actions.userId, userId),
+        eq(actions.status, ACTION_STATUS.APPROVED),
+      ),
+    )
     .returning();
   return updated ?? null;
 }
@@ -134,7 +152,13 @@ export async function releaseActionClaim(id: string, userId: string): Promise<vo
   await db
     .update(actions)
     .set({ claimedAt: null })
-    .where(and(eq(actions.id, id), eq(actions.userId, userId), eq(actions.status, ACTION_STATUS.APPROVED)));
+    .where(
+      and(
+        eq(actions.id, id),
+        eq(actions.userId, userId),
+        eq(actions.status, ACTION_STATUS.APPROVED),
+      ),
+    );
 }
 
 /**
@@ -213,7 +237,9 @@ export type StaleDraftSummary = {
  * Already-expired drafts are excluded — they are dead weight, not a pending
  * decision, and nagging about them would train the operator to ignore the alert.
  */
-export async function getStaleDraftSummaries(olderThanMinutes: number): Promise<StaleDraftSummary[]> {
+export async function getStaleDraftSummaries(
+  olderThanMinutes: number,
+): Promise<StaleDraftSummary[]> {
   const rows = await db
     .select({
       userId: actions.userId,
@@ -256,11 +282,13 @@ export async function getPendingActions(userId: string) {
   return db
     .select()
     .from(actions)
-    .where(and(
-      eq(actions.userId, userId),
-      eq(actions.status, ACTION_STATUS.DRAFT),
-      notInArray(actions.type, [...BOOK_ACTION_TYPES]),
-    ))
+    .where(
+      and(
+        eq(actions.userId, userId),
+        eq(actions.status, ACTION_STATUS.DRAFT),
+        notInArray(actions.type, [...BOOK_ACTION_TYPES]),
+      ),
+    )
     .orderBy(desc(actions.createdAt));
 }
 
@@ -277,7 +305,9 @@ export async function approveAction(id: string, userId: string) {
   return db
     .update(actions)
     .set({ status: ACTION_STATUS.APPROVED, reviewedAt: new Date() })
-    .where(and(eq(actions.id, id), eq(actions.userId, userId), eq(actions.status, ACTION_STATUS.DRAFT)))
+    .where(
+      and(eq(actions.id, id), eq(actions.userId, userId), eq(actions.status, ACTION_STATUS.DRAFT)),
+    )
     .returning();
 }
 
@@ -291,7 +321,9 @@ export async function updateDraftPayload(id: string, userId: string, payload: Ac
   const [row] = await db
     .update(actions)
     .set({ payload })
-    .where(and(eq(actions.id, id), eq(actions.userId, userId), eq(actions.status, ACTION_STATUS.DRAFT)))
+    .where(
+      and(eq(actions.id, id), eq(actions.userId, userId), eq(actions.status, ACTION_STATUS.DRAFT)),
+    )
     .returning();
   return row ?? null;
 }
@@ -300,7 +332,9 @@ export async function rejectAction(id: string, userId: string) {
   return db
     .update(actions)
     .set({ status: ACTION_STATUS.REJECTED, reviewedAt: new Date() })
-    .where(and(eq(actions.id, id), eq(actions.userId, userId), eq(actions.status, ACTION_STATUS.DRAFT)))
+    .where(
+      and(eq(actions.id, id), eq(actions.userId, userId), eq(actions.status, ACTION_STATUS.DRAFT)),
+    )
     .returning();
 }
 
@@ -349,7 +383,10 @@ export async function countPendingCheckins(userId: string): Promise<number> {
  * re-proposed the next tick — only after the window lapses. Complements the
  * still-pending dedupe already enforced by proposeAction's unique-draft index.
  */
-export async function getEntityIdsWithRecentCheckin(userId: string, sinceDays: number): Promise<Set<string>> {
+export async function getEntityIdsWithRecentCheckin(
+  userId: string,
+  sinceDays: number,
+): Promise<Set<string>> {
   const rows = await db
     .selectDistinct({ entityId: actions.entityId })
     .from(actions)

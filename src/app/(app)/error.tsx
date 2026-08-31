@@ -25,7 +25,9 @@ export default function ErrorPage({
         source: "app-error-boundary",
       }),
       keepalive: true,
-    }).catch(() => { /* swallow */ });
+    }).catch(() => {
+      /* swallow */
+    });
   }, [error]);
 
   return (

@@ -42,19 +42,23 @@ export default async function SettingsPage() {
           stripeReady: isStripeReady(),
           hasSubscription: !!user.stripeSubscriptionId,
         }}
-        userPrefs={userPrefs ?? {
-          homeCity: null,
-          homeTimezone: null,
-          homeLocale: null,
-          currentCity: null,
-          currentTimezone: null,
-          currentCityUntil: null,
-          writingVoice: null,
-          memoryEnabled: true,
-        }}
+        userPrefs={
+          userPrefs ?? {
+            homeCity: null,
+            homeTimezone: null,
+            homeLocale: null,
+            currentCity: null,
+            currentTimezone: null,
+            currentCityUntil: null,
+            writingVoice: null,
+            memoryEnabled: true,
+          }
+        }
         projects={projects}
         teamProjects={teamProjects}
-        projectLimit={user.isDefault || isUnlimitedProjects(user.plan) ? null : getProjectLimit(user.plan)}
+        projectLimit={
+          user.isDefault || isUnlimitedProjects(user.plan) ? null : getProjectLimit(user.plan)
+        }
         invitations={invitations}
         orangecatEnabled={getEnabledAuthProviders().orangecat}
       />

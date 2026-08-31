@@ -38,7 +38,7 @@ export function formatDiagnostics(d: ReportDiagnostics): string {
 export function buildSuggestion(
   body: string,
   diagnostics: ReportDiagnostics | null,
-  maxLen: number
+  maxLen: number,
 ): string {
   const prose = body.trim();
   if (!diagnostics) return prose.slice(0, maxLen);

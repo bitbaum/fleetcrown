@@ -21,13 +21,19 @@ export const PatchHabitBody = z
     active: z.boolean().optional(),
   })
   .refine(
-    (v) => v.done !== undefined || v.title !== undefined || v.frequency !== undefined || v.active !== undefined,
+    (v) =>
+      v.done !== undefined ||
+      v.title !== undefined ||
+      v.frequency !== undefined ||
+      v.active !== undefined,
     { message: "done, title, frequency, or active is required" },
   );
 
 const todayDate = () => toLocalDateStr(new Date());
 
-function groupCompletionsByHabit(completions: { habitId: string; completedDate: string }[]): Map<string, Set<string>> {
+function groupCompletionsByHabit(
+  completions: { habitId: string; completedDate: string }[],
+): Map<string, Set<string>> {
   const map = new Map<string, Set<string>>();
   for (const c of completions) {
     if (!map.has(c.habitId)) map.set(c.habitId, new Set());
@@ -94,11 +100,22 @@ export async function getTodayHabits(userId: string): Promise<HabitWithStatus[]>
     const dates = byHabit.get(h.id) ?? new Set<string>();
     const doneToday = dates.has(today);
     const streak = computeStreak(dates, HABIT_HISTORY_DAYS, h.frequency);
-    return { id: h.id, title: h.title, frequency: h.frequency, sortOrder: h.sortOrder, doneToday, streak };
+    return {
+      id: h.id,
+      title: h.title,
+      frequency: h.frequency,
+      sortOrder: h.sortOrder,
+      doneToday,
+      streak,
+    };
   });
 }
 
-export async function toggleHabitCompletion(habitId: string, done: boolean, userId: string): Promise<void> {
+export async function toggleHabitCompletion(
+  habitId: string,
+  done: boolean,
+  userId: string,
+): Promise<void> {
   const today = todayDate();
   if (done) {
     await db
@@ -118,7 +135,11 @@ export async function toggleHabitCompletion(habitId: string, done: boolean, user
   }
 }
 
-export async function createHabit(title: string, frequency: HabitFrequency, userId: string): Promise<{ id: string; title: string }> {
+export async function createHabit(
+  title: string,
+  frequency: HabitFrequency,
+  userId: string,
+): Promise<{ id: string; title: string }> {
   const [maxOrder] = await db
     .select({ max: sql<number>`coalesce(max(${habits.sortOrder}), -1)` })
     .from(habits)
@@ -137,9 +158,7 @@ export async function createHabit(title: string, frequency: HabitFrequency, user
 }
 
 export async function deleteHabit(id: string, userId: string): Promise<void> {
-  await db
-    .delete(habits)
-    .where(and(eq(habits.id, id), eq(habits.userId, userId)));
+  await db.delete(habits).where(and(eq(habits.id, id), eq(habits.userId, userId)));
 }
 
 export type HabitWithHistory = {
@@ -154,7 +173,10 @@ export type HabitWithHistory = {
   streak: number;
 };
 
-export async function getAllHabitsWithHistory(userId: string, days = HABIT_HISTORY_DAYS): Promise<HabitWithHistory[]> {
+export async function getAllHabitsWithHistory(
+  userId: string,
+  days = HABIT_HISTORY_DAYS,
+): Promise<HabitWithHistory[]> {
   const allHabits = await db
     .select()
     .from(habits)
@@ -173,7 +195,10 @@ export async function getAllHabitsWithHistory(userId: string, days = HABIT_HISTO
     .where(
       and(
         eq(habitCompletions.userId, userId),
-        inArray(habitCompletions.habitId, allHabits.map((h) => h.id)),
+        inArray(
+          habitCompletions.habitId,
+          allHabits.map((h) => h.id),
+        ),
         sql`${habitCompletions.completedDate} >= ${sinceStr}`,
       ),
     );
@@ -203,9 +228,9 @@ export async function updateHabit(
   userId: string,
 ): Promise<void> {
   const set: Partial<typeof habits.$inferInsert> = {};
-  if (fields.title)              set.title     = fields.title.trim();
-  if (fields.frequency)          set.frequency = fields.frequency;
-  if (fields.active !== undefined) set.active  = fields.active;
+  if (fields.title) set.title = fields.title.trim();
+  if (fields.frequency) set.frequency = fields.frequency;
+  if (fields.active !== undefined) set.active = fields.active;
   if (Object.keys(set).length === 0) return;
   await db
     .update(habits)

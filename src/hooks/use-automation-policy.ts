@@ -41,33 +41,36 @@ export function useAutomationPolicy() {
     return () => window.removeEventListener(FLEETCROWN_REFRESH_EVENT, reload);
   }, [reload]);
 
-  const updateMode = useCallback(async (next: AutoInjectMode): Promise<FleetKickResult | null> => {
-    if (saving) return null;
-    const previous = mode;
-    setMode(next);
-    setSaving(true);
-    try {
-      const response = await patchJson("/api/beacon-settings", { auto_inject_mode: next });
-      if (!response.ok) {
+  const updateMode = useCallback(
+    async (next: AutoInjectMode): Promise<FleetKickResult | null> => {
+      if (saving) return null;
+      const previous = mode;
+      setMode(next);
+      setSaving(true);
+      try {
+        const response = await patchJson("/api/beacon-settings", { auto_inject_mode: next });
+        if (!response.ok) {
+          setMode(previous);
+          return null;
+        }
+        window.dispatchEvent(new CustomEvent(FLEETCROWN_REFRESH_EVENT));
+
+        if (previous === "off" && next === "on") {
+          const kickRes = await postJson("/api/control/fleet-kick", { source: "play_button" });
+          if (kickRes.ok) {
+            return (await kickRes.json()) as FleetKickResult;
+          }
+        }
+        return null;
+      } catch {
         setMode(previous);
         return null;
+      } finally {
+        setSaving(false);
       }
-      window.dispatchEvent(new CustomEvent(FLEETCROWN_REFRESH_EVENT));
-
-      if (previous === "off" && next === "on") {
-        const kickRes = await postJson("/api/control/fleet-kick", { source: "play_button" });
-        if (kickRes.ok) {
-          return (await kickRes.json()) as FleetKickResult;
-        }
-      }
-      return null;
-    } catch {
-      setMode(previous);
-      return null;
-    } finally {
-      setSaving(false);
-    }
-  }, [mode, saving]);
+    },
+    [mode, saving],
+  );
 
   return { mode, loaded, countdownSeconds, saving, updateMode };
 }

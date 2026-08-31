@@ -8,7 +8,12 @@ import { postJson } from "@/lib/api/fetch";
 import { useControlData } from "@/hooks/use-control-data";
 import { useLaunchModal } from "@/hooks/use-launch-modal";
 import { useCreateProject } from "@/hooks/use-create-project";
-import { buildControlPageState, buildProjectOperationsSnapshots, buildLiveTabRows, deriveFleetPulse } from "./control-presenter";
+import {
+  buildControlPageState,
+  buildProjectOperationsSnapshots,
+  buildLiveTabRows,
+  deriveFleetPulse,
+} from "./control-presenter";
 import { rememberFleetProject } from "@/lib/fleet-context";
 import { STATE_DEFINITIONS, deriveRunnerStateKey } from "@/lib/control-states";
 import { builderCompactLabel } from "@/lib/builder-presence";
@@ -20,10 +25,7 @@ import { ControlInbox } from "./ControlInbox";
 import { ControlSettingsSheet } from "./ControlSettingsSheet";
 import { RunnerStatusBanner } from "./RunnerStatusBanner";
 import { APP_NAME } from "@/config/brand";
-import {
-  ActivityLogPanel,
-  BrainConfigPanel,
-} from "./control-panel-helpers";
+import { ActivityLogPanel, BrainConfigPanel } from "./control-panel-helpers";
 import { ZellijLivePanel } from "./ZellijLivePanel";
 import { buildCardProps } from "./control-panel-card-props";
 import { LaunchTabModal, NewProjectModal } from "./control-panel-modals";
@@ -38,13 +40,32 @@ import type { AutoInjectMode } from "@/config/beacon";
 
 export function ControlPanel() {
   const {
-    data, lastUpdated, refreshing, error, setError,
-    selectedAgent, model,
-    switchableRegistry, selectedDefinition,
-    hasPendingChange, savingAgent, lastTabResults, lastTabResultsAt,
-    runtimeAvailable, runnerLastPushedAt, runnerVersion, runnerConnected, builderPresence,
-    refresh, inject, launchProject, runWithBrain, runCustomPrompt,
-    saveAgent, handleAgentSelect, handleModelChange,
+    data,
+    lastUpdated,
+    refreshing,
+    error,
+    setError,
+    selectedAgent,
+    model,
+    switchableRegistry,
+    selectedDefinition,
+    hasPendingChange,
+    savingAgent,
+    lastTabResults,
+    lastTabResultsAt,
+    runtimeAvailable,
+    runnerLastPushedAt,
+    runnerVersion,
+    runnerConnected,
+    builderPresence,
+    refresh,
+    inject,
+    launchProject,
+    runWithBrain,
+    runCustomPrompt,
+    saveAgent,
+    handleAgentSelect,
+    handleModelChange,
   } = useControlData();
 
   const [queuedNotice, setQueuedNotice] = useState<string | null>(null);
@@ -88,20 +109,39 @@ export function ControlPanel() {
     await postJson("/api/agent/install-cli", { agent: agentId }).catch(() => {});
   };
 
-  const launchableAgents = (data?.agentRegistry.agents ?? []).filter((entry) => entry.capabilities.tabSwitching);
+  const launchableAgents = (data?.agentRegistry.agents ?? []).filter(
+    (entry) => entry.capabilities.tabSwitching,
+  );
 
   const {
-    launchTarget, launchAgentId, launchInitialPrompt, launchingProject, launchError,
-    setLaunchTarget, setLaunchAgentId, setLaunchModel, setLaunchInitialPrompt,
-    openLaunchModal, confirmLaunch,
+    launchTarget,
+    launchAgentId,
+    launchInitialPrompt,
+    launchingProject,
+    launchError,
+    setLaunchTarget,
+    setLaunchAgentId,
+    setLaunchModel,
+    setLaunchInitialPrompt,
+    openLaunchModal,
+    confirmLaunch,
   } = useLaunchModal({ launchableAgents, selectedAgent, setError, launchProject });
 
   const {
-    newProjectOpen, setNewProjectOpen,
-    newName, setNewName, newDir, setNewDir, newGitUrl, setNewGitUrl,
-    creatingProject, createError, createAndLaunch,
+    newProjectOpen,
+    setNewProjectOpen,
+    newName,
+    setNewName,
+    newDir,
+    setNewDir,
+    newGitUrl,
+    setNewGitUrl,
+    creatingProject,
+    createError,
+    createAndLaunch,
   } = useCreateProject({ openLaunchModal, refresh });
-  const runnerAgoMs = lastUpdated && runnerLastPushedAt ? lastUpdated - new Date(runnerLastPushedAt).getTime() : null;
+  const runnerAgoMs =
+    lastUpdated && runnerLastPushedAt ? lastUpdated - new Date(runnerLastPushedAt).getTime() : null;
   // Presence is connection-based: an open runner↔bridge SSE connection
   // (runnerConnected === true) means online, full stop — the badge flips in
   // <1s without waiting on the heartbeat. ADDITIVE ROLLOUT: we do NOT treat
@@ -114,16 +154,15 @@ export function ControlPanel() {
   // runnerConnected === true → online (cloud builder and/or desktop app).
   // runnerConnected === false → offline even if a stale heartbeat exists.
   // null → fall back to heartbeat age until the SSE event arrives.
-  const runnerOffline = !runtimeAvailable && (
-    runnerConnected === false
-    || (runnerConnected !== true
-      && !(builderPresence?.cloud)
-      && runnerAgoMs !== null
-      && runnerAgoMs > RUNNER_OFFLINE_THRESHOLD_MS)
-  );
-  const runnerNeverSeen = !runtimeAvailable
-    && runnerConnected !== true
-    && runnerLastPushedAt === null;
+  const runnerOffline =
+    !runtimeAvailable &&
+    (runnerConnected === false ||
+      (runnerConnected !== true &&
+        !builderPresence?.cloud &&
+        runnerAgoMs !== null &&
+        runnerAgoMs > RUNNER_OFFLINE_THRESHOLD_MS));
+  const runnerNeverSeen =
+    !runtimeAvailable && runnerConnected !== true && runnerLastPushedAt === null;
   // Only hide cached runtime when the runner has never connected. When offline
   // but we have a last push, show last-known Working/Ready state with a stale label.
   const runtimeStateKnown = !runnerNeverSeen;
@@ -132,7 +171,9 @@ export function ControlPanel() {
     syncStale: runnerSyncStale,
     lastSyncedAt: runnerLastPushedAt,
   };
-  const pageState = data ? buildControlPageState(data, nowS, runtimeStateKnown, runnerSyncStale) : null;
+  const pageState = data
+    ? buildControlPageState(data, nowS, runtimeStateKnown, runnerSyncStale)
+    : null;
   const dashboard = pageState?.dashboard ?? null;
   const attention = pageState?.attention ?? [];
   // Truthful hero headline: what the fleet is actually doing, from live
@@ -154,14 +195,22 @@ export function ControlPanel() {
         const ageMs = finishedAt ? nowS * 1000 - Date.parse(finishedAt) : null;
         return { outcome, ageMs };
       })
-      .filter((r): r is { outcome: NonNullable<typeof r>["outcome"]; ageMs: number | null } => Boolean(r)),
+      .filter((r): r is { outcome: NonNullable<typeof r>["outcome"]; ageMs: number | null } =>
+        Boolean(r),
+      ),
   });
   const liveTabRows = useMemo(
     () => (data ? buildLiveTabRows(data.zellijTabs, data.projects, nowS, runnerSyncStale) : []),
     [data, nowS, runnerSyncStale],
   );
   const snapshots = data
-    ? buildProjectOperationsSnapshots(data.projects, data.zellijTabs, nowS, runtimeStateKnown, runtimeSyncCtx)
+    ? buildProjectOperationsSnapshots(
+        data.projects,
+        data.zellijTabs,
+        nowS,
+        runtimeStateKnown,
+        runtimeSyncCtx,
+      )
     : null;
 
   const failedCount = data?.failedCommands?.length ?? 0;
@@ -203,7 +252,9 @@ export function ControlPanel() {
     setLiveTargetTab(resolvedTab);
     if (liveDetailsRef.current) liveDetailsRef.current.open = true;
     livePanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    postJson("/api/control/focus-tab", { tab: resolvedTab }).catch(() => { /* best effort */ });
+    postJson("/api/control/focus-tab", { tab: resolvedTab }).catch(() => {
+      /* best effort */
+    });
 
     if (switchToParam && snapshot?.project.dir) {
       const label = switchableRegistry.find((e) => e.id === switchToParam)?.label ?? switchToParam;
@@ -229,7 +280,17 @@ export function ControlPanel() {
     params.delete("switchTo");
     const qs = params.toString();
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-  }, [focusParam, switchToParam, data, snapshots, liveTabRows, pathname, router, searchParams, switchableRegistry]);
+  }, [
+    focusParam,
+    switchToParam,
+    data,
+    snapshots,
+    liveTabRows,
+    pathname,
+    router,
+    searchParams,
+    switchableRegistry,
+  ]);
 
   // Build cardProps unconditionally — the closure is fine with empty arrays
   // when `data` hasn't loaded yet. ProjectOperationsView only invokes the
@@ -396,40 +457,46 @@ export function ControlPanel() {
           · All clear"). Hide it in the empty state; the welcome cards are
           the right surface there. Status panel returns as soon as projects
           exist. */}
-      {data && data.projects.length > 0 && <ControlFleetStatus
-        dashboard={dashboard}
-        failedCount={failedCount}
-        runnerNeverSeen={runnerNeverSeen}
-        runnerOffline={runnerOffline}
-        runnerStateUnknown={runnerNeverSeen}
-        runnerLastPushedAt={runnerLastPushedAt}
-        runnerVersion={runnerVersion}
-        builderVersions={data.builderVersions}
-        builderPresence={builderPresence}
-        runnerExecutionStall={data.runnerExecutionStall}
-        lastUpdated={lastUpdated}
-        fleetPulse={fleetPulse}
-        // Names, not just a count. "2 need you" that cannot say WHICH two, or
-        // take you to either, is a fact you then go hunting for by hand.
-        // `tab` IS the project's display name throughout Control (the rail,
-        // the cards and the terminal all key off it) — there is no separate
-        // title to prefer.
-        attentionProjects={attention.map((a) => ({ tab: a.project.tab, name: a.project.tab }))}
-        onFocusProject={(tab) => {
-          setSelectedTab(tab);
-          document.getElementById("control-projects")?.scrollIntoView({ behavior: "smooth", block: "start" });
-        }}
-        onOpenSettings={() => setFleetSettingsOpen(true)}
-        onNewProject={() => (runtimeAvailable ? setBootstrapOpen(true) : setNewProjectOpen(true))}
-        onFocusCategory={(category) => {
-          const match = snapshots?.find(
-            (s) => STATE_DEFINITIONS[s.phase].counterCategory === category,
-          );
-          if (!match) return;
-          setSelectedTab(match.project.tab);
-          document.getElementById("control-projects")?.scrollIntoView({ behavior: "smooth", block: "start" });
-        }}
-      />}
+      {data && data.projects.length > 0 && (
+        <ControlFleetStatus
+          dashboard={dashboard}
+          failedCount={failedCount}
+          runnerNeverSeen={runnerNeverSeen}
+          runnerOffline={runnerOffline}
+          runnerStateUnknown={runnerNeverSeen}
+          runnerLastPushedAt={runnerLastPushedAt}
+          runnerVersion={runnerVersion}
+          builderVersions={data.builderVersions}
+          builderPresence={builderPresence}
+          runnerExecutionStall={data.runnerExecutionStall}
+          lastUpdated={lastUpdated}
+          fleetPulse={fleetPulse}
+          // Names, not just a count. "2 need you" that cannot say WHICH two, or
+          // take you to either, is a fact you then go hunting for by hand.
+          // `tab` IS the project's display name throughout Control (the rail,
+          // the cards and the terminal all key off it) — there is no separate
+          // title to prefer.
+          attentionProjects={attention.map((a) => ({ tab: a.project.tab, name: a.project.tab }))}
+          onFocusProject={(tab) => {
+            setSelectedTab(tab);
+            document
+              .getElementById("control-projects")
+              ?.scrollIntoView({ behavior: "smooth", block: "start" });
+          }}
+          onOpenSettings={() => setFleetSettingsOpen(true)}
+          onNewProject={() => (runtimeAvailable ? setBootstrapOpen(true) : setNewProjectOpen(true))}
+          onFocusCategory={(category) => {
+            const match = snapshots?.find(
+              (s) => STATE_DEFINITIONS[s.phase].counterCategory === category,
+            );
+            if (!match) return;
+            setSelectedTab(match.project.tab);
+            document
+              .getElementById("control-projects")
+              ?.scrollIntoView({ behavior: "smooth", block: "start" });
+          }}
+        />
+      )}
 
       <ProjectOperationsView
         snapshots={snapshots}
@@ -458,10 +525,7 @@ export function ControlPanel() {
           per-project state; auto-opening this duplicated the same facts in a
           second layout (dogfood: read as broken / demo chrome). Open when you
           need Zellij quick-send or peek — not on every Control visit. */}
-      <details
-        ref={liveDetailsRef}
-        className="ui-control-live-details"
-      >
+      <details ref={liveDetailsRef} className="ui-control-live-details">
         <summary className="ui-control-live-details-summary">
           <span>Workspaces</span>
           <span className="ui-tag ui-tag-neutral text-micro">
@@ -496,24 +560,24 @@ export function ControlPanel() {
         <div className="ui-control-launch-defaults-body space-y-5">
           <section>
             <p className="mb-3 text-xs leading-relaxed text-text-tertiary">
-              These choices are used when {APP_NAME} opens a new terminal tab. CLI availability is reported by the connected computer, not by the cloud.
+              These choices are used when {APP_NAME} opens a new terminal tab. CLI availability is
+              reported by the connected computer, not by the cloud.
             </p>
-              <BrainConfigPanel
-                selectedAgent={selectedAgent}
-                switchableRegistry={switchableRegistry}
-                model={model}
-                hasPendingChange={hasPendingChange}
-                savingAgent={savingAgent}
-                selectedDefinition={selectedDefinition}
-                lastTabResults={lastTabResults}
-                lastTabResultsAt={lastTabResultsAt}
-                onAgentSelect={handleAgentSelect}
-                onModelChange={handleModelChange}
-                onSave={saveAgent}
-                onRequestInstall={requestAgentInstall}
-              />
+            <BrainConfigPanel
+              selectedAgent={selectedAgent}
+              switchableRegistry={switchableRegistry}
+              model={model}
+              hasPendingChange={hasPendingChange}
+              savingAgent={savingAgent}
+              selectedDefinition={selectedDefinition}
+              lastTabResults={lastTabResults}
+              lastTabResultsAt={lastTabResultsAt}
+              onAgentSelect={handleAgentSelect}
+              onModelChange={handleModelChange}
+              onSave={saveAgent}
+              onRequestInstall={requestAgentInstall}
+            />
           </section>
-
         </div>
       </details>
 
@@ -541,10 +605,18 @@ export function ControlPanel() {
               ? `Builder sync ${timeAgo(new Date(runnerLastPushedAt).getTime())}`
               : null
           }
-          versionDetail={[
-            data?.builderVersions?.cloud ? `cloud v${data.builderVersions.cloud.replace(/^box-/, "")}` : null,
-            data?.builderVersions?.local ? `app v${data.builderVersions.local.replace(/^box-/, "")}` : null,
-          ].filter(Boolean).join(" · ") || null}
+          versionDetail={
+            [
+              data?.builderVersions?.cloud
+                ? `cloud v${data.builderVersions.cloud.replace(/^box-/, "")}`
+                : null,
+              data?.builderVersions?.local
+                ? `app v${data.builderVersions.local.replace(/^box-/, "")}`
+                : null,
+            ]
+              .filter(Boolean)
+              .join(" · ") || null
+          }
         />
       )}
 
@@ -552,7 +624,10 @@ export function ControlPanel() {
         <BootstrapModal
           agentId={selectedAgent}
           agentModel={model}
-          onClose={async () => { setBootstrapOpen(false); await refresh(true); }}
+          onClose={async () => {
+            setBootstrapOpen(false);
+            await refresh(true);
+          }}
         />
       )}
 
@@ -591,7 +666,6 @@ export function ControlPanel() {
         />
       )}
 
-
       {error && <p className="ui-box-error">{error}</p>}
       {(queuedNotice || switchNotice) && (
         <div className="ui-control-notice">
@@ -599,7 +673,6 @@ export function ControlPanel() {
           {switchNotice ?? queuedNotice}
         </div>
       )}
-
     </div>
   );
 }

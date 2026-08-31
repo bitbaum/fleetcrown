@@ -33,7 +33,9 @@ readLocalEnv();
 
 const base = (process.env.BASE ?? "https://fleetcrown.orangecat.ch").replace(/\/$/, "");
 const headless = process.env.HEADLESS !== "0";
-const sessionToken = (process.env.FLEETCROWN_SESSION_TOKEN ?? process.env.COCKPIT_SESSION_TOKEN)?.trim();
+const sessionToken = (
+  process.env.FLEETCROWN_SESSION_TOKEN ?? process.env.COCKPIT_SESSION_TOKEN
+)?.trim();
 const smokePin = process.env.SMOKE_PRIVATE_PIN?.trim();
 // `name=value` from scripts/test/print-private-zone-cookie.ts. Without it the
 // private pages (/people, /habits, /money, /events) render their lock screen,
@@ -152,7 +154,7 @@ async function runG07(page) {
     status: null,
   };
 
-  const canDispatch = fullDispatchEnabled && await builderOnline(page);
+  const canDispatch = fullDispatchEnabled && (await builderOnline(page));
   if (!canDispatch) {
     fullDispatch.skipped = fullDispatchEnabled ? "builder offline" : "UI_FLOW_FULL_DISPATCH=0";
   } else {
@@ -166,8 +168,14 @@ async function runG07(page) {
     await page.locator("textarea").first().press("Enter");
 
     const status = await Promise.race([
-      page.getByText("Sent ✓").waitFor({ timeout: 120_000 }).then(() => "sent"),
-      page.getByText(/Fleet Runner is offline|Failed to run task/i).waitFor({ timeout: 120_000 }).then(() => "error"),
+      page
+        .getByText("Sent ✓")
+        .waitFor({ timeout: 120_000 })
+        .then(() => "sent"),
+      page
+        .getByText(/Fleet Runner is offline|Failed to run task/i)
+        .waitFor({ timeout: 120_000 })
+        .then(() => "error"),
     ]).catch(() => "timeout");
 
     fullDispatch.status = status;
@@ -240,7 +248,7 @@ async function runSt02(page) {
   });
   const accountsOk = accountsRes.ok();
   const accountCount = accountsOk
-    ? (await accountsRes.json().catch(() => ({})))?.accounts?.length ?? 0
+    ? ((await accountsRes.json().catch(() => ({})))?.accounts?.length ?? 0)
     : 0;
 
   return {
@@ -299,7 +307,8 @@ async function runX07(page) {
 
   let snippet = null;
   if (outcome === "result") {
-    snippet = (await page.locator("pre.ui-code-surface").last().textContent())?.trim().slice(0, 120) ?? "";
+    snippet =
+      (await page.locator("pre.ui-code-surface").last().textContent())?.trim().slice(0, 120) ?? "";
   } else if (outcome === "error") {
     snippet = (await page.locator(".ui-box-error").textContent())?.trim().slice(0, 120) ?? "";
   }

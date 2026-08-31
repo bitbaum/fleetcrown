@@ -1,7 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { PanelLeftOpen, PanelLeftClose, LogOut, Lock, Settings as SettingsIcon } from "lucide-react";
+import {
+  PanelLeftOpen,
+  PanelLeftClose,
+  LogOut,
+  Lock,
+  Settings as SettingsIcon,
+} from "lucide-react";
 import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import { usePrivateZone } from "@/hooks/use-private-zone";
@@ -25,9 +31,7 @@ export function SidebarFooter({
     <div className="ui-sidebar-section space-y-1 border-t border-border-subtle">
       <ThemeToggle
         showLabel={!collapsed}
-        className={cn(
-          collapsed ? "mx-auto" : "w-full justify-start ui-theme-cycle-btn-labeled",
-        )}
+        className={cn(collapsed ? "mx-auto" : "w-full justify-start ui-theme-cycle-btn-labeled")}
       />
       <button
         type="button"
@@ -39,9 +43,14 @@ export function SidebarFooter({
         title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
       >
-        {collapsed
-          ? <PanelLeftOpen className="h-4 w-4" />
-          : <><PanelLeftClose className="h-4 w-4 shrink-0" /><span>Collapse</span></>}
+        {collapsed ? (
+          <PanelLeftOpen className="h-4 w-4" />
+        ) : (
+          <>
+            <PanelLeftClose className="h-4 w-4 shrink-0" />
+            <span>Collapse</span>
+          </>
+        )}
       </button>
       <Link
         href={NAV.settings.href}

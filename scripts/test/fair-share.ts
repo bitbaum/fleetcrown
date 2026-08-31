@@ -93,7 +93,10 @@ check("a heavy early user cannot drain the day before anyone else wakes up", () 
 // ── the two refusals mean different things ───────────────────────────────────
 check("'paced' carries a retry; 'share-spent' does NOT", () => {
   const paced = ask({ activeUsers: 2, userSpentTokens: 30_000, dayElapsed: 1 / 3 });
-  assert(paced.reason === "paced" && typeof paced.retryAfterSeconds === "number", "paced needs a retry");
+  assert(
+    paced.reason === "paced" && typeof paced.retryAfterSeconds === "number",
+    "paced needs a retry",
+  );
 
   const spent = ask({ activeUsers: 2, userSpentTokens: 45_000, dayElapsed: 0.99 });
   assert(spent.reason === "share-spent", `expected share-spent, got ${spent.reason}`);
@@ -148,14 +151,20 @@ check("no capacity is reported as such, not as a share of zero", () => {
 check("a bad user count never divides by zero", () => {
   for (const activeUsers of [0, -3, Number.NaN]) {
     const d = ask({ activeUsers });
-    assert(Number.isFinite(d.shareTokens) && d.shareTokens > 0, `activeUsers=${activeUsers} → ${d.shareTokens}`);
+    assert(
+      Number.isFinite(d.shareTokens) && d.shareTokens > 0,
+      `activeUsers=${activeUsers} → ${d.shareTokens}`,
+    );
   }
 });
 
 check("a skewed clock cannot produce a negative or oversized allowance", () => {
   for (const dayElapsed of [-5, 42, Number.NaN]) {
     const d = ask({ activeUsers: 2, dayElapsed });
-    assert(d.allowanceTokens >= 0 && d.allowanceTokens <= d.shareTokens + 1e-9, `elapsed=${dayElapsed}`);
+    assert(
+      d.allowanceTokens >= 0 && d.allowanceTokens <= d.shareTokens + 1e-9,
+      `elapsed=${dayElapsed}`,
+    );
   }
 });
 

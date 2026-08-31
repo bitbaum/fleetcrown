@@ -26,14 +26,21 @@ export function PersonCard({
   let aliasHint = "";
   try {
     const raw = person.attrs.aliases;
-    const aliases = raw ? JSON.parse(raw) as unknown : [];
+    const aliases = raw ? (JSON.parse(raw) as unknown) : [];
     if (Array.isArray(aliases)) {
       aliasHint = aliases
-        .filter((a): a is string => typeof a === "string" && a.trim().length > 0 && a.trim().toLowerCase() !== person.name.toLowerCase())
+        .filter(
+          (a): a is string =>
+            typeof a === "string" &&
+            a.trim().length > 0 &&
+            a.trim().toLowerCase() !== person.name.toLowerCase(),
+        )
         .slice(0, 2)
         .join(" · ");
     }
-  } catch { /* stored as plain text */ }
+  } catch {
+    /* stored as plain text */
+  }
 
   const quickChannel = channels[0] ?? CHANNEL_NAMES[0] ?? "other";
 
@@ -47,7 +54,9 @@ export function PersonCard({
       : "No recorded interactions",
     "",
     "What do you know about this person from my knowledge graph? What would be a good next step with them?",
-  ].filter(Boolean).join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   const [logOpen, setLogOpen] = useState(false);
   const [channel, setChannel] = useState(CHANNEL_NAMES[0] ?? "whatsapp");
@@ -126,9 +135,17 @@ export function PersonCard({
               title={`${person.health}${person.lastInteraction ? ` — last ${formatDistanceToNow(person.lastInteraction, { addSuffix: true })}` : ""}`}
             />
             <div className="min-w-0">
-              <div className="truncate text-lg font-medium text-text-primary md:text-xl" title={person.name}>{person.name}</div>
+              <div
+                className="truncate text-lg font-medium text-text-primary md:text-xl"
+                title={person.name}
+              >
+                {person.name}
+              </div>
               {(profession || location || aliasHint) && (
-                <div className="mt-1 truncate text-base text-text-secondary" title={[profession, location, aliasHint].filter(Boolean).join(" · ")}>
+                <div
+                  className="mt-1 truncate text-base text-text-secondary"
+                  title={[profession, location, aliasHint].filter(Boolean).join(" · ")}
+                >
                   {[profession, location, aliasHint].filter(Boolean).join(" · ")}
                 </div>
               )}
@@ -172,9 +189,13 @@ export function PersonCard({
             title={`Log outbound via ${quickChannel}`}
           >
             {quickDone ? (
-              <><Check className="h-3 w-3 text-status-positive" /> Logged</>
+              <>
+                <Check className="h-3 w-3 text-status-positive" /> Logged
+              </>
             ) : quickSaving ? (
-              <><Loader2 className="ui-spinner-xs" /> …</>
+              <>
+                <Loader2 className="ui-spinner-xs" /> …
+              </>
             ) : (
               <>Log talk</>
             )}
@@ -214,23 +235,30 @@ export function PersonCard({
                   className="ui-input-tight"
                 >
                   {CHANNEL_NAMES.map((ch) => (
-                    <option key={ch} value={ch}>{ch}</option>
+                    <option key={ch} value={ch}>
+                      {ch}
+                    </option>
                   ))}
                 </select>
                 <div className="flex overflow-hidden rounded-xl border border-border-default bg-surface-overlay text-xs">
-                  {([INTERACTION_DIRECTION.OUTBOUND, INTERACTION_DIRECTION.INBOUND] as const).map((d) => (
-                    <button
-                      key={d}
-                      onClick={(e) => { e.stopPropagation(); setDirection(d); }}
-                      className={`px-3 py-1.5 transition-colors ${
-                        direction === d
-                          ? "bg-accent-muted text-accent-text"
-                          : "text-text-tertiary hover:text-text-primary"
-                      }`}
-                    >
-                      {d === INTERACTION_DIRECTION.OUTBOUND ? "out" : "in"}
-                    </button>
-                  ))}
+                  {([INTERACTION_DIRECTION.OUTBOUND, INTERACTION_DIRECTION.INBOUND] as const).map(
+                    (d) => (
+                      <button
+                        key={d}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDirection(d);
+                        }}
+                        className={`px-3 py-1.5 transition-colors ${
+                          direction === d
+                            ? "bg-accent-muted text-accent-text"
+                            : "text-text-tertiary hover:text-text-primary"
+                        }`}
+                      >
+                        {d === INTERACTION_DIRECTION.OUTBOUND ? "out" : "in"}
+                      </button>
+                    ),
+                  )}
                 </div>
               </div>
               <input
@@ -238,7 +266,11 @@ export function PersonCard({
                 onChange={(e) => setSummary(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") submitLog(e);
-                  if (e.key === "Escape") { e.stopPropagation(); setLogOpen(false); setSummary(""); }
+                  if (e.key === "Escape") {
+                    e.stopPropagation();
+                    setLogOpen(false);
+                    setSummary("");
+                  }
                 }}
                 placeholder="Optional note..."
                 autoFocus
@@ -254,12 +286,9 @@ export function PersonCard({
                   {saving ? <Loader2 className="ui-spinner-xs" /> : <Check className="h-3 w-3" />}
                   Log
                 </button>
-                  <button
-                    onClick={cancelLog}
-                    className="ui-link-subtle"
-                  >
-                    Cancel
-                  </button>
+                <button onClick={cancelLog} className="ui-link-subtle">
+                  Cancel
+                </button>
               </div>
             </>
           )}

@@ -3,19 +3,27 @@ import { homedir } from "os";
 import { readFile } from "fs/promises";
 import { requirePrivateApiAccess } from "@/lib/private-zone-api";
 import { IMPORT_SOURCE } from "@/config/book";
-import { parseContactResolver, parseKnowledgePeople, type ImportedContact } from "@/lib/people-import";
+import {
+  parseContactResolver,
+  parseKnowledgePeople,
+  type ImportedContact,
+} from "@/lib/people-import";
 import { applyImportedBook } from "@/db/queries/people-book";
 import { canImportSocial } from "@/config/actors";
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
 
 function resolverPath(): string {
-  return process.env.OPENCLAW_CONTACTS_PATH?.trim()
-    || `${homedir()}/.openclaw/workspace/data/contact-resolver.json`;
+  return (
+    process.env.OPENCLAW_CONTACTS_PATH?.trim() ||
+    `${homedir()}/.openclaw/workspace/data/contact-resolver.json`
+  );
 }
 
 function knowledgeJsonPath(): string {
-  return process.env.OPENCLAW_KNOWLEDGE_JSON?.trim()
-    || `${homedir()}/.openclaw/workspace/data/knowledge-people.json`;
+  return (
+    process.env.OPENCLAW_KNOWLEDGE_JSON?.trim() ||
+    `${homedir()}/.openclaw/workspace/data/knowledge-people.json`
+  );
 }
 
 async function readKnowledgePeople(): Promise<ImportedContact[]> {
@@ -57,10 +65,14 @@ export async function POST() {
   const fromKnowledge = await readKnowledgePeople();
   const contacts = [...fromResolver, ...fromKnowledge];
   if (contacts.length === 0) {
-    return NextResponse.json({
-      error: "OpenClaw book not on this server. Upload contact-resolver.json with Import address book.",
-      path: resolverPath(),
-    }, { status: 404 });
+    return NextResponse.json(
+      {
+        error:
+          "OpenClaw book not on this server. Upload contact-resolver.json with Import address book.",
+        path: resolverPath(),
+      },
+      { status: 404 },
+    );
   }
 
   let offset = 0;

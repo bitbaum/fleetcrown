@@ -24,8 +24,10 @@ process.env.ORANGECAT_WEBHOOK_SECRET = secret;
 async function main() {
   const { POST } = await import("../../src/app/api/orangecat/entitlement/route");
   const { NextRequest } = await import("next/server");
-  const { createUser, setUserOrangeCatActorId, getUserById } = await import("../../src/db/queries/users");
-  const { listOcBillingGrants, downgradeExpiredPlans } = await import("../../src/db/queries/billing-grants");
+  const { createUser, setUserOrangeCatActorId, getUserById } =
+    await import("../../src/db/queries/users");
+  const { listOcBillingGrants, downgradeExpiredPlans } =
+    await import("../../src/db/queries/billing-grants");
   const { db } = await import("../../src/db");
   const { users } = await import("../../src/db/schema");
   const { eq } = await import("drizzle-orm");
@@ -58,7 +60,12 @@ async function main() {
 
   try {
     // 1. Unlinked actor -> 200, granted:false, no user touched.
-    const unlinkedBody = { actorId: randomUUID(), plan: "pro", externalId: `${externalId}-unlinked`, periodDays: 30 };
+    const unlinkedBody = {
+      actorId: randomUUID(),
+      plan: "pro",
+      externalId: `${externalId}-unlinked`,
+      periodDays: 30,
+    };
     const unlinkedRes = await post(unlinkedBody, sign(JSON.stringify(unlinkedBody)));
     assert.equal(unlinkedRes.status, 200);
     const unlinkedJson = await unlinkedRes.json();
@@ -66,7 +73,10 @@ async function main() {
     assert.equal(unlinkedJson.reason, "no-linked-user");
 
     // 2. Invalid signature -> 401, nothing written.
-    const badRes = await post({ actorId, plan: "pro", externalId, periodDays: 30 }, "sha256=" + "0".repeat(64));
+    const badRes = await post(
+      { actorId, plan: "pro", externalId, periodDays: 30 },
+      "sha256=" + "0".repeat(64),
+    );
     assert.equal(badRes.status, 401);
 
     // 3. Genuine settlement -> 200, granted:true, plan + expiry set, ledger row written.
@@ -97,7 +107,10 @@ async function main() {
     assert.equal((await listOcBillingGrants(user.id)).length, 1, "no duplicate ledger row");
 
     // 5. Expiry sweep: backdate the grant, run the daily downgrade cron, confirm it flips to free.
-    await db.update(users).set({ planExpiresAt: new Date(Date.now() - 1000) }).where(eq(users.id, user.id));
+    await db
+      .update(users)
+      .set({ planExpiresAt: new Date(Date.now() - 1000) })
+      .where(eq(users.id, user.id));
     const downgraded = await downgradeExpiredPlans();
     assert.ok(downgraded >= 1, "sweep reports at least this user downgraded");
     const afterSweep = await getUserById(user.id);
@@ -105,7 +118,9 @@ async function main() {
     assert.equal(afterSweep?.planStatus, "canceled");
     assert.equal(afterSweep?.planExpiresAt, null);
 
-    console.log("OrangeCat entitlement end-to-end checks passed (signature verify, actor lookup, grant write, dedupe, expiry sweep).");
+    console.log(
+      "OrangeCat entitlement end-to-end checks passed (signature verify, actor lookup, grant write, dedupe, expiry sweep).",
+    );
   } finally {
     await db.delete(users).where(eq(users.id, user.id));
   }
@@ -114,6 +129,6 @@ async function main() {
 main()
   .then(() => process.exit(0))
   .catch((e) => {
-    console.error(e instanceof Error ? e.stack ?? e.message : e);
+    console.error(e instanceof Error ? (e.stack ?? e.message) : e);
     process.exit(1);
   });

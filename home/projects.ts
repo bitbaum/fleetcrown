@@ -54,8 +54,11 @@ export function projectsConfPath(): string {
 export function loadProjects(confPath: string = projectsConfPath()): Map<string, ProjectConfig> {
   const result = new Map<string, ProjectConfig>();
   let raw: string;
-  try { raw = fs.readFileSync(confPath, "utf8"); }
-  catch { return result; }  // missing file → empty registry
+  try {
+    raw = fs.readFileSync(confPath, "utf8");
+  } catch {
+    return result;
+  } // missing file → empty registry
 
   for (const line of raw.split("\n")) {
     const trimmed = line.trim();
@@ -66,9 +69,10 @@ export function loadProjects(confPath: string = projectsConfPath()): Map<string,
     // Only accept the 3rd field if it matches a known adapter. An unknown
     // value silently degrades to undefined so a typo doesn't poison
     // dispatches — the brain falls back to "claude" downstream.
-    const adapter = adapterRaw && (ADAPTERS as readonly string[]).includes(adapterRaw)
-      ? (adapterRaw as Adapter)
-      : undefined;
+    const adapter =
+      adapterRaw && (ADAPTERS as readonly string[]).includes(adapterRaw)
+        ? (adapterRaw as Adapter)
+        : undefined;
     result.set(name.toLowerCase(), { name, dirPath, adapter });
   }
   return result;
@@ -110,55 +114,91 @@ export function resolveProjectPath(
 
 function selfTest() {
   const tmpConf = path.join(os.tmpdir(), `home-projects-selftest-${process.pid}.conf`);
-  fs.writeFileSync(tmpConf, [
-    "# top-level comment",
-    "FleetCrown|/home/g/dev/fleetcrown",
-    "OrangeCat|/home/g/dev/orangecat|codex",      // 3rd field: codex adapter
-    "   ",                                          // blank line — should be skipped
-    "# inline comment",
-    "Tab With Spaces|/some/where",
-    "broken-line-no-separator",                    // should be skipped silently
-    "Bogus|/path|notarealadapter",                  // unknown 3rd field — silently dropped
-  ].join("\n"));
+  fs.writeFileSync(
+    tmpConf,
+    [
+      "# top-level comment",
+      "FleetCrown|/home/g/dev/fleetcrown",
+      "OrangeCat|/home/g/dev/orangecat|codex", // 3rd field: codex adapter
+      "   ", // blank line — should be skipped
+      "# inline comment",
+      "Tab With Spaces|/some/where",
+      "broken-line-no-separator", // should be skipped silently
+      "Bogus|/path|notarealadapter", // unknown 3rd field — silently dropped
+    ].join("\n"),
+  );
 
   try {
     const projects = loadProjects(tmpConf);
 
     const cases: { name: string; check: () => boolean }[] = [
-      { name: "loads 4 valid entries, skips comments and malformed lines",
-        check: () => projects.size === 4 },
-      { name: "case-insensitive lookup matches mixed-case names",
-        check: () => resolveProjectPath("FLEETCROWN", projects) === "/home/g/dev/fleetcrown" },
-      { name: "lowercase lookup also works",
-        check: () => resolveProjectPath("fleetcrown", projects) === "/home/g/dev/fleetcrown" },
-      { name: "tab name with embedded spaces resolves",
-        check: () => resolveProjectPath("Tab With Spaces", projects) === "/some/where" },
-      { name: "unknown project returns undefined",
-        check: () => resolveProjectPath("nonexistent", projects) === undefined },
-      { name: "preserves the original display-case in the ProjectConfig.name field",
-        check: () => projects.get("orangecat")?.name === "OrangeCat" },
-      { name: "missing conf file returns empty map without throwing",
-        check: () => loadProjects("/no/such/path").size === 0 },
-      { name: "3rd field 'codex' becomes ProjectConfig.adapter (per-project adapter override)",
-        check: () => projects.get("orangecat")?.adapter === "codex" },
-      { name: "resolveProjectAdapter returns the declared adapter",
-        check: () => resolveProjectAdapter("OrangeCat", projects) === "codex" },
-      { name: "two-field entries (no adapter declared) have adapter=undefined",
-        check: () => projects.get("fleetcrown")?.adapter === undefined },
-      { name: "unknown adapter value silently degrades to undefined (typo defence)",
-        check: () => projects.get("bogus")?.adapter === undefined
-                  && projects.get("bogus")?.dirPath === "/path" },
+      {
+        name: "loads 4 valid entries, skips comments and malformed lines",
+        check: () => projects.size === 4,
+      },
+      {
+        name: "case-insensitive lookup matches mixed-case names",
+        check: () => resolveProjectPath("FLEETCROWN", projects) === "/home/g/dev/fleetcrown",
+      },
+      {
+        name: "lowercase lookup also works",
+        check: () => resolveProjectPath("fleetcrown", projects) === "/home/g/dev/fleetcrown",
+      },
+      {
+        name: "tab name with embedded spaces resolves",
+        check: () => resolveProjectPath("Tab With Spaces", projects) === "/some/where",
+      },
+      {
+        name: "unknown project returns undefined",
+        check: () => resolveProjectPath("nonexistent", projects) === undefined,
+      },
+      {
+        name: "preserves the original display-case in the ProjectConfig.name field",
+        check: () => projects.get("orangecat")?.name === "OrangeCat",
+      },
+      {
+        name: "missing conf file returns empty map without throwing",
+        check: () => loadProjects("/no/such/path").size === 0,
+      },
+      {
+        name: "3rd field 'codex' becomes ProjectConfig.adapter (per-project adapter override)",
+        check: () => projects.get("orangecat")?.adapter === "codex",
+      },
+      {
+        name: "resolveProjectAdapter returns the declared adapter",
+        check: () => resolveProjectAdapter("OrangeCat", projects) === "codex",
+      },
+      {
+        name: "two-field entries (no adapter declared) have adapter=undefined",
+        check: () => projects.get("fleetcrown")?.adapter === undefined,
+      },
+      {
+        name: "unknown adapter value silently degrades to undefined (typo defence)",
+        check: () =>
+          projects.get("bogus")?.adapter === undefined &&
+          projects.get("bogus")?.dirPath === "/path",
+      },
     ];
 
-    let pass = 0, fail = 0;
+    let pass = 0,
+      fail = 0;
     for (const c of cases) {
-      if (c.check()) { console.log(`  ✓ ${c.name}`); pass++; }
-      else           { console.log(`  ✗ ${c.name}`); fail++; }
+      if (c.check()) {
+        console.log(`  ✓ ${c.name}`);
+        pass++;
+      } else {
+        console.log(`  ✗ ${c.name}`);
+        fail++;
+      }
     }
     console.log(`\n${pass}/${pass + fail} passed`);
     if (fail > 0) process.exit(1);
   } finally {
-    try { fs.unlinkSync(tmpConf); } catch { /* ignore */ }
+    try {
+      fs.unlinkSync(tmpConf);
+    } catch {
+      /* ignore */
+    }
   }
 }
 

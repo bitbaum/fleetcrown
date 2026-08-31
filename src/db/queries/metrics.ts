@@ -33,10 +33,12 @@ export async function getDispatchMetrics(userId: string) {
   const since = new Date(Date.now() - HOURS_24_MS);
 
   const [totals, failures, pending, latency] = await Promise.all([
-    db.select({ n: count() })
+    db
+      .select({ n: count() })
       .from(pendingCommands)
       .where(and(eq(pendingCommands.userId, userId), gte(pendingCommands.createdAt, since))),
-    db.select({ n: count() })
+    db
+      .select({ n: count() })
       .from(pendingCommands)
       .where(
         and(
@@ -48,12 +50,16 @@ export async function getDispatchMetrics(userId: string) {
           sql`${pendingCommands.result}->>'ok' = 'false'`,
         ),
       ),
-    db.select({ n: count() })
+    db
+      .select({ n: count() })
       .from(pendingCommands)
       .where(and(eq(pendingCommands.userId, userId), isNull(pendingCommands.executedAt))),
-    db.select({
-      avgMs: sql<number | null>`avg(extract(epoch from (${pendingCommands.executedAt} - ${pendingCommands.createdAt})) * 1000)`,
-    })
+    db
+      .select({
+        avgMs: sql<
+          number | null
+        >`avg(extract(epoch from (${pendingCommands.executedAt} - ${pendingCommands.createdAt})) * 1000)`,
+      })
       .from(pendingCommands)
       .where(
         and(

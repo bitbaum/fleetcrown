@@ -27,7 +27,10 @@ function loadEnvFile(file: string) {
     const idx = line.indexOf("=");
     const key = line.slice(0, idx).trim();
     if (process.env[key] !== undefined) continue;
-    process.env[key] = line.slice(idx + 1).trim().replace(/^['"]|['"]$/g, "");
+    process.env[key] = line
+      .slice(idx + 1)
+      .trim()
+      .replace(/^['"]|['"]$/g, "");
   }
 }
 
@@ -97,7 +100,9 @@ async function main() {
     `)) as unknown as Array<{ table_name: string; column_name: string }>;
     liveColumns = new Set(columnRows.map((r) => `${r.table_name}.${r.column_name}`));
   } catch (err) {
-    console.log(`→ schema-drift: database unreachable, skipping (${err instanceof Error ? err.message : String(err)})`);
+    console.log(
+      `→ schema-drift: database unreachable, skipping (${err instanceof Error ? err.message : String(err)})`,
+    );
     process.exit(0);
   }
 
@@ -106,18 +111,26 @@ async function main() {
 
   if (missing.length > 0 || missingColumns.length > 0) {
     if (missing.length > 0) {
-      console.error(`✗ schema-drift: ${missing.length} table(s) declared in src/db/schema are MISSING from the database:`);
+      console.error(
+        `✗ schema-drift: ${missing.length} table(s) declared in src/db/schema are MISSING from the database:`,
+      );
     }
     for (const t of missing) console.error(`    - ${t}`);
     if (missingColumns.length > 0) {
-      console.error(`✗ schema-drift: ${missingColumns.length} column(s) declared in src/db/schema are MISSING from the database:`);
+      console.error(
+        `✗ schema-drift: ${missingColumns.length} column(s) declared in src/db/schema are MISSING from the database:`,
+      );
     }
     for (const c of missingColumns) console.error(`    - ${c}`);
-    console.error("  On a local/scratch DB, run `npm run db:push` (drizzle-kit push) to create them before pushing.");
+    console.error(
+      "  On a local/scratch DB, run `npm run db:push` (drizzle-kit push) to create them before pushing.",
+    );
     process.exit(1);
   }
 
-  console.log(`✓ schema-drift: all ${declared.size} declared tables and ${declaredColumns.size} declared columns exist in the database.`);
+  console.log(
+    `✓ schema-drift: all ${declared.size} declared tables and ${declaredColumns.size} declared columns exist in the database.`,
+  );
   process.exit(0);
 }
 

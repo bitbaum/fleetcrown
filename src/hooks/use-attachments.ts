@@ -32,7 +32,9 @@ import {
 /** Identity for dedupe and removal. Two files with the same name and the same
  *  bytes are the same attachment however they arrived (picker, paste, drop). */
 function stageKey(a: StagedAttachment): string {
-  return a.kind === "image" ? `image:${a.name}:${a.dataBase64.length}` : `text:${a.name}:${a.content.length}`;
+  return a.kind === "image"
+    ? `image:${a.name}:${a.dataBase64.length}`
+    : `text:${a.name}:${a.content.length}`;
 }
 
 export type AttachmentsController = {
@@ -76,78 +78,98 @@ export function useAttachments(): AttachmentsController {
     });
   }, []);
 
-  const stageImage = useCallback((file: File) => {
-    if (!isImageMime(file.type)) {
-      setNote(`${file.name}: use PNG, JPEG, GIF, or WebP.`);
-      return;
-    }
-    if (file.size > MAX_IMAGE_BYTES) {
-      setNote(`${file.name} is too large (max ${Math.round(MAX_IMAGE_BYTES / 1_000_000)}MB).`);
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const previewUrl = URL.createObjectURL(file);
-      previewUrls.current.add(previewUrl);
-      add({
-        kind: "image",
-        name: file.name,
-        mimeType: file.type,
-        dataBase64: stripDataUrlBase64(String(reader.result ?? "")),
-        previewUrl,
-      });
-    };
-    reader.onerror = () => setNote(`Could not read ${file.name}.`);
-    reader.readAsDataURL(file);
-  }, [add]);
+  const stageImage = useCallback(
+    (file: File) => {
+      if (!isImageMime(file.type)) {
+        setNote(`${file.name}: use PNG, JPEG, GIF, or WebP.`);
+        return;
+      }
+      if (file.size > MAX_IMAGE_BYTES) {
+        setNote(`${file.name} is too large (max ${Math.round(MAX_IMAGE_BYTES / 1_000_000)}MB).`);
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        const previewUrl = URL.createObjectURL(file);
+        previewUrls.current.add(previewUrl);
+        add({
+          kind: "image",
+          name: file.name,
+          mimeType: file.type,
+          dataBase64: stripDataUrlBase64(String(reader.result ?? "")),
+          previewUrl,
+        });
+      };
+      reader.onerror = () => setNote(`Could not read ${file.name}.`);
+      reader.readAsDataURL(file);
+    },
+    [add],
+  );
 
-  const stageText = useCallback((file: File) => {
-    if (file.size > MAX_ATTACHMENT_CHARS) {
-      setNote(`${file.name} is too large (max ${Math.round(MAX_ATTACHMENT_CHARS / 1000)}k chars).`);
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () =>
-      add({ kind: "text", name: file.name, content: String(reader.result ?? "").slice(0, MAX_ATTACHMENT_CHARS) });
-    reader.onerror = () => setNote(`Could not read ${file.name}.`);
-    reader.readAsText(file);
-  }, [add]);
+  const stageText = useCallback(
+    (file: File) => {
+      if (file.size > MAX_ATTACHMENT_CHARS) {
+        setNote(
+          `${file.name} is too large (max ${Math.round(MAX_ATTACHMENT_CHARS / 1000)}k chars).`,
+        );
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () =>
+        add({
+          kind: "text",
+          name: file.name,
+          content: String(reader.result ?? "").slice(0, MAX_ATTACHMENT_CHARS),
+        });
+      reader.onerror = () => setNote(`Could not read ${file.name}.`);
+      reader.readAsText(file);
+    },
+    [add],
+  );
 
   // `count` mirrors attachments.length for the one thing an updater cannot do:
   // decide how many more files fit, from outside a render. Reading it from a
   // ref keeps addFiles free of a setState-inside-a-state-updater — a side
   // effect in a reducer, which React is entitled to run twice.
   const count = useRef(0);
-  useEffect(() => { count.current = attachments.length; }, [attachments.length]);
+  useEffect(() => {
+    count.current = attachments.length;
+  }, [attachments.length]);
 
-  const addFiles = useCallback((files: FileList | File[] | null) => {
-    if (!files) return;
-    setNote(null);
-    const room = MAX_ATTACHMENTS - count.current;
-    if (room <= 0) {
-      setNote(`Up to ${MAX_ATTACHMENTS} files.`);
-      return;
-    }
-    // Each stager appends asynchronously once its FileReader resolves; `add`
-    // enforces the ceiling again there, so a burst cannot overshoot.
-    for (const file of Array.from(files).slice(0, room)) {
-      if (isImageMime(file.type)) stageImage(file);
-      else stageText(file);
-    }
-  }, [stageImage, stageText]);
+  const addFiles = useCallback(
+    (files: FileList | File[] | null) => {
+      if (!files) return;
+      setNote(null);
+      const room = MAX_ATTACHMENTS - count.current;
+      if (room <= 0) {
+        setNote(`Up to ${MAX_ATTACHMENTS} files.`);
+        return;
+      }
+      // Each stager appends asynchronously once its FileReader resolves; `add`
+      // enforces the ceiling again there, so a burst cannot overshoot.
+      for (const file of Array.from(files).slice(0, room)) {
+        if (isImageMime(file.type)) stageImage(file);
+        else stageText(file);
+      }
+    },
+    [stageImage, stageText],
+  );
 
-  const addFromPaste = useCallback((e: React.ClipboardEvent) => {
-    const items = e.clipboardData?.items;
-    if (!items) return false;
-    const images = Array.from(items).filter((i) => i.type.startsWith("image/"));
-    if (images.length === 0) return false;
-    setNote(null);
-    for (const item of images) {
-      const file = item.getAsFile();
-      if (file) stageImage(file);
-    }
-    return true;
-  }, [stageImage]);
+  const addFromPaste = useCallback(
+    (e: React.ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return false;
+      const images = Array.from(items).filter((i) => i.type.startsWith("image/"));
+      if (images.length === 0) return false;
+      setNote(null);
+      for (const item of images) {
+        const file = item.getAsFile();
+        if (file) stageImage(file);
+      }
+      return true;
+    },
+    [stageImage],
+  );
 
   const remove = useCallback((key: string) => {
     setAttachments((prev) => {

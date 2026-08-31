@@ -78,13 +78,17 @@ assert.deepEqual(
   // not to do, and a check that reads its own counter-example fires on the
   // explanation instead of the code.
   const hook = readFileSync(".husky/pre-commit", "utf8")
-    .split("\n").map((l) => l.split("#")[0]).join("\n");
+    .split("\n")
+    .map((l) => l.split("#")[0])
+    .join("\n");
   assert.match(
-    hook, /git diff --cached -z[^|\n]*\|\s*xargs -0/,
+    hook,
+    /git diff --cached -z[^|\n]*\|\s*xargs -0/,
     ".husky/pre-commit no longer pipes its -z file list into xargs -0",
   );
   assert.doesNotMatch(
-    hook, /staged=\$\(git diff/,
+    hook,
+    /staged=\$\(git diff/,
     ".husky/pre-commit went back to capturing the file list in a command substitution",
   );
 }

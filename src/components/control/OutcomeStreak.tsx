@@ -101,7 +101,9 @@ export function OutcomeStreak({
   const summary = summarize(outcomes);
   const body = (
     <>
-      <span className="flex items-center gap-1" aria-hidden="true">{glyphs}</span>
+      <span className="flex items-center gap-1" aria-hidden="true">
+        {glyphs}
+      </span>
       <span className="ui-streak-summary">{summary}</span>
     </>
   );

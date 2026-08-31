@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { execSync } from "child_process";
-import { readAgentPreferences, resolveAgentConfig, writeAgentPreferences } from "@/lib/agent-preferences";
+import {
+  readAgentPreferences,
+  resolveAgentConfig,
+  writeAgentPreferences,
+} from "@/lib/agent-preferences";
 import { buildSwitchableAgentCatalog, type AgentCatalog } from "@/lib/agent-catalog";
 import { buildAgentLaunchCommand, AGENT_IDS, type Agent } from "@/lib/agent-registry";
 import { shellEscape } from "@/lib/zellij";
@@ -39,7 +43,11 @@ export async function GET() {
   return NextResponse.json({ registry, config });
 }
 
-function applyToOpenTabs(agent: Agent, model: string, allProjects: { tab: string; dir: string }[]): SwitchTabResult[] {
+function applyToOpenTabs(
+  agent: Agent,
+  model: string,
+  allProjects: { tab: string; dir: string }[],
+): SwitchTabResult[] {
   try {
     execSync("command -v zellij >/dev/null 2>&1");
   } catch {
@@ -48,7 +56,9 @@ function applyToOpenTabs(agent: Agent, model: string, allProjects: { tab: string
 
   let openTabs: string[] = [];
   try {
-    const out = execSync("zellij action query-tab-names 2>/dev/null || true", { encoding: "utf-8" });
+    const out = execSync("zellij action query-tab-names 2>/dev/null || true", {
+      encoding: "utf-8",
+    });
     const ansiRe = /\x1b\[[0-9;]*m/g;
     openTabs = out
       .split("\n")
@@ -76,7 +86,13 @@ function applyToOpenTabs(agent: Agent, model: string, allProjects: { tab: string
       execSync("zellij action write 13");
       return { tab, dir, command, status: "restarted" as const };
     } catch (error) {
-      return { tab, dir, command, status: "failed" as const, error: error instanceof Error ? error.message : String(error) };
+      return {
+        tab,
+        dir,
+        command,
+        status: "failed" as const,
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
   });
 }
@@ -137,7 +153,12 @@ export async function POST(req: NextRequest) {
                 });
                 return { tab, dir, status: "queued" as const };
               } catch (err) {
-                return { tab, dir, status: "failed" as const, error: err instanceof Error ? err.message : String(err) };
+                return {
+                  tab,
+                  dir,
+                  status: "failed" as const,
+                  error: err instanceof Error ? err.message : String(err),
+                };
               }
             }),
           );
@@ -154,9 +175,12 @@ export async function POST(req: NextRequest) {
       tabResults,
     });
   } catch (error) {
-    return NextResponse.json({
-      ok: false,
-      error: error instanceof Error ? error.message : String(error),
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        ok: false,
+        error: error instanceof Error ? error.message : String(error),
+      },
+      { status: 500 },
+    );
   }
 }

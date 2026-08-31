@@ -74,18 +74,21 @@ export async function createBeaconSession(input: {
   gitBranch?: string | null;
 }): Promise<string> {
   const expiresAt = new Date(Date.now() + PENDING_TTL_MS);
-  const [row] = await db.insert(beaconSessions).values({
-    userId: input.userId,
-    project: input.project,
-    sessionContent: input.sessionContent ?? "",
-    currentAgent: input.currentAgent ?? null,
-    nextAgent: input.nextAgent ?? null,
-    capacityIssue: input.capacityIssue ?? false,
-    countdownSeconds: input.countdownSeconds,
-    popupMode: input.popupMode,
-    gitBranch: input.gitBranch ?? null,
-    expiresAt,
-  }).returning({ id: beaconSessions.id });
+  const [row] = await db
+    .insert(beaconSessions)
+    .values({
+      userId: input.userId,
+      project: input.project,
+      sessionContent: input.sessionContent ?? "",
+      currentAgent: input.currentAgent ?? null,
+      nextAgent: input.nextAgent ?? null,
+      capacityIssue: input.capacityIssue ?? false,
+      countdownSeconds: input.countdownSeconds,
+      popupMode: input.popupMode,
+      gitBranch: input.gitBranch ?? null,
+      expiresAt,
+    })
+    .returning({ id: beaconSessions.id });
   return row.id;
 }
 
@@ -103,11 +106,13 @@ export async function getLatestPendingSession(userId: string): Promise<BeaconSes
   const rows = await db
     .select()
     .from(beaconSessions)
-    .where(and(
-      eq(beaconSessions.userId, userId),
-      isNull(beaconSessions.choice),
-      gt(beaconSessions.expiresAt, new Date()),
-    ))
+    .where(
+      and(
+        eq(beaconSessions.userId, userId),
+        isNull(beaconSessions.choice),
+        gt(beaconSessions.expiresAt, new Date()),
+      ),
+    )
     .orderBy(desc(beaconSessions.createdAt))
     .limit(1);
   return rows[0] ? rowToSession(rows[0]) : null;
@@ -121,12 +126,14 @@ export async function cancelActiveBeaconSessions(userId: string, project: string
   const rows = await db
     .update(beaconSessions)
     .set({ choice: "" })
-    .where(and(
-      eq(beaconSessions.userId, userId),
-      eq(beaconSessions.project, project),
-      isNull(beaconSessions.choice),
-      gt(beaconSessions.expiresAt, new Date()),
-    ))
+    .where(
+      and(
+        eq(beaconSessions.userId, userId),
+        eq(beaconSessions.project, project),
+        isNull(beaconSessions.choice),
+        gt(beaconSessions.expiresAt, new Date()),
+      ),
+    )
     .returning({ id: beaconSessions.id });
   return rows.length;
 }

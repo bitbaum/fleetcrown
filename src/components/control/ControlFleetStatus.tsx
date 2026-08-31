@@ -5,10 +5,7 @@ import { ArrowRight, Plus, Radio, Settings2, WifiOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { timeAgo } from "@/lib/dates";
 import type { ControlDashboardState, FleetPulse } from "./control-presenter";
-import {
-  RUNNER_STATE_DEFINITIONS,
-  deriveRunnerStateKey,
-} from "@/lib/control-states";
+import { RUNNER_STATE_DEFINITIONS, deriveRunnerStateKey } from "@/lib/control-states";
 import { builderCompactLabel, builderPresenceDetail } from "@/lib/builder-presence";
 import type { BuilderChannelPresence } from "@/lib/builder-presence";
 import { EXECUTOR_COPY } from "@/config/executor-copy";
@@ -93,9 +90,9 @@ export function ControlFleetStatus({
   // so "1 working · … · 1 tabs open" described the SAME project twice and
   // disagreed with the rail's "0 idle". Now header and rail show identical
   // numbers.
-  const ready = dashboard?.waitingCount ?? 0;     // agent done, awaiting next step
+  const ready = dashboard?.waitingCount ?? 0; // agent done, awaiting next step
   const working = dashboard?.runningCount ?? 0;
-  const idle = dashboard?.idleCount ?? 0;         // inert: not_running / tab_open / closing / completed
+  const idle = dashboard?.idleCount ?? 0; // inert: not_running / tab_open / closing / completed
   // Before the runner's first push every project reads `offline`, so the triad
   // is 0/0/0 — which is also exactly the "All clear" condition. Say "checking"
   // instead of announcing a calm fleet we know nothing about.
@@ -111,11 +108,12 @@ export function ControlFleetStatus({
   });
   const runnerDef = RUNNER_STATE_DEFINITIONS[runnerStateKey];
 
-  const syncDetail = !runnerNeverSeen && runnerLastPushedAt
-    ? `sync ${timeAgo(new Date(runnerLastPushedAt).getTime())}`
-    : lastUpdated
-      ? `page ${timeAgo(lastUpdated)}`
-      : null;
+  const syncDetail =
+    !runnerNeverSeen && runnerLastPushedAt
+      ? `sync ${timeAgo(new Date(runnerLastPushedAt).getTime())}`
+      : lastUpdated
+        ? `page ${timeAgo(lastUpdated)}`
+        : null;
   // Append the connected builders' reported versions so the user can confirm
   // which builds are live (helps diagnose stale-runner bugs). Per channel:
   // two builders can be online at once, and collapsing them to one string
@@ -123,17 +121,23 @@ export function ControlFleetStatus({
   // vbox-0.8.9" and the semver-shaped lie "vdev". A genuine dev build is
   // labeled honestly instead of dressed up as a version number.
   const fmtVersion = (v: string) => (v === "dev" ? "dev build" : `v${v.replace(/^box-/, "")}`);
-  const versionDetail = runnerStateKey === "connected"
-    ? [
-        builderVersions?.cloud ? `cloud ${fmtVersion(builderVersions.cloud)}` : null,
-        builderVersions?.local ? `app ${fmtVersion(builderVersions.local)}` : null,
-      ].filter(Boolean).join(" · ")
-      || (runnerVersion ? `${EXECUTOR_COPY.builder.versionPrefix} ${fmtVersion(runnerVersion)}` : null)
-    : null;
+  const versionDetail =
+    runnerStateKey === "connected"
+      ? [
+          builderVersions?.cloud ? `cloud ${fmtVersion(builderVersions.cloud)}` : null,
+          builderVersions?.local ? `app ${fmtVersion(builderVersions.local)}` : null,
+        ]
+          .filter(Boolean)
+          .join(" · ") ||
+        (runnerVersion
+          ? `${EXECUTOR_COPY.builder.versionPrefix} ${fmtVersion(runnerVersion)}`
+          : null)
+      : null;
   const compactLabel = builderCompactLabel(runnerStateKey, runnerVersion, builderPresence);
-  const presenceDetail = builderPresence && runnerStateKey === "connected"
-    ? builderPresenceDetail(builderPresence)
-    : null;
+  const presenceDetail =
+    builderPresence && runnerStateKey === "connected"
+      ? builderPresenceDetail(builderPresence)
+      : null;
   // Split, because these two are not the same kind of fact. Sync age and
   // presence are STATUS — they answer "is what I'm reading true right now?",
   // which is the first question anyone has about a dashboard. Build versions
@@ -145,15 +149,17 @@ export function ControlFleetStatus({
   const runnerDetail = [syncDetail, presenceDetail].filter(Boolean).join(" · ") || null;
   const runnerTitle = [runnerDef.description, versionDetail].filter(Boolean).join(" — ");
 
-  const RunnerIcon = runnerStateKey === "setup_needed" || runnerStateKey === "offline" ? WifiOff : Radio;
+  const RunnerIcon =
+    runnerStateKey === "setup_needed" || runnerStateKey === "offline" ? WifiOff : Radio;
   // A connected runner with a genuine execution stall must not read plain
   // green: "online · sync just now" is the push channel, and it being healthy
   // is exactly how a hung command loop masquerades as fine. The pulse below
   // carries the full stall story; this line just stops contradicting it.
   const executionStalled = Boolean(runnerExecutionStall?.stalled);
-  const runnerTone = runnerStateKey === "connected" && !executionStalled
-    ? "ui-control-fleet-runner-ok"
-    : "ui-control-fleet-runner-warn";
+  const runnerTone =
+    runnerStateKey === "connected" && !executionStalled
+      ? "ui-control-fleet-runner-ok"
+      : "ui-control-fleet-runner-warn";
 
   // Compact status word for this header card. The full headline + the
   // "commands queue until it reconnects" explanation + the remediation CTA
@@ -163,11 +169,12 @@ export function ControlFleetStatus({
   // rides along as the hover tooltip for the curious.
   const isStale = runnerOffline || runnerStateUnknown;
   const staleClass = isStale ? "opacity-60" : "";
-  const staleTitle = isStale && runnerLastPushedAt
-    ? `From last sync (${timeAgo(new Date(runnerLastPushedAt).getTime())}) — may be out of date`
-    : isStale
-      ? EXECUTOR_COPY.builder.staleSync
-      : undefined;
+  const staleTitle =
+    isStale && runnerLastPushedAt
+      ? `From last sync (${timeAgo(new Date(runnerLastPushedAt).getTime())}) — may be out of date`
+      : isStale
+        ? EXECUTOR_COPY.builder.staleSync
+        : undefined;
 
   // ── What this card is allowed to say ──────────────────────────────────────
   //
@@ -213,15 +220,15 @@ export function ControlFleetStatus({
             text: `${failedCount} dispatch${failedCount === 1 ? "" : "es"} failed`,
             sub: "Retry or dismiss them below.",
           }
-      : fleetPulse.key === "failing" || fleetPulse.key === "stalled"
-        ? { dot: "ui-dot-negative", text: fleetPulse.label, sub: fleetPulse.detail }
-        : working > 0
-          ? {
-              dot: "ui-dot-positive animate-pulse",
-              text: fleetPulse.label,
-              sub: `${working} agent${working === 1 ? "" : "s"} working`,
-            }
-          : { dot: "ui-dot-neutral", text: fleetPulse.label, sub: fleetPulse.detail };
+        : fleetPulse.key === "failing" || fleetPulse.key === "stalled"
+          ? { dot: "ui-dot-negative", text: fleetPulse.label, sub: fleetPulse.detail }
+          : working > 0
+            ? {
+                dot: "ui-dot-positive animate-pulse",
+                text: fleetPulse.label,
+                sub: `${working} agent${working === 1 ? "" : "s"} working`,
+              }
+            : { dot: "ui-dot-neutral", text: fleetPulse.label, sub: fleetPulse.detail };
 
   // At most one. A card with two equally-weighted buttons has no primary, and
   // this card's whole job is to make the next step obvious.
@@ -288,7 +295,11 @@ export function ControlFleetStatus({
       ) : failedCount > 0 ? (
         <button
           type="button"
-          onClick={() => document.getElementById("control-attention")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+          onClick={() =>
+            document
+              .getElementById("control-attention")
+              ?.scrollIntoView({ behavior: "smooth", block: "start" })
+          }
           className="ui-hero-action ui-btn-primary"
         >
           Review failed dispatches
@@ -319,9 +330,16 @@ export function ControlFleetStatus({
           </span>
         </span>
         {countsKnown && (
-          <span className={cn("ui-hero-counts", staleClass)} title={staleTitle ?? COUNT_SCOPE_TITLE}>
+          <span
+            className={cn("ui-hero-counts", staleClass)}
+            title={staleTitle ?? COUNT_SCOPE_TITLE}
+          >
             {working > 0 && onFocusCategory ? (
-              <button type="button" onClick={() => onFocusCategory("working")} className="ui-hero-count-link">
+              <button
+                type="button"
+                onClick={() => onFocusCategory("working")}
+                className="ui-hero-count-link"
+              >
                 {working} working
               </button>
             ) : (
@@ -329,13 +347,18 @@ export function ControlFleetStatus({
             )}
             {" · "}
             {ready > 0 && onFocusCategory ? (
-              <button type="button" onClick={() => onFocusCategory("waiting")} className="ui-hero-count-link">
+              <button
+                type="button"
+                onClick={() => onFocusCategory("waiting")}
+                className="ui-hero-count-link"
+              >
                 {ready} awaiting input
               </button>
             ) : (
               <>{ready} awaiting input</>
             )}
-            {" · "}{idle} idle
+            {" · "}
+            {idle} idle
           </span>
         )}
         {versionDetail && <span className="ui-hero-sync hidden sm:inline">{versionDetail}</span>}

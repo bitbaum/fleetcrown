@@ -69,49 +69,58 @@ export default async function TodayPage() {
   const isFirstRun = projects.length === 0 && orgProjects.length === 0;
   return (
     <PullToRefresh>
-    <div className="app-page max-w-4xl space-y-6">
-      <div>
-        <Greeting name={name} />
-        {isFirstRun && (
-          <div className="ui-callout-accent mt-4">
-            <LayoutGrid className="mt-0.5 h-5 w-5 shrink-0 text-accent-text" />
-            <div className="min-w-0 flex-1">
-              <p className="font-medium text-text-primary">{FIRST_RUN.title}</p>
-              <p className="mt-0.5 text-sm text-text-secondary">{FIRST_RUN.body}</p>
-              <Link href={NAV.control.href} className="mt-3 inline-flex items-center ui-tap gap-1.5 text-sm font-medium text-accent-text hover:opacity-80 transition-opacity">
-                {FIRST_RUN.cta} →
-              </Link>
+      <div className="app-page max-w-4xl space-y-6">
+        <div>
+          <Greeting name={name} />
+          {isFirstRun && (
+            <div className="ui-callout-accent mt-4">
+              <LayoutGrid className="mt-0.5 h-5 w-5 shrink-0 text-accent-text" />
+              <div className="min-w-0 flex-1">
+                <p className="font-medium text-text-primary">{FIRST_RUN.title}</p>
+                <p className="mt-0.5 text-sm text-text-secondary">{FIRST_RUN.body}</p>
+                <Link
+                  href={NAV.control.href}
+                  className="mt-3 inline-flex items-center ui-tap gap-1.5 text-sm font-medium text-accent-text hover:opacity-80 transition-opacity"
+                >
+                  {FIRST_RUN.cta} →
+                </Link>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+          {!isFirstRun && (
+            <>
+              <Suspense
+                fallback={
+                  <div className="mt-2">
+                    <SummaryBarSkeleton />
+                  </div>
+                }
+              >
+                <div className="mt-2">
+                  <SummaryBar />
+                </div>
+              </Suspense>
+              <div className="mt-3 ui-quick-actions-row ui-scroll-fade-right">
+                <DayPhaseDispatch />
+                <LogConversationButton />
+              </div>
+            </>
+          )}
+        </div>
+
         {!isFirstRun && (
           <>
-        <Suspense fallback={<div className="mt-2"><SummaryBarSkeleton /></div>}>
-          <div className="mt-2">
-            <SummaryBar />
-          </div>
-        </Suspense>
-        <div className="mt-3 ui-quick-actions-row ui-scroll-fade-right">
-          <DayPhaseDispatch />
-          <LogConversationButton />
-        </div>
-          </>
-        )}
-      </div>
+            <Suspense fallback={null}>
+              <LockedZoneBanner />
+            </Suspense>
 
-      {!isFirstRun && (
-      <>
-      <Suspense fallback={null}>
-        <LockedZoneBanner />
-      </Suspense>
-
-      {/* Loki's proactive read on the private zone — one thing to focus on,
+            {/* Loki's proactive read on the private zone — one thing to focus on,
           plus a totals strip across categories. Renders only when unlocked. */}
-      <Suspense fallback={<CardSkeleton />}>
-        <TodayWatch />
-      </Suspense>
+            <Suspense fallback={<CardSkeleton />}>
+              <TodayWatch />
+            </Suspense>
 
-      {/* Actionable first — what needs your decision. This has to come before
+            {/* Actionable first — what needs your decision. This has to come before
           the recap cards below it, not after: ActionQueueCard is the one card
           on this page with real Approve/Decline buttons, and on a 390px phone
           "first" is the difference between one thumb-scroll and four. It used
@@ -119,62 +128,62 @@ export default async function TodayPage() {
           RecentRunsCard (both read-only recap) were rendered above it, so a
           mobile user scrolled past two summaries of what ALREADY happened
           before reaching the one card asking them to decide something. */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Suspense fallback={<CardSkeleton />}>
-          <StickyNoteCard />
-        </Suspense>
-        <Suspense fallback={<CardSkeleton />}>
-          <ActionQueueCard />
-        </Suspense>
-        <Suspense fallback={<CardSkeleton />}>
-          <AlertsCard />
-        </Suspense>
-        <Suspense fallback={<CardSkeleton />}>
-          <GoalsDueCard />
-        </Suspense>
-        <Suspense fallback={<CardSkeleton />}>
-          <EventsDueCard />
-        </Suspense>
-        <Suspense fallback={<CardSkeleton />}>
-          <StuckGoalsCard />
-        </Suspense>
-      </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Suspense fallback={<CardSkeleton />}>
+                <StickyNoteCard />
+              </Suspense>
+              <Suspense fallback={<CardSkeleton />}>
+                <ActionQueueCard />
+              </Suspense>
+              <Suspense fallback={<CardSkeleton />}>
+                <AlertsCard />
+              </Suspense>
+              <Suspense fallback={<CardSkeleton />}>
+                <GoalsDueCard />
+              </Suspense>
+              <Suspense fallback={<CardSkeleton />}>
+                <EventsDueCard />
+              </Suspense>
+              <Suspense fallback={<CardSkeleton />}>
+                <StuckGoalsCard />
+              </Suspense>
+            </div>
 
-      {/* Fleet brief — at-a-glance counts of projects/runs today + this week.
+            {/* Fleet brief — at-a-glance counts of projects/runs today + this week.
           Lives above RecentRunsCard because it answers "what happened?"
           (aggregate) before "what specifically happened?" (timeline). Both
           are recap, so both come after the decisions above. */}
-      <Suspense fallback={<CardSkeleton />}>
-        <FleetBriefCard userId={userId} />
-      </Suspense>
+            <Suspense fallback={<CardSkeleton />}>
+              <FleetBriefCard userId={userId} />
+            </Suspense>
 
-      {/* Recent agent outcomes — what agents shipped since last visit */}
-      <Suspense fallback={<CardSkeleton />}>
-        <RecentRunsCard />
-      </Suspense>
+            {/* Recent agent outcomes — what agents shipped since last visit */}
+            <Suspense fallback={<CardSkeleton />}>
+              <RecentRunsCard />
+            </Suspense>
 
-      {/* Context — what's happening today */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <CalendarCard />
-        <WeatherCard />
+            {/* Context — what's happening today */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <CalendarCard />
+              <WeatherCard />
+            </div>
+
+            {/* State — what's pending */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+              <Suspense fallback={<CardSkeleton />}>
+                <HabitsCard />
+              </Suspense>
+              <Suspense fallback={<CardSkeleton />}>
+                <CommitmentsCard />
+              </Suspense>
+              <Suspense fallback={<CardSkeleton />}>
+                <SubscriptionsCard />
+              </Suspense>
+            </div>
+            <AutoRefresh intervalMs={REFRESH_CADENCE.today} />
+          </>
+        )}
       </div>
-
-      {/* State — what's pending */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-        <Suspense fallback={<CardSkeleton />}>
-          <HabitsCard />
-        </Suspense>
-        <Suspense fallback={<CardSkeleton />}>
-          <CommitmentsCard />
-        </Suspense>
-        <Suspense fallback={<CardSkeleton />}>
-          <SubscriptionsCard />
-        </Suspense>
-      </div>
-      <AutoRefresh intervalMs={REFRESH_CADENCE.today} />
-      </>
-      )}
-    </div>
     </PullToRefresh>
   );
 }

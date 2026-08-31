@@ -34,16 +34,17 @@
 // latter rejected as the worst possible inversion of "crown"/command/serious
 // infrastructure tone).
 
-export const APP_NAME        = "FleetCrown";
-export const APP_SLUG        = "fleetcrown";
-export const APP_DOMAIN      = "fleetcrown.orangecat.ch";
-export const APP_KICKER      = "Personal Systems";
-export const APP_DESCRIPTION = "Command your agents, projects, and personal systems from one workspace.";
+export const APP_NAME = "FleetCrown";
+export const APP_SLUG = "fleetcrown";
+export const APP_DOMAIN = "fleetcrown.orangecat.ch";
+export const APP_KICKER = "Personal Systems";
+export const APP_DESCRIPTION =
+  "Command your agents, projects, and personal systems from one workspace.";
 
 // Helpers — never hardcode these patterns in components.
-export const APP_URL         = `https://${APP_DOMAIN}`;
+export const APP_URL = `https://${APP_DOMAIN}`;
 // Dev fallback when NEXTAUTH_URL is unset (local dev server).
-export const LOCAL_DEV_URL   = "http://localhost:3000";
+export const LOCAL_DEV_URL = "http://localhost:3000";
 export const APP_PROFILE_URL = (username: string) => `${APP_DOMAIN}/u/${username}`;
 
 // Bridge — the Hetzner SSE fan-out service that delivers fc:state events to
@@ -57,7 +58,7 @@ export const APP_PROFILE_URL = (username: string) => `${APP_DOMAIN}/u/${username
 // Override use cases: pointing a dev instance at a local bridge (http://localhost:4001/sse)
 // during testing. Production never overrides — the constant below is the truth.
 export const BRIDGE_DOMAIN = "bridge.orangecat.ch";
-export const BRIDGE_URL    = `https://${BRIDGE_DOMAIN}/sse`;
+export const BRIDGE_URL = `https://${BRIDGE_DOMAIN}/sse`;
 
 // Email "From" address. Kept separate from APP_DOMAIN because the email host
 // is usually a different domain than the app host. Override via EMAIL_FROM env var.
@@ -66,14 +67,15 @@ export const APP_EMAIL_FROM = `${APP_NAME} <noreply@${APP_SLUG}.app>`;
  *  the compact sibling of MARKETING_TAGLINE below. Was "your life operating
  *  system", which survived the life-OS → agent-fleet pivot and kept shipping
  *  the old product's promise on every public profile and social card. */
-export const APP_TAGLINE    = "run your agent fleet";
+export const APP_TAGLINE = "run your agent fleet";
 
 // Marketing / Positioning (SSOT for public copy)
-export const MARKETING_TAGLINE      = "The operating system for people running real AI agents.";
-export const MARKETING_SUBTITLE     = "Local execution where the work happens. Remote command from anywhere. One system. Two surfaces.";
-export const MARKETING_HERO_PRIMARY   = "Run your fleet.";
+export const MARKETING_TAGLINE = "The operating system for people running real AI agents.";
+export const MARKETING_SUBTITLE =
+  "Local execution where the work happens. Remote command from anywhere. One system. Two surfaces.";
+export const MARKETING_HERO_PRIMARY = "Run your fleet.";
 export const MARKETING_HERO_SECONDARY = "From anywhere.";
-export const MARKETING_POSITIONING  = "Local execution · Remote command · No compromises";
+export const MARKETING_POSITIONING = "Local execution · Remote command · No compromises";
 /** Phone-width variant of the positioning badge. The full string needs ~330px
  *  of tracked uppercase and wrapped to two lines inside a pill on every phone,
  *  where a badge that wraps stops reading as a badge. Same claim, two terms. */
@@ -87,4 +89,4 @@ export const PRODUCT_NAME = APP_NAME;
 // See BrandMark.tsx for the canonical JSX version. icon.svg and opengraph images
 // duplicate the geometry (with scaling) and must be kept identical.
 export const BRAND_MARK_DESCRIPTION =
-  'Control window (rounded rect frame with internal command bars) — the geometric mark for FleetCrown as command / control plane.'
+  "Control window (rounded rect frame with internal command bars) — the geometric mark for FleetCrown as command / control plane.";

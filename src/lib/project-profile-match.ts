@@ -66,9 +66,12 @@ export function matchProfile(
   const match = dbProjects.find((p) => {
     const n = normalizeName(p.name);
     return (
-      n === tabLower || n === dirBaseLower ||
-      n.includes(tabLower) || tabLower.includes(n) ||
-      n.includes(dirBaseLower) || dirBaseLower.includes(n)
+      n === tabLower ||
+      n === dirBaseLower ||
+      n.includes(tabLower) ||
+      tabLower.includes(n) ||
+      n.includes(dirBaseLower) ||
+      dirBaseLower.includes(n)
     );
   });
   return match ? rowToProfile(match) : null;

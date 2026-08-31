@@ -74,7 +74,10 @@ wait
       const [dir, branch, logStr, dirtyStr, todayStr, behindStr, historyStr] = line.split("\t");
       if (!dir || !branch) continue;
       const [when = "", msg = ""] = (logStr ?? "").split("|");
-      const recentCommits = (historyStr ?? "").split("~").map((s) => s.trim()).filter(Boolean);
+      const recentCommits = (historyStr ?? "")
+        .split("~")
+        .map((s) => s.trim())
+        .filter(Boolean);
       result.set(dir, {
         branch: branch.trim(),
         lastMsg: msg.slice(0, 80),

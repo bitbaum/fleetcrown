@@ -45,10 +45,15 @@ export function SystemStats() {
   // pinning the panel on stale data for the full poll interval. Cadence
   // shared with the server-card AutoRefresh on /system so the surface has
   // one consistent freshness story.
-  const { data, loading, error, refetch } = useFetch<SystemData>("/api/system", { intervalMs: REFRESH_CADENCE.system, timeoutMs: 10_000 });
+  const { data, loading, error, refetch } = useFetch<SystemData>("/api/system", {
+    intervalMs: REFRESH_CADENCE.system,
+    timeoutMs: 10_000,
+  });
 
   if (loading) {
-    return <div className="animate-pulse text-base text-text-secondary">Loading system status...</div>;
+    return (
+      <div className="animate-pulse text-base text-text-secondary">Loading system status...</div>
+    );
   }
   if (error || !data) {
     return (
@@ -73,7 +78,9 @@ export function SystemStats() {
           <div className="ui-label-row">
             <span>Gateway</span>
             <span className="flex items-center gap-2 text-text-primary">
-              <span className={`h-2 w-2 shrink-0 rounded-full ${gatewayStatus === "ok" ? "bg-status-positive" : "bg-status-negative"}`} />
+              <span
+                className={`h-2 w-2 shrink-0 rounded-full ${gatewayStatus === "ok" ? "bg-status-positive" : "bg-status-negative"}`}
+              />
               {gatewayStatus === "ok" ? "Reachable" : "Unavailable"}
             </span>
           </div>
@@ -91,7 +98,9 @@ export function SystemStats() {
             <div>
               <div className="ui-label-row">
                 <span>RAM</span>
-                <span>{formatBytes(mem.usedMiB, "MiB")} / {formatBytes(mem.totalMiB, "MiB")}</span>
+                <span>
+                  {formatBytes(mem.usedMiB, "MiB")} / {formatBytes(mem.totalMiB, "MiB")}
+                </span>
               </div>
               <UsageBar usedMiB={mem.usedMiB} totalMiB={mem.totalMiB} />
             </div>
@@ -99,7 +108,9 @@ export function SystemStats() {
               <div>
                 <div className="ui-label-row">
                   <span>Swap</span>
-                  <span>{formatBytes(swap.usedMiB, "MiB")} / {formatBytes(swap.totalMiB, "MiB")}</span>
+                  <span>
+                    {formatBytes(swap.usedMiB, "MiB")} / {formatBytes(swap.totalMiB, "MiB")}
+                  </span>
                 </div>
                 <UsageBar usedMiB={swap.usedMiB} totalMiB={swap.totalMiB} />
               </div>
@@ -116,7 +127,9 @@ export function SystemStats() {
           <div className="space-y-2">
             <div className="ui-label-row">
               <span>/</span>
-              <span>{formatBytes(disk.usedMiB, "MiB")} / {formatBytes(disk.totalMiB, "MiB")}</span>
+              <span>
+                {formatBytes(disk.usedMiB, "MiB")} / {formatBytes(disk.totalMiB, "MiB")}
+              </span>
             </div>
             <div className="flex items-center gap-2">
               <ProgressBar
@@ -130,7 +143,9 @@ export function SystemStats() {
               />
               <span className="w-10 text-right text-sm text-text-tertiary">{disk.pct}%</span>
             </div>
-            <div className="text-xs text-text-tertiary">{formatBytes(disk.availMiB, "MiB")} free</div>
+            <div className="text-xs text-text-tertiary">
+              {formatBytes(disk.availMiB, "MiB")} free
+            </div>
           </div>
         ) : (
           <p className="text-base text-text-secondary">n/a</p>

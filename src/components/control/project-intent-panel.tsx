@@ -161,31 +161,80 @@ export function IntentButtonPanel({
     runtimeAvailable: runtimeAvailable || builderPresence.runtimeAvailable,
   });
 
-  const { listening, processing, micError, toggleMic, waveformBars, recordingSeconds, maxRecordingSeconds, wrapSend, wrapEnqueue } = useMicComposer({
+  const {
+    listening,
+    processing,
+    micError,
+    toggleMic,
+    waveformBars,
+    recordingSeconds,
+    maxRecordingSeconds,
+    wrapSend,
+    wrapEnqueue,
+  } = useMicComposer({
     custom,
     onAppend: onCustomChange,
-    onSendAfterRecording: (text) => { if (onSendText && text) { onSendText(text); onCustomChange(""); } },
-    onEnqueueAfterRecording: (text) => { if (onEnqueueCustom) { onEnqueueCustom(text); onCustomChange(""); } },
+    onSendAfterRecording: (text) => {
+      if (onSendText && text) {
+        onSendText(text);
+        onCustomChange("");
+      }
+    },
+    onEnqueueAfterRecording: (text) => {
+      if (onEnqueueCustom) {
+        onEnqueueCustom(text);
+        onCustomChange("");
+      }
+    },
   });
 
   // The controller lives here, beside the mic, because both are ways of saying
   // the same thing: this is what I want done. Cleared only after a send is
   // handed off, so a failed dispatch keeps the screenshot with the draft.
   const attachments = useAttachments();
-  const handleSendCustom = useCallback(() => wrapSend(() => {
-    haptic();
-    onSendCustom(attachments.attachments.length ? attachments.toWire() : undefined);
-    attachments.clear();
-  }), [wrapSend, onSendCustom, attachments]);
-  const handleEnqueue = useCallback(() => wrapEnqueue(() => {
-    if (custom.trim() && onEnqueueCustom) { haptic(); onEnqueueCustom(custom.trim()); onCustomChange(""); }
-  }), [wrapEnqueue, custom, onEnqueueCustom, onCustomChange]);
-  const handleSendIntent = useCallback((id: OrchestrationTaskIntentId) => { haptic(); onSendIntent(id); }, [onSendIntent]);
+  const handleSendCustom = useCallback(
+    () =>
+      wrapSend(() => {
+        haptic();
+        onSendCustom(attachments.attachments.length ? attachments.toWire() : undefined);
+        attachments.clear();
+      }),
+    [wrapSend, onSendCustom, attachments],
+  );
+  const handleEnqueue = useCallback(
+    () =>
+      wrapEnqueue(() => {
+        if (custom.trim() && onEnqueueCustom) {
+          haptic();
+          onEnqueueCustom(custom.trim());
+          onCustomChange("");
+        }
+      }),
+    [wrapEnqueue, custom, onEnqueueCustom, onCustomChange],
+  );
+  const handleSendIntent = useCallback(
+    (id: OrchestrationTaskIntentId) => {
+      haptic();
+      onSendIntent(id);
+    },
+    [onSendIntent],
+  );
 
   const inputProps = {
-    custom, listening, processing, micError, sending, justSent, waveformBars, recordingSeconds, maxRecordingSeconds,
-    sendError, onClearSendError,
-    onCustomChange, onCustomFocusChange, toggleMic,
+    custom,
+    listening,
+    processing,
+    micError,
+    sending,
+    justSent,
+    waveformBars,
+    recordingSeconds,
+    maxRecordingSeconds,
+    sendError,
+    onClearSendError,
+    onCustomChange,
+    onCustomFocusChange,
+    toggleMic,
     showQueue: !!onEnqueueCustom,
     onSendCustom: handleSendCustom,
     onEnqueue: handleEnqueue,
@@ -198,12 +247,12 @@ export function IntentButtonPanel({
     statusLabel: !runtimeStateKnown
       ? EXECUTOR_COPY.queuedWhenOffline
       : runnerSyncStale
-      ? "Sync stale — sends queue."
-      : automationStatusLabel
-      ? automationStatusLabel
-      : autoContinueEnabled
-      ? `Automatic continuation allowed for this project: ${APP_NAME} may send queued work when the agent waits.`
-      : `Manual for this project: ${APP_NAME} will wait for you before sending more work.`,
+        ? "Sync stale — sends queue."
+        : automationStatusLabel
+          ? automationStatusLabel
+          : autoContinueEnabled
+            ? `Automatic continuation allowed for this project: ${APP_NAME} may send queued work when the agent waits.`
+            : `Manual for this project: ${APP_NAME} will wait for you before sending more work.`,
   };
 
   // Strip the harness envelope (<task-notification>/<system-reminder>/…) BEFORE
@@ -224,7 +273,11 @@ export function IntentButtonPanel({
     if (t.includes("picked ") && t.includes(" (t")) continue; // the accountability line
     if (/\bwaiting for instructions\b/.test(t)) continue;
     // Nav / marketing chrome accidentally captured as "prompts" — not reusable intent.
-    if (/\b(features|how it works|pricing|for pros|adopt|sign in|log in)\b/.test(t) && t.length < 120) continue;
+    if (
+      /\b(features|how it works|pricing|for pros|adopt|sign in|log in)\b/.test(t) &&
+      t.length < 120
+    )
+      continue;
     if (/^used \d+×/.test(t)) continue;
     cleanedCounts.set(clean, (cleanedCounts.get(clean) ?? 0) + r.count);
   }
@@ -243,9 +296,22 @@ export function IntentButtonPanel({
 
   return (
     <div className="space-y-3 ui-card-section">
-      <PromptInput {...inputProps} placeholder={isRunning ? "Send interrupt…" : "What should the agent work on?"} />
+      <PromptInput
+        {...inputProps}
+        placeholder={isRunning ? "Send interrupt…" : "What should the agent work on?"}
+      />
       {queue.length > 0 && (
-        <QueueList queue={queue} blockedReason={queueBlockedReason} onSend={onSendFromQueue} onRemove={onRemoveFromQueue} onReorder={onReorderInQueue} onEdit={onEditInQueue} onMerge={onMergeQueue} merging={merging} onMergeItems={onMergeItemsInQueue} />
+        <QueueList
+          queue={queue}
+          blockedReason={queueBlockedReason}
+          onSend={onSendFromQueue}
+          onRemove={onRemoveFromQueue}
+          onReorder={onReorderInQueue}
+          onEdit={onEditInQueue}
+          onMerge={onMergeQueue}
+          merging={merging}
+          onMergeItems={onMergeItemsInQueue}
+        />
       )}
 
       {/* Action area — hidden when banner is active (banner owns the primary CTA) */}
@@ -263,9 +329,11 @@ export function IntentButtonPanel({
           <button
             onClick={() => handleSendIntent(primary.id)}
             disabled={sending !== null}
-            title={queueBlockedReason
-              ? `${queueBlockedReason}: Next best stays on recovery work and will not consume the queue. Use a queue row's send button to run that item now.`
-              : "The agent re-reads ground truth (git, types, lint, TODOs, roadmap, session handoff), picks the single highest-impact task, and executes. Dispatches immediately, no preview."}
+            title={
+              queueBlockedReason
+                ? `${queueBlockedReason}: Next best stays on recovery work and will not consume the queue. Use a queue row's send button to run that item now.`
+                : "The agent re-reads ground truth (git, types, lint, TODOs, roadmap, session handoff), picks the single highest-impact task, and executes. Dispatches immediately, no preview."
+            }
             className="ui-btn-nextbest"
           >
             {sending === primary.id
@@ -337,14 +405,22 @@ export function IntentButtonPanel({
                   title="Send /clear to reset the agent's context window (claude/grok)"
                   className="ui-chip-action-compact inline-flex items-center gap-1.5 text-text-tertiary hover:text-status-warning"
                 >
-                  {clearingContext ? <Loader2 className="ui-spinner-sm" /> : <Eraser className="h-3.5 w-3.5" />}
+                  {clearingContext ? (
+                    <Loader2 className="ui-spinner-sm" />
+                  ) : (
+                    <Eraser className="h-3.5 w-3.5" />
+                  )}
                   Clear context
                 </button>
               )}
               {/* Explicit hosted-runner path: works regardless of local-runner
                   state (the composer's Send only auto-routes to Hermes when the
                   runner is OFFLINE). Prefills from the current composer text. */}
-              <HostedDispatchButton projectTab={project.tab} projectName={project.tab} initialTask={custom} />
+              <HostedDispatchButton
+                projectTab={project.tab}
+                projectName={project.tab}
+                initialTask={custom}
+              />
             </div>
           )}
         </div>

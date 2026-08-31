@@ -49,7 +49,12 @@ export function sendEmailFire(to: string, subject: string, html: string, text: s
 }
 
 // Awaitable version for flows that need to know the email was accepted
-export async function sendEmail(to: string, subject: string, html: string, text: string): Promise<void> {
+export async function sendEmail(
+  to: string,
+  subject: string,
+  html: string,
+  text: string,
+): Promise<void> {
   if (!process.env.RESEND_API_KEY) {
     console.log("[email] no RESEND_API_KEY — skipping send");
     return;
@@ -148,7 +153,11 @@ export function resetPasswordEmailTemplate(resetUrl: string) {
   return { subject, html, text };
 }
 
-export function feedbackShippedTemplate(input: { site: string; excerpt: string; page?: string | null }) {
+export function feedbackShippedTemplate(input: {
+  site: string;
+  excerpt: string;
+  page?: string | null;
+}) {
   const subject = mailSubject("feedback_shipped", input.site);
   const where = input.page ? ` on ${input.page}` : "";
   const html = emailShell(`
@@ -193,19 +202,28 @@ function renderDigestMarkdown(markdown: string): string {
     text.replace(/\*\*([^*]+)\*\*/g, `<strong style="color:${EMAIL_THEME.ink};">$1</strong>`);
   for (const rawLine of markdown.split(/\r?\n/)) {
     const line = rawLine.trim();
-    if (!line) { closeList(); continue; }
+    if (!line) {
+      closeList();
+      continue;
+    }
     if (line.startsWith("- ") || line.startsWith("* ")) {
       if (!listOpen) {
-        blocks.push(`<ul style="margin:0 0 16px 0;padding-left:20px;color:${EMAIL_THEME.body};font-size:15px;line-height:1.7;">`);
+        blocks.push(
+          `<ul style="margin:0 0 16px 0;padding-left:20px;color:${EMAIL_THEME.body};font-size:15px;line-height:1.7;">`,
+        );
         listOpen = true;
       }
       blocks.push(`<li>${inline(line.slice(2))}</li>`);
     } else if (/^#{1,3} /.test(line)) {
       closeList();
-      blocks.push(`<h3 style="margin:20px 0 8px 0;font-size:16px;font-weight:600;color:${EMAIL_THEME.ink};">${inline(line.replace(/^#+\s+/, ""))}</h3>`);
+      blocks.push(
+        `<h3 style="margin:20px 0 8px 0;font-size:16px;font-weight:600;color:${EMAIL_THEME.ink};">${inline(line.replace(/^#+\s+/, ""))}</h3>`,
+      );
     } else {
       closeList();
-      blocks.push(`<p style="margin:0 0 14px 0;font-size:15px;line-height:1.7;color:${EMAIL_THEME.body};">${inline(line)}</p>`);
+      blocks.push(
+        `<p style="margin:0 0 14px 0;font-size:15px;line-height:1.7;color:${EMAIL_THEME.body};">${inline(line)}</p>`,
+      );
     }
   }
   closeList();
@@ -244,7 +262,7 @@ export function digestEmailTemplate({
 }: {
   markdown: string;
   cadenceLabel: string; // "daily" | "weekly" | "monthly"
-  windowLabel: string;  // "the last 24 hours" / "the last 7 days" / "the last 30 days"
+  windowLabel: string; // "the last 24 hours" / "the last 7 days" / "the last 30 days"
   activityUrl: string;
   /** Headline counts. Omitted for callers that only have markdown — the email
    *  then degrades to its previous shape rather than inventing numbers. */
@@ -255,7 +273,8 @@ export function digestEmailTemplate({
   if (stats) {
     if (stats.attention > 0) subjectFacts.push(`${stats.attention} needs you`);
     if (stats.shipped > 0) subjectFacts.push(`${stats.shipped} shipped`);
-    if (subjectFacts.length === 0 && stats.running > 0) subjectFacts.push(`${stats.running} running`);
+    if (subjectFacts.length === 0 && stats.running > 0)
+      subjectFacts.push(`${stats.running} running`);
   }
   const subject = mailSubject(
     "digest",
@@ -271,7 +290,9 @@ export function digestEmailTemplate({
     : "";
 
   const agentLine = stats?.agentLabel
-    ? p(`Your agents worked <strong style="color:${EMAIL_THEME.ink};">${stats.agentLabel}</strong> in ${windowLabel}.`)
+    ? p(
+        `Your agents worked <strong style="color:${EMAIL_THEME.ink};">${stats.agentLabel}</strong> in ${windowLabel}.`,
+      )
     : p(`What your fleet did in ${windowLabel}.`);
 
   const html = emailShell(`

@@ -38,9 +38,14 @@ export async function RecentControlAuditCard({ userId }: { userId: string }) {
                 <span className="shrink-0 font-mono text-text-tertiary">
                   {compactRelativeDate(row.createdAt)}
                 </span>
-                <span className="shrink-0 text-text-muted">{row.projectKey ?? row.tabName ?? "system"}</span>
+                <span className="shrink-0 text-text-muted">
+                  {row.projectKey ?? row.tabName ?? "system"}
+                </span>
                 <span className="shrink-0 font-medium text-text-primary">{row.action}</span>
-                <span className="min-w-0 flex-1 truncate text-text-secondary" title={row.reason ?? row.promptPreview ?? ""}>
+                <span
+                  className="min-w-0 flex-1 truncate text-text-secondary"
+                  title={row.reason ?? row.promptPreview ?? ""}
+                >
                   {row.reason ?? row.promptPreview ?? row.source}
                 </span>
               </li>

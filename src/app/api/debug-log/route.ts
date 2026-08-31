@@ -44,6 +44,8 @@ export async function POST(req: NextRequest) {
       path: parsed.data.path ?? null,
       userAgent: req.headers.get("user-agent")?.slice(0, 200) ?? null,
     },
-  }).catch(() => { /* never block error reporting on a logging failure */ });
+  }).catch(() => {
+    /* never block error reporting on a logging failure */
+  });
   return NextResponse.json({ ok: true });
 }

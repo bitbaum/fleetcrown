@@ -72,7 +72,7 @@ const eslintConfig = defineConfig([
         ...["object.name='project'", "object.property.name='project'"].map((projectRef) => ({
           selector: `JSXExpressionContainer > MemberExpression[property.name='description'][${projectRef}]`,
           message:
-            "Pass cleanDescription(project.description), not the raw field — the import placeholder (\"Local repository\") is not a description and must never render or publish.",
+            'Pass cleanDescription(project.description), not the raw field — the import placeholder ("Local repository") is not a description and must never render or publish.',
         })),
       ],
     },

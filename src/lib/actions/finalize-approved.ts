@@ -20,7 +20,10 @@ const INTERACTION_ACTION_TYPES = new Set<ActionType>([
  * (src/app/actions.ts) and the agent HTTP route (/api/actions/[id]/decision),
  * so approve-from-chat and approve-from-UI cannot drift apart.
  */
-export async function finalizeApproved(userId: string, action: ActionRow): Promise<ExecuteActionResult> {
+export async function finalizeApproved(
+  userId: string,
+  action: ActionRow,
+): Promise<ExecuteActionResult> {
   if (action.entityId && INTERACTION_ACTION_TYPES.has(action.type)) {
     await createInteraction(userId, {
       entityId: action.entityId,

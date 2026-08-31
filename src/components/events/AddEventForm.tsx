@@ -5,7 +5,13 @@ import { Plus, X, Loader2 } from "lucide-react";
 import { postJson } from "@/lib/api/fetch";
 import type { EventRow } from "@/db/queries/events";
 
-export function AddEventForm({ onCreated, existingTypes = [] }: { onCreated: (event: EventRow) => void; existingTypes?: string[] }) {
+export function AddEventForm({
+  onCreated,
+  existingTypes = [],
+}: {
+  onCreated: (event: EventRow) => void;
+  existingTypes?: string[];
+}) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [type, setType] = useState("");
@@ -17,8 +23,13 @@ export function AddEventForm({ onCreated, existingTypes = [] }: { onCreated: (ev
   const [error, setError] = useState("");
 
   const reset = () => {
-    setName(""); setType(""); setUrl(""); setDeadline("");
-    setCategory(""); setDescription(""); setError("");
+    setName("");
+    setType("");
+    setUrl("");
+    setDeadline("");
+    setCategory("");
+    setDescription("");
+    setError("");
   };
 
   const submit = async () => {
@@ -29,9 +40,19 @@ export function AddEventForm({ onCreated, existingTypes = [] }: { onCreated: (ev
     setSaving(true);
     setError("");
     try {
-      const res = await postJson("/api/events", { name, type, url, deadline, category, description });
+      const res = await postJson("/api/events", {
+        name,
+        type,
+        url,
+        deadline,
+        category,
+        description,
+      });
       const data = await res.json();
-      if (!res.ok) { setError(data.error ?? "Failed to save"); return; }
+      if (!res.ok) {
+        setError(data.error ?? "Failed to save");
+        return;
+      }
       onCreated(data.event as EventRow);
       reset();
       setOpen(false);
@@ -44,10 +65,7 @@ export function AddEventForm({ onCreated, existingTypes = [] }: { onCreated: (ev
 
   if (!open) {
     return (
-      <button
-        onClick={() => setOpen(true)}
-        className="ui-btn-add pt-1"
-      >
+      <button onClick={() => setOpen(true)} className="ui-btn-add pt-1">
         <Plus className="h-3.5 w-3.5" /> Add event
       </button>
     );
@@ -57,14 +75,22 @@ export function AddEventForm({ onCreated, existingTypes = [] }: { onCreated: (ev
     <div className="mt-2 p-3 rounded-lg border border-border-subtle bg-surface-base space-y-2">
       <div className="flex items-center justify-between mb-1">
         <span className="ui-micro-label">New Event</span>
-        <button onClick={() => { setOpen(false); reset(); }} className="text-text-muted hover:text-text-secondary">
+        <button
+          onClick={() => {
+            setOpen(false);
+            reset();
+          }}
+          className="text-text-muted hover:text-text-secondary"
+        >
           <X className="h-3.5 w-3.5" />
         </button>
       </div>
 
       {existingTypes.length > 0 && (
         <datalist id="event-type-list">
-          {existingTypes.map((t) => <option key={t} value={t} />)}
+          {existingTypes.map((t) => (
+            <option key={t} value={t} />
+          ))}
         </datalist>
       )}
       <input
@@ -106,7 +132,13 @@ export function AddEventForm({ onCreated, existingTypes = [] }: { onCreated: (ev
       <input
         value={description}
         onChange={(e) => setDescription(e.target.value)}
-        onKeyDown={(e) => { if (e.key === "Enter") submit(); if (e.key === "Escape") { setOpen(false); reset(); } }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") submit();
+          if (e.key === "Escape") {
+            setOpen(false);
+            reset();
+          }
+        }}
         placeholder="Description (optional)"
         className="w-full ui-input-compact"
       />
@@ -120,7 +152,13 @@ export function AddEventForm({ onCreated, existingTypes = [] }: { onCreated: (ev
           {saving ? <Loader2 className="ui-spinner-xs" /> : <Plus className="h-3 w-3" />}
           Add
         </button>
-        <button onClick={() => { setOpen(false); reset(); }} className="ui-link-muted">
+        <button
+          onClick={() => {
+            setOpen(false);
+            reset();
+          }}
+          className="ui-link-muted"
+        >
           Cancel
         </button>
       </div>

@@ -5,10 +5,16 @@ import { isCheckableDoneBar } from "@/lib/project-health";
 import { ESCALATION_HUMAN_STREAK } from "@/lib/orchestration/escalation-ladder";
 import type { RunClosePatch } from "@/lib/orchestration/close-from-session";
 
-let pass = 0, fail = 0;
+let pass = 0,
+  fail = 0;
 function ok(name: string, cond: boolean) {
-  if (cond) { pass++; console.log(`  ✓ ${name}`); }
-  else { fail++; console.log(`  ✗ ${name}`); }
+  if (cond) {
+    pass++;
+    console.log(`  ✓ ${name}`);
+  } else {
+    fail++;
+    console.log(`  ✗ ${name}`);
+  }
 }
 
 const base = (outcome: RunClosePatch["outcome"]): RunClosePatch => ({
@@ -25,8 +31,14 @@ ok("success + DoD met → stays success", r1.outcome === "success");
 // 2. success + NOT met → downgraded to partial, gap surfaced in next
 const r2 = applyDoDGate(base("success"), { met: false, gap: "tests not run" });
 ok("success + DoD unmet → partial", r2.outcome === "partial");
-ok("success + DoD unmet → gap written to next", typeof r2.summary.next === "string" && r2.summary.next.includes("tests not run"));
-ok("success + DoD unmet → next signals not-done", r2.summary.next!.toLowerCase().includes("not yet met"));
+ok(
+  "success + DoD unmet → gap written to next",
+  typeof r2.summary.next === "string" && r2.summary.next.includes("tests not run"),
+);
+ok(
+  "success + DoD unmet → next signals not-done",
+  r2.summary.next!.toLowerCase().includes("not yet met"),
+);
 
 // 3. partial + NOT met → unchanged (only gates success)
 const r3 = applyDoDGate(base("partial"), { met: false, gap: "x" });
@@ -38,17 +50,31 @@ ok("error + DoD unmet → stays error", r4.outcome === "error");
 
 // 5. empty gap still produces an actionable next
 const r5 = applyDoDGate(base("success"), { met: false, gap: "" });
-ok("success + DoD unmet + empty gap → still has actionable next", !!r5.summary.next && r5.summary.next.length > 10);
+ok(
+  "success + DoD unmet + empty gap → still has actionable next",
+  !!r5.summary.next && r5.summary.next.length > 10,
+);
 
 // ── Turn cap (goal-mode) ─────────────────────────────────────────────────────
 // 6. under the cap → still downgrades (loop continues)
-const r6 = applyDoDGate(base("success"), { met: false, gap: "flaky" }, { maxTurns: 3, priorPartials: 1 });
+const r6 = applyDoDGate(
+  base("success"),
+  { met: false, gap: "flaky" },
+  { maxTurns: 3, priorPartials: 1 },
+);
 ok("unmet + under cap → still downgrades to partial", r6.outcome === "partial");
 
 // 7. AT the cap → stops downgrading (keeps success so the loop halts) + flags it
-const r7 = applyDoDGate(base("success"), { met: false, gap: "flaky" }, { maxTurns: 3, priorPartials: 3 });
+const r7 = applyDoDGate(
+  base("success"),
+  { met: false, gap: "flaky" },
+  { maxTurns: 3, priorPartials: 3 },
+);
 ok("unmet + at cap → keeps success (loop halts)", r7.outcome === "success");
-ok("unmet + at cap → next records the cap + escalation", !!r7.summary.next && r7.summary.next.toLowerCase().includes("after 3 attempt"));
+ok(
+  "unmet + at cap → next records the cap + escalation",
+  !!r7.summary.next && r7.summary.next.toLowerCase().includes("after 3 attempt"),
+);
 
 // 8. cap set but goal MET → unchanged success (cap never engages)
 const r8 = applyDoDGate(base("success"), { met: true, gap: "" }, { maxTurns: 3, priorPartials: 5 });
@@ -56,15 +82,25 @@ ok("met + over cap → stays success, no cap note", r8.outcome === "success" && 
 
 // 9. no cap (maxTurns null) → loops forever. Reachable ONLY via an explicit
 // goal_max_turns=0 now that the default is bounded; see DEFAULT_GOAL_MAX_TURNS.
-const r9 = applyDoDGate(base("success"), { met: false, gap: "x" }, { maxTurns: null, priorPartials: 99 });
+const r9 = applyDoDGate(
+  base("success"),
+  { met: false, gap: "x" },
+  { maxTurns: null, priorPartials: 99 },
+);
 ok("unmet + explicit no-cap → downgrades forever (opt-in only)", r9.outcome === "partial");
 
 // 10. The default bound exists and is the ladder's human rung — an unbounded
 // goal loop is invisible to the failure brake AND the escalation ladder
 // (a partial streak is not a failure streak), so "loop forever" must not be
 // what a project gets by saying nothing.
-ok("default goal cap is bounded", Number.isFinite(DEFAULT_GOAL_MAX_TURNS) && DEFAULT_GOAL_MAX_TURNS > 0);
-ok("default goal cap is SSOT'd to the ladder's human rung", DEFAULT_GOAL_MAX_TURNS === ESCALATION_HUMAN_STREAK);
+ok(
+  "default goal cap is bounded",
+  Number.isFinite(DEFAULT_GOAL_MAX_TURNS) && DEFAULT_GOAL_MAX_TURNS > 0,
+);
+ok(
+  "default goal cap is SSOT'd to the ladder's human rung",
+  DEFAULT_GOAL_MAX_TURNS === ESCALATION_HUMAN_STREAK,
+);
 
 // 11. A project that has been looping at the default cap stops looping.
 const r11 = applyDoDGate(

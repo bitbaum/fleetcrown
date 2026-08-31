@@ -32,7 +32,7 @@ export type DecideInput = {
 
 export type DecisionAction =
   /** Nothing to do — show the project as idle / waiting. */
-  | { kind: "wait";     reason: string }
+  | { kind: "wait"; reason: string }
   /** Dispatch a specific intent with optional pre-rendered prompt. */
   | { kind: "dispatch"; intent: string; prompt?: string; queueItem?: string; reason: string }
   /** Health is bad — force a recovery intent regardless of queue/autonomy. */
@@ -58,12 +58,12 @@ export type Decision = {
 // Empty history defaults to 0.5 — neutral, neither auto-fire nor block.
 
 const OUTCOME_WEIGHT: Record<Outcome, number> = {
-  success:    +1.0,
-  partial:     0.0,
-  error:      -2.0,
-  hang:       -2.0,
-  timeout:    -1.5,
-  user_abort:  0.0,
+  success: +1.0,
+  partial: 0.0,
+  error: -2.0,
+  hang: -2.0,
+  timeout: -1.5,
+  user_abort: 0.0,
   // The dispatch never reached an agent. That says nothing about whether
   // this project's work is going well, so it must not move confidence —
   // weighting it like a failure would teach the brain to avoid a project
@@ -82,9 +82,7 @@ export function computeConfidence(outcomes: Outcome[]): number {
   //   avg=0     (neutral / mixed)     →  0.50
   //   avg=-2.0  (all error)           →  0.05
   const avg = sum / outcomes.length;
-  const normalized = avg >= 0
-    ? 0.5 + (avg / 1.0) * 0.45
-    : 0.5 + (avg / 2.0) * 0.45;
+  const normalized = avg >= 0 ? 0.5 + (avg / 1.0) * 0.45 : 0.5 + (avg / 2.0) * 0.45;
   return Math.max(0, Math.min(1, normalized));
 }
 
@@ -92,14 +90,14 @@ export function computeConfidence(outcomes: Outcome[]): number {
 // Threshold per mode: below this, hold and ask. At/above, fire.
 
 const AUTONOMY_THRESHOLD: Record<Autonomy, number> = {
-  manual:  0,          // human clicked Dispatch — fire on receipt, no gate. The
-                       // confidence value still flows through for display, but
-                       // it never blocks; the user is the gate.
-  confirm: Infinity,   // never auto-execute — UI shows the proposal so the
-                       // human can override or click Dispatch (manual) to fire
-  auto:    0.55,       // moderate confidence — autonomous scheduler (cron,
-                       // queue drain) fires when the gate clears
-  sleep:   0.75,       // high confidence — fires while user away IF healthy
+  manual: 0, // human clicked Dispatch — fire on receipt, no gate. The
+  // confidence value still flows through for display, but
+  // it never blocks; the user is the gate.
+  confirm: Infinity, // never auto-execute — UI shows the proposal so the
+  // human can override or click Dispatch (manual) to fire
+  auto: 0.55, // moderate confidence — autonomous scheduler (cron,
+  // queue drain) fires when the gate clears
+  sleep: 0.75, // high confidence — fires while user away IF healthy
 };
 
 export function shouldAutoExecute(
@@ -124,19 +122,29 @@ export function shouldAutoExecute(
 
 // ── Health gate (mirror of today's hard rules) ───────────────────────────────
 
-function healthDemandsRecovery(handoff?: Handoff): {
-  needed: true;
-  intent: string;
-  reason: string;
-} | { needed: false } {
+function healthDemandsRecovery(handoff?: Handoff):
+  | {
+      needed: true;
+      intent: string;
+      reason: string;
+    }
+  | { needed: false } {
   if (!handoff) return { needed: false };
   const h = (handoff.health ?? "").toLowerCase();
-  const t = (handoff.tests  ?? "").toLowerCase();
+  const t = (handoff.tests ?? "").toLowerCase();
   if (h.includes("critical")) {
-    return { needed: true, intent: "unblock",      reason: "Health critical — focus recovery before anything else." };
+    return {
+      needed: true,
+      intent: "unblock",
+      reason: "Health critical — focus recovery before anything else.",
+    };
   }
   if (t.includes("fail")) {
-    return { needed: true, intent: "test_and_fix", reason: "Tests failing — recover green before switching concerns." };
+    return {
+      needed: true,
+      intent: "test_and_fix",
+      reason: "Tests failing — recover green before switching concerns.",
+    };
   }
   return { needed: false };
 }
@@ -218,7 +226,11 @@ function selfTest() {
       input: {
         project: {
           ...baseProject,
-          currentRun: { intent: "next_best", adapter: "claude", startedAt: baseProject.lastEventTs },
+          currentRun: {
+            intent: "next_best",
+            adapter: "claude",
+            startedAt: baseProject.lastEventTs,
+          },
         },
       },
       expect: (d) => d.action.kind === "wait" && !d.autoExecute,
@@ -228,7 +240,14 @@ function selfTest() {
       input: {
         project: {
           ...baseProject,
-          lastHandoff: { status: "", done:"x", next: "", tests: "", todos: "", health: "critical — auth broken" },
+          lastHandoff: {
+            status: "",
+            done: "x",
+            next: "",
+            tests: "",
+            todos: "",
+            health: "critical — auth broken",
+          },
         },
       },
       expect: (d) => d.action.kind === "recovery" && d.action.intent === "unblock",
@@ -238,7 +257,14 @@ function selfTest() {
       input: {
         project: {
           ...baseProject,
-          lastHandoff: { status: "", done:"x", next: "", tests: "3/5 pass, 2 fail", todos: "", health: "good" },
+          lastHandoff: {
+            status: "",
+            done: "x",
+            next: "",
+            tests: "3/5 pass, 2 fail",
+            todos: "",
+            health: "good",
+          },
         },
       },
       expect: (d) => d.action.kind === "recovery" && d.action.intent === "test_and_fix",
@@ -246,7 +272,17 @@ function selfTest() {
     {
       name: "queue head dispatched when present and health OK",
       input: {
-        project: { ...baseProject, lastHandoff: { status: "", done:"x", next: "", tests: "all pass", todos: "0", health: "good" } },
+        project: {
+          ...baseProject,
+          lastHandoff: {
+            status: "",
+            done: "x",
+            next: "",
+            tests: "all pass",
+            todos: "0",
+            health: "good",
+          },
+        },
         queueHead: "Run security audit",
       },
       expect: (d) => d.action.kind === "dispatch" && d.action.intent === "custom",
@@ -254,7 +290,17 @@ function selfTest() {
     {
       name: "empty queue + healthy → next_best",
       input: {
-        project: { ...baseProject, lastHandoff: { status: "", done:"x", next: "", tests: "all pass", todos: "0", health: "good" } },
+        project: {
+          ...baseProject,
+          lastHandoff: {
+            status: "",
+            done: "x",
+            next: "",
+            tests: "all pass",
+            todos: "0",
+            health: "good",
+          },
+        },
       },
       expect: (d) => d.action.kind === "dispatch" && d.action.intent === "next_best",
     },
@@ -263,7 +309,10 @@ function selfTest() {
       input: {
         // Fresh project, zero history. The UI Dispatch button hits this path —
         // it must fire even when computeConfidence is still neutral 0.5.
-        project: { ...baseProject, lastHandoff: { status: "", done:"", next: "", tests: "", todos: "", health: "good" } },
+        project: {
+          ...baseProject,
+          lastHandoff: { status: "", done: "", next: "", tests: "", todos: "", health: "good" },
+        },
         autonomy: "manual",
       },
       expect: (d) => d.autoExecute,
@@ -273,7 +322,14 @@ function selfTest() {
       input: {
         project: {
           ...baseProject,
-          lastHandoff: { status: "", done:"x", next: "", tests: "", todos: "", health: "critical — auth broken" },
+          lastHandoff: {
+            status: "",
+            done: "x",
+            next: "",
+            tests: "",
+            todos: "",
+            health: "critical — auth broken",
+          },
         },
         autonomy: "manual",
       },
@@ -285,7 +341,14 @@ function selfTest() {
         project: {
           ...baseProject,
           recentOutcomes: ["success", "success", "success", "success", "success"],
-          lastHandoff: { status: "", done:"x", next: "", tests: "all pass", todos: "0", health: "good" },
+          lastHandoff: {
+            status: "",
+            done: "x",
+            next: "",
+            tests: "all pass",
+            todos: "0",
+            health: "good",
+          },
         },
         autonomy: "confirm",
       },
@@ -297,7 +360,14 @@ function selfTest() {
         project: {
           ...baseProject,
           recentOutcomes: ["success", "success", "success", "success", "success"],
-          lastHandoff: { status: "ready", done:"x", next: "", tests: "all pass", todos: "0", health: "good" },
+          lastHandoff: {
+            status: "ready",
+            done: "x",
+            next: "",
+            tests: "all pass",
+            todos: "0",
+            health: "good",
+          },
         },
         autonomy: "sleep",
       },
@@ -309,7 +379,14 @@ function selfTest() {
         project: {
           ...baseProject,
           recentOutcomes: ["success", "success", "success", "success", "success"],
-          lastHandoff: { status: "working", done:"x", next: "more to do", tests: "all pass", todos: "0", health: "good" },
+          lastHandoff: {
+            status: "working",
+            done: "x",
+            next: "more to do",
+            tests: "all pass",
+            todos: "0",
+            health: "good",
+          },
         },
         autonomy: "sleep",
       },
@@ -321,7 +398,14 @@ function selfTest() {
         project: {
           ...baseProject,
           recentOutcomes: ["success", "success", "success", "success", "success"],
-          lastHandoff: { status: "", done:"x", next: "", tests: "all pass", todos: "0", health: "good" },
+          lastHandoff: {
+            status: "",
+            done: "x",
+            next: "",
+            tests: "all pass",
+            todos: "0",
+            health: "good",
+          },
         },
         autonomy: "auto",
       },
@@ -332,7 +416,14 @@ function selfTest() {
       input: {
         project: {
           ...baseProject,
-          lastHandoff: { status: "working", done:"x", next: "more to do", tests: "all pass", todos: "0", health: "good" },
+          lastHandoff: {
+            status: "working",
+            done: "x",
+            next: "more to do",
+            tests: "all pass",
+            todos: "0",
+            health: "good",
+          },
         },
         autonomy: "manual",
       },
@@ -344,7 +435,14 @@ function selfTest() {
         project: {
           ...baseProject,
           recentOutcomes: ["error", "error", "success"],
-          lastHandoff: { status: "", done:"x", next: "", tests: "all pass", todos: "0", health: "good" },
+          lastHandoff: {
+            status: "",
+            done: "x",
+            next: "",
+            tests: "all pass",
+            todos: "0",
+            health: "good",
+          },
         },
         autonomy: "sleep",
       },
@@ -357,7 +455,8 @@ function selfTest() {
     },
   ];
 
-  let pass = 0, fail = 0;
+  let pass = 0,
+    fail = 0;
   for (const c of cases) {
     const result = decide(c.input);
     if (c.expect(result)) {

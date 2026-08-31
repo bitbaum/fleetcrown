@@ -54,8 +54,14 @@ export function SiteGuides({
         ...(s.path.trim() ? { path: s.path.trim() } : {}),
         ...(s.note.trim() ? { note: s.note.trim() } : {}),
       }));
-    if (!title.trim()) { setError("Give the guide a title."); return; }
-    if (cleaned.length === 0) { setError("Add at least one step."); return; }
+    if (!title.trim()) {
+      setError("Give the guide a title.");
+      return;
+    }
+    if (cleaned.length === 0) {
+      setError("Add at least one step.");
+      return;
+    }
 
     setBusy(true);
     setError(null);
@@ -63,7 +69,12 @@ export function SiteGuides({
       const res = await fetch("/api/atlas/guides", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ projectId, title: title.trim(), description: description.trim() || undefined, steps: cleaned }),
+        body: JSON.stringify({
+          projectId,
+          title: title.trim(),
+          description: description.trim() || undefined,
+          steps: cleaned,
+        }),
       });
       const json = (await res.json()) as { guide?: SiteGuide; error?: string };
       if (!res.ok || !json.guide) throw new Error(json.error ?? "Could not save");
@@ -82,7 +93,10 @@ export function SiteGuides({
   }
 
   return (
-    <section aria-labelledby="site-guides-title" className="rounded-2xl border border-border-subtle bg-surface-raised p-5">
+    <section
+      aria-labelledby="site-guides-title"
+      className="rounded-2xl border border-border-subtle bg-surface-raised p-5"
+    >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 id="site-guides-title" className="text-base font-semibold text-text-primary">
           Guides
@@ -99,8 +113,8 @@ export function SiteGuides({
         )}
       </div>
       <p className="mt-1 text-sm text-text-secondary">
-        The page list says where you can go. A guide says which pages, in what order, and what to
-        do when you get there.
+        The page list says where you can go. A guide says which pages, in what order, and what to do
+        when you get there.
       </p>
 
       {creating && (
@@ -128,7 +142,11 @@ export function SiteGuides({
                 <div className="flex-1 space-y-1.5">
                   <input
                     value={step.label}
-                    onChange={(e) => setSteps((prev) => prev.map((s, j) => (j === i ? { ...s, label: e.target.value } : s)))}
+                    onChange={(e) =>
+                      setSteps((prev) =>
+                        prev.map((s, j) => (j === i ? { ...s, label: e.target.value } : s)),
+                      )
+                    }
                     placeholder="What you do here"
                     aria-label={`Step ${i + 1} label`}
                     className="w-full rounded-lg border border-border-default bg-surface-raised px-3 py-1.5 text-sm text-text-primary placeholder:text-text-tertiary"
@@ -136,14 +154,22 @@ export function SiteGuides({
                   <div className="flex gap-1.5">
                     <input
                       value={step.path}
-                      onChange={(e) => setSteps((prev) => prev.map((s, j) => (j === i ? { ...s, path: e.target.value } : s)))}
+                      onChange={(e) =>
+                        setSteps((prev) =>
+                          prev.map((s, j) => (j === i ? { ...s, path: e.target.value } : s)),
+                        )
+                      }
                       placeholder="/path (optional)"
                       aria-label={`Step ${i + 1} path`}
                       className="w-1/3 rounded-lg border border-border-default bg-surface-raised px-3 py-1.5 text-xs text-text-primary placeholder:text-text-tertiary"
                     />
                     <input
                       value={step.note}
-                      onChange={(e) => setSteps((prev) => prev.map((s, j) => (j === i ? { ...s, note: e.target.value } : s)))}
+                      onChange={(e) =>
+                        setSteps((prev) =>
+                          prev.map((s, j) => (j === i ? { ...s, note: e.target.value } : s)),
+                        )
+                      }
                       placeholder="Note — the button to press, the gotcha (optional)"
                       aria-label={`Step ${i + 1} note`}
                       className="flex-1 rounded-lg border border-border-default bg-surface-raised px-3 py-1.5 text-xs text-text-primary placeholder:text-text-tertiary"
@@ -183,7 +209,11 @@ export function SiteGuides({
             >
               {busy ? "Saving…" : "Save guide"}
             </button>
-            <button type="button" onClick={resetForm} className="text-sm text-text-tertiary hover:text-text-secondary">
+            <button
+              type="button"
+              onClick={resetForm}
+              className="text-sm text-text-tertiary hover:text-text-secondary"
+            >
               Cancel
             </button>
           </div>

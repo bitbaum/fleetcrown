@@ -52,7 +52,10 @@ export function TerminalComposer({ tab }: { tab: string }) {
   const [trackedCommandId, setTrackedCommandId] = useState<string | null>(null);
   const [trackedRunId, setTrackedRunId] = useState<string | null>(null);
   const liveDispatch = useDispatchLiveStatus(trackedCommandId, trackedRunId);
-  const clearTracked = () => { setTrackedCommandId(null); setTrackedRunId(null); };
+  const clearTracked = () => {
+    setTrackedCommandId(null);
+    setTrackedRunId(null);
+  };
 
   // The "self-clears quickly once confirmed" half of the comment above: once
   // the tracked lifecycle settles on a GOOD outcome, the strip has done its
@@ -70,19 +73,25 @@ export function TerminalComposer({ tab }: { tab: string }) {
   const send = async () => {
     // A screenshot alone is a complete instruction; supply the words the
     // picture implies rather than refusing the send.
-    const prompt = text.trim()
-      || (attachments.attachments.length ? "Look at the attached screenshot and fix what is wrong." : "");
+    const prompt =
+      text.trim() ||
+      (attachments.attachments.length
+        ? "Look at the attached screenshot and fix what is wrong."
+        : "");
     if (!prompt || sending) return;
     setSending(true);
     setError(null);
     try {
       const res = await postJson("/api/control/tab-inject", {
-        tab, prompt,
+        tab,
+        prompt,
         ...(attachments.attachments.length ? { attachments: attachments.toWire() } : {}),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(typeof data.error === "string" ? data.error : `Could not dispatch (HTTP ${res.status}).`);
+        setError(
+          typeof data.error === "string" ? data.error : `Could not dispatch (HTTP ${res.status}).`,
+        );
         return;
       }
       // The runner saw the operator actively typing in this exact session and
@@ -90,7 +99,9 @@ export function TerminalComposer({ tab }: { tab: string }) {
       // ran. HTTP still succeeded, so this has to be checked separately from
       // res.ok or it reads as a send.
       if (data.blocked) {
-        setError(`Not sent — someone is typing in “${tab}” right now. Wait a moment and try again.`);
+        setError(
+          `Not sent — someone is typing in “${tab}” right now. Wait a moment and try again.`,
+        );
         return;
       }
       setText("");
@@ -130,7 +141,10 @@ export function TerminalComposer({ tab }: { tab: string }) {
       <div className="overflow-hidden rounded-xl border border-border-default bg-surface-raised">
         {error && (
           <div className="flex items-start gap-2 border-b border-status-negative/30 bg-status-negative-subtle px-3 py-2">
-            <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-status-negative" aria-hidden="true" />
+            <AlertCircle
+              className="mt-0.5 h-3.5 w-3.5 shrink-0 text-status-negative"
+              aria-hidden="true"
+            />
             <p className="min-w-0 flex-1 text-xs text-status-negative">{error}</p>
             <button
               type="button"
@@ -151,13 +165,21 @@ export function TerminalComposer({ tab }: { tab: string }) {
             const next = e.target.value;
             // "/" on an empty composer is the library shortcut. Anywhere else
             // it is just a slash — paths and flags must stay typeable.
-            if (next === "/" && text === "") { setPickerOpen(true); return; }
+            if (next === "/" && text === "") {
+              setPickerOpen(true);
+              return;
+            }
             setText(next);
           }}
           onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); }
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              void send();
+            }
           }}
-          onPaste={(e) => { if (attachments.addFromPaste(e)) e.preventDefault(); }}
+          onPaste={(e) => {
+            if (attachments.addFromPaste(e)) e.preventDefault();
+          }}
           placeholder={`Describe a task for ${tab} — “/” for the prompt library`}
           aria-label={`Prompt for ${tab}`}
           className="w-full resize-none bg-transparent px-3 py-2.5 text-sm leading-relaxed text-text-primary placeholder:text-text-muted outline-none"
@@ -192,7 +214,15 @@ export function TerminalComposer({ tab }: { tab: string }) {
                   : "pointer-events-none bg-surface-overlay text-text-muted opacity-40",
             )}
           >
-            {sending ? <Loader2 className="ui-spinner-sm" /> : sent ? "Sent ✓" : <>Send <Send className="h-3 w-3" /></>}
+            {sending ? (
+              <Loader2 className="ui-spinner-sm" />
+            ) : sent ? (
+              "Sent ✓"
+            ) : (
+              <>
+                Send <Send className="h-3 w-3" />
+              </>
+            )}
           </button>
         </div>
 

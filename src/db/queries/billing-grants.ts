@@ -1,5 +1,9 @@
 import { db } from "@/db";
-import { ocBillingGrants, type NewOcBillingGrant, type OcBillingGrant } from "@/db/schema/billing-grants";
+import {
+  ocBillingGrants,
+  type NewOcBillingGrant,
+  type OcBillingGrant,
+} from "@/db/schema/billing-grants";
 import { and, lt, ne, eq } from "drizzle-orm";
 import { users } from "@/db/schema";
 
@@ -8,7 +12,9 @@ import { users } from "@/db/schema";
  * retried/duplicate settlement webhook inserts nothing and returns null — the
  * caller then skips the plan write. Returns the row only on a genuinely new grant.
  */
-export async function recordOcBillingGrant(input: NewOcBillingGrant): Promise<OcBillingGrant | null> {
+export async function recordOcBillingGrant(
+  input: NewOcBillingGrant,
+): Promise<OcBillingGrant | null> {
   const [row] = await db
     .insert(ocBillingGrants)
     .values(input)
@@ -33,5 +39,9 @@ export async function downgradeExpiredPlans(now = new Date()): Promise<number> {
 
 /** Grants for a user, most recent first — audit/history surface. */
 export async function listOcBillingGrants(userId: string) {
-  return db.select().from(ocBillingGrants).where(eq(ocBillingGrants.userId, userId)).orderBy(ocBillingGrants.createdAt);
+  return db
+    .select()
+    .from(ocBillingGrants)
+    .where(eq(ocBillingGrants.userId, userId))
+    .orderBy(ocBillingGrants.createdAt);
 }

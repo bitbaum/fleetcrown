@@ -57,7 +57,11 @@ export async function publishProjectToOrangeCat(
   });
   if (!project) return { ok: false, reason: "not_found" };
   if (project.orangecatProjectId) {
-    return { ok: true, orangecatProjectId: project.orangecatProjectId, reason: "already_published" };
+    return {
+      ok: true,
+      orangecatProjectId: project.orangecatProjectId,
+      reason: "already_published",
+    };
   }
 
   const link = await getOrangeCatLink(userId);

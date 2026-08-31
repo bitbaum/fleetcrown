@@ -37,10 +37,23 @@ export type RowProps = {
  * selection orchestration.
  */
 export function QueueItemRow({
-  index, item, isFirst, selected, isDragging, isOverlay,
-  dragHandleProps, editingIndex, editText, editRef,
-  onSetEditText, onToggleSelect, onStartEdit, onConfirmEdit, onCancelEdit,
-  onSend, onRemove,
+  index,
+  item,
+  isFirst,
+  selected,
+  isDragging,
+  isOverlay,
+  dragHandleProps,
+  editingIndex,
+  editText,
+  editRef,
+  onSetEditText,
+  onToggleSelect,
+  onStartEdit,
+  onConfirmEdit,
+  onCancelEdit,
+  onSend,
+  onRemove,
 }: RowProps) {
   const editing = editingIndex === index;
   return (
@@ -94,7 +107,10 @@ export function QueueItemRow({
           value={editText}
           onChange={(e) => onSetEditText(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onConfirmEdit(); }
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              onConfirmEdit();
+            }
             if (e.key === "Escape") onCancelEdit();
           }}
           onBlur={onConfirmEdit}
@@ -150,7 +166,9 @@ export function QueueItemRow({
  * the GripVertical button inside QueueItemRow.
  */
 export function SortableQueueItem({ id, ...rowProps }: { id: string } & RowProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id,
+  });
   return (
     <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }}>
       <QueueItemRow

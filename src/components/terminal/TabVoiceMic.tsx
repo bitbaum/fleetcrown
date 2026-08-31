@@ -37,11 +37,16 @@ export function TabVoiceMic({
   // Latest tab in a ref so the stable onTranscript callback always dispatches to
   // the currently-selected tab, not the one bound when recording started.
   const tabRef = useRef(tab);
-  useEffect(() => { tabRef.current = tab; }, [tab]);
+  useEffect(() => {
+    tabRef.current = tab;
+  }, [tab]);
 
-  useEffect(() => () => {
-    if (confirmTimer.current !== null) window.clearTimeout(confirmTimer.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (confirmTimer.current !== null) window.clearTimeout(confirmTimer.current);
+    },
+    [],
+  );
 
   const flash = useCallback((state: SendState, err?: string) => {
     setSend(state);
@@ -53,26 +58,35 @@ export function TabVoiceMic({
     }, CONFIRM_MS);
   }, []);
 
-  const handleTranscript = useCallback(async (text: string) => {
-    const target = tabRef.current;
-    if (!target) return;
-    setSend("sending");
-    setSendError(null);
-    try {
-      const res = await postJson("/api/control/tab-inject", { tab: target, prompt: text });
-      const data = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok) {
-        flash("error", typeof data.error === "string" ? data.error : `Failed (${res.status}).`);
-        return;
+  const handleTranscript = useCallback(
+    async (text: string) => {
+      const target = tabRef.current;
+      if (!target) return;
+      setSend("sending");
+      setSendError(null);
+      try {
+        const res = await postJson("/api/control/tab-inject", { tab: target, prompt: text });
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        if (!res.ok) {
+          flash("error", typeof data.error === "string" ? data.error : `Failed (${res.status}).`);
+          return;
+        }
+        haptic();
+        flash("sent");
+      } catch (err) {
+        flash("error", err instanceof Error ? err.message : "Network error.");
       }
-      haptic();
-      flash("sent");
-    } catch (err) {
-      flash("error", err instanceof Error ? err.message : "Network error.");
-    }
-  }, [flash]);
+    },
+    [flash],
+  );
 
-  const { status, error: voiceError, isSupported, start, stop } = useVoiceInput({
+  const {
+    status,
+    error: voiceError,
+    isSupported,
+    start,
+    stop,
+  } = useVoiceInput({
     onTranscript: handleTranscript,
   });
 
@@ -88,18 +102,18 @@ export function TabVoiceMic({
   const label = voiceError
     ? voiceError
     : sendError
-    ? sendError
-    : recording
-    ? "Recording — tap to send"
-    : transcribing
-    ? "Transcribing…"
-    : send === "sending"
-    ? `Sending to ${tab}…`
-    : send === "sent"
-    ? `Sent → ${tab}`
-    : tab
-    ? `Talk to ${tab}`
-    : "No tab selected";
+      ? sendError
+      : recording
+        ? "Recording — tap to send"
+        : transcribing
+          ? "Transcribing…"
+          : send === "sending"
+            ? `Sending to ${tab}…`
+            : send === "sent"
+              ? `Sent → ${tab}`
+              : tab
+                ? `Talk to ${tab}`
+                : "No tab selected";
 
   const isError = !!voiceError || !!sendError;
 
@@ -116,16 +130,22 @@ export function TabVoiceMic({
           recording
             ? "animate-pulse text-status-negative hover:bg-status-negative/10"
             : busy
-            ? "text-text-muted opacity-50"
-            : disabled
-            ? "text-text-muted opacity-40"
-            : "text-text-secondary hover:bg-surface-raised hover:text-text-primary",
+              ? "text-text-muted opacity-50"
+              : disabled
+                ? "text-text-muted opacity-40"
+                : "text-text-secondary hover:bg-surface-raised hover:text-text-primary",
         )}
       >
         {busy ? (
           <Loader2 className="ui-spinner-sm" />
         ) : recording ? (
-          <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5" stroke="currentColor" strokeWidth={2}>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            className="h-3.5 w-3.5"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
             <rect x="6" y="6" width="12" height="12" rx="2" />
           </svg>
         ) : (
@@ -136,7 +156,11 @@ export function TabVoiceMic({
         <span
           className={cn(
             "min-w-0 truncate text-xs",
-            isError ? "text-status-negative" : recording ? "text-status-negative" : "text-text-muted",
+            isError
+              ? "text-status-negative"
+              : recording
+                ? "text-status-negative"
+                : "text-text-muted",
           )}
         >
           {label}

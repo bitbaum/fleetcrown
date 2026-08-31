@@ -11,10 +11,7 @@
  * /api/inject). Reads return "" when localStorage is unavailable (SSR or
  * private-browsing) — best-effort, no error states bubble out.
  */
-import {
-  DRAFT_STORAGE_PREFIX,
-  LEGACY_DRAFT_STORAGE_PREFIX,
-} from "@/config/brand-storage";
+import { DRAFT_STORAGE_PREFIX, LEGACY_DRAFT_STORAGE_PREFIX } from "@/config/brand-storage";
 
 function keys(tab: string): [string, string] {
   return [`${DRAFT_STORAGE_PREFIX}${tab}`, `${LEGACY_DRAFT_STORAGE_PREFIX}${tab}`];

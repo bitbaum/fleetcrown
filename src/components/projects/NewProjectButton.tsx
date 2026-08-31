@@ -37,12 +37,16 @@ export function NewProjectButton({ autoOpen = false, initialName = "" }: Props) 
     window.history.replaceState(null, "", url.toString());
   }, [autoOpen]);
 
-  const onReset = () => { form.reset(); setError(null); };
+  const onReset = () => {
+    form.reset();
+    setError(null);
+  };
 
-  const onSubmit = () => create({
-    name: form.text("name").trim(),
-    description: form.text("description").trim() || undefined,
-  });
+  const onSubmit = () =>
+    create({
+      name: form.text("name").trim(),
+      description: form.text("description").trim() || undefined,
+    });
 
   return (
     <ModalForm

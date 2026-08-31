@@ -59,7 +59,12 @@ export async function POST(req: NextRequest) {
   if (wsHandle && wsHandle.status !== "exited") {
     if (body.kind === "key") executor.write(wsId, body.data);
     else if (geometry) executor.resize(wsId, geometry.cols, geometry.rows);
-    return NextResponse.json({ ok: true, mode: "pty", tab: body.tab, ...(geometry?.clamped ? { clamped: true } : {}) });
+    return NextResponse.json({
+      ok: true,
+      mode: "pty",
+      tab: body.tab,
+      ...(geometry?.clamped ? { clamped: true } : {}),
+    });
   }
 
   // Otherwise fan out to the runner via the bridge fast lane. Routed by userId,
@@ -69,13 +74,34 @@ export async function POST(req: NextRequest) {
   if (ch === "cloud") {
     const access = await getExecutionAccess(userId);
     if (!access.cloudBuilderAllowed) {
-      return NextResponse.json({ error: "Cloud builder is private for this account." }, { status: 403 });
+      return NextResponse.json(
+        { error: "Cloud builder is private for this account." },
+        { status: 403 },
+      );
     }
   }
   if (body.kind === "key") {
-    await publishFastLaneEvent({ kind: "rawkey", u: userId, tab: body.tab, b: body.data, ...(ch ? { ch } : {}) });
+    await publishFastLaneEvent({
+      kind: "rawkey",
+      u: userId,
+      tab: body.tab,
+      b: body.data,
+      ...(ch ? { ch } : {}),
+    });
   } else if (geometry) {
-    await publishFastLaneEvent({ kind: "resize", u: userId, tab: body.tab, c: geometry.cols, r: geometry.rows, ...(ch ? { ch } : {}) });
+    await publishFastLaneEvent({
+      kind: "resize",
+      u: userId,
+      tab: body.tab,
+      c: geometry.cols,
+      r: geometry.rows,
+      ...(ch ? { ch } : {}),
+    });
   }
-  return NextResponse.json({ ok: true, mode: "bridge", tab: body.tab, ...(geometry?.clamped ? { clamped: true } : {}) });
+  return NextResponse.json({
+    ok: true,
+    mode: "bridge",
+    tab: body.tab,
+    ...(geometry?.clamped ? { clamped: true } : {}),
+  });
 }

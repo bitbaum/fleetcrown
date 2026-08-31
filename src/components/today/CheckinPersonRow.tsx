@@ -22,9 +22,7 @@ export function CheckinPersonRow({ person }: { person: CheckinPerson }) {
   const [state, setState] = useState<"open" | "reminded" | "skipped">("open");
   const [error, setError] = useState<string | null>(null);
 
-  const last = lastTalkLabel(
-    person.lastInteraction ? new Date(person.lastInteraction) : null,
-  );
+  const last = lastTalkLabel(person.lastInteraction ? new Date(person.lastInteraction) : null);
   const channels = reachChannels(person.attrs);
   const profileHref = person.personId
     ? `${NAV.people.href}?open=${encodeURIComponent(person.personId)}`
@@ -75,9 +73,7 @@ export function CheckinPersonRow({ person }: { person: CheckinPerson }) {
   }
 
   if (state === "skipped") {
-    return (
-      <p className="px-2.5 py-2 text-xs text-text-muted">Skipped {person.name}</p>
-    );
+    return <p className="px-2.5 py-2 text-xs text-text-muted">Skipped {person.name}</p>;
   }
 
   return (

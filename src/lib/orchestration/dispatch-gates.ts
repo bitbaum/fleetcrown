@@ -57,7 +57,15 @@ export function leadingFailureStreak(outcomes: string[]): number {
 }
 
 export function evaluateDispatchGates(input: GateInput): DispatchResult | null {
-  const { status, blockerCount, mode, queueLength, streakSuffix, noOpCount = 0, recentOutcomes = [] } = input;
+  const {
+    status,
+    blockerCount,
+    mode,
+    queueLength,
+    streakSuffix,
+    noOpCount = 0,
+    recentOutcomes = [],
+  } = input;
 
   if (status === SESSION_STATUS.WORKING || status === SESSION_STATUS.BLOCKED) {
     return {
@@ -109,9 +117,10 @@ export function evaluateDispatchGates(input: GateInput): DispatchResult | null {
   const fired: DispatchAction = queueLength > 0 ? "queue" : "nextbest";
   return {
     action: fired,
-    reason: queueLength > 0
-      ? `Autopilot on — firing queue item 1.${streakSuffix}`
-      : `Autopilot on, queue empty — firing next_best.${streakSuffix}`,
+    reason:
+      queueLength > 0
+        ? `Autopilot on — firing queue item 1.${streakSuffix}`
+        : `Autopilot on, queue empty — firing next_best.${streakSuffix}`,
     source: queueLength > 0 ? "mode_gate" : "empty_queue",
   };
 }

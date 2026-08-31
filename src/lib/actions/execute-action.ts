@@ -32,10 +32,7 @@ export type ExecuteActionResult = {
  *  gate but do nothing at execution until built. SEND_MESSAGE (Telegram),
  *  SEND_EMAIL (Resend) and CREATE_EVENT (gog calendar create) are now wired —
  *  see the switch below. */
-const DEFERRED_TYPES = new Set<Action["type"]>([
-  ACTION_TYPE.FOLLOW_UP,
-  ACTION_TYPE.OTHER,
-]);
+const DEFERRED_TYPES = new Set<Action["type"]>([ACTION_TYPE.FOLLOW_UP, ACTION_TYPE.OTHER]);
 
 type ProfileUpdatePayload = {
   kind: "profile_update";
@@ -168,9 +165,13 @@ export async function executeAction(userId: string, action: Action): Promise<Exe
           return { executed: false, error: "invalid dispatch_prompt payload" };
         }
 
-        const { status, body } = await injectPrompt({ tab: projectKey, customPrompt: prompt }, userId);
+        const { status, body } = await injectPrompt(
+          { tab: projectKey, customPrompt: prompt },
+          userId,
+        );
         if (status >= 400) {
-          const reason = typeof body.error === "string" ? body.error : `dispatch failed (${status})`;
+          const reason =
+            typeof body.error === "string" ? body.error : `dispatch failed (${status})`;
           await recordActionAuditEvent(userId, action, "failed", { reason });
           return { executed: false, error: reason };
         }
@@ -186,7 +187,11 @@ export async function executeAction(userId: string, action: Action): Promise<Exe
         let feedbackLinked = 0;
         if (feedbackIds.length > 0) {
           try {
-            feedbackLinked = await markFeedbackDispatchedBulk(userId, feedbackIds, runId ?? undefined);
+            feedbackLinked = await markFeedbackDispatchedBulk(
+              userId,
+              feedbackIds,
+              runId ?? undefined,
+            );
           } catch {
             /* audited via feedbackLinked=0 below */
           }
@@ -250,7 +255,9 @@ export async function executeAction(userId: string, action: Action): Promise<Exe
           description: typeof payload.description === "string" ? payload.description : undefined,
           attrs: isRecord(payload.attrs) ? stringRecord(payload.attrs) : {},
           externalId: typeof payload.externalId === "string" ? payload.externalId : undefined,
-          source: (typeof payload.source === "string" ? payload.source : "internal") as ImportSource,
+          source: (typeof payload.source === "string"
+            ? payload.source
+            : "internal") as ImportSource,
         };
         await applyImportedContact(userId, contact);
         return finishExecuted(userId, action);
@@ -261,7 +268,9 @@ export async function executeAction(userId: string, action: Action): Promise<Exe
         const key = typeof payload.key === "string" ? payload.key : "";
         const value = typeof payload.value === "string" ? payload.value : "";
         if (!action.entityId || !key || !value) {
-          await recordActionAuditEvent(userId, action, "failed", { reason: "enrich missing field" });
+          await recordActionAuditEvent(userId, action, "failed", {
+            reason: "enrich missing field",
+          });
           return { executed: false, error: "invalid enrich payload" };
         }
         await applyEnrichment(userId, action.entityId, key, value);
@@ -283,7 +292,8 @@ export async function executeAction(userId: string, action: Action): Promise<Exe
       case ACTION_TYPE.SEND_MESSAGE:
       case ACTION_TYPE.SEND_EMAIL: {
         await recordActionAuditEvent(userId, action, "deferred", {
-          reason: "outbound send frozen — profiles first, no messages while the book is being built",
+          reason:
+            "outbound send frozen — profiles first, no messages while the book is being built",
         });
         return { executed: false, deferred: true };
       }

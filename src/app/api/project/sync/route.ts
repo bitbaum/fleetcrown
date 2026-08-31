@@ -28,9 +28,12 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { stdout, stderr } = await execAsync(`git -C '${dir.replace(/'/g, "'\\''")}' pull --ff-only`, {
-      timeout: 30000,
-    });
+    const { stdout, stderr } = await execAsync(
+      `git -C '${dir.replace(/'/g, "'\\''")}' pull --ff-only`,
+      {
+        timeout: 30000,
+      },
+    );
     return NextResponse.json({ ok: true, output: (stdout + stderr).trim().slice(0, 500) });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

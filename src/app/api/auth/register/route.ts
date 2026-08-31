@@ -8,12 +8,12 @@ import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { RATE_LIMIT_WINDOW_LONG_MS } from "@/lib/constants/time";
 
 const Body = z.object({
-  name:     z.string().trim().min(2, "Name must be at least 2 characters."),
-  email:    z.string().trim().email("Invalid email address.").toLowerCase(),
+  name: z.string().trim().min(2, "Name must be at least 2 characters."),
+  email: z.string().trim().email("Invalid email address.").toLowerCase(),
   password: z.string().min(8, "Password must be at least 8 characters."),
 });
 
-const LIMIT  = 10;           // max registrations
+const LIMIT = 10; // max registrations
 const WINDOW = RATE_LIMIT_WINDOW_LONG_MS;
 
 export async function POST(req: NextRequest) {
@@ -30,7 +30,10 @@ export async function POST(req: NextRequest) {
 
   const existing = await getUserByEmail(email);
   if (existing) {
-    return NextResponse.json({ error: "An account with this email already exists." }, { status: 409 });
+    return NextResponse.json(
+      { error: "An account with this email already exists." },
+      { status: 409 },
+    );
   }
 
   const passwordHash = await hashPassword(password);

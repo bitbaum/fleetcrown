@@ -16,15 +16,20 @@ type WelcomeCardProps = {
   body: ReactNode;
   cta: string;
   variant?: "primary" | "secondary";
-} & (
-  | { href: string; onClick?: never }
-  | { onClick: () => void; href?: never }
-);
+} & ({ href: string; onClick?: never } | { onClick: () => void; href?: never });
 
-function WelcomeCard({ icon: Icon, title, body, cta, variant = "primary", ...rest }: WelcomeCardProps) {
+function WelcomeCard({
+  icon: Icon,
+  title,
+  body,
+  cta,
+  variant = "primary",
+  ...rest
+}: WelcomeCardProps) {
   const iconClass = variant === "primary" ? "text-accent-text" : "text-text-secondary";
   const ctaClass = variant === "primary" ? "text-accent-text" : "text-text-secondary";
-  const shared = "ui-card-shell hover:border-accent-primary transition-colors p-4 flex flex-col gap-2 group text-left";
+  const shared =
+    "ui-card-shell hover:border-accent-primary transition-colors p-4 flex flex-col gap-2 group text-left";
   const content = (
     <>
       <Icon className={`h-5 w-5 ${iconClass}`} />
@@ -37,9 +42,13 @@ function WelcomeCard({ icon: Icon, title, body, cta, variant = "primary", ...res
   );
 
   return "href" in rest && rest.href ? (
-    <Link href={rest.href} className={shared}>{content}</Link>
+    <Link href={rest.href} className={shared}>
+      {content}
+    </Link>
   ) : (
-    <button type="button" onClick={rest.onClick} className={shared}>{content}</button>
+    <button type="button" onClick={rest.onClick} className={shared}>
+      {content}
+    </button>
   );
 }
 
@@ -90,15 +99,25 @@ export function EmptyStateWelcome({
       </div>
 
       <div className="mt-5 flex flex-wrap gap-x-4 gap-y-2 text-sm">
-        <button type="button" onClick={onAddManual} className="min-h-11 text-text-secondary hover:text-text-primary">
+        <button
+          type="button"
+          onClick={onAddManual}
+          className="min-h-11 text-text-secondary hover:text-text-primary"
+        >
           Add without git
         </button>
         {insideFleetRunner ? (
-          <Link href="/control/import-local" className="inline-flex min-h-11 items-center text-text-secondary hover:text-text-primary">
+          <Link
+            href="/control/import-local"
+            className="inline-flex min-h-11 items-center text-text-secondary hover:text-text-primary"
+          >
             Import from this computer
           </Link>
         ) : (
-          <Link href="/download" className="inline-flex min-h-11 items-center text-text-secondary hover:text-text-primary">
+          <Link
+            href="/download"
+            className="inline-flex min-h-11 items-center text-text-secondary hover:text-text-primary"
+          >
             Get Fleet Runner
           </Link>
         )}

@@ -32,7 +32,11 @@ export async function GET(req: NextRequest) {
   await ensureOwnerWeeklyDigest();
   const due = await getUsersDueForDigest(startedAt);
 
-  const results: Array<{ userId: string; status: "sent" | "skipped_empty" | "error"; error?: string }> = [];
+  const results: Array<{
+    userId: string;
+    status: "sent" | "skipped_empty" | "error";
+    error?: string;
+  }> = [];
   const activityUrl = `${appUrl()}/activity`;
 
   // Serial loop on purpose — Groq calls cost ~1–3s each and we'd rather not
@@ -83,9 +87,9 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  const sent    = results.filter((r) => r.status === "sent").length;
+  const sent = results.filter((r) => r.status === "sent").length;
   const skipped = results.filter((r) => r.status === "skipped_empty").length;
-  const errors  = results.filter((r) => r.status === "error").length;
+  const errors = results.filter((r) => r.status === "error").length;
 
   // A failed send is caught per-user so one bad address cannot stop the batch —
   // which also means the whole batch can fail while the route still answers
@@ -94,10 +98,18 @@ export async function GET(req: NextRequest) {
   await logDebug({
     source: "crons/send-digest-emails",
     level: errors > 0 ? "error" : "info",
-    message: errors > 0
-      ? `digest email send FAILED for ${errors}/${due.length} due user(s)`
-      : `${sent} digest email(s) sent, ${skipped} skipped as empty, ${due.length} due`,
-    meta: { consideredAt: startedAt.toISOString(), due: due.length, sent, skipped, errors, details: results },
+    message:
+      errors > 0
+        ? `digest email send FAILED for ${errors}/${due.length} due user(s)`
+        : `${sent} digest email(s) sent, ${skipped} skipped as empty, ${due.length} due`,
+    meta: {
+      consideredAt: startedAt.toISOString(),
+      due: due.length,
+      sent,
+      skipped,
+      errors,
+      details: results,
+    },
   });
 
   return NextResponse.json({

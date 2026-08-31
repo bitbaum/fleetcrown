@@ -40,7 +40,8 @@ export const codexAdapter: AgentAdapter = {
     if (existsSync(path.join(HOME, ".codex"))) {
       return {
         available: false,
-        availabilityReason: "Codex configuration exists, but no Codex CLI command is installed on PATH.",
+        availabilityReason:
+          "Codex configuration exists, but no Codex CLI command is installed on PATH.",
       };
     }
     return {

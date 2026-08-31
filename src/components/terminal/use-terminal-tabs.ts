@@ -28,12 +28,13 @@ export type TerminalTabsState = {
  * a working fleet look broken.
  */
 export function useTerminalTabs(channel: BuilderChannel): TerminalTabsState {
-  const { data, loading } = usePoll<{ tabs: string[]; unavailable?: { code: string; message: string } }>(
-    `/api/control/open-tabs?channel=${channel}`,
-    5000,
-  );
+  const { data, loading } = usePoll<{
+    tabs: string[];
+    unavailable?: { code: string; message: string };
+  }>(`/api/control/open-tabs?channel=${channel}`, 5000);
   const presence = useBuilderPresence();
-  const connected = channel === "cloud" ? presence.builderPresence?.cloud : presence.builderPresence?.local;
+  const connected =
+    channel === "cloud" ? presence.builderPresence?.cloud : presence.builderPresence?.local;
 
   return {
     tabs: data?.tabs ?? [],

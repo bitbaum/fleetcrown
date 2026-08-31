@@ -59,7 +59,9 @@ export function FleetDoctorCard() {
         <CardHeader
           icon={Stethoscope}
           title="Fleet Doctor"
-          right={<span className="text-xs font-medium text-text-tertiary">not applicable here</span>}
+          right={
+            <span className="text-xs font-medium text-text-tertiary">not applicable here</span>
+          }
         />
         <p className="text-sm text-text-secondary">
           Full health checks run where the local runtime lives — the desktop app or the box install.
@@ -77,9 +79,7 @@ export function FleetDoctorCard() {
         icon={Stethoscope}
         title="Fleet Doctor"
         right={
-          <span className={`text-xs font-medium ${summaryTone.cls}`}>
-            {summaryTone.label}
-          </span>
+          <span className={`text-xs font-medium ${summaryTone.cls}`}>{summaryTone.label}</span>
         }
       />
       <div className="mb-3 flex flex-wrap gap-2 text-xs text-text-tertiary">

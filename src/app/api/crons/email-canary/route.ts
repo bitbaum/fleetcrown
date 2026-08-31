@@ -15,7 +15,12 @@ export async function GET(req: NextRequest) {
 
   const key = process.env.RESEND_API_KEY?.trim();
   if (!key) {
-    logDebug({ source: "crons/email-canary", level: "warn", message: "RESEND_API_KEY unset — email path dark", meta: {} });
+    logDebug({
+      source: "crons/email-canary",
+      level: "warn",
+      message: "RESEND_API_KEY unset — email path dark",
+      meta: {},
+    });
     return NextResponse.json({ ok: false, skipped: "no RESEND_API_KEY" });
   }
 
@@ -36,7 +41,12 @@ export async function GET(req: NextRequest) {
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    logDebug({ source: "crons/email-canary", level: "error", message: `Resend probe failed: ${message}`, meta: {} });
+    logDebug({
+      source: "crons/email-canary",
+      level: "error",
+      message: `Resend probe failed: ${message}`,
+      meta: {},
+    });
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 

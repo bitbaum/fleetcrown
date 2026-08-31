@@ -26,7 +26,11 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve as resolvePath } from "node:path";
-import { ladderEffectForClose, levelForStreak, ESCALATION_HUMAN_STREAK } from "@/lib/orchestration/escalation-ladder";
+import {
+  ladderEffectForClose,
+  levelForStreak,
+  ESCALATION_HUMAN_STREAK,
+} from "@/lib/orchestration/escalation-ladder";
 import { leadingFailureStreak } from "@/lib/orchestration/dispatch-gates";
 import { isFailingOutcome } from "@/lib/events";
 import { ORCHESTRATION_OUTCOMES } from "@/lib/orchestration/contract";
@@ -137,7 +141,7 @@ const runsCode = codeOf("src/db/queries/orchestration-runs.ts");
 
 assert(
   !/resolveEscalation\([^)]*"success"\)/.test(runsCode),
-  "orchestration-runs.ts still resolves the ladder with a hardcoded \"success\". " +
+  'orchestration-runs.ts still resolves the ladder with a hardcoded "success". ' +
     "That is the original bug: it makes `partial` a close that neither advances " +
     "nor clears. Route it through ladderEffectForClose instead.",
 );
@@ -182,8 +186,7 @@ const dedupeRepairAt = migration.indexOf("'superseded'");
 assert(indexAt > -1, "migration 0057 must create the unique index");
 assert(
   progressRepairAt > -1 && progressRepairAt < indexAt,
-  "migration 0057 must retro-resolve earned-out ladders BEFORE creating the " +
-    "unique index",
+  "migration 0057 must retro-resolve earned-out ladders BEFORE creating the " + "unique index",
 );
 assert(
   dedupeRepairAt > -1 && dedupeRepairAt < indexAt,

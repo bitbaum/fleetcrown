@@ -56,7 +56,16 @@ export function AgentTokenSettings() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to create token");
       setRevealed({ token: data.token, id: data.id, label: data.label });
-      setTokens((prev) => [...prev, { id: data.id, label: data.label, lastUsedAt: null, createdAt: data.createdAt, prefix: data.prefix }]);
+      setTokens((prev) => [
+        ...prev,
+        {
+          id: data.id,
+          label: data.label,
+          lastUsedAt: null,
+          createdAt: data.createdAt,
+          prefix: data.prefix,
+        },
+      ]);
       setLabel("");
       // If we're inside Fleet Runner, hand the new token straight to the
       // desktop runner over IPC. The user gets paired in one click instead
@@ -87,7 +96,10 @@ export function AgentTokenSettings() {
   const copy = async (text: string, key: string = "default") => {
     await navigator.clipboard.writeText(text);
     setCopiedKey(key);
-    setTimeout(() => setCopiedKey((current) => (current === key ? null : current)), FEEDBACK_MEDIUM_MS);
+    setTimeout(
+      () => setCopiedKey((current) => (current === key ? null : current)),
+      FEEDBACK_MEDIUM_MS,
+    );
   };
 
   const remove = async (id: string) => {
@@ -105,7 +117,11 @@ export function AgentTokenSettings() {
     <section className="ui-settings-section">
       <h2 className="font-medium text-text-primary">Agent Tokens</h2>
       <p className="text-sm text-text-tertiary">
-        Preferred: install the native <a href="/download" className="underline">Fleet Runner desktop app</a> (the authoritative local runtime). Legacy runner installer below for transition / headless.
+        Preferred: install the native{" "}
+        <a href="/download" className="underline">
+          Fleet Runner desktop app
+        </a>{" "}
+        (the authoritative local runtime). Legacy runner installer below for transition / headless.
       </p>
       <div className="flex items-center gap-2">
         <code className="flex-1 break-all rounded-lg bg-surface-raised px-3 py-2 font-mono text-xs text-text-secondary">
@@ -116,7 +132,11 @@ export function AgentTokenSettings() {
           className="ui-icon-action shrink-0 min-h-8 min-w-8 p-1.5"
           title="Copy install command"
         >
-          {copiedKey === "install" ? <Check className="h-4 w-4 text-status-positive" /> : <Copy className="h-4 w-4" />}
+          {copiedKey === "install" ? (
+            <Check className="h-4 w-4 text-status-positive" />
+          ) : (
+            <Copy className="h-4 w-4" />
+          )}
         </button>
       </div>
 
@@ -156,7 +176,11 @@ export function AgentTokenSettings() {
               className="ui-icon-action shrink-0 min-h-8 min-w-8 p-1.5"
               title="Copy token"
             >
-              {copiedKey === "token" ? <Check className="h-4 w-4 text-status-positive" /> : <Copy className="h-4 w-4" />}
+              {copiedKey === "token" ? (
+                <Check className="h-4 w-4 text-status-positive" />
+              ) : (
+                <Copy className="h-4 w-4" />
+              )}
             </button>
           </div>
           {/* Three branches based on the running surface:
@@ -177,7 +201,9 @@ export function AgentTokenSettings() {
                   if (!revealed) return;
                   const save = window.fleetRunner?.saveToken;
                   if (!save) {
-                    setAutoPairError("This Fleet Runner build is missing the saveToken IPC — update to v0.2+");
+                    setAutoPairError(
+                      "This Fleet Runner build is missing the saveToken IPC — update to v0.2+",
+                    );
                     return;
                   }
                   setAutoPairError(null);
@@ -196,7 +222,8 @@ export function AgentTokenSettings() {
               </button>
               {autoPairError && (
                 <p className="text-xs text-status-warning">
-                  Couldn&apos;t pair automatically: {autoPairError}. You can still copy the token and paste it manually.
+                  Couldn&apos;t pair automatically: {autoPairError}. You can still copy the token
+                  and paste it manually.
                 </p>
               )}
             </div>
@@ -234,7 +261,11 @@ export function AgentTokenSettings() {
                   className="ui-icon-action shrink-0 min-h-8 min-w-8 p-1.5"
                   title="Copy install command with token pre-filled"
                 >
-                  {copiedKey === "oneshot" ? <Check className="h-4 w-4 text-status-positive" /> : <Copy className="h-4 w-4" />}
+                  {copiedKey === "oneshot" ? (
+                    <Check className="h-4 w-4 text-status-positive" />
+                  ) : (
+                    <Copy className="h-4 w-4" />
+                  )}
                 </button>
               </div>
             );
@@ -251,7 +282,10 @@ export function AgentTokenSettings() {
                 <div className="flex items-center gap-2 flex-wrap">
                   <p className="truncate text-sm font-medium text-text-primary">{t.label}</p>
                   {t.prefix && (
-                    <code className="rounded bg-surface-raised px-1.5 py-0.5 font-mono text-micro text-text-tertiary shrink-0" title="Token prefix — match this against the ck_… in your .env to identify the right token">
+                    <code
+                      className="rounded bg-surface-raised px-1.5 py-0.5 font-mono text-micro text-text-tertiary shrink-0"
+                      title="Token prefix — match this against the ck_… in your .env to identify the right token"
+                    >
                       {t.prefix}
                     </code>
                   )}
@@ -269,7 +303,11 @@ export function AgentTokenSettings() {
                 className="ui-icon-action shrink-0 min-h-8 min-w-8 p-1.5 text-status-negative/60 hover:text-status-negative"
                 title="Revoke token"
               >
-                {deleting === t.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                {deleting === t.id ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
               </button>
             </div>
           ))}
@@ -277,7 +315,9 @@ export function AgentTokenSettings() {
       )}
 
       {tokens.length === 0 && !revealed && (
-        <p className="text-sm text-text-secondary">No tokens yet. Generate one to connect an agent.</p>
+        <p className="text-sm text-text-secondary">
+          No tokens yet. Generate one to connect an agent.
+        </p>
       )}
     </section>
   );

@@ -37,12 +37,12 @@ export function FleetLifecycleSettings() {
       .catch(() => setLoadError(true));
   }, []);
 
-  const dirty = loaded !== null && (
-    autoRestore !== loaded.autoRestore ||
-    restoreMode !== loaded.restoreMode ||
-    sessionName !== loaded.sessionName ||
-    autoStartAtLogin !== loaded.autoStartAtLogin
-  );
+  const dirty =
+    loaded !== null &&
+    (autoRestore !== loaded.autoRestore ||
+      restoreMode !== loaded.restoreMode ||
+      sessionName !== loaded.sessionName ||
+      autoStartAtLogin !== loaded.autoStartAtLogin);
 
   const save = async () => {
     setSaving(true);
@@ -72,23 +72,26 @@ export function FleetLifecycleSettings() {
       <div>
         <h2 className="font-medium text-text-primary">Fleet Lifecycle</h2>
         <p className="mt-1 text-sm text-text-tertiary">
-          How Fleet Runner brings your zellij fleet back after a restart, and what it does with stale sessions.
-          These knobs apply on the next Fleet Runner boot.
+          How Fleet Runner brings your zellij fleet back after a restart, and what it does with
+          stale sessions. These knobs apply on the next Fleet Runner boot.
         </p>
       </div>
 
       {loadError ? (
-        <p className="ui-error">Failed to load Fleet Lifecycle settings — check that the server is reachable.</p>
+        <p className="ui-error">
+          Failed to load Fleet Lifecycle settings — check that the server is reachable.
+        </p>
       ) : loaded === null ? (
         <div className="flex items-center gap-2 text-sm text-text-muted">
           <Loader2 className="ui-spinner" /> Loading…
         </div>
       ) : (
         <div className="space-y-8">
-
           {/* ─── Restoration ─── */}
           <div className="space-y-5">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">Restoration</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">
+              Restoration
+            </h3>
 
             <div className="space-y-2">
               <label className="ui-kicker">When Fleet Runner starts</label>
@@ -103,9 +106,12 @@ export function FleetLifecycleSettings() {
                       : "border-border-default bg-surface-base hover:border-border-interactive",
                   ].join(" ")}
                 >
-                  <div className="font-medium text-sm text-text-primary">Restore my fleet automatically</div>
+                  <div className="font-medium text-sm text-text-primary">
+                    Restore my fleet automatically
+                  </div>
                   <div className="mt-1 text-xs text-text-tertiary">
-                    Spawn zellij + every agent from my last snapshot the moment Fleet Runner boots. Zero clicks after PC restart.
+                    Spawn zellij + every agent from my last snapshot the moment Fleet Runner boots.
+                    Zero clicks after PC restart.
                   </div>
                 </button>
                 <button
@@ -118,9 +124,12 @@ export function FleetLifecycleSettings() {
                       : "border-border-default bg-surface-base hover:border-border-interactive",
                   ].join(" ")}
                 >
-                  <div className="font-medium text-sm text-text-primary">Show a Restore Fleet button</div>
+                  <div className="font-medium text-sm text-text-primary">
+                    Show a Restore Fleet button
+                  </div>
                   <div className="mt-1 text-xs text-text-tertiary">
-                    Don&apos;t touch zellij on boot. One-click restore from the tray when you&apos;re ready.
+                    Don&apos;t touch zellij on boot. One-click restore from the tray when
+                    you&apos;re ready.
                   </div>
                 </button>
               </div>
@@ -139,9 +148,12 @@ export function FleetLifecycleSettings() {
                       : "border-border-default bg-surface-base hover:border-border-interactive",
                   ].join(" ")}
                 >
-                  <div className="font-medium text-sm text-text-primary">Start fresh from my snapshot</div>
+                  <div className="font-medium text-sm text-text-primary">
+                    Start fresh from my snapshot
+                  </div>
                   <div className="mt-1 text-xs text-text-tertiary">
-                    Discard zellij&apos;s resurrect file. Agents auto-resume from their own session files — the press-ENTER prompt never fires. Recommended.
+                    Discard zellij&apos;s resurrect file. Agents auto-resume from their own session
+                    files — the press-ENTER prompt never fires. Recommended.
                   </div>
                 </button>
                 <button
@@ -154,9 +166,12 @@ export function FleetLifecycleSettings() {
                       : "border-border-default bg-surface-base hover:border-border-interactive",
                   ].join(" ")}
                 >
-                  <div className="font-medium text-sm text-text-primary">Leave zellij&apos;s resurrection alone</div>
+                  <div className="font-medium text-sm text-text-primary">
+                    Leave zellij&apos;s resurrection alone
+                  </div>
                   <div className="mt-1 text-xs text-text-tertiary">
-                    Preserve zellij&apos;s built-in resurrect. You&apos;ll press ENTER per pane when you attach.
+                    Preserve zellij&apos;s built-in resurrect. You&apos;ll press ENTER per pane when
+                    you attach.
                   </div>
                 </button>
               </div>
@@ -165,10 +180,14 @@ export function FleetLifecycleSettings() {
 
           {/* ─── Identity ─── */}
           <div className="space-y-5">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">Identity</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">
+              Identity
+            </h3>
 
             <div className="space-y-2">
-              <label className="ui-kicker" htmlFor="fleet-session-name">Session name</label>
+              <label className="ui-kicker" htmlFor="fleet-session-name">
+                Session name
+              </label>
               <input
                 id="fleet-session-name"
                 type="text"
@@ -180,14 +199,17 @@ export function FleetLifecycleSettings() {
                 pattern="[A-Za-z0-9_-]+"
               />
               <p className="text-xs text-text-muted">
-                The zellij session Fleet Runner owns. Letters, numbers, hyphens, underscores. Default <code className="font-mono">fleet</code>.
+                The zellij session Fleet Runner owns. Letters, numbers, hyphens, underscores.
+                Default <code className="font-mono">fleet</code>.
               </p>
             </div>
           </div>
 
           {/* ─── Startup ─── */}
           <div className="space-y-5">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">Startup</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">
+              Startup
+            </h3>
 
             <div className="space-y-2">
               <label className="flex items-start gap-3 cursor-pointer">
@@ -198,9 +220,12 @@ export function FleetLifecycleSettings() {
                   className="mt-0.5"
                 />
                 <div>
-                  <div className="font-medium text-sm text-text-primary">Auto-start Fleet Runner at login</div>
+                  <div className="font-medium text-sm text-text-primary">
+                    Auto-start Fleet Runner at login
+                  </div>
                   <div className="mt-1 text-xs text-text-tertiary">
-                    macOS Login Items, Linux systemd user unit, Windows startup. Combined with auto-restore: PC boots, fleet is back.
+                    macOS Login Items, Linux systemd user unit, Windows startup. Combined with
+                    auto-restore: PC boots, fleet is back.
                   </div>
                 </div>
               </label>

@@ -8,7 +8,10 @@ import { db } from "@/db";
 import { entities } from "@/db/schema";
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
 import { getProjectContext } from "@/db/queries/project-context";
-import { getProjectDossierByProjectKey, renderProjectDossierForAgent } from "@/db/queries/project-dossier";
+import {
+  getProjectDossierByProjectKey,
+  renderProjectDossierForAgent,
+} from "@/db/queries/project-dossier";
 import { deleteKnowledgeSource, upsertKnowledge } from "@/db/queries/knowledge-embeddings";
 import { embeddingsEnabled } from "@/lib/rag/embeddings";
 import { skipForDemo } from "@/lib/demo-guard";
@@ -24,7 +27,9 @@ async function reindexProjectProfile(userId: string, projectKey: string): Promis
   // indexing its own fixtures once.
   if (await skipForDemo(userId)) return;
   const dossier = await getProjectDossierByProjectKey(userId, projectKey).catch(() => null);
-  const ctx = dossier ? renderProjectDossierForAgent(dossier) : await getProjectContext(userId, projectKey).catch(() => null);
+  const ctx = dossier
+    ? renderProjectDossierForAgent(dossier)
+    : await getProjectContext(userId, projectKey).catch(() => null);
   if (!ctx?.trim()) return;
   await upsertKnowledge(userId, {
     sourceType: "project_profile",
@@ -35,10 +40,17 @@ async function reindexProjectProfile(userId: string, projectKey: string): Promis
 }
 
 /** Look up project name by entity id, then reindex. No-op when RAG is off. */
-export async function reindexProjectProfileByEntityId(userId: string, entityId: string): Promise<void> {
+export async function reindexProjectProfileByEntityId(
+  userId: string,
+  entityId: string,
+): Promise<void> {
   if (!embeddingsEnabled()) return;
   const row = await db.query.entities.findFirst({
-    where: and(eq(entities.id, entityId), eq(entities.userId, userId), eq(entities.type, ENTITY_TYPE.PROJECT)),
+    where: and(
+      eq(entities.id, entityId),
+      eq(entities.userId, userId),
+      eq(entities.type, ENTITY_TYPE.PROJECT),
+    ),
     columns: { name: true },
   });
   if (!row?.name) return;
@@ -62,7 +74,11 @@ export function scheduleRenamedProjectProfileReindex(
   if (!embeddingsEnabled()) return;
   void (async () => {
     const row = await db.query.entities.findFirst({
-      where: and(eq(entities.id, entityId), eq(entities.userId, userId), eq(entities.type, ENTITY_TYPE.PROJECT)),
+      where: and(
+        eq(entities.id, entityId),
+        eq(entities.userId, userId),
+        eq(entities.type, ENTITY_TYPE.PROJECT),
+      ),
       columns: { name: true },
     });
     if (!row?.name) return;
@@ -71,7 +87,10 @@ export function scheduleRenamedProjectProfileReindex(
       await deleteKnowledgeSource(userId, "project_profile", previousProjectKey);
     }
   })().catch((err) => {
-    console.error("[reindex-project-profile] rename failed:", err instanceof Error ? err.message : err);
+    console.error(
+      "[reindex-project-profile] rename failed:",
+      err instanceof Error ? err.message : err,
+    );
   });
 }
 
@@ -81,6 +100,9 @@ export function scheduleRenamedProjectProfileReindex(
 export function scheduleDeletedProjectProfileRemoval(userId: string, projectKey: string): void {
   if (!embeddingsEnabled()) return;
   void deleteKnowledgeSource(userId, "project_profile", projectKey).catch((err) => {
-    console.error("[reindex-project-profile] delete failed:", err instanceof Error ? err.message : err);
+    console.error(
+      "[reindex-project-profile] delete failed:",
+      err instanceof Error ? err.message : err,
+    );
   });
 }

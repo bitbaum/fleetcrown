@@ -13,14 +13,20 @@ import { readFileSync } from "node:fs";
 function buildSha(): string {
   if (process.env.FLEETCROWN_BUILD_SHA) return process.env.FLEETCROWN_BUILD_SHA;
   try {
-    return execSync("git rev-parse --short HEAD", { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+    return execSync("git rev-parse --short HEAD", {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
   } catch {
     return "dev";
   }
 }
 const PKG_VERSION = (() => {
-  try { return (JSON.parse(readFileSync("./package.json", "utf8")) as { version: string }).version; }
-  catch { return "0.0.0"; }
+  try {
+    return (JSON.parse(readFileSync("./package.json", "utf8")) as { version: string }).version;
+  } catch {
+    return "0.0.0";
+  }
 })();
 
 const nextConfig: NextConfig = {

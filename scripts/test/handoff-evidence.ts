@@ -26,10 +26,16 @@ import { dbRowToSession } from "@/lib/project-session";
 import { parseSessionFile } from "@/lib/session-content";
 import type { SessionState } from "@/lib/control-types";
 
-let pass = 0, fail = 0;
+let pass = 0,
+  fail = 0;
 function ok(name: string, cond: boolean) {
-  if (cond) { pass++; console.log(`  ✓ ${name}`); }
-  else { fail++; console.log(`  ✗ ${name}`); }
+  if (cond) {
+    pass++;
+    console.log(`  ✓ ${name}`);
+  } else {
+    fail++;
+    console.log(`  ✗ ${name}`);
+  }
 }
 
 // A distinctive sentinel per field, so "did it arrive" is unambiguous — a
@@ -61,10 +67,7 @@ ok("a ready handoff closes the run", filePatch !== null);
 if (filePatch) {
   const seen = summaryForJudge(filePatch.summary);
   for (const [field] of DOD_EVIDENCE_FIELDS) {
-    ok(
-      `handoff file → judge carries \`${String(field)}\``,
-      seen.includes(sentinel(String(field))),
-    );
+    ok(`handoff file → judge carries \`${String(field)}\``, seen.includes(sentinel(String(field))));
   }
 }
 
@@ -118,7 +121,10 @@ const blankPatch = closeRunFromSession(RUN, {
 });
 if (blankPatch) {
   const seen = summaryForJudge(blankPatch.summary);
-  ok("an unevidenced check is absent from the judge's view, not blank-passed", !/Typecheck:/.test(seen));
+  ok(
+    "an unevidenced check is absent from the judge's view, not blank-passed",
+    !/Typecheck:/.test(seen),
+  );
   ok("what the agent did still reaches the judge", seen.includes("did the thing"));
 }
 

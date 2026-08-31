@@ -63,7 +63,11 @@ export function workspaceTransport(id: string): TerminalTransport {
       source.onerror = () => h.onConnected(false);
       source.onmessage = (msg) => {
         let event: AgentEvent;
-        try { event = JSON.parse(msg.data) as AgentEvent; } catch { return; }
+        try {
+          event = JSON.parse(msg.data) as AgentEvent;
+        } catch {
+          return;
+        }
         if (event.kind === "output" && event.data) h.onOutput(event.data);
         else if (event.kind === "status" && event.status) h.onStatus(event.status);
         else if (event.kind === "exit") h.onStatus("exited");
@@ -96,12 +100,27 @@ export function runnerTransport(tab: string, channel?: BuilderChannel): Terminal
           const { frame, append } = JSON.parse(e.data) as { frame: string; append?: boolean };
           if (!append) h.onReset(); // zellij snapshot → clear then full repaint
           h.onOutput(frame);
-        } catch { /* ignore malformed frame */ }
+        } catch {
+          /* ignore malformed frame */
+        }
       });
       es.onerror = () => h.onConnected(false);
       return () => es.close();
     },
-    sendKey: (data) => postJson("/api/control/tab-inject-raw", { kind: "key", tab, data, ...(ch ? { channel: ch } : {}) }),
-    sendResize: (cols, rows) => void postJson("/api/control/tab-inject-raw", { kind: "resize", tab, cols, rows, ...(ch ? { channel: ch } : {}) }),
+    sendKey: (data) =>
+      postJson("/api/control/tab-inject-raw", {
+        kind: "key",
+        tab,
+        data,
+        ...(ch ? { channel: ch } : {}),
+      }),
+    sendResize: (cols, rows) =>
+      void postJson("/api/control/tab-inject-raw", {
+        kind: "resize",
+        tab,
+        cols,
+        rows,
+        ...(ch ? { channel: ch } : {}),
+      }),
   };
 }

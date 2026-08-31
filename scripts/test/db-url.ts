@@ -8,10 +8,7 @@ function assert(condition: boolean, message: string): void {
   if (!condition) throw new Error(message);
 }
 
-function withEnv(
-  vars: Record<string, string | undefined>,
-  fn: () => void,
-): void {
+function withEnv(vars: Record<string, string | undefined>, fn: () => void): void {
   const prior = new Map<string, string | undefined>();
   for (const key of Object.keys(vars)) {
     prior.set(key, process.env[key]);

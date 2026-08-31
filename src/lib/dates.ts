@@ -142,10 +142,18 @@ export function formatDurationMinutes(minutes: number): string {
 export function advanceDueDate(current: string | null, frequency: string | null): string {
   const base = current ? new Date(current) : new Date();
   switch (frequency) {
-    case FREQUENCY.ANNUAL:    base.setFullYear(base.getFullYear() + 1); break;
-    case FREQUENCY.QUARTERLY: base.setMonth(base.getMonth() + 3); break;
-    case FREQUENCY.WEEKLY:    base.setDate(base.getDate() + 7); break;
-    default:                  base.setMonth(base.getMonth() + 1); break; // monthly
+    case FREQUENCY.ANNUAL:
+      base.setFullYear(base.getFullYear() + 1);
+      break;
+    case FREQUENCY.QUARTERLY:
+      base.setMonth(base.getMonth() + 3);
+      break;
+    case FREQUENCY.WEEKLY:
+      base.setDate(base.getDate() + 7);
+      break;
+    default:
+      base.setMonth(base.getMonth() + 1);
+      break; // monthly
   }
   return base.toISOString();
 }

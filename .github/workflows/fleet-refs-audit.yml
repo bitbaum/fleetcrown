@@ -50,5 +50,5 @@ jobs:
           # A floor, because "0 problems" across 0 repos is not a pass. If the
           # token ever stops seeing the fleet, that must fail rather than
           # quietly report clean.
-          MIN_REPOS: '10'
+          MIN_REPOS: "10"
         run: node scripts/ci/fleet-refs-audit.mjs

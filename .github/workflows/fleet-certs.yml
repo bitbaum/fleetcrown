@@ -18,7 +18,7 @@ name: Fleet certs
 on:
   schedule:
     # 06:41 UTC. Before the working day, and off the hour to spread fleet load.
-    - cron: '41 6 * * *'
+    - cron: "41 6 * * *"
   workflow_dispatch:
 
 permissions:

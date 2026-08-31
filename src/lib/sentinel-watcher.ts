@@ -11,15 +11,20 @@ export function startSentinelWatcher(): () => void {
   try {
     watcher = fs.watch("/tmp", { persistent: false }, (_, filename) => {
       if (!filename) return;
-      const match = filename.match(/^agent-(?:ready|closing|closed|current-prompt|stop-active)-(.+)$/);
+      const match = filename.match(
+        /^agent-(?:ready|closing|closed|current-prompt|stop-active)-(.+)$/,
+      );
       if (!match) return;
       const tab = match[1];
       const existing = debounceMap.get(tab);
       if (existing) clearTimeout(existing);
-      debounceMap.set(tab, setTimeout(() => {
-        debounceMap.delete(tab);
-        sseBus.emit("sentinel-changed", tab);
-      }, 50));
+      debounceMap.set(
+        tab,
+        setTimeout(() => {
+          debounceMap.delete(tab);
+          sseBus.emit("sentinel-changed", tab);
+        }, 50),
+      );
     });
     console.log("[instrumentation] /tmp sentinel watcher started");
   } catch {

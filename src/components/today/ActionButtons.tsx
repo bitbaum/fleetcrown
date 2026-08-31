@@ -11,13 +11,7 @@ import { NAV } from "@/config/navigation";
 
 type DoneStatus = typeof ACTION_STATUS.APPROVED | typeof ACTION_STATUS.REJECTED;
 
-export function ActionButtons({
-  actionId,
-  compact,
-}: {
-  actionId: string;
-  compact?: boolean;
-}) {
+export function ActionButtons({ actionId, compact }: { actionId: string; compact?: boolean }) {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<DoneStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -68,7 +62,9 @@ export function ActionButtons({
       );
     }
     return (
-      <span className={`text-xs ${done === ACTION_STATUS.APPROVED ? "text-status-positive" : "text-text-muted"}`}>
+      <span
+        className={`text-xs ${done === ACTION_STATUS.APPROVED ? "text-status-positive" : "text-text-muted"}`}
+      >
         {done === ACTION_STATUS.APPROVED ? ACTION_COPY.checkin.reminded : "Skipped"}
       </span>
     );
@@ -104,11 +100,7 @@ export function ActionButtons({
     <div className="flex flex-col gap-1 mt-3">
       {error && <p className="ui-error-xs">{error}</p>}
       <div className="flex gap-2">
-        <button
-          onClick={onApprove}
-          disabled={busy}
-          className="ui-btn-confirm-sm"
-        >
+        <button onClick={onApprove} disabled={busy} className="ui-btn-confirm-sm">
           <Check className="h-3 w-3" />
           Done
         </button>

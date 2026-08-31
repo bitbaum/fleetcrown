@@ -74,16 +74,12 @@ export function ThemeToggle({
       disabled={!mounted}
       className={cn("ui-theme-cycle-btn", showLabel && "ui-theme-cycle-btn-labeled", className)}
       aria-label={
-        mounted
-          ? `Theme: ${currentOption.label}. Switch to ${nextOption.label}.`
-          : "Theme"
+        mounted ? `Theme: ${currentOption.label}. Switch to ${nextOption.label}.` : "Theme"
       }
       title={mounted ? `${currentOption.label} — tap for ${nextOption.label}` : "Theme"}
     >
       <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-      {showLabel && (
-        <span className="truncate">{currentOption.label}</span>
-      )}
+      {showLabel && <span className="truncate">{currentOption.label}</span>}
     </button>
   );
 }

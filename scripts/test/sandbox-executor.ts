@@ -40,26 +40,46 @@ async function optionalDockerSmoke() {
   if (process.env.FLEETCROWN_TEST_DOCKER_SANDBOX !== "true") return;
   const fs = await import("node:fs");
   fs.mkdirSync(cwd, { recursive: true });
-  const executor = new SandboxExecutor({ ...config, image: process.env.FLEETCROWN_TEST_DOCKER_IMAGE || "ubuntu:24.04" });
+  const executor = new SandboxExecutor({
+    ...config,
+    image: process.env.FLEETCROWN_TEST_DOCKER_IMAGE || "ubuntu:24.04",
+  });
   const events: AgentEvent[] = [];
   const id = "test:sandbox-smoke";
-  await executor.provision({ id, cwd, command: "bash", args: ["-lc", "echo SANDBOX_OK; sleep 0.2"] });
+  await executor.provision({
+    id,
+    cwd,
+    command: "bash",
+    args: ["-lc", "echo SANDBOX_OK; sleep 0.2"],
+  });
   executor.subscribe(id, 0, (e) => events.push(e));
   const deadline = Date.now() + 15_000;
   while (Date.now() < deadline && !events.some((e) => e.kind === "exit")) {
     await new Promise((r) => setTimeout(r, 100));
   }
-  check("optional docker smoke emits command output", events.some((e) => e.kind === "output" && e.data?.includes("SANDBOX_OK")));
-  check("optional docker smoke exits", events.some((e) => e.kind === "exit"));
+  check(
+    "optional docker smoke emits command output",
+    events.some((e) => e.kind === "output" && e.data?.includes("SANDBOX_OK")),
+  );
+  check(
+    "optional docker smoke exits",
+    events.some((e) => e.kind === "exit"),
+  );
   await executor.terminate(id);
 }
 
 async function main() {
   const name = sandboxContainerName("user:Project With Spaces");
-  check("container names are deterministic", name === sandboxContainerName("user:Project With Spaces"));
+  check(
+    "container names are deterministic",
+    name === sandboxContainerName("user:Project With Spaces"),
+  );
   check("container names are docker-safe", /^fc-ws-[a-f0-9]{24}$/.test(name));
 
-  check("cwd inside workspace root is accepted", assertSandboxCwdAllowed(cwd, root) === path.resolve(cwd));
+  check(
+    "cwd inside workspace root is accepted",
+    assertSandboxCwdAllowed(cwd, root) === path.resolve(cwd),
+  );
   try {
     assertSandboxCwdAllowed(path.join(os.tmpdir(), "elsewhere"), root);
     check("cwd outside workspace root is rejected", false);
@@ -67,13 +87,17 @@ async function main() {
     check("cwd outside workspace root is rejected", true);
   }
 
-  const args = buildDockerRunArgs({
-    id: "user:repo",
-    cwd,
-    command: "bash",
-    args: ["-lc", "pwd"],
-    env: { FOO: "bar" },
-  }, config, "fc-test");
+  const args = buildDockerRunArgs(
+    {
+      id: "user:repo",
+      cwd,
+      command: "bash",
+      args: ["-lc", "pwd"],
+      env: { FOO: "bar" },
+    },
+    config,
+    "fc-test",
+  );
 
   check("docker run uses --rm", args.includes("--rm"));
   check("docker run keeps stdin interactive", args.includes("-i"));
@@ -82,8 +106,14 @@ async function main() {
   check("docker run applies memory limit", hasPair(args, "--memory", "512m"));
   check("docker run applies pids limit", hasPair(args, "--pids-limit", "128"));
   check("docker run drops capabilities", hasPair(args, "--cap-drop", "ALL"));
-  check("docker run blocks privilege escalation", hasPair(args, "--security-opt", "no-new-privileges"));
-  check("docker run binds cwd at /workspace", args.includes(`type=bind,src=${path.resolve(cwd)},dst=/workspace:rw`));
+  check(
+    "docker run blocks privilege escalation",
+    hasPair(args, "--security-opt", "no-new-privileges"),
+  );
+  check(
+    "docker run binds cwd at /workspace",
+    args.includes(`type=bind,src=${path.resolve(cwd)},dst=/workspace:rw`),
+  );
   check("docker run passes explicit env only", hasPair(args, "--env", "FOO=bar"));
   check("docker run ends with requested command", args.slice(-3).join(" ") === "bash -lc pwd");
 
@@ -93,8 +123,15 @@ async function main() {
 
   await optionalDockerSmoke();
 
-  console.log(failures === 0 ? "\nALL SANDBOX EXECUTOR TESTS PASSED" : `\n${failures} SANDBOX EXECUTOR TEST(S) FAILED`);
+  console.log(
+    failures === 0
+      ? "\nALL SANDBOX EXECUTOR TESTS PASSED"
+      : `\n${failures} SANDBOX EXECUTOR TEST(S) FAILED`,
+  );
   process.exit(failures === 0 ? 0 : 1);
 }
 
-main().catch((err) => { console.error(err); process.exit(1); });
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

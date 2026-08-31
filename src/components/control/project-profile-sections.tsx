@@ -35,26 +35,27 @@ export function CollapsibleSection({
         </span>
         <span className="flex items-center gap-2">
           {trailing}
-          <ChevronRight className={cn("h-3.5 w-3.5 text-text-muted transition-transform duration-150", open && "rotate-90")} />
+          <ChevronRight
+            className={cn(
+              "h-3.5 w-3.5 text-text-muted transition-transform duration-150",
+              open && "rotate-90",
+            )}
+          />
         </span>
       </button>
-      {open && (
-        <div className={cn("px-4 pb-4 pt-1 sm:px-5", contentClassName)}>
-          {children}
-        </div>
-      )}
+      {open && <div className={cn("px-4 pb-4 pt-1 sm:px-5", contentClassName)}>{children}</div>}
     </div>
   );
 }
 
 export const DIMENSION_META: Record<string, { label: string; icon: string }> = {
-  engineering: { label: "Engineering",  icon: "⚙" },
-  product:     { label: "Product",      icon: "📦" },
-  ux:          { label: "UX / Design",  icon: "🎨" },
-  marketing:   { label: "Marketing",    icon: "📣" },
-  content:     { label: "Content",      icon: "✍" },
-  business:    { label: "Business",     icon: "💼" },
-  deploy:      { label: "Deploy",       icon: "🚀" },
+  engineering: { label: "Engineering", icon: "⚙" },
+  product: { label: "Product", icon: "📦" },
+  ux: { label: "UX / Design", icon: "🎨" },
+  marketing: { label: "Marketing", icon: "📣" },
+  content: { label: "Content", icon: "✍" },
+  business: { label: "Business", icon: "💼" },
+  deploy: { label: "Deploy", icon: "🚀" },
 };
 
 export function interpolate(
@@ -116,11 +117,18 @@ export function DimensionSection({
         const uses = usageCounts.get(rendered) ?? 0;
         const sendNow = p.sendNow === true;
         return (
-          <div key={p.key} className="inline-flex items-stretch rounded-xl border border-border-subtle bg-surface-base text-xs font-medium text-text-secondary transition-all hover:border-accent-primary/40 hover:text-text-primary">
+          <div
+            key={p.key}
+            className="inline-flex items-stretch rounded-xl border border-border-subtle bg-surface-base text-xs font-medium text-text-secondary transition-all hover:border-accent-primary/40 hover:text-text-primary"
+          >
             <button
               onClick={() => onFill(rendered)}
               disabled={isSending}
-              title={sendNow ? `Fill composer — also click ↪ to send immediately` : `Fill composer with this prompt`}
+              title={
+                sendNow
+                  ? `Fill composer — also click ↪ to send immediately`
+                  : `Fill composer with this prompt`
+              }
               className="min-h-10 rounded-l-xl px-3.5 py-2 hover:bg-surface-raised disabled:opacity-40"
             >
               {p.icon} {p.label}

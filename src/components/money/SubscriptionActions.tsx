@@ -2,7 +2,17 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { X, Lightbulb, ExternalLink, ChevronDown, ChevronUp, Loader2, CheckCheck, Pencil, RotateCcw } from "lucide-react";
+import {
+  X,
+  Lightbulb,
+  ExternalLink,
+  ChevronDown,
+  ChevronUp,
+  Loader2,
+  CheckCheck,
+  Pencil,
+  RotateCcw,
+} from "lucide-react";
 import { LokiDispatchButton } from "@/components/shared/LokiDispatchButton";
 import { DeleteButton } from "@/components/ui/delete-button";
 import { handleCancelSubscription } from "@/app/actions";
@@ -108,7 +118,16 @@ export function SubscriptionActions({
     }
   }
 
-  async function onSaveEditData(data: { name: string; vendor: string; amount: string; currency: string; frequency: string; nextDue: string; notes: string; paymentMethod: string }) {
+  async function onSaveEditData(data: {
+    name: string;
+    vendor: string;
+    amount: string;
+    currency: string;
+    frequency: string;
+    nextDue: string;
+    notes: string;
+    paymentMethod: string;
+  }) {
     const res = await patchJson(`/api/subscriptions/${subId}`, {
       name: data.name.trim() || undefined,
       vendor: data.vendor.trim() || null,
@@ -132,7 +151,9 @@ export function SubscriptionActions({
     notes && `Notes: ${notes}`,
     "",
     "Is this subscription worth keeping? Are there cheaper alternatives, or ways to consolidate or cut costs?",
-  ].filter(Boolean).join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   if (deleted) return null;
 
@@ -144,18 +165,31 @@ export function SubscriptionActions({
       {confirmReactivate ? (
         <div className="flex items-center gap-1.5">
           <span className="text-xs text-text-tertiary">Reactivate?</span>
-          <button onClick={onReactivate} disabled={reactivating}
-            className="text-xs text-status-positive hover:text-status-positive transition-colors px-1 disabled:opacity-50">
+          <button
+            onClick={onReactivate}
+            disabled={reactivating}
+            className="text-xs text-status-positive hover:text-status-positive transition-colors px-1 disabled:opacity-50"
+          >
             {reactivating ? <Loader2 className="ui-spinner-2xs inline" /> : "Yes"}
           </button>
-          <button onClick={() => { setConfirmReactivate(false); setReactivateError(null); }}
-            className="ui-btn-text-cancel">
+          <button
+            onClick={() => {
+              setConfirmReactivate(false);
+              setReactivateError(null);
+            }}
+            className="ui-btn-text-cancel"
+          >
             No
           </button>
         </div>
       ) : (
-        <button onClick={() => { setConfirmReactivate(true); setReactivateError(null); }}
-          className="ui-btn-xs border-status-positive/20 text-status-positive/60 hover:text-status-positive hover:bg-status-positive/5">
+        <button
+          onClick={() => {
+            setConfirmReactivate(true);
+            setReactivateError(null);
+          }}
+          className="ui-btn-xs border-status-positive/20 text-status-positive/60 hover:text-status-positive hover:bg-status-positive/5"
+        >
           <RotateCcw className="h-2.5 w-2.5" />
           Reactivate
         </button>
@@ -187,7 +221,11 @@ export function SubscriptionActions({
           disabled={markingPaid}
           className="ui-btn-xs border-status-positive/20 text-status-positive/60 hover:text-status-positive hover:bg-status-positive/5"
         >
-          {markingPaid ? <Loader2 className="ui-spinner-2xs" /> : <CheckCheck className="h-2.5 w-2.5" />}
+          {markingPaid ? (
+            <Loader2 className="ui-spinner-2xs" />
+          ) : (
+            <CheckCheck className="h-2.5 w-2.5" />
+          )}
           Mark paid
         </button>
       )}
@@ -227,25 +265,39 @@ export function SubscriptionActions({
 
       {/* Mark as cancelled — inline confirm */}
       {cancelError && <span className="ui-error-xs w-full">{cancelError}</span>}
-      {!isCancelled && (confirmCancel ? (
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs text-text-tertiary">Mark cancelled?</span>
-          <button onClick={onCancel} disabled={cancelling}
-            className="text-xs text-status-negative hover:text-status-negative transition-colors px-1 disabled:opacity-50">
-            {cancelling ? <Loader2 className="ui-spinner-2xs inline" /> : "Yes"}
+      {!isCancelled &&
+        (confirmCancel ? (
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-text-tertiary">Mark cancelled?</span>
+            <button
+              onClick={onCancel}
+              disabled={cancelling}
+              className="text-xs text-status-negative hover:text-status-negative transition-colors px-1 disabled:opacity-50"
+            >
+              {cancelling ? <Loader2 className="ui-spinner-2xs inline" /> : "Yes"}
+            </button>
+            <button
+              onClick={() => {
+                setConfirmCancel(false);
+                setCancelError(null);
+              }}
+              className="ui-btn-text-cancel"
+            >
+              No
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => {
+              setConfirmCancel(true);
+              setCancelError(null);
+            }}
+            className="ui-btn-xs"
+          >
+            <X className="h-2.5 w-2.5" />
+            Mark cancelled
           </button>
-          <button onClick={() => { setConfirmCancel(false); setCancelError(null); }}
-            className="ui-btn-text-cancel">
-            No
-          </button>
-        </div>
-      ) : (
-        <button onClick={() => { setConfirmCancel(true); setCancelError(null); }}
-          className="ui-btn-xs">
-          <X className="h-2.5 w-2.5" />
-          Mark cancelled
-        </button>
-      ))}
+        ))}
 
       {/* Delete record permanently */}
       <DeleteButton
@@ -257,7 +309,16 @@ export function SubscriptionActions({
 
       {editing && (
         <SubscriptionEditForm
-          initial={{ name: subName, vendor, amount, currency, frequency, nextDue, notes, paymentMethod }}
+          initial={{
+            name: subName,
+            vendor,
+            amount,
+            currency,
+            frequency,
+            nextDue,
+            notes,
+            paymentMethod,
+          }}
           onSave={onSaveEditData}
           onCancel={() => setEditing(false)}
         />
@@ -271,7 +332,11 @@ export function SubscriptionActions({
         >
           <Lightbulb className="h-2.5 w-2.5" />
           Free alternatives
-          {showAlternatives ? <ChevronUp className="h-2.5 w-2.5" /> : <ChevronDown className="h-2.5 w-2.5" />}
+          {showAlternatives ? (
+            <ChevronUp className="h-2.5 w-2.5" />
+          ) : (
+            <ChevronDown className="h-2.5 w-2.5" />
+          )}
         </button>
       )}
 
@@ -279,7 +344,9 @@ export function SubscriptionActions({
         <div className="w-full mt-1 p-2 rounded bg-status-positive/5 border border-status-positive/10">
           <div className="text-xs text-status-positive/60 font-medium mb-1">Alternatives:</div>
           {meta.alternatives.map((alt, i) => (
-            <div key={i} className="text-xs text-text-tertiary">• {alt}</div>
+            <div key={i} className="text-xs text-text-tertiary">
+              • {alt}
+            </div>
           ))}
         </div>
       )}

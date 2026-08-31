@@ -9,10 +9,7 @@ import { patchJson } from "@/lib/api/fetch";
 import type { AgentPrompt } from "@/app/api/prompts/agent/route";
 import type { ProjectState } from "@/lib/control-types";
 import type { UserProject } from "@/db/schema/user-projects";
-import {
-  DIMENSION_META,
-  DimensionSection,
-} from "./project-profile-sections";
+import { DIMENSION_META, DimensionSection } from "./project-profile-sections";
 import { NotesSection } from "./project-profile-helpers";
 import { buildSessionHandoffFromProjectSession, SessionHandoff } from "./SessionHandoff";
 
@@ -38,14 +35,14 @@ function ProjectContextSummary({ project }: { project: ProjectState }) {
             </Link>
           )}
           {profile?.url && (
-          <a
-            href={profile.url.startsWith("http") ? profile.url : `https://${profile.url}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-micro text-text-muted transition-colors hover:text-text-secondary"
-          >
-            Open product <ExternalLink className="h-3 w-3" />
-          </a>
+            <a
+              href={profile.url.startsWith("http") ? profile.url : `https://${profile.url}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-micro text-text-muted transition-colors hover:text-text-secondary"
+            >
+              Open product <ExternalLink className="h-3 w-3" />
+            </a>
           )}
         </div>
       </div>
@@ -70,14 +67,17 @@ function ProjectContextSummary({ project }: { project: ProjectState }) {
           {project.dir && (
             <div className="flex min-w-0 gap-2 text-sm text-text-secondary">
               <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-text-muted" />
-              <span className="truncate" title={project.dir}>{project.dir}</span>
+              <span className="truncate" title={project.dir}>
+                {project.dir}
+              </span>
             </div>
           )}
           {project.git && (
             <div className="flex min-w-0 gap-2 text-sm text-text-secondary">
               <GitBranch className="mt-0.5 h-3.5 w-3.5 shrink-0 text-text-muted" />
               <span className="truncate" title={project.git.branch}>
-                {project.git.branch}{project.git.dirty ? ` · ${project.git.dirtyCount || 1} pending` : ""}
+                {project.git.branch}
+                {project.git.dirty ? ` · ${project.git.dirtyCount || 1} pending` : ""}
               </span>
             </div>
           )}
@@ -127,11 +127,14 @@ export function ProjectProfile({
 }) {
   const [sending, setSending] = useState(false);
   const [localModel, setLocalModel] = useState<string | null>(project.modelPref ?? null);
-  const activeAgent = localAgent ?? (project.agentPref as AgentId | null) ?? (globalAdapter as AgentId);
+  const activeAgent =
+    localAgent ?? (project.agentPref as AgentId | null) ?? (globalAdapter as AgentId);
 
   const persistAgentPref = (agentId: AgentId | null) => {
     if (project.id) {
-      patchJson(`/api/user-projects/${project.id}`, { agentPref: agentId ?? undefined }).catch(() => {});
+      patchJson(`/api/user-projects/${project.id}`, { agentPref: agentId ?? undefined }).catch(
+        () => {},
+      );
     }
     onSetAgent(agentId);
   };
@@ -139,12 +142,16 @@ export function ProjectProfile({
   const persistModelPref = (model: string | null) => {
     setLocalModel(model);
     if (project.id) {
-      patchJson(`/api/user-projects/${project.id}`, { modelPref: model ?? undefined }).catch(() => {});
+      patchJson(`/api/user-projects/${project.id}`, { modelPref: model ?? undefined }).catch(
+        () => {},
+      );
     }
   };
 
   const { data: allPrompts } = useFetch<AgentPrompt[]>("/api/prompts/agent");
-  const { data: userProject } = useFetch<UserProject>(project.id ? `/api/user-projects/${project.id}` : null);
+  const { data: userProject } = useFetch<UserProject>(
+    project.id ? `/api/user-projects/${project.id}` : null,
+  );
   const dimensionGroups = useMemo(() => {
     if (!allPrompts) return [];
     const byDim = new Map<string, AgentPrompt[]>();
@@ -153,10 +160,12 @@ export function ProjectProfile({
       if (!byDim.has(p.dimensionId)) byDim.set(p.dimensionId, []);
       byDim.get(p.dimensionId)!.push(p);
     }
-    return Object.keys(DIMENSION_META).filter((id) => byDim.has(id)).map((id) => ({
-      id,
-      prompts: byDim.get(id)!,
-    }));
+    return Object.keys(DIMENSION_META)
+      .filter((id) => byDim.has(id))
+      .map((id) => ({
+        id,
+        prompts: byDim.get(id)!,
+      }));
   }, [allPrompts]);
 
   const usageCounts = new Map<string, number>();
@@ -184,12 +193,12 @@ export function ProjectProfile({
           {availableAgents.map((a) => (
             <button
               key={a.id}
-              onClick={() => persistAgentPref(localAgent === a.id ? null : a.id as AgentId)}
+              onClick={() => persistAgentPref(localAgent === a.id ? null : (a.id as AgentId))}
               className={cn(
                 "rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors",
                 activeAgent === a.id
                   ? "border-accent-primary/50 bg-accent-primary/10 text-accent-text"
-                  : "border-border-subtle bg-surface-base text-text-tertiary hover:text-text-secondary hover:border-border-default"
+                  : "border-border-subtle bg-surface-base text-text-tertiary hover:text-text-secondary hover:border-border-default",
               )}
             >
               {a.label}
@@ -220,7 +229,7 @@ export function ProjectProfile({
                     "rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors",
                     activeModel === m
                       ? "border-accent-primary/50 bg-accent-primary/10 text-accent-text"
-                      : "border-border-subtle bg-surface-base text-text-tertiary hover:text-text-secondary hover:border-border-default"
+                      : "border-border-subtle bg-surface-base text-text-tertiary hover:text-text-secondary hover:border-border-default",
                   )}
                 >
                   {m}
@@ -249,7 +258,6 @@ export function ProjectProfile({
 
       {/* Per-project notes / scratchpad */}
       {project.id && <NotesSection projectId={project.id} project={userProject} />}
-
     </div>
   );
 }

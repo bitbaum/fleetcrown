@@ -16,8 +16,17 @@ assert.equal(isResourceVisibleInShare(resource({ visibility: "private" }), "advi
 assert.equal(isResourceVisibleInShare(resource({ visibility: "team" }), "advisor"), true);
 assert.equal(isResourceVisibleInShare(resource({ visibility: "team" }), "public"), false);
 assert.equal(isResourceVisibleInShare(resource({ visibility: "public" }), "public"), true);
-assert.equal(isResourceVisibleInShare(resource({ visibility: "public", sensitivity: "secret" }), "advisor"), false);
-assert.equal(isResourceVisibleInShare(resource({ visibility: "public", kind: "credential" }), "public"), false);
-assert.equal(isResourceVisibleInShare(resource({ visibility: "public", kind: "environment" }), "team"), false);
+assert.equal(
+  isResourceVisibleInShare(resource({ visibility: "public", sensitivity: "secret" }), "advisor"),
+  false,
+);
+assert.equal(
+  isResourceVisibleInShare(resource({ visibility: "public", kind: "credential" }), "public"),
+  false,
+);
+assert.equal(
+  isResourceVisibleInShare(resource({ visibility: "public", kind: "environment" }), "team"),
+  false,
+);
 
 console.log("✓ project-share-visibility tests passed");

@@ -44,11 +44,7 @@ export async function updateOrchestrationRun(
     ? and(eq(orchestrationRuns.id, id), eq(orchestrationRuns.userId, userId))
     : eq(orchestrationRuns.id, id);
 
-  const [updated] = await db
-    .update(orchestrationRuns)
-    .set(patch)
-    .where(condition)
-    .returning();
+  const [updated] = await db.update(orchestrationRuns).set(patch).where(condition).returning();
 
   // Every success-producing close path (runner finish route, gate-and-close)
   // funnels through here — the reaper bypasses it but never stamps success, so
@@ -115,11 +111,13 @@ export async function stampRunDelivered(runId: string, userId: string): Promise<
     .set({
       payload: sql`jsonb_set(COALESCE(payload, '{}'), '{deliveredAt}', ${JSON.stringify(new Date().toISOString())}::jsonb)`,
     })
-    .where(and(
-      eq(orchestrationRuns.id, runId),
-      eq(orchestrationRuns.userId, userId),
-      isNull(orchestrationRuns.finishedAt),
-    ));
+    .where(
+      and(
+        eq(orchestrationRuns.id, runId),
+        eq(orchestrationRuns.userId, userId),
+        isNull(orchestrationRuns.finishedAt),
+      ),
+    );
 }
 
 /**
@@ -128,7 +126,11 @@ export async function stampRunDelivered(runId: string, userId: string): Promise<
  * head-of-line block the project's queued dispatches for up to
  * STALE_RUN_MINUTES. Outcome ≠ success, so close-the-loop never fires off it.
  */
-export async function closeRunUndelivered(runId: string, userId: string, reason: string): Promise<void> {
+export async function closeRunUndelivered(
+  runId: string,
+  userId: string,
+  reason: string,
+): Promise<void> {
   const [closed] = await db
     .update(orchestrationRuns)
     .set({
@@ -137,14 +139,20 @@ export async function closeRunUndelivered(runId: string, userId: string, reason:
       finishedAt: new Date(),
       payload: sql`jsonb_set(COALESCE(payload, '{}'), '{error}', to_jsonb(${`Dispatch failed before the prompt reached the agent: ${reason}`}::text))`,
     })
-    .where(and(
-      eq(orchestrationRuns.id, runId),
-      eq(orchestrationRuns.userId, userId),
-      isNull(orchestrationRuns.finishedAt),
-    ))
+    .where(
+      and(
+        eq(orchestrationRuns.id, runId),
+        eq(orchestrationRuns.userId, userId),
+        isNull(orchestrationRuns.finishedAt),
+      ),
+    )
     .returning();
   if (closed) {
-    void emitRunEvent(runId, userId, "closed", { outcome: ORCHESTRATION_OUTCOME.ERROR, by: "runner-nack", reason });
+    void emitRunEvent(runId, userId, "closed", {
+      outcome: ORCHESTRATION_OUTCOME.ERROR,
+      by: "runner-nack",
+      reason,
+    });
     // This path bypasses updateOrchestrationRun, so it must emit its own
     // chat notification — a chat dispatch that never reached a runner is
     // exactly the close the operator most needs to hear about.
@@ -423,7 +431,9 @@ export async function isProjectBusy(
   ];
   if (opts.excludeRunId) {
     // Only runs strictly older than ours (by started_at, then id) block us.
-    conds.push(sql`(${orchestrationRuns.startedAt}, ${orchestrationRuns.id}) < (SELECT own.started_at, own.id FROM orchestration_runs own WHERE own.id = ${opts.excludeRunId})`);
+    conds.push(
+      sql`(${orchestrationRuns.startedAt}, ${orchestrationRuns.id}) < (SELECT own.started_at, own.id FROM orchestration_runs own WHERE own.id = ${opts.excludeRunId})`,
+    );
   }
   const [row] = await db
     .select({ one: sql<number>`1` })
@@ -491,15 +501,17 @@ export async function getRecentOutcomesByProjectKeys(
       finishedAt: orchestrationRuns.finishedAt,
     })
     .from(orchestrationRuns)
-    .where(and(
-      eq(orchestrationRuns.userId, userId),
-      inArray(orchestrationRuns.projectKey, projectKeys),
-      isNotNull(orchestrationRuns.outcome),
-      isNotNull(orchestrationRuns.finishedAt),
-      // Same recency window as getRecentOutcomes — stale failures are history,
-      // not a live streak on every project card.
-      gt(orchestrationRuns.finishedAt, new Date(Date.now() - RECENT_OUTCOMES_WINDOW_MS)),
-    ))
+    .where(
+      and(
+        eq(orchestrationRuns.userId, userId),
+        inArray(orchestrationRuns.projectKey, projectKeys),
+        isNotNull(orchestrationRuns.outcome),
+        isNotNull(orchestrationRuns.finishedAt),
+        // Same recency window as getRecentOutcomes — stale failures are history,
+        // not a live streak on every project card.
+        gt(orchestrationRuns.finishedAt, new Date(Date.now() - RECENT_OUTCOMES_WINDOW_MS)),
+      ),
+    )
     .orderBy(desc(orchestrationRuns.finishedAt));
 
   for (const r of rows) {
@@ -553,7 +565,14 @@ export async function getRecentOutcomes(
     .limit(limit);
 
   return rows
-    .filter((r): r is { outcome: OrchestrationOutcome; intent: OrchestrationTaskIntentId; finishedAt: Date } =>
-      r.outcome !== null && r.finishedAt !== null)
+    .filter(
+      (
+        r,
+      ): r is {
+        outcome: OrchestrationOutcome;
+        intent: OrchestrationTaskIntentId;
+        finishedAt: Date;
+      } => r.outcome !== null && r.finishedAt !== null,
+    )
     .map((r) => ({ outcome: r.outcome, intent: r.intent, finishedAt: r.finishedAt }));
 }

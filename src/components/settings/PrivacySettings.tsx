@@ -28,8 +28,8 @@ export function PrivacySettings() {
         <div>
           <h2 className="text-lg font-semibold text-text-primary">Private zone</h2>
           <p className="mt-1 text-sm text-text-tertiary">
-            Memory, People, Robots, Goals, Habits, Events, and Money sit behind a PIN gate.
-            Once you enter the right PIN, the zone stays unlocked for 30 minutes of activity.
+            Memory, People, Robots, Goals, Habits, Events, and Money sit behind a PIN gate. Once you
+            enter the right PIN, the zone stays unlocked for 30 minutes of activity.
           </p>
         </div>
 
@@ -62,7 +62,11 @@ export function PrivacySettings() {
                 Change PIN
               </button>
               {unlocked ? (
-                <button type="button" onClick={lock} className="ui-btn-secondary inline-flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={lock}
+                  className="ui-btn-secondary inline-flex items-center gap-2"
+                >
                   <Lock className="h-4 w-4" />
                   Lock now
                 </button>
@@ -107,9 +111,10 @@ export function PrivacySettings() {
         <div>
           <h2 className="text-lg font-semibold text-text-primary">Data</h2>
           <p className="mt-1 text-sm text-text-tertiary">
-            Your private data — contacts, goals, habits, events, money, and the derived knowledge graph —
-            lives on the same database as your account. It&apos;s yours: index it or not, take it with you,
-            delete it (memory on the Memory page, everything under Account → Danger zone).
+            Your private data — contacts, goals, habits, events, money, and the derived knowledge
+            graph — lives on the same database as your account. It&apos;s yours: index it or not,
+            take it with you, delete it (memory on the Memory page, everything under Account →
+            Danger zone).
           </p>
         </div>
 
@@ -133,9 +138,11 @@ function StatusRow({
   tone: "positive" | "warning" | "neutral";
 }) {
   const toneClass =
-    tone === "positive" ? "text-status-positive" :
-    tone === "warning"  ? "text-status-warning"  :
-                          "text-text-tertiary";
+    tone === "positive"
+      ? "text-status-positive"
+      : tone === "warning"
+        ? "text-status-warning"
+        : "text-text-tertiary";
   return (
     <div className="ui-list-item">
       <div className="flex items-center gap-3">
@@ -226,7 +233,9 @@ function SetPinForm({ onCancel, onSuccess }: { onCancel: () => void; onSuccess: 
         <button type="submit" disabled={loading} className="ui-btn-primary">
           {loading ? "Saving…" : "Save PIN"}
         </button>
-        <button type="button" onClick={onCancel} className="ui-btn-secondary">Cancel</button>
+        <button type="button" onClick={onCancel} className="ui-btn-secondary">
+          Cancel
+        </button>
       </div>
     </form>
   );
@@ -268,7 +277,13 @@ function ChangePinForm({ onCancel, onSuccess }: { onCancel: () => void; onSucces
 
   return (
     <form onSubmit={submit} className="ui-settings-subpanel space-y-3">
-      <PinInput label="Current PIN" value={currentPin} onChange={setCurrentPin} placeholder="••••" autoFocus />
+      <PinInput
+        label="Current PIN"
+        value={currentPin}
+        onChange={setCurrentPin}
+        placeholder="••••"
+        autoFocus
+      />
       <PinInput label="New PIN" value={newPin} onChange={setNewPin} placeholder="••••" />
       <PinInput label="Confirm new PIN" value={confirm} onChange={setConfirm} placeholder="••••" />
       {err && <p className="ui-error-xs">{err}</p>}
@@ -276,7 +291,9 @@ function ChangePinForm({ onCancel, onSuccess }: { onCancel: () => void; onSucces
         <button type="submit" disabled={loading} className="ui-btn-primary">
           {loading ? "Saving…" : "Change PIN"}
         </button>
-        <button type="button" onClick={onCancel} className="ui-btn-secondary">Cancel</button>
+        <button type="button" onClick={onCancel} className="ui-btn-secondary">
+          Cancel
+        </button>
       </div>
     </form>
   );
@@ -309,15 +326,24 @@ function DisablePinForm({ onCancel, onSuccess }: { onCancel: () => void; onSucce
   return (
     <form onSubmit={submit} className="ui-settings-subpanel space-y-3">
       <p className="text-sm text-text-secondary">
-        Disabling the PIN removes the gate. Your private data stays in place — it just becomes accessible without entering a PIN.
+        Disabling the PIN removes the gate. Your private data stays in place — it just becomes
+        accessible without entering a PIN.
       </p>
-      <PinInput label="Current PIN" value={currentPin} onChange={setCurrentPin} placeholder="••••" autoFocus />
+      <PinInput
+        label="Current PIN"
+        value={currentPin}
+        onChange={setCurrentPin}
+        placeholder="••••"
+        autoFocus
+      />
       {err && <p className="ui-error-xs">{err}</p>}
       <div className="flex gap-2">
         <button type="submit" disabled={loading} className="ui-btn-danger">
           {loading ? "Disabling…" : "Disable PIN"}
         </button>
-        <button type="button" onClick={onCancel} className="ui-btn-secondary">Cancel</button>
+        <button type="button" onClick={onCancel} className="ui-btn-secondary">
+          Cancel
+        </button>
       </div>
     </form>
   );
@@ -349,8 +375,8 @@ function MemoryConsentToggle() {
       <div>
         <div className="text-sm font-medium text-text-primary">Build fleet memory from my data</div>
         <p className="mt-0.5 text-xs text-text-tertiary">
-          Off = the fleet stops indexing your projects and notes into the knowledge index
-          (RAG). Existing memory stays until you delete it on the Memory page.
+          Off = the fleet stops indexing your projects and notes into the knowledge index (RAG).
+          Existing memory stays until you delete it on the Memory page.
         </p>
         {error && <p className="mt-1 text-xs text-status-negative">{error}</p>}
       </div>

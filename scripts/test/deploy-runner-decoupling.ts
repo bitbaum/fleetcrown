@@ -37,7 +37,10 @@ check("the deploy does not wait for agents to drain", () => {
   // The signature of the old loop: sleeping in a loop while counting agent
   // processes. Any reintroduction reads like this, whatever it is named.
   const waits = /waiting to drain|drain_box_runner_agents|drain timed out/.test(deploy);
-  assert(!waits, "deploy-hetzner.sh must not block on draining agents — schedule it on the box instead");
+  assert(
+    !waits,
+    "deploy-hetzner.sh must not block on draining agents — schedule it on the box instead",
+  );
 });
 
 check("the runner restart is scheduled detached, not run inline", () => {
@@ -66,10 +69,7 @@ check("the deferred restart cannot be killed by the restart it performs", () => 
     /--unit=/.test(deploy),
     "the drain must run in its own systemd unit, not inside the box-runner's cgroup",
   );
-  assert(
-    /systemctl restart/.test(drain),
-    "the drain script is what actually restarts the runner",
-  );
+  assert(/systemctl restart/.test(drain), "the drain script is what actually restarts the runner");
 });
 
 check("the drain still has a cap, so a wedged agent cannot freeze runner code forever", () => {

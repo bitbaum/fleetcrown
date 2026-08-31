@@ -34,10 +34,20 @@ function findSessionForTab(tab: string): string | null {
       const out = zellijExec(
         `ZELLIJ_SESSION_NAME='${escapeTabValue(envSession)}' zellij action query-tab-names 2>/dev/null || true`,
       );
-      if (findMatchingTab(tab, out.split("\n").map((l) => l.trim()).filter(Boolean))) {
+      if (
+        findMatchingTab(
+          tab,
+          out
+            .split("\n")
+            .map((l) => l.trim())
+            .filter(Boolean),
+        )
+      ) {
         return envSession;
       }
-    } catch { /* fall through to full scan */ }
+    } catch {
+      /* fall through to full scan */
+    }
   }
 
   // Scan all sessions for the tab.
@@ -52,12 +62,24 @@ function findSessionForTab(tab: string): string | null {
         const out = zellijExec(
           `ZELLIJ_SESSION_NAME='${escapeTabValue(session)}' zellij action query-tab-names 2>/dev/null || true`,
         );
-        if (findMatchingTab(tab, out.split("\n").map((l) => l.trim()).filter(Boolean))) {
+        if (
+          findMatchingTab(
+            tab,
+            out
+              .split("\n")
+              .map((l) => l.trim())
+              .filter(Boolean),
+          )
+        ) {
           return session;
         }
-      } catch { /* try next */ }
+      } catch {
+        /* try next */
+      }
     }
-  } catch { /* no sessions */ }
+  } catch {
+    /* no sessions */
+  }
 
   return null;
 }
@@ -67,7 +89,10 @@ function getOpenZellijTabs(session: string): string[] {
     const out = zellijExec(
       `ZELLIJ_SESSION_NAME='${escapeTabValue(session)}' zellij action query-tab-names 2>/dev/null || true`,
     );
-    return out.split("\n").map((line) => line.trim()).filter(Boolean);
+    return out
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
   } catch {
     return [];
   }
@@ -148,13 +173,20 @@ function spawnDefaultSession(): string | null {
         .filter(Boolean);
       if (sessions.includes(DEFAULT_SESSION_NAME)) return DEFAULT_SESSION_NAME;
       if (sessions.length > 0) return sessions[0]!;
-    } catch { /* keep waiting */ }
+    } catch {
+      /* keep waiting */
+    }
     execSync("sleep 0.2");
   }
   return null;
 }
 
-export function launchAgentInTab(tab: string, dir: string, agent: AgentOption, model?: string): void {
+export function launchAgentInTab(
+  tab: string,
+  dir: string,
+  agent: AgentOption,
+  model?: string,
+): void {
   // Try to find the existing session; fall back to any available session for new-tab creation.
   let session = findSessionForTab(tab);
 
@@ -166,7 +198,9 @@ export function launchAgentInTab(tab: string, dir: string, agent: AgentOption, m
         .map((line) => line.trim().split(/\s+/)[0])
         .filter(Boolean);
       session = pickPrimarySession(sessions);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
 
   if (!session) {
@@ -178,7 +212,9 @@ export function launchAgentInTab(tab: string, dir: string, agent: AgentOption, m
   }
 
   if (!session) {
-    throw new Error("No Zellij session found and auto-spawn failed — install zellij or check $PATH.");
+    throw new Error(
+      "No Zellij session found and auto-spawn failed — install zellij or check $PATH.",
+    );
   }
 
   try {
@@ -193,7 +229,7 @@ export function launchAgentInTab(tab: string, dir: string, agent: AgentOption, m
     if (/ETIMEDOUT|timed out|timeout/i.test(msg)) {
       throw new Error(
         `Zellij didn't respond while launching "${agent}" in session "${session}" — it's likely detached. ` +
-        `Attach it (zellij attach ${session}) so FleetCrown can drive it, then retry.`,
+          `Attach it (zellij attach ${session}) so FleetCrown can drive it, then retry.`,
       );
     }
     throw e;

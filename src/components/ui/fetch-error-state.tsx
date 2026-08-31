@@ -21,7 +21,9 @@ export function FetchErrorState({ message = "Couldn't load data", detail, onRetr
       <div className="min-w-0">
         <div className="text-sm text-text-tertiary">{message}</div>
         {detail && (
-          <div className="mt-0.5 truncate text-xs text-text-muted" title={detail}>{detail}</div>
+          <div className="mt-0.5 truncate text-xs text-text-muted" title={detail}>
+            {detail}
+          </div>
         )}
       </div>
       {onRetry && (

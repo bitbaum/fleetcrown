@@ -2,7 +2,21 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Check, Code2, Copy, ExternalLink, Layers, Loader2, Pause, Play, RefreshCw, Rocket, ScanEye, Undo2, X } from "lucide-react";
+import {
+  Check,
+  Code2,
+  Copy,
+  ExternalLink,
+  Layers,
+  Loader2,
+  Pause,
+  Play,
+  RefreshCw,
+  Rocket,
+  ScanEye,
+  Undo2,
+  X,
+} from "lucide-react";
 import { useFetch } from "@/hooks/use-fetch";
 import { useClipboard } from "@/hooks/use-clipboard";
 import { deleteJson, postJson, throwApiError } from "@/lib/api/fetch";
@@ -34,12 +48,25 @@ type WidgetTokenInfo = {
  * row. The empty state IS the widget setup card — discovery and activation
  * in one place.
  */
-export function ProjectFeedbackSection({ projectId, projectName }: { projectId: string; projectName: string }) {
-  const feedbackFetch = useFetch<{ feedback: FeedbackListItemWithWork[]; metrics: FeedbackLoopMetrics | null }>(`/api/projects/${projectId}/feedback`);
-  const tokenFetch = useFetch<{ token: WidgetTokenInfo | null }>(`/api/projects/${projectId}/widget-token`);
+export function ProjectFeedbackSection({
+  projectId,
+  projectName,
+}: {
+  projectId: string;
+  projectName: string;
+}) {
+  const feedbackFetch = useFetch<{
+    feedback: FeedbackListItemWithWork[];
+    metrics: FeedbackLoopMetrics | null;
+  }>(`/api/projects/${projectId}/feedback`);
+  const tokenFetch = useFetch<{ token: WidgetTokenInfo | null }>(
+    `/api/projects/${projectId}/widget-token`,
+  );
   const [setupOpen, setSetupOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
-  const { busyId, error, setError, dispatchFix, setStatus, feature } = useFeedbackActions(feedbackFetch.refetch);
+  const { busyId, error, setError, dispatchFix, setStatus, feature } = useFeedbackActions(
+    feedbackFetch.refetch,
+  );
   const [synthesizing, setSynthesizing] = useState(false);
   const [synthesized, setSynthesized] = useState(false);
   const [batchBusy, setBatchBusy] = useState(false);
@@ -66,7 +93,7 @@ export function ProjectFeedbackSection({ projectId, projectName }: { projectId: 
     if (!live) return;
     const t = window.setInterval(() => feedbackFetch.refetch(), 8_000);
     return () => window.clearInterval(t);
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- poll while any row is live; refetch identity is stable enough
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- poll while any row is live; refetch identity is stable enough
   }, [items.map((f) => ("work" in f && f.work ? f.work.phase : f.status)).join("|")]);
 
   // High-volume inbox: shift the unit of action from item to theme. An agent
@@ -109,7 +136,8 @@ export function ProjectFeedbackSection({ projectId, projectName }: { projectId: 
           {metrics && metrics.resolved > 0 && (
             <span className="text-xs text-text-tertiary">
               {metrics.resolved} resolved
-              {metrics.medianResolutionHours != null && ` · median ${compactDurationHours(metrics.medianResolutionHours)} report→fix`}
+              {metrics.medianResolutionHours != null &&
+                ` · median ${compactDurationHours(metrics.medianResolutionHours)} report→fix`}
             </span>
           )}
         </div>
@@ -122,7 +150,11 @@ export function ProjectFeedbackSection({ projectId, projectName }: { projectId: 
               className="ui-btn-save gap-1.5"
               title="One agent run covering every new report (local Fleet Runner or cloud builder)"
             >
-              {batchBusy ? <Loader2 className="ui-spinner-xs" /> : <Rocket className="h-3.5 w-3.5" />}
+              {batchBusy ? (
+                <Loader2 className="ui-spinner-xs" />
+              ) : (
+                <Rocket className="h-3.5 w-3.5" />
+              )}
               Implement all as one
             </button>
           )}
@@ -134,17 +166,30 @@ export function ProjectFeedbackSection({ projectId, projectName }: { projectId: 
               className="ui-btn-secondary gap-1.5"
               title="Queue an agent to cluster the new items into structured briefs, filed back into this inbox"
             >
-              {synthesizing ? <Loader2 className="ui-spinner-xs" /> : <Layers className="h-3.5 w-3.5" />}
+              {synthesizing ? (
+                <Loader2 className="ui-spinner-xs" />
+              ) : (
+                <Layers className="h-3.5 w-3.5" />
+              )}
               {synthesized ? "Synthesis queued" : "Synthesize"}
             </button>
           )}
           {token && (
-            <button type="button" onClick={() => setReviewOpen((v) => !v)} className="ui-btn-secondary gap-1.5" title="Queue an agent to visually review a page and file findings here">
+            <button
+              type="button"
+              onClick={() => setReviewOpen((v) => !v)}
+              className="ui-btn-secondary gap-1.5"
+              title="Queue an agent to visually review a page and file findings here"
+            >
               <ScanEye className="h-3.5 w-3.5" />
               AI review
             </button>
           )}
-          <button type="button" onClick={() => setSetupOpen((v) => !v)} className="ui-btn-secondary gap-1.5">
+          <button
+            type="button"
+            onClick={() => setSetupOpen((v) => !v)}
+            className="ui-btn-secondary gap-1.5"
+          >
             <Code2 className="h-3.5 w-3.5" />
             Widget
           </button>
@@ -260,13 +305,15 @@ function WidgetSetupCard({
       };
       if (!res.ok) {
         setAgentPhase("failed");
-        setError([body.error, body.hint].filter(Boolean).join(" ") || `Could not start the ${mode}`);
+        setError(
+          [body.error, body.hint].filter(Boolean).join(" ") || `Could not start the ${mode}`,
+        );
         return;
       }
       setAgentPhase("queued");
       setAgentNote(
-        body.nextStep
-        || `${EXECUTOR_COPY.honesty.watchQueued} ${EXECUTOR_COPY.honesty.notificationWhenDone}`,
+        body.nextStep ||
+          `${EXECUTOR_COPY.honesty.watchQueued} ${EXECUTOR_COPY.honesty.notificationWhenDone}`,
       );
       onChanged();
     } catch (e) {
@@ -291,11 +338,23 @@ function WidgetSetupCard({
     }
   }
 
-  const create = () => mutate(() => postJson(`/api/projects/${projectId}/widget-token`, {}), "Could not create widget token");
-  const rotate = () => mutate(() => postJson(`/api/projects/${projectId}/widget-token`, { rotate: true }), "Could not rotate widget token");
-  const revoke = () => mutate(() => deleteJson(`/api/projects/${projectId}/widget-token`), "Could not disable widget");
+  const create = () =>
+    mutate(
+      () => postJson(`/api/projects/${projectId}/widget-token`, {}),
+      "Could not create widget token",
+    );
+  const rotate = () =>
+    mutate(
+      () => postJson(`/api/projects/${projectId}/widget-token`, { rotate: true }),
+      "Could not rotate widget token",
+    );
+  const revoke = () =>
+    mutate(() => deleteJson(`/api/projects/${projectId}/widget-token`), "Could not disable widget");
   const setTokenStatus = (status: "active" | "paused") =>
-    mutate(() => postJson(`/api/projects/${projectId}/widget-token`, { status }), "Could not update widget");
+    mutate(
+      () => postJson(`/api/projects/${projectId}/widget-token`, { status }),
+      "Could not update widget",
+    );
 
   const statusCallout = live
     ? "ui-callout-positive flex-col sm:flex-row sm:items-center"
@@ -310,11 +369,17 @@ function WidgetSetupCard({
           <div className="min-w-0">
             <h2 className="ui-page-title text-lg sm:text-xl">Feedback widget</h2>
             <p className="ui-page-subtitle">
-              Visitors point at the broken element. Reports land here. One click sends the fix to the project agent.
+              Visitors point at the broken element. Reports land here. One click sends the fix to
+              the project agent.
             </p>
           </div>
           {onClose && (
-            <button type="button" onClick={onClose} className="ui-btn-icon shrink-0" aria-label="Close widget setup">
+            <button
+              type="button"
+              onClick={onClose}
+              className="ui-btn-icon shrink-0"
+              aria-label="Close widget setup"
+            >
               <X className="h-3.5 w-3.5" />
             </button>
           )}
@@ -356,17 +421,34 @@ function WidgetSetupCard({
                       disabled={agentBusy}
                       className="ui-btn-save gap-1.5"
                     >
-                      {agentBusy ? <Loader2 className="ui-spinner-xs" /> : <Rocket className="h-3.5 w-3.5" />}
+                      {agentBusy ? (
+                        <Loader2 className="ui-spinner-xs" />
+                      ) : (
+                        <Rocket className="h-3.5 w-3.5" />
+                      )}
                       Enable & install
                     </button>
-                    <button type="button" onClick={create} disabled={busy} className="ui-btn-secondary gap-1.5">
+                    <button
+                      type="button"
+                      onClick={create}
+                      disabled={busy}
+                      className="ui-btn-secondary gap-1.5"
+                    >
                       Enable only
                     </button>
                   </>
                 ) : (
                   <>
-                    <button type="button" onClick={() => copy(token.snippet)} className="ui-btn-save gap-1.5">
-                      {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                    <button
+                      type="button"
+                      onClick={() => copy(token.snippet)}
+                      className="ui-btn-save gap-1.5"
+                    >
+                      {copied ? (
+                        <Check className="h-3.5 w-3.5" />
+                      ) : (
+                        <Copy className="h-3.5 w-3.5" />
+                      )}
                       {copied ? "Copied" : "Copy snippet"}
                     </button>
                     {!live && (
@@ -377,7 +459,11 @@ function WidgetSetupCard({
                         className="ui-btn-secondary gap-1.5"
                         title="Queues an agent on Control. Does not mean the widget is live."
                       >
-                        {agentBusy ? <Loader2 className="ui-spinner-xs" /> : <Rocket className="h-3.5 w-3.5" />}
+                        {agentBusy ? (
+                          <Loader2 className="ui-spinner-xs" />
+                        ) : (
+                          <Rocket className="h-3.5 w-3.5" />
+                        )}
                         {agentPhase === "queued" ? "Install queued" : "Install via agent"}
                       </button>
                     )}
@@ -402,20 +488,32 @@ function WidgetSetupCard({
                 <p className="text-xs font-medium text-text-primary">
                   {agentPhase === "queued" ? "Queued — not confirmed working" : "Install"}
                 </p>
-                {agentNote && <p className="mt-1 text-xs leading-relaxed text-text-secondary">{agentNote}</p>}
+                {agentNote && (
+                  <p className="mt-1 text-xs leading-relaxed text-text-secondary">{agentNote}</p>
+                )}
                 <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs">
-                  <Link href={activityHref} className="inline-flex items-center gap-1 text-accent-text underline-offset-2 hover:underline">
+                  <Link
+                    href={activityHref}
+                    className="inline-flex items-center gap-1 text-accent-text underline-offset-2 hover:underline"
+                  >
                     Activity <ExternalLink className="h-3 w-3" />
                   </Link>
-                  <Link href={controlHref} className="inline-flex items-center gap-1 text-accent-text underline-offset-2 hover:underline">
+                  <Link
+                    href={controlHref}
+                    className="inline-flex items-center gap-1 text-accent-text underline-offset-2 hover:underline"
+                  >
                     Control <ExternalLink className="h-3 w-3" />
                   </Link>
-                  <Link href={terminalHref} className="inline-flex items-center gap-1 text-text-tertiary underline-offset-2 hover:underline">
+                  <Link
+                    href={terminalHref}
+                    className="inline-flex items-center gap-1 text-text-tertiary underline-offset-2 hover:underline"
+                  >
                     Terminal · Cloud <ExternalLink className="h-3 w-3" />
                   </Link>
                 </div>
                 <p className="mt-2 text-micro text-text-muted">
-                  {EXECUTOR_COPY.honesty.watchQueued} {EXECUTOR_COPY.honesty.notificationWhenDone} Activity shows every inject attempt and the real error.
+                  {EXECUTOR_COPY.honesty.watchQueued} {EXECUTOR_COPY.honesty.notificationWhenDone}{" "}
+                  Activity shows every inject attempt and the real error.
                 </p>
               </div>
             )}
@@ -450,10 +548,20 @@ function WidgetSetupCard({
                       <Undo2 className="h-3.5 w-3.5" />
                       Remove via agent
                     </button>
-                    <button type="button" onClick={rotate} disabled={busy} className="ui-btn-secondary gap-1.5">
+                    <button
+                      type="button"
+                      onClick={rotate}
+                      disabled={busy}
+                      className="ui-btn-secondary gap-1.5"
+                    >
                       <RefreshCw className="h-3.5 w-3.5" /> Rotate token
                     </button>
-                    <button type="button" onClick={revoke} disabled={busy} className="ui-btn-danger">
+                    <button
+                      type="button"
+                      onClick={revoke}
+                      disabled={busy}
+                      className="ui-btn-danger"
+                    >
                       Disable
                     </button>
                   </>
@@ -512,11 +620,16 @@ function AiReviewCard({
             AI page review
           </div>
           <p className="mt-1 text-xs leading-relaxed text-text-muted">
-            An agent opens the page in a headless browser, reviews it on desktop and mobile,
-            and files each issue into this inbox — you triage and implement fixes as usual.
+            An agent opens the page in a headless browser, reviews it on desktop and mobile, and
+            files each issue into this inbox — you triage and implement fixes as usual.
           </p>
         </div>
-        <button type="button" onClick={onClose} className="ui-btn-icon" aria-label="Close AI review">
+        <button
+          type="button"
+          onClick={onClose}
+          className="ui-btn-icon"
+          aria-label="Close AI review"
+        >
           <X className="h-3.5 w-3.5" />
         </button>
       </div>

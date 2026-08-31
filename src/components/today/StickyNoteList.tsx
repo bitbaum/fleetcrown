@@ -7,13 +7,7 @@ import { postJson, deleteJson } from "@/lib/api/fetch";
 
 type Item = { id: string; body: string };
 
-export function StickyNoteList({
-  initial,
-  hiddenCount,
-}: {
-  initial: Item[];
-  hiddenCount: number;
-}) {
+export function StickyNoteList({ initial, hiddenCount }: { initial: Item[]; hiddenCount: number }) {
   const router = useRouter();
   const [items, setItems] = useState<Item[]>(initial);
 
@@ -37,7 +31,10 @@ export function StickyNoteList({
     setError(null);
     try {
       const res = await postJson("/api/captures", { body });
-      if (!res.ok) { setError("Failed to save"); return; }
+      if (!res.ok) {
+        setError("Failed to save");
+        return;
+      }
       const data = (await res.json()) as { capture: Item };
       setItems((prev) => [data.capture, ...prev]);
       setDraft("");
@@ -82,15 +79,15 @@ export function StickyNoteList({
           ))}
         </ul>
       )}
-      {hiddenCount > 0 && (
-        <p className="text-xs text-text-muted">…and {hiddenCount} more</p>
-      )}
+      {hiddenCount > 0 && <p className="text-xs text-text-muted">…and {hiddenCount} more</p>}
       {error && <p className="ui-error-xs">{error}</p>}
       <div className="flex items-center gap-2 pt-1">
         <input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") add(); }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") add();
+          }}
           placeholder="Add to your list…"
           className="ui-input-tight flex-1 text-sm"
         />

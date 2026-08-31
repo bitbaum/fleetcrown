@@ -23,7 +23,7 @@ export type DispatchStatusInput = {
  * never had it.
  */
 function builderName(channel: BuilderChannel | null | undefined): string | null {
-  return channel ? EXECUTOR_COPY.ranOn[channel] ?? null : null;
+  return channel ? (EXECUTOR_COPY.ranOn[channel] ?? null) : null;
 }
 
 /** SSOT for dispatch outcome copy — Loki footer, Control toasts, etc. */
@@ -32,7 +32,10 @@ export function dispatchStatusLabel(input: DispatchStatusInput): { label: string
     return { label: "Dispatch failed", warn: true };
   }
   const on = builderName(input.channel);
-  if (input.warning === "runner-offline" || (input.mode === "queued" && input.runnerConnected === false)) {
+  if (
+    input.warning === "runner-offline" ||
+    (input.mode === "queued" && input.runnerConnected === false)
+  ) {
     // The most valuable place to name the builder: this says WHY nothing is
     // happening and which machine to wake, instead of a generic "offline".
     return {
@@ -52,10 +55,7 @@ export function dispatchStatusLabel(input: DispatchStatusInput): { label: string
   return { label: on ? `Dispatched to ${on}` : "Dispatched", warn: false };
 }
 
-export function dispatchAssistantContent(
-  projectKey: string,
-  input: DispatchStatusInput,
-): string {
+export function dispatchAssistantContent(projectKey: string, input: DispatchStatusInput): string {
   if (input.ok === false) {
     return `Could not dispatch to ${projectKey}.`;
   }
@@ -123,15 +123,39 @@ export function deriveDispatchLiveStatus(cmd: CommandLiveInput): DispatchLiveVie
   const r = cmd.result ?? {};
   if (!cmd.executedAt) {
     if (!cmd.claimedAt) {
-      return { status: "queued", label: "Queued", detail: "waiting for a builder to pick it up", tone: "neutral", terminal: false };
+      return {
+        status: "queued",
+        label: "Queued",
+        detail: "waiting for a builder to pick it up",
+        tone: "neutral",
+        terminal: false,
+      };
     }
-    return { status: "working", label: "Agent picked up — working", detail: "running your prompt now", tone: "positive", terminal: false };
+    return {
+      status: "working",
+      label: "Agent picked up — working",
+      detail: "running your prompt now",
+      tone: "positive",
+      terminal: false,
+    };
   }
   if (r.ok === false) {
-    return { status: "failed", label: "Dispatch failed", detail: r.error ?? "the agent could not run", tone: "negative", terminal: true };
+    return {
+      status: "failed",
+      label: "Dispatch failed",
+      detail: r.error ?? "the agent could not run",
+      tone: "negative",
+      terminal: true,
+    };
   }
   if (r.verified === false) {
-    return { status: "unconfirmed", label: "Delivered — not confirmed", detail: r.warning ?? "the agent hasn't confirmed it started generating", tone: "warning", terminal: true };
+    return {
+      status: "unconfirmed",
+      label: "Delivered — not confirmed",
+      detail: r.warning ?? "the agent hasn't confirmed it started generating",
+      tone: "warning",
+      terminal: true,
+    };
   }
 
   const run = cmd.run;
@@ -167,15 +191,45 @@ export function deriveDispatchLiveStatus(cmd: CommandLiveInput): DispatchLiveVie
   const error = run.payload?.error?.trim() || null;
   switch (run.outcome) {
     case "success":
-      return { status: "completed", label: "Completed", detail: "successful outcome recorded", tone: "positive", terminal: true };
+      return {
+        status: "completed",
+        label: "Completed",
+        detail: "successful outcome recorded",
+        tone: "positive",
+        terminal: true,
+      };
     case "partial":
-      return { status: "partial", label: "Finished with follow-up", detail: "the run recorded remaining work", tone: "warning", terminal: true };
+      return {
+        status: "partial",
+        label: "Finished with follow-up",
+        detail: "the run recorded remaining work",
+        tone: "warning",
+        terminal: true,
+      };
     case "user_abort":
-      return { status: "stopped", label: "Stopped by you", detail: null, tone: "neutral", terminal: true };
+      return {
+        status: "stopped",
+        label: "Stopped by you",
+        detail: null,
+        tone: "neutral",
+        terminal: true,
+      };
     case "hang":
-      return { status: "failed", label: "Agent stopped responding", detail: error, tone: "negative", terminal: true };
+      return {
+        status: "failed",
+        label: "Agent stopped responding",
+        detail: error,
+        tone: "negative",
+        terminal: true,
+      };
     case "timeout":
-      return { status: "failed", label: "Run timed out", detail: error, tone: "negative", terminal: true };
+      return {
+        status: "failed",
+        label: "Run timed out",
+        detail: error,
+        tone: "negative",
+        terminal: true,
+      };
     case "unconfirmed":
       // Deliberately NOT "Run timed out": no agent was ever seen working on
       // this, so pointing the operator at the agent's runtime is a wild goose
@@ -185,12 +239,20 @@ export function deriveDispatchLiveStatus(cmd: CommandLiveInput): DispatchLiveVie
       return {
         status: "failed",
         label: "Agent never started",
-        detail: error ?? "The prompt was injected but the agent was never seen picking it up. Nothing ran — safe to retry.",
+        detail:
+          error ??
+          "The prompt was injected but the agent was never seen picking it up. Nothing ran — safe to retry.",
         tone: "negative",
         terminal: true,
       };
     case "error":
-      return { status: "failed", label: "Run failed", detail: error, tone: "negative", terminal: true };
+      return {
+        status: "failed",
+        label: "Run failed",
+        detail: error,
+        tone: "negative",
+        terminal: true,
+      };
     default:
       return {
         status: "unconfirmed",
@@ -209,10 +271,14 @@ export function deriveDispatchLiveStatus(cmd: CommandLiveInput): DispatchLiveVie
  *  this was three separate inline `Record<tone, string>` maps before. */
 export function dispatchToneDotClass(tone: StatusTone): string {
   switch (tone) {
-    case "positive": return "ui-dot-positive";
-    case "warning": return "ui-dot-warning";
-    case "negative": return "ui-dot-negative";
-    default: return "ui-dot-neutral";
+    case "positive":
+      return "ui-dot-positive";
+    case "warning":
+      return "ui-dot-warning";
+    case "negative":
+      return "ui-dot-negative";
+    default:
+      return "ui-dot-neutral";
   }
 }
 
@@ -251,7 +317,11 @@ export function deriveMultiDispatchView(attempts: MultiDispatchAttempt[]): Multi
     return { label: "Nothing to dispatch", tone: "neutral", primaryProject: null };
   }
   if (started.length === 0) {
-    return { label: `Dispatch failed — 0 of ${total} started`, tone: "negative", primaryProject: null };
+    return {
+      label: `Dispatch failed — 0 of ${total} started`,
+      tone: "negative",
+      primaryProject: null,
+    };
   }
   if (started.length < total) {
     return {

@@ -10,9 +10,9 @@ type AgentEntry = ControlData["agentRegistry"]["agents"][number];
 // Prompts offered in the launch modal's "start from a library prompt" picker:
 // project-scoped templates (they operate on a single repo, which is exactly
 // what a launch targets), most useful ones first.
-const LAUNCH_PROMPT_OPTIONS = PROMPT_TEMPLATES
-  .filter((t) => t.scope === "project")
-  .sort((a, b) => Number(Boolean(b.featured)) - Number(Boolean(a.featured)));
+const LAUNCH_PROMPT_OPTIONS = PROMPT_TEMPLATES.filter((t) => t.scope === "project").sort(
+  (a, b) => Number(Boolean(b.featured)) - Number(Boolean(a.featured)),
+);
 
 export function NewProjectModal({
   name,
@@ -118,7 +118,9 @@ export function LaunchTabModal({
       <div className="flex items-center justify-between">
         <div>
           <h3 className="font-medium text-text-primary">Launch development tab</h3>
-          <p className="mt-1 text-sm text-text-tertiary">{tab} · {dir}</p>
+          <p className="mt-1 text-sm text-text-tertiary">
+            {tab} · {dir}
+          </p>
         </div>
         <button onClick={onClose} className="text-text-muted hover:text-text-primary">
           <X className="h-4 w-4" />
@@ -134,7 +136,11 @@ export function LaunchTabModal({
               onClick={() => onAgentChange(agent.id)}
               disabled={!agent.available}
               className={selectedAgentId === agent.id ? "ui-chip-toggle-active" : "ui-chip-toggle"}
-              title={agent.available ? `${agent.label}` : (agent.availabilityReason ?? `${agent.label} unavailable`)}
+              title={
+                agent.available
+                  ? `${agent.label}`
+                  : (agent.availabilityReason ?? `${agent.label} unavailable`)
+              }
             >
               {agent.label}
             </button>
@@ -142,7 +148,9 @@ export function LaunchTabModal({
         </div>
 
         {selected && !selected.available && (
-          <p className="text-sm text-status-warning">{selected.availabilityReason ?? `${selected.label} is unavailable on this machine.`}</p>
+          <p className="text-sm text-status-warning">
+            {selected.availabilityReason ?? `${selected.label} is unavailable on this machine.`}
+          </p>
         )}
 
         <div className="space-y-1.5">
@@ -153,7 +161,8 @@ export function LaunchTabModal({
             value=""
             onChange={(e) => {
               const picked = LAUNCH_PROMPT_OPTIONS.find((t) => t.id === e.target.value);
-              if (picked) onInitialPromptChange(picked.template.replaceAll("{{project_name}}", tab));
+              if (picked)
+                onInitialPromptChange(picked.template.replaceAll("{{project_name}}", tab));
             }}
             className="ui-input ui-input-compact w-full"
             aria-label="Start from a library prompt"
@@ -161,7 +170,8 @@ export function LaunchTabModal({
             <option value="">Start from a library prompt…</option>
             {LAUNCH_PROMPT_OPTIONS.map((t) => (
               <option key={t.id} value={t.id}>
-                {t.icon ? `${t.icon} ` : ""}{t.name}
+                {t.icon ? `${t.icon} ` : ""}
+                {t.name}
               </option>
             ))}
           </select>

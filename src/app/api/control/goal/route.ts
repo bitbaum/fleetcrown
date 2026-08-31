@@ -46,7 +46,12 @@ export async function POST(req: NextRequest) {
     await upsertEntityAttribute(userId, entity.id, "definition_of_done", definitionOfDone);
   }
   if (maxTurns !== undefined) {
-    await upsertEntityAttribute(userId, entity.id, "goal_max_turns", maxTurns ? String(maxTurns) : "");
+    await upsertEntityAttribute(
+      userId,
+      entity.id,
+      "goal_max_turns",
+      maxTurns ? String(maxTurns) : "",
+    );
   }
 
   scheduleProjectProfileReindexByEntityId(userId, entity.id);

@@ -11,12 +11,12 @@ type ChannelConfig = {
 };
 
 export const CHANNEL_CONFIG: Record<string, ChannelConfig> = {
-  "channel:whatsapp":  { icon: MessageCircle, label: "WhatsApp",  color: "ui-channel-whatsapp" },
-  "channel:telegram":  { icon: Send,          label: "Telegram",  color: "ui-channel-telegram" },
-  "channel:email":     { icon: Mail,          label: "Email",     color: "text-text-tertiary" },
-  "channel:phone":     { icon: Phone,         label: "Phone",     color: "ui-channel-phone" },
-  "channel:in-person": { icon: Users,         label: "In person", color: "ui-channel-in-person" },
-  "channel:other":     { icon: HelpCircle,    label: "Other",     color: "text-text-muted" },
+  "channel:whatsapp": { icon: MessageCircle, label: "WhatsApp", color: "ui-channel-whatsapp" },
+  "channel:telegram": { icon: Send, label: "Telegram", color: "ui-channel-telegram" },
+  "channel:email": { icon: Mail, label: "Email", color: "text-text-tertiary" },
+  "channel:phone": { icon: Phone, label: "Phone", color: "ui-channel-phone" },
+  "channel:in-person": { icon: Users, label: "In person", color: "ui-channel-in-person" },
+  "channel:other": { icon: HelpCircle, label: "Other", color: "text-text-muted" },
 };
 
 /** Whether a person-attr key marks a contact channel. */

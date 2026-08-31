@@ -30,11 +30,7 @@ export async function buildLokiChatPrompt(
   const block = renderProjectContextBlock(ctx ?? undefined);
   if (!block) return userMessage;
 
-  return [
-    `[Scoped to project: ${projectKey}]`,
-    block,
-    "",
-    "[User message]",
-    userMessage,
-  ].join("\n");
+  return [`[Scoped to project: ${projectKey}]`, block, "", "[User message]", userMessage].join(
+    "\n",
+  );
 }

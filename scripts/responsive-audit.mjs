@@ -66,11 +66,15 @@ async function login(page) {
     if (!ownerPassword) throw new Error("LOCAL_AUTH_PASSWORD is not configured");
     await page.locator('input[type="password"]').first().fill(ownerPassword);
   } else {
-    if (!dogfoodEmail || !dogfoodPassword) throw new Error("DOGFOOD_EMAIL/DOGFOOD_PASSWORD required for production audit");
+    if (!dogfoodEmail || !dogfoodPassword)
+      throw new Error("DOGFOOD_EMAIL/DOGFOOD_PASSWORD required for production audit");
     await page.locator('input[type="email"]').first().fill(dogfoodEmail);
     await page.locator('input[type="password"]').first().fill(dogfoodPassword);
   }
-  await page.getByRole("button", { name: /sign in|continue|unlock/i }).last().click();
+  await page
+    .getByRole("button", { name: /sign in|continue|unlock/i })
+    .last()
+    .click();
   await page.waitForURL((url) => !url.pathname.startsWith("/sign-in"), { timeout: 15000 });
 }
 
@@ -91,7 +95,11 @@ async function analyze(page, viewportName) {
           tag: el.tagName.toLowerCase(),
           text: text.slice(0, 80),
           size: parseFloat(style.fontSize),
-          visible: rect.width > 0 && rect.height > 0 && style.visibility !== "hidden" && style.display !== "none",
+          visible:
+            rect.width > 0 &&
+            rect.height > 0 &&
+            style.visibility !== "hidden" &&
+            style.display !== "none",
         };
       })
       .filter((x) => x.visible && x.text && x.size > 0 && x.size < (vpName === "mobile" ? 12 : 11))
@@ -109,7 +117,11 @@ async function analyze(page, viewportName) {
           right: Math.round(rect.right),
           left: Math.round(rect.left),
           width: Math.round(rect.width),
-          visible: rect.width > 0 && rect.height > 0 && style.visibility !== "hidden" && style.display !== "none",
+          visible:
+            rect.width > 0 &&
+            rect.height > 0 &&
+            style.visibility !== "hidden" &&
+            style.display !== "none",
         };
       })
       .filter((x) => x.visible && (x.right > vw + 2 || x.left < -2))
@@ -120,13 +132,24 @@ async function analyze(page, viewportName) {
       .map((el) => {
         const rect = el.getBoundingClientRect();
         const style = window.getComputedStyle(el);
-        const text = (el.getAttribute("aria-label") || el.textContent || el.getAttribute("title") || "").trim().replace(/\s+/g, " ");
+        const text = (
+          el.getAttribute("aria-label") ||
+          el.textContent ||
+          el.getAttribute("title") ||
+          ""
+        )
+          .trim()
+          .replace(/\s+/g, " ");
         return {
           tag: el.tagName.toLowerCase(),
           text: text.slice(0, 80),
           width: Math.round(rect.width),
           height: Math.round(rect.height),
-          visible: rect.width > 0 && rect.height > 0 && style.visibility !== "hidden" && style.display !== "none",
+          visible:
+            rect.width > 0 &&
+            rect.height > 0 &&
+            style.visibility !== "hidden" &&
+            style.display !== "none",
         };
       })
       .filter((x) => x.visible && vpName === "mobile" && (x.width < 36 || x.height < 36))
@@ -196,10 +219,16 @@ try {
 fs.writeFileSync(path.join(outDir, "report.json"), JSON.stringify(results, null, 2));
 for (const result of results) {
   const problems = [
-    result.scrollWidth > result.clientWidth ? `overflow ${result.scrollWidth}/${result.clientWidth}` : null,
+    result.scrollWidth > result.clientWidth
+      ? `overflow ${result.scrollWidth}/${result.clientWidth}`
+      : null,
     result.tinyText.length ? `tinyText ${result.tinyText.length}` : null,
     result.smallTargets.length ? `smallTargets ${result.smallTargets.length}` : null,
-  ].filter(Boolean).join(", ");
-  console.log(`${result.viewport.padEnd(7)} ${result.url.padEnd(12)} screens=${result.scrollScreens}${problems ? `  ${problems}` : ""}`);
+  ]
+    .filter(Boolean)
+    .join(", ");
+  console.log(
+    `${result.viewport.padEnd(7)} ${result.url.padEnd(12)} screens=${result.scrollScreens}${problems ? `  ${problems}` : ""}`,
+  );
 }
 console.log(`report ${path.join(outDir, "report.json")}`);

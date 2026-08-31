@@ -50,14 +50,22 @@ export function checkEnv(): EnvIssue[] {
   for (const k of SECRETS) {
     const v = val(k);
     if (v != null && v !== v.trim()) {
-      issues.push({ level: "error", key: k, msg: "has leading/trailing whitespace (likely \\n corruption) — will silently mismatch" });
+      issues.push({
+        level: "error",
+        key: k,
+        msg: "has leading/trailing whitespace (likely \\n corruption) — will silently mismatch",
+      });
     }
   }
 
   // 2. Catastrophic: no AUTH_SECRET means sessions AND X login tickets cannot
   //    be signed/verified securely.
   if (!present("AUTH_SECRET")) {
-    issues.push({ level: "fatal", key: "AUTH_SECRET", msg: "missing — sessions and X login tickets cannot be secured" });
+    issues.push({
+      level: "fatal",
+      key: "AUTH_SECRET",
+      msg: "missing — sessions and X login tickets cannot be secured",
+    });
   }
 
   // 3. Half-set provider pairs: one without the other = provider silently
@@ -65,7 +73,11 @@ export function checkEnv(): EnvIssue[] {
   for (const [a, b, label] of PROVIDER_PAIRS) {
     if (present(a) !== present(b)) {
       const missing = present(a) ? b : a;
-      issues.push({ level: "error", key: `${a}/${b}`, msg: `${label}: only one key set (missing ${missing}) — provider silently disabled` });
+      issues.push({
+        level: "error",
+        key: `${a}/${b}`,
+        msg: `${label}: only one key set (missing ${missing}) — provider silently disabled`,
+      });
     }
   }
 
@@ -73,14 +85,26 @@ export function checkEnv(): EnvIssue[] {
   //    they break password reset / verification links in users' inboxes.
   if (isProd) {
     if (!present("RESEND_API_KEY")) {
-      issues.push({ level: "error", key: "RESEND_API_KEY", msg: "missing in prod — all transactional email (verify, reset) silently no-ops" });
+      issues.push({
+        level: "error",
+        key: "RESEND_API_KEY",
+        msg: "missing in prod — all transactional email (verify, reset) silently no-ops",
+      });
     }
     const url = val("NEXTAUTH_URL")?.trim();
     if (!url || !url.startsWith("https://")) {
-      issues.push({ level: "error", key: "NEXTAUTH_URL", msg: "missing or not https — email links + OAuth callbacks resolve to the wrong host" });
+      issues.push({
+        level: "error",
+        key: "NEXTAUTH_URL",
+        msg: "missing or not https — email links + OAuth callbacks resolve to the wrong host",
+      });
     }
     if (!present("EMAIL_FROM")) {
-      issues.push({ level: "warn", key: "EMAIL_FROM", msg: "unset — falls back to a non-DKIM domain; email may be marked spam" });
+      issues.push({
+        level: "warn",
+        key: "EMAIL_FROM",
+        msg: "unset — falls back to a non-DKIM domain; email may be marked spam",
+      });
     }
   }
 
@@ -88,7 +112,11 @@ export function checkEnv(): EnvIssue[] {
   //    feature goes silently dark (extract-proposal returns null, digest cron
   //    no-ops) and the operator has no signal for WHY nothing is produced.
   if (!present("GROQ_API_KEY")) {
-    issues.push({ level: "warn", key: "GROQ_API_KEY", msg: "unset — chat action-producer and digest generation are disabled" });
+    issues.push({
+      level: "warn",
+      key: "GROQ_API_KEY",
+      msg: "unset — chat action-producer and digest generation are disabled",
+    });
   }
 
   // Telegram is the same half-configured-provider shape as PROVIDER_PAIRS

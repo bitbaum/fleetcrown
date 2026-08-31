@@ -28,7 +28,10 @@ export function normalizeConversationTitle(title: string): string {
 }
 
 export function conversationGroupKey(c: ConversationGroupable): string {
-  const projects = [...c.projectKeys].map((k) => k.toLowerCase()).sort().join(",");
+  const projects = [...c.projectKeys]
+    .map((k) => k.toLowerCase())
+    .sort()
+    .join(",");
   return `${normalizeConversationTitle(c.title)}::${projects}`;
 }
 

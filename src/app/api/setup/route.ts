@@ -4,7 +4,7 @@ import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { getUserCount, createInitialUser } from "@/db/queries/users";
 
 const SetupBody = z.object({
-  name:     z.string().trim().min(2, "Name must be at least 2 characters."),
+  name: z.string().trim().min(2, "Name must be at least 2 characters."),
   password: z.string().min(8, "Password must be at least 8 characters."),
 });
 

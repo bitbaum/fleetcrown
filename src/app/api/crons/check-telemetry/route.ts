@@ -59,7 +59,10 @@ export async function GET(req: NextRequest) {
       actionUrl: "/system",
       metadata: {
         broken: report.broken.map((r) => ({
-          table: r.table, state: r.state, ageHours: r.ageHours, writer: r.writer,
+          table: r.table,
+          state: r.state,
+          ageHours: r.ageHours,
+          writer: r.writer,
         })),
         unchecked: report.unchecked.map((r) => r.table),
       },
@@ -106,7 +109,9 @@ export async function GET(req: NextRequest) {
     flowing: report.flowingCount,
     alerted,
     paths: report.results.map((r) => ({
-      table: r.table, state: r.state, age: humanizeAge(r.ageHours),
+      table: r.table,
+      state: r.state,
+      age: humanizeAge(r.ageHours),
     })),
   });
 }

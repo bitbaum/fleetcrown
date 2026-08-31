@@ -17,7 +17,10 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { requireCronAuth } from "@/lib/cron-auth";
 import { logDebug } from "@/db/queries/debug-logs";
-import { getRunnerExecutionStall, reclaimStalePendingCommands } from "@/db/queries/pending-commands";
+import {
+  getRunnerExecutionStall,
+  reclaimStalePendingCommands,
+} from "@/db/queries/pending-commands";
 import { insertActiveAlertOnce } from "@/db/queries/alerts";
 import { getFleetAutopilotUserIds } from "@/db/queries/beacon-settings";
 import { sendTelegramMessage, selfTelegramTarget } from "@/lib/actions/telegram-send";
@@ -76,5 +79,11 @@ export async function GET(req: NextRequest) {
     meta: { users: users.length, stalledUsers, alertsCreated, reclaimed },
   });
 
-  return NextResponse.json({ ok: true, users: users.length, stalledUsers, alertsCreated, reclaimed });
+  return NextResponse.json({
+    ok: true,
+    users: users.length,
+    stalledUsers,
+    alertsCreated,
+    reclaimed,
+  });
 }

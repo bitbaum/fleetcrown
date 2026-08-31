@@ -2,11 +2,7 @@
  * Inline self-tests for onboarding helpers.
  * Run: npm run test:onboarding
  */
-import {
-  suggestUsername,
-  hasValidUsername,
-  isOnboardingComplete,
-} from "@/lib/onboarding";
+import { suggestUsername, hasValidUsername, isOnboardingComplete } from "@/lib/onboarding";
 
 function assert(condition: boolean, message: string): void {
   if (!condition) throw new Error(message);

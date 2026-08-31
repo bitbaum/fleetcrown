@@ -16,7 +16,13 @@ import { Transcript } from "./Transcript";
 import { Composer } from "./Composer";
 import { SaveContextBar } from "./SaveContextBar";
 import { ProjectFilter } from "./ProjectFilter";
-import type { Attachment, ConversationSummary, LokiMessage, LokiProject, ModelChoice } from "./types";
+import type {
+  Attachment,
+  ConversationSummary,
+  LokiMessage,
+  LokiProject,
+  ModelChoice,
+} from "./types";
 import { LOKI_PREFILL_EVENT } from "@/lib/client-events";
 
 const REFETCH_TIMEOUT_MS = 15_000;
@@ -56,7 +62,9 @@ export function LokiWorkspace({
   const hasInitialProjects = initialProjects !== undefined;
   const hasInitialConvos = initialConversations !== undefined;
 
-  const [conversations, setConversations] = useState<ConversationSummary[]>(initialConversations ?? []);
+  const [conversations, setConversations] = useState<ConversationSummary[]>(
+    initialConversations ?? [],
+  );
   const [convosLoading, setConvosLoading] = useState(!hasInitialConvos);
   const [convosError, setConvosError] = useState<string | null>(loadErrors?.conversations ?? null);
 
@@ -106,10 +114,22 @@ export function LokiWorkspace({
     setProjectsLoading(true);
     setProjectsError(null);
     try {
-      const rows = await fetchJson<Array<{ id: string; name: string; entityProjectId?: string | null; topGoal?: LokiProject["topGoal"] }>>(
-        "/api/user-projects",
+      const rows = await fetchJson<
+        Array<{
+          id: string;
+          name: string;
+          entityProjectId?: string | null;
+          topGoal?: LokiProject["topGoal"];
+        }>
+      >("/api/user-projects");
+      setProjects(
+        rows.map((p) => ({
+          id: p.id,
+          name: p.name,
+          entityProjectId: p.entityProjectId ?? null,
+          topGoal: p.topGoal ?? null,
+        })),
       );
-      setProjects(rows.map((p) => ({ id: p.id, name: p.name, entityProjectId: p.entityProjectId ?? null, topGoal: p.topGoal ?? null })));
     } catch {
       setProjectsError("Could not load projects.");
     } finally {
@@ -199,7 +219,9 @@ export function LokiWorkspace({
       projectKeys: selectedProjects,
     });
     if (!res.ok) {
-      await throwApiError(res, "Could not create conversation.").catch((e: Error) => setError(e.message));
+      await throwApiError(res, "Could not create conversation.").catch((e: Error) =>
+        setError(e.message),
+      );
       return null;
     }
     const { conversation } = (await res.json()) as { conversation: ConversationSummary };
@@ -285,13 +307,17 @@ export function LokiWorkspace({
             ? message.meta.projectKeys.filter((value): value is string => typeof value === "string")
             : []
         : [];
-      const knownProjects = resolvedProjects.filter((name) => projects.some((project) => project.name === name));
+      const knownProjects = resolvedProjects.filter((name) =>
+        projects.some((project) => project.name === name),
+      );
       if (knownProjects.length > 0) setSelectedProjects(knownProjects);
       // Sync the list so the server's auto-title (first message) and recency
       // ordering appear live, not only after a reload.
       void getJson<{ conversations: ConversationSummary[] }>("/api/conversations")
         .then((d) => setConversations(d.conversations))
-        .catch(() => { /* keep the existing list on a transient failure */ });
+        .catch(() => {
+          /* keep the existing list on a transient failure */
+        });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Message failed.");
     } finally {
@@ -327,12 +353,12 @@ export function LokiWorkspace({
     setSelectedProjects((prev) => Array.from(new Set([...prev, ...names])));
   const clearProjects = () => setSelectedProjects([]);
 
-  const selectedGoal = selectedProjects.length === 1
-    ? projects.find((project) => project.name === selectedProjects[0])?.topGoal ?? null
-    : null;
+  const selectedGoal =
+    selectedProjects.length === 1
+      ? (projects.find((project) => project.name === selectedProjects[0])?.topGoal ?? null)
+      : null;
 
-  const isStart =
-    messages.length === 0 && !transcriptLoading && !sending && !activeId;
+  const isStart = messages.length === 0 && !transcriptLoading && !sending && !activeId;
 
   const chatBody = (
     <>
@@ -402,7 +428,10 @@ export function LokiWorkspace({
         setActiveId(id);
         setHistoryOpen(false);
       }}
-      onNew={() => { startNewConversation(); setHistoryOpen(false); }}
+      onNew={() => {
+        startNewConversation();
+        setHistoryOpen(false);
+      }}
       onDelete={(id) => void deleteConversation(id)}
     />
   );
@@ -413,9 +442,7 @@ export function LokiWorkspace({
     <>
       {historyOpen && (
         <Drawer onClose={() => setHistoryOpen(false)} size="md">
-          <div className="flex min-h-0 flex-1 flex-col p-3">
-            {historyList}
-          </div>
+          <div className="flex min-h-0 flex-1 flex-col p-3">{historyList}</div>
         </Drawer>
       )}
       {filterOpen && (
@@ -438,7 +465,9 @@ export function LokiWorkspace({
   );
 
   return (
-    <div className={historyPinned ? "ui-loki-workspace ui-loki-workspace-split" : "ui-loki-workspace"}>
+    <div
+      className={historyPinned ? "ui-loki-workspace ui-loki-workspace-split" : "ui-loki-workspace"}
+    >
       {historyPinned && (
         <aside className="ui-loki-history-rail" aria-label="Chats">
           {historyList}
@@ -446,40 +475,49 @@ export function LokiWorkspace({
       )}
 
       <div className="ui-loki-main">
-      <div className="ui-loki-toolbar">
-        <button
-          type="button"
-          className="ui-loki-toolbar-btn"
-          onClick={() => {
-            if (typeof window !== "undefined" && window.matchMedia("(min-width: 768px)").matches) {
-              setHistoryPinned((open) => !open);
-              return;
+        <div className="ui-loki-toolbar">
+          <button
+            type="button"
+            className="ui-loki-toolbar-btn"
+            onClick={() => {
+              if (
+                typeof window !== "undefined" &&
+                window.matchMedia("(min-width: 768px)").matches
+              ) {
+                setHistoryPinned((open) => !open);
+                return;
+              }
+              setHistoryOpen(true);
+            }}
+            aria-label={
+              conversations.length > 0 ? `Open chats (${conversations.length})` : "Open chats"
             }
-            setHistoryOpen(true);
-          }}
-          aria-label={conversations.length > 0 ? `Open chats (${conversations.length})` : "Open chats"}
-          aria-pressed={historyPinned}
-        >
-          <MessagesSquare className="h-4 w-4" />
-          <span>Chats</span>
-          {conversations.length > 0 && <span className="ui-loki-toolbar-dot" aria-hidden />}
-        </button>
-        <button
-          type="button"
-          className="ui-loki-toolbar-btn"
-          onClick={startNewConversation}
-          aria-label="New chat"
-        >
-          <Plus className="h-4 w-4" />
-          <span>New</span>
-        </button>
-      </div>
+            aria-pressed={historyPinned}
+          >
+            <MessagesSquare className="h-4 w-4" />
+            <span>Chats</span>
+            {conversations.length > 0 && <span className="ui-loki-toolbar-dot" aria-hidden />}
+          </button>
+          <button
+            type="button"
+            className="ui-loki-toolbar-btn"
+            onClick={startNewConversation}
+            aria-label="New chat"
+          >
+            <Plus className="h-4 w-4" />
+            <span>New</span>
+          </button>
+        </div>
 
-      <section className={isStart ? "ui-loki-stage ui-loki-stage-empty" : "ui-loki-stage ui-loki-stage-chat"}>
-        {chatBody}
-      </section>
+        <section
+          className={
+            isStart ? "ui-loki-stage ui-loki-stage-empty" : "ui-loki-stage ui-loki-stage-chat"
+          }
+        >
+          {chatBody}
+        </section>
 
-      {drawers}
+        {drawers}
       </div>
     </div>
   );

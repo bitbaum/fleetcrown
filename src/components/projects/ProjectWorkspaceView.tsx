@@ -61,18 +61,21 @@ export function ProjectWorkspaceView({
   }
   const latestDevLogEntry = [...(detail.devLog ?? [])].reverse()[0] ?? null;
   const nextStep = answer(latestDevLogEntry?.next) ?? answer(attrs.next_step);
-  const primaryOrangeCatLink = dossier.orangecatLinks.find((link) => link.role === "funding")
-    ?? dossier.orangecatLinks.find((link) => link.role === "public_profile")
-    ?? dossier.orangecatLinks[0];
+  const primaryOrangeCatLink =
+    dossier.orangecatLinks.find((link) => link.role === "funding") ??
+    dossier.orangecatLinks.find((link) => link.role === "public_profile") ??
+    dossier.orangecatLinks[0];
   // Computed once: the hero and the "Run next step" button below it must never
   // both offer themselves as the way to start this project.
-  const showKickoff = !dossier.readonly && needsKickoff({
-    attrs,
-    goalCount: detail.linkedGoals.length,
-    goalsLocked: detail.goalsLocked,
-    hasRepo: Boolean(links.repo),
-    agentRunning: Boolean(dossier.state?.agentRunning),
-  });
+  const showKickoff =
+    !dossier.readonly &&
+    needsKickoff({
+      attrs,
+      goalCount: detail.linkedGoals.length,
+      goalsLocked: detail.goalsLocked,
+      hasRepo: Boolean(links.repo),
+      agentRunning: Boolean(dossier.state?.agentRunning),
+    });
 
   return (
     <div className="app-page max-w-5xl space-y-6">
@@ -126,7 +129,12 @@ export function ProjectWorkspaceView({
               readonly={dossier.readonly}
             />
             {links.repo && (
-              <a href={links.repo} target="_blank" rel="noreferrer" className="ui-btn-ghost min-h-11 gap-1.5">
+              <a
+                href={links.repo}
+                target="_blank"
+                rel="noreferrer"
+                className="ui-btn-ghost min-h-11 gap-1.5"
+              >
                 <GitBranch className="h-4 w-4" aria-hidden="true" /> Repository
               </a>
             )}
@@ -153,15 +161,17 @@ export function ProjectWorkspaceView({
         aria-label="Project profile sections"
         className="sticky top-0 z-20 -mx-4 flex gap-1 overflow-x-auto border-y border-border-subtle bg-surface-page/95 px-4 py-2 backdrop-blur-sm sm:mx-0 sm:rounded-lg sm:border sm:px-2"
       >
-        {SECTIONS.filter((s) => !("ownerOnly" in s && s.ownerOnly) || !dossier.readonly).map((section) => (
-          <a
-            key={section.href}
-            href={section.href}
-            className="ui-tap inline-flex shrink-0 items-center rounded-md px-3 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary"
-          >
-            {section.label}
-          </a>
-        ))}
+        {SECTIONS.filter((s) => !("ownerOnly" in s && s.ownerOnly) || !dossier.readonly).map(
+          (section) => (
+            <a
+              key={section.href}
+              href={section.href}
+              className="ui-tap inline-flex shrink-0 items-center rounded-md px-3 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary"
+            >
+              {section.label}
+            </a>
+          ),
+        )}
       </nav>
 
       {!dossier.readonly && (
@@ -179,17 +189,30 @@ export function ProjectWorkspaceView({
       )}
 
       <section id="overview" className="scroll-mt-28" aria-labelledby="project-overview-title">
-        <h2 id="project-overview-title" className="sr-only">Overview</h2>
+        <h2 id="project-overview-title" className="sr-only">
+          Overview
+        </h2>
         {healthSignals.length > 0 && (
           <div className="mb-5 divide-y divide-border-subtle border-y border-border-subtle">
             {healthSignals.map((signal) => {
               const signalKey = HEALTH_SIGNAL_CONFIG.find((c) => c.kind === signal.kind)?.key;
               return (
-                <div key={signal.kind} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-baseline sm:gap-3">
-                  <span className="shrink-0 text-sm font-medium text-status-warning">{signal.label}</span>
-                  <span className="flex-1 text-sm leading-relaxed text-text-secondary">{signal.value}</span>
+                <div
+                  key={signal.kind}
+                  className="flex flex-col gap-2 py-3 sm:flex-row sm:items-baseline sm:gap-3"
+                >
+                  <span className="shrink-0 text-sm font-medium text-status-warning">
+                    {signal.label}
+                  </span>
+                  <span className="flex-1 text-sm leading-relaxed text-text-secondary">
+                    {signal.value}
+                  </span>
                   {!dossier.readonly && signalKey && (
-                    <FixSignalButton projectId={project.id} workspaceKey={workspaceKey} signalKey={signalKey} />
+                    <FixSignalButton
+                      projectId={project.id}
+                      workspaceKey={workspaceKey}
+                      signalKey={signalKey}
+                    />
                   )}
                 </div>
               );
@@ -198,7 +221,12 @@ export function ProjectWorkspaceView({
         )}
         <div className="grid gap-5 lg:grid-cols-2">
           <NowSection dossier={dossier} interactive={false} showBrief={false} />
-          <NextSection dossier={dossier} interactive={false} showGoals={false} dispatchable={!dossier.readonly && !showKickoff} />
+          <NextSection
+            dossier={dossier}
+            interactive={false}
+            showGoals={false}
+            dispatchable={!dossier.readonly && !showKickoff}
+          />
         </div>
       </section>
 
@@ -223,37 +251,49 @@ export function ProjectWorkspaceView({
       {/* Feedback outranks the historical log: it is inbound work waiting on a
           decision, the log is the past. It used to sit below Activity, so the
           densest interactive block on the page was the last thing you found. */}
-      {!dossier.readonly && <ProjectFeedbackSection projectId={project.id} projectName={project.name} />}
+      {!dossier.readonly && (
+        <ProjectFeedbackSection projectId={project.id} projectName={project.name} />
+      )}
 
-      <section id="activity" className="ui-project-section" aria-labelledby="project-activity-title">
-        <h2 id="project-activity-title" className="mb-4 text-lg font-semibold text-text-primary">Activity and evidence</h2>
+      <section
+        id="activity"
+        className="ui-project-section"
+        aria-labelledby="project-activity-title"
+      >
+        <h2 id="project-activity-title" className="mb-4 text-lg font-semibold text-text-primary">
+          Activity and evidence
+        </h2>
         <DoneSection dossier={dossier} />
         {/* Funding is evidence, so it reads with the rest of the evidence
             instead of above the project's own status. Rendered only when money
             actually arrived — a "0 BTC · 0 contributions" panel was a headline
             for nothing (the old formatter printed a bare `0` for empty). */}
-        {primaryOrangeCatLink && dossier.orangecatFunding && dossier.orangecatFunding.totalBtc > 0 && (
-          <div className="mt-5 flex flex-col gap-3 rounded-xl border border-border-subtle bg-surface-base p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <div className="ui-micro-label">Confirmed on OrangeCat</div>
-              <div className="mt-1 text-xl font-semibold text-text-primary">
-                {formatBtc(dossier.orangecatFunding.totalBtc)} BTC
+        {primaryOrangeCatLink &&
+          dossier.orangecatFunding &&
+          dossier.orangecatFunding.totalBtc > 0 && (
+            <div className="mt-5 flex flex-col gap-3 rounded-xl border border-border-subtle bg-surface-base p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <div className="ui-micro-label">Confirmed on OrangeCat</div>
+                <div className="mt-1 text-xl font-semibold text-text-primary">
+                  {formatBtc(dossier.orangecatFunding.totalBtc)} BTC
+                </div>
+                <div className="mt-1 text-sm text-text-secondary">
+                  {dossier.orangecatFunding.contributorCount} confirmed{" "}
+                  {dossier.orangecatFunding.contributorCount === 1
+                    ? "contribution"
+                    : "contributions"}
+                </div>
               </div>
-              <div className="mt-1 text-sm text-text-secondary">
-                {dossier.orangecatFunding.contributorCount} confirmed{" "}
-                {dossier.orangecatFunding.contributorCount === 1 ? "contribution" : "contributions"}
-              </div>
+              <a
+                href={primaryOrangeCatLink.publicUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="ui-btn-secondary min-h-11 gap-1.5"
+              >
+                Share and fund <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+              </a>
             </div>
-            <a
-              href={primaryOrangeCatLink.publicUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="ui-btn-secondary min-h-11 gap-1.5"
-            >
-              Share and fund <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-            </a>
-          </div>
-        )}
+          )}
       </section>
 
       {!dossier.readonly && (

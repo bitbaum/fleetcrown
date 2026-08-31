@@ -1,11 +1,6 @@
 import assert from "node:assert/strict";
 import { DIGEST_CADENCES } from "../../src/db/schema/notification-preferences";
-import {
-  DIGEST_CADENCE_COPY,
-  EMAIL_THEME,
-  MAIL_KINDS,
-  mailSubject,
-} from "../../src/config/comms";
+import { DIGEST_CADENCE_COPY, EMAIL_THEME, MAIL_KINDS, mailSubject } from "../../src/config/comms";
 import { AUTH_COPY } from "../../src/config/auth";
 import { NAV } from "../../src/config/navigation";
 import { PALETTE } from "../../src/lib/palette";

@@ -38,7 +38,7 @@ export function TerminalLaunch({
     agentOverride ??
     (project?.agentPref && agents.some((a) => a.id === project.agentPref)
       ? project.agentPref
-      : defaultAgent ?? agents[0]?.id ?? "");
+      : (defaultAgent ?? agents[0]?.id ?? ""));
 
   if (projects.length === 0 || agents.length === 0) return null;
 
@@ -79,7 +79,9 @@ export function TerminalLaunch({
           onChange={(e) => setProjectName(e.target.value)}
         >
           {projects.map((p) => (
-            <option key={p.name} value={p.name}>{p.name}</option>
+            <option key={p.name} value={p.name}>
+              {p.name}
+            </option>
           ))}
         </select>
         <select
@@ -89,7 +91,9 @@ export function TerminalLaunch({
           onChange={(e) => setAgentOverride(e.target.value)}
         >
           {agents.map((a) => (
-            <option key={a.id} value={a.id}>{a.label}</option>
+            <option key={a.id} value={a.id}>
+              {a.label}
+            </option>
           ))}
         </select>
         <button

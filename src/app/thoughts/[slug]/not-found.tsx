@@ -19,7 +19,10 @@ export default function ThoughtNotFound() {
             be rolling out — check again in a minute, or browse what is live below.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
-            <Link href="/thoughts" className="ui-btn-primary inline-flex items-center gap-2 px-5 py-2.5">
+            <Link
+              href="/thoughts"
+              className="ui-btn-primary inline-flex items-center gap-2 px-5 py-2.5"
+            >
               <BookOpen className="h-4 w-4" aria-hidden />
               All essays
             </Link>
@@ -42,7 +45,9 @@ export default function ThoughtNotFound() {
                   >
                     <div className="font-medium text-text-primary">{article.title}</div>
                     {article.summary && (
-                      <p className="mt-1 text-sm text-text-secondary line-clamp-2">{article.summary}</p>
+                      <p className="mt-1 text-sm text-text-secondary line-clamp-2">
+                        {article.summary}
+                      </p>
                     )}
                     <p className="mt-1 text-xs text-text-muted">
                       {article.publishedAt} · {article.readingTimeMin} min

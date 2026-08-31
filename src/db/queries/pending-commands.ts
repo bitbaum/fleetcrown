@@ -1,5 +1,15 @@
 import { db } from "@/db";
-import { pendingCommands, type NewPendingCommand, type InjectPayload, type DispatchPayload, type SwitchAgentPayload, type AutoContinuePayload, type TabPayload, type LaunchAgentPayload, type RunnerChannel } from "@/db/schema/pending-commands";
+import {
+  pendingCommands,
+  type NewPendingCommand,
+  type InjectPayload,
+  type DispatchPayload,
+  type SwitchAgentPayload,
+  type AutoContinuePayload,
+  type TabPayload,
+  type LaunchAgentPayload,
+  type RunnerChannel,
+} from "@/db/schema/pending-commands";
 import { eq, isNull, isNotNull, and, inArray, notInArray, desc, sql } from "drizzle-orm";
 import type { FailedCommand } from "@/lib/control-types";
 import { STALE_RUN_MINUTES } from "./orchestration-runs";
@@ -26,28 +36,32 @@ export async function getRunnerExecutionStall(userId: string, graceSeconds = 120
       oldestSeconds: sql<number>`coalesce(extract(epoch from (now() - min(created_at)))::int, 0)`,
       // Which projects the stuck commands target — so the banner can say
       // "2 dispatches for orangecat" instead of an untraceable count.
-      tabs: sql<string[]>`coalesce(array_agg(distinct coalesce(payload->>'projectKey', payload->>'tab')) filter (where coalesce(payload->>'projectKey', payload->>'tab') is not null), '{}')`,
+      tabs: sql<
+        string[]
+      >`coalesce(array_agg(distinct coalesce(payload->>'projectKey', payload->>'tab')) filter (where coalesce(payload->>'projectKey', payload->>'tab') is not null), '{}')`,
     })
     .from(pendingCommands)
-    .where(and(
-      eq(pendingCommands.userId, userId),
-      isNull(pendingCommands.executedAt),
-      // In-flight, not stalled: a claimed command is being executed right now
-      // (local dispatch legitimately holds its claim 20-35s; hosted Hermes
-      // runs for minutes). Genuinely dead claims are reclaimed to unclaimed
-      // by reclaimStalePendingCommands and then count again.
-      isNull(pendingCommands.claimedAt),
-      sql`created_at < now() - interval '1 second' * ${graceSeconds}`,
-      sql`created_at > now() - interval '2 hours'`,
-      // A dispatch waiting its turn behind an older open run for the same
-      // project is QUEUED, not stalled — the claim gate skips it on purpose.
-      // Counting those had Control shouting "Restart the desktop app" every
-      // time a project ran longer than the grace window with a follow-up
-      // queued (any 2-minute run + one queued dispatch = false alarm). Only a
-      // command the runner was ALLOWED to claim and didn't is evidence of a
-      // hung execution loop.
-      fifoEligibilitySql(),
-    ));
+    .where(
+      and(
+        eq(pendingCommands.userId, userId),
+        isNull(pendingCommands.executedAt),
+        // In-flight, not stalled: a claimed command is being executed right now
+        // (local dispatch legitimately holds its claim 20-35s; hosted Hermes
+        // runs for minutes). Genuinely dead claims are reclaimed to unclaimed
+        // by reclaimStalePendingCommands and then count again.
+        isNull(pendingCommands.claimedAt),
+        sql`created_at < now() - interval '1 second' * ${graceSeconds}`,
+        sql`created_at > now() - interval '2 hours'`,
+        // A dispatch waiting its turn behind an older open run for the same
+        // project is QUEUED, not stalled — the claim gate skips it on purpose.
+        // Counting those had Control shouting "Restart the desktop app" every
+        // time a project ran longer than the grace window with a follow-up
+        // queued (any 2-minute run + one queued dispatch = false alarm). Only a
+        // command the runner was ALLOWED to claim and didn't is evidence of a
+        // hung execution loop.
+        fifoEligibilitySql(),
+      ),
+    );
   const stalledCount = row?.stalledCount ?? 0;
   return {
     stalled: stalledCount > 0,
@@ -125,7 +139,10 @@ export async function enqueuePendingCommand(
   // mistake; this cannot be bypassed without deleting this line.
   await requireNotDemo(command.userId, command.type === "inject" ? "terminal" : "dispatch");
 
-  const [row] = await db.insert(pendingCommands).values(command).returning({ id: pendingCommands.id });
+  const [row] = await db
+    .insert(pendingCommands)
+    .values(command)
+    .returning({ id: pendingCommands.id });
   return row.id;
 }
 
@@ -144,7 +161,10 @@ export async function enqueueDispatchCommand(
 }
 
 /** True when an unexecuted command already targets this project (inject or dispatch). */
-export async function hasOpenPendingForProject(userId: string, projectKey: string): Promise<boolean> {
+export async function hasOpenPendingForProject(
+  userId: string,
+  projectKey: string,
+): Promise<boolean> {
   const [row] = await db
     .select({ id: pendingCommands.id })
     .from(pendingCommands)
@@ -169,11 +189,13 @@ export async function hasUndeliveredCommandForRun(userId: string, runId: string)
   const [row] = await db
     .select({ id: pendingCommands.id })
     .from(pendingCommands)
-    .where(and(
-      eq(pendingCommands.userId, userId),
-      isNull(pendingCommands.executedAt),
-      sql`${pendingCommands.payload}->>'runId' = ${runId}`,
-    ))
+    .where(
+      and(
+        eq(pendingCommands.userId, userId),
+        isNull(pendingCommands.executedAt),
+        sql`${pendingCommands.payload}->>'runId' = ${runId}`,
+      ),
+    )
     .limit(1);
   return !!row;
 }
@@ -193,7 +215,12 @@ export async function enqueueHostedAnalyzeCommand(
  *  (Hermes) on hosted compute — clone, run the agent in its own sandbox, return
  *  the work. Own type so it's distinct from the read-only hosted_analyze and
  *  from the local-runner dispatch path. `model` overrides HERMES_INFERENCE_MODEL. */
-export type HostedDispatchPayload = { projectKey: string; gitUrl: string; task: string; model?: string };
+export type HostedDispatchPayload = {
+  projectKey: string;
+  gitUrl: string;
+  task: string;
+  model?: string;
+};
 export async function enqueueHostedDispatchCommand(
   userId: string,
   payload: HostedDispatchPayload,
@@ -215,17 +242,28 @@ export async function enqueueAutoContinueCommand(
   return enqueuePendingCommand({ userId, type: "auto_continue", payload });
 }
 
-export async function enqueueTabCommand(userId: string, type: "focus_tab" | "close_tab", payload: TabPayload): Promise<string> {
+export async function enqueueTabCommand(
+  userId: string,
+  type: "focus_tab" | "close_tab",
+  payload: TabPayload,
+): Promise<string> {
   return enqueuePendingCommand({ userId, type, payload });
 }
 
-export async function enqueueLaunchAgentCommand(userId: string, payload: LaunchAgentPayload): Promise<string> {
+export async function enqueueLaunchAgentCommand(
+  userId: string,
+  payload: LaunchAgentPayload,
+): Promise<string> {
   return enqueuePendingCommand({ userId, type: "launch_agent", payload });
 }
 
 /** Live terminal: tell the runner to start/stop streaming a tab's screen.
  *  See docs/architecture/embedded-terminal.md. */
-export async function enqueuePeekCommand(userId: string, type: "peek_start" | "peek_stop", payload: TabPayload): Promise<string> {
+export async function enqueuePeekCommand(
+  userId: string,
+  type: "peek_start" | "peek_stop",
+  payload: TabPayload,
+): Promise<string> {
   return enqueuePendingCommand({ userId, type, payload });
 }
 
@@ -236,12 +274,14 @@ export async function retryFailedCommand(userId: string, id: string): Promise<st
   const [row] = await db
     .select({ type: pendingCommands.type, payload: pendingCommands.payload })
     .from(pendingCommands)
-    .where(and(
-      eq(pendingCommands.id, id),
-      eq(pendingCommands.userId, userId),
-      isNotNull(pendingCommands.executedAt),
-      sql`((${pendingCommands.result}->>'ok') = 'false' OR (${pendingCommands.result}->>'verified') = 'false')`,
-    ))
+    .where(
+      and(
+        eq(pendingCommands.id, id),
+        eq(pendingCommands.userId, userId),
+        isNotNull(pendingCommands.executedAt),
+        sql`((${pendingCommands.result}->>'ok') = 'false' OR (${pendingCommands.result}->>'verified') = 'false')`,
+      ),
+    )
     .limit(1);
   if (!row) return null;
   return enqueuePendingCommand({ userId, type: row.type, payload: row.payload });
@@ -280,32 +320,34 @@ const STALE_COMMAND_MAX_AGE_MINUTES = 20;
  *  control_audit_events, so nothing auditable is lost. Returns the count. */
 export async function purgeStalePendingCommands(userIds: string[]): Promise<number> {
   if (userIds.length === 0) return 0;
-  const userFilter = userIds.length === 1
-    ? eq(pendingCommands.userId, userIds[0])
-    : inArray(pendingCommands.userId, userIds);
+  const userFilter =
+    userIds.length === 1
+      ? eq(pendingCommands.userId, userIds[0])
+      : inArray(pendingCommands.userId, userIds);
   const deleted = await db
     .delete(pendingCommands)
-    .where(and(
-      userFilter,
-      isNull(pendingCommands.claimedAt),
-      isNull(pendingCommands.executedAt),
-      sql`${pendingCommands.createdAt} < NOW() - INTERVAL '1 minute' * ${STALE_COMMAND_MAX_AGE_MINUTES}`,
-      // A dispatch/inject held by the per-project serialization gate is NOT an
-      // offline backlog — it is legitimately waiting for the older run to close.
-      // Purging it would silently drop the work AND leave its own open run
-      // wedging the project.
-      //
-      // A queued command lives exactly as long as the run it belongs to, and
-      // not one minute longer: the reaper is what bounds it (60 min for a dead
-      // project, up to MAX_RUN_HOURS while an agent is genuinely alive), so
-      // this needs no second timer of its own. It used to carry one — a flat
-      // STALE_RUN_MINUTES from its own start — which did not match how long a
-      // run may legitimately stay open. Real agent turns run for hours, so the
-      // command was deleted at 60 min while the run ahead was still working
-      // and the run behind it was still open. That dropped the user's work
-      // silently, and the orphaned run then had nothing left to prove it was
-      // undelivered (2026-08-24: four of five feedback fixes lost this way).
-      sql`NOT (
+    .where(
+      and(
+        userFilter,
+        isNull(pendingCommands.claimedAt),
+        isNull(pendingCommands.executedAt),
+        sql`${pendingCommands.createdAt} < NOW() - INTERVAL '1 minute' * ${STALE_COMMAND_MAX_AGE_MINUTES}`,
+        // A dispatch/inject held by the per-project serialization gate is NOT an
+        // offline backlog — it is legitimately waiting for the older run to close.
+        // Purging it would silently drop the work AND leave its own open run
+        // wedging the project.
+        //
+        // A queued command lives exactly as long as the run it belongs to, and
+        // not one minute longer: the reaper is what bounds it (60 min for a dead
+        // project, up to MAX_RUN_HOURS while an agent is genuinely alive), so
+        // this needs no second timer of its own. It used to carry one — a flat
+        // STALE_RUN_MINUTES from its own start — which did not match how long a
+        // run may legitimately stay open. Real agent turns run for hours, so the
+        // command was deleted at 60 min while the run ahead was still working
+        // and the run behind it was still open. That dropped the user's work
+        // silently, and the orphaned run then had nothing left to prove it was
+        // undelivered (2026-08-24: four of five feedback fixes lost this way).
+        sql`NOT (
         ${pendingCommands.type} IN ('dispatch','inject')
         AND ${pendingCommands.payload}->>'runId' IS NOT NULL
         AND EXISTS (
@@ -314,7 +356,8 @@ export async function purgeStalePendingCommands(userIds: string[]): Promise<numb
             AND own.finished_at IS NULL
         )
       )`,
-    ))
+      ),
+    )
     .returning({ id: pendingCommands.id });
   return deleted.length;
 }
@@ -322,9 +365,10 @@ export async function purgeStalePendingCommands(userIds: string[]): Promise<numb
 /** Commands claimed but never finished (runner crash/restart) become claimable again. */
 export async function reclaimStalePendingCommands(userIds: string[]): Promise<number> {
   if (userIds.length === 0) return 0;
-  const userFilter = userIds.length === 1
-    ? eq(pendingCommands.userId, userIds[0])
-    : inArray(pendingCommands.userId, userIds);
+  const userFilter =
+    userIds.length === 1
+      ? eq(pendingCommands.userId, userIds[0])
+      : inArray(pendingCommands.userId, userIds);
   // Type-aware lease in two typed batches (a CASE around the lease param leaves
   // it type-unknown → `interval * unknown` → 42883). Hosted (Hermes) runs get a
   // much longer grace so a healthy multi-minute run is never reclaimed mid-flight
@@ -334,13 +378,15 @@ export async function reclaimStalePendingCommands(userIds: string[]): Promise<nu
     db
       .update(pendingCommands)
       .set({ claimedAt: null })
-      .where(and(
-        userFilter,
-        isNotNull(pendingCommands.claimedAt),
-        isNull(pendingCommands.executedAt),
-        typeCond,
-        sql`${pendingCommands.claimedAt} < NOW() - INTERVAL '1 second' * ${seconds}`,
-      ))
+      .where(
+        and(
+          userFilter,
+          isNotNull(pendingCommands.claimedAt),
+          isNull(pendingCommands.executedAt),
+          typeCond,
+          sql`${pendingCommands.claimedAt} < NOW() - INTERVAL '1 second' * ${seconds}`,
+        ),
+      )
       .returning({ id: pendingCommands.id });
   const [hosted, local] = await Promise.all([
     reclaimBatch(inArray(pendingCommands.type, hostedTypes), HOSTED_STALE_CLAIM_SECONDS),
@@ -349,13 +395,18 @@ export async function reclaimStalePendingCommands(userIds: string[]): Promise<nu
   return hosted.length + local.length;
 }
 
-export async function claimNextPendingCommand(userIds: string[], types?: string[], runnerChannel?: RunnerChannel) {
+export async function claimNextPendingCommand(
+  userIds: string[],
+  types?: string[],
+  runnerChannel?: RunnerChannel,
+) {
   if (userIds.length === 0) return null;
   await purgeStalePendingCommands(userIds);
   await reclaimStalePendingCommands(userIds);
-  const userFilter = userIds.length === 1
-    ? eq(pendingCommands.userId, userIds[0])
-    : inArray(pendingCommands.userId, userIds);
+  const userFilter =
+    userIds.length === 1
+      ? eq(pendingCommands.userId, userIds[0])
+      : inArray(pendingCommands.userId, userIds);
   const cleanTypes = types?.map((type) => type.trim()).filter(Boolean) ?? [];
   const typeFilter = cleanTypes.length > 0 ? inArray(pendingCommands.type, cleanTypes) : undefined;
   const channelFilter = runnerChannel
@@ -368,17 +419,19 @@ export async function claimNextPendingCommand(userIds: string[], types?: string[
     const [row] = await tx
       .select()
       .from(pendingCommands)
-      .where(and(
-        userFilter,
-        typeFilter,
-        channelFilter,
-        isNull(pendingCommands.claimedAt),
-        // A busy project's rows are skipped so a different project's row is
-        // claimed → cross-project parallelism intact. Runs INSIDE the FOR
-        // UPDATE SKIP LOCKED tx (correct under concurrent pollers). Full gate
-        // semantics documented on fifoEligibilitySql.
-        fifoEligibilitySql(),
-      ))
+      .where(
+        and(
+          userFilter,
+          typeFilter,
+          channelFilter,
+          isNull(pendingCommands.claimedAt),
+          // A busy project's rows are skipped so a different project's row is
+          // claimed → cross-project parallelism intact. Runs INSIDE the FOR
+          // UPDATE SKIP LOCKED tx (correct under concurrent pollers). Full gate
+          // semantics documented on fifoEligibilitySql.
+          fifoEligibilitySql(),
+        ),
+      )
       .orderBy(pendingCommands.createdAt)
       .limit(1)
       .for("update", { skipLocked: true });
@@ -394,7 +447,14 @@ export async function claimNextPendingCommand(userIds: string[], types?: string[
 export async function markCommandExecuted(
   id: string,
   userId: string,
-  result: { ok: boolean; text?: string; error?: string; warning?: string; verified?: boolean; workspaceId?: string },
+  result: {
+    ok: boolean;
+    text?: string;
+    error?: string;
+    warning?: string;
+    verified?: boolean;
+    workspaceId?: string;
+  },
 ): Promise<boolean> {
   const updated = await db
     .update(pendingCommands)
@@ -425,12 +485,14 @@ export async function recentSwitchAgentStats(
       pending: sql<number>`count(*) filter (where ${pendingCommands.claimedAt} is null)`,
     })
     .from(pendingCommands)
-    .where(and(
-      eq(pendingCommands.userId, userId),
-      eq(pendingCommands.type, "switch_agent"),
-      sql`${pendingCommands.payload}->>'tab' = ${tab}`,
-      sql`${pendingCommands.createdAt} > now() - interval '15 minutes'`,
-    ));
+    .where(
+      and(
+        eq(pendingCommands.userId, userId),
+        eq(pendingCommands.type, "switch_agent"),
+        sql`${pendingCommands.payload}->>'tab' = ${tab}`,
+        sql`${pendingCommands.createdAt} > now() - interval '15 minutes'`,
+      ),
+    );
   const r = rows[0];
   return { windowCount: Number(r?.windowCount ?? 0), pending: Number(r?.pending ?? 0) };
 }
@@ -451,9 +513,10 @@ export async function getPendingCommandsForUser(userId: string) {
 // surfacing stale errors after the user has moved on.
 export async function getRecentFailedCommands(userIds: string[]): Promise<FailedCommand[]> {
   if (userIds.length === 0) return [];
-  const userFilter = userIds.length === 1
-    ? eq(pendingCommands.userId, userIds[0])
-    : inArray(pendingCommands.userId, userIds);
+  const userFilter =
+    userIds.length === 1
+      ? eq(pendingCommands.userId, userIds[0])
+      : inArray(pendingCommands.userId, userIds);
   const rows = await db
     .select({
       id: pendingCommands.id,
@@ -463,12 +526,14 @@ export async function getRecentFailedCommands(userIds: string[]): Promise<Failed
       executedAt: pendingCommands.executedAt,
     })
     .from(pendingCommands)
-    .where(and(
-      userFilter,
-      isNotNull(pendingCommands.executedAt),
-      sql`((${pendingCommands.result}->>'ok') = 'false' OR ((${pendingCommands.result}->>'ok') = 'true' AND (${pendingCommands.result}->>'verified') = 'false'))`,
-      sql`${pendingCommands.executedAt} > NOW() - INTERVAL '10 minutes'`,
-    ))
+    .where(
+      and(
+        userFilter,
+        isNotNull(pendingCommands.executedAt),
+        sql`((${pendingCommands.result}->>'ok') = 'false' OR ((${pendingCommands.result}->>'ok') = 'true' AND (${pendingCommands.result}->>'verified') = 'false'))`,
+        sql`${pendingCommands.executedAt} > NOW() - INTERVAL '10 minutes'`,
+      ),
+    )
     .orderBy(desc(pendingCommands.executedAt))
     .limit(20);
 
@@ -479,11 +544,11 @@ export async function getRecentFailedCommands(userIds: string[]): Promise<Failed
       const isFailure = result.ok === false;
       const isUnverified = result.ok === true && result.verified === false;
       const error = isFailure
-        ? (result.error as string) ?? "command failed"
-        : (result.warning as string) ?? "delivered but agent did not pick up";
+        ? ((result.error as string) ?? "command failed")
+        : ((result.warning as string) ?? "delivered but agent did not pick up");
       return {
         id: r.id,
-        tab: (r.payload as Record<string, unknown>)?.tab as string ?? "unknown",
+        tab: ((r.payload as Record<string, unknown>)?.tab as string) ?? "unknown",
         type: r.type,
         error,
         executedAt: r.executedAt!.toISOString(),

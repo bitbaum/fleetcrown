@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionUserId } from "@/lib/session";
 import { readJsonBody, z, isUniqueViolation } from "@/lib/api/route-helpers";
 import { emptyToUndefined } from "@/lib/validation";
-import { createUserProject, ensureUserProjectEntityLinks, countActiveProjects } from "@/db/queries/user-projects";
+import {
+  createUserProject,
+  ensureUserProjectEntityLinks,
+  countActiveProjects,
+} from "@/db/queries/user-projects";
 import { getTopActiveGoalByProject } from "@/db/queries/project-context";
 import { getUserById } from "@/db/queries/users";
 import { getProjectLimit } from "@/lib/plan";
@@ -25,7 +29,7 @@ export async function GET() {
   const goalByEntity = await getTopActiveGoalByProject(userId);
   const withGoals = projects.map((p) => ({
     ...p,
-    topGoal: p.entityProjectId ? goalByEntity.get(p.entityProjectId) ?? null : null,
+    topGoal: p.entityProjectId ? (goalByEntity.get(p.entityProjectId) ?? null) : null,
   }));
   return NextResponse.json(withGoals);
 }
@@ -44,7 +48,10 @@ export async function POST(req: NextRequest) {
       const current = await countActiveProjects(userId);
       if (current >= limit) {
         return NextResponse.json(
-          { error: `Project limit reached (${limit} on ${user.plan} plan). Upgrade to add more.`, limitReached: true },
+          {
+            error: `Project limit reached (${limit} on ${user.plan} plan). Upgrade to add more.`,
+            limitReached: true,
+          },
           { status: 403 },
         );
       }
@@ -56,7 +63,11 @@ export async function POST(req: NextRequest) {
   // Canonical lowercase-slug name (SSOT) so the registry stays consistent
   // across deployments instead of drifting Title-case vs slug.
   const name = normalizeProjectName(dataOrResp.name);
-  if (!name) return NextResponse.json({ error: "Project name must contain letters or numbers." }, { status: 400 });
+  if (!name)
+    return NextResponse.json(
+      { error: "Project name must contain letters or numbers." },
+      { status: 400 },
+    );
   try {
     const project = await createUserProject({ userId, ...dataOrResp, name });
     return NextResponse.json(project, { status: 201 });

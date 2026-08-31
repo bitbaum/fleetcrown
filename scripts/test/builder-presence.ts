@@ -18,14 +18,21 @@ if (builderCompactLabel("connected", "box-0.8.9") !== "Cloud builder online") {
 if (builderCompactLabel("connected", "0.8.9") !== "This computer online") {
   throw new Error("local label");
 }
-if (builderCompactLabel("connected", "0.8.9", { cloud: true, local: true }) !== "Cloud + this computer online") {
+if (
+  builderCompactLabel("connected", "0.8.9", { cloud: true, local: true }) !==
+  "Cloud + this computer online"
+) {
   throw new Error("both label");
 }
 if (builderCompactLabel("offline", null) !== "Builder offline") {
   throw new Error("offline label");
 }
 
-const cloudOnly = inferBuilderChannelPresence({ connected: true, cloudConnected: true, localConnected: false });
+const cloudOnly = inferBuilderChannelPresence({
+  connected: true,
+  cloudConnected: true,
+  localConnected: false,
+});
 if (!cloudOnly.cloud || cloudOnly.local) throw new Error("cloud-only infer");
 if (builderPresenceDetail(cloudOnly) !== "This computer offline — cloud builder runs the queue") {
   throw new Error("cloud-only detail");

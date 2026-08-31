@@ -37,7 +37,10 @@ export function LogConversationButton() {
   // Debounced search with AbortController so a slow earlier response
   // can't clobber a faster later one when the user types continuously.
   useEffect(() => {
-    if (!query.trim()) { setResults([]); return; }
+    if (!query.trim()) {
+      setResults([]);
+      return;
+    }
     const ctrl = new AbortController();
     const timer = setTimeout(async () => {
       setSearching(true);
@@ -54,7 +57,10 @@ export function LogConversationButton() {
         if (!ctrl.signal.aborted) setSearching(false);
       }
     }, 200);
-    return () => { clearTimeout(timer); ctrl.abort(); };
+    return () => {
+      clearTimeout(timer);
+      ctrl.abort();
+    };
   }, [query]);
 
   useEffect(() => {
@@ -74,7 +80,10 @@ export function LogConversationButton() {
       });
       if (!res.ok) await throwApiError(res, "Failed to save");
       setDone(true);
-      setTimeout(() => { reset(); router.refresh(); }, 1200);
+      setTimeout(() => {
+        reset();
+        router.refresh();
+      }, 1200);
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
@@ -84,10 +93,7 @@ export function LogConversationButton() {
 
   if (!open) {
     return (
-      <button
-        onClick={() => setOpen(true)}
-        className="ui-btn-pill-muted"
-      >
+      <button onClick={() => setOpen(true)} className="ui-btn-pill-muted">
         <MessageCircle className="h-3.5 w-3.5" />
         Log a conversation
       </button>
@@ -98,7 +104,10 @@ export function LogConversationButton() {
     <div className="bg-surface-base border border-border-subtle rounded-lg p-3 space-y-2">
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium text-text-secondary">Log a conversation</span>
-        <button onClick={reset} className="text-text-muted hover:text-text-secondary transition-colors">
+        <button
+          onClick={reset}
+          className="text-text-muted hover:text-text-secondary transition-colors"
+        >
           <X className="h-3.5 w-3.5" />
         </button>
       </div>
@@ -114,7 +123,10 @@ export function LogConversationButton() {
           <div className="flex items-center gap-2">
             <span className="text-xs text-text-secondary font-medium">{selected.name}</span>
             <button
-              onClick={() => { setSelected(null); setQuery(""); }}
+              onClick={() => {
+                setSelected(null);
+                setQuery("");
+              }}
               className="ui-link-muted"
             >
               change
@@ -126,12 +138,19 @@ export function LogConversationButton() {
               onChange={(e) => setChannel(e.target.value)}
               className="ui-input-tight"
             >
-              {CHANNEL_NAMES.map((c) => <option key={c} value={c}>{c}</option>)}
+              {CHANNEL_NAMES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
             </select>
             <input
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") reset(); }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") save();
+                if (e.key === "Escape") reset();
+              }}
               placeholder="Brief note (optional)"
               autoFocus
               className="flex-1 ui-input-tight"
@@ -139,11 +158,7 @@ export function LogConversationButton() {
           </div>
           {saveError && <p className="ui-error-xs">{saveError}</p>}
           <div className="flex gap-2">
-            <button
-              onClick={save}
-              disabled={saving}
-              className="ui-btn-save"
-            >
+            <button onClick={save} disabled={saving} className="ui-btn-save">
               {saving ? <Loader2 className="ui-spinner-xs" /> : <Check className="h-3 w-3" />}
               Save
             </button>
@@ -161,18 +176,26 @@ export function LogConversationButton() {
               ref={inputRef}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Escape") reset(); }}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") reset();
+              }}
               placeholder="Search person…"
               className="ui-input-inline border-border-subtle w-full pl-6 pr-2 py-1.5 text-xs text-text-primary placeholder:text-text-muted"
             />
-            {searching && <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 ui-spinner-xs text-text-muted" />}
+            {searching && (
+              <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 ui-spinner-xs text-text-muted" />
+            )}
           </div>
           {results.length > 0 && (
             <div className="space-y-0.5">
               {results.map((p) => (
                 <button
                   key={p.id}
-                  onClick={() => { setSelected(p); setQuery(""); setResults([]); }}
+                  onClick={() => {
+                    setSelected(p);
+                    setQuery("");
+                    setResults([]);
+                  }}
                   className="w-full text-left px-2 py-1.5 text-xs text-text-secondary hover:text-text-primary hover:bg-surface-raised rounded transition-colors"
                 >
                   {p.name}

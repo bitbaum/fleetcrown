@@ -1,11 +1,7 @@
 import { EXECUTOR_COPY } from "@/config/executor-copy";
 
 export type ExecutorHonestyKind =
-  | "queued"
-  | "needs-builder"
-  | "needs-github"
-  | "needs-gateway"
-  | "builder-starting";
+  "queued" | "needs-builder" | "needs-github" | "needs-gateway" | "builder-starting";
 
 export interface ExecutorHonestyLabel {
   kind: ExecutorHonestyKind;
@@ -39,7 +35,8 @@ export function deriveExecutorHonestyLabel(
     return {
       kind: "needs-gateway",
       label: EXECUTOR_COPY.honesty.needsGateway,
-      title: "Loki brain runs on the OpenClaw gateway. Without it, chat may fall back to Groq or show unavailable.",
+      title:
+        "Loki brain runs on the OpenClaw gateway. Without it, chat may fall back to Groq or show unavailable.",
     };
   }
   if (input.needsGitHub) {

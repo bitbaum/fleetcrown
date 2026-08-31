@@ -1,10 +1,5 @@
 import assert from "node:assert/strict";
-import {
-  FLEET_SURFACES,
-  NAV,
-  NAV_ITEMS,
-  SIDEBAR_SECTIONS,
-} from "../../src/config/navigation";
+import { FLEET_SURFACES, NAV, NAV_ITEMS, SIDEBAR_SECTIONS } from "../../src/config/navigation";
 
 const work = SIDEBAR_SECTIONS.find((s) => s.id === "work");
 const more = SIDEBAR_SECTIONS.find((s) => s.id === "more");

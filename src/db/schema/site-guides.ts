@@ -26,22 +26,30 @@ export type GuideStep = {
   note?: string;
 };
 
-export const siteGuides = pgTable("site_guides", {
-  id:        uuid("id").primaryKey().defaultRandom(),
-  projectId: uuid("project_id").notNull().references(() => userProjects.id, { onDelete: "cascade" }),
-  userId:    uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+export const siteGuides = pgTable(
+  "site_guides",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => userProjects.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
 
-  title:       text("title").notNull(),
-  description: text("description"),
-  steps:       jsonb("steps").$type<GuideStep[]>().notNull().default([]),
-  position:    integer("position").notNull().default(0),
+    title: text("title").notNull(),
+    description: text("description"),
+    steps: jsonb("steps").$type<GuideStep[]>().notNull().default([]),
+    position: integer("position").notNull().default(0),
 
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-}, (t) => [
-  index("idx_site_guides_project").on(t.projectId, t.position),
-  index("idx_site_guides_user").on(t.userId),
-]);
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    index("idx_site_guides_project").on(t.projectId, t.position),
+    index("idx_site_guides_user").on(t.userId),
+  ],
+);
 
 export type SiteGuide = typeof siteGuides.$inferSelect;
 export type NewSiteGuide = typeof siteGuides.$inferInsert;

@@ -43,4 +43,6 @@ for (const doc of DOCS) {
   );
 }
 
-console.log(`✓ verify gate is not restated in ${DOCS.length} docs (${steps.length} steps stay in package.json)`);
+console.log(
+  `✓ verify gate is not restated in ${DOCS.length} docs (${steps.length} steps stay in package.json)`,
+);

@@ -59,7 +59,10 @@ assert.ok(
 );
 
 // No literal prose left in either writer: the copy has one home.
-for (const [name, src] of [["reaper", reaper], ["reap-evidence", evidence]] as const) {
+for (const [name, src] of [
+  ["reaper", reaper],
+  ["reap-evidence", evidence],
+] as const) {
   assert.ok(
     !/'Reaped as timeout|'Reaper closed an open run/.test(src),
     `${name} still hardcodes reaper prose instead of importing EXECUTOR_COPY`,

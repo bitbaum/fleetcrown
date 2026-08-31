@@ -12,7 +12,12 @@
  * exactly the class of breakage the whole tool was built to catch.
  */
 import assert from "node:assert/strict";
-import { retiredHandleMatches, USES, verdictFor, pathVerdictFor } from "../ci/fleet-refs-audit-lib.mjs";
+import {
+  retiredHandleMatches,
+  USES,
+  verdictFor,
+  pathVerdictFor,
+} from "../ci/fleet-refs-audit-lib.mjs";
 
 const RETIRED = ["maonakamoto"];
 
@@ -30,7 +35,7 @@ jobs:
 assert.deepEqual(
   retiredHandleMatches(selfDeclaration, RETIRED),
   [],
-  "the RETIRED_HANDLES declaration line must not flag itself"
+  "the RETIRED_HANDLES declaration line must not flag itself",
 );
 
 // --- a genuine live reference must still be caught ------------------------
@@ -42,7 +47,7 @@ jobs:
 assert.deepEqual(
   retiredHandleMatches(staleUse, RETIRED),
   ["maonakamoto"],
-  "a real uses: line naming the retired owner must still fail"
+  "a real uses: line naming the retired owner must still fail",
 );
 
 // --- documentation in a comment is intentional, not a bug -----------------
@@ -53,7 +58,7 @@ name: CI
 assert.deepEqual(
   retiredHandleMatches(documented, RETIRED),
   [],
-  "a comment explaining the outage must not be flagged"
+  "a comment explaining the outage must not be flagged",
 );
 
 // --- RETIRED_HANDLES stripping must not eat an unrelated live reference on
@@ -68,101 +73,112 @@ jobs:
 assert.deepEqual(
   retiredHandleMatches(both, RETIRED),
   ["maonakamoto"],
-  "stripping the declaration line must not hide a genuine reference elsewhere in the same file"
+  "stripping the declaration line must not hide a genuine reference elsewhere in the same file",
 );
 
 // --- a clean file reports nothing ------------------------------------------
 assert.deepEqual(
-  retiredHandleMatches("name: CI\non: push\njobs:\n  x:\n    uses: bitbaum/fleetcrown/.github/workflows/selfhost-deploy.yml@main\n", RETIRED),
+  retiredHandleMatches(
+    "name: CI\non: push\njobs:\n  x:\n    uses: bitbaum/fleetcrown/.github/workflows/selfhost-deploy.yml@main\n",
+    RETIRED,
+  ),
   [],
-  "a file with no retired handle anywhere must report nothing"
+  "a file with no retired handle anywhere must report nothing",
 );
 
 // --- USES: what actually gets checked against GitHub -----------------------
-const usesOf = (text: string) => [...text.matchAll(USES)].map(([, owner, name]) => `${owner}/${name}`);
+const usesOf = (text: string) =>
+  [...text.matchAll(USES)].map(([, owner, name]) => `${owner}/${name}`);
 
 assert.deepEqual(
   usesOf("jobs:\n  x:\n    uses: bitbaum/fleetcrown@main\n"),
   ["bitbaum/fleetcrown"],
-  "a plain owner/repo@ref uses: line is matched"
+  "a plain owner/repo@ref uses: line is matched",
 );
 
 assert.deepEqual(
   usesOf("jobs:\n  x:\n    uses: bitbaum/fleetcrown/.github/workflows/selfhost-deploy.yml@main\n"),
   ["bitbaum/fleetcrown"],
-  "the owner/repo is extracted even with a path and filename after it"
+  "the owner/repo is extracted even with a path and filename after it",
 );
 
 assert.deepEqual(
   usesOf("jobs:\n  x:\n    uses: ./.github/actions/local-thing\n"),
   [],
-  "a local action (no owner, no @ref) is not matched"
+  "a local action (no owner, no @ref) is not matched",
 );
 
 assert.deepEqual(
   usesOf("jobs:\n  x:\n    uses: docker://ghcr.io/owner/image:tag\n"),
   [],
-  "a docker:// reference has no owner/repo to be wrong about and must not match"
+  "a docker:// reference has no owner/repo to be wrong about and must not match",
 );
 
 assert.deepEqual(
   usesOf("jobs:\n  a:\n    uses: bitbaum/one@v1\n  b:\n    uses: bitbaum/two@v2\n"),
   ["bitbaum/one", "bitbaum/two"],
-  "every uses: line in a file is matched independently"
+  "every uses: line in a file is matched independently",
 );
 
 assert.deepEqual(
   usesOf("      uses: bitbaum/fleetcrown@main\n"),
   ["bitbaum/fleetcrown"],
-  "indentation before uses: does not prevent a match"
+  "indentation before uses: does not prevent a match",
 );
 
 // --- verdictFor: the actual redirect-detection decision --------------------
 assert.deepEqual(
   verdictFor("bitbaum/fleetcrown", "bitbaum/fleetcrown"),
   { kind: "ok" },
-  "a reference already naming its canonical owner is fine"
+  "a reference already naming its canonical owner is fine",
 );
 
 assert.deepEqual(
   verdictFor("catomean/fleetcrown", "bitbaum/fleetcrown"),
-  { kind: "stale", message: "uses catomean/fleetcrown — canonical is bitbaum/fleetcrown (Actions will NOT follow this)" },
-  "REST resolving a DIFFERENT canonical name is the exact redirect gap Actions falls into"
+  {
+    kind: "stale",
+    message:
+      "uses catomean/fleetcrown — canonical is bitbaum/fleetcrown (Actions will NOT follow this)",
+  },
+  "REST resolving a DIFFERENT canonical name is the exact redirect gap Actions falls into",
 );
 
 assert.deepEqual(
   verdictFor("catomean/does-not-exist", null),
   { kind: "stale", message: "uses catomean/does-not-exist — DOES NOT EXIST" },
-  "a 404 from REST is reported as stale, not silently skipped"
+  "a 404 from REST is reported as stale, not silently skipped",
 );
 
 assert.deepEqual(
   verdictFor("bitbaum/fleetcrown", undefined),
   { kind: "unreadable", message: "bitbaum/fleetcrown (lookup failed)" },
-  "a failed lookup (rate limit, 5xx) must be unreadable — never reported as clean, never as a false stale"
+  "a failed lookup (rate limit, 5xx) must be unreadable — never reported as clean, never as a false stale",
 );
-
 
 // --- USES now also yields the subpath and ref, so the FILE can be checked ---
 const partsOf = (text: string) =>
-  [...text.matchAll(USES)].map(([, owner, name, subpath, ref]) => ({ slug: `${owner}/${name}`, subpath, ref }));
+  [...text.matchAll(USES)].map(([, owner, name, subpath, ref]) => ({
+    slug: `${owner}/${name}`,
+    subpath,
+    ref,
+  }));
 
 assert.deepEqual(
   partsOf("jobs:\n  x:\n    uses: bitbaum/fleet/.github/workflows/auto-merge-sweep.yml@main\n"),
   [{ slug: "bitbaum/fleet", subpath: "/.github/workflows/auto-merge-sweep.yml", ref: "main" }],
-  "a reusable-workflow reference yields owner/repo, the path, and the ref"
+  "a reusable-workflow reference yields owner/repo, the path, and the ref",
 );
 
 assert.deepEqual(
   partsOf("jobs:\n  x:\n    uses: actions/checkout@v5\n"),
   [{ slug: "actions/checkout", subpath: "", ref: "v5" }],
-  "a plain action has no subpath — there is no file to check beyond the repo"
+  "a plain action has no subpath — there is no file to check beyond the repo",
 );
 
 assert.deepEqual(
   partsOf("jobs:\n  x:\n    uses: bitbaum/fleet/.github/workflows/x.yml@abc1234\n")[0].ref,
   "abc1234",
-  "a pinned sha is captured as the ref, not the branch name"
+  "a pinned sha is captured as the ref, not the branch name",
 );
 
 // --- pathVerdictFor: the repo can be canonical while the file is gone -------
@@ -174,29 +190,32 @@ assert.deepEqual(
   pathVerdictFor("bitbaum/dotfiles", "/.github/workflows/auto-merge-sweep.yml", "master", false),
   {
     kind: "stale",
-    message: "uses bitbaum/dotfiles/.github/workflows/auto-merge-sweep.yml@master — the repo exists but THAT FILE DOES NOT (moved or deleted)",
+    message:
+      "uses bitbaum/dotfiles/.github/workflows/auto-merge-sweep.yml@master — the repo exists but THAT FILE DOES NOT (moved or deleted)",
   },
-  "a deleted reusable workflow in a repo that still exists must be caught"
+  "a deleted reusable workflow in a repo that still exists must be caught",
 );
 
 assert.deepEqual(
   pathVerdictFor("bitbaum/fleet", "/.github/workflows/auto-merge-sweep.yml", "main", true),
   { kind: "ok" },
-  "a file that is still there is fine"
+  "a file that is still there is fine",
 );
 
 assert.deepEqual(
   pathVerdictFor("actions/checkout", "", "v5", true),
   { kind: "ok" },
-  "no subpath means there is no file to check — never a finding"
+  "no subpath means there is no file to check — never a finding",
 );
 
 assert.deepEqual(
   pathVerdictFor("bitbaum/fleet", "/.github/workflows/x.yml", "main", undefined),
-  { kind: "unreadable", message: "bitbaum/fleet/.github/workflows/x.yml@main (path lookup failed)" },
-  "a failed path lookup is unreadable — never clean, and never a false stale"
+  {
+    kind: "unreadable",
+    message: "bitbaum/fleet/.github/workflows/x.yml@main (path lookup failed)",
+  },
+  "a failed path lookup is unreadable — never clean, and never a false stale",
 );
-
 
 // --- the compact list form is a `uses:` too --------------------------------
 // `^\s*uses:` does not match `- uses: …`. Steps are routinely written that
@@ -205,25 +224,25 @@ assert.deepEqual(
 assert.deepEqual(
   usesOf("jobs:\n  x:\n    steps:\n      - uses: actions/checkout@v5\n"),
   ["actions/checkout"],
-  "a step in the compact list form (- uses:) must be matched"
+  "a step in the compact list form (- uses:) must be matched",
 );
 
 assert.deepEqual(
   usesOf("jobs:\n  x:\n    steps:\n      - name: Checkout\n        uses: actions/checkout@v5\n"),
   ["actions/checkout"],
-  "the multi-line step form must still be matched"
+  "the multi-line step form must still be matched",
 );
 
 assert.deepEqual(
   partsOf("jobs:\n  x:\n    steps:\n      - uses: bitbaum/fleet/.github/actions/thing@main\n"),
   [{ slug: "bitbaum/fleet", subpath: "/.github/actions/thing", ref: "main" }],
-  "a fleet-owned action referenced as a step yields its path, so the file is checked too"
+  "a fleet-owned action referenced as a step yields its path, so the file is checked too",
 );
 
 assert.deepEqual(
   usesOf("jobs:\n  x:\n    steps:\n      - run: echo not-a-uses\n"),
   [],
-  "a list item that is not a uses: must not be matched"
+  "a list item that is not a uses: must not be matched",
 );
 
 console.log("OK: 26 assertions passed");

@@ -12,27 +12,35 @@ import { entities } from "./entities";
  * revoke on a different lifecycle — coupling them would let a revoked share
  * link silently kill a customer's live widget.
  */
-export const widgetTokens = pgTable("widget_tokens", {
-  id:        uuid("id").primaryKey().defaultRandom(),
-  projectId: uuid("project_id").notNull().references(() => entities.id, { onDelete: "cascade" }),
-  userId:    uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  token:     text("token").notNull().unique(),
-  /** Origin allowlist for submissions. NULL or empty = accept any origin
-   *  (rate limiting + revocation are the spam backstops). */
-  origins:   jsonb("origins").$type<string[]>(),
-  /** Remote kill switch: the widget's boot call renders nothing unless this is
-   *  'active'. Pausing needs no customer deploy — the snippet is a pointer. */
-  status:    text("status").notNull().default("active"),
-  /** Heartbeat from the widget's boot call — the UI's "Live ✓" is this
-   *  observed truth, never install intent. */
-  lastSeenAt:     timestamp("last_seen_at", { withTimezone: true }),
-  lastSeenOrigin: text("last_seen_origin"),
-  revokedAt: timestamp("revoked_at", { withTimezone: true }),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-}, (t) => [
-  index("idx_widget_tokens_project").on(t.projectId),
-  index("idx_widget_tokens_user").on(t.userId),
-]);
+export const widgetTokens = pgTable(
+  "widget_tokens",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => entities.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    token: text("token").notNull().unique(),
+    /** Origin allowlist for submissions. NULL or empty = accept any origin
+     *  (rate limiting + revocation are the spam backstops). */
+    origins: jsonb("origins").$type<string[]>(),
+    /** Remote kill switch: the widget's boot call renders nothing unless this is
+     *  'active'. Pausing needs no customer deploy — the snippet is a pointer. */
+    status: text("status").notNull().default("active"),
+    /** Heartbeat from the widget's boot call — the UI's "Live ✓" is this
+     *  observed truth, never install intent. */
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
+    lastSeenOrigin: text("last_seen_origin"),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    index("idx_widget_tokens_project").on(t.projectId),
+    index("idx_widget_tokens_user").on(t.userId),
+  ],
+);
 
 export type WidgetToken = typeof widgetTokens.$inferSelect;
 export type NewWidgetToken = typeof widgetTokens.$inferInsert;

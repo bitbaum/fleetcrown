@@ -67,15 +67,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     final: closed || undefined,
   };
 
-  await updateOrchestrationRun(id, {
-    tokensIn: body.totals.input,
-    tokensOut: body.totals.output,
-    tokensCacheRead: body.totals.cacheRead,
-    tokensCacheWrite: body.totals.cacheWrite,
-    costUsd,
-    usageDetail: detail,
-    usageUpdatedAt: new Date(),
-  }, userId);
+  await updateOrchestrationRun(
+    id,
+    {
+      tokensIn: body.totals.input,
+      tokensOut: body.totals.output,
+      tokensCacheRead: body.totals.cacheRead,
+      tokensCacheWrite: body.totals.cacheWrite,
+      costUsd,
+      usageDetail: detail,
+      usageUpdatedAt: new Date(),
+    },
+    userId,
+  );
 
   return NextResponse.json({ ok: true, done: closed });
 }

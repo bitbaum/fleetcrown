@@ -24,12 +24,22 @@ export function proposeEnrichments(input: {
 
   if (!input.attrs[BOOK_ATTR.EMAIL]) {
     const email = extractEmails(blob)[0];
-    if (email) out.push({ key: BOOK_ATTR.EMAIL, value: email, reason: "Email found in notes or another field." });
+    if (email)
+      out.push({
+        key: BOOK_ATTR.EMAIL,
+        value: email,
+        reason: "Email found in notes or another field.",
+      });
   }
 
   if (!input.attrs[BOOK_ATTR.PHONE] && !input.attrs[BOOK_ATTR.WHATSAPP]) {
     const phone = extractPhones(blob)[0];
-    if (phone) out.push({ key: BOOK_ATTR.PHONE, value: phone, reason: "Phone number found in notes or another field." });
+    if (phone)
+      out.push({
+        key: BOOK_ATTR.PHONE,
+        value: phone,
+        reason: "Phone number found in notes or another field.",
+      });
   }
 
   if (!input.attrs[BOOK_ATTR.COMPANY]) {

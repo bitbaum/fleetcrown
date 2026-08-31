@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSessionUserId } from "@/lib/session";
 import { readIdParam, readJsonBody } from "@/lib/api/route-helpers";
-import { getActiveProjectShare, revokeProjectShare, upsertProjectShare } from "@/db/queries/project-shares";
+import {
+  getActiveProjectShare,
+  revokeProjectShare,
+  upsertProjectShare,
+} from "@/db/queries/project-shares";
 import { appUrl } from "@/lib/email";
 
 const ShareBody = z.object({

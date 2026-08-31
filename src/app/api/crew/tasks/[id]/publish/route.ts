@@ -29,7 +29,10 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   const task = await getHumanTask(access.userId, idOrResp);
   if (!task) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (task.feeAmount === null) {
-    return NextResponse.json({ error: "Set a fee before publishing to OrangeCat" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Set a fee before publishing to OrangeCat" },
+      { status: 400 },
+    );
   }
 
   const result = await publishTaskToOrangeCat(access.userId, task);

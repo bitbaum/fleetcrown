@@ -49,7 +49,9 @@ export default async function AtlasProjectPage({
         <SitePages
           liveUrl={row.liveUrl}
           paths={row.snapshot?.internalPaths ?? []}
-          checkedAt={row.snapshot?.checkedAt ? new Date(row.snapshot.checkedAt).toISOString() : null}
+          checkedAt={
+            row.snapshot?.checkedAt ? new Date(row.snapshot.checkedAt).toISOString() : null
+          }
         />
         <SiteGuides projectId={projectId} liveUrl={row.liveUrl} initialGuides={guides} />
       </div>

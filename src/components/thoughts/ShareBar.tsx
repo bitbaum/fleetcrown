@@ -47,9 +47,13 @@ export function ShareBar({ url, title }: { url: string; title: string }) {
       </a>
       <button type="button" onClick={copyLink} className="ui-btn-chip" aria-label="Copy link">
         {copied ? (
-          <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5" /> Copied</span>
+          <span className="inline-flex items-center gap-1">
+            <Check className="h-3.5 w-3.5" /> Copied
+          </span>
         ) : (
-          <span className="inline-flex items-center gap-1"><Link2 className="h-3.5 w-3.5" /> Copy link</span>
+          <span className="inline-flex items-center gap-1">
+            <Link2 className="h-3.5 w-3.5" /> Copy link
+          </span>
         )}
       </button>
     </div>

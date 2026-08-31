@@ -80,7 +80,18 @@ export function ProjectsSettings({ projects: initial, teamProjects, projectLimit
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body.error ?? "Failed to save");
-      setProjects((prev) => prev.map((p) => p.id === id ? { ...p, name: editName.trim(), dirPath: editDirPath.trim() || null, gitUrl: editGitUrl.trim() || null } : p));
+      setProjects((prev) =>
+        prev.map((p) =>
+          p.id === id
+            ? {
+                ...p,
+                name: editName.trim(),
+                dirPath: editDirPath.trim() || null,
+                gitUrl: editGitUrl.trim() || null,
+              }
+            : p,
+        ),
+      );
       setEditingId(null);
     } catch (e) {
       setEditError(e instanceof Error ? e.message : "Something went wrong");
@@ -92,7 +103,7 @@ export function ProjectsSettings({ projects: initial, teamProjects, projectLimit
   const remove = async (id: string) => {
     const res = await deleteJson(`/api/user-projects/${id}`);
     if (!res.ok) {
-      const body = await res.json().catch(() => ({})) as { error?: string };
+      const body = (await res.json().catch(() => ({}))) as { error?: string };
       setError(body.error ?? "Failed to remove project");
       return;
     }
@@ -107,7 +118,7 @@ export function ProjectsSettings({ projects: initial, teamProjects, projectLimit
       const [moved] = next.splice(from, 1);
       next.splice(to, 0, moved);
       Promise.all(
-        next.map((p, i) => patchJson(`/api/user-projects/${p.id}`, { position: i }))
+        next.map((p, i) => patchJson(`/api/user-projects/${p.id}`, { position: i })),
       ).catch(() => {
         setProjects(original);
         setError("Failed to save order — please try again");
@@ -133,7 +144,9 @@ export function ProjectsSettings({ projects: initial, teamProjects, projectLimit
         <button
           onClick={() => !atLimit && setAdding((v) => !v)}
           disabled={atLimit}
-          title={atLimit ? `Upgrade your plan to add more than ${projectLimit} projects` : undefined}
+          title={
+            atLimit ? `Upgrade your plan to add more than ${projectLimit} projects` : undefined
+          }
           className="ui-btn-secondary py-1.5 text-xs gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <Plus className="h-3.5 w-3.5" /> Add
@@ -143,7 +156,10 @@ export function ProjectsSettings({ projects: initial, teamProjects, projectLimit
       {atLimit && (
         <p className="text-sm text-text-secondary bg-surface-raised rounded-lg px-4 py-3">
           You&apos;ve reached the {projectLimit}-project limit on your plan.{" "}
-          <a href="/settings#billing" className="ui-link">Upgrade to Pro</a> for unlimited projects.
+          <a href="/settings#billing" className="ui-link">
+            Upgrade to Pro
+          </a>{" "}
+          for unlimited projects.
         </p>
       )}
 
@@ -174,11 +190,7 @@ export function ProjectsSettings({ projects: initial, teamProjects, projectLimit
             <button onClick={() => setAdding(false)} className="ui-btn-ghost">
               Cancel
             </button>
-            <button
-              onClick={add}
-              disabled={saving || !name.trim()}
-              className="ui-btn-primary"
-            >
+            <button onClick={add} disabled={saving || !name.trim()} className="ui-btn-primary">
               {saving && <Loader2 className="ui-spinner-sm" />}
               Add project
             </button>
@@ -196,13 +208,31 @@ export function ProjectsSettings({ projects: initial, teamProjects, projectLimit
             <li
               key={p.id}
               draggable={editingId !== p.id}
-              onDragStart={() => { dragIndex.current = i; }}
-              onDragOver={(e) => { e.preventDefault(); setDragOver(i); }}
-              onDrop={() => { if (dragIndex.current !== null && dragIndex.current !== i) reorder(dragIndex.current, i); dragIndex.current = null; setDragOver(null); }}
-              onDragEnd={() => { setDragOver(null); dragIndex.current = null; }}
+              onDragStart={() => {
+                dragIndex.current = i;
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragOver(i);
+              }}
+              onDrop={() => {
+                if (dragIndex.current !== null && dragIndex.current !== i)
+                  reorder(dragIndex.current, i);
+                dragIndex.current = null;
+                setDragOver(null);
+              }}
+              onDragEnd={() => {
+                setDragOver(null);
+                dragIndex.current = null;
+              }}
               className={cn("ui-list-item group", dragOver === i && "bg-accent-primary/5")}
             >
-              <GripVertical className={cn("h-4 w-4 shrink-0 text-text-muted/50", editingId === p.id ? "invisible" : "cursor-grab active:cursor-grabbing")} />
+              <GripVertical
+                className={cn(
+                  "h-4 w-4 shrink-0 text-text-muted/50",
+                  editingId === p.id ? "invisible" : "cursor-grab active:cursor-grabbing",
+                )}
+              />
 
               {editingId === p.id ? (
                 <div className="flex min-w-0 flex-1 flex-col gap-1.5">
@@ -210,21 +240,29 @@ export function ProjectsSettings({ projects: initial, teamProjects, projectLimit
                     autoFocus
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter") saveEdit(p.id); if (e.key === "Escape") cancelEdit(); }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") saveEdit(p.id);
+                      if (e.key === "Escape") cancelEdit();
+                    }}
                     placeholder="Project name"
                     className="ui-input-tight"
                   />
                   <input
                     value={editDirPath}
                     onChange={(e) => setEditDirPath(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Escape") cancelEdit(); }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") cancelEdit();
+                    }}
                     placeholder="Local path"
                     className="ui-input-tight font-mono text-xs"
                   />
                   <input
                     value={editGitUrl}
                     onChange={(e) => setEditGitUrl(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter") saveEdit(p.id); if (e.key === "Escape") cancelEdit(); }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") saveEdit(p.id);
+                      if (e.key === "Escape") cancelEdit();
+                    }}
                     placeholder="GitHub URL"
                     className="ui-input-tight"
                   />
@@ -235,7 +273,11 @@ export function ProjectsSettings({ projects: initial, teamProjects, projectLimit
                       disabled={editSaving || !editName.trim()}
                       className="ui-btn-confirm-sm"
                     >
-                      {editSaving ? <Loader2 className="ui-spinner-xs" /> : <Check className="h-3 w-3" />}
+                      {editSaving ? (
+                        <Loader2 className="ui-spinner-xs" />
+                      ) : (
+                        <Check className="h-3 w-3" />
+                      )}
                       Save
                     </button>
                     <button onClick={cancelEdit} className="ui-link-muted text-xs">
@@ -245,12 +287,21 @@ export function ProjectsSettings({ projects: initial, teamProjects, projectLimit
                 </div>
               ) : (
                 <div className="min-w-0 flex-1">
-                  <div className="text-sm font-medium text-text-primary truncate" title={p.name}>{p.name}</div>
+                  <div className="text-sm font-medium text-text-primary truncate" title={p.name}>
+                    {p.name}
+                  </div>
                   {p.dirPath && (
-                    <div className="text-xs text-text-tertiary truncate font-mono" title={p.dirPath}>{p.dirPath}</div>
+                    <div
+                      className="text-xs text-text-tertiary truncate font-mono"
+                      title={p.dirPath}
+                    >
+                      {p.dirPath}
+                    </div>
                   )}
                   {p.gitUrl && (
-                    <div className="text-xs text-text-tertiary truncate" title={p.gitUrl}>{p.gitUrl}</div>
+                    <div className="text-xs text-text-tertiary truncate" title={p.gitUrl}>
+                      {p.gitUrl}
+                    </div>
                   )}
                 </div>
               )}
@@ -274,7 +325,10 @@ export function ProjectsSettings({ projects: initial, teamProjects, projectLimit
               )}
 
               {editingId === p.id && (
-                <button onClick={cancelEdit} className="shrink-0 ui-btn-row-action self-start mt-0.5">
+                <button
+                  onClick={cancelEdit}
+                  className="shrink-0 ui-btn-row-action self-start mt-0.5"
+                >
                   <X className="h-3.5 w-3.5" />
                 </button>
               )}

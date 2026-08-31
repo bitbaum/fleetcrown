@@ -18,9 +18,9 @@ import { compactRelativeDate } from "@/lib/dates";
  */
 
 const LEVEL_TONE: Record<string, { icon: typeof Info; cls: string }> = {
-  error: { icon: AlertCircle,   cls: "text-status-negative" },
-  warn:  { icon: AlertTriangle, cls: "text-status-warning" },
-  info:  { icon: Info,          cls: "text-text-tertiary" },
+  error: { icon: AlertCircle, cls: "text-status-negative" },
+  warn: { icon: AlertTriangle, cls: "text-status-warning" },
+  info: { icon: Info, cls: "text-text-tertiary" },
 };
 
 export async function RecentFailuresCard() {
@@ -32,11 +32,18 @@ export async function RecentFailuresCard() {
   // contradicted the badge. Caught live on cloud /system: 10 groq 401
   // warnings rendered under an "all clear" header. Surface warnings in
   // the badge too; reserve "all clear" for genuinely empty problem state.
-  const right = errorCount > 0
-    ? <span className="text-xs font-medium text-status-negative">{errorCount} error{errorCount === 1 ? "" : "s"}</span>
-    : warnCount > 0
-      ? <span className="text-xs font-medium text-status-warning">{warnCount} warning{warnCount === 1 ? "" : "s"}</span>
-      : <span className="text-xs text-text-tertiary">all clear</span>;
+  const right =
+    errorCount > 0 ? (
+      <span className="text-xs font-medium text-status-negative">
+        {errorCount} error{errorCount === 1 ? "" : "s"}
+      </span>
+    ) : warnCount > 0 ? (
+      <span className="text-xs font-medium text-status-warning">
+        {warnCount} warning{warnCount === 1 ? "" : "s"}
+      </span>
+    ) : (
+      <span className="text-xs text-text-tertiary">all clear</span>
+    );
 
   return (
     <Card>

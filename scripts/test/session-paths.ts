@@ -24,7 +24,10 @@ try {
   fs.writeFileSync(path.join(legacy, "FleetCrown.blockers", "pending", "ask.md"), "Need input");
 
   assert.equal(migrateLegacyHandoffs(root), current);
-  assert.equal(fs.readFileSync(path.join(current, "FleetCrown.md"), "utf8"), "status: ready\ndone: legacy\n");
+  assert.equal(
+    fs.readFileSync(path.join(current, "FleetCrown.md"), "utf8"),
+    "status: ready\ndone: legacy\n",
+  );
   assert.equal(fs.existsSync(path.join(current, "12345.json")), false);
   assert.equal(fs.existsSync(path.join(current, "FleetCrown.blockers", "pending", "ask.md")), true);
 

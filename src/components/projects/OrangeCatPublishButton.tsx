@@ -86,7 +86,8 @@ export function OrangeCatPublishButton({ projectId }: { projectId: string }) {
       <button
         type="button"
         onClick={() => {
-          window.location.href = "/sign-in?callbackUrl=" + encodeURIComponent(window.location.pathname);
+          window.location.href =
+            "/sign-in?callbackUrl=" + encodeURIComponent(window.location.pathname);
         }}
         className="ui-btn-ghost min-h-11 gap-1.5"
         title="Publish to OrangeCat — connect your OrangeCat account first"
@@ -106,7 +107,10 @@ export function OrangeCatPublishButton({ projectId }: { projectId: string }) {
       title="Publish to OrangeCat — public page + wall + funding"
       aria-label="Publish to OrangeCat"
     >
-      <Cat className={`h-4 w-4 ${state.phase === "publishing" ? "animate-pulse" : ""}`} aria-hidden />
+      <Cat
+        className={`h-4 w-4 ${state.phase === "publishing" ? "animate-pulse" : ""}`}
+        aria-hidden
+      />
       {state.phase === "publishing" ? "Publishing…" : "Publish"}
     </button>
   );

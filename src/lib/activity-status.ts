@@ -48,16 +48,22 @@ export type PromptDisplayFields = {
 // "<task-notification><task-id>…" in every activity feed. Only rewrites when a
 // harness tag is actually present — clean prompts (and their whitespace) pass
 // through verbatim, so existing display semantics are preserved.
-const HARNESS_TAG = /<\/?(task-notification|system-reminder|command-[a-z-]+|local-command-[a-z-]+)[^>]*>/i;
+const HARNESS_TAG =
+  /<\/?(task-notification|system-reminder|command-[a-z-]+|local-command-[a-z-]+)[^>]*>/i;
 export function stripHarnessScaffolding(text: string): string {
   if (!HARNESS_TAG.test(text)) return text;
-  return text
-    // Drop whole paired blocks first (content between open/close tags).
-    .replace(/<(task-notification|system-reminder|command-[a-z-]+|local-command-[a-z-]+)\b[^>]*>[\s\S]*?<\/\1>/gi, " ")
-    // Then any stray/self-closing harness tags left behind.
-    .replace(HARNESS_TAG, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+  return (
+    text
+      // Drop whole paired blocks first (content between open/close tags).
+      .replace(
+        /<(task-notification|system-reminder|command-[a-z-]+|local-command-[a-z-]+)\b[^>]*>[\s\S]*?<\/\1>/gi,
+        " ",
+      )
+      // Then any stray/self-closing harness tags left behind.
+      .replace(HARNESS_TAG, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+  );
 }
 
 // The fully-assembled operator dispatch (preamble + engineering standards +

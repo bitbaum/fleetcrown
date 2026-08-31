@@ -21,9 +21,7 @@ import { composeDispatchPrompt } from "@/lib/project-dispatch-prompt";
 const DispatchBody = z.object({
   kind: z.enum(PROJECT_DISPATCH_KINDS),
   /** Required for fix_signal: which attention attr to fix. */
-  signalKey: z.enum(
-    HEALTH_SIGNAL_BASE.map((s) => s.key) as [string, ...string[]],
-  ).optional(),
+  signalKey: z.enum(HEALTH_SIGNAL_BASE.map((s) => s.key) as [string, ...string[]]).optional(),
 });
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

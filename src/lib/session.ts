@@ -124,7 +124,7 @@ export async function getApiUserId(): Promise<string | null> {
       warnedDeprecatedDaemonToken = true;
       console.warn(
         "[session] DAEMON_TOKEN bearer is deprecated and unsafe in multi-tenant deployments. " +
-        "Mint a ck_* agent token from /settings and use it instead.",
+          "Mint a ck_* agent token from /settings and use it instead.",
       );
     }
     const { getDefaultUser } = await import("@/db/queries/users");

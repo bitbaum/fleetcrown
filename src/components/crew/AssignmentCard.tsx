@@ -20,12 +20,12 @@ import type { HumanTaskDetail, HumanTaskRow } from "@/db/queries/human-tasks";
 
 /** Verbs, not status names: the button says what you are doing to the ask. */
 const MOVE_LABEL: Record<HumanTaskStatus, string> = {
-  [HUMAN_TASK_STATUS.DRAFT]:     "Pull back to draft",
-  [HUMAN_TASK_STATUS.ASSIGNED]:  "Hand over",
-  [HUMAN_TASK_STATUS.ACCEPTED]:  "Send back for more",
-  [HUMAN_TASK_STATUS.DECLINED]:  "They declined",
+  [HUMAN_TASK_STATUS.DRAFT]: "Pull back to draft",
+  [HUMAN_TASK_STATUS.ASSIGNED]: "Hand over",
+  [HUMAN_TASK_STATUS.ACCEPTED]: "Send back for more",
+  [HUMAN_TASK_STATUS.DECLINED]: "They declined",
   [HUMAN_TASK_STATUS.DELIVERED]: "Mark delivered",
-  [HUMAN_TASK_STATUS.DONE]:      "Accept the work",
+  [HUMAN_TASK_STATUS.DONE]: "Accept the work",
   [HUMAN_TASK_STATUS.CANCELLED]: "Call it off",
 };
 
@@ -37,13 +37,7 @@ function StatusTag({ status }: { status: HumanTaskStatus }) {
   );
 }
 
-export function AssignmentCard({
-  task,
-  onChanged,
-}: {
-  task: HumanTaskRow;
-  onChanged: () => void;
-}) {
+export function AssignmentCard({ task, onChanged }: { task: HumanTaskRow; onChanged: () => void }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,9 +54,13 @@ export function AssignmentCard({
     if (!open || detail) return;
     let cancelled = false;
     getJson<{ task: HumanTaskDetail }>(`/api/crew/tasks/${task.id}`)
-      .then((data) => { if (!cancelled) setDetail(data.task); })
+      .then((data) => {
+        if (!cancelled) setDetail(data.task);
+      })
       .catch(() => {});
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [open, detail, task.id]);
   const due = current.dueDate ? deadlineLabel(current.dueDate) : null;
   const fee = formatFee(current.feeAmount, current.feeCurrency);
@@ -102,20 +100,31 @@ export function AssignmentCard({
   };
 
   return (
-    <div className={`ui-crew-task ${isWaitingOnAssignee(current.status) ? "ui-crew-task-waiting" : ""}`}>
+    <div
+      className={`ui-crew-task ${isWaitingOnAssignee(current.status) ? "ui-crew-task-waiting" : ""}`}
+    >
       <button type="button" onClick={() => setOpen((v) => !v)} className="ui-crew-task-head">
         <span className="min-w-0 flex-1">
           <span className="ui-crew-task-title block">{current.title}</span>
           <span className="ui-crew-task-meta">
             <span>{current.assigneeName ?? "Nobody assigned"}</span>
             {current.projectName && <span>· {current.projectName}</span>}
-            {due && <span className={due.overdue ? "text-status-negative" : ""}>· {due.label}</span>}
-            {fee && <span>· {fee}{sats ? ` (${sats})` : ""}</span>}
+            {due && (
+              <span className={due.overdue ? "text-status-negative" : ""}>· {due.label}</span>
+            )}
+            {fee && (
+              <span>
+                · {fee}
+                {sats ? ` (${sats})` : ""}
+              </span>
+            )}
             {current.sharePath && <span>· link live</span>}
           </span>
         </span>
         <StatusTag status={current.status} />
-        <ChevronDown className={`h-4 w-4 shrink-0 text-text-tertiary transition-transform ${open ? "rotate-180" : ""}`} />
+        <ChevronDown
+          className={`h-4 w-4 shrink-0 text-text-tertiary transition-transform ${open ? "rotate-180" : ""}`}
+        />
       </button>
 
       {open && (
@@ -156,8 +165,8 @@ export function AssignmentCard({
             </p>
           )}
 
-          {owed && (
-            current.assigneePayUrl ? (
+          {owed &&
+            (current.assigneePayUrl ? (
               // The money goes to THEIR OrangeCat profile, where their Lightning
               // wallet lives — never to the studio's listing of the work.
               <a
@@ -171,14 +180,18 @@ export function AssignmentCard({
               </a>
             ) : (
               <p className="text-xs text-status-warning">
-                {current.assigneeName ?? "They"} has no OrangeCat profile on file, so
-                there is nowhere to send {fee}. Add it on their crew card.
+                {current.assigneeName ?? "They"} has no OrangeCat profile on file, so there is
+                nowhere to send {fee}. Add it on their crew card.
               </p>
-            )
-          )}
+            ))}
 
           {current.orangecatUrl && (
-            <a href={current.orangecatUrl} target="_blank" rel="noreferrer" className="ui-btn-xs w-fit">
+            <a
+              href={current.orangecatUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="ui-btn-xs w-fit"
+            >
               <ExternalLink className="h-3.5 w-3.5" />
               Listed on OrangeCat
             </a>
@@ -235,7 +248,9 @@ export function AssignmentCard({
               {detail.timeline.map((entry) => (
                 <div key={entry.id} className="ui-crew-timeline-row">
                   <span className="ui-micro-label">
-                    {entry.actor === TASK_ACTOR.ASSIGNEE ? current.assigneeName ?? "They" : entry.actor}
+                    {entry.actor === TASK_ACTOR.ASSIGNEE
+                      ? (current.assigneeName ?? "They")
+                      : entry.actor}
                   </span>
                   <span>
                     {entry.status ? HUMAN_TASK_STATUS_LABEL[entry.status] : entry.kind}

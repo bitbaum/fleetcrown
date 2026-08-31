@@ -122,7 +122,10 @@ function describeParams(schema: z.ZodTypeAny): string {
     .map(([key, value]) => {
       const v = value as unknown as { isOptional?: () => boolean; _def?: { typeName?: string } };
       const optional = typeof v.isOptional === "function" && v.isOptional();
-      const typeName = String(v._def?.typeName ?? "").replace(/^Zod/, "").toLowerCase() || "string";
+      const typeName =
+        String(v._def?.typeName ?? "")
+          .replace(/^Zod/, "")
+          .toLowerCase() || "string";
       return `${key}: ${optional ? `${typeName}?` : typeName}`;
     })
     .join(", ");
@@ -164,7 +167,8 @@ function zodToJsonSchema(schema: z.ZodTypeAny): Record<string, unknown> {
   for (const [key, value] of Object.entries(shape)) {
     const v = value as unknown as { isOptional?: () => boolean; _def?: { typeName?: string } };
     const typeName = String(v._def?.typeName ?? "");
-    const jsonType = typeName === "ZodNumber" ? "number" : typeName === "ZodBoolean" ? "boolean" : "string";
+    const jsonType =
+      typeName === "ZodNumber" ? "number" : typeName === "ZodBoolean" ? "boolean" : "string";
     properties[key] = { type: jsonType };
     if (!(typeof v.isOptional === "function" && v.isOptional())) required.push(key);
   }

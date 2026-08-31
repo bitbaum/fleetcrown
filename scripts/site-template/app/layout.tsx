@@ -1,12 +1,12 @@
-import type { Metadata } from 'next';
-import Script from 'next/script';
-import './globals.css';
+import type { Metadata } from "next";
+import Script from "next/script";
+import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: '__TITLE__', template: '%s · __TITLE__' },
-  description: '__TITLE__',
-  metadataBase: new URL('https://__HOST__'),
-  openGraph: { siteName: '__TITLE__', type: 'website' },
+  title: { default: "__TITLE__", template: "%s · __TITLE__" },
+  description: "__TITLE__",
+  metadataBase: new URL("https://__HOST__"),
+  openGraph: { siteName: "__TITLE__", type: "website" },
 };
 
 /**

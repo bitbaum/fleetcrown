@@ -71,7 +71,10 @@ export async function endAgentTurn(userId: string, sessionId: string): Promise<b
  * evidence behind "N working" — every row is an agent that told us it started
  * a turn and has not told us it finished.
  */
-export async function getOpenAgentTurns(userId: string, now = new Date()): Promise<AgentSessionRow[]> {
+export async function getOpenAgentTurns(
+  userId: string,
+  now = new Date(),
+): Promise<AgentSessionRow[]> {
   const cutoff = new Date(now.getTime() - OPEN_TURN_TTL_MS);
   return db
     .select()

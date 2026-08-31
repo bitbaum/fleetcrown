@@ -6,7 +6,10 @@ import { RouteError } from "@/components/ui/route-error";
 // MemorySummaryCard's getEntityStats failing on a DB connectivity blip) keeps
 // the shell + retry instead of the global boundary. Body lives in the shared
 // RouteError component (also used by /money, /people, /goals).
-export default function SystemError(props: { error: Error & { digest?: string }; reset: () => void }) {
+export default function SystemError(props: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
   return (
     <RouteError
       route="system"

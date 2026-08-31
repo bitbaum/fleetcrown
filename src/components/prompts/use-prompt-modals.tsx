@@ -27,7 +27,11 @@ export function usePromptModals(template: PromptTemplate, projects: Project[]) {
         <RunModal template={template} projects={projects} onClose={() => setShowRun(false)} />
       )}
       {showSchedule && (
-        <ScheduleModal template={template} projects={projects} onClose={() => setShowSchedule(false)} />
+        <ScheduleModal
+          template={template}
+          projects={projects}
+          onClose={() => setShowSchedule(false)}
+        />
       )}
     </>
   );

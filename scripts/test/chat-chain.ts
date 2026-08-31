@@ -56,7 +56,10 @@ check("the shipped chain spans MORE THAN ONE vendor", () => {
   // A "chain" within a single vendor is the bug this file exists to fix: every
   // link would share that vendor's daily budget, so all of them die together.
   const vendors = new Set(CHAT_CHAIN.map((p) => p.id));
-  assert(vendors.size >= 2, `only ${vendors.size} vendor(s) configured: ${[...vendors].join(", ")}`);
+  assert(
+    vendors.size >= 2,
+    `only ${vendors.size} vendor(s) configured: ${[...vendors].join(", ")}`,
+  );
 });
 
 check("every provider declares a key env and at least one model", () => {
@@ -71,7 +74,10 @@ check("a provider with no key is skipped silently, not thrown on", () => {
   withEnv({ ...KEYS, ...NO_OVERRIDES, GROQ_API_KEY: "x" }, () => {
     const chain = usableChatChain();
     assert(chain.length > 0, "keyed provider produced no links");
-    assert(chain.every((l) => l.provider.id === "groq"), "unkeyed provider leaked into the chain");
+    assert(
+      chain.every((l) => l.provider.id === "groq"),
+      "unkeyed provider leaked into the chain",
+    );
   });
 });
 
@@ -96,23 +102,35 @@ check("links are provider-ordered, and each carries its own provider", () => {
 
 // ── env override: routing around a rotted model without a deploy ─────────────
 check("an env override replaces a provider's models AT CALL TIME", () => {
-  withEnv({ ...KEYS, ...NO_OVERRIDES, GROQ_API_KEY: "x", LOKI_GROQ_MODELS: "only-this-one" }, () => {
-    // Read after the env was set — a value frozen at import would fail here,
-    // and would need a redeploy to route around a dead model.
-    assert(providerModels(groq).join() === "only-this-one", `got ${providerModels(groq).join()}`);
-    assert(usableChatChain().every((l) => l.model === "only-this-one"), "override not applied to the chain");
-  });
+  withEnv(
+    { ...KEYS, ...NO_OVERRIDES, GROQ_API_KEY: "x", LOKI_GROQ_MODELS: "only-this-one" },
+    () => {
+      // Read after the env was set — a value frozen at import would fail here,
+      // and would need a redeploy to route around a dead model.
+      assert(providerModels(groq).join() === "only-this-one", `got ${providerModels(groq).join()}`);
+      assert(
+        usableChatChain().every((l) => l.model === "only-this-one"),
+        "override not applied to the chain",
+      );
+    },
+  );
 });
 
 check("an override accepts commas, spaces, or both", () => {
   withEnv({ LOKI_OPENROUTER_MODELS: "a/one:free,  b/two:free   c/three:free" }, () => {
-    assert(providerModels(openrouter).join("|") === "a/one:free|b/two:free|c/three:free", "bad split");
+    assert(
+      providerModels(openrouter).join("|") === "a/one:free|b/two:free|c/three:free",
+      "bad split",
+    );
   });
 });
 
 check("a blank override falls back to the shipped models, not to nothing", () => {
   withEnv({ LOKI_GROQ_MODELS: "   " }, () => {
-    assert(providerModels(groq).length === groq.models.length, "whitespace override emptied the provider");
+    assert(
+      providerModels(groq).length === groq.models.length,
+      "whitespace override emptied the provider",
+    );
   });
 });
 
@@ -136,7 +154,12 @@ check("a pinned model STARTS the chain and keeps everything after it", () => {
 });
 
 check("pinning the last link still leaves a chain of one, not zero", () => {
-  assert(chainFrom("m3", FAKE).map((l) => l.model).join() === "m3", "lost the pinned link");
+  assert(
+    chainFrom("m3", FAKE)
+      .map((l) => l.model)
+      .join() === "m3",
+    "lost the pinned link",
+  );
 });
 
 check("an UNKNOWN model is tried first, then falls through to the real chain", () => {

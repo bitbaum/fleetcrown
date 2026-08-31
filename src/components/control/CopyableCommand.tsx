@@ -27,7 +27,11 @@ export function CopyableCommand({ command }: { command: string }) {
         aria-label="Copy command"
         title="Copy"
       >
-        {copied ? <Check className="h-3.5 w-3.5 text-status-positive" /> : <Copy className="h-3.5 w-3.5" />}
+        {copied ? (
+          <Check className="h-3.5 w-3.5 text-status-positive" />
+        ) : (
+          <Copy className="h-3.5 w-3.5" />
+        )}
       </button>
     </div>
   );

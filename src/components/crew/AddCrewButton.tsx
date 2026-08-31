@@ -5,7 +5,13 @@ import { Field } from "@/components/ui/form";
 import { ModalForm } from "@/components/ui/modal-form";
 import { useCreateMutation } from "@/hooks/use-create-mutation";
 import { getJson, postJson } from "@/lib/api/fetch";
-import { ENGAGEMENT, ENGAGEMENTS, ENGAGEMENT_LABEL, TASK_CURRENCIES, type EnrolCrewInput } from "@/config/crew";
+import {
+  ENGAGEMENT,
+  ENGAGEMENTS,
+  ENGAGEMENT_LABEL,
+  TASK_CURRENCIES,
+  type EnrolCrewInput,
+} from "@/config/crew";
 
 type PersonOption = { id: string; name: string };
 
@@ -81,14 +87,12 @@ export function AddCrewButton({ onCreated }: { onCreated?: () => void }) {
       onReset={onReset}
     >
       <Field label="From your people book">
-        <select
-          value={personId}
-          onChange={(e) => setPersonId(e.target.value)}
-          className="ui-input"
-        >
+        <select value={personId} onChange={(e) => setPersonId(e.target.value)} className="ui-input">
           <option value="">Someone new…</option>
           {(people ?? []).map((person) => (
-            <option key={person.id} value={person.id}>{person.name}</option>
+            <option key={person.id} value={person.id}>
+              {person.name}
+            </option>
           ))}
         </select>
       </Field>
@@ -120,7 +124,9 @@ export function AddCrewButton({ onCreated }: { onCreated?: () => void }) {
             className="ui-input"
           >
             {ENGAGEMENTS.map((value) => (
-              <option key={value} value={value}>{ENGAGEMENT_LABEL[value]}</option>
+              <option key={value} value={value}>
+                {ENGAGEMENT_LABEL[value]}
+              </option>
             ))}
           </select>
         </Field>
@@ -145,9 +151,15 @@ export function AddCrewButton({ onCreated }: { onCreated?: () => void }) {
           />
         </Field>
         <Field label="Currency">
-          <select value={currency} onChange={(e) => setCurrency(e.target.value)} className="ui-input">
+          <select
+            value={currency}
+            onChange={(e) => setCurrency(e.target.value)}
+            className="ui-input"
+          >
             {TASK_CURRENCIES.map((value) => (
-              <option key={value} value={value}>{value}</option>
+              <option key={value} value={value}>
+                {value}
+              </option>
             ))}
           </select>
         </Field>

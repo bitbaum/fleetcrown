@@ -25,7 +25,9 @@ export function AppFooter() {
         </span>
       )}
       <span className="ml-auto">
-        <Link href={NAV.system.href} className="ui-app-footer-cell">System</Link>
+        <Link href={NAV.system.href} className="ui-app-footer-cell">
+          System
+        </Link>
       </span>
     </footer>
   );

@@ -33,7 +33,8 @@ async function main() {
   } else if (!process.env.DATABASE_URL) {
     const password = process.env.FLEETCROWN_DB_PASSWORD;
     const host = process.env.HETZNER_IP;
-    if (!password || !host) throw new Error("FLEETCROWN_DB_PASSWORD / HETZNER_IP missing from .env.hetzner.local");
+    if (!password || !host)
+      throw new Error("FLEETCROWN_DB_PASSWORD / HETZNER_IP missing from .env.hetzner.local");
     process.env.DATABASE_URL = `postgres://fleetcrown:${encodeURIComponent(password)}@${host}:5432/fleetcrown?sslmode=require`;
   }
 
@@ -51,7 +52,10 @@ async function main() {
   let written = 0;
   for (const [name, attrs] of Object.entries(input)) {
     const p = projects.find((x) => x.name.toLowerCase() === name.toLowerCase());
-    if (!p) { console.log(`— ${name}: no such project, skipped`); continue; }
+    if (!p) {
+      console.log(`— ${name}: no such project, skipped`);
+      continue;
+    }
 
     // Same schema as model output: an unknown key or an over-long value fails
     // here rather than landing in the DB.
@@ -65,7 +69,10 @@ async function main() {
     console.log(`${APPLY ? "✚" : "DRY"} ${p.name}: ${Object.keys(parsed.data).join(", ")}`);
     if (APPLY) {
       const ok = await applyProjectProfile(p.userId, p.id, parsed.data);
-      if (!ok) { console.log(`✗ ${p.name}: apply failed`); continue; }
+      if (!ok) {
+        console.log(`✗ ${p.name}: apply failed`);
+        continue;
+      }
     }
     written++;
   }
@@ -74,4 +81,7 @@ async function main() {
   process.exit(0);
 }
 
-main().catch((e) => { console.error("FAIL:", e); process.exit(1); });
+main().catch((e) => {
+  console.error("FAIL:", e);
+  process.exit(1);
+});

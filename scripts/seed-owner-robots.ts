@@ -17,11 +17,13 @@ async function main() {
   const { ensureDefaultVacuums } = await import("../src/db/queries/robots");
 
   const email = process.env.SEED_OWNER_EMAIL;
-  const all = await db.select({ id: users.id, email: users.email, isDefault: users.isDefault }).from(users);
+  const all = await db
+    .select({ id: users.id, email: users.email, isDefault: users.isDefault })
+    .from(users);
   const owner =
-    (email ? all.find((u) => u.email === email) : undefined)
-    ?? all.find((u) => u.isDefault)
-    ?? all[0];
+    (email ? all.find((u) => u.email === email) : undefined) ??
+    all.find((u) => u.isDefault) ??
+    all[0];
   if (!owner) throw new Error("No users in the database");
 
   const robots = await ensureDefaultVacuums(owner.id);

@@ -78,9 +78,24 @@ const VERIFY_BUNDLE = /\bverif(y|ies|ied)\b/i;
 
 const DEMANDS: Demand[] = [
   { code: "lint", field: "lint", label: "lint:", demandedBy: /\blint(ing|er)?\b/i },
-  { code: "tsc", field: "tsc", label: "tsc:", demandedBy: /\b(tsc|typecheck|type[-\s]?check|typescript)\b/i },
-  { code: "tests", field: "tests", label: "tests:", demandedBy: /\b(test|tests|suite|suites|spec|specs)\b/i },
-  { code: "commit", field: "commit", label: "commit:", demandedBy: /\b(commit|commits|committed|push|pushed)\b/i },
+  {
+    code: "tsc",
+    field: "tsc",
+    label: "tsc:",
+    demandedBy: /\b(tsc|typecheck|type[-\s]?check|typescript)\b/i,
+  },
+  {
+    code: "tests",
+    field: "tests",
+    label: "tests:",
+    demandedBy: /\b(test|tests|suite|suites|spec|specs)\b/i,
+  },
+  {
+    code: "commit",
+    field: "commit",
+    label: "commit:",
+    demandedBy: /\b(commit|commits|committed|push|pushed)\b/i,
+  },
 ];
 
 /**
@@ -126,9 +141,10 @@ export function precheckEvidence(
   for (const demand of DEMANDS) {
     // `commit` is never part of the verify bundle — pushing is a separate act
     // from the checks passing, so it must be named explicitly by the bar.
-    const demanded = demand.code === "commit"
-      ? demand.demandedBy.test(dod)
-      : bundled || demand.demandedBy.test(dod);
+    const demanded =
+      demand.code === "commit"
+        ? demand.demandedBy.test(dod)
+        : bundled || demand.demandedBy.test(dod);
     if (!demanded) continue;
     if (isBlank(summary?.[demand.field])) missing.push(demand);
   }

@@ -27,9 +27,7 @@ export function RobotProfile({ robot }: { robot: RobotWithAttributes }) {
   const [removing, setRemoving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [listingNote, setListingNote] = useState<string | null>(
-    robot.orangecatAssetId
-      ? `Listed on OrangeCat as ${robot.orangecatAssetId}.`
-      : null,
+    robot.orangecatAssetId ? `Listed on OrangeCat as ${robot.orangecatAssetId}.` : null,
   );
 
   async function save(patch: Record<string, unknown>): Promise<boolean> {
@@ -38,15 +36,20 @@ export function RobotProfile({ robot }: { robot: RobotWithAttributes }) {
     try {
       const res = await patchJson(`/api/robots/${robot.id}`, patch);
       if (!res.ok) await throwApiError(res, "Failed to update robot");
-      const data = await res.json() as {
-        robot?: { orangecatAssetId?: string | null; listing?: { published?: boolean; reason?: string; assetId?: string | null } };
+      const data = (await res.json()) as {
+        robot?: {
+          orangecatAssetId?: string | null;
+          listing?: { published?: boolean; reason?: string; assetId?: string | null };
+        };
       };
       const listing = data.robot?.listing;
       if (listing) {
         if (listing.published && listing.assetId) {
           setListingNote(`Listed on OrangeCat as ${listing.assetId}.`);
         } else if (listing.reason === "orangecat-not-configured") {
-          setListingNote("Offer saved here. OrangeCat is not connected — listing is not public yet.");
+          setListingNote(
+            "Offer saved here. OrangeCat is not connected — listing is not public yet.",
+          );
         } else if (listing.reason) {
           setListingNote(`Offer saved here. OrangeCat listing failed: ${listing.reason}`);
         }
@@ -90,7 +93,9 @@ export function RobotProfile({ robot }: { robot: RobotWithAttributes }) {
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            onBlur={() => { if (name.trim() && name.trim() !== robot.name) void save({ name: name.trim() }); }}
+            onBlur={() => {
+              if (name.trim() && name.trim() !== robot.name) void save({ name: name.trim() });
+            }}
             className="ui-input"
           />
         </Field>
@@ -105,7 +110,9 @@ export function RobotProfile({ robot }: { robot: RobotWithAttributes }) {
             className="ui-input"
           >
             {ROBOT_CLASSES.map((value) => (
-              <option key={value} value={value}>{ROBOT_CLASS_LABEL[value]}</option>
+              <option key={value} value={value}>
+                {ROBOT_CLASS_LABEL[value]}
+              </option>
             ))}
           </select>
         </Field>
@@ -114,7 +121,9 @@ export function RobotProfile({ robot }: { robot: RobotWithAttributes }) {
             <input
               value={make}
               onChange={(e) => setMake(e.target.value)}
-              onBlur={() => { if (make !== (robot.make ?? "")) void save({ make: make.trim() || null }); }}
+              onBlur={() => {
+                if (make !== (robot.make ?? "")) void save({ make: make.trim() || null });
+              }}
               placeholder="e.g. iRobot"
               className="ui-input"
             />
@@ -123,7 +132,9 @@ export function RobotProfile({ robot }: { robot: RobotWithAttributes }) {
             <input
               value={model}
               onChange={(e) => setModel(e.target.value)}
-              onBlur={() => { if (model !== (robot.model ?? "")) void save({ model: model.trim() || null }); }}
+              onBlur={() => {
+                if (model !== (robot.model ?? "")) void save({ model: model.trim() || null });
+              }}
               placeholder="e.g. Roomba j7+"
               className="ui-input"
             />
@@ -133,7 +144,9 @@ export function RobotProfile({ robot }: { robot: RobotWithAttributes }) {
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            onBlur={() => { if (description !== (robot.description ?? "")) void save({ description }); }}
+            onBlur={() => {
+              if (description !== (robot.description ?? "")) void save({ description });
+            }}
             rows={3}
             className="ui-input"
           />
@@ -143,8 +156,8 @@ export function RobotProfile({ robot }: { robot: RobotWithAttributes }) {
       <section className="space-y-3">
         <h2 className="ui-kicker">Marketplace</h2>
         <p className="text-sm text-text-secondary">
-          A robot can be booked, rented, or sold. A person cannot. Listing publishes
-          to OrangeCat as an asset — checkout is not live yet.
+          A robot can be booked, rented, or sold. A person cannot. Listing publishes to OrangeCat as
+          an asset — checkout is not live yet.
         </p>
         <div className="flex flex-wrap gap-2">
           {MARKET_OFFERS.map((offer) => {
@@ -164,8 +177,8 @@ export function RobotProfile({ robot }: { robot: RobotWithAttributes }) {
           })}
         </div>
         <p className="text-sm text-text-secondary">
-          {listingNote
-            ?? (robot.orangecatAssetId
+          {listingNote ??
+            (robot.orangecatAssetId
               ? `Listed on OrangeCat as ${robot.orangecatAssetId}.`
               : "Flip an offer on to list this machine on OrangeCat. People cannot be listed.")}
         </p>
@@ -174,7 +187,9 @@ export function RobotProfile({ robot }: { robot: RobotWithAttributes }) {
       {error && <p className="ui-error-xs">{error}</p>}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Link href="/robots" className="ui-link-subtle">Back to robots</Link>
+        <Link href="/robots" className="ui-link-subtle">
+          Back to robots
+        </Link>
         <button
           type="button"
           onClick={() => void remove()}

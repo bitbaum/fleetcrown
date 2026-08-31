@@ -9,20 +9,36 @@ export const WHISPER_MODEL_VALUES = ["tiny", "base", "small", "medium", "large"]
 type WhisperModel = (typeof WHISPER_MODEL_VALUES)[number];
 
 export const WHISPER_MODELS: readonly { value: WhisperModel; label: string; note: string }[] = [
-  { value: "tiny",   label: "Tiny",   note: "~39 MB · fastest, lower accuracy" },
-  { value: "base",   label: "Base",   note: "~74 MB · good balance (default)" },
-  { value: "small",  label: "Small",  note: "~244 MB · better accuracy" },
+  { value: "tiny", label: "Tiny", note: "~39 MB · fastest, lower accuracy" },
+  { value: "base", label: "Base", note: "~74 MB · good balance (default)" },
+  { value: "small", label: "Small", note: "~244 MB · better accuracy" },
   { value: "medium", label: "Medium", note: "~769 MB · high accuracy" },
-  { value: "large",  label: "Large",  note: "~1.5 GB · best accuracy, slowest" },
+  { value: "large", label: "Large", note: "~1.5 GB · best accuracy, slowest" },
 ];
 
 export const TRANSCRIPTION_PROVIDER_VALUES = ["auto", "local", "groq"] as const;
 type TranscriptionProvider = (typeof TRANSCRIPTION_PROVIDER_VALUES)[number];
 
-export const TRANSCRIPTION_PROVIDERS: readonly { value: TranscriptionProvider; label: string; note: string }[] = [
-  { value: "auto",  label: "Auto",          note: "Groq first (~2s, free), local Whisper as fallback on auth/quota/timeout" },
-  { value: "groq",  label: "Groq cloud",    note: "whisper-large-v3-turbo via API — rate limited, no fallback" },
-  { value: "local", label: "Local Whisper", note: "your machine's Whisper model — requires runtime, no Groq attempt" },
+export const TRANSCRIPTION_PROVIDERS: readonly {
+  value: TranscriptionProvider;
+  label: string;
+  note: string;
+}[] = [
+  {
+    value: "auto",
+    label: "Auto",
+    note: "Groq first (~2s, free), local Whisper as fallback on auth/quota/timeout",
+  },
+  {
+    value: "groq",
+    label: "Groq cloud",
+    note: "whisper-large-v3-turbo via API — rate limited, no fallback",
+  },
+  {
+    value: "local",
+    label: "Local Whisper",
+    note: "your machine's Whisper model — requires runtime, no Groq attempt",
+  },
 ];
 
 // Autopilot is binary. After the 2026-06-11 collapse (killing-the-bash-daemon
@@ -48,14 +64,20 @@ export const AUTO_INJECT_MODES: readonly {
   {
     value: "on",
     label: "On",
-    description: "When an agent finishes, FleetCrown sends the next queued instruction — or, if the queue is empty, picks the next-best task. Busy agents, blockers, and failing health checks still pause dispatch.",
+    description:
+      "When an agent finishes, FleetCrown sends the next queued instruction — or, if the queue is empty, picks the next-best task. Busy agents, blockers, and failing health checks still pause dispatch.",
   },
 ];
 
 /** Legacy modes from before the 2026-06-11 collapse. Read-only; used only
  *  by the one-time migration UPDATE and for tolerant parsing of old stored
  *  values. Do not reference from runtime decision code. */
-export const LEGACY_AUTO_INJECT_MODE_VALUES = ["queue_only", "beacon", "next_best", "strategist"] as const;
+export const LEGACY_AUTO_INJECT_MODE_VALUES = [
+  "queue_only",
+  "beacon",
+  "next_best",
+  "strategist",
+] as const;
 export type LegacyAutoInjectMode = (typeof LEGACY_AUTO_INJECT_MODE_VALUES)[number];
 
 /** Map any value (current or legacy) to the new 2-state space. Off stays off;

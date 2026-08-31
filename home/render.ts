@@ -38,12 +38,12 @@ export type RenderInput = {
 
 export function renderPromptForDispatch(input: RenderInput): string {
   return renderTaskForAdapter({
-    projectKey:  input.project,
+    projectKey: input.project,
     projectPath: input.projectPath ?? input.project,
-    adapter:     input.adapter ?? "claude",
-    intent:      input.intent,
+    adapter: input.adapter ?? "claude",
+    intent: input.intent,
     customInstructions: input.customInstructions,
-    queue:       input.queue,
+    queue: input.queue,
   });
 }
 
@@ -54,7 +54,8 @@ export function renderPromptForDispatch(input: RenderInput): string {
 // renderQueueBlock in the underlying renderTaskForAdapter.
 
 function selfTest() {
-  let pass = 0, fail = 0;
+  let pass = 0,
+    fail = 0;
   for (const intent of ORCHESTRATION_TASK_INTENT_IDS) {
     const customBody = intent === "custom" ? "run security audit on FleetCrown" : undefined;
     const out = renderPromptForDispatch({
@@ -64,8 +65,13 @@ function selfTest() {
       customInstructions: customBody,
     });
     const ok = out.length > 0 && (intent !== "custom" || out.includes("security audit"));
-    if (ok) { console.log(`  ✓ ${intent}`); pass++; }
-    else    { console.log(`  ✗ ${intent} → got: ${JSON.stringify(out).slice(0, 100)}`); fail++; }
+    if (ok) {
+      console.log(`  ✓ ${intent}`);
+      pass++;
+    } else {
+      console.log(`  ✗ ${intent} → got: ${JSON.stringify(out).slice(0, 100)}`);
+      fail++;
+    }
   }
 
   // Queue-block regression coverage — pins the contract that 1cacfd2 +
@@ -80,9 +86,11 @@ function selfTest() {
           intent: "next_best",
           queue: ["fix tests", "ship the docs"],
         });
-        return out.includes("User's prompt queue for this project")
-            && out.includes("1. fix tests")
-            && out.includes("2. ship the docs");
+        return (
+          out.includes("User's prompt queue for this project") &&
+          out.includes("1. fix tests") &&
+          out.includes("2. ship the docs")
+        );
       },
     },
     {
@@ -107,17 +115,28 @@ function selfTest() {
       name: "queue > 10 items shows the first 10 plus an overflow indicator",
       check: () => {
         const items = Array.from({ length: 13 }, (_, i) => `item ${i + 1}`);
-        const out = renderPromptForDispatch({ project: "FleetCrown", intent: "next_best", queue: items });
-        return out.includes("1. item 1")
-            && out.includes("10. item 10")
-            && !out.includes("11. item 11")
-            && out.includes("…and 3 more");
+        const out = renderPromptForDispatch({
+          project: "FleetCrown",
+          intent: "next_best",
+          queue: items,
+        });
+        return (
+          out.includes("1. item 1") &&
+          out.includes("10. item 10") &&
+          !out.includes("11. item 11") &&
+          out.includes("…and 3 more")
+        );
       },
     },
   ];
   for (const c of queueCases) {
-    if (c.check()) { console.log(`  ✓ ${c.name}`); pass++; }
-    else           { console.log(`  ✗ ${c.name}`); fail++; }
+    if (c.check()) {
+      console.log(`  ✓ ${c.name}`);
+      pass++;
+    } else {
+      console.log(`  ✗ ${c.name}`);
+      fail++;
+    }
   }
 
   console.log(`\n${pass}/${pass + fail} intents render`);

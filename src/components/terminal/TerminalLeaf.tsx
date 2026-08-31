@@ -34,7 +34,15 @@ const DOT: Record<string, string> = {
  *  xterm (via TerminalView), and terminates it on unmount (pane close or
  *  leaving the page). Kept mounted while the terminal page is open so switching
  *  tabs/splitting never drops the shell. */
-export function TerminalLeaf({ paneId, label, active, canClose, onFocus, onSplit, onClose }: Props) {
+export function TerminalLeaf({
+  paneId,
+  label,
+  active,
+  canClose,
+  onFocus,
+  onSplit,
+  onClose,
+}: Props) {
   const [wsId, setWsId] = useState<string | null>(null);
   const [state, setState] = useState<State>("provisioning");
   const [error, setError] = useState<string | null>(null);
@@ -85,14 +93,29 @@ export function TerminalLeaf({ paneId, label, active, canClose, onFocus, onSplit
         <span className="ui-term-pane-label">{label}</span>
         <span className="ui-term-pane-state">{state}</span>
         <div className="ui-term-pane-actions hidden md:flex">
-          <button type="button" title="Split right" onClick={() => onSplit("row")} className="ui-term-icon-btn">
+          <button
+            type="button"
+            title="Split right"
+            onClick={() => onSplit("row")}
+            className="ui-term-icon-btn"
+          >
             <Columns2 className="h-3.5 w-3.5" />
           </button>
-          <button type="button" title="Split down" onClick={() => onSplit("col")} className="ui-term-icon-btn">
+          <button
+            type="button"
+            title="Split down"
+            onClick={() => onSplit("col")}
+            className="ui-term-icon-btn"
+          >
             <Rows2 className="h-3.5 w-3.5" />
           </button>
           {canClose && (
-            <button type="button" title="Close pane" onClick={onClose} className="ui-term-icon-btn ui-term-icon-btn-danger">
+            <button
+              type="button"
+              title="Close pane"
+              onClick={onClose}
+              className="ui-term-icon-btn ui-term-icon-btn-danger"
+            >
               <X className="h-3.5 w-3.5" />
             </button>
           )}
@@ -111,7 +134,13 @@ export function TerminalLeaf({ paneId, label, active, canClose, onFocus, onSplit
             Starting shell…
           </div>
         ) : (
-          <TerminalView transport={workspaceTransport(wsId)} interactive bare onStatus={setState} className="h-full w-full" />
+          <TerminalView
+            transport={workspaceTransport(wsId)}
+            interactive
+            bare
+            onStatus={setState}
+            className="h-full w-full"
+          />
         )}
       </div>
     </div>

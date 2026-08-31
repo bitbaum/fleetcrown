@@ -111,13 +111,18 @@ export function deriveFeedbackWork(
     return {
       phase: FEEDBACK_WORK_PHASE.FAILED,
       label: "Never started",
-      detail: "The prompt was injected but the agent was never seen picking it up. Nothing ran, so there is no result to read — retry it.",
+      detail:
+        "The prompt was injected but the agent was never seen picking it up. Nothing ran, so there is no result to read — retry it.",
       diagnostic: run.error?.slice(0, 400) ?? null,
     };
   }
 
-  if (run.state === ORCH_STATE.ERROR || run.outcome === ORCHESTRATION_OUTCOME.TIMEOUT
-    || run.outcome === ORCHESTRATION_OUTCOME.ERROR || run.outcome === ORCHESTRATION_OUTCOME.HANG) {
+  if (
+    run.state === ORCH_STATE.ERROR ||
+    run.outcome === ORCHESTRATION_OUTCOME.TIMEOUT ||
+    run.outcome === ORCHESTRATION_OUTCOME.ERROR ||
+    run.outcome === ORCHESTRATION_OUTCOME.HANG
+  ) {
     return {
       phase: FEEDBACK_WORK_PHASE.FAILED,
       label: "Failed",
@@ -126,8 +131,14 @@ export function deriveFeedbackWork(
     };
   }
 
-  if (run.state === ORCH_STATE.DONE || run.state === ORCH_STATE.CLOSED || run.state === ORCH_STATE.CLOSING) {
-    const ok = run.outcome === ORCHESTRATION_OUTCOME.SUCCESS || run.outcome === ORCHESTRATION_OUTCOME.PARTIAL;
+  if (
+    run.state === ORCH_STATE.DONE ||
+    run.state === ORCH_STATE.CLOSED ||
+    run.state === ORCH_STATE.CLOSING
+  ) {
+    const ok =
+      run.outcome === ORCHESTRATION_OUTCOME.SUCCESS ||
+      run.outcome === ORCHESTRATION_OUTCOME.PARTIAL;
     if (ok) {
       return {
         phase: FEEDBACK_WORK_PHASE.DONE,

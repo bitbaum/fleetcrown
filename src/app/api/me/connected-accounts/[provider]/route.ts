@@ -4,10 +4,7 @@ import { db } from "@/db";
 import { accounts, users } from "@/db/schema";
 import { and, eq, ne } from "drizzle-orm";
 
-export async function DELETE(
-  _req: Request,
-  ctx: { params: Promise<{ provider: string }> },
-) {
+export async function DELETE(_req: Request, ctx: { params: Promise<{ provider: string }> }) {
   const userId = await getSessionUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

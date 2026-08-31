@@ -4,10 +4,7 @@ import { useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { LokiPaneBody } from "./LokiPaneBody";
 import { shortTimeAgo } from "@/lib/dates";
-import {
-  groupConversations,
-  visibleConversationGroups,
-} from "@/lib/loki/conversation-groups";
+import { groupConversations, visibleConversationGroups } from "@/lib/loki/conversation-groups";
 import type { ConversationSummary } from "./types";
 
 export function ConversationList({

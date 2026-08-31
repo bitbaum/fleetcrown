@@ -270,34 +270,32 @@ export default function OnboardingPage() {
                   Enter details manually instead
                 </button>
               </div>
-            ) : (
-              showManual || !projectName ? (
-                <div className="space-y-3">
-                  <AuthField label="Project name">
-                    <AuthInput
-                      autoFocus={showManual}
-                      value={projectName}
-                      onChange={(e) => setProjectName(e.target.value)}
-                      placeholder="e.g. my-app"
-                    />
-                  </AuthField>
-                  <AuthField label="Local path (optional)">
-                    <AuthInput
-                      value={dirPath}
-                      onChange={(e) => setDirPath(e.target.value)}
-                      placeholder="/home/you/my-app"
-                    />
-                  </AuthField>
-                  <AuthField label="GitHub URL (optional)">
-                    <AuthInput
-                      value={gitUrl}
-                      onChange={(e) => setGitUrl(e.target.value)}
-                      placeholder="https://github.com/you/my-app"
-                    />
-                  </AuthField>
-                </div>
-              ) : null
-            )}
+            ) : showManual || !projectName ? (
+              <div className="space-y-3">
+                <AuthField label="Project name">
+                  <AuthInput
+                    autoFocus={showManual}
+                    value={projectName}
+                    onChange={(e) => setProjectName(e.target.value)}
+                    placeholder="e.g. my-app"
+                  />
+                </AuthField>
+                <AuthField label="Local path (optional)">
+                  <AuthInput
+                    value={dirPath}
+                    onChange={(e) => setDirPath(e.target.value)}
+                    placeholder="/home/you/my-app"
+                  />
+                </AuthField>
+                <AuthField label="GitHub URL (optional)">
+                  <AuthInput
+                    value={gitUrl}
+                    onChange={(e) => setGitUrl(e.target.value)}
+                    placeholder="https://github.com/you/my-app"
+                  />
+                </AuthField>
+              </div>
+            ) : null}
 
             {error && <p className="ui-error">{error}</p>}
 

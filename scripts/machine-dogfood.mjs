@@ -34,7 +34,9 @@ readLocalEnv();
 
 const base = (process.env.BASE ?? "https://fleetcrown.orangecat.ch").replace(/\/$/, "");
 const headless = process.env.HEADLESS !== "0";
-const sessionToken = (process.env.FLEETCROWN_SESSION_TOKEN ?? process.env.COCKPIT_SESSION_TOKEN)?.trim();
+const sessionToken = (
+  process.env.FLEETCROWN_SESSION_TOKEN ?? process.env.COCKPIT_SESSION_TOKEN
+)?.trim();
 const smokePin = process.env.SMOKE_PRIVATE_PIN?.trim();
 const force = process.env.DOGFOOD_MACHINE_FORCE === "1";
 
@@ -109,17 +111,23 @@ async function main() {
     if (tabs.length > 0) {
       const tab = tabs[0];
       try {
-        const peekRes = await fetch(`${base}/api/control/peek-stream?tab=${encodeURIComponent(tab)}&channel=local`, {
-          headers: { Cookie: cookieHeader() },
-          signal: AbortSignal.timeout(4000),
-        });
+        const peekRes = await fetch(
+          `${base}/api/control/peek-stream?tab=${encodeURIComponent(tab)}&channel=local`,
+          {
+            headers: { Cookie: cookieHeader() },
+            signal: AbortSignal.timeout(4000),
+          },
+        );
         report.steps.push({
           step: "peek-stream-local",
           audit: { status: peekRes.status, tab, ok: [200, 403].includes(peekRes.status) },
         });
         await peekRes.body?.cancel();
       } catch {
-        report.steps.push({ step: "peek-stream-local", audit: { status: 0, tab, ok: true, note: "SSE timeout ok" } });
+        report.steps.push({
+          step: "peek-stream-local",
+          audit: { status: 0, tab, ok: true, note: "SSE timeout ok" },
+        });
       }
     }
 
@@ -134,13 +142,17 @@ async function main() {
     const terminalAudit = await page.evaluate(() => {
       const toggles = [...document.querySelectorAll(".ui-chip-toggle, .ui-chip-toggle-active")];
       const machineActive = toggles.some(
-        (el) => el.textContent?.includes("This computer") && el.classList.contains("ui-chip-toggle-active"),
+        (el) =>
+          el.textContent?.includes("This computer") &&
+          el.classList.contains("ui-chip-toggle-active"),
       );
       const visiblePane = [...document.querySelectorAll(".absolute.inset-0")].find(
         (el) => !el.classList.contains("hidden"),
       );
       const tabButtons = visiblePane
-        ? [...visiblePane.querySelectorAll("button")].map((b) => b.textContent?.trim() ?? "").filter(Boolean)
+        ? [...visiblePane.querySelectorAll("button")]
+            .map((b) => b.textContent?.trim() ?? "")
+            .filter(Boolean)
         : [];
       return {
         url: location.href,

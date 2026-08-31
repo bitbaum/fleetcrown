@@ -10,13 +10,19 @@ import { FEEDBACK_STATUS } from "@/lib/constants/statuses";
  * the ONLY gate on this handler — do not remove it.
  */
 
-const PatchBody = z.object({
-  // `dispatched` is set by the dispatch flow, not by manual triage.
-  status: z.enum([FEEDBACK_STATUS.NEW, FEEDBACK_STATUS.RESOLVED, FEEDBACK_STATUS.ARCHIVED]).optional(),
-  /** Curation for the public "shipped thanks to feedback" strip — resolved
-   *  rows only (enforced in the query). */
-  featured: z.boolean().optional(),
-}).refine((b) => b.status !== undefined || b.featured !== undefined, { message: "Nothing to update" });
+const PatchBody = z
+  .object({
+    // `dispatched` is set by the dispatch flow, not by manual triage.
+    status: z
+      .enum([FEEDBACK_STATUS.NEW, FEEDBACK_STATUS.RESOLVED, FEEDBACK_STATUS.ARCHIVED])
+      .optional(),
+    /** Curation for the public "shipped thanks to feedback" strip — resolved
+     *  rows only (enforced in the query). */
+    featured: z.boolean().optional(),
+  })
+  .refine((b) => b.status !== undefined || b.featured !== undefined, {
+    message: "Nothing to update",
+  });
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const userId = await getSessionUserId();

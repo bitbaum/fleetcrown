@@ -53,9 +53,19 @@ const ATTENTION_CHIP: LokiComposerChip = {
 };
 
 export const LOKI_SCOPED_CHIPS: LokiComposerChip[] = [
-  { id: "move_forward", label: "Move forward", kind: "send", template: "move forward on {project}" },
+  {
+    id: "move_forward",
+    label: "Move forward",
+    kind: "send",
+    template: "move forward on {project}",
+  },
   { id: "quality", label: "Review", kind: "send", template: "code review for {project}" },
-  { id: "test_and_fix", label: "Fix tests", kind: "send", template: "fix types and tests for {project}" },
+  {
+    id: "test_and_fix",
+    label: "Fix tests",
+    kind: "send",
+    template: "fix types and tests for {project}",
+  },
 ];
 
 export function fillSuggestedAction(template: string, projectName: string | null): string {
@@ -94,7 +104,12 @@ export function composerChips(input: {
     return [
       { id: "move_forward_many", label: "Move forward", kind: "send", template: "move forward" },
       { id: "quality_many", label: "Review", kind: "send", template: "code review" },
-      { id: "test_and_fix_many", label: "Fix tests", kind: "send", template: "fix types and tests" },
+      {
+        id: "test_and_fix_many",
+        label: "Fix tests",
+        kind: "send",
+        template: "fix types and tests",
+      },
     ];
   }
   if (input.projectCount === 0) {

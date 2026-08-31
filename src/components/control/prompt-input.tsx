@@ -69,21 +69,23 @@ export function PromptInput({
   const hasAttachments = (attachments?.attachments.length ?? 0) > 0;
   const canSend = Boolean(custom.trim()) || listening || hasAttachments;
   const isComposing = custom.trim().length > 0 || listening || processing || hasAttachments;
-  const status = statusLabel ?? (micError
-    ? micError
-    : listening
-    ? "Recording - paused"
-    : processing
-    ? "Transcribing..."
-    : custom.trim()
-    ? COMPOSER_HINT.enterSends
-    : autoContinueEnabled === false
-    ? COMPOSER_HINT.autoSendPaused
-    : autoContinueEnabled === true && isComposing
-    ? COMPOSER_HINT.autoSendWhileTyping
-    : autoContinueEnabled === true
-    ? COMPOSER_HINT.autoSendReady
-    : "");
+  const status =
+    statusLabel ??
+    (micError
+      ? micError
+      : listening
+        ? "Recording - paused"
+        : processing
+          ? "Transcribing..."
+          : custom.trim()
+            ? COMPOSER_HINT.enterSends
+            : autoContinueEnabled === false
+              ? COMPOSER_HINT.autoSendPaused
+              : autoContinueEnabled === true && isComposing
+                ? COMPOSER_HINT.autoSendWhileTyping
+                : autoContinueEnabled === true
+                  ? COMPOSER_HINT.autoSendReady
+                  : "");
 
   return (
     <div className="overflow-hidden rounded-2xl border border-border-default bg-surface-raised">
@@ -112,51 +114,63 @@ export function PromptInput({
         </div>
       )}
       <div className="relative">
-          <textarea
-            ref={textareaRef}
-            rows={1}
-            value={custom}
-            onChange={(e) => onCustomChange(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey && canSend) {
-                e.preventDefault();
-                if (e.altKey && onEnqueue) onEnqueue();
-                else onSendCustom();
-              }
-            }}
-            onFocus={() => onCustomFocusChange?.(true)}
-            onBlur={() => onCustomFocusChange?.(false)}
-            // Paste-to-attach: on a laptop this is how a screenshot arrives,
-            // and preventDefault only fires when the paste actually held one.
-            onPaste={(e) => { if (attachments?.addFromPaste(e)) e.preventDefault(); }}
-            placeholder={listening ? "Recording..." : processing ? "Transcribing..." : placeholder}
-            className={cn(
-              "w-full resize-none bg-transparent px-4 pb-3 pr-11 pt-3.5 text-sm leading-relaxed text-text-primary placeholder:text-text-muted outline-none",
-              listening && "border-status-negative/40",
-              processing && "border-accent-primary/30",
-            )}
-            style={{ fieldSizing: "content", maxHeight: "8rem" } as React.CSSProperties}
-          />
-          <button
-            type="button"
-            onClick={toggleMic}
-            disabled={processing}
-            title={listening ? "Stop recording" : "Voice input (Whisper)"}
-            className={cn(
-              "absolute right-2.5 top-2.5 ui-tap-icon inline-flex items-center justify-center rounded-lg p-1.5 transition-colors",
-              listening
-                ? "text-status-negative animate-pulse hover:bg-status-negative/10"
-                : processing
+        <textarea
+          ref={textareaRef}
+          rows={1}
+          value={custom}
+          onChange={(e) => onCustomChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey && canSend) {
+              e.preventDefault();
+              if (e.altKey && onEnqueue) onEnqueue();
+              else onSendCustom();
+            }
+          }}
+          onFocus={() => onCustomFocusChange?.(true)}
+          onBlur={() => onCustomFocusChange?.(false)}
+          // Paste-to-attach: on a laptop this is how a screenshot arrives,
+          // and preventDefault only fires when the paste actually held one.
+          onPaste={(e) => {
+            if (attachments?.addFromPaste(e)) e.preventDefault();
+          }}
+          placeholder={listening ? "Recording..." : processing ? "Transcribing..." : placeholder}
+          className={cn(
+            "w-full resize-none bg-transparent px-4 pb-3 pr-11 pt-3.5 text-sm leading-relaxed text-text-primary placeholder:text-text-muted outline-none",
+            listening && "border-status-negative/40",
+            processing && "border-accent-primary/30",
+          )}
+          style={{ fieldSizing: "content", maxHeight: "8rem" } as React.CSSProperties}
+        />
+        <button
+          type="button"
+          onClick={toggleMic}
+          disabled={processing}
+          title={listening ? "Stop recording" : "Voice input (Whisper)"}
+          className={cn(
+            "absolute right-2.5 top-2.5 ui-tap-icon inline-flex items-center justify-center rounded-lg p-1.5 transition-colors",
+            listening
+              ? "text-status-negative animate-pulse hover:bg-status-negative/10"
+              : processing
                 ? "text-text-muted opacity-50"
                 : "text-text-muted hover:text-text-secondary hover:bg-surface-raised",
-            )}
-          >
-            {processing
-              ? <Loader2 className="ui-spinner-sm" />
-              : listening
-              ? <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5" stroke="currentColor" strokeWidth={2}><rect x="6" y="6" width="12" height="12" rx="2" /></svg>
-              : <Mic className="h-3.5 w-3.5" />}
-          </button>
+          )}
+        >
+          {processing ? (
+            <Loader2 className="ui-spinner-sm" />
+          ) : listening ? (
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              className="h-3.5 w-3.5"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <rect x="6" y="6" width="12" height="12" rx="2" />
+            </svg>
+          ) : (
+            <Mic className="h-3.5 w-3.5" />
+          )}
+        </button>
       </div>
 
       {attachments && <AttachmentStrip attachments={attachments} />}
@@ -168,7 +182,11 @@ export function PromptInput({
               <div
                 key={i}
                 className="rounded-full bg-status-negative"
-                style={{ width: 2, height: Math.max(2, Math.round(h * 12)), transition: "height 75ms ease" }}
+                style={{
+                  width: 2,
+                  height: Math.max(2, Math.round(h * 12)),
+                  transition: "height 75ms ease",
+                }}
               />
             ))}
           </div>
@@ -189,7 +207,11 @@ export function PromptInput({
           <button
             onClick={onToggleAutoContinue}
             disabled={processing}
-            title={autoContinueEnabled ? "Pause automatic continuation for this project" : "Allow automatic continuation for this project"}
+            title={
+              autoContinueEnabled
+                ? "Pause automatic continuation for this project"
+                : "Allow automatic continuation for this project"
+            }
             className={cn(
               "shrink-0 ui-tap-icon inline-flex items-center justify-center rounded-md p-1 transition-colors",
               autoContinueEnabled
@@ -197,51 +219,69 @@ export function PromptInput({
                 : "text-accent-text hover:bg-surface-overlay",
             )}
           >
-            {autoContinueEnabled ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+            {autoContinueEnabled ? (
+              <Pause className="h-3.5 w-3.5" />
+            ) : (
+              <Play className="h-3.5 w-3.5" />
+            )}
           </button>
         )}
-        <span className={cn(
-          "min-w-0 flex-1 truncate text-xs",
-          micError ? "text-status-negative" : listening ? "text-status-negative" : processing ? "animate-pulse text-text-muted" : "text-text-muted",
-        )}>
+        <span
+          className={cn(
+            "min-w-0 flex-1 truncate text-xs",
+            micError
+              ? "text-status-negative"
+              : listening
+                ? "text-status-negative"
+                : processing
+                  ? "animate-pulse text-text-muted"
+                  : "text-text-muted",
+          )}
+        >
           {status}
         </span>
-          {showQueue && onEnqueue && (
-            <button
-              onClick={onEnqueue}
-              // The prompt queue persists TEXT. A staged screenshot cannot ride
-              // along, and the first version of this let you click Queue with
-              // one attached: with words it silently dropped the picture, with
-              // only a picture it did nothing at all. Refusing out loud beats
-              // both.
-              disabled={!canSend || sending !== null || hasAttachments}
-              title={
-                hasAttachments
-                  ? "Queued prompts are text only — send now to include the screenshot."
-                  : listening
-                    ? "Stop recording and queue (or send now if idle)"
-                    : "Queue for later (sends immediately if this project is idle) — Alt+Enter"
-              }
-              className="ui-btn-icon shrink-0 disabled:pointer-events-none disabled:opacity-25"
-            >
-              <ListPlus className="h-3.5 w-3.5" />
-            </button>
-          )}
+        {showQueue && onEnqueue && (
           <button
-            onClick={onSendCustom}
-            disabled={!canSend || sending !== null}
-            title={listening ? "Stop recording and send" : undefined}
-            className={cn(
-              "inline-flex shrink-0 ui-tap items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
-              justSent?.id === "custom"
-                ? "bg-status-positive text-text-inverted"
-                : canSend
-                  ? "bg-text-primary text-text-inverted hover:opacity-90"
-                  : "pointer-events-none bg-surface-overlay text-text-muted opacity-40",
-            )}
+            onClick={onEnqueue}
+            // The prompt queue persists TEXT. A staged screenshot cannot ride
+            // along, and the first version of this let you click Queue with
+            // one attached: with words it silently dropped the picture, with
+            // only a picture it did nothing at all. Refusing out loud beats
+            // both.
+            disabled={!canSend || sending !== null || hasAttachments}
+            title={
+              hasAttachments
+                ? "Queued prompts are text only — send now to include the screenshot."
+                : listening
+                  ? "Stop recording and queue (or send now if idle)"
+                  : "Queue for later (sends immediately if this project is idle) — Alt+Enter"
+            }
+            className="ui-btn-icon shrink-0 disabled:pointer-events-none disabled:opacity-25"
           >
-            {justSent?.id === "custom" ? "Sent ✓" : <>Send <Send className="h-3 w-3" /></>}
+            <ListPlus className="h-3.5 w-3.5" />
           </button>
+        )}
+        <button
+          onClick={onSendCustom}
+          disabled={!canSend || sending !== null}
+          title={listening ? "Stop recording and send" : undefined}
+          className={cn(
+            "inline-flex shrink-0 ui-tap items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+            justSent?.id === "custom"
+              ? "bg-status-positive text-text-inverted"
+              : canSend
+                ? "bg-text-primary text-text-inverted hover:opacity-90"
+                : "pointer-events-none bg-surface-overlay text-text-muted opacity-40",
+          )}
+        >
+          {justSent?.id === "custom" ? (
+            "Sent ✓"
+          ) : (
+            <>
+              Send <Send className="h-3 w-3" />
+            </>
+          )}
+        </button>
       </div>
     </div>
   );

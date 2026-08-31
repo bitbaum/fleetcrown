@@ -28,15 +28,19 @@ export function ActivityEventRow({ event }: { event: ActivityEvent }) {
   const [open, setOpen] = useState(false);
   const canExpand = Boolean(event.ask?.expandable || (event.error && event.error.length > 160));
 
-  const askText = event.ask?.missing
-    ? null
-    : event.ask?.preview || null;
+  const askText = event.ask?.missing ? null : event.ask?.preview || null;
 
   return (
     <li className={cn("ui-activity-row", event.status === "negative" && "ui-activity-row-alert")}>
       {/* Line 1 — the header. Project leads: it is what someone scans for. */}
       <div className="ui-activity-head">
-        <span className={cn("ui-activity-dot", `ui-dot-${event.status === "neutral" ? "neutral" : event.status}`)} aria-hidden />
+        <span
+          className={cn(
+            "ui-activity-dot",
+            `ui-dot-${event.status === "neutral" ? "neutral" : event.status}`,
+          )}
+          aria-hidden
+        />
         <span className="ui-activity-project">{event.projectKey}</span>
         <span className={cn("ui-tag", OUTCOME_TAG_CLASS[event.outcome])}>{event.outcomeLabel}</span>
         <span className="ui-activity-meta">
@@ -51,13 +55,9 @@ export function ActivityEventRow({ event }: { event: ActivityEvent }) {
       </p>
 
       {/* Line 2 — the ask. THE thing the old page could not show. */}
-      {askText && (
-        <p className={cn("ui-activity-ask", !open && "line-clamp-3")}>{askText}</p>
-      )}
+      {askText && <p className={cn("ui-activity-ask", !open && "line-clamp-3")}>{askText}</p>}
       {event.ask?.missing && (
-        <p className="ui-activity-ask-missing">
-          No prompt text was recorded for this dispatch.
-        </p>
+        <p className="ui-activity-ask-missing">No prompt text was recorded for this dispatch.</p>
       )}
 
       {/* Line 3 — the payoff: what came back, or why it did not. */}
@@ -70,7 +70,12 @@ export function ActivityEventRow({ event }: { event: ActivityEvent }) {
 
       {/* Cross-model verdict — a second lineage judged this handoff. */}
       {event.verification && (
-        <p className={cn("ui-activity-verify", event.verification.met ? "text-status-positive" : "text-status-warning")}>
+        <p
+          className={cn(
+            "ui-activity-verify",
+            event.verification.met ? "text-status-positive" : "text-status-warning",
+          )}
+        >
           {event.verification.met ? (
             <ShieldCheck className="h-3.5 w-3.5 shrink-0" aria-hidden />
           ) : (
@@ -109,7 +114,10 @@ export function ActivityEventRow({ event }: { event: ActivityEvent }) {
             aria-expanded={open}
             className="ui-activity-toggle"
           >
-            <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-180")} aria-hidden />
+            <ChevronDown
+              className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-180")}
+              aria-hidden
+            />
             {open ? "Less" : "Show full prompt"}
           </button>
         )}

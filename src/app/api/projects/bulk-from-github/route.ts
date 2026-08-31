@@ -27,13 +27,19 @@ export async function POST(req: NextRequest) {
 
   const body = BulkBody.safeParse(await req.json().catch(() => ({})));
   if (!body.success) {
-    return NextResponse.json({ error: "Invalid body", details: body.error.flatten() }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid body", details: body.error.flatten() },
+      { status: 400 },
+    );
   }
   const { repoIds } = body.data;
 
   const token = await getGithubToken(userId);
   if (!token) {
-    return NextResponse.json({ error: "No GitHub account linked", hasGithub: false }, { status: 400 });
+    return NextResponse.json(
+      { error: "No GitHub account linked", hasGithub: false },
+      { status: 400 },
+    );
   }
 
   // Re-fetch the user's repos from GitHub. We can't trust client-supplied

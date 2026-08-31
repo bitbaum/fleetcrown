@@ -37,9 +37,7 @@ export function ProjectFilter({
   return (
     <div className="flex h-full flex-col gap-2">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="ui-kicker">
-          Projects{selected.length > 0 ? ` · ${selected.length}` : ""}
-        </h2>
+        <h2 className="ui-kicker">Projects{selected.length > 0 ? ` · ${selected.length}` : ""}</h2>
         <div className="flex items-center gap-1">
           <Link href={LOKI_NEW_PROJECT_HREF} className="ui-btn-xs">
             New
@@ -79,7 +77,9 @@ export function ProjectFilter({
         <LokiPaneBody loading={loading} error={error} onRetry={onRetry}>
           {projects.length === 0 ? (
             <div className="flex flex-col gap-3 px-1">
-              <p className="ui-loki-convo-meta">No projects yet. Start one, or import one you already have.</p>
+              <p className="ui-loki-convo-meta">
+                No projects yet. Start one, or import one you already have.
+              </p>
               <Link href={LOKI_NEW_PROJECT_HREF} className="ui-btn-primary justify-center">
                 New project
               </Link>
@@ -108,7 +108,9 @@ export function ProjectFilter({
                       {p.topGoal && (
                         <span className="ui-loki-project-goal" title={p.topGoal.title}>
                           {p.topGoal.title}
-                          {typeof p.topGoal.progress === "number" ? ` · ${p.topGoal.progress}%` : ""}
+                          {typeof p.topGoal.progress === "number"
+                            ? ` · ${p.topGoal.progress}%`
+                            : ""}
                         </span>
                       )}
                     </span>

@@ -45,7 +45,11 @@ assert.equal(groups.find((g) => g.head.id === "c")?.count, 1);
 assert.equal(groups.find((g) => g.head.id === "e")?.count, 1);
 
 const withActive = groupConversations(mixed, "d");
-assert.equal(withActive.find((g) => g.count === 3)?.head.id, "d", "active thread becomes the group head");
+assert.equal(
+  withActive.find((g) => g.count === 3)?.head.id,
+  "d",
+  "active thread becomes the group head",
+);
 
 const many = Array.from({ length: 20 }, (_, i) => row(String(i), `unique ${i}`, []));
 const capped = visibleConversationGroups(groupConversations(many));

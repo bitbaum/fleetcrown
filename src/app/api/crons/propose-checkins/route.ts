@@ -29,7 +29,12 @@ export async function GET(req: NextRequest) {
   const users = await getFleetAutopilotUserIds();
 
   let proposedTotal = 0;
-  const perUser: Array<{ userId: string; proposed: number; scanned: number; skipped: string | null }> = [];
+  const perUser: Array<{
+    userId: string;
+    proposed: number;
+    scanned: number;
+    skipped: string | null;
+  }> = [];
 
   for (const userId of users) {
     try {

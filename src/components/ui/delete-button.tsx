@@ -48,7 +48,10 @@ export function DeleteButton({
             {deleting ? <Loader2 className="ui-spinner-xs" /> : "Yes"}
           </button>
           <button
-            onClick={() => { setConfirming(false); setDeleteError(null); }}
+            onClick={() => {
+              setConfirming(false);
+              setDeleteError(null);
+            }}
             className="ui-btn-text-cancel"
           >
             No

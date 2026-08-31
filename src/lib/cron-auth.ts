@@ -30,10 +30,7 @@ export function requireCronAuth(req: NextRequest): NextResponse | null {
   const isProd = process.env.NODE_ENV === "production";
 
   if (isProd && !expected) {
-    return NextResponse.json(
-      { error: "CRON_SECRET not configured" },
-      { status: 503 },
-    );
+    return NextResponse.json({ error: "CRON_SECRET not configured" }, { status: 503 });
   }
 
   if (expected) {

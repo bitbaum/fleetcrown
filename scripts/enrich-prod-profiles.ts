@@ -38,7 +38,10 @@ const UPDATE_GTM = process.argv.includes("--update-gtm");
 const ESTIMATE = process.argv.includes("--estimate");
 // Optional positional args narrow the run to specific project names
 // (e.g. retrying transient extraction failures).
-const ONLY = process.argv.slice(2).filter((a) => !a.startsWith("--")).map((a) => a.toLowerCase());
+const ONLY = process.argv
+  .slice(2)
+  .filter((a) => !a.startsWith("--"))
+  .map((a) => a.toLowerCase());
 const DEV_ROOT = join(homedir(), "dev");
 
 // entities.name (prod) → local repo dir under ~/dev. Identity-cased names
@@ -65,7 +68,11 @@ function localDirFor(name: string): string | null {
 }
 
 function readDoc(path: string): string | null {
-  try { return readFileSync(path, "utf-8").slice(0, 8000); } catch { return null; }
+  try {
+    return readFileSync(path, "utf-8").slice(0, 8000);
+  } catch {
+    return null;
+  }
 }
 
 /** ~/dev/bitbaum/projects/<name>.md — the operator's per-project notes. */
@@ -76,7 +83,9 @@ function bitbaumNotePath(name: string): string | null {
   try {
     const hit = readdirSync(notesDir).find((f) => f.toLowerCase() === target);
     return hit ? join(notesDir, hit) : null;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 /** Newest gtm*.md anywhere under <dir>/docs — covers docs/GTM.md,
@@ -89,11 +98,17 @@ function newestGtmDocPath(dir: string): string | null {
       .filter((f) => typeof f === "string" && /^gtm.*\.md$/i.test(basename(f)))
       .map((f) => join(docsDir, f))
       .flatMap((p) => {
-        try { return [{ path: p, mtimeMs: statSync(p).mtimeMs }]; } catch { return []; }
+        try {
+          return [{ path: p, mtimeMs: statSync(p).mtimeMs }];
+        } catch {
+          return [];
+        }
       })
       .sort((a, b) => b.mtimeMs - a.mtimeMs);
     return hits[0]?.path ?? null;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 /** All available docs for a project, labeled so extraction sees provenance.
@@ -142,7 +157,8 @@ async function reserveTokens(tokens: number): Promise<void> {
 // pass over the fleet costs almost exactly that. In --update-gtm mode only two
 // fields are written, so only the sections that could inform them are sent —
 // which turns a whole-day budget into a few thousand tokens.
-const REACH_HEADING = /^#{1,6}\s*.*(distribution|go-to-market|gtm|marketing|business model|pricing|revenue|customers?|audience|positioning)/i;
+const REACH_HEADING =
+  /^#{1,6}\s*.*(distribution|go-to-market|gtm|marketing|business model|pricing|revenue|customers?|audience|positioning)/i;
 
 /** Markdown sections whose heading is about reach; whole doc head as fallback. */
 function sliceReachSections(text: string): string {
@@ -153,7 +169,11 @@ function sliceReachSections(text: string): string {
     const heading = /^(#{1,6})\s/.exec(line);
     if (heading) {
       const level = heading[1].length;
-      if (REACH_HEADING.test(line)) { depth = level; out.push(line); continue; }
+      if (REACH_HEADING.test(line)) {
+        depth = level;
+        out.push(line);
+        continue;
+      }
       // A heading at or above the kept section's level ends it.
       if (depth && level <= depth) depth = 0;
       if (depth) out.push(line);
@@ -189,7 +209,8 @@ async function main() {
   } else if (!process.env.DATABASE_URL) {
     const password = process.env.FLEETCROWN_DB_PASSWORD;
     const host = process.env.HETZNER_IP;
-    if (!password || !host) throw new Error("FLEETCROWN_DB_PASSWORD / HETZNER_IP missing from .env.hetzner.local");
+    if (!password || !host)
+      throw new Error("FLEETCROWN_DB_PASSWORD / HETZNER_IP missing from .env.hetzner.local");
     // Point the app's db module at prod BEFORE importing it.
     process.env.DATABASE_URL = `postgres://fleetcrown:${encodeURIComponent(password)}@${host}:5432/fleetcrown?sslmode=require`;
   }
@@ -197,14 +218,24 @@ async function main() {
   const { db } = await import("../src/db");
   const { entities, users } = await import("../src/db/schema");
   const { and, eq } = await import("drizzle-orm");
-  const { extractProjectProfile, extractReachProfile, applyProjectProfile } = await import("../src/lib/project-brief");
+  const { extractProjectProfile, extractReachProfile, applyProjectProfile } =
+    await import("../src/lib/project-brief");
   const extract = UPDATE_GTM ? extractReachProfile : extractProjectProfile;
 
-  const allUsers = await db.select({ id: users.id, email: users.email, name: users.name }).from(users);
-  console.log(`prod users: ${allUsers.map((u) => `${u.name ?? "?"} <${u.email ?? "?"}>`).join(" · ")}`);
+  const allUsers = await db
+    .select({ id: users.id, email: users.email, name: users.name })
+    .from(users);
+  console.log(
+    `prod users: ${allUsers.map((u) => `${u.name ?? "?"} <${u.email ?? "?"}>`).join(" · ")}`,
+  );
 
   const projects = await db
-    .select({ id: entities.id, userId: entities.userId, name: entities.name, description: entities.description })
+    .select({
+      id: entities.id,
+      userId: entities.userId,
+      name: entities.name,
+      description: entities.description,
+    })
     .from(entities)
     .where(eq(entities.type, "project"));
   console.log(`prod projects: ${projects.length}\n`);
@@ -215,17 +246,25 @@ async function main() {
     if (ONLY.length && !ONLY.includes(p.name.toLowerCase())) continue;
     const dir = localDirFor(p.name);
     const sources = collectSources(p.name, dir);
-    if (!sources.length) { console.log(`— ${p.name}: no repo and no operator brief, skipped`); continue; }
+    if (!sources.length) {
+      console.log(`— ${p.name}: no repo and no operator brief, skipped`);
+      continue;
+    }
     const body = sources
       .map((s) => `### SOURCE: ${s.label}\n\n${UPDATE_GTM ? sliceReachSections(s.text) : s.text}`)
       .join("\n\n---\n\n");
     // The stored description grounds the model when the sliced sections are thin.
-    const docs = p.description?.trim() && UPDATE_GTM
-      ? `### SOURCE: current profile\n\n${p.description.trim()}\n\n---\n\n${body}`
-      : body;
+    const docs =
+      p.description?.trim() && UPDATE_GTM
+        ? `### SOURCE: current profile\n\n${p.description.trim()}\n\n---\n\n${body}`
+        : body;
     const cost = estimateTokens(docs);
     console.log(`  ${p.name} sources: ${sources.map((s) => s.label).join(" + ")} (${cost} tok)`);
-    if (ESTIMATE) { budget += cost; enriched++; continue; }
+    if (ESTIMATE) {
+      budget += cost;
+      enriched++;
+      continue;
+    }
 
     let profile;
     for (let attempt = 0; ; attempt++) {
@@ -240,18 +279,25 @@ async function main() {
         // into nine hours of pretending. Stop, say so, and be re-run tomorrow.
         if (msg.includes("tokens per day") || msg.includes("(TPD)")) {
           const wait = /try again in ([^"]+?)\./.exec(msg)?.[1] ?? "?";
-          console.log(`\n✗ Groq daily token budget exhausted (retry in ${wait}). Stopping after ${enriched} project(s).`);
-          console.log(`  Resume with: npx tsx scripts/enrich-prod-profiles.ts --apply${UPDATE_GTM ? " --update-gtm" : ""} <names…>`);
+          console.log(
+            `\n✗ Groq daily token budget exhausted (retry in ${wait}). Stopping after ${enriched} project(s).`,
+          );
+          console.log(
+            `  Resume with: npx tsx scripts/enrich-prod-profiles.ts --apply${UPDATE_GTM ? " --update-gtm" : ""} <names…>`,
+          );
           process.exit(1);
         }
-        const transient = msg.includes("fetch failed") || msg.includes("429") || msg.includes("groq 5");
+        const transient =
+          msg.includes("fetch failed") || msg.includes("429") || msg.includes("groq 5");
         if (!transient || attempt >= 4) {
           console.log(`✗ ${p.name}: extraction failed (${msg.slice(0, 160)})`);
           profile = undefined;
           break;
         }
         const wait = retryDelayMs(msg);
-        console.log(`… ${p.name}: retrying in ${Math.round(wait / 1000)}s after ${msg.slice(0, 200)}`);
+        console.log(
+          `… ${p.name}: retrying in ${Math.round(wait / 1000)}s after ${msg.slice(0, 200)}`,
+        );
         await new Promise((r) => setTimeout(r, wait));
       }
     }
@@ -270,20 +316,28 @@ async function main() {
     }
 
     const fields = Object.entries(profile).filter(([, v]) => v);
-    if (!fields.length) { console.log(`— ${p.name}: nothing extracted, skipped`); continue; }
+    if (!fields.length) {
+      console.log(`— ${p.name}: nothing extracted, skipped`);
+      continue;
+    }
 
     console.log(`${APPLY ? "✚" : "DRY"} ${p.name} (${dir?.split("/").pop() ?? "brief only"}):`);
     for (const [k, v] of fields) console.log(`    ${k} = ${String(v).slice(0, 100)}`);
 
     if (APPLY) {
       const applied = await applyProjectProfile(p.userId, p.id, profile);
-      if (!applied) { console.log(`✗ ${p.name}: apply failed`); continue; }
+      if (!applied) {
+        console.log(`✗ ${p.name}: apply failed`);
+        continue;
+      }
     }
     enriched++;
   }
 
   if (ESTIMATE) {
-    console.log(`\nestimate: ${enriched}/${projects.length} projects, ~${budget} input tokens (Groq free tier: 100k/day)`);
+    console.log(
+      `\nestimate: ${enriched}/${projects.length} projects, ~${budget} input tokens (Groq free tier: 100k/day)`,
+    );
     process.exit(0);
   }
   console.log(`\n${APPLY ? "applied" : "would apply"}: ${enriched}/${projects.length} projects`);
@@ -293,4 +347,7 @@ async function main() {
   process.exit(0);
 }
 
-main().catch((e) => { console.error("FAIL:", e); process.exit(1); });
+main().catch((e) => {
+  console.error("FAIL:", e);
+  process.exit(1);
+});

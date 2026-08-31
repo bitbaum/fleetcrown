@@ -48,24 +48,97 @@ export type VerifyResult = {
 const COMMON = new Set(
   [
     // Sentence/structural
-    "the", "a", "an", "and", "or", "but", "if", "then", "so", "because", "not",
-    "this", "that", "these", "those", "it", "its", "your", "you", "i", "we",
-    "there", "here", "what", "which", "who", "when", "where", "why", "how",
-    "no", "yes", "none", "nothing", "today", "tomorrow", "yesterday", "now",
-    "next", "last", "first", "one", "two", "three", "primary", "focus", "task",
-    "tasks", "outreach", "note", "notes", "summary", "status", "update",
+    "the",
+    "a",
+    "an",
+    "and",
+    "or",
+    "but",
+    "if",
+    "then",
+    "so",
+    "because",
+    "not",
+    "this",
+    "that",
+    "these",
+    "those",
+    "it",
+    "its",
+    "your",
+    "you",
+    "i",
+    "we",
+    "there",
+    "here",
+    "what",
+    "which",
+    "who",
+    "when",
+    "where",
+    "why",
+    "how",
+    "no",
+    "yes",
+    "none",
+    "nothing",
+    "today",
+    "tomorrow",
+    "yesterday",
+    "now",
+    "next",
+    "last",
+    "first",
+    "one",
+    "two",
+    "three",
+    "primary",
+    "focus",
+    "task",
+    "tasks",
+    "outreach",
+    "note",
+    "notes",
+    "summary",
+    "status",
+    "update",
     // Days / months — real words, never evidence of a fabricated entity
-    "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday",
-    "january", "february", "march", "april", "may", "june", "july", "august",
-    "september", "october", "november", "december",
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+    "sunday",
+    "january",
+    "february",
+    "march",
+    "april",
+    "may",
+    "june",
+    "july",
+    "august",
+    "september",
+    "october",
+    "november",
+    "december",
     // This system's own nouns
-    "loki", "cat", "fleetcrown", "orangecat", "not", "recorded",
+    "loki",
+    "cat",
+    "fleetcrown",
+    "orangecat",
+    "not",
+    "recorded",
   ].map((w) => w.toLowerCase()),
 );
 
 /** Normalise for containment tests: casefold, collapse punctuation and space. */
 function norm(s: string): string {
-  return s.toLowerCase().replace(/[^a-z0-9+]+/g, " ").replace(/\s+/g, " ").trim();
+  return s
+    .toLowerCase()
+    .replace(/[^a-z0-9+]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 /**
@@ -89,7 +162,23 @@ function buildEvidence(facts: Fact[], userMessage: string, extra: string[]): str
  * only ever sees the harmless halves ("University", "Zurich") while the actual
  * fabricated entity slips through unnamed.
  */
-const NAME_CONNECTORS = new Set(["of", "the", "for", "and", "de", "der", "des", "van", "von", "du", "da", "di", "für", "el", "al"]);
+const NAME_CONNECTORS = new Set([
+  "of",
+  "the",
+  "for",
+  "and",
+  "de",
+  "der",
+  "des",
+  "van",
+  "von",
+  "du",
+  "da",
+  "di",
+  "für",
+  "el",
+  "al",
+]);
 
 /**
  * Named-entity candidates: ALL-CAPS acronyms, capitalised words, and the

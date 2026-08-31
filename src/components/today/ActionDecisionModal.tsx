@@ -29,10 +29,18 @@ const AUTO_APPLY_ALL_KEY = "fleetcrown.advice.autoApplyAll";
 const AUTO_APPLY_EVENT = "fleetcrown:advice-auto-apply";
 
 function readAutoApplyAll(): boolean {
-  try { return localStorage.getItem(AUTO_APPLY_ALL_KEY) === "1"; } catch { return false; }
+  try {
+    return localStorage.getItem(AUTO_APPLY_ALL_KEY) === "1";
+  } catch {
+    return false;
+  }
 }
 function writeAutoApplyAll(on: boolean): void {
-  try { localStorage.setItem(AUTO_APPLY_ALL_KEY, on ? "1" : "0"); } catch { /* private mode */ }
+  try {
+    localStorage.setItem(AUTO_APPLY_ALL_KEY, on ? "1" : "0");
+  } catch {
+    /* private mode */
+  }
   window.dispatchEvent(new Event(AUTO_APPLY_EVENT));
 }
 /** "storage" only fires in OTHER tabs, so same-tab toggles need their own event. */
@@ -46,16 +54,24 @@ function subscribeAutoApplyAll(onChange: () => void): () => void {
 }
 
 const RECOMMENDATION_TAG: Record<Recommendation, { label: string; tone: string }> = {
-  [RECOMMENDATION.DISPATCH]:         { label: "Dispatch",       tone: "ui-tag-positive" },
+  [RECOMMENDATION.DISPATCH]: { label: "Dispatch", tone: "ui-tag-positive" },
   [RECOMMENDATION.DISPATCH_TRIMMED]: { label: "Dispatch (trimmed)", tone: "ui-tag-positive" },
-  [RECOMMENDATION.SKIP]:             { label: "Skip",           tone: "ui-tag-neutral" },
-  [RECOMMENDATION.REVIEW]:           { label: "Read it first",  tone: "ui-tag-warning" },
+  [RECOMMENDATION.SKIP]: { label: "Skip", tone: "ui-tag-neutral" },
+  [RECOMMENDATION.REVIEW]: { label: "Read it first", tone: "ui-tag-warning" },
 };
 
 const REPORT_TAG = {
-  [REPORT_VERDICT.CREDIBLE]:   { label: "Real report",   tone: "ui-tag-positive", Icon: FileText },
-  [REPORT_VERDICT.LOW_SIGNAL]: { label: "Test traffic",  tone: "ui-tag-neutral",  Icon: FlaskConical },
-  [REPORT_VERDICT.STEERING]:   { label: "Contains a directive", tone: "ui-tag-warning", Icon: ShieldAlert },
+  [REPORT_VERDICT.CREDIBLE]: { label: "Real report", tone: "ui-tag-positive", Icon: FileText },
+  [REPORT_VERDICT.LOW_SIGNAL]: {
+    label: "Test traffic",
+    tone: "ui-tag-neutral",
+    Icon: FlaskConical,
+  },
+  [REPORT_VERDICT.STEERING]: {
+    label: "Contains a directive",
+    tone: "ui-tag-warning",
+    Icon: ShieldAlert,
+  },
 } as const;
 
 function Section({ label, children }: { label: string; children: React.ReactNode }) {
@@ -80,13 +96,21 @@ function ReportItem({ report }: { report: AdviceReport }) {
         <span className="text-micro text-text-tertiary truncate">{report.source}</span>
       </div>
       {/* Visitor-controlled text: rendered as plain content, never interpreted. */}
-      <p className="mt-1.5 text-xs text-text-secondary whitespace-pre-wrap break-words">{report.excerpt}</p>
+      <p className="mt-1.5 text-xs text-text-secondary whitespace-pre-wrap break-words">
+        {report.excerpt}
+      </p>
       <p className="mt-1 text-micro text-text-tertiary italic">{report.note}</p>
     </li>
   );
 }
 
-export function ActionDecisionModal({ actionId, onClose }: { actionId: string; onClose: () => void }) {
+export function ActionDecisionModal({
+  actionId,
+  onClose,
+}: {
+  actionId: string;
+  onClose: () => void;
+}) {
   const router = useRouter();
   const [advice, setAdvice] = useState<ActionAdvice | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -94,10 +118,7 @@ export function ActionDecisionModal({ actionId, onClose }: { actionId: string; o
   const [held, setHeld] = useState(false);
   const [seconds, setSeconds] = useState(ADVICE_AUTO_APPLY_SECONDS);
   const [result, setResult] = useState<
-    | { kind: "dispatched"; projectKey: string }
-    | { kind: "skipped" }
-    | { kind: "deferred" }
-    | null
+    { kind: "dispatched"; projectKey: string } | { kind: "skipped" } | { kind: "deferred" } | null
   >(null);
   // localStorage is an external store: useSyncExternalStore reads it without a
   // mount-effect setState, and gives SSR a defined (opt-out) snapshot so the
@@ -107,39 +128,48 @@ export function ActionDecisionModal({ actionId, onClose }: { actionId: string; o
   useEffect(() => {
     let live = true;
     getJson<{ advice: ActionAdvice }>(`/api/actions/${actionId}/advice`)
-      .then((r) => { if (live) setAdvice(r.advice); })
-      .catch(() => { if (live) setError("Could not read this action — decide with the buttons on the card."); });
-    return () => { live = false; };
+      .then((r) => {
+        if (live) setAdvice(r.advice);
+      })
+      .catch(() => {
+        if (live) setError("Could not read this action — decide with the buttons on the card.");
+      });
+    return () => {
+      live = false;
+    };
   }, [actionId]);
 
-  const apply = useCallback(async (option: Recommendation) => {
-    haptic();
-    setBusy(true);
-    try {
-      const outcome = await handleApplyAdvice(actionId, option);
-      if ("skipped" in outcome) {
+  const apply = useCallback(
+    async (option: Recommendation) => {
+      haptic();
+      setBusy(true);
+      try {
+        const outcome = await handleApplyAdvice(actionId, option);
+        if ("skipped" in outcome) {
+          setResult({ kind: "skipped" });
+          return;
+        }
+        if (outcome.error) {
+          setError(outcome.error);
+          setBusy(false);
+          return;
+        }
+        if (outcome.projectKey) {
+          setResult({ kind: "dispatched", projectKey: outcome.projectKey });
+          return;
+        }
+        if (outcome.deferred) {
+          setResult({ kind: "deferred" });
+          return;
+        }
         setResult({ kind: "skipped" });
-        return;
-      }
-      if (outcome.error) {
-        setError(outcome.error);
+      } catch {
+        setError("Failed to apply — try again.");
         setBusy(false);
-        return;
       }
-      if (outcome.projectKey) {
-        setResult({ kind: "dispatched", projectKey: outcome.projectKey });
-        return;
-      }
-      if (outcome.deferred) {
-        setResult({ kind: "deferred" });
-        return;
-      }
-      setResult({ kind: "skipped" });
-    } catch {
-      setError("Failed to apply — try again.");
-      setBusy(false);
-    }
-  }, [actionId]);
+    },
+    [actionId],
+  );
 
   // Auto-apply. Skip runs itself (rejecting executes nothing). Dispatch only
   // when the operator has explicitly opted in — approving is the step that
@@ -157,7 +187,9 @@ export function ActionDecisionModal({ actionId, onClose }: { actionId: string; o
   // never make the grace period silently longer than it says it is.
   useEffect(() => {
     if (!autoEligible || !advice) return;
-    const t = setTimeout(() => { void apply(advice.recommendation); }, ADVICE_AUTO_APPLY_SECONDS * 1000);
+    const t = setTimeout(() => {
+      void apply(advice.recommendation);
+    }, ADVICE_AUTO_APPLY_SECONDS * 1000);
     return () => clearTimeout(t);
   }, [autoEligible, apply, advice]);
 
@@ -230,7 +262,9 @@ export function ActionDecisionModal({ actionId, onClose }: { actionId: string; o
                   {advice.confidence} confidence
                 </span>
               </div>
-              <h2 className="mt-2 text-base md:text-lg font-semibold text-text-primary">{advice.headline}</h2>
+              <h2 className="mt-2 text-base md:text-lg font-semibold text-text-primary">
+                {advice.headline}
+              </h2>
               <p className="mt-0.5 text-xs text-text-tertiary truncate">{advice.title}</p>
             </div>
 
@@ -259,7 +293,9 @@ export function ActionDecisionModal({ actionId, onClose }: { actionId: string; o
               <div className="rounded-md border border-border-subtle bg-surface-raised p-3">
                 <div className="ui-micro-label mb-1">Worth two seconds</div>
                 <p className="text-sm text-text-secondary">{advice.perspective.note}</p>
-                <p className="mt-2 text-micro text-text-tertiary italic">{advice.perspective.principle}</p>
+                <p className="mt-2 text-micro text-text-tertiary italic">
+                  {advice.perspective.principle}
+                </p>
               </div>
 
               {/* Evidence last: it is the longest block and the tags above
@@ -269,7 +305,9 @@ export function ActionDecisionModal({ actionId, onClose }: { actionId: string; o
               {advice.reports.length > 0 && (
                 <Section label={`The evidence (${advice.reports.length})`}>
                   <ul className="space-y-2">
-                    {advice.reports.map((r, i) => <ReportItem key={i} report={r} />)}
+                    {advice.reports.map((r, i) => (
+                      <ReportItem key={i} report={r} />
+                    ))}
                   </ul>
                 </Section>
               )}
@@ -314,8 +352,9 @@ export function ActionDecisionModal({ actionId, onClose }: { actionId: string; o
                   className="mt-0.5"
                 />
                 <span>
-                  Also apply confident <em>dispatch</em> recommendations on their own. Off by default: approving is
-                  what lets untrusted visitor text reach an agent, so that one stays your call until you say otherwise.
+                  Also apply confident <em>dispatch</em> recommendations on their own. Off by
+                  default: approving is what lets untrusted visitor text reach an agent, so that one
+                  stays your call until you say otherwise.
                 </span>
               </label>
             </div>

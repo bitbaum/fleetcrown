@@ -76,7 +76,12 @@ export function LiveUrlField({
             aria-label="Live site URL"
             autoFocus
           />
-          <button type="button" className="ui-btn-primary min-h-11" onClick={() => void save()} disabled={saving}>
+          <button
+            type="button"
+            className="ui-btn-primary min-h-11"
+            onClick={() => void save()}
+            disabled={saving}
+          >
             {saving ? "Saving…" : "Save"}
           </button>
           <button
@@ -96,7 +101,12 @@ export function LiveUrlField({
   if (current) {
     return (
       <span className="inline-flex items-center gap-1">
-        <a href={current} target="_blank" rel="noreferrer" className="ui-btn-ghost min-h-11 gap-1.5">
+        <a
+          href={current}
+          target="_blank"
+          rel="noreferrer"
+          className="ui-btn-ghost min-h-11 gap-1.5"
+        >
           <Globe className="h-4 w-4" aria-hidden="true" /> Live
         </a>
         {!readonly && (

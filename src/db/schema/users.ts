@@ -1,10 +1,10 @@
 import { pgTable, uuid, text, timestamp, boolean, jsonb } from "drizzle-orm/pg-core";
 
 export const PLAN_VALUES = ["free", "personal", "pro", "team"] as const;
-export type Plan = typeof PLAN_VALUES[number];
+export type Plan = (typeof PLAN_VALUES)[number];
 
 export const PLAN_STATUS_VALUES = ["active", "past_due", "canceled"] as const;
-export type PlanStatus = typeof PLAN_STATUS_VALUES[number];
+export type PlanStatus = (typeof PLAN_STATUS_VALUES)[number];
 
 /**
  * Per-user knobs that govern Fleet Runner's local lifecycle behavior —

@@ -70,7 +70,9 @@ async function recordTabDispatch(opts: {
         projectKey,
         projectPath,
         payload: {
-          projectId, projectKey, projectPath,
+          projectId,
+          projectKey,
+          projectPath,
           ...(opts.delivered ? { deliveredAt: new Date().toISOString() } : {}),
         },
       });
@@ -128,8 +130,9 @@ export async function POST(req: NextRequest) {
   const projects = await getUserProjects(userId);
   const project = projects.find((p) => p.name.toLowerCase() === tab.toLowerCase());
   const adapter: AdapterId =
-    project?.agentPref && (ORCHESTRATION_ADAPTER_IDS as readonly string[]).includes(project.agentPref)
-      ? project.agentPref as AdapterId
+    project?.agentPref &&
+    (ORCHESTRATION_ADAPTER_IDS as readonly string[]).includes(project.agentPref)
+      ? (project.agentPref as AdapterId)
       : DEFAULT_ADAPTER_ID;
   const assembled = project?.dirPath
     ? await assembleInjectPrompt({
@@ -156,41 +159,58 @@ export async function POST(req: NextRequest) {
     const { stateFile, clearHandshakeFiles } = await import("@/lib/agent-config");
     const fs = await import("fs");
     const nowS = Math.floor(Date.now() / 1000);
-    fs.writeFileSync(stateFile.prompt(tab), JSON.stringify({
-      key: "custom", label: promptLabel, startedAt: nowS, source: "inject", adapter,
-    }));
+    fs.writeFileSync(
+      stateFile.prompt(tab),
+      JSON.stringify({
+        key: "custom",
+        label: promptLabel,
+        startedAt: nowS,
+        source: "inject",
+        adapter,
+      }),
+    );
     clearHandshakeFiles(tab);
     executor.write(wsId, promptToSend.endsWith("\r") ? promptToSend : `${promptToSend}\r`);
     const runId = await recordTabDispatch({
-      userId, tab, project, adapter,
-      customPrompt: prompt, resolvedPrompt: promptToSend, promptLabel,
+      userId,
+      tab,
+      project,
+      adapter,
+      customPrompt: prompt,
+      resolvedPrompt: promptToSend,
+      promptLabel,
       delivered: true,
     });
     return NextResponse.json({ ok: true, mode: "pty", tab, ...(runId ? { runId } : {}) });
   }
 
   if (isRuntimeAvailable()) {
-    const [{ injectIntoTab, isUserTypingInTab }, { stateFile, clearHandshakeFiles }, fs] = await Promise.all([
-      import("@/lib/zellij"),
-      import("@/lib/agent-config"),
-      import("fs"),
-    ]);
+    const [{ injectIntoTab, isUserTypingInTab }, { stateFile, clearHandshakeFiles }, fs] =
+      await Promise.all([import("@/lib/zellij"), import("@/lib/agent-config"), import("fs")]);
     if (isUserTypingInTab(tab)) {
       return NextResponse.json({ ok: true, blocked: true, reason: "user-typing", tab });
     }
     const nowS = Math.floor(Date.now() / 1000);
-    fs.writeFileSync(stateFile.prompt(tab), JSON.stringify({
-      key: "custom",
-      label: promptLabel,
-      startedAt: nowS,
-      source: "inject",
-      adapter,
-    }));
+    fs.writeFileSync(
+      stateFile.prompt(tab),
+      JSON.stringify({
+        key: "custom",
+        label: promptLabel,
+        startedAt: nowS,
+        source: "inject",
+        adapter,
+      }),
+    );
     clearHandshakeFiles(tab);
     injectIntoTab(tab, promptToSend);
     const runId = await recordTabDispatch({
-      userId, tab, project, adapter,
-      customPrompt: prompt, resolvedPrompt: promptToSend, promptLabel,
+      userId,
+      tab,
+      project,
+      adapter,
+      customPrompt: prompt,
+      resolvedPrompt: promptToSend,
+      promptLabel,
       delivered: true,
     });
     return NextResponse.json({ ok: true, mode: "direct", tab, ...(runId ? { runId } : {}) });
@@ -213,8 +233,13 @@ export async function POST(req: NextRequest) {
   // runner's ack (submitted/delivered/undelivered) and the queued-dispatch
   // ordering machinery both key on payload.runId.
   const runId = await recordTabDispatch({
-    userId, tab, project, adapter,
-    customPrompt: prompt, resolvedPrompt: promptToSend, promptLabel,
+    userId,
+    tab,
+    project,
+    adapter,
+    customPrompt: prompt,
+    resolvedPrompt: promptToSend,
+    promptLabel,
   });
   if (project?.dirPath) {
     const commandId = await enqueueDispatchCommand(userId, {
@@ -228,7 +253,13 @@ export async function POST(req: NextRequest) {
       projectKey: tab,
       ...(runId ? { runId } : {}),
     });
-    return NextResponse.json({ ok: true, mode: "dispatch", commandId, tab, ...(runId ? { runId } : {}) });
+    return NextResponse.json({
+      ok: true,
+      mode: "dispatch",
+      commandId,
+      tab,
+      ...(runId ? { runId } : {}),
+    });
   }
 
   const commandId = await enqueueInjectCommand(userId, {
@@ -240,5 +271,11 @@ export async function POST(req: NextRequest) {
     adapter,
     ...(runId ? { runId } : {}),
   });
-  return NextResponse.json({ ok: true, mode: "queued", commandId, tab, ...(runId ? { runId } : {}) });
+  return NextResponse.json({
+    ok: true,
+    mode: "queued",
+    commandId,
+    tab,
+    ...(runId ? { runId } : {}),
+  });
 }

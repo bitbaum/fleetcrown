@@ -52,8 +52,12 @@ export function AgentSwitcherPopover({
       ref={ref}
       className="absolute left-0 top-full z-50 mt-1.5 min-w-[130px] max-w-[calc(100vw-1.5rem)] rounded-xl border border-border-default bg-surface-overlay py-1.5 shadow-card"
     >
-      <p className="px-3 pb-1 pt-0.5 text-micro uppercase tracking-wide text-text-muted">Switch agent</p>
-      <p className="px-3 pb-1.5 text-micro leading-snug text-text-muted">Quits the current CLI and launches the new one — no /quit in terminal.</p>
+      <p className="px-3 pb-1 pt-0.5 text-micro uppercase tracking-wide text-text-muted">
+        Switch agent
+      </p>
+      <p className="px-3 pb-1.5 text-micro leading-snug text-text-muted">
+        Quits the current CLI and launches the new one — no /quit in terminal.
+      </p>
       {agents.map((agent) => {
         const isActive = agent.id === activeAgentId;
         // undefined availability = unknown (no runner report) → treat as usable;

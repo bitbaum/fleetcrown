@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getProjectState, getProjectStatesByUserId, persistProjectRuntimeIfNewer, persistProjectSessionIfNewer } from "@/db/queries/project-states";
+import {
+  getProjectState,
+  getProjectStatesByUserId,
+  persistProjectRuntimeIfNewer,
+  persistProjectSessionIfNewer,
+} from "@/db/queries/project-states";
 import { recordSessionHandoffChangelog } from "@/db/queries/user-projects";
 import { upsertRuntimeSnapshotIfNewer } from "@/db/queries/runtime-snapshots";
 import type { PaneRecord } from "@/db/schema/runtime-snapshots";
@@ -19,13 +24,15 @@ function sanitizePanes(raw: unknown[]): PaneRecord[] {
     const obj = item as Record<string, unknown>;
     const tab = typeof obj.tab === "string" ? obj.tab.trim() : "";
     if (!tab) continue;
-    const paneIndex = typeof obj.paneIndex === "number" && Number.isFinite(obj.paneIndex)
-      ? Math.max(0, Math.floor(obj.paneIndex))
-      : 0;
+    const paneIndex =
+      typeof obj.paneIndex === "number" && Number.isFinite(obj.paneIndex)
+        ? Math.max(0, Math.floor(obj.paneIndex))
+        : 0;
     const rec: PaneRecord = { tab, paneIndex };
     if (typeof obj.agentCli === "string" && obj.agentCli.trim()) rec.agentCli = obj.agentCli.trim();
     if (typeof obj.cwd === "string" && obj.cwd.trim()) rec.cwd = obj.cwd.trim();
-    if (typeof obj.sessionName === "string" && obj.sessionName.trim()) rec.sessionName = obj.sessionName.trim();
+    if (typeof obj.sessionName === "string" && obj.sessionName.trim())
+      rec.sessionName = obj.sessionName.trim();
     out.push(rec);
   }
   return out;
@@ -41,8 +48,8 @@ interface ProjectRuntimePatch {
   currentPromptKey?: string | null;
   currentPromptLabel?: string | null;
   currentPromptStartedAt?: number | null; // epoch seconds
-  readyAt?: number | null;                // epoch seconds
-  lockAt?: number | null;                 // epoch seconds
+  readyAt?: number | null; // epoch seconds
+  lockAt?: number | null; // epoch seconds
   closingAt?: number | null;
   closedAt?: number | null;
   sessionDone?: string;
@@ -60,7 +67,7 @@ interface ProjectRuntimePatch {
    *  desktop/src/main/pusher.ts and src/lib/orchestration/contract.ts. */
   sessionBlockReason?: string;
   sessionNoOpCount?: number;
-  sessionUpdatedAt?: number | null;       // epoch seconds (file mtime)
+  sessionUpdatedAt?: number | null; // epoch seconds (file mtime)
 }
 
 function tsOrNull(epochS: number | null | undefined): Date | null {
@@ -79,21 +86,34 @@ export async function POST(req: NextRequest) {
   const userId = await getApiUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  let body: { projects?: unknown; openTabs?: unknown; installedAgents?: unknown; observedAt?: unknown; panes?: unknown; runnerVersion?: unknown; powerSource?: unknown };
+  let body: {
+    projects?: unknown;
+    openTabs?: unknown;
+    installedAgents?: unknown;
+    observedAt?: unknown;
+    panes?: unknown;
+    runnerVersion?: unknown;
+    powerSource?: unknown;
+  };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const observedAt = typeof body.observedAt === "number" && Number.isFinite(body.observedAt)
-    ? new Date(body.observedAt)
-    : new Date();
+  const observedAt =
+    typeof body.observedAt === "number" && Number.isFinite(body.observedAt)
+      ? new Date(body.observedAt)
+      : new Date();
 
   if (Array.isArray(body.openTabs)) {
-    const openTabs = body.openTabs.filter((tab): tab is string => typeof tab === "string" && tab.trim().length > 0);
+    const openTabs = body.openTabs.filter(
+      (tab): tab is string => typeof tab === "string" && tab.trim().length > 0,
+    );
     const installedAgents = Array.isArray(body.installedAgents)
-      ? body.installedAgents.filter((agent): agent is string => typeof agent === "string" && agent.trim().length > 0)
+      ? body.installedAgents.filter(
+          (agent): agent is string => typeof agent === "string" && agent.trim().length > 0,
+        )
       : undefined;
     const panes = Array.isArray(body.panes) ? sanitizePanes(body.panes) : undefined;
     const runnerVersion = typeof body.runnerVersion === "string" ? body.runnerVersion : undefined;
@@ -101,11 +121,18 @@ export async function POST(req: NextRequest) {
     // Narrowed against the union, not trusted as a string: an unrecognised
     // value must land as UNKNOWN (absent), never be persisted and later read
     // back as if the runner had told us something.
-    const powerSource = body.powerSource === "ac" || body.powerSource === "battery"
-      ? body.powerSource
-      : undefined;
-    await upsertRuntimeSnapshotIfNewer({ userId, channel, openTabs, observedAt, installedAgents, panes, runnerVersion, powerSource })
-      .catch((err) => console.error("[runtime-state] runtime snapshot write failed:", err));
+    const powerSource =
+      body.powerSource === "ac" || body.powerSource === "battery" ? body.powerSource : undefined;
+    await upsertRuntimeSnapshotIfNewer({
+      userId,
+      channel,
+      openTabs,
+      observedAt,
+      installedAgents,
+      panes,
+      runnerVersion,
+      powerSource,
+    }).catch((err) => console.error("[runtime-state] runtime snapshot write failed:", err));
   }
 
   if (body.projects === undefined) {
@@ -119,109 +146,118 @@ export async function POST(req: NextRequest) {
 
   const projects = body.projects as ProjectRuntimePatch[];
 
-  await Promise.all(projects.map(async (p) => {
-    // Parallel-run alias tab (phase 2 worktree-per-agent, "<project>~<runId8>"):
-    // deliberately NOT persisted as a project_states row — it would render as a
-    // ghost project card and its runtime facts (agentRunning/closedAt) would
-    // clobber the base project's. The alias exists only to close its own run:
-    // a READY handoff closes exactly the run whose payload.sessionTab matches,
-    // using the pushed session fields directly.
-    if (isDerivedRunTab(p.tab)) {
-      if (p.sessionUpdatedAt != null && p.sessionStatus?.toLowerCase() === SESSION_STATUS.READY) {
-        void closeOpenRunBySessionTab(userId, p.tab, {
-          status: p.sessionStatus,
-          done: p.sessionDone ?? "",
-          next: p.sessionNext ?? "",
-          tests: p.sessionTests ?? "",
-          todos: p.sessionTodos ?? "",
-          health: p.sessionHealth ?? "",
-          ...(p.sessionTsc !== undefined && { tsc: p.sessionTsc }),
-          ...(p.sessionLint !== undefined && { lint: p.sessionLint }),
-          ...(p.sessionCommit !== undefined && { commit: p.sessionCommit }),
-          ...(p.sessionBlockReason !== undefined && { blockReason: p.sessionBlockReason }),
-          ...(p.sessionNoOpCount !== undefined && { noOpCount: p.sessionNoOpCount }),
-          mtime: p.sessionUpdatedAt * 1000,
-        }).catch((err) => console.error("[runtime-state] parallel run close failed:", err));
+  await Promise.all(
+    projects.map(async (p) => {
+      // Parallel-run alias tab (phase 2 worktree-per-agent, "<project>~<runId8>"):
+      // deliberately NOT persisted as a project_states row — it would render as a
+      // ghost project card and its runtime facts (agentRunning/closedAt) would
+      // clobber the base project's. The alias exists only to close its own run:
+      // a READY handoff closes exactly the run whose payload.sessionTab matches,
+      // using the pushed session fields directly.
+      if (isDerivedRunTab(p.tab)) {
+        if (p.sessionUpdatedAt != null && p.sessionStatus?.toLowerCase() === SESSION_STATUS.READY) {
+          void closeOpenRunBySessionTab(userId, p.tab, {
+            status: p.sessionStatus,
+            done: p.sessionDone ?? "",
+            next: p.sessionNext ?? "",
+            tests: p.sessionTests ?? "",
+            todos: p.sessionTodos ?? "",
+            health: p.sessionHealth ?? "",
+            ...(p.sessionTsc !== undefined && { tsc: p.sessionTsc }),
+            ...(p.sessionLint !== undefined && { lint: p.sessionLint }),
+            ...(p.sessionCommit !== undefined && { commit: p.sessionCommit }),
+            ...(p.sessionBlockReason !== undefined && { blockReason: p.sessionBlockReason }),
+            ...(p.sessionNoOpCount !== undefined && { noOpCount: p.sessionNoOpCount }),
+            mtime: p.sessionUpdatedAt * 1000,
+          }).catch((err) => console.error("[runtime-state] parallel run close failed:", err));
+        }
+        return;
       }
-      return;
-    }
-    const projectObservedAt = typeof p.observedAt === "number" && Number.isFinite(p.observedAt)
-      ? new Date(p.observedAt)
-      : observedAt;
-    await persistProjectRuntimeIfNewer({
-        projectKey:             p.tab,
-        userId,
-        workspaceId:            typeof p.workspaceId === "string" && p.workspaceId.trim() ? p.workspaceId.trim() : undefined,
-        tabName:                p.tab,
-        runtimeObservedAt:      projectObservedAt,
-        agentRunning:           p.agentRunning,
-        tabOpen:                p.tabOpen,
-        activeAgents:           p.activeAgents,
-        currentPromptKey:       p.currentPromptKey   ?? null,
-        currentPromptLabel:     p.currentPromptLabel  ?? null,
-        currentPromptStartedAt: tsOrNull(p.currentPromptStartedAt),
-        readyAt:                tsOrNull(p.readyAt),
-        lockAt:                 tsOrNull(p.lockAt),
-        closingAt:              tsOrNull(p.closingAt),
-        closedAt:               tsOrNull(p.closedAt),
-      }).catch((err) => console.error("[runtime-state] runtime write failed:", err));
-
-    // Session files are timestamped at their source. Do not allow a delayed
-    // heartbeat to replace newer session content already received.
-    if (p.sessionUpdatedAt != null) {
-      // Previous handoff BEFORE the write — the changelog append below only
-      // fires when the done text actually changed (heartbeats re-push the
-      // same session every few minutes).
-      const prev = await getProjectState(userId, p.tab).catch(() => null);
-      const updated = await persistProjectSessionIfNewer({
+      const projectObservedAt =
+        typeof p.observedAt === "number" && Number.isFinite(p.observedAt)
+          ? new Date(p.observedAt)
+          : observedAt;
+      await persistProjectRuntimeIfNewer({
         projectKey: p.tab,
         userId,
-        workspaceId: typeof p.workspaceId === "string" && p.workspaceId.trim() ? p.workspaceId.trim() : undefined,
+        workspaceId:
+          typeof p.workspaceId === "string" && p.workspaceId.trim()
+            ? p.workspaceId.trim()
+            : undefined,
         tabName: p.tab,
-        sessionUpdatedAt: new Date(p.sessionUpdatedAt * 1000),
-        ...(p.sessionStatus !== undefined && { sessionStatus: p.sessionStatus }),
-        ...(p.sessionDone !== undefined && { sessionDone: p.sessionDone }),
-        ...(p.sessionNext !== undefined && { sessionNext: p.sessionNext }),
-        ...(p.sessionTests !== undefined && { sessionTests: p.sessionTests }),
-        ...(p.sessionTodos !== undefined && { sessionTodos: p.sessionTodos }),
-        ...(p.sessionHealth !== undefined && { sessionHealth: p.sessionHealth }),
-        ...(p.sessionTsc !== undefined && { sessionTsc: p.sessionTsc }),
-        ...(p.sessionLint !== undefined && { sessionLint: p.sessionLint }),
-        ...(p.sessionCommit !== undefined && { sessionCommit: p.sessionCommit }),
-        ...(p.sessionBlockReason !== undefined && { sessionBlockReason: p.sessionBlockReason }),
-        ...(p.sessionNoOpCount !== undefined && { sessionNoOpCount: p.sessionNoOpCount }),
-      }).catch((err) => {
-        console.error("[runtime-state] session write failed:", err);
-        return null;
-      });
-      // Changelog + OrangeCat promote for a NEW handoff — this route is the
-      // ONLY ingestion point for cloud-executed sessions; without this the
-      // devLog (and the OC wall) only ever heard about laptop sessions.
-      if (updated && prev) {
-        await recordSessionHandoffChangelog(userId, {
-          projectId: prev.projectId,
-          tab: p.tab,
-          dateMs: p.sessionUpdatedAt * 1000,
-          previousDone: prev.sessionDone,
-          done: p.sessionDone,
-          next: p.sessionNext,
-          tests: p.sessionTests,
-          todos: p.sessionTodos,
-          health: p.sessionHealth,
-        }).catch((err) => console.error("[runtime-state] changelog append failed:", err));
+        runtimeObservedAt: projectObservedAt,
+        agentRunning: p.agentRunning,
+        tabOpen: p.tabOpen,
+        activeAgents: p.activeAgents,
+        currentPromptKey: p.currentPromptKey ?? null,
+        currentPromptLabel: p.currentPromptLabel ?? null,
+        currentPromptStartedAt: tsOrNull(p.currentPromptStartedAt),
+        readyAt: tsOrNull(p.readyAt),
+        lockAt: tsOrNull(p.lockAt),
+        closingAt: tsOrNull(p.closingAt),
+        closedAt: tsOrNull(p.closedAt),
+      }).catch((err) => console.error("[runtime-state] runtime write failed:", err));
+
+      // Session files are timestamped at their source. Do not allow a delayed
+      // heartbeat to replace newer session content already received.
+      if (p.sessionUpdatedAt != null) {
+        // Previous handoff BEFORE the write — the changelog append below only
+        // fires when the done text actually changed (heartbeats re-push the
+        // same session every few minutes).
+        const prev = await getProjectState(userId, p.tab).catch(() => null);
+        const updated = await persistProjectSessionIfNewer({
+          projectKey: p.tab,
+          userId,
+          workspaceId:
+            typeof p.workspaceId === "string" && p.workspaceId.trim()
+              ? p.workspaceId.trim()
+              : undefined,
+          tabName: p.tab,
+          sessionUpdatedAt: new Date(p.sessionUpdatedAt * 1000),
+          ...(p.sessionStatus !== undefined && { sessionStatus: p.sessionStatus }),
+          ...(p.sessionDone !== undefined && { sessionDone: p.sessionDone }),
+          ...(p.sessionNext !== undefined && { sessionNext: p.sessionNext }),
+          ...(p.sessionTests !== undefined && { sessionTests: p.sessionTests }),
+          ...(p.sessionTodos !== undefined && { sessionTodos: p.sessionTodos }),
+          ...(p.sessionHealth !== undefined && { sessionHealth: p.sessionHealth }),
+          ...(p.sessionTsc !== undefined && { sessionTsc: p.sessionTsc }),
+          ...(p.sessionLint !== undefined && { sessionLint: p.sessionLint }),
+          ...(p.sessionCommit !== undefined && { sessionCommit: p.sessionCommit }),
+          ...(p.sessionBlockReason !== undefined && { sessionBlockReason: p.sessionBlockReason }),
+          ...(p.sessionNoOpCount !== undefined && { sessionNoOpCount: p.sessionNoOpCount }),
+        }).catch((err) => {
+          console.error("[runtime-state] session write failed:", err);
+          return null;
+        });
+        // Changelog + OrangeCat promote for a NEW handoff — this route is the
+        // ONLY ingestion point for cloud-executed sessions; without this the
+        // devLog (and the OC wall) only ever heard about laptop sessions.
+        if (updated && prev) {
+          await recordSessionHandoffChangelog(userId, {
+            projectId: prev.projectId,
+            tab: p.tab,
+            dateMs: p.sessionUpdatedAt * 1000,
+            previousDone: prev.sessionDone,
+            done: p.sessionDone,
+            next: p.sessionNext,
+            tests: p.sessionTests,
+            todos: p.sessionTodos,
+            health: p.sessionHealth,
+          }).catch((err) => console.error("[runtime-state] changelog append failed:", err));
+        }
+        // A freshly-ingested READY handoff is the run's completion signal — close
+        // the open run NOW instead of waiting for a human /control load or the
+        // hourly cron sweep. Fire-and-forget: ingestion latency stays flat, and
+        // closeRunFromSession's own guards (finishedAt, handoff-postdates-start)
+        // make a duplicate attempt a no-op.
+        if (updated && p.sessionStatus?.toLowerCase() === SESSION_STATUS.READY) {
+          void closeOpenRunsForProject(userId, p.tab).catch((err) =>
+            console.error("[runtime-state] run close from handoff failed:", err),
+          );
+        }
       }
-      // A freshly-ingested READY handoff is the run's completion signal — close
-      // the open run NOW instead of waiting for a human /control load or the
-      // hourly cron sweep. Fire-and-forget: ingestion latency stays flat, and
-      // closeRunFromSession's own guards (finishedAt, handoff-postdates-start)
-      // make a duplicate attempt a no-op.
-      if (updated && p.sessionStatus?.toLowerCase() === SESSION_STATUS.READY) {
-        void closeOpenRunsForProject(userId, p.tab).catch((err) =>
-          console.error("[runtime-state] run close from handoff failed:", err),
-        );
-      }
-    }
-  }));
+    }),
+  );
 
   emitStateChanged(userId);
 

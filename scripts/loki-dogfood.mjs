@@ -23,7 +23,9 @@ fs.mkdirSync(outDir, { recursive: true });
 const base = (process.env.BASE ?? "https://fleetcrown.orangecat.ch").replace(/\/$/, "");
 const projectNeedle = (process.env.PROJECT ?? "fleetcrown").toLowerCase();
 const headless = process.env.HEADLESS === "1";
-const sessionToken = (process.env.FLEETCROWN_SESSION_TOKEN ?? process.env.COCKPIT_SESSION_TOKEN)?.trim();
+const sessionToken = (
+  process.env.FLEETCROWN_SESSION_TOKEN ?? process.env.COCKPIT_SESSION_TOKEN
+)?.trim();
 const sessionCookieName = base.startsWith("https://")
   ? "__Secure-authjs.session-token"
   : "authjs.session-token";
@@ -31,8 +33,7 @@ const sessionCookieName = base.startsWith("https://")
 const BRAVE_PROFILE =
   process.env.BRAVE_PROFILE ??
   path.join(process.env.HOME ?? "", ".config/BraveSoftware/Brave-Browser/Default");
-const BRAVE_BIN =
-  process.env.BRAVE_BIN ?? "/opt/brave.com/brave/brave";
+const BRAVE_BIN = process.env.BRAVE_BIN ?? "/opt/brave.com/brave/brave";
 
 function readLocalEnv() {
   const envPath = path.join(root, ".env.local");
@@ -77,7 +78,9 @@ async function collectAudit(page) {
   return page.evaluate(() => {
     const dispatchCard = document.querySelector(".ui-loki-dispatch-card");
     const statusText =
-      dispatchCard?.querySelector(".ui-loki-dispatch-status span:nth-of-type(2)")?.textContent?.trim() ?? "";
+      dispatchCard
+        ?.querySelector(".ui-loki-dispatch-status span:nth-of-type(2)")
+        ?.textContent?.trim() ?? "";
     const links = dispatchCard
       ? [...dispatchCard.querySelectorAll("a")].map((a) => ({
           text: a.textContent?.trim() ?? "",
@@ -85,7 +88,11 @@ async function collectAudit(page) {
         }))
       : [];
     const kind = document.querySelector(".ui-loki-kind")?.textContent?.trim() ?? null;
-    const assistant = document.querySelector(".ui-loki-bubble-assistant:last-of-type")?.textContent?.trim().slice(0, 240) ?? "";
+    const assistant =
+      document
+        .querySelector(".ui-loki-bubble-assistant:last-of-type")
+        ?.textContent?.trim()
+        .slice(0, 240) ?? "";
     return {
       url: location.href,
       title: document.title,
@@ -93,7 +100,9 @@ async function collectAudit(page) {
       assistantPreview: assistant,
       dispatchLinks: links,
       dispatchStatus: statusText,
-      scopePills: [...document.querySelectorAll(".ui-loki-scope-pill")].map((el) => el.textContent?.trim() ?? ""),
+      scopePills: [...document.querySelectorAll(".ui-loki-scope-pill")].map(
+        (el) => el.textContent?.trim() ?? "",
+      ),
     };
   });
 }
@@ -137,7 +146,10 @@ try {
   }
 
   const page = context.pages()[0] ?? (await context.newPage());
-  await page.goto(`${base}/loki?project=${encodeURIComponent(projectNeedle)}`, { waitUntil: "domcontentloaded", timeout: 60_000 });
+  await page.goto(`${base}/loki?project=${encodeURIComponent(projectNeedle)}`, {
+    waitUntil: "domcontentloaded",
+    timeout: 60_000,
+  });
   await waitForAuthenticated(page);
   report.steps.push({ step: "authenticated", url: page.url() });
 
@@ -155,19 +167,28 @@ try {
   await page.waitForTimeout(1500);
 
   await page.waitForFunction(
-    (name) => document.querySelector(".ui-loki-scope-pill")?.textContent?.trim().toLowerCase().includes(name),
+    (name) =>
+      document
+        .querySelector(".ui-loki-scope-pill")
+        ?.textContent?.trim()
+        .toLowerCase()
+        .includes(name),
     projectNeedle,
     { timeout: 30_000 },
   );
 
   const dispatchResponse = page.waitForResponse(
-    (res) => res.request().method() === "POST" && /\/api\/conversations\/[^/]+\/messages$/.test(new URL(res.url()).pathname),
+    (res) =>
+      res.request().method() === "POST" &&
+      /\/api\/conversations\/[^/]+\/messages$/.test(new URL(res.url()).pathname),
     { timeout: 120_000 },
   );
   await page.getByRole("button", { name: "Move forward", exact: true }).click();
   const messageResponse = await dispatchResponse;
   if (!messageResponse.ok()) {
-    throw new Error(`Loki dispatch failed: ${messageResponse.status()} ${messageResponse.statusText()}`);
+    throw new Error(
+      `Loki dispatch failed: ${messageResponse.status()} ${messageResponse.statusText()}`,
+    );
   }
 
   await page.waitForSelector(".ui-loki-dispatch-card, .ui-loki-kind", { timeout: 120_000 });
@@ -189,7 +210,9 @@ try {
   const terminalAudit = await page.evaluate(() => ({
     url: location.href,
     title: document.title,
-    cloudActive: Boolean(document.querySelector(".ui-chip-toggle-active")?.textContent?.includes("Cloud")),
+    cloudActive: Boolean(
+      document.querySelector(".ui-chip-toggle-active")?.textContent?.includes("Cloud"),
+    ),
     subtitle: document.querySelector(".ui-page-subtitle")?.textContent?.trim() ?? "",
   }));
   report.steps.push({ step: "terminal-cloud", audit: terminalAudit });
@@ -201,7 +224,8 @@ try {
   const machineAudit = await page.evaluate(() => {
     const toggles = [...document.querySelectorAll(".ui-chip-toggle, .ui-chip-toggle-active")];
     const machineActive = toggles.some(
-      (el) => el.textContent?.includes("This computer") && el.classList.contains("ui-chip-toggle-active"),
+      (el) =>
+        el.textContent?.includes("This computer") && el.classList.contains("ui-chip-toggle-active"),
     );
     const visiblePane = [...document.querySelectorAll(".absolute.inset-0")].find(
       (el) => !el.classList.contains("hidden"),

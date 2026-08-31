@@ -29,7 +29,10 @@ export async function GET(req: NextRequest) {
   // 14 days of runs were recorded as failures).
   const swept = await closeOpenRunsFromPushedState().catch((e) => {
     console.error("[reap-stale-runs] close sweep failed:", e);
-    return { checked: 0, closed: [] as Array<{ runId: string; projectKey: string; outcome: string }> };
+    return {
+      checked: 0,
+      closed: [] as Array<{ runId: string; projectKey: string; outcome: string }>,
+    };
   });
   if (swept.closed.length > 0) {
     await logDebug({
@@ -45,7 +48,10 @@ export async function GET(req: NextRequest) {
     // Run ledger: the janitor declares the close with the run's ACTUAL verdict
     // — `partial` when the agent had already written a handoff (worked, close
     // just didn't fire), `timeout` only when there was no evidence of work.
-    void emitRunEvent(run.id, run.userId, "closed", { outcome: run.outcome ?? "timeout", by: "reaper" });
+    void emitRunEvent(run.id, run.userId, "closed", {
+      outcome: run.outcome ?? "timeout",
+      by: "reaper",
+    });
   }
   const partial = reaped.filter((r) => r.outcome === "partial").length;
   if (reaped.length > 0) {
@@ -56,5 +62,10 @@ export async function GET(req: NextRequest) {
       meta: { runs: reaped },
     });
   }
-  return NextResponse.json({ ok: true, closed: swept.closed.length, reaped: reaped.length, partial });
+  return NextResponse.json({
+    ok: true,
+    closed: swept.closed.length,
+    reaped: reaped.length,
+    partial,
+  });
 }

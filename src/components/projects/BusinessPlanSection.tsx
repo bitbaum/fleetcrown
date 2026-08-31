@@ -8,7 +8,16 @@
 // against what happened since. Collapsed by default — progressive disclosure.
 
 import { useState } from "react";
-import { Briefcase, ChevronDown, ChevronRight, Loader2, ListPlus, Check, RefreshCw, Sparkles } from "lucide-react";
+import {
+  Briefcase,
+  ChevronDown,
+  ChevronRight,
+  Loader2,
+  ListPlus,
+  Check,
+  RefreshCw,
+  Sparkles,
+} from "lucide-react";
 import { MarkdownText } from "@/components/ui/markdown-text";
 import { AttrRow } from "./project-overview-helpers";
 import { postJson } from "@/lib/api/fetch";
@@ -33,7 +42,9 @@ function parseActions(raw: string | undefined): BusinessAction[] {
   try {
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed)
-      ? parsed.filter((a): a is BusinessAction => typeof a?.title === "string" && typeof a?.prompt === "string")
+      ? parsed.filter(
+          (a): a is BusinessAction => typeof a?.title === "string" && typeof a?.prompt === "string",
+        )
       : [];
   } catch {
     return [];
@@ -75,7 +86,7 @@ export function BusinessPlanSection({
     setError(null);
     try {
       const res = await postJson(`/api/projects/${projectId}/business-plan`, {});
-      const json = await res.json() as { ok?: boolean; error?: string };
+      const json = (await res.json()) as { ok?: boolean; error?: string };
       if (!res.ok || !json.ok) {
         setError(json.error ?? `HTTP ${res.status}`);
         return;
@@ -94,14 +105,21 @@ export function BusinessPlanSection({
     try {
       const key = encodeURIComponent(projectName);
       const current = await fetch(`/api/beacon/queue/${key}`);
-      const { queue = [], revision } = await current.json() as { queue?: string[]; revision?: number };
+      const { queue = [], revision } = (await current.json()) as {
+        queue?: string[];
+        revision?: number;
+      };
       const res = await fetch(`/api/beacon/queue/${key}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ queue: [...queue, action.prompt], expectedRevision: revision }),
       });
       if (!res.ok) {
-        setQueueError(res.status === 409 ? "Queue changed elsewhere — try again" : `Queue failed (HTTP ${res.status})`);
+        setQueueError(
+          res.status === 409
+            ? "Queue changed elsewhere — try again"
+            : `Queue failed (HTTP ${res.status})`,
+        );
         return;
       }
       setQueuedTitles((prev) => new Set(prev).add(action.title));
@@ -112,8 +130,15 @@ export function BusinessPlanSection({
 
   return (
     <div className="ui-card-shell p-3">
-      <button onClick={() => setOpen((v) => !v)} className="flex min-h-11 w-full items-center gap-1.5 text-left">
-        {open ? <ChevronDown className="h-3.5 w-3.5 text-text-muted" /> : <ChevronRight className="h-3.5 w-3.5 text-text-muted" />}
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex min-h-11 w-full items-center gap-1.5 text-left"
+      >
+        {open ? (
+          <ChevronDown className="h-3.5 w-3.5 text-text-muted" />
+        ) : (
+          <ChevronRight className="h-3.5 w-3.5 text-text-muted" />
+        )}
         <Briefcase className="h-3.5 w-3.5 text-accent-text" />
         <span className="text-sm font-medium text-text-primary">Business plan</span>
         {plan && updatedAt && (
@@ -127,11 +152,23 @@ export function BusinessPlanSection({
       {open && (
         <div className="mt-3 space-y-4">
           {editable && (
-            <button onClick={generate} disabled={generating} className="ui-btn-chip ui-tap gap-1.5 px-3 text-xs">
+            <button
+              onClick={generate}
+              disabled={generating}
+              className="ui-btn-chip ui-tap gap-1.5 px-3 text-xs"
+            >
+              {generating ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : plan ? (
+                <RefreshCw className="h-3.5 w-3.5 text-accent-text" />
+              ) : (
+                <Sparkles className="h-3.5 w-3.5 text-accent-text" />
+              )}
               {generating
-                ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                : plan ? <RefreshCw className="h-3.5 w-3.5 text-accent-text" /> : <Sparkles className="h-3.5 w-3.5 text-accent-text" />}
-              {generating ? "Thinking…" : plan ? "Iterate plan — fold in what happened" : "Generate business plan"}
+                ? "Thinking…"
+                : plan
+                  ? "Iterate plan — fold in what happened"
+                  : "Generate business plan"}
             </button>
           )}
           {error && <p className="ui-error-xs">{error}</p>}
@@ -142,10 +179,18 @@ export function BusinessPlanSection({
             <div className="space-y-1.5">
               <p className="ui-kicker">Next business actions — queue them for the agent</p>
               {actions.map((action) => (
-                <div key={action.title} className="flex items-start gap-2 rounded-lg border border-border-subtle bg-surface-raised/50 px-2.5 py-2">
+                <div
+                  key={action.title}
+                  className="flex items-start gap-2 rounded-lg border border-border-subtle bg-surface-raised/50 px-2.5 py-2"
+                >
                   <div className="min-w-0 flex-1">
                     <p className="text-xs font-medium text-text-primary">{action.title}</p>
-                    <p className="mt-0.5 line-clamp-2 text-xs text-text-tertiary" title={action.prompt}>{action.prompt}</p>
+                    <p
+                      className="mt-0.5 line-clamp-2 text-xs text-text-tertiary"
+                      title={action.prompt}
+                    >
+                      {action.prompt}
+                    </p>
                   </div>
                   {editable && (
                     <button
@@ -154,9 +199,15 @@ export function BusinessPlanSection({
                       className="ui-btn-chip ui-tap shrink-0 gap-1 px-2 text-xs"
                       title="Add to this project's prompt queue — the autopilot executes it"
                     >
-                      {queuedTitles.has(action.title)
-                        ? <><Check className="h-3 w-3 text-status-positive" /> Queued</>
-                        : <><ListPlus className="h-3 w-3" /> Queue</>}
+                      {queuedTitles.has(action.title) ? (
+                        <>
+                          <Check className="h-3 w-3 text-status-positive" /> Queued
+                        </>
+                      ) : (
+                        <>
+                          <ListPlus className="h-3 w-3" /> Queue
+                        </>
+                      )}
                     </button>
                   )}
                 </div>

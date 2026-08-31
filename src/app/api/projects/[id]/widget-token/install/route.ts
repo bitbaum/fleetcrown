@@ -7,10 +7,7 @@ import { injectPrompt } from "@/lib/inject-core";
 import { injectWatchUrls } from "@/lib/fleet-context";
 import { EXECUTOR_COPY } from "@/config/executor-copy";
 import { appUrl } from "@/lib/email";
-import {
-  resolveProjectPublicOrigin,
-  resolveProjectRepoTarget,
-} from "@/lib/feedback/project-site";
+import { resolveProjectPublicOrigin, resolveProjectRepoTarget } from "@/lib/feedback/project-site";
 
 /**
  * One-click widget install/uninstall. Auto-enables the token when missing.
@@ -46,13 +43,15 @@ function composeInstallPrompt(
     "",
     "1. If this exact snippet (or an embed referencing the same widget.js + data-fc-project token) is already present anywhere in the codebase, do NOT add a second one — verify it renders and report that in your handoff.",
     "2. Otherwise add it once, in the site's root layout/template so it loads on every public page:",
-    "   - Next.js App Router: next/script with strategy=\"afterInteractive\" and the SAME data-fc-project token. Bake the token as a string literal (or ensure FLEETCROWN_FEEDBACK_TOKEN is present at `next build`). Runtime-only .env after deploy is NOT enough — Next tree-shakes an empty token and the Script never ships.",
+    '   - Next.js App Router: next/script with strategy="afterInteractive" and the SAME data-fc-project token. Bake the token as a string literal (or ensure FLEETCROWN_FEEDBACK_TOKEN is present at `next build`). Runtime-only .env after deploy is NOT enough — Next tree-shakes an empty token and the Script never ships.',
     "   - Plain HTML / other frameworks: the raw tag right before </body> in the base template.",
-    "3. If the site already has its own floating action button in the bottom-right corner, add data-fc-bottom=\"88\" to the snippet so the widget FAB stacks above it instead of overlapping.",
+    '3. If the site already has its own floating action button in the bottom-right corner, add data-fc-bottom="88" to the snippet so the widget FAB stacks above it instead of overlapping.',
     "4. Verify: run the site locally and confirm the page loads without console errors from the embed. (The FAB itself may stay hidden — rendering is server-gated per token — absence of the button is NOT a failure; absence of errors is the check.) If the host has a Content-Security-Policy, add https://fleetcrown.orangecat.ch to script-src AND connect-src — otherwise the browser blocks widget.js even when the tag is in the HTML.",
     "5. Ship it the way this repo ships changes (branch + PR if that's the convention). Deploy is on Hetzner — push/merge so the box picks it up. Smallest possible diff — the embed and nothing else.",
     "6. HANDOFF: state the exact file(s) touched and the verification evidence. If you could not push or the live URL is down, say so plainly — do not claim the widget is live.",
-  ].filter(Boolean).join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 function composeUninstallPrompt(projectName: string, token: string | null): string {
@@ -91,7 +90,8 @@ async function probeSite(origin: string | null): Promise<SiteProbe | null> {
       return {
         ok: false,
         status: 402,
-        message: "Live site returned HTTP 402 (deployment disabled or unpaid host). The widget cannot appear until the site is reachable again.",
+        message:
+          "Live site returned HTTP 402 (deployment disabled or unpaid host). The widget cannot appear until the site is reachable again.",
       };
     }
     if (res.status >= 500) {
@@ -138,7 +138,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (dataOrResp.mode === "install" && !gitUrl && !dirPath) {
     return NextResponse.json(
       {
-        error: "No git URL and no local project directory — Enable & install cannot land the snippet. Add the GitHub URL on the project, or paste the widget snippet manually from the project Widget card.",
+        error:
+          "No git URL and no local project directory — Enable & install cannot land the snippet. Add the GitHub URL on the project, or paste the widget snippet manually from the project Widget card.",
         ...watch,
         code: "no_repo",
       },
@@ -154,12 +155,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   // a fresh active token (or a rewritten allowlist) behind as a side effect.
   const siteProbe = dataOrResp.mode === "install" ? await probeSite(liveOrigin) : null;
 
-  if (
-    dataOrResp.mode === "install"
-    && siteProbe
-    && !siteProbe.ok
-    && !dataOrResp.force
-  ) {
+  if (dataOrResp.mode === "install" && siteProbe && !siteProbe.ok && !dataOrResp.force) {
     return NextResponse.json(
       {
         error: siteProbe.message,
@@ -178,11 +174,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       origins: liveOrigin ? [liveOrigin] : undefined,
     });
   } else if (
-    dataOrResp.mode === "install"
-    && token
-    && liveOrigin
-    && token.origins?.length
-    && !token.origins.includes(liveOrigin)
+    dataOrResp.mode === "install" &&
+    token &&
+    liveOrigin &&
+    token.origins?.length &&
+    !token.origins.includes(liveOrigin)
   ) {
     // MERGE the live origin into the allowlist — never replace it. The old
     // "all origins look like vercel.app → overwrite" heuristic silently broke

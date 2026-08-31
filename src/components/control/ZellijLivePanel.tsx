@@ -57,7 +57,9 @@ export function ZellijLivePanel({
   const focusTab = async (tabName: string) => {
     try {
       await postJson("/api/control/focus-tab", { tab: tabName });
-    } catch { /* best effort */ }
+    } catch {
+      /* best effort */
+    }
   };
 
   // Confirmation runs through <Modal>, never window.confirm — a native dialog
@@ -70,14 +72,18 @@ export function ZellijLivePanel({
     try {
       const res = await postJson("/api/control/close-tab", { tab: tabName });
       if (res.ok) setTimeout(onRefresh, REFRESH_AFTER_TAB_ACTION_MS);
-    } catch { /* best effort */ }
+    } catch {
+      /* best effort */
+    }
   };
 
   const repairHelper = async () => {
     try {
       const res = await postJson("/api/agent/repair-helper", {});
       if (res.ok) setTimeout(onRefresh, FEEDBACK_SHORT_MS);
-    } catch { /* best effort */ }
+    } catch {
+      /* best effort */
+    }
   };
 
   const sendPrompt = async () => {
@@ -85,7 +91,10 @@ export function ZellijLivePanel({
     setSendingPrompt(true);
     setSendError(null);
     try {
-      const res = await postJson("/api/control/tab-inject", { tab: effectiveTarget, prompt: prompt.trim() });
+      const res = await postJson("/api/control/tab-inject", {
+        tab: effectiveTarget,
+        prompt: prompt.trim(),
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setPrompt("");
       setTimeout(onRefresh, REFRESH_AFTER_TAB_ACTION_MS);
@@ -97,7 +106,10 @@ export function ZellijLivePanel({
   };
 
   return (
-    <section ref={panelRef} className={cn("ui-control-live-panel", embedded && "ui-control-live-panel-embedded")}>
+    <section
+      ref={panelRef}
+      className={cn("ui-control-live-panel", embedded && "ui-control-live-panel-embedded")}
+    >
       <div className="ui-control-live-panel-header py-1">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
@@ -163,8 +175,8 @@ export function ZellijLivePanel({
           </div>
           <p className="font-medium text-text-secondary">No live workspace data — yet</p>
           <p className="mt-1 max-w-xl text-sm leading-relaxed text-text-tertiary">
-            The cloud can&apos;t see your local Zellij tabs until something on your
-            machine pushes state to it.
+            The cloud can&apos;t see your local Zellij tabs until something on your machine pushes
+            state to it.
           </p>
           {/* Fleet Runner is the only local runtime — the bash runner was
               deleted 2026-06-11 (killing-the-bash-daemon, Session 4b). Inside
@@ -172,8 +184,8 @@ export function ZellijLivePanel({
               to pair (banner above), so don't show a circular download link. */}
           {insideRunner ? (
             <p className="mt-3 text-xs text-text-tertiary">
-              You&apos;re running Fleet Runner — pair it from the banner above (or
-              Settings → Agent tokens) and your workspaces appear here within 30s.
+              You&apos;re running Fleet Runner — pair it from the banner above (or Settings → Agent
+              tokens) and your workspaces appear here within 30s.
             </p>
           ) : (
             <>
@@ -188,7 +200,8 @@ export function ZellijLivePanel({
                 </a>
               </div>
               <p className="mt-3 text-xs text-text-tertiary">
-                Fleet Runner auto-mints a token from your signed-in session — install, launch, your workspaces appear here within 30s.
+                Fleet Runner auto-mints a token from your signed-in session — install, launch, your
+                workspaces appear here within 30s.
               </p>
             </>
           )}
@@ -213,7 +226,9 @@ export function ZellijLivePanel({
               aria-label="Target Zellij tab"
             >
               {tabOptions.map((tab) => (
-                <option key={tab} value={tab}>{tab}</option>
+                <option key={tab} value={tab}>
+                  {tab}
+                </option>
               ))}
             </select>
             <input
@@ -257,14 +272,23 @@ export function ZellijLivePanel({
         <Modal onClose={() => setConfirmCloseTab(null)} size="sm">
           <h3 className="text-sm font-semibold text-text-primary">Close workspace tab?</h3>
           <p className="text-sm text-text-secondary">
-            This closes the Zellij tab <span className="font-medium text-text-primary">{confirmCloseTab}</span> on
-            your computer. Any agent running in it is stopped.
+            This closes the Zellij tab{" "}
+            <span className="font-medium text-text-primary">{confirmCloseTab}</span> on your
+            computer. Any agent running in it is stopped.
           </p>
           <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => setConfirmCloseTab(null)} className="ui-btn-secondary">
+            <button
+              type="button"
+              onClick={() => setConfirmCloseTab(null)}
+              className="ui-btn-secondary"
+            >
               Cancel
             </button>
-            <button type="button" onClick={() => reallyCloseTab(confirmCloseTab)} className="ui-btn-danger">
+            <button
+              type="button"
+              onClick={() => reallyCloseTab(confirmCloseTab)}
+              className="ui-btn-danger"
+            >
               Close tab
             </button>
           </div>

@@ -10,9 +10,17 @@
  */
 import { searchPeople } from "@/db/queries/people";
 import { SORT_MODE } from "@/lib/constants/statuses";
-import { proposeAction, countPendingCheckins, getEntityIdsWithRecentCheckin } from "@/db/queries/actions";
+import {
+  proposeAction,
+  countPendingCheckins,
+  getEntityIdsWithRecentCheckin,
+} from "@/db/queries/actions";
 import { recordActionAuditEvent } from "@/db/queries/control-audit-events";
-import { buildCheckinProposal, selectCheckinCandidates, type CheckinCandidate } from "@/lib/actions/checkin-proposal";
+import {
+  buildCheckinProposal,
+  selectCheckinCandidates,
+  type CheckinCandidate,
+} from "@/lib/actions/checkin-proposal";
 import type { QueuedActionSummary } from "@/lib/actions/enqueue-proposal";
 
 const CANDIDATE_POOL = 40; // how many cold contacts to consider per tick
@@ -42,7 +50,10 @@ export async function proposeCheckins(userId: string, nowMs: number): Promise<Ch
   // = >14 days since the last interaction). "unknown" (never contacted) is
   // excluded by the health filter — you can't re-check-in with someone you've
   // never actually spoken to, and the imported address book is mostly those.
-  const { people } = await searchPeople(userId, "", CANDIDATE_POOL, 0, SORT_MODE.HEALTH, ["fading", "stale"]);
+  const { people } = await searchPeople(userId, "", CANDIDATE_POOL, 0, SORT_MODE.HEALTH, [
+    "fading",
+    "stale",
+  ]);
   const contacts: CheckinCandidate[] = people.map((p) => ({
     id: p.id,
     name: p.name,
@@ -50,7 +61,10 @@ export async function proposeCheckins(userId: string, nowMs: number): Promise<Ch
   }));
 
   const recentlyProposedIds = await getEntityIdsWithRecentCheckin(userId, COOLDOWN_DAYS);
-  const selected = selectCheckinCandidates(contacts, { recentlyProposedIds, maxPerTick: MAX_PER_TICK });
+  const selected = selectCheckinCandidates(contacts, {
+    recentlyProposedIds,
+    maxPerTick: MAX_PER_TICK,
+  });
 
   const proposed: QueuedActionSummary[] = [];
   for (const contact of selected) {

@@ -95,7 +95,10 @@ export async function POST(req: NextRequest) {
     // Release the claim too: the lease would expire on its own, but a transient
     // gog error should cost one poll interval, not the full lease.
     const row = await getActionById(userId, id);
-    if (row) await recordActionAuditEvent(userId, row, "failed", { reason: error ?? "gog booking failed" });
+    if (row)
+      await recordActionAuditEvent(userId, row, "failed", {
+        reason: error ?? "gog booking failed",
+      });
     await releaseActionClaim(id, userId);
     return NextResponse.json({ ok: false, marked: false });
   }

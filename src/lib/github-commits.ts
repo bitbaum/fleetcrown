@@ -48,19 +48,25 @@ export async function fetchRecentGithubCommits(
     if (!res.ok) return null;
     const rows = (await res.json()) as Array<{
       sha?: string;
-      commit?: { message?: string; committer?: { date?: string }; author?: { name?: string; date?: string } };
+      commit?: {
+        message?: string;
+        committer?: { date?: string };
+        author?: { name?: string; date?: string };
+      };
     }>;
     if (!Array.isArray(rows)) return null;
     return rows.flatMap((row) => {
       const dateStr = row.commit?.committer?.date ?? row.commit?.author?.date;
       const atMs = dateStr ? Date.parse(dateStr) : NaN;
       if (!row.sha || !Number.isFinite(atMs)) return [];
-      return [{
-        sha: row.sha.slice(0, 7),
-        message: (row.commit?.message ?? "").split("\n")[0].slice(0, 120),
-        author: row.commit?.author?.name ?? null,
-        atMs,
-      }];
+      return [
+        {
+          sha: row.sha.slice(0, 7),
+          message: (row.commit?.message ?? "").split("\n")[0].slice(0, 120),
+          author: row.commit?.author?.name ?? null,
+          atMs,
+        },
+      ];
     });
   } catch {
     return null;

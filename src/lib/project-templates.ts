@@ -517,7 +517,7 @@ const TEMPLATE_BUILDS: Record<TemplateId, TemplateBuild> = {
     files: {}, // empty — the GitHub auto_init flag already creates README.md
     infra: ["Stack chosen to fit the goal", "Dependencies installed", "Dev server running"],
     firstTask:
-      "This is a fresh empty repo for \"{{NAME}}\". Set it up from scratch: pick the simplest stack that fits the project goal, scaffold it, install dependencies, set up any database the project needs (a local Postgres or SQLite — your call, create a .env with the connection string and keep secrets out of git), and get a dev server running. Then tell me the stack you chose and the exact command + URL to run it.",
+      'This is a fresh empty repo for "{{NAME}}". Set it up from scratch: pick the simplest stack that fits the project goal, scaffold it, install dependencies, set up any database the project needs (a local Postgres or SQLite — your call, create a .env with the connection string and keep secrets out of git), and get a dev server running. Then tell me the stack you chose and the exact command + URL to run it.',
   },
   "nextjs-tailwind": {
     files: {
@@ -533,7 +533,7 @@ const TEMPLATE_BUILDS: Record<TemplateId, TemplateBuild> = {
     },
     infra: ["npm install", "Database (Postgres via Drizzle, or SQLite)", "Dev server on :3000"],
     firstTask:
-      "Set up this Next.js 15 project \"{{NAME}}\" end to end so it runs locally: run `npm install`; if the project needs persistence, add a database (Drizzle ORM + a local Postgres, or SQLite for a quick start), define an initial schema and migration, and create a `.env.local` with the connection string (never commit it); then start the dev server with `npm run dev`. Confirm it builds and renders at http://localhost:3000, then summarize what you set up and how to run it.",
+      'Set up this Next.js 15 project "{{NAME}}" end to end so it runs locally: run `npm install`; if the project needs persistence, add a database (Drizzle ORM + a local Postgres, or SQLite for a quick start), define an initial schema and migration, and create a `.env.local` with the connection string (never commit it); then start the dev server with `npm run dev`. Confirm it builds and renders at http://localhost:3000, then summarize what you set up and how to run it.',
   },
   "python-fastapi": {
     files: {
@@ -544,7 +544,7 @@ const TEMPLATE_BUILDS: Record<TemplateId, TemplateBuild> = {
     },
     infra: ["uv sync", "Database (Postgres via SQLModel, or SQLite)", "Dev server on :8000"],
     firstTask:
-      "Set up this FastAPI project \"{{NAME}}\" so it runs locally: run `uv sync`; if it needs persistence, add a database layer (SQLModel + a local Postgres via asyncpg, or SQLite to start), wire an initial model + migration, and put the connection string in a `.env` (keep it out of git); then start the server with `uv run uvicorn src.main:app --reload`. Confirm http://localhost:8000/health and /docs respond, then summarize what you set up.",
+      'Set up this FastAPI project "{{NAME}}" so it runs locally: run `uv sync`; if it needs persistence, add a database layer (SQLModel + a local Postgres via asyncpg, or SQLite to start), wire an initial model + migration, and put the connection string in a `.env` (keep it out of git); then start the server with `uv run uvicorn src.main:app --reload`. Confirm http://localhost:8000/health and /docs respond, then summarize what you set up.',
   },
   "hono-cloudflare": {
     files: {
@@ -557,7 +557,7 @@ const TEMPLATE_BUILDS: Record<TemplateId, TemplateBuild> = {
     },
     infra: ["npm install", "D1 database binding (if needed)", "Local Worker on :8787"],
     firstTask:
-      "Set up this Hono + Cloudflare Workers project \"{{NAME}}\" so it runs locally: run `npm install`; if it needs persistence, create a D1 database (`npx wrangler d1 create`), bind it in `wrangler.toml`, and add a first table/migration; then run `npm run dev`. Confirm http://localhost:8787 responds, then summarize what you set up and the deploy command.",
+      'Set up this Hono + Cloudflare Workers project "{{NAME}}" so it runs locally: run `npm install`; if it needs persistence, create a D1 database (`npx wrangler d1 create`), bind it in `wrangler.toml`, and add a first table/migration; then run `npm run dev`. Confirm http://localhost:8787 responds, then summarize what you set up and the deploy command.',
   },
   "html-tailwind": {
     files: {
@@ -568,7 +568,7 @@ const TEMPLATE_BUILDS: Record<TemplateId, TemplateBuild> = {
     },
     infra: ["Local static server"],
     firstTask:
-      "Serve this static site \"{{NAME}}\" locally (`npx serve .`) and confirm it renders in a browser. No database is needed yet — if the project later needs a backend, say so and recommend the Hono + Cloudflare Workers stack alongside it. Summarize how to run it.",
+      'Serve this static site "{{NAME}}" locally (`npx serve .`) and confirm it renders in a browser. No database is needed yet — if the project later needs a backend, say so and recommend the Hono + Cloudflare Workers stack alongside it. Summarize how to run it.',
   },
 };
 

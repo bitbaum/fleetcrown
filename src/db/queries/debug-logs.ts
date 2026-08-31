@@ -9,18 +9,21 @@ import { DAY_MS } from "@/lib/constants/time";
  * tests can await it, but callers should NOT await this in request handlers.
  */
 export function logDebug(entry: Omit<NewDebugLog, "id" | "createdAt">): Promise<unknown> {
-  return db.insert(debugLogs).values(entry).catch((err) => {
-    // Telemetry failed (e.g. Postgres down — the one failure you most need
-    // recorded). Fall back to stderr so journald still captures it, and include
-    // meta: it holds the stack/digest, so dropping it would be a partial
-    // blackout exactly when the DB sink is unavailable.
-    console.error("[debug-logs] insert failed:", err, "for entry:", {
-      source: entry.source,
-      level: entry.level,
-      message: entry.message,
-      meta: entry.meta ?? null,
+  return db
+    .insert(debugLogs)
+    .values(entry)
+    .catch((err) => {
+      // Telemetry failed (e.g. Postgres down — the one failure you most need
+      // recorded). Fall back to stderr so journald still captures it, and include
+      // meta: it holds the stack/digest, so dropping it would be a partial
+      // blackout exactly when the DB sink is unavailable.
+      console.error("[debug-logs] insert failed:", err, "for entry:", {
+        source: entry.source,
+        level: entry.level,
+        message: entry.message,
+        meta: entry.meta ?? null,
+      });
     });
-  });
 }
 
 /** Most-recent N debug log entries, newest first. UI helper for a future admin view. */
@@ -47,12 +50,15 @@ export async function pruneDebugLogs({
   const nonErrorCutoff = new Date(now - nonErrorOlderThanDays * DAY_MS);
   const errorCutoff = new Date(now - errorOlderThanDays * DAY_MS);
 
-  const deleted = await db.delete(debugLogs).where(
-    or(
-      and(sql`${debugLogs.level} <> 'error'`, lt(debugLogs.createdAt, nonErrorCutoff)),
-      and(eq(debugLogs.level, "error"), lt(debugLogs.createdAt, errorCutoff)),
-    ),
-  ).returning({ id: debugLogs.id });
+  const deleted = await db
+    .delete(debugLogs)
+    .where(
+      or(
+        and(sql`${debugLogs.level} <> 'error'`, lt(debugLogs.createdAt, nonErrorCutoff)),
+        and(eq(debugLogs.level, "error"), lt(debugLogs.createdAt, errorCutoff)),
+      ),
+    )
+    .returning({ id: debugLogs.id });
 
   return deleted.length;
 }

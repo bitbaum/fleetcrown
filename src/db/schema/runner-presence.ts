@@ -15,15 +15,17 @@ import { users } from "./users";
  * See docs/architecture/connection-presence.md.
  */
 export const runnerPresence = pgTable("runner_presence", {
-  userId:          uuid("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  userId: uuid("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
   connectionCount: integer("connection_count").notNull().default(0),
-  connected:       boolean("connected").notNull().default(false),
+  connected: boolean("connected").notNull().default(false),
   cloudConnectionCount: integer("cloud_connection_count").notNull().default(0),
   cloudConnected: boolean("cloud_connected").notNull().default(false),
   localConnectionCount: integer("local_connection_count").notNull().default(0),
   localConnected: boolean("local_connected").notNull().default(false),
-  connectedAt:     timestamp("connected_at",   { withTimezone: true }), // when count last went 0→1
-  lastChangeAt:    timestamp("last_change_at",  { withTimezone: true }).defaultNow().notNull(),
+  connectedAt: timestamp("connected_at", { withTimezone: true }), // when count last went 0→1
+  lastChangeAt: timestamp("last_change_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 export type RunnerPresence = typeof runnerPresence.$inferSelect;

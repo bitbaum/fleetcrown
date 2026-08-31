@@ -54,7 +54,10 @@ export function TerminalRawComposer({
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            send();
+          }
         }}
         // A terminal is not prose. Left on, autocorrect turns `cd ~/src` into
         // `cd ~/sec` and capitalises flags — silently, after the send.

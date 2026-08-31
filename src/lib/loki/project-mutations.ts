@@ -6,10 +6,7 @@ import type { UserProject } from "@/db/schema";
 import { proposeAction } from "@/db/queries/actions";
 import { generateBusinessPlan } from "@/lib/business-plan";
 import { ACTION_TYPE } from "@/lib/constants/statuses";
-import {
-  PROFILE_FIELD_LABELS,
-  type ProfileUpdateRequest,
-} from "@/lib/loki-fleet-commands";
+import { PROFILE_FIELD_LABELS, type ProfileUpdateRequest } from "@/lib/loki-fleet-commands";
 
 function findProject(projects: UserProject[], projectKey: string): UserProject | undefined {
   const lower = projectKey.toLowerCase();
@@ -85,7 +82,9 @@ export async function runLokiBusinessPlan(
   }
 }
 
-export function formatBusinessPlanReply(outcome: Extract<BusinessPlanOutcome, { ok: true }>): string {
+export function formatBusinessPlanReply(
+  outcome: Extract<BusinessPlanOutcome, { ok: true }>,
+): string {
   const actionLines =
     outcome.actionTitles.length > 0
       ? outcome.actionTitles.map((t) => `- ${t}`).join("\n")
@@ -135,8 +134,7 @@ export async function proposeLokiProfileUpdate(
 
   const fieldLabel = PROFILE_FIELD_LABELS[update.fieldKey] ?? update.fieldKey;
   const title = `Update ${fieldLabel} on ${project.name}`;
-  const preview =
-    update.value.length > 200 ? `${update.value.slice(0, 197)}…` : update.value;
+  const preview = update.value.length > 200 ? `${update.value.slice(0, 197)}…` : update.value;
 
   const action = await proposeAction(userId, {
     type: ACTION_TYPE.OTHER,
@@ -160,7 +158,9 @@ export async function proposeLokiProfileUpdate(
   };
 }
 
-export function formatProfileUpdateReply(outcome: Extract<ProfileUpdateOutcome, { ok: true }>): string {
+export function formatProfileUpdateReply(
+  outcome: Extract<ProfileUpdateOutcome, { ok: true }>,
+): string {
   if (outcome.duplicate) {
     return [
       `A draft to update **${outcome.fieldLabel}** on **${outcome.projectKey}** is already waiting.`,

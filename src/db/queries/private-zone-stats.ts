@@ -1,13 +1,6 @@
 import { count, and, eq, isNotNull } from "drizzle-orm";
 import { db } from "@/db";
-import {
-  entities,
-  goals,
-  habits,
-  events,
-  subscriptions,
-  commitments,
-} from "@/db/schema";
+import { entities, goals, habits, events, subscriptions, commitments } from "@/db/schema";
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
 
 export type PrivateZoneStats = {
@@ -41,13 +34,22 @@ export async function getPrivateZoneStats(userId: string): Promise<PrivateZoneSt
     commitmentsRow,
   ] = await Promise.all([
     db.select({ n: count() }).from(entities).where(eq(entities.userId, userId)),
-    db.select({ n: count() }).from(entities).where(and(eq(entities.userId, userId), eq(entities.type, ENTITY_TYPE.PERSON))),
-    db.select({ n: count() }).from(entities).where(and(eq(entities.userId, userId), eq(entities.type, ENTITY_TYPE.ROBOT))),
+    db
+      .select({ n: count() })
+      .from(entities)
+      .where(and(eq(entities.userId, userId), eq(entities.type, ENTITY_TYPE.PERSON))),
+    db
+      .select({ n: count() })
+      .from(entities)
+      .where(and(eq(entities.userId, userId), eq(entities.type, ENTITY_TYPE.ROBOT))),
     db.select({ n: count() }).from(goals).where(eq(goals.userId, userId)),
     db.select({ n: count() }).from(habits).where(eq(habits.userId, userId)),
     db.select({ n: count() }).from(events).where(eq(events.userId, userId)),
     db.select({ n: count() }).from(subscriptions).where(eq(subscriptions.userId, userId)),
-    db.select({ n: count() }).from(commitments).where(and(eq(commitments.userId, userId), isNotNull(commitments.createdAt))),
+    db
+      .select({ n: count() })
+      .from(commitments)
+      .where(and(eq(commitments.userId, userId), isNotNull(commitments.createdAt))),
   ]);
 
   return {

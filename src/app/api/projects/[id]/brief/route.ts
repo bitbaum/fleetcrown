@@ -20,10 +20,7 @@ const BriefBody = z.object({
   onlyMissing: z.boolean().optional(),
 });
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const userId = await getSessionUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const idOrResp = await readIdParam(params);
@@ -40,7 +37,10 @@ export async function POST(
     profile = await extractProjectProfile(project.name, dataOrResp.text);
   } catch (e) {
     return NextResponse.json(
-      { error: "Could not extract a profile from that text. Try again in a moment.", details: e instanceof Error ? e.message : String(e) },
+      {
+        error: "Could not extract a profile from that text. Try again in a moment.",
+        details: e instanceof Error ? e.message : String(e),
+      },
       { status: 502 },
     );
   }

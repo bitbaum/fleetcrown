@@ -6,7 +6,7 @@ import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { LOCAL_DEV_URL } from "@/config/brand";
 
 const CheckoutBody = z.object({
-  plan:    z.enum(["personal", "pro", "team"] as const),
+  plan: z.enum(["personal", "pro", "team"] as const),
   billing: z.enum(["monthly", "annual"]).default("annual"),
 });
 
@@ -24,7 +24,10 @@ export async function POST(req: NextRequest) {
 
   const priceId = STRIPE_PRICE_IDS[plan][billing];
   if (!priceId) {
-    return NextResponse.json({ error: `No price configured for ${plan}/${billing}` }, { status: 503 });
+    return NextResponse.json(
+      { error: `No price configured for ${plan}/${billing}` },
+      { status: 503 },
+    );
   }
 
   const user = await getUserById(userId);
@@ -35,7 +38,7 @@ export async function POST(req: NextRequest) {
   if (!customerId) {
     const customer = await stripe.customers.create({
       email: user.email ?? undefined,
-      name:  user.name  ?? undefined,
+      name: user.name ?? undefined,
       metadata: { fleetcrownUserId: userId },
     });
     customerId = customer.id;
@@ -45,12 +48,12 @@ export async function POST(req: NextRequest) {
   const origin = req.headers.get("origin") ?? process.env.NEXTAUTH_URL ?? LOCAL_DEV_URL;
 
   const session = await stripe.checkout.sessions.create({
-    mode:        "subscription",
-    customer:    customerId,
-    line_items:  [{ price: priceId, quantity: 1 }],
+    mode: "subscription",
+    customer: customerId,
+    line_items: [{ price: priceId, quantity: 1 }],
     success_url: `${origin}/settings?billing=success`,
-    cancel_url:  `${origin}/settings?billing=canceled`,
-    metadata:    { fleetcrownUserId: userId, plan },
+    cancel_url: `${origin}/settings?billing=canceled`,
+    metadata: { fleetcrownUserId: userId, plan },
     subscription_data: {
       metadata: { fleetcrownUserId: userId, plan },
     },

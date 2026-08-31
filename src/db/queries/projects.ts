@@ -1,6 +1,16 @@
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
 import { db } from "@/db";
-import { entities, entityRelations, interactions, goals, userProjects, orgMemberships, orgs, siteSnapshots, promptHistory } from "@/db/schema";
+import {
+  entities,
+  entityRelations,
+  interactions,
+  goals,
+  userProjects,
+  orgMemberships,
+  orgs,
+  siteSnapshots,
+  promptHistory,
+} from "@/db/schema";
 import { eq, and, asc, desc, inArray, ilike, or, isNotNull, max } from "drizzle-orm";
 import { excludeSmokeDispatchesSql } from "./smoke-filter";
 import { fetchAttributesByEntityIds, getOrgPeerIds } from "./utils";
@@ -29,10 +39,7 @@ export const PatchProjectBody = z
     /** Per-project autopilot override. Pass null (or omit) to inherit the
      *  user-level beacon_settings.auto_inject_mode. Pass an AutoInjectMode
      *  value (e.g. "off", "queue_only", "strategist") to pin this project. */
-    autoInjectModeOverride: z.union([
-      z.enum(AUTO_INJECT_MODE_VALUES),
-      z.null(),
-    ]).optional(),
+    autoInjectModeOverride: z.union([z.enum(AUTO_INJECT_MODE_VALUES), z.null()]).optional(),
   })
   .refine((v) => Object.keys(v).length > 0, { message: "Nothing to update" });
 
@@ -148,7 +155,9 @@ export async function deleteProject(userId: string, id: string) {
   const [project] = await db
     .select({ id: entities.id, name: entities.name })
     .from(entities)
-    .where(and(eq(entities.id, id), eq(entities.userId, userId), eq(entities.type, ENTITY_TYPE.PROJECT)))
+    .where(
+      and(eq(entities.id, id), eq(entities.userId, userId), eq(entities.type, ENTITY_TYPE.PROJECT)),
+    )
     .limit(1);
   if (!project) return null;
 
@@ -175,22 +184,28 @@ export async function deleteProject(userId: string, id: string) {
 // user_projects is the SSOT for where the project lives on disk and which
 // agent it prefers; the Projects page card needs both so bare-attr tiles show
 // concrete context instead of just a clickable title.
-async function fetchRuntimeMetaByEntityIds(
-  entityIds: string[],
-): Promise<Map<string, {
-  dirPath: string | null;
-  agentPref: string | null;
-  userProjectId: string;
-  liveUrl: string | null;
-  siteOk: boolean | null;
-}>> {
-  const out = new Map<string, {
-    dirPath: string | null;
-    agentPref: string | null;
-    userProjectId: string;
-    liveUrl: string | null;
-    siteOk: boolean | null;
-  }>();
+async function fetchRuntimeMetaByEntityIds(entityIds: string[]): Promise<
+  Map<
+    string,
+    {
+      dirPath: string | null;
+      agentPref: string | null;
+      userProjectId: string;
+      liveUrl: string | null;
+      siteOk: boolean | null;
+    }
+  >
+> {
+  const out = new Map<
+    string,
+    {
+      dirPath: string | null;
+      agentPref: string | null;
+      userProjectId: string;
+      liveUrl: string | null;
+      siteOk: boolean | null;
+    }
+  >();
   if (entityIds.length === 0) return out;
   const rows = await db
     .select({
@@ -222,12 +237,7 @@ export async function getProjects(userId: string) {
   const projects = await db
     .select()
     .from(entities)
-    .where(
-      and(
-        eq(entities.userId, userId),
-        eq(entities.type, ENTITY_TYPE.PROJECT),
-      ),
-    )
+    .where(and(eq(entities.userId, userId), eq(entities.type, ENTITY_TYPE.PROJECT)))
     .orderBy(entities.name);
 
   const ids = projects.map((p) => p.id);
@@ -262,11 +272,13 @@ export async function getProjectsLastDispatch(userId: string): Promise<Record<st
   const rows = await db
     .select({ projectId: promptHistory.projectId, last: max(promptHistory.dispatchedAt) })
     .from(promptHistory)
-    .where(and(
-      eq(promptHistory.userId, userId),
-      isNotNull(promptHistory.projectId),
-      excludeSmokeDispatchesSql(),
-    ))
+    .where(
+      and(
+        eq(promptHistory.userId, userId),
+        isNotNull(promptHistory.projectId),
+        excludeSmokeDispatchesSql(),
+      ),
+    )
     .groupBy(promptHistory.projectId);
   return Object.fromEntries(
     rows
@@ -276,7 +288,9 @@ export async function getProjectsLastDispatch(userId: string): Promise<Record<st
 }
 
 /** Returns entity-level project profiles belonging to org peers (read-only for the viewer). */
-export async function getOrgEntityProjects(userId: string): Promise<(ProjectRow & { readonly: true })[]> {
+export async function getOrgEntityProjects(
+  userId: string,
+): Promise<(ProjectRow & { readonly: true })[]> {
   const peerIds = await getOrgPeerIds(userId);
   if (peerIds.length === 0) return [];
   const projects = await db
@@ -315,7 +329,10 @@ export async function getOrgEntityProjects(userId: string): Promise<(ProjectRow 
 export async function resolveProjectDetailWithOrgFallback(
   viewerUserId: string,
   projectId: string,
-): Promise<{ detail: NonNullable<Awaited<ReturnType<typeof getProjectDetail>>>; ownerId: string } | null> {
+): Promise<{
+  detail: NonNullable<Awaited<ReturnType<typeof getProjectDetail>>>;
+  ownerId: string;
+} | null> {
   // Fast path: viewer owns the entity.
   const ownDetail = await getProjectDetail(viewerUserId, projectId);
   if (ownDetail) return { detail: ownDetail, ownerId: viewerUserId };

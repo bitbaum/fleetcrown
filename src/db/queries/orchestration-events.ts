@@ -11,7 +11,10 @@ export async function createOrchestrationEvent(event: NewOrchestrationEvent) {
 }
 
 /** Idempotent insertion for events derived repeatedly from the same runtime sentinel. */
-export async function createOrchestrationEventOnce(event: NewOrchestrationEvent, dedupeKey: string) {
+export async function createOrchestrationEventOnce(
+  event: NewOrchestrationEvent,
+  dedupeKey: string,
+) {
   const [created] = await db
     .insert(orchestrationEvents)
     .values({ ...event, dedupeKey })

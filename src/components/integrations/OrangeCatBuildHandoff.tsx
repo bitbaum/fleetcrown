@@ -25,7 +25,7 @@ export function OrangeCatBuildHandoff({
   // certainly the same thing; proposing a second "Bitbaum" project by default
   // is exactly the duplicate this picker exists to prevent.
   const exactMatch = projects.find(
-    (project) => project.name.trim().toLowerCase() === intent.entity.title.trim().toLowerCase()
+    (project) => project.name.trim().toLowerCase() === intent.entity.title.trim().toLowerCase(),
   );
   const [mode, setMode] = useState<"new" | "existing">(exactMatch ? "existing" : "new");
   const [projectId, setProjectId] = useState(exactMatch?.id ?? projects[0]?.id ?? "");
@@ -62,7 +62,9 @@ export function OrangeCatBuildHandoff({
         </div>
         <h1 className="mt-5 text-3xl font-semibold text-text-primary">{intent.entity.title}</h1>
         {intent.entity.description && (
-          <p className="mt-4 whitespace-pre-wrap text-text-secondary">{intent.entity.description}</p>
+          <p className="mt-4 whitespace-pre-wrap text-text-secondary">
+            {intent.entity.description}
+          </p>
         )}
         <a
           href={intent.entity.publicUrl}
@@ -78,7 +80,9 @@ export function OrangeCatBuildHandoff({
           <ol className="mt-4 space-y-3">
             {intent.suggestedHandoff.map((step, index) => (
               <li key={step} className="flex gap-3 text-sm leading-relaxed text-text-secondary">
-                <span className="font-mono text-text-muted">{String(index + 1).padStart(2, "0")}</span>
+                <span className="font-mono text-text-muted">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
                 <span>{step}</span>
               </li>
             ))}
@@ -131,7 +135,9 @@ export function OrangeCatBuildHandoff({
                   className="ui-input mt-3 w-full"
                 >
                   {projects.map((project) => (
-                    <option key={project.id} value={project.id}>{project.name}</option>
+                    <option key={project.id} value={project.id}>
+                      {project.name}
+                    </option>
                   ))}
                 </select>
               </span>

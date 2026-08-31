@@ -18,12 +18,36 @@
  */
 
 export type TerminalKeyId =
-  | "esc" | "tab" | "shift-tab" | "enter" | "space" | "backspace"
-  | "up" | "down" | "left" | "right"
-  | "home" | "end" | "pgup" | "pgdn"
-  | "ctrl-c" | "ctrl-d" | "ctrl-l" | "ctrl-r" | "ctrl-z"
-  | "y" | "n"
-  | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9";
+  | "esc"
+  | "tab"
+  | "shift-tab"
+  | "enter"
+  | "space"
+  | "backspace"
+  | "up"
+  | "down"
+  | "left"
+  | "right"
+  | "home"
+  | "end"
+  | "pgup"
+  | "pgdn"
+  | "ctrl-c"
+  | "ctrl-d"
+  | "ctrl-l"
+  | "ctrl-r"
+  | "ctrl-z"
+  | "y"
+  | "n"
+  | "1"
+  | "2"
+  | "3"
+  | "4"
+  | "5"
+  | "6"
+  | "7"
+  | "8"
+  | "9";
 
 export type TerminalKey = {
   id: TerminalKeyId;

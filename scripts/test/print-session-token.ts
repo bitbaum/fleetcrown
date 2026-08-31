@@ -20,9 +20,10 @@ async function tryMintJwt(): Promise<string | null> {
   const hetznerPassword = process.env.FLEETCROWN_DB_PASSWORD;
   const hetznerHost = process.env.HETZNER_IP;
   const isProd = BASE.includes("fleetcrown.orangecat.ch") || BASE.includes("orangecat.ch");
-  const dbUrl = isProd && hetznerPassword && hetznerHost
-    ? `postgres://fleetcrown:${encodeURIComponent(hetznerPassword)}@${hetznerHost}:5432/fleetcrown?sslmode=require`
-    : process.env.DATABASE_URL;
+  const dbUrl =
+    isProd && hetznerPassword && hetznerHost
+      ? `postgres://fleetcrown:${encodeURIComponent(hetznerPassword)}@${hetznerHost}:5432/fleetcrown?sslmode=require`
+      : process.env.DATABASE_URL;
   if (!dbUrl) return null;
 
   const postgres = (await import("postgres")).default;
@@ -35,7 +36,15 @@ async function tryMintJwt(): Promise<string | null> {
       ORDER BY is_default DESC, created_at ASC
       LIMIT 1
     `;
-    const u = rows[0] as { id: string; email: string | null; name: string | null; username: string | null; onboarded_at: Date | null } | undefined;
+    const u = rows[0] as
+      | {
+          id: string;
+          email: string | null;
+          name: string | null;
+          username: string | null;
+          onboarded_at: Date | null;
+        }
+      | undefined;
     if (!u?.id) return null;
 
     const { encode } = await import("@auth/core/jwt");

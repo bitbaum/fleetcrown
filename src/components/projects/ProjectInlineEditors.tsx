@@ -23,10 +23,14 @@ export function DescriptionEditor({
 
   if (!editable) {
     return value ? (
-      <p className={cn(
-        "mt-0.5 w-full cursor-default text-left leading-relaxed text-text-secondary",
-        size === "lead" ? "line-clamp-3 text-sm sm:text-base" : "ui-link-subtle",
-      )}>{value}</p>
+      <p
+        className={cn(
+          "mt-0.5 w-full cursor-default text-left leading-relaxed text-text-secondary",
+          size === "lead" ? "line-clamp-3 text-sm sm:text-base" : "ui-link-subtle",
+        )}
+      >
+        {value}
+      </p>
     ) : null;
   }
 
@@ -49,17 +53,10 @@ export function DescriptionEditor({
           )}
         />
         <div className="flex items-center gap-2">
-          <button
-            onClick={commit}
-            disabled={ie.saving}
-            className="ui-btn-save"
-          >
+          <button onClick={commit} disabled={ie.saving} className="ui-btn-save">
             {ie.saving ? <Loader2 className="ui-spinner-xs" /> : "Save"}
           </button>
-          <button
-            onClick={ie.cancel}
-            className="ui-btn-text-cancel"
-          >
+          <button onClick={ie.cancel} className="ui-btn-text-cancel">
             Cancel
           </button>
         </div>
@@ -98,7 +95,10 @@ export function StatusEditor({
 
   const commit = () => {
     const trimmed = ie.draft.trim();
-    if (!trimmed) { ie.cancel(); return; }
+    if (!trimmed) {
+      ie.cancel();
+      return;
+    }
     ie.commit(() => onSave(trimmed));
   };
 
@@ -112,7 +112,10 @@ export function StatusEditor({
         <input
           value={ie.draft}
           onChange={(e) => ie.setDraft(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") commit(); if (e.key === "Escape") ie.cancel(); }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") commit();
+            if (e.key === "Escape") ie.cancel();
+          }}
           onBlur={commit}
           autoFocus
           placeholder="planning / development / production"
@@ -134,9 +137,7 @@ export function StatusEditor({
       aria-label={value ? `Stage: ${value} — edit` : "Set the lifecycle stage"}
       className="flex min-h-11 items-center"
     >
-      {value
-        ? <StatusBadge value={value} />
-        : <span className="ui-add-chip">+ stage</span>}
+      {value ? <StatusBadge value={value} /> : <span className="ui-add-chip">+ stage</span>}
     </button>
   );
 }

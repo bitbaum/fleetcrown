@@ -125,7 +125,8 @@ export function suggestFleetLinks(sites: AtlasSiteInput[]): LinkSuggestion[] {
     // A link that already exists is not a suggestion, and the first (strongest)
     // reason for a pair wins — restating the same edge under a weaker rationale
     // would inflate the list without adding information.
-    if (from.projectId === to.projectId || has(from.projectId, to.projectId) || seen.has(key)) return;
+    if (from.projectId === to.projectId || has(from.projectId, to.projectId) || seen.has(key))
+      return;
     seen.add(key);
     suggestions.push({
       fromProjectId: from.projectId,

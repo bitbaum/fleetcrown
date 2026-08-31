@@ -41,7 +41,10 @@ export function SitePages({
   }, [paths, query]);
 
   return (
-    <section aria-labelledby="site-pages-title" className="rounded-2xl border border-border-subtle bg-surface-raised p-5">
+    <section
+      aria-labelledby="site-pages-title"
+      className="rounded-2xl border border-border-subtle bg-surface-raised p-5"
+    >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 id="site-pages-title" className="text-base font-semibold text-text-primary">
           Pages
@@ -61,14 +64,17 @@ export function SitePages({
         <p className="mt-4 text-sm text-text-tertiary">No site URL registered yet.</p>
       ) : paths.length === 0 ? (
         <p className="mt-4 text-sm text-text-tertiary">
-          No internal links found — either the site has not been checked yet, or its homepage
-          links nowhere.
+          No internal links found — either the site has not been checked yet, or its homepage links
+          nowhere.
         </p>
       ) : (
         <>
           {paths.length > 8 && (
             <div className="relative mt-4">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" aria-hidden />
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary"
+                aria-hidden
+              />
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
@@ -88,10 +94,15 @@ export function SitePages({
                   className="group flex items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 hover:bg-surface-overlay"
                 >
                   <span className="min-w-0">
-                    <span className="block truncate text-sm text-text-primary">{humanize(path)}</span>
+                    <span className="block truncate text-sm text-text-primary">
+                      {humanize(path)}
+                    </span>
                     <span className="block truncate text-xs text-text-tertiary">{path}</span>
                   </span>
-                  <ExternalLink className="h-3.5 w-3.5 shrink-0 text-text-tertiary opacity-0 group-hover:opacity-100" aria-hidden />
+                  <ExternalLink
+                    className="h-3.5 w-3.5 shrink-0 text-text-tertiary opacity-0 group-hover:opacity-100"
+                    aria-hidden
+                  />
                 </a>
               </li>
             ))}

@@ -38,21 +38,44 @@ function eq<T>(actual: T, expected: T, label: string): void {
 
 // The fleet as it stood on the day, in the order the picker rendered it.
 const FLEET = [
-  "Bitbaum", "BiasLens", "HamsterCheek", "Prime tower", "lifeops",
-  "aoz-housing", "botsmann", "datacat", "fleetcrown", "orangecat",
+  "Bitbaum",
+  "BiasLens",
+  "HamsterCheek",
+  "Prime tower",
+  "lifeops",
+  "aoz-housing",
+  "botsmann",
+  "datacat",
+  "fleetcrown",
+  "orangecat",
 ];
 
 console.log("project-mention — spacing/case tolerance");
-eq(projectMentionedIn("what is left to do with Orange Cat", FLEET), "orangecat", "the reported case");
+eq(
+  projectMentionedIn("what is left to do with Orange Cat", FLEET),
+  "orangecat",
+  "the reported case",
+);
 eq(projectMentionedIn("push orangecat please", FLEET), "orangecat", "exact slug still matches");
 eq(projectMentionedIn("check OrangeCat's build", FLEET), "orangecat", "camel case");
 eq(projectMentionedIn("look at orange-cat", FLEET), "orangecat", "hyphenated");
-eq(projectMentionedIn("the AOZ housing rebuild", FLEET), "aoz-housing", "slug with a hyphen, typed with a space");
-eq(projectMentionedIn("deploy prime tower", FLEET), "Prime tower", "registered name keeps its own casing in the answer");
+eq(
+  projectMentionedIn("the AOZ housing rebuild", FLEET),
+  "aoz-housing",
+  "slug with a hyphen, typed with a space",
+);
+eq(
+  projectMentionedIn("deploy prime tower", FLEET),
+  "Prime tower",
+  "registered name keeps its own casing in the answer",
+);
 
 console.log("\nproject-mention — no invented matches");
 eq(projectMentionedIn("nothing relevant here", FLEET), null, "unrelated prose matches nothing");
-check("a project name is not found inside a longer word", !textMentionsProject("going somewhere", "go"));
+check(
+  "a project name is not found inside a longer word",
+  !textMentionsProject("going somewhere", "go"),
+);
 check("partial token runs do not match", !textMentionsProject("orange", "orangecat"));
 eq(
   projectMentionedIn("compare aoz to the aoz-housing plan", ["aoz", "aoz-housing"]),
@@ -61,8 +84,16 @@ eq(
 );
 
 console.log("\nproject-mention — selection outranks prose");
-eq(resolveProjectFromContext("work on Orange Cat", "datacat", FLEET), "datacat", "an explicit pick wins");
-eq(resolveProjectFromContext("work on Orange Cat", undefined, FLEET), "orangecat", "falls back to the name in the text");
+eq(
+  resolveProjectFromContext("work on Orange Cat", "datacat", FLEET),
+  "datacat",
+  "an explicit pick wins",
+);
+eq(
+  resolveProjectFromContext("work on Orange Cat", undefined, FLEET),
+  "orangecat",
+  "falls back to the name in the text",
+);
 
 console.log("\nproject-mention — naming something we don't have");
 const noOrangeCat = FLEET.filter((p) => p !== "orangecat");
@@ -87,12 +118,23 @@ eq(unknownProjectMention("remind me on Monday", FLEET), null, "a weekday is not 
 console.log("\ncommand-resolve — asking is not dispatching");
 check(
   "the reported sentence is a question, not work",
-  !looksLikeDispatchTask("I want you to tell me what is left to do with Orange Cat for it to work properly."),
+  !looksLikeDispatchTask(
+    "I want you to tell me what is left to do with Orange Cat for it to work properly.",
+  ),
 );
 check("tell me …", !looksLikeDispatchTask("tell me how the deploy pipeline works for fleetcrown"));
-check("can you explain …", !looksLikeDispatchTask("Can you explain what changed in datacat on Friday"));
-check("give me a rundown …", !looksLikeDispatchTask("give me a rundown of what is blocked on botsmann"));
-check("I need to know …", !looksLikeDispatchTask("I need to know whether the migration ran in lifeops"));
+check(
+  "can you explain …",
+  !looksLikeDispatchTask("Can you explain what changed in datacat on Friday"),
+);
+check(
+  "give me a rundown …",
+  !looksLikeDispatchTask("give me a rundown of what is blocked on botsmann"),
+);
+check(
+  "I need to know …",
+  !looksLikeDispatchTask("I need to know whether the migration ran in lifeops"),
+);
 check(
   "a pronoun-led sentence is not an instruction",
   !looksLikeDispatchTask("we should probably think about the pricing page in a while"),
@@ -102,7 +144,10 @@ console.log("\ncommand-resolve — work is still work");
 check("imperative with a verb", looksLikeDispatchTask("fix the failing tests in fleetcrown"));
 check("build handoff", looksLikeDispatchTask("ok let's build it"));
 check("explicit implement", looksLikeDispatchTask("implement the invite flow for botsmann"));
-check("verb-led with no keyword verb", looksLikeDispatchTask("ship the parser rewrite for datacat"));
+check(
+  "verb-led with no keyword verb",
+  looksLikeDispatchTask("ship the parser rewrite for datacat"),
+);
 check(
   "an action question still dispatches",
   looksLikeDispatchTask("can you fix the failing types in lifeops?"),

@@ -32,7 +32,12 @@ export function peekChannel(userId: string, tab: string, channel?: PeekBuilderCh
   return `peek:${channel ?? "any"}:${userId}:${tab.toLowerCase()}`;
 }
 
-export function emitPeekFrame(userId: string, tab: string, payload: PeekFrame, channel?: PeekBuilderChannel): void {
+export function emitPeekFrame(
+  userId: string,
+  tab: string,
+  payload: PeekFrame,
+  channel?: PeekBuilderChannel,
+): void {
   sseBus.emit(peekChannel(userId, tab, channel), payload);
   if (channel) sseBus.emit(peekChannel(userId, tab), payload);
 }
@@ -54,10 +59,17 @@ export function addPeekViewer(userId: string, tab: string, channel?: PeekBuilder
 }
 
 /** Deregister a viewer; returns true if this was the LAST viewer (→ peek_stop). */
-export function removePeekViewer(userId: string, tab: string, channel?: PeekBuilderChannel): boolean {
+export function removePeekViewer(
+  userId: string,
+  tab: string,
+  channel?: PeekBuilderChannel,
+): boolean {
   const key = peekChannel(userId, tab, channel);
   const n = (peekViewers.get(key) ?? 1) - 1;
-  if (n <= 0) { peekViewers.delete(key); return true; }
+  if (n <= 0) {
+    peekViewers.delete(key);
+    return true;
+  }
   peekViewers.set(key, n);
   return false;
 }

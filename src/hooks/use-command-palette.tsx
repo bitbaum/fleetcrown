@@ -17,14 +17,14 @@ export function useCommandPaletteState(): CommandPaletteApi {
   return useMemo(() => ({ open, setOpen, toggle }), [open, toggle]);
 }
 
-export function CommandPaletteProvider(
-  { value, children }: { value: CommandPaletteApi; children: React.ReactNode },
-) {
-  return (
-    <CommandPaletteContext.Provider value={value}>
-      {children}
-    </CommandPaletteContext.Provider>
-  );
+export function CommandPaletteProvider({
+  value,
+  children,
+}: {
+  value: CommandPaletteApi;
+  children: React.ReactNode;
+}) {
+  return <CommandPaletteContext.Provider value={value}>{children}</CommandPaletteContext.Provider>;
 }
 
 /** Any descendant of CommandPaletteProvider can open/close/toggle the palette. */

@@ -39,7 +39,9 @@ export function buildDigestUserPrompt({
   previousCount,
 }: DigestInput): string {
   const lines: string[] = [];
-  lines.push(`Window: last ${windowLabel}${projectKey ? ` · filtered to project "${projectKey}"` : ""}`);
+  lines.push(
+    `Window: last ${windowLabel}${projectKey ? ` · filtered to project "${projectKey}"` : ""}`,
+  );
 
   const tallies = tallyActivityEvents(events);
   const summary = summarizeActivity(events);
@@ -49,7 +51,9 @@ export function buildDigestUserPrompt({
   if (summary.agentLabel) {
     lines.push(`Agent time (summed wall-clock of finished runs): ${summary.agentLabel}`);
   }
-  lines.push(`Projects touched: ${summary.projects}${summary.busiestProject ? ` (busiest: ${summary.busiestProject})` : ""}`);
+  lines.push(
+    `Projects touched: ${summary.projects}${summary.busiestProject ? ` (busiest: ${summary.busiestProject})` : ""}`,
+  );
   if (typeof previousCount === "number") {
     const momentum = computeMomentum(tallies.total, previousCount);
     lines.push(
@@ -124,12 +128,13 @@ export function buildDigestUserPrompt({
   // Dispatches that never produced a run — queued, or waiting on a builder.
   const queued = events.filter((e) => e.outcome === "dispatched" && !e.isLocalChat);
   if (queued.length > 0) {
-    lines.push(`SENT BUT NO RUN RECORDED (${queued.length}): ${queued
-      .slice(0, 10)
-      .map((e) => e.projectKey)
-      .join(", ")}`);
+    lines.push(
+      `SENT BUT NO RUN RECORDED (${queued.length}): ${queued
+        .slice(0, 10)
+        .map((e) => e.projectKey)
+        .join(", ")}`,
+    );
   }
 
   return lines.join("\n");
 }
-

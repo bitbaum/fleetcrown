@@ -38,7 +38,7 @@ export const hermesAdapter: AgentAdapter = {
   capabilities: {
     tabSwitching: true,
     manualPromptInjection: true,
-    autonomousPromptLoop: true,   // Hermes is an autonomous, self-improving runtime
+    autonomousPromptLoop: true, // Hermes is an autonomous, self-improving runtime
     sessionLifecycleSignals: true,
   },
 
@@ -47,12 +47,14 @@ export const hermesAdapter: AgentAdapter = {
     if (existsSync(path.join(HOME, ".hermes"))) {
       return {
         available: false,
-        availabilityReason: "Hermes config exists (~/.hermes), but the `hermes` CLI is not on $PATH. Run the installer from the Control panel.",
+        availabilityReason:
+          "Hermes config exists (~/.hermes), but the `hermes` CLI is not on $PATH. Run the installer from the Control panel.",
       };
     }
     return {
       available: false,
-      availabilityReason: "Hermes CLI is not installed. Install it with the one-click installer (curl … nousresearch.com/install.sh).",
+      availabilityReason:
+        "Hermes CLI is not installed. Install it with the one-click installer (curl … nousresearch.com/install.sh).",
     };
   },
 

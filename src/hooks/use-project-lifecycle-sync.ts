@@ -5,10 +5,7 @@ import { readyAtKey } from "@/lib/control-storage";
  * Syncs project ready state to local storage and /tmp sentinels.
  * Ensures the beacon popup and web dashboard stay in sync.
  */
-export function useProjectLifecycleSync(
-  tab: string,
-  isReady: boolean,
-) {
+export function useProjectLifecycleSync(tab: string, isReady: boolean) {
   const prevIsReadyRef = useRef(false);
 
   useEffect(() => {

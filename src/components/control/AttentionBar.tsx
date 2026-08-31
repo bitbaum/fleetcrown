@@ -25,7 +25,12 @@ function groupConsecutive(items: FailedCommand[]): FailureGroup[] {
   const groups: FailureGroup[] = [];
   for (const item of items) {
     const last = groups[groups.length - 1];
-    if (last && last.representative.type === item.type && last.representative.tab === item.tab && last.representative.error === item.error) {
+    if (
+      last &&
+      last.representative.type === item.type &&
+      last.representative.tab === item.tab &&
+      last.representative.error === item.error
+    ) {
       last.count++;
       last.dismissIds.push(item.id);
     } else {
@@ -53,13 +58,19 @@ export function AttentionBar({
     try {
       const raw = localStorage.getItem(CONTROL_DISMISSED_FAILURES_KEY);
       return new Set(raw ? JSON.parse(raw) : []);
-    } catch { return new Set(); }
+    } catch {
+      return new Set();
+    }
   });
 
   const dismiss = (id: string) => {
     setDismissed((prev) => {
       const next = new Set(prev).add(id);
-      try { localStorage.setItem(CONTROL_DISMISSED_FAILURES_KEY, JSON.stringify([...next])); } catch { /* */ }
+      try {
+        localStorage.setItem(CONTROL_DISMISSED_FAILURES_KEY, JSON.stringify([...next]));
+      } catch {
+        /* */
+      }
       return next;
     });
   };
@@ -73,7 +84,9 @@ export function AttentionBar({
     try {
       const res = await postJson(`/api/control/commands/${id}/retry`, {});
       if (res.ok) group.dismissIds.forEach(dismiss);
-    } catch { /* failure stays visible for another attempt */ }
+    } catch {
+      /* failure stays visible for another attempt */
+    }
     setRetrying((prev) => {
       const next = new Set(prev);
       next.delete(id);
@@ -92,9 +105,15 @@ export function AttentionBar({
         <div className="flex items-start gap-3 rounded-2xl border-l-2 border-status-warning border-t border-r border-b border-border-subtle bg-surface-base px-4 py-3">
           <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5 text-status-warning" />
           <div className="flex flex-wrap gap-2 min-w-0">
-            <span className="text-xs text-text-secondary font-medium shrink-0 mt-0.5">Needs attention:</span>
+            <span className="text-xs text-text-secondary font-medium shrink-0 mt-0.5">
+              Needs attention:
+            </span>
             {items.map(({ project, reason }) => {
-              const healthKey = (project.session?.health ?? project.latestOrchestrationRun?.summary?.health ?? "").toLowerCase();
+              const healthKey = (
+                project.session?.health ??
+                project.latestOrchestrationRun?.summary?.health ??
+                ""
+              ).toLowerCase();
               const tagCls = HEALTH_TAG_STYLE[healthKey] ?? "ui-tag ui-tag-warning";
               // Reason chip only adds value when distinct from the bar's
               // "Needs attention:" prefix; the literal phrase just repeats it.
@@ -137,7 +156,12 @@ export function AttentionBar({
               <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5 text-status-negative" />
               <span className="text-xs text-text-primary">
                 <span className="font-medium">{f.type}</span>
-                {f.tab !== "unknown" && <> → <span className="font-medium">{f.tab}</span></>}
+                {f.tab !== "unknown" && (
+                  <>
+                    {" "}
+                    → <span className="font-medium">{f.tab}</span>
+                  </>
+                )}
                 {` ${verb}: `}
                 <span className="text-text-secondary">{f.error}</span>
                 {group.count > 1 && (
@@ -145,7 +169,9 @@ export function AttentionBar({
                     ×{group.count}
                   </span>
                 )}
-                <span className="ml-2 text-text-muted">{timeAgo(new Date(f.executedAt).getTime())}</span>
+                <span className="ml-2 text-text-muted">
+                  {timeAgo(new Date(f.executedAt).getTime())}
+                </span>
               </span>
             </div>
             <div className="flex shrink-0 items-center gap-2">

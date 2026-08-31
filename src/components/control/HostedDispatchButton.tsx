@@ -70,20 +70,18 @@ export function HostedDispatchButton({
           <div className="space-y-1">
             <h2 className="ui-page-title text-base">Run in cloud · {projectName}</h2>
             <p className="ui-page-subtitle">
-              Hermes clones the repo, makes the change, and opens a PR — laptop-off. Nothing auto-merges; you review it. Progress shows in Activity.
+              Hermes clones the repo, makes the change, and opens a PR — laptop-off. Nothing
+              auto-merges; you review it. Progress shows in Activity.
             </p>
           </div>
 
           {done ? (
             <div className="space-y-3">
-              <div className="ui-tag-positive inline-flex items-center gap-1.5">✓ Queued — a PR will open shortly.</div>
-              <p className="ui-micro-label break-all">
-                dispatch {done.hostedDispatchId}
-              </p>
-              <a
-                href="/activity"
-                className="ui-btn-secondary inline-flex items-center gap-1.5"
-              >
+              <div className="ui-tag-positive inline-flex items-center gap-1.5">
+                ✓ Queued — a PR will open shortly.
+              </div>
+              <p className="ui-micro-label break-all">dispatch {done.hostedDispatchId}</p>
+              <a href="/activity" className="ui-btn-secondary inline-flex items-center gap-1.5">
                 Watch in Activity <ExternalLink className="h-3.5 w-3.5" />
               </a>
             </div>
@@ -100,11 +98,23 @@ export function HostedDispatchButton({
               />
               {error && <p className="ui-error">{error}</p>}
               <div className="flex justify-end gap-2">
-                <button onClick={() => setOpen(false)} disabled={submitting} className="ui-btn-secondary">
+                <button
+                  onClick={() => setOpen(false)}
+                  disabled={submitting}
+                  className="ui-btn-secondary"
+                >
                   Cancel
                 </button>
-                <button onClick={submit} disabled={submitting || !task.trim()} className="ui-btn-primary inline-flex items-center gap-1.5">
-                  {submitting ? <Loader2 className="ui-spinner-sm" /> : <CloudUpload className="h-4 w-4" />}
+                <button
+                  onClick={submit}
+                  disabled={submitting || !task.trim()}
+                  className="ui-btn-primary inline-flex items-center gap-1.5"
+                >
+                  {submitting ? (
+                    <Loader2 className="ui-spinner-sm" />
+                  ) : (
+                    <CloudUpload className="h-4 w-4" />
+                  )}
                   Dispatch to Hermes
                 </button>
               </div>

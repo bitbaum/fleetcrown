@@ -26,7 +26,11 @@
  * those orderings are negative-tested — removing either rule from
  * pickDispatchChannel makes a case below fail.
  */
-import { projectPreferredChannel, projectChannelLock, pickDispatchChannel } from "@/lib/execution-access";
+import {
+  projectPreferredChannel,
+  projectChannelLock,
+  pickDispatchChannel,
+} from "@/lib/execution-access";
 import { BUILDER_CHANNELS, DEFAULT_BUILDER_CHANNEL } from "@/lib/constants/statuses";
 import { channelDurability } from "@/lib/builder-presence";
 
@@ -49,7 +53,10 @@ if (!(BUILDER_CHANNELS as readonly string[]).includes(DEFAULT_BUILDER_CHANNEL)) 
 // The always-on box is the default target: that is the whole point of having a
 // server-side runner. A cloneable repo can be materialized anywhere, so nothing
 // forces it back to the desktop.
-if (projectPreferredChannel({ dirPath: "/home/g/dev/fleetcrown", gitUrl: CLONEABLE }) !== DEFAULT_BUILDER_CHANNEL) {
+if (
+  projectPreferredChannel({ dirPath: "/home/g/dev/fleetcrown", gitUrl: CLONEABLE }) !==
+  DEFAULT_BUILDER_CHANNEL
+) {
   throw new Error("cloneable project must take the default channel");
 }
 if (projectPreferredChannel({ gitUrl: CLONEABLE }) !== DEFAULT_BUILDER_CHANNEL) {
@@ -80,7 +87,9 @@ if (projectPreferredChannel({ dirPath: "/home/g/dev/scratch", gitUrl: "not-a-url
 if (projectPreferredChannel({ gitUrl: CLONEABLE }, "local") !== "local") {
   throw new Error("explicit fallback must be honored");
 }
-if (projectPreferredChannel({ dirPath: "/home/g/dev/scratch", gitUrl: null }, "cloud") !== "local") {
+if (
+  projectPreferredChannel({ dirPath: "/home/g/dev/scratch", gitUrl: null }, "cloud") !== "local"
+) {
   throw new Error("uncloneable project must override an explicit cloud fallback");
 }
 
@@ -101,7 +110,9 @@ const SHAPES = [
 for (const shape of SHAPES) {
   const channel = projectPreferredChannel(shape);
   if (!channel || !(BUILDER_CHANNELS as readonly string[]).includes(channel)) {
-    throw new Error(`unrouted dispatch for ${JSON.stringify(shape)} — got ${JSON.stringify(channel)}`);
+    throw new Error(
+      `unrouted dispatch for ${JSON.stringify(shape)} — got ${JSON.stringify(channel)}`,
+    );
   }
 }
 
@@ -156,7 +167,9 @@ for (const presence of [BOTH, ONLY_LOCAL, ONLY_CLOUD, NEITHER]) {
   for (const shape of SHAPES) {
     const channel = pickDispatchChannel(shape, presence);
     if (!channel || !(BUILDER_CHANNELS as readonly string[]).includes(channel)) {
-      throw new Error(`unrouted: ${JSON.stringify(shape)} @ ${JSON.stringify(presence)} → ${JSON.stringify(channel)}`);
+      throw new Error(
+        `unrouted: ${JSON.stringify(shape)} @ ${JSON.stringify(presence)} → ${JSON.stringify(channel)}`,
+      );
     }
   }
 }
@@ -209,7 +222,9 @@ for (const presence of [BOTH, ONLY_LOCAL, ONLY_CLOUD, NEITHER]) {
     for (const shape of SHAPES) {
       const channel = pickDispatchChannel(shape, presence, durability);
       if (!channel || !(BUILDER_CHANNELS as readonly string[]).includes(channel)) {
-        throw new Error(`unrouted: ${JSON.stringify(shape)} @ ${JSON.stringify(presence)}/${durability}`);
+        throw new Error(
+          `unrouted: ${JSON.stringify(shape)} @ ${JSON.stringify(presence)}/${durability}`,
+        );
       }
     }
   }
@@ -219,27 +234,42 @@ for (const presence of [BOTH, ONLY_LOCAL, ONLY_CLOUD, NEITHER]) {
 const FRESH = new Date();
 const STALE = new Date(Date.now() - 60 * 60 * 1000);
 
-if (channelDurability("local", [{ channel: "local", observedAt: FRESH, powerSource: "ac" }]) !== "durable") {
+if (
+  channelDurability("local", [{ channel: "local", observedAt: FRESH, powerSource: "ac" }]) !==
+  "durable"
+) {
   throw new Error("fresh ac heartbeat is durable");
 }
-if (channelDurability("local", [{ channel: "local", observedAt: FRESH, powerSource: "battery" }]) !== "ephemeral") {
+if (
+  channelDurability("local", [{ channel: "local", observedAt: FRESH, powerSource: "battery" }]) !==
+  "ephemeral"
+) {
   throw new Error("fresh battery heartbeat is ephemeral");
 }
 // The dangerous one: the laptop said "ac" an hour ago and has since slept.
-if (channelDurability("local", [{ channel: "local", observedAt: STALE, powerSource: "ac" }]) !== "unknown") {
+if (
+  channelDurability("local", [{ channel: "local", observedAt: STALE, powerSource: "ac" }]) !==
+  "unknown"
+) {
   throw new Error("a stale ac reading must expire to unknown, not keep vouching");
 }
 if (channelDurability("local", [{ channel: "local", observedAt: FRESH }]) !== "unknown") {
   throw new Error("a heartbeat with no power field is unknown, not battery");
 }
-if (channelDurability("local", [{ channel: "local", observedAt: FRESH, powerSource: null }]) !== "unknown") {
+if (
+  channelDurability("local", [{ channel: "local", observedAt: FRESH, powerSource: null }]) !==
+  "unknown"
+) {
   throw new Error("an explicit null power field is unknown, not battery");
 }
 if (channelDurability("local", []) !== "unknown") {
   throw new Error("no heartbeat at all is unknown");
 }
 // Channels must not read each other's power state.
-if (channelDurability("local", [{ channel: "cloud", observedAt: FRESH, powerSource: "ac" }]) !== "unknown") {
+if (
+  channelDurability("local", [{ channel: "cloud", observedAt: FRESH, powerSource: "ac" }]) !==
+  "unknown"
+) {
   throw new Error("durability must be per-channel");
 }
 

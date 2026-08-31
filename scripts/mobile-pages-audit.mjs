@@ -55,7 +55,10 @@ async function login(page) {
   if (await ownerTab.count()) await ownerTab.click();
   if (!ownerPassword) throw new Error("LOCAL_AUTH_PASSWORD is not configured");
   await page.locator('input[type="password"]').first().fill(ownerPassword);
-  await page.getByRole("button", { name: /sign in|continue|unlock/i }).last().click();
+  await page
+    .getByRole("button", { name: /sign in|continue|unlock/i })
+    .last()
+    .click();
   await page.waitForURL((url) => !url.pathname.startsWith("/sign-in"), { timeout: 30000 });
 }
 
@@ -67,12 +70,21 @@ async function auditPage(page) {
     const scrollWidth = Math.max(document.body.scrollWidth, doc.scrollWidth);
     const overflow = scrollWidth > vw + 2;
 
-    const smallTargets = [...document.querySelectorAll("button,a,input,select,textarea,[role='button']")]
+    const smallTargets = [
+      ...document.querySelectorAll("button,a,input,select,textarea,[role='button']"),
+    ]
       .map((el) => {
         const rect = el.getBoundingClientRect();
         const style = window.getComputedStyle(el);
-        const label = (el.getAttribute("aria-label") || el.textContent || "").trim().replace(/\s+/g, " ").slice(0, 60);
-        const visible = rect.width > 0 && rect.height > 0 && style.visibility !== "hidden" && style.display !== "none";
+        const label = (el.getAttribute("aria-label") || el.textContent || "")
+          .trim()
+          .replace(/\s+/g, " ")
+          .slice(0, 60);
+        const visible =
+          rect.width > 0 &&
+          rect.height > 0 &&
+          style.visibility !== "hidden" &&
+          style.display !== "none";
         return { label, w: Math.round(rect.width), h: Math.round(rect.height), visible };
       })
       .filter((t) => t.visible && (t.w < 36 || t.h < 36))
@@ -95,13 +107,16 @@ async function auditPage(page) {
         ? {
             width: Math.round(drawerRect?.width ?? 0),
             height: Math.round(drawerRect?.height ?? 0),
-            coversViewport: drawerRect ? drawerRect.width >= vw - 4 && drawerRect.height >= vh - 4 : false,
+            coversViewport: drawerRect
+              ? drawerRect.width >= vw - 4 && drawerRect.height >= vh - 4
+              : false,
             bodyScrollable: Boolean(document.querySelector(".ui-drawer-body")),
           }
         : null,
-      navOverlapsDrawer: drawer && navRect && !document.body.classList.contains("fc-overlay-open")
-        ? navRect.top < vh && drawerRect && drawerRect.bottom > navRect.top
-        : false,
+      navOverlapsDrawer:
+        drawer && navRect && !document.body.classList.contains("fc-overlay-open")
+          ? navRect.top < vh && drawerRect && drawerRect.bottom > navRect.top
+          : false,
       smallTargets,
     };
   });
@@ -128,7 +143,10 @@ try {
       await page.goto(`${base}${route}`, { waitUntil: "load", timeout: 45000 });
       await page.waitForTimeout(1500);
       const audit = await auditPage(page);
-      await page.screenshot({ path: path.join(outDir, `${route.replace(/^\//, "") || "home"}.png`), fullPage: false });
+      await page.screenshot({
+        path: path.join(outDir, `${route.replace(/^\//, "") || "home"}.png`),
+        fullPage: false,
+      });
       report.pages.push(audit);
       const flags = [
         audit.overflow ? "OVERFLOW" : null,
@@ -148,7 +166,10 @@ try {
   const row = page.locator(".ui-projects-row, article.ui-projects-card").first();
   await row.click();
   await page.waitForTimeout(1200);
-  await page.screenshot({ path: path.join(outDir, "projects-drawer-overview.png"), fullPage: false });
+  await page.screenshot({
+    path: path.join(outDir, "projects-drawer-overview.png"),
+    fullPage: false,
+  });
 
   const drawerAudit = await auditPage(page);
   drawerAudit.tab = "overview";
@@ -159,7 +180,10 @@ try {
     if (await btn.count()) {
       await btn.click();
       await page.waitForTimeout(800);
-      await page.screenshot({ path: path.join(outDir, `projects-drawer-${tab.toLowerCase()}.png`), fullPage: false });
+      await page.screenshot({
+        path: path.join(outDir, `projects-drawer-${tab.toLowerCase()}.png`),
+        fullPage: false,
+      });
     }
   }
 

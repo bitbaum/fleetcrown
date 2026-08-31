@@ -2,7 +2,18 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, ArrowRight, Zap, FolderOpen, FolderKanban, History as HistoryIcon, Mic, MicOff, Loader2, Repeat2 } from "lucide-react";
+import {
+  Search,
+  ArrowRight,
+  Zap,
+  FolderOpen,
+  FolderKanban,
+  History as HistoryIcon,
+  Mic,
+  MicOff,
+  Loader2,
+  Repeat2,
+} from "lucide-react";
 import { AGENT_LABELS, type AnyAgentId } from "@/lib/agent-labels";
 import { useFetch } from "@/hooks/use-fetch";
 import { useCommandPalette } from "@/hooks/use-command-palette";
@@ -18,17 +29,31 @@ import {
 import { cn } from "@/lib/utils";
 
 type PaletteEntry =
-  | { kind: "agent-prompt";   key: string; label: string; sub: string; icon: string; href: string }
-  | { kind: "prompt-template"; key: string; label: string; sub: string; icon: null;   href: string }
-  | { kind: "nav";             key: string; label: string; sub: string; icon: null;   href: string }
-  | { kind: "project";         key: string; label: string; sub: string; icon: null;   href: string }
-  | { kind: "switch-agent";   key: string; label: string; sub: string; icon: null;   href: string }
+  | { kind: "agent-prompt"; key: string; label: string; sub: string; icon: string; href: string }
+  | { kind: "prompt-template"; key: string; label: string; sub: string; icon: null; href: string }
+  | { kind: "nav"; key: string; label: string; sub: string; icon: null; href: string }
+  | { kind: "project"; key: string; label: string; sub: string; icon: null; href: string }
+  | { kind: "switch-agent"; key: string; label: string; sub: string; icon: null; href: string }
   // Composer (Loki Phase 1): run a natural-language command, and the project
   // picker shown when the command is project-ambiguous ("ask when ambiguous").
-  | { kind: "run-command";    key: string; label: string; sub: string; icon: null;   href: null }
-  | { kind: "pick-project";   key: string; label: string; sub: string; icon: null;   href: null; projectName: string };
+  | { kind: "run-command"; key: string; label: string; sub: string; icon: null; href: null }
+  | {
+      kind: "pick-project";
+      key: string;
+      label: string;
+      sub: string;
+      icon: null;
+      href: null;
+      projectName: string;
+    };
 
-const SWITCHABLE_AGENT_IDS = ["claude", "cursor", "codex", "gemini", "grok"] as const satisfies readonly AnyAgentId[];
+const SWITCHABLE_AGENT_IDS = [
+  "claude",
+  "cursor",
+  "codex",
+  "gemini",
+  "grok",
+] as const satisfies readonly AnyAgentId[];
 
 type UserProjectLite = { id: string; name: string; dirPath?: string | null; isActive?: boolean };
 
@@ -88,63 +113,72 @@ export function CommandPalette() {
 
   // Fire-and-forget the resolved instruction into the project's agent session
   // (the operator's call: dispatch goes to the existing session, not a new one).
-  const dispatchInject = useCallback(async (projectKey: string, prompt: string) => {
-    setBusy(true);
-    setNote(null);
-    try {
-      const res = await fetch("/api/inject", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tab: projectKey, customPrompt: prompt }),
-      });
-      if (!res.ok) {
-        const b = (await res.json().catch(() => ({}))) as { error?: string };
-        setNote(b.error ?? `Dispatch failed (HTTP ${res.status})`);
-        return;
+  const dispatchInject = useCallback(
+    async (projectKey: string, prompt: string) => {
+      setBusy(true);
+      setNote(null);
+      try {
+        const res = await fetch("/api/inject", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tab: projectKey, customPrompt: prompt }),
+        });
+        if (!res.ok) {
+          const b = (await res.json().catch(() => ({}))) as { error?: string };
+          setNote(b.error ?? `Dispatch failed (HTTP ${res.status})`);
+          return;
+        }
+        setPending(null);
+        setQuery("");
+        setOpen(false);
+      } catch {
+        setNote("Dispatch failed — check the runner is connected.");
+      } finally {
+        setBusy(false);
       }
-      setPending(null);
-      setQuery("");
-      setOpen(false);
-    } catch {
-      setNote("Dispatch failed — check the runner is connected.");
-    } finally {
-      setBusy(false);
-    }
-  }, [setOpen]);
+    },
+    [setOpen],
+  );
 
   // Resolve NL → { project, prompt }. If the project is ambiguous, switch to a
   // project picker instead of guessing ("ask when ambiguous").
-  const resolveAndRun = useCallback(async (text: string) => {
-    if (!text.trim()) return;
-    setBusy(true);
-    setNote(null);
-    try {
-      const res = await fetch("/api/command/resolve", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, projects: projectNames }),
-      });
-      const r = (await res.json().catch(() => ({}))) as {
-        projectKey?: string | null; prompt?: string; needsProject?: boolean; error?: string;
-      };
-      if (!res.ok) {
-        setNote(r.error ?? "Couldn't understand that command.");
-        return;
+  const resolveAndRun = useCallback(
+    async (text: string) => {
+      if (!text.trim()) return;
+      setBusy(true);
+      setNote(null);
+      try {
+        const res = await fetch("/api/command/resolve", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text, projects: projectNames }),
+        });
+        const r = (await res.json().catch(() => ({}))) as {
+          projectKey?: string | null;
+          prompt?: string;
+          needsProject?: boolean;
+          error?: string;
+        };
+        if (!res.ok) {
+          setNote(r.error ?? "Couldn't understand that command.");
+          return;
+        }
+        const prompt = r.prompt?.trim() || text.trim();
+        if (r.needsProject || !r.projectKey) {
+          setPending({ prompt });
+          setQuery("");
+          setHighlight(0);
+          return;
+        }
+        await dispatchInject(r.projectKey, prompt);
+      } catch {
+        setNote("Couldn't reach the resolver.");
+      } finally {
+        setBusy(false);
       }
-      const prompt = r.prompt?.trim() || text.trim();
-      if (r.needsProject || !r.projectKey) {
-        setPending({ prompt });
-        setQuery("");
-        setHighlight(0);
-        return;
-      }
-      await dispatchInject(r.projectKey, prompt);
-    } catch {
-      setNote("Couldn't reach the resolver.");
-    } finally {
-      setBusy(false);
-    }
-  }, [projectNames, dispatchInject]);
+    },
+    [projectNames, dispatchInject],
+  );
 
   // Hydrate recent on first open so the order survives across sessions.
   useEffect(() => {
@@ -158,7 +192,9 @@ export function CommandPalette() {
         window.sessionStorage.getItem(PALETTE_RECENT_STORAGE_KEY) ??
         window.sessionStorage.getItem(LEGACY_PALETTE_RECENT_STORAGE_KEY);
       if (raw) setRecent(JSON.parse(raw) as string[]);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, [open]);
 
   useEffect(() => {
@@ -238,15 +274,29 @@ export function CommandPalette() {
       return projectNames
         .filter((name) => !q || name.toLowerCase().includes(q))
         .map<PaletteEntry>((name) => ({
-          kind: "pick-project", key: `pick:${name}`, label: name,
-          sub: "Run the command here", icon: null, href: null, projectName: name,
+          kind: "pick-project",
+          key: `pick:${name}`,
+          label: name,
+          sub: "Run the command here",
+          icon: null,
+          href: null,
+          projectName: name,
         }))
         .slice(0, 60);
     }
     // A free-text query is a candidate command — offer it as the top action,
     // above any matching navigate/prompt entries.
     const runRow: PaletteEntry[] = query.trim()
-      ? [{ kind: "run-command", key: "__run__", label: `Run: ${query.trim()}`, sub: "Resolve in natural language & dispatch", icon: null, href: null }]
+      ? [
+          {
+            kind: "run-command",
+            key: "__run__",
+            label: `Run: ${query.trim()}`,
+            sub: "Resolve in natural language & dispatch",
+            icon: null,
+            href: null,
+          },
+        ]
       : [];
     if (!q) {
       // Default ordering: recents (in order) → nav → agent → templates.
@@ -256,7 +306,12 @@ export function CommandPalette() {
       return [...recentEntries, ...remaining].slice(0, 60);
     }
     const matches = entries
-      .filter((e) => e.label.toLowerCase().includes(q) || e.sub.toLowerCase().includes(q) || e.key.toLowerCase().includes(q))
+      .filter(
+        (e) =>
+          e.label.toLowerCase().includes(q) ||
+          e.sub.toLowerCase().includes(q) ||
+          e.key.toLowerCase().includes(q),
+      )
       .slice(0, 59);
     return [...runRow, ...matches];
   }, [entries, query, recent, pending, projectNames]);
@@ -266,8 +321,14 @@ export function CommandPalette() {
   const safeHighlight = filtered.length === 0 ? 0 : Math.min(highlight, filtered.length - 1);
 
   const onSelect = (entry: PaletteEntry) => {
-    if (entry.kind === "run-command") { void resolveAndRun(query); return; }
-    if (entry.kind === "pick-project") { if (pending) void dispatchInject(entry.projectName, pending.prompt); return; }
+    if (entry.kind === "run-command") {
+      void resolveAndRun(query);
+      return;
+    }
+    if (entry.kind === "pick-project") {
+      if (pending) void dispatchInject(entry.projectName, pending.prompt);
+      return;
+    }
     if (!entry.href) return;
     pushRecent(entry.key, setRecent);
     setOpen(false);
@@ -288,7 +349,10 @@ export function CommandPalette() {
     } else if (e.key === "Escape") {
       e.preventDefault();
       // Back out of the project picker first, rather than closing the palette.
-      if (pending) { setPending(null); setNote(null); } else setOpen(false);
+      if (pending) {
+        setPending(null);
+        setNote(null);
+      } else setOpen(false);
     }
   };
 
@@ -322,9 +386,11 @@ export function CommandPalette() {
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={onKeyDown}
             placeholder={
-              voice.status === "recording" ? "Listening…"
-              : pending ? "Pick a project (type to filter)…"
-              : "Type a command (e.g. “code review for kivvi”) or search…"
+              voice.status === "recording"
+                ? "Listening…"
+                : pending
+                  ? "Pick a project (type to filter)…"
+                  : "Type a command (e.g. “code review for kivvi”) or search…"
             }
             className="ui-palette-input"
             spellCheck={false}
@@ -343,22 +409,28 @@ export function CommandPalette() {
               aria-label={voice.status === "recording" ? "Stop recording" : "Voice input"}
               title={voice.status === "recording" ? "Stop" : "Voice (mic)"}
             >
-              {voice.status === "transcribing" ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                : voice.status === "recording" ? <MicOff className="h-3.5 w-3.5" />
-                : <Mic className="h-3.5 w-3.5" />}
+              {voice.status === "transcribing" ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : voice.status === "recording" ? (
+                <MicOff className="h-3.5 w-3.5" />
+              ) : (
+                <Mic className="h-3.5 w-3.5" />
+              )}
             </button>
           )}
           <kbd className="ui-palette-kbd">esc</kbd>
         </div>
-        {voice.error && (
-          <div className="ui-palette-voice-error">{voice.error}</div>
-        )}
+        {voice.error && <div className="ui-palette-voice-error">{voice.error}</div>}
         {note && <div className="ui-palette-voice-error">{note}</div>}
         {!note && (busy || pending) && (
           <div className="ui-palette-status">
-            {busy
-              ? (<><Loader2 className="mr-1 inline h-3 w-3 animate-spin" /> Working…</>)
-              : `Pick a project to run: “${pending!.prompt}”`}
+            {busy ? (
+              <>
+                <Loader2 className="mr-1 inline h-3 w-3 animate-spin" /> Working…
+              </>
+            ) : (
+              `Pick a project to run: “${pending!.prompt}”`
+            )}
           </div>
         )}
         <ul className="ui-palette-list" role="listbox">
@@ -371,17 +443,22 @@ export function CommandPalette() {
                 role="option"
                 aria-selected={i === safeHighlight}
                 className={cn("ui-palette-row", i === safeHighlight && "ui-palette-row-active")}
-                onMouseDown={(e) => { e.preventDefault(); onSelect(entry); }}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  onSelect(entry);
+                }}
                 onMouseEnter={() => setHighlight(i)}
               >
                 <span className="ui-palette-row-icon" aria-hidden="true">
-                  {entry.kind === "agent-prompt"   && <span className="text-base leading-none">{entry.icon}</span>}
-                  {entry.kind === "prompt-template" && <Zap          className="h-3.5 w-3.5" />}
-                  {entry.kind === "nav"             && <FolderOpen   className="h-3.5 w-3.5" />}
-                  {entry.kind === "project"         && <FolderKanban className="h-3.5 w-3.5" />}
-                  {entry.kind === "switch-agent"   && <Repeat2       className="h-3.5 w-3.5" />}
-                  {entry.kind === "run-command"     && <Zap          className="h-3.5 w-3.5" />}
-                  {entry.kind === "pick-project"    && <FolderKanban className="h-3.5 w-3.5" />}
+                  {entry.kind === "agent-prompt" && (
+                    <span className="text-base leading-none">{entry.icon}</span>
+                  )}
+                  {entry.kind === "prompt-template" && <Zap className="h-3.5 w-3.5" />}
+                  {entry.kind === "nav" && <FolderOpen className="h-3.5 w-3.5" />}
+                  {entry.kind === "project" && <FolderKanban className="h-3.5 w-3.5" />}
+                  {entry.kind === "switch-agent" && <Repeat2 className="h-3.5 w-3.5" />}
+                  {entry.kind === "run-command" && <Zap className="h-3.5 w-3.5" />}
+                  {entry.kind === "pick-project" && <FolderKanban className="h-3.5 w-3.5" />}
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm text-text-primary">{entry.label}</span>
@@ -402,9 +479,15 @@ export function CommandPalette() {
             was three shortcuts nobody can press, costing a line of the list
             that is the point of the panel. */}
         <div className="ui-palette-foot hidden md:flex">
-          <span><kbd className="ui-palette-kbd">↑</kbd> <kbd className="ui-palette-kbd">↓</kbd> navigate</span>
-          <span><kbd className="ui-palette-kbd">⏎</kbd> open</span>
-          <span><kbd className="ui-palette-kbd">⌘K</kbd> toggle</span>
+          <span>
+            <kbd className="ui-palette-kbd">↑</kbd> <kbd className="ui-palette-kbd">↓</kbd> navigate
+          </span>
+          <span>
+            <kbd className="ui-palette-kbd">⏎</kbd> open
+          </span>
+          <span>
+            <kbd className="ui-palette-kbd">⌘K</kbd> toggle
+          </span>
         </div>
       </div>
     </div>
@@ -414,7 +497,11 @@ export function CommandPalette() {
 function pushRecent(key: string, setRecent: React.Dispatch<React.SetStateAction<string[]>>) {
   setRecent((prev) => {
     const next = [key, ...prev.filter((k) => k !== key)].slice(0, RECENT_LIMIT);
-    try { window.sessionStorage.setItem(PALETTE_RECENT_STORAGE_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+    try {
+      window.sessionStorage.setItem(PALETTE_RECENT_STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      /* ignore */
+    }
     return next;
   });
 }

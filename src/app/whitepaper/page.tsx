@@ -11,7 +11,8 @@ import { APP_NAME } from "@/config/brand";
 
 export const metadata: Metadata = {
   title: "Whitepaper",
-  description: "A technical architecture for sustained autonomous execution across many projects simultaneously.",
+  description:
+    "A technical architecture for sustained autonomous execution across many projects simultaneously.",
 };
 
 function parseFrontmatter(raw: string): { meta: Record<string, string>; body: string } {
@@ -64,14 +65,10 @@ export default function WhitepaperPage() {
           <div className="ui-public-doc-meta-row">
             <span className="ui-public-doc-badge">WHITEPAPER</span>
             <span className="ui-public-doc-meta">v{version}</span>
-            {publishedAt && (
-              <span className="ui-public-doc-meta">{publishedAt}</span>
-            )}
+            {publishedAt && <span className="ui-public-doc-meta">{publishedAt}</span>}
           </div>
           <h1 className="ui-public-doc-title">{title}</h1>
-          {subtitle && (
-            <p className="ui-public-doc-subtitle">{subtitle}</p>
-          )}
+          {subtitle && <p className="ui-public-doc-subtitle">{subtitle}</p>}
         </div>
 
         {toc.length > 1 && <DocContents toc={toc} />}
@@ -86,7 +83,11 @@ export default function WhitepaperPage() {
                   </h2>
                 );
               case "h3":
-                return <h3 key={i} className="ui-public-prose-h3">{block.text}</h3>;
+                return (
+                  <h3 key={i} className="ui-public-prose-h3">
+                    {block.text}
+                  </h3>
+                );
               case "p":
                 return (
                   <p
@@ -99,7 +100,9 @@ export default function WhitepaperPage() {
                 return (
                   <blockquote key={i} className="ui-public-prose-blockquote">
                     {block.text.map((line, j) => (
-                      <p key={j} className="ui-public-prose-blockquote-p">{line}</p>
+                      <p key={j} className="ui-public-prose-blockquote-p">
+                        {line}
+                      </p>
                     ))}
                   </blockquote>
                 );
@@ -128,9 +131,7 @@ export default function WhitepaperPage() {
               case "code":
                 return (
                   <div key={i} className="ui-public-code-block">
-                    {block.lang && (
-                      <p className="ui-public-code-lang">{block.lang}</p>
-                    )}
+                    {block.lang && <p className="ui-public-code-lang">{block.lang}</p>}
                     <pre className="ui-public-code-pre">
                       <code>{block.text}</code>
                     </pre>
@@ -144,7 +145,9 @@ export default function WhitepaperPage() {
 
         <div className="ui-public-doc-footer">
           <p className="ui-public-doc-footer-title">Ready to close the execution gap?</p>
-          <p className="ui-public-doc-footer-note">Start using {APP_NAME} as your builder operating system.</p>
+          <p className="ui-public-doc-footer-note">
+            Start using {APP_NAME} as your builder operating system.
+          </p>
           <div className="mx-auto flex max-w-sm flex-col gap-2.5 sm:max-w-none sm:flex-row sm:flex-wrap sm:items-center sm:justify-center sm:gap-3">
             <Link href={ROUTES.SIGN_IN} className="ui-public-cta w-full sm:w-auto">
               Get started →

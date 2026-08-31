@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { searchPeople, createPerson, SORT_MODE, type SortMode, CreatePersonBody } from "@/db/queries/people";
+import {
+  searchPeople,
+  createPerson,
+  SORT_MODE,
+  type SortMode,
+  CreatePersonBody,
+} from "@/db/queries/people";
 import { type RelationshipHealth, RELATIONSHIP_HEALTH_VALUES } from "@/lib/constants/people";
 import { readJsonBody, handleDuplicateEntityNameError } from "@/lib/api/route-helpers";
 import { requirePrivateApiAccess } from "@/lib/private-zone-api";
@@ -33,13 +39,17 @@ export async function GET(request: Request) {
   const limit = Math.min(Math.max(parseInt(searchParams.get("limit") ?? "50", 10) || 50, 1), 200);
   const offset = Math.max(parseInt(searchParams.get("offset") ?? "0", 10) || 0, 0);
   const sortRaw = searchParams.get("sort") ?? SORT_MODE.RECENT;
-  const sort: SortMode = VALID_SORTS.includes(sortRaw as SortMode) ? (sortRaw as SortMode) : SORT_MODE.RECENT;
+  const sort: SortMode = VALID_SORTS.includes(sortRaw as SortMode)
+    ? (sortRaw as SortMode)
+    : SORT_MODE.RECENT;
 
   const healthRaw = searchParams.get("health") ?? "";
   const health = healthRaw
     .split(",")
     .map((h) => h.trim())
-    .filter((h): h is RelationshipHealth => (RELATIONSHIP_HEALTH_VALUES as readonly string[]).includes(h));
+    .filter((h): h is RelationshipHealth =>
+      (RELATIONSHIP_HEALTH_VALUES as readonly string[]).includes(h),
+    );
 
   const result = await searchPeople(userId, q, limit, offset, sort, health);
   return NextResponse.json(result);

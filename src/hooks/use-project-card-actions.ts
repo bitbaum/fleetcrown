@@ -29,7 +29,12 @@ export function useProjectCardActions({
   queue: string[];
   removeFromQueue: (index: number) => void;
   clearQueue: () => void;
-  onInject: (tab: string, promptKey?: string, customPrompt?: string, attachments?: Attachment[]) => Promise<{ commandId?: string | null } | void>;
+  onInject: (
+    tab: string,
+    promptKey?: string,
+    customPrompt?: string,
+    attachments?: Attachment[],
+  ) => Promise<{ commandId?: string | null } | void>;
   onRunWithBrain: (project: ProjectState, intent: OrchestrationTaskIntentId) => Promise<void>;
   setDismissed: (v: boolean) => void;
   isReadyNow: boolean;
@@ -53,16 +58,24 @@ export function useProjectCardActions({
     if (justSentTimer.current) clearTimeout(justSentTimer.current);
     justSentTimer.current = setTimeout(() => setJustSent(null), FEEDBACK_MEDIUM_MS);
   }, []);
-  useEffect(() => () => { if (justSentTimer.current) clearTimeout(justSentTimer.current); }, []);
+  useEffect(
+    () => () => {
+      if (justSentTimer.current) clearTimeout(justSentTimer.current);
+    },
+    [],
+  );
   // Lazy-init from localStorage draft so a failed send / page reload / tab
   // close doesn't drop the user's typed prompt. clearDraft is called only on
   // confirmed-successful sendCustom / sendText. See incident 2026-05-20:
   // mobile user sent from phone, request errored, draft lost.
   const [custom, _setCustom] = useState<string>(() => getDraft(project.tab));
-  const setCustom = useCallback((next: string) => {
-    _setCustom(next);
-    setDraft(project.tab, next);
-  }, [project.tab]);
+  const setCustom = useCallback(
+    (next: string) => {
+      _setCustom(next);
+      setDraft(project.tab, next);
+    },
+    [project.tab],
+  );
   const [customFocused, setCustomFocused] = useState(false);
   const [merging, setMerging] = useState(false);
   const [preloadedDispatch, setPreloadedDispatch] = useState<DispatchResult | null>(null);
@@ -103,23 +116,35 @@ export function useProjectCardActions({
           setDispatchStatus(view);
           if (view.terminal) return; // settled — stop polling
         }
-      } catch { /* transient network error — keep polling */ }
+      } catch {
+        /* transient network error — keep polling */
+      }
       if (attempts >= MAX_ATTEMPTS || token.cancelled) return;
-      setTimeout(() => { void poll(); }, 3000);
+      setTimeout(() => {
+        void poll();
+      }, 3000);
     };
     void poll();
   }, []);
-  useEffect(() => () => { if (pollRef.current) pollRef.current.cancelled = true; }, []);
+  useEffect(
+    () => () => {
+      if (pollRef.current) pollRef.current.cancelled = true;
+    },
+    [],
+  );
 
   // Single funnel for user-initiated sends: fire the inject, then track the
   // returned command id. All the send* handlers below route through this so
   // tracking lives in exactly one place.
-  const doInject = useCallback(async (tab: string, promptKey?: string, customPrompt?: string, attachments?: Attachment[]) => {
-    const result = await onInject(tab, promptKey, customPrompt, attachments);
-    const commandId = result && "commandId" in result ? result.commandId : null;
-    if (commandId) trackDispatch(commandId);
-    return result;
-  }, [onInject, trackDispatch]);
+  const doInject = useCallback(
+    async (tab: string, promptKey?: string, customPrompt?: string, attachments?: Attachment[]) => {
+      const result = await onInject(tab, promptKey, customPrompt, attachments);
+      const commandId = result && "commandId" in result ? result.commandId : null;
+      if (commandId) trackDispatch(commandId);
+      return result;
+    },
+    [onInject, trackDispatch],
+  );
 
   // Pre-fetch dispatch decision as soon as the ready banner appears.
   // Note 2026-05-20: previously gated on queue.length > 0, which short-
@@ -132,34 +157,38 @@ export function useProjectCardActions({
       return;
     }
     const handoff = {
-      done:   project.session?.done   ?? "",
-      next:   project.session?.next   ?? "",
+      done: project.session?.done ?? "",
+      next: project.session?.next ?? "",
       health: project.session?.health ?? "",
-      tests:  project.session?.tests  ?? "",
-      todos:  project.session?.todos  ?? "",
+      tests: project.session?.tests ?? "",
+      todos: project.session?.todos ?? "",
       status: project.session?.status ?? "",
     };
     let cancelled = false;
     postJson("/api/control/dispatch", {
       handoff,
-      blockerCount:  0,
-      noOpCount:     project.session?.noOpCount ?? 0,
+      blockerCount: 0,
+      noOpCount: project.session?.noOpCount ?? 0,
       queue,
-      projectName:   project.tab,
-      projectKey:    project.tab,
-      gitBranch:     project.git?.branch,
+      projectName: project.tab,
+      projectKey: project.tab,
+      gitBranch: project.git?.branch,
       recentCommits: project.git?.recentCommits,
-      mission:       project.profile?.mission,
-    }).then(async (res) => {
-      if (!cancelled && res.ok) setPreloadedDispatch(await res.json() as DispatchResult);
-    }).catch(() => {});
-    return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- preload fires only on the ready-transition; payload fields are read fresh when it does
+      mission: project.profile?.mission,
+    })
+      .then(async (res) => {
+        if (!cancelled && res.ok) setPreloadedDispatch((await res.json()) as DispatchResult);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- preload fires only on the ready-transition; payload fields are read fresh when it does
   }, [isReadyNow, queue.length]);
 
   const sessionHealthBlocksQueue = (): boolean => {
     const health = (project.session?.health ?? "").toLowerCase();
-    const tests  = (project.session?.tests  ?? "").toLowerCase();
+    const tests = (project.session?.tests ?? "").toLowerCase();
     return health.includes("critical") || tests.includes("fail");
   };
 
@@ -192,23 +221,26 @@ export function useProjectCardActions({
     }
   };
 
-  const sendText = useCallback(async (text: string) => {
-    if (!text.trim()) return;
-    setSending("custom");
-    setSendError(null);
-    setDismissed(true);
-    try {
-      await doInject(project.tab, undefined, text.trim());
-      // Belt-and-suspenders: sendText bypasses setCustom (the draft auto-clear
-      // path), so explicit clearDraft after successful send.
-      clearDraft(project.tab);
-      markSent("custom");
-    } catch (err) {
-      setSendError(err instanceof Error ? err.message : "Send failed");
-    } finally {
-      setSending(null);
-    }
-  }, [project.tab, doInject, setDismissed, markSent]);
+  const sendText = useCallback(
+    async (text: string) => {
+      if (!text.trim()) return;
+      setSending("custom");
+      setSendError(null);
+      setDismissed(true);
+      try {
+        await doInject(project.tab, undefined, text.trim());
+        // Belt-and-suspenders: sendText bypasses setCustom (the draft auto-clear
+        // path), so explicit clearDraft after successful send.
+        clearDraft(project.tab);
+        markSent("custom");
+      } catch (err) {
+        setSendError(err instanceof Error ? err.message : "Send failed");
+      } finally {
+        setSending(null);
+      }
+    },
+    [project.tab, doInject, setDismissed, markSent],
+  );
 
   const sendIntent = async (intent: OrchestrationTaskIntentId) => {
     if (intent === "next_best" && !sessionHealthBlocksQueue()) {
@@ -221,9 +253,11 @@ export function useProjectCardActions({
           await doInject(project.tab, undefined, queued);
           removeFromQueue(0);
           markSent(intent);
+        } catch (err) {
+          setSendError(err instanceof Error ? err.message : "Send failed");
+        } finally {
+          setSending(null);
         }
-        catch (err) { setSendError(err instanceof Error ? err.message : "Send failed"); }
-        finally { setSending(null); }
         return;
       }
     }
@@ -305,8 +339,9 @@ export function useProjectCardActions({
         try {
           await onInject(project.tab, undefined, queued);
           removeFromQueue(0);
+        } finally {
+          setSending(null);
         }
-        finally { setSending(null); }
         return;
       }
     }
@@ -316,29 +351,45 @@ export function useProjectCardActions({
     // because the gate-evaluator picked nextbest (or the caller asked
     // without a queue head); fire the canned template.
     await sendIntent("next_best");
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- sendIntent/toast helpers are stable closures; listed deps are the decision inputs
-  }, [autoContinueEnabled, preloadedDispatch, queue, removeFromQueue, project.tab, project.agentRunning, project.currentPrompt, onInject, setDismissed, project.session?.status, project.session?.health, project.session?.tests]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sendIntent/toast helpers are stable closures; listed deps are the decision inputs
+  }, [
+    autoContinueEnabled,
+    preloadedDispatch,
+    queue,
+    removeFromQueue,
+    project.tab,
+    project.agentRunning,
+    project.currentPrompt,
+    onInject,
+    setDismissed,
+    project.session?.status,
+    project.session?.health,
+    project.session?.tests,
+  ]);
 
-  const handleSendFromQueue = useCallback(async (index: number) => {
-    const item = queue[index];
-    if (!item) return;
-    // CRITICAL: do not remove from the queue until the send has confirmed
-    // success. The previous order (remove → await → finally) destroyed the
-    // queue item on any send failure (network drop, auth expiry, 5xx) —
-    // same class as the 9c2525c sendCustom incident, but on the per-project
-    // prompt queue instead of the custom input.
-    setSending("custom");
-    setSendError(null);
-    setDismissed(true);
-    try {
-      await doInject(project.tab, undefined, item);
-      removeFromQueue(index);
-    } catch (err) {
-      setSendError(err instanceof Error ? err.message : "Send failed");
-    } finally {
-      setSending(null);
-    }
-  }, [queue, removeFromQueue, project.tab, doInject, setDismissed]);
+  const handleSendFromQueue = useCallback(
+    async (index: number) => {
+      const item = queue[index];
+      if (!item) return;
+      // CRITICAL: do not remove from the queue until the send has confirmed
+      // success. The previous order (remove → await → finally) destroyed the
+      // queue item on any send failure (network drop, auth expiry, 5xx) —
+      // same class as the 9c2525c sendCustom incident, but on the per-project
+      // prompt queue instead of the custom input.
+      setSending("custom");
+      setSendError(null);
+      setDismissed(true);
+      try {
+        await doInject(project.tab, undefined, item);
+        removeFromQueue(index);
+      } catch (err) {
+        setSendError(err instanceof Error ? err.message : "Send failed");
+      } finally {
+        setSending(null);
+      }
+    },
+    [queue, removeFromQueue, project.tab, doInject, setDismissed],
+  );
 
   const handleMergeQueue = useCallback(async () => {
     if (queue.length < 2) return;
@@ -350,16 +401,22 @@ export function useProjectCardActions({
         clearQueue();
         setCustom(data.merged);
       }
-    } catch { /* ignore */ } finally {
+    } catch {
+      /* ignore */
+    } finally {
       setMerging(false);
     }
   }, [queue, clearQueue, setCustom]);
 
   // Keyboard: 1–9 dispatch prompt slots when this is the sole ready project on the page.
   const sendRef = useRef(send);
-  useEffect(() => { sendRef.current = send; });
+  useEffect(() => {
+    sendRef.current = send;
+  });
   const sendingRef = useRef(sending);
-  useEffect(() => { sendingRef.current = sending; }, [sending]);
+  useEffect(() => {
+    sendingRef.current = sending;
+  }, [sending]);
 
   useEffect(() => {
     if (!isOnlyReady) return;

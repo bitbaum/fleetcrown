@@ -38,4 +38,8 @@ for (const file of readdirSync(SRC).sort()) {
   changed++;
 }
 
-console.log(changed === 0 ? "✓ agent-core mirror already in sync" : `✓ mirrored ${changed} file(s) to ${DEST}`);
+console.log(
+  changed === 0
+    ? "✓ agent-core mirror already in sync"
+    : `✓ mirrored ${changed} file(s) to ${DEST}`,
+);

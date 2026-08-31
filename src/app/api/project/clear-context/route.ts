@@ -20,7 +20,10 @@ export async function POST(req: NextRequest) {
   // 500 that the UI didn't surface — silent no-op for the user. Returning
   // a clear 503 lets the caller (and any future caller) react properly.
   if (!isRuntimeAvailable()) {
-    return NextResponse.json({ ok: false, reason: "runtime_offline", error: "Clear context requires the local runner" }, { status: 503 });
+    return NextResponse.json(
+      { ok: false, reason: "runtime_offline", error: "Clear context requires the local runner" },
+      { status: 503 },
+    );
   }
 
   const dataOrResp = await readJsonBody(req, ClearBody);
@@ -37,7 +40,11 @@ export async function POST(req: NextRequest) {
   try {
     injectIntoTab(canonical, "/clear");
     // /clear is not a prompt — clear the running-prompt state so UI shows idle
-    try { fs.unlinkSync(stateFile.prompt(canonical)); } catch { /* already gone */ }
+    try {
+      fs.unlinkSync(stateFile.prompt(canonical));
+    } catch {
+      /* already gone */
+    }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ error: `Clear failed: ${msg}` }, { status: 500 });

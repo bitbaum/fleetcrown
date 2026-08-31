@@ -122,10 +122,13 @@ export async function GET(req: NextRequest) {
       type: ALERT_TYPE,
       severity: "warning",
       title: `${s.pending} ${noun} waiting for your approval`,
-      description:
-        `Oldest: "${s.oldestTitle}" — waiting ${waited}. Nothing in the queue runs until you approve it.`,
+      description: `Oldest: "${s.oldestTitle}" — waiting ${waited}. Nothing in the queue runs until you approve it.`,
       actionUrl: "/approvals",
-      metadata: { pending: s.pending, oldestTitle: s.oldestTitle, oldestAgeSeconds: s.oldestAgeSeconds },
+      metadata: {
+        pending: s.pending,
+        oldestTitle: s.oldestTitle,
+        oldestAgeSeconds: s.oldestAgeSeconds,
+      },
     });
 
     if (created) {

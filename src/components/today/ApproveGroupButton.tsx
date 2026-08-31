@@ -6,22 +6,14 @@ import { handleApproveAll } from "@/app/actions";
 import { haptic } from "@/lib/haptics";
 import { ACTION_COPY } from "@/config/action-copy";
 
-export function ApproveGroupButton({
-  ids,
-  onDone,
-}: {
-  ids: string[];
-  onDone?: () => void;
-}) {
+export function ApproveGroupButton({ ids, onDone }: { ids: string[]; onDone?: () => void }) {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState(false);
 
   if (done) {
     return (
-      <p className="text-xs text-text-secondary">
-        {ACTION_COPY.checkin.remindedAll(ids.length)}
-      </p>
+      <p className="text-xs text-text-secondary">{ACTION_COPY.checkin.remindedAll(ids.length)}</p>
     );
   }
 

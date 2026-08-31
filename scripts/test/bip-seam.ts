@@ -24,7 +24,16 @@ function check(name: string, fn: () => void) {
 }
 
 const RENDERED_TYPES = new Set([
-  "h2", "h3", "ul", "ol", "blockquote", "p", "image", "code", "table", "embed",
+  "h2",
+  "h3",
+  "ul",
+  "ol",
+  "blockquote",
+  "p",
+  "image",
+  "code",
+  "table",
+  "embed",
 ]);
 
 check("parseThoughtBlocks IS bip-kit's parser, not a fork", () => {

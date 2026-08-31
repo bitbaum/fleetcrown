@@ -18,10 +18,7 @@ const RoadmapBody = z.object({
   text: z.string().trim().min(10, "Paste the spec — at least a sentence.").max(LONG_TEXT_MAX),
 });
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const userId = await getSessionUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const idOrResp = await readIdParam(params);
@@ -38,13 +35,19 @@ export async function POST(
     roadmap = await extractRoadmap(project.name, dataOrResp.text);
   } catch (e) {
     return NextResponse.json(
-      { error: "Could not extract a roadmap from that text. Try again in a moment.", details: e instanceof Error ? e.message : String(e) },
+      {
+        error: "Could not extract a roadmap from that text. Try again in a moment.",
+        details: e instanceof Error ? e.message : String(e),
+      },
       { status: 502 },
     );
   }
 
   if (roadmap.milestones.length === 0) {
-    return NextResponse.json({ error: "The text didn't contain a roadmap to decompose." }, { status: 422 });
+    return NextResponse.json(
+      { error: "The text didn't contain a roadmap to decompose." },
+      { status: 422 },
+    );
   }
 
   // Create each milestone as a project goal linked to this entity. One failure
@@ -59,7 +62,11 @@ export async function POST(
     }
   }
 
-  if (created.length === 0) return NextResponse.json({ error: "Could not create goals for this project." }, { status: 500 });
+  if (created.length === 0)
+    return NextResponse.json(
+      { error: "Could not create goals for this project." },
+      { status: 500 },
+    );
   scheduleProjectProfileReindexByEntityId(userId, idOrResp);
   return NextResponse.json({ ok: true, created });
 }

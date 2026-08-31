@@ -109,9 +109,10 @@ export default function NewFromScratchPage() {
   // ── Result view ─────────────────────────────────────────────────────────
 
   if (result?.ok && result.repo && result.project) {
-    const seededLabel = result.template && result.template !== "bare" && result.templateSeeded
-      ? TEMPLATES[result.template].label
-      : null;
+    const seededLabel =
+      result.template && result.template !== "bare" && result.templateSeeded
+        ? TEMPLATES[result.template].label
+        : null;
     const infra = result.infra ?? [];
     const firstTask = result.firstTask ?? "";
     return (
@@ -128,7 +129,12 @@ export default function NewFromScratchPage() {
                   <span>
                     <GitBranch className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />
                     {result.repo.private ? "Private" : "Public"} GitHub repo{" "}
-                    <a href={result.repo.gitUrl} target="_blank" rel="noopener noreferrer" className="text-accent-text underline break-all">
+                    <a
+                      href={result.repo.gitUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-accent-text underline break-all"
+                    >
                       {result.repo.full_name}
                     </a>
                   </span>
@@ -136,12 +142,17 @@ export default function NewFromScratchPage() {
                 {seededLabel && (
                   <li className="flex items-start gap-2 text-sm text-text-secondary">
                     <Check className="h-4 w-4 mt-0.5 shrink-0 text-status-positive" />
-                    <span><strong>{seededLabel}</strong> starter scaffolded into the repo</span>
+                    <span>
+                      <strong>{seededLabel}</strong> starter scaffolded into the repo
+                    </span>
                   </li>
                 )}
                 {result.template && result.template !== "bare" && !result.templateSeeded && (
                   <li className="flex items-start gap-2 text-sm text-status-warning">
-                    <span>⚠ Starter seeding failed — the repo has just a README; the agent will scaffold the stack instead.</span>
+                    <span>
+                      ⚠ Starter seeding failed — the repo has just a README; the agent will scaffold
+                      the stack instead.
+                    </span>
                   </li>
                 )}
                 <li className="flex items-start gap-2 text-sm text-text-secondary">
@@ -154,17 +165,23 @@ export default function NewFromScratchPage() {
             {/* The bridge: start building it on autopilot */}
             <div className="pt-4 border-t border-border-subtle space-y-3">
               <div>
-                <div className="text-sm font-medium text-text-primary">Now build it on autopilot</div>
+                <div className="text-sm font-medium text-text-primary">
+                  Now build it on autopilot
+                </div>
                 <p className="text-sm text-text-muted mt-1">
-                  Dispatch the first task and an agent takes it from scaffold to running — setting up
+                  Dispatch the first task and an agent takes it from scaffold to running — setting
+                  up
                   {infra.length > 0 ? " " : " everything it needs"}
                   {infra.length > 0 && (
                     <span className="inline-flex flex-wrap gap-1.5 align-middle ml-1">
                       {infra.map((i) => (
-                        <span key={i} className="ui-tag text-xs">{i}</span>
+                        <span key={i} className="ui-tag text-xs">
+                          {i}
+                        </span>
                       ))}
                     </span>
-                  )}.
+                  )}
+                  .
                 </p>
               </div>
 
@@ -180,22 +197,41 @@ export default function NewFromScratchPage() {
                     className="absolute top-7 right-2 ui-btn-icon"
                     title="Copy first task"
                   >
-                    {copied === "task" ? <Check className="h-3.5 w-3.5 text-status-positive" /> : <Copy className="h-3.5 w-3.5" />}
+                    {copied === "task" ? (
+                      <Check className="h-3.5 w-3.5 text-status-positive" />
+                    ) : (
+                      <Copy className="h-3.5 w-3.5" />
+                    )}
                   </button>
                 </div>
               )}
 
               <div className="ui-card-shell p-3 text-xs text-text-muted">
                 The one thing FleetCrown can&apos;t do for you: run code on your machine.{" "}
-                <Link href="/download" className="text-accent-text underline">Connect Fleet Runner</Link>{" "}
-                on the machine you&apos;ll build from — it clones the repo and runs this task automatically. No runner yet? The task queues until one connects.
+                <Link href="/download" className="text-accent-text underline">
+                  Connect Fleet Runner
+                </Link>{" "}
+                on the machine you&apos;ll build from — it clones the repo and runs this task
+                automatically. No runner yet? The task queues until one connects.
               </div>
 
               <div className="flex justify-end gap-2">
-                <button type="button" onClick={() => { setResult(null); setName(""); setDescription(""); }} className="ui-btn-ghost">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setResult(null);
+                    setName("");
+                    setDescription("");
+                  }}
+                  className="ui-btn-ghost"
+                >
                   Create another
                 </button>
-                <button type="button" onClick={() => startBuilding(firstTask, result.project!.name)} className="ui-btn-primary">
+                <button
+                  type="button"
+                  onClick={() => startBuilding(firstTask, result.project!.name)}
+                  className="ui-btn-primary"
+                >
                   Open in Control →
                 </button>
               </div>
@@ -210,21 +246,47 @@ export default function NewFromScratchPage() {
                   <pre className="ui-card-shell p-3 pr-10 overflow-x-auto text-text-secondary">
                     <code>{result.cloneCmd}</code>
                   </pre>
-                  <button type="button" onClick={() => copy(result.cloneCmd ?? "", "ssh")} className="absolute top-7 right-2 ui-btn-icon">
-                    {copied === "ssh" ? <Check className="h-3.5 w-3.5 text-status-positive" /> : <Copy className="h-3.5 w-3.5" />}
+                  <button
+                    type="button"
+                    onClick={() => copy(result.cloneCmd ?? "", "ssh")}
+                    className="absolute top-7 right-2 ui-btn-icon"
+                  >
+                    {copied === "ssh" ? (
+                      <Check className="h-3.5 w-3.5 text-status-positive" />
+                    ) : (
+                      <Copy className="h-3.5 w-3.5" />
+                    )}
                   </button>
                   <div className="relative mt-2">
                     <pre className="ui-card-shell p-3 pr-10 overflow-x-auto text-text-secondary">
                       <code>{result.cloneHttpsCmd}</code>
                     </pre>
-                    <button type="button" onClick={() => copy(result.cloneHttpsCmd ?? "", "https")} className="absolute top-2 right-2 ui-btn-icon">
-                      {copied === "https" ? <Check className="h-3.5 w-3.5 text-status-positive" /> : <Copy className="h-3.5 w-3.5" />}
+                    <button
+                      type="button"
+                      onClick={() => copy(result.cloneHttpsCmd ?? "", "https")}
+                      className="absolute top-2 right-2 ui-btn-icon"
+                    >
+                      {copied === "https" ? (
+                        <Check className="h-3.5 w-3.5 text-status-positive" />
+                      ) : (
+                        <Copy className="h-3.5 w-3.5" />
+                      )}
                     </button>
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <a href={`cursor://file/${encodeURIComponent("~/dev/" + result.repo.name)}`} className="ui-btn-secondary text-xs">Open in Cursor</a>
-                  <a href={`vscode://file/${encodeURIComponent("~/dev/" + result.repo.name)}`} className="ui-btn-secondary text-xs">Open in VS Code</a>
+                  <a
+                    href={`cursor://file/${encodeURIComponent("~/dev/" + result.repo.name)}`}
+                    className="ui-btn-secondary text-xs"
+                  >
+                    Open in Cursor
+                  </a>
+                  <a
+                    href={`vscode://file/${encodeURIComponent("~/dev/" + result.repo.name)}`}
+                    className="ui-btn-secondary text-xs"
+                  >
+                    Open in VS Code
+                  </a>
                 </div>
               </div>
             </details>
@@ -247,14 +309,13 @@ export default function NewFromScratchPage() {
             the h1 of the same words, then repeated the intro paragraph. Both
             now live in the page header, where they are said once. */}
         <div className="ui-card-shell space-y-5 p-5 sm:p-6">
-
-          {error && (
-            <div className="ui-error p-3 rounded-md text-sm">{error}</div>
-          )}
+          {error && <div className="ui-error p-3 rounded-md text-sm">{error}</div>}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">Project name</label>
+              <label className="block text-sm font-medium text-text-primary mb-1">
+                Project name
+              </label>
               <input
                 type="text"
                 value={name}
@@ -268,7 +329,9 @@ export default function NewFromScratchPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">What do you want to build?</label>
+              <label className="block text-sm font-medium text-text-primary mb-1">
+                What do you want to build?
+              </label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -293,14 +356,26 @@ export default function NewFromScratchPage() {
                   <div className="text-sm font-medium text-text-primary mb-1">Visibility</div>
                   <div className="flex gap-2">
                     <label className="flex items-center gap-2 cursor-pointer flex-1 ui-card-shell p-3">
-                      <input type="radio" name="visibility" value="private" checked={visibility === "private"} onChange={() => setVisibility("private")} />
+                      <input
+                        type="radio"
+                        name="visibility"
+                        value="private"
+                        checked={visibility === "private"}
+                        onChange={() => setVisibility("private")}
+                      />
                       <div>
                         <div className="text-sm font-medium">Private</div>
                         <div className="text-xs text-text-muted">Only you can see this repo.</div>
                       </div>
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer flex-1 ui-card-shell p-3">
-                      <input type="radio" name="visibility" value="public" checked={visibility === "public"} onChange={() => setVisibility("public")} />
+                      <input
+                        type="radio"
+                        name="visibility"
+                        value="public"
+                        checked={visibility === "public"}
+                        onChange={() => setVisibility("public")}
+                      />
                       <div>
                         <div className="text-sm font-medium">Public</div>
                         <div className="text-xs text-text-muted">Anyone can find and read it.</div>
@@ -311,11 +386,24 @@ export default function NewFromScratchPage() {
 
                 <div>
                   <div className="text-sm font-medium text-text-primary mb-1">Starter</div>
-                  <p className="text-xs text-text-tertiary mb-2">Leave on <strong>Empty</strong> and the agent picks the stack that fits your idea.</p>
+                  <p className="text-xs text-text-tertiary mb-2">
+                    Leave on <strong>Empty</strong> and the agent picks the stack that fits your
+                    idea.
+                  </p>
                   <div className="space-y-2">
                     {Object.values(TEMPLATES).map((t) => (
-                      <label key={t.id} className="flex items-start gap-2 cursor-pointer ui-card-shell p-3">
-                        <input type="radio" name="template" value={t.id} checked={template === t.id} onChange={() => setTemplate(t.id)} className="mt-1" />
+                      <label
+                        key={t.id}
+                        className="flex items-start gap-2 cursor-pointer ui-card-shell p-3"
+                      >
+                        <input
+                          type="radio"
+                          name="template"
+                          value={t.id}
+                          checked={template === t.id}
+                          onChange={() => setTemplate(t.id)}
+                          className="mt-1"
+                        />
                         <div>
                           <div className="text-sm font-medium">{t.label}</div>
                           <div className="text-xs text-text-muted">{t.description}</div>
@@ -328,7 +416,9 @@ export default function NewFromScratchPage() {
             </details>
 
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-border-subtle">
-              <Link href="/control" className="ui-btn-ghost">Cancel</Link>
+              <Link href="/control" className="ui-btn-ghost">
+                Cancel
+              </Link>
               <button
                 type="submit"
                 disabled={submitting || !name.trim()}

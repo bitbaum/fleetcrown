@@ -17,12 +17,7 @@
  */
 import { NextResponse } from "next/server";
 import { getUserByEmail } from "@/db/queries/users";
-import {
-  DEMO_EMAIL,
-  DEMO_DENIAL_COPY,
-  isDemoEnabled,
-  type DemoDenialReason,
-} from "@/config/demo";
+import { DEMO_EMAIL, DEMO_DENIAL_COPY, isDemoEnabled, type DemoDenialReason } from "@/config/demo";
 
 /**
  * Thrown when the demo account attempts an effect that leaves its tenant.
@@ -114,6 +109,5 @@ export async function denyDemoInHandler(
  * requested by email, not by session. Pure string compare, no DB.
  */
 export function isDemoEmailBlocked(email: string | null | undefined): boolean {
-  return isDemoEnabled() && typeof email === "string"
-    && email.trim().toLowerCase() === DEMO_EMAIL;
+  return isDemoEnabled() && typeof email === "string" && email.trim().toLowerCase() === DEMO_EMAIL;
 }

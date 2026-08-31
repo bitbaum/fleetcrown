@@ -30,25 +30,40 @@ export type HealthSignalBase = {
 /** Single source of truth for health signal metadata. Icons are added in project-badges.tsx. */
 export const HEALTH_SIGNAL_BASE: HealthSignalBase[] = [
   {
-    kind: "security", key: "security_vulnerability",
-    label: "Security risk", cardLabel: "Security Risk", clearLabel: "No security risks open",
+    kind: "security",
+    key: "security_vulnerability",
+    label: "Security risk",
+    cardLabel: "Security Risk",
+    clearLabel: "No security risks open",
     badgeCls: "bg-status-negative-subtle text-status-negative border-status-negative/25",
-    cardBorder: "border-status-negative/25", cardBg: "bg-status-negative-subtle",
-    cardText: "text-status-negative", cardBody: "text-status-negative/70",
+    cardBorder: "border-status-negative/25",
+    cardBg: "bg-status-negative-subtle",
+    cardText: "text-status-negative",
+    cardBody: "text-status-negative/70",
   },
   {
-    kind: "broken", key: "broken_features",
-    label: "Broken", cardLabel: "Broken Features", clearLabel: "No broken features",
+    kind: "broken",
+    key: "broken_features",
+    label: "Broken",
+    cardLabel: "Broken Features",
+    clearLabel: "No broken features",
     badgeCls: "bg-status-warning-subtle text-status-warning border-status-warning/25",
-    cardBorder: "border-status-warning/25", cardBg: "bg-status-warning-subtle",
-    cardText: "text-status-warning", cardBody: "text-status-warning/70",
+    cardBorder: "border-status-warning/25",
+    cardBg: "bg-status-warning-subtle",
+    cardText: "text-status-warning",
+    cardBody: "text-status-warning/70",
   },
   {
-    kind: "deployment", key: "deployment_issue",
-    label: "Deploy issue", cardLabel: "Deployment Issue", clearLabel: "No deploy issues open",
+    kind: "deployment",
+    key: "deployment_issue",
+    label: "Deploy issue",
+    cardLabel: "Deployment Issue",
+    clearLabel: "No deploy issues open",
     badgeCls: "bg-status-warning-subtle text-status-warning border-status-warning/25",
-    cardBorder: "border-status-warning/25", cardBg: "bg-status-warning-subtle",
-    cardText: "text-status-warning", cardBody: "text-status-warning/70",
+    cardBorder: "border-status-warning/25",
+    cardBg: "bg-status-warning-subtle",
+    cardText: "text-status-warning",
+    cardBody: "text-status-warning/70",
   },
 ];
 
@@ -83,8 +98,19 @@ export type ProjectData = {
   createdAt: string | null;
   readonly?: boolean;
   attrs: Record<string, string>;
-  relations: Array<{ type: string; strength: number | null; targetId: string; targetName: string; targetType: string }>;
-  interactions: Array<{ channel: string; direction: string; summary: string | null; occurredAt: string }>;
+  relations: Array<{
+    type: string;
+    strength: number | null;
+    targetId: string;
+    targetName: string;
+    targetType: string;
+  }>;
+  interactions: Array<{
+    channel: string;
+    direction: string;
+    summary: string | null;
+    occurredAt: string;
+  }>;
   linkedJobs: LinkedJob[];
   linkedGoals: LinkedGoal[];
   resources: ProjectResource[];
@@ -126,6 +152,6 @@ export function getProjectLinks(
   const repo = gitUrl || attrRepo;
   return {
     prodUrl: prod ? (prod.startsWith("http") ? prod : `https://${prod}`) : null,
-    repo:    repo ? (repo.startsWith("http") ? repo : `https://github.com/${repo}`) : null,
+    repo: repo ? (repo.startsWith("http") ? repo : `https://github.com/${repo}`) : null,
   };
 }

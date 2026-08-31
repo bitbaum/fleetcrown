@@ -1,6 +1,12 @@
 "use server";
 
-import { approveAction, rejectAction, getActionById, updateDraftPayload, markActionExecuted } from "@/db/queries/actions";
+import {
+  approveAction,
+  rejectAction,
+  getActionById,
+  updateDraftPayload,
+  markActionExecuted,
+} from "@/db/queries/actions";
 import { setFeedbackStatus } from "@/db/queries/site-feedback";
 import { planTrim } from "@/lib/actions/advisor";
 import { RECOMMENDATION, type Recommendation } from "@/lib/actions/advice-rules";
@@ -19,7 +25,6 @@ import { ROUTES } from "@/config/auth";
 import { GOAL_STATUS, FEEDBACK_STATUS } from "@/lib/constants/statuses";
 import { INTERACTION_DIRECTION } from "@/lib/constants/statuses";
 import { revalidatePath } from "next/cache";
-
 
 export async function handleApprove(id: string): Promise<ExecuteActionResult> {
   const userId = await requirePageUserId();
@@ -72,9 +77,7 @@ export async function handleReject(id: string) {
  *  triage bookkeeping must never fail the decision the operator just made. */
 async function archiveFeedback(userId: string, ids: string[]): Promise<void> {
   await Promise.all(
-    ids.map((id) =>
-      setFeedbackStatus(userId, id, FEEDBACK_STATUS.ARCHIVED).catch(() => null),
-    ),
+    ids.map((id) => setFeedbackStatus(userId, id, FEEDBACK_STATUS.ARCHIVED).catch(() => null)),
   );
 }
 

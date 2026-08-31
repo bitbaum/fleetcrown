@@ -10,9 +10,7 @@
  * steals a message from dispatch/chat, which is worse than falling through.
  */
 
-export type StickyNoteRequest =
-  | { kind: "add"; body: string }
-  | { kind: "read" };
+export type StickyNoteRequest = { kind: "add"; body: string } | { kind: "read" };
 
 /** The names people call the list — one alternation, used by every pattern. */
 const LIST = "(?:sticky ?note|sticky|to-?do list|to-?dos?|task list|list|notes?)";
@@ -27,7 +25,10 @@ const ADD_PATTERNS: RegExp[] = [
   // "add pay the invoice to my list" / "put buy sunscreen on the todo list"
   new RegExp(`^(?:add|put)\\s+(.+?)\\s+(?:to|on(?:to)?)\\s+(?:my|the)\\s+${LIST}$`, "i"),
   // "add to my list: buy film" / "put on my sticky note — email Anna"
-  new RegExp(`^(?:add|put)\\s+(?:to|on(?:to)?)\\s+(?:my|the)\\s+${LIST}\\s*[:,\\u2014-]?\\s*(.+)$`, "i"),
+  new RegExp(
+    `^(?:add|put)\\s+(?:to|on(?:to)?)\\s+(?:my|the)\\s+${LIST}\\s*[:,\\u2014-]?\\s*(.+)$`,
+    "i",
+  ),
 ];
 
 const READ_PATTERN = new RegExp(
@@ -37,7 +38,10 @@ const READ_PATTERN = new RegExp(
 
 /** Strip the punctuation voice dictation likes to append. */
 function cleanBody(body: string): string {
-  return body.trim().replace(/[.!]+$/, "").trim();
+  return body
+    .trim()
+    .replace(/[.!]+$/, "")
+    .trim();
 }
 
 export function parseStickyNoteRequest(text: string): StickyNoteRequest | null {

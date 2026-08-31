@@ -56,16 +56,22 @@ export function FeedbackItemRow({
     : "Open this project on Control — Terminal is empty until a session is actually running";
   // Agent-filed rows get a typed badge instead of their magic contact string.
   const agentBadge =
-    f.source === FEEDBACK_SOURCE.AI_REVIEW ? "AI review"
-    : f.source === FEEDBACK_SOURCE.SYNTHESIZER ? "brief"
-    : null;
+    f.source === FEEDBACK_SOURCE.AI_REVIEW
+      ? "AI review"
+      : f.source === FEEDBACK_SOURCE.SYNTHESIZER
+        ? "brief"
+        : null;
   const meta = [
     f.page || f.url,
     f.scope,
     !agentBadge && f.contact,
     compactRelativeDate(f.createdAt),
-    f.status === FEEDBACK_STATUS.RESOLVED && f.resolvedAt && `resolved ${compactRelativeDate(f.resolvedAt)}`,
-    f.status === FEEDBACK_STATUS.RESOLVED && f.dispatchedRunId && `by run ${f.dispatchedRunId.slice(0, 8)}`,
+    f.status === FEEDBACK_STATUS.RESOLVED &&
+      f.resolvedAt &&
+      `resolved ${compactRelativeDate(f.resolvedAt)}`,
+    f.status === FEEDBACK_STATUS.RESOLVED &&
+      f.dispatchedRunId &&
+      `by run ${f.dispatchedRunId.slice(0, 8)}`,
   ].filter(Boolean);
 
   const dotClass =
@@ -73,156 +79,230 @@ export function FeedbackItemRow({
       ? "ui-dot-positive mt-1.5"
       : work.phase === FEEDBACK_WORK_PHASE.FAILED || work.phase === FEEDBACK_WORK_PHASE.STUCK
         ? "ui-dot-negative mt-1.5"
-        : work.phase === FEEDBACK_WORK_PHASE.QUEUED || work.phase === FEEDBACK_WORK_PHASE.NOT_STARTED
+        : work.phase === FEEDBACK_WORK_PHASE.QUEUED ||
+            work.phase === FEEDBACK_WORK_PHASE.NOT_STARTED
           ? "ui-dot-warning mt-1.5"
           : "ui-dot-neutral mt-1.5";
 
   return (
     <div className="flex flex-col gap-2 py-3">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-      <div className="min-w-0 flex-1">
-        <div className="flex items-start gap-2">
-          <span className={dotClass} aria-label={work.label} />
-          <p className="min-w-0 text-sm leading-relaxed text-text-primary">{f.suggestion}</p>
-          <FeedbackWorkBadge work={work} />
-          {agentBadge && <span className="ui-tag shrink-0">{agentBadge}</span>}
-          {f.duplicateCount > 1 && (
-            <span className="ui-badge shrink-0" title={`Reported ${f.duplicateCount} times`}>×{f.duplicateCount}</span>
-          )}
-        </div>
-        <p className="mt-1 pl-4 text-xs text-text-tertiary">
-          {project && (
-            <>
-              <Link
-                href={`/projects/${project.id}#feedback`}
-                className="font-medium text-text-secondary underline-offset-2 hover:underline"
-              >
-                {project.name}
-              </Link>
-              {meta.length > 0 && " · "}
-            </>
-          )}
-          {meta.join(" · ")}
-        </p>
-        {work.detail && (
-          <p className="mt-0.5 pl-4 text-xs text-text-secondary">{work.detail}</p>
-        )}
-        {/* The run's raw error, opened on purpose rather than printed at the
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start gap-2">
+            <span className={dotClass} aria-label={work.label} />
+            <p className="min-w-0 text-sm leading-relaxed text-text-primary">{f.suggestion}</p>
+            <FeedbackWorkBadge work={work} />
+            {agentBadge && <span className="ui-tag shrink-0">{agentBadge}</span>}
+            {f.duplicateCount > 1 && (
+              <span className="ui-badge shrink-0" title={`Reported ${f.duplicateCount} times`}>
+                ×{f.duplicateCount}
+              </span>
+            )}
+          </div>
+          <p className="mt-1 pl-4 text-xs text-text-tertiary">
+            {project && (
+              <>
+                <Link
+                  href={`/projects/${project.id}#feedback`}
+                  className="font-medium text-text-secondary underline-offset-2 hover:underline"
+                >
+                  {project.name}
+                </Link>
+                {meta.length > 0 && " · "}
+              </>
+            )}
+            {meta.join(" · ")}
+          </p>
+          {work.detail && <p className="mt-0.5 pl-4 text-xs text-text-secondary">{work.detail}</p>}
+          {/* The run's raw error, opened on purpose rather than printed at the
             reader. It used to be the detail line itself, which is how an
             engineer's note ("...acked verified:false and never started")
             ended up addressed to whoever filed the feedback. */}
-        {work.diagnostic && (
-          <details className="mt-0.5 pl-4">
-            <summary className="cursor-pointer text-micro text-text-muted hover:text-text-secondary">
-              Technical details
-            </summary>
-            <p className="mt-1 whitespace-pre-wrap break-words font-mono text-micro text-text-muted">
-              {work.diagnostic}
+          {work.diagnostic && (
+            <details className="mt-0.5 pl-4">
+              <summary className="cursor-pointer text-micro text-text-muted hover:text-text-secondary">
+                Technical details
+              </summary>
+              <p className="mt-1 whitespace-pre-wrap break-words font-mono text-micro text-text-muted">
+                {work.diagnostic}
+              </p>
+            </details>
+          )}
+          {f.selectedElements && f.selectedElements.length > 0 && (
+            <p className="mt-0.5 pl-4 text-xs text-text-muted">
+              {f.selectedElements.map((el, i) => (
+                <span
+                  key={`${el.selector}-${i}`}
+                  title={el.selector}
+                  className="mr-2 inline-flex items-baseline gap-1"
+                >
+                  <span className="font-mono text-micro">{el.elementType || "element"}</span>
+                  {el.elementText && (
+                    <span>
+                      “
+                      {el.elementText.length > 60
+                        ? `${el.elementText.slice(0, 60)}…`
+                        : el.elementText}
+                      ”
+                    </span>
+                  )}
+                </span>
+              ))}
             </p>
-          </details>
-        )}
-        {f.selectedElements && f.selectedElements.length > 0 && (
-          <p className="mt-0.5 pl-4 text-xs text-text-muted">
-            {f.selectedElements.map((el, i) => (
-              <span key={`${el.selector}-${i}`} title={el.selector} className="mr-2 inline-flex items-baseline gap-1">
-                <span className="font-mono text-micro">{el.elementType || "element"}</span>
-                {el.elementText && <span>“{el.elementText.length > 60 ? `${el.elementText.slice(0, 60)}…` : el.elementText}”</span>}
-              </span>
-            ))}
-          </p>
-        )}
-        {f.hasScreenshot && (
-          <a
-            href={`/api/feedback/${f.id}/screenshot`}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-1.5 inline-block pl-4"
-            title="Open the visitor's screenshot"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element -- dynamic auth'd API image, not a static asset */}
-            <img
-              src={`/api/feedback/${f.id}/screenshot`}
-              alt="Visitor screenshot (click to open)"
-              className="h-14 w-auto rounded-md border border-border-subtle"
-              loading="lazy"
-            />
-          </a>
-        )}
-      </div>
-      <div className="flex shrink-0 items-center gap-1.5 pl-4 sm:pl-0">
-        {work.phase === FEEDBACK_WORK_PHASE.NOT_STARTED ? (
-          <>
-            <button type="button" onClick={() => onDispatch()} disabled={busy} className="ui-btn-save gap-1.5" title="Ask the agent to fix this">
-              {busy ? <Loader2 className="ui-spinner-xs" /> : <Rocket className="h-3 w-3" />}
-              Implement
-            </button>
-            <button
-              type="button"
-              onClick={() => setNoteOpen((v) => !v)}
-              disabled={busy}
-              className="ui-btn-icon"
-              title="Add an instruction, then implement"
-              aria-label="Add an instruction"
-              aria-expanded={noteOpen}
+          )}
+          {f.hasScreenshot && (
+            <a
+              href={`/api/feedback/${f.id}/screenshot`}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-1.5 inline-block pl-4"
+              title="Open the visitor's screenshot"
             >
-              <PenLine className="h-3.5 w-3.5" />
-            </button>
-            <button type="button" onClick={onResolve} disabled={busy} className="ui-btn-icon" title="Mark resolved" aria-label="Mark resolved">
-              <Check className="h-3.5 w-3.5" />
-            </button>
-          </>
-        ) : work.phase === FEEDBACK_WORK_PHASE.QUEUED || work.phase === FEEDBACK_WORK_PHASE.WORKING ? (
-          <>
-            <a href={progressHref} className="ui-btn-save gap-1" title={progressTitle}>
-              {progressLabel}
+              {/* eslint-disable-next-line @next/next/no-img-element -- dynamic auth'd API image, not a static asset */}
+              <img
+                src={`/api/feedback/${f.id}/screenshot`}
+                alt="Visitor screenshot (click to open)"
+                className="h-14 w-auto rounded-md border border-border-subtle"
+                loading="lazy"
+              />
             </a>
-            <button type="button" onClick={onResolve} disabled={busy} className="ui-btn-secondary gap-1" title="Mark resolved">
-              <Check className="h-3 w-3" /> Resolve
-            </button>
-          </>
-        ) : work.phase === FEEDBACK_WORK_PHASE.STUCK || work.phase === FEEDBACK_WORK_PHASE.FAILED ? (
-          <>
-            <a href={progressHref} className="ui-btn-secondary gap-1" title={progressTitle}>{progressLabel}</a>
-            <button type="button" onClick={() => onDispatch()} disabled={busy} className="ui-btn-save gap-1.5" title="Queue again">
-              {busy ? <Loader2 className="ui-spinner-xs" /> : <Rocket className="h-3 w-3" />}
-              Retry
-            </button>
-            <button type="button" onClick={onResolve} disabled={busy} className="ui-btn-icon" title="Mark resolved" aria-label="Mark resolved">
-              <Check className="h-3.5 w-3.5" />
-            </button>
-          </>
-        ) : work.phase === FEEDBACK_WORK_PHASE.DONE && f.status !== FEEDBACK_STATUS.RESOLVED ? (
-          <>
-            <button type="button" onClick={onResolve} disabled={busy} className="ui-btn-save gap-1">
-              <Check className="h-3 w-3" /> Resolve
-            </button>
-            <a href={progressHref} className="ui-btn-secondary gap-1" title={progressTitle}>{progressLabel}</a>
-          </>
-        ) : f.status === FEEDBACK_STATUS.RESOLVED ? (
-          <>
+          )}
+        </div>
+        <div className="flex shrink-0 items-center gap-1.5 pl-4 sm:pl-0">
+          {work.phase === FEEDBACK_WORK_PHASE.NOT_STARTED ? (
+            <>
+              <button
+                type="button"
+                onClick={() => onDispatch()}
+                disabled={busy}
+                className="ui-btn-save gap-1.5"
+                title="Ask the agent to fix this"
+              >
+                {busy ? <Loader2 className="ui-spinner-xs" /> : <Rocket className="h-3 w-3" />}
+                Implement
+              </button>
+              <button
+                type="button"
+                onClick={() => setNoteOpen((v) => !v)}
+                disabled={busy}
+                className="ui-btn-icon"
+                title="Add an instruction, then implement"
+                aria-label="Add an instruction"
+                aria-expanded={noteOpen}
+              >
+                <PenLine className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={onResolve}
+                disabled={busy}
+                className="ui-btn-icon"
+                title="Mark resolved"
+                aria-label="Mark resolved"
+              >
+                <Check className="h-3.5 w-3.5" />
+              </button>
+            </>
+          ) : work.phase === FEEDBACK_WORK_PHASE.QUEUED ||
+            work.phase === FEEDBACK_WORK_PHASE.WORKING ? (
+            <>
+              <a href={progressHref} className="ui-btn-save gap-1" title={progressTitle}>
+                {progressLabel}
+              </a>
+              <button
+                type="button"
+                onClick={onResolve}
+                disabled={busy}
+                className="ui-btn-secondary gap-1"
+                title="Mark resolved"
+              >
+                <Check className="h-3 w-3" /> Resolve
+              </button>
+            </>
+          ) : work.phase === FEEDBACK_WORK_PHASE.STUCK ||
+            work.phase === FEEDBACK_WORK_PHASE.FAILED ? (
+            <>
+              <a href={progressHref} className="ui-btn-secondary gap-1" title={progressTitle}>
+                {progressLabel}
+              </a>
+              <button
+                type="button"
+                onClick={() => onDispatch()}
+                disabled={busy}
+                className="ui-btn-save gap-1.5"
+                title="Queue again"
+              >
+                {busy ? <Loader2 className="ui-spinner-xs" /> : <Rocket className="h-3 w-3" />}
+                Retry
+              </button>
+              <button
+                type="button"
+                onClick={onResolve}
+                disabled={busy}
+                className="ui-btn-icon"
+                title="Mark resolved"
+                aria-label="Mark resolved"
+              >
+                <Check className="h-3.5 w-3.5" />
+              </button>
+            </>
+          ) : work.phase === FEEDBACK_WORK_PHASE.DONE && f.status !== FEEDBACK_STATUS.RESOLVED ? (
+            <>
+              <button
+                type="button"
+                onClick={onResolve}
+                disabled={busy}
+                className="ui-btn-save gap-1"
+              >
+                <Check className="h-3 w-3" /> Resolve
+              </button>
+              <a href={progressHref} className="ui-btn-secondary gap-1" title={progressTitle}>
+                {progressLabel}
+              </a>
+            </>
+          ) : f.status === FEEDBACK_STATUS.RESOLVED ? (
+            <>
+              <button
+                type="button"
+                onClick={onFeature}
+                disabled={busy}
+                className="ui-btn-icon"
+                title={
+                  f.featuredAt
+                    ? "Remove from the public 'shipped thanks to feedback' strip"
+                    : "Feature on the public 'shipped thanks to feedback' strip"
+                }
+                aria-label={f.featuredAt ? "Unfeature" : "Feature publicly"}
+                aria-pressed={!!f.featuredAt}
+              >
+                <Star className="h-3.5 w-3.5" fill={f.featuredAt ? "currentColor" : "none"} />
+              </button>
+            </>
+          ) : null}
+          {f.status === FEEDBACK_STATUS.RESOLVED ? (
             <button
               type="button"
-              onClick={onFeature}
+              onClick={onReopen}
               disabled={busy}
               className="ui-btn-icon"
-              title={f.featuredAt ? "Remove from the public 'shipped thanks to feedback' strip" : "Feature on the public 'shipped thanks to feedback' strip"}
-              aria-label={f.featuredAt ? "Unfeature" : "Feature publicly"}
-              aria-pressed={!!f.featuredAt}
+              title="Reopen"
+              aria-label="Reopen"
             >
-              <Star className="h-3.5 w-3.5" fill={f.featuredAt ? "currentColor" : "none"} />
+              <Undo2 className="h-3.5 w-3.5" />
             </button>
-          </>
-        ) : null}
-        {f.status === FEEDBACK_STATUS.RESOLVED ? (
-          <button type="button" onClick={onReopen} disabled={busy} className="ui-btn-icon" title="Reopen" aria-label="Reopen">
-            <Undo2 className="h-3.5 w-3.5" />
-          </button>
-        ) : (
-          <button type="button" onClick={onArchive} disabled={busy} className="ui-btn-icon" title="Archive" aria-label="Archive">
-            <Archive className="h-3.5 w-3.5" />
-          </button>
-        )}
-      </div>
+          ) : (
+            <button
+              type="button"
+              onClick={onArchive}
+              disabled={busy}
+              className="ui-btn-icon"
+              title="Archive"
+              aria-label="Archive"
+            >
+              <Archive className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
       </div>
       {noteOpen && work.phase === FEEDBACK_WORK_PHASE.NOT_STARTED && (
         <div className="flex items-center gap-2 pl-4">

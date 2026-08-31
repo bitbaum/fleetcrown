@@ -33,7 +33,11 @@ const SRC = readFileSync("src/lib/agent/sources.ts", "utf8");
     /searchPeople\(userId,\s*query\.trim\(\)\.slice/,
     "peopleFacts must not pass the raw message as a name filter — that was the bug",
   );
-  assert.match(SRC, /import \{ nameCandidates \} from "@\/lib\/people-names"/, "name extraction must exist");
+  assert.match(
+    SRC,
+    /import \{ nameCandidates \} from "@\/lib\/people-names"/,
+    "name extraction must exist",
+  );
   assert.match(
     SRC,
     /for \(const name of candidates\)/,
@@ -62,33 +66,52 @@ function candidates(message: string): string[] {
 // First-name-only is how most contacts are actually asked about.
 {
   const c = candidates("what is Elena's number?");
-  assert.ok(c.some((n) => n.startsWith("Elena")), `bare first name must be extracted, got ${JSON.stringify(c)}`);
+  assert.ok(
+    c.some((n) => n.startsWith("Elena")),
+    `bare first name must be extracted, got ${JSON.stringify(c)}`,
+  );
 }
 
 // Stopwords must not become search terms — "Who"/"My" would match nothing and
 // burn the candidate budget the real name needs.
 {
   const c = candidates("Who should I reach out to today?");
-  assert.ok(!c.some((n) => /^(Who|Should|Reach)$/i.test(n)), `stopwords leaked: ${JSON.stringify(c)}`);
+  assert.ok(
+    !c.some((n) => /^(Who|Should|Reach)$/i.test(n)),
+    `stopwords leaked: ${JSON.stringify(c)}`,
+  );
 }
 
 // A message with no names must yield none, so the caller falls back to recent
 // contacts rather than searching for junk.
 {
-  assert.deepEqual(candidates("what should i do first today?"), [], "no capitalised names → no candidates");
+  assert.deepEqual(
+    candidates("what should i do first today?"),
+    [],
+    "no capitalised names → no candidates",
+  );
 }
 
 {
   const c = candidates("write manu about this saturday");
-  assert.ok(c.some((n) => n.toLowerCase() === "manu"), `lowercase write-target must extract, got ${JSON.stringify(c)}`);
-  assert.ok(!c.some((n) => /saturday/i.test(n)), `weekday must not be a name, got ${JSON.stringify(c)}`);
+  assert.ok(
+    c.some((n) => n.toLowerCase() === "manu"),
+    `lowercase write-target must extract, got ${JSON.stringify(c)}`,
+  );
+  assert.ok(
+    !c.some((n) => /saturday/i.test(n)),
+    `weekday must not be a name, got ${JSON.stringify(c)}`,
+  );
 }
 
 // Accented and hyphenated names must survive — "Ilya Grün" is in the real table.
 {
   const c = candidates("is Ilya Grün the same person as Jean-Luc?");
   assert.ok(c.includes("Ilya Grün"), `umlaut name must extract, got ${JSON.stringify(c)}`);
-  assert.ok(c.some((n) => n.includes("Jean-Luc")), `hyphenated name must extract, got ${JSON.stringify(c)}`);
+  assert.ok(
+    c.some((n) => n.includes("Jean-Luc")),
+    `hyphenated name must extract, got ${JSON.stringify(c)}`,
+  );
 }
 
 // ── A rate limit must step down, not abandon the tools ───────────────────────
@@ -101,7 +124,11 @@ function candidates(message: string): string[] {
   // which is no step-down at all once that vendor's daily budget is spent —
   // every "fallback" drew on the same exhausted pool. It is now a walk down
   // CHAT_CHAIN, which spans vendors, so a 429 still has somewhere to go.
-  assert.match(LLM, /chainFrom/, "a 429 must advance through the model chain, not abandon the tools");
+  assert.match(
+    LLM,
+    /chainFrom/,
+    "a 429 must advance through the model chain, not abandon the tools",
+  );
   // Asserted against the chain's VALUE, not the text of the file that declares
   // it. This used to grep chat-models.ts for the model id, which broke the
   // moment the chain moved into `ai-kit` — the property held perfectly and

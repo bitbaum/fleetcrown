@@ -30,7 +30,8 @@ export function AppTopBar({
 }) {
   const { setOpen } = useCommandPalette();
   const pathname = usePathname();
-  const platformHint = typeof navigator !== "undefined" && /mac/i.test(navigator.platform) ? "⌘K" : "Ctrl K";
+  const platformHint =
+    typeof navigator !== "undefined" && /mac/i.test(navigator.platform) ? "⌘K" : "Ctrl K";
 
   // Resolve the active route to the same label the sidebar/More sheet uses.
   // Falls back to empty string for pages outside the nav config (sign-in,

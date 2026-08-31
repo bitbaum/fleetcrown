@@ -71,7 +71,12 @@ export function SharedTaskView({ token, initialTask }: { token: string; initialT
           </span>
           {task.projectName && <span>{task.projectName}</span>}
           {due && <span className={due.overdue ? "text-status-negative" : ""}>{due.label}</span>}
-          {fee && <span>{fee}{sats ? ` · ${sats}` : ""}</span>}
+          {fee && (
+            <span>
+              {fee}
+              {sats ? ` · ${sats}` : ""}
+            </span>
+          )}
         </div>
       </header>
 
@@ -94,7 +99,8 @@ export function SharedTaskView({ token, initialTask }: { token: string; initialT
           <h2 className="ui-kicker">What it pays</h2>
           {task.payToUrl ? (
             <p className="text-sm text-text-secondary">
-              {fee}{sats ? ` (${sats})` : ""}, sent to your OrangeCat profile —{" "}
+              {fee}
+              {sats ? ` (${sats})` : ""}, sent to your OrangeCat profile —{" "}
               <a href={task.payToUrl} target="_blank" rel="noreferrer" className="ui-link">
                 {task.payToUrl.replace(/^https?:\/\//, "")}
               </a>
@@ -104,13 +110,18 @@ export function SharedTaskView({ token, initialTask }: { token: string; initialT
             // Said plainly rather than hidden: agreeing to paid work with no
             // destination on file is the thing worth knowing BEFORE you say yes.
             <p className="text-sm text-status-warning">
-              {fee}{sats ? ` (${sats})` : ""} — but {task.fromName} has no OrangeCat
-              profile on file for you, so there is nowhere to send it yet. Send them
-              your profile link before you start.
+              {fee}
+              {sats ? ` (${sats})` : ""} — but {task.fromName} has no OrangeCat profile on file for
+              you, so there is nowhere to send it yet. Send them your profile link before you start.
             </p>
           )}
           {task.orangecatUrl && (
-            <a href={task.orangecatUrl} target="_blank" rel="noreferrer" className="ui-btn-secondary w-fit">
+            <a
+              href={task.orangecatUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="ui-btn-secondary w-fit"
+            >
               <ExternalLink className="h-4 w-4" />
               This work on OrangeCat
             </a>
@@ -139,7 +150,9 @@ export function SharedTaskView({ token, initialTask }: { token: string; initialT
                 type="button"
                 disabled={busy !== null}
                 onClick={() => respond(action)}
-                className={action === ASSIGNEE_ACTION.DECLINE ? "ui-public-cta-ghost" : "ui-public-cta"}
+                className={
+                  action === ASSIGNEE_ACTION.DECLINE ? "ui-public-cta-ghost" : "ui-public-cta"
+                }
               >
                 {busy === action ? "Sending…" : ASSIGNEE_ACTION_LABEL[action]}
               </button>

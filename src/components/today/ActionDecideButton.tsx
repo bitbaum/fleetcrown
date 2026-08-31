@@ -27,7 +27,9 @@ export function ActionDecideButton({
     try {
       if (localStorage.getItem(seenKey(actionId))) return;
       localStorage.setItem(seenKey(actionId), "1");
-    } catch { /* private mode — fall through and open once */ }
+    } catch {
+      /* private mode — fall through and open once */
+    }
     // Deferred rather than opened in the effect body: the queue paints first,
     // so the popup arrives over a page you can already read (and React is not
     // asked to cascade a render during mount).

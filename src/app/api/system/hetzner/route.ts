@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { getSessionUserId } from "@/lib/session";
-import { HETZNER_STATE_FILE, HETZNER_RADAR_URL, HETZNER_CONSOLE_URL, HETZNER_RESCALE_STEPS } from "@/config/hetzner";
+import {
+  HETZNER_STATE_FILE,
+  HETZNER_RADAR_URL,
+  HETZNER_CONSOLE_URL,
+  HETZNER_RESCALE_STEPS,
+} from "@/config/hetzner";
 
 /**
  * Hetzner rescale-capacity for the box.
@@ -89,7 +94,9 @@ export async function GET() {
   let state: HetznerState;
   let checkedAtFallback: string | null = null;
   try {
-    state = JSON.parse(readFileSync(/*turbopackIgnore: true*/ HETZNER_STATE_FILE, "utf8")) as HetznerState;
+    state = JSON.parse(
+      readFileSync(/*turbopackIgnore: true*/ HETZNER_STATE_FILE, "utf8"),
+    ) as HetznerState;
     checkedAtFallback = statSync(/*turbopackIgnore: true*/ HETZNER_STATE_FILE).mtime.toISOString();
   } catch {
     return NextResponse.json(untracked("Capacity state file is present but unreadable."));
@@ -97,7 +104,9 @@ export async function GET() {
 
   const checkedAt = state.checkedAt ?? checkedAtFallback;
   const parsed = checkedAt ? Date.parse(checkedAt) : NaN;
-  const ageSeconds = Number.isNaN(parsed) ? null : Math.max(0, Math.round((Date.now() - parsed) / 1000));
+  const ageSeconds = Number.isNaN(parsed)
+    ? null
+    : Math.max(0, Math.round((Date.now() - parsed) / 1000));
 
   return NextResponse.json({
     tracked: true,

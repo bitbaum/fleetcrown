@@ -8,9 +8,24 @@ import Link from "next/link";
 import { ALERT_SEVERITY } from "@/lib/constants/statuses";
 
 const SEVERITY_CONFIG = {
-  urgent: { icon: AlertCircle, color: "text-status-negative", bg: "bg-status-negative-subtle", border: "border-status-negative/20" },
-  warning: { icon: AlertTriangle, color: "text-status-warning", bg: "bg-status-warning-subtle", border: "border-status-warning/20" },
-  info: { icon: Info, color: "text-accent-text", bg: "bg-accent-muted", border: "border-accent-primary/20" },
+  urgent: {
+    icon: AlertCircle,
+    color: "text-status-negative",
+    bg: "bg-status-negative-subtle",
+    border: "border-status-negative/20",
+  },
+  warning: {
+    icon: AlertTriangle,
+    color: "text-status-warning",
+    bg: "bg-status-warning-subtle",
+    border: "border-status-warning/20",
+  },
+  info: {
+    icon: Info,
+    color: "text-accent-text",
+    bg: "bg-accent-muted",
+    border: "border-accent-primary/20",
+  },
 } as const;
 
 export async function AlertsCard() {
@@ -26,7 +41,11 @@ export async function AlertsCard() {
     return (
       <div id="alerts" className="md:col-span-2">
         <Card>
-          <CardHeader icon={Bell} title="Alerts" right={<span className="text-xs text-status-positive font-medium">All clear</span>} />
+          <CardHeader
+            icon={Bell}
+            title="Alerts"
+            right={<span className="text-xs text-status-positive font-medium">All clear</span>}
+          />
           <div className="flex items-center gap-2 text-sm text-text-muted">
             <CheckCircle2 className="h-4 w-4 text-status-positive/70 shrink-0" />
             No active alerts.
@@ -46,7 +65,9 @@ export async function AlertsCard() {
           title="Alerts"
           right={
             urgentCount > 0 ? (
-              <span className="text-xs md:text-sm text-status-negative font-medium">{urgentCount} urgent</span>
+              <span className="text-xs md:text-sm text-status-negative font-medium">
+                {urgentCount} urgent
+              </span>
             ) : (
               <span className="text-xs md:text-sm text-text-tertiary">{items.length} active</span>
             )
@@ -54,7 +75,9 @@ export async function AlertsCard() {
         />
         <div className="space-y-2">
           {items.map((alert) => {
-            const config = SEVERITY_CONFIG[alert.severity as keyof typeof SEVERITY_CONFIG] ?? SEVERITY_CONFIG.info;
+            const config =
+              SEVERITY_CONFIG[alert.severity as keyof typeof SEVERITY_CONFIG] ??
+              SEVERITY_CONFIG.info;
             const Icon = config.icon;
             return (
               <div
@@ -65,7 +88,9 @@ export async function AlertsCard() {
                 <div className="min-w-0 flex-1">
                   <div className="text-sm md:text-base font-medium">{alert.title}</div>
                   {alert.description && (
-                    <div className="text-xs md:text-sm text-text-secondary mt-0.5">{alert.description}</div>
+                    <div className="text-xs md:text-sm text-text-secondary mt-0.5">
+                      {alert.description}
+                    </div>
                   )}
                   {alert.actionUrl && (
                     <Link

@@ -6,18 +6,21 @@ export const stripe: Stripe | null = process.env.STRIPE_SECRET_KEY
   ? new Stripe(process.env.STRIPE_SECRET_KEY)
   : null;
 
-export const STRIPE_PRICE_IDS: Record<Exclude<Plan, "free">, { monthly: string; annual: string }> = {
+export const STRIPE_PRICE_IDS: Record<
+  Exclude<Plan, "free">,
+  { monthly: string; annual: string }
+> = {
   personal: {
     monthly: process.env.STRIPE_PRICE_PERSONAL_MONTHLY ?? "",
-    annual:  process.env.STRIPE_PRICE_PERSONAL_ANNUAL  ?? "",
+    annual: process.env.STRIPE_PRICE_PERSONAL_ANNUAL ?? "",
   },
   pro: {
     monthly: process.env.STRIPE_PRICE_PRO_MONTHLY ?? "",
-    annual:  process.env.STRIPE_PRICE_PRO_ANNUAL  ?? "",
+    annual: process.env.STRIPE_PRICE_PRO_ANNUAL ?? "",
   },
   team: {
     monthly: process.env.STRIPE_PRICE_TEAM_MONTHLY ?? "",
-    annual:  process.env.STRIPE_PRICE_TEAM_ANNUAL  ?? "",
+    annual: process.env.STRIPE_PRICE_TEAM_ANNUAL ?? "",
   },
 };
 

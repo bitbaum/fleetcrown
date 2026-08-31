@@ -7,7 +7,10 @@
  *
  * Run: npm run test:notify-close
  */
-import { formatRunCloseMessage, shouldAnnounceOnClose } from "@/lib/orchestration/notify-close-format";
+import {
+  formatRunCloseMessage,
+  shouldAnnounceOnClose,
+} from "@/lib/orchestration/notify-close-format";
 
 function assert(condition: boolean, message: string): void {
   if (!condition) throw new Error(message);
@@ -30,13 +33,19 @@ function runTests(): void {
 
   check("no opt-in ⇒ null (UI dispatches stay silent)", () => {
     assert(
-      formatRunCloseMessage({ ...base, payload: { projectKey: "orangecat", projectPath: "/x" } }) === null,
+      formatRunCloseMessage({
+        ...base,
+        payload: { projectKey: "orangecat", projectPath: "/x" },
+      }) === null,
       "expected null without notifyOnClose",
     );
   });
 
   check("opted-in but not finished ⇒ null", () => {
-    assert(formatRunCloseMessage({ ...base, finishedAt: null }) === null, "expected null for open run");
+    assert(
+      formatRunCloseMessage({ ...base, finishedAt: null }) === null,
+      "expected null for open run",
+    );
   });
 
   check("success carries ✅ + project + outcome", () => {
@@ -115,7 +124,10 @@ function runTests(): void {
   check("only an actual boolean counts as explicit", () => {
     // A stray undefined must fall through to the actor rule rather than being
     // read as "false" — that would silently restore the shipped-off behavior.
-    assert(shouldAnnounceOnClose({ via: "session" }, undefined) === true, "undefined is not an opt-out");
+    assert(
+      shouldAnnounceOnClose({ via: "session" }, undefined) === true,
+      "undefined is not an opt-out",
+    );
   });
 
   console.log(`\n${passed} passed`);

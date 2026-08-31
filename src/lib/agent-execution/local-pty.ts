@@ -89,7 +89,11 @@ export class LocalPtyExecutor implements Executor {
   resize(id: WorkspaceId, cols: number, rows: number): void {
     const state = this.workspaces.get(id);
     if (state?.pty) {
-      try { state.pty.resize(cols, rows); } catch { /* pty may have just exited */ }
+      try {
+        state.pty.resize(cols, rows);
+      } catch {
+        /* pty may have just exited */
+      }
     }
   }
 
@@ -101,7 +105,9 @@ export class LocalPtyExecutor implements Executor {
       if (event.seq > sinceSeq) listener(event);
     }
     state.listeners.add(listener);
-    return () => { state.listeners.delete(listener); };
+    return () => {
+      state.listeners.delete(listener);
+    };
   }
 
   get(id: WorkspaceId): WorkspaceHandle | null {
@@ -116,7 +122,11 @@ export class LocalPtyExecutor implements Executor {
     const state = this.workspaces.get(id);
     if (!state) return;
     if (state.idleTimer) clearTimeout(state.idleTimer);
-    try { state.pty?.kill(); } catch { /* already dead */ }
+    try {
+      state.pty?.kill();
+    } catch {
+      /* already dead */
+    }
     state.pty = null;
     // Mark exited synchronously. pty.onExit may not fire for a beat, and a
     // re-provision of the same id (e.g. switching agents) must spawn fresh —
@@ -129,7 +139,10 @@ export class LocalPtyExecutor implements Executor {
 
   // --- internals ---
 
-  private emit(state: WorkspaceState, partial: Omit<AgentEvent, "workspaceId" | "seq" | "at">): void {
+  private emit(
+    state: WorkspaceState,
+    partial: Omit<AgentEvent, "workspaceId" | "seq" | "at">,
+  ): void {
     const event: AgentEvent = {
       workspaceId: state.handle.id,
       seq: ++state.seq,
@@ -141,7 +154,11 @@ export class LocalPtyExecutor implements Executor {
       state.buffer.splice(0, state.buffer.length - MAX_BUFFERED_EVENTS);
     }
     for (const listener of state.listeners) {
-      try { listener(event); } catch { /* a bad listener must not break the stream */ }
+      try {
+        listener(event);
+      } catch {
+        /* a bad listener must not break the stream */
+      }
     }
   }
 

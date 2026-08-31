@@ -81,7 +81,9 @@ export function UnlockForm({ next, areas }: { next: string; areas: Area[] }) {
       </div>
 
       <div className="ui-settings-section">
-        <h3 className="text-sm font-semibold uppercase tracking-caps text-text-muted">What this unlocks</h3>
+        <h3 className="text-sm font-semibold uppercase tracking-caps text-text-muted">
+          What this unlocks
+        </h3>
         <ul className="space-y-3">
           {areas.map((area) => (
             <li key={area.label} className="flex items-start gap-3">

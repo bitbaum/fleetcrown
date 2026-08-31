@@ -68,16 +68,25 @@ export function ZellijLiveRows({ rows, highlightTab, focusTab, closeTab, onFocus
           </thead>
           <tbody>
             {rows.map((row) => (
-              <tr key={row.tabName} className={cn(isHighlighted(row.tabName) && "ui-control-live-row-highlight")}>
+              <tr
+                key={row.tabName}
+                className={cn(isHighlighted(row.tabName) && "ui-control-live-row-highlight")}
+              >
                 <td className="py-0.5">
-                  <span className="truncate font-medium text-text-primary" title={row.tabName}>{row.tabName}</span>
+                  <span className="truncate font-medium text-text-primary" title={row.tabName}>
+                    {row.tabName}
+                  </span>
                   {!row.registered && (
                     <span className="ml-1.5 ui-tag ui-tag-warning text-micro">Unlinked</span>
                   )}
                 </td>
-                <td className="py-0.5 whitespace-nowrap text-text-secondary">{row.agentLabel ?? "—"}</td>
+                <td className="py-0.5 whitespace-nowrap text-text-secondary">
+                  {row.agentLabel ?? "—"}
+                </td>
                 <td className="py-0.5 whitespace-nowrap">
-                  <span className={row.stateTagClass} title={rowStateMeta(row).description}>{row.stateLabel}</span>
+                  <span className={row.stateTagClass} title={rowStateMeta(row).description}>
+                    {row.stateLabel}
+                  </span>
                 </td>
                 <td className="py-0.5">
                   {row.activity ? (
@@ -137,13 +146,20 @@ export function ZellijLiveRows({ rows, highlightTab, focusTab, closeTab, onFocus
         {rows.map((row) => (
           <div
             key={row.tabName}
-            className={cn("ui-control-live-card py-1.5 px-2", isHighlighted(row.tabName) && "ui-control-live-row-highlight")}
+            className={cn(
+              "ui-control-live-card py-1.5 px-2",
+              isHighlighted(row.tabName) && "ui-control-live-row-highlight",
+            )}
           >
             <div className="flex items-start justify-between gap-1.5">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="truncate font-medium text-text-primary text-sm">{row.tabName}</span>
-                  <span className={row.stateTagClass} title={rowStateMeta(row).description}>{row.stateLabel}</span>
+                  <span className="truncate font-medium text-text-primary text-sm">
+                    {row.tabName}
+                  </span>
+                  <span className={row.stateTagClass} title={rowStateMeta(row).description}>
+                    {row.stateLabel}
+                  </span>
                 </div>
                 {row.agentLabel && (
                   <p className="mt-0.5 text-micro text-text-tertiary">{row.agentLabel}</p>

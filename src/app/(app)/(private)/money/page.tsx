@@ -21,15 +21,16 @@ import { ORANGECAT_INTEGRATION as INTEGRATION } from "@/config/marketing-content
 export const metadata = { title: "Money" };
 
 const STATUS_STYLE: Record<SubStatus, string> = {
-  [SUB_STATUS.ACTIVE]:     "text-status-positive bg-status-positive-subtle",
+  [SUB_STATUS.ACTIVE]: "text-status-positive bg-status-positive-subtle",
   [SUB_STATUS.UNVERIFIED]: "text-status-warning bg-status-warning-subtle",
-  [SUB_STATUS.CANCELLED]:  "text-text-tertiary bg-surface-overlay",
+  [SUB_STATUS.CANCELLED]: "text-text-tertiary bg-surface-overlay",
 };
 
 function SubRow({ sub }: { sub: Awaited<ReturnType<typeof getAllSubscriptions>>[number] }) {
   const isOverdue = sub.nextDue && isPast(new Date(sub.nextDue));
   const verifyUrl = SUBSCRIPTION_META[sub.name]?.verifyUrl;
-  const statusStyle = STATUS_STYLE[sub.status ?? SUB_STATUS.ACTIVE] ?? STATUS_STYLE[SUB_STATUS.ACTIVE];
+  const statusStyle =
+    STATUS_STYLE[sub.status ?? SUB_STATUS.ACTIVE] ?? STATUS_STYLE[SUB_STATUS.ACTIVE];
   const isCancelled = sub.status === SUB_STATUS.CANCELLED;
 
   return (
@@ -39,7 +40,9 @@ function SubRow({ sub }: { sub: Awaited<ReturnType<typeof getAllSubscriptions>>[
           <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${statusStyle}`}>
             {sub.status}
           </span>
-          <span className={`text-sm md:text-base font-medium ${isCancelled ? "line-through" : ""}`}>{sub.name}</span>
+          <span className={`text-sm md:text-base font-medium ${isCancelled ? "line-through" : ""}`}>
+            {sub.name}
+          </span>
           {verifyUrl && (
             <a
               href={verifyUrl}
@@ -65,9 +68,7 @@ function SubRow({ sub }: { sub: Awaited<ReturnType<typeof getAllSubscriptions>>[
           {sub.paymentMethod ? ` · ${sub.paymentMethod}` : ""}
           {sub.frequency !== FREQUENCY.MONTHLY ? ` · ${sub.frequency}` : ""}
         </div>
-        {sub.notes && (
-          <div className="mt-1 max-w-md text-sm text-text-tertiary">{sub.notes}</div>
-        )}
+        {sub.notes && <div className="mt-1 max-w-md text-sm text-text-tertiary">{sub.notes}</div>}
         <SubscriptionActions
           subId={sub.id}
           subName={sub.name}
@@ -83,7 +84,11 @@ function SubRow({ sub }: { sub: Awaited<ReturnType<typeof getAllSubscriptions>>[
       </div>
       <div className="text-right shrink-0">
         <div className={`text-base font-mono ${isCancelled ? "line-through" : ""}`}>
-          {sub.amount != null ? `${sub.amount} ${sub.currency}` : <span className="text-text-tertiary">— {sub.currency}</span>}
+          {sub.amount != null ? (
+            `${sub.amount} ${sub.currency}`
+          ) : (
+            <span className="text-text-tertiary">— {sub.currency}</span>
+          )}
         </div>
         {sub.nextDue && !isCancelled && (
           <div className={`text-sm ${isOverdue ? "text-status-negative" : "text-text-secondary"}`}>
@@ -115,15 +120,32 @@ export default async function MoneyPage() {
   const isFounder = viewer?.isDefault === true;
   const IntegrationBanner = isFounder ? (
     <div className="mt-6 p-3 bg-surface-raised border border-border-subtle rounded-lg text-sm">
-      <div className="font-medium">Economic layer: <a href={INTEGRATION.orangeCat.profile} target="_blank" className="ui-link">{INTEGRATION.orangeCat.title} profile ({INTEGRATION.owner})</a></div>
+      <div className="font-medium">
+        Economic layer:{" "}
+        <a href={INTEGRATION.orangeCat.profile} target="_blank" className="ui-link">
+          {INTEGRATION.orangeCat.title} profile ({INTEGRATION.owner})
+        </a>
+      </div>
       {/* break-words: a bech32 address has no break opportunity, so it ran off
           the right edge of a 320px phone. */}
       {/* Named the database table this relationship is stored in
           (`stakeholder_relationships`) and then printed a bech32 string with
           no label — a sentence that is half schema and half unexplained
           hex. Founder-only or not, it should read like a note, not a dump. */}
-      <div className="mt-1 break-words text-text-secondary">FleetCrown is a paying customer of OrangeCat. <a href={INTEGRATION.orangeCat.projectUrl} target="_blank" className="ui-link">{INTEGRATION.orangeCat.title} project</a> · <a href={INTEGRATION.fleetCrown.projectUrl} target="_blank" className="ui-link">{INTEGRATION.fleetCrown.title} project</a>.</div>
-      <div className="mt-1 text-text-tertiary">Shared BTC wallet <code className="break-all">{INTEGRATION.wallet.btc}</code></div>
+      <div className="mt-1 break-words text-text-secondary">
+        FleetCrown is a paying customer of OrangeCat.{" "}
+        <a href={INTEGRATION.orangeCat.projectUrl} target="_blank" className="ui-link">
+          {INTEGRATION.orangeCat.title} project
+        </a>{" "}
+        ·{" "}
+        <a href={INTEGRATION.fleetCrown.projectUrl} target="_blank" className="ui-link">
+          {INTEGRATION.fleetCrown.title} project
+        </a>
+        .
+      </div>
+      <div className="mt-1 text-text-tertiary">
+        Shared BTC wallet <code className="break-all">{INTEGRATION.wallet.btc}</code>
+      </div>
     </div>
   ) : null;
 
@@ -144,9 +166,10 @@ export default async function MoneyPage() {
   ].filter(Boolean) as string[];
   // The soonest charge still ahead of us — what a person opens a money page to
   // find out. Anything already past shows as "Overdue" on its own row.
-  const nextCharge = visibleSubs
-    .filter((s) => s.nextDue && !isPast(s.nextDue))
-    .sort((a, b) => a.nextDue!.getTime() - b.nextDue!.getTime())[0] ?? null;
+  const nextCharge =
+    visibleSubs
+      .filter((s) => s.nextDue && !isPast(s.nextDue))
+      .sort((a, b) => a.nextDue!.getTime() - b.nextDue!.getTime())[0] ?? null;
 
   return (
     // The header action is suppressed while the list is empty: the empty state
@@ -193,29 +216,31 @@ export default async function MoneyPage() {
           title="Subscriptions"
           right={
             visibleSubs.length > 0 ? (
-              <span className="text-sm text-text-tertiary">
-                Verified against email receipts
-              </span>
+              <span className="text-sm text-text-tertiary">Verified against email receipts</span>
             ) : undefined
           }
         />
         {visibleSubs.length > 0 ? (
           <div className="space-y-3">
-            {visibleSubs.map((sub) => <SubRow key={sub.id} sub={sub} />)}
+            {visibleSubs.map((sub) => (
+              <SubRow key={sub.id} sub={sub} />
+            ))}
           </div>
         ) : (
           <div className="ui-empty-block ui-empty-block-md">
             <CreditCard className="ui-empty-icon" aria-hidden="true" />
             <p className="ui-empty-title">No subscriptions tracked yet</p>
             <p className="ui-empty-helper">
-              Add what you pay for each month and this page totals the burn, flags
-              anything with no billing email behind it, and tells you what is due next.
+              Add what you pay for each month and this page totals the burn, flags anything with no
+              billing email behind it, and tells you what is due next.
             </p>
             <NewSubscriptionButton />
           </div>
         )}
         <CancelledSubsSection count={cancelledSubs.length}>
-          {cancelledSubs.map((sub) => <SubRow key={sub.id} sub={sub} />)}
+          {cancelledSubs.map((sub) => (
+            <SubRow key={sub.id} sub={sub} />
+          ))}
         </CancelledSubsSection>
         {/* The footnote explains the arrow icon on a row and what "unverified"
             means on a chip. With no rows there is neither, so it explained a UI
@@ -224,7 +249,8 @@ export default async function MoneyPage() {
           <div className="mt-5 flex items-start gap-2 border-t border-border-subtle pt-4 text-sm text-text-tertiary">
             <HelpCircle className="h-3 w-3 shrink-0 mt-0.5" />
             <span>
-              Tap the arrow on a row to verify at the source. Unverified = no billing email found. Ask Loki to re-scan if something looks wrong.
+              Tap the arrow on a row to verify at the source. Unverified = no billing email found.
+              Ask Loki to re-scan if something looks wrong.
             </span>
           </div>
         )}

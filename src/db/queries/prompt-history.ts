@@ -5,7 +5,10 @@ import { excludeSmokeDispatchesSql } from "./smoke-filter";
 import { toPromptDisplayFields, type PromptDisplayFields } from "@/lib/activity-status";
 import { HOUR_MS } from "@/lib/constants/time";
 
-export async function insertPromptHistory(userId: string, row: Omit<NewPromptHistoryRow, "id" | "userId" | "dispatchedAt">) {
+export async function insertPromptHistory(
+  userId: string,
+  row: Omit<NewPromptHistoryRow, "id" | "userId" | "dispatchedAt">,
+) {
   await db.insert(promptHistory).values({ ...row, userId });
 }
 
@@ -142,7 +145,8 @@ type RawDispatchRow = {
 };
 
 // All dispatches — for the dedicated history page (dispatchedAt stays as Date for RSC prop passing)
-export type HistoryItem = Omit<RawDispatchRow, "customPrompt" | "resolvedPrompt"> & PromptDisplayFields;
+export type HistoryItem = Omit<RawDispatchRow, "customPrompt" | "resolvedPrompt"> &
+  PromptDisplayFields;
 
 // Last N dispatches — for activity feeds serialized through JSON API (dispatchedAt as ISO string)
 export type ActivityItem = Omit<HistoryItem, "dispatchedAt"> & { dispatchedAt: string };
@@ -176,12 +180,22 @@ export async function getPromptHistory(userId: string, limit = 200): Promise<His
   return rows.map(toHistoryItem);
 }
 
-export async function getRecentActivity(userId: string, hours = 24, limit = 30): Promise<ActivityItem[]> {
+export async function getRecentActivity(
+  userId: string,
+  hours = 24,
+  limit = 30,
+): Promise<ActivityItem[]> {
   const since = new Date(Date.now() - hours * HOUR_MS);
   const rows = await db
     .select(DISPATCH_COLS)
     .from(promptHistory)
-    .where(and(eq(promptHistory.userId, userId), gte(promptHistory.dispatchedAt, since), excludeSmokeDispatchesSql()))
+    .where(
+      and(
+        eq(promptHistory.userId, userId),
+        gte(promptHistory.dispatchedAt, since),
+        excludeSmokeDispatchesSql(),
+      ),
+    )
     .orderBy(desc(promptHistory.dispatchedAt))
     .limit(limit);
   return rows.map(toActivityItem);
@@ -191,21 +205,40 @@ export async function getRecentActivity(userId: string, hours = 24, limit = 30):
 // where each pane shows one agent's last prompt, live. Matched case-insensitively
 // on projectKey because the dispatch tab and the registered project name can
 // differ in case (see recordSessionHandoffChangelog's ilike match).
-export async function getLastPromptByProjectKey(userId: string, projectKey: string): Promise<ActivityItem | null> {
+export async function getLastPromptByProjectKey(
+  userId: string,
+  projectKey: string,
+): Promise<ActivityItem | null> {
   const [row] = await db
     .select(DISPATCH_COLS)
     .from(promptHistory)
-    .where(and(eq(promptHistory.userId, userId), sql`lower(${promptHistory.projectKey}) = lower(${projectKey})`, excludeSmokeDispatchesSql()))
+    .where(
+      and(
+        eq(promptHistory.userId, userId),
+        sql`lower(${promptHistory.projectKey}) = lower(${projectKey})`,
+        excludeSmokeDispatchesSql(),
+      ),
+    )
     .orderBy(desc(promptHistory.dispatchedAt))
     .limit(1);
   return row ? toActivityItem(row) : null;
 }
 
-export async function getProjectPromptActivity(userId: string, projectId: string, limit = 50): Promise<ActivityItem[]> {
+export async function getProjectPromptActivity(
+  userId: string,
+  projectId: string,
+  limit = 50,
+): Promise<ActivityItem[]> {
   const rows = await db
     .select(DISPATCH_COLS)
     .from(promptHistory)
-    .where(and(eq(promptHistory.userId, userId), eq(promptHistory.projectId, projectId), excludeSmokeDispatchesSql()))
+    .where(
+      and(
+        eq(promptHistory.userId, userId),
+        eq(promptHistory.projectId, projectId),
+        excludeSmokeDispatchesSql(),
+      ),
+    )
     .orderBy(desc(promptHistory.dispatchedAt))
     .limit(limit);
   return rows.map(toActivityItem);

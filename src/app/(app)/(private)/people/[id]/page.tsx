@@ -5,11 +5,7 @@ import { PersonPageClient } from "@/components/people/PersonPageClient";
 
 export const metadata = { title: "Person" };
 
-export default async function PersonPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default async function PersonPage({ params }: { params: Promise<{ id: string }> }) {
   const userId = await requirePageUserId();
   const { id } = await params;
   const person = await getPersonDetail(userId, id);

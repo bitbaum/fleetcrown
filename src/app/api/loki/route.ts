@@ -33,8 +33,7 @@ export async function POST(req: NextRequest) {
   // its own per-conversation threads regardless (same agent + memory).
   // userId also resolves the caller's writing-voice preference.
   let message = dataOrResp.message;
-  let sessionKey =
-    process.env.LOKI_PERSONAL_SESSION_KEY?.trim() || `agent:main:web:ask:${userId}`;
+  let sessionKey = process.env.LOKI_PERSONAL_SESSION_KEY?.trim() || `agent:main:web:ask:${userId}`;
 
   // Project-scoped discussion: a per-project thread, with the project's brief +
   // goals prefaced so Loki reasons as a partner on THIS project (not the generic
@@ -65,7 +64,9 @@ export async function POST(req: NextRequest) {
   // producer; the operator still approves every draft before it executes.
   const [{ status, body }, queued] = await Promise.all([
     askLoki(message, { sessionKey, userId }),
-    enqueueProposalFromMessage(userId, dataOrResp.message, new Date().toISOString()).catch(() => null),
+    enqueueProposalFromMessage(userId, dataOrResp.message, new Date().toISOString()).catch(
+      () => null,
+    ),
   ]);
 
   if (queued) body.queuedAction = queued;

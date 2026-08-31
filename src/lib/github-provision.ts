@@ -22,7 +22,10 @@ const GITHUB_REPO_RE = /github\.com[/:]([^/]+)\/([^/#?]+?)(?:\.git)?(?:[/#?].*)?
 
 /** GitHub-slug a display name the same way `gh repo create` would. */
 export function repoSlug(name: string): string {
-  return name.toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 export function parseGithubRepoUrl(gitUrl: string): { owner: string; repo: string } | null {
@@ -67,14 +70,19 @@ export async function seedTemplate(
   try {
     const branchRes = await gh(`${repoPath}/branches/main`);
     if (!branchRes.ok) return false;
-    const branchData = (await branchRes.json()) as { commit: { sha: string; commit: { tree: { sha: string } } } };
+    const branchData = (await branchRes.json()) as {
+      commit: { sha: string; commit: { tree: { sha: string } } };
+    };
     const baseCommitSha = branchData.commit.sha;
     const baseTreeSha = branchData.commit.commit.tree.sha;
 
     const blobs = await Promise.all(
       Object.entries(template.files).map(async ([path, body]) => {
         const content = renderTemplate(body, values);
-        const blobRes = await gh(`${repoPath}/git/blobs`, { method: "POST", body: JSON.stringify({ content, encoding: "utf-8" }) });
+        const blobRes = await gh(`${repoPath}/git/blobs`, {
+          method: "POST",
+          body: JSON.stringify({ content, encoding: "utf-8" }),
+        });
         if (!blobRes.ok) throw new Error(`blob create failed for ${path}`);
         const { sha } = (await blobRes.json()) as { sha: string };
         return { path, mode: "100644" as const, type: "blob" as const, sha };
@@ -82,18 +90,28 @@ export async function seedTemplate(
     ).catch(() => null);
     if (!blobs) return false;
 
-    const treeRes = await gh(`${repoPath}/git/trees`, { method: "POST", body: JSON.stringify({ base_tree: baseTreeSha, tree: blobs }) });
+    const treeRes = await gh(`${repoPath}/git/trees`, {
+      method: "POST",
+      body: JSON.stringify({ base_tree: baseTreeSha, tree: blobs }),
+    });
     if (!treeRes.ok) return false;
     const { sha: newTreeSha } = (await treeRes.json()) as { sha: string };
 
     const commitRes = await gh(`${repoPath}/git/commits`, {
       method: "POST",
-      body: JSON.stringify({ message: `Add ${template.label} starter (seeded by FleetCrown)`, tree: newTreeSha, parents: [baseCommitSha] }),
+      body: JSON.stringify({
+        message: `Add ${template.label} starter (seeded by FleetCrown)`,
+        tree: newTreeSha,
+        parents: [baseCommitSha],
+      }),
     });
     if (!commitRes.ok) return false;
     const { sha: newCommitSha } = (await commitRes.json()) as { sha: string };
 
-    const refRes = await gh(`${repoPath}/git/refs/heads/main`, { method: "PATCH", body: JSON.stringify({ sha: newCommitSha }) });
+    const refRes = await gh(`${repoPath}/git/refs/heads/main`, {
+      method: "PATCH",
+      body: JSON.stringify({ sha: newCommitSha }),
+    });
     return refRes.ok;
   } catch {
     // Timeout or network failure mid-flow — non-fatal per contract above.
@@ -108,10 +126,21 @@ export type ProvisionResult =
 /** Create a repo on the user's account and seed the chosen template. */
 export async function provisionGithubRepo(
   token: string,
-  opts: { name: string; description?: string; visibility?: "private" | "public"; initReadme?: boolean; template?: TemplateId },
+  opts: {
+    name: string;
+    description?: string;
+    visibility?: "private" | "public";
+    initReadme?: boolean;
+    template?: TemplateId;
+  },
 ): Promise<ProvisionResult> {
   const name = repoSlug(opts.name);
-  if (!name) return { ok: false, status: 400, error: "Name must contain at least one alphanumeric character" };
+  if (!name)
+    return {
+      ok: false,
+      status: 400,
+      error: "Name must contain at least one alphanumeric character",
+    };
 
   const description = opts.description ?? `Started from FleetCrown · ${opts.name}`;
   let res: Response;
@@ -124,7 +153,12 @@ export async function provisionGithubRepo(
         "X-GitHub-Api-Version": "2022-11-28",
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ name, description, private: (opts.visibility ?? "private") === "private", auto_init: opts.initReadme ?? true }),
+      body: JSON.stringify({
+        name,
+        description,
+        private: (opts.visibility ?? "private") === "private",
+        auto_init: opts.initReadme ?? true,
+      }),
       // Repo creation can be slow but must not hang the route forever.
       signal: AbortSignal.timeout(HTTP_TIMEOUT_MS),
     });
@@ -137,9 +171,16 @@ export async function provisionGithubRepo(
     try {
       const body = await res.json();
       detail = body?.errors?.[0]?.message ?? body?.message ?? "";
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     // 422 = name already exists on the account.
-    return { ok: false, status: res.status, error: `GitHub rejected the create (${res.status})`, detail };
+    return {
+      ok: false,
+      status: res.status,
+      error: `GitHub rejected the create (${res.status})`,
+      detail,
+    };
   }
 
   const repo = (await res.json()) as ProvisionedRepo;
@@ -147,15 +188,17 @@ export async function provisionGithubRepo(
   let templateSeeded = true;
   const template = opts.template ?? "bare";
   if (template !== "bare") {
-    templateSeeded = await seedTemplate(token, repo.owner.login, repo.name, template, { name: opts.name, description });
+    templateSeeded = await seedTemplate(token, repo.owner.login, repo.name, template, {
+      name: opts.name,
+      description,
+    });
   }
 
   return { ok: true, repo, templateSeeded };
 }
 
 export type DeprovisionResult =
-  | { ok: true }
-  | { ok: false; status: number; error: string; detail?: string };
+  { ok: true } | { ok: false; status: number; error: string; detail?: string };
 
 export async function deprovisionGithubRepo(
   token: string,
@@ -163,7 +206,8 @@ export async function deprovisionGithubRepo(
   mode: "archive" | "delete",
 ): Promise<DeprovisionResult> {
   const parsed = parseGithubRepoUrl(gitUrl);
-  if (!parsed) return { ok: false, status: 400, error: "Linked repo is not a GitHub repository URL." };
+  if (!parsed)
+    return { ok: false, status: 400, error: "Linked repo is not a GitHub repository URL." };
   let res: Response;
   try {
     res = await fetch(`${GITHUB_API_BASE}/repos/${parsed.owner}/${parsed.repo}`, {
@@ -178,14 +222,20 @@ export async function deprovisionGithubRepo(
       signal: AbortSignal.timeout(HTTP_TIMEOUT_SHORT_MS),
     });
   } catch {
-    return { ok: false, status: 502, error: `GitHub ${mode === "delete" ? "delete" : "archive"} timed out or was unreachable` };
+    return {
+      ok: false,
+      status: 502,
+      error: `GitHub ${mode === "delete" ? "delete" : "archive"} timed out or was unreachable`,
+    };
   }
   if (res.ok || res.status === 204) return { ok: true };
   let detail = "";
   try {
     const body = await res.json();
     detail = body?.message ?? "";
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return {
     ok: false,
     status: res.status === 404 ? 404 : 502,

@@ -8,16 +8,22 @@ import type { ProjectResource } from "@/db/schema/user-projects";
 import { scheduleProjectProfileReindexByEntityId } from "@/lib/rag/reindex-project-profile";
 
 const ResourceBody = z.object({
-  resources: z.array(z.object({
-    id: z.string().trim().max(80).optional(),
-    kind: z.enum(["link", "doc", "spec", "dataset", "credential", "environment", "design", "other"]).default("link"),
-    visibility: z.enum(["private", "team", "public"]).default("private"),
-    sensitivity: z.enum(["normal", "internal", "secret", "credential"]).default("normal"),
-    title: z.string().trim().min(1).max(160),
-    url: z.string().trim().max(1000).optional(),
-    notes: z.string().trim().max(2000).optional(),
-    createdAt: z.string().trim().optional(),
-  })).max(40),
+  resources: z
+    .array(
+      z.object({
+        id: z.string().trim().max(80).optional(),
+        kind: z
+          .enum(["link", "doc", "spec", "dataset", "credential", "environment", "design", "other"])
+          .default("link"),
+        visibility: z.enum(["private", "team", "public"]).default("private"),
+        sensitivity: z.enum(["normal", "internal", "secret", "credential"]).default("normal"),
+        title: z.string().trim().min(1).max(160),
+        url: z.string().trim().max(1000).optional(),
+        notes: z.string().trim().max(2000).optional(),
+        createdAt: z.string().trim().optional(),
+      }),
+    )
+    .max(40),
 });
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -32,7 +38,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const project = await getProjectCore(userId, idOrResp);
   if (!project) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const userProject = await getUserProjectByEntityId(userId, idOrResp);
-  if (!userProject) return NextResponse.json({ error: "Project runtime row not found" }, { status: 404 });
+  if (!userProject)
+    return NextResponse.json({ error: "Project runtime row not found" }, { status: 404 });
 
   const now = new Date().toISOString();
   const resources: ProjectResource[] = dataOrResp.resources.map((r) => ({

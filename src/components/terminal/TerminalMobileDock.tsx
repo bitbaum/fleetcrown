@@ -43,8 +43,8 @@ export function TerminalMobileDock({
       )}
       {inputMode === "type" && liveKeys && (
         <p className="ui-term-dock-hint">
-          Live keystrokes are on — tap the screen above, then type. Turn them off in the
-          session menu to get the typing box back.
+          Live keystrokes are on — tap the screen above, then type. Turn them off in the session
+          menu to get the typing box back.
         </p>
       )}
       {inputMode === "prompt" && <TerminalComposer tab={tab} />}

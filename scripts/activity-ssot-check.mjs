@@ -27,25 +27,37 @@ const outDir = path.join(root, ".tmp", "activity-ssot-check");
 fs.mkdirSync(outDir, { recursive: true });
 
 async function login(page, callbackUrl = "/control") {
-  await page.goto(`${base}/sign-in?callbackUrl=${encodeURIComponent(callbackUrl)}`, { waitUntil: "networkidle" });
+  await page.goto(`${base}/sign-in?callbackUrl=${encodeURIComponent(callbackUrl)}`, {
+    waitUntil: "networkidle",
+  });
   if (page.url().includes("/sign-in")) {
     const ownerTab = page.getByRole("button", { name: /owner key/i });
     if (await ownerTab.count()) await ownerTab.click();
     if (!ownerPassword) throw new Error("LOCAL_AUTH_PASSWORD is not configured");
     await page.locator('input[type="password"]').first().fill(ownerPassword);
-    await page.getByRole("button", { name: /sign in|continue|unlock/i }).last().click();
+    await page
+      .getByRole("button", { name: /sign in|continue|unlock/i })
+      .last()
+      .click();
     await page.waitForURL((url) => !url.pathname.startsWith("/sign-in"), { timeout: 15000 });
   }
 }
 
 async function fetchJson(page, url, options) {
-  return page.evaluate(async ({ url, options }) => {
-    const res = await fetch(url, options);
-    const text = await res.text();
-    let json = null;
-    try { json = text ? JSON.parse(text) : null; } catch { /* caller gets raw text */ }
-    return { ok: res.ok, status: res.status, json, text };
-  }, { url, options });
+  return page.evaluate(
+    async ({ url, options }) => {
+      const res = await fetch(url, options);
+      const text = await res.text();
+      let json = null;
+      try {
+        json = text ? JSON.parse(text) : null;
+      } catch {
+        /* caller gets raw text */
+      }
+      return { ok: res.ok, status: res.status, json, text };
+    },
+    { url, options },
+  );
 }
 
 async function waitForControlPrompt(page, projectTab, token) {
@@ -64,14 +76,19 @@ async function waitForControlPrompt(page, projectTab, token) {
     if (inRecent && inProject) return { control: last, project };
     await page.waitForTimeout(500);
   }
-  throw new Error(`Timed out waiting for prompt ${token} in /api/control; last payload keys=${Object.keys(last ?? {}).join(",")}`);
+  throw new Error(
+    `Timed out waiting for prompt ${token} in /api/control; last payload keys=${Object.keys(last ?? {}).join(",")}`,
+  );
 }
 
 async function clickVisibleActivityToggles(page) {
-  await page.getByRole("button", { name: /recent activity/i }).first().waitFor({
-    state: "visible",
-    timeout: 30_000,
-  });
+  await page
+    .getByRole("button", { name: /recent activity/i })
+    .first()
+    .waitFor({
+      state: "visible",
+      timeout: 30_000,
+    });
   const labels = [/recent activity/i, /^activity/i];
   for (const label of labels) {
     const buttons = page.getByRole("button", { name: label });
@@ -87,28 +104,38 @@ async function clickVisibleActivityToggles(page) {
 }
 
 async function assertBodyContains(page, token, context) {
-  await page.waitForFunction(
-    (needle) => document.body.innerText.includes(needle),
-    token,
-    { timeout: 15000 },
-  ).catch(async () => {
-    await page.screenshot({ path: path.join(outDir, `${context}.png`), fullPage: true });
-    const body = await page.locator("body").innerText({ timeout: 3000 }).catch(() => "");
-    throw new Error(`${context} did not render ${token}. Body sample: ${body.slice(0, 500)}`);
-  });
+  await page
+    .waitForFunction((needle) => document.body.innerText.includes(needle), token, {
+      timeout: 15000,
+    })
+    .catch(async () => {
+      await page.screenshot({ path: path.join(outDir, `${context}.png`), fullPage: true });
+      const body = await page
+        .locator("body")
+        .innerText({ timeout: 3000 })
+        .catch(() => "");
+      throw new Error(`${context} did not render ${token}. Body sample: ${body.slice(0, 500)}`);
+    });
 }
 
 const browser = await chromium.launch({ headless: true, executablePath: chromePath });
 
 try {
-  const context = await browser.newContext({ viewport: { width: 1440, height: 950 }, deviceScaleFactor: 1 });
+  const context = await browser.newContext({
+    viewport: { width: 1440, height: 950 },
+    deviceScaleFactor: 1,
+  });
   const page = await context.newPage();
   await login(page);
 
   const controlRes = await fetchJson(page, "/api/control");
-  if (!controlRes.ok) throw new Error(`/api/control initial failed: ${controlRes.status} ${controlRes.text.slice(0, 300)}`);
+  if (!controlRes.ok)
+    throw new Error(
+      `/api/control initial failed: ${controlRes.status} ${controlRes.text.slice(0, 300)}`,
+    );
   const projects = controlRes.json.projects ?? [];
-  const project = projects.find((p) => p.tab && p.dir && !p.readonly) ?? projects.find((p) => p.tab && p.dir);
+  const project =
+    projects.find((p) => p.tab && p.dir && !p.readonly) ?? projects.find((p) => p.tab && p.dir);
   if (!project) throw new Error("No project with tab+dir found in /api/control");
 
   const token = `ssot-check-${Date.now()}`;
@@ -118,7 +145,10 @@ try {
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ prompt, cwd: project.dir, projectKey: project.tab }),
   });
-  if (!captureRes.ok) throw new Error(`/api/activity/capture failed: ${captureRes.status} ${captureRes.text.slice(0, 300)}`);
+  if (!captureRes.ok)
+    throw new Error(
+      `/api/activity/capture failed: ${captureRes.status} ${captureRes.text.slice(0, 300)}`,
+    );
 
   await waitForControlPrompt(page, project.tab, token);
 

@@ -86,7 +86,11 @@ export function parseTextToolCalls(text: string, validNames: string[]): ToolCall
     const m = /^\s*(?:[-*>]\s*)?(?:\*\*)?TOOL(?:\*\*)?\s*[:=]\s*(.+?)\s*$/i.exec(lines[i]);
     if (!m) continue;
     // Tolerate `name(...)`, backticks, and trailing punctuation copied from prose.
-    const name = m[1].replace(/[`*]/g, "").replace(/\(.*$/, "").replace(/[.,;]$/, "").trim();
+    const name = m[1]
+      .replace(/[`*]/g, "")
+      .replace(/\(.*$/, "")
+      .replace(/[.,;]$/, "")
+      .trim();
     if (!valid.has(name)) continue;
 
     // ARGS may sit on the next non-empty line, or a couple below if the model
@@ -114,7 +118,11 @@ export function parseTextToolCalls(text: string, validNames: string[]): ToolCall
 
 /** Parse a JSON object, tolerating fences and trailing prose. Null if hopeless. */
 function safeJsonObject(raw: string): Record<string, unknown> | null {
-  const cleaned = raw.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+  const cleaned = raw
+    .trim()
+    .replace(/^```(?:json)?/i, "")
+    .replace(/```$/, "")
+    .trim();
   // `null` and `{}` must stay distinguishable. Returning `{}` for "nothing
   // parseable here" would satisfy the caller's `??` fallback and silently
   // discard arguments that were merely on the NEXT line — which is exactly what
@@ -236,9 +244,15 @@ async function callOneLink(
           `${link.provider.id} 429 daily quota exhausted${wait ? ` (retry in ${wait})` : ""}: ${body.slice(0, 160)}`,
         );
       }
-      throw new LinkError("capacity", `${link.model} 429 rate-limited${wait ? ` (retry in ${wait})` : ""}`);
+      throw new LinkError(
+        "capacity",
+        `${link.model} 429 rate-limited${wait ? ` (retry in ${wait})` : ""}`,
+      );
     }
-    throw new LinkError("other", `${link.model} ${res.status}${body ? `: ${body.slice(0, 120)}` : ""}`);
+    throw new LinkError(
+      "other",
+      `${link.model} ${res.status}${body ? `: ${body.slice(0, 120)}` : ""}`,
+    );
   }
 
   const data = (await res.json()) as {
@@ -287,7 +301,11 @@ export async function callModelLinkOnce(link: ChatLink, input: ModelCallInput): 
   try {
     return await callOneLink(link, input, input.tools);
   } catch (e) {
-    if (e instanceof LinkError && /native tools rejected/.test(e.message) && input.tools.length > 0) {
+    if (
+      e instanceof LinkError &&
+      /native tools rejected/.test(e.message) &&
+      input.tools.length > 0
+    ) {
       return callOneLink(link, input, []);
     }
     throw e;
@@ -336,13 +354,19 @@ export async function callModelWithTools(
       try {
         const turn = await callOneLink(link, input, tools);
         if (failures.length > 0) {
-          console.warn(`[loki] answered on ${turn.model} after ${failures.length} refusal(s): ${failures.join("; ")}`);
+          console.warn(
+            `[loki] answered on ${turn.model} after ${failures.length} refusal(s): ${failures.join("; ")}`,
+          );
         }
         return turn;
       } catch (e) {
-        const err = e instanceof LinkError ? e : new LinkError("other", e instanceof Error ? e.message : String(e));
+        const err =
+          e instanceof LinkError
+            ? e
+            : new LinkError("other", e instanceof Error ? e.message : String(e));
         // Retry this same link without native tools, once.
-        if (err.kind === "other" && /native tools rejected/.test(err.message) && tools.length > 0) continue;
+        if (err.kind === "other" && /native tools rejected/.test(err.message) && tools.length > 0)
+          continue;
         failures.push(err.message);
         kinds.add(err.kind);
         if (err.kind === "daily") drained.add(link.provider.id);

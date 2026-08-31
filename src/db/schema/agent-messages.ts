@@ -16,7 +16,9 @@ export const agentMessages = pgTable(
   "agent_messages",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
     /** Stable per-message id from the parser — the idempotency key. */
     msgId: text("msg_id").notNull(),
     fromAgent: text("from_agent").notNull(),

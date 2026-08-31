@@ -9,7 +9,14 @@ import { sql } from "drizzle-orm";
 import { db } from "@/db";
 import { users, accounts, sessions, verificationTokens } from "@/db/schema";
 import { verifyPassword } from "@/lib/password";
-import { getDefaultUser, getUserById, getUserByEmail, updateUser, setUserOrangeCatActorId, type UpdateUserInput } from "@/db/queries/users";
+import {
+  getDefaultUser,
+  getUserById,
+  getUserByEmail,
+  updateUser,
+  setUserOrangeCatActorId,
+  type UpdateUserInput,
+} from "@/db/queries/users";
 import { getOrgMembershipCount, createPersonalOrg } from "@/db/queries/orgs";
 import { logDebug } from "@/db/queries/debug-logs";
 import { healReturningUserOnboarding, onboardingCompleteFlag } from "@/lib/onboarding-heal";
@@ -92,7 +99,6 @@ declare module "@auth/core/jwt" {
   }
 }
 
-
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: DrizzleAdapter(db, {
     usersTable: users,
@@ -130,7 +136,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
         if (typeof c === "object") {
           try {
-            return JSON.parse(JSON.stringify(c, (_, v) => (v instanceof Error ? { name: v.name, message: v.message, stack: v.stack } : v)));
+            return JSON.parse(
+              JSON.stringify(c, (_, v) =>
+                v instanceof Error ? { name: v.name, message: v.message, stack: v.stack } : v,
+              ),
+            );
           } catch {
             // JSON.stringify can throw on circular references (Auth.js internal
             // errors carry context refs that loop), BigInt values, etc. The old
@@ -147,10 +157,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               for (const k of Object.keys(o)) {
                 const v = o[k];
                 if (v instanceof Error) shape[k] = { name: v.name, message: v.message };
-                else if (typeof v === "string" || typeof v === "number" || typeof v === "boolean" || v === null) shape[k] = v;
+                else if (
+                  typeof v === "string" ||
+                  typeof v === "number" ||
+                  typeof v === "boolean" ||
+                  v === null
+                )
+                  shape[k] = v;
               }
               return shape;
-            } catch { return String(c); }
+            } catch {
+              return String(c);
+            }
           }
         }
         return c;
@@ -161,10 +179,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         stack: err?.stack?.split("\n").slice(0, 8).join("\n"),
       };
       if (err?.cause) meta.cause = unwrapCause(err.cause);
-      db.execute(sql`
+      db.execute(
+        sql`
         INSERT INTO debug_logs (source, level, message, meta)
         VALUES ('auth', 'error', ${err?.message ?? String(err)}, ${JSON.stringify(meta)}::jsonb)
-      `).catch(() => {});
+      `,
+      ).catch(() => {});
     },
   },
   events: {
@@ -184,7 +204,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           // it so the rest of the app can resolve "this FC user = that OC actor"
           // without joining through the accounts table. Idempotent — same value
           // every sign-in.
-          const account = (message as { account?: { provider?: string; providerAccountId?: string } }).account;
+          const account = (
+            message as { account?: { provider?: string; providerAccountId?: string } }
+          ).account;
           if (
             account?.provider === "orangecat" &&
             account.providerAccountId &&
@@ -203,11 +225,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       } catch (e) {
         // Org bootstrap failures must not block sign-in. They'll surface in
         // debug_logs but the user still lands authenticated.
-        db.execute(sql`
+        db.execute(
+          sql`
           INSERT INTO debug_logs (source, level, message, meta)
           VALUES ('auth', 'event:signIn-org-bootstrap', ${(e as Error)?.message ?? String(e)},
                   ${JSON.stringify({ userId: message.user?.id, name: (e as Error)?.name })}::jsonb)
-        `).catch(() => {});
+        `,
+        ).catch(() => {});
       }
     },
   },
@@ -225,57 +249,65 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     // Requesting the capability scopes here is the "one consent" grant: the
     // adapter stores the access token on the accounts row, which later powers
     // project publish + timeline promote without a separate API-key step.
-    ...(enabledProviders.orangecat ? [{
-      id: "orangecat",
-      name: "OrangeCat",
-      type: "oidc" as const,
-      issuer: process.env.ORANGECAT_OAUTH_ISSUER ?? ORANGECAT_BASE_FALLBACK,
-      clientId: process.env.ORANGECAT_OAUTH_CLIENT_ID!,
-      clientSecret: process.env.ORANGECAT_OAUTH_CLIENT_SECRET!,
-      // OrangeCat's token endpoint only supports client_secret_post (creds in
-      // the form body); Auth.js defaults to client_secret_basic, which OC
-      // rejects with 400 "client_id is required" at the code-exchange step.
-      client: { token_endpoint_auth_method: "client_secret_post" as const },
-      checks: ["pkce" as const, "state" as const],
-      authorization: {
-        params: {
-          scope: "openid profile email project.read project.write timeline.write wallet.read",
-        },
-      },
-      // Actor `sub`, not email, is the cross-product identity boundary.
-      // Do not silently attach an OrangeCat actor to an existing FleetCrown
-      // account merely because the email strings happen to match.
-    }] : []),
+    ...(enabledProviders.orangecat
+      ? [
+          {
+            id: "orangecat",
+            name: "OrangeCat",
+            type: "oidc" as const,
+            issuer: process.env.ORANGECAT_OAUTH_ISSUER ?? ORANGECAT_BASE_FALLBACK,
+            clientId: process.env.ORANGECAT_OAUTH_CLIENT_ID!,
+            clientSecret: process.env.ORANGECAT_OAUTH_CLIENT_SECRET!,
+            // OrangeCat's token endpoint only supports client_secret_post (creds in
+            // the form body); Auth.js defaults to client_secret_basic, which OC
+            // rejects with 400 "client_id is required" at the code-exchange step.
+            client: { token_endpoint_auth_method: "client_secret_post" as const },
+            checks: ["pkce" as const, "state" as const],
+            authorization: {
+              params: {
+                scope: "openid profile email project.read project.write timeline.write wallet.read",
+              },
+            },
+            // Actor `sub`, not email, is the cross-product identity boundary.
+            // Do not silently attach an OrangeCat actor to an existing FleetCrown
+            // account merely because the email strings happen to match.
+          },
+        ]
+      : []),
     // Conditionally mounted (like Google/X) so a missing key pair cleanly
     // drops the provider instead of mounting it with empty-string creds that
     // fail opaquely on use. env.ts also flags a half-set pair loudly at boot.
-    ...(enabledProviders.github ? [
-    GitHub({
-      clientId: process.env.GITHUB_CLIENT_ID!,
-      clientSecret: process.env.GITHUB_CLIENT_SECRET!,
-      allowDangerousEmailAccountLinking: true,
-      // Scopes:
-      //   read:user + user:email — sign-in identity (Auth.js defaults)
-      //   repo                   — create + read + write private and public
-      //                            repos. Required by /api/projects/create-
-      //                            with-github (the "Start a new project"
-      //                            flow on /control) and by /api/github/repos
-      //                            for listing repos including private ones.
-      // Without `repo`, GitHub returns 404 from POST /user/repos rather than
-      // a clear 403 (security-through-obscurity on their side). Surfaced
-      // during dogfood 2026-06-05 as "GitHub API rejected the create (404)".
-      // Existing tokens minted before this change won't pick up the new
-      // scope automatically — users must sign out + sign back in to re-mint.
-      authorization: { params: { scope: "read:user user:email repo" } },
-    }),
-    ] : []),
-    ...(enabledProviders.google ? [
-      Google({
-        clientId: process.env.GOOGLE_CLIENT_ID!,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-        allowDangerousEmailAccountLinking: true,
-      }),
-    ] : []),
+    ...(enabledProviders.github
+      ? [
+          GitHub({
+            clientId: process.env.GITHUB_CLIENT_ID!,
+            clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+            allowDangerousEmailAccountLinking: true,
+            // Scopes:
+            //   read:user + user:email — sign-in identity (Auth.js defaults)
+            //   repo                   — create + read + write private and public
+            //                            repos. Required by /api/projects/create-
+            //                            with-github (the "Start a new project"
+            //                            flow on /control) and by /api/github/repos
+            //                            for listing repos including private ones.
+            // Without `repo`, GitHub returns 404 from POST /user/repos rather than
+            // a clear 403 (security-through-obscurity on their side). Surfaced
+            // during dogfood 2026-06-05 as "GitHub API rejected the create (404)".
+            // Existing tokens minted before this change won't pick up the new
+            // scope automatically — users must sign out + sign back in to re-mint.
+            authorization: { params: { scope: "read:user user:email repo" } },
+          }),
+        ]
+      : []),
+    ...(enabledProviders.google
+      ? [
+          Google({
+            clientId: process.env.GOOGLE_CLIENT_ID!,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+            allowDangerousEmailAccountLinking: true,
+          }),
+        ]
+      : []),
     // X / Twitter login uses OAuth 1.0a (see the "x-1a" Credentials provider
     // below + src/app/api/x-login/*). The OAuth 2.0 Twitter provider was
     // removed because X's /i/oauth2/authorize 503s for Pay-Per-Use accounts.
@@ -312,7 +344,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             ? await verifyPassword(supplied, user.passwordHash)
             : false;
 
-        if (!ok) return logAuthReject("local", envPassword || user.passwordHash ? "wrong-password" : "no-password-hash", user.email);
+        if (!ok)
+          return logAuthReject(
+            "local",
+            envPassword || user.passwordHash ? "wrong-password" : "no-password-hash",
+            user.email,
+          );
         logAuthAccept("local", user.email, user.id);
         return { id: user.id, email: user.email ?? "", name: user.name ?? "Local user" };
       },
@@ -322,11 +359,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       id: "email-password",
       name: "Email and password",
       credentials: {
-        email:    { label: "Email",    type: "email"    },
+        email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        const email    = credentials.email    as string | undefined;
+        const email = credentials.email as string | undefined;
         const password = credentials.password as string | undefined;
         if (!email || !password) return logAuthReject("email-password", "missing-input", email);
 
@@ -345,11 +382,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       id: "user-password",
       name: "User password",
       credentials: {
-        userId:   { label: "User ID",  type: "text"     },
+        userId: { label: "User ID", type: "text" },
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        const userId   = credentials.userId   as string | undefined;
+        const userId = credentials.userId as string | undefined;
         const password = credentials.password as string | undefined;
         if (!userId || !password) return logAuthReject("user-password", "missing-input", userId);
 
@@ -404,7 +441,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           const patch: UpdateUserInput = {};
           const oauthImage = (user as { image?: string | null }).image;
           if (!existingUser.image && oauthImage) patch.image = oauthImage;
-          if (!existingUser.name  && user.name)  patch.name  = user.name;
+          if (!existingUser.name && user.name) patch.name = user.name;
           // GitHub/Google only hand us an email they have already verified.
           if (!existingUser.emailVerified) patch.emailVerified = new Date();
           if (Object.keys(patch).length > 0) {
@@ -434,7 +471,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           // Orphaned id (reseed/restore) OR drifted username/name (e.g. the
           // operator renamed to a pseudonym) both fall through to refresh, so
           // the session — and the public /u/<username> it links to — self-heal.
-          if (u && (u.username ?? null) === (token.username ?? null) && (u.name ?? null) === (token.name ?? null)) {
+          if (
+            u &&
+            (u.username ?? null) === (token.username ?? null) &&
+            (u.name ?? null) === (token.name ?? null)
+          ) {
             // emailVerified can change without a name/username edit (the
             // verify-email link). Stamp it from the row we already loaded so
             // the optional recovery banner disappears without a sign-out.

@@ -9,22 +9,15 @@
 // so any client-reachable agent-label lookup must come from here, not
 // from the heavier registry.
 
-export const ALL_AGENT_IDS = [
-  "codex",
-  "claude",
-  "gemini",
-  "cursor",
-  "grok",
-  "openclaw",
-] as const;
+export const ALL_AGENT_IDS = ["codex", "claude", "gemini", "cursor", "grok", "openclaw"] as const;
 export type AnyAgentId = (typeof ALL_AGENT_IDS)[number];
 
 /** Display labels for every agent ID — the SINGLE source of truth. */
 export const AGENT_LABELS: Record<AnyAgentId, string> = {
-  claude:   "Claude",
-  codex:    "Codex",
-  cursor:   "Cursor",
-  gemini:   "Gemini",
-  grok:     "Grok",
+  claude: "Claude",
+  codex: "Codex",
+  cursor: "Cursor",
+  gemini: "Gemini",
+  grok: "Grok",
   openclaw: "OpenClaw",
 };

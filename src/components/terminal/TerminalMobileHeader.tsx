@@ -73,9 +73,11 @@ export function TerminalMobileHeader({
         aria-pressed={immersive}
         aria-label={immersive ? "Exit full screen" : "Full screen"}
       >
-        {immersive
-          ? <Minimize2 className="h-4 w-4" aria-hidden="true" />
-          : <Maximize2 className="h-4 w-4" aria-hidden="true" />}
+        {immersive ? (
+          <Minimize2 className="h-4 w-4" aria-hidden="true" />
+        ) : (
+          <Maximize2 className="h-4 w-4" aria-hidden="true" />
+        )}
       </button>
     </div>
   );

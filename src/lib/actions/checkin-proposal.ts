@@ -112,11 +112,15 @@ function selfTest(): void {
     name: `Person ${i}`,
     lastInteraction: daysAgo(30 + i),
   }));
-  check("cap honored", selectCheckinCandidates(many, { recentlyProposedIds: new Set(), maxPerTick: 3 }).length === 3);
+  check(
+    "cap honored",
+    selectCheckinCandidates(many, { recentlyProposedIds: new Set(), maxPerTick: 3 }).length === 3,
+  );
   check(
     "cap keeps first (oldest) N",
-    selectCheckinCandidates(many, { recentlyProposedIds: new Set(), maxPerTick: 2 }).map((c) => c.id).join(",") ===
-      "c0,c1",
+    selectCheckinCandidates(many, { recentlyProposedIds: new Set(), maxPerTick: 2 })
+      .map((c) => c.id)
+      .join(",") === "c0,c1",
   );
 
   // cooldown filter
@@ -131,14 +135,20 @@ function selfTest(): void {
   check(
     "nameless contact skipped",
     selectCheckinCandidates(
-      [{ id: "x", name: "   ", lastInteraction: daysAgo(50) }, { id: "y", name: "Cleo", lastInteraction: daysAgo(50) }],
+      [
+        { id: "x", name: "   ", lastInteraction: daysAgo(50) },
+        { id: "y", name: "Cleo", lastInteraction: daysAgo(50) },
+      ],
       { recentlyProposedIds: new Set(), maxPerTick: 5 },
     )
       .map((c) => c.id)
       .join(",") === "y",
   );
 
-  check("empty input ⇒ empty", selectCheckinCandidates([], { recentlyProposedIds: new Set(), maxPerTick: 3 }).length === 0);
+  check(
+    "empty input ⇒ empty",
+    selectCheckinCandidates([], { recentlyProposedIds: new Set(), maxPerTick: 3 }).length === 0,
+  );
 
   for (const [name, ok] of cases) console.log(`${ok ? "✓" : "✗"} ${name}`);
   const total = cases.length;

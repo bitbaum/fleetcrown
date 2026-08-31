@@ -16,7 +16,9 @@ export async function attachFeedbackWork<T extends FeedbackListItem>(
   userId: string,
   items: T[],
 ): Promise<(T & { work: FeedbackWorkView })[]> {
-  const runIds = [...new Set(items.map((i) => i.dispatchedRunId).filter((id): id is string => !!id))];
+  const runIds = [
+    ...new Set(items.map((i) => i.dispatchedRunId).filter((id): id is string => !!id)),
+  ];
   const runs = await getOrchestrationRunsByIds(userId, runIds);
 
   return items.map((item) => {

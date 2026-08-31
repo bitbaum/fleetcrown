@@ -10,7 +10,10 @@ import { resolveProjectPublicOrigin } from "@/lib/feedback/project-site";
  * Default a new token's origin allowlist from the project's live site
  * (user_projects.liveUrl first — Hetzner SSOT — then legacy attrs).
  */
-async function defaultOriginsFromProject(userId: string, projectId: string): Promise<string[] | null> {
+async function defaultOriginsFromProject(
+  userId: string,
+  projectId: string,
+): Promise<string[] | null> {
   const origin = await resolveProjectPublicOrigin(userId, projectId);
   return origin ? [origin] : null;
 }
@@ -23,9 +26,16 @@ function newToken(): string {
   return TOKEN_PREFIX + randomBytes(16).toString("hex");
 }
 
-export async function getActiveWidgetToken(userId: string, projectId: string): Promise<WidgetToken | null> {
+export async function getActiveWidgetToken(
+  userId: string,
+  projectId: string,
+): Promise<WidgetToken | null> {
   const row = await db.query.widgetTokens.findFirst({
-    where: and(eq(widgetTokens.userId, userId), eq(widgetTokens.projectId, projectId), isNull(widgetTokens.revokedAt)),
+    where: and(
+      eq(widgetTokens.userId, userId),
+      eq(widgetTokens.projectId, projectId),
+      isNull(widgetTokens.revokedAt),
+    ),
   });
   return row ?? null;
 }
@@ -47,10 +57,15 @@ export async function touchWidgetToken(tokenId: string, origin: string | null): 
   await db
     .update(widgetTokens)
     .set({ lastSeenAt: new Date(), lastSeenOrigin: origin })
-    .where(and(
-      eq(widgetTokens.id, tokenId),
-      or(isNull(widgetTokens.lastSeenAt), lt(widgetTokens.lastSeenAt, sql`now() - interval '60 seconds'`)),
-    ));
+    .where(
+      and(
+        eq(widgetTokens.id, tokenId),
+        or(
+          isNull(widgetTokens.lastSeenAt),
+          lt(widgetTokens.lastSeenAt, sql`now() - interval '60 seconds'`),
+        ),
+      ),
+    );
 }
 
 export type WidgetTokenInput = {
@@ -66,17 +81,26 @@ export type WidgetTokenInput = {
  * origins — or mint a replacement when `rotate` is set. Returns null when
  * the project doesn't exist or isn't owned by the user.
  */
-export async function upsertWidgetToken(userId: string, projectId: string, input: WidgetTokenInput = {}): Promise<WidgetToken | null> {
+export async function upsertWidgetToken(
+  userId: string,
+  projectId: string,
+  input: WidgetTokenInput = {},
+): Promise<WidgetToken | null> {
   const project = await db.query.entities.findFirst({
-    where: and(eq(entities.id, projectId), eq(entities.userId, userId), eq(entities.type, ENTITY_TYPE.PROJECT)),
+    where: and(
+      eq(entities.id, projectId),
+      eq(entities.userId, userId),
+      eq(entities.type, ENTITY_TYPE.PROJECT),
+    ),
     columns: { id: true },
   });
   if (!project) return null;
 
   const existing = await getActiveWidgetToken(userId, projectId);
-  const origins = input.origins?.filter(Boolean)
-    ?? existing?.origins
-    ?? await defaultOriginsFromProject(userId, projectId);
+  const origins =
+    input.origins?.filter(Boolean) ??
+    existing?.origins ??
+    (await defaultOriginsFromProject(userId, projectId));
   const status = input.status ?? existing?.status ?? WIDGET_TOKEN_STATUS.ACTIVE;
 
   if (existing && !input.rotate) {
@@ -101,7 +125,13 @@ export async function revokeWidgetToken(userId: string, projectId: string): Prom
   const [revoked] = await db
     .update(widgetTokens)
     .set({ revokedAt: new Date() })
-    .where(and(eq(widgetTokens.userId, userId), eq(widgetTokens.projectId, projectId), isNull(widgetTokens.revokedAt)))
+    .where(
+      and(
+        eq(widgetTokens.userId, userId),
+        eq(widgetTokens.projectId, projectId),
+        isNull(widgetTokens.revokedAt),
+      ),
+    )
     .returning({ id: widgetTokens.id });
   return Boolean(revoked);
 }
@@ -179,8 +209,7 @@ export async function listWidgetCoverage(userId: string): Promise<WidgetCoverage
       }
       const live = !!(t?.lastSeenAt && now - t.lastSeenAt.getTime() < LIVE_WINDOW_MS);
       const siteLike = !!productionUrl;
-      const needsAttention =
-        siteLike && (!t || t.status !== WIDGET_TOKEN_STATUS.ACTIVE || !live);
+      const needsAttention = siteLike && (!t || t.status !== WIDGET_TOKEN_STATUS.ACTIVE || !live);
       return {
         projectId: p.id,
         projectName: p.name,
@@ -196,6 +225,9 @@ export async function listWidgetCoverage(userId: string): Promise<WidgetCoverage
       };
     })
     .filter((p) => !!p.productionUrl)
-    .sort((a, b) => Number(b.needsAttention) - Number(a.needsAttention) || a.projectName.localeCompare(b.projectName));
+    .sort(
+      (a, b) =>
+        Number(b.needsAttention) - Number(a.needsAttention) ||
+        a.projectName.localeCompare(b.projectName),
+    );
 }
-

@@ -38,9 +38,7 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { hashPassword } from "@/lib/password";
-import {
-  DEMO_EMAIL, DEMO_NAME, DEMO_PASSWORD, DEMO_USERNAME, isDemoEnabled,
-} from "@/config/demo";
+import { DEMO_EMAIL, DEMO_NAME, DEMO_PASSWORD, DEMO_USERNAME, isDemoEnabled } from "@/config/demo";
 import { forgetDemoUserId } from "@/lib/demo-guard";
 import { ORCH_STATE } from "@/lib/orchestration/contract";
 import { ORCHESTRATION_OUTCOME } from "@/db/schema/orchestration-runs";
@@ -108,12 +106,12 @@ async function wipeUserRows(userId: string): Promise<Record<string, number>> {
         if (n > 0) removed[ref.table] = (removed[ref.table] ?? 0) + n;
         progressed = true;
       } catch {
-        stillBlocked.push(ref);      // blocked by a child of its own — retry next pass
+        stillBlocked.push(ref); // blocked by a child of its own — retry next pass
       }
     }
 
     remaining = stillBlocked;
-    if (!progressed) break;          // no pass made progress: report below
+    if (!progressed) break; // no pass made progress: report below
   }
 
   if (remaining.length > 0) {
@@ -198,14 +196,16 @@ async function seedDemoContent(userId: string): Promise<Record<string, number>> 
   const projectFixtures = [
     {
       name: "harbourlight",
-      description: "Tide-aware scheduling for a small marina. Booking, billing, and a public availability board.",
+      description:
+        "Tide-aware scheduling for a small marina. Booking, billing, and a public availability board.",
       stack: "Next.js · Postgres · Stripe",
       liveUrl: "https://harbourlight.example",
       notes: "Berth conflicts were the whole problem. Everything else is reporting.",
     },
     {
       name: "kestrel",
-      description: "Field-survey capture for ecologists — offline-first, syncs when a signal appears.",
+      description:
+        "Field-survey capture for ecologists — offline-first, syncs when a signal appears.",
       stack: "React Native · SQLite · Expo",
       liveUrl: null,
       notes: "Offline conflict resolution is the only hard part. Last-write-wins is wrong here.",
@@ -221,15 +221,27 @@ async function seedDemoContent(userId: string): Promise<Record<string, number>> 
 
   const projectIds: { entityId: string; name: string }[] = [];
   for (const [i, p] of projectFixtures.entries()) {
-    const [entity] = await db.insert(entities).values({
-      userId, name: p.name, type: "project",
-      description: p.description, source: "demo-seed",
-    }).returning({ id: entities.id });
+    const [entity] = await db
+      .insert(entities)
+      .values({
+        userId,
+        name: p.name,
+        type: "project",
+        description: p.description,
+        source: "demo-seed",
+      })
+      .returning({ id: entities.id });
 
     await db.insert(userProjects).values({
-      userId, entityProjectId: entity.id, name: p.name,
-      description: p.description, stack: p.stack, liveUrl: p.liveUrl,
-      notes: p.notes, position: i, isActive: true,
+      userId,
+      entityProjectId: entity.id,
+      name: p.name,
+      description: p.description,
+      stack: p.stack,
+      liveUrl: p.liveUrl,
+      notes: p.notes,
+      position: i,
+      isActive: true,
     });
 
     projectIds.push({ entityId: entity.id, name: p.name });
@@ -241,26 +253,61 @@ async function seedDemoContent(userId: string): Promise<Record<string, number>> 
   // contract the real loop writes (OrchestrationTaskSummary) — a demo that
   // rendered a different shape would teach the wrong thing about the product.
   const runFixtures = [
-    { p: 0, intent: "test_and_fix", outcome: ORCHESTRATION_OUTCOME.SUCCESS, days: 0.2,
+    {
+      p: 0,
+      intent: "test_and_fix",
+      outcome: ORCHESTRATION_OUTCOME.SUCCESS,
+      days: 0.2,
       done: "Berth double-booking rejected at the constraint, not in the form.",
       next: "Backfill the three historical overlaps flagged by the new check.",
-      tests: "green — 214 passed", todos: "0 open", health: "healthy" },
-    { p: 0, intent: "product", outcome: ORCHESTRATION_OUTCOME.SUCCESS, days: 1.1,
+      tests: "green — 214 passed",
+      todos: "0 open",
+      health: "healthy",
+    },
+    {
+      p: 0,
+      intent: "product",
+      outcome: ORCHESTRATION_OUTCOME.SUCCESS,
+      days: 1.1,
       done: "Availability board renders tide windows 14 days out, cached hourly.",
       next: "Decide whether the board should show provisional bookings.",
-      tests: "green — 214 passed", todos: "1 open", health: "healthy" },
-    { p: 1, intent: "test_and_fix", outcome: ORCHESTRATION_OUTCOME.PARTIAL, days: 2.4,
+      tests: "green — 214 passed",
+      todos: "1 open",
+      health: "healthy",
+    },
+    {
+      p: 1,
+      intent: "test_and_fix",
+      outcome: ORCHESTRATION_OUTCOME.PARTIAL,
+      days: 2.4,
       done: "Sync conflict resolution reworked around a per-field clock.",
       next: "Two of five edge cases still drop the field note — reproduce case 4 first.",
-      tests: "3 failing", todos: "2 open", health: "needs attention" },
-    { p: 2, intent: "product", outcome: ORCHESTRATION_OUTCOME.SUCCESS, days: 3.0,
+      tests: "3 failing",
+      todos: "2 open",
+      health: "needs attention",
+    },
+    {
+      p: 2,
+      intent: "product",
+      outcome: ORCHESTRATION_OUTCOME.SUCCESS,
+      days: 3.0,
       done: "Audit trail reads in plain language; each entry links to its transaction.",
       next: "Translate the entry templates.",
-      tests: "green — 96 passed", todos: "0 open", health: "healthy" },
-    { p: 2, intent: "quality", outcome: ORCHESTRATION_OUTCOME.SUCCESS, days: 5.5,
+      tests: "green — 96 passed",
+      todos: "0 open",
+      health: "healthy",
+    },
+    {
+      p: 2,
+      intent: "quality",
+      outcome: ORCHESTRATION_OUTCOME.SUCCESS,
+      days: 5.5,
       done: "Dependency sweep: 31 updates, no behaviour change.",
       next: "Nothing queued.",
-      tests: "green — 96 passed", todos: "0 open", health: "healthy" },
+      tests: "green — 96 passed",
+      todos: "0 open",
+      health: "healthy",
+    },
   ] as const;
 
   for (const r of runFixtures) {
@@ -281,20 +328,31 @@ async function seedDemoContent(userId: string): Promise<Record<string, number>> 
   counts.runs = runFixtures.length;
 
   const promptFixtures = [
-    { name: "Tighten the failing test", description: "Fix the cause, not the assertion.",
-      body: "Find the failing test, explain in one sentence why it fails, then fix the cause rather than the assertion." },
-    { name: "Explain this module", description: "Ownership, dependencies, blast radius.",
-      body: "Summarise what this module owns, what it depends on, and what would break if it were deleted." },
-    { name: "Find the wrong predicate", description: "The bug class behind repeat fixes.",
-      body: "Look for conditions that approximate the real rule — a width standing in for pointer type, a class standing in for a capability." },
+    {
+      name: "Tighten the failing test",
+      description: "Fix the cause, not the assertion.",
+      body: "Find the failing test, explain in one sentence why it fails, then fix the cause rather than the assertion.",
+    },
+    {
+      name: "Explain this module",
+      description: "Ownership, dependencies, blast radius.",
+      body: "Summarise what this module owns, what it depends on, and what would break if it were deleted.",
+    },
+    {
+      name: "Find the wrong predicate",
+      description: "The bug class behind repeat fixes.",
+      body: "Look for conditions that approximate the real rule — a width standing in for pointer type, a class standing in for a capability.",
+    },
   ];
   for (const p of promptFixtures) {
-    await db.insert(prompts).values({ userId, name: p.name, description: p.description, body: p.body });
+    await db
+      .insert(prompts)
+      .values({ userId, name: p.name, description: p.description, body: p.body });
   }
   counts.prompts = promptFixtures.length;
 
   const goalFixtures = [
-    { title: "Ship harbourlight billing",  progress: 60 },
+    { title: "Ship harbourlight billing", progress: 60 },
     { title: "Kestrel offline sync solid", progress: 35 },
   ];
   for (const g of goalFixtures) {

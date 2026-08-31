@@ -3,10 +3,7 @@ import { readIdParam, readJsonBody } from "@/lib/api/route-helpers";
 import { createEntityInteraction, CreateInteractionBody } from "@/db/queries/utils";
 import { getSessionUserId } from "@/lib/session";
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const userId = await getSessionUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const idOrResp = await readIdParam(params);

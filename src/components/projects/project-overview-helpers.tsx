@@ -57,13 +57,20 @@ export function AddAttrInline({
           placeholder={presetPlaceholder ?? "value"}
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") onCancel?.(); }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") save();
+            if (e.key === "Escape") onCancel?.();
+          }}
           autoFocus
           className="ui-input-inline min-h-11 min-w-0 flex-1 border-border-subtle px-3 py-2 text-base text-text-secondary placeholder:text-text-muted sm:text-sm"
         />
         <div className="flex items-center justify-end gap-2">
           {onCancel && (
-            <button onClick={onCancel} className="ui-icon-action min-h-11 min-w-11" aria-label="Cancel editing">
+            <button
+              onClick={onCancel}
+              className="ui-icon-action min-h-11 min-w-11"
+              aria-label="Cancel editing"
+            >
               <X className="h-4 w-4" />
             </button>
           )}
@@ -120,7 +127,10 @@ export function AttrRow({
           presetKey={attrKey}
           presetPlaceholder={placeholder ?? label}
           initialValue={value}
-          onSaved={() => { setEditing(false); onReload(); }}
+          onSaved={() => {
+            setEditing(false);
+            onReload();
+          }}
           onCancel={() => setEditing(false)}
         />
       </div>
@@ -133,8 +143,12 @@ export function AttrRow({
       <span className="ui-micro-label shrink-0 pt-0.5 leading-relaxed sm:w-32">{label}</span>
       <div className="flex-1 min-w-0 flex items-start gap-1.5">
         {isUrl ? (
-          <a href={value} target="_blank" rel="noreferrer"
-            className="break-all text-sm leading-relaxed text-text-secondary underline underline-offset-2 hover:text-text-primary">
+          <a
+            href={value}
+            target="_blank"
+            rel="noreferrer"
+            className="break-all text-sm leading-relaxed text-text-secondary underline underline-offset-2 hover:text-text-primary"
+          >
             {value.replace(/^https?:\/\//, "")}
           </a>
         ) : (

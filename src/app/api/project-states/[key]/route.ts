@@ -4,11 +4,11 @@ import { jsonOk, readJsonBody, z } from "@/lib/api/route-helpers";
 import { getApiUserId } from "@/lib/session";
 
 const PatchBody = z.object({
-  tabName:                z.string().optional(),
-  workspaceId:            z.string().optional(),
-  readyAt:                z.string().datetime().optional(),
-  closingAt:              z.string().datetime().optional(),
-  closedAt:               z.string().datetime().optional(),
+  tabName: z.string().optional(),
+  workspaceId: z.string().optional(),
+  readyAt: z.string().datetime().optional(),
+  closingAt: z.string().datetime().optional(),
+  closedAt: z.string().datetime().optional(),
 });
 
 export async function PATCH(
@@ -25,26 +25,32 @@ export async function PATCH(
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
   const d = dataOrResp;
-  const timestampValues = [d.readyAt, d.closingAt, d.closedAt].filter((value): value is string => value !== undefined);
+  const timestampValues = [d.readyAt, d.closingAt, d.closedAt].filter(
+    (value): value is string => value !== undefined,
+  );
   if (timestampValues.length === 0) {
     return NextResponse.json({ error: "A lifecycle timestamp is required" }, { status: 400 });
   }
-  const runtimeObservedAt = new Date(Math.max(...timestampValues.map((value) => new Date(value).getTime())));
+  const runtimeObservedAt = new Date(
+    Math.max(...timestampValues.map((value) => new Date(value).getTime())),
+  );
   const patch = Object.fromEntries(
     Object.entries({
-      projectKey:             key,
+      projectKey: key,
       userId,
-      workspaceId:            d.workspaceId?.trim() || undefined,
-      tabName:                d.tabName ?? key,
+      workspaceId: d.workspaceId?.trim() || undefined,
+      tabName: d.tabName ?? key,
       runtimeObservedAt,
-      readyAt:                d.readyAt                ? new Date(d.readyAt)                : undefined,
-      closingAt:              d.closingAt              ? new Date(d.closingAt)              : undefined,
-      closedAt:               d.closedAt               ? new Date(d.closedAt)               : undefined,
+      readyAt: d.readyAt ? new Date(d.readyAt) : undefined,
+      closingAt: d.closingAt ? new Date(d.closingAt) : undefined,
+      closedAt: d.closedAt ? new Date(d.closedAt) : undefined,
     }).filter(([, v]) => v !== undefined),
   );
 
   try {
-    const row = await persistProjectRuntimeIfNewer(patch as unknown as Parameters<typeof persistProjectRuntimeIfNewer>[0]);
+    const row = await persistProjectRuntimeIfNewer(
+      patch as unknown as Parameters<typeof persistProjectRuntimeIfNewer>[0],
+    );
     // Envelope matches the app-wide jsonOk convention — this route was the last
     // `{ success, data }` holdout. No in-repo consumer reads the body (verified
     // src/ home/ desktop/ scripts/); callers treat the PATCH as fire-and-forget.

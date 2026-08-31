@@ -37,9 +37,7 @@ export function extractEmails(text: string): string[] {
 
 export function extractPhones(text: string): string[] {
   const matches = text.match(/\+?\d[\d\s().-]{6,}\d/g) ?? [];
-  const digits = matches
-    .map((m) => m.replace(/\D/g, ""))
-    .filter((d) => d.length >= 7);
+  const digits = matches.map((m) => m.replace(/\D/g, "")).filter((d) => d.length >= 7);
   return [...new Set(digits)];
 }
 
@@ -86,7 +84,10 @@ export function clusterPeople(people: DedupePerson[]): DuplicateCluster[] {
   function push(reason: DuplicateCluster["reason"], key: string, members: DedupePerson[]) {
     const uniq = uniqueById(members);
     if (uniq.length < 2) return;
-    const sig = uniq.map((m) => m.id).sort().join(",");
+    const sig = uniq
+      .map((m) => m.id)
+      .sort()
+      .join(",");
     if (seen.has(sig)) return;
     seen.add(sig);
     out.push({ key, reason, members: uniq });
@@ -116,7 +117,9 @@ export function phonesOf(p: DedupePerson): string[] {
     p.attrs["channel:whatsapp"],
     p.attrs.phone,
     p.attrs.mobile,
-  ].filter(Boolean).join(" ");
+  ]
+    .filter(Boolean)
+    .join(" ");
   return extractPhones(blob);
 }
 
@@ -131,7 +134,8 @@ export function shouldPreferImportedName(current: string, imported: string): boo
 /** Prefer the richer row — more attrs, then longer name. */
 export function pickCanonicalPerson(members: DedupePerson[]): DedupePerson {
   return [...members].sort((a, b) => {
-    const score = (p: DedupePerson) => Object.keys(p.attrs).filter((k) => p.attrs[k]).length * 10 + p.name.length;
+    const score = (p: DedupePerson) =>
+      Object.keys(p.attrs).filter((k) => p.attrs[k]).length * 10 + p.name.length;
     return score(b) - score(a);
   })[0]!;
 }
@@ -148,7 +152,9 @@ export function matchImportedContact(
   }
   const phones = extractPhones(Object.values(contact.attrs).join(" "));
   if (phones.length > 0) {
-    const hit = people.find((p) => phonesOf(p).some((ph) => phones.some((imp) => phonesCompatible(ph, imp))));
+    const hit = people.find((p) =>
+      phonesOf(p).some((ph) => phones.some((imp) => phonesCompatible(ph, imp))),
+    );
     if (hit) return hit;
   }
   const name = normalizeName(contact.name);
@@ -158,4 +164,3 @@ export function matchImportedContact(
   const nameHits = people.filter((p) => normalizeName(p.name) === name);
   return nameHits.length === 1 ? nameHits[0]! : null;
 }
-

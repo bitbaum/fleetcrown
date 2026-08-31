@@ -12,9 +12,7 @@ import { MINUTE_MS } from "@/lib/constants/time";
 import { answer, cleanDescription } from "@/lib/project-display";
 import type { ProjectDispatchKind } from "@/lib/project-dispatch";
 
-export type ComposedPrompt =
-  | { prompt: string; error?: never }
-  | { prompt?: never; error: string };
+export type ComposedPrompt = { prompt: string; error?: never } | { prompt?: never; error: string };
 
 /**
  * Appended to every dispatch kind — the standing terms of any dispatched run.
@@ -68,30 +66,35 @@ export function composeDispatchPrompt(
     // rebuild milestone one — for a project that may be four milestones in.
     // Refuse: the fix is one PIN away, and a wrong dispatch costs a whole run.
     if (!target && dossier.detail.goalsLocked) {
-      return { error: "Unlock the private zone first — this project's milestones are hidden, so an agent would be briefed without them." };
+      return {
+        error:
+          "Unlock the private zone first — this project's milestones are hidden, so an agent would be briefed without them.",
+      };
     }
     if (!description && !target) {
       return { error: "Describe the project first — there is nothing to brief an agent with." };
     }
 
-    const profile = ([
-      ["Mission", attrs.mission],
-      ["Problem", attrs.problem],
-      ["Solution", attrs.solution],
-      ["Distribution", attrs.distribution],
-      ["Go-to-market", attrs.gtm],
-      ["Stack", attrs.stack],
-      ["Architecture", attrs.architecture],
-      ["Conventions", attrs.conventions],
-    ] as Array<[string, string | undefined]>)
+    const profile = (
+      [
+        ["Mission", attrs.mission],
+        ["Problem", attrs.problem],
+        ["Solution", attrs.solution],
+        ["Distribution", attrs.distribution],
+        ["Go-to-market", attrs.gtm],
+        ["Stack", attrs.stack],
+        ["Architecture", attrs.architecture],
+        ["Conventions", attrs.conventions],
+      ] as Array<[string, string | undefined]>
+    )
       // answer(), not truthiness: a field the extractor filled with "Unknown"
       // must not reach the agent as "STACK: Unknown".
       .map(([label, value]) => [label, answer(value)] as const)
       .filter((row): row is readonly [string, string] => row[1] !== null)
       .map(([label, value]) => `${label.toUpperCase()}: ${value}`);
 
-    const roadmap = milestones.map((goal, i) =>
-      `${i + 1}. ${goal.title}${goal.description ? ` — ${goal.description}` : ""}`,
+    const roadmap = milestones.map(
+      (goal, i) => `${i + 1}. ${goal.title}${goal.description ? ` — ${goal.description}` : ""}`,
     );
 
     return {
@@ -99,12 +102,16 @@ export function composeDispatchPrompt(
         `Start building ${name}. This project is being kicked off — treat the repository as possibly empty.`,
         description ? `\nWHAT IT IS: ${description}` : "",
         profile.length > 0 ? `\n${profile.join("\n")}` : "",
-        roadmap.length > 0 ? `\nBUILD ROADMAP (tracked as this project's goals):\n${roadmap.join("\n")}` : "",
+        roadmap.length > 0
+          ? `\nBUILD ROADMAP (tracked as this project's goals):\n${roadmap.join("\n")}`
+          : "",
         target
           ? `\nYOUR TARGET THIS RUN: ${target.title}${target.description ? `\n${target.description}` : ""}`
           : "\nYOUR TARGET THIS RUN: get the project to its first working, runnable state.",
         `\nScope: deliver that target only — do not attempt the whole roadmap in one run. If the repository is empty, scaffold the minimum that makes the target real and runnable. ${closing}`,
-      ].filter(Boolean).join("\n"),
+      ]
+        .filter(Boolean)
+        .join("\n"),
     };
   }
 
@@ -119,7 +126,10 @@ export function composeDispatchPrompt(
   const timedOut = dossier.runs
     .filter((run) => run.finishedAt && run.outcome === "timeout")
     .slice(0, 5)
-    .map((run) => `- ${run.startedAt.toISOString().slice(0, 10)}: "${run.intent}" ran ~${Math.round(((run.finishedAt as Date).getTime() - run.startedAt.getTime()) / MINUTE_MS)}m then timed out`);
+    .map(
+      (run) =>
+        `- ${run.startedAt.toISOString().slice(0, 10)}: "${run.intent}" ran ~${Math.round(((run.finishedAt as Date).getTime() - run.startedAt.getTime()) / MINUTE_MS)}m then timed out`,
+    );
   if (timedOut.length === 0) return { error: "No timed-out runs to diagnose." };
   return {
     prompt: `Diagnose why dispatched agent runs for ${name} keep timing out instead of finishing:\n\n${timedOut.join("\n")}\n\nInvestigate the workspace state (does the checkout exist and build? are handoffs being written? is the agent stalling on a prompt?), identify the most likely root cause, and fix what you can. ${closing}`,

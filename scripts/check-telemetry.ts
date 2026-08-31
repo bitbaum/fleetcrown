@@ -16,7 +16,10 @@ function loadEnvFile(file: string) {
     const idx = line.indexOf("=");
     const key = line.slice(0, idx).trim();
     if (process.env[key] !== undefined) continue;
-    process.env[key] = line.slice(idx + 1).trim().replace(/^['"]|['"]$/g, "");
+    process.env[key] = line
+      .slice(idx + 1)
+      .trim()
+      .replace(/^['"]|['"]$/g, "");
   }
 }
 

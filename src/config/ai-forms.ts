@@ -54,7 +54,14 @@ export const PROJECT_FORM: FormTarget = {
   key: "project",
   name: "Project",
   fields: defineFields([
-    { name: "name", label: "Name", type: "text", required: true, maxLength: 80, placeholder: "e.g. OrangeCat" },
+    {
+      name: "name",
+      label: "Name",
+      type: "text",
+      required: true,
+      maxLength: 80,
+      placeholder: "e.g. OrangeCat",
+    },
     {
       name: "description",
       label: "Description",
@@ -71,7 +78,14 @@ export const PERSON_FORM: FormTarget = {
   key: "person",
   name: "Person",
   fields: defineFields([
-    { name: "name", label: "Name", type: "text", required: true, maxLength: 80, placeholder: "e.g. Jane Smith" },
+    {
+      name: "name",
+      label: "Name",
+      type: "text",
+      required: true,
+      maxLength: 80,
+      placeholder: "e.g. Jane Smith",
+    },
     {
       name: "description",
       label: "Notes",
@@ -81,16 +95,21 @@ export const PERSON_FORM: FormTarget = {
       hint: "How you know them and anything worth remembering",
     },
   ]),
-  instructions: [
-    "Never invent biographical detail. Record only what the user said.",
-  ],
+  instructions: ["Never invent biographical detail. Record only what the user said."],
 };
 
 export const ROBOT_FORM: FormTarget = {
   key: "robot",
   name: "Robot",
   fields: defineFields([
-    { name: "name", label: "Name", type: "text", required: true, maxLength: 80, placeholder: "e.g. Kitchen Roomba" },
+    {
+      name: "name",
+      label: "Name",
+      type: "text",
+      required: true,
+      maxLength: 80,
+      placeholder: "e.g. Kitchen Roomba",
+    },
     {
       name: "class",
       label: "Class",
@@ -193,8 +212,21 @@ export const SUBSCRIPTION_FORM: FormTarget = {
   key: "subscription",
   name: "Subscription",
   fields: defineFields([
-    { name: "name", label: "Name", type: "text", required: true, maxLength: 80, placeholder: "e.g. GitHub Copilot" },
-    { name: "vendor", label: "Vendor", type: "text", maxLength: 80, placeholder: "e.g. GitHub Inc." },
+    {
+      name: "name",
+      label: "Name",
+      type: "text",
+      required: true,
+      maxLength: 80,
+      placeholder: "e.g. GitHub Copilot",
+    },
+    {
+      name: "vendor",
+      label: "Vendor",
+      type: "text",
+      maxLength: 80,
+      placeholder: "e.g. GitHub Inc.",
+    },
     { name: "amount", label: "Amount", type: "number", min: 0 },
     {
       name: "currency",
@@ -211,7 +243,13 @@ export const SUBSCRIPTION_FORM: FormTarget = {
       overridable: true,
     },
     { name: "nextDue", label: "Next Due", type: "date" },
-    { name: "paymentMethod", label: "Payment Method", type: "text", maxLength: 60, placeholder: "e.g. Visa ····1234" },
+    {
+      name: "paymentMethod",
+      label: "Payment Method",
+      type: "text",
+      maxLength: 60,
+      placeholder: "e.g. Visa ····1234",
+    },
     { name: "notes", label: "Notes", type: "textarea", maxLength: 400 },
   ]),
   instructions: [

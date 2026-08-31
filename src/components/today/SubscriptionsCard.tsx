@@ -22,13 +22,20 @@ async function SubscriptionsCardInner() {
           return (
             <div key={item.id} className="flex items-center justify-between">
               <div>
-                <div className={`text-sm md:text-base ${overdue ? "text-status-negative" : ""}`}>{item.name}</div>
-                <div className={`text-xs md:text-sm ${overdue ? "text-status-negative/70" : "text-text-tertiary"}`}>
-                  {item.vendor}{item.nextDue ? ` · ${format(new Date(item.nextDue), "d MMM")}` : ""}
+                <div className={`text-sm md:text-base ${overdue ? "text-status-negative" : ""}`}>
+                  {item.name}
+                </div>
+                <div
+                  className={`text-xs md:text-sm ${overdue ? "text-status-negative/70" : "text-text-tertiary"}`}
+                >
+                  {item.vendor}
+                  {item.nextDue ? ` · ${format(new Date(item.nextDue), "d MMM")}` : ""}
                   {overdue && " · overdue"}
                 </div>
               </div>
-              <div className={`text-sm md:text-base font-mono ${overdue ? "text-status-negative" : "text-text-secondary"}`}>
+              <div
+                className={`text-sm md:text-base font-mono ${overdue ? "text-status-negative" : "text-text-secondary"}`}
+              >
                 {formatMoney(item.amount, item.currency)}
               </div>
             </div>

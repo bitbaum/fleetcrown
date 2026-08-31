@@ -80,8 +80,10 @@ export const DOD_EVIDENCE_FIELDS: Array<[keyof OrchestrationTaskSummary, string]
 ];
 
 export function summaryForJudge(s: OrchestrationTaskSummary): string {
-  return DOD_EVIDENCE_FIELDS
-    .map(([k, label]) => [label, (s as Record<string, unknown>)[k as string]])
+  return DOD_EVIDENCE_FIELDS.map(([k, label]) => [
+    label,
+    (s as Record<string, unknown>)[k as string],
+  ])
     .filter(([, v]) => typeof v === "string" && (v as string).trim())
     .map(([label, v]) => `${label}: ${v}`)
     .join("\n");
@@ -125,7 +127,10 @@ export async function verifyDefinitionOfDone(
   if (!json) return { met: true, gap: "" };
   try {
     const parsed = JSON.parse(json) as { met?: unknown; gap?: unknown };
-    return { met: parsed.met !== false, gap: typeof parsed.gap === "string" ? parsed.gap.trim() : "" };
+    return {
+      met: parsed.met !== false,
+      gap: typeof parsed.gap === "string" ? parsed.gap.trim() : "",
+    };
   } catch {
     return { met: true, gap: "" };
   }

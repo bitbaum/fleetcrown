@@ -8,7 +8,13 @@ import { postJson } from "@/lib/api/fetch";
 import { ROUTES } from "@/config/auth";
 import { APP_NAME } from "@/config/brand";
 import {
-  AuthShell, AuthCard, AuthField, AuthInput, AuthSubmitButton, AuthIconBadge, AuthHeading,
+  AuthShell,
+  AuthCard,
+  AuthField,
+  AuthInput,
+  AuthSubmitButton,
+  AuthIconBadge,
+  AuthHeading,
 } from "@/components/auth/AuthShell";
 
 export default function SetupPage() {
@@ -22,14 +28,23 @@ export default function SetupPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    if (password !== confirm) { setError("Passwords don't match."); return; }
-    if (password.length < 8) { setError("Password must be at least 8 characters."); return; }
+    if (password !== confirm) {
+      setError("Passwords don't match.");
+      return;
+    }
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
 
     setLoading(true);
     try {
       const res = await postJson("/api/setup", { name, password });
       const data = await res.json();
-      if (!res.ok) { setError(data.error ?? "Setup failed."); return; }
+      if (!res.ok) {
+        setError(data.error ?? "Setup failed.");
+        return;
+      }
 
       const signInRes = await signIn("user-password", {
         userId: data.userId as string,

@@ -27,7 +27,10 @@ export function EmptyLookback({
       <span>
         Last activity <span className="text-text-secondary">{ageLabel}</span>
         {latestPromptProject && (
-          <> on <span className="text-text-secondary">{latestPromptProject}</span></>
+          <>
+            {" "}
+            on <span className="text-text-secondary">{latestPromptProject}</span>
+          </>
         )}
       </span>
       <span>·</span>

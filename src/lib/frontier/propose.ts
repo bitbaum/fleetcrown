@@ -45,7 +45,9 @@ const FLEETCROWN_ARCHITECTURE = `FleetCrown's subsystems a proposal can target:
 - Governance/captain-mode: see + govern across deployed agents (the north star).`;
 
 function digestForPrompt(items: FrontierItem[]): string {
-  return items.map((it, i) => `[${i}] (${it.category}) ${it.title} — ${it.summary} <${it.url}>`).join("\n");
+  return items
+    .map((it, i) => `[${i}] (${it.category}) ${it.title} — ${it.summary} <${it.url}>`)
+    .join("\n");
 }
 
 const GENERATE_SYSTEM = `You are FleetCrown's self-improvement strategist.
@@ -103,7 +105,11 @@ function extractJson(raw: string): string | null {
 function safeParse<T>(text: string): T | null {
   const json = extractJson(text);
   if (!json) return null;
-  try { return JSON.parse(json) as T; } catch { return null; }
+  try {
+    return JSON.parse(json) as T;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -147,12 +153,23 @@ export function salvageProposals(raw: string): unknown[] | null {
       else if (c === '"') inString = false;
       continue;
     }
-    if (c === '"') { inString = true; continue; }
-    if (c === "{") { if (depth === 0) start = i; depth++; continue; }
+    if (c === '"') {
+      inString = true;
+      continue;
+    }
+    if (c === "{") {
+      if (depth === 0) start = i;
+      depth++;
+      continue;
+    }
     if (c === "}") {
       depth--;
       if (depth === 0 && start !== -1) {
-        try { out.push(JSON.parse(text.slice(start, i + 1))); } catch { /* half-written: drop it */ }
+        try {
+          out.push(JSON.parse(text.slice(start, i + 1)));
+        } catch {
+          /* half-written: drop it */
+        }
         start = -1;
       }
       continue;
@@ -163,14 +180,26 @@ export function salvageProposals(raw: string): unknown[] | null {
 }
 
 function norm(s: string): string {
-  return s.toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
+  return s
+    .toLowerCase()
+    .replace(/[^a-z0-9 ]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 // Word-overlap (Jaccard) — a cheap code-level dedup net beyond the LLM's own
 // instruction not to duplicate.
 function tooSimilar(a: string, b: string): boolean {
-  const wa = new Set(norm(a).split(" ").filter((w) => w.length > 3));
-  const wb = new Set(norm(b).split(" ").filter((w) => w.length > 3));
+  const wa = new Set(
+    norm(a)
+      .split(" ")
+      .filter((w) => w.length > 3),
+  );
+  const wb = new Set(
+    norm(b)
+      .split(" ")
+      .filter((w) => w.length > 3),
+  );
   if (wa.size === 0 || wb.size === 0) return false;
   let inter = 0;
   for (const w of wa) if (wb.has(w)) inter++;
@@ -233,11 +262,19 @@ export async function generateProposals(
   const validUrls = new Set(items.map((it) => it.url));
 
   const user = [
-    ctx.openGaps.length ? `OPEN ROADMAP GAPS — start here; these are what FleetCrown needs:\n- ${ctx.openGaps.join("\n- ")}` : "",
+    ctx.openGaps.length
+      ? `OPEN ROADMAP GAPS — start here; these are what FleetCrown needs:\n- ${ctx.openGaps.join("\n- ")}`
+      : "",
     `\nTODAY'S FRONTIER DEVELOPMENTS — match these against the gaps above:\n${digestForPrompt(items)}`,
-    ctx.recentlyShipped.length ? `\nRECENTLY SHIPPED (build on, do NOT repropose):\n- ${ctx.recentlyShipped.join("\n- ")}` : "",
-    ctx.activeGoalTitles.length ? `\nCurrent active goals (do NOT duplicate):\n- ${ctx.activeGoalTitles.join("\n- ")}` : "",
-    ctx.consideredTitles.length ? `\nAlready considered (do NOT repropose):\n- ${ctx.consideredTitles.join("\n- ")}` : "",
+    ctx.recentlyShipped.length
+      ? `\nRECENTLY SHIPPED (build on, do NOT repropose):\n- ${ctx.recentlyShipped.join("\n- ")}`
+      : "",
+    ctx.activeGoalTitles.length
+      ? `\nCurrent active goals (do NOT duplicate):\n- ${ctx.activeGoalTitles.join("\n- ")}`
+      : "",
+    ctx.consideredTitles.length
+      ? `\nAlready considered (do NOT repropose):\n- ${ctx.consideredTitles.join("\n- ")}`
+      : "",
   ].join("\n");
 
   let raw: string;
@@ -261,12 +298,19 @@ export async function generateProposals(
     // drafted, all-deduped — no unparseable. One nightly call at this size
     // requests ~5.2k tokens against Groq's 8000 TPM per-model cap, so it fits;
     // the judges run on different models and so draw on different buckets.
-    raw = await callGroqText(user, { systemPrompt: GENERATE_SYSTEM, maxTokens: 4000, temperature: 0.4, timeoutMs: 40_000 });
+    raw = await callGroqText(user, {
+      systemPrompt: GENERATE_SYSTEM,
+      maxTokens: 4000,
+      temperature: 0.4,
+      timeoutMs: 40_000,
+    });
   } catch (err) {
     // Was `catch { return [] }`. For the eight days the default Groq model
     // 404'd, that turned a hard outage into "the model had no ideas today".
     return {
-      drafts: [], outcome: "call-failed", returned: 0,
+      drafts: [],
+      outcome: "call-failed",
+      returned: 0,
       error: err instanceof Error ? err.message : String(err),
     };
   }
@@ -283,7 +327,8 @@ export async function generateProposals(
     const salvaged = salvageProposals(raw);
     // No array to walk = genuinely unreadable, which needs a different fix from
     // "too long" and so keeps its own name.
-    if (salvaged === null) return { drafts: [], outcome: "unparseable", returned: 0, rawSample: raw.slice(0, 400) };
+    if (salvaged === null)
+      return { drafts: [], outcome: "unparseable", returned: 0, rawSample: raw.slice(0, 400) };
     truncated = true;
     list = salvaged;
   }
@@ -293,10 +338,17 @@ export async function generateProposals(
     const title = String((p as Record<string, unknown>).title ?? "").trim();
     const rationale = String((p as Record<string, unknown>).rationale ?? "").trim();
     const urlsRaw = (p as Record<string, unknown>).sourceUrls;
-    const sourceUrls = Array.isArray(urlsRaw) ? urlsRaw.map(String).filter((u) => validUrls.has(u)) : [];
+    const sourceUrls = Array.isArray(urlsRaw)
+      ? urlsRaw.map(String).filter((u) => validUrls.has(u))
+      : [];
     if (!title || !rationale) continue;
     // Code-level dedup against goals + already-considered + earlier drafts this run.
-    if ([...ctx.activeGoalTitles, ...ctx.consideredTitles, ...drafts.map((d) => d.title)].some((t) => tooSimilar(t, title))) continue;
+    if (
+      [...ctx.activeGoalTitles, ...ctx.consideredTitles, ...drafts.map((d) => d.title)].some((t) =>
+        tooSimilar(t, title),
+      )
+    )
+      continue;
     drafts.push({ title, rationale, sourceUrls });
     if (drafts.length >= 3) break;
   }
@@ -304,15 +356,20 @@ export async function generateProposals(
   // "the model proposed nothing" and "the model proposed and we discarded all
   // of it as duplicates" are different problems wearing the same zero.
   const outcome: GenerationOutcome =
-    drafts.length > 0 ? "drafted"
-      : truncated ? "truncated"
-        : list.length > 0 ? "all-deduped"
+    drafts.length > 0
+      ? "drafted"
+      : truncated
+        ? "truncated"
+        : list.length > 0
+          ? "all-deduped"
           : "model-returned-empty";
   // Keep the head of a truncated reply even when salvage succeeded: the run
   // worked, but it worked on less than the model tried to say, and that is
   // worth seeing before it becomes a night that produces nothing.
   return {
-    drafts, outcome, returned: list.length,
+    drafts,
+    outcome,
+    returned: list.length,
     ...(truncated ? { rawSample: raw.slice(0, 400) } : {}),
   };
 }
@@ -322,8 +379,8 @@ export async function generateProposals(
 // token headroom for their <think> preamble (stripped before parsing).
 export type Judge = { model: string; maxTokens: number };
 export const VERIFIER_PANEL: Judge[] = [
-  { model: "openai/gpt-oss-120b", maxTokens: 600 },  // OpenAI lineage
-  { model: "qwen/qwen3.6-27b",    maxTokens: 3500 }, // Qwen / Alibaba lineage (reasoning — needs room for <think>)
+  { model: "openai/gpt-oss-120b", maxTokens: 600 }, // OpenAI lineage
+  { model: "qwen/qwen3.6-27b", maxTokens: 3500 }, // Qwen / Alibaba lineage (reasoning — needs room for <think>)
 ];
 
 /** A proposal surfaces only if the panel's MEAN score clears this bar… */
@@ -334,8 +391,8 @@ export const PROPOSAL_VETO_FLOOR = 50;
 
 export type VerifierScore = { model: string; score: number };
 export type VerifiedProposal = DraftProposal & {
-  score: number;               // consensus = lowest panel score (conservative)
-  passed: boolean;             // every voting judge >= threshold (>=1 voter)
+  score: number; // consensus = lowest panel score (conservative)
+  passed: boolean; // every voting judge >= threshold (>=1 voter)
   verifierScores: VerifierScore[];
 };
 
@@ -381,7 +438,8 @@ async function runJudge(drafts: DraftProposal[], judge: Judge): Promise<JudgeRun
   for (const s of Array.isArray(parsed?.scores) ? parsed!.scores : []) {
     const idx = Number(s?.index);
     const sc = Number(s?.score);
-    if (Number.isInteger(idx) && Number.isFinite(sc)) byIndex.set(idx, Math.max(0, Math.min(100, Math.round(sc))));
+    if (Number.isInteger(idx) && Number.isFinite(sc))
+      byIndex.set(idx, Math.max(0, Math.min(100, Math.round(sc))));
   }
   // Junk that parsed to no scores is an abstention with no exception to report.
   return { scores: byIndex };
@@ -412,18 +470,23 @@ export async function verifyProposals(drafts: DraftProposal[]): Promise<Verifica
   const panelResults = await Promise.all(VERIFIER_PANEL.map((j) => runJudge(drafts, j)));
 
   const judgeFailures: JudgeFailure[] = panelResults.flatMap((res, k) =>
-    res.error ? [{ model: shortModel(VERIFIER_PANEL[k].model), error: res.error }] : []);
+    res.error ? [{ model: shortModel(VERIFIER_PANEL[k].model), error: res.error }] : [],
+  );
   const anyVoted = panelResults.some((res) => res.scores.size > 0);
 
   const verified = drafts.map((d, i) => {
     const verifierScores: VerifierScore[] = [];
     panelResults.forEach((res, k) => {
       const sc = res.scores.get(i);
-      if (sc !== undefined) verifierScores.push({ model: shortModel(VERIFIER_PANEL[k].model), score: sc });
+      if (sc !== undefined)
+        verifierScores.push({ model: shortModel(VERIFIER_PANEL[k].model), score: sc });
     });
     const nums = verifierScores.map((v) => v.score);
     const mean = nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : 0;
-    const passed = nums.length > 0 && mean >= PROPOSAL_SCORE_THRESHOLD && Math.min(...nums) >= PROPOSAL_VETO_FLOOR;
+    const passed =
+      nums.length > 0 &&
+      mean >= PROPOSAL_SCORE_THRESHOLD &&
+      Math.min(...nums) >= PROPOSAL_VETO_FLOOR;
     return { ...d, score: Math.round(mean), passed, verifierScores };
   });
 

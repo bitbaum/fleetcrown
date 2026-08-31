@@ -23,14 +23,12 @@ const ROOT = join(__dirname, "..");
 // Load the TS SSOT through tsx's loader if present, else a tiny inline copy is
 // avoided — we require running under `node --import tsx` or `tsx`. The npm
 // script uses tsx.
-const { brandMarkSvg } = await import(
-  pathToFileURL(join(ROOT, "src/config/brand-mark.ts")).href
-);
+const { brandMarkSvg } = await import(pathToFileURL(join(ROOT, "src/config/brand-mark.ts")).href);
 
-const INK = "#ededed";       // off-white spiral
-const CANVAS = "#0a0a0a";    // near-black brand canvas
+const INK = "#ededed"; // off-white spiral
+const CANVAS = "#0a0a0a"; // near-black brand canvas
 
-const svgGlyph = brandMarkSvg({ stroke: INK });                              // transparent
+const svgGlyph = brandMarkSvg({ stroke: INK }); // transparent
 const svgIcon = brandMarkSvg({ stroke: INK, background: CANVAS, radius: 22 }); // dark rounded rect
 
 async function png(svg, size, out) {
@@ -65,6 +63,14 @@ for (const size of [16, 24, 32, 48, 64, 128, 256, 512, 1024]) {
 
 // Previews for visual review (dark bg behind the transparent glyph too).
 await png(svgIcon, 256, join(ROOT, ".tmp/brand-preview-icon.png"));
-await png(brandMarkSvg({ stroke: INK, background: CANVAS, radius: 22 }), 64, join(ROOT, ".tmp/brand-preview-64.png"));
-await png(brandMarkSvg({ stroke: INK, background: CANVAS, radius: 22 }), 16, join(ROOT, ".tmp/brand-preview-16.png"));
+await png(
+  brandMarkSvg({ stroke: INK, background: CANVAS, radius: 22 }),
+  64,
+  join(ROOT, ".tmp/brand-preview-64.png"),
+);
+await png(
+  brandMarkSvg({ stroke: INK, background: CANVAS, radius: 22 }),
+  16,
+  join(ROOT, ".tmp/brand-preview-16.png"),
+);
 console.log("done");

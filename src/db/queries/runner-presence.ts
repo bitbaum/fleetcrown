@@ -2,8 +2,16 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { runnerPresence } from "@/db/schema/runner-presence";
 import { runtimeSnapshots } from "@/db/schema/runtime-snapshots";
-import type { BuilderChannelPresence, ChannelHeartbeat, BuilderDurability } from "@/lib/builder-presence";
-import { applyHeartbeatExpiry, inferBuilderChannelPresence, channelDurability } from "@/lib/builder-presence";
+import type {
+  BuilderChannelPresence,
+  ChannelHeartbeat,
+  BuilderDurability,
+} from "@/lib/builder-presence";
+import {
+  applyHeartbeatExpiry,
+  inferBuilderChannelPresence,
+  channelDurability,
+} from "@/lib/builder-presence";
 
 /**
  * Is any builder connected for this user? Connection-based presence —

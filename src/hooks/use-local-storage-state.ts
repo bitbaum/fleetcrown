@@ -21,7 +21,9 @@ export function useLocalStorageState<T>(
     try {
       const raw = localStorage.getItem(key);
       if (raw !== null) setValue(deserialize(raw)); // eslint-disable-line react-hooks/set-state-in-effect
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     setInitialized(true);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -35,7 +37,9 @@ export function useLocalStorageState<T>(
       if (localStorage.getItem(key) !== serialized) {
         localStorage.setItem(key, serialized);
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, [initialized, value, key, serialize]);
 
   // Sync changes from other windows.
@@ -44,7 +48,9 @@ export function useLocalStorageState<T>(
       if (e.key !== key) return;
       try {
         setValue(e.newValue !== null ? deserialize(e.newValue) : defaultValue);
-      } catch { /* ignore malformed */ }
+      } catch {
+        /* ignore malformed */
+      }
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);

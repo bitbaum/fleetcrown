@@ -1,9 +1,6 @@
 import { and, eq, isNull, lt, or } from "drizzle-orm";
 import { db } from "@/db";
-import {
-  notificationPreferences,
-  type DigestCadence,
-} from "@/db/schema/notification-preferences";
+import { notificationPreferences, type DigestCadence } from "@/db/schema/notification-preferences";
 import { users } from "@/db/schema/users";
 import { DAY_MS, HOUR_MS } from "@/lib/constants/time";
 
@@ -44,8 +41,8 @@ export async function upsertNotificationPreferences(
 // check. Slight under-shoot on the longer cadences (6.5d / 29d) so a clock-
 // drifted cron run still picks up users at the rate they asked for.
 const MIN_INTERVAL_MS: Record<Exclude<DigestCadence, "none">, number> = {
-  daily:   23 * HOUR_MS,
-  weekly:  6.5 * DAY_MS,
+  daily: 23 * HOUR_MS,
+  weekly: 6.5 * DAY_MS,
   monthly: 29 * DAY_MS,
 };
 
@@ -60,17 +57,17 @@ export type DueDigestRow = {
 // users so the cron has the email address ready.
 export async function getUsersDueForDigest(now: Date): Promise<DueDigestRow[]> {
   const cutoffs = {
-    daily:   new Date(now.getTime() - MIN_INTERVAL_MS.daily),
-    weekly:  new Date(now.getTime() - MIN_INTERVAL_MS.weekly),
+    daily: new Date(now.getTime() - MIN_INTERVAL_MS.daily),
+    weekly: new Date(now.getTime() - MIN_INTERVAL_MS.weekly),
     monthly: new Date(now.getTime() - MIN_INTERVAL_MS.monthly),
   };
 
   const rows = await db
     .select({
-      userId:    notificationPreferences.userId,
-      email:     users.email,
-      cadence:   notificationPreferences.emailDigestCadence,
-      lastSent:  notificationPreferences.lastDigestSentAt,
+      userId: notificationPreferences.userId,
+      email: users.email,
+      cadence: notificationPreferences.emailDigestCadence,
+      lastSent: notificationPreferences.lastDigestSentAt,
     })
     .from(notificationPreferences)
     .innerJoin(users, eq(users.id, notificationPreferences.userId))
@@ -101,8 +98,9 @@ export async function getUsersDueForDigest(now: Date): Promise<DueDigestRow[]> {
     );
 
   return rows
-    .filter((r): r is typeof r & { email: string; cadence: Exclude<DigestCadence, "none"> } =>
-      Boolean(r.email) && r.cadence !== "none",
+    .filter(
+      (r): r is typeof r & { email: string; cadence: Exclude<DigestCadence, "none"> } =>
+        Boolean(r.email) && r.cadence !== "none",
     )
     .map((r) => ({ userId: r.userId, email: r.email, cadence: r.cadence }));
 }

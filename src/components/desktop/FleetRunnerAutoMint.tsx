@@ -44,7 +44,9 @@ export function FleetRunnerAutoMint() {
       try {
         if (window.sessionStorage.getItem(SESSION_FLAG) === "1") return;
         window.sessionStorage.setItem(SESSION_FLAG, "1");
-      } catch { /* private mode etc — non-fatal */ }
+      } catch {
+        /* private mode etc — non-fatal */
+      }
 
       try {
         const existing = await bridge.loadToken();
@@ -77,7 +79,9 @@ export function FleetRunnerAutoMint() {
     }
 
     void maybeMint();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return null;

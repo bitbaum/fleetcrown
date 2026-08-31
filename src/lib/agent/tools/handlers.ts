@@ -23,7 +23,13 @@ import { HUMAN_TASK_STATUS_LABEL, TASK_ACTOR, formatFee } from "@/config/crew";
 import { ACTION_TYPE, type ActionType } from "@/lib/constants/statuses";
 import { askGatewayAgent, isGatewayConfigured } from "@/lib/openclaw-gateway";
 import { makeFact, type Fact } from "@/lib/agent/core/facts";
-import { peopleFacts, projectFacts, documentFacts, pendingApprovalFacts, dateLabel } from "@/lib/agent/sources";
+import {
+  peopleFacts,
+  projectFacts,
+  documentFacts,
+  pendingApprovalFacts,
+  dateLabel,
+} from "@/lib/agent/sources";
 import { enrichReachPayload, reachFromPerson, resolvePersonToReach } from "@/lib/people-resolve";
 import { defineTool } from "@/lib/agent/tools/registry";
 import type { ToolRegistry, ToolResult } from "@/lib/agent/tools/registry";
@@ -40,7 +46,9 @@ const searchPeopleTool = defineTool({
   kind: "read",
   description:
     "Look up the operator's contacts by name, alias, email, or phone. Returns only stored fields — company, title, location, channels, notes when present. Never invent a job or affiliation.",
-  params: z.object({ query: z.string().max(80).describe("name fragment, or empty for recent contacts") }),
+  params: z.object({
+    query: z.string().max(80).describe("name fragment, or empty for recent contacts"),
+  }),
   example: 'TOOL: search_people\nARGS: {"query": "Elena"}',
   handler: async ({ query }, ctx) => {
     const facts = await peopleFacts(ctx.userId, String(query ?? ""));
@@ -53,7 +61,8 @@ const searchPeopleTool = defineTool({
 const searchProjectsTool = defineTool({
   name: "list_projects",
   kind: "read",
-  description: "List the operator's registered projects with stack, status and latest dev-log line.",
+  description:
+    "List the operator's registered projects with stack, status and latest dev-log line.",
   params: z.object({}),
   example: "TOOL: list_projects\nARGS: {}",
   handler: async (_args, ctx) => {
@@ -153,7 +162,12 @@ const listCommitmentsTool = defineTool({
           kind: "commitment",
           subject: c.description,
           source: "commitments table",
-          values: { title: c.description, due: dateLabel(c.dueDate), counterparty: null, status: "active" },
+          values: {
+            title: c.description,
+            due: dateLabel(c.dueDate),
+            counterparty: null,
+            status: "active",
+          },
         }),
       ),
       ...events.map((e) =>
@@ -161,7 +175,13 @@ const listCommitmentsTool = defineTool({
           kind: "event",
           subject: e.name,
           source: "events table",
-          values: { name: e.name, type: e.type, deadline: dateLabel(e.deadline), url: e.url, status: e.status },
+          values: {
+            name: e.name,
+            type: e.type,
+            deadline: dateLabel(e.deadline),
+            url: e.url,
+            status: e.status,
+          },
         }),
       ),
     ];
@@ -180,7 +200,8 @@ const listPendingApprovalsTool = defineTool({
   example: "TOOL: list_pending_approvals\nARGS: {}",
   handler: async (_args, ctx) => {
     const facts = await pendingApprovalFacts(ctx.userId, LIST_LIMIT);
-    if (facts.length === 0) return empty("The approval queue is empty — nothing is waiting for the operator.");
+    if (facts.length === 0)
+      return empty("The approval queue is empty — nothing is waiting for the operator.");
     return { facts };
   },
 });
@@ -200,19 +221,26 @@ const askOpenClawTool = defineTool({
   description:
     "Ask the operator's OpenClaw agent (the Telegram/WhatsApp brain, with its own separate memory and workspace files). Use ONLY for things outside FleetCrown's database. Its reply is an unverified second-hand report — attribute it, never state it as fact.",
   params: z.object({ question: z.string().min(2).max(500) }),
-  example: 'TOOL: ask_openclaw\nARGS: {"question": "what did we agree in the Telegram thread about the lease?"}',
+  example:
+    'TOOL: ask_openclaw\nARGS: {"question": "what did we agree in the Telegram thread about the lease?"}',
   handler: async ({ question }) => {
-    if (!isGatewayConfigured()) return empty("The OpenClaw gateway is not configured — that source is unavailable.");
+    if (!isGatewayConfigured())
+      return empty("The OpenClaw gateway is not configured — that source is unavailable.");
     const res = await askGatewayAgent(String(question), {}).catch(() => null);
     const text = (res?.text ?? "").trim();
-    if (!res?.ok || !text) return empty("The OpenClaw agent did not answer — that source is unavailable this turn.");
+    if (!res?.ok || !text)
+      return empty("The OpenClaw agent did not answer — that source is unavailable this turn.");
     return {
       facts: [
         makeFact({
           kind: "document",
           subject: `OpenClaw reply to "${String(question).slice(0, 60)}"`,
           source: "openclaw agent (UNVERIFIED second-hand report, not FleetCrown data)",
-          values: { title: "OpenClaw agent reply", source: "openclaw agent", excerpt: text.slice(0, 1200) },
+          values: {
+            title: "OpenClaw agent reply",
+            source: "openclaw agent",
+            excerpt: text.slice(0, 1200),
+          },
         }),
       ],
     };
@@ -234,9 +262,21 @@ const proposeActionTool = defineTool({
   description:
     "Queue a draft action for the operator to approve (message, email, calendar event, commitment, follow-up, dispatch to a project). Nothing happens until they approve it. Never claim the action was done.",
   params: z.object({
-    type: z.enum(["send_message", "send_email", "create_event", "create_commitment", "follow_up", "dispatch_prompt", "other"]),
+    type: z.enum([
+      "send_message",
+      "send_email",
+      "create_event",
+      "create_commitment",
+      "follow_up",
+      "dispatch_prompt",
+      "other",
+    ]),
     title: z.string().min(3).max(160).describe("what the operator will see in the queue"),
-    reasoning: z.string().max(600).optional().describe("why you are proposing this, citing a record id"),
+    reasoning: z
+      .string()
+      .max(600)
+      .optional()
+      .describe("why you are proposing this, citing a record id"),
     to: z.string().max(120).optional(),
     body: z.string().max(4000).optional(),
     dueDate: z.string().max(40).optional(),
@@ -245,7 +285,12 @@ const proposeActionTool = defineTool({
     'TOOL: propose_action\nARGS: {"type": "send_message", "title": "Message Elena Weber about funding", "to": "Elena Weber SINGA Switzerland", "body": "Hi Elena — ...", "reasoning": "contact exists in [F2]; no prior interaction recorded"}',
   handler: async (args, ctx) => {
     const a = args as {
-      type: ActionType; title: string; reasoning?: string; to?: string; body?: string; dueDate?: string;
+      type: ActionType;
+      title: string;
+      reasoning?: string;
+      to?: string;
+      body?: string;
+      dueDate?: string;
     };
     const person =
       a.type === ACTION_TYPE.SEND_MESSAGE || a.type === ACTION_TYPE.SEND_EMAIL
@@ -254,9 +299,10 @@ const proposeActionTool = defineTool({
     const reach = person ? reachFromPerson(person) : null;
     const created = await proposeAction(ctx.userId, {
       type: a.type ?? ACTION_TYPE.OTHER,
-      title: person && (a.type === ACTION_TYPE.SEND_MESSAGE || a.type === ACTION_TYPE.SEND_EMAIL)
-        ? `Message ${person.name}`.slice(0, 160)
-        : a.title,
+      title:
+        person && (a.type === ACTION_TYPE.SEND_MESSAGE || a.type === ACTION_TYPE.SEND_EMAIL)
+          ? `Message ${person.name}`.slice(0, 160)
+          : a.title,
       reasoning: person
         ? `Matched ${person.name}${reach ? ` on ${reach.channel}` : ""}.`
         : (a.reasoning ?? null),
@@ -269,7 +315,9 @@ const proposeActionTool = defineTool({
     // operator — the item is queued — so it must not read as a failure the
     // model then retries or apologises for.
     if (!created) {
-      return empty(`A draft titled "${a.title}" is already waiting in the approval queue — not duplicated.`);
+      return empty(
+        `A draft titled "${a.title}" is already waiting in the approval queue — not duplicated.`,
+      );
     }
     return {
       facts: [
@@ -277,7 +325,12 @@ const proposeActionTool = defineTool({
           kind: "commitment",
           subject: created.title,
           source: "approval queue (DRAFT — awaiting the operator's approval, not yet done)",
-          values: { title: created.title, due: a.dueDate ?? null, counterparty: a.to ?? null, status: "draft — needs approval" },
+          values: {
+            title: created.title,
+            due: a.dueDate ?? null,
+            counterparty: a.to ?? null,
+            status: "draft — needs approval",
+          },
         }),
       ],
     };
@@ -364,21 +417,31 @@ const proposeHumanTaskTool = defineTool({
     title: z.string().min(3).max(160).describe("the ask, one line"),
     brief: z.string().max(4000).optional().describe("what to do, written for the person doing it"),
     reason: z.string().max(1000).optional().describe("why it matters"),
-    assignee: z.string().max(120).optional().describe("name of someone on the crew, if the operator named one"),
+    assignee: z
+      .string()
+      .max(120)
+      .optional()
+      .describe("name of someone on the crew, if the operator named one"),
     dueDate: z.string().max(40).optional(),
   }),
   example:
     'TOOL: propose_human_task\nARGS: {"title": "Call the three Basel suppliers", "brief": "Ask each for a quote on 200 units, delivery before month end.", "reason": "We need a second quote before the board meeting.", "assignee": "Jana Roth"}',
   handler: async (args, ctx) => {
-    const a = args as { title: string; brief?: string; reason?: string; assignee?: string; dueDate?: string };
+    const a = args as {
+      title: string;
+      brief?: string;
+      reason?: string;
+      assignee?: string;
+      dueDate?: string;
+    };
     // Resolve a NAME to a person the operator already has. An unmatched name
     // leaves the draft unassigned rather than inventing a contact — the
     // operator picks who does it on the board.
     const crew = await listCrew(ctx.userId).catch(() => []);
     const wanted = (a.assignee ?? "").trim().toLowerCase();
     const match = wanted
-      ? crew.find((m) => m.name.toLowerCase() === wanted)
-        ?? crew.find((m) => m.name.toLowerCase().includes(wanted))
+      ? (crew.find((m) => m.name.toLowerCase() === wanted) ??
+        crew.find((m) => m.name.toLowerCase().includes(wanted)))
       : undefined;
 
     const created = await createHumanTask(
@@ -407,9 +470,10 @@ const proposeHumanTaskTool = defineTool({
             assignee: created.assigneeName,
             due: a.dueDate ?? null,
             why: a.reason ?? null,
-            status: wanted && !match
-              ? `draft — nobody matched "${a.assignee}", assign it on the crew board`
-              : "draft — the operator hands it over",
+            status:
+              wanted && !match
+                ? `draft — nobody matched "${a.assignee}", assign it on the crew board`
+                : "draft — the operator hands it over",
           },
         }),
       ],

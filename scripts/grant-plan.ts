@@ -40,7 +40,9 @@ async function main() {
   }
   const count = await countActiveProjects(userId).catch(() => 0);
   console.log(`user ${userId} (${before.email ?? "?"})`);
-  console.log(`  BEFORE: plan=${before.plan} status=${before.planStatus ?? "—"} projectLimit=${limitLabel(before.plan)} (using ${count})`);
+  console.log(
+    `  BEFORE: plan=${before.plan} status=${before.planStatus ?? "—"} projectLimit=${limitLabel(before.plan)} (using ${count})`,
+  );
 
   const targetPlan = plan as Plan;
   const updated = await updateUserBilling(userId, {
@@ -55,10 +57,18 @@ async function main() {
     source: "manual-grant",
     level: "info",
     message: `plan ${before.plan} → ${targetPlan}`,
-    meta: { userId, from: before.plan, to: targetPlan, reason: reason ?? null, rail: "orangecat-btc" },
+    meta: {
+      userId,
+      from: before.plan,
+      to: targetPlan,
+      reason: reason ?? null,
+      rail: "orangecat-btc",
+    },
   }).catch(() => {});
 
-  console.log(`  AFTER:  plan=${updated.plan} status=${updated.planStatus} projectLimit=${limitLabel(updated.plan)}`);
+  console.log(
+    `  AFTER:  plan=${updated.plan} status=${updated.planStatus} projectLimit=${limitLabel(updated.plan)}`,
+  );
   console.log(`  reason: ${reason ?? "(none)"}`);
   process.exit(0);
 }

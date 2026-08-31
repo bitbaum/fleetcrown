@@ -5,7 +5,7 @@ import { getUserById, updateUserBilling } from "@/db/queries/users";
 import { ROUTES } from "@/config/auth";
 
 const PAID_PLANS = ["personal", "pro", "team"] as const;
-type PaidPlan = typeof PAID_PLANS[number];
+type PaidPlan = (typeof PAID_PLANS)[number];
 
 function isPaidPlan(value: string): value is PaidPlan {
   return (PAID_PLANS as readonly string[]).includes(value);
@@ -45,8 +45,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ plan
   let customerId = user.stripeCustomerId ?? undefined;
   if (!customerId) {
     const customer = await stripe.customers.create({
-      email:    user.email    ?? undefined,
-      name:     user.name     ?? undefined,
+      email: user.email ?? undefined,
+      name: user.name ?? undefined,
       metadata: { fleetcrownUserId: userId },
     });
     customerId = customer.id;
@@ -56,12 +56,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ plan
   const origin = new URL(req.url).origin;
 
   const checkoutSession = await stripe.checkout.sessions.create({
-    mode:       "subscription",
-    customer:   customerId,
+    mode: "subscription",
+    customer: customerId,
     line_items: [{ price: priceId, quantity: 1 }],
     success_url: `${origin}/settings?billing=success`,
-    cancel_url:  `${origin}/settings?billing=canceled`,
-    metadata:    { fleetcrownUserId: userId, plan },
+    cancel_url: `${origin}/settings?billing=canceled`,
+    metadata: { fleetcrownUserId: userId, plan },
     subscription_data: {
       metadata: { fleetcrownUserId: userId, plan },
     },

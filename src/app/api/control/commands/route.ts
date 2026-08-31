@@ -23,7 +23,8 @@ export async function GET(request: NextRequest) {
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const userIds = [userId];
 
-  const types = request.nextUrl.searchParams.get("types")
+  const types = request.nextUrl.searchParams
+    .get("types")
     ?.split(",")
     .map((type) => type.trim())
     .filter(Boolean);

@@ -29,9 +29,7 @@ export function FulfillCommitmentButton({ commitmentId }: { commitmentId: string
         className="p-1.5 rounded text-text-muted hover:text-status-positive transition-colors disabled:opacity-50 shrink-0"
         title="Mark fulfilled"
       >
-        {busy
-          ? <Loader2 className="ui-spinner" />
-          : <CheckCircle className="h-4 w-4" />}
+        {busy ? <Loader2 className="ui-spinner" /> : <CheckCircle className="h-4 w-4" />}
       </button>
     </div>
   );

@@ -49,11 +49,7 @@ export function LinkGithubButton({
       disabled={loading}
       className={`ui-btn-primary inline-flex items-center gap-2 disabled:opacity-50 ${sizeClass} ${className}`}
     >
-      {loading ? (
-        <Loader2 className="h-4 w-4 animate-spin" />
-      ) : (
-        <GitBranch className="h-4 w-4" />
-      )}
+      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <GitBranch className="h-4 w-4" />}
       Connect GitHub
     </button>
   );

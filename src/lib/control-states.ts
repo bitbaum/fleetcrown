@@ -27,16 +27,16 @@ import { EXECUTOR_COPY } from "@/config/executor-copy";
 import { SESSION_STATUS } from "@/lib/constants/statuses";
 
 export const PROJECT_STATES = [
-  "offline",              // Runner has not pushed state — we genuinely don't know.
-  "not_running",          // No agent process and no tab — nothing exists for this project.
-  "recently_active",      // No live process visible, but a dispatch/run landed recently.
-  "tab_open",             // Zellij tab open, no agent process detected in it.
-  "open_idle",            // Agent process detected, no recent lifecycle signal — likely at prompt.
-  "working",              // Agent mid-turn (lock sentinel fresh OR current prompt active).
-  "ready",                // Stop hook fired recently — agent just handed off.
-  "orchestration_ready",  // Latest orchestration run completed recently.
-  "closing",              // Closing hook fired — agent is shutting down.
-  "completed",            // Closed hook fired — agent finished cleanly.
+  "offline", // Runner has not pushed state — we genuinely don't know.
+  "not_running", // No agent process and no tab — nothing exists for this project.
+  "recently_active", // No live process visible, but a dispatch/run landed recently.
+  "tab_open", // Zellij tab open, no agent process detected in it.
+  "open_idle", // Agent process detected, no recent lifecycle signal — likely at prompt.
+  "working", // Agent mid-turn (lock sentinel fresh OR current prompt active).
+  "ready", // Stop hook fired recently — agent just handed off.
+  "orchestration_ready", // Latest orchestration run completed recently.
+  "closing", // Closing hook fired — agent is shutting down.
+  "completed", // Closed hook fired — agent finished cleanly.
 ] as const;
 
 export type ProjectStateKey = (typeof PROJECT_STATES)[number];
@@ -45,10 +45,10 @@ export type ProjectStateKey = (typeof PROJECT_STATES)[number];
  *  states (ready + orchestration_ready) can both count as "waiting" without
  *  the row badge having to say the same word. */
 export type ProjectCounterCategory =
-  | "working"   // chip: "X working"
-  | "waiting"   // chip: "Y awaiting input" — covers ready + orchestration_ready + open_idle
-  | "idle"      // chip: "Z idle" — not running, tab-only, completed
-  | "offline";  // chip: "W offline"
+  | "working" // chip: "X working"
+  | "waiting" // chip: "Y awaiting input" — covers ready + orchestration_ready + open_idle
+  | "idle" // chip: "Z idle" — not running, tab-only, completed
+  | "offline"; // chip: "W offline"
 
 export type ProjectStateDefinition = {
   /** Badge text. Short, honest, action-implying. */
@@ -94,7 +94,8 @@ export type ProjectStateDefinition = {
 export const STATE_DEFINITIONS: Record<ProjectStateKey, ProjectStateDefinition> = {
   offline: {
     label: "Offline",
-    description: "The builder hasn't pushed fresh state for this project — we don't know what's happening right now.",
+    description:
+      "The builder hasn't pushed fresh state for this project — we don't know what's happening right now.",
     dotClass: "bg-status-warning",
     tagClass: "ui-tag ui-tag-warning",
     counterCategory: "offline",
@@ -120,7 +121,8 @@ export const STATE_DEFINITIONS: Record<ProjectStateKey, ProjectStateDefinition> 
   // asserting death the evidence disproves.
   recently_active: {
     label: "Active recently",
-    description: "No live agent process is visible to FleetCrown, but a dispatch or run landed for this project recently — work likely happened in a terminal FleetCrown can't observe.",
+    description:
+      "No live agent process is visible to FleetCrown, but a dispatch or run landed for this project recently — work likely happened in a terminal FleetCrown can't observe.",
     dotClass: "bg-status-positive",
     tagClass: "ui-tag ui-tag-neutral",
     counterCategory: "idle",
@@ -128,7 +130,8 @@ export const STATE_DEFINITIONS: Record<ProjectStateKey, ProjectStateDefinition> 
   },
   tab_open: {
     label: "Tab open",
-    description: "Terminal workspace exists for this project but no agent process is running in it.",
+    description:
+      "Terminal workspace exists for this project but no agent process is running in it.",
     dotClass: "bg-border-default",
     tagClass: "ui-tag ui-tag-neutral",
     counterCategory: "idle",
@@ -136,7 +139,8 @@ export const STATE_DEFINITIONS: Record<ProjectStateKey, ProjectStateDefinition> 
   },
   open_idle: {
     label: "Awaiting input",
-    description: "Agent process detected but no recent lifecycle signal — the agent is at the prompt waiting for your next message.",
+    description:
+      "Agent process detected but no recent lifecycle signal — the agent is at the prompt waiting for your next message.",
     dotClass: "bg-border-default",
     tagClass: "ui-tag ui-tag-neutral",
     counterCategory: "waiting",
@@ -152,7 +156,8 @@ export const STATE_DEFINITIONS: Record<ProjectStateKey, ProjectStateDefinition> 
   },
   ready: {
     label: "Ready for next step",
-    description: "Stop hook fired recently — the agent finished a turn and is ready for the next instruction. The handoff lists the suggested next move.",
+    description:
+      "Stop hook fired recently — the agent finished a turn and is ready for the next instruction. The handoff lists the suggested next move.",
     dotClass: "bg-status-positive",
     tagClass: "ui-tag ui-tag-positive",
     counterCategory: "waiting",
@@ -160,7 +165,8 @@ export const STATE_DEFINITIONS: Record<ProjectStateKey, ProjectStateDefinition> 
   },
   orchestration_ready: {
     label: "Ready for next step",
-    description: "Latest orchestration run completed and produced a result. Pick the next intent or accept the suggested next-best.",
+    description:
+      "Latest orchestration run completed and produced a result. Pick the next intent or accept the suggested next-best.",
     dotClass: "bg-status-positive",
     tagClass: "ui-tag ui-tag-positive",
     counterCategory: "waiting",
@@ -209,10 +215,10 @@ export function projectStateDescription(key: ProjectStateKey): string {
  */
 
 export const RUNNER_STATES = [
-  "setup_needed",   // The runner has never been seen — first-run path.
-  "offline",        // Runner was seen but the last push exceeded the offline threshold.
-  "state_unknown",  // We have a connection but the runner hasn't pushed a valid state yet.
-  "connected",     // Healthy — runner pushed within the freshness window.
+  "setup_needed", // The runner has never been seen — first-run path.
+  "offline", // Runner was seen but the last push exceeded the offline threshold.
+  "state_unknown", // We have a connection but the runner hasn't pushed a valid state yet.
+  "connected", // Healthy — runner pushed within the freshness window.
 ] as const;
 
 export type RunnerStateKey = (typeof RUNNER_STATES)[number];
@@ -228,7 +234,8 @@ export type RunnerStateDefinition = {
 export const RUNNER_STATE_DEFINITIONS: Record<RunnerStateKey, RunnerStateDefinition> = {
   setup_needed: {
     label: EXECUTOR_COPY.builder.setupOptional,
-    description: "No builder has reported in yet. Git-backed projects can still queue from the browser when the cloud builder is running.",
+    description:
+      "No builder has reported in yet. Git-backed projects can still queue from the browser when the cloud builder is running.",
     dotClass: "bg-border-default",
     tagClass: "ui-tag ui-tag-neutral",
     problem: {
@@ -239,7 +246,8 @@ export const RUNNER_STATE_DEFINITIONS: Record<RunnerStateKey, RunnerStateDefinit
   },
   offline: {
     label: EXECUTOR_COPY.builder.offline,
-    description: "No builder is connected. Dispatches queue until the cloud builder or desktop app is online.",
+    description:
+      "No builder is connected. Dispatches queue until the cloud builder or desktop app is online.",
     dotClass: "bg-status-warning",
     tagClass: "ui-tag ui-tag-warning",
     problem: {

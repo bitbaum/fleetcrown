@@ -30,7 +30,12 @@ function runTests(): void {
   passed++;
 
   assert(
-    isErrorRun({ state: null, outcome: "success", payload: { error: "boom" }, finishedAt: new Date() }),
+    isErrorRun({
+      state: null,
+      outcome: "success",
+      payload: { error: "boom" },
+      finishedAt: new Date(),
+    }),
     "payload.error truthy → error (even if outcome=success)",
   );
   passed++;
@@ -43,7 +48,8 @@ function runTests(): void {
 
   // ─── runStatus ──────────────────────────────────────────────────────────
   assert(
-    runStatus({ state: null, outcome: "error", payload: null, finishedAt: new Date() }) === "negative",
+    runStatus({ state: null, outcome: "error", payload: null, finishedAt: new Date() }) ===
+      "negative",
     "error outcome → negative",
   );
   passed++;
@@ -55,13 +61,15 @@ function runTests(): void {
   passed++;
 
   assert(
-    runStatus({ state: "completed", outcome: "success", payload: null, finishedAt: new Date() }) === "positive",
+    runStatus({ state: "completed", outcome: "success", payload: null, finishedAt: new Date() }) ===
+      "positive",
     "success outcome → positive",
   );
   passed++;
 
   assert(
-    runStatus({ state: "completed", outcome: "partial", payload: null, finishedAt: new Date() }) === "warning",
+    runStatus({ state: "completed", outcome: "partial", payload: null, finishedAt: new Date() }) ===
+      "warning",
     "partial outcome → warning",
   );
   passed++;
@@ -74,13 +82,21 @@ function runTests(): void {
 
   // ─── promptDisplayBody ───────────────────────────────────────────────────
   assert(
-    promptDisplayBody({ customPrompt: "user typed this", resolvedPrompt: "rendered", intent: "next_best" }) === "user typed this",
+    promptDisplayBody({
+      customPrompt: "user typed this",
+      resolvedPrompt: "rendered",
+      intent: "next_best",
+    }) === "user typed this",
     "customPrompt wins when present",
   );
   passed++;
 
   assert(
-    promptDisplayBody({ customPrompt: null, resolvedPrompt: "rendered template", intent: "next_best" }) === "rendered template",
+    promptDisplayBody({
+      customPrompt: null,
+      resolvedPrompt: "rendered template",
+      intent: "next_best",
+    }) === "rendered template",
     "resolvedPrompt wins over intent label when no custom",
   );
   passed++;
@@ -92,7 +108,8 @@ function runTests(): void {
   passed++;
 
   assert(
-    promptDisplayBody({ customPrompt: "", resolvedPrompt: "rendered", intent: "next_best" }) === "rendered",
+    promptDisplayBody({ customPrompt: "", resolvedPrompt: "rendered", intent: "next_best" }) ===
+      "rendered",
     "empty customPrompt falls through to resolvedPrompt",
   );
   passed++;

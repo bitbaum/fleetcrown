@@ -6,7 +6,15 @@ import Link from "next/link";
 // small hand-rolled subset (no tables/images) — pull in a real markdown lib if a
 // surface needs more. Lives in ui/ so every LLM-output panel (digest, project
 // bios, Loki responses) renders consistently.
-export function MarkdownText({ text, className, citations }: { text: string; className?: string; citations?: CitationMap }) {
+export function MarkdownText({
+  text,
+  className,
+  citations,
+}: {
+  text: string;
+  className?: string;
+  citations?: CitationMap;
+}) {
   const blocks = parseBlocks(text);
   return (
     <div className={className ?? "space-y-2 text-sm leading-relaxed text-text-secondary"}>
@@ -110,7 +118,13 @@ function renderInline(text: string, citations?: CitationMap): ReactNode {
       const known = ids.filter((id) => citations?.[id]);
       if (known.length === 0) return null;
       return (
-        <sup key={i} className="ui-loki-cite" title={known.map((id) => `${id} — ${citations![id].label}\n${citations![id].detail}`).join("\n\n")}>
+        <sup
+          key={i}
+          className="ui-loki-cite"
+          title={known
+            .map((id) => `${id} — ${citations![id].label}\n${citations![id].detail}`)
+            .join("\n\n")}
+        >
           {known.join(" ")}
         </sup>
       );
@@ -123,7 +137,11 @@ function renderInline(text: string, citations?: CitationMap): ReactNode {
       );
     }
     if (part.startsWith("**") && part.endsWith("**")) {
-      return <strong key={i} className="text-text-primary">{part.slice(2, -2)}</strong>;
+      return (
+        <strong key={i} className="text-text-primary">
+          {part.slice(2, -2)}
+        </strong>
+      );
     }
     const link = part.match(/^\[([^\]]+)\]\(([^)\s]+)\)$/);
     if (link) {

@@ -49,12 +49,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const project = await getProjectCore(userId, id);
   if (!project) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (project.gitUrl) {
-    return NextResponse.json({ error: "Already provisioned — this project already has a repo linked." }, { status: 409 });
+    return NextResponse.json(
+      { error: "Already provisioned — this project already has a repo linked." },
+      { status: 409 },
+    );
   }
 
   const token = await getGithubToken(userId);
   if (!token) {
-    return NextResponse.json({ error: "No GitHub account linked. Sign in with GitHub first.", hasGithub: false }, { status: 400 });
+    return NextResponse.json(
+      { error: "No GitHub account linked. Sign in with GitHub first.", hasGithub: false },
+      { status: 400 },
+    );
   }
 
   let template = dataOrResp.template;
@@ -69,7 +75,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     template,
   });
   if (!result.ok) {
-    return NextResponse.json({ error: result.error, detail: result.detail }, { status: result.status === 422 ? 409 : 502 });
+    return NextResponse.json(
+      { error: result.error, detail: result.detail },
+      { status: result.status === 422 ? 409 : 502 },
+    );
   }
 
   // Link the repo + set dirPath (the box-runner's clone target) on the
@@ -85,7 +94,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   return NextResponse.json({
     ok: true,
-    repo: { name: result.repo.name, full_name: result.repo.full_name, gitUrl: result.repo.html_url, private: result.repo.private },
+    repo: {
+      name: result.repo.name,
+      full_name: result.repo.full_name,
+      gitUrl: result.repo.html_url,
+      private: result.repo.private,
+    },
     dirPath,
     template,
     templateSeeded: result.templateSeeded,

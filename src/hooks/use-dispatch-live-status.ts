@@ -17,7 +17,10 @@ import type { DispatchLiveView } from "@/lib/dispatch-status";
  * offline builder. SSOT so a fix here (a new terminal state, a longer poll
  * window) reaches every caller at once.
  */
-export function useDispatchLiveStatus(commandId: string | null, runId: string | null): DispatchLiveView | null {
+export function useDispatchLiveStatus(
+  commandId: string | null,
+  runId: string | null,
+): DispatchLiveView | null {
   const [view, setView] = useState<DispatchLiveView | null>(null);
   useEffect(() => {
     const statusUrl = commandId

@@ -8,7 +8,9 @@ import { runFrontierDigest, runFrontierProposals } from "@/lib/frontier/run";
 async function main() {
   const r = await runFrontierDigest();
   console.log(`✓ frontier digest ${r.saved.digestDate} (model: ${r.saved.model})`);
-  console.log(`  ${r.itemCount} items / ${r.candidateCount} candidates / ${r.sourcesOk} sources ok, ${r.sourcesFailed} failed`);
+  console.log(
+    `  ${r.itemCount} items / ${r.candidateCount} candidates / ${r.sourcesOk} sources ok, ${r.sourcesFailed} failed`,
+  );
   console.log(`  headline: ${r.saved.headline}`);
   for (const it of r.saved.items) {
     console.log(`   • [${it.category}] ${it.title}`);
@@ -23,4 +25,9 @@ async function main() {
   }
 }
 
-main().then(() => process.exit(0)).catch((e) => { console.error(e); process.exit(1); });
+main()
+  .then(() => process.exit(0))
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });

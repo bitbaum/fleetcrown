@@ -34,7 +34,8 @@ export async function POST(req: NextRequest) {
   const userId = await getApiUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const access = await decideWorkspaceAccess(userId);
-  if (!access.ok) return NextResponse.json({ error: access.error, code: access.code }, { status: access.status });
+  if (!access.ok)
+    return NextResponse.json({ error: access.error, code: access.code }, { status: access.status });
 
   const data = await readJsonBody(req, ProvisionBody);
   if (data instanceof NextResponse) return data;
@@ -78,7 +79,8 @@ export async function GET() {
   const userId = await getApiUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const access = await decideWorkspaceAccess(userId);
-  if (!access.ok) return NextResponse.json({ error: access.error, code: access.code }, { status: access.status });
+  if (!access.ok)
+    return NextResponse.json({ error: access.error, code: access.code }, { status: access.status });
   const prefix = `${userId}:`;
   const workspaces = executor.list().filter((w) => w.id.startsWith(prefix));
   return NextResponse.json({ workspaces });

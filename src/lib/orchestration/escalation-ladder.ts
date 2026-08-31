@@ -90,9 +90,7 @@ export function escalationInstruction(level: EscalationLevel): string {
  * whatever does not count as a failure resets the failure streak.
  */
 export type LadderEffect =
-  | { kind: "advance" }
-  | { kind: "resolve"; by: "success" | "progress" }
-  | { kind: "ignore" };
+  { kind: "advance" } | { kind: "resolve"; by: "success" | "progress" } | { kind: "ignore" };
 
 export function ladderEffectForClose(outcome: string | null | undefined): LadderEffect {
   if (outcome == null) return { kind: "ignore" };

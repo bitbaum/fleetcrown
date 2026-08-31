@@ -32,50 +32,50 @@
  *     safety net catches it regardless).
  */
 
-import { request as httpsRequest } from 'https'
-import { request as httpRequest } from 'http'
-import { URL } from 'url'
-import { BRIDGE_URL } from '@/config/brand'
+import { request as httpsRequest } from "https";
+import { request as httpRequest } from "http";
+import { URL } from "url";
+import { BRIDGE_URL } from "@/config/brand";
 import {
   isKnownTable,
   TABLE_PENDING_COMMANDS,
   type ChangeEvent,
   type RawKeyEvent,
   type ResizeEvent,
-} from '@/lib/event-stream-types'
+} from "@/lib/event-stream-types";
 
 /** Public hook callbacks. Kept narrow — the subscriber's job is detection,
  *  not action. The poller decides what to do when it gets the signal. */
 export interface BridgeSubscriberCallbacks {
   /** Called when a pending_commands INSERT event arrives for our user.
    *  The poller's job is to immediately drain the queue. */
-  onCommandPending: (commandId: string) => void
+  onCommandPending: (commandId: string) => void;
   /** Fast-lane raw keystroke for the interactive terminal — write verbatim to
    *  the tab's PTY. Non-durable: just deliver, no ack. */
-  onRawKey?: (event: RawKeyEvent) => void
+  onRawKey?: (event: RawKeyEvent) => void;
   /** Fast-lane terminal resize for the tab's PTY. */
-  onResize?: (event: ResizeEvent) => void
+  onResize?: (event: ResizeEvent) => void;
   /** Optional: called whenever the connection state changes, for status UI. */
-  onStateChange?: (state: BridgeSubscriberState) => void
+  onStateChange?: (state: BridgeSubscriberState) => void;
 }
 
 export type BridgeSubscriberState =
-  | { mode: 'idle' }
-  | { mode: 'connecting' }
-  | { mode: 'connected' }
-  | { mode: 'reconnecting'; backoffMs: number; lastError: string | null }
-  | { mode: 'disabled'; reason: string }
+  | { mode: "idle" }
+  | { mode: "connecting" }
+  | { mode: "connected" }
+  | { mode: "reconnecting"; backoffMs: number; lastError: string | null }
+  | { mode: "disabled"; reason: string };
 
 interface Handle {
-  stop: () => void
+  stop: () => void;
 }
 
 // Resolve the bridge URL: env override (for local dev pointing at a localhost
 // bridge) → BRIDGE_URL constant from brand.ts (production). Same precedence
 // the web client uses; see src/lib/event-stream.ts.
 function resolveBridgeUrl(): string {
-  const override = (process.env.FLEETCROWN_BRIDGE_URL ?? '').trim()
-  return override.length > 0 ? override : BRIDGE_URL
+  const override = (process.env.FLEETCROWN_BRIDGE_URL ?? "").trim();
+  return override.length > 0 ? override : BRIDGE_URL;
 }
 
 // The bridge emits a `: ping` heartbeat every 25s (bridge/src/server.ts). If no
@@ -85,86 +85,83 @@ function resolveBridgeUrl(): string {
 // (the bug that left the runner "connected" in its own mind while the bridge had
 // already marked it offline). 60s ≈ 2.4 missed pings: tolerates one slow tick,
 // still recovers fast.
-const SSE_IDLE_TIMEOUT_MS = 60_000
+const SSE_IDLE_TIMEOUT_MS = 60_000;
 
 /**
  * Start an SSE subscription. Idempotent semantics live in the caller (the
  * poller). The returned `stop` aborts the current request and prevents any
  * pending reconnect from firing.
  */
-export function startBridgeSubscriber(
-  token: string,
-  callbacks: BridgeSubscriberCallbacks,
-): Handle {
-  let aborted = false
-  let currentReq: ReturnType<typeof httpsRequest> | null = null
-  let reconnectTimer: NodeJS.Timeout | null = null
-  let backoffMs = 1_000
-  let lastEventId = 0
+export function startBridgeSubscriber(token: string, callbacks: BridgeSubscriberCallbacks): Handle {
+  let aborted = false;
+  let currentReq: ReturnType<typeof httpsRequest> | null = null;
+  let reconnectTimer: NodeJS.Timeout | null = null;
+  let backoffMs = 1_000;
+  let lastEventId = 0;
 
-  const url = resolveBridgeUrl()
-  const baseUrl = new URL(url)
-  const isHttps = baseUrl.protocol === 'https:'
-  const requestFn = isHttps ? httpsRequest : httpRequest
+  const url = resolveBridgeUrl();
+  const baseUrl = new URL(url);
+  const isHttps = baseUrl.protocol === "https:";
+  const requestFn = isHttps ? httpsRequest : httpRequest;
 
   function setState(state: BridgeSubscriberState) {
-    callbacks.onStateChange?.(state)
+    callbacks.onStateChange?.(state);
   }
 
   function scheduleReconnect(error: string | null) {
-    if (aborted) return
-    setState({ mode: 'reconnecting', backoffMs, lastError: error })
+    if (aborted) return;
+    setState({ mode: "reconnecting", backoffMs, lastError: error });
     reconnectTimer = setTimeout(() => {
-      reconnectTimer = null
-      backoffMs = Math.min(backoffMs * 2, 30_000)
-      connect()
-    }, backoffMs)
+      reconnectTimer = null;
+      backoffMs = Math.min(backoffMs * 2, 30_000);
+      connect();
+    }, backoffMs);
   }
 
   function connect() {
-    if (aborted) return
-    setState({ mode: 'connecting' })
+    if (aborted) return;
+    setState({ mode: "connecting" });
 
     // Token rides as a query param: EventSource (browser) can't set headers,
     // and the bridge auth flow is symmetric across browser + desktop for the
     // same reason. The cleartext-in-URL concern is bounded — TLS hides it
     // from the network, server logs are within our trust boundary.
-    const sseUrl = new URL(baseUrl)
-    sseUrl.searchParams.set('token', token)
+    const sseUrl = new URL(baseUrl);
+    sseUrl.searchParams.set("token", token);
     // Tag this as the runner connection so the bridge counts it toward
     // connection-based presence ("Fleet Runner online"). Browser /control tabs
     // open the same bridge without this flag and must NOT flip the badge.
     // See docs/architecture/connection-presence.md.
-    sseUrl.searchParams.set('client', 'runner')
-    const presenceChannel = (process.env.FLEETCROWN_RUNNER_PRESENCE_CHANNEL ?? 'local').trim()
-    if (presenceChannel === 'cloud' || presenceChannel === 'local') {
-      sseUrl.searchParams.set('channel', presenceChannel)
+    sseUrl.searchParams.set("client", "runner");
+    const presenceChannel = (process.env.FLEETCROWN_RUNNER_PRESENCE_CHANNEL ?? "local").trim();
+    if (presenceChannel === "cloud" || presenceChannel === "local") {
+      sseUrl.searchParams.set("channel", presenceChannel);
     }
 
     // One connection attempt schedules at most one reconnect. Destroying a
     // half-dead socket can fire both 'timeout' and 'error'/'end'; without this
     // guard each would spawn its own reconnect and we'd leak overlapping sockets.
-    let settled = false
-    let req: ReturnType<typeof httpsRequest> | null = null
+    let settled = false;
+    let req: ReturnType<typeof httpsRequest> | null = null;
     const fail = (reason: string | null) => {
-      if (settled) return
-      settled = true
-      if (req && !req.destroyed) req.destroy()
-      scheduleReconnect(reason)
-    }
+      if (settled) return;
+      settled = true;
+      if (req && !req.destroyed) req.destroy();
+      scheduleReconnect(reason);
+    };
 
     req = requestFn(
       {
-        method: 'GET',
+        method: "GET",
         hostname: sseUrl.hostname,
         port: sseUrl.port || (isHttps ? 443 : 80),
         path: `${sseUrl.pathname}${sseUrl.search}`,
         headers: {
-          Accept: 'text/event-stream',
-          'Cache-Control': 'no-cache',
+          Accept: "text/event-stream",
+          "Cache-Control": "no-cache",
           // Replay buffered events we missed during a prior disconnect.
           // The bridge keeps a 1000-event ring buffer.
-          ...(lastEventId > 0 ? { 'Last-Event-ID': String(lastEventId) } : {}),
+          ...(lastEventId > 0 ? { "Last-Event-ID": String(lastEventId) } : {}),
         },
       },
       (res) => {
@@ -173,40 +170,40 @@ export function startBridgeSubscriber(
           // one. The long-poller will hit the same wall and surface the error
           // via its own status path.
           setState({
-            mode: 'disabled',
+            mode: "disabled",
             reason: `Bridge rejected token (HTTP ${res.statusCode}). Mint a new one in Settings → Agent tokens.`,
-          })
-          aborted = true
-          res.resume()
-          return
+          });
+          aborted = true;
+          res.resume();
+          return;
         }
         if (res.statusCode !== 200) {
-          res.resume()
-          fail(`HTTP ${res.statusCode}`)
-          return
+          res.resume();
+          fail(`HTTP ${res.statusCode}`);
+          return;
         }
 
-        setState({ mode: 'connected' })
-        backoffMs = 1_000 // successful connect — reset backoff
+        setState({ mode: "connected" });
+        backoffMs = 1_000; // successful connect — reset backoff
 
-        let buffer = ''
-        res.setEncoding('utf8')
-        res.on('data', (chunk: string) => {
-          buffer += chunk
+        let buffer = "";
+        res.setEncoding("utf8");
+        res.on("data", (chunk: string) => {
+          buffer += chunk;
           // SSE frames are delimited by \n\n. Split, parse each complete
           // frame, keep the last partial in the buffer for the next chunk.
-          const parts = buffer.split('\n\n')
-          buffer = parts.pop() ?? ''
+          const parts = buffer.split("\n\n");
+          buffer = parts.pop() ?? "";
           for (const frame of parts) {
-            handleFrame(frame)
+            handleFrame(frame);
           }
-        })
-        res.on('end', () => fail('connection closed by server'))
-        res.on('error', (err) => fail(err.message))
+        });
+        res.on("end", () => fail("connection closed by server"));
+        res.on("error", (err) => fail(err.message));
       },
-    )
+    );
 
-    req.on('error', (err) => fail(err.message))
+    req.on("error", (err) => fail(err.message));
 
     // Heartbeat watchdog — the core self-heal. Node resets this socket timer on
     // every byte received (real data OR the bridge's 25s ping), so it only fires
@@ -215,60 +212,60 @@ export function startBridgeSubscriber(
     // emits. This is what turns "offline forever" into "offline for <SSE_IDLE
     // _TIMEOUT_MS + backoff>".
     req.setTimeout(SSE_IDLE_TIMEOUT_MS, () => {
-      fail('idle timeout — no heartbeat from bridge')
-    })
+      fail("idle timeout — no heartbeat from bridge");
+    });
     // OS-level keepalive: probe a dead peer between heartbeats so a vanished
     // network is detected even faster than the idle timeout.
-    req.on('socket', (socket) => {
-      socket.setKeepAlive(true, 15_000)
-    })
+    req.on("socket", (socket) => {
+      socket.setKeepAlive(true, 15_000);
+    });
 
-    req.end()
-    currentReq = req
+    req.end();
+    currentReq = req;
   }
 
   function handleFrame(frame: string) {
-    let eventType = 'message'
-    let data = ''
-    for (const line of frame.split('\n')) {
-      if (line.startsWith(':')) continue // comment / heartbeat
-      if (line.startsWith('event:')) {
-        eventType = line.slice(6).trim()
-      } else if (line.startsWith('data:')) {
-        data += (data ? '\n' : '') + line.slice(5).trim()
-      } else if (line.startsWith('id:')) {
-        const parsed = parseInt(line.slice(3).trim(), 10)
-        if (Number.isFinite(parsed)) lastEventId = parsed
+    let eventType = "message";
+    let data = "";
+    for (const line of frame.split("\n")) {
+      if (line.startsWith(":")) continue; // comment / heartbeat
+      if (line.startsWith("event:")) {
+        eventType = line.slice(6).trim();
+      } else if (line.startsWith("data:")) {
+        data += (data ? "\n" : "") + line.slice(5).trim();
+      } else if (line.startsWith("id:")) {
+        const parsed = parseInt(line.slice(3).trim(), 10);
+        if (Number.isFinite(parsed)) lastEventId = parsed;
       }
     }
     // Fast-lane (non-durable) events: distinct SSE event names, no replay.
     // Deliver straight to the PTY callbacks; never touch the command path.
-    if (eventType === 'rawkey' || eventType === 'resize') {
-      if (!data) return
+    if (eventType === "rawkey" || eventType === "resize") {
+      if (!data) return;
       try {
-        const ev = JSON.parse(data) as { ch?: string }
-        const myChannel = (process.env.FLEETCROWN_RUNNER_PRESENCE_CHANNEL ?? 'local').trim()
-        if (ev.ch && (ev.ch === 'cloud' || ev.ch === 'local') && myChannel !== ev.ch) return
-        if (eventType === 'rawkey') callbacks.onRawKey?.(ev as RawKeyEvent)
-        else callbacks.onResize?.(ev as ResizeEvent)
+        const ev = JSON.parse(data) as { ch?: string };
+        const myChannel = (process.env.FLEETCROWN_RUNNER_PRESENCE_CHANNEL ?? "local").trim();
+        if (ev.ch && (ev.ch === "cloud" || ev.ch === "local") && myChannel !== ev.ch) return;
+        if (eventType === "rawkey") callbacks.onRawKey?.(ev as RawKeyEvent);
+        else callbacks.onResize?.(ev as ResizeEvent);
       } catch {
         // Bad payload — drop it; a lost keystroke is re-typed.
       }
-      return
+      return;
     }
 
-    if (eventType !== 'change' || !data) return
+    if (eventType !== "change" || !data) return;
 
-    let event: ChangeEvent
+    let event: ChangeEvent;
     try {
-      event = JSON.parse(data) as ChangeEvent
+      event = JSON.parse(data) as ChangeEvent;
     } catch {
-      return
+      return;
     }
-    if (!isKnownTable(event.t)) return
-    if (event.t === TABLE_PENDING_COMMANDS && event.op === 'INSERT') {
+    if (!isKnownTable(event.t)) return;
+    if (event.t === TABLE_PENDING_COMMANDS && event.op === "INSERT") {
       try {
-        callbacks.onCommandPending(event.k)
+        callbacks.onCommandPending(event.k);
       } catch {
         // Callback errors must not break the stream. The poller has its own
         // error handling; we just deliver.
@@ -276,20 +273,20 @@ export function startBridgeSubscriber(
     }
   }
 
-  connect()
+  connect();
 
   return {
     stop: () => {
-      aborted = true
+      aborted = true;
       if (reconnectTimer) {
-        clearTimeout(reconnectTimer)
-        reconnectTimer = null
+        clearTimeout(reconnectTimer);
+        reconnectTimer = null;
       }
       if (currentReq && !currentReq.destroyed) {
-        currentReq.destroy()
+        currentReq.destroy();
       }
-      currentReq = null
-      setState({ mode: 'idle' })
+      currentReq = null;
+      setState({ mode: "idle" });
     },
-  }
+  };
 }

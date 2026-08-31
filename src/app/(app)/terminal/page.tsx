@@ -17,12 +17,12 @@ export default function TerminalPage() {
       <div className="ui-page-header hidden sm:flex">
         <div>
           <PageTitle title="Terminal" />
-          <p className="ui-page-subtitle">
-            {EXECUTOR_COPY.terminal.pageSubtitle}
-          </p>
+          <p className="ui-page-subtitle">{EXECUTOR_COPY.terminal.pageSubtitle}</p>
         </div>
       </div>
-      <Suspense fallback={<div className="ui-empty-page text-sm text-text-muted">Loading terminal…</div>}>
+      <Suspense
+        fallback={<div className="ui-empty-page text-sm text-text-muted">Loading terminal…</div>}
+      >
         <TerminalPageClient local={local} />
       </Suspense>
     </div>

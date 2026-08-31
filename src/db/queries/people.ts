@@ -1,10 +1,20 @@
 import { DEFAULT_USER_EXTERNAL_ID, SOURCE_FLEETCROWN_UI } from "@/lib/constants";
-import { ENTITY_TYPE, SORT_MODE, type InteractionDirection, type SortMode } from "@/lib/constants/statuses";
+import {
+  ENTITY_TYPE,
+  SORT_MODE,
+  type InteractionDirection,
+  type SortMode,
+} from "@/lib/constants/statuses";
 import { db } from "@/db";
 import { entities, attributes, entityRelations, interactions } from "@/db/schema";
 import { eq, and, sql, desc, inArray, type SQL } from "drizzle-orm";
 import { fetchAttributesByEntityIds } from "./utils";
-import { deriveRelationshipHealth, type RelationshipHealth, HEALTH_ACTIVE_DAYS, HEALTH_FADING_DAYS } from "@/lib/constants/people";
+import {
+  deriveRelationshipHealth,
+  type RelationshipHealth,
+  HEALTH_ACTIVE_DAYS,
+  HEALTH_FADING_DAYS,
+} from "@/lib/constants/people";
 import { z } from "zod";
 
 function escapeLike(s: string): string {
@@ -48,9 +58,14 @@ export const PatchPersonBody = z
 // Build HAVING clause for health filtering — all health values are enum literals, not user input
 function buildHealthHaving(health: RelationshipHealth[]): SQL {
   const clauses: SQL[] = [];
-  if (health.includes("active"))  clauses.push(sql`max(i.occurred_at) >= now() - make_interval(days => ${HEALTH_ACTIVE_DAYS})`);
-  if (health.includes("fading"))  clauses.push(sql`max(i.occurred_at) BETWEEN now() - make_interval(days => ${HEALTH_FADING_DAYS}) AND now() - make_interval(days => ${HEALTH_ACTIVE_DAYS})`);
-  if (health.includes("stale"))   clauses.push(sql`max(i.occurred_at) < now() - make_interval(days => ${HEALTH_FADING_DAYS})`);
+  if (health.includes("active"))
+    clauses.push(sql`max(i.occurred_at) >= now() - make_interval(days => ${HEALTH_ACTIVE_DAYS})`);
+  if (health.includes("fading"))
+    clauses.push(
+      sql`max(i.occurred_at) BETWEEN now() - make_interval(days => ${HEALTH_FADING_DAYS}) AND now() - make_interval(days => ${HEALTH_ACTIVE_DAYS})`,
+    );
+  if (health.includes("stale"))
+    clauses.push(sql`max(i.occurred_at) < now() - make_interval(days => ${HEALTH_FADING_DAYS})`);
   if (health.includes("unknown")) clauses.push(sql`max(i.occurred_at) IS NULL`);
   if (clauses.length === 0) return sql``;
   return sql`HAVING (${sql.join(clauses, sql` OR `)})`;
@@ -83,11 +98,12 @@ export async function searchPeople(
     : sql``;
   const having: SQL = buildHealthHaving(health);
 
-  const orderBy: SQL = sort === "name"
-    ? sql`e.name ASC`
-    : sort === "health"
-      ? sql`last_interaction ASC NULLS FIRST`
-      : sql`last_interaction DESC NULLS LAST`;
+  const orderBy: SQL =
+    sort === "name"
+      ? sql`e.name ASC`
+      : sort === "health"
+        ? sql`last_interaction ASC NULLS FIRST`
+        : sql`last_interaction DESC NULLS LAST`;
 
   const [countResult, rows] = await Promise.all([
     db.execute<{ count: string }>(sql`
@@ -173,11 +189,13 @@ export async function getPeopleSummaries(
       description: entities.description,
     })
     .from(entities)
-    .where(and(
-      eq(entities.userId, userId),
-      eq(entities.type, ENTITY_TYPE.PERSON),
-      inArray(entities.id, ids),
-    ));
+    .where(
+      and(
+        eq(entities.userId, userId),
+        eq(entities.type, ENTITY_TYPE.PERSON),
+        inArray(entities.id, ids),
+      ),
+    );
 
   const [attrsByEntity, lastByEntity] = await Promise.all([
     fetchAttributesByEntityIds(rows.map((r) => r.id)),
@@ -208,7 +226,9 @@ export async function getPersonDetail(userId: string, id: string) {
   const [person] = await db
     .select()
     .from(entities)
-    .where(and(eq(entities.id, id), eq(entities.userId, userId), eq(entities.type, ENTITY_TYPE.PERSON)));
+    .where(
+      and(eq(entities.id, id), eq(entities.userId, userId), eq(entities.type, ENTITY_TYPE.PERSON)),
+    );
 
   if (!person) return null;
 
@@ -216,7 +236,10 @@ export async function getPersonDetail(userId: string, id: string) {
   // interactions/attributes queries also filter by userId — defense-in-depth
   // against any stray row whose entity_id outlives its owning user.
   const [attrs, relationsFrom, relationsTo, recentInteractions] = await Promise.all([
-    db.select().from(attributes).where(and(eq(attributes.entityId, id), eq(attributes.userId, userId))),
+    db
+      .select()
+      .from(attributes)
+      .where(and(eq(attributes.entityId, id), eq(attributes.userId, userId))),
     db
       .select({
         type: entityRelations.type,
@@ -226,7 +249,10 @@ export async function getPersonDetail(userId: string, id: string) {
         targetType: entities.type,
       })
       .from(entityRelations)
-      .innerJoin(entities, and(eq(entities.id, entityRelations.toEntityId), eq(entities.userId, userId)))
+      .innerJoin(
+        entities,
+        and(eq(entities.id, entityRelations.toEntityId), eq(entities.userId, userId)),
+      )
       .where(eq(entityRelations.fromEntityId, id)),
     db
       .select({
@@ -237,7 +263,10 @@ export async function getPersonDetail(userId: string, id: string) {
         targetType: entities.type,
       })
       .from(entityRelations)
-      .innerJoin(entities, and(eq(entities.id, entityRelations.fromEntityId), eq(entities.userId, userId)))
+      .innerJoin(
+        entities,
+        and(eq(entities.id, entityRelations.fromEntityId), eq(entities.userId, userId)),
+      )
       .where(eq(entityRelations.toEntityId, id)),
     db
       .select()
@@ -255,7 +284,10 @@ export async function getPersonDetail(userId: string, id: string) {
   };
 }
 
-export async function createPerson(userId: string, { name, description, source, externalId }: CreatePersonInput) {
+export async function createPerson(
+  userId: string,
+  { name, description, source, externalId }: CreatePersonInput,
+) {
   const [created] = await db
     .insert(entities)
     .values({
@@ -270,14 +302,20 @@ export async function createPerson(userId: string, { name, description, source, 
   return created;
 }
 
-export async function patchPerson(userId: string, id: string, data: z.infer<typeof PatchPersonBody>) {
+export async function patchPerson(
+  userId: string,
+  id: string,
+  data: z.infer<typeof PatchPersonBody>,
+) {
   const patch: Partial<typeof entities.$inferInsert> = { updatedAt: new Date() };
   if (data.name !== undefined) patch.name = data.name;
   if (data.description !== undefined) patch.description = data.description.trim() || null;
   const [updated] = await db
     .update(entities)
     .set(patch)
-    .where(and(eq(entities.id, id), eq(entities.userId, userId), eq(entities.type, ENTITY_TYPE.PERSON)))
+    .where(
+      and(eq(entities.id, id), eq(entities.userId, userId), eq(entities.type, ENTITY_TYPE.PERSON)),
+    )
     .returning({ id: entities.id });
   return updated ?? null;
 }
@@ -285,7 +323,9 @@ export async function patchPerson(userId: string, id: string, data: z.infer<type
 export async function deletePerson(userId: string, id: string) {
   const [deleted] = await db
     .delete(entities)
-    .where(and(eq(entities.id, id), eq(entities.userId, userId), eq(entities.type, ENTITY_TYPE.PERSON)))
+    .where(
+      and(eq(entities.id, id), eq(entities.userId, userId), eq(entities.type, ENTITY_TYPE.PERSON)),
+    )
     .returning({ id: entities.id });
   return deleted ?? null;
 }

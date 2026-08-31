@@ -140,7 +140,10 @@ export function AtlasCard({
                   : "No preview image"}
             </span>
             {preview === "broken" && snap?.previewImageUrl && (
-              <span className="max-w-full truncate text-nano text-text-tertiary" title={snap.previewImageUrl}>
+              <span
+                className="max-w-full truncate text-nano text-text-tertiary"
+                title={snap.previewImageUrl}
+              >
                 {hostLabel(snap.previewImageUrl)}
               </span>
             )}
@@ -170,16 +173,23 @@ export function AtlasCard({
           </div>
           <button
             type="button"
-            onClick={() => { setEditing((v) => !v); setValue(row.liveUrl ?? ""); }}
+            onClick={() => {
+              setEditing((v) => !v);
+              setValue(row.liveUrl ?? "");
+            }}
             className="shrink-0 rounded-lg p-1.5 text-text-tertiary hover:bg-surface-overlay hover:text-text-secondary"
-            aria-label={row.liveUrl ? `Edit site URL for ${row.name}` : `Add site URL for ${row.name}`}
+            aria-label={
+              row.liveUrl ? `Edit site URL for ${row.name}` : `Add site URL for ${row.name}`
+            }
           >
             <Pencil className="h-4 w-4" aria-hidden />
           </button>
         </div>
 
         {displayDescription && (
-          <p className="line-clamp-2 text-sm leading-relaxed text-text-secondary">{displayDescription}</p>
+          <p className="line-clamp-2 text-sm leading-relaxed text-text-secondary">
+            {displayDescription}
+          </p>
         )}
 
         {editing ? (
@@ -187,7 +197,10 @@ export function AtlasCard({
             <input
               value={value}
               onChange={(e) => setValue(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") void save(); if (e.key === "Escape") setEditing(false); }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void save();
+                if (e.key === "Escape") setEditing(false);
+              }}
               placeholder="kivvi.orangecat.ch"
               aria-label={`Site URL for ${row.name}`}
               autoFocus
@@ -204,7 +217,10 @@ export function AtlasCard({
             </button>
             <button
               type="button"
-              onClick={() => { setEditing(false); setError(null); }}
+              onClick={() => {
+                setEditing(false);
+                setError(null);
+              }}
               className="rounded-lg p-1.5 text-text-tertiary hover:bg-surface-overlay"
               aria-label="Cancel"
             >
@@ -228,7 +244,9 @@ export function AtlasCard({
         {error && <p className="text-xs text-status-negative">{error}</p>}
 
         {snap?.error && !editing && (
-          <p className="truncate text-xs text-status-negative" title={snap.error}>{snap.error}</p>
+          <p className="truncate text-xs text-status-negative" title={snap.error}>
+            {snap.error}
+          </p>
         )}
 
         <div className="mt-auto flex items-center justify-between gap-2 pt-2 text-xs text-text-tertiary">
@@ -240,7 +258,9 @@ export function AtlasCard({
           <span className="flex items-center gap-2">
             {row.gitUrl && (
               <a
-                href={row.gitUrl.replace(/^git@github\.com:/, "https://github.com/").replace(/\.git$/, "")}
+                href={row.gitUrl
+                  .replace(/^git@github\.com:/, "https://github.com/")
+                  .replace(/\.git$/, "")}
                 target="_blank"
                 rel="noreferrer"
                 className="hover:text-text-secondary"

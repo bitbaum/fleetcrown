@@ -9,12 +9,33 @@ import {
   isBookActionType,
   mergeDraftTitle,
 } from "../../src/config/book";
-import { canImportSocial, canMarket, DEFAULT_VACUUMS, ROBOT_CLASS, ROBOT_CLASS_TO_OC_ASSET } from "../../src/config/actors";
-import { clusterPeople, extractEmails, extractPhones, matchImportedContact, normalizeName, phonesCompatible, pickCanonicalPerson, shouldPreferImportedName } from "../../src/lib/people-dedupe";
+import {
+  canImportSocial,
+  canMarket,
+  DEFAULT_VACUUMS,
+  ROBOT_CLASS,
+  ROBOT_CLASS_TO_OC_ASSET,
+} from "../../src/config/actors";
+import {
+  clusterPeople,
+  extractEmails,
+  extractPhones,
+  matchImportedContact,
+  normalizeName,
+  phonesCompatible,
+  pickCanonicalPerson,
+  shouldPreferImportedName,
+} from "../../src/lib/people-dedupe";
 import { parseKnowledgePeople } from "../../src/lib/people-import";
 import { ENRICH_SCAN_CAP } from "../../src/config/book";
 import { isUniqueViolation } from "../../src/lib/api/route-helpers";
-import { detectImportSource, parseCsv, parseImport, parseVCard, parseContactResolver } from "../../src/lib/people-import";
+import {
+  detectImportSource,
+  parseCsv,
+  parseImport,
+  parseVCard,
+  parseContactResolver,
+} from "../../src/lib/people-import";
 import { proposeEnrichments } from "../../src/lib/people-enrich";
 
 assert.equal(isBookActionType(ACTION_TYPE.IMPORT_PERSON), true);
@@ -70,10 +91,12 @@ const csv = parseCsv("Name,Email\nManuel,manu@example.com\n");
 assert.equal(csv[0]!.name, "Manuel");
 assert.equal(csv[0]!.attrs[BOOK_ATTR.EMAIL], "manu@example.com");
 
-const google = parseCsv([
-  "First Name,Last Name,Nickname,E-mail 1 - Value,Phone 1 - Value,Organization Name,Organization Title,Notes,Address 1 - City,Address 1 - Country,Extra",
-  "Ada,Lovelace,A.L.,ada@analytical.engine,+44201234,Analytical Engines,Mathematician,Notes here,London,UK,x",
-].join("\n"));
+const google = parseCsv(
+  [
+    "First Name,Last Name,Nickname,E-mail 1 - Value,Phone 1 - Value,Organization Name,Organization Title,Notes,Address 1 - City,Address 1 - Country,Extra",
+    "Ada,Lovelace,A.L.,ada@analytical.engine,+44201234,Analytical Engines,Mathematician,Notes here,London,UK,x",
+  ].join("\n"),
+);
 assert.equal(google[0]!.name, "Ada Lovelace");
 assert.equal(google[0]!.attrs[BOOK_ATTR.EMAIL], "ada@analytical.engine");
 assert.equal(google[0]!.attrs[BOOK_ATTR.COMPANY], "Analytical Engines");
@@ -83,17 +106,13 @@ assert.ok(google[0]!.attrs[BOOK_ATTR.ALIASES]?.includes("A.L."));
 assert.equal(google[0]!.description, "Notes here");
 
 assert.equal(
-  matchImportedContact(
-    { name: "George", attrs: {} },
-    [{ id: "g", name: "George", attrs: {} }],
-  ),
+  matchImportedContact({ name: "George", attrs: {} }, [{ id: "g", name: "George", attrs: {} }]),
   null,
 );
 assert.equal(
-  matchImportedContact(
-    { name: "Elena Weber", attrs: {} },
-    [{ id: "e", name: "Elena Weber", attrs: {} }],
-  )?.id,
+  matchImportedContact({ name: "Elena Weber", attrs: {} }, [
+    { id: "e", name: "Elena Weber", attrs: {} },
+  ])?.id,
   "e",
 );
 assert.equal(shouldPreferImportedName("Aaron", "Aaron Brooks"), true);
@@ -110,24 +129,34 @@ const phoneMatch = matchImportedContact(
 assert.equal(phoneMatch?.id, "g");
 
 const knowledge = parseKnowledgePeople([
-  { name: "Manuel Riegner", attrs: { profession: "psychiatrist", relationship_to_george: "friend" } },
+  {
+    name: "Manuel Riegner",
+    attrs: { profession: "psychiatrist", relationship_to_george: "friend" },
+  },
 ]);
 assert.equal(knowledge[0]!.attrs[BOOK_ATTR.PROFESSION], "psychiatrist");
 assert.equal(knowledge[0]!.attrs[BOOK_ATTR.RELATIONSHIP], "friend");
 
-const resolver = parseContactResolver(JSON.stringify({
-  contacts: [{
-    id: "c1",
-    displayName: "Ilya",
-    aliases: ["Ilja"],
-    channels: { whatsapp: { e164: "+4179" } },
-  }],
-}));
+const resolver = parseContactResolver(
+  JSON.stringify({
+    contacts: [
+      {
+        id: "c1",
+        displayName: "Ilya",
+        aliases: ["Ilja"],
+        channels: { whatsapp: { e164: "+4179" } },
+      },
+    ],
+  }),
+);
 assert.equal(resolver[0]!.name, "Ilya");
 assert.ok(resolver[0]!.attrs[BOOK_ATTR.ALIASES]?.includes("Ilja"));
 
 assert.equal(detectImportSource("book.vcf", vcf), IMPORT_SOURCE.VCARD);
-assert.equal(detectImportSource("contact-resolver.json", '{"contacts":[]}'), IMPORT_SOURCE.CONTACT_RESOLVER);
+assert.equal(
+  detectImportSource("contact-resolver.json", '{"contacts":[]}'),
+  IMPORT_SOURCE.CONTACT_RESOLVER,
+);
 assert.equal(parseImport("Name\nOnlyName\n", IMPORT_SOURCE.CSV)[0]!.name, "OnlyName");
 
 const enrich = proposeEnrichments({

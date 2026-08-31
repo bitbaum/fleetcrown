@@ -51,7 +51,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   );
   if (status < 400) {
     const runId = typeof body.runId === "string" ? body.runId : undefined;
-    await markFeedbackDispatchedBulk(userId, items.map((f) => f.id), runId);
+    await markFeedbackDispatchedBulk(
+      userId,
+      items.map((f) => f.id),
+      runId,
+    );
   }
   return NextResponse.json({ ...body, dispatchedCount: items.length }, { status });
 }

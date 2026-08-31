@@ -6,21 +6,32 @@ import { patchJson } from "@/lib/api/fetch";
 import type { UserProject } from "@/db/schema/user-projects";
 import { CollapsibleSection } from "./project-profile-sections";
 
-export function NotesSection({ projectId, project }: { projectId: string; project: UserProject | null }) {
+export function NotesSection({
+  projectId,
+  project,
+}: {
+  projectId: string;
+  project: UserProject | null;
+}) {
   const [draft, setDraft] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const value = draft ?? project?.notes ?? "";
 
-  const persist = useCallback(async (text: string) => {
-    setSaving(true);
-    try {
-      await patchJson(`/api/user-projects/${projectId}`, { notes: text || undefined });
-    } catch { /* ignore */ } finally {
-      setSaving(false);
-    }
-  }, [projectId]);
+  const persist = useCallback(
+    async (text: string) => {
+      setSaving(true);
+      try {
+        await patchJson(`/api/user-projects/${projectId}`, { notes: text || undefined });
+      } catch {
+        /* ignore */
+      } finally {
+        setSaving(false);
+      }
+    },
+    [projectId],
+  );
 
   const handleChange = (text: string) => {
     setDraft(text);
@@ -29,7 +40,10 @@ export function NotesSection({ projectId, project }: { projectId: string; projec
   };
 
   const handleBlur = () => {
-    if (saveTimer.current) { clearTimeout(saveTimer.current); saveTimer.current = null; }
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current);
+      saveTimer.current = null;
+    }
     if (draft !== null) persist(draft);
   };
 
@@ -39,7 +53,9 @@ export function NotesSection({ projectId, project }: { projectId: string; projec
     <CollapsibleSection
       title="Notes"
       icon={<StickyNote className="h-3.5 w-3.5 text-text-muted" />}
-      badge={project.notes ? <span className="h-1.5 w-1.5 rounded-full bg-accent-text/50" /> : undefined}
+      badge={
+        project.notes ? <span className="h-1.5 w-1.5 rounded-full bg-accent-text/50" /> : undefined
+      }
       trailing={saving ? <Loader2 className="h-3 w-3 animate-spin text-text-muted" /> : undefined}
     >
       <textarea

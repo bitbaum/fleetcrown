@@ -249,7 +249,11 @@ export async function economyFacts(query: string, limit: number): Promise<Fact[]
       kind: "document",
       subject: n.title,
       source: "orangecat.ch · open demand",
-      values: { title: n.title, source: "orangecat open demand", excerpt: n.text.replace(/\s+/g, " ").slice(0, DOC_CHUNK_MAX) },
+      values: {
+        title: n.title,
+        source: "orangecat open demand",
+        excerpt: n.text.replace(/\s+/g, " ").slice(0, DOC_CHUNK_MAX),
+      },
     }),
   );
 
@@ -259,7 +263,11 @@ export async function economyFacts(query: string, limit: number): Promise<Fact[]
       subject: m.title,
       source: `orangecat.ch · ${m.type}`,
       ...(m.similarity !== undefined ? { similarity: m.similarity } : {}),
-      values: { title: m.title, source: `orangecat ${m.type}`, excerpt: m.description.replace(/\s+/g, " ").slice(0, DOC_CHUNK_MAX) },
+      values: {
+        title: m.title,
+        source: `orangecat ${m.type}`,
+        excerpt: m.description.replace(/\s+/g, " ").slice(0, DOC_CHUNK_MAX),
+      },
     }),
   );
 

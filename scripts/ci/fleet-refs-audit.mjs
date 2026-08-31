@@ -34,40 +34,49 @@
  * broken for exactly that reason, and had no auto-merge.yml to notice.
  */
 
-import { retiredHandleMatches, USES, verdictFor, pathVerdictFor } from './fleet-refs-audit-lib.mjs';
+import { retiredHandleMatches, USES, verdictFor, pathVerdictFor } from "./fleet-refs-audit-lib.mjs";
 
-const ORG = process.env.FLEET_ORG || 'bitbaum';
-const RETIRED = (process.env.RETIRED_HANDLES || 'maonakamoto').split(',').map(s => s.trim()).filter(Boolean);
+const ORG = process.env.FLEET_ORG || "bitbaum";
+const RETIRED = (process.env.RETIRED_HANDLES || "maonakamoto")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
 const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
-if (!token) { console.log('[fleet-refs-audit] no token — skipping'); process.exit(0); }
+if (!token) {
+  console.log("[fleet-refs-audit] no token — skipping");
+  process.exit(0);
+}
 
 const api = async (path) => {
   const res = await fetch(`https://api.github.com${path}`, {
-    headers: { authorization: `Bearer ${token}`, accept: 'application/vnd.github+json',
-               'user-agent': 'fleet-refs-audit' },
+    headers: {
+      authorization: `Bearer ${token}`,
+      accept: "application/vnd.github+json",
+      "user-agent": "fleet-refs-audit",
+    },
   });
   return { ok: res.ok, status: res.status, body: res.ok ? await res.json() : null };
 };
 
-const canonical = new Map();     // "owner/repo" -> canonical full_name | null
+const canonical = new Map(); // "owner/repo" -> canonical full_name | null
 async function resolve(slug) {
   if (canonical.has(slug)) return canonical.get(slug);
   const r = await api(`/repos/${slug}`);
-  const v = r.ok ? r.body.full_name : (r.status === 404 ? null : undefined);
+  const v = r.ok ? r.body.full_name : r.status === 404 ? null : undefined;
   canonical.set(slug, v);
   return v;
 }
 
-const paths = new Map();      // "owner/repo/path@ref" -> true | false | undefined
+const paths = new Map(); // "owner/repo/path@ref" -> true | false | undefined
 /** Does the referenced file (or action directory) still exist at that ref?
  *  A directory answers 200 with an array, which is what a composite action
  *  reference points at, so both shapes work. */
 async function pathExists(slug, subpath, ref) {
-  const rel = subpath.replace(/^\//, '');
+  const rel = subpath.replace(/^\//, "");
   const key = `${slug}/${rel}@${ref}`;
   if (paths.has(key)) return paths.get(key);
   const r = await api(`/repos/${slug}/contents/${rel}?ref=${encodeURIComponent(ref)}`);
-  const v = r.ok ? true : (r.status === 404 ? false : undefined);
+  const v = r.ok ? true : r.status === 404 ? false : undefined;
   paths.set(key, v);
   return v;
 }
@@ -75,16 +84,24 @@ async function pathExists(slug, subpath, ref) {
 const repos = [];
 for (let page = 1; ; page++) {
   const r = await api(`/orgs/${ORG}/repos?per_page=100&type=all&page=${page}`);
-  if (!r.ok) { console.error(`::error::cannot list ${ORG} repos (HTTP ${r.status})`); process.exit(1); }
-  repos.push(...r.body.filter(x => !x.archived));
+  if (!r.ok) {
+    console.error(`::error::cannot list ${ORG} repos (HTTP ${r.status})`);
+    process.exit(1);
+  }
+  repos.push(...r.body.filter((x) => !x.archived));
   if (r.body.length < 100) break;
 }
 
-const stale = [], retired = [], unreadable = [];
-let checkedRepos = 0, checkedFiles = 0;
+const stale = [],
+  retired = [],
+  unreadable = [];
+let checkedRepos = 0,
+  checkedFiles = 0;
 
 for (const repo of repos) {
-  const dir = await api(`/repos/${repo.full_name}/contents/.github/workflows?ref=${repo.default_branch}`);
+  const dir = await api(
+    `/repos/${repo.full_name}/contents/.github/workflows?ref=${repo.default_branch}`,
+  );
   if (!dir.ok) {
     // 404 == no workflows dir (fine). Anything else == we could not look, which
     // is NOT the same as "clean" and must never be reported as a pass.
@@ -92,10 +109,15 @@ for (const repo of repos) {
     continue;
   }
   checkedRepos++;
-  for (const f of dir.body.filter(x => x.type === 'file' && /\.ya?ml$/.test(x.name))) {
-    const file = await api(`/repos/${repo.full_name}/contents/.github/workflows/${f.name}?ref=${repo.default_branch}`);
-    if (!file.ok) { unreadable.push(`${repo.full_name}/${f.name} (HTTP ${file.status})`); continue; }
-    const text = Buffer.from(file.body.content, 'base64').toString('utf8');
+  for (const f of dir.body.filter((x) => x.type === "file" && /\.ya?ml$/.test(x.name))) {
+    const file = await api(
+      `/repos/${repo.full_name}/contents/.github/workflows/${f.name}?ref=${repo.default_branch}`,
+    );
+    if (!file.ok) {
+      unreadable.push(`${repo.full_name}/${f.name} (HTTP ${file.status})`);
+      continue;
+    }
+    const text = Buffer.from(file.body.content, "base64").toString("utf8");
     checkedFiles++;
 
     // See fleet-refs-audit-lib.mjs: comments and this audit's own
@@ -113,31 +135,50 @@ for (const repo of repos) {
       const where = `${repo.full_name}/.github/workflows/${f.name}`;
       const real = await resolve(slug);
       const verdict = verdictFor(slug, real);
-      if (verdict.kind === 'unreadable') { unreadable.push(verdict.message); continue; }
-      if (verdict.kind === 'stale') { stale.push(`${where}: ${verdict.message}`); continue; }
+      if (verdict.kind === "unreadable") {
+        unreadable.push(verdict.message);
+        continue;
+      }
+      if (verdict.kind === "stale") {
+        stale.push(`${where}: ${verdict.message}`);
+        continue;
+      }
       // Owner is canonical. Now the other half: is the file still there?
-      const pv = pathVerdictFor(slug, subpath, ref, subpath ? await pathExists(slug, subpath, ref) : true);
-      if (pv.kind === 'unreadable') unreadable.push(pv.message);
-      else if (pv.kind === 'stale') stale.push(`${where}: ${pv.message}`);
+      const pv = pathVerdictFor(
+        slug,
+        subpath,
+        ref,
+        subpath ? await pathExists(slug, subpath, ref) : true,
+      );
+      if (pv.kind === "unreadable") unreadable.push(pv.message);
+      else if (pv.kind === "stale") stale.push(`${where}: ${pv.message}`);
     }
   }
 }
 
-console.log(`[fleet-refs-audit] ${checkedRepos} repos, ${checkedFiles} workflow files, ${canonical.size} distinct refs`);
+console.log(
+  `[fleet-refs-audit] ${checkedRepos} repos, ${checkedFiles} workflow files, ${canonical.size} distinct refs`,
+);
 
 // A floor: if the sweep silently stops seeing repos, "0 problems" is not a pass.
 const FLOOR = Number(process.env.MIN_REPOS || 10);
 if (checkedRepos < FLOOR) {
-  console.error(`::error::only ${checkedRepos} repos had workflows (floor ${FLOOR}) — this audit is not seeing the fleet`);
+  console.error(
+    `::error::only ${checkedRepos} repos had workflows (floor ${FLOOR}) — this audit is not seeing the fleet`,
+  );
   process.exit(1);
 }
 
 for (const u of [...new Set(unreadable)]) console.log(`::warning::could not check ${u}`);
-for (const s of stale)   console.log(`::error::${s}`);
+for (const s of stale) console.log(`::error::${s}`);
 for (const r of retired) console.log(`::error::${r}`);
 
 if (stale.length || retired.length) {
-  console.error(`\nFAIL: ${stale.length} broken reference(s) (wrong owner or missing file), ${retired.length} retired-handle reference(s).`);
+  console.error(
+    `\nFAIL: ${stale.length} broken reference(s) (wrong owner or missing file), ${retired.length} retired-handle reference(s).`,
+  );
   process.exit(1);
 }
-console.log('OK: every workflow reference names its canonical owner, and every referenced file exists.');
+console.log(
+  "OK: every workflow reference names its canonical owner, and every referenced file exists.",
+);

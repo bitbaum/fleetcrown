@@ -38,7 +38,9 @@ export function NewsletterSignup({ source }: { source: string }) {
     return (
       <div className="ui-card-shell space-y-1 p-5">
         <p className="text-base text-text-primary">You&apos;re on the list.</p>
-        <p className="text-sm text-text-tertiary">New essays land in your inbox when they publish.</p>
+        <p className="text-sm text-text-tertiary">
+          New essays land in your inbox when they publish.
+        </p>
       </div>
     );
   }
@@ -47,7 +49,9 @@ export function NewsletterSignup({ source }: { source: string }) {
     <form onSubmit={submit} className="ui-card-shell space-y-3 p-5">
       <div>
         <p className="text-base font-medium text-text-primary">Get new essays by email</p>
-        <p className="text-sm text-text-tertiary">No schedule promises, no marketing — just the essays.</p>
+        <p className="text-sm text-text-tertiary">
+          No schedule promises, no marketing — just the essays.
+        </p>
       </div>
       <div className="flex flex-col gap-2 sm:flex-row">
         <input

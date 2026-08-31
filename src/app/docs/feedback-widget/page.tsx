@@ -14,8 +14,8 @@ export default function FeedbackWidgetDocsPage() {
       <main className="ui-public-prose mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-16">
         <h1 className="ui-public-title mb-2">Feedback widget</h1>
         <p className="ui-public-meta mb-8 sm:mb-12">
-          One script tag on any site you run. Visitor reports become dispatchable fleet work,
-          and shipped fixes close the loop automatically.
+          One script tag on any site you run. Visitor reports become dispatchable fleet work, and
+          shipped fixes close the loop automatically.
         </p>
 
         <section className="mb-10 space-y-4 sm:mb-12">
@@ -60,18 +60,18 @@ export default function FeedbackWidgetDocsPage() {
         <section className="mb-10 space-y-4 sm:mb-12">
           <h2 className="ui-public-prose-h2">3. What visitors get</h2>
           <p>
-            A small button on every page. Opening it, the visitor picks a scope —{" "}
-            <em>Element</em> (they click the exact thing that&apos;s broken; the widget records its
-            CSS selector and visible text), <em>This page</em>, or <em>Whole site</em> — writes
-            what should be improved, optionally attaches an image (file picker or paste; the
-            widget downscales it client-side so a phone photo never ships megabytes), and
-            optionally leaves a name or email. The widget renders in a Shadow DOM, so your styles
-            and the widget&apos;s can&apos;t interfere with each other.
+            A small button on every page. Opening it, the visitor picks a scope — <em>Element</em>{" "}
+            (they click the exact thing that&apos;s broken; the widget records its CSS selector and
+            visible text), <em>This page</em>, or <em>Whole site</em> — writes what should be
+            improved, optionally attaches an image (file picker or paste; the widget downscales it
+            client-side so a phone photo never ships megabytes), and optionally leaves a name or
+            email. The widget renders in a Shadow DOM, so your styles and the widget&apos;s
+            can&apos;t interfere with each other.
           </p>
           <p>
-            Repeat reports don&apos;t pile up: the same complaint filed again bumps a counter on
-            the existing inbox row (shown as <em>×N</em>) instead of creating a duplicate — the
-            volume signal survives, the noise doesn&apos;t.
+            Repeat reports don&apos;t pile up: the same complaint filed again bumps a counter on the
+            existing inbox row (shown as <em>×N</em>) instead of creating a duplicate — the volume
+            signal survives, the noise doesn&apos;t.
           </p>
         </section>
 
@@ -102,8 +102,10 @@ export default function FeedbackWidgetDocsPage() {
           <h2 className="ui-public-prose-h2">5. From report to fix</h2>
           <p>
             Submissions land in the project&apos;s <strong>Visitor feedback</strong> inbox, and the{" "}
-            <Link href="/control" className="ui-public-link">Control</Link> page shows a fleet-wide
-            strip of projects with new reports. Per row:
+            <Link href="/control" className="ui-public-link">
+              Control
+            </Link>{" "}
+            page shows a fleet-wide strip of projects with new reports. Per row:
           </p>
           <ul className="list-disc pl-6 space-y-2">
             <li>
@@ -126,8 +128,11 @@ export default function FeedbackWidgetDocsPage() {
             </li>
             <li>
               A <strong>daily digest</strong> clusters busy inboxes into themes and files each as a
-              draft on <Link href="/approvals" className="ui-public-link">Approvals</Link> — with
-              the exact agent prompt included, so you review precisely what would run.
+              draft on{" "}
+              <Link href="/approvals" className="ui-public-link">
+                Approvals
+              </Link>{" "}
+              — with the exact agent prompt included, so you review precisely what would run.
             </li>
           </ul>
           <p>

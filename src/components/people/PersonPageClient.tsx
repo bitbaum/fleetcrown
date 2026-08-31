@@ -9,13 +9,12 @@ export function PersonPageClient({ personId, name }: { personId: string; name: s
   const back = () => router.push("/people");
 
   return (
-    <PageLayout title={name} subtitle="Private profile — your notes, not a public listing" maxWidth="max-w-xl">
-      <PersonDetail
-        personId={personId}
-        variant="page"
-        onClose={back}
-        onDeleted={back}
-      />
+    <PageLayout
+      title={name}
+      subtitle="Private profile — your notes, not a public listing"
+      maxWidth="max-w-xl"
+    >
+      <PersonDetail personId={personId} variant="page" onClose={back} onDeleted={back} />
     </PageLayout>
   );
 }

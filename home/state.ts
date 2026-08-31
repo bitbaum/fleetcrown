@@ -10,7 +10,13 @@
  * dispatch counters arrive in M5 when the decide() function needs them.
  */
 
-import { isFailingOutcome, type Adapter, type Event, type Handoff, type Outcome } from "@/lib/events";
+import {
+  isFailingOutcome,
+  type Adapter,
+  type Event,
+  type Handoff,
+  type Outcome,
+} from "@/lib/events";
 
 export type ProjectState = {
   project: string;
@@ -53,11 +59,12 @@ const RECENT_OUTCOME_LIMIT = 5;
 
 function getOrInit(state: GlobalState, project: string, ts: string): ProjectState {
   const existing = state.get(project);
-  if (existing) return {
-    ...existing,
-    recentOutcomes:   [...existing.recentOutcomes],
-    cancelledRunIds: existing.cancelledRunIds ? [...existing.cancelledRunIds] : undefined,
-  };
+  if (existing)
+    return {
+      ...existing,
+      recentOutcomes: [...existing.recentOutcomes],
+      cancelledRunIds: existing.cancelledRunIds ? [...existing.cancelledRunIds] : undefined,
+    };
   return { project, lastEventTs: ts, recentOutcomes: [] };
 }
 
@@ -137,7 +144,10 @@ export function applyEvent(state: GlobalState, event: Event): GlobalState {
       const wasCancelled = ps.cancelledRunIds?.includes(event.runId ?? "") ?? false;
       if (!wasCancelled) {
         ps.lastOutcome = "error";
-        ps.recentOutcomes = ["error" as Outcome, ...ps.recentOutcomes].slice(0, RECENT_OUTCOME_LIMIT);
+        ps.recentOutcomes = ["error" as Outcome, ...ps.recentOutcomes].slice(
+          0,
+          RECENT_OUTCOME_LIMIT,
+        );
       }
       break;
     }
@@ -163,7 +173,10 @@ export function applyEvent(state: GlobalState, event: Event): GlobalState {
       if (ps.currentRun?.runId === event.runId) ps.currentRun = undefined;
       // Remember this runId so the upcoming worker.finished (from the stop
       // hook) gets relabelled user_abort instead of partial/error.
-      const history = [event.runId, ...(ps.cancelledRunIds ?? []).filter((id) => id !== event.runId)];
+      const history = [
+        event.runId,
+        ...(ps.cancelledRunIds ?? []).filter((id) => id !== event.runId),
+      ];
       ps.cancelledRunIds = history.slice(0, CANCEL_HISTORY_LIMIT);
       break;
     }
@@ -193,23 +206,48 @@ export function applyAll(events: Iterable<Event>): GlobalState {
 function selfTest() {
   const baseTs = "2026-01-01T00:00:00Z";
   const dispatch = (runId: string, intent = "next_best"): Event => ({
-    v: 1, id: `d-${runId}`, ts: baseTs, kind: "bridge.dispatch",
-    project: "T", intent, prompt: "go", runId, autonomy: "auto", adapter: "codex",
+    v: 1,
+    id: `d-${runId}`,
+    ts: baseTs,
+    kind: "bridge.dispatch",
+    project: "T",
+    intent,
+    prompt: "go",
+    runId,
+    autonomy: "auto",
+    adapter: "codex",
     reason: "queue head related to recent commits",
     confidence: 0.8,
   });
   const started = (runId: string): Event => ({
-    v: 1, id: `s-${runId}`, ts: baseTs, kind: "worker.started",
-    project: "T", adapter: "codex", intent: "next_best", runId,
+    v: 1,
+    id: `s-${runId}`,
+    ts: baseTs,
+    kind: "worker.started",
+    project: "T",
+    adapter: "codex",
+    intent: "next_best",
+    runId,
   });
   const finished = (runId: string, outcome: Outcome = "success"): Event => ({
-    v: 1, id: `f-${runId}`, ts: baseTs, kind: "worker.finished",
-    project: "T", runId, handoff: { status: "", done:"x", next: "", tests: "", todos: "", health: "good" },
-    outcome, durationMs: 1000,
+    v: 1,
+    id: `f-${runId}`,
+    ts: baseTs,
+    kind: "worker.finished",
+    project: "T",
+    runId,
+    handoff: { status: "", done: "x", next: "", tests: "", todos: "", health: "good" },
+    outcome,
+    durationMs: 1000,
   });
   const cancel = (runId: string): Event => ({
-    v: 1, id: `c-${runId}`, ts: baseTs, kind: "bridge.cancel",
-    project: "T", runId, reason: "user",
+    v: 1,
+    id: `c-${runId}`,
+    ts: baseTs,
+    kind: "bridge.cancel",
+    project: "T",
+    runId,
+    reason: "user",
   });
 
   const cases: { name: string; check: () => boolean }[] = [
@@ -232,11 +270,13 @@ function selfTest() {
         const s2 = applyAll([evt, evt]);
         const a = s1.get("T")!.currentRun;
         const b = s2.get("T")!.currentRun;
-        return a?.runId === b?.runId
-            && a?.intent === b?.intent
-            && a?.adapter === b?.adapter
-            && a?.reason === b?.reason
-            && a?.confidence === b?.confidence;
+        return (
+          a?.runId === b?.runId &&
+          a?.intent === b?.intent &&
+          a?.adapter === b?.adapter &&
+          a?.reason === b?.reason &&
+          a?.confidence === b?.confidence
+        );
       },
     },
     {
@@ -278,7 +318,11 @@ function selfTest() {
       check: () => {
         const s = applyAll([dispatch("a"), started("a"), finished("a", "success")]);
         const ps = s.get("T")!;
-        return ps.currentRun === undefined && ps.lastOutcome === "success" && ps.recentOutcomes[0] === "success";
+        return (
+          ps.currentRun === undefined &&
+          ps.lastOutcome === "success" &&
+          ps.recentOutcomes[0] === "success"
+        );
       },
     },
     {
@@ -303,14 +347,21 @@ function selfTest() {
         // run might still be alive. recentOutcomes should stay clean so
         // confidence isn't dragged down by an unrelated infra failure.
         const cancelFailCrash: Event = {
-          v: 1, id: "cf1", ts: baseTs, kind: "worker.crashed",
-          project: "T", runId: "a", error: "cancel failed: zellij tab 'T' did not gain focus",
+          v: 1,
+          id: "cf1",
+          ts: baseTs,
+          kind: "worker.crashed",
+          project: "T",
+          runId: "a",
+          error: "cancel failed: zellij tab 'T' did not gain focus",
         };
         const s = applyAll([dispatch("a"), started("a"), cancel("a"), cancelFailCrash]);
         const ps = s.get("T")!;
-        return (ps.lastError?.message.startsWith("cancel failed:") ?? false)
-            && ps.recentOutcomes.length === 0
-            && ps.lastOutcome === undefined;
+        return (
+          (ps.lastError?.message.startsWith("cancel failed:") ?? false) &&
+          ps.recentOutcomes.length === 0 &&
+          ps.lastOutcome === undefined
+        );
       },
     },
     {
@@ -319,14 +370,21 @@ function selfTest() {
         // Distinct from the case above — a genuine inject failure (no prior
         // cancel) is a real run-level error and SHOULD shift confidence.
         const injectFailCrash: Event = {
-          v: 1, id: "if1", ts: baseTs, kind: "worker.crashed",
-          project: "T", runId: "a", error: "inject failed: tab not found",
+          v: 1,
+          id: "if1",
+          ts: baseTs,
+          kind: "worker.crashed",
+          project: "T",
+          runId: "a",
+          error: "inject failed: tab not found",
         };
         const s = applyAll([dispatch("a"), injectFailCrash]);
         const ps = s.get("T")!;
-        return (ps.lastError?.message.startsWith("inject failed:") ?? false)
-            && ps.recentOutcomes[0] === "error"
-            && ps.lastOutcome === "error";
+        return (
+          (ps.lastError?.message.startsWith("inject failed:") ?? false) &&
+          ps.recentOutcomes[0] === "error" &&
+          ps.lastOutcome === "error"
+        );
       },
     },
     {
@@ -337,17 +395,24 @@ function selfTest() {
         // brain knows the truth and overrides.
         const s = applyAll([dispatch("a"), started("a"), cancel("a"), finished("a", "partial")]);
         const ps = s.get("T")!;
-        return ps.lastOutcome === "user_abort"
-            && ps.recentOutcomes[0] === "user_abort"
-            && (ps.cancelledRunIds?.length ?? 0) === 0;   // consumed by the finish
+        return (
+          ps.lastOutcome === "user_abort" &&
+          ps.recentOutcomes[0] === "user_abort" &&
+          (ps.cancelledRunIds?.length ?? 0) === 0
+        ); // consumed by the finish
       },
     },
     {
       name: "cancel for runId 'a' does NOT relabel a later finished for runId 'b'",
       check: () => {
         const s = applyAll([
-          dispatch("a"), started("a"), cancel("a"), finished("a", "partial"),
-          dispatch("b"), started("b"), finished("b", "success"),
+          dispatch("a"),
+          started("a"),
+          cancel("a"),
+          finished("a", "partial"),
+          dispatch("b"),
+          started("b"),
+          finished("b", "success"),
         ]);
         const ps = s.get("T")!;
         // Most recent first: success (b), then user_abort (a)
@@ -358,22 +423,40 @@ function selfTest() {
       name: "worker.crashed sets lastError with the event message",
       check: () => {
         const crashed: Event = {
-          v: 1, id: "c1", ts: baseTs, kind: "worker.crashed",
-          project: "T", runId: "a", error: "inject failed: tab not found",
+          v: 1,
+          id: "c1",
+          ts: baseTs,
+          kind: "worker.crashed",
+          project: "T",
+          runId: "a",
+          error: "inject failed: tab not found",
         };
         const s = applyAll([dispatch("a"), crashed]);
         const ps = s.get("T")!;
-        return ps.lastError?.message === "inject failed: tab not found" && ps.lastOutcome === "error";
+        return (
+          ps.lastError?.message === "inject failed: tab not found" && ps.lastOutcome === "error"
+        );
       },
     },
     {
       name: "successful worker.finished clears lastError (project moved past failure)",
       check: () => {
         const crashed: Event = {
-          v: 1, id: "c1", ts: baseTs, kind: "worker.crashed",
-          project: "T", runId: "a", error: "first run died",
+          v: 1,
+          id: "c1",
+          ts: baseTs,
+          kind: "worker.crashed",
+          project: "T",
+          runId: "a",
+          error: "first run died",
         };
-        const s = applyAll([dispatch("a"), crashed, dispatch("b"), started("b"), finished("b", "success")]);
+        const s = applyAll([
+          dispatch("a"),
+          crashed,
+          dispatch("b"),
+          started("b"),
+          finished("b", "success"),
+        ]);
         return s.get("T")?.lastError === undefined;
       },
     },
@@ -381,10 +464,21 @@ function selfTest() {
       name: "worker.finished with outcome=error PRESERVES lastError from prior crash",
       check: () => {
         const crashed: Event = {
-          v: 1, id: "c1", ts: baseTs, kind: "worker.crashed",
-          project: "T", runId: "a", error: "first crash",
+          v: 1,
+          id: "c1",
+          ts: baseTs,
+          kind: "worker.crashed",
+          project: "T",
+          runId: "a",
+          error: "first crash",
         };
-        const s = applyAll([dispatch("a"), crashed, dispatch("b"), started("b"), finished("b", "error")]);
+        const s = applyAll([
+          dispatch("a"),
+          crashed,
+          dispatch("b"),
+          started("b"),
+          finished("b", "error"),
+        ]);
         return s.get("T")?.lastError?.message === "first crash";
       },
     },
@@ -392,18 +486,31 @@ function selfTest() {
       name: "default adapter is 'claude' when bridge.dispatch omits it",
       check: () => {
         const d: Event = {
-          v: 1, id: "x", ts: baseTs, kind: "bridge.dispatch",
-          project: "T", intent: "next_best", prompt: "go", runId: "z", autonomy: "confirm",
+          v: 1,
+          id: "x",
+          ts: baseTs,
+          kind: "bridge.dispatch",
+          project: "T",
+          intent: "next_best",
+          prompt: "go",
+          runId: "z",
+          autonomy: "confirm",
         };
         return applyAll([d]).get("T")?.currentRun?.adapter === "claude";
       },
     },
   ];
 
-  let pass = 0, fail = 0;
+  let pass = 0,
+    fail = 0;
   for (const c of cases) {
-    if (c.check()) { console.log(`  ✓ ${c.name}`); pass++; }
-    else           { console.log(`  ✗ ${c.name}`); fail++; }
+    if (c.check()) {
+      console.log(`  ✓ ${c.name}`);
+      pass++;
+    } else {
+      console.log(`  ✗ ${c.name}`);
+      fail++;
+    }
   }
   console.log(`\n${pass}/${pass + fail} passed`);
   if (fail > 0) process.exit(1);

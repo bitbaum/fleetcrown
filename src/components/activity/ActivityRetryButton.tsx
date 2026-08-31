@@ -102,10 +102,13 @@ export function ActivityRetryButton({ event }: { event: ActivityEvent }) {
   // shipped) meant a settled run left no way back — and, worse, no colour: a
   // failed retry read exactly like a working one.
   const label =
-    state === "sending" ? "Sending…"
-    : state === "error" ? "Try again"
-    : state === "sent" && live && !live.terminal ? "Sent"
-    : "Run it again";
+    state === "sending"
+      ? "Sending…"
+      : state === "error"
+        ? "Try again"
+        : state === "sent" && live && !live.terminal
+          ? "Sent"
+          : "Run it again";
 
   // Errors and refusals come from the POST itself. Once a dispatch is
   // accepted the polled lifecycle is more current than the message stamped at

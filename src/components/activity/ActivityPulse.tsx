@@ -37,11 +37,16 @@ export function ActivityPulse({
 
   const total = pulse.buckets.reduce((n, b) => n + b.total, 0);
   const attentionBuckets = pulse.buckets.filter((b) => b.attention > 0);
-  const busiest = pulse.buckets.reduce((best, b) => (b.total > best.total ? b : best), pulse.buckets[0]);
+  const busiest = pulse.buckets.reduce(
+    (best, b) => (b.total > best.total ? b : best),
+    pulse.buckets[0],
+  );
 
   return (
     <figure className="ui-pulse">
-      <div className="ui-pulse-plot" role="img"
+      <div
+        className="ui-pulse-plot"
+        role="img"
         aria-label={`Activity over ${pulse.buckets.length} time slices. ${total} actions, busiest slice ${busiest.total}. ${attentionBuckets.length} slices contain something needing attention.`}
       >
         {pulse.buckets.map((bucket) => {

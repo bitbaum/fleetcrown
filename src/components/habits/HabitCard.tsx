@@ -35,7 +35,9 @@ export function HabitCard({
   const [displayTitle, setDisplayTitle] = useState(habit.title);
 
   const completedDatesArr = [...habit.completedDates];
-  const [doneToday, setDoneToday] = useState(() => completedDatesArr.includes(toLocalDateStr(new Date())));
+  const [doneToday, setDoneToday] = useState(() =>
+    completedDatesArr.includes(toLocalDateStr(new Date())),
+  );
   const [togglingDone, setTogglingDone] = useState(false);
   const [toggleError, setToggleError] = useState("");
   const scheduled = scheduledDays(frequency, HABIT_HISTORY_DAYS);
@@ -50,11 +52,16 @@ export function HabitCard({
     linkedGoals.length > 0 && `Linked goals: ${linkedGoals.map((g) => g.title).join(", ")}`,
     "",
     "How can I improve consistency with this habit? What strategies or context would help me stick to it?",
-  ].filter(Boolean).join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   const commitTitle = () => {
     const trimmed = titleEdit.draft.trim();
-    if (!trimmed || trimmed === displayTitle) { titleEdit.cancel(); return; }
+    if (!trimmed || trimmed === displayTitle) {
+      titleEdit.cancel();
+      return;
+    }
     titleEdit.commit(async () => {
       const res = await patchJson(`/api/habits/${habit.id}`, { title: trimmed });
       if (!res.ok) throw new Error("Failed to save");
@@ -146,7 +153,10 @@ export function HabitCard({
                   <button onClick={commitTitle} className="ui-btn-confirm-icon shrink-0">
                     <Check className="h-2.5 w-2.5" />
                   </button>
-                  <button onClick={titleEdit.cancel} className="p-1.5 text-text-muted hover:text-text-secondary shrink-0">
+                  <button
+                    onClick={titleEdit.cancel}
+                    className="p-1.5 text-text-muted hover:text-text-secondary shrink-0"
+                  >
                     <X className="h-2.5 w-2.5" />
                   </button>
                 </div>
@@ -161,9 +171,7 @@ export function HabitCard({
               </button>
             )}
 
-            {!active && (
-              <span className="ui-tag ui-tag-neutral shrink-0">inactive</span>
-            )}
+            {!active && <span className="ui-tag ui-tag-neutral shrink-0">inactive</span>}
 
             {habit.streak >= 2 && (
               <span className="flex items-center gap-1 text-sm text-status-warning shrink-0">
@@ -194,7 +202,7 @@ export function HabitCard({
           <HabitGoalLinks habitId={habit.id} linked={linkedGoals} allGoals={activeGoals} />
         </div>
 
-      <div className="flex flex-wrap items-start justify-end gap-2 shrink-0 max-sm:w-full max-sm:justify-between">
+        <div className="flex flex-wrap items-start justify-end gap-2 shrink-0 max-sm:w-full max-sm:justify-between">
           <button
             onClick={handleToggleDone}
             disabled={togglingDone || !active}
@@ -214,7 +222,9 @@ export function HabitCard({
 
           <div className="text-right">
             <div className="text-base font-medium text-text-primary">{pct}%</div>
-            <div className="text-xs text-text-tertiary">{habit.completionsInWindow}/{scheduled}d</div>
+            <div className="text-xs text-text-tertiary">
+              {habit.completionsInWindow}/{scheduled}d
+            </div>
           </div>
 
           <button
@@ -223,12 +233,15 @@ export function HabitCard({
             title={active ? "Deactivate habit" : "Activate habit"}
             className="mt-0.5 p-1.5 rounded transition-colors hover:bg-surface-raised text-text-muted hover:text-text-secondary disabled:opacity-50"
           >
-            {togglingActive
-              ? <Loader2 className="h-4 w-4 animate-spin" />
-              : <span className={`text-xs font-mono ${active ? "text-status-positive" : "text-text-muted"}`}>
-                  {active ? "on" : "off"}
-                </span>
-            }
+            {togglingActive ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <span
+                className={`text-xs font-mono ${active ? "text-status-positive" : "text-text-muted"}`}
+              >
+                {active ? "on" : "off"}
+              </span>
+            )}
           </button>
 
           <LokiDispatchButton
@@ -248,9 +261,7 @@ export function HabitCard({
         </div>
       </div>
 
-      {toggleError && (
-        <p className="mt-2 text-xs text-status-negative">{toggleError}</p>
-      )}
+      {toggleError && <p className="mt-2 text-xs text-status-negative">{toggleError}</p>}
 
       <HabitHeatmap completedDates={completedDatesArr} frequency={frequency} />
     </Card>

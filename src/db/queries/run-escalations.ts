@@ -187,10 +187,7 @@ export async function resolveEscalation(
  * The prompt block for the project's open escalation, or "" — the shape the
  * dispatch assembly paths consume (best-effort, like every context block).
  */
-export async function getOpenEscalationBlock(
-  userId: string,
-  projectKey: string,
-): Promise<string> {
+export async function getOpenEscalationBlock(userId: string, projectKey: string): Promise<string> {
   const open = await getOpenEscalation(userId, projectKey);
   if (!open) return "";
   return (

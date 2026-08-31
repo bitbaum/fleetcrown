@@ -2,7 +2,12 @@ import Link from "next/link";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { getUserCount, getDefaultUser } from "@/db/queries/users";
-import { getHeroFleetSnapshot, getShippedFromFeedbackSnapshot, type HeroFleetSnapshot, type ShippedFeedbackSnapshot } from "@/db/queries/public-fleet";
+import {
+  getHeroFleetSnapshot,
+  getShippedFromFeedbackSnapshot,
+  type HeroFleetSnapshot,
+  type ShippedFeedbackSnapshot,
+} from "@/db/queries/public-fleet";
 import { PublicSurface } from "@/components/public/PublicSurface";
 import { PublicHeaderActions } from "@/components/public/PublicHeaderActions";
 import { HOME_PRODUCT_SURFACES, START_PATHS, HOME_HERO_CONSOLE } from "@/config/marketing-content";
@@ -57,12 +62,20 @@ export default async function LandingPage({
   // gracefully rather than showing invented numbers.
   const owner = await getDefaultUser().catch(() => null);
   const fleet: HeroFleetSnapshot = owner
-    ? await getHeroFleetSnapshot(owner.id).catch(() => ({ isLive: false, projects: [], metrics: [] }))
+    ? await getHeroFleetSnapshot(owner.id).catch(() => ({
+        isLive: false,
+        projects: [],
+        metrics: [],
+      }))
     : { isLive: false, projects: [], metrics: [] };
   // "Shipped thanks to feedback" — operator-featured resolved reports only
   // (raw visitor text never auto-publishes). Renders nothing until real
   // entries exist, per the same never-fabricate doctrine as the hero.
-  const emptyShipped: ShippedFeedbackSnapshot = { resolvedCount: 0, medianResolutionHours: null, entries: [] };
+  const emptyShipped: ShippedFeedbackSnapshot = {
+    resolvedCount: 0,
+    medianResolutionHours: null,
+    entries: [],
+  };
   const shipped: ShippedFeedbackSnapshot = owner
     ? await getShippedFromFeedbackSnapshot(owner.id).catch(() => emptyShipped)
     : emptyShipped;
@@ -77,13 +90,12 @@ export default async function LandingPage({
           </div>
 
           <h1 className="ui-public-hero-title">
-            {MARKETING_HERO_PRIMARY}<br />
+            {MARKETING_HERO_PRIMARY}
+            <br />
             <span className="ui-public-hero-title-dim">{MARKETING_HERO_SECONDARY}</span>
           </h1>
 
-          <p className="ui-public-hero-lede">
-            {MARKETING_TAGLINE}
-          </p>
+          <p className="ui-public-hero-lede">{MARKETING_TAGLINE}</p>
 
           <div className="ui-public-hero-actions mx-auto">
             <Link href={signedIn ? ROUTES.APP_HOME : ROUTES.SIGN_UP} className="ui-public-cta">
@@ -113,7 +125,9 @@ export default async function LandingPage({
             <div className="ui-public-hero-console">
               <div className="ui-public-hero-console-bar">
                 <span className="ui-public-hero-console-label">{HOME_HERO_CONSOLE.label}</span>
-                <span className={`ui-public-hero-console-live${fleet.isLive ? "" : " ui-public-hero-console-live-idle"}`}>
+                <span
+                  className={`ui-public-hero-console-live${fleet.isLive ? "" : " ui-public-hero-console-live-idle"}`}
+                >
                   {fleet.isLive ? "Live" : "Fleet"}
                 </span>
               </div>
@@ -122,10 +136,14 @@ export default async function LandingPage({
                   {fleet.projects.map((project) => (
                     <div key={project.name} className="ui-public-hero-console-row">
                       <span className="ui-public-hero-console-row-head">
-                        <span className={`ui-public-hero-console-dot ui-public-hero-console-dot-${project.state}`} />
+                        <span
+                          className={`ui-public-hero-console-dot ui-public-hero-console-dot-${project.state}`}
+                        />
                         <span className="ui-public-hero-console-name">{project.name}</span>
                       </span>
-                      {project.note && <span className="ui-public-hero-console-note">{project.note}</span>}
+                      {project.note && (
+                        <span className="ui-public-hero-console-note">{project.note}</span>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -148,10 +166,13 @@ export default async function LandingPage({
           <div className="grid gap-4 md:grid-cols-[0.9fr_1.1fr] md:items-end md:gap-10">
             <div>
               <div className="ui-public-eyebrow">PRODUCT</div>
-              <h2 className="ui-public-display-lg mt-3 sm:mt-4">One control plane. Local execution.</h2>
+              <h2 className="ui-public-display-lg mt-3 sm:mt-4">
+                One control plane. Local execution.
+              </h2>
             </div>
             <p className="ui-public-section-lede md:justify-self-end">
-              {APP_NAME} is built for operators already running multiple AI agents across multiple projects. It makes the work visible, steerable, and recoverable.
+              {APP_NAME} is built for operators already running multiple AI agents across multiple
+              projects. It makes the work visible, steerable, and recoverable.
             </p>
           </div>
 
@@ -163,7 +184,9 @@ export default async function LandingPage({
                 <p className="ui-public-surface-card-body">{surface.body}</p>
                 <div className="ui-public-surface-card-meta">
                   {surface.meta.split(" · ").map((term) => (
-                    <span key={term} className="ui-public-surface-card-meta-chip">{term}</span>
+                    <span key={term} className="ui-public-surface-card-meta-chip">
+                      {term}
+                    </span>
                   ))}
                 </div>
               </section>
@@ -178,7 +201,9 @@ export default async function LandingPage({
             <div className="grid gap-4 md:grid-cols-[0.9fr_1.1fr] md:items-end md:gap-10">
               <div>
                 <div className="ui-public-eyebrow">SHIPPED BECAUSE A VISITOR ASKED</div>
-                <h2 className="ui-public-display-md mt-3 sm:mt-4">The feedback loop, in production.</h2>
+                <h2 className="ui-public-display-md mt-3 sm:mt-4">
+                  The feedback loop, in production.
+                </h2>
               </div>
               <p className="ui-public-section-lede md:justify-self-end">
                 Real reports from the feedback widget, fixed by the fleet and deployed
@@ -187,12 +212,19 @@ export default async function LandingPage({
             </div>
             <div className="ui-public-section-gap grid gap-3 sm:grid-cols-3 sm:gap-4">
               {shipped.entries.map((entry) => (
-                <section key={`${entry.project}-${entry.resolvedAt}`} className="ui-public-surface-card !min-h-0">
+                <section
+                  key={`${entry.project}-${entry.resolvedAt}`}
+                  className="ui-public-surface-card !min-h-0"
+                >
                   <div className="ui-public-surface-card-label">{entry.project}</div>
                   <p className="ui-public-surface-card-body">“{entry.excerpt}”</p>
                   <div className="ui-public-surface-card-meta">
                     <span className="ui-public-surface-card-meta-chip">
-                      {entry.page ? `${entry.page} · ` : ""}shipped {new Date(entry.resolvedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      {entry.page ? `${entry.page} · ` : ""}shipped{" "}
+                      {new Date(entry.resolvedAt).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                      })}
                     </span>
                   </div>
                 </section>
@@ -214,10 +246,9 @@ export default async function LandingPage({
           </div>
 
           <div className="ui-public-section-gap grid gap-3 sm:gap-4 md:grid-cols-3">
-            {START_PATHS
-              .filter((path) => !(insideRunner && path.href === "/download"))
-              .map((path) => (
-              /* The card itself is the link. A 44px text link inside a 260px
+            {START_PATHS.filter((path) => !(insideRunner && path.href === "/download")).map(
+              (path) => (
+                /* The card itself is the link. A 44px text link inside a 260px
                  card is a needle to hit with a thumb; the whole surface is the
                  target now, and the arrow row is just its label.
 
@@ -227,24 +258,26 @@ export default async function LandingPage({
                  take, and leading three choices with it makes the list open on
                  a dead end. The hosted control plane goes first there; the
                  grid restores config order at `md`. */
-              <Link
-                key={path.title}
-                href={path.href}
-                className={`ui-public-start-card${path.href === "/download" ? " order-last md:order-none" : ""}`}
-              >
-                <h3 className="ui-public-start-card-title">{path.title}</h3>
-                <p className="ui-public-start-card-body">{path.body}</p>
-                <span className="ui-public-start-card-link">
-                  {path.cta} →
-                </span>
-              </Link>
-            ))}
+                <Link
+                  key={path.title}
+                  href={path.href}
+                  className={`ui-public-start-card${path.href === "/download" ? " order-last md:order-none" : ""}`}
+                >
+                  <h3 className="ui-public-start-card-title">{path.title}</h3>
+                  <p className="ui-public-start-card-body">{path.body}</p>
+                  <span className="ui-public-start-card-link">{path.cta} →</span>
+                </Link>
+              ),
+            )}
           </div>
         </div>
       </div>
 
       <div className="ui-public-container border-t border-border-subtle py-14 text-center sm:py-20">
-        <Link href={signedIn ? ROUTES.APP_HOME : ROUTES.SIGN_UP} className="ui-public-cta-lg w-full sm:w-auto">
+        <Link
+          href={signedIn ? ROUTES.APP_HOME : ROUTES.SIGN_UP}
+          className="ui-public-cta-lg w-full sm:w-auto"
+        >
           {signedIn ? `Open ${APP_NAME}` : "Begin"}
         </Link>
         <p className="ui-public-meta mt-4">For builders running real agent operations.</p>

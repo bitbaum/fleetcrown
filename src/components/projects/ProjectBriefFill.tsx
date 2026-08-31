@@ -47,7 +47,12 @@ export function ProjectBriefFill({
         `/api/projects/${projectId}/${kind}`,
         kind === "enrich" ? {} : { text },
       );
-      const json = await res.json() as { ok?: boolean; applied?: AppliedFields; created?: string[]; error?: string };
+      const json = (await res.json()) as {
+        ok?: boolean;
+        applied?: AppliedFields;
+        created?: string[];
+        error?: string;
+      };
       if (!res.ok || !json.ok) {
         setError(json.error ?? `HTTP ${res.status}`);
         return;
@@ -69,7 +74,10 @@ export function ProjectBriefFill({
       <div className="flex flex-wrap items-center gap-2">
         {!open && (
           <button
-            onClick={() => { setOpen(true); setAppliedKeys(null); }}
+            onClick={() => {
+              setOpen(true);
+              setAppliedKeys(null);
+            }}
             className="ui-btn-chip ui-tap gap-1.5 px-3 text-xs"
             title="Write what this project is and should become, in your own words — AI fills mission, vision, customers, stack and next step for you."
           >
@@ -84,7 +92,11 @@ export function ProjectBriefFill({
             className="ui-btn-chip ui-tap gap-1.5 px-3 text-xs"
             title="Read the repo's README (and CLAUDE.md) and fill the profile from it."
           >
-            {busy === "enrich" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <GitBranch className="h-3.5 w-3.5 text-accent-text" />}
+            {busy === "enrich" ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <GitBranch className="h-3.5 w-3.5 text-accent-text" />
+            )}
             Fill from repo
           </button>
         )}
@@ -100,7 +112,9 @@ export function ProjectBriefFill({
             maxLength={LONG_TEXT_MAX}
             placeholder="Free form — what is this project, who is it for, what should it become, what's next? Paste notes, dictate, anything. AI sorts it into the profile."
             className="ui-input w-full text-base leading-relaxed sm:text-xs"
-            onKeyDown={(e) => { if (e.key === "Escape") setOpen(false); }}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") setOpen(false);
+            }}
           />
           <div className="flex flex-wrap items-center gap-2">
             <button
@@ -108,7 +122,11 @@ export function ProjectBriefFill({
               disabled={busy !== null || text.trim().length < 10}
               className="ui-btn-save ui-tap gap-1.5"
             >
-              {busy === "brief" ? <Loader2 className="ui-spinner-xs" /> : <Sparkles className="h-3.5 w-3.5" />}
+              {busy === "brief" ? (
+                <Loader2 className="ui-spinner-xs" />
+              ) : (
+                <Sparkles className="h-3.5 w-3.5" />
+              )}
               Fill profile
             </button>
             <button
@@ -117,7 +135,11 @@ export function ProjectBriefFill({
               className="ui-btn-chip ui-tap gap-1.5 px-3 text-xs"
               title="Decompose the pasted spec into an ordered set of milestones, created as project goals."
             >
-              {busy === "roadmap" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ListChecks className="h-3.5 w-3.5 text-accent-text" />}
+              {busy === "roadmap" ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <ListChecks className="h-3.5 w-3.5 text-accent-text" />
+              )}
               Generate milestones
             </button>
             {voice.isSupported && (
@@ -125,7 +147,11 @@ export function ProjectBriefFill({
                 onClick={() => (voice.status === "recording" ? voice.stop() : voice.start())}
                 disabled={busy !== null || voice.status === "transcribing"}
                 className="ui-btn-chip ui-tap gap-1.5 px-3 text-xs"
-                title={voice.status === "recording" ? "Stop recording" : "Dictate — speak what this project should be"}
+                title={
+                  voice.status === "recording"
+                    ? "Stop recording"
+                    : "Dictate — speak what this project should be"
+                }
               >
                 {voice.status === "transcribing" ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -134,10 +160,21 @@ export function ProjectBriefFill({
                 ) : (
                   <Mic className="h-3.5 w-3.5 text-accent-text" />
                 )}
-                {voice.status === "recording" ? "Stop" : voice.status === "transcribing" ? "Transcribing…" : "Speak"}
+                {voice.status === "recording"
+                  ? "Stop"
+                  : voice.status === "transcribing"
+                    ? "Transcribing…"
+                    : "Speak"}
               </button>
             )}
-            <button onClick={() => { setOpen(false); setError(null); voice.cancel(); }} className="ui-btn-text-cancel ui-tap">
+            <button
+              onClick={() => {
+                setOpen(false);
+                setError(null);
+                voice.cancel();
+              }}
+              className="ui-btn-text-cancel ui-tap"
+            >
               Cancel
             </button>
           </div>
@@ -147,12 +184,14 @@ export function ProjectBriefFill({
 
       {appliedKeys && appliedKeys.length > 0 && (
         <p className="text-xs text-status-positive">
-          Filled: {appliedKeys.map((k) => k.replace(/_/g, " ")).join(", ")}. Click any field to adjust.
+          Filled: {appliedKeys.map((k) => k.replace(/_/g, " ")).join(", ")}. Click any field to
+          adjust.
         </p>
       )}
       {createdGoals && createdGoals.length > 0 && (
         <p className="text-xs text-status-positive">
-          Created {createdGoals.length} milestone{createdGoals.length === 1 ? "" : "s"} as goals — see the Goals tab.
+          Created {createdGoals.length} milestone{createdGoals.length === 1 ? "" : "s"} as goals —
+          see the Goals tab.
         </p>
       )}
       {error && <p className="ui-error-xs">{error}</p>}

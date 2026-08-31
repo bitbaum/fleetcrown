@@ -31,7 +31,7 @@ export async function prefetchLokiWorkspace(userId: string): Promise<LokiWorkspa
         id: p.id,
         name: p.name,
         entityProjectId: p.entityProjectId ?? null,
-        topGoal: p.entityProjectId ? goalByEntity.get(p.entityProjectId) ?? null : null,
+        topGoal: p.entityProjectId ? (goalByEntity.get(p.entityProjectId) ?? null) : null,
       }));
     })(),
     listConversations(userId).then(serializeConversations),
@@ -40,8 +40,7 @@ export async function prefetchLokiWorkspace(userId: string): Promise<LokiWorkspa
   return {
     projects: projectsResult.status === "fulfilled" ? projectsResult.value : [],
     conversations: conversationsResult.status === "fulfilled" ? conversationsResult.value : [],
-    projectsError:
-      projectsResult.status === "rejected" ? "Could not load projects." : null,
+    projectsError: projectsResult.status === "rejected" ? "Could not load projects." : null,
     conversationsError:
       conversationsResult.status === "rejected" ? "Could not load conversations." : null,
   };

@@ -11,23 +11,38 @@
  * So: got-it / absent / could-not-look must stay three distinct outcomes.
  */
 import assert from "node:assert/strict";
-import { checkRegisteredModels, describeRot, type CatalogReader, type CallProbe } from "../../src/lib/model-check";
+import {
+  checkRegisteredModels,
+  describeRot,
+  type CatalogReader,
+  type CallProbe,
+} from "../../src/lib/model-check";
 import { supportsReasoningEffort } from "../../src/lib/groq";
 import { REGISTERED_MODELS, registeredIdsFor } from "../../src/config/model-registry";
 
 const ALL_PROVIDERS = [...new Set(REGISTERED_MODELS.map((m) => m.provider))];
 
 async function main() {
-
   // ── Everything present → clean bill of health ────────────────────────────────
   {
     const everythingLives: CatalogReader = async (p) => new Set(registeredIdsFor(p));
     const report = await checkRegisteredModels(everythingLives);
 
-    assert.equal(report.missing.length, 0, "no pin should be missing when the catalogue holds them all");
-    assert.equal(report.uncheckedIds.length, 0, "nothing is unchecked when every catalogue was read");
+    assert.equal(
+      report.missing.length,
+      0,
+      "no pin should be missing when the catalogue holds them all",
+    );
+    assert.equal(
+      report.uncheckedIds.length,
+      0,
+      "nothing is unchecked when every catalogue was read",
+    );
     assert.ok(report.presentCount > 0, "should have confirmed at least one id present");
-    assert.ok(report.providers.every((r) => r.reachable), "every provider was reachable in this scenario");
+    assert.ok(
+      report.providers.every((r) => r.reachable),
+      "every provider was reachable in this scenario",
+    );
   }
 
   // ── A catalogue we CANNOT READ is not a catalogue full of dead models ────────
@@ -40,9 +55,15 @@ async function main() {
       0,
       "UNREADABLE CATALOGUE MUST NOT REPORT ROT — this is the check inventing an outage from its own failure",
     );
-    assert.ok(report.uncheckedIds.length > 0, "unreadable catalogues must surface as UNCHECKED ids");
+    assert.ok(
+      report.uncheckedIds.length > 0,
+      "unreadable catalogues must surface as UNCHECKED ids",
+    );
     assert.equal(report.presentCount, 0, "nothing can be confirmed present when nothing was read");
-    assert.ok(report.providers.every((r) => !r.reachable), "providers should be marked unreachable");
+    assert.ok(
+      report.providers.every((r) => !r.reachable),
+      "providers should be marked unreachable",
+    );
   }
 
   // ── An EMPTY catalogue is treated as unreadable, not as total annihilation ───
@@ -64,7 +85,10 @@ async function main() {
     };
     const report = await checkRegisteredModels(oneIsDead);
 
-    assert.ok(report.missing.length > 0, "a pin absent from a READ catalogue must be reported as rot");
+    assert.ok(
+      report.missing.length > 0,
+      "a pin absent from a READ catalogue must be reported as rot",
+    );
     assert.ok(
       report.missing.every((m) => m.id === victim.id),
       "only the removed id should be reported missing",
@@ -85,7 +109,11 @@ async function main() {
     const mixed: CatalogReader = async (p) => (p === first ? new Set(registeredIdsFor(p)) : null);
     const report = await checkRegisteredModels(mixed);
 
-    assert.equal(report.missing.length, 0, "the unreadable provider must not contribute phantom rot");
+    assert.equal(
+      report.missing.length,
+      0,
+      "the unreadable provider must not contribute phantom rot",
+    );
     assert.ok(report.presentCount > 0, "the readable provider still yields confirmations");
     assert.ok(
       report.uncheckedIds.length > 0,
@@ -137,13 +165,22 @@ async function main() {
   {
     const readable: CatalogReader = async (p) => new Set(registeredIdsFor(p));
     const probed: string[] = [];
-    const recorder: CallProbe = async (m) => { probed.push(m.id); return { verdict: "accepted" }; };
+    const recorder: CallProbe = async (m) => {
+      probed.push(m.id);
+      return { verdict: "accepted" };
+    };
     await checkRegisteredModels(readable, recorder);
 
     const transcribe = REGISTERED_MODELS.filter((m) => m.kind === "transcribe").map((m) => m.id);
-    assert.ok(transcribe.length > 0, "expected at least one transcription pin — has the registry changed?");
+    assert.ok(
+      transcribe.length > 0,
+      "expected at least one transcription pin — has the registry changed?",
+    );
     for (const id of transcribe) {
-      assert.ok(!probed.includes(id), `${id} is a transcription model and must not be probed as chat`);
+      assert.ok(
+        !probed.includes(id),
+        `${id} is a transcription model and must not be probed as chat`,
+      );
     }
     assert.ok(probed.length > 0, "the probe must actually run on the chat pins");
   }
@@ -161,8 +198,9 @@ async function main() {
     "gpt-oss still accepts reasoning_effort; dropping it would silently change every call",
   );
 
-  console.log(`✓ model-check: existence AND callability across ${ALL_PROVIDERS.length} provider(s), ${REGISTERED_MODELS.length} pin(s)`);
-
+  console.log(
+    `✓ model-check: existence AND callability across ${ALL_PROVIDERS.length} provider(s), ${REGISTERED_MODELS.length} pin(s)`,
+  );
 }
 
 void main();

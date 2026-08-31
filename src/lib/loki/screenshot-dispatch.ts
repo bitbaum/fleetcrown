@@ -3,8 +3,7 @@
  * vision.ts; this module decides when the turn should dispatch (not chat).
  */
 
-export const DEFAULT_VISION_QUESTION =
-  "What's wrong here and what should we change?";
+export const DEFAULT_VISION_QUESTION = "What's wrong here and what should we change?";
 
 const IMPLEMENT_SCREENSHOT_RE =
   /\b(implement|build|fix|match|recreate|code|ship|make it look|update the ui|change the ui|apply|adjust)\b/i;
@@ -37,7 +36,10 @@ export function screenshotDispatchPrompt(userText: string): string {
 
 /** Intent for screenshot dispatches — UX review when the user sent image-only/default ask. */
 export function screenshotDispatchIntentId(userText: string): "ux_review" | null {
-  if (isDefaultVisionQuestion(userText) || /\b(ui|ux|layout|screen|mockup|design)\b/i.test(userText)) {
+  if (
+    isDefaultVisionQuestion(userText) ||
+    /\b(ui|ux|layout|screen|mockup|design)\b/i.test(userText)
+  ) {
     return "ux_review";
   }
   return null;

@@ -27,7 +27,10 @@ export function PublicSurface({
       <div aria-hidden className="ui-public-backdrop" />
       <nav className="ui-public-nav">
         <div className="ui-public-nav-brand-row">
-          <Link href={homeHref} className="min-w-0 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-border-interactive">
+          <Link
+            href={homeHref}
+            className="min-w-0 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-border-interactive"
+          >
             <BrandMark responsive />
           </Link>
           {/* Desktop mega-menu only. Below `md` the same PUBLIC_NAV renders in
@@ -36,9 +39,7 @@ export function PublicSurface({
               by AuthShell so it cannot read one itself. */}
           {showNav && <PublicNav />}
         </div>
-        <div className="flex min-w-0 items-center gap-2">
-          {right}
-        </div>
+        <div className="flex min-w-0 items-center gap-2">{right}</div>
       </nav>
 
       {children}

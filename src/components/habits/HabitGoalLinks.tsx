@@ -84,10 +84,11 @@ export function HabitGoalLinks({
             className="ui-hover-reveal transition-opacity ml-0.5"
             title="Unlink"
           >
-            {saving === goal.id
-              ? <Loader2 className="h-2.5 w-2.5 animate-spin" />
-              : <XCircle className="h-2.5 w-2.5" />
-            }
+            {saving === goal.id ? (
+              <Loader2 className="h-2.5 w-2.5 animate-spin" />
+            ) : (
+              <XCircle className="h-2.5 w-2.5" />
+            )}
           </button>
         </span>
       ))}

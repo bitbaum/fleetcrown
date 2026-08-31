@@ -21,7 +21,13 @@ export function useLaunchModal({
   launchableAgents: AgentEntry[];
   selectedAgent: string;
   setError: (e: string) => void;
-  launchProject: (tab: string, dir: string, agent?: string, model?: string, initialPrompt?: string) => Promise<void>;
+  launchProject: (
+    tab: string,
+    dir: string,
+    agent?: string,
+    model?: string,
+    initialPrompt?: string,
+  ) => Promise<void>;
 }) {
   const [launchTarget, setLaunchTarget] = useState<LaunchTarget | null>(null);
   const [launchAgentId, setLaunchAgentId] = useState("");
@@ -54,7 +60,9 @@ export function useLaunchModal({
     setLaunchError("");
     try {
       await launchProject(
-        launchTarget.tab, launchTarget.dir, launchAgentId,
+        launchTarget.tab,
+        launchTarget.dir,
+        launchAgentId,
         launchModel.trim() || undefined,
         launchInitialPrompt.trim() || undefined,
       );

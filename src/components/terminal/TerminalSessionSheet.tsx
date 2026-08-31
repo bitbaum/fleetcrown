@@ -48,11 +48,11 @@ function OptionRow({
         <span className="ui-sheet-option-title">{title}</span>
         {detail && <span className="ui-sheet-option-detail">{detail}</span>}
       </span>
-      {busy
-        ? <Loader2 className="ui-spinner-sm shrink-0" />
-        : active
-          ? <Check className="h-4 w-4 shrink-0 text-accent-text" aria-hidden="true" />
-          : null}
+      {busy ? (
+        <Loader2 className="ui-spinner-sm shrink-0" />
+      ) : active ? (
+        <Check className="h-4 w-4 shrink-0 text-accent-text" aria-hidden="true" />
+      ) : null}
     </button>
   );
 }
@@ -133,7 +133,10 @@ export function TerminalSessionSheet({
               title={option.label}
               detail={terminalSourceHint(option.id)}
               active={option.id === source}
-              onSelect={() => { onSourceChange(option.id); onClose(); }}
+              onSelect={() => {
+                onSourceChange(option.id);
+                onClose();
+              }}
             />
           ))}
           <ExecutorHonestyChip honesty={honesty} className="self-start" />
@@ -152,7 +155,10 @@ export function TerminalSessionSheet({
                 title={tab.label}
                 detail={tab.badge ? `running ${tab.badge}` : undefined}
                 active={tab.id === activeTab}
-                onSelect={() => { onSelectTab(tab.id); onClose(); }}
+                onSelect={() => {
+                  onSelectTab(tab.id);
+                  onClose();
+                }}
               />
             ))}
           </Section>
@@ -175,7 +181,9 @@ export function TerminalSessionSheet({
                 active={agent.id === activeAgentId}
                 disabled={Boolean(agentSwitchDisabledReason) || switchingAgent}
                 busy={switchingAgent && agent.id !== activeAgentId}
-                onSelect={() => { if (agent.id !== activeAgentId) onSwitchAgent(agent.id); }}
+                onSelect={() => {
+                  if (agent.id !== activeAgentId) onSwitchAgent(agent.id);
+                }}
               />
             ))}
           </Section>
@@ -189,7 +197,10 @@ export function TerminalSessionSheet({
                 title={option.label}
                 detail={terminalInputHint(option.id)}
                 active={option.id === inputMode}
-                onSelect={() => { onInputModeChange(option.id); onClose(); }}
+                onSelect={() => {
+                  onInputModeChange(option.id);
+                  onClose();
+                }}
               />
             ))}
           </Section>

@@ -23,7 +23,10 @@ function getTabsForSession(session: string): string[] {
   for (const command of commands) {
     try {
       const out = execSync(command, { encoding: "utf-8", timeout: 2000 });
-      const tabs = out.split("\n").map((s) => s.trim()).filter(Boolean);
+      const tabs = out
+        .split("\n")
+        .map((s) => s.trim())
+        .filter(Boolean);
       if (tabs.length > 0) return tabs;
     } catch {
       // Try next addressing mode.
@@ -34,10 +37,9 @@ function getTabsForSession(session: string): string[] {
 
 function switchTab(session: string, tab: string): void {
   try {
-    execSync(
-      `zellij --session ${shellEscape(session)} action go-to-tab-name ${shellEscape(tab)}`,
-      { stdio: "ignore" },
-    );
+    execSync(`zellij --session ${shellEscape(session)} action go-to-tab-name ${shellEscape(tab)}`, {
+      stdio: "ignore",
+    });
     return;
   } catch {
     execSync(
@@ -62,7 +64,13 @@ export async function POST(req: NextRequest) {
       tab: dataOrResp.tab,
       ...(execution.channel ? { channel: execution.channel } : {}),
     });
-    return NextResponse.json({ ok: true, queued: true, mode: "queued", commandId, runnerConnected: execution.runnerConnected });
+    return NextResponse.json({
+      ok: true,
+      queued: true,
+      mode: "queued",
+      commandId,
+      runnerConnected: execution.runnerConnected,
+    });
   }
 
   const dataOrResp = await readJsonBody(req, FocusTabBody);

@@ -55,9 +55,13 @@ export async function getExecutionAccess(userId: string): Promise<ExecutionAcces
       localDurability: "unknown" as const,
     })),
   ]);
-  const cloudBuilderAllowed =
-    !!user?.isDefault || cloudBuilderAllowlist().has(userId);
-  return { userId, cloudBuilderAllowed, presence: fitness.presence, localDurability: fitness.localDurability };
+  const cloudBuilderAllowed = !!user?.isDefault || cloudBuilderAllowlist().has(userId);
+  return {
+    userId,
+    cloudBuilderAllowed,
+    presence: fitness.presence,
+    localDurability: fitness.localDurability,
+  };
 }
 
 /**
@@ -94,8 +98,8 @@ export function decideQueuedExecution(
 ): QueuedExecutionDecision {
   const requested = options.requestedChannel ?? null;
   const defaultChannel =
-    options.defaultChannel
-    ?? ("project" in options
+    options.defaultChannel ??
+    ("project" in options
       ? pickDispatchChannel(options.project, access.presence, access.localDurability)
       : undefined);
 
@@ -127,9 +131,7 @@ export function decideQueuedExecution(
   }
 
   const channel = requested ?? defaultChannel;
-  const runnerConnected = channel
-    ? access.presence[channel]
-    : access.presence.any;
+  const runnerConnected = channel ? access.presence[channel] : access.presence.any;
   return {
     ok: true,
     ...(channel ? { channel } : {}),
@@ -220,7 +222,9 @@ export function pickDispatchChannel(
   return DEFAULT_BUILDER_CHANNEL;
 }
 
-export function executionAccessErrorBody(decision: Extract<QueuedExecutionDecision, { ok: false }>) {
+export function executionAccessErrorBody(
+  decision: Extract<QueuedExecutionDecision, { ok: false }>,
+) {
   return {
     ok: false,
     error: decision.message,

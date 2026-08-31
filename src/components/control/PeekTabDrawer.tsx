@@ -47,7 +47,7 @@ export function PeekTabDrawer({ tab, onClose }: { tab: string; onClose: () => vo
       const body = await enqueue.json().catch(() => ({}));
       throw new Error(body.error || `Peek request failed (${enqueue.status})`);
     }
-    const { peekId } = await enqueue.json() as { peekId?: string };
+    const { peekId } = (await enqueue.json()) as { peekId?: string };
     if (!peekId) throw new Error("Peek request did not return an id");
 
     const deadline = Date.now() + 45_000;
@@ -58,7 +58,11 @@ export function PeekTabDrawer({ tab, onClose }: { tab: string; onClose: () => vo
         const body = await poll.json().catch(() => ({}));
         throw new Error(body.error || `Peek poll failed (${poll.status})`);
       }
-      const body = await poll.json() as { status: "pending" | "done" | "error"; content?: string; error?: string };
+      const body = (await poll.json()) as {
+        status: "pending" | "done" | "error";
+        content?: string;
+        error?: string;
+      };
       if (body.status === "done") {
         applyContent(body.content ?? "");
         return;
@@ -107,7 +111,9 @@ export function PeekTabDrawer({ tab, onClose }: { tab: string; onClose: () => vo
     if (!autoRefresh || view !== "snapshot") return;
     // 3s cadence — fast enough to feel live during a working agent, slow
     // enough that the brief Zellij focus flash doesn't become annoying.
-    const id = setInterval(() => { void fetchPeek(); }, 3_000);
+    const id = setInterval(() => {
+      void fetchPeek();
+    }, 3_000);
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchPeek is recreated each render; autoRefresh/view/tab are its real inputs
   }, [autoRefresh, view, tab]);
@@ -160,7 +166,9 @@ export function PeekTabDrawer({ tab, onClose }: { tab: string; onClose: () => vo
               </button>
               <button
                 type="button"
-                onClick={() => { void fetchPeek(); }}
+                onClick={() => {
+                  void fetchPeek();
+                }}
                 disabled={loading}
                 className="ui-btn-ghost ui-btn-xs"
                 title="Re-capture"
@@ -189,8 +197,8 @@ export function PeekTabDrawer({ tab, onClose }: { tab: string; onClose: () => vo
             <p className="font-medium text-status-warning">Couldn&apos;t peek this tab</p>
             <p className="mt-2 text-text-tertiary">{error}</p>
             <p className="mt-4 text-xs text-text-muted">
-              Common reasons: the tab is no longer open in Zellij, Zellij is not running on
-              your machine, or neither Fleet Runner nor the local runner is online.
+              Common reasons: the tab is no longer open in Zellij, Zellij is not running on your
+              machine, or neither Fleet Runner nor the local runner is online.
             </p>
           </div>
         ) : content === null ? (

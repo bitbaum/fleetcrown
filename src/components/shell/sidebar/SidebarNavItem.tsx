@@ -50,12 +50,17 @@ export function SidebarNavItem({
             the nav item itself remains a static definition. */}
         {item.id === "feedback" && <FeedbackNavCount collapsed={collapsed} />}
       </Link>
-      {collapsed && tooltipPos && createPortal(
-        <span className="ui-sidebar-portal-tooltip" style={{ top: tooltipPos.top, left: tooltipPos.left }}>
-          {item.label}
-        </span>,
-        document.body,
-      )}
+      {collapsed &&
+        tooltipPos &&
+        createPortal(
+          <span
+            className="ui-sidebar-portal-tooltip"
+            style={{ top: tooltipPos.top, left: tooltipPos.left }}
+          >
+            {item.label}
+          </span>,
+          document.body,
+        )}
     </>
   );
 }

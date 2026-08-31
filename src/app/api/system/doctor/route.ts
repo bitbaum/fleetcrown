@@ -42,7 +42,9 @@ function readRunnerEnv(): Record<string, string> {
   // Fleet Runner writes runner.env; older installs wrote daemon.env. Prefer the
   // current name, fall back to the legacy file so existing machines keep working.
   const dir = `${homedir()}/.config/fleetcrown`;
-  const path = existsSync(/*turbopackIgnore: true*/ `${dir}/runner.env`) ? `${dir}/runner.env` : `${dir}/daemon.env`;
+  const path = existsSync(/*turbopackIgnore: true*/ `${dir}/runner.env`)
+    ? `${dir}/runner.env`
+    : `${dir}/daemon.env`;
   if (!existsSync(/*turbopackIgnore: true*/ path)) return {};
   const out: Record<string, string> = {};
   for (const raw of readFileSync(/*turbopackIgnore: true*/ path, "utf8").split(/\r?\n/)) {
@@ -55,22 +57,22 @@ function readRunnerEnv(): Record<string, string> {
 }
 
 async function tableExists(name: string): Promise<boolean> {
-  const rows = await db.execute(sql`
+  const rows = (await db.execute(sql`
     select 1
     from information_schema.tables
     where table_schema = 'public' and table_name = ${name}
     limit 1
-  `) as unknown as Array<Record<string, unknown>>;
+  `)) as unknown as Array<Record<string, unknown>>;
   return rows.length > 0;
 }
 
 async function columnExists(table: string, column: string): Promise<boolean> {
-  const rows = await db.execute(sql`
+  const rows = (await db.execute(sql`
     select 1
     from information_schema.columns
     where table_schema = 'public' and table_name = ${table} and column_name = ${column}
     limit 1
-  `) as unknown as Array<Record<string, unknown>>;
+  `)) as unknown as Array<Record<string, unknown>>;
   return rows.length > 0;
 }
 
@@ -83,7 +85,12 @@ export async function GET() {
       runtime: false,
       summary: { status: "warn", pass: 0, warn: 1, fail: 0 },
       checks: [
-        check("runtime", "Local runtime", "warn", "Fleet Doctor runs full checks only on the local install."),
+        check(
+          "runtime",
+          "Local runtime",
+          "warn",
+          "Fleet Doctor runs full checks only on the local install.",
+        ),
       ],
     });
   }
@@ -102,25 +109,36 @@ export async function GET() {
         shell(`systemctl --user is-active ${unit}`).catch(() => "inactive"),
         shell(`systemctl --user is-enabled ${unit}`).catch(() => "disabled"),
       ]);
-      checks.push(check(
-        `unit:${unit}`,
-        unit,
-        active === "active" && enabled === "enabled" ? "pass" : active === "active" ? "warn" : "fail",
-        `${active}, ${enabled}`,
-      ));
+      checks.push(
+        check(
+          `unit:${unit}`,
+          unit,
+          active === "active" && enabled === "enabled"
+            ? "pass"
+            : active === "active"
+              ? "warn"
+              : "fail",
+          `${active}, ${enabled}`,
+        ),
+      );
     } catch (err) {
-      checks.push(check(`unit:${unit}`, unit, "fail", err instanceof Error ? err.message : String(err)));
+      checks.push(
+        check(`unit:${unit}`, unit, "fail", err instanceof Error ? err.message : String(err)),
+      );
     }
   }
 
-  const legacyUnits = await shell("systemctl --user list-unit-files '*cockpit*' --no-legend --no-pager 2>/dev/null || true")
-    .catch(() => "");
-  checks.push(check(
-    "legacy-units",
-    "Legacy Cockpit units",
-    legacyUnits ? "warn" : "pass",
-    legacyUnits ? legacyUnits.split("\n").slice(0, 3).join("; ") : "No active unit files listed.",
-  ));
+  const legacyUnits = await shell(
+    "systemctl --user list-unit-files '*cockpit*' --no-legend --no-pager 2>/dev/null || true",
+  ).catch(() => "");
+  checks.push(
+    check(
+      "legacy-units",
+      "Legacy Cockpit units",
+      legacyUnits ? "warn" : "pass",
+      legacyUnits ? legacyUnits.split("\n").slice(0, 3).join("; ") : "No active unit files listed.",
+    ),
+  );
 
   // Session 4 of killing-the-bash-daemon retired the bash bridge that the
   // Stop hook used to exec. The hook is now expected to be a no-op (or
@@ -131,17 +149,21 @@ export async function GET() {
   const stopHook = `${homedir()}/.claude/hooks/stop.sh`;
   const deadBridgeTarget = ".local/share/fleetcrown-beacon/agent-hook-bridge.sh";
   const stopExists = existsSync(/*turbopackIgnore: true*/ stopHook);
-  const stopReferencesDeadBridge = stopExists && readFileSync(/*turbopackIgnore: true*/ stopHook, "utf8").includes(deadBridgeTarget);
-  checks.push(check(
-    "hooks",
-    "Claude Stop hook",
-    !stopReferencesDeadBridge ? "pass" : "fail",
-    !stopExists
-      ? "No stop.sh installed — Fleet Runner's filesystem watcher triggers dispatch instead."
-      : stopReferencesDeadBridge
-        ? "stop.sh still points at the retired bash bridge — rewrite to `exit 0` or remove the file entirely."
-        : "stop.sh is a no-op (correct post-migration state).",
-  ));
+  const stopReferencesDeadBridge =
+    stopExists &&
+    readFileSync(/*turbopackIgnore: true*/ stopHook, "utf8").includes(deadBridgeTarget);
+  checks.push(
+    check(
+      "hooks",
+      "Claude Stop hook",
+      !stopReferencesDeadBridge ? "pass" : "fail",
+      !stopExists
+        ? "No stop.sh installed — Fleet Runner's filesystem watcher triggers dispatch instead."
+        : stopReferencesDeadBridge
+          ? "stop.sh still points at the retired bash bridge — rewrite to `exit 0` or remove the file entirely."
+          : "stop.sh is a no-op (correct post-migration state).",
+    ),
+  );
 
   // Typed-prompt capture: without the UserPromptSubmit hook, prompts typed
   // directly into a Claude tab never reach /api/activity/capture, so Activity
@@ -153,10 +175,14 @@ export async function GET() {
   let captureRegistered = false;
   let legacyCaptureRegistered = false;
   try {
-    const settings = JSON.parse(readFileSync(/*turbopackIgnore: true*/ claudeSettingsPath, "utf8")) as {
+    const settings = JSON.parse(
+      readFileSync(/*turbopackIgnore: true*/ claudeSettingsPath, "utf8"),
+    ) as {
       hooks?: { UserPromptSubmit?: Array<{ hooks?: Array<{ command?: string }> }> };
     };
-    const submitHooks = (settings.hooks?.UserPromptSubmit ?? []).flatMap((entry) => entry.hooks ?? []);
+    const submitHooks = (settings.hooks?.UserPromptSubmit ?? []).flatMap(
+      (entry) => entry.hooks ?? [],
+    );
     captureRegistered = submitHooks.some(
       (h) => typeof h.command === "string" && h.command.includes("fleetcrown-capture.sh"),
     );
@@ -167,36 +193,48 @@ export async function GET() {
     legacyCaptureRegistered = submitHooks.some(
       (h) => typeof h.command === "string" && h.command.includes("fleet-user-prompt.sh"),
     );
-  } catch { /* missing or unparseable settings.json → not registered */ }
+  } catch {
+    /* missing or unparseable settings.json → not registered */
+  }
   const captureScriptExists = existsSync(/*turbopackIgnore: true*/ captureScript);
   const captureHealthy = captureRegistered && captureScriptExists && !legacyCaptureRegistered;
-  checks.push(check(
-    "hooks-capture",
-    "Claude prompt-capture hook",
-    captureHealthy ? "pass" : "warn",
-    captureHealthy
-      ? "UserPromptSubmit hook installed — directly-typed prompts reach Activity."
-      : legacyCaptureRegistered
-        ? "Legacy fleet-user-prompt.sh is still registered — it posts to localhost and drops prompts. Restart Fleet Runner (≥0.8.12) to migrate to fleetcrown-capture.sh."
-        : "Not installed — directly-typed Claude prompts won't appear in Activity. Start Fleet Runner (it installs the hook once a token is saved).",
-  ));
+  checks.push(
+    check(
+      "hooks-capture",
+      "Claude prompt-capture hook",
+      captureHealthy ? "pass" : "warn",
+      captureHealthy
+        ? "UserPromptSubmit hook installed — directly-typed prompts reach Activity."
+        : legacyCaptureRegistered
+          ? "Legacy fleet-user-prompt.sh is still registered — it posts to localhost and drops prompts. Restart Fleet Runner (≥0.8.12) to migrate to fleetcrown-capture.sh."
+          : "Not installed — directly-typed Claude prompts won't appear in Activity. Start Fleet Runner (it installs the hook once a token is saved).",
+    ),
+  );
 
   const token = readTokenFile();
   const env = readRunnerEnv();
   const envToken = env.FLEETCROWN_DAEMON_TOKEN ?? "";
   const localToken = token ? await validateAgentToken(token) : null;
-  checks.push(check(
-    "token-local",
-    "Local runner token",
-    token && localToken?.userId === userId ? "pass" : "fail",
-    token && localToken?.userId === userId ? `Registered locally (${token.slice(0, 8)}…).` : "Missing or not registered for this user.",
-  ));
-  checks.push(check(
-    "token-env",
-    "Runner env token",
-    token && envToken === token ? "pass" : "warn",
-    token && envToken === token ? "daemon.env matches fleet-runner-token." : "daemon.env and fleet-runner-token differ.",
-  ));
+  checks.push(
+    check(
+      "token-local",
+      "Local runner token",
+      token && localToken?.userId === userId ? "pass" : "fail",
+      token && localToken?.userId === userId
+        ? `Registered locally (${token.slice(0, 8)}…).`
+        : "Missing or not registered for this user.",
+    ),
+  );
+  checks.push(
+    check(
+      "token-env",
+      "Runner env token",
+      token && envToken === token ? "pass" : "warn",
+      token && envToken === token
+        ? "daemon.env matches fleet-runner-token."
+        : "daemon.env and fleet-runner-token differ.",
+    ),
+  );
 
   const remoteBase = (env.FLEETCROWN_BASE_URL || APP_URL).replace(/\/$/, "");
   if (token) {
@@ -205,25 +243,61 @@ export async function GET() {
         headers: { Authorization: `Bearer ${token}` },
         signal: AbortSignal.timeout(8000),
       });
-      checks.push(check(
-        "token-cloud",
-        "Cloud runner token",
-        res.ok ? "pass" : "fail",
-        `${remoteBase} returned HTTP ${res.status}.`,
-      ));
+      checks.push(
+        check(
+          "token-cloud",
+          "Cloud runner token",
+          res.ok ? "pass" : "fail",
+          `${remoteBase} returned HTTP ${res.status}.`,
+        ),
+      );
     } catch (err) {
-      checks.push(check("token-cloud", "Cloud runner token", "fail", err instanceof Error ? err.message : String(err)));
+      checks.push(
+        check(
+          "token-cloud",
+          "Cloud runner token",
+          "fail",
+          err instanceof Error ? err.message : String(err),
+        ),
+      );
     }
   } else {
-    checks.push(check("token-cloud", "Cloud runner token", "fail", "No fleet-runner-token file found."));
+    checks.push(
+      check("token-cloud", "Cloud runner token", "fail", "No fleet-runner-token file found."),
+    );
   }
 
   const auditTable = await tableExists("control_audit_events").catch(() => false);
   const beaconTable = await tableExists("beacon_sessions").catch(() => false);
-  const installedAgents = await columnExists("runtime_snapshots", "installed_agents").catch(() => false);
-  checks.push(check("migration:audit", "Audit migration", auditTable ? "pass" : "fail", auditTable ? "control_audit_events exists." : "control_audit_events is missing."));
-  checks.push(check("migration:beacon", "Beacon migration", beaconTable ? "pass" : "fail", beaconTable ? "beacon_sessions exists." : "beacon_sessions is missing."));
-  checks.push(check("migration:runtime", "Runtime snapshot migration", installedAgents ? "pass" : "fail", installedAgents ? "runtime_snapshots.installed_agents exists." : "runtime_snapshots.installed_agents is missing."));
+  const installedAgents = await columnExists("runtime_snapshots", "installed_agents").catch(
+    () => false,
+  );
+  checks.push(
+    check(
+      "migration:audit",
+      "Audit migration",
+      auditTable ? "pass" : "fail",
+      auditTable ? "control_audit_events exists." : "control_audit_events is missing.",
+    ),
+  );
+  checks.push(
+    check(
+      "migration:beacon",
+      "Beacon migration",
+      beaconTable ? "pass" : "fail",
+      beaconTable ? "beacon_sessions exists." : "beacon_sessions is missing.",
+    ),
+  );
+  checks.push(
+    check(
+      "migration:runtime",
+      "Runtime snapshot migration",
+      installedAgents ? "pass" : "fail",
+      installedAgents
+        ? "runtime_snapshots.installed_agents exists."
+        : "runtime_snapshots.installed_agents is missing.",
+    ),
+  );
 
   // Existence is not function. The three checks above prove tables EXIST — the
   // same thing every check proved for 76 days while claude_code_history quietly
@@ -231,23 +305,32 @@ export async function GET() {
   // difference: is anything still arriving?
   const freshness = await checkTelemetryFreshness().catch(() => null);
   if (freshness === null) {
-    checks.push(check("telemetry", "Telemetry freshness", "warn", "Could not query telemetry paths — not the same as healthy."));
+    checks.push(
+      check(
+        "telemetry",
+        "Telemetry freshness",
+        "warn",
+        "Could not query telemetry paths — not the same as healthy.",
+      ),
+    );
   } else {
     for (const r of freshness.results.filter((p) => p.monitored)) {
       const status: DoctorStatus =
         r.state === "flowing" ? "pass" : r.state === "unchecked" ? "warn" : "fail";
-      checks.push(check(
-        `telemetry:${r.table}`,
-        r.label,
-        status,
-        r.state === "flowing"
-          ? `Last row ${humanizeAge(r.ageHours)} ago (budget ${r.maxSilenceHours}h).`
-          : r.state === "silent"
-            ? `NEVER carried a row. Written by: ${r.writer}`
-            : r.state === "unchecked"
-              ? `Could not read this path — not a pass.`
-              : `STOPPED: last row ${humanizeAge(r.ageHours)} ago, budget ${r.maxSilenceHours}h. Written by: ${r.writer}`,
-      ));
+      checks.push(
+        check(
+          `telemetry:${r.table}`,
+          r.label,
+          status,
+          r.state === "flowing"
+            ? `Last row ${humanizeAge(r.ageHours)} ago (budget ${r.maxSilenceHours}h).`
+            : r.state === "silent"
+              ? `NEVER carried a row. Written by: ${r.writer}`
+              : r.state === "unchecked"
+                ? `Could not read this path — not a pass.`
+                : `STOPPED: last row ${humanizeAge(r.ageHours)} ago, budget ${r.maxSilenceHours}h. Written by: ${r.writer}`,
+        ),
+      );
     }
   }
 
@@ -260,30 +343,36 @@ export async function GET() {
   // shipped, and every runner reports its version on every heartbeat.
   const snapshots = await getRuntimeSnapshots(userId).catch(() => null);
   if (snapshots === null) {
-    checks.push(check(
-      "runner:version",
-      "Runner version",
-      "warn",
-      "Could not read runtime snapshots — whether machines are up to date is UNKNOWN, which is not the same as current.",
-    ));
+    checks.push(
+      check(
+        "runner:version",
+        "Runner version",
+        "warn",
+        "Could not read runtime snapshots — whether machines are up to date is UNKNOWN, which is not the same as current.",
+      ),
+    );
   } else if (snapshots.length === 0) {
-    checks.push(check(
-      "runner:version",
-      "Runner version",
-      "warn",
-      "No runner has reported in, so no machine can be confirmed up to date.",
-    ));
+    checks.push(
+      check(
+        "runner:version",
+        "Runner version",
+        "warn",
+        "No runner has reported in, so no machine can be confirmed up to date.",
+      ),
+    );
   } else {
     for (const snap of snapshots) {
       const v = runnerVersionStatus(snap.runnerVersion);
       const status: DoctorStatus =
         v.state === "behind" ? "fail" : v.state === "unknown" ? "warn" : "pass";
-      checks.push(check(
-        `runner:version:${snap.channel ?? "unknown"}`,
-        `Runner version (${snap.channel ?? "unknown"})`,
-        status,
-        v.detail,
-      ));
+      checks.push(
+        check(
+          `runner:version:${snap.channel ?? "unknown"}`,
+          `Runner version (${snap.channel ?? "unknown"})`,
+          status,
+          v.detail,
+        ),
+      );
     }
   }
 
@@ -294,12 +383,14 @@ export async function GET() {
     "/tmp/cockpit-beacon",
     "/tmp/cockpit-hook-auth",
   ].filter((path) => existsSync(/*turbopackIgnore: true*/ path));
-  checks.push(check(
-    "legacy-paths",
-    "Legacy Cockpit paths",
-    legacyPaths.length === 0 ? "pass" : "warn",
-    legacyPaths.length === 0 ? "No live legacy paths found." : legacyPaths.join(", "),
-  ));
+  checks.push(
+    check(
+      "legacy-paths",
+      "Legacy Cockpit paths",
+      legacyPaths.length === 0 ? "pass" : "warn",
+      legacyPaths.length === 0 ? "No live legacy paths found." : legacyPaths.join(", "),
+    ),
+  );
 
   const pass = checks.filter((c) => c.status === "pass").length;
   const warn = checks.filter((c) => c.status === "warn").length;

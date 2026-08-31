@@ -32,21 +32,24 @@ function runTests(): void {
   });
 
   check("AUTO_INJECT_MODE_VALUES is exactly ['off', 'on']", () => {
-    assert(AUTO_INJECT_MODE_VALUES.length === 2, `expected 2 values, got ${AUTO_INJECT_MODE_VALUES.length}`);
+    assert(
+      AUTO_INJECT_MODE_VALUES.length === 2,
+      `expected 2 values, got ${AUTO_INJECT_MODE_VALUES.length}`,
+    );
     assert(AUTO_INJECT_MODE_VALUES[0] === "off", "first value must be 'off'");
-    assert(AUTO_INJECT_MODE_VALUES[1] === "on",  "second value must be 'on'");
+    assert(AUTO_INJECT_MODE_VALUES[1] === "on", "second value must be 'on'");
   });
 
   check("normalizeAutoInjectMode collapses legacy values", () => {
-    assert(normalizeAutoInjectMode("off") === "off",         "off → off");
-    assert(normalizeAutoInjectMode("on") === "on",           "on → on");
-    assert(normalizeAutoInjectMode("queue_only") === "on",   "queue_only → on");
-    assert(normalizeAutoInjectMode("beacon") === "on",       "beacon → on");
-    assert(normalizeAutoInjectMode("next_best") === "on",    "next_best → on");
-    assert(normalizeAutoInjectMode("strategist") === "on",   "strategist → on");
-    assert(normalizeAutoInjectMode(null) === "on",           "null → on");
-    assert(normalizeAutoInjectMode(undefined) === "on",      "undefined → on");
-    assert(normalizeAutoInjectMode("garbage") === "on",      "unknown → on (safe default)");
+    assert(normalizeAutoInjectMode("off") === "off", "off → off");
+    assert(normalizeAutoInjectMode("on") === "on", "on → on");
+    assert(normalizeAutoInjectMode("queue_only") === "on", "queue_only → on");
+    assert(normalizeAutoInjectMode("beacon") === "on", "beacon → on");
+    assert(normalizeAutoInjectMode("next_best") === "on", "next_best → on");
+    assert(normalizeAutoInjectMode("strategist") === "on", "strategist → on");
+    assert(normalizeAutoInjectMode(null) === "on", "null → on");
+    assert(normalizeAutoInjectMode(undefined) === "on", "undefined → on");
+    assert(normalizeAutoInjectMode("garbage") === "on", "unknown → on (safe default)");
   });
 
   // ── SSOT chain — every layer reads the same constant ────────────────────
@@ -58,42 +61,58 @@ function runTests(): void {
 
   check("Queries DEFAULTS sources the constant (no drift)", () => {
     const queries = readFileSync("src/db/queries/beacon-settings.ts", "utf8");
-    assert(/auto_inject_mode:\s*DEFAULT_AUTO_INJECT_MODE/.test(queries),
-      "queries must use DEFAULT_AUTO_INJECT_MODE constant — no inline string defaults");
+    assert(
+      /auto_inject_mode:\s*DEFAULT_AUTO_INJECT_MODE/.test(queries),
+      "queries must use DEFAULT_AUTO_INJECT_MODE constant — no inline string defaults",
+    );
   });
 
   check("Dispatch route falls back to DEFAULT_AUTO_INJECT_MODE", () => {
     const route = readFileSync("src/app/api/control/dispatch/route.ts", "utf8");
-    assert(/DEFAULT_AUTO_INJECT_MODE/.test(route),
-      "dispatch route must use DEFAULT_AUTO_INJECT_MODE when no settings row exists");
-    assert(!/"queue_only"|"beacon"|"next_best"|"strategist"/.test(route),
-      "dispatch route must not reference any retired mode value");
+    assert(
+      /DEFAULT_AUTO_INJECT_MODE/.test(route),
+      "dispatch route must use DEFAULT_AUTO_INJECT_MODE when no settings row exists",
+    );
+    assert(
+      !/"queue_only"|"beacon"|"next_best"|"strategist"/.test(route),
+      "dispatch route must not reference any retired mode value",
+    );
   });
 
   check("Coercer returns the constant for unknown values", () => {
     const queries = readFileSync("src/db/queries/beacon-settings.ts", "utf8");
-    assert(/coerceAutoInjectMode[\s\S]*DEFAULT_AUTO_INJECT_MODE/.test(queries),
-      "coerceAutoInjectMode must return DEFAULT_AUTO_INJECT_MODE on miss");
+    assert(
+      /coerceAutoInjectMode[\s\S]*DEFAULT_AUTO_INJECT_MODE/.test(queries),
+      "coerceAutoInjectMode must return DEFAULT_AUTO_INJECT_MODE on miss",
+    );
   });
 
   check("Dispatch route returns nextbest on empty queue when on", () => {
     const gates = readFileSync("src/lib/orchestration/dispatch-gates.ts", "utf8");
-    assert(/queueLength > 0 \? "queue" : "nextbest"/.test(gates),
-      "dispatch-gates must return nextbest when queue is empty");
+    assert(
+      /queueLength > 0 \? "queue" : "nextbest"/.test(gates),
+      "dispatch-gates must return nextbest when queue is empty",
+    );
   });
 
   check("Automation policy hook seeds from DEFAULT_AUTO_INJECT_MODE", () => {
     const hook = readFileSync("src/hooks/use-automation-policy.ts", "utf8");
-    assert(/useState<AutoInjectMode>\(DEFAULT_AUTO_INJECT_MODE\)/.test(hook),
-      "useAutomationPolicy must not default to off before settings load");
-    assert(/FLEETCROWN_REFRESH_EVENT/.test(hook),
-      "useAutomationPolicy must refetch on FLEETCROWN_REFRESH_EVENT");
+    assert(
+      /useState<AutoInjectMode>\(DEFAULT_AUTO_INJECT_MODE\)/.test(hook),
+      "useAutomationPolicy must not default to off before settings load",
+    );
+    assert(
+      /FLEETCROWN_REFRESH_EVENT/.test(hook),
+      "useAutomationPolicy must refetch on FLEETCROWN_REFRESH_EVENT",
+    );
   });
 
   check("Settings UI initial state seeds from the constant", () => {
     const ui = readFileSync("src/components/settings/BeaconSettings.tsx", "utf8");
-    assert(/useState<AutoInjectMode>\(DEFAULT_AUTO_INJECT_MODE\)/.test(ui),
-      "BeaconSettings must seed from DEFAULT_AUTO_INJECT_MODE — never an inline literal");
+    assert(
+      /useState<AutoInjectMode>\(DEFAULT_AUTO_INJECT_MODE\)/.test(ui),
+      "BeaconSettings must seed from DEFAULT_AUTO_INJECT_MODE — never an inline literal",
+    );
   });
 
   check("Inject route accepts runner bearer token", () => {

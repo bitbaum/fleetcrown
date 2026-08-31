@@ -53,7 +53,9 @@ function code(src: string): string {
 // ── Keys the APP resolves through envAlias ───────────────────────────────────
 const aliasResolved = new Set<string>();
 for (const file of tsFiles("src")) {
-  for (const m of code(readFileSync(file, "utf8")).matchAll(/envAlias\(\s*["'`]([A-Z0-9_]+)["'`]/g)) {
+  for (const m of code(readFileSync(file, "utf8")).matchAll(
+    /envAlias\(\s*["'`]([A-Z0-9_]+)["'`]/g,
+  )) {
     aliasResolved.add(m[1]);
   }
 }

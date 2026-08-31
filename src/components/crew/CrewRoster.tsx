@@ -36,8 +36,8 @@ export function CrewRoster({
           <Users className="h-8 w-8" />
           <div className="text-base text-text-secondary">Nobody in the loop yet</div>
           <p className="max-w-sm text-center text-sm text-text-tertiary">
-            Add the people you actually hand work to — a lawyer, a translator, a
-            friend who makes calls. They stay in your own book; nothing is published.
+            Add the people you actually hand work to — a lawyer, a translator, a friend who makes
+            calls. They stay in your own book; nothing is published.
           </p>
           <AddCrewButton onCreated={onChanged} />
         </div>
@@ -89,20 +89,19 @@ function CrewMemberCard({
       {member.skills.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {member.skills.map((skill) => (
-            <span key={skill} className="ui-crew-skill">{skill}</span>
+            <span key={skill} className="ui-crew-skill">
+              {skill}
+            </span>
           ))}
         </div>
       )}
 
       <div className="flex flex-wrap items-center gap-2">
-        <button type="button" onClick={onAssign} className="ui-btn-xs">Assign work</button>
+        <button type="button" onClick={onAssign} className="ui-btn-xs">
+          Assign work
+        </button>
         {member.orangecatProfile && (
-          <a
-            href={member.orangecatProfile}
-            target="_blank"
-            rel="noreferrer"
-            className="ui-btn-xs"
-          >
+          <a href={member.orangecatProfile} target="_blank" rel="noreferrer" className="ui-btn-xs">
             <ExternalLink className="h-3.5 w-3.5" />
             OrangeCat
           </a>

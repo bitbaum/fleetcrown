@@ -19,7 +19,8 @@ export async function GET() {
   return NextResponse.json(
     {
       ok: false,
-      error: "The bash daemon installer was retired on 2026-06-11. Download Fleet Runner from /download instead.",
+      error:
+        "The bash daemon installer was retired on 2026-06-11. Download Fleet Runner from /download instead.",
       next: "/download",
     },
     {

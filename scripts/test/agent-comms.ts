@@ -6,10 +6,18 @@ import { parseInbox, dedupeAndSort, extractSchema } from "@/lib/agent-comms";
 let pass = 0;
 let fail = 0;
 function eq(actual: unknown, expected: unknown, label: string) {
-  if (actual === expected) { pass++; }
-  else { fail++; console.error(`✗ ${label}: expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`); }
+  if (actual === expected) {
+    pass++;
+  } else {
+    fail++;
+    console.error(
+      `✗ ${label}: expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`,
+    );
+  }
 }
-function ok(cond: boolean, label: string) { eq(cond, true, label); }
+function ok(cond: boolean, label: string) {
+  eq(cond, true, label);
+}
 
 // A realistic inbox: preamble, timed + date-only headers, bold and plain Re:,
 // `---` separators, and a trailing READ marker — mirrors inbox-fleetcrown.md.
@@ -94,7 +102,7 @@ const r = parseInbox(RESULT)[0];
 eq(r.type, "result", "type lifted from body JSON");
 eq(r.status, "done", "status lifted from body JSON");
 
-eq(extractSchema('prose only, no payload').type, undefined, "no payload → type undefined");
+eq(extractSchema("prose only, no payload").type, undefined, "no payload → type undefined");
 eq(extractSchema('"type":"escalation"').type, "escalation", "escalation type parsed");
 eq(extractSchema('"type":"bogus"').type, undefined, "unknown type ignored (constrained set)");
 eq(extractSchema('"status":"in_progress"').status, "in_progress", "multi-word status parsed");

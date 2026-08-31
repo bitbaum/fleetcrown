@@ -39,11 +39,9 @@ import { fileURLToPath } from "node:url";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SRC = join(HERE, "..", "..", "src", "lib", "agent", "core");
-const OC_REPO = process.env.ORANGECAT_DIR
-  ?? join(HERE, "..", "..", "..", "orangecat");
+const OC_REPO = process.env.ORANGECAT_DIR ?? join(HERE, "..", "..", "..", "orangecat");
 const MIRROR_PATH = "src/services/agent-core";
 const REF = process.env.ORANGECAT_REF ?? "origin/main";
-
 
 /**
  * Did THIS branch touch the canonical agent-core files?
@@ -63,17 +61,25 @@ function branchTouchedCanonical(): boolean {
     // this fleet use master and two have no origin/HEAD set.
     let def = "main";
     try {
-      def = execFileSync("git", ["symbolic-ref", "--short", "refs/remotes/origin/HEAD"], {
-        encoding: "utf8", stdio: ["ignore", "pipe", "ignore"],
-      }).trim().replace(/^origin\//, "") || "main";
-    } catch { /* fall through to main */ }
+      def =
+        execFileSync("git", ["symbolic-ref", "--short", "refs/remotes/origin/HEAD"], {
+          encoding: "utf8",
+          stdio: ["ignore", "pipe", "ignore"],
+        })
+          .trim()
+          .replace(/^origin\//, "") || "main";
+    } catch {
+      /* fall through to main */
+    }
     const base = execFileSync("git", ["merge-base", "HEAD", `origin/${def}`], {
-      encoding: "utf8", stdio: ["ignore", "pipe", "ignore"],
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
     }).trim();
     const changed = execFileSync("git", ["diff", "--name-only", `${base}...HEAD`], {
-      encoding: "utf8", stdio: ["ignore", "pipe", "ignore"],
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
     });
-    return changed.split("\n").some(f => f.startsWith("src/lib/agent/core/"));
+    return changed.split("\n").some((f) => f.startsWith("src/lib/agent/core/"));
   } catch {
     // Cannot tell — assume it is yours. A gate that cannot establish innocence
     // should not grant it.
@@ -89,7 +95,10 @@ if (!existsSync(join(OC_REPO, ".git"))) {
 }
 
 const git = (...args: string[]) =>
-  execFileSync("git", ["-C", OC_REPO, ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+  execFileSync("git", ["-C", OC_REPO, ...args], {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "ignore"],
+  });
 
 // A missing ref is an infrastructure fact (shallow clone, no fetch yet), not a
 // verdict about the code — skip rather than block, same as a missing checkout.
@@ -100,7 +109,9 @@ try {
     .filter(Boolean)
     .sort();
 } catch {
-  console.log(`↷ agent-core drift: ${REF} unavailable in ${OC_REPO} — skipped (run \`git fetch\` there)`);
+  console.log(
+    `↷ agent-core drift: ${REF} unavailable in ${OC_REPO} — skipped (run \`git fetch\` there)`,
+  );
   process.exit(0);
 }
 
@@ -123,7 +134,9 @@ for (const f of mirrorFiles) {
 if (problems.length > 0) {
   const yours = branchTouchedCanonical();
   if (!yours) {
-    console.warn("⚠ agent-core drift detected, but this branch did not touch src/lib/agent/core/ —");
+    console.warn(
+      "⚠ agent-core drift detected, but this branch did not touch src/lib/agent/core/ —",
+    );
     console.warn("  the mirror moved in OrangeCat, not here. Not blocking your push.");
     for (const p of problems) console.warn(`    ${p}`);
     console.warn("  Fix separately: npm run sync:agent-core, then merge that in OrangeCat.");

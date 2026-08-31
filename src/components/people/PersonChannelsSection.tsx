@@ -4,7 +4,12 @@ import { useState } from "react";
 import { Loader2, Plus, Save, X } from "lucide-react";
 import { setAttr, removeAttr } from "@/lib/api/attrs";
 import { throwApiError } from "@/lib/api/fetch";
-import { CHANNEL_NAMES, isChannelAttrKey, stripChannelPrefix, withChannelPrefix } from "@/config/channels";
+import {
+  CHANNEL_NAMES,
+  isChannelAttrKey,
+  stripChannelPrefix,
+  withChannelPrefix,
+} from "@/config/channels";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Section, ChannelIcon } from "./PersonDetailHelpers";
 import { formatChannelValue } from "./person-detail-types";
@@ -73,19 +78,26 @@ export function ChannelsSection({
         <div key={key} className="group flex items-center gap-3 ui-list-row">
           <ChannelIcon channel={key} />
           <span className="shrink-0 text-text-secondary">{stripChannelPrefix(key)}</span>
-          <span className="flex-1 truncate font-mono text-xs text-text-tertiary" title={formatChannelValue(value)}>{formatChannelValue(value)}</span>
+          <span
+            className="flex-1 truncate font-mono text-xs text-text-tertiary"
+            title={formatChannelValue(value)}
+          >
+            {formatChannelValue(value)}
+          </span>
           <button
             onClick={() => deleteChannel(key)}
             disabled={deletingKey === key}
             className="shrink-0 ui-hover-reveal ui-btn-icon"
           >
-            {deletingKey === key ? <Loader2 className="ui-spinner-2xs" /> : <X className="h-2.5 w-2.5" />}
+            {deletingKey === key ? (
+              <Loader2 className="ui-spinner-2xs" />
+            ) : (
+              <X className="h-2.5 w-2.5" />
+            )}
           </button>
         </div>
       ))}
-      {channels.length === 0 && !adding && (
-        <EmptyState>No channels yet</EmptyState>
-      )}
+      {channels.length === 0 && !adding && <EmptyState>No channels yet</EmptyState>}
       {adding ? (
         <div className="space-y-1">
           <div className="flex items-center gap-1.5">
@@ -94,15 +106,26 @@ export function ChannelsSection({
               onChange={(e) => setChannelType(e.target.value)}
               className="ui-input-tight shrink-0"
             >
-              {CHANNEL_NAMES.map((c) => <option key={c} value={c}>{c}</option>)}
+              {CHANNEL_NAMES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
             </select>
             <input
               value={channelValue}
-              onChange={(e) => { setChannelValue(e.target.value); setSaveError(null); }}
+              onChange={(e) => {
+                setChannelValue(e.target.value);
+                setSaveError(null);
+              }}
               placeholder="handle or number"
               onKeyDown={(e) => {
                 if (e.key === "Enter") saveChannel();
-                if (e.key === "Escape") { setAdding(false); setChannelValue(""); setSaveError(null); }
+                if (e.key === "Escape") {
+                  setAdding(false);
+                  setChannelValue("");
+                  setSaveError(null);
+                }
               }}
               autoFocus
               className="flex-1 min-w-0 ui-input-tight"
@@ -114,17 +137,21 @@ export function ChannelsSection({
             >
               {saving ? <Loader2 className="ui-spinner-xs" /> : <Save className="h-3 w-3" />}
             </button>
-            <button onClick={() => { setAdding(false); setChannelValue(""); setSaveError(null); }} className="ui-btn-icon">
+            <button
+              onClick={() => {
+                setAdding(false);
+                setChannelValue("");
+                setSaveError(null);
+              }}
+              className="ui-btn-icon"
+            >
               <X className="h-3 w-3" />
             </button>
           </div>
           {saveError && <p className="ui-error-xs">{saveError}</p>}
         </div>
       ) : (
-        <button
-          onClick={() => setAdding(true)}
-          className="ui-btn-add mt-0.5"
-        >
+        <button onClick={() => setAdding(true)} className="ui-btn-add mt-0.5">
           <Plus className="h-3 w-3" /> Add channel
         </button>
       )}

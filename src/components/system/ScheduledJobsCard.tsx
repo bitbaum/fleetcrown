@@ -43,17 +43,21 @@ function JobRow({
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className={`text-sm font-medium truncate ${!job.enabled ? "text-text-muted" : ""}`} title={job.name}>
+          <span
+            className={`text-sm font-medium truncate ${!job.enabled ? "text-text-muted" : ""}`}
+            title={job.name}
+          >
             {job.name}
           </span>
-          {!job.enabled && (
-            <span className="ui-micro-label shrink-0">off</span>
-          )}
+          {!job.enabled && <span className="ui-micro-label shrink-0">off</span>}
         </div>
         <div className="flex items-center gap-2 mt-0.5">
           <span className="text-xs text-text-tertiary">{humanCronSchedule(job.schedule.expr)}</span>
           {hasError && job.state?.lastError && (
-            <span className="flex items-center gap-1 text-micro text-status-negative/70 truncate" title={job.state.lastError}>
+            <span
+              className="flex items-center gap-1 text-micro text-status-negative/70 truncate"
+              title={job.state.lastError}
+            >
               <AlertTriangle className="h-2.5 w-2.5 shrink-0" />
               {job.state.lastError}
             </span>
@@ -68,7 +72,10 @@ function JobRow({
       </div>
 
       <button
-        onClick={(e) => { e.stopPropagation(); onToggle(job.id, !job.enabled); }}
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggle(job.id, !job.enabled);
+        }}
         className={`ui-tap-overlay shrink-0 h-4 w-7 rounded-full transition-colors ${
           job.enabled ? "bg-status-positive" : "bg-surface-overlay"
         }`}
@@ -100,7 +107,7 @@ export function ScheduledJobsCard({ initialJobs }: { initialJobs: CronJob[] }) {
     const res = await patchCronJob({ id, message });
     if (res.ok) {
       setJobs((prev) =>
-        prev.map((j) => j.id === id ? { ...j, payload: { ...j.payload, message } } : j),
+        prev.map((j) => (j.id === id ? { ...j, payload: { ...j.payload, message } } : j)),
       );
       if (selected?.id === id)
         setSelected((prev) => prev && { ...prev, payload: { ...prev.payload, message } });
@@ -156,52 +163,48 @@ export function ScheduledJobsCard({ initialJobs }: { initialJobs: CronJob[] }) {
         {jobs.length === 0 ? (
           <EmptyState>No scheduled jobs configured</EmptyState>
         ) : (
-        <div className="space-y-4">
-          {/* Project-scoped job groups */}
-          {Array.from(projectGroups.entries()).map(([pid, group]) => (
-            <div key={pid}>
-              <div className="flex items-center gap-1.5 px-2 mb-1">
-                <Folder className="h-3 w-3 text-text-muted" />
-                <span className="ui-micro-label font-medium">
-                  {group.name}
-                </span>
-              </div>
-              <div className="space-y-0.5 pl-2 border-l border-border-subtle">
-                {group.jobs.map((job) => (
-                  <JobRow
-                    key={job.id}
-                    job={job}
-                    onSelect={() => setSelected(job)}
-                    onToggle={handleToggle}
-                  />
-                ))}
-              </div>
-            </div>
-          ))}
-
-          {/* Global (untagged) jobs */}
-          {globalJobs.length > 0 && (
-            <div>
-              {projectGroups.size > 0 && (
+          <div className="space-y-4">
+            {/* Project-scoped job groups */}
+            {Array.from(projectGroups.entries()).map(([pid, group]) => (
+              <div key={pid}>
                 <div className="flex items-center gap-1.5 px-2 mb-1">
-                  <span className="ui-micro-label font-medium">
-                    Global
-                  </span>
+                  <Folder className="h-3 w-3 text-text-muted" />
+                  <span className="ui-micro-label font-medium">{group.name}</span>
                 </div>
-              )}
-              <div className="space-y-0.5">
-                {globalJobs.map((job) => (
-                  <JobRow
-                    key={job.id}
-                    job={job}
-                    onSelect={() => setSelected(job)}
-                    onToggle={handleToggle}
-                  />
-                ))}
+                <div className="space-y-0.5 pl-2 border-l border-border-subtle">
+                  {group.jobs.map((job) => (
+                    <JobRow
+                      key={job.id}
+                      job={job}
+                      onSelect={() => setSelected(job)}
+                      onToggle={handleToggle}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
-        </div>
+            ))}
+
+            {/* Global (untagged) jobs */}
+            {globalJobs.length > 0 && (
+              <div>
+                {projectGroups.size > 0 && (
+                  <div className="flex items-center gap-1.5 px-2 mb-1">
+                    <span className="ui-micro-label font-medium">Global</span>
+                  </div>
+                )}
+                <div className="space-y-0.5">
+                  {globalJobs.map((job) => (
+                    <JobRow
+                      key={job.id}
+                      job={job}
+                      onSelect={() => setSelected(job)}
+                      onToggle={handleToggle}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         )}
       </Card>
 

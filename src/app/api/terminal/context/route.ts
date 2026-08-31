@@ -84,9 +84,12 @@ export async function GET(req: Request) {
   const installedAgents = snapshot?.installedAgents ?? [];
   const availability: AgentAvailabilityOverride | undefined = isRuntimeAvailable()
     ? undefined
-    : Object.fromEntries(
-        agentIds.map((agent) => [agent, installedAgents.length === 0 || installedAgents.includes(agent)]),
-      ) as AgentAvailabilityOverride;
+    : (Object.fromEntries(
+        agentIds.map((agent) => [
+          agent,
+          installedAgents.length === 0 || installedAgents.includes(agent),
+        ]),
+      ) as AgentAvailabilityOverride);
 
   const agents = buildSwitchableAgentCatalog(preferences.models, agentConfig.agent, availability);
 
@@ -104,11 +107,10 @@ export async function GET(req: Request) {
   const tabs: TerminalTabContext[] = (snapshot?.openTabs ?? []).map((tab) => {
     const tabPanes = panes.filter((p) => p.tab.toLowerCase() === tab.toLowerCase());
     const project =
-      byName.get(tab.toLowerCase()) ??
-      tabPanes.map((p) => projectForCwd(p.cwd)).find(Boolean);
-    const liveAgents = [...new Set(
-      tabPanes.map((p) => p.agentCli).filter((a): a is string => Boolean(a)),
-    )];
+      byName.get(tab.toLowerCase()) ?? tabPanes.map((p) => projectForCwd(p.cwd)).find(Boolean);
+    const liveAgents = [
+      ...new Set(tabPanes.map((p) => p.agentCli).filter((a): a is string => Boolean(a))),
+    ];
     return {
       tab,
       dir: project?.dirPath ?? null,

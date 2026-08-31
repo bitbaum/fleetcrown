@@ -77,15 +77,15 @@ export type CronJob = {
 };
 
 const CRON_LABELS: Record<string, { compact: string; verbose: string }> = {
-  "0 6 * * *":           { compact: "Daily 6:00",     verbose: "Daily at 6:00" },
-  "0 20 * * 5":          { compact: "Fri 20:00",      verbose: "Every Friday at 20:00" },
-  "0 20 * * 0-4":        { compact: "Sun-Thu 20:00",  verbose: "Sun-Thu at 20:00" },
-  "30 3 * * *":          { compact: "Daily 3:30",     verbose: "Daily at 3:30" },
-  "0 9 * * 1":           { compact: "Mon 9:00",       verbose: "Every Monday at 9:00" },
-  "0 4 * * 0":           { compact: "Sun 4:00",       verbose: "Every Sunday at 4:00" },
-  "0 7,11,15,19 * * *":  { compact: "4x daily",       verbose: "4x daily (7, 11, 15, 19)" },
-  "0 10 * * 4":          { compact: "Thu 10:00",      verbose: "Every Thursday at 10:00" },
-  "0 9 1 * *":           { compact: "Monthly 1st",    verbose: "1st of every month at 9:00" },
+  "0 6 * * *": { compact: "Daily 6:00", verbose: "Daily at 6:00" },
+  "0 20 * * 5": { compact: "Fri 20:00", verbose: "Every Friday at 20:00" },
+  "0 20 * * 0-4": { compact: "Sun-Thu 20:00", verbose: "Sun-Thu at 20:00" },
+  "30 3 * * *": { compact: "Daily 3:30", verbose: "Daily at 3:30" },
+  "0 9 * * 1": { compact: "Mon 9:00", verbose: "Every Monday at 9:00" },
+  "0 4 * * 0": { compact: "Sun 4:00", verbose: "Every Sunday at 4:00" },
+  "0 7,11,15,19 * * *": { compact: "4x daily", verbose: "4x daily (7, 11, 15, 19)" },
+  "0 10 * * 4": { compact: "Thu 10:00", verbose: "Every Thursday at 10:00" },
+  "0 9 1 * *": { compact: "Monthly 1st", verbose: "1st of every month at 9:00" },
 };
 
 export function humanCronSchedule(expr: string, tz?: string): string {

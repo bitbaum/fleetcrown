@@ -5,7 +5,13 @@ import path from "node:path";
 import { getSessionUserId } from "@/lib/session";
 import { readIdParam, readJsonBody, isUniqueViolation } from "@/lib/api/route-helpers";
 import { readCronJobs } from "@/lib/crons";
-import { patchProject, deleteProject, getProjectCore, PatchProjectBody, resolveProjectDetailWithOrgFallback } from "@/db/queries/projects";
+import {
+  patchProject,
+  deleteProject,
+  getProjectCore,
+  PatchProjectBody,
+  resolveProjectDetailWithOrgFallback,
+} from "@/db/queries/projects";
 import {
   scheduleDeletedProjectProfileRemoval,
   scheduleProjectProfileReindexByEntityId,
@@ -25,7 +31,8 @@ function getLinkedJobs(projectId: string, projectName: string) {
       const jobNameLower = (job.name ?? "").toLowerCase();
       const msgLower = (job.payload?.message ?? "").toLowerCase();
       // Fallback: fuzzy name match when no projectId set on the job
-      const byFuzzy = !job.projectId && (jobNameLower.includes(nameLower) || msgLower.includes(nameLower));
+      const byFuzzy =
+        !job.projectId && (jobNameLower.includes(nameLower) || msgLower.includes(nameLower));
       return byId || byFuzzy;
     })
     .map((job) => ({
@@ -40,10 +47,7 @@ function getLinkedJobs(projectId: string, projectName: string) {
     }));
 }
 
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const userId = await getSessionUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const idOrResp = await readIdParam(params);
@@ -64,34 +68,48 @@ export async function PATCH(
     return NextResponse.json({ ok: true });
   } catch (e: unknown) {
     if (isUniqueViolation(e)) {
-      return NextResponse.json({ error: "A project with that name already exists" }, { status: 409 });
+      return NextResponse.json(
+        { error: "A project with that name already exists" },
+        { status: 409 },
+      );
     }
     throw e;
   }
 }
 
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const userId = await getSessionUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const idOrResp = await readIdParam(params);
   if (idOrResp instanceof NextResponse) return idOrResp;
 
   const resolved = await resolveProjectDetailWithOrgFallback(userId, idOrResp);
-  if (!resolved || resolved.ownerId !== userId) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!resolved || resolved.ownerId !== userId)
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
   const userProject = await getUserProjectByEntityId(userId, idOrResp).catch(() => null);
   const deprovision = req.nextUrl.searchParams.get("deprovision");
   const deleteLocal = req.nextUrl.searchParams.get("deleteLocal") === "1";
 
   if (deprovision === "archive-repo" || deprovision === "delete-repo") {
     const gitUrl = resolved.detail.project.gitUrl ?? userProject?.gitUrl ?? null;
-    if (!gitUrl) return NextResponse.json({ error: "No GitHub repo is linked to this project." }, { status: 400 });
+    if (!gitUrl)
+      return NextResponse.json(
+        { error: "No GitHub repo is linked to this project." },
+        { status: 400 },
+      );
     const token = await getGithubToken(userId);
-    if (!token) return NextResponse.json({ error: "No GitHub account linked. Sign in with GitHub first." }, { status: 400 });
-    const gh = await deprovisionGithubRepo(token, gitUrl, deprovision === "delete-repo" ? "delete" : "archive");
-    if (!gh.ok) return NextResponse.json({ error: gh.error, detail: gh.detail }, { status: gh.status });
+    if (!token)
+      return NextResponse.json(
+        { error: "No GitHub account linked. Sign in with GitHub first." },
+        { status: 400 },
+      );
+    const gh = await deprovisionGithubRepo(
+      token,
+      gitUrl,
+      deprovision === "delete-repo" ? "delete" : "archive",
+    );
+    if (!gh.ok)
+      return NextResponse.json({ error: gh.error, detail: gh.detail }, { status: gh.status });
   }
 
   if (deleteLocal && userProject?.dirPath) {
@@ -106,8 +124,12 @@ export async function DELETE(
   return NextResponse.json({ ok: true });
 }
 
-function safeLocalProjectPath(dirPath: string): { ok: true; path: string } | { ok: false; error: string } {
-  const devRoot = path.resolve(process.env.FLEETCROWN_BOX_DEV_ROOT || path.join(os.homedir(), "dev"));
+function safeLocalProjectPath(
+  dirPath: string,
+): { ok: true; path: string } | { ok: false; error: string } {
+  const devRoot = path.resolve(
+    process.env.FLEETCROWN_BOX_DEV_ROOT || path.join(os.homedir(), "dev"),
+  );
   const target = path.resolve(dirPath);
   if (target === devRoot || !target.startsWith(devRoot + path.sep)) {
     return { ok: false, error: "Refusing to delete a folder outside the configured dev root." };
@@ -115,10 +137,7 @@ function safeLocalProjectPath(dirPath: string): { ok: true; path: string } | { o
   return { ok: true, path: target };
 }
 
-export async function GET(
-  _req: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const userId = await getSessionUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const idOrResp = await readIdParam(params);
@@ -128,7 +147,17 @@ export async function GET(
   const resolved = await resolveProjectDetailWithOrgFallback(userId, id);
   if (!resolved) return NextResponse.json(null, { status: 404 });
   const { detail, ownerId } = resolved;
-  const { project, createdAt, attrs, relations, recentInteractions, linkedGoals, devLog, resources, notes } = detail;
+  const {
+    project,
+    createdAt,
+    attrs,
+    relations,
+    recentInteractions,
+    linkedGoals,
+    devLog,
+    resources,
+    notes,
+  } = detail;
   const readonly = ownerId !== userId;
 
   // Runtime state + activity both belong to the project owner — fetch under their
@@ -166,14 +195,16 @@ export async function GET(
     notes,
     devLog: [...(devLog ?? [])].reverse().slice(0, 20),
     activity,
-    runtimeState: runtimeState ? {
-      tabName: runtimeState.tabName,
-      readyAt: runtimeState.readyAt?.toISOString() ?? null,
-      closingAt: runtimeState.closingAt?.toISOString() ?? null,
-      closedAt: runtimeState.closedAt?.toISOString() ?? null,
-      currentPromptLabel: runtimeState.currentPromptLabel,
-      currentPromptStartedAt: runtimeState.currentPromptStartedAt?.toISOString() ?? null,
-      sessionUpdatedAt: runtimeState.sessionUpdatedAt?.toISOString() ?? null,
-    } : null,
+    runtimeState: runtimeState
+      ? {
+          tabName: runtimeState.tabName,
+          readyAt: runtimeState.readyAt?.toISOString() ?? null,
+          closingAt: runtimeState.closingAt?.toISOString() ?? null,
+          closedAt: runtimeState.closedAt?.toISOString() ?? null,
+          currentPromptLabel: runtimeState.currentPromptLabel,
+          currentPromptStartedAt: runtimeState.currentPromptStartedAt?.toISOString() ?? null,
+          sessionUpdatedAt: runtimeState.sessionUpdatedAt?.toISOString() ?? null,
+        }
+      : null,
   });
 }

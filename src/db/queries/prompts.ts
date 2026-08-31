@@ -123,7 +123,11 @@ export async function createPrompt(userId: string, data: CreatePromptInput): Pro
   return row;
 }
 
-export async function updatePrompt(userId: string, id: string, data: UpdatePromptInput): Promise<PromptRow | null> {
+export async function updatePrompt(
+  userId: string,
+  id: string,
+  data: UpdatePromptInput,
+): Promise<PromptRow | null> {
   const patch: Partial<typeof prompts.$inferInsert> = { updatedAt: new Date() };
   if (data.name !== undefined) patch.name = data.name;
   if (data.description !== undefined) patch.description = data.description;
@@ -169,14 +173,16 @@ export async function listPromptsForUser(userId: string): Promise<PromptRow[]> {
   return db
     .select()
     .from(prompts)
-    .where(and(
-      eq(prompts.isActive, true),
-      // Own rows always visible; peers' rows visible only if scope='org'.
-      or(
-        eq(prompts.userId, userId),
-        and(inArray(prompts.userId, visibleUserIds), eq(prompts.scope, "org")),
+    .where(
+      and(
+        eq(prompts.isActive, true),
+        // Own rows always visible; peers' rows visible only if scope='org'.
+        or(
+          eq(prompts.userId, userId),
+          and(inArray(prompts.userId, visibleUserIds), eq(prompts.scope, "org")),
+        ),
       ),
-    ))
+    )
     .orderBy(desc(prompts.updatedAt), asc(prompts.name));
 }
 

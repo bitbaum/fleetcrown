@@ -45,7 +45,10 @@ export function ScheduleModal({
         message: resolvedMessage,
         ...(projectId ? { projectId, projectName } : {}),
       });
-      if (!res.ok) { setError("Failed to create job — try again"); return; }
+      if (!res.ok) {
+        setError("Failed to create job — try again");
+        return;
+      }
       setDone(true);
       setTimeout(onClose, MODAL_AUTO_CLOSE_MS);
     } catch {
@@ -59,10 +62,7 @@ export function ScheduleModal({
     <Modal onClose={onClose} size="lg">
       <div className="flex items-center justify-between">
         <div className="text-xl font-semibold text-text-primary">Schedule Job</div>
-        <button
-          onClick={onClose}
-          className="ui-btn-overlay p-2"
-        >
+        <button onClick={onClose} className="ui-btn-overlay p-2">
           <X className="h-4 w-4" />
         </button>
       </div>
@@ -86,7 +86,9 @@ export function ScheduleModal({
           >
             <option value="">— Select project —</option>
             {projects.map((p) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
             ))}
           </select>
         </div>
@@ -113,11 +115,17 @@ export function ScheduleModal({
         className="ui-btn-submit"
       >
         {done ? (
-          <><Check className="h-4 w-4" /> Scheduled!</>
+          <>
+            <Check className="h-4 w-4" /> Scheduled!
+          </>
         ) : saving ? (
-          <><Loader2 className="ui-spinner" /> Creating…</>
+          <>
+            <Loader2 className="ui-spinner" /> Creating…
+          </>
         ) : (
-          <><Clock className="h-4 w-4" /> Create Scheduled Job</>
+          <>
+            <Clock className="h-4 w-4" /> Create Scheduled Job
+          </>
         )}
       </button>
     </Modal>

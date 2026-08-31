@@ -18,13 +18,23 @@
  *
  * Run: npx tsx scripts/test/undelivered-run-close.ts
  */
-import { closeRunFromSession, runWasDelivered, type OpenRun } from "@/lib/orchestration/close-from-session";
+import {
+  closeRunFromSession,
+  runWasDelivered,
+  type OpenRun,
+} from "@/lib/orchestration/close-from-session";
 import type { SessionState } from "@/lib/control-types";
 
-let pass = 0, fail = 0;
+let pass = 0,
+  fail = 0;
 function ok(name: string, cond: boolean) {
-  if (cond) { pass++; console.log(`  ✓ ${name}`); }
-  else { fail++; console.log(`  ✗ ${name}`); }
+  if (cond) {
+    pass++;
+    console.log(`  ✓ ${name}`);
+  } else {
+    fail++;
+    console.log(`  ✗ ${name}`);
+  }
 }
 
 const DISPATCHED_MS = 1_000;
@@ -61,7 +71,10 @@ ok(
 
 // The delivered sibling must still close — the guard has to reject the
 // undelivered case WITHOUT breaking the path that legitimately works.
-ok("a ready handoff still closes the delivered run", closeRunFromSession(delivered, READY) !== null);
+ok(
+  "a ready handoff still closes the delivered run",
+  closeRunFromSession(delivered, READY) !== null,
+);
 
 // A handoff written before delivery is somebody else's work even when the run
 // WAS eventually delivered.
@@ -70,7 +83,10 @@ const lateDelivery: OpenRun = {
   finishedAt: null,
   payload: { deliveredAt: new Date(9_000).toISOString() } as OpenRun["payload"],
 };
-ok("a handoff predating delivery does not close the run", closeRunFromSession(lateDelivery, READY) === null);
+ok(
+  "a handoff predating delivery does not close the run",
+  closeRunFromSession(lateDelivery, READY) === null,
+);
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

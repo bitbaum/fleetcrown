@@ -11,7 +11,6 @@ import { PLAN_LIMITS, isUnlimitedProjects } from "@/lib/plan";
 
 export const PRICING_CURRENCY = "CHF";
 
-
 export type PricingPlan = {
   key: Plan;
   name: string;
@@ -30,9 +29,7 @@ export type PricingPlan = {
 };
 
 const projectLimitLabel = (plan: Plan): string =>
-  isUnlimitedProjects(plan)
-    ? "Unlimited projects"
-    : `Up to ${PLAN_LIMITS.projects[plan]} projects`;
+  isUnlimitedProjects(plan) ? "Unlimited projects" : `Up to ${PLAN_LIMITS.projects[plan]} projects`;
 
 export const PRICING_PLANS: PricingPlan[] = [
   {

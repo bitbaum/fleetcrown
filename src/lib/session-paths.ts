@@ -20,7 +20,8 @@ export function migrateLegacyHandoffs(homeDir = os.homedir()): string {
   const destination = fleetSessionsDir(homeDir);
   const legacy = legacyClaudeSessionsDir(homeDir);
   fs.mkdirSync(destination, { recursive: true });
-  if (path.resolve(destination) === path.resolve(legacy) || !fs.existsSync(legacy)) return destination;
+  if (path.resolve(destination) === path.resolve(legacy) || !fs.existsSync(legacy))
+    return destination;
 
   for (const name of fs.readdirSync(legacy)) {
     // Claude owns the live <pid>.json files. FleetCrown owns Markdown handoffs,

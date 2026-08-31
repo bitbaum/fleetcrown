@@ -77,7 +77,13 @@ export function ProjectKickoff({
   const [finished, setFinished] = useState(false);
 
   const source = text.trim() || null;
-  const plan = planKickoff({ attrs, goalCount, goalsLocked, hasRepo, wantRepo: !hasRepo && wantRepo });
+  const plan = planKickoff({
+    attrs,
+    goalCount,
+    goalsLocked,
+    hasRepo,
+    wantRepo: !hasRepo && wantRepo,
+  });
   // The brief is always shown: every step reads it, dispatch included, so a
   // project whose plan is only "repo + dispatch" still deserves a say in what
   // gets built. It is only *required* by the steps that are extracted from it.
@@ -186,8 +192,9 @@ export function ProjectKickoff({
         </h2>
         {!steps && !blocked && (
           <p className="mt-1 text-sm leading-relaxed text-text-secondary">
-            One click does the setup: {plan.map((id) => KICKOFF_STEP_LABEL[id].toLowerCase()).join(", ")}
-            . You can edit anything it writes afterwards.
+            One click does the setup:{" "}
+            {plan.map((id) => KICKOFF_STEP_LABEL[id].toLowerCase()).join(", ")}. You can edit
+            anything it writes afterwards.
           </p>
         )}
       </div>
@@ -198,8 +205,8 @@ export function ProjectKickoff({
       {!steps && blocked === "goals-locked" && (
         <div className="space-y-2 rounded-lg border border-border-subtle bg-surface-raised p-3">
           <p className="text-sm leading-relaxed text-text-secondary">
-            This project&apos;s milestones are behind your PIN, so an agent would be briefed
-            without them — and a run that ignores the roadmap redoes work that is already done.
+            This project&apos;s milestones are behind your PIN, so an agent would be briefed without
+            them — and a run that ignores the roadmap redoes work that is already done.
           </p>
           <Link href="/unlock" className="ui-btn-primary gap-2">
             <Lock className="h-4 w-4" aria-hidden="true" /> Unlock to start
@@ -271,7 +278,11 @@ export function ProjectKickoff({
             disabled={running || !ready}
             className="ui-btn-primary gap-2 px-5 py-3 text-base"
           >
-            {running ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Zap className="h-4 w-4" aria-hidden="true" />}
+            {running ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <Zap className="h-4 w-4" aria-hidden="true" />
+            )}
             {running ? "Making it happen…" : "Make it happen"}
           </button>
           {!ready && (
@@ -291,7 +302,11 @@ export function ProjectKickoff({
                 {KICKOFF_STEP_LABEL[s.id]}
               </span>
               {s.note && (
-                <span className={s.state === "failed" ? "ui-error text-xs" : "text-xs text-text-secondary"}>
+                <span
+                  className={
+                    s.state === "failed" ? "ui-error text-xs" : "text-xs text-text-secondary"
+                  }
+                >
                   {s.note}
                 </span>
               )}
@@ -303,7 +318,10 @@ export function ProjectKickoff({
       {finished && (
         <div className="space-y-2 border-t border-border-subtle pt-3">
           {dispatchOk ? (
-            <Link href={fleetSurfaceHref("terminal", workspaceKey)} className="ui-btn-primary gap-2">
+            <Link
+              href={fleetSurfaceHref("terminal", workspaceKey)}
+              className="ui-btn-primary gap-2"
+            >
               <Rocket className="h-4 w-4" aria-hidden="true" /> Watch it work
             </Link>
           ) : (
@@ -313,8 +331,8 @@ export function ProjectKickoff({
           )}
           {failures.length > 0 && (
             <p className="text-xs text-text-secondary">
-              {failures.length} step{failures.length === 1 ? "" : "s"} did not complete — everything above
-              them landed and is editable on this page.
+              {failures.length} step{failures.length === 1 ? "" : "s"} did not complete — everything
+              above them landed and is editable on this page.
             </p>
           )}
         </div>
@@ -324,8 +342,13 @@ export function ProjectKickoff({
 }
 
 function StepIcon({ state }: { state: StepState }) {
-  if (state === "running") return <Loader2 className="h-4 w-4 shrink-0 animate-spin text-accent-text" aria-hidden="true" />;
-  if (state === "done") return <Check className="h-4 w-4 shrink-0 text-status-positive" aria-hidden="true" />;
-  if (state === "failed") return <AlertCircle className="h-4 w-4 shrink-0 text-status-negative" aria-hidden="true" />;
+  if (state === "running")
+    return (
+      <Loader2 className="h-4 w-4 shrink-0 animate-spin text-accent-text" aria-hidden="true" />
+    );
+  if (state === "done")
+    return <Check className="h-4 w-4 shrink-0 text-status-positive" aria-hidden="true" />;
+  if (state === "failed")
+    return <AlertCircle className="h-4 w-4 shrink-0 text-status-negative" aria-hidden="true" />;
   return <span className="ui-dot ui-dot-neutral mx-1.5 shrink-0" aria-hidden="true" />;
 }

@@ -30,7 +30,8 @@ export async function GET(req: Request) {
         tabs: [],
         unavailable: {
           code: "cloud-builder-private",
-          message: "Cloud builder is private for this account. Use This computer after connecting Fleet Runner.",
+          message:
+            "Cloud builder is private for this account. Use This computer after connecting Fleet Runner.",
         },
       });
     }

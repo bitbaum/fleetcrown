@@ -60,7 +60,10 @@ export function parseProposalJson(raw: string): ExtractedProposal | null {
   if (!raw) return null;
   // Models often wrap JSON in ```json fences or add a prose preamble; grab the
   // outermost {...} span and parse that.
-  const fenced = raw.replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
+  const fenced = raw
+    .replace(/^```(?:json)?/i, "")
+    .replace(/```$/i, "")
+    .trim();
   const start = fenced.indexOf("{");
   const end = fenced.lastIndexOf("}");
   if (start === -1 || end === -1 || end <= start) return null;
@@ -147,22 +150,33 @@ function selfTest(): void {
 
   check(
     "code-fenced JSON parsed",
-    parseProposalJson('```json\n{"actionable": true, "type": "send_email", "title": "Email bank"}\n```')?.type ===
-      "send_email",
+    parseProposalJson(
+      '```json\n{"actionable": true, "type": "send_email", "title": "Email bank"}\n```',
+    )?.type === "send_email",
   );
 
   check(
     "prose preamble tolerated",
-    parseProposalJson('Sure! Here you go:\n{"actionable": true, "type": "create_commitment", "title": "Call dentist"}')
-      ?.title === "Call dentist",
+    parseProposalJson(
+      'Sure! Here you go:\n{"actionable": true, "type": "create_commitment", "title": "Call dentist"}',
+    )?.title === "Call dentist",
   );
 
   // Fail-closed: actionable but missing type/title ⇒ null.
-  check("actionable w/o type ⇒ null", parseProposalJson('{"actionable": true, "title": "x"}') === null);
-  check("actionable w/o title ⇒ null", parseProposalJson('{"actionable": true, "type": "send_email"}') === null);
+  check(
+    "actionable w/o type ⇒ null",
+    parseProposalJson('{"actionable": true, "title": "x"}') === null,
+  );
+  check(
+    "actionable w/o title ⇒ null",
+    parseProposalJson('{"actionable": true, "type": "send_email"}') === null,
+  );
 
   // Unwired/deferred type is not in the enum ⇒ rejected.
-  check("non-extractable type ⇒ null", parseProposalJson('{"actionable": true, "type": "other", "title": "x"}') === null);
+  check(
+    "non-extractable type ⇒ null",
+    parseProposalJson('{"actionable": true, "type": "other", "title": "x"}') === null,
+  );
 
   // Garbage / no JSON ⇒ null, never throws.
   check("empty ⇒ null", parseProposalJson("") === null);
@@ -170,7 +184,12 @@ function selfTest(): void {
   check("broken json ⇒ null", parseProposalJson('{"actionable": true, "type":') === null);
 
   // Title length guard.
-  check("overlong title ⇒ null", parseProposalJson(`{"actionable": true, "type": "send_email", "title": "${"x".repeat(201)}"}`) === null);
+  check(
+    "overlong title ⇒ null",
+    parseProposalJson(
+      `{"actionable": true, "type": "send_email", "title": "${"x".repeat(201)}"}`,
+    ) === null,
+  );
 
   const evt = parseProposalJson(
     '{"actionable": true, "type": "create_event", "title": "Team sync", "payload": {"eventDate": "2026-07-20", "eventLocation": "Zurich"}}',

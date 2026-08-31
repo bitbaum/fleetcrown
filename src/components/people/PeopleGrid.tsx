@@ -9,11 +9,20 @@ import { PeopleBookPanel } from "./PeopleBookPanel";
 import { type PersonWithAttributes } from "@/db/queries/people";
 import { getJson } from "@/lib/api/fetch";
 import { SORT_MODE, SORT_LABELS, type SortMode } from "@/lib/constants/statuses";
-import { type RelationshipHealth, HEALTH_DOT_COLOR, HEALTH_LABEL, RELATIONSHIP_HEALTH_VALUES, deriveRelationshipHealth } from "@/lib/constants/people";
+import {
+  type RelationshipHealth,
+  HEALTH_DOT_COLOR,
+  HEALTH_LABEL,
+  RELATIONSHIP_HEALTH_VALUES,
+  deriveRelationshipHealth,
+} from "@/lib/constants/people";
 import { useEscapeKey } from "@/hooks/use-escape-key";
 import { SEARCH_DEBOUNCE_MS } from "@/lib/constants/timings";
 
-const HEALTH_FILTERS = RELATIONSHIP_HEALTH_VALUES.map((value) => ({ value, label: HEALTH_LABEL[value] }));
+const HEALTH_FILTERS = RELATIONSHIP_HEALTH_VALUES.map((value) => ({
+  value,
+  label: HEALTH_LABEL[value],
+}));
 
 const SORT_ORDER: SortMode[] = Object.values(SORT_MODE);
 
@@ -57,7 +66,13 @@ export function PeopleGrid({
   }, [healthFilter]);
 
   const search = useCallback(
-    async (q: string, s: SortMode, hf: RelationshipHealth[], newOffset: number, signal?: AbortSignal) => {
+    async (
+      q: string,
+      s: SortMode,
+      hf: RelationshipHealth[],
+      newOffset: number,
+      signal?: AbortSignal,
+    ) => {
       setLoading(true);
       try {
         const params = new URLSearchParams({
@@ -67,7 +82,10 @@ export function PeopleGrid({
           offset: String(newOffset),
         });
         if (hf.length > 0) params.set("health", hf.join(","));
-        const data = await getJson<{ people: PersonWithAttributes[]; total: number }>(`/api/people?${params}`, { signal });
+        const data = await getJson<{ people: PersonWithAttributes[]; total: number }>(
+          `/api/people?${params}`,
+          { signal },
+        );
         if (signal?.aborted) return;
         setFetchError(false);
         if (newOffset === 0) {
@@ -93,16 +111,23 @@ export function PeopleGrid({
       return;
     }
     const ctrl = new AbortController();
-    const timer = setTimeout(() => search(query, sort, healthFilter, 0, ctrl.signal), SEARCH_DEBOUNCE_MS);
-    return () => { clearTimeout(timer); ctrl.abort(); };
+    const timer = setTimeout(
+      () => search(query, sort, healthFilter, 0, ctrl.signal),
+      SEARCH_DEBOUNCE_MS,
+    );
+    return () => {
+      clearTimeout(timer);
+      ctrl.abort();
+    };
   }, [query, sort, healthFilter, search]);
 
-  useEscapeKey(() => { setQuery(""); setHealthFilter([]); });
+  useEscapeKey(() => {
+    setQuery("");
+    setHealthFilter([]);
+  });
 
   function toggleHealth(h: RelationshipHealth) {
-    setHealthFilter((prev) =>
-      prev.includes(h) ? prev.filter((x) => x !== h) : [...prev, h],
-    );
+    setHealthFilter((prev) => (prev.includes(h) ? prev.filter((x) => x !== h) : [...prev, h]));
   }
 
   function cycleSort() {
@@ -118,7 +143,12 @@ export function PeopleGrid({
         ? prev.filter((p) => p.id !== id)
         : prev.map((p) =>
             p.id === id
-              ? { ...p, lastInteraction: at, interactionCount: p.interactionCount + 1, health: newHealth }
+              ? {
+                  ...p,
+                  lastInteraction: at,
+                  interactionCount: p.interactionCount + 1,
+                  health: newHealth,
+                }
               : p,
           ),
     );
@@ -139,12 +169,15 @@ export function PeopleGrid({
             placeholder="Search people..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Escape") { setQuery(""); (e.target as HTMLInputElement).blur(); } }}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") {
+                setQuery("");
+                (e.target as HTMLInputElement).blur();
+              }
+            }}
             className="ui-search-input"
           />
-          <span className="ui-badge absolute right-3 top-1/2 -translate-y-1/2">
-            {total}
-          </span>
+          <span className="ui-badge absolute right-3 top-1/2 -translate-y-1/2">{total}</span>
         </div>
         <button
           onClick={cycleSort}
@@ -175,10 +208,7 @@ export function PeopleGrid({
           );
         })}
         {healthFilter.length > 0 && (
-          <button
-            onClick={() => setHealthFilter([])}
-            className="ui-chip-filter shrink-0"
-          >
+          <button onClick={() => setHealthFilter([])} className="ui-chip-filter shrink-0">
             Clear
           </button>
         )}
@@ -199,13 +229,14 @@ export function PeopleGrid({
         <div className="ui-empty-panel">
           <Users className="h-8 w-8" />
           <div className="text-base text-text-secondary">
-            {query || healthFilter.length > 0
-              ? "No people match your search"
-              : "No people yet"}
+            {query || healthFilter.length > 0 ? "No people match your search" : "No people yet"}
           </div>
           {(query || healthFilter.length > 0) && (
             <button
-              onClick={() => { setQuery(""); setHealthFilter([]); }}
+              onClick={() => {
+                setQuery("");
+                setHealthFilter([]);
+              }}
               className="text-sm text-accent-text underline underline-offset-2 transition-colors hover:text-accent-hover"
             >
               Clear filters

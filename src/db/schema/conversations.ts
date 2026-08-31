@@ -10,36 +10,44 @@ import { users } from "./users";
  * A message in a conversation either (a) chats with Loki or (b) dispatches work
  * to a project's agent session — the per-message `kind` records which path ran.
  */
-export const conversations = pgTable("conversations", {
-  id:          uuid("id").primaryKey().defaultRandom(),
-  userId:      uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  title:       text("title").notNull(),
-  /** Project keys (user_projects.name) this thread is scoped to. Drives the
-   *  right-pane filter; empty = unscoped. */
-  projectKeys: text("project_keys").array().notNull().default([]),
-  createdAt:   timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt:   timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-}, (table) => [
-  index("idx_conversations_user_id").on(table.userId),
-]);
+export const conversations = pgTable(
+  "conversations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    /** Project keys (user_projects.name) this thread is scoped to. Drives the
+     *  right-pane filter; empty = unscoped. */
+    projectKeys: text("project_keys").array().notNull().default([]),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index("idx_conversations_user_id").on(table.userId)],
+);
 
-export const conversationMessages = pgTable("conversation_messages", {
-  id:             uuid("id").primaryKey().defaultRandom(),
-  conversationId: uuid("conversation_id").notNull().references(() => conversations.id, { onDelete: "cascade" }),
-  /** "user" | "assistant" | "system" — text, not an enum, to mirror the
-   *  project's existing schema convention (see beacon-sessions agent fields). */
-  role:           text("role").notNull(),
-  /** How the assistant turn was produced: "chat" (Loki reply), "command"
-   *  (resolved but awaiting a project), or "dispatch" (sent to a project
-   *  session). NULL for plain user turns. */
-  kind:           text("kind"),
-  content:        text("content").notNull(),
-  /** Resolution metadata — e.g. { needsProject, projectKey, intentId }. */
-  meta:           jsonb("meta").$type<Record<string, unknown>>().default({}),
-  createdAt:      timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-}, (table) => [
-  index("idx_conversation_messages_conversation_id").on(table.conversationId),
-]);
+export const conversationMessages = pgTable(
+  "conversation_messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    conversationId: uuid("conversation_id")
+      .notNull()
+      .references(() => conversations.id, { onDelete: "cascade" }),
+    /** "user" | "assistant" | "system" — text, not an enum, to mirror the
+     *  project's existing schema convention (see beacon-sessions agent fields). */
+    role: text("role").notNull(),
+    /** How the assistant turn was produced: "chat" (Loki reply), "command"
+     *  (resolved but awaiting a project), or "dispatch" (sent to a project
+     *  session). NULL for plain user turns. */
+    kind: text("kind"),
+    content: text("content").notNull(),
+    /** Resolution metadata — e.g. { needsProject, projectKey, intentId }. */
+    meta: jsonb("meta").$type<Record<string, unknown>>().default({}),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index("idx_conversation_messages_conversation_id").on(table.conversationId)],
+);
 
 export type Conversation = typeof conversations.$inferSelect;
 export type NewConversation = typeof conversations.$inferInsert;

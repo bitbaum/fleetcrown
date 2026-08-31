@@ -23,7 +23,10 @@ type Reply = { throws?: string; text?: string };
 let reply: Reply = {};
 const groqPath = require.resolve("../../src/lib/groq");
 require.cache[groqPath] = {
-  id: groqPath, filename: groqPath, loaded: true, paths: [],
+  id: groqPath,
+  filename: groqPath,
+  loaded: true,
+  paths: [],
   exports: {
     GROQ_FAST_MODEL: "stub-model",
     GROQ_WHISPER_MODEL: "stub-whisper",
@@ -43,7 +46,10 @@ const ITEMS = [
 const CTX = { activeGoalTitles: [], consideredTitles: [], openGaps: [], recentlyShipped: [] };
 
 const ok = (name: string, cond: boolean) => {
-  if (!cond) { console.error(`✗ ${name}`); process.exit(1); }
+  if (!cond) {
+    console.error(`✗ ${name}`);
+    process.exit(1);
+  }
   console.log(`  ✓ ${name}`);
 };
 
@@ -75,13 +81,25 @@ async function main() {
   // ── 4. the model proposed, and WE threw it all away ────────────────────────
   {
     // The dedup net drops anything too similar to an already-considered title.
-    reply = { text: JSON.stringify({ proposals: [
-      { title: "Improve the orchestration run close path", rationale: "because", sourceUrls: [] },
-    ] }) };
+    reply = {
+      text: JSON.stringify({
+        proposals: [
+          {
+            title: "Improve the orchestration run close path",
+            rationale: "because",
+            sourceUrls: [],
+          },
+        ],
+      }),
+    };
     const r = await generateProposals(ITEMS, {
-      ...CTX, consideredTitles: ["Improve the orchestration run close path"],
+      ...CTX,
+      consideredTitles: ["Improve the orchestration run close path"],
     });
-    ok("dedup-eaten drafts are NOT reported as the model having no ideas", r.outcome === "all-deduped");
+    ok(
+      "dedup-eaten drafts are NOT reported as the model having no ideas",
+      r.outcome === "all-deduped",
+    );
     ok("…and `returned` proves the model DID propose", r.returned === 1);
     ok("…while drafted is still 0", r.drafts.length === 0);
   }
@@ -93,7 +111,10 @@ async function main() {
     const v = await verifyProposals(drafts);
     ok("an unreachable panel is flagged, not reported as a rejection", v.panelUnreachable === true);
     ok("…every judge failure is named with its reason", v.judgeFailures.length >= 1);
-    ok("…and the proposal still fails closed", v.verified.every((p: { passed: boolean }) => !p.passed));
+    ok(
+      "…and the proposal still fails closed",
+      v.verified.every((p: { passed: boolean }) => !p.passed),
+    );
   }
 
   // ── 6. a WORKING panel that rejects is not flagged as broken ───────────────
@@ -103,7 +124,10 @@ async function main() {
     const v = await verifyProposals(drafts);
     ok("a real rejection is not mistaken for an outage", v.panelUnreachable === false);
     ok("…with no judge failures", v.judgeFailures.length === 0);
-    ok("…and the low score still fails the bar", v.verified.every((p: { passed: boolean }) => !p.passed));
+    ok(
+      "…and the low score still fails the bar",
+      v.verified.every((p: { passed: boolean }) => !p.passed),
+    );
   }
 
   console.log("✓ propose-verdict: zero proposals now names which of four causes");

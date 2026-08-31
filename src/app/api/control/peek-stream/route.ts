@@ -7,7 +7,13 @@
  */
 import { NextRequest } from "next/server";
 import { getSessionUserId } from "@/lib/session";
-import { sseBus, peekChannel, addPeekViewer, removePeekViewer, type PeekFrame } from "@/lib/sse-bus";
+import {
+  sseBus,
+  peekChannel,
+  addPeekViewer,
+  removePeekViewer,
+  type PeekFrame,
+} from "@/lib/sse-bus";
 import { enqueuePeekCommand } from "@/db/queries/pending-commands";
 import type { RunnerChannel } from "@/db/schema/pending-commands";
 import { getExecutionAccess } from "@/lib/execution-access";
@@ -19,19 +25,28 @@ export const dynamic = "force-dynamic";
 
 const Channel = z.enum(BUILDER_CHANNELS);
 
-
 function sseEvent(event: string, data: unknown): string {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
 }
 
 export async function GET(req: NextRequest) {
   const userId = await getSessionUserId();
-  if (!userId) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { "Content-Type": "application/json" } });
+  if (!userId)
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
 
   const tab = new URL(req.url).searchParams.get("tab")?.trim();
-  if (!tab) return new Response(JSON.stringify({ error: "tab required" }), { status: 400, headers: { "Content-Type": "application/json" } });
+  if (!tab)
+    return new Response(JSON.stringify({ error: "tab required" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
   const channelParam = Channel.safeParse(new URL(req.url).searchParams.get("channel"));
-  const runnerChannel: RunnerChannel | undefined = channelParam.success ? channelParam.data : undefined;
+  const runnerChannel: RunnerChannel | undefined = channelParam.success
+    ? channelParam.data
+    : undefined;
   if (runnerChannel === "cloud") {
     const access = await getExecutionAccess(userId);
     if (!access.cloudBuilderAllowed) {
@@ -47,11 +62,20 @@ export async function GET(req: NextRequest) {
   const stream = new ReadableStream({
     async start(controller) {
       const enc = new TextEncoder();
-      const send = (text: string) => { try { controller.enqueue(enc.encode(text)); } catch { /* client gone */ } };
+      const send = (text: string) => {
+        try {
+          controller.enqueue(enc.encode(text));
+        } catch {
+          /* client gone */
+        }
+      };
 
       // First viewer for this tab → ask the runner to start streaming it.
       if (addPeekViewer(userId, tab, runnerChannel)) {
-        await enqueuePeekCommand(userId, "peek_start", { tab, ...(runnerChannel ? { channel: runnerChannel } : {}) }).catch(() => {});
+        await enqueuePeekCommand(userId, "peek_start", {
+          tab,
+          ...(runnerChannel ? { channel: runnerChannel } : {}),
+        }).catch(() => {});
       }
       send(sseEvent("ready", { tab }));
 
@@ -65,9 +89,16 @@ export async function GET(req: NextRequest) {
         clearInterval(keepalive);
         sseBus.off(channel, onFrame);
         if (removePeekViewer(userId, tab, runnerChannel)) {
-          void enqueuePeekCommand(userId, "peek_stop", { tab, ...(runnerChannel ? { channel: runnerChannel } : {}) }).catch(() => {});
+          void enqueuePeekCommand(userId, "peek_stop", {
+            tab,
+            ...(runnerChannel ? { channel: runnerChannel } : {}),
+          }).catch(() => {});
         }
-        try { controller.close(); } catch { /* already closed */ }
+        try {
+          controller.close();
+        } catch {
+          /* already closed */
+        }
       });
     },
   });

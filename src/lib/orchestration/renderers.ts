@@ -110,7 +110,7 @@ function renderIntentBody(request: OrchestrationTaskRequest): string {
         "Ensure the working tree is in a safe state, run quality checks, note test results, and leave a clean handoff.",
       ].join("\n");
     case "hard_stop":
-      return "HARD STOP. Stop all work immediately. Do not run any more tools. Do not write any code. Do not make any changes. Say only \"Stopped.\" and stop.";
+      return 'HARD STOP. Stop all work immediately. Do not run any more tools. Do not write any code. Do not make any changes. Say only "Stopped." and stop.';
     case "continue":
       return [
         `Continue the current work in ${request.projectPath}.`,
@@ -142,7 +142,9 @@ function renderQueueBlock(queue?: string[]): string | null {
     ...lines,
     overflow,
     `Weigh these against the scanning candidates below — pick what's truly highest-impact right now.`,
-  ].filter(Boolean).join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 /** The project's brief + active goals (the roadmap). Placed FIRST in the prompt
@@ -157,7 +159,10 @@ export function renderProjectContextBlock(projectContext?: string): string | nul
   ].join("\n");
 }
 
-export function renderTaskForAdapter(request: OrchestrationTaskRequest, adapter: AdapterId = request.adapter): string {
+export function renderTaskForAdapter(
+  request: OrchestrationTaskRequest,
+  adapter: AdapterId = request.adapter,
+): string {
   const intent = getOrchestrationIntent(request.intent);
   const queueBlock = renderQueueBlock(request.queue);
   const contextBlock = renderProjectContextBlock(request.projectContext);
@@ -199,7 +204,9 @@ export function renderTaskForAdapter(request: OrchestrationTaskRequest, adapter:
   }
 
   if (adapter === "openclaw") {
-    sections.push("Use OpenClaw-native tools and durable execution patterns where they reduce manual busywork.");
+    sections.push(
+      "Use OpenClaw-native tools and durable execution patterns where they reduce manual busywork.",
+    );
   }
 
   return sections.join("\n\n");

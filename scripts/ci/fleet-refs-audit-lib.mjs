@@ -20,11 +20,9 @@
  * comment-stripping above already exists to prevent, just one layer deeper.
  */
 export function retiredHandleMatches(text, retiredHandles) {
-  const withoutComments = text.split('\n').filter(l => !/^\s*#/.test(l));
-  const live = withoutComments
-    .filter(l => !/^\s*RETIRED_HANDLES\s*:/.test(l))
-    .join('\n');
-  return retiredHandles.filter(h => live.includes(h));
+  const withoutComments = text.split("\n").filter((l) => !/^\s*#/.test(l));
+  const live = withoutComments.filter((l) => !/^\s*RETIRED_HANDLES\s*:/.test(l)).join("\n");
+  return retiredHandles.filter((h) => live.includes(h));
 }
 
 /** `uses: owner/repo/path@ref` and `uses: owner/repo@ref`. Local (`./…`) and
@@ -69,10 +67,14 @@ export const USES = /^\s*(?:-\s+)?uses:\s*([A-Za-z0-9][\w.-]*)\/([\w.-]+)((?:\/[
  *   real === slug         → the reference is already canonical
  */
 export function verdictFor(slug, real) {
-  if (real === undefined) return { kind: 'unreadable', message: `${slug} (lookup failed)` };
-  if (real === null) return { kind: 'stale', message: `uses ${slug} — DOES NOT EXIST` };
-  if (real !== slug) return { kind: 'stale', message: `uses ${slug} — canonical is ${real} (Actions will NOT follow this)` };
-  return { kind: 'ok' };
+  if (real === undefined) return { kind: "unreadable", message: `${slug} (lookup failed)` };
+  if (real === null) return { kind: "stale", message: `uses ${slug} — DOES NOT EXIST` };
+  if (real !== slug)
+    return {
+      kind: "stale",
+      message: `uses ${slug} — canonical is ${real} (Actions will NOT follow this)`,
+    };
+  return { kind: "ok" };
 }
 
 /**
@@ -98,11 +100,15 @@ export function verdictFor(slug, real) {
  * An empty `subpath` (plain `owner/repo@ref`) has no file to check.
  */
 export function pathVerdictFor(slug, subpath, ref, exists) {
-  if (!subpath) return { kind: 'ok' };
-  const rel = subpath.replace(/^\//, '');
-  if (exists === undefined) return { kind: 'unreadable', message: `${slug}/${rel}@${ref} (path lookup failed)` };
+  if (!subpath) return { kind: "ok" };
+  const rel = subpath.replace(/^\//, "");
+  if (exists === undefined)
+    return { kind: "unreadable", message: `${slug}/${rel}@${ref} (path lookup failed)` };
   if (exists === false) {
-    return { kind: 'stale', message: `uses ${slug}/${rel}@${ref} — the repo exists but THAT FILE DOES NOT (moved or deleted)` };
+    return {
+      kind: "stale",
+      message: `uses ${slug}/${rel}@${ref} — the repo exists but THAT FILE DOES NOT (moved or deleted)`,
+    };
   }
-  return { kind: 'ok' };
+  return { kind: "ok" };
 }

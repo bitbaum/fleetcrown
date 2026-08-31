@@ -17,9 +17,8 @@ export function parseSession(tab: string, adapter = "claude"): SessionState | nu
     // OrchestrationTaskSummary's purview and don't leak into ProjectState.
     const blockReasonRaw = fields["block-reason"]?.trim();
     const noOpCountRaw = fields["no-op-count"]?.trim();
-    const noOpCount = noOpCountRaw && /^\d+$/.test(noOpCountRaw)
-      ? parseInt(noOpCountRaw, 10)
-      : undefined;
+    const noOpCount =
+      noOpCountRaw && /^\d+$/.test(noOpCountRaw) ? parseInt(noOpCountRaw, 10) : undefined;
     return {
       ...fields,
       ...(blockReasonRaw ? { blockReason: blockReasonRaw } : {}),
@@ -37,7 +36,9 @@ export function readTmpTs(filename: string): number | null {
       const ts = parseInt(fs.readFileSync(filename, "utf-8").trim(), 10);
       return isNaN(ts) ? null : ts;
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return null;
 }
 
@@ -46,10 +47,16 @@ export function readCurrentPrompt(tab: string): CurrentPrompt | null {
     const file = stateFile.prompt(tab);
     if (!fs.existsSync(file)) return null;
     const obj = JSON.parse(fs.readFileSync(file, "utf-8"));
-    if (typeof obj?.key === "string" && typeof obj?.label === "string" && typeof obj?.startedAt === "number") {
+    if (
+      typeof obj?.key === "string" &&
+      typeof obj?.label === "string" &&
+      typeof obj?.startedAt === "number"
+    ) {
       return obj as CurrentPrompt;
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return null;
 }
 
@@ -104,7 +111,7 @@ export function getAgentProcesses(
     id: string;
     processMatchers: string[];
     capabilities: { sessionLifecycleSignals: boolean };
-  }>
+  }>,
 ): AgentProcess[] {
   const processes: AgentProcess[] = [];
   try {
@@ -121,8 +128,10 @@ export function getAgentProcesses(
         const agent = agents.find((candidate) =>
           candidate.processMatchers.some((m) => {
             if (m === "agent" && candidate.id === "cursor") {
-              return basename === "agent"
-                && (argv0.includes(".local/bin/agent") || argv0.includes("/.cursor/"));
+              return (
+                basename === "agent" &&
+                (argv0.includes(".local/bin/agent") || argv0.includes("/.cursor/"))
+              );
             }
             return basename === m || basename === `${m}.exe` || basename.startsWith(`${m}-`);
           }),
@@ -185,7 +194,10 @@ export function readClaudeLiveSessions(): Map<string, ClaudeLiveSession> {
   for (const f of files) {
     try {
       const raw = JSON.parse(fs.readFileSync(`${dir}/${f}`, "utf-8")) as {
-        pid?: number; cwd?: string; status?: string; statusUpdatedAt?: number;
+        pid?: number;
+        cwd?: string;
+        status?: string;
+        statusUpdatedAt?: number;
       };
       if (!raw.pid || !raw.cwd || typeof raw.status !== "string") continue;
       if (!fs.existsSync(`/proc/${raw.pid}`)) continue; // stale file, dead agent
@@ -197,7 +209,9 @@ export function readClaudeLiveSessions(): Map<string, ClaudeLiveSession> {
       };
       const prev = byCwd.get(raw.cwd);
       if (!prev || entry.statusUpdatedAtS > prev.statusUpdatedAtS) byCwd.set(raw.cwd, entry);
-    } catch { /* unreadable/partial write — skip */ }
+    } catch {
+      /* unreadable/partial write — skip */
+    }
   }
   return byCwd;
 }
@@ -236,48 +250,56 @@ export type FastProjectState = {
 };
 
 export function readFastState(
-  projects: Array<{ tab: string; dir: string; sessionLifecycleSignals?: boolean; activeAgents?: string[]; tabOpen?: boolean }>,
-  agentCwds: string[]
+  projects: Array<{
+    tab: string;
+    dir: string;
+    sessionLifecycleSignals?: boolean;
+    activeAgents?: string[];
+    tabOpen?: boolean;
+  }>,
+  agentCwds: string[],
 ): FastProjectState[] {
   const nowS = Math.floor(Date.now() / 1000);
   const liveSessions = readClaudeLiveSessions();
-  return projects.map(({ tab, dir, sessionLifecycleSignals = true, activeAgents = [], tabOpen = false }) => {
-    const tmpReady   = readTmpTs(stateFile.ready(tab));
-    const tmpLock    = readTmpTs(stateFile.lock(tab));
-    const tmpClosing = readTmpTs(stateFile.closing(tab));
-    const tmpClosed  = readTmpTs(stateFile.closed(tab));
+  return projects.map(
+    ({ tab, dir, sessionLifecycleSignals = true, activeAgents = [], tabOpen = false }) => {
+      const tmpReady = readTmpTs(stateFile.ready(tab));
+      const tmpLock = readTmpTs(stateFile.lock(tab));
+      const tmpClosing = readTmpTs(stateFile.closing(tab));
+      const tmpClosed = readTmpTs(stateFile.closed(tab));
 
-    const rawCurrentPrompt = readCurrentPrompt(tab);
-    let currentPrompt = sessionLifecycleSignals || rawCurrentPrompt?.source === "runner"
-      ? rawCurrentPrompt
-      : null;
-    // No prompt state file (headless box: nothing writes /tmp prompt state)
-    // but the CLI itself says it is generating → surface it as the
-    // direct-terminal observation so the agent reads as Working instead of
-    // "process detected, no lifecycle signal".
-    if (!currentPrompt) {
-      const live = claudeLiveSessionForDir(liveSessions, dir);
-      if (live && live.status !== "idle") {
-        currentPrompt = {
-          key: "direct_terminal",
-          label: "Direct terminal activity",
-          startedAt: live.statusUpdatedAtS,
-        };
+      const rawCurrentPrompt = readCurrentPrompt(tab);
+      let currentPrompt =
+        sessionLifecycleSignals || rawCurrentPrompt?.source === "runner" ? rawCurrentPrompt : null;
+      // No prompt state file (headless box: nothing writes /tmp prompt state)
+      // but the CLI itself says it is generating → surface it as the
+      // direct-terminal observation so the agent reads as Working instead of
+      // "process detected, no lifecycle signal".
+      if (!currentPrompt) {
+        const live = claudeLiveSessionForDir(liveSessions, dir);
+        if (live && live.status !== "idle") {
+          currentPrompt = {
+            key: "direct_terminal",
+            label: "Direct terminal activity",
+            startedAt: live.statusUpdatedAtS,
+          };
+        }
       }
-    }
 
-    const liveAdapter = activeAgents[0] ?? "claude";
-    return {
-      tab,
-      agentRunning: agentCwds.some((cwd) => cwd === dir || cwd.startsWith(dir + "/")),
-      tabOpen,
-      activeAgents,
-      session: parseSession(tab, liveAdapter),
-      currentPrompt,
-      readyAt:   tmpReady   !== null && (nowS - tmpReady)   < SENTINEL_VALIDITY_S ? tmpReady   : null,
-      lockAt:    tmpLock    !== null && (nowS - tmpLock)    < SENTINEL_VALIDITY_S ? tmpLock    : null,
-      closingAt: tmpClosing !== null && (nowS - tmpClosing) < SENTINEL_VALIDITY_S ? tmpClosing : null,
-      closedAt:  tmpClosed  !== null && (nowS - tmpClosed)  < SENTINEL_VALIDITY_S ? tmpClosed  : null,
-    };
-  });
+      const liveAdapter = activeAgents[0] ?? "claude";
+      return {
+        tab,
+        agentRunning: agentCwds.some((cwd) => cwd === dir || cwd.startsWith(dir + "/")),
+        tabOpen,
+        activeAgents,
+        session: parseSession(tab, liveAdapter),
+        currentPrompt,
+        readyAt: tmpReady !== null && nowS - tmpReady < SENTINEL_VALIDITY_S ? tmpReady : null,
+        lockAt: tmpLock !== null && nowS - tmpLock < SENTINEL_VALIDITY_S ? tmpLock : null,
+        closingAt:
+          tmpClosing !== null && nowS - tmpClosing < SENTINEL_VALIDITY_S ? tmpClosing : null,
+        closedAt: tmpClosed !== null && nowS - tmpClosed < SENTINEL_VALIDITY_S ? tmpClosed : null,
+      };
+    },
+  );
 }

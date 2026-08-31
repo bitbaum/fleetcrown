@@ -44,7 +44,10 @@ export function UpdateBanner() {
 
   useEffect(() => {
     const bridge = window.fleetRunner;
-    if (typeof bridge?.getUpdateState !== "function" || typeof bridge?.onUpdateState !== "function") {
+    if (
+      typeof bridge?.getUpdateState !== "function" ||
+      typeof bridge?.onUpdateState !== "function"
+    ) {
       return;
     }
     let alive = true;
@@ -64,7 +67,9 @@ export function UpdateBanner() {
     if (!state?.newVersion) return;
     try {
       window.sessionStorage.setItem(DISMISS_KEY, state.newVersion);
-    } catch { /* private mode */ }
+    } catch {
+      /* private mode */
+    }
     setDismissedVersion(state.newVersion);
   }
 
@@ -101,18 +106,23 @@ export function UpdateBanner() {
         <span className="font-medium">Fleet Runner v{state.newVersion} ready.</span>{" "}
         {isDebInstall && debCommand ? (
           <span className="text-text-secondary">
-            Auto-install isn&apos;t available for .deb (Linux sudo policy). Run this in any terminal:
+            Auto-install isn&apos;t available for .deb (Linux sudo policy). Run this in any
+            terminal:
           </span>
-        ) : state.installFormat === "appimage" || state.installFormat === "dmg" || state.installFormat === "exe" ? (
+        ) : state.installFormat === "appimage" ||
+          state.installFormat === "dmg" ||
+          state.installFormat === "exe" ? (
           <span className="text-text-secondary">Restart Fleet Runner to apply.</span>
         ) : (
           <span className="text-text-secondary">
-            Visit <a href="/releases" className="ui-public-link">releases</a> to download.
+            Visit{" "}
+            <a href="/releases" className="ui-public-link">
+              releases
+            </a>{" "}
+            to download.
           </span>
         )}
-        {isDebInstall && debCommand && (
-          <code className="ui-update-banner-cmd">{debCommand}</code>
-        )}
+        {isDebInstall && debCommand && <code className="ui-update-banner-cmd">{debCommand}</code>}
       </div>
 
       <div className="ui-update-banner-actions">
@@ -127,7 +137,9 @@ export function UpdateBanner() {
             <span className="ml-1">{copied ? "Copied" : "Copy"}</span>
           </button>
         )}
-        {(state.installFormat === "appimage" || state.installFormat === "dmg" || state.installFormat === "exe") && (
+        {(state.installFormat === "appimage" ||
+          state.installFormat === "dmg" ||
+          state.installFormat === "exe") && (
           <button
             type="button"
             onClick={onRestartToInstall}

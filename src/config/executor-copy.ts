@@ -11,13 +11,13 @@ export const EXECUTOR_COPY = {
   /** Unified executor — cloud (box-runner) and/or this computer (desktop app) */
   builder: {
     online: "Builder online",
-  cloudOnline: "Cloud builder online",
-  localComputerOnline: "This computer online",
-  bothOnline: "Cloud + this computer online",
-  cloudOnlyDetail: "This computer offline — cloud builder runs the queue",
-  localOnlyDetail: "Cloud builder offline — this computer runs the queue",
-  cloudOffline: "Cloud builder offline",
-  localComputerOffline: "This computer offline",
+    cloudOnline: "Cloud builder online",
+    localComputerOnline: "This computer online",
+    bothOnline: "Cloud + this computer online",
+    cloudOnlyDetail: "This computer offline — cloud builder runs the queue",
+    localOnlyDetail: "Cloud builder offline — this computer runs the queue",
+    cloudOffline: "Cloud builder offline",
+    localComputerOffline: "This computer offline",
     offline: "Builder offline",
     queued: "Queued",
     building: "Building",
@@ -66,8 +66,7 @@ export const EXECUTOR_COPY = {
     stepTitle: "You're ready to build",
     stepDescriptionTeam:
       "Use the web app from anywhere. Connect this computer when you want agents to run your repos and tools.",
-    stepDescription:
-      "Same app in your browser or on desktop — one account, one Control page.",
+    stepDescription: "Same app in your browser or on desktop — one account, one Control page.",
     intro: `${APP_NAME} runs in your browser. Connect a builder when you want agents to work. Hosted cloud builders are private beta; Fleet Runner on this computer is the default path for new accounts.`,
     browserPath: {
       title: "Continue in your browser",
@@ -114,12 +113,10 @@ export const EXECUTOR_COPY = {
 
   inject: {
     queuedOfflineApi: "Queued — builder offline (runs when online)",
-    hostedFallback:
-      "Builder offline — cloud worker will make the change and open a PR.",
+    hostedFallback: "Builder offline — cloud worker will make the change and open a PR.",
     hostedAndLocal:
       "Builder offline — cloud worker started; this computer runs it too when connected.",
-    queuedOnly:
-      "Queued — runs when the builder is online.",
+    queuedOnly: "Queued — runs when the builder is online.",
   },
 
   /** How Loki (and Control) reach the agent CLI — not a separate chat channel. */
@@ -169,8 +166,7 @@ export const EXECUTOR_COPY = {
     // point of the page: one shell, and you choose where it runs and how you
     // talk to it. The old subtitle described only typing, which was the single
     // thing the terminal could already do.
-    pageSubtitle:
-      "The live agent session. Type into it the same way you would locally.",
+    pageSubtitle: "The live agent session. Type into it the same way you would locally.",
     cloudLabel: "Cloud",
     cloudLabelLocalHost: "Cloud (this server)",
     thisComputerLabel: "This computer",
@@ -178,17 +174,21 @@ export const EXECUTOR_COPY = {
       "Agents on the cloud builder (box-runner). Pick a project tab, click to focus, and type — keystrokes go straight to the agent PTY. Ctrl+C, arrows, and paste work.",
     cloudLoading: "Looking for agents on the cloud builder…",
     cloudEmpty: "Nothing running on the cloud builder.",
-    cloudEmptyHint: "Start an agent below, or dispatch from Control (Implement) or Loki. When an agent session actually starts, it appears here — an empty Terminal means nothing is running for this tab yet.",
+    cloudEmptyHint:
+      "Start an agent below, or dispatch from Control (Implement) or Loki. When an agent session actually starts, it appears here — an empty Terminal means nothing is running for this tab yet.",
     cloudOfflineHint: "The cloud builder (box-runner on Hetzner) is offline right now.",
     // Connected to the peek stream but no screen frames arrived → the runner is
     // wedged (e.g. its outbound fetch is failing). Honest, actionable — not a
     // black pane labelled "live".
-    cloudStalledHint: "Connected, but the cloud builder isn't streaming this session — it may be stuck. Check the box-runner service on Hetzner.",
-    thisComputerStalledHint: "Connected, but Fleet Runner on this computer isn't streaming output — it may be stuck. Quit it from the menu bar and reopen.",
+    cloudStalledHint:
+      "Connected, but the cloud builder isn't streaming this session — it may be stuck. Check the box-runner service on Hetzner.",
+    thisComputerStalledHint:
+      "Connected, but Fleet Runner on this computer isn't streaming output — it may be stuck. Quit it from the menu bar and reopen.",
     thisComputerHelp:
       "Interactive view of agents on this computer via the desktop app. Same keystroke path as Cloud — click the terminal and type.",
     thisComputerEmpty: "Nothing running on this computer.",
-    thisComputerEmptyHint: "Start an agent below, or dispatch from Control or Loki — the live session shows up here only while an agent is running.",
+    thisComputerEmptyHint:
+      "Start an agent below, or dispatch from Control or Loki — the live session shows up here only while an agent is running.",
     thisComputerOfflineHint: "Connect Fleet Runner on this computer to this account.",
     thisComputerLoading: "Looking for agents on this computer…",
   },

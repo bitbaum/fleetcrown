@@ -1,8 +1,12 @@
 import { and, asc, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import {
-  frontierDigests, type FrontierDigestRow, type NewFrontierDigestRow,
-  frontierProposals, type FrontierProposalRow, type NewFrontierProposalRow,
+  frontierDigests,
+  type FrontierDigestRow,
+  type NewFrontierDigestRow,
+  frontierProposals,
+  type FrontierProposalRow,
+  type NewFrontierProposalRow,
   entities,
 } from "@/db/schema";
 import { createGoal } from "@/db/queries/goals";
@@ -42,18 +46,17 @@ export async function getLatestFrontierDigest(): Promise<FrontierDigestRow | nul
 /** Recent digests for an archive strip (date + headline only is enough, but we
  *  return full rows for simplicity; the list is short). */
 export async function listRecentFrontierDigests(limit = 14): Promise<FrontierDigestRow[]> {
-  return db
-    .select()
-    .from(frontierDigests)
-    .orderBy(desc(frontierDigests.digestDate))
-    .limit(limit);
+  return db.select().from(frontierDigests).orderBy(desc(frontierDigests.digestDate)).limit(limit);
 }
 
 // ─── Self-improvement proposals ──────────────────────────────────────────────
 
 /** Who/what the self-improvement loop drafts proposals for: the owner of the
  *  "fleetcrown" product entity. Resolved (not hardcoded) so it survives reseeds. */
-export async function getSelfImprovementTarget(): Promise<{ userId: string; entityId: string } | null> {
+export async function getSelfImprovementTarget(): Promise<{
+  userId: string;
+  entityId: string;
+} | null> {
   const [row] = await db
     .select({ userId: entities.userId, entityId: entities.id })
     .from(entities)
@@ -63,7 +66,9 @@ export async function getSelfImprovementTarget(): Promise<{ userId: string; enti
   return row ?? null;
 }
 
-export async function insertProposals(rows: NewFrontierProposalRow[]): Promise<FrontierProposalRow[]> {
+export async function insertProposals(
+  rows: NewFrontierProposalRow[],
+): Promise<FrontierProposalRow[]> {
   if (rows.length === 0) return [];
   return db.insert(frontierProposals).values(rows).returning();
 }
@@ -104,20 +109,24 @@ export async function decideProposal(
   if (proposal.status !== "proposed") return { ok: false, reason: "already_decided" };
 
   if (action === "dismiss") {
-    await db.update(frontierProposals)
+    await db
+      .update(frontierProposals)
       .set({ status: "dismissed", decidedAt: new Date() })
       .where(eq(frontierProposals.id, id));
     return { ok: true };
   }
 
   // accept → goal. Fold the source links into the goal description for provenance.
-  const links = proposal.sourceUrls.length ? `\n\nFrom the frontier digest (${proposal.digestDate}):\n${proposal.sourceUrls.map((u) => `- ${u}`).join("\n")}` : "";
+  const links = proposal.sourceUrls.length
+    ? `\n\nFrom the frontier digest (${proposal.digestDate}):\n${proposal.sourceUrls.map((u) => `- ${u}`).join("\n")}`
+    : "";
   const goal = await createGoal(userId, {
     title: proposal.title,
     description: `${proposal.rationale}${links}`,
     entityId: proposal.entityId ?? undefined,
   });
-  await db.update(frontierProposals)
+  await db
+    .update(frontierProposals)
     .set({ status: "accepted", createdGoalId: goal.id, decidedAt: new Date() })
     .where(eq(frontierProposals.id, id));
   return { ok: true, goalId: goal.id };

@@ -20,8 +20,8 @@ export async function PrivateZoneDataGate({
       <EmptyState>
         <Link href="/unlock" className="text-accent-text underline-offset-2 hover:underline">
           Unlock the private zone
-        </Link>
-        {" "}to view {label}.
+        </Link>{" "}
+        to view {label}.
       </EmptyState>
     );
   }

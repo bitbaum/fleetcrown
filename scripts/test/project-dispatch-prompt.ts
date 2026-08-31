@@ -16,29 +16,48 @@ import type { ProjectDossier } from "@/db/queries/project-dossier";
 let pass = 0;
 let fail = 0;
 function ok(cond: boolean, label: string) {
-  if (cond) { pass++; } else { fail++; console.error(`✗ ${label}`); }
+  if (cond) {
+    pass++;
+  } else {
+    fail++;
+    console.error(`✗ ${label}`);
+  }
 }
 function eq(actual: unknown, expected: unknown, label: string) {
   const a = JSON.stringify(actual);
   const e = JSON.stringify(expected);
-  if (a === e) { pass++; }
-  else { fail++; console.error(`✗ ${label}: expected ${e}, got ${a}`); }
+  if (a === e) {
+    pass++;
+  } else {
+    fail++;
+    console.error(`✗ ${label}: expected ${e}, got ${a}`);
+  }
 }
 
 const DAY = 24 * 60 * 60 * 1000;
 const T0 = new Date("2026-08-04T12:00:00Z");
 
 /** A dossier with everything a prompt can draw on; override per test. */
-function dossier(over: {
-  attrs?: Record<string, string>;
-  description?: string | null;
-  goals?: Array<{ title: string; description?: string | null; progress?: number; createdAt?: Date }>;
-  devLog?: Array<{ next?: string | null }>;
-  runs?: Array<{ intent: string; outcome: string; startedAt: Date; finishedAt: Date | null }>;
-} = {}): ProjectDossier {
+function dossier(
+  over: {
+    attrs?: Record<string, string>;
+    description?: string | null;
+    goals?: Array<{
+      title: string;
+      description?: string | null;
+      progress?: number;
+      createdAt?: Date;
+    }>;
+    devLog?: Array<{ next?: string | null }>;
+    runs?: Array<{ intent: string; outcome: string; startedAt: Date; finishedAt: Date | null }>;
+  } = {},
+): ProjectDossier {
   return {
     detail: {
-      project: { name: "HamsterCheek", description: "description" in over ? over.description ?? null : "A box you hide outside." },
+      project: {
+        name: "HamsterCheek",
+        description: "description" in over ? (over.description ?? null) : "A box you hide outside.",
+      },
       attrs: over.attrs ?? {},
       linkedGoals: (over.goals ?? []).map((g, i) => ({
         title: g.title,
@@ -61,12 +80,22 @@ const FOR_EVERY_KIND: Record<string, ProjectDossier> = {
   next_step: dossier({ attrs: { next_step: "Add the recovery contact field" } }),
   fix_signal: dossier({ attrs: { security_vulnerability: "Uploads are unauthenticated" } }),
   diagnose_timeouts: dossier({
-    runs: [{ intent: "build", outcome: "timeout", startedAt: T0, finishedAt: new Date(T0.getTime() + DAY) }],
+    runs: [
+      {
+        intent: "build",
+        outcome: "timeout",
+        startedAt: T0,
+        finishedAt: new Date(T0.getTime() + DAY),
+      },
+    ],
   }),
 };
 
-eq(Object.keys(FOR_EVERY_KIND).sort(), [...PROJECT_DISPATCH_KINDS].sort(),
-  "this test covers every dispatch kind — a new kind must be added here");
+eq(
+  Object.keys(FOR_EVERY_KIND).sort(),
+  [...PROJECT_DISPATCH_KINDS].sort(),
+  "this test covers every dispatch kind — a new kind must be added here",
+);
 
 for (const kind of PROJECT_DISPATCH_KINDS) {
   const signalKey = kind === "fix_signal" ? "security_vulnerability" : undefined;
@@ -80,15 +109,21 @@ for (const kind of PROJECT_DISPATCH_KINDS) {
 
 // ── Placeholders never reach an agent ───────────────────────────────────────
 
-const withUnknowns = composeDispatchPrompt("kickoff", undefined, dossier({
-  attrs: {
-    mission: "Keep valuables out of the house",
-    stack: "Unknown", architecture: "N/A", conventions: "TBD",
-    distribution: "RSS + newsletter",
-    gtm: "Solo builders; first paying customer via OrangeCat",
-  },
-  goals: [{ title: "Core data model" }],
-}));
+const withUnknowns = composeDispatchPrompt(
+  "kickoff",
+  undefined,
+  dossier({
+    attrs: {
+      mission: "Keep valuables out of the house",
+      stack: "Unknown",
+      architecture: "N/A",
+      conventions: "TBD",
+      distribution: "RSS + newsletter",
+      gtm: "Solo builders; first paying customer via OrangeCat",
+    },
+    goals: [{ title: "Core data model" }],
+  }),
+);
 const kickoffPrompt = withUnknowns.prompt ?? "";
 ok(!/Unknown/.test(kickoffPrompt), "a placeholder stack never reaches the agent");
 ok(!/N\/A/.test(kickoffPrompt), "'N/A' never reaches the agent");
@@ -103,15 +138,24 @@ eq(
   "a placeholder next_step is no next step — refuse rather than dispatch 'do Unknown'",
 );
 eq(
-  composeDispatchPrompt("fix_signal", "security_vulnerability", dossier({ attrs: { security_vulnerability: "Unknown" } })).error,
+  composeDispatchPrompt(
+    "fix_signal",
+    "security_vulnerability",
+    dossier({ attrs: { security_vulnerability: "Unknown" } }),
+  ).error,
   "That issue is no longer recorded on the profile.",
   "a placeholder signal is not an issue to fix",
 );
 ok(
   !/Definition of done: Unknown/.test(
-    composeDispatchPrompt("kickoff", undefined, dossier({
-      attrs: { definition_of_done: "Unknown" }, goals: [{ title: "x" }],
-    })).prompt ?? "",
+    composeDispatchPrompt(
+      "kickoff",
+      undefined,
+      dossier({
+        attrs: { definition_of_done: "Unknown" },
+        goals: [{ title: "x" }],
+      }),
+    ).prompt ?? "",
   ),
   "a placeholder definition_of_done falls back to the generic verify instruction",
 );
@@ -122,15 +166,22 @@ ok(
 
 // ── Kickoff targets one milestone, in creation order ─────────────────────────
 
-const ordered = composeDispatchPrompt("kickoff", undefined, dossier({
-  goals: [
-    { title: "Core data model", createdAt: new Date(T0.getTime() + 1000), progress: 100 },
-    { title: "Map picker", createdAt: new Date(T0.getTime() + 2000), progress: 0 },
-    { title: "Photo upload", createdAt: new Date(T0.getTime() + 3000), progress: 0 },
-  ],
-})).prompt ?? "";
-ok(/YOUR TARGET THIS RUN: Map picker/.test(ordered),
-  "the target is the first UNFINISHED milestone by creation order, not the first listed");
+const ordered =
+  composeDispatchPrompt(
+    "kickoff",
+    undefined,
+    dossier({
+      goals: [
+        { title: "Core data model", createdAt: new Date(T0.getTime() + 1000), progress: 100 },
+        { title: "Map picker", createdAt: new Date(T0.getTime() + 2000), progress: 0 },
+        { title: "Photo upload", createdAt: new Date(T0.getTime() + 3000), progress: 0 },
+      ],
+    }),
+  ).prompt ?? "";
+ok(
+  /YOUR TARGET THIS RUN: Map picker/.test(ordered),
+  "the target is the first UNFINISHED milestone by creation order, not the first listed",
+);
 ok(/do not attempt the whole roadmap in one run/.test(ordered), "scope is one milestone");
 
 eq(
@@ -171,10 +222,14 @@ ok(
 
 ok(
   /Wire the recovery contact/.test(
-    composeDispatchPrompt("next_step", undefined, dossier({
-      attrs: { next_step: "stale plan" },
-      devLog: [{ next: "older" }, { next: "Wire the recovery contact" }],
-    })).prompt ?? "",
+    composeDispatchPrompt(
+      "next_step",
+      undefined,
+      dossier({
+        attrs: { next_step: "stale plan" },
+        devLog: [{ next: "older" }, { next: "Wire the recovery contact" }],
+      }),
+    ).prompt ?? "",
   ),
   "the last dev-log handoff beats the stored next_step",
 );

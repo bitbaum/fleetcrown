@@ -4,7 +4,11 @@ import { conversations, conversationMessages } from "../../src/db/schema";
 import { desc, eq } from "drizzle-orm";
 
 async function main() {
-  const convs = await db.select().from(conversations).orderBy(desc(conversations.updatedAt)).limit(10);
+  const convs = await db
+    .select()
+    .from(conversations)
+    .orderBy(desc(conversations.updatedAt))
+    .limit(10);
   console.log(`conversations: ${convs.length}\n`);
   for (const c of convs) {
     const msgs = await db

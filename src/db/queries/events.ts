@@ -14,7 +14,10 @@ export const CreateEventBody = z.object({
   type: z.string().trim().min(1, "type is required"),
   description: z.string().trim().optional(),
   url: z.string().trim().optional(),
-  deadline: z.string().refine((s) => !Number.isNaN(new Date(s).getTime()), "Invalid date").optional(),
+  deadline: z
+    .string()
+    .refine((s) => !Number.isNaN(new Date(s).getTime()), "Invalid date")
+    .optional(),
   category: z.string().trim().optional(),
 });
 
@@ -24,7 +27,11 @@ export const PatchEventBody = z
     name: z.string().trim().min(1, "name cannot be empty").optional(),
     description: z.string().nullable().optional(),
     url: z.string().trim().nullable().optional(),
-    deadline: z.string().refine((s) => !Number.isNaN(new Date(s).getTime()), "Invalid date").nullable().optional(),
+    deadline: z
+      .string()
+      .refine((s) => !Number.isNaN(new Date(s).getTime()), "Invalid date")
+      .nullable()
+      .optional(),
   })
   .refine((v) => Object.keys(v).length > 0, { message: "Nothing to update" });
 
@@ -57,7 +64,9 @@ export async function patchEvent(userId: string, id: string, data: PatchEventInp
       ...(data.name !== undefined && { name: data.name }),
       ...(data.description !== undefined && { description: data.description }),
       ...(data.url !== undefined && { url: data.url }),
-      ...(data.deadline !== undefined && { deadline: data.deadline ? new Date(data.deadline) : null }),
+      ...(data.deadline !== undefined && {
+        deadline: data.deadline ? new Date(data.deadline) : null,
+      }),
       updatedAt: new Date(),
     })
     .where(and(eq(events.id, id), eq(events.userId, userId)))
@@ -69,7 +78,10 @@ export async function deleteEvent(userId: string, id: string) {
   await db.delete(events).where(and(eq(events.id, id), eq(events.userId, userId)));
 }
 
-export async function getEventsDueSoon(userId: string, days = EVENTS_DUE_SOON_DAYS): Promise<EventRow[]> {
+export async function getEventsDueSoon(
+  userId: string,
+  days = EVENTS_DUE_SOON_DAYS,
+): Promise<EventRow[]> {
   const soon = new Date();
   soon.setDate(soon.getDate() + days);
 

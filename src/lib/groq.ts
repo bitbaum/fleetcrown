@@ -127,7 +127,10 @@ async function callOneLink(
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
     body: JSON.stringify({
-      model: link.model, messages, max_tokens: o.maxTokens, temperature: o.temperature,
+      model: link.model,
+      messages,
+      max_tokens: o.maxTokens,
+      temperature: o.temperature,
       ...(supportsReasoningEffort(link.model) ? { reasoning_effort: o.reasoningEffort } : {}),
     }),
     signal: AbortSignal.timeout(o.timeoutMs),
@@ -140,7 +143,7 @@ async function callOneLink(
     const body = await res.text().catch(() => "");
     throw new Error(`${link.provider.id} ${res.status}${body ? `: ${body.slice(0, 300)}` : ""}`);
   }
-  const data = await res.json() as { choices?: Array<{ message?: { content?: string } }> };
+  const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
   const text = (data?.choices?.[0]?.message?.content ?? "").trim();
   // A 200 with empty content is a failure for every caller here (they all parse
   // the text). Treating it as success would spend the fallback budget on
@@ -156,25 +159,51 @@ async function callOneLink(
  * total outage reports which vendors were tried and why each refused, instead
  * of a single vendor's message standing in for the whole chain.
  */
-export async function callTextDetailed(prompt: string, options: GroqOptions = {}): Promise<TextCompletion> {
+export async function callTextDetailed(
+  prompt: string,
+  options: GroqOptions = {},
+): Promise<TextCompletion> {
   const {
-    maxTokens = 200, temperature = 0.2, timeoutMs = HTTP_TIMEOUT_SHORT_MS,
-    systemPrompt, model = GROQ_FAST_MODEL, reasoningEffort = "low", fallback = true,
+    maxTokens = 200,
+    temperature = 0.2,
+    timeoutMs = HTTP_TIMEOUT_SHORT_MS,
+    systemPrompt,
+    model = GROQ_FAST_MODEL,
+    reasoningEffort = "low",
+    fallback = true,
   } = options;
 
   const chain = chainFrom(model);
   // `chainFrom` returns [] when no vendor key is configured at all, and drops
   // links whose key is absent. Falling back to the requested model keeps the
   // "no key" error identical to the one callers have always seen.
-  const links: ChatLink[] = chain.length === 0
-    ? [{ provider: { id: "groq", baseUrl: GROQ_BASE_URL, keyEnv: "GROQ_API_KEY", models: [model], dailyTokens: 0 }, model }]
-    : fallback ? chain : [chain[0]];
+  const links: ChatLink[] =
+    chain.length === 0
+      ? [
+          {
+            provider: {
+              id: "groq",
+              baseUrl: GROQ_BASE_URL,
+              keyEnv: "GROQ_API_KEY",
+              models: [model],
+              dailyTokens: 0,
+            },
+            model,
+          },
+        ]
+      : fallback
+        ? chain
+        : [chain[0]];
 
   const attempts: { model: string; error: string }[] = [];
   for (const link of links) {
     try {
       const text = await callOneLink(link, prompt, {
-        maxTokens, temperature, timeoutMs, systemPrompt, reasoningEffort,
+        maxTokens,
+        temperature,
+        timeoutMs,
+        systemPrompt,
+        reasoningEffort,
       });
       // A fallback that fires SILENTLY hides the very fault it is compensating
       // for: the feature still works, so nothing looks wrong, while the primary
@@ -226,6 +255,6 @@ export async function callGroqTranscribe(audio: Blob, mimeType = "audio/webm"): 
     const body = await res.text().catch(() => "");
     throw new Error(`groq transcribe ${res.status}: ${body.slice(0, 200)}`);
   }
-  const data = await res.json() as { text?: string };
+  const data = (await res.json()) as { text?: string };
   return (data.text ?? "").trim();
 }

@@ -2,7 +2,12 @@ import fs from "fs";
 import { NextRequest, NextResponse } from "next/server";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { isRuntimeAvailable } from "@/lib/runtime";
-import { listAgentRegistry, isAgentId, buildAgentOptionLaunchCommand, type Agent } from "@/lib/agent-registry";
+import {
+  listAgentRegistry,
+  isAgentId,
+  buildAgentOptionLaunchCommand,
+  type Agent,
+} from "@/lib/agent-registry";
 import { injectIntoTab, sendRawKey } from "@/lib/zellij";
 import { getSessionUserId } from "@/lib/session";
 import { enqueueSwitchAgentCommand } from "@/db/queries/pending-commands";
@@ -10,11 +15,11 @@ import { resolveOutgoingAgentForDir, resolveRunningAgentsInDir } from "@/lib/age
 import { executionAccessErrorBody, resolveQueuedExecution } from "@/lib/execution-access";
 
 const SwitchAgentBody = z.object({
-  tab:       z.string().trim().min(1).max(120),
-  dir:       z.string().trim().min(1),
-  toAgent:   z.string().trim().min(1),
+  tab: z.string().trim().min(1).max(120),
+  dir: z.string().trim().min(1),
+  toAgent: z.string().trim().min(1),
   fromAgent: z.string().trim().optional(),
-  model:     z.string().trim().optional(),
+  model: z.string().trim().optional(),
 });
 
 function sleep(ms: number): Promise<void> {
@@ -32,9 +37,13 @@ function isAgentRunningInDir(processMatchers: string[], dir: string): boolean {
         if (!processMatchers.some((m) => basename === m || basename.startsWith(`${m}-`))) continue;
         const cwd = fs.readlinkSync(`/proc/${entry}/cwd`);
         if (cwd === dir || cwd.startsWith(dir + "/")) return true;
-      } catch { /* process gone or permission denied */ }
+      } catch {
+        /* process gone or permission denied */
+      }
     }
-  } catch { /* /proc unavailable */ }
+  } catch {
+    /* /proc unavailable */
+  }
   return false;
 }
 
@@ -110,8 +119,8 @@ export async function POST(req: NextRequest) {
     const agentsToQuit = running.length
       ? running.filter((id) => id !== toAgent)
       : outgoing && outgoing !== toAgent
-      ? [outgoing]
-      : [];
+        ? [outgoing]
+        : [];
 
     for (const agentId of agentsToQuit) {
       await quitAgentInTab(tab, agentId, dir, registry);

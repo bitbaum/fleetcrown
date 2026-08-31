@@ -52,7 +52,7 @@ function resolveZellijExecutable(): string {
   ].filter((value): value is string => Boolean(value));
   for (const candidate of candidates) {
     try {
-      if (fs.existsSync(candidate) && (fs.statSync(candidate).mode & 0o111)) return candidate;
+      if (fs.existsSync(candidate) && fs.statSync(candidate).mode & 0o111) return candidate;
     } catch {
       // Ignore unreadable candidates.
     }
@@ -116,8 +116,14 @@ export function getZellijPaneTabMap(session: string): Map<number, string> {
 
     for (const raw of text.split("\n")) {
       const line = raw.trim();
-      if (line === "tabs {") { section = "tabs"; continue; }
-      if (line === "panes {") { section = "panes"; continue; }
+      if (line === "tabs {") {
+        section = "tabs";
+        continue;
+      }
+      if (line === "panes {") {
+        section = "panes";
+        continue;
+      }
       if (!section) continue;
 
       if (line === "tab {" || line === "pane {") {
@@ -130,7 +136,12 @@ export function getZellijPaneTabMap(session: string): Map<number, string> {
         inBlock = false;
         if (section === "tabs" && blockPosition !== undefined && blockName !== undefined) {
           positionToName.set(blockPosition, blockName);
-        } else if (section === "panes" && !blockIsPlugin && blockPaneId !== undefined && blockTabPosition !== undefined) {
+        } else if (
+          section === "panes" &&
+          !blockIsPlugin &&
+          blockPaneId !== undefined &&
+          blockTabPosition !== undefined
+        ) {
           // Skip plugin panes (tab-bar, status-bar) — they host no agent.
           paneToPosition.set(blockPaneId, blockTabPosition);
         }
@@ -144,10 +155,12 @@ export function getZellijPaneTabMap(session: string): Map<number, string> {
 
       if (section === "tabs") {
         if (line.startsWith("position ")) blockPosition = Number(line.slice("position ".length));
-        else if (line.startsWith("name ")) blockName = line.slice("name ".length).replace(/^"|"$/g, "");
+        else if (line.startsWith("name "))
+          blockName = line.slice("name ".length).replace(/^"|"$/g, "");
       } else {
         if (line.startsWith("id ")) blockPaneId = Number(line.slice("id ".length));
-        else if (line.startsWith("tab_position ")) blockTabPosition = Number(line.slice("tab_position ".length));
+        else if (line.startsWith("tab_position "))
+          blockTabPosition = Number(line.slice("tab_position ".length));
         else if (line === "is_plugin true") blockIsPlugin = true;
       }
     }
@@ -171,10 +184,13 @@ function cleanZellijLines(stdout: string): string[] {
 
 export function getZellijSessionsSync(): string[] {
   try {
-    const stdout = execSync(`${zellijExecutableForShell()} list-sessions --no-formatting 2>/dev/null`, {
-      encoding: "utf-8",
-      timeout: 2000,
-    });
+    const stdout = execSync(
+      `${zellijExecutableForShell()} list-sessions --no-formatting 2>/dev/null`,
+      {
+        encoding: "utf-8",
+        timeout: 2000,
+      },
+    );
     // Strip ANSI before parsing: some zellij builds/envs colorize even with
     // --no-formatting (e.g. when CLICOLOR_FORCE is set). An un-stripped color
     // code leaks into the session name, so every subsequent `--session <name>`
@@ -223,7 +239,10 @@ async function getTabsAsync(): Promise<string[]> {
     if (tabs.length > 0) return [...new Set(tabs)];
   }
   try {
-    const { stdout } = await execAsync(`${zellijExecutableForShell()} action query-tab-names 2>/dev/null || true`, { timeout: 2000 });
+    const { stdout } = await execAsync(
+      `${zellijExecutableForShell()} action query-tab-names 2>/dev/null || true`,
+      { timeout: 2000 },
+    );
     return cleanZellijLines(stdout);
   } catch {
     return [];
@@ -260,7 +279,9 @@ function waitForTabFocus(tab: string, maxWaitMs = 1000, session: string | null =
       // may be lowercase. Strict equality used to silently fail the focus
       // confirmation 100% of dispatches when the cases drifted.
       if (active.toLowerCase() === target) return true;
-    } catch { /* dump-layout unavailable or parse failed — fall through */ }
+    } catch {
+      /* dump-layout unavailable or parse failed — fall through */
+    }
     execSync("sleep 0.05", { timeout: 1000 });
   }
   return false;
@@ -352,13 +373,19 @@ function withFocusedTab<T>(tab: string, fn: (session: string | null) => T): T {
     return fn(session);
   } finally {
     if (originalTab && originalTab.toLowerCase() !== liveTab.toLowerCase()) {
-      try { execSync(zellijCmd(session, "go-to-tab-name", shellEscape(originalTab)), { timeout: 2000 }); } catch { /* best effort */ }
+      try {
+        execSync(zellijCmd(session, "go-to-tab-name", shellEscape(originalTab)), { timeout: 2000 });
+      } catch {
+        /* best effort */
+      }
     }
   }
 }
 
 function zellijCmd(session: string | null, ...args: string[]): string {
-  const prefix = session ? `${zellijExecutableForShell()} --session ${shellEscape(session)} action` : `${zellijExecutableForShell()} action`;
+  const prefix = session
+    ? `${zellijExecutableForShell()} --session ${shellEscape(session)} action`
+    : `${zellijExecutableForShell()} action`;
   return `${prefix} ${args.join(" ")}`;
 }
 
@@ -419,7 +446,11 @@ export const zellijAdapter: TerminalAdapter = {
       } catch (e) {
         dumpErr = e as Error;
       } finally {
-        try { fs.unlinkSync(tmpFile); } catch { /* best effort */ }
+        try {
+          fs.unlinkSync(tmpFile);
+        } catch {
+          /* best effort */
+        }
       }
     });
     if (dumpErr) throw dumpErr;
@@ -432,7 +463,9 @@ export const zellijAdapter: TerminalAdapter = {
    *  to handle unclean exits. */
   isUserTyping(tab: string): boolean {
     try {
-      const files = (fs.readdirSync("/tmp") as string[]).filter((f) => f.startsWith(TYPING_FILE_PREFIX));
+      const files = (fs.readdirSync("/tmp") as string[]).filter((f) =>
+        f.startsWith(TYPING_FILE_PREFIX),
+      );
       const now = Math.floor(Date.now() / 1000);
       for (const file of files) {
         try {
@@ -440,9 +473,13 @@ export const zellijAdapter: TerminalAdapter = {
           const tabName = lines[0]?.trim() ?? "";
           const ts = parseInt(lines[1]?.trim() ?? "0", 10);
           if (tabName.toLowerCase() === tab.toLowerCase() && now - ts < 60) return true;
-        } catch { /* file deleted between readdir and readFile */ }
+        } catch {
+          /* file deleted between readdir and readFile */
+        }
       }
-    } catch { /* /tmp unavailable */ }
+    } catch {
+      /* /tmp unavailable */
+    }
     return false;
   },
 };

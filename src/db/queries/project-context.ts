@@ -41,14 +41,20 @@ export const DRIVING_FIELDS: ReadonlyArray<readonly [string, string]> = [
   [PROJECT_ATTR.NEXT_STEP, "Next step (owner's highest-priority action right now)"],
   [PROJECT_ATTR.ARCHITECTURE, "Architecture"],
   [PROJECT_ATTR.CONVENTIONS, "Conventions (how this project is built — follow these)"],
-  [PROJECT_ATTR.DEFINITION_OF_DONE, "Definition of done (a change isn't finished until this holds)"],
+  [
+    PROJECT_ATTR.DEFINITION_OF_DONE,
+    "Definition of done (a change isn't finished until this holds)",
+  ],
 ];
 
 /**
  * Formatted brief + active goals for a project, or null when the project has no
  * description and no active goals (so callers can omit the section entirely).
  */
-export async function getProjectContext(userId: string, projectKey: string): Promise<string | null> {
+export async function getProjectContext(
+  userId: string,
+  projectKey: string,
+): Promise<string | null> {
   const dossier = await getProjectDossierByProjectKey(userId, projectKey).catch(() => null);
   if (dossier) return renderProjectDossierForAgent(dossier);
 
@@ -69,7 +75,13 @@ export async function getProjectContext(userId: string, projectKey: string): Pro
       db
         .select({ title: goals.title, progress: goals.progress, milestones: goals.milestones })
         .from(goals)
-        .where(and(eq(goals.userId, userId), eq(goals.entityId, entity.id), eq(goals.status, GOAL_STATUS.ACTIVE)))
+        .where(
+          and(
+            eq(goals.userId, userId),
+            eq(goals.entityId, entity.id),
+            eq(goals.status, GOAL_STATUS.ACTIVE),
+          ),
+        )
         .orderBy(desc(goals.updatedAt))
         .limit(MAX_GOALS),
       fetchAttributesByEntityIds([entity.id]),
@@ -122,7 +134,10 @@ export async function getProjectContext(userId: string, projectKey: string): Pro
 }
 
 /** A project's definition_of_done (the autopilot stop-gate bar), or null. */
-export async function getProjectDefinitionOfDone(userId: string, projectKey: string): Promise<string | null> {
+export async function getProjectDefinitionOfDone(
+  userId: string,
+  projectKey: string,
+): Promise<string | null> {
   return (await getProjectGoalConfig(userId, projectKey)).definitionOfDone;
 }
 

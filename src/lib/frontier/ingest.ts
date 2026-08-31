@@ -35,7 +35,9 @@ function decodeEntities(s: string): string {
 }
 
 function stripTags(s: string): string {
-  return decodeEntities(s.replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim();
+  return decodeEntities(s.replace(/<[^>]+>/g, " "))
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function tag(block: string, name: string): string {
@@ -54,9 +56,14 @@ async function fetchText(url: string): Promise<string> {
 }
 
 // Generic RSS/Atom parser — works for arXiv category feeds and lobste.rs alike.
-async function ingestRss(src: Extract<FrontierSource, { kind: "rss" }>): Promise<FrontierCandidate[]> {
+async function ingestRss(
+  src: Extract<FrontierSource, { kind: "rss" }>,
+): Promise<FrontierCandidate[]> {
   const xml = await fetchText(src.url);
-  const blocks = xml.split(/<item[\s>]/i).slice(1).map((b) => b.split(/<\/item>/i)[0]);
+  const blocks = xml
+    .split(/<item[\s>]/i)
+    .slice(1)
+    .map((b) => b.split(/<\/item>/i)[0]);
   const out: FrontierCandidate[] = [];
   for (const block of blocks.slice(0, src.max)) {
     const url = stripTags(tag(block, "link"));
@@ -79,7 +86,13 @@ async function ingestRss(src: Extract<FrontierSource, { kind: "rss" }>): Promise
   return out;
 }
 
-type HnHit = { objectID: string; title?: string | null; url?: string | null; points?: number | null; story_text?: string | null };
+type HnHit = {
+  objectID: string;
+  title?: string | null;
+  url?: string | null;
+  points?: number | null;
+  story_text?: string | null;
+};
 
 async function ingestHn(
   src: Extract<FrontierSource, { kind: "hn" }>,
@@ -111,7 +124,10 @@ async function ingestHn(
 }
 
 function dedupeKey(c: FrontierCandidate): string {
-  return c.url.replace(/^https?:\/\/(www\.)?/, "").replace(/\/+$/, "").toLowerCase();
+  return c.url
+    .replace(/^https?:\/\/(www\.)?/, "")
+    .replace(/\/+$/, "")
+    .toLowerCase();
 }
 
 export type IngestResult = {
@@ -139,7 +155,10 @@ function balancedMerge(candidates: FrontierCandidate[]): FrontierCandidate[] {
     added = false;
     for (const q of queues) {
       const next = q.shift();
-      if (next) { out.push(next); added = true; }
+      if (next) {
+        out.push(next);
+        added = true;
+      }
     }
   }
   return out;
@@ -151,16 +170,17 @@ export async function ingestFrontier(nowMs = Date.now()): Promise<IngestResult> 
   const cutoff = Math.floor(nowMs / 1000) - HN_LOOKBACK_SECONDS;
 
   const settled = await Promise.allSettled(
-    FRONTIER_SOURCES.map((src) =>
-      src.kind === "rss" ? ingestRss(src) : ingestHn(src, cutoff),
-    ),
+    FRONTIER_SOURCES.map((src) => (src.kind === "rss" ? ingestRss(src) : ingestHn(src, cutoff))),
   );
 
   const seen = new Map<string, FrontierCandidate>();
   let sourcesOk = 0;
   let sourcesFailed = 0;
   for (const r of settled) {
-    if (r.status !== "fulfilled") { sourcesFailed++; continue; }
+    if (r.status !== "fulfilled") {
+      sourcesFailed++;
+      continue;
+    }
     sourcesOk++;
     for (const c of r.value) {
       const key = dedupeKey(c);

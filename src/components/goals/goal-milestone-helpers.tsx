@@ -41,10 +41,7 @@ export function AddMilestoneInline({
 
   if (!open) {
     return (
-      <button
-        onClick={() => setOpen(true)}
-        className="ui-btn-add-success mt-1"
-      >
+      <button onClick={() => setOpen(true)} className="ui-btn-add-success mt-1">
         <Plus className="h-3 w-3" /> Add milestone
       </button>
     );
@@ -58,7 +55,11 @@ export function AddMilestoneInline({
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter") save();
-            if (e.key === "Escape") { setOpen(false); setValue(""); setError(null); }
+            if (e.key === "Escape") {
+              setOpen(false);
+              setValue("");
+              setError(null);
+            }
           }}
           placeholder="Milestone title…"
           autoFocus
@@ -72,7 +73,11 @@ export function AddMilestoneInline({
           {saving ? <Loader2 className="ui-spinner-xs" /> : <Plus className="h-3 w-3" />}
         </button>
         <button
-          onClick={() => { setOpen(false); setValue(""); setError(null); }}
+          onClick={() => {
+            setOpen(false);
+            setValue("");
+            setError(null);
+          }}
           className="ui-btn-inline-cancel"
         >
           <X className="h-3 w-3" />
@@ -111,9 +116,7 @@ export function MilestoneRow({
     if (toggling) return;
     setToggling(true);
     setError(null);
-    const updated = allMilestones.map((m, i) =>
-      i === index ? { ...m, done: !m.done } : m,
-    );
+    const updated = allMilestones.map((m, i) => (i === index ? { ...m, done: !m.done } : m));
     const doneCount = updated.filter((m) => m.done).length;
     const progress = updated.length > 0 ? Math.round((doneCount / updated.length) * 100) : 0;
     try {
@@ -135,9 +138,7 @@ export function MilestoneRow({
     }
     setSavingEdit(true);
     setError(null);
-    const updated = allMilestones.map((m, i) =>
-      i === index ? { ...m, title: trimmed } : m,
-    );
+    const updated = allMilestones.map((m, i) => (i === index ? { ...m, title: trimmed } : m));
     const doneCount = updated.filter((m) => m.done).length;
     const progress = updated.length > 0 ? Math.round((doneCount / updated.length) * 100) : 0;
     try {
@@ -184,7 +185,10 @@ export function MilestoneRow({
               onBlur={saveRename}
               onKeyDown={(e) => {
                 if (e.key === "Enter") saveRename();
-                if (e.key === "Escape") { setEditing(false); setEditTitle(milestone.title); }
+                if (e.key === "Escape") {
+                  setEditing(false);
+                  setEditTitle(milestone.title);
+                }
               }}
               autoFocus
               className="flex-1 ui-input-tight text-xs"

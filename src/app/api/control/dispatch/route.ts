@@ -50,11 +50,11 @@ function streakLine(outcomes: RecentOutcome[]): string {
 }
 
 const HandoffSchema = z.object({
-  done:   z.string().default(""),
-  next:   z.string().default(""),
+  done: z.string().default(""),
+  next: z.string().default(""),
   health: z.string().default(""),
-  tests:  z.string().default(""),
-  todos:  z.string().default(""),
+  tests: z.string().default(""),
+  todos: z.string().default(""),
   /** Agent's self-reported lifecycle. "working"/"blocked" → autopilot must
    *  NOT inject. "ready" → autopilot may fire. Empty is legacy/unknown
    *  (treated permissively as ready). */
@@ -62,14 +62,14 @@ const HandoffSchema = z.object({
 });
 
 const DispatchBody = z.object({
-  handoff:       HandoffSchema,
-  queue:         z.array(z.string().trim().min(1)).max(20),
+  handoff: HandoffSchema,
+  queue: z.array(z.string().trim().min(1)).max(20),
   /** Count of files in ~/.fleetcrown/sessions/<P>.blockers/pending/ as reported
    *  by the caller. >0 short-circuits dispatch — human-action gate. */
-  blockerCount:  z.number().int().nonnegative().default(0),
-  noOpCount:     z.number().int().nonnegative().default(0),
-  projectName:   z.string().optional(),
-  projectKey:    z.string().optional(),
+  blockerCount: z.number().int().nonnegative().default(0),
+  noOpCount: z.number().int().nonnegative().default(0),
+  projectName: z.string().optional(),
+  projectKey: z.string().optional(),
   /** Optional context kept on the wire for audit/log purposes only — the
    *  decision logic no longer reads these. Removed in the 2026-06-11
    *  simplification: gitBranch, recentCommits, mission. The bash bridge
@@ -154,8 +154,9 @@ export async function POST(req: NextRequest) {
   if (projectKey) {
     let agentPresent: boolean | undefined;
     if (isRuntimeAvailable()) {
-      const dir = (await getUserProjects(userId).catch(() => []))
-        .find((p) => p.name.toLowerCase() === projectKey.toLowerCase())?.dirPath;
+      const dir = (await getUserProjects(userId).catch(() => [])).find(
+        (p) => p.name.toLowerCase() === projectKey.toLowerCase(),
+      )?.dirPath;
       if (dir) agentPresent = resolveRunningAgentsInDir(dir).length > 0;
     } else {
       const runtimeRow = await getProjectState(userId, projectKey).catch(() => null);
@@ -164,7 +165,8 @@ export async function POST(req: NextRequest) {
     if (agentPresent === false) {
       return recordAndReturn({
         action: "off",
-        reason: "No agent process running in the tab — autopilot will not inject into a bare shell. Launch an agent first.",
+        reason:
+          "No agent process running in the tab — autopilot will not inject into a bare shell. Launch an agent first.",
         source: "status_gate",
       });
     }
@@ -184,7 +186,7 @@ export async function POST(req: NextRequest) {
   // surfaced the false positive — Fleet Runner dispatched "Tests failing"
   // on a "130 pass · 0 fail" handoff.
   const health = handoff.health.toLowerCase();
-  const tests  = handoff.tests.toLowerCase();
+  const tests = handoff.tests.toLowerCase();
   const testsAreFailing = /(^|\s)([1-9]\d*)\s*fail/.test(tests) || /fail\(\s*[1-9]/.test(tests);
   if (health.includes("critical") || testsAreFailing) {
     return recordAndReturn({

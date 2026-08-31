@@ -2,7 +2,11 @@ import Link from "next/link";
 import { AlertTriangle, CheckCircle2, Clock, Loader2, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ActivityFilter } from "@/lib/activity-events";
-import type { ActivityMomentum, ActivityPulse as Pulse, ActivitySummary } from "@/lib/activity-summary";
+import type {
+  ActivityMomentum,
+  ActivityPulse as Pulse,
+  ActivitySummary,
+} from "@/lib/activity-summary";
 import { activityHeadline } from "@/lib/activity-summary";
 import type { DigestWindow } from "@/db/queries/digests";
 import { ActivityPulse } from "./ActivityPulse";
@@ -40,7 +44,13 @@ export function ActivityHero({
     Icon: typeof CheckCircle2;
     tone?: "alert" | "good";
   }[] = [
-    { id: "attention", label: "Needs you", value: summary.attention, Icon: AlertTriangle, tone: "alert" },
+    {
+      id: "attention",
+      label: "Needs you",
+      value: summary.attention,
+      Icon: AlertTriangle,
+      tone: "alert",
+    },
     { id: "done", label: "Shipped", value: summary.shipped, Icon: CheckCircle2, tone: "good" },
     { id: "running", label: "Running", value: summary.running, Icon: Loader2 },
   ];
@@ -51,16 +61,23 @@ export function ActivityHero({
 
       <p className="ui-activity-context">
         {RANGE_LABEL[digestWindow]}
-        {projectKey && <> · <span className="text-text-secondary">{projectKey}</span></>}
+        {projectKey && (
+          <>
+            {" "}
+            · <span className="text-text-secondary">{projectKey}</span>
+          </>
+        )}
         {summary.agentLabel && (
           <>
-            {" "}· <Clock className="mb-0.5 inline h-3 w-3" aria-hidden />{" "}
+            {" "}
+            · <Clock className="mb-0.5 inline h-3 w-3" aria-hidden />{" "}
             <span className="text-text-secondary">{summary.agentLabel}</span> of agent time
           </>
         )}
         {momentum.label && (
           <>
-            {" "}· <TrendingUp className="mb-0.5 inline h-3 w-3" aria-hidden /> {momentum.label}
+            {" "}
+            · <TrendingUp className="mb-0.5 inline h-3 w-3" aria-hidden /> {momentum.label}
           </>
         )}
       </p>
@@ -84,7 +101,10 @@ export function ActivityHero({
           </Link>
         ))}
         {summary.queued > 0 && (
-          <span className="ui-activity-kpi" title="Dispatched, but no run has been recorded yet — waiting on a builder to pick it up.">
+          <span
+            className="ui-activity-kpi"
+            title="Dispatched, but no run has been recorded yet — waiting on a builder to pick it up."
+          >
             <span className="ui-activity-kpi-value tabular-nums">{summary.queued}</span>
             <span className="ui-activity-kpi-label">Queued</span>
           </span>

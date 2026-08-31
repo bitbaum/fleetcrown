@@ -147,9 +147,7 @@ export function renderFacts(facts: Fact[]): string {
   return facts
     .map((f) => {
       const head = `[${f.id}] ${f.kind} — ${f.subject}  (${f.source})`;
-      const body = Object.entries(f.fields).map(
-        ([k, v]) => `     ${k}: ${v ?? NOT_RECORDED}`,
-      );
+      const body = Object.entries(f.fields).map(([k, v]) => `     ${k}: ${v ?? NOT_RECORDED}`);
       return [head, ...body].join("\n");
     })
     .join("\n\n");

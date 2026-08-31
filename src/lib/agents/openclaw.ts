@@ -38,7 +38,8 @@ export const openclawAdapter: AgentAdapter = {
     if (existsSync(path.join(HOME, "openclaw", "openclaw.mjs"))) {
       return {
         available: false,
-        availabilityReason: "OpenClaw source is present, but the `openclaw` CLI is not installed on PATH.",
+        availabilityReason:
+          "OpenClaw source is present, but the `openclaw` CLI is not installed on PATH.",
       };
     }
     return {

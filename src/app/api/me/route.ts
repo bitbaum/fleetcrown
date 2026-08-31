@@ -3,18 +3,19 @@ import { getSessionUserId } from "@/lib/session";
 import { normalizeUsername } from "@/lib/username";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { toClientUser } from "@/lib/user-client-view";
-import {
-  getUserById,
-  getUserByUsername,
-  updateUser,
-  deleteUserAccount,
-} from "@/db/queries/users";
+import { getUserById, getUserByUsername, updateUser, deleteUserAccount } from "@/db/queries/users";
 
 const PatchBody = z.object({
-  username: z.preprocess(
-    (value) => (typeof value === "string" ? normalizeUsername(value) : value),
-    z.string().min(2).max(40).regex(/^[a-z0-9-]+$/, "Lowercase letters, numbers and hyphens only"),
-  ).optional(),
+  username: z
+    .preprocess(
+      (value) => (typeof value === "string" ? normalizeUsername(value) : value),
+      z
+        .string()
+        .min(2)
+        .max(40)
+        .regex(/^[a-z0-9-]+$/, "Lowercase letters, numbers and hyphens only"),
+    )
+    .optional(),
   name: z.string().trim().min(1).max(120).optional(),
 });
 
@@ -79,10 +80,7 @@ export async function DELETE(req: NextRequest) {
   // The platform's seeded default user is load-bearing (owns shared fixtures);
   // deleting it would brick the instance.
   if (user.isDefault) {
-    return NextResponse.json(
-      { error: "The default account cannot be deleted" },
-      { status: 403 },
-    );
+    return NextResponse.json({ error: "The default account cannot be deleted" }, { status: 403 });
   }
 
   await deleteUserAccount(userId);

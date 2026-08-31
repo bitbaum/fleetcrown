@@ -18,14 +18,20 @@ const hostedNoSandbox = decideWorkspaceAccessFromSignals({
   sandboxExecutorEnabled: false,
   cloudBuilderAllowed: true,
 });
-check("hosted control plane without sandbox refuses workspaces", !hostedNoSandbox.ok && hostedNoSandbox.code === "server-workspaces-disabled");
+check(
+  "hosted control plane without sandbox refuses workspaces",
+  !hostedNoSandbox.ok && hostedNoSandbox.code === "server-workspaces-disabled",
+);
 
 const hostedSandboxDenied = decideWorkspaceAccessFromSignals({
   runtimeAvailable: false,
   sandboxExecutorEnabled: true,
   cloudBuilderAllowed: false,
 });
-check("hosted sandbox refuses non-allowlisted accounts", !hostedSandboxDenied.ok && hostedSandboxDenied.code === "cloud-builder-private");
+check(
+  "hosted sandbox refuses non-allowlisted accounts",
+  !hostedSandboxDenied.ok && hostedSandboxDenied.code === "cloud-builder-private",
+);
 
 const hostedSandboxAllowed = decideWorkspaceAccessFromSignals({
   runtimeAvailable: false,
@@ -34,5 +40,9 @@ const hostedSandboxAllowed = decideWorkspaceAccessFromSignals({
 });
 check("hosted sandbox allows cloud-builder-allowed accounts", hostedSandboxAllowed.ok);
 
-console.log(failures === 0 ? "\nALL WORKSPACE ACCESS TESTS PASSED" : `\n${failures} WORKSPACE ACCESS TEST(S) FAILED`);
+console.log(
+  failures === 0
+    ? "\nALL WORKSPACE ACCESS TESTS PASSED"
+    : `\n${failures} WORKSPACE ACCESS TEST(S) FAILED`,
+);
 process.exit(failures === 0 ? 0 : 1);

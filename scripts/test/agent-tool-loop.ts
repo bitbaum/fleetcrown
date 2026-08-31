@@ -18,7 +18,12 @@
 import assert from "node:assert/strict";
 import { z } from "zod";
 import { parseTextToolCalls, stripToolCallLines, type ModelTurn } from "../../src/lib/agent/llm";
-import { defineTool, renderToolCatalog, toOpenAITools, type ToolRegistry } from "../../src/lib/agent/tools/registry";
+import {
+  defineTool,
+  renderToolCatalog,
+  toOpenAITools,
+  type ToolRegistry,
+} from "../../src/lib/agent/tools/registry";
 import { runLokiTurn } from "../../src/lib/agent/loop";
 import { makeFact, assignFactIds } from "../../src/lib/agent/core/facts";
 
@@ -40,11 +45,21 @@ const NAMES = ["search_people", "list_projects", "propose_action"];
   assert.equal(noArgs.length, 1, "a no-argument call needs no ARGS line");
   assert.deepEqual(noArgs[0].args, {}, "missing ARGS means empty args, not failure");
 
-  const fenced = parseTextToolCalls('TOOL: search_people\nARGS: ```json\n{"query": "Elena"}\n```', NAMES);
+  const fenced = parseTextToolCalls(
+    'TOOL: search_people\nARGS: ```json\n{"query": "Elena"}\n```',
+    NAMES,
+  );
   assert.equal(fenced[0]?.args.query, "Elena", "fenced ARGS must parse");
 
-  const trailing = parseTextToolCalls('TOOL: search_people\nARGS: {"query": "Elena"} — then I will summarise', NAMES);
-  assert.equal(trailing[0]?.args.query, "Elena", "commentary after the JSON must not break the parse");
+  const trailing = parseTextToolCalls(
+    'TOOL: search_people\nARGS: {"query": "Elena"} — then I will summarise',
+    NAMES,
+  );
+  assert.equal(
+    trailing[0]?.args.query,
+    "Elena",
+    "commentary after the JSON must not break the parse",
+  );
 
   const multi = parseTextToolCalls(
     'TOOL: list_projects\nTOOL: search_people\nARGS: {"query": "Elena"}',
@@ -55,12 +70,17 @@ const NAMES = ["search_people", "list_projects", "propose_action"];
 
   // A name that is not registered must never be dispatched — the parser is the
   // closed-set boundary, not the executor.
-  assert.equal(parseTextToolCalls("TOOL: rm_rf_everything\nARGS: {}", NAMES).length, 0, "unknown tools must not parse");
+  assert.equal(
+    parseTextToolCalls("TOOL: rm_rf_everything\nARGS: {}", NAMES).length,
+    0,
+    "unknown tools must not parse",
+  );
 }
 
 // ── 2. Narrated calls never reach the operator as prose ──────────────────────
 {
-  const raw = 'Let me look her up.\nTOOL: search_people\nARGS: {"query": "Elena"}\nI will report back.';
+  const raw =
+    'Let me look her up.\nTOOL: search_people\nARGS: {"query": "Elena"}\nI will report back.';
   const stripped = stripToolCallLines(raw);
   assert.doesNotMatch(stripped, /TOOL:/, "tool lines must be stripped from prose");
   assert.doesNotMatch(stripped, /ARGS:/, "args lines must be stripped from prose");
@@ -97,7 +117,10 @@ const STUB_REGISTRY: ToolRegistry = {
                 kind: "person",
                 subject: "Elena Weber SINGA Switzerland",
                 source: "people table",
-                values: { name: "Elena Weber SINGA Switzerland", channels: "whatsapp +41774730093" },
+                values: {
+                  name: "Elena Weber SINGA Switzerland",
+                  channels: "whatsapp +41774730093",
+                },
               }),
             ],
           },
@@ -140,8 +163,14 @@ async function main() {
 
     // Native specs must advertise exactly the same set — drift here would let a
     // model call something the executor does not have.
-    const native = toOpenAITools(LOKI_TOOLS).map((t) => (t.function as { name: string }).name).sort();
-    assert.deepEqual(native, Object.keys(LOKI_TOOLS).sort(), "native specs must match the registry exactly");
+    const native = toOpenAITools(LOKI_TOOLS)
+      .map((t) => (t.function as { name: string }).name)
+      .sort();
+    assert.deepEqual(
+      native,
+      Object.keys(LOKI_TOOLS).sort(),
+      "native specs must match the registry exactly",
+    );
   }
 
   // ── 4. Loki has NO tool that acts directly ───────────────────────────────────
@@ -149,183 +178,202 @@ async function main() {
   // adds an executing tool this fails, which is the intent.
   {
     const kinds = new Set(Object.values(LOKI_TOOLS).map((t) => t.kind));
-    assert.deepEqual([...kinds].sort(), ["propose", "read"], "only read and propose kinds may exist");
+    assert.deepEqual(
+      [...kinds].sort(),
+      ["propose", "read"],
+      "only read and propose kinds may exist",
+    );
     assert.equal(LOKI_TOOLS.propose_action.kind, "propose");
   }
 
-// ── 5. Tool results become facts the answer can cite ─────────────────────────
-{
-  const model = scriptedModel([
-    { toolCalls: [{ id: "1", name: "search_people", args: { query: "Elena" } }] },
-    { text: "Elena Weber SINGA Switzerland — whatsapp +41774730093 [F1]." },
-  ]);
-  const r = await runLokiTurn({
-    userId: "u1",
-    message: "who is Elena?",
-    registry: STUB_REGISTRY,
-    callModel: model.fn,
-    seed: SEED,
-  });
-  assert.deepEqual(r.toolsUsed, ["search_people"], "the tool must have executed");
-  assert.equal(r.facts.length, 1, "the tool's records must land in the fact set");
-  assert.equal(r.facts[0].id, "F1", "facts must be citable");
-  assert.deepEqual(r.violations, [], `a grounded answer must verify clean: ${JSON.stringify(r.violations)}`);
-  assert.equal(r.rounds, 2, "one gather round then one answer round");
-}
+  // ── 5. Tool results become facts the answer can cite ─────────────────────────
+  {
+    const model = scriptedModel([
+      { toolCalls: [{ id: "1", name: "search_people", args: { query: "Elena" } }] },
+      { text: "Elena Weber SINGA Switzerland — whatsapp +41774730093 [F1]." },
+    ]);
+    const r = await runLokiTurn({
+      userId: "u1",
+      message: "who is Elena?",
+      registry: STUB_REGISTRY,
+      callModel: model.fn,
+      seed: SEED,
+    });
+    assert.deepEqual(r.toolsUsed, ["search_people"], "the tool must have executed");
+    assert.equal(r.facts.length, 1, "the tool's records must land in the fact set");
+    assert.equal(r.facts[0].id, "F1", "facts must be citable");
+    assert.deepEqual(
+      r.violations,
+      [],
+      `a grounded answer must verify clean: ${JSON.stringify(r.violations)}`,
+    );
+    assert.equal(r.rounds, 2, "one gather round then one answer round");
+  }
 
-// ── 6. An invented attribute is caught even when the tool ran ────────────────
-// The whole point of routing tools through Facts: calling the right tool does
-// not license adding a field the record never had.
-{
-  const model = scriptedModel([
-    { toolCalls: [{ id: "1", name: "search_people", args: { query: "Elena" } }] },
-    { text: "Elena Weber is Program Manager at Impact Hub Zurich [F1]." },
-    { text: `Elena Weber SINGA Switzerland [F1]. Her role is not recorded.` },
-  ]);
-  const r = await runLokiTurn({
-    userId: "u1",
-    message: "who is Elena?",
-    registry: STUB_REGISTRY,
-    callModel: model.fn,
-    seed: SEED,
-  });
-  assert.ok(
-    r.violations.length === 0 || !/Impact Hub/i.test(r.text),
-    "an invented employer must be repaired away or flagged, never served clean",
+  // ── 6. An invented attribute is caught even when the tool ran ────────────────
+  // The whole point of routing tools through Facts: calling the right tool does
+  // not license adding a field the record never had.
+  {
+    const model = scriptedModel([
+      { toolCalls: [{ id: "1", name: "search_people", args: { query: "Elena" } }] },
+      { text: "Elena Weber is Program Manager at Impact Hub Zurich [F1]." },
+      { text: `Elena Weber SINGA Switzerland [F1]. Her role is not recorded.` },
+    ]);
+    const r = await runLokiTurn({
+      userId: "u1",
+      message: "who is Elena?",
+      registry: STUB_REGISTRY,
+      callModel: model.fn,
+      seed: SEED,
+    });
+    assert.ok(
+      r.violations.length === 0 || !/Impact Hub/i.test(r.text),
+      "an invented employer must be repaired away or flagged, never served clean",
+    );
+    assert.doesNotMatch(r.text, /Impact Hub/i, "the repair pass must have removed the fabrication");
+  }
+
+  // ── 7. Empty tool results are reported, not papered over ─────────────────────
+  {
+    const model = scriptedModel([
+      { toolCalls: [{ id: "1", name: "search_people", args: { query: "nobody" } }] },
+      { text: "Not in your data." },
+    ]);
+    const r = await runLokiTurn({
+      userId: "u1",
+      message: "who is nobody?",
+      registry: STUB_REGISTRY,
+      callModel: model.fn,
+      seed: SEED,
+    });
+    assert.equal(r.facts.length, 0, "an empty tool result adds no facts");
+    assert.match(r.text, /Not in your data/, "the refusal must survive to the operator");
+  }
+
+  // ── 8. A throwing tool reads as UNKNOWN, never as "none" ─────────────────────
+  {
+    const model = scriptedModel([
+      { toolCalls: [{ id: "1", name: "boom", args: {} }] },
+      { text: "That lookup failed, so I cannot say." },
+    ]);
+    const r = await runLokiTurn({
+      userId: "u1",
+      message: "check the thing",
+      registry: STUB_REGISTRY,
+      callModel: model.fn,
+      seed: SEED,
+    });
+    assert.equal(r.facts.length, 0, "a failed tool contributes no facts");
+    assert.ok(r.text.length > 0, "a failed tool must not fail the turn");
+  }
+
+  // ── 9. Bad arguments get the example back, not a zod dump ────────────────────
+  {
+    const model = scriptedModel([
+      { toolCalls: [{ id: "1", name: "search_people", args: { wrong: 1 } }] },
+      { toolCalls: [{ id: "2", name: "search_people", args: { query: "Elena" } }] },
+      { text: "Elena Weber SINGA Switzerland [F1]." },
+    ]);
+    const r = await runLokiTurn({
+      userId: "u1",
+      message: "who is Elena?",
+      registry: STUB_REGISTRY,
+      callModel: model.fn,
+      seed: SEED,
+    });
+    assert.deepEqual(
+      r.toolsUsed,
+      ["search_people"],
+      "the malformed call must not count as executed",
+    );
+    assert.equal(r.facts.length, 1, "the corrected retry must succeed");
+  }
+
+  // ── 10. The loop is bounded, and the last round cannot call tools ────────────
+  // A model that only ever calls tools must still terminate WITH an answer —
+  // otherwise a weak model's loop becomes a hung request.
+  {
+    const model = scriptedModel([
+      { toolCalls: [{ id: "1", name: "search_people", args: { query: "Elena" } }] },
+      { toolCalls: [{ id: "2", name: "search_people", args: { query: "Elena" } }] },
+      { text: "Elena Weber SINGA Switzerland [F1]." },
+    ]);
+    const r = await runLokiTurn({
+      userId: "u1",
+      message: "who is Elena?",
+      registry: STUB_REGISTRY,
+      callModel: model.fn,
+      seed: SEED,
+    });
+    assert.ok(r.rounds <= 3, `the loop must be bounded, ran ${r.rounds} rounds`);
+    assert.ok(r.text.length > 0, "the loop must always end with text");
+    assert.equal(
+      model.seen[model.seen.length - 1].toolsAdvertised,
+      0,
+      "the final round must advertise NO tools so the model is forced to answer",
+    );
+  }
+
+  // ── 11. A too-large prompt sheds facts instead of abandoning the loop ────────
+  // Observed in production: the big model rate-limited, the 429 handler stepped
+  // down to the 8B model as designed, and the 8B model then returned 413 because
+  // a prompt sized for a 128k context does not fit a small one. The loop gave up
+  // and fell back to weaker retrieval, so the step-down achieved nothing.
+  {
+    const manyFacts = assignFactIds(
+      Array.from({ length: 40 }, (_, i) =>
+        makeFact({
+          kind: "project",
+          subject: `proj-${i}`,
+          source: "projects table",
+          values: { name: `proj-${i}` },
+        }),
+      ),
+    );
+    const sizes: number[] = [];
+    let calls = 0;
+    const model = (async (input: { messages: Array<{ content: string }> }) => {
+      calls++;
+      // Count rendered records to observe the shed.
+      sizes.push((input.messages[1]?.content.match(/^\[F\d+\]/gm) ?? []).length);
+      if (calls <= 2) throw new Error("groq 413: Request too large for model");
+      return { text: "Answered with what fits.", toolCalls: [], model: "stub" };
+    }) as never;
+
+    const r = await runLokiTurn({
+      userId: "u1",
+      message: "what am I working on?",
+      registry: STUB_REGISTRY,
+      callModel: model,
+      seed: { facts: manyFacts, directives: [] },
+    });
+    assert.equal(r.text, "Answered with what fits.", "a 413 must not fail the turn");
+    assert.ok(sizes.length >= 3, `expected retries, saw ${sizes.length} attempt(s)`);
+    assert.ok(sizes[1] < sizes[0], `facts must shrink on 413: ${sizes.join(" -> ")}`);
+    assert.ok(sizes[2] < sizes[1], `facts must shrink again: ${sizes.join(" -> ")}`);
+
+    // A non-413 error must NOT be retried — retrying a 401 or a 500 just burns
+    // the operator's latency for a guaranteed second failure.
+    let other = 0;
+    const failing = (async () => {
+      other++;
+      throw new Error("groq 401: invalid api key");
+    }) as never;
+    await runLokiTurn({
+      userId: "u1",
+      message: "hi",
+      registry: STUB_REGISTRY,
+      callModel: failing,
+      seed: { facts: manyFacts, directives: [] },
+    }).then(
+      () => assert.fail("a 401 must propagate"),
+      () => assert.equal(other, 1, "a non-413 error must not be retried"),
+    );
+  }
+
+  console.log(
+    "✓ agent tool loop: 11 checks passed (protocol tolerance, catalog shape, no-execute boundary, fact accumulation, repair, bounds, 413 shedding)",
   );
-  assert.doesNotMatch(r.text, /Impact Hub/i, "the repair pass must have removed the fabrication");
-}
-
-// ── 7. Empty tool results are reported, not papered over ─────────────────────
-{
-  const model = scriptedModel([
-    { toolCalls: [{ id: "1", name: "search_people", args: { query: "nobody" } }] },
-    { text: "Not in your data." },
-  ]);
-  const r = await runLokiTurn({
-    userId: "u1",
-    message: "who is nobody?",
-    registry: STUB_REGISTRY,
-    callModel: model.fn,
-    seed: SEED,
-  });
-  assert.equal(r.facts.length, 0, "an empty tool result adds no facts");
-  assert.match(r.text, /Not in your data/, "the refusal must survive to the operator");
-}
-
-// ── 8. A throwing tool reads as UNKNOWN, never as "none" ─────────────────────
-{
-  const model = scriptedModel([
-    { toolCalls: [{ id: "1", name: "boom", args: {} }] },
-    { text: "That lookup failed, so I cannot say." },
-  ]);
-  const r = await runLokiTurn({
-    userId: "u1",
-    message: "check the thing",
-    registry: STUB_REGISTRY,
-    callModel: model.fn,
-    seed: SEED,
-  });
-  assert.equal(r.facts.length, 0, "a failed tool contributes no facts");
-  assert.ok(r.text.length > 0, "a failed tool must not fail the turn");
-}
-
-// ── 9. Bad arguments get the example back, not a zod dump ────────────────────
-{
-  const model = scriptedModel([
-    { toolCalls: [{ id: "1", name: "search_people", args: { wrong: 1 } }] },
-    { toolCalls: [{ id: "2", name: "search_people", args: { query: "Elena" } }] },
-    { text: "Elena Weber SINGA Switzerland [F1]." },
-  ]);
-  const r = await runLokiTurn({
-    userId: "u1",
-    message: "who is Elena?",
-    registry: STUB_REGISTRY,
-    callModel: model.fn,
-    seed: SEED,
-  });
-  assert.deepEqual(r.toolsUsed, ["search_people"], "the malformed call must not count as executed");
-  assert.equal(r.facts.length, 1, "the corrected retry must succeed");
-}
-
-// ── 10. The loop is bounded, and the last round cannot call tools ────────────
-// A model that only ever calls tools must still terminate WITH an answer —
-// otherwise a weak model's loop becomes a hung request.
-{
-  const model = scriptedModel([
-    { toolCalls: [{ id: "1", name: "search_people", args: { query: "Elena" } }] },
-    { toolCalls: [{ id: "2", name: "search_people", args: { query: "Elena" } }] },
-    { text: "Elena Weber SINGA Switzerland [F1]." },
-  ]);
-  const r = await runLokiTurn({
-    userId: "u1",
-    message: "who is Elena?",
-    registry: STUB_REGISTRY,
-    callModel: model.fn,
-    seed: SEED,
-  });
-  assert.ok(r.rounds <= 3, `the loop must be bounded, ran ${r.rounds} rounds`);
-  assert.ok(r.text.length > 0, "the loop must always end with text");
-  assert.equal(
-    model.seen[model.seen.length - 1].toolsAdvertised,
-    0,
-    "the final round must advertise NO tools so the model is forced to answer",
-  );
-}
-
-// ── 11. A too-large prompt sheds facts instead of abandoning the loop ────────
-// Observed in production: the big model rate-limited, the 429 handler stepped
-// down to the 8B model as designed, and the 8B model then returned 413 because
-// a prompt sized for a 128k context does not fit a small one. The loop gave up
-// and fell back to weaker retrieval, so the step-down achieved nothing.
-{
-  const manyFacts = assignFactIds(
-    Array.from({ length: 40 }, (_, i) =>
-      makeFact({ kind: "project", subject: `proj-${i}`, source: "projects table", values: { name: `proj-${i}` } }),
-    ),
-  );
-  const sizes: number[] = [];
-  let calls = 0;
-  const model = (async (input: { messages: Array<{ content: string }> }) => {
-    calls++;
-    // Count rendered records to observe the shed.
-    sizes.push((input.messages[1]?.content.match(/^\[F\d+\]/gm) ?? []).length);
-    if (calls <= 2) throw new Error("groq 413: Request too large for model");
-    return { text: "Answered with what fits.", toolCalls: [], model: "stub" };
-  }) as never;
-
-  const r = await runLokiTurn({
-    userId: "u1",
-    message: "what am I working on?",
-    registry: STUB_REGISTRY,
-    callModel: model,
-    seed: { facts: manyFacts, directives: [] },
-  });
-  assert.equal(r.text, "Answered with what fits.", "a 413 must not fail the turn");
-  assert.ok(sizes.length >= 3, `expected retries, saw ${sizes.length} attempt(s)`);
-  assert.ok(sizes[1] < sizes[0], `facts must shrink on 413: ${sizes.join(" -> ")}`);
-  assert.ok(sizes[2] < sizes[1], `facts must shrink again: ${sizes.join(" -> ")}`);
-
-  // A non-413 error must NOT be retried — retrying a 401 or a 500 just burns
-  // the operator's latency for a guaranteed second failure.
-  let other = 0;
-  const failing = (async () => {
-    other++;
-    throw new Error("groq 401: invalid api key");
-  }) as never;
-  await runLokiTurn({
-    userId: "u1",
-    message: "hi",
-    registry: STUB_REGISTRY,
-    callModel: failing,
-    seed: { facts: manyFacts, directives: [] },
-  }).then(
-    () => assert.fail("a 401 must propagate"),
-    () => assert.equal(other, 1, "a non-413 error must not be retried"),
-  );
-}
-
-  console.log("✓ agent tool loop: 11 checks passed (protocol tolerance, catalog shape, no-execute boundary, fact accumulation, repair, bounds, 413 shedding)");
 }
 
 main().catch((e) => {

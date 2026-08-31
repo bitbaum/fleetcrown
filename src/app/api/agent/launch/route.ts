@@ -48,14 +48,19 @@ async function recordLaunchedState(
   // isCurrentPromptStale clears it the moment the agent process exits).
   try {
     const nowS = Math.floor(Date.now() / 1000);
-    fs.writeFileSync(stateFile.prompt(tab), JSON.stringify({
-      key: "launch",
-      label: label.slice(0, 120),
-      startedAt: nowS,
-      source: "inject",
-      adapter: agent,
-    }));
-  } catch { /* best effort — /tmp may be unwritable */ }
+    fs.writeFileSync(
+      stateFile.prompt(tab),
+      JSON.stringify({
+        key: "launch",
+        label: label.slice(0, 120),
+        startedAt: nowS,
+        source: "inject",
+        adapter: agent,
+      }),
+    );
+  } catch {
+    /* best effort — /tmp may be unwritable */
+  }
 
   try {
     const now = new Date();
@@ -75,7 +80,9 @@ async function recordLaunchedState(
       closedAt: null,
       runtimeObservedAt: now,
     });
-  } catch { /* best effort — never fail the launch on a state-mirror write */ }
+  } catch {
+    /* best effort — never fail the launch on a state-mirror write */
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -92,10 +99,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `Unknown agent: ${agent}` }, { status: 400 });
   }
   if (isRuntimeAvailable() && !exactEntry.available) {
-    return NextResponse.json({ error: exactEntry.availabilityReason ?? `${exactEntry.label} is not available on this machine.` }, { status: 400 });
+    return NextResponse.json(
+      {
+        error:
+          exactEntry.availabilityReason ?? `${exactEntry.label} is not available on this machine.`,
+      },
+      { status: 400 },
+    );
   }
   if (!exactEntry.capabilities.tabSwitching) {
-    return NextResponse.json({ error: `${exactEntry.label} does not support launching into a development tab yet.` }, { status: 400 });
+    return NextResponse.json(
+      { error: `${exactEntry.label} does not support launching into a development tab yet.` },
+      { status: 400 },
+    );
   }
 
   if (!isRuntimeAvailable()) {
@@ -133,7 +149,12 @@ export async function POST(req: NextRequest) {
     // docs/architecture/agent-execution-platform.md (step 3).
     await provisionAgentWorkspace(userId, { projectKey: tab, dir, agent: exactEntry.id, model });
     const promptText = initialPrompt?.trim();
-    await recordLaunchedState(userId, tab, exactEntry.id, promptText || `Starting ${exactEntry.label}…`);
+    await recordLaunchedState(
+      userId,
+      tab,
+      exactEntry.id,
+      promptText || `Starting ${exactEntry.label}…`,
+    );
     if (promptText) {
       writeInitialPromptWhenReady(userId, tab, promptText);
     }

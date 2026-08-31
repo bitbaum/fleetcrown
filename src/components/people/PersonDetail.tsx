@@ -47,21 +47,34 @@ export function PersonDetail({
     getJson<PersonDetailData>(`/api/people/${personId}`)
       .then((d) => {
         if (cancelled) return;
-        setData(d); setInteractions(d.interactions); setDescription(d.description); setAttrs(d.attrs); setName(d.name);
+        setData(d);
+        setInteractions(d.interactions);
+        setDescription(d.description);
+        setAttrs(d.attrs);
+        setName(d.name);
       })
-      .catch(() => { if (!cancelled) setData(null); })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+      .catch(() => {
+        if (!cancelled) setData(null);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [personId]);
 
   const commitName = async () => {
     const trimmed = nameEdit.draft.trim();
-    if (!trimmed || trimmed === name) { nameEdit.cancel(); return; }
+    if (!trimmed || trimmed === name) {
+      nameEdit.cancel();
+      return;
+    }
     setNameSaving(true);
     setNameError(null);
     try {
       const res = await patchJson(`/api/people/${personId}`, { name: trimmed });
-      const json = await res.json() as { ok?: boolean; error?: string };
+      const json = (await res.json()) as { ok?: boolean; error?: string };
       if (json.ok) {
         setName(trimmed);
         nameEdit.cancel();
@@ -81,7 +94,7 @@ export function PersonDetail({
     setDescError(null);
     try {
       const res = await patchJson(`/api/people/${personId}`, { description: trimmed });
-      const json = await res.json() as { ok?: boolean; error?: string };
+      const json = (await res.json()) as { ok?: boolean; error?: string };
       if (json.ok) {
         setDescription(trimmed || null);
         descEdit.cancel();
@@ -104,10 +117,16 @@ export function PersonDetail({
               <div className="flex items-center gap-1.5">
                 <input
                   value={nameEdit.draft}
-                  onChange={(e) => { nameEdit.setDraft(e.target.value); setNameError(null); }}
+                  onChange={(e) => {
+                    nameEdit.setDraft(e.target.value);
+                    setNameError(null);
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") commitName();
-                    if (e.key === "Escape") { nameEdit.cancel(); setNameError(null); }
+                    if (e.key === "Escape") {
+                      nameEdit.cancel();
+                      setNameError(null);
+                    }
                   }}
                   autoFocus
                   className={`w-full max-w-xs rounded-lg border bg-surface-overlay px-3 py-1.5 text-xl font-semibold text-text-primary outline-none transition-colors sm:w-56 ${nameError ? "border-status-negative/60 focus:border-status-negative" : "border-border-default focus:border-accent-primary"}`}
@@ -127,45 +146,57 @@ export function PersonDetail({
               {name}
             </h2>
           )}
-          {data && (() => {
-            const lastDate = interactions[0] ? new Date(interactions[0].occurredAt) : null;
-            const health = deriveRelationshipHealth(lastDate);
-            return (
-              <div
-                className="flex shrink-0 items-center gap-1.5"
-                title={lastDate ? `Last contact ${formatDistanceToNow(lastDate, { addSuffix: true })}` : "No interactions recorded"}
-              >
-                <div className={`h-2 w-2 rounded-full ${HEALTH_DOT_COLOR[health]}`} />
-                <span className="text-xs text-text-tertiary">{HEALTH_LABEL[health]}</span>
-              </div>
-            );
-          })()}
+          {data &&
+            (() => {
+              const lastDate = interactions[0] ? new Date(interactions[0].occurredAt) : null;
+              const health = deriveRelationshipHealth(lastDate);
+              return (
+                <div
+                  className="flex shrink-0 items-center gap-1.5"
+                  title={
+                    lastDate
+                      ? `Last contact ${formatDistanceToNow(lastDate, { addSuffix: true })}`
+                      : "No interactions recorded"
+                  }
+                >
+                  <div className={`h-2 w-2 rounded-full ${HEALTH_DOT_COLOR[health]}`} />
+                  <span className="text-xs text-text-tertiary">{HEALTH_LABEL[health]}</span>
+                </div>
+              );
+            })()}
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          {data && (() => {
-            const profession = attrs["profession"] ?? attrs["role"];
-            const location = attrs["location"] ?? attrs["home_location"];
-            const lastInt = interactions[0] ? new Date(interactions[0].occurredAt) : null;
-            const prompt = [
-              `Person: ${name}`,
-              profession && `Role: ${profession}`,
-              location && `Location: ${location}`,
-              description && `Notes: ${description}`,
-              lastInt
-                ? `Last contact: ${formatDistanceToNow(lastInt, { addSuffix: true })} (${interactions.length} total interactions)`
-                : "No recorded interactions",
-              interactions.length > 0 && `Recent interactions: ${interactions.slice(0, 3).map((i) => `${i.channel} ${i.direction}`).join(", ")}`,
-              "",
-              "What do you know about this person from my knowledge graph? What would be a good next step with them?",
-            ].filter(Boolean).join("\n");
-            return (
-              <LokiDispatchButton
-                prompt={prompt}
-                title="Ask Loki about this person"
-                className="ui-btn-icon text-text-muted hover:text-status-positive"
-              />
-            );
-          })()}
+          {data &&
+            (() => {
+              const profession = attrs["profession"] ?? attrs["role"];
+              const location = attrs["location"] ?? attrs["home_location"];
+              const lastInt = interactions[0] ? new Date(interactions[0].occurredAt) : null;
+              const prompt = [
+                `Person: ${name}`,
+                profession && `Role: ${profession}`,
+                location && `Location: ${location}`,
+                description && `Notes: ${description}`,
+                lastInt
+                  ? `Last contact: ${formatDistanceToNow(lastInt, { addSuffix: true })} (${interactions.length} total interactions)`
+                  : "No recorded interactions",
+                interactions.length > 0 &&
+                  `Recent interactions: ${interactions
+                    .slice(0, 3)
+                    .map((i) => `${i.channel} ${i.direction}`)
+                    .join(", ")}`,
+                "",
+                "What do you know about this person from my knowledge graph? What would be a good next step with them?",
+              ]
+                .filter(Boolean)
+                .join("\n");
+              return (
+                <LokiDispatchButton
+                  prompt={prompt}
+                  title="Ask Loki about this person"
+                  className="ui-btn-icon text-text-muted hover:text-status-positive"
+                />
+              );
+            })()}
           {data && (
             <DeleteButton
               onDelete={async () => {
@@ -214,9 +245,15 @@ export function PersonDetail({
             <div className="space-y-1.5">
               <textarea
                 value={descEdit.draft}
-                onChange={(e) => { descEdit.setDraft(e.target.value); setDescError(null); }}
+                onChange={(e) => {
+                  descEdit.setDraft(e.target.value);
+                  setDescError(null);
+                }}
                 onKeyDown={(e) => {
-                  if (e.key === "Escape") { descEdit.cancel(); setDescError(null); }
+                  if (e.key === "Escape") {
+                    descEdit.cancel();
+                    setDescError(null);
+                  }
                   if (e.key === "Enter" && e.metaKey) commitDescription();
                 }}
                 autoFocus
@@ -226,15 +263,14 @@ export function PersonDetail({
               />
               {descError && <p className="ui-error-xs">{descError}</p>}
               <div className="flex items-center gap-2">
-                <button
-                  onClick={commitDescription}
-                  disabled={descSaving}
-                  className="ui-btn-save"
-                >
+                <button onClick={commitDescription} disabled={descSaving} className="ui-btn-save">
                   {descSaving ? <Loader2 className="ui-spinner-xs" /> : "Save"}
                 </button>
                 <button
-                  onClick={() => { descEdit.cancel(); setDescError(null); }}
+                  onClick={() => {
+                    descEdit.cancel();
+                    setDescError(null);
+                  }}
                   className="ui-link-subtle-button"
                 >
                   Cancel
@@ -253,7 +289,8 @@ export function PersonDetail({
 
           {!Object.keys(attrs).some(isChannelAttrKey) && (
             <p className="text-sm text-text-secondary">
-              No way to reach them on file. Add an email, phone, or chat below — without that this is only a name.
+              No way to reach them on file. Add an email, phone, or chat below — without that this
+              is only a name.
             </p>
           )}
 

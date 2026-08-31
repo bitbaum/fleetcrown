@@ -40,7 +40,11 @@ const FOOTER_GROUPS = [
     heading: "Support",
     links: [
       { label: "Support FleetCrown", href: "/support" },
-      { label: "GitHub issues", href: "https://github.com/bitbaum/fleetcrown/issues", external: true },
+      {
+        label: "GitHub issues",
+        href: "https://github.com/bitbaum/fleetcrown/issues",
+        external: true,
+      },
     ],
   },
   {
@@ -75,28 +79,30 @@ export function PublicFooter() {
              column read as a list with holes punched in it. Desktop keeps
              the gap, where the rows are only as tall as the text. */
           <div key={group.heading} className="flex flex-col sm:gap-2">
-            <div className="ui-public-footer-heading">
-              {group.heading}
-            </div>
+            <div className="ui-public-footer-heading">{group.heading}</div>
             {group.links
               .filter((link) => !(insideRunner && link.href === "/download"))
               .map((link) =>
-              "external" in link && link.external ? (
-                <a
-                  key={link.label}
-                  href={link.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="ui-public-link-standalone text-sm"
-                >
-                  {link.label}
-                </a>
-              ) : (
-                <Link key={link.label} href={link.href} className="ui-public-link-standalone text-sm">
-                  {link.label}
-                </Link>
-              ),
-            )}
+                "external" in link && link.external ? (
+                  <a
+                    key={link.label}
+                    href={link.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ui-public-link-standalone text-sm"
+                  >
+                    {link.label}
+                  </a>
+                ) : (
+                  <Link
+                    key={link.label}
+                    href={link.href}
+                    className="ui-public-link-standalone text-sm"
+                  >
+                    {link.label}
+                  </Link>
+                ),
+              )}
           </div>
         ))}
       </div>
@@ -126,7 +132,9 @@ export function PublicFooter() {
         </div>
       </details>
       <div className="ui-public-footer-bottom">
-        <div>© {new Date().getFullYear()} {APP_NAME} · Mao Nakamoto</div>
+        <div>
+          © {new Date().getFullYear()} {APP_NAME} · Mao Nakamoto
+        </div>
         <Link href="/releases" className="ui-public-link font-mono">
           Fleet Runner v{CURRENT_RELEASE.version}
         </Link>

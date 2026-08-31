@@ -29,11 +29,17 @@ export function LokiDispatchButton({
     // name — announced inconsistently by screen readers and never rendered at
     // all on a touch screen. Every icon-only call site (people, projects,
     // goals) shared the gap; naming it here fixes all of them at once.
-    <button onClick={handleSend} className={className} title={title} aria-label={label ? undefined : title}>
-      {sent
-        ? <CheckCircle className="h-3 w-3 text-status-positive" />
-        : <Send className="h-3 w-3" />
-      }
+    <button
+      onClick={handleSend}
+      className={className}
+      title={title}
+      aria-label={label ? undefined : title}
+    >
+      {sent ? (
+        <CheckCircle className="h-3 w-3 text-status-positive" />
+      ) : (
+        <Send className="h-3 w-3" />
+      )}
       {label && <span>{sent ? "Sent" : label}</span>}
     </button>
   );

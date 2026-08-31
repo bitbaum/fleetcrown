@@ -44,13 +44,19 @@ export function FleetSurfaceGuide() {
       : pathname === s.href || pathname.startsWith(`${s.href}/`),
   );
   const readProject = useCallback(() => {
-    const routeProject = projectFromFleetRoute(pathname, new URLSearchParams(window.location.search));
+    const routeProject = projectFromFleetRoute(
+      pathname,
+      new URLSearchParams(window.location.search),
+    );
     return routeProject ?? readRememberedFleetProject();
   }, [pathname]);
   const project = useSyncExternalStore(subscribeToFleetProject, readProject, () => null);
 
   useEffect(() => {
-    const routeProject = projectFromFleetRoute(pathname, new URLSearchParams(window.location.search));
+    const routeProject = projectFromFleetRoute(
+      pathname,
+      new URLSearchParams(window.location.search),
+    );
     if (routeProject) rememberFleetProject(routeProject);
   }, [pathname]);
 

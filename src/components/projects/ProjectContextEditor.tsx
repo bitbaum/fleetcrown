@@ -17,43 +17,92 @@ const CONTEXT_GROUPS = [
     title: "Purpose",
     fields: [
       { key: PROJECT_ATTR.MISSION, label: "Mission", placeholder: "Why this project exists now" },
-      { key: PROJECT_ATTR.VISION, label: "Vision", placeholder: "The future this project should create" },
-      { key: PROJECT_ATTR.CUSTOMERS, label: "People served", placeholder: "Who uses it and what they need" },
+      {
+        key: PROJECT_ATTR.VISION,
+        label: "Vision",
+        placeholder: "The future this project should create",
+      },
+      {
+        key: PROJECT_ATTR.CUSTOMERS,
+        label: "People served",
+        placeholder: "Who uses it and what they need",
+      },
     ],
   },
   {
     title: "Product",
     fields: [
-      { key: PROJECT_ATTR.PROBLEM, label: "Problem", placeholder: "The concrete problem worth solving" },
-      { key: PROJECT_ATTR.SOLUTION, label: "Solution", placeholder: "How this project solves the problem" },
+      {
+        key: PROJECT_ATTR.PROBLEM,
+        label: "Problem",
+        placeholder: "The concrete problem worth solving",
+      },
+      {
+        key: PROJECT_ATTR.SOLUTION,
+        label: "Solution",
+        placeholder: "How this project solves the problem",
+      },
     ],
   },
   {
     title: "Reach",
     fields: [
-      { key: PROJECT_ATTR.DISTRIBUTION, label: "Distribution", placeholder: "Channels that exist today — RSS, newsletter, social queue, OG cards" },
-      { key: PROJECT_ATTR.GTM, label: "Go-to-market", placeholder: "ICP, path to first paying customer, monetization state" },
+      {
+        key: PROJECT_ATTR.DISTRIBUTION,
+        label: "Distribution",
+        placeholder: "Channels that exist today — RSS, newsletter, social queue, OG cards",
+      },
+      {
+        key: PROJECT_ATTR.GTM,
+        label: "Go-to-market",
+        placeholder: "ICP, path to first paying customer, monetization state",
+      },
     ],
   },
   {
     title: "Build contract",
     fields: [
-      { key: PROJECT_ATTR.STACK, label: "Stack", placeholder: "Languages, frameworks, and infrastructure" },
-      { key: PROJECT_ATTR.ARCHITECTURE, label: "Architecture", placeholder: "Main modules, stores, and integrations" },
-      { key: PROJECT_ATTR.CONVENTIONS, label: "Conventions", placeholder: "Patterns and rules every agent must follow" },
+      {
+        key: PROJECT_ATTR.STACK,
+        label: "Stack",
+        placeholder: "Languages, frameworks, and infrastructure",
+      },
+      {
+        key: PROJECT_ATTR.ARCHITECTURE,
+        label: "Architecture",
+        placeholder: "Main modules, stores, and integrations",
+      },
+      {
+        key: PROJECT_ATTR.CONVENTIONS,
+        label: "Conventions",
+        placeholder: "Patterns and rules every agent must follow",
+      },
     ],
   },
 ] as const;
 
-const CONTEXT_KEYS = new Set<string>(CONTEXT_GROUPS.flatMap((group) => group.fields.map((field) => field.key)));
+const CONTEXT_KEYS = new Set<string>(
+  CONTEXT_GROUPS.flatMap((group) => group.fields.map((field) => field.key)),
+);
 /** Known attrs that are NOT free-form context — rendered by dedicated UI elsewhere. */
 const NON_CONTEXT_KEYS = new Set<string>([
-  PROJECT_ATTR.STATUS, PROJECT_ATTR.MATURITY, PROJECT_ATTR.NEXT_STEP,
-  PROJECT_ATTR.DEFINITION_OF_DONE, PROJECT_ATTR.GOAL_MAX_TURNS,
-  PROJECT_ATTR.DESCRIPTION, PROJECT_ATTR.OWNER, PROJECT_ATTR.PRODUCTION_URL,
-  PROJECT_ATTR.URL, PROJECT_ATTR.REPO, PROJECT_ATTR.GITHUB_REPO,
-  PROJECT_ATTR.SECURITY_VULNERABILITY, PROJECT_ATTR.BROKEN_FEATURES, PROJECT_ATTR.DEPLOYMENT_ISSUE,
-  PROJECT_ATTR.BUSINESS_PLAN, PROJECT_ATTR.BUSINESS_ACTIONS, PROJECT_ATTR.BUSINESS_PLAN_UPDATED_AT,
+  PROJECT_ATTR.STATUS,
+  PROJECT_ATTR.MATURITY,
+  PROJECT_ATTR.NEXT_STEP,
+  PROJECT_ATTR.DEFINITION_OF_DONE,
+  PROJECT_ATTR.GOAL_MAX_TURNS,
+  PROJECT_ATTR.DESCRIPTION,
+  PROJECT_ATTR.OWNER,
+  PROJECT_ATTR.PRODUCTION_URL,
+  PROJECT_ATTR.URL,
+  PROJECT_ATTR.REPO,
+  PROJECT_ATTR.GITHUB_REPO,
+  PROJECT_ATTR.SECURITY_VULNERABILITY,
+  PROJECT_ATTR.BROKEN_FEATURES,
+  PROJECT_ATTR.DEPLOYMENT_ISSUE,
+  PROJECT_ATTR.BUSINESS_PLAN,
+  PROJECT_ATTR.BUSINESS_ACTIONS,
+  PROJECT_ATTR.BUSINESS_PLAN_UPDATED_AT,
 ]);
 
 export function ProjectContextEditor({
@@ -81,9 +130,10 @@ export function ProjectContextEditor({
     0,
   );
   const extraAttrs = useMemo(
-    () => Object.entries(attrs).filter(([key, value]) =>
-      value?.trim() && !CONTEXT_KEYS.has(key) && !NON_CONTEXT_KEYS.has(key),
-    ),
+    () =>
+      Object.entries(attrs).filter(
+        ([key, value]) => value?.trim() && !CONTEXT_KEYS.has(key) && !NON_CONTEXT_KEYS.has(key),
+      ),
     [attrs],
   );
   const hasRepo = getProjectLinks(attrs, gitUrl).repo !== null;
@@ -94,7 +144,9 @@ export function ProjectContextEditor({
         <div>
           <div className="flex items-center gap-2">
             <Brain className="h-4 w-4 text-accent-text" aria-hidden="true" />
-            <h2 id="project-context-title" className="text-lg font-semibold text-text-primary">Agent context</h2>
+            <h2 id="project-context-title" className="text-lg font-semibold text-text-primary">
+              Agent context
+            </h2>
           </div>
           <p className="mt-1 text-sm text-text-secondary">
             Exact project context · {filledCount}/{fieldCount} core fields complete
@@ -110,7 +162,10 @@ export function ProjectContextEditor({
 
       <div className="mt-6 grid gap-x-8 gap-y-7 lg:grid-cols-2">
         {CONTEXT_GROUPS.map((group) => (
-          <section key={group.title} className={group.title === "Build contract" ? "lg:col-span-2" : undefined}>
+          <section
+            key={group.title}
+            className={group.title === "Build contract" ? "lg:col-span-2" : undefined}
+          >
             <h3 className="ui-projects-section-label mb-1">{group.title}</h3>
             <div className="border-y border-border-subtle">
               {group.fields.map((field) => {
@@ -137,7 +192,10 @@ export function ProjectContextEditor({
                         projectId={projectId}
                         presetKey={field.key}
                         presetPlaceholder={field.placeholder}
-                        onSaved={() => { setAddingKey(null); refresh(); }}
+                        onSaved={() => {
+                          setAddingKey(null);
+                          refresh();
+                        }}
                         onCancel={() => setAddingKey(null)}
                       />
                     ) : (
@@ -148,7 +206,9 @@ export function ProjectContextEditor({
                       >
                         <Plus className="h-4 w-4 shrink-0" aria-hidden="true" />
                         <span className="font-medium">{field.label}</span>
-                        <span className="hidden truncate text-text-muted sm:inline">{field.placeholder}</span>
+                        <span className="hidden truncate text-text-muted sm:inline">
+                          {field.placeholder}
+                        </span>
                       </button>
                     )}
                   </div>

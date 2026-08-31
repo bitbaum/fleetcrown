@@ -15,15 +15,20 @@ export async function insertSiteFeedback(values: NewSiteFeedback): Promise<SiteF
  * AFTER its fix resolved the row is a fresh report (maybe a regression) and
  * gets a new row.
  */
-export async function bumpDuplicateFeedback(projectId: string, contentHash: string): Promise<string | null> {
+export async function bumpDuplicateFeedback(
+  projectId: string,
+  contentHash: string,
+): Promise<string | null> {
   const [bumped] = await db
     .update(siteFeedback)
     .set({ duplicateCount: sql`${siteFeedback.duplicateCount} + 1` })
-    .where(and(
-      eq(siteFeedback.projectId, projectId),
-      eq(siteFeedback.contentHash, contentHash),
-      inArray(siteFeedback.status, [FEEDBACK_STATUS.NEW, FEEDBACK_STATUS.DISPATCHED]),
-    ))
+    .where(
+      and(
+        eq(siteFeedback.projectId, projectId),
+        eq(siteFeedback.contentHash, contentHash),
+        inArray(siteFeedback.status, [FEEDBACK_STATUS.NEW, FEEDBACK_STATUS.DISPATCHED]),
+      ),
+    )
     .returning({ id: siteFeedback.id });
   return bumped?.id ?? null;
 }
@@ -33,13 +38,19 @@ export async function bumpDuplicateFeedback(projectId: string, contentHash: stri
 export type FeedbackListItem = Omit<SiteFeedback, "screenshot"> & { hasScreenshot: boolean };
 
 /** Inbox for one project, newest first. Owner-scoped by userId. */
-export async function listProjectFeedback(userId: string, projectId: string, limit = 200): Promise<FeedbackListItem[]> {
+export async function listProjectFeedback(
+  userId: string,
+  projectId: string,
+  limit = 200,
+): Promise<FeedbackListItem[]> {
   return db.query.siteFeedback.findMany({
     where: and(eq(siteFeedback.userId, userId), eq(siteFeedback.projectId, projectId)),
     orderBy: [desc(siteFeedback.createdAt)],
     limit,
     columns: { screenshot: false },
-    extras: { hasScreenshot: sql<boolean>`(${siteFeedback.screenshot} IS NOT NULL)`.as("has_screenshot") },
+    extras: {
+      hasScreenshot: sql<boolean>`(${siteFeedback.screenshot} IS NOT NULL)`.as("has_screenshot"),
+    },
   });
 }
 
@@ -56,7 +67,10 @@ export type FeedbackLoopMetrics = {
   medianResolutionHours: number | null;
 };
 
-export async function getFeedbackLoopMetrics(userId: string, projectId?: string): Promise<FeedbackLoopMetrics> {
+export async function getFeedbackLoopMetrics(
+  userId: string,
+  projectId?: string,
+): Promise<FeedbackLoopMetrics> {
   const where = projectId
     ? and(eq(siteFeedback.userId, userId), eq(siteFeedback.projectId, projectId))
     : eq(siteFeedback.userId, userId);
@@ -66,7 +80,9 @@ export async function getFeedbackLoopMetrics(userId: string, projectId?: string)
       open: sql<number>`count(*) filter (where ${siteFeedback.status} in (${FEEDBACK_STATUS.NEW}, ${FEEDBACK_STATUS.DISPATCHED}))::int`,
       resolved: sql<number>`count(*) filter (where ${siteFeedback.status} = ${FEEDBACK_STATUS.RESOLVED})::int`,
       resolved30d: sql<number>`count(*) filter (where ${siteFeedback.status} = ${FEEDBACK_STATUS.RESOLVED} and ${siteFeedback.resolvedAt} > now() - interval '30 days')::int`,
-      medianResolutionHours: sql<number | null>`extract(epoch from percentile_cont(0.5) within group (order by (${siteFeedback.resolvedAt} - ${siteFeedback.createdAt})) filter (where ${siteFeedback.resolvedAt} is not null)) / 3600`,
+      medianResolutionHours: sql<
+        number | null
+      >`extract(epoch from percentile_cont(0.5) within group (order by (${siteFeedback.resolvedAt} - ${siteFeedback.createdAt})) filter (where ${siteFeedback.resolvedAt} is not null)) / 3600`,
     })
     .from(siteFeedback)
     .where(where);
@@ -75,20 +91,27 @@ export async function getFeedbackLoopMetrics(userId: string, projectId?: string)
     open: row?.open ?? 0,
     resolved: row?.resolved ?? 0,
     resolved30d: row?.resolved30d ?? 0,
-    medianResolutionHours: row?.medianResolutionHours != null ? Number(row.medianResolutionHours) : null,
+    medianResolutionHours:
+      row?.medianResolutionHours != null ? Number(row.medianResolutionHours) : null,
   };
 }
 
 /** Operator curation toggle for the public strip — resolved rows only. */
-export async function setFeedbackFeatured(userId: string, id: string, featured: boolean): Promise<boolean> {
+export async function setFeedbackFeatured(
+  userId: string,
+  id: string,
+  featured: boolean,
+): Promise<boolean> {
   const [updated] = await db
     .update(siteFeedback)
     .set({ featuredAt: featured ? new Date() : null })
-    .where(and(
-      eq(siteFeedback.id, id),
-      eq(siteFeedback.userId, userId),
-      eq(siteFeedback.status, FEEDBACK_STATUS.RESOLVED),
-    ))
+    .where(
+      and(
+        eq(siteFeedback.id, id),
+        eq(siteFeedback.userId, userId),
+        eq(siteFeedback.status, FEEDBACK_STATUS.RESOLVED),
+      ),
+    )
     .returning({ id: siteFeedback.id });
   return !!updated;
 }
@@ -112,7 +135,10 @@ export type UserFeedbackListItem = FeedbackListItem & { projectName: string };
  * screenshot exclusion as the per-project list; the join supplies the project
  * name so the UI never needs a second lookup. Newest first across the fleet.
  */
-export async function listUserFeedback(userId: string, limit = 400): Promise<UserFeedbackListItem[]> {
+export async function listUserFeedback(
+  userId: string,
+  limit = 400,
+): Promise<UserFeedbackListItem[]> {
   const { screenshot: _screenshot, ...cols } = getTableColumns(siteFeedback);
   return db
     .select({
@@ -157,10 +183,12 @@ export async function listFeedbackSummary(userId: string): Promise<ProjectFeedba
     })
     .from(siteFeedback)
     .innerJoin(entities, eq(siteFeedback.projectId, entities.id))
-    .where(and(
-      eq(siteFeedback.userId, userId),
-      inArray(siteFeedback.status, [FEEDBACK_STATUS.NEW, FEEDBACK_STATUS.DISPATCHED]),
-    ))
+    .where(
+      and(
+        eq(siteFeedback.userId, userId),
+        inArray(siteFeedback.status, [FEEDBACK_STATUS.NEW, FEEDBACK_STATUS.DISPATCHED]),
+      ),
+    )
     .groupBy(siteFeedback.projectId, entities.name)
     .orderBy(desc(count(siteFeedback.id)), desc(sql`max(${siteFeedback.createdAt})`));
   return rows.map((r) => ({
@@ -201,11 +229,13 @@ export async function markFeedbackDispatchedBulk(
   const rows = await db
     .update(siteFeedback)
     .set({ status: FEEDBACK_STATUS.DISPATCHED, ...(runId ? { dispatchedRunId: runId } : {}) })
-    .where(and(
-      eq(siteFeedback.userId, userId),
-      inArray(siteFeedback.id, ids),
-      eq(siteFeedback.status, FEEDBACK_STATUS.NEW),
-    ))
+    .where(
+      and(
+        eq(siteFeedback.userId, userId),
+        inArray(siteFeedback.id, ids),
+        eq(siteFeedback.status, FEEDBACK_STATUS.NEW),
+      ),
+    )
     .returning({ id: siteFeedback.id });
   return rows.length;
 }
@@ -224,9 +254,12 @@ export async function setFeedbackStatus(
       ...(dispatchedRunId ? { dispatchedRunId } : {}),
       // Resolution evidence: stamp when the row resolves, clear on reopen so a
       // re-resolved row never shows a stale date.
-      resolvedAt: status === FEEDBACK_STATUS.RESOLVED ? new Date()
-        : status === FEEDBACK_STATUS.NEW ? null
-        : undefined,
+      resolvedAt:
+        status === FEEDBACK_STATUS.RESOLVED
+          ? new Date()
+          : status === FEEDBACK_STATUS.NEW
+            ? null
+            : undefined,
     })
     .where(and(eq(siteFeedback.id, id), eq(siteFeedback.userId, userId)))
     .returning();

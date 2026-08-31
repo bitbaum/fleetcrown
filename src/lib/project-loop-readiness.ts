@@ -75,6 +75,7 @@ export function deriveProjectLoopReadiness(
     label: "Loop-ready",
     tone: "positive",
     reason: "has_path",
-    description: "This project has an execution path and can receive loop dispatches when a builder is connected.",
+    description:
+      "This project has an execution path and can receive loop dispatches when a builder is connected.",
   };
 }

@@ -66,8 +66,8 @@ export default function ImportFromGithubPage() {
             <div className="space-y-1">
               <h2 className="ui-page-subtitle">Pick the repos you want to manage</h2>
               <p className="text-sm text-text-muted">
-                Each selected repo becomes a FleetCrown project. You can import all of them now
-                and remove individual ones later — duplicates by name are silently skipped.
+                Each selected repo becomes a FleetCrown project. You can import all of them now and
+                remove individual ones later — duplicates by name are silently skipped.
               </p>
             </div>
           </div>
@@ -75,18 +75,14 @@ export default function ImportFromGithubPage() {
           {result && result.skipped.length > 0 && (
             <div className="ui-tag-warning p-3 rounded-md text-sm">
               Imported {result.created.length} project{result.created.length === 1 ? "" : "s"}.
-              Skipped {result.skipped.length}:{" "}
-              {result.skipped.map((s) => s.reason).join(", ")}
-              .{" "}
+              Skipped {result.skipped.length}: {result.skipped.map((s) => s.reason).join(", ")}.{" "}
               <Link href="/control" className="underline">
                 Go to Control →
               </Link>
             </div>
           )}
 
-          {error && (
-            <div className="ui-error p-3 rounded-md text-sm">{error}</div>
-          )}
+          {error && <div className="ui-error p-3 rounded-md text-sm">{error}</div>}
 
           <input
             type="search"
@@ -121,8 +117,7 @@ export default function ImportFromGithubPage() {
                 </>
               ) : (
                 <>
-                  Import {selectedIds.length}{" "}
-                  {selectedIds.length === 1 ? "project" : "projects"}
+                  Import {selectedIds.length} {selectedIds.length === 1 ? "project" : "projects"}
                 </>
               )}
             </button>

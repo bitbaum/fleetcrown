@@ -19,10 +19,7 @@ export function ExecutorHonestyChip({
 }) {
   if (!honesty) return null;
   return (
-    <span
-      className={cn(KIND_CLASS[honesty.kind], className)}
-      title={honesty.title}
-    >
+    <span className={cn(KIND_CLASS[honesty.kind], className)} title={honesty.title}>
       {honesty.label}
     </span>
   );

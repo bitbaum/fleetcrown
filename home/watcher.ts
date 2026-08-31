@@ -31,7 +31,8 @@ import type { Handoff } from "@/lib/events";
 // we export startWatcher() and do not print+exit.
 // Direct `npx tsx home/watcher.ts` (no args) prints usage and exits.
 // --self-test runs the pure parser tests.
-const isDirectCli = import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.endsWith("watcher.ts");
+const isDirectCli =
+  import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.endsWith("watcher.ts");
 
 if (isDirectCli && !process.argv.includes("--start") && !process.argv.includes("--self-test")) {
   console.log(`${APP_NAME} watcher — Bridge layer of the home/ stack.
@@ -118,7 +119,11 @@ function readAndEmit(filename: string) {
 
   const filePath = path.join(SESSIONS_DIR, filename);
   let stat: fs.Stats;
-  try { stat = fs.statSync(filePath); } catch { return; }
+  try {
+    stat = fs.statSync(filePath);
+  } catch {
+    return;
+  }
   if (!stat.isFile()) return;
 
   const mtime = stat.mtimeMs;
@@ -126,7 +131,11 @@ function readAndEmit(filename: string) {
   lastMtime.set(filename, mtime);
 
   let content: string;
-  try { content = fs.readFileSync(filePath, "utf8"); } catch { return; }
+  try {
+    content = fs.readFileSync(filePath, "utf8");
+  } catch {
+    return;
+  }
   const handoff = parseHandoff(content);
 
   // A session.md file always contains all 5 fields once the agent writes a
@@ -142,23 +151,31 @@ function readAndEmit(filename: string) {
   console.log(`[watcher] worker.idle ${tab} · ${handoff.done.slice(0, 60)}…`);
 
   if (onIdleSubscriber) {
-    try { onIdleSubscriber({ project: tab, handoff }); }
-    catch (e) { console.warn(`[watcher] onIdle subscriber threw: ${(e as Error).message}`); }
+    try {
+      onIdleSubscriber({ project: tab, handoff });
+    } catch (e) {
+      console.warn(`[watcher] onIdle subscriber threw: ${(e as Error).message}`);
+    }
   }
 }
 
 function scheduleFlush(filename: string) {
   const existing = pendingFlush.get(filename);
   if (existing) clearTimeout(existing);
-  pendingFlush.set(filename, setTimeout(() => {
-    pendingFlush.delete(filename);
-    readAndEmit(filename);
-  }, DEBOUNCE_MS));
+  pendingFlush.set(
+    filename,
+    setTimeout(() => {
+      pendingFlush.delete(filename);
+      readAndEmit(filename);
+    }, DEBOUNCE_MS),
+  );
 }
 
 // ── Boot ─────────────────────────────────────────────────────────────────────
 
-export function startWatcher(opts: { onIdle?: OnIdle; acceptUnregistered?: boolean } = {}): { close: () => void } {
+export function startWatcher(opts: { onIdle?: OnIdle; acceptUnregistered?: boolean } = {}): {
+  close: () => void;
+} {
   onIdleSubscriber = opts.onIdle ?? null;
   acceptUnregistered = opts.acceptUnregistered ?? false;
 
@@ -175,7 +192,9 @@ export function startWatcher(opts: { onIdle?: OnIdle; acceptUnregistered?: boole
     try {
       const stat = fs.statSync(path.join(SESSIONS_DIR, file));
       lastMtime.set(file, stat.mtimeMs);
-    } catch { /* file deleted between readdir and stat — skip */ }
+    } catch {
+      /* file deleted between readdir and stat — skip */
+    }
   }
 
   console.log(`[watcher] ${APP_NAME} bridge watching ${SESSIONS_DIR}`);
@@ -183,7 +202,9 @@ export function startWatcher(opts: { onIdle?: OnIdle; acceptUnregistered?: boole
   console.log(`[watcher] seeded ${lastMtime.size} session files; emitting on change`);
   console.log(`[watcher] events → ~/.${APP_SLUG}/events.jsonl`);
   if (registeredLower.size === 0 && !acceptUnregistered) {
-    console.log(`[watcher] WARN: empty registry — no session.md changes will emit. Add entries to ${projectsConfPath()}.`);
+    console.log(
+      `[watcher] WARN: empty registry — no session.md changes will emit. Add entries to ${projectsConfPath()}.`,
+    );
   }
 
   const w = fs.watch(SESSIONS_DIR, (eventType, filename) => {
@@ -194,7 +215,11 @@ export function startWatcher(opts: { onIdle?: OnIdle; acceptUnregistered?: boole
   w.on("error", (err) => console.error("[watcher] fs.watch error:", err));
 
   const close = () => {
-    try { w.close(); } catch { /* ignore */ }
+    try {
+      w.close();
+    } catch {
+      /* ignore */
+    }
     for (const t of pendingFlush.values()) clearTimeout(t);
     pendingFlush.clear();
     onIdleSubscriber = null;
@@ -209,7 +234,7 @@ export function startWatcher(opts: { onIdle?: OnIdle; acceptUnregistered?: boole
       close();
       process.exit(0);
     };
-    process.on("SIGINT",  () => shutdown("SIGINT"));
+    process.on("SIGINT", () => shutdown("SIGINT"));
     process.on("SIGTERM", () => shutdown("SIGTERM"));
   }
 
@@ -226,19 +251,23 @@ function selfTest() {
     {
       name: "parseHandoff extracts all five fields from a well-formed session.md",
       run: () => {
-        const h = parseHandoff([
-          "done: Built thing X",
-          "next: Test thing X",
-          "tests: 3 pass · 0 fail",
-          "todos: 0 TODOs",
-          "health: good",
-          "",
-        ].join("\n"));
-        return h.done === "Built thing X"
-            && h.next === "Test thing X"
-            && h.tests === "3 pass · 0 fail"
-            && h.todos === "0 TODOs"
-            && h.health === "good";
+        const h = parseHandoff(
+          [
+            "done: Built thing X",
+            "next: Test thing X",
+            "tests: 3 pass · 0 fail",
+            "todos: 0 TODOs",
+            "health: good",
+            "",
+          ].join("\n"),
+        );
+        return (
+          h.done === "Built thing X" &&
+          h.next === "Test thing X" &&
+          h.tests === "3 pass · 0 fail" &&
+          h.todos === "0 TODOs" &&
+          h.health === "good"
+        );
       },
     },
     {
@@ -260,21 +289,19 @@ function selfTest() {
       run: () => {
         // "done: implementing next: foo behavior" — next regex shouldn't
         // match because the line starts with 'done:', not 'next:'.
-        const h = parseHandoff([
-          "done: implementing next: foo behavior",
-          "next: actually do it",
-          "",
-        ].join("\n"));
-        return h.done === "implementing next: foo behavior"
-            && h.next === "actually do it";
+        const h = parseHandoff(
+          ["done: implementing next: foo behavior", "next: actually do it", ""].join("\n"),
+        );
+        return h.done === "implementing next: foo behavior" && h.next === "actually do it";
       },
     },
     {
       name: "parseHandoff returns all-empty Handoff for a blank session.md",
       run: () => {
         const h = parseHandoff("");
-        return h.done === "" && h.next === "" && h.tests === ""
-            && h.todos === "" && h.health === "";
+        return (
+          h.done === "" && h.next === "" && h.tests === "" && h.todos === "" && h.health === ""
+        );
       },
     },
     {
@@ -283,20 +310,26 @@ function selfTest() {
     },
     {
       name: "tabFromFilename returns null for non-.md files",
-      run: () => tabFromFilename("README.txt") === null
-              && tabFromFilename("noextension") === null,
+      run: () => tabFromFilename("README.txt") === null && tabFromFilename("noextension") === null,
     },
     {
       name: "tabFromFilename preserves multi-word tab names verbatim",
-      run: () => tabFromFilename("Tab #1.md") === "Tab #1"
-              && tabFromFilename("Revamp-Info.md") === "Revamp-Info",
+      run: () =>
+        tabFromFilename("Tab #1.md") === "Tab #1" &&
+        tabFromFilename("Revamp-Info.md") === "Revamp-Info",
     },
   ];
 
-  let pass = 0, fail = 0;
+  let pass = 0,
+    fail = 0;
   for (const c of cases) {
-    if (c.run()) { console.log(`  ✓ ${c.name}`); pass++; }
-    else         { console.log(`  ✗ ${c.name}`); fail++; }
+    if (c.run()) {
+      console.log(`  ✓ ${c.name}`);
+      pass++;
+    } else {
+      console.log(`  ✗ ${c.name}`);
+      fail++;
+    }
   }
   console.log(`\n${pass}/${pass + fail} passed`);
   if (fail > 0) process.exit(1);

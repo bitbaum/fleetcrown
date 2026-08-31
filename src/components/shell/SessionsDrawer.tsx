@@ -46,13 +46,7 @@ const PHASE_DOT_CLASS: Record<SessionSnapshotItem["state"]["phase"], string> = {
   unknown: "text-border-default fill-border-default",
 };
 
-export function SessionsDrawer({
-  open,
-  onClose,
-}: {
-  open: boolean;
-  onClose: () => void;
-}) {
+export function SessionsDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [snapshot, setSnapshot] = useState<SessionSnapshot | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -107,11 +101,7 @@ export function SessionsDrawer({
   return (
     <>
       {/* Backdrop — semi-transparent, clickable to close. */}
-      <div
-        className="fixed inset-0 z-40 ui-backdrop"
-        onClick={onClose}
-        aria-hidden
-      />
+      <div className="fixed inset-0 z-40 ui-backdrop" onClick={onClose} aria-hidden />
 
       {/* Drawer — slides in from the right. */}
       <aside
@@ -127,22 +117,13 @@ export function SessionsDrawer({
               {loading && <span className="ml-1.5">· refreshing…</span>}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="ui-btn-icon"
-            aria-label="Close"
-          >
+          <button type="button" onClick={onClose} className="ui-btn-icon" aria-label="Close">
             <X className="h-4 w-4" />
           </button>
         </header>
 
         <div className="px-4 py-3 space-y-2">
-          {error && (
-            <div className="ui-error p-3 rounded-md text-sm">
-              {error}
-            </div>
-          )}
+          {error && <div className="ui-error p-3 rounded-md text-sm">{error}</div>}
 
           {!loading && !error && projects.length === 0 && (
             <div className="ui-empty-page py-8 text-center space-y-2">

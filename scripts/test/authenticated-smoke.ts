@@ -17,7 +17,15 @@
  * habits, events, subscriptions, prompts) — ephemeral rows tagged smoke-*.
  * Execution API probes (X01–X09 paths) run on every authenticated smoke.
  */
-import { cpSync, existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { config } from "dotenv";
@@ -60,7 +68,10 @@ function loadEnvFile(file: string) {
     const idx = line.indexOf("=");
     const key = line.slice(0, idx).trim();
     if (process.env[key] !== undefined) continue;
-    process.env[key] = line.slice(idx + 1).trim().replace(/^['"]|['"]$/g, "");
+    process.env[key] = line
+      .slice(idx + 1)
+      .trim()
+      .replace(/^['"]|['"]$/g, "");
   }
 }
 
@@ -117,7 +128,9 @@ async function signInWithCredentials(email: string, password: string): Promise<s
   }
 
   const errText = await res.text().catch(() => "");
-  throw new Error(`credentials sign-in failed (${res.status})${errText ? `: ${errText.slice(0, 80)}` : ""}`);
+  throw new Error(
+    `credentials sign-in failed (${res.status})${errText ? `: ${errText.slice(0, 80)}` : ""}`,
+  );
 }
 
 async function resolveSessionFromBrowser(): Promise<string> {
@@ -128,7 +141,9 @@ async function resolveSessionFromBrowser(): Promise<string> {
   const braveBin = process.env.BRAVE_BIN ?? "/opt/brave.com/brave/brave";
 
   if (!existsSync(braveProfile)) {
-    throw new Error(`Brave profile not found at ${braveProfile} — set BRAVE_PROFILE or use SMOKE_EMAIL/SMOKE_PASSWORD`);
+    throw new Error(
+      `Brave profile not found at ${braveProfile} — set BRAVE_PROFILE or use SMOKE_EMAIL/SMOKE_PASSWORD`,
+    );
   }
 
   const copied = mkdtempSync(resolve(tmpdir(), "fc-auth-smoke-"));
@@ -155,7 +170,9 @@ async function resolveSessionFromBrowser(): Promise<string> {
         await page.waitForTimeout(500);
       }
       if (page.url().includes("/sign-in")) {
-        throw new Error("Browser still on /sign-in — complete OAuth in the window or set SMOKE_EMAIL/SMOKE_PASSWORD");
+        throw new Error(
+          "Browser still on /sign-in — complete OAuth in the window or set SMOKE_EMAIL/SMOKE_PASSWORD",
+        );
       }
 
       const cookies = await context.cookies(BASE);
@@ -170,15 +187,18 @@ async function resolveSessionFromBrowser(): Promise<string> {
   }
 }
 
-async function tryMintJwtSession(isProdBase: boolean): Promise<{ token: string; source: string } | null> {
+async function tryMintJwtSession(
+  isProdBase: boolean,
+): Promise<{ token: string; source: string } | null> {
   const secret = process.env.AUTH_SECRET?.trim();
   if (!secret) return null;
 
   const hetznerPassword = process.env.FLEETCROWN_DB_PASSWORD;
   const hetznerHost = process.env.HETZNER_IP;
-  const dbUrl = isProdBase && hetznerPassword && hetznerHost
-    ? `postgres://fleetcrown:${encodeURIComponent(hetznerPassword)}@${hetznerHost}:5432/fleetcrown?sslmode=require`
-    : process.env.DATABASE_URL;
+  const dbUrl =
+    isProdBase && hetznerPassword && hetznerHost
+      ? `postgres://fleetcrown:${encodeURIComponent(hetznerPassword)}@${hetznerHost}:5432/fleetcrown?sslmode=require`
+      : process.env.DATABASE_URL;
   if (!dbUrl) return null;
 
   const postgres = (await import("postgres")).default;
@@ -191,13 +211,15 @@ async function tryMintJwtSession(isProdBase: boolean): Promise<{ token: string; 
       ORDER BY is_default DESC, created_at ASC
       LIMIT 1
     `;
-    const u = rows[0] as {
-      id: string;
-      email: string | null;
-      name: string | null;
-      username: string | null;
-      onboarded_at: Date | null;
-    } | undefined;
+    const u = rows[0] as
+      | {
+          id: string;
+          email: string | null;
+          name: string | null;
+          username: string | null;
+          onboarded_at: Date | null;
+        }
+      | undefined;
     if (!u?.id) return null;
 
     const { encode } = await import("@auth/core/jwt");
@@ -316,7 +338,10 @@ async function resolveSessionToken(): Promise<{ token: string; source: string }>
 function mergeCookieHeader(base: string, setCookie: string | null): string {
   if (!setCookie) return base;
   const parts = new Map<string, string>();
-  for (const chunk of base.split(";").map((s) => s.trim()).filter(Boolean)) {
+  for (const chunk of base
+    .split(";")
+    .map((s) => s.trim())
+    .filter(Boolean)) {
     const eq = chunk.indexOf("=");
     if (eq > 0) parts.set(chunk.slice(0, eq), chunk.slice(eq + 1));
   }
@@ -370,7 +395,13 @@ async function probe(
   let note: string | undefined;
 
   if (opts.checkBody && text.includes(ERROR_BOUNDARY)) {
-    return { route: opts.label ?? route, method, status: res.status, ok: false, note: "error boundary" };
+    return {
+      route: opts.label ?? route,
+      method,
+      status: res.status,
+      ok: false,
+      note: "error boundary",
+    };
   }
 
   if (opts.jsonOk && res.ok) {
@@ -413,7 +444,12 @@ function idFrom(json: Record<string, unknown> | null, ...keys: string[]): string
   if (!json) return null;
   for (const key of keys) {
     const val = json[key];
-    if (val && typeof val === "object" && "id" in val && typeof (val as { id: unknown }).id === "string") {
+    if (
+      val &&
+      typeof val === "object" &&
+      "id" in val &&
+      typeof (val as { id: unknown }).id === "string"
+    ) {
       return (val as { id: string }).id;
     }
     if (typeof val === "string") return val;
@@ -443,7 +479,12 @@ async function runPrivateZoneCrudProbes(cookieHeader: string): Promise<ProbeResu
       description: "authenticated-smoke",
     });
     const personId = idFrom(created.json, "person");
-    push("PE06 POST /api/people", "POST", created.status, created.status === 201 && Boolean(personId));
+    push(
+      "PE06 POST /api/people",
+      "POST",
+      created.status,
+      created.status === 201 && Boolean(personId),
+    );
     if (personId) {
       const patched = await apiJson(cookieHeader, `/api/people/${personId}`, "PATCH", {
         description: "smoke patched",
@@ -456,14 +497,26 @@ async function runPrivateZoneCrudProbes(cookieHeader: string): Promise<ProbeResu
       });
       push("PE09 POST /api/people/<id>/attrs", "POST", attr.status, attr.status === 200);
 
-      const interaction = await apiJson(cookieHeader, `/api/people/${personId}/interactions`, "POST", {
-        channel: "smoke",
-        direction: "outbound",
-        summary: "authenticated-smoke probe",
-      });
-      push("PE10 POST /api/people/<id>/interactions", "POST", interaction.status, interaction.status === 201);
+      const interaction = await apiJson(
+        cookieHeader,
+        `/api/people/${personId}/interactions`,
+        "POST",
+        {
+          channel: "smoke",
+          direction: "outbound",
+          summary: "authenticated-smoke probe",
+        },
+      );
+      push(
+        "PE10 POST /api/people/<id>/interactions",
+        "POST",
+        interaction.status,
+        interaction.status === 201,
+      );
 
-      const attrDel = await apiJson(cookieHeader, `/api/people/${personId}/attrs`, "DELETE", { key: "smoke_tag" });
+      const attrDel = await apiJson(cookieHeader, `/api/people/${personId}/attrs`, "DELETE", {
+        key: "smoke_tag",
+      });
       push("PE09 DELETE /api/people/<id>/attrs", "DELETE", attrDel.status, attrDel.status === 200);
 
       const deleted = await apiJson(cookieHeader, `/api/people/${personId}`, "DELETE");
@@ -487,7 +540,12 @@ async function runPrivateZoneCrudProbes(cookieHeader: string): Promise<ProbeResu
         parentGoalId: goalId,
       });
       childId = idFrom(child.json, "goal");
-      push("G03 POST /api/goals (sub-goal)", "POST", child.status, child.status === 201 && Boolean(childId));
+      push(
+        "G03 POST /api/goals (sub-goal)",
+        "POST",
+        child.status,
+        child.status === 201 && Boolean(childId),
+      );
 
       const patched = await apiJson(cookieHeader, `/api/goals/${goalId}`, "PATCH", {
         progress: 42,
@@ -497,7 +555,12 @@ async function runPrivateZoneCrudProbes(cookieHeader: string): Promise<ProbeResu
 
       if (childId) {
         const delChild = await apiJson(cookieHeader, `/api/goals/${childId}`, "DELETE");
-        push("G06 DELETE /api/goals/<id> (sub)", "DELETE", delChild.status, delChild.status === 200);
+        push(
+          "G06 DELETE /api/goals/<id> (sub)",
+          "DELETE",
+          delChild.status,
+          delChild.status === 200,
+        );
       }
       const delGoal = await apiJson(cookieHeader, `/api/goals/${goalId}`, "DELETE");
       push("G06 DELETE /api/goals/<id>", "DELETE", delGoal.status, delGoal.status === 200);
@@ -506,7 +569,9 @@ async function runPrivateZoneCrudProbes(cookieHeader: string): Promise<ProbeResu
 
   // Habits — create, patch done/title, link goal, delete
   {
-    const goalForLink = await apiJson(cookieHeader, "/api/goals", "POST", { title: `${tag} link-goal` });
+    const goalForLink = await apiJson(cookieHeader, "/api/goals", "POST", {
+      title: `${tag} link-goal`,
+    });
     const linkGoalId = idFrom(goalForLink.json, "goal");
 
     const created = await apiJson(cookieHeader, "/api/habits", "POST", {
@@ -514,7 +579,12 @@ async function runPrivateZoneCrudProbes(cookieHeader: string): Promise<ProbeResu
       frequency: "daily",
     });
     const habitId = idFrom(created.json, "habit");
-    push("H03 POST /api/habits", "POST", created.status, created.status === 201 && Boolean(habitId));
+    push(
+      "H03 POST /api/habits",
+      "POST",
+      created.status,
+      created.status === 201 && Boolean(habitId),
+    );
 
     if (habitId) {
       const done = await apiJson(cookieHeader, `/api/habits/${habitId}`, "PATCH", { done: true });
@@ -534,7 +604,12 @@ async function runPrivateZoneCrudProbes(cookieHeader: string): Promise<ProbeResu
         const unlinked = await apiJson(cookieHeader, `/api/habits/${habitId}/goals`, "DELETE", {
           goalId: linkGoalId,
         });
-        push("H06 DELETE /api/habits/<id>/goals", "DELETE", unlinked.status, unlinked.status === 200);
+        push(
+          "H06 DELETE /api/habits/<id>/goals",
+          "DELETE",
+          unlinked.status,
+          unlinked.status === 200,
+        );
       }
 
       const deleted = await apiJson(cookieHeader, `/api/habits/${habitId}`, "DELETE");
@@ -554,7 +629,12 @@ async function runPrivateZoneCrudProbes(cookieHeader: string): Promise<ProbeResu
       description: "smoke",
     });
     const eventId = idFrom(created.json, "event");
-    push("E03 POST /api/events", "POST", created.status, created.status === 201 && Boolean(eventId));
+    push(
+      "E03 POST /api/events",
+      "POST",
+      created.status,
+      created.status === 201 && Boolean(eventId),
+    );
 
     if (eventId) {
       const patched = await apiJson(cookieHeader, `/api/events/${eventId}`, "PATCH", {
@@ -562,7 +642,9 @@ async function runPrivateZoneCrudProbes(cookieHeader: string): Promise<ProbeResu
       });
       push("E04 PATCH /api/events/<id>", "PATCH", patched.status, patched.status === 200);
 
-      const archived = await apiJson(cookieHeader, `/api/events/${eventId}`, "PATCH", { status: "archived" });
+      const archived = await apiJson(cookieHeader, `/api/events/${eventId}`, "PATCH", {
+        status: "archived",
+      });
       push("E05 PATCH /api/events/<id> archive", "PATCH", archived.status, archived.status === 200);
 
       const deleted = await apiJson(cookieHeader, `/api/events/${eventId}`, "DELETE");
@@ -580,7 +662,12 @@ async function runPrivateZoneCrudProbes(cookieHeader: string): Promise<ProbeResu
       frequency: "monthly",
     });
     const subId = idFrom(created.json, "subscription");
-    push("M02 POST /api/subscriptions", "POST", created.status, created.status === 201 && Boolean(subId));
+    push(
+      "M02 POST /api/subscriptions",
+      "POST",
+      created.status,
+      created.status === 201 && Boolean(subId),
+    );
 
     if (subId) {
       const patched = await apiJson(cookieHeader, `/api/subscriptions/${subId}`, "PATCH", {
@@ -591,10 +678,20 @@ async function runPrivateZoneCrudProbes(cookieHeader: string): Promise<ProbeResu
       const cancelled = await apiJson(cookieHeader, `/api/subscriptions/${subId}`, "PATCH", {
         status: "cancelled",
       });
-      push("M03 PATCH /api/subscriptions/<id> cancel", "PATCH", cancelled.status, cancelled.status === 200);
+      push(
+        "M03 PATCH /api/subscriptions/<id> cancel",
+        "PATCH",
+        cancelled.status,
+        cancelled.status === 200,
+      );
 
       const reactivated = await apiJson(cookieHeader, `/api/subscriptions/${subId}`, "POST");
-      push("M03 POST /api/subscriptions/<id> reactivate", "POST", reactivated.status, reactivated.status === 200);
+      push(
+        "M03 POST /api/subscriptions/<id> reactivate",
+        "POST",
+        reactivated.status,
+        reactivated.status === 200,
+      );
 
       const deleted = await apiJson(cookieHeader, `/api/subscriptions/${subId}`, "DELETE");
       push("M03 DELETE /api/subscriptions/<id>", "DELETE", deleted.status, deleted.status === 200);
@@ -610,7 +707,12 @@ async function runPrivateZoneCrudProbes(cookieHeader: string): Promise<ProbeResu
       tags: ["smoke"],
     });
     const promptId = idFrom(created.json, "prompt");
-    push("PR02 POST /api/prompts", "POST", created.status, created.status === 201 && Boolean(promptId));
+    push(
+      "PR02 POST /api/prompts",
+      "POST",
+      created.status,
+      created.status === 201 && Boolean(promptId),
+    );
 
     if (promptId) {
       const patched = await apiJson(cookieHeader, `/api/prompts/${promptId}`, "PATCH", {
@@ -688,8 +790,7 @@ async function runExecutionProbes(cookieHeader: string): Promise<ProbeResult[]> 
     intent: "continue",
   });
   const orchOk =
-    orch.status === 200
-    || (orch.status === 503 && typeof orch.json?.error === "string");
+    orch.status === 200 || (orch.status === 503 && typeof orch.json?.error === "string");
   push("X06 POST /api/orchestration/run", "POST", orch.status, orchOk);
 
   const dispatch = await apiJson(cookieHeader, "/api/control/dispatch", "POST", {
@@ -704,7 +805,12 @@ async function runExecutionProbes(cookieHeader: string): Promise<ProbeResult[]> 
       `${BASE}/api/control/peek-stream?tab=${encodeURIComponent(project.key)}&channel=cloud`,
       { headers: { Cookie: cookieHeader }, signal: AbortSignal.timeout(4000) },
     );
-    push("X04 GET /api/control/peek-stream", "GET", peekRes.status, [200, 403].includes(peekRes.status));
+    push(
+      "X04 GET /api/control/peek-stream",
+      "GET",
+      peekRes.status,
+      [200, 403].includes(peekRes.status),
+    );
     await peekRes.body?.cancel();
   } catch {
     push("X04 GET /api/control/peek-stream", "GET", 0, true, "SSE timeout ok");
@@ -714,7 +820,11 @@ async function runExecutionProbes(cookieHeader: string): Promise<ProbeResult[]> 
   push("X08 POST create-with-github (invalid body)", "POST", gh.status, gh.status === 400);
 
   if (project.id) {
-    const pub = await apiJson(cookieHeader, `/api/user-projects/${project.id}/publish-orangecat`, "POST");
+    const pub = await apiJson(
+      cookieHeader,
+      `/api/user-projects/${project.id}/publish-orangecat`,
+      "POST",
+    );
     push(
       "X09 POST publish-orangecat",
       "POST",
@@ -737,7 +847,12 @@ async function runExecutionProbes(cookieHeader: string): Promise<ProbeResult[]> 
 
   if (localBuilderOnline) {
     const openLocal = await apiJson(cookieHeader, "/api/control/open-tabs?channel=local", "GET");
-    push("X05 GET /api/control/open-tabs?channel=local", "GET", openLocal.status, openLocal.status === 200);
+    push(
+      "X05 GET /api/control/open-tabs?channel=local",
+      "GET",
+      openLocal.status,
+      openLocal.status === 200,
+    );
     const localTabs = Array.isArray(openLocal.json?.tabs) ? (openLocal.json.tabs as string[]) : [];
     if (localTabs.length > 0) {
       try {
@@ -786,15 +901,25 @@ async function runSettingsSystemProbes(
   // fails step 2.
   const captureMarker = `[${tag}] capture closed-loop probe — ignore`;
   const cap1 = await apiJson(cookieHeader, "/api/activity/capture", "POST", {
-    prompt: captureMarker, cwd: "/tmp/smoke",
+    prompt: captureMarker,
+    cwd: "/tmp/smoke",
   });
-  push("AC10 POST /api/activity/capture records", "POST", cap1.status,
-    cap1.status === 200 && cap1.json?.ok === true);
+  push(
+    "AC10 POST /api/activity/capture records",
+    "POST",
+    cap1.status,
+    cap1.status === 200 && cap1.json?.ok === true,
+  );
   const cap2 = await apiJson(cookieHeader, "/api/activity/capture", "POST", {
-    prompt: captureMarker, cwd: "/tmp/smoke",
+    prompt: captureMarker,
+    cwd: "/tmp/smoke",
   });
-  push("AC11 capture echo-dedupe reads row back", "POST", cap2.status,
-    cap2.status === 200 && cap2.json?.skipped === "dispatch_echo");
+  push(
+    "AC11 capture echo-dedupe reads row back",
+    "POST",
+    cap2.status,
+    cap2.status === 200 && cap2.json?.skipped === "dispatch_echo",
+  );
 
   const meGet = await apiJson(cookieHeader, "/api/me", "GET");
   if (meGet.status === 200 && typeof meGet.json?.name === "string") {
@@ -827,7 +952,12 @@ async function runSettingsSystemProbes(
     const prefsPatch = await apiJson(cookieHeader, "/api/me/preferences", "PATCH", {
       writingVoice: typeof voice === "string" ? voice : null,
     });
-    push("ST06 PATCH /api/me/preferences voice", "PATCH", prefsPatch.status, prefsPatch.status === 200);
+    push(
+      "ST06 PATCH /api/me/preferences voice",
+      "PATCH",
+      prefsPatch.status,
+      prefsPatch.status === 200,
+    );
   }
 
   const fleetGet = await apiJson(cookieHeader, "/api/settings/fleet-lifecycle", "GET");
@@ -840,20 +970,29 @@ async function runSettingsSystemProbes(
 
   const beaconGet = await apiJson(cookieHeader, "/api/beacon-settings", "GET");
   if (beaconGet.status === 200) {
-    const countdown = typeof beaconGet.json?.countdown_seconds === "number"
-      ? beaconGet.json.countdown_seconds
-      : 8;
+    const countdown =
+      typeof beaconGet.json?.countdown_seconds === "number" ? beaconGet.json.countdown_seconds : 8;
     const beaconPatch = await apiJson(cookieHeader, "/api/beacon-settings", "PATCH", {
       countdown_seconds: countdown,
     });
-    push("ST12 PATCH /api/beacon-settings", "PATCH", beaconPatch.status, beaconPatch.status === 200);
+    push(
+      "ST12 PATCH /api/beacon-settings",
+      "PATCH",
+      beaconPatch.status,
+      beaconPatch.status === 200,
+    );
   }
 
   const tokenCreate = await apiJson(cookieHeader, "/api/agent-tokens", "POST", {
     label: `${tag} token`,
   });
   const tokenId = typeof tokenCreate.json?.id === "string" ? tokenCreate.json.id : null;
-  push("ST11 POST /api/agent-tokens", "POST", tokenCreate.status, tokenCreate.status === 200 && Boolean(tokenId));
+  push(
+    "ST11 POST /api/agent-tokens",
+    "POST",
+    tokenCreate.status,
+    tokenCreate.status === 200 && Boolean(tokenId),
+  );
   if (tokenId) {
     const tokenDel = await apiJson(cookieHeader, "/api/agent-tokens", "DELETE", { id: tokenId });
     push("ST11 DELETE /api/agent-tokens", "DELETE", tokenDel.status, tokenDel.status === 200);
@@ -923,7 +1062,9 @@ async function runSettingsSystemProbes(
       "ME02 GET /api/memory/rag-stats",
       "GET",
       rag.status,
-      rag.status === 200 && typeof rag.json?.enabled === "boolean" && (!ragEnabled || ragChunks > 0),
+      rag.status === 200 &&
+        typeof rag.json?.enabled === "boolean" &&
+        (!ragEnabled || ragChunks > 0),
       ragEnabled ? `chunks=${ragChunks}` : "RAG disabled (no EMBEDDINGS_BASE_URL)",
     );
   }
@@ -960,7 +1101,9 @@ async function runShareLifecycleProbes(cookieHeader: string): Promise<ProbeResul
       const rows = (await res.json()) as { entityProjectId?: string }[];
       entityId = rows.find((r) => r.entityProjectId)?.entityProjectId ?? null;
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   if (!entityId) {
     push("SH01 share lifecycle", "GET", 0, true, "skipped — no project with an entity id");
@@ -978,16 +1121,29 @@ async function runShareLifecycleProbes(cookieHeader: string): Promise<ProbeResul
     // renders but do NOT mutate (revoking would break a live link).
     const token = typeof preShare.token === "string" ? preShare.token : "";
     if (token) {
-      out.push(await probe(cookieHeader, `/share/project/${token}`, {
-        checkBody: true, expectStatus: [200], label: "SH02 public shared page (existing)",
-      }));
+      out.push(
+        await probe(cookieHeader, `/share/project/${token}`, {
+          checkBody: true,
+          expectStatus: [200],
+          label: "SH02 public shared page (existing)",
+        }),
+      );
     }
-    push("SH03 lifecycle mutate", "POST", 0, true, "skipped — project already shared (not mutating)");
+    push(
+      "SH03 lifecycle mutate",
+      "POST",
+      0,
+      true,
+      "skipped — project already shared (not mutating)",
+    );
     return out;
   }
 
   // 1. Create
-  const created = await apiJson(cookieHeader, base, "POST", { audience: "advisor", includeRepo: false });
+  const created = await apiJson(cookieHeader, base, "POST", {
+    audience: "advisor",
+    includeRepo: false,
+  });
   const share = shareOf(created.json);
   const token = typeof share?.token === "string" ? share.token : "";
   push("SH03 POST create share", "POST", created.status, created.status === 200 && Boolean(token));
@@ -997,15 +1153,28 @@ async function runShareLifecycleProbes(cookieHeader: string): Promise<ProbeResul
   // internal bind (https://0.0.0.0:4002) that req.nextUrl.origin yields on the box.
   const url = typeof share?.url === "string" ? share.url : "";
   const publicUrl = /^https?:\/\//.test(url) && !url.includes("0.0.0.0") && url.includes(token);
-  push("SH03b share url is a public link", "GET", created.status, publicUrl, publicUrl ? undefined : `bad url: ${url}`);
+  push(
+    "SH03b share url is a public link",
+    "GET",
+    created.status,
+    publicUrl,
+    publicUrl ? undefined : `bad url: ${url}`,
+  );
 
   // 2. Public page renders for a valid token
-  out.push(await probe(cookieHeader, `/share/project/${token}`, {
-    checkBody: true, expectStatus: [200], label: "SH04 public shared page (200)",
-  }));
+  out.push(
+    await probe(cookieHeader, `/share/project/${token}`, {
+      checkBody: true,
+      expectStatus: [200],
+      label: "SH04 public shared page (200)",
+    }),
+  );
 
   // 3. Update — re-POST reuses the SAME active share row (token stays stable)
-  const updated = await apiJson(cookieHeader, base, "POST", { audience: "public", includeRepo: true });
+  const updated = await apiJson(cookieHeader, base, "POST", {
+    audience: "public",
+    includeRepo: true,
+  });
   const updatedShare = shareOf(updated.json);
   const sameToken = updatedShare?.token === token;
   push(
@@ -1030,9 +1199,12 @@ async function runShareLifecycleProbes(cookieHeader: string): Promise<ProbeResul
   push("SH07 DELETE revoke share", "DELETE", revoked.status, revoked.status === 200);
 
   // 6. Public page 404s once the token is revoked
-  out.push(await probe(cookieHeader, `/share/project/${token}`, {
-    expectStatus: [404], label: "SH08 public page 404 after revoke",
-  }));
+  out.push(
+    await probe(cookieHeader, `/share/project/${token}`, {
+      expectStatus: [404],
+      label: "SH08 public page 404 after revoke",
+    }),
+  );
 
   // 7. No active share remains — project is clean again
   const afterRevoke = await apiJson(cookieHeader, base, "GET");
@@ -1071,7 +1243,9 @@ async function main(): Promise<void> {
       const pin = (await pinRes.json()) as { configured?: boolean; unlocked?: boolean };
       privateZoneLocked = Boolean(pin.configured && !pin.unlocked);
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   const smokePin = process.env.SMOKE_PRIVATE_PIN;
   if (privateZoneLocked && smokePin) {
@@ -1123,7 +1297,9 @@ async function main(): Promise<void> {
           : "  ok   PZ01 unlock minted from AUTH_SECRET — private zone probes enabled",
       );
     } catch (e) {
-      console.log(`  warn could not mint private-zone unlock (${e instanceof Error ? e.message : e})`);
+      console.log(
+        `  warn could not mint private-zone unlock (${e instanceof Error ? e.message : e})`,
+      );
     }
   }
 
@@ -1153,7 +1329,9 @@ async function main(): Promise<void> {
   ];
 
   for (const route of pageRoutes) {
-    probes.push(await probe(cookieHeader, route, { checkBody: true, expectStatus: [200, 307, 308] }));
+    probes.push(
+      await probe(cookieHeader, route, { checkBody: true, expectStatus: [200, 307, 308] }),
+    );
   }
 
   const apiGets = [
@@ -1204,7 +1382,9 @@ async function main(): Promise<void> {
   );
 
   // Stripe portal — configured or 503
-  probes.push(await probe(cookieHeader, "/api/stripe/portal", { expectStatus: [200, 303, 307, 503] }));
+  probes.push(
+    await probe(cookieHeader, "/api/stripe/portal", { expectStatus: [200, 303, 307, 503] }),
+  );
 
   const webhookRes = await fetch(`${BASE}/api/stripe/webhook`, {
     method: "POST",
@@ -1247,20 +1427,34 @@ async function main(): Promise<void> {
   // Dynamic detail routes from list payloads
   const headers = { Cookie: cookieHeader };
 
-  const peopleRes = await fetch(`${BASE}/api/people?limit=1`, { headers, signal: AbortSignal.timeout(30_000) });
+  const peopleRes = await fetch(`${BASE}/api/people?limit=1`, {
+    headers,
+    signal: AbortSignal.timeout(30_000),
+  });
   if (peopleRes.ok) {
     const data = (await peopleRes.json()) as { people?: { id: string }[] };
     const id = data.people?.[0]?.id;
-    if (id) probes.push(await probe(cookieHeader, `/api/people/${id}`, { jsonOk: true, label: "/api/people/<id>" }));
+    if (id)
+      probes.push(
+        await probe(cookieHeader, `/api/people/${id}`, { jsonOk: true, label: "/api/people/<id>" }),
+      );
   }
 
-  const upRes = await fetch(`${BASE}/api/user-projects`, { headers, signal: AbortSignal.timeout(30_000) });
+  const upRes = await fetch(`${BASE}/api/user-projects`, {
+    headers,
+    signal: AbortSignal.timeout(30_000),
+  });
   if (upRes.ok) {
     const rows = (await upRes.json()) as { entityProjectId?: string; id?: string; name?: string }[];
     const entityId = rows[0]?.entityProjectId;
     const upId = rows[0]?.id;
     if (entityId) {
-      probes.push(await probe(cookieHeader, `/api/projects/${entityId}`, { jsonOk: true, label: "/api/projects/<id>" }));
+      probes.push(
+        await probe(cookieHeader, `/api/projects/${entityId}`, {
+          jsonOk: true,
+          label: "/api/projects/<id>",
+        }),
+      );
     }
     if (upId) {
       probes.push(
@@ -1272,12 +1466,20 @@ async function main(): Promise<void> {
     }
   }
 
-  const convRes = await fetch(`${BASE}/api/conversations`, { headers, signal: AbortSignal.timeout(30_000) });
+  const convRes = await fetch(`${BASE}/api/conversations`, {
+    headers,
+    signal: AbortSignal.timeout(30_000),
+  });
   if (convRes.ok) {
     const convs = (await convRes.json()) as { id: string }[];
     const cid = convs[0]?.id;
     if (cid) {
-      probes.push(await probe(cookieHeader, `/api/conversations/${cid}`, { jsonOk: true, label: "/api/conversations/<id>" }));
+      probes.push(
+        await probe(cookieHeader, `/api/conversations/${cid}`, {
+          jsonOk: true,
+          label: "/api/conversations/<id>",
+        }),
+      );
     }
   }
 
@@ -1301,12 +1503,12 @@ async function main(): Promise<void> {
       note: "skipped — private zone still locked (AUTH_SECRET missing?)",
     });
   } else {
-    probes.push(...await runPrivateZoneCrudProbes(cookieHeader));
+    probes.push(...(await runPrivateZoneCrudProbes(cookieHeader)));
   }
 
-  probes.push(...await runExecutionProbes(cookieHeader));
-  probes.push(...await runShareLifecycleProbes(cookieHeader));
-  probes.push(...await runSettingsSystemProbes(cookieHeader, privateZoneLocked));
+  probes.push(...(await runExecutionProbes(cookieHeader)));
+  probes.push(...(await runShareLifecycleProbes(cookieHeader)));
+  probes.push(...(await runSettingsSystemProbes(cookieHeader, privateZoneLocked)));
 
   let passed = 0;
   let failed = 0;
@@ -1333,7 +1535,10 @@ async function main(): Promise<void> {
 
   const outDir = resolve(process.cwd(), ".tmp");
   mkdirSync(outDir, { recursive: true });
-  writeFileSync(resolve(outDir, "authenticated-smoke-report.json"), JSON.stringify(report, null, 2));
+  writeFileSync(
+    resolve(outDir, "authenticated-smoke-report.json"),
+    JSON.stringify(report, null, 2),
+  );
 
   console.log("");
   if (failed > 0) {

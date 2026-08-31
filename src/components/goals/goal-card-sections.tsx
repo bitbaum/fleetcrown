@@ -109,10 +109,11 @@ export function GoalTitleRow({
               : "text-text-muted hover:text-status-warning"
           }`}
         >
-          {abandoningStatus
-            ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            : <Archive className="h-3.5 w-3.5" />
-          }
+          {abandoningStatus ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Archive className="h-3.5 w-3.5" />
+          )}
         </button>
         <DeleteGoalButton goalId={goalId} />
       </div>
@@ -148,9 +149,16 @@ export function GoalDescriptionEdit({
         />
         <div className="flex flex-col gap-1 shrink-0">
           <button onClick={onCommitDesc} disabled={descEdit.saving} className="ui-btn-confirm-icon">
-            {descEdit.saving ? <Loader2 className="ui-spinner-2xs" /> : <Check className="h-2.5 w-2.5" />}
+            {descEdit.saving ? (
+              <Loader2 className="ui-spinner-2xs" />
+            ) : (
+              <Check className="h-2.5 w-2.5" />
+            )}
           </button>
-          <button onClick={descEdit.cancel} className="p-1.5 text-text-muted hover:text-text-secondary">
+          <button
+            onClick={descEdit.cancel}
+            className="p-1.5 text-text-muted hover:text-text-secondary"
+          >
             <X className="h-2.5 w-2.5" />
           </button>
         </div>
@@ -162,8 +170,11 @@ export function GoalDescriptionEdit({
     <button
       onClick={() => !isClosed && descEdit.start(description ?? "")}
       className={`text-xs md:text-sm mt-1 text-left w-full transition-colors ${
-        isClosed ? "cursor-default" :
-        description ? "text-text-tertiary hover:text-text-secondary" : "text-text-muted hover:text-text-muted italic"
+        isClosed
+          ? "cursor-default"
+          : description
+            ? "text-text-tertiary hover:text-text-secondary"
+            : "text-text-muted hover:text-text-muted italic"
       }`}
       disabled={isClosed}
       title={isClosed ? undefined : "Click to edit description"}

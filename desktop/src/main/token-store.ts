@@ -24,30 +24,30 @@
  * parser silently rejects it as malformed.
  */
 
-import { homedir } from 'os'
-import { join } from 'path'
-import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync } from 'fs'
+import { homedir } from "os";
+import { join } from "path";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync } from "fs";
 
-const CONFIG_DIR = join(homedir(), '.config', 'fleetcrown')
-const TOKEN_FILE = join(CONFIG_DIR, 'fleet-runner-token')
+const CONFIG_DIR = join(homedir(), ".config", "fleetcrown");
+const TOKEN_FILE = join(CONFIG_DIR, "fleet-runner-token");
 
 /** Absolute path to the token file — exposed for IPC `get-config-dir` etc. */
-export const tokenPath = TOKEN_FILE
+export const tokenPath = TOKEN_FILE;
 
 /** Directory holding the token file. Exposed so the renderer can show
  *  "Saved to <path>" hints without re-deriving it. */
-export const tokenDir = CONFIG_DIR
+export const tokenDir = CONFIG_DIR;
 
 /** Read the saved token, or null when no token is saved. Trims whitespace
  *  (notably trailing newlines from clipboard-pasted values) so callers can
  *  inline it into `Bearer …` headers without worrying about line endings. */
 export function loadToken(): string | null {
   try {
-    if (!existsSync(TOKEN_FILE)) return null
-    const t = readFileSync(TOKEN_FILE, 'utf8').trim()
-    return t || null
+    if (!existsSync(TOKEN_FILE)) return null;
+    const t = readFileSync(TOKEN_FILE, "utf8").trim();
+    return t || null;
   } catch {
-    return null
+    return null;
   }
 }
 
@@ -56,11 +56,11 @@ export function loadToken(): string | null {
  *  (read-only home, quota, etc.) without throwing across the IPC bridge. */
 export function saveToken(token: string): { ok: true } | { ok: false; error: string } {
   try {
-    if (!existsSync(CONFIG_DIR)) mkdirSync(CONFIG_DIR, { recursive: true })
-    writeFileSync(TOKEN_FILE, token.trim(), 'utf8')
-    return { ok: true as const }
+    if (!existsSync(CONFIG_DIR)) mkdirSync(CONFIG_DIR, { recursive: true });
+    writeFileSync(TOKEN_FILE, token.trim(), "utf8");
+    return { ok: true as const };
   } catch (e) {
-    return { ok: false as const, error: (e as Error).message }
+    return { ok: false as const, error: (e as Error).message };
   }
 }
 
@@ -73,7 +73,7 @@ export function saveToken(token: string): { ok: true } | { ok: false; error: str
  *  the production runner that shares this file. The default-URL (production)
  *  build still clears, so its auto-mint recovery path is unchanged. */
 export function isDevBaseOverride(): boolean {
-  return !!(process.env.FLEETCROWN_WEB_URL || '').trim()
+  return !!(process.env.FLEETCROWN_WEB_URL || "").trim();
 }
 
 /** Delete the saved token. No-ops when the file is already absent, so it's
@@ -81,9 +81,9 @@ export function isDevBaseOverride(): boolean {
  *  guarding for state. */
 export function clearToken(): { ok: true } | { ok: false; error: string } {
   try {
-    if (existsSync(TOKEN_FILE)) unlinkSync(TOKEN_FILE)
-    return { ok: true as const }
+    if (existsSync(TOKEN_FILE)) unlinkSync(TOKEN_FILE);
+    return { ok: true as const };
   } catch (e) {
-    return { ok: false as const, error: (e as Error).message }
+    return { ok: false as const, error: (e as Error).message };
   }
 }
