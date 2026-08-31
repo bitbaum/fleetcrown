@@ -324,15 +324,57 @@ function h<K extends keyof HTMLElementTagNameMap>(
     // Scroll-fade companion to the narrow-viewport CSS above: the class is
     // toggled on every viewport, but only the ≤480px media query styles it.
     let scrollSettle = 0;
-    window.addEventListener(
-      "scroll",
-      () => {
-        fab.classList.add("scrolling");
-        clearTimeout(scrollSettle);
-        scrollSettle = window.setTimeout(() => fab.classList.remove("scrolling"), 350);
-      },
-      { passive: true },
-    );
+    window.addEventListener("scroll", () => {
+      fab.classList.add("scrolling");
+      clearTimeout(scrollSettle);
+      scrollSettle = window.setTimeout(() => {
+        fab.classList.remove("scrolling");
+        dodge();
+      }, 350);
+    }, { passive: true });
+
+    // Narrow viewports: a fixed corner launcher can land ON an interactive
+    // control — measured covering the /auth GitHub sign-in button at 320px,
+    // where the max-z FAB steals the tap. `data-fc-bottom` only helps hosts
+    // that know their own layout; pages can't predict what scrolls into the
+    // corner. So hit-test the stacking context under the FAB and step it
+    // upward until nothing tappable sits beneath (capped, so a pathological
+    // page can't walk it off-screen).
+    const baseBottom = Number.isFinite(bottomOffset) ? bottomOffset : 12;
+    const INTERACTIVE = "a,button,input,select,textarea,summary,[role='button']";
+    const dodge = () => {
+      if (fab.style.display === "none") return; // hidden while panel is open — rect is degenerate
+      if (window.innerWidth > 480) {
+        fab.style.bottom = Number.isFinite(bottomOffset) ? `${bottomOffset}px` : "";
+        return;
+      }
+      let bottom = baseBottom;
+      fab.style.bottom = `${bottom}px`;
+      for (let i = 0; i < 12; i++) {
+        const r = fab.getBoundingClientRect();
+        const pts: Array<[number, number]> = [
+          [r.left + 3, r.top + 3], [r.right - 3, r.top + 3],
+          [r.left + 3, r.bottom - 3], [r.right - 3, r.bottom - 3],
+          [(r.left + r.right) / 2, (r.top + r.bottom) / 2],
+        ];
+        const covered = pts.some(([x, y]) =>
+          document.elementsFromPoint(x, y).some(
+            (el) => el !== host && !host.contains(el) && el.closest(INTERACTIVE) !== null,
+          ),
+        );
+        if (!covered) return;
+        bottom += 16;
+        fab.style.bottom = `${bottom}px`;
+      }
+    };
+    dodge();
+    // Layout shifts after hydration/fonts move the controls under the corner.
+    window.setTimeout(dodge, 800);
+    let resizeSettle = 0;
+    window.addEventListener("resize", () => {
+      clearTimeout(resizeSettle);
+      resizeSettle = window.setTimeout(dodge, 150);
+    }, { passive: true });
 
     // ---- panel (built once, shown on demand) ----
     const backdrop = h("div", "backdrop");
