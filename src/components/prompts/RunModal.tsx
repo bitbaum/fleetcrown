@@ -21,9 +21,7 @@ export function RunModal({
   projects: Project[];
   onClose: () => void;
 }) {
-  const [projectId, setProjectId] = useState(
-    template.scope === "global" ? "__global__" : "",
-  );
+  const [projectId, setProjectId] = useState(template.scope === "global" ? "__global__" : "");
   const [projectName, setProjectName] = useState("");
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<string | null>(null);
@@ -60,8 +58,8 @@ export function RunModal({
   // Never guess between several unrelated sessions — dispatching into the wrong
   // agent is not a recoverable mistake.
   const targetTab =
-    openTabs.find((tab) => tab.toLowerCase() === projectName.toLowerCase())
-    ?? (openTabs.length === 1 ? openTabs[0] : null);
+    openTabs.find((tab) => tab.toLowerCase() === projectName.toLowerCase()) ??
+    (openTabs.length === 1 ? openTabs[0] : null);
 
   const handleSendToTerminal = async () => {
     if (!targetTab || dispatching) return;
@@ -71,14 +69,19 @@ export function RunModal({
     setTrackedCommandId(null);
     setTrackedRunId(null);
     try {
-      const res = await postJson("/api/control/tab-inject", { tab: targetTab, prompt: resolvedMessage });
+      const res = await postJson("/api/control/tab-inject", {
+        tab: targetTab,
+        prompt: resolvedMessage,
+      });
       // postJson never throws on a non-2xx status (it's a bare fetch) — the
       // previous version skipped this check entirely, so a 401/500 from
       // tab-inject still flipped the modal to "Sent to X. Watch it in
       // Terminal →" in green. It hadn't sent anything.
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(typeof data.error === "string" ? data.error : `Could not send (HTTP ${res.status}).`);
+        setError(
+          typeof data.error === "string" ? data.error : `Could not send (HTTP ${res.status}).`,
+        );
         return;
       }
       // The runner detected the operator actively typing in this exact
@@ -86,7 +89,9 @@ export function RunModal({
       // HTTP call still succeeded. Showing "Sent" here would be the same lie
       // this fix exists to remove, just from a different response shape.
       if (data.blocked) {
-        setError(`Not sent — someone is typing in “${targetTab}” right now. Wait a moment and try again.`);
+        setError(
+          `Not sent — someone is typing in “${targetTab}” right now. Wait a moment and try again.`,
+        );
         return;
       }
       setDispatchedTo(targetTab);
@@ -123,7 +128,13 @@ export function RunModal({
 
   return (
     <>
-      <Modal onClose={onClose} size="2xl" padded={false} disableClose={running} className="flex flex-col">
+      <Modal
+        onClose={onClose}
+        size="2xl"
+        padded={false}
+        disableClose={running}
+        className="flex flex-col"
+      >
         <div className="shrink-0 border-b border-border-subtle p-6">
           <div className="flex items-start justify-between gap-3">
             <div>
@@ -143,9 +154,7 @@ export function RunModal({
         <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-6">
           <div>
             <div className="ui-kicker mb-2">Resolved Prompt</div>
-            <pre className="ui-code-surface">
-              {resolvedMessage}
-            </pre>
+            <pre className="ui-code-surface">{resolvedMessage}</pre>
           </div>
 
           {template.scope === "project" && (
@@ -172,7 +181,9 @@ export function RunModal({
               >
                 <option value="">— Select project —</option>
                 {projects.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
                 ))}
               </select>
             </div>
@@ -203,31 +214,23 @@ export function RunModal({
                   Loki is working… (this may take up to 60s)
                 </div>
               )}
-              {result && (
-                <pre className="ui-code-surface">
-                  {result}
-                </pre>
-              )}
+              {result && <pre className="ui-code-surface">{result}</pre>}
             </div>
           )}
-          {error && (
-            <div className="ui-box-error">
-              {error}
-            </div>
-          )}
+          {error && <div className="ui-box-error">{error}</div>}
         </div>
 
         <div className="shrink-0 space-y-2 border-t border-border-subtle p-6">
           <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={handleRun}
-              disabled={!canRun || running}
-              className="ui-btn-submit"
-            >
+            <button onClick={handleRun} disabled={!canRun || running} className="ui-btn-submit">
               {running ? (
-                <><Loader2 className="ui-spinner" /> Running…</>
+                <>
+                  <Loader2 className="ui-spinner" /> Running…
+                </>
               ) : (
-                <><Zap className="h-4 w-4" /> Run with Loki</>
+                <>
+                  <Zap className="h-4 w-4" /> Run with Loki
+                </>
               )}
             </button>
             <button
@@ -242,17 +245,23 @@ export function RunModal({
               }
               className="ui-btn-secondary disabled:pointer-events-none disabled:opacity-40"
             >
-              {dispatching
-                ? <><Loader2 className="ui-spinner" /> Sending…</>
-                : <><SquareTerminal className="h-4 w-4" /> Send to terminal</>}
+              {dispatching ? (
+                <>
+                  <Loader2 className="ui-spinner" /> Sending…
+                </>
+              ) : (
+                <>
+                  <SquareTerminal className="h-4 w-4" /> Send to terminal
+                </>
+              )}
             </button>
           </div>
           {/* "Run with Loki" answers in this modal; "Send to terminal" hands the
               prompt to an agent that can actually change the repo. Saying so
               here is cheaper than a user discovering it by picking wrong. */}
           <p className="text-xs text-text-muted">
-            Loki answers here. Send to terminal dispatches into a live agent session — assembled with project
-            context, and queued if the builder is offline.
+            Loki answers here. Send to terminal dispatches into a live agent session — assembled
+            with project context, and queued if the builder is offline.
           </p>
           {/* Was: a static green "Sent to X. Watch it in Terminal →" regardless
               of whether tab-inject ran the prompt immediately or queued it

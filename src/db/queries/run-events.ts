@@ -43,12 +43,19 @@ export async function emitRunEvent(
   detail?: Record<string, unknown>,
 ): Promise<void> {
   const row: NewRunEvent = { runId, userId, kind, detail: detail ?? null };
-  await db.insert(runEvents).values(row).catch((err) => {
-    console.error("[run-events] emit failed:", kind, runId, err);
-  });
+  await db
+    .insert(runEvents)
+    .values(row)
+    .catch((err) => {
+      console.error("[run-events] emit failed:", kind, runId, err);
+    });
 }
 
 /** Full ledger for one run, oldest first — the run's biography. */
 export async function getRunEvents(runId: string) {
-  return db.select().from(runEvents).where(eq(runEvents.runId, runId)).orderBy(asc(runEvents.createdAt));
+  return db
+    .select()
+    .from(runEvents)
+    .where(eq(runEvents.runId, runId))
+    .orderBy(asc(runEvents.createdAt));
 }

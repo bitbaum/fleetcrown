@@ -13,16 +13,19 @@ import { ProposalRow } from "./ProposalRow";
 export async function FrontierProposalsCard({ userId }: { userId: string }) {
   const proposals = await listOpenProposals(userId).catch(() => []);
   const right =
-    proposals.length > 0
-      ? <span className="text-xs font-medium text-accent-text">{proposals.length} to review</span>
-      : <span className="text-xs text-text-tertiary">nothing pending</span>;
+    proposals.length > 0 ? (
+      <span className="text-xs font-medium text-accent-text">{proposals.length} to review</span>
+    ) : (
+      <span className="text-xs text-text-tertiary">nothing pending</span>
+    );
 
   return (
     <Card>
       <CardHeader icon={Lightbulb} title="Frontier proposals" right={right} />
       {proposals.length === 0 ? (
         <EmptyState>
-          The fleet hasn&apos;t drafted new directions since you last reviewed. It mines each day&apos;s frontier digest for self-improvement ideas.
+          The fleet hasn&apos;t drafted new directions since you last reviewed. It mines each
+          day&apos;s frontier digest for self-improvement ideas.
         </EmptyState>
       ) : (
         <ul className="space-y-2">

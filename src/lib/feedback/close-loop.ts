@@ -21,10 +21,12 @@ export async function resolveFeedbackForRun(runId: string): Promise<void> {
     const resolved = await db
       .update(siteFeedback)
       .set({ status: FEEDBACK_STATUS.RESOLVED, resolvedAt: new Date() })
-      .where(and(
-        eq(siteFeedback.dispatchedRunId, runId),
-        eq(siteFeedback.status, FEEDBACK_STATUS.DISPATCHED),
-      ))
+      .where(
+        and(
+          eq(siteFeedback.dispatchedRunId, runId),
+          eq(siteFeedback.status, FEEDBACK_STATUS.DISPATCHED),
+        ),
+      )
       .returning({
         id: siteFeedback.id,
         contact: siteFeedback.contact,
@@ -47,7 +49,8 @@ export async function resolveFeedbackForRun(runId: string): Promise<void> {
         .where(eq(entities.id, row.projectId))
         .limit(1);
       const site = project?.name ?? "the site";
-      const excerpt = row.suggestion.length > 140 ? `${row.suggestion.slice(0, 140)}…` : row.suggestion;
+      const excerpt =
+        row.suggestion.length > 140 ? `${row.suggestion.slice(0, 140)}…` : row.suggestion;
       const mail = feedbackShippedTemplate({ site, excerpt, page: row.page });
       sendEmailFire(contact, mail.subject, mail.html, mail.text);
     }

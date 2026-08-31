@@ -37,7 +37,13 @@ export async function runFrontierDigest(nowMs = Date.now()): Promise<RunFrontier
     model: result.model,
   });
 
-  return { saved, sourcesOk, sourcesFailed, candidateCount: candidates.length, itemCount: result.items.length };
+  return {
+    saved,
+    sourcesOk,
+    sourcesFailed,
+    candidateCount: candidates.length,
+    itemCount: result.items.length,
+  };
 }
 
 export type RunProposalsResult = {
@@ -46,7 +52,12 @@ export type RunProposalsResult = {
   surfaced: number;
   /** Every draft with its panel verdict — makes the loop observable (you can
    *  see what was proposed and why it did/didn't clear the bar), not a black box. */
-  details?: { title: string; score: number; passed: boolean; judges: { model: string; score: number }[] }[];
+  details?: {
+    title: string;
+    score: number;
+    passed: boolean;
+    judges: { model: string; score: number }[];
+  }[];
   /**
    * Why the generator produced what it produced. `drafted: 0` used to be the
    * whole story, and it covered four different faults with four different
@@ -74,7 +85,8 @@ export type RunProposalsResult = {
 /** The self-improvement half: draft proposals from a digest, critique them,
  *  store only those that clear the bar. Never auto-builds — a human decides. */
 export async function runFrontierProposals(digest: FrontierDigestRow): Promise<RunProposalsResult> {
-  if (!digest.items || digest.items.length === 0) return { skipped: "no-items", drafted: 0, surfaced: 0 };
+  if (!digest.items || digest.items.length === 0)
+    return { skipped: "no-items", drafted: 0, surfaced: 0 };
 
   const target = await getSelfImprovementTarget();
   if (!target) return { skipped: "no-target", drafted: 0, surfaced: 0 };
@@ -88,10 +100,14 @@ export async function runFrontierProposals(digest: FrontierDigestRow): Promise<R
 
   // Open milestones across active goals = the declared gaps to fill.
   const openGaps = activeGoals
-    .flatMap((g) => (g.milestones ?? []).filter((m) => !m.done).map((m) => `${g.title}: ${m.title}`))
+    .flatMap((g) =>
+      (g.milestones ?? []).filter((m) => !m.done).map((m) => `${g.title}: ${m.title}`),
+    )
     .slice(0, 16);
   // Recently shipped, user-facing features — build on these, don't repropose.
-  const recentlyShipped = FLEET_RUNNER_RELEASES.slice(0, 6).flatMap((r) => r.highlights).slice(0, 12);
+  const recentlyShipped = FLEET_RUNNER_RELEASES.slice(0, 6)
+    .flatMap((r) => r.highlights)
+    .slice(0, 12);
 
   const generation = await generateProposals(digest.items, {
     activeGoalTitles: activeGoals.map((g) => g.title),
@@ -102,7 +118,9 @@ export async function runFrontierProposals(digest: FrontierDigestRow): Promise<R
   const drafts = generation.drafts;
   if (drafts.length === 0) {
     return {
-      drafted: 0, surfaced: 0, details: [],
+      drafted: 0,
+      surfaced: 0,
+      details: [],
       generation: generation.outcome,
       returned: generation.returned,
       ...(generation.error ? { generationError: generation.error } : {}),
@@ -111,7 +129,12 @@ export async function runFrontierProposals(digest: FrontierDigestRow): Promise<R
   }
 
   const { verified, judgeFailures, panelUnreachable } = await verifyProposals(drafts);
-  const details = verified.map((p) => ({ title: p.title, score: p.score, passed: p.passed, judges: p.verifierScores }));
+  const details = verified.map((p) => ({
+    title: p.title,
+    score: p.score,
+    passed: p.passed,
+    judges: p.verifierScores,
+  }));
   const survivors = verified.filter((p) => p.passed);
   const panel = {
     generation: generation.outcome,
@@ -125,17 +148,19 @@ export async function runFrontierProposals(digest: FrontierDigestRow): Promise<R
   };
   if (survivors.length === 0) return { drafted: drafts.length, surfaced: 0, details, ...panel };
 
-  await insertProposals(survivors.map((p) => ({
-    digestDate: digest.digestDate,
-    userId: target.userId,
-    entityId: target.entityId,
-    title: p.title,
-    rationale: p.rationale,
-    sourceUrls: p.sourceUrls,
-    score: p.score,
-    verifierScores: p.verifierScores,
-    status: "proposed",
-  })));
+  await insertProposals(
+    survivors.map((p) => ({
+      digestDate: digest.digestDate,
+      userId: target.userId,
+      entityId: target.entityId,
+      title: p.title,
+      rationale: p.rationale,
+      sourceUrls: p.sourceUrls,
+      score: p.score,
+      verifierScores: p.verifierScores,
+      status: "proposed",
+    })),
+  );
 
   return { drafted: drafts.length, surfaced: survivors.length, details, ...panel };
 }

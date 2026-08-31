@@ -28,11 +28,17 @@ import { fleetSessionsDir, legacyClaudeSessionsDir } from "@/lib/session-paths";
 // next.config.ts in the route bundle.
 const home = () => process.env.HOME ?? homedir();
 
-const PROJECTS_CONF = () => process.env.AGENT_PROJECTS_CONF ?? path.join(/*turbopackIgnore: true*/ home(), ".config", "agent-projects.conf");
-const CLAUDE_PROJECTS_CONF = () => path.join(/*turbopackIgnore: true*/ home(), ".config", "claude-projects.conf");
+const PROJECTS_CONF = () =>
+  process.env.AGENT_PROJECTS_CONF ??
+  path.join(/*turbopackIgnore: true*/ home(), ".config", "agent-projects.conf");
+const CLAUDE_PROJECTS_CONF = () =>
+  path.join(/*turbopackIgnore: true*/ home(), ".config", "claude-projects.conf");
 
-export const PROMPTS_FILE = () => process.env.AGENT_PROMPTS_FILE ?? path.join(/*turbopackIgnore: true*/ home(), ".config", "agent-prompts.json");
-const CLAUDE_PROMPTS_FILE = () => path.join(/*turbopackIgnore: true*/ home(), ".config", "claude-prompts.json");
+export const PROMPTS_FILE = () =>
+  process.env.AGENT_PROMPTS_FILE ??
+  path.join(/*turbopackIgnore: true*/ home(), ".config", "agent-prompts.json");
+const CLAUDE_PROMPTS_FILE = () =>
+  path.join(/*turbopackIgnore: true*/ home(), ".config", "claude-prompts.json");
 
 export const SESSIONS_DIR = () => fleetSessionsDir(home());
 
@@ -64,9 +70,10 @@ export function sessionFilePath(tab: string, adapter = "claude"): string {
 export function resolveSessionFile(tab: string, adapter = "claude"): string | null {
   const target = `${tab}.md`.toLowerCase();
   let best: { path: string; mtimeMs: number } | null = null;
-  const dirs = adapter === "claude"
-    ? [agentSessionDir(adapter), legacyClaudeSessionsDir(home())]
-    : [agentSessionDir(adapter)];
+  const dirs =
+    adapter === "claude"
+      ? [agentSessionDir(adapter), legacyClaudeSessionsDir(home())]
+      : [agentSessionDir(adapter)];
   for (const dir of new Set(dirs)) {
     try {
       for (const name of fs.readdirSync(dir)) {
@@ -75,7 +82,9 @@ export function resolveSessionFile(tab: string, adapter = "claude"): string | nu
         const mtimeMs = fs.statSync(full).mtimeMs;
         if (!best || mtimeMs > best.mtimeMs) best = { path: full, mtimeMs };
       }
-    } catch { /* session dir missing */ }
+    } catch {
+      /* session dir missing */
+    }
   }
   return best?.path ?? null;
 }
@@ -86,24 +95,37 @@ export function resolveSessionFile(tab: string, adapter = "claude"): string | nu
 // rename any of these, update stop.sh and notification.sh to match.
 
 export const stateFile = {
-  ready:    (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `agent-ready-${tab}`),
-  closing:  (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `agent-closing-${tab}`),
-  closed:   (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `agent-closed-${tab}`),
-  sentinel: (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `agent-session-closed-${tab}`),
-  prompt:   (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `agent-current-prompt-${tab}`),
-  lock:     (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `agent-stop-active-${tab}`),
-  queue:    (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `agent-queue-${tab.toLowerCase()}`),
-  run:      (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `${APP_SLUG}-run-${tab}`),
+  ready: (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `agent-ready-${tab}`),
+  closing: (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `agent-closing-${tab}`),
+  closed: (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `agent-closed-${tab}`),
+  sentinel: (tab: string) =>
+    path.join("/tmp", /*turbopackIgnore: true*/ `agent-session-closed-${tab}`),
+  prompt: (tab: string) =>
+    path.join("/tmp", /*turbopackIgnore: true*/ `agent-current-prompt-${tab}`),
+  lock: (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `agent-stop-active-${tab}`),
+  queue: (tab: string) =>
+    path.join("/tmp", /*turbopackIgnore: true*/ `agent-queue-${tab.toLowerCase()}`),
+  run: (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `${APP_SLUG}-run-${tab}`),
 
   // Legacy names — no new files are written with these names; only used to delete stale on-disk files.
-  claudeReady:  (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `claude-ready-${tab}`),
-  claudeClosed: (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `claude-closed-${tab}`),
+  claudeReady: (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `claude-ready-${tab}`),
+  claudeClosed: (tab: string) =>
+    path.join("/tmp", /*turbopackIgnore: true*/ `claude-closed-${tab}`),
 } as const;
 
 /** Delete all handshake state files for a tab, ignoring missing-file errors. */
 export function clearHandshakeFiles(tab: string): void {
-  for (const p of [stateFile.ready(tab), stateFile.claudeReady(tab), stateFile.closed(tab), stateFile.claudeClosed(tab)]) {
-    try { fs.unlinkSync(p); } catch { /* already gone */ }
+  for (const p of [
+    stateFile.ready(tab),
+    stateFile.claudeReady(tab),
+    stateFile.closed(tab),
+    stateFile.claudeClosed(tab),
+  ]) {
+    try {
+      fs.unlinkSync(p);
+    } catch {
+      /* already gone */
+    }
   }
 }
 
@@ -174,7 +196,8 @@ export function readProjectsMap(): Map<string, string> {
 export function resolveEffectiveTab(canonical: string, activeTabs: string[]): string {
   if (!activeTabs.length) return canonical;
   // Return exact zellij casing — case-insensitive match, exact-case return
-  const findAlive = (name: string) => activeTabs.find((t) => t.toLowerCase() === name.toLowerCase());
+  const findAlive = (name: string) =>
+    activeTabs.find((t) => t.toLowerCase() === name.toLowerCase());
   const liveMatch = findAlive(canonical);
   if (liveMatch) return liveMatch;
   // Human-created tab names often differ only by punctuation/casing from the
@@ -275,16 +298,18 @@ export function sessionHandoffContract(sessionFilePath: string): string {
   ].join("\n");
 }
 
-export function buildPromptWithSession(base: string, tab: string, projectStateDescription?: string): string {
+export function buildPromptWithSession(
+  base: string,
+  tab: string,
+  projectStateDescription?: string,
+): string {
   const sessionFile = path.join(SESSIONS_DIR(), `${tab}.md`);
   const sessionUpdateBlock = sessionHandoffContract(sessionFile);
 
   // Project-state block — same one-line description the badge tooltip
   // shows, prepended so the agent reasons from the same context the
   // human sees. Empty when caller didn't provide it (transitional).
-  const stateBlock = projectStateDescription
-    ? `Project state: ${projectStateDescription}\n\n`
-    : "";
+  const stateBlock = projectStateDescription ? `Project state: ${projectStateDescription}\n\n` : "";
 
   try {
     if (fs.existsSync(sessionFile)) {

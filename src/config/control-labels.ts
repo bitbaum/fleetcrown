@@ -20,8 +20,7 @@ export function promptQueueHeading(count: number): string {
 }
 
 /** Composer hint when the queue is empty */
-export const PROMPT_QUEUE_EMPTY_HINT =
-  "Alt+Enter while typing to add to the queue";
+export const PROMPT_QUEUE_EMPTY_HINT = "Alt+Enter while typing to add to the queue";
 
 /** Collapsed activity drawer — dispatches in the last 24h (up to 5 shown) */
 export const RECENT_DISPATCHES_TITLE = "Recent dispatches";

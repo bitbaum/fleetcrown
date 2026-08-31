@@ -18,12 +18,12 @@
  */
 
 export interface ReleaseEntry {
-  version: string;          // e.g. "0.7.4"
-  tag: string;              // e.g. "fleet-runner-v0.7.4" (matches GitHub release tag)
-  date: string;             // ISO 8601 UTC, e.g. "2026-06-07T14:35:53Z"
-  highlights: string[];     // user-facing bullets
-  breaking: string[];       // compat-breaks, empty if none
-  notes: string;            // optional hand-written paragraph; "" if nothing extra to say
+  version: string; // e.g. "0.7.4"
+  tag: string; // e.g. "fleet-runner-v0.7.4" (matches GitHub release tag)
+  date: string; // ISO 8601 UTC, e.g. "2026-06-07T14:35:53Z"
+  highlights: string[]; // user-facing bullets
+  breaking: string[]; // compat-breaks, empty if none
+  notes: string; // optional hand-written paragraph; "" if nothing extra to say
 }
 
 /** Newest first. */
@@ -36,7 +36,8 @@ export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
       "Fleet Runner now points at the bitbaum organisation, where the studio's repositories live as of today.",
     ],
     breaking: [],
-    notes: "The 41-repo fleet moved from the personal catomean account into the bitbaum GitHub org, and desktop carried two literal owner references (the issue-report link, the auto-updater's feed owner) that the sweep updates alongside every other repo. Same shape as 0.8.14 four commits ago: an owner literal in desktop/ changes, the release-drift gate catches it, a release ships. This one is the last time it should be an account name at all — the org is the stable home going forward.",
+    notes:
+      "The 41-repo fleet moved from the personal catomean account into the bitbaum GitHub org, and desktop carried two literal owner references (the issue-report link, the auto-updater's feed owner) that the sweep updates alongside every other repo. Same shape as 0.8.14 four commits ago: an owner literal in desktop/ changes, the release-drift gate catches it, a release ships. This one is the last time it should be an account name at all — the org is the stable home going forward.",
   },
   {
     version: "0.8.14",
@@ -46,7 +47,8 @@ export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
       "Fleet Runner now points at the renamed GitHub account, so updates and release downloads resolve again.",
     ],
     breaking: [],
-    notes: "The GitHub account this project lives under was renamed, and two files in desktop/ carried the old name — an update URL and a package reference. GitHub redirects repository URLs, but only until somebody else claims the freed name, so a redirect is not something an auto-updater should depend on. Cut as its own release because the check that fails when desktop code changes without a version bump is exactly the check that caught it, four commits after it was written to prevent this.",
+    notes:
+      "The GitHub account this project lives under was renamed, and two files in desktop/ carried the old name — an update URL and a package reference. GitHub redirects repository URLs, but only until somebody else claims the freed name, so a redirect is not something an auto-updater should depend on. Cut as its own release because the check that fails when desktop code changes without a version bump is exactly the check that caught it, four commits after it was written to prevent this.",
   },
   {
     version: "0.8.13",
@@ -55,23 +57,25 @@ export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
     highlights: [
       "Your machine now tells the fleet whether it is on wall power or on battery, and dispatches stop being routed to a laptop that will sleep when the lid shuts.",
       "A run that touches the same directory twice is metered once. Long sessions were being billed for the same tokens repeatedly, which inflated the cost shown against a project.",
-      "Dispatched work reports the phase it is actually in instead of sitting on a bare \"dispatched\" chip until it finishes.",
+      'Dispatched work reports the phase it is actually in instead of sitting on a bare "dispatched" chip until it finishes.',
       "The agent count on Control now counts agents that are genuinely working, not every process that happens to be alive.",
     ],
     breaking: [],
-    notes: "Everything here was merged between 14 and 26 August and had been sitting on the server, unreachable by any machine, because a release was never cut. Fleet Runner ships only when a fleet-runner-v tag exists, that tag was minted by hand, and nothing checked that anyone had done it — so seven changed files reported no problem at all while going nowhere. CI now fails when desktop code changes without a version bump, and mints and publishes the tag itself once main is green. This release is the backlog that gap accumulated.",
+    notes:
+      "Everything here was merged between 14 and 26 August and had been sitting on the server, unreachable by any machine, because a release was never cut. Fleet Runner ships only when a fleet-runner-v tag exists, that tag was minted by hand, and nothing checked that anyone had done it — so seven changed files reported no problem at all while going nowhere. CI now fails when desktop code changes without a version bump, and mints and publishes the tag itself once main is green. This release is the backlog that gap accumulated.",
   },
   {
     version: "0.8.12",
     tag: "fleet-runner-v0.8.12",
     date: "2026-08-14T11:00:00Z",
     highlights: [
-      "The terminal tab strip now names the agent running in each tab, including tabs you never renamed. A machine with Claude in one tab and Grok in another reads \"Tab #3 GROK\" and \"Tab #4 CLAUDE\" instead of five identical labels.",
+      'The terminal tab strip now names the agent running in each tab, including tabs you never renamed. A machine with Claude in one tab and Grok in another reads "Tab #3 GROK" and "Tab #4 CLAUDE" instead of five identical labels.',
       "Tabs also show the project they belong to, read from the live agent process rather than from a config file.",
       "When the tab cannot be identified, no badge is shown at all — a wrong badge would aim a dispatched prompt at the wrong agent.",
     ],
     breaking: [],
-    notes: "Local counterpart to the web-side tab-truth work. The join reads the ZELLIJ_PANE_ID that zellij exports into each pane and the agent CLI inherits (via /proc/<pid>/environ), then resolves it against the session's own metadata — pane id to tab position to tab name. This replaces name-matching, which cannot work for a default-named tab: \"Tab #3\" shares no text with the project directory, so every match fell through silently and the runner published an empty pane list. Resolution order is pane id, then config entry, then directory basename, and any parse failure yields an empty map. Needed a release because the web deploy updates the cloud builder but cannot update a desktop app.",
+    notes:
+      'Local counterpart to the web-side tab-truth work. The join reads the ZELLIJ_PANE_ID that zellij exports into each pane and the agent CLI inherits (via /proc/<pid>/environ), then resolves it against the session\'s own metadata — pane id to tab position to tab name. This replaces name-matching, which cannot work for a default-named tab: "Tab #3" shares no text with the project directory, so every match fell through silently and the runner published an empty pane list. Resolution order is pane id, then config entry, then directory basename, and any parse failure yields an empty map. Needed a release because the web deploy updates the cloud builder but cannot update a desktop app.',
   },
   {
     version: "0.8.11",
@@ -83,17 +87,19 @@ export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
       "Per-run cost metering now measures the directory the agent actually runs in, so worktree-isolated dispatches are attributed to the right project.",
     ],
     breaking: [],
-    notes: "Recorded here after the fact: this release shipped on 2026-08-04 but was never added to the timeline, so /releases and the footer version pill both kept claiming 0.8.9 while operators were running 0.8.11. The release itself restored the full three-platform matrix (#157) after a period when only Linux was being produced.",
+    notes:
+      "Recorded here after the fact: this release shipped on 2026-08-04 but was never added to the timeline, so /releases and the footer version pill both kept claiming 0.8.9 while operators were running 0.8.11. The release itself restored the full three-platform matrix (#157) after a period when only Linux was being produced.",
   },
   {
     version: "0.8.9",
     tag: "fleet-runner-v0.8.9",
     date: "2026-06-18T17:09:04Z",
     highlights: [
-      "The \"My machine\" terminal is now fully interactive — char-level keystrokes, Ctrl-C / Tab / arrows, and live resize — at parity with the server terminal.",
+      'The "My machine" terminal is now fully interactive — char-level keystrokes, Ctrl-C / Tab / arrows, and live resize — at parity with the server terminal.',
     ],
     breaking: [],
-    notes: "P3 terminal interactive parity. A non-durable rawkey/resize event rides the existing bridge NOTIFY → SSE channel (no per-keystroke DB rows, no command-claim); the runner dispatches it to writeRawKey/resizePty, writing bytes verbatim into the agent's owned PTY. Strictly additive and independent of the autopilot command-drain path. Verified end-to-end: typed in the browser terminal, echoed from a runner-owned PTY with no zellij dependency; killing an agent leaves the runner green (PTY isolation confirmed). Linux (AppImage + .deb).",
+    notes:
+      "P3 terminal interactive parity. A non-durable rawkey/resize event rides the existing bridge NOTIFY → SSE channel (no per-keystroke DB rows, no command-claim); the runner dispatches it to writeRawKey/resizePty, writing bytes verbatim into the agent's owned PTY. Strictly additive and independent of the autopilot command-drain path. Verified end-to-end: typed in the browser terminal, echoed from a runner-owned PTY with no zellij dependency; killing an agent leaves the runner green (PTY isolation confirmed). Linux (AppImage + .deb).",
   },
   {
     version: "0.8.8",
@@ -103,7 +109,8 @@ export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
       "The runner no longer goes silently offline after the dashboard restarts (e.g. during a deploy). The command poll now has a hard timeout, so a half-open connection can't wedge the loop with the app still running.",
     ],
     breaking: [],
-    notes: "Reliability: the wait=0 command poll had no request timeout, so a connection left half-open by a backend restart could hang the poll forever — the poller went silent, the process stayed alive (so nothing restarted it), and the autopilot loop stalled. Bounded the poll with AbortSignal.timeout(20s); on timeout it backs off and retries instead of hanging. Pairs with the supervised systemd service (Restart=always) for end-to-end 'never silently offline'.",
+    notes:
+      "Reliability: the wait=0 command poll had no request timeout, so a connection left half-open by a backend restart could hang the poll forever — the poller went silent, the process stayed alive (so nothing restarted it), and the autopilot loop stalled. Bounded the poll with AbortSignal.timeout(20s); on timeout it backs off and retries instead of hanging. Pairs with the supervised systemd service (Restart=always) for end-to-end 'never silently offline'.",
   },
   {
     version: "0.8.7",
@@ -113,7 +120,8 @@ export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
       "Dispatched and next-best prompts now actually submit. Large multi-line prompts were being pasted into the agent's input but never sent (stuck as “[Pasted text +N lines]”), so the agent looked launched but never started working.",
     ],
     breaking: [],
-    notes: "Injection fix. Claude's TUI treats a big multi-line write as a bracketed paste and absorbs a trailing carriage return into the paste buffer instead of submitting — so the prompt sat in the input unsent and every dispatch reported “the agent didn't pick up the prompt within the window.” Fixed by sending the submit Enter as a separate keystroke after the paste settles (two nudged CRs at 250ms/800ms). Found by driving kivvi end-to-end and reading the live PTY.",
+    notes:
+      "Injection fix. Claude's TUI treats a big multi-line write as a bracketed paste and absorbs a trailing carriage return into the paste buffer instead of submitting — so the prompt sat in the input unsent and every dispatch reported “the agent didn't pick up the prompt within the window.” Fixed by sending the submit Enter as a separate keystroke after the paste settles (two nudged CRs at 250ms/800ms). Found by driving kivvi end-to-end and reading the live PTY.",
   },
   {
     version: "0.8.6",
@@ -125,19 +133,21 @@ export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
       "The status heartbeat can no longer get stuck on a slow request, so the dashboard stops showing stale state.",
     ],
     breaking: [],
-    notes: "Reliability release for the autopilot loop. Three root causes of the 'nothing works' freeze: (1) the live-terminal peek ran a synchronous zellij dump-screen that blocked the runner's single event loop and starved command acks → every command was re-served forever; fixed by streaming only owned PTYs (async, in-memory). (2) the status push had no request timeout → one hung request killed the heartbeat. (3) runtime state was only pushed every 5 min → launched agents took minutes to appear; now pushed immediately after each command.",
+    notes:
+      "Reliability release for the autopilot loop. Three root causes of the 'nothing works' freeze: (1) the live-terminal peek ran a synchronous zellij dump-screen that blocked the runner's single event loop and starved command acks → every command was re-served forever; fixed by streaming only owned PTYs (async, in-memory). (2) the status push had no request timeout → one hung request killed the heartbeat. (3) runtime state was only pushed every 5 min → launched agents took minutes to appear; now pushed immediately after each command.",
   },
   {
     version: "0.8.3",
     tag: "fleet-runner-v0.8.3",
     date: "2026-06-17T21:30:00Z",
     highlights: [
-      "Agents now run in a terminal Fleet Runner owns by default — no more dispatch/launch timeouts when your Zellij session isn't attached (the recurring \"spawnSync /bin/sh ETIMEDOUT\").",
+      'Agents now run in a terminal Fleet Runner owns by default — no more dispatch/launch timeouts when your Zellij session isn\'t attached (the recurring "spawnSync /bin/sh ETIMEDOUT").',
       "If an owned-terminal launch ever fails, it falls back to Zellij automatically, so launching can't dead-end.",
       "Watch any agent live from the web app in full color with scrollback.",
     ],
     breaking: [],
-    notes: "Makes the owned-PTY execution from 0.8.2 the default (set FLEETCROWN_RUNNER_PTY=false to force Zellij). This removes the structural cause of the launch timeouts: launching no longer depends on an attached Zellij client.",
+    notes:
+      "Makes the owned-PTY execution from 0.8.2 the default (set FLEETCROWN_RUNNER_PTY=false to force Zellij). This removes the structural cause of the launch timeouts: launching no longer depends on an attached Zellij client.",
   },
   {
     version: "0.8.2",
@@ -149,7 +159,8 @@ export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
       "Opt-in for now: set FLEETCROWN_RUNNER_PTY=true to switch a project's agents to owned terminals; everything else keeps using Zellij until you flip it.",
     ],
     breaking: [],
-    notes: "First step of moving agent execution off Zellij name-puppeting onto FleetCrown-owned PTYs (docs/architecture/agent-execution-platform.md). Ships node-pty in the runner (load-verified in the packaged build) but stays behind a flag so this release behaves exactly like 0.8.1 until you opt a project in.",
+    notes:
+      "First step of moving agent execution off Zellij name-puppeting onto FleetCrown-owned PTYs (docs/architecture/agent-execution-platform.md). Ships node-pty in the runner (load-verified in the packaged build) but stays behind a flag so this release behaves exactly like 0.8.1 until you opt a project in.",
   },
   {
     version: "0.8.1",
@@ -157,13 +168,14 @@ export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
     date: "2026-06-17T18:00:00Z",
     highlights: [
       "Reliable dispatch: a single verified command ensures the project's Zellij tab, launches the agent if none is running, injects the prompt, and confirms the agent picked it up — instead of silently typing into a closed or wrong tab.",
-      "Fuzzy tab matching: project keys now resolve to the tab names you actually use, so \"revampit\" finds your \"revamp-it\" tab (case + hyphens + spaces no longer matter).",
-      "Detached-session launches now fail with a clear \"zellij attach <session>\" instruction instead of a cryptic spawn timeout; stale commands queued while the runner was offline are purged instead of failing noisily on reconnect.",
-      "Self-healing bridge connection so the runner stops getting stuck \"offline\", and an honest offline state when a dispatch can't reach your machine.",
+      'Fuzzy tab matching: project keys now resolve to the tab names you actually use, so "revampit" finds your "revamp-it" tab (case + hyphens + spaces no longer matter).',
+      'Detached-session launches now fail with a clear "zellij attach <session>" instruction instead of a cryptic spawn timeout; stale commands queued while the runner was offline are purged instead of failing noisily on reconnect.',
+      'Self-healing bridge connection so the runner stops getting stuck "offline", and an honest offline state when a dispatch can\'t reach your machine.',
       "Auto-update enabled: future Fleet Runner fixes download in place — no more manual reinstalls.",
     ],
     breaking: [],
-    notes: "The reliability release for the dispatch loop (Control → your local Zellij). Pairs with the web app's new Terminal tab, real Activity timeline, sidebar Light/Dark/Auto switch, and the dark-first Geist redesign deployed on fleetcrown.orangecat.ch.",
+    notes:
+      "The reliability release for the dispatch loop (Control → your local Zellij). Pairs with the web app's new Terminal tab, real Activity timeline, sidebar Light/Dark/Auto switch, and the dark-first Geist redesign deployed on fleetcrown.orangecat.ch.",
   },
   {
     version: "0.8.0",
@@ -171,12 +183,13 @@ export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
     date: "2026-06-08T00:00:00Z",
     highlights: [
       "One-click agent switching from the project card chip or Cmd+K — quits the live CLI and launches the new agent without typing /quit in the terminal.",
-      "Rate-limit and quota banners on project cards offer a single \"Switch to …\" button with automatic fallback order (Claude → Cursor → Codex → Gemini → Grok).",
-      "Agent label mismatch warnings when the UI preference disagrees with the live process scan, so \"Claude\" no longer silently shows while Codex is running.",
+      'Rate-limit and quota banners on project cards offer a single "Switch to …" button with automatic fallback order (Claude → Cursor → Codex → Gemini → Grok).',
+      'Agent label mismatch warnings when the UI preference disagrees with the live process scan, so "Claude" no longer silently shows while Codex is running.',
       "Switch-agent commands now scan /proc and quit every running agent in the project directory before launching the replacement.",
     ],
     breaking: [],
-    notes: "Mostly a web UI + API release — deploys immediately on fleetcrown.orangecat.ch. Fleet Runner v0.8.0 picks up the improved remote switch_agent poller when you next update the desktop app; until then, cloud-queued switches still work on the existing runner.",
+    notes:
+      "Mostly a web UI + API release — deploys immediately on fleetcrown.orangecat.ch. Fleet Runner v0.8.0 picks up the improved remote switch_agent poller when you next update the desktop app; until then, cloud-queued switches still work on the existing runner.",
   },
   {
     version: "0.7.9",
@@ -187,7 +200,8 @@ export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
       "Desktop command handling now logs handled/rejected command IDs, making remote-control failures debuggable from systemd logs.",
     ],
     breaking: [],
-    notes: "Closes the last dogfood gap found while testing production Control against the local Zellij workspace: queued focus commands were claimed but could appear to land on the wrong tab without useful logs.",
+    notes:
+      "Closes the last dogfood gap found while testing production Control against the local Zellij workspace: queued focus commands were claimed but could appear to land on the wrong tab without useful logs.",
   },
   {
     version: "0.7.8",
@@ -198,7 +212,8 @@ export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
       "Fixes false 'Missing local tools' banners when Claude, Gemini, Codex, Cursor, or Grok are installed and work in the terminal.",
     ],
     breaking: [],
-    notes: "Completes the v0.7.7 Control-state fix by making the desktop app report the same installed tools the user's terminal can actually run.",
+    notes:
+      "Completes the v0.7.7 Control-state fix by making the desktop app report the same installed tools the user's terminal can actually run.",
   },
   {
     version: "0.7.7",
@@ -210,7 +225,8 @@ export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
       "Project-to-tab matching now tolerates punctuation and case differences such as `revampit` versus `revamp-it`.",
     ],
     breaking: [],
-    notes: "Fixes the UI drift where Fleet Runner showed open workspaces but each project still said 'No live observation'. The pusher now sends the same rich runtime snapshot the server route already knew how to store.",
+    notes:
+      "Fixes the UI drift where Fleet Runner showed open workspaces but each project still said 'No live observation'. The pusher now sends the same rich runtime snapshot the server route already knew how to store.",
   },
   {
     version: "0.7.6",
@@ -222,7 +238,8 @@ export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
       "The desktop command boundary has regression coverage for every supported queued command type.",
     ],
     breaking: [],
-    notes: "Fixes the dogfood gap where the cloud UI looked connected but only `truthseeker` appeared and most remote actions were rejected by the desktop poller. This release makes the web app and phone UI a real controller for the local Zellij workspace.",
+    notes:
+      "Fixes the dogfood gap where the cloud UI looked connected but only `truthseeker` appeared and most remote actions were rejected by the desktop poller. This release makes the web app and phone UI a real controller for the local Zellij workspace.",
   },
   {
     version: "0.7.5",
@@ -239,7 +256,8 @@ export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
       "Banner is dismissable per-version (sessionStorage) so it doesn't nag, but re-appears on the next release.",
     ],
     breaking: [],
-    notes: "Permanent fix for the .deb auto-update problem the user surfaced on 2026-06-07: they installed v0.7.0, received zero update notifications across 4 shipped releases (v0.7.1-v0.7.4), and didn't know they were stale. The auto-updater was downloading the new .debs but couldn't apply them — Linux dpkg requires sudo and Electron can't escalate. Now even when auto-apply fails, the user always sees what to do.",
+    notes:
+      "Permanent fix for the .deb auto-update problem the user surfaced on 2026-06-07: they installed v0.7.0, received zero update notifications across 4 shipped releases (v0.7.1-v0.7.4), and didn't know they were stale. The auto-updater was downloading the new .debs but couldn't apply them — Linux dpkg requires sudo and Electron can't escalate. Now even when auto-apply fails, the user always sees what to do.",
   },
   {
     version: "0.7.4",
@@ -252,7 +270,8 @@ export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
       "Splash → web shell transition is the only boot path; clean offline page if cloud is unreachable.",
     ],
     breaking: [],
-    notes: "Architectural cleanup. The bundled renderer was an aspirational 'local-first' surface that never reached parity with /control. Deleting it (2,135 lines) puts Fleet Runner in the same category as Slack / Linear / Notion desktop: web UI + native integrations (tray, deep-link auth, IPC for Peek + auto-mint + local-dev-scan, auto-update).",
+    notes:
+      "Architectural cleanup. The bundled renderer was an aspirational 'local-first' surface that never reached parity with /control. Deleting it (2,135 lines) puts Fleet Runner in the same category as Slack / Linear / Notion desktop: web UI + native integrations (tray, deep-link auth, IPC for Peek + auto-mint + local-dev-scan, auto-update).",
   },
   {
     version: "0.7.3",
@@ -264,7 +283,8 @@ export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
       "Pusher and poller now signal token-invalid back to the auto-mint flow, so a dead token recovers without user intervention.",
     ],
     breaking: [],
-    notes: "Fixes a real bug where a revoked token would lock the user permanently offline — auto-mint's 'if existing token, bail' guard kept reusing the dead one. Now the runner deletes bad tokens on 401, and the next /control load mints a fresh one from the signed-in browser session.",
+    notes:
+      "Fixes a real bug where a revoked token would lock the user permanently offline — auto-mint's 'if existing token, bail' guard kept reusing the dead one. Now the runner deletes bad tokens on 401, and the next /control load mints a fresh one from the signed-in browser session.",
   },
   {
     version: "0.7.2",
@@ -275,7 +295,8 @@ export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
       "Sub-200ms round-trip per peek; auto-refresh toggle re-snapshots every 3s for watching long-running agents.",
     ],
     breaking: [],
-    notes: "Closes the biggest visibility gap in /control: you could see tab names and state chips but had to alt-tab into Zellij to see what an agent was actually saying. Peek brings the agent's view into FleetCrown itself.",
+    notes:
+      "Closes the biggest visibility gap in /control: you could see tab names and state chips but had to alt-tab into Zellij to see what an agent was actually saying. Peek brings the agent's view into FleetCrown itself.",
   },
   {
     version: "0.7.1",
@@ -287,7 +308,8 @@ export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
       "Updated download CTA on the marketing site to point at the latest release dynamically.",
     ],
     breaking: [],
-    notes: "Emergency revert. v0.7.0 shipped the bundled renderer as the default boot target before it had parity with /control, which produced the 'YOUR MACHINES. YOUR AGENTS. / 0 projects / Sync error: Failed to fetch' screen. v0.7.4 later deletes the bundled renderer entirely; v0.7.1 was the safe rollback to v0.6 behavior in the meantime.",
+    notes:
+      "Emergency revert. v0.7.0 shipped the bundled renderer as the default boot target before it had parity with /control, which produced the 'YOUR MACHINES. YOUR AGENTS. / 0 projects / Sync error: Failed to fetch' screen. v0.7.4 later deletes the bundled renderer entirely; v0.7.1 was the safe rollback to v0.6 behavior in the meantime.",
   },
   {
     version: "0.7.0",
@@ -302,7 +324,8 @@ export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
     breaking: [
       "Bundled renderer became the default boot target — produced a broken UX, reverted in v0.7.1, removed entirely in v0.7.4.",
     ],
-    notes: "Major v0.6 → v0.7 cut. Several real features landed (autopilot, typed boundary, scheduler) but the Phase C 'make the bundled renderer the primary' change went out before parity work was done. v0.7.1 reverted that part; v0.7.4 deleted the bundled renderer for good.",
+    notes:
+      "Major v0.6 → v0.7 cut. Several real features landed (autopilot, typed boundary, scheduler) but the Phase C 'make the bundled renderer the primary' change went out before parity work was done. v0.7.1 reverted that part; v0.7.4 deleted the bundled renderer for good.",
   },
   {
     version: "0.6.0",
@@ -315,7 +338,8 @@ export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
       "Runner pusher is event-driven (worker.idle from session.md changes) instead of pure heartbeat.",
     ],
     breaking: [],
-    notes: "The architectural foundation for everything that came after. Pre-v0.6, /control polled /api/control every 30s and the daemon-offline indicator was always lying about staleness. v0.6 inverts the dataflow: clients subscribe to an SSE stream, the bridge LISTENs on Postgres NOTIFY events, every row change fans out to connected clients within milliseconds.",
+    notes:
+      "The architectural foundation for everything that came after. Pre-v0.6, /control polled /api/control every 30s and the daemon-offline indicator was always lying about staleness. v0.6 inverts the dataflow: clients subscribe to an SSE stream, the bridge LISTENs on Postgres NOTIFY events, every row change fans out to connected clients within milliseconds.",
   },
   {
     version: "0.5.1",
@@ -366,8 +390,8 @@ export const CURRENT_RELEASE: ReleaseEntry = FLEET_RUNNER_RELEASES[0];
  * uses the product, no commit-message slang.
  */
 export interface PlatformChangeEntry {
-  date: string;        // ISO 8601 date the feature was live + verified
-  title: string;       // feature name, e.g. "Feedback widget"
+  date: string; // ISO 8601 date the feature was live + verified
+  title: string; // feature name, e.g. "Feedback widget"
   highlights: string[];
   /** Optional deep link (docs page or Thoughts essay) for the full story. */
   link?: { href: string; label: string };
@@ -379,12 +403,12 @@ export const PLATFORM_CHANGELOG: PlatformChangeEntry[] = [
     date: "2026-07-31",
     title: "Feedback pipeline — honest attribution, image attach, and the loop made visible",
     highlights: [
-      "Every dispatch now gets its own attributed run: a second dispatch to a busy project waits until the current run finishes, so summaries, outcomes, and \"your feedback shipped\" emails can never credit the wrong work.",
+      'Every dispatch now gets its own attributed run: a second dispatch to a busy project waits until the current run finishes, so summaries, outcomes, and "your feedback shipped" emails can never credit the wrong work.',
       "Visitors can attach an image to a report (file picker or paste, downscaled client-side); it shows as a thumbnail in the inbox.",
       "Repeat reports dedupe at ingest into a ×N counter on one row — volume signal without inbox noise.",
       "Agent-filed rows (AI review findings, synthesized briefs) are typed and badged, briefs are never re-clustered by the daily digest, and visitor text is fenced as data in every composed prompt.",
       "The loop in numbers: resolved count and median report→fix time on each inbox and the fleet strip.",
-      "Resolved reports you feature appear on the landing page — \"shipped because a visitor asked\", with real excerpts only you curate.",
+      'Resolved reports you feature appear on the landing page — "shipped because a visitor asked", with real excerpts only you curate.',
     ],
     link: { href: "/docs/feedback-widget", label: "Docs: feedback widget" },
   },

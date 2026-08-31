@@ -15,11 +15,7 @@
  *   script's own src, so one snippet works on every deployment.
  */
 
-import {
-  buildSuggestion,
-  formatDiagnostics,
-  type ReportDiagnostics,
-} from "./report-payload";
+import { buildSuggestion, formatDiagnostics, type ReportDiagnostics } from "./report-payload";
 
 type Scope = "element" | "page" | "site";
 type SelectedEl = { elementType: string; elementText: string; selector: string };
@@ -48,7 +44,6 @@ interface FleetCrownApi {
   ready: boolean;
   report(input?: ReportInput): void;
 }
-
 
 const SHADOW_CSS = `
 :host { all: initial; }
@@ -187,7 +182,10 @@ function downscaleImage(file: Blob): Promise<string | null> {
       }
       resolve(null);
     };
-    img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve(null);
+    };
     img.src = url;
   });
 }
@@ -243,7 +241,11 @@ function generateSelector(el: Element): string {
   const cls = (el.getAttribute("class") ?? "")
     .split(/\s+/)
     .filter((c) => c && !c.startsWith("fcw-"));
-  if (cls.length > 0) return `${tag}.${cls.slice(0, 2).map((c) => CSS.escape(c)).join(".")}`;
+  if (cls.length > 0)
+    return `${tag}.${cls
+      .slice(0, 2)
+      .map((c) => CSS.escape(c))
+      .join(".")}`;
   return tag;
 }
 
@@ -322,14 +324,18 @@ function h<K extends keyof HTMLElementTagNameMap>(
     // Scroll-fade companion to the narrow-viewport CSS above: the class is
     // toggled on every viewport, but only the ≤480px media query styles it.
     let scrollSettle = 0;
-    window.addEventListener("scroll", () => {
-      fab.classList.add("scrolling");
-      clearTimeout(scrollSettle);
-      scrollSettle = window.setTimeout(() => {
-        fab.classList.remove("scrolling");
-        dodge();
-      }, 350);
-    }, { passive: true });
+    window.addEventListener(
+      "scroll",
+      () => {
+        fab.classList.add("scrolling");
+        clearTimeout(scrollSettle);
+        scrollSettle = window.setTimeout(() => {
+          fab.classList.remove("scrolling");
+          dodge();
+        }, 350);
+      },
+      { passive: true },
+    );
 
     // Narrow viewports: a fixed corner launcher can land ON an interactive
     // control — measured covering the /auth GitHub sign-in button at 320px,
@@ -351,14 +357,16 @@ function h<K extends keyof HTMLElementTagNameMap>(
       for (let i = 0; i < 12; i++) {
         const r = fab.getBoundingClientRect();
         const pts: Array<[number, number]> = [
-          [r.left + 3, r.top + 3], [r.right - 3, r.top + 3],
-          [r.left + 3, r.bottom - 3], [r.right - 3, r.bottom - 3],
+          [r.left + 3, r.top + 3],
+          [r.right - 3, r.top + 3],
+          [r.left + 3, r.bottom - 3],
+          [r.right - 3, r.bottom - 3],
           [(r.left + r.right) / 2, (r.top + r.bottom) / 2],
         ];
         const covered = pts.some(([x, y]) =>
-          document.elementsFromPoint(x, y).some(
-            (el) => el !== host && !host.contains(el) && el.closest(INTERACTIVE) !== null,
-          ),
+          document
+            .elementsFromPoint(x, y)
+            .some((el) => el !== host && !host.contains(el) && el.closest(INTERACTIVE) !== null),
         );
         if (!covered) return;
         bottom += 16;
@@ -369,10 +377,14 @@ function h<K extends keyof HTMLElementTagNameMap>(
     // Layout shifts after hydration/fonts move the controls under the corner.
     window.setTimeout(dodge, 800);
     let resizeSettle = 0;
-    window.addEventListener("resize", () => {
-      clearTimeout(resizeSettle);
-      resizeSettle = window.setTimeout(dodge, 150);
-    }, { passive: true });
+    window.addEventListener(
+      "resize",
+      () => {
+        clearTimeout(resizeSettle);
+        resizeSettle = window.setTimeout(dodge, 150);
+      },
+      { passive: true },
+    );
 
     // ---- panel (built once, shown on demand) ----
     const backdrop = h("div", "backdrop");
@@ -478,8 +490,13 @@ function h<K extends keyof HTMLElementTagNameMap>(
     });
     // Paste a screenshot straight into the panel (desktop muscle memory).
     panel.addEventListener("paste", (e: ClipboardEvent) => {
-      const item = Array.from(e.clipboardData?.items ?? []).find((i) => i.type.startsWith("image/"));
-      if (item) { e.preventDefault(); void attachFile(item.getAsFile()); }
+      const item = Array.from(e.clipboardData?.items ?? []).find((i) =>
+        i.type.startsWith("image/"),
+      );
+      if (item) {
+        e.preventDefault();
+        void attachFile(item.getAsFile());
+      }
     });
 
     const row = h("div", "row");
@@ -654,10 +671,14 @@ function h<K extends keyof HTMLElementTagNameMap>(
       pickShield.addEventListener("mousemove", onPickMove, true);
       pickShield.addEventListener("click", onPickClick, true);
       // Also swallow pointerdown so Next <Link> / button handlers never fire.
-      pickShield.addEventListener("pointerdown", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-      }, true);
+      pickShield.addEventListener(
+        "pointerdown",
+        (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        },
+        true,
+      );
     }
 
     function stopPicking() {
@@ -731,7 +752,19 @@ function h<K extends keyof HTMLElementTagNameMap>(
         closePanel();
         // Rebuild the form for the next open (success view replaced it).
         panel.textContent = "";
-        panel.append(hdr, chips, hint, textarea, cnt, diagNote, contact, attachRow, row, errEl, keys);
+        panel.append(
+          hdr,
+          chips,
+          hint,
+          textarea,
+          cnt,
+          diagNote,
+          contact,
+          attachRow,
+          row,
+          errEl,
+          keys,
+        );
       }, 2200);
     }
 

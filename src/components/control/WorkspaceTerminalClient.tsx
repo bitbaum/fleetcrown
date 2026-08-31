@@ -65,7 +65,11 @@ export function WorkspaceTerminalClient() {
       <div className="flex flex-wrap items-center gap-2">
         <h1 className="ui-page-title">Workspace terminal</h1>
         <span className="ui-badge">{status}</span>
-        {meta && <span className="ui-micro-label max-w-full truncate">{meta.cmd} · {meta.dir}</span>}
+        {meta && (
+          <span className="ui-micro-label max-w-full truncate">
+            {meta.cmd} · {meta.dir}
+          </span>
+        )}
       </div>
 
       <details className="ui-callout-warning md:hidden">
@@ -74,31 +78,51 @@ export function WorkspaceTerminalClient() {
         </summary>
         <div className="mt-2 text-sm leading-relaxed text-text-secondary">
           {exitedFast ? (
-            <>This embedded terminal runs on the server hosting FleetCrown, which can&apos;t reach your machine when you&apos;re on the hosted app — so the agent exited.{" "}</>
+            <>
+              This embedded terminal runs on the server hosting FleetCrown, which can&apos;t reach
+              your machine when you&apos;re on the hosted app — so the agent exited.{" "}
+            </>
           ) : (
-            <>This embedded terminal runs on the server hosting FleetCrown.{" "}</>
+            <>This embedded terminal runs on the server hosting FleetCrown. </>
           )}
-          To drive an agent on your computer, use <strong>Focus terminal</strong> / <strong>Dispatch</strong> on a project in{" "}
-          <Link href="/control" className="text-accent-text underline">Control</Link> — those run through Fleet Runner against your local Zellij.
+          To drive an agent on your computer, use <strong>Focus terminal</strong> /{" "}
+          <strong>Dispatch</strong> on a project in{" "}
+          <Link href="/control" className="text-accent-text underline">
+            Control
+          </Link>{" "}
+          — those run through Fleet Runner against your local Zellij.
         </div>
       </details>
       <div className="ui-callout-warning hidden md:flex">
         <Info className="mt-0.5 h-4 w-4 shrink-0 text-status-warning" />
         <div className="text-sm leading-relaxed text-text-secondary">
           {exitedFast ? (
-            <>This embedded terminal runs on the server hosting FleetCrown, which can&apos;t reach your machine when you&apos;re on the hosted app — so the agent exited.{" "}</>
+            <>
+              This embedded terminal runs on the server hosting FleetCrown, which can&apos;t reach
+              your machine when you&apos;re on the hosted app — so the agent exited.{" "}
+            </>
           ) : (
-            <>This embedded terminal runs on the server hosting FleetCrown.{" "}</>
+            <>This embedded terminal runs on the server hosting FleetCrown. </>
           )}
-          To drive an agent on your computer, use <strong>Focus terminal</strong> / <strong>Dispatch</strong> on a project in{" "}
-          <Link href="/control" className="text-accent-text underline">Control</Link> — those run through Fleet Runner against your local Zellij.
+          To drive an agent on your computer, use <strong>Focus terminal</strong> /{" "}
+          <strong>Dispatch</strong> on a project in{" "}
+          <Link href="/control" className="text-accent-text underline">
+            Control
+          </Link>{" "}
+          — those run through Fleet Runner against your local Zellij.
         </div>
       </div>
 
       {error && <p className="ui-error">{error}</p>}
       {id && (
         <div className="ui-panel min-h-0 flex-1 overflow-hidden p-2">
-          <TerminalView transport={workspaceTransport(id)} interactive bare onStatus={setStatus} className="h-full w-full" />
+          <TerminalView
+            transport={workspaceTransport(id)}
+            interactive
+            bare
+            onStatus={setStatus}
+            className="h-full w-full"
+          />
         </div>
       )}
     </div>

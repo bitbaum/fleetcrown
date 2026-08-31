@@ -24,15 +24,21 @@ async function login(page) {
 
 // Tour the populated state: month window has 112 prompts across 6 active projects.
 const SHOTS = [
-  { name: "1-month-compact",            url: "/activity?window=month" },
-  { name: "2-month-detailed",           url: "/activity?window=month&density=detailed" },
-  { name: "3-month-revampit-detailed",  url: "/activity?window=month&project=revamp-it&density=detailed" },
-  { name: "4-month-orangecat-compact",  url: "/activity?window=month&project=OrangeCat" },
+  { name: "1-month-compact", url: "/activity?window=month" },
+  { name: "2-month-detailed", url: "/activity?window=month&density=detailed" },
+  {
+    name: "3-month-revampit-detailed",
+    url: "/activity?window=month&project=revamp-it&density=detailed",
+  },
+  { name: "4-month-orangecat-compact", url: "/activity?window=month&project=OrangeCat" },
 ];
 
 const browser = await chromium.launch({ headless: true, executablePath: "/usr/bin/google-chrome" });
 try {
-  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
+  const ctx = await browser.newContext({
+    viewport: { width: 1440, height: 900 },
+    deviceScaleFactor: 1,
+  });
   const page = await ctx.newPage();
   await login(page);
   await ctx.storageState({ path: path.join(outDir, "storage.json") });
@@ -40,7 +46,7 @@ try {
 
   for (const viewport of [
     { tag: "desktop", width: 1440, height: 900, isMobile: false },
-    { tag: "mobile",  width: 390,  height: 844, isMobile: true  },
+    { tag: "mobile", width: 390, height: 844, isMobile: true },
   ]) {
     const c = await browser.newContext({
       storageState: path.join(outDir, "storage.json"),
@@ -53,7 +59,10 @@ try {
       await p.goto(`${base}${shot.url}`, { waitUntil: "load", timeout: 20000 });
       await p.waitForTimeout(1500);
       // Cap height for chat readability — first viewport, not full-page.
-      await p.screenshot({ path: path.join(outDir, `${viewport.tag}-${shot.name}.png`), fullPage: false });
+      await p.screenshot({
+        path: path.join(outDir, `${viewport.tag}-${shot.name}.png`),
+        fullPage: false,
+      });
     }
     await c.close();
   }

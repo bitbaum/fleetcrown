@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
   const origin = req.headers.get("origin") ?? process.env.NEXTAUTH_URL ?? LOCAL_DEV_URL;
 
   const session = await stripe.billingPortal.sessions.create({
-    customer:   user.stripeCustomerId,
+    customer: user.stripeCustomerId,
     return_url: `${origin}/settings`,
   });
 

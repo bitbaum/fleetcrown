@@ -8,8 +8,12 @@ let fail = 0;
 function eq(actual: unknown, expected: unknown, label: string) {
   const a = JSON.stringify(actual);
   const b = JSON.stringify(expected);
-  if (a === b) { pass++; }
-  else { fail++; console.error(`✗ ${label}: expected ${b}, got ${a}`); }
+  if (a === b) {
+    pass++;
+  } else {
+    fail++;
+    console.error(`✗ ${label}: expected ${b}, got ${a}`);
+  }
 }
 
 const withSite = buildOrangeCatProjectPayload({

@@ -5,8 +5,13 @@ import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { useSession } from "next-auth/react";
 import {
-  AuthShell, AuthCard, AuthField, AuthInput, AuthSubmitButton,
-  AuthFooterLink, AuthHeading,
+  AuthShell,
+  AuthCard,
+  AuthField,
+  AuthInput,
+  AuthSubmitButton,
+  AuthFooterLink,
+  AuthHeading,
 } from "@/components/auth/AuthShell";
 import { postJson } from "@/lib/api/fetch";
 import { AUTH_COPY, ROUTES } from "@/config/auth";
@@ -15,10 +20,10 @@ import { APP_NAME } from "@/config/brand";
 function VerifyEmailInner() {
   const params = useSearchParams();
   const success = params.get("success") === "1";
-  const error   = params.get("error");
+  const error = params.get("error");
 
-  const [email, setEmail]   = useState("");
-  const [sent, setSent]     = useState(false);
+  const [email, setEmail] = useState("");
+  const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [reqError, setReqError] = useState("");
 
@@ -95,14 +100,9 @@ function VerifyEmailInner() {
 
   return (
     <AuthShell>
-      <AuthHeading
-        title={AUTH_COPY.verify.title}
-        description={AUTH_COPY.verify.description}
-      />
+      <AuthHeading title={AUTH_COPY.verify.title} description={AUTH_COPY.verify.description} />
       {sent ? (
-        <p className="ui-auth-hint-emphasis">
-          New link sent — check your inbox (and spam folder).
-        </p>
+        <p className="ui-auth-hint-emphasis">New link sent — check your inbox (and spam folder).</p>
       ) : (
         <>
           <p className="ui-auth-hint-emphasis mb-4">

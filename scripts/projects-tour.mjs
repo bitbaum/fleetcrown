@@ -34,7 +34,12 @@ const allViewports = [
   { tag: "tablet", width: 768, height: 1024, isMobile: false },
   { tag: "desktop", width: 1440, height: 1000, isMobile: false },
 ];
-const requestedViewports = new Set((process.env.VIEWPORTS ?? "").split(",").map((value) => value.trim()).filter(Boolean));
+const requestedViewports = new Set(
+  (process.env.VIEWPORTS ?? "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean),
+);
 const viewports = requestedViewports.size
   ? allViewports.filter((viewport) => requestedViewports.has(viewport.tag))
   : allViewports;
@@ -62,7 +67,10 @@ async function login(page) {
     }
     await page.locator('input[type="email"]').first().fill(dogfoodEmail);
     await page.locator('input[type="password"]').first().fill(dogfoodPassword);
-    await page.getByRole("button", { name: /^sign in/i }).last().click();
+    await page
+      .getByRole("button", { name: /^sign in/i })
+      .last()
+      .click();
   }
   await page.waitForURL((url) => !url.pathname.startsWith("/sign-in"), { timeout: 60_000 });
 }
@@ -72,7 +80,12 @@ async function auditLayout(page, viewport) {
     const visible = (el) => {
       const style = getComputedStyle(el);
       const rect = el.getBoundingClientRect();
-      return rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden";
+      return (
+        rect.width > 0 &&
+        rect.height > 0 &&
+        style.display !== "none" &&
+        style.visibility !== "hidden"
+      );
     };
     const elements = [...document.querySelectorAll("body *")];
     const overflow = elements
@@ -91,15 +104,25 @@ async function auditLayout(page, viewport) {
       .slice(0, 20);
     const smallTargets = isMobile
       ? elements
-          .filter((el) => el.matches("a,button,input,select,textarea,[role='button']") && visible(el))
+          .filter(
+            (el) => el.matches("a,button,input,select,textarea,[role='button']") && visible(el),
+          )
           .map((el) => {
-            const target = el.matches('input[type="checkbox"], input[type="radio"]') && el.closest("label")
-              ? el.closest("label")
-              : el;
+            const target =
+              el.matches('input[type="checkbox"], input[type="radio"]') && el.closest("label")
+                ? el.closest("label")
+                : el;
             const rect = target.getBoundingClientRect();
             return {
-              text: (el.getAttribute("aria-label") || el.textContent || el.getAttribute("title") || "")
-                .trim().replace(/\s+/g, " ").slice(0, 80),
+              text: (
+                el.getAttribute("aria-label") ||
+                el.textContent ||
+                el.getAttribute("title") ||
+                ""
+              )
+                .trim()
+                .replace(/\s+/g, " ")
+                .slice(0, 80),
               width: Math.round(rect.width),
               height: Math.round(rect.height),
             };
@@ -145,7 +168,10 @@ async function auditCatalog(page, viewport) {
     ),
     drawerCount: document.querySelectorAll('[role="dialog"], [data-drawer]').length,
   }));
-  check(layout.scrollWidth <= layout.clientWidth + 2, `${viewport.tag}: catalog has horizontal overflow`);
+  check(
+    layout.scrollWidth <= layout.clientWidth + 2,
+    `${viewport.tag}: catalog has horizontal overflow`,
+  );
   check(content.projectLinks > 0, `${viewport.tag}: catalog has no canonical project links`);
   check(content.drawerCount === 0, `${viewport.tag}: retired project drawer is still mounted`);
   return { ...layout, ...content };
@@ -156,21 +182,38 @@ async function auditProfile(page, viewport, expectedId) {
   const layout = await auditLayout(page, viewport);
   const content = await page.evaluate(() => ({
     name: document.querySelector(".app-page h1")?.textContent?.trim() ?? "",
-    sectionLinks: [...document.querySelectorAll('nav[aria-label="Project profile sections"] a')].map((el) =>
-      (el.textContent || "").trim(),
-    ),
-    workspaceLinks: [...document.querySelectorAll('nav[aria-label="Project workspace views"] a')].map((el) => ({
+    sectionLinks: [
+      ...document.querySelectorAll('nav[aria-label="Project profile sections"] a'),
+    ].map((el) => (el.textContent || "").trim()),
+    workspaceLinks: [
+      ...document.querySelectorAll('nav[aria-label="Project workspace views"] a'),
+    ].map((el) => ({
       label: (el.textContent || "").trim(),
       href: el.getAttribute("href"),
     })),
-    sectionIds: ["overview", "context", "plan", "activity"].filter((id) => document.getElementById(id)),
-    contextSummary: document.querySelector("#project-context-title")?.parentElement?.parentElement?.textContent
-      ?.trim().replace(/\s+/g, " ").slice(0, 180) ?? "",
+    sectionIds: ["overview", "context", "plan", "activity"].filter((id) =>
+      document.getElementById(id),
+    ),
+    contextSummary:
+      document
+        .querySelector("#project-context-title")
+        ?.parentElement?.parentElement?.textContent?.trim()
+        .replace(/\s+/g, " ")
+        .slice(0, 180) ?? "",
   }));
-  check(locationPath(page) === `/projects/${expectedId}`, `${viewport.tag}: profile is not canonical`);
-  check(layout.scrollWidth <= layout.clientWidth + 2, `${viewport.tag}: profile has horizontal overflow`);
+  check(
+    locationPath(page) === `/projects/${expectedId}`,
+    `${viewport.tag}: profile is not canonical`,
+  );
+  check(
+    layout.scrollWidth <= layout.clientWidth + 2,
+    `${viewport.tag}: profile has horizontal overflow`,
+  );
   check(content.sectionIds.length === 4, `${viewport.tag}: profile is missing anchored sections`);
-  check(content.workspaceLinks.length === 4, `${viewport.tag}: workspace switcher does not have four views`);
+  check(
+    content.workspaceLinks.length === 4,
+    `${viewport.tag}: workspace switcher does not have four views`,
+  );
   check(content.name.length > 0, `${viewport.tag}: project profile has no name`);
   return { ...layout, ...content };
 }
@@ -183,18 +226,36 @@ async function verifyWorkspaceLinks(page, projectName, projectId) {
   const nav = page.getByRole("navigation", { name: "Project workspace views" });
 
   await nav.getByRole("link", { name: "Chat" }).click();
-  await page.waitForURL((url) => url.pathname === "/loki" && url.searchParams.get("project") === projectName, { timeout: 30_000 });
+  await page.waitForURL(
+    (url) => url.pathname === "/loki" && url.searchParams.get("project") === projectName,
+    { timeout: 30_000 },
+  );
   await page.waitForTimeout(500);
 
-  await page.getByRole("navigation", { name: "Project workspace views" }).getByRole("link", { name: "Control" }).click();
-  await page.waitForURL((url) => url.pathname === "/control" && url.searchParams.get("focus") === projectName, { timeout: 30_000 });
+  await page
+    .getByRole("navigation", { name: "Project workspace views" })
+    .getByRole("link", { name: "Control" })
+    .click();
+  await page.waitForURL(
+    (url) => url.pathname === "/control" && url.searchParams.get("focus") === projectName,
+    { timeout: 30_000 },
+  );
   await page.waitForTimeout(500);
 
-  await page.getByRole("navigation", { name: "Project workspace views" }).getByRole("link", { name: "Terminal" }).click();
-  await page.waitForURL((url) => url.pathname === "/terminal" && url.searchParams.get("tab") === projectName, { timeout: 30_000 });
+  await page
+    .getByRole("navigation", { name: "Project workspace views" })
+    .getByRole("link", { name: "Terminal" })
+    .click();
+  await page.waitForURL(
+    (url) => url.pathname === "/terminal" && url.searchParams.get("tab") === projectName,
+    { timeout: 30_000 },
+  );
   await page.waitForTimeout(500);
 
-  await page.getByRole("navigation", { name: "Project workspace views" }).getByRole("link", { name: "Profile" }).click();
+  await page
+    .getByRole("navigation", { name: "Project workspace views" })
+    .getByRole("link", { name: "Profile" })
+    .click();
   await page.waitForURL((url) => url.pathname === `/projects/${projectId}`, { timeout: 30_000 });
 }
 
@@ -214,9 +275,12 @@ try {
     });
     const page = await context.newPage();
     page.on("console", (message) => {
-      if (message.type() === "error") report.consoleErrors.push({ viewport: viewport.tag, text: message.text() });
+      if (message.type() === "error")
+        report.consoleErrors.push({ viewport: viewport.tag, text: message.text() });
     });
-    page.on("pageerror", (error) => report.consoleErrors.push({ viewport: viewport.tag, text: error.message }));
+    page.on("pageerror", (error) =>
+      report.consoleErrors.push({ viewport: viewport.tag, text: error.message }),
+    );
 
     await login(page);
     await page.goto(`${base}/projects`, { waitUntil: "load", timeout: 60_000 });
@@ -224,7 +288,10 @@ try {
     await page.waitForTimeout(500);
 
     const catalog = await auditCatalog(page, viewport);
-    await page.screenshot({ path: path.join(outDir, `${viewport.tag}-catalog.png`), fullPage: true });
+    await page.screenshot({
+      path: path.join(outDir, `${viewport.tag}-catalog.png`),
+      fullPage: true,
+    });
 
     const firstProject = page.locator('a[href^="/projects/"]').first();
     const href = await firstProject.getAttribute("href");
@@ -235,7 +302,10 @@ try {
     await page.waitForURL((url) => url.pathname === `/projects/${projectId}`, { timeout: 30_000 });
     const profile = await auditProfile(page, viewport, projectId);
     const projectName = profile.name;
-    await page.screenshot({ path: path.join(outDir, `${viewport.tag}-profile.png`), fullPage: true });
+    await page.screenshot({
+      path: path.join(outDir, `${viewport.tag}-profile.png`),
+      fullPage: true,
+    });
 
     await page.goBack();
     await page.waitForURL((url) => url.pathname === "/projects");
@@ -256,7 +326,8 @@ try {
       profile,
       browserBack: "pass",
       legacyRedirect: "pass",
-      connectedWorkspace: viewport.tag === "mobile-390" || viewport.tag === "desktop" ? "pass" : "not repeated",
+      connectedWorkspace:
+        viewport.tag === "mobile-390" || viewport.tag === "desktop" ? "pass" : "not repeated",
     });
     await context.close();
   }
@@ -264,30 +335,45 @@ try {
   await browser.close();
 }
 
-const ignoredConsoleErrors = report.consoleErrors.filter(({ text }) =>
-  !/favicon|Failed to load resource.*404|ResizeObserver loop/i.test(text) &&
-  // ClientFetchError minifies to a bare class name in production builds, so
-  // match the stable authjs error URL rather than the constructor name.
-  !(isLocal && /bridge\.orangecat\.ch\/sse|Failed to fetch.*authjs\.dev#autherror|net::ERR_FAILED/i.test(text)),
+const ignoredConsoleErrors = report.consoleErrors.filter(
+  ({ text }) =>
+    !/favicon|Failed to load resource.*404|ResizeObserver loop/i.test(text) &&
+    // ClientFetchError minifies to a bare class name in production builds, so
+    // match the stable authjs error URL rather than the constructor name.
+    !(
+      isLocal &&
+      /bridge\.orangecat\.ch\/sse|Failed to fetch.*authjs\.dev#autherror|net::ERR_FAILED/i.test(
+        text,
+      )
+    ),
 );
 
 fs.writeFileSync(path.join(outDir, "report.json"), JSON.stringify(report, null, 2));
-check(ignoredConsoleErrors.length === 0, `Browser console errors: ${JSON.stringify(ignoredConsoleErrors)}`);
-console.log(JSON.stringify({
-  base,
-  viewports: report.viewports.map((item) => ({
-    viewport: item.viewport,
-    project: item.projectName,
-    catalogOverflow: item.catalog.overflow.length,
-    profileOverflow: item.profile.overflow.length,
-    catalogTinyText: item.catalog.tinyText.length,
-    profileTinyText: item.profile.tinyText.length,
-    catalogSmallTargets: item.catalog.smallTargets.length,
-    profileSmallTargets: item.profile.smallTargets.length,
-    browserBack: item.browserBack,
-    legacyRedirect: item.legacyRedirect,
-    connectedWorkspace: item.connectedWorkspace,
-  })),
-  consoleErrors: ignoredConsoleErrors,
-}, null, 2));
+check(
+  ignoredConsoleErrors.length === 0,
+  `Browser console errors: ${JSON.stringify(ignoredConsoleErrors)}`,
+);
+console.log(
+  JSON.stringify(
+    {
+      base,
+      viewports: report.viewports.map((item) => ({
+        viewport: item.viewport,
+        project: item.projectName,
+        catalogOverflow: item.catalog.overflow.length,
+        profileOverflow: item.profile.overflow.length,
+        catalogTinyText: item.catalog.tinyText.length,
+        profileTinyText: item.profile.tinyText.length,
+        catalogSmallTargets: item.catalog.smallTargets.length,
+        profileSmallTargets: item.profile.smallTargets.length,
+        browserBack: item.browserBack,
+        legacyRedirect: item.legacyRedirect,
+        connectedWorkspace: item.connectedWorkspace,
+      })),
+      consoleErrors: ignoredConsoleErrors,
+    },
+    null,
+    2,
+  ),
+);
 console.log(`screenshots and report: ${outDir}`);

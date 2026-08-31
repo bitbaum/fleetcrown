@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCommandById, markCommandExecuted } from "@/db/queries/pending-commands";
-import { closeRunUndelivered, getOrchestrationRunById, stampRunDelivered } from "@/db/queries/orchestration-runs";
+import {
+  closeRunUndelivered,
+  getOrchestrationRunById,
+  stampRunDelivered,
+} from "@/db/queries/orchestration-runs";
 import { emitRunEvent } from "@/db/queries/run-events";
 import { getApiUserId } from "@/lib/session";
 import { deriveDispatchLiveStatus, type CommandLiveInput } from "@/lib/dispatch-status";
@@ -9,10 +13,7 @@ import { deriveDispatchLiveStatus, type CommandLiveInput } from "@/lib/dispatch-
 // polls so a dispatch shows queued → picked up → ran/failed instead of a frozen
 // "starting shortly". Scoped to the owner; returns a settled `terminal` flag so
 // the client can stop polling.
-export async function GET(
-  _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const userId = await getApiUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -22,9 +23,10 @@ export async function GET(
     return NextResponse.json({ error: "Command not found" }, { status: 404 });
   }
   const runId = (command.payload as { runId?: unknown } | null)?.runId;
-  const run = typeof runId === "string"
-    ? await getOrchestrationRunById(userId, runId).catch(() => null)
-    : null;
+  const run =
+    typeof runId === "string"
+      ? await getOrchestrationRunById(userId, runId).catch(() => null)
+      : null;
   const view = deriveDispatchLiveStatus({
     claimedAt: command.claimedAt,
     executedAt: command.executedAt,
@@ -42,10 +44,7 @@ export async function GET(
 
 // Runner calls this to mark a command as executed.
 // PATCH /api/control/commands/:id  body: { ok: boolean, error?: string }
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const userId = await getApiUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -61,7 +60,14 @@ export async function PATCH(
   // Stage 2 (workspace addressing): which workspace served this command.
   const workspaceId = typeof body.workspaceId === "string" ? body.workspaceId : undefined;
 
-  const updated = await markCommandExecuted(id, userId, { ok, text, error, warning, verified, workspaceId });
+  const updated = await markCommandExecuted(id, userId, {
+    ok,
+    text,
+    error,
+    warning,
+    verified,
+    workspaceId,
+  });
   if (!updated) return NextResponse.json({ error: "Command not found" }, { status: 404 });
 
   // Run ledger: project the runner's ack onto the dispatch's run. A clean ack
@@ -73,7 +79,10 @@ export async function PATCH(
     const runId = (command?.payload as { runId?: string } | null)?.runId;
     if (runId) {
       if (!ok) {
-        void emitRunEvent(runId, userId, "blocked", { reason: error ?? "runner error", workspaceId });
+        void emitRunEvent(runId, userId, "blocked", {
+          reason: error ?? "runner error",
+          workspaceId,
+        });
         // The prompt never landed — the run can't produce a handoff. Close it
         // now so it doesn't head-of-line block the project's queued dispatches.
         await closeRunUndelivered(runId, userId, error ?? "runner error").catch(() => {});
@@ -85,7 +94,9 @@ export async function PATCH(
         await stampRunDelivered(runId, userId).catch(() => {});
       }
     }
-  } catch { /* telemetry only — never fail the ack */ }
+  } catch {
+    /* telemetry only — never fail the ack */
+  }
 
   return NextResponse.json({ ok: true });
 }

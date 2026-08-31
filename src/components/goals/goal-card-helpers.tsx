@@ -71,8 +71,7 @@ export function DateInput({
   onUpdate: (date: Date | null) => void;
 }) {
   // Normalise to YYYY-MM-DD string for <input type="date">
-  const toDateStr = (d: Date | null) =>
-    d ? toLocalDateStr(new Date(d)) : "";
+  const toDateStr = (d: Date | null) => (d ? toLocalDateStr(new Date(d)) : "");
 
   const ie = useInlineEdit<string>(toDateStr(initial));
   const currentDate = initial ? new Date(initial) : null;
@@ -127,16 +126,11 @@ export function DateInput({
   }
 
   return (
-    <button
-      onClick={() => ie.start("")}
-      className="ui-link-muted"
-      title="Set deadline"
-    >
+    <button onClick={() => ie.start("")} className="ui-link-muted" title="Set deadline">
       Set deadline
     </button>
   );
 }
-
 
 type GoalPromptProps = {
   title: string;
@@ -147,7 +141,14 @@ type GoalPromptProps = {
   entityName: string | null;
 };
 
-function buildGoalPrompt({ title, description, progress, milestones, targetDate, entityName }: GoalPromptProps): string {
+function buildGoalPrompt({
+  title,
+  description,
+  progress,
+  milestones,
+  targetDate,
+  entityName,
+}: GoalPromptProps): string {
   const lines: string[] = [`Goal: ${title}`];
   if (description?.trim()) lines.push(`Description: ${description.trim()}`);
   lines.push(`Progress: ${progress}%`);
@@ -179,7 +180,11 @@ export function CopyGoalPromptButton(props: GoalPromptProps) {
       className="ui-hover-reveal ui-icon-btn p-1 rounded transition-all shrink-0 text-text-muted hover:text-accent-text"
       title="Copy goal as agent prompt"
     >
-      {copied ? <CheckCircle className="h-3.5 w-3.5 text-status-positive" /> : <Clipboard className="h-3.5 w-3.5" />}
+      {copied ? (
+        <CheckCircle className="h-3.5 w-3.5 text-status-positive" />
+      ) : (
+        <Clipboard className="h-3.5 w-3.5" />
+      )}
     </button>
   );
 }

@@ -11,10 +11,7 @@
  * The manifest's `excluded` lines are generated from that same source, so the
  * document describing what was withheld cannot drift from what actually was.
  */
-import {
-  USER_EXPORT_OMITTED_FIELDS,
-  USER_WITHHELD_FIELDS,
-} from "@/lib/user-client-view";
+import { USER_EXPORT_OMITTED_FIELDS, USER_WITHHELD_FIELDS } from "@/lib/user-client-view";
 
 export const ACCOUNT_EXPORT_FILENAME = "fleetcrown-account-export.json";
 

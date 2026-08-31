@@ -2,7 +2,9 @@ import { useEffect, useLayoutEffect, useRef } from "react";
 
 export function useEscapeKey(handler: () => void) {
   const ref = useRef(handler);
-  useLayoutEffect(() => { ref.current = handler; });
+  useLayoutEffect(() => {
+    ref.current = handler;
+  });
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;

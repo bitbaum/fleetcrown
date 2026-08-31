@@ -22,7 +22,9 @@ type OpenClawAgentResponse = {
   error?: string;
 };
 
-export async function runOpenClawIntent(request: OrchestrationTaskRequest): Promise<OpenClawRunResult> {
+export async function runOpenClawIntent(
+  request: OrchestrationTaskRequest,
+): Promise<OpenClawRunResult> {
   const prompt = renderTaskForAdapter({ ...request, adapter: "openclaw" }, "openclaw");
   const sessionId = `${APP_SLUG}:${request.projectKey}:${request.intent}:${Date.now()}`;
   const command = `openclaw agent --agent main --session-id ${shellEscape(sessionId)} --message ${shellEscape(prompt)} --json`;

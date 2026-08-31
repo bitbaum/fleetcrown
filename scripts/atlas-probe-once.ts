@@ -12,9 +12,14 @@ async function main() {
     for (const t of targets) {
       const p = await probeSite(t.liveUrl);
       await saveSiteSnapshot(userId, t.id, p);
-      console.log(`${p.ok ? "UP  " : "DOWN"} ${String(p.statusCode)} pages=${String(p.internalPaths.length).padStart(3)} ${t.liveUrl}`);
+      console.log(
+        `${p.ok ? "UP  " : "DOWN"} ${String(p.statusCode)} pages=${String(p.internalPaths.length).padStart(3)} ${t.liveUrl}`,
+      );
     }
   }
   process.exit(0);
 }
-main().catch((e) => { console.error(e); process.exit(1); });
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

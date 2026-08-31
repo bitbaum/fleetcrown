@@ -1,8 +1,22 @@
 import { db } from "@/db";
 import {
-  users, actions, alerts, claudeCodeHistory, commitments, entities,
-  entityRelations, events, goals, habitCompletions, habits, interactions,
-  invitations, orchestrationRuns, promptHistory, siteFeedback, subscriptions,
+  users,
+  actions,
+  alerts,
+  claudeCodeHistory,
+  commitments,
+  entities,
+  entityRelations,
+  events,
+  goals,
+  habitCompletions,
+  habits,
+  interactions,
+  invitations,
+  orchestrationRuns,
+  promptHistory,
+  siteFeedback,
+  subscriptions,
   attributes,
 } from "@/db/schema";
 import { eq, count } from "drizzle-orm";
@@ -50,7 +64,12 @@ export interface CreateInitialUserInput {
 export async function createInitialUser(data: CreateInitialUserInput) {
   const [user] = await db
     .insert(users)
-    .values({ name: data.name, passwordHash: data.passwordHash, isDefault: true, onboardedAt: new Date() })
+    .values({
+      name: data.name,
+      passwordHash: data.passwordHash,
+      isDefault: true,
+      onboardedAt: new Date(),
+    })
     .returning({ id: users.id });
   return user;
 }
@@ -82,11 +101,13 @@ export async function updateUserBilling(id: string, patch: UpdateUserBillingInpu
   const [updated] = await db
     .update(users)
     .set({
-      ...(patch.plan              !== undefined && { plan:                 patch.plan }),
-      ...(patch.planStatus        !== undefined && { planStatus:           patch.planStatus }),
-      ...(patch.stripeCustomerId  !== undefined && { stripeCustomerId:     patch.stripeCustomerId }),
-      ...(patch.stripeSubscriptionId !== undefined && { stripeSubscriptionId: patch.stripeSubscriptionId }),
-      ...(patch.planExpiresAt        !== undefined && { planExpiresAt:        patch.planExpiresAt }),
+      ...(patch.plan !== undefined && { plan: patch.plan }),
+      ...(patch.planStatus !== undefined && { planStatus: patch.planStatus }),
+      ...(patch.stripeCustomerId !== undefined && { stripeCustomerId: patch.stripeCustomerId }),
+      ...(patch.stripeSubscriptionId !== undefined && {
+        stripeSubscriptionId: patch.stripeSubscriptionId,
+      }),
+      ...(patch.planExpiresAt !== undefined && { planExpiresAt: patch.planExpiresAt }),
       updatedAt: new Date(),
     })
     .where(eq(users.id, id))
@@ -166,10 +187,7 @@ export async function deleteUserAccount(userId: string): Promise<void> {
     await tx.delete(entities).where(eq(entities.userId, userId));
     // invitations.used_by is nullable with no cascade — detach, don't delete
     // (the invite belongs to whoever created it).
-    await tx
-      .update(invitations)
-      .set({ usedBy: null })
-      .where(eq(invitations.usedBy, userId));
+    await tx.update(invitations).set({ usedBy: null }).where(eq(invitations.usedBy, userId));
     // Finally the users row — every onDelete:"cascade" table purges with it.
     await tx.delete(users).where(eq(users.id, userId));
   });

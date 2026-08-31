@@ -47,7 +47,10 @@ export function resolveDetectedAgentIds(project: ProjectState, liveTab?: string)
 }
 
 /** Best guess for the agent to quit when switching — prefers live detection. */
-export function resolveOutgoingAgent(project: ProjectState, localAgent?: string | null): string | null {
+export function resolveOutgoingAgent(
+  project: ProjectState,
+  localAgent?: string | null,
+): string | null {
   const detected = resolveDetectedAgentIds(project);
   if (detected.length === 1) return detected[0]!;
   if (detected.length > 1) return detected[0]!;

@@ -30,9 +30,7 @@ export function ConnectMachineStep({ saving, onComplete }: Props) {
           <Globe className="h-4 w-4 text-accent-text shrink-0" />
           {copy.browserPath.title}
         </div>
-        <p className="text-sm text-text-secondary leading-relaxed">
-          {copy.browserPath.body}
-        </p>
+        <p className="text-sm text-text-secondary leading-relaxed">{copy.browserPath.body}</p>
         <button
           type="button"
           onClick={onComplete}
@@ -47,9 +45,7 @@ export function ConnectMachineStep({ saving, onComplete }: Props) {
         <div className="ui-auth-status-banner">
           <Wifi className="h-4 w-4 shrink-0 text-status-positive" />
           {copy.connectedBanner}
-          {status?.runnerLastPushedAt && (
-            <span className="ui-auth-status-meta">· syncing</span>
-          )}
+          {status?.runnerLastPushedAt && <span className="ui-auth-status-meta">· syncing</span>}
         </div>
       )}
 
@@ -58,15 +54,13 @@ export function ConnectMachineStep({ saving, onComplete }: Props) {
           <Laptop className="h-4 w-4 text-text-secondary shrink-0" />
           {copy.desktopPath.title}
         </div>
-        <p className="text-sm text-text-secondary leading-relaxed">
-          {copy.desktopPath.body}
-        </p>
+        <p className="text-sm text-text-secondary leading-relaxed">{copy.desktopPath.body}</p>
         <Link href={copy.desktopPath.href} className="ui-auth-secondary-btn inline-flex gap-2">
           {copy.desktopPath.cta}
         </Link>
         <p className="text-micro text-text-muted">
-          Same sign-in as the website — the desktop window loads your dashboard and keeps
-          agents running in the background on this computer.
+          Same sign-in as the website — the desktop window loads your dashboard and keeps agents
+          running in the background on this computer.
         </p>
       </div>
 

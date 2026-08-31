@@ -2,7 +2,17 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Send, Mic, Check, Loader2, Paperclip, X, ImageIcon, FolderKanban, Plus } from "lucide-react";
+import {
+  Send,
+  Mic,
+  Check,
+  Loader2,
+  Paperclip,
+  X,
+  ImageIcon,
+  FolderKanban,
+  Plus,
+} from "lucide-react";
 import { useVoiceInput } from "@/hooks/use-voice-input";
 import {
   MAX_ATTACHMENTS,
@@ -111,7 +121,9 @@ export function Composer({
       return;
     }
     if (file.size > MAX_IMAGE_BYTES) {
-      setAttachNote(`${file.name} is too large (max ${Math.round(MAX_IMAGE_BYTES / 1_000_000)}MB).`);
+      setAttachNote(
+        `${file.name} is too large (max ${Math.round(MAX_IMAGE_BYTES / 1_000_000)}MB).`,
+      );
       return;
     }
     const reader = new FileReader();
@@ -134,7 +146,9 @@ export function Composer({
 
   const stageTextFile = (file: File) => {
     if (file.size > MAX_ATTACHMENT_CHARS) {
-      setAttachNote(`${file.name} is too large (max ${Math.round(MAX_ATTACHMENT_CHARS / 1000)}k chars).`);
+      setAttachNote(
+        `${file.name} is too large (max ${Math.round(MAX_ATTACHMENT_CHARS / 1000)}k chars).`,
+      );
       return;
     }
     const reader = new FileReader();
@@ -275,10 +289,20 @@ export function Composer({
                   ))}
                 </div>
                 <span className="ui-voice-timer tabular-nums">{fmtTime(elapsed)}</span>
-                <button type="button" className="ui-voice-cancel" onClick={voice.cancel} aria-label="Cancel recording">
+                <button
+                  type="button"
+                  className="ui-voice-cancel"
+                  onClick={voice.cancel}
+                  aria-label="Cancel recording"
+                >
                   <X className="h-4 w-4" />
                 </button>
-                <button type="button" className="ui-voice-stop" onClick={voice.stop} aria-label="Stop and transcribe">
+                <button
+                  type="button"
+                  className="ui-voice-stop"
+                  onClick={voice.stop}
+                  aria-label="Stop and transcribe"
+                >
                   <Check className="h-4 w-4" />
                 </button>
               </>
@@ -292,42 +316,42 @@ export function Composer({
         )}
         <div className="ui-loki-composer">
           {showScopeRow && (
-          <div className="ui-loki-composer-scope-row">
-            {selectedProjects.length === 0 &&
-              projectCount > 0 &&
-              onOpenProjects &&
-              (text.trim() || !chips.some((chip) => chip.kind === "open_projects")) && (
-              <button type="button" className="ui-btn-chip" onClick={onOpenProjects}>
-                <FolderKanban className="h-3.5 w-3.5" /> Project
-              </button>
-            )}
-            {selectedProjects.map((project) => (
-              <span key={project} className="ui-loki-scope-pill">
-                <span className="truncate">{project}</span>
-                {onRemoveProject && (
-                  <button
-                    type="button"
-                    className="ui-loki-scope-remove"
-                    onClick={() => onRemoveProject(project)}
-                    aria-label={`Remove ${project}`}
-                  >
-                    <X className="h-3 w-3" />
+            <div className="ui-loki-composer-scope-row">
+              {selectedProjects.length === 0 &&
+                projectCount > 0 &&
+                onOpenProjects &&
+                (text.trim() || !chips.some((chip) => chip.kind === "open_projects")) && (
+                  <button type="button" className="ui-btn-chip" onClick={onOpenProjects}>
+                    <FolderKanban className="h-3.5 w-3.5" /> Project
                   </button>
                 )}
-              </span>
-            ))}
-            {selectedProjects.length > 0 && onOpenProjects && (
-              <button
-                type="button"
-                className="ui-loki-scope-add"
-                onClick={onOpenProjects}
-                aria-label="Change project scope"
-                title="Change project scope"
-              >
-                <Plus className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
+              {selectedProjects.map((project) => (
+                <span key={project} className="ui-loki-scope-pill">
+                  <span className="truncate">{project}</span>
+                  {onRemoveProject && (
+                    <button
+                      type="button"
+                      className="ui-loki-scope-remove"
+                      onClick={() => onRemoveProject(project)}
+                      aria-label={`Remove ${project}`}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </span>
+              ))}
+              {selectedProjects.length > 0 && onOpenProjects && (
+                <button
+                  type="button"
+                  className="ui-loki-scope-add"
+                  onClick={onOpenProjects}
+                  aria-label="Change project scope"
+                  title="Change project scope"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
           )}
 
           {!text.trim() && chips.length > 0 && (
@@ -434,7 +458,9 @@ export function Composer({
               {voice.isSupported && (
                 <button
                   type="button"
-                  className={recording ? "ui-loki-tool-btn ui-loki-tool-btn-rec" : "ui-loki-tool-btn"}
+                  className={
+                    recording ? "ui-loki-tool-btn ui-loki-tool-btn-rec" : "ui-loki-tool-btn"
+                  }
                   disabled={disabled || voice.status === "transcribing"}
                   onClick={voice.status === "recording" ? voice.stop : () => void voice.start()}
                   aria-label={voice.status === "recording" ? "Stop recording" : "Voice input"}

@@ -37,7 +37,9 @@ type JsonlEvent = {
   };
 };
 
-function extractText(content: JsonlEvent["message"] extends { content: infer C } ? C : unknown): string {
+function extractText(
+  content: JsonlEvent["message"] extends { content: infer C } ? C : unknown,
+): string {
   if (typeof content === "string") return content.trim();
   if (!Array.isArray(content)) return "";
   const parts: string[] = [];
@@ -133,8 +135,9 @@ async function ingestJsonl(
 async function listJsonlFiles(root: string, sinceMs: number | null): Promise<string[]> {
   let dirs: string[];
   try {
-    dirs = await readdir(root, { withFileTypes: true })
-      .then((entries) => entries.filter((e) => e.isDirectory()).map((e) => join(root, e.name)));
+    dirs = await readdir(root, { withFileTypes: true }).then((entries) =>
+      entries.filter((e) => e.isDirectory()).map((e) => join(root, e.name)),
+    );
   } catch {
     return [];
   }
@@ -154,29 +157,47 @@ async function listJsonlFiles(root: string, sinceMs: number | null): Promise<str
   return out;
 }
 
-function parseArgs(argv: string[]): { dir: string; sinceMs: number | null; userIdOverride: string | null; emailOverride: string | null } {
+function parseArgs(argv: string[]): {
+  dir: string;
+  sinceMs: number | null;
+  userIdOverride: string | null;
+  emailOverride: string | null;
+} {
   let dir = CLAUDE_PROJECTS_DIR;
   let sinceMs: number | null = null;
   let userIdOverride: string | null = null;
   let emailOverride: string | null = null;
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
-    if (arg === "--dir" && argv[i + 1]) { dir = argv[i + 1]; i++; }
-    else if (arg === "--since" && argv[i + 1]) {
+    if (arg === "--dir" && argv[i + 1]) {
+      dir = argv[i + 1];
+      i++;
+    } else if (arg === "--since" && argv[i + 1]) {
       const t = Date.parse(argv[i + 1]);
       if (!Number.isNaN(t)) sinceMs = t;
       i++;
+    } else if (arg === "--user-id" && argv[i + 1]) {
+      userIdOverride = argv[i + 1];
+      i++;
+    } else if (arg === "--user-email" && argv[i + 1]) {
+      emailOverride = argv[i + 1];
+      i++;
     }
-    else if (arg === "--user-id" && argv[i + 1]) { userIdOverride = argv[i + 1]; i++; }
-    else if (arg === "--user-email" && argv[i + 1]) { emailOverride = argv[i + 1]; i++; }
   }
   return { dir, sinceMs, userIdOverride, emailOverride };
 }
 
-async function resolveUserId(opts: { userIdOverride: string | null; emailOverride: string | null }): Promise<string | null> {
+async function resolveUserId(opts: {
+  userIdOverride: string | null;
+  emailOverride: string | null;
+}): Promise<string | null> {
   if (opts.userIdOverride) return opts.userIdOverride;
   if (opts.emailOverride) {
-    const [row] = await db.select({ id: users.id }).from(users).where(eq(users.email, opts.emailOverride)).limit(1);
+    const [row] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.email, opts.emailOverride))
+      .limit(1);
     return row?.id ?? null;
   }
   const u = await getDefaultUser();
@@ -187,17 +208,26 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   const userId = await resolveUserId(args);
   if (!userId) {
-    console.error("ingest-history: no user found. Pass --user-id <uuid>, --user-email <addr>, or mark a user is_default=true.");
+    console.error(
+      "ingest-history: no user found. Pass --user-id <uuid>, --user-email <addr>, or mark a user is_default=true.",
+    );
     process.exit(1);
   }
   const projectIndex = await loadProjectIndex(userId);
-  console.log(`ingest-history: user=${userId} scanning ${args.dir} (${projectIndex.length} projects indexed)`);
-  if (args.sinceMs !== null) console.log(`ingest-history: filtering files modified since ${new Date(args.sinceMs).toISOString()}`);
+  console.log(
+    `ingest-history: user=${userId} scanning ${args.dir} (${projectIndex.length} projects indexed)`,
+  );
+  if (args.sinceMs !== null)
+    console.log(
+      `ingest-history: filtering files modified since ${new Date(args.sinceMs).toISOString()}`,
+    );
 
   const files = await listJsonlFiles(args.dir, args.sinceMs);
   console.log(`ingest-history: ${files.length} JSONL file(s) to process`);
 
-  let totalAdded = 0, totalSkipped = 0, totalErrored = 0;
+  let totalAdded = 0,
+    totalSkipped = 0,
+    totalErrored = 0;
   for (const file of files) {
     try {
       const r = await ingestJsonl(file, userId, projectIndex);
@@ -211,7 +241,9 @@ async function main() {
       console.error(`  ${file}: failed —`, (err as Error).message);
     }
   }
-  console.log(`\nDone. ${totalAdded} new event(s), ${totalSkipped} already in DB, ${totalErrored} malformed line(s).`);
+  console.log(
+    `\nDone. ${totalAdded} new event(s), ${totalSkipped} already in DB, ${totalErrored} malformed line(s).`,
+  );
   process.exit(0);
 }
 

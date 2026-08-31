@@ -31,12 +31,18 @@ async function main() {
   console.log(`\nentities TOTAL ${rows.length}`);
 
   const ups = await db
-    .select({ name: userProjects.name, entityId: userProjects.entityProjectId, dir: userProjects.dirPath })
+    .select({
+      name: userProjects.name,
+      entityId: userProjects.entityProjectId,
+      dir: userProjects.dirPath,
+    })
     .from(userProjects)
     .orderBy(userProjects.name);
   console.log("\nuser_projects:");
   for (const u of ups) {
-    console.log(`  ${u.name.padEnd(22)} entity=${u.entityId?.slice(0, 8) ?? "-".padEnd(8)} dir=${u.dir ?? "-"}`);
+    console.log(
+      `  ${u.name.padEnd(22)} entity=${u.entityId?.slice(0, 8) ?? "-".padEnd(8)} dir=${u.dir ?? "-"}`,
+    );
   }
   console.log(`user_projects TOTAL ${ups.length}`);
   process.exit(0);

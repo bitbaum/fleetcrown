@@ -47,7 +47,9 @@ export function ProjectsWorkspace({
 
   const [query, setQuery] = useState(() => searchParams.get("q") ?? "");
   const [debouncedQuery, setDebouncedQuery] = useState(query);
-  const [pageFilter, setPageFilter] = useState<ProjectsPageFilter>(() => parseFilter(searchParams.get("filter")));
+  const [pageFilter, setPageFilter] = useState<ProjectsPageFilter>(() =>
+    parseFilter(searchParams.get("filter")),
+  );
   const [listExpanded, setListExpanded] = useState(false);
 
   useEffect(() => {
@@ -89,7 +91,10 @@ export function ProjectsWorkspace({
     <div className="space-y-5">
       <div className="ui-projects-sticky-bar space-y-3">
         <div className="relative min-w-0">
-          <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" aria-hidden="true" />
+          <Search
+            className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary"
+            aria-hidden="true"
+          />
           <input
             type="search"
             placeholder="Search projects…"
@@ -130,8 +135,8 @@ export function ProjectsWorkspace({
           </EmptyState>
         ) : (
           <EmptyState icon={FolderKanban} title="No projects yet">
-            Register your first project with “New project” above — connect a repo and the fleet
-            can start working on it.
+            Register your first project with “New project” above — connect a repo and the fleet can
+            start working on it.
           </EmptyState>
         )
       ) : (
@@ -160,7 +165,6 @@ export function ProjectsWorkspace({
       )}
 
       <ProjectsCiPanel projects={projects} />
-
     </div>
   );
 }

@@ -60,8 +60,12 @@ export function ReadyBanner({
   const primaryKey = prompts.find((p) => p.style === "primary")?.key ?? "next_best";
   const onAutoInjectRef = useRef(onAutoInject);
   const onSendRef = useRef(onSend);
-  useEffect(() => { onAutoInjectRef.current = onAutoInject; }, [onAutoInject]);
-  useEffect(() => { onSendRef.current = onSend; }, [onSend]);
+  useEffect(() => {
+    onAutoInjectRef.current = onAutoInject;
+  }, [onAutoInject]);
+  useEffect(() => {
+    onSendRef.current = onSend;
+  }, [onSend]);
 
   useEffect(() => {
     let next = countdownSeconds;
@@ -98,13 +102,14 @@ export function ReadyBanner({
     return () => clearTimeout(id);
   }, [seconds, paused, autoContinueEnabled, primaryKey, tab]);
 
-  const timerLabel = inactiveLabel ?? (!autoContinueEnabled ? "Manual" : paused ? "Paused" : `${seconds}s`);
+  const timerLabel =
+    inactiveLabel ?? (!autoContinueEnabled ? "Manual" : paused ? "Paused" : `${seconds}s`);
 
   const nextLabel = healthBypass
     ? `AI picks recovery task — ${healthBypass.toLowerCase()}, queue paused`
     : nextQueueItem
-    ? `"${nextQueueItem.length > 52 ? nextQueueItem.slice(0, 50) + "…" : nextQueueItem}"${queueTotal > 1 ? ` · +${queueTotal - 1} more` : ""}`
-    : "Select the next instruction";
+      ? `"${nextQueueItem.length > 52 ? nextQueueItem.slice(0, 50) + "…" : nextQueueItem}"${queueTotal > 1 ? ` · +${queueTotal - 1} more` : ""}`
+      : "Select the next instruction";
 
   return (
     <div className="border-t border-status-positive/30 bg-status-positive/[0.06] px-5 py-4">
@@ -118,7 +123,11 @@ export function ReadyBanner({
           {onToggleAutoContinue && (
             <button
               onClick={onToggleAutoContinue}
-              title={autoContinueEnabled && !paused ? "Pause automatic continuation for this project" : "Allow automatic continuation for this project"}
+              title={
+                autoContinueEnabled && !paused
+                  ? "Pause automatic continuation for this project"
+                  : "Allow automatic continuation for this project"
+              }
               className={cn(
                 "ui-icon-btn rounded p-0.5 transition-colors",
                 paused || !autoContinueEnabled
@@ -126,12 +135,17 @@ export function ReadyBanner({
                   : "text-text-muted hover:text-text-secondary hover:bg-surface-overlay",
               )}
             >
-              {autoContinueEnabled && !paused
-                ? <Pause className="h-3.5 w-3.5" />
-                : <Play className="h-3.5 w-3.5" />}
+              {autoContinueEnabled && !paused ? (
+                <Pause className="h-3.5 w-3.5" />
+              ) : (
+                <Play className="h-3.5 w-3.5" />
+              )}
             </button>
           )}
-          <button onClick={onDismiss} className="inline-flex ui-tap items-center px-1 text-sm text-text-secondary transition-colors hover:text-text-primary">
+          <button
+            onClick={onDismiss}
+            className="inline-flex ui-tap items-center px-1 text-sm text-text-secondary transition-colors hover:text-text-primary"
+          >
             dismiss
           </button>
         </div>
@@ -143,23 +157,28 @@ export function ReadyBanner({
       </p>
       {dispatchReason && (
         <p className="mb-2 truncate font-mono text-micro text-text-muted/60">
-          <span className="mr-1">AI:</span>{dispatchReason}
+          <span className="mr-1">AI:</span>
+          {dispatchReason}
         </p>
       )}
 
       <div className="ui-control-intent-grid">
-        {prompts.filter((p) => p.style === "primary" || p.style === "action").map((p, i) => (
-          <button
-            key={p.key}
-            onClick={() => onSend(p.key)}
-            className={cn(PROMPT_STYLE[p.style] ?? PROMPT_STYLE.action)}
-          >
-            {p.icon} {p.label}
-            {showKeyHints && (
-              <span className="font-mono text-micro opacity-50 tabular-nums">[{p.slot ?? i + 1}]</span>
-            )}
-          </button>
-        ))}
+        {prompts
+          .filter((p) => p.style === "primary" || p.style === "action")
+          .map((p, i) => (
+            <button
+              key={p.key}
+              onClick={() => onSend(p.key)}
+              className={cn(PROMPT_STYLE[p.style] ?? PROMPT_STYLE.action)}
+            >
+              {p.icon} {p.label}
+              {showKeyHints && (
+                <span className="font-mono text-micro opacity-50 tabular-nums">
+                  [{p.slot ?? i + 1}]
+                </span>
+              )}
+            </button>
+          ))}
       </div>
     </div>
   );

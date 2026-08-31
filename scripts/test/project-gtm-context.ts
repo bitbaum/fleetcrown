@@ -11,7 +11,12 @@ process.env.DATABASE_URL ??= "postgres://unit:unit@localhost:5432/unit";
 let pass = 0;
 let fail = 0;
 function ok(cond: boolean, label: string) {
-  if (cond) { pass++; } else { fail++; console.error(`✗ ${label}`); }
+  if (cond) {
+    pass++;
+  } else {
+    fail++;
+    console.error(`✗ ${label}`);
+  }
 }
 
 async function main() {
@@ -54,27 +59,39 @@ async function main() {
     } as unknown as ProjectDossier;
   }
 
-  const rendered = renderProjectDossierForAgent(dossier({
-    mission: "Keep valuables out of the house",
-    distribution: "RSS + newsletter, OG cards on every share page",
-    gtm: "ICP: solo builders; first paying customer via OrangeCat top-ups",
-  }));
+  const rendered = renderProjectDossierForAgent(
+    dossier({
+      mission: "Keep valuables out of the house",
+      distribution: "RSS + newsletter, OG cards on every share page",
+      gtm: "ICP: solo builders; first paying customer via OrangeCat top-ups",
+    }),
+  );
   ok(/- Distribution: RSS \+ newsletter/.test(rendered), "dossier renders '- Distribution: …'");
   ok(/- Go-to-market: ICP: solo builders/.test(rendered), "dossier renders '- Go-to-market: …'");
-  ok(rendered.indexOf("## Profile") < rendered.indexOf("- Distribution:"), "both live in the Profile section");
+  ok(
+    rendered.indexOf("## Profile") < rendered.indexOf("- Distribution:"),
+    "both live in the Profile section",
+  );
 
   // ── The 9000-char prompt cap survives the new fields ─────────────────────
   const huge = renderProjectDossierForAgent(dossier({ gtm: "x".repeat(20_000) }));
   ok(huge.length <= 9000, `dossier stays capped at 9000 chars (got ${huge.length})`);
 
   // ── Brief extraction accepts both, at the same 500-char limit ────────────
-  ok(ExtractedProfileSchema.safeParse({ distribution: "RSS", gtm: "Solo builders" }).success,
-    "ExtractedProfileSchema accepts distribution + gtm");
-  ok(!ExtractedProfileSchema.safeParse({ distribution: "x".repeat(501) }).success,
-    "a 501-char distribution is rejected (FIELD_LIMIT holds)");
+  ok(
+    ExtractedProfileSchema.safeParse({ distribution: "RSS", gtm: "Solo builders" }).success,
+    "ExtractedProfileSchema accepts distribution + gtm",
+  );
+  ok(
+    !ExtractedProfileSchema.safeParse({ distribution: "x".repeat(501) }).success,
+    "a 501-char distribution is rejected (FIELD_LIMIT holds)",
+  );
 
   console.log(`${fail === 0 ? "✓" : "✗"} project-gtm-context: ${pass} passed, ${fail} failed`);
   process.exit(fail === 0 ? 0 : 1);
 }
 
-main().catch((e) => { console.error("FAIL:", e); process.exit(1); });
+main().catch((e) => {
+  console.error("FAIL:", e);
+  process.exit(1);
+});

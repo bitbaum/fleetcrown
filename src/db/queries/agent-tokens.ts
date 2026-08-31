@@ -30,9 +30,7 @@ export async function listAgentTokens(userId: string): Promise<AgentToken[]> {
 }
 
 export async function deleteAgentToken(id: string, userId: string): Promise<void> {
-  await db.delete(agentTokens).where(
-    and(eq(agentTokens.id, id), eq(agentTokens.userId, userId)),
-  );
+  await db.delete(agentTokens).where(and(eq(agentTokens.id, id), eq(agentTokens.userId, userId)));
 }
 
 /**
@@ -106,7 +104,9 @@ export async function deleteStaleEventStreamTokens(
 }
 
 /** Validates a bearer token and returns the associated userId, or null if invalid/expired. */
-export async function validateAgentToken(token: string): Promise<{ userId: string; orgId: string | null } | null> {
+export async function validateAgentToken(
+  token: string,
+): Promise<{ userId: string; orgId: string | null } | null> {
   const now = new Date();
   const [row] = await db
     .select({ id: agentTokens.id, userId: agentTokens.userId, orgId: agentTokens.orgId })

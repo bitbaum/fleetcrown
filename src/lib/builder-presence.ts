@@ -106,8 +106,10 @@ export function inferBuilderChannelPresence(input: {
   localConnected?: boolean | null;
   runnerVersion?: string | null;
 }): BuilderChannelPresence {
-  const cloud = input.cloudConnected ?? (input.connected && isCloudRunnerVersion(input.runnerVersion));
-  const local = input.localConnected ?? (input.connected && !isCloudRunnerVersion(input.runnerVersion));
+  const cloud =
+    input.cloudConnected ?? (input.connected && isCloudRunnerVersion(input.runnerVersion));
+  const local =
+    input.localConnected ?? (input.connected && !isCloudRunnerVersion(input.runnerVersion));
   return { cloud: !!cloud, local: !!local, any: !!(cloud || local) };
 }
 

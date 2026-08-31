@@ -23,7 +23,9 @@ const ATTENTION_KEYS = [
   PROJECT_ATTR.DEPLOYMENT_ISSUE,
 ] as const;
 
-export function hasProjectAttention(project: Pick<ProjectGridRow, "attrs" | "liveUrl" | "siteOk">): boolean {
+export function hasProjectAttention(
+  project: Pick<ProjectGridRow, "attrs" | "liveUrl" | "siteOk">,
+): boolean {
   return ATTENTION_KEYS.some((k) => Boolean(project.attrs[k])) || isSiteDown(project);
 }
 
@@ -77,4 +79,3 @@ export function filterProjects(
     return a.name.localeCompare(b.name);
   });
 }
-

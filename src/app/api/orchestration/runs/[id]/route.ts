@@ -6,10 +6,7 @@ import { getApiUserId } from "@/lib/session";
 // GET /api/orchestration/runs/:id - live status for direct Loki dispatches.
 // The run query is user-scoped so a guessed UUID cannot expose another
 // operator's execution state.
-export async function GET(
-  _req: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const userId = await getApiUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

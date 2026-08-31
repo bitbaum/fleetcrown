@@ -1,4 +1,14 @@
-import { Inbox, Send, Calendar, CheckCircle, MessageCircle, Rocket, Check, X, Users } from "lucide-react";
+import {
+  Inbox,
+  Send,
+  Calendar,
+  CheckCircle,
+  MessageCircle,
+  Rocket,
+  Check,
+  X,
+  Users,
+} from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { getPendingActions, getRecentActions, type ActionRow } from "@/db/queries/actions";
 import { requirePageUserId } from "@/lib/session";
@@ -15,16 +25,16 @@ import { CHECKIN_TITLE_PREFIX } from "@/lib/actions/checkin-proposal";
 import { compactRelativeDate } from "@/lib/dates";
 
 const TYPE_ICONS: Record<ActionType, typeof Send> = {
-  [ACTION_TYPE.SEND_MESSAGE]:      MessageCircle,
-  [ACTION_TYPE.SEND_EMAIL]:        Send,
-  [ACTION_TYPE.CREATE_EVENT]:      Calendar,
+  [ACTION_TYPE.SEND_MESSAGE]: MessageCircle,
+  [ACTION_TYPE.SEND_EMAIL]: Send,
+  [ACTION_TYPE.CREATE_EVENT]: Calendar,
   [ACTION_TYPE.CREATE_COMMITMENT]: CheckCircle,
-  [ACTION_TYPE.FOLLOW_UP]:         MessageCircle,
-  [ACTION_TYPE.DISPATCH_PROMPT]:   Rocket,
-  [ACTION_TYPE.IMPORT_PERSON]:     Users,
-  [ACTION_TYPE.ENRICH_PERSON]:     Users,
-  [ACTION_TYPE.MERGE_PEOPLE]:      Users,
-  [ACTION_TYPE.OTHER]:             Inbox,
+  [ACTION_TYPE.FOLLOW_UP]: MessageCircle,
+  [ACTION_TYPE.DISPATCH_PROMPT]: Rocket,
+  [ACTION_TYPE.IMPORT_PERSON]: Users,
+  [ACTION_TYPE.ENRICH_PERSON]: Users,
+  [ACTION_TYPE.MERGE_PEOPLE]: Users,
+  [ACTION_TYPE.OTHER]: Inbox,
 };
 
 type ActionGroup = {
@@ -95,16 +105,16 @@ export async function ActionQueueCard({
     getPendingActions(userId),
     getRecentActions(userId, 5),
   ]);
-  const linkedIds = pending
-    .filter((a) => a.entityId)
-    .map((a) => a.entityId as string);
+  const linkedIds = pending.filter((a) => a.entityId).map((a) => a.entityId as string);
   const people = await getPeopleSummaries(userId, linkedIds);
   const resolvedByAction = new Map<string, PersonSummary>();
   for (const a of pending) {
     if (a.entityId) continue;
     if (a.type !== ACTION_TYPE.SEND_MESSAGE && a.type !== ACTION_TYPE.SEND_EMAIL) continue;
     const hint = typeof a.payload?.to === "string" ? a.payload.to : "";
-    const hit = await resolvePersonToReach(userId, hint || undefined, `${hint} ${a.title}`).catch(() => null);
+    const hit = await resolvePersonToReach(userId, hint || undefined, `${hint} ${a.title}`).catch(
+      () => null,
+    );
     if (!hit) continue;
     resolvedByAction.set(a.id, {
       id: hit.id,
@@ -124,13 +134,22 @@ export async function ActionQueueCard({
           <CardHeader icon={Inbox} title="Action Queue" />
           <div className="space-y-1.5">
             {recent.map((action) => {
-              const done = action.status === ACTION_STATUS.APPROVED || action.status === ACTION_STATUS.EXECUTED;
+              const done =
+                action.status === ACTION_STATUS.APPROVED ||
+                action.status === ACTION_STATUS.EXECUTED;
               return (
                 <div key={action.id} className="flex items-center gap-3 px-1 py-1 rounded">
-                  {done
-                    ? <Check className="h-3.5 w-3.5 text-status-positive shrink-0" />
-                    : <X className="h-3.5 w-3.5 text-text-muted shrink-0" />}
-                  <span className="flex-1 truncate text-sm text-text-secondary" title={action.title}>{action.title}</span>
+                  {done ? (
+                    <Check className="h-3.5 w-3.5 text-status-positive shrink-0" />
+                  ) : (
+                    <X className="h-3.5 w-3.5 text-text-muted shrink-0" />
+                  )}
+                  <span
+                    className="flex-1 truncate text-sm text-text-secondary"
+                    title={action.title}
+                  >
+                    {action.title}
+                  </span>
                   {action.reviewedAt && (
                     <span className="text-xs text-text-tertiary shrink-0">
                       {compactRelativeDate(action.reviewedAt)}
@@ -180,16 +199,24 @@ export async function ActionQueueCard({
               );
             }
 
-            if (action.type === ACTION_TYPE.SEND_MESSAGE || action.type === ACTION_TYPE.SEND_EMAIL) {
-              const person = (action.entityId ? people.get(action.entityId) : undefined)
-                ?? resolvedByAction.get(action.id);
-              const name = person?.name ?? (typeof payload?.to === "string" ? payload.to : action.title);
+            if (
+              action.type === ACTION_TYPE.SEND_MESSAGE ||
+              action.type === ACTION_TYPE.SEND_EMAIL
+            ) {
+              const person =
+                (action.entityId ? people.get(action.entityId) : undefined) ??
+                resolvedByAction.get(action.id);
+              const name =
+                person?.name ?? (typeof payload?.to === "string" ? payload.to : action.title);
               const channel = typeof payload?.channel === "string" ? payload.channel : null;
               const address =
                 typeof payload?.address === "string"
                   ? payload.address
                   : person
-                    ? (person.attrs["channel:whatsapp"] ?? person.attrs["channel:email"] ?? person.attrs["channel:phone"] ?? null)
+                    ? (person.attrs["channel:whatsapp"] ??
+                      person.attrs["channel:email"] ??
+                      person.attrs["channel:phone"] ??
+                      null)
                     : null;
               return (
                 <div
@@ -223,7 +250,8 @@ export async function ActionQueueCard({
 
                     {payload?.to != null && (
                       <div className="text-xs md:text-sm text-text-tertiary mt-0.5">
-                        {"To: "}{String(payload.to)}
+                        {"To: "}
+                        {String(payload.to)}
                         {payload.channel != null ? ` via ${String(payload.channel)}` : ""}
                       </div>
                     )}
@@ -231,9 +259,12 @@ export async function ActionQueueCard({
                     {/* Calendar events: show when/where so nothing is approved blind. */}
                     {(payload?.eventStart != null || payload?.eventDate != null) && (
                       <div className="text-xs md:text-sm text-text-tertiary mt-0.5">
-                        {"When: "}{String(payload.eventStart ?? payload.eventDate)}
+                        {"When: "}
+                        {String(payload.eventStart ?? payload.eventDate)}
                         {payload?.eventEnd != null ? ` – ${String(payload.eventEnd)}` : ""}
-                        {payload?.eventLocation != null ? ` · ${String(payload.eventLocation)}` : ""}
+                        {payload?.eventLocation != null
+                          ? ` · ${String(payload.eventLocation)}`
+                          : ""}
                       </div>
                     )}
 
@@ -249,7 +280,8 @@ export async function ActionQueueCard({
                         <div className="px-2 pb-2">
                           {payload?.subject != null && (
                             <div className="text-xs font-medium text-text-secondary mb-1">
-                              {"Subject: "}{String(payload.subject)}
+                              {"Subject: "}
+                              {String(payload.subject)}
                             </div>
                           )}
                           <pre className="text-xs text-text-secondary whitespace-pre-wrap">

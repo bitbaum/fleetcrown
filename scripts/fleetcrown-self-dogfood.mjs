@@ -61,13 +61,19 @@ async function loginLocal(page) {
   const ownerTab = page.getByRole("button", { name: /owner key/i });
   if (await ownerTab.count()) await ownerTab.click({ force: true, timeout: 10_000 });
   await page.locator('input[type="password"]').first().fill(pw);
-  await page.getByRole("button", { name: /sign in|continue|unlock/i }).last().click();
+  await page
+    .getByRole("button", { name: /sign in|continue|unlock/i })
+    .last()
+    .click();
   await Promise.race([
     page.waitForURL((url) => !url.pathname.startsWith("/sign-in"), { timeout: 30_000 }),
-    page.locator(".ui-error").waitFor({ state: "visible", timeout: 30_000 }).then(async () => {
-      const error = await page.locator(".ui-error").first().textContent();
-      throw new Error(`Owner-key sign-in failed: ${error?.trim() || "unknown error"}`);
-    }),
+    page
+      .locator(".ui-error")
+      .waitFor({ state: "visible", timeout: 30_000 })
+      .then(async () => {
+        const error = await page.locator(".ui-error").first().textContent();
+        throw new Error(`Owner-key sign-in failed: ${error?.trim() || "unknown error"}`);
+      }),
   ]);
 }
 
@@ -99,13 +105,19 @@ async function loginEmailPasswordIfConfigured(page, callbackUrl = "/control") {
   await gotoPage(page, `${base}/sign-in?callbackUrl=${encodeURIComponent(callbackUrl)}`);
   await page.locator('input[type="email"]').first().fill(email);
   await page.locator('input[type="password"]').first().fill(password);
-  await page.getByRole("button", { name: /sign in/i }).last().click();
+  await page
+    .getByRole("button", { name: /sign in/i })
+    .last()
+    .click();
   await Promise.race([
     page.waitForURL((url) => !url.pathname.startsWith("/sign-in"), { timeout: 30_000 }),
-    page.locator(".ui-error").waitFor({ state: "visible", timeout: 30_000 }).then(async () => {
-      const error = await page.locator(".ui-error").first().textContent();
-      throw new Error(`Email/password sign-in failed: ${error?.trim() || "unknown error"}`);
-    }),
+    page
+      .locator(".ui-error")
+      .waitFor({ state: "visible", timeout: 30_000 })
+      .then(async () => {
+        const error = await page.locator(".ui-error").first().textContent();
+        throw new Error(`Email/password sign-in failed: ${error?.trim() || "unknown error"}`);
+      }),
   ]);
   return true;
 }
@@ -123,7 +135,12 @@ async function gotoPage(page, url, waitUntil = "domcontentloaded", timeout = 60_
   logStep(`goto ${url}`);
   await Promise.race([
     page.goto(url, { waitUntil, timeout }),
-    new Promise((_, reject) => setTimeout(() => reject(new Error(`Navigation timed out after ${timeout}ms: ${url}`)), timeout)),
+    new Promise((_, reject) =>
+      setTimeout(
+        () => reject(new Error(`Navigation timed out after ${timeout}ms: ${url}`)),
+        timeout,
+      ),
+    ),
   ]);
 }
 
@@ -140,7 +157,9 @@ try {
     context = await chromium.launch({
       headless,
       slowMo,
-      executablePath: fs.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : undefined,
+      executablePath: fs.existsSync("/usr/bin/google-chrome")
+        ? "/usr/bin/google-chrome"
+        : undefined,
     });
     const page = await context.newPage({ viewport: { width: 1440, height: 900 } });
     activePage = page;
@@ -151,16 +170,25 @@ try {
     await page.goto(`${base}/control`, { waitUntil: "domcontentloaded" });
     await page.waitForTimeout(2000);
     const controlAudit = await page.evaluate(() => ({
-      builderLabel: document.querySelector(".ui-control-fleet-status, [class*='FleetStatus']")?.textContent?.trim().slice(0, 80) ?? null,
-      fleetcrownCard: [...document.querySelectorAll("article, [data-project]")].find((el) =>
-        el.textContent?.toLowerCase().includes("fleetcrown"),
-      )?.textContent?.trim().slice(0, 120) ?? null,
+      builderLabel:
+        document
+          .querySelector(".ui-control-fleet-status, [class*='FleetStatus']")
+          ?.textContent?.trim()
+          .slice(0, 80) ?? null,
+      fleetcrownCard:
+        [...document.querySelectorAll("article, [data-project]")]
+          .find((el) => el.textContent?.toLowerCase().includes("fleetcrown"))
+          ?.textContent?.trim()
+          .slice(0, 120) ?? null,
     }));
     report.steps.push({ step: "control", audit: controlAudit });
     report.shots.push(await shot(page, "01-control", "Control — fleet + fleetcrown card"));
 
     // ── 2. Loki — dispatch move forward ──
-    await page.goto(`${base}/loki?project=${encodeURIComponent(project)}`, { waitUntil: "domcontentloaded", timeout: 60_000 });
+    await page.goto(`${base}/loki?project=${encodeURIComponent(project)}`, {
+      waitUntil: "domcontentloaded",
+      timeout: 60_000,
+    });
     await page.waitForSelector(".ui-loki-composer-input", { timeout: 60_000 });
     await page.waitForFunction(
       (name) => {
@@ -172,39 +200,63 @@ try {
     );
 
     const sendResponse = page.waitForResponse(
-      (res) => res.request().method() === "POST" && /\/api\/conversations\/[^/]+\/messages$/.test(new URL(res.url()).pathname),
+      (res) =>
+        res.request().method() === "POST" &&
+        /\/api\/conversations\/[^/]+\/messages$/.test(new URL(res.url()).pathname),
       { timeout: 120_000 },
     );
     await page.getByRole("button", { name: "Move forward", exact: true }).click();
     const messageResponse = await sendResponse.catch(() => null);
-    const gotDispatch = Boolean(messageResponse?.ok()) && await page
-      .waitForSelector(".ui-loki-dispatch-card, .ui-loki-kind", { timeout: 30_000 })
-      .then(() => true)
-      .catch(() => false);
+    const gotDispatch =
+      Boolean(messageResponse?.ok()) &&
+      (await page
+        .waitForSelector(".ui-loki-dispatch-card, .ui-loki-kind", { timeout: 30_000 })
+        .then(() => true)
+        .catch(() => false));
     await page.waitForTimeout(1500);
     let lokiAudit = { kind: null, status: null, links: [], bubble: null };
     if (!gotDispatch) {
-      note("loki-send", "high", "Loki Send did not produce dispatch footer within 120s", "Check GROQ_API_KEY, network, or composer disabled state");
+      note(
+        "loki-send",
+        "high",
+        "Loki Send did not produce dispatch footer within 120s",
+        "Check GROQ_API_KEY, network, or composer disabled state",
+      );
       report.shots.push(await shot(page, "03-loki-timeout", "Loki — send hung or failed"));
     } else {
       lokiAudit = await page.evaluate(() => {
         const foot = document.querySelector(".ui-loki-dispatch-card");
         return {
           kind: document.querySelector(".ui-loki-kind")?.textContent?.trim(),
-          status: foot?.querySelector(".ui-loki-dispatch-status span:nth-of-type(2)")?.textContent?.trim(),
+          status: foot
+            ?.querySelector(".ui-loki-dispatch-status span:nth-of-type(2)")
+            ?.textContent?.trim(),
           links: foot ? [...foot.querySelectorAll("a")].map((a) => a.textContent?.trim()) : [],
-          bubble: document.querySelector(".ui-loki-bubble-assistant:last-of-type")?.textContent?.trim().slice(0, 200),
+          bubble: document
+            .querySelector(".ui-loki-bubble-assistant:last-of-type")
+            ?.textContent?.trim()
+            .slice(0, 200),
         };
       });
       report.shots.push(await shot(page, "03-loki-dispatch", "Loki — after Move forward dispatch"));
     }
     report.steps.push({ step: "loki-dispatch", audit: lokiAudit });
     if (gotDispatch && /failed|error|unconfirmed|not sent/i.test(lokiAudit.status ?? "")) {
-      note("loki-dispatch-outcome", "high", `Loki reported ${lokiAudit.status}`, "Pick an open project session or fix the dispatch path before calling dogfood successful");
+      note(
+        "loki-dispatch-outcome",
+        "high",
+        `Loki reported ${lokiAudit.status}`,
+        "Pick an open project session or fix the dispatch path before calling dogfood successful",
+      );
     }
 
     if (lokiAudit.status?.includes("runs when the builder is online")) {
-      note("presence", "high", "Dispatch footer still says builder offline on localhost", "Local dev has no box-runner; copy should say cloud-only or link to prod");
+      note(
+        "presence",
+        "high",
+        "Dispatch footer still says builder offline on localhost",
+        "Local dev has no box-runner; copy should say cloud-only or link to prod",
+      );
     }
 
     // ── 3. Terminal Cloud ──
@@ -215,32 +267,49 @@ try {
       await page.waitForTimeout(2000);
       const termAudit = await page.evaluate(() => ({
         url: location.href,
-        tabLabel: document.querySelector(".ui-terminal-tab-active, [class*='tab']")?.textContent?.trim().slice(0, 40),
+        tabLabel: document
+          .querySelector(".ui-terminal-tab-active, [class*='tab']")
+          ?.textContent?.trim()
+          .slice(0, 40),
         hasAgentOutput: Boolean(document.querySelector(".xterm-rows, .xterm-screen")),
         bodyPreview: document.body.innerText.slice(0, 300),
       }));
       report.steps.push({ step: "terminal", audit: termAudit });
       report.shots.push(await shot(page, "04-terminal-cloud", "Terminal → Cloud"));
-      if (!termAudit.url.includes(project) && !termAudit.bodyPreview?.toLowerCase().includes(project)) {
-        note("terminal-tab", "high", "Terminal Cloud did not focus fleetcrown agent session", "Deep-link tab= should open box-runner PTY for that project, not generic bash");
+      if (
+        !termAudit.url.includes(project) &&
+        !termAudit.bodyPreview?.toLowerCase().includes(project)
+      ) {
+        note(
+          "terminal-tab",
+          "high",
+          "Terminal Cloud did not focus fleetcrown agent session",
+          "Deep-link tab= should open box-runner PTY for that project, not generic bash",
+        );
       }
     }
 
     // ── 4. Projects — fleetcrown profile ──
     await page.goto(`${base}/projects`, { waitUntil: "domcontentloaded" });
     await page.waitForTimeout(1500);
-    const fleetRow = page.locator(".ui-projects-row, article.ui-projects-card").filter({ hasText: new RegExp(project, "i") }).first();
+    const fleetRow = page
+      .locator(".ui-projects-row, article.ui-projects-card")
+      .filter({ hasText: new RegExp(project, "i") })
+      .first();
     if (await fleetRow.count()) await fleetRow.click();
     await page.waitForTimeout(1000);
     report.shots.push(await shot(page, "05-projects-fleetcrown", "Projects — fleetcrown detail"));
-
   } else {
-    const hasDogfoodCredentials = Boolean(process.env.DOGFOOD_EMAIL && process.env.DOGFOOD_PASSWORD);
+    const hasDogfoodCredentials = Boolean(
+      process.env.DOGFOOD_EMAIL && process.env.DOGFOOD_PASSWORD,
+    );
     if (hasDogfoodCredentials) {
       context = await chromium.launch({
         headless,
         slowMo,
-        executablePath: fs.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : undefined,
+        executablePath: fs.existsSync("/usr/bin/google-chrome")
+          ? "/usr/bin/google-chrome"
+          : undefined,
       });
     } else {
       profileDir = copyBraveProfile();
@@ -252,9 +321,10 @@ try {
         viewport: { width: 1440, height: 900 },
       });
     }
-    const page = "newPage" in context
-      ? await context.newPage({ viewport: { width: 1440, height: 900 } })
-      : (context.pages()[0] ?? (await context.newPage()));
+    const page =
+      "newPage" in context
+        ? await context.newPage({ viewport: { width: 1440, height: 900 } })
+        : (context.pages()[0] ?? (await context.newPage()));
     activePage = page;
     if (hasDogfoodCredentials) {
       await loginEmailPasswordIfConfigured(page, "/control");
@@ -269,37 +339,63 @@ try {
     await gotoPage(page, `${base}/loki?project=${encodeURIComponent(project)}`);
     await page.waitForSelector(".ui-loki-composer-input", { timeout: 60_000 });
     await page.waitForFunction(
-      (name) => document.querySelector(".ui-loki-scope-pill")?.textContent?.trim().toLowerCase().includes(name),
+      (name) =>
+        document
+          .querySelector(".ui-loki-scope-pill")
+          ?.textContent?.trim()
+          .toLowerCase()
+          .includes(name),
       project.toLowerCase(),
       { timeout: 30_000 },
     );
     report.shots.push(await shot(page, "02-loki-prod", "Prod Loki scoped"));
     const sendResponse = page.waitForResponse(
-      (res) => res.request().method() === "POST" && /\/api\/conversations\/[^/]+\/messages$/.test(new URL(res.url()).pathname),
+      (res) =>
+        res.request().method() === "POST" &&
+        /\/api\/conversations\/[^/]+\/messages$/.test(new URL(res.url()).pathname),
       { timeout: 120_000 },
     );
     await page.getByRole("button", { name: "Move forward", exact: true }).click();
     const messageResponse = await sendResponse.catch(() => null);
-    const gotDispatch = Boolean(messageResponse?.ok()) && await page
-      .waitForSelector(".ui-loki-dispatch-card, .ui-loki-kind, .ui-error", { timeout: 30_000 })
-      .then(() => true)
-      .catch(() => false);
+    const gotDispatch =
+      Boolean(messageResponse?.ok()) &&
+      (await page
+        .waitForSelector(".ui-loki-dispatch-card, .ui-loki-kind, .ui-error", { timeout: 30_000 })
+        .then(() => true)
+        .catch(() => false));
     await page.waitForTimeout(2000);
     let lokiAudit = { status: null, bubble: null };
     if (!gotDispatch) {
-      const status = messageResponse ? `${messageResponse.status()} ${messageResponse.statusText()}` : "no response";
-      note("loki-send", "high", `Prod Loki send did not return a successful dispatch footer (${status})`, "Check /api/conversations messages route and dispatch resolver logs");
+      const status = messageResponse
+        ? `${messageResponse.status()} ${messageResponse.statusText()}`
+        : "no response";
+      note(
+        "loki-send",
+        "high",
+        `Prod Loki send did not return a successful dispatch footer (${status})`,
+        "Check /api/conversations messages route and dispatch resolver logs",
+      );
       report.shots.push(await shot(page, "03-loki-timeout-prod", "Prod Loki timeout"));
     } else {
       lokiAudit = await page.evaluate(() => ({
-        status: document.querySelector(".ui-loki-dispatch-card .ui-loki-dispatch-status span:nth-of-type(2)")?.textContent?.trim(),
-        bubble: document.querySelector(".ui-loki-bubble-assistant:last-of-type")?.textContent?.trim().slice(0, 200),
+        status: document
+          .querySelector(".ui-loki-dispatch-card .ui-loki-dispatch-status span:nth-of-type(2)")
+          ?.textContent?.trim(),
+        bubble: document
+          .querySelector(".ui-loki-bubble-assistant:last-of-type")
+          ?.textContent?.trim()
+          .slice(0, 200),
       }));
       report.shots.push(await shot(page, "03-loki-dispatch-prod", "Prod dispatch"));
     }
     report.steps.push({ step: "loki-dispatch", audit: lokiAudit });
     if (gotDispatch && /failed|error|unconfirmed|not sent/i.test(lokiAudit.status ?? "")) {
-      note("loki-dispatch-outcome", "high", `Prod Loki reported ${lokiAudit.status}`, "Fix the live dispatch path before calling dogfood successful");
+      note(
+        "loki-dispatch-outcome",
+        "high",
+        `Prod Loki reported ${lokiAudit.status}`,
+        "Fix the live dispatch path before calling dogfood successful",
+      );
     }
 
     const cloud = page.getByRole("link", { name: /Cloud terminal/i });
@@ -321,9 +417,20 @@ try {
       };
     });
     report.steps.push({ step: "control-api", audit: api });
-    if (!api.runnerConnected) note("presence", "high", "Control API reports no connected builder while box-runner may be up", "Check bridge SSE + userId on runner_presence");
+    if (!api.runnerConnected)
+      note(
+        "presence",
+        "high",
+        "Control API reports no connected builder while box-runner may be up",
+        "Check bridge SSE + userId on runner_presence",
+      );
     if (lokiAudit.status?.includes("runs when the builder is online")) {
-      note("dispatch-copy", "medium", "Still showing offline copy on prod after f755b4f", "Verify runnerConnected passed in inject response");
+      note(
+        "dispatch-copy",
+        "medium",
+        "Still showing offline copy on prod after f755b4f",
+        "Verify runnerConnected passed in inject response",
+      );
     }
   }
 
@@ -331,11 +438,18 @@ try {
   report.shotDir = outDir;
   const dispatchStep = report.steps.find((step) => step.step === "loki-dispatch");
   const dispatchStatus = dispatchStep?.audit?.status ?? "";
-  report.ok = Boolean(dispatchStep)
-    && !/(failed|error|unconfirmed|not sent)/i.test(dispatchStatus)
-    && !weaknesses.some((weakness) => weakness.severity === "high");
+  report.ok =
+    Boolean(dispatchStep) &&
+    !/(failed|error|unconfirmed|not sent)/i.test(dispatchStatus) &&
+    !weaknesses.some((weakness) => weakness.severity === "high");
   fs.writeFileSync(path.join(outDir, "report.json"), JSON.stringify(report, null, 2));
-  console.log(JSON.stringify({ ok: report.ok, shotDir: outDir, weaknesses, steps: report.steps.map((s) => s.step) }, null, 2));
+  console.log(
+    JSON.stringify(
+      { ok: report.ok, shotDir: outDir, weaknesses, steps: report.steps.map((s) => s.step) },
+      null,
+      2,
+    ),
+  );
   if (!report.ok) process.exitCode = 1;
 } catch (err) {
   report.error = String(err?.stack ?? err);

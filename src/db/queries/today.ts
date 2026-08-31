@@ -4,35 +4,75 @@ import {
   EVENTS_DUE_SOON_DAYS,
   SUBSCRIPTIONS_UPCOMING_DAYS,
 } from "@/lib/constants";
-import { STALE_GOALS_DAYS, STUCK_GOALS_LIMIT, RECENT_RUNS_HOURS, RECENT_RUNS_LIMIT } from "@/lib/constants/today";
+import {
+  STALE_GOALS_DAYS,
+  STUCK_GOALS_LIMIT,
+  RECENT_RUNS_HOURS,
+  RECENT_RUNS_LIMIT,
+} from "@/lib/constants/today";
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
 import { BOOK_ACTION_TYPES } from "@/config/book";
 import { db } from "@/db";
-import { commitments, subscriptions, goals, alerts, actions, events, projectStates, orchestrationRuns, entities, promptHistory } from "@/db/schema";
+import {
+  commitments,
+  subscriptions,
+  goals,
+  alerts,
+  actions,
+  events,
+  projectStates,
+  orchestrationRuns,
+  entities,
+  promptHistory,
+} from "@/db/schema";
 import { eq, and, lt, lte, isNotNull, gte, desc, sql, notInArray } from "drizzle-orm";
 import { HEALTH_FADING_DAYS } from "@/lib/constants/people";
-import { GOAL_STATUS, SUB_STATUS, COMMITMENT_STATUS, ACTION_STATUS, ALERT_SEVERITY, EVENT_STATUS, HABIT_FREQUENCY } from "@/lib/constants/statuses";
-import { READY_WINDOW_S, PROMPT_RUNNING_WINDOW_S, getHealthShort, isHealthPoor } from "@/lib/constants/control";
+import {
+  GOAL_STATUS,
+  SUB_STATUS,
+  COMMITMENT_STATUS,
+  ACTION_STATUS,
+  ALERT_SEVERITY,
+  EVENT_STATUS,
+  HABIT_FREQUENCY,
+} from "@/lib/constants/statuses";
+import {
+  READY_WINDOW_S,
+  PROMPT_RUNNING_WINDOW_S,
+  getHealthShort,
+  isHealthPoor,
+} from "@/lib/constants/control";
 import { toPromptDisplayFields } from "@/lib/activity-status";
 import { z } from "zod";
 import { DAY_MS, HOUR_MS } from "@/lib/constants/time";
 
 export const CreateCommitmentBody = z.object({
   description: z.string().trim().min(1, "description is required"),
-  dueDate: z.string().refine((s) => !Number.isNaN(new Date(s).getTime()), "Invalid date").optional(),
+  dueDate: z
+    .string()
+    .refine((s) => !Number.isNaN(new Date(s).getTime()), "Invalid date")
+    .optional(),
   financialImpact: z.string().trim().optional(),
 });
 
 export const PatchCommitmentBody = z.object({
   description: z.string().trim().min(1, "description cannot be empty").optional(),
-  dueDate: z.string().refine((s) => !Number.isNaN(new Date(s).getTime()), "Invalid date").nullable().optional(),
+  dueDate: z
+    .string()
+    .refine((s) => !Number.isNaN(new Date(s).getTime()), "Invalid date")
+    .nullable()
+    .optional(),
   financialImpact: z.string().nullable().optional(),
 });
 
 export type CreateCommitmentInput = z.infer<typeof CreateCommitmentBody>;
 type PatchCommitmentInput = z.infer<typeof PatchCommitmentBody>;
 
-export async function createCommitment(userId: string, data: CreateCommitmentInput, source?: string) {
+export async function createCommitment(
+  userId: string,
+  data: CreateCommitmentInput,
+  source?: string,
+) {
   const [created] = await db
     .insert(commitments)
     .values({
@@ -51,7 +91,8 @@ export async function patchCommitment(userId: string, id: string, data: PatchCom
   const patch: Partial<typeof commitments.$inferInsert> = { updatedAt: new Date() };
   if (data.description !== undefined) patch.description = data.description;
   if (data.dueDate !== undefined) patch.dueDate = data.dueDate ? new Date(data.dueDate) : null;
-  if (data.financialImpact !== undefined) patch.financialImpact = data.financialImpact?.trim() || null;
+  if (data.financialImpact !== undefined)
+    patch.financialImpact = data.financialImpact?.trim() || null;
   const [updated] = await db
     .update(commitments)
     .set(patch)
@@ -96,12 +137,7 @@ export async function getActiveCommitments(userId: string) {
   return db
     .select()
     .from(commitments)
-    .where(
-      and(
-        eq(commitments.userId, userId),
-        eq(commitments.status, COMMITMENT_STATUS.ACTIVE),
-      ),
-    )
+    .where(and(eq(commitments.userId, userId), eq(commitments.status, COMMITMENT_STATUS.ACTIVE)))
     .orderBy(commitments.dueDate);
 }
 
@@ -117,12 +153,14 @@ export async function getGoalsDueSoon(userId: string, days = GOALS_DUE_SOON_DAYS
       targetDate: goals.targetDate,
     })
     .from(goals)
-    .where(and(
-      eq(goals.userId, userId),
-      eq(goals.status, GOAL_STATUS.ACTIVE),
-      isNotNull(goals.targetDate),
-      lte(goals.targetDate, soon),
-    ))
+    .where(
+      and(
+        eq(goals.userId, userId),
+        eq(goals.status, GOAL_STATUS.ACTIVE),
+        isNotNull(goals.targetDate),
+        lte(goals.targetDate, soon),
+      ),
+    )
     .orderBy(goals.targetDate);
 }
 
@@ -178,41 +216,55 @@ export async function getTodaySummary(userId: string) {
     db
       .select({ count: sql<number>`count(*)` })
       .from(alerts)
-      .where(and(eq(alerts.userId, userId), eq(alerts.dismissed, false), eq(alerts.severity, ALERT_SEVERITY.URGENT))),
+      .where(
+        and(
+          eq(alerts.userId, userId),
+          eq(alerts.dismissed, false),
+          eq(alerts.severity, ALERT_SEVERITY.URGENT),
+        ),
+      ),
     db
       .select({ drafts: sql<number>`count(*)` })
       .from(actions)
-      .where(and(
-        eq(actions.userId, userId),
-        eq(actions.status, ACTION_STATUS.DRAFT),
-        notInArray(actions.type, [...BOOK_ACTION_TYPES]),
-      )),
+      .where(
+        and(
+          eq(actions.userId, userId),
+          eq(actions.status, ACTION_STATUS.DRAFT),
+          notInArray(actions.type, [...BOOK_ACTION_TYPES]),
+        ),
+      ),
     db
       .select({ count: sql<number>`count(*)` })
       .from(commitments)
-      .where(and(
-        eq(commitments.userId, userId),
-        eq(commitments.status, COMMITMENT_STATUS.ACTIVE),
-        lte(commitments.dueDate, new Date()),
-      )),
+      .where(
+        and(
+          eq(commitments.userId, userId),
+          eq(commitments.status, COMMITMENT_STATUS.ACTIVE),
+          lte(commitments.dueDate, new Date()),
+        ),
+      ),
     db
       .select({ count: sql<number>`count(*)` })
       .from(goals)
-      .where(and(
-        eq(goals.userId, userId),
-        eq(goals.status, GOAL_STATUS.ACTIVE),
-        isNotNull(goals.targetDate),
-        lte(goals.targetDate, goalsSoon),
-      )),
+      .where(
+        and(
+          eq(goals.userId, userId),
+          eq(goals.status, GOAL_STATUS.ACTIVE),
+          isNotNull(goals.targetDate),
+          lte(goals.targetDate, goalsSoon),
+        ),
+      ),
     db
       .select({ count: sql<number>`count(*)` })
       .from(events)
-      .where(and(
-        eq(events.userId, userId),
-        eq(events.status, EVENT_STATUS.ACTIVE),
-        isNotNull(events.deadline),
-        lte(events.deadline, eventsSoon),
-      )),
+      .where(
+        and(
+          eq(events.userId, userId),
+          eq(events.status, EVENT_STATUS.ACTIVE),
+          isNotNull(events.deadline),
+          lte(events.deadline, eventsSoon),
+        ),
+      ),
     db.execute<{ total: string; done: string }>(sql`
       SELECT
         count(*)::text AS total,
@@ -243,15 +295,19 @@ export async function getTodaySummary(userId: string) {
     db
       .select({ count: sql<number>`count(*)` })
       .from(goals)
-      .where(and(
-        eq(goals.userId, userId),
-        eq(goals.status, GOAL_STATUS.ACTIVE),
-        eq(goals.progress, 0),
-        lt(goals.updatedAt, staleGoalsAt),
-      )),
+      .where(
+        and(
+          eq(goals.userId, userId),
+          eq(goals.status, GOAL_STATUS.ACTIVE),
+          eq(goals.progress, 0),
+          lt(goals.updatedAt, staleGoalsAt),
+        ),
+      ),
   ]);
 
-  const staleContacts = Number((staleContactsResult[0] as { count: string } | undefined)?.count ?? 0);
+  const staleContacts = Number(
+    (staleContactsResult[0] as { count: string } | undefined)?.count ?? 0,
+  );
   const habitRow = habitStatsResult[0] as { total: string; done: string } | undefined;
 
   return {
@@ -314,17 +370,23 @@ export async function getStuckGoals(userId: string, days = STALE_GOALS_DAYS) {
     })
     .from(goals)
     .leftJoin(entities, eq(goals.entityId, entities.id))
-    .where(and(
-      eq(goals.userId, userId),
-      eq(goals.status, GOAL_STATUS.ACTIVE),
-      eq(goals.progress, 0),
-      lt(goals.updatedAt, cutoff),
-    ))
+    .where(
+      and(
+        eq(goals.userId, userId),
+        eq(goals.status, GOAL_STATUS.ACTIVE),
+        eq(goals.progress, 0),
+        lt(goals.updatedAt, cutoff),
+      ),
+    )
     .orderBy(goals.updatedAt)
     .limit(STUCK_GOALS_LIMIT);
 }
 
-export async function getRecentOrchestrationRuns(userId: string, hours = RECENT_RUNS_HOURS, limit = RECENT_RUNS_LIMIT) {
+export async function getRecentOrchestrationRuns(
+  userId: string,
+  hours = RECENT_RUNS_HOURS,
+  limit = RECENT_RUNS_LIMIT,
+) {
   const since = new Date(Date.now() - hours * HOUR_MS);
   return db
     .select({
@@ -355,7 +417,11 @@ export async function getRecentOrchestrationRuns(userId: string, hours = RECENT_
 // without it, a fresh-install user (or one who dispatches via the prompt
 // library / Send box) sees "No agent runs in the past 24 hours" even though
 // they queued five injects today, which destroys trust in the dashboard.
-export async function getRecentDispatches(userId: string, hours = RECENT_RUNS_HOURS, limit = RECENT_RUNS_LIMIT) {
+export async function getRecentDispatches(
+  userId: string,
+  hours = RECENT_RUNS_HOURS,
+  limit = RECENT_RUNS_LIMIT,
+) {
   const since = new Date(Date.now() - hours * HOUR_MS);
   const rows = await db
     .select({
@@ -368,12 +434,7 @@ export async function getRecentDispatches(userId: string, hours = RECENT_RUNS_HO
       dispatchedAt: promptHistory.dispatchedAt,
     })
     .from(promptHistory)
-    .where(
-      and(
-        eq(promptHistory.userId, userId),
-        gte(promptHistory.dispatchedAt, since),
-      ),
-    )
+    .where(and(eq(promptHistory.userId, userId), gte(promptHistory.dispatchedAt, since)))
     .orderBy(desc(promptHistory.dispatchedAt))
     .limit(limit);
   // Route through the shared display mapper so the harness envelope is stripped

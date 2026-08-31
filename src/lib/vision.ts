@@ -43,7 +43,9 @@ export async function analyzeImages(input: {
 }): Promise<VisionResult> {
   const chain = usableVisionChain();
   if (chain.length === 0) {
-    throw new Error("no vision provider configured (set OPENROUTER_API_KEY, or GROQ_VISION_MODEL if Groq has one again)");
+    throw new Error(
+      "no vision provider configured (set OPENROUTER_API_KEY, or GROQ_VISION_MODEL if Groq has one again)",
+    );
   }
 
   const content = [

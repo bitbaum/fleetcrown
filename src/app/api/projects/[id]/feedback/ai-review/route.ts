@@ -57,7 +57,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const project = await getProjectCore(userId, idOrResp);
   if (!project) return jsonError("Project not found", 404);
   const token = await getActiveWidgetToken(userId, idOrResp);
-  if (!token) return jsonError("Enable the feedback widget first — the AI reviewer files its findings through the widget API", 400);
+  if (!token)
+    return jsonError(
+      "Enable the feedback widget first — the AI reviewer files its findings through the widget API",
+      400,
+    );
 
   const { status, body } = await injectPrompt(
     {

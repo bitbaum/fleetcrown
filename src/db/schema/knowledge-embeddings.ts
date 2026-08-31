@@ -1,4 +1,13 @@
-import { pgTable, uuid, text, jsonb, timestamp, unique, index, customType } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  uuid,
+  text,
+  jsonb,
+  timestamp,
+  unique,
+  index,
+  customType,
+} from "drizzle-orm/pg-core";
 import { users } from "./users";
 
 /**
@@ -26,19 +35,25 @@ const vectorType = customType<{ data: number[]; driverData: string; config: { di
   },
 });
 
-export const knowledgeEmbeddings = pgTable("knowledge_embeddings", {
-  id:         uuid("id").primaryKey().defaultRandom(),
-  userId:     uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  // 'project_profile' | 'dev_log' | 'orchestration_outcome' | 'decision' | 'entity' | 'commitment' | 'thought'
-  sourceType: text("source_type").notNull(),
-  sourceId:   text("source_id").notNull(),
-  chunk:      text("chunk").notNull(),
-  embedding:  vectorType("embedding", { dim: 384 }).notNull(),
-  metadata:   jsonb("metadata").notNull().default({}),
-  updatedAt:  timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-}, (t) => [
-  unique("uq_knowledge_embeddings_src").on(t.userId, t.sourceType, t.sourceId),
-  index("idx_knowledge_embeddings_user_type").on(t.userId, t.sourceType),
-]);
+export const knowledgeEmbeddings = pgTable(
+  "knowledge_embeddings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // 'project_profile' | 'dev_log' | 'orchestration_outcome' | 'decision' | 'entity' | 'commitment' | 'thought'
+    sourceType: text("source_type").notNull(),
+    sourceId: text("source_id").notNull(),
+    chunk: text("chunk").notNull(),
+    embedding: vectorType("embedding", { dim: 384 }).notNull(),
+    metadata: jsonb("metadata").notNull().default({}),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique("uq_knowledge_embeddings_src").on(t.userId, t.sourceType, t.sourceId),
+    index("idx_knowledge_embeddings_user_type").on(t.userId, t.sourceType),
+  ],
+);
 
 export type KnowledgeEmbeddingRow = typeof knowledgeEmbeddings.$inferSelect;

@@ -50,7 +50,10 @@ export async function POST(req: NextRequest) {
   }
   const parsed = Body.safeParse(json);
   if (!parsed.success) {
-    return NextResponse.json({ error: "invalid body", details: parsed.error.flatten() }, { status: 400 });
+    return NextResponse.json(
+      { error: "invalid body", details: parsed.error.flatten() },
+      { status: 400 },
+    );
   }
   const { actorId, plan, externalId, periodDays, amountBtc } = parsed.data;
 
@@ -91,7 +94,14 @@ export async function POST(req: NextRequest) {
       source: "orangecat/entitlement",
       level: "info",
       message: `BTC pass granted: ${plan} until ${expiresAt.toISOString()}`,
-      meta: { userId: user.id, plan, periodDays, externalId, amountBtc: amountBtc ?? null, rail: "orangecat-btc" },
+      meta: {
+        userId: user.id,
+        plan,
+        periodDays,
+        externalId,
+        amountBtc: amountBtc ?? null,
+        rail: "orangecat-btc",
+      },
     }).catch(() => {});
 
     return NextResponse.json({ ok: true, granted: true, plan, expiresAt: expiresAt.toISOString() });

@@ -82,7 +82,10 @@ export function generateLayoutKdl(panes: PaneRecord[], opts: GenerateOpts = {}):
 
   const lines: string[] = ["layout {"];
   for (const tab of tabOrder) {
-    const records = byTab.get(tab)!.slice().sort((a, b) => a.paneIndex - b.paneIndex);
+    const records = byTab
+      .get(tab)!
+      .slice()
+      .sort((a, b) => a.paneIndex - b.paneIndex);
     lines.push(`    tab name=${kdlString(tab)} {`);
     for (const rec of records) lines.push(emitPane(rec, suspend));
     lines.push("    }");
@@ -120,10 +123,12 @@ function runSelfTest(): void {
     {
       name: "shell pane (no agentCli) emits bare pane with cwd",
       run: () => {
-        const out = generateLayoutKdl([
-          { tab: "scratch", paneIndex: 0, cwd: "/tmp" },
-        ]);
-        return out.includes('tab name="scratch"') && out.includes('pane cwd="/tmp"') && !out.includes('command="bash"');
+        const out = generateLayoutKdl([{ tab: "scratch", paneIndex: 0, cwd: "/tmp" }]);
+        return (
+          out.includes('tab name="scratch"') &&
+          out.includes('pane cwd="/tmp"') &&
+          !out.includes('command="bash"')
+        );
       },
     },
     {
@@ -185,9 +190,18 @@ function runSelfTest(): void {
   let fail = 0;
   for (const c of cases) {
     let ok = false;
-    try { ok = c.run(); } catch { ok = false; }
-    if (ok) { console.log(`  ✓ ${c.name}`); pass++; }
-    else    { console.log(`  ✗ ${c.name}`); fail++; }
+    try {
+      ok = c.run();
+    } catch {
+      ok = false;
+    }
+    if (ok) {
+      console.log(`  ✓ ${c.name}`);
+      pass++;
+    } else {
+      console.log(`  ✗ ${c.name}`);
+      fail++;
+    }
   }
   console.log(`\n${pass}/${pass + fail} passed`);
   if (fail > 0) process.exit(1);

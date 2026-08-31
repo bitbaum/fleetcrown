@@ -1,7 +1,11 @@
 "use client";
 
 import { useAiForm } from "@fleet/ai-forms/react";
-import { VALID_CURRENCIES as CURRENCIES, VALID_FREQUENCIES as FREQUENCIES, FREQUENCY } from "@/config/subscriptions";
+import {
+  VALID_CURRENCIES as CURRENCIES,
+  VALID_FREQUENCIES as FREQUENCIES,
+  FREQUENCY,
+} from "@/config/subscriptions";
 import { Field } from "@/components/ui/form";
 import { ModalForm } from "@/components/ui/modal-form";
 import { useCreateMutation } from "@/hooks/use-create-mutation";
@@ -22,19 +26,23 @@ export function NewSubscriptionButton() {
     errorLabel: "subscription",
   });
 
-  const onReset = () => { form.reset(); setError(null); };
+  const onReset = () => {
+    form.reset();
+    setError(null);
+  };
 
   const amount = form.text("amount");
-  const onSubmit = () => create({
-    name: form.text("name").trim(),
-    vendor: form.text("vendor").trim() || undefined,
-    amount: amount ? parseFloat(amount) : undefined,
-    currency: form.text("currency") as typeof CURRENCIES[number],
-    frequency: form.text("frequency") as typeof FREQUENCIES[number],
-    nextDue: form.text("nextDue") || undefined,
-    paymentMethod: form.text("paymentMethod").trim() || undefined,
-    notes: form.text("notes").trim() || undefined,
-  });
+  const onSubmit = () =>
+    create({
+      name: form.text("name").trim(),
+      vendor: form.text("vendor").trim() || undefined,
+      amount: amount ? parseFloat(amount) : undefined,
+      currency: form.text("currency") as (typeof CURRENCIES)[number],
+      frequency: form.text("frequency") as (typeof FREQUENCIES)[number],
+      nextDue: form.text("nextDue") || undefined,
+      paymentMethod: form.text("paymentMethod").trim() || undefined,
+      notes: form.text("notes").trim() || undefined,
+    });
 
   return (
     <ModalForm
@@ -87,7 +95,11 @@ export function NewSubscriptionButton() {
             onChange={(e) => form.setValue("currency", e.target.value)}
             className="ui-input"
           >
-            {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            {CURRENCIES.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
           </select>
         </Field>
       </div>
@@ -99,7 +111,11 @@ export function NewSubscriptionButton() {
             onChange={(e) => form.setValue("frequency", e.target.value)}
             className="ui-input"
           >
-            {FREQUENCIES.map((f) => <option key={f} value={f}>{f}</option>)}
+            {FREQUENCIES.map((f) => (
+              <option key={f} value={f}>
+                {f}
+              </option>
+            ))}
           </select>
         </Field>
         <Field label="Next Due" aiTouched={form.isAiTouched("nextDue")}>

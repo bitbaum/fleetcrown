@@ -41,7 +41,7 @@ name: Desktop release
 on:
   push:
     tags:
-      - 'fleet-runner-v*'
+      - "fleet-runner-v*"
   workflow_dispatch:
 
 concurrency:
@@ -108,7 +108,7 @@ jobs:
       - name: Setup Python 3.11 (node-gyp needs distutils)
         uses: actions/setup-python@v7
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       # Top-level install — the web app's package.json is needed so
       # @home/* + @/* imports in the desktop main process resolve (those

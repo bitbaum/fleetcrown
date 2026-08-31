@@ -29,15 +29,18 @@ function repoSlugFromUrl(url: string | null | undefined): string | null {
 }
 
 export function ProjectsCiPanel({ projects }: { projects: ProjectGridRow[] }) {
-  const { data, loading, error, refetch } = useFetch<{ repos: RepoStatus[]; error?: string; runtimeOnly?: boolean }>(
-    "/api/github",
-    { intervalMs: REFRESH_CADENCE.projectsCi, timeoutMs: 35_000 },
-  );
+  const { data, loading, error, refetch } = useFetch<{
+    repos: RepoStatus[];
+    error?: string;
+    runtimeOnly?: boolean;
+  }>("/api/github", { intervalMs: REFRESH_CADENCE.projectsCi, timeoutMs: 35_000 });
   const repos = useMemo(() => data?.repos ?? [], [data?.repos]);
 
   const linkedSlugs = useMemo(() => {
     return new Set(
-      projects.map((p) => repoSlugFromUrl(p.gitUrl ?? p.attrs["repo"] ?? null)).filter(Boolean) as string[],
+      projects
+        .map((p) => repoSlugFromUrl(p.gitUrl ?? p.attrs["repo"] ?? null))
+        .filter(Boolean) as string[],
     );
   }, [projects]);
 
@@ -72,7 +75,10 @@ export function ProjectsCiPanel({ projects }: { projects: ProjectGridRow[] }) {
           <span className="truncate text-sm font-medium text-text-primary">GitHub CI</span>
           <span className="truncate text-xs text-text-tertiary">{summaryLabel}</span>
         </div>
-        <ChevronDown className="h-4 w-4 shrink-0 text-text-muted ui-details-chevron" aria-hidden="true" />
+        <ChevronDown
+          className="h-4 w-4 shrink-0 text-text-muted ui-details-chevron"
+          aria-hidden="true"
+        />
       </summary>
 
       <div className="ui-projects-ci-body">
@@ -83,7 +89,11 @@ export function ProjectsCiPanel({ projects }: { projects: ProjectGridRow[] }) {
             ))}
           </div>
         ) : error || (data?.error && repos.length === 0) ? (
-          <FetchErrorState message="Couldn't load GitHub status" detail={error ?? data?.error} onRetry={refetch} />
+          <FetchErrorState
+            message="Couldn't load GitHub status"
+            detail={error ?? data?.error}
+            onRetry={refetch}
+          />
         ) : linkedRepos.length === 0 ? (
           <p className="text-sm text-text-tertiary">
             Link a GitHub repo on a project profile to see CI and open PR counts here.
@@ -96,11 +106,20 @@ export function ProjectsCiPanel({ projects }: { projects: ProjectGridRow[] }) {
               return (
                 <div key={repo.repo} className="ui-projects-ci-row">
                   <div className="flex min-w-0 items-center gap-2">
-                    <Icon className={`h-3.5 w-3.5 shrink-0 ${status.className}`} aria-hidden="true" />
-                    <span className="truncate text-sm font-medium text-text-primary">{repo.repo}</span>
+                    <Icon
+                      className={`h-3.5 w-3.5 shrink-0 ${status.className}`}
+                      aria-hidden="true"
+                    />
+                    <span className="truncate text-sm font-medium text-text-primary">
+                      {repo.repo}
+                    </span>
                   </div>
                   <div className="flex shrink-0 items-center gap-3 text-xs text-text-secondary">
-                    {(repo.open_prs ?? 0) > 0 && <span>{repo.open_prs} PR{repo.open_prs !== 1 ? "s" : ""}</span>}
+                    {(repo.open_prs ?? 0) > 0 && (
+                      <span>
+                        {repo.open_prs} PR{repo.open_prs !== 1 ? "s" : ""}
+                      </span>
+                    )}
                     {(repo.dependabot_prs ?? 0) > 0 && (
                       <span className="text-status-warning">{repo.dependabot_prs} deps</span>
                     )}

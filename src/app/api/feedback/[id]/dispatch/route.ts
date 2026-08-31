@@ -29,7 +29,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const row = await getFeedbackWithProject(userId, idOrResp);
   if (!row) return jsonError("Not found", 404);
-  if (row.feedback.status === FEEDBACK_STATUS.RESOLVED || row.feedback.status === FEEDBACK_STATUS.ARCHIVED) {
+  if (
+    row.feedback.status === FEEDBACK_STATUS.RESOLVED ||
+    row.feedback.status === FEEDBACK_STATUS.ARCHIVED
+  ) {
     return jsonError("Reopen the item before dispatching again", 409);
   }
   if (row.feedback.status === FEEDBACK_STATUS.DISPATCHED) {
@@ -48,7 +51,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const { status, body } = await injectPrompt(
     {
       tab: row.projectName,
-      customPrompt: composeFeedbackFixPrompt(row.feedback, row.projectName, dataOrResp.note || undefined),
+      customPrompt: composeFeedbackFixPrompt(
+        row.feedback,
+        row.projectName,
+        dataOrResp.note || undefined,
+      ),
       notifyOnClose: true,
     },
     userId,

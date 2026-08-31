@@ -62,9 +62,10 @@ export function NewAssignmentButton({
       projectId: form.text("projectId") || undefined,
       dueDate: form.text("dueDate") || undefined,
       feeAmount: fee !== undefined && Number.isFinite(fee) ? fee : undefined,
-      feeCurrency: fee !== undefined && Number.isFinite(fee)
-        ? (form.text("feeCurrency") as CreateHumanTaskInput["feeCurrency"])
-        : undefined,
+      feeCurrency:
+        fee !== undefined && Number.isFinite(fee)
+          ? (form.text("feeCurrency") as CreateHumanTaskInput["feeCurrency"])
+          : undefined,
     });
     if (ok) onCreated?.();
     return ok;
@@ -140,7 +141,9 @@ export function NewAssignmentButton({
           >
             <option value="">No project</option>
             {projects.map((project) => (
-              <option key={project.id} value={project.id}>{project.name}</option>
+              <option key={project.id} value={project.id}>
+                {project.name}
+              </option>
             ))}
           </select>
         </Field>
@@ -175,7 +178,9 @@ export function NewAssignmentButton({
             className="ui-input"
           >
             {TASK_CURRENCIES.map((currency) => (
-              <option key={currency} value={currency}>{currency}</option>
+              <option key={currency} value={currency}>
+                {currency}
+              </option>
             ))}
           </select>
         </Field>

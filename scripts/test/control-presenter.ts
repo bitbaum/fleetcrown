@@ -71,23 +71,35 @@ function runTests(): void {
 
   check("findProjectForOpenTab exact match", () => {
     const projects = [stubProject({ tab: "FleetCrown", liveTab: "FleetCrown" })];
-    assert(findProjectForOpenTab("FleetCrown", projects)?.tab === "FleetCrown", "expected FleetCrown");
+    assert(
+      findProjectForOpenTab("FleetCrown", projects)?.tab === "FleetCrown",
+      "expected FleetCrown",
+    );
   });
 
   check("findProjectForOpenTab prefix match (agent suffix tab)", () => {
     const projects = [stubProject({ tab: "FleetCrown", liveTab: "FleetCrown Claude" })];
-    assert(findProjectForOpenTab("FleetCrown Claude", projects)?.tab === "FleetCrown", "expected prefix match");
+    assert(
+      findProjectForOpenTab("FleetCrown Claude", projects)?.tab === "FleetCrown",
+      "expected prefix match",
+    );
   });
 
   check("isProjectTabOpen accepts agent-suffixed live tabs", () => {
     const project = stubProject({ tab: "FleetCrown", liveTab: "FleetCrown" });
-    assert(isProjectTabOpen(project, ["FleetCrown Claude"]), "expected suffix tab to count as open");
+    assert(
+      isProjectTabOpen(project, ["FleetCrown Claude"]),
+      "expected suffix tab to count as open",
+    );
     assert(!isProjectTabOpen(project, ["Cockpit2 Claude"]), "must not match unrelated prefixes");
   });
 
   check("isProjectTabOpen accepts a different live agent suffix than cached liveTab", () => {
     const project = stubProject({ tab: "FleetCrown", liveTab: "FleetCrown Claude" });
-    assert(isProjectTabOpen(project, ["FleetCrown Codex"]), "expected canonical project suffix to count as open");
+    assert(
+      isProjectTabOpen(project, ["FleetCrown Codex"]),
+      "expected canonical project suffix to count as open",
+    );
   });
 
   check("buildLiveTabRows sorts Working before Open and drops unregistered tabs", () => {
@@ -110,26 +122,36 @@ function runTests(): void {
       }),
     ];
     const rows = buildLiveTabRows(["Active", "IdleProj", "Mystery"], projects, nowS);
-    assert(rows.length === 2, `expected 2 rows (Mystery dropped as unregistered), got ${rows.length}`);
+    assert(
+      rows.length === 2,
+      `expected 2 rows (Mystery dropped as unregistered), got ${rows.length}`,
+    );
     assert(rows[0]?.tabName === "Active", "working tab first");
     assert(rows[0]?.stateLabel === "Working", "working state");
     assert(rows[1]?.tabName === "IdleProj", "registered idle tab second");
-    assert(rows.every((r) => r.registered === true), "no unregistered tabs in output");
+    assert(
+      rows.every((r) => r.registered === true),
+      "no unregistered tabs in output",
+    );
   });
 
   check("formatAgentRuntimeLabel maps cursor agent id", () => {
-    const label = formatAgentRuntimeLabel(stubProject({
-      tab: "X",
-      activeAgents: ["cursor"],
-    }));
+    const label = formatAgentRuntimeLabel(
+      stubProject({
+        tab: "X",
+        activeAgents: ["cursor"],
+      }),
+    );
     assert(label === "Cursor", `expected Cursor, got ${label}`);
   });
 
   check("formatAgentRuntimeLabel maps legacy agent basename", () => {
-    const label = formatAgentRuntimeLabel(stubProject({
-      tab: "X",
-      activeAgents: ["agent"],
-    }));
+    const label = formatAgentRuntimeLabel(
+      stubProject({
+        tab: "X",
+        activeAgents: ["agent"],
+      }),
+    );
     assert(label === "Cursor", `expected Cursor, got ${label}`);
   });
 
@@ -150,25 +172,45 @@ function runTests(): void {
     });
     const state = getProjectDisplayState(project, ["Disconnected"], nowS, false, false);
     assert(state.stateLabel === "Offline", "disconnected card must say Offline");
-    assert(!state.isRunning && !state.isReady && !state.tabOpen, "stale live signals must be hidden");
+    assert(
+      !state.isRunning && !state.isReady && !state.tabOpen,
+      "stale live signals must be hidden",
+    );
   });
 
   check("no detected process is reported as not running, not inferred activity", () => {
     const project = stubProject({ tab: "FleetCrown" });
     const state = getProjectDisplayState(project, [], 1_700_000_000);
-    assert(state.stateLabel === "Not running", "inactive project must describe the absent live signal");
+    assert(
+      state.stateLabel === "Not running",
+      "inactive project must describe the absent live signal",
+    );
   });
 
   check("snapshot separates saved context from current operational state", () => {
     const nowS = 1_700_000_000;
-    const snapshot = buildProjectOperationsSnapshot(stubProject({
-      tab: "FleetCrown",
-      session: { done: "Done earlier", next: "Continue later", tests: "", todos: "", health: "", mtime: (nowS - 300) * 1000 },
-    }), [], nowS);
+    const snapshot = buildProjectOperationsSnapshot(
+      stubProject({
+        tab: "FleetCrown",
+        session: {
+          done: "Done earlier",
+          next: "Continue later",
+          tests: "",
+          todos: "",
+          health: "",
+          mtime: (nowS - 300) * 1000,
+        },
+      }),
+      [],
+      nowS,
+    );
     assert(snapshot.phase === "not_running", "handoff must not imply a running agent");
     // Names the SIGNAL, like its "Last run" / "Last dispatch" siblings — "Idle"
     // described a state while the other two named their evidence.
-    assert(snapshot.evidenceLabel === "Last handoff", `handoff evidence must name the handoff, got '${snapshot.evidenceLabel}'`);
+    assert(
+      snapshot.evidenceLabel === "Last handoff",
+      `handoff evidence must name the handoff, got '${snapshot.evidenceLabel}'`,
+    );
     assert(snapshot.evidenceKind === "historical", "handoff provenance must be historical");
   });
 
@@ -178,29 +220,61 @@ function runTests(): void {
     // prove the project was worked on. "Not running" contradicted the
     // recorded facts on the same card (fleetcrown, 2026-08-13).
     const nowS = 1_700_000_000;
-    const state = getProjectDisplayState(stubProject({
-      tab: "fleetcrown",
-      recentActivity: [{
-        id: "d1", projectKey: "fleetcrown", at: new Date((nowS - 2_640) * 1000).toISOString(),
-        kind: "dispatch", source: "user", adapter: "claude", intent: "custom",
-        title: "keep going", detail: null, status: "neutral",
-      }],
-    }), [], nowS);
-    assert(state.stateKey === "recently_active", `recent dispatch must not read as dead, got '${state.stateKey}'`);
+    const state = getProjectDisplayState(
+      stubProject({
+        tab: "fleetcrown",
+        recentActivity: [
+          {
+            id: "d1",
+            projectKey: "fleetcrown",
+            at: new Date((nowS - 2_640) * 1000).toISOString(),
+            kind: "dispatch",
+            source: "user",
+            adapter: "claude",
+            intent: "custom",
+            title: "keep going",
+            detail: null,
+            status: "neutral",
+          },
+        ],
+      }),
+      [],
+      nowS,
+    );
+    assert(
+      state.stateKey === "recently_active",
+      `recent dispatch must not read as dead, got '${state.stateKey}'`,
+    );
     assert(state.stateLabel === "Active recently", "badge names the honest state");
   });
 
   check("an old dispatch does NOT keep a project looking active", () => {
     const nowS = 1_700_000_000;
-    const state = getProjectDisplayState(stubProject({
-      tab: "kivvi",
-      recentActivity: [{
-        id: "d2", projectKey: "kivvi", at: new Date((nowS - 30 * 86_400) * 1000).toISOString(),
-        kind: "dispatch", source: "user", adapter: "claude", intent: "custom",
-        title: "old work", detail: null, status: "neutral",
-      }],
-    }), [], nowS);
-    assert(state.stateKey === "not_running", `a month-old dispatch is not recent activity, got '${state.stateKey}'`);
+    const state = getProjectDisplayState(
+      stubProject({
+        tab: "kivvi",
+        recentActivity: [
+          {
+            id: "d2",
+            projectKey: "kivvi",
+            at: new Date((nowS - 30 * 86_400) * 1000).toISOString(),
+            kind: "dispatch",
+            source: "user",
+            adapter: "claude",
+            intent: "custom",
+            title: "old work",
+            detail: null,
+            status: "neutral",
+          },
+        ],
+      }),
+      [],
+      nowS,
+    );
+    assert(
+      state.stateKey === "not_running",
+      `a month-old dispatch is not recent activity, got '${state.stateKey}'`,
+    );
   });
 
   check("a finished run fresher than the handoff names itself in the evidence", () => {
@@ -209,32 +283,80 @@ function runTests(): void {
     // stale handoff) reads as a dead project. The freshest recorded signal
     // must win: "Last run <when>". (orangecat, 2026-08-13.)
     const nowS = 1_700_000_000;
-    const snapshot = buildProjectOperationsSnapshot(stubProject({
-      tab: "orangecat",
-      session: { done: "old", next: "", tests: "", todos: "", health: "", mtime: (nowS - 86_400) * 1000 },
-      latestOrchestrationRun: {
-        adapter: "claude", intent: "custom", state: "done",
-        startedAt: new Date((nowS - 3_000) * 1000).toISOString(),
-        finishedAt: new Date((nowS - 2_400) * 1000).toISOString(),
-        summary: null, tokensIn: null, tokensOut: null, tokensCacheRead: null, costUsd: null, payload: null,
-      },
-    }), [], nowS);
-    assert(snapshot.evidenceLabel === "Last run", `freshest signal must be named, got '${snapshot.evidenceLabel}'`);
-    assert(snapshot.evidenceAt === (nowS - 2_400) * 1000, "evidence timestamp must be the run finish, not the handoff");
+    const snapshot = buildProjectOperationsSnapshot(
+      stubProject({
+        tab: "orangecat",
+        session: {
+          done: "old",
+          next: "",
+          tests: "",
+          todos: "",
+          health: "",
+          mtime: (nowS - 86_400) * 1000,
+        },
+        latestOrchestrationRun: {
+          adapter: "claude",
+          intent: "custom",
+          state: "done",
+          startedAt: new Date((nowS - 3_000) * 1000).toISOString(),
+          finishedAt: new Date((nowS - 2_400) * 1000).toISOString(),
+          summary: null,
+          tokensIn: null,
+          tokensOut: null,
+          tokensCacheRead: null,
+          costUsd: null,
+          payload: null,
+        },
+      }),
+      [],
+      nowS,
+    );
+    assert(
+      snapshot.evidenceLabel === "Last run",
+      `freshest signal must be named, got '${snapshot.evidenceLabel}'`,
+    );
+    assert(
+      snapshot.evidenceAt === (nowS - 2_400) * 1000,
+      "evidence timestamp must be the run finish, not the handoff",
+    );
   });
 
   check("a dispatch fresher than run and handoff names itself in the evidence", () => {
     const nowS = 1_700_000_000;
-    const snapshot = buildProjectOperationsSnapshot(stubProject({
-      tab: "orangecat",
-      session: { done: "old", next: "", tests: "", todos: "", health: "", mtime: (nowS - 86_400) * 1000 },
-      recentActivity: [{
-        id: "a1", projectKey: "orangecat", at: new Date((nowS - 600) * 1000).toISOString(),
-        kind: "dispatch", source: "user", displayText: "fix feedback", runId: null,
-      } as ProjectState["recentActivity"][number]],
-    }), [], nowS);
-    assert(snapshot.evidenceLabel === "Last dispatch", `freshest signal must be named, got '${snapshot.evidenceLabel}'`);
-    assert(snapshot.evidenceAt === (nowS - 600) * 1000, "evidence timestamp must be the dispatch time");
+    const snapshot = buildProjectOperationsSnapshot(
+      stubProject({
+        tab: "orangecat",
+        session: {
+          done: "old",
+          next: "",
+          tests: "",
+          todos: "",
+          health: "",
+          mtime: (nowS - 86_400) * 1000,
+        },
+        recentActivity: [
+          {
+            id: "a1",
+            projectKey: "orangecat",
+            at: new Date((nowS - 600) * 1000).toISOString(),
+            kind: "dispatch",
+            source: "user",
+            displayText: "fix feedback",
+            runId: null,
+          } as ProjectState["recentActivity"][number],
+        ],
+      }),
+      [],
+      nowS,
+    );
+    assert(
+      snapshot.evidenceLabel === "Last dispatch",
+      `freshest signal must be named, got '${snapshot.evidenceLabel}'`,
+    );
+    assert(
+      snapshot.evidenceAt === (nowS - 600) * 1000,
+      "evidence timestamp must be the dispatch time",
+    );
   });
 
   check("open session is labeled 'Awaiting input' to match the summary chip", () => {
@@ -246,9 +368,15 @@ function runTests(): void {
     // dormant when really the only known fact is "agent process detected, no
     // recent handoff signal" — actionable wording matches the summary section
     // ("X awaiting input") so the row + chip agree.
-    assert(state.stateLabel === "Awaiting input", "open inactive agent must read as awaiting your next prompt");
+    assert(
+      state.stateLabel === "Awaiting input",
+      "open inactive agent must read as awaiting your next prompt",
+    );
     assert(snapshot.phase === "open_idle", "open_idle phase is still the underlying state");
-    assert(snapshot.evidenceLabel === "Awaiting input", "evidence label must match the badge wording");
+    assert(
+      snapshot.evidenceLabel === "Awaiting input",
+      "evidence label must match the badge wording",
+    );
   });
 
   check("ready sentinel is a next-step state, not generic waiting", () => {
@@ -258,30 +386,44 @@ function runTests(): void {
     const snapshot = buildProjectOperationsSnapshot(project, ["FleetCrown"], nowS);
     assert(state.stateLabel === "Ready for next step", "ready signal must name the action state");
     assert(snapshot.phase === "ready", "ready signal remains actionable");
-    assert(snapshot.evidenceLabel === "Agent signaled ready on connected computer", "ready evidence should identify the signal");
+    assert(
+      snapshot.evidenceLabel === "Agent signaled ready on connected computer",
+      "ready evidence should identify the signal",
+    );
   });
 
   check("operations list prioritizes projects waiting for user action", () => {
     const nowS = 1_700_000_000;
-    const snapshots = buildProjectOperationsSnapshots([
-      stubProject({
-        tab: "Working",
-        agentRunning: true,
-        currentPrompt: { key: "custom", label: "Implementing", startedAt: nowS - 5 },
-      }),
-      stubProject({ tab: "Waiting", agentRunning: true, readyAt: nowS - 5 }),
-      stubProject({ tab: "Stopped" }),
-    ], ["Working", "Waiting"], nowS);
-    assert(snapshots.map(({ project }) => project.tab).join(",") === "Waiting,Working,Stopped", "actionable ordering expected");
+    const snapshots = buildProjectOperationsSnapshots(
+      [
+        stubProject({
+          tab: "Working",
+          agentRunning: true,
+          currentPrompt: { key: "custom", label: "Implementing", startedAt: nowS - 5 },
+        }),
+        stubProject({ tab: "Waiting", agentRunning: true, readyAt: nowS - 5 }),
+        stubProject({ tab: "Stopped" }),
+      ],
+      ["Working", "Waiting"],
+      nowS,
+    );
+    assert(
+      snapshots.map(({ project }) => project.tab).join(",") === "Waiting,Working,Stopped",
+      "actionable ordering expected",
+    );
   });
 
   check("closing lifecycle takes precedence over an open process in the snapshot", () => {
     const nowS = 1_700_000_000;
-    const snapshot = buildProjectOperationsSnapshot(stubProject({
-      tab: "Closing",
-      agentRunning: true,
-      closingAt: nowS - 2,
-    }), ["Closing"], nowS);
+    const snapshot = buildProjectOperationsSnapshot(
+      stubProject({
+        tab: "Closing",
+        agentRunning: true,
+        closingAt: nowS - 2,
+      }),
+      ["Closing"],
+      nowS,
+    );
     assert(snapshot.display.stateLabel === "Closing", "badge must report closing");
     assert(snapshot.phase === "closing", "rail phase must agree with the badge");
   });
@@ -292,10 +434,20 @@ function runTests(): void {
       tab: "FleetCrown",
       agentRunning: true,
       currentPrompt: { key: "custom", label: "Current work", startedAt: nowS - 10 },
-      session: { done: "previous", next: "", tests: "", todos: "", health: "", mtime: (nowS - 20) * 1000 },
+      session: {
+        done: "previous",
+        next: "",
+        tests: "",
+        todos: "",
+        health: "",
+        mtime: (nowS - 20) * 1000,
+      },
     });
     assert(!isCurrentPromptStale(project, nowS), "older handoff must not end current work");
-    assert(getProjectDisplayState(project, ["FleetCrown"], nowS).stateLabel === "Working", "fresh prompt must show Working");
+    assert(
+      getProjectDisplayState(project, ["FleetCrown"], nowS).stateLabel === "Working",
+      "fresh prompt must show Working",
+    );
   });
 
   check("direct-terminal observation is surfaced as Working", () => {
@@ -311,14 +463,21 @@ function runTests(): void {
       tab: "FleetCrown",
       agentRunning: true,
       activeAgents: ["claude"],
-      currentPrompt: { key: "direct_terminal", label: "Direct terminal activity", startedAt: nowS - 3 },
+      currentPrompt: {
+        key: "direct_terminal",
+        label: "Direct terminal activity",
+        startedAt: nowS - 3,
+      },
     });
     const state = getProjectDisplayState(project, ["FleetCrown"], nowS);
     assert(state.stateLabel === "Working", "direct-terminal observation must report Working");
     assert(state.isAgentWorking, "isAgentWorking is the SSOT chips read");
     const snapshot = buildProjectOperationsSnapshot(project, ["FleetCrown"], nowS);
     assert(snapshot.phase === "working", "snapshot phase must match the badge");
-    assert(snapshot.evidenceLabel === "Live agent process detected", "evidence must read live, not historical");
+    assert(
+      snapshot.evidenceLabel === "Live agent process detected",
+      "evidence must read live, not historical",
+    );
   });
 
   check("working handoff does not stale an active prompt", () => {
@@ -327,11 +486,21 @@ function runTests(): void {
       tab: "FleetCrown",
       agentRunning: false,
       currentPrompt: { key: "custom", label: "Still implementing", startedAt: nowS - 30 },
-      session: { status: "working", done: "partial", next: "finish", tests: "", todos: "", health: "good", mtime: (nowS - 5) * 1000 },
+      session: {
+        status: "working",
+        done: "partial",
+        next: "finish",
+        tests: "",
+        todos: "",
+        health: "good",
+        mtime: (nowS - 5) * 1000,
+      },
     });
     assert(!isCurrentPromptStale(project, nowS), "status:working handoff must not clear Working");
-    assert(getProjectDisplayState(project, ["FleetCrown"], nowS).stateLabel === "Working",
-      "fresh prompt must show Working without agentRunning");
+    assert(
+      getProjectDisplayState(project, ["FleetCrown"], nowS).stateLabel === "Working",
+      "fresh prompt must show Working without agentRunning",
+    );
   });
 
   check("handoff written after prompt marks it completed", () => {
@@ -340,29 +509,50 @@ function runTests(): void {
       tab: "FleetCrown",
       agentRunning: true,
       currentPrompt: { key: "custom", label: "Current work", startedAt: nowS - 20 },
-      session: { done: "finished", next: "", tests: "", todos: "", health: "", mtime: (nowS - 5) * 1000 },
+      session: {
+        done: "finished",
+        next: "",
+        tests: "",
+        todos: "",
+        health: "",
+        mtime: (nowS - 5) * 1000,
+      },
     });
     assert(isCurrentPromptStale(project, nowS), "newer handoff should end displayed work");
   });
 
   // Helper: recent runs (age 0) unless a specific age is given.
-  const runs = (outcomes: Array<"error" | "hang" | "timeout" | "success" | "partial" | "user_abort">, ageMs = 0) =>
-    outcomes.map((outcome) => ({ outcome, ageMs }));
+  const runs = (
+    outcomes: Array<"error" | "hang" | "timeout" | "success" | "partial" | "user_abort">,
+    ageMs = 0,
+  ) => outcomes.map((outcome) => ({ outcome, ageMs }));
 
   check("fleet pulse: off → Paused regardless of outcomes", () => {
-    const pulse = deriveFleetPulse({ automationMode: "off", workingCount: 3, latestRuns: runs(["error", "error"]) });
+    const pulse = deriveFleetPulse({
+      automationMode: "off",
+      workingCount: 3,
+      latestRuns: runs(["error", "error"]),
+    });
     assert(pulse.key === "paused", "off must be paused");
   });
 
   check("fleet pulse: any working agent → Building", () => {
-    const pulse = deriveFleetPulse({ automationMode: "on", workingCount: 1, latestRuns: runs(["error", "error"]) });
+    const pulse = deriveFleetPulse({
+      automationMode: "on",
+      workingCount: 1,
+      latestRuns: runs(["error", "error"]),
+    });
     assert(pulse.key === "building", "working agents mean building even with past failures");
   });
 
   check("fleet pulse: 0 working + all RECENT runs failed → Stalled", () => {
     // The 2026-07-02 dead-fleet shape: autopilot on, nothing working, every
     // project's latest run a recent timeout — must NOT read "Building".
-    const pulse = deriveFleetPulse({ automationMode: "on", workingCount: 0, latestRuns: runs(["timeout", "timeout", "error"]) });
+    const pulse = deriveFleetPulse({
+      automationMode: "on",
+      workingCount: 0,
+      latestRuns: runs(["timeout", "timeout", "error"]),
+    });
     assert(pulse.key === "failing", "all-failed fleet must surface as failing");
     assert(!!pulse.detail, "failing pulse carries a detail sentence");
   });
@@ -371,33 +561,67 @@ function runTests(): void {
     // The box-credential outage shape: every latest run is a timeout, but they
     // all finished weeks ago and nothing has run since. Idle, not stalled.
     const old = 3 * 24 * 60 * 60 * 1000;
-    const pulse = deriveFleetPulse({ automationMode: "on", workingCount: 0, latestRuns: runs(["timeout", "timeout", "error"], old) });
+    const pulse = deriveFleetPulse({
+      automationMode: "on",
+      workingCount: 0,
+      latestRuns: runs(["timeout", "timeout", "error"], old),
+    });
     assert(pulse.key === "waiting", "old failures with no recent runs are idle, not a live stall");
   });
 
   check("fleet pulse: one failure among successes → Waiting, not Stalled", () => {
-    const pulse = deriveFleetPulse({ automationMode: "on", workingCount: 0, latestRuns: runs(["error", "success", "partial"]) });
+    const pulse = deriveFleetPulse({
+      automationMode: "on",
+      workingCount: 0,
+      latestRuns: runs(["error", "success", "partial"]),
+    });
     assert(pulse.key === "waiting", "a single failing project must not panic the hero");
   });
 
-  check("fleet pulse: 0 working, nothing queued, nobody waiting → Idle, not 'about to dispatch'", () => {
-    const pulse = deriveFleetPulse({ automationMode: "on", workingCount: 0, waitingCount: 0, latestRuns: [] });
-    assert(pulse.key === "waiting", "quiet fleet with autopilot on is waiting, not building");
-    assert(pulse.label === "Idle — nothing queued", "an empty quiet fleet must not promise an imminent dispatch");
-  });
+  check(
+    "fleet pulse: 0 working, nothing queued, nobody waiting → Idle, not 'about to dispatch'",
+    () => {
+      const pulse = deriveFleetPulse({
+        automationMode: "on",
+        workingCount: 0,
+        waitingCount: 0,
+        latestRuns: [],
+      });
+      assert(pulse.key === "waiting", "quiet fleet with autopilot on is waiting, not building");
+      assert(
+        pulse.label === "Idle — nothing queued",
+        "an empty quiet fleet must not promise an imminent dispatch",
+      );
+    },
+  );
 
-  check("fleet pulse: projects awaiting input → 'Waiting on you', not 'Waiting to dispatch'", () => {
-    // 2026-08-13: the hero read "Waiting to dispatch" while the queue was
-    // empty and the only thing anyone waited on was the human — autopilot
-    // deliberately does NOT interrupt a session that's awaiting input, so
-    // the promised dispatch could never come.
-    const pulse = deriveFleetPulse({ automationMode: "on", workingCount: 0, waitingCount: 1, latestRuns: [] });
-    assert(pulse.label === "Waiting on you", "the hero must name who is actually blocking");
-    assert(!!pulse.detail && pulse.detail.includes("1 project"), "detail counts the projects awaiting input");
-  });
+  check(
+    "fleet pulse: projects awaiting input → 'Waiting on you', not 'Waiting to dispatch'",
+    () => {
+      // 2026-08-13: the hero read "Waiting to dispatch" while the queue was
+      // empty and the only thing anyone waited on was the human — autopilot
+      // deliberately does NOT interrupt a session that's awaiting input, so
+      // the promised dispatch could never come.
+      const pulse = deriveFleetPulse({
+        automationMode: "on",
+        workingCount: 0,
+        waitingCount: 1,
+        latestRuns: [],
+      });
+      assert(pulse.label === "Waiting on you", "the hero must name who is actually blocking");
+      assert(
+        !!pulse.detail && pulse.detail.includes("1 project"),
+        "detail counts the projects awaiting input",
+      );
+    },
+  );
 
   check("fleet pulse: user_abort is neutral, not a systemic failure", () => {
-    const pulse = deriveFleetPulse({ automationMode: "on", workingCount: 0, latestRuns: runs(["user_abort", "timeout"]) });
+    const pulse = deriveFleetPulse({
+      automationMode: "on",
+      workingCount: 0,
+      latestRuns: runs(["user_abort", "timeout"]),
+    });
     assert(pulse.key === "waiting", "aborts are human choices — only real failures stall the hero");
   });
 
@@ -414,8 +638,14 @@ function runTests(): void {
       executionStall: { stalled: true, stalledCount: 2, oldestSeconds: 469, tabs: ["orangecat"] },
     });
     assert(pulse.key === "stalled", "stalled execution must not read as Building");
-    assert(!!pulse.detail && pulse.detail.includes("orangecat"), "stall detail names the stuck projects");
-    assert(!!pulse.detail && pulse.detail.includes("8m"), "stall detail states the queue age in minutes");
+    assert(
+      !!pulse.detail && pulse.detail.includes("orangecat"),
+      "stall detail names the stuck projects",
+    );
+    assert(
+      !!pulse.detail && pulse.detail.includes("8m"),
+      "stall detail states the queue age in minutes",
+    );
   });
 
   check("fleet pulse: non-stalled execution health leaves Building untouched", () => {
@@ -458,7 +688,10 @@ function runTests(): void {
     // The bucket only ever exists with count >= 1, but a future caller that
     // sends an empty bucket must not light the card up.
     const state = getProjectDisplayState(
-      stubProject({ tab: "petvity", liveAgentTurns: { count: 0, startedAt: new Date().toISOString(), cwds: [] } }),
+      stubProject({
+        tab: "petvity",
+        liveAgentTurns: { count: 0, startedAt: new Date().toISOString(), cwds: [] },
+      }),
       [],
       Math.floor(Date.now() / 1000),
     );
@@ -543,7 +776,11 @@ function runTests(): void {
     // is not a partial count, it is indistinguishable from a healthy quiet
     // fleet. If this ever stops being true, revisit whether countsKnown is
     // still load-bearing rather than deleting it silently.
-    const projects = [stubProject({ tab: "alpha" }), stubProject({ tab: "beta" }), stubProject({ tab: "gamma" })];
+    const projects = [
+      stubProject({ tab: "alpha" }),
+      stubProject({ tab: "beta" }),
+      stubProject({ tab: "gamma" }),
+    ];
     const nowS = Math.floor(Date.now() / 1000);
     const unknown = buildControlPageState(controlData(projects), nowS, false, false).dashboard;
     assert(unknown.runningCount === 0, "nothing can be known to be working");

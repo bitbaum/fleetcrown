@@ -18,13 +18,29 @@ const APPLY = process.argv.includes("--apply");
 
 /** loser → winner (loser entity deleted; attrs/goals repointed). */
 const MERGE_PAIRS: Array<{ winner: string; loser: string; reason: string }> = [
-  { winner: "fleetcrown", loser: "Cockpit", reason: "Cockpit renamed to FleetCrown — same product" },
+  {
+    winner: "fleetcrown",
+    loser: "Cockpit",
+    reason: "Cockpit renamed to FleetCrown — same product",
+  },
   { winner: "aoz-housing", loser: "AOZ", reason: "Empty duplicate shell" },
   { winner: "surf-your-life", loser: "SYL", reason: "Empty duplicate shell" },
-  { winner: "surf-your-life", loser: "swiss-longevity-hub", reason: "Renamed to Surf Your Life — stale SLH repo retired" },
+  {
+    winner: "surf-your-life",
+    loser: "swiss-longevity-hub",
+    reason: "Renamed to Surf Your Life — stale SLH repo retired",
+  },
   { winner: "ivy-portal", loser: "Ivy", reason: "Empty duplicate shell" },
-  { winner: "revampit", loser: "revamp-it", reason: "Duplicate; revampit has dir_path + richer profile" },
-  { winner: "truthseeker", loser: "truthseeker-tmp", reason: "Import stub superseded by truthseeker" },
+  {
+    winner: "revampit",
+    loser: "revamp-it",
+    reason: "Duplicate; revampit has dir_path + richer profile",
+  },
+  {
+    winner: "truthseeker",
+    loser: "truthseeker-tmp",
+    reason: "Import stub superseded by truthseeker",
+  },
 ];
 
 /** Pure delete — no canonical merge target worth keeping. */
@@ -41,20 +57,20 @@ const DELETE_NAMES: Array<{ name: string; reason: string }> = [
 async function main() {
   const password = process.env.FLEETCROWN_DB_PASSWORD;
   const host = process.env.HETZNER_IP;
-  if (!password || !host) throw new Error("FLEETCROWN_DB_PASSWORD / HETZNER_IP missing from .env.hetzner.local");
+  if (!password || !host)
+    throw new Error("FLEETCROWN_DB_PASSWORD / HETZNER_IP missing from .env.hetzner.local");
   process.env.DATABASE_URL = `postgres://fleetcrown:${encodeURIComponent(password)}@${host}:5432/fleetcrown?sslmode=require`;
 
   const { db } = await import("../../src/db");
   const { entities, users } = await import("../../src/db/schema");
   const { eq, sql } = await import("drizzle-orm");
   const { ENTITY_TYPE } = await import("../../src/lib/constants/statuses");
-  const {
-    findProjectEntityByName,
-    retireProjectMerge,
-    deleteProjectEntityByName,
-  } = await import("../../src/db/queries/project-merge");
+  const { findProjectEntityByName, retireProjectMerge, deleteProjectEntityByName } =
+    await import("../../src/db/queries/project-merge");
 
-  const allUsers = await db.select({ id: users.id, email: users.email, name: users.name }).from(users);
+  const allUsers = await db
+    .select({ id: users.id, email: users.email, name: users.name })
+    .from(users);
   const projectOwners = await db
     .select({ userId: entities.userId, count: sql<number>`count(*)::int` })
     .from(entities)
@@ -73,7 +89,9 @@ async function main() {
     .select({ id: entities.id })
     .from(entities)
     .where(eq(entities.type, ENTITY_TYPE.PROJECT));
-  console.log(`${APPLY ? "Applying" : "Dry run"} retire-stale-projects for ${ownerUser.name ?? ownerUser.email} (${ownerCounts.get(userId)} projects)`);
+  console.log(
+    `${APPLY ? "Applying" : "Dry run"} retire-stale-projects for ${ownerUser.name ?? ownerUser.email} (${ownerCounts.get(userId)} projects)`,
+  );
   console.log(`Project entities before: ${before.length}\n`);
 
   let merged = 0;

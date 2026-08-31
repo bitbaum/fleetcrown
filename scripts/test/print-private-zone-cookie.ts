@@ -34,7 +34,8 @@ function sessionCookieName(): string {
 async function main() {
   const token = smokeSessionToken().trim();
   if (!token) throw new Error("No session — set FLEETCROWN_SESSION_TOKEN");
-  if (!process.env.AUTH_SECRET?.trim()) throw new Error("AUTH_SECRET is required to mint the unlock");
+  if (!process.env.AUTH_SECRET?.trim())
+    throw new Error("AUTH_SECRET is required to mint the unlock");
 
   const res = await fetch(`${BASE}/api/me`, {
     headers: { Cookie: `${sessionCookieName()}=${token}` },

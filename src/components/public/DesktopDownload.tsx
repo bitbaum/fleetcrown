@@ -56,7 +56,9 @@ const SERVER_DETECTED: Detected = {
   // Server snapshot: pick the one that's actually ready so non-interactive
   // crawlers and the initial paint surface a real link, not a "coming soon"
   // panel that depends on the user's UA.
-  platformId: DESKTOP_DOWNLOAD.platforms.find((p) => p.status === "ready")?.id ?? DESKTOP_DOWNLOAD.platforms[0].id,
+  platformId:
+    DESKTOP_DOWNLOAD.platforms.find((p) => p.status === "ready")?.id ??
+    DESKTOP_DOWNLOAD.platforms[0].id,
   handheld: false,
 };
 
@@ -77,8 +79,7 @@ export function DesktopDownload() {
   // make the coming-soon branch unreachable and delete a UI state we still
   // need the moment a new platform is announced.
   const platforms: DesktopDownloadPlatform[] = DESKTOP_DOWNLOAD.platforms;
-  const active =
-    platforms.find((platform) => platform.id === activePlatformId) ?? platforms[0];
+  const active = platforms.find((platform) => platform.id === activePlatformId) ?? platforms[0];
   const [showDeveloper, setShowDeveloper] = useState(false);
 
   return (
@@ -93,8 +94,12 @@ export function DesktopDownload() {
         {/* Web vs desktop — answers "do I need this?" before any download CTA */}
         <div className="ui-public-download-compare">
           <div className="ui-public-download-compare-card">
-            <div className="ui-public-download-compare-label">{DESKTOP_DOWNLOAD.comparison.web.label}</div>
-            <div className="ui-public-download-compare-tagline">{DESKTOP_DOWNLOAD.comparison.web.tagline}</div>
+            <div className="ui-public-download-compare-label">
+              {DESKTOP_DOWNLOAD.comparison.web.label}
+            </div>
+            <div className="ui-public-download-compare-tagline">
+              {DESKTOP_DOWNLOAD.comparison.web.tagline}
+            </div>
             <ul className="ui-public-download-compare-list">
               {DESKTOP_DOWNLOAD.comparison.web.bullets.map((b) => (
                 <li key={b}>{b}</li>
@@ -102,8 +107,12 @@ export function DesktopDownload() {
             </ul>
           </div>
           <div className="ui-public-download-compare-card ui-public-download-compare-card-emphasis">
-            <div className="ui-public-download-compare-label">{DESKTOP_DOWNLOAD.comparison.desktop.label}</div>
-            <div className="ui-public-download-compare-tagline">{DESKTOP_DOWNLOAD.comparison.desktop.tagline}</div>
+            <div className="ui-public-download-compare-label">
+              {DESKTOP_DOWNLOAD.comparison.desktop.label}
+            </div>
+            <div className="ui-public-download-compare-tagline">
+              {DESKTOP_DOWNLOAD.comparison.desktop.tagline}
+            </div>
             <ul className="ui-public-download-compare-list">
               {DESKTOP_DOWNLOAD.comparison.desktop.bullets.map((b) => (
                 <li key={b}>{b}</li>
@@ -166,8 +175,12 @@ export function DesktopDownload() {
 
         {/* What it uses on your computer — plain-language prereqs */}
         <div className="ui-public-download-prereqs">
-          <div className="ui-public-download-prereqs-title">{DESKTOP_DOWNLOAD.prerequisites.title}</div>
-          <p className="ui-public-download-prereqs-desc">{DESKTOP_DOWNLOAD.prerequisites.description}</p>
+          <div className="ui-public-download-prereqs-title">
+            {DESKTOP_DOWNLOAD.prerequisites.title}
+          </div>
+          <p className="ui-public-download-prereqs-desc">
+            {DESKTOP_DOWNLOAD.prerequisites.description}
+          </p>
           <div className="ui-public-download-prereqs-grid">
             {DESKTOP_DOWNLOAD.prerequisites.items.map((item) => (
               <div key={item.title} className="ui-public-download-prereq-card">
@@ -187,7 +200,9 @@ export function DesktopDownload() {
                   </span>
                 </div>
                 <p className="ui-public-download-prereq-why">{item.whyYouNeedIt}</p>
-                {item.command && <code className="ui-public-download-prereq-command">{item.command}</code>}
+                {item.command && (
+                  <code className="ui-public-download-prereq-command">{item.command}</code>
+                )}
                 <a
                   href={item.href}
                   target="_blank"
@@ -215,18 +230,32 @@ export function DesktopDownload() {
           </button>
           {showDeveloper && (
             <div className="ui-public-download-dev-body">
-              <p className="ui-public-download-dev-desc">{DESKTOP_DOWNLOAD.developer.description}</p>
+              <p className="ui-public-download-dev-desc">
+                {DESKTOP_DOWNLOAD.developer.description}
+              </p>
 
               <div className="ui-public-download-dev-block">
-                <div className="ui-public-download-dev-block-title">{DESKTOP_DOWNLOAD.developer.buildFromSource.label}</div>
-                <p className="ui-public-download-dev-block-body">{DESKTOP_DOWNLOAD.developer.buildFromSource.body}</p>
-                <code className="ui-public-download-dev-command">{DESKTOP_DOWNLOAD.developer.buildFromSource.command}</code>
+                <div className="ui-public-download-dev-block-title">
+                  {DESKTOP_DOWNLOAD.developer.buildFromSource.label}
+                </div>
+                <p className="ui-public-download-dev-block-body">
+                  {DESKTOP_DOWNLOAD.developer.buildFromSource.body}
+                </p>
+                <code className="ui-public-download-dev-command">
+                  {DESKTOP_DOWNLOAD.developer.buildFromSource.command}
+                </code>
               </div>
 
               <div className="ui-public-download-dev-block">
-                <div className="ui-public-download-dev-block-title">{DESKTOP_DOWNLOAD.developer.legacyDaemon.label}</div>
-                <p className="ui-public-download-dev-block-body">{DESKTOP_DOWNLOAD.developer.legacyDaemon.body}</p>
-                <code className="ui-public-download-dev-command">{DESKTOP_DOWNLOAD.developer.legacyDaemon.command}</code>
+                <div className="ui-public-download-dev-block-title">
+                  {DESKTOP_DOWNLOAD.developer.legacyDaemon.label}
+                </div>
+                <p className="ui-public-download-dev-block-body">
+                  {DESKTOP_DOWNLOAD.developer.legacyDaemon.body}
+                </p>
+                <code className="ui-public-download-dev-command">
+                  {DESKTOP_DOWNLOAD.developer.legacyDaemon.command}
+                </code>
               </div>
             </div>
           )}
@@ -234,7 +263,8 @@ export function DesktopDownload() {
       </div>
 
       <p className="ui-public-download-footer">
-        The desktop app, the web, and your phone all connect to the same fleet. Use whichever surface is in front of you.
+        The desktop app, the web, and your phone all connect to the same fleet. Use whichever
+        surface is in front of you.
       </p>
     </div>
   );
@@ -258,10 +288,10 @@ function HandheldHandoff() {
         Fleet Runner installs on a computer — but you don&apos;t need it to start.
       </h3>
       <p className="ui-public-download-handoff-body">
-        {APP_NAME} on the web is the full control plane: watch every agent, dispatch work,
-        approve decisions, and drive a live terminal from this phone. Fleet Runner is what
-        lets those agents touch files and run commands on your own machine — so install it
-        there, whenever you&apos;re next in front of it.
+        {APP_NAME} on the web is the full control plane: watch every agent, dispatch work, approve
+        decisions, and drive a live terminal from this phone. Fleet Runner is what lets those agents
+        touch files and run commands on your own machine — so install it there, whenever you&apos;re
+        next in front of it.
       </p>
       <div className="ui-public-download-handoff-actions">
         <Link href={ROUTES.SIGN_UP} className="ui-public-download-handoff-primary">
@@ -272,7 +302,11 @@ function HandheldHandoff() {
           onClick={() => copy(link)}
           className="ui-public-download-handoff-secondary"
         >
-          {copied ? <Check className="h-4 w-4" aria-hidden /> : <Copy className="h-4 w-4" aria-hidden />}
+          {copied ? (
+            <Check className="h-4 w-4" aria-hidden />
+          ) : (
+            <Copy className="h-4 w-4" aria-hidden />
+          )}
           {copied ? "Link copied" : "Copy the install link"}
         </button>
       </div>
@@ -281,7 +315,11 @@ function HandheldHandoff() {
   );
 }
 
-function ReadyPlatformPanel({ platform }: { platform: Extract<DesktopDownloadPlatform, { status: "ready" }> }) {
+function ReadyPlatformPanel({
+  platform,
+}: {
+  platform: Extract<DesktopDownloadPlatform, { status: "ready" }>;
+}) {
   return (
     <div className="ui-public-download-panel">
       <div className="flex flex-col items-center gap-3">
@@ -308,7 +346,11 @@ function ReadyPlatformPanel({ platform }: { platform: Extract<DesktopDownloadPla
   );
 }
 
-function ComingSoonPanel({ platform }: { platform: Extract<DesktopDownloadPlatform, { status: "comingSoon" }> }) {
+function ComingSoonPanel({
+  platform,
+}: {
+  platform: Extract<DesktopDownloadPlatform, { status: "comingSoon" }>;
+}) {
   // Honest CTA instead of a Download button that 404s: Fleet Runner ships
   // Kept for a platform that genuinely has no asset yet. All three ship
   // today, so this is currently unreachable — do not delete it to "clean up"
@@ -317,8 +359,8 @@ function ComingSoonPanel({ platform }: { platform: Extract<DesktopDownloadPlatfo
     <div className="ui-public-download-panel">
       <div className="flex flex-col items-center gap-3 text-center">
         <p className="ui-public-download-lede">
-          The {platform.label} build is not published yet — watch releases to get
-          the {platform.label} build the moment it lands, or use FleetCrown on the web now.
+          The {platform.label} build is not published yet — watch releases to get the{" "}
+          {platform.label} build the moment it lands, or use FleetCrown on the web now.
         </p>
         <div className="flex flex-wrap justify-center gap-2">
           <a
@@ -330,7 +372,9 @@ function ComingSoonPanel({ platform }: { platform: Extract<DesktopDownloadPlatfo
             Watch releases
             <ExternalLink className="ui-public-download-prereq-link-icon" aria-hidden />
           </a>
-          <Link href="/" className="ui-public-download-secondary">Use FleetCrown on the web</Link>
+          <Link href="/" className="ui-public-download-secondary">
+            Use FleetCrown on the web
+          </Link>
         </div>
       </div>
     </div>
@@ -349,10 +393,13 @@ function CopyableCommand({ command }: { command: string }) {
         aria-label={copied ? "Copied" : "Copy command"}
         className="ui-public-download-command-copy"
       >
-        {copied ? <Check className="h-4 w-4" aria-hidden /> : <Copy className="h-4 w-4" aria-hidden />}
+        {copied ? (
+          <Check className="h-4 w-4" aria-hidden />
+        ) : (
+          <Copy className="h-4 w-4" aria-hidden />
+        )}
         <span>{copied ? "Copied" : "Copy"}</span>
       </button>
     </div>
   );
 }
-

@@ -35,7 +35,8 @@ assert.equal(legacy.isCustom, false);
 
 // Harness scaffolding is stripped from the display title…
 const noisy = toPromptDisplayFields({
-  customPrompt: "<task-notification><task-id>abc</task-id><summary>done</summary></task-notification>\nFix the login bug",
+  customPrompt:
+    "<task-notification><task-id>abc</task-id><summary>done</summary></task-notification>\nFix the login bug",
   resolvedPrompt: null,
   intent: "next_best",
 });

@@ -3,17 +3,22 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
-  AuthShell, AuthCard, AuthField, AuthInput, AuthSubmitButton,
-  AuthFooterLink, AuthHeading,
+  AuthShell,
+  AuthCard,
+  AuthField,
+  AuthInput,
+  AuthSubmitButton,
+  AuthFooterLink,
+  AuthHeading,
 } from "@/components/auth/AuthShell";
 import { postJson } from "@/lib/api/fetch";
 import { AUTH_COPY, ROUTES } from "@/config/auth";
 
 export default function ForgotPasswordPage() {
-  const [email, setEmail]       = useState("");
+  const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
-  const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -43,10 +48,7 @@ export default function ForgotPasswordPage() {
 
   return (
     <AuthShell>
-      <AuthHeading
-        title={AUTH_COPY.forgot.title}
-        description={AUTH_COPY.forgot.description}
-      />
+      <AuthHeading title={AUTH_COPY.forgot.title} description={AUTH_COPY.forgot.description} />
 
       <AuthCard>
         <form onSubmit={handleSubmit} className="space-y-4">

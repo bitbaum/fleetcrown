@@ -5,14 +5,19 @@ import { isRuntimeAvailable } from "@/lib/runtime";
 import { enqueueAutoContinueCommand } from "@/db/queries/pending-commands";
 import { APP_SLUG } from "@/config/brand";
 import { writeFileSync, unlinkSync } from "fs";
-import { getProjectState, getProjectStatesByUserId, setAllProjectAutoContinue, upsertProjectState } from "@/db/queries/project-states";
+import {
+  getProjectState,
+  getProjectStatesByUserId,
+  setAllProjectAutoContinue,
+  upsertProjectState,
+} from "@/db/queries/project-states";
 import { recordControlAuditEvent } from "@/db/queries/control-audit-events";
 import { executionAccessErrorBody, resolveQueuedExecution } from "@/lib/execution-access";
 
 const Body = z.object({
-  tab:     z.string().max(200).optional(),
+  tab: z.string().max(200).optional(),
   enabled: z.boolean(),
-  all:     z.boolean().optional(),
+  all: z.boolean().optional(),
 });
 
 function sentinelPath(tab: string) {
@@ -21,7 +26,11 @@ function sentinelPath(tab: string) {
 
 function applyLocalSentinel(tab: string, enabled: boolean) {
   if (enabled) {
-    try { unlinkSync(sentinelPath(tab)); } catch { /* absent */ }
+    try {
+      unlinkSync(sentinelPath(tab));
+    } catch {
+      /* absent */
+    }
   } else {
     writeFileSync(sentinelPath(tab), "off", "utf8");
   }
@@ -42,7 +51,9 @@ export async function POST(req: NextRequest) {
       event: "auto_continue",
       source: "api/control/auto-continue",
       action: enabled ? "resumed_all" : "paused_all",
-      reason: enabled ? "Resumed automatic continuation for all projects" : "Paused automatic continuation for all projects",
+      reason: enabled
+        ? "Resumed automatic continuation for all projects"
+        : "Paused automatic continuation for all projects",
       meta: { count: rows.length },
     });
     if (isRuntimeAvailable()) {
@@ -53,12 +64,22 @@ export async function POST(req: NextRequest) {
     if (!execution.ok) {
       return NextResponse.json(executionAccessErrorBody(execution), { status: execution.status });
     }
-    const commandIds = await Promise.all(rows.map((row) => enqueueAutoContinueCommand(userId, {
-      tab: row.tabName,
-      ...(execution.channel ? { channel: execution.channel } : {}),
-      enabled,
-    })));
-    return NextResponse.json({ ok: true, mode: "queued", scope: "all", count: commandIds.length, commandIds });
+    const commandIds = await Promise.all(
+      rows.map((row) =>
+        enqueueAutoContinueCommand(userId, {
+          tab: row.tabName,
+          ...(execution.channel ? { channel: execution.channel } : {}),
+          enabled,
+        }),
+      ),
+    );
+    return NextResponse.json({
+      ok: true,
+      mode: "queued",
+      scope: "all",
+      count: commandIds.length,
+      commandIds,
+    });
   }
 
   if (!tab) return NextResponse.json({ error: "tab is required" }, { status: 400 });
@@ -72,7 +93,9 @@ export async function POST(req: NextRequest) {
     event: "auto_continue",
     source: "api/control/auto-continue",
     action: enabled ? "resumed" : "paused",
-    reason: enabled ? "Resumed automatic continuation for project" : "Paused automatic continuation for project",
+    reason: enabled
+      ? "Resumed automatic continuation for project"
+      : "Paused automatic continuation for project",
   });
 
   if (isRuntimeAvailable()) {
@@ -96,7 +119,8 @@ export async function GET(req: NextRequest) {
   const userId = await getApiUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const tab = req.nextUrl.searchParams.get("tab")?.trim().toLowerCase();
-  const all = req.nextUrl.searchParams.get("all") === "1" || req.nextUrl.searchParams.get("all") === "true";
+  const all =
+    req.nextUrl.searchParams.get("all") === "1" || req.nextUrl.searchParams.get("all") === "true";
   if (all) {
     const rows = await getProjectStatesByUserId(userId);
     const disabled = rows.filter((row) => !row.autoContinueEnabled).length;

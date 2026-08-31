@@ -12,7 +12,13 @@ export async function insertActiveAlertOnce(alert: NewAlert): Promise<Alert | nu
   const [existing] = await db
     .select({ id: alerts.id })
     .from(alerts)
-    .where(and(eq(alerts.userId, alert.userId), eq(alerts.type, alert.type), eq(alerts.dismissed, false)))
+    .where(
+      and(
+        eq(alerts.userId, alert.userId),
+        eq(alerts.type, alert.type),
+        eq(alerts.dismissed, false),
+      ),
+    )
     .limit(1);
   if (existing) return null;
   const [row] = await db.insert(alerts).values(alert).returning();
@@ -32,7 +38,13 @@ export async function refreshOrInsertActiveAlert(
   const [existing] = await db
     .select({ id: alerts.id })
     .from(alerts)
-    .where(and(eq(alerts.userId, alert.userId), eq(alerts.type, alert.type), eq(alerts.dismissed, false)))
+    .where(
+      and(
+        eq(alerts.userId, alert.userId),
+        eq(alerts.type, alert.type),
+        eq(alerts.dismissed, false),
+      ),
+    )
     .limit(1);
 
   if (existing) {

@@ -8,7 +8,6 @@ import { SSE_KEEPALIVE_MS } from "@/lib/constants/time";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-
 /** GET /api/workspaces/[id]/stream — SSE of the workspace's event stream.
  *  Replays retained history first (the browser sends Last-Event-ID on reconnect
  *  → resume from that seq), then live output/status/exit events. This is the
@@ -35,7 +34,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const stream = new ReadableStream({
     start(controller) {
       const safeEnqueue = (text: string) => {
-        try { controller.enqueue(enc.encode(text)); } catch { /* client disconnected */ }
+        try {
+          controller.enqueue(enc.encode(text));
+        } catch {
+          /* client disconnected */
+        }
       };
       unsubscribe = executor.subscribe(id, sinceSeq, (event) => {
         safeEnqueue(`id: ${event.seq}\ndata: ${JSON.stringify(event)}\n\n`);
@@ -44,7 +47,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       req.signal.addEventListener("abort", () => {
         if (keepalive) clearInterval(keepalive);
         unsubscribe();
-        try { controller.close(); } catch { /* already closed */ }
+        try {
+          controller.close();
+        } catch {
+          /* already closed */
+        }
       });
     },
     cancel() {

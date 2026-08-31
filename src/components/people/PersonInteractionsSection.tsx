@@ -38,7 +38,7 @@ export function InteractionsSection({
         summary: summary || undefined,
         occurredAt,
       });
-      const data = await res.json() as { ok?: boolean; error?: string };
+      const data = (await res.json()) as { ok?: boolean; error?: string };
       if (data.ok) {
         onAdd({ channel, direction, summary: summary || null, occurredAt });
         setLogging(false);
@@ -63,7 +63,11 @@ export function InteractionsSection({
               onChange={(e) => setChannel(e.target.value)}
               className="flex-1 ui-input-tight"
             >
-              {CHANNEL_NAMES.map((c) => <option key={c} value={c}>{c}</option>)}
+              {CHANNEL_NAMES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
             </select>
             <select
               value={direction}
@@ -78,7 +82,10 @@ export function InteractionsSection({
             value={summary}
             onChange={(e) => setSummary(e.target.value)}
             placeholder="Brief note (optional)"
-            onKeyDown={(e) => { if (e.key === "Enter") handleLog(); if (e.key === "Escape") setLogging(false); }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleLog();
+              if (e.key === "Escape") setLogging(false);
+            }}
             autoFocus
             className="w-full ui-input-tight"
           />
@@ -90,11 +97,7 @@ export function InteractionsSection({
               onChange={(e) => setOccurredAt(e.target.value)}
               className="flex-1 ui-input-tight"
             />
-            <button
-              onClick={handleLog}
-              disabled={saving}
-              className="ui-btn-save"
-            >
+            <button onClick={handleLog} disabled={saving} className="ui-btn-save">
               {saving ? <Loader2 className="ui-spinner-xs" /> : "Save"}
             </button>
             <button onClick={() => setLogging(false)} className="ui-link-subtle-button">
@@ -103,22 +106,19 @@ export function InteractionsSection({
           </div>
         </div>
       ) : (
-        <button
-          onClick={() => setLogging(true)}
-          className="ui-btn-add mt-1"
-        >
+        <button onClick={() => setLogging(true)} className="ui-btn-add mt-1">
           <Plus className="h-3.5 w-3.5" /> Log interaction
         </button>
       )}
 
-      {list.length === 0 && !logging && (
-        <EmptyState>No interactions recorded</EmptyState>
-      )}
+      {list.length === 0 && !logging && <EmptyState>No interactions recorded</EmptyState>}
       {list.map((ix, i) => (
         <div key={i} className="ui-list-row space-y-0.5">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <span className={`text-xs ${ix.direction === INTERACTION_DIRECTION.INBOUND ? "text-text-tertiary" : "text-status-positive/60"}`}>
+              <span
+                className={`text-xs ${ix.direction === INTERACTION_DIRECTION.INBOUND ? "text-text-tertiary" : "text-status-positive/60"}`}
+              >
                 {ix.direction === INTERACTION_DIRECTION.INBOUND ? "←" : "→"}
               </span>
               <span className="text-text-secondary">{ix.channel}</span>
@@ -127,9 +127,7 @@ export function InteractionsSection({
               {new Date(ix.occurredAt).toLocaleDateString(APP_LOCALE)}
             </span>
           </div>
-          {ix.summary && (
-            <p className="text-xs text-text-tertiary leading-relaxed">{ix.summary}</p>
-          )}
+          {ix.summary && <p className="text-xs text-text-tertiary leading-relaxed">{ix.summary}</p>}
         </div>
       ))}
     </Section>

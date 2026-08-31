@@ -210,6 +210,11 @@ export type ControlData = {
   builderPresence: { cloud: boolean; local: boolean; any: boolean } | null;
   /** Execution health: a runner can push snapshots while its command loop is
    *  hung, queuing dispatches forever. null when runtime is local. */
-  runnerExecutionStall: { stalled: boolean; stalledCount: number; oldestSeconds: number; tabs: string[] } | null;
+  runnerExecutionStall: {
+    stalled: boolean;
+    stalledCount: number;
+    oldestSeconds: number;
+    tabs: string[];
+  } | null;
   failedCommands: FailedCommand[];
 };

@@ -48,10 +48,16 @@ function boxToken(): string {
 /** Strip a legacy embedded credential from origin so old clones stop leaking. */
 function scrubRemoteUrl(boxDir: string): void {
   try {
-    const url = execFileSync("git", ["-C", boxDir, "remote", "get-url", "origin"], { timeout: 15_000 })
-      .toString().trim();
+    const url = execFileSync("git", ["-C", boxDir, "remote", "get-url", "origin"], {
+      timeout: 15_000,
+    })
+      .toString()
+      .trim();
     const clean = url.replace(/^https:\/\/[^@/]+@/, "https://");
-    if (clean !== url) execFileSync("git", ["-C", boxDir, "remote", "set-url", "origin", clean], { timeout: 15_000 });
+    if (clean !== url)
+      execFileSync("git", ["-C", boxDir, "remote", "set-url", "origin", clean], {
+        timeout: 15_000,
+      });
   } catch {
     // No origin (empty scaffold dir) — nothing to scrub.
   }
@@ -66,9 +72,14 @@ function syncExistingClone(boxDir: string): void {
       stdio: "inherit",
       timeout: 120_000,
     });
-    execFileSync("git", [...auth, "-C", boxDir, "pull", "--ff-only"], { stdio: "inherit", timeout: 120_000 });
+    execFileSync("git", [...auth, "-C", boxDir, "pull", "--ff-only"], {
+      stdio: "inherit",
+      timeout: 120_000,
+    });
   } catch (e) {
-    console.warn(`[box-prepare] git sync failed for ${boxDir}: ${e instanceof Error ? e.message : String(e)}`);
+    console.warn(
+      `[box-prepare] git sync failed for ${boxDir}: ${e instanceof Error ? e.message : String(e)}`,
+    );
   }
 }
 

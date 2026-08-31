@@ -38,9 +38,9 @@ function resolveTs(
 ): number | null {
   if (runtimeTs !== null) return runtimeTs;
   const eventS = toUnixSeconds(eventTs);
-  if (eventS !== null && (nowS - eventS) < SENTINEL_VALIDITY_S) return eventS;
+  if (eventS !== null && nowS - eventS < SENTINEL_VALIDITY_S) return eventS;
   const dbS = toUnixSeconds(dbTs);
-  if (dbS !== null && (nowS - dbS) < SENTINEL_VALIDITY_S) return dbS;
+  if (dbS !== null && nowS - dbS < SENTINEL_VALIDITY_S) return dbS;
   return null;
 }
 
@@ -61,7 +61,9 @@ export function deriveLifecycleState(args: {
   };
 }
 
-export function collectRuntimeLifecycleEvents(runtime: RuntimeLifecycleFacts): RuntimeEventCandidate[] {
+export function collectRuntimeLifecycleEvents(
+  runtime: RuntimeLifecycleFacts,
+): RuntimeEventCandidate[] {
   const events: RuntimeEventCandidate[] = [];
 
   if (runtime.readyAt !== null) {
@@ -86,7 +88,11 @@ export function collectRuntimeLifecycleEvents(runtime: RuntimeLifecycleFacts): R
     events.push({ type: "session_closed", at: runtime.closedAt, source: "runtime-sentinel" });
   }
   if (runtime.currentPromptStartedAt !== null && runtime.currentPromptStartedAt > 0) {
-    events.push({ type: "task_started", at: runtime.currentPromptStartedAt, source: "runtime-prompt" });
+    events.push({
+      type: "task_started",
+      at: runtime.currentPromptStartedAt,
+      source: "runtime-prompt",
+    });
   }
 
   return events;

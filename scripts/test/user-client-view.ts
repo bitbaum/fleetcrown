@@ -6,19 +6,23 @@
 // Run: npx tsx scripts/test/user-client-view.ts
 import { getTableColumns } from "drizzle-orm";
 import { users, type User } from "@/db/schema/users";
-import {
-  USER_CLIENT_FIELDS,
-  USER_WITHHELD_FIELDS,
-  toClientUser,
-} from "@/lib/user-client-view";
+import { USER_CLIENT_FIELDS, USER_WITHHELD_FIELDS, toClientUser } from "@/lib/user-client-view";
 
 let pass = 0;
 let fail = 0;
 function ok(cond: boolean, label: string) {
-  if (cond) { pass++; } else { fail++; console.error(`✗ ${label}`); }
+  if (cond) {
+    pass++;
+  } else {
+    fail++;
+    console.error(`✗ ${label}`);
+  }
 }
 function eq(actual: unknown, expected: unknown, label: string) {
-  ok(JSON.stringify(actual) === JSON.stringify(expected), `${label}: expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
+  ok(
+    JSON.stringify(actual) === JSON.stringify(expected),
+    `${label}: expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`,
+  );
 }
 
 const schemaColumns = Object.keys(getTableColumns(users)).sort();
@@ -46,7 +50,10 @@ for (const field of [...exposed, ...withheld]) {
 
 // Every withheld field carries the reason it can never be sent.
 for (const [field, reason] of Object.entries(USER_WITHHELD_FIELDS)) {
-  ok(typeof reason === "string" && reason.length > 20, `users.${field} is withheld without a stated reason`);
+  ok(
+    typeof reason === "string" && reason.length > 20,
+    `users.${field} is withheld without a stated reason`,
+  );
 }
 
 // The two that started this. Named explicitly so a future "simplification" that
@@ -97,7 +104,13 @@ ok(!wire.includes(row.privateZonePinHash!), "serialized response does not contai
 eq(view.id, row.id, "id survives");
 eq(view.username, row.username, "username survives");
 eq(view.plan, row.plan, "plan survives");
-eq(view.privateZonePinSetAt, row.privateZonePinSetAt, "privateZonePinSetAt survives (the fact, not the secret)");
+eq(
+  view.privateZonePinSetAt,
+  row.privateZonePinSetAt,
+  "privateZonePinSetAt survives (the fact, not the secret)",
+);
 
-console.log(`${pass}/${pass + fail} user-client-view cases passed (${schemaColumns.length} columns classified)`);
+console.log(
+  `${pass}/${pass + fail} user-client-view cases passed (${schemaColumns.length} columns classified)`,
+);
 if (fail > 0) process.exit(1);

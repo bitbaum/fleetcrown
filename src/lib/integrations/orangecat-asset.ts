@@ -29,7 +29,11 @@ export async function publishRobotAsset(
 
   const client = await getOrangeCatClient();
   if (!client) {
-    return { assetId: robot.orangecatAssetId, published: false, reason: "orangecat-not-configured" };
+    return {
+      assetId: robot.orangecatAssetId,
+      published: false,
+      reason: "orangecat-not-configured",
+    };
   }
 
   const robotClass = (robot.robotClass ?? "other") as RobotClass;
@@ -38,10 +42,14 @@ export async function publishRobotAsset(
     robot.market.book && "bookable",
     robot.market.rent && "rentable",
     robot.market.sell && "sellable",
-  ].filter(Boolean).join(", ");
+  ]
+    .filter(Boolean)
+    .join(", ");
   const body = {
     title: robot.name,
-    description: [robot.description, spec && `Spec: ${spec}`, `Offers: ${offers}`].filter(Boolean).join("\n"),
+    description: [robot.description, spec && `Spec: ${spec}`, `Offers: ${offers}`]
+      .filter(Boolean)
+      .join("\n"),
     type: ROBOT_CLASS_TO_OC_ASSET[robotClass],
     is_for_rent: robot.market.book || robot.market.rent,
     is_for_sale: robot.market.sell,
@@ -52,10 +60,9 @@ export async function publishRobotAsset(
       await updateOrangeCatAsset(robot.orangecatAssetId, body);
       return { assetId: robot.orangecatAssetId, published: true };
     }
-    const asset = await client.assets.create(
-      body as Parameters<typeof client.assets.create>[0],
-      { idempotencyKey: `fleetcrown_robot_${robot.id}` },
-    );
+    const asset = await client.assets.create(body as Parameters<typeof client.assets.create>[0], {
+      idempotencyKey: `fleetcrown_robot_${robot.id}`,
+    });
     await upsertEntityAttribute(userId, robot.id, ROBOT_ATTR.ORANGECAT_ASSET_ID, asset.id);
     return { assetId: asset.id, published: true };
   } catch (err) {

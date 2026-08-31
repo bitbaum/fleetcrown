@@ -42,7 +42,9 @@ export function ActivityTimeline({ tab }: { tab: string }) {
     const mine = ++seq.current;
     setRefreshing(true);
     try {
-      const res = await fetch(`/api/control/activity?tab=${encodeURIComponent(tab)}`, { cache: "no-store" });
+      const res = await fetch(`/api/control/activity?tab=${encodeURIComponent(tab)}`, {
+        cache: "no-store",
+      });
       if (mine !== seq.current) return;
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -88,13 +90,21 @@ export function ActivityTimeline({ tab }: { tab: string }) {
       ) : events.length === 0 ? (
         <div className="flex h-full flex-col items-center justify-center gap-1 text-center text-sm text-text-tertiary">
           <p className="font-medium text-text-secondary">No activity yet</p>
-          <p className="text-text-muted">Dispatch a prompt to this project and it&apos;ll show up here.</p>
+          <p className="text-text-muted">
+            Dispatch a prompt to this project and it&apos;ll show up here.
+          </p>
         </div>
       ) : (
         <ul className="min-h-0 flex-1 space-y-0.5 overflow-y-auto pr-1">
           {events.map((ev) => (
-            <li key={ev.id} className="flex items-start gap-3 rounded-lg px-2 py-2 hover:bg-surface-overlay">
-              <span className={cn("mt-1.5 h-2 w-2 shrink-0 rounded-full", STATUS_DOT_CLASS[ev.status])} aria-hidden />
+            <li
+              key={ev.id}
+              className="flex items-start gap-3 rounded-lg px-2 py-2 hover:bg-surface-overlay"
+            >
+              <span
+                className={cn("mt-1.5 h-2 w-2 shrink-0 rounded-full", STATUS_DOT_CLASS[ev.status])}
+                aria-hidden
+              />
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
                   <span className="ui-badge shrink-0">{KIND_LABEL[ev.kind]}</span>

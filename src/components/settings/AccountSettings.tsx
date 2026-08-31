@@ -12,14 +12,22 @@ import { TOAST_MEDIUM_MS } from "@/lib/constants/timings";
 type ConnectedAccount = { provider: string; providerAccountId: string };
 
 const PROVIDER_META: Record<string, { label: string; icon: React.ElementType }> = {
-  github:    { label: "GitHub",    icon: GitBranch },
-  google:    { label: "Google",    icon: Globe     },
-  twitter:   { label: "Twitter/X", icon: XIcon     },
-  orangecat: { label: "OrangeCat", icon: Cat       },
+  github: { label: "GitHub", icon: GitBranch },
+  google: { label: "Google", icon: Globe },
+  twitter: { label: "Twitter/X", icon: XIcon },
+  orangecat: { label: "OrangeCat", icon: Cat },
 };
 
-function ConnectedAccountsSection({ hasPassword, orangecatEnabled }: { hasPassword: boolean; orangecatEnabled: boolean }) {
-  const { data, refetch } = useFetch<{ accounts: ConnectedAccount[] }>("/api/me/connected-accounts");
+function ConnectedAccountsSection({
+  hasPassword,
+  orangecatEnabled,
+}: {
+  hasPassword: boolean;
+  orangecatEnabled: boolean;
+}) {
+  const { data, refetch } = useFetch<{ accounts: ConnectedAccount[] }>(
+    "/api/me/connected-accounts",
+  );
   const [disconnecting, setDisconnecting] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +56,7 @@ function ConnectedAccountsSection({ hasPassword, orangecatEnabled }: { hasPasswo
     try {
       const res = await deleteJson(`/api/me/connected-accounts/${provider}`);
       if (!res.ok) {
-        const d = await res.json() as { error?: string };
+        const d = (await res.json()) as { error?: string };
         setError(d.error ?? "Failed to disconnect");
         return;
       }
@@ -72,18 +80,29 @@ function ConnectedAccountsSection({ hasPassword, orangecatEnabled }: { hasPasswo
         const Icon = meta.icon;
         const isOnly = connectedAccounts.length === 1 && !hasPassword;
         return (
-          <div key={provider} className="flex items-center gap-3 rounded-lg border border-border-subtle bg-surface-base px-3 py-2.5">
+          <div
+            key={provider}
+            className="flex items-center gap-3 rounded-lg border border-border-subtle bg-surface-base px-3 py-2.5"
+          >
             <Icon className="h-4 w-4 shrink-0 text-text-secondary" />
             <span className="flex-1 text-sm text-text-primary">{meta.label}</span>
             <span className="text-xs text-status-positive">Connected</span>
             <button
               onClick={() => disconnect(provider)}
               disabled={!!disconnecting || isOnly}
-              title={isOnly ? "Set a password before disconnecting your only sign-in method" : `Disconnect ${meta.label}`}
+              title={
+                isOnly
+                  ? "Set a password before disconnecting your only sign-in method"
+                  : `Disconnect ${meta.label}`
+              }
               className="ml-2 p-1 rounded text-text-muted hover:text-status-negative/70 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               aria-label={`Disconnect ${meta.label}`}
             >
-              {disconnecting === provider ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+              {disconnecting === provider ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Trash2 className="h-3.5 w-3.5" />
+              )}
             </button>
           </div>
         );
@@ -92,11 +111,7 @@ function ConnectedAccountsSection({ hasPassword, orangecatEnabled }: { hasPasswo
         <div className="flex items-center gap-3 rounded-lg border border-border-subtle bg-surface-base px-3 py-2.5">
           <Cat className="h-4 w-4 shrink-0 text-text-secondary" />
           <span className="flex-1 text-sm text-text-primary">OrangeCat</span>
-          <button
-            onClick={connectOrangeCat}
-            disabled={connecting}
-            className="ui-btn-xs"
-          >
+          <button onClick={connectOrangeCat} disabled={connecting} className="ui-btn-xs">
             {connecting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Connect"}
           </button>
         </div>
@@ -129,7 +144,7 @@ function SetInitialPasswordSection() {
     try {
       const res = await postJson("/api/me/password", { newPassword: newPwd });
       if (!res.ok) {
-        const data = await res.json() as { error?: string };
+        const data = (await res.json()) as { error?: string };
         throw new Error(data.error ?? "Failed to set password");
       }
       // Re-render the server component so hasPassword flips to true and this
@@ -146,8 +161,8 @@ function SetInitialPasswordSection() {
     <div className="border-t border-border-subtle pt-4 space-y-3">
       <h3 className="text-sm font-medium text-text-primary">Set a password</h3>
       <p className="text-xs text-text-muted">
-        Add a password so you can sign in without an external provider — required
-        before you can disconnect your only connected account.
+        Add a password so you can sign in without an external provider — required before you can
+        disconnect your only connected account.
       </p>
       <div className="space-y-2">
         <div className="space-y-1.5">
@@ -155,7 +170,10 @@ function SetInitialPasswordSection() {
           <input
             type="password"
             value={newPwd}
-            onChange={(e) => { setNewPwd(e.target.value); setError(""); }}
+            onChange={(e) => {
+              setNewPwd(e.target.value);
+              setError("");
+            }}
             autoComplete="new-password"
             className={`ui-input ${tooShort ? "border-status-negative/50" : ""}`}
             placeholder="At least 8 characters"
@@ -167,7 +185,10 @@ function SetInitialPasswordSection() {
           <input
             type="password"
             value={confirmPwd}
-            onChange={(e) => { setConfirmPwd(e.target.value); setError(""); }}
+            onChange={(e) => {
+              setConfirmPwd(e.target.value);
+              setError("");
+            }}
             autoComplete="new-password"
             className={`ui-input ${mismatch ? "border-status-negative/50" : ""}`}
             placeholder="Repeat password"
@@ -233,13 +254,18 @@ export function AccountSettings({ user, orangecatEnabled }: Props) {
     setPwdError("");
     setPwdSaved(false);
     try {
-      const res = await patchJson("/api/me/password", { currentPassword: currentPwd, newPassword: newPwd });
+      const res = await patchJson("/api/me/password", {
+        currentPassword: currentPwd,
+        newPassword: newPwd,
+      });
       if (!res.ok) {
-        const data = await res.json() as { error?: string };
+        const data = (await res.json()) as { error?: string };
         throw new Error(data.error ?? "Failed to change password");
       }
       setPwdSaved(true);
-      setCurrentPwd(""); setNewPwd(""); setConfirmPwd("");
+      setCurrentPwd("");
+      setNewPwd("");
+      setConfirmPwd("");
       setTimeout(() => setPwdSaved(false), TOAST_MEDIUM_MS);
     } catch (e) {
       setPwdError(e instanceof Error ? e.message : "Something went wrong");
@@ -264,7 +290,10 @@ export function AccountSettings({ user, orangecatEnabled }: Props) {
       {/* Connected OAuth accounts */}
       <div className="space-y-2">
         <label className="ui-kicker">Connected accounts</label>
-        <ConnectedAccountsSection hasPassword={user.hasPassword} orangecatEnabled={orangecatEnabled} />
+        <ConnectedAccountsSection
+          hasPassword={user.hasPassword}
+          orangecatEnabled={orangecatEnabled}
+        />
       </div>
 
       {/* Set initial password (OAuth-only accounts with no password yet) */}
@@ -280,7 +309,10 @@ export function AccountSettings({ user, orangecatEnabled }: Props) {
               <input
                 type="password"
                 value={currentPwd}
-                onChange={(e) => { setCurrentPwd(e.target.value); setPwdError(""); }}
+                onChange={(e) => {
+                  setCurrentPwd(e.target.value);
+                  setPwdError("");
+                }}
                 autoComplete="current-password"
                 className="ui-input"
                 placeholder="Your current password"
@@ -291,7 +323,10 @@ export function AccountSettings({ user, orangecatEnabled }: Props) {
               <input
                 type="password"
                 value={newPwd}
-                onChange={(e) => { setNewPwd(e.target.value); setPwdError(""); }}
+                onChange={(e) => {
+                  setNewPwd(e.target.value);
+                  setPwdError("");
+                }}
                 autoComplete="new-password"
                 className={`ui-input ${pwdTooShort ? "border-status-negative/50" : ""}`}
                 placeholder="At least 8 characters"
@@ -303,7 +338,10 @@ export function AccountSettings({ user, orangecatEnabled }: Props) {
               <input
                 type="password"
                 value={confirmPwd}
-                onChange={(e) => { setConfirmPwd(e.target.value); setPwdError(""); }}
+                onChange={(e) => {
+                  setConfirmPwd(e.target.value);
+                  setPwdError("");
+                }}
                 autoComplete="new-password"
                 className={`ui-input ${pwdMismatch ? "border-status-negative/50" : ""}`}
                 placeholder="Repeat new password"
@@ -328,8 +366,8 @@ export function AccountSettings({ user, orangecatEnabled }: Props) {
       <div className="border-t border-border-subtle pt-4">
         <h3 className="text-sm font-medium text-status-negative/80 mb-2">Danger zone</h3>
         <p className="text-xs text-text-muted mb-3">
-          Permanently delete your account and everything it owns — projects, runs, memory,
-          feedback, chat history. This cannot be undone.
+          Permanently delete your account and everything it owns — projects, runs, memory, feedback,
+          chat history. This cannot be undone.
         </p>
         <button
           onClick={() => setDeleteOpen(true)}
@@ -344,7 +382,9 @@ export function AccountSettings({ user, orangecatEnabled }: Props) {
           <h3 className="text-base font-semibold text-status-negative">Delete account</h3>
           <p className="text-sm text-text-secondary">
             This permanently deletes your account and all data it owns. There is no undo and no
-            grace period. Type <span className="font-mono text-text-primary">{user.email ?? "your email"}</span> to confirm.
+            grace period. Type{" "}
+            <span className="font-mono text-text-primary">{user.email ?? "your email"}</span> to
+            confirm.
           </p>
           <input
             type="text"
@@ -365,7 +405,9 @@ export function AccountSettings({ user, orangecatEnabled }: Props) {
             </button>
             <button
               onClick={handleDeleteAccount}
-              disabled={deleting || deleteConfirm.trim().toLowerCase() !== (user.email ?? "").toLowerCase()}
+              disabled={
+                deleting || deleteConfirm.trim().toLowerCase() !== (user.email ?? "").toLowerCase()
+              }
               className="ui-btn-danger"
             >
               {deleting && <Loader2 className="ui-spinner" />}

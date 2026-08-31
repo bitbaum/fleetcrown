@@ -32,13 +32,19 @@ function assert(cond: boolean, msg: string) {
 }
 
 check("the deploy reports its outcome on every exit path", () => {
-  assert(/trap report_deploy_status EXIT/.test(deploy), "deploy must report its outcome via an EXIT trap");
+  assert(
+    /trap report_deploy_status EXIT/.test(deploy),
+    "deploy must report its outcome via an EXIT trap",
+  );
 });
 
 check("a failure names the step it died on", () => {
   // The variable alone is not the property — the failure MESSAGE has to carry
   // it, or the step is tracked and then thrown away.
-  assert(/DEPLOY_STEP="starting"/.test(deploy), "DEPLOY_STEP must have a defined value before the first step");
+  assert(
+    /DEPLOY_STEP="starting"/.test(deploy),
+    "DEPLOY_STEP must have a defined value before the first step",
+  );
   // Skip comments: the rationale above this code quotes the old message
   // verbatim, and matching prose instead of the assignment would let the real
   // line drift while the test stayed green.

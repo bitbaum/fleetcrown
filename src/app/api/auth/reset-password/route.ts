@@ -6,7 +6,7 @@ import { updateUserPasswordHash } from "@/db/queries/users";
 import { isDemoUserId } from "@/lib/demo-guard";
 
 const Body = z.object({
-  token:    z.string().min(1),
+  token: z.string().min(1),
   password: z.string().min(8, "Password must be at least 8 characters."),
 });
 
@@ -17,7 +17,10 @@ export async function POST(req: NextRequest) {
 
   const reset = await getPasswordReset(token);
   if (!reset) {
-    return NextResponse.json({ error: "This reset link is invalid or has expired." }, { status: 400 });
+    return NextResponse.json(
+      { error: "This reset link is invalid or has expired." },
+      { status: 400 },
+    );
   }
 
   // Defense in depth: forgot-password never mints a token for the demo
@@ -25,14 +28,20 @@ export async function POST(req: NextRequest) {
   // predates the demo. Refuse either way — the demo password is published and
   // must keep working for the next visitor.
   if (await isDemoUserId(reset.userId)) {
-    return NextResponse.json({ error: "This reset link is invalid or has expired." }, { status: 400 });
+    return NextResponse.json(
+      { error: "This reset link is invalid or has expired." },
+      { status: 400 },
+    );
   }
 
   const passwordHash = await hashPassword(password);
 
   const consumed = await consumePasswordReset(token);
   if (!consumed) {
-    return NextResponse.json({ error: "This reset link is invalid or has expired." }, { status: 400 });
+    return NextResponse.json(
+      { error: "This reset link is invalid or has expired." },
+      { status: 400 },
+    );
   }
 
   await updateUserPasswordHash(reset.userId, passwordHash);

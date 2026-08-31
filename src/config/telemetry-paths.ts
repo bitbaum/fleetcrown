@@ -169,7 +169,8 @@ export const TELEMETRY_PATHS: TelemetryPath[] = [
     label: "Agent sessions",
     writer: "an agent session opening or reporting in",
     monitored: false,
-    because: "Session-driven, and its only timestamp is updated_at — a mutable " +
+    because:
+      "Session-driven, and its only timestamp is updated_at — a mutable " +
       "column, so freshness here cannot distinguish new traffic from a touch.",
   },
   {
@@ -189,8 +190,7 @@ export const TELEMETRY_PATHS: TelemetryPath[] = [
     label: "Beacon sessions",
     writer: "a user starting a beacon session",
     monitored: false,
-    because: "User-initiated and self-purging (10-minute TTL). Silence is the " +
-      "normal state.",
+    because: "User-initiated and self-purging (10-minute TTL). Silence is the " + "normal state.",
   },
   {
     table: "captures",
@@ -198,8 +198,8 @@ export const TELEMETRY_PATHS: TelemetryPath[] = [
     label: "Captures",
     writer: "the capture API, when a user saves one",
     monitored: false,
-    because: "Has never held a row. Monitoring an unused feature would alert " +
-      "daily about nothing.",
+    because:
+      "Has never held a row. Monitoring an unused feature would alert " + "daily about nothing.",
   },
 ];
 

@@ -5,7 +5,10 @@
  *   DATABASE_URL=... npx tsx scripts/db/merge-duplicate-projects.ts          # dry run
  *   DATABASE_URL=... npx tsx scripts/db/merge-duplicate-projects.ts --apply  # execute
  */
-import { mergeAllDuplicateProjectEntities, findDuplicateProjectEntityGroups } from "../../src/db/queries/project-merge";
+import {
+  mergeAllDuplicateProjectEntities,
+  findDuplicateProjectEntityGroups,
+} from "../../src/db/queries/project-merge";
 
 async function main() {
   const apply = process.argv.includes("--apply");
@@ -15,7 +18,9 @@ async function main() {
   const groups = await findDuplicateProjectEntityGroups(userId);
   console.log(`${apply ? "Applying" : "Dry run"} — ${groups.length} duplicate group(s)`);
   for (const g of groups) {
-    console.log(`• ${g.nameKey}: keep ${g.winner.name} (${g.winner.id}), drop ${g.losers.map((l) => l.name).join(", ")}`);
+    console.log(
+      `• ${g.nameKey}: keep ${g.winner.name} (${g.winner.id}), drop ${g.losers.map((l) => l.name).join(", ")}`,
+    );
   }
 
   if (groups.length === 0) {

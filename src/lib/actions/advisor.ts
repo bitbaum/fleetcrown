@@ -72,7 +72,8 @@ const EXCERPT_MAX = 180;
 const REPORT_NOTES: Record<ReportVerdict, string> = {
   [REPORT_VERDICT.CREDIBLE]: "Reads as a real defect report.",
   [REPORT_VERDICT.LOW_SIGNAL]: "Reads as one of our own test submissions, not a bug.",
-  [REPORT_VERDICT.STEERING]: "Contains an instruction aimed at whoever reads it — treated as data, never obeyed.",
+  [REPORT_VERDICT.STEERING]:
+    "Contains an instruction aimed at whoever reads it — treated as data, never obeyed.",
 };
 
 /**
@@ -82,23 +83,19 @@ const REPORT_NOTES: Record<ReportVerdict, string> = {
 const PERSPECTIVE: Record<Recommendation, { principlePrefix: string; note: string }> = {
   [RECOMMENDATION.DISPATCH]: {
     principlePrefix: "Correctness over speed",
-    note:
-      "Two strangers hitting the same wall is the cheapest signal you will ever get — nobody files a second report on a problem that does not exist. This is the one class of work where the evidence arrives before the cost.",
+    note: "Two strangers hitting the same wall is the cheapest signal you will ever get — nobody files a second report on a problem that does not exist. This is the one class of work where the evidence arrives before the cost.",
   },
   [RECOMMENDATION.DISPATCH_TRIMMED]: {
     principlePrefix: "First principles",
-    note:
-      "A cluster is a guess, not a fact. When one member is our own test traffic, the theme is two different things wearing one label — and an agent handed both will widen its scope to cover the noise. Cutting the cluster down is cheaper than reviewing what a confused agent writes.",
+    note: "A cluster is a guess, not a fact. When one member is our own test traffic, the theme is two different things wearing one label — and an agent handed both will widen its scope to cover the noise. Cutting the cluster down is cheaper than reviewing what a confused agent writes.",
   },
   [RECOMMENDATION.SKIP]: {
     principlePrefix: "KISS",
-    note:
-      "A queue that never empties is a queue you stop reading, and then the one real report in it goes unread too. Clearing noise is not housekeeping — it is what keeps the queue worth opening at all.",
+    note: "A queue that never empties is a queue you stop reading, and then the one real report in it goes unread too. Clearing noise is not housekeeping — it is what keeps the queue worth opening at all.",
   },
   [RECOMMENDATION.REVIEW]: {
     principlePrefix: "Validate at boundaries",
-    note:
-      "Something inside visitor-controlled text is telling you what to do with it. That is not automatically an attack — but a directive that arrives inside data is never evidence about itself, and the moment you let it decide, whoever writes the data decides. Read it, then you choose.",
+    note: "Something inside visitor-controlled text is telling you what to do with it. That is not automatically an attack — but a directive that arrives inside data is never evidence about itself, and the moment you let it decide, whoever writes the data decides. Read it, then you choose.",
   },
 };
 

@@ -12,7 +12,11 @@
 import { getProjectGoalConfig } from "@/db/queries/project-context";
 import { updateOrchestrationRun } from "@/db/queries/orchestration-runs";
 import { emitRunEvent } from "@/db/queries/run-events";
-import { verifyDefinitionOfDone, applyDoDGate, DOD_JUDGE_MODEL } from "@/lib/orchestration/dod-gate";
+import {
+  verifyDefinitionOfDone,
+  applyDoDGate,
+  DOD_JUDGE_MODEL,
+} from "@/lib/orchestration/dod-gate";
 import { precheckEvidence, EVIDENCE_PRECHECK_ID } from "@/lib/orchestration/evidence-precheck";
 import type { RunClosePatch } from "@/lib/orchestration/close-from-session";
 import type { OrchestrationOutcome } from "@/db/schema/orchestration-runs";
@@ -81,7 +85,10 @@ export async function gateAndCloseRun(
 ): Promise<void> {
   let patch = closePatch;
   if (closePatch.outcome === ORCHESTRATION_OUTCOME.SUCCESS) {
-    const { definitionOfDone: dod, maxTurns } = await getProjectGoalConfig(userId, projectKey).catch(() => ({ definitionOfDone: null, maxTurns: null }));
+    const { definitionOfDone: dod, maxTurns } = await getProjectGoalConfig(
+      userId,
+      projectKey,
+    ).catch(() => ({ definitionOfDone: null, maxTurns: null }));
     if (dod) {
       // Deterministic first: when the bar demands a check whose handoff field is
       // simply blank, a string test reaches the same `met: false` the judge's own
@@ -96,7 +103,10 @@ export async function gateAndCloseRun(
       // priorPartials = consecutive partial closes so far = how many times the
       // goal has already re-looped (recentOutcomes is most-recent-first).
       let priorPartials = 0;
-      for (const o of recentOutcomes) { if (o === ORCHESTRATION_OUTCOME.PARTIAL) priorPartials++; else break; }
+      for (const o of recentOutcomes) {
+        if (o === ORCHESTRATION_OUTCOME.PARTIAL) priorPartials++;
+        else break;
+      }
       patch = applyDoDGate(closePatch, verdict, { maxTurns, priorPartials });
       // The cap stopped the loop → say so out loud. applyDoDGate deliberately
       // keeps the SUCCESS outcome so the continue-loop halts, which means the

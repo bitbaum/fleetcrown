@@ -39,23 +39,23 @@ export { CREW_ATTR, HUMAN_TASK_STATUS, type HumanTaskStatus };
 // ─── How you work with someone ────────────────────────────────────────────────
 
 export const ENGAGEMENT = {
-  FAVOR:      "favor",
-  FREELANCE:  "freelance",
-  CONTRACT:   "contract",
-  AGENCY:     "agency",
-  PARTNER:    "partner",
-  EMPLOYEE:   "employee",
+  FAVOR: "favor",
+  FREELANCE: "freelance",
+  CONTRACT: "contract",
+  AGENCY: "agency",
+  PARTNER: "partner",
+  EMPLOYEE: "employee",
 } as const;
 export type Engagement = (typeof ENGAGEMENT)[keyof typeof ENGAGEMENT];
 export const ENGAGEMENTS = Object.values(ENGAGEMENT) as [Engagement, ...Engagement[]];
 
 export const ENGAGEMENT_LABEL: Record<Engagement, string> = {
-  [ENGAGEMENT.FAVOR]:     "Favor",
+  [ENGAGEMENT.FAVOR]: "Favor",
   [ENGAGEMENT.FREELANCE]: "Freelance",
-  [ENGAGEMENT.CONTRACT]:  "Contract",
-  [ENGAGEMENT.AGENCY]:    "Agency",
-  [ENGAGEMENT.PARTNER]:   "Partner",
-  [ENGAGEMENT.EMPLOYEE]:  "Employee",
+  [ENGAGEMENT.CONTRACT]: "Contract",
+  [ENGAGEMENT.AGENCY]: "Agency",
+  [ENGAGEMENT.PARTNER]: "Partner",
+  [ENGAGEMENT.EMPLOYEE]: "Employee",
 };
 
 export function isEngagement(value: string): value is Engagement {
@@ -65,33 +65,33 @@ export function isEngagement(value: string): value is Engagement {
 // ─── Assignment lifecycle ─────────────────────────────────────────────────────
 
 export const HUMAN_TASK_STATUS_LABEL: Record<HumanTaskStatus, string> = {
-  [HUMAN_TASK_STATUS.DRAFT]:     "Draft",
-  [HUMAN_TASK_STATUS.ASSIGNED]:  "Asked",
-  [HUMAN_TASK_STATUS.ACCEPTED]:  "Accepted",
-  [HUMAN_TASK_STATUS.DECLINED]:  "Declined",
+  [HUMAN_TASK_STATUS.DRAFT]: "Draft",
+  [HUMAN_TASK_STATUS.ASSIGNED]: "Asked",
+  [HUMAN_TASK_STATUS.ACCEPTED]: "Accepted",
+  [HUMAN_TASK_STATUS.DECLINED]: "Declined",
   [HUMAN_TASK_STATUS.DELIVERED]: "Delivered",
-  [HUMAN_TASK_STATUS.DONE]:      "Done",
+  [HUMAN_TASK_STATUS.DONE]: "Done",
   [HUMAN_TASK_STATUS.CANCELLED]: "Cancelled",
 };
 
 /** One line each, written for the operator scanning the board. */
 export const HUMAN_TASK_STATUS_HINT: Record<HumanTaskStatus, string> = {
-  [HUMAN_TASK_STATUS.DRAFT]:     "Written down. Nobody has been asked yet.",
-  [HUMAN_TASK_STATUS.ASSIGNED]:  "Sent. Waiting on their answer.",
-  [HUMAN_TASK_STATUS.ACCEPTED]:  "They said yes and are on it.",
-  [HUMAN_TASK_STATUS.DECLINED]:  "They said no. Reassign or drop it.",
+  [HUMAN_TASK_STATUS.DRAFT]: "Written down. Nobody has been asked yet.",
+  [HUMAN_TASK_STATUS.ASSIGNED]: "Sent. Waiting on their answer.",
+  [HUMAN_TASK_STATUS.ACCEPTED]: "They said yes and are on it.",
+  [HUMAN_TASK_STATUS.DECLINED]: "They said no. Reassign or drop it.",
   [HUMAN_TASK_STATUS.DELIVERED]: "They say it is done — your turn to check.",
-  [HUMAN_TASK_STATUS.DONE]:      "You accepted the work.",
+  [HUMAN_TASK_STATUS.DONE]: "You accepted the work.",
   [HUMAN_TASK_STATUS.CANCELLED]: "Called off.",
 };
 
 export const HUMAN_TASK_STATUS_TONE: Record<HumanTaskStatus, StatusTone> = {
-  [HUMAN_TASK_STATUS.DRAFT]:     "neutral",
-  [HUMAN_TASK_STATUS.ASSIGNED]:  "warning",
-  [HUMAN_TASK_STATUS.ACCEPTED]:  "positive",
-  [HUMAN_TASK_STATUS.DECLINED]:  "negative",
+  [HUMAN_TASK_STATUS.DRAFT]: "neutral",
+  [HUMAN_TASK_STATUS.ASSIGNED]: "warning",
+  [HUMAN_TASK_STATUS.ACCEPTED]: "positive",
+  [HUMAN_TASK_STATUS.DECLINED]: "negative",
   [HUMAN_TASK_STATUS.DELIVERED]: "warning",
-  [HUMAN_TASK_STATUS.DONE]:      "positive",
+  [HUMAN_TASK_STATUS.DONE]: "positive",
   [HUMAN_TASK_STATUS.CANCELLED]: "neutral",
 };
 
@@ -136,9 +136,11 @@ export function isWaitingOnAssignee(status: HumanTaskStatus): boolean {
 
 /** Your move. Drives the ONE question the crew page answers. */
 export function isWaitingOnOperator(status: HumanTaskStatus): boolean {
-  return status === HUMAN_TASK_STATUS.DRAFT
-    || status === HUMAN_TASK_STATUS.DELIVERED
-    || status === HUMAN_TASK_STATUS.DECLINED;
+  return (
+    status === HUMAN_TASK_STATUS.DRAFT ||
+    status === HUMAN_TASK_STATUS.DELIVERED ||
+    status === HUMAN_TASK_STATUS.DECLINED
+  );
 }
 
 /**
@@ -150,26 +152,38 @@ export function isWaitingOnOperator(status: HumanTaskStatus): boolean {
  * would be recording consent nobody gave.
  */
 export const OPERATOR_MOVES: Record<HumanTaskStatus, HumanTaskStatus[]> = {
-  [HUMAN_TASK_STATUS.DRAFT]:     [HUMAN_TASK_STATUS.ASSIGNED, HUMAN_TASK_STATUS.CANCELLED],
+  [HUMAN_TASK_STATUS.DRAFT]: [HUMAN_TASK_STATUS.ASSIGNED, HUMAN_TASK_STATUS.CANCELLED],
   // Pulling an ask back to draft is how you un-send: the share link is revoked
   // with it, so the person you asked stops being able to answer.
-  [HUMAN_TASK_STATUS.ASSIGNED]:  [HUMAN_TASK_STATUS.DRAFT, HUMAN_TASK_STATUS.DONE, HUMAN_TASK_STATUS.CANCELLED],
-  [HUMAN_TASK_STATUS.ACCEPTED]:  [HUMAN_TASK_STATUS.DONE, HUMAN_TASK_STATUS.CANCELLED],
+  [HUMAN_TASK_STATUS.ASSIGNED]: [
+    HUMAN_TASK_STATUS.DRAFT,
+    HUMAN_TASK_STATUS.DONE,
+    HUMAN_TASK_STATUS.CANCELLED,
+  ],
+  [HUMAN_TASK_STATUS.ACCEPTED]: [HUMAN_TASK_STATUS.DONE, HUMAN_TASK_STATUS.CANCELLED],
   // Delivered work you are not happy with goes back to accepted, not to draft —
   // they are still on it, the ask never stopped being theirs.
-  [HUMAN_TASK_STATUS.DELIVERED]: [HUMAN_TASK_STATUS.DONE, HUMAN_TASK_STATUS.ACCEPTED, HUMAN_TASK_STATUS.CANCELLED],
-  [HUMAN_TASK_STATUS.DECLINED]:  [HUMAN_TASK_STATUS.DRAFT, HUMAN_TASK_STATUS.CANCELLED],
-  [HUMAN_TASK_STATUS.DONE]:      [],
+  [HUMAN_TASK_STATUS.DELIVERED]: [
+    HUMAN_TASK_STATUS.DONE,
+    HUMAN_TASK_STATUS.ACCEPTED,
+    HUMAN_TASK_STATUS.CANCELLED,
+  ],
+  [HUMAN_TASK_STATUS.DECLINED]: [HUMAN_TASK_STATUS.DRAFT, HUMAN_TASK_STATUS.CANCELLED],
+  [HUMAN_TASK_STATUS.DONE]: [],
   [HUMAN_TASK_STATUS.CANCELLED]: [HUMAN_TASK_STATUS.DRAFT],
 };
 
 export const ASSIGNEE_MOVES: Record<HumanTaskStatus, HumanTaskStatus[]> = {
-  [HUMAN_TASK_STATUS.DRAFT]:     [],
-  [HUMAN_TASK_STATUS.ASSIGNED]:  [HUMAN_TASK_STATUS.ACCEPTED, HUMAN_TASK_STATUS.DECLINED, HUMAN_TASK_STATUS.DELIVERED],
-  [HUMAN_TASK_STATUS.ACCEPTED]:  [HUMAN_TASK_STATUS.DELIVERED, HUMAN_TASK_STATUS.DECLINED],
+  [HUMAN_TASK_STATUS.DRAFT]: [],
+  [HUMAN_TASK_STATUS.ASSIGNED]: [
+    HUMAN_TASK_STATUS.ACCEPTED,
+    HUMAN_TASK_STATUS.DECLINED,
+    HUMAN_TASK_STATUS.DELIVERED,
+  ],
+  [HUMAN_TASK_STATUS.ACCEPTED]: [HUMAN_TASK_STATUS.DELIVERED, HUMAN_TASK_STATUS.DECLINED],
   [HUMAN_TASK_STATUS.DELIVERED]: [],
-  [HUMAN_TASK_STATUS.DECLINED]:  [],
-  [HUMAN_TASK_STATUS.DONE]:      [],
+  [HUMAN_TASK_STATUS.DECLINED]: [],
+  [HUMAN_TASK_STATUS.DONE]: [],
   [HUMAN_TASK_STATUS.CANCELLED]: [],
 };
 
@@ -183,20 +197,20 @@ export function canAssigneeMove(from: HumanTaskStatus, to: HumanTaskStatus): boo
 
 /** What the person clicks on the share page, and the status each lands on. */
 export const ASSIGNEE_ACTION = {
-  ACCEPT:  "accept",
+  ACCEPT: "accept",
   DECLINE: "decline",
   DELIVER: "deliver",
 } as const;
 export type AssigneeAction = (typeof ASSIGNEE_ACTION)[keyof typeof ASSIGNEE_ACTION];
 
 export const ASSIGNEE_ACTION_STATUS: Record<AssigneeAction, HumanTaskStatus> = {
-  [ASSIGNEE_ACTION.ACCEPT]:  HUMAN_TASK_STATUS.ACCEPTED,
+  [ASSIGNEE_ACTION.ACCEPT]: HUMAN_TASK_STATUS.ACCEPTED,
   [ASSIGNEE_ACTION.DECLINE]: HUMAN_TASK_STATUS.DECLINED,
   [ASSIGNEE_ACTION.DELIVER]: HUMAN_TASK_STATUS.DELIVERED,
 };
 
 export const ASSIGNEE_ACTION_LABEL: Record<AssigneeAction, string> = {
-  [ASSIGNEE_ACTION.ACCEPT]:  "I'll do it",
+  [ASSIGNEE_ACTION.ACCEPT]: "I'll do it",
   [ASSIGNEE_ACTION.DECLINE]: "I can't take this",
   [ASSIGNEE_ACTION.DELIVER]: "It's done",
 };
@@ -214,17 +228,17 @@ export function assigneeActionsFor(status: HumanTaskStatus): AssigneeAction[] {
 export const TASK_ACTOR = {
   OPERATOR: "operator",
   ASSIGNEE: "assignee",
-  LOKI:     "loki",
+  LOKI: "loki",
 } as const;
 export type TaskActor = (typeof TASK_ACTOR)[keyof typeof TASK_ACTOR];
 
 export const TASK_EVENT = {
-  CREATED:  "created",
-  STATUS:   "status",
-  SHARED:   "shared",
-  REVOKED:  "revoked",
-  NOTE:     "note",
-  EDITED:   "edited",
+  CREATED: "created",
+  STATUS: "status",
+  SHARED: "shared",
+  REVOKED: "revoked",
+  NOTE: "note",
+  EDITED: "edited",
   PUBLISHED: "published",
 } as const;
 export type TaskEventKind = (typeof TASK_EVENT)[keyof typeof TASK_EVENT];
@@ -258,11 +272,11 @@ export function isTaskCurrency(value: string): value is TaskCurrency {
 export const MAX_TASK_FEE = 1_000_000;
 
 export const CrewProfileFields = z.object({
-  role:         trimmed(80).optional(),
-  skills:       trimmed(240).optional(),
-  engagement:   z.enum(ENGAGEMENTS).optional(),
-  rate:         trimmed(60).optional(),
-  currency:     z.enum(TASK_CURRENCIES).optional(),
+  role: trimmed(80).optional(),
+  skills: trimmed(240).optional(),
+  engagement: z.enum(ENGAGEMENTS).optional(),
+  rate: trimmed(60).optional(),
+  currency: z.enum(TASK_CURRENCIES).optional(),
   availability: trimmed(120).optional(),
   // A handle or a full profile URL, both accepted; stored canonical. Rejected
   // rather than silently dropped when it is neither — a payment destination
@@ -283,42 +297,43 @@ export type CrewProfileInput = z.infer<typeof CrewProfileFields>;
  */
 export const EnrolCrewBody = CrewProfileFields.extend({
   personId: uuid.optional(),
-  name:     trimmed(80).optional(),
-  notes:    trimmed(600).optional(),
+  name: trimmed(80).optional(),
+  notes: trimmed(600).optional(),
 }).refine((v) => Boolean(v.personId) || Boolean(v.name), {
   message: "Pick someone from your book or give a name",
 });
 export type EnrolCrewInput = z.infer<typeof EnrolCrewBody>;
 
-export const PatchCrewBody = CrewProfileFields.refine(
-  (v) => Object.keys(v).length > 0,
-  { message: "Nothing to update" },
-);
+export const PatchCrewBody = CrewProfileFields.refine((v) => Object.keys(v).length > 0, {
+  message: "Nothing to update",
+});
 
 export const CreateHumanTaskBody = z.object({
-  title:       z.string().trim().min(3, "title is required").max(160),
-  brief:       trimmed(6000).optional(),
-  reason:      trimmed(2000).optional(),
-  assigneeId:  uuid.optional(),
-  projectId:   uuid.optional(),
-  dueDate:     trimmed(40).optional(),
-  feeAmount:   z.number().min(0).max(MAX_TASK_FEE).optional(),
+  title: z.string().trim().min(3, "title is required").max(160),
+  brief: trimmed(6000).optional(),
+  reason: trimmed(2000).optional(),
+  assigneeId: uuid.optional(),
+  projectId: uuid.optional(),
+  dueDate: trimmed(40).optional(),
+  feeAmount: z.number().min(0).max(MAX_TASK_FEE).optional(),
   feeCurrency: z.enum(TASK_CURRENCIES).optional(),
 });
 export type CreateHumanTaskInput = z.infer<typeof CreateHumanTaskBody>;
 
 export const PatchHumanTaskBody = z
   .object({
-    title:       z.string().trim().min(3).max(160).optional(),
-    brief:       trimmed(6000).nullable().optional(),
-    reason:      trimmed(2000).nullable().optional(),
-    assigneeId:  uuid.nullable().optional(),
-    projectId:   uuid.nullable().optional(),
-    dueDate:     trimmed(40).nullable().optional(),
-    feeAmount:   z.number().min(0).max(MAX_TASK_FEE).nullable().optional(),
+    title: z.string().trim().min(3).max(160).optional(),
+    brief: trimmed(6000).nullable().optional(),
+    reason: trimmed(2000).nullable().optional(),
+    assigneeId: uuid.nullable().optional(),
+    projectId: uuid.nullable().optional(),
+    dueDate: trimmed(40).nullable().optional(),
+    feeAmount: z.number().min(0).max(MAX_TASK_FEE).nullable().optional(),
     feeCurrency: z.enum(TASK_CURRENCIES).optional(),
-    status:      z.enum(Object.values(HUMAN_TASK_STATUS) as [HumanTaskStatus, ...HumanTaskStatus[]]).optional(),
-    note:        trimmed(1000).optional(),
+    status: z
+      .enum(Object.values(HUMAN_TASK_STATUS) as [HumanTaskStatus, ...HumanTaskStatus[]])
+      .optional(),
+    note: trimmed(1000).optional(),
   })
   .refine((v) => Object.keys(v).length > 0, { message: "Nothing to update" });
 export type PatchHumanTaskInput = z.infer<typeof PatchHumanTaskBody>;
@@ -326,7 +341,7 @@ export type PatchHumanTaskInput = z.infer<typeof PatchHumanTaskBody>;
 /** The only thing an un-authenticated assignee may send. */
 export const RespondToTaskBody = z.object({
   action: z.enum(Object.values(ASSIGNEE_ACTION) as [AssigneeAction, ...AssigneeAction[]]),
-  note:   trimmed(1000).optional(),
+  note: trimmed(1000).optional(),
 });
 export type RespondToTaskInput = z.infer<typeof RespondToTaskBody>;
 
@@ -386,6 +401,7 @@ export function orangeCatProfileUrl(input: string, base = "https://orangecat.ch"
   const origin = base.replace(/\/+$/, "");
   const fromUrl = value.match(/^https?:\/\/[^/]+\/profiles\/([A-Za-z0-9_.-]{1,40})$/);
   if (fromUrl) return `${origin}/profiles/${fromUrl[1]}`;
-  if (/^@?[A-Za-z0-9_.-]{1,40}$/.test(value)) return `${origin}/profiles/${value.replace(/^@/, "")}`;
+  if (/^@?[A-Za-z0-9_.-]{1,40}$/.test(value))
+    return `${origin}/profiles/${value.replace(/^@/, "")}`;
   return null;
 }

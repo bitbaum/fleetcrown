@@ -93,7 +93,10 @@ export function ShellWorkspace() {
     setTabs((prev) => {
       const out: Tab[] = [];
       for (const t of prev) {
-        if (t.id !== tabId) { out.push(t); continue; }
+        if (t.id !== tabId) {
+          out.push(t);
+          continue;
+        }
         const root = closeLeaf(t.root, paneId);
         if (root === null) continue; // last pane closed → drop the tab
         out.push({ ...t, root, activeLeafId: firstLeafId(root) });
@@ -113,8 +116,11 @@ export function ShellWorkspace() {
     const regionW = (s.rect.w / 100) * box.width;
     const regionH = (s.rect.h / 100) * box.height;
     const move = (ev: MouseEvent) => {
-      const ratio = s.dir === "row" ? (ev.clientX - regionX) / regionW : (ev.clientY - regionY) / regionH;
-      setTabs((prev) => prev.map((t) => (t.id === tabId ? { ...t, root: setRatio(t.root, s.id, ratio) } : t)));
+      const ratio =
+        s.dir === "row" ? (ev.clientX - regionX) / regionW : (ev.clientY - regionY) / regionH;
+      setTabs((prev) =>
+        prev.map((t) => (t.id === tabId ? { ...t, root: setRatio(t.root, s.id, ratio) } : t)),
+      );
     };
     const up = () => {
       window.removeEventListener("mousemove", move);
@@ -134,7 +140,9 @@ export function ShellWorkspace() {
         onSelect={setActiveTabId}
         onClose={closeTab}
         onNew={addTab}
-        onRename={(id, title) => setTabs((prev) => prev.map((t) => (t.id === id ? { ...t, title } : t)))}
+        onRename={(id, title) =>
+          setTabs((prev) => prev.map((t) => (t.id === id ? { ...t, title } : t)))
+        }
         newLabel="New shell"
       />
 
@@ -155,14 +163,21 @@ export function ShellWorkspace() {
             return (
               <div
                 key={t.id}
-                ref={(el) => { areaRefs.current[t.id] = el; }}
+                ref={(el) => {
+                  areaRefs.current[t.id] = el;
+                }}
                 className={cn("ui-term-canvas", t.id !== activeTabId && "hidden")}
               >
                 {leaves.map((lf, i) => (
                   <div
                     key={lf.id}
                     className="ui-term-slot"
-                    style={{ left: `${lf.rect.x}%`, top: `${lf.rect.y}%`, width: `${lf.rect.w}%`, height: `${lf.rect.h}%` }}
+                    style={{
+                      left: `${lf.rect.x}%`,
+                      top: `${lf.rect.y}%`,
+                      width: `${lf.rect.w}%`,
+                      height: `${lf.rect.h}%`,
+                    }}
                   >
                     <TerminalLeaf
                       paneId={lf.id}
@@ -179,11 +194,22 @@ export function ShellWorkspace() {
                   <div
                     key={s.id}
                     onMouseDown={(e) => startDrag(t.id, s, e)}
-                    className={cn("ui-term-divider", s.dir === "row" ? "ui-term-divider-v" : "ui-term-divider-h")}
+                    className={cn(
+                      "ui-term-divider",
+                      s.dir === "row" ? "ui-term-divider-v" : "ui-term-divider-h",
+                    )}
                     style={
                       s.dir === "row"
-                        ? { left: `${s.rect.x + s.rect.w * s.ratio}%`, top: `${s.rect.y}%`, height: `${s.rect.h}%` }
-                        : { top: `${s.rect.y + s.rect.h * s.ratio}%`, left: `${s.rect.x}%`, width: `${s.rect.w}%` }
+                        ? {
+                            left: `${s.rect.x + s.rect.w * s.ratio}%`,
+                            top: `${s.rect.y}%`,
+                            height: `${s.rect.h}%`,
+                          }
+                        : {
+                            top: `${s.rect.y + s.rect.h * s.ratio}%`,
+                            left: `${s.rect.x}%`,
+                            width: `${s.rect.w}%`,
+                          }
                     }
                   />
                 ))}

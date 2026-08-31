@@ -1,4 +1,4 @@
-@import 'tailwindcss';
+@import "tailwindcss";
 
 /**
  * __TITLE__ — design tokens. The only place a colour, font or radius is defined.
@@ -20,8 +20,8 @@
  * Retheming is then editing this file and nothing else.
  */
 @theme {
-  --font-heading: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-heading: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 
   --tracking-display: -0.02em;
@@ -45,7 +45,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
+  :root:not([data-theme="light"]) {
     --color-surface-page: var(--primitive-ink-950);
     --color-surface-raised: #171a1c;
     --color-fg-primary: var(--primitive-ink-100);

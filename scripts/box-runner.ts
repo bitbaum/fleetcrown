@@ -18,7 +18,12 @@
 import { readFileSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
-import { startPoller, stopPoller, onPollerStatus, formatTrayTooltip } from "../desktop/src/main/poller";
+import {
+  startPoller,
+  stopPoller,
+  onPollerStatus,
+  formatTrayTooltip,
+} from "../desktop/src/main/poller";
 import { pushNow, startPusher, stopPusher } from "../desktop/src/main/pusher";
 import { loadToken } from "../desktop/src/main/token-store";
 import { APP_URL } from "@/config/brand";
@@ -36,7 +41,9 @@ function boxRunnerVersion(): string {
     const pkgPath = join(dirname(fileURLToPath(import.meta.url)), "..", "desktop", "package.json");
     const pkg = JSON.parse(readFileSync(pkgPath, "utf8")) as { version?: string };
     if (pkg.version) return `box-${pkg.version}`;
-  } catch { /* fall through to env */ }
+  } catch {
+    /* fall through to env */
+  }
   return process.env.FLEETCROWN_RUNNER_VERSION ?? "box";
 }
 
@@ -59,7 +66,9 @@ function main(): void {
     );
     process.exit(1);
   }
-  log(`v${VERSION} → ${WEB} (token ${token.slice(0, 9)}…, PTY=${process.env.FLEETCROWN_RUNNER_PTY !== "false"})`);
+  log(
+    `v${VERSION} → ${WEB} (token ${token.slice(0, 9)}…, PTY=${process.env.FLEETCROWN_RUNNER_PTY !== "false"})`,
+  );
 
   // The desktop refreshes a tray tooltip from every poller status event
   // (~every 2s). Headless, that verbatim stream wrote "connected · last poll
@@ -84,7 +93,9 @@ function main(): void {
   // so a completed run never waits for the five-minute liveness heartbeat.
   const watcher = startWatcher({
     acceptUnregistered: true,
-    onIdle: () => { void pushNow(); },
+    onIdle: () => {
+      void pushNow();
+    },
   });
 
   // Poller starts the bridge subscriber (presence + fast-path wake) itself; the
@@ -98,9 +109,21 @@ function main(): void {
     if (shuttingDown) return;
     shuttingDown = true;
     log(`${sig} → draining`);
-    try { stopPoller(); } catch { /* best-effort */ }
-    try { stopPusher(); } catch { /* best-effort */ }
-    try { watcher.close(); } catch { /* best-effort */ }
+    try {
+      stopPoller();
+    } catch {
+      /* best-effort */
+    }
+    try {
+      stopPusher();
+    } catch {
+      /* best-effort */
+    }
+    try {
+      watcher.close();
+    } catch {
+      /* best-effort */
+    }
     // Let in-flight stop work settle, then exit so systemd sees a clean stop.
     setTimeout(() => process.exit(0), 300);
   };
@@ -109,7 +132,9 @@ function main(): void {
 
   // Nothing else holds the event loop open (poller/pusher run on timers), so
   // keep the process alive explicitly until a signal arrives.
-  setInterval(() => { /* keep-alive */ }, 1 << 30);
+  setInterval(() => {
+    /* keep-alive */
+  }, 1 << 30);
 }
 
 main();

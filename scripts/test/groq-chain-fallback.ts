@@ -23,7 +23,10 @@ import { readFileSync } from "node:fs";
 import { callTextDetailed, callGroqText, GROQ_FAST_MODEL } from "../../src/lib/groq";
 import { usableChatChain } from "../../src/config/chat-models";
 
-type Handler = (url: string, body: { model: string }) => { status: number; content?: string; text?: string };
+type Handler = (
+  url: string,
+  body: { model: string },
+) => { status: number; content?: string; text?: string };
 
 const realFetch = globalThis.fetch;
 const calls: { url: string; model: string }[] = [];
@@ -48,7 +51,10 @@ async function main() {
   const chain = usableChatChain();
   assert.ok(chain.length >= 2, `need >=2 usable links to test fallback, got ${chain.length}`);
   const vendors = [...new Set(chain.map((l) => l.provider.id))];
-  assert.ok(vendors.length >= 2, `fallback must cross VENDORS, chain covers only: ${vendors.join(",")}`);
+  assert.ok(
+    vendors.length >= 2,
+    `fallback must cross VENDORS, chain covers only: ${vendors.join(",")}`,
+  );
 
   // ── 1. Happy path: first link answers, nothing else is tried ───────────────
   {
@@ -64,7 +70,10 @@ async function main() {
   {
     let first = true;
     stub(() => {
-      if (first) { first = false; return { status: 404, text: "model_not_found" }; }
+      if (first) {
+        first = false;
+        return { status: 404, text: "model_not_found" };
+      }
       return { status: 200, content: "rescued" };
     });
     const r = await callTextDetailed("p");
@@ -82,12 +91,18 @@ async function main() {
   // A 429 on tokens-per-day kills every model behind that key, so stepping to
   // another model at the same vendor is not a fallback at all.
   {
-    stub((url) => url.includes("api.groq.com")
-      ? { status: 429, text: "Rate limit reached ... on tokens per day (TPD): Limit 100000" }
-      : { status: 200, content: "other vendor" });
+    stub((url) =>
+      url.includes("api.groq.com")
+        ? { status: 429, text: "Rate limit reached ... on tokens per day (TPD): Limit 100000" }
+        : { status: 200, content: "other vendor" },
+    );
     const r = await callTextDetailed("p");
     assert.equal(r.text, "other vendor");
-    assert.notEqual(r.provider, "groq", "must land on a different vendor when one vendor is exhausted");
+    assert.notEqual(
+      r.provider,
+      "groq",
+      "must land on a different vendor when one vendor is exhausted",
+    );
     assert.ok(
       calls.some((c) => !c.url.includes("api.groq.com")),
       "the chain must actually leave the exhausted vendor's host",
@@ -150,15 +165,24 @@ async function main() {
   {
     const realWarn = console.warn;
     const warnings: string[] = [];
-    console.warn = (...a: unknown[]) => { warnings.push(a.join(" ")); };
+    console.warn = (...a: unknown[]) => {
+      warnings.push(a.join(" "));
+    };
     try {
       stub(() => ({ status: 200, content: "fine" }));
       await callTextDetailed("p");
-      assert.equal(warnings.length, 0, "a first-try success must not warn — silence has to mean 'nothing degraded'");
+      assert.equal(
+        warnings.length,
+        0,
+        "a first-try success must not warn — silence has to mean 'nothing degraded'",
+      );
 
       let first = true;
       stub(() => {
-        if (first) { first = false; return { status: 404, text: "model_not_found" }; }
+        if (first) {
+          first = false;
+          return { status: 404, text: "model_not_found" };
+        }
         return { status: 200, content: "rescued" };
       });
       await callTextDetailed("p");
@@ -171,7 +195,9 @@ async function main() {
   }
 
   globalThis.fetch = realFetch;
-  console.log(`✓ groq chain fallback: ${chain.length} link(s) across ${vendors.length} vendor(s); provenance + panel isolation hold`);
+  console.log(
+    `✓ groq chain fallback: ${chain.length} link(s) across ${vendors.length} vendor(s); provenance + panel isolation hold`,
+  );
 }
 
 void main();

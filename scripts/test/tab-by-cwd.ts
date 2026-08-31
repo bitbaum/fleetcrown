@@ -36,12 +36,16 @@ assert.ok(
 // --- findPaneForProject ------------------------------------------------
 assert.equal(findPaneForProject("orangecat", []), null);
 assert.equal(
-  findPaneForProject("orangecat", [proc({ cwd: "/home/g/dev/orangecat", pid: 10, zellijPaneId: undefined })]),
+  findPaneForProject("orangecat", [
+    proc({ cwd: "/home/g/dev/orangecat", pid: 10, zellijPaneId: undefined }),
+  ]),
   null,
   "a process outside zellij has no pane to focus",
 );
 assert.equal(
-  findPaneForProject("orangecat", [proc({ cwd: "/home/g/dev/orangecat", pid: 10, zellijSession: undefined })]),
+  findPaneForProject("orangecat", [
+    proc({ cwd: "/home/g/dev/orangecat", pid: 10, zellijSession: undefined }),
+  ]),
   null,
   "pane ids are only unique within a session — no session, no target",
 );
@@ -73,7 +77,11 @@ const map = (session: string) =>
   session === "main" ? new Map([[5, "Tab #9"]]) : new Map<number, string>();
 
 assert.deepEqual(
-  resolveTabByRunningAgent("orangecat", [proc({ cwd: "/home/g/dev/orangecat", pid: 20, zellijPaneId: 5 })], map),
+  resolveTabByRunningAgent(
+    "orangecat",
+    [proc({ cwd: "/home/g/dev/orangecat", pid: 20, zellijPaneId: 5 })],
+    map,
+  ),
   { session: "main", tab: "Tab #9" },
   "THE regression: a default-named tab resolves, where name matching returned nothing",
 );

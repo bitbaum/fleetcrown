@@ -2,10 +2,10 @@ import type { Plan } from "@/db/schema/users";
 
 export const PLAN_LIMITS = {
   projects: {
-    free:     3,
+    free: 3,
     personal: 5,
-    pro:      Infinity,
-    team:     Infinity,
+    pro: Infinity,
+    team: Infinity,
   },
 } satisfies Record<string, Record<Plan, number>>;
 

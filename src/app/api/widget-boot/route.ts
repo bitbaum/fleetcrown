@@ -24,7 +24,7 @@ const CORS_HEADERS = {
   // Pause propagates within this window; page loads stay cheap. Vary:Origin
   // because the verdict depends on the allowlist check against Origin.
   "Cache-Control": "public, max-age=30",
-  "Vary": "Origin",
+  Vary: "Origin",
 } as const;
 
 function bootResponse(active: boolean, status = 200): NextResponse {

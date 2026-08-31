@@ -17,14 +17,20 @@ export async function upsertSubscription(
     .insert(pushSubscriptions)
     .values({
       userId,
-      endpoint:  sub.endpoint,
-      p256dh:    sub.keys.p256dh,
-      auth:      sub.keys.auth,
+      endpoint: sub.endpoint,
+      p256dh: sub.keys.p256dh,
+      auth: sub.keys.auth,
       userAgent,
     })
     .onConflictDoUpdate({
       target: pushSubscriptions.endpoint,
-      set: { userId, p256dh: sub.keys.p256dh, auth: sub.keys.auth, userAgent, lastSeenAt: new Date() },
+      set: {
+        userId,
+        p256dh: sub.keys.p256dh,
+        auth: sub.keys.auth,
+        userAgent,
+        lastSeenAt: new Date(),
+      },
     });
 }
 
@@ -36,9 +42,15 @@ export async function removeSubscriptionForUser(userId: string, endpoint: string
     .where(and(eq(pushSubscriptions.userId, userId), eq(pushSubscriptions.endpoint, endpoint)));
 }
 
-export async function listSubscriptionsForUser(userId: string): Promise<{ endpoint: string; p256dh: string; auth: string }[]> {
+export async function listSubscriptionsForUser(
+  userId: string,
+): Promise<{ endpoint: string; p256dh: string; auth: string }[]> {
   return db
-    .select({ endpoint: pushSubscriptions.endpoint, p256dh: pushSubscriptions.p256dh, auth: pushSubscriptions.auth })
+    .select({
+      endpoint: pushSubscriptions.endpoint,
+      p256dh: pushSubscriptions.p256dh,
+      auth: pushSubscriptions.auth,
+    })
     .from(pushSubscriptions)
     .where(eq(pushSubscriptions.userId, userId));
 }

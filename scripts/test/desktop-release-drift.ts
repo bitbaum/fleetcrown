@@ -103,7 +103,10 @@ try {
   );
 }
 
-const tags = tagList.split("\n").map((t) => t.trim()).filter(Boolean);
+const tags = tagList
+  .split("\n")
+  .map((t) => t.trim())
+  .filter(Boolean);
 assert(
   tags.length > 0,
   `no ${TAG_PREFIX}* tags are present, so this check cannot tell whether ` +

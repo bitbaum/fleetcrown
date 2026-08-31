@@ -15,29 +15,37 @@ import { orchestrationRuns } from "./orchestration-runs";
  */
 export const RUN_EVENT_KINDS = [
   "dispatched", // control plane assembled + queued the dispatch
-  "claimed",    // runner claimed the pending command
-  "launched",   // agent PTY created (fresh launch only)
-  "submitted",  // prompt verifiably submitted (CLI live status left idle)
+  "claimed", // runner claimed the pending command
+  "launched", // agent PTY created (fresh launch only)
+  "submitted", // prompt verifiably submitted (CLI live status left idle)
   "generating", // agent confirmed generating
-  "blocked",    // agent blocked on input / auth / dialog (detail.reason)
-  "handoff",    // session handoff received (pusher persisted it)
-  "closed",     // run closed with outcome (closeRunFromSession / reaper)
-  "recorded",   // changelog entry appended from the handoff
-  "promoted",   // changelog entry promoted to the OrangeCat wall
+  "blocked", // agent blocked on input / auth / dialog (detail.reason)
+  "handoff", // session handoff received (pusher persisted it)
+  "closed", // run closed with outcome (closeRunFromSession / reaper)
+  "recorded", // changelog entry appended from the handoff
+  "promoted", // changelog entry promoted to the OrangeCat wall
 ] as const;
 export type RunEventKind = (typeof RUN_EVENT_KINDS)[number];
 
-export const runEvents = pgTable("run_events", {
-  id:        uuid("id").primaryKey().defaultRandom(),
-  runId:     uuid("run_id").notNull().references(() => orchestrationRuns.id, { onDelete: "cascade" }),
-  userId:    uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  kind:      text("kind").$type<RunEventKind>().notNull(),
-  detail:    jsonb("detail").$type<Record<string, unknown>>(),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-}, (t) => [
-  index("idx_run_events_run_id").on(t.runId),
-  index("idx_run_events_user_created").on(t.userId, t.createdAt),
-]);
+export const runEvents = pgTable(
+  "run_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    runId: uuid("run_id")
+      .notNull()
+      .references(() => orchestrationRuns.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    kind: text("kind").$type<RunEventKind>().notNull(),
+    detail: jsonb("detail").$type<Record<string, unknown>>(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    index("idx_run_events_run_id").on(t.runId),
+    index("idx_run_events_user_created").on(t.userId, t.createdAt),
+  ],
+);
 
 export type RunEvent = typeof runEvents.$inferSelect;
 export type NewRunEvent = typeof runEvents.$inferInsert;

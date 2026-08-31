@@ -10,10 +10,7 @@ import { StickyNoteList } from "./StickyNoteList";
 // add to but never see again is not a list.
 export async function StickyNoteCard() {
   const userId = await requirePageUserId();
-  const [items, total] = await Promise.all([
-    listCaptures(userId, 20),
-    countCaptures(userId),
-  ]);
+  const [items, total] = await Promise.all([listCaptures(userId, 20), countCaptures(userId)]);
 
   return (
     <div id="sticky-note" className="scroll-mt-20">
@@ -21,11 +18,7 @@ export async function StickyNoteCard() {
         <CardHeader
           icon={StickyNote}
           title="Sticky note"
-          right={
-            <span className="text-xs md:text-sm text-text-tertiary">
-              {total} open
-            </span>
-          }
+          right={<span className="text-xs md:text-sm text-text-tertiary">{total} open</span>}
         />
         <StickyNoteList
           initial={items.map((c) => ({ id: c.id, body: c.body }))}

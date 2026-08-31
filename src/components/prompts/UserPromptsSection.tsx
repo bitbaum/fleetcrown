@@ -69,7 +69,10 @@ export function UserPromptsSection({
   const [isPending, startTransition] = useTransition();
 
   async function handleDelete(id: string) {
-    if (!confirm("Soft-delete this prompt? It will be hidden but can be restored from DB if needed.")) return;
+    if (
+      !confirm("Soft-delete this prompt? It will be hidden but can be restored from DB if needed.")
+    )
+      return;
     setDeletingId(id);
     try {
       const res = await fetch(`/api/prompts/${id}`, { method: "DELETE" });
@@ -79,9 +82,9 @@ export function UserPromptsSection({
     }
   }
 
-  const editingPrompt = editingId ? prompts.find((p) => p.id === editingId) ?? null : null;
-  const runningPrompt = runId ? prompts.find((p) => p.id === runId) ?? null : null;
-  const schedulingPrompt = scheduleId ? prompts.find((p) => p.id === scheduleId) ?? null : null;
+  const editingPrompt = editingId ? (prompts.find((p) => p.id === editingId) ?? null) : null;
+  const runningPrompt = runId ? (prompts.find((p) => p.id === runId) ?? null) : null;
+  const schedulingPrompt = scheduleId ? (prompts.find((p) => p.id === scheduleId) ?? null) : null;
 
   // Collapse exact duplicates (same name + body). A smoke session once forked
   // the same default six times and the section rendered "Next Best Step" ×7 —
@@ -114,7 +117,10 @@ export function UserPromptsSection({
         </div>
         <button
           type="button"
-          onClick={() => { setEditingId(null); setIsCreating(true); }}
+          onClick={() => {
+            setEditingId(null);
+            setIsCreating(true);
+          }}
           className="ui-btn-primary inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap text-sm"
         >
           <Plus className="h-3.5 w-3.5" />
@@ -126,7 +132,10 @@ export function UserPromptsSection({
         <PromptForm
           initial={editingPrompt}
           projects={projects}
-          onCancel={() => { setIsCreating(false); setEditingId(null); }}
+          onCancel={() => {
+            setIsCreating(false);
+            setEditingId(null);
+          }}
           onSaved={() => {
             setIsCreating(false);
             setEditingId(null);
@@ -148,14 +157,18 @@ export function UserPromptsSection({
       {visiblePrompts.length > 0 && (
         // Cap columns to the number of saved prompts so 1–2 don't sit stranded
         // at 1/3 width in a fixed 3-col grid (the section usually has few items).
-        <div className={`grid gap-3 ${
-          visiblePrompts.length === 1 ? "max-w-md grid-cols-1"
-            : visiblePrompts.length === 2 ? "grid-cols-1 sm:grid-cols-2"
-              : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
-        }`}>
+        <div
+          className={`grid gap-3 ${
+            visiblePrompts.length === 1
+              ? "max-w-md grid-cols-1"
+              : visiblePrompts.length === 2
+                ? "grid-cols-1 sm:grid-cols-2"
+                : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
+          }`}
+        >
           {visiblePrompts.map((p) => {
             const projectName = p.projectId
-              ? projects.find((pr) => pr.id === p.projectId)?.name ?? "(deleted project)"
+              ? (projects.find((pr) => pr.id === p.projectId)?.name ?? "(deleted project)")
               : null;
             return (
               <article
@@ -190,7 +203,10 @@ export function UserPromptsSection({
                     </button>
                     <button
                       type="button"
-                      onClick={() => { setIsCreating(false); setEditingId(p.id); }}
+                      onClick={() => {
+                        setIsCreating(false);
+                        setEditingId(p.id);
+                      }}
                       className="ui-btn-icon"
                       aria-label="Edit prompt"
                       title="Edit"
@@ -205,14 +221,22 @@ export function UserPromptsSection({
                       aria-label="Delete prompt"
                       title="Delete"
                     >
-                      {deletingId === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                      {deletingId === p.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-3.5 w-3.5" />
+                      )}
                     </button>
                   </div>
                 </header>
 
                 <div className="flex flex-wrap gap-1.5 text-micro">
                   <span className="ui-tag">{p.scope}</span>
-                  {projectName && <span className="ui-tag" title="Pinned to project">{projectName}</span>}
+                  {projectName && (
+                    <span className="ui-tag" title="Pinned to project">
+                      {projectName}
+                    </span>
+                  )}
                   {/* Only shown once a prompt has actually been run. runCount is
                       schema-backed; until run-tracking writes it, this stays
                       hidden rather than displaying a placeholder 0% metric.
@@ -221,12 +245,17 @@ export function UserPromptsSection({
                       answers it costs seven characters, and the hover title
                       carrying it never reaches a phone. */}
                   {p.runCount > 0 && (
-                    <span className="ui-tag" title={`${p.successCount} of ${p.runCount} runs succeeded`}>
+                    <span
+                      className="ui-tag"
+                      title={`${p.successCount} of ${p.runCount} runs succeeded`}
+                    >
                       {`${Math.round((p.successCount / p.runCount) * 100)}% success · ${p.runCount} runs`}
                     </span>
                   )}
                   {p.tags.slice(0, 3).map((t) => (
-                    <span key={t} className="ui-tag">{t}</span>
+                    <span key={t} className="ui-tag">
+                      {t}
+                    </span>
                   ))}
                 </div>
 
@@ -274,7 +303,9 @@ function PromptForm({
   const [name, setName] = useState(initial?.name ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
   const [body, setBody] = useState(initial?.body ?? "");
-  const [scope, setScope] = useState<"global" | "project">(initial?.scope === "project" ? "project" : "global");
+  const [scope, setScope] = useState<"global" | "project">(
+    initial?.scope === "project" ? "project" : "global",
+  );
   const [projectId, setProjectId] = useState<string>(initial?.projectId ?? "");
   const [tagsInput, setTagsInput] = useState((initial?.tags ?? []).join(", "));
   const [saving, setSaving] = useState(false);
@@ -328,12 +359,7 @@ function PromptForm({
         <h3 className="font-medium text-text-primary">
           {isEditing ? "Edit prompt" : "New prompt"}
         </h3>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="ui-btn-icon"
-          aria-label="Cancel"
-        >
+        <button type="button" onClick={onCancel} className="ui-btn-icon" aria-label="Cancel">
           <X className="h-3.5 w-3.5" />
         </button>
       </header>
@@ -349,7 +375,9 @@ function PromptForm({
       </div>
 
       <div className="space-y-2">
-        <label className="ui-kicker">Description <span className="text-text-tertiary">(optional)</span></label>
+        <label className="ui-kicker">
+          Description <span className="text-text-tertiary">(optional)</span>
+        </label>
         <input
           value={description}
           onChange={(e) => setDescription(e.target.value)}
@@ -368,7 +396,8 @@ function PromptForm({
           className="ui-input font-mono text-sm"
         />
         <p className="text-xs text-text-muted">
-          Variables: <code>{`{{var_name}}`}</code> or <code>{`{{var_name|default value}}`}</code>. At run time the UI will prompt for each.
+          Variables: <code>{`{{var_name}}`}</code> or <code>{`{{var_name|default value}}`}</code>.
+          At run time the UI will prompt for each.
         </p>
       </div>
 
@@ -394,7 +423,9 @@ function PromptForm({
             >
               <option value="">— pick —</option>
               {projects.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
               ))}
             </select>
           </div>
@@ -402,7 +433,9 @@ function PromptForm({
       </div>
 
       <div className="space-y-2">
-        <label className="ui-kicker">Tags <span className="text-text-tertiary">(comma-separated)</span></label>
+        <label className="ui-kicker">
+          Tags <span className="text-text-tertiary">(comma-separated)</span>
+        </label>
         <input
           value={tagsInput}
           onChange={(e) => setTagsInput(e.target.value)}
@@ -423,11 +456,7 @@ function PromptForm({
           {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
           {isEditing ? "Save changes" : "Create"}
         </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="ui-btn-ghost"
-        >
+        <button type="button" onClick={onCancel} className="ui-btn-ghost">
           Cancel
         </button>
       </div>

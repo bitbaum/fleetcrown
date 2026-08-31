@@ -19,7 +19,7 @@ async function geocodeCity(city: string): Promise<GeoResult | null> {
     const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=en&format=json`;
     const res = await fetch(url, { next: { revalidate: 0 } });
     if (!res.ok) return null;
-    const data = await res.json() as { results?: GeoResult[] };
+    const data = (await res.json()) as { results?: GeoResult[] };
     const r = data.results?.[0];
     if (!r) return null;
     const geo = { latitude: r.latitude, longitude: r.longitude, timezone: r.timezone ?? "UTC" };
@@ -34,16 +34,34 @@ async function geocodeCity(city: string): Promise<GeoResult | null> {
 // so WeatherCard's parseWeather + WeatherIcon-by-keyword detection light up
 // the same icons (cloud / rain / snow / fog) regardless of source.
 const WMO_DESCRIPTION: Record<number, string> = {
-  0:  "Clear",                 1:  "Mainly clear",       2:  "Partly cloudy",       3:  "Overcast",
-  45: "Foggy",                 48: "Foggy",
-  51: "Light drizzle",         53: "Drizzle",             55: "Heavy drizzle",
-  56: "Freezing drizzle",      57: "Heavy freezing drizzle",
-  61: "Light rain",            63: "Rain",                65: "Heavy rain",
-  66: "Freezing rain",         67: "Heavy freezing rain",
-  71: "Light snow",            73: "Snow",                75: "Heavy snow",          77: "Snow grains",
-  80: "Light showers",         81: "Showers",             82: "Heavy showers",
-  85: "Snow showers",          86: "Heavy snow showers",
-  95: "Thunderstorm",          96: "Thunderstorm + hail", 99: "Heavy thunderstorm",
+  0: "Clear",
+  1: "Mainly clear",
+  2: "Partly cloudy",
+  3: "Overcast",
+  45: "Foggy",
+  48: "Foggy",
+  51: "Light drizzle",
+  53: "Drizzle",
+  55: "Heavy drizzle",
+  56: "Freezing drizzle",
+  57: "Heavy freezing drizzle",
+  61: "Light rain",
+  63: "Rain",
+  65: "Heavy rain",
+  66: "Freezing rain",
+  67: "Heavy freezing rain",
+  71: "Light snow",
+  73: "Snow",
+  75: "Heavy snow",
+  77: "Snow grains",
+  80: "Light showers",
+  81: "Showers",
+  82: "Heavy showers",
+  85: "Snow showers",
+  86: "Heavy snow showers",
+  95: "Thunderstorm",
+  96: "Thunderstorm + hail",
+  99: "Heavy thunderstorm",
 };
 
 function describeCode(code: number | undefined): string {
@@ -59,11 +77,11 @@ function describeCode(code: number | undefined): string {
 async function fetchOpenMeteoWeather(geo: GeoResult): Promise<string | null> {
   try {
     const params = new URLSearchParams({
-      latitude:     String(geo.latitude),
-      longitude:    String(geo.longitude),
-      timezone:     geo.timezone,
-      current:      "temperature_2m,wind_speed_10m,relative_humidity_2m,weather_code",
-      daily:        "temperature_2m_max,temperature_2m_min,weather_code",
+      latitude: String(geo.latitude),
+      longitude: String(geo.longitude),
+      timezone: geo.timezone,
+      current: "temperature_2m,wind_speed_10m,relative_humidity_2m,weather_code",
+      daily: "temperature_2m_max,temperature_2m_min,weather_code",
       forecast_days: "2",
     });
     const res = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`, {
@@ -71,9 +89,19 @@ async function fetchOpenMeteoWeather(geo: GeoResult): Promise<string | null> {
       signal: AbortSignal.timeout(7000),
     });
     if (!res.ok) return null;
-    const data = await res.json() as {
-      current?: { temperature_2m?: number; wind_speed_10m?: number; relative_humidity_2m?: number; weather_code?: number };
-      daily?: { time?: string[]; temperature_2m_max?: number[]; temperature_2m_min?: number[]; weather_code?: number[] };
+    const data = (await res.json()) as {
+      current?: {
+        temperature_2m?: number;
+        wind_speed_10m?: number;
+        relative_humidity_2m?: number;
+        weather_code?: number;
+      };
+      daily?: {
+        time?: string[];
+        temperature_2m_max?: number[];
+        temperature_2m_min?: number[];
+        weather_code?: number[];
+      };
     };
     const c = data.current;
     if (!c) return null;
@@ -105,7 +133,10 @@ export async function GET() {
   // showed "Unavailable" forever.
   if (!isRuntimeAvailable()) {
     if (!geo) {
-      return NextResponse.json({ weather: null, error: `Could not geocode "${city}"` }, { status: 503 });
+      return NextResponse.json(
+        { weather: null, error: `Could not geocode "${city}"` },
+        { status: 503 },
+      );
     }
     const weather = await fetchOpenMeteoWeather(geo);
     if (!weather) {

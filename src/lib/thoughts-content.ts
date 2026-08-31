@@ -25,7 +25,8 @@ export type ThoughtBlock = ContentBlock;
 
 export function listThoughts(): Array<ThoughtMeta & { body: string }> {
   if (!fs.existsSync(THOUGHTS_DIR)) return [];
-  return fs.readdirSync(THOUGHTS_DIR)
+  return fs
+    .readdirSync(THOUGHTS_DIR)
     .filter((f) => f.endsWith(".md"))
     .map((f) => {
       const slug = f.replace(/\.md$/, "");
@@ -39,7 +40,10 @@ export function listThoughts(): Array<ThoughtMeta & { body: string }> {
         summary: meta.summary ?? meta.subtitle ?? "",
         excerpt: meta.excerpt ?? meta.subtitle ?? "",
         publishedAt: meta.publishedAt ?? "",
-        tags: (meta.tags ?? "").split(",").map((s) => s.trim()).filter(Boolean),
+        tags: (meta.tags ?? "")
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean),
         featured: (meta.featured ?? "false") === "true",
         author: meta.author ?? "Loki",
         readingTimeMin: Number(meta.readingTimeMin ?? "6"),
@@ -54,7 +58,9 @@ export function getThought(slug: string) {
 }
 
 export function listThoughtTags(): string[] {
-  return [...new Set(listThoughts().flatMap((article) => article.tags))].sort((a, b) => a.localeCompare(b));
+  return [...new Set(listThoughts().flatMap((article) => article.tags))].sort((a, b) =>
+    a.localeCompare(b),
+  );
 }
 
 export function getAdjacentThoughts(slug: string) {
@@ -80,7 +86,10 @@ export function getRelatedThoughts(slug: string, limit = 3) {
       sharedTags: article.tags.filter((tag) => current.tags.includes(tag)).length,
     }))
     .filter((entry) => entry.sharedTags > 0)
-    .sort((a, b) => b.sharedTags - a.sharedTags || (a.article.publishedAt < b.article.publishedAt ? 1 : -1))
+    .sort(
+      (a, b) =>
+        b.sharedTags - a.sharedTags || (a.article.publishedAt < b.article.publishedAt ? 1 : -1),
+    )
     .slice(0, limit)
     .map((entry) => entry.article);
 }

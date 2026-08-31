@@ -33,7 +33,8 @@ export const geminiAdapter: AgentAdapter = {
     if (existsSync(path.join(HOME, ".gemini"))) {
       return {
         available: false,
-        availabilityReason: "Gemini configuration exists, but no Gemini CLI command is installed on PATH.",
+        availabilityReason:
+          "Gemini configuration exists, but no Gemini CLI command is installed on PATH.",
       };
     }
     return {

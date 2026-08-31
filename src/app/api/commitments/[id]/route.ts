@@ -3,10 +3,7 @@ import { requirePrivateApiAccess } from "@/lib/private-zone-api";
 import { readIdParam, readJsonBody } from "@/lib/api/route-helpers";
 import { patchCommitment, deleteCommitment, PatchCommitmentBody } from "@/db/queries/today";
 
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const access = await requirePrivateApiAccess();
   if (access instanceof NextResponse) return access;
   const { userId } = access;
@@ -21,10 +18,7 @@ export async function PATCH(
   return NextResponse.json({ ok: true, commitment: updated });
 }
 
-export async function DELETE(
-  _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const access = await requirePrivateApiAccess();
   if (access instanceof NextResponse) return access;
   const { userId } = access;

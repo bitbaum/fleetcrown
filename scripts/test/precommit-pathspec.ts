@@ -29,7 +29,10 @@ const HOOK = ".husky/pre-commit";
 const hook = readFileSync(HOOK, "utf8");
 
 const globsLine = hook.split("\n").find((l) => /^GLOBS=/.test(l.trim()));
-assert.ok(globsLine, `no GLOBS= assignment in ${HOOK} — the pathspec moved; update this test with it`);
+assert.ok(
+  globsLine,
+  `no GLOBS= assignment in ${HOOK} — the pathspec moved; update this test with it`,
+);
 
 // Same shell, same unquoted expansion the hook performs.
 const matched = execFileSync("sh", ["-c", `${globsLine}\ngit ls-files -- $GLOBS`], {

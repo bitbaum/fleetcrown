@@ -48,7 +48,10 @@ function runTests(): void {
       queueLength: 3,
       streakSuffix: "",
     });
-    assert(result?.source === "status_gate", "status_gate must win over mode_gate even with queue items");
+    assert(
+      result?.source === "status_gate",
+      "status_gate must win over mode_gate even with queue items",
+    );
   });
 
   check("status:blocked short-circuits before any other gate", () => {
@@ -152,7 +155,10 @@ function runTests(): void {
       streakSuffix: "",
     });
     // Empty status falls through to mode handling — autopilot fires.
-    assert(result?.action === "nextbest", "missing status (legacy clients) does not block — autopilot fires");
+    assert(
+      result?.action === "nextbest",
+      "missing status (legacy clients) does not block — autopilot fires",
+    );
   });
 
   check("status:ready with blockers still blocks (safety beats happy-path)", () => {

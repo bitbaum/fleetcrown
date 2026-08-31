@@ -13,7 +13,10 @@ import {
 } from "@/lib/orchestration/contract";
 
 export function splitSessionItems(text: string): string[] {
-  return text.split(/;\s+/).map((s) => s.trim()).filter(Boolean);
+  return text
+    .split(/;\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
 }
 
 // ── Beacon DB content parser ──────────────────────────────────────────────────
@@ -30,7 +33,16 @@ type ParsedSession = {
 };
 
 export function parseSessionText(content: string): ParsedSession {
-  const result: ParsedSession = { status: "", done: [], next: [], in_progress: [], tests: "", todos: "", health: "", noOpCount: null };
+  const result: ParsedSession = {
+    status: "",
+    done: [],
+    next: [],
+    in_progress: [],
+    tests: "",
+    todos: "",
+    health: "",
+    noOpCount: null,
+  };
   for (const line of content.split("\n")) {
     const idx = line.indexOf(":");
     if (idx <= 0) continue;

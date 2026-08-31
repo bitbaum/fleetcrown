@@ -37,6 +37,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true, summary: result.summary });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Run crashed" }, { status: 500 });
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Run crashed" },
+      { status: 500 },
+    );
   }
 }

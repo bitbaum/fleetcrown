@@ -15,7 +15,10 @@ export function NewPersonButton({ onCreated }: { onCreated?: () => void } = {}) 
     errorLabel: "person",
   });
 
-  const onReset = () => { form.reset(); setError(null); };
+  const onReset = () => {
+    form.reset();
+    setError(null);
+  };
 
   const onSubmit = async () => {
     const ok = await create({

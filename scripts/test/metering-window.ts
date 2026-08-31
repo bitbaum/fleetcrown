@@ -98,8 +98,11 @@ const entry = (runId: string, dir: string, atMs: number): MeteredEntry => ({
   const a = entry("a", "/dev/orangecat", T0);
   closeWindowsForDirectory([a], entry("b", "/dev/orangecat", T0 - MIN));
   // b predates a, so a is untouched and still runs to now.
-  assert.equal(meteringWindowEnd(a, T0 - 10 * MIN) >= a.deliveredAtMs, true,
-    "window end fell below its own start — collectClaudeUsage would scan an inverted range");
+  assert.equal(
+    meteringWindowEnd(a, T0 - 10 * MIN) >= a.deliveredAtMs,
+    true,
+    "window end fell below its own start — collectClaudeUsage would scan an inverted range",
+  );
 }
 
 console.log("✓ metering-window: one directory, one metered run");

@@ -25,10 +25,18 @@ export function x1Enabled(): boolean {
 
 // RFC 3986 percent-encoding (stricter than encodeURIComponent for OAuth).
 function enc(s: string): string {
-  return encodeURIComponent(s).replace(/[!*'()]/g, (c) => "%" + c.charCodeAt(0).toString(16).toUpperCase());
+  return encodeURIComponent(s).replace(
+    /[!*'()]/g,
+    (c) => "%" + c.charCodeAt(0).toString(16).toUpperCase(),
+  );
 }
 
-function sign(method: string, url: string, params: Record<string, string>, tokenSecret = ""): string {
+function sign(
+  method: string,
+  url: string,
+  params: Record<string, string>,
+  tokenSecret = "",
+): string {
   const paramStr = Object.keys(params)
     .sort()
     .map((k) => `${enc(k)}=${enc(params[k])}`)
@@ -59,7 +67,9 @@ function baseOauth(): Record<string, string> {
 }
 
 /** Step 1: obtain a request token. `callbackUrl` must be whitelisted in the X app. */
-export async function requestToken(callbackUrl: string): Promise<{ oauth_token: string; oauth_token_secret: string }> {
+export async function requestToken(
+  callbackUrl: string,
+): Promise<{ oauth_token: string; oauth_token_secret: string }> {
   const url = `${API}/oauth/request_token`;
   const params: Record<string, string> = { ...baseOauth(), oauth_callback: callbackUrl };
   params.oauth_signature = sign("POST", url, params);
@@ -76,7 +86,8 @@ export async function requestToken(callbackUrl: string): Promise<{ oauth_token: 
   const p = new URLSearchParams(text);
   const oauth_token = p.get("oauth_token");
   const oauth_token_secret = p.get("oauth_token_secret");
-  if (!oauth_token || !oauth_token_secret) throw new Error(`request_token malformed: ${text.slice(0, 200)}`);
+  if (!oauth_token || !oauth_token_secret)
+    throw new Error(`request_token malformed: ${text.slice(0, 200)}`);
   return { oauth_token, oauth_token_secret };
 }
 
@@ -87,7 +98,11 @@ export async function accessToken(
   verifier: string,
 ): Promise<{ user_id: string; screen_name: string }> {
   const url = `${API}/oauth/access_token`;
-  const params: Record<string, string> = { ...baseOauth(), oauth_token: oauthToken, oauth_verifier: verifier };
+  const params: Record<string, string> = {
+    ...baseOauth(),
+    oauth_token: oauthToken,
+    oauth_verifier: verifier,
+  };
   params.oauth_signature = sign("POST", url, params, oauthTokenSecret);
   // Login path — fail fast (see requestToken).
   const res = await fetch(url, {
@@ -124,7 +139,9 @@ function ticketSecret(): string {
 
 export function mintTicket(data: TicketData): string {
   const secret = ticketSecret();
-  const payload = Buffer.from(JSON.stringify({ ...data, exp: Math.floor(Date.now() / 1000) + 120 })).toString("base64url");
+  const payload = Buffer.from(
+    JSON.stringify({ ...data, exp: Math.floor(Date.now() / 1000) + 120 }),
+  ).toString("base64url");
   const sig = crypto.createHmac("sha256", secret).update(payload).digest("base64url");
   return `${payload}.${sig}`;
 }
@@ -138,7 +155,9 @@ export function verifyTicket(ticket: string): TicketData | null {
     const a = Buffer.from(sig);
     const b = Buffer.from(expected);
     if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
-    const data = JSON.parse(Buffer.from(payload, "base64url").toString()) as TicketData & { exp: number };
+    const data = JSON.parse(Buffer.from(payload, "base64url").toString()) as TicketData & {
+      exp: number;
+    };
     if (typeof data.exp !== "number" || data.exp < Math.floor(Date.now() / 1000)) return null;
     if (!data.xId || !data.handle) return null;
     return { xId: data.xId, handle: data.handle };

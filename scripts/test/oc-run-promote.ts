@@ -1,7 +1,10 @@
 // Pure unit test: run→wall moment builder + promote policy entry.
 // No DB, no network — auto-discovered by scripts/test-unit.ts.
 import assert from "node:assert";
-import { buildRunMoment, type RunPromoteInput } from "../../src/lib/integrations/orangecat-run-moment";
+import {
+  buildRunMoment,
+  type RunPromoteInput,
+} from "../../src/lib/integrations/orangecat-run-moment";
 import { PROMOTE_POLICY } from "../../src/config/orangecat-publish";
 
 // Policy: run_closed must exist, be enabled, and map onto an OC-accepted type.

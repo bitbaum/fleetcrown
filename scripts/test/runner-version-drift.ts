@@ -120,10 +120,7 @@ assert(normalizeRunnerVersion("garbage") === null, "an unparsable version is nul
 
 // ── Fleet Doctor must actually consult it, and rank it honestly ────────────
 
-const doctor = readFileSync(
-  resolvePath(repoRoot, "src/app/api/system/doctor/route.ts"),
-  "utf8",
-)
+const doctor = readFileSync(resolvePath(repoRoot, "src/app/api/system/doctor/route.ts"), "utf8")
   .replace(/\/\*[\s\S]*?\*\//g, "")
   .split("\n")
   .map((l) => l.replace(/\/\/.*$/, ""))

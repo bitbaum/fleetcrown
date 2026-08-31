@@ -63,11 +63,16 @@ export function GoalEditor({
             <>
               {definitionOfDone}
               <span className="ml-1.5 text-xs text-text-muted">
-                · {maxTurns ? `stop after ${maxTurns} turn${maxTurns === 1 ? "" : "s"}` : "loop until met"}
+                ·{" "}
+                {maxTurns
+                  ? `stop after ${maxTurns} turn${maxTurns === 1 ? "" : "s"}`
+                  : "loop until met"}
               </span>
             </>
           ) : (
-            <span className="text-text-muted">Not set — the fleet stops on the agent&apos;s own say-so.</span>
+            <span className="text-text-muted">
+              Not set — the fleet stops on the agent&apos;s own say-so.
+            </span>
           )}
         </dd>
       </div>
@@ -76,8 +81,9 @@ export function GoalEditor({
 
   return (
     <div className="space-y-2">
-        <dt className="flex items-center gap-1.5 text-xs font-medium text-text-muted">
-        <Target className="h-3 w-3" /> Definition of done — one turn&apos;s bar, checkable from the handoff alone
+      <dt className="flex items-center gap-1.5 text-xs font-medium text-text-muted">
+        <Target className="h-3 w-3" /> Definition of done — one turn&apos;s bar, checkable from the
+        handoff alone
       </dt>
       <textarea
         className="ui-input w-full"
@@ -104,10 +110,18 @@ export function GoalEditor({
       </div>
       {error && <p className="ui-error">{error}</p>}
       <div className="flex items-center gap-2">
-        <button className="ui-btn-primary ui-btn-xs inline-flex ui-tap items-center gap-1.5" onClick={save} disabled={saving}>
+        <button
+          className="ui-btn-primary ui-btn-xs inline-flex ui-tap items-center gap-1.5"
+          onClick={save}
+          disabled={saving}
+        >
           {saving ? <Loader2 className="ui-spinner-sm" /> : <Check className="h-3.5 w-3.5" />} Save
         </button>
-        <button className="ui-btn-ghost ui-btn-xs inline-flex ui-tap items-center gap-1.5" onClick={() => setEditing(false)} disabled={saving}>
+        <button
+          className="ui-btn-ghost ui-btn-xs inline-flex ui-tap items-center gap-1.5"
+          onClick={() => setEditing(false)}
+          disabled={saving}
+        >
           <X className="h-3.5 w-3.5" /> Cancel
         </button>
       </div>

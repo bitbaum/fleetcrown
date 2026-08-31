@@ -1,7 +1,11 @@
 "use client";
 
 import { BookOpen, ChevronDown, ChevronUp } from "lucide-react";
-import { CATEGORY_META, FEATURED_PROJECT_PROMPTS, substituteProjectName } from "@/config/prompt-library";
+import {
+  CATEGORY_META,
+  FEATURED_PROJECT_PROMPTS,
+  substituteProjectName,
+} from "@/config/prompt-library";
 import { PROMPT_LIBRARY_TITLE } from "@/config/control-labels";
 import { cn } from "@/lib/utils";
 
@@ -46,9 +50,18 @@ export function ProjectPromptLibrary({
                 title={template.description}
                 className="group flex min-h-24 flex-col gap-1 rounded-xl border border-border-subtle bg-surface-base px-3 py-2.5 text-left transition-colors hover:border-border-default hover:bg-surface-raised"
               >
-                <span className="text-xs font-semibold leading-tight text-text-primary">{template.name}</span>
-                <span className="line-clamp-2 text-micro leading-snug text-text-muted">{template.description}</span>
-                <span className={cn("mt-auto self-start rounded-full border px-1.5 py-0.5 text-micro font-medium", meta.color)}>
+                <span className="text-xs font-semibold leading-tight text-text-primary">
+                  {template.name}
+                </span>
+                <span className="line-clamp-2 text-micro leading-snug text-text-muted">
+                  {template.description}
+                </span>
+                <span
+                  className={cn(
+                    "mt-auto self-start rounded-full border px-1.5 py-0.5 text-micro font-medium",
+                    meta.color,
+                  )}
+                >
                   {meta.label}
                 </span>
               </button>

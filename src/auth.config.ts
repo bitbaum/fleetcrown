@@ -64,19 +64,20 @@ export const authConfig = {
         const authHeader = request.headers.get("authorization") ?? "";
         if (authHeader.startsWith("Bearer ck_")) return true;
         // Edge runtime — inline the alias logic instead of importing to keep the bundle tiny.
-        const daemonToken = process.env.APP_DAEMON_TOKEN ?? process.env.FLEETCROWN_DAEMON_TOKEN ?? process.env.COCKPIT_DAEMON_TOKEN;
-        const legacyAllowed = (
-          process.env.APP_ALLOW_LEGACY_DAEMON_TOKEN ??
-          process.env.FLEETCROWN_ALLOW_LEGACY_DAEMON_TOKEN ??
-          process.env.COCKPIT_ALLOW_LEGACY_DAEMON_TOKEN
-        ) === "1";
+        const daemonToken =
+          process.env.APP_DAEMON_TOKEN ??
+          process.env.FLEETCROWN_DAEMON_TOKEN ??
+          process.env.COCKPIT_DAEMON_TOKEN;
+        const legacyAllowed =
+          (process.env.APP_ALLOW_LEGACY_DAEMON_TOKEN ??
+            process.env.FLEETCROWN_ALLOW_LEGACY_DAEMON_TOKEN ??
+            process.env.COCKPIT_ALLOW_LEGACY_DAEMON_TOKEN) === "1";
         if (legacyAllowed && daemonToken && authHeader === `Bearer ${daemonToken}`) return true;
 
         // The app runs behind Caddy on a single known host
         // (fleetcrown.orangecat.ch). x-forwarded-host carries the real host the
         // user typed, which we prefer over the internal request host.
-        const host =
-          request.headers.get("x-forwarded-host") ?? request.nextUrl.host;
+        const host = request.headers.get("x-forwarded-host") ?? request.nextUrl.host;
         const proto =
           request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol.replace(":", "");
         const signInUrl = new URL(ROUTES.SIGN_IN, `${proto}://${host}`);
@@ -105,7 +106,8 @@ export const authConfig = {
         !pathname.startsWith(ROUTES.SIGN_OUT)
       ) {
         const host = request.headers.get("x-forwarded-host") ?? request.nextUrl.host;
-        const proto = request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol.replace(":", "");
+        const proto =
+          request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol.replace(":", "");
         return Response.redirect(new URL(ROUTES.ONBOARDING, `${proto}://${host}`));
       }
 

@@ -106,7 +106,10 @@ function runTests(): void {
   check("manual banner surfaces under autopilot when autopilot can't act", () => {
     assert(shouldShowManualCapacityBanner(true, "all-tried"), "on + all-tried → surface");
     assert(shouldShowManualCapacityBanner(true, "no-fallback"), "on + no-fallback → surface");
-    assert(shouldShowManualCapacityBanner(true, "tab-closed"), "on + tab-closed (not running) → surface, never invisible");
+    assert(
+      shouldShowManualCapacityBanner(true, "tab-closed"),
+      "on + tab-closed (not running) → surface, never invisible",
+    );
   });
 
   // ── Headless (server/beacon) reroute ────────────────────────────────────
@@ -146,12 +149,18 @@ function runTests(): void {
   });
 
   check("headless: window cap reached → stop (no infinite cascade)", () => {
-    const d = decideHeadlessReroute({ ...headlessBase, recentSwitchCount: MAX_AUTO_REROUTES_PER_WINDOW });
+    const d = decideHeadlessReroute({
+      ...headlessBase,
+      recentSwitchCount: MAX_AUTO_REROUTES_PER_WINDOW,
+    });
     assert(!d.reroute && d.reason === "window-exhausted", "expected window-exhausted");
   });
 
   check("headless: one hop below the cap still reroutes", () => {
-    const d = decideHeadlessReroute({ ...headlessBase, recentSwitchCount: MAX_AUTO_REROUTES_PER_WINDOW - 1 });
+    const d = decideHeadlessReroute({
+      ...headlessBase,
+      recentSwitchCount: MAX_AUTO_REROUTES_PER_WINDOW - 1,
+    });
     assert(d.reroute, "expected reroute just under the cap");
   });
 

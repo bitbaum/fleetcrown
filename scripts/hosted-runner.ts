@@ -14,9 +14,17 @@
 // docs/architecture/hosted-ephemeral-runner.md.
 
 import { setRunnerConnected } from "@/db/queries/runner-presence";
-import { claimNextPendingCommand, markCommandExecuted, type HostedAnalyzePayload, type HostedDispatchPayload } from "@/db/queries/pending-commands";
+import {
+  claimNextPendingCommand,
+  markCommandExecuted,
+  type HostedAnalyzePayload,
+  type HostedDispatchPayload,
+} from "@/db/queries/pending-commands";
 import { getProjectContext } from "@/db/queries/project-context";
-import { getRecentProjectActivity, type RecentProjectActivity } from "@/db/queries/orchestration-events";
+import {
+  getRecentProjectActivity,
+  type RecentProjectActivity,
+} from "@/db/queries/orchestration-events";
 import { getSelfImprovementTarget } from "@/db/queries/frontier";
 import { getGithubToken } from "@/lib/github-token";
 import { appendProjectDevLog } from "@/db/queries/user-projects";
@@ -65,7 +73,9 @@ async function logResult(userId: string, projectKey: string, label: string, text
     date: new Date().toISOString(),
     done: label.slice(0, 100),
     next: text.slice(0, 2_000),
-    tests: "", todos: "", health: "good",
+    tests: "",
+    todos: "",
+    health: "good",
   }).catch((e) => console.error("[hosted-runner] devlog append failed:", e));
 }
 
@@ -110,56 +120,122 @@ async function tick(userId: string): Promise<boolean> {
     if (cmd.type === "hosted_dispatch") {
       // Phase 1: write-class task → Hermes in its own sandbox (orchestrate, not out-build).
       console.log(`[hosted-runner] dispatch→hermes ${p.projectKey}: ${p.task.slice(0, 60)}`);
-      void emitHostedEvent(userId, p.projectKey, "task_started", `Hermes dispatch — ${p.task.slice(0, 120)}`, HERMES_ADAPTER);
+      void emitHostedEvent(
+        userId,
+        p.projectKey,
+        "task_started",
+        `Hermes dispatch — ${p.task.slice(0, 120)}`,
+        HERMES_ADAPTER,
+      );
       const model = (cmd.payload as HostedDispatchPayload).model;
       // Recent-activity context: give Hermes the "what was just done" signal so it
       // doesn't repeat or undo recent work. Single choke point — every hosted
       // dispatch (auto-routed or intentional) gets it here, not per trigger.
       const recent = await getRecentProjectActivity(userId, p.projectKey).catch(() => []);
       const res = await runHermesTask({
-        gitUrl: p.gitUrl, task: p.task, projectContext: ctx,
-        recentActivity: renderRecentActivity(recent), token, model,
+        gitUrl: p.gitUrl,
+        task: p.task,
+        projectContext: ctx,
+        recentActivity: renderRecentActivity(recent),
+        token,
+        model,
       });
       if (res.ok) {
         const summary = res.noChanges
           ? `${res.output}\n\n(Hermes made no file changes.)`
           : `${res.output}\n\n— changed:\n${res.diff || "(no diff)"}${res.prUrl ? `\n\nPR: ${res.prUrl}` : res.branch ? `\n\nPushed branch: ${res.branch}` : ""}`;
         await markCommandExecuted(cmd.id, userId, { ok: true, text: summary });
-        await logResult(userId, p.projectKey, `Hosted dispatch (Hermes) — ${p.task.slice(0, 70)}`, summary);
-        void emitHostedEvent(userId, p.projectKey, "task_completed",
-          res.prUrl ? `Hermes → PR ${res.prUrl}` : res.noChanges ? "Hermes: no file changes" : `Hermes pushed ${res.branch ?? "a branch"}`,
-          HERMES_ADAPTER);
-        console.log(`[hosted-runner] ✓ ${p.projectKey} (hermes/${res.model})${res.prUrl ? ` → ${res.prUrl}` : ""}`);
+        await logResult(
+          userId,
+          p.projectKey,
+          `Hosted dispatch (Hermes) — ${p.task.slice(0, 70)}`,
+          summary,
+        );
+        void emitHostedEvent(
+          userId,
+          p.projectKey,
+          "task_completed",
+          res.prUrl
+            ? `Hermes → PR ${res.prUrl}`
+            : res.noChanges
+              ? "Hermes: no file changes"
+              : `Hermes pushed ${res.branch ?? "a branch"}`,
+          HERMES_ADAPTER,
+        );
+        console.log(
+          `[hosted-runner] ✓ ${p.projectKey} (hermes/${res.model})${res.prUrl ? ` → ${res.prUrl}` : ""}`,
+        );
       } else {
         await markCommandExecuted(cmd.id, userId, { ok: false, error: res.error });
         // Failures used to vanish into console only — log + emit so a broken hosted
         // path is visible in the project dev log and Activity, not archaeology.
-        await logResult(userId, p.projectKey, `Hosted dispatch (Hermes) FAILED — ${p.task.slice(0, 60)}`, res.error);
-        void emitHostedEvent(userId, p.projectKey, "task_failed", `Hermes failed — ${res.error}`, HERMES_ADAPTER);
+        await logResult(
+          userId,
+          p.projectKey,
+          `Hosted dispatch (Hermes) FAILED — ${p.task.slice(0, 60)}`,
+          res.error,
+        );
+        void emitHostedEvent(
+          userId,
+          p.projectKey,
+          "task_failed",
+          `Hermes failed — ${res.error}`,
+          HERMES_ADAPTER,
+        );
         console.log(`[hosted-runner] ✗ ${p.projectKey}: ${res.error}`);
       }
     } else {
       // Phase 0: read-only analysis via Groq.
       console.log(`[hosted-runner] analyze ${p.projectKey}: ${p.task.slice(0, 60)}`);
-      void emitHostedEvent(userId, p.projectKey, "task_started", `Hosted analysis — ${p.task.slice(0, 120)}`);
+      void emitHostedEvent(
+        userId,
+        p.projectKey,
+        "task_started",
+        `Hosted analysis — ${p.task.slice(0, 120)}`,
+      );
       const res = await analyzeRepo({ gitUrl: p.gitUrl, task: p.task, projectContext: ctx, token });
       if (res.ok) {
         await markCommandExecuted(cmd.id, userId, { ok: true, text: res.report });
-        await logResult(userId, p.projectKey, `Hosted analysis — ${p.task.slice(0, 80)}`, res.report);
-        void emitHostedEvent(userId, p.projectKey, "task_completed", `Hosted analysis complete (${res.model})`);
+        await logResult(
+          userId,
+          p.projectKey,
+          `Hosted analysis — ${p.task.slice(0, 80)}`,
+          res.report,
+        );
+        void emitHostedEvent(
+          userId,
+          p.projectKey,
+          "task_completed",
+          `Hosted analysis complete (${res.model})`,
+        );
         console.log(`[hosted-runner] ✓ ${p.projectKey} (${res.model})`);
       } else {
         await markCommandExecuted(cmd.id, userId, { ok: false, error: res.error });
-        await logResult(userId, p.projectKey, `Hosted analysis FAILED — ${p.task.slice(0, 60)}`, res.error);
-        void emitHostedEvent(userId, p.projectKey, "task_failed", `Hosted analysis failed — ${res.error}`);
+        await logResult(
+          userId,
+          p.projectKey,
+          `Hosted analysis FAILED — ${p.task.slice(0, 60)}`,
+          res.error,
+        );
+        void emitHostedEvent(
+          userId,
+          p.projectKey,
+          "task_failed",
+          `Hosted analysis failed — ${res.error}`,
+        );
         console.log(`[hosted-runner] ✗ ${p.projectKey}: ${res.error}`);
       }
     }
   } catch (e) {
     const msg = e instanceof Error ? e.message : "hosted run failed";
     await markCommandExecuted(cmd.id, userId, { ok: false, error: msg });
-    void emitHostedEvent(userId, p.projectKey, "task_failed", `Hosted run threw — ${msg}`,
-      cmd.type === "hosted_dispatch" ? HERMES_ADAPTER : undefined);
+    void emitHostedEvent(
+      userId,
+      p.projectKey,
+      "task_failed",
+      `Hosted run threw — ${msg}`,
+      cmd.type === "hosted_dispatch" ? HERMES_ADAPTER : undefined,
+    );
   }
   return true;
 }
@@ -175,7 +251,10 @@ async function main() {
   // Phase 0 serves the FleetCrown product owner's projects. Multi-tenant
   // scheduling across users is Phase 3.
   const target = await getSelfImprovementTarget();
-  if (!target) { console.error("[hosted-runner] no fleetcrown owner resolved — nothing to serve"); process.exit(1); }
+  if (!target) {
+    console.error("[hosted-runner] no fleetcrown owner resolved — nothing to serve");
+    process.exit(1);
+  }
   const userId = target.userId;
 
   // --once is a one-shot drain (e.g. a cron tick): do the work, do NOT claim a
@@ -188,12 +267,21 @@ async function main() {
   }
 
   await setRunnerConnected(userId, true);
-  console.log(`[hosted-runner] presence ON for ${userId}; polling hosted_analyze every ${POLL_MS}ms`);
-  const shutdown = async () => { await setRunnerConnected(userId, false).catch(() => {}); process.exit(0); };
+  console.log(
+    `[hosted-runner] presence ON for ${userId}; polling hosted_analyze every ${POLL_MS}ms`,
+  );
+  const shutdown = async () => {
+    await setRunnerConnected(userId, false).catch(() => {});
+    process.exit(0);
+  };
   process.on("SIGINT", shutdown);
   process.on("SIGTERM", shutdown);
   for (;;) {
-    try { await drain(userId); } catch (e) { console.error("[hosted-runner] loop error:", e); }
+    try {
+      await drain(userId);
+    } catch (e) {
+      console.error("[hosted-runner] loop error:", e);
+    }
     await new Promise((r) => setTimeout(r, POLL_MS));
   }
 }

@@ -39,7 +39,8 @@ type AgentPrompt = {
   sendNow?: boolean;
 };
 
-const JSON_PATH = process.env.AGENT_PROMPTS_FILE ?? join(homedir(), ".config", "agent-prompts.json");
+const JSON_PATH =
+  process.env.AGENT_PROMPTS_FILE ?? join(homedir(), ".config", "agent-prompts.json");
 
 function loadExisting(): AgentPrompt[] {
   if (!existsSync(JSON_PATH)) return [];
@@ -51,26 +52,26 @@ function loadExisting(): AgentPrompt[] {
   }
 }
 
-function transformTsEntry(t: typeof PROMPT_TEMPLATES[number]): AgentPrompt | null {
+function transformTsEntry(t: (typeof PROMPT_TEMPLATES)[number]): AgentPrompt | null {
   if (!t.agentKey) return null;
   return {
-    key:         t.agentKey,
-    slot:        t.slot ?? null,
-    icon:        t.icon ?? "•",
-    label:       t.name,
-    style:       t.style ?? "dimension",
-    category:    t.category,
+    key: t.agentKey,
+    slot: t.slot ?? null,
+    icon: t.icon ?? "•",
+    label: t.name,
+    style: t.style ?? "dimension",
+    category: t.category,
     dimensionId: t.dimensionId ?? null,
-    prompt:      t.template,
+    prompt: t.template,
     ...(t.sendNow !== undefined ? { sendNow: t.sendNow } : {}),
   };
 }
 
 function main(): void {
   const existing = loadExisting();
-  const tsTransformed = PROMPT_TEMPLATES
-    .map(transformTsEntry)
-    .filter((p): p is AgentPrompt => p !== null);
+  const tsTransformed = PROMPT_TEMPLATES.map(transformTsEntry).filter(
+    (p): p is AgentPrompt => p !== null,
+  );
 
   const byKey = new Map<string, AgentPrompt>();
   for (const p of existing) byKey.set(p.key, p);

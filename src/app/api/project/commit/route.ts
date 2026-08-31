@@ -6,9 +6,9 @@ import { shellEscape } from "@/lib/zellij";
 import { getApiUserId } from "@/lib/session";
 
 const CommitBody = z.object({
-  dir:     z.string().trim().min(1),
+  dir: z.string().trim().min(1),
   message: z.string().trim().max(200).optional(),
-  push:    z.boolean().optional(),
+  push: z.boolean().optional(),
 });
 
 function gitExec(dir: string, args: string): string {
@@ -39,7 +39,10 @@ export async function POST(req: NextRequest) {
     // Check if there's anything to commit.
     const status = gitExec(dir, "status --porcelain");
     if (!status) {
-      return NextResponse.json({ ok: false, error: "Nothing to commit — working tree is clean" }, { status: 422 });
+      return NextResponse.json(
+        { ok: false, error: "Nothing to commit — working tree is clean" },
+        { status: 422 },
+      );
     }
 
     const msg = message?.trim() || "wip: checkpoint";

@@ -1,9 +1,18 @@
 import { getExecutionAccess } from "@/lib/execution-access";
-import { isRuntimeAvailable, isSandboxExecutorEnabled, WORKSPACES_CLOUD_DISABLED } from "@/lib/runtime";
+import {
+  isRuntimeAvailable,
+  isSandboxExecutorEnabled,
+  WORKSPACES_CLOUD_DISABLED,
+} from "@/lib/runtime";
 
 export type WorkspaceAccessDecision =
   | { ok: true }
-  | { ok: false; status: 403; error: string; code: "server-workspaces-disabled" | "cloud-builder-private" };
+  | {
+      ok: false;
+      status: 403;
+      error: string;
+      code: "server-workspaces-disabled" | "cloud-builder-private";
+    };
 
 export function decideWorkspaceAccessFromSignals(input: {
   runtimeAvailable: boolean;
@@ -12,14 +21,20 @@ export function decideWorkspaceAccessFromSignals(input: {
 }): WorkspaceAccessDecision {
   if (input.runtimeAvailable) return { ok: true };
   if (!input.sandboxExecutorEnabled) {
-    return { ok: false, status: 403, code: "server-workspaces-disabled", error: WORKSPACES_CLOUD_DISABLED };
+    return {
+      ok: false,
+      status: 403,
+      code: "server-workspaces-disabled",
+      error: WORKSPACES_CLOUD_DISABLED,
+    };
   }
   if (!input.cloudBuilderAllowed) {
     return {
       ok: false,
       status: 403,
       code: "cloud-builder-private",
-      error: "Hosted sandbox workspaces are private for this account. Connect Fleet Runner on this computer to run agent work.",
+      error:
+        "Hosted sandbox workspaces are private for this account. Connect Fleet Runner on this computer to run agent work.",
     };
   }
   return { ok: true };
@@ -35,8 +50,16 @@ export async function decideWorkspaceAccess(userId: string): Promise<WorkspaceAc
   const runtimeAvailable = isRuntimeAvailable();
   const sandboxExecutorEnabled = isSandboxExecutorEnabled();
   if (runtimeAvailable || !sandboxExecutorEnabled) {
-    return decideWorkspaceAccessFromSignals({ runtimeAvailable, sandboxExecutorEnabled, cloudBuilderAllowed: false });
+    return decideWorkspaceAccessFromSignals({
+      runtimeAvailable,
+      sandboxExecutorEnabled,
+      cloudBuilderAllowed: false,
+    });
   }
   const access = await getExecutionAccess(userId);
-  return decideWorkspaceAccessFromSignals({ runtimeAvailable, sandboxExecutorEnabled, cloudBuilderAllowed: access.cloudBuilderAllowed });
+  return decideWorkspaceAccessFromSignals({
+    runtimeAvailable,
+    sandboxExecutorEnabled,
+    cloudBuilderAllowed: access.cloudBuilderAllowed,
+  });
 }

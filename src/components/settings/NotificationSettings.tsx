@@ -24,8 +24,12 @@ export function NotificationSettings() {
         setLastSentAt(d.lastDigestSentAt ?? null);
         setLoaded(true);
       })
-      .catch(() => { if (!cancelled) setLoaded(true); });
-    return () => { cancelled = true; };
+      .catch(() => {
+        if (!cancelled) setLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   async function pick(next: DigestCadence) {
@@ -55,10 +59,10 @@ export function NotificationSettings() {
       <div className="flex items-start gap-3">
         <Mail className="h-5 w-5 text-text-secondary mt-0.5" />
         <div className="space-y-1">
-          <h2 className="text-base font-semibold text-text-primary">{COMMS_COPY.digestSettingsTitle}</h2>
-          <p className="text-sm text-text-tertiary">
-            {COMMS_COPY.digestSettingsBody}
-          </p>
+          <h2 className="text-base font-semibold text-text-primary">
+            {COMMS_COPY.digestSettingsTitle}
+          </h2>
+          <p className="text-sm text-text-tertiary">{COMMS_COPY.digestSettingsBody}</p>
         </div>
       </div>
 
@@ -88,7 +92,9 @@ export function NotificationSettings() {
                 ) : null}
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-medium text-text-primary">{DIGEST_CADENCE_COPY[c].label}</p>
+                <p className="text-sm font-medium text-text-primary">
+                  {DIGEST_CADENCE_COPY[c].label}
+                </p>
                 <p className="text-xs text-text-tertiary">{DIGEST_CADENCE_COPY[c].description}</p>
               </div>
             </button>

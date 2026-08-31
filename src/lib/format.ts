@@ -45,9 +45,7 @@ export function formatMoney(
  */
 export function formatCount(value: number | bigint | string): string {
   const n =
-    typeof value === "number" ? value :
-    typeof value === "bigint" ? Number(value) :
-    Number(value);
+    typeof value === "number" ? value : typeof value === "bigint" ? Number(value) : Number(value);
   if (!Number.isFinite(n)) return String(value);
   return new Intl.NumberFormat(APP_LOCALE).format(n);
 }
@@ -76,10 +74,7 @@ const BYTE_UNITS = ["B", "KiB", "MiB", "GiB", "TiB", "PiB"] as const;
  * selects the unit of the *input* value (default "B"). Pass "MiB" when you
  * already have MiB and want GiB scaling, etc.
  */
-export function formatBytes(
-  value: number,
-  inputUnit: typeof BYTE_UNITS[number] = "B",
-): string {
+export function formatBytes(value: number, inputUnit: (typeof BYTE_UNITS)[number] = "B"): string {
   if (!Number.isFinite(value)) return "—";
   let idx = BYTE_UNITS.indexOf(inputUnit);
   let v = value;

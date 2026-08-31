@@ -22,7 +22,10 @@ const hits = (message: string, why: string) => {
   passed += 1;
 };
 const misses = (message: string, why: string) => {
-  assert(!APPROVAL_CUES.test(message), `should NOT seed approvals: ${JSON.stringify(message)} — ${why}`);
+  assert(
+    !APPROVAL_CUES.test(message),
+    `should NOT seed approvals: ${JSON.stringify(message)} — ${why}`,
+  );
   passed += 1;
 };
 

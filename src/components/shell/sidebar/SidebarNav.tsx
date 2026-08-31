@@ -16,10 +16,10 @@ import {
   LEGACY_SIDEBAR_SECTIONS_STORAGE_KEY,
 } from "@/config/brand-storage";
 const DEFAULT_EXPANDED: Record<string, boolean> = {
-  work: true,      // the four daily surfaces
-  more: false,     // destinations — Terminal, Agents, Atlas, …
-  private: false,  // hidden until the user explicitly opens it
-  site: false,     // marketing pages — least-used inside the app shell
+  work: true, // the four daily surfaces
+  more: false, // destinations — Terminal, Agents, Atlas, …
+  private: false, // hidden until the user explicitly opens it
+  site: false, // marketing pages — least-used inside the app shell
 };
 
 function loadExpanded(): Record<string, boolean> {
@@ -36,13 +36,7 @@ function loadExpanded(): Record<string, boolean> {
   }
 }
 
-export function SidebarNav({
-  pathname,
-  collapsed,
-}: {
-  pathname: string;
-  collapsed: boolean;
-}) {
+export function SidebarNav({ pathname, collapsed }: { pathname: string; collapsed: boolean }) {
   const { configured, unlocked } = usePrivateZone();
   const privateLocked = configured && !unlocked;
 
@@ -144,7 +138,11 @@ function SidebarNavSection({
       );
     }
     return (
-      <Link href="/unlock" className="ui-sidebar-section-locked" aria-label="Unlock private section">
+      <Link
+        href="/unlock"
+        className="ui-sidebar-section-locked"
+        aria-label="Unlock private section"
+      >
         <span className="flex items-center gap-2">
           <span>{section.label}</span>
           <Lock className="ui-sidebar-section-lock-active" />

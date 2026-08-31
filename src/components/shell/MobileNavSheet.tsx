@@ -51,13 +51,7 @@ function MobileNavRow({
   );
 }
 
-export function MobileNavSheet({
-  pathname,
-  onClose,
-}: {
-  pathname: string;
-  onClose: () => void;
-}) {
+export function MobileNavSheet({ pathname, onClose }: { pathname: string; onClose: () => void }) {
   const { configured, unlocked } = usePrivateZone();
   const privateLocked = configured && !unlocked;
 
@@ -96,11 +90,7 @@ export function MobileNavSheet({
               return (
                 <div key={section.id} className="px-3 pb-2">
                   <p className="ui-mobile-nav-sheet-label">{section.label}</p>
-                  <Link
-                    href="/unlock"
-                    onClick={onClose}
-                    className="ui-mobile-nav-row"
-                  >
+                  <Link href="/unlock" onClick={onClose} className="ui-mobile-nav-row">
                     <Lock className="h-5 w-5 shrink-0 text-accent-text" aria-hidden="true" />
                     <span className="min-w-0 flex-1">
                       <span className="block text-sm font-medium">Unlock private zone</span>
@@ -136,11 +126,7 @@ export function MobileNavSheet({
             <span className="text-sm text-text-secondary">Appearance</span>
             <ThemeToggle showLabel />
           </div>
-          <Link
-            href={NAV.settings.href}
-            onClick={onClose}
-            className="ui-mobile-nav-row"
-          >
+          <Link href={NAV.settings.href} onClick={onClose} className="ui-mobile-nav-row">
             <SettingsIcon className="h-5 w-5 shrink-0" aria-hidden="true" />
             <span className="text-sm font-medium">{NAV.settings.label}</span>
           </Link>

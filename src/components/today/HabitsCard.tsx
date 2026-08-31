@@ -20,9 +20,13 @@ async function HabitsCardContent() {
         icon={Repeat2}
         title="Habits"
         right={
-          habits.length > 0
-            ? <span className={`text-xs ${allDone ? "text-status-positive font-medium" : "text-text-tertiary"}`}>{done}/{habits.length} today</span>
-            : null
+          habits.length > 0 ? (
+            <span
+              className={`text-xs ${allDone ? "text-status-positive font-medium" : "text-text-tertiary"}`}
+            >
+              {done}/{habits.length} today
+            </span>
+          ) : null
         }
       />
       <HabitsList initialHabits={habits} />

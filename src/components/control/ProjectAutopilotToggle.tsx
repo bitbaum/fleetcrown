@@ -128,7 +128,10 @@ export function ProjectAutopilotToggle({
           <Play className="h-4 w-4" aria-hidden="true" />
         )}
         {building && (
-          <span aria-hidden="true" className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-accent-primary" />
+          <span
+            aria-hidden="true"
+            className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-accent-primary"
+          />
         )}
         {/* Say what the control IS, not a state word. "Building" next to the
             card's own state badge ("Awaiting input") read as two contradicting

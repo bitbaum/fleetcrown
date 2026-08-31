@@ -44,7 +44,10 @@ const schedLine = installer.split("\n").find((l) => l.includes("declare -A SCHED
 assert.ok(schedLine, `no 'declare -A SCHED=' line in ${INSTALLER} — the schedule table moved`);
 
 const scheduledNames = [...schedLine.matchAll(/\[([a-z0-9-]+)\]=/g)].map((m) => m[1]).sort();
-assert.ok(scheduledNames.length > 0, "parsed zero timer names — the regex no longer matches the table");
+assert.ok(
+  scheduledNames.length > 0,
+  "parsed zero timer names — the regex no longer matches the table",
+);
 
 // ── 1. No route without a timer ──────────────────────────────────────────────
 const unscheduled = scheduledRoutes.filter((r) => !scheduledNames.includes(r));

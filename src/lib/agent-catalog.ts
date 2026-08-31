@@ -1,4 +1,9 @@
-import { listAgentRegistry, type Agent, type AgentOption, type AgentRegistryEntry } from "@/lib/agent-registry";
+import {
+  listAgentRegistry,
+  type Agent,
+  type AgentOption,
+  type AgentRegistryEntry,
+} from "@/lib/agent-registry";
 
 export type SwitchableAgent = Agent;
 
@@ -26,12 +31,15 @@ export function buildSwitchableAgentCatalog(
 ): AgentCatalog {
   const agents = listAgentRegistry().map((entry) => {
     const override = availabilityOverride?.[entry.id];
-    const availability = override === undefined
-      ? {}
-      : {
-          available: override,
-          availabilityReason: override ? undefined : `${entry.label} was not reported as installed by the connected computer.`,
-        };
+    const availability =
+      override === undefined
+        ? {}
+        : {
+            available: override,
+            availabilityReason: override
+              ? undefined
+              : `${entry.label} was not reported as installed by the connected computer.`,
+          };
     // Models are user-configured only for the Agent union; openclaw remains
     // launchable in the catalog but has no per-user model preference.
     if (entry.switchable && isSwitchableAgent(entry.id)) {

@@ -57,7 +57,8 @@ function extractUrlsFromBuffer(term: import("@xterm/xterm").Terminal): string[] 
   // Scan a bounded recent window; back up to a logical-line boundary so a URL
   // that began just above the window isn't captured truncated.
   let start = Math.max(0, buf.length - 300);
-  while (start > 0 && (buf.getLine(start - 1)?.translateToString(true).length ?? 0) === cols) start--;
+  while (start > 0 && (buf.getLine(start - 1)?.translateToString(true).length ?? 0) === cols)
+    start--;
   for (let i = start; i < buf.length; i++) {
     const text = buf.getLine(i)?.translateToString(true) ?? "";
     logical += text;
@@ -79,10 +80,13 @@ function LinkBar({ links, onDismiss }: { links: string[]; onDismiss: () => void 
   const [open, setOpen] = useState(false);
   if (links.length === 0) return null;
   const copy = (url: string) => {
-    navigator.clipboard?.writeText(url).then(() => {
-      setCopied(url);
-      window.setTimeout(() => setCopied((c) => (c === url ? null : c)), 1500);
-    }).catch(() => {});
+    navigator.clipboard
+      ?.writeText(url)
+      .then(() => {
+        setCopied(url);
+        window.setTimeout(() => setCopied((c) => (c === url ? null : c)), 1500);
+      })
+      .catch(() => {});
   };
   return (
     <>
@@ -94,31 +98,49 @@ function LinkBar({ links, onDismiss }: { links: string[]; onDismiss: () => void 
       >
         <Link2 className="h-3.5 w-3.5" aria-hidden="true" />
         {links.length} link{links.length === 1 ? "" : "s"}
-        {open
-          ? <ChevronDown className="ml-auto h-3.5 w-3.5" aria-hidden="true" />
-          : <ChevronUp className="ml-auto h-3.5 w-3.5" aria-hidden="true" />}
+        {open ? (
+          <ChevronDown className="ml-auto h-3.5 w-3.5" aria-hidden="true" />
+        ) : (
+          <ChevronUp className="ml-auto h-3.5 w-3.5" aria-hidden="true" />
+        )}
       </button>
-    <div className={open ? "ui-term-linkbar" : "ui-term-linkbar hidden md:flex"}>
-      <span className="ui-term-linkbar-label">Links</span>
-      <div className="ui-term-linkbar-list">
-        {links.map((url) => (
-          <div key={url} className="ui-term-linkbar-row">
-            <a className="ui-term-linkbar-url" href={url} target="_blank" rel="noopener noreferrer" title={url}>
-              {url}
-            </a>
-            <button type="button" className="ui-term-linkbar-btn" onClick={() => copy(url)}>
-              {copied === url ? "Copied" : "Copy"}
-            </button>
-            <a className="ui-term-linkbar-btn" href={url} target="_blank" rel="noopener noreferrer">
-              Open
-            </a>
-          </div>
-        ))}
+      <div className={open ? "ui-term-linkbar" : "ui-term-linkbar hidden md:flex"}>
+        <span className="ui-term-linkbar-label">Links</span>
+        <div className="ui-term-linkbar-list">
+          {links.map((url) => (
+            <div key={url} className="ui-term-linkbar-row">
+              <a
+                className="ui-term-linkbar-url"
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={url}
+              >
+                {url}
+              </a>
+              <button type="button" className="ui-term-linkbar-btn" onClick={() => copy(url)}>
+                {copied === url ? "Copied" : "Copy"}
+              </button>
+              <a
+                className="ui-term-linkbar-btn"
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Open
+              </a>
+            </div>
+          ))}
+        </div>
+        <button
+          type="button"
+          className="ui-term-linkbar-dismiss"
+          onClick={onDismiss}
+          aria-label="Dismiss links"
+        >
+          ✕
+        </button>
       </div>
-      <button type="button" className="ui-term-linkbar-dismiss" onClick={onDismiss} aria-label="Dismiss links">
-        ✕
-      </button>
-    </div>
     </>
   );
 }
@@ -231,20 +253,33 @@ export function TerminalView({
   // re-renders on these never does so during this component's render.
   const liveState = stalled ? "stalled" : connected ? "live" : "connecting";
   const onLiveRef = useRef(onLive);
-  useEffect(() => { onLiveRef.current = onLive; });
-  useEffect(() => { onLiveRef.current?.(liveState); }, [liveState]);
+  useEffect(() => {
+    onLiveRef.current = onLive;
+  });
+  useEffect(() => {
+    onLiveRef.current?.(liveState);
+  }, [liveState]);
   const onGeometryRef = useRef(onGeometry);
-  useEffect(() => { onGeometryRef.current = onGeometry; });
-  useEffect(() => { if (geometry) onGeometryRef.current?.(geometry); }, [geometry]);
+  useEffect(() => {
+    onGeometryRef.current = onGeometry;
+  });
+  useEffect(() => {
+    if (geometry) onGeometryRef.current?.(geometry);
+  }, [geometry]);
 
-  const stallMessage = stalledHint ??
+  const stallMessage =
+    stalledHint ??
     "Connected, but no output arrived — the session may be unresponsive. Reopen it, or restart the executor.";
 
   // Keep the latest transport/onStatus without retearing the stream every render.
   const transportRef = useRef(transport);
-  useEffect(() => { transportRef.current = transport; });
+  useEffect(() => {
+    transportRef.current = transport;
+  });
   const onStatusRef = useRef(onStatus);
-  useEffect(() => { onStatusRef.current = onStatus; });
+  useEffect(() => {
+    onStatusRef.current = onStatus;
+  });
 
   useEffect(() => {
     const host = hostRef.current;
@@ -273,8 +308,17 @@ export function TerminalView({
       // first, or xterm measures the fallback glyph and mis-sizes every cell.
       await document.fonts.ready;
       if (disposed) return;
-      const cssMono = getComputedStyle(document.documentElement).getPropertyValue("--font-mono").trim();
-      const fontFamily = [cssMono, "ui-monospace", "SFMono-Regular", "Menlo", "Consolas", "monospace"]
+      const cssMono = getComputedStyle(document.documentElement)
+        .getPropertyValue("--font-mono")
+        .trim();
+      const fontFamily = [
+        cssMono,
+        "ui-monospace",
+        "SFMono-Regular",
+        "Menlo",
+        "Consolas",
+        "monospace",
+      ]
         .filter(Boolean)
         .join(", ");
 
@@ -285,7 +329,8 @@ export function TerminalView({
         // Read-only peeks keep stdin disabled so the view never swallows page input.
         disableStdin: !interactive,
         fontFamily,
-        fontSize: fontOverrideRef.current ?? (mobile ? TERMINAL_MOBILE_MAX_FONT : TERMINAL_DESKTOP_FONT),
+        fontSize:
+          fontOverrideRef.current ?? (mobile ? TERMINAL_MOBILE_MAX_FONT : TERMINAL_DESKTOP_FONT),
         lineHeight: 1.2,
         letterSpacing: 0,
         scrollback: 5000,
@@ -318,7 +363,10 @@ export function TerminalView({
             if (i === absRow) rowOffset = logical.length;
             logical += buf.getLine(i)?.translateToString(true) ?? "";
           }
-          if (rowOffset < 0) { callback(undefined); return; }
+          if (rowOffset < 0) {
+            callback(undefined);
+            return;
+          }
           const rowLen = lineLen(absRow);
           const links: import("@xterm/xterm").ILink[] = [];
           for (const m of logical.matchAll(URL_RE)) {
@@ -331,7 +379,10 @@ export function TerminalView({
             if (segStart >= segEnd) continue;
             links.push({
               text: url,
-              range: { start: { x: segStart - rowOffset + 1, y: viewportY }, end: { x: segEnd - rowOffset, y: viewportY } },
+              range: {
+                start: { x: segStart - rowOffset + 1, y: viewportY },
+                end: { x: segEnd - rowOffset, y: viewportY },
+              },
               decorations: { underline: true, pointerCursor: true },
               activate: () => window.open(url, "_blank", "noopener,noreferrer"),
             });
@@ -371,7 +422,12 @@ export function TerminalView({
         const isShiftPaste = e.shiftKey && (e.ctrlKey || e.metaKey) && key === "v";
         if (isShiftPaste && interactive) {
           e.preventDefault(); // guarantee a single paste even if the browser also pastes
-          navigator.clipboard?.readText().then((t) => { if (t) void transport.sendKey(t); }).catch(() => {});
+          navigator.clipboard
+            ?.readText()
+            .then((t) => {
+              if (t) void transport.sendKey(t);
+            })
+            .catch(() => {});
           return false;
         }
         return true;
@@ -380,7 +436,9 @@ export function TerminalView({
       term.open(host);
       if (interactive) {
         host.tabIndex = 0;
-        host.addEventListener("mousedown", () => { term.focus(); });
+        host.addEventListener("mousedown", () => {
+          term.focus();
+        });
       }
       // Debug/automation handle: reach the live xterm instance from devtools or
       // an e2e harness (e.g. to assert copy/paste wiring) via
@@ -390,7 +448,11 @@ export function TerminalView({
       // native font engine, so text is crisp + identical to the rest of the page.
       // WebGL is faster but rasterizes to a texture atlas that can blur text on
       // fractional-DPR displays — wrong trade for a readability-first terminal.
-      try { fit.fit(); } catch { /* host not laid out yet */ }
+      try {
+        fit.fit();
+      } catch {
+        /* host not laid out yet */
+      }
 
       // Serialize keystrokes through a single in-flight send chain so bytes never
       // race out of order under fast typing (the bug the server terminal had:
@@ -411,7 +473,10 @@ export function TerminalView({
         }
       };
       const inputDisposable = interactive
-        ? term.onData((data) => { inputBuffer += data; void flushInput(); })
+        ? term.onData((data) => {
+            inputBuffer += data;
+            void flushInput();
+          })
         : null;
 
       // ResizeObserver tracks both viewport and container changes — keeps the
@@ -431,12 +496,20 @@ export function TerminalView({
        */
       const fitFontToTarget = () => {
         if (fontOverrideRef.current !== null || !isNarrowViewport()) {
-          try { fit.fit(); } catch { /* not laid out yet */ }
+          try {
+            fit.fit();
+          } catch {
+            /* not laid out yet */
+          }
           return;
         }
         let size = TERMINAL_MOBILE_MAX_FONT;
         term.options.fontSize = size;
-        try { fit.fit(); } catch { return; }
+        try {
+          fit.fit();
+        } catch {
+          return;
+        }
         // nextFontSizeForTarget owns the arithmetic (and the "always make
         // progress" guarantee); this loop only applies and re-measures. The
         // bound is belt-and-braces against a host whose width changes under us.
@@ -445,7 +518,11 @@ export function TerminalView({
           if (next === null) return;
           size = next;
           term.options.fontSize = size;
-          try { fit.fit(); } catch { return; }
+          try {
+            fit.fit();
+          } catch {
+            return;
+          }
         }
       };
 
@@ -491,11 +568,18 @@ export function TerminalView({
       // an honest "not responding" beats a black pane labelled "live".
       let framed = false;
       let stallTimer = 0;
-      const clearStallTimer = () => { if (stallTimer) { window.clearTimeout(stallTimer); stallTimer = 0; } };
+      const clearStallTimer = () => {
+        if (stallTimer) {
+          window.clearTimeout(stallTimer);
+          stallTimer = 0;
+        }
+      };
       const armStall = () => {
         if (framed) return;
         clearStallTimer();
-        stallTimer = window.setTimeout(() => { if (!framed) setStalled(true); }, STALL_MS);
+        stallTimer = window.setTimeout(() => {
+          if (!framed) setStalled(true);
+        }, STALL_MS);
       };
       const markFramed = () => {
         framed = true;
@@ -503,13 +587,24 @@ export function TerminalView({
         setStalled(false);
       };
       disconnect = transport.connect({
-        onOutput: (data) => { markFramed(); term.write(data); scheduleScan(); },
-        onReset: () => { markFramed(); term.reset(); setLinks([]); },
+        onOutput: (data) => {
+          markFramed();
+          term.write(data);
+          scheduleScan();
+        },
+        onReset: () => {
+          markFramed();
+          term.reset();
+          setLinks([]);
+        },
         onStatus: (status) => onStatusRef.current?.(status),
         onConnected: (c) => {
           setConnected(c);
           if (c) armStall();
-          else { clearStallTimer(); setStalled(false); }
+          else {
+            clearStallTimer();
+            setStalled(false);
+          }
         },
       });
 
@@ -546,7 +641,11 @@ export function TerminalView({
       return;
     }
     term.options.fontSize = fontOverride;
-    try { fit.fit(); } catch { /* not laid out yet */ }
+    try {
+      fit.fit();
+    } catch {
+      /* not laid out yet */
+    }
     setGeometry({ cols: term.cols, rows: term.rows });
   }, [fontOverride]);
 
@@ -576,13 +675,20 @@ export function TerminalView({
     const text = line.trim();
     if (!text || !onSend) return;
     setSending(true);
-    try { await onSend(text); setLine(""); } finally { setSending(false); }
+    try {
+      await onSend(text);
+      setLine("");
+    } finally {
+      setSending(false);
+    }
   };
 
   const statusLabel = stalled
     ? "not responding"
     : connected
-      ? interactive ? "live · click to focus, type directly" : "live"
+      ? interactive
+        ? "live · click to focus, type directly"
+        : "live"
       : "connecting…";
   // Below the target the grid is narrower than the screen the agent drew, so
   // wide output WILL wrap oddly. Saying which is which costs one chip and turns
@@ -645,7 +751,9 @@ export function TerminalView({
           )}
         </div>
       </div>
-      <div className={`relative w-full overflow-hidden rounded-md bg-surface-terminal ${fill ? "min-h-0 flex-1" : compactChrome ? "min-h-0 flex-1" : "h-72"}`}>
+      <div
+        className={`relative w-full overflow-hidden rounded-md bg-surface-terminal ${fill ? "min-h-0 flex-1" : compactChrome ? "min-h-0 flex-1" : "h-72"}`}
+      >
         <div ref={hostRef} className="h-full w-full" />
         {stalled && <TerminalStalledOverlay message={stallMessage} />}
       </div>
@@ -656,11 +764,18 @@ export function TerminalView({
             className="ui-input-compact flex-1"
             value={line}
             onChange={(e) => setLine(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") void send(); }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void send();
+            }}
             placeholder="Type a line to send into the terminal…"
             autoFocus
           />
-          <button type="button" className="ui-btn-primary ui-btn-xs" onClick={() => void send()} disabled={sending || !line.trim()}>
+          <button
+            type="button"
+            className="ui-btn-primary ui-btn-xs"
+            onClick={() => void send()}
+            disabled={sending || !line.trim()}
+          >
             {sending ? "Sending…" : "Send"}
           </button>
         </div>

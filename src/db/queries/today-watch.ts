@@ -1,7 +1,12 @@
 import { and, eq, lte, isNotNull, asc, desc, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { goals, events, commitments, subscriptions } from "@/db/schema";
-import { GOAL_STATUS, COMMITMENT_STATUS, EVENT_STATUS, ENTITY_TYPE } from "@/lib/constants/statuses";
+import {
+  GOAL_STATUS,
+  COMMITMENT_STATUS,
+  EVENT_STATUS,
+  ENTITY_TYPE,
+} from "@/lib/constants/statuses";
 import { HEALTH_FADING_DAYS } from "@/lib/constants/people";
 import { DAY_MS } from "@/lib/constants/time";
 import { getTodayHabits } from "@/db/queries/habits";
@@ -14,11 +19,18 @@ const STALLED_DAYS = 21;
 const IMMINENT_DAYS = 5;
 
 export type WatchFocus = {
-  kind: "overdue-commitment" | "overdue-goal" | "habit-at-risk" | "imminent-bill" | "imminent-event" | "stale-contact" | "stalled-goal";
+  kind:
+    | "overdue-commitment"
+    | "overdue-goal"
+    | "habit-at-risk"
+    | "imminent-bill"
+    | "imminent-event"
+    | "stale-contact"
+    | "stalled-goal";
   title: string;
-  context: string;        // a single short clarifying line ("85% done · 1mo past target")
-  href: string;           // where the user goes if they click through
-  lokiPrompt: string;      // pre-built prompt body for "Brief Loki on this"
+  context: string; // a single short clarifying line ("85% done · 1mo past target")
+  href: string; // where the user goes if they click through
+  lokiPrompt: string; // pre-built prompt body for "Brief Loki on this"
 };
 
 export type WatchData = {
@@ -64,46 +76,69 @@ export async function getTodayWatch(userId: string): Promise<WatchData> {
     todayHabits,
   ] = await Promise.all([
     db
-      .select({ id: commitments.id, description: commitments.description, dueDate: commitments.dueDate })
+      .select({
+        id: commitments.id,
+        description: commitments.description,
+        dueDate: commitments.dueDate,
+      })
       .from(commitments)
-      .where(and(
-        eq(commitments.userId, userId),
-        eq(commitments.status, COMMITMENT_STATUS.ACTIVE),
-        isNotNull(commitments.dueDate),
-        lte(commitments.dueDate, now),
-      ))
+      .where(
+        and(
+          eq(commitments.userId, userId),
+          eq(commitments.status, COMMITMENT_STATUS.ACTIVE),
+          isNotNull(commitments.dueDate),
+          lte(commitments.dueDate, now),
+        ),
+      )
       .orderBy(asc(commitments.dueDate)),
 
     db
-      .select({ id: goals.id, title: goals.title, progress: goals.progress, targetDate: goals.targetDate })
+      .select({
+        id: goals.id,
+        title: goals.title,
+        progress: goals.progress,
+        targetDate: goals.targetDate,
+      })
       .from(goals)
-      .where(and(
-        eq(goals.userId, userId),
-        eq(goals.status, GOAL_STATUS.ACTIVE),
-        isNotNull(goals.targetDate),
-        lte(goals.targetDate, now),
-      ))
+      .where(
+        and(
+          eq(goals.userId, userId),
+          eq(goals.status, GOAL_STATUS.ACTIVE),
+          isNotNull(goals.targetDate),
+          lte(goals.targetDate, now),
+        ),
+      )
       .orderBy(desc(goals.progress)),
 
     db
-      .select({ id: subscriptions.id, name: subscriptions.name, amount: subscriptions.amount, currency: subscriptions.currency, nextBilling: subscriptions.nextDue })
+      .select({
+        id: subscriptions.id,
+        name: subscriptions.name,
+        amount: subscriptions.amount,
+        currency: subscriptions.currency,
+        nextBilling: subscriptions.nextDue,
+      })
       .from(subscriptions)
-      .where(and(
-        eq(subscriptions.userId, userId),
-        isNotNull(subscriptions.nextDue),
-        lte(subscriptions.nextDue, imminentBy),
-      ))
+      .where(
+        and(
+          eq(subscriptions.userId, userId),
+          isNotNull(subscriptions.nextDue),
+          lte(subscriptions.nextDue, imminentBy),
+        ),
+      )
       .orderBy(asc(subscriptions.nextDue)),
 
     db
       .select({ id: events.id, name: events.name, deadline: events.deadline })
       .from(events)
-      .where(and(
-        eq(events.userId, userId),
-        eq(events.status, EVENT_STATUS.ACTIVE),
-        isNotNull(events.deadline),
-        lte(events.deadline, imminentBy),
-      ))
+      .where(
+        and(
+          eq(events.userId, userId),
+          eq(events.status, EVENT_STATUS.ACTIVE),
+          isNotNull(events.deadline),
+          lte(events.deadline, imminentBy),
+        ),
+      )
       .orderBy(asc(events.deadline)),
 
     // Stale contacts — entities of type=person whose latest interaction is
@@ -122,13 +157,20 @@ export async function getTodayWatch(userId: string): Promise<WatchData> {
     `),
 
     db
-      .select({ id: goals.id, title: goals.title, progress: goals.progress, updatedAt: goals.updatedAt })
+      .select({
+        id: goals.id,
+        title: goals.title,
+        progress: goals.progress,
+        updatedAt: goals.updatedAt,
+      })
       .from(goals)
-      .where(and(
-        eq(goals.userId, userId),
-        eq(goals.status, GOAL_STATUS.ACTIVE),
-        lte(goals.updatedAt, stalledBy),
-      ))
+      .where(
+        and(
+          eq(goals.userId, userId),
+          eq(goals.status, GOAL_STATUS.ACTIVE),
+          lte(goals.updatedAt, stalledBy),
+        ),
+      )
       .orderBy(asc(goals.updatedAt)),
 
     // Habit streaks at risk — habits due today, not yet done, with a streak
@@ -138,7 +180,11 @@ export async function getTodayWatch(userId: string): Promise<WatchData> {
     getTodayHabits(userId),
   ]);
 
-  const staleContactList = Array.from(staleContactRows) as Array<{ id: string; name: string; last_interaction: string | null }>;
+  const staleContactList = Array.from(staleContactRows) as Array<{
+    id: string;
+    name: string;
+    last_interaction: string | null;
+  }>;
   const habitsAtRisk = todayHabits
     .filter((h) => !h.doneToday && h.streak >= HABIT_STREAK_THRESHOLD)
     .sort((a, b) => b.streak - a.streak);
@@ -172,7 +218,13 @@ function pickFocus(
   overdueCommitments: { id: string; description: string; dueDate: Date | null }[],
   overdueGoals: { id: string; title: string; progress: number | null; targetDate: Date | null }[],
   habitsAtRisk: { id: string; title: string; streak: number }[],
-  imminentBills: { id: string; name: string; amount: number | null; currency: string | null; nextBilling: Date | null }[],
+  imminentBills: {
+    id: string;
+    name: string;
+    amount: number | null;
+    currency: string | null;
+    nextBilling: Date | null;
+  }[],
   imminentEvents: { id: string; name: string; deadline: Date | null }[],
   staleContacts: { id: string; name: string; last_interaction: string | null }[],
   stalledGoals: { id: string; title: string; progress: number | null; updatedAt: Date }[],
@@ -180,7 +232,9 @@ function pickFocus(
 ): WatchFocus | null {
   const c = overdueCommitments[0];
   if (c) {
-    const daysOverdue = c.dueDate ? Math.floor((now.getTime() - new Date(c.dueDate).getTime()) / DAY_MS) : null;
+    const daysOverdue = c.dueDate
+      ? Math.floor((now.getTime() - new Date(c.dueDate).getTime()) / DAY_MS)
+      : null;
     return {
       kind: "overdue-commitment",
       title: c.description,
@@ -192,7 +246,9 @@ function pickFocus(
 
   const g = overdueGoals[0];
   if (g) {
-    const daysOverdue = g.targetDate ? Math.floor((now.getTime() - new Date(g.targetDate).getTime()) / DAY_MS) : null;
+    const daysOverdue = g.targetDate
+      ? Math.floor((now.getTime() - new Date(g.targetDate).getTime()) / DAY_MS)
+      : null;
     const progress = g.progress ?? 0;
     return {
       kind: "overdue-goal",
@@ -216,7 +272,9 @@ function pickFocus(
 
   const b = imminentBills[0];
   if (b) {
-    const daysUntil = b.nextBilling ? Math.ceil((new Date(b.nextBilling).getTime() - now.getTime()) / DAY_MS) : null;
+    const daysUntil = b.nextBilling
+      ? Math.ceil((new Date(b.nextBilling).getTime() - now.getTime()) / DAY_MS)
+      : null;
     return {
       kind: "imminent-bill",
       title: b.name,
@@ -228,7 +286,9 @@ function pickFocus(
 
   const e = imminentEvents[0];
   if (e) {
-    const daysUntil = e.deadline ? Math.ceil((new Date(e.deadline).getTime() - now.getTime()) / DAY_MS) : null;
+    const daysUntil = e.deadline
+      ? Math.ceil((new Date(e.deadline).getTime() - now.getTime()) / DAY_MS)
+      : null;
     return {
       kind: "imminent-event",
       title: e.name,

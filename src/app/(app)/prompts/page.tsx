@@ -37,9 +37,10 @@ export default async function PromptsPage() {
     updatedAt: p.updatedAt.toISOString(),
   }));
 
-  const subtitle = userPrompts.length > 0
-    ? `${PROMPT_TEMPLATES.length} FleetCrown defaults · ${userPrompts.length} custom`
-    : `${PROMPT_TEMPLATES.length} templates · fleet control, security, engineering, design, business`;
+  const subtitle =
+    userPrompts.length > 0
+      ? `${PROMPT_TEMPLATES.length} FleetCrown defaults · ${userPrompts.length} custom`
+      : `${PROMPT_TEMPLATES.length} templates · fleet control, security, engineering, design, business`;
 
   return (
     <PageLayout title={NAV.prompts.label} subtitle={subtitle}>

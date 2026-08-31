@@ -17,8 +17,8 @@ import { BUILDER_CHANNELS } from "@/lib/constants/statuses";
 const Channel = z.enum(BUILDER_CHANNELS);
 
 const Body = z.object({
-  tab:   z.string().trim().min(1).max(120),
-  seq:   z.number().int().nonnegative(),
+  tab: z.string().trim().min(1).max(120),
+  seq: z.number().int().nonnegative(),
   // A zellij dump-screen snapshot OR a raw-PTY byte delta (when append=true).
   // Capped to keep one frame well under typical body limits even with color
   // escapes + wide terminals.

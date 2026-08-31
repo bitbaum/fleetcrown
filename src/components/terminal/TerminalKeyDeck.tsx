@@ -18,7 +18,11 @@ import {
  *  time — a byte sent to a busy agent can take a second to redraw — so without
  *  this the operator taps ▼ again, and again, and lands three rows down. */
 function tick() {
-  try { navigator.vibrate?.(KEY_HAPTIC_MS); } catch { /* unsupported or blocked */ }
+  try {
+    navigator.vibrate?.(KEY_HAPTIC_MS);
+  } catch {
+    /* unsupported or blocked */
+  }
 }
 
 /**
@@ -68,7 +72,10 @@ function KeyCap({
     onKey(keyDef.bytes);
     if (!keyDef.repeatable) return;
     timers.current.delay = window.setTimeout(() => {
-      timers.current.interval = window.setInterval(() => onKey(keyDef.bytes), KEY_REPEAT_INTERVAL_MS);
+      timers.current.interval = window.setInterval(
+        () => onKey(keyDef.bytes),
+        KEY_REPEAT_INTERVAL_MS,
+      );
     }, KEY_REPEAT_DELAY_MS);
   };
 

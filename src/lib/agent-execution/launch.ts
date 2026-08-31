@@ -42,7 +42,10 @@ export async function provisionAgentWorkspace(
   userId: string,
   args: ProvisionAgentArgs,
 ): Promise<WorkspaceHandle> {
-  const launchCommand = buildAgentOptionLaunchCommand({ agent: args.agent, model: args.model }, args.dir);
+  const launchCommand = buildAgentOptionLaunchCommand(
+    { agent: args.agent, model: args.model },
+    args.dir,
+  );
   // Login + interactive (-lic), NOT plain -c: the agent CLIs live on PATH only
   // after the profile/nvm chain loads (claude is in ~/.nvm/.../bin), and the
   // launch command's own `source ~/.bashrc` clobbers PATH non-interactively.
@@ -80,7 +83,11 @@ export function writeInitialPromptWhenReady(
   const send = () => {
     if (sent) return;
     sent = true;
-    try { executor.write(id, text); } catch { /* workspace gone — nothing to do */ }
+    try {
+      executor.write(id, text);
+    } catch {
+      /* workspace gone — nothing to do */
+    }
     unsub();
     clearTimeout(timer);
   };

@@ -18,24 +18,24 @@ on:
   workflow_call:
     inputs:
       app:
-        description: 'Key in scripts/hetzner/apps.conf — SSOT for port, domain, app dir and database'
+        description: "Key in scripts/hetzner/apps.conf — SSOT for port, domain, app dir and database"
         required: true
         type: string
       node-version:
-        description: 'Node version to build with'
+        description: "Node version to build with"
         required: false
         type: string
-        default: '20'
+        default: "20"
       install-flags:
-        description: 'Extra flags for the install command (e.g. --legacy-peer-deps)'
+        description: "Extra flags for the install command (e.g. --legacy-peer-deps)"
         required: false
         type: string
-        default: ''
+        default: ""
       package-manager:
-        description: 'Override lockfile detection: npm | pnpm | yarn'
+        description: "Override lockfile detection: npm | pnpm | yarn"
         required: false
         type: string
-        default: ''
+        default: ""
     secrets:
       HETZNER_SSH_PRIVATE_KEY:
         required: true
@@ -231,8 +231,8 @@ jobs:
           INSTALL_FLAGS: ${{ inputs.install-flags }}
           # Deploys build from a lockfile CI already verified; a drifted lockfile
           # should fail in CI, not be silently papered over here.
-          NPM_CONFIG_FUND: 'false'
-          NPM_CONFIG_AUDIT: 'false'
+          NPM_CONFIG_FUND: "false"
+          NPM_CONFIG_AUDIT: "false"
         run: |
           set -euo pipefail
           case "$MGR" in

@@ -56,16 +56,21 @@ export function useTerminalFont(): TerminalFontControl {
   // settles on a pixel would be a cost paid for nothing.
   const rendered = useRef(TERMINAL_MOBILE_MAX_FONT);
 
-  const step = useCallback((delta: number) => {
-    setSize((current) => {
-      const base = current ?? rendered.current;
-      return Math.min(MAX_FONT, Math.max(TERMINAL_MOBILE_MIN_FONT, base + delta));
-    });
-  }, [setSize]);
+  const step = useCallback(
+    (delta: number) => {
+      setSize((current) => {
+        const base = current ?? rendered.current;
+        return Math.min(MAX_FONT, Math.max(TERMINAL_MOBILE_MIN_FONT, base + delta));
+      });
+    },
+    [setSize],
+  );
 
   const reset = useCallback(() => setSize(null), [setSize]);
 
-  const sync = useCallback((px: number) => { rendered.current = px; }, []);
+  const sync = useCallback((px: number) => {
+    rendered.current = px;
+  }, []);
 
   return { size, step, reset, sync };
 }

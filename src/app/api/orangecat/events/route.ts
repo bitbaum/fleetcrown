@@ -19,7 +19,11 @@ const Body = z.object({
   entityType: z.string().trim().max(40),
   entityId: z.string().uuid(),
   title: z.string().trim().max(300).optional(),
-  amountBtc: z.string().trim().regex(/^\d+(\.\d{1,8})?$/).max(32),
+  amountBtc: z
+    .string()
+    .trim()
+    .regex(/^\d+(\.\d{1,8})?$/)
+    .max(32),
   externalId: z.string().trim().min(1).max(200),
 });
 
@@ -42,7 +46,10 @@ export async function POST(req: NextRequest) {
   }
   const parsed = Body.safeParse(json);
   if (!parsed.success) {
-    return NextResponse.json({ error: "invalid body", details: parsed.error.flatten() }, { status: 400 });
+    return NextResponse.json(
+      { error: "invalid body", details: parsed.error.flatten() },
+      { status: 400 },
+    );
   }
   const ev = parsed.data;
 
@@ -55,29 +62,31 @@ export async function POST(req: NextRequest) {
     }
 
     const amount = `${ev.amountBtc} BTC`;
-    const results = await Promise.all(linkedProjects.map(async ({ project }) => {
-      const created = await createOrchestrationEventOnce(
-        {
-          userId: project.userId,
-          projectId: project.entityProjectId,
-          projectKey: project.name,
-          eventType: "funding",
-          source: "orangecat",
-          detail: `Funding settled on OrangeCat: ${amount}${ev.title ? ` — ${ev.title}` : ""}`,
-          happenedAt: new Date(),
-        },
-        `oc-payment-${ev.externalId}-${project.id}`,
-      );
-      if (created) {
-        await logDebug({
-          source: "orangecat/events",
-          level: "info",
-          message: `funding event recorded for ${project.name}`,
-          meta: { externalId: ev.externalId, entityId: ev.entityId, amount },
-        }).catch(() => {});
-      }
-      return created;
-    }));
+    const results = await Promise.all(
+      linkedProjects.map(async ({ project }) => {
+        const created = await createOrchestrationEventOnce(
+          {
+            userId: project.userId,
+            projectId: project.entityProjectId,
+            projectKey: project.name,
+            eventType: "funding",
+            source: "orangecat",
+            detail: `Funding settled on OrangeCat: ${amount}${ev.title ? ` — ${ev.title}` : ""}`,
+            happenedAt: new Date(),
+          },
+          `oc-payment-${ev.externalId}-${project.id}`,
+        );
+        if (created) {
+          await logDebug({
+            source: "orangecat/events",
+            level: "info",
+            message: `funding event recorded for ${project.name}`,
+            meta: { externalId: ev.externalId, entityId: ev.entityId, amount },
+          }).catch(() => {});
+        }
+        return created;
+      }),
+    );
     const recorded = results.filter(Boolean).length;
     return NextResponse.json({
       ok: true,

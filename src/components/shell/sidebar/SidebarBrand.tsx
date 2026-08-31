@@ -31,7 +31,11 @@ export function SidebarBrand({
           title={toggleLabel}
           aria-label={toggleLabel}
         >
-          {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+          {collapsed ? (
+            <PanelLeftOpen className="h-4 w-4" />
+          ) : (
+            <PanelLeftClose className="h-4 w-4" />
+          )}
         </button>
       </div>
       {/* Version stamp under the logo — hidden when the rail is collapsed to a

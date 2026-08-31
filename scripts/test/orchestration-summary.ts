@@ -18,17 +18,19 @@ function runTests(): void {
   };
 
   check("parses LOOP v2 evidence fields and marks verified ready work successful", () => {
-    const summary = parseOrchestrationSummary([
-      "status: ready",
-      "last-3-same-dir: no",
-      "wip-or-revert-in-last-5: no",
-      "tsc: pass",
-      "lint: pass",
-      "tests: 12 pass - 0 fail",
-      "todos: 0",
-      "done: aligned handoff contract",
-      "next:",
-    ].join("\n"));
+    const summary = parseOrchestrationSummary(
+      [
+        "status: ready",
+        "last-3-same-dir: no",
+        "wip-or-revert-in-last-5: no",
+        "tsc: pass",
+        "lint: pass",
+        "tests: 12 pass - 0 fail",
+        "todos: 0",
+        "done: aligned handoff contract",
+        "next:",
+      ].join("\n"),
+    );
 
     assert(summary?.status === "ready", "expected ready status");
     assert(summary?.tsc === "pass", "expected tsc signal");
@@ -37,11 +39,9 @@ function runTests(): void {
   });
 
   check("captures the resulting commit SHA from the handoff", () => {
-    const summary = parseOrchestrationSummary([
-      "status: ready",
-      "done: shipped commit-capture",
-      "commit: a1b2c3d",
-    ].join("\n"));
+    const summary = parseOrchestrationSummary(
+      ["status: ready", "done: shipped commit-capture", "commit: a1b2c3d"].join("\n"),
+    );
     assert(summary?.commit === "a1b2c3d", "expected commit SHA to be parsed");
   });
 
@@ -51,12 +51,14 @@ function runTests(): void {
   });
 
   check("persists loop-control fields that the old literal dropped", () => {
-    const summary = parseOrchestrationSummary([
-      "status: working",
-      "block-reason: awaiting_user",
-      "no-op-count: 7",
-      "done: paused on a decision",
-    ].join("\n"));
+    const summary = parseOrchestrationSummary(
+      [
+        "status: working",
+        "block-reason: awaiting_user",
+        "no-op-count: 7",
+        "done: paused on a decision",
+      ].join("\n"),
+    );
     assert(summary?.["block-reason"] === "awaiting_user", "expected block-reason to survive");
     assert(summary?.["no-op-count"] === "7", "expected no-op-count to survive");
   });
@@ -73,7 +75,9 @@ function runTests(): void {
   });
 
   check("nonzero failed test counts stay partial", () => {
-    const summary = parseOrchestrationSummary("status: ready\ntests: 11 pass - 1 fail\ndone: attempted");
+    const summary = parseOrchestrationSummary(
+      "status: ready\ntests: 11 pass - 1 fail\ndone: attempted",
+    );
     assert(inferOutcome({ summary }) === "partial", "expected failed tests to stay partial");
   });
 

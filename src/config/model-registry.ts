@@ -65,7 +65,8 @@ export const REGISTERED_MODELS: RegisteredModel[] = [
     id: j.model,
     provider: "groq" as const,
     kind: "chat" as const,
-    usedFor: "frontier proposal judge panel — a dead judge abstains, and a fully abstaining panel fails closed silently",
+    usedFor:
+      "frontier proposal judge panel — a dead judge abstains, and a fully abstaining panel fails closed silently",
   })),
 ];
 

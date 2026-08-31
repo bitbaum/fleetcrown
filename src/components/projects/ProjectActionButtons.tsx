@@ -87,9 +87,11 @@ export function FixSignalButton({
         disabled={state.phase === "sending"}
         className="ui-btn-secondary min-h-11 gap-1 px-2.5 text-xs"
       >
-        {state.phase === "sending"
-          ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-          : <Wrench className="h-3.5 w-3.5" aria-hidden="true" />}
+        {state.phase === "sending" ? (
+          <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+        ) : (
+          <Wrench className="h-3.5 w-3.5" aria-hidden="true" />
+        )}
         {state.phase === "sending" ? "Queuing…" : "Fix"}
       </button>
       {state.phase === "error" && <span className="ui-error text-xs">{state.message}</span>}
@@ -116,9 +118,11 @@ export function RunNextStepButton({
         disabled={state.phase === "sending"}
         className="ui-btn-primary min-h-11 gap-1.5 px-3 text-xs"
       >
-        {state.phase === "sending"
-          ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-          : <Play className="h-3.5 w-3.5" aria-hidden="true" />}
+        {state.phase === "sending" ? (
+          <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+        ) : (
+          <Play className="h-3.5 w-3.5" aria-hidden="true" />
+        )}
         {state.phase === "sending" ? "Queuing…" : "Run next step"}
       </button>
       {state.phase === "error" && <span className="ui-error text-xs">{state.message}</span>}

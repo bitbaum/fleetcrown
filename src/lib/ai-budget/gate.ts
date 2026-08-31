@@ -47,8 +47,7 @@ async function ledger() {
 export const ESTIMATED_TURN_TOKENS = 20_000;
 
 export type BudgetVerdict =
-  | { allowed: true }
-  | { allowed: false; message: string; retryAfterSeconds?: number };
+  { allowed: true } | { allowed: false; message: string; retryAfterSeconds?: number };
 
 /** Turn a refusal into something the operator can act on. */
 function explain(decision: ShareDecision): string {
@@ -95,7 +94,8 @@ export async function checkAiBudget(
 ): Promise<BudgetVerdict> {
   try {
     const capacity = (deps.capacity ?? dayCapacityTokens)();
-    const readUsage = deps.readUsage ?? (async (u: string, n: Date) => (await ledger()).getDayUsage(u, n));
+    const readUsage =
+      deps.readUsage ?? (async (u: string, n: Date) => (await ledger()).getDayUsage(u, n));
     const { userSpentTokens, activeUsers } = await readUsage(userId, now);
 
     const decision = fairShare({
@@ -110,10 +110,15 @@ export async function checkAiBudget(
     return {
       allowed: false,
       message: explain(decision),
-      ...(decision.retryAfterSeconds !== undefined ? { retryAfterSeconds: decision.retryAfterSeconds } : {}),
+      ...(decision.retryAfterSeconds !== undefined
+        ? { retryAfterSeconds: decision.retryAfterSeconds }
+        : {}),
     };
   } catch (e) {
-    console.error("[ai-budget] check failed, admitting the turn:", e instanceof Error ? e.message : e);
+    console.error(
+      "[ai-budget] check failed, admitting the turn:",
+      e instanceof Error ? e.message : e,
+    );
     return { allowed: true };
   }
 }
@@ -130,7 +135,11 @@ export async function checkAiBudget(
  * rather than as free, since a turn that reached a model was never free and
  * booking it at zero would let an unreporting provider drain the day invisibly.
  */
-export async function recordAiSpend(userId: string, tokens: number, now = new Date()): Promise<void> {
+export async function recordAiSpend(
+  userId: string,
+  tokens: number,
+  now = new Date(),
+): Promise<void> {
   try {
     const { recordSpend } = await ledger();
     await recordSpend(userId, tokens > 0 ? tokens : ESTIMATED_TURN_TOKENS, now);

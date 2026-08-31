@@ -15,10 +15,7 @@ export async function DELETE(req: NextRequest) {
   if (access instanceof NextResponse) return access;
 
   if (req.nextUrl.searchParams.get("all") !== "true") {
-    return NextResponse.json(
-      { error: "Pass ?all=true to forget all memory" },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "Pass ?all=true to forget all memory" }, { status: 400 });
   }
 
   await forgetAllMemory(access.userId);

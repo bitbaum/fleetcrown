@@ -26,10 +26,22 @@ function parseArgs(argv) {
   }
   for (let i = 3; i < argv.length; i++) {
     const a = argv[i];
-    if (a === "--token" && argv[i + 1]) { args.token = argv[++i]; continue; }
-    if (a === "--base-url" && argv[i + 1]) { args.baseUrl = argv[++i].replace(/\/$/, ""); continue; }
-    if (a === "--install") { args.install = true; continue; }
-    if (a === "--no-install") { args.install = false; continue; }
+    if (a === "--token" && argv[i + 1]) {
+      args.token = argv[++i];
+      continue;
+    }
+    if (a === "--base-url" && argv[i + 1]) {
+      args.baseUrl = argv[++i].replace(/\/$/, "");
+      continue;
+    }
+    if (a === "--install") {
+      args.install = true;
+      continue;
+    }
+    if (a === "--no-install") {
+      args.install = false;
+      continue;
+    }
   }
   return args;
 }
@@ -46,14 +58,22 @@ function prompt(question) {
   let input = process.stdin;
   let openedTty = null;
   if (!process.stdin.isTTY) {
-    try { openedTty = fs.createReadStream("/dev/tty"); input = openedTty; }
-    catch { /* fall through to process.stdin (likely Windows) */ }
+    try {
+      openedTty = fs.createReadStream("/dev/tty");
+      input = openedTty;
+    } catch {
+      /* fall through to process.stdin (likely Windows) */
+    }
   }
   const rl = readline.createInterface({ input, output: process.stdout });
   return new Promise((resolve) => {
     rl.question(question, (answer) => {
       rl.close();
-      if (openedTty) { try { openedTty.destroy(); } catch {} }
+      if (openedTty) {
+        try {
+          openedTty.destroy();
+        } catch {}
+      }
       resolve(answer.trim());
     });
   });
@@ -104,14 +124,21 @@ async function downloadDaemon(baseUrl) {
       stdio: ["pipe", "inherit", "inherit"],
     });
     child.on("error", reject);
-    child.on("close", (code) => code === 0 ? resolve() : reject(new Error(`tar exited ${code}`)));
+    child.on("close", (code) => (code === 0 ? resolve() : reject(new Error(`tar exited ${code}`))));
     child.stdin.end(tarball);
   });
 
   // chmod +x the executables so the user can run them directly without
   // having to remember `bash ...`.
-  for (const name of ["fleetcrown-daemon.sh", "fleet", "agent-hook-bridge.sh", "install-fleetcrown-daemon.sh"]) {
-    try { fs.chmodSync(path.join(DAEMON_DIR, name), 0o755); } catch {}
+  for (const name of [
+    "fleetcrown-daemon.sh",
+    "fleet",
+    "agent-hook-bridge.sh",
+    "install-fleetcrown-daemon.sh",
+  ]) {
+    try {
+      fs.chmodSync(path.join(DAEMON_DIR, name), 0o755);
+    } catch {}
   }
 
   return DAEMON_DIR;
@@ -177,7 +204,9 @@ async function main() {
     daemonInstalledAt = await downloadDaemon(args.baseUrl);
   } catch (err) {
     console.warn(`\n⚠️  Daemon install failed: ${err.message}`);
-    console.warn(`   Token is saved (${ENV_FILE}). Re-run this command to retry the daemon download.`);
+    console.warn(
+      `   Token is saved (${ENV_FILE}). Re-run this command to retry the daemon download.`,
+    );
   }
 
   console.log(`\n✓ Connected as ${profile.user?.name ?? profile.user?.email ?? profile.user?.id}`);

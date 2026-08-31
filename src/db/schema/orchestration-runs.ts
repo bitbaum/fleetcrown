@@ -1,9 +1,23 @@
-import { pgTable, uuid, text, timestamp, jsonb, index, bigint, doublePrecision } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  uuid,
+  text,
+  timestamp,
+  jsonb,
+  index,
+  bigint,
+  doublePrecision,
+} from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { users } from "./users";
 import { entities } from "./entities";
 import { orgs } from "./orgs";
-import type { AdapterId, OrchestrationState, OrchestrationTaskIntentId, OrchestrationTaskSummary } from "@/lib/orchestration";
+import type {
+  AdapterId,
+  OrchestrationState,
+  OrchestrationTaskIntentId,
+  OrchestrationTaskSummary,
+} from "@/lib/orchestration";
 
 export type OrchestrationRunPayload = {
   projectId?: string | null;
@@ -54,43 +68,53 @@ export {
 } from "@/lib/orchestration/contract";
 import type { OrchestrationOutcome } from "@/lib/orchestration/contract";
 
-export const orchestrationRuns = pgTable("orchestration_runs", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").notNull().references(() => users.id),
-  orgId: uuid("org_id").references(() => orgs.id, { onDelete: "set null" }),
-  projectId: uuid("project_id").references(() => entities.id, { onDelete: "set null" }),
-  adapter: text("adapter").$type<AdapterId>().notNull(),
-  intent: text("intent").$type<OrchestrationTaskIntentId>().notNull(),
-  state: text("state").$type<OrchestrationState>().notNull(),
-  outcome: text("outcome").$type<OrchestrationOutcome>(),
-  projectKey: text("project_key").notNull(),
-  projectPath: text("project_path").notNull(),
-  summary: jsonb("summary").$type<OrchestrationTaskSummary>(),
-  payload: jsonb("payload").$type<OrchestrationRunPayload>(),
-  startedAt: timestamp("started_at", { withTimezone: true }).defaultNow().notNull(),
-  finishedAt: timestamp("finished_at", { withTimezone: true }),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  // Token/cost accounting — reported by the runner from the agent's own
-  // transcript (window [deliveredAt, close]), priced box-side at ingest
-  // (src/app/api/orchestration/runs/[id]/usage). Null = never reported
-  // (non-Claude adapter, runner predates the reporter, or zero usage).
-  tokensIn: bigint("tokens_in", { mode: "number" }),
-  tokensOut: bigint("tokens_out", { mode: "number" }),
-  tokensCacheRead: bigint("tokens_cache_read", { mode: "number" }),
-  tokensCacheWrite: bigint("tokens_cache_write", { mode: "number" }),
-  /** Estimated USD at API list rates (subscription runs: comparable unit, not an invoice). */
-  costUsd: doublePrecision("cost_usd"),
-  usageDetail: jsonb("usage_detail").$type<OrchestrationRunUsageDetail>(),
-  usageUpdatedAt: timestamp("usage_updated_at", { withTimezone: true }),
-}, (table) => [
-  index("idx_orchestration_runs_user_id").on(table.userId),
-  index("idx_orchestration_runs_org_id").on(table.orgId),
-  index("idx_orchestration_runs_project_id").on(table.projectId),
-  index("idx_orchestration_runs_project_path").on(table.projectPath),
-  index("idx_orchestration_runs_started_at").on(table.startedAt),
-  // Powers getRecentOutcomes(userId, projectKey) — finishedAt DESC, partial-indexed to skip running rows
-  index("idx_orchestration_runs_recent_outcomes").on(table.userId, table.projectKey, sql`finished_at DESC`),
-]);
+export const orchestrationRuns = pgTable(
+  "orchestration_runs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    orgId: uuid("org_id").references(() => orgs.id, { onDelete: "set null" }),
+    projectId: uuid("project_id").references(() => entities.id, { onDelete: "set null" }),
+    adapter: text("adapter").$type<AdapterId>().notNull(),
+    intent: text("intent").$type<OrchestrationTaskIntentId>().notNull(),
+    state: text("state").$type<OrchestrationState>().notNull(),
+    outcome: text("outcome").$type<OrchestrationOutcome>(),
+    projectKey: text("project_key").notNull(),
+    projectPath: text("project_path").notNull(),
+    summary: jsonb("summary").$type<OrchestrationTaskSummary>(),
+    payload: jsonb("payload").$type<OrchestrationRunPayload>(),
+    startedAt: timestamp("started_at", { withTimezone: true }).defaultNow().notNull(),
+    finishedAt: timestamp("finished_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    // Token/cost accounting — reported by the runner from the agent's own
+    // transcript (window [deliveredAt, close]), priced box-side at ingest
+    // (src/app/api/orchestration/runs/[id]/usage). Null = never reported
+    // (non-Claude adapter, runner predates the reporter, or zero usage).
+    tokensIn: bigint("tokens_in", { mode: "number" }),
+    tokensOut: bigint("tokens_out", { mode: "number" }),
+    tokensCacheRead: bigint("tokens_cache_read", { mode: "number" }),
+    tokensCacheWrite: bigint("tokens_cache_write", { mode: "number" }),
+    /** Estimated USD at API list rates (subscription runs: comparable unit, not an invoice). */
+    costUsd: doublePrecision("cost_usd"),
+    usageDetail: jsonb("usage_detail").$type<OrchestrationRunUsageDetail>(),
+    usageUpdatedAt: timestamp("usage_updated_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("idx_orchestration_runs_user_id").on(table.userId),
+    index("idx_orchestration_runs_org_id").on(table.orgId),
+    index("idx_orchestration_runs_project_id").on(table.projectId),
+    index("idx_orchestration_runs_project_path").on(table.projectPath),
+    index("idx_orchestration_runs_started_at").on(table.startedAt),
+    // Powers getRecentOutcomes(userId, projectKey) — finishedAt DESC, partial-indexed to skip running rows
+    index("idx_orchestration_runs_recent_outcomes").on(
+      table.userId,
+      table.projectKey,
+      sql`finished_at DESC`,
+    ),
+  ],
+);
 
 /** Non-column usage context stored alongside the token counters. */
 export type OrchestrationRunUsageDetail = {

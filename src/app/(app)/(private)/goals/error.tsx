@@ -4,7 +4,10 @@ import { RouteError } from "@/components/ui/route-error";
 
 // Route-level error boundary for /goals — a throw while loading the goal tree
 // keeps the shell + retry instead of the global boundary.
-export default function GoalsError(props: { error: Error & { digest?: string }; reset: () => void }) {
+export default function GoalsError(props: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
   return (
     <RouteError
       route="goals"

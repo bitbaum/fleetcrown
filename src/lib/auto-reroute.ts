@@ -22,16 +22,15 @@
  */
 
 export type AutoRerouteSkipReason =
-  | "no-capacity-issue"   // nothing to react to
-  | "autopilot-off"       // user owns this project — surface, don't act
-  | "switch-in-flight"    // a switch is already running; wait for it to land
-  | "tab-closed"          // no live workspace to switch inside of
-  | "no-fallback"         // no other installed agent to switch to
-  | "all-tried";          // every alternative already auto-attempted this episode
+  | "no-capacity-issue" // nothing to react to
+  | "autopilot-off" // user owns this project — surface, don't act
+  | "switch-in-flight" // a switch is already running; wait for it to land
+  | "tab-closed" // no live workspace to switch inside of
+  | "no-fallback" // no other installed agent to switch to
+  | "all-tried"; // every alternative already auto-attempted this episode
 
 export type AutoRerouteDecision =
-  | { reroute: true; toAgent: string }
-  | { reroute: false; reason: AutoRerouteSkipReason };
+  { reroute: true; toAgent: string } | { reroute: false; reason: AutoRerouteSkipReason };
 
 export type AutoRerouteInput = {
   /** Capacity/rate-limit language detected in the project's session fields. */
@@ -58,7 +57,8 @@ export function decideAutoReroute(input: AutoRerouteInput): AutoRerouteDecision 
   if (input.switchInFlight) return { reroute: false, reason: "switch-in-flight" };
   if (!input.tabOpen) return { reroute: false, reason: "tab-closed" };
   if (!input.suggestedFallback) return { reroute: false, reason: "no-fallback" };
-  if (input.triedAgents.has(input.suggestedFallback)) return { reroute: false, reason: "all-tried" };
+  if (input.triedAgents.has(input.suggestedFallback))
+    return { reroute: false, reason: "all-tried" };
   return { reroute: true, toAgent: input.suggestedFallback };
 }
 
@@ -78,14 +78,13 @@ export const MAX_AUTO_REROUTES_PER_WINDOW = 4;
 export type HeadlessRerouteSkipReason =
   | "no-capacity-issue"
   | "autopilot-off"
-  | "no-fallback"        // resolveNextAvailableAgent found no installed alternative
-  | "no-dir"             // project has no local dir to switch inside of
-  | "switch-pending"     // an unclaimed switch is already queued for this project
-  | "window-exhausted";  // hit the per-window cap → surface, don't churn
+  | "no-fallback" // resolveNextAvailableAgent found no installed alternative
+  | "no-dir" // project has no local dir to switch inside of
+  | "switch-pending" // an unclaimed switch is already queued for this project
+  | "window-exhausted"; // hit the per-window cap → surface, don't churn
 
 export type HeadlessRerouteDecision =
-  | { reroute: true; toAgent: string }
-  | { reroute: false; reason: HeadlessRerouteSkipReason };
+  { reroute: true; toAgent: string } | { reroute: false; reason: HeadlessRerouteSkipReason };
 
 export type HeadlessRerouteInput = {
   capacityIssue: boolean;
@@ -127,7 +126,9 @@ export function shouldShowManualCapacityBanner(
   // clicking Switch still persists the agent preference for the next launch).
   // When autopilot CAN act, autoRerouteHandling renders the auto banner instead.
   // A capacity wall must never be silently invisible.
-  return lastDecisionReason === "all-tried"
-    || lastDecisionReason === "no-fallback"
-    || lastDecisionReason === "tab-closed";
+  return (
+    lastDecisionReason === "all-tried" ||
+    lastDecisionReason === "no-fallback" ||
+    lastDecisionReason === "tab-closed"
+  );
 }

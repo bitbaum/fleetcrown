@@ -12,7 +12,11 @@ import {
 import { EXECUTOR_COPY } from "@/config/executor-copy";
 import { BUILDER_CHANNELS } from "@/lib/constants/statuses";
 
-const offline = dispatchStatusLabel({ mode: "queued", runnerConnected: false, warning: "runner-offline" });
+const offline = dispatchStatusLabel({
+  mode: "queued",
+  runnerConnected: false,
+  warning: "runner-offline",
+});
 if (!offline.warn || offline.label !== EXECUTOR_COPY.queuedWhenOffline) {
   throw new Error("offline queued label");
 }
@@ -27,7 +31,11 @@ if (direct.warn || direct.label !== "Running now") {
   throw new Error("direct label");
 }
 
-const md = dispatchAssistantContent("fleetcrown", { ok: true, mode: "queued", runnerConnected: true });
+const md = dispatchAssistantContent("fleetcrown", {
+  ok: true,
+  mode: "queued",
+  runnerConnected: true,
+});
 if (!md.includes("fleetcrown") || !md.includes("builder")) {
   throw new Error("assistant content");
 }
@@ -91,7 +99,11 @@ if (!offlineNamed.label.includes(EXECUTOR_COPY.ranOn.local) || !offlineNamed.war
   throw new Error("offline queue must name the builder it is waiting on");
 }
 
-const queuedNamed = dispatchStatusLabel({ mode: "queued", runnerConnected: true, channel: "cloud" });
+const queuedNamed = dispatchStatusLabel({
+  mode: "queued",
+  runnerConnected: true,
+  channel: "cloud",
+});
 if (!queuedNamed.label.includes(EXECUTOR_COPY.ranOn.cloud) || queuedNamed.warn) {
   throw new Error("queued-with-builder must name the builder");
 }
@@ -103,7 +115,11 @@ for (const missing of [undefined, null]) {
   if (bare.label !== "Running now") {
     throw new Error(`absent channel must not be named — got ${bare.label}`);
   }
-  const bareQueued = dispatchStatusLabel({ mode: "queued", runnerConnected: true, channel: missing });
+  const bareQueued = dispatchStatusLabel({
+    mode: "queued",
+    runnerConnected: true,
+    channel: missing,
+  });
   if (bareQueued.label !== EXECUTOR_COPY.queuedWithBuilderOnline) {
     throw new Error(`absent channel must keep the unnamed queued copy — got ${bareQueued.label}`);
   }
@@ -150,7 +166,9 @@ const allStarted = deriveMultiDispatchView([
   { projectKey: "orangecat", ok: true },
 ]);
 if (allStarted.tone !== "positive" || allStarted.primaryProject !== "fleetcrown") {
-  throw new Error(`all-started must be positive and link the first started project — got ${JSON.stringify(allStarted)}`);
+  throw new Error(
+    `all-started must be positive and link the first started project — got ${JSON.stringify(allStarted)}`,
+  );
 }
 
 const noneStarted = deriveMultiDispatchView([
@@ -158,7 +176,9 @@ const noneStarted = deriveMultiDispatchView([
   { projectKey: "orangecat", ok: false, skipped: true, reason: "pending_command" },
 ]);
 if (noneStarted.tone !== "negative" || noneStarted.primaryProject !== null) {
-  throw new Error(`0-of-N must be negative with no link to watch — got ${JSON.stringify(noneStarted)}`);
+  throw new Error(
+    `0-of-N must be negative with no link to watch — got ${JSON.stringify(noneStarted)}`,
+  );
 }
 if (!noneStarted.label.includes("0 of 2")) {
   throw new Error(`0-of-N label must say so plainly — got "${noneStarted.label}"`);
@@ -170,10 +190,14 @@ const partialStarted = deriveMultiDispatchView([
   { projectKey: "datacat", ok: false, skipped: true, reason: "concurrency_cap" },
 ]);
 if (partialStarted.tone !== "warning" || partialStarted.primaryProject !== "fleetcrown") {
-  throw new Error(`partial start must warn and link a project that actually started — got ${JSON.stringify(partialStarted)}`);
+  throw new Error(
+    `partial start must warn and link a project that actually started — got ${JSON.stringify(partialStarted)}`,
+  );
 }
 if (!partialStarted.label.includes("1 of 3")) {
-  throw new Error(`partial-start label must say how many of how many — got "${partialStarted.label}"`);
+  throw new Error(
+    `partial-start label must say how many of how many — got "${partialStarted.label}"`,
+  );
 }
 
 // The link must never point at a SKIPPED project just because it happened to
@@ -183,7 +207,9 @@ const skippedFirst = deriveMultiDispatchView([
   { projectKey: "started-one", ok: true },
 ]);
 if (skippedFirst.primaryProject !== "started-one") {
-  throw new Error(`link must skip past a failed first attempt to the project that actually started — got ${skippedFirst.primaryProject}`);
+  throw new Error(
+    `link must skip past a failed first attempt to the project that actually started — got ${skippedFirst.primaryProject}`,
+  );
 }
 
 // Every tone in the union renders a real dot class — none can fall through to

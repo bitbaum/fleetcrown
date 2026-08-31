@@ -19,7 +19,11 @@ import type { SessionState } from "@/lib/control-types";
 import { getRecentOutcomes } from "@/db/queries/orchestration-runs";
 import { resolveProjectSession } from "@/lib/project-session";
 import { adapterFor } from "@/lib/orchestration/adapter-registry";
-import { ORCHESTRATION_ADAPTER_IDS, DEFAULT_ADAPTER_ID, type AdapterId } from "@/lib/orchestration/contract";
+import {
+  ORCHESTRATION_ADAPTER_IDS,
+  DEFAULT_ADAPTER_ID,
+  type AdapterId,
+} from "@/lib/orchestration/contract";
 import { gateAndCloseRun, closingRuns } from "@/lib/orchestration/gate-and-close";
 
 export type CloseSweepResult = {
@@ -39,7 +43,10 @@ function runSessionTab(run: OpenRunRow): string | null {
 /** Try to close ONE open run from its project's pushed session state (or a
  *  directly-supplied session for parallel-alias runs). Returns the closed
  *  outcome, or null when the run stays open. */
-async function tryCloseRun(run: OpenRunRow, sessionOverride?: SessionState): Promise<string | null> {
+async function tryCloseRun(
+  run: OpenRunRow,
+  sessionOverride?: SessionState,
+): Promise<string | null> {
   if (closingRuns.has(run.id)) return null; // another close is in flight
   // A run whose dispatch command is still queued (gate-held behind an older
   // run, or runner offline) never had its prompt delivered — no handoff can be
@@ -68,7 +75,9 @@ async function tryCloseRun(run: OpenRunRow, sessionOverride?: SessionState): Pro
   }
   if (!session) return null;
 
-  const adapterId: AdapterId = (ORCHESTRATION_ADAPTER_IDS as readonly string[]).includes(run.adapter)
+  const adapterId: AdapterId = (ORCHESTRATION_ADAPTER_IDS as readonly string[]).includes(
+    run.adapter,
+  )
     ? (run.adapter as AdapterId)
     : DEFAULT_ADAPTER_ID;
   const patch = adapterFor(adapterId)?.closeRunFromSession?.(run, session) ?? null;
@@ -77,7 +86,14 @@ async function tryCloseRun(run: OpenRunRow, sessionOverride?: SessionState): Pro
   closingRuns.add(run.id);
   try {
     const recent = await getRecentOutcomes(run.userId, run.projectKey).catch(() => []);
-    await gateAndCloseRun(run.id, patch, run.userId, run.projectKey, recent.map((r) => r.outcome), run.adapter);
+    await gateAndCloseRun(
+      run.id,
+      patch,
+      run.userId,
+      run.projectKey,
+      recent.map((r) => r.outcome),
+      run.adapter,
+    );
     return patch.outcome;
   } finally {
     closingRuns.delete(run.id);
@@ -110,7 +126,8 @@ export async function closeOpenRunsForProject(userId: string, projectKey: string
   const open = await listOpenRuns(0);
   let n = 0;
   for (const run of open) {
-    if (run.userId !== userId || run.projectKey.toLowerCase() !== projectKey.toLowerCase()) continue;
+    if (run.userId !== userId || run.projectKey.toLowerCase() !== projectKey.toLowerCase())
+      continue;
     const outcome = await tryCloseRun(run).catch(() => null);
     if (outcome) n++;
   }

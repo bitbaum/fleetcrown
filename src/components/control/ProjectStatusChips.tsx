@@ -2,18 +2,22 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { GitBranch, Terminal, ChevronDown, Loader2, SquareTerminal, UploadCloud, Check } from "lucide-react";
+import {
+  GitBranch,
+  Terminal,
+  ChevronDown,
+  Loader2,
+  SquareTerminal,
+  UploadCloud,
+  Check,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { postJson } from "@/lib/api/fetch";
 import type { ProjectState } from "@/lib/control-types";
 import { formatAgentRuntimeLabel } from "./control-presenter";
 import { AgentSwitcherPopover } from "./agent-switcher-popover";
 import type { AgentEntry } from "./agent-switcher-popover";
-import {
-  agentLabel,
-  hasAgentLabelMismatch,
-  resolveDisplayedAgentId,
-} from "@/lib/agent-resolution";
+import { agentLabel, hasAgentLabelMismatch, resolveDisplayedAgentId } from "@/lib/agent-resolution";
 import { deriveLoopState } from "@/lib/session-state";
 import { deriveProjectLoopReadiness } from "@/lib/project-loop-readiness";
 import { TOAST_MEDIUM_MS, TOAST_LONG_MS } from "@/lib/constants/timings";
@@ -33,8 +37,8 @@ function statusChipClass(tone: "neutral" | "positive" | "warning" = "neutral", c
     tone === "positive"
       ? "border-status-positive/25 bg-status-positive/[0.08] text-status-positive"
       : tone === "warning"
-      ? "border-status-warning/30 bg-status-warning/[0.08] text-status-warning"
-      : "border-border-subtle bg-surface-raised text-text-tertiary",
+        ? "border-status-warning/30 bg-status-warning/[0.08] text-status-warning"
+        : "border-border-subtle bg-surface-raised text-text-tertiary",
     clickable && "hover:border-border-default hover:bg-surface-overlay hover:text-text-secondary",
   );
 }
@@ -91,10 +95,11 @@ export function ProjectStatusChips({
     ? `Pending changes means files were edited in this project but are not saved into Git history yet. Branch: ${git.branch}. In Git, a commit is the checkpoint that records those changes.`
     : `Branch: ${git?.branch}. No local file changes detected.`;
 
-  const effectiveAgentId = resolveDisplayedAgentId(project, localAgentId, project.liveTab)
-    || localAgentId
-    || project.agentPref
-    || (availableAgents?.[0]?.id ?? "");
+  const effectiveAgentId =
+    resolveDisplayedAgentId(project, localAgentId, project.liveTab) ||
+    localAgentId ||
+    project.agentPref ||
+    (availableAgents?.[0]?.id ?? "");
   const labelMismatch = hasAgentLabelMismatch(project, localAgentId, project.liveTab);
   const canSwitchAgent = onSwitchAgent && availableAgents && availableAgents.length > 1;
 
@@ -106,7 +111,9 @@ export function ProjectStatusChips({
   const readiness = deriveProjectLoopReadiness(project, autoContinueEnabled ? "on" : "off");
   const showAwaitingUser = loop.awaitingUser;
   const showLoopSpiral =
-    !showAwaitingUser && loop.state === "firing" && (loop.noOpCount ?? 0) >= LOOP_NO_OP_DISPLAY_THRESHOLD;
+    !showAwaitingUser &&
+    loop.state === "firing" &&
+    (loop.noOpCount ?? 0) >= LOOP_NO_OP_DISPLAY_THRESHOLD;
 
   // "Focus terminal" brings the project's terminal to the front ON THE USER'S
   // MACHINE via the runner. The old embedded-PTY route (/control/workspace)
@@ -120,14 +127,19 @@ export function ProjectStatusChips({
   // running OUTSIDE zellij (e.g. a background CLI session) has no tab — the
   // runner replies "tab not found" every time, so offering the chip there is a
   // guaranteed-fail dead end ("Open here" still works from any device).
-  const canFocusTerminal = tabOpen || (!project.agentRunning && Boolean(project.dir) && Boolean(effectiveAgentId));
+  const canFocusTerminal =
+    tabOpen || (!project.agentRunning && Boolean(project.dir) && Boolean(effectiveAgentId));
   const openWorkspace = async (event: React.MouseEvent) => {
     event.stopPropagation();
     if (wsState === "working") return;
     setWsState("working");
     try {
       if (!project.agentRunning && project.dir && effectiveAgentId) {
-        await postJson("/api/agent/launch", { tab: project.tab, dir: project.dir, agent: effectiveAgentId });
+        await postJson("/api/agent/launch", {
+          tab: project.tab,
+          dir: project.dir,
+          agent: effectiveAgentId,
+        });
       } else {
         await postJson("/api/control/focus-tab", { tab: workspaceTab });
       }
@@ -150,53 +162,95 @@ export function ProjectStatusChips({
       if (res.ok) {
         setCommitResult({ sha: body.sha });
         setCommitState("done");
-        setTimeout(() => { setCommitState("idle"); setCommitResult(null); }, TOAST_MEDIUM_MS);
+        setTimeout(() => {
+          setCommitState("idle");
+          setCommitResult(null);
+        }, TOAST_MEDIUM_MS);
       } else {
         setCommitResult({ error: body.error ?? "Commit failed" });
         setCommitState("error");
-        setTimeout(() => { setCommitState("idle"); setCommitResult(null); }, TOAST_LONG_MS);
+        setTimeout(() => {
+          setCommitState("idle");
+          setCommitResult(null);
+        }, TOAST_LONG_MS);
       }
     } catch {
       setCommitState("error");
       setCommitResult({ error: "Network error" });
-      setTimeout(() => { setCommitState("idle"); setCommitResult(null); }, TOAST_MEDIUM_MS);
+      setTimeout(() => {
+        setCommitState("idle");
+        setCommitResult(null);
+      }, TOAST_MEDIUM_MS);
     }
   };
 
   if (!runtimeLabel && !git && !tabOpen) return null;
 
   const chips = (
-    <div className={compact ? "flex min-w-0 flex-wrap items-center gap-2 text-xs text-text-tertiary" : "ui-control-card-header-meta"}>
-      {runtimeLabel && (
-        canSwitchAgent ? (
+    <div
+      className={
+        compact
+          ? "flex min-w-0 flex-wrap items-center gap-2 text-xs text-text-tertiary"
+          : "ui-control-card-header-meta"
+      }
+    >
+      {runtimeLabel &&
+        (canSwitchAgent ? (
           <div className="relative">
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); if (!switchingAgent) setAgentPopoverOpen((v) => !v); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!switchingAgent) setAgentPopoverOpen((v) => !v);
+              }}
               title={
                 switchingAgent
                   ? "Switching agent…"
                   : labelMismatch
-                  ? `Live: ${project.activeAgents.map(agentLabel).join(", ")} — preference: ${agentLabel(localAgentId ?? project.agentPref ?? "?")}. Click to switch.`
-                  : `${runtimeLabel} — click to switch agent for this project`
+                    ? `Live: ${project.activeAgents.map(agentLabel).join(", ")} — preference: ${agentLabel(localAgentId ?? project.agentPref ?? "?")}. Click to switch.`
+                    : `${runtimeLabel} — click to switch agent for this project`
               }
               disabled={switchingAgent}
-              className={compact
-                ? cn(
-                    "flex items-center gap-1 transition-colors hover:text-text-primary disabled:opacity-60",
-                    labelMismatch ? "text-status-warning" : "text-text-secondary",
-                  )
-                : cn(
-                    statusChipClass(switchingAgent ? "neutral" : working ? "warning" : labelMismatch ? "warning" : "neutral", !switchingAgent),
-                    "cursor-pointer disabled:cursor-default disabled:opacity-70",
-                    labelMismatch && !switchingAgent && "ring-1 ring-status-warning/50 animate-pulse",
-                  )}
-            >
-              {switchingAgent
-                ? <><Loader2 className="h-3 w-3 shrink-0 animate-spin" /><span>Switching…</span></>
-                : <><span>{runtimeStateLabel}</span>
-                   <ChevronDown className={cn("h-3 w-3 shrink-0 opacity-50 transition-transform", agentPopoverOpen && "rotate-180")} /></>
+              className={
+                compact
+                  ? cn(
+                      "flex items-center gap-1 transition-colors hover:text-text-primary disabled:opacity-60",
+                      labelMismatch ? "text-status-warning" : "text-text-secondary",
+                    )
+                  : cn(
+                      statusChipClass(
+                        switchingAgent
+                          ? "neutral"
+                          : working
+                            ? "warning"
+                            : labelMismatch
+                              ? "warning"
+                              : "neutral",
+                        !switchingAgent,
+                      ),
+                      "cursor-pointer disabled:cursor-default disabled:opacity-70",
+                      labelMismatch &&
+                        !switchingAgent &&
+                        "ring-1 ring-status-warning/50 animate-pulse",
+                    )
               }
+            >
+              {switchingAgent ? (
+                <>
+                  <Loader2 className="h-3 w-3 shrink-0 animate-spin" />
+                  <span>Switching…</span>
+                </>
+              ) : (
+                <>
+                  <span>{runtimeStateLabel}</span>
+                  <ChevronDown
+                    className={cn(
+                      "h-3 w-3 shrink-0 opacity-50 transition-transform",
+                      agentPopoverOpen && "rotate-180",
+                    )}
+                  />
+                </>
+              )}
             </button>
             {agentPopoverOpen && (
               <AgentSwitcherPopover
@@ -210,7 +264,9 @@ export function ProjectStatusChips({
         ) : (
           <span
             className={cn(
-              compact ? undefined : statusChipClass(working ? "warning" : labelMismatch ? "warning" : "neutral"),
+              compact
+                ? undefined
+                : statusChipClass(working ? "warning" : labelMismatch ? "warning" : "neutral"),
               labelMismatch && !compact && "ring-1 ring-status-warning/50",
             )}
             title={
@@ -224,8 +280,7 @@ export function ProjectStatusChips({
               <span className="ml-1 text-status-warning">· mismatch</span>
             )}
           </span>
-        )
-      )}
+        ))}
 
       {/* Agent-declared "I'm blocked on you" state. Sourced from session.md
           (health contains "awaiting user" OR status: blocked) — the agent
@@ -282,11 +337,21 @@ export function ProjectStatusChips({
           onClick={openWorkspace}
           disabled={wsState === "working"}
           title={`Bring ${workspaceTab}'s terminal to the front on your machine (launches the agent there if it isn't running). Requires Fleet Runner online.`}
-          className={compact
-            ? cn("transition-colors", "text-status-positive/70 hover:text-status-positive disabled:opacity-60")
-            : statusChipClass("positive", true)}
+          className={
+            compact
+              ? cn(
+                  "transition-colors",
+                  "text-status-positive/70 hover:text-status-positive disabled:opacity-60",
+                )
+              : statusChipClass("positive", true)
+          }
         >
-          {!compact && (wsState === "working" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Terminal className="h-3.5 w-3.5" />)}
+          {!compact &&
+            (wsState === "working" ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Terminal className="h-3.5 w-3.5" />
+            ))}
           {wsState === "done" ? "Focused ✓" : wsState === "error" ? "Failed" : "Focus terminal"}
         </button>
       )}
@@ -302,9 +367,11 @@ export function ProjectStatusChips({
           href={`/terminal?tab=${encodeURIComponent(workspaceTab)}`}
           onClick={(event) => event.stopPropagation()}
           title={`Open ${workspaceTab}'s session in FleetCrown's terminal — works from any device, no Fleet Runner needed.`}
-          className={compact
-            ? "text-text-tertiary transition-colors hover:text-text-primary"
-            : statusChipClass("neutral", true)}
+          className={
+            compact
+              ? "text-text-tertiary transition-colors hover:text-text-primary"
+              : statusChipClass("neutral", true)
+          }
         >
           {!compact && <SquareTerminal className="h-3.5 w-3.5" />}
           Open here
@@ -312,10 +379,7 @@ export function ProjectStatusChips({
       )}
 
       {git && compact && (
-        <span
-          className={cn(git.dirty && "text-status-warning")}
-          title={dirtyHelp}
-        >
+        <span className={cn(git.dirty && "text-status-warning")} title={dirtyHelp}>
           {changesLabel ?? git.branch}
         </span>
       )}
@@ -331,9 +395,7 @@ export function ProjectStatusChips({
           title={dirtyHelp}
         >
           <GitBranch className="h-3.5 w-3.5" />
-          <span className="max-w-[16rem] truncate">
-            {changesLabel ?? git.branch}
-          </span>
+          <span className="max-w-[16rem] truncate">{changesLabel ?? git.branch}</span>
         </button>
       )}
 
@@ -358,8 +420,12 @@ export function ProjectStatusChips({
           <>
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="font-medium text-text-secondary">{changesLabel} on <span className="font-mono">{git.branch}</span></p>
-                <p className="mt-1 text-text-muted">Uncommitted edits — not yet saved into Git history.</p>
+                <p className="font-medium text-text-secondary">
+                  {changesLabel} on <span className="font-mono">{git.branch}</span>
+                </p>
+                <p className="mt-1 text-text-muted">
+                  Uncommitted edits — not yet saved into Git history.
+                </p>
               </div>
               {project.dir && (
                 <button
@@ -371,8 +437,8 @@ export function ProjectStatusChips({
                     commitState === "done"
                       ? "border-status-positive/40 bg-status-positive/10 text-status-positive"
                       : commitState === "error"
-                      ? "border-status-negative/40 bg-status-negative-subtle text-status-negative"
-                      : "border-border-default bg-surface-overlay text-text-secondary hover:border-border-strong hover:text-text-primary disabled:opacity-50",
+                        ? "border-status-negative/40 bg-status-negative-subtle text-status-negative"
+                        : "border-border-default bg-surface-overlay text-text-secondary hover:border-border-strong hover:text-text-primary disabled:opacity-50",
                   )}
                   title="Stage all changes, commit with a checkpoint message, and push to origin"
                 >
@@ -380,20 +446,30 @@ export function ProjectStatusChips({
                   {commitState === "done" && <Check className="h-3 w-3" />}
                   {commitState === "error" && <span>!</span>}
                   {(commitState === "idle" || commitState === "committing") && (
-                    <UploadCloud className={cn("h-3 w-3", commitState !== "committing" && "block")} />
+                    <UploadCloud
+                      className={cn("h-3 w-3", commitState !== "committing" && "block")}
+                    />
                   )}
                   <span>
-                    {commitState === "committing" ? "Committing…" :
-                     commitState === "done" ? (commitResult?.sha ? `Pushed ${commitResult.sha}` : "Pushed ✓") :
-                     commitState === "error" ? (commitResult?.error ?? "Failed") :
-                     "Commit & push"}
+                    {commitState === "committing"
+                      ? "Committing…"
+                      : commitState === "done"
+                        ? commitResult?.sha
+                          ? `Pushed ${commitResult.sha}`
+                          : "Pushed ✓"
+                        : commitState === "error"
+                          ? (commitResult?.error ?? "Failed")
+                          : "Commit & push"}
                   </span>
                 </button>
               )}
             </div>
           </>
         ) : (
-          <p>Clean on <span className="font-medium text-text-secondary font-mono">{git.branch}</span> — no pending changes.</p>
+          <p>
+            Clean on <span className="font-medium text-text-secondary font-mono">{git.branch}</span>{" "}
+            — no pending changes.
+          </p>
         )}
       </div>
     </div>

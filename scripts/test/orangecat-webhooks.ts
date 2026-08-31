@@ -37,7 +37,10 @@ const eventBody = JSON.stringify({
 });
 
 // 1. A genuine OrangeCat-signed body verifies for both rails.
-assert.equal(verifyOrangeCatWebhookSignature(entitlementBody, ocSign(entitlementBody), secret), true);
+assert.equal(
+  verifyOrangeCatWebhookSignature(entitlementBody, ocSign(entitlementBody), secret),
+  true,
+);
 assert.equal(verifyOrangeCatWebhookSignature(eventBody, ocSign(eventBody), secret), true);
 
 // 2. A bare hex (no "sha256=" prefix) is accepted for forward-compat.
@@ -51,7 +54,10 @@ assert.equal(
 );
 
 // 4. Wrong secret → reject.
-assert.equal(verifyOrangeCatWebhookSignature(entitlementBody, ocSign(entitlementBody), "not-the-secret"), false);
+assert.equal(
+  verifyOrangeCatWebhookSignature(entitlementBody, ocSign(entitlementBody), "not-the-secret"),
+  false,
+);
 
 // 5. Missing header → reject (fail-closed).
 assert.equal(verifyOrangeCatWebhookSignature(entitlementBody, null, secret), false);

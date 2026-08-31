@@ -23,11 +23,11 @@ export function NotificationsPill() {
   if (push.status === "unsupported" || push.publicKeyMissing) return null;
 
   const isSubscribed = push.status === "subscribed";
-  const isWorking    = push.status === "registering";
+  const isWorking = push.status === "registering";
   const onClick = () => {
     if (isWorking) return;
     if (isSubscribed) void push.unsubscribe();
-    else              void push.subscribe();
+    else void push.subscribe();
   };
 
   // Icon-only — the bell on/off state communicates the same thing the text
@@ -40,10 +40,7 @@ export function NotificationsPill() {
       type="button"
       onClick={onClick}
       disabled={isWorking}
-      className={cn(
-        "ui-topbar-btn",
-        isSubscribed && "text-accent-text",
-      )}
+      className={cn("ui-topbar-btn", isSubscribed && "text-accent-text")}
       title={
         isSubscribed
           ? "Notifications on (run finished · new feedback) — tap to turn off"
@@ -53,9 +50,13 @@ export function NotificationsPill() {
       }
       aria-label={isSubscribed ? "Disable push notifications" : "Enable push notifications"}
     >
-      {isWorking ? <Loader2 className="h-4 w-4 animate-spin" />
-        : isSubscribed ? <Bell className="h-4 w-4" />
-        : <BellOff className="h-4 w-4" />}
+      {isWorking ? (
+        <Loader2 className="h-4 w-4 animate-spin" />
+      ) : isSubscribed ? (
+        <Bell className="h-4 w-4" />
+      ) : (
+        <BellOff className="h-4 w-4" />
+      )}
     </button>
   );
 }

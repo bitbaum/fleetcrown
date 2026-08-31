@@ -40,7 +40,11 @@ function WeatherIcon({ condition, className }: { condition: string; className?: 
 }
 
 export function WeatherCard() {
-  const { data, loading, error, refetch } = useFetch<{ weather: string | null; city?: string; error?: string }>("/api/weather", { intervalMs: REFRESH_CADENCE.weather, timeoutMs: 8_000 });
+  const { data, loading, error, refetch } = useFetch<{
+    weather: string | null;
+    city?: string;
+    error?: string;
+  }>("/api/weather", { intervalMs: REFRESH_CADENCE.weather, timeoutMs: 8_000 });
 
   if (loading) {
     return (
@@ -65,7 +69,11 @@ export function WeatherCard() {
     return (
       <Card>
         <CardHeader icon={Sun} title="Weather" />
-        <FetchErrorState message="Couldn't load weather" detail={error ?? data?.error} onRetry={refetch} />
+        <FetchErrorState
+          message="Couldn't load weather"
+          detail={error ?? data?.error}
+          onRetry={refetch}
+        />
       </Card>
     );
   }
@@ -92,8 +100,14 @@ export function WeatherCard() {
         </div>
         <div className="text-xs text-text-tertiary space-y-0.5">
           <div>{w.condition}</div>
-          <div>Wind {w.wind} km/h · Humidity {w.humidity}%</div>
-          {w.range && <div>Today {w.range}° · {w.forecastCondition}</div>}
+          <div>
+            Wind {w.wind} km/h · Humidity {w.humidity}%
+          </div>
+          {w.range && (
+            <div>
+              Today {w.range}° · {w.forecastCondition}
+            </div>
+          )}
         </div>
       </div>
     </Card>

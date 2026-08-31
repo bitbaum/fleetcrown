@@ -83,7 +83,12 @@ export function ProjectRow({
         </div>
         {line && (
           <p className="mt-0.5 flex items-start gap-1.5 truncate text-xs text-text-tertiary">
-            {nextStep && <ArrowRight className="mt-0.5 h-3 w-3 shrink-0 text-status-positive" aria-hidden="true" />}
+            {nextStep && (
+              <ArrowRight
+                className="mt-0.5 h-3 w-3 shrink-0 text-status-positive"
+                aria-hidden="true"
+              />
+            )}
             <span className="truncate">{line}</span>
           </p>
         )}

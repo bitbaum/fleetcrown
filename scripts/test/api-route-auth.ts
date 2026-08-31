@@ -71,29 +71,31 @@ const PUBLIC: Record<string, string> = {
   "auth/register": "creates the account that a session would require",
   "auth/forgot-password": "pre-session recovery; guarded by emailed one-time token instead",
   "auth/reset-password": "pre-session recovery; the emailed token IS the credential",
-  "auth/resend-verification": "pre-session; rate-limited, reveals nothing about whether the address exists",
+  "auth/resend-verification":
+    "pre-session; rate-limited, reveals nothing about whether the address exists",
   "x-login/start": "OAuth handshake begins before any session exists",
   "x-login/callback": "OAuth provider posts here; state parameter is the credential",
 
   // — The bearer IS the credential; there is no user to look up first.
   "invitations/[token]": "unguessable invite token in the path is the credential",
   "invitations/[token]/accept": "same token; accepting is what creates the membership",
-  "share/task/[token]": "an assignee has no account by design — the minted share token in the path IS their credential, it is looked up with revoked links excluded, and the only write it permits is accept/decline/deliver on that one assignment",
+  "share/task/[token]":
+    "an assignee has no account by design — the minted share token in the path IS their credential, it is looked up with revoked links excluded, and the only write it permits is accept/decline/deliver on that one assignment",
 
   // — Bootstrap and installers. Deliberately fetchable without an account.
-  "setup": "first-run only — returns 409 once any user exists (verified)",
+  setup: "first-run only — returns 409 once any user exists (verified)",
   "agent/install": "serves the agent CLI body so a new customer can install before signing in",
   "agent/daemon": "serves the shell daemon tarball; same bootstrap reason",
 
   // — Operator-local surfaces. These read the BOX's own state via TOOLS_DIR,
   //   not any user's records, so there is no per-user data to scope.
-  "github": "runs github-status.sh against the box; no user-scoped data in the response",
-  "calendar": "box-local calendar tool; no user-scoped data in the response",
+  github: "runs github-status.sh against the box; no user-scoped data in the response",
+  calendar: "box-local calendar tool; no user-scoped data in the response",
 
   // — Intentional, with the reasoning recorded at the route itself.
   "debug-log": "client error reporter — see the route's own comment on why it takes no auth",
-  "health": "liveness probe; must answer before anything else works",
-  "newsletter": "public marketing signup — email address only",
+  health: "liveness probe; must answer before anything else works",
+  newsletter: "public marketing signup — email address only",
   "control/transcribe": "one-line re-export of /api/beacon/transcribe, which carries the guard",
 };
 

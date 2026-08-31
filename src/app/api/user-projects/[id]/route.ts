@@ -37,7 +37,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (dataOrResp instanceof NextResponse) return dataOrResp;
   const updated = await updateUserProject(idOrResp, userId, dataOrResp);
   if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (updated.entityProjectId) scheduleProjectProfileReindexByEntityId(userId, updated.entityProjectId);
+  if (updated.entityProjectId)
+    scheduleProjectProfileReindexByEntityId(userId, updated.entityProjectId);
   return NextResponse.json(updated);
 }
 
@@ -48,6 +49,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   if (idOrResp instanceof NextResponse) return idOrResp;
   const project = await getUserProject(idOrResp, userId);
   await deleteUserProject(idOrResp, userId);
-  if (project?.entityProjectId) scheduleProjectProfileReindexByEntityId(userId, project.entityProjectId);
+  if (project?.entityProjectId)
+    scheduleProjectProfileReindexByEntityId(userId, project.entityProjectId);
   return NextResponse.json({ ok: true });
 }

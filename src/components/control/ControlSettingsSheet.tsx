@@ -29,7 +29,8 @@ import { AutomationPolicyControl } from "./AutomationPolicyControl";
 const AUTOMATION_HINTS: Record<AutoInjectMode, { primary: string; secondary?: string }> = {
   off: { primary: "Agents stop when a task ends. You dispatch every next step yourself." },
   on: {
-    primary: "Agents work through each project's queue, then pick the next-best task automatically.",
+    primary:
+      "Agents work through each project's queue, then pick the next-best task automatically.",
     secondary: "Busy agents, blockers, and failing health checks still pause dispatch.",
   },
 };
@@ -86,8 +87,12 @@ export function ControlSettingsSheet({
           <p className="ui-sheet-hint">
             <Zap className="mr-1 inline h-3 w-3 text-accent-text" aria-hidden="true" />
             {automationModeLoaded
-              ? [AUTOMATION_HINTS[automationMode].primary, AUTOMATION_HINTS[automationMode].secondary]
-                  .filter(Boolean).join(" ")
+              ? [
+                  AUTOMATION_HINTS[automationMode].primary,
+                  AUTOMATION_HINTS[automationMode].secondary,
+                ]
+                  .filter(Boolean)
+                  .join(" ")
               : "Checking autopilot setting…"}
           </p>
         </section>
@@ -107,9 +112,11 @@ export function ControlSettingsSheet({
               disabled={refreshing}
               className="ui-btn-secondary ui-btn-sm"
             >
-              {refreshing
-                ? <Loader2 className="ui-spinner-xs" />
-                : <RefreshCw className={cn("h-3.5 w-3.5")} aria-hidden="true" />}
+              {refreshing ? (
+                <Loader2 className="ui-spinner-xs" />
+              ) : (
+                <RefreshCw className={cn("h-3.5 w-3.5")} aria-hidden="true" />
+              )}
               Refresh
             </button>
           </div>
@@ -117,7 +124,9 @@ export function ControlSettingsSheet({
       </div>
 
       <div className="ui-sheet-foot">
-        <button type="button" className="ui-btn-secondary w-full" onClick={onClose}>Done</button>
+        <button type="button" className="ui-btn-secondary w-full" onClick={onClose}>
+          Done
+        </button>
       </div>
     </Modal>
   );

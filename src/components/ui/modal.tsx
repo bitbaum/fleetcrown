@@ -39,9 +39,7 @@ export function Modal({
   useEscapeToClose(onClose, disableClose);
   useOverlayLock(true);
   const containerPos =
-    position === "bottom-mobile"
-      ? "items-end md:items-center"
-      : "items-end md:items-center";
+    position === "bottom-mobile" ? "items-end md:items-center" : "items-end md:items-center";
   const panelMargin =
     position === "bottom-mobile"
       ? "ui-modal-panel-mobile-bottom"

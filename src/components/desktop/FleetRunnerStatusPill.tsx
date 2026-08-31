@@ -57,9 +57,14 @@ export function FleetRunnerStatusPill() {
     if (!isBridgeReady(bridge)) return;
 
     let cancelled = false;
-    bridge.getPollerStatus()
-      .then((s) => { if (!cancelled) setStatus(s); })
-      .catch(() => { /* leave null → component renders nothing */ });
+    bridge
+      .getPollerStatus()
+      .then((s) => {
+        if (!cancelled) setStatus(s);
+      })
+      .catch(() => {
+        /* leave null → component renders nothing */
+      });
 
     const unsubscribe = bridge.onPollerStatus((next) => {
       if (!cancelled) setStatus(next);
@@ -67,17 +72,24 @@ export function FleetRunnerStatusPill() {
 
     return () => {
       cancelled = true;
-      try { unsubscribe?.(); } catch { /* listener already torn down */ }
+      try {
+        unsubscribe?.();
+      } catch {
+        /* listener already torn down */
+      }
     };
   }, []);
 
   if (!status) return null;
 
   const shortLabel =
-    status.state === "connected" ? "live"
-    : status.state === "connecting" ? "connecting"
-    : status.state === "error" ? "error"
-    : "idle";
+    status.state === "connected"
+      ? "live"
+      : status.state === "connecting"
+        ? "connecting"
+        : status.state === "error"
+          ? "error"
+          : "idle";
 
   return (
     <span

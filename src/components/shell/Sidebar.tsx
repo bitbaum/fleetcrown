@@ -17,10 +17,7 @@ export function Sidebar({
 
   return (
     <aside
-      className={cn(
-        "ui-sidebar hidden md:flex md:flex-col",
-        collapsed ? "md:w-20" : "md:w-72",
-      )}
+      className={cn("ui-sidebar hidden md:flex md:flex-col", collapsed ? "md:w-20" : "md:w-72")}
     >
       <SidebarBrand collapsed={collapsed} onToggleCollapsed={onToggleCollapsed} />
       <div className="min-h-0 flex-1 overflow-y-auto">

@@ -96,5 +96,11 @@ export async function dispatchToHostedRunner(input: {
     `hosted-dispatch:${hostedDispatchId}`,
   ).catch((e) => console.error("[hosted-dispatch] event emit failed:", e));
 
-  return { ok: true, hostedDispatchId, projectKey: project.name!, projectName: project.name!, gitUrl: project.gitUrl };
+  return {
+    ok: true,
+    hostedDispatchId,
+    projectKey: project.name!,
+    projectName: project.name!,
+    gitUrl: project.gitUrl,
+  };
 }

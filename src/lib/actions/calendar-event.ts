@@ -41,7 +41,9 @@ export type ResolvedEventTimes = {
  *   2. eventDate  — date-only ⇒ all-day (1 day); datetime ⇒ +1h block
  * Returns null when there is no usable time at all (caller must not book).
  */
-export function resolveEventTimes(payload: ActionPayload | null | undefined): ResolvedEventTimes | null {
+export function resolveEventTimes(
+  payload: ActionPayload | null | undefined,
+): ResolvedEventTimes | null {
   const forceAllDay = payload?.allDay === true;
   const start = typeof payload?.eventStart === "string" ? payload.eventStart.trim() : "";
   const end = typeof payload?.eventEnd === "string" ? payload.eventEnd.trim() : "";
@@ -56,7 +58,8 @@ export function resolveEventTimes(payload: ActionPayload | null | undefined): Re
     const t = Date.parse(`${day}T00:00:00Z`);
     if (Number.isNaN(t)) return null;
     // Google treats an all-day `end` as exclusive → next day for a single-day event.
-    const endDay = end && DATE_ONLY.test(end) ? end : new Date(t + DAY_MS).toISOString().slice(0, 10);
+    const endDay =
+      end && DATE_ONLY.test(end) ? end : new Date(t + DAY_MS).toISOString().slice(0, 10);
     return { from: day, to: endDay, allDay: true };
   }
 
@@ -101,12 +104,24 @@ export function buildGogCreateArgs(
   fallbackTitle: string,
   calendarId: string = DEFAULT_CALENDAR,
 ): string[] | null {
-  const title = (typeof payload?.eventTitle === "string" && payload.eventTitle.trim()) || fallbackTitle.trim();
+  const title =
+    (typeof payload?.eventTitle === "string" && payload.eventTitle.trim()) || fallbackTitle.trim();
   if (!title) return null;
   const times = resolveEventTimes(payload);
   if (!times) return null;
 
-  const args = ["calendar", "create", calendarId, "--json", "--summary", title, "--from", times.from, "--to", times.to];
+  const args = [
+    "calendar",
+    "create",
+    calendarId,
+    "--json",
+    "--summary",
+    title,
+    "--from",
+    times.from,
+    "--to",
+    times.to,
+  ];
   if (times.allDay) args.push("--all-day");
   const location = typeof payload?.eventLocation === "string" ? payload.eventLocation.trim() : "";
   if (location) args.push("--location", location);
@@ -114,8 +129,7 @@ export function buildGogCreateArgs(
 }
 
 export type BookEventResult =
-  | { ok: true; eventId?: string; htmlLink?: string }
-  | { ok: false; error: string };
+  { ok: true; eventId?: string; htmlLink?: string } | { ok: false; error: string };
 
 /**
  * Agents sometimes propose a calendar event with a MESSAGE-shaped payload
@@ -145,12 +159,17 @@ Resolve relative/human/German dates against the current time; output absolute va
   let raw: string;
   try {
     raw = await callGroqText(`Current time: ${new Date().toISOString()}\n\nText:\n${text}`, {
-      systemPrompt: system, model: GROQ_FAST_MODEL, maxTokens: 300, temperature: 0, timeoutMs: HTTP_TIMEOUT_SHORT_MS,
+      systemPrompt: system,
+      model: GROQ_FAST_MODEL,
+      maxTokens: 300,
+      temperature: 0,
+      timeoutMs: HTTP_TIMEOUT_SHORT_MS,
     });
   } catch {
     return payload;
   }
-  const s = raw.indexOf("{"), e = raw.lastIndexOf("}");
+  const s = raw.indexOf("{"),
+    e = raw.lastIndexOf("}");
   if (s === -1 || e <= s) return payload;
   let obj: Record<string, unknown>;
   try {

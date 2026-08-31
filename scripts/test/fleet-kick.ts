@@ -3,7 +3,11 @@
  * Run: npm run test:fleet-kick
  */
 import assert from "node:assert/strict";
-import { formatFleetKickReply, sortProjectsForKick, type FleetKickReplyResult } from "@/lib/fleet-kick-format";
+import {
+  formatFleetKickReply,
+  sortProjectsForKick,
+  type FleetKickReplyResult,
+} from "@/lib/fleet-kick-format";
 import { isDevelopAllFleetRequest } from "@/lib/loki-fleet-commands";
 import { resolveDispatchTargets } from "@/lib/loki/dispatch-targets";
 import { deriveProjectLoopReadiness } from "@/lib/project-loop-readiness";
@@ -59,7 +63,10 @@ function testDispatchTargets() {
 }
 
 function testScreenshotDispatch() {
-  assert.equal(shouldDispatchScreenshot("What's wrong here and what should we change?", true, "fleetcrown"), true);
+  assert.equal(
+    shouldDispatchScreenshot("What's wrong here and what should we change?", true, "fleetcrown"),
+    true,
+  );
   assert.equal(shouldDispatchScreenshot("implement this ui", true, "fleetcrown"), true);
   assert.equal(shouldDispatchScreenshot("what do you think?", true, "fleetcrown"), false);
   assert.equal(shouldDispatchScreenshot("implement this", true, null), false);
@@ -72,7 +79,10 @@ function testProjectLoopReadiness() {
   const missing = deriveProjectLoopReadiness({ dirPath: null });
   assert.equal(missing.reason, "no_path");
   assert.equal(missing.label, "Needs path");
-  const paused = deriveProjectLoopReadiness({ dirPath: "/repo/app", autoInjectModeOverride: "off" });
+  const paused = deriveProjectLoopReadiness({
+    dirPath: "/repo/app",
+    autoInjectModeOverride: "off",
+  });
   assert.equal(paused.reason, "project_paused");
 }
 

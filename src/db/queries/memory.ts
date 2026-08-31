@@ -1,5 +1,11 @@
 import { db } from "@/db";
-import { entities, entityRelations, interactions, attributes, knowledgeEmbeddings } from "@/db/schema";
+import {
+  entities,
+  entityRelations,
+  interactions,
+  attributes,
+  knowledgeEmbeddings,
+} from "@/db/schema";
 import { and, desc, eq, sql } from "drizzle-orm";
 
 export async function getEntityStats(userId: string) {

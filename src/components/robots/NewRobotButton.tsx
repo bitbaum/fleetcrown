@@ -26,7 +26,10 @@ export function NewRobotButton({ onCreated }: { onCreated?: () => void } = {}) {
     errorLabel: "robot",
   });
 
-  const onReset = () => { form.reset(); setError(null); };
+  const onReset = () => {
+    form.reset();
+    setError(null);
+  };
 
   const onSubmit = async () => {
     const ok = await create({
@@ -69,7 +72,9 @@ export function NewRobotButton({ onCreated }: { onCreated?: () => void } = {}) {
           className="ui-input"
         >
           {ROBOT_CLASSES.map((value) => (
-            <option key={value} value={value}>{ROBOT_CLASS_LABEL[value]}</option>
+            <option key={value} value={value}>
+              {ROBOT_CLASS_LABEL[value]}
+            </option>
           ))}
         </select>
       </Field>

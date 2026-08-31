@@ -33,16 +33,28 @@ function runTests(): void {
   });
 
   check("browsers still get the marketing page", () => {
-    assert(landingRedirect({ insideRunner: false, signedIn: true, params: {} }) === null, "browser must not redirect");
+    assert(
+      landingRedirect({ insideRunner: false, signedIn: true, params: {} }) === null,
+      "browser must not redirect",
+    );
   });
 
   check("signed-out runner still gets the pitch and the sign-in path", () => {
-    assert(landingRedirect({ insideRunner: true, signedIn: false, params: {} }) === null, "signed-out must not redirect");
+    assert(
+      landingRedirect({ insideRunner: true, signedIn: false, params: {} }) === null,
+      "signed-out must not redirect",
+    );
   });
 
   check("?site opens the real homepage from inside the runner", () => {
-    assert(landingRedirect({ insideRunner: true, signedIn: true, params: { site: "" } }) === null, "?site must not redirect");
-    assert(landingRedirect({ insideRunner: true, signedIn: true, params: { site: "1" } }) === null, "?site=1 must not redirect");
+    assert(
+      landingRedirect({ insideRunner: true, signedIn: true, params: { site: "" } }) === null,
+      "?site must not redirect",
+    );
+    assert(
+      landingRedirect({ insideRunner: true, signedIn: true, params: { site: "1" } }) === null,
+      "?site=1 must not redirect",
+    );
   });
 
   check("an unrelated query param does not open the escape hatch", () => {

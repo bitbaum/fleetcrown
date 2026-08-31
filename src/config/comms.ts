@@ -18,7 +18,10 @@ export const MAIL_KINDS = [
 export type MailKind = (typeof MAIL_KINDS)[number];
 
 /** Cadence presentation — schema owns the values, this owns the words. */
-export const DIGEST_CADENCE_COPY: Record<DigestCadence, { label: string; description: string; windowLabel: string }> = {
+export const DIGEST_CADENCE_COPY: Record<
+  DigestCadence,
+  { label: string; description: string; windowLabel: string }
+> = {
   none: {
     label: "Off",
     description: "Don't send digest emails.",
@@ -83,6 +86,5 @@ export const COMMS_COPY = {
   verifyBanner: "Verify your email for account recovery (optional).",
   verifySent: "Verification link sent — check your inbox.",
   digestSettingsTitle: "Activity digest emails",
-  digestSettingsBody:
-    "What ran, what broke, what moved. This is the mail FleetCrown sends.",
+  digestSettingsBody: "What ran, what broke, what moved. This is the mail FleetCrown sends.",
 } as const;

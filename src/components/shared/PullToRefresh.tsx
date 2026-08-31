@@ -35,24 +35,32 @@ export function PullToRefresh({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const scrollContainer = document.querySelector(".app-main") as HTMLElement | null;
-    const getScrollTop = () =>
-      scrollContainer ? scrollContainer.scrollTop : window.scrollY;
+    const getScrollTop = () => (scrollContainer ? scrollContainer.scrollTop : window.scrollY);
 
     const onTouchStart = (e: TouchEvent) => {
       if (refreshing) return;
-      if (getScrollTop() > 0) { startY.current = null; return; }
+      if (getScrollTop() > 0) {
+        startY.current = null;
+        return;
+      }
       startY.current = e.touches[0]!.clientY;
     };
 
     const onTouchMove = (e: TouchEvent) => {
       if (startY.current === null || refreshing) return;
       const dy = e.touches[0]!.clientY - startY.current;
-      if (dy <= 0) { setPull(0); return; }
+      if (dy <= 0) {
+        setPull(0);
+        return;
+      }
       setPull(Math.min(dy * DAMPING, THRESHOLD * 1.5));
     };
 
     const onTouchEnd = () => {
-      if (startY.current === null) { setPull(0); return; }
+      if (startY.current === null) {
+        setPull(0);
+        return;
+      }
       const triggered = pullRef.current >= THRESHOLD;
       startY.current = null;
       if (triggered) {
@@ -96,7 +104,8 @@ export function PullToRefresh({ children }: { children: React.ReactNode }) {
           style={{
             transform: `translateY(${Math.max(0, pull - 16)}px)`,
             opacity: Math.min(1, pull / THRESHOLD),
-            transition: refreshing || pull === 0 ? "transform 200ms ease, opacity 200ms ease" : "none",
+            transition:
+              refreshing || pull === 0 ? "transform 200ms ease, opacity 200ms ease" : "none",
           }}
         >
           <div className="mt-2 rounded-full border border-border-subtle bg-surface-overlay p-2 shadow-panel">

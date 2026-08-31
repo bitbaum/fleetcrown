@@ -42,7 +42,11 @@ const TOOLS = [
     function: {
       name: "search_people",
       description: "Look up the operator's contacts by name.",
-      parameters: { type: "object", properties: { query: { type: "string" } }, required: ["query"] },
+      parameters: {
+        type: "object",
+        properties: { query: { type: "string" } },
+        required: ["query"],
+      },
     },
   },
 ];
@@ -77,7 +81,9 @@ function linksToProbe(): ChatLink[] {
 async function main() {
   const links = linksToProbe();
   if (links.length === 0) {
-    console.error("No chat provider configured — set GROQ_API_KEY or OPENROUTER_API_KEY in .env.local.");
+    console.error(
+      "No chat provider configured — set GROQ_API_KEY or OPENROUTER_API_KEY in .env.local.",
+    );
     process.exit(2);
   }
   let usable = 0;
@@ -105,12 +111,15 @@ async function main() {
         `${ok ? "✓" : "✗"} ${label.padEnd(48)} calls=${turn.toolCalls.length} via=${protocol.padEnd(6)} args=${JSON.stringify(call?.args ?? {})}`,
       );
     } catch (e) {
-      console.log(`✗ ${label.padEnd(48)} ERROR ${e instanceof Error ? e.message.slice(0, 90) : String(e)}`);
+      console.log(
+        `✗ ${label.padEnd(48)} ERROR ${e instanceof Error ? e.message.slice(0, 90) : String(e)}`,
+      );
     }
   }
 
   console.log(`\n${usable}/${links.length} chat link(s) can drive the loop.`);
-  if (usable === 0) console.log("  ✗ NO chat model answered — Loki's tool loop is DOWN, not degraded.");
+  if (usable === 0)
+    console.log("  ✗ NO chat model answered — Loki's tool loop is DOWN, not degraded.");
 
   // ── Vision chain ───────────────────────────────────────────────────────────
   // A 2x2 solid-red PNG. Tiny, but it proves the model actually READ the image
@@ -122,7 +131,9 @@ async function main() {
   const chain = usableVisionChain();
   console.log(`\nVision chain (${chain.length} usable link(s)):`);
   if (chain.length === 0) {
-    console.log("  ✗ none — no OPENROUTER_API_KEY and no GROQ_VISION_MODEL. Image attachments WILL fail.");
+    console.log(
+      "  ✗ none — no OPENROUTER_API_KEY and no GROQ_VISION_MODEL. Image attachments WILL fail.",
+    );
   }
   let visionOk = 0;
   for (const { provider, model } of chain) {
@@ -139,10 +150,13 @@ async function main() {
       visionOk++;
       break;
     } catch (e) {
-      console.log(`  ✗ ${provider.id}/${model} — ${e instanceof Error ? e.message.slice(0, 90) : e}`);
+      console.log(
+        `  ✗ ${provider.id}/${model} — ${e instanceof Error ? e.message.slice(0, 90) : e}`,
+      );
     }
   }
-  if (visionOk === 0 && chain.length > 0) console.log("  ✗ NO vision model answered — image attachments are broken.");
+  if (visionOk === 0 && chain.length > 0)
+    console.log("  ✗ NO vision model answered — image attachments are broken.");
 }
 
 main().catch((e) => {

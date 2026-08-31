@@ -45,27 +45,37 @@ export const Handoff = z.object({
   // Optional until every installed bridge/worker has been upgraded to LOOP v2.
   "last-3-same-dir": z.string().optional(),
   "wip-or-revert-in-last-5": z.string().optional(),
-  tsc:    z.string().optional(),
-  lint:   z.string().optional(),
-  done:   z.string().default(""),
-  next:   z.string().default(""),
-  tests:  z.string().default(""),
-  todos:  z.string().default(""),
+  tsc: z.string().optional(),
+  lint: z.string().optional(),
+  done: z.string().default(""),
+  next: z.string().default(""),
+  tests: z.string().default(""),
+  todos: z.string().default(""),
   health: z.string().default(""),
 });
 export type Handoff = z.infer<typeof Handoff>;
 
 /** Outcome categories — same union as orchestration_runs.outcome. */
-export const OUTCOMES = ["success", "partial", "error", "hang", "user_abort", "timeout", "unconfirmed"] as const satisfies readonly OrchestrationOutcome[];
+export const OUTCOMES = [
+  "success",
+  "partial",
+  "error",
+  "hang",
+  "user_abort",
+  "timeout",
+  "unconfirmed",
+] as const satisfies readonly OrchestrationOutcome[];
 export const Outcome = z.enum(OUTCOMES);
 export type Outcome = z.infer<typeof Outcome>;
 
 /** Compile-time drift guard: errors if OUTCOMES and the DB schema's outcome
  *  union ever diverge (in either direction). Runtime value is inert. */
-export const OUTCOMES_MATCH_DB_SCHEMA:
-  [Exclude<Outcome, OrchestrationOutcome>, Exclude<OrchestrationOutcome, Outcome>] extends [never, never]
-    ? true
-    : never = true;
+export const OUTCOMES_MATCH_DB_SCHEMA: [
+  Exclude<Outcome, OrchestrationOutcome>,
+  Exclude<OrchestrationOutcome, Outcome>,
+] extends [never, never]
+  ? true
+  : never = true;
 
 /**
  * The outcomes that count as hard failures — SSOT for the dispatch failure
@@ -99,7 +109,7 @@ export const Adapter = z.enum(ADAPTERS);
 export type Adapter = z.infer<typeof Adapter>;
 
 const Common = z.object({
-  v:  z.literal(EVENT_VERSION),
+  v: z.literal(EVENT_VERSION),
   id: z.string().uuid(),
   ts: Iso,
 });
@@ -109,90 +119,90 @@ const Common = z.object({
 // will read these — appending to the log is the entire contract.
 
 export const WorkerStarted = Common.extend({
-  kind:    z.literal("worker.started"),
+  kind: z.literal("worker.started"),
   project: Project,
   adapter: Adapter,
-  intent:  z.string().min(1).max(60),
-  pane:    PaneId.optional(),
+  intent: z.string().min(1).max(60),
+  pane: PaneId.optional(),
   /** Present when this run was initiated by a bridge.dispatch command. */
-  runId:   RunId.optional(),
+  runId: RunId.optional(),
 });
 
 export const WorkerProgress = Common.extend({
-  kind:    z.literal("worker.progress"),
+  kind: z.literal("worker.progress"),
   project: Project,
-  pane:    PaneId.optional(),
-  runId:   RunId.optional(),
+  pane: PaneId.optional(),
+  runId: RunId.optional(),
   /** Free-form marker: "tests passing", "commit pushed", "deploy started", … */
-  marker:  z.string().max(200),
+  marker: z.string().max(200),
 });
 
 export const WorkerIdle = Common.extend({
-  kind:       z.literal("worker.idle"),
-  project:    Project,
-  pane:       PaneId.optional(),
-  runId:      RunId.optional(),
-  handoff:    Handoff,
+  kind: z.literal("worker.idle"),
+  project: Project,
+  pane: PaneId.optional(),
+  runId: RunId.optional(),
+  handoff: Handoff,
   /** Wall-clock duration since worker.started, if known. */
   durationMs: z.number().int().nonnegative().optional(),
 });
 
 export const WorkerFinished = Common.extend({
-  kind:       z.literal("worker.finished"),
-  project:    Project,
-  pane:       PaneId.optional(),
-  runId:      RunId.optional(),
-  handoff:    Handoff,
-  outcome:    Outcome,
+  kind: z.literal("worker.finished"),
+  project: Project,
+  pane: PaneId.optional(),
+  runId: RunId.optional(),
+  handoff: Handoff,
+  outcome: Outcome,
   durationMs: z.number().int().nonnegative(),
 });
 
 export const WorkerCrashed = Common.extend({
-  kind:       z.literal("worker.crashed"),
-  project:    Project,
-  pane:       PaneId.optional(),
-  runId:      RunId.optional(),
-  error:      z.string().max(2000),
+  kind: z.literal("worker.crashed"),
+  project: Project,
+  pane: PaneId.optional(),
+  runId: RunId.optional(),
+  error: z.string().max(2000),
   durationMs: z.number().int().nonnegative().optional(),
 });
 
 // ── Bridge commands (brain → bridge → worker) ────────────────────────────────
 
 export const BridgeDispatch = Common.extend({
-  kind:       z.literal("bridge.dispatch"),
-  project:    Project,
-  intent:     z.string().min(1).max(60),
+  kind: z.literal("bridge.dispatch"),
+  project: Project,
+  intent: z.string().min(1).max(60),
   /** Full rendered prompt text — what the worker actually receives. */
-  prompt:     z.string().min(1).max(40000),
-  runId:      RunId,
-  autonomy:   Autonomy,
+  prompt: z.string().min(1).max(40000),
+  runId: RunId,
+  autonomy: Autonomy,
   /** Adapter the brain decided to use. Worker echoes onto worker.started so
    *  analytics + decide() see the truth instead of a hardcoded "claude". */
-  adapter:    Adapter.optional(),
+  adapter: Adapter.optional(),
   /** Human-readable reason the brain chose this dispatch (audit + UI). */
-  reason:     z.string().max(500).optional(),
+  reason: z.string().max(500).optional(),
   /** [0,1] confidence the dispatch is the right call. Sleep mode gates on this. */
   confidence: z.number().min(0).max(1).optional(),
 });
 
 export const BridgeCancel = Common.extend({
-  kind:    z.literal("bridge.cancel"),
+  kind: z.literal("bridge.cancel"),
   project: Project,
-  runId:   RunId,
-  reason:  z.string().max(200),
+  runId: RunId,
+  reason: z.string().max(200),
 });
 
 // ── Brain outcomes (brain's persisted view, written after worker.finished) ───
 
 export const BrainOutcome = Common.extend({
-  kind:               z.literal("brain.outcome"),
-  runId:              RunId,
-  project:            Project,
-  intent:             z.string().min(1).max(60),
-  outcome:            Outcome,
-  handoff:            Handoff.optional(),
-  durationMs:         z.number().int().nonnegative(),
-  dispatchReason:     z.string().max(500).optional(),
+  kind: z.literal("brain.outcome"),
+  runId: RunId,
+  project: Project,
+  intent: z.string().min(1).max(60),
+  outcome: Outcome,
+  handoff: Handoff.optional(),
+  durationMs: z.number().int().nonnegative(),
+  dispatchReason: z.string().max(500).optional(),
   dispatchConfidence: z.number().min(0).max(1).optional(),
 });
 
@@ -211,9 +221,7 @@ export const Event = z.discriminatedUnion("kind", [
 export type Event = z.infer<typeof Event>;
 export type EventKind = Event["kind"];
 
-export type ParseResult =
-  | { ok: true;  event: Event }
-  | { ok: false; error: string; raw: string };
+export type ParseResult = { ok: true; event: Event } | { ok: false; error: string; raw: string };
 
 /**
  * Parse one JSONL line into an Event, or return a structured error.
@@ -231,7 +239,11 @@ export function parseEvent(line: string): ParseResult {
   }
   const parsed = Event.safeParse(json);
   if (!parsed.success) {
-    return { ok: false, error: `schema: ${parsed.error.issues[0]?.message ?? "unknown"}`, raw: trimmed };
+    return {
+      ok: false,
+      error: `schema: ${parsed.error.issues[0]?.message ?? "unknown"}`,
+      raw: trimmed,
+    };
   }
   return { ok: true, event: parsed.data };
 }

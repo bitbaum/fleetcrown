@@ -25,7 +25,15 @@ export async function memoryIndexingAllowed(userId: string): Promise<boolean> {
 }
 
 export type KnowledgeSourceType =
-  | "project_profile" | "dev_log" | "goal" | "orchestration_outcome" | "decision" | "entity" | "commitment" | "thought" | "repo_doc";
+  | "project_profile"
+  | "dev_log"
+  | "goal"
+  | "orchestration_outcome"
+  | "decision"
+  | "entity"
+  | "commitment"
+  | "thought"
+  | "repo_doc";
 
 export type KnowledgeItem = {
   sourceType: KnowledgeSourceType;
@@ -43,7 +51,10 @@ export type KnowledgeHit = {
 };
 
 /** Embed + upsert a batch of chunks for one user. Returns how many landed. */
-export async function upsertKnowledgeBatch(userId: string, items: KnowledgeItem[]): Promise<number> {
+export async function upsertKnowledgeBatch(
+  userId: string,
+  items: KnowledgeItem[],
+): Promise<number> {
   if (!embeddingsEnabled() || items.length === 0) return 0;
   if (!(await memoryIndexingAllowed(userId))) return 0;
   const vecs = await embedTexts(items.map((i) => i.chunk));
@@ -93,9 +104,15 @@ export async function pruneKnowledgeToIds(
   keepIds: string[],
 ): Promise<void> {
   if (sourceTypes.length === 0) return;
-  const typeArray = sql`ARRAY[${sql.join(sourceTypes.map((t) => sql`${t}`), sql`, `)}]::text[]`;
+  const typeArray = sql`ARRAY[${sql.join(
+    sourceTypes.map((t) => sql`${t}`),
+    sql`, `,
+  )}]::text[]`;
   const keepClause = keepIds.length
-    ? sql`AND source_id <> ALL(${sql`ARRAY[${sql.join(keepIds.map((id) => sql`${id}`), sql`, `)}]::text[]`})`
+    ? sql`AND source_id <> ALL(${sql`ARRAY[${sql.join(
+        keepIds.map((id) => sql`${id}`),
+        sql`, `,
+      )}]::text[]`})`
     : sql``;
   await db.execute(
     sql`DELETE FROM knowledge_embeddings WHERE user_id = ${userId} AND source_type = ANY(${typeArray}) ${keepClause}`,
@@ -119,11 +136,18 @@ export async function searchKnowledge(
   const k = opts?.k ?? 6;
   const minSim = opts?.minSimilarity ?? 0.3;
   const typeFilter = opts?.sourceTypes?.length
-    ? sql`AND source_type = ANY(${sql`ARRAY[${sql.join(opts.sourceTypes.map((t) => sql`${t}`), sql`, `)}]::text[]`})`
+    ? sql`AND source_type = ANY(${sql`ARRAY[${sql.join(
+        opts.sourceTypes.map((t) => sql`${t}`),
+        sql`, `,
+      )}]::text[]`})`
     : sql``;
 
   const rows = await db.execute<{
-    source_type: string; source_id: string; chunk: string; metadata: Record<string, unknown>; similarity: number;
+    source_type: string;
+    source_id: string;
+    chunk: string;
+    metadata: Record<string, unknown>;
+    similarity: number;
   }>(sql`
     SELECT source_type, source_id, chunk, metadata,
            1 - (embedding <=> ${lit}::vector) AS similarity
@@ -133,8 +157,22 @@ export async function searchKnowledge(
     LIMIT ${k}
   `);
 
-  return (rows as unknown as Array<{ source_type: string; source_id: string; chunk: string; metadata: Record<string, unknown>; similarity: number }>)
-    .map((r) => ({ sourceType: r.source_type, sourceId: r.source_id, chunk: r.chunk, similarity: Number(r.similarity), metadata: r.metadata ?? {} }))
+  return (
+    rows as unknown as Array<{
+      source_type: string;
+      source_id: string;
+      chunk: string;
+      metadata: Record<string, unknown>;
+      similarity: number;
+    }>
+  )
+    .map((r) => ({
+      sourceType: r.source_type,
+      sourceId: r.source_id,
+      chunk: r.chunk,
+      similarity: Number(r.similarity),
+      metadata: r.metadata ?? {},
+    }))
     .filter((h) => h.similarity >= minSim);
 }
 
@@ -161,7 +199,8 @@ export async function retrieveFleetContextBlock(
     .slice(0, k);
   if (filtered.length === 0) return "";
   const lines = filtered.map(
-    (h) => `- [${(h.metadata?.project as string) ?? h.sourceId}] ${h.chunk.replace(/\s+/g, " ").slice(0, 280)}`,
+    (h) =>
+      `- [${(h.metadata?.project as string) ?? h.sourceId}] ${h.chunk.replace(/\s+/g, " ").slice(0, 280)}`,
   );
   return [
     "## Relevant context from your other projects (retrieved)",

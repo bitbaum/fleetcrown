@@ -1,6 +1,6 @@
-import { defineConfig, globalIgnores } from 'eslint/config';
-import nextVitals from 'eslint-config-next/core-web-vitals';
-import nextTs from 'eslint-config-next/typescript';
+import { defineConfig, globalIgnores } from "eslint/config";
+import nextVitals from "eslint-config-next/core-web-vitals";
+import nextTs from "eslint-config-next/typescript";
 
 // ESLint 9 flat config, matching what the rest of the fleet's Next 16 apps use.
 // Without a config file `eslint` exits non-zero with a migration notice, which
@@ -9,7 +9,7 @@ import nextTs from 'eslint-config-next/typescript';
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
-  globalIgnores(['.next/**', 'out/**', 'build/**', 'next-env.d.ts']),
+  globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts"]),
 ]);
 
 export default eslintConfig;

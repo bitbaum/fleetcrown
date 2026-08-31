@@ -177,8 +177,8 @@ export const ORCHESTRATION_TASK_SUMMARY_FIELDS = [
   // out of free-text done:/health: strings with different rules. These fields
   // are the SSOT; content-sniffs in session-state.ts + the bash guard remain
   // as fallbacks for sessions written before agents started emitting them.
-  "block-reason",     // "awaiting_user" | "external_dependency" | "manual_pause"
-  "no-op-count",      // integer, monotonically incremented by the agent on each no-op turn
+  "block-reason", // "awaiting_user" | "external_dependency" | "manual_pause"
+  "no-op-count", // integer, monotonically incremented by the agent on each no-op turn
 ] as const;
 export type OrchestrationTaskSummaryField = (typeof ORCHESTRATION_TASK_SUMMARY_FIELDS)[number];
 
@@ -204,10 +204,10 @@ export type OrchestrationTaskSummary = {
    *  single-agent runtime structurally cannot do — its judge would be itself).
    *  Surfaced in Activity so "done" visibly means a second mind agreed. */
   verification?: {
-    judge: string;    // the judging model, or EVIDENCE_PRECHECK_ID when decided deterministically
-    worker: string;   // the adapter that did the work
-    met: boolean;     // did the handoff evidence the stated Definition of Done?
-    gap?: string;     // when not met, the single most important thing still required
+    judge: string; // the judging model, or EVIDENCE_PRECHECK_ID when decided deterministically
+    worker: string; // the adapter that did the work
+    met: boolean; // did the handoff evidence the stated Definition of Done?
+    gap?: string; // when not met, the single most important thing still required
     /** Stable category for the gap (e.g. `evidence:lint+tsc`), set only by the
      *  deterministic pre-check. Free-text `gap` from the model judge is a
      *  snowflake — prod 2026-08-07 had 48 distinct sentences across 48
@@ -265,7 +265,12 @@ export const DEFAULT_ADAPTER_ID: AdapterId = "claude";
  *  getStatus dispatch consolidation is deferred (see openclaw plan). */
 export type OrchestrationSeam = Pick<
   AgentAdapter,
-  "id" | "label" | "capabilities" | "collectLifecycleEvents" | "closeRunFromSession" | "enrichPrompt"
+  | "id"
+  | "label"
+  | "capabilities"
+  | "collectLifecycleEvents"
+  | "closeRunFromSession"
+  | "enrichPrompt"
 >;
 
 export function createCapabilities(

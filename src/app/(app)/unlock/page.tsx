@@ -20,8 +20,9 @@ export default async function UnlockPage({ searchParams }: { searchParams: Searc
       <PageLayout title="Private zone is open" maxWidth="max-w-xl">
         <div className="ui-settings-section">
           <p className="text-sm text-text-secondary">
-            You haven&apos;t set a PIN yet, so the private zone is unlocked by default.
-            Set one in Settings → Privacy to gate Memory, People, Robots, Goals, Habits, Events, and Money behind a PIN.
+            You haven&apos;t set a PIN yet, so the private zone is unlocked by default. Set one in
+            Settings → Privacy to gate Memory, People, Robots, Goals, Habits, Events, and Money
+            behind a PIN.
           </p>
           <a href="/settings#privacy" className="ui-btn-primary mt-2 inline-flex">
             Open Settings → Privacy
@@ -51,14 +52,54 @@ export default async function UnlockPage({ searchParams }: { searchParams: Searc
   }));
 
   const areas = [
-    { label: "Memory",         description: "Knowledge graph — people, projects, decisions, conversations.", count: stats.memoryEntities,  unit: "entities" },
-    { label: "People",         description: "Your private address book. Other users have their own.",        count: stats.people,          unit: "contacts" },
-    { label: "Robots",         description: "Machines you own — profile, book, rent, or sell.",              count: stats.robots,          unit: "robots" },
-    { label: "Goals",          description: "Active goals, milestones, progress.",                            count: stats.goals,           unit: "goals" },
-    { label: "Habits",         description: "Daily streaks and 30-day heatmaps.",                             count: stats.habits,          unit: "habits" },
-    { label: "Events",         description: "Deadlines and opportunities.",                                   count: stats.events,          unit: "events" },
-    { label: "Money",          description: "Subscriptions and monthly burn.",                                count: stats.subscriptions,   unit: "subscriptions" },
-    { label: "Commitments",    description: "Promises you have made and what they will cost.",                count: stats.commitments,     unit: "commitments" },
+    {
+      label: "Memory",
+      description: "Knowledge graph — people, projects, decisions, conversations.",
+      count: stats.memoryEntities,
+      unit: "entities",
+    },
+    {
+      label: "People",
+      description: "Your private address book. Other users have their own.",
+      count: stats.people,
+      unit: "contacts",
+    },
+    {
+      label: "Robots",
+      description: "Machines you own — profile, book, rent, or sell.",
+      count: stats.robots,
+      unit: "robots",
+    },
+    {
+      label: "Goals",
+      description: "Active goals, milestones, progress.",
+      count: stats.goals,
+      unit: "goals",
+    },
+    {
+      label: "Habits",
+      description: "Daily streaks and 30-day heatmaps.",
+      count: stats.habits,
+      unit: "habits",
+    },
+    {
+      label: "Events",
+      description: "Deadlines and opportunities.",
+      count: stats.events,
+      unit: "events",
+    },
+    {
+      label: "Money",
+      description: "Subscriptions and monthly burn.",
+      count: stats.subscriptions,
+      unit: "subscriptions",
+    },
+    {
+      label: "Commitments",
+      description: "Promises you have made and what they will cost.",
+      count: stats.commitments,
+      unit: "commitments",
+    },
   ];
 
   return (

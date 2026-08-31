@@ -57,7 +57,8 @@ const EXTRA_CSS = process.env.AUDIT_EXTRA_CSS
  * number IS the message; dev builds print prose instead. Matching only one form
  * means the check works in exactly the environment you are not auditing.
  */
-const HYDRATION_ERROR = /Minified React error #(418|419|421|422|423|425)|[Hh]ydration failed|did not match the server|Text content does not match/;
+const HYDRATION_ERROR =
+  /Minified React error #(418|419|421|422|423|425)|[Hh]ydration failed|did not match the server|Text content does not match/;
 
 /**
  * Widths that represent real failure classes, not a sweep.
@@ -107,11 +108,28 @@ const VIEWPORTS = [
  * screen — so the audit degrades to what it measured before rather than failing.
  */
 const PAGES = [
-  "/today", "/loki", "/control", "/projects", "/approvals",
-  "/terminal", "/prompts", "/activity", "/system", "/thoughts",
-  "/settings", "/frontier", "/integrations/orangecat/build",
-  "/control/import", "/control/new-from-scratch",
-  "/people", "/crew", "/money", "/habits", "/events", "/goals", "/memory",
+  "/today",
+  "/loki",
+  "/control",
+  "/projects",
+  "/approvals",
+  "/terminal",
+  "/prompts",
+  "/activity",
+  "/system",
+  "/thoughts",
+  "/settings",
+  "/frontier",
+  "/integrations/orangecat/build",
+  "/control/import",
+  "/control/new-from-scratch",
+  "/people",
+  "/crew",
+  "/money",
+  "/habits",
+  "/events",
+  "/goals",
+  "/memory",
 ];
 
 const MIN_TOUCH_PX = 44;
@@ -144,7 +162,10 @@ async function mintToken() {
     const { encode } = await import("@auth/core/jwt");
     return await encode({
       token: {
-        id: u.id, email: u.email, name: u.name, username: u.username,
+        id: u.id,
+        email: u.email,
+        name: u.name,
+        username: u.username,
         onboardedAt: u.onboarded_at,
         onboardingComplete: Boolean(u.username && u.onboarded_at),
         sub: u.id,
@@ -172,17 +193,17 @@ async function mintToken() {
 function measurePage(minTouch) {
   const de = document.documentElement;
   const vw = de.clientWidth;
-  const offenders = [...document.querySelectorAll('body *')]
+  const offenders = [...document.querySelectorAll("body *")]
     .filter((el) => {
       const r = el.getBoundingClientRect();
       if (r.width === 0 || r.height === 0) return false;
       const cs = getComputedStyle(el);
-      if (cs.position === 'fixed' || cs.visibility === 'hidden') return false;
+      if (cs.position === "fixed" || cs.visibility === "hidden") return false;
       return r.right > vw + 1;
     })
     .map((el) => ({
       tag: el.tagName.toLowerCase(),
-      cls: (el.className || '').toString().slice(0, 80),
+      cls: (el.className || "").toString().slice(0, 80),
       right: Math.round(el.getBoundingClientRect().right),
       width: Math.round(el.getBoundingClientRect().width),
     }))
@@ -201,9 +222,10 @@ function measurePage(minTouch) {
   // position is not a measurement. So resolve the hit area from geometry, which
   // is what the two real techniques above actually change.
   const overlayBox = (el) => {
-    for (const pseudo of ['::after', '::before']) {
+    for (const pseudo of ["::after", "::before"]) {
       const cs = getComputedStyle(el, pseudo);
-      if (!cs || cs.content === 'none' || (cs.position !== 'absolute' && cs.position !== 'fixed')) continue;
+      if (!cs || cs.content === "none" || (cs.position !== "absolute" && cs.position !== "fixed"))
+        continue;
       const h = Math.max(parseFloat(cs.height) || 0, parseFloat(cs.minHeight) || 0);
       const w = Math.max(parseFloat(cs.width) || 0, parseFloat(cs.minWidth) || 0);
       if (h > 0 || w > 0) return { height: h, width: w };
@@ -216,9 +238,13 @@ function measurePage(minTouch) {
     let best = { height: own.height, width: own.width };
     // A wrapping <label> (or one pointing here with `for`) IS the hit area.
     if (/^(input|select|textarea)$/i.test(el.tagName)) {
-      let lab = el.closest('label');
+      let lab = el.closest("label");
       if (!lab && el.id) {
-        try { lab = document.querySelector(`label[for="${CSS.escape(el.id)}"]`); } catch { lab = null; }
+        try {
+          lab = document.querySelector(`label[for="${CSS.escape(el.id)}"]`);
+        } catch {
+          lab = null;
+        }
       }
       if (lab) {
         const lr = lab.getBoundingClientRect();
@@ -235,79 +261,110 @@ function measurePage(minTouch) {
       const r = el.getBoundingClientRect();
       if (r.width === 0 || r.height === 0) return false;
       const cs = getComputedStyle(el);
-      if (cs.visibility === 'hidden' || cs.opacity === '0' || cs.pointerEvents === 'none') return false;
+      if (cs.visibility === "hidden" || cs.opacity === "0" || cs.pointerEvents === "none")
+        return false;
       // WCAG 2.5.8's inline exception: a link INSIDE a sentence cannot be given
       // a 44px box without wrecking the paragraph, and the surrounding text is
       // what makes it findable. Only genuinely inline links in flowing text —
       // a link that is a flex item has been blockified and is not this.
-      if (el.tagName === 'A' && cs.display === 'inline') {
-        const parentText = (el.parentElement?.textContent || '').trim().length;
-        const ownText = (el.textContent || '').trim().length;
+      if (el.tagName === "A" && cs.display === "inline") {
+        const parentText = (el.parentElement?.textContent || "").trim().length;
+        const ownText = (el.textContent || "").trim().length;
         if (parentText > ownText + 12) return false;
       }
       return hitBox(el).height < minTouch - 0.5;
     })
     .map((el) => ({
       tag: el.tagName.toLowerCase(),
-      label: (el.getAttribute('aria-label') || el.textContent || '').trim().slice(0, 28),
+      label: (el.getAttribute("aria-label") || el.textContent || "").trim().slice(0, 28),
       // The class is what you actually fix. Without it every finding needs a
       // reverse hunt from a truncated label back to a component.
-      cls: ((el.className || '').toString().match(/ui-[\w-]+/g) || []).join('.') || (el.className || '').toString().slice(0, 40),
+      cls:
+        ((el.className || "").toString().match(/ui-[\w-]+/g) || []).join(".") ||
+        (el.className || "").toString().slice(0, 40),
       h: Math.round(hitBox(el).height),
     }))
     .slice(0, 12);
 
   // Text clipped by a fixed-height box: content the operator simply cannot
   // read, and invisible to an overflow check because the container itself fits.
-  const clipped = [...document.querySelectorAll('body *')]
+  const clipped = [...document.querySelectorAll("body *")]
     .filter((el) => {
       if (el.children.length > 0) return false;
-      const t = (el.textContent || '').trim();
+      const t = (el.textContent || "").trim();
       if (t.length < 12) return false;
       const cs = getComputedStyle(el);
-      if (cs.overflow === 'visible' || cs.visibility === 'hidden') return false;
+      if (cs.overflow === "visible" || cs.visibility === "hidden") return false;
       // Ellipsis is a deliberate design choice; genuine vertical clipping is not.
-      if (cs.textOverflow === 'ellipsis' && el.scrollWidth > el.clientWidth) return false;
+      if (cs.textOverflow === "ellipsis" && el.scrollWidth > el.clientWidth) return false;
       // line-clamp is the VERTICAL ellipsis and is just as deliberate. Without
       // this the audit reported every summary card in the app as clipped —
       // "(-1014px)" on a line-clamp-2 prompt preview, which is the feature
       // working. That noise is what made the clipped-text section unreadable,
       // and an unreadable section hides the real clipping underneath it.
-      if (cs.webkitLineClamp && cs.webkitLineClamp !== 'none') return false;
+      if (cs.webkitLineClamp && cs.webkitLineClamp !== "none") return false;
       return el.scrollHeight > el.clientHeight + 2;
     })
     .map((el) => ({
       tag: el.tagName.toLowerCase(),
-      text: (el.textContent || '').trim().slice(0, 30),
-      cls: ((el.className || '').toString().match(/ui-[\w-]+/g) || []).join('.') || (el.className || '').toString().slice(0, 40),
+      text: (el.textContent || "").trim().slice(0, 30),
+      cls:
+        ((el.className || "").toString().match(/ui-[\w-]+/g) || []).join(".") ||
+        (el.className || "").toString().slice(0, 40),
       hidden: el.scrollHeight - el.clientHeight,
     }))
     .slice(0, 5);
 
   // Content trapped under fixed chrome (mobile bottom nav). Reachable only if
   // the page scrolls far enough; on a short page it is permanently covered.
-  const bars = [...document.querySelectorAll('body *')].filter((el) => {
+  const bars = [...document.querySelectorAll("body *")].filter((el) => {
     const cs = getComputedStyle(el);
     const r = el.getBoundingClientRect();
-    return cs.position === 'fixed' && r.height > 24 && r.width > vw * 0.6 && r.bottom >= de.clientHeight - 2;
+    return (
+      cs.position === "fixed" &&
+      r.height > 24 &&
+      r.width > vw * 0.6 &&
+      r.bottom >= de.clientHeight - 2
+    );
   });
-  const barTop = bars.length ? Math.min(...bars.map((b) => b.getBoundingClientRect().top)) : Infinity;
-  const buried = bars.length === 0 ? [] : [...document.querySelectorAll('button, a[href], input, select')]
-    .filter((el) => {
-      const r = el.getBoundingClientRect();
-      if (r.height === 0 || getComputedStyle(el).position === 'fixed') return false;
-      // Intersects the bar AND the page cannot scroll further to free it.
-      return r.bottom > barTop && r.top < de.clientHeight && de.scrollHeight <= de.clientHeight + 2;
-    })
-    .map((el) => ({ tag: el.tagName.toLowerCase(), label: (el.getAttribute('aria-label') || el.textContent || '').trim().slice(0, 24) }))
+  const barTop = bars.length
+    ? Math.min(...bars.map((b) => b.getBoundingClientRect().top))
+    : Infinity;
+  const buried =
+    bars.length === 0
+      ? []
+      : [...document.querySelectorAll("button, a[href], input, select")]
+          .filter((el) => {
+            const r = el.getBoundingClientRect();
+            if (r.height === 0 || getComputedStyle(el).position === "fixed") return false;
+            // Intersects the bar AND the page cannot scroll further to free it.
+            return (
+              r.bottom > barTop && r.top < de.clientHeight && de.scrollHeight <= de.clientHeight + 2
+            );
+          })
+          .map((el) => ({
+            tag: el.tagName.toLowerCase(),
+            label: (el.getAttribute("aria-label") || el.textContent || "").trim().slice(0, 24),
+          }))
+          .slice(0, 4);
+
+  const brokenImages = [...document.querySelectorAll("img")]
+    .filter(
+      (img) => img.complete && img.naturalWidth === 0 && (img.getAttribute("src") || "").length > 0,
+    )
+    .map((img) => (img.getAttribute("src") || "").slice(0, 60))
     .slice(0, 4);
 
-  const brokenImages = [...document.querySelectorAll('img')]
-    .filter((img) => img.complete && img.naturalWidth === 0 && (img.getAttribute('src') || '').length > 0)
-    .map((img) => (img.getAttribute('src') || '').slice(0, 60))
-    .slice(0, 4);
-
-  return { vw, scrollWidth: de.scrollWidth, overflow: de.scrollWidth > vw + 1, offenders, small, clipped, buried, brokenImages };
+  return {
+    vw,
+    scrollWidth: de.scrollWidth,
+    overflow: de.scrollWidth > vw + 1,
+    offenders,
+    small,
+    clipped,
+    buried,
+    brokenImages,
+  };
 }
 
 async function main() {
@@ -336,7 +393,14 @@ async function main() {
       deviceScaleFactor: 1,
     });
     const cookies = [
-      { name: cookieName(), value: token, domain: new URL(BASE).hostname, path: "/", httpOnly: true, secure: BASE.startsWith("https://") },
+      {
+        name: cookieName(),
+        value: token,
+        domain: new URL(BASE).hostname,
+        path: "/",
+        httpOnly: true,
+        secure: BASE.startsWith("https://"),
+      },
     ];
     const pz = process.env.FLEETCROWN_PRIVATE_ZONE_COOKIE?.trim();
     const pzEq = pz ? pz.indexOf("=") : -1;
@@ -358,8 +422,12 @@ async function main() {
       // and are the cheapest signal that a surface is quietly broken — an audit
       // that only measures boxes will pass a page whose data never loaded.
       const consoleErrors = [];
-      page.on("console", (m) => { if (m.type() === "error") consoleErrors.push(m.text().slice(0, 120)); });
-      page.on("pageerror", (e) => consoleErrors.push(`uncaught: ${String(e.message).slice(0, 120)}`));
+      page.on("console", (m) => {
+        if (m.type() === "error") consoleErrors.push(m.text().slice(0, 120));
+      });
+      page.on("pageerror", (e) =>
+        consoleErrors.push(`uncaught: ${String(e.message).slice(0, 120)}`),
+      );
       const httpFailures = [];
       // 4xx is tracked SEPARATELY and by URL. The first run of this audit
       // reported "400 responses on /settings and /thoughts" and that was all it
@@ -375,7 +443,8 @@ async function main() {
         const url = r.url();
         if (!url.startsWith(BASE)) return;
         if (s >= 500) httpFailures.push(`${s} ${url.replace(BASE, "").slice(0, 70)}`);
-        else if (s >= 400 && s !== 404) badRequests.push(`${s} ${url.replace(BASE, "").slice(0, 70)}`);
+        else if (s >= 400 && s !== 404)
+          badRequests.push(`${s} ${url.replace(BASE, "").slice(0, 70)}`);
       });
       try {
         await page.goto(`${BASE}${route}`, { waitUntil: "networkidle", timeout: 45_000 });
@@ -424,27 +493,44 @@ async function main() {
         if (r.overflow) {
           failures.push(
             `${route} @${vp.name}: horizontal overflow ${r.scrollWidth}px > ${r.vw}px\n` +
-              r.offenders.map((o) => `      ${o.tag}.${o.cls} (right=${o.right}, w=${o.width})`).join("\n"),
+              r.offenders
+                .map((o) => `      ${o.tag}.${o.cls} (right=${o.right}, w=${o.width})`)
+                .join("\n"),
           );
           console.log(`  ✗ ${route} @${vp.name}px — overflow ${r.scrollWidth} > ${r.vw}`);
         } else if (httpFailures.length > 0) {
-          failures.push(`${route} @${vp.name}: server error(s) — ${httpFailures.slice(0, 3).join("; ")}`);
+          failures.push(
+            `${route} @${vp.name}: server error(s) — ${httpFailures.slice(0, 3).join("; ")}`,
+          );
           console.log(`  ✗ ${route} @${vp.name}px — ${httpFailures[0]}`);
         } else if (r.buried.length > 0) {
-          failures.push(`${route} @${vp.name}: control(s) trapped under fixed chrome on an unscrollable page — ${r.buried.map((b) => `${b.tag}"${b.label}"`).join(", ")}`);
-          console.log(`  ✗ ${route} @${vp.name}px — ${r.buried.length} control(s) buried under the bottom bar`);
+          failures.push(
+            `${route} @${vp.name}: control(s) trapped under fixed chrome on an unscrollable page — ${r.buried.map((b) => `${b.tag}"${b.label}"`).join(", ")}`,
+          );
+          console.log(
+            `  ✗ ${route} @${vp.name}px — ${r.buried.length} control(s) buried under the bottom bar`,
+          );
         } else if (vp.touch && r.small.length > 0) {
           // Reported, not failed: the 44px rule has legitimate exceptions
           // (inline text links), and failing on it would bury the overflow
           // signal that actually breaks a page.
-          console.log(`  ⚠ ${route} @${vp.name}px — ${r.small.length} target(s) under ${MIN_TOUCH_PX}px: ${r.small.map((s) => `${s.tag}"${s.label}"[${s.cls}]=${s.h}px`).join(", ")}`);
+          console.log(
+            `  ⚠ ${route} @${vp.name}px — ${r.small.length} target(s) under ${MIN_TOUCH_PX}px: ${r.small.map((s) => `${s.tag}"${s.label}"[${s.cls}]=${s.h}px`).join(", ")}`,
+          );
         } else {
           console.log(`  ✓ ${route} @${vp.name}px`);
         }
         // Soft signals, always reported alongside the verdict above.
-        if (r.clipped.length > 0) console.log(`     ⚠ clipped text: ${r.clipped.map((c) => `"${c.text}"[${c.cls}] (-${c.hidden}px)`).join(", ")}`);
-        if (r.brokenImages.length > 0) console.log(`     ⚠ broken image(s): ${r.brokenImages.join(", ")}`);
-        if (badRequests.length > 0) console.log(`     ⚠ rejected request(s): ${[...new Set(badRequests)].slice(0, 4).join(" | ")}`);
+        if (r.clipped.length > 0)
+          console.log(
+            `     ⚠ clipped text: ${r.clipped.map((c) => `"${c.text}"[${c.cls}] (-${c.hidden}px)`).join(", ")}`,
+          );
+        if (r.brokenImages.length > 0)
+          console.log(`     ⚠ broken image(s): ${r.brokenImages.join(", ")}`);
+        if (badRequests.length > 0)
+          console.log(
+            `     ⚠ rejected request(s): ${[...new Set(badRequests)].slice(0, 4).join(" | ")}`,
+          );
         // Hydration errors get their own line rather than being one of two
         // truncated console strings. They are never cosmetic: the server sent
         // markup the browser disagreed with, so SOMETHING on the page rendered
@@ -452,10 +538,13 @@ async function main() {
         // id, a width. The user sees the wrong content before React repairs it.
         const hydration = [...new Set(consoleErrors)].filter((m) => HYDRATION_ERROR.test(m));
         if (hydration.length > 0) console.log(`     ⚠ HYDRATION MISMATCH: ${hydration[0]}`);
-        if (consoleErrors.length > 0) console.log(`     ⚠ console: ${[...new Set(consoleErrors)].slice(0, 2).join(" | ")}`);
+        if (consoleErrors.length > 0)
+          console.log(`     ⚠ console: ${[...new Set(consoleErrors)].slice(0, 2).join(" | ")}`);
       } catch (e) {
         failures.push(`${route} @${vp.name}: ${e instanceof Error ? e.message.slice(0, 120) : e}`);
-        console.log(`  ✗ ${route} @${vp.name}px — ${e instanceof Error ? e.message.slice(0, 80) : e}`);
+        console.log(
+          `  ✗ ${route} @${vp.name}px — ${e instanceof Error ? e.message.slice(0, 80) : e}`,
+        );
       } finally {
         await page.close();
       }

@@ -31,7 +31,9 @@ const smokeSrc = readFileSync(join(root, "scripts/test/authenticated-smoke.ts"),
 check("every smoke probe prompt starts with the filtered marker", () => {
   // Template literals of the form `[${tag}] …` / `[${smokeTag}] …` where the
   // tag itself is built as `smoke-${Date.now()}`.
-  const tagVars = [...smokeSrc.matchAll(/const (\w+) = `smoke-\$\{Date\.now\(\)\}`/g)].map((m) => m[1]);
+  const tagVars = [...smokeSrc.matchAll(/const (\w+) = `smoke-\$\{Date\.now\(\)\}`/g)].map(
+    (m) => m[1],
+  );
   assert(tagVars.length > 0, "authenticated-smoke must build its probe tags as `smoke-<ts>`");
   const markers = [...smokeSrc.matchAll(/`\[\$\{(\w+)\}\][^`]*`/g)].map((m) => m[1]);
   assert(markers.length > 0, "authenticated-smoke must prefix probe prompts with [<tag>]");
@@ -70,14 +72,17 @@ check("user-facing dispatch reads apply the filter", () => {
   // Dedupe/echo lookups are deliberately EXEMPT (the smoke echo test needs to
   // find its own row) — only surfaces that present dispatches as activity.
   const filtered: Array<[string, string[]]> = [
-    ["src/db/queries/prompt-history.ts", [
-      "getRecentCustomPromptsByProjectKey",
-      "getRecentCustomPromptsByProjectKeys",
-      "getPromptHistory",
-      "getRecentActivity",
-      "getLastPromptByProjectKey",
-      "getProjectPromptActivity",
-    ]],
+    [
+      "src/db/queries/prompt-history.ts",
+      [
+        "getRecentCustomPromptsByProjectKey",
+        "getRecentCustomPromptsByProjectKeys",
+        "getPromptHistory",
+        "getRecentActivity",
+        "getLastPromptByProjectKey",
+        "getProjectPromptActivity",
+      ],
+    ],
     ["src/db/queries/activity.ts", ["getProjectActivity", "getProjectActivityBatch"]],
   ];
   for (const [file, fns] of filtered) {

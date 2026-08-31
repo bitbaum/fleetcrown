@@ -20,8 +20,8 @@ const execFileAsync = promisify(execFile);
 // Without these guards it is an open cost-drain / CPU-exhaustion vector. Cap the
 // upload and rate-limit per IP.
 const MAX_AUDIO_BYTES = 10 * 1024 * 1024; // ~10 min of Opus; far above any real clip
-const RATE_LIMIT = 20;                     // transcriptions
-const RATE_WINDOW_MS = 60_000;             // per minute per IP
+const RATE_LIMIT = 20; // transcriptions
+const RATE_WINDOW_MS = 60_000; // per minute per IP
 
 // Resolve scripts/transcribe.py for both deployment modes:
 //   • `npm run dev`           → cwd = repo root            → scripts/transcribe.py
@@ -48,7 +48,9 @@ async function readTranscriptionSettings(): Promise<{ whisperModel: string; prov
       const s = await getBeaconSettings(userId);
       return { whisperModel: s.whisper_model, provider: s.transcription_provider };
     }
-  } catch { /* no auth — use defaults */ }
+  } catch {
+    /* no auth — use defaults */
+  }
   return { whisperModel: "base", provider: "auto" };
 }
 
@@ -84,7 +86,8 @@ async function attemptGroq(audio: File): Promise<AttemptResult> {
         ok: false,
         recoverable: true,
         status: 502,
-        error: "Groq API key invalid — rotate it at https://console.groq.com and update GROQ_API_KEY.",
+        error:
+          "Groq API key invalid — rotate it at https://console.groq.com and update GROQ_API_KEY.",
         detail: msg,
       };
     }
@@ -131,11 +134,12 @@ async function attemptLocalWhisper(audio: File, model: string): Promise<AttemptR
       ok: false,
       recoverable: false,
       status: 503,
-      error: "Local Whisper runtime not available on this server (no ffmpeg / python3 / model). Pick Groq under Settings → Beacon, or install Whisper.",
+      error:
+        "Local Whisper runtime not available on this server (no ffmpeg / python3 / model). Pick Groq under Settings → Beacon, or install Whisper.",
     };
   }
   const webmPath = join(tmpdir(), `beacon-${randomUUID()}.webm`);
-  const wavPath  = webmPath.replace(".webm", ".wav");
+  const wavPath = webmPath.replace(".webm", ".wav");
   try {
     const buf = Buffer.from(await audio.arrayBuffer());
     if (buf.length < 100) {
@@ -143,14 +147,34 @@ async function attemptLocalWhisper(audio: File, model: string): Promise<AttemptR
     }
     await writeFile(webmPath, buf);
     try {
-      await execFileAsync("ffmpeg", [
-        "-nostdin", "-threads", "0",
-        "-err_detect", "ignore_err",
-        "-i", webmPath,
-        "-f", "wav", "-ac", "1", "-ar", "16000", "-y", wavPath,
-      ], { timeout: 15_000, encoding: "utf-8" });
+      await execFileAsync(
+        "ffmpeg",
+        [
+          "-nostdin",
+          "-threads",
+          "0",
+          "-err_detect",
+          "ignore_err",
+          "-i",
+          webmPath,
+          "-f",
+          "wav",
+          "-ac",
+          "1",
+          "-ar",
+          "16000",
+          "-y",
+          wavPath,
+        ],
+        { timeout: 15_000, encoding: "utf-8" },
+      );
     } catch {
-      return { ok: false, recoverable: false, status: 422, error: "Audio decode failed — recording may be too short or corrupt" };
+      return {
+        ok: false,
+        recoverable: false,
+        status: 422,
+        error: "Audio decode failed — recording may be too short or corrupt",
+      };
     }
     const { stdout } = await execFileAsync("python3", [TRANSCRIBE_PY, wavPath, model], {
       timeout: 60_000,
@@ -168,10 +192,7 @@ async function attemptLocalWhisper(audio: File, model: string): Promise<AttemptR
     const detail = e.stderr?.trim() || e.message;
     return { ok: false, recoverable: true, status: 500, error: detail };
   } finally {
-    await Promise.all([
-      unlink(webmPath).catch(() => {}),
-      unlink(wavPath).catch(() => {}),
-    ]);
+    await Promise.all([unlink(webmPath).catch(() => {}), unlink(wavPath).catch(() => {})]);
   }
 }
 
@@ -183,7 +204,10 @@ async function attemptLocalWhisper(audio: File, model: string): Promise<AttemptR
 // Returns either { text } or an HTTP error matching the failing branch's status.
 export async function POST(req: NextRequest) {
   if (!checkRateLimit(`transcribe:${getClientIp(req)}`, RATE_LIMIT, RATE_WINDOW_MS)) {
-    return NextResponse.json({ error: "Too many transcription requests — slow down." }, { status: 429 });
+    return NextResponse.json(
+      { error: "Too many transcription requests — slow down." },
+      { status: 429 },
+    );
   }
 
   // Every call bills Groq Whisper or spawns local Whisper. Matcher-excluded
@@ -203,7 +227,10 @@ export async function POST(req: NextRequest) {
   if (provider === "local") {
     const result = await attemptLocalWhisper(audio, model);
     if (result.ok) return NextResponse.json({ text: result.text });
-    return NextResponse.json({ error: result.error, ...(result.detail ? { detail: result.detail } : {}) }, { status: result.status });
+    return NextResponse.json(
+      { error: result.error, ...(result.detail ? { detail: result.detail } : {}) },
+      { status: result.status },
+    );
   }
 
   const groqResult = await attemptGroq(audio);
@@ -215,20 +242,30 @@ export async function POST(req: NextRequest) {
     // mysteriously-different latency for the same button.
     const localResult = await attemptLocalWhisper(audio, model);
     if (localResult.ok) {
-      return NextResponse.json({ text: localResult.text, via: "local", groqError: groqResult.error });
+      return NextResponse.json({
+        text: localResult.text,
+        via: "local",
+        groqError: groqResult.error,
+      });
     }
     // Both paths failed — surface the Groq error (the user's actual default)
     // with the local fallback's status appended so they understand neither
     // worked. Prefer Groq's status as the response code since that was the
     // attempted-first path.
-    return NextResponse.json({
-      error: `${groqResult.error} Local fallback also failed: ${localResult.error}`,
-      detail: groqResult.detail,
-    }, { status: groqResult.status });
+    return NextResponse.json(
+      {
+        error: `${groqResult.error} Local fallback also failed: ${localResult.error}`,
+        detail: groqResult.detail,
+      },
+      { status: groqResult.status },
+    );
   }
 
-  return NextResponse.json({
-    error: groqResult.error,
-    ...(groqResult.detail ? { detail: groqResult.detail } : {}),
-  }, { status: groqResult.status });
+  return NextResponse.json(
+    {
+      error: groqResult.error,
+      ...(groqResult.detail ? { detail: groqResult.detail } : {}),
+    },
+    { status: groqResult.status },
+  );
 }

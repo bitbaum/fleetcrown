@@ -32,7 +32,12 @@ export const BOX_DEV_ROOT = process.env.FLEETCROWN_BOX_DEV_ROOT || path.join(os.
 
 /** Directory-safe form of a project/tab name. */
 export function sanitizeWorkspaceKey(tab: string): string {
-  return tab.toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "workspace";
+  return (
+    tab
+      .toLowerCase()
+      .replace(/[^a-z0-9._-]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "workspace"
+  );
 }
 
 /**

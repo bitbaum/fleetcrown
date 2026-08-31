@@ -54,13 +54,19 @@ function selfTest(): void {
   check("empty in ⇒ empty string", formatOperatorContextBlock([], []) === "");
 
   const d = new Date("2026-08-01T00:00:00Z");
-  const goalsOnly = formatOperatorContextBlock([{ title: "Ship paid tier", progress: 40, targetDate: d }], []);
+  const goalsOnly = formatOperatorContextBlock(
+    [{ title: "Ship paid tier", progress: 40, targetDate: d }],
+    [],
+  );
   check("goals header present", goalsOnly.includes("top-level goals"));
   check("goal progress rendered", goalsOnly.includes("(40%)"));
   check("goal target date rendered", goalsOnly.includes(`target ${toLocalDateStr(d)}`));
   check("no commitments header when none", !goalsOnly.includes("commitments/deadlines"));
 
-  const commitsOnly = formatOperatorContextBlock([], [{ description: "Investor demo", dueDate: d }]);
+  const commitsOnly = formatOperatorContextBlock(
+    [],
+    [{ description: "Investor demo", dueDate: d }],
+  );
   check("commitments header present", commitsOnly.includes("commitments/deadlines"));
   check("commitment due rendered", commitsOnly.includes(`due ${toLocalDateStr(d)}`));
 

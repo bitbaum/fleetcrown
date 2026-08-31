@@ -1,22 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getApiUserId } from "@/lib/session";
-import {
-  listSubscriptionsForUser,
-  pruneDeadEndpoints,
-} from "@/db/queries/push-subscriptions";
+import { listSubscriptionsForUser, pruneDeadEndpoints } from "@/db/queries/push-subscriptions";
 import { configureWebPush, sendOne, isDeadStatus } from "@/lib/push";
 import { PUSH_TAG_PREFIX } from "@/config/brand-storage";
 
 export const dynamic = "force-dynamic";
 
 const NotifyBody = z.object({
-  tab:         z.string().trim().min(1).max(120),
+  tab: z.string().trim().min(1).max(120),
   projectName: z.string().trim().min(1).max(120),
-  next:        z.string().trim().max(240).optional(),
-  kind:        z.enum(["stopped", "blocked"]).default("stopped"),
-  title:       z.string().trim().max(120).optional(),
-  body:        z.string().trim().max(240).optional(),
+  next: z.string().trim().max(240).optional(),
+  kind: z.enum(["stopped", "blocked"]).default("stopped"),
+  title: z.string().trim().max(120).optional(),
+  body: z.string().trim().max(240).optional(),
 });
 
 /**
@@ -35,13 +32,19 @@ export async function POST(req: NextRequest) {
 
     const cfg = configureWebPush();
     if (!cfg.ok) {
-      return NextResponse.json({ error: "Push not configured", detail: cfg.reason }, { status: 503 });
+      return NextResponse.json(
+        { error: "Push not configured", detail: cfg.reason },
+        { status: 503 },
+      );
     }
 
     const json = await req.json().catch(() => null);
     const parsed = NotifyBody.safeParse(json);
     if (!parsed.success) {
-      return NextResponse.json({ error: "Invalid notify payload", details: parsed.error.flatten() }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid notify payload", details: parsed.error.flatten() },
+        { status: 400 },
+      );
     }
     const { tab, projectName, next, kind, title, body } = parsed.data;
 
@@ -52,17 +55,17 @@ export async function POST(req: NextRequest) {
 
     const payload = {
       title: title ?? defaultTitle(kind, projectName),
-      body:  body  ?? defaultBody(kind, next),
-      url:   `/control?focus=${encodeURIComponent(tab)}`,
-      tag:   `${PUSH_TAG_PREFIX}${tab}`,
+      body: body ?? defaultBody(kind, next),
+      url: `/control?focus=${encodeURIComponent(tab)}`,
+      tag: `${PUSH_TAG_PREFIX}${tab}`,
     };
 
     const results = await Promise.all(subs.map((s) => sendOne(s, payload)));
     const dead = results.filter((r) => !r.ok && isDeadStatus(r.statusCode)).map((r) => r.endpoint);
     if (dead.length > 0) await pruneDeadEndpoints(dead);
 
-    const sent  = results.filter((r) => r.ok).length;
-    const errs  = results.filter((r) => !r.ok && !isDeadStatus(r.statusCode)).length;
+    const sent = results.filter((r) => r.ok).length;
+    const errs = results.filter((r) => !r.ok && !isDeadStatus(r.statusCode)).length;
     return NextResponse.json({ ok: true, sent, gc: dead.length, errors: errs });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Push notify failed";
@@ -71,9 +74,7 @@ export async function POST(req: NextRequest) {
 }
 
 function defaultTitle(kind: "stopped" | "blocked", project: string): string {
-  return kind === "blocked"
-    ? `${project} · needs you`
-    : `${project} · ready`;
+  return kind === "blocked" ? `${project} · needs you` : `${project} · ready`;
 }
 
 function defaultBody(kind: "stopped" | "blocked", next: string | undefined): string {

@@ -27,8 +27,8 @@ export function DemoBanner() {
     <div className="ui-callout-accent mx-3 mb-2 mt-2 flex items-center gap-2 py-1.5 text-xs text-text-secondary sm:mx-4">
       <FlaskConical className="h-3.5 w-3.5 shrink-0 text-text-tertiary" />
       <span className="min-w-0 flex-1">
-        You&rsquo;re in the demo — explore freely. Dispatching agents, terminals and
-        outbound messages are off, and everything here resets nightly.
+        You&rsquo;re in the demo — explore freely. Dispatching agents, terminals and outbound
+        messages are off, and everything here resets nightly.
       </span>
       <Link href={ROUTES.SIGN_UP} className="ui-btn-secondary ui-btn-xs shrink-0">
         Get your own →

@@ -60,7 +60,10 @@ check("short/odd runIds still produce a usable alias", () => {
   const t1 = deriveRunTab("p", "ab");
   assert(t1 === `p${RUN_TAB_SEPARATOR}ab` && isDerivedRunTab(t1), "short runId broke alias");
   const t2 = deriveRunTab("p", "---");
-  assert(t2 === `p${RUN_TAB_SEPARATOR}run` && baseProjectKey(t2) === "p", "dash-only runId broke alias");
+  assert(
+    t2 === `p${RUN_TAB_SEPARATOR}run` && baseProjectKey(t2) === "p",
+    "dash-only runId broke alias",
+  );
 });
 
 check("alias is filesystem-safe for the session file convention (<tab>.md)", () => {

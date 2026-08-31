@@ -7,7 +7,10 @@ import {
   LOKI_SCOPED_CHIPS,
 } from "../../src/config/loki-suggested-actions";
 
-assert.equal(fillSuggestedAction("move forward on {project}", "datacat"), "move forward on datacat");
+assert.equal(
+  fillSuggestedAction("move forward on {project}", "datacat"),
+  "move forward on datacat",
+);
 assert.equal(fillSuggestedAction("code review for {project}", "kivvi"), "code review for kivvi");
 assert.equal(fillSuggestedAction("move forward on {project}", null), "move forward");
 assert.equal(fillSuggestedAction("next best for {project}", null), "next best");
@@ -21,7 +24,10 @@ assert.deepEqual(
 );
 assert.equal(none[0].href, LOKI_NEW_PROJECT_HREF);
 assert.equal(none[1].href, LOKI_IMPORT_PROJECT_HREF);
-assert.ok(none.every((c) => c.kind !== "send" || c.chatOnly), "no unscoped dispatch when the fleet is empty");
+assert.ok(
+  none.every((c) => c.kind !== "send" || c.chatOnly),
+  "no unscoped dispatch when the fleet is empty",
+);
 
 const unscoped = composerChips({ projectCount: 4, selectedProjects: [] });
 assert.deepEqual(
@@ -30,7 +36,10 @@ assert.deepEqual(
   "fleet, no scope: new / open / what needs me",
 );
 assert.equal(unscoped.length, 3);
-assert.ok(!unscoped.some((c) => c.id === "move_forward"), "dispatch chips stay hidden until a project is picked");
+assert.ok(
+  !unscoped.some((c) => c.id === "move_forward"),
+  "dispatch chips stay hidden until a project is picked",
+);
 assert.equal(unscoped.find((c) => c.id === "attention")?.chatOnly, true);
 
 const scoped = composerChips({ projectCount: 4, selectedProjects: ["fleetcrown"] });

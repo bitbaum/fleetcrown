@@ -54,9 +54,7 @@ export function MobileNav() {
         </button>
       </nav>
 
-      {sheetOpen && (
-        <MobileNavSheet pathname={pathname} onClose={() => setSheetOpen(false)} />
-      )}
+      {sheetOpen && <MobileNavSheet pathname={pathname} onClose={() => setSheetOpen(false)} />}
     </>
   );
 }

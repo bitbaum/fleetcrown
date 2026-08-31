@@ -13,7 +13,12 @@ import { ShareBar } from "@/components/thoughts/ShareBar";
 import { NewsletterSignup } from "@/components/thoughts/NewsletterSignup";
 import { MermaidDiagram } from "@/components/thoughts/MermaidDiagram";
 import { ThoughtVideoEmbed } from "@/components/thoughts/ThoughtVideoEmbed";
-import { getAdjacentThoughts, getRelatedThoughts, getThought, parseThoughtBlocks } from "@/lib/thoughts-content";
+import {
+  getAdjacentThoughts,
+  getRelatedThoughts,
+  getThought,
+  parseThoughtBlocks,
+} from "@/lib/thoughts-content";
 
 // Read a repo-authored SVG diagram from /public so it can be inlined into the
 // DOM (see the "image" block renderer). Only same-origin absolute paths under
@@ -35,14 +40,34 @@ function ri(text: string): ReactNode {
   const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/);
   return parts.map((part, i) => {
     if (part.startsWith("**") && part.endsWith("**"))
-      return <strong key={i} className="font-semibold text-text-primary">{part.slice(2, -2)}</strong>;
-    if (part.startsWith("*") && part.endsWith("*"))
-      return <em key={i}>{part.slice(1, -1)}</em>;
+      return (
+        <strong key={i} className="font-semibold text-text-primary">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    if (part.startsWith("*") && part.endsWith("*")) return <em key={i}>{part.slice(1, -1)}</em>;
     if (part.startsWith("`") && part.endsWith("`"))
-      return <code key={i} className="rounded bg-surface-raised px-1.5 py-0.5 font-mono text-sm text-text-primary">{part.slice(1, -1)}</code>;
+      return (
+        <code
+          key={i}
+          className="rounded bg-surface-raised px-1.5 py-0.5 font-mono text-sm text-text-primary"
+        >
+          {part.slice(1, -1)}
+        </code>
+      );
     const link = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
     if (link)
-      return <a key={i} href={link[2]} target="_blank" rel="noopener noreferrer" className="text-accent-text underline underline-offset-2 hover:text-accent-hover transition-colors">{link[1]}</a>;
+      return (
+        <a
+          key={i}
+          href={link[2]}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-accent-text underline underline-offset-2 hover:text-accent-hover transition-colors"
+        >
+          {link[1]}
+        </a>
+      );
     return part;
   });
 }
@@ -99,17 +124,19 @@ export default async function ThoughtArticlePage({
       <div className="relative z-10 mx-auto max-w-5xl space-y-6 px-6 pb-24 pt-16 sm:px-10">
         <div className="ui-public-doc-header">
           <h1 className="ui-public-doc-title">{article.title}</h1>
-          {article.summary && (
-            <p className="ui-public-doc-subtitle">{article.summary}</p>
-          )}
+          {article.summary && <p className="ui-public-doc-subtitle">{article.summary}</p>}
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Link href="/thoughts" className="ui-btn-chip">All essays</Link>
+          <Link href="/thoughts" className="ui-btn-chip">
+            All essays
+          </Link>
           <span className="ui-badge">{article.publishedAt}</span>
           <span className="ui-badge">{article.readingTimeMin} min</span>
           {article.tags.map((tag) => (
-            <span key={tag} className="ui-tag ui-tag-neutral">{tag}</span>
+            <span key={tag} className="ui-tag ui-tag-neutral">
+              {tag}
+            </span>
           ))}
           <div className="ml-auto">
             <ShareBar url={`${APP_URL}/thoughts/${slug}`} title={article.title} />
@@ -133,7 +160,10 @@ export default async function ThoughtArticlePage({
                 );
               case "ul":
                 return (
-                  <ul key={i} className="list-disc space-y-2 pl-6 text-base text-text-secondary md:text-lg">
+                  <ul
+                    key={i}
+                    className="list-disc space-y-2 pl-6 text-base text-text-secondary md:text-lg"
+                  >
                     {block.items.map((item, j) => (
                       <li key={j}>{ri(item)}</li>
                     ))}
@@ -141,7 +171,10 @@ export default async function ThoughtArticlePage({
                 );
               case "ol":
                 return (
-                  <ol key={i} className="list-decimal space-y-2 pl-6 text-base text-text-secondary md:text-lg">
+                  <ol
+                    key={i}
+                    className="list-decimal space-y-2 pl-6 text-base text-text-secondary md:text-lg"
+                  >
                     {block.items.map((item, j) => (
                       <li key={j}>{ri(item)}</li>
                     ))}
@@ -149,7 +182,10 @@ export default async function ThoughtArticlePage({
                 );
               case "blockquote":
                 return (
-                  <blockquote key={i} className="border-l-2 border-border-default pl-4 italic text-text-secondary md:text-lg">
+                  <blockquote
+                    key={i}
+                    className="border-l-2 border-border-default pl-4 italic text-text-secondary md:text-lg"
+                  >
                     {block.text.map((line, j) => (
                       <p key={j}>{ri(line)}</p>
                     ))}
@@ -178,7 +214,9 @@ export default async function ThoughtArticlePage({
                         dangerouslySetInnerHTML={{ __html: inlineSvg }}
                       />
                       {block.alt && (
-                        <figcaption className="text-center text-sm text-text-muted">{block.alt}</figcaption>
+                        <figcaption className="text-center text-sm text-text-muted">
+                          {block.alt}
+                        </figcaption>
                       )}
                     </figure>
                   );
@@ -194,7 +232,9 @@ export default async function ThoughtArticlePage({
                       unoptimized={block.src.startsWith("http")}
                     />
                     {block.alt && (
-                      <figcaption className="text-center text-sm text-text-muted">{block.alt}</figcaption>
+                      <figcaption className="text-center text-sm text-text-muted">
+                        {block.alt}
+                      </figcaption>
                     )}
                   </figure>
                 );
@@ -203,7 +243,10 @@ export default async function ThoughtArticlePage({
                 return block.lang === "mermaid" ? (
                   <MermaidDiagram key={i} chart={block.text} />
                 ) : (
-                  <pre key={i} className="overflow-x-auto rounded-xl bg-surface-raised p-4 text-sm text-text-secondary">
+                  <pre
+                    key={i}
+                    className="overflow-x-auto rounded-xl bg-surface-raised p-4 text-sm text-text-secondary"
+                  >
                     <code>{block.text}</code>
                   </pre>
                 );
@@ -214,7 +257,9 @@ export default async function ThoughtArticlePage({
                       <thead>
                         <tr className="border-b border-border-default">
                           {block.headers.map((header, j) => (
-                            <th key={j} className="px-4 py-2 font-medium text-text-primary">{ri(header)}</th>
+                            <th key={j} className="px-4 py-2 font-medium text-text-primary">
+                              {ri(header)}
+                            </th>
                           ))}
                         </tr>
                       </thead>
@@ -222,7 +267,9 @@ export default async function ThoughtArticlePage({
                         {block.rows.map((row, j) => (
                           <tr key={j} className="border-b border-border-subtle last:border-b-0">
                             {row.map((cell, k) => (
-                              <td key={k} className="px-4 py-2">{ri(cell)}</td>
+                              <td key={k} className="px-4 py-2">
+                                {ri(cell)}
+                              </td>
                             ))}
                           </tr>
                         ))}

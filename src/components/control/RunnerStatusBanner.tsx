@@ -56,7 +56,12 @@ export function RunnerStatusBanner({
       const res = await postJson("/api/agent-tokens", {
         label: `Fleet Runner · ${new Date().toLocaleDateString(undefined, { month: "short", day: "numeric" })}`,
       });
-      const body = (await res.json()) as { ok?: boolean; error?: string; token?: string; label?: string };
+      const body = (await res.json()) as {
+        ok?: boolean;
+        error?: string;
+        token?: string;
+        label?: string;
+      };
       if (!res.ok || !body.token) {
         setPairError(body.error ?? `Failed to mint token (HTTP ${res.status})`);
         return;
@@ -84,17 +89,13 @@ export function RunnerStatusBanner({
 
   if (dismissed || (!runnerNeverSeen && !runnerOffline)) return null;
 
-  const lastSeen = runnerLastPushedAt
-    ? timeAgo(new Date(runnerLastPushedAt).getTime())
-    : null;
+  const lastSeen = runnerLastPushedAt ? timeAgo(new Date(runnerLastPushedAt).getTime()) : null;
 
   if (!runnerNeverSeen && !expanded) {
     return (
       <div className="flex items-center gap-2 rounded-lg border border-border-subtle bg-surface-raised/60 px-3 py-2 text-xs text-text-tertiary">
         <WifiOff className="h-3.5 w-3.5 shrink-0 text-status-warning" />
-        <span className="min-w-0 truncate">
-          {EXECUTOR_COPY.runnerBanner.offlineChip(lastSeen)}
-        </span>
+        <span className="min-w-0 truncate">{EXECUTOR_COPY.runnerBanner.offlineChip(lastSeen)}</span>
         <button
           onClick={() => setExpanded(true)}
           className="ml-auto shrink-0 text-accent-text hover:underline"
@@ -115,11 +116,7 @@ export function RunnerStatusBanner({
   return (
     <div className="ui-callout-warning">
       <div className="mt-0.5 shrink-0 text-status-warning">
-        {runnerNeverSeen ? (
-          <Radio className="h-4 w-4" />
-        ) : (
-          <WifiOff className="h-4 w-4" />
-        )}
+        {runnerNeverSeen ? <Radio className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />}
       </div>
 
       <div className="min-w-0 flex-1 space-y-2">
@@ -148,19 +145,22 @@ export function RunnerStatusBanner({
                   state already cover that case; users-with-projects don't
                   need to be told to start one). */}
               {!hasProjects && (
-              <Link
-                href="/control/new-from-scratch"
-                className="ui-card-shell hover:border-accent-primary transition-colors p-3 flex flex-col gap-1 group"
-              >
-                <div className="flex items-center gap-1.5 font-medium text-text-primary text-sm">
-                  <Sparkles className="h-3.5 w-3.5 text-accent-text" />
-                  Start a new project
-                </div>
-                <p className="text-xs text-text-muted">
-                  Creates a GitHub repo + project record right from this website. No install. Pick a starter (Next.js, FastAPI, Hono, plain HTML), clone wherever.
-                </p>
-                <span className="text-xs text-accent-text mt-auto pt-1 group-hover:underline">No install needed →</span>
-              </Link>
+                <Link
+                  href="/control/new-from-scratch"
+                  className="ui-card-shell hover:border-accent-primary transition-colors p-3 flex flex-col gap-1 group"
+                >
+                  <div className="flex items-center gap-1.5 font-medium text-text-primary text-sm">
+                    <Sparkles className="h-3.5 w-3.5 text-accent-text" />
+                    Start a new project
+                  </div>
+                  <p className="text-xs text-text-muted">
+                    Creates a GitHub repo + project record right from this website. No install. Pick
+                    a starter (Next.js, FastAPI, Hono, plain HTML), clone wherever.
+                  </p>
+                  <span className="text-xs text-accent-text mt-auto pt-1 group-hover:underline">
+                    No install needed →
+                  </span>
+                </Link>
               )}
 
               {/* Path B branches on whether we're already inside Fleet Runner.
@@ -176,7 +176,8 @@ export function RunnerStatusBanner({
                       Paired with this computer
                     </div>
                     <p className="text-xs text-text-muted">
-                      Token <strong>{pairedTokenLabel}</strong> saved. {EXECUTOR_COPY.builder.online} within ~30s.
+                      Token <strong>{pairedTokenLabel}</strong> saved.{" "}
+                      {EXECUTOR_COPY.builder.online} within ~30s.
                     </p>
                   </div>
                 ) : (
@@ -186,8 +187,8 @@ export function RunnerStatusBanner({
                       Pair this computer
                     </div>
                     <p className="text-xs text-text-muted">
-                      You&apos;re in the desktop app. One click connects it to the shared builder queue.
-                      — no manual copy-paste.
+                      You&apos;re in the desktop app. One click connects it to the shared builder
+                      queue. — no manual copy-paste.
                     </p>
                     <button
                       type="button"
@@ -207,9 +208,7 @@ export function RunnerStatusBanner({
                         </>
                       )}
                     </button>
-                    {pairError && (
-                      <p className="text-xs text-status-warning">{pairError}</p>
-                    )}
+                    {pairError && <p className="text-xs text-status-warning">{pairError}</p>}
                   </div>
                 )
               ) : (
@@ -222,9 +221,12 @@ export function RunnerStatusBanner({
                     Get the desktop app
                   </div>
                   <p className="text-xs text-text-muted">
-                    Optional — run agents on this computer with your local folders and CLI tools. Same dashboard as the website.
+                    Optional — run agents on this computer with your local folders and CLI tools.
+                    Same dashboard as the website.
                   </p>
-                  <span className="text-xs text-accent-text mt-auto pt-1 group-hover:underline">Download for your OS →</span>
+                  <span className="text-xs text-accent-text mt-auto pt-1 group-hover:underline">
+                    Download for your OS →
+                  </span>
                 </Link>
               )}
             </div>
@@ -237,7 +239,9 @@ export function RunnerStatusBanner({
               <div className="mt-2 ml-4 space-y-1.5">
                 <p>
                   Mint a token at{" "}
-                  <Link href="/settings" className="text-accent-text underline">/settings → Agent tokens</Link>{" "}
+                  <Link href="/settings" className="text-accent-text underline">
+                    /settings → Agent tokens
+                  </Link>{" "}
                   and paste this in a terminal:
                 </p>
                 <pre className="ui-card-shell p-2 overflow-x-auto text-xs">
@@ -253,9 +257,14 @@ export function RunnerStatusBanner({
             </p>
             <p className="text-xs text-text-muted">
               {EXECUTOR_COPY.runnerBanner.reconnectHint}{" "}
-              <Link href="/settings" className="text-accent-text underline">{EXECUTOR_COPY.runnerBanner.settingsLink}</Link>{" "}
+              <Link href="/settings" className="text-accent-text underline">
+                {EXECUTOR_COPY.runnerBanner.settingsLink}
+              </Link>{" "}
               or{" "}
-              <Link href="/download" className="text-accent-text underline">{EXECUTOR_COPY.runnerBanner.downloadLink}</Link>.
+              <Link href="/download" className="text-accent-text underline">
+                {EXECUTOR_COPY.runnerBanner.downloadLink}
+              </Link>
+              .
             </p>
           </>
         )}
@@ -270,7 +279,9 @@ export function RunnerStatusBanner({
             the CLIs ACTUALLY missing (v0.6.0 getInstalledCLIs IPC). */}
         {(runnerNeverSeen || runtimeAvailable) && !insideFleetRunner && (
           <div className="pt-2 border-t border-border-subtle">
-            <p className="text-xs text-text-muted mb-1.5">Missing an agent CLI? Click to open a dedicated terminal tab with the installer:</p>
+            <p className="text-xs text-text-muted mb-1.5">
+              Missing an agent CLI? Click to open a dedicated terminal tab with the installer:
+            </p>
             <div className="flex flex-wrap gap-2">
               {["grok", "claude", "cursor", "gemini", "codex"].map((a) => (
                 <button
@@ -286,7 +297,8 @@ export function RunnerStatusBanner({
               ))}
             </div>
             <p className="text-micro text-text-muted mt-1">
-              When Fleet Runner is running, these buttons open a dedicated “Install X” tab with the installer already pasted.
+              When Fleet Runner is running, these buttons open a dedicated “Install X” tab with the
+              installer already pasted.
             </p>
           </div>
         )}

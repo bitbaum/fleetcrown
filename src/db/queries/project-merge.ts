@@ -21,7 +21,11 @@ import {
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
 import { fetchAttributesByEntityIds } from "./utils";
-import { pickCanonicalProject, projectNameKey, type ProjectEntityScoreInput } from "@/lib/domain/project-canonical";
+import {
+  pickCanonicalProject,
+  projectNameKey,
+  type ProjectEntityScoreInput,
+} from "@/lib/domain/project-canonical";
 
 export interface DuplicateProjectGroup {
   userId: string;
@@ -31,7 +35,9 @@ export interface DuplicateProjectGroup {
   losers: ProjectEntityScoreInput[];
 }
 
-export async function findDuplicateProjectEntityGroups(userId?: string): Promise<DuplicateProjectGroup[]> {
+export async function findDuplicateProjectEntityGroups(
+  userId?: string,
+): Promise<DuplicateProjectGroup[]> {
   const where = userId
     ? and(eq(entities.userId, userId), eq(entities.type, ENTITY_TYPE.PROJECT))
     : eq(entities.type, ENTITY_TYPE.PROJECT);
@@ -95,15 +101,28 @@ export async function findDuplicateProjectEntityGroups(userId?: string): Promise
 }
 
 /** Repoint loser → winner and delete the loser entity. Runs in one transaction. */
-export async function mergeProjectEntityPair(winnerId: string, loserId: string, userId: string): Promise<void> {
+export async function mergeProjectEntityPair(
+  winnerId: string,
+  loserId: string,
+  userId: string,
+): Promise<void> {
   if (winnerId === loserId) return;
 
   await db.transaction(async (tx) => {
     const [winner, loser] = await Promise.all([
-      tx.select().from(entities).where(and(eq(entities.id, winnerId), eq(entities.userId, userId))).limit(1),
-      tx.select().from(entities).where(and(eq(entities.id, loserId), eq(entities.userId, userId))).limit(1),
+      tx
+        .select()
+        .from(entities)
+        .where(and(eq(entities.id, winnerId), eq(entities.userId, userId)))
+        .limit(1),
+      tx
+        .select()
+        .from(entities)
+        .where(and(eq(entities.id, loserId), eq(entities.userId, userId)))
+        .limit(1),
     ]);
-    if (!winner[0] || !loser[0]) throw new Error(`mergeProjectEntityPair: missing entity ${winnerId}/${loserId}`);
+    if (!winner[0] || !loser[0])
+      throw new Error(`mergeProjectEntityPair: missing entity ${winnerId}/${loserId}`);
 
     const loserAttrs = await tx.select().from(attributes).where(eq(attributes.entityId, loserId));
     const winnerAttrs = await tx.select().from(attributes).where(eq(attributes.entityId, winnerId));
@@ -113,13 +132,22 @@ export async function mergeProjectEntityPair(winnerId: string, loserId: string, 
       if (winnerKeys.has(attr.key)) {
         await tx.delete(attributes).where(eq(attributes.id, attr.id));
       } else {
-        await tx.update(attributes).set({ entityId: winnerId, updatedAt: new Date() }).where(eq(attributes.id, attr.id));
+        await tx
+          .update(attributes)
+          .set({ entityId: winnerId, updatedAt: new Date() })
+          .where(eq(attributes.id, attr.id));
       }
     }
 
-    await tx.update(interactions).set({ entityId: winnerId }).where(eq(interactions.entityId, loserId));
+    await tx
+      .update(interactions)
+      .set({ entityId: winnerId })
+      .where(eq(interactions.entityId, loserId));
 
-    const fromRels = await tx.select().from(entityRelations).where(eq(entityRelations.fromEntityId, loserId));
+    const fromRels = await tx
+      .select()
+      .from(entityRelations)
+      .where(eq(entityRelations.fromEntityId, loserId));
     for (const rel of fromRels) {
       const clash = await tx
         .select({ id: entityRelations.id })
@@ -134,10 +162,17 @@ export async function mergeProjectEntityPair(winnerId: string, loserId: string, 
         )
         .limit(1);
       if (clash[0]) await tx.delete(entityRelations).where(eq(entityRelations.id, rel.id));
-      else await tx.update(entityRelations).set({ fromEntityId: winnerId, updatedAt: new Date() }).where(eq(entityRelations.id, rel.id));
+      else
+        await tx
+          .update(entityRelations)
+          .set({ fromEntityId: winnerId, updatedAt: new Date() })
+          .where(eq(entityRelations.id, rel.id));
     }
 
-    const toRels = await tx.select().from(entityRelations).where(eq(entityRelations.toEntityId, loserId));
+    const toRels = await tx
+      .select()
+      .from(entityRelations)
+      .where(eq(entityRelations.toEntityId, loserId));
     for (const rel of toRels) {
       const clash = await tx
         .select({ id: entityRelations.id })
@@ -152,24 +187,58 @@ export async function mergeProjectEntityPair(winnerId: string, loserId: string, 
         )
         .limit(1);
       if (clash[0]) await tx.delete(entityRelations).where(eq(entityRelations.id, rel.id));
-      else await tx.update(entityRelations).set({ toEntityId: winnerId, updatedAt: new Date() }).where(eq(entityRelations.id, rel.id));
+      else
+        await tx
+          .update(entityRelations)
+          .set({ toEntityId: winnerId, updatedAt: new Date() })
+          .where(eq(entityRelations.id, rel.id));
     }
 
     await tx.update(goals).set({ entityId: winnerId }).where(eq(goals.entityId, loserId));
     await tx.update(prompts).set({ projectId: winnerId }).where(eq(prompts.projectId, loserId));
-    await tx.update(userProjects).set({ entityProjectId: winnerId }).where(eq(userProjects.entityProjectId, loserId));
-    await tx.update(claudeCodeHistory).set({ projectId: winnerId }).where(eq(claudeCodeHistory.projectId, loserId));
-    await tx.update(promptHistory).set({ projectId: winnerId }).where(eq(promptHistory.projectId, loserId));
-    await tx.update(controlAuditEvents).set({ projectId: winnerId }).where(eq(controlAuditEvents.projectId, loserId));
-    await tx.update(orchestrationRuns).set({ projectId: winnerId }).where(eq(orchestrationRuns.projectId, loserId));
+    await tx
+      .update(userProjects)
+      .set({ entityProjectId: winnerId })
+      .where(eq(userProjects.entityProjectId, loserId));
+    await tx
+      .update(claudeCodeHistory)
+      .set({ projectId: winnerId })
+      .where(eq(claudeCodeHistory.projectId, loserId));
+    await tx
+      .update(promptHistory)
+      .set({ projectId: winnerId })
+      .where(eq(promptHistory.projectId, loserId));
+    await tx
+      .update(controlAuditEvents)
+      .set({ projectId: winnerId })
+      .where(eq(controlAuditEvents.projectId, loserId));
+    await tx
+      .update(orchestrationRuns)
+      .set({ projectId: winnerId })
+      .where(eq(orchestrationRuns.projectId, loserId));
 
     await tx.delete(projectStates).where(eq(projectStates.projectId, loserId));
-    await tx.update(subscriptions).set({ entityId: winnerId }).where(eq(subscriptions.entityId, loserId));
-    await tx.update(commitments).set({ entityId: winnerId }).where(eq(commitments.entityId, loserId));
+    await tx
+      .update(subscriptions)
+      .set({ entityId: winnerId })
+      .where(eq(subscriptions.entityId, loserId));
+    await tx
+      .update(commitments)
+      .set({ entityId: winnerId })
+      .where(eq(commitments.entityId, loserId));
     await tx.update(actions).set({ entityId: winnerId }).where(eq(actions.entityId, loserId));
-    await tx.update(frontierProposals).set({ entityId: winnerId }).where(eq(frontierProposals.entityId, loserId));
-    await tx.update(orchestrationEvents).set({ projectId: winnerId }).where(eq(orchestrationEvents.projectId, loserId));
-    await tx.update(orchestrationRuns).set({ projectId: winnerId }).where(eq(orchestrationRuns.projectId, loserId));
+    await tx
+      .update(frontierProposals)
+      .set({ entityId: winnerId })
+      .where(eq(frontierProposals.entityId, loserId));
+    await tx
+      .update(orchestrationEvents)
+      .set({ projectId: winnerId })
+      .where(eq(orchestrationEvents.projectId, loserId));
+    await tx
+      .update(orchestrationRuns)
+      .set({ projectId: winnerId })
+      .where(eq(orchestrationRuns.projectId, loserId));
 
     await tx
       .update(entities)
@@ -196,7 +265,9 @@ export async function mergeAllDuplicateProjectEntities(opts: {
   for (const group of groups) {
     for (const loser of group.losers) {
       if (opts.dryRun) {
-        console.log(`  would merge ${loser.name} (${loser.id}) → ${group.winner.name} (${group.winner.id})`);
+        console.log(
+          `  would merge ${loser.name} (${loser.id}) → ${group.winner.name} (${group.winner.id})`,
+        );
       } else {
         await mergeProjectEntityPair(group.winner.id, loser.id, group.userId);
         console.log(`  merged ${loser.name} → ${group.winner.name}`);
@@ -226,7 +297,10 @@ export async function findProjectEntityByName(userId: string, name: string) {
 }
 
 /** Remove RAG rows keyed by project name (source_id or metadata.project). */
-export async function purgeProjectKnowledgeEmbeddings(userId: string, projectKey: string): Promise<number> {
+export async function purgeProjectKnowledgeEmbeddings(
+  userId: string,
+  projectKey: string,
+): Promise<number> {
   const key = projectKey.trim();
   const result = await db.execute(sql`
     DELETE FROM knowledge_embeddings
@@ -243,7 +317,12 @@ export async function purgeProjectKnowledgeEmbeddings(userId: string, projectKey
 export async function deleteUserProjectByName(userId: string, name: string): Promise<number> {
   const deleted = await db
     .delete(userProjects)
-    .where(and(eq(userProjects.userId, userId), sql`lower(${userProjects.name}) = lower(${name.trim()})`))
+    .where(
+      and(
+        eq(userProjects.userId, userId),
+        sql`lower(${userProjects.name}) = lower(${name.trim()})`,
+      ),
+    )
     .returning({ id: userProjects.id });
   return deleted.length;
 }
@@ -252,7 +331,10 @@ export async function deleteUserProjectByName(userId: string, name: string): Pro
  * Retire a project entity with no canonical merge target. Cascades attrs/interactions;
  * nulls FKs on goals/history; deletes matching user_projects + knowledge_embeddings rows.
  */
-export async function deleteProjectEntityByName(userId: string, name: string): Promise<{ name: string; id: string }> {
+export async function deleteProjectEntityByName(
+  userId: string,
+  name: string,
+): Promise<{ name: string; id: string }> {
   const row = await findProjectEntityByName(userId, name);
   if (!row) throw new Error(`deleteProjectEntityByName: no project "${name}" for user ${userId}`);
 
@@ -267,7 +349,9 @@ export async function deleteProjectEntityByName(userId: string, name: string): P
     `);
     await tx
       .delete(userProjects)
-      .where(and(eq(userProjects.userId, userId), sql`lower(${userProjects.name}) = lower(${row.name})`));
+      .where(
+        and(eq(userProjects.userId, userId), sql`lower(${userProjects.name}) = lower(${row.name})`),
+      );
     await tx.delete(projectStates).where(eq(projectStates.projectId, row.id));
     await tx.delete(entities).where(and(eq(entities.id, row.id), eq(entities.userId, userId)));
   });

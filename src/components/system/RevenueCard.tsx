@@ -15,9 +15,10 @@ import type { Plan } from "@/db/schema/users";
  * Renders the truthful zero-state rather than placeholder metrics — until a
  * pass actually settles, "no paid subscribers yet" is the correct display.
  */
-const PLAN_NAME = Object.fromEntries(
-  PRICING_PLANS.map((p) => [p.key, p.name]),
-) as Record<Plan, string>;
+const PLAN_NAME = Object.fromEntries(PRICING_PLANS.map((p) => [p.key, p.name])) as Record<
+  Plan,
+  string
+>;
 
 function money(currency: string, amount: number): string {
   return `${currency} ${amount.toLocaleString("en-CH")}`;
@@ -43,9 +44,9 @@ export async function RevenueCard() {
 
       {!hasRevenue ? (
         <EmptyState>
-          No paid subscribers yet. Monthly recurring revenue and Bitcoin pass
-          grants land here the moment the first pass settles — the pricing page
-          and the OrangeCat rail are live and waiting.
+          No paid subscribers yet. Monthly recurring revenue and Bitcoin pass grants land here the
+          moment the first pass settles — the pricing page and the OrangeCat rail are live and
+          waiting.
         </EmptyState>
       ) : (
         <div className="space-y-4">
@@ -76,11 +77,12 @@ export async function RevenueCard() {
 
           {rev.btcGrantCount > 0 && (
             <div className="border-t border-border-subtle pt-3 text-sm text-text-secondary">
-              <span className="font-medium text-text-primary">{rev.btcGrantCount}</span>{" "}
-              Bitcoin pass{rev.btcGrantCount === 1 ? "" : "es"} settled
+              <span className="font-medium text-text-primary">{rev.btcGrantCount}</span> Bitcoin
+              pass{rev.btcGrantCount === 1 ? "" : "es"} settled
               {rev.btcGrantTotal > 0 && (
                 <>
-                  {" "}·{" "}
+                  {" "}
+                  ·{" "}
                   <span className="font-medium text-text-primary">
                     ₿{formatBtc(rev.btcGrantTotal)}
                   </span>{" "}

@@ -2,20 +2,38 @@ import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import {
-  users, userPreferences, notificationPreferences, beaconSettings,
-  userProjects, projectStates, orchestrationRuns, promptHistory, prompts,
-  conversations, conversationMessages, agentMessages,
-  entities, entityRelations, attributes, interactions,
-  goals, commitments, habits, habitCompletions, events, actions, alerts,
-  captures, subscriptions, siteFeedback, claudeCodeHistory,
-  knowledgeEmbeddings, ocBillingGrants,
+  users,
+  userPreferences,
+  notificationPreferences,
+  beaconSettings,
+  userProjects,
+  projectStates,
+  orchestrationRuns,
+  promptHistory,
+  prompts,
+  conversations,
+  conversationMessages,
+  agentMessages,
+  entities,
+  entityRelations,
+  attributes,
+  interactions,
+  goals,
+  commitments,
+  habits,
+  habitCompletions,
+  events,
+  actions,
+  alerts,
+  captures,
+  subscriptions,
+  siteFeedback,
+  claudeCodeHistory,
+  knowledgeEmbeddings,
+  ocBillingGrants,
 } from "@/db/schema";
 import { requirePrivateApiAccess } from "@/lib/private-zone-api";
-import {
-  ACCOUNT_EXPORT_FILENAME,
-  buildExportManifest,
-  toExportUser,
-} from "@/lib/account-export";
+import { ACCOUNT_EXPORT_FILENAME, buildExportManifest, toExportUser } from "@/lib/account-export";
 
 /**
  * GET /api/me/export — download everything the platform stores about the
@@ -33,13 +51,34 @@ export async function GET() {
   const { userId } = access;
 
   const [
-    userRows, prefs, notifPrefs, beacon,
-    projects, states, runs, promptHist, promptRows,
-    convs, agentMsgs,
-    ents, rels, attrs, inters,
-    goalRows, commitmentRows, habitRows, habitCompletionRows, eventRows,
-    actionRows, alertRows, captureRows, subscriptionRows, feedbackRows,
-    historyRows, knowledgeRows, grantRows,
+    userRows,
+    prefs,
+    notifPrefs,
+    beacon,
+    projects,
+    states,
+    runs,
+    promptHist,
+    promptRows,
+    convs,
+    agentMsgs,
+    ents,
+    rels,
+    attrs,
+    inters,
+    goalRows,
+    commitmentRows,
+    habitRows,
+    habitCompletionRows,
+    eventRows,
+    actionRows,
+    alertRows,
+    captureRows,
+    subscriptionRows,
+    feedbackRows,
+    historyRows,
+    knowledgeRows,
+    grantRows,
   ] = await Promise.all([
     db.select().from(users).where(eq(users.id, userId)),
     db.select().from(userPreferences).where(eq(userPreferences.userId, userId)),
@@ -88,19 +127,41 @@ export async function GET() {
       : (
           await Promise.all(
             convIds.map((id) =>
-              db.select().from(conversationMessages).where(eq(conversationMessages.conversationId, id)),
+              db
+                .select()
+                .from(conversationMessages)
+                .where(eq(conversationMessages.conversationId, id)),
             ),
           )
         ).flat();
 
   const sections = [
-    "user (redacted)", "preferences", "notification_preferences", "beacon_settings",
-    "projects", "project_states", "orchestration_runs", "prompt_history", "prompts",
-    "conversations", "conversation_messages", "agent_messages",
+    "user (redacted)",
+    "preferences",
+    "notification_preferences",
+    "beacon_settings",
+    "projects",
+    "project_states",
+    "orchestration_runs",
+    "prompt_history",
+    "prompts",
+    "conversations",
+    "conversation_messages",
+    "agent_messages",
     "memory: entities / relations / attributes / interactions",
-    "goals", "commitments", "habits", "habit_completions", "events", "actions",
-    "alerts", "captures", "subscriptions", "site_feedback", "claude_code_history",
-    "knowledge_index (chunks + metadata, no vectors)", "billing_grants",
+    "goals",
+    "commitments",
+    "habits",
+    "habit_completions",
+    "events",
+    "actions",
+    "alerts",
+    "captures",
+    "subscriptions",
+    "site_feedback",
+    "claude_code_history",
+    "knowledge_index (chunks + metadata, no vectors)",
+    "billing_grants",
   ];
 
   const payload = {

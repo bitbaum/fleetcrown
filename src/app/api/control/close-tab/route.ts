@@ -22,5 +22,10 @@ export async function POST(req: NextRequest) {
     tab: dataOrResp.tab,
     ...(execution.channel ? { channel: execution.channel } : {}),
   });
-  return NextResponse.json({ ok: true, queued: true, commandId, runnerConnected: execution.runnerConnected });
+  return NextResponse.json({
+    ok: true,
+    queued: true,
+    commandId,
+    runnerConnected: execution.runnerConnected,
+  });
 }

@@ -94,10 +94,16 @@ export function DetailAttrs({
               <div className="flex w-full items-center justify-end gap-1">
                 <input
                   value={editValue}
-                  onChange={(e) => { setEditValue(e.target.value); setSaveError(null); }}
+                  onChange={(e) => {
+                    setEditValue(e.target.value);
+                    setSaveError(null);
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") saveEdit(key);
-                    if (e.key === "Escape") { setEditingKey(null); setSaveError(null); }
+                    if (e.key === "Escape") {
+                      setEditingKey(null);
+                      setSaveError(null);
+                    }
                   }}
                   autoFocus
                   className="min-w-0 flex-1 rounded-lg border border-border-default bg-surface-overlay px-2 py-1 text-right text-xs text-text-primary outline-none transition-colors focus:border-accent-primary"
@@ -107,9 +113,19 @@ export function DetailAttrs({
                   disabled={saving}
                   className="ui-btn-icon-accent p-1"
                 >
-                  {saving ? <Loader2 className="ui-spinner-2xs" /> : <Save className="h-2.5 w-2.5" />}
+                  {saving ? (
+                    <Loader2 className="ui-spinner-2xs" />
+                  ) : (
+                    <Save className="h-2.5 w-2.5" />
+                  )}
                 </button>
-                <button onClick={() => { setEditingKey(null); setSaveError(null); }} className="shrink-0 ui-btn-icon">
+                <button
+                  onClick={() => {
+                    setEditingKey(null);
+                    setSaveError(null);
+                  }}
+                  className="shrink-0 ui-btn-icon"
+                >
                   <X className="h-2.5 w-2.5" />
                 </button>
                 <button
@@ -118,7 +134,11 @@ export function DetailAttrs({
                   className="shrink-0 ui-btn-icon hover:text-status-negative"
                   title="Delete attribute"
                 >
-                  {deletingKey === key ? <Loader2 className="ui-spinner-2xs" /> : <Trash2 className="h-2.5 w-2.5" />}
+                  {deletingKey === key ? (
+                    <Loader2 className="ui-spinner-2xs" />
+                  ) : (
+                    <Trash2 className="h-2.5 w-2.5" />
+                  )}
                 </button>
               </div>
               {saveError && <p className="ui-error-xs">{saveError}</p>}
@@ -126,9 +146,14 @@ export function DetailAttrs({
             </div>
           ) : (
             <div className="flex min-w-0 items-center gap-1">
-              <span className="truncate text-right text-text-primary" title={value}>{value}</span>
+              <span className="truncate text-right text-text-primary" title={value}>
+                {value}
+              </span>
               <button
-                onClick={() => { setEditValue(value); setEditingKey(key); }}
+                onClick={() => {
+                  setEditValue(value);
+                  setEditingKey(key);
+                }}
                 className="shrink-0 ui-hover-reveal ui-btn-icon"
               >
                 <Pencil className="h-2.5 w-2.5" />
@@ -137,25 +162,34 @@ export function DetailAttrs({
           )}
         </div>
       ))}
-      {detailAttrs.length === 0 && !addingNew && (
-        <EmptyState>No details yet</EmptyState>
-      )}
+      {detailAttrs.length === 0 && !addingNew && <EmptyState>No details yet</EmptyState>}
       {addingNew ? (
         <div className="space-y-1 pt-0.5">
           <div className="flex items-center gap-1.5">
             <input
               value={newKey}
-              onChange={(e) => { setNewKey(e.target.value); setSaveError(null); }}
+              onChange={(e) => {
+                setNewKey(e.target.value);
+                setSaveError(null);
+              }}
               placeholder="key"
               className="w-20 ui-input-tight"
             />
             <input
               value={newValue}
-              onChange={(e) => { setNewValue(e.target.value); setSaveError(null); }}
+              onChange={(e) => {
+                setNewValue(e.target.value);
+                setSaveError(null);
+              }}
               placeholder="value"
               onKeyDown={(e) => {
                 if (e.key === "Enter") saveNew();
-                if (e.key === "Escape") { setAddingNew(false); setNewKey(""); setNewValue(""); setSaveError(null); }
+                if (e.key === "Escape") {
+                  setAddingNew(false);
+                  setNewKey("");
+                  setNewValue("");
+                  setSaveError(null);
+                }
               }}
               autoFocus
               className="flex-1 ui-input-tight"
@@ -167,17 +201,22 @@ export function DetailAttrs({
             >
               {saving ? <Loader2 className="ui-spinner-xs" /> : <Save className="h-3 w-3" />}
             </button>
-            <button onClick={() => { setAddingNew(false); setNewKey(""); setNewValue(""); setSaveError(null); }} className="ui-btn-icon">
+            <button
+              onClick={() => {
+                setAddingNew(false);
+                setNewKey("");
+                setNewValue("");
+                setSaveError(null);
+              }}
+              className="ui-btn-icon"
+            >
               <X className="h-3 w-3" />
             </button>
           </div>
           {saveError && <p className="ui-error-xs">{saveError}</p>}
         </div>
       ) : (
-        <button
-          onClick={() => setAddingNew(true)}
-          className="ui-btn-add mt-0.5"
-        >
+        <button onClick={() => setAddingNew(true)} className="ui-btn-add mt-0.5">
           <Plus className="h-3 w-3" /> Add detail
         </button>
       )}

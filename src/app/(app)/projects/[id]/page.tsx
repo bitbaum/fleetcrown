@@ -17,24 +17,31 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
   const dossier = await getProjectDossier(session.user.id, id).catch(() => null);
   if (!dossier) notFound();
 
-  const share = dossier.ownerId === session.user.id
-    ? await getActiveProjectShare(session.user.id, id).catch(() => null)
+  const share =
+    dossier.ownerId === session.user.id
+      ? await getActiveProjectShare(session.user.id, id).catch(() => null)
+      : null;
+  const shareForClient = share
+    ? {
+        token: share.token,
+        url: `/share/project/${share.token}`,
+        audience: share.audience as "advisor" | "team" | "public",
+        includeRoadmap: share.includeRoadmap,
+        includeChangelog: share.includeChangelog,
+        includeResources: share.includeResources,
+        includeRepo: share.includeRepo,
+        includeLiveUrl: share.includeLiveUrl,
+      }
     : null;
-  const shareForClient = share ? {
-    token: share.token,
-    url: `/share/project/${share.token}`,
-    audience: share.audience as "advisor" | "team" | "public",
-    includeRoadmap: share.includeRoadmap,
-    includeChangelog: share.includeChangelog,
-    includeResources: share.includeResources,
-    includeRepo: share.includeRepo,
-    includeLiveUrl: share.includeLiveUrl,
-  } : null;
 
   return (
     <ProjectWorkspaceView
       dossier={dossier}
-      shareAction={!dossier.readonly ? <ProjectSharePanel projectId={id} initialShare={shareForClient} /> : undefined}
+      shareAction={
+        !dossier.readonly ? (
+          <ProjectSharePanel projectId={id} initialShare={shareForClient} />
+        ) : undefined
+      }
     />
   );
 }

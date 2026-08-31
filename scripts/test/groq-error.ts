@@ -70,7 +70,11 @@ is(
 );
 
 // Requests-per-day is the same situation: nothing helps before the reset.
-is("daily", "Rate limit reached ... on requests per day (RPD): Limit 14400", "RPD is a daily cap too");
+is(
+  "daily",
+  "Rate limit reached ... on requests per day (RPD): Limit 14400",
+  "RPD is a daily cap too",
+);
 
 // Context-window overflow is a size problem by another name.
 is("size", "please reduce the length of the messages", "context overflow wording");
@@ -123,7 +127,10 @@ check("a spent minute still invites a retry, with the real delay", () => {
 
 check("an oversized request does not tell the operator to wait — waiting cannot fix it", () => {
   const msg = rateLimitMessage("groq 429: Request too large ... please reduce your message size");
-  assert(!/try again|resets in/.test(msg), `told the operator to retry a request that cannot fit: ${msg}`);
+  assert(
+    !/try again|resets in/.test(msg),
+    `told the operator to retry a request that cannot fit: ${msg}`,
+  );
 });
 
 check("the message is a clause the caller can embed, not a sentence", () => {

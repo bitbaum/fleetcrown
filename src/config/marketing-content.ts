@@ -1,10 +1,17 @@
-import { APP_NAME, APP_DOMAIN, MARKETING_TAGLINE, MARKETING_SUBTITLE, MARKETING_POSITIONING } from "./brand";
+import {
+  APP_NAME,
+  APP_DOMAIN,
+  MARKETING_TAGLINE,
+  MARKETING_SUBTITLE,
+  MARKETING_POSITIONING,
+} from "./brand";
 
 // Central source of truth for all public marketing copy.
 // Rebrand, reposition, or A/B test by editing this file — no component changes.
 
 export const SITE_TITLE = `${APP_NAME} — Local AI Agent Fleet Control`;
-export const SITE_DESCRIPTION = "The operating system for people running real AI agents. Local execution where the work happens. Remote command from anywhere.";
+export const SITE_DESCRIPTION =
+  "The operating system for people running real AI agents. Local execution where the work happens. Remote command from anywhere.";
 
 // Homepage hero
 export const HOME_HERO = {
@@ -24,7 +31,8 @@ export const HOME_HERO_CONSOLE = {
 // Differentiation
 export const DIFFERENTIATION = {
   title: "Not another coding agent.",
-  subtitle: "Most tools help you write code faster in one file or one project. We help serious builders orchestrate real agent operations at fleet scale.",
+  subtitle:
+    "Most tools help you write code faster in one file or one project. We help serious builders orchestrate real agent operations at fleet scale.",
   points: [
     {
       title: "Local execution is the foundation",
@@ -61,37 +69,45 @@ export const PHILOSOPHY = {
   values: [
     {
       name: "Local first. Always.",
-      description: "Your machine is the privileged execution surface. When it can do the work, it should. Full environment access. Zero cloud sandbox compromise.",
+      description:
+        "Your machine is the privileged execution surface. When it can do the work, it should. Full environment access. Zero cloud sandbox compromise.",
     },
     {
       name: "Humans in the loop, by default.",
-      description: "You decide how much the system decides. Per project. Per moment. Autonomy is a dial — not a switch you flip once and forget.",
+      description:
+        "You decide how much the system decides. Per project. Per moment. Autonomy is a dial — not a switch you flip once and forget.",
     },
     {
       name: "Software today. Robots tomorrow.",
-      description: "The same control patterns that orchestrate agents will orchestrate robots. We are building the abstraction layer for both.",
+      description:
+        "The same control patterns that orchestrate agents will orchestrate robots. We are building the abstraction layer for both.",
     },
     {
       name: "Open models, first class.",
-      description: "Frontier subscriptions are not the destination. Open and local models compete equally for your attention and your work.",
+      description:
+        "Frontier subscriptions are not the destination. Open and local models compete equally for your attention and your work.",
     },
     {
       name: "Nothing hidden.",
-      description: "You always know what each agent is doing and why. No black boxes inside your own fleet.",
+      description:
+        "You always know what each agent is doing and why. No black boxes inside your own fleet.",
     },
     {
       name: "Built for serious operators.",
-      description: "FleetCrown is infrastructure for builders running many agents at once across multiple projects — not a friendly chat assistant.",
+      description:
+        "FleetCrown is infrastructure for builders running many agents at once across multiple projects — not a friendly chat assistant.",
     },
   ],
-  closer: "These are not slogans. They are the constraints we use when making product and engineering decisions.",
+  closer:
+    "These are not slogans. They are the constraints we use when making product and engineering decisions.",
 };
 
 // Investors — sharp thesis, declarative bullets
 export const INVESTORS = {
   eyebrow: "FOR INVESTORS",
   headline: "The control layer for the age of autonomous creation.",
-  thesis: "One person commanding a fleet of agents is the new unit of leverage. We are building the operating system for that future — and for the robotic fleets that will follow.",
+  thesis:
+    "One person commanding a fleet of agents is the new unit of leverage. We are building the operating system for that future — and for the robotic fleets that will follow.",
   whyNow: [
     "Agent capability has crossed the orchestration threshold. The bottleneck is no longer raw generation. It is human direction.",
     "The most advanced users are already running many agents at once across multiple projects. They need infrastructure built for that reality.",
@@ -99,7 +115,8 @@ export const INVESTORS = {
     "Open and local models are converging on frontier capability. Whoever controls the orchestration layer will be neutral to model choice.",
     "The same control patterns transfer to physical robotics. The market has not yet appreciated this.",
   ],
-  built: "A web command center coordinates fleets of AI agents across projects. A native Fleet Runner desktop app — same React tree as the web, plus tray and OS notifications — runs them directly in the operator's terminal environment via Zellij. Per-project autonomy controls, reliable handoff systems, queue management, and truthful status surfaces are live and in daily use. Multi-OS installers (Linux, macOS, Windows) ship from a single CI matrix on every release tag.",
+  built:
+    "A web command center coordinates fleets of AI agents across projects. A native Fleet Runner desktop app — same React tree as the web, plus tray and OS notifications — runs them directly in the operator's terminal environment via Zellij. Per-project autonomy controls, reliable handoff systems, queue management, and truthful status surfaces are live and in daily use. Multi-OS installers (Linux, macOS, Windows) ship from a single CI matrix on every release tag.",
   // Scannable bullets, not a prose wall — the page pairs these with the live
   // fleet snapshot (same real data source as the homepage hero).
   traction: [
@@ -154,7 +171,8 @@ export const ROADMAP: {
   buckets: [
     {
       title: "Shipping now",
-      summary: "Live in production. The system already coordinates real fleets across real projects.",
+      summary:
+        "Live in production. The system already coordinates real fleets across real projects.",
       items: [
         {
           title: "Fleet command center",
@@ -179,7 +197,8 @@ export const ROADMAP: {
     },
     {
       title: "Next",
-      summary: "Concrete engineering, in sequence: distribution first, then the remote control channel, then mobile on top of it.",
+      summary:
+        "Concrete engineering, in sequence: distribution first, then the remote control channel, then mobile on top of it.",
       items: [
         {
           title: "Distribution and auto-update",
@@ -214,7 +233,8 @@ export const ROADMAP: {
     },
     {
       title: "Research",
-      summary: "Directions we are committed to that are design and strategy work today. Nothing here is presented as available.",
+      summary:
+        "Directions we are committed to that are design and strategy work today. Nothing here is presented as available.",
       items: [
         {
           title: "Cloud agents as a complementary mode",
@@ -245,13 +265,19 @@ export const ROADMAP: {
         },
         {
           title: "One agent per user",
-          line: "Loki (FleetCrown) and Cat (OrangeCat) converge into one agent over one memory graph, one autonomy dial, and one approval inbox — the surfaces stay as engineering boundaries, the user perceives \"my agent.\"",
-          essay: { label: "Read the essay: From Two AIs to One", href: "/thoughts/from-two-ais-to-one" },
+          line: 'Loki (FleetCrown) and Cat (OrangeCat) converge into one agent over one memory graph, one autonomy dial, and one approval inbox — the surfaces stay as engineering boundaries, the user perceives "my agent."',
+          essay: {
+            label: "Read the essay: From Two AIs to One",
+            href: "/thoughts/from-two-ais-to-one",
+          },
         },
         {
           title: "Stakeholder graph",
           line: "Track each project's surrounding relationships — competitors, collaborators, investors, customers — as typed edges in OrangeCat's entity graph, surfaced on FleetCrown for the agent to act on. Competitors ship first as the most automatable category.",
-          essay: { label: "Read the essay: Where Stakeholders Live", href: "/thoughts/where-stakeholders-live" },
+          essay: {
+            label: "Read the essay: Where Stakeholders Live",
+            href: "/thoughts/where-stakeholders-live",
+          },
         },
         {
           title: "OrangeCat integration — the transaction half",
@@ -302,7 +328,8 @@ export const ROADMAP: {
       },
     ],
   },
-  closer: "This is the public-facing roadmap. Detailed engineering plans, deadlines, and sequencing live in internal documents and the architecture reference post.",
+  closer:
+    "This is the public-facing roadmap. Detailed engineering plans, deadlines, and sequencing live in internal documents and the architecture reference post.",
 };
 
 // Shared final CTA used at the bottom of every marketing page
@@ -327,14 +354,12 @@ export const DESKTOP_DOWNLOAD = {
   // Top-level back-compat fields (used by /download page metadata + homepage).
   eyebrow: "DESKTOP APP",
   title: "Get Fleet Runner",
-  lede:
-    "FleetCrown runs in your browser as a full control plane. Fleet Runner is the optional desktop app that lets agents act on your computer — open files, run commands, drive terminal sessions — while you stay in command from the web or your phone.",
+  lede: "FleetCrown runs in your browser as a full control plane. Fleet Runner is the optional desktop app that lets agents act on your computer — open files, run commands, drive terminal sessions — while you stay in command from the web or your phone.",
 
   hero: {
     eyebrow: "DESKTOP APP",
     title: "Get Fleet Runner",
-    lede:
-      "FleetCrown runs in your browser as a full control plane. Fleet Runner is the optional desktop app that lets agents act on your computer — open files, run commands, drive terminal sessions — while you stay in command from the web or your phone.",
+    lede: "FleetCrown runs in your browser as a full control plane. Fleet Runner is the optional desktop app that lets agents act on your computer — open files, run commands, drive terminal sessions — while you stay in command from the web or your phone.",
   },
 
   // Web vs. desktop — answers "do I need this?" in plain language.
@@ -368,20 +393,17 @@ export const DESKTOP_DOWNLOAD = {
     {
       number: "01",
       title: "Make it runnable, then open",
-      body:
-        "On Linux, downloads start non-executable for safety. Paste the one-line command shown under Download to mark Fleet Runner executable and launch it. On macOS and Windows, a normal double-click is enough.",
+      body: "On Linux, downloads start non-executable for safety. Paste the one-line command shown under Download to mark Fleet Runner executable and launch it. On macOS and Windows, a normal double-click is enough.",
     },
     {
       number: "02",
       title: "Sign in — once",
-      body:
-        "Use the same FleetCrown account you signed up with on the web. The desktop app opens straight to your dashboard. From the web, you can also click \"Open in Fleet Runner\" to log the desktop app in without copy-pasting a token. From v0.3.0 onward, Fleet Runner checks for updates on launch and downloads them in the background — you'll never have to manually re-download.",
+      body: 'Use the same FleetCrown account you signed up with on the web. The desktop app opens straight to your dashboard. From the web, you can also click "Open in Fleet Runner" to log the desktop app in without copy-pasting a token. From v0.3.0 onward, Fleet Runner checks for updates on launch and downloads them in the background — you\'ll never have to manually re-download.',
     },
     {
       number: "03",
       title: "Dispatch your first intent",
-      body:
-        "Pick a project on your computer and dispatch an intent. Fleet Runner launches the agent in a terminal session and pings you when it hands off — even if the app is hidden. The terminal session manager ships inside Fleet Runner; you just need at least one agent CLI installed (Claude Code or Grok — see prerequisites below).",
+      body: "Pick a project on your computer and dispatch an intent. Fleet Runner launches the agent in a terminal session and pings you when it hands off — even if the app is hidden. The terminal session manager ships inside Fleet Runner; you just need at least one agent CLI installed (Claude Code or Grok — see prerequisites below).",
     },
   ],
 
@@ -405,20 +427,17 @@ export const DESKTOP_DOWNLOAD = {
         note: "Recommended · ~80 MB · installs via package manager",
         // /releases/latest/download/... — GitHub redirects to the current
         // release, so this URL survives future version bumps.
-        url:
-          "https://github.com/bitbaum/fleetcrown-releases/releases/latest/download/Fleet-Runner-linux-amd64.deb",
+        url: "https://github.com/bitbaum/fleetcrown-releases/releases/latest/download/Fleet-Runner-linux-amd64.deb",
       },
       secondary: [
         {
           label: "AppImage (other distros)",
-          url:
-            "https://github.com/bitbaum/fleetcrown-releases/releases/latest/download/Fleet-Runner-linux-x86_64.AppImage",
+          url: "https://github.com/bitbaum/fleetcrown-releases/releases/latest/download/Fleet-Runner-linux-x86_64.AppImage",
         },
       ],
       afterDownload:
         "Open a terminal and paste this one line. It installs Fleet Runner system-wide, then launches it. No file-manager dance, no KDE security popup:",
-      command:
-        "sudo dpkg -i ~/Downloads/Fleet-Runner-linux-amd64.deb && fleet-runner",
+      command: "sudo dpkg -i ~/Downloads/Fleet-Runner-linux-amd64.deb && fleet-runner",
     },
     {
       id: "mac",
@@ -432,18 +451,16 @@ export const DESKTOP_DOWNLOAD = {
       primary: {
         label: "Download .dmg",
         note: "Apple Silicon · ~98 MB",
-        url:
-          "https://github.com/bitbaum/fleetcrown-releases/releases/latest/download/Fleet-Runner-mac-arm64.dmg",
+        url: "https://github.com/bitbaum/fleetcrown-releases/releases/latest/download/Fleet-Runner-mac-arm64.dmg",
       },
       secondary: [
         {
           label: ".zip (no installer)",
-          url:
-            "https://github.com/bitbaum/fleetcrown-releases/releases/latest/download/Fleet-Runner-mac-arm64.zip",
+          url: "https://github.com/bitbaum/fleetcrown-releases/releases/latest/download/Fleet-Runner-mac-arm64.zip",
         },
       ],
       afterDownload:
-        "Open the .dmg, drag Fleet Runner to Applications, then launch it. First time only: macOS will warn \"Apple cannot check this for malicious software\" (we're not yet code-signed). Control-click the app → Open → Open. After that one bypass, it launches normally:",
+        'Open the .dmg, drag Fleet Runner to Applications, then launch it. First time only: macOS will warn "Apple cannot check this for malicious software" (we\'re not yet code-signed). Control-click the app → Open → Open. After that one bypass, it launches normally:',
       command: "open ~/Applications/Fleet\\ Runner.app",
     },
     {
@@ -454,12 +471,11 @@ export const DESKTOP_DOWNLOAD = {
       primary: {
         label: "Download installer",
         note: "x64 · ~81 MB",
-        url:
-          "https://github.com/bitbaum/fleetcrown-releases/releases/latest/download/Fleet-Runner-win-x64.exe",
+        url: "https://github.com/bitbaum/fleetcrown-releases/releases/latest/download/Fleet-Runner-win-x64.exe",
       },
       secondary: [],
       afterDownload:
-        "Run the .exe. Windows SmartScreen may say \"unrecognized app\" (we're not yet code-signed). Click \"More info\" → \"Run anyway.\" The installer takes care of the rest:",
+        'Run the .exe. Windows SmartScreen may say "unrecognized app" (we\'re not yet code-signed). Click "More info" → "Run anyway." The installer takes care of the rest:',
       command: "Fleet-Runner-win-x64.exe",
     },
   ],
@@ -506,28 +522,23 @@ export const DESKTOP_DOWNLOAD = {
   // Developer / advanced — collapsed by default in the UI.
   developer: {
     label: "For developers",
-    description:
-      "Build the desktop app yourself, or run the headless CLI agent instead.",
+    description: "Build the desktop app yourself, or run the headless CLI agent instead.",
     buildFromSource: {
       label: "Build the desktop app from source",
-      body:
-        "Clone and build a native package for your machine. Useful if you're contributing, want a development build, or are on a platform we don't ship binaries for yet.",
+      body: "Clone and build a native package for your machine. Useful if you're contributing, want a development build, or are on a platform we don't ship binaries for yet.",
       command:
         "git clone https://github.com/bitbaum/fleetcrown.git && cd fleetcrown/desktop && npm install && npm run dist:linux  # or dist:mac / dist:win",
     },
     legacyDaemon: {
       label: "Headless CLI agent",
-      body:
-        "For CI runners, headless servers, or operators who prefer a pure terminal flow. Fleet Runner is the recommended path; the CLI agent covers machines that can't run a desktop app.",
-      command:
-        "curl -fsSL https://fleetcrown.orangecat.ch/api/agent/install | node - init",
+      body: "For CI runners, headless servers, or operators who prefer a pure terminal flow. Fleet Runner is the recommended path; the CLI agent covers machines that can't run a desktop app.",
+      command: "curl -fsSL https://fleetcrown.orangecat.ch/api/agent/install | node - init",
     },
   },
 
   // "Coming to more surfaces" — kept in case the homepage section wants it.
   future: {
-    desktop:
-      "One-click signed installers with auto-update for macOS, Windows, and Linux.",
+    desktop: "One-click signed installers with auto-update for macOS, Windows, and Linux.",
     mobile:
       "Native iOS and Android apps on the same remote control channel — fleet visibility, queues, and dispatch from your phone.",
   },

@@ -106,7 +106,11 @@ export async function dbReader(path: TelemetryPath): Promise<PathReading | null>
                  max(${sql.identifier(path.timeColumn)}) as newest,
                  extract(epoch from (now() - max(${sql.identifier(path.timeColumn)})))/3600.0 as age_hours
           from ${sql.identifier(path.table)}`,
-    )) as unknown as Array<{ rows: number; newest: string | Date | null; age_hours: string | number | null }>;
+    )) as unknown as Array<{
+      rows: number;
+      newest: string | Date | null;
+      age_hours: string | number | null;
+    }>;
 
     const r = rows[0];
     if (!r) return null;

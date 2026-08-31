@@ -104,7 +104,11 @@ export function LokiNudge({
     <div className="ui-loki-nudge">
       <Sparkles className="h-3.5 w-3.5 shrink-0 text-accent-text" />
       <span className="ui-loki-nudge-text">
-        {state === "ready" ? composed : <span className="ui-loki-nudge-shimmer">Loki is composing…</span>}
+        {state === "ready" ? (
+          composed
+        ) : (
+          <span className="ui-loki-nudge-shimmer">Loki is composing…</span>
+        )}
       </span>
     </div>
   );

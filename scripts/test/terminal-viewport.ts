@@ -20,12 +20,20 @@ let fail = 0;
 function eq(actual: unknown, expected: unknown, label: string) {
   const a = JSON.stringify(actual);
   const e = JSON.stringify(expected);
-  if (a === e) { pass++; }
-  else { fail++; console.error(`✗ ${label}: expected ${e}, got ${a}`); }
+  if (a === e) {
+    pass++;
+  } else {
+    fail++;
+    console.error(`✗ ${label}: expected ${e}, got ${a}`);
+  }
 }
 function check(label: string, condition: boolean) {
-  if (condition) { pass++; }
-  else { fail++; console.error(`✗ ${label}`); }
+  if (condition) {
+    pass++;
+  } else {
+    fail++;
+    console.error(`✗ ${label}`);
+  }
 }
 
 // --- what the viewer publishes ------------------------------------------------
@@ -47,7 +55,11 @@ eq(
 
 // ResizeObserver fires on every layout pass; each duplicate used to be a real
 // POST that woke the runner to re-apply a size it already had.
-eq(ptyResizeToPublish({ cols: 152, rows: 20 }, { cols: 152, rows: 20 }), null, "unchanged size stays silent");
+eq(
+  ptyResizeToPublish({ cols: 152, rows: 20 }, { cols: 152, rows: 20 }),
+  null,
+  "unchanged size stays silent",
+);
 eq(
   ptyResizeToPublish({ cols: 152, rows: 21 }, { cols: 152, rows: 20 }),
   { cols: 152, rows: 21 },
@@ -55,15 +67,31 @@ eq(
 );
 
 // A collapse must not overwrite the last good size — the session keeps it.
-eq(ptyResizeToPublish({ cols: 74, rows: 1 }, { cols: 152, rows: 20 }), null, "collapse after a good size stays silent");
+eq(
+  ptyResizeToPublish({ cols: 74, rows: 1 }, { cols: 152, rows: 20 }),
+  null,
+  "collapse after a good size stays silent",
+);
 
 // --- what the boundary accepts ------------------------------------------------
 
 // The server floors independently: an old bundle or any other caller is bound
 // by the same rule without importing the client's decision.
-eq(clampPtyGeometry({ cols: 74, rows: 1 }), { cols: 74, rows: TERMINAL_MIN_ROWS, clamped: true }, "server floors rows");
-eq(clampPtyGeometry({ cols: 3, rows: 40 }), { cols: TERMINAL_MIN_COLS, rows: 40, clamped: true }, "server floors cols");
-eq(clampPtyGeometry({ cols: 152, rows: 20 }), { cols: 152, rows: 20, clamped: false }, "real size passes through untouched");
+eq(
+  clampPtyGeometry({ cols: 74, rows: 1 }),
+  { cols: 74, rows: TERMINAL_MIN_ROWS, clamped: true },
+  "server floors rows",
+);
+eq(
+  clampPtyGeometry({ cols: 3, rows: 40 }),
+  { cols: TERMINAL_MIN_COLS, rows: 40, clamped: true },
+  "server floors cols",
+);
+eq(
+  clampPtyGeometry({ cols: 152, rows: 20 }),
+  { cols: 152, rows: 20, clamped: false },
+  "real size passes through untouched",
+);
 eq(
   clampPtyGeometry({ cols: TERMINAL_MIN_COLS, rows: TERMINAL_MIN_ROWS }),
   { cols: TERMINAL_MIN_COLS, rows: TERMINAL_MIN_ROWS, clamped: false },
@@ -80,11 +108,13 @@ for (const geom of [
 ]) {
   const published = ptyResizeToPublish(geom, null);
   if (published) {
-    eq(clampPtyGeometry(published).clamped, false, `client-published ${geom.cols}x${geom.rows} is never clamped`);
+    eq(
+      clampPtyGeometry(published).clamped,
+      false,
+      `client-published ${geom.cols}x${geom.rows} is never clamped`,
+    );
   }
 }
-
-
 
 // ── Which session the viewer attaches to ─────────────────────────────────────
 // The safety half of the 2026-08-18 phone report: /terminal?tab=orangecat found
@@ -94,22 +124,42 @@ for (const geom of [
 const RUNNING = ["sbb-lost-found", "fleetcrown"];
 
 eq(
-  resolveTabAttachment({ requestedTab: "orangecat", selected: "orangecat", tabs: RUNNING, loading: false }),
+  resolveTabAttachment({
+    requestedTab: "orangecat",
+    selected: "orangecat",
+    tabs: RUNNING,
+    loading: false,
+  }),
   { activeTab: null, deepLinkMiss: true },
   "a deep link that matches nothing attaches to NOTHING",
 );
 eq(
-  resolveTabAttachment({ requestedTab: "orangecat", selected: "orangecat", tabs: RUNNING, loading: true }),
+  resolveTabAttachment({
+    requestedTab: "orangecat",
+    selected: "orangecat",
+    tabs: RUNNING,
+    loading: true,
+  }),
   { activeTab: null, deepLinkMiss: false },
   "mid-fetch is not yet evidence the session is gone",
 );
 eq(
-  resolveTabAttachment({ requestedTab: "orangecat", selected: "fleetcrown", tabs: RUNNING, loading: false }),
+  resolveTabAttachment({
+    requestedTab: "orangecat",
+    selected: "fleetcrown",
+    tabs: RUNNING,
+    loading: false,
+  }),
   { activeTab: "fleetcrown", deepLinkMiss: false },
   "picking a session from the miss state clears it",
 );
 eq(
-  resolveTabAttachment({ requestedTab: "fleetcrown", selected: "fleetcrown", tabs: RUNNING, loading: false }),
+  resolveTabAttachment({
+    requestedTab: "fleetcrown",
+    selected: "fleetcrown",
+    tabs: RUNNING,
+    loading: false,
+  }),
   { activeTab: "fleetcrown", deepLinkMiss: false },
   "a deep link that hits attaches to what was asked for",
 );
@@ -119,7 +169,12 @@ eq(
   "with no deep link, first tab is a fine default",
 );
 eq(
-  resolveTabAttachment({ requestedTab: "orangecat", selected: "orangecat", tabs: [], loading: false }),
+  resolveTabAttachment({
+    requestedTab: "orangecat",
+    selected: "orangecat",
+    tabs: [],
+    loading: false,
+  }),
   { activeTab: null, deepLinkMiss: true },
   "nothing running is still a miss, not a blank live pane",
 );
@@ -129,21 +184,32 @@ eq(
 eq(nextFontSizeForTarget(13, 80), null, "already at target — stop");
 eq(nextFontSizeForTarget(13, 120), null, "wider than target — stop");
 eq(nextFontSizeForTarget(13, 0), null, "unlaid-out host — stop rather than divide by nothing");
-eq(nextFontSizeForTarget(TERMINAL_MOBILE_MIN_FONT, 44), null, "at the floor there is nowhere left to go");
-eq(nextFontSizeForTarget(13, 44), 7, "390px phone at 13px (44 cols) lands on the floor in one step");
+eq(
+  nextFontSizeForTarget(TERMINAL_MOBILE_MIN_FONT, 44),
+  null,
+  "at the floor there is nowhere left to go",
+);
+eq(
+  nextFontSizeForTarget(13, 44),
+  7,
+  "390px phone at 13px (44 cols) lands on the floor in one step",
+);
 eq(nextFontSizeForTarget(12, 76), 11, "a near miss steps down by one instead of standing still");
-check("every step strictly shrinks", (() => {
-  // The property that matters: the walk terminates. Sweep every plausible
-  // (size, cols) pair and assert progress or a stop — never a repeat.
-  for (let size = TERMINAL_MOBILE_MIN_FONT; size <= TERMINAL_MOBILE_MAX_FONT; size++) {
-    for (let cols = 1; cols < TERMINAL_TARGET_COLS; cols++) {
-      const next = nextFontSizeForTarget(size, cols);
-      if (next === null) continue;
-      if (next >= size || next < TERMINAL_MOBILE_MIN_FONT) return false;
+check(
+  "every step strictly shrinks",
+  (() => {
+    // The property that matters: the walk terminates. Sweep every plausible
+    // (size, cols) pair and assert progress or a stop — never a repeat.
+    for (let size = TERMINAL_MOBILE_MIN_FONT; size <= TERMINAL_MOBILE_MAX_FONT; size++) {
+      for (let cols = 1; cols < TERMINAL_TARGET_COLS; cols++) {
+        const next = nextFontSizeForTarget(size, cols);
+        if (next === null) continue;
+        if (next >= size || next < TERMINAL_MOBILE_MIN_FONT) return false;
+      }
     }
-  }
-  return true;
-})());
+    return true;
+  })(),
+);
 
 console.log(`${pass}/${pass + fail} terminal-viewport cases passed`);
 if (fail > 0) process.exit(1);

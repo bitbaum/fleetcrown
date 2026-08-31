@@ -48,7 +48,9 @@ export function TeamSettings({ invitations: initial }: Props) {
   };
 
   const inviteUrl = (token: string) =>
-    typeof window !== "undefined" ? `${window.location.origin}/invite/${token}` : `/invite/${token}`;
+    typeof window !== "undefined"
+      ? `${window.location.origin}/invite/${token}`
+      : `/invite/${token}`;
 
   // All members across all orgs the user belongs to (deduplicated by userId).
   const allMembers = orgs.flatMap((o) => o.members);
@@ -75,7 +77,11 @@ export function TeamSettings({ invitations: initial }: Props) {
               <div key={m.userId} className="ui-card-shell flex items-center gap-3 px-4 py-2.5">
                 {m.image ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={m.image} alt="" className="h-7 w-7 shrink-0 rounded-full object-cover" />
+                  <img
+                    src={m.image}
+                    alt=""
+                    className="h-7 w-7 shrink-0 rounded-full object-cover"
+                  />
                 ) : (
                   <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-raised text-xs font-medium text-text-secondary">
                     {(m.name ?? m.email ?? "?").charAt(0).toUpperCase()}
@@ -85,9 +91,13 @@ export function TeamSettings({ invitations: initial }: Props) {
                   <p className="truncate text-sm font-medium text-text-primary">
                     {m.name ?? m.email ?? "Unknown"}
                   </p>
-                  {m.username && <p className="truncate text-xs text-text-tertiary">@{m.username}</p>}
+                  {m.username && (
+                    <p className="truncate text-xs text-text-tertiary">@{m.username}</p>
+                  )}
                 </div>
-                <span className={`ui-tag shrink-0 ${m.role === "owner" ? "ui-tag-neutral" : "ui-tag-positive"}`}>
+                <span
+                  className={`ui-tag shrink-0 ${m.role === "owner" ? "ui-tag-neutral" : "ui-tag-positive"}`}
+                >
                   {m.role}
                 </span>
               </div>
@@ -125,14 +135,19 @@ export function TeamSettings({ invitations: initial }: Props) {
             return (
               <div key={inv.id} className="ui-card-shell flex items-center gap-3 px-4 py-3">
                 <div className="flex-1 min-w-0">
-                  <p className="truncate font-mono text-xs text-text-secondary" title={inviteUrl(inv.token)}>
+                  <p
+                    className="truncate font-mono text-xs text-text-secondary"
+                    title={inviteUrl(inv.token)}
+                  >
                     {inviteUrl(inv.token).replace(/^https?:\/\//, "")}
                   </p>
                   {inv.email && (
                     <p className="text-xs text-text-tertiary mt-0.5">for {inv.email}</p>
                   )}
                 </div>
-                <span className={`ui-tag shrink-0 ${used ? "ui-tag-neutral" : expired ? "ui-tag-negative" : "ui-tag-positive"}`}>
+                <span
+                  className={`ui-tag shrink-0 ${used ? "ui-tag-neutral" : expired ? "ui-tag-negative" : "ui-tag-positive"}`}
+                >
                   {used ? "used" : expired ? "expired" : "active"}
                 </span>
                 {!used && !expired && (
@@ -155,7 +170,9 @@ export function TeamSettings({ invitations: initial }: Props) {
       )}
 
       {invites.length === 0 && uniqueMembers.length <= 1 && (
-        <p className="text-sm text-text-secondary">No invitations yet. Create a link to invite someone.</p>
+        <p className="text-sm text-text-secondary">
+          No invitations yet. Create a link to invite someone.
+        </p>
       )}
     </section>
   );

@@ -24,7 +24,12 @@ export async function GET(req: NextRequest) {
 
   const users = await getFleetAutopilotUserIds();
   let proposedTotal = 0;
-  const perUser: Array<{ userId: string; proposed: number; projectsScanned: number; skipped: string | null }> = [];
+  const perUser: Array<{
+    userId: string;
+    proposed: number;
+    projectsScanned: number;
+    skipped: string | null;
+  }> = [];
 
   for (const userId of users) {
     try {
@@ -32,7 +37,12 @@ export async function GET(req: NextRequest) {
       proposedTotal += r.proposed;
       perUser.push({ userId, ...r });
     } catch (e) {
-      perUser.push({ userId, proposed: 0, projectsScanned: 0, skipped: `error:${(e as Error).message}` });
+      perUser.push({
+        userId,
+        proposed: 0,
+        projectsScanned: 0,
+        skipped: `error:${(e as Error).message}`,
+      });
     }
   }
 

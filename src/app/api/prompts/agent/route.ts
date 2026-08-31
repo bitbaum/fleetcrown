@@ -40,19 +40,17 @@ function mergePromptSources(): AgentPrompt[] {
   }
 
   // TS templates with agentKey set become AgentPrompt entries.
-  const tsPrompts: AgentPrompt[] = PROMPT_TEMPLATES
-    .filter((t) => t.agentKey)
-    .map((t) => ({
-      key:         t.agentKey!,
-      slot:        t.slot ?? null,
-      icon:        t.icon ?? "•",
-      label:       t.name,
-      style:       (t.style ?? "dimension") as AgentPrompt["style"],
-      category:    t.category,
-      dimensionId: t.dimensionId ?? null,
-      prompt:      t.template,
-      sendNow:     t.sendNow ?? false,
-    }));
+  const tsPrompts: AgentPrompt[] = PROMPT_TEMPLATES.filter((t) => t.agentKey).map((t) => ({
+    key: t.agentKey!,
+    slot: t.slot ?? null,
+    icon: t.icon ?? "•",
+    label: t.name,
+    style: (t.style ?? "dimension") as AgentPrompt["style"],
+    category: t.category,
+    dimensionId: t.dimensionId ?? null,
+    prompt: t.template,
+    sendNow: t.sendNow ?? false,
+  }));
 
   // TS wins on key conflict — this is how the SSOT migration happens
   // incrementally without breaking the runner's JSON consumers.

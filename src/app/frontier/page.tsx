@@ -6,7 +6,8 @@ import { FRONTIER_CATEGORY_LABEL, type FrontierItem } from "@/lib/frontier/types
 
 export const metadata = {
   title: "Frontier — daily AI & robotics digest",
-  description: "The latest and most significant developments in AI, robotics, and frontier technology, distilled daily.",
+  description:
+    "The latest and most significant developments in AI, robotics, and frontier technology, distilled daily.",
 };
 
 // The digest is rebuilt by a daily cron; always read the freshest row.
@@ -77,8 +78,8 @@ export default async function FrontierPage() {
         {!digest ? (
           <div className="ui-frontier-empty">
             <p className="ui-frontier-item-summary">
-              The first digest publishes shortly. Check back soon for the day&apos;s most significant
-              AI and robotics developments.
+              The first digest publishes shortly. Check back soon for the day&apos;s most
+              significant AI and robotics developments.
             </p>
           </div>
         ) : (
@@ -97,7 +98,10 @@ export default async function FrontierPage() {
 
             <p className="ui-frontier-credit">
               {digest.items.length} items selected from {digest.candidateCount} candidates across{" "}
-              {digest.sourceCount} sources · ranked by {digest.model === "fallback" || digest.model === "static" ? "source signal" : "an LLM editor"}
+              {digest.sourceCount} sources · ranked by{" "}
+              {digest.model === "fallback" || digest.model === "static"
+                ? "source signal"
+                : "an LLM editor"}
             </p>
           </>
         )}

@@ -23,7 +23,11 @@ export default function RoadmapPage() {
             tap instead of a minute of scrolling. */}
         <nav className="ui-public-jumpbar" aria-label="Roadmap sections">
           {ROADMAP.buckets.map((bucket) => (
-            <a key={bucket.title} href={`#${bucketId(bucket.title)}`} className="ui-public-jumpbar-link">
+            <a
+              key={bucket.title}
+              href={`#${bucketId(bucket.title)}`}
+              className="ui-public-jumpbar-link"
+            >
               {bucket.title}
             </a>
           ))}
@@ -32,7 +36,11 @@ export default function RoadmapPage() {
 
       <div className="ui-public-container-mid space-y-12 pb-14 sm:space-y-20 sm:pb-24">
         {ROADMAP.buckets.map((bucket) => (
-          <section key={bucket.title} id={bucketId(bucket.title)} className="border-t border-border-subtle pt-10 sm:pt-16">
+          <section
+            key={bucket.title}
+            id={bucketId(bucket.title)}
+            className="border-t border-border-subtle pt-10 sm:pt-16"
+          >
             <h2 className="ui-public-display-md">{bucket.title}</h2>
             <p className="ui-public-section-lede mt-3 sm:mt-4">{bucket.summary}</p>
 
@@ -42,7 +50,10 @@ export default function RoadmapPage() {
                   <div className="ui-public-prose-strong text-lg">{item.title}</div>
                   <p className="ui-public-prose-muted mt-2">{item.line}</p>
                   {item.essay && (
-                    <Link href={item.essay.href} className="ui-public-link mt-3 inline-block text-sm">
+                    <Link
+                      href={item.essay.href}
+                      className="ui-public-link mt-3 inline-block text-sm"
+                    >
                       {item.essay.label} →
                     </Link>
                   )}
@@ -89,10 +100,16 @@ export default function RoadmapPage() {
       </div>
 
       <div className="ui-public-container-mid pb-14 sm:pb-24">
-        <p className="ui-public-meta max-w-2xl border-t border-border-subtle pt-8 sm:pt-12">{ROADMAP.closer}</p>
+        <p className="ui-public-meta max-w-2xl border-t border-border-subtle pt-8 sm:pt-12">
+          {ROADMAP.closer}
+        </p>
         <div className="mt-6 flex flex-wrap gap-3 sm:mt-8">
-          <Link href="/thoughts" className="ui-btn-chip">Thoughts</Link>
-          <Link href="/releases" className="ui-btn-chip">Changelog</Link>
+          <Link href="/thoughts" className="ui-btn-chip">
+            Thoughts
+          </Link>
+          <Link href="/releases" className="ui-btn-chip">
+            Changelog
+          </Link>
         </div>
       </div>
 
@@ -103,5 +120,8 @@ export default function RoadmapPage() {
 
 /** Stable anchor id for a bucket title ("Shipping now" → "shipping-now"). */
 function bucketId(title: string): string {
-  return title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
 }

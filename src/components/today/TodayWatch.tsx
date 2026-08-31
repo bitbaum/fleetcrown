@@ -8,12 +8,12 @@ import { LokiNudge } from "./LokiNudge";
 
 const KIND_LABEL: Record<WatchFocus["kind"], string> = {
   "overdue-commitment": "Overdue commitment",
-  "overdue-goal":       "Overdue goal",
-  "habit-at-risk":      "Streak at risk",
-  "imminent-bill":      "Renewal coming up",
-  "imminent-event":     "Approaching deadline",
-  "stale-contact":      "Relationship going stale",
-  "stalled-goal":       "Stalled goal",
+  "overdue-goal": "Overdue goal",
+  "habit-at-risk": "Streak at risk",
+  "imminent-bill": "Renewal coming up",
+  "imminent-event": "Approaching deadline",
+  "stale-contact": "Relationship going stale",
+  "stalled-goal": "Stalled goal",
 };
 
 /**
@@ -63,9 +63,7 @@ export async function TodayWatch() {
         </div>
       )}
 
-      {totalStrip && (
-        <p className="ui-today-watch-totals">{totalStrip}</p>
-      )}
+      {totalStrip && <p className="ui-today-watch-totals">{totalStrip}</p>}
 
       {focus && (
         <div className="ui-today-watch-action">
@@ -92,12 +90,26 @@ function buildTotalStrip(totals: {
 }): string | null {
   const parts: string[] = [];
   if (totals.overdueCommitments > 1) parts.push(`${totals.overdueCommitments - 1} more overdue`);
-  if (totals.overdueGoals > 0) parts.push(`${totals.overdueGoals} overdue goal${totals.overdueGoals === 1 ? "" : "s"}`);
-  if (totals.habitsAtRisk > 1) parts.push(`${totals.habitsAtRisk - 1} more streak${totals.habitsAtRisk - 1 === 1 ? "" : "s"} at risk`);
-  if (totals.imminentBills > 1) parts.push(`${totals.imminentBills - 1} more imminent bill${totals.imminentBills - 1 === 1 ? "" : "s"}`);
-  if (totals.imminentEvents > 0) parts.push(`${totals.imminentEvents} imminent deadline${totals.imminentEvents === 1 ? "" : "s"}`);
-  if (totals.staleContacts > 0) parts.push(`${totals.staleContacts} relationship${totals.staleContacts === 1 ? "" : "s"} going stale`);
-  if (totals.stalledGoals > 0) parts.push(`${totals.stalledGoals} stalled goal${totals.stalledGoals === 1 ? "" : "s"}`);
+  if (totals.overdueGoals > 0)
+    parts.push(`${totals.overdueGoals} overdue goal${totals.overdueGoals === 1 ? "" : "s"}`);
+  if (totals.habitsAtRisk > 1)
+    parts.push(
+      `${totals.habitsAtRisk - 1} more streak${totals.habitsAtRisk - 1 === 1 ? "" : "s"} at risk`,
+    );
+  if (totals.imminentBills > 1)
+    parts.push(
+      `${totals.imminentBills - 1} more imminent bill${totals.imminentBills - 1 === 1 ? "" : "s"}`,
+    );
+  if (totals.imminentEvents > 0)
+    parts.push(
+      `${totals.imminentEvents} imminent deadline${totals.imminentEvents === 1 ? "" : "s"}`,
+    );
+  if (totals.staleContacts > 0)
+    parts.push(
+      `${totals.staleContacts} relationship${totals.staleContacts === 1 ? "" : "s"} going stale`,
+    );
+  if (totals.stalledGoals > 0)
+    parts.push(`${totals.stalledGoals} stalled goal${totals.stalledGoals === 1 ? "" : "s"}`);
   if (parts.length === 0) return null;
   return `Also: ${parts.join(" · ")}.`;
 }

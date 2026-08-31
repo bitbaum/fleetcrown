@@ -46,13 +46,14 @@ export function ProjectSharePanel({
   const hasShare = Boolean(share);
 
   const includeCount = useMemo(
-    () => [
-      settings.includeRoadmap,
-      settings.includeChangelog,
-      settings.includeResources,
-      settings.includeRepo,
-      settings.includeLiveUrl,
-    ].filter(Boolean).length,
+    () =>
+      [
+        settings.includeRoadmap,
+        settings.includeChangelog,
+        settings.includeResources,
+        settings.includeRepo,
+        settings.includeLiveUrl,
+      ].filter(Boolean).length,
     [settings],
   );
 
@@ -97,7 +98,11 @@ export function ProjectSharePanel({
       {/* Ghost, like every other control in the project header — see the note
           on the action row in ProjectWorkspaceView. As the one bordered button
           in that row it read as the page's primary action, which it is not. */}
-      <button type="button" onClick={() => setOpen((v) => !v)} className="ui-btn-ghost min-h-11 gap-1.5">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="ui-btn-ghost min-h-11 gap-1.5"
+      >
         <Share2 className="h-3.5 w-3.5" />
         {hasShare ? "Shared" : "Share"}
       </button>
@@ -106,9 +111,17 @@ export function ProjectSharePanel({
           <div className="mb-3 flex items-start gap-2">
             <div className="min-w-0 flex-1">
               <div className="text-sm font-medium text-text-primary">Share project dossier</div>
-              <p className="mt-1 text-xs leading-relaxed text-text-muted">Unlisted, read-only, and filtered. Internal controls, private notes, and credential values stay out.</p>
+              <p className="mt-1 text-xs leading-relaxed text-text-muted">
+                Unlisted, read-only, and filtered. Internal controls, private notes, and credential
+                values stay out.
+              </p>
             </div>
-            <button type="button" onClick={() => setOpen(false)} className="ui-icon-btn" aria-label="Close share panel">
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="ui-icon-btn"
+              aria-label="Close share panel"
+            >
               <X className="h-3.5 w-3.5" />
             </button>
           </div>
@@ -116,7 +129,12 @@ export function ProjectSharePanel({
           <div className="space-y-2">
             <select
               value={settings.audience}
-              onChange={(e) => setSettings((s) => ({ ...s, audience: e.target.value as ShareSettings["audience"] }))}
+              onChange={(e) =>
+                setSettings((s) => ({
+                  ...s,
+                  audience: e.target.value as ShareSettings["audience"],
+                }))
+              }
               className="ui-input-tight w-full"
               aria-label="Audience"
             >
@@ -143,7 +161,12 @@ export function ProjectSharePanel({
           </div>
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <button type="button" onClick={saveShare} disabled={busy} className="ui-btn-save gap-1.5">
+            <button
+              type="button"
+              onClick={saveShare}
+              disabled={busy}
+              className="ui-btn-save gap-1.5"
+            >
               {busy ? <Loader2 className="ui-spinner-xs" /> : <Share2 className="h-3.5 w-3.5" />}
               {share ? `Update (${includeCount})` : "Create link"}
             </button>
@@ -153,7 +176,12 @@ export function ProjectSharePanel({
                   {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                   {copied ? "Copied" : "Copy"}
                 </button>
-                <a href={share.url} target="_blank" rel="noreferrer" className="ui-btn-secondary gap-1.5">
+                <a
+                  href={share.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="ui-btn-secondary gap-1.5"
+                >
                   <ExternalLink className="h-3.5 w-3.5" /> Open
                 </a>
                 <button type="button" onClick={revoke} disabled={busy} className="ui-btn-danger">

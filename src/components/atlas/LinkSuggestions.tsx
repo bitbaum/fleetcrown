@@ -50,8 +50,8 @@ export function LinkSuggestions({ suggestions }: { suggestions: LinkSuggestion[]
 
       {suggestions.length === 0 ? (
         <p className="mt-4 text-sm text-text-tertiary">
-          Nothing to suggest — either every site is already connected, or no site has been
-          checked yet.
+          Nothing to suggest — either every site is already connected, or no site has been checked
+          yet.
         </p>
       ) : (
         <ul className="mt-4 space-y-2">

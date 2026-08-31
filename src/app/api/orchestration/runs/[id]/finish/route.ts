@@ -13,9 +13,11 @@ const FinishBody = z.object({
   // or omitted to let infer-outcome derive it from the handoff.
   outcome: z.enum(ORCHESTRATION_OUTCOMES).optional(),
   summary: z
-    .object(Object.fromEntries(
-      ORCHESTRATION_TASK_SUMMARY_FIELDS.map((f) => [f, z.string().trim().max(4000).optional()]),
-    ) as Record<typeof ORCHESTRATION_TASK_SUMMARY_FIELDS[number], z.ZodOptional<z.ZodString>>)
+    .object(
+      Object.fromEntries(
+        ORCHESTRATION_TASK_SUMMARY_FIELDS.map((f) => [f, z.string().trim().max(4000).optional()]),
+      ) as Record<(typeof ORCHESTRATION_TASK_SUMMARY_FIELDS)[number], z.ZodOptional<z.ZodString>>,
+    )
     .optional(),
   durationMs: z.number().int().nonnegative().optional(),
   error: z.string().trim().max(2000).optional(),
@@ -39,12 +41,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   // contract field — including block-reason / no-op-count — is persisted.
   const summary = body.summary ? buildOrchestrationSummary(body.summary) : null;
 
-  const outcome: OrchestrationOutcome = body.outcome ?? inferOutcome({
-    summary,
-    durationMs: body.durationMs,
-    error: body.error ?? null,
-    userAbort: body.userAbort ?? false,
-  });
+  const outcome: OrchestrationOutcome =
+    body.outcome ??
+    inferOutcome({
+      summary,
+      durationMs: body.durationMs,
+      error: body.error ?? null,
+      userAbort: body.userAbort ?? false,
+    });
 
   const updated = await updateOrchestrationRun(
     id,

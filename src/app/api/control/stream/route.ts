@@ -13,18 +13,21 @@ import { NOTIFY_CHANNEL } from "@/db/setup-notify-trigger";
 import { SSE_KEEPALIVE_MS } from "@/lib/constants/time";
 import type { FastProjectState } from "@/lib/control-fast-state";
 import { sseBus } from "@/lib/sse-bus";
-import { resolveProjectSession, dbRowToSession, isRuntimeObservationFresh } from "@/lib/project-session";
+import {
+  resolveProjectSession,
+  dbRowToSession,
+  isRuntimeObservationFresh,
+} from "@/lib/project-session";
 import { getDatabaseDirectUrl } from "@/lib/db-url";
 import postgres from "postgres";
 
 export const dynamic = "force-dynamic";
 
-
 // Map DB state rows to the FastProjectState shape the SSE client expects.
 // Used on the cloud host where /proc and /tmp are unavailable — runner keeps DB current.
 function dbToFastState(
   confProjects: Array<{ tab: string; ownerUserId: string }>,
-  dbRows: DbProjectState[]
+  dbRows: DbProjectState[],
 ): FastProjectState[] {
   // Key by (ownerUserId, projectKey) so two users with the same project name
   // don't collide when an org peer is viewing a team project. normalizeTabName
@@ -33,7 +36,20 @@ function dbToFastState(
   const byKey = new Map(dbRows.map((r) => [`${r.userId}:${normalizeTabName(r.projectKey)}`, r]));
   return confProjects.map(({ tab, ownerUserId }) => {
     const r = byKey.get(`${ownerUserId}:${normalizeTabName(tab)}`);
-    if (!r) return { tab, workspaceId: null, agentRunning: false, tabOpen: false, activeAgents: [], session: null, currentPrompt: null, readyAt: null, lockAt: null, closingAt: null, closedAt: null };
+    if (!r)
+      return {
+        tab,
+        workspaceId: null,
+        agentRunning: false,
+        tabOpen: false,
+        activeAgents: [],
+        session: null,
+        currentPrompt: null,
+        readyAt: null,
+        lockAt: null,
+        closingAt: null,
+        closedAt: null,
+      };
     // Runtime liveness claims expire when the runner stops reporting this
     // project (see isRuntimeObservationFresh) — session handoffs do not.
     const fresh = isRuntimeObservationFresh(r);
@@ -44,13 +60,21 @@ function dbToFastState(
       tabOpen: fresh && r.tabOpen,
       activeAgents: fresh ? r.activeAgents : [],
       session: dbRowToSession(r),
-      currentPrompt: fresh && r.currentPromptKey
-        ? { key: r.currentPromptKey, label: r.currentPromptLabel ?? r.currentPromptKey, startedAt: r.currentPromptStartedAt ? Math.floor(r.currentPromptStartedAt.getTime() / 1000) : 0, source: "inject" as const }
-        : null,
-      readyAt:   r.readyAt   ? Math.floor(r.readyAt.getTime()   / 1000) : null,
-      lockAt:    r.lockAt    ? Math.floor(r.lockAt.getTime()    / 1000) : null,
+      currentPrompt:
+        fresh && r.currentPromptKey
+          ? {
+              key: r.currentPromptKey,
+              label: r.currentPromptLabel ?? r.currentPromptKey,
+              startedAt: r.currentPromptStartedAt
+                ? Math.floor(r.currentPromptStartedAt.getTime() / 1000)
+                : 0,
+              source: "inject" as const,
+            }
+          : null,
+      readyAt: r.readyAt ? Math.floor(r.readyAt.getTime() / 1000) : null,
+      lockAt: r.lockAt ? Math.floor(r.lockAt.getTime() / 1000) : null,
       closingAt: r.closingAt ? Math.floor(r.closingAt.getTime() / 1000) : null,
-      closedAt:  r.closedAt  ? Math.floor(r.closedAt.getTime()  / 1000) : null,
+      closedAt: r.closedAt ? Math.floor(r.closedAt.getTime() / 1000) : null,
       promptQueue: r.promptQueue ?? [],
       promptQueueRevision: r.promptQueueRevision,
       autoContinueEnabled: r.autoContinueEnabled,
@@ -64,7 +88,11 @@ function sseEvent(event: string, data: unknown): string {
 
 export async function GET() {
   const userId = await getSessionUserId();
-  if (!userId) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { "Content-Type": "application/json" } });
+  if (!userId)
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
   const preferences = readAgentPreferences();
   const agentConfig = resolveAgentConfig(preferences);
   const agentRegistry = buildSwitchableAgentCatalog(preferences.models, agentConfig.agent);
@@ -75,7 +103,12 @@ export async function GET() {
   ]);
   const seenStreamTabs = new Set<string>();
   const confProjects = [...dbUserProjects, ...dbTeamProjects]
-    .filter((p) => p.dirPath && !seenStreamTabs.has(p.name.toLowerCase()) && seenStreamTabs.add(p.name.toLowerCase()))
+    .filter(
+      (p) =>
+        p.dirPath &&
+        !seenStreamTabs.has(p.name.toLowerCase()) &&
+        seenStreamTabs.add(p.name.toLowerCase()),
+    )
     .map((p) => {
       const agentId = p.agentPref ?? agentConfig.agent;
       const agent = agentRegistry.agents.find((entry) => entry.id === agentId);
@@ -100,7 +133,11 @@ export async function GET() {
   const refreshTabsCacheIfStale = () => {
     if (Date.now() - lastTabRefreshMs < TAB_CACHE_TTL_MS) return;
     lastTabRefreshMs = Date.now();
-    getZellijTabs().then((tabs) => { zellijTabCache = tabs; }).catch(() => {});
+    getZellijTabs()
+      .then((tabs) => {
+        zellijTabCache = tabs;
+      })
+      .catch(() => {});
   };
 
   let lastSent: FastProjectState[] = [];
@@ -112,14 +149,17 @@ export async function GET() {
     const agentProcesses = getAgentProcesses(agentRegistry.agents);
     const scanInput = confProjects.map(({ tab, dir, sessionLifecycleSignals }) => {
       const resolvedTab = resolveEffectiveTab(tab, zellijTabCache);
-      const projectProcesses = agentProcesses.filter((p) => p.cwd === dir || p.cwd.startsWith(dir + "/"));
+      const projectProcesses = agentProcesses.filter(
+        (p) => p.cwd === dir || p.cwd.startsWith(dir + "/"),
+      );
       return {
         tab: resolvedTab,
         dir,
         activeAgents: [...new Set(projectProcesses.map((p) => p.agentId))],
-        sessionLifecycleSignals: projectProcesses.length > 0
-          ? projectProcesses.some((p) => p.sessionLifecycleSignals)
-          : sessionLifecycleSignals,
+        sessionLifecycleSignals:
+          projectProcesses.length > 0
+            ? projectProcesses.some((p) => p.sessionLifecycleSignals)
+            : sessionLifecycleSignals,
         tabOpen: zellijTabCache.some((t) => t.toLowerCase() === resolvedTab.toLowerCase()),
       };
     });
@@ -135,7 +175,9 @@ export async function GET() {
     const dbRows = await getProjectStatesByUserIds(ownerIds).catch((): DbProjectState[] => []);
     const byKey = new Map(dbRows.map((r) => [`${r.userId}:${normalizeTabName(r.projectKey)}`, r]));
     return fast.map((p, i) => {
-      const dbRow = byKey.get(`${confProjects[i].ownerUserId}:${normalizeTabName(confProjects[i].tab)}`);
+      const dbRow = byKey.get(
+        `${confProjects[i].ownerUserId}:${normalizeTabName(confProjects[i].tab)}`,
+      );
       return {
         ...p,
         workspaceId: p.workspaceId ?? dbRow?.workspaceId ?? null,
@@ -149,18 +191,27 @@ export async function GET() {
       const enc = new TextEncoder();
 
       const send = (text: string) => {
-        try { controller.enqueue(enc.encode(text)); } catch { /* client disconnected */ }
+        try {
+          controller.enqueue(enc.encode(text));
+        } catch {
+          /* client disconnected */
+        }
       };
 
       const tick = async () => {
         refreshTabsCacheIfStale();
         const current = isRuntimeAvailable()
           ? await scanProjects()
-          : dbToFastState(confProjects, await getProjectStatesByUserIds(ownerIds).catch((): DbProjectState[] => []));
+          : dbToFastState(
+              confProjects,
+              await getProjectStatesByUserIds(ownerIds).catch((): DbProjectState[] => []),
+            );
         // Connection-based presence rides every stream event so the online
         // badge flips in <1s (the bridge pg_notify's this channel on
         // connect/disconnect). See docs/architecture/connection-presence.md.
-        const builderPresence = await getBuilderPresence(userId).catch(() => lastBuilderPresence ?? { cloud: false, local: false, any: false });
+        const builderPresence = await getBuilderPresence(userId).catch(
+          () => lastBuilderPresence ?? { cloud: false, local: false, any: false },
+        );
         const runnerConnected = builderPresence.any;
 
         const agentsKey = (a: string[]) => [...a].sort().join(",");
@@ -183,15 +234,21 @@ export async function GET() {
 
         // Push when projects changed OR presence flipped — a pure
         // connect/disconnect must still update the badge.
-        const presenceChanged = !lastBuilderPresence
-          || lastBuilderPresence.cloud !== builderPresence.cloud
-          || lastBuilderPresence.local !== builderPresence.local;
+        const presenceChanged =
+          !lastBuilderPresence ||
+          lastBuilderPresence.cloud !== builderPresence.cloud ||
+          lastBuilderPresence.local !== builderPresence.local;
         if (changed.length > 0 || runnerConnected !== lastRunnerConnected || presenceChanged) {
           lastSent = current;
           lastRunnerConnected = runnerConnected;
           lastBuilderPresence = builderPresence;
-          send(sseEvent("projects-update", { projects: current, runnerConnected, builderPresence }));
-          if (keepaliveTimer) { clearTimeout(keepaliveTimer); keepaliveTimer = null; }
+          send(
+            sseEvent("projects-update", { projects: current, runnerConnected, builderPresence }),
+          );
+          if (keepaliveTimer) {
+            clearTimeout(keepaliveTimer);
+            keepaliveTimer = null;
+          }
           scheduleKeepalive();
         }
       };
@@ -206,11 +263,24 @@ export async function GET() {
       // Initial snapshot
       const initialProjects = isRuntimeAvailable()
         ? await scanProjects()
-        : dbToFastState(confProjects, await getProjectStatesByUserIds(ownerIds).catch((): DbProjectState[] => []));
+        : dbToFastState(
+            confProjects,
+            await getProjectStatesByUserIds(ownerIds).catch((): DbProjectState[] => []),
+          );
       lastSent = initialProjects;
-      lastBuilderPresence = await getBuilderPresence(userId).catch(() => ({ cloud: false, local: false, any: false }));
+      lastBuilderPresence = await getBuilderPresence(userId).catch(() => ({
+        cloud: false,
+        local: false,
+        any: false,
+      }));
       lastRunnerConnected = lastBuilderPresence.any;
-      send(sseEvent("projects-update", { projects: lastSent, runnerConnected: lastRunnerConnected, builderPresence: lastBuilderPresence }));
+      send(
+        sseEvent("projects-update", {
+          projects: lastSent,
+          runnerConnected: lastRunnerConnected,
+          builderPresence: lastBuilderPresence,
+        }),
+      );
       scheduleKeepalive();
 
       // Guard against concurrent ticks — events can fire faster than a tick completes.
@@ -218,7 +288,11 @@ export async function GET() {
       const scheduledTick = () => {
         if (tickRunning) return;
         tickRunning = true;
-        tick().catch((err) => console.error("[control/stream] tick failed:", err)).finally(() => { tickRunning = false; });
+        tick()
+          .catch((err) => console.error("[control/stream] tick failed:", err))
+          .finally(() => {
+            tickRunning = false;
+          });
       };
 
       // Event-driven: runner HTTP push → emitStateChanged → wake this stream immediately.
@@ -238,9 +312,11 @@ export async function GET() {
       const directDatabaseUrl = getDatabaseDirectUrl();
       if (!isRuntimeAvailable() && directDatabaseUrl) {
         pgListener = postgres(directDatabaseUrl, { max: 1 });
-        pgListener.listen(NOTIFY_CHANNEL, (notifyUserId) => {
-          if (notifyUserId === userId) scheduledTick();
-        }).catch((err) => console.warn("[control/stream] LISTEN setup failed:", err));
+        pgListener
+          .listen(NOTIFY_CHANNEL, (notifyUserId) => {
+            if (notifyUserId === userId) scheduledTick();
+          })
+          .catch((err) => console.warn("[control/stream] LISTEN setup failed:", err));
       }
 
       // Fallback tick — much longer now that events cover real-time changes.

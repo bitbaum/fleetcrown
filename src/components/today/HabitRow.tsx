@@ -51,7 +51,11 @@ export function HabitRow({
   const handleToggle = async () => {
     if (toggling || ie.editing) return;
     setToggling(true);
-    try { await onToggle(habit.id, habit.doneToday); } finally { setToggling(false); }
+    try {
+      await onToggle(habit.id, habit.doneToday);
+    } finally {
+      setToggling(false);
+    }
   };
 
   return (
@@ -71,11 +75,15 @@ export function HabitRow({
           />
           <select
             value={ie.draft.frequency}
-            onChange={(e) => ie.setDraft({ ...ie.draft, frequency: e.target.value as HabitFrequency })}
+            onChange={(e) =>
+              ie.setDraft({ ...ie.draft, frequency: e.target.value as HabitFrequency })
+            }
             className="ui-input-inline border-border-subtle px-1.5 py-0.5 text-xs text-text-secondary"
           >
             {Object.values(HABIT_FREQUENCY).map((f) => (
-              <option key={f} value={f}>{f}</option>
+              <option key={f} value={f}>
+                {f}
+              </option>
             ))}
           </select>
           <button
@@ -85,7 +93,10 @@ export function HabitRow({
           >
             {ie.saving ? <Loader2 className="ui-spinner-xs" /> : <Check className="h-3 w-3" />}
           </button>
-          <button onClick={ie.cancel} className="p-1 rounded text-text-muted hover:text-text-secondary transition-colors shrink-0">
+          <button
+            onClick={ie.cancel}
+            className="p-1 rounded text-text-muted hover:text-text-secondary transition-colors shrink-0"
+          >
             <X className="h-3 w-3" />
           </button>
         </div>
@@ -109,7 +120,9 @@ export function HabitRow({
           </button>
 
           <div className="flex-1 min-w-0">
-            <span className={`text-sm md:text-base ${habit.doneToday ? "text-text-tertiary line-through" : ""}`}>
+            <span
+              className={`text-sm md:text-base ${habit.doneToday ? "text-text-tertiary line-through" : ""}`}
+            >
               {habit.title}
             </span>
             {habit.frequency !== HABIT_FREQUENCY.DAILY && (
@@ -119,7 +132,10 @@ export function HabitRow({
 
           <div className="flex items-center gap-1 shrink-0">
             {habit.streak >= 2 && (
-              <span className="flex items-center gap-0.5 text-xs text-status-warning/60" title={`${habit.streak}-day streak`}>
+              <span
+                className="flex items-center gap-0.5 text-xs text-status-warning/60"
+                title={`${habit.streak}-day streak`}
+              >
                 <Flame className="h-3 w-3" />
                 {habit.streak}
               </span>

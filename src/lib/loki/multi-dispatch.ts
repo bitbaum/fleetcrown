@@ -111,7 +111,11 @@ export function formatMultiDispatchReply(
     lines.push("", "**Started:**", ...ok.map((a) => `- ${a.projectKey}`));
   }
   if (skipped.length > 0) {
-    lines.push("", "**Skipped:**", ...skipped.map((a) => `- ${a.projectKey}${a.reason ? ` (${a.reason})` : ""}`));
+    lines.push(
+      "",
+      "**Skipped:**",
+      ...skipped.map((a) => `- ${a.projectKey}${a.reason ? ` (${a.reason})` : ""}`),
+    );
   }
   lines.push("", "Watch progress on [Control](/control).");
   return lines.join("\n");

@@ -32,11 +32,11 @@ export interface ChangeEvent {
 /** Short table-name constants for ChangeEvent.t. Use these instead of
  *  literal strings so a typo at a callsite becomes a type error rather
  *  than a silently-ignored event. */
-export const TABLE_PROJECT_STATES     = "project_states";
-export const TABLE_RUNTIME_SNAPSHOTS  = "runtime_snapshots";
-export const TABLE_PENDING_COMMANDS   = "pending_commands";
+export const TABLE_PROJECT_STATES = "project_states";
+export const TABLE_RUNTIME_SNAPSHOTS = "runtime_snapshots";
+export const TABLE_PENDING_COMMANDS = "pending_commands";
 export const TABLE_ORCHESTRATION_RUNS = "orchestration_runs";
-export const TABLE_BEACON_SETTINGS    = "beacon_settings";
+export const TABLE_BEACON_SETTINGS = "beacon_settings";
 
 /** Union of every table the bridge currently notifies on. Adding a new
  *  table to drizzle/0022_notify_triggers.sql must extend this union — the

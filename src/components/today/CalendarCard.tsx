@@ -17,7 +17,11 @@ type CalendarEvent = {
 };
 
 export function CalendarCard() {
-  const { data, loading, error, refetch } = useFetch<{ events: CalendarEvent[]; error?: string; runtimeOnly?: boolean }>("/api/calendar", { intervalMs: REFRESH_CADENCE.calendar, timeoutMs: 12_000 });
+  const { data, loading, error, refetch } = useFetch<{
+    events: CalendarEvent[];
+    error?: string;
+    runtimeOnly?: boolean;
+  }>("/api/calendar", { intervalMs: REFRESH_CADENCE.calendar, timeoutMs: 12_000 });
   const events = data?.events ?? [];
 
   // Cloud mode: calendar data comes from the `gog` CLI on the machine running the
@@ -42,18 +46,27 @@ export function CalendarCard() {
           ))}
         </div>
       ) : error || (data?.error && events.length === 0) ? (
-        <FetchErrorState message="Couldn't load calendar" detail={error ?? data?.error} onRetry={refetch} />
+        <FetchErrorState
+          message="Couldn't load calendar"
+          detail={error ?? data?.error}
+          onRetry={refetch}
+        />
       ) : events.length === 0 ? (
         <EmptyState>No events today</EmptyState>
       ) : (
         <div className="space-y-2">
           {events.map((event, i) => (
-            <div key={`${event.start ?? event.startTime ?? i}-${event.summary ?? event.title ?? i}`} className="flex gap-3 items-start">
+            <div
+              key={`${event.start ?? event.startTime ?? i}-${event.summary ?? event.title ?? i}`}
+              className="flex gap-3 items-start"
+            >
               <div className="text-xs text-text-tertiary font-mono w-12 shrink-0 pt-0.5">
                 {formatTime(event.start ?? event.startTime)}
               </div>
               <div>
-                <div className="text-sm font-medium">{event.summary ?? event.title ?? "Untitled"}</div>
+                <div className="text-sm font-medium">
+                  {event.summary ?? event.title ?? "Untitled"}
+                </div>
                 {event.location && (
                   <div className="text-xs text-text-tertiary">{event.location}</div>
                 )}

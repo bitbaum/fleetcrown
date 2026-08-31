@@ -21,12 +21,12 @@ export type { TerminalAdapter, TerminalId } from "./types";
 
 /** Every terminal multiplexer FleetCrown knows about. Order = preference
  *  order for auto-detection (first installed one wins). */
-export const ALL_TERMINALS: readonly TerminalAdapter[] = [
-  zellijAdapter,
-];
+export const ALL_TERMINALS: readonly TerminalAdapter[] = [zellijAdapter];
 
 /** Find a multiplexer adapter by id. */
-export function findTerminal(id: TerminalId | string | null | undefined): TerminalAdapter | undefined {
+export function findTerminal(
+  id: TerminalId | string | null | undefined,
+): TerminalAdapter | undefined {
   if (!id) return undefined;
   return ALL_TERMINALS.find((t) => t.id === id);
 }

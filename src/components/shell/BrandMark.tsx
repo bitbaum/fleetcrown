@@ -28,7 +28,10 @@ export function BrandMark({
 
   return (
     <div className="flex items-center gap-3">
-      <div className={`ui-brand-mark ${markSize} transition-transform hover:scale-[1.02] active:scale-[0.985]`} aria-hidden>
+      <div
+        className={`ui-brand-mark ${markSize} transition-transform hover:scale-[1.02] active:scale-[0.985]`}
+        aria-hidden
+      >
         {/* Dense Archimedean coil — geometry from the SSOT (src/config/brand-mark.ts).
             Stroked with currentColor so it themes; the same path drives the
             favicon, tray icon, app icon, and OG images. */}

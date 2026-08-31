@@ -96,11 +96,16 @@ export function CrewWorkspace({
           <ClipboardList className="h-8 w-8" />
           <div className="text-base text-text-secondary">No assignments yet</div>
           <p className="max-w-md text-center text-sm text-text-tertiary">
-            Some work is not an agent&apos;s to do — calls to make, a room to walk
-            into, a signature. Write the ask, hand it to a person, and watch the
-            same board you watch your agents on.
+            Some work is not an agent&apos;s to do — calls to make, a room to walk into, a
+            signature. Write the ask, hand it to a person, and watch the same board you watch your
+            agents on.
           </p>
-          <NewAssignmentButton crew={crew} projects={projects} onCreated={refresh} triggerLabel="Write the first ask" />
+          <NewAssignmentButton
+            crew={crew}
+            projects={projects}
+            onCreated={refresh}
+            triggerLabel="Write the first ask"
+          />
         </div>
       ) : (
         <section className="space-y-5">
@@ -171,9 +176,8 @@ function ClosedSection({
         <span className="tabular-nums">{closed.length}</span>
         <span className="text-text-tertiary">{open ? "hide" : "show"}</span>
       </button>
-      {open && closed.map((task) => (
-        <AssignmentCard key={task.id} task={task} onChanged={onChanged} />
-      ))}
+      {open &&
+        closed.map((task) => <AssignmentCard key={task.id} task={task} onChanged={onChanged} />)}
     </div>
   );
 }
@@ -206,7 +210,9 @@ function AssignFromRoster({
           triggerLabel={`Write an ask for ${member.name}`}
           onCreated={onDone}
         />
-        <button type="button" onClick={onDone} className="ui-btn-xs">Cancel</button>
+        <button type="button" onClick={onDone} className="ui-btn-xs">
+          Cancel
+        </button>
       </span>
     </div>
   );

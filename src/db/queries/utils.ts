@@ -8,7 +8,10 @@ import { assertAttrAllowed } from "@/config/actors";
 import { z } from "zod";
 
 /** Shared validator for the two `/api/<entity>/[id]/interactions` POST routes. */
-const DIRECTIONS = Object.values(INTERACTION_DIRECTION) as [InteractionDirection, ...InteractionDirection[]];
+const DIRECTIONS = Object.values(INTERACTION_DIRECTION) as [
+  InteractionDirection,
+  ...InteractionDirection[],
+];
 export const CreateInteractionBody = z.object({
   channel: z.string().trim().min(1, "channel is required"),
   direction: z.enum(DIRECTIONS, { error: "direction must be inbound or outbound" }),
@@ -92,7 +95,11 @@ export async function upsertEntityAttribute(
 }
 
 /** Deletes the (entity, key) attribute for the current user. */
-export async function deleteEntityAttribute(userId: string, entityId: string, key: string): Promise<void> {
+export async function deleteEntityAttribute(
+  userId: string,
+  entityId: string,
+  key: string,
+): Promise<void> {
   await db
     .delete(attributes)
     .where(

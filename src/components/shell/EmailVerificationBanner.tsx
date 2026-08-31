@@ -48,7 +48,9 @@ export function EmailVerificationBanner() {
   function dismiss() {
     try {
       window.localStorage.setItem(DISMISS_KEY, "1");
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     setDismissed(true);
   }
 
@@ -75,14 +77,27 @@ export function EmailVerificationBanner() {
       </div>
       <div className="flex items-center gap-2 sm:ml-auto sm:shrink-0">
         {!sent && (
-          <button type="button" className="ui-btn-ghost ui-btn-xs shrink-0" disabled={sending} onClick={() => void resend()}>
+          <button
+            type="button"
+            className="ui-btn-ghost ui-btn-xs shrink-0"
+            disabled={sending}
+            onClick={() => void resend()}
+          >
             {sending ? "Sending…" : "Resend"}
           </button>
         )}
-        <Link href={ROUTES.VERIFY_EMAIL} className="ui-tap inline-flex shrink-0 items-center text-accent-text underline">
+        <Link
+          href={ROUTES.VERIFY_EMAIL}
+          className="ui-tap inline-flex shrink-0 items-center text-accent-text underline"
+        >
           Learn more
         </Link>
-        <button type="button" className="ui-btn-icon hidden shrink-0 sm:inline-flex" onClick={dismiss} aria-label="Dismiss">
+        <button
+          type="button"
+          className="ui-btn-icon hidden shrink-0 sm:inline-flex"
+          onClick={dismiss}
+          aria-label="Dismiss"
+        >
           <X className="h-3.5 w-3.5" />
         </button>
       </div>

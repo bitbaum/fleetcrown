@@ -15,7 +15,10 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { timeAgo, shortTimeAgo, elapsedSince, compactRelativeDate } from "../../src/lib/dates";
 
-const SEC = 1000, MIN = 60 * SEC, HOUR = 60 * MIN, DAY = 24 * HOUR;
+const SEC = 1000,
+  MIN = 60 * SEC,
+  HOUR = 60 * MIN,
+  DAY = 24 * HOUR;
 const ago = (delta: number) => timeAgo(Date.now() - delta);
 const short = (delta: number) => shortTimeAgo(Date.now() - delta);
 
@@ -57,7 +60,8 @@ assert.equal(short(31 * DAY), "1mo");
 
 // The two renderers cannot drift, because they read one ladder.
 for (const delta of [0, 30 * SEC, 5 * MIN, 3 * HOUR, 2 * DAY, 288 * HOUR, 31 * DAY, 400 * DAY]) {
-  const s = short(delta), t = ago(delta);
+  const s = short(delta),
+    t = ago(delta);
   assert.equal(
     t,
     s === "now" ? "just now" : `${s} ago`,

@@ -44,7 +44,12 @@ const WORKTREES_ROOT =
 const LINKED_ARTIFACTS = ["node_modules", ".env", ".env.local", ".env.selfhost.local"];
 
 function sanitize(s: string): string {
-  return s.toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "x";
+  return (
+    s
+      .toLowerCase()
+      .replace(/[^a-z0-9._-]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "x"
+  );
 }
 
 function git(dir: string, args: string[], timeoutMs = 60_000): string {

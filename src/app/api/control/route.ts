@@ -2,30 +2,41 @@ import { NextResponse } from "next/server";
 import { getZellijTabs } from "@/lib/zellij";
 import { getProjects, type ProjectRow } from "@/db/queries/projects";
 import { getLatestEventsByProjectKeys } from "@/db/queries/orchestration-events";
-import { getLatestRunsByProjectPaths, getRecentOutcomesByProjectKeys } from "@/db/queries/orchestration-runs";
-import { getRecentActivity, getRecentCustomPromptsByProjectKeys, type RecentCustomPrompt } from "@/db/queries/prompt-history";
+import {
+  getLatestRunsByProjectPaths,
+  getRecentOutcomesByProjectKeys,
+} from "@/db/queries/orchestration-runs";
+import {
+  getRecentActivity,
+  getRecentCustomPromptsByProjectKeys,
+  type RecentCustomPrompt,
+} from "@/db/queries/prompt-history";
 import { getProjectActivityBatch, type ProjectActivityEvent } from "@/db/queries/activity";
-import { getProjectStatesByUserId, getProjectStatesByUserIds, persistProjectSessionIfNewer } from "@/db/queries/project-states";
+import {
+  getProjectStatesByUserId,
+  getProjectStatesByUserIds,
+  persistProjectSessionIfNewer,
+} from "@/db/queries/project-states";
 import type { ProjectState as DbProjectState } from "@/db/schema/project-states";
-import { ensureUserProjectEntityLinks, getOrgProjects, recordSessionHandoffChangelog } from "@/db/queries/user-projects";
+import {
+  ensureUserProjectEntityLinks,
+  getOrgProjects,
+  recordSessionHandoffChangelog,
+} from "@/db/queries/user-projects";
 import { readAgentPreferences, resolveAgentConfig } from "@/lib/agent-preferences";
-import { buildSwitchableAgentCatalog, type AgentAvailabilityOverride, type AgentCatalog } from "@/lib/agent-catalog";
+import {
+  buildSwitchableAgentCatalog,
+  type AgentAvailabilityOverride,
+  type AgentCatalog,
+} from "@/lib/agent-catalog";
 import {
   resolveEffectiveTab,
   normalizeTabName,
   readPromptMeta,
   type PromptMeta,
 } from "@/lib/agent-config";
-import {
-  parseSession,
-  readCurrentPrompt,
-  getAgentProcesses,
-} from "@/lib/control-fast-state";
-import {
-  DEFAULT_ADAPTER_ID,
-  ORCHESTRATION_ADAPTER_IDS,
-  type AdapterId,
-} from "@/lib/orchestration";
+import { parseSession, readCurrentPrompt, getAgentProcesses } from "@/lib/control-fast-state";
+import { DEFAULT_ADAPTER_ID, ORCHESTRATION_ADAPTER_IDS, type AdapterId } from "@/lib/orchestration";
 import {
   deriveProjectLifecycle,
   persistRuntimeLifecycleEvents,
@@ -45,18 +56,42 @@ import { getBuilderPresence } from "@/db/queries/runner-presence";
 import { isHeartbeatFresh } from "@/lib/builder-presence";
 import { isAgentId, listAgentRegistry } from "@/lib/agent-registry";
 import { inferAdapterFromTabName } from "@/components/control/control-presenter";
-import type { ProjectProfile, CurrentPrompt, ProjectState, SessionState, GitState, ControlData, FailedCommand, LiveAgentTurns } from "@/lib/control-types";
-import { getRecentFailedCommands, hasUndeliveredCommandForRun } from "@/db/queries/pending-commands";
+import type {
+  ProjectProfile,
+  CurrentPrompt,
+  ProjectState,
+  SessionState,
+  GitState,
+  ControlData,
+  FailedCommand,
+  LiveAgentTurns,
+} from "@/lib/control-types";
+import {
+  getRecentFailedCommands,
+  hasUndeliveredCommandForRun,
+} from "@/db/queries/pending-commands";
 import { getOpenAgentTurnsByProject } from "@/db/queries/agent-sessions";
 import { getRuntimeSnapshots } from "@/db/queries/runtime-snapshots";
 import { writePromptQueueMirror } from "@/lib/prompt-queue-mirror";
 import { fetchAllGitStates } from "@/lib/git-state";
-import { matchProfile, matchProfileById, resolveAutoInjectOverride } from "@/lib/project-profile-match";
+import {
+  matchProfile,
+  matchProfileById,
+  resolveAutoInjectOverride,
+} from "@/lib/project-profile-match";
 import { resolveProjectSession, isRuntimeObservationFresh } from "@/lib/project-session";
 import { workspaceIdFor } from "@/lib/agent-execution/ownership";
 import { normalizeRepoWorkEvidence } from "@/lib/repo-evidence";
 
-export type { ProjectProfile, CurrentPrompt, ProjectState, SessionState, GitState, ControlData, FailedCommand };
+export type {
+  ProjectProfile,
+  CurrentPrompt,
+  ProjectState,
+  SessionState,
+  GitState,
+  ControlData,
+  FailedCommand,
+};
 export type { PromptMeta };
 export type { ProjectActivityEvent as ActivityTimelineEvent } from "@/db/queries/activity";
 
@@ -68,7 +103,7 @@ type SlowCache = {
   key: string;
   gitMap: Map<string, GitState>;
   zellijTabs: string[];
-  dirs: string[];        // dirs list used to build this cache
+  dirs: string[]; // dirs list used to build this cache
   builtAt: number;
   runtimeSnapshotUpdatedAt: Date | null;
   installedAgents: string[];
@@ -87,8 +122,18 @@ async function buildSlowData(userId: string, dirs: string[], key: string): Promi
   const [gitMap, zellijTabsLocal, dbStates, runtimeSnapshots] = await Promise.all([
     fetchAllGitStates(dirs),
     isRuntimeAvailable() ? getZellijTabs() : Promise.resolve([] as string[]),
-    isRuntimeAvailable() ? Promise.resolve([] as DbProjectState[]) : getProjectStatesByUserId(userId).catch((e): DbProjectState[] => { console.error("[control/slowData] projectStates failed:", e); return []; }),
-    isRuntimeAvailable() ? Promise.resolve([]) : getRuntimeSnapshots(userId).catch((e) => { console.error("[control/slowData] runtimeSnapshots failed:", e); return []; }),
+    isRuntimeAvailable()
+      ? Promise.resolve([] as DbProjectState[])
+      : getProjectStatesByUserId(userId).catch((e): DbProjectState[] => {
+          console.error("[control/slowData] projectStates failed:", e);
+          return [];
+        }),
+    isRuntimeAvailable()
+      ? Promise.resolve([])
+      : getRuntimeSnapshots(userId).catch((e) => {
+          console.error("[control/slowData] runtimeSnapshots failed:", e);
+          return [];
+        }),
   ]);
   // Cloud + local builders each push their OWN channel row. The tab list must
   // be the UNION of fresh channels — reading only the last-written row made
@@ -110,9 +155,9 @@ async function buildSlowData(userId: string, dirs: string[], key: string): Promi
   // resurrect tabs it stopped reporting.
   const zellijTabs = isRuntimeAvailable()
     ? zellijTabsLocal
-    : (unionTabs.length
+    : unionTabs.length
       ? unionTabs
-      : dbStates.filter((s) => s.tabOpen && isRuntimeObservationFresh(s)).map((s) => s.tabName));
+      : dbStates.filter((s) => s.tabOpen && isRuntimeObservationFresh(s)).map((s) => s.tabName);
   const latestObservedAt = runtimeSnapshots.reduce<Date | null>(
     (max, s) => (s.observedAt && (!max || s.observedAt > max) ? s.observedAt : max),
     null,
@@ -146,7 +191,15 @@ async function getSlowData(userId: string, dirs: string[]): Promise<SlowCache> {
     // Stale: return stale immediately, refresh in background
     if (!cacheRefreshing) {
       cacheRefreshing = true;
-      buildSlowData(userId, dirs, key).then((fresh) => { slowCache = fresh; cacheRefreshing = false; }).catch((e) => { console.error("[control/cache] background refresh failed:", e); cacheRefreshing = false; });
+      buildSlowData(userId, dirs, key)
+        .then((fresh) => {
+          slowCache = fresh;
+          cacheRefreshing = false;
+        })
+        .catch((e) => {
+          console.error("[control/cache] background refresh failed:", e);
+          cacheRefreshing = false;
+        });
     }
     return slowCache;
   }
@@ -158,7 +211,6 @@ async function getSlowData(userId: string, dirs: string[]): Promise<SlowCache> {
 
 // ── Handler ───────────────────────────────────────────────────────────────────
 
-
 export async function GET() {
   const userId = await getSessionUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -168,26 +220,55 @@ export async function GET() {
 
   // Own projects + team projects (org peers). Own take precedence on tab-name collision.
   const [dbUserProjects, dbTeamProjects] = await Promise.all([
-    ensureUserProjectEntityLinks(userId).catch((e) => { console.error("[control/GET] ensureUserProjectEntityLinks failed:", e); return []; }),
-    getOrgProjects(userId).catch((e) => { console.error("[control/GET] getOrgProjects failed:", e); return []; }),
+    ensureUserProjectEntityLinks(userId).catch((e) => {
+      console.error("[control/GET] ensureUserProjectEntityLinks failed:", e);
+      return [];
+    }),
+    getOrgProjects(userId).catch((e) => {
+      console.error("[control/GET] getOrgProjects failed:", e);
+      return [];
+    }),
   ]);
 
   const seenTabs = new Set<string>();
   const toEntry = (p: (typeof dbUserProjects)[number]) => ({
-    id: p.id, projectId: p.entityProjectId ?? null, tab: p.name,
-    dir: p.dirPath!, agentPref: p.agentPref ?? null, modelPref: p.modelPref ?? null,
+    id: p.id,
+    projectId: p.entityProjectId ?? null,
+    tab: p.name,
+    dir: p.dirPath!,
+    agentPref: p.agentPref ?? null,
+    modelPref: p.modelPref ?? null,
     ownerUserId: p.userId,
     readonly: false as boolean,
   });
-  const ownEntries = dbUserProjects.filter((p) => p.dirPath).map(toEntry)
-    .filter((p) => { if (seenTabs.has(p.tab.toLowerCase())) return false; seenTabs.add(p.tab.toLowerCase()); return true; });
-  const teamEntries = dbTeamProjects.filter((p) => p.dirPath).map((p) => ({ ...toEntry(p), readonly: true }))
-    .filter((p) => { if (seenTabs.has(p.tab.toLowerCase())) return false; seenTabs.add(p.tab.toLowerCase()); return true; });
+  const ownEntries = dbUserProjects
+    .filter((p) => p.dirPath)
+    .map(toEntry)
+    .filter((p) => {
+      if (seenTabs.has(p.tab.toLowerCase())) return false;
+      seenTabs.add(p.tab.toLowerCase());
+      return true;
+    });
+  const teamEntries = dbTeamProjects
+    .filter((p) => p.dirPath)
+    .map((p) => ({ ...toEntry(p), readonly: true }))
+    .filter((p) => {
+      if (seenTabs.has(p.tab.toLowerCase())) return false;
+      seenTabs.add(p.tab.toLowerCase());
+      return true;
+    });
   const projects = [...ownEntries, ...teamEntries];
   const dirs = projects.map((p) => p.dir);
 
   // Slow data (git + DB) served from cache — no fork needed for CWD check
-  const { gitMap, zellijTabs, runtimeSnapshotUpdatedAt, installedAgents, runnerVersion, builderVersions } = await getSlowData(userId, dirs);
+  const {
+    gitMap,
+    zellijTabs,
+    runtimeSnapshotUpdatedAt,
+    installedAgents,
+    runnerVersion,
+    builderVersions,
+  } = await getSlowData(userId, dirs);
   const runtimeAvailable = isRuntimeAvailable();
   // Pull the canonical agent ID list straight from the registry — same source
   // buildSwitchableAgentCatalog reads from one line below. Pre-fix this was
@@ -197,9 +278,15 @@ export async function GET() {
   const runnerAvailability: AgentAvailabilityOverride | undefined = runtimeAvailable
     ? undefined
     : installedAgents.length === 0
-      ? Object.fromEntries(agentIds.map((agent) => [agent, true])) as AgentAvailabilityOverride
-      : Object.fromEntries(agentIds.map((agent) => [agent, installedAgents.includes(agent)])) as AgentAvailabilityOverride;
-  const agentRegistry: AgentCatalog = buildSwitchableAgentCatalog(preferences.models, agentConfig.agent, runnerAvailability);
+      ? (Object.fromEntries(agentIds.map((agent) => [agent, true])) as AgentAvailabilityOverride)
+      : (Object.fromEntries(
+          agentIds.map((agent) => [agent, installedAgents.includes(agent)]),
+        ) as AgentAvailabilityOverride);
+  const agentRegistry: AgentCatalog = buildSwitchableAgentCatalog(
+    preferences.models,
+    agentConfig.agent,
+    runnerAvailability,
+  );
   // Detect any known agent running in a project dir — not just the configured default
   const agentProcesses = getAgentProcesses(agentRegistry.agents);
   const projectKeys = projects.map((p) => p.tab);
@@ -207,27 +294,70 @@ export async function GET() {
   // Fetch DB states for own user + all team project owners so session progress is visible.
   const teamOwnerIds = [...new Set(dbTeamProjects.map((p) => p.userId))];
   const allOwnerIds = [userId, ...teamOwnerIds];
-  const [latestRuns, recentPromptsMap, recentOutcomesMap, activityByProject, recentActivity, dbStatesArr, latestLifecycleEvents, effectiveDbProjects, failedCommands, openAgentTurns] = await Promise.all([
+  const [
+    latestRuns,
+    recentPromptsMap,
+    recentOutcomesMap,
+    activityByProject,
+    recentActivity,
+    dbStatesArr,
+    latestLifecycleEvents,
+    effectiveDbProjects,
+    failedCommands,
+    openAgentTurns,
+  ] = await Promise.all([
     getLatestRunsByProjectPaths(userId, dirs),
-    getRecentCustomPromptsByProjectKeys(userId, projectKeys).catch((e) => { console.error("[control/GET] recentPromptsMap failed:", e); return new Map<string, RecentCustomPrompt[]>(); }),
-    getRecentOutcomesByProjectKeys(userId, projectKeys, 5).catch((e) => { console.error("[control/GET] recentOutcomesMap failed:", e); return new Map<string, import("@/db/schema/orchestration-runs").OrchestrationOutcome[]>(); }),
+    getRecentCustomPromptsByProjectKeys(userId, projectKeys).catch((e) => {
+      console.error("[control/GET] recentPromptsMap failed:", e);
+      return new Map<string, RecentCustomPrompt[]>();
+    }),
+    getRecentOutcomesByProjectKeys(userId, projectKeys, 5).catch((e) => {
+      console.error("[control/GET] recentOutcomesMap failed:", e);
+      return new Map<string, import("@/db/schema/orchestration-runs").OrchestrationOutcome[]>();
+    }),
     getProjectActivityBatch(userId, projectKeys, { days: 1, perKey: 8 }).catch((e) => {
       console.error("[control/GET] projectActivity failed:", e);
       return new Map<string, ProjectActivityEvent[]>();
     }),
-    getRecentActivity(userId).catch((e) => { console.error("[control/GET] recentActivity failed:", e); return []; }),
+    getRecentActivity(userId).catch((e) => {
+      console.error("[control/GET] recentActivity failed:", e);
+      return [];
+    }),
     // Single batch query instead of N per-owner queries
-    getProjectStatesByUserIds(allOwnerIds).catch((e): DbProjectState[] => { console.error("[control/GET] projectStates failed:", e); return []; }),
-    getLatestEventsByProjectKeys(userId, projectKeys, ["input_requested", "close_requested", "session_closed", "task_started"])
-      .catch((e) => { console.error("[control/GET] lifecycleEvents failed:", e); return new Map(); }),
+    getProjectStatesByUserIds(allOwnerIds).catch((e): DbProjectState[] => {
+      console.error("[control/GET] projectStates failed:", e);
+      return [];
+    }),
+    getLatestEventsByProjectKeys(userId, projectKeys, [
+      "input_requested",
+      "close_requested",
+      "session_closed",
+      "task_started",
+    ]).catch((e) => {
+      console.error("[control/GET] lifecycleEvents failed:", e);
+      return new Map();
+    }),
     // Fetch own + team owners' entity projects per-request (not cached) so each user
     // always sees their own profile data regardless of who last built the git cache.
-    Promise.all(allOwnerIds.map((oid) => getProjects(oid).catch((e) => { console.error("[control/GET] getProjects failed for", oid, e); return [] as ProjectRow[]; }))).then((arrs) => arrs.flat()),
-    getRecentFailedCommands([userId]).catch((e): FailedCommand[] => { console.error("[control/GET] failedCommands failed:", e); return []; }),
+    Promise.all(
+      allOwnerIds.map((oid) =>
+        getProjects(oid).catch((e) => {
+          console.error("[control/GET] getProjects failed for", oid, e);
+          return [] as ProjectRow[];
+        }),
+      ),
+    ).then((arrs) => arrs.flat()),
+    getRecentFailedCommands([userId]).catch((e): FailedCommand[] => {
+      console.error("[control/GET] failedCommands failed:", e);
+      return [];
+    }),
     // Agent turns the agents themselves reported open (hook-driven). Scoped to
     // `userId`, not allOwnerIds: the hooks run on THIS user's machine, so a
     // teammate's live sessions are not ours to claim on their card.
-    getOpenAgentTurnsByProject(userId).catch((e): Record<string, LiveAgentTurns> => { console.error("[control/GET] openAgentTurns failed:", e); return {}; }),
+    getOpenAgentTurnsByProject(userId).catch((e): Record<string, LiveAgentTurns> => {
+      console.error("[control/GET] openAgentTurns failed:", e);
+      return {};
+    }),
   ]);
   // Stale-run reaping moved EXCLUSIVELY to the reap-stale-runs cron (hourly),
   // which runs the close-from-handoff sweep FIRST. Reaping on page load raced
@@ -241,226 +371,267 @@ export async function GET() {
   // live tab name ("prime-tower"), the registry by the display name ("Prime
   // tower") — a case-only join left such projects permanently detached from
   // their runtime rows (agentRunning stuck false forever).
-  const dbStateMap = new Map(dbStatesArr.map((s) => [`${s.userId}:${normalizeTabName(s.projectKey)}`, s]));
+  const dbStateMap = new Map(
+    dbStatesArr.map((s) => [`${s.userId}:${normalizeTabName(s.projectKey)}`, s]),
+  );
 
-  const states: ProjectState[] = projects.map(({ id, projectId, tab, dir, agentPref, modelPref, ownerUserId, readonly }) => {
-    const latestRun = latestRuns.get(dir);
-    const dbState = dbStateMap.get(`${ownerUserId}:${normalizeTabName(tab)}`);
+  const states: ProjectState[] = projects.map(
+    ({ id, projectId, tab, dir, agentPref, modelPref, ownerUserId, readonly }) => {
+      const latestRun = latestRuns.get(dir);
+      const dbState = dbStateMap.get(`${ownerUserId}:${normalizeTabName(tab)}`);
 
-    // Resolve live Zellij tab first — session files and /tmp sentinels all use the live name.
-    // e.g. canonical "FleetCrown" may run as "FleetCrown Claude", so sessions/FleetCrown Claude.md wins.
-    const liveTab = resolveEffectiveTab(tab, zellijTabs);
-    const projectProcesses = agentProcesses.filter((process) => process.cwd === dir || process.cwd.startsWith(dir + "/"));
-    const promptHint = runtimeAvailable ? readCurrentPrompt(liveTab) : null;
-    const liveAdapter = projectProcesses[0]?.agentId
-      ?? (promptHint?.adapter && isAgentId(promptHint.adapter) ? promptHint.adapter : null)
-      ?? inferAdapterFromTabName(liveTab)
-      ?? (agentPref && isAgentId(agentPref) ? agentPref : null)
-      ?? agentConfig.agent;
-    const localSession = runtimeAvailable ? parseSession(liveTab, liveAdapter) : null;
-    // File handoff wins, else the persisted project_states row. Shared with the
-    // SSE stream via resolveProjectSession so the two paths can't diverge.
-    const session = resolveProjectSession(localSession, dbState);
+      // Resolve live Zellij tab first — session files and /tmp sentinels all use the live name.
+      // e.g. canonical "FleetCrown" may run as "FleetCrown Claude", so sessions/FleetCrown Claude.md wins.
+      const liveTab = resolveEffectiveTab(tab, zellijTabs);
+      const projectProcesses = agentProcesses.filter(
+        (process) => process.cwd === dir || process.cwd.startsWith(dir + "/"),
+      );
+      const promptHint = runtimeAvailable ? readCurrentPrompt(liveTab) : null;
+      const liveAdapter =
+        projectProcesses[0]?.agentId ??
+        (promptHint?.adapter && isAgentId(promptHint.adapter) ? promptHint.adapter : null) ??
+        inferAdapterFromTabName(liveTab) ??
+        (agentPref && isAgentId(agentPref) ? agentPref : null) ??
+        agentConfig.agent;
+      const localSession = runtimeAvailable ? parseSession(liveTab, liveAdapter) : null;
+      // File handoff wins, else the persisted project_states row. Shared with the
+      // SSE stream via resolveProjectSession so the two paths can't diverge.
+      const session = resolveProjectSession(localSession, dbState);
 
-    // The DB is authoritative; the local runtime reads this transport mirror.
-    if (!readonly && isRuntimeAvailable() && dbState?.promptQueue) {
-      writePromptQueueMirror(tab, dbState.promptQueue);
-    }
-
-    // Only the project's owner writes to project_states. A viewer reading a team
-    // (readonly) project's session would otherwise create a row under their own
-    // userId, which would never be queried again and would drift from the owner's.
-    if (!readonly && session && (!dbState || session.mtime > (dbState.sessionUpdatedAt?.getTime() ?? 0))) {
-      const sessionMtimeMs = session.mtime;
-      persistProjectSessionIfNewer({
-        projectKey: tab,
-        projectId,
-        userId: ownerUserId,
-        workspaceId: dbState?.workspaceId ?? workspaceIdFor(ownerUserId, tab),
-        tabName: liveTab,
-        sessionStatus: session.status,
-        sessionDone:   session.done,
-        sessionNext:   session.next,
-        sessionTests:  session.tests,
-        sessionTodos:  session.todos,
-        sessionHealth: session.health,
-        sessionTsc:    session.tsc,
-        sessionLint:   session.lint,
-        sessionCommit: session.commit,
-        sessionBlockReason: session.blockReason,
-        sessionNoOpCount:   session.noOpCount,
-        sessionUpdatedAt: new Date(sessionMtimeMs),
-      }).then((updated) => {
-        // Append only for the writer that won the timestamp race. Shared with
-        // the cloud ingestion path (runtime-state route) — one append point.
-        if (updated && dbState) {
-          recordSessionHandoffChangelog(ownerUserId, {
-            projectId,
-            tab,
-            dateMs: sessionMtimeMs,
-            previousDone: dbState.sessionDone,
-            done: session.done,
-            next: session.next,
-            tests: session.tests,
-            todos: session.todos,
-            health: session.health,
-          }).catch((err) => console.error("[control] devlog append failed:", err));
-        }
-      }).catch((err) => console.error("[control] session state write failed:", err));
-    }
-
-    // Resolve the orchestration seam for this project's agent. Claude binds the
-    // existing lifecycle/close/enrich hooks (behavior-identical); unregistered
-    // adapters yield undefined → neutral fallbacks (no close / no events).
-    const adapterId: AdapterId =
-      typeof liveAdapter === "string" && (ORCHESTRATION_ADAPTER_IDS as readonly string[]).includes(liveAdapter)
-        ? (liveAdapter as AdapterId)
-        : DEFAULT_ADAPTER_ID;
-    const seam = adapterFor(adapterId);
-
-    // Close an open orchestration run when the agent's handoff reports ready.
-    // The local-runtime path has no stop-hook closer since the bash-daemon kill,
-    // so the session.md we just read IS the completion signal. Idempotent — only
-    // the owner writes, and a run with finishedAt is never re-closed.
-    if (!readonly && session && latestRun && !latestRun.finishedAt) {
-      const closePatch = seam?.closeRunFromSession?.(latestRun, session) ?? null;
-      // Guard: closePatch stays non-null across polls until the close persists
-      // (fire-and-forget). The in-flight set keeps the DoD judge from firing
-      // more than once for the same run.
-      if (closePatch && !closingRuns.has(latestRun.id)) {
-        closingRuns.add(latestRun.id);
-        // A run whose dispatch command is still queued (gate-held behind an
-        // older run) never had its prompt delivered — this handoff cannot be
-        // its work; skip the close and let its own delivery + handoff close it.
-        hasUndeliveredCommandForRun(ownerUserId, latestRun.id)
-          .catch(() => false)
-          .then((undelivered) => undelivered
-            ? undefined
-            : gateAndCloseRun(latestRun.id, closePatch, ownerUserId, tab, recentOutcomesMap.get(tab) ?? [], latestRun.adapter))
-          .catch((err) => console.error("[control] run close failed:", err))
-          .finally(() => closingRuns.delete(latestRun.id));
+      // The DB is authoritative; the local runtime reads this transport mirror.
+      if (!readonly && isRuntimeAvailable() && dbState?.promptQueue) {
+        writePromptQueueMirror(tab, dbState.promptQueue);
       }
-    }
 
-    const nowS = Math.floor(Date.now() / 1000);
+      // Only the project's owner writes to project_states. A viewer reading a team
+      // (readonly) project's session would otherwise create a row under their own
+      // userId, which would never be queried again and would drift from the owner's.
+      if (
+        !readonly &&
+        session &&
+        (!dbState || session.mtime > (dbState.sessionUpdatedAt?.getTime() ?? 0))
+      ) {
+        const sessionMtimeMs = session.mtime;
+        persistProjectSessionIfNewer({
+          projectKey: tab,
+          projectId,
+          userId: ownerUserId,
+          workspaceId: dbState?.workspaceId ?? workspaceIdFor(ownerUserId, tab),
+          tabName: liveTab,
+          sessionStatus: session.status,
+          sessionDone: session.done,
+          sessionNext: session.next,
+          sessionTests: session.tests,
+          sessionTodos: session.todos,
+          sessionHealth: session.health,
+          sessionTsc: session.tsc,
+          sessionLint: session.lint,
+          sessionCommit: session.commit,
+          sessionBlockReason: session.blockReason,
+          sessionNoOpCount: session.noOpCount,
+          sessionUpdatedAt: new Date(sessionMtimeMs),
+        })
+          .then((updated) => {
+            // Append only for the writer that won the timestamp race. Shared with
+            // the cloud ingestion path (runtime-state route) — one append point.
+            if (updated && dbState) {
+              recordSessionHandoffChangelog(ownerUserId, {
+                projectId,
+                tab,
+                dateMs: sessionMtimeMs,
+                previousDone: dbState.sessionDone,
+                done: session.done,
+                next: session.next,
+                tests: session.tests,
+                todos: session.todos,
+                health: session.health,
+              }).catch((err) => console.error("[control] devlog append failed:", err));
+            }
+          })
+          .catch((err) => console.error("[control] session state write failed:", err));
+      }
 
-    const projectAgentId = agentPref ?? agentConfig.agent;
-    const projectAgent = agentRegistry.agents.find((entry) => entry.id === projectAgentId);
-    // On the cloud host (no /proc access) fall back to runner-pushed DB state so the control
-    // panel reflects live agent activity on the home machine.
-    // Stale runner observations must not read as live work (a killed agent
-    // once showed "Working" forever) — gate the DB fallback on freshness.
-    const dbRuntimeFresh = isRuntimeObservationFresh(dbState);
-    const agentRunning = runtimeAvailable
-      ? projectProcesses.length > 0
-      : (dbRuntimeFresh && (dbState?.agentRunning ?? false));
-    const activeAgents = runtimeAvailable
-      ? [...new Set(projectProcesses.map((process) => process.agentId))]
-      : (dbRuntimeFresh ? (dbState?.activeAgents ?? []) : []);
-    const sessionLifecycleSignals = projectProcesses.length > 0
-      ? projectProcesses.some((process) => process.sessionLifecycleSignals)
-      : projectAgent?.capabilities.sessionLifecycleSignals ?? false;
+      // Resolve the orchestration seam for this project's agent. Claude binds the
+      // existing lifecycle/close/enrich hooks (behavior-identical); unregistered
+      // adapters yield undefined → neutral fallbacks (no close / no events).
+      const adapterId: AdapterId =
+        typeof liveAdapter === "string" &&
+        (ORCHESTRATION_ADAPTER_IDS as readonly string[]).includes(liveAdapter)
+          ? (liveAdapter as AdapterId)
+          : DEFAULT_ADAPTER_ID;
+      const seam = adapterFor(adapterId);
 
-    // currentPrompt: on local machine, /tmp file is authoritative (DB fallback would
-    // show stale tasks after reboot). On the cloud host, runner keeps DB current so use DB.
-    const rawCurrentPrompt: CurrentPrompt | null = runtimeAvailable
-      ? promptHint
-      : (dbState?.currentPromptKey && dbState?.currentPromptLabel && dbState?.currentPromptStartedAt)
-        ? {
-            key: dbState.currentPromptKey,
-            label: dbState.currentPromptLabel,
-            startedAt: Math.floor(dbState.currentPromptStartedAt.getTime() / 1000),
-            source: "inject" as const,
-          }
-        : null;
-    // Agents without lifecycle callbacks can leave inject sentinels that outlive
-    // the work on local runtime. Cloud runner already applies stale cleanup.
-    const currentPrompt: CurrentPrompt | null = runtimeAvailable
-      ? (sessionLifecycleSignals || rawCurrentPrompt?.source === "runner" ? rawCurrentPrompt : null)
-      : rawCurrentPrompt;
+      // Close an open orchestration run when the agent's handoff reports ready.
+      // The local-runtime path has no stop-hook closer since the bash-daemon kill,
+      // so the session.md we just read IS the completion signal. Idempotent — only
+      // the owner writes, and a run with finishedAt is never re-closed.
+      if (!readonly && session && latestRun && !latestRun.finishedAt) {
+        const closePatch = seam?.closeRunFromSession?.(latestRun, session) ?? null;
+        // Guard: closePatch stays non-null across polls until the close persists
+        // (fire-and-forget). The in-flight set keeps the DoD judge from firing
+        // more than once for the same run.
+        if (closePatch && !closingRuns.has(latestRun.id)) {
+          closingRuns.add(latestRun.id);
+          // A run whose dispatch command is still queued (gate-held behind an
+          // older run) never had its prompt delivered — this handoff cannot be
+          // its work; skip the close and let its own delivery + handoff close it.
+          hasUndeliveredCommandForRun(ownerUserId, latestRun.id)
+            .catch(() => false)
+            .then((undelivered) =>
+              undelivered
+                ? undefined
+                : gateAndCloseRun(
+                    latestRun.id,
+                    closePatch,
+                    ownerUserId,
+                    tab,
+                    recentOutcomesMap.get(tab) ?? [],
+                    latestRun.adapter,
+                  ),
+            )
+            .catch((err) => console.error("[control] run close failed:", err))
+            .finally(() => closingRuns.delete(latestRun.id));
+        }
+      }
 
-    const lifecycleEvents = latestLifecycleEvents.get(tab);
-    const { derived: derivedLifecycle, runtimeFacts } = deriveProjectLifecycle({
-      userId: ownerUserId,
-      projectKey: tab,
-      liveTab,
-      runtimeAvailable,
-      dbState,
-      lifecycleEvents,
-      currentPrompt,
-      nowS,
-      collectAdapterEvents: seam?.collectLifecycleEvents,
-    });
+      const nowS = Math.floor(Date.now() / 1000);
 
-    if (!readonly) {
-      persistRuntimeLifecycleEvents({
+      const projectAgentId = agentPref ?? agentConfig.agent;
+      const projectAgent = agentRegistry.agents.find((entry) => entry.id === projectAgentId);
+      // On the cloud host (no /proc access) fall back to runner-pushed DB state so the control
+      // panel reflects live agent activity on the home machine.
+      // Stale runner observations must not read as live work (a killed agent
+      // once showed "Working" forever) — gate the DB fallback on freshness.
+      const dbRuntimeFresh = isRuntimeObservationFresh(dbState);
+      const agentRunning = runtimeAvailable
+        ? projectProcesses.length > 0
+        : dbRuntimeFresh && (dbState?.agentRunning ?? false);
+      const activeAgents = runtimeAvailable
+        ? [...new Set(projectProcesses.map((process) => process.agentId))]
+        : dbRuntimeFresh
+          ? (dbState?.activeAgents ?? [])
+          : [];
+      const sessionLifecycleSignals =
+        projectProcesses.length > 0
+          ? projectProcesses.some((process) => process.sessionLifecycleSignals)
+          : (projectAgent?.capabilities.sessionLifecycleSignals ?? false);
+
+      // currentPrompt: on local machine, /tmp file is authoritative (DB fallback would
+      // show stale tasks after reboot). On the cloud host, runner keeps DB current so use DB.
+      const rawCurrentPrompt: CurrentPrompt | null = runtimeAvailable
+        ? promptHint
+        : dbState?.currentPromptKey &&
+            dbState?.currentPromptLabel &&
+            dbState?.currentPromptStartedAt
+          ? {
+              key: dbState.currentPromptKey,
+              label: dbState.currentPromptLabel,
+              startedAt: Math.floor(dbState.currentPromptStartedAt.getTime() / 1000),
+              source: "inject" as const,
+            }
+          : null;
+      // Agents without lifecycle callbacks can leave inject sentinels that outlive
+      // the work on local runtime. Cloud runner already applies stale cleanup.
+      const currentPrompt: CurrentPrompt | null = runtimeAvailable
+        ? sessionLifecycleSignals || rawCurrentPrompt?.source === "runner"
+          ? rawCurrentPrompt
+          : null
+        : rawCurrentPrompt;
+
+      const lifecycleEvents = latestLifecycleEvents.get(tab);
+      const { derived: derivedLifecycle, runtimeFacts } = deriveProjectLifecycle({
         userId: ownerUserId,
         projectKey: tab,
-        runtimeFacts,
+        liveTab,
+        runtimeAvailable,
+        dbState,
         lifecycleEvents,
+        currentPrompt,
+        nowS,
         collectAdapterEvents: seam?.collectLifecycleEvents,
       });
-    }
 
-    return ({
-    id,
-    projectId,
-    tab,
-    workspaceId: dbState?.workspaceId ?? workspaceIdFor(ownerUserId, tab),
-    liveTab,
-    dir,
-    agentPref,
-    modelPref,
-    session,
-    git: gitMap.get(dir) ?? null,
-    sessionLifecycleSignals,
-    agentRunning,
-    activeAgents,
-    profile: matchProfileById(projectId, effectiveDbProjects) ?? matchProfile(tab, dir, effectiveDbProjects),
-    currentPrompt,
-    readyAt:   derivedLifecycle.readyAt,
-    lockAt:    derivedLifecycle.lockAt,
-    closingAt: derivedLifecycle.closingAt,
-    closedAt:  derivedLifecycle.closedAt,
-    recentCustomPrompts: recentPromptsMap.get(tab) ?? [],
-    recentActivity: activityByProject.get(tab) ?? [],
-    recentOutcomes: recentOutcomesMap.get(tab) ?? [],
-    // Turns the agents reported open themselves. Keyed on the registry name,
-    // which is exactly what /api/activity/capture resolves a cwd to — including
-    // a worktree, which resolves to its parent project's row.
-    liveAgentTurns: openAgentTurns[tab] ?? null,
-    // Stream-aligned per-tab fields so the first render carries what the SSE
-    // patches will keep fresh — replaces per-card polling on mount.
-    promptQueue: dbState?.promptQueue ?? [],
-    promptQueueRevision: dbState?.promptQueueRevision ?? 0,
-    autoContinueEnabled: dbState?.autoContinueEnabled ?? true,
-    autoInjectModeOverride: resolveAutoInjectOverride(projectId, tab, dir, effectiveDbProjects),
-    latestOrchestrationRun: latestRun ? {
-      adapter: latestRun.adapter,
-      intent: latestRun.intent,
-      state: latestRun.state,
-      startedAt: latestRun.startedAt?.toISOString?.() ?? String(latestRun.startedAt),
-      finishedAt: latestRun.finishedAt ? (latestRun.finishedAt.toISOString?.() ?? String(latestRun.finishedAt)) : null,
-      summary: latestRun.summary ?? null,
-      tokensIn: latestRun.tokensIn ?? null,
-      tokensOut: latestRun.tokensOut ?? null,
-      tokensCacheRead: latestRun.tokensCacheRead ?? null,
-      costUsd: latestRun.costUsd ?? null,
-      payload: latestRun.payload ? {
-        resultText: latestRun.payload.resultText,
-        error: latestRun.payload.error,
-        note: typeof latestRun.payload.note === "string" ? latestRun.payload.note : undefined,
-        // Validated, not cast: payload is jsonb, so `kind` arrives as a bare
-        // string and the card renders different words per kind. An unknown
-        // kind drops the whole evidence block rather than shipping a link
-        // labelled by a value nothing checked.
-        evidence: normalizeRepoWorkEvidence(latestRun.payload.evidence) ?? undefined,
-        durationMs: latestRun.payload.durationMs,
-        model: latestRun.payload.model,
-      } : null,
-    } : null,
-  });
-  });
+      if (!readonly) {
+        persistRuntimeLifecycleEvents({
+          userId: ownerUserId,
+          projectKey: tab,
+          runtimeFacts,
+          lifecycleEvents,
+          collectAdapterEvents: seam?.collectLifecycleEvents,
+        });
+      }
+
+      return {
+        id,
+        projectId,
+        tab,
+        workspaceId: dbState?.workspaceId ?? workspaceIdFor(ownerUserId, tab),
+        liveTab,
+        dir,
+        agentPref,
+        modelPref,
+        session,
+        git: gitMap.get(dir) ?? null,
+        sessionLifecycleSignals,
+        agentRunning,
+        activeAgents,
+        profile:
+          matchProfileById(projectId, effectiveDbProjects) ??
+          matchProfile(tab, dir, effectiveDbProjects),
+        currentPrompt,
+        readyAt: derivedLifecycle.readyAt,
+        lockAt: derivedLifecycle.lockAt,
+        closingAt: derivedLifecycle.closingAt,
+        closedAt: derivedLifecycle.closedAt,
+        recentCustomPrompts: recentPromptsMap.get(tab) ?? [],
+        recentActivity: activityByProject.get(tab) ?? [],
+        recentOutcomes: recentOutcomesMap.get(tab) ?? [],
+        // Turns the agents reported open themselves. Keyed on the registry name,
+        // which is exactly what /api/activity/capture resolves a cwd to — including
+        // a worktree, which resolves to its parent project's row.
+        liveAgentTurns: openAgentTurns[tab] ?? null,
+        // Stream-aligned per-tab fields so the first render carries what the SSE
+        // patches will keep fresh — replaces per-card polling on mount.
+        promptQueue: dbState?.promptQueue ?? [],
+        promptQueueRevision: dbState?.promptQueueRevision ?? 0,
+        autoContinueEnabled: dbState?.autoContinueEnabled ?? true,
+        autoInjectModeOverride: resolveAutoInjectOverride(projectId, tab, dir, effectiveDbProjects),
+        latestOrchestrationRun: latestRun
+          ? {
+              adapter: latestRun.adapter,
+              intent: latestRun.intent,
+              state: latestRun.state,
+              startedAt: latestRun.startedAt?.toISOString?.() ?? String(latestRun.startedAt),
+              finishedAt: latestRun.finishedAt
+                ? (latestRun.finishedAt.toISOString?.() ?? String(latestRun.finishedAt))
+                : null,
+              summary: latestRun.summary ?? null,
+              tokensIn: latestRun.tokensIn ?? null,
+              tokensOut: latestRun.tokensOut ?? null,
+              tokensCacheRead: latestRun.tokensCacheRead ?? null,
+              costUsd: latestRun.costUsd ?? null,
+              payload: latestRun.payload
+                ? {
+                    resultText: latestRun.payload.resultText,
+                    error: latestRun.payload.error,
+                    note:
+                      typeof latestRun.payload.note === "string"
+                        ? latestRun.payload.note
+                        : undefined,
+                    // Validated, not cast: payload is jsonb, so `kind` arrives as a bare
+                    // string and the card renders different words per kind. An unknown
+                    // kind drops the whole evidence block rather than shipping a link
+                    // labelled by a value nothing checked.
+                    evidence: normalizeRepoWorkEvidence(latestRun.payload.evidence) ?? undefined,
+                    durationMs: latestRun.payload.durationMs,
+                    model: latestRun.payload.model,
+                  }
+                : null,
+            }
+          : null,
+      };
+    },
+  );
 
   return NextResponse.json(
     {
@@ -503,10 +674,10 @@ export async function GET() {
       runnerVersion: !isRuntimeAvailable() ? runnerVersion : null,
       builderVersions: !isRuntimeAvailable() ? builderVersions : null,
       builderPresence: !isRuntimeAvailable()
-        // Read at request time, NOT from the slow cache above: that cache is
-        // served stale while it refreshes, so cached heartbeat timestamps age
-        // out and report a live builder as offline.
-        ? await getBuilderPresence(userId, runnerVersion).catch(() => null)
+        ? // Read at request time, NOT from the slow cache above: that cache is
+          // served stale while it refreshes, so cached heartbeat timestamps age
+          // out and report a live builder as offline.
+          await getBuilderPresence(userId, runnerVersion).catch(() => null)
         : null,
       // Execution health (≠ push heartbeat): a runner can keep pushing snapshots
       // while its command loop is hung, so dispatches silently queue forever.

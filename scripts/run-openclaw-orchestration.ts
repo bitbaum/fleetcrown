@@ -25,7 +25,10 @@ async function main() {
   // started by the route at line ~385. Without this, every openclaw run on
   // the happy path showed task_started but never task_completed, leaving
   // dispatch-success-rate queries unable to count completions for openclaw.
-  const emitLifecycleEvent = async (eventType: "task_completed" | "task_failed", detail: string) => {
+  const emitLifecycleEvent = async (
+    eventType: "task_completed" | "task_failed",
+    detail: string,
+  ) => {
     try {
       await createOrchestrationEvent({
         userId,
@@ -49,7 +52,9 @@ async function main() {
   try {
     log("before runOpenClawIntent");
     const result = await runOpenClawIntent(request);
-    log(`after runOpenClawIntent ok=${result.ok} model=${result.model ?? ""} durationMs=${result.durationMs ?? ""}`);
+    log(
+      `after runOpenClawIntent ok=${result.ok} model=${result.model ?? ""} durationMs=${result.durationMs ?? ""}`,
+    );
     const summary = parseOrchestrationSummary(result.text);
 
     log("before updateOrchestrationRun success/error");
@@ -73,10 +78,12 @@ async function main() {
     //   failure → "<intent>: <error>"   (colon separator, not em-dash)
     await emitLifecycleEvent(
       result.ok ? "task_completed" : "task_failed",
-      result.ok ? request.intent : `${request.intent}: ${result.error ?? "openclaw returned not-ok"}`,
+      result.ok
+        ? request.intent
+        : `${request.intent}: ${result.error ?? "openclaw returned not-ok"}`,
     );
   } catch (error) {
-    log(`catch error=${error instanceof Error ? error.stack ?? error.message : String(error)}`);
+    log(`catch error=${error instanceof Error ? (error.stack ?? error.message) : String(error)}`);
     await updateOrchestrationRun(runId, {
       state: "error",
       payload: {
@@ -88,7 +95,10 @@ async function main() {
       finishedAt: new Date(),
     });
     log("after updateOrchestrationRun catch");
-    await emitLifecycleEvent("task_failed", `${request.intent}: ${error instanceof Error ? error.message : "OpenClaw run crashed"}`);
+    await emitLifecycleEvent(
+      "task_failed",
+      `${request.intent}: ${error instanceof Error ? error.message : "OpenClaw run crashed"}`,
+    );
     throw error;
   }
 }

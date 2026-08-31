@@ -7,11 +7,7 @@
 // the export-specific part: billing ids are dropped, everything else survives,
 // and the manifest cannot claim an exclusion it did not make.
 // Run: npx tsx scripts/test/account-export.ts
-import {
-  toExportUser,
-  buildExportManifest,
-  ACCOUNT_EXPORT_FILENAME,
-} from "@/lib/account-export";
+import { toExportUser, buildExportManifest, ACCOUNT_EXPORT_FILENAME } from "@/lib/account-export";
 import {
   USER_CLIENT_FIELDS,
   USER_EXPORT_OMITTED_FIELDS,
@@ -22,8 +18,12 @@ import type { User } from "@/db/schema/users";
 let pass = 0;
 let fail = 0;
 function ok(cond: boolean, label: string) {
-  if (cond) { pass++; }
-  else { fail++; console.error(`✗ ${label}`); }
+  if (cond) {
+    pass++;
+  } else {
+    fail++;
+    console.error(`✗ ${label}`);
+  }
 }
 
 const userRow = {
@@ -83,10 +83,16 @@ const manifest = buildExportManifest("u-1", ["a", "b"]);
 ok(manifest.user_id === "u-1", "manifest user_id");
 ok(Array.isArray(manifest.scope) && manifest.scope.length === 2, "manifest scope");
 for (const field of Object.keys(USER_WITHHELD_FIELDS)) {
-  ok(manifest.excluded.some((e) => e.includes(field)), `manifest names ${field} as excluded`);
+  ok(
+    manifest.excluded.some((e) => e.includes(field)),
+    `manifest names ${field} as excluded`,
+  );
 }
 for (const field of USER_EXPORT_OMITTED_FIELDS) {
-  ok(manifest.excluded.some((e) => e.includes(field)), `manifest names ${field} as excluded`);
+  ok(
+    manifest.excluded.some((e) => e.includes(field)),
+    `manifest names ${field} as excluded`,
+  );
 }
 ok(
   manifest.excluded.every((line) =>

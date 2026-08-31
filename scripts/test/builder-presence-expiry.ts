@@ -36,7 +36,10 @@ const NOW = 1_800_000_000_000; // fixed clock — these tests must not depend on
 const ago = (ms: number) => new Date(NOW - ms);
 const BOTH = { cloud: true, local: true, any: true };
 const fresh = (channel: string) => ({ channel, observedAt: ago(60_000) });
-const stale = (channel: string) => ({ channel, observedAt: ago(RUNNER_OFFLINE_THRESHOLD_MS + 60_000) });
+const stale = (channel: string) => ({
+  channel,
+  observedAt: ago(RUNNER_OFFLINE_THRESHOLD_MS + 60_000),
+});
 
 check("a connected channel with a fresh heartbeat is online", () => {
   const r = applyHeartbeatExpiry(BOTH, [fresh("cloud"), fresh("local")], NOW);
@@ -60,7 +63,11 @@ check("a connected channel that never pushed a heartbeat is OFFLINE", () => {
 check("a heartbeat alone does not make a disconnected builder online", () => {
   // AND, not OR: a runner posting snapshots while its SSE channel is down
   // cannot receive dispatches, so it is not an executor.
-  const r = applyHeartbeatExpiry({ cloud: false, local: false, any: false }, [fresh("cloud"), fresh("local")], NOW);
+  const r = applyHeartbeatExpiry(
+    { cloud: false, local: false, any: false },
+    [fresh("cloud"), fresh("local")],
+    NOW,
+  );
   assert(!r.any, "presence must require BOTH the connection and the heartbeat");
 });
 
@@ -74,8 +81,14 @@ check("expiry uses the shared runner threshold, not a private literal", () => {
   // One tick inside the threshold is alive; one tick past it is not. Pins the
   // boundary to lib/constants/runner so raising the heartbeat cadence
   // auto-scales this too (the 90s-vs-5min drift that caused UI flicker).
-  assert(isHeartbeatFresh(ago(RUNNER_OFFLINE_THRESHOLD_MS - 1_000), NOW), "just inside the threshold must be fresh");
-  assert(!isHeartbeatFresh(ago(RUNNER_OFFLINE_THRESHOLD_MS + 1_000), NOW), "just past the threshold must be stale");
+  assert(
+    isHeartbeatFresh(ago(RUNNER_OFFLINE_THRESHOLD_MS - 1_000), NOW),
+    "just inside the threshold must be fresh",
+  );
+  assert(
+    !isHeartbeatFresh(ago(RUNNER_OFFLINE_THRESHOLD_MS + 1_000), NOW),
+    "just past the threshold must be stale",
+  );
   assert(!isHeartbeatFresh(null, NOW), "a missing observation is not fresh");
   assert(
     RUNNER_OFFLINE_THRESHOLD_MS > RUNNER_HEARTBEAT_MS,

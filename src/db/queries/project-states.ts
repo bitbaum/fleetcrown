@@ -30,10 +30,12 @@ export async function upsertProjectState(patch: NewProjectState) {
   const [row] = await db
     .update(projectStates)
     .set(updateSet)
-    .where(and(
-      eq(projectStates.userId, patch.userId),
-      sql`lower(${projectStates.projectKey}) = ${projectKey}`,
-    ))
+    .where(
+      and(
+        eq(projectStates.userId, patch.userId),
+        sql`lower(${projectStates.projectKey}) = ${projectKey}`,
+      ),
+    )
     .returning();
   return row;
 }
@@ -43,10 +45,12 @@ export async function getProjectState(userId: string, projectKey: string) {
   const [row] = await db
     .select()
     .from(projectStates)
-    .where(and(
-      eq(projectStates.userId, userId),
-      sql`lower(${projectStates.projectKey}) = ${normalizedKey}`,
-    ))
+    .where(
+      and(
+        eq(projectStates.userId, userId),
+        sql`lower(${projectStates.projectKey}) = ${normalizedKey}`,
+      ),
+    )
     .limit(1);
   return row ?? null;
 }
@@ -87,7 +91,12 @@ export async function replaceProjectPromptQueue(
       .onConflictDoNothing()
       .returning();
     if (inserted) {
-      return { queue: inserted.promptQueue, revision: inserted.promptQueueRevision, exists: true, applied: true };
+      return {
+        queue: inserted.promptQueue,
+        revision: inserted.promptQueueRevision,
+        exists: true,
+        applied: true,
+      };
     }
   }
 
@@ -99,19 +108,31 @@ export async function replaceProjectPromptQueue(
       promptQueueRevision: sql`${projectStates.promptQueueRevision} + 1`,
       updatedAt: new Date(),
     })
-    .where(and(
-      eq(projectStates.userId, userId),
-      sql`lower(${projectStates.projectKey}) = ${normalizedKey}`,
-      eq(projectStates.promptQueueRevision, expectedRevision),
-    ))
+    .where(
+      and(
+        eq(projectStates.userId, userId),
+        sql`lower(${projectStates.projectKey}) = ${normalizedKey}`,
+        eq(projectStates.promptQueueRevision, expectedRevision),
+      ),
+    )
     .returning();
   if (updated) {
-    return { queue: updated.promptQueue, revision: updated.promptQueueRevision, exists: true, applied: true };
+    return {
+      queue: updated.promptQueue,
+      revision: updated.promptQueueRevision,
+      exists: true,
+      applied: true,
+    };
   }
 
   const current = await getProjectState(userId, normalizedKey);
   return current
-    ? { queue: current.promptQueue, revision: current.promptQueueRevision, exists: true, applied: false }
+    ? {
+        queue: current.promptQueue,
+        revision: current.promptQueueRevision,
+        exists: true,
+        applied: false,
+      }
     : { queue: [], revision: 0, exists: false, applied: false };
 }
 
@@ -124,23 +145,42 @@ export async function consumeProjectPrompt(
   projectKey: string,
   consumedPrompt: string,
 ): Promise<PromptQueueWriteResult & { consumed: boolean }> {
-  if (!consumedPrompt) return { queue: [], revision: 0, exists: false, applied: false, consumed: false };
+  if (!consumedPrompt)
+    return { queue: [], revision: 0, exists: false, applied: false, consumed: false };
 
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const row = await getProjectState(userId, projectKey);
     if (!row) return { queue: [], revision: 0, exists: false, applied: false, consumed: false };
     const index = row.promptQueue.indexOf(consumedPrompt);
     if (index < 0) {
-      return { queue: row.promptQueue, revision: row.promptQueueRevision, exists: true, applied: false, consumed: false };
+      return {
+        queue: row.promptQueue,
+        revision: row.promptQueueRevision,
+        exists: true,
+        applied: false,
+        consumed: false,
+      };
     }
     const queue = row.promptQueue.filter((_, itemIndex) => itemIndex !== index);
-    const result = await replaceProjectPromptQueue(userId, projectKey, row.tabName, queue, row.promptQueueRevision);
+    const result = await replaceProjectPromptQueue(
+      userId,
+      projectKey,
+      row.tabName,
+      queue,
+      row.promptQueueRevision,
+    );
     if (result.applied) return { ...result, consumed: true };
   }
 
   const row = await getProjectState(userId, projectKey);
   return row
-    ? { queue: row.promptQueue, revision: row.promptQueueRevision, exists: true, applied: false, consumed: false }
+    ? {
+        queue: row.promptQueue,
+        revision: row.promptQueueRevision,
+        exists: true,
+        applied: false,
+        consumed: false,
+      }
     : { queue: [], revision: 0, exists: false, applied: false, consumed: false };
 }
 
@@ -171,15 +211,33 @@ export async function prependProjectPrompt(
 
 type SessionFields = Pick<
   NewProjectState,
-  "workspaceId" | "sessionStatus" | "sessionDone" | "sessionNext" | "sessionTests" | "sessionTodos" | "sessionHealth" |
-    "sessionTsc" | "sessionLint" | "sessionCommit" |
-    "sessionBlockReason" | "sessionNoOpCount"
+  | "workspaceId"
+  | "sessionStatus"
+  | "sessionDone"
+  | "sessionNext"
+  | "sessionTests"
+  | "sessionTodos"
+  | "sessionHealth"
+  | "sessionTsc"
+  | "sessionLint"
+  | "sessionCommit"
+  | "sessionBlockReason"
+  | "sessionNoOpCount"
 >;
 
 type RuntimeFields = Pick<
   NewProjectState,
-  "workspaceId" | "agentRunning" | "tabOpen" | "activeAgents" | "currentPromptKey" | "currentPromptLabel" |
-    "currentPromptStartedAt" | "readyAt" | "lockAt" | "closingAt" | "closedAt"
+  | "workspaceId"
+  | "agentRunning"
+  | "tabOpen"
+  | "activeAgents"
+  | "currentPromptKey"
+  | "currentPromptLabel"
+  | "currentPromptStartedAt"
+  | "readyAt"
+  | "lockAt"
+  | "closingAt"
+  | "closedAt"
 >;
 
 /** Accepts runtime presence/lifecycle data only from the newest runner observation. */
@@ -189,7 +247,11 @@ export async function persistProjectRuntimeIfNewer(
 ) {
   const projectKey = patch.projectKey.toLowerCase();
   const values = { ...patch, projectKey, updatedAt: new Date() };
-  const [inserted] = await db.insert(projectStates).values(values).onConflictDoNothing().returning();
+  const [inserted] = await db
+    .insert(projectStates)
+    .values(values)
+    .onConflictDoNothing()
+    .returning();
   if (inserted) return inserted;
 
   const updateSet: Partial<NewProjectState> & { updatedAt: Date; runtimeObservedAt: Date } = {
@@ -197,8 +259,19 @@ export async function persistProjectRuntimeIfNewer(
     runtimeObservedAt: patch.runtimeObservedAt,
   };
   for (const key of [
-    "projectId", "workspaceId", "tabName", "agentRunning", "tabOpen", "activeAgents", "currentPromptKey",
-    "currentPromptLabel", "currentPromptStartedAt", "readyAt", "lockAt", "closingAt", "closedAt",
+    "projectId",
+    "workspaceId",
+    "tabName",
+    "agentRunning",
+    "tabOpen",
+    "activeAgents",
+    "currentPromptKey",
+    "currentPromptLabel",
+    "currentPromptStartedAt",
+    "readyAt",
+    "lockAt",
+    "closingAt",
+    "closedAt",
   ] as const) {
     const value = patch[key];
     if (value !== undefined) (updateSet as Record<string, unknown>)[key] = value;
@@ -206,11 +279,16 @@ export async function persistProjectRuntimeIfNewer(
   const [updated] = await db
     .update(projectStates)
     .set(updateSet)
-    .where(and(
-      eq(projectStates.userId, patch.userId),
-      sql`lower(${projectStates.projectKey}) = ${projectKey}`,
-      or(isNull(projectStates.runtimeObservedAt), lt(projectStates.runtimeObservedAt, patch.runtimeObservedAt)),
-    ))
+    .where(
+      and(
+        eq(projectStates.userId, patch.userId),
+        sql`lower(${projectStates.projectKey}) = ${projectKey}`,
+        or(
+          isNull(projectStates.runtimeObservedAt),
+          lt(projectStates.runtimeObservedAt, patch.runtimeObservedAt),
+        ),
+      ),
+    )
     .returning();
   return updated ?? null;
 }
@@ -237,10 +315,20 @@ export async function persistProjectSessionIfNewer(
     sessionUpdatedAt: patch.sessionUpdatedAt,
   };
   for (const key of [
-    "projectId", "workspaceId", "tabName", "sessionStatus", "sessionDone", "sessionNext",
-    "sessionTests", "sessionTodos", "sessionHealth",
-    "sessionTsc", "sessionLint", "sessionCommit",
-    "sessionBlockReason", "sessionNoOpCount",
+    "projectId",
+    "workspaceId",
+    "tabName",
+    "sessionStatus",
+    "sessionDone",
+    "sessionNext",
+    "sessionTests",
+    "sessionTodos",
+    "sessionHealth",
+    "sessionTsc",
+    "sessionLint",
+    "sessionCommit",
+    "sessionBlockReason",
+    "sessionNoOpCount",
   ] as const) {
     const value = patch[key];
     if (value !== undefined) (updateSet as Record<string, unknown>)[key] = value;
@@ -249,11 +337,16 @@ export async function persistProjectSessionIfNewer(
   const [updated] = await db
     .update(projectStates)
     .set(updateSet)
-    .where(and(
-      eq(projectStates.userId, patch.userId),
-      sql`lower(${projectStates.projectKey}) = ${projectKey}`,
-      or(isNull(projectStates.sessionUpdatedAt), lt(projectStates.sessionUpdatedAt, patch.sessionUpdatedAt)),
-    ))
+    .where(
+      and(
+        eq(projectStates.userId, patch.userId),
+        sql`lower(${projectStates.projectKey}) = ${projectKey}`,
+        or(
+          isNull(projectStates.sessionUpdatedAt),
+          lt(projectStates.sessionUpdatedAt, patch.sessionUpdatedAt),
+        ),
+      ),
+    )
     .returning();
   return updated ?? null;
 }
@@ -272,7 +365,9 @@ export async function getProjectStateByProjectId(userId: string, projectId: stri
   return row ?? null;
 }
 
-export async function getProjectStatesByUserId(userId: string): Promise<(typeof projectStates.$inferSelect)[]> {
+export async function getProjectStatesByUserId(
+  userId: string,
+): Promise<(typeof projectStates.$inferSelect)[]> {
   return db.select().from(projectStates).where(eq(projectStates.userId, userId));
 }
 
@@ -285,7 +380,9 @@ export async function setAllProjectAutoContinue(userId: string, enabled: boolean
 }
 
 /** Batch version — avoids N separate queries when fetching states for own user + org team owners. */
-export async function getProjectStatesByUserIds(userIds: string[]): Promise<(typeof projectStates.$inferSelect)[]> {
+export async function getProjectStatesByUserIds(
+  userIds: string[],
+): Promise<(typeof projectStates.$inferSelect)[]> {
   if (userIds.length === 0) return [];
   if (userIds.length === 1) return getProjectStatesByUserId(userIds[0]);
   return db.select().from(projectStates).where(inArray(projectStates.userId, userIds));

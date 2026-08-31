@@ -37,17 +37,18 @@ export function injectWatchUrls(projectKey: string): {
 }
 
 export function projectFromFleetRoute(pathname: string, search: URLSearchParams): string | null {
-  const value = pathname === "/projects"
-    ? search.get("project")
-    : pathname.startsWith("/loki")
+  const value =
+    pathname === "/projects"
       ? search.get("project")
-      : pathname.startsWith("/control")
-        ? search.get("focus")
-        : pathname.startsWith("/terminal")
-          ? search.get("tab")
-          : pathname.startsWith("/activity")
-            ? search.get("project")
-            : null;
+      : pathname.startsWith("/loki")
+        ? search.get("project")
+        : pathname.startsWith("/control")
+          ? search.get("focus")
+          : pathname.startsWith("/terminal")
+            ? search.get("tab")
+            : pathname.startsWith("/activity")
+              ? search.get("project")
+              : null;
   return value?.trim() || null;
 }
 

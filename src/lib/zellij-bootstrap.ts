@@ -33,7 +33,11 @@ import { execSync, spawn } from "child_process";
 import fs from "fs";
 import os from "os";
 import path from "path";
-import { zellijExecutableForShell, shellEscape, getZellijSessionsSync } from "@/lib/terminals/zellij";
+import {
+  zellijExecutableForShell,
+  shellEscape,
+  getZellijSessionsSync,
+} from "@/lib/terminals/zellij";
 import type { PaneRecord } from "@/db/schema/runtime-snapshots";
 import { generateLayoutKdl } from "@/lib/zellij-layout-generator";
 
@@ -78,9 +82,12 @@ function sessionIsLive(sessionName: string): boolean {
 
 function deleteSession(sessionName: string): void {
   try {
-    execSync(`${zellijExecutableForShell()} delete-session ${shellEscape(sessionName)} 2>/dev/null || true`, {
-      timeout: 3000,
-    });
+    execSync(
+      `${zellijExecutableForShell()} delete-session ${shellEscape(sessionName)} 2>/dev/null || true`,
+      {
+        timeout: 3000,
+      },
+    );
   } catch {
     // best effort; spawn step will catch anything pathological
   }

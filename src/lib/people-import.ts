@@ -11,12 +11,7 @@
  * created. Inferred enrichments (scan) stay accept/discard.
  */
 
-import {
-  BOOK_ATTR,
-  IMPORT_SOURCE,
-  isBookAttrKey,
-  type ImportSource,
-} from "@/config/book";
+import { BOOK_ATTR, IMPORT_SOURCE, isBookAttrKey, type ImportSource } from "@/config/book";
 import { extractEmails, extractPhones, normalizeName } from "@/lib/people-dedupe";
 
 export type ImportedContact = {
@@ -36,7 +31,9 @@ export function detectImportSource(filename: string, text: string): ImportSource
     try {
       const parsed = JSON.parse(text) as { contacts?: unknown };
       if (Array.isArray(parsed.contacts)) return IMPORT_SOURCE.CONTACT_RESOLVER;
-    } catch { /* not json */ }
+    } catch {
+      /* not json */
+    }
   }
   return IMPORT_SOURCE.CSV;
 }
@@ -53,7 +50,8 @@ export function parseVCard(text: string): ImportedContact[] {
   for (const raw of cards) {
     const block = raw.split(/END:VCARD/i)[0] ?? "";
     const unfolded = block.replace(/\r\n[ \t]/g, "").replace(/\n[ \t]/g, "");
-    const fn = vcardField(unfolded, "FN") ?? vcardField(unfolded, "N")?.split(";").filter(Boolean).join(" ");
+    const fn =
+      vcardField(unfolded, "FN") ?? vcardField(unfolded, "N")?.split(";").filter(Boolean).join(" ");
     const name = (fn ?? "").trim();
     if (!name) continue;
     const attrs: Record<string, string> = {};
@@ -89,16 +87,25 @@ function headerIndex(header: string[], re: RegExp): number {
 export function parseCsv(text: string): ImportedContact[] {
   const table = parseCsvTable(text);
   if (table.length === 0) return [];
-  const header = table[0]!.map((h) => h.toLowerCase().replace(/[\u2013\u2014]/g, "-").trim());
+  const header = table[0]!.map((h) =>
+    h
+      .toLowerCase()
+      .replace(/[\u2013\u2014]/g, "-")
+      .trim(),
+  );
   const dataRows = table.slice(1);
   if (looksLikeGoogleContactsCsv(header)) return parseGoogleContactsCsv(header, dataRows);
   const hasHeader = header.some((h) => /name|email|phone|fn|display/.test(h));
   const rows = hasHeader ? dataRows : table;
-  const nameIdx = hasHeader ? header.findIndex((h) => /^(name|display name|fn|full name)$/.test(h)) : 0;
+  const nameIdx = hasHeader
+    ? header.findIndex((h) => /^(name|display name|fn|full name)$/.test(h))
+    : 0;
   const emailIdx = hasHeader ? header.findIndex((h) => /email/.test(h)) : -1;
   const phoneIdx = hasHeader ? header.findIndex((h) => /phone|tel|mobile/.test(h)) : -1;
   const noteIdx = hasHeader ? header.findIndex((h) => /note|notes|comment/.test(h)) : -1;
-  const orgIdx = hasHeader ? header.findIndex((h) => /org|company|organisation|organization/.test(h)) : -1;
+  const orgIdx = hasHeader
+    ? header.findIndex((h) => /org|company|organisation|organization/.test(h))
+    : -1;
 
   const out: ImportedContact[] = [];
   for (const cols of rows) {
@@ -144,9 +151,12 @@ export function parseContactResolver(text: string): ImportedContact[] {
       for (const [channel, data] of Object.entries(c.channels)) {
         const key = channel.startsWith("channel:") ? channel : `channel:${channel}`;
         if (!isBookAttrKey(key) && !key.startsWith("channel:")) continue;
-        const value = typeof data === "string"
-          ? data
-          : Object.entries(data).map(([k, v]) => `${k}:${v}`).join(",");
+        const value =
+          typeof data === "string"
+            ? data
+            : Object.entries(data)
+                .map(([k, v]) => `${k}:${v}`)
+                .join(",");
         if (value) attrs[isBookAttrKey(key) ? key : key] = value;
       }
     }
@@ -178,9 +188,9 @@ function parseGoogleContactsCsv(header: string[], rows: string[][]): ImportedCon
   const out: ImportedContact[] = [];
   for (const cols of rows) {
     const name = (
-      (nameIdx >= 0 ? cols[nameIdx] : "")
-      || [first >= 0 ? cols[first] : "", last >= 0 ? cols[last] : ""].filter(Boolean).join(" ")
-      || (fileAs >= 0 ? cols[fileAs] : "")
+      (nameIdx >= 0 ? cols[nameIdx] : "") ||
+      [first >= 0 ? cols[first] : "", last >= 0 ? cols[last] : ""].filter(Boolean).join(" ") ||
+      (fileAs >= 0 ? cols[fileAs] : "")
     ).trim();
     if (!name) continue;
     const attrs: Record<string, string> = {};
@@ -262,8 +272,10 @@ export function parseCsvTable(text: string): string[][] {
   for (let i = 0; i < text.length; i++) {
     const ch = text[i];
     if (ch === '"') {
-      if (inQuotes && text[i + 1] === '"') { cur += '"'; i++; }
-      else inQuotes = !inQuotes;
+      if (inQuotes && text[i + 1] === '"') {
+        cur += '"';
+        i++;
+      } else inQuotes = !inQuotes;
     } else if (ch === "," && !inQuotes) {
       row.push(cur.trim());
       cur = "";

@@ -7,7 +7,14 @@ import { getSessionUserId } from "@/lib/session";
 // The empty payload returned to unauthenticated callers — same shape the /system
 // page already handles, so a monitor polling this GET keeps working but learns
 // nothing about host capacity/load.
-const EMPTY = { mem: null, swap: null, disk: null, uptime: null, gatewayStatus: "down", runtime: false };
+const EMPTY = {
+  mem: null,
+  swap: null,
+  disk: null,
+  uptime: null,
+  gatewayStatus: "down",
+  runtime: false,
+};
 
 const MIB = 1024 * 1024;
 
@@ -60,7 +67,12 @@ export async function GET() {
     const dAvail = Math.round(fs.bavail * blockMiB);
     const dUsed = Math.round((fs.blocks - fs.bfree) * blockMiB);
     const denom = dUsed + dAvail;
-    disk = { totalMiB: dTotal, usedMiB: dUsed, availMiB: dAvail, pct: denom > 0 ? Math.round((dUsed / denom) * 100) : 0 };
+    disk = {
+      totalMiB: dTotal,
+      usedMiB: dUsed,
+      availMiB: dAvail,
+      pct: denom > 0 ? Math.round((dUsed / denom) * 100) : 0,
+    };
   } catch {
     disk = null;
   }

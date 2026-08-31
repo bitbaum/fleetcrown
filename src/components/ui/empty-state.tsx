@@ -33,7 +33,8 @@ export function EmptyState({
   if (!Icon && !title && !action) {
     return <div className={cn("text-sm text-text-tertiary", className)}>{children}</div>;
   }
-  const pad = size === "sm" ? "ui-empty-block-sm" : size === "lg" ? "ui-empty-block-lg" : "ui-empty-block-md";
+  const pad =
+    size === "sm" ? "ui-empty-block-sm" : size === "lg" ? "ui-empty-block-lg" : "ui-empty-block-md";
   return (
     <div className={cn("ui-empty-block", pad, className)}>
       {Icon && <Icon className="ui-empty-icon" />}

@@ -31,7 +31,8 @@ const check = (label: string, fn: () => void) => {
 type DigestEmailTemplate = typeof import("@/lib/email").digestEmailTemplate;
 
 const base = {
-  markdown: "**Headline:** truthseeker timed out overnight.\n\n## Needs you\n- **truthseeker** — timed out after 1h.",
+  markdown:
+    "**Headline:** truthseeker timed out overnight.\n\n## Needs you\n- **truthseeker** — timed out after 1h.",
   cadenceLabel: "daily",
   windowLabel: "the last 24 hours",
   activityUrl: "https://fleetcrown.orangecat.ch/activity",

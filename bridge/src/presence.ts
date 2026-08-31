@@ -12,7 +12,11 @@ async function notifyState(pool: Pool, userId: string): Promise<void> {
 }
 
 /** A runner SSE connection opened on cloud (box-runner) or local (desktop). */
-export async function markConnect(pool: Pool, userId: string, channel: PresenceChannel = "local"): Promise<void> {
+export async function markConnect(
+  pool: Pool,
+  userId: string,
+  channel: PresenceChannel = "local",
+): Promise<void> {
   await pool.query(
     `INSERT INTO runner_presence (
        user_id, connection_count, connected, connected_at, last_change_at,
@@ -44,7 +48,11 @@ export async function markConnect(pool: Pool, userId: string, channel: PresenceC
 }
 
 /** A runner SSE connection closed. Floors counts at 0. */
-export async function markDisconnect(pool: Pool, userId: string, channel: PresenceChannel = "local"): Promise<void> {
+export async function markDisconnect(
+  pool: Pool,
+  userId: string,
+  channel: PresenceChannel = "local",
+): Promise<void> {
   await pool.query(
     `UPDATE runner_presence SET
        connection_count = GREATEST(0, connection_count - 1),

@@ -55,7 +55,10 @@ export async function getHeroFleetSnapshot(userId: string): Promise<HeroFleetSna
     projects,
     metrics: [
       { value: String(projectCount), label: projectCount === 1 ? "project" : "projects" },
-      { value: String(fleet.running), label: fleet.running === 1 ? "agent running" : "agents running" },
+      {
+        value: String(fleet.running),
+        label: fleet.running === 1 ? "agent running" : "agents running",
+      },
       { value: String(weekRuns.length), label: "runs this week" },
     ],
   };
@@ -90,7 +93,9 @@ export type ShippedFeedbackSnapshot = {
 const STRIP_MAX_ENTRIES = 3;
 const EXCERPT_LEN = 140;
 
-export async function getShippedFromFeedbackSnapshot(userId: string): Promise<ShippedFeedbackSnapshot> {
+export async function getShippedFromFeedbackSnapshot(
+  userId: string,
+): Promise<ShippedFeedbackSnapshot> {
   const [loop, rows] = await Promise.all([
     getFeedbackLoopMetrics(userId),
     db
@@ -102,11 +107,13 @@ export async function getShippedFromFeedbackSnapshot(userId: string): Promise<Sh
       })
       .from(siteFeedback)
       .innerJoin(entities, eq(siteFeedback.projectId, entities.id))
-      .where(and(
-        eq(siteFeedback.userId, userId),
-        eq(siteFeedback.status, FEEDBACK_STATUS.RESOLVED),
-        isNotNull(siteFeedback.featuredAt),
-      ))
+      .where(
+        and(
+          eq(siteFeedback.userId, userId),
+          eq(siteFeedback.status, FEEDBACK_STATUS.RESOLVED),
+          isNotNull(siteFeedback.featuredAt),
+        ),
+      )
       .orderBy(desc(sql`${siteFeedback.featuredAt}`))
       .limit(STRIP_MAX_ENTRIES),
   ]);
@@ -115,7 +122,8 @@ export async function getShippedFromFeedbackSnapshot(userId: string): Promise<Sh
     resolvedCount: loop.resolved,
     medianResolutionHours: loop.medianResolutionHours,
     entries: rows.map((r) => ({
-      excerpt: r.suggestion.length > EXCERPT_LEN ? `${r.suggestion.slice(0, EXCERPT_LEN)}…` : r.suggestion,
+      excerpt:
+        r.suggestion.length > EXCERPT_LEN ? `${r.suggestion.slice(0, EXCERPT_LEN)}…` : r.suggestion,
       page: r.page,
       project: r.project,
       resolvedAt: (r.resolvedAt ?? new Date()).toISOString(),

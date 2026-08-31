@@ -44,7 +44,11 @@ import { salvageProposals } from "../../src/lib/frontier/propose";
     '{"title":"B","rationale":"plain","sourceUrls":[]}]}';
   const out = salvageProposals(withBraces);
   assert.equal(out!.length, 2, "an unpaired brace inside a string is text, not structure");
-  assert.equal((out![1] as { title: string }).title, "B", "the object after the brace must still parse");
+  assert.equal(
+    (out![1] as { title: string }).title,
+    "B",
+    "the object after the brace must still parse",
+  );
 }
 
 // ── An escaped quote must not be read as the end of the string ──────────────
@@ -96,8 +100,15 @@ for (const prose of [
 
 // ── A <think> preamble is stripped before the walk, as elsewhere ─────────────
 {
-  const withThink = '<think>weighing options</think>\n{"proposals":[{"title":"A","rationale":"r"}]}';
-  assert.equal(salvageProposals(withThink)!.length, 1, "reasoning preamble must not hide the array");
+  const withThink =
+    '<think>weighing options</think>\n{"proposals":[{"title":"A","rationale":"r"}]}';
+  assert.equal(
+    salvageProposals(withThink)!.length,
+    1,
+    "reasoning preamble must not hide the array",
+  );
 }
 
-console.log("✓ frontier salvage: complete proposals survive a truncated reply; no-JSON stays a separate failure");
+console.log(
+  "✓ frontier salvage: complete proposals survive a truncated reply; no-JSON stays a separate failure",
+);

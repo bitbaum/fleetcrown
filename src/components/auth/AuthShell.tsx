@@ -18,15 +18,22 @@ export function AuthField({
 
   if (!fieldId && Children.count(children) === 1) {
     const only = Children.only(children);
-    if (isValidElement<React.InputHTMLAttributes<HTMLInputElement>>(only) && only.type === AuthInput) {
+    if (
+      isValidElement<React.InputHTMLAttributes<HTMLInputElement>>(only) &&
+      only.type === AuthInput
+    ) {
       fieldId = only.props.id ?? generatedId;
-      content = cloneElement(only as ReactElement<React.InputHTMLAttributes<HTMLInputElement>>, { id: fieldId });
+      content = cloneElement(only as ReactElement<React.InputHTMLAttributes<HTMLInputElement>>, {
+        id: fieldId,
+      });
     }
   }
 
   return (
     <div className="space-y-1.5">
-      <label className="ui-auth-label" htmlFor={fieldId}>{label}</label>
+      <label className="ui-auth-label" htmlFor={fieldId}>
+        {label}
+      </label>
       {content}
     </div>
   );
@@ -34,20 +41,12 @@ export function AuthField({
 
 export function AuthInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return (
-    <input
-      {...props}
-      className={`ui-auth-input ${props.className ?? ""}`}
-      style={props.style}
-    />
+    <input {...props} className={`ui-auth-input ${props.className ?? ""}`} style={props.style} />
   );
 }
 
 export function AuthCard({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="ui-auth-card">
-      {children}
-    </div>
-  );
+  return <div className="ui-auth-card">{children}</div>;
 }
 
 export function AuthHeading({
@@ -110,11 +109,7 @@ export function AuthShell({
 }
 
 export function AuthIconBadge({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="ui-auth-icon-badge">
-      {children}
-    </div>
-  );
+  return <div className="ui-auth-icon-badge">{children}</div>;
 }
 
 export function AuthDivider({ label }: { label: string }) {
@@ -127,13 +122,7 @@ export function AuthDivider({ label }: { label: string }) {
   );
 }
 
-export function AuthFooterLink({
-  href,
-  children,
-}: {
-  href: string;
-  children: React.ReactNode;
-}) {
+export function AuthFooterLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
     <p className="ui-auth-footer">
       <Link href={href} className="ui-auth-footer-link">
@@ -148,10 +137,7 @@ export function AuthSecondaryButton({
   ...props
 }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
-    <button
-      {...props}
-      className={`ui-auth-secondary-btn ${props.className ?? ""}`}
-    >
+    <button {...props} className={`ui-auth-secondary-btn ${props.className ?? ""}`}>
       {children}
     </button>
   );
@@ -225,7 +211,9 @@ export function AuthModeTabs({
           key={tab.id}
           type="button"
           onClick={() => onChange(tab.id)}
-          className={active === tab.id ? "ui-auth-mode-tab ui-auth-mode-tab-active" : "ui-auth-mode-tab"}
+          className={
+            active === tab.id ? "ui-auth-mode-tab ui-auth-mode-tab-active" : "ui-auth-mode-tab"
+          }
         >
           {tab.label}
         </button>

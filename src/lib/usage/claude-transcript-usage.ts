@@ -36,7 +36,12 @@ export type WindowUsage = {
   sessionIds: string[];
 };
 
-export const emptyTotals = (): UsageTotals => ({ input: 0, output: 0, cacheRead: 0, cacheWrite: 0 });
+export const emptyTotals = (): UsageTotals => ({
+  input: 0,
+  output: 0,
+  cacheRead: 0,
+  cacheWrite: 0,
+});
 
 /**
  * Claude Code encodes a project cwd as a directory slug by replacing BOTH
@@ -65,7 +70,10 @@ type TranscriptLine = {
   };
 };
 
-function addTotals(into: UsageTotals, u: NonNullable<NonNullable<TranscriptLine["message"]>["usage"]>): void {
+function addTotals(
+  into: UsageTotals,
+  u: NonNullable<NonNullable<TranscriptLine["message"]>["usage"]>,
+): void {
   into.input += u.input_tokens ?? 0;
   into.output += u.output_tokens ?? 0;
   into.cacheRead += u.cache_read_input_tokens ?? 0;

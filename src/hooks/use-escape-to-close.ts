@@ -14,7 +14,9 @@ import { useEffect } from "react";
 export function useEscapeToClose(onClose: () => void, disabled = false) {
   useEffect(() => {
     if (disabled) return;
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [onClose, disabled]);

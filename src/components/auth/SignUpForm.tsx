@@ -4,8 +4,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import {
-  AuthShell, AuthCard, AuthField, AuthInput, AuthSubmitButton,
-  AuthFooterLink, AuthHeading, AuthDivider,
+  AuthShell,
+  AuthCard,
+  AuthField,
+  AuthInput,
+  AuthSubmitButton,
+  AuthFooterLink,
+  AuthHeading,
+  AuthDivider,
 } from "@/components/auth/AuthShell";
 import { OAuthButtons, hasAnyOAuth, type OAuthEnabledFlags } from "@/components/auth/OAuthButtons";
 import { postJson } from "@/lib/api/fetch";
@@ -14,23 +20,29 @@ import { AUTH_COPY, ROUTES } from "@/config/auth";
 export function SignUpForm({ oauthFlags }: { oauthFlags: OAuthEnabledFlags }) {
   const router = useRouter();
 
-  const [name, setName]         = useState("");
-  const [email, setEmail]       = useState("");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirm, setConfirm]   = useState("");
-  const [error, setError]       = useState("");
-  const [loading, setLoading]   = useState(false);
+  const [confirm, setConfirm] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    if (password !== confirm) { setError("Passwords don't match."); return; }
+    if (password !== confirm) {
+      setError("Passwords don't match.");
+      return;
+    }
 
     setLoading(true);
     try {
       const res = await postJson("/api/auth/register", { name, email, password });
       const data = await res.json();
-      if (!res.ok) { setError(data.error ?? "Registration failed."); return; }
+      if (!res.ok) {
+        setError(data.error ?? "Registration failed.");
+        return;
+      }
 
       const result = await signIn("email-password", { email, password, redirect: false });
       if (result?.ok) {
@@ -47,10 +59,7 @@ export function SignUpForm({ oauthFlags }: { oauthFlags: OAuthEnabledFlags }) {
 
   return (
     <AuthShell>
-      <AuthHeading
-        title={AUTH_COPY.signUp.title}
-        description={AUTH_COPY.signUp.description}
-      />
+      <AuthHeading title={AUTH_COPY.signUp.title} description={AUTH_COPY.signUp.description} />
 
       <AuthCard>
         {/* OAuth first: signing up via an existing identity (OrangeCat above
@@ -120,9 +129,7 @@ export function SignUpForm({ oauthFlags }: { oauthFlags: OAuthEnabledFlags }) {
         </form>
       </AuthCard>
 
-      <AuthFooterLink href={ROUTES.SIGN_IN}>
-        Already have an account? Sign in →
-      </AuthFooterLink>
+      <AuthFooterLink href={ROUTES.SIGN_IN}>Already have an account? Sign in →</AuthFooterLink>
     </AuthShell>
   );
 }

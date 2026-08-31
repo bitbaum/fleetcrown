@@ -27,7 +27,15 @@ const OUTCOME_TAG: Record<string, string> = {
   timeout: "ui-tag ui-tag-negative",
 };
 
-function SectionShell({ kicker, title, children }: { kicker: string; title: string; children: React.ReactNode }) {
+function SectionShell({
+  kicker,
+  title,
+  children,
+}: {
+  kicker: string;
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
     <section className="ui-card-shell p-4 sm:p-5 space-y-3">
       <div>
@@ -81,12 +89,14 @@ export function NowSection({
   const liveActive = !stale && !!state?.agentRunning;
 
   // Stack is shown in the Technology card below — don't repeat it here.
-  const briefRows: Array<[string, string]> = showBrief ? (
-    [
-      ["Mission", attrs.mission],
-      ["Status", attrs.status],
-    ] as Array<[string, string | undefined]>
-  ).filter((row): row is [string, string] => Boolean(row[1])) : [];
+  const briefRows: Array<[string, string]> = showBrief
+    ? (
+        [
+          ["Mission", attrs.mission],
+          ["Status", attrs.status],
+        ] as Array<[string, string | undefined]>
+      ).filter((row): row is [string, string] => Boolean(row[1]))
+    : [];
 
   const goalMaxTurns = (() => {
     const n = parseInt(attrs.goal_max_turns ?? "", 10);
@@ -97,7 +107,12 @@ export function NowSection({
     <SectionShell kicker="Now" title="Status quo">
       <div className="space-y-1.5">
         <p className="text-sm text-text-primary">
-          <span className={liveActive ? "ui-dot ui-dot-positive mr-1.5" : "ui-dot ui-dot-neutral mr-1.5"} aria-hidden="true" />
+          <span
+            className={
+              liveActive ? "ui-dot ui-dot-positive mr-1.5" : "ui-dot ui-dot-neutral mr-1.5"
+            }
+            aria-hidden="true"
+          />
           {liveLabel}
           {commitFresher ? (
             <span className="text-xs text-text-muted">
@@ -105,7 +120,8 @@ export function NowSection({
             </span>
           ) : handoffMs != null ? (
             <span className="text-xs text-text-muted">
-              {" · "}{stale ? `last active ${timeAgo(handoffMs)}` : `handoff ${timeAgo(handoffMs)}`}
+              {" · "}
+              {stale ? `last active ${timeAgo(handoffMs)}` : `handoff ${timeAgo(handoffMs)}`}
             </span>
           ) : null}
         </p>
@@ -124,7 +140,12 @@ export function NowSection({
             handoff is recent. A week-old "health good" is not a live signal. */}
         {!stale && latest && (latest.tests || latest.health) && (
           <p className="text-xs text-text-muted">
-            Last checks: {[latest.tests, latest.todos ? `${latest.todos} TODOs` : null, latest.health ? `health ${latest.health}` : null]
+            Last checks:{" "}
+            {[
+              latest.tests,
+              latest.todos ? `${latest.todos} TODOs` : null,
+              latest.health ? `health ${latest.health}` : null,
+            ]
               .filter(Boolean)
               .join(" · ")}
           </p>
@@ -248,10 +269,16 @@ export function DoneSection({ dossier }: { dossier: ProjectDossier }) {
           <p className="text-xs font-medium text-text-tertiary">Recent commits</p>
           <ul className="space-y-1">
             {dossier.commits!.slice(0, 5).map((commit) => (
-              <li key={commit.sha} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs">
+              <li
+                key={commit.sha}
+                className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs"
+              >
                 <span className="text-text-muted tabular-nums">{timeAgo(commit.atMs)}</span>
                 <span className="font-mono text-text-tertiary">{commit.sha}</span>
-                <span className="min-w-0 flex-1 truncate text-text-secondary" title={commit.message}>
+                <span
+                  className="min-w-0 flex-1 truncate text-text-secondary"
+                  title={commit.message}
+                >
                   {commit.message}
                 </span>
               </li>
@@ -270,14 +297,23 @@ export function DoneSection({ dossier }: { dossier: ProjectDossier }) {
           <p className="text-xs font-medium text-text-tertiary">Run history</p>
           <ul className="space-y-1.5">
             {shownRuns.map((run) => {
-              const commit = run.summary?.commit && run.summary.commit !== "none" ? run.summary.commit : null;
+              const commit =
+                run.summary?.commit && run.summary.commit !== "none" ? run.summary.commit : null;
               const errorText = typeof run.payload?.error === "string" ? run.payload.error : null;
               return (
-                <li key={run.id} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs">
+                <li
+                  key={run.id}
+                  className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs"
+                >
                   <span className="text-text-muted tabular-nums">
-                    {run.startedAt.toLocaleDateString(APP_LOCALE, { month: "short", day: "numeric" })}
+                    {run.startedAt.toLocaleDateString(APP_LOCALE, {
+                      month: "short",
+                      day: "numeric",
+                    })}
                   </span>
-                  <span className={OUTCOME_TAG[run.outcome ?? ""] ?? "ui-tag ui-tag-neutral"}>{run.outcome ?? run.state}</span>
+                  <span className={OUTCOME_TAG[run.outcome ?? ""] ?? "ui-tag ui-tag-neutral"}>
+                    {run.outcome ?? run.state}
+                  </span>
                   <span className="text-text-secondary">{run.intent}</span>
                   {commit && <span className="font-mono text-text-tertiary">{commit}</span>}
                   {runDuration(run) && <span className="text-text-muted">{runDuration(run)}</span>}
@@ -292,7 +328,9 @@ export function DoneSection({ dossier }: { dossier: ProjectDossier }) {
             href={`/activity?window=month&project=${encodeURIComponent(dossier.detail.project.name)}`}
             className="inline-block text-xs text-accent-text underline-offset-2 hover:underline"
           >
-            {hiddenRunCount > 0 ? `Full activity timeline (${hiddenRunCount} more)` : "Full activity timeline"}
+            {hiddenRunCount > 0
+              ? `Full activity timeline (${hiddenRunCount} more)`
+              : "Full activity timeline"}
           </Link>
         </div>
       )}

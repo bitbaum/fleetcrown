@@ -43,7 +43,11 @@ export async function countActiveProjects(userId: string): Promise<number> {
   return value;
 }
 
-async function findOrCreateProjectEntity(userId: string, name: string, description?: string | null): Promise<string> {
+async function findOrCreateProjectEntity(
+  userId: string,
+  name: string,
+  description?: string | null,
+): Promise<string> {
   const existing = await findProjectEntityByName(userId, name);
   if (existing) return existing.id;
 
@@ -71,7 +75,11 @@ export async function ensureUserProjectEntityLinks(userId: string): Promise<User
       continue;
     }
 
-    const entityProjectId = await findOrCreateProjectEntity(userId, project.name, project.description);
+    const entityProjectId = await findOrCreateProjectEntity(
+      userId,
+      project.name,
+      project.description,
+    );
     const [updated] = await db
       .update(userProjects)
       .set({ entityProjectId, updatedAt: new Date() })
@@ -88,7 +96,13 @@ export async function getPublicProjects(userId: string): Promise<UserProject[]> 
   const rows = await db
     .select()
     .from(userProjects)
-    .where(and(eq(userProjects.userId, userId), eq(userProjects.isActive, true), isNotNull(userProjects.gitUrl)))
+    .where(
+      and(
+        eq(userProjects.userId, userId),
+        eq(userProjects.isActive, true),
+        isNotNull(userProjects.gitUrl),
+      ),
+    )
     .orderBy(asc(userProjects.position), asc(userProjects.createdAt));
   // Defense-in-depth for the public face (landing hero, /u profiles): never
   // surface a smoke/dogfood artifact even if one leaks into the DB. See
@@ -129,8 +143,10 @@ export async function recordSessionHandoffChangelog(
   //     (the retired hosted-Hermes path wrote "API call failed …" four times
   //     with health good — rendered verbatim on the project page, 2026-07-03);
   //   - repeats of a recent entry (retries, double-claims) must not stack.
-  const FAILURE_SIGNATURE = /api call failed|401 invalid|please run \/login|error:|made no file changes/i;
-  const looksFailed = FAILURE_SIGNATURE.test(doneTrimmed) || FAILURE_SIGNATURE.test(input.next ?? "");
+  const FAILURE_SIGNATURE =
+    /api call failed|401 invalid|please run \/login|error:|made no file changes/i;
+  const looksFailed =
+    FAILURE_SIGNATURE.test(doneTrimmed) || FAILURE_SIGNATURE.test(input.next ?? "");
   const project = await db.query.userProjects.findFirst({
     where: input.projectId
       ? and(eq(userProjects.userId, userId), eq(userProjects.entityProjectId, input.projectId))
@@ -146,7 +162,7 @@ export async function recordSessionHandoffChangelog(
     next: input.next?.trim() ?? "",
     tests: input.tests?.trim() ?? "",
     todos: input.todos?.trim() ?? "",
-    health: looksFailed ? "broken" : (input.health?.trim() || "good"),
+    health: looksFailed ? "broken" : input.health?.trim() || "good",
   };
   if (input.projectId) {
     await appendProjectDevLogByEntityProjectId(userId, input.projectId, entry);
@@ -156,7 +172,10 @@ export async function recordSessionHandoffChangelog(
 }
 
 /** The user_projects row backing an entity project (devLog, gitUrl, OC link). */
-export async function getUserProjectByEntityId(userId: string, entityProjectId: string): Promise<UserProject | null> {
+export async function getUserProjectByEntityId(
+  userId: string,
+  entityProjectId: string,
+): Promise<UserProject | null> {
   const row = await db.query.userProjects.findFirst({
     where: and(eq(userProjects.userId, userId), eq(userProjects.entityProjectId, entityProjectId)),
   });
@@ -168,7 +187,9 @@ export async function getUserProjectByEntityId(userId: string, entityProjectId: 
  * entity belongs to. Cross-user by design — OC webhooks identify the project,
  * not the operator; the row carries the owning userId.
  */
-export async function getUserProjectByOrangeCatProjectId(orangecatProjectId: string): Promise<UserProject | null> {
+export async function getUserProjectByOrangeCatProjectId(
+  orangecatProjectId: string,
+): Promise<UserProject | null> {
   const linked = await getProjectByOrangeCatEntity("project", orangecatProjectId);
   if (linked?.project) return linked.project;
   const row = await db.query.userProjects.findFirst({
@@ -184,7 +205,11 @@ export async function getUserProjectByOrangeCatProjectId(orangecatProjectId: str
  * updates the entity, this mirrors it so the fleet index reflects saved context
  * too, not just the dossier. No-op when the project has no linked user_projects row.
  */
-export async function syncUserProjectDescription(userId: string, entityProjectId: string, description: string): Promise<void> {
+export async function syncUserProjectDescription(
+  userId: string,
+  entityProjectId: string,
+  description: string,
+): Promise<void> {
   await db
     .update(userProjects)
     .set({ description: description.trim() || null, updatedAt: new Date() })
@@ -203,16 +228,25 @@ export async function getUserProject(id: string, userId: string): Promise<UserPr
 export async function createUserProject(
   data: Omit<NewUserProject, "id" | "createdAt" | "updatedAt">,
 ): Promise<UserProject> {
-  const entityProjectId = data.entityProjectId ?? await findOrCreateProjectEntity(data.userId, data.name, data.description);
+  const entityProjectId =
+    data.entityProjectId ??
+    (await findOrCreateProjectEntity(data.userId, data.name, data.description));
 
   // Auto-link to the user's primary org so team members can see it via getOrgProjects.
   let orgId = data.orgId ?? null;
   if (!orgId) {
-    const [orgRow] = await db.select({ id: orgs.id }).from(orgs).where(eq(orgs.ownerId, data.userId)).limit(1);
+    const [orgRow] = await db
+      .select({ id: orgs.id })
+      .from(orgs)
+      .where(eq(orgs.ownerId, data.userId))
+      .limit(1);
     orgId = orgRow?.id ?? null;
   }
 
-  const [row] = await db.insert(userProjects).values({ ...data, entityProjectId, orgId }).returning();
+  const [row] = await db
+    .insert(userProjects)
+    .values({ ...data, entityProjectId, orgId })
+    .returning();
   return row;
 }
 
@@ -223,7 +257,11 @@ export async function upsertLocalUserProject(
   const entityProjectId = await findOrCreateProjectEntity(data.userId, data.name, data.description);
 
   let orgId: string | null = null;
-  const [orgRow] = await db.select({ id: orgs.id }).from(orgs).where(eq(orgs.ownerId, data.userId)).limit(1);
+  const [orgRow] = await db
+    .select({ id: orgs.id })
+    .from(orgs)
+    .where(eq(orgs.ownerId, data.userId))
+    .limit(1);
   orgId = orgRow?.id ?? null;
 
   const values = {
@@ -262,7 +300,22 @@ export async function upsertLocalUserProject(
 export async function updateUserProject(
   id: string,
   userId: string,
-  data: Partial<Pick<UserProject, "name" | "dirPath" | "gitUrl" | "description" | "stack" | "agentPref" | "modelPref" | "position" | "isActive" | "notes" | "resources">>,
+  data: Partial<
+    Pick<
+      UserProject,
+      | "name"
+      | "dirPath"
+      | "gitUrl"
+      | "description"
+      | "stack"
+      | "agentPref"
+      | "modelPref"
+      | "position"
+      | "isActive"
+      | "notes"
+      | "resources"
+    >
+  >,
 ): Promise<UserProject | null> {
   const [row] = await db
     .update(userProjects)
@@ -282,7 +335,10 @@ const DEV_LOG_MAX = 50;
 
 async function writeDevLog(id: string, existing: DevLogEntry[], entry: DevLogEntry): Promise<void> {
   const updated = [...existing, entry].slice(-DEV_LOG_MAX);
-  await db.update(userProjects).set({ devLog: updated, updatedAt: new Date() }).where(eq(userProjects.id, id));
+  await db
+    .update(userProjects)
+    .set({ devLog: updated, updatedAt: new Date() })
+    .where(eq(userProjects.id, id));
 }
 
 /**
@@ -326,8 +382,6 @@ export async function appendProjectDevLogByEntityProjectId(
  * commands for every userId rather than just the isDefault one.
  */
 export async function getAllDistinctUserIds(): Promise<string[]> {
-  const rows = await db
-    .selectDistinct({ userId: userProjects.userId })
-    .from(userProjects);
+  const rows = await db.selectDistinct({ userId: userProjects.userId }).from(userProjects);
   return rows.map((r) => r.userId);
 }

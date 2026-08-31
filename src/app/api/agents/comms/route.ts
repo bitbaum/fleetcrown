@@ -16,7 +16,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUserId, getApiUserId } from "@/lib/session";
 import { isRuntimeAvailable } from "@/lib/runtime";
-import { parseInbox, dedupeAndSort, MESSAGE_TYPES, MESSAGE_STATUSES, type AgentMessage } from "@/lib/agent-comms";
+import {
+  parseInbox,
+  dedupeAndSort,
+  MESSAGE_TYPES,
+  MESSAGE_STATUSES,
+  type AgentMessage,
+} from "@/lib/agent-comms";
 import { ingestAgentMessages, listAgentMessages } from "@/db/queries/agent-messages";
 import { logDebug } from "@/db/queries/debug-logs";
 
@@ -47,7 +53,12 @@ export async function GET() {
     files = readdirSync(dir).filter((f) => /^inbox-.+\.md$/.test(f));
   } catch (err) {
     if ((err as NodeJS.ErrnoException)?.code !== "ENOENT") {
-      logDebug({ source: "api/agents/comms", level: "error", message: "failed to read comms inbox dir", meta: { dir, error: String(err) } });
+      logDebug({
+        source: "api/agents/comms",
+        level: "error",
+        message: "failed to read comms inbox dir",
+        meta: { dir, error: String(err) },
+      });
     }
     return NextResponse.json({ messages: [] });
   }
@@ -75,7 +86,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "invalid JSON" }, { status: 400 });
   }
   const raw = (body as { messages?: unknown })?.messages;
-  if (!Array.isArray(raw)) return NextResponse.json({ error: "messages[] required" }, { status: 400 });
+  if (!Array.isArray(raw))
+    return NextResponse.json({ error: "messages[] required" }, { status: 400 });
 
   // The runner's token is the trust boundary, but validate shape so a malformed
   // push can't poison the feed.
@@ -83,14 +95,32 @@ export async function POST(req: NextRequest) {
   for (const m of raw.slice(0, 500)) {
     if (!m || typeof m !== "object") continue;
     const o = m as Record<string, unknown>;
-    if (typeof o.id !== "string" || typeof o.from !== "string" || typeof o.to !== "string" || typeof o.body !== "string" || typeof o.ts !== "string") continue;
-    const type = typeof o.type === "string" && (MESSAGE_TYPES as readonly string[]).includes(o.type) ? (o.type as AgentMessage["type"]) : undefined;
-    const status = typeof o.status === "string" && (MESSAGE_STATUSES as readonly string[]).includes(o.status) ? (o.status as AgentMessage["status"]) : undefined;
+    if (
+      typeof o.id !== "string" ||
+      typeof o.from !== "string" ||
+      typeof o.to !== "string" ||
+      typeof o.body !== "string" ||
+      typeof o.ts !== "string"
+    )
+      continue;
+    const type =
+      typeof o.type === "string" && (MESSAGE_TYPES as readonly string[]).includes(o.type)
+        ? (o.type as AgentMessage["type"])
+        : undefined;
+    const status =
+      typeof o.status === "string" && (MESSAGE_STATUSES as readonly string[]).includes(o.status)
+        ? (o.status as AgentMessage["status"])
+        : undefined;
     messages.push({
-      id: o.id, from: o.from, to: o.to, body: o.body, ts: o.ts,
+      id: o.id,
+      from: o.from,
+      to: o.to,
+      body: o.body,
+      ts: o.ts,
       re: typeof o.re === "string" ? o.re : "",
       read: o.read === true,
-      type, status,
+      type,
+      status,
     });
   }
 

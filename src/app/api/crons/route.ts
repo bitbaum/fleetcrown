@@ -4,7 +4,12 @@ import { readJsonBody } from "@/lib/api/route-helpers";
 import { getSessionUserId } from "@/lib/session";
 import { getUserPreferences, getActiveTimezone } from "@/db/queries/user-preferences";
 import { TELEGRAM_CHAT_ID } from "@/lib/constants";
-import { insertCronJob, listCronJobsForUser, updateCronJobForUser, getCronJobRowByOpenclawId } from "@/db/queries/cron-jobs";
+import {
+  insertCronJob,
+  listCronJobsForUser,
+  updateCronJobForUser,
+  getCronJobRowByOpenclawId,
+} from "@/db/queries/cron-jobs";
 
 export type { CronJob };
 
@@ -26,7 +31,8 @@ export async function POST(req: NextRequest) {
 
   const dataOrResp = await readJsonBody(req, CreateCronBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
-  const { name, scheduleExpr, message, model, timeoutSeconds, tz, projectId, projectName } = dataOrResp;
+  const { name, scheduleExpr, message, model, timeoutSeconds, tz, projectId, projectName } =
+    dataOrResp;
 
   const prefs = await getUserPreferences(userId).catch(() => null);
   const defaultTz = getActiveTimezone(prefs);

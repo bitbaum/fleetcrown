@@ -30,20 +30,33 @@ async function main() {
     process.exit(1);
   }
   const target = await getSelfImprovementTarget();
-  if (!target) { console.error("No FleetCrown owner resolved — nothing to dispatch for."); process.exit(1); }
+  if (!target) {
+    console.error("No FleetCrown owner resolved — nothing to dispatch for.");
+    process.exit(1);
+  }
 
-  const res = await dispatchToHostedRunner({ userId: target.userId, projectKey, task, ...(model ? { model } : {}) });
+  const res = await dispatchToHostedRunner({
+    userId: target.userId,
+    projectKey,
+    task,
+    ...(model ? { model } : {}),
+  });
   if (!res.ok) {
     console.error(`✗ ${res.error}`);
-    if (res.knownProjects?.length) console.error(`  Known projects: ${res.knownProjects.join(", ")}`);
+    if (res.knownProjects?.length)
+      console.error(`  Known projects: ${res.knownProjects.join(", ")}`);
     process.exit(1);
   }
 
   console.log(`✓ queued hosted Hermes dispatch ${res.hostedDispatchId}`);
   console.log(`  project: ${res.projectName}   repo: ${res.gitUrl}`);
   console.log(`  task:    ${task}`);
-  console.log(`  Drained by fleetcrown-hosted-runner.timer (~≤1 min) → clone → Hermes → PR (never auto-merged).`);
-  console.log(`  Watch:   journalctl -u fleetcrown-hosted-runner -f    |    Activity (source=hosted-runner)`);
+  console.log(
+    `  Drained by fleetcrown-hosted-runner.timer (~≤1 min) → clone → Hermes → PR (never auto-merged).`,
+  );
+  console.log(
+    `  Watch:   journalctl -u fleetcrown-hosted-runner -f    |    Activity (source=hosted-runner)`,
+  );
   process.exit(0);
 }
 

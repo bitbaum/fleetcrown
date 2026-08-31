@@ -34,7 +34,9 @@ export function scoreProjectEntity(row: ProjectEntityScoreInput): number {
 
 export function pickCanonicalProject<T extends ProjectEntityScoreInput>(rows: T[]): T {
   if (rows.length === 0) throw new Error("pickCanonicalProject: empty group");
-  return rows.reduce((best, cur) => (scoreProjectEntity(cur) > scoreProjectEntity(best) ? cur : best));
+  return rows.reduce((best, cur) =>
+    scoreProjectEntity(cur) > scoreProjectEntity(best) ? cur : best,
+  );
 }
 
 /** Safety net after DB merge — team rows never collapse with owned rows. */

@@ -6,9 +6,9 @@ let configured = false;
 export function configureWebPush(): { ok: boolean; reason?: string } {
   if (configured) return { ok: true };
 
-  const publicKey  = process.env.VAPID_PUBLIC_KEY;
+  const publicKey = process.env.VAPID_PUBLIC_KEY;
   const privateKey = process.env.VAPID_PRIVATE_KEY;
-  const subject    = process.env.VAPID_SUBJECT;
+  const subject = process.env.VAPID_SUBJECT;
 
   if (!publicKey || !privateKey || !subject) {
     return {
@@ -55,9 +55,10 @@ export async function sendOne(
     await webpush.sendNotification(sub, JSON.stringify(payload), { TTL: 60 });
     return { endpoint: subscription.endpoint, ok: true };
   } catch (err: unknown) {
-    const statusCode = err && typeof err === "object" && "statusCode" in err
-      ? Number((err as { statusCode: unknown }).statusCode)
-      : undefined;
+    const statusCode =
+      err && typeof err === "object" && "statusCode" in err
+        ? Number((err as { statusCode: unknown }).statusCode)
+        : undefined;
     return { endpoint: subscription.endpoint, ok: false, statusCode };
   }
 }

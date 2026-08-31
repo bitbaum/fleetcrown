@@ -20,35 +20,39 @@ function access(input: {
   };
 }
 
-const founderCloud = decideQueuedExecution(
-  access({ cloudBuilderAllowed: true, cloud: true }),
-  { defaultChannel: "cloud" },
-);
+const founderCloud = decideQueuedExecution(access({ cloudBuilderAllowed: true, cloud: true }), {
+  defaultChannel: "cloud",
+});
 if (!founderCloud.ok || founderCloud.channel !== "cloud" || founderCloud.runnerConnected !== true) {
   throw new Error("founder cloud routing");
 }
 
-const founderCloudOffline = decideQueuedExecution(
-  access({ cloudBuilderAllowed: true }),
-  { defaultChannel: "cloud" },
-);
-if (!founderCloudOffline.ok || founderCloudOffline.channel !== "cloud" || founderCloudOffline.runnerConnected !== false) {
+const founderCloudOffline = decideQueuedExecution(access({ cloudBuilderAllowed: true }), {
+  defaultChannel: "cloud",
+});
+if (
+  !founderCloudOffline.ok ||
+  founderCloudOffline.channel !== "cloud" ||
+  founderCloudOffline.runnerConnected !== false
+) {
   throw new Error("founder cloud offline queue");
 }
 
-const tenantLocal = decideQueuedExecution(
-  access({ cloudBuilderAllowed: false, local: true }),
-  { defaultChannel: "cloud" },
-);
+const tenantLocal = decideQueuedExecution(access({ cloudBuilderAllowed: false, local: true }), {
+  defaultChannel: "cloud",
+});
 if (!tenantLocal.ok || tenantLocal.channel !== "local" || tenantLocal.runnerConnected !== true) {
   throw new Error("tenant reroutes to local builder");
 }
 
-const tenantNoBuilder = decideQueuedExecution(
-  access({ cloudBuilderAllowed: false }),
-  { defaultChannel: "cloud" },
-);
-if (tenantNoBuilder.ok || tenantNoBuilder.status !== 409 || tenantNoBuilder.code !== "builder-required") {
+const tenantNoBuilder = decideQueuedExecution(access({ cloudBuilderAllowed: false }), {
+  defaultChannel: "cloud",
+});
+if (
+  tenantNoBuilder.ok ||
+  tenantNoBuilder.status !== 409 ||
+  tenantNoBuilder.code !== "builder-required"
+) {
   throw new Error("tenant without builder must not queue into the void");
 }
 
@@ -56,7 +60,11 @@ const tenantExplicitCloud = decideQueuedExecution(
   access({ cloudBuilderAllowed: false, local: true }),
   { requestedChannel: "cloud" },
 );
-if (tenantExplicitCloud.ok || tenantExplicitCloud.status !== 403 || tenantExplicitCloud.code !== "cloud-builder-private") {
+if (
+  tenantExplicitCloud.ok ||
+  tenantExplicitCloud.status !== 403 ||
+  tenantExplicitCloud.code !== "cloud-builder-private"
+) {
   throw new Error("tenant explicit cloud must be blocked");
 }
 

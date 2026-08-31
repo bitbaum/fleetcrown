@@ -13,7 +13,10 @@ if (fleetSurfaceHref("control", project) !== "/control?focus=BiasLens%20alpha") 
 if (fleetSurfaceHref("terminal", project) !== "/terminal?source=server&tab=BiasLens%20alpha") {
   throw new Error("terminal deep link");
 }
-if (projectFromFleetRoute("/terminal", new URLSearchParams("source=server&tab=BiasLens")) !== "BiasLens") {
+if (
+  projectFromFleetRoute("/terminal", new URLSearchParams("source=server&tab=BiasLens")) !==
+  "BiasLens"
+) {
   throw new Error("terminal route context");
 }
 if (projectFromFleetRoute("/projects", new URLSearchParams("project=BiasLens+alpha")) !== project) {

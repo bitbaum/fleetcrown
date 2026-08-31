@@ -10,13 +10,22 @@ export function RobotCard({ robot }: { robot: RobotWithAttributes }) {
   const offers = MARKET_OFFERS.filter((offer) => robot.market[offer]);
 
   return (
-    <Link href={`/robots/${robot.id}`} className="ui-card-shell block w-full p-4 text-left transition-colors hover:bg-surface-raised md:p-5">
+    <Link
+      href={`/robots/${robot.id}`}
+      className="ui-card-shell block w-full p-4 text-left transition-colors hover:bg-surface-raised md:p-5"
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="truncate text-lg font-medium text-text-primary md:text-xl" title={robot.name}>
+          <div
+            className="truncate text-lg font-medium text-text-primary md:text-xl"
+            title={robot.name}
+          >
             {robot.name}
           </div>
-          <div className="mt-1 truncate text-base text-text-secondary" title={[classLabel, spec].filter(Boolean).join(" · ")}>
+          <div
+            className="mt-1 truncate text-base text-text-secondary"
+            title={[classLabel, spec].filter(Boolean).join(" · ")}
+          >
             {[classLabel, spec].filter(Boolean).join(" · ")}
           </div>
           {robot.description && (

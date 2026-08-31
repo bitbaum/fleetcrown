@@ -44,10 +44,7 @@ export async function listConversations(
       updatedAt: conversations.updatedAt,
     })
     .from(conversations)
-    .innerJoin(
-      conversationMessages,
-      eq(conversationMessages.conversationId, conversations.id),
-    )
+    .innerJoin(conversationMessages, eq(conversationMessages.conversationId, conversations.id))
     .where(eq(conversations.userId, userId))
     .groupBy(
       conversations.id,
@@ -68,10 +65,7 @@ export async function createConversation(
   userId: string,
   { title, projectKeys = [] }: { title: string; projectKeys?: string[] },
 ): Promise<Conversation> {
-  const [row] = await db
-    .insert(conversations)
-    .values({ userId, title, projectKeys })
-    .returning();
+  const [row] = await db.insert(conversations).values({ userId, title, projectKeys }).returning();
   return row;
 }
 

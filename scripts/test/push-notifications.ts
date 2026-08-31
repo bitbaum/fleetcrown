@@ -25,7 +25,10 @@ function runTests(): void {
   });
 
   check("migration SQL exists", () => {
-    assert(existsSync("drizzle/0020_push_subscriptions.sql"), "0020_push_subscriptions.sql must exist");
+    assert(
+      existsSync("drizzle/0020_push_subscriptions.sql"),
+      "0020_push_subscriptions.sql must exist",
+    );
   });
 
   check("API routes exist (subscribe + notify)", () => {
@@ -58,7 +61,10 @@ function runTests(): void {
 
   check("configureWebPush catches invalid VAPID keys", () => {
     const lib = readFileSync("src/lib/push.ts", "utf8");
-    assert(/try \{[\s\S]*setVapidDetails/.test(lib), "configureWebPush must catch setVapidDetails throws");
+    assert(
+      /try \{[\s\S]*setVapidDetails/.test(lib),
+      "configureWebPush must catch setVapidDetails throws",
+    );
     const notify = readFileSync("src/app/api/push/notify/route.ts", "utf8");
     assert(/catch \(err/.test(notify), "notify route must catch unhandled errors");
   });

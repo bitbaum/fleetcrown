@@ -8,7 +8,18 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Zap, Clock, Globe, FolderOpen, ChevronDown, ChevronUp, Check, Copy, Loader2, Star } from "lucide-react";
+import {
+  Zap,
+  Clock,
+  Globe,
+  FolderOpen,
+  ChevronDown,
+  ChevronUp,
+  Check,
+  Copy,
+  Loader2,
+  Star,
+} from "lucide-react";
 import { usePromptModals } from "./use-prompt-modals";
 import { useForkPrompt } from "./use-fork-prompt";
 import { CATEGORY_META, type PromptTemplate } from "@/config/prompt-library";
@@ -26,9 +37,7 @@ export function PromptCard({
   const [expanded, setExpanded] = useState(false);
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const { fork, state } = useForkPrompt(template, () =>
-    startTransition(() => router.refresh()),
-  );
+  const { fork, state } = useForkPrompt(template, () => startTransition(() => router.refresh()));
   const meta = CATEGORY_META[template.category];
 
   return (
@@ -37,26 +46,40 @@ export function PromptCard({
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
           <span className={`ui-chip ${meta.color}`}>{meta.label}</span>
           {template.featured && (
-            <Star className="h-3.5 w-3.5 fill-status-warning/80 text-status-warning/80" aria-label="Featured" />
+            <Star
+              className="h-3.5 w-3.5 fill-status-warning/80 text-status-warning/80"
+              aria-label="Featured"
+            />
           )}
           {template.scope === "global" ? (
-            <span className="ui-badge"><Globe className="h-3 w-3" /> global</span>
+            <span className="ui-badge">
+              <Globe className="h-3 w-3" /> global
+            </span>
           ) : (
-            <span className="ui-badge"><FolderOpen className="h-3 w-3" /> project</span>
+            <span className="ui-badge">
+              <FolderOpen className="h-3 w-3" /> project
+            </span>
           )}
           {template.suggestedSchedule && (
-            <span className="ui-badge"><Clock className="h-3 w-3" /> schedulable</span>
+            <span className="ui-badge">
+              <Clock className="h-3 w-3" /> schedulable
+            </span>
           )}
         </div>
 
         <div className="flex-1">
           <h3 className="text-lg font-semibold leading-snug text-text-primary">{template.name}</h3>
-          <p className="mt-1 text-base leading-relaxed text-text-secondary">{template.description}</p>
+          <p className="mt-1 text-base leading-relaxed text-text-secondary">
+            {template.description}
+          </p>
         </div>
 
         <div className="mt-auto flex items-center gap-2">
           <button
-            onClick={() => { haptic(); openRun(); }}
+            onClick={() => {
+              haptic();
+              openRun();
+            }}
             className="ui-btn-lg flex flex-1 items-center justify-center gap-2"
           >
             <Zap className="h-4 w-4" /> Run
@@ -96,9 +119,7 @@ export function PromptCard({
           )}
         </div>
 
-        {expanded && (
-          <pre className="ui-code-surface">{template.template}</pre>
-        )}
+        {expanded && <pre className="ui-code-surface">{template.template}</pre>}
       </div>
 
       {modals}

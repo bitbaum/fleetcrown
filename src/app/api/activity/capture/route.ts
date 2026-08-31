@@ -19,7 +19,7 @@ import { userProjects } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 import { LONG_TEXT_MAX } from "@/lib/constants";
 
-const MIN_PROMPT_CHARS = 8;       // skip "yes" / "ok" / "continue" noise
+const MIN_PROMPT_CHARS = 8; // skip "yes" / "ok" / "continue" noise
 const MAX_PROMPT_CHARS = LONG_TEXT_MAX; // hard cap mirrors prompt_history.custom_prompt + headroom
 
 const Body = z.object({
@@ -41,15 +41,28 @@ const Body = z.object({
 async function resolveProject(userId: string, cwd: string, projectKeyHint: string | undefined) {
   if (projectKeyHint) {
     const row = await db
-      .select({ entityProjectId: userProjects.entityProjectId, name: userProjects.name, dirPath: userProjects.dirPath })
+      .select({
+        entityProjectId: userProjects.entityProjectId,
+        name: userProjects.name,
+        dirPath: userProjects.dirPath,
+      })
       .from(userProjects)
       .where(and(eq(userProjects.userId, userId), eq(userProjects.name, projectKeyHint)))
       .limit(1);
-    if (row[0]) return { projectId: row[0].entityProjectId ?? null, projectKey: row[0].name, projectPath: row[0].dirPath ?? cwd };
+    if (row[0])
+      return {
+        projectId: row[0].entityProjectId ?? null,
+        projectKey: row[0].name,
+        projectPath: row[0].dirPath ?? cwd,
+      };
   }
   // Match against any user_projects.directory that is the cwd or an ancestor.
   const rows = await db
-    .select({ entityProjectId: userProjects.entityProjectId, name: userProjects.name, dirPath: userProjects.dirPath })
+    .select({
+      entityProjectId: userProjects.entityProjectId,
+      name: userProjects.name,
+      dirPath: userProjects.dirPath,
+    })
     .from(userProjects)
     .where(eq(userProjects.userId, userId));
   let best: { entityProjectId: string | null; name: string; dirPath: string } | null = null;
@@ -57,11 +70,20 @@ async function resolveProject(userId: string, cwd: string, projectKeyHint: strin
     if (!row.dirPath) continue;
     if (cwd === row.dirPath || cwd.startsWith(row.dirPath + path.sep)) {
       if (!best || row.dirPath.length > best.dirPath.length) {
-        best = { entityProjectId: row.entityProjectId ?? null, name: row.name, dirPath: row.dirPath };
+        best = {
+          entityProjectId: row.entityProjectId ?? null,
+          name: row.name,
+          dirPath: row.dirPath,
+        };
       }
     }
   }
-  if (best) return { projectId: best.entityProjectId ?? null, projectKey: best.name, projectPath: best.dirPath };
+  if (best)
+    return {
+      projectId: best.entityProjectId ?? null,
+      projectKey: best.name,
+      projectPath: best.dirPath,
+    };
   // Fall back to the directory's basename as the tab-name-style key. The row
   // gets recorded anyway so the user can audit unmatched work later.
   const basename = path.basename(cwd);

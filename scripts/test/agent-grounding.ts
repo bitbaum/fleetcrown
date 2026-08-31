@@ -30,7 +30,13 @@ import {
   unrecordedFields,
   NOT_RECORDED,
 } from "ai-kit/grounding";
-import { buildContract, buildGroundedContext, renderDirectives, buildAssistantRules, NO_BASIS } from "ai-kit/grounding";
+import {
+  buildContract,
+  buildGroundedContext,
+  renderDirectives,
+  buildAssistantRules,
+  NO_BASIS,
+} from "ai-kit/grounding";
 import { verifyAnswer, buildRepairPrompt } from "ai-kit/grounding";
 
 // ── The real records, exactly as FleetCrown stores them ──────────────────────
@@ -60,13 +66,24 @@ const USER_MSG = "Plan my day. Who should I reach out to and why?";
 // ── 1. Absence is rendered explicitly, not omitted ───────────────────────────
 {
   const rendered = renderFacts(FACTS);
-  assert.match(rendered, /affiliation: <not recorded>/, "affiliation must render as an explicit gap");
+  assert.match(
+    rendered,
+    /affiliation: <not recorded>/,
+    "affiliation must render as an explicit gap",
+  );
   assert.match(rendered, /role: <not recorded>/, "role must render as an explicit gap");
-  assert.match(rendered, /channels: whatsapp \+41774730093/, "stored values must survive rendering");
+  assert.match(
+    rendered,
+    /channels: whatsapp \+41774730093/,
+    "stored values must survive rendering",
+  );
   assert.equal(NOT_RECORDED, "<not recorded>");
 
   const gaps = unrecordedFields(FACTS);
-  assert.ok(gaps.includes("person.affiliation"), "affiliation gap must be reported to the contract");
+  assert.ok(
+    gaps.includes("person.affiliation"),
+    "affiliation gap must be reported to the contract",
+  );
   assert.ok(gaps.includes("person.role"), "role gap must be reported to the contract");
 }
 
@@ -112,9 +129,18 @@ const USER_MSG = "Plan my day. Who should I reach out to and why?";
   });
   assert.equal(r.ok, false, "the invented biography must be rejected");
   const texts = r.violations.map((v) => v.text);
-  assert.ok(texts.some((t) => /Accelerator/i.test(t)), "invented job title must be flagged");
-  assert.ok(texts.some((t) => /Liechtenstein/i.test(t)), "invented alma mater must be flagged");
-  assert.ok(texts.some((t) => /START Summit/i.test(t)), "invented jury role must be flagged");
+  assert.ok(
+    texts.some((t) => /Accelerator/i.test(t)),
+    "invented job title must be flagged",
+  );
+  assert.ok(
+    texts.some((t) => /Liechtenstein/i.test(t)),
+    "invented alma mater must be flagged",
+  );
+  assert.ok(
+    texts.some((t) => /START Summit/i.test(t)),
+    "invented jury role must be flagged",
+  );
 
   // The genuinely-stored phone number must NOT be flagged, even though the
   // model reformatted it with spaces. Digit-level comparison covers that.
@@ -161,7 +187,8 @@ const USER_MSG = "Plan my day. Who should I reach out to and why?";
 // fabrication. Corrections are claims and must clear the same bar.
 {
   const bad = verifyAnswer({
-    answer: "Correction: Ilya Druzhnikov is listed in data/contact-resolver.json with no UZH affiliation.",
+    answer:
+      "Correction: Ilya Druzhnikov is listed in data/contact-resolver.json with no UZH affiliation.",
     facts: FACTS,
     userMessage: "ilya is at uzh? where is this info coming from",
   });
@@ -191,11 +218,23 @@ const USER_MSG = "Plan my day. Who should I reach out to and why?";
 // ── 9. Computed answers are stated as settled, and empties survive ───────────
 {
   const block = renderDirectives([
-    { question: "goals stuck at 0% for 30+ days", answer: [], method: "SQL: progress=0 AND updated_at < now()-30d" },
-    { question: "commitments due in 3 days", answer: ["Ship harness — due 2026-08-15"], method: "SQL: due <= now()+3d" },
+    {
+      question: "goals stuck at 0% for 30+ days",
+      answer: [],
+      method: "SQL: progress=0 AND updated_at < now()-30d",
+    },
+    {
+      question: "commitments due in 3 days",
+      answer: ["Ship harness — due 2026-08-15"],
+      method: "SQL: due <= now()+3d",
+    },
   ]);
   assert.match(block, /do not re-derive/i, "computed answers must be marked non-negotiable");
-  assert.match(block, /\(none — the query ran and matched nothing\)/, "an empty result must be explicit");
+  assert.match(
+    block,
+    /\(none — the query ran and matched nothing\)/,
+    "an empty result must be explicit",
+  );
   assert.match(block, /Ship harness/, "a real computed result must render");
 }
 
@@ -210,8 +249,15 @@ const USER_MSG = "Plan my day. Who should I reach out to and why?";
     verifyAnswer({ answer: "Ilya Druzhnikov (UZH)", facts: FACTS, userMessage: "" }).violations,
     NO_BASIS,
   );
-  assert.match(repair, /Remove every unsupported claim/, "repair prompt must instruct deletion, not re-generation");
-  assert.ok(repair.includes(NO_BASIS), "repair prompt must offer the refusal phrase as the substitute");
+  assert.match(
+    repair,
+    /Remove every unsupported claim/,
+    "repair prompt must instruct deletion, not re-generation",
+  );
+  assert.ok(
+    repair.includes(NO_BASIS),
+    "repair prompt must offer the refusal phrase as the substitute",
+  );
 }
 
 // ── 11. entity-attribution mode: Cat keeps general knowledge, loses invention ──
@@ -240,7 +286,11 @@ const USER_MSG = "Plan my day. Who should I reach out to and why?";
     userMessage: "who can help me with funding?",
     mode: "entity-attribution",
   });
-  assert.equal(attributed.ok, false, "an invented affiliation for a known contact must still be caught");
+  assert.equal(
+    attributed.ok,
+    false,
+    "an invented affiliation for a known contact must still be caught",
+  );
   assert.ok(
     attributed.violations.some((v) => /Impact Hub/i.test(v.text)),
     "the fabricated employer must be named in the violation",
@@ -254,7 +304,11 @@ const USER_MSG = "Plan my day. Who should I reach out to and why?";
     userMessage: "how can I get paid?",
     mode: "closed-world",
   });
-  assert.equal(strict.ok, false, "closed-world mode must be strictly stronger than entity-attribution");
+  assert.equal(
+    strict.ok,
+    false,
+    "closed-world mode must be strictly stronger than entity-attribution",
+  );
 }
 
 // ── 12. The fact-free rules block still forbids the invention ────────────────
@@ -264,7 +318,13 @@ const USER_MSG = "Plan my day. Who should I reach out to and why?";
   assert.match(rules, /have not browsed the web/i, "the no-research rule must survive");
   assert.match(rules, /General knowledge/, "general knowledge must be explicitly permitted");
   assert.ok(rules.includes(NO_BASIS), "the refusal phrase must be supplied");
-  assert.doesNotMatch(rules, /\[F1\]/, "no citation ids exist without a fact set — none must be promised");
+  assert.doesNotMatch(
+    rules,
+    /\[F1\]/,
+    "no citation ids exist without a fact set — none must be promised",
+  );
 }
 
-console.log("✓ agent grounding: 12 adversarial checks passed (UZH, invented bio, invented paths, fake citations, correction path, mode scoping)");
+console.log(
+  "✓ agent grounding: 12 adversarial checks passed (UZH, invented bio, invented paths, fake citations, correction path, mode scoping)",
+);

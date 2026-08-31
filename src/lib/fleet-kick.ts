@@ -133,7 +133,10 @@ export async function kickFleet(userId: string, opts: FleetKickOptions): Promise
     .map((p) => ({ name: p.name, dirPath: p.dirPath }));
 
   const projectByName = new Map(activeProjects.map((p) => [p.name.toLowerCase(), p]));
-  const candidates = sortProjectsForKick(activeProjects.map((p) => p.name), readyKeys).filter((name) => {
+  const candidates = sortProjectsForKick(
+    activeProjects.map((p) => p.name),
+    readyKeys,
+  ).filter((name) => {
     const lower = name.toLowerCase();
     if (scope && !scope.has(lower)) {
       skipped.not_in_scope++;

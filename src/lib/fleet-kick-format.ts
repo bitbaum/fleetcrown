@@ -17,10 +17,7 @@ export type FleetKickReplyResult = {
 };
 
 /** Prefer agents that reported ready — they're waiting for the next instruction. */
-export function sortProjectsForKick(
-  names: string[],
-  readyKeys: Set<string>,
-): string[] {
+export function sortProjectsForKick(names: string[], readyKeys: Set<string>): string[] {
   return [...names].sort((a, b) => {
     const ar = readyKeys.has(a.toLowerCase()) ? 0 : 1;
     const br = readyKeys.has(b.toLowerCase()) ? 0 : 1;
@@ -45,7 +42,11 @@ export function formatFleetKickReply(result: FleetKickReplyResult): string {
       if (reason === "blocked") return "blocked";
       return reason ?? "not eligible";
     };
-    lines.push("", "**Skipped:**", ...skipped.slice(0, 8).map((d) => `- ${d.projectKey}: ${reasonLabel(d.reason)}`));
+    lines.push(
+      "",
+      "**Skipped:**",
+      ...skipped.slice(0, 8).map((d) => `- ${d.projectKey}: ${reasonLabel(d.reason)}`),
+    );
     if (skipped.length > 8) lines.push(`- ...and ${skipped.length - 8} more`);
   }
   if (!result.runnerConnected && result.kicked > 0) {

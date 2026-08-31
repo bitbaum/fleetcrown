@@ -39,8 +39,7 @@ const LOKI_SYSTEM_PROMPT =
  * a calendar write and invented an Approve button that would book it — both false.
  * The truth: Loki has no direct external powers; it only proposes to the queue.
  */
-const LOKI_CAPABILITIES =
-  `CAPABILITIES — ground truth; never exceed or invent beyond this: You look up people with search_people (the operator's private book — name, company, title, channels, notes). OpenClaw is the WhatsApp/Telegram workspace behind many of those names; Hermes is a task CLI, not a contact book. You have NO ability to send messages or emails — outbound send is frozen while the book is built. You cannot change Google Calendar yourself. Your only lever is the ${APP_NAME} approval queue — you PROPOSE actions and the operator must approve each one. An approved calendar event is booked by running \`gog calendar create\` on the operator's own machine. Never claim a "security sandbox" blocked you, and never report a result (an event booked, a message sent) you did not receive confirmation of. If you cannot do something, say so plainly.`;
+const LOKI_CAPABILITIES = `CAPABILITIES — ground truth; never exceed or invent beyond this: You look up people with search_people (the operator's private book — name, company, title, channels, notes). OpenClaw is the WhatsApp/Telegram workspace behind many of those names; Hermes is a task CLI, not a contact book. You have NO ability to send messages or emails — outbound send is frozen while the book is built. You cannot change Google Calendar yourself. Your only lever is the ${APP_NAME} approval queue — you PROPOSE actions and the operator must approve each one. An approved calendar event is booked by running \`gog calendar create\` on the operator's own machine. Never claim a "security sandbox" blocked you, and never report a result (an event booked, a message sent) you did not receive confirmation of. If you cannot do something, say so plainly.`;
 
 // The user's Settings → Voice preference, layered onto whichever brain answers.
 // SSOT for turning that free-text instruction into a directive — applied to both
@@ -74,7 +73,10 @@ function looksLikeFleetEcho(text: string): boolean {
 }
 
 // Degraded fallback when the OpenClaw gateway is unavailable.
-async function callGroq(message: string, voice: string | null): Promise<{ text: string; model: string }> {
+async function callGroq(
+  message: string,
+  voice: string | null,
+): Promise<{ text: string; model: string }> {
   const text = await callGroqText(message, {
     systemPrompt: LOKI_SYSTEM_PROMPT + voiceClause(voice),
     maxTokens: 1024,
@@ -136,7 +138,10 @@ function toolLoopEnabled(userId?: string): boolean {
  *
  * `sessionKey` keeps a per-conversation thread on the gateway path.
  */
-export async function askLoki(message: string, opts?: { sessionKey?: string; userId?: string }): Promise<AskLokiResult> {
+export async function askLoki(
+  message: string,
+  opts?: { sessionKey?: string; userId?: string },
+): Promise<AskLokiResult> {
   // Ration BEFORE any provider is called, and only for identified users —
   // an anonymous caller has no ledger to charge, and the paths they can reach
   // do not draw on the rationed pool.
@@ -151,7 +156,9 @@ export async function askLoki(message: string, opts?: { sessionKey?: string; use
         status: 429,
         body: {
           error: verdict.message,
-          ...(verdict.retryAfterSeconds !== undefined ? { retryAfterSeconds: verdict.retryAfterSeconds } : {}),
+          ...(verdict.retryAfterSeconds !== undefined
+            ? { retryAfterSeconds: verdict.retryAfterSeconds }
+            : {}),
         },
       };
     }
@@ -199,14 +206,21 @@ export async function askLoki(message: string, opts?: { sessionKey?: string; use
 }
 
 /** The pre-tool-loop path: grounded context + gateway/Groq, kept as fallback. */
-async function askLokiViaGateway(message: string, opts?: { sessionKey?: string; userId?: string }): Promise<AskLokiResult> {
+async function askLokiViaGateway(
+  message: string,
+  opts?: { sessionKey?: string; userId?: string },
+): Promise<AskLokiResult> {
   // Resolve the caller's writing-voice preference + the grounded turn once.
   // The grounded turn (typed records + computed answers + the contract) is what
   // makes Loki "on top of" the operator's work rather than a generic chat.
   // Both are best-effort: a slow/failed lookup degrades to plain Loki, never a
   // broken turn.
   const [voice, grounded] = await Promise.all([
-    opts?.userId ? getUserPreferences(opts.userId).then((p) => p.writingVoice).catch(() => null) : Promise.resolve(null),
+    opts?.userId
+      ? getUserPreferences(opts.userId)
+          .then((p) => p.writingVoice)
+          .catch(() => null)
+      : Promise.resolve(null),
     opts?.userId
       ? buildGroundedTurn(opts.userId, message).catch(() => null)
       : Promise.resolve(null),
@@ -219,7 +233,9 @@ async function askLokiViaGateway(message: string, opts?: { sessionKey?: string; 
   // context (both read-only background) ahead of the operator's question. Used
   // by the gateway AND Groq paths so Loki answers from records and, critically,
   // never over-claims — regardless of which one serves the turn.
-  const background = grounded?.context ? `${LOKI_CAPABILITIES}\n\n---\n\n${grounded.context}` : LOKI_CAPABILITIES;
+  const background = grounded?.context
+    ? `${LOKI_CAPABILITIES}\n\n---\n\n${grounded.context}`
+    : LOKI_CAPABILITIES;
   const contextualMessage = `${background}\n\n---\n\n${message}`;
 
   /**
@@ -238,17 +254,32 @@ async function askLokiViaGateway(message: string, opts?: { sessionKey?: string; 
     regenerate: (repair: string) => Promise<string>,
   ): Promise<{ text: string; violations: Violation[] }> {
     if (facts.length === 0) return { text, violations: [] };
-    const first = verifyAnswer({ answer: text, facts, userMessage: message, extraEvidence: evidence });
+    const first = verifyAnswer({
+      answer: text,
+      facts,
+      userMessage: message,
+      extraEvidence: evidence,
+    });
     if (first.ok) return { text, violations: [] };
 
     console.warn(
       "[loki] ungrounded claims, repairing:",
-      first.violations.map((v) => `${v.kind}:${v.text}`).join(", ").slice(0, 300),
+      first.violations
+        .map((v) => `${v.kind}:${v.text}`)
+        .join(", ")
+        .slice(0, 300),
     );
-    const repaired = (await regenerate(buildRepairPrompt(first.violations, NO_BASIS)).catch(() => "")).trim();
+    const repaired = (
+      await regenerate(buildRepairPrompt(first.violations, NO_BASIS)).catch(() => "")
+    ).trim();
     if (!repaired) return { text, violations: first.violations };
 
-    const second = verifyAnswer({ answer: repaired, facts, userMessage: message, extraEvidence: evidence });
+    const second = verifyAnswer({
+      answer: repaired,
+      facts,
+      userMessage: message,
+      extraEvidence: evidence,
+    });
     return { text: repaired, violations: second.violations };
   }
 
@@ -257,7 +288,9 @@ async function askLokiViaGateway(message: string, opts?: { sessionKey?: string; 
   // without mutating its own persistent personality.
   if (isGatewayConfigured()) {
     const v = voice?.trim();
-    const prefaced = v ? `[Voice for this reply — ${v}]\n\n${contextualMessage}` : contextualMessage;
+    const prefaced = v
+      ? `[Voice for this reply — ${v}]\n\n${contextualMessage}`
+      : contextualMessage;
     const res = await askGatewayAgent(prefaced, { sessionKey: opts?.sessionKey });
     const text = (res.text ?? "").trim();
     // The gateway can return ok=true with EMPTY or "couldn't generate a
@@ -332,11 +365,15 @@ async function askLokiViaGateway(message: string, opts?: { sessionKey?: string; 
     // Surface the actual Groq cause so the user can act (rotate key / wait out
     // the rate limit) instead of a generic "unavailable" wall.
     const raw = e instanceof Error ? e.message : String(e);
-    const hint = /\b401\b|invalid.api.key/i.test(raw) ? "Groq API key is invalid"
-              : /\b429\b/.test(raw)                  ? rateLimitMessage(raw)
-              : /\b5\d\d\b/.test(raw)                ? "Groq server error"
-              : /timeout|abort/i.test(raw)           ? "Groq timed out"
-              : `Loki is unavailable right now (${raw.slice(0, 80)})`;
+    const hint = /\b401\b|invalid.api.key/i.test(raw)
+      ? "Groq API key is invalid"
+      : /\b429\b/.test(raw)
+        ? rateLimitMessage(raw)
+        : /\b5\d\d\b/.test(raw)
+          ? "Groq server error"
+          : /timeout|abort/i.test(raw)
+            ? "Groq timed out"
+            : `Loki is unavailable right now (${raw.slice(0, 80)})`;
     console.error("[loki] Groq fallback failed:", raw);
     return { status: 503, body: { error: `Loki is offline — ${hint}.` } };
   }

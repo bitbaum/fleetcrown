@@ -131,7 +131,9 @@ export default async function PricingPage() {
           })}
         </div>
 
-        <p className="mx-auto mt-6 max-w-3xl text-center text-sm text-text-secondary sm:mt-8">{PRICING_BILLING_NOTE}</p>
+        <p className="mx-auto mt-6 max-w-3xl text-center text-sm text-text-secondary sm:mt-8">
+          {PRICING_BILLING_NOTE}
+        </p>
 
         {/* Every plan includes the captain layer — stated once, honestly, rather
             than faked as per-tier gates the product doesn't enforce. */}

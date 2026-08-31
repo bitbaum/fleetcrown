@@ -21,7 +21,12 @@ const ApplyBody = z.object({
   apply: z.object({
     updates: z.record(z.string(), z.string().trim().max(500)).default({}),
     newAttributes: z
-      .array(z.object({ key: z.string().regex(/^[a-z][a-z0-9_]{1,39}$/), value: z.string().trim().min(1).max(500) }))
+      .array(
+        z.object({
+          key: z.string().regex(/^[a-z][a-z0-9_]{1,39}$/),
+          value: z.string().trim().min(1).max(500),
+        }),
+      )
       .max(3)
       .default([]),
   }),
@@ -35,7 +40,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const id = idOrResp;
 
   const entity = await db.query.entities.findFirst({
-    where: and(eq(entities.id, id), eq(entities.userId, userId), eq(entities.type, ENTITY_TYPE.PROJECT)),
+    where: and(
+      eq(entities.id, id),
+      eq(entities.userId, userId),
+      eq(entities.type, ENTITY_TYPE.PROJECT),
+    ),
     columns: { id: true, name: true, description: true },
   });
   if (!entity) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -63,7 +72,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   // ── PREVIEW ────────────────────────────────────────────────────────────────
   const parsed = PreviewBody.safeParse(raw);
-  if (!parsed.success) return NextResponse.json({ error: "Paste the doc — at least a sentence." }, { status: 400 });
+  if (!parsed.success)
+    return NextResponse.json({ error: "Paste the doc — at least a sentence." }, { status: 400 });
 
   const attrs = (await fetchAttributesByEntityIds([id])).get(id) ?? {};
   const currentFields: Record<string, string> = { ...attrs };
@@ -74,7 +84,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     patch = await reconcileProfile(entity.name, currentFields, parsed.data.text);
   } catch (e) {
     return NextResponse.json(
-      { error: "Could not reconcile the doc. Try again in a moment.", details: e instanceof Error ? e.message : String(e) },
+      {
+        error: "Could not reconcile the doc. Try again in a moment.",
+        details: e instanceof Error ? e.message : String(e),
+      },
       { status: 502 },
     );
   }
@@ -88,5 +101,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const changedKeys = new Set(updates.map((u) => u.key));
   const unchangedCount = Object.keys(currentFields).filter((k) => !changedKeys.has(k)).length;
 
-  return NextResponse.json({ ok: true, updates, newAttributes: patch.newAttributes, unchangedCount });
+  return NextResponse.json({
+    ok: true,
+    updates,
+    newAttributes: patch.newAttributes,
+    unchangedCount,
+  });
 }

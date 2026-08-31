@@ -11,16 +11,8 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
-import {
-  APP_NAME,
-  APP_SLUG,
-  APP_DOMAIN,
-  BRIDGE_DOMAIN,
-} from "@/config/brand";
-import {
-  DRAFT_STORAGE_PREFIX,
-  PRIVATE_ZONE_COOKIE,
-} from "@/config/brand-storage";
+import { APP_NAME, APP_SLUG, APP_DOMAIN, BRIDGE_DOMAIN } from "@/config/brand";
+import { DRAFT_STORAGE_PREFIX, PRIVATE_ZONE_COOKIE } from "@/config/brand-storage";
 
 function assert(condition: boolean, message: string): void {
   if (!condition) throw new Error(message);

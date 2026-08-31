@@ -8,7 +8,10 @@ import {
 } from "../../src/lib/project-display";
 
 assert.equal(cleanDescription("Local repository imported from fleetcrown-ui"), null);
-assert.equal(cleanDescription("A weatherproof box for valuables."), "A weatherproof box for valuables.");
+assert.equal(
+  cleanDescription("A weatherproof box for valuables."),
+  "A weatherproof box for valuables.",
+);
 
 assert.equal(isPublicTestArtifact("smoke-1783188931860-gh"), true);
 assert.equal(isPublicTestArtifact("orangecat"), false);
@@ -41,7 +44,11 @@ assert.equal(
   null,
   "an unsubstituted <name> placeholder is not a real answer",
 );
-assert.equal(answer("Wire up the <repo> CI badge"), null, "any bare <word> placeholder, not just <name>");
+assert.equal(
+  answer("Wire up the <repo> CI badge"),
+  null,
+  "any bare <word> placeholder, not just <name>",
+);
 assert.equal(
   answer("Ship the parser rewrite for datacat."),
   "Ship the parser rewrite for datacat.",

@@ -15,7 +15,12 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
-import { isAgentId, looksLikeAgentCapacityIssue, resolveNextAvailableAgent, type Agent } from "@/lib/agent-registry";
+import {
+  isAgentId,
+  looksLikeAgentCapacityIssue,
+  resolveNextAvailableAgent,
+  type Agent,
+} from "@/lib/agent-registry";
 import { DEFAULT_BEACON_COUNTDOWN_S, DEFAULT_POPUP_MODE } from "@/lib/constants/control";
 import { getApiUserId } from "@/lib/session";
 import { denyDemoInHandler } from "@/lib/demo-guard";
@@ -80,19 +85,25 @@ async function maybeAutoRerouteOnCapacity(
     toAgent: decision.toAgent,
     fromAgent: fromAgent ?? undefined,
   });
-  console.log(`[beacon] auto-reroute queued: ${projectName} ${fromAgent ?? "?"}→${decision.toAgent}`);
+  console.log(
+    `[beacon] auto-reroute queued: ${projectName} ${fromAgent ?? "?"}→${decision.toAgent}`,
+  );
 }
 
 // Re-export the type so callers that imported BeaconSession from this
 // module continue to work without touching their imports.
 export type { BeaconSession };
 
-async function readConfiguredSettings(userId: string | null): Promise<{ countdownSeconds: number; popupMode: string }> {
+async function readConfiguredSettings(
+  userId: string | null,
+): Promise<{ countdownSeconds: number; popupMode: string }> {
   if (userId) {
     try {
       const s = await getBeaconSettings(userId);
       return { countdownSeconds: s.countdown_seconds, popupMode: s.popup_mode };
-    } catch { /* DB hiccup — fall through to defaults */ }
+    } catch {
+      /* DB hiccup — fall through to defaults */
+    }
   }
   return { countdownSeconds: DEFAULT_BEACON_COUNTDOWN_S, popupMode: DEFAULT_POPUP_MODE };
 }
@@ -154,7 +165,9 @@ export async function POST(req: NextRequest) {
 
   const { countdownSeconds, popupMode } = await readConfiguredSettings(userId);
 
-  const currentAgent: Agent | null = isAgentId(dataOrResp.currentAgent) ? dataOrResp.currentAgent : "claude";
+  const currentAgent: Agent | null = isAgentId(dataOrResp.currentAgent)
+    ? dataOrResp.currentAgent
+    : "claude";
   const nextAgent = resolveNextAvailableAgent(dataOrResp.currentAgent ?? "claude");
   const capacityIssue = looksLikeAgentCapacityIssue(dataOrResp.sessionContent);
 

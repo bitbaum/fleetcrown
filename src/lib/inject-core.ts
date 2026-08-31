@@ -10,7 +10,14 @@
  * This path is autopilot-critical — keep it behavior-preserving.
  */
 import { ensureUserProjectEntityLinks, getOrgProjects } from "@/db/queries/user-projects";
-import { ORCHESTRATION_ADAPTER_IDS, ORCHESTRATION_TASK_INTENT_IDS, DEFAULT_ADAPTER_ID, renderProjectContextBlock, type OrchestrationTaskIntentId, type AdapterId } from "@/lib/orchestration";
+import {
+  ORCHESTRATION_ADAPTER_IDS,
+  ORCHESTRATION_TASK_INTENT_IDS,
+  DEFAULT_ADAPTER_ID,
+  renderProjectContextBlock,
+  type OrchestrationTaskIntentId,
+  type AdapterId,
+} from "@/lib/orchestration";
 import { getProjectContext } from "@/db/queries/project-context";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { ORCH_STATE } from "@/lib/orchestration/contract";
@@ -18,8 +25,15 @@ import { workspaceIdFor } from "@/lib/agent-execution/ownership";
 import { executeInject } from "@/lib/executor";
 import { pickDispatchChannel } from "@/lib/execution-access";
 import { getBuilderFitness } from "@/db/queries/runner-presence";
-import { createOrchestrationEvent, createOrchestrationEventOnce } from "@/db/queries/orchestration-events";
-import { createOrchestrationRun, isProjectBusy, stampRunDelivered } from "@/db/queries/orchestration-runs";
+import {
+  createOrchestrationEvent,
+  createOrchestrationEventOnce,
+} from "@/db/queries/orchestration-events";
+import {
+  createOrchestrationRun,
+  isProjectBusy,
+  stampRunDelivered,
+} from "@/db/queries/orchestration-runs";
 import { emitRunEvent } from "@/db/queries/run-events";
 import { insertPromptHistory } from "@/db/queries/prompt-history";
 import { getProjectState, persistProjectRuntimeIfNewer } from "@/db/queries/project-states";
@@ -106,9 +120,7 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
   // the zsh user-typing hook). No live workspace → fall back to the legacy zellij
   // path unchanged (cloud mode never has one; injectFn is null there).
   const ptyWorkspaceId = workspaceIdFor(userId, canonical);
-  const ptyExecutor = runtimeAvailable
-    ? (await import("@/lib/agent-execution")).executor
-    : null;
+  const ptyExecutor = runtimeAvailable ? (await import("@/lib/agent-execution")).executor : null;
   const ptyHandle = ptyExecutor ? ptyExecutor.get(ptyWorkspaceId) : null;
   const ptyBacked = !!ptyHandle && ptyHandle.status !== "exited";
 
@@ -150,7 +162,10 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
       const activeTabs = await getZellijTabs();
       if (activeTabs.length > 0) {
         effectiveTab = resolveEffectiveTab(canonical, activeTabs);
-        if (effectiveTab === canonical && !activeTabs.some((t) => t.toLowerCase() === canonical.toLowerCase())) {
+        if (
+          effectiveTab === canonical &&
+          !activeTabs.some((t) => t.toLowerCase() === canonical.toLowerCase())
+        ) {
           return {
             status: 422,
             body: { error: `Tab "${canonical}" is not open in Zellij. Open it and try again.` },
@@ -184,8 +199,15 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
     ]);
     const contextBlock = renderProjectContextBlock(projectContext ?? undefined);
     const withContext = (body: string) =>
-      [contextBlock || null, operatorSection || null, fleetBlock || null, escalationBlock || null, body]
-        .filter(Boolean).join("\n\n");
+      [
+        contextBlock || null,
+        operatorSection || null,
+        fleetBlock || null,
+        escalationBlock || null,
+        body,
+      ]
+        .filter(Boolean)
+        .join("\n\n");
 
     if (customPrompt) {
       prompt = withContext(customPrompt);
@@ -210,8 +232,8 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
       // ~/.fleetcrown/sessions/<tab>.md (identical to the prior buildPromptWithSession
       // call); adapters without a session seam fall back to identity.
       const enrichPrompt =
-        (await import("@/lib/orchestration/adapter-registry")).adapterFor(eventAdapter)?.enrichPrompt ??
-        ((b: string) => b);
+        (await import("@/lib/orchestration/adapter-registry")).adapterFor(eventAdapter)
+          ?.enrichPrompt ?? ((b: string) => b);
       prompt = withContext(enrichPrompt(base, effectiveTab, projectStateDescription(stateKey)));
       const meta = readPromptMeta().find((m) => m.key === promptKey);
       promptLabel = meta ? `${meta.icon} ${meta.label}` : promptKey;
@@ -243,7 +265,9 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
   const eventIntent: OrchestrationTaskIntentId | undefined =
     promptKey && ORCHESTRATION_TASK_INTENT_IDS.includes(promptKey as OrchestrationTaskIntentId)
       ? (promptKey as OrchestrationTaskIntentId)
-      : customPrompt ? "custom" : undefined;
+      : customPrompt
+        ? "custom"
+        : undefined;
 
   const resolvedProjectPath = projectPath ?? canonical;
   const nowS = Math.floor(Date.now() / 1000);
@@ -323,28 +347,35 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
         promptPreview: fingerprint.promptPreview,
         meta: { adapter: eventAdapter, promptKey: promptKey ?? "custom", runtimeAvailable: true },
       });
-      return { status: 200, body: { ok: true, blocked: true, reason: "user-typing", tab: effectiveTab } };
+      return {
+        status: 200,
+        body: { ok: true, blocked: true, reason: "user-typing", tab: effectiveTab },
+      };
     }
   }
 
   // Run local filesystem side-effects — the server process can always write to /tmp
   // regardless of whether it's inside a Zellij pane or not.
   if (runtimeAvailable) {
-    const [{ cancelActiveBeaconSessions }, { stateFile, clearHandshakeFiles }, fs] = await Promise.all([
-      import("@/app/api/beacon/route"),
-      import("@/lib/agent-config"),
-      import("fs"),
-    ]);
+    const [{ cancelActiveBeaconSessions }, { stateFile, clearHandshakeFiles }, fs] =
+      await Promise.all([
+        import("@/app/api/beacon/route"),
+        import("@/lib/agent-config"),
+        import("fs"),
+      ]);
 
     await cancelActiveBeaconSessions(userId, effectiveTab);
 
-    fs.writeFileSync(stateFile.prompt(effectiveTab), JSON.stringify({
-      key: promptKey ?? "custom",
-      label: promptLabel,
-      startedAt: nowS,
-      source: "inject",
-      adapter: eventAdapter,
-    }));
+    fs.writeFileSync(
+      stateFile.prompt(effectiveTab),
+      JSON.stringify({
+        key: promptKey ?? "custom",
+        label: promptLabel,
+        startedAt: nowS,
+        source: "inject",
+        adapter: eventAdapter,
+      }),
+    );
 
     clearHandshakeFiles(effectiveTab);
 
@@ -356,7 +387,11 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
       fs.writeFileSync(stateFile.sentinel(effectiveTab), "");
       fs.writeFileSync(stateFile.closing(effectiveTab), String(nowS));
     } else {
-      try { fs.unlinkSync(stateFile.closing(effectiveTab)); } catch { /* gone */ }
+      try {
+        fs.unlinkSync(stateFile.closing(effectiveTab));
+      } catch {
+        /* gone */
+      }
     }
   }
 
@@ -367,8 +402,9 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
   // must always fire to interrupt the running agent. Fail open on a DB hiccup —
   // never block a dispatch on a transient error.
   const lifecycleIntent = promptKey === "hard_stop" || promptKey === "close_session";
-  const projectBusy = !lifecycleIntent
-    && (await isProjectBusy(userId, canonical, { excludeRunId: runId }).catch(() => false));
+  const projectBusy =
+    !lifecycleIntent &&
+    (await isProjectBusy(userId, canonical, { excludeRunId: runId }).catch(() => false));
 
   // Name the builder that will run this. A command with no channel is claimable
   // by EVERY runner at once, so leaving it open is a race the always-on box
@@ -384,7 +420,20 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
   const pinnedChannel = pickDispatchChannel(dbMatch, fitness.presence, fitness.localDurability);
 
   const result = await executeInject(
-    { tab: effectiveTab, prompt, promptKey, promptLabel, adapter: eventAdapter, model: eventModel, projectId, projectKey: canonical, runId, dir: projectPath, projectBusy, channel: pinnedChannel },
+    {
+      tab: effectiveTab,
+      prompt,
+      promptKey,
+      promptLabel,
+      adapter: eventAdapter,
+      model: eventModel,
+      projectId,
+      projectKey: canonical,
+      runId,
+      dir: projectPath,
+      projectBusy,
+      channel: pinnedChannel,
+    },
     userId,
     injectFn ?? (() => Promise.reject(new Error("Runtime unavailable"))),
   );
@@ -445,9 +494,11 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
       },
     });
     const policyStatus =
-      (result as { code?: string }).code === "builder-required" ? 409
-      : (result as { code?: string }).code === "cloud-builder-private" ? 403
-      : 500;
+      (result as { code?: string }).code === "builder-required"
+        ? 409
+        : (result as { code?: string }).code === "cloud-builder-private"
+          ? 403
+          : 500;
     return {
       status: policyStatus,
       body: {
@@ -502,7 +553,10 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
     userId,
     projectId,
     projectKey: canonical,
-    eventType: (promptKey === "close_session" || promptKey === "hard_stop") ? "close_requested" : "continue_requested",
+    eventType:
+      promptKey === "close_session" || promptKey === "hard_stop"
+        ? "close_requested"
+        : "continue_requested",
     source: "api-inject",
     adapter: eventAdapter,
     intent: eventIntent,
@@ -535,11 +589,11 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
     action: result.mode === "queued" ? "queued" : "injected",
     reason:
       result.mode === "queued"
-        ? ((result as { runnerConnected?: boolean }).runnerConnected === false
-            ? EXECUTOR_COPY.inject.queuedOfflineApi
-            // Either builder (cloud box-runner or desktop) can claim the queued
+        ? (result as { runnerConnected?: boolean }).runnerConnected === false
+          ? EXECUTOR_COPY.inject.queuedOfflineApi
+          : // Either builder (cloud box-runner or desktop) can claim the queued
             // command — "local runner" was a lie whenever the box served it.
-            : "Queued — a connected builder (cloud or this computer) will claim it")
+            "Queued — a connected builder (cloud or this computer) will claim it"
         : "Injected into local runtime",
     promptHash: fingerprint.promptHash,
     promptPreview: fingerprint.promptPreview,
@@ -554,8 +608,7 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
   });
 
   const queuedOffline =
-    result.mode === "queued" &&
-    (result as { runnerConnected?: boolean }).runnerConnected === false;
+    result.mode === "queued" && (result as { runnerConnected?: boolean }).runnerConnected === false;
 
   // Producer for the hosted runner: when the local Fleet Runner is offline, a
   // WORK dispatch doesn't have to wait forever — auto-route it to the hosted
@@ -578,17 +631,20 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
     // response flag — same orchestration_events stream, attributed to the real
     // executor (Hermes). Deduped by command id so a retry can't double-count.
     if (hostedDispatchId) {
-      void createOrchestrationEventOnce({
-        userId,
-        projectId,
-        projectKey: canonical,
-        eventType: "continue_requested",
-        source: "hosted-runner",
-        adapter: "hermes" as AdapterId,
-        intent: eventIntent,
-        detail: "Auto-routed to hosted runner (Hermes) — local runner offline",
-        happenedAt: new Date(),
-      }, `hosted-dispatch:${hostedDispatchId}`).catch((err) => console.error("[inject] hosted event emit failed:", err));
+      void createOrchestrationEventOnce(
+        {
+          userId,
+          projectId,
+          projectKey: canonical,
+          eventType: "continue_requested",
+          source: "hosted-runner",
+          adapter: "hermes" as AdapterId,
+          intent: eventIntent,
+          detail: "Auto-routed to hosted runner (Hermes) — local runner offline",
+          happenedAt: new Date(),
+        },
+        `hosted-dispatch:${hostedDispatchId}`,
+      ).catch((err) => console.error("[inject] hosted event emit failed:", err));
     }
   }
 

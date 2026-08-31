@@ -119,7 +119,10 @@ check("a dispatch nothing ran still renders, marked Sent", () => {
 });
 
 check("a run with no dispatch row still renders", () => {
-  const events = buildActivityEvents({ prompts: [], runs: [run({ outcome: "success", finishedAt: at(1_000) })] });
+  const events = buildActivityEvents({
+    prompts: [],
+    runs: [run({ outcome: "success", finishedAt: at(1_000) })],
+  });
   assert.equal(events.length, 1);
   assert.equal(events[0].ask, null, "no ask to show, and that is honest");
   assert.equal(events[0].outcome, "success");
@@ -152,8 +155,17 @@ check("the event is anchored to when work was ASKED for, not when it finished", 
 check("a real blocked reason beats the reaper's circular timeout text", () => {
   const [event] = buildActivityEvents({
     prompts: [],
-    runs: [run({ id: "r9", outcome: "timeout", finishedAt: at(10), payload: { error: "exceeded max duration" } })],
-    blockedReasons: new Map([["r9", "injected to running claude (pty), but the agent isn't generating"]]),
+    runs: [
+      run({
+        id: "r9",
+        outcome: "timeout",
+        finishedAt: at(10),
+        payload: { error: "exceeded max duration" },
+      }),
+    ],
+    blockedReasons: new Map([
+      ["r9", "injected to running claude (pty), but the agent isn't generating"],
+    ]),
   });
   assert.ok(event.error?.includes("isn't generating"), String(event.error));
 });
@@ -166,7 +178,10 @@ check("events come back newest first", () => {
     ],
     runs: [],
   });
-  assert.deepEqual(events.map((e) => e.promptId), ["new", "old"]);
+  assert.deepEqual(
+    events.map((e) => e.promptId),
+    ["new", "old"],
+  );
 });
 
 console.log("\ntriage");
@@ -191,7 +206,9 @@ check("tallies count what a person triages by", () => {
 });
 
 check("the attention filter surfaces exactly the failures and partials", () => {
-  const got = filterActivityEvents(mixed, "attention").map((e) => e.outcome).sort();
+  const got = filterActivityEvents(mixed, "attention")
+    .map((e) => e.outcome)
+    .sort();
   assert.deepEqual(got, ["error", "partial", "timeout"]);
 });
 
@@ -219,7 +236,10 @@ check("consecutive events on one day share a single header", () => {
     runs: [],
   });
   const groups = groupEventsByDay(events);
-  assert.deepEqual(groups.map((g) => g.day), ["2026-08-26", "2026-08-25"]);
+  assert.deepEqual(
+    groups.map((g) => g.day),
+    ["2026-08-26", "2026-08-25"],
+  );
   assert.equal(groups[0].events.length, 2);
   assert.equal(groups[1].events.length, 1);
 });
@@ -228,7 +248,11 @@ console.log("\nintentId — what a retry replays");
 
 check("the RAW intent id rides along, not just its label", () => {
   const [event] = buildActivityEvents({ prompts: [prompt()], runs: [run()] });
-  assert.equal(event.intentId, "next_best", "the label alone cannot be handed back to the pipeline");
+  assert.equal(
+    event.intentId,
+    "next_best",
+    "the label alone cannot be handed back to the pipeline",
+  );
   assert.notEqual(event.intentId, event.intentLabel, "label and id are different things");
 });
 
@@ -244,7 +268,11 @@ check("a locally-typed prompt is marked custom and flagged as local", () => {
     localChats: [{ id: "c1", projectKey: "a", gitBranch: null, promptText: "hey", occurredAt: T0 }],
   });
   assert.equal(event.intentId, "custom");
-  assert.equal(event.isLocalChat, true, "local chat was never dispatched, so it must not offer a re-dispatch");
+  assert.equal(
+    event.isLocalChat,
+    true,
+    "local chat was never dispatched, so it must not offer a re-dispatch",
+  );
 });
 
 console.log(`\n${passed}/${passed} activity-events cases passed`);

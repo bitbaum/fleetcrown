@@ -26,10 +26,10 @@ export async function GET() {
       },
     });
   } catch (e) {
-    console.error(`[${APP_SLUG}/agent/install] failed to read agent script:`, (e as Error)?.message);
-    return NextResponse.json(
-      { error: `${APP_NAME} agent script unavailable` },
-      { status: 500 },
+    console.error(
+      `[${APP_SLUG}/agent/install] failed to read agent script:`,
+      (e as Error)?.message,
     );
+    return NextResponse.json({ error: `${APP_NAME} agent script unavailable` }, { status: 500 });
   }
 }

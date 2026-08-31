@@ -10,7 +10,11 @@ import { postJson, patchJson } from "@/lib/api/fetch";
 import type { ProjectState } from "@/lib/control-types";
 import type { PromptMeta } from "@/lib/agent-config";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
-import { getProjectDisplayState, isProjectTabOpen, type ProjectOperationsSnapshot } from "./control-presenter";
+import {
+  getProjectDisplayState,
+  isProjectTabOpen,
+  type ProjectOperationsSnapshot,
+} from "./control-presenter";
 import { ProjectProfile } from "./ProjectProfile";
 import { LatestOrchestrationPanel } from "./project-card-helpers";
 import { ProjectCardHeader, SessionSummary } from "./project-card-sections";
@@ -61,7 +65,11 @@ export function ProjectCard({
   zellijTabs: string[];
   currentAdapter: string;
   availableAgents: { id: string; label: string; modelSuggestions: string[] }[];
-  onInject: (tab: string, promptKey?: string, customPrompt?: string) => Promise<{ commandId?: string | null } | void>;
+  onInject: (
+    tab: string,
+    promptKey?: string,
+    customPrompt?: string,
+  ) => Promise<{ commandId?: string | null } | void>;
   onRunWithBrain: (project: ProjectState, intent: OrchestrationTaskIntentId) => Promise<void>;
   onRunCustomPrompt: (project: ProjectState, prompt: string, agent: string) => Promise<void>;
   onCollapse?: () => void;
@@ -111,7 +119,9 @@ export function ProjectCard({
         toAgent: agentId,
         fromAgent: currentAgent ?? undefined,
       });
-    } catch { /* best effort */ } finally {
+    } catch {
+      /* best effort */
+    } finally {
       setSwitchingAgent(false);
     }
   };
@@ -170,16 +180,37 @@ export function ProjectCard({
     // performAgentSwitch is a stable closure over component state; the primitive
     // deps below capture every signal that should re-run the decision.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [capacityIssue, autopilotOn, tabOpen, switchingAgent, suggestedFallback, project.session?.mtime, outgoingAgent]);
+  }, [
+    capacityIssue,
+    autopilotOn,
+    tabOpen,
+    switchingAgent,
+    suggestedFallback,
+    project.session?.mtime,
+    outgoingAgent,
+  ]);
 
   // Autopilot is actively switching (or about to) — distinct from "can't act"
   // skips like tab-closed, which surface no banner at all.
   const autoRerouteHandling =
-    autopilotOn && capacityIssue && (autoRerouteReason === null || autoRerouteReason === "switch-in-flight");
+    autopilotOn &&
+    capacityIssue &&
+    (autoRerouteReason === null || autoRerouteReason === "switch-in-flight");
 
   const [dismissed, setDismissed] = useState(false);
-  const { enabled: autoContinueEnabled, toggle: toggleAutoContinue } = useAutoContinue(project.tab, project.autoContinueEnabled);
-  const { queue, enqueue, remove: removeFromQueue, reorder: reorderInQueue, edit: editInQueue, clear: clearQueue, mergeItems: mergeItemsInQueue } = usePromptQueue(project.tab, project.promptQueue, project.promptQueueRevision);
+  const { enabled: autoContinueEnabled, toggle: toggleAutoContinue } = useAutoContinue(
+    project.tab,
+    project.autoContinueEnabled,
+  );
+  const {
+    queue,
+    enqueue,
+    remove: removeFromQueue,
+    reorder: reorderInQueue,
+    edit: editInQueue,
+    clear: clearQueue,
+    mergeItems: mergeItemsInQueue,
+  } = usePromptQueue(project.tab, project.promptQueue, project.promptQueueRevision);
 
   // Reset dismissed each time a new agent run begins so the ready banner fires once per cycle.
   const prevAgentRunning = useRef(project.agentRunning);
@@ -191,7 +222,8 @@ export function ProjectCard({
   const nowS = Math.floor(Date.now() / 1000);
   const display = dismissed
     ? getProjectDisplayState(project, zellijTabs, nowS, true, runtimeStateKnown, runnerSyncStale)
-    : snapshot?.display ?? getProjectDisplayState(project, zellijTabs, nowS, false, runtimeStateKnown, runnerSyncStale);
+    : (snapshot?.display ??
+      getProjectDisplayState(project, zellijTabs, nowS, false, runtimeStateKnown, runnerSyncStale));
   const isReadyNow = display.isReady || display.isOrchestrationReady;
   useProjectLifecycleSync(project.tab, isReadyNow);
   // After the 2026-06-11 collapse autopilot is binary. "on" continues when
@@ -228,33 +260,60 @@ export function ProjectCard({
         ? "Automatic continuation paused for this project."
         : queue.length > 0
           ? "Autopilot on: the next queued instruction will send when the agent waits."
-          // "Queue" here is the PROMPT queue only. Saying "queue is empty"
-          // while dispatches sit unexecuted in pending_commands contradicted
-          // the hero's own stall banner one screen up.
-          : executionStalled
+          : // "Queue" here is the PROMPT queue only. Saying "queue is empty"
+            // while dispatches sit unexecuted in pending_commands contradicted
+            // the hero's own stall banner one screen up.
+            executionStalled
             ? "Autopilot on, but dispatches are queued and not executing — see the builder status above."
             : "Autopilot on: queue is empty, so FleetCrown picks the next-best task when the agent waits.";
 
   const {
-    sending, justSent, custom, setCustom, customFocused, setCustomFocused,
-    merging, sendError, clearSendError, dispatchStatus, clearDispatchStatus,
-    sendCustom, sendText, sessionHealthBlocksQueue, sendIntent, send,
-    handleAutoInject, handleSendFromQueue, handleMergeQueue,
+    sending,
+    justSent,
+    custom,
+    setCustom,
+    customFocused,
+    setCustomFocused,
+    merging,
+    sendError,
+    clearSendError,
+    dispatchStatus,
+    clearDispatchStatus,
+    sendCustom,
+    sendText,
+    sessionHealthBlocksQueue,
+    sendIntent,
+    send,
+    handleAutoInject,
+    handleSendFromQueue,
+    handleMergeQueue,
   } = useProjectCardActions({
-    project, queue, removeFromQueue, clearQueue,
-    onInject, onRunWithBrain,
-    setDismissed, isReadyNow,
-    prompts, isOnlyReady, autoContinueEnabled: automaticContinuationEnabled,
+    project,
+    queue,
+    removeFromQueue,
+    clearQueue,
+    onInject,
+    onRunWithBrain,
+    setDismissed,
+    isReadyNow,
+    prompts,
+    isOnlyReady,
+    autoContinueEnabled: automaticContinuationEnabled,
   });
 
   const latestOrchRun = project.latestOrchestrationRun;
   const showPreviousRunPanel = display.showLatestOrchestration && !display.tabOpen;
-  const queueBlockedReason = sessionHealthBlocksQueue() && queue.length > 0
-    ? project.session?.health?.toLowerCase().includes("critical")
-      ? "Health critical"
-      : "Tests failing"
-    : null;
-  const paused = !automaticContinuationEnabled || customFocused || custom.trim().length > 0 || display.isBeaconActive;
+  const queueBlockedReason =
+    sessionHealthBlocksQueue() && queue.length > 0
+      ? project.session?.health?.toLowerCase().includes("critical")
+        ? "Health critical"
+        : "Tests failing"
+      : null;
+  const paused =
+    !automaticContinuationEnabled ||
+    customFocused ||
+    custom.trim().length > 0 ||
+    display.isBeaconActive;
 
   // Smart "send to queue" (user request #2):
   // - If the project is currently idle/ready (nothing being done), treat the
@@ -264,29 +323,42 @@ export function ProjectCard({
   // This unifies "type or pick from library/history → send to queue".
   // Works for both the textarea (Alt+Enter) and the ListPlus button, and
   // the mic "enqueue after recording" path (via onEnqueueCustom).
-  const smartEnqueue = useCallback((text: string) => {
-    const trimmed = (text || "").trim();
-    if (!trimmed) return;
+  const smartEnqueue = useCallback(
+    (text: string) => {
+      const trimmed = (text || "").trim();
+      if (!trimmed) return;
 
-    // Special case for deliberate handoff-controlled prompts the user pastes
-    // (e.g. starting with "status: working" + full task). These should almost
-    // always go direct so the user can drive the agent intentionally.
-    const isHandoffControl = /^status:\s*(working|ready)/i.test(trimmed);
+      // Special case for deliberate handoff-controlled prompts the user pastes
+      // (e.g. starting with "status: working" + full task). These should almost
+      // always go direct so the user can drive the agent intentionally.
+      const isHandoffControl = /^status:\s*(working|ready)/i.test(trimmed);
 
-    if (isHandoffControl) {
-      sendText(trimmed);
-      return;
-    }
+      if (isHandoffControl) {
+        sendText(trimmed);
+        return;
+      }
 
-    const idle = !project.agentRunning
-      && !display.isRunning
-      && (isReadyNow || display.tone === "idle" || display.isReady || display.isOrchestrationReady);
-    if (idle) {
-      sendText(trimmed);
-    } else {
-      enqueue(trimmed);
-    }
-  }, [enqueue, sendText, project.agentRunning, display.isRunning, display.tone, isReadyNow, display.isReady, display.isOrchestrationReady]);
+      const idle =
+        !project.agentRunning &&
+        !display.isRunning &&
+        (isReadyNow || display.tone === "idle" || display.isReady || display.isOrchestrationReady);
+      if (idle) {
+        sendText(trimmed);
+      } else {
+        enqueue(trimmed);
+      }
+    },
+    [
+      enqueue,
+      sendText,
+      project.agentRunning,
+      display.isRunning,
+      display.tone,
+      isReadyNow,
+      display.isReady,
+      display.isOrchestrationReady,
+    ],
+  );
 
   return (
     <div
@@ -295,16 +367,17 @@ export function ProjectCard({
         display.isClosed
           ? "border-status-positive/30 bg-status-positive/[0.02]"
           : display.isClosing
-          ? "border-status-warning/25 bg-status-warning/[0.02]"
-          : display.isReady || display.isOrchestrationReady
-          ? "border-status-positive/40 bg-status-positive/[0.03]"
-          : display.isSessionOpen
-          ? "border-accent-primary/25 bg-accent-primary/[0.02]"
-          : "border-border-subtle bg-surface-base"
+            ? "border-status-warning/25 bg-status-warning/[0.02]"
+            : display.isReady || display.isOrchestrationReady
+              ? "border-status-positive/40 bg-status-positive/[0.03]"
+              : display.isSessionOpen
+                ? "border-accent-primary/25 bg-accent-primary/[0.02]"
+                : "border-border-subtle bg-surface-base",
       )}
     >
-      {capacityIssue && suggestedFallback && (
-        autoRerouteHandling ? (
+      {capacityIssue &&
+        suggestedFallback &&
+        (autoRerouteHandling ? (
           <CapacityIssueBanner
             currentAgentId={outgoingAgent ?? project.agentPref ?? "claude"}
             nextAgentId={suggestedFallback}
@@ -320,8 +393,7 @@ export function ProjectCard({
             onSwitch={() => performAgentSwitch(suggestedFallback)}
             onDismiss={() => setCapacityDismissed(true)}
           />
-        ) : null
-      )}
+        ) : null)}
 
       {/* Honest dispatch status — the REAL lifecycle of the last queued
           dispatch (queued → picked up → ran / failed / unconfirmed), polled
@@ -344,10 +416,10 @@ export function ProjectCard({
             dispatchStatus.tone === "negative"
               ? "border-status-negative/25 bg-status-negative/[0.05] text-status-negative"
               : dispatchStatus.tone === "warning"
-              ? "border-status-warning/25 bg-status-warning/[0.05] text-status-warning"
-              : dispatchStatus.tone === "positive"
-              ? "border-status-positive/25 bg-status-positive/[0.03] text-text-secondary"
-              : "border-border-subtle bg-surface-base text-text-secondary"
+                ? "border-status-warning/25 bg-status-warning/[0.05] text-status-warning"
+                : dispatchStatus.tone === "positive"
+                  ? "border-status-positive/25 bg-status-positive/[0.03] text-text-secondary"
+                  : "border-border-subtle bg-surface-base text-text-secondary",
           )}
         >
           <span className="min-w-0 flex-1">
@@ -459,7 +531,13 @@ export function ProjectCard({
             paused={paused}
             nextQueueItem={sessionHealthBlocksQueue() ? undefined : queue[0]}
             queueTotal={sessionHealthBlocksQueue() ? 0 : queue.length}
-            healthBypass={sessionHealthBlocksQueue() && queue.length > 0 ? (project.session?.health?.toLowerCase().includes("critical") ? "Health critical" : "Tests failing") : undefined}
+            healthBypass={
+              sessionHealthBlocksQueue() && queue.length > 0
+                ? project.session?.health?.toLowerCase().includes("critical")
+                  ? "Health critical"
+                  : "Tests failing"
+                : undefined
+            }
             dispatchReason={undefined}
             onDismiss={() => setDismissed(true)}
             onSend={send}
@@ -474,11 +552,15 @@ export function ProjectCard({
           )}
           {display.tone === "idle" && project.session && !display.tabOpen && (
             <div className="border-t border-border-subtle">
-              <p className="px-4 pt-4 text-xs font-medium text-text-muted sm:px-5 md:px-6">Saved context from the last agent run</p>
+              <p className="px-4 pt-4 text-xs font-medium text-text-muted sm:px-5 md:px-6">
+                Saved context from the last agent run
+              </p>
               <SessionSummary session={project.session} isClosed={false} />
             </div>
           )}
-          {showPreviousRunPanel && latestOrchRun && <LatestOrchestrationPanel run={latestOrchRun} nowMs={nowS * 1000} />}
+          {showPreviousRunPanel && latestOrchRun && (
+            <LatestOrchestrationPanel run={latestOrchRun} nowMs={nowS * 1000} />
+          )}
 
           {/* Idle with no agent running — offer to launch one, whether or not a
               terminal tab is already open. Previously the launch button was

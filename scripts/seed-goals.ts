@@ -6,7 +6,9 @@ import * as schema from "../src/db/schema";
 // canonical hierarchy. Gate behind COCKPIT_OWNER_SEED=1 so it can't run
 // against a multi-tenant deployment.
 if (process.env.COCKPIT_OWNER_SEED !== "1") {
-  console.error("Refusing to run seed-goals.ts without COCKPIT_OWNER_SEED=1 (this wipes the goals table).");
+  console.error(
+    "Refusing to run seed-goals.ts without COCKPIT_OWNER_SEED=1 (this wipes the goals table).",
+  );
   process.exit(1);
 }
 
@@ -24,59 +26,72 @@ async function main() {
   // TOP-LEVEL LIFE GOALS
   // ═══════════════════════════════════════════════
 
-  const [godMode] = await db.insert(schema.goals).values({
-    userId: DEFAULT_USER_ID,
-    title: "God Mode — AI that runs your life",
-    description: "Build Ivy into a fully autonomous life OS. FleetCrown is the interface. Knowledge graph is the brain. Adapters are the senses. Then replicate it for others.",
-    status: "active",
-    progress: 15,
-    milestones: [
-      { title: "Knowledge graph in Postgres", done: true },
-      { title: "FleetCrown v1 with 7 views", done: true },
-      { title: "Seed 1,300+ entities from contacts + knowledge", done: true },
-      { title: "Email integration (Today view)", done: false },
-      { title: "Goal tracking with progress", done: true },
-      { title: "Ask Ivy button functional", done: false },
-      { title: "Interaction tracking (who you talked to, when)", done: false },
-      { title: "Proactive alerts (overdue, stale relationships)", done: false },
-      { title: "Set up FleetCrown for first other person", done: false },
-    ],
-  }).returning();
+  const [godMode] = await db
+    .insert(schema.goals)
+    .values({
+      userId: DEFAULT_USER_ID,
+      title: "God Mode — AI that runs your life",
+      description:
+        "Build Ivy into a fully autonomous life OS. FleetCrown is the interface. Knowledge graph is the brain. Adapters are the senses. Then replicate it for others.",
+      status: "active",
+      progress: 15,
+      milestones: [
+        { title: "Knowledge graph in Postgres", done: true },
+        { title: "FleetCrown v1 with 7 views", done: true },
+        { title: "Seed 1,300+ entities from contacts + knowledge", done: true },
+        { title: "Email integration (Today view)", done: false },
+        { title: "Goal tracking with progress", done: true },
+        { title: "Ask Ivy button functional", done: false },
+        { title: "Interaction tracking (who you talked to, when)", done: false },
+        { title: "Proactive alerts (overdue, stale relationships)", done: false },
+        { title: "Set up FleetCrown for first other person", done: false },
+      ],
+    })
+    .returning();
 
-  const [financialFreedom] = await db.insert(schema.goals).values({
-    userId: DEFAULT_USER_ID,
-    title: "Financial independence",
-    description: "Enough passive/semi-passive income to never need a job. BTC + product revenue + consulting.",
-    status: "active",
-    progress: 10,
-    milestones: [
-      { title: "Track all subscriptions and burn rate", done: true },
-      { title: "OrangeCat generating revenue", done: false },
-      { title: "Kivvi first paying customer", done: false },
-      { title: "Monthly income > monthly burn", done: false },
-    ],
-  }).returning();
+  const [financialFreedom] = await db
+    .insert(schema.goals)
+    .values({
+      userId: DEFAULT_USER_ID,
+      title: "Financial independence",
+      description:
+        "Enough passive/semi-passive income to never need a job. BTC + product revenue + consulting.",
+      status: "active",
+      progress: 10,
+      milestones: [
+        { title: "Track all subscriptions and burn rate", done: true },
+        { title: "OrangeCat generating revenue", done: false },
+        { title: "Kivvi first paying customer", done: false },
+        { title: "Monthly income > monthly burn", done: false },
+      ],
+    })
+    .returning();
 
-  const [civilizationalStack] = await db.insert(schema.goals).values({
-    userId: DEFAULT_USER_ID,
-    title: "Civilizational Stack",
-    description: "Remove every bottleneck between humans and their full potential. AI inventing AI, robots building robots, humans freed from coerced labor. Stack builds bottom-up.",
-    status: "active",
-    progress: 20,
-    milestones: [
-      { title: "Layer 1: Hardware Access (RevampIT)", done: true },
-      { title: "Layer 2: Value Exchange (OrangeCat)", done: false },
-      { title: "Layer 3: Governance (Solon)", done: false },
-      { title: "Layer 4: Automation (DataCat, Kivvi)", done: false },
-      { title: "Layer 5: AI Services (Botsmann)", done: false },
-      { title: "Layer 6: Intelligence (Hirnli)", done: false },
-    ],
-  }).returning();
+  const [civilizationalStack] = await db
+    .insert(schema.goals)
+    .values({
+      userId: DEFAULT_USER_ID,
+      title: "Civilizational Stack",
+      description:
+        "Remove every bottleneck between humans and their full potential. AI inventing AI, robots building robots, humans freed from coerced labor. Stack builds bottom-up.",
+      status: "active",
+      progress: 20,
+      milestones: [
+        { title: "Layer 1: Hardware Access (RevampIT)", done: true },
+        { title: "Layer 2: Value Exchange (OrangeCat)", done: false },
+        { title: "Layer 3: Governance (Solon)", done: false },
+        { title: "Layer 4: Automation (DataCat, Kivvi)", done: false },
+        { title: "Layer 5: AI Services (Botsmann)", done: false },
+        { title: "Layer 6: Intelligence (Hirnli)", done: false },
+      ],
+    })
+    .returning();
 
   await db.insert(schema.goals).values({
     userId: DEFAULT_USER_ID,
     title: "Health & longevity",
-    description: "Optimize body and mind. Swiss Longevity Hub connection. Psychedelics for growth. Exercise, sleep, nutrition.",
+    description:
+      "Optimize body and mind. Swiss Longevity Hub connection. Psychedelics for growth. Exercise, sleep, nutrition.",
     status: "active",
     progress: 30,
   });
@@ -84,7 +99,8 @@ async function main() {
   await db.insert(schema.goals).values({
     userId: DEFAULT_USER_ID,
     title: "Relationships & community",
-    description: "Maintain deep connections. Anja. Close friends. Zurich network. Don't let relationships decay through neglect.",
+    description:
+      "Maintain deep connections. Anja. Close friends. Zurich network. Don't let relationships decay through neglect.",
     status: "active",
     progress: 50,
     milestones: [
@@ -104,7 +120,8 @@ async function main() {
     userId: DEFAULT_USER_ID,
     parentGoalId: godMode.id,
     title: "FleetCrown Phase 2 — write operations + email",
-    description: "Add create/edit for goals and commitments. Integrate email-intel.py into Today view. Make Ask Ivy functional.",
+    description:
+      "Add create/edit for goals and commitments. Integrate email-intel.py into Today view. Make Ask Ivy functional.",
     status: "active",
     progress: 0,
   });
@@ -113,7 +130,8 @@ async function main() {
     userId: DEFAULT_USER_ID,
     parentGoalId: godMode.id,
     title: "FleetCrown for others — productize",
-    description: "Package FleetCrown as a self-hosted Docker app. Document setup. Find first beta user.",
+    description:
+      "Package FleetCrown as a self-hosted Docker app. Document setup. Find first beta user.",
     status: "active",
     progress: 0,
   });
@@ -138,7 +156,8 @@ async function main() {
     userId: DEFAULT_USER_ID,
     parentGoalId: financialFreedom.id,
     title: "Reduce monthly burn",
-    description: "Audit subscriptions. Cancel what's not essential. Target: under 200 CHF/mo total.",
+    description:
+      "Audit subscriptions. Cancel what's not essential. Target: under 200 CHF/mo total.",
     status: "active",
     progress: 20,
   });
@@ -148,7 +167,8 @@ async function main() {
     userId: DEFAULT_USER_ID,
     parentGoalId: civilizationalStack.id,
     title: "Hirnli launch — Q2 2026",
-    description: "Fundraising intelligence at hirn.li. Layer 6: Intelligence. Docs exist, no code yet.",
+    description:
+      "Fundraising intelligence at hirn.li. Layer 6: Intelligence. Docs exist, no code yet.",
     status: "active",
     progress: 5,
     targetDate: new Date("2026-06-30"),
@@ -158,7 +178,8 @@ async function main() {
     userId: DEFAULT_USER_ID,
     parentGoalId: civilizationalStack.id,
     title: "RevampIT security fix + CMS deploy",
-    description: "Email verification bypass is a production vulnerability. CMS backend not deployed.",
+    description:
+      "Email verification bypass is a production vulnerability. CMS backend not deployed.",
     status: "active",
     progress: 70,
     milestones: [

@@ -47,7 +47,8 @@ export const ADAPTER_DEFINITIONS: Record<AdapterId, AdapterDefinition> = {
       autonomousContinue: true,
       sessionHandoff: true,
     }),
-    notes: "Target orchestrator of record; should own durable task execution rather than imitate local Claude hooks.",
+    notes:
+      "Target orchestrator of record; should own durable task execution rather than imitate local Claude hooks.",
   },
   gemini: {
     id: "gemini",
@@ -75,7 +76,8 @@ export const ADAPTER_DEFINITIONS: Record<AdapterId, AdapterDefinition> = {
       sessionHandoff: true,
       tabInjected: true,
     }),
-    notes: "Local Grok CLI integration with adapter-aware handoffs and hook-driven lifecycle state.",
+    notes:
+      "Local Grok CLI integration with adapter-aware handoffs and hook-driven lifecycle state.",
   },
 };
 

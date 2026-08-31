@@ -23,12 +23,13 @@ export function NewGoalButton({ goals }: { goals: GoalWithChildren[] }) {
     setError(null);
   };
 
-  const onSubmit = () => create({
-    title: form.text("title").trim(),
-    description: form.text("description").trim() || undefined,
-    targetDate: form.text("targetDate") || undefined,
-    parentGoalId: form.text("parentGoalId") || undefined,
-  });
+  const onSubmit = () =>
+    create({
+      title: form.text("title").trim(),
+      description: form.text("description").trim() || undefined,
+      targetDate: form.text("targetDate") || undefined,
+      parentGoalId: form.text("parentGoalId") || undefined,
+    });
 
   // Flatten goal tree for parent selector (exclude completed goals)
   const flatGoals: Array<{ id: string; title: string; depth: number }> = [];
@@ -97,7 +98,9 @@ export function NewGoalButton({ goals }: { goals: GoalWithChildren[] }) {
               <option value="">— None —</option>
               {flatGoals.map((g) => (
                 <option key={g.id} value={g.id}>
-                  {"  ".repeat(g.depth)}{g.depth > 0 ? "↳ " : ""}{g.title}
+                  {"  ".repeat(g.depth)}
+                  {g.depth > 0 ? "↳ " : ""}
+                  {g.title}
                 </option>
               ))}
             </select>

@@ -29,8 +29,12 @@ let fail = 0;
 function eq(actual: unknown, expected: unknown, label: string) {
   const a = JSON.stringify(actual);
   const e = JSON.stringify(expected);
-  if (a === e) { pass++; }
-  else { fail++; console.error(`✗ ${label}: expected ${e}, got ${a}`); }
+  if (a === e) {
+    pass++;
+  } else {
+    fail++;
+    console.error(`✗ ${label}: expected ${e}, got ${a}`);
+  }
 }
 
 // ── The plan ────────────────────────────────────────────────────────────────
@@ -38,8 +42,16 @@ function eq(actual: unknown, expected: unknown, label: string) {
 const COLD = { attrs: {} as Record<string, string>, goalCount: 0, hasRepo: false };
 const FULL_ATTRS = { mission: "m", problem: "p", solution: "s", stack: "Next.js" };
 
-eq(missingKickoffSetup(COLD), ["profile", "milestones", "repo"], "an idea needs all three setup steps");
-eq(planKickoff({ ...COLD, wantRepo: true }), ["profile", "milestones", "repo", "dispatch"], "full plan ends in dispatch");
+eq(
+  missingKickoffSetup(COLD),
+  ["profile", "milestones", "repo"],
+  "an idea needs all three setup steps",
+);
+eq(
+  planKickoff({ ...COLD, wantRepo: true }),
+  ["profile", "milestones", "repo", "dispatch"],
+  "full plan ends in dispatch",
+);
 eq(
   planKickoff({ ...COLD, wantRepo: false }),
   ["profile", "milestones", "dispatch"],
@@ -69,7 +81,11 @@ eq(
 // ── Whether the hero renders at all ─────────────────────────────────────────
 
 eq(needsKickoff({ ...COLD, agentRunning: false }), true, "cold project shows the hero");
-eq(needsKickoff({ ...COLD, agentRunning: true }), false, "a live agent means it is already happening");
+eq(
+  needsKickoff({ ...COLD, agentRunning: true }),
+  false,
+  "a live agent means it is already happening",
+);
 eq(
   needsKickoff({ attrs: FULL_ATTRS, goalCount: 3, hasRepo: true, agentRunning: false }),
   false,
@@ -100,7 +116,11 @@ eq(hasAnswer("  —  "), false, "a dash is a non-answer");
 eq(hasAnswer(""), false, "empty is a non-answer");
 eq(hasAnswer(undefined), false, "absent is a non-answer");
 eq(hasAnswer("Next.js"), true, "a real value is an answer");
-eq(hasAnswer("No known competitors yet"), true, "a real sentence that mentions not-knowing is still an answer");
+eq(
+  hasAnswer("No known competitors yet"),
+  true,
+  "a real sentence that mentions not-knowing is still an answer",
+);
 // answer() is the value-returning twin — the two must never disagree, which is
 // the whole reason hasAnswer delegates to it.
 eq(answer("Unknown"), null, "answer() drops a placeholder");
@@ -132,12 +152,24 @@ eq(
   "genuinely zero goals still earns the milestones step",
 );
 eq(
-  needsKickoff({ attrs: FULL_ATTRS, goalCount: 0, hasRepo: true, goalsLocked: true, agentRunning: false }),
+  needsKickoff({
+    attrs: FULL_ATTRS,
+    goalCount: 0,
+    hasRepo: true,
+    goalsLocked: true,
+    agentRunning: false,
+  }),
   false,
   "a set-up project does not sprout a kickoff hero just because the zone is locked",
 );
 eq(
-  planKickoff({ attrs: FULL_ATTRS, goalCount: 0, hasRepo: true, goalsLocked: true, wantRepo: true }),
+  planKickoff({
+    attrs: FULL_ATTRS,
+    goalCount: 0,
+    hasRepo: true,
+    goalsLocked: true,
+    wantRepo: true,
+  }),
   ["dispatch"],
   "locked + otherwise complete means there is nothing to set up, only work to do",
 );
@@ -153,7 +185,11 @@ eq(
 // ["repo","dispatch"], the repo step CREATED A REAL GITHUB REPOSITORY, and the
 // dispatch then returned 409 because the locked zone hides the roadmap. The
 // only irreversible step ran, the step that mattered did not.
-eq(kickoffBlockedReason({ goalsLocked: true }), "goals-locked", "a locked zone blocks the run up front");
+eq(
+  kickoffBlockedReason({ goalsLocked: true }),
+  "goals-locked",
+  "a locked zone blocks the run up front",
+);
 eq(kickoffBlockedReason({ goalsLocked: false }), null, "an unlocked zone does not block");
 eq(kickoffBlockedReason({}), null, "absent means unlocked — never block by default");
 // The contract with the dispatch route: whenever the hero would let a kickoff
@@ -162,20 +198,34 @@ eq(kickoffBlockedReason({}), null, "absent means unlocked — never block by def
 for (const goalsLocked of [true, false]) {
   const heroWouldRun = kickoffBlockedReason({ goalsLocked }) === null;
   const dispatchWouldRefuse = Boolean(goalsLocked); // locked ⇒ linkedGoals [] ⇒ no target
-  eq(heroWouldRun && dispatchWouldRefuse, false,
-    `hero never starts a run the dispatch will refuse (goalsLocked=${goalsLocked})`);
+  eq(
+    heroWouldRun && dispatchWouldRefuse,
+    false,
+    `hero never starts a run the dispatch will refuse (goalsLocked=${goalsLocked})`,
+  );
 }
 
 // ── Thin briefs are flagged, never blocked ──────────────────────────────────
 // HamsterCheek's original description was one sentence. It cleared the 10-char
 // floor, so the hero hid the editor and that sentence silently became the whole
 // brief — which is why the extractor had nothing to infer a stack from.
-eq(isThinBrief("HamsterCheek allows people to hide physical items in various locations."), true,
-  "one sentence runs, but is flagged as thin");
-eq(isThinBrief("short"), false, "below the floor is not 'thin', it's unusable — `ready` already blocks it");
+eq(
+  isThinBrief("HamsterCheek allows people to hide physical items in various locations."),
+  true,
+  "one sentence runs, but is flagged as thin",
+);
+eq(
+  isThinBrief("short"),
+  false,
+  "below the floor is not 'thin', it's unusable — `ready` already blocks it",
+);
 eq(isThinBrief(""), false, "empty is not thin");
 eq(isThinBrief(null), false, "absent is not thin");
-eq(isThinBrief("x".repeat(KICKOFF_THIN_DESCRIPTION)), false, "at the threshold it is no longer thin");
+eq(
+  isThinBrief("x".repeat(KICKOFF_THIN_DESCRIPTION)),
+  false,
+  "at the threshold it is no longer thin",
+);
 eq(isThinBrief("x".repeat(KICKOFF_THIN_DESCRIPTION - 1)), true, "one char under is still thin");
 // The advisory must never become a gate: a thin brief still starts the project.
 eq(
@@ -192,8 +242,16 @@ eq(hasKickoffSource("            "), false, "whitespace is no source");
 // ── Starter inference ───────────────────────────────────────────────────────
 
 eq(inferProvisionTemplate(null), DEFAULT_PROVISION_TEMPLATE, "no stack falls back to the default");
-eq(inferProvisionTemplate("  "), DEFAULT_PROVISION_TEMPLATE, "blank stack falls back to the default");
-eq(inferProvisionTemplate("Rust, Actix"), DEFAULT_PROVISION_TEMPLATE, "an unknown stack falls back, never throws");
+eq(
+  inferProvisionTemplate("  "),
+  DEFAULT_PROVISION_TEMPLATE,
+  "blank stack falls back to the default",
+);
+eq(
+  inferProvisionTemplate("Rust, Actix"),
+  DEFAULT_PROVISION_TEMPLATE,
+  "an unknown stack falls back, never throws",
+);
 eq(inferProvisionTemplate("Next.js 15, Tailwind, Postgres"), "nextjs-tailwind", "web stack");
 eq(inferProvisionTemplate("Python + FastAPI, Postgres"), "python-fastapi", "python stack");
 eq(inferProvisionTemplate("Hono on Cloudflare Workers"), "hono-cloudflare", "edge stack");
@@ -204,7 +262,11 @@ eq(
   "python-fastapi",
   "the stack with more matches wins over the one listed first",
 );
-eq(inferProvisionTemplate("NEXTJS AND TAILWIND"), "nextjs-tailwind", "matching is case-insensitive");
+eq(
+  inferProvisionTemplate("NEXTJS AND TAILWIND"),
+  "nextjs-tailwind",
+  "matching is case-insensitive",
+);
 
 // ── The template list is genuinely one list ─────────────────────────────────
 
@@ -224,7 +286,9 @@ eq(
   "every configured template is seedable",
 );
 eq(
-  PROVISION_TEMPLATES.every((t) => t.id === "bare" || Object.keys(TEMPLATES[t.id].files).length > 0),
+  PROVISION_TEMPLATES.every(
+    (t) => t.id === "bare" || Object.keys(TEMPLATES[t.id].files).length > 0,
+  ),
   true,
   "every non-bare starter seeds files",
 );

@@ -23,7 +23,14 @@ export default async function PeoplePage({
     : [];
 
   const userId = await requirePageUserId();
-  const { people, total } = await searchPeople(userId, "", 50, 0, SORT_MODE.RECENT, initialHealthFilter);
+  const { people, total } = await searchPeople(
+    userId,
+    "",
+    50,
+    0,
+    SORT_MODE.RECENT,
+    initialHealthFilter,
+  );
 
   return (
     <PageLayout

@@ -44,10 +44,7 @@ export async function consumeEmailVerificationToken(token: string): Promise<stri
     .set({ usedAt: new Date() })
     .where(eq(emailVerificationTokens.token, token));
 
-  await db
-    .update(users)
-    .set({ emailVerified: new Date() })
-    .where(eq(users.id, row.userId));
+  await db.update(users).set({ emailVerified: new Date() }).where(eq(users.id, row.userId));
 
   return row.userId;
 }

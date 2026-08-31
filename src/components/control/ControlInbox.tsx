@@ -3,7 +3,15 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
-  Archive, Check, ChevronRight, Code2, Inbox, Layers, Loader2, MessageSquare, Rocket,
+  Archive,
+  Check,
+  ChevronRight,
+  Code2,
+  Inbox,
+  Layers,
+  Loader2,
+  MessageSquare,
+  Rocket,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFetch } from "@/hooks/use-fetch";
@@ -156,7 +164,12 @@ export function ControlInbox() {
 /** A one-line group that opens in place. The chevron, not a separate control,
  *  is the affordance — the whole row is the button, so a thumb cannot miss it. */
 function GroupRow({
-  icon, label, count, open, onToggle, children,
+  icon,
+  label,
+  count,
+  open,
+  onToggle,
+  children,
 }: {
   icon: React.ReactNode;
   label: string;
@@ -172,7 +185,10 @@ function GroupRow({
         <span className="ui-inbox-group-label">{label}</span>
         <span className="ui-inbox-group-count">{count}</span>
         <ChevronRight
-          className={cn("h-4 w-4 shrink-0 text-text-muted transition-transform", open && "rotate-90")}
+          className={cn(
+            "h-4 w-4 shrink-0 text-text-muted transition-transform",
+            open && "rotate-90",
+          )}
           aria-hidden="true"
         />
       </button>
@@ -189,7 +205,8 @@ function ActionRail({ children }: { children: React.ReactNode }) {
 }
 
 function WidgetCoverage({
-  items, onChanged,
+  items,
+  onChanged,
 }: {
   items: WidgetCoverageItem[];
   onChanged: () => void;
@@ -201,26 +218,49 @@ function WidgetCoverage({
 
   async function install(projectId: string, projectName: string) {
     setBusyId(projectId);
-    setOutcomes((p) => { const n = { ...p }; delete n[projectId]; return n; });
+    setOutcomes((p) => {
+      const n = { ...p };
+      delete n[projectId];
+      return n;
+    });
     try {
-      const res = await postJson(`/api/projects/${projectId}/widget-token/install`, { mode: "install" });
-      const body = (await res.json().catch(() => ({}))) as { error?: string; hint?: string; nextStep?: string };
+      const res = await postJson(`/api/projects/${projectId}/widget-token/install`, {
+        mode: "install",
+      });
+      const body = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        hint?: string;
+        nextStep?: string;
+      };
       if (!res.ok) {
-        setOutcomes((p) => ({ ...p, [projectId]: {
-          ok: false, message: [body.error, body.hint].filter(Boolean).join(" ") || "Install could not start.",
-        } }));
+        setOutcomes((p) => ({
+          ...p,
+          [projectId]: {
+            ok: false,
+            message:
+              [body.error, body.hint].filter(Boolean).join(" ") || "Install could not start.",
+          },
+        }));
         return;
       }
-      setOutcomes((p) => ({ ...p, [projectId]: {
-        ok: true,
-        message: body.nextStep
-          ?? `Queued for ${projectName}. If Attention shows Retry, the agent never started.`,
-      } }));
+      setOutcomes((p) => ({
+        ...p,
+        [projectId]: {
+          ok: true,
+          message:
+            body.nextStep ??
+            `Queued for ${projectName}. If Attention shows Retry, the agent never started.`,
+        },
+      }));
       onChanged();
     } catch (e) {
-      setOutcomes((p) => ({ ...p, [projectId]: {
-        ok: false, message: e instanceof Error ? e.message : "Install could not start.",
-      } }));
+      setOutcomes((p) => ({
+        ...p,
+        [projectId]: {
+          ok: false,
+          message: e instanceof Error ? e.message : "Install could not start.",
+        },
+      }));
     } finally {
       setBusyId(null);
     }
@@ -253,7 +293,9 @@ function WidgetCoverage({
                   </p>
                 )}
                 {outcome && (
-                  <p className={outcome.ok ? "ui-inbox-row-ok" : "ui-inbox-row-blocked"}>{outcome.message}</p>
+                  <p className={outcome.ok ? "ui-inbox-row-ok" : "ui-inbox-row-blocked"}>
+                    {outcome.message}
+                  </p>
                 )}
               </div>
               <ActionRail>
@@ -262,11 +304,17 @@ function WidgetCoverage({
                   onClick={() => install(p.projectId, p.projectName)}
                   disabled={busyId === p.projectId || !p.canInstall}
                   className="ui-btn-secondary ui-btn-sm"
-                  title={p.canInstall
-                    ? "Mint a token if needed and queue an agent to embed the widget"
-                    : "Blocked — no repo URL and no local runner directory"}
+                  title={
+                    p.canInstall
+                      ? "Mint a token if needed and queue an agent to embed the widget"
+                      : "Blocked — no repo URL and no local runner directory"
+                  }
                 >
-                  {busyId === p.projectId ? <Loader2 className="ui-spinner-xs" /> : <Rocket className="h-3 w-3" />}
+                  {busyId === p.projectId ? (
+                    <Loader2 className="ui-spinner-xs" />
+                  ) : (
+                    <Rocket className="h-3 w-3" />
+                  )}
                   Install
                 </button>
                 <Link
@@ -292,7 +340,9 @@ function WidgetCoverage({
 }
 
 function FeedbackTriage({
-  projectId, projectName, onChanged,
+  projectId,
+  projectName,
+  onChanged,
 }: {
   projectId: string;
   projectName: string;
@@ -360,7 +410,11 @@ function FeedbackTriage({
         <div className="ui-inbox-batch">
           <button
             type="button"
-            onClick={async () => { setBatchBusy(true); await batch("dispatch-batch", "Implement all failed"); setBatchBusy(false); }}
+            onClick={async () => {
+              setBatchBusy(true);
+              await batch("dispatch-batch", "Implement all failed");
+              setBatchBusy(false);
+            }}
             disabled={batchBusy || busyId !== null}
             className="ui-btn-primary ui-btn-sm"
             title="One agent run for every not-started report"
@@ -371,12 +425,19 @@ function FeedbackTriage({
           {newItems.length >= SYNTHESIZE_MIN_ITEMS && (
             <button
               type="button"
-              onClick={async () => { setSynthState("busy"); await batch("synthesize", "Synthesize failed", () => setSynthState("done")); }}
+              onClick={async () => {
+                setSynthState("busy");
+                await batch("synthesize", "Synthesize failed", () => setSynthState("done"));
+              }}
               disabled={synthState !== "idle"}
               className="ui-btn-secondary ui-btn-sm"
               title="Cluster these reports into theme briefs"
             >
-              {synthState === "busy" ? <Loader2 className="ui-spinner-xs" /> : <Layers className="h-3.5 w-3.5" />}
+              {synthState === "busy" ? (
+                <Loader2 className="ui-spinner-xs" />
+              ) : (
+                <Layers className="h-3.5 w-3.5" />
+              )}
               {synthState === "done" ? "Queued" : "Synthesize"}
             </button>
           )}
@@ -387,7 +448,8 @@ function FeedbackTriage({
         {shown.map((f) => {
           const work = f.work;
           const notStarted = work.phase === FEEDBACK_WORK_PHASE.NOT_STARTED;
-          const broken = work.phase === FEEDBACK_WORK_PHASE.STUCK || work.phase === FEEDBACK_WORK_PHASE.FAILED;
+          const broken =
+            work.phase === FEEDBACK_WORK_PHASE.STUCK || work.phase === FEEDBACK_WORK_PHASE.FAILED;
           const watchable = work.phase === FEEDBACK_WORK_PHASE.WORKING;
           return (
             <li key={f.id} className="ui-inbox-row">
@@ -397,7 +459,9 @@ function FeedbackTriage({
                   <FeedbackWorkBadge work={work} />
                 </div>
                 <p className="ui-inbox-row-meta">
-                  {[f.page || f.url, f.scope, compactRelativeDate(f.createdAt)].filter(Boolean).join(" · ")}
+                  {[f.page || f.url, f.scope, compactRelativeDate(f.createdAt)]
+                    .filter(Boolean)
+                    .join(" · ")}
                 </p>
                 {work.detail && <p className="ui-inbox-row-detail line-clamp-2">{work.detail}</p>}
               </div>
@@ -405,11 +469,21 @@ function FeedbackTriage({
                 {(notStarted || broken) && (
                   <button
                     type="button"
-                    onClick={() => act(f.id, () => postJson(`/api/feedback/${f.id}/dispatch`, {}), broken ? "Retry failed" : "Implement failed")}
+                    onClick={() =>
+                      act(
+                        f.id,
+                        () => postJson(`/api/feedback/${f.id}/dispatch`, {}),
+                        broken ? "Retry failed" : "Implement failed",
+                      )
+                    }
                     disabled={busyId === f.id || batchBusy}
                     className="ui-btn-secondary ui-btn-sm"
                   >
-                    {busyId === f.id ? <Loader2 className="ui-spinner-xs" /> : <Rocket className="h-3 w-3" />}
+                    {busyId === f.id ? (
+                      <Loader2 className="ui-spinner-xs" />
+                    ) : (
+                      <Rocket className="h-3 w-3" />
+                    )}
                     {broken ? "Retry" : "Implement"}
                   </button>
                 )}
@@ -424,7 +498,14 @@ function FeedbackTriage({
                 )}
                 <button
                   type="button"
-                  onClick={() => act(f.id, () => patchJson(`/api/feedback/${f.id}`, { status: FEEDBACK_STATUS.RESOLVED }), "Update failed")}
+                  onClick={() =>
+                    act(
+                      f.id,
+                      () =>
+                        patchJson(`/api/feedback/${f.id}`, { status: FEEDBACK_STATUS.RESOLVED }),
+                      "Update failed",
+                    )
+                  }
                   disabled={busyId === f.id || batchBusy}
                   className="ui-btn-icon"
                   title="Mark resolved"
@@ -434,7 +515,14 @@ function FeedbackTriage({
                 </button>
                 <button
                   type="button"
-                  onClick={() => act(f.id, () => patchJson(`/api/feedback/${f.id}`, { status: FEEDBACK_STATUS.ARCHIVED }), "Update failed")}
+                  onClick={() =>
+                    act(
+                      f.id,
+                      () =>
+                        patchJson(`/api/feedback/${f.id}`, { status: FEEDBACK_STATUS.ARCHIVED }),
+                      "Update failed",
+                    )
+                  }
                   disabled={busyId === f.id || batchBusy}
                   className="ui-btn-icon"
                   title="Archive"
@@ -454,7 +542,10 @@ function FeedbackTriage({
             Show all {items.length}
           </button>
         )}
-        <Link href={`/feedback?project=${encodeURIComponent(projectName)}`} className="ui-inbox-more">
+        <Link
+          href={`/feedback?project=${encodeURIComponent(projectName)}`}
+          className="ui-inbox-more"
+        >
           Full inbox →
         </Link>
       </div>

@@ -205,10 +205,7 @@ for (const tag of ["0058_undelivered_backfill", "0059_unconfirmed_rename"]) {
   );
 }
 
-const rename = readFileSync(
-  resolvePath(repoRoot, "drizzle/0059_unconfirmed_rename.sql"),
-  "utf8",
-);
+const rename = readFileSync(resolvePath(repoRoot, "drizzle/0059_unconfirmed_rename.sql"), "utf8");
 assert(
   /SET "outcome" = 'unconfirmed'/.test(rename) && /WHERE "outcome" = 'undelivered'/.test(rename),
   "0059 must relabel exactly the rows 0058 wrote, and nothing else",

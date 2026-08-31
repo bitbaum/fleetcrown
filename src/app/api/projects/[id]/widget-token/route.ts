@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readIdParam, readJsonBody, jsonOk, jsonError, z } from "@/lib/api/route-helpers";
 import { getSessionUserId } from "@/lib/session";
-import { getActiveWidgetToken, upsertWidgetToken, revokeWidgetToken } from "@/db/queries/widget-tokens";
+import {
+  getActiveWidgetToken,
+  upsertWidgetToken,
+  revokeWidgetToken,
+} from "@/db/queries/widget-tokens";
 import { appUrl } from "@/lib/email";
 import type { WidgetToken } from "@/db/schema";
 

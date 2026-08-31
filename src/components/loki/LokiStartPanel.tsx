@@ -42,7 +42,9 @@ export function LokiStartPanel({
   return (
     <div className="ui-loki-start">
       <p className="ui-loki-start-lede">
-        {recent.length > 0 ? "Pick up where you left off" : "Ask anything, or send work to a project."}
+        {recent.length > 0
+          ? "Pick up where you left off"
+          : "Ask anything, or send work to a project."}
       </p>
 
       {recent.length > 0 && (

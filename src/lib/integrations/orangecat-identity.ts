@@ -87,7 +87,10 @@ export async function getOrangeCatLink(userId: string): Promise<OrangeCatLink | 
         expires_at: data.expires_in ? nowSecs + data.expires_in : null,
       })
       .where(
-        and(eq(accounts.provider, "orangecat"), eq(accounts.providerAccountId, account.providerAccountId)),
+        and(
+          eq(accounts.provider, "orangecat"),
+          eq(accounts.providerAccountId, account.providerAccountId),
+        ),
       );
 
     return { actorId: account.providerAccountId, accessToken: data.access_token };

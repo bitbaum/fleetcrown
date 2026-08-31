@@ -34,9 +34,16 @@ export function SaveContextBar({
       .filter((m) => m.role === "assistant")
       .map((m) => m.content.toLowerCase())
       .join(" ");
-    const named = savable.find((p) => assistantText.includes(`**${p.name.toLowerCase()}**`))
-      ?? savable.find((p) => assistantText.includes(p.name.toLowerCase()));
-    return named?.name ?? (selectedProject && savable.some((p) => p.name === selectedProject) ? selectedProject : savable[0]?.name) ?? null;
+    const named =
+      savable.find((p) => assistantText.includes(`**${p.name.toLowerCase()}**`)) ??
+      savable.find((p) => assistantText.includes(p.name.toLowerCase()));
+    return (
+      named?.name ??
+      (selectedProject && savable.some((p) => p.name === selectedProject)
+        ? selectedProject
+        : savable[0]?.name) ??
+      null
+    );
   }, [messages, savable, selectedProject]);
 
   const [target, setTarget] = useState<string | null>(suggested);
@@ -49,7 +56,8 @@ export function SaveContextBar({
   const effectiveTarget = touched ? target : suggested;
 
   const transcript = useMemo(
-    () => messages.map((m) => `${m.role === "user" ? "Operator" : "Loki"}: ${m.content}`).join("\n\n"),
+    () =>
+      messages.map((m) => `${m.role === "user" ? "Operator" : "Loki"}: ${m.content}`).join("\n\n"),
     [messages],
   );
 
@@ -61,7 +69,9 @@ export function SaveContextBar({
     setState("saving");
     setErr(null);
     try {
-      const res = await postJson(`/api/projects/${proj.entityProjectId}/brief`, { text: transcript });
+      const res = await postJson(`/api/projects/${proj.entityProjectId}/brief`, {
+        text: transcript,
+      });
       if (!res.ok) await throwApiError(res, "Could not save context");
       setState("saved");
     } catch (e) {
@@ -77,13 +87,11 @@ export function SaveContextBar({
   // it earns a one-line trigger and nothing more until asked for.
   if (!open) {
     return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="ui-loki-save-trigger"
-      >
+      <button type="button" onClick={() => setOpen(true)} className="ui-loki-save-trigger">
         <BookmarkPlus className="h-3.5 w-3.5" />
-        {state === "saved" ? "Saved to project context" : "Save this exchange to a project\u2019s context"}
+        {state === "saved"
+          ? "Saved to project context"
+          : "Save this exchange to a project\u2019s context"}
       </button>
     );
   }
@@ -94,12 +102,18 @@ export function SaveContextBar({
       <span className="text-text-secondary">Save this into</span>
       <select
         value={effectiveTarget ?? ""}
-        onChange={(e) => { setTouched(true); setTarget(e.target.value); setState("idle"); }}
+        onChange={(e) => {
+          setTouched(true);
+          setTarget(e.target.value);
+          setState("idle");
+        }}
         className="ui-input-tight"
         aria-label="Project to save context into"
       >
         {savable.map((p) => (
-          <option key={p.id} value={p.name}>{p.name}</option>
+          <option key={p.id} value={p.name}>
+            {p.name}
+          </option>
         ))}
       </select>
       <span className="text-text-secondary">&rsquo;s context</span>
@@ -109,10 +123,18 @@ export function SaveContextBar({
         disabled={state === "saving" || state === "saved"}
         className={state === "saved" ? "ui-btn-secondary gap-1.5" : "ui-btn-save gap-1.5"}
       >
-        {state === "saving" ? <Loader2 className="ui-spinner-xs" /> : state === "saved" ? <Check className="h-3.5 w-3.5" /> : <BookmarkPlus className="h-3.5 w-3.5" />}
+        {state === "saving" ? (
+          <Loader2 className="ui-spinner-xs" />
+        ) : state === "saved" ? (
+          <Check className="h-3.5 w-3.5" />
+        ) : (
+          <BookmarkPlus className="h-3.5 w-3.5" />
+        )}
         {state === "saved" ? "Saved" : state === "saving" ? "Saving…" : "Save"}
       </button>
-      {state === "saved" && <span className="text-xs text-text-tertiary">Loki will use it going forward.</span>}
+      {state === "saved" && (
+        <span className="text-xs text-text-tertiary">Loki will use it going forward.</span>
+      )}
       {err && <span className="ui-error-xs">{err}</span>}
     </div>
   );

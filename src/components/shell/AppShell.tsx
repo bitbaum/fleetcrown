@@ -36,13 +36,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       } else {
         setSidebarCollapsed(true);
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, []);
 
   useEffect(() => {
     try {
       window.localStorage.setItem(SIDEBAR_COLLAPSE_STORAGE_KEY, String(sidebarCollapsed));
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, [sidebarCollapsed]);
 
   return (

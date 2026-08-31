@@ -4,7 +4,11 @@ import { useState, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  AuthShell, AuthCard, AuthField, AuthInput, AuthSubmitButton,
+  AuthShell,
+  AuthCard,
+  AuthField,
+  AuthInput,
+  AuthSubmitButton,
   AuthHeading,
 } from "@/components/auth/AuthShell";
 import { postJson } from "@/lib/api/fetch";
@@ -15,21 +19,27 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ token:
   const router = useRouter();
 
   const [password, setPassword] = useState("");
-  const [confirm, setConfirm]   = useState("");
-  const [error, setError]       = useState("");
-  const [loading, setLoading]   = useState(false);
-  const [done, setDone]         = useState(false);
+  const [confirm, setConfirm] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    if (password !== confirm) { setError("Passwords don't match."); return; }
+    if (password !== confirm) {
+      setError("Passwords don't match.");
+      return;
+    }
 
     setLoading(true);
     try {
       const res = await postJson("/api/auth/reset-password", { token, password });
       const data = await res.json();
-      if (!res.ok) { setError(data.error ?? "Reset failed."); return; }
+      if (!res.ok) {
+        setError(data.error ?? "Reset failed.");
+        return;
+      }
       setDone(true);
       setTimeout(() => router.push(ROUTES.SIGN_IN), 2000);
     } catch {
@@ -52,10 +62,7 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ token:
 
   return (
     <AuthShell>
-      <AuthHeading
-        title={AUTH_COPY.reset.title}
-        description={AUTH_COPY.reset.description}
-      />
+      <AuthHeading title={AUTH_COPY.reset.title} description={AUTH_COPY.reset.description} />
 
       <AuthCard>
         <form onSubmit={handleSubmit} className="space-y-4">

@@ -37,10 +37,15 @@ export function usePoll<T>(url: string | null, intervalMs: number): PollState<T>
   // Latest url in a ref so the loop reads the current one without restarting
   // the timer chain on every render.
   const urlRef = useRef(url);
-  useEffect(() => { urlRef.current = url; }, [url]);
+  useEffect(() => {
+    urlRef.current = url;
+  }, [url]);
 
   useEffect(() => {
-    if (!url) { setLoading(false); return; }
+    if (!url) {
+      setLoading(false);
+      return;
+    }
     let cancelled = false;
     let timer = 0;
 
@@ -64,7 +69,10 @@ export function usePoll<T>(url: string | null, intervalMs: number): PollState<T>
     };
     void tick();
 
-    return () => { cancelled = true; window.clearTimeout(timer); };
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
   }, [url, intervalMs, revision]);
 
   return { data, loading, error, refetch };

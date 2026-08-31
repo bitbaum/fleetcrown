@@ -10,7 +10,7 @@ const Body = z.object({
   email: z.string().trim().email().toLowerCase(),
 });
 
-const LIMIT  = 5;
+const LIMIT = 5;
 const WINDOW = RATE_LIMIT_WINDOW_SHORT_MS;
 
 export async function POST(req: NextRequest) {
@@ -32,7 +32,10 @@ export async function POST(req: NextRequest) {
   try {
     const token = await createEmailVerificationToken(user.id);
     const verifyUrl = `${appUrl()}/verify-email/${token}`;
-    const { subject, html, text } = verifyEmailTemplate(verifyUrl, user.name ?? email.split("@")[0]);
+    const { subject, html, text } = verifyEmailTemplate(
+      verifyUrl,
+      user.name ?? email.split("@")[0],
+    );
     sendEmailFire(email, subject, html, text);
   } catch (err) {
     console.error("[resend-verification] error:", err);

@@ -2,10 +2,22 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ExternalLink, ListChecks, Loader2, MessageCircle, Monitor, TerminalSquare } from "lucide-react";
+import {
+  ExternalLink,
+  ListChecks,
+  Loader2,
+  MessageCircle,
+  Monitor,
+  TerminalSquare,
+} from "lucide-react";
 import { MarkdownText, type CitationMap } from "@/components/ui/markdown-text";
 import type { LokiMessage } from "./types";
-import { deriveMultiDispatchView, dispatchStatusLabel, dispatchToneDotClass, type MultiDispatchAttempt } from "@/lib/dispatch-status";
+import {
+  deriveMultiDispatchView,
+  dispatchStatusLabel,
+  dispatchToneDotClass,
+  type MultiDispatchAttempt,
+} from "@/lib/dispatch-status";
 import { useDispatchLiveStatus } from "@/hooks/use-dispatch-live-status";
 import { isBuilderChannel } from "@/lib/constants/statuses";
 /** Human-readable label for an assistant turn's kind badge. SSOT for the
@@ -74,8 +86,7 @@ function DispatchFooter({ meta }: { meta: Record<string, unknown> | null }) {
   // failed dispatch's Control/Terminal buttons at a project that was SKIPPED.
   const primaryProject = multiView ? multiView.primaryProject : (projectKeys[0] ?? null);
   const failed = meta.ok === false;
-  const runnerConnected =
-    typeof meta.runnerConnected === "boolean" ? meta.runnerConnected : null;
+  const runnerConnected = typeof meta.runnerConnected === "boolean" ? meta.runnerConnected : null;
   const { label: staticStatus, warn } = dispatchStatusLabel({
     ok: failed ? false : true,
     mode: typeof meta.mode === "string" ? meta.mode : null,
@@ -92,7 +103,9 @@ function DispatchFooter({ meta }: { meta: Record<string, unknown> | null }) {
     ? dispatchToneDotClass(multiView.tone)
     : live
       ? dispatchToneDotClass(live.tone)
-      : warn ? "ui-dot-warning" : "ui-dot-positive";
+      : warn
+        ? "ui-dot-warning"
+        : "ui-dot-positive";
   // Only present when the operator pinned a non-default model in the composer.
   const agent = typeof meta.agent === "string" ? meta.agent : null;
   const model = typeof meta.model === "string" ? meta.model : null;
@@ -114,7 +127,10 @@ function DispatchFooter({ meta }: { meta: Record<string, unknown> | null }) {
       </div>
       {primaryProject && (
         <div className="ui-loki-dispatch-actions">
-          <Link href={`/control?focus=${encodeURIComponent(primaryProject)}`} className="ui-dispatch-watch-link">
+          <Link
+            href={`/control?focus=${encodeURIComponent(primaryProject)}`}
+            className="ui-dispatch-watch-link"
+          >
             <Monitor className="h-3.5 w-3.5" />
             Control state
           </Link>
@@ -154,7 +170,9 @@ function QueuedActionFooter({ meta }: { meta: Record<string, unknown> | null }) 
   return (
     <Link href="/today#actions" className="ui-loki-queued-action">
       <ListChecks className="h-3.5 w-3.5" />
-      <span>Added to your approval queue: <strong>{title}</strong> — review to run it</span>
+      <span>
+        Added to your approval queue: <strong>{title}</strong> — review to run it
+      </span>
     </Link>
   );
 }
@@ -189,9 +207,7 @@ function NeedsProjectPicker({
   if (!pendingText || options.length === 0) return null;
 
   const needle = query.trim().toLowerCase();
-  const shown = needle
-    ? options.filter((name) => name.toLowerCase().includes(needle))
-    : options;
+  const shown = needle ? options.filter((name) => name.toLowerCase().includes(needle)) : options;
 
   return (
     <div className="ui-loki-picker">
@@ -256,7 +272,10 @@ export function Transcript({
 
   if (loading) {
     return (
-      <div className="flex min-h-0 flex-1 items-center justify-center text-sm text-text-muted" role="status">
+      <div
+        className="flex min-h-0 flex-1 items-center justify-center text-sm text-text-muted"
+        role="status"
+      >
         <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading conversation
       </div>
     );
@@ -278,35 +297,42 @@ export function Transcript({
         still scroll normally.
       */}
       <div className="mt-auto flex flex-col gap-3">
-      {messages.map((m) =>
-        m.role === "user" ? (
-          <div key={m.id} className="ui-loki-bubble ui-loki-bubble-user">
-            {m.content}
-          </div>
-        ) : (
-          <div key={m.id} className="flex flex-col">
-            {m.kind && <span className="ui-loki-kind">{KIND_LABEL[m.kind] ?? m.kind}</span>}
-            <div className="ui-loki-bubble ui-loki-bubble-assistant">
-              <MarkdownText text={m.content} className="space-y-2" citations={citationsFrom(m.meta)} />
+        {messages.map((m) =>
+          m.role === "user" ? (
+            <div key={m.id} className="ui-loki-bubble ui-loki-bubble-user">
+              {m.content}
             </div>
-            {m.kind === "command" && onPickProject && (
-              <NeedsProjectPicker
-                meta={m.meta}
-                onPick={onPickProject}
-                onAnswerAnyway={onAnswerAnyway}
-              />
-            )}
-            {m.kind === "dispatch" && <DispatchFooter meta={m.meta} />}
-            {m.kind === "chat" && <QueuedActionFooter meta={m.meta} />}
+          ) : (
+            <div key={m.id} className="flex flex-col">
+              {m.kind && <span className="ui-loki-kind">{KIND_LABEL[m.kind] ?? m.kind}</span>}
+              <div className="ui-loki-bubble ui-loki-bubble-assistant">
+                <MarkdownText
+                  text={m.content}
+                  className="space-y-2"
+                  citations={citationsFrom(m.meta)}
+                />
+              </div>
+              {m.kind === "command" && onPickProject && (
+                <NeedsProjectPicker
+                  meta={m.meta}
+                  onPick={onPickProject}
+                  onAnswerAnyway={onAnswerAnyway}
+                />
+              )}
+              {m.kind === "dispatch" && <DispatchFooter meta={m.meta} />}
+              {m.kind === "chat" && <QueuedActionFooter meta={m.meta} />}
+            </div>
+          ),
+        )}
+        {sending && (
+          <div
+            className="ui-loki-bubble ui-loki-bubble-assistant flex items-center gap-2 text-text-tertiary"
+            role="status"
+          >
+            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loki is thinking
           </div>
-        ),
-      )}
-      {sending && (
-        <div className="ui-loki-bubble ui-loki-bubble-assistant flex items-center gap-2 text-text-tertiary" role="status">
-          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loki is thinking
-        </div>
-      )}
-      <div ref={endRef} />
+        )}
+        <div ref={endRef} />
       </div>
     </div>
   );

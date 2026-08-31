@@ -9,7 +9,12 @@ export function ThoughtVideoEmbed({ url }: { url: string }) {
   const parsed = parseVideoEmbed(url);
   if (!parsed) {
     return (
-      <a href={url} target="_blank" rel="noopener noreferrer" className="text-accent-text underline">
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-accent-text underline"
+      >
         {url}
       </a>
     );

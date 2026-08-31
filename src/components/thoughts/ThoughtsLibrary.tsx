@@ -33,13 +33,19 @@ export function ThoughtsLibrary({
   const rankedTags = useMemo(() => {
     const counts = new Map<string, number>();
     for (const a of articles) for (const t of a.tags) counts.set(t, (counts.get(t) ?? 0) + 1);
-    return [...tags].sort((a, b) => (counts.get(b) ?? 0) - (counts.get(a) ?? 0) || a.localeCompare(b));
+    return [...tags].sort(
+      (a, b) => (counts.get(b) ?? 0) - (counts.get(a) ?? 0) || a.localeCompare(b),
+    );
   }, [articles, tags]);
   const visibleTags = showAllTags
     ? rankedTags
-    : rankedTags.slice(0, TOP_TAGS).concat(
-        activeTag !== "all" && !rankedTags.slice(0, TOP_TAGS).includes(activeTag) ? [activeTag] : [],
-      );
+    : rankedTags
+        .slice(0, TOP_TAGS)
+        .concat(
+          activeTag !== "all" && !rankedTags.slice(0, TOP_TAGS).includes(activeTag)
+            ? [activeTag]
+            : [],
+        );
   const hiddenTagCount = rankedTags.length - Math.min(TOP_TAGS, rankedTags.length);
 
   const filtered = useMemo(() => {

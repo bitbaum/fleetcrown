@@ -52,12 +52,12 @@ export function MermaidDiagram({ chart }: { chart: string }) {
         startOnLoad: false,
         theme: dark ? "dark" : "default",
         themeVariables: {
-          background:          "transparent",
-          primaryColor:        resolveColorVar("--surface-raised",  fallback.surfaceRaised),
-          primaryTextColor:    resolveColorVar("--text-primary",    fallback.textPrimary),
-          lineColor:           resolveColorVar("--text-tertiary",   fallback.textTertiary),
-          edgeLabelBackground: resolveColorVar("--surface-base",    fallback.surfaceBase),
-          clusterBkg:          resolveColorVar("--surface-raised",  fallback.surfaceRaised),
+          background: "transparent",
+          primaryColor: resolveColorVar("--surface-raised", fallback.surfaceRaised),
+          primaryTextColor: resolveColorVar("--text-primary", fallback.textPrimary),
+          lineColor: resolveColorVar("--text-tertiary", fallback.textTertiary),
+          edgeLabelBackground: resolveColorVar("--surface-base", fallback.surfaceBase),
+          clusterBkg: resolveColorVar("--surface-raised", fallback.surfaceRaised),
         },
         fontFamily: "inherit",
       });
@@ -69,11 +69,14 @@ export function MermaidDiagram({ chart }: { chart: string }) {
         .catch(() => {
           if (!cancelled && ref.current) {
             ref.current.textContent = chart;
-            ref.current.className = "font-mono text-xs text-text-tertiary whitespace-pre overflow-x-auto";
+            ref.current.className =
+              "font-mono text-xs text-text-tertiary whitespace-pre overflow-x-auto";
           }
         });
     });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [id, chart, dark]);
 
   return (

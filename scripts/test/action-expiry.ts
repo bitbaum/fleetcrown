@@ -24,11 +24,17 @@ const check = (name: string, cond: boolean) => {
 // ── Timed events ────────────────────────────────────────────────────────────
 check(
   "timed event that ended an hour ago ⇒ passed",
-  isEventSlotPassed({ eventStart: "2026-08-06T08:00:00Z", eventEnd: "2026-08-06T09:00:00Z" }, NOW) === true,
+  isEventSlotPassed(
+    { eventStart: "2026-08-06T08:00:00Z", eventEnd: "2026-08-06T09:00:00Z" },
+    NOW,
+  ) === true,
 );
 check(
   "timed event still running right now ⇒ NOT passed",
-  isEventSlotPassed({ eventStart: "2026-08-06T09:30:00Z", eventEnd: "2026-08-06T11:00:00Z" }, NOW) === false,
+  isEventSlotPassed(
+    { eventStart: "2026-08-06T09:30:00Z", eventEnd: "2026-08-06T11:00:00Z" },
+    NOW,
+  ) === false,
 );
 check(
   "timed event later today ⇒ NOT passed",
@@ -65,12 +71,15 @@ check(
 // to age out on the ordinary time limit instead of being silently dropped.
 check(
   "message-shaped payload (no structured time) ⇒ NOT passed",
-  isEventSlotPassed({
-    to: "primary",
-    channel: "calendar",
-    subject: "Appointment with Simon",
-    body: "Create primary calendar event: 'Appointment with Simon' from 2026-01-01T15:00:00+02:00 to 2026-01-01T16:00:00+02:00",
-  }, NOW) === false,
+  isEventSlotPassed(
+    {
+      to: "primary",
+      channel: "calendar",
+      subject: "Appointment with Simon",
+      body: "Create primary calendar event: 'Appointment with Simon' from 2026-01-01T15:00:00+02:00 to 2026-01-01T16:00:00+02:00",
+    },
+    NOW,
+  ) === false,
 );
 check("empty payload ⇒ NOT passed", isEventSlotPassed({}, NOW) === false);
 check("null payload ⇒ NOT passed", isEventSlotPassed(null, NOW) === false);

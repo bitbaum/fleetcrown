@@ -3,10 +3,7 @@ import { readIdParam, readJsonBody } from "@/lib/api/route-helpers";
 import { createEntityInteraction, CreateInteractionBody } from "@/db/queries/utils";
 import { requirePrivateApiAccess } from "@/lib/private-zone-api";
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const access = await requirePrivateApiAccess();
   if (access instanceof NextResponse) return access;
   const { userId } = access;

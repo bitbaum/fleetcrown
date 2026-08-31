@@ -85,11 +85,7 @@ export function ProfileSettings({ user }: Props) {
       {error && <p className="ui-error">{error}</p>}
       {saved && <p className="text-sm text-text-secondary">Saved.</p>}
 
-      <button
-        onClick={save}
-        disabled={saving || !dirty}
-        className="ui-btn-primary"
-      >
+      <button onClick={save} disabled={saving || !dirty} className="ui-btn-primary">
         {saving && <Loader2 className="ui-spinner" />}
         Save changes
       </button>

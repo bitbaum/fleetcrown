@@ -35,19 +35,32 @@ export async function POST(req: NextRequest) {
 
   const parsed = Body.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid body", details: parsed.error.flatten() }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid body", details: parsed.error.flatten() },
+      { status: 400 },
+    );
   }
   const { name, description, visibility, init_readme, template } = parsed.data;
 
   const token = await getGithubToken(userId);
   if (!token) {
     return NextResponse.json(
-      { error: "No GitHub account linked. Sign in with GitHub or use the Connect GitHub button on /control/import.", hasGithub: false },
+      {
+        error:
+          "No GitHub account linked. Sign in with GitHub or use the Connect GitHub button on /control/import.",
+        hasGithub: false,
+      },
       { status: 400 },
     );
   }
 
-  const result = await provisionGithubRepo(token, { name, description, visibility, initReadme: init_readme, template });
+  const result = await provisionGithubRepo(token, {
+    name,
+    description,
+    visibility,
+    initReadme: init_readme,
+    template,
+  });
   if (!result.ok) {
     return NextResponse.json(
       { error: result.error, detail: result.detail, status: result.status },
@@ -60,7 +73,11 @@ export async function POST(req: NextRequest) {
   let projectId: string;
   let projectName: string;
   try {
-    const project = await createProject(userId, { name, description: description ?? undefined, gitUrl: repo.html_url }, SOURCE_FLEETCROWN_UI);
+    const project = await createProject(
+      userId,
+      { name, description: description ?? undefined, gitUrl: repo.html_url },
+      SOURCE_FLEETCROWN_UI,
+    );
     projectId = project.id;
     projectName = project.name;
     scheduleProjectProfileReindexByEntityId(userId, project.id);
@@ -79,7 +96,10 @@ export async function POST(req: NextRequest) {
   }
 
   const tpl = TEMPLATES[template];
-  const firstTask = renderTemplate(tpl.firstTask, { name: projectName, description: description ?? `Started from FleetCrown · ${name}` });
+  const firstTask = renderTemplate(tpl.firstTask, {
+    name: projectName,
+    description: description ?? `Started from FleetCrown · ${name}`,
+  });
 
   return NextResponse.json({
     ok: true,

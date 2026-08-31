@@ -38,7 +38,7 @@ export function chunkMarkdown(
     }
     let buf = "";
     for (const para of sec.split(/\n{2,}/)) {
-      if (buf && (buf.length + para.length + 2) > maxChars) {
+      if (buf && buf.length + para.length + 2 > maxChars) {
         chunks.push(buf.trim());
         buf = para;
       } else {

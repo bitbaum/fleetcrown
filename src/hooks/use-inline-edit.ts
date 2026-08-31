@@ -30,7 +30,10 @@ export function useInlineEdit<T>(initial: T) {
     saving,
     setDraft,
     /** Enter edit mode, seeding the draft with `current`. */
-    start: (current: T) => { setDraft(current); setEditing(true); },
+    start: (current: T) => {
+      setDraft(current);
+      setEditing(true);
+    },
     /** Exit edit mode without saving. */
     cancel: () => setEditing(false),
     /**

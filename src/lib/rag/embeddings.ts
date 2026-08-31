@@ -43,7 +43,9 @@ async function embedBatch(url: string, inputs: string[]): Promise<(number[] | nu
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...(process.env.EMBEDDINGS_API_KEY ? { Authorization: `Bearer ${process.env.EMBEDDINGS_API_KEY}` } : {}),
+        ...(process.env.EMBEDDINGS_API_KEY
+          ? { Authorization: `Bearer ${process.env.EMBEDDINGS_API_KEY}` }
+          : {}),
       },
       body: JSON.stringify({ model: model(), input: inputs }),
       signal: AbortSignal.timeout(30_000),

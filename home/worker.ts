@@ -93,7 +93,7 @@ export function applyEvent(
     return phase === "live" ? { cancel: event } : {};
   }
   if (event.kind !== "bridge.dispatch") return {};
-  if (state.startedRunIds.has(event.runId)) return {};   // already handled
+  if (state.startedRunIds.has(event.runId)) return {}; // already handled
 
   if (phase === "replay") {
     // Track dispatches without a matching worker.started yet. If one
@@ -123,7 +123,9 @@ function executeCancel(event: Event) {
   if (event.kind !== "bridge.cancel") return;
   try {
     sendRawKey(event.project, CTRL_C);
-    console.log(`[worker] sent Ctrl+C to project=${event.project} runId=${event.runId} reason=${event.reason}`);
+    console.log(
+      `[worker] sent Ctrl+C to project=${event.project} runId=${event.runId} reason=${event.reason}`,
+    );
   } catch (e) {
     // Symmetric with executeDispatch's inject-failure branch: emit
     // worker.crashed so the brain's state.applyEvent sets lastError and
@@ -149,8 +151,11 @@ function executeDispatch(state: WorkerState, event: Event) {
     // failure here doesn't block the inject; the stop hook just falls
     // back to a runId-less worker.finished and the relabel doesn't match
     // (degraded mode, not broken).
-    try { fs.writeFileSync(runSentinelPath(event.project), event.runId); }
-    catch { /* read-only /tmp or weird filesystem — keep going */ }
+    try {
+      fs.writeFileSync(runSentinelPath(event.project), event.runId);
+    } catch {
+      /* read-only /tmp or weird filesystem — keep going */
+    }
     injectIntoTab(event.project, event.prompt);
     appendEvent({
       kind: "worker.started",
@@ -162,7 +167,9 @@ function executeDispatch(state: WorkerState, event: Event) {
       runId: event.runId,
     });
     state.startedRunIds.add(event.runId);
-    console.log(`[worker] injected runId=${event.runId} intent=${event.intent} project=${event.project}`);
+    console.log(
+      `[worker] injected runId=${event.runId} intent=${event.intent} project=${event.project}`,
+    );
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     appendEvent({
@@ -178,8 +185,11 @@ function executeDispatch(state: WorkerState, event: Event) {
     // unrelated worker.finished with our crashed runId. Same trap that
     // motivated agent-hook-bridge.sh:finish_orchestration_run's rm — apply
     // it here too so the dispatch-fail path doesn't leak state.
-    try { fs.rmSync(runSentinelPath(event.project), { force: true }); }
-    catch { /* sentinel write may have failed too; nothing to clean up */ }
+    try {
+      fs.rmSync(runSentinelPath(event.project), { force: true });
+    } catch {
+      /* sentinel write may have failed too; nothing to clean up */
+    }
     console.error(`[worker] inject failed runId=${event.runId}: ${msg}`);
   }
 }
@@ -194,7 +204,7 @@ function start() {
     (event, phase) => {
       const { dispatch, cancel } = applyEvent(state, event, phase);
       if (dispatch) executeDispatch(state, dispatch);
-      if (cancel)   executeCancel(cancel);
+      if (cancel) executeCancel(cancel);
     },
     (err) => console.error("[worker]", err.message),
   );
@@ -204,7 +214,9 @@ function start() {
   // the state map is settled.
   setImmediate(() => {
     if (state.pendingDispatches.size === 0) return;
-    console.log(`[worker] ${state.pendingDispatches.size} dispatch(es) pending from previous boot — executing`);
+    console.log(
+      `[worker] ${state.pendingDispatches.size} dispatch(es) pending from previous boot — executing`,
+    );
     for (const event of state.pendingDispatches.values()) executeDispatch(state, event);
     state.pendingDispatches.clear();
   });
@@ -216,7 +228,7 @@ function start() {
     handle.close();
     process.exit(0);
   };
-  process.on("SIGINT",  () => shutdown("SIGINT"));
+  process.on("SIGINT", () => shutdown("SIGINT"));
   process.on("SIGTERM", () => shutdown("SIGTERM"));
 }
 
@@ -228,23 +240,43 @@ function start() {
 function selfTest() {
   const fresh = () => makeWorkerState();
   const dispatchEvent = (runId: string): Event => ({
-    v: 1, id: runId, ts: "2026-01-01T00:00:00Z",
-    kind: "bridge.dispatch", project: "Test", intent: "next_best",
-    prompt: "go", runId, autonomy: "confirm",
+    v: 1,
+    id: runId,
+    ts: "2026-01-01T00:00:00Z",
+    kind: "bridge.dispatch",
+    project: "Test",
+    intent: "next_best",
+    prompt: "go",
+    runId,
+    autonomy: "confirm",
   });
   const startedEvent = (runId: string): Event => ({
-    v: 1, id: `started-${runId}`, ts: "2026-01-01T00:01:00Z",
-    kind: "worker.started", project: "Test", adapter: "claude",
-    intent: "next_best", runId,
+    v: 1,
+    id: `started-${runId}`,
+    ts: "2026-01-01T00:01:00Z",
+    kind: "worker.started",
+    project: "Test",
+    adapter: "claude",
+    intent: "next_best",
+    runId,
   });
   const crashedEvent = (runId: string): Event => ({
-    v: 1, id: `crashed-${runId}`, ts: "2026-01-01T00:01:00Z",
-    kind: "worker.crashed", project: "Test", runId,
+    v: 1,
+    id: `crashed-${runId}`,
+    ts: "2026-01-01T00:01:00Z",
+    kind: "worker.crashed",
+    project: "Test",
+    runId,
     error: "inject failed: tab not found",
   });
   const cancelEvent = (runId: string): Event => ({
-    v: 1, id: `cancel-${runId}`, ts: "2026-01-01T00:02:00Z",
-    kind: "bridge.cancel", project: "Test", runId, reason: "user clicked Cancel",
+    v: 1,
+    id: `cancel-${runId}`,
+    ts: "2026-01-01T00:02:00Z",
+    kind: "bridge.cancel",
+    project: "Test",
+    runId,
+    reason: "user clicked Cancel",
   });
 
   type Case = { name: string; run: () => boolean };
@@ -270,7 +302,7 @@ function selfTest() {
       run: () => {
         const s = fresh();
         applyEvent(s, dispatchEvent("a"), "replay");
-        applyEvent(s, startedEvent("a"),  "replay");
+        applyEvent(s, startedEvent("a"), "replay");
         return s.pendingDispatches.size === 0 && s.startedRunIds.has("a");
       },
     },
@@ -280,7 +312,7 @@ function selfTest() {
         const s = fresh();
         applyEvent(s, dispatchEvent("a"), "replay");
         applyEvent(s, dispatchEvent("b"), "replay");
-        applyEvent(s, startedEvent("a"),  "replay");
+        applyEvent(s, startedEvent("a"), "replay");
         // 'a' resolved, 'b' is the crash-recovery candidate.
         return s.pendingDispatches.size === 1 && s.pendingDispatches.has("b");
       },
@@ -299,7 +331,7 @@ function selfTest() {
       run: () => {
         const s = fresh();
         applyEvent(s, dispatchEvent("a"), "replay");
-        applyEvent(s, crashedEvent("a"),  "replay");
+        applyEvent(s, crashedEvent("a"), "replay");
         // After a crashed event, the run is done — no pending recovery, no
         // chance of a live re-dispatch firing again.
         return s.pendingDispatches.size === 0 && s.startedRunIds.has("a");
@@ -336,7 +368,7 @@ function selfTest() {
       run: () => {
         const s = fresh();
         applyEvent(s, dispatchEvent("a"), "replay");
-        applyEvent(s, cancelEvent("a"),   "replay");
+        applyEvent(s, cancelEvent("a"), "replay");
         return s.pendingDispatches.size === 0 && s.startedRunIds.has("a");
       },
     },
@@ -354,9 +386,12 @@ function selfTest() {
       run: () => {
         const s = fresh();
         const idle: Event = {
-          v: 1, id: "i1", ts: "2026-01-01T00:00:00Z",
-          kind: "worker.idle", project: "Test",
-          handoff: { status: "", done:"", next: "", tests: "", todos: "", health: "good" },
+          v: 1,
+          id: "i1",
+          ts: "2026-01-01T00:00:00Z",
+          kind: "worker.idle",
+          project: "Test",
+          handoff: { status: "", done: "", next: "", tests: "", todos: "", health: "good" },
         };
         applyEvent(s, idle, "live");
         return s.startedRunIds.size === 0 && s.pendingDispatches.size === 0;
@@ -364,10 +399,16 @@ function selfTest() {
     },
   ];
 
-  let pass = 0, fail = 0;
+  let pass = 0,
+    fail = 0;
   for (const c of cases) {
-    if (c.run()) { console.log(`  ✓ ${c.name}`); pass++; }
-    else         { console.log(`  ✗ ${c.name}`); fail++; }
+    if (c.run()) {
+      console.log(`  ✓ ${c.name}`);
+      pass++;
+    } else {
+      console.log(`  ✗ ${c.name}`);
+      fail++;
+    }
   }
   console.log(`\n${pass}/${pass + fail} passed`);
   if (fail > 0) process.exit(1);

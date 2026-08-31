@@ -35,7 +35,9 @@ export async function setupNotifyTrigger(): Promise<void> {
         AFTER INSERT OR UPDATE ON project_states
         FOR EACH ROW EXECUTE FUNCTION ${NOTIFY_FN_NAME}();
     `);
-    console.log(`[instrumentation] Postgres NOTIFY trigger installed on project_states (fn=${NOTIFY_FN_NAME}, channel=${NOTIFY_CHANNEL})`);
+    console.log(
+      `[instrumentation] Postgres NOTIFY trigger installed on project_states (fn=${NOTIFY_FN_NAME}, channel=${NOTIFY_CHANNEL})`,
+    );
   } finally {
     await sql.end();
   }

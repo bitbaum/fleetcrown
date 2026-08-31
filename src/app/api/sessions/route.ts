@@ -8,17 +8,19 @@ import { getApiUserId } from "@/lib/session";
 // readFileSync has no Next.js dynamic signal — force dynamic so middleware runs.
 export const dynamic = "force-dynamic";
 
-export type SessionData = {
-  found: false;
-} | {
-  found: true;
-  done: string;
-  next: string;
-  tests: string;
-  todos: string;
-  health: string;
-  raw: string;
-};
+export type SessionData =
+  | {
+      found: false;
+    }
+  | {
+      found: true;
+      done: string;
+      next: string;
+      tests: string;
+      todos: string;
+      health: string;
+      raw: string;
+    };
 
 /** Find a session file matching the project name (case-insensitive, dash-tolerant). */
 function findSessionFile(projectName: string): string | null {

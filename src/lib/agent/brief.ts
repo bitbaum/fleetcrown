@@ -60,27 +60,44 @@ export async function buildDailyBrief(userId: string): Promise<Directive[]> {
 
   directives.push(
     stuck === null
-      ? { question: `goals stuck at 0% for ${STUCK_DAYS}+ days`, answer: [], method: "QUERY FAILED — treat as unknown, not as none" }
+      ? {
+          question: `goals stuck at 0% for ${STUCK_DAYS}+ days`,
+          answer: [],
+          method: "QUERY FAILED — treat as unknown, not as none",
+        }
       : {
           question: `goals stuck at 0% for ${STUCK_DAYS}+ days`,
           method: `SQL: status=active AND progress=0 AND updated_at < now()-${STUCK_DAYS}d`,
-          answer: stuck.map((g) => `${g.title}${g.entityName ? ` (${g.entityName})` : ""} — untouched since ${dateLabel(g.updatedAt)}`),
+          answer: stuck.map(
+            (g) =>
+              `${g.title}${g.entityName ? ` (${g.entityName})` : ""} — untouched since ${dateLabel(g.updatedAt)}`,
+          ),
         },
   );
 
   directives.push(
     goalsDue === null
-      ? { question: `goals with a target date inside ${IMMINENT_DAYS} days`, answer: [], method: "QUERY FAILED — treat as unknown, not as none" }
+      ? {
+          question: `goals with a target date inside ${IMMINENT_DAYS} days`,
+          answer: [],
+          method: "QUERY FAILED — treat as unknown, not as none",
+        }
       : {
           question: `goals with a target date inside ${IMMINENT_DAYS} days`,
           method: `SQL: status=active AND target_date <= now()+${IMMINENT_DAYS}d`,
-          answer: goalsDue.map((g) => `${g.title} — due ${dateLabel(g.targetDate)}, ${g.progress ?? 0}% done`),
+          answer: goalsDue.map(
+            (g) => `${g.title} — due ${dateLabel(g.targetDate)}, ${g.progress ?? 0}% done`,
+          ),
         },
   );
 
   directives.push(
     commitments === null
-      ? { question: `commitments due inside ${IMMINENT_DAYS} days`, answer: [], method: "QUERY FAILED — treat as unknown, not as none" }
+      ? {
+          question: `commitments due inside ${IMMINENT_DAYS} days`,
+          answer: [],
+          method: "QUERY FAILED — treat as unknown, not as none",
+        }
       : {
           question: `commitments due inside ${IMMINENT_DAYS} days`,
           method: `SQL: status=active AND due_date <= now()+${IMMINENT_DAYS}d`,
@@ -90,7 +107,11 @@ export async function buildDailyBrief(userId: string): Promise<Directive[]> {
 
   directives.push(
     events === null
-      ? { question: `events/deadlines inside ${IMMINENT_DAYS} days`, answer: [], method: "QUERY FAILED — treat as unknown, not as none" }
+      ? {
+          question: `events/deadlines inside ${IMMINENT_DAYS} days`,
+          answer: [],
+          method: "QUERY FAILED — treat as unknown, not as none",
+        }
       : {
           question: `events/deadlines inside ${IMMINENT_DAYS} days`,
           method: `SQL: deadline <= now()+${IMMINENT_DAYS}d`,
@@ -105,7 +126,11 @@ export async function buildDailyBrief(userId: string): Promise<Directive[]> {
   // model re-invents it differently every turn.
   directives.push(
     habits === null
-      ? { question: "habit most at risk today", answer: [], method: "QUERY FAILED — treat as unknown, not as none" }
+      ? {
+          question: "habit most at risk today",
+          answer: [],
+          method: "QUERY FAILED — treat as unknown, not as none",
+        }
       : {
           question: "habit most at risk today",
           method: "not yet checked off today, ranked by streak at stake (longest first)",

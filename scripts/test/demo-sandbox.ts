@@ -24,9 +24,16 @@ import { readFileSync, readdirSync, statSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import {
-  DEMO_DENIED_PREFIXES, DEMO_DENIED_GET_PREFIXES, DEMO_HANDLER_ENFORCED,
-  DEMO_SAFE_FAMILIES, DEMO_WRITE_CARVEOUTS, DEMO_DENIAL_COPY,
-  DEMO_PARTIAL_PREFIXES, demoDenialFor, isDemoEmail, DEMO_EMAIL,
+  DEMO_DENIED_PREFIXES,
+  DEMO_DENIED_GET_PREFIXES,
+  DEMO_HANDLER_ENFORCED,
+  DEMO_SAFE_FAMILIES,
+  DEMO_WRITE_CARVEOUTS,
+  DEMO_DENIAL_COPY,
+  DEMO_PARTIAL_PREFIXES,
+  demoDenialFor,
+  isDemoEmail,
+  DEMO_EMAIL,
 } from "@/config/demo";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -35,7 +42,10 @@ function assert(condition: boolean, message: string): void {
   if (!condition) throw new Error(message);
 }
 let passed = 0;
-const ok = (condition: boolean, message: string) => { assert(condition, message); passed += 1; };
+const ok = (condition: boolean, message: string) => {
+  assert(condition, message);
+  passed += 1;
+};
 
 // ── The proxy matcher, as the runtime actually applies it ────────────────────
 // Extracted from source rather than hand-copied: a hand-copied duplicate of the
@@ -53,7 +63,10 @@ const MATCHER = proxyMatcher();
 // Sanity-check the extraction itself. If this fails, every reachability
 // assertion below is meaningless — a broken extractor that matches everything
 // would silently "pass" the whole suite.
-ok(MATCHER.test("/api/control/dispatch"), "extractor sanity: /api/control must be matcher-reachable");
+ok(
+  MATCHER.test("/api/control/dispatch"),
+  "extractor sanity: /api/control must be matcher-reachable",
+);
 ok(!MATCHER.test("/api/health"), "extractor sanity: /api/health must be matcher-excluded");
 
 // ── 1. Every middleware-enforced prefix is actually reachable ────────────────
@@ -64,20 +77,20 @@ for (const [prefix] of [...DEMO_DENIED_PREFIXES, ...DEMO_DENIED_GET_PREFIXES]) {
   ok(
     MATCHER.test(prefix),
     `${prefix} is denied in DEMO_DENIED_PREFIXES but the proxy matcher EXCLUDES it — ` +
-    `the gate can never fire. Move it to DEMO_HANDLER_ENFORCED and guard it in the handler.`,
+      `the gate can never fire. Move it to DEMO_HANDLER_ENFORCED and guard it in the handler.`,
   );
   const deepReachable = MATCHER.test(`${prefix}/probe`);
   const declaredPartial = prefix in DEMO_PARTIAL_PREFIXES;
   ok(
     deepReachable || declaredPartial,
     `${prefix} is gated, but paths BENEATH it are matcher-excluded, so the gate ` +
-    `covers only the bare path. If that is intended, declare it in ` +
-    `DEMO_PARTIAL_PREFIXES with the reason; if not, the sub-tree is unprotected.`,
+      `covers only the bare path. If that is intended, declare it in ` +
+      `DEMO_PARTIAL_PREFIXES with the reason; if not, the sub-tree is unprotected.`,
   );
   ok(
     !declaredPartial || !deepReachable,
     `${prefix} is listed in DEMO_PARTIAL_PREFIXES but its sub-paths ARE reachable — ` +
-    `the exemption is stale and now hides full coverage behind an excuse.`,
+      `the exemption is stale and now hides full coverage behind an excuse.`,
   );
 }
 
@@ -86,13 +99,13 @@ for (const [prefix, , file] of DEMO_HANDLER_ENFORCED) {
   ok(
     !MATCHER.test(`${prefix}/probe`),
     `${prefix} is listed as handler-enforced, but the proxy matcher DOES reach it — ` +
-    `put it in DEMO_DENIED_PREFIXES instead, where one rule covers every method.`,
+      `put it in DEMO_DENIED_PREFIXES instead, where one rule covers every method.`,
   );
   const source = readFileSync(join(ROOT, file), "utf8");
   ok(
     /denyDemoInHandler|isDemoEmailBlocked|isDemoUserId|requireNotDemo/.test(source),
     `${file} is named as the enforcement point for ${prefix} but calls no demo guard — ` +
-    `DEMO_HANDLER_ENFORCED would be documenting protection nobody wrote.`,
+      `DEMO_HANDLER_ENFORCED would be documenting protection nobody wrote.`,
   );
 }
 
@@ -100,7 +113,9 @@ for (const [prefix, , file] of DEMO_HANDLER_ENFORCED) {
 // The check that survives the next feature. Everything under src/app/api is
 // either denied (by prefix or in a handler) or explicitly declared safe.
 const apiDir = join(ROOT, "src/app/api");
-const families = readdirSync(apiDir).filter((f) => statSync(join(apiDir, f)).isDirectory()).sort();
+const families = readdirSync(apiDir)
+  .filter((f) => statSync(join(apiDir, f)).isDirectory())
+  .sort();
 
 const deniedFamilies = new Set(
   [...DEMO_DENIED_PREFIXES, ...DEMO_DENIED_GET_PREFIXES].map(([p]) => p.split("/")[2]),
@@ -112,8 +127,8 @@ for (const family of families) {
   ok(
     deniedFamilies.has(family) || handlerFamilies.has(family) || safeFamilies.has(family),
     `/api/${family} is not classified for the demo sandbox. Add it to DEMO_DENIED_PREFIXES ` +
-    `(if it can reach the box, someone's inbox, or a paid API) or to DEMO_SAFE_FAMILIES ` +
-    `(if it only touches the caller's own tenant data). See src/config/demo.ts.`,
+      `(if it can reach the box, someone's inbox, or a paid API) or to DEMO_SAFE_FAMILIES ` +
+      `(if it only touches the caller's own tenant data). See src/config/demo.ts.`,
   );
 }
 
@@ -127,16 +142,27 @@ for (const family of DEMO_SAFE_FAMILIES) {
 }
 
 // ── 4. The matcher itself: longest prefix wins, carve-outs beat parents ──────
-ok(demoDenialFor("/api/control/dispatch", "POST") === "dispatch", "control POST is dispatch-denied");
-ok(demoDenialFor("/api/control/activity", "POST") === null, "the activity carve-out beats its denied parent");
+ok(
+  demoDenialFor("/api/control/dispatch", "POST") === "dispatch",
+  "control POST is dispatch-denied",
+);
+ok(
+  demoDenialFor("/api/control/activity", "POST") === null,
+  "the activity carve-out beats its denied parent",
+);
 ok(demoDenialFor("/api/control/activity/capture", "POST") === null, "carve-outs cover sub-paths");
-ok(demoDenialFor("/api/control", "GET") === null, "reads are allowed — tenant scoping already limits them");
+ok(
+  demoDenialFor("/api/control", "GET") === null,
+  "reads are allowed — tenant scoping already limits them",
+);
 ok(demoDenialFor("/api/frontier", "GET") === "spend", "a GET that generates is still denied");
 ok(demoDenialFor("/api/projects", "POST") === null, "the demo may create its own projects");
 ok(demoDenialFor("/api/me/password", "PATCH") === "credentials", "the shared password is fixed");
 ok(demoDenialFor("/api/me", "PATCH") === null, "…but the rest of /api/me stays editable");
-ok(demoDenialFor("/api/controlled-substances", "POST") === null,
-   "prefix matching must be path-segment aware, not a bare startsWith");
+ok(
+  demoDenialFor("/api/controlled-substances", "POST") === null,
+  "prefix matching must be path-segment aware, not a bare startsWith",
+);
 
 // Carve-outs must name a path under a denied parent, or they are misleading
 // no-ops that suggest an exception exists where nothing was ever blocked.
@@ -153,14 +179,24 @@ const reasons = new Set([
 ]);
 for (const reason of reasons) {
   const copy = DEMO_DENIAL_COPY[reason];
-  ok(Boolean(copy) && copy.length > 30,
-     `denial reason "${reason}" needs copy a visitor can act on — a bare 403 reads as a broken app.`);
+  ok(
+    Boolean(copy) && copy.length > 30,
+    `denial reason "${reason}" needs copy a visitor can act on — a bare 403 reads as a broken app.`,
+  );
 }
 
 // ── 6. Identity ──────────────────────────────────────────────────────────────
 ok(isDemoEmail(DEMO_EMAIL), "the demo email identifies itself");
-ok(isDemoEmail(` ${DEMO_EMAIL.toUpperCase()} `), "case and surrounding space must not defeat the check");
+ok(
+  isDemoEmail(` ${DEMO_EMAIL.toUpperCase()} `),
+  "case and surrounding space must not defeat the check",
+);
 ok(!isDemoEmail("demo@fleetcrown.app.attacker.example"), "a suffix must not match");
-ok(!isDemoEmail(null) && !isDemoEmail(undefined) && !isDemoEmail(""), "absent email is not the demo");
+ok(
+  !isDemoEmail(null) && !isDemoEmail(undefined) && !isDemoEmail(""),
+  "absent email is not the demo",
+);
 
-console.log(`✓ demo sandbox — ${passed} assertions passed (${families.length} API families classified)`);
+console.log(
+  `✓ demo sandbox — ${passed} assertions passed (${families.length} API families classified)`,
+);

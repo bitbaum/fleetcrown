@@ -22,7 +22,8 @@ export function cleanDescription(desc: string | null | undefined): string | null
 // Operator-facing dumps (CLAUDE.md, dogfood notes, seam contracts) must never
 // reach a public hero. The live homepage leaked "KNOWN BUG" + webhook-secret
 // status from project descriptions on 2026-08-13.
-const INTERNAL_DUMP = /known bug|mutual dogfood|webhook_secret|hmac|42501|rls |seam (status|contract)|todo:|fixme:|orangecat_webhook/i;
+const INTERNAL_DUMP =
+  /known bug|mutual dogfood|webhook_secret|hmac|42501|rls |seam (status|contract)|todo:|fixme:|orangecat_webhook/i;
 
 const HERO_NOTE_MAX = 72;
 
@@ -51,8 +52,21 @@ export function publicHeroNote(desc: string | null | undefined): string | null {
  * was not actually filled in.
  */
 const PLACEHOLDER_ANSWERS = new Set([
-  "unknown", "n/a", "na", "none", "nil", "null", "tbd", "to be determined",
-  "not specified", "not applicable", "not known", "unspecified", "-", "—", "?",
+  "unknown",
+  "n/a",
+  "na",
+  "none",
+  "nil",
+  "null",
+  "tbd",
+  "to be determined",
+  "not specified",
+  "not applicable",
+  "not known",
+  "unspecified",
+  "-",
+  "—",
+  "?",
 ]);
 
 /**
@@ -105,7 +119,10 @@ export function answer(value: string | null | undefined): string | null {
  * header wants a summary, not an essay. Prefers whole-sentence boundaries and
  * appends an ellipsis when it trims.
  */
-export function summarizeDescription(desc: string | null | undefined, maxChars = 220): string | null {
+export function summarizeDescription(
+  desc: string | null | undefined,
+  maxChars = 220,
+): string | null {
   const clean = cleanDescription(desc);
   if (!clean || clean.length <= maxChars) return clean;
   const sentences = clean.split(/(?<=[.!?])\s+/);

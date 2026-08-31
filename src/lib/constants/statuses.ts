@@ -32,7 +32,7 @@ export type CommitmentStatus = (typeof COMMITMENT_STATUS)[keyof typeof COMMITMEN
  * control-states.ts, which happen to share strings but mean a different thing.
  */
 export const SESSION_STATUS = {
-  READY: "ready",     // agent finished its turn — safe to auto-continue
+  READY: "ready", // agent finished its turn — safe to auto-continue
   WORKING: "working", // agent mid-turn — never interrupt
   BLOCKED: "blocked", // agent blocked on user/input — never interrupt
 } as const;
@@ -53,20 +53,20 @@ export type ActionStatus = (typeof ACTION_STATUS)[keyof typeof ACTION_STATUS];
 
 /** Action type — what kind of action Loki is proposing. */
 export const ACTION_TYPE = {
-  SEND_MESSAGE:      "send_message",
-  SEND_EMAIL:        "send_email",
-  CREATE_EVENT:      "create_event",
+  SEND_MESSAGE: "send_message",
+  SEND_EMAIL: "send_email",
+  CREATE_EVENT: "create_event",
   CREATE_COMMITMENT: "create_commitment",
-  FOLLOW_UP:         "follow_up",
+  FOLLOW_UP: "follow_up",
   /** Approve → injectPrompt a prepared prompt into a project (feedback digester). */
-  DISPATCH_PROMPT:   "dispatch_prompt",
+  DISPATCH_PROMPT: "dispatch_prompt",
   /** Accept a parsed contact into this user's private book. Never a scrape. */
-  IMPORT_PERSON:     "import_person",
+  IMPORT_PERSON: "import_person",
   /** Accept a field proposal onto an existing person. Never silent. */
-  ENRICH_PERSON:     "enrich_person",
+  ENRICH_PERSON: "enrich_person",
   /** Collapse two person rows that are the same human. Robots stay out. */
-  MERGE_PEOPLE:      "merge_people",
-  OTHER:             "other",
+  MERGE_PEOPLE: "merge_people",
+  OTHER: "other",
 } as const;
 export type ActionType = (typeof ACTION_TYPE)[keyof typeof ACTION_TYPE];
 
@@ -83,13 +83,13 @@ export type ActionType = (typeof ACTION_TYPE)[keyof typeof ACTION_TYPE];
  * explicit act — the same IRON RULE the action queue runs on.
  */
 export const HUMAN_TASK_STATUS = {
-  DRAFT:     "draft",      // written down; nobody has been asked
-  ASSIGNED:  "assigned",   // handed to a person, awaiting their answer
-  ACCEPTED:  "accepted",   // they said yes and are on it
-  DECLINED:  "declined",   // they said no — reassign or drop
-  DELIVERED: "delivered",  // they say it is done; you have not checked yet
-  DONE:      "done",       // you accepted the work
-  CANCELLED: "cancelled",  // called off
+  DRAFT: "draft", // written down; nobody has been asked
+  ASSIGNED: "assigned", // handed to a person, awaiting their answer
+  ACCEPTED: "accepted", // they said yes and are on it
+  DECLINED: "declined", // they said no — reassign or drop
+  DELIVERED: "delivered", // they say it is done; you have not checked yet
+  DONE: "done", // you accepted the work
+  CANCELLED: "cancelled", // called off
 } as const;
 export type HumanTaskStatus = (typeof HUMAN_TASK_STATUS)[keyof typeof HUMAN_TASK_STATUS];
 
@@ -205,14 +205,14 @@ export const DEFAULT_BUILDER_CHANNEL: BuilderChannel = "local";
  *  entities table; capability (check-in vs market) is decided by that SSOT,
  *  never by a parallel robots table. */
 export const ENTITY_TYPE = {
-  PERSON:  "person",
-  ROBOT:   "robot",
+  PERSON: "person",
+  ROBOT: "robot",
   PROJECT: "project",
   COMPANY: "company",
-  GOAL:    "goal",
-  TOOL:    "tool",
+  GOAL: "goal",
+  TOOL: "tool",
   CONCEPT: "concept",
-  EVENT:   "event",
+  EVENT: "event",
 } as const;
 export type EntityType = (typeof ENTITY_TYPE)[keyof typeof ENTITY_TYPE];
 
@@ -227,7 +227,7 @@ export type HabitFrequency = (typeof HABIT_FREQUENCY)[keyof typeof HABIT_FREQUEN
 /** Returns true if a habit with the given frequency is due on the given day-of-week (0=Sun…6=Sat). */
 export function isHabitScheduled(frequency: HabitFrequency, dow: number): boolean {
   if (frequency === HABIT_FREQUENCY.WEEKDAYS) return dow >= 1 && dow <= 5;
-  if (frequency === HABIT_FREQUENCY.WEEKLY)   return dow === 1;
+  if (frequency === HABIT_FREQUENCY.WEEKLY) return dow === 1;
   return true;
 }
 
@@ -246,7 +246,8 @@ export const INTERACTION_DIRECTION = {
   INBOUND: "inbound",
   OUTBOUND: "outbound",
 } as const;
-export type InteractionDirection = (typeof INTERACTION_DIRECTION)[keyof typeof INTERACTION_DIRECTION];
+export type InteractionDirection =
+  (typeof INTERACTION_DIRECTION)[keyof typeof INTERACTION_DIRECTION];
 
 /** People-list sort modes — shared between the API parser, the UI cycle
  *  button, and the queries layer. Lives here (not in queries/people.ts)
@@ -254,13 +255,13 @@ export type InteractionDirection = (typeof INTERACTION_DIRECTION)[keyof typeof I
  *  server-only db module. */
 export const SORT_MODE = {
   RECENT: "recent",
-  NAME:   "name",
+  NAME: "name",
   HEALTH: "health",
 } as const;
 export type SortMode = (typeof SORT_MODE)[keyof typeof SORT_MODE];
 export const SORT_LABELS: Record<SortMode, string> = {
   [SORT_MODE.RECENT]: "Recent",
-  [SORT_MODE.NAME]:   "A–Z",
+  [SORT_MODE.NAME]: "A–Z",
   [SORT_MODE.HEALTH]: "Needs attention",
 };
 

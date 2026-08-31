@@ -145,7 +145,10 @@ export function parseThemePrompt(body: string): ParsedThemePrompt | null {
       return {
         index,
         raw,
-        source: raw.slice(0, raw.indexOf("\n") === -1 ? raw.length : raw.indexOf("\n")).replace(/^- /, "").trim(),
+        source: raw
+          .slice(0, raw.indexOf("\n") === -1 ? raw.length : raw.indexOf("\n"))
+          .replace(/^- /, "")
+          .trim(),
         text,
         verdict: classifyReportText(text),
       };
@@ -228,19 +231,32 @@ export function computeSignals(
   const expiresInDays = action.expiresAt
     ? Math.floor((action.expiresAt.getTime() - now.getTime()) / DAY_MS)
     : null;
-  const projectKey = typeof action.payload?.projectKey === "string" ? action.payload.projectKey : null;
+  const projectKey =
+    typeof action.payload?.projectKey === "string" ? action.payload.projectKey : null;
 
   if (!parsed || action.type !== ACTION_TYPE.DISPATCH_PROMPT) {
     return {
       kind: ADVICE_KIND.GENERIC,
-      totalReports: 0, credibleReports: 0, lowSignalReports: 0, steeringReports: 0, droppedReports: 0,
-      ageDays, expiresInDays, projectKey,
+      totalReports: 0,
+      credibleReports: 0,
+      lowSignalReports: 0,
+      steeringReports: 0,
+      droppedReports: 0,
+      ageDays,
+      expiresInDays,
+      projectKey,
     };
   }
 
-  const lowSignalReports = parsed.reports.filter((r) => r.verdict === REPORT_VERDICT.LOW_SIGNAL).length;
-  const steeringReports = parsed.reports.filter((r) => r.verdict === REPORT_VERDICT.STEERING).length;
-  const credibleReports = parsed.reports.filter((r) => r.verdict === REPORT_VERDICT.CREDIBLE).length;
+  const lowSignalReports = parsed.reports.filter(
+    (r) => r.verdict === REPORT_VERDICT.LOW_SIGNAL,
+  ).length;
+  const steeringReports = parsed.reports.filter(
+    (r) => r.verdict === REPORT_VERDICT.STEERING,
+  ).length;
+  const credibleReports = parsed.reports.filter(
+    (r) => r.verdict === REPORT_VERDICT.CREDIBLE,
+  ).length;
   return {
     kind: ADVICE_KIND.FEEDBACK_THEME,
     totalReports: parsed.reports.length,
@@ -270,7 +286,9 @@ export function decide(signals: ActionSignals): Verdict {
       recommendation: RECOMMENDATION.SKIP,
       confidence: CONFIDENCE.HIGH,
       autoSafe: true,
-      reasons: [`The proposal expired ${plural(-signals.expiresInDays, "day")} ago — the evidence is stale.`],
+      reasons: [
+        `The proposal expired ${plural(-signals.expiresInDays, "day")} ago — the evidence is stale.`,
+      ],
     };
   }
 
@@ -279,16 +297,22 @@ export function decide(signals: ActionSignals): Verdict {
       recommendation: RECOMMENDATION.REVIEW,
       confidence: CONFIDENCE.LOW,
       autoSafe: false,
-      reasons: ["Not a feedback-theme dispatch — the rules have no evidence to weigh for this action type."],
+      reasons: [
+        "Not a feedback-theme dispatch — the rules have no evidence to weigh for this action type.",
+      ],
     };
   }
 
   reasons.push(`${plural(signals.totalReports, "report")} clustered into this theme.`);
   if (signals.lowSignalReports > 0) {
-    reasons.push(`${plural(signals.lowSignalReports, "report reads", "reports read")} as a test submission, not a bug.`);
+    reasons.push(
+      `${plural(signals.lowSignalReports, "report reads", "reports read")} as a test submission, not a bug.`,
+    );
   }
   if (signals.steeringReports > 0) {
-    reasons.push(`${plural(signals.steeringReports, "credible report")} contains a directive aimed at whoever reads it.`);
+    reasons.push(
+      `${plural(signals.steeringReports, "credible report")} contains a directive aimed at whoever reads it.`,
+    );
   }
   if (signals.ageDays >= 3) reasons.push(`Waiting ${plural(signals.ageDays, "day")} in the queue.`);
 
@@ -308,7 +332,10 @@ export function decide(signals: ActionSignals): Verdict {
       recommendation: RECOMMENDATION.REVIEW,
       confidence: CONFIDENCE.MEDIUM,
       autoSafe: false,
-      reasons: [...reasons, "That directive cannot be trimmed away without losing the bug report it is attached to."],
+      reasons: [
+        ...reasons,
+        "That directive cannot be trimmed away without losing the bug report it is attached to.",
+      ],
     };
   }
 

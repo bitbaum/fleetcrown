@@ -53,12 +53,16 @@ export const cursorAdapter: AgentAdapter = {
     if (!bin) {
       return {
         available: false,
-        availabilityReason: "Cursor Agent CLI is not installed. Run: curl https://cursor.com/install -fsS | bash",
+        availabilityReason:
+          "Cursor Agent CLI is not installed. Run: curl https://cursor.com/install -fsS | bash",
       };
     }
 
     try {
-      const version = execSync(`${bin} --version 2>&1`, { encoding: "utf-8", timeout: 3000 }).trim();
+      const version = execSync(`${bin} --version 2>&1`, {
+        encoding: "utf-8",
+        timeout: 3000,
+      }).trim();
       if (/\d{4}\.\d{2}\.\d{2}/.test(version)) {
         return { available: true };
       }

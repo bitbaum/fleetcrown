@@ -13,19 +13,21 @@ import { logDebug } from "@/db/queries/debug-logs";
 import { injectPrompt } from "@/lib/inject-core";
 import { shouldAnnounceOnClose } from "@/lib/orchestration/notify-close-format";
 
-const InjectBody = z.object({
-  tab:          z.string().min(1).max(80),
-  promptKey:    z.string().optional(),
-  customPrompt: z.string().max(4000).optional(),
-  /** Screenshots and text files staged in the composer — see
-   *  lib/composer-attachments for why an image becomes text before it ships. */
-  attachments:  AttachmentsField,
-  adapter:      z.enum(ORCHESTRATION_ADAPTER_IDS).optional(),
-  runId:        z.string().uuid().optional(),
-  // Chat-originated dispatches (Loki's fleet skill) ask for the outcome to be
-  // pushed back to chat on close — see lib/orchestration/notify-close.ts.
-  notifyOnClose: z.boolean().optional(),
-}).refine((d) => d.promptKey || d.customPrompt, { message: "promptKey or customPrompt required" });
+const InjectBody = z
+  .object({
+    tab: z.string().min(1).max(80),
+    promptKey: z.string().optional(),
+    customPrompt: z.string().max(4000).optional(),
+    /** Screenshots and text files staged in the composer — see
+     *  lib/composer-attachments for why an image becomes text before it ships. */
+    attachments: AttachmentsField,
+    adapter: z.enum(ORCHESTRATION_ADAPTER_IDS).optional(),
+    runId: z.string().uuid().optional(),
+    // Chat-originated dispatches (Loki's fleet skill) ask for the outcome to be
+    // pushed back to chat on close — see lib/orchestration/notify-close.ts.
+    notifyOnClose: z.boolean().optional(),
+  })
+  .refine((d) => d.promptKey || d.customPrompt, { message: "promptKey or customPrompt required" });
 
 export async function POST(req: NextRequest) {
   const dataOrResp = await readJsonBody(req, InjectBody);

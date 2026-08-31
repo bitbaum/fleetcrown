@@ -35,7 +35,10 @@ export function AutomationPolicyControl({
         title={MODE_TOOLTIP[mode]}
         disabled={saving}
         onClick={() => onChange(building ? "off" : "on")}
-        className={cn(building ? "ui-btn-secondary" : "ui-btn-primary", "gap-1.5 px-3 py-1.5 text-xs")}
+        className={cn(
+          building ? "ui-btn-secondary" : "ui-btn-primary",
+          "gap-1.5 px-3 py-1.5 text-xs",
+        )}
       >
         {saving ? (
           <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
@@ -45,7 +48,10 @@ export function AutomationPolicyControl({
           <Play className="h-3.5 w-3.5" aria-hidden="true" />
         )}
         {building && (
-          <span aria-hidden="true" className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-accent-primary" />
+          <span
+            aria-hidden="true"
+            className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-accent-primary"
+          />
         )}
         {building ? "Pause all" : "Build all"}
       </button>
@@ -69,7 +75,10 @@ export function AutomationPolicyControl({
         <Play className="h-4 w-4" aria-hidden="true" />
       )}
       {building && (
-        <span aria-hidden="true" className="h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-accent-primary" />
+        <span
+          aria-hidden="true"
+          className="h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-accent-primary"
+        />
       )}
       {building ? "Pause fleet" : "Start building"}
     </button>

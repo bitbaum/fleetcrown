@@ -27,7 +27,8 @@ export function CapacityIssueBanner({
       <div className="mx-4 mb-3 rounded-xl border border-status-warning/40 bg-status-warning/[0.06] px-4 py-3 sm:mx-5 md:mx-6">
         <p className="flex items-center gap-2 text-sm font-medium text-text-primary">
           <Loader2 className="h-3.5 w-3.5 animate-spin text-status-warning" />
-          {agentLabel(currentAgentId)} hit a capacity limit — autopilot is switching to {agentLabel(nextAgentId)}…
+          {agentLabel(currentAgentId)} hit a capacity limit — autopilot is switching to{" "}
+          {agentLabel(nextAgentId)}…
         </p>
       </div>
     );
@@ -61,9 +62,17 @@ export function CapacityIssueBanner({
             disabled={switching}
             className="ui-btn-secondary gap-2 text-xs disabled:opacity-60"
           >
-            {switching
-              ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Switching…</>
-              : <><Repeat2 className="h-3.5 w-3.5" />Switch to {agentLabel(nextAgentId)}</>}
+            {switching ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Switching…
+              </>
+            ) : (
+              <>
+                <Repeat2 className="h-3.5 w-3.5" />
+                Switch to {agentLabel(nextAgentId)}
+              </>
+            )}
           </button>
         </div>
       </div>

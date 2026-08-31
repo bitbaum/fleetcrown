@@ -34,7 +34,8 @@ export async function MemorySummaryCard() {
       <Card>
         <CardHeader icon={Brain} title="Memory" />
         <p className="text-sm text-text-tertiary">
-          Couldn&apos;t load knowledge-graph stats. The rest of System is unaffected; this section will refresh on the next page load.
+          Couldn&apos;t load knowledge-graph stats. The rest of System is unaffected; this section
+          will refresh on the next page load.
         </p>
       </Card>
     );
@@ -69,7 +70,9 @@ export async function MemorySummaryCard() {
           {stats.entityTypes.slice(0, 4).map((row) => (
             <div key={row.type} className="flex items-center justify-between gap-2">
               <span className="text-micro text-text-tertiary capitalize">{row.type}</span>
-              <span className="text-micro text-text-tertiary font-mono">{formatCount(row.count)}</span>
+              <span className="text-micro text-text-tertiary font-mono">
+                {formatCount(row.count)}
+              </span>
             </div>
           ))}
         </div>

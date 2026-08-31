@@ -27,13 +27,20 @@ function snap(over: Partial<FeedbackRunSnapshot>): FeedbackRunSnapshot {
 }
 
 // Terminal statuses ignore the run entirely.
-assert.equal(deriveFeedbackWork(FEEDBACK_STATUS.ARCHIVED, null).phase, FEEDBACK_WORK_PHASE.ARCHIVED);
+assert.equal(
+  deriveFeedbackWork(FEEDBACK_STATUS.ARCHIVED, null).phase,
+  FEEDBACK_WORK_PHASE.ARCHIVED,
+);
 assert.equal(deriveFeedbackWork(FEEDBACK_STATUS.RESOLVED, null).phase, FEEDBACK_WORK_PHASE.DONE);
 assert.equal(deriveFeedbackWork(FEEDBACK_STATUS.NEW, null).phase, FEEDBACK_WORK_PHASE.NOT_STARTED);
 
 // THE regression pin: dispatched + no run record = STUCK, not queued.
 const runless = deriveFeedbackWork(FEEDBACK_STATUS.DISPATCHED, null);
-assert.equal(runless.phase, FEEDBACK_WORK_PHASE.STUCK, "run-less dispatched row must be STUCK (retryable)");
+assert.equal(
+  runless.phase,
+  FEEDBACK_WORK_PHASE.STUCK,
+  "run-less dispatched row must be STUCK (retryable)",
+);
 
 // Live states.
 assert.equal(
@@ -41,12 +48,16 @@ assert.equal(
   FEEDBACK_WORK_PHASE.WORKING,
 );
 assert.equal(
-  deriveFeedbackWork(FEEDBACK_STATUS.DISPATCHED, snap({ startedAt: new Date(Date.now() - 10_000) })).phase,
+  deriveFeedbackWork(FEEDBACK_STATUS.DISPATCHED, snap({ startedAt: new Date(Date.now() - 10_000) }))
+    .phase,
   FEEDBACK_WORK_PHASE.QUEUED,
   "young undelivered run is queued",
 );
 assert.equal(
-  deriveFeedbackWork(FEEDBACK_STATUS.DISPATCHED, snap({ startedAt: new Date(Date.now() - 5 * 60_000) })).phase,
+  deriveFeedbackWork(
+    FEEDBACK_STATUS.DISPATCHED,
+    snap({ startedAt: new Date(Date.now() - 5 * 60_000) }),
+  ).phase,
   FEEDBACK_WORK_PHASE.STUCK,
   "undelivered past the starting window is stuck",
 );
@@ -71,24 +82,37 @@ assert.equal(
 assert.equal(
   deriveFeedbackWork(
     FEEDBACK_STATUS.DISPATCHED,
-    snap({ state: ORCH_STATE.CLOSED, outcome: ORCHESTRATION_OUTCOME.SUCCESS, finishedAt: new Date() }),
+    snap({
+      state: ORCH_STATE.CLOSED,
+      outcome: ORCHESTRATION_OUTCOME.SUCCESS,
+      finishedAt: new Date(),
+    }),
   ).phase,
   FEEDBACK_WORK_PHASE.DONE,
 );
 assert.equal(
   deriveFeedbackWork(
     FEEDBACK_STATUS.DISPATCHED,
-    snap({ state: ORCH_STATE.CLOSED, outcome: ORCHESTRATION_OUTCOME.ERROR, finishedAt: new Date() }),
+    snap({
+      state: ORCH_STATE.CLOSED,
+      outcome: ORCHESTRATION_OUTCOME.ERROR,
+      finishedAt: new Date(),
+    }),
   ).phase,
   FEEDBACK_WORK_PHASE.FAILED,
 );
 assert.equal(
-  deriveFeedbackWork(FEEDBACK_STATUS.DISPATCHED, snap({ outcome: ORCHESTRATION_OUTCOME.HANG })).phase,
+  deriveFeedbackWork(FEEDBACK_STATUS.DISPATCHED, snap({ outcome: ORCHESTRATION_OUTCOME.HANG }))
+    .phase,
   FEEDBACK_WORK_PHASE.FAILED,
 );
 
 // Never the word the layer exists to kill.
-for (const status of [FEEDBACK_STATUS.NEW, FEEDBACK_STATUS.DISPATCHED, FEEDBACK_STATUS.RESOLVED] as const) {
+for (const status of [
+  FEEDBACK_STATUS.NEW,
+  FEEDBACK_STATUS.DISPATCHED,
+  FEEDBACK_STATUS.RESOLVED,
+] as const) {
   assert.ok(
     !deriveFeedbackWork(status, null).label.toLowerCase().includes("dispatched"),
     "labels never say 'dispatched'",
@@ -124,7 +148,11 @@ assert.equal(
     snap({ state: ORCH_STATE.ERROR, error: note }),
   );
   assert.equal(failed.phase, FEEDBACK_WORK_PHASE.FAILED);
-  assert.equal(failed.diagnostic, note, "the error is kept — it is the most useful text when a run really did fail");
+  assert.equal(
+    failed.diagnostic,
+    note,
+    "the error is kept — it is the most useful text when a run really did fail",
+  );
   assert.ok(
     failed.detail && !failed.detail.includes("Corrected"),
     "...but the line addressed to the reader is written for the reader",

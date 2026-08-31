@@ -2,14 +2,19 @@ import { db } from "@/db";
 import { habitGoals, habits, goals } from "@/db/schema";
 import { eq, and, inArray } from "drizzle-orm";
 
-export async function linkHabitToGoal(userId: string, habitId: string, goalId: string): Promise<void> {
-  await db
-    .insert(habitGoals)
-    .values({ userId, habitId, goalId })
-    .onConflictDoNothing();
+export async function linkHabitToGoal(
+  userId: string,
+  habitId: string,
+  goalId: string,
+): Promise<void> {
+  await db.insert(habitGoals).values({ userId, habitId, goalId }).onConflictDoNothing();
 }
 
-export async function unlinkHabitFromGoal(userId: string, habitId: string, goalId: string): Promise<void> {
+export async function unlinkHabitFromGoal(
+  userId: string,
+  habitId: string,
+  goalId: string,
+): Promise<void> {
   await db
     .delete(habitGoals)
     .where(

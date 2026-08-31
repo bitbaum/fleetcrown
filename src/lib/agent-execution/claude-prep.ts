@@ -17,14 +17,29 @@ import os from "os";
 import path from "path";
 import { migrateLegacyHandoffs } from "@/lib/session-paths";
 
-export const UNATTENDED_ALLOW = ["Bash", "Edit", "Write", "Read", "Glob", "Grep", "WebFetch", "WebSearch", "MultiEdit", "TodoWrite"];
+export const UNATTENDED_ALLOW = [
+  "Bash",
+  "Edit",
+  "Write",
+  "Read",
+  "Glob",
+  "Grep",
+  "WebFetch",
+  "WebSearch",
+  "MultiEdit",
+  "TodoWrite",
+];
 
 export function ensureClaudeReady(dir: string): void {
   const home = os.homedir();
   migrateLegacyHandoffs(home);
   const cfgPath = path.join(home, ".claude.json");
   let cfg: { projects?: Record<string, Record<string, unknown>> } = {};
-  try { cfg = JSON.parse(fs.readFileSync(cfgPath, "utf-8")); } catch { /* fresh config */ }
+  try {
+    cfg = JSON.parse(fs.readFileSync(cfgPath, "utf-8"));
+  } catch {
+    /* fresh config */
+  }
   cfg.projects ??= {};
   const existing = cfg.projects[dir] ?? {};
   cfg.projects[dir] = {
@@ -36,7 +51,11 @@ export function ensureClaudeReady(dir: string): void {
 
   const setPath = path.join(home, ".claude", "settings.json");
   let settings: { permissions?: { allow?: string[] } } = {};
-  try { settings = JSON.parse(fs.readFileSync(setPath, "utf-8")); } catch { /* fresh settings */ }
+  try {
+    settings = JSON.parse(fs.readFileSync(setPath, "utf-8"));
+  } catch {
+    /* fresh settings */
+  }
   settings.permissions ??= {};
   const allow = new Set(settings.permissions.allow ?? []);
   for (const t of UNATTENDED_ALLOW) allow.add(t);

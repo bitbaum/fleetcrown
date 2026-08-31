@@ -80,7 +80,10 @@ async function main() {
     });
     withEnv({ ...KEYS, GROQ_API_KEY: "x", LOKI_GROQ_DAILY_TOKENS: "nonsense" }, () => {
       const groq = CHAT_CHAIN.find((p) => p.id === "groq")!;
-      assert(dayCapacityTokens() === groq.dailyTokens, "a junk override must fall back, not zero the budget");
+      assert(
+        dayCapacityTokens() === groq.dailyTokens,
+        "a junk override must fall back, not zero the budget",
+      );
     });
   });
 
@@ -95,15 +98,18 @@ async function main() {
     assert(v.allowed, "refused a turn with a million tokens available");
   });
 
-  await check("A LEDGER ERROR ADMITS THE TURN — rationing must never become an outage", async () => {
-    const v = await checkAiBudget("u1", NOON, {
-      capacity: plenty,
-      readUsage: async () => {
-        throw new Error("connection refused");
-      },
-    });
-    assert(v.allowed, "a database error refused the turn — this is the fail-closed trap");
-  });
+  await check(
+    "A LEDGER ERROR ADMITS THE TURN — rationing must never become an outage",
+    async () => {
+      const v = await checkAiBudget("u1", NOON, {
+        capacity: plenty,
+        readUsage: async () => {
+          throw new Error("connection refused");
+        },
+      });
+      assert(v.allowed, "a database error refused the turn — this is the fail-closed trap");
+    },
+  );
 
   await check("a capacity of zero refuses, and says there is nothing to draw on", async () => {
     const v = await checkAiBudget("u1", NOON, {
@@ -111,7 +117,10 @@ async function main() {
       readUsage: async () => ({ userSpentTokens: 0, activeUsers: 1 }),
     });
     assert(!v.allowed, "admitted a turn with no capacity");
-    assert(!v.allowed && /no ai provider/i.test(v.message), `unhelpful message: ${!v.allowed && v.message}`);
+    assert(
+      !v.allowed && /no ai provider/i.test(v.message),
+      `unhelpful message: ${!v.allowed && v.message}`,
+    );
   });
 
   await check("'paced' offers a retry and explains WHY there is a wait", async () => {

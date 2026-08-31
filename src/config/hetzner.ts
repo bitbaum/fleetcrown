@@ -24,8 +24,7 @@ export const HETZNER_STATE_FILE =
  * its query params, since its `loc` numbering is not documented and does not
  * necessarily match Hetzner's own location ids (where fsn1=1, nbg1=2).
  */
-export const HETZNER_RADAR_URL =
-  "https://radar.iodev.org/cloud-status?hist=st%3A116%2Cloc%3A2";
+export const HETZNER_RADAR_URL = "https://radar.iodev.org/cloud-status?hist=st%3A116%2Cloc%3A2";
 
 /** Where the rescale is actually performed once a window opens. */
 export const HETZNER_CONSOLE_URL = "https://console.hetzner.cloud/";

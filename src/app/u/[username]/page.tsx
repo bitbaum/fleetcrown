@@ -63,8 +63,9 @@ export default async function PublicProfilePage({
 
   // Fleet liveness — recent agent runs. Public-safe: project + coarse state +
   // time only, never the run summary. This is what a repo list / Linktree can't show.
-  const recentRuns = (await getRecentOrchestrationRuns(user.id, 168, 6).catch(() => []))
-    .filter((r) => r.finishedAt);
+  const recentRuns = (await getRecentOrchestrationRuns(user.id, 168, 6).catch(() => [])).filter(
+    (r) => r.finishedAt,
+  );
 
   return (
     <PublicSurface right={<PublicHeaderActions />}>
@@ -109,9 +110,7 @@ export default async function PublicProfilePage({
                           <ExternalLink className="h-3.5 w-3.5 shrink-0 text-text-muted" />
                         </div>
                         {desc && (
-                          <p className="mt-1 text-sm text-text-secondary line-clamp-2">
-                            {desc}
-                          </p>
+                          <p className="mt-1 text-sm text-text-secondary line-clamp-2">{desc}</p>
                         )}
                       </div>
                       {healthCls && (
@@ -120,9 +119,14 @@ export default async function PublicProfilePage({
                     </div>
                     {project.stack && (
                       <div className="mt-3 flex flex-wrap gap-1.5">
-                        {project.stack.split(/[,·\s]+/).filter(Boolean).map((tech) => (
-                          <span key={tech} className="ui-tag ui-tag-neutral">{tech}</span>
-                        ))}
+                        {project.stack
+                          .split(/[,·\s]+/)
+                          .filter(Boolean)
+                          .map((tech) => (
+                            <span key={tech} className="ui-tag ui-tag-neutral">
+                              {tech}
+                            </span>
+                          ))}
                       </div>
                     )}
                   </a>
@@ -147,7 +151,9 @@ export default async function PublicProfilePage({
                   <span className="ui-dot-positive shrink-0" />
                   <span className="font-mono text-sm text-text-secondary">{run.projectKey}</span>
                   <span className="text-sm text-text-tertiary">agent run · {run.state}</span>
-                  <span className="ml-auto text-xs text-text-muted">{run.finishedAt ? compactRelativeDate(run.finishedAt) : ""}</span>
+                  <span className="ml-auto text-xs text-text-muted">
+                    {run.finishedAt ? compactRelativeDate(run.finishedAt) : ""}
+                  </span>
                 </div>
               ))}
             </div>
@@ -171,11 +177,15 @@ export default async function PublicProfilePage({
                   <p className="text-xs text-text-muted mb-1">{article.publishedAt}</p>
                   <p className="font-medium text-text-primary">{article.title}</p>
                   {article.summary && (
-                    <p className="mt-1 text-sm text-text-secondary line-clamp-2">{article.summary}</p>
+                    <p className="mt-1 text-sm text-text-secondary line-clamp-2">
+                      {article.summary}
+                    </p>
                   )}
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {article.tags.map((tag) => (
-                      <span key={tag} className="ui-tag ui-tag-neutral">{tag}</span>
+                      <span key={tag} className="ui-tag ui-tag-neutral">
+                        {tag}
+                      </span>
                     ))}
                   </div>
                 </Link>
@@ -195,7 +205,9 @@ export default async function PublicProfilePage({
         {/* Branded footer CTA — always visible so empty-state profiles still
             offer the share-target visitor a path forward. */}
         <footer className="mt-16 border-t border-border-subtle pt-8">
-          <p className="text-sm text-text-tertiary">{APP_NAME} · {APP_TAGLINE}</p>
+          <p className="text-sm text-text-tertiary">
+            {APP_NAME} · {APP_TAGLINE}
+          </p>
           <Link
             href={ROUTES.SIGN_UP}
             className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-text-primary transition-opacity hover:opacity-80"

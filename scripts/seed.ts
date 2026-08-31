@@ -5,7 +5,12 @@ import postgres from "postgres";
 import { readFileSync } from "fs";
 import { homedir } from "os";
 import * as schema from "../src/db/schema";
-import type { EntityType, SubStatus, CommitmentStatus, EventStatus } from "../src/lib/constants/statuses";
+import type {
+  EntityType,
+  SubStatus,
+  CommitmentStatus,
+  EventStatus,
+} from "../src/lib/constants/statuses";
 import type { SubscriptionCurrency, SubscriptionFrequency } from "../src/config/subscriptions";
 
 // Owner-only: this script truncates every table and inserts the owner's
@@ -41,7 +46,9 @@ async function main() {
 
   // Truncate all tables
   console.log("Truncating tables...");
-  await db.execute(sql`TRUNCATE users, entities, entity_relations, attributes, interactions, goals, commitments, subscriptions, events CASCADE`);
+  await db.execute(
+    sql`TRUNCATE users, entities, entity_relations, attributes, interactions, goals, commitments, subscriptions, events CASCADE`,
+  );
 
   // Create default user
   console.log("Creating default user...");
@@ -59,29 +66,44 @@ async function main() {
 
   // Import entities
   const sqliteEntities = sqlite.prepare("SELECT * FROM entities").all() as Array<{
-    id: number; name: string; type: string; created_at: string; updated_at: string;
+    id: number;
+    name: string;
+    type: string;
+    created_at: string;
+    updated_at: string;
   }>;
 
   const idMap = new Map<number, string>(); // sqlite id -> postgres uuid
 
   console.log(`Importing ${sqliteEntities.length} entities...`);
   for (const e of sqliteEntities) {
-    const [inserted] = await db.insert(schema.entities).values({
-      userId: OWNER_USER_ID,
-      name: e.name,
-      // Sqlite is the legacy boundary; types are validated upstream of the import.
-      type: e.type as EntityType,
-      source: "knowledge.sqlite",
-      createdAt: safeDateRequired(e.created_at),
-      updatedAt: safeDateRequired(e.updated_at),
-    }).returning({ id: schema.entities.id });
+    const [inserted] = await db
+      .insert(schema.entities)
+      .values({
+        userId: OWNER_USER_ID,
+        name: e.name,
+        // Sqlite is the legacy boundary; types are validated upstream of the import.
+        type: e.type as EntityType,
+        source: "knowledge.sqlite",
+        createdAt: safeDateRequired(e.created_at),
+        updatedAt: safeDateRequired(e.updated_at),
+      })
+      .returning({ id: schema.entities.id });
     idMap.set(e.id, inserted.id);
   }
 
   // Import attributes
   const sqliteAttrs = sqlite.prepare("SELECT * FROM attributes").all() as Array<{
-    id: number; entity_id: number; key: string; value: string; confidence: number;
-    source: string; temporal: string; valid_until: string; created_at: string; updated_at: string;
+    id: number;
+    entity_id: number;
+    key: string;
+    value: string;
+    confidence: number;
+    source: string;
+    temporal: string;
+    valid_until: string;
+    created_at: string;
+    updated_at: string;
   }>;
 
   console.log(`Importing ${sqliteAttrs.length} attributes...`);
@@ -104,8 +126,15 @@ async function main() {
 
   // Import relations
   const sqliteRelations = sqlite.prepare("SELECT * FROM relations").all() as Array<{
-    id: number; from_entity_id: number; relation: string; to_entity_id: number;
-    properties: string; confidence: number; source: string; created_at: string; updated_at: string;
+    id: number;
+    from_entity_id: number;
+    relation: string;
+    to_entity_id: number;
+    properties: string;
+    confidence: number;
+    source: string;
+    created_at: string;
+    updated_at: string;
   }>;
 
   console.log(`Importing ${sqliteRelations.length} relations...`);
@@ -128,8 +157,15 @@ async function main() {
 
   // Import commitments
   const sqliteCommitments = sqlite.prepare("SELECT * FROM commitments").all() as Array<{
-    id: number; description: string; entity_id: number; due_date: string;
-    status: string; financial_impact: string; source: string; created_at: string; updated_at: string;
+    id: number;
+    description: string;
+    entity_id: number;
+    due_date: string;
+    status: string;
+    financial_impact: string;
+    source: string;
+    created_at: string;
+    updated_at: string;
   }>;
 
   console.log(`Importing ${sqliteCommitments.length} commitments...`);
@@ -150,9 +186,20 @@ async function main() {
 
   // Import subscriptions
   const sqliteSubs = sqlite.prepare("SELECT * FROM subscriptions").all() as Array<{
-    id: number; entity_id: number; name: string; vendor: string; amount: number;
-    currency: string; frequency: string; category: string; status: string;
-    next_due: string; payment_method: string; notes: string; created_at: string; updated_at: string;
+    id: number;
+    entity_id: number;
+    name: string;
+    vendor: string;
+    amount: number;
+    currency: string;
+    frequency: string;
+    category: string;
+    status: string;
+    next_due: string;
+    payment_method: string;
+    notes: string;
+    created_at: string;
+    updated_at: string;
   }>;
 
   console.log(`Importing ${sqliteSubs.length} subscriptions...`);
@@ -178,10 +225,22 @@ async function main() {
 
   // Import events
   const sqliteEvents = sqlite.prepare("SELECT * FROM events").all() as Array<{
-    id: number; name: string; type: string; description: string; url: string;
-    location: string; date_start: string; date_end: string; deadline: string;
-    cost: string; category: string; status: string; source: string;
-    metadata: string; created_at: string; updated_at: string;
+    id: number;
+    name: string;
+    type: string;
+    description: string;
+    url: string;
+    location: string;
+    date_start: string;
+    date_end: string;
+    deadline: string;
+    cost: string;
+    category: string;
+    status: string;
+    source: string;
+    metadata: string;
+    created_at: string;
+    updated_at: string;
   }>;
 
   console.log(`Importing ${sqliteEvents.length} events...`);
@@ -236,18 +295,22 @@ async function main() {
 
     if (!entityId) {
       // Create new person entity
-      const [inserted] = await db.insert(schema.entities).values({
-        userId: OWNER_USER_ID,
-        name: contact.displayName,
-        type: "person",
-        externalId: contact.id,
-        source: "contact-resolver",
-      }).returning({ id: schema.entities.id });
+      const [inserted] = await db
+        .insert(schema.entities)
+        .values({
+          userId: OWNER_USER_ID,
+          name: contact.displayName,
+          type: "person",
+          externalId: contact.id,
+          source: "contact-resolver",
+        })
+        .returning({ id: schema.entities.id });
       entityId = inserted.id;
       contactsNew++;
     } else {
       // Update external_id on existing entity
-      await db.update(schema.entities)
+      await db
+        .update(schema.entities)
         .set({ externalId: contact.id, source: "knowledge.sqlite+contact-resolver" })
         .where(sql`${schema.entities.id} = ${entityId}`);
       contactsEnriched++;
@@ -255,26 +318,34 @@ async function main() {
 
     // Add aliases as attribute
     if (contact.aliases && contact.aliases.length > 0) {
-      await db.insert(schema.attributes).values({
-        userId: OWNER_USER_ID,
-        entityId,
-        key: "aliases",
-        value: JSON.stringify(contact.aliases),
-        source: "contact-resolver",
-      }).onConflictDoNothing();
+      await db
+        .insert(schema.attributes)
+        .values({
+          userId: OWNER_USER_ID,
+          entityId,
+          key: "aliases",
+          value: JSON.stringify(contact.aliases),
+          source: "contact-resolver",
+        })
+        .onConflictDoNothing();
     }
 
     // Add channel attributes
     if (contact.channels) {
       for (const [channel, data] of Object.entries(contact.channels)) {
-        const value = Object.entries(data).map(([k, v]) => `${k}:${v}`).join(",");
-        await db.insert(schema.attributes).values({
-          userId: OWNER_USER_ID,
-          entityId,
-          key: `channel:${channel}`,
-          value,
-          source: "contact-resolver",
-        }).onConflictDoNothing();
+        const value = Object.entries(data)
+          .map(([k, v]) => `${k}:${v}`)
+          .join(",");
+        await db
+          .insert(schema.attributes)
+          .values({
+            userId: OWNER_USER_ID,
+            entityId,
+            key: `channel:${channel}`,
+            value,
+            source: "contact-resolver",
+          })
+          .onConflictDoNothing();
       }
     }
   }
@@ -295,7 +366,9 @@ async function main() {
   };
 
   console.log("\n--- Seed Summary ---");
-  console.log(`Entities:      ${extractCount(entityCount)} (${contactsNew} new from contacts, ${contactsEnriched} enriched)`);
+  console.log(
+    `Entities:      ${extractCount(entityCount)} (${contactsNew} new from contacts, ${contactsEnriched} enriched)`,
+  );
   console.log(`Attributes:    ${extractCount(attrCount)}`);
   console.log(`Relations:     ${extractCount(relCount)}`);
   console.log(`Commitments:   ${extractCount(commitCount)}`);

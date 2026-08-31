@@ -32,7 +32,12 @@ function varint(n: number): Uint8Array {
 
 function messageDigest(message: string): Uint8Array {
   const msg = new TextEncoder().encode(message);
-  const preimage = secp.etc.concatBytes(Uint8Array.of(MAGIC.length), MAGIC, varint(msg.length), msg);
+  const preimage = secp.etc.concatBytes(
+    Uint8Array.of(MAGIC.length),
+    MAGIC,
+    varint(msg.length),
+    msg,
+  );
   return sha256(sha256(preimage));
 }
 
@@ -54,7 +59,9 @@ export function signBitcoinMessage(message: string, privateKeyHex: string): stri
     format: "recovered",
   });
   const header = 27 + sig[0] + 4;
-  return Buffer.from(secp.etc.concatBytes(Uint8Array.of(header), sig.subarray(1))).toString("base64");
+  return Buffer.from(secp.etc.concatBytes(Uint8Array.of(header), sig.subarray(1))).toString(
+    "base64",
+  );
 }
 
 /** Canonical Solon vote message — byte-identical to Solon's voteMessage(). */

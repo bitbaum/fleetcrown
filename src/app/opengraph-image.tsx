@@ -14,56 +14,59 @@ export const contentType = "image/png";
 
 export default async function OGImage() {
   return new ImageResponse(
-    (
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "flex-start",
+        justifyContent: "center",
+        background: PALETTE.dark.surfacePage,
+        color: PALETTE.dark.textPrimary,
+        padding: "80px",
+        fontFamily: "sans-serif",
+      }}
+    >
+      {/* Brand mark — dense spiral coil from the SSOT (src/config/brand-mark.ts) */}
+      <svg
+        width="120"
+        height="120"
+        viewBox={`0 0 ${BRAND_MARK.viewBox} ${BRAND_MARK.viewBox}`}
+        style={{ marginBottom: 48 }}
+      >
+        <path
+          d={spiralPathD()}
+          fill="none"
+          stroke={PALETTE.dark.textPrimary}
+          strokeWidth={BRAND_MARK.strokeWidth}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+
       <div
         style={{
-          width: "100%",
-          height: "100%",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "flex-start",
-          justifyContent: "center",
-          background: PALETTE.dark.surfacePage,
-          color: PALETTE.dark.textPrimary,
-          padding: "80px",
-          fontFamily: "sans-serif",
+          fontSize: 96,
+          fontWeight: 700,
+          letterSpacing: "-0.03em",
+          lineHeight: 1,
         }}
       >
-        {/* Brand mark — dense spiral coil from the SSOT (src/config/brand-mark.ts) */}
-        <svg width="120" height="120" viewBox={`0 0 ${BRAND_MARK.viewBox} ${BRAND_MARK.viewBox}`} style={{ marginBottom: 48 }}>
-          <path
-            d={spiralPathD()}
-            fill="none"
-            stroke={PALETTE.dark.textPrimary}
-            strokeWidth={BRAND_MARK.strokeWidth}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-
-        <div
-          style={{
-            fontSize: 96,
-            fontWeight: 700,
-            letterSpacing: "-0.03em",
-            lineHeight: 1,
-          }}
-        >
-          {APP_NAME}
-        </div>
-        <div
-          style={{
-            marginTop: 24,
-            fontSize: 36,
-            color: PALETTE.zinc[400],
-            lineHeight: 1.2,
-            maxWidth: 900,
-          }}
-        >
-          {APP_TAGLINE}
-        </div>
+        {APP_NAME}
       </div>
-    ),
+      <div
+        style={{
+          marginTop: 24,
+          fontSize: 36,
+          color: PALETTE.zinc[400],
+          lineHeight: 1.2,
+          maxWidth: 900,
+        }}
+      >
+        {APP_TAGLINE}
+      </div>
+    </div>,
     { ...size },
   );
 }

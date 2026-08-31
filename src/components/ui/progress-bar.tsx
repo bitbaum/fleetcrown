@@ -19,12 +19,7 @@ export function getProgressTone(
     lowTone?: ProgressTone;
   } = {},
 ): ProgressTone {
-  const {
-    positiveAt,
-    warningAt,
-    negativeAt,
-    lowTone = "accent",
-  } = thresholds;
+  const { positiveAt, warningAt, negativeAt, lowTone = "accent" } = thresholds;
 
   if (negativeAt !== undefined && value >= negativeAt) return "negative";
   if (positiveAt !== undefined && value >= positiveAt) return "positive";

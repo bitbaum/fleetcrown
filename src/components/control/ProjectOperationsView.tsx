@@ -21,8 +21,12 @@ function snapshotActivityMs(snapshot: ProjectOperationsSnapshot): number {
   return Math.max(
     snapshot.evidenceAt ?? 0,
     project.session?.mtime ?? 0,
-    project.latestOrchestrationRun?.finishedAt ? Date.parse(project.latestOrchestrationRun.finishedAt) : 0,
-    project.latestOrchestrationRun?.startedAt ? Date.parse(project.latestOrchestrationRun.startedAt) : 0,
+    project.latestOrchestrationRun?.finishedAt
+      ? Date.parse(project.latestOrchestrationRun.finishedAt)
+      : 0,
+    project.latestOrchestrationRun?.startedAt
+      ? Date.parse(project.latestOrchestrationRun.startedAt)
+      : 0,
     project.recentActivity[0]?.at ? Date.parse(project.recentActivity[0].at) : 0,
   );
 }
@@ -81,23 +85,35 @@ export function ProjectOperationsView({
             snapshot.project.dir,
             snapshot.project.git?.branch,
             snapshot.contextSummary,
-          ].filter(Boolean).join(" ").toLowerCase();
+          ]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
           return haystack.includes(normalizedQuery);
         })
       : sourceSnapshots;
 
     const ranked = [...filtered].sort((a, b) => {
       if (sort === "az") return a.project.tab.localeCompare(b.project.tab);
-      if (sort === "recent") return snapshotActivityMs(b) - snapshotActivityMs(a) || a.project.tab.localeCompare(b.project.tab);
+      if (sort === "recent")
+        return (
+          snapshotActivityMs(b) - snapshotActivityMs(a) ||
+          a.project.tab.localeCompare(b.project.tab)
+        );
       return sourceSnapshots.indexOf(a) - sourceSnapshots.indexOf(b);
     });
 
-    const setKey = `${sort}|${normalizedQuery}|${filtered.map((s) => s.project.tab).sort().join(",")}`;
+    const setKey = `${sort}|${normalizedQuery}|${filtered
+      .map((s) => s.project.tab)
+      .sort()
+      .join(",")}`;
     if (frozenOrderRef.current.key !== setKey) {
       frozenOrderRef.current = { key: setKey, order: ranked.map((s) => s.project.tab) };
     }
     const order = frozenOrderRef.current.order;
-    return [...filtered].sort((a, b) => order.indexOf(a.project.tab) - order.indexOf(b.project.tab));
+    return [...filtered].sort(
+      (a, b) => order.indexOf(a.project.tab) - order.indexOf(b.project.tab),
+    );
   }, [normalizedQuery, sourceSnapshots, sort]);
   const selected =
     sourceSnapshots.find((snapshot) => snapshot.project.tab === selectedTab) ??
@@ -187,11 +203,13 @@ export function ProjectOperationsView({
             />
           </div>
           <div className="mt-2 grid grid-cols-3 gap-1">
-            {([
-              ["priority", "Priority"],
-              ["recent", "Recent"],
-              ["az", "A-Z"],
-            ] as const).map(([id, label]) => (
+            {(
+              [
+                ["priority", "Priority"],
+                ["recent", "Recent"],
+                ["az", "A-Z"],
+              ] as const
+            ).map(([id, label]) => (
               <button
                 key={id}
                 type="button"
@@ -283,25 +301,36 @@ export function ProjectOperationsView({
                   className="ui-tap flex min-w-0 flex-1 items-start gap-2 text-left"
                   title={rowTitle}
                 >
-                <span className={cn("mt-1.5 h-2 w-2 shrink-0 rounded-full", dotClass)} />
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-center justify-between gap-2">
-                    <span className="truncate text-sm font-medium text-text-primary">{snapshot.project.tab}</span>
-                    <span className="flex shrink-0 items-center gap-1.5">
-                      <ProjectAutopilotToggle
-                        variant="rail"
-                        projectId={snapshot.project.projectId}
-                        currentOverride={snapshot.project.autoInjectModeOverride}
-                        inheritedMode={automationMode}
-                      />
-                      {snapshot.attentionReason && (
-                        <span className="h-1.5 w-1.5 rounded-full bg-status-warning" title={snapshot.attentionReason} />
-                      )}
+                  <span className={cn("mt-1.5 h-2 w-2 shrink-0 rounded-full", dotClass)} />
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center justify-between gap-2">
+                      <span className="truncate text-sm font-medium text-text-primary">
+                        {snapshot.project.tab}
+                      </span>
+                      <span className="flex shrink-0 items-center gap-1.5">
+                        <ProjectAutopilotToggle
+                          variant="rail"
+                          projectId={snapshot.project.projectId}
+                          currentOverride={snapshot.project.autoInjectModeOverride}
+                          inheritedMode={automationMode}
+                        />
+                        {snapshot.attentionReason && (
+                          <span
+                            className="h-1.5 w-1.5 rounded-full bg-status-warning"
+                            title={snapshot.attentionReason}
+                          />
+                        )}
+                      </span>
                     </span>
+                    <span className="mt-0.5 block truncate text-xs text-text-secondary">
+                      {snapshot.display.stateLabel}
+                    </span>
+                    {evidence && (
+                      <span className="mt-0.5 block truncate text-micro text-text-muted">
+                        {evidence}
+                      </span>
+                    )}
                   </span>
-                  <span className="mt-0.5 block truncate text-xs text-text-secondary">{snapshot.display.stateLabel}</span>
-                  {evidence && <span className="mt-0.5 block truncate text-micro text-text-muted">{evidence}</span>}
-                </span>
                 </button>
               </div>
             );

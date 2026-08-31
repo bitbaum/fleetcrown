@@ -11,8 +11,8 @@ import { dispatchToHostedRunner } from "@/lib/hosted-runner/dispatch";
 
 const HermesDispatchBody = z.object({
   projectKey: z.string().min(1).max(80),
-  task:       z.string().min(1).max(4000),
-  model:      z.string().max(80).optional(),
+  task: z.string().min(1).max(4000),
+  model: z.string().max(80).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -23,9 +23,22 @@ export async function POST(req: NextRequest) {
   const userId = await getApiUserId();
   if (!userId) return jsonError("Unauthorized", 401);
 
-  const res = await dispatchToHostedRunner({ userId, projectKey, task, ...(model ? { model } : {}) });
+  const res = await dispatchToHostedRunner({
+    userId,
+    projectKey,
+    task,
+    ...(model ? { model } : {}),
+  });
   if (!res.ok) {
-    return jsonError(res.error, res.status, res.knownProjects ? { knownProjects: res.knownProjects } : undefined);
+    return jsonError(
+      res.error,
+      res.status,
+      res.knownProjects ? { knownProjects: res.knownProjects } : undefined,
+    );
   }
-  return jsonOk({ hostedDispatchId: res.hostedDispatchId, projectName: res.projectName, gitUrl: res.gitUrl });
+  return jsonOk({
+    hostedDispatchId: res.hostedDispatchId,
+    projectName: res.projectName,
+    gitUrl: res.gitUrl,
+  });
 }

@@ -16,8 +16,12 @@ import {
 let pass = 0;
 let fail = 0;
 function ok(cond: boolean, label: string) {
-  if (cond) { pass++; }
-  else { fail++; console.error(`✗ ${label}`); }
+  if (cond) {
+    pass++;
+  } else {
+    fail++;
+    console.error(`✗ ${label}`);
+  }
 }
 
 const MAX = 2000;
@@ -25,11 +29,13 @@ const diag = { code: "cat_permission_denied", action: "update_product", category
 
 // ---- formatDiagnostics ----
 ok(
-  formatDiagnostics(diag) === "code: cat_permission_denied\naction: update_product\ncategory: entities",
+  formatDiagnostics(diag) ===
+    "code: cat_permission_denied\naction: update_product\ncategory: entities",
   "renders one key: value line per entry",
 );
 ok(
-  formatDiagnostics({ a: "1", b: undefined, c: null, d: "", e: 0, f: false }) === "a: 1\ne: 0\nf: false",
+  formatDiagnostics({ a: "1", b: undefined, c: null, d: "", e: 0, f: false }) ===
+    "a: 1\ne: 0\nf: false",
   "drops undefined/null/empty but keeps falsy 0 and false",
 );
 ok(formatDiagnostics({}) === "", "empty diagnostics render as empty string");

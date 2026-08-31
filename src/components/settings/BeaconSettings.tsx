@@ -12,42 +12,50 @@ import {
   MAX_BEACON_MIN_IDLE_S,
   DEFAULT_AUTO_INJECT_MODE,
 } from "@/lib/constants/control";
-import { WHISPER_MODELS, TRANSCRIPTION_PROVIDERS, POPUP_MODES, AUTO_INJECT_MODES, type AutoInjectMode } from "@/config/beacon";
+import {
+  WHISPER_MODELS,
+  TRANSCRIPTION_PROVIDERS,
+  POPUP_MODES,
+  AUTO_INJECT_MODES,
+  type AutoInjectMode,
+} from "@/config/beacon";
 import { FLEETCROWN_REFRESH_EVENT } from "@/lib/client-events";
 
 export function BeaconSettings() {
-  const [data, setData]         = useState<BeaconSettingsData | null>(null);
-  const [popupMode, setPopupMode]   = useState("web");
-  const [countdown, setCountdown]   = useState(DEFAULT_BEACON_COUNTDOWN_S);
-  const [minIdle, setMinIdle]       = useState(DEFAULT_BEACON_MIN_IDLE_S);
-  const [model, setModel]           = useState("base");
-  const [provider, setProvider]     = useState("auto");
+  const [data, setData] = useState<BeaconSettingsData | null>(null);
+  const [popupMode, setPopupMode] = useState("web");
+  const [countdown, setCountdown] = useState(DEFAULT_BEACON_COUNTDOWN_S);
+  const [minIdle, setMinIdle] = useState(DEFAULT_BEACON_MIN_IDLE_S);
+  const [model, setModel] = useState("base");
+  const [provider, setProvider] = useState("auto");
   const [autoInjectMode, setAutoInjectMode] = useState<AutoInjectMode>(DEFAULT_AUTO_INJECT_MODE);
-  const [saving, setSaving]         = useState(false);
-  const [saved, setSaved]           = useState(false);
-  const [error, setError]           = useState("");
-  const [loadError, setLoadError]   = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
-    getJson<BeaconSettingsData>("/api/beacon-settings").then((d) => {
-      setData(d);
-      setPopupMode(d.popup_mode);
-      setCountdown(d.countdown_seconds);
-      setMinIdle(d.min_idle_seconds);
-      setModel(d.whisper_model);
-      setProvider(d.transcription_provider);
-      setAutoInjectMode(d.auto_inject_mode);
-    }).catch(() => setLoadError(true));
+    getJson<BeaconSettingsData>("/api/beacon-settings")
+      .then((d) => {
+        setData(d);
+        setPopupMode(d.popup_mode);
+        setCountdown(d.countdown_seconds);
+        setMinIdle(d.min_idle_seconds);
+        setModel(d.whisper_model);
+        setProvider(d.transcription_provider);
+        setAutoInjectMode(d.auto_inject_mode);
+      })
+      .catch(() => setLoadError(true));
   }, []);
 
-  const dirty = data !== null && (
-    popupMode !== data.popup_mode ||
-    countdown !== data.countdown_seconds ||
-    minIdle !== data.min_idle_seconds ||
-    model !== data.whisper_model ||
-    provider !== data.transcription_provider ||
-    autoInjectMode !== data.auto_inject_mode
-  );
+  const dirty =
+    data !== null &&
+    (popupMode !== data.popup_mode ||
+      countdown !== data.countdown_seconds ||
+      minIdle !== data.min_idle_seconds ||
+      model !== data.whisper_model ||
+      provider !== data.transcription_provider ||
+      autoInjectMode !== data.auto_inject_mode);
 
   const save = async () => {
     setSaving(true);
@@ -63,7 +71,14 @@ export function BeaconSettings() {
         auto_inject_mode: autoInjectMode,
       });
       if (!res.ok) await throwApiError(res, "Failed to save");
-      setData({ popup_mode: popupMode, countdown_seconds: countdown, min_idle_seconds: minIdle, whisper_model: model, transcription_provider: provider, auto_inject_mode: autoInjectMode });
+      setData({
+        popup_mode: popupMode,
+        countdown_seconds: countdown,
+        min_idle_seconds: minIdle,
+        whisper_model: model,
+        transcription_provider: provider,
+        auto_inject_mode: autoInjectMode,
+      });
       setSaved(true);
       window.dispatchEvent(new CustomEvent(FLEETCROWN_REFRESH_EVENT));
     } catch (e) {
@@ -80,23 +95,26 @@ export function BeaconSettings() {
       <div>
         <h2 className="font-medium text-text-primary">Beacon</h2>
         <p className="mt-1 text-sm text-text-tertiary">
-          Controls the popup and auto-continue behavior when an agent finishes a task.
-          Settings are stored per account and apply across all your sessions.
+          Controls the popup and auto-continue behavior when an agent finishes a task. Settings are
+          stored per account and apply across all your sessions.
         </p>
       </div>
 
       {loadError ? (
-        <p className="ui-error">Failed to load beacon settings — check that the server is reachable and try reloading.</p>
+        <p className="ui-error">
+          Failed to load beacon settings — check that the server is reachable and try reloading.
+        </p>
       ) : data === null ? (
         <div className="flex items-center gap-2 text-sm text-text-muted">
           <Loader2 className="ui-spinner" /> Loading…
         </div>
       ) : (
         <div className="space-y-8">
-
           {/* ─── Subgroup: Autopilot behavior ─── */}
           <div className="space-y-5">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">Autopilot</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">
+              Autopilot
+            </h3>
 
             {/* ── Autopilot mode ── */}
             <div className="space-y-2">
@@ -120,7 +138,10 @@ export function BeaconSettings() {
                 ))}
               </div>
               <p className="text-xs text-text-muted">
-                When an agent finishes a task, autopilot sends the next queued instruction — or, if the queue is empty, picks the next-best task automatically. It pauses on its own for busy agents, pending blockers, and failing health checks. Set it Off to dispatch every prompt by hand.
+                When an agent finishes a task, autopilot sends the next queued instruction — or, if
+                the queue is empty, picks the next-best task automatically. It pauses on its own for
+                busy agents, pending blockers, and failing health checks. Set it Off to dispatch
+                every prompt by hand.
               </p>
             </div>
 
@@ -133,7 +154,11 @@ export function BeaconSettings() {
                   min={0}
                   max={MAX_BEACON_MIN_IDLE_S}
                   value={minIdle}
-                  onChange={(e) => setMinIdle(Math.max(0, Math.min(MAX_BEACON_MIN_IDLE_S, parseInt(e.target.value) || 0)))}
+                  onChange={(e) =>
+                    setMinIdle(
+                      Math.max(0, Math.min(MAX_BEACON_MIN_IDLE_S, parseInt(e.target.value) || 0)),
+                    )
+                  }
                   className="ui-input w-24 tabular-nums"
                 />
                 <span className="text-sm text-text-tertiary">seconds</span>
@@ -154,13 +179,24 @@ export function BeaconSettings() {
                   min={MIN_BEACON_COUNTDOWN_S}
                   max={MAX_BEACON_COUNTDOWN_S}
                   value={countdown}
-                  onChange={(e) => setCountdown(Math.max(MIN_BEACON_COUNTDOWN_S, Math.min(MAX_BEACON_COUNTDOWN_S, parseInt(e.target.value) || DEFAULT_BEACON_COUNTDOWN_S)))}
+                  onChange={(e) =>
+                    setCountdown(
+                      Math.max(
+                        MIN_BEACON_COUNTDOWN_S,
+                        Math.min(
+                          MAX_BEACON_COUNTDOWN_S,
+                          parseInt(e.target.value) || DEFAULT_BEACON_COUNTDOWN_S,
+                        ),
+                      ),
+                    )
+                  }
                   className="ui-input w-24 tabular-nums"
                 />
                 <span className="text-sm text-text-tertiary">seconds</span>
               </div>
               <p className="text-xs text-text-muted">
-                How long the beacon waits before auto-submitting the primary action. Currently {countdown}s.
+                How long the beacon waits before auto-submitting the primary action. Currently{" "}
+                {countdown}s.
               </p>
             </div>
           </div>
@@ -169,7 +205,9 @@ export function BeaconSettings() {
 
           {/* ─── Subgroup: Popup behavior ─── */}
           <div className="space-y-5">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">Popup behavior</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">
+              Popup behavior
+            </h3>
 
             <div className="space-y-2">
               <label className="ui-kicker">Popup mode</label>
@@ -193,10 +231,12 @@ export function BeaconSettings() {
               </div>
               <div className="rounded-lg border border-border-subtle bg-surface-raised p-3 space-y-1">
                 <p className="text-xs text-status-positive">
-                  <span className="font-semibold">Advantage — </span>{selectedMode.pros}
+                  <span className="font-semibold">Advantage — </span>
+                  {selectedMode.pros}
                 </p>
                 <p className="text-xs text-text-muted">
-                  <span className="font-semibold">Trade-off — </span>{selectedMode.cons}
+                  <span className="font-semibold">Trade-off — </span>
+                  {selectedMode.cons}
                 </p>
               </div>
             </div>
@@ -206,7 +246,9 @@ export function BeaconSettings() {
 
           {/* ─── Subgroup: Voice transcription ─── */}
           <div className="space-y-5">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">Voice transcription</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">
+              Voice transcription
+            </h3>
 
             {/* ── Transcription provider ── */}
             <div className="space-y-1.5">
@@ -223,18 +265,15 @@ export function BeaconSettings() {
                 ))}
               </select>
               <p className="text-xs text-text-muted">
-                Force local Whisper when Groq is rate-limited, or force Groq when local runtime is unavailable.
+                Force local Whisper when Groq is rate-limited, or force Groq when local runtime is
+                unavailable.
               </p>
             </div>
 
             {/* ── Whisper model ── */}
             <div className="space-y-1.5">
               <label className="ui-kicker">Voice transcription model</label>
-              <select
-                value={model}
-                onChange={(e) => setModel(e.target.value)}
-                className="ui-input"
-              >
+              <select value={model} onChange={(e) => setModel(e.target.value)} className="ui-input">
                 {WHISPER_MODELS.map((m) => (
                   <option key={m.value} value={m.value}>
                     {m.label} — {m.note}
@@ -242,8 +281,9 @@ export function BeaconSettings() {
                 ))}
               </select>
               <p className="text-xs text-text-muted">
-                Whisper model used when provider is Local or Auto with runtime available. Larger models are more accurate but slower.
-                Cached in <code className="text-text-secondary">~/.cache/whisper/</code>.
+                Whisper model used when provider is Local or Auto with runtime available. Larger
+                models are more accurate but slower. Cached in{" "}
+                <code className="text-text-secondary">~/.cache/whisper/</code>.
               </p>
             </div>
           </div>
@@ -253,11 +293,7 @@ export function BeaconSettings() {
       {error && <p className="ui-error">{error}</p>}
       {saved && <p className="text-sm text-status-positive">Saved.</p>}
 
-      <button
-        onClick={save}
-        disabled={saving || !dirty}
-        className="ui-btn-primary"
-      >
+      <button onClick={save} disabled={saving || !dirty} className="ui-btn-primary">
         {saving && <Loader2 className="ui-spinner" />}
         Save changes
       </button>

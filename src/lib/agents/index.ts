@@ -39,7 +39,12 @@ import { geminiAdapter } from "./gemini";
 // runs emit orchestration_events (source="hosted-runner", adapter="hermes"),
 // visible in Activity. Not yet proven under volume.
 
-export type { AgentAdapter, AgentCapabilities, AgentAvailability, AgentRuntimeConfig } from "./types";
+export type {
+  AgentAdapter,
+  AgentCapabilities,
+  AgentAvailability,
+  AgentRuntimeConfig,
+} from "./types";
 
 /** Every agent FleetCrown knows about. Order = UI display order. */
 export const ALL_ADAPTERS: readonly AgentAdapter[] = [

@@ -45,15 +45,13 @@ export type SessionSnapshot = {
 // (loosely) the logic in components/control/control-presenter.ts but kept
 // inline here so the snapshot endpoint doesn't need to import the heavy
 // presenter module.
-function derivePhase(
-  state: {
-    sessionStatus: string | null;
-    agentRunning: boolean;
-    tabOpen: boolean;
-    closedAt: Date | null;
-    updatedAt: Date;
-  },
-): SessionSnapshotItem["state"]["phase"] {
+function derivePhase(state: {
+  sessionStatus: string | null;
+  agentRunning: boolean;
+  tabOpen: boolean;
+  closedAt: Date | null;
+  updatedAt: Date;
+}): SessionSnapshotItem["state"]["phase"] {
   if (state.closedAt) return "closed";
   if (state.agentRunning) return "working";
   if (state.sessionStatus === SESSION_STATUS.READY) return "ready";

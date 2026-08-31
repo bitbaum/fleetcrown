@@ -80,7 +80,8 @@ export function GitHubRepoSuggestions() {
         <div className="flex items-center gap-3">
           <Check className="h-5 w-5 text-status-positive shrink-0" />
           <div className="font-medium text-text-primary">
-            Imported {successCount} GitHub repo{successCount === 1 ? "" : "s"}. Welcome to your fleet.
+            Imported {successCount} GitHub repo{successCount === 1 ? "" : "s"}. Welcome to your
+            fleet.
           </div>
         </div>
       </section>
@@ -96,7 +97,8 @@ export function GitHubRepoSuggestions() {
             Import your {repos.length} most recent GitHub repos?
           </div>
           <p className="text-sm text-text-muted mt-0.5">
-            One click pulls them in as FleetCrown projects. Pick others or add manually below if you want different ones.
+            One click pulls them in as FleetCrown projects. Pick others or add manually below if you
+            want different ones.
           </p>
         </div>
       </div>
@@ -111,9 +113,7 @@ export function GitHubRepoSuggestions() {
         ))}
       </ul>
 
-      {error && (
-        <p className="text-xs text-status-warning">{error}</p>
-      )}
+      {error && <p className="text-xs text-status-warning">{error}</p>}
 
       <div className="flex items-center gap-2">
         <button
@@ -131,10 +131,7 @@ export function GitHubRepoSuggestions() {
             <>Import all {repos.length}</>
           )}
         </button>
-        <a
-          href="/control/import"
-          className="ui-btn-ghost text-sm"
-        >
+        <a href="/control/import" className="ui-btn-ghost text-sm">
           Pick different ones →
         </a>
       </div>

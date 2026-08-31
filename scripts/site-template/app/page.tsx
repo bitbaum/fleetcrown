@@ -6,9 +6,9 @@ export default function Home() {
       </h1>
       <p className="mt-6 max-w-prose text-lg leading-relaxed text-fg-secondary">
         This is a new site scaffolded by <code className="font-mono text-sm">new-site.sh</code>.
-        Replace this page, and change the tokens in{' '}
-        <code className="font-mono text-sm">app/globals.css</code> — shipping in the default
-        palette is the one thing a bespoke site must not do.
+        Replace this page, and change the tokens in{" "}
+        <code className="font-mono text-sm">app/globals.css</code> — shipping in the default palette
+        is the one thing a bespoke site must not do.
       </p>
       <p className="mt-10 font-mono text-xs uppercase tracking-caps text-fg-muted">__HOST__</p>
     </main>

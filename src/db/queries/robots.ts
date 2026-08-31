@@ -114,7 +114,10 @@ export async function searchRobots(
   };
 }
 
-export async function getRobotDetail(userId: string, id: string): Promise<RobotWithAttributes | null> {
+export async function getRobotDetail(
+  userId: string,
+  id: string,
+): Promise<RobotWithAttributes | null> {
   const [row] = await db
     .select({
       id: entities.id,
@@ -124,7 +127,9 @@ export async function getRobotDetail(userId: string, id: string): Promise<RobotW
       updatedAt: entities.updatedAt,
     })
     .from(entities)
-    .where(and(eq(entities.id, id), eq(entities.userId, userId), eq(entities.type, ENTITY_TYPE.ROBOT)));
+    .where(
+      and(eq(entities.id, id), eq(entities.userId, userId), eq(entities.type, ENTITY_TYPE.ROBOT)),
+    );
 
   if (!row) return null;
 
@@ -202,7 +207,9 @@ export async function patchRobot(userId: string, id: string, data: z.infer<typeo
   const [updated] = await db
     .update(entities)
     .set(patch)
-    .where(and(eq(entities.id, id), eq(entities.userId, userId), eq(entities.type, ENTITY_TYPE.ROBOT)))
+    .where(
+      and(eq(entities.id, id), eq(entities.userId, userId), eq(entities.type, ENTITY_TYPE.ROBOT)),
+    )
     .returning({ id: entities.id });
   if (!updated) return null;
 
@@ -231,7 +238,13 @@ export async function ensureDefaultVacuums(userId: string): Promise<RobotWithAtt
     const existing = await db
       .select({ id: entities.id })
       .from(entities)
-      .where(and(eq(entities.userId, userId), eq(entities.type, ENTITY_TYPE.ROBOT), eq(entities.name, spec.name)))
+      .where(
+        and(
+          eq(entities.userId, userId),
+          eq(entities.type, ENTITY_TYPE.ROBOT),
+          eq(entities.name, spec.name),
+        ),
+      )
       .limit(1);
     if (existing[0]) {
       const detail = await getRobotDetail(userId, existing[0].id);
@@ -252,7 +265,9 @@ export async function ensureDefaultVacuums(userId: string): Promise<RobotWithAtt
 export async function deleteRobot(userId: string, id: string) {
   const [deleted] = await db
     .delete(entities)
-    .where(and(eq(entities.id, id), eq(entities.userId, userId), eq(entities.type, ENTITY_TYPE.ROBOT)))
+    .where(
+      and(eq(entities.id, id), eq(entities.userId, userId), eq(entities.type, ENTITY_TYPE.ROBOT)),
+    )
     .returning({ id: entities.id });
   return deleted ?? null;
 }

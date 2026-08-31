@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
 
   let pin: string;
   try {
-    const body = await req.json() as { pin?: unknown };
+    const body = (await req.json()) as { pin?: unknown };
     pin = String(body.pin ?? "").trim();
   } catch {
     return NextResponse.json({ ok: false, error: "Invalid request" }, { status: 400 });

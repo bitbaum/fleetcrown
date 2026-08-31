@@ -23,9 +23,13 @@ export function useAutoContinue(tab: string, initialEnabled?: boolean) {
     }
     let cancelled = false;
     getJson<{ enabled: boolean }>(`/api/control/auto-continue?tab=${encodeURIComponent(tab)}`)
-      .then((result) => { if (!cancelled) setEnabled(result.enabled); })
+      .then((result) => {
+        if (!cancelled) setEnabled(result.enabled);
+      })
       .catch(() => {});
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [tab, initialEnabled]);
 
   const toggle = useCallback(async () => {

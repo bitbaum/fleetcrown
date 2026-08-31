@@ -39,8 +39,8 @@ type SortMode = "default" | "due" | "stuck" | "progress";
 
 const SORT_OPTIONS: { value: SortMode; label: string }[] = [
   { value: "default", label: "Default" },
-  { value: "due",      label: "Due soon" },
-  { value: "stuck",    label: "Stuck first" },
+  { value: "due", label: "Due soon" },
+  { value: "stuck", label: "Stuck first" },
   { value: "progress", label: "Most done" },
 ];
 
@@ -79,7 +79,11 @@ export function GoalsGrid({
   const [projectFilter, setProjectFilter] = useState<string | null>(null);
   const [sort, setSort] = useState<SortMode>("default");
 
-  useEscapeKey(() => { setQuery(""); setProjectFilter(null); setSort("default"); });
+  useEscapeKey(() => {
+    setQuery("");
+    setProjectFilter(null);
+    setSort("default");
+  });
 
   const projects = useMemo(() => {
     const names = activeGoals.map((g) => g.entityName).filter((n): n is string => !!n);
@@ -104,7 +108,12 @@ export function GoalsGrid({
           placeholder="Search goals…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Escape") { setQuery(""); (e.target as HTMLInputElement).blur(); } }}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") {
+              setQuery("");
+              (e.target as HTMLInputElement).blur();
+            }
+          }}
           className="ui-input pl-10 pr-14"
         />
         <span className="ui-badge absolute right-3 top-1/2 -translate-y-1/2">
@@ -156,7 +165,9 @@ export function GoalsGrid({
         <Card>
           <div className="flex flex-col items-center gap-2 py-6">
             <Target className="h-8 w-8 text-text-tertiary" />
-            <div className="text-sm text-text-secondary">No active goals match the current filter</div>
+            <div className="text-sm text-text-secondary">
+              No active goals match the current filter
+            </div>
           </div>
         </Card>
       ) : activeGoals.length === 0 && completedGoals.length > 0 ? (

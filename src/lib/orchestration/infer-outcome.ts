@@ -57,18 +57,27 @@ export function inferOutcome(input: InferOutcomeInput): OrchestrationOutcome {
   const { summary, durationMs, error, userAbort } = input;
 
   if (userAbort) return ORCHESTRATION_OUTCOME.USER_ABORT;
-  if (error || contains(summary?.health, "critical") || contains(summary?.tsc, "fail")) return ORCHESTRATION_OUTCOME.ERROR;
+  if (error || contains(summary?.health, "critical") || contains(summary?.tsc, "fail"))
+    return ORCHESTRATION_OUTCOME.ERROR;
 
   // No handoff written + ran long → hung
   if (!summary?.done && typeof durationMs === "number" && durationMs > THIRTY_MINUTES_MS) {
     return ORCHESTRATION_OUTCOME.HANG;
   }
 
-  if (hasFailedTests(summary?.tests) || contains(summary?.lint, "fail") || contains(summary?.health, "needs attention")) {
+  if (
+    hasFailedTests(summary?.tests) ||
+    contains(summary?.lint, "fail") ||
+    contains(summary?.health, "needs attention")
+  ) {
     return ORCHESTRATION_OUTCOME.PARTIAL;
   }
 
-  if ((contains(summary?.health, "good") || summary?.status?.toLowerCase() === SESSION_STATUS.READY) && summary?.done) {
+  if (
+    (contains(summary?.health, "good") ||
+      summary?.status?.toLowerCase() === SESSION_STATUS.READY) &&
+    summary?.done
+  ) {
     return ORCHESTRATION_OUTCOME.SUCCESS;
   }
 

@@ -18,12 +18,12 @@
  * token is returned rather than rotated — rotating would silently invalidate a
  * snippet already deployed on a live site.
  */
-import { db } from '@/db';
-import { entities, users } from '@/db/schema';
-import { and, eq } from 'drizzle-orm';
-import { ENTITY_TYPE } from '@/lib/constants/statuses';
-import { createProject } from '@/db/queries/projects';
-import { upsertWidgetToken } from '@/db/queries/widget-tokens';
+import { db } from "@/db";
+import { entities, users } from "@/db/schema";
+import { and, eq } from "drizzle-orm";
+import { ENTITY_TYPE } from "@/lib/constants/statuses";
+import { createProject } from "@/db/queries/projects";
+import { upsertWidgetToken } from "@/db/queries/widget-tokens";
 
 const [slug, title, host] = process.argv.slice(2);
 
@@ -33,7 +33,7 @@ function die(message: string): never {
 }
 
 if (!slug || !title || !host) {
-  die('usage: provision-widget.ts <slug> <title> <host>');
+  die("usage: provision-widget.ts <slug> <title> <host>");
 }
 
 /**
@@ -52,8 +52,8 @@ async function resolveOwner(): Promise<string> {
     return row.id;
   }
   const all = await db.select({ id: users.id }).from(users).limit(2);
-  if (all.length === 0) die('no users in the database');
-  if (all.length > 1) die('more than one user — set FLEETCROWN_OWNER_EMAIL');
+  if (all.length === 0) die("no users in the database");
+  if (all.length > 1) die("more than one user — set FLEETCROWN_OWNER_EMAIL");
   return all[0].id;
 }
 
@@ -65,7 +65,7 @@ async function main(): Promise<void> {
     where: and(
       eq(entities.userId, userId),
       eq(entities.name, title),
-      eq(entities.type, ENTITY_TYPE.PROJECT)
+      eq(entities.type, ENTITY_TYPE.PROJECT),
     ),
     columns: { id: true },
   });
@@ -81,9 +81,9 @@ async function main(): Promise<void> {
         description: `Website at https://${host}`,
         // Owner from the environment, matching _box-env.sh — hardcoding it
         // here is what made a rename touch this file at all.
-        gitUrl: `https://github.com/${process.env.GH_OWNER ?? 'bitbaum'}/${slug}`,
+        gitUrl: `https://github.com/${process.env.GH_OWNER ?? "bitbaum"}/${slug}`,
       },
-      'new-site.sh'
+      "new-site.sh",
     );
     projectId = created.id;
     console.error(`+ created project "${title}" (${projectId})`);
@@ -94,7 +94,7 @@ async function main(): Promise<void> {
   const token = await upsertWidgetToken(userId, projectId, {
     origins: [`https://${host}`],
   });
-  if (!token) die('failed to mint a widget token');
+  if (!token) die("failed to mint a widget token");
 
   console.error(`✓ widget token bound to https://${host}`);
   process.stdout.write(token.token);
@@ -102,4 +102,4 @@ async function main(): Promise<void> {
 
 main()
   .then(() => process.exit(0))
-  .catch(err => die(err instanceof Error ? err.message : String(err)));
+  .catch((err) => die(err instanceof Error ? err.message : String(err)));

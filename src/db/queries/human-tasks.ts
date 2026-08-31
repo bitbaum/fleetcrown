@@ -16,7 +16,14 @@
 import { randomBytes } from "node:crypto";
 import { aliasedTable, and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { attributes, entities, humanTaskEvents, humanTasks, users, type HumanTask } from "@/db/schema";
+import {
+  attributes,
+  entities,
+  humanTaskEvents,
+  humanTasks,
+  users,
+  type HumanTask,
+} from "@/db/schema";
 import { ENTITY_TYPE, HUMAN_TASK_STATUS, type HumanTaskStatus } from "@/lib/constants/statuses";
 import {
   ASSIGNEE_ACTION_STATUS,
@@ -191,7 +198,10 @@ function parseDate(value: string | null | undefined): Date | null {
 }
 
 /** A project id must be one of the operator's own projects, or it is dropped. */
-async function resolveProjectId(userId: string, projectId: string | null | undefined): Promise<string | null> {
+async function resolveProjectId(
+  userId: string,
+  projectId: string | null | undefined,
+): Promise<string | null> {
   if (!projectId) return null;
   const [row] = await db
     .select({ id: entities.id })
@@ -218,7 +228,7 @@ export async function createHumanTask(
   actor: TaskActor = TASK_ACTOR.OPERATOR,
 ): Promise<HumanTaskRow | null> {
   const assigneeId = input.assigneeId
-    ? (await assertAssignablePerson(userId, input.assigneeId))?.id ?? null
+    ? ((await assertAssignablePerson(userId, input.assigneeId))?.id ?? null)
     : null;
 
   const [created] = await db
@@ -232,7 +242,7 @@ export async function createHumanTask(
       reason: input.reason?.trim() || null,
       dueDate: parseDate(input.dueDate),
       feeAmount: input.feeAmount ?? null,
-      feeCurrency: input.feeAmount !== undefined ? input.feeCurrency ?? null : null,
+      feeCurrency: input.feeAmount !== undefined ? (input.feeCurrency ?? null) : null,
       status: HUMAN_TASK_STATUS.DRAFT,
     })
     .returning();
@@ -275,10 +285,11 @@ export async function patchHumanTask(
   if (input.dueDate !== undefined) patch.dueDate = parseDate(input.dueDate);
   if (input.feeAmount !== undefined) patch.feeAmount = input.feeAmount;
   if (input.feeCurrency !== undefined) patch.feeCurrency = input.feeCurrency;
-  if (input.projectId !== undefined) patch.projectId = await resolveProjectId(userId, input.projectId);
+  if (input.projectId !== undefined)
+    patch.projectId = await resolveProjectId(userId, input.projectId);
   if (input.assigneeId !== undefined) {
     patch.assigneeId = input.assigneeId
-      ? (await assertAssignablePerson(userId, input.assigneeId))?.id ?? null
+      ? ((await assertAssignablePerson(userId, input.assigneeId))?.id ?? null)
       : null;
   }
 
@@ -367,7 +378,10 @@ export async function shareHumanTask(userId: string, id: string): Promise<HumanT
     patch.assignedAt = now;
   }
 
-  await db.update(humanTasks).set(patch).where(and(eq(humanTasks.id, id), eq(humanTasks.userId, userId)));
+  await db
+    .update(humanTasks)
+    .set(patch)
+    .where(and(eq(humanTasks.id, id), eq(humanTasks.userId, userId)));
   await recordEvent(userId, id, TASK_EVENT.SHARED, TASK_ACTOR.OPERATOR, {
     status: patch.status as HumanTaskStatus | undefined,
   });
@@ -380,7 +394,10 @@ export async function shareHumanTask(userId: string, id: string): Promise<HumanT
  * repeats every morning. One they already accepted keeps its status: they did
  * answer, and revoking is only about access from here on.
  */
-export async function revokeHumanTaskShare(userId: string, id: string): Promise<HumanTaskDetail | null> {
+export async function revokeHumanTaskShare(
+  userId: string,
+  id: string,
+): Promise<HumanTaskDetail | null> {
   const existing = await getHumanTask(userId, id);
   if (!existing) return null;
 
@@ -391,7 +408,10 @@ export async function revokeHumanTaskShare(userId: string, id: string): Promise<
     patch.assignedAt = null;
   }
 
-  await db.update(humanTasks).set(patch).where(and(eq(humanTasks.id, id), eq(humanTasks.userId, userId)));
+  await db
+    .update(humanTasks)
+    .set(patch)
+    .where(and(eq(humanTasks.id, id), eq(humanTasks.userId, userId)));
   await recordEvent(userId, id, TASK_EVENT.REVOKED, TASK_ACTOR.OPERATOR, {
     status: patch.status as HumanTaskStatus | undefined,
   });
@@ -441,7 +461,10 @@ export async function getSharedTask(token: string): Promise<SharedTask | null> {
   const timeline = (await getTimeline(row.task.id)).filter(
     // The operator's internal notes stay internal; hand-offs and the
     // assignee's own answers are exactly what they should be able to re-read.
-    (e) => e.actor === TASK_ACTOR.ASSIGNEE || e.kind === TASK_EVENT.SHARED || e.kind === TASK_EVENT.STATUS,
+    (e) =>
+      e.actor === TASK_ACTOR.ASSIGNEE ||
+      e.kind === TASK_EVENT.SHARED ||
+      e.kind === TASK_EVENT.STATUS,
   );
 
   return {

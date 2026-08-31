@@ -5,14 +5,14 @@ import { DEFAULT_TIMEZONE } from "@/lib/constants";
 import { WEATHER_CITY } from "@/lib/constants/today";
 
 export type UserPreferencesData = {
-  homeCity:         string | null;
-  homeTimezone:     string | null;
-  homeLocale:       string | null;
-  currentCity:      string | null;
-  currentTimezone:  string | null;
+  homeCity: string | null;
+  homeTimezone: string | null;
+  homeLocale: string | null;
+  currentCity: string | null;
+  currentTimezone: string | null;
   currentCityUntil: string | null;
-  writingVoice:     string | null;
-  memoryEnabled:    boolean;
+  writingVoice: string | null;
+  memoryEnabled: boolean;
 };
 
 export function getActiveCity(prefs: UserPreferencesData | null): string {
@@ -43,17 +43,27 @@ export async function getUserPreferences(userId: string): Promise<UserPreference
     .limit(1)
     .then((r) => r[0] ?? null);
 
-  if (!row) return { homeCity: null, homeTimezone: null, homeLocale: null, currentCity: null, currentTimezone: null, currentCityUntil: null, writingVoice: null, memoryEnabled: true };
+  if (!row)
+    return {
+      homeCity: null,
+      homeTimezone: null,
+      homeLocale: null,
+      currentCity: null,
+      currentTimezone: null,
+      currentCityUntil: null,
+      writingVoice: null,
+      memoryEnabled: true,
+    };
 
   return {
-    homeCity:         row.homeCity,
-    homeTimezone:     row.homeTimezone,
-    homeLocale:       row.homeLocale,
-    currentCity:      row.currentCity,
-    currentTimezone:  row.currentTimezone,
+    homeCity: row.homeCity,
+    homeTimezone: row.homeTimezone,
+    homeLocale: row.homeLocale,
+    currentCity: row.currentCity,
+    currentTimezone: row.currentTimezone,
     currentCityUntil: row.currentCityUntil,
-    writingVoice:     row.writingVoice,
-    memoryEnabled:    row.memoryEnabled,
+    writingVoice: row.writingVoice,
+    memoryEnabled: row.memoryEnabled,
   };
 }
 
@@ -77,13 +87,13 @@ export async function upsertUserPreferences(
 
 function toRow(d: UserPreferencesData) {
   return {
-    homeCity:         d.homeCity,
-    homeTimezone:     d.homeTimezone,
-    homeLocale:       d.homeLocale,
-    currentCity:      d.currentCity,
-    currentTimezone:  d.currentTimezone,
+    homeCity: d.homeCity,
+    homeTimezone: d.homeTimezone,
+    homeLocale: d.homeLocale,
+    currentCity: d.currentCity,
+    currentTimezone: d.currentTimezone,
     currentCityUntil: d.currentCityUntil,
-    writingVoice:     d.writingVoice,
-    memoryEnabled:    d.memoryEnabled,
+    writingVoice: d.writingVoice,
+    memoryEnabled: d.memoryEnabled,
   };
 }

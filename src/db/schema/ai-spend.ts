@@ -20,24 +20,30 @@ import { users } from "./users";
  * and a small count. If per-turn forensics are ever needed they belong in the
  * activity stream, which already exists for that.
  */
-export const aiSpend = pgTable("ai_spend", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  /** UTC day this spend belongs to (YYYY-MM-DD). */
-  day: date("day").notNull(),
-  /** Tokens drawn by this user on this day, across every provider. */
-  tokens: integer("tokens").notNull().default(0),
-  /** Turns taken, so a cost-per-turn estimate can be recalibrated from reality. */
-  turns: integer("turns").notNull().default(0),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-}, (t) => [
-  // The upsert target. Without this the increment races: two concurrent turns
-  // both read zero, both insert, and one user gets two rows and twice the share.
-  unique("uq_ai_spend_user_day").on(t.userId, t.day),
-  // Counting distinct users for a day is the divisor in every fair-share
-  // decision, so it runs on every turn.
-  index("idx_ai_spend_day").on(t.day),
-]);
+export const aiSpend = pgTable(
+  "ai_spend",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    /** UTC day this spend belongs to (YYYY-MM-DD). */
+    day: date("day").notNull(),
+    /** Tokens drawn by this user on this day, across every provider. */
+    tokens: integer("tokens").notNull().default(0),
+    /** Turns taken, so a cost-per-turn estimate can be recalibrated from reality. */
+    turns: integer("turns").notNull().default(0),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    // The upsert target. Without this the increment races: two concurrent turns
+    // both read zero, both insert, and one user gets two rows and twice the share.
+    unique("uq_ai_spend_user_day").on(t.userId, t.day),
+    // Counting distinct users for a day is the divisor in every fair-share
+    // decision, so it runs on every turn.
+    index("idx_ai_spend_day").on(t.day),
+  ],
+);
 
 export type AiSpend = typeof aiSpend.$inferSelect;
 export type NewAiSpend = typeof aiSpend.$inferInsert;

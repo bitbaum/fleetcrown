@@ -78,7 +78,15 @@ export function ClosingBanner({ startedAt }: { startedAt: number }) {
   );
 }
 
-export function RunningBanner({ label, promptKey, startedAt }: { label: string; promptKey: string; startedAt: number }) {
+export function RunningBanner({
+  label,
+  promptKey,
+  startedAt,
+}: {
+  label: string;
+  promptKey: string;
+  startedAt: number;
+}) {
   const [elapsed, setElapsed] = useState(() => Math.floor(Date.now() / 1000) - startedAt);
   // Click-to-expand: the prompt label is truncated by default (1 line for
   // canned prompts, 3 lines for custom) so cards stay scannable. The
@@ -129,22 +137,27 @@ export function RunningBanner({ label, promptKey, startedAt }: { label: string; 
             )}
           </p>
           <p
-            className={cn(mayTruncate && "cursor-pointer", expanded ? expandedClass : truncatedClass)}
+            className={cn(
+              mayTruncate && "cursor-pointer",
+              expanded ? expandedClass : truncatedClass,
+            )}
             onClick={mayTruncate ? () => setExpanded((v) => !v) : undefined}
             title={mayTruncate ? (expanded ? "Click to collapse" : "Click to expand") : undefined}
           >
             {label}
           </p>
         </div>
-        <span className={cn("ui-icon-nudge-p shrink-0 text-xs tabular-nums", timerClass)}>{elapsedStr}</span>
+        <span className={cn("ui-icon-nudge-p shrink-0 text-xs tabular-nums", timerClass)}>
+          {elapsedStr}
+        </span>
       </div>
     </div>
   );
 }
 
 const RUN_STATE_TAG: Record<string, string> = {
-  done:    "ui-tag ui-tag-positive",
-  error:   "ui-tag ui-tag-negative",
+  done: "ui-tag ui-tag-positive",
+  error: "ui-tag ui-tag-negative",
   running: "ui-tag ui-tag-warning",
 };
 
@@ -169,7 +182,7 @@ export function LatestOrchestrationPanel({
   const displayState = staleRunning ? "interrupted" : run.state;
   const stateClass = staleRunning
     ? "ui-tag ui-tag-neutral"
-    : RUN_STATE_TAG[run.state] ?? "ui-tag ui-tag-neutral";
+    : (RUN_STATE_TAG[run.state] ?? "ui-tag ui-tag-neutral");
   const [expanded, setExpanded] = useState(false);
   const hasSummary = Boolean(run.summary?.done || run.summary?.next);
   const fallbackText = run.payload?.resultText?.trim() ?? "";
@@ -202,10 +215,15 @@ export function LatestOrchestrationPanel({
   return (
     <div className="space-y-2.5 ui-card-section">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="ui-kicker" title="Previous automated run. Live terminal state is shown in the project header.">
+        <span
+          className="ui-kicker"
+          title="Previous automated run. Live terminal state is shown in the project header."
+        >
           Previous automated run
         </span>
-        <span className="ui-tag ui-tag-neutral">{getAdapterLabel(run.adapter)} · {getIntentLabel(run.intent)}</span>
+        <span className="ui-tag ui-tag-neutral">
+          {getAdapterLabel(run.adapter)} · {getIntentLabel(run.intent)}
+        </span>
         <span className={stateClass}>{displayState}</span>
         {(() => {
           const usageLine = formatRunUsage(run);
@@ -224,17 +242,26 @@ export function LatestOrchestrationPanel({
           </span>
         )}
         {claimedWorkNoCommit && (
-          <span className="ui-tag ui-tag-warning" title="Run reported work done but recorded no commit — nothing landed in git.">
+          <span
+            className="ui-tag ui-tag-warning"
+            title="Run reported work done but recorded no commit — nothing landed in git."
+          >
             no commit
           </span>
         )}
         {blockReason && (
-          <span className="ui-tag ui-tag-warning" title="Agent reported it is blocked and can't progress without input.">
+          <span
+            className="ui-tag ui-tag-warning"
+            title="Agent reported it is blocked and can't progress without input."
+          >
             blocked: {blockReason.replace(/_/g, " ")}
           </span>
         )}
         {noOpCount >= 3 && (
-          <span className="ui-tag ui-tag-warning" title="Consecutive no-op turns — the agent is looping without shipping.">
+          <span
+            className="ui-tag ui-tag-warning"
+            title="Consecutive no-op turns — the agent is looping without shipping."
+          >
             {noOpCount} no-ops
           </span>
         )}

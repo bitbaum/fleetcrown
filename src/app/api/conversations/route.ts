@@ -20,7 +20,10 @@ export async function GET(req: NextRequest) {
 
   const projectsParam = req.nextUrl.searchParams.get("projects");
   const projectKeys = projectsParam
-    ? projectsParam.split(",").map((s) => s.trim()).filter(Boolean)
+    ? projectsParam
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
     : undefined;
 
   const conversations = await listConversations(userId, { projectKeys });

@@ -5,25 +5,33 @@ import type { BuilderChannel } from "@/lib/constants/statuses";
 
 // Commands queued by the cloud control plane for the local runtime node to execute.
 // The local runner polls this table, claims rows, executes them via zellij, and marks them done.
-export const pendingCommands = pgTable("pending_commands", {
-  id:          uuid("id").primaryKey().defaultRandom(),
-  userId:      uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  type:        text("type").notNull(),           // "inject" | "focus_tab" | "close_tab" | "launch_agent" | "switch_agent" | "peek_tab" | ...
-  payload:     jsonb("payload").notNull(),        // command-specific fields
-  createdAt:   timestamp("created_at",  { withTimezone: true }).defaultNow().notNull(),
-  claimedAt:   timestamp("claimed_at",  { withTimezone: true }),
-  executedAt:  timestamp("executed_at", { withTimezone: true }),
-  result:      jsonb("result"),                   // { ok: boolean, error?: string }
-}, (table) => [
-  index("idx_pending_commands_user_id").on(table.userId),
-  index("idx_pending_commands_created_at").on(table.createdAt),
-  // The claim gate, purge exemption, and close-sweep undelivered check all
-  // probe unexecuted commands by payload.runId — partial expression index so
-  // those stay cheap as the table grows.
-  index("idx_pending_commands_open_run").on(sql`((payload->>'runId'))`).where(sql`executed_at IS NULL`),
-]);
+export const pendingCommands = pgTable(
+  "pending_commands",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    type: text("type").notNull(), // "inject" | "focus_tab" | "close_tab" | "launch_agent" | "switch_agent" | "peek_tab" | ...
+    payload: jsonb("payload").notNull(), // command-specific fields
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    claimedAt: timestamp("claimed_at", { withTimezone: true }),
+    executedAt: timestamp("executed_at", { withTimezone: true }),
+    result: jsonb("result"), // { ok: boolean, error?: string }
+  },
+  (table) => [
+    index("idx_pending_commands_user_id").on(table.userId),
+    index("idx_pending_commands_created_at").on(table.createdAt),
+    // The claim gate, purge exemption, and close-sweep undelivered check all
+    // probe unexecuted commands by payload.runId — partial expression index so
+    // those stay cheap as the table grows.
+    index("idx_pending_commands_open_run")
+      .on(sql`((payload->>'runId'))`)
+      .where(sql`executed_at IS NULL`),
+  ],
+);
 
-export type PendingCommand    = typeof pendingCommands.$inferSelect;
+export type PendingCommand = typeof pendingCommands.$inferSelect;
 export type NewPendingCommand = typeof pendingCommands.$inferInsert;
 
 export type InjectPayload = {

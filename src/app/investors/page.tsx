@@ -14,7 +14,11 @@ export default async function InvestorsPage() {
   // public-safe fields only. Degrades to nothing rather than fake numbers.
   const owner = await getDefaultUser().catch(() => null);
   const fleet: HeroFleetSnapshot = owner
-    ? await getHeroFleetSnapshot(owner.id).catch(() => ({ isLive: false, projects: [], metrics: [] }))
+    ? await getHeroFleetSnapshot(owner.id).catch(() => ({
+        isLive: false,
+        projects: [],
+        metrics: [],
+      }))
     : { isLive: false, projects: [], metrics: [] };
 
   return (
@@ -80,12 +84,17 @@ export default async function InvestorsPage() {
           ask for this audience; the next step here is a conversation. */}
       <div className="ui-public-container-mid ui-public-section border-t border-border-subtle text-center">
         <h2 className="ui-public-display-lg">Talk to the founder.</h2>
-        <p className="ui-public-meta mx-auto mt-4 max-w-md sm:mt-6">Deck {INVESTOR_DETAILS.deck.toLowerCase()}.</p>
+        <p className="ui-public-meta mx-auto mt-4 max-w-md sm:mt-6">
+          Deck {INVESTOR_DETAILS.deck.toLowerCase()}.
+        </p>
         <div className="mt-7 sm:mt-10">
           {/* The address is the button. On a phone it is also the one tap that
               opens a mail composer, so it gets full width rather than a pill
               whose label ("mao@orangecat.ch") already fills the row. */}
-          <a href={`mailto:${INVESTOR_DETAILS.contact}`} className="ui-public-cta-lg w-full break-all sm:w-auto">
+          <a
+            href={`mailto:${INVESTOR_DETAILS.contact}`}
+            className="ui-public-cta-lg w-full break-all sm:w-auto"
+          >
             {INVESTOR_DETAILS.contact}
           </a>
         </div>

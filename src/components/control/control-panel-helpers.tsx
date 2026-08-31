@@ -34,7 +34,9 @@ export function ActivityLogPanel({
         {/* Count what this list SHOWS. The header printed the fetched total
             (30) over a 20-row body with no "show more" — ten dispatches the
             user was told about but could never see. */}
-        <span className="text-text-tertiary">({Math.min(activities.length, RECENT_ACTIVITY_ROWS)})</span>
+        <span className="text-text-tertiary">
+          ({Math.min(activities.length, RECENT_ACTIVITY_ROWS)})
+        </span>
         {open ? <ChevronUp className="h-3 w-3 ml-1" /> : <ChevronDown className="h-3 w-3 ml-1" />}
       </button>
       {open && (
@@ -102,12 +104,12 @@ export function BrainConfigPanel({
             <span className="text-sm font-semibold">
               {selectedDefinition?.label ?? getAdapterLabel(selectedAgent)}
             </span>
-            <span className="text-xs text-text-tertiary">· {model || selectedDefinition?.defaultModel}</span>
+            <span className="text-xs text-text-tertiary">
+              · {model || selectedDefinition?.defaultModel}
+            </span>
           </div>
         </div>
-        {headerRight && (
-          <div className="flex shrink-0 items-center gap-1.5">{headerRight}</div>
-        )}
+        {headerRight && <div className="flex shrink-0 items-center gap-1.5">{headerRight}</div>}
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -121,7 +123,11 @@ export function BrainConfigPanel({
                 onClick={() => isAvailable && onAgentSelect(entry.id, entry.defaultModel)}
                 disabled={!isAvailable}
                 className={isSelected ? "ui-chip-toggle-active" : "ui-chip-toggle"}
-                title={isAvailable ? `${entry.label} is available on the connected computer` : entry.availabilityReason ?? `${entry.label} is not available`}
+                title={
+                  isAvailable
+                    ? `${entry.label} is available on the connected computer`
+                    : (entry.availabilityReason ?? `${entry.label} is not available`)
+                }
               >
                 {entry.label}
                 {!isAvailable && <span className="ml-1 text-micro opacity-60">(missing)</span>}
@@ -154,7 +160,9 @@ export function BrainConfigPanel({
                 key={option}
                 type="button"
                 onClick={() => onModelChange(option)}
-                className={model === option ? "ui-chip-toggle-compact-active" : "ui-chip-toggle-compact"}
+                className={
+                  model === option ? "ui-chip-toggle-compact-active" : "ui-chip-toggle-compact"
+                }
               >
                 {option}
               </button>
@@ -202,12 +210,14 @@ export function BrainConfigPanel({
         <div className="rounded-xl border border-border-subtle bg-surface-overlay px-3 py-1.5 text-micro text-text-tertiary">
           Last switch{lastTabResultsAt ? ` · ${timeAgo(lastTabResultsAt)}` : ""}:{" "}
           {lastTabResults.slice(0, 3).map((r, i) => (
-            <span key={i}>{r.tab ? `${r.tab} ${r.status}` : r.status}{r.error ? ` (${r.error})` : ""}{i < Math.min(lastTabResults.length, 3) - 1 ? ", " : ""}</span>
+            <span key={i}>
+              {r.tab ? `${r.tab} ${r.status}` : r.status}
+              {r.error ? ` (${r.error})` : ""}
+              {i < Math.min(lastTabResults.length, 3) - 1 ? ", " : ""}
+            </span>
           ))}
           {lastTabResults.some((r) => r.status === "queued") && (
-            <span className="ml-1 text-text-muted">
-              · runner picks up within ~25s
-            </span>
+            <span className="ml-1 text-text-muted">· runner picks up within ~25s</span>
           )}
         </div>
       )}

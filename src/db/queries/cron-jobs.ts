@@ -16,10 +16,7 @@ export async function getCronJobRowByOpenclawId(userId: string, openclawId: stri
   const [row] = await db
     .select()
     .from(cronJobs)
-    .where(and(
-      eq(cronJobs.userId, userId),
-      sql`${cronJobs.job}->>'id' = ${openclawId}`,
-    ))
+    .where(and(eq(cronJobs.userId, userId), sql`${cronJobs.job}->>'id' = ${openclawId}`))
     .limit(1);
   return row ?? null;
 }

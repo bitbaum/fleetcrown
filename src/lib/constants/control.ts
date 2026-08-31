@@ -1,26 +1,26 @@
 // UI banner display windows — how long each state banner stays visible after detection.
 // Must be kept in sync with the /tmp sentinel file TTLs in the bash hooks.
-export const READY_WINDOW_S   = 600;    // 10 min — "Agent finished" banner
-export const CLOSED_WINDOW_S  = 3600;   // 1 hour — "Session closed" banner
-export const CLOSING_WINDOW_S = 1800;   // 30 min — "Closing session…" banner
+export const READY_WINDOW_S = 600; // 10 min — "Agent finished" banner
+export const CLOSED_WINDOW_S = 3600; // 1 hour — "Session closed" banner
+export const CLOSING_WINDOW_S = 1800; // 30 min — "Closing session…" banner
 // Projects with recent ready/closing/closed activity are considered "active" for display.
 // Must be long enough to survive a brief idle gap between sessions on the same project.
-export const ACTIVE_WINDOW_S  = 300;    // 5 min — active vs idle split in control presenter
-export const DEFAULT_BEACON_COUNTDOWN_S  = 12;  // fallback when settings file is absent — must match Python COUNTDOWN_SECONDS
-export const MIN_BEACON_COUNTDOWN_S      = 5;   // shortest allowed beacon countdown
-export const MAX_BEACON_COUNTDOWN_S      = 300; // longest allowed beacon countdown (5 minutes)
-export const DEFAULT_BEACON_MIN_IDLE_S   = 0;   // 0 = always show popup regardless of keyboard activity
-export const MAX_BEACON_MIN_IDLE_S       = 600; // 10 minutes max
-export const DEFAULT_POPUP_MODE          = "web"; // "web" | "disabled" — "both"/"pyqt" coerced to "web" for legacy rows
+export const ACTIVE_WINDOW_S = 300; // 5 min — active vs idle split in control presenter
+export const DEFAULT_BEACON_COUNTDOWN_S = 12; // fallback when settings file is absent — must match Python COUNTDOWN_SECONDS
+export const MIN_BEACON_COUNTDOWN_S = 5; // shortest allowed beacon countdown
+export const MAX_BEACON_COUNTDOWN_S = 300; // longest allowed beacon countdown (5 minutes)
+export const DEFAULT_BEACON_MIN_IDLE_S = 0; // 0 = always show popup regardless of keyboard activity
+export const MAX_BEACON_MIN_IDLE_S = 600; // 10 minutes max
+export const DEFAULT_POPUP_MODE = "web"; // "web" | "disabled" — "both"/"pyqt" coerced to "web" for legacy rows
 /** New-user autopilot policy. After the 2026-06-11 collapse the choice is
  *  binary — "on" defaults to true so new users get the fire-when-ready
  *  behavior immediately (still safety-gated by status:working, blockers,
  *  health). Users who want to dispatch every prompt manually toggle off. */
-export const DEFAULT_AUTO_INJECT_MODE    = "on" as const;
+export const DEFAULT_AUTO_INJECT_MODE = "on" as const;
 
 /** Max projects fleet-kick will start in one batch. Autopilot keeps filling
  *  slots as agents finish — this prevents 18 simultaneous cold starts. */
-export const MAX_CONCURRENT_BUILDING     = 3;
+export const MAX_CONCURRENT_BUILDING = 3;
 
 // Fleet query windows — used by getFleetSummary (today.ts) to classify agent states from DB only.
 // PROMPT_RUNNING_WINDOW_S: a started prompt older than this is considered stale (crashed without cleanup).
@@ -46,7 +46,10 @@ export function withinWindow(ts: number | null, nowS: number, windowS: number): 
 
 /** Extract the short health label from verbose agent output like "GOOD — deployed; all tests pass" */
 export function getHealthShort(health: string): string {
-  return health.split(/\s*[,—–]\s*/)[0].trim().toLowerCase();
+  return health
+    .split(/\s*[,—–]\s*/)[0]
+    .trim()
+    .toLowerCase();
 }
 
 /** Returns true for health short-labels that represent a problem needing attention. */
@@ -61,6 +64,6 @@ export function isHealthPoor(short: string): boolean {
 // a workflow via API. Their keys overlap but their execution paths differ.
 export const PROMPT_STYLE: Record<string, string> = {
   primary: "ui-btn-ready-primary",
-  action:  "ui-btn-ready-action",
-  more:    "ui-btn-ready-more",
+  action: "ui-btn-ready-action",
+  more: "ui-btn-ready-more",
 };

@@ -33,15 +33,15 @@ export function AddCommitmentButton() {
       dueDate: dueDate || undefined,
       financialImpact: financialImpact || undefined,
     });
-    if (ok) { reset(); setOpen(false); }
+    if (ok) {
+      reset();
+      setOpen(false);
+    }
   };
 
   if (!open) {
     return (
-      <button
-        onClick={() => setOpen(true)}
-        className="ui-btn-add-success mt-2"
-      >
+      <button onClick={() => setOpen(true)} className="ui-btn-add-success mt-2">
         <Plus className="h-3.5 w-3.5" /> Add commitment
       </button>
     );
@@ -54,7 +54,12 @@ export function AddCommitmentButton() {
         onChange={(e) => setDescription(e.target.value)}
         placeholder="What did you commit to? *"
         autoFocus
-        onKeyDown={(e) => { if (e.key === "Escape") { setOpen(false); reset(); } }}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") {
+            setOpen(false);
+            reset();
+          }
+        }}
         className="w-full ui-input-compact"
       />
       <div className="flex gap-2">
@@ -68,7 +73,13 @@ export function AddCommitmentButton() {
           value={financialImpact}
           onChange={(e) => setFinancialImpact(e.target.value)}
           placeholder="Financial impact (optional)"
-          onKeyDown={(e) => { if (e.key === "Enter") submit(); if (e.key === "Escape") { setOpen(false); reset(); } }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") submit();
+            if (e.key === "Escape") {
+              setOpen(false);
+              reset();
+            }
+          }}
           className="flex-1 ui-input-compact"
         />
       </div>
@@ -83,7 +94,10 @@ export function AddCommitmentButton() {
           Add
         </button>
         <button
-          onClick={() => { setOpen(false); reset(); }}
+          onClick={() => {
+            setOpen(false);
+            reset();
+          }}
           className="flex items-center gap-1 ui-link-muted"
         >
           <X className="h-3 w-3" /> Cancel

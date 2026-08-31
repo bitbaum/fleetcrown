@@ -98,7 +98,8 @@ export function fitFactsToBudget(
   budgetTokens: number,
 ): Fact[] {
   const overhead = Math.ceil(overheadChars / 4);
-  const fits = (n: number) => overhead + estimateTokens(render(trimFactsToBudget(all, n))) <= budgetTokens;
+  const fits = (n: number) =>
+    overhead + estimateTokens(render(trimFactsToBudget(all, n))) <= budgetTokens;
 
   if (fits(all.length)) return all;
   // Binary search the fact count. Rendered size grows with n, so the predicate

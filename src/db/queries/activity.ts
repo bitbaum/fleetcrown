@@ -60,7 +60,12 @@ export type ProjectActivityEvent = {
 // Lifecycle signals the dispatch/run rows don't already express. task_failed is
 // included so local/direct-mode failures (which never create a run row) still
 // surface; cross-source de-dup removes the cloud-mode overlap with runs.
-const SIGNAL_EVENT_TYPES: OrchestrationEventType[] = ["input_requested", "session_closed", "task_failed", "funding"];
+const SIGNAL_EVENT_TYPES: OrchestrationEventType[] = [
+  "input_requested",
+  "session_closed",
+  "task_failed",
+  "funding",
+];
 
 const EVENT_TITLES: Partial<Record<OrchestrationEventType, string>> = {
   input_requested: "Input requested",
@@ -146,8 +151,14 @@ function runToEvent(r: RunRow): ProjectActivityEvent {
     source: "runner",
     adapter: r.adapter,
     intent: r.intent,
-    title: failed ? "Task failed" : `Task complete${r.outcome && r.outcome !== "success" ? ` (${r.outcome})` : ""}${shipped}`,
-    detail: r.payload?.error ? oneLine(r.payload.error) : r.summary?.done ? oneLine(r.summary.done) : null,
+    title: failed
+      ? "Task failed"
+      : `Task complete${r.outcome && r.outcome !== "success" ? ` (${r.outcome})` : ""}${shipped}`,
+    detail: r.payload?.error
+      ? oneLine(r.payload.error)
+      : r.summary?.done
+        ? oneLine(r.summary.done)
+        : null,
     status: runStatus(r),
   };
 }
@@ -207,7 +218,14 @@ export async function getProjectActivity(
         dispatchedAt: promptHistory.dispatchedAt,
       })
       .from(promptHistory)
-      .where(and(eq(promptHistory.userId, userId), eq(promptHistory.projectKey, projectKey), gte(promptHistory.dispatchedAt, since), excludeSmokeDispatchesSql()))
+      .where(
+        and(
+          eq(promptHistory.userId, userId),
+          eq(promptHistory.projectKey, projectKey),
+          gte(promptHistory.dispatchedAt, since),
+          excludeSmokeDispatchesSql(),
+        ),
+      )
       .orderBy(desc(promptHistory.dispatchedAt))
       .limit(limit),
     db
@@ -223,7 +241,13 @@ export async function getProjectActivity(
         finishedAt: orchestrationRuns.finishedAt,
       })
       .from(orchestrationRuns)
-      .where(and(eq(orchestrationRuns.userId, userId), eq(orchestrationRuns.projectKey, projectKey), gte(orchestrationRuns.startedAt, since)))
+      .where(
+        and(
+          eq(orchestrationRuns.userId, userId),
+          eq(orchestrationRuns.projectKey, projectKey),
+          gte(orchestrationRuns.startedAt, since),
+        ),
+      )
       .orderBy(desc(orchestrationRuns.startedAt))
       .limit(limit),
     db
@@ -281,7 +305,14 @@ export async function getProjectActivityBatch(
         dispatchedAt: promptHistory.dispatchedAt,
       })
       .from(promptHistory)
-      .where(and(eq(promptHistory.userId, userId), inArray(promptHistory.projectKey, projectKeys), gte(promptHistory.dispatchedAt, since), excludeSmokeDispatchesSql()))
+      .where(
+        and(
+          eq(promptHistory.userId, userId),
+          inArray(promptHistory.projectKey, projectKeys),
+          gte(promptHistory.dispatchedAt, since),
+          excludeSmokeDispatchesSql(),
+        ),
+      )
       .orderBy(desc(promptHistory.dispatchedAt)),
     db
       .select({
@@ -296,7 +327,13 @@ export async function getProjectActivityBatch(
         finishedAt: orchestrationRuns.finishedAt,
       })
       .from(orchestrationRuns)
-      .where(and(eq(orchestrationRuns.userId, userId), inArray(orchestrationRuns.projectKey, projectKeys), gte(orchestrationRuns.startedAt, since)))
+      .where(
+        and(
+          eq(orchestrationRuns.userId, userId),
+          inArray(orchestrationRuns.projectKey, projectKeys),
+          gte(orchestrationRuns.startedAt, since),
+        ),
+      )
       .orderBy(desc(orchestrationRuns.startedAt)),
     db
       .select({
@@ -328,7 +365,10 @@ export async function getProjectActivityBatch(
     byKey.set(ev.projectKey, list);
   };
   dispatches.map(dispatchToEvent).forEach(push);
-  runs.filter((r) => r.finishedAt !== null).map(runToEvent).forEach(push);
+  runs
+    .filter((r) => r.finishedAt !== null)
+    .map(runToEvent)
+    .forEach(push);
   events.map(eventToEvent).forEach(push);
 
   for (const key of projectKeys) {

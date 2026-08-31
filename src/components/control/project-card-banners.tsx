@@ -107,7 +107,11 @@ export function ProjectBanners({
         />
       )}
       {showRunning && currentPrompt && (
-        <RunningBanner label={currentPrompt.label} promptKey={currentPrompt.key} startedAt={currentPrompt.startedAt} />
+        <RunningBanner
+          label={currentPrompt.label}
+          promptKey={currentPrompt.key}
+          startedAt={currentPrompt.startedAt}
+        />
       )}
     </>
   );

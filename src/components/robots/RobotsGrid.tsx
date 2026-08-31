@@ -26,7 +26,10 @@ export function RobotsGrid({
     setLoading(true);
     try {
       const params = new URLSearchParams({ q, limit: "100" });
-      const data = await getJson<{ robots: RobotWithAttributes[]; total: number }>(`/api/robots?${params}`, { signal });
+      const data = await getJson<{ robots: RobotWithAttributes[]; total: number }>(
+        `/api/robots?${params}`,
+        { signal },
+      );
       if (signal?.aborted) return;
       setFetchError(false);
       setRobots(data.robots);
@@ -46,7 +49,10 @@ export function RobotsGrid({
     }
     const ctrl = new AbortController();
     const timer = setTimeout(() => search(query, ctrl.signal), SEARCH_DEBOUNCE_MS);
-    return () => { clearTimeout(timer); ctrl.abort(); };
+    return () => {
+      clearTimeout(timer);
+      ctrl.abort();
+    };
   }, [query, search]);
 
   return (
@@ -59,12 +65,15 @@ export function RobotsGrid({
             placeholder="Search robots…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Escape") { setQuery(""); (e.target as HTMLInputElement).blur(); } }}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") {
+                setQuery("");
+                (e.target as HTMLInputElement).blur();
+              }
+            }}
             className="ui-search-input"
           />
-          <span className="ui-badge absolute right-3 top-1/2 -translate-y-1/2">
-            {total}
-          </span>
+          <span className="ui-badge absolute right-3 top-1/2 -translate-y-1/2">{total}</span>
         </div>
         <NewRobotButton onCreated={() => search(query)} />
         {total === 0 && <AddTwoVacuumsButton onCreated={() => search(query)} />}
@@ -115,9 +124,7 @@ export function RobotsGrid({
         </div>
       )}
 
-      {loading && robots.length > 0 && (
-        <p className="text-sm text-text-tertiary">Updating…</p>
-      )}
+      {loading && robots.length > 0 && <p className="text-sm text-text-tertiary">Updating…</p>}
     </>
   );
 }

@@ -15,10 +15,13 @@ type GlobalAutoContinue = {
 };
 
 export function GlobalAutoContinueCard() {
-  const { data, loading, error, refetch } = useFetch<GlobalAutoContinue>("/api/control/auto-continue?all=1", {
-    intervalMs: REFRESH_CADENCE.system,
-    timeoutMs: 10_000,
-  });
+  const { data, loading, error, refetch } = useFetch<GlobalAutoContinue>(
+    "/api/control/auto-continue?all=1",
+    {
+      intervalMs: REFRESH_CADENCE.system,
+      timeoutMs: 10_000,
+    },
+  );
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -29,7 +32,9 @@ export function GlobalAutoContinueCard() {
       const res = await postJson("/api/control/auto-continue", { all: true, enabled });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await getJson<GlobalAutoContinue>("/api/control/auto-continue?all=1");
-      setMessage(`${enabled ? "Resumed" : "Paused"} ${json.total} project${json.total === 1 ? "" : "s"}.`);
+      setMessage(
+        `${enabled ? "Resumed" : "Paused"} ${json.total} project${json.total === 1 ? "" : "s"}.`,
+      );
       refetch();
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Request failed");
@@ -51,7 +56,11 @@ export function GlobalAutoContinueCard() {
     return (
       <Card>
         <CardHeader icon={Pause} title="Global auto-continue" />
-        <FetchErrorState message="Couldn't load auto-continue state" detail={error} onRetry={refetch} />
+        <FetchErrorState
+          message="Couldn't load auto-continue state"
+          detail={error}
+          onRetry={refetch}
+        />
       </Card>
     );
   }
@@ -64,13 +73,25 @@ export function GlobalAutoContinueCard() {
         right={<span className="text-xs text-text-tertiary">{data.disabled} paused</span>}
       />
       <p className="mb-3 text-sm text-text-secondary">
-        {data.enabled ? "Automatic continuation is enabled for all tracked projects." : "At least one project is paused."}
+        {data.enabled
+          ? "Automatic continuation is enabled for all tracked projects."
+          : "At least one project is paused."}
       </p>
       <div className="flex flex-wrap gap-2">
-        <button type="button" className="ui-btn-secondary text-sm" disabled={busy} onClick={() => setAll(false)}>
+        <button
+          type="button"
+          className="ui-btn-secondary text-sm"
+          disabled={busy}
+          onClick={() => setAll(false)}
+        >
           <Pause className="h-4 w-4" /> Pause all
         </button>
-        <button type="button" className="ui-btn-primary text-sm" disabled={busy} onClick={() => setAll(true)}>
+        <button
+          type="button"
+          className="ui-btn-primary text-sm"
+          disabled={busy}
+          onClick={() => setAll(true)}
+        >
           <Play className="h-4 w-4" /> Resume all
         </button>
       </div>

@@ -67,7 +67,11 @@ export type RunSource = {
   intent: string;
   state: string | null;
   outcome: string | null;
-  summary: { done?: string | null; next?: string | null; verification?: RunVerification | null } | null;
+  summary: {
+    done?: string | null;
+    next?: string | null;
+    verification?: RunVerification | null;
+  } | null;
   payload: { error?: string | null; resultText?: string | null } | null;
   startedAt: Date;
   finishedAt: Date | null;
@@ -127,8 +131,17 @@ export function formatDuration(startMs: number, endMs: number): string | null {
 }
 
 function runOutcome(run: RunSource): ActivityOutcome {
-  const known: ActivityOutcome[] = ["success", "partial", "error", "timeout", "hang", "user_abort", "unconfirmed"];
-  if (run.outcome && (known as string[]).includes(run.outcome)) return run.outcome as ActivityOutcome;
+  const known: ActivityOutcome[] = [
+    "success",
+    "partial",
+    "error",
+    "timeout",
+    "hang",
+    "user_abort",
+    "unconfirmed",
+  ];
+  if (run.outcome && (known as string[]).includes(run.outcome))
+    return run.outcome as ActivityOutcome;
   if (run.payload?.error) return "error";
   if (!run.finishedAt) return "running";
   return "success";
@@ -302,7 +315,10 @@ export function eventNeedsAttention(event: ActivityEvent): boolean {
   return NEEDS_ATTENTION.has(event.outcome);
 }
 
-export function filterActivityEvents(events: ActivityEvent[], filter: ActivityFilter): ActivityEvent[] {
+export function filterActivityEvents(
+  events: ActivityEvent[],
+  filter: ActivityFilter,
+): ActivityEvent[] {
   if (filter === "all") return events;
   if (filter === "attention") return events.filter(eventNeedsAttention);
   if (filter === "running") return events.filter((e) => e.outcome === "running");
@@ -326,7 +342,9 @@ export function tallyActivityEvents(events: ActivityEvent[]): ActivityTallies {
 }
 
 /** Calendar-day buckets in feed order, so a date is never repeated 20 times. */
-export function groupEventsByDay(events: ActivityEvent[]): { day: string; events: ActivityEvent[] }[] {
+export function groupEventsByDay(
+  events: ActivityEvent[],
+): { day: string; events: ActivityEvent[] }[] {
   const groups: { day: string; events: ActivityEvent[] }[] = [];
   for (const event of events) {
     const day = event.occurredAt.slice(0, 10);

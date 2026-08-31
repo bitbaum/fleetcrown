@@ -163,95 +163,106 @@ async function fetchActivityRows(userId: string, since: Date, projectKey: string
 
   // Activity counts per project run unfiltered so the chip wall can rank
   // projects by hotness even when one is currently selected.
-  const [projectRows, promptCounts, runCounts, localChatCounts, prompts, runs, localChats] = await Promise.all([
-    db
-      .select({ key: userProjects.name })
-      .from(userProjects)
-      .where(and(eq(userProjects.userId, userId), eq(userProjects.isActive, true)))
-      .orderBy(userProjects.name),
-    db
-      .select({
-        projectKey: promptHistory.projectKey,
-        n: sql<number>`count(*)::int`,
-      })
-      .from(promptHistory)
-      .where(and(eq(promptHistory.userId, userId), gte(promptHistory.dispatchedAt, since)))
-      .groupBy(promptHistory.projectKey),
-    db
-      .select({
-        projectKey: orchestrationRuns.projectKey,
-        n: sql<number>`count(*)::int`,
-      })
-      .from(orchestrationRuns)
-      .where(and(eq(orchestrationRuns.userId, userId), gte(orchestrationRuns.startedAt, since)))
-      .groupBy(orchestrationRuns.projectKey),
-    db
-      .select({
-        projectKey: claudeCodeHistory.projectKey,
-        n: sql<number>`count(*)::int`,
-      })
-      .from(claudeCodeHistory)
-      .where(and(
-        eq(claudeCodeHistory.userId, userId),
-        gte(claudeCodeHistory.occurredAt, since),
-        eq(claudeCodeHistory.promptType, "user"),
-      ))
-      .groupBy(claudeCodeHistory.projectKey)
-      // Degrade gracefully when the table doesn't exist yet (env where the
-      // schema hasn't been applied — typically prod before someone runs the
-      // CREATE TABLE). Empty array = digest still renders prompts + runs.
-      .catch(() => [] as { projectKey: string | null; n: number }[]),
-    db
-      .select({
-        id: promptHistory.id,
-        projectKey: promptHistory.projectKey,
-        adapter: promptHistory.adapter,
-        intent: promptHistory.intent,
-        customPrompt: promptHistory.customPrompt,
-        resolvedPrompt: promptHistory.resolvedPrompt,
-        dispatchedAt: promptHistory.dispatchedAt,
-      })
-      .from(promptHistory)
-      .where(and(...promptConditions))
-      .orderBy(desc(promptHistory.dispatchedAt))
-      .limit(MAX_RAW_ROWS_PER_QUERY),
-    db
-      .select({
-        id: orchestrationRuns.id,
-        projectKey: orchestrationRuns.projectKey,
-        adapter: orchestrationRuns.adapter,
-        intent: orchestrationRuns.intent,
-        state: orchestrationRuns.state,
-        outcome: orchestrationRuns.outcome,
-        summary: orchestrationRuns.summary,
-        payload: orchestrationRuns.payload,
-        startedAt: orchestrationRuns.startedAt,
-        finishedAt: orchestrationRuns.finishedAt,
-      })
-      .from(orchestrationRuns)
-      .where(and(...runConditions))
-      .orderBy(desc(orchestrationRuns.startedAt))
-      .limit(MAX_RAW_ROWS_PER_QUERY),
-    db
-      .select({
-        id: claudeCodeHistory.id,
-        projectKey: claudeCodeHistory.projectKey,
-        projectPath: claudeCodeHistory.projectPath,
-        gitBranch: claudeCodeHistory.gitBranch,
-        sessionId: claudeCodeHistory.sessionId,
-        promptText: claudeCodeHistory.promptText,
-        occurredAt: claudeCodeHistory.occurredAt,
-      })
-      .from(claudeCodeHistory)
-      .where(and(...localChatConditions))
-      .orderBy(desc(claudeCodeHistory.occurredAt))
-      .limit(MAX_RAW_ROWS_PER_QUERY)
-      // Same fallback as localChatCounts — missing table degrades cleanly.
-      .catch(() => [] as Array<{
-        id: string; projectKey: string | null; projectPath: string;
-        gitBranch: string | null; sessionId: string; promptText: string; occurredAt: Date;
-      }>),
-  ]);
+  const [projectRows, promptCounts, runCounts, localChatCounts, prompts, runs, localChats] =
+    await Promise.all([
+      db
+        .select({ key: userProjects.name })
+        .from(userProjects)
+        .where(and(eq(userProjects.userId, userId), eq(userProjects.isActive, true)))
+        .orderBy(userProjects.name),
+      db
+        .select({
+          projectKey: promptHistory.projectKey,
+          n: sql<number>`count(*)::int`,
+        })
+        .from(promptHistory)
+        .where(and(eq(promptHistory.userId, userId), gte(promptHistory.dispatchedAt, since)))
+        .groupBy(promptHistory.projectKey),
+      db
+        .select({
+          projectKey: orchestrationRuns.projectKey,
+          n: sql<number>`count(*)::int`,
+        })
+        .from(orchestrationRuns)
+        .where(and(eq(orchestrationRuns.userId, userId), gte(orchestrationRuns.startedAt, since)))
+        .groupBy(orchestrationRuns.projectKey),
+      db
+        .select({
+          projectKey: claudeCodeHistory.projectKey,
+          n: sql<number>`count(*)::int`,
+        })
+        .from(claudeCodeHistory)
+        .where(
+          and(
+            eq(claudeCodeHistory.userId, userId),
+            gte(claudeCodeHistory.occurredAt, since),
+            eq(claudeCodeHistory.promptType, "user"),
+          ),
+        )
+        .groupBy(claudeCodeHistory.projectKey)
+        // Degrade gracefully when the table doesn't exist yet (env where the
+        // schema hasn't been applied — typically prod before someone runs the
+        // CREATE TABLE). Empty array = digest still renders prompts + runs.
+        .catch(() => [] as { projectKey: string | null; n: number }[]),
+      db
+        .select({
+          id: promptHistory.id,
+          projectKey: promptHistory.projectKey,
+          adapter: promptHistory.adapter,
+          intent: promptHistory.intent,
+          customPrompt: promptHistory.customPrompt,
+          resolvedPrompt: promptHistory.resolvedPrompt,
+          dispatchedAt: promptHistory.dispatchedAt,
+        })
+        .from(promptHistory)
+        .where(and(...promptConditions))
+        .orderBy(desc(promptHistory.dispatchedAt))
+        .limit(MAX_RAW_ROWS_PER_QUERY),
+      db
+        .select({
+          id: orchestrationRuns.id,
+          projectKey: orchestrationRuns.projectKey,
+          adapter: orchestrationRuns.adapter,
+          intent: orchestrationRuns.intent,
+          state: orchestrationRuns.state,
+          outcome: orchestrationRuns.outcome,
+          summary: orchestrationRuns.summary,
+          payload: orchestrationRuns.payload,
+          startedAt: orchestrationRuns.startedAt,
+          finishedAt: orchestrationRuns.finishedAt,
+        })
+        .from(orchestrationRuns)
+        .where(and(...runConditions))
+        .orderBy(desc(orchestrationRuns.startedAt))
+        .limit(MAX_RAW_ROWS_PER_QUERY),
+      db
+        .select({
+          id: claudeCodeHistory.id,
+          projectKey: claudeCodeHistory.projectKey,
+          projectPath: claudeCodeHistory.projectPath,
+          gitBranch: claudeCodeHistory.gitBranch,
+          sessionId: claudeCodeHistory.sessionId,
+          promptText: claudeCodeHistory.promptText,
+          occurredAt: claudeCodeHistory.occurredAt,
+        })
+        .from(claudeCodeHistory)
+        .where(and(...localChatConditions))
+        .orderBy(desc(claudeCodeHistory.occurredAt))
+        .limit(MAX_RAW_ROWS_PER_QUERY)
+        // Same fallback as localChatCounts — missing table degrades cleanly.
+        .catch(
+          () =>
+            [] as Array<{
+              id: string;
+              projectKey: string | null;
+              projectPath: string;
+              gitBranch: string | null;
+              sessionId: string;
+              promptText: string;
+              occurredAt: Date;
+            }>,
+        ),
+    ]);
 
   return { projectRows, promptCounts, runCounts, localChatCounts, prompts, runs, localChats };
 }
@@ -287,8 +298,14 @@ async function fetchPreviousWindowCount(
   if (projectKey) runWhere.push(eq(orchestrationRuns.projectKey, projectKey));
 
   const [prompts, runs] = await Promise.all([
-    db.select({ n: sql<number>`count(*)::int` }).from(promptHistory).where(and(...promptWhere)),
-    db.select({ n: sql<number>`count(*)::int` }).from(orchestrationRuns).where(and(...runWhere)),
+    db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(promptHistory)
+      .where(and(...promptWhere)),
+    db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(orchestrationRuns)
+      .where(and(...runWhere)),
   ]);
   // A dispatch that produced a run is ONE action; counting both tables would
   // roughly double every window. Runs are the better proxy for "work done", so
@@ -309,8 +326,10 @@ function buildProjectsList(
   localChatCounts: ActivityRows["localChatCounts"],
 ): DigestProjectOption[] {
   const activityByProject = new Map<string, number>();
-  for (const row of promptCounts) activityByProject.set(row.projectKey, (activityByProject.get(row.projectKey) ?? 0) + row.n);
-  for (const row of runCounts) activityByProject.set(row.projectKey, (activityByProject.get(row.projectKey) ?? 0) + row.n);
+  for (const row of promptCounts)
+    activityByProject.set(row.projectKey, (activityByProject.get(row.projectKey) ?? 0) + row.n);
+  for (const row of runCounts)
+    activityByProject.set(row.projectKey, (activityByProject.get(row.projectKey) ?? 0) + row.n);
   for (const row of localChatCounts) {
     if (!row.projectKey) continue;
     activityByProject.set(row.projectKey, (activityByProject.get(row.projectKey) ?? 0) + row.n);
@@ -371,7 +390,10 @@ function buildProjectStatuses(runs: RunRow[], projects: DigestProjectOption[]): 
     if (STATUS_RANK[status] > STATUS_RANK[entry.worst]) entry.worst = status;
   }
   return Array.from(byKey.values()).sort(
-    (a, b) => STATUS_RANK[b.worst] - STATUS_RANK[a.worst] || b.total - a.total || a.label.localeCompare(b.label),
+    (a, b) =>
+      STATUS_RANK[b.worst] - STATUS_RANK[a.worst] ||
+      b.total - a.total ||
+      a.label.localeCompare(b.label),
   );
 }
 
@@ -407,10 +429,17 @@ export async function getProjectDigest(
   const windowMs = until.getTime() - since.getTime();
   const [rows, previousCount] = await Promise.all([
     fetchActivityRows(userId, since, projectKey),
-    fetchPreviousWindowCount(userId, new Date(since.getTime() - windowMs), since, projectKey).catch(() => 0),
+    fetchPreviousWindowCount(userId, new Date(since.getTime() - windowMs), since, projectKey).catch(
+      () => 0,
+    ),
   ]);
 
-  const projects = buildProjectsList(rows.projectRows, rows.promptCounts, rows.runCounts, rows.localChatCounts);
+  const projects = buildProjectsList(
+    rows.projectRows,
+    rows.promptCounts,
+    rows.runCounts,
+    rows.localChatCounts,
+  );
   const projectStatuses = buildProjectStatuses(rows.runs, projects);
   const stats = buildStats(rows.prompts, rows.runs, rows.promptCounts, rows.runCounts, projectKey);
   const compacted = buildCompacted(rows.prompts, rows.runs);

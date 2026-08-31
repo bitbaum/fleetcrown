@@ -1,15 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getApiUserId } from "@/lib/session";
 import { readIdParam } from "@/lib/api/route-helpers";
-import {
-  getConversationWithMessages,
-  deleteConversation,
-} from "@/db/queries/conversations";
+import { getConversationWithMessages, deleteConversation } from "@/db/queries/conversations";
 
-export async function GET(
-  _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const userId = await getApiUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -22,10 +16,7 @@ export async function GET(
   return NextResponse.json(result);
 }
 
-export async function DELETE(
-  _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const userId = await getApiUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

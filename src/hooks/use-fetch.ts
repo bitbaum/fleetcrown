@@ -29,15 +29,19 @@ export function useFetch<T>(
   const effectiveTimeoutMs = timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
   useEffect(() => {
-    if (!url) { setLoading(false); return; } // eslint-disable-line react-hooks/set-state-in-effect
+    if (!url) {
+      setLoading(false); // eslint-disable-line react-hooks/set-state-in-effect
+      return;
+    }
     let cancelled = false;
     setLoading(true);
     setError(null);
 
     const controller = effectiveTimeoutMs > 0 ? new AbortController() : null;
-    const timeoutId = effectiveTimeoutMs > 0 && controller
-      ? setTimeout(() => controller.abort(), effectiveTimeoutMs)
-      : null;
+    const timeoutId =
+      effectiveTimeoutMs > 0 && controller
+        ? setTimeout(() => controller.abort(), effectiveTimeoutMs)
+        : null;
 
     getJson<T>(url, controller ? { signal: controller.signal } : undefined)
       .then((json) => {

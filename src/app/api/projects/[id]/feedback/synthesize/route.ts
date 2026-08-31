@@ -40,11 +40,19 @@ function renderItem(f: FeedbackListItem): string {
   return parts.join("\n");
 }
 
-function composeSynthesizePrompt(items: FeedbackListItem[], projectName: string, widgetToken: string): string {
+function composeSynthesizePrompt(
+  items: FeedbackListItem[],
+  projectName: string,
+  widgetToken: string,
+): string {
   const ingestUrl = `${appUrl().replace(/\/$/, "")}/api/feedback`;
   const siteOrigin = (() => {
     const withUrl = items.find((f) => f.url);
-    try { return withUrl?.url ? new URL(withUrl.url).origin : appUrl(); } catch { return appUrl(); }
+    try {
+      return withUrl?.url ? new URL(withUrl.url).origin : appUrl();
+    } catch {
+      return appUrl();
+    }
   })();
   return [
     `Synthesize the visitor-feedback inbox of ${projectName} into structured briefs. Do NOT change any code — this is an analysis-only run; the operator dispatches fixes separately.`,
@@ -80,17 +88,27 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   const project = await getProjectCore(userId, idOrResp);
   if (!project) return jsonError("Project not found", 404);
   const token = await getActiveWidgetToken(userId, idOrResp);
-  if (!token) return jsonError("Enable the feedback widget first — briefs are filed through the widget API", 400);
+  if (!token)
+    return jsonError(
+      "Enable the feedback widget first — briefs are filed through the widget API",
+      400,
+    );
 
   // Briefs (source=synthesizer) are this agent's own output — re-synthesizing
   // them would compound aggregates. The contact check keeps legacy rows out.
   const items = (await listProjectFeedback(userId, idOrResp))
-    .filter((f) => f.status === FEEDBACK_STATUS.NEW
-      && f.source !== FEEDBACK_SOURCE.SYNTHESIZER
-      && f.contact !== SYNTHESIZER_CONTACT)
+    .filter(
+      (f) =>
+        f.status === FEEDBACK_STATUS.NEW &&
+        f.source !== FEEDBACK_SOURCE.SYNTHESIZER &&
+        f.contact !== SYNTHESIZER_CONTACT,
+    )
     .slice(0, MAX_ITEMS);
   if (items.length < SYNTHESIZE_MIN_ITEMS) {
-    return jsonError(`Nothing to synthesize — needs at least ${SYNTHESIZE_MIN_ITEMS} new items`, 400);
+    return jsonError(
+      `Nothing to synthesize — needs at least ${SYNTHESIZE_MIN_ITEMS} new items`,
+      400,
+    );
   }
 
   const { status, body } = await injectPrompt(

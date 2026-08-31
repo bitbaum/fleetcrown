@@ -47,33 +47,49 @@ function runTests(): void {
     assert(patch!.onboardedAt instanceof Date, "expected onboardedAt date");
   });
 
-  check("returning user with projects + suggested username taken → no heal (avoid wasted write)", () => {
-    // Without a valid username, setting onboardedAt is a no-op because
-    // isOnboardingComplete still gates on hasValidUsername. Skip the write
-    // and let the user fall through to /onboarding to pick manually.
-    const patch = decideHealPatch(newUser, 3, false);
-    assert(patch === null, "expected null patch — no username, no point setting onboardedAt");
-  });
+  check(
+    "returning user with projects + suggested username taken → no heal (avoid wasted write)",
+    () => {
+      // Without a valid username, setting onboardedAt is a no-op because
+      // isOnboardingComplete still gates on hasValidUsername. Skip the write
+      // and let the user fall through to /onboarding to pick manually.
+      const patch = decideHealPatch(newUser, 3, false);
+      assert(patch === null, "expected null patch — no username, no point setting onboardedAt");
+    },
+  );
 
   check("already-onboarded user with valid username → no heal needed", () => {
     const patch = decideHealPatch(
-      { name: "Jane Doe", email: "jane@example.com", username: "jane-doe", onboardedAt: new Date() },
+      {
+        name: "Jane Doe",
+        email: "jane@example.com",
+        username: "jane-doe",
+        onboardedAt: new Date(),
+      },
       5,
       true,
     );
     assert(patch === null, "expected null patch when user is fully set up");
   });
 
-  check("user with onboardedAt but no username (legacy migrated row) → patch sets username only", () => {
-    const patch = decideHealPatch(
-      { name: "Jane Doe", email: "jane@example.com", username: null, onboardedAt: new Date("2025-01-01") },
-      0,
-      true,
-    );
-    assert(patch !== null, "expected patch");
-    assert(patch!.username === "jane-doe", `expected jane-doe, got ${patch!.username}`);
-    assert(patch!.onboardedAt === undefined, "expected no onboardedAt when already set");
-  });
+  check(
+    "user with onboardedAt but no username (legacy migrated row) → patch sets username only",
+    () => {
+      const patch = decideHealPatch(
+        {
+          name: "Jane Doe",
+          email: "jane@example.com",
+          username: null,
+          onboardedAt: new Date("2025-01-01"),
+        },
+        0,
+        true,
+      );
+      assert(patch !== null, "expected patch");
+      assert(patch!.username === "jane-doe", `expected jane-doe, got ${patch!.username}`);
+      assert(patch!.onboardedAt === undefined, "expected no onboardedAt when already set");
+    },
+  );
 
   check("zero projects + onboardedAt set → still treated as returning", () => {
     const patch = decideHealPatch(

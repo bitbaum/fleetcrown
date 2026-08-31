@@ -75,7 +75,9 @@ export async function buildGroundedTurn(userId: string, message: string): Promis
     wantsApprovals
       ? pendingApprovalFacts(userId, APPROVAL_K).catch(() => [] as Fact[])
       : Promise.resolve([] as Fact[]),
-    wantsBrief ? buildDailyBrief(userId).catch(() => [] as Directive[]) : Promise.resolve([] as Directive[]),
+    wantsBrief
+      ? buildDailyBrief(userId).catch(() => [] as Directive[])
+      : Promise.resolve([] as Directive[]),
   ]);
 
   // Order matters for attention: deterministic records first (they are simply

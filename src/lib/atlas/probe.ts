@@ -97,7 +97,8 @@ function absolutize(value: string | null, base: string): string | null {
 }
 
 /** Assets are not destinations — a site map full of .png and .css is noise. */
-const ASSET_EXT = /\.(png|jpe?g|gif|svg|webp|avif|ico|css|js|mjs|json|xml|txt|pdf|zip|woff2?|ttf|mp4|webm|rss)$/i;
+const ASSET_EXT =
+  /\.(png|jpe?g|gif|svg|webp|avif|ico|css|js|mjs|json|xml|txt|pdf|zip|woff2?|ttf|mp4|webm|rss)$/i;
 const MAX_PATHS = 120;
 
 /**
@@ -142,8 +143,7 @@ export function parseSiteHtml(html: string, baseUrl: string): ParsedSite {
 
   const titleTag = /<title\b[^>]*>([\s\S]*?)<\/title>/i.exec(html);
   const title =
-    clean(metas["og:title"], 200) ??
-    clean(titleTag ? decodeEntities(titleTag[1]) : null, 200);
+    clean(metas["og:title"], 200) ?? clean(titleTag ? decodeEntities(titleTag[1]) : null, 200);
 
   const description =
     clean(metas["og:description"], 400) ??
@@ -166,7 +166,10 @@ export function parseSiteHtml(html: string, baseUrl: string): ParsedSite {
     if (!href) continue;
     const host = hostOf(href, baseUrl);
     if (!host) continue;
-    if (host !== ownHost) { hosts.add(host); continue; }
+    if (host !== ownHost) {
+      hosts.add(host);
+      continue;
+    }
     const path = pathOf(href, baseUrl);
     if (path) paths.add(path);
   }

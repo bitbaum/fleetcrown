@@ -15,7 +15,11 @@ export default async function LokiPage() {
 
   return (
     <div className="app-page ui-loki-page app-viewport-pane flex flex-col">
-      <Suspense fallback={<div className="mx-auto h-full w-full max-w-5xl animate-pulse rounded-lg bg-surface-base" />}>
+      <Suspense
+        fallback={
+          <div className="mx-auto h-full w-full max-w-5xl animate-pulse rounded-lg bg-surface-base" />
+        }
+      >
         <LokiWorkspace
           initialProjects={seed?.projects}
           initialConversations={seed?.conversations}

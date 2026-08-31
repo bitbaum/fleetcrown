@@ -39,7 +39,10 @@ check("postbuild stamps the build before anything ships it", () => {
     postbuild.includes("record-build-ref.sh"),
     "postbuild must run record-build-ref.sh — a build with no stamp is a build prod cannot identify",
   );
-  assert(existsSync(join(root, "scripts/record-build-ref.sh")), "scripts/record-build-ref.sh is missing");
+  assert(
+    existsSync(join(root, "scripts/record-build-ref.sh")),
+    "scripts/record-build-ref.sh is missing",
+  );
 });
 
 check("the stamp lands inside the artifact both deploy paths ship", () => {
@@ -52,7 +55,10 @@ check("the stamp lands inside the artifact both deploy paths ship", () => {
     "the marker must be written into .next/standalone so rsync carries it",
   );
   const deploy = readFileSync(join(root, "scripts/deploy-hetzner.sh"), "utf8");
-  assert(/STANDALONE=.*\.next\/standalone/.test(deploy), "deploy no longer rsyncs .next/standalone — marker path is wrong");
+  assert(
+    /STANDALONE=.*\.next\/standalone/.test(deploy),
+    "deploy no longer rsyncs .next/standalone — marker path is wrong",
+  );
 });
 
 check("a build with no resolvable commit does not fail the build", () => {
@@ -63,14 +69,20 @@ check("a build with no resolvable commit does not fail the build", () => {
   try {
     mkdirSync(join(dir, "scripts"), { recursive: true });
     mkdirSync(join(dir, ".next", "standalone"), { recursive: true });
-    writeFileSync(join(dir, "scripts", "record-build-ref.sh"), readFileSync(join(root, "scripts/record-build-ref.sh")));
+    writeFileSync(
+      join(dir, "scripts", "record-build-ref.sh"),
+      readFileSync(join(root, "scripts/record-build-ref.sh")),
+    );
     // No git repo, no env vars → no SHA is resolvable anywhere.
     const out = execFileSync("bash", [join(dir, "scripts", "record-build-ref.sh")], {
       env: { PATH: process.env.PATH ?? "", HOME: dir },
       encoding: "utf8",
     });
     assert(/not recorded/.test(out), `expected a warning, got: ${out}`);
-    assert(!existsSync(join(dir, ".next", "standalone", ".build-ref")), "no SHA must mean no marker, not an empty one");
+    assert(
+      !existsSync(join(dir, ".next", "standalone", ".build-ref")),
+      "no SHA must mean no marker, not an empty one",
+    );
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -81,7 +93,10 @@ function stampIn(env: Record<string, string>): string {
   try {
     mkdirSync(join(dir, "scripts"), { recursive: true });
     mkdirSync(join(dir, ".next", "standalone"), { recursive: true });
-    writeFileSync(join(dir, "scripts", "record-build-ref.sh"), readFileSync(join(root, "scripts/record-build-ref.sh")));
+    writeFileSync(
+      join(dir, "scripts", "record-build-ref.sh"),
+      readFileSync(join(root, "scripts/record-build-ref.sh")),
+    );
     execFileSync("bash", [join(dir, "scripts", "record-build-ref.sh")], {
       env: { PATH: process.env.PATH ?? "", HOME: dir, ...env },
       encoding: "utf8",
@@ -115,7 +130,10 @@ check("/api/health reports the commit, and never guesses one", () => {
   const health = readFileSync(join(root, "src/app/api/health/route.ts"), "utf8");
   assert(/commit:\s*BUILD_COMMIT/.test(health), "/api/health must expose the build commit");
   assert(health.includes(".build-ref"), "/api/health must read the build-ref marker");
-  assert(/return null;/.test(health), "an unreadable marker must report null, not a fabricated value");
+  assert(
+    /return null;/.test(health),
+    "an unreadable marker must report null, not a fabricated value",
+  );
 });
 
 check("the deploy asserts the LIVE box runs the commit it just shipped", () => {
@@ -132,7 +150,10 @@ check("the deploy asserts the LIVE box runs the commit it just shipped", () => {
   // What was missing was ever being told; that is what this must guarantee.
   const block = deploy.slice(deploy.indexOf("SHIPPED_SHA="), deploy.indexOf("✓ deployed"));
   assert(/⚠ live build is/.test(block), "a mismatch must be announced");
-  assert(!/rollback_box/.test(block), "a commit mismatch must NOT roll back — it would discard the newer build");
+  assert(
+    !/rollback_box/.test(block),
+    "a commit mismatch must NOT roll back — it would discard the newer build",
+  );
 });
 
 console.log(`\n${passed}/${passed} passed`);

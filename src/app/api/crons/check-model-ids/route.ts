@@ -65,8 +65,16 @@ export async function GET(req: NextRequest) {
           `\`npm run check:models\`.`,
         actionUrl: "/system",
         metadata: {
-          missing: report.missing.map((m) => ({ id: m.id, provider: m.provider, usedFor: m.usedFor })),
-          rejected: report.rejected.map((r) => ({ id: r.model.id, error: r.error, usedFor: r.model.usedFor })),
+          missing: report.missing.map((m) => ({
+            id: m.id,
+            provider: m.provider,
+            usedFor: m.usedFor,
+          })),
+          rejected: report.rejected.map((r) => ({
+            id: r.model.id,
+            error: r.error,
+            usedFor: r.model.usedFor,
+          })),
           uncheckedIds: report.uncheckedIds,
         },
       });
@@ -94,7 +102,10 @@ export async function GET(req: NextRequest) {
     message:
       broken > 0
         ? `MODEL ROT: ${rotted} pinned id(s) gone, ${refused} present-but-REFUSING our request — ` +
-          [...report.missing.map((m) => m.id), ...report.rejected.map((r) => `${r.model.id} (400)`)].join(", ")
+          [
+            ...report.missing.map((m) => m.id),
+            ...report.rejected.map((r) => `${r.model.id} (400)`),
+          ].join(", ")
         : unchecked > 0
           ? `${report.presentCount} pinned id(s) present; ${unchecked} UNCHECKED (catalogue unreadable) — not a pass for those`
           : `All ${report.presentCount} pinned model id(s) exist at their provider`,

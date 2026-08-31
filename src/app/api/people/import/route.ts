@@ -19,12 +19,16 @@ export async function POST(req: NextRequest) {
   const access = await requirePrivateApiAccess();
   if (access instanceof NextResponse) return access;
   if (!canImportSocial(ENTITY_TYPE.PERSON)) {
-    return NextResponse.json({ error: "People import is not allowed for this actor kind" }, { status: 403 });
+    return NextResponse.json(
+      { error: "People import is not allowed for this actor kind" },
+      { status: 403 },
+    );
   }
   const dataOrResp = await readJsonBody(req, Body);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
-  const source = dataOrResp.source ?? detectImportSource(dataOrResp.filename ?? "", dataOrResp.text);
+  const source =
+    dataOrResp.source ?? detectImportSource(dataOrResp.filename ?? "", dataOrResp.text);
   const contacts = parseImport(dataOrResp.text, source);
   if (contacts.length === 0) {
     return NextResponse.json({ error: "No contacts found in that file" }, { status: 422 });

@@ -43,15 +43,15 @@ export async function enqueueProposalFromMessage(
   const action = await proposeAction(userId, {
     type: proposal.type,
     title:
-      person && (proposal.type === ACTION_TYPE.SEND_MESSAGE || proposal.type === ACTION_TYPE.SEND_EMAIL)
+      person &&
+      (proposal.type === ACTION_TYPE.SEND_MESSAGE || proposal.type === ACTION_TYPE.SEND_EMAIL)
         ? `Message ${person.name}`.slice(0, 200)
         : proposal.title,
     description: proposal.description,
     payload: enrichReachPayload(proposal.payload, reach),
-    reasoning:
-      person
-        ? `Matched ${person.name}${reach ? ` on ${reach.channel}` : ""}.`
-        : (proposal.reasoning ?? "Proposed by Loki from chat — approve to run it."),
+    reasoning: person
+      ? `Matched ${person.name}${reach ? ` on ${reach.channel}` : ""}.`
+      : (proposal.reasoning ?? "Proposed by Loki from chat — approve to run it."),
     entityId: person?.id ?? null,
   });
   // proposeAction dedupes an already-pending draft title to null.

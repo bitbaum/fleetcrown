@@ -19,7 +19,16 @@ type Deps = {
   zellijTabs: string[];
   selectedAgent: string;
   switchableRegistry: RegistryEntry[];
-  inject: (tab: string, promptKey?: string, customPrompt?: string, attachments?: Attachment[]) => Promise<{ mode: "queued" | "direct"; runnerConnected: boolean | null; commandId: string | null }>;
+  inject: (
+    tab: string,
+    promptKey?: string,
+    customPrompt?: string,
+    attachments?: Attachment[],
+  ) => Promise<{
+    mode: "queued" | "direct";
+    runnerConnected: boolean | null;
+    commandId: string | null;
+  }>;
   runWithBrain: (project: ProjectState, intent: OrchestrationTaskIntentId) => Promise<void>;
   runCustomPrompt: (project: ProjectState, prompt: string, agent: string) => Promise<void>;
   setError: (error: string | null) => void;
@@ -65,9 +74,19 @@ export function buildCardProps(deps: Deps) {
     zellijTabs: deps.zellijTabs,
     currentAdapter: deps.selectedAgent,
     availableAgents,
-    onInject: async (tab: string, promptKey?: string, customPrompt?: string, attachments?: Attachment[]) => {
+    onInject: async (
+      tab: string,
+      promptKey?: string,
+      customPrompt?: string,
+      attachments?: Attachment[],
+    ) => {
       try {
-        const { mode, runnerConnected, commandId } = await deps.inject(tab, promptKey, customPrompt, attachments);
+        const { mode, runnerConnected, commandId } = await deps.inject(
+          tab,
+          promptKey,
+          customPrompt,
+          attachments,
+        );
         if (mode === "queued") {
           const msg =
             runnerConnected === false

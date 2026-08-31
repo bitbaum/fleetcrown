@@ -5,8 +5,14 @@ import { normalizeTabKey, findMatchingTab } from "@/lib/tab-match";
 let pass = 0;
 let fail = 0;
 function eq(actual: unknown, expected: unknown, label: string) {
-  if (actual === expected) { pass++; }
-  else { fail++; console.error(`✗ ${label}: expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`); }
+  if (actual === expected) {
+    pass++;
+  } else {
+    fail++;
+    console.error(
+      `✗ ${label}: expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`,
+    );
+  }
 }
 
 // normalize

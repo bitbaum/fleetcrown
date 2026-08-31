@@ -18,12 +18,23 @@
  * should import from `@/lib/agents` directly.
  */
 
-import { ALL_ADAPTERS, findAdapter, effectiveDefaultModel, effectiveModelSuggestions } from "@/lib/agents";
+import {
+  ALL_ADAPTERS,
+  findAdapter,
+  effectiveDefaultModel,
+  effectiveModelSuggestions,
+} from "@/lib/agents";
 import type { AgentAdapter } from "@/lib/agents";
 import { looksLikeAgentCapacityIssue as detectCapacityIssue } from "@/lib/agent-resolution";
 
 export const AGENT_IDS = ["codex", "claude", "gemini", "cursor", "grok"] as const;
-export const AGENT_FALLBACK_ORDER: readonly Agent[] = ["claude", "cursor", "codex", "gemini", "grok"];
+export const AGENT_FALLBACK_ORDER: readonly Agent[] = [
+  "claude",
+  "cursor",
+  "codex",
+  "gemini",
+  "grok",
+];
 export type Agent = (typeof AGENT_IDS)[number];
 export type AgentOption = Agent | "openclaw";
 
@@ -92,7 +103,13 @@ export function sanitizeAgentId(value: string | undefined): Agent {
 }
 
 export function isAgentId(value: string | undefined | null): value is Agent {
-  return value === "claude" || value === "codex" || value === "gemini" || value === "cursor" || value === "grok";
+  return (
+    value === "claude" ||
+    value === "codex" ||
+    value === "gemini" ||
+    value === "cursor" ||
+    value === "grok"
+  );
 }
 
 export function looksLikeAgentCapacityIssue(text: string): boolean {
@@ -107,7 +124,13 @@ export function resolveNextAvailableAgent(currentAgent?: string | null): Agent |
   const registry = listAgentRegistry();
   const available = new Set(
     registry
-      .filter((entry) => entry.switchable && entry.available && entry.capabilities.tabSwitching && isAgentId(entry.id))
+      .filter(
+        (entry) =>
+          entry.switchable &&
+          entry.available &&
+          entry.capabilities.tabSwitching &&
+          isAgentId(entry.id),
+      )
       .map((entry) => entry.id as Agent),
   );
 
@@ -137,7 +160,10 @@ export function syncAgentSettings(agent: Agent, model: string): void {
 }
 
 /** Build the launch command for the given agent in the given dir. */
-export function buildAgentLaunchCommand(config: { agent: Agent; model: string }, dir: string): string {
+export function buildAgentLaunchCommand(
+  config: { agent: Agent; model: string },
+  dir: string,
+): string {
   return buildAgentOptionLaunchCommand(config, dir);
 }
 
@@ -147,7 +173,10 @@ export function getAgentInstallCommand(agent: AgentOption): string {
 }
 
 /** AgentOption-typed variant — accepts both Agent and "openclaw". */
-export function buildAgentOptionLaunchCommand(config: { agent: AgentOption; model?: string }, dir: string): string {
+export function buildAgentOptionLaunchCommand(
+  config: { agent: AgentOption; model?: string },
+  dir: string,
+): string {
   const adapter = findAdapter(config.agent);
   if (!adapter) {
     // Defensive default — fall back to codex if somehow an unknown id reaches us.

@@ -56,16 +56,20 @@ export async function POST(req: NextRequest) {
         userId,
         name: folder.name,
         dirPath: folder.path,
-        description: folder.remote_url ? `Local repository imported from ${SOURCE_FLEETCROWN_UI}` : "Local repository",
+        description: folder.remote_url
+          ? `Local repository imported from ${SOURCE_FLEETCROWN_UI}`
+          : "Local repository",
         gitUrl: folder.remote_url || null,
       });
-      if (project.entityProjectId) scheduleProjectProfileReindexByEntityId(userId, project.entityProjectId);
+      if (project.entityProjectId)
+        scheduleProjectProfileReindexByEntityId(userId, project.entityProjectId);
       created.push({ id: project.id, name: project.name, path: folder.path });
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       skipped.push({
         name: folder.name,
-        reason: msg.includes("duplicate") || msg.includes("unique") ? "duplicate" : msg.slice(0, 200),
+        reason:
+          msg.includes("duplicate") || msg.includes("unique") ? "duplicate" : msg.slice(0, 200),
       });
     }
   }

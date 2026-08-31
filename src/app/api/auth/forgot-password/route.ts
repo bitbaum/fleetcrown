@@ -11,7 +11,7 @@ const Body = z.object({
   email: z.string().trim().email().toLowerCase(),
 });
 
-const LIMIT  = 5;            // max reset requests
+const LIMIT = 5; // max reset requests
 const WINDOW = RATE_LIMIT_WINDOW_SHORT_MS;
 
 export async function POST(req: NextRequest) {

@@ -21,8 +21,15 @@ export function AddHabitForm({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const reset = () => { setTitle(""); setFrequency(HABIT_FREQUENCY.DAILY); setError(null); };
-  const close = () => { reset(); setOpen(false); };
+  const reset = () => {
+    setTitle("");
+    setFrequency(HABIT_FREQUENCY.DAILY);
+    setError(null);
+  };
+  const close = () => {
+    reset();
+    setOpen(false);
+  };
 
   const submit = async () => {
     const trimmed = title.trim();
@@ -64,7 +71,9 @@ export function AddHabitForm({
             className="ui-input-tight"
           >
             {Object.values(HABIT_FREQUENCY).map((f) => (
-              <option key={f} value={f}>{f}</option>
+              <option key={f} value={f}>
+                {f}
+              </option>
             ))}
           </select>
           <button

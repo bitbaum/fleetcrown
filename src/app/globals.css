@@ -48,24 +48,24 @@
   --color-surface-modal: var(--surface-modal);
   --color-surface-drawer: var(--surface-drawer);
   /* Semantic design tokens */
-  --color-text-primary:    var(--text-primary);
-  --color-text-secondary:  var(--text-secondary);
-  --color-text-tertiary:   var(--text-tertiary);
-  --color-text-muted:      var(--text-muted);
-  --color-text-inverted:   var(--text-inverted);
-  --color-surface-page:    var(--surface-page);
-  --color-surface-base:    var(--surface-base);
-  --color-surface-raised:  var(--surface-raised);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-text-muted: var(--text-muted);
+  --color-text-inverted: var(--text-inverted);
+  --color-surface-page: var(--surface-page);
+  --color-surface-base: var(--surface-base);
+  --color-surface-raised: var(--surface-raised);
   --color-surface-overlay: var(--surface-overlay);
-  --color-border-subtle:       var(--border-subtle);
-  --color-border-default:      var(--border-default);
-  --color-border-strong:       var(--border-strong);
-  --color-border-interactive:  var(--border-interactive);
-  --color-accent-primary:  var(--accent-primary);
-  --color-accent-hover:    var(--accent-hover);
-  --color-accent-muted:    var(--accent-muted);
-  --color-accent-text:     var(--accent-text);
-  --color-accent-warm:       var(--accent-warm);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-default: var(--border-default);
+  --color-border-strong: var(--border-strong);
+  --color-border-interactive: var(--border-interactive);
+  --color-accent-primary: var(--accent-primary);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-muted: var(--accent-muted);
+  --color-accent-text: var(--accent-text);
+  --color-accent-warm: var(--accent-warm);
   --color-accent-warm-hover: var(--accent-warm-hover);
   /* The label colour for text sitting ON accent-warm. White on the warm
      accent is ~3.0:1 — below the 4.5 AA floor — which put "Launch agent",
@@ -74,20 +74,20 @@
      orange button takes. Mirrors --on-accent in @fleet/design-tokens v1.1.0
      (SSOT for Solon and OrangeCat); FleetCrown still declares its ramp
      locally, so the value is kept in step by hand. */
-  --color-on-accent:         var(--on-accent);
+  --color-on-accent: var(--on-accent);
   /* Status tokens — the only chromatic colors in the system */
-  --color-status-positive:        var(--status-positive);
+  --color-status-positive: var(--status-positive);
   --color-status-positive-subtle: var(--status-positive-subtle);
-  --color-status-warning:         var(--status-warning);
-  --color-status-warning-subtle:  var(--status-warning-subtle);
-  --color-status-negative:        var(--status-negative);
+  --color-status-warning: var(--status-warning);
+  --color-status-warning-subtle: var(--status-warning-subtle);
+  --color-status-negative: var(--status-negative);
   --color-status-negative-subtle: var(--status-negative-subtle);
-  --color-status-neutral:         var(--status-neutral);
+  --color-status-neutral: var(--status-neutral);
   /* Public/editorial surface — always near-black regardless of app theme */
-  --color-surface-public:  var(--surface-public);
+  --color-surface-public: var(--surface-public);
   /* Theme-invariant surfaces/fills */
   --color-surface-terminal: var(--surface-terminal);
-  --color-toggle-knob:      var(--toggle-knob);
+  --color-toggle-knob: var(--toggle-knob);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -95,8 +95,8 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
-  --radius-modal: calc(var(--radius) * 4);   /* modal sheets: 2rem at default scale */
-  --radius-pill: calc(var(--radius) * 3.5);  /* floating nav pill: 1.75rem at default scale */
+  --radius-modal: calc(var(--radius) * 4); /* modal sheets: 2rem at default scale */
+  --radius-pill: calc(var(--radius) * 3.5); /* floating nav pill: 1.75rem at default scale */
   --text-micro: var(--text-micro);
   --text-nano: var(--text-nano);
   --text-compact: var(--text-compact);
@@ -126,24 +126,24 @@
 /* ─── Light mode ──────────────────────────────────────────────────────────── */
 :root {
   --background: oklch(0.98 0 0);
-  --foreground: oklch(0.10 0 0);
+  --foreground: oklch(0.1 0 0);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.10 0 0);
+  --card-foreground: oklch(0.1 0 0);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.10 0 0);
-  --primary: oklch(0.10 0 0);
+  --popover-foreground: oklch(0.1 0 0);
+  --primary: oklch(0.1 0 0);
   --primary-foreground: oklch(0.98 0 0);
   --secondary: oklch(0.96 0 0);
-  --secondary-foreground: oklch(0.10 0 0);
+  --secondary-foreground: oklch(0.1 0 0);
   --muted: oklch(0.96 0 0);
-  --muted-foreground: oklch(0.50 0 0);
+  --muted-foreground: oklch(0.5 0 0);
   --accent: oklch(0.96 0 0);
-  --accent-foreground: oklch(0.10 0 0);
+  --accent-foreground: oklch(0.1 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.87 0 0);
   --input: oklch(0.87 0 0);
   --ring: oklch(0.66 0.21 41 / 55%);
-  --chart-1: oklch(0.70 0 0);
+  --chart-1: oklch(0.7 0 0);
   --chart-2: oklch(0.55 0 0);
   --chart-3: oklch(0.43 0 0);
   --chart-4: oklch(0.35 0 0);
@@ -156,26 +156,30 @@
   --font-heading: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --text-micro: 0.625rem; /* 10px — compact widget/metadata text */
-  --text-nano: 0.5rem;    /* 8px — micro heatmap labels, tightest readable size */
+  --text-nano: 0.5rem; /* 8px — micro heatmap labels, tightest readable size */
   --text-compact: 0.8rem; /* 12.8px — small button/control text between xs and sm */
-  --modal-max-height: 85vh;  /* standard tall-modal cap */
-  --page-min-height: 60vh;   /* error / empty / placeholder page min */
+  --modal-max-height: 85vh; /* standard tall-modal cap */
+  --page-min-height: 60vh; /* error / empty / placeholder page min */
   --tracking-display: -0.03em;
-  --tracking-label: 0.10em;
+  --tracking-label: 0.1em;
   --tracking-caps: 0.16em;
-  --tracking-pin: 0.4em;  /* wide digit spacing for PIN entry fields */
-  --shadow-panel: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04);
-  --shadow-panel-strong: 0 2px 6px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.06);
+  --tracking-pin: 0.4em; /* wide digit spacing for PIN entry fields */
+  --shadow-panel: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.04);
+  --shadow-panel-strong: 0 2px 6px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.06);
   /* Theme-invariant tokens — same value in light and dark (inherited by .dark) */
-  --scrim: rgb(0 0 0 / 0.45);      /* overlay backdrop behind modals/drawers/sheets */
-  --toggle-knob: oklch(1 0 0);     /* switch knob — stays light in both themes (sits on a colored/overlay track) */
-  --surface-terminal: #0a0a0a;     /* MUST match PALETTE.dark.surfacePage in src/lib/palette.ts — the JS mirror used by xterm/OG/email/themeColor (they can't read CSS vars) */
+  --scrim: rgb(0 0 0 / 0.45); /* overlay backdrop behind modals/drawers/sheets */
+  --toggle-knob: oklch(
+    1 0 0
+  ); /* switch knob — stays light in both themes (sits on a colored/overlay track) */
+  --surface-terminal: #0a0a0a; /* MUST match PALETTE.dark.surfacePage in src/lib/palette.ts — the JS mirror used by xterm/OG/email/themeColor (they can't read CSS vars) */
   --shell-max: 90rem;
   /* Mobile chrome — bottom nav + safe area (Layer 1) */
   --mobile-nav-height: 3.25rem;
   --mobile-nav-offset: 0.75rem;
   --mobile-safe-bottom: env(safe-area-inset-bottom, 0px);
-  --mobile-chrome-bottom: calc(var(--mobile-nav-offset) + var(--mobile-nav-height) + var(--mobile-safe-bottom));
+  --mobile-chrome-bottom: calc(
+    var(--mobile-nav-offset) + var(--mobile-nav-height) + var(--mobile-safe-bottom)
+  );
   --app-topbar-height: 3.25rem;
   --app-viewport-height: calc(100svh - var(--app-topbar-height) - var(--mobile-chrome-bottom));
   --public-nav-height: 76px;
@@ -186,12 +190,12 @@
   --public-backdrop-grid-size: 80px;
   /* Marketing backdrop — flips with theme so the public surface stays
      coherent in light and dark mode. Values track foreground colour. */
-  --public-grid-stroke:     rgba(0, 0, 0, 0.055);
-  --public-glow-primary:    rgba(0, 0, 0, 0.04);
-  --public-glow-primary-2:  rgba(0, 0, 0, 0.02);
-  --public-glow-secondary:  rgba(0, 0, 0, 0.025);
-  --public-accent:          #ff5c00; /* x.ai-style warm orange for download CTAs (band forces dark aesthetic) */
-  --public-glow-accent:     rgba(255, 92, 0, 0.06);
+  --public-grid-stroke: rgba(0, 0, 0, 0.055);
+  --public-glow-primary: rgba(0, 0, 0, 0.04);
+  --public-glow-primary-2: rgba(0, 0, 0, 0.02);
+  --public-glow-secondary: rgba(0, 0, 0, 0.025);
+  --public-accent: #ff5c00; /* x.ai-style warm orange for download CTAs (band forces dark aesthetic) */
+  --public-glow-accent: rgba(255, 92, 0, 0.06);
   /* 34px floor, not 52px. The floor is what a 390px phone actually renders,
      and 52px put "Feedback widget" on two lines at a size meant for a 27"
      display. The vw term still reaches the same 108px ceiling on desktop. */
@@ -202,47 +206,47 @@
   --auth-title-preferred: 5vw;
   --auth-title-max: 48px;
   --sidebar: oklch(0.97 0 0);
-  --sidebar-foreground: oklch(0.10 0 0);
-  --sidebar-primary: oklch(0.10 0 0);
+  --sidebar-foreground: oklch(0.1 0 0);
+  --sidebar-primary: oklch(0.1 0 0);
   --sidebar-primary-foreground: oklch(0.98 0 0);
   --sidebar-accent: oklch(0.93 0 0);
-  --sidebar-accent-foreground: oklch(0.10 0 0);
+  --sidebar-accent-foreground: oklch(0.1 0 0);
   --sidebar-border: oklch(0.87 0 0);
-  --sidebar-ring: oklch(0.50 0 0);
+  --sidebar-ring: oklch(0.5 0 0);
   /* Semantic tokens — light */
-  --text-primary:      oklch(0.10 0 0);
-  --text-secondary:    oklch(0.40 0 0);
-  --text-tertiary:     oklch(0.58 0 0);
-  --text-muted:        oklch(0.72 0 0);
-  --text-inverted:     oklch(0.98 0 0);
-  --surface-page:      oklch(0.97 0 0);
-  --surface-base:      oklch(1 0 0);
-  --surface-raised:    oklch(0.96 0 0);
-  --surface-overlay:   oklch(0.94 0 0);
-  --surface-modal:     oklch(1 0 0);
-  --surface-drawer:    oklch(0.98 0 0);
-  --surface-public:    oklch(0.04 0 0);
-  --border-subtle:       oklch(0.90 0 0 / 90%);
-  --border-default:      oklch(0.82 0 0 / 95%);
-  --border-strong:       oklch(0.60 0 0);
-  --border-interactive:  oklch(0.30 0 0);
-  --accent-primary:    oklch(0.10 0 0);
-  --accent-hover:      oklch(0.20 0 0);
-  --accent-muted:      oklch(0.10 0 0 / 8%);
-  --accent-text:       oklch(0.10 0 0);
+  --text-primary: oklch(0.1 0 0);
+  --text-secondary: oklch(0.4 0 0);
+  --text-tertiary: oklch(0.58 0 0);
+  --text-muted: oklch(0.72 0 0);
+  --text-inverted: oklch(0.98 0 0);
+  --surface-page: oklch(0.97 0 0);
+  --surface-base: oklch(1 0 0);
+  --surface-raised: oklch(0.96 0 0);
+  --surface-overlay: oklch(0.94 0 0);
+  --surface-modal: oklch(1 0 0);
+  --surface-drawer: oklch(0.98 0 0);
+  --surface-public: oklch(0.04 0 0);
+  --border-subtle: oklch(0.9 0 0 / 90%);
+  --border-default: oklch(0.82 0 0 / 95%);
+  --border-strong: oklch(0.6 0 0);
+  --border-interactive: oklch(0.3 0 0);
+  --accent-primary: oklch(0.1 0 0);
+  --accent-hover: oklch(0.2 0 0);
+  --accent-muted: oklch(0.1 0 0 / 8%);
+  --accent-text: oklch(0.1 0 0);
   /* Warm brand accent (x.ai/grok #ff5c00) — used sparingly on primary CTAs +
      focus rings. Darker hover for the light theme. SSOT for warm = here. */
-  --accent-warm:       oklch(0.66 0.21 41);
-  --on-accent:         oklch(0.18 0 0);
-  --accent-warm-hover: oklch(0.60 0.21 40);
+  --accent-warm: oklch(0.66 0.21 41);
+  --on-accent: oklch(0.18 0 0);
+  --accent-warm-hover: oklch(0.6 0.21 40);
   /* Status — light */
-  --status-positive:        oklch(0.44 0.16 145);
+  --status-positive: oklch(0.44 0.16 145);
   --status-positive-subtle: oklch(0.44 0.16 145 / 8%);
-  --status-warning:         oklch(0.46 0.14 68);
-  --status-warning-subtle:  oklch(0.46 0.14 68 / 8%);
-  --status-negative:        oklch(0.50 0.18 25);
-  --status-negative-subtle: oklch(0.50 0.18 25 / 8%);
-  --status-neutral:         oklch(0.58 0 0);
+  --status-warning: oklch(0.46 0.14 68);
+  --status-warning-subtle: oklch(0.46 0.14 68 / 8%);
+  --status-negative: oklch(0.5 0.18 25);
+  --status-negative-subtle: oklch(0.5 0.18 25 / 8%);
+  --status-neutral: oklch(0.58 0 0);
 }
 
 /* ─── Dark mode ───────────────────────────────────────────────────────────── */
@@ -262,12 +266,12 @@
   --muted-foreground: oklch(0.55 0 0);
   --accent: oklch(0.14 0 0);
   --accent-foreground: oklch(0.92 0 0);
-  --destructive: oklch(0.65 0.20 22);
+  --destructive: oklch(0.65 0.2 22);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 10%);
   --ring: oklch(0.69 0.21 41 / 55%);
-  --chart-1: oklch(0.80 0 0);
-  --chart-2: oklch(0.60 0 0);
+  --chart-1: oklch(0.8 0 0);
+  --chart-2: oklch(0.6 0 0);
   --chart-3: oklch(0.45 0 0);
   --chart-4: oklch(0.32 0 0);
   --chart-5: oklch(0.22 0 0);
@@ -295,48 +299,48 @@
      The steps stay ~0.07 apart so the hierarchy still reads; the whole ramp
      simply moves up into the range a near-black surface leaves usable. On the
      worst surface: secondary 8.0:1, muted 6.0:1, tertiary 4.9:1. */
-  --text-primary:      oklch(0.92 0 0);
-  --text-secondary:    oklch(0.72 0 0);
-  --text-muted:        oklch(0.65 0 0);
-  --text-tertiary:     oklch(0.59 0 0);
-  --text-inverted:     oklch(0.07 0 0);
-  --surface-page:      oklch(0.07 0 0);
-  --surface-base:      oklch(0.10 0 0);
-  --surface-raised:    oklch(0.13 0 0);
-  --surface-overlay:   oklch(0.16 0 0);
-  --surface-modal:     oklch(0.10 0 0);
-  --surface-drawer:    oklch(0.09 0 0);
-  --border-subtle:       oklch(1 0 0 / 8%);
-  --border-default:      oklch(1 0 0 / 13%);
-  --border-strong:       oklch(1 0 0 / 24%);
-  --border-interactive:  oklch(1 0 0 / 55%);
-  --accent-primary:    oklch(0.92 0 0);
-  --accent-hover:      oklch(1 0 0);
-  --accent-muted:      oklch(1 0 0 / 8%);
-  --accent-text:       oklch(0.75 0 0);
+  --text-primary: oklch(0.92 0 0);
+  --text-secondary: oklch(0.72 0 0);
+  --text-muted: oklch(0.65 0 0);
+  --text-tertiary: oklch(0.59 0 0);
+  --text-inverted: oklch(0.07 0 0);
+  --surface-page: oklch(0.07 0 0);
+  --surface-base: oklch(0.1 0 0);
+  --surface-raised: oklch(0.13 0 0);
+  --surface-overlay: oklch(0.16 0 0);
+  --surface-modal: oklch(0.1 0 0);
+  --surface-drawer: oklch(0.09 0 0);
+  --border-subtle: oklch(1 0 0 / 8%);
+  --border-default: oklch(1 0 0 / 13%);
+  --border-strong: oklch(1 0 0 / 24%);
+  --border-interactive: oklch(1 0 0 / 55%);
+  --accent-primary: oklch(0.92 0 0);
+  --accent-hover: oklch(1 0 0);
+  --accent-muted: oklch(1 0 0 / 8%);
+  --accent-text: oklch(0.75 0 0);
   /* Warm brand accent (x.ai/grok #ff5c00) — lighter hover for dark. */
-  --accent-warm:       oklch(0.69 0.21 41);
+  --accent-warm: oklch(0.69 0.21 41);
   --accent-warm-hover: oklch(0.75 0.19 43);
   /* Status — dark */
-  --status-positive:        oklch(0.72 0.14 145);
+  --status-positive: oklch(0.72 0.14 145);
   --status-positive-subtle: oklch(0.72 0.14 145 / 12%);
-  --status-warning:         oklch(0.78 0.12 68);
-  --status-warning-subtle:  oklch(0.78 0.12 68 / 12%);
-  --status-negative:        oklch(0.68 0.16 25);
+  --status-warning: oklch(0.78 0.12 68);
+  --status-warning-subtle: oklch(0.78 0.12 68 / 12%);
+  --status-negative: oklch(0.68 0.16 25);
   --status-negative-subtle: oklch(0.68 0.16 25 / 12%);
-  --status-neutral:         oklch(0.42 0 0);
+  --status-neutral: oklch(0.42 0 0);
   --shadow-panel: 0 1px 0 oklch(1 0 0 / 4%), 0 0 0 1px oklch(1 0 0 / 6%);
   --shadow-panel-strong: 0 2px 0 oklch(1 0 0 / 4%), 0 0 0 1px oklch(1 0 0 / 8%);
   /* Marketing backdrop overrides — dark theme flips the grid + glow to white. */
-  --public-grid-stroke:     rgba(255, 255, 255, 0.06);
-  --public-glow-primary:    rgba(255, 255, 255, 0.14);
-  --public-glow-primary-2:  rgba(255, 255, 255, 0.04);
-  --public-glow-secondary:  rgba(255, 255, 255, 0.05);
-  --public-accent:          #ff5c00; /* x.ai-style warm orange for download CTAs and highlights on public dark bands */
+  --public-grid-stroke: rgba(255, 255, 255, 0.06);
+  --public-glow-primary: rgba(255, 255, 255, 0.14);
+  --public-glow-primary-2: rgba(255, 255, 255, 0.04);
+  --public-glow-secondary: rgba(255, 255, 255, 0.05);
+  --public-accent: #ff5c00; /* x.ai-style warm orange for download CTAs and highlights on public dark bands */
   /* Subtle warm spotlight bleeding down from the top of the hero — injects the
      brand warmth into the otherwise-monochrome dark surface without using the
      accent as fill. Kept very low alpha so it reads as depth, not colour. */
-  --public-glow-accent:     rgba(255, 92, 0, 0.10);
+  --public-glow-accent: rgba(255, 92, 0, 0.1);
 }
 
 /* ─── Base ────────────────────────────────────────────────────────────────── */
@@ -353,22 +357,27 @@
     color-scheme: light dark;
   }
   body {
-    transition: background-color 250ms ease, color 200ms ease;
+    transition:
+      background-color 250ms ease,
+      color 200ms ease;
   }
-  h1, h2, h3, h4 {
+  h1,
+  h2,
+  h3,
+  h4 {
     letter-spacing: var(--tracking-display);
     line-height: 1.08;
     font-family: var(--font-heading);
     font-weight: 700;
   }
-  p, li {
+  p,
+  li {
     line-height: 1.65;
   }
 }
 
 /* ─── Components — SSOT for all recurring patterns ───────────────────────── */
 @layer components {
-
   /* Shell */
   .app-shell-frame {
     height: 100dvh;
@@ -385,7 +394,9 @@
     padding-bottom: calc(var(--mobile-chrome-bottom) + 1rem);
   }
   @media (min-width: 48rem) {
-    .app-main { padding-bottom: 0; }
+    .app-main {
+      padding-bottom: 0;
+    }
   }
   /* Full-height panes derive their size from the remaining shell space. This
      keeps banners and workspace tabs from pushing chat/terminal under mobile
@@ -420,15 +431,24 @@
     @apply text-text-secondary;
     background: oklch(from var(--surface-base) l c h / 0.8);
   }
-  .ui-app-topbar-search-label { @apply truncate; }
-  .ui-app-topbar-right { @apply ml-auto flex items-center gap-2; }
+  .ui-app-topbar-search-label {
+    @apply truncate;
+  }
+  .ui-app-topbar-right {
+    @apply ml-auto flex items-center gap-2;
+  }
   .ui-topbar-pill {
     @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs text-text-tertiary transition-colors;
     background: oklch(1 0 0 / 0.04);
     box-shadow: inset 0 0 0 1px oklch(1 0 0 / 0.04);
   }
-  .ui-topbar-pill:hover { @apply text-text-secondary; background: oklch(1 0 0 / 0.08); }
-  .ui-topbar-pill:disabled { @apply opacity-60; }
+  .ui-topbar-pill:hover {
+    @apply text-text-secondary;
+    background: oklch(1 0 0 / 0.08);
+  }
+  .ui-topbar-pill:disabled {
+    @apply opacity-60;
+  }
   .ui-topbar-pill-active {
     color: var(--accent-primary);
     background: oklch(from var(--accent-primary) l c h / 0.12);
@@ -501,7 +521,9 @@
     @apply bg-sidebar/92 backdrop-blur-md;
     /* Soft right separation via inset shadow — no hard 1px border (the x.ai look). */
     box-shadow: inset -1px 0 0 oklch(1 0 0 / 0.04);
-    transition: width 200ms ease, background-color 250ms ease;
+    transition:
+      width 200ms ease,
+      background-color 250ms ease;
   }
   .ui-sidebar-section {
     @apply px-3 py-4;
@@ -514,7 +536,9 @@
     box-shadow: var(--shadow-panel-strong);
     opacity: 0;
     transform: translate(-6px, -50%);
-    transition: opacity 140ms ease, transform 140ms ease;
+    transition:
+      opacity 140ms ease,
+      transform 140ms ease;
   }
   .group:hover .ui-sidebar-tooltip {
     opacity: 1;
@@ -596,9 +620,23 @@
   .ui-public-backdrop {
     @apply pointer-events-none absolute inset-0 overflow-hidden;
     background:
-      radial-gradient(ellipse 700px 480px at 50% -8%, var(--public-glow-accent) 0%, transparent 60%),
-      radial-gradient(ellipse var(--public-backdrop-primary-width) var(--public-backdrop-primary-height) at 50% 0%, var(--public-glow-primary) 0%, var(--public-glow-primary-2) 40%, transparent 70%),
-      radial-gradient(ellipse var(--public-backdrop-secondary-width) var(--public-backdrop-secondary-height) at 50% 33%, var(--public-glow-secondary) 0%, transparent 60%);
+      radial-gradient(
+        ellipse 700px 480px at 50% -8%,
+        var(--public-glow-accent) 0%,
+        transparent 60%
+      ),
+      radial-gradient(
+        ellipse var(--public-backdrop-primary-width) var(--public-backdrop-primary-height) at 50% 0%,
+        var(--public-glow-primary) 0%,
+        var(--public-glow-primary-2) 40%,
+        transparent 70%
+      ),
+      radial-gradient(
+        ellipse var(--public-backdrop-secondary-width) var(--public-backdrop-secondary-height) at
+          50% 33%,
+        var(--public-glow-secondary) 0%,
+        transparent 60%
+      );
   }
   .ui-public-backdrop::after {
     content: "";
@@ -608,7 +646,13 @@
       linear-gradient(90deg, var(--public-grid-stroke) 1px, transparent 1px);
     background-size: var(--public-backdrop-grid-size) var(--public-backdrop-grid-size);
     mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 70%, transparent 100%);
-    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 70%, transparent 100%);
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      transparent 0%,
+      black 15%,
+      black 70%,
+      transparent 100%
+    );
   }
   .ui-public-nav-brand-row {
     @apply flex min-w-0 items-center gap-3 sm:gap-8;
@@ -868,7 +912,11 @@
     @apply space-y-2 pl-5 text-sm leading-relaxed text-white/75 list-disc marker:text-white/30;
   }
   .ui-public-title {
-    font-size: clamp(var(--public-title-min), var(--public-title-preferred), var(--public-title-max));
+    font-size: clamp(
+      var(--public-title-min),
+      var(--public-title-preferred),
+      var(--public-title-max)
+    );
     line-height: 1;
     letter-spacing: -0.04em;
     font-family: var(--font-heading);
@@ -1317,13 +1365,21 @@
   /* x.ai/SpaceX-style entrance: a short, eased rise+fade. Staggered down the
      hero fold. Disabled under reduced-motion. */
   @keyframes ui-public-rise {
-    from { opacity: 0; transform: translateY(14px); }
-    to   { opacity: 1; transform: translateY(0); }
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
   @media (prefers-reduced-motion: reduce) {
     .ui-public-hero-title,
     .ui-public-hero-lede,
-    .ui-public-hero-sublede { animation: none; }
+    .ui-public-hero-sublede {
+      animation: none;
+    }
   }
   /* Hero product visual — a framed snapshot of the fleet-command surface that
      gives the hero fold a payload instead of leaving type on empty black. A
@@ -1332,7 +1388,9 @@
      HOME_HERO_CONSOLE (marketing-content.ts) — no inline literals. */
   .ui-public-hero-console {
     @apply relative mx-auto mt-10 w-full max-w-2xl overflow-hidden rounded-2xl border border-border-default bg-surface-raised p-4 text-left sm:mt-16 sm:p-6;
-    box-shadow: var(--shadow-panel-strong), 0 50px 90px -50px rgba(0, 0, 0, 0.85);
+    box-shadow:
+      var(--shadow-panel-strong),
+      0 50px 90px -50px rgba(0, 0, 0, 0.85);
     animation: ui-public-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.28s both;
   }
   .ui-public-hero-console::before {
@@ -1426,14 +1484,18 @@
      didn't. */
   .ui-public-cta {
     @apply inline-flex min-h-12 items-center justify-center rounded-xl bg-text-primary px-6 py-3 text-[15px] font-medium text-text-inverted transition-all hover:opacity-90 active:scale-[0.98] sm:px-7;
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.4) inset, 0 8px 24px -8px rgba(255, 255, 255, 0.25);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.4) inset,
+      0 8px 24px -8px rgba(255, 255, 255, 0.25);
   }
   .ui-public-cta-ghost {
     @apply inline-flex min-h-12 items-center justify-center rounded-xl border border-border-default bg-white/[0.02] px-6 py-3 text-[15px] font-medium text-text-secondary transition-all hover:border-border-strong hover:bg-white/[0.05] hover:text-text-primary active:scale-[0.98] sm:px-7;
   }
   .ui-public-cta-lg {
     @apply inline-flex min-h-13 items-center justify-center rounded-xl bg-text-primary px-7 py-3.5 text-base font-medium text-text-inverted transition-all hover:opacity-90 active:scale-[0.98] sm:px-9 sm:text-lg;
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.4) inset, 0 10px 30px -10px rgba(255, 255, 255, 0.3);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.4) inset,
+      0 10px 30px -10px rgba(255, 255, 255, 0.3);
   }
   .ui-public-lede {
     @apply text-[17px] leading-snug text-text-secondary sm:text-2xl;
@@ -1934,10 +1996,14 @@
     transform-origin: 50% 50%;
   }
   @keyframes ui-brand-spiral-spin {
-    to { transform: rotate(360deg); }
+    to {
+      transform: rotate(360deg);
+    }
   }
   @media (prefers-reduced-motion: reduce) {
-    .ui-brand-spiral-animated { animation: none; }
+    .ui-brand-spiral-animated {
+      animation: none;
+    }
   }
 
   /* ── Terminal (multi-tab + split panes) ─────────────────────────────────
@@ -1965,13 +2031,17 @@
   .ui-term-tab-index {
     @apply text-nano tabular-nums text-text-muted;
   }
-  .ui-term-tab-active .ui-term-tab-index { @apply text-text-tertiary; }
+  .ui-term-tab-active .ui-term-tab-index {
+    @apply text-text-tertiary;
+  }
   /* The live-agent chip after the tab name — what is actually running in this
      tab (claude, grok, …), from the runner's pane topology. */
   .ui-term-tab-badge {
     @apply rounded-sm bg-surface-overlay px-1 py-px text-nano uppercase tracking-caps text-text-muted;
   }
-  .ui-term-tab-active .ui-term-tab-badge { @apply text-text-secondary; }
+  .ui-term-tab-active .ui-term-tab-badge {
+    @apply text-text-secondary;
+  }
   /* One-line honesty note above the session, e.g. a ?tab= deep link that
      matched nothing on the selected builder. */
   .ui-term-notice {
@@ -1984,7 +2054,9 @@
   .ui-term-tab-close {
     @apply rounded p-0.5 text-text-muted opacity-0 transition-all hover:bg-surface-overlay hover:text-text-primary group-hover:opacity-100;
   }
-  .ui-term-tab-active .ui-term-tab-close { @apply opacity-60; }
+  .ui-term-tab-active .ui-term-tab-close {
+    @apply opacity-60;
+  }
   .ui-term-newtab {
     @apply shrink-0 rounded-md p-1.5 text-text-tertiary transition-colors hover:bg-surface-raised hover:text-text-primary;
   }
@@ -2007,7 +2079,9 @@
   .ui-term-pane-head {
     @apply flex items-center gap-2 border-b border-border-subtle bg-surface-base px-2.5 py-1;
   }
-  .ui-term-dot { @apply h-1.5 w-1.5 shrink-0 rounded-full; }
+  .ui-term-dot {
+    @apply h-1.5 w-1.5 shrink-0 rounded-full;
+  }
   .ui-term-pane-label {
     @apply text-micro font-medium tracking-wide text-text-secondary;
     font-family: var(--font-mono);
@@ -2021,7 +2095,9 @@
   .ui-term-icon-btn {
     @apply rounded p-1 text-text-muted transition-colors hover:bg-surface-raised hover:text-text-primary;
   }
-  .ui-term-icon-btn-danger { @apply hover:text-status-negative; }
+  .ui-term-icon-btn-danger {
+    @apply hover:text-status-negative;
+  }
   .ui-term-pane-body {
     @apply min-h-0 flex-1 overflow-hidden bg-surface-page p-1.5;
   }
@@ -2047,9 +2123,15 @@
     content: "";
     @apply absolute bg-transparent transition-colors;
   }
-  .ui-term-divider-v::after { @apply inset-y-0 left-1/2 w-px -translate-x-1/2; }
-  .ui-term-divider-h::after { @apply inset-x-0 top-1/2 h-px -translate-y-1/2; }
-  .ui-term-divider:hover::after { @apply bg-border-interactive; }
+  .ui-term-divider-v::after {
+    @apply inset-y-0 left-1/2 w-px -translate-x-1/2;
+  }
+  .ui-term-divider-h::after {
+    @apply inset-x-0 top-1/2 h-px -translate-y-1/2;
+  }
+  .ui-term-divider:hover::after {
+    @apply bg-border-interactive;
+  }
 
   /* Detected-link bar — surfaces URLs found in the terminal's OUTPUT STREAM as
      real DOM elements. xterm wraps long URLs across visual rows and its link
@@ -2135,18 +2217,29 @@
     @apply h-2 w-2 shrink-0 rounded-full;
     background-color: var(--status-neutral);
   }
-  .ui-term-live-dot-on { background-color: var(--status-positive); }
-  .ui-term-live-dot-warn { background-color: var(--status-warning); }
+  .ui-term-live-dot-on {
+    background-color: var(--status-positive);
+  }
+  .ui-term-live-dot-warn {
+    background-color: var(--status-warning);
+  }
   .ui-term-live-dot-pending {
     background-color: var(--status-neutral);
     animation: ui-term-pulse 1.4s ease-in-out infinite;
   }
   @keyframes ui-term-pulse {
-    0%, 100% { opacity: 0.3; }
-    50% { opacity: 1; }
+    0%,
+    100% {
+      opacity: 0.3;
+    }
+    50% {
+      opacity: 1;
+    }
   }
   @media (prefers-reduced-motion: reduce) {
-    .ui-term-live-dot-pending { animation: none; }
+    .ui-term-live-dot-pending {
+      animation: none;
+    }
   }
 
   /* ── Key deck ─────────────────────────────────────────────────────────────
@@ -2178,8 +2271,12 @@
   .ui-term-key-accent {
     @apply flex-1 border-transparent bg-accent-primary text-base font-medium text-text-inverted;
   }
-  .ui-term-key-accent.ui-term-key-held { @apply bg-accent-hover; }
-  .ui-term-key-danger { @apply text-status-negative; }
+  .ui-term-key-accent.ui-term-key-held {
+    @apply bg-accent-hover;
+  }
+  .ui-term-key-danger {
+    @apply text-status-negative;
+  }
   /* The d-pad: four caps sharing one border, hairlines between them. */
   .ui-term-key-cluster {
     @apply flex shrink-0 overflow-hidden rounded-lg border border-border-default bg-surface-raised;
@@ -2191,7 +2288,9 @@
     -webkit-user-select: none;
     touch-action: manipulation;
   }
-  .ui-term-key-arrow.ui-term-key-held { @apply bg-surface-overlay text-text-primary; }
+  .ui-term-key-arrow.ui-term-key-held {
+    @apply bg-surface-overlay text-text-primary;
+  }
   /* Secondary lane — scrolls sideways, grouped by what the keys do. */
   .ui-term-key-lane {
     @apply flex items-center gap-3 overflow-x-auto pb-0.5 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden;
@@ -2536,21 +2635,35 @@
   /* Optical baseline nudge — aligns small icons/markers with the first text
      line of an adjacent multi-line block. -p variant for elements that need
      padding instead of margin (e.g. inline timers). */
-  .ui-icon-nudge   { margin-top: 3px; }
-  .ui-icon-nudge-p { padding-top: 3px; }
+  .ui-icon-nudge {
+    margin-top: 3px;
+  }
+  .ui-icon-nudge-p {
+    padding-top: 3px;
+  }
 
   /* Loading spinners — applied to Loader2 icon className */
-  .ui-spinner      { @apply h-4 w-4 animate-spin; }
-  .ui-spinner-sm   { @apply h-3.5 w-3.5 animate-spin; }
-  .ui-spinner-xs   { @apply h-3 w-3 animate-spin; }
-  .ui-spinner-2xs  { @apply h-2.5 w-2.5 animate-spin; }
+  .ui-spinner {
+    @apply h-4 w-4 animate-spin;
+  }
+  .ui-spinner-sm {
+    @apply h-3.5 w-3.5 animate-spin;
+  }
+  .ui-spinner-xs {
+    @apply h-3 w-3 animate-spin;
+  }
+  .ui-spinner-2xs {
+    @apply h-2.5 w-2.5 animate-spin;
+  }
   /* Div-based border-ring spinner (used in full-panel loading states) */
   .ui-loading-ring {
     @apply h-5 w-5 animate-spin rounded-full border-2 border-border-subtle;
     border-top-color: color-mix(in oklch, var(--text-primary) 20%, transparent);
   }
   /* Range input accent colour aligned to the design token system */
-  .ui-range-accent { accent-color: var(--status-positive); }
+  .ui-range-accent {
+    accent-color: var(--status-positive);
+  }
 
   /* Typography */
   .ui-kicker {
@@ -2559,11 +2672,19 @@
     letter-spacing: var(--tracking-label);
   }
   /* Micro-kicker for compact data cells — 10px caps */
-  .ui-micro-label { @apply text-micro uppercase tracking-wider text-text-muted; }
+  .ui-micro-label {
+    @apply text-micro uppercase tracking-wider text-text-muted;
+  }
   /* Inline error messages — use ui-error for form-level, ui-error-xs for tight row contexts */
-  .ui-error    { @apply text-sm text-status-negative; }
-  .ui-error-xs { @apply text-xs text-status-negative; }
-  .ui-page-header   { @apply flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4; }
+  .ui-error {
+    @apply text-sm text-status-negative;
+  }
+  .ui-error-xs {
+    @apply text-xs text-status-negative;
+  }
+  .ui-page-header {
+    @apply flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4;
+  }
   /* Bare trash trigger shared by nine call sites. Owns display + centering so
      that when the pointer:coarse floor inflates it to 44px the glyph stays in
      the middle; callers layer colour and padding on top via triggerClassName. */
@@ -2588,9 +2709,15 @@
   .ui-health-seg {
     @apply h-1 w-1.5 rounded-sm bg-surface-overlay;
   }
-  .ui-health-seg-positive { @apply bg-status-positive; }
-  .ui-health-seg-warning  { @apply bg-status-warning; }
-  .ui-health-seg-negative { @apply bg-status-negative; }
+  .ui-health-seg-positive {
+    @apply bg-status-positive;
+  }
+  .ui-health-seg-warning {
+    @apply bg-status-warning;
+  }
+  .ui-health-seg-negative {
+    @apply bg-status-negative;
+  }
   .ui-health-score {
     @apply text-xs tabular-nums text-text-secondary;
   }
@@ -2664,9 +2791,15 @@
   }
   /* Back-to-parent affordance above a flow page's title. -ml-2 so the label
      optically aligns with the title while the tap area still extends left. */
-  .ui-page-back     { @apply -ml-2 inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm text-text-tertiary transition-colors hover:text-text-primary; }
-  .ui-page-title    { @apply text-xl sm:text-2xl font-semibold text-text-primary; }
-  .ui-page-subtitle { @apply mt-1.5 max-w-2xl text-sm text-text-tertiary; }
+  .ui-page-back {
+    @apply -ml-2 inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm text-text-tertiary transition-colors hover:text-text-primary;
+  }
+  .ui-page-title {
+    @apply text-xl sm:text-2xl font-semibold text-text-primary;
+  }
+  .ui-page-subtitle {
+    @apply mt-1.5 max-w-2xl text-sm text-text-tertiary;
+  }
 
   /* Panels */
   .ui-panel {
@@ -2674,8 +2807,12 @@
     box-shadow: var(--shadow-panel);
   }
   /* Compact list item row — no shadow, tighter padding */
-  .ui-list-row { @apply rounded-xl border border-border-subtle bg-surface-base px-3 py-2 text-sm; }
-  .ui-panel-interactive { @apply transition-colors hover:bg-surface-raised; }
+  .ui-list-row {
+    @apply rounded-xl border border-border-subtle bg-surface-base px-3 py-2 text-sm;
+  }
+  .ui-panel-interactive {
+    @apply transition-colors hover:bg-surface-raised;
+  }
   /* Command palette — global ⌘K search */
   .ui-palette-backdrop {
     @apply fixed inset-0 -z-10;
@@ -2731,7 +2868,9 @@
   .ui-palette-row-arrow {
     @apply text-text-tertiary opacity-0 transition-opacity;
   }
-  .ui-palette-row-active .ui-palette-row-arrow { @apply opacity-100; }
+  .ui-palette-row-active .ui-palette-row-arrow {
+    @apply opacity-100;
+  }
   .ui-palette-foot {
     @apply flex items-center gap-4 px-4 py-2 text-text-tertiary;
     font-family: var(--font-mono);
@@ -2742,16 +2881,26 @@
     @apply inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-text-tertiary transition-colors;
     background: oklch(1 0 0 / 0.04);
   }
-  .ui-palette-mic:hover { @apply text-text-secondary; background: oklch(1 0 0 / 0.08); }
-  .ui-palette-mic:disabled { @apply opacity-60; }
+  .ui-palette-mic:hover {
+    @apply text-text-secondary;
+    background: oklch(1 0 0 / 0.08);
+  }
+  .ui-palette-mic:disabled {
+    @apply opacity-60;
+  }
   .ui-palette-mic-active {
     color: var(--accent-primary);
     background: oklch(from var(--accent-primary) l c h / 0.16);
     animation: ui-palette-mic-pulse 1.2s ease-in-out infinite;
   }
   @keyframes ui-palette-mic-pulse {
-    0%, 100% { box-shadow: 0 0 0 0 oklch(from var(--accent-primary) l c h / 0.35); }
-    50%      { box-shadow: 0 0 0 4px oklch(from var(--accent-primary) l c h / 0.0); }
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 oklch(from var(--accent-primary) l c h / 0.35);
+    }
+    50% {
+      box-shadow: 0 0 0 4px oklch(from var(--accent-primary) l c h / 0);
+    }
   }
   .ui-palette-voice-error {
     @apply px-4 py-2 text-xs text-status-negative;
@@ -2803,31 +2952,59 @@
   .ui-btn-pill {
     @apply flex items-center gap-1.5 rounded-full border border-border-subtle bg-surface-raised px-3 py-1.5 text-xs text-text-secondary transition-colors hover:bg-surface-overlay;
   }
-  .ui-btn-pill-muted    { @apply flex shrink-0 items-center gap-1.5 rounded-full border border-border-subtle bg-surface-raised px-3 py-1.5 text-xs text-text-secondary transition-colors hover:bg-surface-overlay hover:text-text-primary; }
-  .ui-btn-pill-positive { @apply flex shrink-0 items-center gap-1.5 rounded-full border border-border-subtle bg-surface-raised px-3 py-1.5 text-xs text-text-secondary transition-colors hover:bg-surface-overlay hover:text-status-positive hover:border-status-positive/30; }
+  .ui-btn-pill-muted {
+    @apply flex shrink-0 items-center gap-1.5 rounded-full border border-border-subtle bg-surface-raised px-3 py-1.5 text-xs text-text-secondary transition-colors hover:bg-surface-overlay hover:text-text-primary;
+  }
+  .ui-btn-pill-positive {
+    @apply flex shrink-0 items-center gap-1.5 rounded-full border border-border-subtle bg-surface-raised px-3 py-1.5 text-xs text-text-secondary transition-colors hover:bg-surface-overlay hover:text-status-positive hover:border-status-positive/30;
+  }
   .ui-empty-panel {
     @apply flex flex-col items-center gap-3 rounded-2xl border border-border-subtle bg-surface-base py-14 text-center text-text-tertiary;
     box-shadow: var(--shadow-panel);
   }
   /* Inline empty state — lives inside an existing Card. Three sizes (sm/md/lg) cover
      the spectrum from tight section empties (py-4) to first-run hero empties (py-16). */
-  .ui-empty-block    { @apply flex flex-col items-center gap-3 text-center; }
-  .ui-empty-block-sm { @apply py-4; }
-  .ui-empty-block-md { @apply py-10; }
-  .ui-empty-block-lg { @apply py-16; }
-  .ui-empty-icon     { @apply h-10 w-10 text-text-tertiary; }
-  .ui-empty-title    { @apply text-sm font-medium text-text-secondary; }
-  .ui-empty-helper   { @apply max-w-md text-xs text-text-tertiary; }
+  .ui-empty-block {
+    @apply flex flex-col items-center gap-3 text-center;
+  }
+  .ui-empty-block-sm {
+    @apply py-4;
+  }
+  .ui-empty-block-md {
+    @apply py-10;
+  }
+  .ui-empty-block-lg {
+    @apply py-16;
+  }
+  .ui-empty-icon {
+    @apply h-10 w-10 text-text-tertiary;
+  }
+  .ui-empty-title {
+    @apply text-sm font-medium text-text-secondary;
+  }
+  .ui-empty-helper {
+    @apply max-w-md text-xs text-text-tertiary;
+  }
 
   /* Callout banners — status-tinted inline notices used for warnings, errors, successes,
      and brand accent. Same geometry across variants, only tint changes. */
-  .ui-callout-positive { @apply flex items-start gap-3 rounded-xl border border-status-positive/20 bg-status-positive-subtle px-4 py-3 text-sm; }
-  .ui-callout-warning  { @apply flex items-start gap-3 rounded-xl border border-status-warning/20 bg-status-warning-subtle px-4 py-3 text-sm; }
-  .ui-callout-negative { @apply flex items-start gap-3 rounded-xl border border-status-negative/30 bg-status-negative-subtle px-4 py-3 text-sm; }
-  .ui-callout-accent   { @apply flex items-start gap-3 rounded-xl border border-accent-primary/20 bg-accent-muted px-4 py-3 text-sm; }
+  .ui-callout-positive {
+    @apply flex items-start gap-3 rounded-xl border border-status-positive/20 bg-status-positive-subtle px-4 py-3 text-sm;
+  }
+  .ui-callout-warning {
+    @apply flex items-start gap-3 rounded-xl border border-status-warning/20 bg-status-warning-subtle px-4 py-3 text-sm;
+  }
+  .ui-callout-negative {
+    @apply flex items-start gap-3 rounded-xl border border-status-negative/30 bg-status-negative-subtle px-4 py-3 text-sm;
+  }
+  .ui-callout-accent {
+    @apply flex items-start gap-3 rounded-xl border border-accent-primary/20 bg-accent-muted px-4 py-3 text-sm;
+  }
 
   /* Clickable row inside a list — subtle hover, no shadow. */
-  .ui-row-interactive { @apply transition-colors hover:bg-surface-raised; }
+  .ui-row-interactive {
+    @apply transition-colors hover:bg-surface-raised;
+  }
 
   .ui-settings-section {
     @apply space-y-5 rounded-2xl border border-border-subtle bg-surface-base p-5 sm:p-6;
@@ -2871,7 +3048,9 @@
   .ui-nav-item {
     @apply flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-text-tertiary transition-colors;
   }
-  .ui-nav-item:hover { @apply bg-surface-raised text-text-secondary; }
+  .ui-nav-item:hover {
+    @apply bg-surface-raised text-text-secondary;
+  }
   .ui-nav-item-active {
     /* Subtle bg shift + left-edge accent — x.ai-style restraint, no full border. */
     @apply bg-surface-raised text-text-primary;
@@ -2921,11 +3100,15 @@
   .ui-input-compact {
     @apply rounded-xl border border-border-default bg-surface-overlay px-3 py-2 text-base text-text-primary outline-none transition-colors placeholder:text-text-muted sm:text-sm;
   }
-  .ui-input-compact:focus { @apply border-accent-primary; }
+  .ui-input-compact:focus {
+    @apply border-accent-primary;
+  }
   .ui-input-tight {
     @apply rounded-lg border border-border-default bg-surface-overlay px-2.5 py-1.5 text-xs text-text-primary placeholder:text-text-muted outline-none transition-colors;
   }
-  .ui-input-tight:focus { @apply border-accent-primary; }
+  .ui-input-tight:focus {
+    @apply border-accent-primary;
+  }
   /* PIN entry — mono digits with wide spacing (settings, unlock, private gate).
      Digit cap lives in src/lib/constants/auth.ts (PIN_MAX_DIGITS). */
   .ui-pin-input {
@@ -2936,7 +3119,9 @@
   .ui-input-inline {
     @apply bg-surface-raised border border-border-default rounded outline-none transition-colors;
   }
-  .ui-input-inline:focus { @apply border-border-strong; }
+  .ui-input-inline:focus {
+    @apply border-border-strong;
+  }
 
   /* Buttons. These declare padding only — py-2 (≈36px) is the compact desktop
      look. The 44px touch minimum is NOT stated per-button; it comes from THE
@@ -3012,8 +3197,12 @@
     @apply flex items-center gap-1 rounded px-2.5 py-1.5 text-xs font-medium text-text-inverted transition-colors;
     background-color: color-mix(in oklch, var(--accent-primary) 80%, transparent);
   }
-  .ui-btn-save:hover { background-color: var(--accent-primary); }
-  .ui-btn-save:disabled { opacity: 0.4; }
+  .ui-btn-save:hover {
+    background-color: var(--accent-primary);
+  }
+  .ui-btn-save:disabled {
+    opacity: 0.4;
+  }
   /* Drawer tab bar — shared by all entity detail drawers */
   .ui-tab {
     @apply flex items-center justify-center gap-1.5 border-b-2 border-transparent px-4 py-3 text-xs font-medium text-text-tertiary transition-colors hover:border-border-strong hover:text-text-secondary sm:px-5 sm:py-2.5;
@@ -3100,10 +3289,14 @@
   }
 
   /* Hover-reveal: hidden on desktop until parent .group hovers; always visible on mobile */
-  .ui-hover-reveal { @apply sm:opacity-0 sm:group-hover:opacity-100; }
+  .ui-hover-reveal {
+    @apply sm:opacity-0 sm:group-hover:opacity-100;
+  }
   /* Touch devices have no hover — keep the controls permanently visible there */
   @media (hover: none) {
-    .ui-hover-reveal { opacity: 1; }
+    .ui-hover-reveal {
+      opacity: 1;
+    }
   }
 
   /* Icon/content overlay button — border + surface-overlay bg, caller adds padding */
@@ -3166,22 +3359,49 @@
     -webkit-mask-image: linear-gradient(to right, black calc(100% - 24px), transparent);
   }
   @media (min-width: 640px) {
-    .ui-scroll-fade-right { mask-image: none; -webkit-mask-image: none; }
+    .ui-scroll-fade-right {
+      mask-image: none;
+      -webkit-mask-image: none;
+    }
   }
 
   /* Prompt-library category chip colors — applied alongside .ui-chip or as filter-chip active state */
-  .ui-cat-fleet        { @apply bg-amber-500/15 text-amber-400 border-amber-500/20; }
-  .ui-cat-security     { @apply bg-red-500/15 text-red-400 border-red-500/20; }
-  .ui-cat-engineering  { @apply bg-blue-500/15 text-blue-400 border-blue-500/20; }
-  .ui-cat-frontend     { @apply bg-purple-500/15 text-purple-400 border-purple-500/20; }
-  .ui-cat-backend      { @apply bg-indigo-500/15 text-indigo-400 border-indigo-500/20; }
-  .ui-cat-database     { @apply bg-cyan-500/15 text-cyan-400 border-cyan-500/20; }
-  .ui-cat-devops       { @apply bg-orange-500/15 text-orange-400 border-orange-500/20; }
-  .ui-cat-design       { @apply bg-pink-500/15 text-pink-400 border-pink-500/20; }
-  .ui-cat-business     { @apply bg-emerald-500/15 text-emerald-400 border-emerald-500/20; }
-  .ui-cat-marketing    { @apply bg-yellow-500/15 text-yellow-400 border-yellow-500/20; }
-  .ui-cat-research     { @apply bg-teal-500/15 text-teal-400 border-teal-500/20; }
-  .ui-cat-personal     { @apply bg-rose-500/15 text-rose-400 border-rose-500/20; }
+  .ui-cat-fleet {
+    @apply bg-amber-500/15 text-amber-400 border-amber-500/20;
+  }
+  .ui-cat-security {
+    @apply bg-red-500/15 text-red-400 border-red-500/20;
+  }
+  .ui-cat-engineering {
+    @apply bg-blue-500/15 text-blue-400 border-blue-500/20;
+  }
+  .ui-cat-frontend {
+    @apply bg-purple-500/15 text-purple-400 border-purple-500/20;
+  }
+  .ui-cat-backend {
+    @apply bg-indigo-500/15 text-indigo-400 border-indigo-500/20;
+  }
+  .ui-cat-database {
+    @apply bg-cyan-500/15 text-cyan-400 border-cyan-500/20;
+  }
+  .ui-cat-devops {
+    @apply bg-orange-500/15 text-orange-400 border-orange-500/20;
+  }
+  .ui-cat-design {
+    @apply bg-pink-500/15 text-pink-400 border-pink-500/20;
+  }
+  .ui-cat-business {
+    @apply bg-emerald-500/15 text-emerald-400 border-emerald-500/20;
+  }
+  .ui-cat-marketing {
+    @apply bg-yellow-500/15 text-yellow-400 border-yellow-500/20;
+  }
+  .ui-cat-research {
+    @apply bg-teal-500/15 text-teal-400 border-teal-500/20;
+  }
+  .ui-cat-personal {
+    @apply bg-rose-500/15 text-rose-400 border-rose-500/20;
+  }
 
   /* ── Brand / category color classes ────────────────────────────────────────
      These ARE the SSOT for chromatic colors outside the status system.
@@ -3241,30 +3461,62 @@
   }
 
   /* Contact channel icon colors — brand identity, intentionally chromatic */
-  .ui-channel-whatsapp  { @apply text-green-400/60; }
-  .ui-channel-telegram  { @apply text-blue-400/60; }
-  .ui-channel-phone     { @apply text-cyan-400/60; }
-  .ui-channel-in-person { @apply text-violet-400/60; }
+  .ui-channel-whatsapp {
+    @apply text-green-400/60;
+  }
+  .ui-channel-telegram {
+    @apply text-blue-400/60;
+  }
+  .ui-channel-phone {
+    @apply text-cyan-400/60;
+  }
+  .ui-channel-in-person {
+    @apply text-violet-400/60;
+  }
 
   /* Programming language badge colors — GitHub lingua franca palette */
-  .ui-lang-ts   { @apply bg-blue-500/20 text-blue-300; }
-  .ui-lang-js   { @apply bg-yellow-500/20 text-yellow-300; }
-  .ui-lang-py   { @apply bg-green-500/20 text-green-300; }
-  .ui-lang-go   { @apply bg-cyan-500/20 text-cyan-300; }
-  .ui-lang-rs   { @apply bg-orange-500/20 text-orange-300; }
-  .ui-lang-rb   { @apply bg-red-500/20 text-red-300; }
-  .ui-lang-cs   { @apply bg-purple-500/20 text-purple-300; }
-  .ui-lang-java { @apply bg-amber-500/20 text-amber-300; }
-  .ui-lang-default { @apply bg-white/10 text-white/50; }
+  .ui-lang-ts {
+    @apply bg-blue-500/20 text-blue-300;
+  }
+  .ui-lang-js {
+    @apply bg-yellow-500/20 text-yellow-300;
+  }
+  .ui-lang-py {
+    @apply bg-green-500/20 text-green-300;
+  }
+  .ui-lang-go {
+    @apply bg-cyan-500/20 text-cyan-300;
+  }
+  .ui-lang-rs {
+    @apply bg-orange-500/20 text-orange-300;
+  }
+  .ui-lang-rb {
+    @apply bg-red-500/20 text-red-300;
+  }
+  .ui-lang-cs {
+    @apply bg-purple-500/20 text-purple-300;
+  }
+  .ui-lang-java {
+    @apply bg-amber-500/20 text-amber-300;
+  }
+  .ui-lang-default {
+    @apply bg-white/10 text-white/50;
+  }
 
   /* ── End brand / category colors ─────────────────────────────────────────── */
 
   /* Horizontal label+value row (e.g. "RAM — 4/16 GiB") above a progress bar */
-  .ui-label-row  { @apply mb-2 flex justify-between text-sm text-text-tertiary; }
-  .ui-data-cell  { @apply rounded-md border border-border-subtle bg-surface-base p-2.5; }
+  .ui-label-row {
+    @apply mb-2 flex justify-between text-sm text-text-tertiary;
+  }
+  .ui-data-cell {
+    @apply rounded-md border border-border-subtle bg-surface-base p-2.5;
+  }
 
   /* Card section divider — content block within a card, beneath a border */
-  .ui-card-section { @apply border-t border-border-subtle px-4 pb-4 pt-4 sm:px-5 sm:pb-5 md:px-6; }
+  .ui-card-section {
+    @apply border-t border-border-subtle px-4 pb-4 pt-4 sm:px-5 sm:pb-5 md:px-6;
+  }
 
   /* Control */
   .ui-control-hero {
@@ -3280,8 +3532,11 @@
 
        What is left is depth only — one soft corner glow. Decoration on an
        operations surface has to lose every argument with legibility. */
-    background-image:
-      radial-gradient(circle at top left, color-mix(in oklch, var(--accent-primary) 8%, transparent), transparent 32rem);
+    background-image: radial-gradient(
+      circle at top left,
+      color-mix(in oklch, var(--accent-primary) 8%, transparent),
+      transparent 32rem
+    );
   }
   /* Run-outcome streak: glyphs plus the sentence they encode. The summary is
      what makes the row readable without a tooltip, which is to say readable at
@@ -3500,8 +3755,12 @@
      the card that rendered them. Dead ui-* classes are not free: they ship in
      the stylesheet every visitor downloads, and the next person to read this
      file cannot tell which of them are still load-bearing. */
-  .ui-control-fleet-runner-ok { @apply text-status-positive; }
-  .ui-control-fleet-runner-warn { @apply text-status-warning; }
+  .ui-control-fleet-runner-ok {
+    @apply text-status-positive;
+  }
+  .ui-control-fleet-runner-warn {
+    @apply text-status-warning;
+  }
   /* "Start building" earns full-width prominence on phones (it's the positive
      next step); "Pause fleet" does not — full-width made a fleet-wide stop the
      single biggest control on the mobile screen. It stays a normal button. */
@@ -3779,8 +4038,13 @@
   /* High-flier command esthetics: subtle live pulse for active fleet (working agents).
      Pure CSS, respects tokens, restrained (no full spin, just breathing opacity for "alive" feel). */
   @keyframes fleet-live-pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.65; }
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.65;
+    }
   }
   .ui-control-fleet-live {
     animation: fleet-live-pulse 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
@@ -4139,11 +4403,21 @@
 
   /* Misc */
   /* Status dots — used inline with text for agent/project state */
-  .ui-dot          { @apply inline-block h-1.5 w-1.5 rounded-full shrink-0; }
-  .ui-dot-positive { background-color: var(--status-positive); }
-  .ui-dot-warning  { background-color: var(--status-warning); }
-  .ui-dot-negative { background-color: var(--status-negative); }
-  .ui-dot-neutral  { background-color: var(--status-neutral); }
+  .ui-dot {
+    @apply inline-block h-1.5 w-1.5 rounded-full shrink-0;
+  }
+  .ui-dot-positive {
+    background-color: var(--status-positive);
+  }
+  .ui-dot-warning {
+    background-color: var(--status-warning);
+  }
+  .ui-dot-negative {
+    background-color: var(--status-negative);
+  }
+  .ui-dot-neutral {
+    background-color: var(--status-neutral);
+  }
 
   /* Micro badge — shape only; caller adds color/bg/border-color classes */
   .ui-micro-badge {
@@ -4343,8 +4617,12 @@
   .ui-loki-convo-active {
     @apply border-border-subtle bg-surface-raised text-text-primary;
   }
-  .ui-loki-convo-title { @apply truncate font-medium; }
-  .ui-loki-convo-meta  { @apply mt-0.5 truncate text-xs text-text-tertiary; }
+  .ui-loki-convo-title {
+    @apply truncate font-medium;
+  }
+  .ui-loki-convo-meta {
+    @apply mt-0.5 truncate text-xs text-text-tertiary;
+  }
 
   /* Conversation row wrapper — holds the select button + a delete action that
      stays out of the way until the row is hovered or focused within. */
@@ -4364,7 +4642,9 @@
   /* Touch devices have no hover, so the delete would be permanently invisible.
      Show it (dimmed) there; desktop keeps the reveal-on-hover behaviour. */
   @media (hover: none) {
-    .ui-loki-convo-delete { @apply opacity-60; }
+    .ui-loki-convo-delete {
+      @apply opacity-60;
+    }
   }
 
   /* Message bubbles (center pane). */
@@ -4375,7 +4655,9 @@
     max-width: 90%;
   }
   @media (min-width: 640px) {
-    .ui-loki-bubble { max-width: 75%; }
+    .ui-loki-bubble {
+      max-width: 75%;
+    }
   }
   .ui-loki-bubble-user {
     @apply self-end bg-accent-muted text-text-primary;
@@ -4497,15 +4779,33 @@
   }
   /* Staggered, uneven delays so the row reads as an organic waveform, not a
      single sine sweep. */
-  .ui-voice-wave-bar:nth-child(1) { animation-delay: -0.9s; }
-  .ui-voice-wave-bar:nth-child(2) { animation-delay: -0.3s; }
-  .ui-voice-wave-bar:nth-child(3) { animation-delay: -0.7s; }
-  .ui-voice-wave-bar:nth-child(4) { animation-delay: -0.1s; }
-  .ui-voice-wave-bar:nth-child(5) { animation-delay: -0.6s; }
-  .ui-voice-wave-bar:nth-child(6) { animation-delay: -0.2s; }
-  .ui-voice-wave-bar:nth-child(7) { animation-delay: -0.8s; }
-  .ui-voice-wave-bar:nth-child(8) { animation-delay: -0.4s; }
-  .ui-voice-wave-bar:nth-child(9) { animation-delay: -0.5s; }
+  .ui-voice-wave-bar:nth-child(1) {
+    animation-delay: -0.9s;
+  }
+  .ui-voice-wave-bar:nth-child(2) {
+    animation-delay: -0.3s;
+  }
+  .ui-voice-wave-bar:nth-child(3) {
+    animation-delay: -0.7s;
+  }
+  .ui-voice-wave-bar:nth-child(4) {
+    animation-delay: -0.1s;
+  }
+  .ui-voice-wave-bar:nth-child(5) {
+    animation-delay: -0.6s;
+  }
+  .ui-voice-wave-bar:nth-child(6) {
+    animation-delay: -0.2s;
+  }
+  .ui-voice-wave-bar:nth-child(7) {
+    animation-delay: -0.8s;
+  }
+  .ui-voice-wave-bar:nth-child(8) {
+    animation-delay: -0.4s;
+  }
+  .ui-voice-wave-bar:nth-child(9) {
+    animation-delay: -0.5s;
+  }
   .ui-voice-timer {
     @apply shrink-0 text-sm font-medium text-text-secondary;
   }
@@ -4516,12 +4816,22 @@
     @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-status-negative text-white transition-transform active:scale-95;
   }
   @keyframes ui-voice-wave {
-    0%, 100% { transform: scaleY(0.25); }
-    50% { transform: scaleY(1); }
+    0%,
+    100% {
+      transform: scaleY(0.25);
+    }
+    50% {
+      transform: scaleY(1);
+    }
   }
   @keyframes ui-voice-pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.35; }
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.35;
+    }
   }
 
   /* Staged file attachment, shown above the composer until sent. */
@@ -4563,13 +4873,18 @@
   .ui-loki-project-goal {
     @apply mt-0.5 block truncate text-xs text-text-tertiary;
   }
-
 }
 
 /* ─── Sidebar portal tooltip (outside @layer to avoid Tailwind 4 keyframe issue) ── */
 @keyframes sidebar-tooltip-in {
-  from { opacity: 0; transform: translate(-4px, -50%); }
-  to   { opacity: 1; transform: translate(0,   -50%); }
+  from {
+    opacity: 0;
+    transform: translate(-4px, -50%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(0, -50%);
+  }
 }
 .ui-sidebar-portal-tooltip {
   position: fixed;
@@ -4589,10 +4904,19 @@
 }
 
 /* ─── Scrollbar ───────────────────────────────────────────────────────────── */
-::-webkit-scrollbar       { width: 4px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border-default); border-radius: 2px; }
-::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-default);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-strong);
+}
 
 /* ─── Reduced-motion catch-all ────────────────────────────────────────────────
    Respect the OS-level `prefers-reduced-motion` for every remaining animation.
@@ -4601,7 +4925,9 @@
    ui-palette-mic-pulse, sidebar-tooltip-in) so nothing loops for users who
    asked the platform to reduce motion. Near-zero (not 0) keeps final states. */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;

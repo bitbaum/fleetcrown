@@ -65,11 +65,14 @@ export async function acceptInvitation(
       .limit(1);
 
     if (inviterOrg) {
-      await tx.insert(orgMemberships).values({
-        orgId: inviterOrg.id,
-        userId: user.id,
-        role: "member",
-      }).onConflictDoNothing();
+      await tx
+        .insert(orgMemberships)
+        .values({
+          orgId: inviterOrg.id,
+          userId: user.id,
+          role: "member",
+        })
+        .onConflictDoNothing();
     }
 
     return { userId: user.id };

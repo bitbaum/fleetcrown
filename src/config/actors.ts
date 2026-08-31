@@ -87,8 +87,16 @@ export const ROBOT_CLASS_TO_OC_ASSET: Record<RobotClass, string> = {
 };
 
 export const DEFAULT_VACUUMS = [
-  { name: "Kitchen vacuum", class: ROBOT_CLASS.VACUUM, description: "Robot vacuum — kitchen and ground floor." },
-  { name: "Hallway vacuum", class: ROBOT_CLASS.VACUUM, description: "Robot vacuum — hallway and upstairs." },
+  {
+    name: "Kitchen vacuum",
+    class: ROBOT_CLASS.VACUUM,
+    description: "Robot vacuum — kitchen and ground floor.",
+  },
+  {
+    name: "Hallway vacuum",
+    class: ROBOT_CLASS.VACUUM,
+    description: "Robot vacuum — hallway and upstairs.",
+  },
 ] as const;
 
 export const ROBOT_CLASS_LABEL: Record<RobotClass, string> = {

@@ -42,15 +42,31 @@ export default async function HabitsPage() {
           header) and filled the fold doing it. */}
       {habits.length > 0 && (
         <StatRow>
-          <StatCard label="Active Habits" value={String(active.length)} sub={`${habits.length} total`} />
-          <StatCard label={`Completions (${HABIT_HISTORY_DAYS}d)`} value={String(totalCompletions)} sub="across all habits" />
-          <StatCard label="Best Streak" value={bestStreak > 0 ? `${bestStreak}d` : "—"} sub="current longest" />
+          <StatCard
+            label="Active Habits"
+            value={String(active.length)}
+            sub={`${habits.length} total`}
+          />
+          <StatCard
+            label={`Completions (${HABIT_HISTORY_DAYS}d)`}
+            value={String(totalCompletions)}
+            sub="across all habits"
+          />
+          <StatCard
+            label="Best Streak"
+            value={bestStreak > 0 ? `${bestStreak}d` : "—"}
+            sub="current longest"
+          />
         </StatRow>
       )}
 
       {habits.length === 0 ? (
         <Card>
-          <EmptyState icon={Repeat2} title="No habits tracked yet" action={<AddHabitButton emptyState />} />
+          <EmptyState
+            icon={Repeat2}
+            title="No habits tracked yet"
+            action={<AddHabitButton emptyState />}
+          />
         </Card>
       ) : (
         <div className="space-y-3">

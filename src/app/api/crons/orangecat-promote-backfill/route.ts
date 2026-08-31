@@ -36,9 +36,7 @@ export async function GET(req: NextRequest) {
   const denied = requireCronAuth(req);
   if (denied) return denied;
 
-  const cutoff = new Date(Date.now() - BACKFILL_WINDOW_DAYS * DAY_MS)
-    .toISOString()
-    .slice(0, 10);
+  const cutoff = new Date(Date.now() - BACKFILL_WINDOW_DAYS * DAY_MS).toISOString().slice(0, 10);
 
   const linked = await db
     .select({
@@ -72,11 +70,13 @@ export async function GET(req: NextRequest) {
         .map((entry) => () => promoteDevLogEntry(project.userId, project.id, project.name, entry)),
       // Run→wall reconcile: re-emit recent successful runs — same idempotent
       // external ids as the close-time fire-and-forget emit.
-      ...(await getRecentSuccessfulRuns(
-        project.userId,
-        project.name,
-        new Date(Date.now() - BACKFILL_WINDOW_DAYS * DAY_MS),
-      )).map((run) => () => promoteRunClose(run)),
+      ...(
+        await getRecentSuccessfulRuns(
+          project.userId,
+          project.name,
+          new Date(Date.now() - BACKFILL_WINDOW_DAYS * DAY_MS),
+        )
+      ).map((run) => () => promoteRunClose(run)),
     ];
 
     // Sequential on purpose: this is a janitor, not a hot path — one in-flight

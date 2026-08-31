@@ -6,7 +6,11 @@ import { getSharedProjectDossier } from "@/db/queries/project-dossier";
 
 export const metadata = { title: "Shared project" };
 
-export default async function SharedProjectPage({ params }: { params: Promise<{ token: string }> }) {
+export default async function SharedProjectPage({
+  params,
+}: {
+  params: Promise<{ token: string }>;
+}) {
   const { token } = await params;
   const shared = await getSharedProjectDossier(token).catch(() => null);
   if (!shared) notFound();

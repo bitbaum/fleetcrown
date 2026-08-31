@@ -28,7 +28,10 @@ export function CommitmentItem({ id, description, dueDate, financialImpact }: Co
   const { label: deadline, overdue: isOverdue } = deadlineLabel(dueDate);
 
   const save = async () => {
-    if (!desc.trim()) { setError("Description required"); return; }
+    if (!desc.trim()) {
+      setError("Description required");
+      return;
+    }
     setSaving(true);
     setError("");
     try {
@@ -38,7 +41,7 @@ export function CommitmentItem({ id, description, dueDate, financialImpact }: Co
         financialImpact: impact || null,
       });
       if (!res.ok) {
-        const data = await res.json() as { error?: string };
+        const data = (await res.json()) as { error?: string };
         setError(data.error ?? "Failed to save");
         return;
       }
@@ -68,7 +71,9 @@ export function CommitmentItem({ id, description, dueDate, financialImpact }: Co
             value={desc}
             onChange={(e) => setDesc(e.target.value)}
             autoFocus
-            onKeyDown={(e) => { if (e.key === "Escape") cancel(); }}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") cancel();
+            }}
             className="ui-input-inline w-full px-2 py-1 text-sm text-text-primary placeholder:text-text-muted"
           />
           <div className="flex gap-1.5">
@@ -82,17 +87,16 @@ export function CommitmentItem({ id, description, dueDate, financialImpact }: Co
               value={impact}
               onChange={(e) => setImpact(e.target.value)}
               placeholder="Financial impact"
-              onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") cancel(); }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") save();
+                if (e.key === "Escape") cancel();
+              }}
               className="flex-1 ui-input-tight"
             />
           </div>
           {error && <p className="ui-error-xs">{error}</p>}
           <div className="flex gap-1.5">
-            <button
-              onClick={save}
-              disabled={saving || !desc.trim()}
-              className="ui-btn-confirm-sm"
-            >
+            <button onClick={save} disabled={saving || !desc.trim()} className="ui-btn-confirm-sm">
               {saving ? <Loader2 className="ui-spinner-xs" /> : <Check className="h-3 w-3" />}
               Save
             </button>
@@ -115,7 +119,9 @@ export function CommitmentItem({ id, description, dueDate, financialImpact }: Co
       <div className="min-w-0 flex-1">
         <div className="text-sm md:text-base">{description}</div>
         {dueDate && (
-          <div className={`text-xs md:text-sm ${isOverdue ? "text-status-negative" : "text-text-tertiary"}`}>
+          <div
+            className={`text-xs md:text-sm ${isOverdue ? "text-status-negative" : "text-text-tertiary"}`}
+          >
             {deadline}
           </div>
         )}

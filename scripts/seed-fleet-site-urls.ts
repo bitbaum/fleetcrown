@@ -52,7 +52,10 @@ async function main() {
       if (!row.liveUrl) unmatched.push(row.name);
       continue;
     }
-    if (row.liveUrl) { skipped++; continue; }
+    if (row.liveUrl) {
+      skipped++;
+      continue;
+    }
     console.log(`${apply ? "set" : "would set"} ${row.name} → ${url}`);
     if (apply) {
       await db
@@ -69,4 +72,7 @@ async function main() {
   process.exit(0);
 }
 
-main().catch((e) => { console.error(e); process.exit(1); });
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

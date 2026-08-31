@@ -5,7 +5,11 @@ import type { ControlData, ProjectState } from "@/lib/control-types";
 import type { FastProjectState } from "@/lib/control-fast-state";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import { getJson, postJson, throwApiError } from "@/lib/api/fetch";
-import { REFRESH_AFTER_DISPATCH_MS, REFRESH_AFTER_LAUNCH_MS, AGENT_COLD_START_MS } from "@/lib/constants/timings";
+import {
+  REFRESH_AFTER_DISPATCH_MS,
+  REFRESH_AFTER_LAUNCH_MS,
+  AGENT_COLD_START_MS,
+} from "@/lib/constants/timings";
 import type { Agent } from "@/lib/agent-registry";
 import type { Attachment } from "@/lib/loki/attachments";
 import { FLEETCROWN_REFRESH_EVENT } from "@/lib/client-events";
@@ -36,8 +40,23 @@ export interface ControlDataHook {
    *  to heartbeat age. true/false = authoritative live signal. */
   runnerConnected: boolean | null;
   refresh: (manual?: boolean) => Promise<void>;
-  inject: (tab: string, promptKey?: string, customPrompt?: string, attachments?: Attachment[]) => Promise<{ mode: "direct" | "queued"; runnerConnected: boolean | null; commandId: string | null }>;
-  launchProject: (tab: string, dir: string, agent?: string, model?: string, initialPrompt?: string) => Promise<void>;
+  inject: (
+    tab: string,
+    promptKey?: string,
+    customPrompt?: string,
+    attachments?: Attachment[],
+  ) => Promise<{
+    mode: "direct" | "queued";
+    runnerConnected: boolean | null;
+    commandId: string | null;
+  }>;
+  launchProject: (
+    tab: string,
+    dir: string,
+    agent?: string,
+    model?: string,
+    initialPrompt?: string,
+  ) => Promise<void>;
   runWithBrain: (project: ProjectState, intent: OrchestrationTaskIntentId) => Promise<void>;
   runCustomPrompt: (project: ProjectState, prompt: string, ag: string) => Promise<void>;
   saveAgent: (applyToOpenTabs: boolean) => Promise<void>;
@@ -62,7 +81,11 @@ export function useControlData(): ControlDataHook {
   // the heartbeat-age fallback still governs the badge pre-rollout).
   // See docs/architecture/connection-presence.md.
   const [runnerConnected, setRunnerConnected] = useState<boolean | null>(null);
-  const [builderPresence, setBuilderPresence] = useState<{ cloud: boolean; local: boolean; any: boolean } | null>(null);
+  const [builderPresence, setBuilderPresence] = useState<{
+    cloud: boolean;
+    local: boolean;
+    any: boolean;
+  } | null>(null);
   const inFlight = useRef(false);
 
   const registry = data?.agentRegistry.agents ?? [];
@@ -70,33 +93,38 @@ export function useControlData(): ControlDataHook {
   const defaultAgent = data?.agentRegistry.defaultAgent ?? switchableRegistry[0]?.id ?? "claude";
   const selectedAgent = (agent || data?.agentConfig.agent || defaultAgent) as Agent;
   const selectedDefinition = switchableRegistry.find((entry) => entry.id === selectedAgent) ?? null;
-  const activeDefinition = switchableRegistry.find((entry) => entry.id === data?.agentConfig.agent) ?? null;
-  const model = draftModels[selectedAgent] ?? data?.agentConfig.model ?? selectedDefinition?.defaultModel ?? "";
+  const activeDefinition =
+    switchableRegistry.find((entry) => entry.id === data?.agentConfig.agent) ?? null;
+  const model =
+    draftModels[selectedAgent] ?? data?.agentConfig.model ?? selectedDefinition?.defaultModel ?? "";
   const savedConfig = data?.agentConfig ?? null;
   const hasAgentChange = savedConfig ? selectedAgent !== savedConfig.agent : false;
   const hasModelChange = savedConfig ? model.trim() !== savedConfig.model : false;
   const hasPendingChange = hasAgentChange || hasModelChange;
 
-  const refresh = useCallback(async (manual = false) => {
-    if (manual) setRefreshing(true);
-    try {
-      const payload = await getJson<ControlData>("/api/control");
-      setData(payload);
-      if (payload.builderPresence) setBuilderPresence(payload.builderPresence);
-      if (payload.builderPresence?.any) setRunnerConnected(true);
-      else if (payload.builderPresence && !payload.builderPresence.any) setRunnerConnected(false);
-      if (!agentDirty) {
-        setAgent(payload.agentConfig.agent);
-        setDraftModels({ [payload.agentConfig.agent]: payload.agentConfig.model });
+  const refresh = useCallback(
+    async (manual = false) => {
+      if (manual) setRefreshing(true);
+      try {
+        const payload = await getJson<ControlData>("/api/control");
+        setData(payload);
+        if (payload.builderPresence) setBuilderPresence(payload.builderPresence);
+        if (payload.builderPresence?.any) setRunnerConnected(true);
+        else if (payload.builderPresence && !payload.builderPresence.any) setRunnerConnected(false);
+        if (!agentDirty) {
+          setAgent(payload.agentConfig.agent);
+          setDraftModels({ [payload.agentConfig.agent]: payload.agentConfig.model });
+        }
+        setLastUpdated(Date.now());
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load");
+      } finally {
+        if (manual) setRefreshing(false);
       }
-      setLastUpdated(Date.now());
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load");
-    } finally {
-      if (manual) setRefreshing(false);
-    }
-  }, [agentDirty]);
+    },
+    [agentDirty],
+  );
 
   useEffect(() => {
     const poll = async () => {
@@ -108,7 +136,9 @@ export function useControlData(): ControlDataHook {
 
     // Always fetch on mount — bypass visibility so background-opened tabs load data.
     inFlight.current = true;
-    refresh().finally(() => { inFlight.current = false; });
+    refresh().finally(() => {
+      inFlight.current = false;
+    });
 
     // Three triggers for refetch after mount, all event-driven — no setInterval:
     //   1. visibilitychange: tab comes back to foreground (covers backgrounded
@@ -121,9 +151,13 @@ export function useControlData(): ControlDataHook {
     // pushes projects-update patches directly into setData without a full
     // /api/control refetch. With both push paths active, polling on a timer
     // is paying for an outage that hasn't happened — delete it.
-    const onVisibilityChange = () => { if (!document.hidden) poll(); };
+    const onVisibilityChange = () => {
+      if (!document.hidden) poll();
+    };
     document.addEventListener("visibilitychange", onVisibilityChange);
-    const onFleetCrownRefresh = () => { poll(); };
+    const onFleetCrownRefresh = () => {
+      poll();
+    };
     window.addEventListener(FLEETCROWN_REFRESH_EVENT, onFleetCrownRefresh);
 
     return () => {
@@ -153,7 +187,9 @@ export function useControlData(): ControlDataHook {
         eventCoalesce.current = null;
         if (!document.hidden && !inFlight.current) {
           inFlight.current = true;
-          refresh().finally(() => { inFlight.current = false; });
+          refresh().finally(() => {
+            inFlight.current = false;
+          });
         }
       }, 200);
     },
@@ -185,8 +221,12 @@ export function useControlData(): ControlDataHook {
           closingAt: patch.closingAt,
           closedAt: patch.closedAt,
           ...(patch.promptQueue !== undefined ? { promptQueue: patch.promptQueue } : {}),
-          ...(patch.promptQueueRevision !== undefined ? { promptQueueRevision: patch.promptQueueRevision } : {}),
-          ...(patch.autoContinueEnabled !== undefined ? { autoContinueEnabled: patch.autoContinueEnabled } : {}),
+          ...(patch.promptQueueRevision !== undefined
+            ? { promptQueueRevision: patch.promptQueueRevision }
+            : {}),
+          ...(patch.autoContinueEnabled !== undefined
+            ? { autoContinueEnabled: patch.autoContinueEnabled }
+            : {}),
         };
       });
       // Sync zellijTabs from tabOpen patches so active/idle categorisation stays live
@@ -220,8 +260,11 @@ export function useControlData(): ControlDataHook {
           };
           mergeProjectPatches(payload.projects);
           if (payload.builderPresence) setBuilderPresence(payload.builderPresence);
-          if (typeof payload.runnerConnected === "boolean") setRunnerConnected(payload.runnerConnected);
-        } catch { /* ignore malformed events */ }
+          if (typeof payload.runnerConnected === "boolean")
+            setRunnerConnected(payload.runnerConnected);
+        } catch {
+          /* ignore malformed events */
+        }
       });
       es.onerror = () => {
         es?.close();
@@ -245,7 +288,16 @@ export function useControlData(): ControlDataHook {
     return () => clearTimeout(id);
   }, [lastTabResultsAt]);
 
-  const inject = async (tab: string, promptKey?: string, customPrompt?: string, attachments?: Attachment[]): Promise<{ mode: "direct" | "queued"; runnerConnected: boolean | null; commandId: string | null }> => {
+  const inject = async (
+    tab: string,
+    promptKey?: string,
+    customPrompt?: string,
+    attachments?: Attachment[],
+  ): Promise<{
+    mode: "direct" | "queued";
+    runnerConnected: boolean | null;
+    commandId: string | null;
+  }> => {
     // Same-machine fast path (POST localhost:3001/api/inject → home/server.ts
     // → bash inject_prompt) was retired in Session 4 of killing-the-bash-
     // runner (2026-06-11). Every inject now goes through the cloud
@@ -253,7 +305,9 @@ export function useControlData(): ControlDataHook {
     // and types the resulting prompt into zellij. Same end-state, one
     // transport instead of two, no bash anywhere.
     const res = await postJson("/api/inject", {
-      tab, promptKey, customPrompt,
+      tab,
+      promptKey,
+      customPrompt,
       adapter: data?.agentConfig.agent ?? selectedAgent,
       // Screenshots ride along raw; the server turns them into text (it must
       // not be skippable from here — see lib/composer-attachments).
@@ -276,7 +330,13 @@ export function useControlData(): ControlDataHook {
     };
   };
 
-  const launchProject = async (tab: string, dir: string, agent?: string, model?: string, initialPrompt?: string) => {
+  const launchProject = async (
+    tab: string,
+    dir: string,
+    agent?: string,
+    model?: string,
+    initialPrompt?: string,
+  ) => {
     const res = await postJson("/api/agent/launch", {
       tab,
       dir,
@@ -294,10 +354,13 @@ export function useControlData(): ControlDataHook {
     try {
       const queueRes = await fetch(`/api/beacon/queue/${encodeURIComponent(project.tab)}`);
       if (queueRes.ok) {
-        const stored = await queueRes.json() as { queue?: unknown };
-        if (Array.isArray(stored.queue)) queue = stored.queue.filter((item): item is string => typeof item === "string");
+        const stored = (await queueRes.json()) as { queue?: unknown };
+        if (Array.isArray(stored.queue))
+          queue = stored.queue.filter((item): item is string => typeof item === "string");
       }
-    } catch { /* queue context remains best-effort */ }
+    } catch {
+      /* queue context remains best-effort */
+    }
     const res = await postJson("/api/orchestration/run", {
       projectId: project.projectId,
       projectKey: project.tab,
@@ -309,7 +372,9 @@ export function useControlData(): ControlDataHook {
     if (!res.ok) await throwApiError(res, `HTTP ${res.status}`);
     const body = await res.json().catch(() => ({}));
     if (body.warning === "runner-offline") {
-      setError(body.message ?? "Fleet Runner is offline — queued; it will run when the runner reconnects.");
+      setError(
+        body.message ?? "Fleet Runner is offline — queued; it will run when the runner reconnects.",
+      );
     }
     await refresh(true);
   };
@@ -334,7 +399,11 @@ export function useControlData(): ControlDataHook {
   const saveAgent = async (applyToOpenTabs: boolean) => {
     setSavingAgent(true);
     try {
-      const res = await postJson("/api/control/agent", { agent: selectedAgent, model, applyToOpenTabs });
+      const res = await postJson("/api/control/agent", {
+        agent: selectedAgent,
+        model,
+        applyToOpenTabs,
+      });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
       setAgentDirty(false);
@@ -365,17 +434,33 @@ export function useControlData(): ControlDataHook {
   };
 
   return {
-    data, lastUpdated, refreshing, error,
-    selectedAgent, model, savedConfig,
-    switchableRegistry, activeDefinition, selectedDefinition,
-    hasPendingChange, savingAgent, lastTabResults, lastTabResultsAt,
+    data,
+    lastUpdated,
+    refreshing,
+    error,
+    selectedAgent,
+    model,
+    savedConfig,
+    switchableRegistry,
+    activeDefinition,
+    selectedDefinition,
+    hasPendingChange,
+    savingAgent,
+    lastTabResults,
+    lastTabResultsAt,
     runtimeAvailable: data?.runtimeAvailable ?? true,
     runnerLastPushedAt: data?.runnerLastPushedAt ?? null,
     runnerVersion: data?.runnerVersion ?? null,
     runnerConnected,
     builderPresence,
-    refresh, inject, launchProject,
-    runWithBrain, runCustomPrompt, saveAgent,
-    handleAgentSelect, handleModelChange, setError,
+    refresh,
+    inject,
+    launchProject,
+    runWithBrain,
+    runCustomPrompt,
+    saveAgent,
+    handleAgentSelect,
+    handleModelChange,
+    setError,
   };
 }

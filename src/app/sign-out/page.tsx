@@ -12,10 +12,7 @@ export default function SignOutPage() {
 
   return (
     <AuthShell>
-      <AuthHeading
-        title="Signing out…"
-        description="You'll be redirected to the sign-in page."
-      />
+      <AuthHeading title="Signing out…" description="You'll be redirected to the sign-in page." />
       <AuthLoadingCenter />
     </AuthShell>
   );

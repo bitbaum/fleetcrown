@@ -16,17 +16,13 @@ export function HabitsList({ initialHabits }: { initialHabits: HabitWithStatus[]
 
   const toggle = async (id: string, currentDone: boolean) => {
     setToggleError(null);
-    setHabits((prev) =>
-      prev.map((h) => (h.id === id ? { ...h, doneToday: !currentDone } : h)),
-    );
+    setHabits((prev) => prev.map((h) => (h.id === id ? { ...h, doneToday: !currentDone } : h)));
     try {
       const res = await patchJson(`/api/habits/${id}`, { done: !currentDone });
       if (!res.ok) throw new Error("Failed");
       router.refresh();
     } catch {
-      setHabits((prev) =>
-        prev.map((h) => (h.id === id ? { ...h, doneToday: currentDone } : h)),
-      );
+      setHabits((prev) => prev.map((h) => (h.id === id ? { ...h, doneToday: currentDone } : h)));
       setToggleError("Failed to save — try again");
       setTimeout(() => setToggleError(null), 3000);
     }
@@ -49,10 +45,13 @@ export function HabitsList({ initialHabits }: { initialHabits: HabitWithStatus[]
     router.refresh();
   };
 
-  const addHabit = async (input: { title: string; frequency: HabitFrequency }): Promise<boolean> => {
+  const addHabit = async (input: {
+    title: string;
+    frequency: HabitFrequency;
+  }): Promise<boolean> => {
     try {
       const res = await postJson("/api/habits", input);
-      const data = await res.json() as { habit?: { id: string; title: string } };
+      const data = (await res.json()) as { habit?: { id: string; title: string } };
       if (!data.habit) return false;
       setHabits((prev) => [
         ...prev,

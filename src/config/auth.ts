@@ -58,7 +58,8 @@ export const AUTH_COPY = {
     successTitle: "Email verified",
     successDescription: "Your email address has been confirmed. You're all set.",
     expiredTitle: "Link expired",
-    expiredDescription: "This verification link is invalid or has expired. Enter your email to get a new one.",
+    expiredDescription:
+      "This verification link is invalid or has expired. Enter your email to get a new one.",
   },
 } as const;
 
@@ -94,11 +95,19 @@ export const PUBLIC_NAV: PublicNavEntry[] = [
         title: "Understand",
         items: [
           { label: "Mission", href: "/mission", description: "Why FleetCrown exists" },
-          { label: "Philosophy", href: "/philosophy", description: "The principles behind the product" },
+          {
+            label: "Philosophy",
+            href: "/philosophy",
+            description: "The principles behind the product",
+          },
           { label: "Roadmap", href: "/roadmap", description: "What works now and what comes next" },
           { label: "Changelog", href: "/releases", description: "Every shipped release" },
           { label: "Docs", href: "/docs", description: "Install, connect, and operate your fleet" },
-          { label: "Whitepaper", href: "/whitepaper", description: "Architecture and product thesis" },
+          {
+            label: "Whitepaper",
+            href: "/whitepaper",
+            description: "Architecture and product thesis",
+          },
         ],
       },
       {
@@ -106,9 +115,17 @@ export const PUBLIC_NAV: PublicNavEntry[] = [
         items: [
           // "Linux app" outlived its truth: mac and Windows builds have shipped
           // from the same CI matrix since v0.8.11.
-          { label: "Download", href: "/download", description: "Fleet Runner for Mac, Windows, and Linux" },
+          {
+            label: "Download",
+            href: "/download",
+            description: "Fleet Runner for Mac, Windows, and Linux",
+          },
           { label: "Pricing", href: "/pricing", description: "Plans for operators and teams" },
-          { label: "Frontier", href: "/frontier", description: "Daily AI & robotics frontier digest" },
+          {
+            label: "Frontier",
+            href: "/frontier",
+            description: "Daily AI & robotics frontier digest",
+          },
         ],
       },
     ],

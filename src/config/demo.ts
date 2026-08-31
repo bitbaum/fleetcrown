@@ -74,14 +74,17 @@ export type DemoDenialReason =
   | "infrastructure";
 
 export const DEMO_DENIAL_COPY: Record<DemoDenialReason, string> = {
-  dispatch:       "Dispatching an agent runs real work on a real machine, so it is off in the demo. The runs already in here are real history — open one and read it end to end.",
-  terminal:       "Terminal sessions attach to a live machine, so they are read-only in the demo.",
-  spend:          "This calls a paid model, so it is off in the demo.",
-  outbound:       "This would send a real message to a real person, so it is off in the demo.",
-  billing:        "Billing is off in the demo — nothing here can be charged. Create your own account to pick a plan.",
-  credentials:    "The demo account is shared, so its credentials and tokens are fixed.",
-  tenancy:        "Team, workspace and integration settings are off in the demo.",
-  content:        "Publishing pushes to a public surface, so it is off in the demo. Existing published items are all readable.",
+  dispatch:
+    "Dispatching an agent runs real work on a real machine, so it is off in the demo. The runs already in here are real history — open one and read it end to end.",
+  terminal: "Terminal sessions attach to a live machine, so they are read-only in the demo.",
+  spend: "This calls a paid model, so it is off in the demo.",
+  outbound: "This would send a real message to a real person, so it is off in the demo.",
+  billing:
+    "Billing is off in the demo — nothing here can be charged. Create your own account to pick a plan.",
+  credentials: "The demo account is shared, so its credentials and tokens are fixed.",
+  tenancy: "Team, workspace and integration settings are off in the demo.",
+  content:
+    "Publishing pushes to a public surface, so it is off in the demo. Existing published items are all readable.",
   infrastructure: "Infrastructure controls are off in the demo.",
 };
 
@@ -100,44 +103,44 @@ export const DEMO_DENIAL_COPY: Record<DemoDenialReason, string> = {
  */
 export const DEMO_DENIED_PREFIXES: ReadonlyArray<readonly [string, DemoDenialReason]> = [
   // — reaches the box ————————————————————————————————————————————————
-  ["/api/control",       "dispatch"],
-  ["/api/agents",        "dispatch"],
-  ["/api/agent",         "credentials"],   // mints ck_* tokens
-  ["/api/agent-tokens",  "credentials"],   // mints ck_* tokens the runner authenticates with
+  ["/api/control", "dispatch"],
+  ["/api/agents", "dispatch"],
+  ["/api/agent", "credentials"], // mints ck_* tokens
+  ["/api/agent-tokens", "credentials"], // mints ck_* tokens the runner authenticates with
   ["/api/orchestration", "dispatch"],
-  ["/api/inject",        "terminal"],
-  ["/api/terminal",      "terminal"],
-  ["/api/command",       "terminal"],
+  ["/api/inject", "terminal"],
+  ["/api/terminal", "terminal"],
+  ["/api/command", "terminal"],
 
   // — spends API credit ——————————————————————————————————————————————
-  ["/api/loki",          "spend"],
+  ["/api/loki", "spend"],
   ["/api/conversations", "spend"],
-  ["/api/frontier",      "spend"],
-  ["/api/memory",        "spend"],
-  ["/api/atlas",         "spend"],
-  ["/api/captures",      "spend"],
-  ["/api/hermes",        "spend"],
-  ["/api/ai",            "spend"],         // form-assist — one model call per submit
+  ["/api/frontier", "spend"],
+  ["/api/memory", "spend"],
+  ["/api/atlas", "spend"],
+  ["/api/captures", "spend"],
+  ["/api/hermes", "spend"],
+  ["/api/ai", "spend"], // form-assist — one model call per submit
 
   // — sends something to a real human ————————————————————————————————
-  ["/api/actions",       "outbound"],
-  ["/api/people",        "outbound"],
-  ["/api/push",          "outbound"],
+  ["/api/actions", "outbound"],
+  ["/api/people", "outbound"],
+  ["/api/push", "outbound"],
 
   // — money ——————————————————————————————————————————————————————————
-  ["/api/stripe",        "billing"],
-  ["/api/checkout",      "billing"],
+  ["/api/stripe", "billing"],
+  ["/api/checkout", "billing"],
   ["/api/subscriptions", "billing"],
 
   // — identity and tenancy ———————————————————————————————————————————
-  ["/api/me/password",   "credentials"],
-  ["/api/orgs",          "tenancy"],
-  ["/api/workspaces",    "tenancy"],
-  ["/api/invitations",   "tenancy"],
-  ["/api/settings",      "tenancy"],
-  ["/api/integrations",  "tenancy"],
-  ["/api/github",        "tenancy"],
-  ["/api/decisions",     "content"],
+  ["/api/me/password", "credentials"],
+  ["/api/orgs", "tenancy"],
+  ["/api/workspaces", "tenancy"],
+  ["/api/invitations", "tenancy"],
+  ["/api/settings", "tenancy"],
+  ["/api/integrations", "tenancy"],
+  ["/api/github", "tenancy"],
+  ["/api/decisions", "content"],
 ] as const;
 
 /**
@@ -173,10 +176,10 @@ export const DEMO_PARTIAL_PREFIXES: Readonly<Record<string, string>> = {
  * reachable by a browser session at all. /api/crons/* requires CRON_SECRET.
  */
 export const DEMO_HANDLER_ENFORCED: ReadonlyArray<readonly [string, DemoDenialReason, string]> = [
-  ["/api/auth/forgot-password", "credentials",    "src/app/api/auth/forgot-password/route.ts"],
-  ["/api/auth/reset-password",  "credentials",    "src/app/api/auth/reset-password/route.ts"],
-  ["/api/beacon",               "dispatch",       "src/app/api/beacon/route.ts"],
-  ["/api/beacon/transcribe",    "spend",          "src/app/api/beacon/transcribe/route.ts"],
+  ["/api/auth/forgot-password", "credentials", "src/app/api/auth/forgot-password/route.ts"],
+  ["/api/auth/reset-password", "credentials", "src/app/api/auth/reset-password/route.ts"],
+  ["/api/beacon", "dispatch", "src/app/api/beacon/route.ts"],
+  ["/api/beacon/transcribe", "spend", "src/app/api/beacon/transcribe/route.ts"],
 ] as const;
 
 /**
@@ -187,7 +190,7 @@ export const DEMO_HANDLER_ENFORCED: ReadonlyArray<readonly [string, DemoDenialRe
  * Longest match wins, so these override DEMO_DENIED_PREFIXES.
  */
 export const DEMO_WRITE_CARVEOUTS: readonly string[] = [
-  "/api/control/activity",     // records that the operator LOOKED at something
+  "/api/control/activity", // records that the operator LOOKED at something
 ] as const;
 
 /**
@@ -197,7 +200,7 @@ export const DEMO_WRITE_CARVEOUTS: readonly string[] = [
  */
 export const DEMO_DENIED_GET_PREFIXES: ReadonlyArray<readonly [string, DemoDenialReason]> = [
   ["/api/frontier", "spend"],
-  ["/api/hermes",   "spend"],
+  ["/api/hermes", "spend"],
 ] as const;
 
 /**
@@ -212,13 +215,42 @@ export const DEMO_DENIED_GET_PREFIXES: ReadonlyArray<readonly [string, DemoDenia
  * test turns that silence into a red build.
  */
 export const DEMO_SAFE_FAMILIES: readonly string[] = [
-  "activity", "beacon-settings", "builder", "calendar", "commitments", "crew",
-  "crons", "debug-log", "event-stream-token", "events", "feedback", "fleet",
-  "goals", "habits", "health", "me", "metrics", "newsletter",
-  "notification-preferences", "onboarding", "orangecat", "project",
-  "project-states", "projects", "prompts", "robots", "sessions", "setup",
-  "share", "solon", "system", "today", "user-projects", "weather",
-  "widget-boot", "x-login",
+  "activity",
+  "beacon-settings",
+  "builder",
+  "calendar",
+  "commitments",
+  "crew",
+  "crons",
+  "debug-log",
+  "event-stream-token",
+  "events",
+  "feedback",
+  "fleet",
+  "goals",
+  "habits",
+  "health",
+  "me",
+  "metrics",
+  "newsletter",
+  "notification-preferences",
+  "onboarding",
+  "orangecat",
+  "project",
+  "project-states",
+  "projects",
+  "prompts",
+  "robots",
+  "sessions",
+  "setup",
+  "share",
+  "solon",
+  "system",
+  "today",
+  "user-projects",
+  "weather",
+  "widget-boot",
+  "x-login",
 ] as const;
 // Two of these deserve their reasoning written down rather than inferred:
 //

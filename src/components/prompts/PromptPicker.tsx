@@ -69,7 +69,9 @@ export function PromptPicker({
 
   // Keep the highlighted row in view during keyboard navigation.
   useEffect(() => {
-    listRef.current?.querySelector<HTMLElement>(`[data-idx="${cursorIndex}"]`)?.scrollIntoView({ block: "nearest" });
+    listRef.current
+      ?.querySelector<HTMLElement>(`[data-idx="${cursorIndex}"]`)
+      ?.scrollIntoView({ block: "nearest" });
   }, [cursorIndex]);
 
   const pick = (template: PromptTemplate) => {
@@ -84,12 +86,25 @@ export function PromptPicker({
         <input
           autoFocus
           value={query}
-          onChange={(e) => { setQuery(e.target.value); setCursor(0); }}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setCursor(0);
+          }}
           onKeyDown={(e) => {
-            if (e.key === "ArrowDown") { e.preventDefault(); setCursor(Math.min(cursorIndex + 1, matches.length - 1)); }
-            else if (e.key === "ArrowUp") { e.preventDefault(); setCursor(Math.max(cursorIndex - 1, 0)); }
-            else if (e.key === "Enter") { e.preventDefault(); const t = matches[cursorIndex]; if (t) pick(t); }
-            else if (e.key === "Escape") { e.preventDefault(); onClose(); }
+            if (e.key === "ArrowDown") {
+              e.preventDefault();
+              setCursor(Math.min(cursorIndex + 1, matches.length - 1));
+            } else if (e.key === "ArrowUp") {
+              e.preventDefault();
+              setCursor(Math.max(cursorIndex - 1, 0));
+            } else if (e.key === "Enter") {
+              e.preventDefault();
+              const t = matches[cursorIndex];
+              if (t) pick(t);
+            } else if (e.key === "Escape") {
+              e.preventDefault();
+              onClose();
+            }
           }}
           placeholder="Search the prompt library…"
           aria-label="Search the prompt library"
@@ -100,7 +115,9 @@ export function PromptPicker({
 
       <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto">
         {matches.length === 0 ? (
-          <p className="px-3 py-4 text-center text-xs text-text-muted">No prompt matches “{query}”.</p>
+          <p className="px-3 py-4 text-center text-xs text-text-muted">
+            No prompt matches “{query}”.
+          </p>
         ) : (
           matches.map((template, i) => {
             const meta = CATEGORY_META[template.category];
@@ -118,9 +135,15 @@ export function PromptPicker({
               >
                 <span className="flex items-center gap-2">
                   <span className="truncate text-xs font-medium text-text-primary">
-                    {template.icon ? `${template.icon} ` : ""}{template.name}
+                    {template.icon ? `${template.icon} ` : ""}
+                    {template.name}
                   </span>
-                  <span className={cn("shrink-0 rounded-full border px-1.5 py-0.5 text-micro font-medium", meta.color)}>
+                  <span
+                    className={cn(
+                      "shrink-0 rounded-full border px-1.5 py-0.5 text-micro font-medium",
+                      meta.color,
+                    )}
+                  >
                     {meta.label}
                   </span>
                 </span>

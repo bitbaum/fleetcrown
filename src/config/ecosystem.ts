@@ -9,18 +9,12 @@ function readPublicUrl(name: string, fallback: string): URL {
   }
 }
 
-const orangeCatOrigin = readPublicUrl(
-  "NEXT_PUBLIC_ORANGECAT_URL",
-  DEFAULT_ORANGECAT_ORIGIN,
-);
+const orangeCatOrigin = readPublicUrl("NEXT_PUBLIC_ORANGECAT_URL", DEFAULT_ORANGECAT_ORIGIN);
 const fleetCrownOrigin = readPublicUrl(
   "NEXT_PUBLIC_FLEETCROWN_URL",
   "https://fleetcrown.orangecat.ch",
 );
-const solonOrigin = readPublicUrl(
-  "NEXT_PUBLIC_SOLON_URL",
-  "https://solon.orangecat.ch",
-);
+const solonOrigin = readPublicUrl("NEXT_PUBLIC_SOLON_URL", "https://solon.orangecat.ch");
 
 function orangeCatPage(path: string): string {
   return new URL(path, orangeCatOrigin).toString();
@@ -35,8 +29,7 @@ export const ECOSYSTEM = {
   orangeCat: {
     title: "OrangeCat",
     projectId:
-      process.env.NEXT_PUBLIC_ORANGECAT_PROJECT_ID ??
-      "cb093f00-8745-4579-98df-050ebfb37181",
+      process.env.NEXT_PUBLIC_ORANGECAT_PROJECT_ID ?? "cb093f00-8745-4579-98df-050ebfb37181",
     profileUrl: orangeCatPage("/profile/mao-nakamoto"),
     siteUrl: orangeCatOrigin.toString(),
   },
@@ -53,8 +46,7 @@ export const ECOSYSTEM = {
   },
   support: {
     lightningAddress:
-      process.env.NEXT_PUBLIC_ECOSYSTEM_LIGHTNING_ADDRESS ??
-      "orangecat@getalby.com",
+      process.env.NEXT_PUBLIC_ECOSYSTEM_LIGHTNING_ADDRESS ?? "orangecat@getalby.com",
     bitcoinAddress:
       process.env.NEXT_PUBLIC_ECOSYSTEM_BITCOIN_ADDRESS ??
       "bc1q3hh4yklcmwtpnqmxyksw36yedg7zyfy6tzzqwz",
@@ -103,7 +95,22 @@ export const ORANGECAT_INTEGRATION = {
  * webhooks land at /api/solon/events.
  */
 export const ECOSYSTEM_PILLARS = [
-  { key: "orangecat", title: ECOSYSTEM.orangeCat.title, role: "Economy", siteUrl: ECOSYSTEM.orangeCat.siteUrl },
-  { key: "fleetcrown", title: ECOSYSTEM.fleetCrown.title, role: "Engineering", siteUrl: ECOSYSTEM.fleetCrown.siteUrl },
-  { key: "solon", title: ECOSYSTEM.solon.title, role: "Governance", siteUrl: ECOSYSTEM.solon.siteUrl },
+  {
+    key: "orangecat",
+    title: ECOSYSTEM.orangeCat.title,
+    role: "Economy",
+    siteUrl: ECOSYSTEM.orangeCat.siteUrl,
+  },
+  {
+    key: "fleetcrown",
+    title: ECOSYSTEM.fleetCrown.title,
+    role: "Engineering",
+    siteUrl: ECOSYSTEM.fleetCrown.siteUrl,
+  },
+  {
+    key: "solon",
+    title: ECOSYSTEM.solon.title,
+    role: "Governance",
+    siteUrl: ECOSYSTEM.solon.siteUrl,
+  },
 ] as const;

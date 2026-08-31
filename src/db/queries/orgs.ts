@@ -33,10 +33,7 @@ async function uniqueOrgSlug(base: string): Promise<string> {
   let candidate = base;
   let suffix = 0;
   for (;;) {
-    const existing = await db
-      .select({ id: orgs.id })
-      .from(orgs)
-      .where(eq(orgs.slug, candidate));
+    const existing = await db.select({ id: orgs.id }).from(orgs).where(eq(orgs.slug, candidate));
     if (existing.length === 0) return candidate;
     suffix += 1;
     candidate = `${base}-${suffix}`;
@@ -51,7 +48,11 @@ export async function getOrgsByUserId(userId: string) {
     .where(eq(orgMemberships.userId, userId));
 }
 
-export async function addOrgMember(orgId: string, userId: string, role: "admin" | "member" = "member") {
+export async function addOrgMember(
+  orgId: string,
+  userId: string,
+  role: "admin" | "member" = "member",
+) {
   await db
     .insert(orgMemberships)
     .values({ orgId, userId, role })

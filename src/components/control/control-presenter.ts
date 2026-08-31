@@ -11,10 +11,7 @@ import { ORCH_STATE } from "@/lib/orchestration/contract";
 import { SESSION_STATUS } from "@/lib/constants/statuses";
 import { AGENT_LABELS, type AnyAgentId } from "@/lib/agent-labels";
 import { inferAdapterFromTabName } from "@/lib/agent-resolution";
-import {
-  STATE_DEFINITIONS,
-  type ProjectStateKey,
-} from "@/lib/control-states";
+import { STATE_DEFINITIONS, type ProjectStateKey } from "@/lib/control-states";
 
 export { inferAdapterFromTabName } from "@/lib/agent-resolution";
 import type { ControlData, ProjectState } from "@/lib/control-types";
@@ -153,9 +150,12 @@ export type ControlPhase = ProjectStateKey;
  *  cannot disagree — adding a state forces an explicit dot class in one
  *  place. The Record below is just a typed cache to keep call-site syntax
  *  stable for components that index it directly. */
-export const PHASE_DOT_CLASS: Record<ControlPhase, string> = (Object.fromEntries(
-  (Object.keys(STATE_DEFINITIONS) as ProjectStateKey[]).map((k) => [k, STATE_DEFINITIONS[k].dotClass]),
-) as Record<ProjectStateKey, string>);
+export const PHASE_DOT_CLASS: Record<ControlPhase, string> = Object.fromEntries(
+  (Object.keys(STATE_DEFINITIONS) as ProjectStateKey[]).map((k) => [
+    k,
+    STATE_DEFINITIONS[k].dotClass,
+  ]),
+) as Record<ProjectStateKey, string>;
 
 export type ProjectOperationsSnapshot = {
   project: ProjectState;
@@ -234,7 +234,12 @@ export function deriveFleetPulse(input: {
   latestRuns: Array<{ outcome: OrchestrationOutcome; ageMs: number | null }>;
   /** Execution health from getRunnerExecutionStall — already filtered to
    *  GENUINE stalls (serialized/in-flight commands don't count). */
-  executionStall?: { stalled: boolean; stalledCount: number; oldestSeconds: number; tabs?: string[] } | null;
+  executionStall?: {
+    stalled: boolean;
+    stalledCount: number;
+    oldestSeconds: number;
+    tabs?: string[];
+  } | null;
 }): FleetPulse {
   if (input.automationMode === "off") return { key: "paused", label: "Paused", detail: null };
   // A genuine execution stall outranks "Building": an observed terminal
@@ -318,7 +323,10 @@ const LIVE_TAB_RANK: Record<LiveTabRankLabel, number> = {
 };
 
 /** Map an open Zellij tab name back to a registered fleet project. */
-export function findProjectForOpenTab(openTab: string, projects: ProjectState[]): ProjectState | null {
+export function findProjectForOpenTab(
+  openTab: string,
+  projects: ProjectState[],
+): ProjectState | null {
   const lower = openTab.toLowerCase();
   const exact = projects.find(
     (p) => p.tab.toLowerCase() === lower || p.liveTab.toLowerCase() === lower,
@@ -382,49 +390,53 @@ export function buildLiveTabRows(
   syncStale = false,
 ): LiveTabRow[] {
   const uniqueTabs = [...new Set(zellijTabs.map((t) => t.trim()).filter(Boolean))];
-  return uniqueTabs
-    // 2026-05-31: skip zellij tabs that don't map to any registered project.
-    // The user surfaced "Tab #1 Unlinked" as visible noise — scratch tabs
-    // they opened manually that have nothing to do with the fleet. Their
-    // real zellij window already shows them; the FleetCrown UI is for fleet
-    // ops, not a generic tab list. To re-expose unregistered tabs later,
-    // gate this on a "show all tabs" toggle in the UI.
-    .map((tabName) => ({ tabName, project: findProjectForOpenTab(tabName, projects) }))
-    .filter((entry): entry is { tabName: string; project: ProjectState } => entry.project !== null)
-    .map(({ tabName, project }) => {
-      const display = getProjectDisplayState(project, uniqueTabs, nowS, false, true, syncStale);
-      // When a prompt is running but the /proc scan hasn't caught the agent
-      // process yet (the brief launch window), prefer the dispatched adapter
-      // ("Claude", "Cursor", …) over a bare generic "Agent" — but only when
-      // it's a real adapter, not the "unknown" placeholder a raw tab-inject
-      // writes (which would render a worse "Unknown").
-      const dispatched = project.currentPrompt?.adapter;
-      const dispatchedLabel = dispatched && dispatched !== "unknown"
-        ? labelForProcessOrAdapter(dispatched)
-        : null;
-      const agentLabel = project.activeAgents.length
-        ? formatAgentRuntimeLabel(project, tabName)
-        : display.isRunning
-          ? (dispatchedLabel ?? "Agent")
-          : inferAgentLabelFromTabName(tabName);
-      return {
-        tabName,
-        project,
-        agentLabel: agentLabel || null,
-        stateKey: display.stateKey,
-        stateLabel: display.stateLabel,
-        stateTagClass: display.stateTagClass,
-        activity: getTabActivityText(project, display),
-        isWorking: display.isRunning,
-        isWaiting: display.isReady || display.isOrchestrationReady || display.tone === "session-open",
-        registered: true,
-      } satisfies LiveTabRow;
-    })
-    .sort((a, b) => {
-      const rankDelta = LIVE_TAB_RANK[a.stateLabel] - LIVE_TAB_RANK[b.stateLabel];
-      if (rankDelta !== 0) return rankDelta;
-      return a.tabName.localeCompare(b.tabName);
-    });
+  return (
+    uniqueTabs
+      // 2026-05-31: skip zellij tabs that don't map to any registered project.
+      // The user surfaced "Tab #1 Unlinked" as visible noise — scratch tabs
+      // they opened manually that have nothing to do with the fleet. Their
+      // real zellij window already shows them; the FleetCrown UI is for fleet
+      // ops, not a generic tab list. To re-expose unregistered tabs later,
+      // gate this on a "show all tabs" toggle in the UI.
+      .map((tabName) => ({ tabName, project: findProjectForOpenTab(tabName, projects) }))
+      .filter(
+        (entry): entry is { tabName: string; project: ProjectState } => entry.project !== null,
+      )
+      .map(({ tabName, project }) => {
+        const display = getProjectDisplayState(project, uniqueTabs, nowS, false, true, syncStale);
+        // When a prompt is running but the /proc scan hasn't caught the agent
+        // process yet (the brief launch window), prefer the dispatched adapter
+        // ("Claude", "Cursor", …) over a bare generic "Agent" — but only when
+        // it's a real adapter, not the "unknown" placeholder a raw tab-inject
+        // writes (which would render a worse "Unknown").
+        const dispatched = project.currentPrompt?.adapter;
+        const dispatchedLabel =
+          dispatched && dispatched !== "unknown" ? labelForProcessOrAdapter(dispatched) : null;
+        const agentLabel = project.activeAgents.length
+          ? formatAgentRuntimeLabel(project, tabName)
+          : display.isRunning
+            ? (dispatchedLabel ?? "Agent")
+            : inferAgentLabelFromTabName(tabName);
+        return {
+          tabName,
+          project,
+          agentLabel: agentLabel || null,
+          stateKey: display.stateKey,
+          stateLabel: display.stateLabel,
+          stateTagClass: display.stateTagClass,
+          activity: getTabActivityText(project, display),
+          isWorking: display.isRunning,
+          isWaiting:
+            display.isReady || display.isOrchestrationReady || display.tone === "session-open",
+          registered: true,
+        } satisfies LiveTabRow;
+      })
+      .sort((a, b) => {
+        const rankDelta = LIVE_TAB_RANK[a.stateLabel] - LIVE_TAB_RANK[b.stateLabel];
+        if (rankDelta !== 0) return rankDelta;
+        return a.tabName.localeCompare(b.tabName);
+      })
+  );
 }
 
 export type ControlPageState = {
@@ -437,12 +449,22 @@ function attentionScore(project: ProjectState): { score: number; reason: string 
   const reasons: string[] = [];
 
   const sessionHealth = project.session?.health?.toLowerCase() ?? "";
-  if (sessionHealth === "critical") { score += 4; reasons.push("critical"); }
-  else if (sessionHealth.includes("attention")) { score += 2; reasons.push("needs attention"); }
+  if (sessionHealth === "critical") {
+    score += 4;
+    reasons.push("critical");
+  } else if (sessionHealth.includes("attention")) {
+    score += 2;
+    reasons.push("needs attention");
+  }
 
   const runHealth = project.latestOrchestrationRun?.summary?.health?.toLowerCase() ?? "";
-  if (runHealth === "critical" && score < 4) { score += 3; reasons.push("last run: critical"); }
-  else if (runHealth.includes("attention") && score < 2) { score += 2; reasons.push("last run: needs attention"); }
+  if (runHealth === "critical" && score < 4) {
+    score += 3;
+    reasons.push("last run: critical");
+  } else if (runHealth.includes("attention") && score < 2) {
+    score += 2;
+    reasons.push("last run: needs attention");
+  }
 
   return { score, reason: reasons[0] ?? "" };
 }
@@ -456,7 +478,7 @@ const PROCESS_NAME_ALIASES: Record<string, AnyAgentId> = {
 
 function labelForProcessOrAdapter(name: string): string {
   const id = (PROCESS_NAME_ALIASES[name] ?? name) as AnyAgentId;
-  return AGENT_LABELS[id] ?? (name[0]?.toUpperCase() + name.slice(1));
+  return AGENT_LABELS[id] ?? name[0]?.toUpperCase() + name.slice(1);
 }
 
 export function formatAgentRuntimeLabel(project: ProjectState, liveTab?: string): string {
@@ -480,7 +502,6 @@ export function inferAgentLabelFromTabName(tabName: string): string | null {
   const id = inferAdapterFromTabName(tabName);
   return id ? (AGENT_LABELS[id] ?? null) : null;
 }
-
 
 export function getProjectDisplayState(
   project: ProjectState,
@@ -528,13 +549,9 @@ export function getProjectDisplayState(
   const liveTurnRunning = (project.liveAgentTurns?.count ?? 0) > 0;
 
   const isClosed =
-    !dismissed &&
-    !project.agentRunning &&
-    withinWindow(project.closedAt, nowS, CLOSED_WINDOW_S);
+    !dismissed && !project.agentRunning && withinWindow(project.closedAt, nowS, CLOSED_WINDOW_S);
   const isClosing =
-    !dismissed &&
-    !isClosed &&
-    withinWindow(project.closingAt, nowS, CLOSING_WINDOW_S);
+    !dismissed && !isClosed && withinWindow(project.closingAt, nowS, CLOSING_WINDOW_S);
   // Ready when the stop hook has fired recently AND no prompt is actively running.
   // We do NOT require !agentRunning because the claude process stays alive between
   // turns — using it would permanently suppress the ready state for all active sessions.
@@ -591,16 +608,16 @@ export function getProjectDisplayState(
   const tone: ProjectDisplayState["tone"] = isClosed
     ? "closed"
     : isClosing
-    ? "closing"
-    : isReady
-    ? "ready"
-    : isOrchestrationReady
-    ? "orchestration-ready"
-    : isRunning
-    ? "running"
-    : isSessionOpen
-    ? "session-open"
-    : "idle";
+      ? "closing"
+      : isReady
+        ? "ready"
+        : isOrchestrationReady
+          ? "orchestration-ready"
+          : isRunning
+            ? "running"
+            : isSessionOpen
+              ? "session-open"
+              : "idle";
 
   // Labels and tag classes used to be a pair of Records here. Now they come
   // from STATE_DEFINITIONS in lib/control-states — adding a state requires
@@ -697,7 +714,14 @@ export function buildProjectOperationsSnapshot(
   syncCtx: RuntimeSyncContext = {},
 ): ProjectOperationsSnapshot {
   const { syncStale = false, lastSyncedAt = null } = syncCtx;
-  const display = getProjectDisplayState(project, zellijTabs, nowS, false, runtimeStateKnown, syncStale);
+  const display = getProjectDisplayState(
+    project,
+    zellijTabs,
+    nowS,
+    false,
+    runtimeStateKnown,
+    syncStale,
+  );
   // Phase IS stateKey now — the SSOT enum is the only enum. Operations
   // snapshot just exposes the same key under the legacy `phase` field for
   // callers mid-migration. Once those callers move, this whole block
@@ -705,13 +729,14 @@ export function buildProjectOperationsSnapshot(
   const phase: ControlPhase = display.stateKey;
   const attention = attentionScore(project);
   const handoffAt = project.session?.mtime ?? null;
-  const contextSummary = display.isRunning && project.currentPrompt?.label
-    ? project.currentPrompt.label
-    : project.session?.next?.trim()
-      ? project.session.next.trim()
-      : project.session?.done?.trim()
-        ? project.session.done.trim()
-        : null;
+  const contextSummary =
+    display.isRunning && project.currentPrompt?.label
+      ? project.currentPrompt.label
+      : project.session?.next?.trim()
+        ? project.session.next.trim()
+        : project.session?.done?.trim()
+          ? project.session.done.trim()
+          : null;
   // States that assert a live observation on the agent host. When the runner
   // sync is stale these claims come from the last push and may no longer be
   // true — the evidence line must say when they were observed, not pair the
@@ -719,7 +744,11 @@ export function buildProjectOperationsSnapshot(
   // 1w ago" — badge from a 34h-old push, timestamp from a week-old handoff,
   // reading as "the agent sat at the prompt for a week").
   const claimsLiveObservation =
-    display.isRunning || display.isReady || display.isOrchestrationReady || display.isSessionOpen || display.tabOpen;
+    display.isRunning ||
+    display.isReady ||
+    display.isOrchestrationReady ||
+    display.isSessionOpen ||
+    display.tabOpen;
   const liveObserved = runtimeStateKnown && !syncStale && claimsLiveObservation;
   const latestActivity = project.recentActivity?.[0];
   const latestActivityAgeS = latestActivity?.at
@@ -772,17 +801,18 @@ export function buildProjectOperationsSnapshot(
     : 0;
   const lastDispatchAt = latestActivity?.at ? Date.parse(latestActivity.at) : 0;
   const historicalAt = Math.max(handoffAt ?? 0, lastRunAt, lastDispatchAt);
-  const historicalLabel = historicalAt === 0
-    ? "No recent activity"
-    : historicalAt === lastRunAt && lastRunAt > 0
-      ? "Last run"
-      : historicalAt === lastDispatchAt && lastDispatchAt > 0
-        ? "Last dispatch"
-        // Name the SIGNAL, like the two branches above. "Idle" described a
-        // state while its siblings named their evidence, so the same row slot
-        // read as two different kinds of fact ("Idle 1mo ago" vs "Last run
-        // 1w ago") — the handoff file is what this timestamp comes from.
-        : "Last handoff";
+  const historicalLabel =
+    historicalAt === 0
+      ? "No recent activity"
+      : historicalAt === lastRunAt && lastRunAt > 0
+        ? "Last run"
+        : historicalAt === lastDispatchAt && lastDispatchAt > 0
+          ? "Last dispatch"
+          : // Name the SIGNAL, like the two branches above. "Idle" described a
+            // state while its siblings named their evidence, so the same row slot
+            // read as two different kinds of fact ("Idle 1mo ago" vs "Last run
+            // 1w ago") — the handoff file is what this timestamp comes from.
+            "Last handoff";
   const evidenceLabel = !runtimeStateKnown
     ? "Live status unavailable"
     : syncStale && claimsLiveObservation
@@ -800,10 +830,19 @@ export function buildProjectOperationsSnapshot(
     // the label) — attaching handoffAt here is what produced "Awaiting input
     // 1w ago". Historical rows carry the timestamp of the signal the label
     // names (run finish / dispatch / handoff), not always the handoff.
-    evidenceAt: liveObserved || (syncStale && claimsLiveObservation)
-      ? null
-      : historicalAt > 0 ? historicalAt : null,
-    evidenceKind: !runtimeStateKnown ? "unknown" : syncStale ? "historical" : liveObserved ? "live" : "historical",
+    evidenceAt:
+      liveObserved || (syncStale && claimsLiveObservation)
+        ? null
+        : historicalAt > 0
+          ? historicalAt
+          : null,
+    evidenceKind: !runtimeStateKnown
+      ? "unknown"
+      : syncStale
+        ? "historical"
+        : liveObserved
+          ? "live"
+          : "historical",
     contextSummary,
     attentionReason: attention.score > 0 ? attention.reason : null,
   };
@@ -818,8 +857,12 @@ export function buildProjectOperationsSnapshots(
 ): ProjectOperationsSnapshot[] {
   const { syncStale = false } = syncCtx;
   return projects
-    .map((project) => buildProjectOperationsSnapshot(project, zellijTabs, nowS, runtimeStateKnown, syncCtx))
-    .sort((a, b) => compareProjects(a.project, b.project, zellijTabs, nowS, runtimeStateKnown, syncStale));
+    .map((project) =>
+      buildProjectOperationsSnapshot(project, zellijTabs, nowS, runtimeStateKnown, syncCtx),
+    )
+    .sort((a, b) =>
+      compareProjects(a.project, b.project, zellijTabs, nowS, runtimeStateKnown, syncStale),
+    );
 }
 
 function compareProjects(
@@ -865,17 +908,21 @@ export function buildControlPageState(
   // had "open" meaning two different numbers. Now both read working/waiting/
   // idle off counterCategory. syncStale collapses stale projects to the
   // "offline" category, so they drop out of all three live counts.
-  const categories = data.projects.map((project) =>
-    STATE_DEFINITIONS[
-      getProjectDisplayState(project, data.zellijTabs, nowS, false, runtimeStateKnown, syncStale).stateKey
-    ].counterCategory,
+  const categories = data.projects.map(
+    (project) =>
+      STATE_DEFINITIONS[
+        getProjectDisplayState(project, data.zellijTabs, nowS, false, runtimeStateKnown, syncStale)
+          .stateKey
+      ].counterCategory,
   );
   // Not "how many are idle" but "we cannot know yet" — see countsKnown.
   const countsKnown = runtimeStateKnown;
   const runningCount = categories.filter((c) => c === "working").length;
   const waitingCount = categories.filter((c) => c === "waiting").length;
   const idleCount = categories.filter((c) => c === "idle").length;
-  const openTabCount = data.projects.filter((project) => isProjectTabOpen(project, data.zellijTabs)).length;
+  const openTabCount = data.projects.filter((project) =>
+    isProjectTabOpen(project, data.zellijTabs),
+  ).length;
   const controlProjectCount = data.inventory.controlProjectCount ?? 0;
   const commitsToday = data.projects.reduce((sum, p) => sum + (p.git?.todayCount ?? 0), 0);
 

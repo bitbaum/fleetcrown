@@ -21,7 +21,9 @@ export type ProjectLifecycleInput = {
   lifecycleEvents?: LifecycleEventSnapshot;
   currentPrompt: CurrentPrompt | null;
   nowS?: number;
-  collectAdapterEvents?: (facts: RuntimeLifecycleFacts) => ReturnType<typeof collectRuntimeLifecycleEvents>;
+  collectAdapterEvents?: (
+    facts: RuntimeLifecycleFacts,
+  ) => ReturnType<typeof collectRuntimeLifecycleEvents>;
 };
 
 export type ProjectLifecycleResult = {
@@ -73,8 +75,8 @@ export function persistRuntimeLifecycleEvents(args: {
   collectAdapterEvents?: ProjectLifecycleInput["collectAdapterEvents"];
 }): void {
   const events =
-    args.collectAdapterEvents?.(args.runtimeFacts)
-    ?? collectRuntimeLifecycleEvents(args.runtimeFacts);
+    args.collectAdapterEvents?.(args.runtimeFacts) ??
+    collectRuntimeLifecycleEvents(args.runtimeFacts);
 
   for (const event of events) {
     if (!shouldPersistLifecycleEvent(event, args.lifecycleEvents)) continue;

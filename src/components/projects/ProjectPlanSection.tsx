@@ -32,14 +32,17 @@ export function ProjectPlanSection({
   const [addingNext, setAddingNext] = useState(false);
   const refresh = () => router.refresh();
   const rawMaxTurns = Number.parseInt(attrs.goal_max_turns ?? "", 10);
-  const maxTurns = Number.isFinite(rawMaxTurns) && rawMaxTurns > 0 ? Math.min(rawMaxTurns, 20) : null;
+  const maxTurns =
+    Number.isFinite(rawMaxTurns) && rawMaxTurns > 0 ? Math.min(rawMaxTurns, 20) : null;
   const nextStep = answer(attrs.next_step);
 
   return (
     <section id="plan" className="ui-project-section" aria-labelledby="project-plan-title">
       <div className="flex items-center gap-2">
         <Target className="h-4 w-4 text-accent-text" aria-hidden="true" />
-        <h2 id="project-plan-title" className="text-lg font-semibold text-text-primary">Plan and finish line</h2>
+        <h2 id="project-plan-title" className="text-lg font-semibold text-text-primary">
+          Plan and finish line
+        </h2>
       </div>
 
       <div className="mt-5 grid gap-7 lg:grid-cols-2">
@@ -63,7 +66,10 @@ export function ProjectPlanSection({
                     projectId={projectId}
                     presetKey="next_step"
                     presetPlaceholder="The single most important next action"
-                    onSaved={() => { setAddingNext(false); refresh(); }}
+                    onSaved={() => {
+                      setAddingNext(false);
+                      refresh();
+                    }}
                     onCancel={() => setAddingNext(false)}
                   />
                 ) : (
@@ -106,7 +112,10 @@ export function ProjectPlanSection({
       <section className="mt-7">
         <div className="flex min-h-11 items-center justify-between gap-3 border-b border-border-subtle">
           <h3 className="text-sm font-medium text-text-primary">Goals</h3>
-          <Link href="/goals" className="inline-flex min-h-11 items-center gap-1 text-sm text-accent-text hover:underline">
+          <Link
+            href="/goals"
+            className="inline-flex min-h-11 items-center gap-1 text-sm text-accent-text hover:underline"
+          >
             Manage goals <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
           </Link>
         </div>
@@ -120,13 +129,25 @@ export function ProjectPlanSection({
                 <article key={goal.id} className="py-4">
                   <div className="flex items-baseline justify-between gap-3">
                     <h4 className="text-sm font-medium text-text-primary">{goal.title}</h4>
-                    <span className="shrink-0 text-xs tabular-nums text-text-muted">{goal.progress ?? 0}%</span>
+                    <span className="shrink-0 text-xs tabular-nums text-text-muted">
+                      {goal.progress ?? 0}%
+                    </span>
                   </div>
-                  {goal.description && <p className="mt-1 text-sm leading-relaxed text-text-secondary">{goal.description}</p>}
-                  <div className="mt-2"><GoalProgressBar value={goal.progress ?? 0} /></div>
+                  {goal.description && (
+                    <p className="mt-1 text-sm leading-relaxed text-text-secondary">
+                      {goal.description}
+                    </p>
+                  )}
+                  <div className="mt-2">
+                    <GoalProgressBar value={goal.progress ?? 0} />
+                  </div>
                   {openMilestones.length > 0 && (
                     <ul className="mt-2 space-y-1 text-xs text-text-tertiary">
-                      {openMilestones.map((milestone) => <li key={`${milestone.title}:${milestone.date ?? ""}`}>• {milestone.title}</li>)}
+                      {openMilestones.map((milestone) => (
+                        <li key={`${milestone.title}:${milestone.date ?? ""}`}>
+                          • {milestone.title}
+                        </li>
+                      ))}
                     </ul>
                   )}
                 </article>
@@ -137,7 +158,10 @@ export function ProjectPlanSection({
           <p className="py-4 text-sm text-text-muted">
             {goalsLocked ? (
               <>
-                <Link href="/unlock" className="text-accent-text underline-offset-2 hover:underline">
+                <Link
+                  href="/unlock"
+                  className="text-accent-text underline-offset-2 hover:underline"
+                >
                   Unlock the private zone
                 </Link>{" "}
                 to see this project&apos;s milestones. They are hidden, not missing.

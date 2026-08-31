@@ -55,8 +55,7 @@ export function verifyOrangeCatBuildIntent(token: string): OrangeCatBuildIntent 
   }
   const publicUrl = new URL(payload.entity.publicUrl);
   const isOrangeCatHost =
-    publicUrl.hostname === "orangecat.ch" ||
-    publicUrl.hostname.endsWith(".orangecat.ch");
+    publicUrl.hostname === "orangecat.ch" || publicUrl.hostname.endsWith(".orangecat.ch");
   if (publicUrl.protocol !== "https:" || !isOrangeCatHost) {
     throw new Error("Invalid OrangeCat public URL");
   }

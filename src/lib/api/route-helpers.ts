@@ -13,9 +13,7 @@ import { isValidUuid } from "@/lib/utils";
  *   if (idOrResp instanceof NextResponse) return idOrResp;
  *   const id = idOrResp;
  */
-export async function readIdParam(
-  params: Promise<{ id: string }>,
-): Promise<string | NextResponse> {
+export async function readIdParam(params: Promise<{ id: string }>): Promise<string | NextResponse> {
   const { id } = await params;
   if (!isValidUuid(id)) {
     return NextResponse.json({ error: "Invalid id" }, { status: 400 });
@@ -37,7 +35,7 @@ export async function readJsonBody<T>(
   req: NextRequest,
   schema: ZodSchema<T>,
 ): Promise<T | NextResponse> {
-  const raw = await req.json().catch(() => null) as unknown;
+  const raw = (await req.json().catch(() => null)) as unknown;
   if (raw === null) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
@@ -77,7 +75,11 @@ export function jsonOk(data?: Record<string, unknown>, init?: ResponseInit): Nex
  *
  *   return jsonError("Unauthorized", 401);
  */
-export function jsonError(message: string, status: number, extra?: Record<string, unknown>): NextResponse {
+export function jsonError(
+  message: string,
+  status: number,
+  extra?: Record<string, unknown>,
+): NextResponse {
   return NextResponse.json({ error: message, ...extra }, { status });
 }
 
@@ -115,7 +117,8 @@ export function isUniqueViolation(e: unknown): boolean {
   for (let i = 0; i < 4 && cur && typeof cur === "object"; i++) {
     const rec = cur as { code?: string; cause?: unknown; message?: string };
     if (rec.code === "23505") return true;
-    if (typeof rec.message === "string" && rec.message.includes("uq_entities_user_name_type")) return true;
+    if (typeof rec.message === "string" && rec.message.includes("uq_entities_user_name_type"))
+      return true;
     cur = rec.cause;
   }
   return false;

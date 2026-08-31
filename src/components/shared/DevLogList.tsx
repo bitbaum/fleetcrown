@@ -16,22 +16,35 @@ export function DevLogList({ entries }: { entries: DevLogEntry[] }) {
         return (
           <div key={i} className="ui-panel p-3 space-y-1.5">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs text-text-muted">{dateStr} <span className="text-text-muted/60">{timeStr}</span></span>
+              <span className="text-xs text-text-muted">
+                {dateStr} <span className="text-text-muted/60">{timeStr}</span>
+              </span>
               {entry.health && <span className={healthCls}>{entry.health}</span>}
             </div>
             {entry.done && (
               <p className="text-xs leading-relaxed text-text-secondary">
-                <span className="font-medium text-text-tertiary">done </span>{entry.done}
+                <span className="font-medium text-text-tertiary">done </span>
+                {entry.done}
               </p>
             )}
             {entry.next && (
               <p className="text-xs leading-relaxed text-text-primary">
-                <span className="font-medium text-accent-text">→ </span>{entry.next}
+                <span className="font-medium text-accent-text">→ </span>
+                {entry.next}
               </p>
             )}
             {(entry.tests || entry.todos) && (
               <p className="text-xs text-text-muted">
-                {[entry.tests, entry.todos ? `${String(entry.todos).replace(/\s*TODOs?\s*$/i, "").trim()} TODOs` : ""].filter(Boolean).join(" · ")}
+                {[
+                  entry.tests,
+                  entry.todos
+                    ? `${String(entry.todos)
+                        .replace(/\s*TODOs?\s*$/i, "")
+                        .trim()} TODOs`
+                    : "",
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
               </p>
             )}
           </div>

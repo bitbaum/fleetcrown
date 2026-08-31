@@ -33,11 +33,7 @@ function clientDesktopVersion(): string | null {
 }
 
 export function BrandVersion() {
-  const desktopVersion = useSyncExternalStore(
-    noopSubscribe,
-    clientDesktopVersion,
-    () => null,
-  );
+  const desktopVersion = useSyncExternalStore(noopSubscribe, clientDesktopVersion, () => null);
 
   const label = desktopVersion ? `Fleet Runner v${desktopVersion}` : `v${VERSION}`;
   const tooltip = desktopVersion

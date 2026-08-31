@@ -146,10 +146,7 @@ export type ProfileUpdateRequest = {
 
 function trimQuotedValue(raw: string): string {
   let v = raw.trim();
-  if (
-    (v.startsWith('"') && v.endsWith('"')) ||
-    (v.startsWith("'") && v.endsWith("'"))
-  ) {
+  if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
     v = v.slice(1, -1).trim();
   }
   return v.replace(/\s+$/, "");

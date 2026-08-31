@@ -50,10 +50,7 @@ check("a user-typed custom prompt is returned verbatim, without any envelope", (
     "## Your task (direct operator instruction)\nFix the checkout flow so the BTC amount refreshes.",
     EXIT,
   ].join("\n\n");
-  assert.equal(
-    extractOperatorTask(envelope),
-    "Fix the checkout flow so the BTC amount refreshes.",
-  );
+  assert.equal(extractOperatorTask(envelope), "Fix the checkout flow so the BTC amount refreshes.");
 });
 
 check("an intent dispatch keeps its rendered body — the part with no heading", () => {
@@ -112,14 +109,20 @@ check("empty input yields null rather than an empty string", () => {
 console.log("\npromptDisplay — what the row renders");
 
 check("a plain custom prompt needs no expansion", () => {
-  const d = promptDisplay({ customPrompt: "just fix the bug", resolvedPrompt: null, intent: "custom" });
+  const d = promptDisplay({
+    customPrompt: "just fix the bug",
+    resolvedPrompt: null,
+    intent: "custom",
+  });
   assert.equal(d.preview, "just fix the bug");
   assert.equal(d.expandable, false);
   assert.equal(d.missing, false);
 });
 
 check("an enveloped dispatch previews the task and stays expandable to the full text", () => {
-  const envelope = [PREAMBLE, CONTEXT_BLOCK, "Work on the project at /x.\n\nShip it.", EXIT].join("\n\n");
+  const envelope = [PREAMBLE, CONTEXT_BLOCK, "Work on the project at /x.\n\nShip it.", EXIT].join(
+    "\n\n",
+  );
   const d = promptDisplay({ customPrompt: null, resolvedPrompt: envelope, intent: "next_best" });
   assert.ok(d.preview.includes("Ship it"), d.preview);
   assert.ok(!d.preview.includes("full text hidden"), "the old placeholder is gone");
@@ -154,13 +157,21 @@ check("scaffolding-only capture reports missing, not raw harness tags", () => {
 console.log("\npromptDisplay.task — what a re-dispatch replays");
 
 check("task is the UNWRAPPED instruction, not the envelope", () => {
-  const envelope = [PREAMBLE, CONTEXT_BLOCK, "Work on the project at /x.\n\nShip the parser.", EXIT].join("\n\n");
+  const envelope = [
+    PREAMBLE,
+    CONTEXT_BLOCK,
+    "Work on the project at /x.\n\nShip the parser.",
+    EXIT,
+  ].join("\n\n");
   const d = promptDisplay({ customPrompt: null, resolvedPrompt: envelope, intent: "next_best" });
   assert.ok(d.task, "expected a replayable task");
   assert.ok(d.task!.includes("Ship the parser"), d.task!);
   // Replaying the envelope would hand the pipeline its own preamble to wrap
   // a second time.
-  assert.ok(!d.task!.includes("FleetCrown operator dispatch"), "envelope leaked into the replay payload");
+  assert.ok(
+    !d.task!.includes("FleetCrown operator dispatch"),
+    "envelope leaked into the replay payload",
+  );
   assert.ok(!d.task!.includes("Exit contract"), "exit contract leaked into the replay payload");
 });
 

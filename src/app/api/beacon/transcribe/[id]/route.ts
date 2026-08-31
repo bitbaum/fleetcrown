@@ -5,10 +5,7 @@ import { getSessionUserId } from "@/lib/session";
 // GET /api/beacon/transcribe/:id
 // Client polls this after the remote path enqueues a transcription command.
 // Returns { status: 'pending' | 'done' | 'error', text?, error? }
-export async function GET(
-  _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
   const userId = await getSessionUserId();

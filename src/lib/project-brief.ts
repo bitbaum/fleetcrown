@@ -92,7 +92,10 @@ Omit any key you have no basis for. Write in the same language as the source tex
 
 /** Strip optional markdown fences and parse the model's JSON answer. */
 function parseModelJson(raw: string): unknown {
-  const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "").trim();
+  const cleaned = raw
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/```\s*$/, "")
+    .trim();
   const start = cleaned.indexOf("{");
   const end = cleaned.lastIndexOf("}");
   if (start === -1 || end === -1 || end <= start) throw new Error("model returned no JSON object");
@@ -124,7 +127,10 @@ function clampFields(value: unknown): unknown {
  * Extract a structured profile from free-form text (user brief, README, …).
  * Throws on Groq/parse failure — callers map that to a 502.
  */
-export async function extractProjectProfile(projectName: string, sourceText: string): Promise<ExtractedProfile> {
+export async function extractProjectProfile(
+  projectName: string,
+  sourceText: string,
+): Promise<ExtractedProfile> {
   const prompt = `Project name: ${projectName}\n\nSource text:\n${sourceText.slice(0, 12_000)}`;
   let raw = "";
   // Groq free tier rate-limits in bursts; one bounded retry absorbs the
@@ -145,7 +151,10 @@ export async function extractProjectProfile(projectName: string, sourceText: str
     }
   }
   const parsed = ExtractedProfileSchema.safeParse(clampFields(parseModelJson(raw)));
-  if (!parsed.success) throw new Error(`model output failed validation: ${parsed.error.issues[0]?.message ?? "unknown"}`);
+  if (!parsed.success)
+    throw new Error(
+      `model output failed validation: ${parsed.error.issues[0]?.message ?? "unknown"}`,
+    );
   return parsed.data;
 }
 
@@ -169,7 +178,10 @@ Omit any key you have no basis for. Write in the same language as the source tex
  * tokens PER DAY — one whole-fleet pass on the full prompt exhausts the day's
  * budget on its own. Same key definitions, same clamping, same schema subset.
  */
-export async function extractReachProfile(projectName: string, sourceText: string): Promise<ExtractedProfile> {
+export async function extractReachProfile(
+  projectName: string,
+  sourceText: string,
+): Promise<ExtractedProfile> {
   const prompt = `Project name: ${projectName}\n\nSource text:\n${sourceText.slice(0, 12_000)}`;
   const raw = await callGroqText(prompt, {
     systemPrompt: REACH_SYSTEM_PROMPT,
@@ -177,9 +189,13 @@ export async function extractReachProfile(projectName: string, sourceText: strin
     temperature: 0.2,
     timeoutMs: 25_000,
   });
-  const parsed = ExtractedProfileSchema.pick({ distribution: true, gtm: true })
-    .safeParse(clampFields(parseModelJson(raw)));
-  if (!parsed.success) throw new Error(`model output failed validation: ${parsed.error.issues[0]?.message ?? "unknown"}`);
+  const parsed = ExtractedProfileSchema.pick({ distribution: true, gtm: true }).safeParse(
+    clampFields(parseModelJson(raw)),
+  );
+  if (!parsed.success)
+    throw new Error(
+      `model output failed validation: ${parsed.error.issues[0]?.message ?? "unknown"}`,
+    );
   return parsed.data;
 }
 
@@ -269,7 +285,10 @@ export async function reconcileProfile(
     }
   }
   const parsed = ReconcilePatchSchema.safeParse(parseModelJson(raw));
-  if (!parsed.success) throw new Error(`reconcile output failed validation: ${parsed.error.issues[0]?.message ?? "unknown"}`);
+  if (!parsed.success)
+    throw new Error(
+      `reconcile output failed validation: ${parsed.error.issues[0]?.message ?? "unknown"}`,
+    );
   return parsed.data;
 }
 
@@ -293,7 +312,10 @@ export async function extractRoadmap(projectName: string, sourceText: string): P
     }
   }
   const parsed = RoadmapSchema.safeParse(parseModelJson(raw));
-  if (!parsed.success) throw new Error(`roadmap output failed validation: ${parsed.error.issues[0]?.message ?? "unknown"}`);
+  if (!parsed.success)
+    throw new Error(
+      `roadmap output failed validation: ${parsed.error.issues[0]?.message ?? "unknown"}`,
+    );
   return parsed.data;
 }
 
@@ -342,9 +364,7 @@ export async function applyProjectProfile(
   // profile from a brief the user just edited. `onlyMissing` is for the callers
   // that fill gaps in a profile someone has already worked on, where silently
   // replacing their own mission with the model's is the whole risk.
-  const existing = options.onlyMissing
-    ? await readExistingProfileValues(userId, entityId)
-    : null;
+  const existing = options.onlyMissing ? await readExistingProfileValues(userId, entityId) : null;
   // hasAnswer, not a bare emptiness test: it is the same predicate
   // computeProjectHealth uses, so "already answered" means exactly what the
   // health check means by it. Anything else and a fill could overwrite a field
@@ -362,18 +382,30 @@ export async function applyProjectProfile(
   }
 
   const attrKeys = [
-    PROJECT_ATTR.MISSION, PROJECT_ATTR.VISION, PROJECT_ATTR.CUSTOMERS,
-    PROJECT_ATTR.STACK, PROJECT_ATTR.STATUS, PROJECT_ATTR.NEXT_STEP,
-    PROJECT_ATTR.ARCHITECTURE, PROJECT_ATTR.CONVENTIONS, PROJECT_ATTR.DEFINITION_OF_DONE,
-    PROJECT_ATTR.DISTRIBUTION, PROJECT_ATTR.GTM,
-    PROJECT_ATTR.PROBLEM, PROJECT_ATTR.SOLUTION, PROJECT_ATTR.CURRENT_ALTERNATIVES,
-    PROJECT_ATTR.COMPETITORS, PROJECT_ATTR.COMPLEMENTS_SUBSTITUTES, PROJECT_ATTR.PARTNERSHIPS,
-    PROJECT_ATTR.POTENTIAL_CUSTOMERS, PROJECT_ATTR.EXPANSION_IDEAS,
+    PROJECT_ATTR.MISSION,
+    PROJECT_ATTR.VISION,
+    PROJECT_ATTR.CUSTOMERS,
+    PROJECT_ATTR.STACK,
+    PROJECT_ATTR.STATUS,
+    PROJECT_ATTR.NEXT_STEP,
+    PROJECT_ATTR.ARCHITECTURE,
+    PROJECT_ATTR.CONVENTIONS,
+    PROJECT_ATTR.DEFINITION_OF_DONE,
+    PROJECT_ATTR.DISTRIBUTION,
+    PROJECT_ATTR.GTM,
+    PROJECT_ATTR.PROBLEM,
+    PROJECT_ATTR.SOLUTION,
+    PROJECT_ATTR.CURRENT_ALTERNATIVES,
+    PROJECT_ATTR.COMPETITORS,
+    PROJECT_ATTR.COMPLEMENTS_SUBSTITUTES,
+    PROJECT_ATTR.PARTNERSHIPS,
+    PROJECT_ATTR.POTENTIAL_CUSTOMERS,
+    PROJECT_ATTR.EXPANSION_IDEAS,
   ] as const;
 
   const entries = attrKeys.flatMap((key) => {
     const value = profile[key];
-    return value && !occupied(key) ? ([[key, value] as const]) : [];
+    return value && !occupied(key) ? [[key, value] as const] : [];
   });
 
   if (entries.length > 0) {

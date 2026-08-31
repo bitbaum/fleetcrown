@@ -46,10 +46,7 @@ export async function GET(req: NextRequest) {
   const userId = await getSessionUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const limit = Math.min(
-    parseInt(req.nextUrl.searchParams.get("limit") ?? "50", 10) || 50,
-    200,
-  );
+  const limit = Math.min(parseInt(req.nextUrl.searchParams.get("limit") ?? "50", 10) || 50, 200);
 
   // Fetch each source independently in parallel; merge after.
   const [projects, runs, tokens] = await Promise.all([

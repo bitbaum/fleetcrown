@@ -15,7 +15,6 @@ import type { RepoWorkEvidence } from "@/lib/repo-evidence";
 export type { RepoWorkEvidence } from "@/lib/repo-evidence";
 export { normalizeRepoWorkEvidence } from "@/lib/repo-evidence";
 
-
 function ghInit(token: string): RequestInit {
   return {
     headers: {
@@ -38,13 +37,21 @@ export async function findRepoWorkEvidence(
   const base = `${GITHUB_API_BASE}/repos/${parsed.owner}/${parsed.repo}`;
 
   try {
-    const res = await fetch(`${base}/pulls?state=all&sort=created&direction=desc&per_page=10`, ghInit(token));
+    const res = await fetch(
+      `${base}/pulls?state=all&sort=created&direction=desc&per_page=10`,
+      ghInit(token),
+    );
     if (res.ok) {
-      const rows = (await res.json()) as Array<{ html_url?: string; title?: string; created_at?: string }>;
+      const rows = (await res.json()) as Array<{
+        html_url?: string;
+        title?: string;
+        created_at?: string;
+      }>;
       for (const row of Array.isArray(rows) ? rows : []) {
         const atMs = row.created_at ? Date.parse(row.created_at) : NaN;
         if (!Number.isFinite(atMs) || atMs < sinceMs) break; // sorted desc — older from here on
-        if (row.html_url) return { kind: "pr", url: row.html_url, title: row.title ?? "pull request", atMs };
+        if (row.html_url)
+          return { kind: "pr", url: row.html_url, title: row.title ?? "pull request", atMs };
       }
     }
   } catch {
@@ -63,7 +70,10 @@ export async function findRepoWorkEvidence(
         if (row.type !== "PushEvent" && row.type !== "CreateEvent") continue;
         const atMs = row.created_at ? Date.parse(row.created_at) : NaN;
         if (!Number.isFinite(atMs) || atMs < sinceMs) break; // events feed is newest-first
-        const ref = typeof row.payload?.ref === "string" ? row.payload.ref.replace(/^refs\/heads\//, "") : null;
+        const ref =
+          typeof row.payload?.ref === "string"
+            ? row.payload.ref.replace(/^refs\/heads\//, "")
+            : null;
         return {
           kind: "push",
           url: `https://github.com/${parsed.owner}/${parsed.repo}${ref ? `/tree/${ref}` : ""}`,

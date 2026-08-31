@@ -58,12 +58,20 @@ function runTests(): void {
   });
 
   check("resolveDetectedAgentIds prefers activeAgents", () => {
-    const project = stubProject({ tab: "FleetCrown", activeAgents: ["codex"], agentPref: "claude" });
+    const project = stubProject({
+      tab: "FleetCrown",
+      activeAgents: ["codex"],
+      agentPref: "claude",
+    });
     assert(resolveDetectedAgentIds(project)[0] === "codex", "expected live codex");
   });
 
   check("resolveOutgoingAgent uses live scan over preference", () => {
-    const project = stubProject({ tab: "FleetCrown", activeAgents: ["codex"], agentPref: "claude" });
+    const project = stubProject({
+      tab: "FleetCrown",
+      activeAgents: ["codex"],
+      agentPref: "claude",
+    });
     assert(resolveOutgoingAgent(project, "claude") === "codex", "expected codex outgoing");
   });
 
@@ -94,7 +102,10 @@ function runTests(): void {
   });
 
   check("resolveNextFallbackAgent skips current", () => {
-    assert(resolveNextFallbackAgent("codex", ["claude", "cursor", "codex"]) === "claude", "expected claude");
+    assert(
+      resolveNextFallbackAgent("codex", ["claude", "cursor", "codex"]) === "claude",
+      "expected claude",
+    );
   });
 
   check("looksLikeAgentCapacityIssue matches quota", () => {

@@ -3,7 +3,16 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowUpRight, Loader2, MessageSquare, Play, Sparkles, Stethoscope, Wrench, X } from "lucide-react";
+import {
+  ArrowUpRight,
+  Loader2,
+  MessageSquare,
+  Play,
+  Sparkles,
+  Stethoscope,
+  Wrench,
+  X,
+} from "lucide-react";
 import { readPageContext } from "@fleet/ai-forms/react";
 import {
   readAssistantContext,
@@ -12,7 +21,11 @@ import {
 } from "@/lib/assistant-context";
 import { readActiveForm, subscribeActiveForm } from "@/lib/active-form";
 import { LOKI_PROACTIVE_STARTERS } from "@/config/loki-suggested-actions";
-import { useProjectDispatch, DispatchedNote, type ProjectDispatchKind } from "@/components/projects/ProjectActionButtons";
+import {
+  useProjectDispatch,
+  DispatchedNote,
+  type ProjectDispatchKind,
+} from "@/components/projects/ProjectActionButtons";
 import { postJson } from "@/lib/api/fetch";
 import { LOKI_OPEN_EVENT } from "@/lib/client-events";
 import { useEscapeToClose } from "@/hooks/use-escape-to-close";
@@ -55,10 +68,14 @@ function ProposalChip({
         className="ui-btn-secondary min-h-8 gap-1.5 px-2.5 text-xs"
         title={label}
       >
-        {state.phase === "sending"
-          ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" aria-hidden="true" />
-          : <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
-        <span className="max-w-56 truncate">{state.phase === "sending" ? "Dispatching…" : label}</span>
+        {state.phase === "sending" ? (
+          <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" aria-hidden="true" />
+        ) : (
+          <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+        )}
+        <span className="max-w-56 truncate">
+          {state.phase === "sending" ? "Dispatching…" : label}
+        </span>
       </button>
       {state.phase === "error" && <span className="ui-error text-xs">{state.message}</span>}
     </span>
@@ -90,12 +107,16 @@ export function AskLokiButton() {
   // A dialog you can open with a key and not close with one. `?` toggles this
   // panel open, and Escape did nothing — the same gap the command palette was
   // fixed for once already.
-  useEscapeToClose(useCallback(() => setOpen(false), []), !open);
+  useEscapeToClose(
+    useCallback(() => setOpen(false), []),
+    !open,
+  );
 
   useEffect(() => {
     const keyHandler = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
-      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) return;
+      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)
+        return;
       if (e.key === "?" && !e.metaKey && !e.ctrlKey && !e.altKey) {
         e.preventDefault();
         setOpen((v) => !v);
@@ -199,7 +220,9 @@ export function AskLokiButton() {
             </div>
             <div className="flex shrink-0 items-center gap-1">
               <Link
-                href={context ? `/loki?project=${encodeURIComponent(context.workspaceKey)}` : "/loki"}
+                href={
+                  context ? `/loki?project=${encodeURIComponent(context.workspaceKey)}` : "/loki"
+                }
                 className="ui-btn-ghost min-h-8 gap-1 px-2 text-xs"
                 title="Continue in the full Loki workspace"
               >
@@ -230,20 +253,28 @@ export function AskLokiButton() {
 
             {/* Page-aware proposals: everything the page called out, one click each. */}
             <div className={activeForm ? "hidden" : "space-y-2"}>
-              <p className="ui-micro-label">{context ? "Proposed for this project" : "Start somewhere"}</p>
+              <p className="ui-micro-label">
+                {context ? "Proposed for this project" : "Start somewhere"}
+              </p>
               <div className="flex flex-wrap gap-1.5">
-                {canAct && context.signals.map((signal) => (
-                  <ProposalChip
-                    key={signal.key}
-                    context={context}
-                    kind="fix_signal"
-                    signalKey={signal.key}
-                    icon={Wrench}
-                    label={`Fix: ${signal.label.toLowerCase()}`}
-                  />
-                ))}
+                {canAct &&
+                  context.signals.map((signal) => (
+                    <ProposalChip
+                      key={signal.key}
+                      context={context}
+                      kind="fix_signal"
+                      signalKey={signal.key}
+                      icon={Wrench}
+                      label={`Fix: ${signal.label.toLowerCase()}`}
+                    />
+                  ))}
                 {canAct && context.nextStep && (
-                  <ProposalChip context={context} kind="next_step" icon={Play} label="Run next step" />
+                  <ProposalChip
+                    context={context}
+                    kind="next_step"
+                    icon={Play}
+                    label="Run next step"
+                  />
                 )}
                 {canAct && context.timeoutStreak >= 2 && (
                   <ProposalChip
@@ -253,22 +284,30 @@ export function AskLokiButton() {
                     label={`Diagnose ${context.timeoutStreak} timed-out runs`}
                   />
                 )}
-                {!context && LOKI_PROACTIVE_STARTERS.map((starter) => (
-                  <button
-                    key={starter.id}
-                    type="button"
-                    onClick={() => setInput(starter.prompt)}
-                    className="ui-btn-secondary min-h-8 px-2.5 text-xs"
-                  >
-                    {starter.label}
-                  </button>
-                ))}
+                {!context &&
+                  LOKI_PROACTIVE_STARTERS.map((starter) => (
+                    <button
+                      key={starter.id}
+                      type="button"
+                      onClick={() => setInput(starter.prompt)}
+                      className="ui-btn-secondary min-h-8 px-2.5 text-xs"
+                    >
+                      {starter.label}
+                    </button>
+                  ))}
                 {context && !canAct && (
-                  <p className="text-xs text-text-muted">Team project — ask about it below; actions are owner-only.</p>
+                  <p className="text-xs text-text-muted">
+                    Team project — ask about it below; actions are owner-only.
+                  </p>
                 )}
-                {canAct && context.signals.length === 0 && !context.nextStep && context.timeoutStreak < 2 && (
-                  <p className="text-xs text-text-muted">No open callouts — ask anything about this project below.</p>
-                )}
+                {canAct &&
+                  context.signals.length === 0 &&
+                  !context.nextStep &&
+                  context.timeoutStreak < 2 && (
+                    <p className="text-xs text-text-muted">
+                      No open callouts — ask anything about this project below.
+                    </p>
+                  )}
               </div>
             </div>
 
@@ -287,7 +326,8 @@ export function AskLokiButton() {
             ))}
             {asking && (
               <p className="flex items-center gap-2 text-xs text-text-muted">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> Loki is thinking…
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> Loki is
+                thinking…
               </p>
             )}
             {askError && <p className="ui-error text-xs">{askError}</p>}
@@ -314,7 +354,11 @@ export function AskLokiButton() {
               className="ui-input-compact min-w-0 flex-1"
               aria-label="Ask Loki"
             />
-            <button type="submit" disabled={!input.trim() || asking} className="ui-btn-primary min-h-9 px-3 text-xs">
+            <button
+              type="submit"
+              disabled={!input.trim() || asking}
+              className="ui-btn-primary min-h-9 px-3 text-xs"
+            >
               Ask
             </button>
           </form>

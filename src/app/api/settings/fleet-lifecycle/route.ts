@@ -34,14 +34,17 @@ function sanitize(raw: unknown): FleetLifecycleSettings {
   return out;
 }
 
-function merged(stored: FleetLifecycleSettings | null | undefined): Required<FleetLifecycleSettings> {
+function merged(
+  stored: FleetLifecycleSettings | null | undefined,
+): Required<FleetLifecycleSettings> {
   return { ...DEFAULT_FLEET_SETTINGS, ...(stored ?? {}) };
 }
 
 export async function GET() {
   const userId = await getApiUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const [row] = await db.select({ fleetSettings: users.fleetSettings })
+  const [row] = await db
+    .select({ fleetSettings: users.fleetSettings })
     .from(users)
     .where(eq(users.id, userId))
     .limit(1);
@@ -52,17 +55,21 @@ export async function PUT(req: NextRequest) {
   const userId = await getApiUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   let body: unknown;
-  try { body = await req.json(); } catch {
+  try {
+    body = await req.json();
+  } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
   const incoming = sanitize((body as { settings?: unknown })?.settings);
   // Merge with stored so PUT can be a partial patch.
-  const [row] = await db.select({ fleetSettings: users.fleetSettings })
+  const [row] = await db
+    .select({ fleetSettings: users.fleetSettings })
     .from(users)
     .where(eq(users.id, userId))
     .limit(1);
   const next: FleetLifecycleSettings = { ...(row?.fleetSettings ?? {}), ...incoming };
-  await db.update(users)
+  await db
+    .update(users)
     .set({ fleetSettings: next, updatedAt: new Date() })
     .where(eq(users.id, userId));
   return NextResponse.json({ settings: merged(next) });

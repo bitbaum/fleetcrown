@@ -25,11 +25,13 @@ export async function listBookDrafts(userId: string) {
   return db
     .select()
     .from(actions)
-    .where(and(
-      eq(actions.userId, userId),
-      eq(actions.status, ACTION_STATUS.DRAFT),
-      inArray(actions.type, [...BOOK_ACTION_TYPES]),
-    ))
+    .where(
+      and(
+        eq(actions.userId, userId),
+        eq(actions.status, ACTION_STATUS.DRAFT),
+        inArray(actions.type, [...BOOK_ACTION_TYPES]),
+      ),
+    )
     .orderBy(desc(actions.createdAt));
 }
 
@@ -53,11 +55,13 @@ export async function applyImportedContact(
     const [existing] = await db
       .select({ id: entities.id, name: entities.name })
       .from(entities)
-      .where(and(
-        eq(entities.userId, userId),
-        eq(entities.type, ENTITY_TYPE.PERSON),
-        eq(entities.name, contact.name),
-      ))
+      .where(
+        and(
+          eq(entities.userId, userId),
+          eq(entities.type, ENTITY_TYPE.PERSON),
+          eq(entities.name, contact.name),
+        ),
+      )
       .limit(1);
     if (!existing) throw e;
     created = existing;
@@ -70,20 +74,35 @@ export async function applyImportedContact(
   return created;
 }
 
-export async function applyEnrichment(userId: string, entityId: string, key: string, value: string) {
+export async function applyEnrichment(
+  userId: string,
+  entityId: string,
+  key: string,
+  value: string,
+) {
   if (!isBookAttrKey(key) && !key.startsWith("channel:")) {
     throw new Error("That field is not an allowed book attribute");
   }
   const [person] = await db
     .select({ id: entities.id, type: entities.type })
     .from(entities)
-    .where(and(eq(entities.id, entityId), eq(entities.userId, userId), eq(entities.type, ENTITY_TYPE.PERSON)));
+    .where(
+      and(
+        eq(entities.id, entityId),
+        eq(entities.userId, userId),
+        eq(entities.type, ENTITY_TYPE.PERSON),
+      ),
+    );
   if (!person) throw new Error("Person not found");
   const ok = await upsertEntityAttribute(userId, entityId, key, value);
   if (!ok) throw new Error("Person not found");
 }
 
-export async function enqueueImport(userId: string, contacts: ImportedContact[], source: ImportSource) {
+export async function enqueueImport(
+  userId: string,
+  contacts: ImportedContact[],
+  source: ImportSource,
+) {
   const existing = await db
     .select({ id: entities.id, name: entities.name })
     .from(entities)
@@ -253,7 +272,9 @@ export async function enqueueEnrichmentScan(userId: string) {
 }
 
 /** Merge 2-person clusters that share an email or phone — not a name-only guess. */
-export async function mergeObviousTwins(userId: string): Promise<{ merged: number; skipped: number }> {
+export async function mergeObviousTwins(
+  userId: string,
+): Promise<{ merged: number; skipped: number }> {
   const { findDuplicatePeople } = await import("./people-merge");
   const { mergePeoplePair } = await import("./people-merge");
   const { pickCanonicalPerson } = await import("@/lib/people-dedupe");

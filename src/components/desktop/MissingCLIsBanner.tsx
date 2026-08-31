@@ -35,11 +35,14 @@ export function MissingCLIsBanner() {
   useEffect(() => {
     const bridge = window.fleetRunner;
     if (!hasIPC(bridge)) return;
-    bridge.getInstalledCLIs().then(setDetected).catch(() => {
-      // Silent: we don't want to render a "couldn't scan your PATH" error.
-      // The user can still mint a token + dispatch; the dispatch failure
-      // (CLI-not-found) will surface in /history if it actually happens.
-    });
+    bridge
+      .getInstalledCLIs()
+      .then(setDetected)
+      .catch(() => {
+        // Silent: we don't want to render a "couldn't scan your PATH" error.
+        // The user can still mint a token + dispatch; the dispatch failure
+        // (CLI-not-found) will surface in /history if it actually happens.
+      });
   }, []);
 
   if (!detected) return null;
@@ -88,7 +91,8 @@ export function MissingCLIsBanner() {
           <div>
             <span className="font-medium text-text-primary">Missing local tools</span>
             <p className="text-sm text-text-secondary mt-0.5">
-              Fleet Runner dispatches agents into zellij tabs. The following weren&apos;t found on your PATH:
+              Fleet Runner dispatches agents into zellij tabs. The following weren&apos;t found on
+              your PATH:
             </p>
           </div>
           <button
@@ -129,8 +133,8 @@ export function MissingCLIsBanner() {
         </div>
 
         <p className="ui-micro-label text-text-tertiary">
-          Each &quot;Install&quot; opens a zellij tab with the installer command pre-typed — review it before pressing Enter.
-          {" "}
+          Each &quot;Install&quot; opens a zellij tab with the installer command pre-typed — review
+          it before pressing Enter.{" "}
           <Link href="/docs/quickstart" className="text-accent-text underline">
             Need help?
           </Link>

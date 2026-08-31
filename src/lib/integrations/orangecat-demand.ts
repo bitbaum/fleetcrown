@@ -81,7 +81,7 @@ export async function searchEconomy(query: string): Promise<EconomyMatch[]> {
     return [];
   }
   const data = await ocGet<{ results?: EconomyMatch[] }>(
-    `/api/v1/search?q=${encodeURIComponent(q.slice(0, 200))}`
+    `/api/v1/search?q=${encodeURIComponent(q.slice(0, 200))}`,
   );
   return Array.isArray(data?.results) ? data.results : [];
 }
@@ -98,7 +98,7 @@ export function buildEconomySearchBlock(matches: EconomyMatch[]): string {
   }
   const lines = strong.map(
     (m) =>
-      `- [${m.type}] ${m.title}: ${(m.description || "").replace(/\s+/g, " ").slice(0, 140)} (${m.url})`
+      `- [${m.type}] ${m.title}: ${(m.description || "").replace(/\s+/g, " ").slice(0, 140)} (${m.url})`,
   );
   return [
     "### Relevant on OrangeCat right now (semantic matches to the operator's message — needs, offerings, projects, or people they could act on or build for)",

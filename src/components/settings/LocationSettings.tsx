@@ -34,20 +34,20 @@ export function LocationSettings({ initialPrefs }: Props) {
   const [savedPrefs, setSavedPrefs] = useState(initialPrefs);
 
   // Home base
-  const [homeCity,     setHomeCity]     = useState(initialPrefs.homeCity ?? "");
+  const [homeCity, setHomeCity] = useState(initialPrefs.homeCity ?? "");
   const [homeTimezone, setHomeTimezone] = useState(initialPrefs.homeTimezone ?? "");
-  const [homeLocale,   setHomeLocale]   = useState(initialPrefs.homeLocale ?? "");
-  const [homeSaving,   setHomeSaving]   = useState(false);
-  const [homeError,    setHomeError]    = useState("");
-  const [homeSaved,    setHomeSaved]    = useState(false);
+  const [homeLocale, setHomeLocale] = useState(initialPrefs.homeLocale ?? "");
+  const [homeSaving, setHomeSaving] = useState(false);
+  const [homeError, setHomeError] = useState("");
+  const [homeSaved, setHomeSaved] = useState(false);
 
   // Current location
-  const [currentCity,      setCurrentCity]      = useState(initialPrefs.currentCity ?? "");
-  const [currentTimezone,  setCurrentTimezone]  = useState(initialPrefs.currentTimezone ?? "");
+  const [currentCity, setCurrentCity] = useState(initialPrefs.currentCity ?? "");
+  const [currentTimezone, setCurrentTimezone] = useState(initialPrefs.currentTimezone ?? "");
   const [currentCityUntil, setCurrentCityUntil] = useState(initialPrefs.currentCityUntil ?? "");
-  const [currentSaving,    setCurrentSaving]    = useState(false);
-  const [currentError,     setCurrentError]     = useState("");
-  const [currentSaved,     setCurrentSaved]     = useState(false);
+  const [currentSaving, setCurrentSaving] = useState(false);
+  const [currentError, setCurrentError] = useState("");
+  const [currentSaved, setCurrentSaved] = useState(false);
 
   const isCurrentExpired =
     !!savedPrefs.currentCity &&
@@ -75,11 +75,15 @@ export function LocationSettings({ initialPrefs }: Props) {
         homeLocale: homeLocale || null,
       });
       if (!res.ok) {
-        const d = await res.json() as { error?: string };
+        const d = (await res.json()) as { error?: string };
         setHomeError(d.error ?? "Failed to save");
         return;
       }
-      const saved = { homeCity: homeCity.trim() || null, homeTimezone: homeTimezone || null, homeLocale: homeLocale || null };
+      const saved = {
+        homeCity: homeCity.trim() || null,
+        homeTimezone: homeTimezone || null,
+        homeLocale: homeLocale || null,
+      };
       setSavedPrefs((p) => ({ ...p, ...saved }));
       setHomeSaved(true);
       setTimeout(() => setHomeSaved(false), TOAST_SHORT_MS);
@@ -101,11 +105,15 @@ export function LocationSettings({ initialPrefs }: Props) {
         currentCityUntil: currentCityUntil || null,
       });
       if (!res.ok) {
-        const d = await res.json() as { error?: string };
+        const d = (await res.json()) as { error?: string };
         setCurrentError(d.error ?? "Failed to save");
         return;
       }
-      const saved = { currentCity: currentCity.trim() || null, currentTimezone: currentTimezone || null, currentCityUntil: currentCityUntil || null };
+      const saved = {
+        currentCity: currentCity.trim() || null,
+        currentTimezone: currentTimezone || null,
+        currentCityUntil: currentCityUntil || null,
+      };
       setSavedPrefs((p) => ({ ...p, ...saved }));
       setCurrentSaved(true);
       setTimeout(() => setCurrentSaved(false), TOAST_SHORT_MS);
@@ -122,8 +130,17 @@ export function LocationSettings({ initialPrefs }: Props) {
     setCurrentCityUntil("");
     setCurrentSaving(true);
     try {
-      await patchJson("/api/me/preferences", { currentCity: null, currentTimezone: null, currentCityUntil: null });
-      setSavedPrefs((p) => ({ ...p, currentCity: null, currentTimezone: null, currentCityUntil: null }));
+      await patchJson("/api/me/preferences", {
+        currentCity: null,
+        currentTimezone: null,
+        currentCityUntil: null,
+      });
+      setSavedPrefs((p) => ({
+        ...p,
+        currentCity: null,
+        currentTimezone: null,
+        currentCityUntil: null,
+      }));
     } finally {
       setCurrentSaving(false);
     }
@@ -135,8 +152,8 @@ export function LocationSettings({ initialPrefs }: Props) {
     <section className="ui-settings-section">
       <h2 className="font-medium text-text-primary">Location</h2>
       <p className="text-sm text-text-secondary -mt-1">
-        Your location powers weather, event recommendations, and scheduling defaults.
-        Set a home base and optionally override it when traveling.
+        Your location powers weather, event recommendations, and scheduling defaults. Set a home
+        base and optionally override it when traveling.
       </p>
 
       {/* Home base */}
@@ -164,7 +181,9 @@ export function LocationSettings({ initialPrefs }: Props) {
             >
               <option value="">Select timezone</option>
               {TIMEZONES.map((tz) => (
-                <option key={tz} value={tz}>{tz.replace(/_/g, " ")}</option>
+                <option key={tz} value={tz}>
+                  {tz.replace(/_/g, " ")}
+                </option>
               ))}
             </select>
           </div>
@@ -178,17 +197,15 @@ export function LocationSettings({ initialPrefs }: Props) {
           >
             <option value="">Select locale</option>
             {LOCALE_OPTIONS.map(({ value, label }) => (
-              <option key={value} value={value}>{label}</option>
+              <option key={value} value={value}>
+                {label}
+              </option>
             ))}
           </select>
         </div>
         {homeError && <p className="ui-error-xs">{homeError}</p>}
         {homeSaved && <p className="text-sm text-status-positive">Saved.</p>}
-        <button
-          onClick={saveHome}
-          disabled={homeSaving || !homeDirty}
-          className="ui-btn-primary"
-        >
+        <button onClick={saveHome} disabled={homeSaving || !homeDirty} className="ui-btn-primary">
           {homeSaving && <Loader2 className="ui-spinner" />}
           Save home base
         </button>
@@ -202,7 +219,9 @@ export function LocationSettings({ initialPrefs }: Props) {
             <h3 className="text-sm font-medium text-text-primary">
               Currently in
               {hasCurrentLocation && (
-                <span className="ml-2 text-xs font-normal text-accent-text">{savedPrefs.currentCity}</span>
+                <span className="ml-2 text-xs font-normal text-accent-text">
+                  {savedPrefs.currentCity}
+                </span>
               )}
             </h3>
           </div>
@@ -226,7 +245,8 @@ export function LocationSettings({ initialPrefs }: Props) {
         )}
 
         <p className="text-xs text-text-muted">
-          Override your home location while traveling. Set an &ldquo;until&rdquo; date and it reverts automatically.
+          Override your home location while traveling. Set an &ldquo;until&rdquo; date and it
+          reverts automatically.
         </p>
 
         <div className="grid gap-2 sm:grid-cols-2">
@@ -248,7 +268,9 @@ export function LocationSettings({ initialPrefs }: Props) {
             >
               <option value="">Same as home</option>
               {TIMEZONES.map((tz) => (
-                <option key={tz} value={tz}>{tz.replace(/_/g, " ")}</option>
+                <option key={tz} value={tz}>
+                  {tz.replace(/_/g, " ")}
+                </option>
               ))}
             </select>
           </div>

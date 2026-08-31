@@ -41,10 +41,7 @@ export function useTerminalDeck() {
     deserialize,
   );
 
-  const setLiveKeys = useCallback(
-    (value: boolean) => setPrefs({ liveKeys: value }),
-    [setPrefs],
-  );
+  const setLiveKeys = useCallback((value: boolean) => setPrefs({ liveKeys: value }), [setPrefs]);
 
   return { liveKeys: prefs.liveKeys ?? !narrow, setLiveKeys };
 }

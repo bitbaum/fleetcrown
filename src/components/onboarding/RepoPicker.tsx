@@ -7,12 +7,12 @@ import type { GitHubRepo } from "@/app/api/github/repos/route";
 const LANG_COLORS: Record<string, string> = {
   TypeScript: "ui-lang-ts",
   JavaScript: "ui-lang-js",
-  Python:     "ui-lang-py",
-  Go:         "ui-lang-go",
-  Rust:       "ui-lang-rs",
-  Ruby:       "ui-lang-rb",
-  "C#":       "ui-lang-cs",
-  Java:       "ui-lang-java",
+  Python: "ui-lang-py",
+  Go: "ui-lang-go",
+  Rust: "ui-lang-rs",
+  Ruby: "ui-lang-rb",
+  "C#": "ui-lang-cs",
+  Java: "ui-lang-java",
 };
 
 export function RepoPicker({ onSelect }: { onSelect: (repo: GitHubRepo) => void }) {
@@ -48,7 +48,9 @@ export function RepoPicker({ onSelect }: { onSelect: (repo: GitHubRepo) => void 
       <div className="ui-auth-repo-scroll">
         {repos.map((repo) => {
           const isSelected = selected === repo.id;
-          const langColor = repo.language ? (LANG_COLORS[repo.language] ?? "ui-lang-default") : null;
+          const langColor = repo.language
+            ? (LANG_COLORS[repo.language] ?? "ui-lang-default")
+            : null;
           return (
             <button
               key={repo.id}
@@ -63,7 +65,9 @@ export function RepoPicker({ onSelect }: { onSelect: (repo: GitHubRepo) => void 
                 {repo.private && <Lock className="ui-auth-icon-faint" />}
                 <span className="ui-auth-repo-name">{repo.name}</span>
                 {langColor && (
-                  <span className={`ml-auto shrink-0 rounded-md px-1.5 py-0.5 text-xs font-medium ${langColor}`}>
+                  <span
+                    className={`ml-auto shrink-0 rounded-md px-1.5 py-0.5 text-xs font-medium ${langColor}`}
+                  >
                     {repo.language}
                   </span>
                 )}
@@ -74,9 +78,7 @@ export function RepoPicker({ onSelect }: { onSelect: (repo: GitHubRepo) => void 
                   </span>
                 )}
               </div>
-              {repo.description && (
-                <p className="ui-auth-repo-desc">{repo.description}</p>
-              )}
+              {repo.description && <p className="ui-auth-repo-desc">{repo.description}</p>}
             </button>
           );
         })}

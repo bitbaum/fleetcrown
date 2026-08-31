@@ -7,10 +7,10 @@ import { PRICING_PLANS, PRICING_CURRENCY, PRICING_BILLING_NOTE } from "@/config/
 import type { Plan } from "@/db/schema/users";
 
 const PLAN_LABEL: Record<Plan, string> = {
-  free:     "Free",
+  free: "Free",
   personal: "Personal",
-  pro:      "Pro",
-  team:     "Team",
+  pro: "Pro",
+  team: "Team",
 };
 
 type Props = {
@@ -21,21 +21,23 @@ type Props = {
 };
 
 const BILLING_MESSAGES: Record<string, { text: string; type: "success" | "info" | "error" }> = {
-  success:          { text: "Subscription activated — welcome to the plan!", type: "success" },
-  canceled:         { text: "Checkout canceled — no charge was made.", type: "info" },
-  error:            { text: "Something went wrong during checkout. Please try again.", type: "error" },
+  success: { text: "Subscription activated — welcome to the plan!", type: "success" },
+  canceled: { text: "Checkout canceled — no charge was made.", type: "info" },
+  error: { text: "Something went wrong during checkout. Please try again.", type: "error" },
   "not-configured": { text: "Payment integration is not yet configured.", type: "info" },
   "already-active": { text: "You're already on this plan.", type: "info" },
 };
 
 export function BillingSettings({ plan, planStatus, stripeReady, hasSubscription }: Props) {
-  const searchParams  = useSearchParams();
-  const router        = useRouter();
-  const pathname      = usePathname();
-  const didProcess    = useRef(false);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const didProcess = useRef(false);
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState("");
-  const [notice, setNotice] = useState<{ text: string; type: "success" | "info" | "error" } | null>(null);
+  const [notice, setNotice] = useState<{ text: string; type: "success" | "info" | "error" } | null>(
+    null,
+  );
 
   useEffect(() => {
     if (didProcess.current) return;
@@ -56,7 +58,10 @@ export function BillingSettings({ plan, planStatus, stripeReady, hasSubscription
     try {
       const res = await postJson("/api/stripe/checkout", { plan: targetPlan, billing: "annual" });
       const data = await res.json();
-      if (!res.ok) { setError(data.error ?? "Failed to start checkout."); return; }
+      if (!res.ok) {
+        setError(data.error ?? "Failed to start checkout.");
+        return;
+      }
       if (data.url) window.location.href = data.url;
     } catch {
       setError("Something went wrong.");
@@ -72,11 +77,15 @@ export function BillingSettings({ plan, planStatus, stripeReady, hasSubscription
   return (
     <section className="ui-settings-section">
       {notice && (
-        <p className={`rounded-lg px-4 py-3 text-sm ${
-          notice.type === "success" ? "bg-status-positive/10 text-status-positive" :
-          notice.type === "error"   ? "bg-status-negative/10 text-status-negative" :
-          "bg-surface-raised text-text-secondary"
-        }`}>
+        <p
+          className={`rounded-lg px-4 py-3 text-sm ${
+            notice.type === "success"
+              ? "bg-status-positive/10 text-status-positive"
+              : notice.type === "error"
+                ? "bg-status-negative/10 text-status-negative"
+                : "bg-surface-raised text-text-secondary"
+          }`}
+        >
           {notice.text}
         </p>
       )}
@@ -85,7 +94,8 @@ export function BillingSettings({ plan, planStatus, stripeReady, hasSubscription
         <div>
           <h2 className="font-medium text-text-primary">Billing</h2>
           <p className="text-sm text-text-tertiary">
-            Current plan: <span className="text-text-secondary font-medium">{PLAN_LABEL[plan]}</span>
+            Current plan:{" "}
+            <span className="text-text-secondary font-medium">{PLAN_LABEL[plan]}</span>
             {planStatus === "past_due" && (
               <span className="ml-2 text-status-warning text-xs">· payment past due</span>
             )}
@@ -101,7 +111,8 @@ export function BillingSettings({ plan, planStatus, stripeReady, hasSubscription
       {!stripeReady && (
         <p className="text-sm text-text-muted bg-surface-raised rounded-lg px-4 py-3">
           Payment integration is not yet configured. Add{" "}
-          <code className="text-accent-text text-xs">STRIPE_SECRET_KEY</code> and price IDs to enable subscriptions.
+          <code className="text-accent-text text-xs">STRIPE_SECRET_KEY</code> and price IDs to
+          enable subscriptions.
         </p>
       )}
 
@@ -109,30 +120,37 @@ export function BillingSettings({ plan, planStatus, stripeReady, hasSubscription
         <>
           <div className="grid gap-3 sm:grid-cols-3">
             {/* Tiers with a null price are to-be-announced — not sellable yet. */}
-            {PRICING_PLANS.filter((tier) => tier.key !== "free" && tier.priceMonthly !== null).map((tier) => {
-              const tierPlan = tier.key as "personal" | "pro" | "team";
-              return (
-                <div
-                  key={tier.key}
-                  className={`ui-panel rounded-xl p-4 space-y-3 ${tier.featured ? "border-accent-primary/40" : ""}`}
-                >
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-widest text-text-muted">{tier.name}</p>
-                    <p className="text-2xl font-bold text-text-primary mt-1">
-                      {PRICING_CURRENCY} {tier.priceMonthly}<span className="text-sm font-normal text-text-tertiary">/mo</span>
-                    </p>
-                    <p className="text-xs text-text-tertiary">{tier.tagline}</p>
-                  </div>
-                  <button
-                    onClick={() => handleUpgrade(tierPlan)}
-                    disabled={!!loading}
-                    className={tier.featured ? "ui-btn-primary w-full" : "ui-btn-secondary w-full"}
+            {PRICING_PLANS.filter((tier) => tier.key !== "free" && tier.priceMonthly !== null).map(
+              (tier) => {
+                const tierPlan = tier.key as "personal" | "pro" | "team";
+                return (
+                  <div
+                    key={tier.key}
+                    className={`ui-panel rounded-xl p-4 space-y-3 ${tier.featured ? "border-accent-primary/40" : ""}`}
                   >
-                    {loading === tierPlan ? "Redirecting…" : tier.cta}
-                  </button>
-                </div>
-              );
-            })}
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-widest text-text-muted">
+                        {tier.name}
+                      </p>
+                      <p className="text-2xl font-bold text-text-primary mt-1">
+                        {PRICING_CURRENCY} {tier.priceMonthly}
+                        <span className="text-sm font-normal text-text-tertiary">/mo</span>
+                      </p>
+                      <p className="text-xs text-text-tertiary">{tier.tagline}</p>
+                    </div>
+                    <button
+                      onClick={() => handleUpgrade(tierPlan)}
+                      disabled={!!loading}
+                      className={
+                        tier.featured ? "ui-btn-primary w-full" : "ui-btn-secondary w-full"
+                      }
+                    >
+                      {loading === tierPlan ? "Redirecting…" : tier.cta}
+                    </button>
+                  </div>
+                );
+              },
+            )}
           </div>
           <p className="text-xs text-text-muted">{PRICING_BILLING_NOTE}</p>
         </>

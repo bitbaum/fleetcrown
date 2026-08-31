@@ -63,21 +63,30 @@ export function TerminalTabStrip({
       if (!e.altKey || e.ctrlKey || e.metaKey) return;
       // Never steal a key that a text field is legitimately receiving.
       const el = document.activeElement;
-      if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || (el as HTMLElement | null)?.isContentEditable) return;
+      if (
+        el instanceof HTMLInputElement ||
+        el instanceof HTMLTextAreaElement ||
+        (el as HTMLElement | null)?.isContentEditable
+      )
+        return;
       if (tabs.length === 0) return;
 
       const index = tabs.findIndex((t) => t.id === activeId);
       if (/^[1-9]$/.test(e.key)) {
         const target = tabs[Number(e.key) - 1];
-        if (target) { e.preventDefault(); onSelect(target.id); }
+        if (target) {
+          e.preventDefault();
+          onSelect(target.id);
+        }
         return;
       }
       if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
         e.preventDefault();
         const from = index === -1 ? 0 : index;
-        const next = e.key === "ArrowRight"
-          ? (from + 1) % tabs.length
-          : (from - 1 + tabs.length) % tabs.length;
+        const next =
+          e.key === "ArrowRight"
+            ? (from + 1) % tabs.length
+            : (from - 1 + tabs.length) % tabs.length;
         onSelect(tabs[next].id);
       }
     };
@@ -97,13 +106,22 @@ export function TerminalTabStrip({
             title={tab.title ?? tab.label}
             onMouseDown={() => onSelect(tab.id)}
             onDoubleClick={() => onRename && setEditingId(tab.id)}
-            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(tab.id); } }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onSelect(tab.id);
+              }
+            }}
             className={cn("group ui-term-tab", tab.id === activeId && "ui-term-tab-active")}
           >
             {tab.dot && <span className={cn("ui-term-dot", tab.dot)} aria-hidden="true" />}
             {/* The index doubles as the Alt+N affordance — the shortcut is
                 discoverable without a help panel nobody opens. */}
-            {i < 9 && <span className="ui-term-tab-index" aria-hidden="true">{i + 1}</span>}
+            {i < 9 && (
+              <span className="ui-term-tab-index" aria-hidden="true">
+                {i + 1}
+              </span>
+            )}
             {onRename && editingId === tab.id ? (
               <input
                 autoFocus
@@ -132,7 +150,10 @@ export function TerminalTabStrip({
                 className="ui-term-tab-close"
                 title={`Close ${tab.label}`}
                 aria-label={`Close ${tab.label}`}
-                onMouseDown={(e) => { e.stopPropagation(); onClose(tab.id); }}
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                  onClose(tab.id);
+                }}
               >
                 <X className="h-3 w-3" />
               </button>
@@ -140,7 +161,13 @@ export function TerminalTabStrip({
           </div>
         ))}
         {onNew && (
-          <button type="button" className="ui-term-newtab" title={newLabel} aria-label={newLabel} onClick={onNew}>
+          <button
+            type="button"
+            className="ui-term-newtab"
+            title={newLabel}
+            aria-label={newLabel}
+            onClick={onNew}
+          >
             <Plus className="h-4 w-4" />
           </button>
         )}

@@ -168,13 +168,21 @@ export async function resolveCommand(
       `Projects: ${JSON.stringify(projects)}\nCurrently selected project: ${selectedProject ?? "none"}\nInput: ${text}`,
       { systemPrompt: SYSTEM, maxTokens: 220, temperature: 0, timeoutMs: 8000 },
     );
-    const raw = JSON.parse(out.replace(/^```(?:json)?\s*|\s*```$/g, "").trim()) as Record<string, unknown>;
+    const raw = JSON.parse(out.replace(/^```(?:json)?\s*|\s*```$/g, "").trim()) as Record<
+      string,
+      unknown
+    >;
 
-    const llmProject = typeof raw.projectKey === "string" && projects.includes(raw.projectKey) ? raw.projectKey : null;
+    const llmProject =
+      typeof raw.projectKey === "string" && projects.includes(raw.projectKey)
+        ? raw.projectKey
+        : null;
     const projectKey = pickProjectKey(projects, llmProject ?? namedInText, selectedProject);
-    const intentId = typeof raw.intentId === "string" && (ORCHESTRATION_TASK_INTENT_IDS as readonly string[]).includes(raw.intentId)
-      ? (raw.intentId as OrchestrationTaskIntentId)
-      : null;
+    const intentId =
+      typeof raw.intentId === "string" &&
+      (ORCHESTRATION_TASK_INTENT_IDS as readonly string[]).includes(raw.intentId)
+        ? (raw.intentId as OrchestrationTaskIntentId)
+        : null;
     const kind = raw.kind === "chat" ? "chat" : "command";
     const prompt = typeof raw.prompt === "string" && raw.prompt.trim() ? raw.prompt.trim() : text;
 

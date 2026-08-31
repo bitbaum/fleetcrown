@@ -74,7 +74,12 @@ export function TerminalSourceBar({
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
       {sourceOptions.length > 1 && (
-        <Segment options={sourceOptions} value={source} onChange={onSourceChange} label="Terminal source" />
+        <Segment
+          options={sourceOptions}
+          value={source}
+          onChange={onSourceChange}
+          label="Terminal source"
+        />
       )}
       <ExecutorHonestyChip honesty={honesty} />
     </div>
@@ -141,7 +146,9 @@ export function TerminalSessionBar({
             <AgentSwitcherPopover
               agents={agents}
               activeAgentId={activeAgentId ?? ""}
-              onSwitch={(id) => { if (id) onSwitchAgent(id); }}
+              onSwitch={(id) => {
+                if (id) onSwitchAgent(id);
+              }}
               onClose={() => setAgentOpen(false)}
             />
           )}

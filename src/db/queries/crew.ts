@@ -191,12 +191,16 @@ export async function assertAssignablePerson(
 }
 
 /** Write the profile half of a crew record. Absent fields are left alone; empty ones are cleared. */
-async function writeProfile(userId: string, personId: string, input: CrewProfileInput): Promise<void> {
+async function writeProfile(
+  userId: string,
+  personId: string,
+  input: CrewProfileInput,
+): Promise<void> {
   // The profile is a payment destination, so it is stored canonical — a handle
   // and a pasted URL must not become two different-looking records of the same
   // wallet. The zod body already rejected anything that is neither.
   const profile = input.orangecatProfile
-    ? orangeCatProfileUrl(input.orangecatProfile) ?? undefined
+    ? (orangeCatProfileUrl(input.orangecatProfile) ?? undefined)
     : input.orangecatProfile;
 
   const pairs: Array<[string, string | undefined]> = [
@@ -292,7 +296,9 @@ export async function getCrewSummary(userId: string): Promise<{
     db
       .select({ status: humanTasks.status, count: sql<number>`count(*)::int` })
       .from(humanTasks)
-      .where(and(eq(humanTasks.userId, userId), inArray(humanTasks.status, OPEN_HUMAN_TASK_STATUSES)))
+      .where(
+        and(eq(humanTasks.userId, userId), inArray(humanTasks.status, OPEN_HUMAN_TASK_STATUSES)),
+      )
       .groupBy(humanTasks.status),
   ]);
 
@@ -303,10 +309,7 @@ export async function getCrewSummary(userId: string): Promise<{
     openTasks += row.count;
     if (isWaitingOnAssignee(row.status as HumanTaskStatus)) waitingOnThem += row.count;
     // Draft and delivered are both the operator's move — one to send, one to check.
-    if (
-      row.status === HUMAN_TASK_STATUS.DRAFT
-      || row.status === HUMAN_TASK_STATUS.DELIVERED
-    ) {
+    if (row.status === HUMAN_TASK_STATUS.DRAFT || row.status === HUMAN_TASK_STATUS.DELIVERED) {
       waitingOnYou += row.count;
     }
   }

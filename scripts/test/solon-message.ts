@@ -18,7 +18,8 @@ const PRIV = "1111111111111111111111111111111111111111111111111111111111111111";
 const ADDRESS = "1Q1pE5vPGEEMqRcVRMbtBK842Y6Pzo6nK9";
 const SESSION = "11111111-2222-4333-8444-555555555555";
 const MESSAGE = `Solon vote\nsession:${SESSION}\nchoice:yes\nvoter:${ADDRESS}`;
-const SIGNATURE = "IPTWOIU6N/j674TVg2T2ej7uRDi5AkcGVRtfY9CC04ezFV6g6um12yrjJ5W8silm95MnfPeVFjIz0HYtd6Aises=";
+const SIGNATURE =
+  "IPTWOIU6N/j674TVg2T2ej7uRDi5AkcGVRtfY9CC04ezFV6g6um12yrjJ5W8silm95MnfPeVFjIz0HYtd6Aises=";
 
 // Address derivation matches Solon's.
 assert.strictEqual(addressFromPrivateKey(PRIV), ADDRESS, "address derivation drifted from Solon");
@@ -31,7 +32,11 @@ assert.strictEqual(
 );
 
 // Deterministic signature matches Solon's signer byte-for-byte.
-assert.strictEqual(signBitcoinMessage(MESSAGE, PRIV), SIGNATURE, "signature drifted from Solon's signer");
+assert.strictEqual(
+  signBitcoinMessage(MESSAGE, PRIV),
+  SIGNATURE,
+  "signature drifted from Solon's signer",
+);
 
 // ---------------------------------------------------------------------------
 // Foreign witness — OpenSSL, not @noble, verifies the pinned signature.
@@ -137,8 +142,14 @@ const body = '{"event":"decision.finalized","decision_id":"x"}';
 const hex = createHmac("sha256", secret).update(body).digest("hex");
 assert.ok(verifySolonWebhookSignature(body, `sha256=${hex}`, secret), "sha256= form rejected");
 assert.ok(verifySolonWebhookSignature(body, hex, secret), "bare hex form rejected");
-assert.ok(!verifySolonWebhookSignature(body, `sha256=${"0".repeat(64)}`, secret), "forged accepted");
-assert.ok(!verifySolonWebhookSignature(`${body} `, `sha256=${hex}`, secret), "tampered body accepted");
+assert.ok(
+  !verifySolonWebhookSignature(body, `sha256=${"0".repeat(64)}`, secret),
+  "forged accepted",
+);
+assert.ok(
+  !verifySolonWebhookSignature(`${body} `, `sha256=${hex}`, secret),
+  "tampered body accepted",
+);
 assert.ok(!verifySolonWebhookSignature(body, null, secret), "missing header accepted");
 
 // Webhook receivers authenticate via HMAC, not a session — the auth middleware

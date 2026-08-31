@@ -3,22 +3,28 @@ import { users } from "./users";
 import { entities } from "./entities";
 import { COMMITMENT_STATUS, type CommitmentStatus } from "@/lib/constants/statuses";
 
-export const commitments = pgTable("commitments", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").notNull().references(() => users.id),
-  entityId: uuid("entity_id").references(() => entities.id, { onDelete: "set null" }),
-  description: text("description").notNull(),
-  dueDate: timestamp("due_date", { withTimezone: true }),
-  status: text("status").$type<CommitmentStatus>().default(COMMITMENT_STATUS.ACTIVE),
-  financialImpact: text("financial_impact"),
-  source: text("source"),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-}, (table) => [
-  index("idx_commitments_user_id").on(table.userId),
-  index("idx_commitments_status").on(table.status),
-  index("idx_commitments_due_date").on(table.dueDate),
-]);
+export const commitments = pgTable(
+  "commitments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    entityId: uuid("entity_id").references(() => entities.id, { onDelete: "set null" }),
+    description: text("description").notNull(),
+    dueDate: timestamp("due_date", { withTimezone: true }),
+    status: text("status").$type<CommitmentStatus>().default(COMMITMENT_STATUS.ACTIVE),
+    financialImpact: text("financial_impact"),
+    source: text("source"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("idx_commitments_user_id").on(table.userId),
+    index("idx_commitments_status").on(table.status),
+    index("idx_commitments_due_date").on(table.dueDate),
+  ],
+);
 
 export type Commitment = typeof commitments.$inferSelect;
 export type NewCommitment = typeof commitments.$inferInsert;

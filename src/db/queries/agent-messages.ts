@@ -8,7 +8,10 @@ import type { AgentMessage } from "@/lib/agent-comms";
  * re-pushes the same tail each heartbeat, so duplicates (same userId+msgId)
  * are dropped. Returns how many were genuinely new.
  */
-export async function ingestAgentMessages(userId: string, messages: AgentMessage[]): Promise<number> {
+export async function ingestAgentMessages(
+  userId: string,
+  messages: AgentMessage[],
+): Promise<number> {
   if (messages.length === 0) return 0;
   const rows: NewAgentMessageRow[] = messages.map((m) => ({
     userId,

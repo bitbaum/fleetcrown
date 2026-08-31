@@ -141,7 +141,10 @@ export default function SupportPage() {
             the same audit trail, and privacy coins deliberately hide it. Both remain research
             topics on the roadmap; neither is presented as available now.
           </p>
-          <Link href="/roadmap" className="ui-public-link mt-4 inline-flex min-h-11 items-center sm:mt-6">
+          <Link
+            href="/roadmap"
+            className="ui-public-link mt-4 inline-flex min-h-11 items-center sm:mt-6"
+          >
             Read the roadmap →
           </Link>
         </section>

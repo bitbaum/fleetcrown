@@ -115,17 +115,19 @@ export async function GET(req: NextRequest) {
 
       const [projects, executableProjects] = await Promise.all([
         db
-        .select({
-          id: entities.id,
-          name: entities.name,
-          autoInjectModeOverride: entities.autoInjectModeOverride,
-          metadata: entities.metadata,
-        })
-        .from(entities)
-        .where(and(eq(entities.userId, userId), eq(entities.type, ENTITY_TYPE.PROJECT))),
+          .select({
+            id: entities.id,
+            name: entities.name,
+            autoInjectModeOverride: entities.autoInjectModeOverride,
+            metadata: entities.metadata,
+          })
+          .from(entities)
+          .where(and(eq(entities.userId, userId), eq(entities.type, ENTITY_TYPE.PROJECT))),
         getUserProjects(userId).catch(() => []),
       ]);
-      const executableByName = new Map(executableProjects.map((project) => [project.name.toLowerCase(), project]));
+      const executableByName = new Map(
+        executableProjects.map((project) => [project.name.toLowerCase(), project]),
+      );
 
       for (const proj of projects) {
         if (nudgedRows.length >= MAX_NUDGES_PER_TICK) break;
@@ -236,7 +238,12 @@ export async function GET(req: NextRequest) {
       source: "crons/nudge-idle",
       level: "info",
       message: `Nudged ${nudgedRows.length} idle project(s) across ${activeUsers.length} autopilot-on user(s)`,
-      meta: { nudged: nudgedRows, skipped, gated: gatedRows, capped: nudgedRows.length >= MAX_NUDGES_PER_TICK },
+      meta: {
+        nudged: nudgedRows,
+        skipped,
+        gated: gatedRows,
+        capped: nudgedRows.length >= MAX_NUDGES_PER_TICK,
+      },
     });
 
     return NextResponse.json({
@@ -255,6 +262,9 @@ export async function GET(req: NextRequest) {
       message: `Cron failed: ${msg}`,
       meta: { partialNudged: nudgedRows.length, skipped },
     });
-    return NextResponse.json({ ok: false, error: msg, partialNudged: nudgedRows.length }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, error: msg, partialNudged: nudgedRows.length },
+      { status: 500 },
+    );
   }
 }

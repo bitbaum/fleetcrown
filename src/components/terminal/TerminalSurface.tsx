@@ -37,9 +37,16 @@ import { useTerminalTabs } from "./use-terminal-tabs";
 
 /** Per-source copy. Cloud and machine differ only in wording, so the strings
  *  stay in the copy SSOT and this map just selects between them. */
-const COPY: Record<"cloud" | "machine", {
-  loading: string; empty: string; emptyHint: string; offlineHint: string; stalledHint: string;
-}> = {
+const COPY: Record<
+  "cloud" | "machine",
+  {
+    loading: string;
+    empty: string;
+    emptyHint: string;
+    offlineHint: string;
+    stalledHint: string;
+  }
+> = {
   cloud: {
     loading: EXECUTOR_COPY.terminal.cloudLoading,
     empty: EXECUTOR_COPY.terminal.cloudEmpty,
@@ -56,7 +63,8 @@ const COPY: Record<"cloud" | "machine", {
   },
 };
 
-const channelFor = (source: TerminalSource): BuilderChannel => (source === "machine" ? "local" : "cloud");
+const channelFor = (source: TerminalSource): BuilderChannel =>
+  source === "machine" ? "local" : "cloud";
 
 /** Comfortably under the 4000-byte cap the raw-key route enforces on one write.
  *  Multi-byte characters make length-in-chars an under-estimate of bytes, and
@@ -169,7 +177,9 @@ export function TerminalSurface({
   // The terminal is one of the four project surfaces, so the tab you are
   // watching IS the fleet's active project — Control, Loki and the project
   // profile follow you here instead of resetting.
-  useEffect(() => { if (activeTab) rememberFleetProject(activeTab); }, [activeTab]);
+  useEffect(() => {
+    if (activeTab) rememberFleetProject(activeTab);
+  }, [activeTab]);
 
   // One transport per attached session, shared by the view that renders it and
   // the key deck that writes into it. Both need the same PTY; making it here
@@ -183,14 +193,17 @@ export function TerminalSurface({
   // bytes, and the composer will happily hand over a pasted paragraph. Sending
   // the pieces without awaiting would let them arrive out of order — the same
   // "echo" → "ehco" reordering TerminalView's own input buffer exists to stop.
-  const sendKey = useCallback((bytes: string) => {
-    if (!transport) return;
-    void (async () => {
-      for (let i = 0; i < bytes.length; i += RAW_KEY_CHUNK) {
-        await transport.sendKey(bytes.slice(i, i + RAW_KEY_CHUNK));
-      }
-    })();
-  }, [transport]);
+  const sendKey = useCallback(
+    (bytes: string) => {
+      if (!transport) return;
+      void (async () => {
+        for (let i = 0; i < bytes.length; i += RAW_KEY_CHUNK) {
+          await transport.sendKey(bytes.slice(i, i + RAW_KEY_CHUNK));
+        }
+      })();
+    },
+    [transport],
+  );
 
   // Phone chrome state. Font and stream status are owned here rather than
   // inside TerminalView because the controls that read them now live outside
@@ -204,15 +217,22 @@ export function TerminalSurface({
 
   const honesty = deriveExecutorHonestyLabel(
     source === "machine"
-      ? { runnerConnected: presence.builderPresence?.local ?? presence.runnerConnected, runtimeAvailable: false, scope: "machine" }
-      : { runnerConnected: presence.runnerConnected, runtimeAvailable: local || presence.runtimeAvailable, scope: "cloud" },
+      ? {
+          runnerConnected: presence.builderPresence?.local ?? presence.runnerConnected,
+          runtimeAvailable: false,
+          scope: "machine",
+        }
+      : {
+          runnerConnected: presence.runnerConnected,
+          runtimeAvailable: local || presence.runtimeAvailable,
+          scope: "cloud",
+        },
   );
 
   // Agent roster + tab→dir, on the same cadence as the tab list.
-  const { data: context } = useFetch<TerminalContext>(
-    `/api/terminal/context?channel=${channel}`,
-    { intervalMs: 15000 },
-  );
+  const { data: context } = useFetch<TerminalContext>(`/api/terminal/context?channel=${channel}`, {
+    intervalMs: 15000,
+  });
   const agents = useMemo(
     () => (context?.agents.agents ?? []).filter((a) => a.switchable),
     [context],
@@ -227,45 +247,53 @@ export function TerminalSurface({
       ? `“${activeTab}” isn’t linked to a project directory, so FleetCrown doesn’t know where to relaunch the agent.`
       : null;
 
-  const switchAgent = useCallback(async (agentId: string) => {
-    if (!activeTab || !tabContext?.dir) return;
-    setSwitchingAgent(true);
-    try {
-      await postJson("/api/control/switch-agent", {
-        tab: activeTab,
-        dir: tabContext.dir,
-        toAgent: agentId,
-        ...(activeAgentId ? { fromAgent: activeAgentId } : {}),
-      });
-    } catch { /* the session itself remains the source of truth on screen */ }
-    finally { setSwitchingAgent(false); }
-  }, [activeTab, tabContext?.dir, activeAgentId]);
+  const switchAgent = useCallback(
+    async (agentId: string) => {
+      if (!activeTab || !tabContext?.dir) return;
+      setSwitchingAgent(true);
+      try {
+        await postJson("/api/control/switch-agent", {
+          tab: activeTab,
+          dir: tabContext.dir,
+          toAgent: agentId,
+          ...(activeAgentId ? { fromAgent: activeAgentId } : {}),
+        });
+      } catch {
+        /* the session itself remains the source of truth on screen */
+      } finally {
+        setSwitchingAgent(false);
+      }
+    },
+    [activeTab, tabContext?.dir, activeAgentId],
+  );
 
   // The strip tells the truth about each tab: the project it resolves to (by
   // name, or by pane cwd for generically named tabs) and the agent CLI actually
   // running in it — so "Tab #1 · claude" and "Tab #2 · grok" are distinguishable
   // without clicking through.
   const stripTabs = useMemo(
-    () => tabs.map((tab) => {
-      const ctx = context?.tabs.find((t) => t.tab === tab);
-      const badge = ctx?.liveAgents.length ? ctx.liveAgents.join("+") : undefined;
-      const label = ctx?.projectName ?? tab;
-      return {
-        id: tab,
-        label,
-        badge,
-        title: [label !== tab ? tab : null, badge].filter(Boolean).join(" — ") || undefined,
-        dot: tab === activeTab ? "ui-dot-positive" : undefined,
-      };
-    }),
+    () =>
+      tabs.map((tab) => {
+        const ctx = context?.tabs.find((t) => t.tab === tab);
+        const badge = ctx?.liveAgents.length ? ctx.liveAgents.join("+") : undefined;
+        const label = ctx?.projectName ?? tab;
+        return {
+          id: tab,
+          label,
+          badge,
+          title: [label !== tab ? tab : null, badge].filter(Boolean).join(" — ") || undefined,
+          dot: tab === activeTab ? "ui-dot-positive" : undefined,
+        };
+      }),
     [tabs, activeTab, context],
   );
 
   // Where we looked, and the one place we haven't — both named in the miss
   // state, since "not on Cloud" and "nowhere" are very different news.
-  const sourceLabel = source === "machine"
-    ? EXECUTOR_COPY.terminal.thisComputerLabel
-    : EXECUTOR_COPY.terminal.cloudLabel;
+  const sourceLabel =
+    source === "machine"
+      ? EXECUTOR_COPY.terminal.thisComputerLabel
+      : EXECUTOR_COPY.terminal.cloudLabel;
   const otherSourceLabel =
     source === "machine"
       ? sources.includes("cloud")
@@ -291,12 +319,12 @@ export function TerminalSurface({
   // The phone's one header row. What it names is what changes: which session,
   // what is running in it, whether it is alive. Everything else is one tap
   // behind it, in the sheet.
-  const headerTitle = source === "shell"
-    ? "Shell"
-    : (stripTabs.find((t) => t.id === activeTab)?.label ?? activeTab ?? sourceLabel);
-  const headerAgent = source === "shell"
-    ? null
-    : (stripTabs.find((t) => t.id === activeTab)?.badge ?? null);
+  const headerTitle =
+    source === "shell"
+      ? "Shell"
+      : (stripTabs.find((t) => t.id === activeTab)?.label ?? activeTab ?? sourceLabel);
+  const headerAgent =
+    source === "shell" ? null : (stripTabs.find((t) => t.id === activeTab)?.badge ?? null);
   const headerState: TerminalLiveState = !activeTab && source !== "shell" ? "idle" : liveState;
 
   const mobileHeader = (
@@ -386,9 +414,10 @@ export function TerminalSurface({
       // (allowed and connected, just nothing running → offer the next step).
       // Deep link ?tab=X with no session is the common Install/Implement Watch
       // dead-end — say so plainly instead of a generic empty cloud.
-      const tabHint = initialTab && !offline && !gatedMessage
-        ? `No live agent session for “${initialTab}”. If you just clicked Implement or Install, open Control — Attention shows Retry when the prompt never started. Terminal only shows sessions that are actually running.`
-        : null;
+      const tabHint =
+        initialTab && !offline && !gatedMessage
+          ? `No live agent session for “${initialTab}”. If you just clicked Implement or Install, open Control — Attention shows Retry when the prompt never started. Terminal only shows sessions that are actually running.`
+          : null;
       const hint = gatedMessage ?? (offline ? copy.offlineHint : (tabHint ?? copy.emptyHint));
       const controlHref = initialTab
         ? `/control?focus=${encodeURIComponent(initialTab)}`
@@ -401,7 +430,7 @@ export function TerminalSurface({
           </p>
           <p className="max-w-md text-center text-xs text-text-muted">{hint}</p>
           {!gatedMessage && !offline && (
-<>
+            <>
               <TerminalLaunch
                 projects={context?.launchable ?? []}
                 agents={agents}
@@ -409,8 +438,12 @@ export function TerminalSurface({
                 channel={channel}
               />
               <div className="mt-2 flex flex-wrap justify-center gap-2">
-                <Link href={controlHref} className="ui-btn-secondary">Open on Control</Link>
-                <Link href="/loki" className="ui-btn-secondary">Ask Loki</Link>
+                <Link href={controlHref} className="ui-btn-secondary">
+                  Open on Control
+                </Link>
+                <Link href="/loki" className="ui-btn-secondary">
+                  Ask Loki
+                </Link>
               </div>
             </>
           )}
@@ -443,11 +476,7 @@ export function TerminalSurface({
       {sourceBar}
       <div className="md:hidden">{mobileHeader}</div>
       <div className="hidden md:block">
-        <TerminalTabStrip
-          tabs={stripTabs}
-          activeId={activeTab}
-          onSelect={setSelected}
-        />
+        <TerminalTabStrip tabs={stripTabs} activeId={activeTab} onSelect={setSelected} />
       </div>
       {activeTab && (
         <div className="hidden md:block">
@@ -468,7 +497,9 @@ export function TerminalSurface({
           key deck, so there is exactly one stack of controls under the screen
           rather than a composer here and a keyboard somewhere else. */}
       {activeTab && inputMode === "prompt" && (
-        <div className="hidden md:block"><TerminalComposer tab={activeTab} /></div>
+        <div className="hidden md:block">
+          <TerminalComposer tab={activeTab} />
+        </div>
       )}
       {activeTab && inputMode === "voice" && (
         <div className="hidden shrink-0 items-center md:flex">

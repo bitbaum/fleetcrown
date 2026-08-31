@@ -134,11 +134,7 @@ function PublicNavDropdown({
   }, [open, onClose]);
 
   return (
-    <div
-      ref={containerRef}
-      className="relative"
-      onMouseEnter={onOpen}
-    >
+    <div ref={containerRef} className="relative" onMouseEnter={onOpen}>
       <button
         type="button"
         className="ui-public-nav-trigger"
@@ -209,7 +205,13 @@ function DrawerRow({
 
   if (external) {
     return (
-      <a href={href} target="_blank" rel="noopener noreferrer" onClick={onClose} className="ui-public-drawer-item">
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={onClose}
+        className="ui-public-drawer-item"
+      >
         {body}
       </a>
     );

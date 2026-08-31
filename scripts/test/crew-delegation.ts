@@ -82,9 +82,18 @@ ok(
 
 // The assignee answers. They never close the work off as accepted.
 for (const from of ALL_STATUSES) {
-  ok(!canAssigneeMove(from, HUMAN_TASK_STATUS.DONE), `assignee must not sign off their own work: ${from} → done`);
-  ok(!canAssigneeMove(from, HUMAN_TASK_STATUS.CANCELLED), `assignee must not cancel the ask: ${from} → cancelled`);
-  ok(!canAssigneeMove(from, HUMAN_TASK_STATUS.ASSIGNED), `assignee must not hand work to themselves: ${from} → assigned`);
+  ok(
+    !canAssigneeMove(from, HUMAN_TASK_STATUS.DONE),
+    `assignee must not sign off their own work: ${from} → done`,
+  );
+  ok(
+    !canAssigneeMove(from, HUMAN_TASK_STATUS.CANCELLED),
+    `assignee must not cancel the ask: ${from} → cancelled`,
+  );
+  ok(
+    !canAssigneeMove(from, HUMAN_TASK_STATUS.ASSIGNED),
+    `assignee must not hand work to themselves: ${from} → assigned`,
+  );
 }
 
 // A draft has told nobody anything, so nobody can answer it.

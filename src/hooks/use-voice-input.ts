@@ -30,8 +30,7 @@ function subscribeVoiceSupport(): () => void {
 }
 
 function getVoiceSupportSnapshot(): boolean {
-  return typeof window.MediaRecorder !== "undefined" &&
-    !!navigator.mediaDevices?.getUserMedia;
+  return typeof window.MediaRecorder !== "undefined" && !!navigator.mediaDevices?.getUserMedia;
 }
 
 function getVoiceSupportServerSnapshot(): boolean {
@@ -92,10 +91,14 @@ export function useVoiceInput(opts: Options = {}): UseVoiceInputResult {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
       const mime = MIME_CANDIDATES.find((m) => MediaRecorder.isTypeSupported(m)) ?? "";
-      const recorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+      const recorder = mime
+        ? new MediaRecorder(stream, { mimeType: mime })
+        : new MediaRecorder(stream);
       recorderRef.current = recorder;
 
-      recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
       recorder.onstop = async () => {
         releaseStream();
         if (cancelledRef.current) {
@@ -114,7 +117,9 @@ export function useVoiceInput(opts: Options = {}): UseVoiceInputResult {
           const res = await fetch(endpoint, { method: "POST", body: form });
           const data = await res.json().catch(() => ({}));
           if (!res.ok) {
-            setError(typeof data.error === "string" ? data.error : `Transcription failed (${res.status}).`);
+            setError(
+              typeof data.error === "string" ? data.error : `Transcription failed (${res.status}).`,
+            );
             setStatus("error");
             return;
           }
@@ -139,7 +144,9 @@ export function useVoiceInput(opts: Options = {}): UseVoiceInputResult {
       }, maxDurationMs);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Microphone permission denied.";
-      setError(/permission/i.test(msg) ? "Microphone permission denied. Allow access and try again." : msg);
+      setError(
+        /permission/i.test(msg) ? "Microphone permission denied. Allow access and try again." : msg,
+      );
       setStatus("error");
       releaseStream();
     }

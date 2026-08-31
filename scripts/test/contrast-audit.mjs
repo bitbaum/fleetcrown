@@ -30,7 +30,9 @@ import path from "node:path";
 
 const root = process.cwd();
 const BASE = (process.env.BASE ?? "https://fleetcrown.orangecat.ch").replace(/\/$/, "");
-const ROUTES = (process.env.ROUTES ?? "/control,/today,/projects,/activity,/prompts,/settings").split(",");
+const ROUTES = (
+  process.env.ROUTES ?? "/control,/today,/projects,/activity,/prompts,/settings"
+).split(",");
 /** WCAG 2.1 AA: 4.5:1 for text under 18.66px (or under 24px when not bold). */
 const AA_SMALL = 4.5;
 const AA_LARGE = 3.0;
@@ -71,8 +73,13 @@ async function mintToken() {
       const u = rows[0];
       if (u?.id) {
         claims = {
-          id: u.id, sub: u.id, email: u.email, name: u.name, username: u.username,
-          onboardedAt: u.onboarded_at, onboardingComplete: Boolean(u.username && u.onboarded_at),
+          id: u.id,
+          sub: u.id,
+          email: u.email,
+          name: u.name,
+          username: u.username,
+          onboardedAt: u.onboarded_at,
+          onboardingComplete: Boolean(u.username && u.onboarded_at),
         };
       }
     } finally {
@@ -179,7 +186,7 @@ async function main() {
   const token = await mintToken();
   if (!token) {
     console.error(
-      "✗ no session. Set FLEETCROWN_SESSION_TOKEN, or AUDIT_DATABASE_URL + AUTH_SECRET."
+      "✗ no session. Set FLEETCROWN_SESSION_TOKEN, or AUDIT_DATABASE_URL + AUTH_SECRET.",
     );
     process.exit(2);
   }
@@ -187,8 +194,12 @@ async function main() {
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
   await ctx.addCookies([
     {
-      name: cookieName(), value: token, domain: new URL(BASE).hostname,
-      path: "/", httpOnly: true, secure: BASE.startsWith("https://"),
+      name: cookieName(),
+      value: token,
+      domain: new URL(BASE).hostname,
+      path: "/",
+      httpOnly: true,
+      secure: BASE.startsWith("https://"),
     },
   ]);
 
@@ -236,7 +247,7 @@ async function main() {
   for (const f of failures) {
     console.log(
       `✗ ${String(f.contrast).padStart(5)}:1 (needs ${f.floor})  ${f.route}  ` +
-      `<${f.tag}> ${Math.round(f.fontSize)}px  "${f.text}"${f.href ? `  → ${f.href}` : ""}`
+        `<${f.tag}> ${Math.round(f.fontSize)}px  "${f.text}"${f.href ? `  → ${f.href}` : ""}`,
     );
   }
   console.log(`\n${failures.length} interactive label(s) below the AA floor`);

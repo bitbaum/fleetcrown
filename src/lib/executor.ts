@@ -14,12 +14,12 @@ import type { InjectPayload } from "@/db/schema/pending-commands";
 import { resolveQueuedExecution } from "@/lib/execution-access";
 
 export type ExecuteResult =
-  | { ok: true;  mode: "direct" }
+  | { ok: true; mode: "direct" }
   // `runnerConnected` tells the caller whether a live Fleet Runner exists to
   // drain this queued command. false = it will sit in pending_commands until a
   // runner reconnects. Callers MUST surface that so a dispatch to an offline
   // runner is never a silent success (the "queued into the void" bug).
-  | { ok: true;  mode: "queued"; commandId: string; runnerConnected: boolean }
+  | { ok: true; mode: "queued"; commandId: string; runnerConnected: boolean }
   | { ok: false; mode: "direct" | "queued"; error: string; code?: string };
 
 /**

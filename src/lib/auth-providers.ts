@@ -46,7 +46,8 @@ export function getEnabledAuthProviders(): EnabledAuthProviders {
     orangecat: Boolean(
       process.env.ORANGECAT_OAUTH_CLIENT_ID && process.env.ORANGECAT_OAUTH_CLIENT_SECRET,
     ),
-    localOwnerKeyTab: Boolean(process.env.LOCAL_AUTH_PASSWORD) && process.env.ENABLE_OWNER_KEY === "1",
+    localOwnerKeyTab:
+      Boolean(process.env.LOCAL_AUTH_PASSWORD) && process.env.ENABLE_OWNER_KEY === "1",
     demo: isDemoEnabled(),
   };
 }

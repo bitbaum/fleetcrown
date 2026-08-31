@@ -7,8 +7,14 @@ import { AUTH_COPY, ROUTES } from "@/config/auth";
 import { DEMO_EMAIL, DEMO_PASSWORD } from "@/config/demo";
 import { APP_NAME } from "@/config/brand";
 import {
-  AuthShell, AuthCard, AuthField, AuthInput, AuthSubmitButton,
-  AuthDivider, AuthHeading, AuthModeTabs,
+  AuthShell,
+  AuthCard,
+  AuthField,
+  AuthInput,
+  AuthSubmitButton,
+  AuthDivider,
+  AuthHeading,
+  AuthModeTabs,
 } from "@/components/auth/AuthShell";
 import { OAuthButtons, hasAnyOAuth } from "@/components/auth/OAuthButtons";
 import Link from "next/link";
@@ -16,7 +22,11 @@ import Link from "next/link";
 type Mode = "email" | "owner";
 
 function FormInner({
-  githubEnabled, googleEnabled, twitterEnabled, orangecatEnabled, localAuthEnabled,
+  githubEnabled,
+  googleEnabled,
+  twitterEnabled,
+  orangecatEnabled,
+  localAuthEnabled,
   demoEnabled,
 }: {
   githubEnabled: boolean;
@@ -29,22 +39,24 @@ function FormInner({
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? ROUTES.APP_HOME;
-  const safeCallback = callbackUrl.startsWith("/") && !callbackUrl.startsWith("//") ? callbackUrl : ROUTES.APP_HOME;
+  const safeCallback =
+    callbackUrl.startsWith("/") && !callbackUrl.startsWith("//") ? callbackUrl : ROUTES.APP_HOME;
 
   const urlError = searchParams.get("error");
-  const urlErrorMsg = urlError === "OAuthAccountNotLinked"
-    ? "This email is already registered with a different sign-in method."
-    : urlError === "AccessDenied"
-    ? "Access was denied. Please try again."
-    : urlError
-    ? "Sign-in failed. Please try again."
-    : "";
+  const urlErrorMsg =
+    urlError === "OAuthAccountNotLinked"
+      ? "This email is already registered with a different sign-in method."
+      : urlError === "AccessDenied"
+        ? "Access was denied. Please try again."
+        : urlError
+          ? "Sign-in failed. Please try again."
+          : "";
 
-  const [mode, setMode]     = useState<Mode>("email");
-  const [email, setEmail]   = useState("");
+  const [mode, setMode] = useState<Mode>("email");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [ownerPwd, setOwnerPwd] = useState("");
-  const [error, setError]   = useState(urlErrorMsg);
+  const [error, setError] = useState(urlErrorMsg);
   const [loading, setLoading] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
 
@@ -82,7 +94,9 @@ function FormInner({
     setError("");
     setDemoLoading(true);
     const res = await signIn("email-password", {
-      email: DEMO_EMAIL, password: DEMO_PASSWORD, redirect: false,
+      email: DEMO_EMAIL,
+      password: DEMO_PASSWORD,
+      redirect: false,
     });
     setDemoLoading(false);
     if (res?.ok) router.push(safeCallback);
@@ -129,8 +143,8 @@ function FormInner({
             {demoLoading ? "Opening the demo…" : "Explore the demo — no account needed"}
           </button>
           <p className="ui-auth-demo-note">
-            A sandboxed fleet with real history. Dispatching agents, terminals and
-            outbound messages are off; everything else is live. Resets nightly.
+            A sandboxed fleet with real history. Dispatching agents, terminals and outbound messages
+            are off; everything else is live. Resets nightly.
           </p>
           <AuthDivider label="or sign in" />
         </div>
@@ -200,7 +214,8 @@ function FormInner({
       ) : (
         <AuthCard>
           <p className="ui-auth-owner-note">
-            Use the owner password set in <code className="ui-auth-inline-code">LOCAL_AUTH_PASSWORD</code>.
+            Use the owner password set in{" "}
+            <code className="ui-auth-inline-code">LOCAL_AUTH_PASSWORD</code>.
           </p>
           <form onSubmit={handleOwnerPassword} className="space-y-3">
             <AuthField label="Owner password">
@@ -224,13 +239,16 @@ function FormInner({
           </form>
         </AuthCard>
       )}
-
     </AuthShell>
   );
 }
 
 export function SignInForm({
-  githubEnabled, googleEnabled, twitterEnabled, orangecatEnabled, localAuthEnabled,
+  githubEnabled,
+  googleEnabled,
+  twitterEnabled,
+  orangecatEnabled,
+  localAuthEnabled,
   demoEnabled,
 }: {
   githubEnabled: boolean;

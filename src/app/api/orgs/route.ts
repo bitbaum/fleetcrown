@@ -56,7 +56,15 @@ export async function GET() {
   const membersByOrg = new Map<string, OrgMember[]>();
   for (const m of memberRows) {
     const list = membersByOrg.get(m.orgId) ?? [];
-    list.push({ userId: m.userId, name: m.name, email: m.email, username: m.username, image: m.image, role: m.role, joinedAt: m.joinedAt.toISOString() });
+    list.push({
+      userId: m.userId,
+      name: m.name,
+      email: m.email,
+      username: m.username,
+      image: m.image,
+      role: m.role,
+      joinedAt: m.joinedAt.toISOString(),
+    });
     membersByOrg.set(m.orgId, list);
   }
 

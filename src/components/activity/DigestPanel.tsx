@@ -48,7 +48,12 @@ export function DigestPanel({ window, project }: { window: string; project: stri
             <h2 className="text-sm font-semibold text-text-primary">Report</h2>
             <p className="text-xs text-text-tertiary">
               Reader-friendly summary of what your fleet is doing in this window.
-              {project && <> · scoped to <strong className="text-text-secondary">{project}</strong></>}
+              {project && (
+                <>
+                  {" "}
+                  · scoped to <strong className="text-text-secondary">{project}</strong>
+                </>
+              )}
             </p>
           </div>
         </div>

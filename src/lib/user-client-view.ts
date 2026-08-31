@@ -43,11 +43,13 @@ export const USER_CLIENT_FIELDS = [
 
 /** Withheld, each with the reason it can never be sent. */
 export const USER_WITHHELD_FIELDS: Readonly<Partial<Record<keyof User, string>>> = {
-  passwordHash: "credential digest — nothing in the browser can use it, anything in the browser could take it",
-  privateZonePinHash: "scrypt digest of a short numeric PIN — low entropy makes an offline attempt cheap",
+  passwordHash:
+    "credential digest — nothing in the browser can use it, anything in the browser could take it",
+  privateZonePinHash:
+    "scrypt digest of a short numeric PIN — low entropy makes an offline attempt cheap",
 };
 
-export type ClientUser = Pick<User, typeof USER_CLIENT_FIELDS[number]>;
+export type ClientUser = Pick<User, (typeof USER_CLIENT_FIELDS)[number]>;
 
 /** Project a user row down to what its owner's browser may see. */
 export function toClientUser(user: User): ClientUser {

@@ -37,7 +37,8 @@ export default async function ApprovalsPage() {
                   : `${pendingCount} proposed action${pendingCount === 1 ? "" : "s"} waiting for your review.`}
               </div>
               <p className="text-xs md:text-sm text-text-secondary mt-1">
-                Proposals can reference people and other private data, so they stay hidden until you unlock.
+                Proposals can reference people and other private data, so they stay hidden until you
+                unlock.
               </p>
               <Link href="/unlock?next=/approvals" className="ui-btn-primary mt-3 inline-flex">
                 Unlock to review
@@ -57,8 +58,8 @@ export default async function ApprovalsPage() {
           <div className="ui-empty-page">
             <Inbox className="h-5 w-5 text-text-tertiary" />
             <p className="text-sm text-text-secondary">
-              Nothing waiting for approval. When Loki proposes an email, message,
-              event, or commitment, it lands here for your yes/no.
+              Nothing waiting for approval. When Loki proposes an email, message, event, or
+              commitment, it lands here for your yes/no.
             </p>
           </div>
         }

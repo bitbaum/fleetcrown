@@ -32,7 +32,15 @@ import { GITHUB_API_BASE } from "@/lib/github-api";
 const run = promisify(execFile);
 
 export type HermesRunResult =
-  | { ok: true; output: string; diff: string; model: string; prUrl?: string; branch?: string; noChanges?: boolean }
+  | {
+      ok: true;
+      output: string;
+      diff: string;
+      model: string;
+      prUrl?: string;
+      branch?: string;
+      noChanges?: boolean;
+    }
   | { ok: false; error: string; needsInstall?: boolean };
 
 /** Parse "https://github.com/owner/repo(.git)" → {owner, repo}; null if not GitHub. */
@@ -43,7 +51,13 @@ function parseGitHub(gitUrl: string): { owner: string; repo: string } | null {
 
 /** Open a PR via the GitHub API. Returns the html_url, or null on failure. */
 async function openPr(opts: {
-  owner: string; repo: string; token: string; head: string; base: string; title: string; body: string;
+  owner: string;
+  repo: string;
+  token: string;
+  head: string;
+  base: string;
+  title: string;
+  body: string;
 }): Promise<string | null> {
   try {
     const res = await fetch(`${GITHUB_API_BASE}/repos/${opts.owner}/${opts.repo}/pulls`, {
@@ -54,7 +68,12 @@ async function openPr(opts: {
         "X-GitHub-Api-Version": "2022-11-28",
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ title: opts.title, head: opts.head, base: opts.base, body: opts.body }),
+      body: JSON.stringify({
+        title: opts.title,
+        head: opts.head,
+        base: opts.base,
+        body: opts.body,
+      }),
     });
     if (!res.ok) return null;
     const json = (await res.json()) as { html_url?: string };
@@ -82,21 +101,36 @@ export async function runHermesTask(input: {
 
   // Orchestrate, don't assume: if the runtime isn't present, say so clearly.
   if (!commandExistsInPath("hermes")) {
-    return { ok: false, needsInstall: true, error: "The `hermes` CLI is not installed on this runner." };
+    return {
+      ok: false,
+      needsInstall: true,
+      error: "The `hermes` CLI is not installed on this runner.",
+    };
   }
 
   let dir: string | null = null;
   try {
     dir = await mkdtemp(join(tmpdir(), "fc-hermes-"));
-    const cloneUrl = token && gitUrl.startsWith("https://")
-      ? gitUrl.replace("https://", `https://x-access-token:${token}@`)
-      : gitUrl;
-    await run("git", ["clone", "--depth", "1", "--no-tags", cloneUrl, dir], { timeout: EXEC_TIMEOUT_LONG_MS, maxBuffer: 16 * 1024 * 1024 });
+    const cloneUrl =
+      token && gitUrl.startsWith("https://")
+        ? gitUrl.replace("https://", `https://x-access-token:${token}@`)
+        : gitUrl;
+    await run("git", ["clone", "--depth", "1", "--no-tags", cloneUrl, dir], {
+      timeout: EXEC_TIMEOUT_LONG_MS,
+      maxBuffer: 16 * 1024 * 1024,
+    });
 
     // Identify base branch + a unique work branch up front.
-    const { stdout: baseRaw } = await run("git", ["-C", dir, "rev-parse", "--abbrev-ref", "HEAD"], { timeout: EXEC_TIMEOUT_MS }).catch(() => ({ stdout: "main" }));
+    const { stdout: baseRaw } = await run("git", ["-C", dir, "rev-parse", "--abbrev-ref", "HEAD"], {
+      timeout: EXEC_TIMEOUT_MS,
+    }).catch(() => ({ stdout: "main" }));
     const base = baseRaw.trim() || "main";
-    const slug = task.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 32) || "task";
+    const slug =
+      task
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 32) || "task";
     const branch = `hermes/${slug}-${Date.now().toString(36)}`;
 
     // Guardrails: this runs unattended and the diff goes straight to a PR. The
@@ -113,44 +147,69 @@ export async function runHermesTask(input: {
       "- If a file you were asked to CREATE already exists, do NOT overwrite or wholesale-replace it — append or make a minimal edit, or report the conflict and change nothing.",
       "- If the task is ambiguous or cannot be done safely, make no changes and explain why.",
     ].join("\n");
-    const prompt = [projectContext, recentActivity, `Task:\n${task}`, GUARDRAILS].filter(Boolean).join("\n\n");
+    const prompt = [projectContext, recentActivity, `Task:\n${task}`, GUARDRAILS]
+      .filter(Boolean)
+      .join("\n\n");
     const modelArgs = model && model !== "auto" ? ["-m", model] : [];
 
     // Headless agentic run. --yolo bypasses approval prompts (we're in a throwaway
     // clone). Model + Nous creds resolved from ~/.hermes/config.yaml.
-    const { stdout } = await run(
-      "hermes",
-      ["-z", prompt, "--yolo", ...modelArgs],
-      { cwd: dir, timeout: 15 * 60_000, maxBuffer: 32 * 1024 * 1024, env: { ...process.env } },
-    );
+    const { stdout } = await run("hermes", ["-z", prompt, "--yolo", ...modelArgs], {
+      cwd: dir,
+      timeout: 15 * 60_000,
+      maxBuffer: 32 * 1024 * 1024,
+      env: { ...process.env },
+    });
     const output = stdout.trim();
 
     // Stage everything the agent touched; if nothing changed, report that honestly.
     await run("git", ["-C", dir, "add", "-A"], { timeout: 30_000 });
-    const { stdout: diffStat } = await run("git", ["-C", dir, "diff", "--cached", "--stat"], { timeout: 30_000, maxBuffer: 8 * 1024 * 1024 }).catch(() => ({ stdout: "" }));
+    const { stdout: diffStat } = await run("git", ["-C", dir, "diff", "--cached", "--stat"], {
+      timeout: 30_000,
+      maxBuffer: 8 * 1024 * 1024,
+    }).catch(() => ({ stdout: "" }));
     if (!diffStat.trim()) {
       return { ok: true, output, diff: "", model: model ?? "config-default", noChanges: true };
     }
 
     // Preserve the work: commit on a branch, push, open a PR (never auto-merge).
-    await run("git", ["-C", dir, "config", "user.email", "runner@fleetcrown.local"], { timeout: 10_000 });
-    await run("git", ["-C", dir, "config", "user.name", "FleetCrown Hosted Runner"], { timeout: 10_000 });
+    await run("git", ["-C", dir, "config", "user.email", "runner@fleetcrown.local"], {
+      timeout: 10_000,
+    });
+    await run("git", ["-C", dir, "config", "user.name", "FleetCrown Hosted Runner"], {
+      timeout: 10_000,
+    });
     await run("git", ["-C", dir, "checkout", "-b", branch], { timeout: EXEC_TIMEOUT_MS });
-    await run("git", ["-C", dir, "commit", "-m", `hermes: ${task.slice(0, 72)}`], { timeout: 30_000 });
-    await run("git", ["-C", dir, "push", "origin", `HEAD:refs/heads/${branch}`], { timeout: EXEC_TIMEOUT_LONG_MS });
+    await run("git", ["-C", dir, "commit", "-m", `hermes: ${task.slice(0, 72)}`], {
+      timeout: 30_000,
+    });
+    await run("git", ["-C", dir, "push", "origin", `HEAD:refs/heads/${branch}`], {
+      timeout: EXEC_TIMEOUT_LONG_MS,
+    });
 
     let prUrl: string | undefined;
     const gh = parseGitHub(gitUrl);
     if (gh && token) {
       const url = await openPr({
-        owner: gh.owner, repo: gh.repo, token, head: branch, base,
+        owner: gh.owner,
+        repo: gh.repo,
+        token,
+        head: branch,
+        base,
         title: `hermes: ${task.slice(0, 72)}`,
         body: `Autonomous change by the FleetCrown hosted runner (Hermes) for an offline dispatch.\n\n**Task:** ${task}\n\n**Agent summary:**\n${output.slice(0, 4000)}\n\n_Review before merging — this was produced unattended._`,
       });
       if (url) prUrl = url;
     }
 
-    return { ok: true, output, diff: diffStat.trim(), model: model ?? "config-default", branch, prUrl };
+    return {
+      ok: true,
+      output,
+      diff: diffStat.trim(),
+      model: model ?? "config-default",
+      branch,
+      prUrl,
+    };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "hermes run failed" };
   } finally {

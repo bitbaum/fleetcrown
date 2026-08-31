@@ -61,7 +61,8 @@ export async function GET(req: NextRequest) {
     await logDebug({
       source: "crons/check-runner-version",
       level: "warn",
-      message: "UNCHECKED: could not read runtime snapshots — runner freshness is unknown, not current",
+      message:
+        "UNCHECKED: could not read runtime snapshots — runner freshness is unknown, not current",
     });
     return NextResponse.json({ ok: false, unchecked: true });
   }
@@ -90,7 +91,13 @@ export async function GET(req: NextRequest) {
         `Desktop features merged since then are dormant there. On .deb installs the updater ` +
         `can download but not apply (no sudo from userspace), so this needs a hand.`,
       actionUrl: "/system",
-      metadata: { behind: behind.map((r) => ({ channel: r.channel, version: r.normalized, latest: r.latest })) },
+      metadata: {
+        behind: behind.map((r) => ({
+          channel: r.channel,
+          version: r.normalized,
+          latest: r.latest,
+        })),
+      },
     });
     alerted = true;
     // Once per episode, not per tick — a daily ping about a known condition is
@@ -116,7 +123,13 @@ export async function GET(req: NextRequest) {
         : unknown.length > 0
           ? `${readings.length - unknown.length}/${readings.length} runner(s) verified current; ${unknown.length} UNKNOWN — not a pass`
           : `All ${readings.length} runner(s) at or ahead of the published release`,
-    meta: { readings: readings.map((r) => ({ channel: r.channel, state: r.state, version: r.normalized })) },
+    meta: {
+      readings: readings.map((r) => ({
+        channel: r.channel,
+        state: r.state,
+        version: r.normalized,
+      })),
+    },
   });
 
   return NextResponse.json({
@@ -124,6 +137,11 @@ export async function GET(req: NextRequest) {
     behind: behind.length,
     unknown: unknown.length,
     alerted,
-    runners: readings.map((r) => ({ channel: r.channel, state: r.state, version: r.normalized, latest: r.latest })),
+    runners: readings.map((r) => ({
+      channel: r.channel,
+      state: r.state,
+      version: r.normalized,
+      latest: r.latest,
+    })),
   });
 }

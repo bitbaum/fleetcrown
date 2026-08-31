@@ -17,17 +17,21 @@ import { pgTable, uuid, text, timestamp, jsonb, index } from "drizzle-orm/pg-cor
  * Level:  "error" | "warn" | "info" — UI filters by this.
  * Meta:   free-form JSONB — request body shape, error stack, runtime info.
  */
-export const debugLogs = pgTable("debug_logs", {
-  id:        uuid("id").primaryKey().defaultRandom(),
-  source:    text("source").notNull(),
-  level:     text("level").notNull(),
-  message:   text("message").notNull(),
-  meta:      jsonb("meta"),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-}, (table) => [
-  index("idx_debug_logs_created_at").on(table.createdAt),
-  index("idx_debug_logs_source").on(table.source),
-]);
+export const debugLogs = pgTable(
+  "debug_logs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    source: text("source").notNull(),
+    level: text("level").notNull(),
+    message: text("message").notNull(),
+    meta: jsonb("meta"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("idx_debug_logs_created_at").on(table.createdAt),
+    index("idx_debug_logs_source").on(table.source),
+  ],
+);
 
-export type DebugLog    = typeof debugLogs.$inferSelect;
+export type DebugLog = typeof debugLogs.$inferSelect;
 export type NewDebugLog = typeof debugLogs.$inferInsert;

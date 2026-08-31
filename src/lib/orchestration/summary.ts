@@ -23,7 +23,9 @@ export function buildOrchestrationSummary(
   ) as unknown as OrchestrationTaskSummary;
 }
 
-export function parseOrchestrationSummary(text: string | undefined): OrchestrationTaskSummary | undefined {
+export function parseOrchestrationSummary(
+  text: string | undefined,
+): OrchestrationTaskSummary | undefined {
   if (!text) return undefined;
 
   const fields: Partial<Record<OrchestrationTaskSummaryField, string>> = {};

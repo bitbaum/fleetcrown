@@ -53,7 +53,8 @@ function resolveLibraryPromptBody(key: string): string | null {
 export async function assembleInjectPrompt(
   input: AssembleInjectPromptInput,
 ): Promise<AssembleInjectPromptResult> {
-  const { userId, projectKey, projectPath, projectId, adapter, promptKey, customPrompt, model } = input;
+  const { userId, projectKey, projectPath, projectId, adapter, promptKey, customPrompt, model } =
+    input;
 
   if (!promptKey && !customPrompt) {
     return { ok: false, status: 400, error: "promptKey or customPrompt required" };
@@ -100,14 +101,18 @@ export async function assembleInjectPrompt(
     [
       preamble,
       operatorBlock || null,
-      fleetBlock ? `## Background context from your other projects (read-only)\n${fleetBlock}` : null,
+      fleetBlock
+        ? `## Background context from your other projects (read-only)\n${fleetBlock}`
+        : null,
       // Escalation directly above the task: it MODIFIES how the task is to be
       // approached (rung-specific instruction + last failure), so it must read
       // as operator instruction, not background.
       escalationBlock || null,
       body,
       exitContract,
-    ].filter(Boolean).join("\n\n");
+    ]
+      .filter(Boolean)
+      .join("\n\n");
 
   if (customPrompt) {
     const intent: OrchestrationTaskIntentId = "custom";
@@ -164,11 +169,9 @@ export async function assembleInjectPrompt(
   const libraryBody = resolveLibraryPromptBody(key);
   if (libraryBody) {
     const contextBlock = renderProjectContextBlock(projectContext);
-    const sections = [
-      contextBlock,
-      `Work on the project at ${projectPath}.`,
-      libraryBody,
-    ].filter(Boolean);
+    const sections = [contextBlock, `Work on the project at ${projectPath}.`, libraryBody].filter(
+      Boolean,
+    );
     return {
       ok: true,
       prompt: withFleet(sections.join("\n\n")),

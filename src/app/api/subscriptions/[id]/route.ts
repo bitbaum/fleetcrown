@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { patchSubscription, deleteSubscription, reactivateSubscription, PatchSubscriptionBody } from "@/db/queries/money";
+import {
+  patchSubscription,
+  deleteSubscription,
+  reactivateSubscription,
+  PatchSubscriptionBody,
+} from "@/db/queries/money";
 import { readIdParam, readJsonBody } from "@/lib/api/route-helpers";
 import { requirePrivateApiAccess } from "@/lib/private-zone-api";
 
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const access = await requirePrivateApiAccess();
   if (access instanceof NextResponse) return access;
   const { userId } = access;
@@ -22,10 +24,7 @@ export async function PATCH(
 }
 
 /** Reactivate a cancelled subscription — flips status back to active. */
-export async function POST(
-  _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const access = await requirePrivateApiAccess();
   if (access instanceof NextResponse) return access;
   const { userId } = access;
@@ -37,10 +36,7 @@ export async function POST(
   return NextResponse.json({ ok: true, subscription: reactivated });
 }
 
-export async function DELETE(
-  _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const access = await requirePrivateApiAccess();
   if (access instanceof NextResponse) return access;
   const { userId } = access;

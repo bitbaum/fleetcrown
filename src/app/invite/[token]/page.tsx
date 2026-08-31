@@ -8,7 +8,13 @@ import { getJson, postJson } from "@/lib/api/fetch";
 import { ROUTES } from "@/config/auth";
 import { APP_NAME } from "@/config/brand";
 import {
-  AuthShell, AuthCard, AuthField, AuthInput, AuthSubmitButton, AuthIconBadge, AuthHeading,
+  AuthShell,
+  AuthCard,
+  AuthField,
+  AuthInput,
+  AuthSubmitButton,
+  AuthIconBadge,
+  AuthHeading,
 } from "@/components/auth/AuthShell";
 
 export default function InvitePage({ params }: { params: Promise<{ token: string }> }) {
@@ -40,8 +46,14 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    if (password !== confirm) { setError("Passwords don't match."); return; }
-    if (password.length < 8) { setError("Password must be at least 8 characters."); return; }
+    if (password !== confirm) {
+      setError("Passwords don't match.");
+      return;
+    }
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -51,9 +63,16 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
         ...(email ? { email } : {}),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error ?? "Registration failed."); return; }
+      if (!res.ok) {
+        setError(data.error ?? "Registration failed.");
+        return;
+      }
 
-      const result = await signIn("user-password", { userId: data.userId, password, redirect: false });
+      const result = await signIn("user-password", {
+        userId: data.userId,
+        password,
+        redirect: false,
+      });
       if (result?.ok) {
         router.push(ROUTES.ONBOARDING);
       } else {
@@ -67,16 +86,24 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
   }
 
   const heading =
-    status === "loading" ? "Checking…" :
-    status === "used"    ? "Already used" :
-    status === "expired" ? "Link expired" :
-    "You're invited";
+    status === "loading"
+      ? "Checking…"
+      : status === "used"
+        ? "Already used"
+        : status === "expired"
+          ? "Link expired"
+          : "You're invited";
 
   const subheading =
-    status === "loading" ? "Verifying your invitation link." :
-    status === "used"    ? "This invitation has already been accepted." :
-    status === "expired" ? "This invitation link is invalid or has expired." :
-    prefillEmail ? `Joining as ${prefillEmail}.` : `Create your ${APP_NAME} account.`;
+    status === "loading"
+      ? "Verifying your invitation link."
+      : status === "used"
+        ? "This invitation has already been accepted."
+        : status === "expired"
+          ? "This invitation link is invalid or has expired."
+          : prefillEmail
+            ? `Joining as ${prefillEmail}.`
+            : `Create your ${APP_NAME} account.`;
 
   const isError = status === "expired" || status === "used";
 
@@ -90,7 +117,9 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
 
       {isError && (
         <p className="ui-auth-note">
-          <Link href={ROUTES.SIGN_IN} className="ui-auth-inline-link">Sign in</Link>{" "}
+          <Link href={ROUTES.SIGN_IN} className="ui-auth-inline-link">
+            Sign in
+          </Link>{" "}
           if you already have an account.
         </p>
       )}

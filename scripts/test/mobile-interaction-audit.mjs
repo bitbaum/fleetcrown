@@ -26,9 +26,21 @@ config({ path: ".env.local", quiet: true });
 const BASE = (process.env.AUDIT_BASE ?? "https://fleetcrown.orangecat.ch").replace(/\/$/, "");
 const OUT = ".tmp/mobile-audit";
 const PAGES = [
-  "/today", "/control", "/loki", "/projects", "/people", "/crew",
-  "/money", "/habits", "/events", "/goals", "/activity",
-  "/prompts", "/settings", "/system", "/approvals",
+  "/today",
+  "/control",
+  "/loki",
+  "/projects",
+  "/people",
+  "/crew",
+  "/money",
+  "/habits",
+  "/events",
+  "/goals",
+  "/activity",
+  "/prompts",
+  "/settings",
+  "/system",
+  "/approvals",
 ];
 
 function cookieName() {
@@ -45,11 +57,20 @@ async function main() {
 
   const host = new URL(BASE).hostname;
   const secure = BASE.startsWith("https://");
-  const cookies = [{ name: cookieName(), value: token, domain: host, path: "/", httpOnly: true, secure }];
+  const cookies = [
+    { name: cookieName(), value: token, domain: host, path: "/", httpOnly: true, secure },
+  ];
   const pz = process.env.FLEETCROWN_PRIVATE_ZONE_COOKIE?.trim();
   const pzEq = pz ? pz.indexOf("=") : -1;
   if (pzEq > 0) {
-    cookies.push({ name: pz.slice(0, pzEq), value: pz.slice(pzEq + 1), domain: host, path: "/", httpOnly: true, secure });
+    cookies.push({
+      name: pz.slice(0, pzEq),
+      value: pz.slice(pzEq + 1),
+      domain: host,
+      path: "/",
+      httpOnly: true,
+      secure,
+    });
   }
 
   const browser = await chromium.launch();
@@ -75,7 +96,11 @@ async function main() {
         const el = document.querySelector(".app-main") ?? document.scrollingElement;
         if (!el) return null;
         el.scrollTop = el.scrollHeight;
-        return { scrollTop: el.scrollTop, scrollHeight: el.scrollHeight, clientHeight: el.clientHeight };
+        return {
+          scrollTop: el.scrollTop,
+          scrollHeight: el.scrollHeight,
+          clientHeight: el.clientHeight,
+        };
       });
       await page.waitForTimeout(600);
 
@@ -85,7 +110,9 @@ async function main() {
         if (!nav) return { navFound: false, hidden: [] };
         const navBox = nav.getBoundingClientRect();
         const hidden = [];
-        const targets = document.querySelectorAll("main a, main button, main input, main textarea, main select");
+        const targets = document.querySelectorAll(
+          "main a, main button, main input, main textarea, main select",
+        );
         for (const el of targets) {
           const r = el.getBoundingClientRect();
           if (r.width === 0 || r.height === 0) continue;
@@ -99,7 +126,9 @@ async function main() {
           const cy = Math.min(Math.max(r.top + r.height / 2, 0), window.innerHeight - 1);
           const hit = document.elementFromPoint(cx, cy);
           if (hit && !el.contains(hit) && !hit.contains(el) && nav.contains(hit)) {
-            hidden.push(`${el.tagName.toLowerCase()}"${(el.textContent ?? "").trim().slice(0, 40)}"`);
+            hidden.push(
+              `${el.tagName.toLowerCase()}"${(el.textContent ?? "").trim().slice(0, 40)}"`,
+            );
           }
         }
         return { navFound: true, hidden };
@@ -110,7 +139,9 @@ async function main() {
 
       if (covered.navFound && covered.hidden.length > 0) {
         findings.push({ route, kind: "covered-by-nav", detail: covered.hidden.slice(0, 4) });
-        console.log(`  ✗ ${route} — ${covered.hidden.length} element(s) unreachable under the bottom nav: ${covered.hidden.slice(0, 3).join(", ")}`);
+        console.log(
+          `  ✗ ${route} — ${covered.hidden.length} element(s) unreachable under the bottom nav: ${covered.hidden.slice(0, 3).join(", ")}`,
+        );
       } else if (!covered.navFound) {
         console.log(`  · ${route} — no mobile nav on this page`);
       } else {
@@ -147,7 +178,11 @@ async function main() {
       // While open, the page behind must not scroll.
       const bodyOverflow = await page.evaluate(() => getComputedStyle(document.body).overflow);
       if (bodyOverflow !== "hidden") {
-        findings.push({ route: "/today", kind: "menu-sheet", detail: `page scrolls behind the sheet (body overflow: ${bodyOverflow})` });
+        findings.push({
+          route: "/today",
+          kind: "menu-sheet",
+          detail: `page scrolls behind the sheet (body overflow: ${bodyOverflow})`,
+        });
         console.log(`  ✗ menu sheet — page scrolls behind it (body overflow: ${bodyOverflow})`);
       } else {
         console.log("  ✓ menu sheet locks the page behind it");
@@ -164,7 +199,11 @@ async function main() {
         if ((await sheet().count()) === 0) {
           console.log(`  ✓ menu sheet closes on ${name}`);
         } else {
-          findings.push({ route: "/today", kind: "menu-sheet", detail: `${name} does not close the sheet` });
+          findings.push({
+            route: "/today",
+            kind: "menu-sheet",
+            detail: `${name} does not close the sheet`,
+          });
           console.log(`  ✗ menu sheet does NOT close on ${name}`);
         }
       }

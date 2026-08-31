@@ -39,12 +39,14 @@ export const grokAdapter: AgentAdapter = {
     if (existsSync(path.join(HOME, ".grok"))) {
       return {
         available: false,
-        availabilityReason: "Grok config exists (~/.grok), but the `grok` CLI is not on $PATH. Run the installer from the web UI.",
+        availabilityReason:
+          "Grok config exists (~/.grok), but the `grok` CLI is not on $PATH. Run the installer from the web UI.",
       };
     }
     return {
       available: false,
-      availabilityReason: "Grok CLI is not installed. Click Install Grok in the Control panel to get the one-click terminal installer.",
+      availabilityReason:
+        "Grok CLI is not installed. Click Install Grok in the Control panel to get the one-click terminal installer.",
     };
   },
 

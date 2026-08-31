@@ -35,10 +35,13 @@ function freshness(ageSeconds: number | null): { text: string; stale: boolean } 
 }
 
 export function HetznerCapacityCard() {
-  const { data, loading, error, refetch } = useFetch<HetznerCapacityResponse>("/api/system/hetzner", {
-    intervalMs: REFRESH_CADENCE.system,
-    timeoutMs: 15_000,
-  });
+  const { data, loading, error, refetch } = useFetch<HetznerCapacityResponse>(
+    "/api/system/hetzner",
+    {
+      intervalMs: REFRESH_CADENCE.system,
+      timeoutMs: 15_000,
+    },
+  );
 
   if (loading) {
     return (
@@ -75,7 +78,9 @@ export function HetznerCapacityCard() {
     return (
       <Card>
         <CardHeader icon={Server} title="Box capacity" />
-        <p className="text-sm text-text-secondary">{data.reason ?? "No capacity reading available here."}</p>
+        <p className="text-sm text-text-secondary">
+          {data.reason ?? "No capacity reading available here."}
+        </p>
         <p className="mt-2 text-xs text-text-tertiary">Track it externally: {radarLink}</p>
       </Card>
     );
@@ -90,7 +95,9 @@ export function HetznerCapacityCard() {
         icon={Server}
         title="Box capacity"
         right={
-          <span className={age.stale ? "text-xs text-status-warning" : "text-xs text-text-tertiary"}>
+          <span
+            className={age.stale ? "text-xs text-status-warning" : "text-xs text-text-tertiary"}
+          >
             {age.text}
           </span>
         }
@@ -101,8 +108,7 @@ export function HetznerCapacityCard() {
           <span className="text-text-primary">
             {data.server ?? "box"} — {data.current.name ?? "unknown type"}
           </span>{" "}
-          ({specLine(data.current)})
-          {data.location ? ` in ${data.location}` : ""}
+          ({specLine(data.current)}){data.location ? ` in ${data.location}` : ""}
         </p>
       )}
 
@@ -146,8 +152,8 @@ export function HetznerCapacityCard() {
         </p>
       ) : (
         <p className="mt-3 text-xs text-text-tertiary">
-          Rescale is capacity-blocked right now. You get a Telegram alert the moment a window opens — or watch the{" "}
-          {radarLink}.
+          Rescale is capacity-blocked right now. You get a Telegram alert the moment a window opens
+          — or watch the {radarLink}.
         </p>
       )}
     </Card>

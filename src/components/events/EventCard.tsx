@@ -45,7 +45,9 @@ export function EventCard({
     event.description && `Description: ${event.description}`,
     "",
     "What should I do to prepare for or make the most of this event/opportunity before the deadline?",
-  ].filter(Boolean).join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   const openEdit = () => {
     setDraftName(event.name);
@@ -55,7 +57,10 @@ export function EventCard({
     setEditing(true);
   };
 
-  const cancelEdit = () => { setEditing(false); setSaveError(null); };
+  const cancelEdit = () => {
+    setEditing(false);
+    setSaveError(null);
+  };
 
   const handleSave = async () => {
     if (!draftName.trim()) return;
@@ -88,7 +93,7 @@ export function EventCard({
     try {
       const res = await patchJson(`/api/events/${event.id}`, { status: EVENT_STATUS.ARCHIVED });
       if (!res.ok) {
-        const data = await res.json().catch(() => ({})) as { error?: string };
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
         setArchiveError(data.error ?? "Failed to archive");
         return;
       }
@@ -106,7 +111,10 @@ export function EventCard({
         <input
           value={draftName}
           onChange={(e) => setDraftName(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") handleSave(); if (e.key === "Escape") cancelEdit(); }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") handleSave();
+            if (e.key === "Escape") cancelEdit();
+          }}
           placeholder="Event name"
           autoFocus
           className="ui-input-compact w-full"
@@ -153,7 +161,9 @@ export function EventCard({
   }
 
   return (
-    <div className={`group py-3 border-b border-border-subtle last:border-0 ${dimmed ? "opacity-50" : ""}`}>
+    <div
+      className={`group py-3 border-b border-border-subtle last:border-0 ${dimmed ? "opacity-50" : ""}`}
+    >
       <div className="flex items-start gap-3">
         <div className="flex-1 min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-1.5">
@@ -166,7 +176,9 @@ export function EventCard({
               </span>
             )}
             {deadline && (
-              <span className={`text-micro ml-auto shrink-0 ${overdue ? "text-status-negative" : "text-text-tertiary"}`}>
+              <span
+                className={`text-micro ml-auto shrink-0 ${overdue ? "text-status-negative" : "text-text-tertiary"}`}
+              >
                 {deadlineText}
                 <span className="text-text-tertiary ml-1">· {format(deadline, "d MMM yyyy")}</span>
               </span>
@@ -202,11 +214,7 @@ export function EventCard({
             />
           )}
           {onEdit && !dimmed && (
-            <button
-              onClick={openEdit}
-              title="Edit event"
-              className="ui-btn-row-action"
-            >
+            <button onClick={openEdit} title="Edit event" className="ui-btn-row-action">
               <Pencil className="h-3.5 w-3.5" />
             </button>
           )}
@@ -217,7 +225,11 @@ export function EventCard({
               title="Archive event"
               className="p-1.5 rounded text-text-muted hover:text-status-warning hover:bg-surface-raised transition-colors disabled:opacity-40"
             >
-              {archiving ? <Loader2 className="ui-spinner-sm" /> : <Archive className="h-3.5 w-3.5" />}
+              {archiving ? (
+                <Loader2 className="ui-spinner-sm" />
+              ) : (
+                <Archive className="h-3.5 w-3.5" />
+              )}
             </button>
           )}
           <DeleteButton
@@ -232,9 +244,7 @@ export function EventCard({
           />
         </div>
       </div>
-      {archiveError && (
-        <p className="mt-1 ui-error-xs">{archiveError}</p>
-      )}
+      {archiveError && <p className="mt-1 ui-error-xs">{archiveError}</p>}
     </div>
   );
 }

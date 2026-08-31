@@ -2,7 +2,12 @@ import fs from "fs";
 import path from "path";
 import { APP_SLUG } from "@/config/brand";
 import { HOME } from "@/lib/constants";
-import { AGENT_DEFAULT_MODELS, type Agent, sanitizeAgentId, syncAgentSettings } from "@/lib/agent-registry";
+import {
+  AGENT_DEFAULT_MODELS,
+  type Agent,
+  sanitizeAgentId,
+  syncAgentSettings,
+} from "@/lib/agent-registry";
 
 const DEFAULT_AGENT: Agent = "claude";
 
@@ -26,7 +31,9 @@ function sanitizeModel(agent: Agent, model: string | undefined): string {
   return AGENT_DEFAULT_MODELS[agent];
 }
 
-function normalizePreferences(raw: Partial<AgentPreferences & LegacyAgentConfig>): AgentPreferences {
+function normalizePreferences(
+  raw: Partial<AgentPreferences & LegacyAgentConfig>,
+): AgentPreferences {
   const defaultAgent = sanitizeAgentId(raw.defaultAgent ?? raw.agent);
   const currentModels = raw.models ?? {};
 
@@ -49,7 +56,9 @@ export function readAgentPreferences(): AgentPreferences {
     const file = fs.existsSync(AGENT_PREFERENCES_FILE)
       ? AGENT_PREFERENCES_FILE
       : LEGACY_AGENT_PREFERENCES_FILE;
-    const raw = JSON.parse(fs.readFileSync(file, "utf-8")) as Partial<AgentPreferences & LegacyAgentConfig>;
+    const raw = JSON.parse(fs.readFileSync(file, "utf-8")) as Partial<
+      AgentPreferences & LegacyAgentConfig
+    >;
     return normalizePreferences(raw);
   } catch {
     const defaultAgent = DEFAULT_AGENT;
@@ -66,7 +75,10 @@ export function writeAgentPreferences(preferences: AgentPreferences): AgentPrefe
   return normalized;
 }
 
-export function resolveAgentConfig(preferences = readAgentPreferences()): { agent: Agent; model: string } {
+export function resolveAgentConfig(preferences = readAgentPreferences()): {
+  agent: Agent;
+  model: string;
+} {
   const agent = preferences.defaultAgent;
   return {
     agent,

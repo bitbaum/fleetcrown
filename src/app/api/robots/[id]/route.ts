@@ -4,10 +4,7 @@ import { readIdParam, readJsonBody, isUniqueViolation } from "@/lib/api/route-he
 import { requirePrivateApiAccess } from "@/lib/private-zone-api";
 import { isActorCapabilityError } from "@/config/actors";
 
-export async function GET(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const access = await requirePrivateApiAccess();
   if (access instanceof NextResponse) return access;
   const { userId } = access;
@@ -19,10 +16,7 @@ export async function GET(
   return NextResponse.json(robot);
 }
 
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const access = await requirePrivateApiAccess();
   if (access instanceof NextResponse) return access;
   const { userId } = access;
@@ -47,10 +41,7 @@ export async function PATCH(
   }
 }
 
-export async function DELETE(
-  _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const access = await requirePrivateApiAccess();
   if (access instanceof NextResponse) return access;
   const { userId } = access;
