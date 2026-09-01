@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useSyncExternalStore } from "react";
 import { useTheme } from "next-themes";
 import { PALETTE } from "@/lib/palette";
 
@@ -27,19 +27,22 @@ function resolvedThemeIsDark(theme: string | undefined, systemDark: boolean): bo
   return systemDark;
 }
 
+// The OS color-scheme preference is an external store: subscribe via
+// useSyncExternalStore instead of mirroring matchMedia into useState from an
+// effect. The server snapshot keeps the pre-hydration default (dark).
+function subscribeSystemDark(onChange: () => void): () => void {
+  const mq = window.matchMedia("(prefers-color-scheme: dark)");
+  mq.addEventListener("change", onChange);
+  return () => mq.removeEventListener("change", onChange);
+}
+const getSystemDark = () => window.matchMedia("(prefers-color-scheme: dark)").matches;
+const getServerSystemDark = () => true;
+
 export function MermaidDiagram({ chart }: { chart: string }) {
   const id = useId().replace(/:/g, "");
   const ref = useRef<HTMLDivElement>(null);
   const { resolvedTheme, theme } = useTheme();
-  const [systemDark, setSystemDark] = useState(true);
-
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    setSystemDark(mq.matches);
-    const onChange = () => setSystemDark(mq.matches);
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
-  }, []);
+  const systemDark = useSyncExternalStore(subscribeSystemDark, getSystemDark, getServerSystemDark);
 
   const dark = resolvedThemeIsDark(resolvedTheme ?? theme, systemDark);
 

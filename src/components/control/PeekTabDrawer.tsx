@@ -37,7 +37,11 @@ export function PeekTabDrawer({ tab, onClose }: { tab: string; onClose: () => vo
     });
   };
 
-  const fetchRemotePeek = async (seq: number) => {
+  // Pure fetcher: resolves with the captured content, or null when a newer
+  // request superseded this one. It never touches state itself — callers apply
+  // the result from a .then callback, so effects can start it without setting
+  // state synchronously.
+  const fetchRemotePeek = async (seq: number): Promise<string | null> => {
     const enqueue = await fetch("/api/control/peek-tab", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -52,7 +56,7 @@ export function PeekTabDrawer({ tab, onClose }: { tab: string; onClose: () => vo
 
     const deadline = Date.now() + 45_000;
     while (Date.now() < deadline) {
-      if (seq !== requestSeq.current) return;
+      if (seq !== requestSeq.current) return null;
       const poll = await fetch(`/api/control/peek-tab/${peekId}`, { cache: "no-store" });
       if (!poll.ok) {
         const body = await poll.json().catch(() => ({}));
@@ -64,8 +68,7 @@ export function PeekTabDrawer({ tab, onClose }: { tab: string; onClose: () => vo
         error?: string;
       };
       if (body.status === "done") {
-        applyContent(body.content ?? "");
-        return;
+        return body.content ?? "";
       }
       if (body.status === "error") {
         throw new Error(body.error || "Peek failed");
@@ -75,36 +78,60 @@ export function PeekTabDrawer({ tab, onClose }: { tab: string; onClose: () => vo
     throw new Error("Fleet Runner did not claim the peek request within 45s — is it running?");
   };
 
-  const fetchPeek = async () => {
+  // Starts a capture without touching state synchronously — every setState
+  // lives in a promise callback, so the snapshot effect can call this directly.
+  const runPeek = () => {
     const seq = requestSeq.current + 1;
     requestSeq.current = seq;
     const bridge = window.fleetRunner;
+    const work =
+      typeof bridge?.peekTab === "function"
+        ? bridge.peekTab(tab).then((result) => {
+            if (seq !== requestSeq.current) return;
+            if (result.ok) {
+              applyContent(result.content);
+            } else {
+              setError(result.error || "Peek failed");
+            }
+          })
+        : fetchRemotePeek(seq).then((peeked) => {
+            if (peeked !== null && seq === requestSeq.current) applyContent(peeked);
+          });
+    return work
+      .catch((e: unknown) => {
+        if (seq !== requestSeq.current) return;
+        setError((e as Error).message || "Peek failed");
+      })
+      .finally(() => {
+        if (seq === requestSeq.current) setLoading(false);
+      });
+  };
+
+  // Event-context wrapper (refresh button, auto-refresh timer): prime the
+  // spinner, then capture.
+  const fetchPeek = () => {
     setLoading(true);
     setError(null);
-    try {
-      if (typeof bridge?.peekTab === "function") {
-        const result = await bridge.peekTab(tab);
-        if (seq !== requestSeq.current) return;
-        if (result.ok) {
-          applyContent(result.content);
-        } else {
-          setError(result.error || "Peek failed");
-        }
-      } else {
-        await fetchRemotePeek(seq);
-      }
-    } catch (e) {
-      if (seq !== requestSeq.current) return;
-      setError((e as Error).message || "Peek failed");
-    } finally {
-      if (seq === requestSeq.current) setLoading(false);
-    }
+    return runPeek();
   };
+
+  // Entering snapshot view (or the tab changing while in it) primes the
+  // spinner via a guarded render-time adjustment; the effect below only kicks
+  // off the async capture.
+  const snapshotKey = view === "snapshot" ? tab : null;
+  const [prevSnapshotKey, setPrevSnapshotKey] = useState<string | null>(null);
+  if (snapshotKey !== prevSnapshotKey) {
+    setPrevSnapshotKey(snapshotKey);
+    if (snapshotKey !== null) {
+      setLoading(true);
+      setError(null);
+    }
+  }
 
   useEffect(() => {
     if (view !== "snapshot") return; // live streams via TerminalView; activity reads the DB
-    void fetchPeek();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchPeek is recreated each render; tab/view are its real inputs
+    void runPeek();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runPeek is recreated each render; tab/view are its real inputs
   }, [tab, view]);
 
   useEffect(() => {

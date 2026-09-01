@@ -247,14 +247,18 @@ export function TerminalSurface({
       ? `“${activeTab}” isn’t linked to a project directory, so FleetCrown doesn’t know where to relaunch the agent.`
       : null;
 
+  // Capture the one field the callback needs as a local, so the closure
+  // depends on `tabDir` — not the whole `tabContext` object — and the manual
+  // deps match what the compiler infers.
+  const tabDir = tabContext?.dir ?? null;
   const switchAgent = useCallback(
     async (agentId: string) => {
-      if (!activeTab || !tabContext?.dir) return;
+      if (!activeTab || !tabDir) return;
       setSwitchingAgent(true);
       try {
         await postJson("/api/control/switch-agent", {
           tab: activeTab,
-          dir: tabContext.dir,
+          dir: tabDir,
           toAgent: agentId,
           ...(activeAgentId ? { fromAgent: activeAgentId } : {}),
         });
@@ -264,7 +268,7 @@ export function TerminalSurface({
         setSwitchingAgent(false);
       }
     },
-    [activeTab, tabContext?.dir, activeAgentId],
+    [activeTab, tabDir, activeAgentId],
   );
 
   // The strip tells the truth about each tab: the project it resolves to (by

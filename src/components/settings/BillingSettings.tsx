@@ -35,16 +35,18 @@ export function BillingSettings({ plan, planStatus, stripeReady, hasSubscription
   const didProcess = useRef(false);
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState("");
-  const [notice, setNotice] = useState<{ text: string; type: "success" | "info" | "error" } | null>(
-    null,
-  );
+  // The ?billing= outcome is known at mount (we land here from a Stripe
+  // redirect), so the banner is seeded via the lazy initializer instead of a
+  // setState inside the effect — the effect below only strips the query param.
+  const [notice] = useState<{ text: string; type: "success" | "info" | "error" } | null>(() => {
+    const billingParam = searchParams.get("billing");
+    return billingParam ? (BILLING_MESSAGES[billingParam] ?? null) : null;
+  });
 
   useEffect(() => {
     if (didProcess.current) return;
-    const billingParam = searchParams.get("billing");
-    if (!billingParam) return;
+    if (!searchParams.get("billing")) return;
     didProcess.current = true;
-    setNotice(BILLING_MESSAGES[billingParam] ?? null);
     // Remove the query param so a page refresh doesn't re-show it
     const params = new URLSearchParams(searchParams.toString());
     params.delete("billing");
@@ -62,7 +64,9 @@ export function BillingSettings({ plan, planStatus, stripeReady, hasSubscription
         setError(data.error ?? "Failed to start checkout.");
         return;
       }
-      if (data.url) window.location.href = data.url;
+      // location.assign() (a method call, not a mutation of a captured value)
+      // — same navigation, and Stripe Checkout is an external URL.
+      if (data.url) window.location.assign(data.url);
     } catch {
       setError("Something went wrong.");
     } finally {

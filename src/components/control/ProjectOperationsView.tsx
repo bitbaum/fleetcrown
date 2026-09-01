@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { compactRelativeDate } from "@/lib/dates";
@@ -73,26 +73,36 @@ export function ProjectOperationsView({
   // card content but must not reshuffle rows mid-click (priority re-ranking
   // moved the target under the cursor twice on 2026-07-03 — one dispatch went
   // to the wrong project, one vanished). The ranking recomputes only when the
-  // sort mode, the query, or the SET of visible projects changes.
-  const frozenOrderRef = useRef<{ key: string; order: string[] }>({ key: "", order: [] });
-  const visibleSnapshots = useMemo(() => {
-    const filtered = normalizedQuery
-      ? sourceSnapshots.filter((snapshot) => {
-          const haystack = [
-            snapshot.project.tab,
-            snapshot.project.profile?.mission,
-            snapshot.project.profile?.description,
-            snapshot.project.dir,
-            snapshot.project.git?.branch,
-            snapshot.contextSummary,
-          ]
-            .filter(Boolean)
-            .join(" ")
-            .toLowerCase();
-          return haystack.includes(normalizedQuery);
-        })
-      : sourceSnapshots;
+  // sort mode, the query, or the SET of visible projects changes. The frozen
+  // order lives in state, adjusted during render behind the setKey guard
+  // (previously a ref, but refs must not be read or written during render).
+  const filtered = normalizedQuery
+    ? sourceSnapshots.filter((snapshot) => {
+        const haystack = [
+          snapshot.project.tab,
+          snapshot.project.profile?.mission,
+          snapshot.project.profile?.description,
+          snapshot.project.dir,
+          snapshot.project.git?.branch,
+          snapshot.contextSummary,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return haystack.includes(normalizedQuery);
+      })
+    : sourceSnapshots;
 
+  const setKey = `${sort}|${normalizedQuery}|${filtered
+    .map((s) => s.project.tab)
+    .sort()
+    .join(",")}`;
+  const [frozenOrder, setFrozenOrder] = useState<{ key: string; order: string[] }>({
+    key: "",
+    order: [],
+  });
+  let order = frozenOrder.order;
+  if (frozenOrder.key !== setKey) {
     const ranked = [...filtered].sort((a, b) => {
       if (sort === "az") return a.project.tab.localeCompare(b.project.tab);
       if (sort === "recent")
@@ -102,19 +112,12 @@ export function ProjectOperationsView({
         );
       return sourceSnapshots.indexOf(a) - sourceSnapshots.indexOf(b);
     });
-
-    const setKey = `${sort}|${normalizedQuery}|${filtered
-      .map((s) => s.project.tab)
-      .sort()
-      .join(",")}`;
-    if (frozenOrderRef.current.key !== setKey) {
-      frozenOrderRef.current = { key: setKey, order: ranked.map((s) => s.project.tab) };
-    }
-    const order = frozenOrderRef.current.order;
-    return [...filtered].sort(
-      (a, b) => order.indexOf(a.project.tab) - order.indexOf(b.project.tab),
-    );
-  }, [normalizedQuery, sourceSnapshots, sort]);
+    order = ranked.map((s) => s.project.tab);
+    setFrozenOrder({ key: setKey, order });
+  }
+  const visibleSnapshots = [...filtered].sort(
+    (a, b) => order.indexOf(a.project.tab) - order.indexOf(b.project.tab),
+  );
   const selected =
     sourceSnapshots.find((snapshot) => snapshot.project.tab === selectedTab) ??
     visibleSnapshots[0] ??

@@ -35,37 +35,57 @@ const REFRESH_MS = 5_000;
 export function ActivityTimeline({ tab }: { tab: string }) {
   const [events, setEvents] = useState<ProjectActivityEvent[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
+  const [refreshing, setRefreshing] = useState(true);
   const seq = useRef(0);
 
-  const load = async () => {
+  // Fetch without touching state synchronously — every setState lives in a
+  // promise callback, so the mount effect can call this directly. The spinner
+  // is primed by useState(true) on mount, by the render-time adjustment below
+  // on tab change, and by load() for interval/retry refreshes.
+  const fetchEvents = () => {
     const mine = ++seq.current;
-    setRefreshing(true);
-    try {
-      const res = await fetch(`/api/control/activity?tab=${encodeURIComponent(tab)}`, {
-        cache: "no-store",
+    return fetch(`/api/control/activity?tab=${encodeURIComponent(tab)}`, {
+      cache: "no-store",
+    })
+      .then(async (res) => {
+        if (mine !== seq.current) return;
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.error || `Activity request failed (${res.status})`);
+        }
+        const body = (await res.json()) as { events: ProjectActivityEvent[] };
+        if (mine !== seq.current) return;
+        setError(null);
+        setEvents(body.events);
+      })
+      .catch((e: unknown) => {
+        if (mine !== seq.current) return;
+        setError((e as Error).message || "Couldn't load activity");
+      })
+      .finally(() => {
+        if (mine === seq.current) setRefreshing(false);
       });
-      if (mine !== seq.current) return;
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.error || `Activity request failed (${res.status})`);
-      }
-      const body = (await res.json()) as { events: ProjectActivityEvent[] };
-      setError(null);
-      setEvents(body.events);
-    } catch (e) {
-      if (mine !== seq.current) return;
-      setError((e as Error).message || "Couldn't load activity");
-    } finally {
-      if (mine === seq.current) setRefreshing(false);
-    }
   };
 
+  // Event-context refresh (interval tick, retry button).
+  const load = () => {
+    setRefreshing(true);
+    return fetchEvents();
+  };
+
+  // Tab change re-arms the spinner in the same render pass (guarded
+  // adjustment); the effect below re-fetches.
+  const [prevTab, setPrevTab] = useState(tab);
+  if (tab !== prevTab) {
+    setPrevTab(tab);
+    setRefreshing(true);
+  }
+
   useEffect(() => {
-    void load();
+    void fetchEvents();
     const id = setInterval(() => void load(), REFRESH_MS);
     return () => clearInterval(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchEvents/load close over `tab`, which is the effect's real input
   }, [tab]);
 
   return (

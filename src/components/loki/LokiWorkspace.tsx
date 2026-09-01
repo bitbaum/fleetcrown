@@ -57,7 +57,15 @@ export function LokiWorkspace({
 }: LokiWorkspaceProps = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [composerPrefill, setComposerPrefill] = useState<string | null>(null);
+  // ?q= deep-link seeds the composer at mount (initializer); later q changes
+  // are mirrored by the guarded render-time adjustment below, not an effect.
+  const prefillParam = searchParams.get("q")?.trim() || null;
+  const [composerPrefill, setComposerPrefill] = useState<string | null>(prefillParam);
+  const [prevPrefillParam, setPrevPrefillParam] = useState(prefillParam);
+  if (prefillParam !== prevPrefillParam) {
+    setPrevPrefillParam(prefillParam);
+    if (prefillParam) setComposerPrefill(prefillParam);
+  }
 
   const hasInitialProjects = initialProjects !== undefined;
   const hasInitialConvos = initialConversations !== undefined;
@@ -95,12 +103,6 @@ export function LokiWorkspace({
     runtimeAvailable: builderPresence.runtimeAvailable,
   });
 
-  // Initial load — conversations + projects.
-  useEffect(() => {
-    const q = searchParams.get("q")?.trim();
-    if (q) setComposerPrefill(q);
-  }, [searchParams]);
-
   useEffect(() => {
     const handler = (e: Event) => {
       const prompt = (e as CustomEvent<{ prompt: string }>).detail?.prompt ?? "";
@@ -110,53 +112,78 @@ export function LokiWorkspace({
     return () => window.removeEventListener(LOKI_PREFILL_EVENT, handler);
   }, []);
 
-  const reloadProjects = useCallback(async () => {
-    setProjectsLoading(true);
-    setProjectsError(null);
-    try {
-      const rows = await fetchJson<
+  // Core fetchers set state only from promise callbacks, so the mount effect
+  // can call them without a synchronous setState. The reload* wrappers add the
+  // spinner priming for event contexts (retry buttons); on the mount path the
+  // loading flags are already true from their initializers.
+  const fetchProjects = useCallback(
+    () =>
+      fetchJson<
         Array<{
           id: string;
           name: string;
           entityProjectId?: string | null;
           topGoal?: LokiProject["topGoal"];
         }>
-      >("/api/user-projects");
-      setProjects(
-        rows.map((p) => ({
-          id: p.id,
-          name: p.name,
-          entityProjectId: p.entityProjectId ?? null,
-          topGoal: p.topGoal ?? null,
-        })),
-      );
-    } catch {
-      setProjectsError("Could not load projects.");
-    } finally {
-      setProjectsLoading(false);
-    }
-  }, []);
+      >("/api/user-projects")
+        .then((rows) => {
+          setProjects(
+            rows.map((p) => ({
+              id: p.id,
+              name: p.name,
+              entityProjectId: p.entityProjectId ?? null,
+              topGoal: p.topGoal ?? null,
+            })),
+          );
+          setProjectsError(null);
+        })
+        .catch(() => {
+          setProjectsError("Could not load projects.");
+        })
+        .finally(() => {
+          setProjectsLoading(false);
+        }),
+    [],
+  );
 
-  const reloadConversations = useCallback(async () => {
+  const reloadProjects = useCallback(() => {
+    setProjectsLoading(true);
+    setProjectsError(null);
+    return fetchProjects();
+  }, [fetchProjects]);
+
+  const fetchConversations = useCallback(
+    () =>
+      fetchJson<{ conversations: ConversationSummary[] }>("/api/conversations")
+        .then((data) => {
+          setConversations(data.conversations);
+          setConvosError(null);
+        })
+        .catch(() => {
+          setConvosError("Could not load conversations.");
+        })
+        .finally(() => {
+          setConvosLoading(false);
+        }),
+    [],
+  );
+
+  const reloadConversations = useCallback(() => {
     setConvosLoading(true);
     setConvosError(null);
-    try {
-      const data = await fetchJson<{ conversations: ConversationSummary[] }>("/api/conversations");
-      setConversations(data.conversations);
-    } catch {
-      setConvosError("Could not load conversations.");
-    } finally {
-      setConvosLoading(false);
-    }
-  }, []);
+    return fetchConversations();
+  }, [fetchConversations]);
 
+  // Initial load — conversations + projects.
   useEffect(() => {
-    if (!hasInitialProjects) void reloadProjects();
-    if (!hasInitialConvos) void reloadConversations();
-  }, [hasInitialConvos, hasInitialProjects, reloadConversations, reloadProjects]);
+    if (!hasInitialProjects) void fetchProjects();
+    if (!hasInitialConvos) void fetchConversations();
+  }, [hasInitialConvos, hasInitialProjects, fetchConversations, fetchProjects]);
 
-  useEffect(() => {
-    if (selectionInitialized || projectsLoading || projects.length === 0) return;
+  // One-shot selection seed once projects have loaded. Pure computation over
+  // props/state, so it runs as a guarded render-time adjustment (the
+  // selectionInitialized latch guarantees convergence) rather than an effect.
+  if (!selectionInitialized && !projectsLoading && projects.length > 0) {
     // Only honor an explicit ?project= — a fresh /loki visit is the start
     // page (new / open / what needs me). Remembered scope still writes so
     // Control and Terminal keep the last project.
@@ -164,7 +191,7 @@ export function LokiWorkspace({
     const fromUrl = resolveLokiProjectSelection(projects, requested);
     if (fromUrl.length > 0) setSelectedProjects(fromUrl);
     setSelectionInitialized(true);
-  }, [projects, projectsLoading, searchParams, selectionInitialized]);
+  }
 
   useEffect(() => {
     if (!selectionInitialized) return;
@@ -180,16 +207,19 @@ export function LokiWorkspace({
     router.replace(query ? `/loki?${query}` : "/loki", { scroll: false });
   }, [router, searchParams, selectedProjects, selectionInitialized]);
 
+  // Switching conversations clears the transcript and arms the loader in the
+  // same render pass (guarded adjustment); the effect below only fetches.
+  const [prevActiveId, setPrevActiveId] = useState<string | null>(null);
+  if (activeId !== prevActiveId) {
+    setPrevActiveId(activeId);
+    setMessages([]);
+    setTranscriptLoading(activeId !== null);
+  }
+
   // Load the active conversation's transcript.
   useEffect(() => {
-    if (!activeId) {
-      setMessages([]);
-      setTranscriptLoading(false);
-      return;
-    }
+    if (!activeId) return;
     let current = true;
-    setMessages([]);
-    setTranscriptLoading(true);
     getJson<{ messages: LokiMessage[] }>(`/api/conversations/${activeId}`)
       .then((d) => {
         if (current) setMessages(d.messages);

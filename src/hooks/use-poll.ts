@@ -41,11 +41,15 @@ export function usePoll<T>(url: string | null, intervalMs: number): PollState<T>
     urlRef.current = url;
   }, [url]);
 
+  // No URL means there is nothing to wait for: settle `loading` via a guarded
+  // render-time adjustment instead of a sync setState inside the effect. Same
+  // one-way latch as before — once false it never flips back.
+  if (!url && loading) {
+    setLoading(false);
+  }
+
   useEffect(() => {
-    if (!url) {
-      setLoading(false);
-      return;
-    }
+    if (!url) return;
     let cancelled = false;
     let timer = 0;
 

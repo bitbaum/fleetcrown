@@ -66,7 +66,23 @@ export function CommandPalette() {
   const panelRef = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState("");
   const [highlight, setHighlight] = useState(0);
-  const [recent, setRecent] = useState<string[]>([]);
+  // Hydrate recents once, lazily, so the order survives across page loads.
+  // Migration: read fleetcrown.* first; fall back to the legacy cockpit.* key
+  // so existing users don't lose their recents after the 2026-06 rebrand. The
+  // next pushRecent writes under the new key, so the legacy entry stops being
+  // read once the user picks anything. Within a mount, `recent` state and
+  // sessionStorage are kept in step by pushRecent itself.
+  const [recent, setRecent] = useState<string[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const raw =
+        window.sessionStorage.getItem(PALETTE_RECENT_STORAGE_KEY) ??
+        window.sessionStorage.getItem(LEGACY_PALETTE_RECENT_STORAGE_KEY);
+      return raw ? (JSON.parse(raw) as string[]) : [];
+    } catch {
+      return [];
+    }
+  });
 
   // Full-screen overlay: freeze the page under it, same as every other one.
   useOverlayLock(open);
@@ -180,35 +196,27 @@ export function CommandPalette() {
     [projectNames, dispatchInject],
   );
 
-  // Hydrate recent on first open so the order survives across sessions.
-  useEffect(() => {
-    if (!open) return;
-    try {
-      // Migration: read fleetcrown.* first; fall back to the legacy
-      // cockpit.* key so existing users don't lose their recents after the
-      // 2026-06 rebrand. The next pushRecent writes under the new key, so
-      // the legacy entry stops being read once the user picks anything.
-      const raw =
-        window.sessionStorage.getItem(PALETTE_RECENT_STORAGE_KEY) ??
-        window.sessionStorage.getItem(LEGACY_PALETTE_RECENT_STORAGE_KEY);
-      if (raw) setRecent(JSON.parse(raw) as string[]);
-    } catch {
-      /* ignore */
-    }
-  }, [open]);
-
-  useEffect(() => {
+  // Opening the palette resets the composer. Guarded render-time adjustment
+  // (React's "adjusting state when a prop changes" pattern) instead of an
+  // effect, so the reset is visible in the same paint the palette opens on.
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
     if (open) {
       setQuery("");
       setHighlight(0);
       setPending(null);
       setNote(null);
       setBusy(false);
-      // Defer focus to after the modal mounts so the keystroke that opened
-      // us doesn't immediately type into the input.
-      const t = window.setTimeout(() => inputRef.current?.focus(), 30);
-      return () => window.clearTimeout(t);
     }
+  }
+
+  useEffect(() => {
+    if (!open) return;
+    // Defer focus to after the modal mounts so the keystroke that opened
+    // us doesn't immediately type into the input.
+    const t = window.setTimeout(() => inputRef.current?.focus(), 30);
+    return () => window.clearTimeout(t);
   }, [open]);
 
   const entries = useMemo<PaletteEntry[]>(() => {
