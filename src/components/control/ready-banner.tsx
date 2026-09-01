@@ -85,7 +85,7 @@ export function ReadyBanner({
   useEffect(() => {
     const wasEmpty = !prevQueueItemRef.current;
     prevQueueItemRef.current = nextQueueItem;
-    if (wasEmpty && nextQueueItem) setSeconds(countdownSeconds); // eslint-disable-line react-hooks/set-state-in-effect
+    if (wasEmpty && nextQueueItem) setSeconds(countdownSeconds);
   }, [nextQueueItem, countdownSeconds]);
 
   useEffect(() => {

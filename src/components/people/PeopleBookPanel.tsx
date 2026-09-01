@@ -38,14 +38,20 @@ export function PeopleBookPanel({
   const [importNote, setImportNote] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const refresh = useCallback(async () => {
-    const [p, d] = await Promise.all([
-      getJson<{ proposals: Proposal[] }>("/api/people/proposals"),
-      getJson<{ clusters: Cluster[] }>("/api/people/duplicates"),
-    ]);
-    setProposals(p.proposals);
-    setClusters(d.clusters);
-  }, []);
+  // Promise-callback form (not async/await): the setStates live inside a
+  // .then callback, so calling refresh() from the mount effect never sets
+  // state synchronously within the effect body. Same microtask timing.
+  const refresh = useCallback(
+    () =>
+      Promise.all([
+        getJson<{ proposals: Proposal[] }>("/api/people/proposals"),
+        getJson<{ clusters: Cluster[] }>("/api/people/duplicates"),
+      ]).then(([p, d]) => {
+        setProposals(p.proposals);
+        setClusters(d.clusters);
+      }),
+    [],
+  );
 
   useEffect(() => {
     void refresh().catch(() => setError("Could not load book proposals"));

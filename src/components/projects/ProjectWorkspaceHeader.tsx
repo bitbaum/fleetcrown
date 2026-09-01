@@ -40,13 +40,19 @@ export function ProjectWorkspaceHeader({
   // control — the health worklist writes both — landed in the database, came
   // back down on router.refresh(), and was ignored here: the header went on
   // showing "+ stage" for a stage that was already set. A write you cannot see
-  // land is indistinguishable from one that failed.
-  useEffect(() => {
+  // land is indistinguishable from one that failed. Guarded render-time
+  // adjustment (React's "adjusting state when a prop changes" pattern) instead
+  // of effects, so the reseed lands in the same render pass.
+  const [prevStatus, setPrevStatus] = useState(status);
+  if (status !== prevStatus) {
+    setPrevStatus(status);
     setCurrentStatus(status);
-  }, [status]);
-  useEffect(() => {
+  }
+  const [prevDescription, setPrevDescription] = useState(description);
+  if (description !== prevDescription) {
+    setPrevDescription(description);
     setCurrentDescription(description);
-  }, [description]);
+  }
 
   useEffect(() => {
     rememberFleetProject(workspaceKey);

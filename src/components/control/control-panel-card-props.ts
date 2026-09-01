@@ -42,6 +42,9 @@ type Deps = {
   executionStalled: boolean;
   automationMode: AutoInjectMode;
   countdownSeconds: number | undefined;
+  /** ControlPanel's per-render clock (unix seconds) — one Date.now() per
+   *  render tree, so the card's staleness math matches the snapshots'. */
+  nowS: number;
 };
 
 /**
@@ -126,5 +129,6 @@ export function buildCardProps(deps: Deps) {
     executionStalled: deps.executionStalled,
     automationMode: deps.automationMode,
     countdownSeconds: deps.countdownSeconds,
+    nowS: deps.nowS,
   });
 }

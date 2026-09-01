@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   DndContext,
   DragEndEvent,
@@ -46,7 +46,6 @@ export function QueueList({
   const [editText, setEditText] = useState("");
   const [activeId, setActiveId] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
-  const editRef = useRef<HTMLTextAreaElement>(null);
 
   // Clear selection when queue length changes (items added/removed/merged).
   useEffect(() => {
@@ -87,10 +86,11 @@ export function QueueList({
     setSelected(new Set());
   };
 
+  // The edit textarea mounts with autoFocus (see QueueItemRow), so no ref +
+  // deferred .focus() is needed here.
   const startEdit = (i: number) => {
     setEditingIndex(i);
     setEditText(queue[i]);
-    setTimeout(() => editRef.current?.focus(), 0);
   };
 
   const confirmEdit = () => {
@@ -113,7 +113,6 @@ export function QueueList({
     selected: selected.has(i),
     editingIndex,
     editText,
-    editRef,
     onSetEditText: setEditText,
     onToggleSelect: () => toggleSelect(i),
     onStartEdit: onEdit ? () => startEdit(i) : () => {},

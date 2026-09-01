@@ -59,6 +59,7 @@ export function ProjectCard({
   snapshot,
   automationMode = "on",
   countdownSeconds,
+  nowS,
 }: {
   project: ProjectState;
   prompts: PromptMeta[];
@@ -86,6 +87,9 @@ export function ProjectCard({
   snapshot?: ProjectOperationsSnapshot;
   automationMode?: AutoInjectMode;
   countdownSeconds?: number;
+  /** Parent-render clock (unix seconds) — one Date.now() per render tree, so
+   *  the card's staleness math matches the snapshots' (and render stays pure). */
+  nowS: number;
 }) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [localAgent, setLocalAgent] = useState<string | null>(project.agentPref ?? null);
@@ -97,9 +101,16 @@ export function ProjectCard({
   const capacityIssue = detectCapacityIssueFromProject(project);
   const suggestedFallback = resolveNextFallbackAgent(outgoingAgent, installedAgentIds);
 
-  useEffect(() => {
+  // A (re)appearing capacity issue or a new session state re-arms the banner.
+  // Guarded render-time adjustment (React's "adjusting state when props
+  // change" pattern) instead of an effect.
+  const capacityResetSignature = `${capacityIssue}:${project.session?.mtime ?? ""}:${project.currentPrompt?.label ?? ""}`;
+  const [prevCapacityResetSignature, setPrevCapacityResetSignature] =
+    useState(capacityResetSignature);
+  if (capacityResetSignature !== prevCapacityResetSignature) {
+    setPrevCapacityResetSignature(capacityResetSignature);
     if (capacityIssue) setCapacityDismissed(false);
-  }, [capacityIssue, project.session?.mtime, project.currentPrompt?.label]);
+  }
 
   const performAgentSwitch = async (agentId: string) => {
     const currentAgent = resolveOutgoingAgent(project, localAgent);
@@ -155,6 +166,7 @@ export function ProjectCard({
     if (!capacityIssue) {
       autoTriedAgentsRef.current.clear();
       handledCapacitySignatureRef.current = null;
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Episodic automation: this effect reacts to polled session state and must reset/record the reroute banner exactly once per capacity episode (ref-tracked signature + tried-agent set as loop guards). Deriving that state during render would rewire the loop-safety guarantees of a live agent-switching path for no user-visible gain.
       setAutoRerouteReason(null);
       return;
     }
@@ -212,14 +224,14 @@ export function ProjectCard({
     mergeItems: mergeItemsInQueue,
   } = usePromptQueue(project.tab, project.promptQueue, project.promptQueueRevision);
 
-  // Reset dismissed each time a new agent run begins so the ready banner fires once per cycle.
-  const prevAgentRunning = useRef(project.agentRunning);
-  useEffect(() => {
-    if (!prevAgentRunning.current && project.agentRunning) setDismissed(false);
-    prevAgentRunning.current = project.agentRunning;
-  }, [project.agentRunning]);
+  // Reset dismissed each time a new agent run begins so the ready banner fires
+  // once per cycle. Guarded render-time adjustment on the running transition.
+  const [prevAgentRunning, setPrevAgentRunning] = useState(project.agentRunning);
+  if (project.agentRunning !== prevAgentRunning) {
+    setPrevAgentRunning(project.agentRunning);
+    if (project.agentRunning) setDismissed(false);
+  }
 
-  const nowS = Math.floor(Date.now() / 1000);
   const display = dismissed
     ? getProjectDisplayState(project, zellijTabs, nowS, true, runtimeStateKnown, runnerSyncStale)
     : (snapshot?.display ??

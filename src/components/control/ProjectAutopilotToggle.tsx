@@ -15,7 +15,7 @@
 // override instead of storing a redundant one, so "inherit" stays the default
 // and the override count on the fleet hint only reflects real divergence.
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Loader2, Pause, Play } from "lucide-react";
 import { patchJson } from "@/lib/api/fetch";
 import { FLEETCROWN_REFRESH_EVENT } from "@/lib/client-events";
@@ -46,9 +46,15 @@ export function ProjectAutopilotToggle({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  // Server truth wins: when a refetch delivers a new override, drop the local
+  // optimistic value. Guarded render-time adjustment (React's "adjusting state
+  // when a prop changes" pattern) instead of an effect, so the reset lands in
+  // the same render pass without an extra paint.
+  const [prevOverride, setPrevOverride] = useState<AutoInjectMode | null>(currentOverride);
+  if (currentOverride !== prevOverride) {
+    setPrevOverride(currentOverride);
     setLocalOverride(currentOverride);
-  }, [currentOverride]);
+  }
 
   if (!projectId) return null;
 

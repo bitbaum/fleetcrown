@@ -20,7 +20,6 @@ export type RowProps = {
   dragHandleProps?: React.HTMLAttributes<HTMLButtonElement>;
   editingIndex: number | null;
   editText: string;
-  editRef: React.RefObject<HTMLTextAreaElement | null>;
   onSetEditText: (v: string) => void;
   onToggleSelect: () => void;
   onStartEdit: () => void;
@@ -46,7 +45,6 @@ export function QueueItemRow({
   dragHandleProps,
   editingIndex,
   editText,
-  editRef,
   onSetEditText,
   onToggleSelect,
   onStartEdit,
@@ -103,7 +101,9 @@ export function QueueItemRow({
       {/* Content */}
       {editing ? (
         <textarea
-          ref={editRef}
+          // Mounts only when this row enters edit mode — autoFocus replaces
+          // the old ref + deferred .focus() (a ref may not cross render code).
+          autoFocus
           value={editText}
           onChange={(e) => onSetEditText(e.target.value)}
           onKeyDown={(e) => {

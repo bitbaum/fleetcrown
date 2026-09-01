@@ -144,6 +144,10 @@ export function AskLokiButton() {
     transcriptRef.current?.scrollTo({ top: transcriptRef.current.scrollHeight });
   }, [turns, asking]);
 
+  // Capture the one field the callback needs as a local, so the closure
+  // depends on `workspaceKey` — not the whole `context` object — and the
+  // manual deps match what the compiler infers.
+  const workspaceKey = context?.workspaceKey ?? null;
   const ask = useCallback(async () => {
     const message = input.trim();
     if (!message || asking) return;
@@ -169,7 +173,7 @@ export function AskLokiButton() {
     }
 
     try {
-      const projectKey = context?.workspaceKey ?? null;
+      const projectKey = workspaceKey;
       // Send the heavy project context once per project thread per page life.
       const includeContext = projectKey != null && sentContextRef.current !== projectKey;
       // What the user can actually see, read from the rendered page — so the
@@ -192,7 +196,7 @@ export function AskLokiButton() {
     } finally {
       setAsking(false);
     }
-  }, [input, asking, context?.workspaceKey, activeForm]);
+  }, [input, asking, workspaceKey, activeForm]);
 
   if (pathname === "/loki") return null;
 

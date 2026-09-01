@@ -36,11 +36,11 @@ export function LogConversationButton() {
 
   // Debounced search with AbortController so a slow earlier response
   // can't clobber a faster later one when the user types continuously.
+  // Clearing results on an emptied query happens in the input's onChange
+  // (an event, not this effect), so the effect only ever sets state from
+  // its async callbacks.
   useEffect(() => {
-    if (!query.trim()) {
-      setResults([]);
-      return;
-    }
+    if (!query.trim()) return;
     const ctrl = new AbortController();
     const timer = setTimeout(async () => {
       setSearching(true);
@@ -175,7 +175,10 @@ export function LogConversationButton() {
             <input
               ref={inputRef}
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                if (!e.target.value.trim()) setResults([]);
+              }}
               onKeyDown={(e) => {
                 if (e.key === "Escape") reset();
               }}

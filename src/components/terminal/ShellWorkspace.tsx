@@ -54,7 +54,6 @@ export function ShellWorkspace() {
     if (seeded.current) return;
     seeded.current = true;
     const t = makeTab();
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- client-only seed, see above
     setTabs([t]);
     setActiveTabId(t.id);
   }, []);

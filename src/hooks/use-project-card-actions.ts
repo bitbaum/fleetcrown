@@ -151,11 +151,14 @@ export function useProjectCardActions({
   // circuited the strategist for the most-valuable case (empty queue,
   // smart-nudge needed). Now fires whenever ready — server decides what
   // to do based on auto_inject_mode + queue + handoff.
+  // Leaving the ready state invalidates the preloaded decision. Guarded
+  // render-time adjustment (not a sync setState in the effect below) — it
+  // converges in one extra render and keeps the effect purely async.
+  if (!isReadyNow && preloadedDispatch !== null) {
+    setPreloadedDispatch(null);
+  }
   useEffect(() => {
-    if (!isReadyNow) {
-      setPreloadedDispatch(null);
-      return;
-    }
+    if (!isReadyNow) return;
     const handoff = {
       done: project.session?.done ?? "",
       next: project.session?.next ?? "",

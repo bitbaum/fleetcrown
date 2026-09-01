@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Globe, Pencil, X } from "lucide-react";
 
 /**
@@ -27,13 +27,16 @@ export function LiveUrlField({
   // column — the value lands in the database and comes back down on
   // router.refresh(), and this field went on saying "Add live URL" anyway. The
   // health point was earned while the page disagreed, which is worse than not
-  // being able to earn it. Skipped while editing so a refresh cannot yank the
-  // text out from under someone mid-type.
-  useEffect(() => {
-    if (editing) return;
+  // being able to earn it. Guarded render-time adjustment (not an effect):
+  // reseed only when the prop actually changes, and skip while editing so a
+  // refresh cannot yank the text out from under someone mid-type — a change
+  // that arrived mid-edit is picked up as soon as editing ends.
+  const [prevLiveUrl, setPrevLiveUrl] = useState(liveUrl);
+  if (liveUrl !== prevLiveUrl && !editing) {
+    setPrevLiveUrl(liveUrl);
     setCurrent(liveUrl);
     setValue(liveUrl ?? "");
-  }, [liveUrl, editing]);
+  }
 
   if (!userProjectId) return null;
 

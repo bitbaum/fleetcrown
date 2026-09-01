@@ -102,41 +102,54 @@ export function useControlData(): ControlDataHook {
   const hasModelChange = savedConfig ? model.trim() !== savedConfig.model : false;
   const hasPendingChange = hasAgentChange || hasModelChange;
 
+  // Core fetch: every setState lives in a promise callback, so the mount
+  // effect can start it without setting state synchronously in the effect body.
+  const fetchControl = useCallback(
+    () =>
+      getJson<ControlData>("/api/control")
+        .then((payload) => {
+          setData(payload);
+          if (payload.builderPresence) setBuilderPresence(payload.builderPresence);
+          if (payload.builderPresence?.any) setRunnerConnected(true);
+          else if (payload.builderPresence && !payload.builderPresence.any)
+            setRunnerConnected(false);
+          if (!agentDirty) {
+            setAgent(payload.agentConfig.agent);
+            setDraftModels({ [payload.agentConfig.agent]: payload.agentConfig.model });
+          }
+          setLastUpdated(Date.now());
+          setError(null);
+        })
+        .catch((err: unknown) => {
+          setError(err instanceof Error ? err.message : "Failed to load");
+        }),
+    [agentDirty],
+  );
+
+  // Event-context wrapper: manual refreshes prime the spinner.
   const refresh = useCallback(
     async (manual = false) => {
       if (manual) setRefreshing(true);
       try {
-        const payload = await getJson<ControlData>("/api/control");
-        setData(payload);
-        if (payload.builderPresence) setBuilderPresence(payload.builderPresence);
-        if (payload.builderPresence?.any) setRunnerConnected(true);
-        else if (payload.builderPresence && !payload.builderPresence.any) setRunnerConnected(false);
-        if (!agentDirty) {
-          setAgent(payload.agentConfig.agent);
-          setDraftModels({ [payload.agentConfig.agent]: payload.agentConfig.model });
-        }
-        setLastUpdated(Date.now());
-        setError(null);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load");
+        await fetchControl();
       } finally {
         if (manual) setRefreshing(false);
       }
     },
-    [agentDirty],
+    [fetchControl],
   );
 
   useEffect(() => {
     const poll = async () => {
       if (document.hidden || inFlight.current) return;
       inFlight.current = true;
-      await refresh();
+      await fetchControl();
       inFlight.current = false;
     };
 
     // Always fetch on mount — bypass visibility so background-opened tabs load data.
     inFlight.current = true;
-    refresh().finally(() => {
+    fetchControl().finally(() => {
       inFlight.current = false;
     });
 
@@ -164,7 +177,7 @@ export function useControlData(): ControlDataHook {
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener(FLEETCROWN_REFRESH_EVENT, onFleetCrownRefresh);
     };
-  }, [refresh]);
+  }, [fetchControl]);
 
   // Subscribe to the SSE bridge for live change events. Any event for the
   // user (project_states, runtime_snapshots, pending_commands, etc.)

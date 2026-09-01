@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type RefObject } from "react";
+import { useMemo, useState, type RefObject } from "react";
 import { PanelsTopLeft, RefreshCw, Send, Terminal, Wrench } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { postJson } from "@/lib/api/fetch";
@@ -42,11 +42,16 @@ export function ZellijLivePanel({
   embedded?: boolean;
 }) {
   const insideRunner = useInsideFleetRunner();
-  const [targetTab, setTargetTab] = useState("");
+  const [targetTab, setTargetTab] = useState(initialTargetTab || "");
 
-  useEffect(() => {
+  // Deep-link updates (e.g. a push notification while the panel is mounted)
+  // re-point the composer. Guarded render-time adjustment instead of an
+  // effect; the mount case is covered by the useState initializer above.
+  const [prevInitialTarget, setPrevInitialTarget] = useState(initialTargetTab);
+  if (initialTargetTab !== prevInitialTarget) {
+    setPrevInitialTarget(initialTargetTab);
     if (initialTargetTab) setTargetTab(initialTargetTab);
-  }, [initialTargetTab]);
+  }
   const [prompt, setPrompt] = useState("");
   const [sendingPrompt, setSendingPrompt] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);

@@ -245,8 +245,13 @@ export function TerminalView({
   const fitRef = useRef<import("@xterm/addon-fit").FitAddon | null>(null);
   /** Re-runs the mount effect's measure/fit/publish pass from outside it. */
   const resyncRef = useRef<(() => void) | null>(null);
+  // Mirrored via effect (never written during render — see the refs rule);
+  // declared before the mount effect below so the declaration-order effect run
+  // seeds it before that effect's first read.
   const fontOverrideRef = useRef<number | null>(null);
-  fontOverrideRef.current = fontOverride;
+  useEffect(() => {
+    fontOverrideRef.current = fontOverride;
+  });
 
   // Mirror the stream state and grid size out to a caller rendering its own
   // chrome. Effects rather than calls at the setState sites, so a parent that

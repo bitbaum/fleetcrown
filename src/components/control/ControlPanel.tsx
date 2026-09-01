@@ -215,15 +215,19 @@ export function ControlPanel() {
 
   const failedCount = data?.failedCommands?.length ?? 0;
 
-  useEffect(() => {
-    if (!snapshots?.length) return;
+  // Keep the selection valid as the snapshot set changes. Guarded render-time
+  // adjustment (React's "adjusting state when props change" pattern) instead
+  // of an effect: it converges in one re-render because the fallback tab is
+  // always a member of the current snapshot set.
+  if (snapshots?.length) {
     const currentValid = selectedTab && snapshots.some((s) => s.project.tab === selectedTab);
-    if (currentValid) return;
-    const priority = snapshots.find(
-      (s) => s.phase === "ready" || s.phase === "orchestration_ready" || s.attentionReason,
-    );
-    setSelectedTab(priority?.project.tab ?? snapshots[0].project.tab);
-  }, [snapshots, selectedTab]);
+    if (!currentValid) {
+      const priority = snapshots.find(
+        (s) => s.phase === "ready" || s.phase === "orchestration_ready" || s.attentionReason,
+      );
+      setSelectedTab(priority?.project.tab ?? snapshots[0].project.tab);
+    }
+  }
 
   useEffect(() => {
     if (selectedTab) rememberFleetProject(selectedTab);
@@ -247,6 +251,7 @@ export function ControlPanel() {
     if (handledFocusRef.current === requestKey) return;
     handledFocusRef.current = requestKey;
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Deep-link handler: an App Router param change only surfaces as a re-render, so this effect IS the event handler for /control?focus=…. It resolves the target once, atomically, then selects + highlights + scrolls + clears the params; the requestKey ref already guarantees it runs once per navigation. Splitting the setStates into render-time adjustments would resolve the target twice against possibly-different data mid-refresh.
     if (snapshotTab) setSelectedTab(snapshotTab);
     setHighlightTab(resolvedTab);
     setLiveTargetTab(resolvedTab);
@@ -321,6 +326,7 @@ export function ControlPanel() {
     executionStalled: Boolean(data?.runnerExecutionStall?.stalled),
     automationMode: automationPolicy.mode,
     countdownSeconds: automationPolicy.countdownSeconds,
+    nowS,
   });
 
   const livePanelProps = {

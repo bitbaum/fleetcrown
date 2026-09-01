@@ -16,11 +16,18 @@ export function useAutoContinue(tab: string, initialEnabled?: boolean) {
   const [enabled, setEnabled] = useState(initialEnabled ?? false);
   const [saving, setSaving] = useState(false);
 
+  // Streamed value wins: mirror `initialEnabled` into state as a guarded
+  // render-time adjustment (not an effect), so an SSE update lands in the same
+  // render pass instead of one paint later.
+  const [prevInitial, setPrevInitial] = useState(initialEnabled);
+  if (initialEnabled !== prevInitial) {
+    setPrevInitial(initialEnabled);
+    if (initialEnabled !== undefined) setEnabled(initialEnabled);
+  }
+
+  // One-shot HTTP fallback only when the stream doesn't project this field.
   useEffect(() => {
-    if (initialEnabled !== undefined) {
-      setEnabled(initialEnabled);
-      return;
-    }
+    if (initialEnabled !== undefined) return;
     let cancelled = false;
     getJson<{ enabled: boolean }>(`/api/control/auto-continue?tab=${encodeURIComponent(tab)}`)
       .then((result) => {
