@@ -52,6 +52,8 @@
     "test:approval-cues": "npx tsx scripts/test/approval-cues.ts",
     "test:groq-error": "npx tsx scripts/test/groq-error.ts",
     "test:chat-chain": "npx tsx scripts/test/chat-chain.ts",
+    "test:ai-health": "npx tsx scripts/test/ai-health.ts",
+    "test:health-route": "npx tsx scripts/test/health-route.ts",
     "test:answering-prompt": "npx tsx scripts/test/answering-prompt.ts",
     "test:prompt-history": "npx tsx scripts/test/prompt-history.ts",
     "test:desktop-command-validator": "npx tsx scripts/test/desktop-command-validator.ts",

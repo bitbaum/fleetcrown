@@ -31,6 +31,7 @@
 import { HTTP_TIMEOUT_LONG_MS } from "@/lib/constants/time";
 import { classifyGroqLimit, groqRetryAfterSeconds, humanizeWait } from "@/lib/agent/groq-error";
 import { chainFrom, type ChatLink } from "@/config/chat-models";
+import { recordAIHealthFailure, recordAIHealthSuccess } from "@/lib/ai/health";
 
 export type ChatMessage = {
   role: "system" | "user" | "assistant" | "tool";
@@ -339,7 +340,9 @@ export async function callModelWithTools(
 ): Promise<ModelTurn> {
   const chain = chainFrom(input.model ?? process.env.LOKI_MODEL);
   if (chain.length === 0) {
-    throw new Error("no chat provider configured (set GROQ_API_KEY or OPENROUTER_API_KEY)");
+    const error = new Error("no chat provider configured (set GROQ_API_KEY or OPENROUTER_API_KEY)");
+    recordAIHealthFailure(error);
+    throw error;
   }
 
   const failures: string[] = [];
@@ -358,6 +361,9 @@ export async function callModelWithTools(
             `[loki] answered on ${turn.model} after ${failures.length} refusal(s): ${failures.join("; ")}`,
           );
         }
+        // Recorded once per top-level call — a later link answering is the
+        // fallback doing its job, not a health problem.
+        recordAIHealthSuccess();
         return turn;
       } catch (e) {
         const err =
@@ -386,7 +392,14 @@ export async function callModelWithTools(
   // Surface the most ACTIONABLE failure, not the last one. Only `size` gives the
   // caller something to do (shed facts and retry), so it wins when present.
   const summary = failures.join("; ");
-  if (kinds.has("size")) throw new Error(`request too large on every model: ${summary}`);
-  if (kinds.has("daily")) throw new Error(`daily quota exhausted: ${summary}`);
-  throw new Error(`no chat model answered: ${summary}`);
+  const exhausted = kinds.has("size")
+    ? new Error(`request too large on every model: ${summary}`)
+    : kinds.has("daily")
+      ? new Error(`daily quota exhausted: ${summary}`)
+      : new Error(`no chat model answered: ${summary}`);
+  // `size` is a request-shape problem, not a vendor outage — recording it as
+  // AI-down would make /api/health flap on prompts that are simply too big,
+  // which is a caller bug (see loop.ts's shedding), not a chain failure.
+  if (!kinds.has("size")) recordAIHealthFailure(exhausted);
+  throw exhausted;
 }

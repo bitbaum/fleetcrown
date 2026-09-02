@@ -18,6 +18,7 @@
 
 import { HTTP_TIMEOUT_SHORT_MS, HTTP_TIMEOUT_LONG_MS } from "@/lib/constants/time";
 import { chainFrom, type ChatLink } from "@/config/chat-models";
+import { recordAIHealthFailure, recordAIHealthSuccess } from "@/lib/ai/health";
 
 /**
  * The default chat model for every direct Groq call in this app.
@@ -215,16 +216,22 @@ export async function callTextDetailed(
             `${attempts.length} failed link(s) — ${attempts.map((a) => `${a.model}: ${a.error}`).join(" | ")}`,
         );
       }
+      // Recorded once per call, not per link: a success on a later link is
+      // still a success for the caller, and flagging it "degraded" here would
+      // report the fallback doing its job as if it were a problem.
+      recordAIHealthSuccess();
       return { text, model: link.model, provider: link.provider.id, attempts };
     } catch (err) {
       attempts.push({ model: link.model, error: err instanceof Error ? err.message : String(err) });
     }
   }
 
-  throw new Error(
+  const exhausted = new Error(
     `all ${attempts.length} model link(s) failed: ` +
       attempts.map((a) => `${a.model} → ${a.error}`).join(" | "),
   );
+  recordAIHealthFailure(exhausted);
+  throw exhausted;
 }
 
 /**

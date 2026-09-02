@@ -13,6 +13,7 @@
  */
 import { usableVisionChain } from "@/config/vision-models";
 import { HTTP_TIMEOUT_XL_MS } from "@/lib/constants/time";
+import { recordAIHealthFailure, recordAIHealthSuccess } from "@/lib/ai/health";
 
 export type VisionImage = { mimeType: string; dataBase64: string; name?: string };
 
@@ -43,9 +44,11 @@ export async function analyzeImages(input: {
 }): Promise<VisionResult> {
   const chain = usableVisionChain();
   if (chain.length === 0) {
-    throw new Error(
+    const error = new Error(
       "no vision provider configured (set OPENROUTER_API_KEY, or GROQ_VISION_MODEL if Groq has one again)",
     );
+    recordAIHealthFailure(error);
+    throw error;
   }
 
   const content = [
@@ -84,11 +87,16 @@ export async function analyzeImages(input: {
         failures.push(`${model}: empty response`);
         continue;
       }
+      // Recorded once per top-level call — a later link answering is the
+      // fallback doing its job, not a health problem.
+      recordAIHealthSuccess();
       return { text, model: `${provider.id}/${model}` };
     } catch (e) {
       failures.push(`${model}: ${e instanceof Error ? e.message.slice(0, 60) : "error"}`);
     }
   }
 
-  throw new Error(`all vision models failed — ${failures.join("; ")}`);
+  const exhausted = new Error(`all vision models failed — ${failures.join("; ")}`);
+  recordAIHealthFailure(exhausted);
+  throw exhausted;
 }
