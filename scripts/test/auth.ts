@@ -68,9 +68,9 @@ async function runTests(): Promise<void> {
   process.env.AUTH_SECRET = "test-auth-secret-123";
 
   await check("ticket round-trips (mint → verify)", () => {
-    const t = mintTicket({ xId: "4190014653", handle: "catomean" });
+    const t = mintTicket({ xId: "4190014653", handle: "bitbaum" });
     const d = verifyTicket(t);
-    assert(d?.xId === "4190014653" && d?.handle === "catomean", "round-trip mismatch");
+    assert(d?.xId === "4190014653" && d?.handle === "bitbaum", "round-trip mismatch");
   });
 
   await check("tampered ticket is rejected", () => {
