@@ -14,7 +14,10 @@ FleetCrown is a multi-user SaaS platform for commanding AI agent fleets across p
 
 - **Next.js 16** (App Router, Server Components, Server Actions)
 - **TypeScript strict** — no `any` without justification
-- **Tailwind CSS 4 + shadcn/ui** — always dark mode (`.dark` class on html)
+- **Tailwind CSS 4 + shadcn/ui** — dark by DEFAULT, not forced. `ThemeProvider`
+  sets `defaultTheme="dark"`; a `ThemeToggle` ships in 8 places including the
+  public nav, so light mode is a real state your styling must survive. Never
+  assume a dark ground outside the always-dark surfaces noted below.
 - **Drizzle ORM** — schema is SSOT for types (`$inferSelect`, `$inferInsert`)
 - **PostgreSQL 17** (self-hosted, `fleetcrown` database)
 
@@ -26,7 +29,8 @@ src/
 ├── components/
 │   ├── ui/        → Shared primitives (Card, Modal, Drawer, Field, PageLayout)
 │   ├── shell/     → AppShell, Sidebar, MobileNav (Today/Control/Projects + Loki + More), AskLokiButton → /loki
-│   ├── control/   → ControlPanel, ProjectCard, ProjectTile, ProjectProfile (fleet command)
+│   ├── control/   → ControlPanel, ProjectCard, ProjectProfile (fleet command).
+│   │                 There is no ProjectTile
 │   │                 ControlFleetStatus = the hero: ONE question ("is anything
 │   │                 waiting on me?"), the projects by name, at most one button.
 │   │                 ControlInbox = one collapsed queue for every small task
@@ -58,14 +62,19 @@ src/
 │   │                 a share link with no account. Who may move a task is
 │   │                 SSOT in config/crew.ts (OPERATOR_MOVES vs ASSIGNEE_MOVES)
 │   │                 — never widen one to "fix" a stuck row.
-│   ├── projects/  → ProjectGrid, ProjectDetail (split into header/tabs/inline-editors)
+│   ├── projects/  → ProjectsWorkspace + ProjectRow (list), ProjectWorkspaceView +
+│   │                 ProjectWorkspaceHeader (detail). ProjectGrid/ProjectDetail
+│   │                 survive only as TYPE names (project-grid-row.ts,
+│   │                 project-detail-types.ts) — there are no such components
 │   ├── goals/     → GoalCard, GoalsGrid, NewGoalButton
 │   ├── money/     → SubscriptionActions, NewSubscriptionButton
 │   ├── habits/    → HabitHeatmap (per-row daily check-off lives in today/)
 │   ├── events/    → EventCard, AddEventForm, EventsGrid
-│   ├── prompts/   → PromptRow, FeaturedCard, CategoryBar, RunModal, ScheduleModal
+│   ├── prompts/   → PromptCard (replaced the old FeaturedCard + PromptRow),
+│   │                 GroupBar (was CategoryBar), RunModal, ScheduleModal
 │   ├── settings/  → TeamSettings (invite flow)
-│   └── system/    → AutopilotCard, JobDetail, SystemStats
+│   └── system/    → JobDetail, SystemStats, FleetDoctorCard, ScheduledJobsCard,
+│   │                 RecentFailuresCard, HetznerCapacityCard (no AutopilotCard)
 ├── config/        → SSOT for navigation, channels, prompt-library, subscriptions,
 │                    actors (who may be listed vs delegated to) and crew (who
 │                    may move an assignment, and to where)
@@ -75,21 +84,42 @@ src/
 ├── hooks/         → useFetch, useCreateMutation, useInlineEdit
 └── lib/           → constants, dates, tools, utils, api/* wrappers
 
-home/              → Local-first agent orchestration library — runs on the
-                     user's machine (not the hosted box). Pure pieces that tail one
+home/              → Agent orchestration library. Pure pieces that tail one
                      append-only JSONL event log: watcher.ts (Bridge — emits
                      worker.idle when ~/.fleetcrown/sessions/*.md changes),
                      worker.ts (Consumer — injects bridge.dispatch into zellij,
                      sends Ctrl+C on bridge.cancel), plus decide/render/state.
                      The standalone Brain (home/server.ts, port 3001) and its
-                     scripts/home-start.sh launcher were RETIRED in a3f470d:
-                     Fleet Runner desktop is now the sole local executor and
-                     embeds these pieces via startWatcher(). Every dispatch goes
-                     cloud /api/inject → pending_command → Fleet Runner polls and
-                     types into zellij. To iterate on a single piece, run it
-                     directly (`npx tsx home/worker.ts --start`); test the whole
-                     library with `npm run test:home` (inline tests, no
-                     framework, also runs on pre-push). Full docs: home/README.md.
+                     scripts/home-start.sh launcher were RETIRED in a3f470d.
+                     These pieces are a LIBRARY, not a process — three different
+                     executors embed them via startWatcher():
+                       • scripts/box-runner.ts — systemd on the box. The DEFAULT.
+                         Exists precisely to delete the "laptop must be on"
+                         dependency (b62e3aeb, 2026-06-26).
+                       • desktop/ (Fleet Runner) — the user's own machine, for
+                         work that must touch local files or a local checkout.
+                       • scripts/hosted-runner.ts — ephemeral hosted runs.
+                     Do NOT describe any one of them as the sole executor; which
+                     one serves a given workflow is SSOT in
+                     docs/development/cloud-local-workflows.md. Every dispatch
+                     still goes cloud /api/inject → pending_command → whichever
+                     runner is attached polls and types into zellij. To iterate
+                     on a single piece, run it directly (`npx tsx
+                     home/worker.ts --start`); test the whole library with
+                     `npm run test:home`. Full docs: home/README.md.
+
+widget/            → The embeddable feedback widget customer sites load as
+                     <script src=".../widget.js">. Zero-dependency vanilla TS,
+                     bundled by esbuild on `prebuild` into public/widget.js
+                     (gitignored — built, never committed). main.ts is the UI
+                     (Shadow DOM, so host CSS cannot reach it), voice.ts is
+                     speak-your-feedback, report-payload.ts is the shared
+                     budgeting the ingest route also relies on.
+                     This is the ONLY surface strangers on other people's sites
+                     touch, so it earns the same care as src/ — it is covered by
+                     `npm run lint` and tsc. It is deliberately NOT bound by the
+                     four-layer design system below: it cannot see globals.css
+                     or Tailwind, so its literal colors are correct, not debt.
 ```
 
 ## Key Conventions
@@ -223,7 +253,9 @@ explicit rule to admit when something is not in that excerpt.
 (needs `GROQ_API_KEY`; not part of `verify`).
 
 ### SSOT Rules
-- **User ID**: `getCurrentUserId()` from `lib/session.ts` in API routes; `DEFAULT_USER_ID` is fallback only
+- **User ID**: `getApiUserId()` (API routes, returns `string | null`) or `requirePageUserId()`
+  (pages, throws/redirects) from `lib/session.ts`. There is no `getCurrentUserId` and no
+  `DEFAULT_USER_ID` — both were removed in 98e88b65 and neither has existed since
 - **Username normalization**: `normalizeUsername()` from `lib/username.ts` — used in forms, API, DB queries
 - **Page layout**: `.app-page` class on root div — never repeat padding pattern
 - **Navigation**: `config/navigation.ts` is SSOT for sidebar items
@@ -318,12 +350,19 @@ npx tsx home/worker.ts --start  # Run a single home/ piece for iteration
                                 # (Fleet Runner desktop is the real executor)
 ```
 
-A husky pre-commit hook runs `tsc --noEmit` and `eslint src/` automatically.
-A husky pre-push hook runs `npm run test:home` (always) and `npm run smoke`
-(if the dev server is up) before pushing. When `SMOKE_PRIVATE_PIN` is in
-`.env.local` (or exported), `npm run test:pre-push-prod-dogfood` runs authenticated prod smoke and headless
-prod UI dogfood (`ui-flows` always; `dogfood:loki` when builder online; `dogfood:machine` when local Fleet Runner connected).
-Smoke is opt-in (needs the dev server running) — run before opening a PR.
+A husky **pre-commit** hook runs `eslint` on STAGED FILES ONLY — no `tsc`. A
+commit is cheap and local, so it is gated cheaply.
+
+A husky **pre-push** hook runs the full `npm run verify` bundle — the same one
+CI runs, so green locally means green in CI — plus a schema-drift guard, dev-server
+smoke (if one is up), and, when `SMOKE_PRIVATE_PIN` is in `.env.local` (or
+exported), `npm run test:pre-push-prod-dogfood`: authenticated prod smoke and
+headless prod UI dogfood (`ui-flows` always; `dogfood:loki` when the builder is
+online; `dogfood:machine` when a local Fleet Runner is connected). A push is
+shared, so it is gated completely.
+
+Budget for it: pre-push takes minutes, not seconds. That is the trade — the
+expensive gate sits where the work becomes everyone's problem.
 
 ## Views
 
@@ -333,6 +372,7 @@ Smoke is opt-in (needs the dev server running) — run before opening a PR.
 | Agents | /agents | RETIRED — redirects to /control. Control already is the roster; escalations land there |
 | Loki | /loki | Chat assistant workspace — conversations, project-scoped dispatch, save-to-memory |
 | Approvals | /approvals | The Approval Queue as a destination — review/approve Loki's proposed actions; locked-zone state shows pending count + unlock CTA |
+| Feedback | /feedback | Every report across the fleet in one ironing-out loop: what phase each fix is in and the next action, without opening a project. Fed by the embeddable widget (`widget/`, served as `/widget.js`), AI review, and synthesized briefs. `ControlInbox` is the preview; this is the surface |
 | Terminal | /terminal | Live embedded terminal — watch/drive the cloud builder or local Fleet Runner PTY per project tab |
 | Activity | /activity | Fleet activity timeline — digests, event stream, per-project status strip across windows (hour/day/week/month). `/digests`, `/decisions` and `/history` are redirect stubs onto this page |
 | Atlas | /atlas | RETIRED — redirects to /projects. Live URL and down-state live on Projects |

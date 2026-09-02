@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
+  AlertTriangle,
   Archive,
   Check,
   ChevronRight,
@@ -90,10 +91,47 @@ export function ControlInbox() {
   const feedbackCount = summary.reduce((n, s) => n + (s.newCount || s.openCount), 0);
   const total = feedbackCount + needsWidget.length;
 
+  // A fetch that failed yields `[]` exactly like a queue that is genuinely
+  // empty, and this panel answers "is anything waiting on me?" by existing at
+  // all. Conflating the two makes a failed request render as the confident
+  // answer "no" — the one wrong answer this component must never give.
+  const loadFailed = Boolean(feedback.error || widget.error);
+  const settling = feedback.loading || widget.loading;
+
   // Silence is the correct rendering of an empty queue. An "Inbox (0)" panel is
   // a permanent reminder that a feature exists, which is not the same as being
   // useful — and on a phone it costs the same rows as a full one.
-  if (total === 0) return null;
+  //
+  // Silence is NOT the correct rendering of a queue we failed to read. While
+  // requests are still in flight we stay quiet (a failure that resolves in
+  // 300ms should not flash), but once they have settled and we still have
+  // nothing, say which of the two happened.
+  if (total === 0) {
+    if (settling || !loadFailed) return null;
+    return (
+      <section className="ui-inbox" aria-label="Needs you">
+        <header className="ui-inbox-head">
+          <AlertTriangle className="h-4 w-4 shrink-0 text-status-negative" aria-hidden="true" />
+          <h2 className="ui-inbox-title">Needs you</h2>
+        </header>
+        <div className="ui-inbox-group px-4 py-3">
+          <p className="ui-inbox-row-blocked" role="status">
+            Couldn&apos;t load the inbox — this is not a claim that nothing needs you.
+          </p>
+          <button
+            type="button"
+            className="ui-btn-xs mt-2"
+            onClick={() => {
+              feedback.refetch();
+              widget.refetch();
+            }}
+          >
+            Retry
+          </button>
+        </div>
+      </section>
+    );
+  }
 
   const toggle = (id: GroupId) => setOpenGroup((cur) => (cur === id ? null : id));
 
@@ -104,6 +142,15 @@ export function ControlInbox() {
         <h2 className="ui-inbox-title">Needs you</h2>
         <span className="ui-inbox-total">{total}</span>
       </header>
+
+      {/* One list loaded and the other did not: the total above is real but
+          incomplete. Saying so is cheaper than an operator trusting a count
+          that silently dropped a whole category. */}
+      {loadFailed && (
+        <p className="ui-inbox-row-blocked px-4 pb-2" role="status">
+          One list failed to load — the count may be low.
+        </p>
+      )}
 
       {feedbackCount > 0 && (
         <GroupRow

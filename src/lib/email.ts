@@ -2,18 +2,28 @@ import { Resend } from "resend";
 import { ROUTES } from "@/config/auth";
 import { APP_NAME, APP_EMAIL_FROM, APP_TAGLINE, LOCAL_DEV_URL } from "@/config/brand";
 import { EMAIL_THEME, mailSubject } from "@/config/comms";
-import { logDebug } from "@/db/queries/debug-logs";
+import { escapeHtml, escapeHtmlWithBreaks } from "@/lib/escape-html";
 
 // Record every send outcome to debug_logs so "did the reset/verify email
 // actually go out?" is answerable. No body/PII logged — just recipient,
 // subject, the Resend id, and any error. Fire-and-forget (never blocks send).
+//
+// The debug-logs import is deferred rather than top-level: it opens a DB
+// client at module load, which every *template* in this file would otherwise
+// inherit. Templates are pure string builders with no business touching a
+// database, and a static import made them unloadable (and so untestable)
+// without DATABASE_URL set. Sending still logs exactly as before.
 function logSend(to: string, subject: string, id: string | null, error: string | null): void {
-  void logDebug({
-    source: "email",
-    level: error ? "error" : "info",
-    message: `${error ? "failed" : "sent"}: ${subject}`,
-    meta: { to, subject, id, error },
-  }).catch(() => {});
+  void import("@/db/queries/debug-logs")
+    .then(({ logDebug }) =>
+      logDebug({
+        source: "email",
+        level: error ? "error" : "info",
+        message: `${error ? "failed" : "sent"}: ${subject}`,
+        meta: { to, subject, id, error },
+      }),
+    )
+    .catch(() => {});
 }
 
 // Lazy — Resend throws at construction if key is empty string, which breaks next build
@@ -160,11 +170,18 @@ export function feedbackShippedTemplate(input: {
 }) {
   const subject = mailSubject("feedback_shipped", input.site);
   const where = input.page ? ` on ${input.page}` : "";
+  // `excerpt` and `page` are visitor-authored: excerpt is the raw suggestion
+  // body from the widget, page is location.pathname off the customer's site.
+  // Both land in an email we send from our own domain to an address the same
+  // visitor chose, so unescaped they are an injection path into our mail.
+  const safeExcerpt = escapeHtml(input.excerpt);
+  const safeWhere = input.page ? ` on ${escapeHtml(input.page)}` : "";
   const html = emailShell(`
     <h2 style="margin:0 0 8px 0;font-size:22px;font-weight:700;color:${EMAIL_THEME.ink};">Your feedback shipped</h2>
-    ${p(`You reported: “${input.excerpt}”`)}
-    ${p(`A fix just went live${where}. Thanks for pointing it out.`)}
+    ${p(`You reported: “${safeExcerpt}”`)}
+    ${p(`A fix just went live${safeWhere}. Thanks for pointing it out.`)}
   `);
+  // The text/plain alternative is not markup, so it keeps the raw values.
   const text = `You reported: "${input.excerpt}"\n\nA fix just went live${where}. Thanks for pointing it out.`;
   return { subject, html, text };
 }
@@ -172,11 +189,7 @@ export function feedbackShippedTemplate(input: {
 /** Operator-approved outbound mail — same chrome as every other FleetCrown email. */
 export function operatorMailTemplate(input: { subject: string; body: string }) {
   const subject = mailSubject("operator", input.subject);
-  const escaped = input.body
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/\n/g, "<br>");
+  const escaped = escapeHtmlWithBreaks(input.body);
   const html = emailShell(`
     <h2 style="margin:0 0 8px 0;font-size:22px;font-weight:700;color:${EMAIL_THEME.ink};">${subject}</h2>
     <div style="font-size:15px;line-height:1.6;color:${EMAIL_THEME.body};">${escaped}</div>

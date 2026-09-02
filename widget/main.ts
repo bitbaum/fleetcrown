@@ -16,6 +16,13 @@
  */
 
 import { buildSuggestion, formatDiagnostics, type ReportDiagnostics } from "./report-payload";
+import {
+  createVoiceRecorder,
+  formatElapsed,
+  isVoiceSupported,
+  mergeTranscript,
+  type VoiceRecorder,
+} from "./voice";
 
 type Scope = "element" | "page" | "site";
 type SelectedEl = { elementType: string; elementText: string; selector: string };
@@ -23,6 +30,9 @@ type SelectedEl = { elementType: string; elementText: string; selector: string }
 const ACCENT = "#e0680f";
 const MAX_LEN = 2000;
 const MAX_ELEMENTS = 10;
+/** Stop recording here. Kept under the server's ~2 min upload cap so the
+ *  visitor is never told "too long" after they have already said it. */
+const VOICE_MAX_MS = 110_000;
 
 interface ReportInput {
   /** Pre-filled first line so the visitor never faces an empty box. */
@@ -123,6 +133,32 @@ input { margin-bottom: 10px; }
   border-radius: 50%; background: #1c1917; color: #fff; font-size: 11px; line-height: 1;
   display: flex; align-items: center; justify-content: center;
 }
+/* An 18px dot is under any touch-target guideline. Keep the dot the same size
+   visually and grow only the hit area, so the layout is unchanged but a thumb
+   can actually land on it. */
+@media (pointer: coarse) {
+  .shot .rm::after { content: ""; position: absolute; inset: -13px; }
+  .attach { padding: 12px 14px; }
+}
+/* ---- voice ---- */
+.mic {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; color: #57534e;
+  padding: 6px 10px; border: 1px dashed #d6d3d1; border-radius: 8px;
+}
+.mic:hover { border-color: ${ACCENT}; color: ${ACCENT}; }
+.mic svg { width: 14px; height: 14px; }
+.mic.rec { border-style: solid; border-color: #dc2626; color: #dc2626; background: #fef2f2; }
+.mic.busy { opacity: .7; cursor: default; }
+/* The pulsing dot is the only thing that says "live" at a glance; motion is
+   the signal, so honour a visitor who has asked for less of it. */
+.mic .dot {
+  width: 8px; height: 8px; border-radius: 50%; background: #dc2626;
+  animation: fcpulse 1.2s ease-in-out infinite;
+}
+@keyframes fcpulse { 0%,100% { opacity: 1; } 50% { opacity: .25; } }
+@media (prefers-reduced-motion: reduce) { .mic .dot { animation: none; } }
+@media (pointer: coarse) { .mic { padding: 12px 14px; } }
 .row { display: flex; gap: 8px; }
 .go {
   flex: 1; background: ${ACCENT}; color: #fff; font-size: 13px; font-weight: 600;
@@ -192,6 +228,17 @@ function downscaleImage(file: Blob): Promise<string | null> {
 
 const PENCIL_SVG =
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>';
+
+const MIC_SVG =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></svg>';
+
+/** A fresh <span> each call — one node cannot sit in two places, and the label
+ *  is rebuilt on every state change. */
+function micIcon(): HTMLSpanElement {
+  const span = h("span");
+  span.innerHTML = MIC_SVG;
+  return span;
+}
 
 /**
  * Prefer the thing the visitor meant (link/button/card) over decorative
@@ -469,7 +516,65 @@ function h<K extends keyof HTMLElementTagNameMap>(
     shotRm.setAttribute("aria-label", "Remove attached image");
     shotRm.addEventListener("click", () => setShot(null));
     shotWrap.append(shotImg, shotRm);
+    // ---- voice input ----
+    // Progressive enhancement: on a browser without MediaRecorder, or on an
+    // insecure origin where getUserMedia is undefined, no button is created at
+    // all. A control that cannot work is worse than no control.
+    let micBtn: HTMLButtonElement | null = null;
+    let voice: VoiceRecorder | null = null;
+    if (isVoiceSupported()) {
+      micBtn = h("button", "mic");
+      const micLabel = h("span", undefined, "Speak");
+      micBtn.append(micIcon(), micLabel);
+      micBtn.setAttribute("aria-label", "Record your feedback by voice");
+
+      voice = createVoiceRecorder({
+        endpoint: `${apiBase}/api/widget/transcribe`,
+        token,
+        maxMs: VOICE_MAX_MS,
+        onTranscript: (text) => {
+          textarea.value = mergeTranscript(textarea.value, text, MAX_LEN);
+          cnt.textContent = `${textarea.value.length}/${MAX_LEN}`;
+          sendBtn.disabled = !textarea.value.trim();
+          textarea.focus();
+          textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+        },
+        onState: (state, detail) => {
+          if (!micBtn) return;
+          micBtn.classList.toggle("rec", state === "recording");
+          micBtn.classList.toggle("busy", state === "requesting" || state === "transcribing");
+          micBtn.disabled = state === "requesting" || state === "transcribing";
+          micBtn.replaceChildren();
+          if (state === "recording") {
+            micBtn.append(
+              h("span", "dot"),
+              h("span", undefined, `Stop ${formatElapsed(detail?.elapsedMs ?? 0)}`),
+            );
+            micBtn.setAttribute("aria-label", "Stop recording and transcribe");
+          } else if (state === "transcribing") {
+            micBtn.append(h("span", undefined, "Transcribing…"));
+          } else if (state === "requesting") {
+            micBtn.append(h("span", undefined, "Allow mic…"));
+          } else {
+            micBtn.append(micIcon(), h("span", undefined, "Speak"));
+            micBtn.setAttribute("aria-label", "Record your feedback by voice");
+          }
+          // Errors share the panel's one error line rather than inventing a
+          // second place to look. Clearing on any non-error state means a
+          // successful retry visibly clears the previous failure.
+          errEl.textContent = state === "error" ? (detail?.error ?? "Microphone failed") : "";
+        },
+      });
+
+      micBtn.addEventListener("click", () => {
+        const s = voice!.state();
+        if (s === "recording") voice!.stop();
+        else if (s === "idle" || s === "error") void voice!.start();
+      });
+    }
+
     attachRow.append(attachBtn, shotWrap, fileInput);
+    if (micBtn) attachRow.append(micBtn);
 
     function setShot(dataUrl: string | null) {
       shot = dataUrl;
@@ -548,6 +653,11 @@ function h<K extends keyof HTMLElementTagNameMap>(
 
     function closePanel() {
       if (picking) stopPicking();
+      // Abandon any in-flight recording. Closing the panel with the mic still
+      // open would leave the browser's "recording" indicator lit on someone
+      // else's site, which reads as the page still listening after the visitor
+      // dismissed it — and would transcribe audio they chose not to send.
+      voice?.cancel();
       clearSelection();
       backdrop.remove();
       panel.remove();
