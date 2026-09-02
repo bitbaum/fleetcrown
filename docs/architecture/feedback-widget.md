@@ -255,7 +255,10 @@ over polling for readiness.
 
 | Route | Auth | Purpose |
 |-------|------|---------|
-| `GET /widget.js` | public | The embed bundle. Built by esbuild from `widget/` at build time into `public/`; immutable-cached with a version query. |
+| `GET /widget.js` | public | The embed bundle. Built by esbuild from `widget/` on `prebuild` into `public/` (gitignored — built, never committed). Served as a plain Next static asset: there is **no** version query and **no** cache-header rule for it (`next.config.ts` sets those for `/sw.js` only), so do not rely on immutable caching. |
+| `POST /api/widget/transcribe` | widget token in form | Speech-to-text for the mic. Same `fcw_*` token and origin allowlist as ingest; per-IP and per-token limits; Groq Whisper only. Deliberately NOT `/api/beacon/transcribe`, which takes no token and would become an anonymous spend endpoint if opened cross-origin. |
+| `OPTIONS /api/widget/transcribe` | public | CORS preflight, reflecting requested headers for the same reason ingest does. |
+| `GET /api/widget-boot` | token in query | Render gate + heartbeat. The remote kill switch: pausing or revoking a token hides the widget on every site without touching their HTML. Also what makes Coverage "Live" observed truth rather than install intent. |
 | `POST /api/feedback` | widget token in body | Ingest. Zod-validate, clamp lengths, resolve token → project (reject revoked), rate limit per IP+token, insert, `jsonOk`. |
 | `OPTIONS /api/feedback` | public | CORS preflight. Echo origin if it passes the token's `origins` allowlist (or any when unset). |
 | `GET/POST/DELETE /api/projects/[id]/widget-token` | session | Owner manages the token: create, view snippet, revoke/rotate. |
@@ -269,9 +272,11 @@ Gotchas already known:
 - **proxy.ts allowlist** (Next 16 middleware): `api/feedback` and `widget.js` must be
   added to the matcher exclusions or anonymous submissions bounce to /sign-in
   (same class as the OC-rail `proxy.ts` lesson).
-- **No rate limiter exists in FleetCrown yet** — port revampit's small
-  `src/lib/security/rate-limit.ts` (in-memory buckets, `getClientIdentifier`) as
-  `src/lib/rate-limit.ts`. Sufficient for a single-box deployment.
+- **Rate limiting is already solved — do not write another one.** `src/lib/rate-limit.ts`
+  exists and is owned by the shared `limitkit` package (see dotfiles/SHARED.md);
+  `/api/feedback`, `/api/widget-boot` and `/api/widget/transcribe` all use it.
+  This bullet previously said no limiter existed and told you to port one, which
+  is exactly how a fleet grows its fourteenth copy of the same utility.
 - CORS: this is a cross-origin POST from customer sites. `Content-Type: application/json`
   triggers preflight — the OPTIONS handler is not optional.
 
@@ -315,10 +320,14 @@ matters):
    uses (`contact: "FleetCrown AI reviewer"`). Human and AI feedback share one
    inbox and one triage flow; review runs never auto-dispatch fixes. UI: "AI
    review" button on the project feedback section (needs an active widget token).
-6. **Later (not now, YAGNI)** — email loop back to submitter, screenshot capture,
-   auto-triage draft actions via the action queue, per-page analytics, theming API,
-   site-wide crawl review, conversational widget (Loki-in-widget — needs its own
-   security model; the fcw_ token stays write-only).
+6. **Later (not now, YAGNI)** — per-page analytics, theming API, site-wide crawl
+   review, conversational widget (Loki-in-widget — needs its own security model;
+   the fcw_ token stays write-only).
+
+   SHIPPED since this list was written, despite still reading as "later":
+   the email loop back to the submitter, screenshot capture, auto-triage draft
+   actions via the action queue, and voice input. Check the API table above
+   before trusting any "not yet" in this file.
 
 ## Since v1 (2026-08-24)
 
@@ -346,4 +355,5 @@ matters):
 - npm-published widget package.
 - Multi-language widget UI (ship English; revampit's German strings become a simple
   `data-fc-lang` attribute later if needed).
-- Screenshots/replay — big surface, privacy questions; not in v1.
+- Session replay — big surface, privacy questions; still not built. (Screenshots
+  ARE built: `screenshot` column, client-downscaled data URL, owner-scoped read.)
