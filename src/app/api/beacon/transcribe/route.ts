@@ -7,7 +7,7 @@ import { join } from "path";
 import { existsSync } from "fs";
 import { randomUUID } from "crypto";
 import { isRuntimeAvailable } from "@/lib/runtime";
-import { callGroqTranscribe } from "@/lib/groq";
+import { transcribeWithGroq, type TranscribeAttempt } from "@/lib/transcribe";
 import { getApiUserId } from "@/lib/session";
 import { denyDemoInHandler } from "@/lib/demo-guard";
 import { getBeaconSettings } from "@/db/queries/beacon-settings";
@@ -55,68 +55,14 @@ async function readTranscriptionSettings(): Promise<{ whisperModel: string; prov
 }
 
 // ─── Transcription attempt shape ─────────────────────────────────────────────
-// Both helpers return the same tagged union so the orchestrator can decide
-// whether a failure is recoverable (fall back to the other provider) or final
-// (return the error to the user).
-type AttemptResult =
-  | { ok: true; text: string }
-  | { ok: false; recoverable: boolean; status: number; error: string; detail?: string };
+// The Groq attempt lives in @/lib/transcribe because the public feedback
+// widget needs the same step; the local fallback below stays here because it
+// spawns processes on this host and must not be reachable anonymously.
+// `attemptLocalWhisper` returns the same tagged union so the orchestrator can
+// still decide recoverable-vs-final uniformly.
+type AttemptResult = TranscribeAttempt;
 
-// ─── Groq Whisper cloud ──────────────────────────────────────────────────────
-// Fast (~2s), free tier, lives outside our infra. Failure modes that should
-// trigger a local-Whisper fallback: invalid key, rate-limited, network 5xx.
-// "No speech" or "recording too short" are final — the audio is the audio,
-// retrying somewhere else won't help.
-async function attemptGroq(audio: File): Promise<AttemptResult> {
-  const buf = Buffer.from(await audio.arrayBuffer());
-  if (buf.length < 100) {
-    return { ok: false, recoverable: false, status: 422, error: "Recording too short" };
-  }
-  try {
-    const blob = new Blob([buf], { type: audio.type || "audio/webm" });
-    const text = await callGroqTranscribe(blob, audio.type || "audio/webm");
-    if (!text) {
-      return { ok: false, recoverable: false, status: 422, error: "No speech detected" };
-    }
-    return { ok: true, text };
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (/groq transcribe 401/i.test(msg) || /invalid.*api.*key/i.test(msg)) {
-      return {
-        ok: false,
-        recoverable: true,
-        status: 502,
-        error:
-          "Groq API key invalid — rotate it at https://console.groq.com and update GROQ_API_KEY.",
-        detail: msg,
-      };
-    }
-    if (/groq transcribe 429/i.test(msg) || /rate.?limit/i.test(msg) || /quota/i.test(msg)) {
-      return {
-        ok: false,
-        recoverable: true,
-        status: 429,
-        error: "Groq rate-limited or over quota.",
-        detail: msg,
-      };
-    }
-    if (/abort|timeout/i.test(msg)) {
-      return {
-        ok: false,
-        recoverable: true,
-        status: 504,
-        error: "Groq transcription timed out (>30s).",
-        detail: msg,
-      };
-    }
-    return {
-      ok: false,
-      recoverable: true,
-      status: 502,
-      error: msg,
-    };
-  }
-}
+const attemptGroq = transcribeWithGroq;
 
 // ─── Local Whisper subprocess ────────────────────────────────────────────────
 // Runs on whatever next-server handles the request — your Linux box in dev,

@@ -121,6 +121,7 @@ export const DEMO_DENIED_PREFIXES: ReadonlyArray<readonly [string, DemoDenialRea
   ["/api/captures", "spend"],
   ["/api/hermes", "spend"],
   ["/api/ai", "spend"], // form-assist — one model call per submit
+  ["/api/widget", "spend"], // widget speech-to-text — one Whisper call per clip
 
   // — sends something to a real human ————————————————————————————————
   ["/api/actions", "outbound"],
