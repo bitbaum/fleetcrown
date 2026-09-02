@@ -19,7 +19,7 @@
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
     "check:schema": "npx tsx scripts/check-schema-drift.ts",
-    "lint": "eslint --cache --cache-location node_modules/.cache/eslint src/ home/",
+    "lint": "eslint --cache --cache-location node_modules/.cache/eslint src/ home/ widget/",
     "check:design": "bash scripts/check-design-system.sh",
     "check:desktop": "bash scripts/check-desktop.sh",
     "verify": "npm run format:check && npm run check:deploy-ready && npm run check:telegram-registry && tsc --noEmit && npm run lint && npm run check:design && npm run check:desktop && npm run test:unit && npm run test:home && npm run test:deploy-ref-gate && npm run test:not-behind-gate && npm run test:deploy-ready-gate && npm run test:ops",
