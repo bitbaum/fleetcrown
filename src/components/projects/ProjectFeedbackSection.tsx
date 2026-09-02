@@ -82,7 +82,12 @@ export function ProjectFeedbackSection({
     (f) => f.status === FEEDBACK_STATUS.NEW && f.source !== FEEDBACK_SOURCE.SYNTHESIZER,
   ).length;
   const token = tokenFetch.data?.token ?? null;
-  const showSetup = setupOpen || (!tokenFetch.loading && !token);
+  // A failed token GET also yields `null`, which previously read as "no token
+  // exists" and offered to enable a widget that may already be live on the
+  // customer's site. Not knowing is its own state: never show setup on the
+  // strength of a request that never answered.
+  const tokenUnknown = Boolean(tokenFetch.error);
+  const showSetup = setupOpen || (!tokenFetch.loading && !tokenUnknown && !token);
 
   // Keep work labels honest while something is in flight.
   useEffect(() => {
@@ -208,6 +213,20 @@ export function ProjectFeedbackSection({
       {synthesized && (
         <p className="mb-3">
           <DispatchedNote workspaceKey={projectName} />
+        </p>
+      )}
+
+      {tokenUnknown && (
+        <p className="mb-3 text-xs text-status-negative" role="status">
+          Couldn&apos;t check whether the widget is enabled — showing neither state rather than
+          guessing.{" "}
+          <button
+            type="button"
+            onClick={tokenFetch.refetch}
+            className="text-accent-text underline-offset-2 hover:underline"
+          >
+            Retry
+          </button>
         </p>
       )}
 

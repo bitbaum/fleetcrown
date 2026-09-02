@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Loader2, MessagesSquare } from "lucide-react";
+import { AlertTriangle, Loader2, MessagesSquare } from "lucide-react";
 import { useFetch } from "@/hooks/use-fetch";
 import { compactDurationHours } from "@/lib/dates";
 import { FEEDBACK_SOURCE, FEEDBACK_STATUS, type FeedbackStatus } from "@/lib/constants/statuses";
@@ -35,7 +35,15 @@ const SOURCE_FILTERS = [
  * stays behind a toggle.
  */
 export function FeedbackInbox() {
-  const { data, loading, refetch } = useFetch<{
+  // `loadError` is aliased because `error` below is the *mutation* error from
+  // useFeedbackActions. They are different failures and the page shows them in
+  // different places; sharing the name is how the load error got dropped.
+  const {
+    data,
+    loading,
+    error: loadError,
+    refetch,
+  } = useFetch<{
     feedback: InboxItem[];
     metrics: FeedbackLoopMetrics | null;
   }>("/api/feedback/inbox");
@@ -93,6 +101,25 @@ export function FeedbackInbox() {
       <div className="flex items-center gap-2 py-10 text-sm text-text-tertiary">
         <Loader2 className="ui-spinner-xs" /> Loading your inbox…
       </div>
+    );
+  }
+
+  // An empty list because the request failed is not "no feedback yet" — it is
+  // an unanswered question, and this page is the one place an operator checks
+  // to be sure nothing is waiting. Answer the question that was actually asked.
+  if (all.length === 0 && loadError) {
+    return (
+      <EmptyState icon={AlertTriangle} title="Couldn't load feedback">
+        The inbox request failed, so this is not a claim that there is no feedback.{" "}
+        <button
+          type="button"
+          onClick={refetch}
+          className="text-accent-text underline-offset-2 hover:underline"
+        >
+          Try again
+        </button>
+        .
+      </EmptyState>
     );
   }
 
