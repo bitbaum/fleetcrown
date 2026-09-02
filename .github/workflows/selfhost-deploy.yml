@@ -22,10 +22,17 @@ on:
         required: true
         type: string
       node-version:
+        # The FALLBACK when a repo commits no .nvmrc. It must track the box
+        # runtime (Node 24 since 2026-08-31) and the fleet's CI default —
+        # 2026-09-02: aoz-housing's deploy npm-ci'd with npm 10 (Node 20)
+        # against a lockfile written by npm 11 (Node 24 CI) and failed on
+        # "Missing: esbuild from lock file", stranding two merged commits.
+        # A stale fallback here recreates that npm-major split for every
+        # .nvmrc-less repo in the fleet.
         description: "Node version to build with"
         required: false
         type: string
-        default: "20"
+        default: "24"
       install-flags:
         description: "Extra flags for the install command (e.g. --legacy-peer-deps)"
         required: false
