@@ -58,10 +58,13 @@ export const config = {
      *   api/feedback               – public widget ingest (fcw_* token auth + CORS); the
      *                                PATCH triage sub-route enforces session auth in-handler
      *   api/widget-boot            – public widget render-gate + heartbeat (same CORS story)
+     *   api/widget/transcribe      – widget speech-to-text; fcw_* token auth + origin allowlist
+     *                                in-handler, Groq only. Named exactly, NOT `api/widget/`, so
+     *                                a future sibling under that prefix is protected by default
      *   widget\.js                 – the embeddable feedback-widget bundle customer sites load
      *   import-from-local\.sh      – public bash one-liner users curl-pipe into their terminal
      *                                to scan ~/dev and POST detected repos to /api/projects/import-from-local
      */
-    "/((?!_next/static|_next/image|favicon\\.ico|icon\\.svg|manifest\\.json|opengraph-image|twitter-image|robots\\.txt|sitemap\\.xml|rss\\.xml|sign-in|sign-up|forgot-password|reset-password|verify-email|setup|invite|download|whitepaper|thoughts|frontier|mission|philosophy|investors|roadmap|pricing|releases|privacy|terms|license|docs|blog|changelog|support|u/|share/project/|share/task/|beacon|import-from-local\\.sh|api/auth|api/agent/install|api/agent/daemon|api/health|api/setup|api/crons|api/system|api/beacon|api/invitations/|api/share/task/|api/stripe/webhook|api/orangecat/|api/solon/|api/newsletter|api/feedback|api/widget-boot|widget\\.js).+)",
+    "/((?!_next/static|_next/image|favicon\\.ico|icon\\.svg|manifest\\.json|opengraph-image|twitter-image|robots\\.txt|sitemap\\.xml|rss\\.xml|sign-in|sign-up|forgot-password|reset-password|verify-email|setup|invite|download|whitepaper|thoughts|frontier|mission|philosophy|investors|roadmap|pricing|releases|privacy|terms|license|docs|blog|changelog|support|u/|share/project/|share/task/|beacon|import-from-local\\.sh|api/auth|api/agent/install|api/agent/daemon|api/health|api/setup|api/crons|api/system|api/beacon|api/invitations/|api/share/task/|api/stripe/webhook|api/orangecat/|api/solon/|api/newsletter|api/feedback|api/widget-boot|api/widget/transcribe|widget\\.js).+)",
   ],
 };
