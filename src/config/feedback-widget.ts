@@ -1,27 +1,55 @@
 /**
- * SSOT: which routes show FleetCrown's own dogfood feedback widget
- * (docs/architecture/feedback-widget.md, Phase 4). Public marketing/content
- * surface only — the widget FAB would collide with the app shell's mobile
- * nav, and in-app feedback already has Loki.
+ * SSOT: where FleetCrown shows its OWN feedback widget.
  *
- * "/" is matched exactly; everything else by prefix.
+ * This used to be an allowlist of eleven public marketing routes, justified in
+ * a comment that gave two reasons. Both were checked, and neither holds:
+ *
+ *   "the widget FAB would collide with the app shell's mobile nav"
+ *      — true when written. The widget now measures its corner and steps out
+ *        of the way: rectangle-matching for the desktop Loki FAB (56px at
+ *        bottom:28, which the feedback FAB overlapped exactly), and an
+ *        interactive hit-test below 480px for the mobile nav, which is
+ *        `inset-x-3` and therefore too wide for the rectangle scan to treat as
+ *        an obstacle. See widget/placement.ts.
+ *
+ *   "in-app feedback already has Loki"
+ *      — not true. `insertSiteFeedback` has exactly one caller, the widget's
+ *        ingest route. Loki cannot file feedback; the word does not appear in
+ *        loki-core.ts. Telling the assistant "this button is broken" produces
+ *        no site_feedback row, nothing in the triage inbox, and nothing
+ *        dispatchable. A signed-in user's only route was to tell the operator
+ *        out of band.
+ *
+ * So the rule is inverted: the widget renders everywhere EXCEPT a short list of
+ * surfaces where a floating button actively harms the task. An allowlist meant
+ * every new page shipped without a way to report a bug on it, and nobody
+ * noticed because the omission is invisible — the whole reason this product
+ * exists is that unreported problems stay unfixed.
  */
-export const FEEDBACK_WIDGET_PUBLIC_PREFIXES = [
-  "/",
-  "/thoughts",
-  "/frontier",
-  "/mission",
-  "/philosophy",
-  "/roadmap",
-  "/pricing",
-  "/download",
-  "/whitepaper",
-  "/investors",
-  "/releases",
+
+/**
+ * Surfaces that deliberately have no widget, each with the reason.
+ * Matched exactly or by `/prefix/`.
+ */
+export const FEEDBACK_WIDGET_EXCLUDED_PREFIXES = [
+  // A full-height PTY. A floating button over live terminal output covers the
+  // thing the operator is reading, and the terminal has its own composer.
+  "/terminal",
+  // Not in the product yet. Feedback here would be about the door, not the
+  // room, and an anonymous FAB on a credential form is the wrong invitation.
+  "/sign-in",
+  "/sign-up",
+  "/forgot-password",
+  "/reset-password",
+  "/verify-email",
+  "/setup",
+  "/invite",
+  // The widget itself. Rendering the launcher on the page that documents the
+  // launcher makes "is this yours or the demo's?" an unanswerable question.
+  "/docs/feedback-widget",
 ] as const;
 
 export function isFeedbackWidgetRoute(pathname: string): boolean {
-  return FEEDBACK_WIDGET_PUBLIC_PREFIXES.some((p) =>
-    p === "/" ? pathname === "/" : pathname === p || pathname.startsWith(`${p}/`),
-  );
+  const path = pathname || "/";
+  return !FEEDBACK_WIDGET_EXCLUDED_PREFIXES.some((p) => path === p || path.startsWith(`${p}/`));
 }

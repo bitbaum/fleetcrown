@@ -5,8 +5,9 @@ import { usePathname } from "next/navigation";
 import { isFeedbackWidgetRoute } from "@/config/feedback-widget";
 
 /**
- * Dogfood embed of FleetCrown's own feedback widget on the public pages
- * (docs/architecture/feedback-widget.md, Phase 4). Injects the exact same
+ * Dogfood embed of FleetCrown's own feedback widget — on EVERY surface, not
+ * just the public pages (see config/feedback-widget.ts for the short list of
+ * exclusions and why each one is excluded). Injects the exact same
  * /widget.js script tag a customer site would use — same code path, same
  * ingest API — pointed at the project the FEEDBACK_WIDGET_TOKEN env var
  * belongs to. Rendered by the root layout only when that env var is set.
@@ -14,7 +15,7 @@ import { isFeedbackWidgetRoute } from "@/config/feedback-widget";
  * Imperative injection (not a JSX <script>) so route changes can mount and
  * unmount it cleanly along with the host element the widget creates.
  */
-export function PublicFeedbackWidget({ token }: { token: string }) {
+export function DogfoodFeedbackWidget({ token }: { token: string }) {
   const pathname = usePathname();
   const show = isFeedbackWidgetRoute(pathname ?? "");
 
