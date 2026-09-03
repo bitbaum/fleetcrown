@@ -24,7 +24,7 @@
  * observed failure mode, not defensive padding, and the loop always degrades to
  * "answer with what you have" rather than to an error.
  */
-import { assignFactIds, renderFacts, type Fact } from "ai-kit/grounding";
+import { assignFactIds, renderFacts, type Fact } from "@bitbaum/ai-kit/grounding";
 import {
   trimFactsToBudget,
   mergeFactsWithCap,
@@ -37,8 +37,8 @@ import {
   directiveId,
   NO_BASIS,
   type Directive,
-} from "ai-kit/grounding";
-import { verifyAnswer, buildRepairPrompt, type Violation } from "ai-kit/grounding";
+} from "@bitbaum/ai-kit/grounding";
+import { verifyAnswer, buildRepairPrompt, type Violation } from "@bitbaum/ai-kit/grounding";
 import { callModelWithTools, type ChatMessage, type ToolCall } from "@/lib/agent/llm";
 import {
   renderToolCatalog,

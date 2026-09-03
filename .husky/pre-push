@@ -25,7 +25,7 @@ fi
 # ---------------------------------------------------------------------------
 # PRECONDITION, NOT A CHECK.
 #
-# A stale node_modules makes tsc report "Cannot find module 'ai-kit'", which
+# A stale node_modules makes tsc report "Cannot find module '@bitbaum/ai-kit'", which
 # reads as a type error in your change and is not one. That exact confusion cost
 # a day: the dependency was unresolvable after a GitHub account rename, every
 # push went red, and the conclusion drawn was "the hook is broken". Fail loudly

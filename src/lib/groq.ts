@@ -4,7 +4,7 @@
  *
  * ── Why this is no longer Groq-only ──────────────────────────────────────────
  * It kept the name because sixteen call sites import it, but the transport now
- * walks the SAME cross-vendor chain Loki has used all along (`ai-kit` via
+ * walks the SAME cross-vendor chain Loki has used all along (`@bitbaum/ai-kit` via
  * config/chat-models). That is the whole fix for 2026-08-18: Groq retired
  * `llama-3.3-70b-versatile`, every direct caller here had exactly one vendor
  * and no fallback, and seven features went dark for eight days. Loki, which

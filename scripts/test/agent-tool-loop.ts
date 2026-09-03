@@ -25,7 +25,7 @@ import {
   type ToolRegistry,
 } from "../../src/lib/agent/tools/registry";
 import { runLokiTurn } from "../../src/lib/agent/loop";
-import { makeFact, assignFactIds } from "ai-kit/grounding";
+import { makeFact, assignFactIds } from "@bitbaum/ai-kit/grounding";
 
 const NAMES = ["search_people", "list_projects", "propose_action"];
 

@@ -1,5 +1,5 @@
 /**
- * 429 classification — now owned by `ai-kit`.
+ * 429 classification — now owned by `@bitbaum/ai-kit`.
  *
  * The three kinds of 429 (capacity / size / daily) and their opposite responses
  * were learned here the expensive way, so the knowledge was extracted rather
@@ -20,4 +20,4 @@ export {
   retryAfterSeconds as groqRetryAfterSeconds,
   humanizeWait,
   rateLimitMessage,
-} from "ai-kit";
+} from "@bitbaum/ai-kit";

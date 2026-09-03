@@ -26,7 +26,7 @@
 import { getStuckGoals, getGoalsDueSoon, listUpcomingCommitments } from "@/db/queries/today";
 import { getEventsDueSoon } from "@/db/queries/events";
 import { getTodayHabits } from "@/db/queries/habits";
-import type { Directive } from "ai-kit/grounding";
+import type { Directive } from "@bitbaum/ai-kit/grounding";
 
 /** Days ahead treated as "imminent" for the day-planning brief. */
 const IMMINENT_DAYS = 3;

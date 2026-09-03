@@ -29,15 +29,15 @@ import {
   renderFacts,
   unrecordedFields,
   NOT_RECORDED,
-} from "ai-kit/grounding";
+} from "@bitbaum/ai-kit/grounding";
 import {
   buildContract,
   buildGroundedContext,
   renderDirectives,
   buildAssistantRules,
   NO_BASIS,
-} from "ai-kit/grounding";
-import { verifyAnswer, buildRepairPrompt } from "ai-kit/grounding";
+} from "@bitbaum/ai-kit/grounding";
+import { verifyAnswer, buildRepairPrompt } from "@bitbaum/ai-kit/grounding";
 
 // ── The real records, exactly as FleetCrown stores them ──────────────────────
 const FACTS = assignFactIds([
