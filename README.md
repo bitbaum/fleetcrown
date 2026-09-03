@@ -9,8 +9,9 @@ once. It is the **engineering pillar** of a three-pillar stack:
 | Engineering | **FleetCrown** (this repo) | Agent fleets, project execution, and the deploy pipeline for the whole stack |
 | Governance | [Solon](https://solon.orangecat.ch) | Bitcoin-signed proposals, votes, and self-verifying decisions |
 
-The ties are real: FleetCrown is OrangeCat's customer #1 (OIDC login, publish
-bus, stakeholder graph, shared BTC wallet); FleetCrown's agent Loki is a
+The ties are real: FleetCrown dogfoods OrangeCat (OIDC login, publish
+bus, stakeholder graph, shared BTC wallet) — sibling-product integration, **not**
+a paying or institutional customer; FleetCrown's agent Loki is a
 registered voting member in Solon, casting Bitcoin-signed votes from its own
 box (`scripts/solon/cast-vote.ts`) with decision webhooks landing at
 `/api/solon/events`; and `.github/workflows/selfhost-deploy.yml` is the shared
@@ -21,6 +22,7 @@ but serious users still need a trustworthy command center. FleetCrown provides t
 state, queues, handoffs, guardrails, and business context around that capacity.
 
 Production: https://fleetcrown.orangecat.ch
+**Status (2026-09-03):** live, pre-1.0, single-builder. Hosting is **Hetzner** (not Vercel). Stripe is dark: **CHF 0 billed, 0 paying users**. `fleetcrown.com` is unregistered.
 
 ## What It Does
 
@@ -41,17 +43,19 @@ Production: https://fleetcrown.orangecat.ch
 
 ## Product And Economic Model
 
-FleetCrown is designed as a high-retention SaaS for power users and small teams. As a customer of OrangeCat, it demonstrates the "one is customer of the other" model (FleetCrown production consumes OrangeCat economic services). Both projects live on the OrangeCat platform with typed relations. See live: orangecat.ch projects for FleetCrown / OrangeCat (shared wallet bc1q3hh4yklcmwtpnqmxyksw36yedg7zyfy6tzzqwz).
+FleetCrown is designed as a high-retention SaaS for power users and small teams. It dogfoods OrangeCat economic services (typed relations, shared wallet) — **not a paying customer**. Both projects live on the OrangeCat platform with typed relations. See live: orangecat.ch projects for FleetCrown / OrangeCat (shared wallet bc1q3hh4yklcmwtpnqmxyksw36yedg7zyfy6tzzqwz).
 The economic model is built around durable workflow ownership, not one-off AI
 novelty.
 
-| Layer | Value | Monetization path |
+**The table below is a designed / planned model. It is not billed. There are no paying users. Stripe is dark (CHF 0).**
+
+| Layer | Value | Planned monetization (not billed) |
 | --- | --- | --- |
-| Individual builder | One FleetCrown for projects, agents, commitments, and execution memory | Pro subscription |
-| Team / studio | Shared project state, team visibility, agent dispatch, audit trail | Per-seat team plan |
-| Agent runtime | Local daemon connects private machines to the hosted control plane | Paid runtime seats / usage tiers |
-| Execution intelligence | Prompt routing, queue reasoning, outcomes, continuation policies | Premium automation tier |
-| Enterprise / investor diligence | Operating telemetry, governance, security, and project health | Managed deployment / annual contract |
+| Individual builder | One FleetCrown for projects, agents, commitments, and execution memory | Pro subscription (planned) |
+| Team / studio | Shared project state, team visibility, agent dispatch, audit trail | Per-seat team plan (planned) |
+| Agent runtime | Local daemon connects private machines to the hosted control plane | Paid runtime seats / usage tiers (planned) |
+| Execution intelligence | Prompt routing, queue reasoning, outcomes, continuation policies | Premium automation tier (planned) |
+| Enterprise / investor diligence | Operating telemetry, governance, security, and project health | Managed deployment / annual contract (planned) |
 
 See [docs/business-model.md](docs/business-model.md) for positioning,
 pricing logic, expansion loops, and defensibility.

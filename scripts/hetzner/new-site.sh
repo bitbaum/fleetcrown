@@ -157,7 +157,7 @@ fi
 # Before anything else reaches the box. A site that is not in a repository
 # cannot be handed to anyone, and that is the step that gets skipped.
 echo "→ repository"
-run "cd '$REPO_DIR' && git init -q && git add -A && git -c user.name='Mao Nakamoto' -c user.email='georgy.butaev@revamp-it.ch' commit -q -m 'feat: scaffold $TITLE' && git branch -M main"
+run "cd '$REPO_DIR' && git init -q && git add -A && git -c user.name='Mao Nakamoto' -c user.email='catomean@users.noreply.github.com' commit -q -m 'feat: scaffold $TITLE' && git branch -M main"
 run "cd '$REPO_DIR' && gh repo create '$GH_OWNER/$SLUG' $VISIBILITY --source=. --remote=origin --push"
 
 # ----------------------------------------------------------------- ci secret
