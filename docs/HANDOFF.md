@@ -2,6 +2,24 @@
 
 **Read this first.** A 5-minute brief on what FleetCrown is, where it stands, what to work on next, and what you'll get wrong if you don't know.
 
+> **⚠ Written 2026-06-07. Re-checked 2026-09-02: the VERSION AND SCALE FIGURES
+> BELOW ARE WRONG.** The narrative — why the architecture is shaped this way,
+> what the bundled-renderer disaster taught — is still worth reading. The numbers
+> are not. Verified today:
+>
+> | This file says | Actually |
+> |---|---|
+> | Desktop v0.7.5 latest | **v0.8.15** (31+ releases since) |
+> | Electron 33 | **^43.4.1** |
+> | 39 tables | ~57 schema modules |
+> | `drizzle-kit migrate` on deploy | forward-only applier, `scripts/hetzner/apply-schema.sh` |
+> | "Next: A3, A4, A6" | all ticked in the priority plan |
+> | Release recipe: run the mirror by hand | automated in `desktop-release.yml` |
+>
+> Because this file opens with "read this first", a stale number here propagates
+> further than one buried in a reference doc. Prefer `CLAUDE.md` for architecture
+> and `docs/development/cloud-local-workflows.md` for what runs where.
+
 Written 2026-06-07 after a 2-day session that took the product from v0.7.0 (broken bundled-renderer disaster) to v0.7.5 (clean Electron web-shell + adapter architecture + observability + migration ledger). Audience is the next agent or contributor.
 
 > **Infra update (2026-06-12):** FleetCrown left Vercel entirely. The web app and

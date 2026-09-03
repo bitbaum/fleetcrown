@@ -1,5 +1,19 @@
 # Codebase Audit Report — Hardcoded Values, Magic Numbers, Secrets & SSOT
 
+> **⚠ Snapshot from 2026-07-17 — re-checked 2026-09-02, and it has drifted BOTH ways.**
+> Verify any line here against the code before acting on it.
+>
+> - **Item 3 (bare box IPs) is largely CLOSED**: `scripts/hetzner/_box-env.sh` exists
+>   and is sourced across the hetzner scripts. Roughly 7 bare IPs remain.
+> - **Item 8 (god files) got WORSE, not better**: `desktop/src/main/index.ts`
+>   1254 → 1297, `poller.ts` 963 → 1044, `control-presenter.ts` 789 → 948 (and it
+>   moved to `src/components/control/`). An unticked "LOW" item is not a stable one.
+> - **Item 1 (rotate the PIN) is still open**, and this file was itself the last
+>   place in HEAD printing the value — now redacted. See the item for detail.
+>
+> This is the failure mode of an undated point-in-time report: it keeps being read
+> as current. If you update it, update this banner too, or retire the file.
+
 **Date**: 2026-07-17
 **Auditor**: Claude Code (Fable 5 — 6 parallel audit agents + 6 fix agents in 3 waves)
 **Branch**: `main`
@@ -38,7 +52,7 @@ lives in git history.
 ## What was found and fixed (by wave)
 
 ### Wave 1 — identity, secrets, URLs, design, dead code
-- **Private-zone PIN `55550`** removed from 3 tracked scripts (usage examples now `<pin>`).
+- **Private-zone PIN** removed from 3 tracked scripts (usage examples now `<pin>`).
 - **Identity scrub**: seed email now `SEED_OWNER_EMAIL` env (fallback `mao@orangecat.ch`);
   `GEORGE_USER_ID` → `OWNER_USER_ID`; "George" comments → "the operator"/"Mao" in
   code + docs + a published Thoughts essay; CODEOWNERS `@g-but` → `@bitbaum`;
@@ -85,10 +99,16 @@ lives in git history.
 
 ## Open Items (not fixed — prioritized)
 
-1. **ROTATE THE PRIVATE-ZONE PIN** *(operator action, HIGH)* — `55550` is in git
-   history (and in this audit's history note). Removing it from HEAD does not
-   un-leak it. Same caveat applies to the scrubbed email/name: history rewrite or
-   acceptance is a deliberate decision, not done here.
+1. **ROTATE THE PRIVATE-ZONE PIN** *(operator action, HIGH, STILL OPEN)* — the old
+   PIN is in git history. Removing it from HEAD does not un-leak it, so rotation
+   is the only real fix and only an operator can do it. Same caveat applies to the
+   scrubbed email/name: history rewrite or acceptance is a deliberate decision.
+
+   Note (2026-09-02): this report scrubbed the PIN from three scripts and then
+   printed it twice in its own text, which left it as the ONLY file in HEAD still
+   carrying the value it tells you to rotate. Both occurrences are now redacted.
+   That does not close the item — the history leak is unchanged and rotation is
+   still owed.
 2. **Box workspace remotes embed the GitHub OAuth token** *(HIGH, infra)* — every
    `/home/ubuntu/dev/*` remote URL is `https://x-access-token:gho_…@github.com/…`.
    Works, but leaks into logs/ps. Move to a git credential helper on the box.
