@@ -3730,6 +3730,27 @@
   .ui-inbox-batch {
     @apply mb-2 flex flex-wrap items-center gap-1.5;
   }
+  /* Per-row edit/delete icons, revealed rather than permanent.
+     Measured on the project Context tab: 16 attribute rows each carried a
+     visible pencil AND trash — 32 icon buttons competing with the text they
+     act on, and 80px of every row reserved for them. Taken out of flow and
+     revealed on hover, the prose in a 440px grid column goes from 228px wide
+     to the full column, which is the difference between 30 characters a line
+     and a readable measure.
+     Kept reachable, not hidden: focus-within reveals them for keyboard users,
+     and a coarse pointer — which has no hover at all — always shows them. */
+  .ui-row-actions {
+    @apply absolute right-0 top-2 flex items-start gap-1.5 opacity-0 transition-opacity;
+  }
+  .group:hover .ui-row-actions,
+  .group:focus-within .ui-row-actions {
+    @apply opacity-100;
+  }
+  @media (pointer: coarse) {
+    .ui-row-actions {
+      @apply opacity-100;
+    }
+  }
   .ui-inbox-empty {
     @apply py-2 text-xs text-text-muted;
   }

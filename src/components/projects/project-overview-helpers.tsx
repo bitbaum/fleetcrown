@@ -139,9 +139,16 @@ export function AttrRow({
 
   const isUrl = value.startsWith("http");
   return (
-    <div className="group flex min-h-14 flex-col gap-1.5 border-b border-border-subtle py-3 last:border-0 sm:flex-row sm:gap-4">
-      <span className="ui-micro-label shrink-0 pt-0.5 leading-relaxed sm:w-32">{label}</span>
-      <div className="flex-1 min-w-0 flex items-start gap-1.5">
+    /* Label ABOVE the value, not beside it.
+       Side-by-side cost 128px of label plus 80px of always-visible icons out
+       of a 440px grid column, leaving 228px for prose — 425 characters of
+       Mission wrapped to ~30 characters a line and 296px tall. Readable prose
+       wants 45–75. Stacking the label and lifting the icons out of flow gives
+       the text the whole column, which is most of why this tab read as a wall.
+       `relative` anchors .ui-row-actions; `group` is what reveals them. */
+    <div className="group relative flex min-h-14 flex-col gap-1 border-b border-border-subtle py-3 last:border-0">
+      <span className="ui-micro-label leading-relaxed">{label}</span>
+      <div className="min-w-0 pr-20">
         {isUrl ? (
           <a
             href={value}
@@ -154,28 +161,28 @@ export function AttrRow({
         ) : (
           <span className="break-words text-sm leading-relaxed text-text-secondary">{value}</span>
         )}
-        {editable && (
-          <>
-            <button
-              onClick={() => setEditing(true)}
-              className="ui-icon-action -my-2 min-h-10 min-w-10 shrink-0 text-text-muted hover:text-text-secondary"
-              title="Edit"
-              aria-label={`Edit ${label}`}
-            >
-              <Pencil className="h-3 w-3" />
-            </button>
-            <button
-              onClick={deleteAttr}
-              disabled={deleting}
-              className="ui-icon-action -my-2 min-h-10 min-w-10 shrink-0 text-text-muted hover:text-status-negative disabled:opacity-30"
-              title="Delete attribute"
-              aria-label={`Delete ${label}`}
-            >
-              {deleting ? <Loader2 className="ui-spinner-xs" /> : <Trash2 className="h-3 w-3" />}
-            </button>
-          </>
-        )}
       </div>
+      {editable && (
+        <div className="ui-row-actions">
+          <button
+            onClick={() => setEditing(true)}
+            className="ui-icon-action min-h-10 min-w-10 shrink-0 text-text-muted hover:text-text-secondary"
+            title="Edit"
+            aria-label={`Edit ${label}`}
+          >
+            <Pencil className="h-3 w-3" />
+          </button>
+          <button
+            onClick={deleteAttr}
+            disabled={deleting}
+            className="ui-icon-action min-h-10 min-w-10 shrink-0 text-text-muted hover:text-status-negative disabled:opacity-30"
+            title="Delete attribute"
+            aria-label={`Delete ${label}`}
+          >
+            {deleting ? <Loader2 className="ui-spinner-xs" /> : <Trash2 className="h-3 w-3" />}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

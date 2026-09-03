@@ -32,6 +32,7 @@ import { fleetSurfaceHref } from "@/lib/fleet-context";
 import { EXECUTOR_COPY } from "@/config/executor-copy";
 import { DispatchedNote } from "@/components/projects/ProjectActionButtons";
 import { WidgetPlacementControl } from "@/components/projects/WidgetPlacementControl";
+import { cn } from "@/lib/utils";
 
 type WidgetTokenInfo = {
   token: string;
@@ -92,6 +93,13 @@ export function ProjectFeedbackSection({
   // strength of a request that never answered.
   const tokenUnknown = Boolean(tokenFetch.error);
   const showSetup = setupOpen || (!tokenFetch.loading && !tokenUnknown && !token);
+  // Same derivation WidgetSetupCard uses, hoisted so the always-visible status
+  // line can state it without opening the card. "Live" is the observed boot
+  // heartbeat, never install intent — a token that exists but has never been
+  // seen is a third state, and saying so is the whole point of the line.
+  const live = !!token?.lastSeenAt && token.status !== "paused";
+  const paused = token?.status === "paused";
+  const site = token?.lastSeenOrigin ?? token?.origins?.[0] ?? null;
 
   // Keep work labels honest while something is in flight.
   useEffect(() => {
@@ -198,12 +206,47 @@ export function ProjectFeedbackSection({
             type="button"
             onClick={() => setSetupOpen((v) => !v)}
             className="ui-btn-secondary gap-1.5"
+            aria-expanded={setupOpen}
           >
             <Code2 className="h-3.5 w-3.5" />
-            Widget
+            {setupOpen ? "Hide widget setup" : "Widget setup"}
           </button>
         </div>
       </div>
+
+      {/* Widget STATE is always on screen; only its controls are behind a
+          click. This is the fix for a real report: someone came to this page
+          to put the widget on a site, saw a thousand words of feedback items
+          and an unlabelled "Widget" button, and concluded the project had no
+          widget. It had one, and it was live.
+          A status line costs one row and answers the question that brought
+          them here without requiring a click to find out. */}
+      {token && !showSetup && (
+        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-border-subtle bg-surface-base px-3 py-2">
+          <span
+            className={cn(
+              "h-2 w-2 shrink-0 rounded-full",
+              live ? "bg-status-positive" : "bg-status-warning",
+            )}
+            aria-hidden="true"
+          />
+          <span className="text-sm font-medium text-text-primary">
+            {live ? "Widget live" : paused ? "Widget paused" : "Widget enabled, not seen yet"}
+          </span>
+          {site && (
+            <span className="truncate text-xs text-text-tertiary">
+              {site.replace(/^https:\/\//, "")}
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={() => setSetupOpen(true)}
+            className="ui-btn-ghost ml-auto text-xs"
+          >
+            Manage
+          </button>
+        </div>
+      )}
 
       {reviewOpen && token && (
         <AiReviewCard
