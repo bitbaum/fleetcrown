@@ -70,7 +70,7 @@ export function WidgetPlacementControl({
       <div className="flex flex-wrap items-start gap-4">
         {/* Preview */}
         <div
-          className="relative h-16 w-25 shrink-0 rounded-md border border-border-default bg-surface-overlay"
+          className="relative h-16 w-24 shrink-0 rounded-md border border-border-default bg-surface-overlay"
           aria-hidden="true"
         >
           <span

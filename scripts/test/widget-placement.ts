@@ -12,6 +12,7 @@ import {
   cornerEdges,
   normalizePlacement,
   overlaps,
+  toRect,
   DEFAULT_PLACEMENT,
   type Rect,
 } from "../../widget/placement";
@@ -116,6 +117,58 @@ ok(movedTop > 16, "top-anchored launchers also step away");
 const st = movedTop - 16;
 const boxTop = { ...ownTop, top: ownTop.top + st, bottom: ownTop.bottom + st };
 ok(!overlaps(boxTop, chatTop), "top-anchored shift moves DOWN and clears");
+
+// ---- DOMRect shape: the bug every other assertion here missed ----
+//
+// avoidOffsetY used to clone its input with `{...own}`. At runtime `own` is a
+// DOMRect from getBoundingClientRect(), whose left/top/right/bottom are GETTERS
+// ON THE PROTOTYPE — not own enumerable properties. The spread produced `{}`,
+// every comparison became `undefined < number` (false), and the function
+// silently concluded nothing was ever in the way. Auto-avoid did nothing in
+// production while all 38 assertions above stayed green, because their fixtures
+// are object literals and those spread perfectly.
+//
+// This fixture reproduces the real shape. It must behave identically to a plain
+// object, so a future refactor cannot reintroduce a spread.
+// Built with prototype getters and NO own properties, which is precisely what
+// makes a real DOMRect spread to `{}`. A class with fields would not reproduce
+// it — TypeScript turns those into own properties and the spread survives.
+function fakeDOMRect(l: number, t: number, w: number, h: number): Rect {
+  const proto = {
+    get left() {
+      return l;
+    },
+    get top() {
+      return t;
+    },
+    get right() {
+      return l + w;
+    },
+    get bottom() {
+      return t + h;
+    },
+  };
+  return Object.create(proto) as Rect;
+}
+const ownDom = fakeDOMRect(1376, 836, 48, 48);
+const chatDom = fakeDOMRect(1360, 820, 60, 60);
+
+ok(
+  Object.keys({ ...(ownDom as object) }).length === 0,
+  "fixture is faithful: spreading it yields NO own properties, exactly like a real DOMRect",
+);
+ok(
+  avoidOffsetY(ownDom, [chatDom], "bottom-right", 16) === moved,
+  "a getter-backed rect gives the SAME shift as a plain object — the prod bug",
+);
+ok(
+  toRect(ownDom).bottom === own.bottom && toRect(ownDom).left === own.left,
+  "toRect reads through prototype getters",
+);
+ok(probeCornerOverlapCheck(ownDom, chatDom), "overlaps() works on getter-backed rects too");
+function probeCornerOverlapCheck(a: Rect, b: Rect): boolean {
+  return overlaps(toRect(a), toRect(b));
+}
 
 // ---- normalizePlacement: total, never throws ----
 ok(normalizePlacement(null).corner === "bottom-right", "null falls back to the default corner");
