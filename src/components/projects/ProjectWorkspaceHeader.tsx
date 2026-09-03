@@ -102,10 +102,18 @@ export function ProjectWorkspaceHeader({
           Three lines answers "what is this"; the rest is one click away, and
           the editor always opens the full text. Only offered when there is
           enough text to be worth hiding. */}
+      {/* Height clamp, NOT line-clamp. `line-clamp-3` was tried first and did
+          nothing on the live page: it clamps LINE BOXES of inline content, but
+          the description renders inside DescriptionEditor's full-width
+          <button>, which produces no line boxes in this wrapper. The computed
+          display came back `flow-root` rather than `-webkit-box`, and the
+          element measured 386px tall with a 386px scrollHeight — a clamp that
+          reported itself as applied while clamping nothing.
+          A max-height does not care what the child element is. */}
       <div
         className={cn(
           "mt-2 max-w-3xl text-sm leading-relaxed text-text-secondary sm:text-base",
-          !descExpanded && isLongDescription && "line-clamp-3",
+          !descExpanded && isLongDescription && "relative max-h-24 overflow-hidden",
         )}
       >
         <DescriptionEditor
