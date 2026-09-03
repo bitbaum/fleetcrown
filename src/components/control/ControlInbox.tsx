@@ -12,6 +12,8 @@ import {
   Layers,
   Loader2,
   MessageSquare,
+  Pause,
+  Play,
   Rocket,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -313,6 +315,27 @@ function WidgetCoverage({
     }
   }
 
+  async function toggle(projectId: string, resume: boolean) {
+    setBusyId(projectId);
+    try {
+      const res = await postJson(`/api/projects/${projectId}/widget-token`, {
+        status: resume ? "active" : "paused",
+      });
+      if (!res.ok) await throwApiError(res, "Could not update the widget");
+      onChanged();
+    } catch (e) {
+      setOutcomes((p) => ({
+        ...p,
+        [projectId]: {
+          ok: false,
+          message: e instanceof Error ? e.message : "Could not update the widget.",
+        },
+      }));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   return (
     <>
       <ul className="ui-inbox-list">
@@ -364,6 +387,30 @@ function WidgetCoverage({
                   )}
                   Install
                 </button>
+                {/* A token that exists but is paused does not need installing —
+                    it needs turning back on, which was previously a trip into
+                    the project page. One click, from the list that told you it
+                    was off. */}
+                {p.hasToken && (
+                  <button
+                    type="button"
+                    onClick={() => toggle(p.projectId, p.tokenStatus !== "active")}
+                    disabled={busyId === p.projectId}
+                    className="ui-btn-secondary ui-btn-sm"
+                    title={
+                      p.tokenStatus === "active"
+                        ? "Pause — hides the launcher and stops accepting feedback"
+                        : "Resume — the launcher reappears within about a minute"
+                    }
+                  >
+                    {p.tokenStatus === "active" ? (
+                      <Pause className="h-3 w-3" />
+                    ) : (
+                      <Play className="h-3 w-3" />
+                    )}
+                    {p.tokenStatus === "active" ? "Pause" : "Resume"}
+                  </button>
+                )}
                 <Link
                   href={`/projects/${p.projectId}#feedback`}
                   className="ui-btn-icon"

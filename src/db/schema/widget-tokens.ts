@@ -1,6 +1,7 @@
 import { pgTable, uuid, text, jsonb, timestamp, index } from "drizzle-orm/pg-core";
 import { users } from "./users";
 import { entities } from "./entities";
+import type { WidgetPlacement } from "@/config/widget-placement";
 
 /**
  * Widget tokens — authorize the embeddable feedback widget to SUBMIT feedback
@@ -29,6 +30,12 @@ export const widgetTokens = pgTable(
     /** Remote kill switch: the widget's boot call renders nothing unless this is
      *  'active'. Pausing needs no customer deploy — the snippet is a pointer. */
     status: text("status").notNull().default("active"),
+    /** Where the launcher sits, and whether it may move itself out of the way.
+     *  Served by the boot call, so repositioning a widget on a customer site is
+     *  a dashboard action — the alternative was editing their HTML. NULL means
+     *  WIDGET_PLACEMENT_DEFAULT; see src/config/widget-placement.ts, which is
+     *  the SSOT for the shape and the only thing allowed to interpret it. */
+    placement: jsonb("placement").$type<WidgetPlacement>(),
     /** Heartbeat from the widget's boot call — the UI's "Live ✓" is this
      *  observed truth, never install intent. */
     lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),

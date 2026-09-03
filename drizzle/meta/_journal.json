@@ -428,6 +428,13 @@
       "when": 1787991680224,
       "tag": "0061_mysterious_purifiers",
       "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1788426696563,
+      "tag": "0062_vengeful_lockjaw",
+      "breakpoints": true
     }
   ]
 }

@@ -5,6 +5,7 @@ import { entities, userProjects, widgetTokens, type WidgetToken } from "@/db/sch
 import { ENTITY_TYPE, WIDGET_TOKEN_STATUS, type WidgetTokenStatus } from "@/lib/constants/statuses";
 import { fetchAttributesByEntityIds } from "./utils";
 import { resolveProjectPublicOrigin } from "@/lib/feedback/project-site";
+import type { WidgetPlacement } from "@/config/widget-placement";
 
 /**
  * Default a new token's origin allowlist from the project's live site
@@ -74,6 +75,9 @@ export type WidgetTokenInput = {
   status?: WidgetTokenStatus;
   /** Revoke the current token and mint a fresh one (invalidates the old snippet). */
   rotate?: boolean;
+  /** Where the launcher sits on the customer's page — served by the boot call,
+   *  so repositioning needs no change to their HTML. */
+  placement?: WidgetPlacement;
 };
 
 /**
@@ -102,11 +106,14 @@ export async function upsertWidgetToken(
     existing?.origins ??
     (await defaultOriginsFromProject(userId, projectId));
   const status = input.status ?? existing?.status ?? WIDGET_TOKEN_STATUS.ACTIVE;
+  // Carried across a rotate on purpose: rotating invalidates the snippet, not
+  // the operator's decision about where the launcher belongs on their page.
+  const placement = input.placement ?? existing?.placement ?? null;
 
   if (existing && !input.rotate) {
     const [updated] = await db
       .update(widgetTokens)
-      .set({ origins, status })
+      .set({ origins, status, placement })
       .where(and(eq(widgetTokens.id, existing.id), eq(widgetTokens.userId, userId)))
       .returning();
     return updated ?? null;
@@ -116,7 +123,7 @@ export async function upsertWidgetToken(
 
   const [created] = await db
     .insert(widgetTokens)
-    .values({ userId, projectId, token: newToken(), origins, status })
+    .values({ userId, projectId, token: newToken(), origins, status, placement })
     .returning();
   return created ?? null;
 }

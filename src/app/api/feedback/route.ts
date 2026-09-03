@@ -6,6 +6,7 @@ import {
   FEEDBACK_SCOPE_VALUES,
   FEEDBACK_SOURCE,
   FEEDBACK_SOURCE_VALUES,
+  WIDGET_TOKEN_STATUS,
 } from "@/lib/constants/statuses";
 import { getWidgetTokenByToken } from "@/db/queries/widget-tokens";
 import { bumpDuplicateFeedback, insertSiteFeedback } from "@/db/queries/site-feedback";
@@ -95,6 +96,15 @@ export async function POST(req: NextRequest) {
 
   const token = await getWidgetTokenByToken(data.token);
   if (!token) return corsError("Unknown or revoked widget token", 403);
+
+  // Pause has to mean pause. The boot call stops the widget RENDERING, but the
+  // token is public and sits in the customer's page source, so a paused project
+  // was still accepting POSTs from anyone who kept a copy — and the operator,
+  // seeing no widget on the site, had no reason to think otherwise. The UI
+  // offers Pause as the way to stop collecting; make the ingest agree with it.
+  if (token.status !== WIDGET_TOKEN_STATUS.ACTIVE) {
+    return corsError("Feedback is paused for this site", 403);
+  }
 
   // Server-side origin allowlist (empty/null = any origin).
   const origin = req.headers.get("origin");
