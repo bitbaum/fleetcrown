@@ -3,7 +3,7 @@ import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import { SessionProvider } from "next-auth/react";
 import { ThemeProvider } from "@/components/shell/ThemeProvider";
-import { PublicFeedbackWidget } from "@/components/shell/PublicFeedbackWidget";
+import { DogfoodFeedbackWidget } from "@/components/shell/DogfoodFeedbackWidget";
 import { APP_DESCRIPTION, APP_NAME, APP_URL } from "@/config/brand";
 import { PALETTE } from "@/lib/palette";
 import "./globals.css";
@@ -78,10 +78,14 @@ export default function RootLayout({
         <SessionProvider>
           <ThemeProvider>{children}</ThemeProvider>
         </SessionProvider>
-        {/* Dogfood: FleetCrown's own feedback widget on public pages, active
-            only where FEEDBACK_WIDGET_TOKEN is provisioned (see config/feedback-widget.ts). */}
+        {/* Dogfood: FleetCrown's own feedback widget, on every surface except a
+            short excluded list (config/feedback-widget.ts). Active only where
+            FEEDBACK_WIDGET_TOKEN is provisioned. It sits in the ROOT layout on
+            purpose — a signed-in user hitting a bug in the app had no way to
+            report it, because the widget was scoped to marketing pages and
+            Loki cannot file feedback. */}
         {process.env.FEEDBACK_WIDGET_TOKEN && (
-          <PublicFeedbackWidget token={process.env.FEEDBACK_WIDGET_TOKEN} />
+          <DogfoodFeedbackWidget token={process.env.FEEDBACK_WIDGET_TOKEN} />
         )}
       </body>
     </html>
