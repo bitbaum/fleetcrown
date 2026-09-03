@@ -186,11 +186,7 @@ export function ProjectWorkspaceView({
                     needed={showKickoff}
                   />
                 )}
-                <section
-                  id="overview"
-                  className="scroll-mt-28"
-                  aria-labelledby="project-overview-title"
-                >
+                <section className="scroll-mt-28" aria-labelledby="project-overview-title">
                   <h2 id="project-overview-title" className="sr-only">
                     Overview
                   </h2>
@@ -280,11 +276,7 @@ export function ProjectWorkspaceView({
             label: "Activity",
             content: (
               <>
-                <section
-                  id="activity"
-                  className="ui-project-section"
-                  aria-labelledby="project-activity-title"
-                >
+                <section className="ui-project-section" aria-labelledby="project-activity-title">
                   <h2
                     id="project-activity-title"
                     className="mb-4 text-lg font-semibold text-text-primary"

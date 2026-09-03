@@ -37,7 +37,7 @@ export function ProjectPlanSection({
   const nextStep = answer(attrs.next_step);
 
   return (
-    <section id="plan" className="ui-project-section" aria-labelledby="project-plan-title">
+    <section className="ui-project-section" aria-labelledby="project-plan-title">
       <div className="flex items-center gap-2">
         <Target className="h-4 w-4 text-accent-text" aria-hidden="true" />
         <h2 id="project-plan-title" className="text-lg font-semibold text-text-primary">

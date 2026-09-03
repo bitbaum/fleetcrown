@@ -143,7 +143,7 @@ export function ProjectFeedbackSection({
     }
   }
   return (
-    <section id="feedback" className="ui-project-section" aria-labelledby="project-feedback-title">
+    <section className="ui-project-section" aria-labelledby="project-feedback-title">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-baseline gap-2">
           <h2 id="project-feedback-title" className="text-lg font-semibold text-text-primary">

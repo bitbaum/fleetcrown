@@ -94,7 +94,7 @@ export function ProjectTabs({ tabs, initialId }: { tabs: ProjectTab[]; initialId
             role="tab"
             type="button"
             aria-selected={active === tab.id}
-            aria-controls={`panel-${tab.id}`}
+            aria-controls={tab.id}
             tabIndex={active === tab.id ? 0 : -1}
             onClick={() => select(tab.id)}
             onKeyDown={(e) => onKeyDown(e, i)}
@@ -122,14 +122,23 @@ export function ProjectTabs({ tabs, initialId }: { tabs: ProjectTab[]; initialId
         ))}
       </div>
 
+      {/* The panel owns the hash id, and the sections inside it no longer carry
+          one. Before this, both existed: the panel was `panel-feedback` while
+          the section inside kept the legacy `id="feedback"` from when these
+          were scroll anchors. Every panel stays mounted, so loading
+          /projects/<id>#feedback gave the browser a real element to scroll to
+          that was inside a HIDDEN panel — native anchor behaviour racing the
+          tab logic over the same name. One element per anchor removes the race,
+          and what the browser scrolls to is now what becomes visible.
+          `scroll-mt-28` clears the sticky tab bar. */}
       {tabs.map((tab) => (
         <div
           key={tab.id}
-          id={`panel-${tab.id}`}
+          id={tab.id}
           role="tabpanel"
           aria-labelledby={`tab-${tab.id}`}
           hidden={active !== tab.id}
-          className="space-y-6"
+          className="scroll-mt-28 space-y-6"
         >
           {/* Mounted even while hidden, on purpose. These panels contain forms
               with unsaved drafts and lists that poll while work is in flight;
