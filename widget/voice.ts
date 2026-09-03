@@ -53,17 +53,58 @@ export function pickAudioMime(): string {
 }
 
 /**
- * Whether to offer the mic at all. getUserMedia is undefined on insecure
- * origins, which is the common case for a customer testing on plain http —
- * hence a support check rather than a try/catch at click time.
+ * Whether to offer the mic at all.
+ *
+ * Three separate ways it can be unavailable, and all three must be checked
+ * BEFORE drawing the button — a control that cannot work is worse than no
+ * control, because the visitor spends effort discovering that:
+ *
+ *   1. No MediaRecorder — old browser.
+ *   2. getUserMedia undefined — insecure origin, the common case for a
+ *      customer testing over plain http.
+ *   3. Blocked by the host page's Permissions-Policy. This one is the reason
+ *      the function grew: orangecat.ch sends
+ *      `permissions-policy: camera=(), microphone=(), geolocation=()`.
+ *      `microphone=()` is an EMPTY allowlist — denied for every origin
+ *      including the site itself — so getUserMedia rejects with
+ *      NotAllowedError and the browser never shows a prompt. Measured there:
+ *      permissionState "denied", not "prompt".
+ *
+ *      Crucially, navigator.mediaDevices.getUserMedia still EXISTS in that
+ *      state, so checks 1 and 2 both pass and we happily drew a "Speak"
+ *      button that could only ever fail. The visitor then sees "Microphone
+ *      permission denied" and cannot fix it — there is nothing to allow.
+ *
+ * A script cannot override Permissions-Policy; that is the point of it. So
+ * the widget's job is to notice and stay quiet, and the site's job is to
+ * permit the mic (`microphone=(self)`) if it wants the feature.
  */
 export function isVoiceSupported(): boolean {
-  return (
-    typeof navigator !== "undefined" &&
-    !!navigator.mediaDevices &&
-    typeof navigator.mediaDevices.getUserMedia === "function" &&
-    typeof MediaRecorder !== "undefined"
-  );
+  if (typeof navigator === "undefined") return false;
+  if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== "function") {
+    return false;
+  }
+  if (typeof MediaRecorder === "undefined") return false;
+  return isMicrophoneAllowedByPolicy();
+}
+
+/**
+ * Does this document's Permissions-Policy permit the microphone?
+ *
+ * `document.featurePolicy` is non-standard and absent in some browsers, so an
+ * unknown answer is treated as ALLOWED: the alternative is hiding a working
+ * mic wherever the introspection API is missing, and a real block still fails
+ * loudly at click time with a message the visitor can read.
+ */
+export function isMicrophoneAllowedByPolicy(): boolean {
+  try {
+    const fp = (document as unknown as { featurePolicy?: { allowsFeature(f: string): boolean } })
+      .featurePolicy;
+    if (!fp || typeof fp.allowsFeature !== "function") return true;
+    return fp.allowsFeature("microphone");
+  } catch {
+    return true;
+  }
 }
 
 export type VoiceState = "idle" | "requesting" | "recording" | "transcribing" | "error";

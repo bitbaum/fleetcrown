@@ -1191,6 +1191,12 @@
   .ui-public-prose-h3 {
     @apply pt-2 text-lg font-semibold text-text-secondary;
   }
+  /* A caveat the reader must act on, not skim past — a prerequisite on their
+     side that silently disables a feature if unmet. Distinct from body prose,
+     quieter than an error. */
+  .ui-public-callout {
+    @apply rounded-lg border border-border-default bg-surface-base px-4 py-3 text-sm leading-relaxed text-text-secondary;
+  }
   .ui-public-prose-p {
     @apply text-base leading-[1.8] text-text-secondary;
   }

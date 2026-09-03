@@ -5,7 +5,7 @@
 // appending would silently destroy the sentence they just wrote, on someone
 // else's site, with no undo. These pin the merge rules.
 // Run: npx tsx scripts/test/widget-voice.ts
-import { formatElapsed, mergeTranscript } from "../../widget/voice";
+import { formatElapsed, isMicrophoneAllowedByPolicy, mergeTranscript } from "../../widget/voice";
 
 let pass = 0;
 let fail = 0;
@@ -51,6 +51,56 @@ ok(
 ok(
   mergeTranscript("a".repeat(2100), "", MAX).length === MAX,
   "an already-over-cap box is clipped rather than grown",
+);
+
+// ---- Permissions-Policy: the reason a "Speak" button could only ever fail ----
+//
+// orangecat.ch sends `permissions-policy: camera=(), microphone=(), geolocation=()`.
+// An empty allowlist denies the mic to EVERY origin including the site itself,
+// so getUserMedia rejects with NotAllowedError and no prompt is ever shown —
+// measured there as permissionState "denied", not "prompt".
+//
+// The trap: navigator.mediaDevices.getUserMedia still EXISTS in that state. A
+// support check that only looks for the API therefore passes, draws the
+// button, and hands the visitor an error they cannot resolve — there is
+// nothing for them to allow. Only the policy tells the truth.
+const realDocument = (globalThis as { document?: unknown }).document;
+function withFeaturePolicy(value: unknown, run: () => void) {
+  (globalThis as { document?: unknown }).document = value;
+  try {
+    run();
+  } finally {
+    if (realDocument === undefined) delete (globalThis as { document?: unknown }).document;
+    else (globalThis as { document?: unknown }).document = realDocument;
+  }
+}
+
+withFeaturePolicy({ featurePolicy: { allowsFeature: (f: string) => f !== "microphone" } }, () => {
+  ok(
+    isMicrophoneAllowedByPolicy() === false,
+    "a document whose policy denies the microphone reports it as blocked",
+  );
+});
+withFeaturePolicy({ featurePolicy: { allowsFeature: () => true } }, () => {
+  ok(isMicrophoneAllowedByPolicy() === true, "an allowing policy reports allowed");
+});
+// Unknown must mean allowed: featurePolicy is non-standard and missing in some
+// browsers. Failing closed there would hide a WORKING mic, which is a worse
+// error than a click that fails with a readable message.
+withFeaturePolicy({}, () => {
+  ok(isMicrophoneAllowedByPolicy() === true, "no featurePolicy API — treated as allowed");
+});
+withFeaturePolicy(
+  {
+    featurePolicy: {
+      allowsFeature: () => {
+        throw new Error("boom");
+      },
+    },
+  },
+  () => {
+    ok(isMicrophoneAllowedByPolicy() === true, "a throwing featurePolicy is treated as allowed");
+  },
 );
 
 // ---- formatElapsed ----
