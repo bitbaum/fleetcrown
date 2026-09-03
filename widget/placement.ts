@@ -81,6 +81,24 @@ export interface Rect {
   bottom: number;
 }
 
+/**
+ * Copy anything rect-shaped into a plain Rect.
+ *
+ * This exists because of a bug that unit tests could not see. `avoidOffsetY`
+ * used to clone its input with `{...own}`, and `own` at runtime is a DOMRect
+ * from getBoundingClientRect(). DOMRect exposes left/top/right/bottom as
+ * GETTERS ON THE PROTOTYPE, not own enumerable properties — so the spread
+ * produced `{}`, every comparison became `undefined < number` (false), and the
+ * function concluded that nothing was ever in the way. Silently, with no error.
+ *
+ * The tests all passed because their fixtures were object literals, which
+ * spread perfectly. Only a real browser reproduces it. Read the four fields
+ * explicitly and the shape of the source stops mattering.
+ */
+export function toRect(r: Rect | DOMRect): Rect {
+  return { left: r.left, top: r.top, right: r.right, bottom: r.bottom };
+}
+
 /** Do two rectangles overlap at all? Touching edges do not count. */
 export function overlaps(a: Rect, b: Rect): boolean {
   return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
@@ -98,34 +116,40 @@ export function overlaps(a: Rect, b: Rect): boolean {
  * Returns the new offsetY, or the original when nothing is in the way.
  */
 export function avoidOffsetY(
-  own: Rect,
-  foreign: Rect[],
+  own: Rect | DOMRect,
+  foreign: Array<Rect | DOMRect>,
   corner: Corner,
   currentOffsetY: number,
 ): number {
   const anchoredTop = corner.startsWith("top");
   let offset = currentOffsetY;
-  let box = { ...own };
+  // toRect, never {...own}: a DOMRect spreads to {} — see toRect's note.
+  let box = toRect(own);
+  const obstacles = foreign.map(toRect);
 
   // Re-check after each shift: stepping over one launcher can land on another
   // (a site running chat + cookie consent + a back-to-top button). Bounded by
   // the list length, so no unbounded loop even if rectangles are pathological.
-  for (let i = 0; i < foreign.length + 1; i++) {
+  for (let i = 0; i < obstacles.length + 1; i++) {
     // Test against a box inflated by the gap, not the bare one. Strict overlap
     // alone lets a shift land the launcher exactly flush against the next
     // obstacle — technically not covering it, visually one indistinguishable
     // blob of buttons. The gap is the point, so it has to be part of the test.
-    const probe = { ...box, top: box.top - AVOID_GAP, bottom: box.bottom + AVOID_GAP };
-    const hit = foreign.find((f) => overlaps(probe, f));
+    const probe = {
+      left: box.left,
+      right: box.right,
+      top: box.top - AVOID_GAP,
+      bottom: box.bottom + AVOID_GAP,
+    };
+    const hit = obstacles.find((f) => overlaps(probe, f));
     if (!hit) break;
     const shift = (anchoredTop ? hit.bottom - box.top : box.bottom - hit.top) + AVOID_GAP;
     if (shift <= 0) break;
     const next = offset + shift;
     if (next - currentOffsetY > MAX_AVOID_SHIFT) return currentOffsetY;
     offset = next;
-    box = anchoredTop
-      ? { ...box, top: box.top + shift, bottom: box.bottom + shift }
-      : { ...box, top: box.top - shift, bottom: box.bottom - shift };
+    const dy = anchoredTop ? shift : -shift;
+    box = { left: box.left, right: box.right, top: box.top + dy, bottom: box.bottom + dy };
   }
   return offset;
 }
@@ -142,7 +166,8 @@ export function avoidOffsetY(
  * and an open one belongs to somebody else's component; the host rectangle is
  * what actually occupies the space, which is all we need.
  */
-export function probeCorner(ownHost: Element, ownRect: Rect): Rect[] {
+export function probeCorner(ownHost: Element, ownRect: Rect | DOMRect): Rect[] {
+  const own = toRect(ownRect);
   const found: Rect[] = [];
   const seen = new Set<Element>();
   const all = document.body ? document.body.querySelectorAll<HTMLElement>("*") : [];
@@ -162,8 +187,8 @@ export function probeCorner(ownHost: Element, ownRect: Rect): Rect[] {
     // we can step around usefully — moving up just lands on the next one, and
     // the visitor can still reach a launcher that overlaps a banner edge.
     if (r.width > window.innerWidth * 0.9) continue;
-    const rect = { left: r.left, top: r.top, right: r.right, bottom: r.bottom };
-    if (!overlaps(ownRect, rect)) continue;
+    const rect = toRect(r);
+    if (!overlaps(own, rect)) continue;
     seen.add(el);
     found.push(rect);
   }
