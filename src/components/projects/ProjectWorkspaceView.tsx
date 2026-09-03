@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft, Cat, ExternalLink, GitBranch } from "lucide-react";
 import type { ProjectDossier } from "@/db/queries/project-dossier";
 import { ProjectWorkspaceHeader } from "./ProjectWorkspaceHeader";
+import { ProjectTabs } from "./ProjectTabs";
 import { ProjectContextEditor } from "./ProjectContextEditor";
 import { ProjectPlanSection } from "./ProjectPlanSection";
 import { ProjectSettingsPanel } from "./ProjectSettingsPanel";
@@ -18,18 +19,6 @@ import { AssistantContextBridge } from "./AssistantContextBridge";
 import { needsKickoff } from "@/lib/project-kickoff";
 import { answer, cleanDescription } from "@/lib/project-display";
 import { formatBtc } from "@/lib/format";
-
-// The nav must index the WHOLE page — a jump bar that knows four of seven
-// sections teaches the reader the rest don't exist. Owner-only sections are
-// filtered at render (readonly viewers don't get dead anchors).
-const SECTIONS = [
-  { href: "#overview", label: "Overview" },
-  { href: "#context", label: "Context" },
-  { href: "#plan", label: "Plan" },
-  { href: "#activity", label: "Activity" },
-  { href: "#feedback", label: "Feedback", ownerOnly: true },
-  { href: "#settings", label: "Settings", ownerOnly: true },
-] as const;
 
 export function ProjectWorkspaceView({
   dossier,
@@ -101,8 +90,18 @@ export function ProjectWorkspaceView({
         <ArrowLeft className="h-4 w-4" aria-hidden="true" /> All projects
       </Link>
 
+      {/* Destinations sit BELOW the identity, never beside it.
+          Measured on a 1680px window before this change: the header was a
+          `justify-between` row whose links column was `shrink-0`, so six ghost
+          links took 607px of 960px — 63% — and squeezed the project's name and
+          description into 333px. A 202-word description then wrapped into a
+          twenty-line ribbon with two thirds of the screen empty beside it.
+          That is what read as "a wall of text": mostly layout, not word count.
+
+          A project's name and what it is outrank links to elsewhere, so they
+          get the full measure and the links get a quiet row underneath. */}
       <header className="border-b border-border-subtle pb-6">
-        <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col gap-5">
           <ProjectWorkspaceHeader
             projectId={project.id}
             userProjectId={userProject?.id ?? null}
@@ -122,7 +121,7 @@ export function ProjectWorkspaceView({
               unlabelled icon, so on a phone — where the row wraps to two lines
               — it read as four unrelated controls rather than one set. Both
               are ghost links with labels now. */}
-          <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
             <LiveUrlField
               userProjectId={userProject?.id ?? null}
               liveUrl={links.prodUrl}
@@ -157,152 +156,193 @@ export function ProjectWorkspaceView({
         </div>
       </header>
 
-      <nav
-        aria-label="Project profile sections"
-        className="sticky top-0 z-20 -mx-4 flex gap-1 overflow-x-auto border-y border-border-subtle bg-surface-page/95 px-4 py-2 backdrop-blur-sm sm:mx-0 sm:rounded-lg sm:border sm:px-2"
-      >
-        {SECTIONS.filter((s) => !("ownerOnly" in s && s.ownerOnly) || !dossier.readonly).map(
-          (section) => (
-            <a
-              key={section.href}
-              href={section.href}
-              className="ui-tap inline-flex shrink-0 items-center rounded-md px-3 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary"
-            >
-              {section.label}
-            </a>
-          ),
-        )}
-      </nav>
+      {/* Tabs, not a scroll. Everything below used to stack into one page:
+          measured at 2,698 words across 17 sections, of which ten answered
+          variations of the same question. The old jump-nav indexed 6 of those
+          17, which its own comment named as the failure — a nav that knows
+          about some sections teaches the reader the others are not there.
 
-      {!dossier.readonly && (
-        <ProjectKickoff
-          projectId={project.id}
-          projectName={project.name}
-          workspaceKey={workspaceKey}
-          description={cleanDescription(project.description)}
-          attrs={attrs}
-          goalCount={detail.linkedGoals.length}
-          goalsLocked={detail.goalsLocked}
-          hasRepo={Boolean(links.repo)}
-          needed={showKickoff}
-        />
-      )}
-
-      <section id="overview" className="scroll-mt-28" aria-labelledby="project-overview-title">
-        <h2 id="project-overview-title" className="sr-only">
-          Overview
-        </h2>
-        {healthSignals.length > 0 && (
-          <div className="mb-5 divide-y divide-border-subtle border-y border-border-subtle">
-            {healthSignals.map((signal) => {
-              const signalKey = HEALTH_SIGNAL_CONFIG.find((c) => c.kind === signal.kind)?.key;
-              return (
-                <div
-                  key={signal.kind}
-                  className="flex flex-col gap-2 py-3 sm:flex-row sm:items-baseline sm:gap-3"
+          Anchors could not fix it either: scrolling into a wall still leaves
+          the other 2,400 words underneath. A tab removes them. */}
+      <ProjectTabs
+        tabs={[
+          {
+            id: "now",
+            label: "Now",
+            count: healthSignals.length,
+            urgent: healthSignals.length > 0,
+            content: (
+              <>
+                {!dossier.readonly && (
+                  <ProjectKickoff
+                    projectId={project.id}
+                    projectName={project.name}
+                    workspaceKey={workspaceKey}
+                    description={cleanDescription(project.description)}
+                    attrs={attrs}
+                    goalCount={detail.linkedGoals.length}
+                    goalsLocked={detail.goalsLocked}
+                    hasRepo={Boolean(links.repo)}
+                    needed={showKickoff}
+                  />
+                )}
+                <section
+                  id="overview"
+                  className="scroll-mt-28"
+                  aria-labelledby="project-overview-title"
                 >
-                  <span className="shrink-0 text-sm font-medium text-status-warning">
-                    {signal.label}
-                  </span>
-                  <span className="flex-1 text-sm leading-relaxed text-text-secondary">
-                    {signal.value}
-                  </span>
-                  {!dossier.readonly && signalKey && (
-                    <FixSignalButton
-                      projectId={project.id}
-                      workspaceKey={workspaceKey}
-                      signalKey={signalKey}
-                    />
+                  <h2 id="project-overview-title" className="sr-only">
+                    Overview
+                  </h2>
+                  {healthSignals.length > 0 && (
+                    <div className="mb-5 divide-y divide-border-subtle border-y border-border-subtle">
+                      {healthSignals.map((signal) => {
+                        const signalKey = HEALTH_SIGNAL_CONFIG.find(
+                          (c) => c.kind === signal.kind,
+                        )?.key;
+                        return (
+                          <div
+                            key={signal.kind}
+                            className="flex flex-col gap-2 py-3 sm:flex-row sm:items-baseline sm:gap-3"
+                          >
+                            <span className="shrink-0 text-sm font-medium text-status-warning">
+                              {signal.label}
+                            </span>
+                            <span className="flex-1 text-sm leading-relaxed text-text-secondary">
+                              {signal.value}
+                            </span>
+                            {!dossier.readonly && signalKey && (
+                              <FixSignalButton
+                                projectId={project.id}
+                                workspaceKey={workspaceKey}
+                                signalKey={signalKey}
+                              />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-        <div className="grid gap-5 lg:grid-cols-2">
-          <NowSection dossier={dossier} interactive={false} showBrief={false} />
-          <NextSection
-            dossier={dossier}
-            interactive={false}
-            showGoals={false}
-            dispatchable={!dossier.readonly && !showKickoff}
-          />
-        </div>
-      </section>
-
-      <ProjectContextEditor
-        projectId={project.id}
-        projectName={workspaceKey}
-        attrs={attrs}
-        gitUrl={userProject?.gitUrl ?? project.gitUrl ?? null}
-        resources={detail.resources ?? []}
-        readonly={dossier.readonly}
+                  <div className="grid gap-5 lg:grid-cols-2">
+                    <NowSection dossier={dossier} interactive={false} showBrief={false} />
+                    <NextSection
+                      dossier={dossier}
+                      interactive={false}
+                      showGoals={false}
+                      dispatchable={!dossier.readonly && !showKickoff}
+                    />
+                  </div>
+                </section>
+              </>
+            ),
+          },
+          ...(dossier.readonly
+            ? []
+            : [
+                {
+                  id: "feedback",
+                  label: "Feedback",
+                  content: (
+                    <ProjectFeedbackSection projectId={project.id} projectName={project.name} />
+                  ),
+                },
+              ]),
+          {
+            id: "plan",
+            label: "Plan",
+            content: (
+              <ProjectPlanSection
+                projectId={project.id}
+                projectName={project.name}
+                attrs={attrs}
+                goalsLocked={detail.goalsLocked}
+                goals={detail.linkedGoals}
+                readonly={dossier.readonly}
+              />
+            ),
+          },
+          {
+            id: "context",
+            label: "Context",
+            content: (
+              <ProjectContextEditor
+                projectId={project.id}
+                projectName={workspaceKey}
+                attrs={attrs}
+                gitUrl={userProject?.gitUrl ?? project.gitUrl ?? null}
+                resources={detail.resources ?? []}
+                readonly={dossier.readonly}
+              />
+            ),
+          },
+          {
+            id: "activity",
+            label: "Activity",
+            content: (
+              <>
+                <section
+                  id="activity"
+                  className="ui-project-section"
+                  aria-labelledby="project-activity-title"
+                >
+                  <h2
+                    id="project-activity-title"
+                    className="mb-4 text-lg font-semibold text-text-primary"
+                  >
+                    Activity and evidence
+                  </h2>
+                  <DoneSection dossier={dossier} />
+                  {/* Funding is evidence, so it reads with the rest of the evidence
+                      instead of above the project's own status. Rendered only when money
+                      actually arrived — a "0 BTC · 0 contributions" panel was a headline
+                      for nothing (the old formatter printed a bare `0` for empty). */}
+                  {primaryOrangeCatLink &&
+                    dossier.orangecatFunding &&
+                    dossier.orangecatFunding.totalBtc > 0 && (
+                      <div className="mt-5 flex flex-col gap-3 rounded-xl border border-border-subtle bg-surface-base p-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <div className="ui-micro-label">Confirmed on OrangeCat</div>
+                          <div className="mt-1 text-xl font-semibold text-text-primary">
+                            {formatBtc(dossier.orangecatFunding.totalBtc)} BTC
+                          </div>
+                          <div className="mt-1 text-sm text-text-secondary">
+                            {dossier.orangecatFunding.contributorCount} confirmed{" "}
+                            {dossier.orangecatFunding.contributorCount === 1
+                              ? "contribution"
+                              : "contributions"}
+                          </div>
+                        </div>
+                        <a
+                          href={primaryOrangeCatLink.publicUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="ui-btn-secondary min-h-11 gap-1.5"
+                        >
+                          Share and fund <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+                        </a>
+                      </div>
+                    )}
+                </section>
+              </>
+            ),
+          },
+          ...(dossier.readonly
+            ? []
+            : [
+                {
+                  id: "settings",
+                  label: "Settings",
+                  content: (
+                    <ProjectSettingsPanel
+                      projectId={project.id}
+                      hasRepo={Boolean(links.repo)}
+                      hasLocalPath={Boolean(userProject?.dirPath)}
+                    />
+                  ),
+                },
+              ]),
+        ]}
       />
-
-      <ProjectPlanSection
-        projectId={project.id}
-        projectName={project.name}
-        attrs={attrs}
-        goalsLocked={detail.goalsLocked}
-        goals={detail.linkedGoals}
-        readonly={dossier.readonly}
-      />
-
-      {/* Feedback outranks the historical log: it is inbound work waiting on a
-          decision, the log is the past. It used to sit below Activity, so the
-          densest interactive block on the page was the last thing you found. */}
-      {!dossier.readonly && (
-        <ProjectFeedbackSection projectId={project.id} projectName={project.name} />
-      )}
-
-      <section
-        id="activity"
-        className="ui-project-section"
-        aria-labelledby="project-activity-title"
-      >
-        <h2 id="project-activity-title" className="mb-4 text-lg font-semibold text-text-primary">
-          Activity and evidence
-        </h2>
-        <DoneSection dossier={dossier} />
-        {/* Funding is evidence, so it reads with the rest of the evidence
-            instead of above the project's own status. Rendered only when money
-            actually arrived — a "0 BTC · 0 contributions" panel was a headline
-            for nothing (the old formatter printed a bare `0` for empty). */}
-        {primaryOrangeCatLink &&
-          dossier.orangecatFunding &&
-          dossier.orangecatFunding.totalBtc > 0 && (
-            <div className="mt-5 flex flex-col gap-3 rounded-xl border border-border-subtle bg-surface-base p-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <div className="ui-micro-label">Confirmed on OrangeCat</div>
-                <div className="mt-1 text-xl font-semibold text-text-primary">
-                  {formatBtc(dossier.orangecatFunding.totalBtc)} BTC
-                </div>
-                <div className="mt-1 text-sm text-text-secondary">
-                  {dossier.orangecatFunding.contributorCount} confirmed{" "}
-                  {dossier.orangecatFunding.contributorCount === 1
-                    ? "contribution"
-                    : "contributions"}
-                </div>
-              </div>
-              <a
-                href={primaryOrangeCatLink.publicUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="ui-btn-secondary min-h-11 gap-1.5"
-              >
-                Share and fund <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-              </a>
-            </div>
-          )}
-      </section>
-
-      {!dossier.readonly && (
-        <ProjectSettingsPanel
-          projectId={project.id}
-          hasRepo={Boolean(links.repo)}
-          hasLocalPath={Boolean(userProject?.dirPath)}
-        />
-      )}
     </div>
   );
 }

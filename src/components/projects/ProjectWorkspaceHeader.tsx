@@ -9,6 +9,7 @@ import { rememberFleetProject } from "@/lib/fleet-context";
 import { HealthScoreBar } from "./HealthScore";
 import type { ProjectHealth } from "@/lib/project-health";
 import { PROJECT_ATTR } from "@/config/project-attrs";
+import { cn } from "@/lib/utils";
 
 export function ProjectWorkspaceHeader({
   projectId,
@@ -33,6 +34,10 @@ export function ProjectWorkspaceHeader({
 }) {
   const router = useRouter();
   const [currentDescription, setCurrentDescription] = useState(description);
+  const [descExpanded, setDescExpanded] = useState(false);
+  /** ~3 lines at this measure. Below it the clamp would hide nothing and the
+   *  toggle would be a control that does not visibly do anything. */
+  const isLongDescription = (currentDescription ?? "").length > 260;
   const [currentStatus, setCurrentStatus] = useState(status);
 
   // Re-seed from the server on every refresh. `useState(prop)` only reads its
@@ -89,7 +94,20 @@ export function ProjectWorkspaceHeader({
         </h1>
       </div>
 
-      <div className="mt-2 max-w-3xl text-sm leading-relaxed text-text-secondary sm:text-base">
+      {/* Clamped to three lines, expandable.
+          A description is meant to say what this project IS. These have grown
+          into whole briefs — fleetcrown's is 202 words naming every route,
+          integration and monetisation rail — and printing all of it directly
+          under the title pushes the page's actual controls below the fold.
+          Three lines answers "what is this"; the rest is one click away, and
+          the editor always opens the full text. Only offered when there is
+          enough text to be worth hiding. */}
+      <div
+        className={cn(
+          "mt-2 max-w-3xl text-sm leading-relaxed text-text-secondary sm:text-base",
+          !descExpanded && isLongDescription && "line-clamp-3",
+        )}
+      >
         <DescriptionEditor
           value={currentDescription}
           editable={!readonly}
@@ -104,6 +122,16 @@ export function ProjectWorkspaceHeader({
           }}
         />
       </div>
+      {isLongDescription && (
+        <button
+          type="button"
+          onClick={() => setDescExpanded((v) => !v)}
+          aria-expanded={descExpanded}
+          className="mt-1 text-xs font-medium text-text-tertiary transition-colors hover:text-text-secondary"
+        >
+          {descExpanded ? "Show less" : "Show full description"}
+        </button>
+      )}
     </div>
   );
 }
