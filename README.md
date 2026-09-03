@@ -10,8 +10,7 @@ once. It is the **engineering pillar** of a three-pillar stack:
 | Governance | [Solon](https://solon.orangecat.ch) | Bitcoin-signed proposals, votes, and self-verifying decisions |
 
 The ties are real: FleetCrown dogfoods OrangeCat (OIDC login, publish
-bus, stakeholder graph, shared BTC wallet) — sibling-product integration, **not**
-a paying or institutional customer; FleetCrown's agent Loki is a
+bus, stakeholder graph, shared BTC wallet) — sibling-product integration; FleetCrown's agent Loki is a
 registered voting member in Solon, casting Bitcoin-signed votes from its own
 box (`scripts/solon/cast-vote.ts`) with decision webhooks landing at
 `/api/solon/events`; and `.github/workflows/selfhost-deploy.yml` is the shared
@@ -22,7 +21,7 @@ but serious users still need a trustworthy command center. FleetCrown provides t
 state, queues, handoffs, guardrails, and business context around that capacity.
 
 Production: https://fleetcrown.orangecat.ch
-**Status (2026-09-03):** live, pre-1.0, single-builder. Hosting is **Hetzner** (not Vercel). Stripe is dark: **CHF 0 billed, 0 paying users**. `fleetcrown.com` is unregistered.
+**Status:** live, pre-1.0. Hosted on **Hetzner**.
 
 ## What It Does
 
@@ -43,11 +42,11 @@ Production: https://fleetcrown.orangecat.ch
 
 ## Product And Economic Model
 
-FleetCrown is designed as a high-retention SaaS for power users and small teams. It dogfoods OrangeCat economic services (typed relations, shared wallet) — **not a paying customer**. Both projects live on the OrangeCat platform with typed relations. See live: orangecat.ch projects for FleetCrown / OrangeCat (shared wallet bc1q3hh4yklcmwtpnqmxyksw36yedg7zyfy6tzzqwz).
+FleetCrown is designed as a high-retention SaaS for power users and small teams. It uses OrangeCat economic services (typed relations, shared wallet). Both projects live on the OrangeCat platform with typed relations.
 The economic model is built around durable workflow ownership, not one-off AI
 novelty.
 
-**The table below is a designed / planned model. It is not billed. There are no paying users. Stripe is dark (CHF 0).**
+**Designed economic model** (planned monetization).
 
 | Layer | Value | Planned monetization (not billed) |
 | --- | --- | --- |
