@@ -17,7 +17,7 @@ export function ProjectSettingsPanel({
   const router = useRouter();
 
   return (
-    <details id="settings" className="scroll-mt-28 border-y border-border-subtle">
+    <details className="border-y border-border-subtle">
       <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 text-sm font-medium text-text-secondary transition-colors hover:text-text-primary">
         <Settings className="h-4 w-4" aria-hidden="true" /> Project settings
       </summary>

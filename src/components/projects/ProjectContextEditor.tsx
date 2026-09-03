@@ -139,7 +139,7 @@ export function ProjectContextEditor({
   const hasRepo = getProjectLinks(attrs, gitUrl).repo !== null;
 
   return (
-    <section id="context" className="ui-project-section" aria-labelledby="project-context-title">
+    <section className="ui-project-section" aria-labelledby="project-context-title">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
