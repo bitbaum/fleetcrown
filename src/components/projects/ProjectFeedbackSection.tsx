@@ -31,6 +31,7 @@ import { useFeedbackActions } from "@/components/feedback/use-feedback-actions";
 import { fleetSurfaceHref } from "@/lib/fleet-context";
 import { EXECUTOR_COPY } from "@/config/executor-copy";
 import { DispatchedNote } from "@/components/projects/ProjectActionButtons";
+import { WidgetPlacementControl } from "@/components/projects/WidgetPlacementControl";
 
 type WidgetTokenInfo = {
   token: string;
@@ -39,6 +40,9 @@ type WidgetTokenInfo = {
   origins: string[] | null;
   lastSeenAt: string | null;
   lastSeenOrigin: string | null;
+  /** Unknown rather than WidgetPlacement: rows written before the column
+   *  existed are null, and the SSOT normalizer is what interprets it. */
+  placement: unknown;
 };
 
 /**
@@ -534,6 +538,21 @@ function WidgetSetupCard({
                   {EXECUTOR_COPY.honesty.watchQueued} {EXECUTOR_COPY.honesty.notificationWhenDone}{" "}
                   Activity shows every inject attempt and the real error.
                 </p>
+              </div>
+            )}
+
+            {token && (
+              <div className="border-t border-border-subtle pt-3">
+                <WidgetPlacementControl
+                  value={token.placement}
+                  busy={busy}
+                  onSave={(placement) =>
+                    mutate(
+                      () => postJson(`/api/projects/${projectId}/widget-token`, { placement }),
+                      "Could not move the launcher",
+                    )
+                  }
+                />
               </div>
             )}
 

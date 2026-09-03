@@ -8,6 +8,7 @@ import {
 } from "@/db/queries/widget-tokens";
 import { appUrl } from "@/lib/email";
 import type { WidgetToken } from "@/db/schema";
+import { WIDGET_CORNERS, WIDGET_OFFSET_MAX, WIDGET_OFFSET_MIN } from "@/config/widget-placement";
 
 /**
  * Owner management of a project's feedback-widget token: view the embed
@@ -20,6 +21,17 @@ const TokenBody = z.object({
   origins: z.array(z.string().url().max(200)).max(10).optional(),
   status: z.enum(["active", "paused"]).optional(),
   rotate: z.boolean().default(false),
+  /** Where the launcher sits on the customer's page. Bounds mirror
+   *  src/config/widget-placement.ts; the SSOT normalizer clamps on read too,
+   *  so a row written before these bounds existed still resolves. */
+  placement: z
+    .object({
+      corner: z.enum(WIDGET_CORNERS),
+      offsetX: z.number().int().min(WIDGET_OFFSET_MIN).max(WIDGET_OFFSET_MAX),
+      offsetY: z.number().int().min(WIDGET_OFFSET_MIN).max(WIDGET_OFFSET_MAX),
+      autoAvoid: z.boolean(),
+    })
+    .optional(),
 });
 
 function withSnippet(t: WidgetToken) {
@@ -51,6 +63,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     origins: dataOrResp.origins?.map((o) => new URL(o).origin),
     status: dataOrResp.status,
     rotate: dataOrResp.rotate,
+    placement: dataOrResp.placement,
   });
   if (!token) return jsonError("Project not found", 404);
   return jsonOk({ token: withSnippet(token) });

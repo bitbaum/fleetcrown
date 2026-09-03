@@ -3,6 +3,7 @@ import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { RATE_LIMIT_WINDOW_SHORT_MS } from "@/lib/constants/time";
 import { WIDGET_TOKEN_STATUS } from "@/lib/constants/statuses";
 import { getWidgetTokenByToken, touchWidgetToken } from "@/db/queries/widget-tokens";
+import { normalizeWidgetPlacement, type WidgetPlacement } from "@/config/widget-placement";
 
 /**
  * Widget boot: the embed's first call on every page load. Returns whether the
@@ -27,8 +28,20 @@ const CORS_HEADERS = {
   Vary: "Origin",
 } as const;
 
-function bootResponse(active: boolean, status = 200): NextResponse {
-  return NextResponse.json({ active }, { status, headers: CORS_HEADERS });
+/**
+ * `placement` rides along with the render verdict rather than getting its own
+ * call: the widget already blocks on this response before drawing anything, so
+ * folding position in costs no extra round trip and removes any window where
+ * the launcher paints in one corner and then jumps to another.
+ *
+ * Omitted entirely when the widget will not render — a paused token should
+ * leak nothing about the project's configuration.
+ */
+function bootResponse(active: boolean, status = 200, placement?: WidgetPlacement): NextResponse {
+  return NextResponse.json(active && placement ? { active, placement } : { active }, {
+    status,
+    headers: CORS_HEADERS,
+  });
 }
 
 export function OPTIONS(req: NextRequest) {
@@ -66,5 +79,7 @@ export async function GET(req: NextRequest) {
   // verdict must not wait on the write.
   void touchWidgetToken(row.id, origin).catch(() => {});
 
-  return bootResponse(true);
+  // normalize, never validate-and-reject: a malformed or half-migrated row must
+  // still render a widget at the default position rather than none at all.
+  return bootResponse(true, 200, normalizeWidgetPlacement(row.placement));
 }

@@ -1,0 +1,1 @@
+ALTER TABLE "widget_tokens" ADD COLUMN "placement" jsonb;
