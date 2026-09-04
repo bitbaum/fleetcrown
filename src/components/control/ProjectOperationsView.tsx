@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { ChevronLeft, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { compactRelativeDate } from "@/lib/dates";
 import { postJson } from "@/lib/api/fetch";
@@ -35,6 +35,8 @@ export function ProjectOperationsView({
   snapshots,
   selectedTab,
   onSelect,
+  projectOpenOnPhone = false,
+  onBackToList,
   cardProps,
   automationMode,
   onBulkNotice,
@@ -42,6 +44,11 @@ export function ProjectOperationsView({
   snapshots: ProjectOperationsSnapshot[] | null;
   selectedTab: string | null;
   onSelect: (tab: string) => void;
+  /** Phone only: is the operator looking at a project, or at the roster?
+   *  Ignored from `lg` up, where both panes are on screen together. */
+  projectOpenOnPhone?: boolean;
+  /** Phone only: return to the roster. */
+  onBackToList?: () => void;
   cardProps: (project: ProjectState) => CardBaseProps;
   automationMode: AutoInjectMode;
   /** Toast after bulk build/pause on the selected rail rows. */
@@ -182,7 +189,16 @@ export function ProjectOperationsView({
 
   return (
     <section id="control-projects" className="ui-control-workspace scroll-mt-24">
-      <aside className="ui-control-project-rail">
+      {/* ONE PANE AT A TIME ON A PHONE.
+          Both panes are full-width and stacked below `lg`, so whichever sits
+          second is off-screen. Ordering them was tried both ways and neither
+          works: list-first buried the working agent under 20 idle rows, and
+          detail-first (the previous fix) opened on a project you had not
+          chosen, with the chooser below it — so tapping a row appeared to do
+          nothing, because the pane it drives was already three scrolls above.
+          Showing one at a time is the fix the ordering was standing in for.
+          From `lg` both are visible side by side and this changes nothing. */}
+      <aside className={cn("ui-control-project-rail", projectOpenOnPhone && "max-lg:hidden")}>
         <div className="border-b border-border-subtle px-4 pb-3 pt-4">
           <h2 className="text-sm font-semibold text-text-primary">Projects</h2>
           {/* Vocabulary matches the row badges and the fleet chips: "awaiting
@@ -341,7 +357,22 @@ export function ProjectOperationsView({
         </div>
       </aside>
 
-      <div className="ui-control-project-detail">
+      <div className={cn("ui-control-project-detail", !projectOpenOnPhone && "max-lg:hidden")}>
+        {/* The way back. A phone that swaps one full-screen pane for another
+            owes you an exit, and the browser's Back button is not it — the
+            selection is component state, not a route, so Back would leave
+            /control entirely. Named, not a bare chevron: it says where it
+            returns you to. */}
+        {onBackToList && (
+          <button
+            type="button"
+            onClick={onBackToList}
+            className="ui-btn-ghost ui-btn-xs mb-2 gap-1 lg:hidden"
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+            All projects
+          </button>
+        )}
         <ProjectCard
           key={selected.project.tab}
           {...cardProps(selected.project)}
