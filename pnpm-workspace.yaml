@@ -9,7 +9,6 @@ allowBuilds:
   # git-hosted dep: needs its prepare script to build dist/. pnpm requires the
   # exact resolved spec for git deps, so this key changes if the pinned ref
   # ever moves.
-  "ai-forms@https://codeload.github.com/bitbaum/ai-forms/tar.gz/52e3239ae4b0a2fcdc579edc2b9d8f8e7bff44b9": true
   "limitkit@https://codeload.github.com/bitbaum/limitkit/tar.gz/75adef1e993f90c6079a36a6cd96567cae5924c7": true
   "@parcel/watcher": true
   "@swc/core": true
