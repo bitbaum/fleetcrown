@@ -64,7 +64,12 @@ done
 _base=$(git merge-base HEAD "origin/${_def:-main}" 2>/dev/null || echo "")
 _touches_schema=""
 if [ -n "$_base" ]; then
-  git diff --name-only "$_base"...HEAD 2>/dev/null | grep -qE '^(src/db/|drizzle)' && _touches_schema=1
+  # `src/db/schema/`, not `src/db/`. The wider pattern also matched
+  # `src/db/queries/` — data ACCESS, not the shape of the data — so a branch
+  # that only edited a SELECT was treated as schema-touching and a stale local
+  # scratch DB blocked it. That is the exact false block the scoping above was
+  # written to prevent, reintroduced by one directory level.
+  git diff --name-only "$_base"...HEAD 2>/dev/null | grep -qE '^(src/db/schema/|drizzle/)' && _touches_schema=1
 else
   _touches_schema=1   # cannot tell — treat as yours
 fi

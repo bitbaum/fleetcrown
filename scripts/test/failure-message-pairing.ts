@@ -119,5 +119,79 @@ for (const remedy of Object.values(FAILURE_REMEDY)) {
   );
 }
 
+/**
+ * No failure message may NAME a specific agent as a literal.
+ *
+ * A real dispatch (Prime tower, 2026-09-04) produced:
+ *
+ *   "launched claude (pty) + injected, but the agent isn't generating yet …
+ *    Retry, or switch the project agent away from grok if this repeats."
+ *
+ * One sentence naming the agent that ran and, as advice, an agent that did not.
+ * The runner has `agent` in scope — the auth-failure branch a few lines above
+ * interpolates it correctly — so this was a literal left behind from when grok
+ * was the default. Hardcoding one agent into a generic failure is wrong for
+ * every agent but that one, and it discredits the rest of the message: if the
+ * diagnosis cannot tell which agent ran, why believe its diagnosis?
+ *
+ * Checked against the adapter ids themselves rather than a hand-typed list, so
+ * a new agent is covered the day it is added.
+ */
+const AGENT_IDS = ["claude", "grok", "codex", "gemini", "cursor", "openclaw"];
+const PROSE_MIN_SPACES = 5;
+
+/**
+ * Message STATEMENTS, not lines.
+ *
+ * A message built as `a` + `b` across two lines must be judged whole: the
+ * auth-failure message interpolates `${agent}` on its first line and mentions
+ * `claude setup-token` on its second, and reading either line alone gets the
+ * answer wrong. Joining continuations is the difference between a check that
+ * understands the code and one that greps it.
+ */
+const statements: { body: string; n: number }[] = [];
+{
+  const lines = src.split("\n");
+  let buf = "";
+  let start = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (/^\s*(\/\/|\*|\/\*)/.test(line)) continue; // comments — this file's own note names grok
+    if (buf === "") start = i + 1;
+    buf += line;
+    if (/\+\s*$/.test(line.trimEnd())) continue; // continued onto the next line
+    const parts = [...buf.matchAll(/`([^`]+)`/g)].map((m) => m[1]).join(" ");
+    if (parts) statements.push({ body: parts, n: start });
+    buf = "";
+  }
+}
+
+const messageBodies = statements
+  // PROSE, not paths. `${process.env.HOME}/.claude/projects/…` is a legitimate
+  // directory containing "claude" and no spaces; a sentence addressed to the
+  // operator has several. Without this the check fails on its own codebase,
+  // which is how a gate gets switched off.
+  .filter(({ body }) => (body.match(/ /g) || []).length >= PROSE_MIN_SPACES);
+
+// The rule, stated so it survives contact with legitimate copy: if a failure
+// message NAMES an agent, it must be naming the one that actually ran — that
+// is, it must interpolate `${agent}`.
+//
+// A blunter "no agent id in any message" rule fails on its own codebase. The
+// auth-failure message legitimately says `~/.claude/.credentials.json` and
+// `claude setup-token`: those are a real path and a real command, and that
+// message already interpolates `${agent}` for the agent it is about. The grok
+// line did not — it named an agent nobody chose, in a sentence about the agent
+// they did. That is the difference the check has to see.
+for (const id of AGENT_IDS) {
+  const offenders = messageBodies.filter(
+    ({ body }) => new RegExp(`\\b${id}\\b`, "i").test(body) && !body.includes("${agent}"),
+  );
+  ok(
+    offenders.length === 0,
+    `poller.ts message hardcodes the agent "${id}" (line ${offenders[0]?.n}) — interpolate \${agent} so the advice names the agent that actually ran`,
+  );
+}
+
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

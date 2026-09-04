@@ -504,7 +504,7 @@ export function ProjectCard({
             that day ignored both. The agent's handoff wins when there is one,
             and each source is NAMED so a suggestion can't pass as a fact.
 
-            line-clamp-2, NOT truncate. `truncate` is one line with an ellipsis,
+            line-clamp-3, NOT truncate. `truncate` is one line with an ellipsis,
             so this rendered as "Suggested next (profile): Conduct a 1-month
             baseline m…" — measured on prod, 594 of its 644 pixels hidden at
             390px and 432 at 1440px. The rest of the sentence existed only in
@@ -512,14 +512,28 @@ export function ProjectCard({
             this same directory documents having already fixed that exact
             mistake for its glyph row. It costs more here than there: clicking
             this button loads the text into the composer, so the sentence IS
-            the decision, and a tenth of a sentence is not one. /activity
-            already clamps the same "what's next" content to two lines
-            (ActivityEventRow) — the two surfaces now agree. */}
+            the decision, and a tenth of a sentence is not one.
+
+            NO `block` HERE, AND THAT IS THE WHOLE POINT. `-webkit-line-clamp`
+            does nothing unless the box is `display: -webkit-box`, which the
+            line-clamp utility sets — and Tailwind's `block` utility overrode
+            it. The first version of this fix shipped `block ... line-clamp-2`
+            and computed to `display: block; -webkit-line-clamp: 2`: the clamp
+            was INERT. It looked fixed because the text then wrapped freely,
+            which reads fine until the sentence is long. Checked live in a
+            browser: a 460-character next_step grew this box from 48px to 96px
+            and pushed the composer — the thing you act with — off the bottom
+            of the viewport. So a green "it renders fully now" was measuring
+            the absence of a clamp, not its presence.
+
+            Three lines, not two: a typical next_step (~256 chars) reads in
+            full at this width, and a pathological one is bounded and still
+            reachable — clicking loads the whole text into the composer. */}
         {nextStep && (
           <button
             type="button"
             onClick={() => setCustom(nextStep.text)}
-            className="ui-link-subtle-button mt-1.5 block w-full px-0 text-left line-clamp-2"
+            className="ui-link-subtle-button mt-1.5 w-full px-0 text-left line-clamp-3"
             title={`${nextStep.text}\n\n${nextStep.sourceTitle}\nClick to use as the prompt below — edit, then Send.`}
           >
             <span className="font-medium text-text-secondary">{nextStep.label}</span>{" "}
