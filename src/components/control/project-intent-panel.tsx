@@ -344,14 +344,15 @@ export function IntentButtonPanel({
           </button>
 
           {/* Secondary intents: compact chips + More toggle.
-              On phones, these three (Test & fix / Quality / Commit) plus the
-              primary CTA above plus composer/mic/send below put 8-10 tap
-              targets on screen before scrolling past a single card — the
-              "wall of buttons" the mobile UX audit named as this surface's
-              worst offender. Hidden under `sm` until "More" is tapped, same
-              as MORE_INTENTS already was; one extra tap trades for a card
-              that opens with ONE clear action instead of ten. Unchanged at
-              sm and up, where the room to show them was never the problem. */}
+              This row used to carry Test & fix / Quality / Commit, hidden under
+              `sm` but always shown above it — "the room to show them was never
+              the problem" at desktop widths. Room was not the problem; ATTENTION
+              was. Counted over all of orchestration_runs, those three have one
+              real dispatch between them ever, against next_best's 185, so they
+              now live in `more` (see config/control-intents.ts for the counts).
+              ACTION_INTENTS is consequently empty and this map renders nothing —
+              the group is kept, not deleted, because the fix is a config change
+              and reassigning an intent back is one word. */}
           <div className="flex flex-wrap gap-1.5">
             {ACTION_INTENTS.map(({ id, label }) => (
               <button
