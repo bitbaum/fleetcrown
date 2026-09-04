@@ -69,7 +69,7 @@ State already exists: `beacon_settings.auto_inject_mode` (on|off) + `entities.au
 - [ ] 4b. Update session file + memory.
 
 ## Verification
-- [ ] tsc + eslint (pre-commit), npm run smoke
+- [ ] tsc + eslint (pre-commit), pnpm run smoke
 - [ ] Browser-verify /control play/pause + describe-it flow (login with the test owner account)
 - [ ] Push, deploy to the Hetzner box (`scripts/deploy-hetzner.sh`) and confirm the app restarts healthy.
 

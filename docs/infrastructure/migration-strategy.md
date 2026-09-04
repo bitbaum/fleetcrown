@@ -32,7 +32,7 @@ documented path.
 | Location | Target DB | Prod risk? |
 |---|---|---|
 | `package.json` → `"db:push": "drizzle-kit push"` (was `"migrate"`) | Whatever `DATABASE_URL` is set to | **Yes, if pointed at the box** — but the name no longer *reads* as the normal workflow, and the docs now forbid it against shared DBs. |
-| `.github/workflows/deploy.yml` line 73 | Ephemeral CI Postgres service (`postgres:ci@localhost:5432`) | No — throwaway DB, exists only so `npm run build` can static-pre-render. |
+| `.github/workflows/deploy.yml` line 73 | Ephemeral CI Postgres service (`postgres:ci@localhost:5432`) | No — throwaway DB, exists only so `pnpm run build` can static-pre-render. |
 | `docker-compose.yml` line 24 | Local dev container Postgres | No — local only. |
 | `CLAUDE.md` → "Schema push: `DATABASE_URL=… npx drizzle-kit push`" | Documentation | Indirect — it teaches `push` as the normal workflow. |
 
@@ -71,7 +71,7 @@ The Drizzle setup that feeds this:
 - **Schema (SSOT):** `src/db/schema/` (`drizzle.config.ts` → `schema`).
 - **Migration files (out):** `drizzle/` (`0001_*.sql` … `0039_*.sql`).
 - **Meta:** `drizzle/meta/_journal.json` + `0039_snapshot.json` — a current
-  snapshot exists, so `npm run db:generate` diffs against it and emits the next
+  snapshot exists, so `pnpm run db:generate` diffs against it and emits the next
   `0040+` migration automatically.
 - **Ledger bootstrap:** `scripts/db/bootstrap-migration-ledger.ts` reconciles
   drizzle's native `drizzle.__drizzle_migrations` ledger from existing schema —
@@ -85,7 +85,7 @@ equivalent, filename+ledger-based (immune to journal/snapshot state).
 
 Not every migration lives in `drizzle/`. The two most recent
 (`scripts/db/migrations/074_*.sql`, `075_*.sql`) are hand-written raw SQL applied
-**manually** via `npm run db:apply-box -- <file>` — which SSHes to the box and
+**manually** via `pnpm run db:apply-box <file>` — which SSHes to the box and
 runs the file **as the app role** (so created objects are owned by `fleetcrown`
 and stay visible to the app; applying as `postgres` is the owner/grant footgun
 that has cost rollbacks before). `apply-schema.sh` reads only `<repo>/drizzle`,
@@ -112,7 +112,7 @@ when hand-applied via `db:apply-box` ahead of the deploy.
 - **No rollback point.** Because nothing is versioned, you cannot revert to
   "schema at commit X." Recovery means a restore from backup.
 - **Environment-coupled.** `push` does exactly what its `DATABASE_URL` says.
-  `npm run db:push` with a box URL in the shell = unreviewed prod DDL. This is
+  `pnpm run db:push` with a box URL in the shell = unreviewed prod DDL. This is
   the single realistic route by which FleetCrown could still auto-mutate prod —
   now named and documented so it reads as the forbidden path, not the default.
 - **Schema can exist with no migration file.** A change applied by `push` never
@@ -135,7 +135,7 @@ exists; the change is making it the default and demoting `push`.
 1. **Edit schema** in `src/db/schema/`.
 2. **Generate a versioned migration file:**
    ```bash
-   npm run db:generate           # drizzle-kit generate → drizzle/NNNN_*.sql
+   pnpm run db:generate           # drizzle-kit generate → drizzle/NNNN_*.sql
    ```
 3. **Review the generated SQL in the PR.** This is the gate — a human (and CI)
    reads the DDL before it can reach any environment. Destructive statements are
@@ -176,7 +176,7 @@ Small, mechanical, close the footgun:
   new landmine (YAGNI).
 - ✅ **`CLAUDE.md` / `README.md` / call-sites — DONE:** the Database section now
   documents the generate → review → forward-apply loop and states explicitly
-  that **`npm run db:push` is for a throwaway local/scratch DB only — never a
+  that **`pnpm run db:push` is for a throwaway local/scratch DB only — never a
   shared or production database.** Every `npm run migrate` reference
   (`README.md`, `scripts/check-schema-drift.ts`, `scripts/db/deploy-host.sh`,
   `scripts/deploy-local.sh`, `docs/infrastructure/postgres-portability.md`) was
@@ -207,12 +207,12 @@ is **already solved** in this repo; this section records it so it isn't redone.
    `drizzle.__drizzle_migrations` + `drizzle/meta/_journal.json` from the
    existing files so `migrate` treats them as applied instead of re-running them:
    ```bash
-   npx tsx scripts/db/bootstrap-migration-ledger.ts --dry-run      # inspect
-   npx tsx scripts/db/bootstrap-migration-ledger.ts --write-journal # journal only
-   DATABASE_URL=<box> npx tsx scripts/db/bootstrap-migration-ledger.ts --apply
+   pnpm exec tsx scripts/db/bootstrap-migration-ledger.ts --dry-run      # inspect
+   pnpm exec tsx scripts/db/bootstrap-migration-ledger.ts --write-journal # journal only
+   DATABASE_URL=<box> pnpm exec tsx scripts/db/bootstrap-migration-ledger.ts --apply
    ```
 3. **Snapshot is current.** `drizzle/meta/0039_snapshot.json` matches the live
-   schema, so `npm run db:generate` produces a correct incremental `0040+` diff —
+   schema, so `pnpm run db:generate` produces a correct incremental `0040+` diff —
    not a from-scratch recreate.
 
 **No re-baselining needed.** The one behavioral change to adopt is discipline +

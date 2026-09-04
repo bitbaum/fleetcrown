@@ -35,16 +35,16 @@ docs/             Architecture + infrastructure notes
 ## Dev commands
 
 ```bash
-npm run dev        # dev server (port 3000)
-npm run build      # production build
-npm run smoke      # curl every route on :3000, assert 2xx/3xx (needs dev server)
-npm run test:home  # home/ inline self-test suites (~14s)
+pnpm run dev        # dev server (port 3000)
+pnpm run build      # production build
+pnpm run smoke      # curl every route on :3000, assert 2xx/3xx (needs dev server)
+pnpm run test:home  # home/ inline self-test suites (~14s)
 ```
 
 ## verify (the one canonical gate)
 
 ```bash
-npm run verify
+pnpm run verify
 # The step list lives in package.json "scripts.verify" and NOWHERE else.
 # Read it there: `jq -r '.scripts.verify' package.json`
 ```
@@ -54,7 +54,7 @@ five steps while the gate had grown to nine, so this file taught a weaker bar
 than CI enforces. A doc that restates a machine-readable SSOT will always
 eventually lie about it; point at the source instead.
 
-CI (`.github/workflows/ci.yml`) runs `npm run verify` **verbatim** — green local
+CI (`.github/workflows/ci.yml`) runs `pnpm run verify` **verbatim** — green local
 verify ⇒ green CI. Run it before declaring any change done. A husky pre-commit
 hook runs `tsc --noEmit` + `eslint`; pre-push runs `test:home` (+ `smoke` when
 the dev server is up).
@@ -63,10 +63,10 @@ the dev server is up).
 
 - **Schema (SSOT):** `src/db/schema/` — types via `$inferSelect` / `$inferInsert`.
 - **Migrations:** `drizzle/NNNN_*.sql`, meta in `drizzle/meta/`.
-- **Change flow:** edit schema → `npm run db:generate` (versioned file) →
+- **Change flow:** edit schema → `pnpm run db:generate` (versioned file) →
   review the SQL in the PR → the deploy applies it forward-only.
 - **Raw-SQL migrations** (`scripts/db/migrations/NNN_*.sql`, e.g. 074/075) are
-  hand-applied via `npm run db:apply-box -- <file>` (runs as the app role so
+  hand-applied via `pnpm run db:apply-box <file>` (runs as the app role so
   objects are owned by `fleetcrown`). The deploy's `apply-schema.sh` does NOT
   auto-apply these — apply them to the box **and** local dev *before* the code
   reaches `main`, or the drift-gate rolls the deploy back.

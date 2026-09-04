@@ -10,7 +10,7 @@ last_modified_summary: Horizon C1-C4 completed: Loki resolves project context fr
 
 **Honest status (2026-06):** pre-1.0, one paying operator (dogfood), schema-ready multi-user SaaS, single-tenant cloud execution (box-runner + optional desktop).
 
-**SSOT for autopilot:** re-run `FLEETCROWN_SEED_ROADMAP=1 DATABASE_URL=… npx tsx scripts/seed-fleetcrown-roadmap.ts` after milestone edits so `getProjectContext` goals match this plan.
+**SSOT for autopilot:** re-run `FLEETCROWN_SEED_ROADMAP=1 DATABASE_URL=… pnpm exec tsx scripts/seed-fleetcrown-roadmap.ts` after milestone edits so `getProjectContext` goals match this plan.
 
 ## Layer stack (dependency order)
 

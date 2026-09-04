@@ -127,7 +127,7 @@ Before shipping UI changes, verify at **375×667** and **320×568**:
 6. Landing `/` — hero readable; public nav drawer opens
 7. Public pages in **Light** as well as Dark — the surface follows the theme, and a white-on-white regression is invisible in a dark-only pass
 
-Run `npm run smoke` with dev server up for route health; Playwright viewport tests are planned but not yet in CI.
+Run `pnpm run smoke` with dev server up for route health; Playwright viewport tests are planned but not yet in CI.
 
 ## Control page (`/control`)
 

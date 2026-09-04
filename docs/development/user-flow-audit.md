@@ -31,7 +31,7 @@ SSOT for **every user-facing flow implied by the UI**, with a working-status gra
 | # | Initiative | Status |
 |---|------------|--------|
 | 1 | Flow-status matrix in this doc | [x] Done 2026-07-04 |
-| 2 | Authenticated smoke + PIN on prod (`npm run test:authenticated-smoke`) | [x] 115/115 2026-07-04 |
+| 2 | Authenticated smoke + PIN on prod (`pnpm run test:authenticated-smoke`) | [x] 115/115 2026-07-04 |
 | 3 | UI honesty labels on Control/Loki/Terminal (queued / needs builder / needs GitHub) | [x] `executor-copy.ts` + `ExecutorHonestyChip` on Control intents, Loki composer, Terminal toggle |
 | 4 | Fix top “feels broken” gaps (setup→sign-in, verify-email enforcement, `/control/workspace`) | [x] Setup auto sign-in; verify-email optional banner + email copy; workspace gated on hosted |
 
@@ -59,15 +59,15 @@ SSOT for **every user-facing flow implied by the UI**, with a working-status gra
 | Method | Scope | Result |
 |--------|-------|--------|
 | Production `scripts/smoke.sh` (unauthenticated) | 44 routes | **44/44 OK** |
-| `npm run test:authenticated-smoke` (prod) | 115 probes session + PIN + CRUD + RAG + billing SSOT | **115/115 OK** (2026-07-04) |
-| `npm run dogfood:loki:ci` (prod, builder online) | Loki dispatch → Terminal Cloud UI | **ok** 2026-07-04 |
-| `npm run dogfood:ui-flows:ci` (prod, PIN) | PE11/H05/G07/M04/ST02/PR04/X07 UI flows | **ok** 2026-07-04 |
-| `npm run dogfood:machine:ci` (prod) | X05 full path when local Fleet Runner online | skips when desktop offline |
+| `pnpm run test:authenticated-smoke` (prod) | 115 probes session + PIN + CRUD + RAG + billing SSOT | **115/115 OK** (2026-07-04) |
+| `pnpm run dogfood:loki:ci` (prod, builder online) | Loki dispatch → Terminal Cloud UI | **ok** 2026-07-04 |
+| `pnpm run dogfood:ui-flows:ci` (prod, PIN) | PE11/H05/G07/M04/ST02/PR04/X07 UI flows | **ok** 2026-07-04 |
+| `pnpm run dogfood:machine:ci` (prod) | X05 full path when local Fleet Runner online | skips when desktop offline |
 | `SMOKE_PRIVATE_PIN` + `git push` | Pre-push `test:pre-push-prod-dogfood` | reads `.env.local`; smoke + ui-flows + machine; loki when builder online (**ok** 2026-07-04) |
 | Unit/inline tests | auth, onboarding, execution-access, workspace-access, dispatch-gates, fleet-kick, loop-ssot, executor | all passed |
 | Codebase mapping | Every `page.tsx`, shell component, `api/*/route.ts` | complete |
 
-### Authenticated smoke (`npm run test:authenticated-smoke`)
+### Authenticated smoke (`pnpm run test:authenticated-smoke`)
 
 Script: `scripts/test/authenticated-smoke.ts`. Resolves a session via (in order):
 
@@ -95,21 +95,21 @@ Report written to `.tmp/authenticated-smoke-report.json`.
 
 **115/115 probes passed** with session + PIN unlock on production.
 
-**Dogfood:** `SMOKE_PRIVATE_PIN=… BASE=https://fleetcrown.orangecat.ch npm run dogfood:loki:ci` — UI round-trip Loki → dispatch bubble → Terminal Cloud (requires builder online for `ok: true`).
+**Dogfood:** `SMOKE_PRIVATE_PIN=… BASE=https://fleetcrown.orangecat.ch pnpm run dogfood:loki:ci` — UI round-trip Loki → dispatch bubble → Terminal Cloud (requires builder online for `ok: true`).
 
-**UI flows:** `SMOKE_PRIVATE_PIN=… npm run dogfood:ui-flows:ci` — Ask Loki from People card, habits heatmap, goal → Control prefill + harmless full dispatch when builder is online, prompt fork, Run with Loki modal.
+**UI flows:** `SMOKE_PRIVATE_PIN=… pnpm run dogfood:ui-flows:ci` — Ask Loki from People card, habits heatmap, goal → Control prefill + harmless full dispatch when builder is online, prompt fork, Run with Loki modal.
 
 Re-run:
 
 ```bash
 # Full authenticated probe suite
-BASE=https://fleetcrown.orangecat.ch npm run test:authenticated-smoke
+BASE=https://fleetcrown.orangecat.ch pnpm run test:authenticated-smoke
 
 # With private-zone unlock (operator PIN — never commit)
-SMOKE_PRIVATE_PIN=… BASE=https://fleetcrown.orangecat.ch npm run test:authenticated-smoke
+SMOKE_PRIVATE_PIN=… BASE=https://fleetcrown.orangecat.ch pnpm run test:authenticated-smoke
 
 # Legacy route smoke with a minted token
-FLEETCROWN_SESSION_TOKEN=… BASE=https://fleetcrown.orangecat.ch npm run smoke
+FLEETCROWN_SESSION_TOKEN=… BASE=https://fleetcrown.orangecat.ch pnpm run smoke
 ```
 
 ---
@@ -530,7 +530,7 @@ When adding a UI action:
 2. If the flow is cloud vs local, also update [cloud-local-workflows.md](./cloud-local-workflows.md).
 3. Add the page route to `scripts/smoke.sh` if it is a new top-level `page.tsx`.
 4. Add authenticated GET probes to `scripts/test/authenticated-smoke.ts` when the route is session-gated.
-5. Execution API probes + `npm run dogfood:loki:ci` for Loki → Terminal UI; `npm run dogfood:ui-flows:ci` for card/modal flows (see §15).
+5. Execution API probes + `pnpm run dogfood:loki:ci` for Loki → Terminal UI; `pnpm run dogfood:ui-flows:ci` for card/modal flows (see §15).
 6. Bump `last_modified_date` and `last_modified_summary` on this file.
 
 When fixing a gap, upgrade the grade and note the change in `last_modified_summary`.

@@ -22,7 +22,8 @@ only path to production.
 push to default branch
   └─ wait for that commit's CI to go green         ci-gate.sh (red → blocked)
      └─ pull the app's runtime .env from the box    box stays the env SSOT
-        └─ npm ci + build + rsync + atomic swap     deploy.sh
+        └─ install (npm/pnpm, per lockfile) + build
+           + rsync + atomic swap                    deploy.sh
            └─ localhost health check                deploy.sh (auto-rollback)
               └─ public https check                 through Caddy/TLS/DNS
 ```
@@ -65,8 +66,9 @@ Two properties worth keeping:
        secrets: inherit
    ```
 
-   Optional inputs: `node-version` (default `20`) and `install-flags` (e.g.
-   `--legacy-peer-deps`).
+   Optional inputs: `node-version` (fallback `24` when the repo has no
+   `.nvmrc`), `install-flags` (e.g. `--legacy-peer-deps`), and
+   `package-manager` to override lockfile detection (`npm | pnpm | yarn`).
 
 The app repo's name and the `apps.conf` key often differ — `revamp-info` on the
 box is served from the `hirnli` repo, `datacat-web` from `datacat`. The shim's

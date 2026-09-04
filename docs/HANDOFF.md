@@ -204,7 +204,7 @@ Browser /control re-fetches → UI updates within ~200ms of the DB write
 
 ### What's broken / known footguns
 - **Auto-update on .deb is silently broken at the OS level.** electron-updater downloads but can't apply (sudo needed). v0.7.5's UpdateBanner is the user-facing fix. The durable fix is task #48 (apt repo).
-- **Smoke test (`npm run smoke`) requires the local dev server.** Husky pre-push skips it when the server isn't running. Run `npm run dev` before pushing if you want full validation.
+- **Smoke test (`pnpm run smoke`) requires the local dev server.** Husky pre-push skips it when the server isn't running. Run `pnpm run dev` before pushing if you want full validation.
 - **`drizzle-kit push` is the historical migration path on prod.** Migration ledger now exists; future deploys should use `drizzle-kit migrate`. Push is still safe for dev DBs but DO NOT use on prod after this point.
 - **Agent CLI distribution is by official installer, not bundled.** Fleet Runner bundles Zellij but not Claude/Codex/Grok/Gemini/Cursor. The "Install X" UI button on /control launches the agent's official one-line installer in a new Zellij tab. Detection lives in each adapter's `detectAvailable()`.
 
@@ -262,7 +262,7 @@ The mirror script is the bridge between `bitbaum/fleetcrown` (where CI builds) a
 
 ## 9. How to dogfood
 
-1. `npm run dev` — local Next.js at `:3000`.
+1. `pnpm run dev` — local Next.js at `:3000`.
 2. The user's daemon runs as `systemd --user` unit `fleetcrown-app` (NOT a fresh `next dev` process). See `pattern_local_prod_systemd` in agent memory — this is a footgun.
 3. Fleet Runner desktop wraps `fleetcrown.orangecat.ch` by default. Set `FLEETCROWN_WEB_URL=http://localhost:3000` for local dogfood.
 4. Hit `/api/metrics` to see what the cloud knows about the user's recent activity.
@@ -300,7 +300,7 @@ Agent memory at `~/.claude/projects/-home-g-dev-fleetcrown/memory/` has addition
 | `/control` shows old data | Check the bridge SSE connection in browser DevTools network tab. Or check `runtime_snapshots` for `observed_at` freshness. |
 | Dispatch goes nowhere | `pending_commands` table — was the row inserted? Did the poller claim it? Check `result` field after claim. |
 | Auto-update silently fails | It does on .deb. That's why v0.7.5 ships the UpdateBanner. Task #48 is the real fix. |
-| `drizzle-kit migrate` wants to re-apply old migrations | The ledger now exists. If somehow it's empty, re-run `npx tsx scripts/db/bootstrap-migration-ledger.ts --apply` with `DATABASE_URL` set. |
+| `drizzle-kit migrate` wants to re-apply old migrations | The ledger now exists. If somehow it's empty, re-run `pnpm exec tsx scripts/db/bootstrap-migration-ledger.ts --apply` with `DATABASE_URL` set. |
 | /api/metrics is empty | Either the user has no activity in the last 24h, or the new metric query you added has a bug. Check `getDispatchMetrics`/`getRunMetrics` in `src/db/queries/metrics.ts`. |
 
 ---

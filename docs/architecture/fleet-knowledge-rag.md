@@ -19,7 +19,7 @@ Manual backfill (also runs nightly at 03:30 UTC via `fleetcrown-reindex.timer`):
 ssh root@167.233.22.31 'systemctl start fleetcrown-reindex.service'
 ```
 
-Verify: `/memory` shows chunk counts; `npx tsx scripts/test/rag-retrieval.ts` exercises retrieval.
+Verify: `/memory` shows chunk counts; `pnpm exec tsx scripts/test/rag-retrieval.ts` exercises retrieval.
 
 ## Why now
 

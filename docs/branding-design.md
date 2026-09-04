@@ -28,7 +28,7 @@ FleetCrown is locked as the product name. The criteria below were used to evalua
 - **Domain / TLS**: Caddy vhost on the Hetzner box + DNS at the registrar (Infomaniak, `orangecat.ch` zone).
 - **Everything else** (manifest, layouts, components, OG images, desktop) must import from the above or use the generated `ui-*` / CSS custom properties. No other source of truth for the name or core positioning strings.
 
-Rebrand process (one sentence): edit the two SSOT files + Caddy vhost domain + registrar DNS. Then audit with `npm run check:design`, `grep` for the old name, update desktop assets, and test the installers + public surfaces.
+Rebrand process (one sentence): edit the two SSOT files + Caddy vhost domain + registrar DNS. Then audit with `pnpm run check:design`, `grep` for the old name, update desktop assets, and test the installers + public surfaces.
 
 ## Name Selection Criteria (first principles)
 
@@ -70,7 +70,7 @@ FleetCrown is the name because it positions the *product* as the authoritative c
 | Filled accent control | `bg-accent-warm` + `text-on-accent` | `bg-accent` + `text-accent-foreground` |
 | Subtle raised surface | `bg-surface-raised` | `bg-accent` |
 
-`npm run check:design` now fails on any bare `(text|fill|stroke|border|ring|bg)-accent` in TSX. The general lesson: a token whose name reads like a colour may be half of a surface pair — check its OKLCH lightness against the background it will sit on before using it as ink.
+`pnpm run check:design` now fails on any bare `(text|fill|stroke|border|ring|bg)-accent` in TSX. The general lesson: a token whose name reads like a colour may be half of a surface pair — check its OKLCH lightness against the background it will sit on before using it as ink.
 
 **Brand mark (the geometric logo):**
 - The single source of truth for the mark is the SVG inside `src/components/shell/BrandMark.tsx` (rounded control-window frame + vertical divider + horizontal control bars). It is rendered with `currentColor` + semantic text tokens so it adapts to light/dark and context.
@@ -90,7 +90,7 @@ FleetCrown is the name because it positions the *product* as the authoritative c
 - Still imports `APP_SLUG` (and can import more) from the web brand SSOT where useful.
 
 **Audit discipline (never skip):**
-- `npm run check:design` (runs `scripts/check-design-system.sh`) — blocks on raw palette colors in TSX (except OG), raw recipe duplication outside globals, `ui-*` used via `@apply` in components, etc.
+- `pnpm run check:design` (runs `scripts/check-design-system.sh`) — blocks on raw palette colors in TSX (except OG), raw recipe duplication outside globals, `ui-*` used via `@apply` in components, etc.
 - The manual grep from CLAUDE.md for palette + arbitrary text sizes.
 - Before any PR that touches UI: the above must be clean, and new recurring patterns must be extracted to Layer 3.
 
@@ -128,7 +128,7 @@ Ask (in order):
 - `src/components/shell/BrandMark.tsx` + `SidebarBrand.tsx`
 - `src/app/layout.tsx` (metadata), `public/manifest.json`, `src/app/opengraph-image.tsx` + siblings
 - `src/config/marketing-content.ts`
-- `npm run check:design`
+- `pnpm run check:design`
 - Desktop: `desktop/src/renderer/src/App.tsx`, its globals.css, `desktop/src/main/index.ts`
 - Docs: this file + `CLAUDE.md` (design system section) + `docs/desktop-app.md` (rebrand notes from the cockpit→fleetcrown pass)
 
@@ -142,7 +142,7 @@ Keep the crown on the fleet.
 - Used todo_write for structured plan.
 - Immediately executed via tools: git status/diff, zellij dump-layout + /tmp/claude-pane-* inspection, ~/.claude/sessions/Cockpit.md + project memory reads to detect other agent's focus (desktop Fleet Runner polish + "impeccable" web control feedback per their session; they have pushed runner commits; current uncommitted in this pane are the branding/design ones).
 - Deep review: Multiple passes reading globals.css (full control section + hero), ControlPanel (structure, delegation to presenter/hooks), ControlFleetStatus, ProjectCard (factoring), AttentionBar, BrandMark, control-presenter snippets, public surfaces, metrics.
-- Audits run repeatedly: `npm run check:design`, CLAUDE grep for violations, brand SSOT greps, literal name scans.
+- Audits run repeatedly: `pnpm run check:design`, CLAUDE grep for violations, brand SSOT greps, literal name scans.
 - Prioritized: High-impact (command "alive" feel, visual hierarchy for attention/ready/working), low-conflict (mostly globals.css + docs + small token-based esthetics in already-modified control files; avoided large logic changes in ControlPanel where other agent might target "feedback impeccable").
 - Changes layered on top of prior unification/SSOT work. All verified post-edit. No new abstractions; pure CSS for animation; respected 4-layer, SSOT, first principles (simplicity, state/SSOT, serve the judgment user, correctness).
 

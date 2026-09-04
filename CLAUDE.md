@@ -104,9 +104,9 @@ home/              → Agent orchestration library. Pure pieces that tail one
                      docs/development/cloud-local-workflows.md. Every dispatch
                      still goes cloud /api/inject → pending_command → whichever
                      runner is attached polls and types into zellij. To iterate
-                     on a single piece, run it directly (`npx tsx
+                     on a single piece, run it directly (`pnpm exec tsx
                      home/worker.ts --start`); test the whole library with
-                     `npm run test:home`. Full docs: home/README.md.
+                     `pnpm run test:home`. Full docs: home/README.md.
 
 widget/            → The embeddable feedback widget customer sites load as
                      <script src=".../widget.js">. Zero-dependency vanilla TS,
@@ -117,7 +117,7 @@ widget/            → The embeddable feedback widget customer sites load as
                      budgeting the ingest route also relies on.
                      This is the ONLY surface strangers on other people's sites
                      touch, so it earns the same care as src/ — it is covered by
-                     `npm run lint` and tsc. It is deliberately NOT bound by the
+                     `pnpm run lint` and tsc. It is deliberately NOT bound by the
                      four-layer design system below: it cannot see globals.css
                      or Tailwind, so its literal colors are correct, not debt.
 ```
@@ -249,7 +249,7 @@ Loki assistant writes into it instead of describing which fields to type in.
 Loki also receives a `pageContext` excerpt of the rendered `<main>`, with an
 explicit rule to admit when something is not in that excerpt.
 
-`npm run test:ai-forms` exercises fill + follow-up refine against the live model
+`pnpm run test:ai-forms` exercises fill + follow-up refine against the live model
 (needs `GROQ_API_KEY`; not part of `verify`).
 
 ### SSOT Rules
@@ -272,9 +272,9 @@ explicit rule to admit when something is not in that excerpt.
 
 ### Database
 - Connection: `DATABASE_URL` env var (required, fail-fast if missing)
-- Schema change flow: edit `src/db/schema/` → `npm run db:generate` (versioned `drizzle/NNNN_*.sql`) → review the SQL in the PR → the deploy applies it forward-only (`scripts/hetzner/apply-schema.sh`, guarded + rollback-on-drift). See `docs/infrastructure/migration-strategy.md`.
-- `npm run db:push` (`drizzle-kit push`) is for a **throwaway local/scratch DB only** — never a shared or production database (it diff-applies with no reviewable file and can drop data).
-- Seed: `DATABASE_URL=... npx tsx scripts/seed.ts`
+- Schema change flow: edit `src/db/schema/` → `pnpm run db:generate` (versioned `drizzle/NNNN_*.sql`) → review the SQL in the PR → the deploy applies it forward-only (`scripts/hetzner/apply-schema.sh`, guarded + rollback-on-drift). See `docs/infrastructure/migration-strategy.md`.
+- `pnpm run db:push` (`drizzle-kit push`) is for a **throwaway local/scratch DB only** — never a shared or production database (it diff-applies with no reviewable file and can drop data).
+- Seed: `DATABASE_URL=... pnpm exec tsx scripts/seed.ts`
 - Every table has `user_id` for multi-user prep
 - UUIDs for all primary keys
 - JSONB for flexible metadata
@@ -291,14 +291,14 @@ See `docs/development/cloud-local-workflows.md` — SSOT for which workflows run
 
 See `docs/development/responsive-design.md` — SSOT for mobile chrome tokens, shell layout, viewport-height panes, and responsive component patterns. All pages must work at 320px+ without horizontal scroll.
 
-That rule now has a check behind it. `npm run audit:responsive` drives the
+That rule now has a check behind it. `pnpm run audit:responsive` drives the
 AUTHENTICATED pages through real viewports (320/390/768/1440) in headless
 Chromium, fails on horizontal overflow, reports touch targets under 44px, and
 writes a screenshot per page/viewport to `.tmp/responsive-audit/`. It needs a
 session: set `FLEETCROWN_SESSION_TOKEN`, or `AUDIT_DATABASE_URL` + `AUTH_SECRET`
 — and since prod Postgres is firewalled to the box, `eval "$(bash
 scripts/db-tunnel.sh)"` opens an SSH tunnel and exports the right URL. Not part
-of `npm run verify` (needs network, a session, and a browser download).
+of `pnpm run verify` (needs network, a session, and a browser download).
 
 ## Shipping: nobody merges by hand
 
@@ -336,27 +336,27 @@ and change it THERE, because a fix made here would reach nobody.
 ## Dev Commands
 
 ```bash
-npm run dev          # Start dev server (default port 3000)
-npm run build        # Production build
-npm run smoke        # Curl every page route on localhost:3000 and assert 2xx/3xx
-npm run test:home    # Run all eight home/ inline self-test suites (~14s)
-npm run check:desktop # Typecheck + build desktop/ (Fleet Runner). Part of `verify`.
+pnpm run dev          # Start dev server (default port 3000)
+pnpm run build        # Production build
+pnpm run smoke        # Curl every page route on localhost:3000 and assert 2xx/3xx
+pnpm run test:home    # Run all eight home/ inline self-test suites (~14s)
+pnpm run check:desktop # Typecheck + build desktop/ (Fleet Runner). Part of `verify`.
                       # Runs on EVERY PR, not just desktop ones: desktop/src/main
                       # bundles ../src and ../home, so a src/ change can break it.
-npm run db:generate  # Generate a versioned migration file from schema changes
-npm run db:push      # drizzle-kit push — LOCAL/scratch DB only, never shared/prod
-npx tsx scripts/seed.ts  # Re-seed database from knowledge.sqlite + contacts
-npx tsx home/worker.ts --start  # Run a single home/ piece for iteration
+pnpm run db:generate  # Generate a versioned migration file from schema changes
+pnpm run db:push      # drizzle-kit push — LOCAL/scratch DB only, never shared/prod
+pnpm exec tsx scripts/seed.ts  # Re-seed database from knowledge.sqlite + contacts
+pnpm exec tsx home/worker.ts --start  # Run a single home/ piece for iteration
                                 # (Fleet Runner desktop is the real executor)
 ```
 
 A husky **pre-commit** hook runs `eslint` on STAGED FILES ONLY — no `tsc`. A
 commit is cheap and local, so it is gated cheaply.
 
-A husky **pre-push** hook runs the full `npm run verify` bundle — the same one
+A husky **pre-push** hook runs the full `pnpm run verify` bundle — the same one
 CI runs, so green locally means green in CI — plus a schema-drift guard, dev-server
 smoke (if one is up), and, when `SMOKE_PRIVATE_PIN` is in `.env.local` (or
-exported), `npm run test:pre-push-prod-dogfood`: authenticated prod smoke and
+exported), `pnpm run test:pre-push-prod-dogfood`: authenticated prod smoke and
 headless prod UI dogfood (`ui-flows` always; `dogfood:loki` when the builder is
 online; `dogfood:machine` when a local Fleet Runner is connected). A push is
 shared, so it is gated completely.

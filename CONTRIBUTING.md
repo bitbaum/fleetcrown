@@ -48,9 +48,9 @@ restating per task.
 Run the relevant subset while developing. Before pushing a broad change, run:
 
 ```bash
-npm run verify   # the canonical gate — CI runs exactly this
-npm run build
-npm run smoke    # needs the dev server up
+pnpm run verify   # the canonical gate — CI runs exactly this
+pnpm run build
+pnpm run smoke    # needs the dev server up
 ```
 
 ## Pull Requests

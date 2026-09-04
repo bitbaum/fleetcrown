@@ -117,15 +117,15 @@ content/                 Public essays and whitepaper content
 
 Every change should preserve:
 
-- `npm run verify` — the one canonical gate. CI runs it verbatim, so green
+- `pnpm run verify` — the one canonical gate. CI runs it verbatim, so green
   local verify means green CI. Its step list lives in `package.json`
   (`scripts.verify`); this file deliberately does not restate it.
-- `npm run build`
+- `pnpm run build`
 
 This used to enumerate an ad-hoc subset of test scripts. Every such list
 drifts from the real gate — three docs ended up teaching three different,
 all-weaker bars — so the rule is now: name the gate, never its contents.
-- `npm run smoke`
+- `pnpm run smoke`
 
 CI runs type/lint/design/self-test checks on pushes and pull requests. A
 scheduled audit workflow fails on high or critical dependency vulnerabilities.
@@ -135,11 +135,11 @@ Production deploys to the Hetzner box run via `scripts/deploy-hetzner.sh`
 ## Local Development
 
 ```bash
-npm install
+pnpm install
 docker compose up db -d
 cp .env.example .env.local
-npm run db:push   # local scratch DB only — never a shared/prod database
-npm run dev
+pnpm run db:push   # local scratch DB only — never a shared/prod database
+pnpm run dev
 ```
 
 Minimum local `.env.local`:

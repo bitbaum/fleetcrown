@@ -86,7 +86,7 @@ Point each app at its own database name on the same host via its `DATABASE_URL`.
 DATABASE_URL="$OLD_DIRECT_URL" ./scripts/db/dump.sh fleetcrown-pre-migrate.sql.gz
 
 # 2. Create empty DB on new host, push schema
-DATABASE_URL="$NEW_DIRECT_URL" npm run db:push
+DATABASE_URL="$NEW_DIRECT_URL" pnpm run db:push
 
 # 3. Restore
 DATABASE_URL="$NEW_DIRECT_URL" ./scripts/db/restore.sh fleetcrown-pre-migrate.sql.gz
@@ -107,7 +107,7 @@ SOURCE_DATABASE_URL="$OLD" TARGET_DATABASE_URL="$NEW" TARGET_USER_ID="<uuid>" \
 
 - [ ] `DATABASE_URL` (direct) and `DATABASE_POOL_URL` (pool, if used) set in the app env
 - [ ] Local `.env.local` still points at Docker — not new prod
-- [ ] `npm run db:push` succeeds against new direct URL
+- [ ] `pnpm run db:push` succeeds against new direct URL
 - [ ] Auth sign-in works
 - [ ] Control SSE / runner push updates `runtime_snapshots`
 - [ ] Decommission old host after 7 days (keep a cold dump for 30)
@@ -116,9 +116,9 @@ SOURCE_DATABASE_URL="$OLD" TARGET_DATABASE_URL="$NEW" TARGET_USER_ID="<uuid>" \
 
 | Script | Purpose |
 |--------|---------|
-| `npm run test:db-url` | Assert URL resolution logic |
-| `scripts/db/dump.sh` (`npm run db:dump`) | Portable `pg_dump` backup |
-| `scripts/db/restore.sh` (`npm run db:restore`) | Restore into target DB |
+| `pnpm run test:db-url` | Assert URL resolution logic |
+| `scripts/db/dump.sh` (`pnpm run db:dump`) | Portable `pg_dump` backup |
+| `scripts/db/restore.sh` (`pnpm run db:restore`) | Restore into target DB |
 | `scripts/db/restore-to-target.sh` | Restore + verify row counts against a manifest |
 | `scripts/db/sync-user-data.sh` | Copy user-owned rows between DBs |
 

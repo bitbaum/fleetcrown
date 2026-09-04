@@ -6,7 +6,7 @@ All alerts flow through the watchdog's Telegram channel (`/opt/monitoring/telegr
 
 **The SSOT for everything that reaches the operator's Telegram — alerts,
 digests, feedback pings, briefings — is `docs/telegram-notifications.md`**,
-enforced by `scripts/ci/check-telegram-registry.sh` (part of `npm run verify`).
+enforced by `scripts/ci/check-telegram-registry.sh` (part of `pnpm run verify`).
 This file covers only the box-monitoring senders in that registry.
 
 ## What alerts you
@@ -41,7 +41,7 @@ A page is not the product — the outcome is. Two mechanisms act before a human:
   reports box-shaped causes as exact commands. Token SSOT: the same `ck_*`
   agent token Loki's `fc.sh` uses (`/home/openclaw/.openclaw/calendar-drain.env`).
 
-Covered end-to-end by `scripts/hetzner/test-host-alerts.sh` (`npm run test:ops`).
+Covered end-to-end by `scripts/hetzner/test-host-alerts.sh` (`pnpm run test:ops`).
 
 The rescale watcher exists because Falkenstein is capacity-blocked: the Hetzner
 console *lists* cx43/cx53 as valid rescale targets ("supported"), but the API's
