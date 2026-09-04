@@ -22,7 +22,7 @@ import { createHumanTask, listOpenHumanTasks } from "@/db/queries/human-tasks";
 import { HUMAN_TASK_STATUS_LABEL, TASK_ACTOR, formatFee } from "@/config/crew";
 import { ACTION_TYPE, type ActionType } from "@/lib/constants/statuses";
 import { askGatewayAgent, isGatewayConfigured } from "@/lib/openclaw-gateway";
-import { makeFact, type Fact } from "ai-kit/grounding";
+import { makeFact, type Fact } from "@bitbaum/ai-kit/grounding";
 import {
   peopleFacts,
   projectFacts,

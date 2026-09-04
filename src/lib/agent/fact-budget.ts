@@ -1,4 +1,4 @@
-import type { Fact } from "ai-kit/grounding";
+import type { Fact } from "@bitbaum/ai-kit/grounding";
 
 /**
  * Fact-budget policy for the tool loop — pure, and load-bearing.
