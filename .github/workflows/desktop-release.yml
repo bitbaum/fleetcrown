@@ -113,8 +113,10 @@ jobs:
       # Top-level install — the web app's package.json is needed so
       # @home/* + @/* imports in the desktop main process resolve (those
       # aliases reach into ../src and ../home).
+      - uses: pnpm/action-setup@v6
+
       - name: Install root deps
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Install desktop deps
         working-directory: desktop

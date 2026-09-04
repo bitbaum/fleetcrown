@@ -19,7 +19,7 @@ if [ "${NODE_MAJOR:-0}" -ge 22 ]; then ok "node $(node --version) (>=22)"
 else bad "node $(node --version 2>/dev/null || echo '?') — need >=22 (CI uses 22)"; fi
 
 # Dependencies installed
-[ -d node_modules ] && ok "node_modules present" || bad "node_modules missing — run 'npm ci'"
+[ -d node_modules ] && ok "node_modules present" || bad "node_modules missing — run 'pnpm install'"
 
 # .env.local + DATABASE_URL
 DBURL=""
@@ -59,7 +59,7 @@ fi
 # Branch hygiene
 [ "$(git config --get remote.origin.prune 2>/dev/null)" = "true" ] \
   && ok "git auto-prune enabled" \
-  || warn "git auto-prune off — 'git config remote.origin.prune true' (or 'npm run git:prune')"
+  || warn "git auto-prune off — 'git config remote.origin.prune true' (or 'pnpm run git:prune')"
 
 echo "──────────────────────────────────────────────────────────"
 if [ "$FAIL" -eq 0 ]; then echo "  doctor: OK"; else echo "  doctor: $FAIL hard issue(s) above — fix before dev/deploy"; fi

@@ -15,7 +15,7 @@
 #   echo "$FC_DESCRIPTION_OPEN_IDLE"  # → "Agent process detected …"
 
 
-FC_STATE_KEYS='offline not_running tab_open open_idle working ready orchestration_ready closing completed'
+FC_STATE_KEYS='offline not_running recently_active tab_open open_idle working ready orchestration_ready closing completed'
 
 FC_LABEL_OFFLINE='Offline'
 FC_DESCRIPTION_OFFLINE='The builder hasn'\''t pushed fresh state for this project — we don'\''t know what'\''s happening right now.'
@@ -24,6 +24,10 @@ FC_COUNTER_CATEGORY_OFFLINE='offline'
 FC_LABEL_NOT_RUNNING='Not running'
 FC_DESCRIPTION_NOT_RUNNING='No agent process and no terminal tab detected for this project.'
 FC_COUNTER_CATEGORY_NOT_RUNNING='idle'
+
+FC_LABEL_RECENTLY_ACTIVE='Active recently'
+FC_DESCRIPTION_RECENTLY_ACTIVE='No live agent process is visible to FleetCrown, but a dispatch or run landed for this project recently — work likely happened in a terminal FleetCrown can'\''t observe.'
+FC_COUNTER_CATEGORY_RECENTLY_ACTIVE='idle'
 
 FC_LABEL_TAB_OPEN='Tab open'
 FC_DESCRIPTION_TAB_OPEN='Terminal workspace exists for this project but no agent process is running in it.'

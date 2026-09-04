@@ -14,7 +14,7 @@ STANDALONE="$PROJECT_DIR/.next/standalone"
 
 if [ ! -f "$STANDALONE/server.js" ]; then
   echo "[fleetcrown-app] ERROR: standalone build not found at $STANDALONE/server.js" >&2
-  echo "[fleetcrown-app] Run: npm run build && npm run install-app" >&2
+  echo "[fleetcrown-app] Run: pnpm run build && pnpm run install-app" >&2
   exit 1
 fi
 

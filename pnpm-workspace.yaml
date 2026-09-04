@@ -1,0 +1,38 @@
+# packages/agent replaces the npm "workspaces" field; bridge/ (its own npm
+# package with its own lockfile under npm) joins the workspace so the whole
+# repo installs with ONE pnpm install and one lockfile.
+packages:
+  - packages/*
+  - bridge
+
+allowBuilds:
+  # git-hosted dep: needs its prepare script to build dist/. pnpm requires the
+  # exact resolved spec for git deps, so this key changes if the pinned ref
+  # ever moves.
+  "ai-forms@https://codeload.github.com/bitbaum/ai-forms/tar.gz/52e3239ae4b0a2fcdc579edc2b9d8f8e7bff44b9": true
+  "limitkit@https://codeload.github.com/bitbaum/limitkit/tar.gz/75adef1e993f90c6079a36a6cd96567cae5924c7": true
+  "@parcel/watcher": true
+  "@swc/core": true
+  "@tailwindcss/oxide": true
+  better-sqlite3: true
+  esbuild: true
+  node-pty: true
+  sharp: true
+  unrs-resolver: true
+  "@sentry/cli": true
+
+# Security pin. This lived in package.json "overrides", which pnpm silently
+# IGNORES (npm-only field) — it must live here to keep applying.
+overrides:
+  fast-uri: ^3.1.6
+
+# pnpm refuses packages published within its minimum-release-age window — a
+# supply-chain guard against a compromised release being installed before
+# anyone notices. @bitbaum/ai-kit 0.6.2 is our own package, published to npm
+# the day before this commit, so it needs an explicit exemption.
+#
+# Temporary: once 0.6.2 is older than the window this entry is redundant and
+# should be deleted. Add lines only for versions we published ourselves —
+# never to hurry along a third-party package.
+minimumReleaseAgeExclude:
+  - "@bitbaum/ai-kit@0.6.2"

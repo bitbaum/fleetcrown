@@ -172,22 +172,22 @@ elif [ -n "$REF" ]; then
   # mid-build is caught here (box rsync aborts) but the postbuild has already
   # restarted the local prod service with the torn build — the box was protected
   # but local was not. Now a drifted pinned build restarts nothing, anywhere.
-  (cd "$PROJECT_DIR" && FLEETCROWN_DEPLOY_REF="$REF" npm run build)
+  (cd "$PROJECT_DIR" && FLEETCROWN_DEPLOY_REF="$REF" pnpm run build)
   AFTER="$(git_head)"
   if [ "$AFTER" != "$REF" ]; then
     echo "✗ pinned deploy ABORTED — HEAD moved to ${AFTER:0:12} during the build; not shipping a torn tree (local restart was skipped too)." >&2
     exit 1
   fi
 else
-  (cd "$PROJECT_DIR" && npm run build)
+  (cd "$PROJECT_DIR" && pnpm run build)
 fi
 
 if [ -z "$NO_BUILD" ]; then
-  (cd "$PROJECT_DIR" && npm --prefix bridge run build)
+  (cd "$PROJECT_DIR" && pnpm -C bridge run build)
 fi
 
 if [ ! -d "$STANDALONE/.next/static" ]; then
-  echo "✗ $STANDALONE missing static assets — run npm run build first" >&2
+  echo "✗ $STANDALONE missing static assets — run pnpm run build first" >&2
   exit 1
 fi
 

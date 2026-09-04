@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-# Before code leaves this machine: run the SAME `npm run verify` bundle CI runs
+# Before code leaves this machine: run the SAME `pnpm run verify` bundle CI runs
 # (tsc + lint + check:design + test:unit + test:home) — one definition of
 # "verified", so a `git commit --no-verify` can't slip a red past the local gate.
 # Then the deploy-safety extras: schema-drift guard, dev-server smoke (if up),
@@ -31,16 +31,16 @@ fi
 # push went red, and the conclusion drawn was "the hook is broken". Fail loudly
 # on the real cause instead, before running anything that would mis-attribute it.
 # ---------------------------------------------------------------------------
-if [ package-lock.json -nt node_modules/.package-lock.json ] 2>/dev/null; then
-  echo "✗ node_modules is older than package-lock.json."
+if [ pnpm-lock.yaml -nt node_modules/.modules.yaml ] 2>/dev/null; then
+  echo "✗ node_modules is older than pnpm-lock.yaml."
   echo "  This is an INSTALL problem, not a problem with your change — and left"
   echo "  alone it surfaces as bogus 'Cannot find module' type errors."
-  echo "  Run: npm ci"
+  echo "  Run: pnpm install"
   exit 1
 fi
 
 echo "→ verify (tsc + lint + check:design + test:unit + test:home) — same bundle as CI"
-npm run verify
+pnpm run verify
 
 # ---------------------------------------------------------------------------
 # AMBIENT CHECK — scoped to the diff.
@@ -71,10 +71,10 @@ fi
 
 if [ -n "$_touches_schema" ]; then
   echo "→ check:schema (this branch changes schema — a mismatch is yours)"
-  npm run check:schema
+  pnpm run check:schema
 else
   echo "→ check:schema (branch touches no schema — mismatches are ambient, not blocking)"
-  npm run check:schema || echo "  ⚠ schema mismatch predates this branch. Fix with: npm run db:push"
+  pnpm run check:schema || echo "  ⚠ schema mismatch predates this branch. Fix with: pnpm run db:push"
 fi
 
 BASE="${COCKPIT_URL:-http://localhost:3000}"
@@ -90,16 +90,16 @@ BASE="${COCKPIT_URL:-http://localhost:3000}"
 # exactly like a missing one.
 _health=$(curl -sf --max-time 2 "$BASE/api/health" 2>/dev/null || true)
 if [ -z "$_health" ]; then
-  echo "→ smoke: server not running at $BASE — skipping (start with npm run dev or install-app)"
+  echo "→ smoke: server not running at $BASE — skipping (start with pnpm run dev or install-app)"
 elif ! printf '%s' "$_health" | grep -q '"commit"'; then
   echo "→ smoke: server at $BASE is NOT FleetCrown (health payload lacks \"commit\") — skipping"
 else
   echo "→ smoke: FleetCrown server detected at $BASE"
-  npm run smoke
+  pnpm run smoke
 fi
 
 echo "→ test:pre-push-prod-dogfood"
-npm run test:pre-push-prod-dogfood
+pnpm run test:pre-push-prod-dogfood
 
 # >>> fleetcrown push-deploy >>>
 # DISABLED 2026-07-28 — the Hetzner deploy now fires from GitHub Actions
@@ -132,7 +132,7 @@ npm run test:pre-push-prod-dogfood
 #       echo "[push-deploy] fleetcrown: BLOCKED by CI gate for ${_sha} — fix CI, then re-push or deploy manually"
 #     fi
 #   ) >> "$_log" 2>&1 & disown 2>/dev/null || true
-#   echo "[push-deploy] fleetcrown: CI-gated deploy started → ${_log} (or: npm run deploy:status)"
+#   echo "[push-deploy] fleetcrown: CI-gated deploy started → ${_log} (or: pnpm run deploy:status)"
 # fi
 echo "→ deploy: handled by GitHub Actions (deploy.yml, DEPLOY_VIA_CI=true) after CI passes on main"
 # <<< fleetcrown push-deploy <<<

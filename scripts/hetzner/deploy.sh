@@ -63,7 +63,7 @@ if [ "$DB" != "-" ]; then
 fi
 
 echo "=== build $NAME ($SRC) ==="
-SELF_HOST=1 npm run build
+SELF_HOST=1 pnpm run build
 
 ST="$SRC/.next/standalone"
 [ -d "$ST" ] || { echo "ERROR: no standalone output — set output:'standalone' in next.config"; exit 1; }

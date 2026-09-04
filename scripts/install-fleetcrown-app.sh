@@ -26,7 +26,7 @@ done
 if [ "$SKIP_BUILD" = "0" ]; then
   log "Building production bundle (this takes ~2 minutes)…"
   cd "$PROJECT_DIR"
-  npm run build
+  pnpm run build
   log "Build complete."
 else
   log "Skipping build (--skip-build)."

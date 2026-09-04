@@ -99,7 +99,7 @@ while IFS='|' read -r name port domains repo appdir db rest; do
   # "Has CI" means a workflow that actually verifies something — a repo whose
   # only workflow is deploy.yml has a pipeline, not a gate.
   if ls "$repo"/.github/workflows/*.y*ml >/dev/null 2>&1 \
-     && grep -lqE "^name: *CI|type-check|npm run verify|npm test" "$repo"/.github/workflows/*.y*ml 2>/dev/null; then
+     && grep -lqE "^name: *CI|type-check|npm run verify|pnpm run verify|npm test|pnpm test" "$repo"/.github/workflows/*.y*ml 2>/dev/null; then
     :
   else
     missing_ci="$missing_ci $name"
