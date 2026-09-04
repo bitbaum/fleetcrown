@@ -29,6 +29,17 @@ export interface ReleaseEntry {
 /** Newest first. */
 export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
   {
+    version: "0.8.17",
+    tag: "fleet-runner-v0.8.17",
+    date: "2026-09-04T12:55:00Z",
+    highlights: [
+      "Dependency refresh — no behaviour change; this release exists so the updated lockfile actually reaches installed runners.",
+    ],
+    breaking: [],
+    notes:
+      "Dependabot bumped @types/node (#411), which edits desktop/package-lock.json — a file that determines what gets built into the runner. Nothing bumped the version alongside it, so main went red on the release-drift gate and the merge queue stopped: the sweep only merges onto a green base. The gate was right. A lockfile change with no release is a change that lives on the server and on no machine, which is the failure the gate was written for after six commits went missing at v0.8.12. Worth noting the shape: a dependency bot can trip a release gate, and its PR will never carry the bump itself.",
+  },
+  {
     version: "0.8.16",
     tag: "fleet-runner-v0.8.16",
     date: "2026-09-04T12:10:00Z",
