@@ -205,7 +205,7 @@ was wrong). No phase depends on a later phase being built.
   first, then the prompt is logged against it. Await the insert.
 - Do the same at `src/lib/inject-core.ts:452`. Leave
   `api/activity/capture/route.ts` unlinked if no run exists for it.
-- Generate the migration with `npm run db:generate` (do not hand-write SQL —
+- Generate the migration with `pnpm run db:generate` (do not hand-write SQL —
   the deploy schema-drift guard compares against Drizzle).
 
 **Acceptance:** every new dispatch that produces a run has a `prompt_history`

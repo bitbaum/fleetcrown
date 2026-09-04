@@ -115,7 +115,7 @@ This order is chosen for maximum leverage, minimum risk, and fastest path to a s
 
 **Why this specific order (first-principles + product reasoning)**:
 - **Correctness & ownership first**: The local app must *actually own* execution before we add remote features or polish. Building on the already-modern `home/` stack (instead of the older daemon polling) ensures we carry the better model forward. Relevant because the debt-reduction work and the fleet-runner essay both emphasize one event/state model and local truth.
-- **Leverage existing tested code**: `home/` is small, has inline self-tests (`npm run test:home`), and was designed for exactly the local responsibilities we want. Porting it gives us decide(), autonomy, handoff rendering, etc., for "free." Rewriting would be waste.
+- **Leverage existing tested code**: `home/` is small, has inline self-tests (`pnpm run test:home`), and was designed for exactly the local responsibilities we want. Porting it gives us decide(), autonomy, handoff rendering, etc., for "free." Rewriting would be waste.
 - **Small, reviewable, valuable slices**: We get a *runnable desktop app that can actually run agents* very early. This is 10x more useful for feedback and credibility than a pretty empty window.
 - **Ship the "local fleet runner" story ASAP**: The public roadmap calls this "NEXT". A downloadable app changes the user experience and the external narrative immediately ("install the fleet runner").
 - **Safety / transition**: Everything is additive/parallel to the daemon. We don't force migration.
