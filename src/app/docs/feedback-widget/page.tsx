@@ -73,6 +73,21 @@ export default function FeedbackWidgetDocsPage() {
             existing inbox row (shown as <em>×N</em>) instead of creating a duplicate — the volume
             signal survives, the noise doesn&apos;t.
           </p>
+          <p>
+            They can also <strong>speak instead of typing</strong> — useful on a phone, where
+            describing a bug by thumb is where most reports die. The transcript lands in the same
+            box, editable, and the visitor still presses Send.
+          </p>
+          <p className="ui-public-callout">
+            <strong>The mic needs your site&apos;s permission.</strong> If your site sends a{" "}
+            <code>Permissions-Policy</code> header with <code>microphone=()</code> — an empty
+            allowlist, which several security presets ship by default — browsers block the
+            microphone for every origin including your own, and never show a permission prompt. The
+            widget detects this and simply doesn&apos;t offer the button, rather than showing one
+            that can only fail. To enable it, allow your own origin:{" "}
+            <code>Permissions-Policy: microphone=(self)</code>. Everything else in the widget works
+            regardless.
+          </p>
         </section>
 
         <section className="mb-10 space-y-4 sm:mb-12">
