@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Eraser, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Eraser, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMicComposer } from "@/hooks/use-mic-composer";
 import { postJson } from "@/lib/api/fetch";
@@ -154,6 +154,10 @@ export function IntentButtonPanel({
 }) {
   const [showMore, setShowMore] = useState(false);
   const [showLibraryPrompts, setShowLibraryPrompts] = useState(false);
+  // Phone-only: the two reuse surfaces at the foot of this panel share one
+  // disclosure. Closed by default — a convenience does not get to open itself
+  // on the screen where space is scarcest.
+  const [reuseOpen, setReuseOpen] = useState(false);
   const [clearingContext, setClearingContext] = useState(false);
   const builderPresence = useBuilderPresence();
   const dispatchHonesty = deriveExecutorHonestyLabel({
@@ -317,8 +321,16 @@ export function IntentButtonPanel({
       {/* Action area — hidden when banner is active (banner owns the primary CTA) */}
       {!bannerActive && primary && (
         <div className="space-y-2 border-t border-border-subtle pt-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="ui-kicker">Send to agent</p>
+          {/* No "Send to agent" heading here any more.
+              The composer sitting directly above already asks the question —
+              its placeholder is "What should the agent work on?" — so the
+              kicker restated it and, worse, put a section break between the
+              two halves of ONE decision. Measured on a phone: the composer
+              ended at y=779 and this button started at y=924, reading as a
+              separate feature rather than the other way to answer the same
+              prompt. The honesty chip stays; it says something the button
+              cannot ("Builder online"). */}
+          <div className="flex justify-end">
             <ExecutorHonestyChip honesty={dispatchHonesty} />
           </div>
           {/* Primary CTA: Next best — full width, visually elevated.
@@ -427,19 +439,41 @@ export function IntentButtonPanel({
         </div>
       )}
 
-      <RecentPromptChips prompts={recentPrompts} onPick={onCustomChange} />
+      {/* ONE reuse affordance on a phone, not two.
+          These two components do the same job with the same handler —
+          `onPick={onCustomChange}` and `onSelect={onCustomChange}`, both
+          "put text in the composer" — yet they rendered as two separate
+          blocks with two headings. Counted on the live detail screen at
+          390px, they accounted for 4 of 22 controls and ~150px, below the
+          fold, competing with the composer they feed.
+          They stay one tap away, together, under a single label. From `lg`
+          the toggle is hidden and both are simply visible, as before: the
+          desktop card has the room and never had the problem. */}
+      <button
+        type="button"
+        onClick={() => setReuseOpen((v) => !v)}
+        aria-expanded={reuseOpen}
+        className="ui-btn-ghost ui-btn-xs w-full justify-between lg:hidden"
+      >
+        Reuse a prompt
+        {reuseOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+      </button>
 
-      <ProjectPromptLibrary
-        projectName={project.tab}
-        open={showLibraryPrompts}
-        onOpenChange={setShowLibraryPrompts}
-        // Universal fill-first rule (2026-05-31): library picks always go into
-        // the composer textarea so the user previews/edits before sending.
-        // Previously this branched on bannerActive and silently sent — the
-        // same click had different consequences depending on which surface
-        // you were on, which was the UX bug the user named.
-        onSelect={onCustomChange}
-      />
+      <div className={cn("space-y-3", !reuseOpen && "max-lg:hidden")}>
+        <RecentPromptChips prompts={recentPrompts} onPick={onCustomChange} />
+
+        <ProjectPromptLibrary
+          projectName={project.tab}
+          open={showLibraryPrompts}
+          onOpenChange={setShowLibraryPrompts}
+          // Universal fill-first rule (2026-05-31): library picks always go into
+          // the composer textarea so the user previews/edits before sending.
+          // Previously this branched on bannerActive and silently sent — the
+          // same click had different consequences depending on which surface
+          // you were on, which was the UX bug the user named.
+          onSelect={onCustomChange}
+        />
+      </div>
     </div>
   );
 }
