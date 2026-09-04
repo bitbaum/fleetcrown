@@ -358,6 +358,53 @@ function measurePage(minTouch) {
     }))
     .slice(0, 5);
 
+  // A line-clamp that is DECLARED but does nothing.
+  //
+  // `-webkit-line-clamp` is inert unless the box is `display: -webkit-box`,
+  // which the line-clamp utility sets — and Tailwind's `block` utility
+  // overrides. `block ... line-clamp-2` computes to `display: block;
+  // -webkit-line-clamp: 2` and clamps nothing. It shipped here once, on
+  // /control's "Suggested next" line, and looked fixed: with no clamp the text
+  // simply wraps, which reads fine until a long one arrives and shoves the
+  // composer off the viewport.
+  //
+  // The clipped-prose check above cannot see this — that measures a HORIZONTAL
+  // ellipsis, and this failure has none. Nor can `display === "-webkit-box"`:
+  // Chrome reported `flow-root` for a clamp that was working correctly, so the
+  // declared display is not a reliable signal either way.
+  //
+  // So test the BEHAVIOUR: an element declaring N lines that renders more than
+  // N is a clamp that is not being enforced. Requires no knowledge of how the
+  // browser normalises display.
+  const deadClamps = [...document.querySelectorAll("body *")]
+    .filter((el) => {
+      const cs = getComputedStyle(el);
+      const n = parseInt(cs.webkitLineClamp, 10);
+      if (!Number.isFinite(n) || n < 1) return false;
+      if (cs.visibility === "hidden") return false;
+      const r = el.getBoundingClientRect();
+      if (r.height === 0 || r.width === 0) return false;
+      const lh = parseFloat(cs.lineHeight);
+      if (!Number.isFinite(lh) || lh <= 0) return false;
+      // Half a line of slack absorbs padding and sub-pixel rounding.
+      return el.clientHeight / lh > n + 0.5;
+    })
+    .map((el) => {
+      const cs = getComputedStyle(el);
+      return {
+        tag: el.tagName.toLowerCase(),
+        text: (el.textContent || "").trim().slice(0, 40),
+        cls:
+          ((el.className || "").toString().match(/(ui-[\w-]+|line-clamp-\d+|block)/g) || []).join(
+            ".",
+          ) || (el.className || "").toString().slice(0, 40),
+        declared: parseInt(cs.webkitLineClamp, 10),
+        rendered: Math.round(el.clientHeight / parseFloat(cs.lineHeight)),
+        display: cs.display,
+      };
+    })
+    .slice(0, 5);
+
   // Content trapped under fixed chrome (mobile bottom nav). Reachable only if
   // the page scrolls far enough; on a short page it is permanently covered.
   const bars = [...document.querySelectorAll("body *")].filter((el) => {
@@ -406,6 +453,7 @@ function measurePage(minTouch) {
     small,
     clipped,
     clippedProse,
+    deadClamps,
     buried,
     brokenImages,
   };
@@ -573,6 +621,15 @@ async function main() {
           console.log(
             `     ⚠ sentence cut off by a single-line ellipsis (the rest is hover-only, so a phone cannot read it): ${r.clippedProse
               .map((c) => `"${c.text}…"[${c.cls}] ${c.shownPct}% shown, -${c.hidden}px`)
+              .join(", ")}`,
+          );
+        if (r.deadClamps.length > 0)
+          console.log(
+            `     ⚠ line-clamp declared but NOT enforced (a \`block\`/display utility beats it — the box grows instead): ${r.deadClamps
+              .map(
+                (c) =>
+                  `"${c.text}…"[${c.cls}] declared ${c.declared} lines, renders ${c.rendered} (display:${c.display})`,
+              )
               .join(", ")}`,
           );
         if (r.brokenImages.length > 0)

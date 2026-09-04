@@ -29,6 +29,17 @@ export interface ReleaseEntry {
 /** Newest first. */
 export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
   {
+    version: "0.8.16",
+    tag: "fleet-runner-v0.8.16",
+    date: "2026-09-04T12:10:00Z",
+    highlights: [
+      "When a prompt reaches an agent but the agent never starts generating, the advice now names the agent you are actually running instead of always saying “grok”.",
+    ],
+    breaking: [],
+    notes:
+      "Seen on a real dispatch: “launched claude (pty) + injected … Retry, or switch the project agent away from grok if this repeats.” One sentence naming the agent that ran and, as advice, one that did not — a literal left over from when grok was the default, in a message that already had the right agent in scope. Small, but it is the sentence you read when something has gone wrong, and advice about an agent you are not using undermines the diagnosis around it. A gate now requires any failure message that names an agent to interpolate the real one.",
+  },
+  {
     version: "0.8.15",
     tag: "fleet-runner-v0.8.15",
     date: "2026-08-28T07:30:00Z",

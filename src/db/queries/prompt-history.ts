@@ -50,6 +50,25 @@ export type RecentCustomPrompt = {
   lastUsedAt: string;
 };
 
+/**
+ * A prompt is worth OFFERING BACK only if it was actually reused.
+ *
+ * "Paste from history" exists for the thing you keep retyping. It was fed by
+ * every custom dispatch ordered by recency, which is the opposite selection:
+ * measured on prod 2026-09-04, 30 days of history holds 1859 distinct custom
+ * prompts, of which 1823 — 98% — were sent exactly once. Ordering by recency
+ * therefore surfaced the three most recent ONE-OFFS, i.e. by definition the
+ * prompts least likely to be wanted again. On /control it was offering back
+ * conversational asides ("you do it. open in browser and do it") as reusable
+ * work, next to genuinely reused ones like "continue" (115×).
+ *
+ * Requiring two uses cuts the pool from 1859 to 36 and leaves exactly the
+ * prompts the feature is named for. A one-off is still reachable — Activity
+ * keeps every dispatch with a re-run control; it just stops competing for the
+ * card with the ones that earn their place.
+ */
+const MIN_USES_TO_OFFER = 2;
+
 // Per-project: deduplicated custom prompts sorted by recency and frequency
 export async function getRecentCustomPromptsByProjectKey(
   userId: string,
@@ -73,6 +92,7 @@ export async function getRecentCustomPromptsByProjectKey(
       ),
     )
     .groupBy(promptHistory.customPrompt)
+    .having(sql`count(*) >= ${MIN_USES_TO_OFFER}`)
     .orderBy(desc(sql`max(dispatched_at)`))
     .limit(limit);
 
@@ -106,6 +126,9 @@ export async function getRecentCustomPromptsByProjectKeys(
       ),
     )
     .groupBy(promptHistory.projectKey, promptHistory.customPrompt)
+    // Same rule as the single-project query above — the control panel is the
+    // surface where this was actually offering back one-offs.
+    .having(sql`count(*) >= ${MIN_USES_TO_OFFER}`)
     .orderBy(desc(sql`max(dispatched_at)`));
 
   const result = new Map<string, RecentCustomPrompt[]>();

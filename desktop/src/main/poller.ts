@@ -723,7 +723,15 @@ async function handleCommand(
               ok = false
               warning = undefined
               error =
-                `${text}, but the agent isn't generating yet — inject did not stick (booting, idle, or hung). Retry, or switch the project agent away from grok if this repeats.`
+                // `${agent}`, not the literal "grok". This read "launched claude
+                // (pty) + injected … switch the project agent away from grok" on
+                // a real dispatch (Prime tower, 2026-09-04) — advice naming an
+                // agent the operator is not using, in the same sentence that
+                // names the one they are. A hardcoded agent name in a generic
+                // failure is wrong for every agent but one, and it undermines
+                // the whole message: if the diagnosis can't tell which agent ran,
+                // why trust the rest of it?
+                `${text}, but the agent isn't generating yet — inject did not stick (booting, idle, or hung). Retry, or switch the project agent away from ${agent} if this repeats.`
             }
             break
           }
