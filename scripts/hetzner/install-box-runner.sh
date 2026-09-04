@@ -65,7 +65,7 @@ WorkingDirectory=/opt/fleetcrown/runner
 # scripts/hetzner/harden-box-runner.sh (which applies this to an existing box).
 NoNewPrivileges=true
 PrivateTmp=true
-InaccessiblePaths=-/home/ubuntu/.ssh -/opt/orangecat -/opt/kivvi -/opt/botsmann -/opt/datacat-api -/opt/datacat-web -/opt/petvity -/opt/printcraft -/opt/reparaturbonus-zh -/opt/revamp-info -/opt/revampit -/opt/sbb-lost-found -/opt/solon -/opt/surf-your-life -/opt/vitareba -/opt/aoz-wohnen -/opt/supabase -/opt/backups -/opt/monitoring -/opt/_appcron
+InaccessiblePaths=-/home/ubuntu/.ssh -/opt/orangecat -/opt/kivvi -/opt/botsmann -/opt/datacat-api -/opt/datacat-web -/opt/petvity -/opt/printcraft -/opt/reparaturbonus-zh -/opt/revamp-info -/opt/evig -/opt/sbb-lost-found -/opt/solon -/opt/surf-your-life -/opt/vitareba -/opt/aoz-wohnen -/opt/supabase -/opt/backups -/opt/monitoring -/opt/_appcron
 EnvironmentFile=/opt/fleetcrown/runner/.env
 Environment=HOME=/home/ubuntu
 Environment=PATH=/home/ubuntu/.local/bin:/usr/local/bin:/usr/bin:/bin

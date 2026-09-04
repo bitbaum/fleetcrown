@@ -44,7 +44,7 @@ echo
 echo "root_verdict — the weaker fallback: does it serve anything?"
 eq up   "$(root_verdict 200)" "200 serves"
 eq up   "$(root_verdict 307)" "307 serves (petvity, vitareba redirect / to a locale)"
-eq up   "$(root_verdict 308)" "308 serves (revampit redirects to its canonical host)"
+eq up   "$(root_verdict 308)" "308 serves (aoz-wohnen redirects to its canonical host)"
 eq down "$(root_verdict 404)" "404 on / is DOWN"
 eq down "$(root_verdict 502)" "502 on / is DOWN"
 eq down "$(root_verdict 000)" "unreachable is DOWN"
@@ -146,7 +146,7 @@ done <<<"$(extra_targets)"
 # exactly as unwatched as they were before this script existed. Asserted BY
 # NAME rather than by counting: the list now holds two categories, and a count
 # would go green if one of the four were swapped for something else entirely.
-for svc in bridge fleetcrown orangecat revampit; do
+for svc in bridge fleetcrown orangecat evig; do
   extra_targets | grep -q "^${svc}	" \
     && ok "$svc is covered — apps.conf documents it as deliberately absent" \
     || no "$svc is in no manifest and now in no hand-list either"

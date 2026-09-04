@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Generate + push systemd units, launch scripts, and Caddy vhosts for every
 # app in apps.conf. Idempotent. Does NOT touch the four pre-existing services
-# (bridge, fleetcrown, orangecat, revampit) or any /opt/<app>/.env.
+# (bridge, fleetcrown, orangecat, evig) or any /opt/<app>/.env.
 # Usage: sync-infra.sh [app ...]   (no args = all)
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 

@@ -35,7 +35,7 @@ else
 fi
 check "$APP_SLUG" "$APP_DOMAIN" 4002
 check orangecat orangecat.ch 4003
-check revampit revampit.orangecat.ch 4004
+check evig evig.orangecat.ch 4004
 
 # Manifest apps
 while IFS='|' read -r name port domains repo app_dir db; do

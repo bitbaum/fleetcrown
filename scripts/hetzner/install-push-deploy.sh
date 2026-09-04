@@ -67,7 +67,7 @@ EOF
 apps=("$@")
 if [ ${#apps[@]} -eq 0 ]; then
   mapfile -t apps < <(app_names)
-  apps+=(fleetcrown revampit)
+  apps+=(fleetcrown evig)
 fi
 
 for app in "${apps[@]}"; do
@@ -77,10 +77,10 @@ for app in "${apps[@]}"; do
       fleetcrown
     continue
   fi
-  if [ "$app" = "revampit" ]; then
-    install_hook /home/g/dev/revampit \
-      "env -u CI bash /home/g/dev/revampit/scripts/selfhost-deploy-revampit.sh" \
-      revampit
+  if [ "$app" = "evig" ]; then
+    install_hook /home/g/dev/evig \
+      "env -u CI bash /home/g/dev/evig/scripts/selfhost-deploy-evig.sh" \
+      evig
     continue
   fi
   app_lookup "$app" || continue
