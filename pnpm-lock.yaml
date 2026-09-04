@@ -30,8 +30,8 @@ importers:
         specifier: ^3.2.2
         version: 3.2.2(react@19.2.8)
       '@fleet/ai-forms':
-        specifier: github:bitbaum/ai-forms#v0.1.2
-        version: ai-forms@https://codeload.github.com/bitbaum/ai-forms/tar.gz/52e3239ae4b0a2fcdc579edc2b9d8f8e7bff44b9(react@19.2.8)
+        specifier: npm:ai-forms@^0.1.2
+        version: ai-forms@0.1.2(react@19.2.8)
       '@noble/hashes':
         specifier: ^2.4.0
         version: 2.4.0
@@ -2124,16 +2124,6 @@ packages:
 
   ai-forms@0.1.2:
     resolution: {integrity: sha512-agadca4pN0iGlZTlNy1Vo2SmnQB+0dNkrQSDE3wCJYeaVxKDs5KaxiwGj5+GL6mVYcI1xZ8pwnT9kL9WcxnBHA==}
-    engines: {node: '>=18'}
-    peerDependencies:
-      react: '>=18'
-    peerDependenciesMeta:
-      react:
-        optional: true
-
-  ai-forms@https://codeload.github.com/bitbaum/ai-forms/tar.gz/52e3239ae4b0a2fcdc579edc2b9d8f8e7bff44b9:
-    resolution: {gitHosted: true, integrity: sha512-+yQ5Co6sQ+zCouexy9+olSVafUxRvRoNLmistZQuP+zxudNDA5MH5qdRvRkqMdTvUNlkOCUbx8AExDvLzkpAUQ==, tarball: https://codeload.github.com/bitbaum/ai-forms/tar.gz/52e3239ae4b0a2fcdc579edc2b9d8f8e7bff44b9}
-    version: 0.1.2
     engines: {node: '>=18'}
     peerDependencies:
       react: '>=18'
@@ -6501,10 +6491,6 @@ snapshots:
   agent-base@7.1.4: {}
 
   ai-forms@0.1.2(react@19.2.8):
-    optionalDependencies:
-      react: 19.2.8
-
-  ai-forms@https://codeload.github.com/bitbaum/ai-forms/tar.gz/52e3239ae4b0a2fcdc579edc2b9d8f8e7bff44b9(react@19.2.8):
     optionalDependencies:
       react: 19.2.8
 
