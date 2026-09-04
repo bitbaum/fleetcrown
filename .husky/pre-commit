@@ -9,7 +9,7 @@
 # 2026-08-25: 206 finished files sat uncommitted across the fleet for ten days.
 #
 # The split that makes sense: a COMMIT is local and reversible, so gate it
-# cheaply; a PUSH is shared, so gate it completely. `npm run verify` still runs
+# cheaply; a PUSH is shared, so gate it completely. `pnpm run verify` still runs
 # in full on pre-push and again in CI, so nothing reaches origin unverified —
 # only the local loop got its three minutes back.
 #
@@ -54,4 +54,4 @@ fi
 
 echo "→ eslint (staged files only — full tree runs on push and in CI)"
 # shellcheck disable=SC2086
-git diff --cached -z --name-only $FILTER -- $GLOBS | xargs -0 -r npx eslint
+git diff --cached -z --name-only $FILTER -- $GLOBS | xargs -0 -r pnpm exec eslint

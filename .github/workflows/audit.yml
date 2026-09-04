@@ -16,18 +16,24 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - uses: pnpm/action-setup@v6
+
+      # setup-pnpm's default store nests inside its own bin dir, which breaks
+      # any prepare-building dep (portable-type TS2742) — pin it outside.
+      - run: pnpm config set store-dir ~/.pnpm-store --global
+
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-          cache: npm
+          cache: pnpm
 
-      - run: npm ci
+      - run: pnpm install --frozen-lockfile
 
       # --audit-level=high → exit non-zero only when a high or critical
       # vuln is present. Moderate transitive vulns flap too often (esbuild
       # via drizzle-kit, postcss-via-next) to be a useful daily signal.
-      - name: npm audit (fail on high+)
-        run: npm audit --audit-level=high
+      - name: pnpm audit (fail on high+)
+        run: pnpm audit --audit-level=high
 
       # Always print the full report so the run page shows context even
       # when the audit step itself passed.

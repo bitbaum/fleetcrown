@@ -80,19 +80,26 @@ jobs:
           # out the default branch and would ship something nobody verified.
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
+      - uses: pnpm/action-setup@v6
+
+      # setup-pnpm's default store nests inside its own bin dir, which breaks
+      # any prepare-building dep (portable-type TS2742) — pin it outside.
+      - run: pnpm config set store-dir ~/.pnpm-store --global
+
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-          cache: npm
+          cache: pnpm
 
       # Root deps AND the bridge subpackage — bridge/ is its own npm package with
       # its own lockfile (pg, @types/pg). The build step below runs `tsc` in it,
       # so without this the bridge build fails with "Cannot find module 'pg'".
-      - run: npm ci
-      - run: npm --prefix bridge ci
+      # One workspace install covers root AND bridge/ (both in
+      # pnpm-workspace.yaml) — the separate `npm --prefix bridge ci` is gone.
+      - run: pnpm install --frozen-lockfile
 
       - name: Push schema to CI Postgres (build needs it)
-        run: npx drizzle-kit push
+        run: pnpm exec drizzle-kit push
 
       # Next's incremental compiler cache. Every deploy compiled the whole app
       # from cold because the runner is ephemeral — the one part of the pipeline
@@ -105,15 +112,15 @@ jobs:
         uses: actions/cache@v6
         with:
           path: .next/cache
-          key: ${{ runner.os }}-next-${{ hashFiles('package-lock.json') }}-${{ hashFiles('src/**/*.ts', 'src/**/*.tsx') }}
+          key: ${{ runner.os }}-next-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('src/**/*.ts', 'src/**/*.tsx') }}
           restore-keys: |
-            ${{ runner.os }}-next-${{ hashFiles('package-lock.json') }}-
+            ${{ runner.os }}-next-${{ hashFiles('pnpm-lock.yaml') }}-
             ${{ runner.os }}-next-
 
       - name: Build (app + bridge)
         run: |
-          npm run build
-          npm --prefix bridge run build
+          pnpm run build
+          pnpm -C bridge run build
 
       - name: SSH setup
         run: |

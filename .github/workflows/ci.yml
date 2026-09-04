@@ -55,12 +55,18 @@ jobs:
         with:
           fetch-depth: 0
 
+      - uses: pnpm/action-setup@v6
+
+      # setup-pnpm's default store nests inside its own bin dir, which breaks
+      # any prepare-building dep (portable-type TS2742) — pin it outside.
+      - run: pnpm config set store-dir ~/.pnpm-store --global
+
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-          cache: npm
+          cache: pnpm
 
-      - run: npm ci
+      - run: pnpm install --frozen-lockfile
 
       # check:design scans with ripgrep, which is NOT preinstalled on the
       # runner. Without this the script exited 127 on every pattern, read that
@@ -70,7 +76,7 @@ jobs:
       - name: Install ripgrep (required by check:design)
         run: sudo apt-get update -qq && sudo apt-get install -y -qq ripgrep
 
-      # ONE canonical bundle — the exact `npm run verify` you run locally
+      # ONE canonical bundle — the exact `pnpm run verify` you run locally
       # (tsc + lint + check:design + check:desktop + test:unit + test:home +
       # test:ops). CI calls it VERBATIM, so a green local verify can't diverge
       # from a green CI. The unit suite is glob-discovered
@@ -96,7 +102,7 @@ jobs:
           npx drizzle-kit push --force
 
       - name: Verify
-        run: npm run verify
+        run: pnpm run verify
 
       # `next build` is intentionally NOT here — the App-Router pages do
       # DB queries during static pre-render, so a real Postgres would

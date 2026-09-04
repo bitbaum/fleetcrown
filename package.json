@@ -5,12 +5,9 @@
     "node": ">=20"
   },
   "private": true,
-  "workspaces": [
-    "packages/*"
-  ],
   "scripts": {
     "dev": "next dev",
-    "prebuild": "npx tsx scripts/generate-bash-state-vocab.ts && npm run build:widget",
+    "prebuild": "npx tsx scripts/generate-bash-state-vocab.ts && pnpm run build:widget",
     "build:widget": "esbuild widget/main.ts --bundle --minify --format=iife --outfile=public/widget.js --log-level=warning",
     "build": "next build",
     "postbuild": "bash scripts/record-build-ref.sh && bash scripts/deploy-local.sh",
@@ -22,7 +19,7 @@
     "lint": "eslint --cache --cache-location node_modules/.cache/eslint src/ home/ widget/",
     "check:design": "bash scripts/check-design-system.sh",
     "check:desktop": "bash scripts/check-desktop.sh",
-    "verify": "npm run format:check && npm run check:deploy-ready && npm run check:telegram-registry && tsc --noEmit && npm run lint && npm run check:design && npm run check:desktop && npm run test:unit && npm run test:home && npm run test:deploy-ref-gate && npm run test:not-behind-gate && npm run test:deploy-ready-gate && npm run test:ops",
+    "verify": "pnpm run format:check && pnpm run check:deploy-ready && pnpm run check:telegram-registry && tsc --noEmit && pnpm run lint && pnpm run check:design && pnpm run check:desktop && pnpm run test:unit && pnpm run test:home && pnpm run test:deploy-ref-gate && pnpm run test:not-behind-gate && pnpm run test:deploy-ready-gate && pnpm run test:ops",
     "check:telegram-registry": "bash scripts/ci/check-telegram-registry.sh",
     "smoke": "bash scripts/smoke.sh",
     "test:home": "bash scripts/test-home.sh",
@@ -83,9 +80,9 @@
     "generate:brand": "npx tsx scripts/generate-brand.mjs",
     "generate:agent-prompts": "npx tsx scripts/generate-agent-prompts.ts",
     "ingest:history": "npx tsx scripts/ingest-claude-code-history.ts",
-    "desktop:dev": "cd desktop && npm run dev",
-    "desktop:build": "cd desktop && npm run build",
-    "desktop:preview": "cd desktop && npm run preview",
+    "desktop:dev": "cd desktop && pnpm run dev",
+    "desktop:build": "cd desktop && pnpm run build",
+    "desktop:preview": "cd desktop && pnpm run preview",
     "db:dump": "bash scripts/db/dump.sh",
     "db:restore": "bash scripts/db/restore.sh",
     "db:apply-box": "bash scripts/db/apply-box.sh",
@@ -107,6 +104,7 @@
     "format:check": "prettier --check ."
   },
   "dependencies": {
+    "@auth/core": "0.41.3",
     "@auth/drizzle-adapter": "^1.11.3",
     "@bitbaum/ai-kit": "^0.6.2",
     "@dnd-kit/core": "^6.3.1",
@@ -154,6 +152,7 @@
     "@types/react-dom": "^19",
     "@types/web-push": "^3.6.4",
     "better-sqlite3": "^13.0.3",
+    "dotenv": "^17.4.2",
     "drizzle-kit": "^0.31.10",
     "esbuild": "^0.28.2",
     "eslint": "^10",
@@ -161,11 +160,10 @@
     "husky": "^9.1.7",
     "playwright": "^1.62.1",
     "prettier": "3.9.6",
+    "sharp": "^0.35.4",
     "tailwindcss": "^4",
     "tsx": "^4.23.12",
     "typescript": "^6.0.3"
   },
-  "overrides": {
-    "fast-uri": "^3.1.6"
-  }
+  "packageManager": "pnpm@11.25.0"
 }
