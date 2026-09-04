@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { AlertTriangle, RotateCcw, Play, X } from "lucide-react";
+import { AlertTriangle, RotateCcw, Play, Terminal as TerminalIcon, X } from "lucide-react";
 import { remedyForFailure, FAILURE_REMEDY } from "@/lib/terminals/focus-failure";
 import type { AttentionItem } from "./control-presenter";
 import type { FailedCommand } from "@/lib/control-types";
@@ -194,6 +194,22 @@ export function AttentionBar({
                   <Play className="h-3 w-3" />
                   Start session
                 </button>
+              )}
+              {/* START_TERMINAL had NO branch here, so a failure classified as
+                  "zellij isn't running at all" rendered no action whatsoever —
+                  worse than the wrong button it was meant to replace, because
+                  the row then offers nothing but Dismiss.
+                  Starting a session cannot help here: there is no terminal for
+                  a session to live in, so this points at Terminal instead. */}
+              {remedy === FAILURE_REMEDY.START_TERMINAL && (
+                <a
+                  href="/terminal"
+                  className="ui-btn-ghost ui-btn-xs gap-1 text-micro"
+                  title="No zellij is running on the connected computer — nothing can be focused until a terminal is up"
+                >
+                  <TerminalIcon className="h-3 w-3" />
+                  Open Terminal
+                </a>
               )}
               {remedy === FAILURE_REMEDY.RETRY && (
                 <button

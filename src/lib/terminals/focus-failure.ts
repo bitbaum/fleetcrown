@@ -24,6 +24,16 @@
 export const FOCUS_FAILURE_PHRASE = {
   /** Zellij itself isn't running — nothing to focus into. */
   NO_TERMINAL: "no zellij session is running on the connected computer",
+  /**
+   * The same condition as worded by the Fleet Runner desktop app
+   * (desktop/src/main/poller.ts:881). Sibling of NO_SUCH_TARGET_DESKTOP below.
+   *
+   * Found by sweeping for this exact class after the `tab not found:` fix: the
+   * two wordings sit three lines apart in poller.ts, and only one of them had
+   * been taught to this classifier. Fixing one instance of a drift and leaving
+   * its neighbour is how a class of bug survives being "fixed".
+   */
+  NO_TERMINAL_DESKTOP: "no zellij session found",
   /** Zellij is up, but this project has no tab and no running agent. */
   NO_SUCH_TARGET: "no zellij tab with that name in any active session",
   /**
@@ -45,6 +55,18 @@ export const FOCUS_FAILURE_PHRASE = {
   NO_SUCH_TARGET_DESKTOP: "tab not found:",
   /** The tab exists and was found; focus just didn't take in time. */
   FOCUS_TIMED_OUT: "focus did not take within",
+  /**
+   * Same condition, desktop wording (`zellij tab "<tab>" did not gain focus`,
+   * poller.ts:919). Unlike its two siblings this one already reached the right
+   * answer — a focus race IS retryable, so falling through to the RETRY default
+   * was correct. But it was correct BY ACCIDENT: nothing recognised the string,
+   * and the default happened to suit it.
+   *
+   * Named here so it is classified deliberately. An accidental right answer is
+   * indistinguishable from a wrong one until the default changes, and then it
+   * silently becomes a bug nobody edited.
+   */
+  FOCUS_TIMED_OUT_DESKTOP: "did not gain focus",
 } as const;
 
 export const FAILURE_REMEDY = {
@@ -67,6 +89,7 @@ export type FailureRemedy = (typeof FAILURE_REMEDY)[keyof typeof FAILURE_REMEDY]
 export function remedyForFailure(error: string | null | undefined): FailureRemedy {
   const text = (error ?? "").toLowerCase();
   if (text.includes(FOCUS_FAILURE_PHRASE.NO_TERMINAL)) return FAILURE_REMEDY.START_TERMINAL;
+  if (text.includes(FOCUS_FAILURE_PHRASE.NO_TERMINAL_DESKTOP)) return FAILURE_REMEDY.START_TERMINAL;
   if (text.includes(FOCUS_FAILURE_PHRASE.NO_SUCH_TARGET)) return FAILURE_REMEDY.START_SESSION;
   if (text.includes(FOCUS_FAILURE_PHRASE.NO_SUCH_TARGET_DESKTOP))
     return FAILURE_REMEDY.START_SESSION;
