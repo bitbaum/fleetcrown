@@ -80,6 +80,20 @@ export function ControlPanel() {
   };
   const [activityOpen, setActivityOpen] = useState(false);
   const [selectedTab, setSelectedTab] = useState<string | null>(null);
+  /**
+   * Has the operator OPENED a project, as opposed to one being auto-selected?
+   *
+   * `selectedTab` cannot answer that: the guard below forces a selection
+   * whenever it is null, because the desktop two-column layout must never
+   * render an empty detail pane. Correct there, wrong on a phone — it meant
+   * /control opened on one project's controls before you had chosen anything,
+   * with the chooser below it. Tapping a row then changed only a highlight,
+   * because the thing it selects was already on screen three scrolls up.
+   *
+   * So the phone needs its own answer to "am I looking at the list, or at a
+   * project?", and this is it. Desktop ignores it entirely.
+   */
+  const [projectOpenOnPhone, setProjectOpenOnPhone] = useState(false);
   const [highlightTab, setHighlightTab] = useState<string | null>(null);
   const [liveTargetTab, setLiveTargetTab] = useState<string | null>(null);
   const livePanelRef = useRef<HTMLElement>(null);
@@ -253,6 +267,11 @@ export function ControlPanel() {
 
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Deep-link handler: an App Router param change only surfaces as a re-render, so this effect IS the event handler for /control?focus=…. It resolves the target once, atomically, then selects + highlights + scrolls + clears the params; the requestKey ref already guarantees it runs once per navigation. Splitting the setStates into render-time adjustments would resolve the target twice against possibly-different data mid-refresh.
     if (snapshotTab) setSelectedTab(snapshotTab);
+    // A deep link names a project, so on a phone it must LAND on that project
+    // rather than on the list — arriving from a push notification or the
+    // failure banner's "Open on Control" and being shown the roster instead
+    // would make the link useless exactly when it matters.
+    setProjectOpenOnPhone(true);
     setHighlightTab(resolvedTab);
     setLiveTargetTab(resolvedTab);
     if (liveDetailsRef.current) liveDetailsRef.current.open = true;
@@ -507,7 +526,12 @@ export function ControlPanel() {
       <ProjectOperationsView
         snapshots={snapshots}
         selectedTab={selectedTab}
-        onSelect={setSelectedTab}
+        onSelect={(tab) => {
+          setSelectedTab(tab);
+          setProjectOpenOnPhone(true);
+        }}
+        projectOpenOnPhone={projectOpenOnPhone}
+        onBackToList={() => setProjectOpenOnPhone(false)}
         cardProps={cardProps}
         automationMode={automationPolicy.mode}
         onBulkNotice={(msg) => {

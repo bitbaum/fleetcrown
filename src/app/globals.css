@@ -3926,10 +3926,18 @@
   .ui-control-project-detail {
     @apply order-1 min-w-0 lg:order-none;
   }
-  /* The rail list is a capped scroll pane on EVERY breakpoint — on phones an
-     uncapped list rendered all rows full-height (~3 screens of idle projects). */
+  /* Capped and scrollable from `lg`, where the rail sits beside the detail and
+     must not run past it.
+     On a phone it is NOT capped, and that is the point. The 50dvh cap was
+     correct while the list shared the screen with the detail card, but it made
+     a scroller inside a scroller: measured at 671px tall, a 336px window
+     holding 1835px of rows, inside a page with 1746px of its own scroll. A
+     drag near the list scrolled the list; a drag anywhere else scrolled the
+     page; neither was predictable. Now the list is the WHOLE phone screen when
+     it is showing, so the page scroll is the only scroll — one gesture, one
+     result. */
   .ui-control-project-list {
-    @apply flex max-h-[50dvh] flex-col gap-2 overflow-y-auto p-2 lg:block lg:max-h-[calc(100dvh-20rem)] lg:space-y-1;
+    @apply flex flex-col gap-2 p-2 lg:block lg:max-h-[calc(100dvh-20rem)] lg:space-y-1 lg:overflow-y-auto;
   }
   @media (min-width: 64rem) {
     .ui-control-project-list {
