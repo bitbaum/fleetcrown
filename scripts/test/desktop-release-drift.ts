@@ -198,6 +198,82 @@ assert(
     `from this version again.`,
 );
 
+/**
+ * THIS BRANCH'S OWN desktop change must carry its own bump.
+ *
+ * Everything above is cumulative — "has anything changed since the last tag" —
+ * and that is RACY across a merge queue. Observed 2026-09-04:
+ *
+ *   #482 merges, mints fleet-runner-v0.8.16
+ *   #411 (dependabot, touches ONLY desktop/package-lock.json) had run its CI
+ *        while v0.8.15 was still newest. Against v0.8.15 the base already read
+ *        0.8.16, so "version is ahead of released" held and the check PASSED.
+ *   #411 merges. Now the newest tag is v0.8.16, the only desktop change since
+ *        it is that lockfile, and the same check goes RED — on main.
+ *
+ * Both evaluations were correct; the gap is between them. The cost is paid by
+ * everyone else: main red, and the sweep merges nothing onto a red base, so
+ * every unrelated PR stalls behind a bot's dependency bump.
+ *
+ * So also ask a question that has no race in it: does the diff of THIS BRANCH
+ * touch desktop/, and if so does THIS BRANCH bump the version? That is decided
+ * entirely within the branch, identically before and after any tag is minted.
+ *
+ * It fires on the PR, where it is one blocked bot PR that a human can see,
+ * instead of after the merge, where it is a red main and a stopped queue.
+ */
+function baseRef(): string | null {
+  for (const ref of ["origin/main", "origin/master"]) {
+    try {
+      git("rev-parse", "--verify", "--quiet", ref);
+      return ref;
+    } catch {
+      /* try the next one */
+    }
+  }
+  return null;
+}
+
+const base = baseRef();
+if (base) {
+  let mergeBase = "";
+  try {
+    mergeBase = git("merge-base", "HEAD", base);
+  } catch {
+    mergeBase = "";
+  }
+  // On main itself the diff is empty and this rule simply does not apply — the
+  // cumulative check above is what guards there.
+  if (mergeBase && mergeBase !== git("rev-parse", "HEAD")) {
+    const branchDesktopFiles = git("diff", "--name-only", mergeBase, "HEAD", "--", "desktop")
+      .split("\n")
+      .map((f) => f.trim())
+      .filter(Boolean)
+      .filter((f) => !f.endsWith(".md"));
+
+    if (branchDesktopFiles.length > 0) {
+      let baseVersion = "";
+      try {
+        baseVersion = readVersionFrom(git("show", `${mergeBase}:desktop/package.json`));
+      } catch {
+        baseVersion = "";
+      }
+      assert(
+        baseVersion !== "" && compareVersions(currentVersion, baseVersion) > 0,
+        `this branch changes desktop/ but does not bump desktop/package.json ` +
+          `(still ${currentVersion}, same as its base). A desktop change that ` +
+          `merges without a bump goes red on MAIN once the next release tag is ` +
+          `minted, and the sweep will not merge anything onto a red base — so ` +
+          `one unbumped dependency PR stalls the whole queue.\n` +
+          `Fix: bump desktop/package.json and add the matching ` +
+          `FLEET_RUNNER_RELEASES entry in src/config/changelog.ts.\n` +
+          `Changed here: ${branchDesktopFiles.slice(0, 8).join(", ")}` +
+          (branchDesktopFiles.length > 8 ? `, +${branchDesktopFiles.length - 8} more` : ""),
+      );
+    }
+  }
+}
+
 // ── The gate must not outlive the machinery it assumes ─────────────────────
 //
 // Everything above trusts two things about ci.yml: that tags are fetched (or
