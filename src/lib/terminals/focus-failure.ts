@@ -26,6 +26,23 @@ export const FOCUS_FAILURE_PHRASE = {
   NO_TERMINAL: "no zellij session is running on the connected computer",
   /** Zellij is up, but this project has no tab and no running agent. */
   NO_SUCH_TARGET: "no zellij tab with that name in any active session",
+  /**
+   * The SAME condition, worded by the Fleet Runner desktop app instead of the
+   * cloud: `tab not found: <name>` (desktop/src/main/poller.ts).
+   *
+   * This is the drift the note above predicts, across a boundary it did not
+   * anticipate. The desktop runner is a separately shipped codebase that
+   * composes its own message, so a project focused through a local Fleet
+   * Runner produced text this classifier did not recognise, fell through to
+   * RETRY, and drew a Retry button that could never succeed — reported from
+   * /control through the feedback widget as "what is this? can you fix?".
+   *
+   * Matched here rather than fixed only in the desktop app, because Fleet
+   * Runner is versioned and released independently: every operator still on an
+   * older build would keep sending the old wording. A classifier that only
+   * understands the newest client is a classifier that lies about old ones.
+   */
+  NO_SUCH_TARGET_DESKTOP: "tab not found:",
   /** The tab exists and was found; focus just didn't take in time. */
   FOCUS_TIMED_OUT: "focus did not take within",
 } as const;
@@ -51,5 +68,7 @@ export function remedyForFailure(error: string | null | undefined): FailureRemed
   const text = (error ?? "").toLowerCase();
   if (text.includes(FOCUS_FAILURE_PHRASE.NO_TERMINAL)) return FAILURE_REMEDY.START_TERMINAL;
   if (text.includes(FOCUS_FAILURE_PHRASE.NO_SUCH_TARGET)) return FAILURE_REMEDY.START_SESSION;
+  if (text.includes(FOCUS_FAILURE_PHRASE.NO_SUCH_TARGET_DESKTOP))
+    return FAILURE_REMEDY.START_SESSION;
   return FAILURE_REMEDY.RETRY;
 }

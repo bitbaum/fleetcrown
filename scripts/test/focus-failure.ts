@@ -49,4 +49,34 @@ assert.equal(
   FAILURE_REMEDY.START_TERMINAL,
 );
 
+// The Fleet Runner desktop app words the SAME condition differently:
+// `tab not found: <name>` (desktop/src/main/poller.ts). Unrecognised, it fell
+// through to RETRY and drew a button that could never succeed — reported from
+// /control through the feedback widget as "what is this? can you fix?".
+//
+// Verbatim from that report, including the trailing UI text the element picker
+// captured, because that is what actually reaches this function.
+assert.equal(
+  remedyForFailure("focus_tab → fleetcrown failed: tab not found: fleetcrown"),
+  FAILURE_REMEDY.START_SESSION,
+);
+assert.equal(
+  remedyForFailure(
+    "focus_tab → fleetcrown failed: tab not found: fleetcrown4m agoOpen on ControlRetry",
+  ),
+  FAILURE_REMEDY.START_SESSION,
+);
+assert.equal(remedyForFailure("tab not found: orangecat"), FAILURE_REMEDY.START_SESSION);
+assert.equal(remedyForFailure("TAB NOT FOUND: evig"), FAILURE_REMEDY.START_SESSION);
+
+// Same precedence rule as the cloud wording: no terminal at all outranks it.
+assert.equal(
+  remedyForFailure(`tab not found: x / ${FOCUS_FAILURE_PHRASE.NO_TERMINAL}`),
+  FAILURE_REMEDY.START_TERMINAL,
+);
+
+// Must not over-match: a message that merely mentions a tab is not this failure.
+assert.equal(remedyForFailure("tab closed by user"), FAILURE_REMEDY.RETRY);
+assert.equal(remedyForFailure("could not find the window"), FAILURE_REMEDY.RETRY);
+
 console.log("✓ focus-failure tests passed");
