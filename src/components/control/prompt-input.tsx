@@ -201,7 +201,13 @@ export function PromptInput({
         </div>
       )}
 
-      <div className="flex items-center gap-1.5 border-t border-border-subtle px-3 py-2">
+      {/* flex-wrap so the status line below can take a row of its own on a
+          phone. It shared this row with four controls and Send, which left it
+          72px: the audit measured "Autopilot on: queue is empty, so
+          FleetCrown…" at 0% shown at 320px and 14% at 390px. No amount of
+          shorter copy fits a sentence into 72px — it needed the width, not
+          fewer words. */}
+      <div className="flex flex-wrap items-center gap-1.5 border-t border-border-subtle px-3 py-2">
         {attachments && <AttachButton attachments={attachments} />}
         {onToggleAutoContinue && typeof autoContinueEnabled === "boolean" && (
           <button
@@ -228,7 +234,11 @@ export function PromptInput({
         )}
         <span
           className={cn(
-            "min-w-0 flex-1 truncate text-xs",
+            // Below sm: its own full-width row (order-last puts it under the
+            // buttons), wrapping freely — a status nobody can read is not a
+            // status. From sm up the row has the room it always had, so it
+            // stays inline and single-line exactly as before.
+            "order-last w-full text-xs sm:order-none sm:w-auto sm:min-w-0 sm:flex-1 sm:truncate",
             micError
               ? "text-status-negative"
               : listening
