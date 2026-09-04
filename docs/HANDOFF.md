@@ -46,7 +46,7 @@ FleetCrown is a multi-user SaaS for builders who run **multiple AI agents across
 | Surface | URL / path | Status |
 |---|---|---|
 | Cloud web app | `https://fleetcrown.orangecat.ch` | Production, self-hosted on Hetzner (Caddy + systemd), Postgres 17 on the same box |
-| SSE bridge | `https://bridge.orangecat.ch` | Production, same Hetzner CX43 (8 vCPU / 16 GB, 40 GB disk, €17.29/mo) |
+| SSE bridge | `https://bridge.orangecat.ch` | Production, same Hetzner box — **CX33: 4 vCPU / 8 GB / 80 GB** (measured 2026-09-04: `nproc` 4, 7746 MiB, 75 G, 4 GB swap). Live figures: `/api/system/hetzner` |
 | DB | `postgresql://fleetcrown@postgresqlbridge.orangecat.ch:5432/fleetcrown` | Postgres 17.10, 10 MB used, 39 tables, all healthy |
 | Desktop app | `Fleet Runner` (Electron 33) | v0.7.5 latest, ships as .deb / .dmg / .exe / AppImage |
 | Releases | `https://github.com/bitbaum/fleetcrown-releases/releases` | Mirror of build artifacts |

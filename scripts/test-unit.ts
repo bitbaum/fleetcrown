@@ -30,7 +30,13 @@ const SKIP: Record<string, string> = {
   "authenticated-smoke.ts":
     "needs a running server + FLEETCROWN_SESSION_TOKEN (pre-push/prod dogfood)",
   "rag-retrieval.ts": "needs EMBEDDINGS_BASE_URL (fastembed service)",
-  "push-notifications.ts": "needs push/web-push env — run manually",
+  // push-notifications.ts was here, excluded as "needs push/web-push env —
+  // run manually". It never needed env: every check is a static file read. It
+  // was failing because scripts/agent-hook-bridge.sh was deleted on 2026-06-11
+  // (956ccf64), and the skip entry gave a reason that was never the real one —
+  // so the failure looked accounted for and nobody looked for three months.
+  // A wrong skip reason is worse than no skip: it answers the question that
+  // would have found the bug.
   "inject-prompt.ts": "needs a live DB (only passes locally via .env.local)",
   "verify-project-brief.ts": "needs a live DB + Groq API (network + GROQ_API_KEY)",
 };

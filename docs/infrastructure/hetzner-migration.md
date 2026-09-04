@@ -6,9 +6,27 @@ Neon entirely. Every real app and every database now lives on the `bitbaum`
 box. Hosted accounts are kept frozen for 14 days as a fallback, then deleted
 (see Decommission below).
 
-## Box layout (bitbaum · 167.233.22.31 · CX43 8 vCPU / 16 GB · 40 GB disk + 4GB swap)
+## Box layout (bitbaum · 167.233.22.31 · CX33 4 vCPU / 8 GB · 80 GB disk + 4 GB swap)
 
-> **Disk caveat (2026-06-30):** the CPU/RAM were rescaled to CX43 (8 vCPU / 16 GB)
+> **Current spec, measured 2026-09-04:** `nproc` = 4, `free -m` = 7746 MiB,
+> `df -h /` = 75 G, swap 4095 MiB. That is a **CX33**, and it is what
+> `src/app/api/system/hetzner/route.ts` has said all along ("the box is a cx33
+> and cannot simply be resized: Falkenstein is capacity-blocked"). This heading
+> claimed CX43 / 8 vCPU / 16 GB / 40 GB — every figure but the swap was wrong,
+> in the direction that matters: planning against 16 GB on an 8 GB machine is
+> how you meet the OOM killer.
+>
+> Note the shape of the drift. CPU and RAM went DOWN (8→4, 16→8) while the disk
+> went UP (40→75), which is what a disk-inclusive rescale to a smaller tier
+> looks like — a trade made to escape the disk-full problem the caveat below
+> describes. The caveat is kept as the historical record of how that arose.
+>
+> **Do not re-state these numbers elsewhere.** `/api/system/hetzner` reports
+> them live; a hardcoded spec is a second source of truth that rots silently,
+> which is exactly what happened here between June and September.
+
+> **Disk caveat (HISTORICAL, 2026-06-30 — superseded by the measurement above):**
+> the CPU/RAM were rescaled to CX43 (8 vCPU / 16 GB)
 > ~2026-06-16, but the rescale was done **"Nur CPU und RAM"** (CPU & RAM only), so
 > the disk is still stuck at the original **40 GB** (`df` shows 38 GB, ~85–92% full).
 > The full CX43 tier ships ~160 GB. To claim it requires a **disk-inclusive rescale**
