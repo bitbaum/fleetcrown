@@ -90,7 +90,7 @@ for dir in /opt/*/; do
   done
 done
 
-# ---- 5. every app unit MEANT to run is running -----------------------------
+# ---- 5. every app unit MEANT to run is running, and still has its guards ----
 # Enabled-but-not-active, not merely not-active. aoz-demo is stopped AND
 # disabled with nothing routed to its port — deliberately retired, and flagging
 # it as a fault is how a check earns the reputation that gets it ignored.
@@ -105,6 +105,18 @@ for u in /etc/systemd/system/*-app.service; do
   esac
   state="$(systemctl is-active "$unit" 2>/dev/null)"
   [ "$state" = "active" ] || finding "$app" "unit is enabled but $state"
+
+  # A rename moves the unit file; it does NOT move the .service.d/ drop-ins
+  # beside it. evig-app ran for two days after such a rename with no memory
+  # cap on a shared box and no OnFailure, because the drop-ins were still
+  # sitting in the OLD unit's directory. Nothing in git describes them — they
+  # are box state — so the running system is the only thing that can be asked,
+  # and every other app unit here carries both, which is what makes an
+  # exception a finding rather than a preference.
+  [ "$(systemctl show "$unit" -p MemoryMax --value 2>/dev/null)" = "infinity" ] \
+    && finding "$app" "unit has no memory cap (MemoryMax=infinity) on a shared box"
+  [ -n "$(systemctl show "$unit" -p OnFailure --value 2>/dev/null)" ] \
+    || finding "$app" "unit has no OnFailure= — it can die without alerting anyone"
 done
 
 note "checked $(ls -d /opt/*/ 2>/dev/null | wc -l) app dirs on node $BOX_NODE"

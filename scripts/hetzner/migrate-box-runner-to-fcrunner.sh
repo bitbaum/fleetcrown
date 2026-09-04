@@ -56,7 +56,7 @@ DST=/home/fcrunner
 COPY=(.claude .local .npm .gitconfig)
 
 # Co-tenant paths the runner must never read (+ all of /home/ubuntu once moved).
-INACCESSIBLE="-/home/ubuntu -/opt/orangecat -/opt/kivvi -/opt/botsmann -/opt/datacat-api -/opt/datacat-web -/opt/petvity -/opt/printcraft -/opt/reparaturbonus-zh -/opt/revamp-info -/opt/revampit -/opt/sbb-lost-found -/opt/solon -/opt/surf-your-life -/opt/vitareba -/opt/aoz-wohnen -/opt/supabase -/opt/backups -/opt/monitoring -/opt/_appcron"
+INACCESSIBLE="-/home/ubuntu -/opt/orangecat -/opt/kivvi -/opt/botsmann -/opt/datacat-api -/opt/datacat-web -/opt/petvity -/opt/printcraft -/opt/reparaturbonus-zh -/opt/revamp-info -/opt/evig -/opt/sbb-lost-found -/opt/solon -/opt/surf-your-life -/opt/vitareba -/opt/aoz-wohnen -/opt/supabase -/opt/backups -/opt/monitoring -/opt/_appcron"
 
 read -r -d '' DROPIN_BODY <<CONF || true
 [Service]

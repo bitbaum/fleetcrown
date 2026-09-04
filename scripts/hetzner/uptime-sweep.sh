@@ -29,7 +29,7 @@
 #
 # THREE of those twelve were counted among "the rest" until 2026-08-28, and none
 # of them was ever broken — the sweep was asking the wrong URL and believing the
-# answer. aoz-wohnen and revampit answer on the canonical host they redirect to;
+# answer. aoz-wohnen answers on the canonical host it redirects to;
 # petvity answers at /api/healthz, while the /api/health we asked for is its pet
 # health-RECORDS api sitting behind auth. Each looked exactly like an app with
 # no health route, which is the one shape this script must never get wrong.
@@ -62,7 +62,7 @@ DEFAULT_HEALTH_PATH=/api/health
 # ── The four apps.conf documents as deliberately absent ──────────────────────
 #
 # apps.conf says, in its own header: "Ports 4001-4004 are the pre-existing
-# handcrafted services (bridge, fleetcrown, orangecat, revampit) — they keep
+# handcrafted services (bridge, fleetcrown, orangecat, evig) — they keep
 # their own units and Caddy blocks and are NOT listed here." They are still
 # public, still on the one box, and still unwatched, so leaving them out would
 # reproduce the exact blind spot this script exists to close.
@@ -83,7 +83,7 @@ EXTRA_TARGETS='
 bridge|bridge.orangecat.ch
 fleetcrown|fleetcrown.orangecat.ch
 orangecat|orangecat.ch
-revampit|revampit.orangecat.ch
+evig|evig.orangecat.ch
 annushka|annushka.orangecat.ch
 '
 
@@ -260,7 +260,7 @@ cert_verdict() {
 
 # root_verdict <http_code> — the weaker fallback question: does it serve at all?
 # 3xx counts as serving: several apps redirect `/` to a locale or a canonical
-# host (revampit, petvity, vitareba all do) and that is a working app.
+# host (aoz-wohnen, petvity, vitareba all do) and that is a working app.
 root_verdict() {
   case "$1" in
     2??|3??) echo up ;;

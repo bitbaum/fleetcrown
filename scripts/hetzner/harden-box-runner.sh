@@ -40,7 +40,7 @@ read -r -d '' DROPIN_BODY <<'CONF' || true
 # agent cannot read another product's secrets, the backups, or the box SSH keys.
 NoNewPrivileges=true
 PrivateTmp=true
-InaccessiblePaths=-/home/ubuntu/.ssh -/opt/orangecat -/opt/kivvi -/opt/botsmann -/opt/datacat-api -/opt/datacat-web -/opt/petvity -/opt/printcraft -/opt/reparaturbonus-zh -/opt/revamp-info -/opt/revampit -/opt/sbb-lost-found -/opt/solon -/opt/surf-your-life -/opt/vitareba -/opt/aoz-wohnen -/opt/supabase -/opt/backups -/opt/monitoring -/opt/_appcron
+InaccessiblePaths=-/home/ubuntu/.ssh -/opt/orangecat -/opt/kivvi -/opt/botsmann -/opt/datacat-api -/opt/datacat-web -/opt/petvity -/opt/printcraft -/opt/reparaturbonus-zh -/opt/revamp-info -/opt/evig -/opt/sbb-lost-found -/opt/solon -/opt/surf-your-life -/opt/vitareba -/opt/aoz-wohnen -/opt/supabase -/opt/backups -/opt/monitoring -/opt/_appcron
 CONF
 
 if [ "${1:-}" = "--dry-run" ]; then
