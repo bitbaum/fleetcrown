@@ -235,10 +235,16 @@ export function PromptInput({
         <span
           className={cn(
             // Below sm: its own full-width row (order-last puts it under the
-            // buttons), wrapping freely — a status nobody can read is not a
-            // status. From sm up the row has the room it always had, so it
-            // stays inline and single-line exactly as before.
-            "order-last w-full text-xs sm:order-none sm:w-auto sm:min-w-0 sm:flex-1 sm:truncate",
+            // buttons). From sm up it goes back inline beside them.
+            //
+            // It WRAPS at every width, though. Keeping `sm:truncate` for
+            // desktop left it at 57% on a 1440 viewport — "Autopilot on: queue
+            // is empty, so FleetCr…" — which is the same defect as the phone's
+            // 14%, just less obvious, and there is no title here so the rest is
+            // unreachable at any width. Wrapping costs one extra line in the
+            // toolbar only when the sentence is long; truncating costs the
+            // half of the sentence that says what will happen.
+            "order-last w-full text-xs sm:order-none sm:w-auto sm:min-w-0 sm:flex-1",
             micError
               ? "text-status-negative"
               : listening

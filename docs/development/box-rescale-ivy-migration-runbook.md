@@ -42,6 +42,13 @@ The #1 data-loss risk: nightly dumps currently live on the same disk as the DBs.
 CX22 → **CX43** (8 vCPU / 16 GB) completed 2026-06-16. Verified: 15 GB total,
 10 GB free, **0 swap**, no failed services, site 200. No action remaining.
 
+> **Superseded — the box is no longer on this tier.** Measured 2026-09-04:
+> 4 vCPU, 7746 MiB, 75 G disk, 4 GB swap — a **CX33**. CPU/RAM went down and the
+> disk went up, i.e. a later disk-inclusive rescale to a smaller tier (see
+> `docs/infrastructure/hetzner-migration.md`). This entry stays as the record of
+> what was done in June; it is not the current spec. For that, read
+> `/api/system/hetzner`, never a number written in a doc.
+
 > (Separate note, not gating Ivy: the box was swapping pre-rescale; it's healthy
 > now. If app count grows, re-evaluate — but that's its own decision.)
 

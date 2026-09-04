@@ -1,7 +1,11 @@
 /**
  * Inline self-tests for Web Push (Stage 5) — keeps the subscribe/notify
- * surface, service worker, and Stop-hook bridge wired together.
+ * surface, the service worker, and the run-close notification wired together.
  * Run: npm run test:push-notifications
+ *
+ * Needs no environment: every check is a static file read. It was excluded from
+ * test:unit for years as "needs push/web-push env", which was never true — see
+ * the note on the run-close check below.
  */
 import { readFileSync, existsSync } from "fs";
 
@@ -46,12 +50,40 @@ function runTests(): void {
     assert(/showNotification/.test(sw), "sw.js must show OS notifications");
   });
 
-  check("Stop hook calls push_notify_stop", () => {
-    const sh = readFileSync("scripts/agent-hook-bridge.sh", "utf8");
-    assert(/push_notify_stop/.test(sh), "push_notify_stop helper must exist");
-    assert(/\/api\/push\/notify/.test(sh), "push_notify_stop must POST /api/push/notify");
-    const stopCalls = sh.match(/push_notify_stop\s+"\$TAB_NAME"/g) ?? [];
-    assert(stopCalls.length >= 1, "handle_stop must invoke push_notify_stop");
+  // "An agent finished, tell the operator" — the point of this whole surface.
+  //
+  // This used to read scripts/agent-hook-bridge.sh and assert a bash helper
+  // called push_notify_stop. That file was deleted on 2026-06-11 (956ccf64,
+  // "delete the bash daemon and bridge files") when the Stop hook moved into
+  // TypeScript, so the check threw ENOENT and the whole suite exited 1 — while
+  // its entry in scripts/test-unit.ts SKIP said it "needs push/web-push env",
+  // which was never why it failed. A test excluded from CI for a reason that
+  // was not the real one is a test that rots unread: nothing has asserted this
+  // path for three months.
+  //
+  // Retargeted, not deleted. The behaviour did not go away, it moved —
+  // notify-close.ts reaches the operator through pushToUser now — and
+  // scripts/test/notify-close.ts covers that module without mentioning push at
+  // all. Deleting the check would have quietly ratified the coverage hole.
+  check("a closing run still pushes to the operator", () => {
+    const closer = readFileSync("src/lib/orchestration/notify-close.ts", "utf8");
+    assert(
+      /from "@\/lib\/push-fanout"/.test(closer),
+      "notify-close must reach the operator through push-fanout",
+    );
+    assert(/pushToUser\s*\(/.test(closer), "notify-close must call pushToUser");
+    const fanout = readFileSync("src/lib/push-fanout.ts", "utf8");
+    assert(
+      /listSubscriptionsForUser\s*\(/.test(fanout),
+      "push-fanout must look up the operator's subscribed devices",
+    );
+    // A fan-out that throws would take its caller down with it, and the caller
+    // is a run finishing — the notification is the least important thing on
+    // that path. The module's own contract says "must never throw".
+    assert(
+      /catch\b/.test(fanout),
+      "push-fanout must be fire-and-forget, never throwing at callers",
+    );
   });
 
   check("NotificationsPill is wired into AppTopBar", () => {
