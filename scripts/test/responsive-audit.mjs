@@ -315,6 +315,49 @@ function measurePage(minTouch) {
     }))
     .slice(0, 5);
 
+  // A SENTENCE cut off by a single-line ellipsis.
+  //
+  // The vertical check above deliberately exempts `text-overflow: ellipsis`,
+  // and that exemption is right for what it was written for: a project name in
+  // a narrow rail, a filename, an id. Truncating an identifier is a normal
+  // affordance — you still recognise it, and 76 files in src/components use
+  // `truncate` for exactly that. A blanket rule would fire on all of them.
+  //
+  // It is not right for prose. /control's "Suggested next (profile): …" line
+  // showed 50 of its 644 pixels — the rest lived only in a `title` tooltip, and
+  // a phone has no hover. Clicking that line loads it into the composer, so the
+  // sentence was the decision and a tenth of a sentence is not one.
+  //
+  // Three conditions keep this narrow enough to stay silent on the legitimate
+  // cases: the text must READ as a sentence (long, many spaces — an id has
+  // neither), and more than half of it must be hidden (a chip losing its tail
+  // is fine; a line showing its first eight words is not).
+  const PROSE_MIN_CHARS = 60;
+  const PROSE_MIN_SPACES = 8;
+  const PROSE_MAX_VISIBLE_FRACTION = 0.5;
+  const clippedProse = [...document.querySelectorAll("body *")]
+    .filter((el) => {
+      const cs = getComputedStyle(el);
+      if (cs.textOverflow !== "ellipsis" || cs.whiteSpace !== "nowrap") return false;
+      if (cs.visibility === "hidden") return false;
+      const t = (el.textContent || "").trim();
+      if (t.length < PROSE_MIN_CHARS) return false;
+      if ((t.match(/\s/g) || []).length < PROSE_MIN_SPACES) return false;
+      const full = el.scrollWidth;
+      if (full <= el.clientWidth + 2 || full === 0) return false;
+      return el.clientWidth / full < PROSE_MAX_VISIBLE_FRACTION;
+    })
+    .map((el) => ({
+      tag: el.tagName.toLowerCase(),
+      text: (el.textContent || "").trim().slice(0, 44),
+      cls:
+        ((el.className || "").toString().match(/ui-[\w-]+/g) || []).join(".") ||
+        (el.className || "").toString().slice(0, 40),
+      hidden: el.scrollWidth - el.clientWidth,
+      shownPct: Math.round((el.clientWidth / el.scrollWidth) * 100),
+    }))
+    .slice(0, 5);
+
   // Content trapped under fixed chrome (mobile bottom nav). Reachable only if
   // the page scrolls far enough; on a short page it is permanently covered.
   const bars = [...document.querySelectorAll("body *")].filter((el) => {
@@ -362,6 +405,7 @@ function measurePage(minTouch) {
     offenders,
     small,
     clipped,
+    clippedProse,
     buried,
     brokenImages,
   };
@@ -524,6 +568,12 @@ async function main() {
         if (r.clipped.length > 0)
           console.log(
             `     ⚠ clipped text: ${r.clipped.map((c) => `"${c.text}"[${c.cls}] (-${c.hidden}px)`).join(", ")}`,
+          );
+        if (r.clippedProse.length > 0)
+          console.log(
+            `     ⚠ sentence cut off by a single-line ellipsis (the rest is hover-only, so a phone cannot read it): ${r.clippedProse
+              .map((c) => `"${c.text}…"[${c.cls}] ${c.shownPct}% shown, -${c.hidden}px`)
+              .join(", ")}`,
           );
         if (r.brokenImages.length > 0)
           console.log(`     ⚠ broken image(s): ${r.brokenImages.join(", ")}`);

@@ -502,12 +502,24 @@ export function ProjectCard({
             "configure GOOGLE_CLIENT_ID…" from a months-old enrich while the
             agent's handoff said something else entirely and 7 real dispatches
             that day ignored both. The agent's handoff wins when there is one,
-            and each source is NAMED so a suggestion can't pass as a fact. */}
+            and each source is NAMED so a suggestion can't pass as a fact.
+
+            line-clamp-2, NOT truncate. `truncate` is one line with an ellipsis,
+            so this rendered as "Suggested next (profile): Conduct a 1-month
+            baseline m…" — measured on prod, 594 of its 644 pixels hidden at
+            390px and 432 at 1440px. The rest of the sentence existed only in
+            the `title` tooltip, and a phone has no hover; OutcomeStreak.tsx in
+            this same directory documents having already fixed that exact
+            mistake for its glyph row. It costs more here than there: clicking
+            this button loads the text into the composer, so the sentence IS
+            the decision, and a tenth of a sentence is not one. /activity
+            already clamps the same "what's next" content to two lines
+            (ActivityEventRow) — the two surfaces now agree. */}
         {nextStep && (
           <button
             type="button"
             onClick={() => setCustom(nextStep.text)}
-            className="ui-link-subtle-button mt-1.5 block w-full truncate px-0 text-left"
+            className="ui-link-subtle-button mt-1.5 block w-full px-0 text-left line-clamp-2"
             title={`${nextStep.text}\n\n${nextStep.sourceTitle}\nClick to use as the prompt below — edit, then Send.`}
           >
             <span className="font-medium text-text-secondary">{nextStep.label}</span>{" "}
