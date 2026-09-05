@@ -122,7 +122,7 @@ export function GoalsGrid({
       </div>
 
       {/* Sort chips */}
-      <div className="flex flex-wrap gap-1.5">
+      <div className="ui-filter-chip-row ui-scroll-fade-right">
         {SORT_OPTIONS.map((opt) => (
           <button
             key={opt.value}
@@ -136,7 +136,7 @@ export function GoalsGrid({
 
       {/* Project filter chips */}
       {projects.length > 1 && (
-        <div className="flex flex-wrap gap-1.5">
+        <div className="ui-filter-chip-row ui-scroll-fade-right">
           {projects.map((name) => (
             <button
               key={name}

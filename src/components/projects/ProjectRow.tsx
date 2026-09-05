@@ -81,15 +81,31 @@ export function ProjectRow({
             </span>
           )}
         </div>
+        {/* Two lines, not one ellipsis.
+
+            This page's own header says "Decide what needs your attention now",
+            and the next step is the only content on the row that supports that
+            decision — yet it was `truncate`d to a single line showing 21–36% of
+            the sentence, with the remainder available on hover only. A phone
+            has no hover, so on the viewport where the row is narrowest the
+            deciding information was simply unreadable. Measured across all four
+            widths by audit:responsive, which flags prose under 50% visible.
+
+            `truncate` has to come off the PARENT too: it sets
+            `white-space: nowrap`, which would stop the child wrapping no matter
+            what the child says. min-w-0 lets the span shrink inside the flex
+            row instead of overflowing it. */}
         {line && (
-          <p className="mt-0.5 flex items-start gap-1.5 truncate text-xs text-text-tertiary">
+          <p className="mt-0.5 flex items-start gap-1.5 text-xs text-text-tertiary">
             {nextStep && (
               <ArrowRight
                 className="mt-0.5 h-3 w-3 shrink-0 text-status-positive"
                 aria-hidden="true"
               />
             )}
-            <span className="truncate">{line}</span>
+            <span className="line-clamp-2 min-w-0" title={line}>
+              {line}
+            </span>
           </p>
         )}
       </div>
