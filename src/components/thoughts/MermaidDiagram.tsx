@@ -4,10 +4,34 @@ import { useEffect, useId, useRef, useSyncExternalStore } from "react";
 import { useTheme } from "next-themes";
 import { PALETTE } from "@/lib/palette";
 
-// Resolves a CSS custom property to a concrete rgb() value by temporarily
-// applying it to a hidden element and reading the browser-computed color.
-// This keeps Mermaid colours in sync with the design token SSOT (globals.css)
-// without hardcoding hex values that would drift from the theme.
+// Normalises any colour the browser understands down to #rrggbb.
+//
+// getComputedStyle returns a colour in the space it was AUTHORED in, so a token
+// written with oklch()/lab() reads back as e.g. "lab(95.36 0 0)" — valid CSS
+// Color 4 that Mermaid's colour parser rejects outright. It threw inside
+// initialize(), which runs BEFORE render(), so render()'s .catch() never fired
+// and every diagram on the site rendered as an empty box. Canvas is the cheapest
+// converter the platform offers: assigning fillStyle round-trips through the
+// browser's own parser and reads back as hex.
+function toSrgbHex(value: string, fallback: string): string {
+  try {
+    const ctx = document.createElement("canvas").getContext("2d");
+    if (!ctx) return fallback;
+    // Sentinel: an unparseable assignment leaves fillStyle untouched, which is
+    // the only way to tell "the browser rejected it" from "it is that colour".
+    ctx.fillStyle = "#010203";
+    ctx.fillStyle = value;
+    const out = ctx.fillStyle;
+    return typeof out === "string" && out !== "#010203" ? out : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+// Resolves a CSS custom property to a concrete colour by temporarily applying it
+// to a hidden element and reading the browser-computed value, then normalising
+// it. This keeps Mermaid colours in sync with the design token SSOT
+// (globals.css) without hardcoding hex values that would drift from the theme.
 function resolveColorVar(cssVar: string, fallback: string): string {
   if (typeof document === "undefined") return fallback;
   const el = document.createElement("span");
@@ -18,7 +42,8 @@ function resolveColorVar(cssVar: string, fallback: string): string {
   const value = getComputedStyle(el).backgroundColor;
   el.remove();
   // If the browser couldn't resolve it (returns "" or "transparent"), use fallback.
-  return value && value !== "rgba(0, 0, 0, 0)" ? value : fallback;
+  if (!value || value === "rgba(0, 0, 0, 0)") return fallback;
+  return toSrgbHex(value, fallback);
 }
 
 function resolvedThemeIsDark(theme: string | undefined, systemDark: boolean): boolean {
@@ -51,19 +76,29 @@ export function MermaidDiagram({ chart }: { chart: string }) {
     import("mermaid").then((m) => {
       if (cancelled) return;
       const fallback = dark ? PALETTE.darkFallback : PALETTE.lightFallback;
-      m.default.initialize({
+      const base = {
         startOnLoad: false,
-        theme: dark ? "dark" : "default",
-        themeVariables: {
-          background: "transparent",
-          primaryColor: resolveColorVar("--surface-raised", fallback.surfaceRaised),
-          primaryTextColor: resolveColorVar("--text-primary", fallback.textPrimary),
-          lineColor: resolveColorVar("--text-tertiary", fallback.textTertiary),
-          edgeLabelBackground: resolveColorVar("--surface-base", fallback.surfaceBase),
-          clusterBkg: resolveColorVar("--surface-raised", fallback.surfaceRaised),
-        },
+        theme: dark ? ("dark" as const) : ("default" as const),
         fontFamily: "inherit",
-      });
+      };
+      try {
+        m.default.initialize({
+          ...base,
+          themeVariables: {
+            background: "transparent",
+            primaryColor: resolveColorVar("--surface-raised", fallback.surfaceRaised),
+            primaryTextColor: resolveColorVar("--text-primary", fallback.textPrimary),
+            lineColor: resolveColorVar("--text-tertiary", fallback.textTertiary),
+            edgeLabelBackground: resolveColorVar("--surface-base", fallback.surfaceBase),
+            clusterBkg: resolveColorVar("--surface-raised", fallback.surfaceRaised),
+          },
+        });
+      } catch {
+        // A theme value Mermaid cannot parse must cost the reader the THEME, not
+        // the diagram. initialize() runs outside render()'s promise chain, so an
+        // uncaught throw here silently skipped rendering altogether.
+        m.default.initialize(base);
+      }
       m.default
         .render(`mermaid-${id}-${dark ? "d" : "l"}`, chart)
         .then(({ svg }) => {
