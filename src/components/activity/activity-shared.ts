@@ -1,4 +1,4 @@
-import { APP_LOCALE } from "@/lib/constants";
+import { APP_LOCALE, DEFAULT_TIMEZONE } from "@/lib/constants";
 import type { DigestWindow } from "@/db/queries/digests";
 import type { ActivityFilter, ActivityOutcome } from "@/lib/activity-events";
 import type { StatusTone } from "@/lib/constants/statuses";
@@ -75,10 +75,25 @@ export function activityHref(opts: {
 }
 
 // ─── Time formatting ─────────────────────────────────────────────────────────
+//
+// Every formatter here pins `timeZone`. Without it they read the RUNTIME's
+// zone — UTC on the box, Europe/Zurich in the browser — and the components
+// calling them are "use client", so they render in BOTH places: the server
+// wrote 10:18 and hydration wrote 12:18. React discarded the tree, which is
+// React #418 on /activity at every viewport, in production only.
+//
+// Measured on a single page load 2026-09-05: 1798 words server, 1798 client,
+// every clock differing by exactly two hours.
+//
+// Pinning beats the mounted-gate the greeting uses: these are PAST events, not
+// "now", so there is no reader-dependent answer to defer to — deferring would
+// trade a wrong first paint for an empty one. DEFAULT_TIMEZONE is already the
+// app's SSOT for the operator's zone.
 
 /** Full stamp — used where a date is genuinely needed (range labels). */
 export function formatActivityTime(iso: string): string {
   return new Date(iso).toLocaleString(APP_LOCALE, {
+    timeZone: DEFAULT_TIMEZONE,
     month: "short",
     day: "numeric",
     hour: "2-digit",
@@ -93,20 +108,34 @@ export function formatActivityTime(iso: string): string {
  */
 export function formatClockTime(iso: string): string {
   return new Date(iso).toLocaleTimeString(APP_LOCALE, {
+    timeZone: DEFAULT_TIMEZONE,
     hour: "2-digit",
     minute: "2-digit",
   });
 }
 
-/** "Today" / "Yesterday" / "Mon, 25 Aug" for a YYYY-MM-DD bucket key. */
+/**
+ * "Today" / "Yesterday" / "Mon, 25 Aug" for a YYYY-MM-DD bucket key.
+ *
+ * Compared as calendar-date STRINGS in a fixed zone, not by Date arithmetic.
+ * `new Date(y, m-1, d)` and `now.getFullYear()` both read the runtime's zone,
+ * so between 00:00 and 02:00 Zurich the box (UTC, still on yesterday) and the
+ * browser (CEST, already on today) disagreed about which bucket is "Today" —
+ * the same hydration mismatch as the clocks above, in a two-hour window. That
+ * is why /activity failed on some runs and not others before the whole file
+ * was pinned.
+ */
 export function formatDayHeading(day: string, now = new Date()): string {
+  // en-CA renders ISO-shaped YYYY-MM-DD, which is exactly the bucket key format.
+  const key = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: DEFAULT_TIMEZONE });
+  if (day === key(now)) return "Today";
+  if (day === key(new Date(now.getTime() - 86_400_000))) return "Yesterday";
+
+  // Build the date as UTC midnight and render it as UTC: the key names a
+  // calendar day, not an instant, so no zone conversion should shift it.
   const [y, m, d] = day.split("-").map(Number);
-  const date = new Date(y, (m ?? 1) - 1, d ?? 1);
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const diffDays = Math.round((startOfToday.getTime() - date.getTime()) / 86_400_000);
-  if (diffDays === 0) return "Today";
-  if (diffDays === 1) return "Yesterday";
-  return date.toLocaleDateString(APP_LOCALE, {
+  return new Date(Date.UTC(y ?? 1970, (m ?? 1) - 1, d ?? 1)).toLocaleDateString(APP_LOCALE, {
+    timeZone: "UTC",
     weekday: "short",
     day: "numeric",
     month: "short",
@@ -122,7 +151,16 @@ export function formatDayHeading(day: string, now = new Date()): string {
 export function formatPulseBucketLabel(iso: string, digestWindow: DigestWindow): string {
   const date = new Date(iso);
   if (digestWindow === "hour" || digestWindow === "day") {
-    return date.toLocaleTimeString(APP_LOCALE, { hour: "2-digit", minute: "2-digit" });
+    return date.toLocaleTimeString(APP_LOCALE, {
+      timeZone: DEFAULT_TIMEZONE,
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   }
-  return date.toLocaleDateString(APP_LOCALE, { weekday: "short", day: "numeric", month: "short" });
+  return date.toLocaleDateString(APP_LOCALE, {
+    timeZone: DEFAULT_TIMEZONE,
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
 }
