@@ -13,11 +13,7 @@ export default async function ActivityPage({
   const params = await searchParams;
 
   return (
-    <PageLayout
-      title="Activity"
-      subtitle="Every action your fleet took — what you asked for, what came back, and what needs you."
-      maxWidth="max-w-5xl"
-    >
+    <PageLayout title="Activity" maxWidth="max-w-5xl">
       <ActivityView
         userId={userId}
         window={params.window}

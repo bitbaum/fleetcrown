@@ -20,7 +20,7 @@ import { FleetBriefCard } from "@/components/today/FleetBriefCard";
 import { StuckGoalsCard } from "@/components/today/StuckGoalsCard";
 import { LockedZoneBanner } from "@/components/today/LockedZoneBanner";
 import { TodayWatch } from "@/components/today/TodayWatch";
-import { LayoutGrid } from "lucide-react";
+import { LayoutGrid, ChevronDown } from "lucide-react";
 import { DayPhaseDispatch } from "@/components/today/DayPhaseDispatch";
 import { requirePageUserId, getCurrentUserName } from "@/lib/session";
 import { getUserProjects, getOrgProjects } from "@/db/queries/user-projects";
@@ -120,14 +120,10 @@ export default async function TodayPage() {
               <TodayWatch />
             </Suspense>
 
-            {/* Actionable first — what needs your decision. This has to come before
-          the recap cards below it, not after: ActionQueueCard is the one card
-          on this page with real Approve/Decline buttons, and on a 390px phone
-          "first" is the difference between one thumb-scroll and four. It used
-          to sit here in a comment but not in the layout — FleetBriefCard and
-          RecentRunsCard (both read-only recap) were rendered above it, so a
-          mobile user scrolled past two summaries of what ALREADY happened
-          before reaching the one card asking them to decide something. */}
+            {/* Decisions first — the only cards that ask the reader for
+                something. On a 390px phone the ordering here is the difference
+                between one thumb-scroll and four, so read-only recap must never
+                climb above this block. */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Suspense fallback={<CardSkeleton />}>
                 <StickyNoteCard />
@@ -138,37 +134,16 @@ export default async function TodayPage() {
               <Suspense fallback={<CardSkeleton />}>
                 <AlertsCard />
               </Suspense>
-              <Suspense fallback={<CardSkeleton />}>
-                <GoalsDueCard />
-              </Suspense>
-              <Suspense fallback={<CardSkeleton />}>
-                <EventsDueCard />
-              </Suspense>
-              <Suspense fallback={<CardSkeleton />}>
-                <StuckGoalsCard />
-              </Suspense>
             </div>
 
-            {/* Fleet brief — at-a-glance counts of projects/runs today + this week.
-          Lives above RecentRunsCard because it answers "what happened?"
-          (aggregate) before "what specifically happened?" (timeline). Both
-          are recap, so both come after the decisions above. */}
-            <Suspense fallback={<CardSkeleton />}>
-              <FleetBriefCard userId={userId} />
-            </Suspense>
-
-            {/* Recent agent outcomes — what agents shipped since last visit */}
-            <Suspense fallback={<CardSkeleton />}>
-              <RecentRunsCard />
-            </Suspense>
-
-            {/* Context — what's happening today */}
+            {/* Today itself — the two cards that are only true right now. */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <CalendarCard />
               <WeatherCard />
             </div>
 
-            {/* State — what's pending */}
+            {/* Habits are a today action (check one off), so they stay out of
+                the disclosure below with the read-only recap. */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
               <Suspense fallback={<CardSkeleton />}>
                 <HabitsCard />
@@ -176,10 +151,51 @@ export default async function TodayPage() {
               <Suspense fallback={<CardSkeleton />}>
                 <CommitmentsCard />
               </Suspense>
-              <Suspense fallback={<CardSkeleton />}>
-                <SubscriptionsCard />
-              </Suspense>
             </div>
+
+            {/*
+              Everything below is recap or a summary of a page that already
+              exists in the nav: goals (/goals), events (/events),
+              subscriptions (/money), run history (/activity).
+
+              This page rendered thirteen cards of equal weight, so answering
+              "what needs me today?" meant scrolling past six summaries of
+              things that did not. Collapsed by default it is still one tap
+              away and still crawlable in the DOM — <details> renders its
+              content either way — but the phone screen is spent on the
+              decisions above instead.
+            */}
+            <details className="ui-disclosure">
+              <summary className="ui-disclosure-summary">
+                <ChevronDown className="ui-disclosure-chevron" aria-hidden="true" />
+                <span className="ui-section-label">Recap &amp; reference</span>
+                <span className="text-micro text-text-muted">
+                  goals · events · bills · fleet activity
+                </span>
+              </summary>
+              <div className="ui-disclosure-body space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                  <Suspense fallback={<CardSkeleton />}>
+                    <GoalsDueCard />
+                  </Suspense>
+                  <Suspense fallback={<CardSkeleton />}>
+                    <EventsDueCard />
+                  </Suspense>
+                  <Suspense fallback={<CardSkeleton />}>
+                    <StuckGoalsCard />
+                  </Suspense>
+                  <Suspense fallback={<CardSkeleton />}>
+                    <SubscriptionsCard />
+                  </Suspense>
+                </div>
+                <Suspense fallback={<CardSkeleton />}>
+                  <FleetBriefCard userId={userId} />
+                </Suspense>
+                <Suspense fallback={<CardSkeleton />}>
+                  <RecentRunsCard />
+                </Suspense>
+              </div>
+            </details>
             <AutoRefresh intervalMs={REFRESH_CADENCE.today} />
           </>
         )}

@@ -9,7 +9,7 @@ export default async function EventsPage() {
   const userId = await requirePageUserId();
   const [items, archived] = await Promise.all([getEvents(userId), getArchivedEvents(userId)]);
   return (
-    <PageLayout title="Events" subtitle="Opportunities, deadlines, and what's coming up">
+    <PageLayout title="Events">
       <EventsGrid initialEvents={items} initialArchived={archived} />
     </PageLayout>
   );

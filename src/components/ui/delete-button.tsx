@@ -12,11 +12,19 @@ export function DeleteButton({
   label = "Delete?",
   triggerTitle = "Delete",
   triggerClassName = "p-1.5 rounded text-text-muted hover:text-status-negative hover:bg-surface-raised transition-colors",
+  triggerLabel,
 }: {
   onDelete: () => Promise<void>;
   label?: string;
   triggerTitle?: string;
   triggerClassName?: string;
+  /**
+   * Visible text beside the icon. Every existing call site is an icon-only
+   * control in a row, where the glyph is the whole affordance; inside an
+   * overflow menu a lone trash glyph reads as nothing, because the menu's
+   * other entries are words.
+   */
+  triggerLabel?: string;
 }) {
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -75,6 +83,7 @@ export function DeleteButton({
       aria-label={triggerTitle}
     >
       <Trash2 className="h-3.5 w-3.5" />
+      {triggerLabel}
     </button>
   );
 }

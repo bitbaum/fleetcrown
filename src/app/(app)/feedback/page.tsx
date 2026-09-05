@@ -15,11 +15,7 @@ export const metadata = { title: "Feedback" };
 export default async function FeedbackPage() {
   await requirePageUserId();
   return (
-    <PageLayout
-      title="Feedback"
-      subtitle="Every report across your fleet — triage it, implement it, watch the fix land."
-      maxWidth="max-w-5xl"
-    >
+    <PageLayout title="Feedback" maxWidth="max-w-5xl">
       <Suspense fallback={<CardSkeleton />}>
         <FeedbackInbox />
       </Suspense>

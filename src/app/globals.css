@@ -4124,6 +4124,66 @@
     @apply flex gap-2 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden;
   }
 
+  /* ── Section heading + disclosure ────────────────────────────────────────
+     A page that stacks a dozen equally-weighted cards asks the reader to rank
+     them, which is work the page should have done. These two classes carry the
+     ranking: a quiet label that groups what belongs together, and a disclosure
+     that keeps reference material reachable without spending a phone screen on
+     it.
+
+     Built on <details>/<summary> deliberately — no state, no effect, no
+     hydration boundary. Every JS disclosure here would be another component
+     whose server and client first render must agree, which is exactly the
+     class of bug that put React #418 on every authenticated page (#488). The
+     browser already implements this one correctly. */
+  .ui-section-label {
+    @apply text-micro font-medium uppercase tracking-wider text-text-muted;
+  }
+  .ui-disclosure {
+    @apply rounded-2xl border border-border-subtle bg-surface-base/40;
+  }
+  .ui-disclosure-summary {
+    @apply flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm text-text-secondary transition-colors hover:text-text-primary;
+    /* Safari renders a disclosure triangle from a pseudo-element that
+       `list-style: none` does not remove. */
+    &::-webkit-details-marker {
+      display: none;
+    }
+  }
+  /* The chevron rotates from the parent's open state, so the caller writes no
+     JS and no icon-swap branch. */
+  .ui-disclosure-chevron {
+    @apply h-4 w-4 shrink-0 text-text-muted transition-transform duration-200;
+  }
+  details[open] > summary .ui-disclosure-chevron {
+    @apply rotate-180;
+  }
+  .ui-disclosure-body {
+    @apply px-3 pb-4 pt-1;
+  }
+
+  /* ── Row overflow menu ───────────────────────────────────────────────────
+     A list row that renders every action it supports makes the reader scan
+     six controls to find the one they came for, and repeats that scan for
+     every row. Nine subscriptions rendered fifty-four buttons.
+
+     So: the action people actually repeat stays inline, and the rest live
+     behind one trigger. The menu is positioned absolutely — no card shell here
+     sets overflow-hidden, so it is free to escape its row. */
+  .ui-menu {
+    @apply absolute right-0 top-full z-50 mt-1 min-w-44 max-w-[calc(100vw-2rem)] rounded-xl border border-border-default bg-surface-overlay py-1;
+    box-shadow: var(--shadow-panel-strong);
+  }
+  .ui-menu-item {
+    @apply flex w-full items-center gap-2 whitespace-nowrap px-3 py-2 text-left text-xs text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary disabled:opacity-40;
+  }
+  .ui-menu-item-danger {
+    @apply text-status-negative/70 hover:text-status-negative;
+  }
+  .ui-menu-separator {
+    @apply my-1 h-px bg-border-subtle;
+  }
+
   /* ── Activity hero ───────────────────────────────────────────────────────
      The answer, before the evidence. One sentence, one picture, three numbers
      that are also destinations. */
@@ -5047,6 +5107,10 @@
      span their container, so a min-width would fight the layout and means
      nothing for a row that is already full-width. */
   .ui-tap,
+  /* A menu exists to be tapped, and its items are the whole reason the row's
+     actions were moved out of sight — they must not be harder to hit than the
+     buttons they replaced. */
+  .ui-menu-item,
   /* A text field is a tap target too — you have to hit it to type in it.
      These measured 42px: near-misses are still misses, and "nearly" is not a
      category the finger recognises. */

@@ -2,19 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  X,
-  Lightbulb,
-  ExternalLink,
-  ChevronDown,
-  ChevronUp,
-  Loader2,
-  CheckCheck,
-  Pencil,
-  RotateCcw,
-} from "lucide-react";
+import { X, Lightbulb, ExternalLink, Loader2, CheckCheck, Pencil, RotateCcw } from "lucide-react";
 import { LokiDispatchButton } from "@/components/shared/LokiDispatchButton";
 import { DeleteButton } from "@/components/ui/delete-button";
+import { RowActions } from "@/components/ui/row-actions";
 import { handleCancelSubscription } from "@/app/actions";
 import { SUBSCRIPTION_META, FREQUENCY } from "@/config/subscriptions";
 import { SUB_STATUS } from "@/lib/constants/statuses";
@@ -232,80 +223,100 @@ export function SubscriptionActions({
       {paid && <span className="text-xs text-status-positive/50">Next due updated</span>}
       {paidError && <span className="ui-error-xs">{paidError}</span>}
 
-      {/* Inline edit for amount/currency/notes */}
-      {!isCancelled && (
-        <button
-          onClick={() => setEditing((v) => !v)}
-          className="ui-btn-xs"
-          title="Edit amount, currency, notes"
-        >
-          <Pencil className="h-2.5 w-2.5" />
-          Edit
-        </button>
-      )}
-
-      <LokiDispatchButton
-        prompt={lokiPrompt}
-        title="Ask Loki about this subscription"
-        className="p-1 rounded text-text-muted hover:text-status-positive transition-colors"
-      />
-
-      {/* Cancel at provider — only when meta is configured */}
-      {meta && (
-        <a
-          href={meta.cancelUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="ui-btn-xs border-status-negative/20 text-status-negative/70 hover:text-status-negative hover:bg-status-negative/5"
-        >
-          <ExternalLink className="h-2.5 w-2.5" />
-          Cancel at {new URL(meta.cancelUrl).hostname.replace("www.", "")}
-        </a>
-      )}
-
-      {/* Mark as cancelled — inline confirm */}
+      {/* The cancel confirm answers HERE, in the row, not inside the menu that
+          offered it: the menu closes on choose, so a confirm rendered inside it
+          would unmount before it could be answered. */}
       {cancelError && <span className="ui-error-xs w-full">{cancelError}</span>}
-      {!isCancelled &&
-        (confirmCancel ? (
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs text-text-tertiary">Mark cancelled?</span>
-            <button
-              onClick={onCancel}
-              disabled={cancelling}
-              className="text-xs text-status-negative hover:text-status-negative transition-colors px-1 disabled:opacity-50"
-            >
-              {cancelling ? <Loader2 className="ui-spinner-2xs inline" /> : "Yes"}
-            </button>
-            <button
-              onClick={() => {
-                setConfirmCancel(false);
-                setCancelError(null);
-              }}
-              className="ui-btn-text-cancel"
-            >
-              No
-            </button>
-          </div>
-        ) : (
+      {!isCancelled && confirmCancel && (
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-text-tertiary">Mark cancelled?</span>
+          <button
+            onClick={onCancel}
+            disabled={cancelling}
+            className="text-xs text-status-negative hover:text-status-negative transition-colors px-1 disabled:opacity-50"
+          >
+            {cancelling ? <Loader2 className="ui-spinner-2xs inline" /> : "Yes"}
+          </button>
+          <button
+            onClick={() => {
+              setConfirmCancel(false);
+              setCancelError(null);
+            }}
+            className="ui-btn-text-cancel"
+          >
+            No
+          </button>
+        </div>
+      )}
+
+      {/* Everything else. "Mark paid" above is the action a person repeats;
+          these are the ones they reach for once. */}
+      <RowActions label={`More actions for ${subName}`}>
+        {!isCancelled && (
+          <button onClick={() => setEditing((v) => !v)} className="ui-menu-item" role="menuitem">
+            <Pencil className="h-3 w-3 shrink-0" />
+            Edit amount, currency, notes
+          </button>
+        )}
+
+        <LokiDispatchButton
+          prompt={lokiPrompt}
+          title="Ask Loki about this subscription"
+          label="Ask Loki about this"
+          className="ui-menu-item"
+        />
+
+        {meta && !meta.essential && meta.alternatives.length > 0 && (
+          <button
+            onClick={() => setShowAlternatives((v) => !v)}
+            className="ui-menu-item"
+            role="menuitem"
+          >
+            <Lightbulb className="h-3 w-3 shrink-0" />
+            {showAlternatives ? "Hide free alternatives" : "Free alternatives"}
+          </button>
+        )}
+
+        {(meta || !isCancelled) && <div className="ui-menu-separator" />}
+
+        {meta && (
+          <a
+            href={meta.cancelUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="ui-menu-item ui-menu-item-danger"
+            role="menuitem"
+          >
+            <ExternalLink className="h-3 w-3 shrink-0" />
+            Cancel at {new URL(meta.cancelUrl).hostname.replace("www.", "")}
+          </a>
+        )}
+
+        {!isCancelled && !confirmCancel && (
           <button
             onClick={() => {
               setConfirmCancel(true);
               setCancelError(null);
             }}
-            className="ui-btn-xs"
+            className="ui-menu-item ui-menu-item-danger"
+            role="menuitem"
           >
-            <X className="h-2.5 w-2.5" />
+            <X className="h-3 w-3 shrink-0" />
             Mark cancelled
           </button>
-        ))}
+        )}
 
-      {/* Delete record permanently */}
-      <DeleteButton
-        onDelete={onDeleteRecord}
-        label="Delete record?"
-        triggerTitle="Delete subscription record"
-        triggerClassName="ui-btn-xs hover:text-status-negative hover:bg-status-negative/5"
-      />
+        {/* Answers in place, so it must not bubble to the menu's close handler. */}
+        <span onClick={(e) => e.stopPropagation()}>
+          <DeleteButton
+            onDelete={onDeleteRecord}
+            label="Delete record?"
+            triggerTitle="Delete subscription record"
+            triggerLabel="Delete record"
+            triggerClassName="ui-menu-item ui-menu-item-danger"
+          />
+        </span>
+      </RowActions>
 
       {editing && (
         <SubscriptionEditForm
@@ -324,22 +335,8 @@ export function SubscriptionActions({
         />
       )}
 
-      {/* Free alternatives — only when meta is configured */}
-      {meta && !meta.essential && meta.alternatives.length > 0 && (
-        <button
-          onClick={() => setShowAlternatives(!showAlternatives)}
-          className="ui-btn-xs border-status-positive/20 text-status-positive/60 hover:text-status-positive hover:bg-status-positive/5"
-        >
-          <Lightbulb className="h-2.5 w-2.5" />
-          Free alternatives
-          {showAlternatives ? (
-            <ChevronUp className="h-2.5 w-2.5" />
-          ) : (
-            <ChevronDown className="h-2.5 w-2.5" />
-          )}
-        </button>
-      )}
-
+      {/* The trigger moved into the menu above; the panel it opens stays here,
+          full-width under the row. */}
       {showAlternatives && meta && (
         <div className="w-full mt-1 p-2 rounded bg-status-positive/5 border border-status-positive/10">
           <div className="text-xs text-status-positive/60 font-medium mb-1">Alternatives:</div>

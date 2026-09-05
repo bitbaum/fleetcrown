@@ -9,12 +9,14 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Loader2, X, Pencil, Trash2, Zap, Clock } from "lucide-react";
+import { Plus, Loader2, X, Pencil, Zap, Clock } from "lucide-react";
 import type { Project } from "./types";
 import type { PromptTemplate } from "@/config/prompt-library";
 import { RunModal } from "./RunModal";
 import { ScheduleModal } from "./ScheduleModal";
 import { SAVED_PROMPTS_TITLE } from "@/config/control-labels";
+import { RowActions } from "@/components/ui/row-actions";
+import { DeleteButton } from "@/components/ui/delete-button";
 
 /**
  * Adapt a user-owned prompt into the PromptTemplate shape the existing
@@ -63,23 +65,25 @@ export function UserPromptsSection({
   const router = useRouter();
   const [isCreating, setIsCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [runId, setRunId] = useState<string | null>(null);
   const [scheduleId, setScheduleId] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+  // DeleteButton owns the per-row deleting/erroring state now, so this
+  // component no longer tracks which id is mid-delete.
+  const [, startTransition] = useTransition();
 
+  /**
+   * Confirmation is the shared two-step DeleteButton, like every other delete
+   * in the app — this was the one call site using a native `confirm()`, which
+   * looks foreign, cannot be styled, and blocks the whole tab.
+   *
+   * It also used to swallow a failed response: `if (res.ok) refresh()` with no
+   * else, so a delete that failed looked exactly like one that worked until
+   * the row reappeared on the next load. Throwing lets DeleteButton say so.
+   */
   async function handleDelete(id: string) {
-    if (
-      !confirm("Soft-delete this prompt? It will be hidden but can be restored from DB if needed.")
-    )
-      return;
-    setDeletingId(id);
-    try {
-      const res = await fetch(`/api/prompts/${id}`, { method: "DELETE" });
-      if (res.ok) startTransition(() => router.refresh());
-    } finally {
-      setDeletingId(null);
-    }
+    const res = await fetch(`/api/prompts/${id}`, { method: "DELETE" });
+    if (!res.ok) throw new Error("Could not delete this prompt — try again");
+    startTransition(() => router.refresh());
   }
 
   const editingPrompt = editingId ? (prompts.find((p) => p.id === editingId) ?? null) : null;
@@ -178,11 +182,24 @@ export function UserPromptsSection({
                 <header className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
                     <h3 className="font-medium text-text-primary truncate">{p.name}</h3>
-                    {p.description && (
-                      <p className="text-xs text-text-muted line-clamp-2 mt-0.5">{p.description}</p>
-                    )}
+                    {/* One summary per card. This used to render the
+                        description here AND the whole body in a <pre> below,
+                        so every card said the same thing twice — and the
+                        second copy was cut mid-word, because `line-clamp-4` on
+                        a `<pre class="overflow-hidden">` is inert: the
+                        overflow makes the box a flow-root, and -webkit-box is
+                        what line-clamp needs. `max-h-24` did the clipping
+                        instead, which cuts through a line rather than after
+                        one. The body is what Edit opens. */}
+                    <p className="text-xs text-text-muted line-clamp-2 mt-0.5">
+                      {p.description || p.body}
+                    </p>
                   </div>
-                  <div className="flex shrink-0 gap-1">
+                  {/* Running it is what a saved prompt is FOR, so that stays a
+                      button. Schedule/edit/delete are once-in-a-while, and four
+                      equal glyphs on every card made the reader work out which
+                      was which, per card, every time. */}
+                  <div className="flex shrink-0 items-center gap-1">
                     <button
                       type="button"
                       onClick={() => setRunId(p.id)}
@@ -192,41 +209,40 @@ export function UserPromptsSection({
                     >
                       <Zap className="h-3.5 w-3.5" />
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => setScheduleId(p.id)}
-                      className="ui-btn-icon"
-                      aria-label="Schedule prompt"
-                      title="Schedule as cron job"
-                    >
-                      <Clock className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsCreating(false);
-                        setEditingId(p.id);
-                      }}
-                      className="ui-btn-icon"
-                      aria-label="Edit prompt"
-                      title="Edit"
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(p.id)}
-                      disabled={deletingId === p.id || isPending}
-                      className="ui-btn-icon text-text-tertiary hover:text-status-warning disabled:opacity-40"
-                      aria-label="Delete prompt"
-                      title="Delete"
-                    >
-                      {deletingId === p.id ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-3.5 w-3.5" />
-                      )}
-                    </button>
+                    <RowActions label={`More actions for ${p.name}`}>
+                      <button
+                        type="button"
+                        onClick={() => setScheduleId(p.id)}
+                        className="ui-menu-item"
+                        role="menuitem"
+                      >
+                        <Clock className="h-3 w-3 shrink-0" />
+                        Schedule as cron job
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsCreating(false);
+                          setEditingId(p.id);
+                        }}
+                        className="ui-menu-item"
+                        role="menuitem"
+                      >
+                        <Pencil className="h-3 w-3 shrink-0" />
+                        Edit
+                      </button>
+                      <div className="ui-menu-separator" />
+                      {/* Answers in place — must not bubble to the menu's close. */}
+                      <span onClick={(e) => e.stopPropagation()}>
+                        <DeleteButton
+                          onDelete={() => handleDelete(p.id)}
+                          label="Delete prompt?"
+                          triggerTitle="Delete prompt"
+                          triggerLabel="Delete"
+                          triggerClassName="ui-menu-item ui-menu-item-danger"
+                        />
+                      </span>
+                    </RowActions>
                   </div>
                 </header>
 
@@ -258,10 +274,6 @@ export function UserPromptsSection({
                     </span>
                   ))}
                 </div>
-
-                <pre className="text-xs text-text-secondary bg-surface-base px-3 py-2 rounded-md whitespace-pre-wrap line-clamp-4 max-h-24 overflow-hidden">
-                  {p.body}
-                </pre>
               </article>
             );
           })}
