@@ -29,7 +29,7 @@ export function GroupBar({
 
   return (
     <ScrollAffordance childCount={visibleGroups.length + 1} threshold={4}>
-      <div className="flex gap-2 overflow-x-auto ui-scroll-fade-right [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:overflow-x-visible">
+      <div className="ui-filter-chip-row gap-2 ui-scroll-fade-right">
         <button
           onClick={() => onSelect("all")}
           className={`shrink-0 ${active === "all" ? "ui-chip-filter-active" : "ui-chip-filter"}`}

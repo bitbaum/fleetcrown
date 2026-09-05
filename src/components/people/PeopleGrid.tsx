@@ -193,7 +193,7 @@ export function PeopleGrid({
 
       {/* One scrolling row rather than a wrapping block: four health chips plus
           Clear wrapped to two rows and took 96px above the first contact. */}
-      <div className="ui-scroll-fade-right -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 [&::-webkit-scrollbar]:hidden">
+      <div className="ui-filter-chip-row ui-scroll-fade-right -mx-4 gap-2 px-4 pb-1 sm:mx-0 sm:px-0">
         {HEALTH_FILTERS.map(({ value, label }) => {
           const active = healthFilter.includes(value);
           return (

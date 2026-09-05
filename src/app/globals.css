@@ -3356,10 +3356,23 @@
 
   /* Filter/tab toggle pill */
   .ui-chip-filter {
-    @apply rounded-xl border border-border-subtle bg-surface-overlay px-4 py-3 text-sm font-medium text-text-secondary transition-colors hover:border-border-default hover:text-text-primary;
+    @apply shrink-0 rounded-xl border border-border-subtle bg-surface-overlay px-4 py-3 text-sm font-medium text-text-secondary transition-colors hover:border-border-default hover:text-text-primary;
   }
   .ui-chip-filter-active {
-    @apply rounded-xl border border-accent-primary/30 bg-accent-muted px-4 py-3 text-sm font-medium text-text-primary transition-colors;
+    @apply shrink-0 rounded-xl border border-accent-primary/30 bg-accent-muted px-4 py-3 text-sm font-medium text-text-primary transition-colors;
+  }
+  /* The row those chips sit in: ONE scrollable line on a phone, wrapping from
+     `sm` up.
+
+     This existed already — written out by hand in PeopleGrid, EventsGrid and
+     the prompts GroupBar, three times, with a different class list each time.
+     /goals never got it and still used `flex flex-wrap`, so its four sort chips
+     plus its project chips took three stacked rows above the first goal. Three
+     occurrences is the repo's own threshold for extracting a pattern, and the
+     fourth call site is exactly the bug that comes from not having. */
+  .ui-filter-chip-row {
+    @apply flex gap-1.5 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden;
+    @apply sm:flex-wrap sm:overflow-x-visible;
   }
   /* Rounded-pill toggle — agent/health/category selector chips. Compact by
      default; THE TOUCH FLOOR gives it a 44px target on coarse pointers. */
