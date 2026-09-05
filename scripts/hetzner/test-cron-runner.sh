@@ -31,6 +31,9 @@ PORT=4997
 printf 'CRON_SECRET=testsecret\n' > "$TMP/.env"
 sed -i "s#ENV_FILE=/opt/fleetcrown/app/.env#ENV_FILE=$TMP/.env#" "$TMP/fc-cron.sh"
 sed -i "s#http://127.0.0.1:4002#http://127.0.0.1:$PORT#" "$TMP/fc-cron.sh"
+# Same retry count, a fraction of the sleep — the retry LOGIC is under test,
+# not production's ~13s deploy-restart window.
+sed -i "s#RETRY_SLEEP_SECS=4#RETRY_SLEEP_SECS=0.2#" "$TMP/fc-cron.sh"
 chmod +x "$TMP/fc-cron.sh"
 
 # Stub app: /api/crons/ok returns a rich 200 body, anything else a 500 body.
@@ -79,6 +82,34 @@ check "failure: still exits non-zero so systemd marks the unit failed" \
 # a grep that reads prose as code is a gate that fails on its own documentation.
 check "the runner never discards the body to /dev/null" \
   "$(grep -v '^[[:space:]]*#' "$TMP/fc-cron.sh" | grep -q -- '-o /dev/null' && echo 1 || echo 0)"
+
+# The deploy-restart race: nothing listens on the port yet (connection
+# refused, curl exit 7) when the job starts, then the app comes up mid-retry.
+# This is the exact failure that paged the operator for check-runner-stall
+# while fleetcrown-app.service was mid-restart and self-resolved a tick later.
+RETRY_PORT=4998
+sed "s#http://127.0.0.1:$PORT#http://127.0.0.1:$RETRY_PORT#" "$TMP/fc-cron.sh" > "$TMP/fc-cron-retry.sh"
+chmod +x "$TMP/fc-cron-retry.sh"
+("$TMP/fc-cron-retry.sh" ok > "$TMP/retry-out.txt" 2>&1; echo $? > "$TMP/retry-rc.txt") &
+RETRY_PID=$!
+sleep 0.3
+python3 - "$RETRY_PORT" <<'PY' &
+import sys, http.server
+class H(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json"); self.end_headers()
+        self.wfile.write(b'{"drafted":3,"surfaced":0,"details":[{"score":41,"passed":false}]}')
+    def log_message(self, *a): pass
+http.server.HTTPServer(("127.0.0.1", int(sys.argv[1])), H).serve_forever()
+PY
+RETRY_SRV=$!
+wait "$RETRY_PID"
+kill "$RETRY_SRV" 2>/dev/null
+RETRY_RC=$(cat "$TMP/retry-rc.txt")
+RETRY_OUT=$(cat "$TMP/retry-out.txt")
+check "retries through a transient connection-refused window and succeeds" \
+  "$(echo "$RETRY_OUT" | grep -q '\"drafted\":3' && [ "$RETRY_RC" -eq 0 ] && echo 0 || echo 1)"
 
 echo
 echo "  ${pass} passed, ${fail} failed"

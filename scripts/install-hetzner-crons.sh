@@ -46,9 +46,25 @@ NAME="$1"
 BODY_FILE="$(mktemp)"
 trap 'rm -f "$BODY_FILE"' EXIT
 rc=0
-curl --fail-with-body -sS -m 120 "http://127.0.0.1:4002/api/crons/${NAME}" \
-  -H "Authorization: Bearer ${SECRET}" \
-  -o "$BODY_FILE" -w "fc-cron ${NAME}: HTTP %{http_code}\n" || rc=$?
+# fleetcrown-app.service documents a real window on every deploy restart where
+# :4002 is "bound but refusing" (SIGTERM stops answering, then sits refused
+# until SIGKILL frees the port for the new process — measured up to ~13s).
+# Any *:15/*:30/*:45 cron tick that lands inside that window used to fail the
+# whole oneshot outright and page the operator for an outage that resolved
+# itself before the next tick. Retry ONLY curl's connection-refused (exit 7,
+# the exact signature of that window) a few times with a short sleep; a real
+# HTTP error status still fails on the first try, same as before.
+RETRY_ATTEMPTS=5
+RETRY_SLEEP_SECS=4
+attempt=1
+while :; do
+  curl --fail-with-body -sS -m 120 "http://127.0.0.1:4002/api/crons/${NAME}" \
+    -H "Authorization: Bearer ${SECRET}" \
+    -o "$BODY_FILE" -w "fc-cron ${NAME}: HTTP %{http_code}\n" && { rc=0; break; } || rc=$?
+  [ "$rc" -eq 7 ] && [ "$attempt" -lt "$RETRY_ATTEMPTS" ] || break
+  sleep "$RETRY_SLEEP_SECS"
+  attempt=$((attempt + 1))
+done
 echo "fc-cron ${NAME}: $(head -c 2000 "$BODY_FILE" | tr -d '\n')"
 exit "$rc"
 SH
