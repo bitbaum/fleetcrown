@@ -1,0 +1,39 @@
+# One identity: Cato.
+#
+# Rewrites the DISPLAYED author of existing commits (git log, GitHub) without
+# rewriting a single hash. Six name variants and seven addresses accumulated
+# across these repos before the git config was corrected.
+#
+# Two kinds of rule, and the difference matters:
+#   `Cato <canonical> <old-email>`        — matches by commit email alone.
+#   `Cato <canonical> Name <that-email>`  — needed when the commit already
+#                                            carries the canonical email, so an
+#                                            email-only rule cannot match it.
+
+# Retired noreply addresses (both the numbered and unnumbered forms)
+Cato <41178744+catomean@users.noreply.github.com> <41178744+maonakamoto@users.noreply.github.com>
+Cato <41178744+catomean@users.noreply.github.com> <maonakamoto@users.noreply.github.com>
+Cato <41178744+catomean@users.noreply.github.com> <41178744+g-but@users.noreply.github.com>
+
+# Personal and machine-local addresses that leaked into commit metadata
+Cato <41178744+catomean@users.noreply.github.com> <butaeff@gmail.com>
+Cato <41178744+catomean@users.noreply.github.com> <gbut@DESKTOP-Q45PBJ6>
+
+# git's uninitialised default, used before the config was set
+Cato <41178744+catomean@users.noreply.github.com> <your.email@example.com>
+
+# Names carrying the CANONICAL email — email-only rules cannot reach these
+Cato <41178744+catomean@users.noreply.github.com> G <41178744+catomean@users.noreply.github.com>
+Cato <41178744+catomean@users.noreply.github.com> Mao Nakamoto <41178744+catomean@users.noreply.github.com>
+
+# A handful of commits carry a human name on the assistant's address — the
+# author was the human, so they resolve to Cato. The name+email rule wins over
+# the email-only Claude rule below, which still covers genuine agent commits.
+Cato <41178744+catomean@users.noreply.github.com> Mao Nakamoto <noreply@anthropic.com>
+
+Claude (AI assistant) <noreply@anthropic.com> <noreply@anthropic.com>
+
+# Placeholder identities from commits made before a git config existed here.
+# A solo repo: x@x and test@test are nobody else.
+Cato <41178744+catomean@users.noreply.github.com> <x@x>
+Cato <41178744+catomean@users.noreply.github.com> <test@test>
