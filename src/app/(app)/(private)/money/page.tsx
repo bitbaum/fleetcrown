@@ -197,9 +197,24 @@ export default async function MoneyPage() {
           above an empty list with no way in. */}
       {visibleSubs.length > 0 && (
         <StatRow>
+          {/* Stacked, not joined with " + ". Two currencies rendered as
+              "50.00 CHF + 329.60 USD" wrapped mid-figure on a 390px phone, and
+              the plus sign claimed a sum that does not exist — you cannot add
+              francs to dollars without a rate this page does not have. One
+              line per currency says the true thing and fits. */}
           <StatCard
             label="Monthly burn"
-            value={burnByCurrency.join(" + ") || formatMoney(0, "CHF")}
+            value={
+              burnByCurrency.length > 0 ? (
+                <span className="flex flex-col leading-tight">
+                  {burnByCurrency.map((amount) => (
+                    <span key={amount}>{amount}</span>
+                  ))}
+                </span>
+              ) : (
+                formatMoney(0, "CHF")
+              )
+            }
             sub={`across ${burn.count} active ${burn.count === 1 ? "subscription" : "subscriptions"}`}
           />
           <StatCard

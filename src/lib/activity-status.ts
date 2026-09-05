@@ -102,6 +102,14 @@ const ENVELOPE_BLOCK_PATTERNS: RegExp[] = [
   // the prose-form "Project context & goals" header, whichever comes first.
   /^##[ \t]*The operator['\u2019]s goals & deadlines\b[\s\S]*?(?=\n#{1,3}[ \t]|\nProject context & goals\b|(?![\s\S]))/im,
   /^##[ \t]*Background context from your other projects\b[\s\S]*?(?=\n#{1,3}[ \t]|\nProject context & goals\b|(?![\s\S]))/im,
+  // The RAG block. Its heading is "Relevant context…", not "Background
+  // context…", so the pattern above never matched it and every dispatch that
+  // retrieved anything showed its ask as "## Relevant context from your other
+  // projects…" in the Activity feed — the retrieval scaffolding presented as
+  // the thing the operator typed. Exactly the upstream-drift this list's own
+  // comment warns about; scripts/test/dispatch-headings-stripped.ts now fails
+  // when a pipeline heading has no pattern here.
+  /^##[ \t]*Relevant context from your other projects\b[\s\S]*?(?=\n#{1,3}[ \t]|\nProject context & goals\b|(?![\s\S]))/im,
   /^##[ \t]*Escalation state\b[\s\S]*?(?=\n#{1,3}[ \t]|\nProject context & goals\b|(?![\s\S]))/im,
   // The project brief block ends with its own sentinel line, not a heading.
   /^Project context & goals\b[\s\S]*?Favor the next step that most advances these goals\.?/im,
