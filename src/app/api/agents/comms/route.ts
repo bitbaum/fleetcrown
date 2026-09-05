@@ -23,7 +23,11 @@ import {
   MESSAGE_STATUSES,
   type AgentMessage,
 } from "@/lib/agent-comms";
-import { ingestAgentMessages, listAgentMessages } from "@/db/queries/agent-messages";
+import {
+  ingestAgentMessages,
+  listAgentMessages,
+  markAgentMessageRead,
+} from "@/db/queries/agent-messages";
 import { logDebug } from "@/db/queries/debug-logs";
 
 export const runtime = "nodejs";
@@ -72,6 +76,40 @@ export async function GET() {
     }
   }
   return NextResponse.json({ messages: dedupeAndSort(messages) });
+}
+
+/**
+ * Mark one message read. Body: { msgId }.
+ *
+ * This existed as a query (`markAgentMessageRead`) with NO caller and no route,
+ * so nothing in the product could ever set `read: true` — and the Control
+ * escalation banner renders on `!m.read`. A banner with no way to clear it is
+ * permanent by construction, which is what shipped.
+ *
+ * DB-backed path only, deliberately. On a local builder GET reads the inbox
+ * markdown directly and `read` comes from the file's own marker (see
+ * READ_RE in lib/agent-comms.ts) — that mechanism already works and is the
+ * source of truth there. Production runs hosted (`runtime: false`), where the
+ * DB transport is the feed, and that is the half that had no writer.
+ */
+export async function PATCH(req: NextRequest) {
+  const userId = await getSessionUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "invalid JSON" }, { status: 400 });
+  }
+  const msgId = (body as { msgId?: unknown })?.msgId;
+  if (typeof msgId !== "string" || !msgId.trim()) {
+    return NextResponse.json({ error: "msgId required" }, { status: 400 });
+  }
+
+  // Scoped by userId inside the query, so one tenant cannot clear another's.
+  await markAgentMessageRead(userId, msgId.trim());
+  return NextResponse.json({ ok: true });
 }
 
 /** Runner ingest: bearer-authed, idempotent. Body: { messages: AgentMessage[] }. */
