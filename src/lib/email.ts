@@ -1,6 +1,6 @@
-import { Resend } from "resend";
+import { conventionalFrom, fromAddress, isMailConfigured, sendMail } from "@bitbaum/mail-kit";
 import { ROUTES } from "@/config/auth";
-import { APP_NAME, APP_EMAIL_FROM, APP_TAGLINE, LOCAL_DEV_URL } from "@/config/brand";
+import { APP_NAME, APP_TAGLINE, LOCAL_DEV_URL } from "@/config/brand";
 import { EMAIL_THEME, mailSubject } from "@/config/comms";
 import { escapeHtml, escapeHtmlWithBreaks } from "@/lib/escape-html";
 
@@ -26,14 +26,11 @@ function logSend(to: string, subject: string, id: string | null, error: string |
     .catch(() => {});
 }
 
-// Lazy — Resend throws at construction if key is empty string, which breaks next build
-let _resend: Resend | null = null;
-function getResend(): Resend {
-  if (!_resend) _resend = new Resend(process.env.RESEND_API_KEY!);
-  return _resend;
+// Sender SSOT: RESEND_FROM (fleet env contract, read by mail-kit). Fallback is
+// the fleet-conventional sender on the one Resend-verified domain.
+function senderFrom(): string {
+  return fromAddress() ?? conventionalFrom(APP_NAME);
 }
-
-const FROM = process.env.EMAIL_FROM ?? APP_EMAIL_FROM;
 
 export function appUrl(): string {
   return process.env.NEXTAUTH_URL ?? process.env.APP_URL ?? LOCAL_DEV_URL;
@@ -41,21 +38,19 @@ export function appUrl(): string {
 
 // Fire-and-forget — callers don't await
 export function sendEmailFire(to: string, subject: string, html: string, text: string): void {
-  if (!process.env.RESEND_API_KEY) {
+  if (!isMailConfigured()) {
     // NEVER log `text`/`html` here — reset-password and verify-email bodies carry
     // a live one-time token URL; stdout is not a safe place for a credential.
     // The recipient + subject are captured structurally by logSend (debug_logs).
-    console.log(`[email] no RESEND_API_KEY — skipping send: "${subject}" → ${to}`);
-    logSend(to, subject, null, "no RESEND_API_KEY — skipped");
+    console.log(`[email] mail not configured — skipping send: "${subject}" → ${to}`);
+    logSend(to, subject, null, "mail not configured — skipped");
     return;
   }
-  getResend()
-    .emails.send({ from: FROM, to, subject, html, text })
-    .then((res) => logSend(to, subject, res.data?.id ?? null, res.error?.message ?? null))
-    .catch((err) => {
-      console.error("[email] send error:", err);
-      logSend(to, subject, null, (err as Error)?.message ?? "send threw");
-    });
+  // sendMail never throws — failures come back as { sent: false }.
+  void sendMail({ from: senderFrom(), to, subject, html, text }).then((res) => {
+    if (!res.sent) console.error("[email] send error:", res.error);
+    logSend(to, subject, res.sent ? res.id : null, res.sent ? null : res.error);
+  });
 }
 
 // Awaitable version for flows that need to know the email was accepted
@@ -64,14 +59,15 @@ export async function sendEmail(
   subject: string,
   html: string,
   text: string,
+  options?: { idempotencyKey?: string },
 ): Promise<void> {
-  if (!process.env.RESEND_API_KEY) {
-    console.log("[email] no RESEND_API_KEY — skipping send");
+  if (!isMailConfigured()) {
+    console.log("[email] mail not configured — skipping send");
     return;
   }
-  const { data, error } = await getResend().emails.send({ from: FROM, to, subject, html, text });
-  logSend(to, subject, data?.id ?? null, error?.message ?? null);
-  if (error) throw new Error(`Resend error: ${error.message}`);
+  const res = await sendMail({ from: senderFrom(), to, subject, html, text }, options);
+  logSend(to, subject, res.sent ? res.id : null, res.sent ? null : res.error);
+  if (!res.sent) throw new Error(`Resend error: ${res.error}`);
 }
 
 // ─── Shared HTML shell ────────────────────────────────────────────────────────

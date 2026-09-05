@@ -60,9 +60,9 @@ export const APP_PROFILE_URL = (username: string) => `${APP_DOMAIN}/u/${username
 export const BRIDGE_DOMAIN = "bridge.orangecat.ch";
 export const BRIDGE_URL = `https://${BRIDGE_DOMAIN}/sse`;
 
-// Email "From" address. Kept separate from APP_DOMAIN because the email host
-// is usually a different domain than the app host. Override via EMAIL_FROM env var.
-export const APP_EMAIL_FROM = `${APP_NAME} <noreply@${APP_SLUG}.app>`;
+// Email "From" is no longer defined here: the sender SSOT is the RESEND_FROM
+// env var (read by @bitbaum/mail-kit), with mail-kit's fleet-conventional
+// sender as the fallback — see src/lib/email.ts.
 /** Short lowercase tagline for OG images, profile footers, and email chrome —
  *  the compact sibling of MARKETING_TAGLINE below. Was "your life operating
  *  system", which survived the life-OS → agent-fleet pivot and kept shipping

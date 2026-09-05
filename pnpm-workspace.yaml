@@ -35,3 +35,4 @@ overrides:
 # never to hurry along a third-party package.
 minimumReleaseAgeExclude:
   - "@bitbaum/ai-kit@0.6.2"
+  - "@bitbaum/mail-kit"

@@ -99,11 +99,11 @@ export function checkEnv(): EnvIssue[] {
         msg: "missing or not https — email links + OAuth callbacks resolve to the wrong host",
       });
     }
-    if (!present("EMAIL_FROM")) {
+    if (!present("RESEND_FROM")) {
       issues.push({
         level: "warn",
-        key: "EMAIL_FROM",
-        msg: "unset — falls back to a non-DKIM domain; email may be marked spam",
+        key: "RESEND_FROM",
+        msg: "unset — falls back to the fleet-conventional sender (mail-kit conventionalFrom)",
       });
     }
   }
