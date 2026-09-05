@@ -27,13 +27,17 @@ function greetingFor(hour: number, name: string): string {
 
 export function Greeting({ name }: { name: string }) {
   const now = useLocalNow();
+  // A greeting uses the name a person is greeted BY. "Good morning, Mao
+  // Nakamoto" also wrapped to two lines on a 390px phone, spending the top of
+  // the landing page on a salutation that carries no information.
+  const firstName = name.trim().split(/\s+/)[0] || name;
 
   return (
     <div>
-      <h1 className="text-3xl font-bold tracking-tight text-text-primary md:text-4xl">
-        {now ? greetingFor(now.getHours(), name) : `Hello, ${name}`}
+      <h1 className="text-2xl font-bold tracking-tight text-text-primary sm:text-3xl md:text-4xl">
+        {now ? greetingFor(now.getHours(), firstName) : `Hello, ${firstName}`}
       </h1>
-      <p className="mt-1 text-base text-text-secondary">
+      <p className="mt-1 text-sm text-text-tertiary">
         {now
           ? now.toLocaleDateString(APP_LOCALE, {
               weekday: "long",

@@ -32,11 +32,7 @@ export default async function GoalsPage() {
   const abandonedGoals = goalTree.filter((g) => g.status === GOAL_STATUS.ABANDONED);
 
   return (
-    <PageLayout
-      title="Goals"
-      subtitle="Where you're going — and how you're getting there"
-      right={<NewGoalButton goals={activeGoals} />}
-    >
+    <PageLayout title="Goals" right={<NewGoalButton goals={activeGoals} />}>
       {/* Hidden until there is something to summarise — see the note on the
           same guard in the Habits page. */}
       {goalTree.length > 0 && (

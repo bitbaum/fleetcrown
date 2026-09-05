@@ -68,7 +68,18 @@ function SubRow({ sub }: { sub: Awaited<ReturnType<typeof getAllSubscriptions>>[
           {sub.paymentMethod ? ` · ${sub.paymentMethod}` : ""}
           {sub.frequency !== FREQUENCY.MONTHLY ? ` · ${sub.frequency}` : ""}
         </div>
-        {sub.notes && <div className="mt-1 max-w-md text-sm text-text-tertiary">{sub.notes}</div>}
+        {/* Notes are a scratchpad — some run to several sentences of cancellation
+            history — and rendering them in full turned each row into a
+            paragraph, burying the amount the page exists to show. Two lines is
+            enough to recognise which note this is; Edit opens the whole thing.
+            No `block` here: a display utility beats -webkit-line-clamp and
+            silently makes the clamp inert (caught behaviourally by
+            audit:responsive). */}
+        {sub.notes && (
+          <div className="mt-1 line-clamp-2 max-w-md text-sm text-text-tertiary" title={sub.notes}>
+            {sub.notes}
+          </div>
+        )}
         <SubscriptionActions
           subId={sub.id}
           subName={sub.name}
@@ -177,7 +188,6 @@ export default async function MoneyPage() {
     // apart is a choice the reader has to think about for no reason.
     <PageLayout
       title="Money"
-      subtitle="Subscriptions, bills, and financial commitments"
       right={visibleSubs.length > 0 ? <NewSubscriptionButton /> : undefined}
     >
       {/* The summary is about the subscriptions, so with none there is nothing

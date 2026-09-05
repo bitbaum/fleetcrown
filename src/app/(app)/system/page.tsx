@@ -45,7 +45,7 @@ export default async function SystemPage() {
 
   return (
     <PullToRefresh>
-      <PageLayout title="System" subtitle="Infrastructure health and scheduled jobs">
+      <PageLayout title="System">
         <SystemStats />
         {/* Directly under the host stats: when disk/RAM are tight, the next
             question is always "can I upgrade yet?" */}
