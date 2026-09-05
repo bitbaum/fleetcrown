@@ -56,13 +56,22 @@ export async function RecentFailuresCard() {
             const tone = LEVEL_TONE[row.level] ?? LEVEL_TONE.info;
             const Icon = tone.icon;
             return (
-              <li key={row.id} className="flex items-start gap-2 text-xs">
+              // The message is the only part of this row that says what
+              // happened, and it was last in a single nowrap line after a
+              // timestamp and a source — so at 320px it rendered 0% of itself
+              // (-596px), and the rest was hover-only on a device with no
+              // hover. It now wraps to its own full-width line below the meta
+              // on a phone and stays inline from `sm` up.
+              <li key={row.id} className="flex flex-wrap items-start gap-x-2 gap-y-0.5 text-xs">
                 <Icon className={`mt-0.5 h-3 w-3 shrink-0 ${tone.cls}`} />
                 <span className="shrink-0 font-mono text-text-tertiary">
                   {compactRelativeDate(row.createdAt)}
                 </span>
                 <span className="shrink-0 text-text-muted">{row.source}</span>
-                <span className="min-w-0 flex-1 truncate text-text-secondary" title={row.message}>
+                <span
+                  className="line-clamp-2 w-full min-w-0 text-text-secondary sm:w-auto sm:flex-1"
+                  title={row.message}
+                >
                   {row.message}
                 </span>
               </li>

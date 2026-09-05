@@ -4769,8 +4769,13 @@
   .ui-loki-convo-active {
     @apply border-border-subtle bg-surface-raised text-text-primary;
   }
+  /* Two lines, not one ellipsis. A conversation's title IS its identity in
+     this list, and at 42-45% visible — on DESKTOP, where there is room —
+     several threads collapsed to the same visible prefix ("Context EVIG
+     (evig.orangecat.ch) is my Zü…" twice over), so the list could not tell
+     you which chat was which. */
   .ui-loki-convo-title {
-    @apply truncate font-medium;
+    @apply line-clamp-2 font-medium;
   }
   .ui-loki-convo-meta {
     @apply mt-0.5 truncate text-xs text-text-tertiary;

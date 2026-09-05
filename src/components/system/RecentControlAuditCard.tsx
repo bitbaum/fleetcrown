@@ -33,7 +33,10 @@ export async function RecentControlAuditCard({ userId }: { userId: string }) {
           {rows.map((row) => {
             const Icon = ICONS[row.action as keyof typeof ICONS] ?? ListChecks;
             return (
-              <li key={row.id} className="flex items-start gap-2 text-xs">
+              // Same shape as RecentFailuresCard: three fixed-width labels
+              // ahead of the one field that says WHY, on a line that cannot
+              // wrap. The reason gets its own line on a phone.
+              <li key={row.id} className="flex flex-wrap items-start gap-x-2 gap-y-0.5 text-xs">
                 <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-text-tertiary" />
                 <span className="shrink-0 font-mono text-text-tertiary">
                   {compactRelativeDate(row.createdAt)}
@@ -43,7 +46,7 @@ export async function RecentControlAuditCard({ userId }: { userId: string }) {
                 </span>
                 <span className="shrink-0 font-medium text-text-primary">{row.action}</span>
                 <span
-                  className="min-w-0 flex-1 truncate text-text-secondary"
+                  className="line-clamp-2 w-full min-w-0 text-text-secondary sm:w-auto sm:flex-1"
                   title={row.reason ?? row.promptPreview ?? ""}
                 >
                   {row.reason ?? row.promptPreview ?? row.source}

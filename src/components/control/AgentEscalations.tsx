@@ -31,8 +31,13 @@ export function AgentEscalations() {
               >
                 <span className="font-medium">{m.from}</span>
                 <span className="text-text-muted"> → {m.to}</span>
+                {/* The escalation's actual message, at 16% visible on one
+                    nowrap line. `block` is deliberately GONE, not merely
+                    joined by line-clamp: a display utility overrides
+                    -webkit-box and leaves the clamp declared but inert — the
+                    bug this repo has now shipped three times. */}
                 {(m.re || m.body) && (
-                  <span className="mt-0.5 block truncate text-xs text-text-secondary">
+                  <span className="mt-0.5 line-clamp-2 text-xs text-text-secondary">
                     {m.re || m.body}
                   </span>
                 )}
