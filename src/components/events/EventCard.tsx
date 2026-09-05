@@ -5,6 +5,7 @@ import { ExternalLink, Loader2, Archive, Pencil, Check, X } from "lucide-react";
 import { LokiDispatchButton } from "@/components/shared/LokiDispatchButton";
 import { format } from "date-fns";
 import { DeleteButton } from "@/components/ui/delete-button";
+import { RowActions } from "@/components/ui/row-actions";
 import { deadlineLabel, toLocalDateStr } from "@/lib/dates";
 import { patchJson, deleteJson, throwApiError } from "@/lib/api/fetch";
 import type { EventRow } from "@/db/queries/events";
@@ -205,43 +206,60 @@ export function EventCard({
           )}
         </div>
 
-        <div className="shrink-0 flex items-center gap-0.5 ui-hover-reveal transition-opacity">
-          {!dimmed && (
-            <LokiDispatchButton
-              prompt={lokiPrompt}
-              title="Ask Loki about this event"
-              className="p-1.5 rounded text-text-muted hover:text-status-positive transition-colors"
-            />
-          )}
-          {onEdit && !dimmed && (
-            <button onClick={openEdit} title="Edit event" className="ui-btn-row-action">
-              <Pencil className="h-3.5 w-3.5" />
-            </button>
-          )}
-          {onArchive && (
-            <button
-              onClick={handleArchive}
-              disabled={archiving}
-              title="Archive event"
-              className="p-1.5 rounded text-text-muted hover:text-status-warning hover:bg-surface-raised transition-colors disabled:opacity-40"
-            >
-              {archiving ? (
-                <Loader2 className="ui-spinner-sm" />
-              ) : (
-                <Archive className="h-3.5 w-3.5" />
-              )}
-            </button>
-          )}
-          <DeleteButton
-            onDelete={async () => {
-              const res = await deleteJson(`/api/events/${event.id}`);
-              if (!res.ok) await throwApiError(res, "Failed to delete");
-              onDelete(event.id);
-            }}
-            label=""
-            triggerTitle="Delete event"
-            triggerClassName="p-1.5 rounded ui-btn-danger hover:bg-surface-raised transition-colors"
-          />
+        {/* Four icon controls used ~140px of a 390px row, which is why event
+            names wrapped to three lines — and the loudest element on the whole
+            page was the DELETE button, because it carried `ui-btn-danger`, a
+            FILLED red style. A destructive action repeated once per row should
+            be the quietest thing there, not the brightest.
+
+            One trigger now; the names get the width back. */}
+        <div className="shrink-0">
+          <RowActions label={`More actions for ${event.name}`}>
+            {!dimmed && (
+              <LokiDispatchButton
+                prompt={lokiPrompt}
+                title="Ask Loki about this event"
+                label="Ask Loki about this"
+                className="ui-menu-item"
+              />
+            )}
+            {onEdit && !dimmed && (
+              <button onClick={openEdit} className="ui-menu-item" role="menuitem">
+                <Pencil className="h-3.5 w-3.5 shrink-0" />
+                Edit event
+              </button>
+            )}
+            {onArchive && (
+              <button
+                onClick={handleArchive}
+                disabled={archiving}
+                className="ui-menu-item"
+                role="menuitem"
+              >
+                {archiving ? (
+                  <Loader2 className="ui-spinner-sm shrink-0" />
+                ) : (
+                  <Archive className="h-3.5 w-3.5 shrink-0" />
+                )}
+                Archive event
+              </button>
+            )}
+            <div className="ui-menu-separator" />
+            {/* Answers in place, so it must not bubble to the menu's close. */}
+            <span onClick={(e) => e.stopPropagation()}>
+              <DeleteButton
+                onDelete={async () => {
+                  const res = await deleteJson(`/api/events/${event.id}`);
+                  if (!res.ok) await throwApiError(res, "Failed to delete");
+                  onDelete(event.id);
+                }}
+                label="Delete event?"
+                triggerTitle="Delete event"
+                triggerLabel="Delete event"
+                triggerClassName="ui-menu-item ui-menu-item-danger"
+              />
+            </span>
+          </RowActions>
         </div>
       </div>
       {archiveError && <p className="mt-1 ui-error-xs">{archiveError}</p>}
