@@ -167,7 +167,15 @@ function buildGoalPrompt({
   return lines.join("\n");
 }
 
-export function CopyGoalPromptButton(props: GoalPromptProps) {
+/**
+ * `className` and `label` are optional so these can render EITHER as the bare
+ * icon they have always been or as a row of words inside an overflow menu.
+ * Without a label a menu entry is a lone glyph among sentences, which reads as
+ * nothing.
+ */
+type GoalActionProps = GoalPromptProps & { className?: string; label?: string };
+
+export function CopyGoalPromptButton({ className, label, ...props }: GoalActionProps) {
   const { copied, copy } = useClipboard();
 
   const handleCopy = () => {
@@ -177,24 +185,32 @@ export function CopyGoalPromptButton(props: GoalPromptProps) {
   return (
     <button
       onClick={handleCopy}
-      className="ui-hover-reveal ui-icon-btn p-1 rounded transition-all shrink-0 text-text-muted hover:text-accent-text"
+      className={
+        className ??
+        "ui-hover-reveal ui-icon-btn p-1 rounded transition-all shrink-0 text-text-muted hover:text-accent-text"
+      }
       title="Copy goal as agent prompt"
     >
       {copied ? (
-        <CheckCircle className="h-3.5 w-3.5 text-status-positive" />
+        <CheckCircle className="h-3.5 w-3.5 shrink-0 text-status-positive" />
       ) : (
-        <Clipboard className="h-3.5 w-3.5" />
+        <Clipboard className="h-3.5 w-3.5 shrink-0" />
       )}
+      {label ? (copied ? "Copied" : label) : null}
     </button>
   );
 }
 
-export function SendToLokiButton(props: GoalPromptProps) {
+export function SendToLokiButton({ className, label, ...props }: GoalActionProps) {
   return (
     <LokiDispatchButton
       prompt={buildGoalPrompt(props)}
       title="Ask Loki about this goal"
-      className="ui-hover-reveal ui-icon-btn p-1 rounded transition-all shrink-0 text-text-muted hover:text-status-positive"
+      label={label}
+      className={
+        className ??
+        "ui-hover-reveal ui-icon-btn p-1 rounded transition-all shrink-0 text-text-muted hover:text-status-positive"
+      }
     />
   );
 }

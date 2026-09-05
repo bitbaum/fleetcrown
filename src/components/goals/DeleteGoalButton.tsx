@@ -14,7 +14,11 @@ export function DeleteGoalButton({ goalId }: { goalId: string }) {
       }}
       label="Delete?"
       triggerTitle="Delete goal"
-      triggerClassName="ui-hover-reveal ui-icon-btn p-1 rounded text-text-muted hover:text-status-negative transition-all shrink-0"
+      // Renders inside the goal row's overflow menu (its only call site), so it
+      // is a labelled row of words like its neighbours rather than the bare
+      // hover-revealed glyph it used to be beside three other glyphs.
+      triggerLabel="Delete goal"
+      triggerClassName="ui-menu-item ui-menu-item-danger"
     />
   );
 }

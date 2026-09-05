@@ -5,6 +5,7 @@ import type { Milestone } from "@/db/schema/goals";
 import type { useInlineEdit } from "@/hooks/use-inline-edit";
 import { DeleteGoalButton } from "./DeleteGoalButton";
 import { SendToLokiButton, CopyGoalPromptButton } from "./goal-card-helpers";
+import { RowActions } from "@/components/ui/row-actions";
 
 type InlineEdit<T> = ReturnType<typeof useInlineEdit<T>>;
 
@@ -78,44 +79,58 @@ export function GoalTitleRow({
           completed
         </span>
       )}
+      {/* One trigger, not four glyphs. None of these is the action a person
+          repeats on a goal — that is editing progress, which is inline in the
+          card body — so all four belong behind an overflow menu. `ui-hover-reveal`
+          kept the icons out of the way on DESKTOP, but a phone has no hover, so
+          on the viewport with the least room they were all permanently visible,
+          competing with the goal's own title. */}
       <div className="ml-auto flex items-center gap-0.5">
-        {!isClosed && (
-          <>
-            <SendToLokiButton
-              title={displayTitle}
-              description={description}
-              progress={progress}
-              milestones={milestones}
-              targetDate={targetDate}
-              entityName={entityName}
-            />
-            <CopyGoalPromptButton
-              title={displayTitle}
-              description={description}
-              progress={progress}
-              milestones={milestones}
-              targetDate={targetDate}
-              entityName={entityName}
-            />
-          </>
-        )}
-        <button
-          onClick={onToggleAbandon}
-          disabled={abandoningStatus || isCompleted}
-          title={isAbandoned ? "Restore goal" : "Mark abandoned"}
-          className={`ui-hover-reveal ui-icon-btn p-1 rounded transition-all shrink-0 disabled:opacity-30 ${
-            isAbandoned
-              ? "text-text-muted hover:text-text-secondary opacity-100"
-              : "text-text-muted hover:text-status-warning"
-          }`}
-        >
-          {abandoningStatus ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <Archive className="h-3.5 w-3.5" />
+        <RowActions label={`More actions for ${displayTitle}`}>
+          {!isClosed && (
+            <>
+              <SendToLokiButton
+                title={displayTitle}
+                description={description}
+                progress={progress}
+                milestones={milestones}
+                targetDate={targetDate}
+                entityName={entityName}
+                className="ui-menu-item"
+                label="Ask Loki about this goal"
+              />
+              <CopyGoalPromptButton
+                title={displayTitle}
+                description={description}
+                progress={progress}
+                milestones={milestones}
+                targetDate={targetDate}
+                entityName={entityName}
+                className="ui-menu-item"
+                label="Copy as agent prompt"
+              />
+              <div className="ui-menu-separator" />
+            </>
           )}
-        </button>
-        <DeleteGoalButton goalId={goalId} />
+          <button
+            onClick={onToggleAbandon}
+            disabled={abandoningStatus || isCompleted}
+            title={isAbandoned ? "Restore goal" : "Mark abandoned"}
+            className="ui-menu-item"
+            role="menuitem"
+          >
+            {abandoningStatus ? (
+              <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
+            ) : (
+              <Archive className="h-3.5 w-3.5 shrink-0" />
+            )}
+            {isAbandoned ? "Restore goal" : "Mark abandoned"}
+          </button>
+          {/* Answers in place, so it must not bubble to the menu's close. */}
+          <span onClick={(e) => e.stopPropagation()}>
+            <DeleteGoalButton goalId={goalId} />
+          </span>
+        </RowActions>
       </div>
     </div>
   );

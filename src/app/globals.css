@@ -2790,16 +2790,50 @@
   /* Three-up stats row (Goals, Habits, Money, Memory). Two columns on a phone
      so each card can hold its number; the odd card out spans the row instead
      of sitting half-width beside a gap. See components/ui/stat-row.tsx. */
+  /* ── Summary stats ───────────────────────────────────────────────────────
+     Below `sm` these are ONE scrollable line, not a grid of cards.
+
+     Three cards, each a kicker plus a 2xl number plus a sub-line, measured
+     ~130px tall — and they stack two-up, so /goals spent ~280px of an 844px
+     phone on reference figures ("19 active · 24% avg · 23 total") before the
+     first goal. Nothing on that strip is a decision; you scrolled past all of
+     it to reach the list the page is named after.
+
+     The chip strip is not a new invention: /today's SummaryBar already answers
+     exactly this job — a few counts, one horizontally scrollable line — so
+     this borrows an idiom the app has already proven rather than adding a
+     second way to show the same thing.
+
+     From `sm` up, where the height is free, it stays the card grid it was. */
   .ui-stat-row {
-    @apply grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-4;
+    @apply flex gap-2 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden;
+    @apply sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-x-visible;
   }
-  .ui-stat-row > :last-child:nth-child(odd) {
-    grid-column: span 2;
+  .ui-stat-card {
+    @apply flex shrink-0 items-baseline gap-1.5 whitespace-nowrap rounded-full border border-border-subtle bg-surface-base px-3 py-2;
+    @apply sm:block sm:shrink sm:whitespace-normal sm:rounded-2xl sm:p-5 md:p-6;
+    box-shadow: var(--shadow-panel);
   }
-  @media (min-width: 40rem) {
-    .ui-stat-row > :last-child:nth-child(odd) {
-      grid-column: auto;
+  /* DOM order is label → value → sub, which is the desktop reading order. The
+     chip reads value-first, so the mobile layout reorders with flex `order`
+     rather than duplicating the markup. */
+  .ui-stat-card-label {
+    @apply order-2 text-xs font-medium normal-case text-text-secondary;
+    @apply sm:order-none sm:block sm:font-semibold sm:uppercase;
+    /* Matches .ui-kicker at sm+ — the same 0.75rem and label tracking, stated
+       as CSS rather than an arbitrary `text-[0.75rem]` utility. */
+    @media (min-width: 40rem) {
+      font-size: 0.75rem;
+      letter-spacing: var(--tracking-label);
     }
+  }
+  .ui-stat-card-value {
+    @apply order-1 text-sm font-semibold text-text-primary;
+    @apply sm:order-none sm:mt-2 sm:block sm:text-2xl sm:font-medium md:text-3xl;
+  }
+  .ui-stat-card-sub {
+    @apply order-3 text-xs text-text-muted;
+    @apply sm:order-none sm:mt-1 sm:block sm:text-sm sm:text-text-secondary;
   }
   /* Disclosure header for a panel of one-off setup (People → Fill the book). */
   .ui-book-panel-toggle {
