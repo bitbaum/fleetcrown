@@ -51,7 +51,6 @@ const APP_SURFACES = [
   "/prompts",
   "/system",
   "/settings",
-  "/loki",
   "/approvals",
 ];
 for (const path of APP_SURFACES) {
@@ -74,6 +73,17 @@ for (const p of FEEDBACK_WIDGET_EXCLUDED_PREFIXES) {
 // routes is how an allowlist quietly loses pages.
 ok(isFeedbackWidgetRoute("/terminals"), "/terminals is not caught by the /terminal exclusion");
 ok(isFeedbackWidgetRoute("/settings"), "/settings is an app page, not an auth page");
+
+// /loki was in APP_SURFACES above and moved out DELIBERATELY, so this asserts
+// the decision rather than letting a list edit look like a typo.
+//
+// Measured on production at 390px: the launcher's centre resolved to
+// `textarea.ui-loki-composer-input` — it covered the box you type into, on the
+// page that exists for typing into it. Same reason /terminal is excluded: the
+// surface has its own composer, and a floating button over it hides the thing
+// being used. Re-including it needs a new measurement, not an opinion.
+ok(!isFeedbackWidgetRoute("/loki"), "/loki is excluded: the launcher covered its composer");
+ok(isFeedbackWidgetRoute("/lokis"), "/lokis is not caught by the /loki exclusion");
 
 // The claim that justified the old scoping must not silently return. If Loki
 // ever does gain the ability to file feedback, this test should be revisited

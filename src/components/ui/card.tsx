@@ -75,11 +75,15 @@ export function StatCard({
   value: React.ReactNode;
   sub: string;
 }) {
+  // Not built on <Card>: below `sm` this is a chip on one scrollable line, and
+  // Card hard-codes the padding and radius that shape would have to fight. The
+  // responsive behaviour lives in `.ui-stat-card` — globals.css carries the
+  // measurement for why three tall cards were the wrong thing on a phone.
   return (
-    <Card>
-      <div className="ui-kicker">{label}</div>
-      <div className="mt-2 text-2xl md:text-3xl font-medium text-text-primary">{value}</div>
-      <div className="mt-1 text-sm text-text-secondary">{sub}</div>
-    </Card>
+    <div className="ui-stat-card">
+      <div className="ui-stat-card-label">{label}</div>
+      <div className="ui-stat-card-value">{value}</div>
+      <div className="ui-stat-card-sub">{sub}</div>
+    </div>
   );
 }

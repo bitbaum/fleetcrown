@@ -35,6 +35,20 @@ export const FEEDBACK_WIDGET_EXCLUDED_PREFIXES = [
   // A full-height PTY. A floating button over live terminal output covers the
   // thing the operator is reading, and the terminal has its own composer.
   "/terminal",
+  // Same shape as /terminal, and measured rather than assumed: at 390px the
+  // launcher's centre sits ON TOP of `textarea.ui-loki-composer-input` — the
+  // box you type into on the page whose whole purpose is typing into it.
+  //
+  // Not a failure of the widget's avoidance. `INTERACTIVE` already matches
+  // `textarea` and the 260px shift cap was never reached: autoAvoid moved the
+  // launcher 164px up and correctly found a clear spot, then the composer
+  // reflowed under it once the conversation list loaded. The widget re-checks
+  // at two fixed moments after paint, not on layout change, so a late reflow
+  // wins. Fixing that properly means a ResizeObserver in a bundle that runs on
+  // other people's sites; excluding the one page in this app that puts a
+  // full-width composer at the bottom is the honest small fix, and Loki is
+  // where you would talk to the assistant about a problem anyway.
+  "/loki",
   // Not in the product yet. Feedback here would be about the door, not the
   // room, and an anonymous FAB on a credential form is the wrong invitation.
   "/sign-in",
