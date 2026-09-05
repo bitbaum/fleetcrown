@@ -11,7 +11,7 @@ import type { Plan } from "@/db/schema/users";
  * If improvement loops are only honest when they touch settled money, the
  * operator needs one place that sums it. Read-only; founder-scoped in the UI.
  *
- * "Active paid" = any non-free plan whose pass hasn't lapsed. Stripe subs carry
+ * "Active paid" = any non-free plan whose pass hasn't lapsed. Grants carry
  * a null expiry (recurring); BTC passes carry a future expiry. The daily
  * downgrade cron flips lapsed passes back to free, so a non-free row with a
  * null-or-future expiry is genuinely paying right now.

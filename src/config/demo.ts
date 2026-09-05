@@ -129,7 +129,6 @@ export const DEMO_DENIED_PREFIXES: ReadonlyArray<readonly [string, DemoDenialRea
   ["/api/push", "outbound"],
 
   // — money ——————————————————————————————————————————————————————————
-  ["/api/stripe", "billing"],
   ["/api/checkout", "billing"],
   ["/api/subscriptions", "billing"],
 

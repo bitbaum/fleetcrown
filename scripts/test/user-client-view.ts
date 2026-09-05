@@ -76,8 +76,6 @@ const row: User = {
   orangecatActorId: null,
   plan: "free",
   planStatus: null,
-  stripeCustomerId: null,
-  stripeSubscriptionId: null,
   planExpiresAt: null,
   privateZonePinHash: "deadbeef.cafe",
   privateZonePinSetAt: new Date("2026-02-01T00:00:00Z"),

@@ -25,7 +25,7 @@ export async function recordOcBillingGrant(
 
 /**
  * Downgrade every user whose BTC pass has lapsed → free. Returns the count.
- * Only touches non-free users with an expiry in the past; Stripe subscribers
+ * Only touches non-free users with an expiry in the past; a plan with
  * (planExpiresAt null) are untouched. Idempotent — a second run finds none.
  */
 export async function downgradeExpiredPlans(now = new Date()): Promise<number> {

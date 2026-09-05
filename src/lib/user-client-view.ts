@@ -31,8 +31,6 @@ export const USER_CLIENT_FIELDS = [
   "orangecatActorId",
   "plan",
   "planStatus",
-  "stripeCustomerId",
-  "stripeSubscriptionId",
   "planExpiresAt",
   // Not the PIN itself — only whether/when one was set, which Settings shows.
   "privateZonePinSetAt",
@@ -68,10 +66,9 @@ export function toClientUser(user: User): ClientUser {
  * narrowing of the allow-list, never a second answer to what is secret — that
  * question has one answer, USER_WITHHELD_FIELDS, and both projections inherit it.
  */
-export const USER_EXPORT_OMITTED_FIELDS = [
-  "stripeCustomerId",
-  "stripeSubscriptionId",
-] as const satisfies ReadonlyArray<(typeof USER_CLIENT_FIELDS)[number]>;
+export const USER_EXPORT_OMITTED_FIELDS = [] as const satisfies ReadonlyArray<
+  (typeof USER_CLIENT_FIELDS)[number]
+>;
 
 export type ExportUser = Omit<ClientUser, (typeof USER_EXPORT_OMITTED_FIELDS)[number]>;
 

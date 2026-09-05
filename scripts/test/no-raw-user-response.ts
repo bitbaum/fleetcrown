@@ -30,7 +30,6 @@ const FULL_ROW_SOURCES = [
   "getUserByUsername",
   "getUserByEmail",
   "getDefaultUser",
-  "getUserByStripeCustomerId",
   "getUserByOrangeCatActorId",
   "createUser",
   "createInitialUser",

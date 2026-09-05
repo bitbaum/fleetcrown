@@ -6,7 +6,6 @@ import { getUserById } from "@/db/queries/users";
 import { getUserPreferences } from "@/db/queries/user-preferences";
 import { SettingsTabs } from "@/components/settings/SettingsTabs";
 import { PageLayout } from "@/components/ui/page-layout";
-import { isStripeReady } from "@/lib/stripe";
 import { getEnabledAuthProviders } from "@/lib/auth-providers";
 import { getProjectLimit, isUnlimitedProjects } from "@/lib/plan";
 import { ROUTES } from "@/config/auth";
@@ -39,8 +38,6 @@ export default async function SettingsPage() {
           hasPassword: !!user.passwordHash,
           plan: user.plan,
           planStatus: user.planStatus ?? null,
-          stripeReady: isStripeReady(),
-          hasSubscription: !!user.stripeSubscriptionId,
         }}
         userPrefs={
           userPrefs ?? {
