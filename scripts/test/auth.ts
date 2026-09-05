@@ -30,7 +30,7 @@ const ENV_KEYS = [
   "X1_CONSUMER_SECRET",
   "DATABASE_URL",
   "NEXTAUTH_URL",
-  "EMAIL_FROM",
+  "RESEND_FROM",
   "GROQ_API_KEY",
 ] as const;
 const CLEAN_PROD_ENV: Record<string, string> = {
@@ -46,7 +46,7 @@ const CLEAN_PROD_ENV: Record<string, string> = {
   X1_CONSUMER_SECRET: "x_sec",
   DATABASE_URL: "postgres://x",
   NEXTAUTH_URL: "https://fleetcrown.orangecat.ch",
-  EMAIL_FROM: "FleetCrown <noreply@fleetcrown.orangecat.ch>",
+  RESEND_FROM: "FleetCrown <fleetcrown@fleetcrown.orangecat.ch>",
   GROQ_API_KEY: "gsk_test",
 };
 

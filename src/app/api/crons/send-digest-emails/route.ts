@@ -78,7 +78,11 @@ export async function GET(req: NextRequest) {
           agentLabel: summary.agentLabel,
         },
       });
-      await sendEmail(row.email, subject, html, text);
+      // Idempotency key: a retried tick (crash between send and markDigestSent)
+      // cannot double-send — Resend dedupes shared keys for 24h.
+      await sendEmail(row.email, subject, html, text, {
+        idempotencyKey: `digest-${row.userId}-${row.cadence}-${startedAt.toISOString().slice(0, 10)}`,
+      });
       await markDigestSent(row.userId, startedAt);
       results.push({ userId: row.userId, status: "sent" });
     } catch (err) {
