@@ -597,8 +597,18 @@
   .ui-loki-nudge {
     @apply mt-1 flex items-start gap-2 rounded-lg border border-border-subtle bg-surface-raised px-3 py-2;
   }
+  /* Clamped: the composed nudge is a third telling of the same item — the
+     focus title says it, `focus.context` dates it, and this restates both in
+     model prose.
+
+     Not a prompt problem: the compose route already demands "two sentences
+     absolute maximum" with maxTokens 120, and the model obeys. Two sentences
+     is simply EIGHT LINES on a 390px phone, which pushed the rest of /today
+     below the fold. A word budget is not a height budget, so the height is
+     capped here. No `block` utility on this span — a display utility silently
+     defeats -webkit-line-clamp. */
   .ui-loki-nudge-text {
-    @apply text-sm leading-relaxed text-text-secondary;
+    @apply line-clamp-3 text-sm leading-relaxed text-text-secondary;
   }
   .ui-loki-nudge-shimmer {
     @apply text-text-muted italic;
