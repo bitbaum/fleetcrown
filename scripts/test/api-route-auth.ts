@@ -54,8 +54,6 @@ const GUARDS = [
   "getWidgetTokenByToken", // fcw_* write-only widget token
   // Signed webhooks from other services
   "WEBHOOK_SECRET",
-  "stripe-signature",
-  "constructEvent",
 ] as const;
 
 /**

@@ -29,8 +29,6 @@ type Props = {
     hasPassword: boolean;
     plan: Plan;
     planStatus: string | null;
-    stripeReady: boolean;
-    hasSubscription: boolean;
   };
   userPrefs: UserPreferencesData;
   projects: UserProject[];
@@ -166,12 +164,7 @@ export function SettingsTabs({
         {activeTab === "team" && <TeamSettings invitations={invitations} />}
         {activeTab === "billing" && (
           <Suspense>
-            <BillingSettings
-              plan={user.plan}
-              planStatus={user.planStatus}
-              stripeReady={user.stripeReady}
-              hasSubscription={user.hasSubscription}
-            />
+            <BillingSettings plan={user.plan} planStatus={user.planStatus} />
           </Suspense>
         )}
       </div>

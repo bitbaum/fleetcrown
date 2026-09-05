@@ -1381,25 +1381,6 @@ async function main(): Promise<void> {
     }),
   );
 
-  // Stripe portal — configured or 503
-  probes.push(
-    await probe(cookieHeader, "/api/stripe/portal", { expectStatus: [200, 303, 307, 503] }),
-  );
-
-  const webhookRes = await fetch(`${BASE}/api/stripe/webhook`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: "{}",
-    signal: AbortSignal.timeout(15_000),
-  });
-  probes.push({
-    route: "CH04 POST /api/stripe/webhook (invalid sig)",
-    method: "POST",
-    status: webhookRes.status,
-    ok: [400, 503].includes(webhookRes.status),
-    note: webhookRes.status === 503 ? "Stripe not configured" : "signature rejected",
-  });
-
   const metaIssues: string[] = [];
   for (const [name, meta] of Object.entries(SUBSCRIPTION_META)) {
     try {

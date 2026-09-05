@@ -4,7 +4,6 @@ import type { Metadata } from "next";
 import { auth } from "@/auth";
 import { PublicSurface } from "@/components/public/PublicSurface";
 import { PublicHeaderActions } from "@/components/public/PublicHeaderActions";
-import { isStripeReady } from "@/lib/stripe";
 import { orangeCatPayUrl } from "@/lib/oc-pay";
 import { ROUTES } from "@/config/auth";
 import { APP_NAME } from "@/config/brand";
@@ -22,17 +21,19 @@ export const metadata: Metadata = {
 };
 
 /**
- * Public pricing. Honest about billing state: paid CTAs open Stripe checkout
- * only when it's configured (isStripeReady); until then every CTA routes to
- * a free signup — never a dead "Buy" button. Flips live automatically the
- * moment Stripe keys land, with no code change here.
+ * Public pricing. Honest about billing state: a paid CTA only appears when a
+ * rail can actually take the money — never a dead "Buy" button.
+ *
+ * The rail is Bitcoin via OrangeCat (orangeCatPayUrl), which needs no merchant
+ * account. A Stripe branch used to sit ahead of it, permanently unreachable:
+ * isStripeReady() was false in every environment, so every visitor already got
+ * the path below. Removing it changed no rendered output.
  */
 export default async function PricingPage() {
   const session = await auth();
   const signedIn = Boolean(session?.user);
-  const stripeReady = isStripeReady();
 
-  // Resolve each plan's CTA target for the current state (signed-in? stripe live?).
+  // Resolve each plan's CTA target for the current state (signed in? BTC rail live?).
   function ctaFor(plan: PricingPlan): { href: string; label: string } {
     if (plan.key === "free") {
       return signedIn
@@ -45,11 +46,8 @@ export default async function PricingPage() {
         ? { href: ROUTES.APP_HOME, label: `Open ${APP_NAME}` }
         : { href: ROUTES.SIGN_UP, label: "Start free" };
     }
-    if (stripeReady) {
-      return { href: `/api/checkout/${plan.key}`, label: plan.cta };
-    }
-    // Stripe blocked on incorporation — but the Bitcoin/OrangeCat rail needs no
-    // merchant account. If this tier has an OC pass configured, offer it.
+    // The Bitcoin/OrangeCat rail needs no merchant account. If this tier has
+    // an OC pass configured, offer it.
     const btc = orangeCatPayUrl(plan.key);
     if (btc) {
       return { href: btc, label: "Pay in Bitcoin" };

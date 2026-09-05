@@ -38,8 +38,6 @@ const userRow = {
   orangecatActorId: null,
   plan: "pro",
   planStatus: "active",
-  stripeCustomerId: "cus_123",
-  stripeSubscriptionId: "sub_456",
   planExpiresAt: null,
   privateZonePinSetAt: new Date("2026-01-01"),
   fleetSettings: { a: 1 },
@@ -59,11 +57,10 @@ for (const field of Object.keys(USER_WITHHELD_FIELDS)) {
 ok(!serialized.includes("bcrypt$secret"), "serialized export does not contain the password hash");
 ok(!serialized.includes("scrypt$pin"), "serialized export does not contain the PIN hash");
 
-// Billing ids: withheld from the export specifically.
+// Fields withheld from the export specifically.
 for (const field of USER_EXPORT_OMITTED_FIELDS) {
   ok(!(field in exported), `${field} omitted from export`);
 }
-ok(!serialized.includes("cus_123"), "serialized export does not contain the Stripe customer id");
 
 // Everything else the owner may see must survive — an export that quietly drops
 // data fails its purpose (right of access) as surely as one that leaks.

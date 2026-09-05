@@ -16,7 +16,7 @@ export type PricingPlan = {
   name: string;
   /**
    * CHF per month. 0 = genuinely free; null = price to be announced — the tier
-   * stays visible, no number is shown, and every checkout rail (Stripe and the
+   * stays visible, no number is shown, and the checkout rail (the
    * OrangeCat Bitcoin passes) is disabled for it until a number is set.
    * Mirror any change in orangecat's src/config/fleetcrown-passes.ts + re-seed.
    */

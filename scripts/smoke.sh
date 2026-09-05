@@ -160,10 +160,6 @@ for route in "${AUTH_API_ROUTES[@]}"; do
   check_route "$route" 0 "$route" 1
 done
 
-# Routes that may return 503 when optional integrations (Stripe) are not configured.
-# 401 (no session) or 503 (not configured) both prove the route isn't crashing.
-check_route "/api/stripe/portal" 0 "/api/stripe/portal" 1 "503"
-
 # Invitation token routes are excluded from the auth middleware so unauthenticated
 # users can accept invites. A bogus token must return 404 — if it returns 401 the
 # middleware exclusion regressed and new users can no longer accept invitations.

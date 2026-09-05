@@ -161,7 +161,7 @@ import { join } from "node:path";
 const proxySource = readFileSync(join(__dirname, "../../src/proxy.ts"), "utf8");
 const matcherExclusion = proxySource.match(/"\/\(\(\?!(.+)\)\.\+\)"/)?.[1];
 assert.ok(matcherExclusion, "proxy.ts matcher exclusion pattern not found");
-for (const receiver of ["api/orangecat/", "api/solon/", "api/stripe/webhook"]) {
+for (const receiver of ["api/orangecat/", "api/solon/"]) {
   assert.ok(
     matcherExclusion.split("|").includes(receiver.replace(/\./g, "\\.")) ||
       matcherExclusion.split("|").includes(receiver),

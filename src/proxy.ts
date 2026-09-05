@@ -51,7 +51,6 @@ export const config = {
      *                                trailing slash keeps GET /api/invitations (list) protected
      *   api/share/task/            – the assignee's read + accept/decline/deliver, by token;
      *                                the path segment keeps every other /api/share child protected
-     *   api/stripe/webhook         – Stripe webhook; verifies its own Stripe-Signature header
      *   api/orangecat/             – OrangeCat webhooks (entitlement, events); each verifies its own HMAC signature
      *   api/solon/                 – Solon governance webhooks (decision.finalized); verifies its own HMAC signature
      *   api/newsletter             – public email-capture (zod + rate-limited in-handler)
@@ -65,6 +64,6 @@ export const config = {
      *   import-from-local\.sh      – public bash one-liner users curl-pipe into their terminal
      *                                to scan ~/dev and POST detected repos to /api/projects/import-from-local
      */
-    "/((?!_next/static|_next/image|favicon\\.ico|icon\\.svg|manifest\\.json|opengraph-image|twitter-image|robots\\.txt|sitemap\\.xml|rss\\.xml|sign-in|sign-up|forgot-password|reset-password|verify-email|setup|invite|download|whitepaper|thoughts|frontier|mission|philosophy|investors|roadmap|pricing|releases|privacy|terms|license|docs|blog|changelog|support|u/|share/project/|share/task/|beacon|import-from-local\\.sh|api/auth|api/agent/install|api/agent/daemon|api/health|api/setup|api/crons|api/system|api/beacon|api/invitations/|api/share/task/|api/stripe/webhook|api/orangecat/|api/solon/|api/newsletter|api/feedback|api/widget-boot|api/widget/transcribe|widget\\.js).+)",
+    "/((?!_next/static|_next/image|favicon\\.ico|icon\\.svg|manifest\\.json|opengraph-image|twitter-image|robots\\.txt|sitemap\\.xml|rss\\.xml|sign-in|sign-up|forgot-password|reset-password|verify-email|setup|invite|download|whitepaper|thoughts|frontier|mission|philosophy|investors|roadmap|pricing|releases|privacy|terms|license|docs|blog|changelog|support|u/|share/project/|share/task/|beacon|import-from-local\\.sh|api/auth|api/agent/install|api/agent/daemon|api/health|api/setup|api/crons|api/system|api/beacon|api/invitations/|api/share/task/|api/orangecat/|api/solon/|api/newsletter|api/feedback|api/widget-boot|api/widget/transcribe|widget\\.js).+)",
   ],
 };

@@ -5,7 +5,7 @@ import type { Plan } from "@/db/schema/users";
  *
  * Each paid tier maps to an OrangeCat product/pass with a BTC price; the URL is
  * that pass's OC checkout. Read from env so the "Pay in Bitcoin" CTA lights up
- * the moment the OC-side passes exist — no code change (mirrors isStripeReady).
+ * the moment the OC-side passes exist — no code change.
  * Null everywhere today because the OC passes aren't created yet.
  */
 export function orangeCatPayUrl(plan: Plan): string | null {

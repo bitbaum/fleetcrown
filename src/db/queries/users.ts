@@ -86,15 +86,9 @@ export interface UpdateUserInput {
 export interface UpdateUserBillingInput {
   plan?: Plan;
   planStatus?: PlanStatus | null;
-  stripeCustomerId?: string;
-  stripeSubscriptionId?: string | null;
   /** OrangeCat/BTC-rail pass expiry (now + period). Null clears it (e.g. the
-   *  expiry cron reverting to free, or a Stripe sub that manages its own cycle). */
+   *  expiry cron reverting to free). */
   planExpiresAt?: Date | null;
-}
-
-export async function getUserByStripeCustomerId(stripeCustomerId: string) {
-  return db.query.users.findFirst({ where: eq(users.stripeCustomerId, stripeCustomerId) }) ?? null;
 }
 
 export async function updateUserBilling(id: string, patch: UpdateUserBillingInput) {
@@ -103,10 +97,6 @@ export async function updateUserBilling(id: string, patch: UpdateUserBillingInpu
     .set({
       ...(patch.plan !== undefined && { plan: patch.plan }),
       ...(patch.planStatus !== undefined && { planStatus: patch.planStatus }),
-      ...(patch.stripeCustomerId !== undefined && { stripeCustomerId: patch.stripeCustomerId }),
-      ...(patch.stripeSubscriptionId !== undefined && {
-        stripeSubscriptionId: patch.stripeSubscriptionId,
-      }),
       ...(patch.planExpiresAt !== undefined && { planExpiresAt: patch.planExpiresAt }),
       updatedAt: new Date(),
     })
