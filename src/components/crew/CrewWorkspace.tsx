@@ -83,13 +83,22 @@ export function CrewWorkspace({
 
   return (
     <div className="space-y-7">
-      <div className="ui-crew-hero">
-        <span className="ui-crew-hero-answer">{answer}</span>
-        <span className="ui-crew-hero-sub">{sub}</span>
-        <span className="ml-auto">
-          <NewAssignmentButton crew={crew} projects={projects} onCreated={refresh} />
-        </span>
-      </div>
+      {/* With no assignments the hero can only say "Nothing out with anyone",
+          which is what the empty panel below says better and with a reason —
+          and it carried a SECOND NewAssignmentButton opening the same modal a
+          thumb-width from the first. /money settled this case already: suppress
+          the header action while the list is empty, because the empty state
+          already carries the way in, and two identical buttons are a choice the
+          reader has to make for no reason. */}
+      {tasks.length > 0 && (
+        <div className="ui-crew-hero">
+          <span className="ui-crew-hero-answer">{answer}</span>
+          <span className="ui-crew-hero-sub">{sub}</span>
+          <span className="ml-auto">
+            <NewAssignmentButton crew={crew} projects={projects} onCreated={refresh} />
+          </span>
+        </div>
+      )}
 
       {tasks.length === 0 ? (
         <div className="ui-empty-panel">
