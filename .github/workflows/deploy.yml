@@ -117,7 +117,17 @@ jobs:
             ${{ runner.os }}-next-${{ hashFiles('pnpm-lock.yaml') }}-
             ${{ runner.os }}-next-
 
+      # A NEXT_PUBLIC_* value has two origins: the server reads it at runtime,
+      # the browser gets what was inlined HERE, at build time. Anything the box
+      # sets at runtime must therefore also be handed to this step, or the two
+      # disagree — which is what rendered a notifications bell on the server and
+      # nothing on the client, throwing away the tree on every authenticated
+      # page (React #418, #488). scripts/test/public-env-inlined.ts enforces it.
       - name: Build (app + bridge)
+        env:
+          # Public by design — it is compiled into the client bundle and handed
+          # to every browser that subscribes. A repo variable, not a secret.
+          NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${{ vars.NEXT_PUBLIC_VAPID_PUBLIC_KEY }}
         run: |
           pnpm run build
           pnpm -C bridge run build

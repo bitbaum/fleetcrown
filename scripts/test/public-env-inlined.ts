@@ -52,18 +52,15 @@ function ok(cond: boolean, label: string) {
  * means adding a repo secret/variable AND passing it in deploy.yml's build
  * step; then delete the entry and this check keeps it closed forever.
  *
- * Deliberately not failing on these today: the fix needs repo secrets that do
- * not exist yet (`gh secret list` shows only HETZNER_SSH_KEY and
- * RELEASES_REPO_TOKEN), and a gate nobody can satisfy is a gate that gets
- * switched off — the same trap as a wrong SKIP reason.
+ * The entries that remain are vars set NOWHERE — neither build nor box — so
+ * both sides fall back to the same default and cannot diverge. They are listed
+ * rather than deleted so that setting one in prod trips this check.
+ *
+ * NEXT_PUBLIC_VAPID_PUBLIC_KEY used to live here and is now CLOSED: the repo
+ * variable exists and deploy.yml's build step passes it, so removing either
+ * fails this check instead of silently killing push notifications again.
  */
 const KNOWN_GAPS: Record<string, string> = {
-  NEXT_PUBLIC_VAPID_PUBLIC_KEY:
-    "SET ON THE BOX, absent from the bundle — the one that actually diverges. " +
-    "Push notifications are dead in prod: the browser sees an empty key so " +
-    "subscribe() cannot run. Closing it needs a repo secret (none exists yet: " +
-    "`gh secret list` shows only HETZNER_SSH_KEY and RELEASES_REPO_TOKEN) plus " +
-    "an env: entry on deploy.yml's build step.",
   NEXT_PUBLIC_SENTRY_DSN:
     "Intentionally optional — absent means Sentry is disabled, a valid state, " +
     "and the box does not set it either, so both sides agree on empty.",
