@@ -36,16 +36,30 @@ export async function TodayWatch() {
 
   return (
     <div className="ui-today-watch">
+      {/* ONE eyebrow, not two. This card stacked "LOKI IS WATCHING" above
+          "OVERDUE COMMITMENT" — two rows of small caps before a single word of
+          content, and the first said nothing the eye icon doesn't. When there
+          is a focus, its kind is the label; "Loki is watching" is kept only for
+          the states where there is no kind to name. */}
       <div className="ui-today-watch-head">
         <Eye className="h-4 w-4 shrink-0 text-accent-text" />
-        <span className="ui-today-watch-eyebrow">Loki is watching</span>
+        <span
+          className={focus ? "ui-today-watch-focus-kind" : "ui-today-watch-eyebrow"}
+          title={focus ? "Loki is watching" : undefined}
+        >
+          {focus ? KIND_LABEL[focus.kind] : "Loki is watching"}
+        </span>
       </div>
 
       {focus ? (
         <>
-          <div className="ui-today-watch-focus-kind">{KIND_LABEL[focus.kind]}</div>
+          {/* The title is a heading, not a paragraph: this one ran to four
+              lines on a 390px phone. Clamped on the inner span because the
+              link itself is the flex row holding the arrow. */}
           <Link href={focus.href} className="ui-today-watch-focus-title group">
-            {focus.title}
+            <span className="line-clamp-2" title={focus.title}>
+              {focus.title}
+            </span>
             <ArrowRight className="h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5" />
           </Link>
           <p className="ui-today-watch-focus-context">{focus.context}</p>
@@ -63,7 +77,15 @@ export async function TodayWatch() {
         </div>
       )}
 
-      {totalStrip && <p className="ui-today-watch-totals">{totalStrip}</p>}
+      {/* "Also: 1 more overdue · 3 overdue goals · 6 more imminent bills · 25
+          relationships going stale · 19 stalled goals." ran to three lines of
+          things you are behind on, under the one thing this card picked for
+          you. Two lines; the rest is on hover and on the pages that own it. */}
+      {totalStrip && (
+        <p className="ui-today-watch-totals line-clamp-2" title={totalStrip}>
+          {totalStrip}
+        </p>
+      )}
 
       {focus && (
         <div className="ui-today-watch-action">
