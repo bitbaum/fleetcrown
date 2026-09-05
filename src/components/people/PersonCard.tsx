@@ -6,6 +6,7 @@ import { CHANNEL_CONFIG, CHANNEL_NAMES, isChannelAttrKey } from "@/config/channe
 import { HEALTH_DOT_COLOR } from "@/lib/constants/people";
 import { Link2, Plus, Check, Loader2 } from "lucide-react";
 import { LokiDispatchButton } from "@/components/shared/LokiDispatchButton";
+import { RowActions } from "@/components/ui/row-actions";
 import { formatDistanceToNow } from "date-fns";
 import { postJson, throwApiError } from "@/lib/api/fetch";
 import { INTERACTION_DIRECTION, type InteractionDirection } from "@/lib/constants/statuses";
@@ -214,23 +215,24 @@ export function PersonCard({
               <>Log talk</>
             )}
           </button>
-          <div className="flex items-center gap-1.5">
+          {/* "Log talk" is the one-tap action and stays; the other two are the
+              same job at other fidelities — a detailed log, or handing the
+              person to Loki — so they sit behind one trigger. Three controls
+              per card, across 2,749 cards, is a lot of deciding for a list you
+              scroll. The log form still opens in the CARD, not in the menu, so
+              closing the menu on choose is the right behaviour here. */}
+          <RowActions label={`More actions for ${person.name}`}>
             <LokiDispatchButton
               prompt={lokiPrompt}
               title="Ask Loki about this person"
-              className="opacity-100 transition-opacity sm:opacity-70 sm:group-hover:opacity-100 p-1.5 rounded text-text-muted hover:text-status-positive transition-colors"
+              label="Ask Loki about this person"
+              className="ui-menu-item"
             />
-            <button
-              onClick={openLog}
-              className="opacity-100 transition-opacity sm:opacity-70 sm:group-hover:opacity-100 ui-btn-chip"
-              title="Log with details"
-            >
-              {/* "Details" read as "show me this person" — which is what
-                  clicking the card already does. This opens the log form with
-                  channel/direction/summary fields, so it says so. */}
-              <Plus className="h-3 w-3" /> Log details
+            <button onClick={openLog} className="ui-menu-item" role="menuitem">
+              <Plus className="h-3 w-3 shrink-0" />
+              Log with details
             </button>
-          </div>
+          </RowActions>
         </div>
       )}
 
