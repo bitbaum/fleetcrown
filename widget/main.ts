@@ -696,6 +696,10 @@ function h<K extends keyof HTMLElementTagNameMap>(
     contact.type = "text";
     contact.placeholder = "Name / email (optional)";
     contact.autocomplete = "off";
+    // Same cap the ingest route enforces, so the field stops accepting text at
+    // the limit instead of taking it and losing the whole report on submit.
+    // The textarea already does this; the contact input did not.
+    contact.maxLength = 200;
 
     // ---- image attach (file picker + paste; client-downscaled) ----
     let shot: string | null = null;
@@ -1029,8 +1033,14 @@ function h<K extends keyof HTMLElementTagNameMap>(
           body: JSON.stringify({
             token,
             suggestion: suggestionWithDiagnostics(),
-            contact: contact.value.trim() || undefined,
-            page: location.pathname,
+            // Every field here is clamped to the server's own cap. Two of them
+            // were not, and the ingest route rejects the WHOLE submission with
+            // a bare "Invalid submission" naming no field — so a visitor who
+            // typed a long signature into "Name / email", or who was on a page
+            // with a very long pathname, lost their entire report with no way
+            // to know why. Caps: api/feedback/route.ts FeedbackBody.
+            contact: contact.value.trim().slice(0, 200) || undefined,
+            page: location.pathname.slice(0, 300),
             url: location.href.slice(0, 1000),
             pageTitle: document.title.slice(0, 300) || undefined,
             scope,

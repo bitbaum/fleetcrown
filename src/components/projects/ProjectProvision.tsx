@@ -72,7 +72,15 @@ export function ProjectProvision({
             setOpen(true);
             setError(null);
           }}
-          className="ui-btn-chip gap-1.5 px-3 py-1.5 text-xs"
+          // `ui-btn-chip` reaches the 44px floor through its OWN `py-3` — it is
+          // not in the coarse-pointer floor list in globals.css. Overriding to
+          // `py-1.5 text-xs` without `ui-tap` made this ~28px on a phone, 16px
+          // under the stated floor, and visibly shorter than the seven
+          // identical sibling chips (ProjectBriefFill, BusinessPlanSection,
+          // ProjectDocSync) which all carry `ui-tap`. audit:responsive cannot
+          // see it: this button is on /projects/[id] and the audit visits
+          // /projects only.
+          className="ui-btn-chip ui-tap gap-1.5 px-3 text-xs"
           title="Create the GitHub repo + starter, link it, and make this project dispatchable in Control — no terminal needed."
         >
           <Rocket className="h-3.5 w-3.5 text-accent-text" />
