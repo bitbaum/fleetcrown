@@ -60,7 +60,21 @@ export function CardSkeleton() {
   );
 }
 
-export function StatCard({ label, value, sub }: { label: string; value: string; sub: string }) {
+export function StatCard({
+  label,
+  value,
+  sub,
+}: {
+  label: string;
+  /**
+   * ReactNode, not string: a figure that is really SEVERAL figures (a burn in
+   * two currencies) has to stack, and joining it into one string wrapped
+   * mid-number at 390px. Every existing caller passes a string and is
+   * unaffected.
+   */
+  value: React.ReactNode;
+  sub: string;
+}) {
   return (
     <Card>
       <div className="ui-kicker">{label}</div>

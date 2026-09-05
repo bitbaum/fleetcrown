@@ -28,13 +28,27 @@ export function PersonCard({
     const raw = person.attrs.aliases;
     const aliases = raw ? (JSON.parse(raw) as unknown) : [];
     if (Array.isArray(aliases)) {
+      // An alias made of words already in the displayed name tells the reader
+      // nothing. This filter only excluded an alias equal to the WHOLE name, so
+      // a person stored with ["Manuel", "Riegner"] rendered as
+      // "Manuel Riegner" with "Manuel · Riegner" directly beneath it — the name
+      // again, split up, presented as if it were extra information. Across a
+      // 2,749-person book that is a duplicated line on most rows.
+      const nameTokens = new Set(
+        person.name
+          .toLowerCase()
+          .split(/[\s,]+/)
+          .filter(Boolean),
+      );
       aliasHint = aliases
-        .filter(
-          (a): a is string =>
-            typeof a === "string" &&
-            a.trim().length > 0 &&
-            a.trim().toLowerCase() !== person.name.toLowerCase(),
-        )
+        .filter((a): a is string => typeof a === "string" && a.trim().length > 0)
+        .filter((a) => {
+          const norm = a.trim().toLowerCase();
+          if (norm === person.name.toLowerCase()) return false;
+          // Every word of the alias already appears in the name → adds nothing.
+          const words = norm.split(/[\s,]+/).filter(Boolean);
+          return !words.every((w) => nameTokens.has(w));
+        })
         .slice(0, 2)
         .join(" · ");
     }
@@ -211,7 +225,10 @@ export function PersonCard({
               className="opacity-100 transition-opacity sm:opacity-70 sm:group-hover:opacity-100 ui-btn-chip"
               title="Log with details"
             >
-              <Plus className="h-3 w-3" /> Details
+              {/* "Details" read as "show me this person" — which is what
+                  clicking the card already does. This opens the log form with
+                  channel/direction/summary fields, so it says so. */}
+              <Plus className="h-3 w-3" /> Log details
             </button>
           </div>
         </div>
