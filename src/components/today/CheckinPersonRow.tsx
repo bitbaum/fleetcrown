@@ -93,7 +93,24 @@ export function CheckinPersonRow({ person }: { person: CheckinPerson }) {
           <ul className="mt-1 flex flex-col gap-0.5">
             {channels.map((c) => (
               <li key={c.label} className="truncate text-xs text-text-secondary">
-                {c.label}: {c.value}
+                {c.label}:{" "}
+                {c.href ? (
+                  // The whole point of this row is reaching the person, and the
+                  // number used to be inert text you had to select and copy.
+                  // noreferrer on a mailto/tel is harmless and one rule is
+                  // easier to keep right than a per-scheme exception.
+                  <a
+                    href={c.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="ui-tap underline decoration-dotted underline-offset-2 hover:text-accent-text"
+                  >
+                    {c.value}
+                  </a>
+                ) : (
+                  c.value
+                )}
               </li>
             ))}
           </ul>

@@ -13,6 +13,7 @@ import {
 import { EmptyState } from "@/components/ui/empty-state";
 import { Section, ChannelIcon } from "./PersonDetailHelpers";
 import { formatChannelValue } from "./person-detail-types";
+import { channelHref } from "@/lib/people-reach";
 import { TOAST_SHORT_MS } from "@/lib/constants/timings";
 
 export function ChannelsSection({
@@ -78,12 +79,31 @@ export function ChannelsSection({
         <div key={key} className="group flex items-center gap-3 ui-list-row">
           <ChannelIcon channel={key} />
           <span className="shrink-0 text-text-secondary">{stripChannelPrefix(key)}</span>
-          <span
-            className="flex-1 truncate font-mono text-xs text-text-tertiary"
-            title={formatChannelValue(value)}
-          >
-            {formatChannelValue(value)}
-          </span>
+          {(() => {
+            // Same treatment as Today's check-in row: a contact value the
+            // operator has to select and copy is not a contact method. One
+            // shared builder, so the two surfaces cannot drift on which
+            // schemes are safe to open.
+            const shown = formatChannelValue(value);
+            const href = channelHref(key, shown);
+            const cls = "flex-1 truncate font-mono text-xs text-text-tertiary";
+            return href ? (
+              <a
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className={`${cls} underline decoration-dotted underline-offset-2 hover:text-accent-text`}
+                title={shown}
+              >
+                {shown}
+              </a>
+            ) : (
+              <span className={cls} title={shown}>
+                {shown}
+              </span>
+            );
+          })()}
           <button
             onClick={() => deleteChannel(key)}
             disabled={deletingKey === key}
