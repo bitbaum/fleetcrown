@@ -68,14 +68,6 @@ const BASELINE: Record<string, string> = {
   getProjectDefinitionOfDone:
     "The autopilot stop-gate bar is stored and never read, so definition_of_done gates nothing — " +
     "a project can set one and autopilot will stop on the same conditions either way.",
-  renderPromptBody:
-    "The /prompts run path substitutes ONE variable, with RunModal's " +
-    'template.replaceAll("{{project_name}}", …) — so every other {{var}} and every ' +
-    "declared default reaches the agent as a literal placeholder. This is the renderer " +
-    "that handles them, and a client component cannot import it: it lives in a db/queries " +
-    "module that pulls in `db`. Fixing it means moving it to lib/ and rewiring RunModal, " +
-    "which changes what a run actually sends — its own change, not a deletion. Reported " +
-    "dead once already, in docs/AUDIT_REPORT_2026-07-13.md.",
   getUserProjectByOrangeCatProjectId:
     "The FC->OC reverse lookup has no caller, so an OrangeCat webhook that identifies a project " +
     "(not an operator) has no way to find which FleetCrown project owns it.",
