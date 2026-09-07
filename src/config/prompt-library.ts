@@ -25,6 +25,8 @@
 
 import { APP_NAME } from "./brand";
 
+import { renderPromptBody } from "@/lib/prompt-vars";
+
 export type PromptCategory =
   | "fleet"
   | "security"
@@ -1212,7 +1214,15 @@ export const FEATURED_PROJECT_PROMPTS = PROMPT_TEMPLATES.filter(
   (t) => t.featured && t.scope === "project",
 );
 
-/** Replace {{project_name}} placeholders in a template with the actual project name. */
+/**
+ * Replace {{project_name}} in a template with the actual project name.
+ *
+ * Delegates to the shared renderer rather than owning a second regex: this one
+ * matched only the exact spelling `{{project_name}}`, so `{{ project_name }}`
+ * — which parsePromptVariables has always accepted — passed through untouched
+ * and shipped braces to the agent. Any other declared variable keeps its
+ * default here, and stays visible when it has none.
+ */
 export function substituteProjectName(template: string, projectName: string): string {
-  return template.replace(/\{\{project_name\}\}/g, projectName);
+  return renderPromptBody(template, { project_name: projectName });
 }

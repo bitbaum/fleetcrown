@@ -11,6 +11,7 @@ import { useClipboard } from "@/hooks/use-clipboard";
 import { useFetch } from "@/hooks/use-fetch";
 import { useDispatchLiveStatus } from "@/hooks/use-dispatch-live-status";
 import { dispatchStatusLabel, dispatchToneDotClass } from "@/lib/dispatch-status";
+import { renderPromptBody, parsePromptVariables } from "@/lib/prompt-vars";
 
 export function RunModal({
   template,
@@ -23,6 +24,7 @@ export function RunModal({
 }) {
   const [projectId, setProjectId] = useState(template.scope === "global" ? "__global__" : "");
   const [projectName, setProjectName] = useState("");
+  const [varValues, setVarValues] = useState<Record<string, string>>({});
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -47,10 +49,20 @@ export function RunModal({
   const [trackedMode, setTrackedMode] = useState<string | null>(null);
   const liveDispatch = useDispatchLiveStatus(trackedCommandId, trackedRunId);
 
-  const resolvedMessage =
-    template.scope === "project" && projectName
-      ? template.template.replaceAll("{{project_name}}", projectName)
-      : template.template;
+  // Every {{variable}} the body declares, not just project_name. User-owned
+  // prompts arrive here through asTemplate() in UserPromptsSection and may
+  // declare anything; the old replaceAll dispatched their braces verbatim.
+  const declared = parsePromptVariables(template.template);
+  const extraVars = declared.filter((v) => v.name !== "project_name");
+  const values: Record<string, string> = { ...varValues };
+  if (projectName) values.project_name = projectName;
+  const resolvedMessage = renderPromptBody(template.template, values);
+  // A variable with no value and no default still reads as {{name}} in the
+  // preview — deliberately, so a half-filled prompt is visible before dispatch
+  // rather than after.
+  const missingVars = extraVars.filter(
+    (v) => !varValues[v.name]?.trim() && v.defaultValue === undefined,
+  );
 
   const canRun = template.scope === "global" || !!projectId;
 
@@ -156,6 +168,36 @@ export function RunModal({
             <div className="ui-kicker mb-2">Resolved Prompt</div>
             <pre className="ui-code-surface">{resolvedMessage}</pre>
           </div>
+
+          {extraVars.length > 0 && (
+            <div className="space-y-3">
+              <div className="ui-kicker text-text-tertiary">
+                Variables
+                {missingVars.length > 0 && (
+                  <span className="ui-tag ui-tag-warning ml-2">{missingVars.length} unfilled</span>
+                )}
+              </div>
+              {extraVars.map((v) => (
+                <div key={v.name}>
+                  <label className="ui-micro-label mb-1 block" htmlFor={`var-${v.name}`}>
+                    {v.name}
+                    {v.defaultValue !== undefined && (
+                      <span className="text-text-muted"> · defaults to {v.defaultValue}</span>
+                    )}
+                  </label>
+                  <input
+                    id={`var-${v.name}`}
+                    value={varValues[v.name] ?? ""}
+                    onChange={(e) =>
+                      setVarValues((prev) => ({ ...prev, [v.name]: e.target.value }))
+                    }
+                    placeholder={v.defaultValue ?? `Value for ${v.name}`}
+                    className="ui-input"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
 
           {template.scope === "project" && (
             <div>

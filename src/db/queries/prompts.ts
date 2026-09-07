@@ -20,40 +20,17 @@ import { prompts, type PromptRow } from "@/db/schema/prompts";
 import { getOrgPeerIds } from "./utils";
 
 // ── Variable parsing ────────────────────────────────────────────────────────
+// Moved to src/lib/prompt-vars.ts, which has no `db` import, so the run and
+// schedule modals can use the SAME renderer this module needs. Re-exported so
+// existing server-side import paths keep working.
 
-const VAR_RE = /\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)(?:\s*\|\s*([^}]+))?\s*\}\}/g;
-
-export interface PromptVariable {
-  name: string;
-  defaultValue?: string;
-  description?: string;
-}
-
-/** Extract {{name}} and {{name|default}} placeholders from a body. Dedupes
- *  by name (first occurrence wins for the default). Pure function — no DB. */
-export function parsePromptVariables(body: string): PromptVariable[] {
-  const seen = new Map<string, PromptVariable>();
-  let match: RegExpExecArray | null;
-  VAR_RE.lastIndex = 0;
-  while ((match = VAR_RE.exec(body)) !== null) {
-    const name = match[1];
-    if (seen.has(name)) continue;
-    const defaultValue = match[2]?.trim();
-    seen.set(name, defaultValue ? { name, defaultValue } : { name });
-  }
-  return Array.from(seen.values());
-}
-
-/** Render a body with variable substitutions. Missing vars fall back to the
- *  declared default; otherwise the placeholder stays in (visible to the agent
- *  so the user notices). */
-export function renderPromptBody(body: string, values: Record<string, string>): string {
-  return body.replace(VAR_RE, (_full, name: string, defaultValue?: string) => {
-    if (values[name] !== undefined) return values[name];
-    if (defaultValue !== undefined) return defaultValue.trim();
-    return _full;
-  });
-}
+export {
+  parsePromptVariables,
+  renderPromptBody,
+  unresolvedVariables,
+  type PromptVariable,
+} from "@/lib/prompt-vars";
+import { parsePromptVariables } from "@/lib/prompt-vars";
 
 // ── Validators ──────────────────────────────────────────────────────────────
 

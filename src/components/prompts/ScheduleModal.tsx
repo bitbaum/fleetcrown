@@ -7,6 +7,7 @@ import type { PromptTemplate } from "@/config/prompt-library";
 import type { Project } from "./types";
 import { Modal } from "@/components/ui/modal";
 import { MODAL_AUTO_CLOSE_MS } from "@/lib/constants/timings";
+import { renderPromptBody, parsePromptVariables } from "@/lib/prompt-vars";
 
 export function ScheduleModal({
   template,
@@ -19,15 +20,21 @@ export function ScheduleModal({
 }) {
   const [projectId, setProjectId] = useState("");
   const [projectName, setProjectName] = useState("");
+  const [varValues, setVarValues] = useState<Record<string, string>>({});
   const [schedule, setSchedule] = useState(template.suggestedSchedule ?? "0 9 * * 1");
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const resolvedMessage =
-    template.scope === "project" && projectName
-      ? template.template.replaceAll("{{project_name}}", projectName)
-      : template.template;
+  // A scheduled job stores its message as text, so whatever is unfilled here is
+  // baked in and re-sent on every tick. Resolve EVERY declared variable, not
+  // just project_name — a user-owned prompt reaching this modal through
+  // asTemplate() used to schedule its braces verbatim, forever.
+  const declared = parsePromptVariables(template.template);
+  const extraVars = declared.filter((v) => v.name !== "project_name");
+  const values: Record<string, string> = { ...varValues };
+  if (projectName) values.project_name = projectName;
+  const resolvedMessage = renderPromptBody(template.template, values);
 
   const jobName =
     template.scope === "project" && projectName
@@ -91,6 +98,29 @@ export function ScheduleModal({
               </option>
             ))}
           </select>
+        </div>
+      )}
+
+      {extraVars.length > 0 && (
+        <div className="space-y-3">
+          <div className="ui-kicker text-text-tertiary">Variables</div>
+          {extraVars.map((v) => (
+            <div key={v.name}>
+              <label className="ui-micro-label mb-1 block" htmlFor={`sched-var-${v.name}`}>
+                {v.name}
+                {v.defaultValue !== undefined && (
+                  <span className="text-text-muted"> · defaults to {v.defaultValue}</span>
+                )}
+              </label>
+              <input
+                id={`sched-var-${v.name}`}
+                value={varValues[v.name] ?? ""}
+                onChange={(e) => setVarValues((prev) => ({ ...prev, [v.name]: e.target.value }))}
+                placeholder={v.defaultValue ?? `Value for ${v.name}`}
+                className="ui-input"
+              />
+            </div>
+          ))}
         </div>
       )}
 
