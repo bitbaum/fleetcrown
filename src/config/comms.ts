@@ -52,7 +52,7 @@ export const EMAIL_THEME = {
   card: PALETTE.white,
   ink: PALETTE.dark.surfacePage,
   body: PALETTE.dark.surfacePage,
-  muted: PALETTE.darkFallback.textTertiary,
+  muted: PALETTE.dark.textTertiary,
   button: PALETTE.dark.surfacePage,
   buttonInk: PALETTE.dark.textPrimary,
   /** Digest stat strip. Email is a light surface, so these are the light-mode

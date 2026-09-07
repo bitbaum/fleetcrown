@@ -42,13 +42,10 @@ const nextConfig: NextConfig = {
   // bundled by Turbopack/webpack, and only runs in the Node runtime. It backs
   // the LocalPtyExecutor (FleetCrown-owned agent PTYs). See
   // docs/architecture/agent-execution-platform.md.
-  // shiki must ALSO stay external: bip-kit loads it as an optional peer via a
-  // bundler-hidden dynamic import (`new Function("s","return import(s)")`), so
-  // a bundled copy is unreachable — the runtime import resolves from
-  // node_modules or not at all. External + the static import in
-  // ThoughtArticleBody makes nft trace the real package (correct pnpm layout)
-  // into the standalone node_modules, exactly how node-pty ships.
-  serverExternalPackages: ["node-pty", "shiki"],
+  // (shiki no longer needs to be external: bip-kit 0.2.1's setHighlighterLoader
+  // seam — registered in ThoughtArticleBody — puts the literal import("shiki")
+  // in our own code, so the bundler ships it like any other dependency.)
+  serverExternalPackages: ["node-pty"],
   env: {
     NEXT_PUBLIC_APP_VERSION: PKG_VERSION,
     NEXT_PUBLIC_BUILD_SHA: buildSha(),
