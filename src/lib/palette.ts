@@ -21,32 +21,9 @@ export const PALETTE = {
     surfacePage: "#0a0a0a",
     /** --text-primary (dark) ≈ oklch(0.92 0 0) — OG text, brand-mark default stroke */
     textPrimary: "#ededed",
-  },
-  /** Approximate dark-token fallbacks used only when a CSS var cannot be
-   *  resolved at runtime (MermaidDiagram's SSR guard). Slightly off from the
-   *  canonical mirrors above — kept verbatim so no rendered value changes. */
-  darkFallback: {
-    /** ≈ --surface-base (dark) */
-    surfaceBase: "#0d0d0d",
-    /** ≈ --surface-raised (dark) */
-    surfaceRaised: "#1e1e1e",
-    /** ≈ --text-primary (dark) */
-    textPrimary: "#e8e8e8",
-    /** ≈ --text-tertiary (dark) */
+    /** ≈ --text-tertiary (dark) — digest-email muted text */
     textTertiary: "#666666",
   },
-  /** Approximate light-token fallbacks for Mermaid when CSS vars cannot resolve. */
-  lightFallback: {
-    /** ≈ --surface-base (light) */
-    surfaceBase: "#f7f7f7",
-    /** ≈ --surface-raised (light) */
-    surfaceRaised: "#ffffff",
-    /** ≈ --text-primary (light) */
-    textPrimary: "#171717",
-    /** ≈ --text-tertiary (light) */
-    textTertiary: "#737373",
-  },
-
   /** Tailwind zinc-scale mirrors — OG-card greys and xterm. Email chrome
    *  lives in EMAIL_THEME (src/config/comms.ts) and maps to brand tokens. */
   zinc: {

@@ -1,24 +1,19 @@
 import fs from "fs";
 import path from "path";
-// Load-bearing import, deliberately: bip-kit loads shiki as an OPTIONAL peer
-// through a bundler-hidden dynamic import that Next's file tracer cannot see,
-// so without a statically visible, actually-USED reference here (shiki is in
-// serverExternalPackages), the standalone build ships without shiki and prod
-// silently renders code blocks as the un-highlighted mono fallback while dev
-// shows them highlighted. A bare `import "shiki"` is NOT enough — shiki
-// declares sideEffects:false, the bundler drops the unused import, and no
-// `require("shiki")` survives for the tracer to follow (this exact hole
-// shipped once). The assertion below keeps the reference alive and turns a
-// missing peer into a loud module-load failure instead of a silent styling
-// regression. Do not "clean up" this import.
-import { bundledLanguages } from "shiki";
-import { ArticleBody } from "bip-kit/react";
+import { ArticleBody, setHighlighterLoader } from "bip-kit/react";
+import { MermaidBlock } from "bip-kit/react/mermaid";
 
-if (typeof bundledLanguages !== "object" || bundledLanguages === null) {
-  throw new Error("shiki peer failed to load — essay code highlighting would silently degrade");
-}
+// shiki is an OPTIONAL peer of bip-kit; its zero-config load goes through an
+// import the bundler and Next's file tracer cannot see, so a standalone
+// deploy would silently ship without shiki and lose highlighting (this exact
+// hole shipped once). bip-kit 0.2.1's supported seam: register the loader at
+// module scope so the literal `import("shiki")` lives in OUR code, where the
+// bundler resolves and ships it. This runs on import, before any ArticleBody
+// render, and replaces the old serverExternalPackages entry + deploy-time
+// node_modules/shiki symlink.
+setHighlighterLoader(() => import("shiki"));
+
 import type { ThoughtBlock } from "@/lib/thoughts-content";
-import { MermaidDiagram } from "@/components/thoughts/MermaidDiagram";
 
 /**
  * Essay body renderer: bip-kit's reference renderer (`ArticleBody`) with two
@@ -100,7 +95,7 @@ export function ThoughtArticleBody({ blocks }: { blocks: ThoughtBlock[] }) {
     <>
       {toSegments(blocks).map((segment, i) =>
         segment.kind === "article" ? (
-          <ArticleBody key={i} blocks={segment.blocks} components={{ mermaid: MermaidDiagram }} />
+          <ArticleBody key={i} blocks={segment.blocks} components={{ mermaid: MermaidBlock }} />
         ) : (
           <div key={i} className="bp-article">
             <figure className="bp-figure">

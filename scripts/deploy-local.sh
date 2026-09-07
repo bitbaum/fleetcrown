@@ -72,21 +72,8 @@ if [ -d "$NODE_PTY_SRC" ] && [ -d "$STANDALONE/node_modules/node-pty" ]; then
   echo "→ deploy: node-pty native binary swapped into standalone (atomic)"
 fi
 
-# ── shiki top-level link ──────────────────────────────────────────────────────
-# bip-kit loads its optional shiki peer via a bundler-hidden dynamic import
-# (`new Function("s","return import(s)")`) — plain NODE resolution from the
-# server chunk, invisible to bundler and tracer alike. The traced .pnpm store
-# entries land in standalone/node_modules/.pnpm, but Next never emits the
-# top-level node_modules/shiki symlink, so Node cannot resolve "shiki" and
-# essay code blocks silently degrade to the un-highlighted mono fallback
-# (verified hermetically 2026-09-07: without the link the fallback renders,
-# with it --shiki-light/--shiki-dark spans appear). Same lesson as node-pty
-# above: what the tracer can't see, the postbuild must supply.
-SHIKI_STORE_ENTRY="$(ls "$STANDALONE/node_modules/.pnpm" 2>/dev/null | grep -E '^shiki@' | head -1 || true)"
-if [ -n "$SHIKI_STORE_ENTRY" ] && [ ! -e "$STANDALONE/node_modules/shiki" ]; then
-  ln -s ".pnpm/$SHIKI_STORE_ENTRY/node_modules/shiki" "$STANDALONE/node_modules/shiki"
-  echo "→ deploy: linked standalone node_modules/shiki -> .pnpm/$SHIKI_STORE_ENTRY"
-fi
+# (The former shiki top-level link is gone: bip-kit 0.2.1's setHighlighterLoader
+# seam makes shiki a normal bundled dependency — nothing for the tracer to miss.)
 
 # Hosted CI stops here: the standalone is fully assembled (all deploy-hetzner.sh
 # --no-build needs), and everything below is local-machine-only (a schema warning

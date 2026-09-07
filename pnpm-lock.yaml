@@ -60,8 +60,8 @@ importers:
         specifier: ^6.0.0
         version: 6.0.0
       bip-kit:
-        specifier: ^0.2.0
-        version: 0.2.0(katex@0.16.47)(mermaid@11.17.2)(react@19.2.8)(shiki@3.23.0)
+        specifier: ^0.2.1
+        version: 0.2.1(katex@0.16.47)(mermaid@11.17.2)(react@19.2.8)(shiki@3.23.0)
       bs58check:
         specifier: ^4.0.0
         version: 4.0.0
@@ -2280,8 +2280,8 @@ packages:
     resolution: {integrity: sha512-RbOBxmLBG8uvFUc15X9+9SFemKcQ0WBuISBVkpuiaUB2qblC8UWlHEjdWVoZ8AdhSwmoEgsiXKfopX0CQxaACQ==}
     engines: {node: '>=22'}
 
-  bip-kit@0.2.0:
-    resolution: {integrity: sha512-01Br3gHdKwG+tFN/fnA2dfgEJZ9i+SlTT1tQJtdnDIEOi0Z/R1khlzvwStHmDBFBYWZQLgVkgqCAQvz2RFASOw==}
+  bip-kit@0.2.1:
+    resolution: {integrity: sha512-vXl/u6gB68U4DN/EBB2DFYJStKBgP+364U+FTyUYmz8MMrGe0JBE8BfDb7yhkAO0ajXjLkP7ZP0b5laHCN3n6Q==}
     engines: {node: '>=20'}
     peerDependencies:
       katex: '>=0.16'
@@ -6792,7 +6792,7 @@ snapshots:
     dependencies:
       node-addon-api: 8.9.0
 
-  bip-kit@0.2.0(katex@0.16.47)(mermaid@11.17.2)(react@19.2.8)(shiki@3.23.0):
+  bip-kit@0.2.1(katex@0.16.47)(mermaid@11.17.2)(react@19.2.8)(shiki@3.23.0):
     dependencies:
       react: 19.2.8
     optionalDependencies:
