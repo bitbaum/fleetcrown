@@ -81,11 +81,6 @@ const BASELINE: Record<string, string> = {
     "Nothing asks whether any paid tier actually has an OrangeCat BTC checkout URL configured " +
     "before offering it, so a missing ORANGECAT_PAY_URL_* surfaces to the user as a dead " +
     "upgrade path rather than a hidden one.",
-  mailtoHref:
-    "People's reach row renders labels and raw values: reachChannels() returns {label, value} " +
-    "and builds no hrefs at all, so nothing in the UI is clickable. This is the email half of " +
-    "the href family that never got wired (whatsappHref, its sibling, escapes this check only " +
-    "because scripts/test/people-reach.ts imports it).",
 };
 
 /**
