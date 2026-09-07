@@ -70,12 +70,6 @@ const BASELINE: Record<string, string> = {
   getUserProjectByOrangeCatProjectId:
     "The FC->OC reverse lookup has no caller, so an OrangeCat webhook that identifies a project " +
     "(not an operator) has no way to find which FleetCrown project owns it.",
-  isAllowedTelegramTarget:
-    "sendTelegramMessage's docblock says 'the caller is responsible for the self-only allowlist " +
-    "check BEFORE calling this' — and no caller performs it. What keeps the blast radius closed " +
-    "today is structural, not this guard: all eight call sites send to selfTelegramTarget(), so " +
-    "no attacker-chosen chat id is reachable. It must be wired the moment any flow lets a " +
-    "recipient be requested. Deleting it would remove the check that flow needs.",
 };
 
 /**
