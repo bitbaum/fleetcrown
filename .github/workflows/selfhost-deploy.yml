@@ -259,6 +259,28 @@ jobs:
 
       # Prod only ever receives code CI has verified. Exit 3 = this commit was
       # superseded by a newer push, whose own deploy will ship — skip quietly.
+      # Next keeps its compiler output in .next/cache. Deploys here run a full
+      # `npm run build` (deploy.sh) on the runner, and without this the build is
+      # COLD every single time — for every repo that calls this workflow.
+      #
+      # Measured 2026-09-07 across the fleet: nobody's deploy cached this, and
+      # only one repo's CI did. Deploy medians ran 2.9m (fleetcrown) to 12.7m
+      # (evig) against CI medians of 1.9m to 10.7m for the same commits, because
+      # the same compile happens twice from scratch.
+      #
+      # Scoped by app so two apps in one repo cannot evict each other, and keyed
+      # on the lockfile so a dependency change invalidates it. The bare
+      # restore-key is last on purpose: a stale cache is still far cheaper than
+      # no cache, and Next validates entries itself rather than trusting them.
+      - name: Cache Next.js build
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.app.outputs.app_dir }}/.next/cache
+          key: nextjs-${{ runner.os }}-${{ inputs.app }}-${{ hashFiles('**/package-lock.json', '**/pnpm-lock.yaml', '**/yarn.lock') }}-${{ github.sha }}
+          restore-keys: |
+            nextjs-${{ runner.os }}-${{ inputs.app }}-${{ hashFiles('**/package-lock.json', '**/pnpm-lock.yaml', '**/yarn.lock') }}-
+            nextjs-${{ runner.os }}-${{ inputs.app }}-
+
       - name: Wait for CI to pass on this commit
         id: gate
         env:
