@@ -57,3 +57,19 @@ jobs:
       rearm_workflows: "ci.yml"
       # The reconciler. Without this, merges land and never ship (see above).
       deploy_workflow: deploy.yml
+    secrets:
+      # GITHUB_TOKEN cannot merge a PR that touches .github/workflows, so every
+      # Dependabot `github_actions` bump stalls forever: the sweep tries, the
+      # merge API refuses, it logs "leaving for the next sweep", and repeats —
+      # while still exiting 0. ai-kit #11 sat green for nine days that way, and
+      # aoz-housing #122 for nine more.
+      #
+      # A PAT also makes the queue drain at CI speed rather than at the
+      # schedule's. A dispatch made with GITHUB_TOKEN emits no workflow_run, so
+      # after each merge nothing wakes the sweep for the next PR until the cron
+      # fires — and GitHub throttles that to roughly hourly whatever the cron
+      # says. A PAT-created dispatch does emit it.
+      #
+      # Undefined resolves to empty and the reusable workflow falls back to
+      # github.token, so this line is inert until the org secret exists.
+      token: ${{ secrets.FLEET_PAT }}
