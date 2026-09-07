@@ -55,19 +55,18 @@ const repoRoot = resolve(here, "../..");
  * one of these said.
  */
 const BASELINE: Record<string, string> = {
-  addOrgMember:
-    "Nothing adds a member to an org, so an org can only ever contain whoever created it. " +
-    "getOrgsByUserId reads a membership table that has one writer and no caller.",
   enqueueHostedAnalyzeCommand:
     "Hosted read-only analyze/plan/review cannot be requested. Only hosted DISPATCH is wired " +
     "(lib/inject-core.ts, lib/hosted-runner/dispatch.ts), so Phase 0 exists as a command type " +
     "the runner would handle and nothing can produce.",
   enqueueImport:
-    "The people-book import queue has no producer. Accept/discard of a vCard/CSV the user hands " +
-    "over is the documented flow in config/book.ts, and no surface can start one.",
-  getProjectDefinitionOfDone:
-    "The autopilot stop-gate bar is stored and never read, so definition_of_done gates nothing — " +
-    "a project can set one and autopilot will stop on the same conditions either way.",
+    "Importing works, but not the way config/book.ts describes it. That file calls import " +
+    "'accept/discard of a file the user handed us', and this is the half that builds the " +
+    "accept/discard drafts: it matches each contact against the book and proposes an " +
+    "IMPORT_PERSON action for the ones it cannot place. execute-action.ts still HANDLES that " +
+    "action type, so the reviewing half is live with nothing feeding it — /api/people/import " +
+    "and the OpenClaw sync both call applyImportedBook and write contacts straight in. Whether " +
+    "review was dropped deliberately or never wired is a product call, not a deletion.",
   getUserProjectByOrangeCatProjectId:
     "The FC->OC reverse lookup has no caller, so an OrangeCat webhook that identifies a project " +
     "(not an operator) has no way to find which FleetCrown project owns it.",
@@ -77,10 +76,6 @@ const BASELINE: Record<string, string> = {
     "today is structural, not this guard: all eight call sites send to selfTelegramTarget(), so " +
     "no attacker-chosen chat id is reachable. It must be wired the moment any flow lets a " +
     "recipient be requested. Deleting it would remove the check that flow needs.",
-  isOrangeCatPayReady:
-    "Nothing asks whether any paid tier actually has an OrangeCat BTC checkout URL configured " +
-    "before offering it, so a missing ORANGECAT_PAY_URL_* surfaces to the user as a dead " +
-    "upgrade path rather than a hidden one.",
 };
 
 /**
@@ -196,23 +191,55 @@ const EXPORT_RE =
  */
 const allDead: Array<{ name: string; file: string }> = [];
 const overExported: Array<{ name: string; file: string }> = [];
+/**
+ * Per file, the exports that ARE used elsewhere — printed beside every finding.
+ *
+ * This exists because of a specific mistake, made three times in one sitting
+ * while writing the BASELINE below. Each reason claimed a feature was
+ * impossible ("nothing adds a member to an org", "the DoD bar is never read",
+ * "no dead upgrade path is detected") and each was FALSE: a live sibling in the
+ * same file already did the job — getProjectGoalConfig returned the DoD, the
+ * invite flow inserted the membership, /pricing gated per plan. The dead export
+ * was redundant, not evidence of a gap.
+ *
+ * "This symbol is unreferenced" and "this capability is missing" are different
+ * claims, and the first does not imply the second. Showing the live neighbours
+ * puts the refutation next to the finding, where it gets read.
+ */
+const liveSiblings = new Map<string, string[]>();
 for (const dir of WATCHED) {
   for (const file of walk(join(repoRoot, dir))) {
     if (!/\.tsx?$/.test(file)) continue;
     const src = readFileSync(file, "utf8");
+    const rel = relative(repoRoot, file);
     for (const m of src.matchAll(EXPORT_RE)) {
       const name = m[1];
       const seen = mentions.get(name);
       const elsewhere = seen ? [...seen].filter((f) => f !== file) : [];
-      if (elsewhere.length > 0) continue;
+      if (elsewhere.length > 0) {
+        const list = liveSiblings.get(rel) ?? [];
+        list.push(name);
+        liveSiblings.set(rel, list);
+        continue;
+      }
       // More than one occurrence in its own file means the definition plus at
       // least one use.
       const ownFileUses = (src.match(new RegExp(`\\b${name}\\b`, "g")) ?? []).length;
-      const entry = { name, file: relative(repoRoot, file) };
+      const entry = { name, file: rel };
       if (ownFileUses > 1) overExported.push(entry);
       else allDead.push(entry);
     }
   }
+}
+
+/** "also here, and used: a, b, c" — or a note that nothing in the file is. */
+function siblingNote(file: string): string {
+  const live = liveSiblings.get(file) ?? [];
+  if (live.length === 0)
+    return "      no export in this file is used anywhere — check the FILE, not the symbol.";
+  const shown = live.slice(0, 6).join(", ");
+  const more = live.length > 6 ? `, +${live.length - 6} more` : "";
+  return `      live in the same file: ${shown}${more}  <- does one already do this job?`;
 }
 
 const intentional = new Set(Object.keys(INTENTIONALLY_UNREFERENCED));
@@ -233,6 +260,7 @@ ok(added.length === 0, `no NEW dead exports (found ${added.length})`);
 for (const d of added) {
   console.error(`      ${d.name}  —  ${d.file}`);
   console.error(`      nothing in the repo references it. Delete it, or wire it up.`);
+  console.error(siblingNote(d.file));
 }
 
 // 2. The baseline may not rot: an entry that is no longer dead must be removed
@@ -249,7 +277,10 @@ console.log(
 console.log(`over-exported (used in-file only, value is live): ${overExported.length}`);
 if (added.length === 0 && revived.length === 0 && dead.length > 0) {
   console.log("recorded debt, worth working down:");
-  for (const d of dead) console.log(`  ${d.name}  ${d.file}`);
+  for (const d of dead) {
+    console.log(`  ${d.name}  ${d.file}`);
+    console.log(siblingNote(d.file).replace(/^ {6}/, "    "));
+  }
 }
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);
