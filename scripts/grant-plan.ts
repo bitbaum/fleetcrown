@@ -3,9 +3,11 @@
  *
  * Until the OC→FC payment webhook exists (Phase 1), a FleetCrown tier bought in
  * Bitcoin through OrangeCat is granted by hand with this: confirm the BTC payment
- * settled on the OC side, then run this to flip `users.plan` — the SAME write the
- * Stripe webhook does (updateUserBilling), so the entitlement is identical
- * regardless of rail. Records the grant in debug_logs for an audit trail.
+ * settled on the OC side, then run this to flip `users.plan` — the SAME write
+ * (updateUserBilling) that /api/orangecat/entitlement performs, so a hand grant
+ * and an automated one are indistinguishable downstream. (This used to say "the
+ * same write the Stripe webhook does"; that rail was removed in #508.) Records
+ * the grant in debug_logs for an audit trail.
  *
  *   npx tsx scripts/grant-plan.ts <userId> <free|personal|pro|team> "<reason/oc-payment-ref>"
  *

@@ -52,14 +52,18 @@ prompts.
 `(userId, projectKey, adapter, intent, time-proximity)`, which is lossy under
 concurrency — and concurrency is our normal operating state.
 
-It is **not** a pure schema change. At `src/app/api/orchestration/run/route.ts:270`
+It is **not** a pure schema change. In `src/app/api/orchestration/run/route.ts`
 the prompt is logged *before* the `orchestration_runs` row is created, and the
 insert is fire-and-forget (`.catch(...)`, not awaited), so its id is not
-available to the run. There are three write sites:
+available to the run. There are **four** call sites of `insertPromptHistory`
+(this list said three and named line numbers; the numbers had all drifted and
+`tab-inject` was missing, so following it would have left one dispatch path
+unlinked — grep the symbol, do not trust the list):
 
-- `src/lib/inject-core.ts:452`
-- `src/app/api/orchestration/run/route.ts:270` (not awaited)
-- `src/app/api/activity/capture/route.ts:80` (awaited)
+- `src/lib/inject-core.ts` (not awaited)
+- `src/app/api/orchestration/run/route.ts` (not awaited)
+- `src/app/api/control/tab-inject/route.ts` (not awaited)
+- `src/app/api/activity/capture/route.ts` (awaited)
 
 Phase 0 is therefore "one column **plus** make the dispatch write an ordered,
 linked pair." Small, but not zero. Sizing it honestly is the difference between
@@ -203,7 +207,8 @@ was wrong). No phase depends on a later phase being built.
   `close_session`) legitimately produce no run.
 - Reorder `src/app/api/orchestration/run/route.ts` so the run row is created
   first, then the prompt is logged against it. Await the insert.
-- Do the same at `src/lib/inject-core.ts:452`. Leave
+- Do the same at `src/lib/inject-core.ts` and
+  `src/app/api/control/tab-inject/route.ts`. Leave
   `api/activity/capture/route.ts` unlinked if no run exists for it.
 - Generate the migration with `pnpm run db:generate` (do not hand-write SQL —
   the deploy schema-drift guard compares against Drizzle).

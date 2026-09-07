@@ -2,8 +2,8 @@
 
 ---
 created_date: 2026-07-04
-last_modified_date: 2026-07-08
-last_modified_summary: Added public /pricing page (Stripe-aware CTAs, gated until keys land); registered in smoke.sh.
+last_modified_date: 2026-09-07
+last_modified_summary: Billing section rewritten after the Stripe rail was removed (#508) — CH01-CH04 retired, /pricing CTA behaviour restated against the OrangeCat BTC rail.
 ---
 
 SSOT for **every user-facing flow implied by the UI**, with a working-status grade per flow. Use this for QA planning, onboarding honesty, and prioritising fixes.
@@ -48,7 +48,7 @@ SSOT for **every user-facing flow implied by the UI**, with a working-status gra
 | Grade | Meaning | “Works 100%” for the user? |
 |-------|---------|----------------------------|
 | **A** | UI + API + persistence complete in production with DB + auth only | Yes |
-| **B** | Wired correctly; needs an external runtime (builder, OpenClaw/Loki gateway, Groq, local CLIs, Stripe, GitHub OAuth, OrangeCat OIDC, etc.) | No — queues, degrades, or blocks until dep is up |
+| **B** | Wired correctly; needs an external runtime (builder, OpenClaw/Loki gateway, Groq, local CLIs, GitHub OAuth, OrangeCat OIDC, etc.) | No — queues, degrades, or blocks until dep is up |
 | **C** | Partial — known gap, misleading surface, or graceful degradation | No |
 | **D** | Stub, redirect-only, or explicit roadmap — UI oversells capability | No |
 
@@ -89,7 +89,7 @@ Report written to `.tmp/authenticated-smoke-report.json`.
 | Private-zone APIs (`/api/goals`, `people`, `habits`, `events`) | **200** with PIN | CRUD flows **A** when unlocked |
 | Private-zone APIs without PIN | **403** | Expected gate — not broken |
 | `/api/workspaces` | **403** (hosted gate) | Workspace flow stays **C** |
-| `/api/stripe/portal` | **503** (Stripe not configured) | Billing stays **B** |
+| `/api/stripe/portal` | **404** — route deleted with the rail (#508) | Billing is the OrangeCat BTC rail; see `docs/oc-rail-monetization-scope.md` |
 | `/api/calendar`, `/api/weather`, `/api/github` | **200** on prod | Today tool cards **A** for read |
 | Dynamic `/api/projects/<id>`, `/api/people/<id>`, OC publish GET | 200 | Drawer/dossier load **A** |
 
@@ -162,7 +162,7 @@ FLEETCROWN_SESSION_TOKEN=… BASE=https://fleetcrown.orangecat.ch pnpm run smoke
 - [~] **A15** First-time setup `/setup` — **C** (no email on user)
 - [~] **A16** `/` → `/setup` when 0 users — **C**
 - [x] **A17** Public marketing pages — **A**
-- [x] **A17b** Pricing `/pricing` — **A** public page; CTAs start free (Stripe checkout when `isStripeReady()`)
+- [x] **A17b** Pricing `/pricing` — **A** public page; each plan's CTA resolves at render time (free sign-up, or the `ORANGECAT_PAY_URL_*` BTC link where one is set)
 - [x] **A18** Download Fleet Runner — **A**
 - [x] **A19** Legal / docs / releases — **A**
 - [x] **A20** Frontier public digest — **A** read
@@ -418,16 +418,20 @@ FLEETCROWN_SESSION_TOKEN=… BASE=https://fleetcrown.orangecat.ch pnpm run smoke
 - [x] **ST12** Fleet lifecycle / beacon — **A** smoke PUT/PATCH
 - [x] **ST13** Projects registry — **A**
 - [x] **ST14** Team invite create — **A** page
-- [~] **ST15** Billing / Stripe — **B** (503 portal on prod)
+- [~] **ST15** Billing — **B**: no self-serve checkout. The Stripe rail was removed (#508); a paid tier is a static `ORANGECAT_PAY_URL_*` link plus a manual `scripts/grant-plan.ts` grant.
 
 ---
 
 ## 12. Checkout (API-only)
 
-- [~] **CH01** `GET /api/checkout/:plan` — **B**
-- [~] **CH02** `POST /api/stripe/checkout` — **B**
-- [~] **CH03** Billing portal — **B** smoke 503
-- [~] **CH04** Webhook subscription sync — **B** smoke rejects invalid webhook signature (503 when Stripe off on prod)
+CH01–CH04 covered the Stripe rail, which was removed in #508 (2026-09-06) —
+`/api/checkout/:plan`, `/api/stripe/checkout`, `/api/stripe/portal` and
+`/api/stripe/webhook` are all deleted, so those checks no longer address
+anything. There is no self-serve checkout to audit: a paid tier is a static
+`ORANGECAT_PAY_URL_*` link off `/pricing`, entitlement is one
+`updateUserBilling` write from `/api/orangecat/entitlement` or a manual
+`scripts/grant-plan.ts` run.
+
 - [x] **CH05** Plan limits on project count — **A** enforcement
 
 ---
@@ -482,12 +486,12 @@ or report notes in `.tmp/` only.
 4. Disconnect only a non-primary OAuth account; do not remove the last sign-in method.
 5. Reconnect and confirm sign-in still works in a clean browser profile.
 
-### CH04 Stripe Webhook Subscription Sync
+### CH04 Stripe Webhook Subscription Sync — RETIRED
 
-1. In Stripe test mode, send a signed `checkout.session.completed` or subscription lifecycle event to the prod webhook endpoint.
-2. Confirm the webhook returns 2xx and the subscription state changes in `/money` or the relevant account billing view.
-3. Replay the same event and confirm idempotency: no duplicate subscription row or duplicated activity.
-4. Send one event with an invalid signature and confirm it is rejected.
+The webhook endpoint was deleted with the rail (#508, 2026-09-06). The
+equivalent path to exercise is `/api/orangecat/entitlement`, whose own
+signature-verification and idempotency behaviour is covered by
+`scripts/test/orangecat-entitlement-e2e.ts`.
 
 ### M04 External Verify / Cancel URLs
 
@@ -502,7 +506,7 @@ or report notes in `.tmp/` only.
 |--------|-------|-------|
 | `[x]` Smoke-verified | ~151 | + ME02 RAG chunks on prod |
 | `[~]` Partial / needs runtime | ~95 | M04/ST02/CH04 partial; X05/X07 when builder |
-| `[ ]` Not E2E verified | ~0 | Manual runbooks remain for full OAuth / Stripe live / external click-through |
+| `[ ]` Not E2E verified | ~0 | Manual runbooks remain for full OAuth / external click-through |
 | **Total checklist items** | **~250** | Sections 0–15 |
 
 **Full implied outcome on hosted prod** (grade **A** end-to-end): still **~40%** — smoke proves shells and read APIs; execution and many mutations are unchecked.
