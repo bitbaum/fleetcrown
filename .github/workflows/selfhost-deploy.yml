@@ -273,7 +273,7 @@ jobs:
       # restore-key is last on purpose: a stale cache is still far cheaper than
       # no cache, and Next validates entries itself rather than trusting them.
       - name: Cache Next.js build
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ${{ steps.app.outputs.app_dir }}/.next/cache
           key: nextjs-${{ runner.os }}-${{ inputs.app }}-${{ hashFiles('**/package-lock.json', '**/pnpm-lock.yaml', '**/yarn.lock') }}-${{ github.sha }}
