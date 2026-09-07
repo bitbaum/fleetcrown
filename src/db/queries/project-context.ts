@@ -133,14 +133,6 @@ export async function getProjectContext(
   return blocks.join("\n\n");
 }
 
-/** A project's definition_of_done (the autopilot stop-gate bar), or null. */
-export async function getProjectDefinitionOfDone(
-  userId: string,
-  projectKey: string,
-): Promise<string | null> {
-  return (await getProjectGoalConfig(userId, projectKey)).definitionOfDone;
-}
-
 /**
  * The goal config that drives the DoD stop-gate for a project: the bar itself
  * (`definition_of_done`) plus the turn cap (`goal_max_turns`) that bounds how

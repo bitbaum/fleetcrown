@@ -48,20 +48,6 @@ export async function getOrgsByUserId(userId: string) {
     .where(eq(orgMemberships.userId, userId));
 }
 
-export async function addOrgMember(
-  orgId: string,
-  userId: string,
-  role: "admin" | "member" = "member",
-) {
-  await db
-    .insert(orgMemberships)
-    .values({ orgId, userId, role })
-    .onConflictDoUpdate({
-      target: [orgMemberships.orgId, orgMemberships.userId],
-      set: { role },
-    });
-}
-
 export async function getOwnerOrgId(userId: string): Promise<string | null> {
   const [row] = await db
     .select({ id: orgs.id })

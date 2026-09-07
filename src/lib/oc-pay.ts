@@ -17,8 +17,3 @@ export function orangeCatPayUrl(plan: Plan): string | null {
   const url = byPlan[plan]?.trim();
   return url ? url : null;
 }
-
-/** True when at least one paid tier has an OrangeCat BTC checkout configured. */
-export function isOrangeCatPayReady(): boolean {
-  return (["personal", "pro", "team"] as Plan[]).some((p) => orangeCatPayUrl(p) !== null);
-}
