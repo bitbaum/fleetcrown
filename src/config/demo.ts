@@ -129,7 +129,7 @@ export const DEMO_DENIED_PREFIXES: ReadonlyArray<readonly [string, DemoDenialRea
   ["/api/push", "outbound"],
 
   // — money ——————————————————————————————————————————————————————————
-  ["/api/checkout", "billing"],
+  // /api/checkout lived here until #508 deleted the Stripe rail with it.
   ["/api/subscriptions", "billing"],
 
   // — identity and tenancy ———————————————————————————————————————————

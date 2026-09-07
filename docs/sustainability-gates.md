@@ -58,13 +58,22 @@ endpoints (OrangeCat already ships exactly this shape — the 10/day pattern in 
 
 **Threshold:** the first Team-plan customer with more than ~2 seats.
 
-**Why:** Team is a flat CHF 90/mo tier; Stripe checkout is `quantity: 1`
-hardcoded (`src/app/api/stripe/checkout/route.ts`). A 10-person studio pays the
-same CHF 90 as a 2-person one while consuming ~5× the Groq/email/support cost.
-The whitepaper's "up to 10 people" is not enforced anywhere.
+**Why:** Team is a flat CHF 90/mo tier, and nothing reads a seat count. A
+10-person studio pays the same CHF 90 as a 2-person one while consuming ~5× the
+Groq/email/support cost. The whitepaper's "up to 10 people" is not enforced
+anywhere.
 
-**Machinery that must exist first:** either enforce a seat cap or wire per-seat
-pricing (seat count → `quantity`). Pick one before selling Team to a real studio.
+The gate *hardened* when the Stripe rail was removed (#508, 2026-09-06). It used
+to name a fixable line — checkout was `quantity: 1` hardcoded in
+`src/app/api/stripe/checkout/route.ts`. That route is gone, and the OrangeCat BTC
+rail that replaced it is a static per-plan payment URL
+(`ORANGECAT_PAY_URL_TEAM`), which carries no quantity concept at all. There is
+now no seat number anywhere in the purchase path to correct.
+
+**Machinery that must exist first:** either enforce a seat cap in the app, or
+give the Team tier a per-seat purchase path. The BTC rail cannot express seats
+on its own, so this is a build, not a config change. Pick one before selling
+Team to a real studio.
 
 ## The honest holes this does not fix
 

@@ -11,9 +11,9 @@
 
 **FleetCrown**
 - Plans `free/personal/pro/team` (`src/config/plans.ts`); the *only* enforced gate is the **project limit** (`src/lib/plan.ts` `PLAN_LIMITS.projects`). Everything else a single builder does is on every tier.
-- Entitlement is one write: `updateUserBilling(userId, { plan, planStatus })` → `users.plan` / `users.planStatus` (`src/db/queries/users.ts`). The Stripe webhook already calls exactly this — an OC signal calls the same thing.
-- Bridge: OIDC scope already includes **`wallet.read`** + `project.*` + `timeline.write` (`src/auth.ts:234`); FC holds a per-user OC access token (refresh-rotated) and already calls `${OC_BASE}/api/v1/*` with it.
-- `/pricing` already routes CTAs *away from checkout* when `isStripeReady()===false` — a ready-made seam for a "Pay in Bitcoin" CTA.
+- Entitlement is one write: `updateUserBilling(userId, { plan, planStatus })` → `users.plan` / `users.planStatus` (`src/db/queries/users.ts`). The Stripe webhook used to call exactly this; the rail was removed in #508 (2026-09-06) and `/api/orangecat/entitlement` now performs the same write (the manual `scripts/grant-plan.ts` is the other caller), so the seam this scope depends on is intact.
+- Bridge: OIDC scope already includes **`wallet.read`** + `project.*` + `timeline.write` (the `scope:` string on the OrangeCat provider in `src/auth.ts`); FC holds a per-user OC access token (refresh-rotated) and already calls `${OC_BASE}/api/v1/*` with it.
+- `/pricing` resolves each plan's CTA at render time (`src/app/pricing/page.tsx`). The `isStripeReady()` branch this scope planned to reuse is gone with the rail (#508); what is left is the BTC path itself, gated on `ORANGECAT_PAY_URL_*` — the "Pay in Bitcoin" CTA is the default case now, not an alternative to add.
 
 **OrangeCat**
 - **Cat Credits** (`src/services/cat/credits.ts`, `credit-topup.ts`): a working BTC-topup ledger — user pays a Lightning invoice from OC's platform NWC wallet, settlement is polled via `lookupInvoice`, a `topup` entry is appended (idempotent via `unique(kind, ref=payment_hash)`), balance in BTC. This is the proven "pay BTC → credit an account" machine.

@@ -141,6 +141,25 @@ for (const family of DEMO_SAFE_FAMILIES) {
   );
 }
 
+// The same reverse check the SAFE list already had, for the DENIED lists — which
+// is the half that was missing. `/api/checkout` sat under the "money" heading
+// long after #508 deleted the route, so the policy read as covering a billing
+// endpoint that no longer existed. A deny rule for a route on no disk is the
+// same dead reassurance as a stale safe entry, and it is worse in one way: it
+// makes the money section look staffed.
+for (const [prefix] of [
+  ...DEMO_DENIED_PREFIXES,
+  ...DEMO_DENIED_GET_PREFIXES,
+  ...DEMO_HANDLER_ENFORCED,
+]) {
+  const family = prefix.split("/")[2];
+  ok(
+    families.includes(family),
+    `a demo deny rule names "${prefix}" but src/app/api/${family} does not exist — ` +
+      `delete the entry (the route is gone) or restore the route.`,
+  );
+}
+
 // ── 4. The matcher itself: longest prefix wins, carve-outs beat parents ──────
 ok(
   demoDenialFor("/api/control/dispatch", "POST") === "dispatch",
