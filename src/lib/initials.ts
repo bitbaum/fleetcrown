@@ -4,7 +4,7 @@
  * contexts — neither marks itself "use client" / "use server" since the
  * function is universal.
  *
- * "Mao Nakamoto" → "MN"
+ * "Ada Lovelace" → "AL"
  * "Mao"          → "MA"  (first two letters of a single word)
  * ""             → "?"
  */

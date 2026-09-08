@@ -16,7 +16,7 @@ export default function LicensePage() {
         <section className="space-y-4 mb-10">
           <h2 className="ui-public-prose-h2">Plain English</h2>
           <p>
-            FleetCrown is a personal project by Mao Nakamoto, source-available on GitHub. You can
+            FleetCrown is a personal project by Cato, source-available on GitHub. You can
             read the code, run it locally, and use the hosted product for free for personal and
             small-team work. Commercial redistribution, repackaging, or running it as a competing
             hosted service requires a separate agreement.
@@ -92,7 +92,7 @@ export default function LicensePage() {
             >
               github.com/bitbaum/fleetcrown/issues
             </a>{" "}
-            or email Mao Nakamoto via the address on the GitHub profile.
+            or email Cato via the address on the GitHub profile.
           </p>
         </section>
 
