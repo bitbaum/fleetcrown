@@ -51,7 +51,7 @@ box. Hosted accounts are kept frozen for 14 days as a fallback, then deleted
 | petvity-app              | 4013 | petvity.orangecat.ch            | petvity               |
 | botsmann-app             | 4014 | botsmann.orangecat.ch (*)       | self-hosted Supabase  |
 | printcraft-app           | 4015 | printcraft.orangecat.ch         | Supabase, `printcraft` schema |
-| sbb-lost-found-app       | 4016 | sbb.orangecat.ch                | — (demo frontend)     |
+| sbb-fundbuero-app        | 4016 | sbbfundbuero.orangecat.ch       | — (demo frontend)     |
 | reparaturbonus-zh-app    | 4017 | reparaturbonus.orangecat.ch     | reparaturbonus        |
 | Supabase stack (docker)  | 8000 | supabase.orangecat.ch           | own PG15 container    |
 | Postgres 17 (host)       | 5432 | —                               | all app DBs           |
@@ -151,7 +151,7 @@ first resolvable request.
 - **botsmann.com** domain has no NS records (lapsed?). App serves on
   botsmann.orangecat.ch meanwhile. botsmann's MongoDB Atlas dependency is
   retired per owner — Mongo-backed features are dead code.
-- **sbb-lost-found**: only the demo frontend is deployed (its backend
+- **sbb-fundbuero**: only the demo frontend is deployed (its backend
   services were never deployed anywhere, incl. on Vercel).
 - **swiss-longevity-hub / slh.orangecat.ch**: retired 2026-06-28 — product
   renamed to surf-your-life; DB dropped, removed from `apps.conf`.

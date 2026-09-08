@@ -87,8 +87,8 @@ export const FLEET_SITES: readonly FleetSite[] = [
     blurb: "Transparentes Fundraising: Finanzen, Wirkung, Strategie.",
   },
   {
-    name: "Nordbahn Lost & Found",
-    url: "https://sbb.orangecat.ch",
+    name: "Nordbahn Fundbüro",
+    url: "https://sbbfundbuero.orangecat.ch",
     blurb: "Verlorene Gegenstände melden — Konzeptdemo.",
   },
   {
