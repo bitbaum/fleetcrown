@@ -64,6 +64,10 @@ export default async function OrangeCatBuildPage({
     return {
       id: project.id,
       name: project.name,
+      // Where this project lives in FleetCrown. Same id the API redirects to on
+      // confirm, so an already-connected project can be opened directly instead
+      // of spending the one-shot handoff token to arrive at the same page.
+      fleetcrownPath: `/projects/${project.entityProjectId ?? project.id}`,
       repoUrl: project.gitUrl,
       dirPath: project.dirPath,
       liveUrl: project.liveUrl,
