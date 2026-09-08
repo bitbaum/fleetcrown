@@ -29,7 +29,7 @@ const SITES: Record<string, string> = {
   "reparaturbonus-zh": "https://reparaturbonus.orangecat.ch",
   "revamp-info": "https://revamp-info.orangecat.ch",
   revampit: "https://revampit.orangecat.ch",
-  "sbb-lost-found": "https://sbb.orangecat.ch",
+  "sbb-fundbuero": "https://sbbfundbuero.orangecat.ch",
   solon: "https://solon.orangecat.ch",
   "surf-your-life": "https://surf-your-life.orangecat.ch",
   vitareba: "https://vitareba.orangecat.ch",
