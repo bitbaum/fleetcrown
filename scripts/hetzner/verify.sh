@@ -38,7 +38,12 @@ check orangecat orangecat.ch 4003
 check evig evig.orangecat.ch 4004
 
 # Manifest apps
-while IFS='|' read -r name port domains repo app_dir db; do
+# The trailing `rest` is load-bearing: bash assigns the remainder of the line to
+# the LAST variable, so without it $db reads "-|S-Ink|client-site|live|-|-|-" on
+# every row. Harmless only for as long as this loop keeps ignoring $db — which
+# is precisely the kind of latent trap app_lookup() in lib.sh already documents
+# having been bitten by. Named here rather than left for the next reader.
+while IFS='|' read -r name port domains repo app_dir db rest; do
   case "$name" in \#*|"") continue;; esac
   check "$name" "$domains" "$port"
 done < <(grep -v '^#' "$MANIFEST")
