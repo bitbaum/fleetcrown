@@ -17,18 +17,7 @@ for app in "${apps[@]}"; do
   app_lookup "$app"
   echo "=== sync $NAME (port $PORT) ==="
 
-  launch=$(cat <<EOF
-#!/usr/bin/env bash
-set -euo pipefail
-HERE="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
-if [ -f "\$HERE/.env" ]; then set -a; source "\$HERE/.env"; set +a; fi
-export NODE_ENV=production PORT=$PORT HOSTNAME=127.0.0.1
-SERVER_JS=\$(find "\$HERE" -maxdepth 4 -name server.js -not -path "*node_modules*" | head -1)
-if [ -n "\$SERVER_JS" ]; then exec /usr/bin/node "\$SERVER_JS"; fi
-# Non-Next services define their own entrypoint via START_CMD in .env
-exec bash -c "\${START_CMD:?no server.js found and START_CMD unset}"
-EOF
-)
+  launch=$(sed "s|__PORT__|$PORT|g" "$(dirname "${BASH_SOURCE[0]}")/launch.sh.tmpl")
 
   unit=$(cat <<EOF
 [Unit]

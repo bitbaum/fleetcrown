@@ -88,18 +88,20 @@ RELDIR="/opt/$NAME/releases/$REL"
 
 # One-time shared/ bootstrap: COPY (not move — the running service still uses
 # them) .env + launch.sh out of a legacy app dir. Idempotent.
+#
+# launch.sh is NOT patched here. It is generated from
+# scripts/hetzner/launch.sh.tmpl by sync-infra.sh, which is the single writer.
+# This used to sed `pwd` → `pwd -P` into the generated file after the fact,
+# which repaired the output while leaving the generator emitting the broken
+# version — so the bug came back the moment sync-infra ran without a deploy
+# behind it (sbb-fundbuero, 2026-09-08). A legacy copy above may still be
+# stale; `sync-infra.sh <app>` rewrites it from the template.
 box "set -e
   mkdir -p /opt/$NAME/releases /opt/$NAME/shared
   if [ -d /opt/$NAME/app ] && [ ! -L /opt/$NAME/app ]; then
     [ -f /opt/$NAME/shared/.env ]      || cp -p /opt/$NAME/app/.env /opt/$NAME/shared/.env 2>/dev/null || true
     [ -f /opt/$NAME/shared/launch.sh ] || cp -p /opt/$NAME/app/launch.sh /opt/$NAME/shared/launch.sh 2>/dev/null || true
-  fi
-  # launch.sh must resolve its dir PHYSICALLY: /opt/<name>/app is a symlink in
-  # the releases layout, and its server.js search does not descend a logical
-  # symlink path — vitareba crash-looped on the first release-deploy until
-  # pwd -P (2026-07-17). NB: no backticks in this box \"...\" string — they run
-  # as command substitution on the box (that is what emitted find\\: not found).
-  [ -f /opt/$NAME/shared/launch.sh ] && sed -i 's|&& pwd)\"|\&\& pwd -P)\"|' /opt/$NAME/shared/launch.sh"
+  fi"
 
 if [ "$FORCE_ENV" = "--env" ] || ! box "test -f /opt/$NAME/shared/.env"; then
   [ -f "$SRC/.env.selfhost.local" ] || { echo "ERROR: $SRC/.env.selfhost.local missing"; exit 1; }
