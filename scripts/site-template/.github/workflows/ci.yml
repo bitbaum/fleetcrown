@@ -41,6 +41,30 @@ jobs:
       # that drifts from it is exactly how a dependency silently disappears.
       - run: npm ci
 
+      # Next keeps its compiler output in .next/cache, and this job BUILDS. With
+      # nothing restoring it, every run of every scaffolded site recompiles from
+      # scratch — and the deploy then compiles a second time.
+      #
+      # This file is the third copy of the golden CI floor. The other two live in
+      # fleet/templates/ci/, and they gained this step on 2026-09-07 when a fleet
+      # sweep found 14 of 32 repos building cold. This one is the copy the
+      # scaffold ACTUALLY uses, so it was the one that mattered and the one that
+      # was missed — every site created between then and now started cold by
+      # construction. Held fleet-wide by fleet's cicd-hygiene-audit.sh, but that
+      # ratchet can only flag a repo after it exists; a template fixes it before.
+      #
+      # Keyed on the lockfile so a dependency change invalidates it. The bare
+      # restore-key is last on purpose: a stale cache still beats no cache, and
+      # Next validates its own entries rather than trusting them.
+      - name: Cache Next.js build
+        uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
+          restore-keys: |
+            nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+            nextjs-${{ runner.os }}-
+
       - name: Type check
         run: npm run type-check
 
