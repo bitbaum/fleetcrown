@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Generated onto the box by sync-infra.sh. __PORT__ is substituted per app.
+# This template is the ONE definition of the launch script — do not paste a
+# second copy into deploy.sh or patch the generated file after the fact.
+set -euo pipefail
+# `pwd -P`, not `pwd`: /opt/<name>/app is a SYMLINK into releases/, and find(1)
+# does not descend a logical symlink path. With a plain `pwd` the server.js
+# search below returns nothing and the app crash-loops on every deploy.
+#
+# This has now cost two outages. vitareba hit it on its first release-deploy
+# (2026-07-17) and the fix was applied to deploy.sh — which sed-patched the
+# already-generated file — instead of to the generator that keeps emitting the
+# broken version. sbb-fundbuero hit the identical failure on 2026-09-08 the
+# moment sync-infra.sh ran without a subsequent deploy. Fixing the output of a
+# generator does not fix the generator.
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+if [ -f "$HERE/.env" ]; then set -a; source "$HERE/.env"; set +a; fi
+export NODE_ENV=production PORT=__PORT__ HOSTNAME=127.0.0.1
+SERVER_JS=$(find "$HERE" -maxdepth 4 -name server.js -not -path "*node_modules*" | head -1)
+if [ -n "$SERVER_JS" ]; then exec /usr/bin/node "$SERVER_JS"; fi
+# Non-Next services define their own entrypoint via START_CMD in .env
+exec bash -c "${START_CMD:?no server.js found and START_CMD unset}"
