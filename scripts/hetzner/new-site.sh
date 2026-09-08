@@ -3,7 +3,12 @@
 # Spin up a new site: repo → register → box → deploy. One command.
 #
 #   new-site.sh <slug> [--title "Name"] [--owner X] [--kind K] [--status S]
+#               [--plan P] [--price N]
 #               [--private] [--no-deploy] [--dry-run]
+#
+# --plan/--price are REQUIRED when --kind is client-app/client-site and --status
+# is live: the register's terms columns exist to answer "what am I owed this
+# month", and a live engagement that leaves them '-' is the case they exist for.
 #
 # PUBLIC BY DEFAULT, because that is how this studio actually works: 37 of 41
 # repos are public. It is also what makes organisation secrets usable — GitHub
@@ -52,6 +57,10 @@ source "$HERE/lib.sh"
 SECRET_OK=0
 SLUG=""; TITLE=""; OWNER="bitbaum"; KIND="client-site"; STATUS="prospect"
 VISIBILITY="--public"; DEPLOY=1; DRY=0
+# '-' is the register's word for NOT KNOWN, and it is the honest default for a
+# prospect. It stops being honest the moment --status live is passed for client
+# work; see the refusal below.
+PLAN="-"; PRICE="-"
 # DEV_ROOT, GH_OWNER and SITES_BASE_DOMAIN come from _box-env.sh via lib.sh —
 # the studio's env SSOT. Do not redeclare them here; a second copy is how a
 # rename becomes a hunt.
@@ -63,6 +72,8 @@ while [ $# -gt 0 ]; do
     --owner)  OWNER="$2"; shift 2 ;;
     --kind)   KIND="$2"; shift 2 ;;
     --status) STATUS="$2"; shift 2 ;;
+    --plan)   PLAN="$2"; shift 2 ;;
+    --price)  PRICE="$2"; shift 2 ;;
     --private) VISIBILITY="--private"; shift ;;
     --no-deploy) DEPLOY=0; shift ;;
     --dry-run) DRY=1; shift ;;
@@ -74,6 +85,25 @@ done
 
 [ -n "$SLUG" ] || { echo "usage: new-site.sh <slug> [--title \"Name\"]" >&2; exit 2; }
 [ -n "$TITLE" ] || TITLE="$SLUG"
+
+# Refused HERE, before the repo, the box and the deploy — not by CI afterwards.
+# check-client-ledger.sh will reject this row anyway, but by then the site is
+# created, pushed and serving, and the only way out is a follow-up commit. The
+# question "what is this client paying" is answerable at the moment someone
+# types the command and at no cheaper moment ever again.
+case "$KIND" in
+  client-app|client-site)
+    if [ "$STATUS" = live ] && { [ "$PLAN" = "-" ] || [ "$PRICE" = "-" ]; }; then
+      echo "✗ --status live on $KIND needs --plan and --price." >&2
+      echo "  A live client engagement with unrecorded terms is work being done" >&2
+      echo "  for an amount nobody can state; scripts/ci/check-client-ledger.sh" >&2
+      echo "  would fail the PR that registers it." >&2
+      echo "  Not settled yet? Register it as --status prospect and flip it to" >&2
+      echo "  live with the terms once it is." >&2
+      exit 2
+    fi
+    ;;
+esac
 
 say() { printf '  %s\n' "$*"; }
 run() { if [ "$DRY" = 1 ]; then printf '  DRY  %s\n' "$*"; else eval "$@"; fi; }
@@ -181,7 +211,7 @@ fi
 
 # ------------------------------------------------------------------- register
 echo "→ register"
-LINE="$SLUG|$PORT|$SLUG.$BASE_DOMAIN|$REPO_DIR|.|-|$OWNER|$KIND|$STATUS|-|-|$(date -u +%Y-%m-%d)"
+LINE="$SLUG|$PORT|$SLUG.$BASE_DOMAIN|$REPO_DIR|.|-|$OWNER|$KIND|$STATUS|$PLAN|$PRICE|$(date -u +%Y-%m-%d)"
 if [ "$DRY" = 1 ]; then say "DRY  append: $LINE"; else
   printf '%s\n' "$LINE" >> "$MANIFEST"
   say "appended to $MANIFEST"
