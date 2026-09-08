@@ -7,7 +7,7 @@ import {
   userProjects,
 } from "@/db/schema";
 import { createUserProject, getUserProject } from "@/db/queries/user-projects";
-import { linkOrangeCatEntity } from "@/db/queries/orangecat-links";
+import { getOrangeCatLinksForProject, linkOrangeCatEntity } from "@/db/queries/orangecat-links";
 import { getSessionUserId } from "@/lib/session";
 import { getOrangeCatLink } from "@/lib/integrations/orangecat-identity";
 import { verifyOrangeCatBuildIntent } from "@/lib/integrations/orangecat-build-intent";
@@ -16,7 +16,11 @@ export async function POST(request: Request) {
   const userId = await getSessionUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = (await request.json()) as { token?: string; projectId?: string | null };
+  const body = (await request.json()) as {
+    token?: string;
+    projectId?: string | null;
+    replaceExistingOrigin?: boolean;
+  };
   if (!body.token || body.token.length > 20_000) {
     return NextResponse.json({ error: "Invalid build handoff" }, { status: 400 });
   }
@@ -73,6 +77,30 @@ export async function POST(request: Request) {
 
     if (!project) {
       throw new Error("Choose a FleetCrown project you own.");
+    }
+
+    // Linking an existing project used to overwrite `orangecat_project_id`
+    // unconditionally, silently repointing that project's OrangeCat origin —
+    // and the funding read path keyed off it — at whatever entity the handoff
+    // carried. Refuse unless the caller says explicitly that it is a replacement.
+    // Throwing (rather than returning) releases the one-shot intent reservation
+    // in the catch below, so the handoff link stays usable.
+    if (body.projectId && !body.replaceExistingOrigin) {
+      const existing = await getOrangeCatLinksForProject(userId, project.id);
+      const foreign = existing.find(
+        (row) => row.entityType === intent.entity.type && row.entityId !== intent.entity.id,
+      );
+      const foreignLegacy =
+        intent.entity.type === "project" &&
+        project.orangecatProjectId &&
+        project.orangecatProjectId !== intent.entity.id;
+      if (foreign || foreignLegacy) {
+        throw new Error(
+          `“${project.name}” already points at another OrangeCat entity${
+            foreign?.title ? ` (${foreign.title})` : ""
+          }. Confirm the replacement to repoint it.`,
+        );
+      }
     }
 
     await linkOrangeCatEntity({

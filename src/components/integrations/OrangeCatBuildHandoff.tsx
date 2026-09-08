@@ -1,12 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRight, Bot, ExternalLink } from "lucide-react";
+import { AlertTriangle, ArrowRight, Bot, ExternalLink } from "lucide-react";
 import type { OrangeCatBuildIntent } from "@/lib/integrations/orangecat-build-intent";
 
 interface ProjectOption {
   id: string;
   name: string;
+  repoUrl: string | null;
+  dirPath: string | null;
+  liveUrl: string | null;
+  /** Already the origin of a different OrangeCat entity — relinking repoints it. */
+  linkedTo: { title: string | null; publicUrl: string } | null;
+  /** Already linked to this same entity — confirming changes nothing. */
+  alreadyLinked: boolean;
 }
 
 export function OrangeCatBuildHandoff({
@@ -29,8 +36,14 @@ export function OrangeCatBuildHandoff({
   );
   const [mode, setMode] = useState<"new" | "existing">(exactMatch ? "existing" : "new");
   const [projectId, setProjectId] = useState(exactMatch?.id ?? projects[0]?.id ?? "");
+  const [replaceOrigin, setReplaceOrigin] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+
+  const selected = projects.find((project) => project.id === projectId) ?? null;
+  // Only blocks when the chosen project is the origin of a *different* entity;
+  // the server enforces the same rule, so a stale page cannot slip past it.
+  const needsReplaceAck = mode === "existing" && Boolean(selected?.linkedTo) && !replaceOrigin;
 
   async function confirm() {
     setSubmitting(true);
@@ -42,6 +55,7 @@ export function OrangeCatBuildHandoff({
         body: JSON.stringify({
           token,
           projectId: mode === "existing" ? projectId : null,
+          replaceExistingOrigin: mode === "existing" && replaceOrigin,
         }),
       });
       const body = (await response.json()) as { url?: string; error?: string };
@@ -96,6 +110,11 @@ export function OrangeCatBuildHandoff({
 
       <section className="rounded-2xl border border-border-subtle bg-surface-base p-6">
         <h2 className="text-lg font-semibold text-text-primary">Where should this live?</h2>
+        <p className="mt-2 text-sm text-text-secondary">
+          In a FleetCrown project — a workspace record, not a repository. A project may point at a
+          repo, a local checkout and a live site, and each option below shows which of those it
+          actually has.
+        </p>
         <div className="mt-5 space-y-3">
           <label className="flex cursor-pointer gap-3 rounded-xl border border-border-subtle p-4">
             <input
@@ -107,7 +126,8 @@ export function OrangeCatBuildHandoff({
             <span>
               <span className="block font-medium text-text-primary">Create a new project</span>
               <span className="mt-1 block text-sm text-text-secondary">
-                Prefill the title, brief, OrangeCat origin, and Loki plan.
+                Prefill the title, brief, OrangeCat origin, and Loki plan. No repo or local path is
+                attached — you set those later in Control.
               </span>
             </span>
           </label>
@@ -130,24 +150,54 @@ export function OrangeCatBuildHandoff({
                 </span>
                 <select
                   value={projectId}
-                  onChange={(event) => setProjectId(event.target.value)}
+                  onChange={(event) => {
+                    setProjectId(event.target.value);
+                    setReplaceOrigin(false);
+                  }}
                   disabled={mode !== "existing"}
                   className="ui-input mt-3 w-full"
                 >
                   {projects.map((project) => (
                     <option key={project.id} value={project.id}>
                       {project.name}
+                      {project.linkedTo ? " — linked elsewhere" : ""}
                     </option>
                   ))}
                 </select>
+                {mode === "existing" && selected && <ProjectProvenance project={selected} />}
               </span>
             </label>
           )}
         </div>
+        {mode === "existing" && selected?.linkedTo && (
+          <label className="ui-callout-warning mt-4 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={replaceOrigin}
+              onChange={(event) => setReplaceOrigin(event.target.checked)}
+              className="mt-1"
+            />
+            <span className="text-text-secondary">
+              <span className="flex items-center gap-1.5 font-medium text-text-primary">
+                <AlertTriangle className="h-4 w-4" aria-hidden />“{selected.name}” already points at{" "}
+                {selected.linkedTo.title ?? "another OrangeCat entity"}
+              </span>
+              <span className="mt-1 block">
+                Confirming repoints its OrangeCat origin — and the funding it reads — at{" "}
+                {intent.entity.title}. Tick to replace it.
+              </span>
+            </span>
+          </label>
+        )}
+        {mode === "existing" && selected?.alreadyLinked && (
+          <p className="mt-4 text-sm text-text-secondary">
+            “{selected.name}” is already linked to {intent.entity.title}. Confirming just opens it.
+          </p>
+        )}
         <button
           type="button"
           onClick={confirm}
-          disabled={submitting || (mode === "existing" && !projectId)}
+          disabled={submitting || (mode === "existing" && (!projectId || needsReplaceAck))}
           className="ui-btn-primary mt-6 w-full min-h-11 gap-2"
         >
           {submitting ? "Linking…" : "Confirm and open project"}
@@ -159,5 +209,36 @@ export function OrangeCatBuildHandoff({
         </p>
       </section>
     </div>
+  );
+}
+
+/**
+ * What the selected project actually is. Without this the picker is a list of
+ * bare names that read like repositories — the reader cannot tell a repo-backed
+ * project from a cloud-only record, which is the question the picker provokes.
+ */
+function ProjectProvenance({ project }: { project: ProjectOption }) {
+  const facts: { label: string; value: string }[] = [];
+  if (project.repoUrl) facts.push({ label: "Repo", value: project.repoUrl });
+  if (project.dirPath) facts.push({ label: "Local", value: project.dirPath });
+  if (project.liveUrl) facts.push({ label: "Site", value: project.liveUrl });
+
+  if (facts.length === 0) {
+    return (
+      <span className="mt-3 block text-xs text-text-muted">
+        No repo, no local checkout, no live site — a FleetCrown record only.
+      </span>
+    );
+  }
+
+  return (
+    <dl className="mt-3 space-y-1 text-xs text-text-muted">
+      {facts.map((fact) => (
+        <div key={fact.label} className="flex gap-2">
+          <dt className="w-12 shrink-0">{fact.label}</dt>
+          <dd className="min-w-0 truncate font-mono">{fact.value}</dd>
+        </div>
+      ))}
+    </dl>
   );
 }

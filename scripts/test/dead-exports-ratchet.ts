@@ -92,7 +92,17 @@ const WATCHED = ["src/db/queries", "src/config", "src/lib"];
 /** Everything that can legitimately reference a name. */
 const SEARCH_ROOTS = ["src", "scripts", "home", "desktop", "widget", ".github", "docs"];
 const SEARCH_EXT = /\.(ts|tsx|mjs|cjs|js|jsx|json|md|sh|yml|yaml)$/;
-const SKIP_DIR = new Set(["node_modules", ".next", ".git", "dist", "build", ".turbo"]);
+const SKIP_DIR = new Set(["node_modules", ".next", ".git", ".turbo"]);
+
+/**
+ * Compiled output, skipped so a build artifact cannot vouch for its own source
+ * (see the public/widget.js note below). Matched by PATH, not by name: `build`
+ * and `dist` are also ordinary words, and matching the bare name skipped
+ * `src/app/integrations/orangecat/build/` — a real App Router route segment.
+ * Every export whose only caller lived on that page therefore read as dead, so
+ * the check reported a lie about a page that ships.
+ */
+const SKIP_OUTPUT_PATH = /^(?:[^/]+\/)?(?:dist|build)$/;
 
 function walk(dir: string, out: string[] = []): string[] {
   let entries: string[];
@@ -104,6 +114,7 @@ function walk(dir: string, out: string[] = []): string[] {
   for (const entry of entries) {
     if (SKIP_DIR.has(entry)) continue;
     const full = join(dir, entry);
+    if (SKIP_OUTPUT_PATH.test(relative(repoRoot, full))) continue;
     let st;
     try {
       st = statSync(full);
@@ -158,6 +169,19 @@ function ok(cond: boolean, label: string) {
 }
 
 ok(files.length > 500, `indexed the repo (${files.length} files)`);
+
+// The skip list decides what counts as a caller, so a too-greedy entry makes
+// live exports read as dead. Assert against the INDEX, not just the pattern:
+// the first version of this check tested the regex alone and stayed green
+// while the call site still matched on the bare directory name.
+ok(
+  files.some((f) => /(?:^|\/)(?:build|dist)\//.test(relative(repoRoot, f))),
+  "indexes source under nested build/ and dist/ route segments",
+);
+ok(
+  SKIP_OUTPUT_PATH.test("dist") && SKIP_OUTPUT_PATH.test("desktop/dist"),
+  "still skips compiled output at a root",
+);
 
 /**
  * Exported VALUES only. `export type` / `export interface` are excluded: a type

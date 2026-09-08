@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { ROUTES } from "@/config/auth";
 import { getUserProjects } from "@/db/queries/user-projects";
+import { getOrangeCatLinksForUser } from "@/db/queries/orangecat-links";
 import { getOrangeCatLink } from "@/lib/integrations/orangecat-identity";
 import { verifyOrangeCatBuildIntent } from "@/lib/integrations/orangecat-build-intent";
 import { OrangeCatBuildHandoff } from "@/components/integrations/OrangeCatBuildHandoff";
@@ -47,15 +48,37 @@ export default async function OrangeCatBuildPage({
     );
   }
 
-  const projects = await getUserProjects(session.user.id);
+  const [projects, links] = await Promise.all([
+    getUserProjects(session.user.id),
+    getOrangeCatLinksForUser(session.user.id),
+  ]);
+
+  // A picker that shows only names cannot be reasoned about: every option reads
+  // like a repository, and none of them is one. A FleetCrown project is a
+  // workspace row that MAY carry a repo, a local checkout and a live site — so
+  // send those three facts down and let the reader see which a project has.
+  const linksOfThisType = links.filter((row) => row.entityType === intent.entity.type);
+  const options = projects.map((project) => {
+    const owned = linksOfThisType.filter((row) => row.projectId === project.id);
+    const foreign = owned.find((row) => row.entityId !== intent.entity.id);
+    return {
+      id: project.id,
+      name: project.name,
+      repoUrl: project.gitUrl,
+      dirPath: project.dirPath,
+      liveUrl: project.liveUrl,
+      // Already the origin of a DIFFERENT OrangeCat entity. Confirming would
+      // repoint this project's OrangeCat origin and its funding read path.
+      linkedTo: foreign ? { title: foreign.title, publicUrl: foreign.publicUrl } : null,
+      // Already linked to THIS entity — re-confirming is a no-op, not a stomp.
+      alreadyLinked: owned.some((row) => row.entityId === intent.entity.id),
+    };
+  });
+
   return (
     <PublicSurface right={<PublicHeaderActions />}>
       <main className="mx-auto max-w-5xl px-6 py-16 sm:py-24">
-        <OrangeCatBuildHandoff
-          token={token}
-          intent={intent}
-          projects={projects.map((project) => ({ id: project.id, name: project.name }))}
-        />
+        <OrangeCatBuildHandoff token={token} intent={intent} projects={options} />
       </main>
     </PublicSurface>
   );
