@@ -16,9 +16,9 @@ export default function PrivacyPage() {
         <section className="space-y-4 mb-10">
           <h2 className="ui-public-prose-h2">Plain English</h2>
           <p>
-            FleetCrown is a personal project run by Cato. It is not yet a registered
-            company. The product collects only what it needs to authenticate you, drive agents on
-            your behalf, and let you sign in again on a different device.
+            FleetCrown is a personal project run by Cato. It is not yet a registered company. The
+            product collects only what it needs to authenticate you, drive agents on your behalf,
+            and let you sign in again on a different device.
           </p>
           <p>
             We don&apos;t sell your data, we don&apos;t share it with advertisers, and we don&apos;t

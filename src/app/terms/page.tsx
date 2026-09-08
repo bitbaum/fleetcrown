@@ -16,10 +16,10 @@ export default function TermsPage() {
         <section className="space-y-4 mb-10">
           <h2 className="ui-public-prose-h2">Honest framing</h2>
           <p>
-            FleetCrown is a pre-incorporation product run by Cato. It is provided as-is,
-            free of charge, under active development. These terms exist so the relationship is
-            clear; they will be replaced with a proper agreement when the product is offered as a
-            paid service by an incorporated entity.
+            FleetCrown is a pre-incorporation product run by Cato. It is provided as-is, free of
+            charge, under active development. These terms exist so the relationship is clear; they
+            will be replaced with a proper agreement when the product is offered as a paid service
+            by an incorporated entity.
           </p>
         </section>
 

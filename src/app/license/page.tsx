@@ -16,10 +16,10 @@ export default function LicensePage() {
         <section className="space-y-4 mb-10">
           <h2 className="ui-public-prose-h2">Plain English</h2>
           <p>
-            FleetCrown is a personal project by Cato, source-available on GitHub. You can
-            read the code, run it locally, and use the hosted product for free for personal and
-            small-team work. Commercial redistribution, repackaging, or running it as a competing
-            hosted service requires a separate agreement.
+            FleetCrown is a personal project by Cato, source-available on GitHub. You can read the
+            code, run it locally, and use the hosted product for free for personal and small-team
+            work. Commercial redistribution, repackaging, or running it as a competing hosted
+            service requires a separate agreement.
           </p>
           <p>
             This will be replaced by a standard open-source license when the project incorporates
