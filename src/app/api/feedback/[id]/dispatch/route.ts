@@ -115,8 +115,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       ...body,
       adapter,
       sessionId: currentSession?.sessionId ?? null,
-      sessionAction:
-        adapter === "claude" ? (currentSession ? "resumed" : "started") : "started",
+      sessionAction: adapter === "claude" ? (currentSession ? "resumed" : "started") : "started",
       workLabel: status < 400 ? "Queued" : undefined,
       // Add helpful context for common failures
       ...(status === 404 && {
