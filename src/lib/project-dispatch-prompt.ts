@@ -61,16 +61,10 @@ export function composeDispatchPrompt(
       (a, b) => (a.createdAt?.getTime() ?? 0) - (b.createdAt?.getTime() ?? 0),
     );
     const target = milestones.find((goal) => (goal.progress ?? 0) < 100) ?? null;
-    // A locked private zone empties linkedGoals. Dispatching anyway would brief
-    // the agent with no roadmap and aim it at "first runnable state" — i.e.
-    // rebuild milestone one — for a project that may be four milestones in.
-    // Refuse: the fix is one PIN away, and a wrong dispatch costs a whole run.
-    if (!target && dossier.detail.goalsLocked) {
-      return {
-        error:
-          "Unlock the private zone first — this project's milestones are hidden, so an agent would be briefed without them.",
-      };
-    }
+    // Private-zone PIN may hide goals. That must not refuse a kickoff: many
+    // builders never use the private zone. Brief from the project description
+    // and profile; if a roadmap is visible, aim at the next open milestone.
+    // Optional unlock only adds roadmap detail — it is not consent to start.
     if (!description && !target) {
       return { error: "Describe the project first — there is nothing to brief an agent with." };
     }
@@ -104,10 +98,12 @@ export function composeDispatchPrompt(
         profile.length > 0 ? `\n${profile.join("\n")}` : "",
         roadmap.length > 0
           ? `\nBUILD ROADMAP (tracked as this project's goals):\n${roadmap.join("\n")}`
-          : "",
+          : dossier.detail.goalsLocked
+            ? "\nBUILD ROADMAP: not visible (private zone locked). Use the brief and profile only — do not invent a conflicting roadmap."
+            : "",
         target
           ? `\nYOUR TARGET THIS RUN: ${target.title}${target.description ? `\n${target.description}` : ""}`
-          : "\nYOUR TARGET THIS RUN: get the project to its first working, runnable state.",
+          : "\nYOUR TARGET THIS RUN: get the project to its first working, runnable state (a real site or app the person can open).",
         `\nScope: deliver that target only — do not attempt the whole roadmap in one run. If the repository is empty, scaffold the minimum that makes the target real and runnable. ${closing}`,
       ]
         .filter(Boolean)
