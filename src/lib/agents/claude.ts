@@ -66,8 +66,8 @@ export const claudeAdapter: AgentAdapter = {
     // prompts via a settings.json permissions allow-list seeded by
     // box-workspace — NOT --dangerously-skip-permissions, which has its own
     // one-time interactive "Yes, I accept" gate that would hang the agent.
-    const sessionArg = sessionId ? ` --session ${shellEscape(sessionId)}` : "";
-    return `source ~/.bashrc >/dev/null 2>&1 || true; cd ${shellEscape(dir)} && claude${sessionArg}`;
+    const resumeArg = sessionId ? ` --resume ${shellEscape(sessionId)}` : "";
+    return `source ~/.bashrc >/dev/null 2>&1 || true; cd ${shellEscape(dir)} && claude${resumeArg}`;
   },
 
   syncSelectedModel(model: string): void {

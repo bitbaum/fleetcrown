@@ -648,7 +648,21 @@ async function handleCommand(
           const ptyAlready = ptyAlreadyLive
           let launched = false
           let ptyOk = ptyAlready
-          if (!ptyAlready) {
+          // When we have a sessionId and a PTY is already running, terminate it
+          // and relaunch with --resume <sessionId> to ensure we're in the correct
+          // session. Without this, we'd inject into whatever session is currently
+          // open, not the one identified by sessionId from agent_sessions.
+          if (ptyAlready && sessionId) {
+            try {
+              console.log(`[poller] terminating existing PTY to resume session ${sessionId}`)
+              await terminatePty(tab)
+              await asleep(400)
+              ptyOk = false // Force relaunch path below
+            } catch (e) {
+              console.warn('[poller] PTY terminate failed:', (e as Error).message)
+            }
+          }
+          if (!ptyOk) {
             try {
               await launchAgentPty(tab, effDir, agent as AgentOption, model, sessionId)
               clearHandoffSentinel(tab)
