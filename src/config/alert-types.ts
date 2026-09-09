@@ -67,6 +67,10 @@ export const ALERT_TYPES = {
     label: "A goal stopped after too many attempts",
     producer: "src/lib/orchestration/gate-and-close.ts",
   },
+  new_feedback: {
+    label: "New feedback needs triage",
+    producer: "src/lib/feedback/notify-new.ts",
+  },
 } as const satisfies Record<string, AlertTypeSpec>;
 
 export type AlertType = keyof typeof ALERT_TYPES;
