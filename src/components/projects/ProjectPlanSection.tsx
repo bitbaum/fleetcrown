@@ -158,13 +158,14 @@ export function ProjectPlanSection({
           <p className="py-4 text-sm text-text-muted">
             {goalsLocked ? (
               <>
+                Milestones are behind your PIN — hidden, not missing.{" "}
                 <Link
                   href="/unlock"
                   className="text-accent-text underline-offset-2 hover:underline"
                 >
-                  Unlock the private zone
+                  Unlock for the roadmap
                 </Link>{" "}
-                to see this project&apos;s milestones. They are hidden, not missing.
+                if you want them here. Starting and shipping still work without it.
               </>
             ) : (
               "No goals are linked to this project."
