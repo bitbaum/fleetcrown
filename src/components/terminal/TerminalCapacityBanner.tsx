@@ -22,12 +22,7 @@ type Props = {
  * the same AGENT_FALLBACK_ORDER and resolveNextAvailableAgent logic that
  * Control already relies on, so this is one system, not a second detector.
  */
-export function TerminalCapacityBanner({
-  currentAgent,
-  nextAgent,
-  resetsAt,
-  onSwitch,
-}: Props) {
+export function TerminalCapacityBanner({ currentAgent, nextAgent, resetsAt, onSwitch }: Props) {
   const currentLabel = agentLabel(currentAgent);
 
   return (
@@ -39,15 +34,12 @@ export function TerminalCapacityBanner({
             <p className="text-sm font-medium text-text-primary">
               {currentLabel} has hit its capacity limit
             </p>
-            {resetsAt && (
-              <p className="mt-1 text-xs text-text-secondary">Resets {resetsAt}</p>
-            )}
+            {resetsAt && <p className="mt-1 text-xs text-text-secondary">Resets {resetsAt}</p>}
           </div>
         </div>
 
         <p className="text-xs text-text-secondary">
-          You can switch to another agent to continue working now, or wait for the limit to
-          reset.
+          You can switch to another agent to continue working now, or wait for the limit to reset.
         </p>
 
         {nextAgent ? (
