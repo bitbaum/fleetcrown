@@ -40,6 +40,7 @@ type SelectedEl = { elementType: string; elementText: string; selector: string }
 const ACCENT = "#e0680f";
 const MAX_LEN = 2000;
 const MAX_ELEMENTS = 10;
+const MAX_SCREENSHOTS = 5;
 /** Stop recording here. Kept under the server's ~2 min upload cap so the
  *  visitor is never told "too long" after they have already said it. */
 const VOICE_MAX_MS = 110_000;
@@ -133,14 +134,16 @@ textarea:focus, input:focus { outline: 2px solid ${ACCENT}; outline-offset: -1px
   padding: 5px 8px; margin: -4px 0 10px; cursor: help;
 }
 input { margin-bottom: 10px; }
-.attachrow { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-.attach { font-size: 12px; color: #57534e; padding: 6px 10px; border: 1px dashed #d6d3d1; border-radius: 8px; }
-.attach:hover { border-color: ${ACCENT}; color: ${ACCENT}; }
+.attachrow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 10px; }
+.attach { font-size: 13px; font-weight: 500; color: #1c1917; padding: 10px 16px; border: 1.5px solid #d6d3d1; border-radius: 8px; background: #fff; display: flex; align-items: center; gap: 8px; }
+.attach:hover { border-color: ${ACCENT}; color: ${ACCENT}; background: #fff7ed; }
+.attach svg { width: 16px; height: 16px; }
+.shots { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; }
 .shot { position: relative; display: inline-flex; }
-.shot img { height: 44px; max-width: 88px; object-fit: cover; border-radius: 6px; border: 1px solid #e7e5e4; }
+.shot img { height: 56px; max-width: 100px; object-fit: cover; border-radius: 6px; border: 1px solid #e7e5e4; }
 .shot .rm {
-  position: absolute; top: -6px; right: -6px; width: 18px; height: 18px;
-  border-radius: 50%; background: #1c1917; color: #fff; font-size: 11px; line-height: 1;
+  position: absolute; top: -6px; right: -6px; width: 20px; height: 20px;
+  border-radius: 50%; background: #1c1917; color: #fff; font-size: 12px; line-height: 1;
   display: flex; align-items: center; justify-content: center;
 }
 /* An 18px dot is under any touch-target guideline. Keep the dot the same size
@@ -148,7 +151,7 @@ input { margin-bottom: 10px; }
    can actually land on it. */
 @media (pointer: coarse) {
   .shot .rm::after { content: ""; position: absolute; inset: -13px; }
-  .attach { padding: 12px 14px; }
+  .attach { padding: 12px 18px; }
 }
 /* ---- visitor placement menu ---- */
 .fabmenu {
@@ -169,13 +172,13 @@ input { margin-bottom: 10px; }
 @media (pointer: coarse) { .fabmenu-item { padding: 13px 12px; } }
 /* ---- voice ---- */
 .mic {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-size: 12px; color: #57534e;
-  padding: 6px 10px; border: 1px dashed #d6d3d1; border-radius: 8px;
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 13px; font-weight: 500; color: #1c1917;
+  padding: 10px 16px; border: 1.5px solid #d6d3d1; border-radius: 8px; background: #fff;
 }
-.mic:hover { border-color: ${ACCENT}; color: ${ACCENT}; }
-.mic svg { width: 14px; height: 14px; }
-.mic.rec { border-style: solid; border-color: #dc2626; color: #dc2626; background: #fef2f2; }
+.mic:hover { border-color: ${ACCENT}; color: ${ACCENT}; background: #fff7ed; }
+.mic svg { width: 16px; height: 16px; }
+.mic.rec { border-style: solid; border-width: 2px; border-color: #dc2626; color: #dc2626; background: #fef2f2; }
 .mic.busy { opacity: .7; cursor: default; }
 /* The pulsing dot is the only thing that says "live" at a glance; motion is
    the signal, so honour a visitor who has asked for less of it. */
@@ -185,7 +188,7 @@ input { margin-bottom: 10px; }
 }
 @keyframes fcpulse { 0%,100% { opacity: 1; } 50% { opacity: .25; } }
 @media (prefers-reduced-motion: reduce) { .mic .dot { animation: none; } }
-@media (pointer: coarse) { .mic { padding: 12px 14px; } }
+@media (pointer: coarse) { .mic { padding: 12px 18px; } }
 .row { display: flex; gap: 8px; }
 .go {
   flex: 1; background: ${ACCENT}; color: #fff; font-size: 13px; font-weight: 600;
@@ -258,6 +261,9 @@ const PENCIL_SVG =
 
 const MIC_SVG =
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></svg>';
+
+const CAMERA_SVG =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>';
 
 /** A fresh <span> each call — one node cannot sit in two places, and the label
  *  is rebuilt on every state change. */
@@ -702,23 +708,20 @@ function h<K extends keyof HTMLElementTagNameMap>(
     contact.maxLength = 200;
 
     // ---- image attach (file picker + paste; client-downscaled) ----
-    let shot: string | null = null;
+    let shots: string[] = [];
     const attachRow = h("div", "attachrow");
     const fileInput = h("input");
     fileInput.type = "file";
     fileInput.accept = "image/*";
+    fileInput.multiple = true;
     fileInput.style.display = "none";
-    const attachBtn = h("button", "attach", "Attach image");
-    attachBtn.setAttribute("aria-label", "Attach an image (or paste one)");
+    const attachBtn = h("button", "attach");
+    const cameraIcon = h("span");
+    cameraIcon.innerHTML = CAMERA_SVG;
+    attachBtn.append(cameraIcon, h("span", undefined, "Add screenshots"));
+    attachBtn.setAttribute("aria-label", "Add screenshots (or paste)");
     attachBtn.addEventListener("click", () => fileInput.click());
-    const shotWrap = h("span", "shot");
-    shotWrap.style.display = "none";
-    const shotImg = h("img");
-    shotImg.alt = "Attached image";
-    const shotRm = h("button", "rm", "✕");
-    shotRm.setAttribute("aria-label", "Remove attached image");
-    shotRm.addEventListener("click", () => setShot(null));
-    shotWrap.append(shotImg, shotRm);
+    const shotsContainer = h("div", "shots");
     // ---- voice input ----
     // Progressive enhancement: on a browser without MediaRecorder, or on an
     // insecure origin where getUserMedia is undefined, no button is created at
@@ -727,7 +730,7 @@ function h<K extends keyof HTMLElementTagNameMap>(
     let voice: VoiceRecorder | null = null;
     if (isVoiceSupported()) {
       micBtn = h("button", "mic");
-      const micLabel = h("span", undefined, "Speak");
+      const micLabel = h("span", undefined, "Record your feedback");
       micBtn.append(micIcon(), micLabel);
       micBtn.setAttribute("aria-label", "Record your feedback by voice");
 
@@ -759,7 +762,7 @@ function h<K extends keyof HTMLElementTagNameMap>(
           } else if (state === "requesting") {
             micBtn.append(h("span", undefined, "Allow mic…"));
           } else {
-            micBtn.append(micIcon(), h("span", undefined, "Speak"));
+            micBtn.append(micIcon(), h("span", undefined, "Record your feedback"));
             micBtn.setAttribute("aria-label", "Record your feedback by voice");
           }
           // Errors share the panel's one error line rather than inventing a
@@ -776,34 +779,69 @@ function h<K extends keyof HTMLElementTagNameMap>(
       });
     }
 
-    attachRow.append(attachBtn, shotWrap, fileInput);
     if (micBtn) attachRow.append(micBtn);
+    attachRow.append(attachBtn, fileInput);
 
-    function setShot(dataUrl: string | null) {
-      shot = dataUrl;
-      shotWrap.style.display = dataUrl ? "" : "none";
-      attachBtn.style.display = dataUrl ? "none" : "";
-      if (dataUrl) shotImg.src = dataUrl;
-      else shotImg.removeAttribute("src");
+    function renderShots() {
+      shotsContainer.textContent = "";
+      for (let i = 0; i < shots.length; i++) {
+        const shotWrap = h("span", "shot");
+        const shotImg = h("img");
+        shotImg.alt = `Screenshot ${i + 1}`;
+        shotImg.src = shots[i];
+        const shotRm = h("button", "rm", "✕");
+        shotRm.setAttribute("aria-label", `Remove screenshot ${i + 1}`);
+        const idx = i;
+        shotRm.addEventListener("click", () => {
+          shots.splice(idx, 1);
+          renderShots();
+        });
+        shotWrap.append(shotImg, shotRm);
+        shotsContainer.appendChild(shotWrap);
+      }
+      attachBtn.style.display = shots.length >= MAX_SCREENSHOTS ? "none" : "";
+      attachBtn.textContent = shots.length > 0 ? `Add more (${shots.length}/${MAX_SCREENSHOTS})` : "";
+      if (shots.length === 0 || shots.length >= MAX_SCREENSHOTS) {
+        attachBtn.textContent = "";
+        const icon = h("span");
+        icon.innerHTML = CAMERA_SVG;
+        attachBtn.append(icon, h("span", undefined, shots.length >= MAX_SCREENSHOTS ? `Max ${MAX_SCREENSHOTS} screenshots` : "Add screenshots"));
+      }
     }
     async function attachFile(file: Blob | null | undefined) {
       if (!file || !file.type.startsWith("image/")) return;
+      if (shots.length >= MAX_SCREENSHOTS) {
+        errEl.textContent = `Maximum ${MAX_SCREENSHOTS} screenshots`;
+        return;
+      }
       const dataUrl = await downscaleImage(file);
-      if (dataUrl) setShot(dataUrl);
-      else errEl.textContent = "Could not attach that image — try a smaller one";
+      if (dataUrl) {
+        shots.push(dataUrl);
+        renderShots();
+      } else {
+        errEl.textContent = "Could not attach that image — try a smaller one";
+      }
+    }
+    async function attachFiles(files: FileList | null) {
+      if (!files) return;
+      for (let i = 0; i < files.length && shots.length < MAX_SCREENSHOTS; i++) {
+        await attachFile(files[i]);
+      }
     }
     fileInput.addEventListener("change", () => {
-      void attachFile(fileInput.files?.[0]);
+      void attachFiles(fileInput.files);
       fileInput.value = "";
     });
     // Paste a screenshot straight into the panel (desktop muscle memory).
     panel.addEventListener("paste", (e: ClipboardEvent) => {
-      const item = Array.from(e.clipboardData?.items ?? []).find((i) =>
+      const items = Array.from(e.clipboardData?.items ?? []).filter((i) =>
         i.type.startsWith("image/"),
       );
-      if (item) {
+      if (items.length > 0) {
         e.preventDefault();
-        void attachFile(item.getAsFile());
+        for (const item of items) {
+          void attachFile(item.getAsFile());
+        }
       }
     });
 
@@ -818,7 +856,7 @@ function h<K extends keyof HTMLElementTagNameMap>(
     const errEl = h("div", "err");
     const keys = h("div", "keys", "Esc closes · Ctrl+Enter sends");
 
-    panel.append(hdr, chips, hint, textarea, cnt, diagNote, contact, attachRow, row, errEl, keys);
+    panel.append(hdr, chips, hint, textarea, cnt, diagNote, contact, attachRow, shotsContainer, row, errEl, keys);
 
     // ---- element-pick bar ----
     const pickbar = h("div", "pickbar");
@@ -868,7 +906,8 @@ function h<K extends keyof HTMLElementTagNameMap>(
       scope = "page";
       textarea.value = "";
       contact.value = "";
-      setShot(null);
+      shots = [];
+      renderShots();
       cnt.textContent = `0/${MAX_LEN}`;
       diagnostics = null;
       syncDiagnostics();
@@ -1044,7 +1083,7 @@ function h<K extends keyof HTMLElementTagNameMap>(
             url: location.href.slice(0, 1000),
             pageTitle: document.title.slice(0, 300) || undefined,
             scope,
-            screenshot: shot ?? undefined,
+            screenshots: shots.length ? shots : undefined,
             selectedElements: selected.length ? selected : undefined,
           }),
         });
@@ -1080,6 +1119,7 @@ function h<K extends keyof HTMLElementTagNameMap>(
           diagNote,
           contact,
           attachRow,
+          shotsContainer,
           row,
           errEl,
           keys,

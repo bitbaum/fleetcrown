@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Archive, Check, Loader2, PenLine, Rocket, Star, Undo2 } from "lucide-react";
 import { compactRelativeDate } from "@/lib/dates";
@@ -150,23 +150,7 @@ export function FeedbackItemRow({
               ))}
             </p>
           )}
-          {f.hasScreenshot && (
-            <a
-              href={`/api/feedback/${f.id}/screenshot`}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-1.5 inline-block pl-4"
-              title="Open the visitor's screenshot"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element -- dynamic auth'd API image, not a static asset */}
-              <img
-                src={`/api/feedback/${f.id}/screenshot`}
-                alt="Visitor screenshot (click to open)"
-                className="h-14 w-auto rounded-md border border-border-subtle"
-                loading="lazy"
-              />
-            </a>
-          )}
+          {f.hasScreenshots && <ScreenshotsThumbnails feedbackId={f.id} />}
         </div>
         <div className="flex shrink-0 items-center gap-1.5 pl-4 sm:pl-0">
           {work.phase === FEEDBACK_WORK_PHASE.NOT_STARTED ? (
@@ -328,6 +312,47 @@ export function FeedbackItemRow({
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+function ScreenshotsThumbnails({ feedbackId }: { feedbackId: string }) {
+  const [screenshots, setScreenshots] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`/api/feedback/${feedbackId}/screenshot`)
+      .then((res) => res.json())
+      .then((data: { screenshots?: string[] }) => {
+        setScreenshots(data.screenshots ?? []);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, [feedbackId]);
+
+  if (loading) return null;
+  if (screenshots.length === 0) return null;
+
+  return (
+    <div className="mt-1.5 flex flex-wrap gap-2 pl-4">
+      {screenshots.map((dataUrl, i) => (
+        <a
+          key={i}
+          href={dataUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-block"
+          title={`Screenshot ${i + 1} of ${screenshots.length}`}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element -- data URL from API */}
+          <img
+            src={dataUrl}
+            alt={`Visitor screenshot ${i + 1}`}
+            className="h-14 w-auto rounded-md border border-border-subtle"
+            loading="lazy"
+          />
+        </a>
+      ))}
     </div>
   );
 }

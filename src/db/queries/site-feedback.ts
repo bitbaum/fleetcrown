@@ -1,6 +1,6 @@
 import { and, count, desc, eq, getTableColumns, inArray, max, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { entities, siteFeedback, type SiteFeedback, type NewSiteFeedback } from "@/db/schema";
+import { entities, siteFeedback, userProjects, type SiteFeedback, type NewSiteFeedback } from "@/db/schema";
 import { FEEDBACK_STATUS, type FeedbackStatus } from "@/lib/constants/statuses";
 
 export async function insertSiteFeedback(values: NewSiteFeedback): Promise<SiteFeedback | null> {
@@ -34,8 +34,8 @@ export async function bumpDuplicateFeedback(
 }
 
 /** Inbox row: everything except the screenshot bytes (kept out of list
- *  payloads), plus a flag so the UI can offer the image on demand. */
-export type FeedbackListItem = Omit<SiteFeedback, "screenshot"> & { hasScreenshot: boolean };
+ *  payloads), plus a flag so the UI can offer the images on demand. */
+export type FeedbackListItem = Omit<SiteFeedback, "screenshots"> & { hasScreenshots: boolean };
 
 /** Inbox for one project, newest first. Owner-scoped by userId. */
 export async function listProjectFeedback(
@@ -47,9 +47,9 @@ export async function listProjectFeedback(
     where: and(eq(siteFeedback.userId, userId), eq(siteFeedback.projectId, projectId)),
     orderBy: [desc(siteFeedback.createdAt)],
     limit,
-    columns: { screenshot: false },
+    columns: { screenshots: false },
     extras: {
-      hasScreenshot: sql<boolean>`(${siteFeedback.screenshot} IS NOT NULL)`.as("has_screenshot"),
+      hasScreenshots: sql<boolean>`(${siteFeedback.screenshots} IS NOT NULL AND jsonb_array_length(${siteFeedback.screenshots}) > 0)`.as("has_screenshots"),
     },
   });
 }
@@ -117,14 +117,14 @@ export async function setFeedbackFeatured(
 }
 
 /** The screenshot bytes for one row (owner-scoped) — the ONLY reader of the
- *  screenshot column. */
-export async function getFeedbackScreenshot(userId: string, id: string): Promise<string | null> {
+ *  screenshots column. */
+export async function getFeedbackScreenshots(userId: string, id: string): Promise<string[] | null> {
   const [row] = await db
-    .select({ screenshot: siteFeedback.screenshot })
+    .select({ screenshots: siteFeedback.screenshots })
     .from(siteFeedback)
     .where(and(eq(siteFeedback.id, id), eq(siteFeedback.userId, userId)))
     .limit(1);
-  return row?.screenshot ?? null;
+  return row?.screenshots ?? null;
 }
 
 /** Cross-project inbox row: the list shape plus which project it belongs to. */
@@ -132,18 +132,18 @@ export type UserFeedbackListItem = FeedbackListItem & { projectName: string };
 
 /**
  * Every project's inbox in one read — the lens behind /feedback. Same
- * screenshot exclusion as the per-project list; the join supplies the project
+ * screenshots exclusion as the per-project list; the join supplies the project
  * name so the UI never needs a second lookup. Newest first across the fleet.
  */
 export async function listUserFeedback(
   userId: string,
   limit = 400,
 ): Promise<UserFeedbackListItem[]> {
-  const { screenshot: _screenshot, ...cols } = getTableColumns(siteFeedback);
+  const { screenshots: _screenshots, ...cols } = getTableColumns(siteFeedback);
   return db
     .select({
       ...cols,
-      hasScreenshot: sql<boolean>`(${siteFeedback.screenshot} IS NOT NULL)`.as("has_screenshot"),
+      hasScreenshots: sql<boolean>`(${siteFeedback.screenshots} IS NOT NULL AND jsonb_array_length(${siteFeedback.screenshots}) > 0)`.as("has_screenshots"),
       projectName: entities.name,
     })
     .from(siteFeedback)
@@ -200,18 +200,37 @@ export async function listFeedbackSummary(userId: string): Promise<ProjectFeedba
   }));
 }
 
-/** One feedback item + its project's name (dispatch needs the tab name). */
+/** One feedback item + its project's name (dispatch needs the tab name).
+ *  Tries to find the project name via user_projects first (for dispatch compatibility),
+ *  falls back to entities name if no user_projects link exists. */
 export async function getFeedbackWithProject(
   userId: string,
   id: string,
 ): Promise<{ feedback: SiteFeedback; projectName: string } | null> {
   const [row] = await db
-    .select({ feedback: siteFeedback, projectName: entities.name })
+    .select({
+      feedback: siteFeedback,
+      projectName: entities.name,
+      userProjectName: userProjects.name,
+    })
     .from(siteFeedback)
     .innerJoin(entities, eq(siteFeedback.projectId, entities.id))
+    .leftJoin(
+      userProjects,
+      and(
+        eq(userProjects.entityProjectId, siteFeedback.projectId),
+        eq(userProjects.userId, userId),
+        eq(userProjects.isActive, true),
+      ),
+    )
     .where(and(eq(siteFeedback.id, id), eq(siteFeedback.userId, userId)))
     .limit(1);
-  return row ?? null;
+  if (!row) return null;
+  // Prefer user_projects name (matches dispatch tab lookup) over entities name
+  return {
+    feedback: row.feedback,
+    projectName: row.userProjectName ?? row.projectName,
+  };
 }
 
 /**
