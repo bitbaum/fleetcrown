@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { postJson } from "@/lib/api/fetch";
+import { fleetSurfaceHref } from "@/lib/fleet-context";
 import type { ProjectState } from "@/lib/control-types";
 import { formatAgentRuntimeLabel } from "./control-presenter";
 import { AgentSwitcherPopover } from "./agent-switcher-popover";
@@ -184,7 +185,11 @@ export function ProjectStatusChips({
     }
   };
 
-  if (!runtimeLabel && !git && !tabOpen) return null;
+  // Open terminal must stay reachable even when nothing is running yet.
+  // Returning null here hid the chip for not_running projects with no git
+  // snapshot — the exact Control rows where operators most need a path into
+  // `/terminal?project=…`. Focus terminal stays gated; this link does not.
+  if (!runtimeLabel && !git && !tabOpen && !clickableWorkspace) return null;
 
   const chips = (
     <div
@@ -364,7 +369,7 @@ export function ProjectStatusChips({
           navigate to /terminal and find the tab by hand. */}
       {clickableWorkspace && (
         <Link
-          href={`/terminal?project=${encodeURIComponent(project.tab)}`}
+          href={fleetSurfaceHref("terminal", project.tab)}
           onClick={(event) => event.stopPropagation()}
           title={`Open ${workspaceTab}'s session in FleetCrown's terminal — works from any device, no Fleet Runner needed.`}
           className={
