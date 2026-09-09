@@ -475,4 +475,3 @@ export function ProjectStatusChips({
     </div>
   );
 }
-
