@@ -589,12 +589,13 @@ export function TerminalView({
       syncSize();
 
       // Scan the rendered buffer for URLs (newest first, capped) and surface them
-      // in <LinkBar/>. Debounced: run once output settles, after xterm has laid
-      // the bytes into the grid — only then can full-width rows be joined back
-      // into whole URLs. Kept after the URL leaves the screen on a TUI redraw.
+      // in <LinkBar/>. Also scan for capacity issues — debounced to run once output
+      // settles, after xterm has laid the bytes into the grid.
       let scanTimer = 0;
       const scheduleScan = () => {
         if (scanTimer) return;
+        // Reduced from 150ms to 50ms for faster capacity detection. The overlay
+        // needs to appear quickly to replace the vendor error text.
         scanTimer = window.setTimeout(() => {
           scanTimer = 0;
           const urls = extractUrlsFromBuffer(term);
@@ -608,7 +609,7 @@ export function TerminalView({
           // Also scan for capacity issues in the buffer.
           const capacity = detectCapacityInBuffer(term);
           setCapacityState(capacity);
-        }, 150);
+        }, 50);
       };
       // Stall watchdog: arm on connect, disarm on the first frame. If it fires,
       // the stream said "ready" but the runner never streamed the screen —
