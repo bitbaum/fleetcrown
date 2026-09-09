@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Loader2, MonitorSmartphone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { postJson } from "@/lib/api/fetch";
 import { EXECUTOR_COPY } from "@/config/executor-copy";
 import { deriveExecutorHonestyLabel } from "@/lib/executor-honesty";
+import { resolveNextAvailableAgent } from "@/lib/agent-registry";
 import { useFetch } from "@/hooks/use-fetch";
 import { useLocalStorageState } from "@/hooks/use-local-storage-state";
 import { useTerminalFont } from "@/hooks/use-terminal-font";
@@ -174,6 +175,44 @@ export function TerminalSurface({
     loading,
   });
 
+  // Auto-switch sources when Watch opens a tab that's on the other side.
+  // Uses a ref to track the switch signature so we only auto-switch once per
+  // deep-link miss episode, preventing infinite loops.
+  const autoSwitchSignatureRef = useRef<string | null>(null);
+  const [autoSwitching, setAutoSwitching] = useState(false);
+
+  useEffect(() => {
+    // When we have a deep link miss and haven't auto-switched for this episode,
+    // automatically try the other source. This makes Watch land on the right
+    // side without requiring a manual "Look on X" click.
+    if (!deepLinkMiss || !initialTab) {
+      autoSwitchSignatureRef.current = null;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setAutoSwitching(false);
+      return;
+    }
+
+    const signature = `${initialTab}:${source}`;
+    if (signature === autoSwitchSignatureRef.current) return;
+
+    const otherSource = source === "machine" ? "cloud" : "machine";
+    if (!sources.includes(otherSource)) {
+      setAutoSwitching(false);
+      return;
+    }
+
+    autoSwitchSignatureRef.current = signature;
+    setAutoSwitching(true);
+    setSource(otherSource);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deepLinkMiss, initialTab, source]);
+  // ^^^ Episodic automation: this effect reacts to a polled tab list and must
+  // switch sources exactly once per miss episode (ref-tracked signature as loop
+  // guard). Deriving the state during render would rewire the loop-safety
+  // guarantees of a live source-switching path for no user-visible gain. sources
+  // and setSource are intentionally omitted from deps (would cause loops) — the
+  // [deepLinkMiss, initialTab, source] triple captures the decision point.
+
   // The terminal is one of the four project surfaces, so the tab you are
   // watching IS the fleet's active project — Control, Loki and the project
   // profile follow you here instead of resetting.
@@ -270,6 +309,9 @@ export function TerminalSurface({
     },
     [activeTab, tabDir, activeAgentId],
   );
+
+  // Next available agent for capacity banner — same logic Control uses.
+  const nextAvailableAgent = resolveNextAvailableAgent(activeAgentId);
 
   // The strip tells the truth about each tab: the project it resolves to (by
   // name, or by pane cwd for generically named tabs) and the agent CLI actually
@@ -394,6 +436,19 @@ export function TerminalSurface({
   // ── Agent sessions ──────────────────────────────────────────────────────
   const body = () => {
     if (deepLinkMiss) {
+      // Show loading while we auto-switch to check the other source.
+      if (autoSwitching) {
+        return (
+          <div className="flex items-center gap-2 p-6 text-sm text-text-muted">
+            <Loader2 className="ui-spinner" /> Looking for session on{" "}
+            {source === "machine"
+              ? EXECUTOR_COPY.terminal.thisComputerLabel
+              : EXECUTOR_COPY.terminal.cloudLabel}
+            …
+          </div>
+        );
+      }
+
       return (
         <TerminalSessionMiss
           requestedTab={initialTab!}
@@ -471,6 +526,9 @@ export function TerminalSurface({
         font={font}
         onLive={setLiveState}
         onGeometry={setGeometry}
+        currentAgent={activeAgentId}
+        nextAgent={nextAvailableAgent}
+        onSwitchAgent={switchAgent}
       />
     );
   };
