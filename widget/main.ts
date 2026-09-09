@@ -65,27 +65,6 @@ type WidgetTheme = {
   white: string;
 };
 
-const DEFAULT_THEME: WidgetTheme = {
-  accent: "#e0680f",
-  accentHover: "#ff7519",
-  accentMuted: "${theme.white}7ed",
-  text: "${theme.text}",
-  textSecondary: "${theme.textSecondary}",
-  textTertiary: "${theme.textTertiary}",
-  textMuted: "${theme.textMuted}",
-  surface: "${theme.white}fff",
-  surfaceRaised: "${theme.surfaceRaised}",
-  surfaceSubtle: "${theme.surfaceSubtle}",
-  border: "${theme.border}",
-  borderStrong: "${theme.borderStrong}",
-  borderDark: "${theme.borderDark}",
-  success: "${theme.success}",
-  error: "${theme.error}",
-  errorSurface: "${theme.errorSurface}",
-  black: "${theme.text}",
-  white: "${theme.white}fff",
-};
-
 interface ReportInput {
   /** Pre-filled first line so the visitor never faces an empty box. */
   message?: string;
@@ -1232,9 +1211,16 @@ function h<K extends keyof HTMLElementTagNameMap>(
   const boot = async () => {
     try {
       const res = await fetch(`${apiBase}/api/widget-boot?token=${encodeURIComponent(token)}`);
-      const body = (await res.json()) as { active?: boolean; placement?: unknown; theme?: WidgetTheme };
+      const body = (await res.json()) as {
+        active?: boolean;
+        placement?: unknown;
+        theme?: WidgetTheme;
+      };
       if (body.active !== true) return;
-      const theme = body.theme ?? DEFAULT_THEME;
+      // Theme must come from boot — the widget has no fallback palette.
+      // If boot doesn't provide colors, the widget doesn't render.
+      if (!body.theme) return;
+      const theme = body.theme;
       // Placement arrives with the render verdict, so the launcher paints once
       // in its final corner instead of appearing bottom-right and jumping.
       placement = normalizePlacement(body.placement);

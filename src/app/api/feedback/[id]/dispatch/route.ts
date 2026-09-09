@@ -29,7 +29,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const row = await getFeedbackWithProject(userId, idOrResp);
   if (!row) return jsonError("Feedback not found", 404);
-  
+
   // Verify the project actually exists in user_projects before dispatching.
   // This prevents creating runs for projects that can't be found by inject.
   if (!row.projectName) {
@@ -38,7 +38,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       422,
     );
   }
-  
+
   if (
     row.feedback.status === FEEDBACK_STATUS.RESOLVED ||
     row.feedback.status === FEEDBACK_STATUS.ARCHIVED
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     },
     userId,
   );
-  
+
   // Only mark as dispatched if the injection succeeded (status < 400).
   // This ensures failed injections (e.g. "Unknown tab") don't mark the
   // feedback as dispatched, which would make it look like work started
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const runId = typeof body.runId === "string" ? body.runId : undefined;
     await setFeedbackStatus(userId, idOrResp, FEEDBACK_STATUS.DISPATCHED, runId);
   }
-  
+
   // Return detailed error messages to help the operator understand what went wrong
   return NextResponse.json(
     {
