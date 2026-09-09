@@ -3827,7 +3827,8 @@
   /* ── Notification panel ───────────────────────────────────────────────────
      Dropdown panel from the bell icon showing alerts that need the operator. */
   .ui-notification-badge {
-    @apply absolute right-0 top-0 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-status-negative px-1 text-nano font-medium tabular-nums text-white;
+    @apply absolute right-0 top-0 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-status-negative px-1 text-nano font-medium tabular-nums;
+    color: white;
   }
   .ui-notification-panel {
     @apply fixed right-2 top-14 z-50 w-[min(24rem,calc(100vw-1rem))] overflow-hidden rounded-2xl border border-border-subtle bg-surface-raised shadow-panel-strong;
