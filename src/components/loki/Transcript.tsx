@@ -135,14 +135,14 @@ function DispatchFooter({ meta }: { meta: Record<string, unknown> | null }) {
             Control state
           </Link>
           <Link
-            href={`/terminal?source=server&tab=${encodeURIComponent(primaryProject)}`}
+            href={`/terminal?source=cloud&project=${encodeURIComponent(primaryProject)}`}
             className="ui-dispatch-watch-link"
           >
             <TerminalSquare className="h-3.5 w-3.5" />
             Cloud terminal
           </Link>
           <Link
-            href={`/terminal?source=machine&tab=${encodeURIComponent(primaryProject)}`}
+            href={`/terminal?source=machine&project=${encodeURIComponent(primaryProject)}`}
             className="ui-dispatch-watch-link"
           >
             <ExternalLink className="h-3.5 w-3.5" />

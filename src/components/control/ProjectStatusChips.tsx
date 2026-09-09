@@ -364,7 +364,7 @@ export function ProjectStatusChips({
           navigate to /terminal and find the tab by hand. */}
       {clickableWorkspace && (
         <Link
-          href={`/terminal?tab=${encodeURIComponent(workspaceTab)}`}
+          href={`/terminal?project=${encodeURIComponent(project.tab)}`}
           onClick={(event) => event.stopPropagation()}
           title={`Open ${workspaceTab}'s session in FleetCrown's terminal — works from any device, no Fleet Runner needed.`}
           className={

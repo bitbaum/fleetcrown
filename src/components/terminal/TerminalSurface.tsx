@@ -133,6 +133,8 @@ export function TerminalSurface({
   /** Phone full-screen toggle — rendered inside the mobile control bar. */
   onToggleImmersive?: () => void;
   initialSource?: TerminalSource;
+  /** Tab or project name from URL. When from ?project=, this is the project key
+   *  that will be resolved to the actual tab name via context lookup. */
   initialTab?: string | null;
 }) {
   // "shell" — a FleetCrown-owned bash PTY — is only offered where one can

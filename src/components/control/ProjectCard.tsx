@@ -441,7 +441,7 @@ export function ProjectCard({
             )}
           </span>
           <Link
-            href={`/terminal?tab=${encodeURIComponent(project.tab)}`}
+            href={`/terminal?project=${encodeURIComponent(project.tab)}`}
             className="ui-dispatch-watch-link shrink-0"
           >
             <TerminalSquare className="h-3.5 w-3.5" />

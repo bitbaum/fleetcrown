@@ -19,7 +19,11 @@ function parseSource(value: string | null): TerminalSource | undefined {
 export function TerminalPageClient({ local }: { local: boolean }) {
   const searchParams = useSearchParams();
   const initialSource = parseSource(searchParams.get("source"));
-  const initialTab = searchParams.get("tab");
+  // Accept both ?project= (new session-based) and ?tab= (legacy).
+  // When ?project= is provided, we pass it as initialTab and TerminalSurface
+  // will resolve it to the actual tab name via context lookup.
+  const initialProject = searchParams.get("project");
+  const initialTab = initialProject ?? searchParams.get("tab");
   const surfaceKey = `${initialSource ?? "default"}:${initialTab ?? ""}`;
 
   return (
