@@ -136,7 +136,7 @@ export function ProjectStatusChips({
     try {
       if (!project.agentRunning && project.dir && effectiveAgentId) {
         await postJson("/api/agent/launch", {
-          tab: project.tab,
+          tab: workspaceTab,
           dir: project.dir,
           agent: effectiveAgentId,
         });
