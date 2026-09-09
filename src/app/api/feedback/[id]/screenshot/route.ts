@@ -22,10 +22,13 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     return jsonError("No screenshots", 404);
   }
 
-  return NextResponse.json({ screenshots }, {
-    headers: {
-      // Owner-only, immutable per row — cache privately.
-      "Cache-Control": "private, max-age=3600",
+  return NextResponse.json(
+    { screenshots },
+    {
+      headers: {
+        // Owner-only, immutable per row — cache privately.
+        "Cache-Control": "private, max-age=3600",
+      },
     },
-  });
+  );
 }

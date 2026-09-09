@@ -1,6 +1,12 @@
 import { and, count, desc, eq, getTableColumns, inArray, max, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { entities, siteFeedback, userProjects, type SiteFeedback, type NewSiteFeedback } from "@/db/schema";
+import {
+  entities,
+  siteFeedback,
+  userProjects,
+  type SiteFeedback,
+  type NewSiteFeedback,
+} from "@/db/schema";
 import { FEEDBACK_STATUS, type FeedbackStatus } from "@/lib/constants/statuses";
 
 export async function insertSiteFeedback(values: NewSiteFeedback): Promise<SiteFeedback | null> {
@@ -49,7 +55,10 @@ export async function listProjectFeedback(
     limit,
     columns: { screenshots: false },
     extras: {
-      hasScreenshots: sql<boolean>`(${siteFeedback.screenshots} IS NOT NULL AND jsonb_array_length(${siteFeedback.screenshots}) > 0)`.as("has_screenshots"),
+      hasScreenshots:
+        sql<boolean>`(${siteFeedback.screenshots} IS NOT NULL AND jsonb_array_length(${siteFeedback.screenshots}) > 0)`.as(
+          "has_screenshots",
+        ),
     },
   });
 }
@@ -143,7 +152,10 @@ export async function listUserFeedback(
   return db
     .select({
       ...cols,
-      hasScreenshots: sql<boolean>`(${siteFeedback.screenshots} IS NOT NULL AND jsonb_array_length(${siteFeedback.screenshots}) > 0)`.as("has_screenshots"),
+      hasScreenshots:
+        sql<boolean>`(${siteFeedback.screenshots} IS NOT NULL AND jsonb_array_length(${siteFeedback.screenshots}) > 0)`.as(
+          "has_screenshots",
+        ),
       projectName: entities.name,
     })
     .from(siteFeedback)

@@ -55,7 +55,7 @@ const FeedbackBody = z.object({
       z
         .string()
         .regex(/^data:image\/(jpeg|png|webp);base64,/)
-        .max(600_000)
+        .max(600_000),
     )
     .max(5)
     .optional(),

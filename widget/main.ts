@@ -37,13 +37,54 @@ import {
 type Scope = "element" | "page" | "site";
 type SelectedEl = { elementType: string; elementText: string; selector: string };
 
-const ACCENT = "#e0680f";
 const MAX_LEN = 2000;
 const MAX_ELEMENTS = 10;
 const MAX_SCREENSHOTS = 5;
 /** Stop recording here. Kept under the server's ~2 min upload cap so the
  *  visitor is never told "too long" after they have already said it. */
 const VOICE_MAX_MS = 110_000;
+
+type WidgetTheme = {
+  accent: string;
+  accentHover: string;
+  accentMuted: string;
+  text: string;
+  textSecondary: string;
+  textTertiary: string;
+  textMuted: string;
+  surface: string;
+  surfaceRaised: string;
+  surfaceSubtle: string;
+  border: string;
+  borderStrong: string;
+  borderDark: string;
+  success: string;
+  error: string;
+  errorSurface: string;
+  black: string;
+  white: string;
+};
+
+const DEFAULT_THEME: WidgetTheme = {
+  accent: "#e0680f",
+  accentHover: "#ff7519",
+  accentMuted: "${theme.white}7ed",
+  text: "${theme.text}",
+  textSecondary: "${theme.textSecondary}",
+  textTertiary: "${theme.textTertiary}",
+  textMuted: "${theme.textMuted}",
+  surface: "${theme.white}fff",
+  surfaceRaised: "${theme.surfaceRaised}",
+  surfaceSubtle: "${theme.surfaceSubtle}",
+  border: "${theme.border}",
+  borderStrong: "${theme.borderStrong}",
+  borderDark: "${theme.borderDark}",
+  success: "${theme.success}",
+  error: "${theme.error}",
+  errorSurface: "${theme.errorSurface}",
+  black: "${theme.text}",
+  white: "${theme.white}fff",
+};
 
 interface ReportInput {
   /** Pre-filled first line so the visitor never faces an empty box. */
@@ -66,7 +107,8 @@ interface FleetCrownApi {
   report(input?: ReportInput): void;
 }
 
-const SHADOW_CSS = `
+function buildShadowCSS(theme: WidgetTheme): string {
+  return `
 :host { all: initial; }
 * { box-sizing: border-box; margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
 button { cursor: pointer; border: none; background: none; }
@@ -75,7 +117,7 @@ button { cursor: pointer; border: none; background: none; }
   width: 48px; height: 48px; border-radius: 50%;
   /* Accent bg + white ring: must stay visible on light AND dark host sites
      (a dark FAB vanished on dark pages — found dogfooding on FleetCrown). */
-  background: ${ACCENT}; color: #fff;
+  background: ${theme.accent}; color: ${theme.white};
   border: 2px solid rgba(255,255,255,.85);
   display: flex; align-items: center; justify-content: center;
   box-shadow: 0 2px 12px rgba(0,0,0,.35);
@@ -100,7 +142,7 @@ button { cursor: pointer; border: none; background: none; }
   position: fixed; z-index: 2147483002;
   right: 16px; bottom: 16px; width: 360px; max-width: calc(100vw - 32px);
   max-height: min(85vh, 640px); overflow-y: auto;
-  background: #fff; color: #1c1917; border-radius: 14px;
+  background: ${theme.surface}; color: ${theme.text}; border-radius: 14px;
   box-shadow: 0 8px 40px rgba(0,0,0,.3);
   padding: 16px;
 }
@@ -110,40 +152,40 @@ button { cursor: pointer; border: none; background: none; }
 }
 .hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
 .hdr b { font-size: 14px; }
-.hdr .page { font-size: 11px; color: #78716c; margin-top: 2px; max-width: 260px;
+.hdr .page { font-size: 11px; color: ${theme.textTertiary}; margin-top: 2px; max-width: 260px;
              overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.x { color: #a8a29e; font-size: 18px; line-height: 1; padding: 4px; }
-.x:hover { color: #1c1917; }
+.x { color: ${theme.textMuted}; font-size: 18px; line-height: 1; padding: 4px; }
+.x:hover { color: ${theme.text}; }
 .chips { display: flex; gap: 6px; margin-bottom: 10px; }
 .chip {
   flex: 1; padding: 7px 4px; font-size: 12px; border-radius: 8px;
-  border: 1px solid #e7e5e4; color: #57534e; background: #fafaf9; text-align: center;
+  border: 1px solid ${theme.border}; color: ${theme.textSecondary}; background: ${theme.surfaceRaised}; text-align: center;
 }
-.chip.on { border-color: ${ACCENT}; color: ${ACCENT}; background: #fff7ed; font-weight: 600; }
-.hint { font-size: 11px; color: ${ACCENT}; margin: -4px 0 8px; }
+.chip.on { border-color: ${theme.accent}; color: ${theme.accent}; background: ${theme.white}7ed; font-weight: 600; }
+.hint { font-size: 11px; color: ${theme.accent}; margin: -4px 0 8px; }
 textarea, input {
-  width: 100%; font-size: 13px; color: #1c1917;
-  border: 1px solid #d6d3d1; border-radius: 8px; padding: 8px 10px; background: #fff;
+  width: 100%; font-size: 13px; color: ${theme.text};
+  border: 1px solid ${theme.borderStrong}; border-radius: 8px; padding: 8px 10px; background: ${theme.white};
 }
 textarea { resize: none; min-height: 74px; }
-textarea:focus, input:focus { outline: 2px solid ${ACCENT}; outline-offset: -1px; border-color: transparent; }
-.cnt { font-size: 10px; color: #a8a29e; text-align: right; margin: 3px 0 8px; }
+textarea:focus, input:focus { outline: 2px solid ${theme.accent}; outline-offset: -1px; border-color: transparent; }
+.cnt { font-size: 10px; color: ${theme.textMuted}; text-align: right; margin: 3px 0 8px; }
 .diag {
-  font-size: 11px; color: #57534e; background: #f5f5f4;
-  border: 1px solid #e7e5e4; border-radius: 6px;
+  font-size: 11px; color: ${theme.textSecondary}; background: ${theme.surfaceSubtle};
+  border: 1px solid ${theme.border}; border-radius: 6px;
   padding: 5px 8px; margin: -4px 0 10px; cursor: help;
 }
 input { margin-bottom: 10px; }
 .attachrow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 10px; }
-.attach { font-size: 13px; font-weight: 500; color: #1c1917; padding: 10px 16px; border: 1.5px solid #d6d3d1; border-radius: 8px; background: #fff; display: flex; align-items: center; gap: 8px; }
-.attach:hover { border-color: ${ACCENT}; color: ${ACCENT}; background: #fff7ed; }
+.attach { font-size: 13px; font-weight: 500; color: ${theme.text}; padding: 10px 16px; border: 1.5px solid ${theme.borderStrong}; border-radius: 8px; background: ${theme.white}; display: flex; align-items: center; gap: 8px; }
+.attach:hover { border-color: ${theme.accent}; color: ${theme.accent}; background: ${theme.white}7ed; }
 .attach svg { width: 16px; height: 16px; }
 .shots { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; }
 .shot { position: relative; display: inline-flex; }
-.shot img { height: 56px; max-width: 100px; object-fit: cover; border-radius: 6px; border: 1px solid #e7e5e4; }
+.shot img { height: 56px; max-width: 100px; object-fit: cover; border-radius: 6px; border: 1px solid ${theme.border}; }
 .shot .rm {
   position: absolute; top: -6px; right: -6px; width: 20px; height: 20px;
-  border-radius: 50%; background: #1c1917; color: #fff; font-size: 12px; line-height: 1;
+  border-radius: 50%; background: ${theme.text}; color: ${theme.white}; font-size: 12px; line-height: 1;
   display: flex; align-items: center; justify-content: center;
 }
 /* An 18px dot is under any touch-target guideline. Keep the dot the same size
@@ -156,34 +198,34 @@ input { margin-bottom: 10px; }
 /* ---- visitor placement menu ---- */
 .fabmenu {
   position: fixed; z-index: 2147483003;
-  background: #fff; color: #1c1917;
-  border: 1px solid #e7e5e4; border-radius: 10px;
+  background: ${theme.white}; color: ${theme.text};
+  border: 1px solid ${theme.border}; border-radius: 10px;
   box-shadow: 0 6px 24px rgba(0,0,0,.18);
   padding: 4px; min-width: 180px;
 }
 .fabmenu-item {
   display: block; width: 100%; text-align: left;
-  font-size: 13px; color: #1c1917;
+  font-size: 13px; color: ${theme.text};
   padding: 9px 10px; border-radius: 6px;
 }
-.fabmenu-item:hover { background: #f5f5f4; }
+.fabmenu-item:hover { background: ${theme.surfaceSubtle}; }
 /* A menu is only reachable by long-press on touch, so its rows must clear the
    44px target guideline even though the launcher itself is smaller. */
 @media (pointer: coarse) { .fabmenu-item { padding: 13px 12px; } }
 /* ---- voice ---- */
 .mic {
   display: inline-flex; align-items: center; gap: 8px;
-  font-size: 13px; font-weight: 500; color: #1c1917;
-  padding: 10px 16px; border: 1.5px solid #d6d3d1; border-radius: 8px; background: #fff;
+  font-size: 13px; font-weight: 500; color: ${theme.text};
+  padding: 10px 16px; border: 1.5px solid ${theme.borderStrong}; border-radius: 8px; background: ${theme.white};
 }
-.mic:hover { border-color: ${ACCENT}; color: ${ACCENT}; background: #fff7ed; }
+.mic:hover { border-color: ${theme.accent}; color: ${theme.accent}; background: ${theme.white}7ed; }
 .mic svg { width: 16px; height: 16px; }
-.mic.rec { border-style: solid; border-width: 2px; border-color: #dc2626; color: #dc2626; background: #fef2f2; }
+.mic.rec { border-style: solid; border-width: 2px; border-color: ${theme.error}; color: ${theme.error}; background: ${theme.errorSurface}; }
 .mic.busy { opacity: .7; cursor: default; }
 /* The pulsing dot is the only thing that says "live" at a glance; motion is
    the signal, so honour a visitor who has asked for less of it. */
 .mic .dot {
-  width: 8px; height: 8px; border-radius: 50%; background: #dc2626;
+  width: 8px; height: 8px; border-radius: 50%; background: ${theme.error};
   animation: fcpulse 1.2s ease-in-out infinite;
 }
 @keyframes fcpulse { 0%,100% { opacity: 1; } 50% { opacity: .25; } }
@@ -191,25 +233,25 @@ input { margin-bottom: 10px; }
 @media (pointer: coarse) { .mic { padding: 12px 18px; } }
 .row { display: flex; gap: 8px; }
 .go {
-  flex: 1; background: ${ACCENT}; color: #fff; font-size: 13px; font-weight: 600;
+  flex: 1; background: ${theme.accent}; color: ${theme.white}; font-size: 13px; font-weight: 600;
   border-radius: 8px; padding: 9px 0;
 }
 .go:disabled { opacity: .5; cursor: default; }
-.ghost { font-size: 13px; color: #57534e; padding: 9px 14px; border: 1px solid #e7e5e4; border-radius: 8px; }
-.err { font-size: 12px; color: #dc2626; margin-top: 8px; }
-.keys { font-size: 10px; color: #a8a29e; text-align: center; margin-top: 10px; }
+.ghost { font-size: 13px; color: ${theme.textSecondary}; padding: 9px 14px; border: 1px solid ${theme.border}; border-radius: 8px; }
+.err { font-size: 12px; color: ${theme.error}; margin-top: 8px; }
+.keys { font-size: 10px; color: ${theme.textMuted}; text-align: center; margin-top: 10px; }
 .ok { text-align: center; padding: 22px 0 14px; }
-.ok .tick { width: 40px; height: 40px; border-radius: 50%; background: #16a34a; color: #fff;
+.ok .tick { width: 40px; height: 40px; border-radius: 50%; background: ${theme.success}; color: ${theme.white};
             display: inline-flex; align-items: center; justify-content: center; font-size: 20px; }
-.ok p { font-size: 13px; margin-top: 10px; color: #1c1917; }
+.ok p { font-size: 13px; margin-top: 10px; color: ${theme.text}; }
 .pickbar {
   position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 2147483002;
-  background: #1c1917; color: #fff; border-radius: 10px; padding: 10px 14px;
+  background: ${theme.text}; color: ${theme.white}; border-radius: 10px; padding: 10px 14px;
   display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 20px rgba(0,0,0,.35);
   font-size: 12px; max-width: calc(100vw - 24px);
 }
 .pickbar .go { flex: none; padding: 6px 12px; font-size: 12px; }
-.pickbar .ghost { color: #d6d3d1; border-color: #44403c; padding: 6px 12px; font-size: 12px; white-space: nowrap; }
+.pickbar .ghost { color: ${theme.borderStrong}; border-color: ${theme.borderDark}; padding: 6px 12px; font-size: 12px; white-space: nowrap; }
 .pickbar span { flex: 1; min-width: 0; }
 @media (max-width: 480px) {
   .pickbar { left: 12px; right: 12px; transform: none; max-width: none; }
@@ -219,12 +261,15 @@ input { margin-bottom: 10px; }
   .keys { display: none; }
 }
 `;
+}
 
 /** Injected into document.head — the only styling that must reach host elements. */
-const DOC_CSS = `
-.fcw-hover { outline: 2px dashed ${ACCENT} !important; outline-offset: 2px !important; cursor: crosshair !important; }
-.fcw-selected { outline: 2px solid ${ACCENT} !important; outline-offset: 2px !important; }
+function buildDocCSS(theme: WidgetTheme): string {
+  return `
+.fcw-hover { outline: 2px dashed ${theme.accent} !important; outline-offset: 2px !important; cursor: crosshair !important; }
+.fcw-selected { outline: 2px solid ${theme.accent} !important; outline-offset: 2px !important; }
 `;
+}
 
 /** Client-side downscale so a phone photo never ships megabytes: longest edge
  *  ≤1280px, JPEG, quality stepped down until it fits the ingest cap. */
@@ -420,7 +465,7 @@ function h<K extends keyof HTMLElementTagNameMap>(
   };
   (window as unknown as { FleetCrown?: FleetCrownApi }).FleetCrown = api;
 
-  const mount = () => {
+  const mount = (theme: WidgetTheme) => {
     // ---- state ----
     let scope: Scope = "page";
     let picking = false;
@@ -434,12 +479,12 @@ function h<K extends keyof HTMLElementTagNameMap>(
     host.id = "fleetcrown-feedback-host";
     const root = host.attachShadow({ mode: "open" });
     const style = h("style");
-    style.textContent = SHADOW_CSS;
+    style.textContent = buildShadowCSS(theme);
     root.appendChild(style);
     document.body.appendChild(host);
 
     const docStyle = h("style");
-    docStyle.textContent = DOC_CSS;
+    docStyle.textContent = buildDocCSS(theme);
 
     // ---- FAB ----
     const fab = h("button", "fab");
@@ -800,12 +845,22 @@ function h<K extends keyof HTMLElementTagNameMap>(
         shotsContainer.appendChild(shotWrap);
       }
       attachBtn.style.display = shots.length >= MAX_SCREENSHOTS ? "none" : "";
-      attachBtn.textContent = shots.length > 0 ? `Add more (${shots.length}/${MAX_SCREENSHOTS})` : "";
+      attachBtn.textContent =
+        shots.length > 0 ? `Add more (${shots.length}/${MAX_SCREENSHOTS})` : "";
       if (shots.length === 0 || shots.length >= MAX_SCREENSHOTS) {
         attachBtn.textContent = "";
         const icon = h("span");
         icon.innerHTML = CAMERA_SVG;
-        attachBtn.append(icon, h("span", undefined, shots.length >= MAX_SCREENSHOTS ? `Max ${MAX_SCREENSHOTS} screenshots` : "Add screenshots"));
+        attachBtn.append(
+          icon,
+          h(
+            "span",
+            undefined,
+            shots.length >= MAX_SCREENSHOTS
+              ? `Max ${MAX_SCREENSHOTS} screenshots`
+              : "Add screenshots",
+          ),
+        );
       }
     }
     async function attachFile(file: Blob | null | undefined) {
@@ -856,7 +911,20 @@ function h<K extends keyof HTMLElementTagNameMap>(
     const errEl = h("div", "err");
     const keys = h("div", "keys", "Esc closes · Ctrl+Enter sends");
 
-    panel.append(hdr, chips, hint, textarea, cnt, diagNote, contact, attachRow, shotsContainer, row, errEl, keys);
+    panel.append(
+      hdr,
+      chips,
+      hint,
+      textarea,
+      cnt,
+      diagNote,
+      contact,
+      attachRow,
+      shotsContainer,
+      row,
+      errEl,
+      keys,
+    );
 
     // ---- element-pick bar ----
     const pickbar = h("div", "pickbar");
@@ -1164,8 +1232,9 @@ function h<K extends keyof HTMLElementTagNameMap>(
   const boot = async () => {
     try {
       const res = await fetch(`${apiBase}/api/widget-boot?token=${encodeURIComponent(token)}`);
-      const body = (await res.json()) as { active?: boolean; placement?: unknown };
+      const body = (await res.json()) as { active?: boolean; placement?: unknown; theme?: WidgetTheme };
       if (body.active !== true) return;
+      const theme = body.theme ?? DEFAULT_THEME;
       // Placement arrives with the render verdict, so the launcher paints once
       // in its final corner instead of appearing bottom-right and jumping.
       placement = normalizePlacement(body.placement);
@@ -1178,11 +1247,11 @@ function h<K extends keyof HTMLElementTagNameMap>(
       // a round trip to ask. Checked after boot so a revoked token still short-
       // circuits first — the operator's kill switch outranks the preference.
       if (isHiddenByVisitor(visitorOverride)) return;
+      if (document.body) mount(theme);
+      else document.addEventListener("DOMContentLoaded", () => mount(theme));
     } catch {
       return;
     }
-    if (document.body) mount();
-    else document.addEventListener("DOMContentLoaded", mount);
   };
   void boot();
 })();
