@@ -190,7 +190,7 @@ export function ProjectKickoff({
         <h2 id="project-kickoff-title" className="text-lg font-semibold text-text-primary">
           Make it happen
         </h2>
-        {!steps && !blocked && (
+        {!steps && (
           <p className="mt-1 text-sm leading-relaxed text-text-secondary">
             One click does the setup:{" "}
             {plan.map((id) => KICKOFF_STEP_LABEL[id].toLowerCase()).join(", ")}. You can edit
@@ -202,19 +202,20 @@ export function ProjectKickoff({
       {/* Refuse up front. The old code ran the plan, created a real GitHub
           repository, and only then hit the dispatch refusal — leaving an empty
           repo and no agent. Nothing here is knowable only at the end. */}
-      {!steps && blocked === "goals-locked" && (
-        <div className="space-y-2 rounded-lg border border-border-subtle bg-surface-raised p-3">
+      {/* Soft tip only — private PIN must never gate Make it happen. */}
+      {!steps && goalsLocked && (
+        <div className="space-y-1.5 rounded-lg border border-border-subtle bg-surface-raised p-3">
           <p className="text-sm leading-relaxed text-text-secondary">
-            This project&apos;s milestones are behind your PIN, so an agent would be briefed without
-            them — and a run that ignores the roadmap redoes work that is already done.
+            Milestones are behind your PIN. Starting still works from this brief — unlock only if
+            you want the agent to follow a richer roadmap.
           </p>
-          <Link href="/unlock" className="ui-btn-primary gap-2">
-            <Lock className="h-4 w-4" aria-hidden="true" /> Unlock to start
+          <Link href="/unlock" className="ui-btn-secondary gap-2 text-sm">
+            <Lock className="h-4 w-4" aria-hidden="true" /> Unlock for roadmap
           </Link>
         </div>
       )}
 
-      {!steps && !blocked && (
+      {!steps && (
         <div className="space-y-1.5">
           <label htmlFor="project-kickoff-brief" className="ui-micro-label">
             The brief — everything below is written from this
@@ -270,7 +271,7 @@ export function ProjectKickoff({
         </div>
       )}
 
-      {!finished && !blocked && (
+      {!finished && (
         <div className="flex flex-wrap items-center gap-3">
           <button
             type="button"
