@@ -4,6 +4,7 @@ import { RATE_LIMIT_WINDOW_SHORT_MS } from "@/lib/constants/time";
 import { WIDGET_TOKEN_STATUS } from "@/lib/constants/statuses";
 import { getWidgetTokenByToken, touchWidgetToken } from "@/db/queries/widget-tokens";
 import { normalizeWidgetPlacement, type WidgetPlacement } from "@/config/widget-placement";
+import { PALETTE } from "@/lib/palette";
 
 /**
  * Widget boot: the embed's first call on every page load. Returns whether the
@@ -29,44 +30,20 @@ const CORS_HEADERS = {
 } as const;
 
 /**
- * Design theme for the widget — colors that match the FleetCrown brand.
- * Served with the boot payload so the widget never hardcodes hex values.
- */
-const WIDGET_THEME = {
-  accent: "#e0680f",
-  accentHover: "#ff7519",
-  accentMuted: "#fff7ed",
-  text: "#1c1917",
-  textSecondary: "#57534e",
-  textTertiary: "#78716c",
-  textMuted: "#a8a29e",
-  surface: "#ffffff",
-  surfaceRaised: "#fafaf9",
-  surfaceSubtle: "#f5f5f4",
-  border: "#e7e5e4",
-  borderStrong: "#d6d3d1",
-  borderDark: "#44403c",
-  success: "#16a34a",
-  error: "#dc2626",
-  errorSurface: "#fef2f2",
-  black: "#1c1917",
-  white: "#ffffff",
-};
-
-/**
  * `placement` rides along with the render verdict rather than getting its own
  * call: the widget already blocks on this response before drawing anything, so
  * folding position in costs no extra round trip and removes any window where
  * the launcher paints in one corner and then jumps to another.
  *
  * Theme colors also travel with boot so the widget never hardcodes hex values.
+ * Colors come from PALETTE.widget, which mirrors the app's design tokens.
  *
  * Omitted entirely when the widget will not render — a paused token should
  * leak nothing about the project's configuration.
  */
 function bootResponse(active: boolean, status = 200, placement?: WidgetPlacement): NextResponse {
   return NextResponse.json(
-    active && placement ? { active, placement, theme: WIDGET_THEME } : { active },
+    active && placement ? { active, placement, theme: PALETTE.widget } : { active },
     {
       status,
       headers: CORS_HEADERS,

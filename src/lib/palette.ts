@@ -55,4 +55,45 @@ export const PALETTE = {
   },
   /** Plain white — email card surface + button/header text on dark fills. */
   white: "#ffffff",
+  /** Widget theme — mirrors the app's dark-mode design tokens for the embed.
+   *  The widget is always dark (works on any host page background), so these
+   *  map to .dark tokens in globals.css. Change both places together. */
+  widget: {
+    /** --accent-warm (dark) ≈ oklch(0.69 0.21 41) — primary accent, CTAs, focus */
+    accent: "#ff7519",
+    /** --accent-warm-hover (dark) ≈ oklch(0.75 0.19 43) — hover state */
+    accentHover: "#ff8534",
+    /** --accent-warm at 8% opacity — muted accent surface */
+    accentMuted: "#fff7ed",
+    /** --text-primary (dark) ≈ oklch(0.92 0 0) */
+    text: "#ededed",
+    /** --text-secondary (dark) ≈ oklch(0.6 0 0) */
+    textSecondary: "#999999",
+    /** --text-tertiary (dark) ≈ oklch(0.4 0 0) */
+    textTertiary: "#666666",
+    /** --text-muted (dark) ≈ oklch(0.35 0 0) */
+    textMuted: "#595959",
+    /** --surface-base (dark) ≈ oklch(0.12 0 0) */
+    surface: "#1f1f1f",
+    /** --surface-raised (dark) ≈ oklch(0.16 0 0) */
+    surfaceRaised: "#292929",
+    /** --surface-overlay (dark) ≈ oklch(0.14 0 0) */
+    surfaceSubtle: "#242424",
+    /** --border-subtle (dark) ≈ oklch(0.2 0 0) */
+    border: "#333333",
+    /** --border-default (dark) ≈ oklch(0.26 0 0) */
+    borderStrong: "#424242",
+    /** Used for picker bar on dark pages */
+    borderDark: "#525252",
+    /** --status-positive (dark) ≈ oklch(0.55 0.16 145) */
+    success: "#00a000",
+    /** --status-negative (dark) ≈ oklch(0.6 0.24 25) */
+    error: "#ef4444",
+    /** --status-negative-subtle (dark) — error surface */
+    errorSurface: "#fee",
+    /** Pure black for high contrast elements */
+    black: "#000000",
+    /** Pure white for high contrast text */
+    white: "#ffffff",
+  },
 } as const;
