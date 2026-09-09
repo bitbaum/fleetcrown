@@ -29,6 +29,19 @@ export interface ReleaseEntry {
 /** Newest first. */
 export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
   {
+    version: "0.8.18",
+    tag: "fleet-runner-v0.8.18",
+    date: "2026-09-09T15:35:00Z",
+    highlights: [
+      "Feedback implementation now resumes Claude's durable native session instead of treating a terminal tab name as the identity of the work.",
+      "Watch links follow the project to whichever runner owns its live session, without forcing Cloud or exposing a tab name in the URL.",
+      "A runner restart no longer makes FleetCrown kill a live terminal merely because an in-memory session map was lost.",
+    ],
+    breaking: [],
+    notes:
+      "This closes the identity gap between Implement and Watch: the database session id drives resume, while a tab remains only the transport used to display and type into that session.",
+  },
+  {
     version: "0.8.17",
     tag: "fleet-runner-v0.8.17",
     date: "2026-09-04T12:55:00Z",
