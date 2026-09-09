@@ -152,7 +152,7 @@ export function TerminalSurface({
   // pin the source forever — arriving via ?source=cloud made the toggle inert,
   // because each click was immediately overruled by the unchanged URL.
   const [pickedSource, setPickedSource] = useState<TerminalSource | null>(null);
-  
+
   // Auto-switch preparation: poll both sources to see which has the requested tab
   const desiredSourceFromUrl = initialSource ?? mode.source;
   const primarySource: TerminalSource = sources.includes(desiredSourceFromUrl)
@@ -160,7 +160,7 @@ export function TerminalSurface({
     : "cloud";
   const primaryChannel = channelFor(primarySource);
   const primaryTabs = useTerminalTabs(primaryChannel);
-  
+
   const otherSource: TerminalSource | null =
     primarySource === "machine" && sources.includes("cloud")
       ? "cloud"
@@ -210,10 +210,14 @@ export function TerminalSurface({
     loading,
   });
   // Suppress the miss UI while we're auto-switching to the other source.
-  const deepLinkMiss =
-    rawDeepLinkMiss &&
+  // Use case-insensitive matching to check if tab exists on other source.
+  const otherHasTab = Boolean(
     initialTab &&
-    (!otherSource || otherSourceTabs.loading || !otherSourceTabs.tabs.includes(initialTab));
+      otherSource &&
+      !otherSourceTabs.loading &&
+      otherSourceTabs.tabs.some((t) => t.toLowerCase() === initialTab.toLowerCase()),
+  );
+  const deepLinkMiss = rawDeepLinkMiss && initialTab && !otherHasTab;
 
   // The terminal is one of the four project surfaces, so the tab you are
   // watching IS the fleet's active project — Control, Loki and the project

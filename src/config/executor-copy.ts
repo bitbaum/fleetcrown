@@ -180,10 +180,9 @@ export const EXECUTOR_COPY = {
     // Connected to the peek stream but no screen frames arrived → the runner is
     // wedged (e.g. its outbound fetch is failing). Honest, actionable — not a
     // black pane labelled "live".
-    cloudStalledHint:
-      "Connected, but the stream isn't flowing. Try This computer if Fleet Runner is running, or check Control for status.",
+    cloudStalledHint: "Session stream not responding. Check Control for status or restart the session.",
     thisComputerStalledHint:
-      "Connected, but the stream isn't flowing. Try Cloud if the session is there, or restart Fleet Runner from the menu bar.",
+      "Session stream not responding. Restart Fleet Runner from the menu bar or check Control.",
     thisComputerHelp:
       "Interactive view of agents on this computer via the desktop app. Same keystroke path as Cloud — click the terminal and type.",
     thisComputerEmpty: "Nothing running on this computer.",

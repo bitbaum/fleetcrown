@@ -99,6 +99,13 @@ export type TabAttachment = {
  * requested name and normal resolution resumes, so the miss state cannot trap
  * them. And while `loading` is true the miss is not yet reported — an empty tab
  * list mid-fetch is not evidence the session is gone.
+ *
+ * **Case-insensitive matching** (2026-09-09): project names are case-insensitive
+ * across the fleet ("Bitbaum" and "bitbaum" are the same project), but tab names
+ * in the runtime snapshot preserve whatever case the runner reported. This caused
+ * "Watch" and "Focus terminal" to fail when the URL requested "fleetcrown" but
+ * the actual tab was "Bitbaum". Now matches case-insensitively and returns the
+ * actual tab name so the transport can connect.
  */
 export function resolveTabAttachment({
   requestedTab,
@@ -111,10 +118,21 @@ export function resolveTabAttachment({
   tabs: string[];
   loading: boolean;
 }): TabAttachment {
-  const pending =
-    Boolean(requestedTab) && selected === requestedTab && !tabs.includes(requestedTab!);
+  // Case-insensitive lookup helper
+  const findTab = (name: string | null | undefined): string | null => {
+    if (!name) return null;
+    const lower = name.toLowerCase();
+    return tabs.find((t) => t.toLowerCase() === lower) ?? null;
+  };
+
+  // Deep link miss: requested a specific tab, but it's not in the list
+  const requestedActual = findTab(requestedTab);
+  const pending = Boolean(requestedTab) && selected === requestedTab && !requestedActual;
   if (pending) return { activeTab: null, deepLinkMiss: !loading };
-  const activeTab = selected && tabs.includes(selected) ? selected : (tabs[0] ?? null);
+
+  // Normal resolution: use selected tab if it exists, else first available
+  const selectedActual = findTab(selected);
+  const activeTab = selectedActual ?? (tabs[0] ?? null);
   return { activeTab, deepLinkMiss: false };
 }
 
