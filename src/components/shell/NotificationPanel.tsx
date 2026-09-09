@@ -27,7 +27,7 @@ export function NotificationPanel({ onClose }: { onClose: () => void }) {
       const res = await patchJson(`/api/alerts/${id}/dismiss`, {});
       if (!res.ok) await throwApiError(res, "Could not dismiss alert");
       refetch();
-    } catch (e) {
+    } catch (_e) {
       // Silent fail — user can retry
     } finally {
       setBusyId(null);
@@ -81,9 +81,7 @@ export function NotificationPanel({ onClose }: { onClose: () => void }) {
                 {alert.description && (
                   <p className="ui-notification-item-description">{alert.description}</p>
                 )}
-                <p className="ui-notification-item-meta">
-                  {compactRelativeDate(alert.createdAt)}
-                </p>
+                <p className="ui-notification-item-meta">{compactRelativeDate(alert.createdAt)}</p>
               </div>
               <div className="ui-notification-item-actions">
                 {alert.actionUrl && (

@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
-import { Bell, BellOff, Loader2 } from "lucide-react";
-import { usePushSubscription } from "@/hooks/use-push-subscription";
+import { Bell } from "lucide-react";
 import { useFetch } from "@/hooks/use-fetch";
 import { cn } from "@/lib/utils";
 import { NotificationPanel } from "./NotificationPanel";
@@ -23,7 +22,6 @@ const onClient = () => true;
 const onServer = () => false;
 
 export function NotificationsPill() {
-  const push = usePushSubscription();
   const [panelOpen, setPanelOpen] = useState(false);
   const { data } = useFetch<{ alerts: Alert[] }>("/api/alerts");
 
@@ -64,14 +62,14 @@ export function NotificationsPill() {
         type="button"
         onClick={() => setPanelOpen(!panelOpen)}
         className={cn("ui-topbar-btn relative", hasAlerts && "text-accent-text")}
-        title={hasAlerts ? `${alertCount} notification${alertCount === 1 ? "" : "s"}` : "Notifications"}
+        title={
+          hasAlerts ? `${alertCount} notification${alertCount === 1 ? "" : "s"}` : "Notifications"
+        }
         aria-label={hasAlerts ? `${alertCount} notifications` : "Notifications"}
       >
         <Bell className="h-4 w-4" />
         {hasAlerts && (
-          <span className="ui-notification-badge">
-            {alertCount > 9 ? "9+" : alertCount}
-          </span>
+          <span className="ui-notification-badge">{alertCount > 9 ? "9+" : alertCount}</span>
         )}
       </button>
 

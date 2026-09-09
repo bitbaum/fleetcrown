@@ -3,10 +3,7 @@ import { getApiUserId } from "@/lib/session";
 import { dismissAlert } from "@/db/queries/alerts";
 import { jsonOk, jsonError } from "@/lib/api/route-helpers";
 
-export async function PATCH(
-  req: NextRequest,
-  props: { params: Promise<{ id: string }> },
-) {
+export async function PATCH(req: NextRequest, props: { params: Promise<{ id: string }> }) {
   const userId = getApiUserId();
   if (!userId) return jsonError("Unauthorized", 401);
 
