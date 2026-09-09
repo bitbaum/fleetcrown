@@ -48,12 +48,16 @@ const FeedbackBody = z.object({
   // synthesizer declare themselves. Self-asserted via the public token, so a
   // routing hint, not a trust boundary.
   source: z.enum(FEEDBACK_SOURCE_VALUES).optional(),
-  /** Visitor-attached image, client-downscaled by the widget. Data URL only;
-   *  the char cap bounds storage (~450 KB of image per submission). */
-  screenshot: z
-    .string()
-    .regex(/^data:image\/(jpeg|png|webp);base64,/)
-    .max(600_000)
+  /** Visitor-attached images, client-downscaled by the widget. Data URLs only;
+   *  the char cap bounds storage per image (~450 KB each). */
+  screenshots: z
+    .array(
+      z
+        .string()
+        .regex(/^data:image\/(jpeg|png|webp);base64,/)
+        .max(600_000),
+    )
+    .max(5)
     .optional(),
   selectedElements: z
     .array(
@@ -138,7 +142,7 @@ export async function POST(req: NextRequest) {
     scope: data.scope ?? null,
     source: data.source ?? FEEDBACK_SOURCE.VISITOR,
     contentHash,
-    screenshot: data.screenshot ?? null,
+    screenshots: data.screenshots ?? null,
     selectedElements: data.selectedElements ?? null,
     userAgent: req.headers.get("user-agent")?.slice(0, 300) ?? null,
   });

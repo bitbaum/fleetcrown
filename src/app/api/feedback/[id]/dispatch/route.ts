@@ -29,7 +29,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
   const row = await getFeedbackWithProject(userId, idOrResp);
-  if (!row) return jsonError("Not found", 404);
+  if (!row) return jsonError("Feedback not found", 404);
+
+  // Verify the project actually exists in user_projects before dispatching.
+  // This prevents creating runs for projects that can't be found by inject.
+  if (!row.projectName) {
+    return jsonError(
+      "Project configuration not found. The project may need to be re-registered on the Projects page.",
+      422,
+    );
+  }
+
   if (
     row.feedback.status === FEEDBACK_STATUS.RESOLVED ||
     row.feedback.status === FEEDBACK_STATUS.ARCHIVED
@@ -66,16 +76,27 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     },
     userId,
   );
+
+  // Only mark as dispatched if the injection succeeded (status < 400).
+  // This ensures failed injections (e.g. "Unknown tab") don't mark the
+  // feedback as dispatched, which would make it look like work started
+  // when it never did.
   if (status < 400) {
     const runId = typeof body.runId === "string" ? body.runId : undefined;
     await setFeedbackStatus(userId, idOrResp, FEEDBACK_STATUS.DISPATCHED, runId);
   }
+
+  // Return detailed error messages to help the operator understand what went wrong
   return NextResponse.json(
     {
       ...body,
       sessionId: currentSession?.sessionId,
       sessionAction: currentSession ? "resumed" : "started",
       workLabel: status < 400 ? "Queued" : undefined,
+      // Add helpful context for common failures
+      ...(status === 404 && {
+        hint: "The project may need to be registered on the Projects page, or the agent may need to be started.",
+      }),
     },
     { status },
   );

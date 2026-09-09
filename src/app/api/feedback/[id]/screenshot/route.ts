@@ -1,17 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readIdParam, jsonError } from "@/lib/api/route-helpers";
 import { getSessionUserId } from "@/lib/session";
-import { getFeedbackScreenshot } from "@/db/queries/site-feedback";
+import { getFeedbackScreenshots } from "@/db/queries/site-feedback";
 
 /**
- * The visitor-attached image for one feedback row, served as a real image
- * response. Kept out of the inbox list payload on purpose — the bytes load
+ * The visitor-attached images for one feedback row. Returns JSON array of
+ * data URLs. Kept out of the inbox list payload on purpose — the bytes load
  * only when the operator opens them. NOTE: /api/feedback is excluded from the
  * auth middleware (the public ingest lives there), so the session check below
  * is the ONLY gate on this handler — do not remove it.
  */
-
-const DATA_URL_RE = /^data:(image\/(?:jpeg|png|webp));base64,(.+)$/;
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const userId = await getSessionUserId();
@@ -19,17 +17,18 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const idOrResp = await readIdParam(params);
   if (idOrResp instanceof NextResponse) return idOrResp;
 
-  const dataUrl = await getFeedbackScreenshot(userId, idOrResp);
-  const match = dataUrl ? DATA_URL_RE.exec(dataUrl) : null;
-  if (!match) return jsonError("No screenshot", 404);
+  const screenshots = await getFeedbackScreenshots(userId, idOrResp);
+  if (!screenshots || screenshots.length === 0) {
+    return jsonError("No screenshots", 404);
+  }
 
-  const bytes = Buffer.from(match[2], "base64");
-  return new NextResponse(bytes, {
-    headers: {
-      "Content-Type": match[1],
-      "Content-Length": String(bytes.length),
-      // Owner-only, immutable per row — cache privately.
-      "Cache-Control": "private, max-age=3600",
+  return NextResponse.json(
+    { screenshots },
+    {
+      headers: {
+        // Owner-only, immutable per row — cache privately.
+        "Cache-Control": "private, max-age=3600",
+      },
     },
-  });
+  );
 }

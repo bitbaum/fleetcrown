@@ -4,6 +4,7 @@ import { RATE_LIMIT_WINDOW_SHORT_MS } from "@/lib/constants/time";
 import { WIDGET_TOKEN_STATUS } from "@/lib/constants/statuses";
 import { getWidgetTokenByToken, touchWidgetToken } from "@/db/queries/widget-tokens";
 import { normalizeWidgetPlacement, type WidgetPlacement } from "@/config/widget-placement";
+import { PALETTE } from "@/lib/palette";
 
 /**
  * Widget boot: the embed's first call on every page load. Returns whether the
@@ -34,14 +35,20 @@ const CORS_HEADERS = {
  * folding position in costs no extra round trip and removes any window where
  * the launcher paints in one corner and then jumps to another.
  *
+ * Theme colors also travel with boot so the widget never hardcodes hex values.
+ * Colors come from PALETTE.widget, which mirrors the app's design tokens.
+ *
  * Omitted entirely when the widget will not render — a paused token should
  * leak nothing about the project's configuration.
  */
 function bootResponse(active: boolean, status = 200, placement?: WidgetPlacement): NextResponse {
-  return NextResponse.json(active && placement ? { active, placement } : { active }, {
-    status,
-    headers: CORS_HEADERS,
-  });
+  return NextResponse.json(
+    active && placement ? { active, placement, theme: PALETTE.widget } : { active },
+    {
+      status,
+      headers: CORS_HEADERS,
+    },
+  );
 }
 
 export function OPTIONS(req: NextRequest) {
