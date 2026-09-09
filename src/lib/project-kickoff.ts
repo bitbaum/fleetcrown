@@ -96,7 +96,7 @@ export function planKickoff(input: KickoffSetupInput & { wantRepo: boolean }): K
 }
 
 /** Why a kickoff cannot run right now — checked BEFORE the first step. */
-export type KickoffBlock = never;
+export type KickoffBlock = "goals-locked"; // retained for call sites; never returned
 
 /**
  * Private-zone PIN must not block starting a project.
