@@ -216,6 +216,7 @@ export const DEMO_DENIED_GET_PREFIXES: ReadonlyArray<readonly [string, DemoDenia
  */
 export const DEMO_SAFE_FAMILIES: readonly string[] = [
   "activity",
+  "alerts",
   "beacon-settings",
   "builder",
   "calendar",

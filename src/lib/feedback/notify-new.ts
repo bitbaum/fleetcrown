@@ -8,9 +8,13 @@ import { pushToUser } from "@/lib/push-fanout";
 import { PUSH_TAG_PREFIX } from "@/config/brand-storage";
 import { APP_URL } from "@/config/brand";
 import { FEEDBACK_SOURCE } from "@/lib/constants/statuses";
+import { refreshOrInsertActiveAlert } from "@/db/queries/alerts";
 
 /** Longest suggestion excerpt a new-feedback notification carries. */
 const EXCERPT_MAX_CHARS = 160;
+
+/** Alert type for new feedback — must match config/alert-types.ts. */
+const ALERT_TYPE = "new_feedback";
 
 /**
  * Tell the operator a visitor just filed feedback.
@@ -61,6 +65,16 @@ export async function notifyFeedbackReceived(row: SiteFeedback): Promise<void> {
           `${APP_URL}${inboxPath}`,
         ];
         await sendTelegramMessage(target, lines.join("\n")).catch(() => undefined);
+      })(),
+      (async () => {
+        await refreshOrInsertActiveAlert({
+          userId: row.userId,
+          type: ALERT_TYPE,
+          severity: "info",
+          title: "New feedback needs triage",
+          description: `${projectName}: "${excerpt}"`,
+          actionUrl: inboxPath,
+        });
       })(),
     ]);
 

@@ -3824,6 +3824,49 @@
     @apply inline-flex min-h-9 items-center text-xs text-text-secondary underline decoration-border-subtle underline-offset-2 transition-colors hover:decoration-current;
   }
 
+  /* ── Notification panel ───────────────────────────────────────────────────
+     Dropdown panel from the bell icon showing alerts that need the operator. */
+  .ui-notification-badge {
+    @apply absolute right-0 top-0 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-status-negative px-1 text-nano font-medium tabular-nums;
+    color: white;
+  }
+  .ui-notification-panel {
+    @apply fixed right-2 top-14 z-50 w-[min(24rem,calc(100vw-1rem))] overflow-hidden rounded-2xl border border-border-subtle bg-surface-raised shadow-panel-strong;
+  }
+  .ui-notification-header {
+    @apply flex items-center justify-between gap-2 border-b border-border-subtle px-4 py-3;
+  }
+  .ui-notification-title {
+    @apply text-sm font-semibold text-text-primary;
+  }
+  .ui-notification-list {
+    @apply max-h-[min(32rem,60vh)] divide-y divide-border-subtle overflow-y-auto;
+  }
+  .ui-notification-item {
+    @apply flex flex-col gap-2 p-4 sm:flex-row sm:items-start sm:gap-4;
+  }
+  .ui-notification-item-main {
+    @apply min-w-0 flex-1;
+  }
+  .ui-notification-item-title {
+    @apply min-w-0 text-sm font-medium leading-snug text-text-primary;
+  }
+  .ui-notification-item-description {
+    @apply mt-1 text-xs leading-snug text-text-secondary;
+  }
+  .ui-notification-item-meta {
+    @apply mt-0.5 text-xs text-text-tertiary;
+  }
+  .ui-notification-severity {
+    @apply shrink-0 text-nano font-medium uppercase tracking-wide;
+  }
+  .ui-notification-item-actions {
+    @apply flex shrink-0 items-center justify-end gap-1.5 sm:justify-start;
+  }
+  .ui-notification-empty {
+    @apply px-4 py-8 text-center text-xs text-text-muted;
+  }
+
   .ui-control-operations-header {
     @apply flex flex-col gap-4 rounded-2xl border border-border-subtle bg-surface-raised p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5;
     box-shadow: var(--shadow-panel);
