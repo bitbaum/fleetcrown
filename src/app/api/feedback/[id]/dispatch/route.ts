@@ -64,7 +64,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const { status, body } = await injectPrompt(
     {
-      tab: row.projectName,
+      tab: row.projectName, // Still required by InjectParams but sessionId takes precedence
+      sessionId: currentSession.sessionId,
       customPrompt: composeFeedbackFixPrompt(
         row.feedback,
         row.projectName,

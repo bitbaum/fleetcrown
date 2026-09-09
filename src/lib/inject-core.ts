@@ -61,6 +61,10 @@ export type InjectParams = {
   /** Push the close outcome to chat (Telegram). Set by chat-originated
    *  dispatches (Loki's fleet skill) — see lib/orchestration/notify-close.ts. */
   notifyOnClose?: boolean;
+  /** Claude session ID from agent_sessions. When provided, resumes that session
+   *  instead of matching by tab name. This is the project-based identity that
+   *  replaces tab-name matching. */
+  sessionId?: string;
 };
 
 export type InjectResult = { status: number; body: Record<string, unknown> };
