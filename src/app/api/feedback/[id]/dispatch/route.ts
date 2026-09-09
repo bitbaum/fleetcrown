@@ -9,16 +9,36 @@ import { composeFeedbackFixPrompt } from "@/lib/feedback/compose-dispatch";
 import { deriveFeedbackWork, FEEDBACK_WORK_PHASE } from "@/lib/feedback/work-phase";
 import { runToFeedbackSnapshot } from "@/lib/feedback/attach-work";
 import { getCurrentClaudeSessionForProject } from "@/db/queries/agent-sessions";
+import {
+  DEFAULT_ADAPTER_ID,
+  ORCHESTRATION_ADAPTER_IDS,
+  type AdapterId,
+} from "@/lib/orchestration";
 
 /**
  * One-click Implement: queue a scoped agent run via injectPrompt.
  * Returns runId when accepted. Allows Retry when a prior run is stuck/failed
  * (not while a run is queued or actively working).
+ *
+ * Agent choice: the project's agentPref when it is an orchestration adapter the
+ * runner can launch. Claude is the only worker with a durable session id today,
+ * so session resume applies only when the chosen adapter is Claude. openclaw is
+ * accepted by orchestration ids but is not launchable — fall through to default.
  */
 
 const DispatchBody = z.object({
   note: z.string().trim().max(500).optional(),
 });
+
+/** Adapters Implement may start. openclaw is orchestration-listed but not launchable. */
+const IMPLEMENT_ADAPTERS = ORCHESTRATION_ADAPTER_IDS.filter((id) => id !== "openclaw");
+
+function resolveImplementAdapter(agentPref: string | null | undefined): AdapterId {
+  if (agentPref && (IMPLEMENT_ADAPTERS as readonly string[]).includes(agentPref)) {
+    return agentPref as AdapterId;
+  }
+  return DEFAULT_ADAPTER_ID;
+}
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const userId = await getApiUserId();
@@ -59,13 +79,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
   }
 
-  const currentSession = await getCurrentClaudeSessionForProject(userId, row.projectName);
+  const adapter = resolveImplementAdapter(row.agentPref);
+  const currentSession =
+    adapter === "claude"
+      ? await getCurrentClaudeSessionForProject(userId, row.projectName)
+      : null;
+
   const { status, body } = await injectPrompt(
     {
       tab: row.projectName,
-      // Claude is the only provider whose hook reports a durable native id.
-      // No row means the existing dispatch path starts one action/session.
-      adapter: "claude",
+      adapter,
       sessionId: currentSession?.sessionId,
       customPrompt: composeFeedbackFixPrompt(
         row.feedback,
@@ -90,8 +113,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   return NextResponse.json(
     {
       ...body,
-      sessionId: currentSession?.sessionId,
-      sessionAction: currentSession ? "resumed" : "started",
+      adapter,
+      sessionId: currentSession?.sessionId ?? null,
+      sessionAction:
+        adapter === "claude" ? (currentSession ? "resumed" : "started") : "started",
       workLabel: status < 400 ? "Queued" : undefined,
       // Add helpful context for common failures
       ...(status === 404 && {
