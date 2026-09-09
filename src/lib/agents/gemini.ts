@@ -15,7 +15,7 @@ import type { AgentAdapter, AgentAvailability, AgentRuntimeConfig } from "./type
 
 export const geminiAdapter: AgentAdapter = {
   id: "gemini",
-  label: "Gemini",
+  label: "Antigravity",
   processMatchers: ["gemini"],
   defaultModel: "auto",
   modelSuggestions: ["auto", "pro", "flash", "flash-lite"],

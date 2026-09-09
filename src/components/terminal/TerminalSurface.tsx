@@ -476,12 +476,16 @@ export function TerminalSurface({
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-2" style={rootStyle}>
+    <div className="flex h-full min-h-0 flex-col gap-3" style={rootStyle}>
       {sourceBar}
       <div className="md:hidden">{mobileHeader}</div>
-      <div className="hidden md:block">
-        <TerminalTabStrip tabs={stripTabs} activeId={activeTab} onSelect={setSelected} />
-      </div>
+      {/* Tab strip - show prominently when sessions exist */}
+      {stripTabs.length > 0 && (
+        <div className="hidden md:block">
+          <TerminalTabStrip tabs={stripTabs} activeId={activeTab} onSelect={setSelected} />
+        </div>
+      )}
+      {/* Session controls - agent switcher and input mode */}
       {activeTab && (
         <div className="hidden md:block">
           <TerminalSessionBar

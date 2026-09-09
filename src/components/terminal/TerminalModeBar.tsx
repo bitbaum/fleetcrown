@@ -69,18 +69,29 @@ export function TerminalSourceBar({
   honesty: ExecutorHonestyLabel | null;
 }) {
   const sourceOptions = TERMINAL_SOURCES.filter((s) => sources.includes(s.id));
-  if (sourceOptions.length <= 1 && !honesty) return null;
+  // Always show the bar when there are sessions to view - users need to know
+  // WHERE they're looking (cloud vs local), even if only one builder is online.
+  // The bar only hides on the empty state when there's truly nothing to show.
+  const showBar = sourceOptions.length > 0 || honesty !== null;
+  if (!showBar) return null;
 
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-      {sourceOptions.length > 1 && (
+      {sourceOptions.length > 1 ? (
         <Segment
           options={sourceOptions}
           value={source}
           onChange={onSourceChange}
           label="Terminal source"
         />
-      )}
+      ) : sourceOptions.length === 1 ? (
+        // When there's only one source, show it as a label so users know where they're looking
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium text-text-secondary">
+            {sourceOptions[0].label}
+          </span>
+        </div>
+      ) : null}
       <ExecutorHonestyChip honesty={honesty} />
     </div>
   );

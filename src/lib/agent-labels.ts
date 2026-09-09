@@ -17,7 +17,7 @@ export const AGENT_LABELS: Record<AnyAgentId, string> = {
   claude: "Claude",
   codex: "Codex",
   cursor: "Cursor",
-  gemini: "Gemini",
+  gemini: "Antigravity",
   grok: "Grok",
   openclaw: "OpenClaw",
 };
