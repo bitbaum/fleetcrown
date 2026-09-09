@@ -84,6 +84,11 @@ const DEFAULT_SESSION_NAME = 'fleet'
  *  restart empties the map; the next dispatch re-prunes, so nothing leaks. */
 const worktreeByTab = new Map<string, { primaryDir: string; launchDir: string }>()
 
+/** Track which Claude session ID we launched in each tab's PTY. Used to avoid
+ *  killing a live PTY that's already running the correct session — restarting
+ *  the pane would look like a crash to the person watching. */
+const sessionIdByTab = new Map<string, string>()
+
 const COMMAND_DEDUP_DIR = path.join(os.tmpdir())
 function dedupSentinelPath(commandId: string): string {
   return path.join(COMMAND_DEDUP_DIR, `fc-cmd-${commandId}.done`)
@@ -563,6 +568,7 @@ async function handleCommand(
           try { pruneWorktrees(tab, wt.primaryDir) } catch { /* best-effort */ }
           worktreeByTab.delete(tab)
         }
+        sessionIdByTab.delete(tab)
         ok = true
         break
       }
@@ -648,15 +654,15 @@ async function handleCommand(
           const ptyAlready = ptyAlreadyLive
           let launched = false
           let ptyOk = ptyAlready
-          // When we have a sessionId and a PTY is already running, terminate it
-          // and relaunch with --resume <sessionId> to ensure we're in the correct
-          // session. Without this, we'd inject into whatever session is currently
-          // open, not the one identified by sessionId from agent_sessions.
-          if (ptyAlready && sessionId) {
+          // When we have a sessionId and a PTY is already running, check if it's
+          // already the correct session. Only terminate + relaunch if it's WRONG.
+          // Killing a live pane the person is watching looks like a crash.
+          if (ptyAlready && sessionId && sessionIdByTab.get(tab) !== sessionId) {
             try {
-              console.log(`[poller] terminating existing PTY to resume session ${sessionId}`)
+              console.log(`[poller] terminating PTY (wrong session) to resume ${sessionId}`)
               await terminatePty(tab)
               await asleep(400)
+              sessionIdByTab.delete(tab)
               ptyOk = false // Force relaunch path below
             } catch (e) {
               console.warn('[poller] PTY terminate failed:', (e as Error).message)
@@ -666,6 +672,7 @@ async function handleCommand(
             try {
               await launchAgentPty(tab, effDir, agent as AgentOption, model, sessionId)
               clearHandoffSentinel(tab)
+              if (sessionId) sessionIdByTab.set(tab, sessionId)
               launched = true
               ptyOk = true
               // Wait for the agent to show life, then settle before pasting.
