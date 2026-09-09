@@ -472,6 +472,7 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
       projectId,
       projectKey: canonical,
       runId,
+      sessionId, // Pass through to the runner so Claude can resume this session
       dir: projectPath,
       projectBusy,
       channel: pinnedChannel,

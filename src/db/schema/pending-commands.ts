@@ -59,6 +59,12 @@ export type InjectPayload = {
    * when the agent's session ends. Closes the outcome-tracking loop in cloud mode.
    */
   runId?: string;
+  /**
+   * Claude session ID from agent_sessions. When provided, the runner must
+   * resume this specific session instead of starting a new one. This is the
+   * session-based identity that replaces tab-name matching.
+   */
+  sessionId?: string;
 };
 
 export type SwitchAgentPayload = {
@@ -116,4 +122,9 @@ export type DispatchPayload = {
   promptLabel?: string;
   projectKey?: string;
   runId?: string;
+  /**
+   * Claude session ID from agent_sessions. When provided, the runner must
+   * resume this specific session instead of starting a new one.
+   */
+  sessionId?: string;
 };

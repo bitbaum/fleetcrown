@@ -91,6 +91,7 @@ export async function executeInject(
           promptLabel: payload.promptLabel,
           projectKey: payload.projectKey,
           runId: payload.runId,
+          sessionId: payload.sessionId,
         })
       : await enqueueInjectCommand(userId, channel ? { ...payload, channel } : payload);
     return { ok: true, mode: "queued", commandId, runnerConnected: decision.runnerConnected };
