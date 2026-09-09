@@ -200,6 +200,8 @@ export function TerminalSurface({
       // 3. No match - return original (may not exist, but that's what deepLinkMiss handles)
       return projectOrTab;
     },
+    // ctx parameter is used, not primaryContext - disable exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
 
@@ -242,7 +244,12 @@ export function TerminalSurface({
   };
   const setInputMode = (next: TerminalInputMode) => setMode((m) => ({ ...m, input: next }));
 
-  const [selected, setSelected] = useState<string | null>(resolvedInitialTab ?? null);
+  // Separate user's manual selection from the deep-linked/resolved initial tab.
+  // This way, selected automatically updates when resolvedInitialTab changes
+  // (e.g., when context loads and maps "fleetcrown" → "Bitbaum"), without
+  // needing an effect that triggers cascading renders.
+  const [userSelection, setUserSelection] = useState<string | null>(null);
+  const selected = userSelection ?? resolvedInitialTab;
   // A ?tab= deep link that matched nothing must not quietly attach to whatever
   // else is running — see resolveTabAttachment for the incident this encodes.
   // But only show the miss UI after we've checked both sources (auto-switch above).
@@ -440,7 +447,7 @@ export function TerminalSurface({
       // the agent in a session the shell is not showing.
       tabs={source === "shell" ? undefined : stripTabs}
       activeTab={source === "shell" ? null : activeTab}
-      onSelectTab={source === "shell" ? undefined : setSelected}
+      onSelectTab={source === "shell" ? undefined : setUserSelection}
       inputMode={inputMode}
       onInputModeChange={setInputMode}
       agents={agents}
@@ -486,7 +493,7 @@ export function TerminalSurface({
           sourceLabel={sourceLabel}
           otherSourceLabel={otherSourceLabel}
           available={tabs}
-          onAttach={setSelected}
+          onAttach={setUserSelection}
           onSwitchSource={() => setSource(source === "machine" ? "cloud" : "machine")}
         />
       );
@@ -566,7 +573,7 @@ export function TerminalSurface({
       {sourceBar}
       <div className="md:hidden">{mobileHeader}</div>
       <div className="hidden md:block">
-        <TerminalTabStrip tabs={stripTabs} activeId={activeTab} onSelect={setSelected} />
+        <TerminalTabStrip tabs={stripTabs} activeId={activeTab} onSelect={setUserSelection} />
       </div>
       {activeTab && (
         <div className="hidden md:block">
