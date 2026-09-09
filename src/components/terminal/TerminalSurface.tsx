@@ -7,7 +7,8 @@ import { cn } from "@/lib/utils";
 import { postJson } from "@/lib/api/fetch";
 import { EXECUTOR_COPY } from "@/config/executor-copy";
 import { deriveExecutorHonestyLabel } from "@/lib/executor-honesty";
-import { resolveNextAvailableAgent } from "@/lib/agent-registry";
+import { listAgentRegistry, AGENT_FALLBACK_ORDER } from "@/lib/agent-registry";
+import type { AgentAvailability } from "@/components/terminal/TerminalCapacityBanner";
 import { useFetch } from "@/hooks/use-fetch";
 import { useLocalStorageState } from "@/hooks/use-local-storage-state";
 import { useTerminalFont } from "@/hooks/use-terminal-font";
@@ -310,8 +311,19 @@ export function TerminalSurface({
     [activeTab, tabDir, activeAgentId],
   );
 
-  // Next available agent for capacity banner — same logic Control uses.
-  const nextAvailableAgent = resolveNextAvailableAgent(activeAgentId);
+  // Build agent fallback chain for capacity banner — uses the registry SSOT.
+  const agentFallbackChain: AgentAvailability[] = useMemo(() => {
+    const registry = listAgentRegistry();
+    return AGENT_FALLBACK_ORDER.map((id) => {
+      const entry = registry.find((r) => r.id === id);
+      return {
+        id,
+        label: entry?.label ?? id,
+        available: entry?.available ?? false,
+        availabilityReason: entry?.availabilityReason,
+      };
+    }).filter((a) => a.id !== activeAgentId); // Exclude current agent from the chain
+  }, [activeAgentId]);
 
   // The strip tells the truth about each tab: the project it resolves to (by
   // name, or by pane cwd for generically named tabs) and the agent CLI actually
@@ -527,8 +539,9 @@ export function TerminalSurface({
         onLive={setLiveState}
         onGeometry={setGeometry}
         currentAgent={activeAgentId}
-        nextAgent={nextAvailableAgent}
+        availableAgents={agentFallbackChain}
         onSwitchAgent={switchAgent}
+        switchingAgent={switchingAgent}
       />
     );
   };

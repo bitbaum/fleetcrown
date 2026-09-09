@@ -15,7 +15,7 @@ import {
 } from "@/lib/terminal-viewport";
 import type { TerminalTransport } from "./terminal-transport";
 import { looksLikeAgentCapacityIssue } from "@/lib/agent-resolution";
-import { TerminalCapacityBanner } from "./TerminalCapacityBanner";
+import { TerminalCapacityBanner, type AgentAvailability } from "./TerminalCapacityBanner";
 
 /**
  * Font sizing on a phone is a column-count problem wearing a typography mask.
@@ -221,12 +221,10 @@ export function TerminalView({
   onLive,
   onGeometry,
   className,
-  /** Current agent for capacity detection, e.g. "claude" */
   currentAgent,
-  /** Next available agent to offer when hitting capacity */
-  nextAgent,
-  /** Callback to switch agents when the capacity banner is clicked */
+  availableAgents,
   onSwitchAgent,
+  switchingAgent = false,
 }: {
   transport: TerminalTransport;
   /** Capture keystrokes (onData → transport.sendKey) and keep the PTY resized. */
@@ -252,8 +250,9 @@ export function TerminalView({
   /** Host div class (bare layout). */
   className?: string;
   currentAgent?: string | null;
-  nextAgent?: string | null;
+  availableAgents?: AgentAvailability[];
   onSwitchAgent?: (agent: string) => void;
+  switchingAgent?: boolean;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const [connected, setConnected] = useState(false);
@@ -710,19 +709,24 @@ export function TerminalView({
   // Capacity banner takes precedence over stalled overlay — a capacity wall is
   // a known, actionable state; stalled is "maybe wedged, maybe just slow".
   const showCapacity =
-    capacityState.detected && currentAgent && (nextAgent !== undefined || onSwitchAgent);
+    capacityState.detected &&
+    currentAgent &&
+    availableAgents &&
+    availableAgents.length > 0 &&
+    onSwitchAgent;
 
   if (bare) {
     return (
       <div className={`flex flex-col ${className ?? "h-full w-full"}`}>
         <div className="relative min-h-0 flex-1">
           <div ref={hostRef} className="h-full w-full" />
-          {showCapacity && onSwitchAgent && (
+          {showCapacity && (
             <TerminalCapacityBanner
               currentAgent={currentAgent}
-              nextAgent={nextAgent ?? null}
+              agents={availableAgents}
               resetsAt={capacityState.resetsAt}
               onSwitch={onSwitchAgent}
+              switching={switchingAgent}
             />
           )}
           {!showCapacity && stalled && <TerminalStalledOverlay message={stallMessage} />}
@@ -816,12 +820,13 @@ export function TerminalView({
         className={`relative w-full overflow-hidden rounded-md bg-surface-terminal ${fill ? "min-h-0 flex-1" : compactChrome ? "min-h-0 flex-1" : "h-72"}`}
       >
         <div ref={hostRef} className="h-full w-full" />
-        {showCapacity && onSwitchAgent && (
+        {showCapacity && (
           <TerminalCapacityBanner
             currentAgent={currentAgent}
-            nextAgent={nextAgent ?? null}
+            agents={availableAgents}
             resetsAt={capacityState.resetsAt}
             onSwitch={onSwitchAgent}
+            switching={switchingAgent}
           />
         )}
         {!showCapacity && stalled && <TerminalStalledOverlay message={stallMessage} />}
