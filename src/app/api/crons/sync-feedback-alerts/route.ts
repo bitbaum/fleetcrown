@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
     const { synced, cleared } = await syncFeedbackAlerts();
 
     void logDebug({
-      source: "cron/sync-feedback-alerts",
+      source: "crons/sync-feedback-alerts",
       level: "info",
       message: `Synced ${synced} feedback alert(s), cleared ${cleared}`,
     });
@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
     });
   } catch (e) {
     void logDebug({
-      source: "cron/sync-feedback-alerts",
+      source: "crons/sync-feedback-alerts",
       level: "error",
       message: `Sync failed: ${(e as Error).message}`,
     });

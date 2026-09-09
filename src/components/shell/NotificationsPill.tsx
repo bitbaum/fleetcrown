@@ -21,9 +21,18 @@ const subscribeNothing = () => () => {};
 const onClient = () => true;
 const onServer = () => false;
 
+type FeedbackSummary = {
+  projectId: string;
+  projectName: string;
+  newCount: number;
+  openCount: number;
+  latestAt: string;
+};
+
 export function NotificationsPill() {
   const [panelOpen, setPanelOpen] = useState(false);
   const { data } = useFetch<{ alerts: Alert[] }>("/api/alerts");
+  const feedback = useFetch<{ summary: FeedbackSummary[] }>("/api/feedback/summary");
 
   /**
    * Render NOTHING until mounted, so the server and the first client render
@@ -50,8 +59,11 @@ export function NotificationsPill() {
   const mounted = useSyncExternalStore(subscribeNothing, onClient, onServer);
   if (!mounted) return null;
 
-  const alertCount = data?.alerts.length ?? 0;
-  const hasAlerts = alertCount > 0;
+  const alerts = data?.alerts ?? [];
+  const feedbackSummary = feedback.data?.summary ?? [];
+  const feedbackCount = feedbackSummary.reduce((n, s) => n + (s.newCount || s.openCount), 0);
+  const totalCount = alerts.length + feedbackCount;
+  const hasAlerts = totalCount > 0;
 
   // Icon-only — the bell state communicates whether there are notifications.
   // Hover-tooltip carries the state explanation. Primary action is opening
@@ -63,13 +75,13 @@ export function NotificationsPill() {
         onClick={() => setPanelOpen(!panelOpen)}
         className={cn("ui-topbar-btn relative", hasAlerts && "text-accent-text")}
         title={
-          hasAlerts ? `${alertCount} notification${alertCount === 1 ? "" : "s"}` : "Notifications"
+          hasAlerts ? `${totalCount} notification${totalCount === 1 ? "" : "s"}` : "Notifications"
         }
-        aria-label={hasAlerts ? `${alertCount} notifications` : "Notifications"}
+        aria-label={hasAlerts ? `${totalCount} notifications` : "Notifications"}
       >
         <Bell className="h-4 w-4" />
         {hasAlerts && (
-          <span className="ui-notification-badge">{alertCount > 9 ? "9+" : alertCount}</span>
+          <span className="ui-notification-badge">{totalCount > 9 ? "9+" : totalCount}</span>
         )}
       </button>
 

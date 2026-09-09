@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { X, Check, ExternalLink, MessageSquare } from "lucide-react";
 import { useFetch } from "@/hooks/use-fetch";
-import { patchJson, postJson, throwApiError } from "@/lib/api/fetch";
+import { patchJson, throwApiError } from "@/lib/api/fetch";
 import { compactRelativeDate } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 import type { Alert } from "@/db/schema/alerts";
@@ -27,11 +27,6 @@ export function NotificationPanel({ onClose }: { onClose: () => void }) {
   const { data, loading, refetch } = useFetch<{ alerts: Alert[] }>("/api/alerts");
   const feedback = useFetch<{ summary: FeedbackSummary[] }>("/api/feedback/summary");
   const [busyId, setBusyId] = useState<string | null>(null);
-
-  // Sync feedback alerts on mount so existing feedback appears
-  useEffect(() => {
-    void postJson("/api/crons/sync-feedback-alerts", {}).catch(() => undefined);
-  }, []);
 
   const alerts = data?.alerts ?? [];
   const feedbackSummary = feedback.data?.summary ?? [];
