@@ -123,7 +123,8 @@ export function TerminalLaunch({
   if (startedAs) {
     return (
       <p className="text-center text-xs text-text-muted">
-        Starting {startedAs} in "{projectName}" — the session appears above when it&apos;s up.
+        Starting {startedAs} in &ldquo;{projectName}&rdquo; — the session appears above when
+        it&apos;s up.
       </p>
     );
   }
