@@ -9,7 +9,6 @@ import {
   type OrchestrationOutcome,
 } from "@/db/schema/orchestration-runs";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
-import { resolveFeedbackForRun } from "@/lib/feedback/close-loop";
 import { promoteRunClose } from "@/lib/integrations/orangecat-publish";
 import { advanceEscalation, resolveEscalation } from "./run-escalations";
 import { ladderEffectForClose } from "@/lib/orchestration/escalation-ladder";
@@ -46,17 +45,15 @@ export async function updateOrchestrationRun(
 
   const [updated] = await db.update(orchestrationRuns).set(patch).where(condition).returning();
 
-  // Every success-producing close path (runner finish route, gate-and-close)
-  // funnels through here — the reaper bypasses it but never stamps success, so
-  // skipping feedback resolution there is correct. (It does NOT get to skip the
-  // notification; the reaper fires that itself. See the loop in
-  // cleanupStaleOrchestrationRuns.)
-  // Fire-and-forget: closing the feedback loop must not slow or fail the close.
+  // SUCCESS used to auto-resolve linked feedback here. That claimed the live
+  // product shipped when only the agent run closed — inject delivered ≠ Done.
+  // Feedback stays dispatched → "Check live" until operator Resolve (or a
+  // future live-stamp / merged-PR closer calls resolveFeedbackForRun).
+  //
+  // Run→wall loop still fires: successful agent work surfaces as OrangeCat
+  // activity for OC-published projects. Idempotent (external_id = run id) and
+  // re-sent by the daily promote backfill, so a dropped emit here is never lost.
   if (updated && patch.finishedAt && patch.outcome === ORCHESTRATION_OUTCOME.SUCCESS) {
-    void resolveFeedbackForRun(updated.id);
-    // Run→wall loop: successful agent work surfaces as OrangeCat activity for
-    // OC-published projects. Idempotent (external_id = run id) and re-sent by
-    // the daily promote backfill, so a dropped emit here is never lost.
     void promoteRunClose(updated);
   }
 

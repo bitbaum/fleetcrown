@@ -78,9 +78,8 @@ export function closeRunFromSession(run: OpenRun, session: SessionState): RunClo
   if (run.finishedAt) return null; // already closed
   if (session.status?.toLowerCase() !== "ready") return null; // agent not done
   // A run whose prompt never reached an agent cannot have produced this
-  // handoff — somebody else's work did. Closing it here would not merely
-  // mislabel the run: `success` funnels into resolveFeedbackForRun, so the
-  // visitor whose report was never touched is told it shipped. Undelivered
+  // handoff — somebody else's work did. Closing it here would mislabel the
+  // run (and used to auto-resolve linked feedback as "shipped"). Undelivered
   // runs belong to the reaper, which stamps the honest `timeout`.
   if (!runWasDelivered(run)) return null;
   const startedMs = runEffectiveStartMs(run);

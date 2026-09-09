@@ -12,7 +12,8 @@ export function FeedbackWorkBadge({ work }: { work: FeedbackWorkView }) {
         ? "ui-tag-positive"
         : work.phase === FEEDBACK_WORK_PHASE.FAILED || work.phase === FEEDBACK_WORK_PHASE.STUCK
           ? "ui-tag-negative"
-          : work.phase === FEEDBACK_WORK_PHASE.QUEUED
+          : work.phase === FEEDBACK_WORK_PHASE.QUEUED ||
+              work.phase === FEEDBACK_WORK_PHASE.NEEDS_VERIFY
             ? "ui-tag-warning"
             : "ui-tag";
 

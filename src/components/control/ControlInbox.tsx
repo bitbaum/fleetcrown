@@ -545,6 +545,7 @@ function FeedbackTriage({
           const broken =
             work.phase === FEEDBACK_WORK_PHASE.STUCK || work.phase === FEEDBACK_WORK_PHASE.FAILED;
           const watchable = work.phase === FEEDBACK_WORK_PHASE.WORKING;
+          const needsVerify = work.phase === FEEDBACK_WORK_PHASE.NEEDS_VERIFY;
           return (
             <li key={f.id} className="ui-inbox-row">
               <div className="ui-inbox-row-main">
@@ -590,23 +591,42 @@ function FeedbackTriage({
                     Watch
                   </a>
                 )}
-                <button
-                  type="button"
-                  onClick={() =>
-                    act(
-                      f.id,
-                      () =>
-                        patchJson(`/api/feedback/${f.id}`, { status: FEEDBACK_STATUS.RESOLVED }),
-                      "Update failed",
-                    )
-                  }
-                  disabled={busyId === f.id || batchBusy}
-                  className="ui-btn-icon"
-                  title="Mark resolved"
-                  aria-label="Mark resolved"
-                >
-                  <Check className="h-3.5 w-3.5" />
-                </button>
+                {needsVerify ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      act(
+                        f.id,
+                        () =>
+                          patchJson(`/api/feedback/${f.id}`, { status: FEEDBACK_STATUS.RESOLVED }),
+                        "Update failed",
+                      )
+                    }
+                    disabled={busyId === f.id || batchBusy}
+                    className="ui-btn-save ui-btn-sm gap-1"
+                    title="Confirm the live product changed"
+                  >
+                    <Check className="h-3 w-3" /> Resolve
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      act(
+                        f.id,
+                        () =>
+                          patchJson(`/api/feedback/${f.id}`, { status: FEEDBACK_STATUS.RESOLVED }),
+                        "Update failed",
+                      )
+                    }
+                    disabled={busyId === f.id || batchBusy}
+                    className="ui-btn-icon"
+                    title="Mark resolved"
+                    aria-label="Mark resolved"
+                  >
+                    <Check className="h-3.5 w-3.5" />
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() =>

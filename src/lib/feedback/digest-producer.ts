@@ -160,8 +160,8 @@ export async function digestFeedback(userId: string): Promise<DigestResult> {
     for (const theme of themes) {
       if (proposed >= MAX_PROPOSALS_PER_USER) break;
       // Carry the clustered item ids so the executor can flip them to
-      // 'dispatched' with the run id — that linkage is what lets
-      // close-the-loop auto-resolve them when the run succeeds.
+      // 'dispatched' with the run id — that linkage feeds the inbox work
+      // phase (and a future evidence-gated closer), not auto-Done on SUCCESS.
       const feedbackIds = theme.itemIndexes
         .map((i) => items[i]?.id)
         .filter((id): id is string => typeof id === "string");
