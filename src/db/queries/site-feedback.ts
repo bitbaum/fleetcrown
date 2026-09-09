@@ -1,6 +1,7 @@
 import { and, count, desc, eq, getTableColumns, inArray, max, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { entities, siteFeedback, type SiteFeedback, type NewSiteFeedback } from "@/db/schema";
+import { projectStates } from "@/db/schema/project-states";
 import { FEEDBACK_STATUS, type FeedbackStatus } from "@/lib/constants/statuses";
 
 export async function insertSiteFeedback(values: NewSiteFeedback): Promise<SiteFeedback | null> {
@@ -204,11 +205,22 @@ export async function listFeedbackSummary(userId: string): Promise<ProjectFeedba
 export async function getFeedbackWithProject(
   userId: string,
   id: string,
-): Promise<{ feedback: SiteFeedback; projectName: string } | null> {
+): Promise<{ feedback: SiteFeedback; projectName: string; liveTab: string | null } | null> {
   const [row] = await db
-    .select({ feedback: siteFeedback, projectName: entities.name })
+    .select({
+      feedback: siteFeedback,
+      projectName: entities.name,
+      liveTab: projectStates.tabName,
+    })
     .from(siteFeedback)
     .innerJoin(entities, eq(siteFeedback.projectId, entities.id))
+    .leftJoin(
+      projectStates,
+      and(
+        eq(projectStates.userId, userId),
+        sql`lower(${projectStates.projectKey}) = lower(${entities.name})`,
+      ),
+    )
     .where(and(eq(siteFeedback.id, id), eq(siteFeedback.userId, userId)))
     .limit(1);
   return row ?? null;

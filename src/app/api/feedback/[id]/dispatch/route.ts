@@ -8,9 +8,6 @@ import { FEEDBACK_STATUS } from "@/lib/constants/statuses";
 import { composeFeedbackFixPrompt } from "@/lib/feedback/compose-dispatch";
 import { deriveFeedbackWork, FEEDBACK_WORK_PHASE } from "@/lib/feedback/work-phase";
 import { runToFeedbackSnapshot } from "@/lib/feedback/attach-work";
-import { resolveEffectiveTab } from "@/lib/agent-config";
-import { getZellijTabs } from "@/lib/zellij";
-import { isRuntimeAvailable } from "@/lib/runtime";
 
 /**
  * One-click Implement: queue a scoped agent run via injectPrompt.
@@ -51,11 +48,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
   }
 
-  // Resolve project name to live tab name using the same logic Control uses.
+  // Resolve project name to live tab name using the same liveTab Control has.
   // When project "fleetcrown" runs as tab "Bitbaum", injectPrompt must receive
-  // "Bitbaum" or focus_tab fails with "tab not found".
-  const zellijTabs = isRuntimeAvailable() ? await getZellijTabs() : [];
-  const effectiveTab = resolveEffectiveTab(row.projectName, zellijTabs);
+  // "Bitbaum" or focus_tab fails with "tab not found". Use the stored tabName
+  // from project_states (written by Control) instead of resolving again.
+  const effectiveTab = row.liveTab ?? row.projectName;
 
   const { status, body } = await injectPrompt(
     {
