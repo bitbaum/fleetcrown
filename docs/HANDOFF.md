@@ -39,7 +39,7 @@ Written 2026-06-07 after a 2-day session that took the product from v0.7.0 (brok
 
 ## 1. The product in one paragraph
 
-FleetCrown is a multi-user SaaS for builders who run **multiple AI agents across multiple projects in parallel**. The user signs into `fleetcrown.orangecat.ch` (GitHub OAuth), registers their projects, and dispatches prompts to agents running on the **cloud builder** (`fleetcrown-box-runner` on Hetzner) and/or optionally on their computer via the desktop Fleet Runner app. The cloud is the **coordination layer**; agents and terminals are pluggable adapters. FleetCrown itself is the customer of sibling product **OrangeCat** (BTC payment/economic layer). Both ship under solo pseudonymous founder **Mao Nakamoto**, pre-revenue, one paying user (himself, dogfooding).
+FleetCrown is a multi-user SaaS for builders who run **multiple AI agents across multiple projects in parallel**. The user signs into `fleetcrown.orangecat.ch` (GitHub OAuth), registers their projects, and dispatches prompts to agents running on the **cloud builder** (`fleetcrown-box-runner` on Hetzner) and/or optionally on their computer via the desktop Fleet Runner app. The cloud is the **coordination layer**; agents and terminals are pluggable adapters. FleetCrown itself is the customer of sibling product **OrangeCat** (BTC payment/economic layer). Both ship under solo pseudonymous founder **Cato**, pre-revenue, one paying user (himself, dogfooding).
 
 ## 2. The lay of the land
 
@@ -285,7 +285,9 @@ The mirror script is the bridge between `bitbaum/fleetcrown` (where CI builds) a
 ## 11. Important external context
 
 The repo's `CLAUDE.md` files (project and user-global at `~/.claude/CLAUDE.md`) are the ground rules. Read them. Highlights:
-- **Mao Nakamoto is a pseudonym.** Never use the founder's real name in code/commits/messages.
+- **Cato is a pseudonym.** Never use the founder's real name in code/commits/messages.
+  The retired pseudonym "Mao Nakamoto" is equally out of bounds — see
+  scripts/hetzner/test-no-retired-name.sh, which fails if either returns.
 - **Exact action steps for the user.** Full URL + numbered steps + UI branches + verification. No vague directives.
 - **Design tokens are SSOT.** Four-layer system in `globals.css`; no arbitrary hex / sizes in JSX.
 - **First-principles, not analogy.** Don't say "X does it this way." Say "the constraint is Y, so we do Z."

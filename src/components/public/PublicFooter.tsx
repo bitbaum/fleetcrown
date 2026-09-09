@@ -133,7 +133,7 @@ export function PublicFooter() {
       </details>
       <div className="ui-public-footer-bottom">
         <div>
-          © {new Date().getFullYear()} {APP_NAME} · Mao Nakamoto
+          © {new Date().getFullYear()} {APP_NAME} · Cato
         </div>
         <Link href="/releases" className="ui-public-link font-mono">
           Fleet Runner v{CURRENT_RELEASE.version}

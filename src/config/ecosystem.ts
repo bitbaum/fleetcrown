@@ -25,7 +25,7 @@ function orangeCatPage(path: string): string {
  * surfaces cannot drift onto different OrangeCat entities.
  */
 export const ECOSYSTEM = {
-  owner: "Mao Nakamoto",
+  owner: "Cato",
   orangeCat: {
     title: "OrangeCat",
     projectId:

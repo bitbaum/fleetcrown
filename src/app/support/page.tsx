@@ -53,7 +53,7 @@ const supportTargets = [
     icon: Cat,
   },
   {
-    title: "Mao Nakamoto",
+    title: "Cato",
     body: "Support the founder and follow the entities being built across both products.",
     href: ECOSYSTEM_LINKS.mao,
     icon: Bitcoin,

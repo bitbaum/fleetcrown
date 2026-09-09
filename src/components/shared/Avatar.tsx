@@ -13,7 +13,7 @@ export { getInitials };
  * (broken src, 404, CORS, blocked). Renders a single component everywhere
  * profile pictures show so the broken-image icon never leaks to users.
  *
- * Pass `name` to drive the initials — for "Mao Nakamoto" → "MN", single
+ * Pass `name` to drive the initials — for "Ada Lovelace" → "AL", single
  * word → "MA" (first two letters), empty → "?". Image-only callers can
  * pass `name=""` to force the placeholder.
  */
