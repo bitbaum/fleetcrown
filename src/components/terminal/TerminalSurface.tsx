@@ -508,11 +508,11 @@ export function TerminalSurface({
                 defaultAgent={context?.agents.defaultAgent ?? null}
                 channel={channel}
               />
-              <div className="mt-2 flex flex-wrap justify-center gap-2">
-                <Link href={controlHref} className="ui-btn-secondary">
+              <div className="flex flex-wrap justify-center gap-2">
+                <Link href={controlHref} className="ui-btn-xs">
                   Open on Control
                 </Link>
-                <Link href="/loki" className="ui-btn-secondary">
+                <Link href="/loki" className="ui-btn-xs">
                   Ask Loki
                 </Link>
               </div>
