@@ -126,7 +126,7 @@ export function ProjectStatusChips({
   // launch one (agent not running yet + dir + agent known). An agent process
   // running OUTSIDE zellij (e.g. a background CLI session) has no tab — the
   // runner replies "tab not found" every time, so offering the chip there is a
-  // guaranteed-fail dead end ("Open here" still works from any device).
+  // guaranteed-fail dead end ("Open terminal" still works from any device).
   const canFocusTerminal =
     tabOpen || (!project.agentRunning && Boolean(project.dir) && Boolean(effectiveAgentId));
   const openWorkspace = async (event: React.MouseEvent) => {
