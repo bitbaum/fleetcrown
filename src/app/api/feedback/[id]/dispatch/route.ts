@@ -8,6 +8,7 @@ import { FEEDBACK_STATUS } from "@/lib/constants/statuses";
 import { composeFeedbackFixPrompt } from "@/lib/feedback/compose-dispatch";
 import { deriveFeedbackWork, FEEDBACK_WORK_PHASE } from "@/lib/feedback/work-phase";
 import { runToFeedbackSnapshot } from "@/lib/feedback/attach-work";
+import { getCurrentSessionForProject } from "@/db/queries/agent-sessions";
 
 /**
  * One-click Implement: queue a scoped agent run via injectPrompt.
@@ -48,15 +49,22 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
   }
 
-  // Resolve project name to live tab name using the same liveTab Control has.
-  // When project "fleetcrown" runs as tab "Bitbaum", injectPrompt must receive
-  // "Bitbaum" or focus_tab fails with "tab not found". Use the stored tabName
-  // from project_states (written by Control) instead of resolving again.
-  const effectiveTab = row.liveTab ?? row.projectName;
+  // Look up the current session for this project from agent_sessions.
+  // This is the session Watch/Focus would open - Implement resumes it.
+  const currentSession = await getCurrentSessionForProject(userId, row.projectName);
+
+  if (!currentSession) {
+    // No session exists yet for this project. The operator needs to start one.
+    // TODO: Provide one action to start a session for the project.
+    return jsonError(
+      "No session exists for this project. Start a session first, then implement feedback.",
+      404,
+    );
+  }
 
   const { status, body } = await injectPrompt(
     {
-      tab: effectiveTab,
+      tab: row.projectName,
       customPrompt: composeFeedbackFixPrompt(
         row.feedback,
         row.projectName,
