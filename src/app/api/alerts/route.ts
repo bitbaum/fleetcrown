@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import { getApiUserId } from "@/lib/session";
 import { getActiveAlerts } from "@/db/queries/alerts";
 import { jsonOk, jsonError } from "@/lib/api/route-helpers";
