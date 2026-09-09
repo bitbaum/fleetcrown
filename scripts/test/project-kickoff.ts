@@ -180,28 +180,26 @@ eq(
   "the lock hides only the milestones question — profile and repo still answer for themselves",
 );
 
-// ── Refuse before the irreversible step, not after ──────────────────────────
-// Observed on prod 2026-08-05 with `printcraft`: the plan was
-// ["repo","dispatch"], the repo step CREATED A REAL GITHUB REPOSITORY, and the
-// dispatch then returned 409 because the locked zone hides the roadmap. The
-// only irreversible step ran, the step that mattered did not.
+// ── Private PIN must not gate Make it happen ────────────────────────────────
+// Observed on OrangeCat → FleetCrown dogfood: a person who never wants a
+// private zone still hits Unlock before a public site can start. That was
+// wrong. Locked milestones skip inventing a roadmap; the brief + profile are
+// enough. Unlock is optional enrichment, never a hard gate.
 eq(
   kickoffBlockedReason({ goalsLocked: true }),
-  "goals-locked",
-  "a locked zone blocks the run up front",
+  null,
+  "a locked zone does not block the run",
 );
 eq(kickoffBlockedReason({ goalsLocked: false }), null, "an unlocked zone does not block");
 eq(kickoffBlockedReason({}), null, "absent means unlocked — never block by default");
-// The contract with the dispatch route: whenever the hero would let a kickoff
-// run, composeDispatchPrompt must not refuse it for a reason the hero could
-// have known. Locked is exactly that reason, so the two must agree.
+// Hero and dispatch must agree: locked never means refuse. Dispatch briefs from
+// description when goals are hidden (composeDispatchPrompt), so the hero may
+// always start when a brief exists.
 for (const goalsLocked of [true, false]) {
-  const heroWouldRun = kickoffBlockedReason({ goalsLocked }) === null;
-  const dispatchWouldRefuse = Boolean(goalsLocked); // locked ⇒ linkedGoals [] ⇒ no target
   eq(
-    heroWouldRun && dispatchWouldRefuse,
-    false,
-    `hero never starts a run the dispatch will refuse (goalsLocked=${goalsLocked})`,
+    kickoffBlockedReason({ goalsLocked }),
+    null,
+    `hero can start whether or not the zone is locked (goalsLocked=${goalsLocked})`,
   );
 }
 
