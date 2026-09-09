@@ -146,13 +146,52 @@ export function TerminalSurface({
     serializeMode,
     deserializeMode,
   );
+
   // Precedence: what the user just clicked > the deep link that opened the page
   // > the remembered mode. Reading the deep link on every render instead would
   // pin the source forever — arriving via ?source=cloud made the toggle inert,
   // because each click was immediately overruled by the unchanged URL.
   const [pickedSource, setPickedSource] = useState<TerminalSource | null>(null);
-  const desiredSource = pickedSource ?? initialSource ?? mode.source;
-  const source: TerminalSource = sources.includes(desiredSource) ? desiredSource : "cloud";
+  
+  // Auto-switch preparation: poll both sources to see which has the requested tab
+  const desiredSourceFromUrl = initialSource ?? mode.source;
+  const primarySource: TerminalSource = sources.includes(desiredSourceFromUrl)
+    ? desiredSourceFromUrl
+    : "cloud";
+  const primaryChannel = channelFor(primarySource);
+  const primaryTabs = useTerminalTabs(primaryChannel);
+  
+  const otherSource: TerminalSource | null =
+    primarySource === "machine" && sources.includes("cloud")
+      ? "cloud"
+      : primarySource === "cloud" && sources.includes("machine")
+        ? "machine"
+        : null;
+  const otherChannel = otherSource ? channelFor(otherSource) : null;
+  const otherSourceTabs = useTerminalTabs(otherChannel ?? primaryChannel);
+
+  // Auto-switch when: deep link requests a tab, it's not on primary source, but IS on other source
+  const shouldUseOtherSource =
+    initialTab &&
+    !primaryTabs.loading &&
+    !primaryTabs.tabs.includes(initialTab) &&
+    otherSource &&
+    !otherSourceTabs.loading &&
+    otherSourceTabs.tabs.includes(initialTab);
+
+  // Final source decision: user click > auto-switch > deep link > remembered mode
+  const source: TerminalSource =
+    pickedSource && sources.includes(pickedSource)
+      ? pickedSource
+      : shouldUseOtherSource
+        ? otherSource!
+        : primarySource;
+
+  const channel = channelFor(source);
+  const copy = COPY[source === "machine" ? "machine" : "cloud"];
+  const { tabs, loading, gatedMessage, offline, presence } =
+    source === primarySource ? primaryTabs : otherSourceTabs;
+
   const inputMode = mode.input;
   const setSource = (next: TerminalSource) => {
     setPickedSource(next);
@@ -160,19 +199,21 @@ export function TerminalSurface({
   };
   const setInputMode = (next: TerminalInputMode) => setMode((m) => ({ ...m, input: next }));
 
-  const channel = channelFor(source);
-  const copy = COPY[source === "machine" ? "machine" : "cloud"];
-  const { tabs, loading, gatedMessage, offline, presence } = useTerminalTabs(channel);
-
   const [selected, setSelected] = useState<string | null>(initialTab ?? null);
   // A ?tab= deep link that matched nothing must not quietly attach to whatever
   // else is running — see resolveTabAttachment for the incident this encodes.
-  const { activeTab, deepLinkMiss } = resolveTabAttachment({
+  // But only show the miss UI after we've checked both sources (auto-switch above).
+  const { activeTab, deepLinkMiss: rawDeepLinkMiss } = resolveTabAttachment({
     requestedTab: initialTab,
     selected,
     tabs,
     loading,
   });
+  // Suppress the miss UI while we're auto-switching to the other source.
+  const deepLinkMiss =
+    rawDeepLinkMiss &&
+    initialTab &&
+    (!otherSource || otherSourceTabs.loading || !otherSourceTabs.tabs.includes(initialTab));
 
   // The terminal is one of the four project surfaces, so the tab you are
   // watching IS the fleet's active project — Control, Loki and the project
