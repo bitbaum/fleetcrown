@@ -1,7 +1,6 @@
--- Migration: add site_feedback.screenshots (jsonb array) beside screenshot (text).
--- Do NOT drop screenshot. The box deploy gate refuses DROP COLUMN, and #537/#540
--- never reached the box because 0064 previously ended with a DROP.
--- App reads screenshots; leftover screenshot column is harmless.
+-- Migration: add site_feedback.screenshots (jsonb array).
+-- Keep the legacy screenshot text column. New writers use screenshots only.
+-- Copy any existing single image into the array when the array is empty.
 
 ALTER TABLE "site_feedback" ADD COLUMN IF NOT EXISTS "screenshots" jsonb;
 
