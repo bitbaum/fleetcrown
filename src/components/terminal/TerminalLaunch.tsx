@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { Loader2, Play } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { ChevronDown, Loader2, Play } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { postJson } from "@/lib/api/fetch";
 import type { BuilderChannel } from "@/lib/event-stream-types";
 import type { TerminalLaunchProject } from "@/app/api/terminal/context/route";
@@ -15,6 +16,83 @@ import type { TerminalLaunchProject } from "@/app/api/terminal/context/route";
  * builder the user is currently looking at, so the session appears in the very
  * strip above this form within one poll.
  */
+
+/** Dropdown picker — replaces cramped native <select> with design-system chrome. */
+function Picker({
+  label,
+  value,
+  options,
+  onChange,
+  disabled,
+}: {
+  label: string;
+  value: string;
+  options: { id: string; label: string }[];
+  onChange: (id: string) => void;
+  disabled?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const escHandler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    document.addEventListener("keydown", escHandler);
+    return () => {
+      document.removeEventListener("mousedown", handler);
+      document.removeEventListener("keydown", escHandler);
+    };
+  }, [open]);
+
+  const selected = options.find((o) => o.id === value);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => !disabled && setOpen((o) => !o)}
+        disabled={disabled}
+        aria-label={label}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        className={cn(
+          "ui-chip-toggle inline-flex items-center gap-1.5 px-3 py-1.5 text-xs",
+          disabled && "cursor-not-allowed opacity-50",
+        )}
+      >
+        {selected?.label ?? value}
+        <ChevronDown className="h-3 w-3" aria-hidden="true" />
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full z-50 mt-1.5 max-h-60 min-w-[160px] overflow-y-auto rounded-xl border border-border-default bg-surface-overlay py-1.5 shadow-card">
+          {options.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              onClick={() => {
+                onChange(option.id);
+                setOpen(false);
+              }}
+              className={cn(
+                "ui-tap block w-full px-3 py-1.5 text-left text-xs transition-colors hover:bg-surface-raised",
+                option.id === value ? "text-accent-text font-medium" : "text-text-secondary",
+              )}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function TerminalLaunch({
   projects,
   agents,
@@ -45,7 +123,7 @@ export function TerminalLaunch({
   if (startedAs) {
     return (
       <p className="text-center text-xs text-text-muted">
-        Starting {startedAs} in “{projectName}” — the session appears above when it&apos;s up.
+        Starting {startedAs} in "{projectName}" — the session appears above when it&apos;s up.
       </p>
     );
   }
@@ -69,33 +147,26 @@ export function TerminalLaunch({
     }
   };
 
+  const projectOptions = projects.map((p) => ({ id: p.name, label: p.name }));
+  const agentOptions = agents.map((a) => ({ id: a.id, label: a.label }));
+
   return (
-    <div className="mt-2 flex flex-col items-center gap-2">
+    <div className="mt-2 flex flex-col items-center gap-3">
       <div className="flex flex-wrap items-center justify-center gap-2">
-        <select
-          className="ui-input-compact"
-          aria-label="Project to start an agent in"
+        <Picker
+          label="Project to start an agent in"
           value={projectName}
-          onChange={(e) => setProjectName(e.target.value)}
-        >
-          {projects.map((p) => (
-            <option key={p.name} value={p.name}>
-              {p.name}
-            </option>
-          ))}
-        </select>
-        <select
-          className="ui-input-compact"
-          aria-label="Agent to start"
+          options={projectOptions}
+          onChange={setProjectName}
+          disabled={busy}
+        />
+        <Picker
+          label="Agent to start"
           value={agentId}
-          onChange={(e) => setAgentOverride(e.target.value)}
-        >
-          {agents.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.label}
-            </option>
-          ))}
-        </select>
+          options={agentOptions}
+          onChange={setAgentOverride}
+          disabled={busy}
+        />
         <button
           type="button"
           className="ui-btn-primary"
