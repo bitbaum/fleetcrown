@@ -27,7 +27,6 @@ import {
   KICKOFF_STEP_LABEL,
   hasKickoffSource,
   isThinBrief,
-  kickoffBlockedReason,
   planKickoff,
   type KickoffStepId,
 } from "@/lib/project-kickoff";
@@ -89,7 +88,6 @@ export function ProjectKickoff({
   // gets built. It is only *required* by the steps that are extracted from it.
   const requiresSource = plan.includes("profile") || plan.includes("milestones");
   const ready = !requiresSource || hasKickoffSource(source);
-  const blocked = kickoffBlockedReason({ goalsLocked });
 
   function mark(id: KickoffStepId, state: StepState, note?: string) {
     setSteps((prev) => (prev ?? []).map((s) => (s.id === id ? { ...s, state, note } : s)));
@@ -239,7 +237,7 @@ export function ProjectKickoff({
         </div>
       )}
 
-      {!steps && !blocked && !hasRepo && (
+      {!steps && !hasRepo && (
         <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border-subtle bg-surface-raised p-3">
           <label className="flex items-center gap-2 text-sm text-text-secondary">
             <input
