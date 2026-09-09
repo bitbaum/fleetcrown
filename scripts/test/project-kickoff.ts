@@ -185,11 +185,7 @@ eq(
 // private zone still hits Unlock before a public site can start. That was
 // wrong. Locked milestones skip inventing a roadmap; the brief + profile are
 // enough. Unlock is optional enrichment, never a hard gate.
-eq(
-  kickoffBlockedReason({ goalsLocked: true }),
-  null,
-  "a locked zone does not block the run",
-);
+eq(kickoffBlockedReason({ goalsLocked: true }), null, "a locked zone does not block the run");
 eq(kickoffBlockedReason({ goalsLocked: false }), null, "an unlocked zone does not block");
 eq(kickoffBlockedReason({}), null, "absent means unlocked — never block by default");
 // Hero and dispatch must agree: locked never means refuse. Dispatch briefs from
