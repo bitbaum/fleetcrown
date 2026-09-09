@@ -4,7 +4,7 @@ import { dismissAlert } from "@/db/queries/alerts";
 import { jsonOk, jsonError } from "@/lib/api/route-helpers";
 
 export async function PATCH(_req: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const userId = getApiUserId();
+  const userId = await getApiUserId();
   if (!userId) return jsonError("Unauthorized", 401);
 
   const params = await props.params;
