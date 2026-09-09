@@ -53,19 +53,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   // This is the session Watch/Focus would open - Implement resumes it.
   const currentSession = await getCurrentSessionForProject(userId, row.projectName);
 
-  if (!currentSession) {
-    // No session exists yet for this project. The operator needs to start one.
-    // TODO: Provide one action to start a session for the project.
-    return jsonError(
-      "No session exists for this project. Start a session first, then implement feedback.",
-      404,
-    );
+  let sessionId: string | undefined;
+  if (currentSession) {
+    sessionId = currentSession.sessionId;
   }
+  // If currentSession is null, sessionId stays undefined and inject will start
+  // a new session via the legacy tab-based path.
 
   const { status, body } = await injectPrompt(
     {
-      tab: row.projectName, // Still required by InjectParams but sessionId takes precedence
-      sessionId: currentSession.sessionId,
+      tab: row.projectName, // Required by InjectParams; used only when sessionId is undefined
+      sessionId,
       customPrompt: composeFeedbackFixPrompt(
         row.feedback,
         row.projectName,

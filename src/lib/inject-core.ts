@@ -75,46 +75,84 @@ export type InjectResult = { status: number; body: Record<string, unknown> };
  * /api/inject route returns. `userId` is already authenticated by the caller.
  */
 export async function injectPrompt(params: InjectParams, userId: string): Promise<InjectResult> {
-  const { tab, promptKey, customPrompt, adapter } = params;
+  const { tab, promptKey, customPrompt, adapter, sessionId } = params;
   const runtimeAvailable = isRuntimeAvailable();
   let runId = params.runId;
   // Provisional adapter for early-return logging; the real resolution happens
   // after we've looked up dbMatch and can honor user_projects.agent_pref below.
   let eventAdapter: ResolvedAdapter = adapter ?? DEFAULT_ADAPTER_ID;
 
-  // Resolve canonical tab name and project path — own projects first, then org team projects.
+  // When sessionId is provided, look up the project from agent_sessions instead
+  // of matching by tab name. This is the session-based identity.
   const [dbProjects, dbTeamProjects] = await Promise.all([
     ensureUserProjectEntityLinks(userId).catch(() => []),
     getOrgProjects(userId).catch(() => []),
   ]);
-  const dbMatch =
-    dbProjects.find((p) => p.name.toLowerCase() === tab.toLowerCase()) ??
-    dbTeamProjects.find((p) => p.name.toLowerCase() === tab.toLowerCase());
-  if (!dbMatch) {
-    logDebug({
-      source: "api/inject",
-      level: "warn",
-      message: `Unknown tab: ${tab}`,
-      meta: { userId, tab, hasPromptKey: !!promptKey, hasCustomPrompt: !!customPrompt },
-    });
-    recordControlAuditEvent({
-      userId,
-      projectKey: tab,
-      tabName: tab,
-      event: "inject_request",
-      source: "api/inject",
-      action: "refused",
-      reason: "Unknown tab",
-      queueLength: null,
-      blockerCount: null,
-      promptHash: null,
-      promptPreview: customPrompt?.slice(0, 220) ?? promptKey ?? null,
-      meta: { hasPromptKey: !!promptKey, hasCustomPrompt: !!customPrompt },
-    });
-    return { status: 404, body: { error: `Unknown tab: ${tab}` } };
-  }
 
-  const canonical = dbMatch.name;
+  let dbMatch: (typeof dbProjects)[number] | undefined;
+  let canonical: string;
+
+  if (sessionId) {
+    const { agentSessions } = await import("@/db/schema");
+    const { eq, and } = await import("drizzle-orm");
+    const { db } = await import("@/db");
+
+    const [session] = await db
+      .select({
+        projectKey: agentSessions.projectKey,
+        projectId: agentSessions.projectId,
+        agent: agentSessions.agent,
+      })
+      .from(agentSessions)
+      .where(and(eq(agentSessions.userId, userId), eq(agentSessions.sessionId, sessionId)))
+      .limit(1);
+
+    if (!session) {
+      return { status: 404, body: { error: `Session ${sessionId} not found` } };
+    }
+
+    // Look up the full project record for this session's projectKey
+    dbMatch =
+      dbProjects.find((p) => p.name.toLowerCase() === session.projectKey.toLowerCase()) ??
+      dbTeamProjects.find((p) => p.name.toLowerCase() === session.projectKey.toLowerCase());
+
+    if (!dbMatch) {
+      // Session exists but project was removed - shouldn't happen but handle it
+      return { status: 404, body: { error: `Project for session ${sessionId} not found` } };
+    }
+
+    canonical = dbMatch.name;
+    eventAdapter = (session.agent as ResolvedAdapter) ?? eventAdapter;
+  } else {
+    // Legacy path: resolve by tab name
+    dbMatch =
+      dbProjects.find((p) => p.name.toLowerCase() === tab.toLowerCase()) ??
+      dbTeamProjects.find((p) => p.name.toLowerCase() === tab.toLowerCase());
+    if (!dbMatch) {
+      logDebug({
+        source: "api/inject",
+        level: "warn",
+        message: `Unknown tab: ${tab}`,
+        meta: { userId, tab, hasPromptKey: !!promptKey, hasCustomPrompt: !!customPrompt },
+      });
+      recordControlAuditEvent({
+        userId,
+        projectKey: tab,
+        tabName: tab,
+        event: "inject_request",
+        source: "api/inject",
+        action: "refused",
+        reason: "Unknown tab",
+        queueLength: null,
+        blockerCount: null,
+        promptHash: null,
+        promptPreview: customPrompt?.slice(0, 220) ?? promptKey ?? null,
+        meta: { hasPromptKey: !!promptKey, hasCustomPrompt: !!customPrompt },
+      });
+      return { status: 404, body: { error: `Unknown tab: ${tab}` } };
+    }
+    canonical = dbMatch.name;
+  }
   const projectPath: string | null = dbMatch.dirPath ?? null;
   const projectId: string | null = dbMatch.entityProjectId ?? null;
 
