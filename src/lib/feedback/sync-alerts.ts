@@ -1,14 +1,11 @@
-import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { siteFeedback, entities } from "@/db/schema";
+import { siteFeedback } from "@/db/schema";
 import { FEEDBACK_STATUS } from "@/lib/constants/statuses";
 import { refreshOrInsertActiveAlert, dismissActiveAlertsByType } from "@/db/queries/alerts";
 
 /** Alert type for feedback needing attention — must match config/alert-types.ts. */
 const ALERT_TYPE = "new_feedback";
-
-/** Longest suggestion excerpt an alert carries. */
-const EXCERPT_MAX_CHARS = 160;
 
 /**
  * Sync alerts with feedback that needs the operator.
