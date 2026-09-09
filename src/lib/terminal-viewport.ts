@@ -132,7 +132,7 @@ export function resolveTabAttachment({
 
   // Normal resolution: use selected tab if it exists, else first available
   const selectedActual = findTab(selected);
-  const activeTab = selectedActual ?? (tabs[0] ?? null);
+  const activeTab = selectedActual ?? tabs[0] ?? null;
   return { activeTab, deepLinkMiss: false };
 }
 

@@ -28,6 +28,7 @@ import { FeedbackWorkBadge } from "@/components/feedback/FeedbackWorkBadge";
 import type { FeedbackListItemWithWork } from "@/lib/feedback/attach-work";
 import type { ProjectFeedbackSummary } from "@/db/queries/site-feedback";
 import type { WidgetCoverageItem } from "@/db/queries/widget-tokens";
+import type { ProjectState } from "@/lib/control-types";
 
 /**
  * One inbox for every small thing that wants doing.
@@ -76,7 +77,7 @@ const PREVIEW_LIMIT = 3;
 
 type GroupId = "feedback" | "widget";
 
-export function ControlInbox() {
+export function ControlInbox({ projects }: { projects: ProjectState[] }) {
   const feedback = useFetch<{ summary: ProjectFeedbackSummary[] }>("/api/feedback/summary");
   const widget = useFetch<{ coverage: WidgetCoverageItem[]; needsAttention: WidgetCoverageItem[] }>(
     "/api/feedback/widget-coverage",
@@ -186,6 +187,7 @@ export function ControlInbox() {
               key={openProjectId}
               projectId={openProjectId}
               projectName={summary.find((s) => s.projectId === openProjectId)?.projectName ?? ""}
+              projects={projects}
               onChanged={feedback.refetch}
             />
           )}
@@ -436,10 +438,12 @@ function WidgetCoverage({
 function FeedbackTriage({
   projectId,
   projectName,
+  projects,
   onChanged,
 }: {
   projectId: string;
   projectName: string;
+  projects: ProjectState[];
   onChanged: () => void;
 }) {
   const { data, loading, refetch } = useFetch<{ feedback: FeedbackListItemWithWork[] }>(
@@ -545,6 +549,12 @@ function FeedbackTriage({
           const broken =
             work.phase === FEEDBACK_WORK_PHASE.STUCK || work.phase === FEEDBACK_WORK_PHASE.FAILED;
           const watchable = work.phase === FEEDBACK_WORK_PHASE.WORKING;
+          // Resolve project name to live tab name using Control's existing mapping.
+          // Watch links pass the tab name to Terminal, which must match the actual
+          // Zellij tab. When project "fleetcrown" runs as tab "Bitbaum", the link
+          // must say "Bitbaum" or Terminal shows "tab not found".
+          const project = projects.find((p) => p.tab === projectName || p.projectId === projectId);
+          const resolvedTab = project?.liveTab ?? projectName;
           return (
             <li key={f.id} className="ui-inbox-row">
               <div className="ui-inbox-row-main">
@@ -583,7 +593,7 @@ function FeedbackTriage({
                 )}
                 {watchable && (
                   <a
-                    href={fleetSurfaceHref("terminal", projectName)}
+                    href={fleetSurfaceHref("terminal", resolvedTab)}
                     className="ui-btn-secondary ui-btn-sm"
                     title="Live agent session"
                   >

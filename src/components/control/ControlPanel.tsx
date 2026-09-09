@@ -549,7 +549,7 @@ export function ControlPanel() {
           between them spent ~1,400px of a 390px phone. They are one queue —
           small things a human has to say yes to — so they are one collapsed
           section. Add a GROUP to the inbox; never add a third strip here. */}
-      <ControlInbox />
+      <ControlInbox projects={data.projects} />
 
       {/* Workspaces panel — collapsed by default. Projects already shows
           per-project state; auto-opening this duplicated the same facts in a

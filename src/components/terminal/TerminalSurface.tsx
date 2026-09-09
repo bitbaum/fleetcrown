@@ -264,9 +264,9 @@ export function TerminalSurface({
   // Use case-insensitive matching to check if tab exists on other source.
   const otherHasTab = Boolean(
     resolvedInitialTab &&
-      otherSource &&
-      !otherSourceTabs.loading &&
-      otherSourceTabs.tabs.some((t) => t.toLowerCase() === resolvedInitialTab.toLowerCase()),
+    otherSource &&
+    !otherSourceTabs.loading &&
+    otherSourceTabs.tabs.some((t) => t.toLowerCase() === resolvedInitialTab.toLowerCase()),
   );
   const deepLinkMiss = rawDeepLinkMiss && resolvedInitialTab && !otherHasTab;
 
