@@ -61,12 +61,13 @@ export const claudeAdapter: AgentAdapter = {
     return readModelFromSettings(SETTINGS_FILE) ?? readModelFromSettings(DOTFILES_SETTINGS_FILE);
   },
 
-  buildLaunchCommand({ dir }: AgentRuntimeConfig): string {
+  buildLaunchCommand({ dir, sessionId }: AgentRuntimeConfig): string {
     // Plain launch. Unattended hosts (the box-runner) run claude without
     // prompts via a settings.json permissions allow-list seeded by
     // box-workspace — NOT --dangerously-skip-permissions, which has its own
     // one-time interactive "Yes, I accept" gate that would hang the agent.
-    return `source ~/.bashrc >/dev/null 2>&1 || true; cd ${shellEscape(dir)} && claude`;
+    const sessionArg = sessionId ? ` --session ${shellEscape(sessionId)}` : "";
+    return `source ~/.bashrc >/dev/null 2>&1 || true; cd ${shellEscape(dir)} && claude${sessionArg}`;
   },
 
   syncSelectedModel(model: string): void {

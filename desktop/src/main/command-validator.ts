@@ -71,6 +71,7 @@ export interface DispatchCommand {
     promptLabel?: string
     projectKey?: string
     runId?: string
+    sessionId?: string
   }
 }
 
@@ -253,7 +254,7 @@ function validateDispatch(payload: Record<string, unknown>): ValidationResult {
   if (typeof prompt !== 'string' || prompt.length === 0) {
     return { ok: false, error: "dispatch payload missing required string 'prompt'" }
   }
-  for (const field of ['model', 'promptKey', 'promptLabel', 'projectKey', 'runId'] as const) {
+  for (const field of ['model', 'promptKey', 'promptLabel', 'projectKey', 'runId', 'sessionId'] as const) {
     const v = payload[field]
     if (v !== undefined && typeof v !== 'string') {
       return { ok: false, error: `dispatch payload field '${field}' must be a string if present` }
@@ -273,6 +274,7 @@ function validateDispatch(payload: Record<string, unknown>): ValidationResult {
         promptLabel: payload.promptLabel as string | undefined,
         projectKey: payload.projectKey as string | undefined,
         runId: payload.runId as string | undefined,
+        sessionId: payload.sessionId as string | undefined,
       },
     },
   }

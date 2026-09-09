@@ -604,7 +604,7 @@ async function handleCommand(
         // The reliable product loop, done where we have ground truth (the
         // local machine): ensure the tab + agent, then inject — and VERIFY,
         // so the cloud/UI learns the real outcome instead of a fake ok.
-        const { tab, dir, agent, model, prompt, runId } = validation.command.payload
+        const { tab, dir, agent, model, prompt, runId, sessionId } = validation.command.payload
         assertKnownLaunchAgent(agent)
         // Worktree-per-agent (opt-in via FLEETCROWN_WORKTREE_DISPATCH): a FRESH
         // dispatch launch runs in its own git worktree so it can never collide
@@ -650,7 +650,7 @@ async function handleCommand(
           let ptyOk = ptyAlready
           if (!ptyAlready) {
             try {
-              await launchAgentPty(tab, effDir, agent as AgentOption, model)
+              await launchAgentPty(tab, effDir, agent as AgentOption, model, sessionId)
               clearHandoffSentinel(tab)
               launched = true
               ptyOk = true

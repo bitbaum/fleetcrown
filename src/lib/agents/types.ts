@@ -43,6 +43,11 @@ export interface AgentRuntimeConfig {
   dir: string;
   /** User-selected model override. When omitted, adapter uses defaultModel. */
   model?: string;
+  /**
+   * Claude session ID from agent_sessions. When provided, resume this specific
+   * session instead of starting a new one. Claude-specific; other agents ignore it.
+   */
+  sessionId?: string;
 }
 
 /** Availability detection result. Both fields exist so the UI can show
