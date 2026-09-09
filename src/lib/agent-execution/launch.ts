@@ -23,6 +23,7 @@ export interface ProvisionAgentArgs {
   /** A validated agent id (caller must have checked isAgentId / the registry). */
   agent: AgentOption;
   model?: string;
+  sessionId?: string;
   cols?: number;
   rows?: number;
   /**
@@ -43,7 +44,7 @@ export async function provisionAgentWorkspace(
   args: ProvisionAgentArgs,
 ): Promise<WorkspaceHandle> {
   const launchCommand = buildAgentOptionLaunchCommand(
-    { agent: args.agent, model: args.model },
+    { agent: args.agent, model: args.model, sessionId: args.sessionId },
     args.dir,
   );
   // Login + interactive (-lic), NOT plain -c: the agent CLIs live on PATH only

@@ -174,7 +174,7 @@ export function getAgentInstallCommand(agent: AgentOption): string {
 
 /** AgentOption-typed variant — accepts both Agent and "openclaw". */
 export function buildAgentOptionLaunchCommand(
-  config: { agent: AgentOption; model?: string },
+  config: { agent: AgentOption; model?: string; sessionId?: string },
   dir: string,
 ): string {
   const adapter = findAdapter(config.agent);
@@ -183,5 +183,5 @@ export function buildAgentOptionLaunchCommand(
     // Pre-refactor the switch's default branch did exactly this.
     return findAdapter("codex")!.buildLaunchCommand({ dir, model: config.model });
   }
-  return adapter.buildLaunchCommand({ dir, model: config.model });
+  return adapter.buildLaunchCommand({ dir, model: config.model, sessionId: config.sessionId });
 }

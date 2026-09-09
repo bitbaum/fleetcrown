@@ -320,7 +320,7 @@ export function RunModal({
                 <span className="text-text-tertiary">— {liveDispatch.detail}</span>
               )}
               <Link
-                href={`/terminal?tab=${encodeURIComponent(dispatchedTo)}`}
+                href={`/terminal?project=${encodeURIComponent(dispatchedTo)}`}
                 className="ui-dispatch-watch-link"
               >
                 <SquareTerminal className="h-3.5 w-3.5" /> Watch

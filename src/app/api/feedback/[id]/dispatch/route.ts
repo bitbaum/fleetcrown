@@ -8,6 +8,7 @@ import { FEEDBACK_STATUS } from "@/lib/constants/statuses";
 import { composeFeedbackFixPrompt } from "@/lib/feedback/compose-dispatch";
 import { deriveFeedbackWork, FEEDBACK_WORK_PHASE } from "@/lib/feedback/work-phase";
 import { runToFeedbackSnapshot } from "@/lib/feedback/attach-work";
+import { getCurrentClaudeSessionForProject } from "@/db/queries/agent-sessions";
 
 /**
  * One-click Implement: queue a scoped agent run via injectPrompt.
@@ -48,9 +49,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
   }
 
+  const currentSession = await getCurrentClaudeSessionForProject(userId, row.projectName);
   const { status, body } = await injectPrompt(
     {
       tab: row.projectName,
+      // Claude is the only provider whose hook reports a durable native id.
+      // No row means the existing dispatch path starts one action/session.
+      adapter: "claude",
+      sessionId: currentSession?.sessionId,
       customPrompt: composeFeedbackFixPrompt(
         row.feedback,
         row.projectName,
@@ -67,6 +73,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   return NextResponse.json(
     {
       ...body,
+      sessionId: currentSession?.sessionId,
+      sessionAction: currentSession ? "resumed" : "started",
       workLabel: status < 400 ? "Queued" : undefined,
     },
     { status },

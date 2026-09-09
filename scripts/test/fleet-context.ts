@@ -10,14 +10,14 @@ if (fleetSurfaceHref("chat", project) !== "/loki?project=BiasLens%20alpha") {
 if (fleetSurfaceHref("control", project) !== "/control?focus=BiasLens%20alpha") {
   throw new Error("control deep link");
 }
-if (fleetSurfaceHref("terminal", project) !== "/terminal?source=server&tab=BiasLens%20alpha") {
+if (fleetSurfaceHref("terminal", project) !== "/terminal?project=BiasLens%20alpha") {
   throw new Error("terminal deep link");
 }
-if (
-  projectFromFleetRoute("/terminal", new URLSearchParams("source=server&tab=BiasLens")) !==
-  "BiasLens"
-) {
+if (projectFromFleetRoute("/terminal", new URLSearchParams("project=BiasLens")) !== "BiasLens") {
   throw new Error("terminal route context");
+}
+if (projectFromFleetRoute("/terminal", new URLSearchParams("tab=BiasLens")) !== "BiasLens") {
+  throw new Error("legacy terminal route context");
 }
 if (projectFromFleetRoute("/projects", new URLSearchParams("project=BiasLens+alpha")) !== project) {
   throw new Error("profile route context");

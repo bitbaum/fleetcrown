@@ -1,4 +1,4 @@
-import { and, eq, gt, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, gt, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { agentSessions, type AgentSessionRow } from "@/db/schema";
 import { OPEN_TURN_TTL_MS, bucketTurnsByProject } from "@/lib/agent-turns";
@@ -99,6 +99,49 @@ export async function getOpenAgentTurnsByProject(
   now = new Date(),
 ): Promise<Record<string, LiveAgentTurns>> {
   return bucketTurnsByProject(await getOpenAgentTurns(userId, now));
+}
+
+/**
+ * Durable identity for the next project action.
+ *
+ * A project tab is transport, not identity. Claude's native session id is the
+ * only identity reported end-to-end today, so callers must resume only rows
+ * that Claude itself reported. Prefer a genuinely open turn; otherwise return
+ * the most recently observed session so a stopped session can be continued.
+ */
+export async function getCurrentClaudeSessionForProject(
+  userId: string,
+  projectKey: string,
+  now = new Date(),
+): Promise<Pick<AgentSessionRow, "sessionId" | "cwd" | "endedAt" | "startedAt"> | null> {
+  const cutoff = new Date(now.getTime() - OPEN_TURN_TTL_MS);
+  const fields = {
+    sessionId: agentSessions.sessionId,
+    cwd: agentSessions.cwd,
+    endedAt: agentSessions.endedAt,
+    startedAt: agentSessions.startedAt,
+  };
+  const common = and(
+    eq(agentSessions.userId, userId),
+    eq(agentSessions.projectKey, projectKey),
+    eq(agentSessions.agent, "claude"),
+  );
+
+  const [open] = await db
+    .select(fields)
+    .from(agentSessions)
+    .where(and(common, isNull(agentSessions.endedAt), gt(agentSessions.startedAt, cutoff)))
+    .orderBy(desc(agentSessions.startedAt))
+    .limit(1);
+  if (open) return open;
+
+  const [latest] = await db
+    .select(fields)
+    .from(agentSessions)
+    .where(common)
+    .orderBy(desc(agentSessions.startedAt))
+    .limit(1);
+  return latest ?? null;
 }
 
 /**

@@ -124,7 +124,7 @@ export function ActivityEventRow({ event }: { event: ActivityEvent }) {
         {/* A failure a person cannot act on is just bad news. Give it a door. */}
         {event.status === "negative" && (
           <Link
-            href={`/terminal?tab=${encodeURIComponent(event.projectKey)}`}
+            href={`/terminal?project=${encodeURIComponent(event.projectKey)}`}
             className="ui-activity-action"
           >
             <ExternalLink className="h-3.5 w-3.5" aria-hidden />
