@@ -43,6 +43,8 @@ export interface AgentRuntimeConfig {
   dir: string;
   /** User-selected model override. When omitted, adapter uses defaultModel. */
   model?: string;
+  /** Native provider session id. Only adapters that support resume use it. */
+  sessionId?: string;
 }
 
 /** Availability detection result. Both fields exist so the UI can show

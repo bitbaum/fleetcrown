@@ -19,7 +19,7 @@ export function fleetSurfaceHref(surface: FleetSurfaceId, project: string | null
   if (surface === "chat") return `/loki?project=${encoded}`;
   if (surface === "control") return `/control?focus=${encoded}`;
   if (surface === "activity") return `/activity?project=${encoded}`;
-  return `/terminal?source=server&tab=${encoded}`;
+  return `/terminal?project=${encoded}`;
 }
 
 /** Where to watch a queued inject: Control for state, Activity for the ledger,
@@ -45,7 +45,7 @@ export function projectFromFleetRoute(pathname: string, search: URLSearchParams)
         : pathname.startsWith("/control")
           ? search.get("focus")
           : pathname.startsWith("/terminal")
-            ? search.get("tab")
+            ? (search.get("project") ?? search.get("tab"))
             : pathname.startsWith("/activity")
               ? search.get("project")
               : null;

@@ -133,6 +133,8 @@ export function TerminalSurface({
   /** Phone full-screen toggle — rendered inside the mobile control bar. */
   onToggleImmersive?: () => void;
   initialSource?: TerminalSource;
+  /** Tab or project name from URL. When from ?project=, this is the project key
+   *  that will be resolved to the actual tab name via context lookup. */
   initialTab?: string | null;
 }) {
   // "shell" — a FleetCrown-owned bash PTY — is only offered where one can
@@ -146,13 +148,97 @@ export function TerminalSurface({
     serializeMode,
     deserializeMode,
   );
+
   // Precedence: what the user just clicked > the deep link that opened the page
   // > the remembered mode. Reading the deep link on every render instead would
   // pin the source forever — arriving via ?source=cloud made the toggle inert,
   // because each click was immediately overruled by the unchanged URL.
   const [pickedSource, setPickedSource] = useState<TerminalSource | null>(null);
-  const desiredSource = pickedSource ?? initialSource ?? mode.source;
-  const source: TerminalSource = sources.includes(desiredSource) ? desiredSource : "cloud";
+
+  // Auto-switch preparation: poll both sources to see which has the requested tab
+  const desiredSourceFromUrl = initialSource ?? mode.source;
+  const primarySource: TerminalSource = sources.includes(desiredSourceFromUrl)
+    ? desiredSourceFromUrl
+    : "cloud";
+  const primaryChannel = channelFor(primarySource);
+  const primaryTabs = useTerminalTabs(primaryChannel);
+
+  const otherSource: TerminalSource | null =
+    primarySource === "machine" && sources.includes("cloud")
+      ? "cloud"
+      : primarySource === "cloud" && sources.includes("machine")
+        ? "machine"
+        : null;
+  const otherChannel = otherSource ? channelFor(otherSource) : null;
+  const otherSourceTabs = useTerminalTabs(otherChannel ?? primaryChannel);
+
+  // Fetch context to map project names to tab names (must happen before resolving initialTab)
+  const primaryContext = useFetch<TerminalContext>(
+    `/api/terminal/context?channel=${primaryChannel}`,
+    { intervalMs: 15000 },
+  );
+  const otherContext = useFetch<TerminalContext>(
+    otherChannel ? `/api/terminal/context?channel=${otherChannel}` : null,
+    { intervalMs: 15000 },
+  );
+
+  // Resolve project name to actual tab name using the same logic Control uses.
+  // When initialTab is "fleetcrown" (project) but the actual tab is "Bitbaum",
+  // this maps it so all lookups use "Bitbaum". Prevents "tab not found" when
+  // Watch/Focus/Open pass a project name instead of the live tab name.
+  const resolveProjectToTab = useCallback(
+    (projectOrTab: string | null | undefined, ctx: typeof primaryContext.data): string | null => {
+      if (!projectOrTab || !ctx) return projectOrTab ?? null;
+      const lower = projectOrTab.toLowerCase();
+
+      // 1. Direct tab name match (case-insensitive)
+      const directMatch = ctx.tabs.find((t) => t.tab.toLowerCase() === lower);
+      if (directMatch) return directMatch.tab;
+
+      // 2. Project name match - find tab whose projectName matches
+      const projectMatch = ctx.tabs.find((t) => t.projectName?.toLowerCase() === lower);
+      if (projectMatch) return projectMatch.tab;
+
+      // 3. No match - return original (may not exist, but that's what deepLinkMiss handles)
+      return projectOrTab;
+    },
+    // ctx parameter is used, not primaryContext - disable exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  // Resolve initialTab on BOTH sources to determine auto-switch
+  const resolvedOnPrimary = resolveProjectToTab(initialTab, primaryContext.data);
+  const resolvedOnOther = resolveProjectToTab(initialTab, otherContext.data);
+
+  // Auto-switch when: resolved tab not on primary source, but IS on other source
+  const shouldUseOtherSource =
+    resolvedOnPrimary &&
+    !primaryTabs.loading &&
+    !primaryTabs.tabs.some((t) => t.toLowerCase() === resolvedOnPrimary.toLowerCase()) &&
+    otherSource &&
+    !otherSourceTabs.loading &&
+    otherSourceTabs.tabs.some((t) => t.toLowerCase() === (resolvedOnOther ?? "").toLowerCase());
+
+  // Final source decision: user click > auto-switch > deep link > remembered mode
+  const source: TerminalSource =
+    pickedSource && sources.includes(pickedSource)
+      ? pickedSource
+      : shouldUseOtherSource
+        ? otherSource!
+        : primarySource;
+
+  const channel = channelFor(source);
+  const copy = COPY[source === "machine" ? "machine" : "cloud"];
+  const { tabs, loading, gatedMessage, offline, presence } =
+    source === primarySource ? primaryTabs : otherSourceTabs;
+
+  // Use context for the active source
+  const context = source === primarySource ? primaryContext.data : otherContext.data;
+
+  // Final resolved tab for the active source
+  const resolvedInitialTab = resolveProjectToTab(initialTab, context);
+
   const inputMode = mode.input;
   const setSource = (next: TerminalSource) => {
     setPickedSource(next);
@@ -160,19 +246,31 @@ export function TerminalSurface({
   };
   const setInputMode = (next: TerminalInputMode) => setMode((m) => ({ ...m, input: next }));
 
-  const channel = channelFor(source);
-  const copy = COPY[source === "machine" ? "machine" : "cloud"];
-  const { tabs, loading, gatedMessage, offline, presence } = useTerminalTabs(channel);
-
-  const [selected, setSelected] = useState<string | null>(initialTab ?? null);
+  // Separate user's manual selection from the deep-linked/resolved initial tab.
+  // This way, selected automatically updates when resolvedInitialTab changes
+  // (e.g., when context loads and maps "fleetcrown" → "Bitbaum"), without
+  // needing an effect that triggers cascading renders.
+  const [userSelection, setUserSelection] = useState<string | null>(null);
+  const selected = userSelection ?? resolvedInitialTab;
   // A ?tab= deep link that matched nothing must not quietly attach to whatever
   // else is running — see resolveTabAttachment for the incident this encodes.
-  const { activeTab, deepLinkMiss } = resolveTabAttachment({
-    requestedTab: initialTab,
+  // But only show the miss UI after we've checked both sources (auto-switch above).
+  // Use resolvedInitialTab (already mapped from project to tab) for all matching.
+  const { activeTab, deepLinkMiss: rawDeepLinkMiss } = resolveTabAttachment({
+    requestedTab: resolvedInitialTab,
     selected,
     tabs,
     loading,
   });
+  // Suppress the miss UI while we're auto-switching to the other source.
+  // Use case-insensitive matching to check if tab exists on other source.
+  const otherHasTab = Boolean(
+    resolvedInitialTab &&
+    otherSource &&
+    !otherSourceTabs.loading &&
+    otherSourceTabs.tabs.some((t) => t.toLowerCase() === resolvedInitialTab.toLowerCase()),
+  );
+  const deepLinkMiss = rawDeepLinkMiss && resolvedInitialTab && !otherHasTab;
 
   // The terminal is one of the four project surfaces, so the tab you are
   // watching IS the fleet's active project — Control, Loki and the project
@@ -229,10 +327,7 @@ export function TerminalSurface({
         },
   );
 
-  // Agent roster + tab→dir, on the same cadence as the tab list.
-  const { data: context } = useFetch<TerminalContext>(`/api/terminal/context?channel=${channel}`, {
-    intervalMs: 15000,
-  });
+  // Agent roster derived from context (already fetched above for tab resolution)
   const agents = useMemo(
     () => (context?.agents.agents ?? []).filter((a) => a.switchable),
     [context],
@@ -354,7 +449,7 @@ export function TerminalSurface({
       // the agent in a session the shell is not showing.
       tabs={source === "shell" ? undefined : stripTabs}
       activeTab={source === "shell" ? null : activeTab}
-      onSelectTab={source === "shell" ? undefined : setSelected}
+      onSelectTab={source === "shell" ? undefined : setUserSelection}
       inputMode={inputMode}
       onInputModeChange={setInputMode}
       agents={agents}
@@ -396,11 +491,11 @@ export function TerminalSurface({
     if (deepLinkMiss) {
       return (
         <TerminalSessionMiss
-          requestedTab={initialTab!}
+          requestedTab={resolvedInitialTab!}
           sourceLabel={sourceLabel}
           otherSourceLabel={otherSourceLabel}
           available={tabs}
-          onAttach={setSelected}
+          onAttach={setUserSelection}
           onSwitchSource={() => setSource(source === "machine" ? "cloud" : "machine")}
         />
       );
@@ -480,7 +575,7 @@ export function TerminalSurface({
       {sourceBar}
       <div className="md:hidden">{mobileHeader}</div>
       <div className="hidden md:block">
-        <TerminalTabStrip tabs={stripTabs} activeId={activeTab} onSelect={setSelected} />
+        <TerminalTabStrip tabs={stripTabs} activeId={activeTab} onSelect={setUserSelection} />
       </div>
       {activeTab && (
         <div className="hidden md:block">

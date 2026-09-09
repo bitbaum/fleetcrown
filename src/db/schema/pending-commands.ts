@@ -59,6 +59,8 @@ export type InjectPayload = {
    * when the agent's session ends. Closes the outcome-tracking loop in cloud mode.
    */
   runId?: string;
+  /** Native Claude session to resume if this command must launch a PTY. */
+  sessionId?: string;
 };
 
 export type SwitchAgentPayload = {
@@ -116,4 +118,6 @@ export type DispatchPayload = {
   promptLabel?: string;
   projectKey?: string;
   runId?: string;
+  /** Native Claude session to resume if no live PTY already owns the project. */
+  sessionId?: string;
 };

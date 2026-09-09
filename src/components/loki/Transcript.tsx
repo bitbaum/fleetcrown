@@ -135,7 +135,7 @@ function DispatchFooter({ meta }: { meta: Record<string, unknown> | null }) {
             Control state
           </Link>
           <Link
-            href={`/terminal?source=server&tab=${encodeURIComponent(primaryProject)}`}
+            href={`/terminal?project=${encodeURIComponent(primaryProject)}`}
             className="ui-dispatch-watch-link"
           >
             <TerminalSquare className="h-3.5 w-3.5" />

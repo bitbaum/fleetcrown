@@ -63,6 +63,7 @@ export async function launchAgentPty(
   dir: string,
   agent: AgentOption,
   model?: string,
+  sessionId?: string,
 ): Promise<void> {
   let effectiveDir = dir;
   // Box-runner: the dispatch's dir is the LAPTOP path and won't exist here.
@@ -97,6 +98,7 @@ export async function launchAgentPty(
     dir: effectiveDir,
     agent,
     model,
+    sessionId,
     workspaceId: runnerWorkspaceId(tab),
   });
 }

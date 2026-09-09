@@ -70,7 +70,7 @@ export function NeedsYouCard({
             <div className="ui-needs-you-actions">
               <ActivityRetryButton event={event} />
               <Link
-                href={`/terminal?tab=${encodeURIComponent(event.projectKey)}`}
+                href={`/terminal?project=${encodeURIComponent(event.projectKey)}`}
                 className="ui-needs-you-action-quiet"
               >
                 Open session <ArrowRight className="h-3 w-3" aria-hidden />
