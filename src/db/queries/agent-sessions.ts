@@ -102,6 +102,57 @@ export async function getOpenAgentTurnsByProject(
 }
 
 /**
+ * Get the current session for a project: the open turn, or the most recent
+ * closed session. This is what Watch/Focus/Implement should resume.
+ *
+ * Returns null only when the project has never had a session reported.
+ */
+export async function getCurrentSessionForProject(
+  userId: string,
+  projectKey: string,
+  now = new Date(),
+): Promise<Pick<AgentSessionRow, "sessionId" | "agent" | "cwd" | "endedAt"> | null> {
+  const cutoff = new Date(now.getTime() - OPEN_TURN_TTL_MS);
+
+  // Open turn takes precedence
+  const [openTurn] = await db
+    .select({
+      sessionId: agentSessions.sessionId,
+      agent: agentSessions.agent,
+      cwd: agentSessions.cwd,
+      endedAt: agentSessions.endedAt,
+    })
+    .from(agentSessions)
+    .where(
+      and(
+        eq(agentSessions.userId, userId),
+        eq(agentSessions.projectKey, projectKey),
+        isNull(agentSessions.endedAt),
+        gt(agentSessions.startedAt, cutoff),
+      ),
+    )
+    .orderBy(sql`${agentSessions.startedAt} DESC`)
+    .limit(1);
+
+  if (openTurn) return openTurn;
+
+  // Fall back to most recent closed session
+  const [lastSession] = await db
+    .select({
+      sessionId: agentSessions.sessionId,
+      agent: agentSessions.agent,
+      cwd: agentSessions.cwd,
+      endedAt: agentSessions.endedAt,
+    })
+    .from(agentSessions)
+    .where(and(eq(agentSessions.userId, userId), eq(agentSessions.projectKey, projectKey)))
+    .orderBy(sql`${agentSessions.startedAt} DESC`)
+    .limit(1);
+
+  return lastSession ?? null;
+}
+
+/**
  * Housekeeping: close turns that blew past the TTL. Purely cosmetic for the
  * live read (which already bounds on startedAt) — it exists so the table does
  * not accumulate rows that look open forever to anything querying it directly,
