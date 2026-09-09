@@ -1,9 +1,11 @@
 /**
  * Honest work-phase for visitor feedback — what the captain sees after
- * Dispatch. DB status stays new|dispatched|resolved|archived; this layer
- * answers: not started / queued / working / stuck / failed / done.
+ * Implement. DB status stays new|dispatched|resolved|archived; this layer
+ * answers: not started / queued / working / stuck / failed / needs verify / done.
  *
- * "dispatched" alone is not a user-facing word — it lied by sounding finished.
+ * "Done" means the live product changed (operator Resolve, or later a live
+ * stamp / merged PR). An agent run finishing — or injectPrompt delivering a
+ * prompt — is not Done. "dispatched" alone is not a user-facing word either.
  */
 import { FEEDBACK_STATUS, type FeedbackStatus } from "@/lib/constants/statuses";
 import { ORCH_STATE, type OrchestrationState } from "@/lib/orchestration/contract";
@@ -16,6 +18,8 @@ export const FEEDBACK_WORK_PHASE = {
   WORKING: "working",
   STUCK: "stuck",
   FAILED: "failed",
+  /** Agent run closed ok — still waiting for live proof / operator Resolve. */
+  NEEDS_VERIFY: "needs_verify",
   DONE: "done",
   ARCHIVED: "archived",
 } as const;
@@ -140,10 +144,16 @@ export function deriveFeedbackWork(
       run.outcome === ORCHESTRATION_OUTCOME.SUCCESS ||
       run.outcome === ORCHESTRATION_OUTCOME.PARTIAL;
     if (ok) {
+      // Not Done. SUCCESS/PARTIAL is the agent's claim that its session ended
+      // well — not evidence the live UI changed. Done is only RESOLVED
+      // (operator Resolve today; live stamp / merged PR later).
       return {
-        phase: FEEDBACK_WORK_PHASE.DONE,
-        label: "Done",
-        detail: "Run finished — click Resolve if the fix looks right.",
+        phase: FEEDBACK_WORK_PHASE.NEEDS_VERIFY,
+        label: "Check live",
+        detail:
+          run.outcome === ORCHESTRATION_OUTCOME.PARTIAL
+            ? "Agent finished with partial success — confirm the live product changed, then Resolve."
+            : "Agent finished — confirm the live product changed, then Resolve.",
       };
     }
     return {

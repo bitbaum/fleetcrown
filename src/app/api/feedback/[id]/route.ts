@@ -3,6 +3,7 @@ import { readIdParam, readJsonBody, jsonOk, jsonError, z } from "@/lib/api/route
 import { getSessionUserId } from "@/lib/session";
 import { setFeedbackFeatured, setFeedbackStatus } from "@/db/queries/site-feedback";
 import { FEEDBACK_STATUS } from "@/lib/constants/statuses";
+import { notifyFeedbackShipped } from "@/lib/feedback/close-loop";
 
 /**
  * Triage a feedback item. NOTE: /api/feedback is excluded from the auth
@@ -41,6 +42,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (dataOrResp.status !== undefined) {
     const updated = await setFeedbackStatus(userId, idOrResp, dataOrResp.status);
     if (!updated) return jsonError("Not found", 404);
+    // Done = operator confirmed live change. Visitor "shipped" mail rides this
+    // path now — not a bare SUCCESS run close (that lied about inject-only).
+    if (dataOrResp.status === FEEDBACK_STATUS.RESOLVED) {
+      void notifyFeedbackShipped(updated.id);
+    }
     return jsonOk({ feedback: updated });
   }
   return jsonOk({});

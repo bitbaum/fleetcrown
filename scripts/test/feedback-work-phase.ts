@@ -1,9 +1,12 @@
-// Pure tests for the feedback work-phase honesty layer. The one regression
-// this file exists to pin: a DISPATCHED row with NO run record is STUCK
-// (retryable, poll stops), never a perpetual QUEUED — the run row is created
-// before the status flips, so "no record" always means failed-create or
-// pruned, and QUEUED-forever had no exit (endless 8s polls, no Retry button,
-// and the dispatch route's duplicate-guard treating it as un-retryable).
+// Pure tests for the feedback work-phase honesty layer.
+//
+// Regression pins:
+// 1. DISPATCHED + NO run record is STUCK (retryable, poll stops), never a
+//    perpetual QUEUED — the run row is created before the status flips, so
+//    "no record" always means failed-create or pruned.
+// 2. A SUCCESS/PARTIAL closed run is NEEDS_VERIFY ("Check live"), never Done.
+//    Done is only FEEDBACK_STATUS.RESOLVED (operator Resolve / live stamp).
+//    Calling Done on inject-or-run-finish alone is the closed-loop lie.
 import assert from "node:assert/strict";
 import {
   deriveFeedbackWork,
@@ -78,17 +81,42 @@ assert.equal(
   "delivered but silent past the thinking window is stuck",
 );
 
-// Closed states.
+// Closed states — SUCCESS is not Done (inject/run finish ≠ live UI changed).
+const successClosed = deriveFeedbackWork(
+  FEEDBACK_STATUS.DISPATCHED,
+  snap({
+    state: ORCH_STATE.CLOSED,
+    outcome: ORCHESTRATION_OUTCOME.SUCCESS,
+    finishedAt: new Date(),
+  }),
+);
+assert.equal(
+  successClosed.phase,
+  FEEDBACK_WORK_PHASE.NEEDS_VERIFY,
+  "SUCCESS close waits for live proof / operator Resolve — never Done alone",
+);
+assert.equal(successClosed.label, "Check live");
+assert.ok(
+  !successClosed.label.toLowerCase().includes("done"),
+  "badge must not say Done before Resolve",
+);
 assert.equal(
   deriveFeedbackWork(
     FEEDBACK_STATUS.DISPATCHED,
     snap({
       state: ORCH_STATE.CLOSED,
-      outcome: ORCHESTRATION_OUTCOME.SUCCESS,
+      outcome: ORCHESTRATION_OUTCOME.PARTIAL,
       finishedAt: new Date(),
     }),
   ).phase,
-  FEEDBACK_WORK_PHASE.DONE,
+  FEEDBACK_WORK_PHASE.NEEDS_VERIFY,
+  "PARTIAL close also needs verify, not Done",
+);
+// Only operator Resolve (DB resolved) is Done.
+assert.equal(
+  deriveFeedbackWork(FEEDBACK_STATUS.RESOLVED, null).label,
+  "Done",
+  "Resolve is the ship stamp that earns Done",
 );
 assert.equal(
   deriveFeedbackWork(

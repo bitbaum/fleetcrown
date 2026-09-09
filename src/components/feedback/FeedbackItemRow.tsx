@@ -80,7 +80,8 @@ export function FeedbackItemRow({
       : work.phase === FEEDBACK_WORK_PHASE.FAILED || work.phase === FEEDBACK_WORK_PHASE.STUCK
         ? "ui-dot-negative mt-1.5"
         : work.phase === FEEDBACK_WORK_PHASE.QUEUED ||
-            work.phase === FEEDBACK_WORK_PHASE.NOT_STARTED
+            work.phase === FEEDBACK_WORK_PHASE.NOT_STARTED ||
+            work.phase === FEEDBACK_WORK_PHASE.NEEDS_VERIFY
           ? "ui-dot-warning mt-1.5"
           : "ui-dot-neutral mt-1.5";
 
@@ -230,7 +231,7 @@ export function FeedbackItemRow({
                 <Check className="h-3.5 w-3.5" />
               </button>
             </>
-          ) : work.phase === FEEDBACK_WORK_PHASE.DONE && f.status !== FEEDBACK_STATUS.RESOLVED ? (
+          ) : work.phase === FEEDBACK_WORK_PHASE.NEEDS_VERIFY ? (
             <>
               <button
                 type="button"
