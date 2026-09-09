@@ -218,12 +218,13 @@ export async function listFeedbackSummary(userId: string): Promise<ProjectFeedba
 export async function getFeedbackWithProject(
   userId: string,
   id: string,
-): Promise<{ feedback: SiteFeedback; projectName: string } | null> {
+): Promise<{ feedback: SiteFeedback; projectName: string; agentPref: string | null } | null> {
   const [row] = await db
     .select({
       feedback: siteFeedback,
       projectName: entities.name,
       userProjectName: userProjects.name,
+      agentPref: userProjects.agentPref,
     })
     .from(siteFeedback)
     .innerJoin(entities, eq(siteFeedback.projectId, entities.id))
@@ -242,6 +243,7 @@ export async function getFeedbackWithProject(
   return {
     feedback: row.feedback,
     projectName: row.userProjectName ?? row.projectName,
+    agentPref: row.agentPref ?? null,
   };
 }
 
