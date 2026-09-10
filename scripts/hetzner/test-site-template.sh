@@ -50,11 +50,11 @@ want "uses actions/cache for that restore" \
      'uses:[[:space:]]*actions/cache@'
 want "keys the cache on the lockfile so a dependency change invalidates it" \
      'hashFiles\(.*lock'
-want "installs from the lockfile (npm ci, not npm install)" \
-     '^[[:space:]]*-[[:space:]]*run:[[:space:]]*npm ci[[:space:]]*$'
+want "installs from the lockfile (pnpm install --frozen-lockfile)" \
+     '^[[:space:]]*-[[:space:]]*run:[[:space:]]*pnpm install --frozen-lockfile[[:space:]]*$'
 want "type-checks" '(run:.*type-check)'
-want "lints"       '(run:.*npm run lint)'
-want "builds"      '(run:.*npm run build)'
+want "lints"       '(run:.*pnpm run lint)'
+want "builds"      '(run:.*pnpm run build)'
 want "runs on pull_request, not only on push" '^[[:space:]]*pull_request:'
 want "declares a concurrency group" '^concurrency:'
 
