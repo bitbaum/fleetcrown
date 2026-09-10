@@ -103,7 +103,8 @@ jobs:
     uses: ${owner}/fleetcrown/.github/workflows/selfhost-deploy.yml@main
     with:
       app: ${slug}
-    secrets: inherit
+    secrets:
+      HETZNER_SSH_PRIVATE_KEY: \${{ secrets.HETZNER_SSH_PRIVATE_KEY }}
 `;
 }
 

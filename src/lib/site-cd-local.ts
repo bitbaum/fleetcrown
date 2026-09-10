@@ -36,10 +36,14 @@ function registerScriptCandidates(): string[] {
   if (process.env.FLEETCROWN_REGISTER_SITE_SCRIPT?.trim()) {
     return [process.env.FLEETCROWN_REGISTER_SITE_SCRIPT.trim()];
   }
+  // Prefer the /opt release copy so Register site runs the just-deployed script.
+  // Durable /home/ubuntu/dev/fleetcrown can lag after Deploy and still refuse
+  // "already exists" while main is already idempotent. apps.conf writes still
+  // go to FLEETCROWN_REPO_ROOT via the script's own MANIFEST resolution.
   return [
+    "/opt/fleetcrown/app/scripts/hetzner/register-site.sh",
     path.join(studioRepoRoot(), "scripts/hetzner/register-site.sh"),
     path.join(process.cwd(), "scripts/hetzner/register-site.sh"),
-    "/opt/fleetcrown/app/scripts/hetzner/register-site.sh",
   ];
 }
 

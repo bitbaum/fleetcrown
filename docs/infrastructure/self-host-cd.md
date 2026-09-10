@@ -63,8 +63,14 @@ Two properties worth keeping:
        uses: bitbaum/fleetcrown/.github/workflows/selfhost-deploy.yml@main
        with:
          app: <apps.conf key>
-       secrets: inherit
+       secrets:
+         HETZNER_SSH_PRIVATE_KEY: ${{ secrets.HETZNER_SSH_PRIVATE_KEY }}
    ```
+
+   Use an explicit secret mapping (not `secrets: inherit`). Inherit only works
+   inside the same GitHub org; kickoff repos under a personal account
+   (e.g. `catomean/…`) calling `bitbaum/fleetcrown` would otherwise fail with
+   "Secret HETZNER_SSH_PRIVATE_KEY is required, but not provided while calling."
 
    Optional inputs: `node-version` (fallback `24` when the repo has no
    `.nvmrc`), `install-flags` (e.g. `--legacy-peer-deps`), and
