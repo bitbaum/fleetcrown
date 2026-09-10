@@ -10,6 +10,7 @@ import { ProjectFeedbackSection } from "./ProjectFeedbackSection";
 import { DoneSection, NextSection, NowSection } from "./ProjectDossierSections";
 import { OrangeCatPublishButton } from "./OrangeCatPublishButton";
 import { LiveUrlField } from "./LiveUrlField";
+import { RegisterSiteButton } from "./RegisterSiteButton";
 import { getProjectLinks } from "./project-detail-types";
 import { getHealthSignals, HEALTH_SIGNAL_CONFIG } from "./project-badges";
 import { computeProjectHealth } from "@/lib/project-health";
@@ -127,6 +128,13 @@ export function ProjectWorkspaceView({
               liveUrl={links.prodUrl}
               readonly={dossier.readonly}
             />
+            {!dossier.readonly && (
+              <RegisterSiteButton
+                projectId={project.id}
+                hasRepo={Boolean(userProject?.gitUrl ?? project.gitUrl)}
+                liveUrl={userProject?.liveUrl ?? links.prodUrl}
+              />
+            )}
             {links.repo && (
               <a
                 href={links.repo}

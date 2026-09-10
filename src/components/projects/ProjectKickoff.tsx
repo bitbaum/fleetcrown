@@ -167,13 +167,21 @@ export function ProjectKickoff({
           predictedLiveUrl?: string;
           command?: string | null;
           reason?: string | null;
+          gate?: string | null;
           error?: string;
         };
         if (cdRes.ok && cd.ok) {
           if (cd.registered && cd.liveUrl) {
             siteNote = `${repo?.full_name ?? "repo"} · live ${cd.liveUrl}`;
-          } else if (cd.command) {
-            siteNote = `${repo?.full_name ?? "repo"} · next: ${cd.command}`;
+          } else if (cd.reason || cd.command) {
+            // Dogfood #551 showed only the command — silent about eligible vs
+            // missing key. Always surface the reason string from register.
+            const why = cd.reason?.trim();
+            const cmd = cd.command?.trim();
+            siteNote =
+              why && cmd
+                ? `${repo?.full_name ?? "repo"} · ${why} — ${cmd}`
+                : `${repo?.full_name ?? "repo"} · ${why || cmd}`;
           } else if (cd.predictedLiveUrl) {
             siteNote = `${repo?.full_name ?? "repo"} · intended ${cd.predictedLiveUrl}`;
           }

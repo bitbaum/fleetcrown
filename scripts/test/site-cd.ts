@@ -14,6 +14,12 @@ import {
   siteCdSlug,
   templateSupportsSiteCd,
 } from "@/lib/site-cd";
+import {
+  canRunRegisterSiteLocally,
+  probeRegisterSiteLocally,
+  studioDevRoot,
+  studioRepoRoot,
+} from "@/lib/site-cd-local";
 
 let pass = 0;
 let fail = 0;
@@ -83,6 +89,33 @@ const workers = planSiteCd({
   template: "hono-cloudflare",
 });
 ok(workers.ok === false && workers.code === "unsupported-template", "refuses workers template");
+
+ok(
+  typeof studioDevRoot() === "string" && studioDevRoot().length > 0,
+  "studioDevRoot returns a path",
+);
+ok(
+  studioRepoRoot().endsWith("fleetcrown") || studioRepoRoot().includes("fleetcrown"),
+  "studioRepoRoot names fleetcrown",
+);
+const probe = probeRegisterSiteLocally();
+ok(typeof probe.ok === "boolean", "probe returns ok");
+ok(
+  Array.isArray(probe.scriptCandidates) && probe.scriptCandidates.length > 0,
+  "probe lists script candidates",
+);
+ok(
+  Array.isArray(probe.keyCandidates) && probe.keyCandidates.length > 0,
+  "probe lists key candidates",
+);
+eq(canRunRegisterSiteLocally(), probe.ok, "canRunRegisterSiteLocally matches probe.ok");
+if (!probe.ok) {
+  ok(
+    typeof probe.reason === "string" && probe.reason.length > 0,
+    "failed probe has a reason string",
+  );
+  ok(probe.gate !== null, "failed probe names a gate");
+}
 
 console.log(`${fail === 0 ? "✓" : "✗"} site-cd: ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

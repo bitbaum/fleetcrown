@@ -67,6 +67,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       predictedLiveUrl: up.liveUrl,
       command: null,
       reason: null,
+      gate: null,
       deployYmlSeeded: true,
       alreadyLive: true,
     });
@@ -111,6 +112,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     slug: result.plan.slug,
     command: result.command,
     reason: result.reason,
+    gate: result.gate,
     deployYmlSeeded: result.deployYmlSeeded,
     alreadyLive: false,
   });
