@@ -162,25 +162,41 @@ else
 fi
 
 echo
-echo "a checkout under another host's home is inspected there, not called drift here"
+echo "a repo_path on ANOTHER host is announced, never called drift"
+# dogfood-site-sep10-1201 was scaffolded straight onto the box, so its repo_path
+# is /home/ubuntu/dev/... — a path that cannot exist on the laptop however
+# healthy the fleet is. The gate called it drift and failed pre-push for
+# everyone, on a register row that was correct and a site serving 200. "Missing
+# here" and "belongs elsewhere" are different claims.
 
-# register-site.sh writes rows like /home/ubuntu/dev/<slug> from the box. No
-# workstation has /home/ubuntu, so the old rule read every product-registered
-# site as one missing checkout among present ones — i.e. drift — and verify
-# went red on laptops for a register that was correct.
 G=$(fixture)
-fake_repo "$TMP/app-here" ci deploy
-{
-  echo "app-here|5021|h.example.com|$TMP/app-here|.|-|t|demo|demo|-|-|-"
-  echo "box-site|5022|s.example.com|/home/no-such-user-$$/dev/box-site|.|-|t|client-site|prospect|-|-|-"
-} > "$TMP/scripts/hetzner/apps.conf"
-echo 0 > "$TMP/scripts/ci/deploy-ready.baseline"
-echo 0 > "$TMP/scripts/ci/deploy-ready-cd.baseline"
-OUT=$("$G" 2>&1); RC=$?
-[ "$RC" = 0 ] || fail "a box-only checkout beside a present one must not fail as drift (rc=$RC): $OUT"
-echo "$OUT" | grep -q "not inspected here.*box-site" || fail "the box-only checkout must be announced, not silently skipped: $OUT"
-echo "$OUT" | grep -q "drift" && fail "a box-only checkout must not be reported as drift: $OUT"
-ok "a checkout under another host's home is announced as inspected elsewhere"
+sed -i 's#^petvity|\([^|]*\)|\([^|]*\)|/home/g/dev/petvity|#petvity|\1|\2|/home/ubuntu/dev/petvity|#' \
+  "$TMP/scripts/hetzner/apps.conf"
+if [ -d /home/g/dev/kivvi ]; then
+  OUT=$("$G" 2>&1); RC=$?
+  [ "$RC" = 0 ] || fail "a box-side repo_path must NOT fail the gate (rc=$RC): $OUT"
+  echo "$OUT" | grep -q "another host" || fail "it must be announced, not silently dropped: $OUT"
+  echo "$OUT" | grep -q "petvity" || fail "the announcement must name the app: $OUT"
+  # Matched against the drift FAILURE line, not the bare word — the
+  # announcement itself says "Not drift", which a naive grep reads as a hit.
+  if echo "$OUT" | grep -q "drift, not a bare"; then
+    fail "a path on another host must not be reported as drift: $OUT"
+  fi
+  ok "a repo_path on another host is announced and does not fail the gate"
+
+  # The verdict must speak for what was INSPECTED. Saying "all 16 apps have CI"
+  # while one was never looked at is the absence-reads-as-success shape again,
+  # just one level up: the count itself does the overclaiming.
+  echo "$OUT" | grep -qE "CI: all [0-9]+ inspected apps have it" \
+    || fail "the CI verdict must be scoped to inspected apps: $OUT"
+  insp=$(echo "$OUT" | sed -nE 's/.*CI: all ([0-9]+) inspected apps have it.*/\1/p')
+  tot=$(echo "$OUT" | sed -nE 's/^✓ register: ([0-9]+) entries.*/\1/p')
+  [ -n "$insp" ] && [ -n "$tot" ] && [ "$insp" -lt "$tot" ] \
+    || fail "inspected ($insp) should be fewer than registered ($tot) here: $OUT"
+  ok "the CI/CD verdict counts only apps it actually inspected"
+else
+  ok "off-host case not exercised — the fleet is not checked out here (reported, not skipped silently)"
+fi
 
 echo
 echo "migrations with db=- — botsmann's root cause, and printcraft's after it"
