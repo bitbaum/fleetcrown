@@ -55,7 +55,8 @@ jobs:
           # earlier manual register blocks pull — reset to origin/main (dogfood
           # row is already committed). Prefer /opt register-site (just Deployed).
           if [ -d /home/ubuntu/dev/fleetcrown/.git ]; then
-            sudo -u ubuntu bash -lc 'cd /home/ubuntu/dev/fleetcrown && git fetch origin main && git checkout -f main && git reset --hard origin/main'
+            git config --global --add safe.directory /home/ubuntu/dev/fleetcrown || true
+            sudo -u ubuntu bash -lc 'git config --global --add safe.directory /home/ubuntu/dev/fleetcrown; cd /home/ubuntu/dev/fleetcrown && git fetch origin main && git checkout -f main && git reset --hard origin/main'
             echo "durable fleetcrown at \$(git -C /home/ubuntu/dev/fleetcrown rev-parse --short HEAD)"
           else
             echo "WARN: no durable fleetcrown checkout"
@@ -69,11 +70,17 @@ jobs:
           export REG DEP
 
           # Expand REG/DEP in this shell, pass literal paths into ubuntu's bash -lc.
+          # Ensure local dogfood checkout can pull before any deploy.yml repair push.
+          if [ -d /home/ubuntu/dev/$SLUG/.git ]; then
+            sudo -u ubuntu bash -lc "cd /home/ubuntu/dev/$SLUG && git fetch origin && git reset --hard origin/main" || true
+          fi
+
           sudo -u ubuntu -E env \
             FLEETCROWN_REPO_ROOT=/home/ubuntu/dev/fleetcrown \
             DEV_ROOT=/home/ubuntu/dev \
             DEPLOY_KEY_PATH=/home/ubuntu/.ssh/fleetcrown_ci_deploy \
-            bash "\$REG" $SLUG --repo $REPO --title 'Dogfood site sep10 1201' --no-deploy
+            bash "\$REG" $SLUG --repo $REPO --title 'Dogfood site sep10 1201' --no-deploy \
+            || echo "register-site exited non-zero — continuing to deploy if apps.conf row exists"
 
           # First deploy for this slug only (do not touch fleetcrown).
           sudo -u ubuntu -E env \
