@@ -33,8 +33,8 @@ BASE_DOMAIN="$SITES_BASE_DOMAIN"
 FC_REPO="${FLEETCROWN_REPO_ROOT:-$DEV_ROOT/fleetcrown}"
 if [ -f "$FC_REPO/scripts/hetzner/apps.conf" ]; then
   MANIFEST="$FC_REPO/scripts/hetzner/apps.conf"
-  SYNC_INFRA="$FC_REPO/scripts/hetzner/sync-infra.sh"
-  DEPLOY_SH="$FC_REPO/scripts/hetzner/deploy.sh"
+  SYNC_INFRA="$HERE/sync-infra.sh"
+  DEPLOY_SH="$HERE/deploy.sh"
 else
   # Release /opt copy, or a checkout that only has the script beside apps.conf.
   # Prefer durable FC_REPO when present; never leave MANIFEST unset.
@@ -64,6 +64,13 @@ done
 [ -n "$SLUG" ] || { echo "usage: register-site.sh <slug> --repo OWNER/NAME" >&2; exit 2; }
 [ -n "$REPO_REF" ] || { echo "usage: register-site.sh <slug> --repo OWNER/NAME" >&2; exit 2; }
 [ -n "$TITLE" ] || TITLE="$SLUG"
+# Child tools must read the exact canonical register we update, even when the
+# executable comes from the current release and the register is durable.
+export MANIFEST
+if [ "$DRY" != 1 ]; then
+  exec 9>"$MANIFEST.lock"
+  flock -w 60 -x 9 || { echo "ERROR: another registration is still running; retry shortly" >&2; exit 1; }
+fi
 
 case "$KIND" in
   client-app|client-site)
@@ -82,6 +89,7 @@ if [[ "$REPO_REF" == https://github.com/* ]] || [[ "$REPO_REF" == git@github.com
   REPO_REF=$(printf '%s' "$REPO_REF" | sed -E 's#^https://github.com/##; s#^git@github.com:##; s#\.git$##')
 fi
 GH_REPO="$REPO_REF"
+[[ "$GH_REPO" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || { echo "invalid GitHub repository" >&2; exit 2; }
 
 echo "→ validating '$SLUG'"
 [[ "$SLUG" =~ ^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$ ]] \
@@ -123,6 +131,8 @@ say "manifest $MANIFEST"
 # ----------------------------------------------------------------- checkout
 echo "→ checkout"
 if [ -e "$REPO_DIR" ]; then
+  actual_repo=$(git -C "$REPO_DIR" remote get-url origin | sed -E 's#^https://github.com/##; s#^git@github.com:##; s#\.git$##')
+  [ "$actual_repo" = "$GH_REPO" ] || { echo "ERROR: existing checkout belongs to another repository" >&2; exit 1; }
   say "exists $REPO_DIR — leaving contents alone"
 else
   run "gh repo clone '$GH_REPO' '$REPO_DIR'"
@@ -207,6 +217,8 @@ else
   say "could not set the secret (gh auth?) — CD will not reach the box until it is set."
 fi
 
+[ "$DRY" = 1 ] || [ "$SECRET_OK" = 1 ] || { echo "ERROR: deploy secret was not installed" >&2; exit 1; }
+
 # ------------------------------------------------------------------- register
 echo "→ register"
 if [ "$ALREADY" = 1 ]; then
@@ -224,10 +236,20 @@ fi
 echo "→ box (systemd unit, launch.sh, Caddy vhost, monitoring)"
 run "bash '$SYNC_INFRA' '$SLUG'"
 
+# A fresh static Next.js site needs an environment too: CD always pulls it
+# from the box. Never overwrite an existing runtime environment.
+if [ "$DRY" != 1 ]; then
+  box "mkdir -p /opt/$SLUG/shared
+    if [ ! -f /opt/$SLUG/shared/.env ]; then
+      if [ -f /opt/$SLUG/app/.env ]; then cp -p /opt/$SLUG/app/.env /opt/$SLUG/shared/.env
+      else (umask 077; printf 'NODE_ENV=production\nPORT=$PORT\n' > /opt/$SLUG/shared/.env); fi
+    fi"
+fi
+
 # --------------------------------------------------------------------- deploy
 if [ "$DEPLOY" = 1 ]; then
   echo "→ deploy"
-  run "bash '$DEPLOY_SH' '$SLUG'" || say "⚠ first deploy failed — URL is registered; fix the app and push (or re-run deploy.sh)"
+  run "bash '$DEPLOY_SH' '$SLUG'"
 fi
 
 # ----------------------------------------------------------------------- next

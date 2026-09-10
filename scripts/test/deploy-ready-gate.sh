@@ -162,6 +162,27 @@ else
 fi
 
 echo
+echo "a checkout under another host's home is inspected there, not called drift here"
+
+# register-site.sh writes rows like /home/ubuntu/dev/<slug> from the box. No
+# workstation has /home/ubuntu, so the old rule read every product-registered
+# site as one missing checkout among present ones — i.e. drift — and verify
+# went red on laptops for a register that was correct.
+G=$(fixture)
+fake_repo "$TMP/app-here" ci deploy
+{
+  echo "app-here|5021|h.example.com|$TMP/app-here|.|-|t|demo|demo|-|-|-"
+  echo "box-site|5022|s.example.com|/home/no-such-user-$$/dev/box-site|.|-|t|client-site|prospect|-|-|-"
+} > "$TMP/scripts/hetzner/apps.conf"
+echo 0 > "$TMP/scripts/ci/deploy-ready.baseline"
+echo 0 > "$TMP/scripts/ci/deploy-ready-cd.baseline"
+OUT=$("$G" 2>&1); RC=$?
+[ "$RC" = 0 ] || fail "a box-only checkout beside a present one must not fail as drift (rc=$RC): $OUT"
+echo "$OUT" | grep -q "not inspected here.*box-site" || fail "the box-only checkout must be announced, not silently skipped: $OUT"
+echo "$OUT" | grep -q "drift" && fail "a box-only checkout must not be reported as drift: $OUT"
+ok "a checkout under another host's home is announced as inspected elsewhere"
+
+echo
 echo "migrations with db=- — botsmann's root cause, and printcraft's after it"
 
 # deploy.sh skips apply-schema.sh entirely when db is '-'. An app that ships

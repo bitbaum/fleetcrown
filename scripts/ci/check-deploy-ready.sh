@@ -90,10 +90,20 @@ echo "✓ register: $total entries, $FIELDS fields each, names and ports unique"
 
 # -------------------------------------------------- half 2: fleet inspection
 # Only meaningful where the sibling checkouts are present.
-missing_ci=""; missing_cd=""; stale=""; silent_schema=""; present=0
+missing_ci=""; missing_cd=""; stale=""; elsewhere=""; silent_schema=""; present=0
 shopt -s nullglob   # so `probe=(dir/[0-9]*.sql)` is EMPTY on no match, not a literal
 while IFS='|' read -r name port domains repo appdir db rest; do
   case "$name" in \#*|"") continue ;; esac
+  # Sites the product registers from the box live under /home/ubuntu/dev and
+  # exist on no laptop. That is not drift: the checkout is real, on the host
+  # the path names. A path rooted in a home directory that does not exist
+  # HERE belongs to another machine's user and is inspected where it lives.
+  # (dogfood-site-sep10-1201 read as "1 of 16 missing" on every workstation.)
+  case "$repo" in
+    /home/*)
+      home_root=$(printf '%s' "$repo" | cut -d/ -f1-3)
+      if [ ! -d "$home_root" ]; then elsewhere="$elsewhere $name"; continue; fi ;;
+  esac
   if [ ! -d "$repo" ]; then stale="$stale $name"; continue; fi
   present=$((present + 1))
   # "Has CI" means a workflow that actually verifies something — a repo whose
@@ -139,6 +149,10 @@ while IFS='|' read -r name port domains repo appdir db rest; do
       ;;
   esac
 done < <(grep -v '^#' "$MANIFEST")
+
+if [ -n "$elsewhere" ]; then
+  echo "· not inspected here — checkouts under another host's home:$elsewhere"
+fi
 
 if [ "$present" = 0 ]; then
   echo "· fleet inspection NOT RUN: none of the $total checkouts exist under $DEV_ROOT."

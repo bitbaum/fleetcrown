@@ -83,6 +83,18 @@ jobs:
           git clone --quiet --depth 1 https://github.com/bitbaum/fleetcrown.git "$RUNNER_TEMP/fleet-tooling"
           echo "tooling at $(git -C "$RUNNER_TEMP/fleet-tooling" rev-parse --short HEAD)"
 
+      - name: Setup SSH
+        env:
+          SSH_KEY: ${{ secrets.HETZNER_SSH_PRIVATE_KEY }}
+          IP: "167.233.22.31"
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$IP" >> ~/.ssh/known_hosts 2>/dev/null
+          ssh -o BatchMode=yes "ubuntu@$IP" 'echo "ssh to $(hostname) ok"'
+
       - name: Resolve app from manifest
         id: app
         run: |
@@ -91,7 +103,20 @@ jobs:
           # lib.sh sets NAME PORT DOMAINS REPO APP_DIR DB, and exits non-zero on
           # an unknown app — a typo in the caller shim fails here, not in prod.
           source "$TOOLING/lib.sh"
-          app_lookup "${{ inputs.app }}"
+          APP="${{ inputs.app }}"
+          [[ "$APP" =~ ^[a-z0-9][a-z0-9-]*$ ]] || exit 1
+          if ! app_lookup "$APP"; then
+            # Registration writes the durable canonical register. A new site
+            # must not wait for an unrelated FleetCrown source deployment.
+            ssh -o BatchMode=yes "ubuntu@$HETZNER_IP" 'cat /home/ubuntu/dev/fleetcrown/scripts/hetzner/apps.conf' > "$RUNNER_TEMP/registered-apps.conf"
+            export MANIFEST="$RUNNER_TEMP/registered-apps.conf"
+            app_lookup "$APP"
+            # Prove the registered checkout belongs to this caller repository.
+            registered_repo=$(ssh -o BatchMode=yes "ubuntu@$HETZNER_IP" "git -C '$REPO' remote get-url origin")
+            registered_repo=$(printf '%s' "$registered_repo" | sed -E 's#^https://github.com/##; s#^git@github.com:##; s#\.git$##')
+            [ "$registered_repo" = "$GITHUB_REPOSITORY" ] || { echo "::error::registered repository does not match caller"; exit 1; }
+            echo "MANIFEST=$MANIFEST" >> "$GITHUB_ENV"
+          fi
           {
             echo "name=$NAME"
             echo "port=$PORT"
@@ -101,18 +126,6 @@ jobs:
             echo "tooling=$TOOLING"
           } >> "$GITHUB_OUTPUT"
           echo "resolved $NAME → port $PORT, dir '$APP_DIR', domain ${DOMAINS%%,*}, db $DB"
-
-      - name: Setup SSH
-        env:
-          SSH_KEY: ${{ secrets.HETZNER_SSH_PRIVATE_KEY }}
-          IP: ${{ steps.app.outputs.ip }}
-        run: |
-          set -euo pipefail
-          mkdir -p ~/.ssh && chmod 700 ~/.ssh
-          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H "$IP" >> ~/.ssh/known_hosts 2>/dev/null
-          ssh -o BatchMode=yes "ubuntu@$IP" 'echo "ssh to $(hostname) ok"'
 
       # The box holds the authoritative runtime env (NEXT_PUBLIC_* is baked in at
       # build time, so the builder needs it too). Pulling it keeps ONE copy of
@@ -309,6 +322,7 @@ jobs:
       - name: Deploy
         if: steps.gate.outputs.proceed == 'true'
         env:
+          BUILD_PACKAGE_MANAGER: ${{ steps.pm.outputs.manager }}
           REPO_OVERRIDE: ${{ github.workspace }}
           TOOLING: ${{ steps.app.outputs.tooling }}
         run: bash "$TOOLING/deploy.sh" "${{ inputs.app }}"

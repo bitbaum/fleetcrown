@@ -7,7 +7,7 @@ import { getProjectCore } from "@/db/queries/projects";
 import { getUserProjectByEntityId } from "@/db/queries/user-projects";
 import { getExecutionAccess } from "@/lib/execution-access";
 import { parseGithubRepoUrl } from "@/lib/github-provision";
-import { registerProjectSiteCd } from "@/lib/site-cd-register";
+import { checkProjectSiteDeployment, registerProjectSiteCd } from "@/lib/site-cd-register";
 import { PROVISION_TEMPLATE_IDS } from "@/config/project-templates";
 
 /**
@@ -59,20 +59,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     );
   }
 
-  if (up.liveUrl) {
-    return NextResponse.json({
-      ok: true,
-      registered: true,
-      liveUrl: up.liveUrl,
-      predictedLiveUrl: up.liveUrl,
-      command: null,
-      reason: null,
-      gate: null,
-      deployYmlSeeded: true,
-      alreadyLive: true,
-    });
-  }
-
   const token = await getGithubToken(userId);
   if (!token) {
     return NextResponse.json(
@@ -115,5 +101,34 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     gate: result.gate,
     deployYmlSeeded: result.deployYmlSeeded,
     alreadyLive: false,
+    deploymentStatus: result.deploymentStatus,
+    deploymentUrl: result.deploymentUrl,
   });
+}
+
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const userId = await getSessionUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const id = await readIdParam(params);
+  if (id instanceof NextResponse) return id;
+  const project = await getProjectCore(userId, id);
+  const up = await getUserProjectByEntityId(userId, id);
+  if (!project || !up) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const parsed = project.gitUrl ? parseGithubRepoUrl(project.gitUrl) : null;
+  const token = await getGithubToken(userId);
+  if (!parsed || !token)
+    return NextResponse.json(
+      { error: "A linked GitHub repository and account are required." },
+      { status: 400 },
+    );
+  const result = await checkProjectSiteDeployment({
+    userId,
+    entityProjectId: id,
+    userProjectId: up.id,
+    projectName: project.name,
+    repoFullName: `${parsed.owner}/${parsed.repo}`,
+    githubToken: token,
+  });
+  if (!("plan" in result)) return NextResponse.json(result, { status: 400 });
+  return NextResponse.json({ ok: true, ...result, predictedLiveUrl: result.plan.liveUrl });
 }
