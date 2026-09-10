@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { PROJECT_ATTR } from "@/config/project-attrs";
 
 export interface OrangeCatBuildIntent {
   iss: "orangecat";
@@ -14,7 +15,39 @@ export interface OrangeCatBuildIntent {
     description: string | null;
     publicUrl: string;
   };
+  /**
+   * Who the builder is building FOR (OrangeCat sends it since 2026-09-10;
+   * older tokens carry none). `unclaimed` is a page set up on someone's behalf
+   * that she has not taken over yet — the steward answers for her until then.
+   */
+  owner?: {
+    kind: "user" | "group" | "unclaimed";
+    displayName: string;
+    pageUrl: string | null;
+    stewardUsername: string | null;
+  };
   suggestedHandoff: string[];
+}
+
+/**
+ * The client block for a project's notes. The first question any builder asks
+ * is "who is this for, and who do I talk to?" — the answer travels in the
+ * token and is written where the agent dossier and the project page both read.
+ */
+export function describeClient(intent: Pick<OrangeCatBuildIntent, "owner">): string[] {
+  const owner = intent.owner;
+  if (!owner) return [];
+  const who = owner.pageUrl ? `${owner.displayName} (${owner.pageUrl})` : owner.displayName;
+  if (owner.kind === "unclaimed") {
+    return [
+      `Client: ${who} — has not claimed the OrangeCat page yet.`,
+      owner.stewardUsername
+        ? `Contact until then: @${owner.stewardUsername} on OrangeCat, who set the page up.`
+        : "Contact until then: the person who set the page up on OrangeCat.",
+      "Once a site exists, the client steers changes through the FleetCrown feedback widget on it — no FleetCrown account needed.",
+    ];
+  }
+  return [`Client: ${who}${owner.kind === "group" ? " (a group)" : ""}.`];
 }
 
 function decode(segment: string): unknown {
@@ -60,4 +93,28 @@ export function verifyOrangeCatBuildIntent(token: string): OrangeCatBuildIntent 
     throw new Error("Invalid OrangeCat public URL");
   }
   return payload;
+}
+
+const SITE_BRIEF_NEXT_STEP =
+  "Turn the OrangeCat description into a website brief the client can read, then scaffold the site (fleetcrown: scripts/hetzner/new-site.sh <slug>) so the feedback widget reaches her from day one.";
+
+/** The fields the token states outright — no model, no guessing. */
+export function handoffAttributes(intent: OrangeCatBuildIntent): Record<string, string> {
+  const attrs: Record<string, string> = {
+    [PROJECT_ATTR.URL]: intent.entity.publicUrl,
+    [PROJECT_ATTR.STATUS]: "Brief from OrangeCat",
+    [PROJECT_ATTR.NEXT_STEP]: SITE_BRIEF_NEXT_STEP,
+  };
+  const owner = intent.owner;
+  if (owner) {
+    attrs[PROJECT_ATTR.OWNER] =
+      owner.kind === "unclaimed"
+        ? `${owner.displayName} (client; page not yet claimed${owner.stewardUsername ? `, steward @${owner.stewardUsername}` : ""})`
+        : owner.displayName;
+    if (owner.kind === "unclaimed") {
+      attrs[PROJECT_ATTR.CUSTOMERS] =
+        `Built for ${owner.displayName}; she reviews the result herself and requests changes through the site's feedback widget.`;
+    }
+  }
+  return attrs;
 }

@@ -10,7 +10,11 @@ import { createUserProject, getUserProject } from "@/db/queries/user-projects";
 import { getOrangeCatLinksForProject, linkOrangeCatEntity } from "@/db/queries/orangecat-links";
 import { getSessionUserId } from "@/lib/session";
 import { getOrangeCatLink } from "@/lib/integrations/orangecat-identity";
-import { verifyOrangeCatBuildIntent } from "@/lib/integrations/orangecat-build-intent";
+import {
+  describeClient,
+  verifyOrangeCatBuildIntent,
+} from "@/lib/integrations/orangecat-build-intent";
+import { fillProfileFromHandoff } from "@/lib/integrations/orangecat-handoff-profile";
 
 export async function POST(request: Request) {
   const userId = await getSessionUserId();
@@ -69,6 +73,7 @@ export async function POST(request: Request) {
           gitUrl: null,
           notes: [
             `Origin: ${intent.entity.publicUrl}`,
+            ...describeClient(intent),
             "",
             "Loki's proposed starting plan:",
             ...intent.suggestedHandoff.map((step, index) => `${index + 1}. ${step}`),
@@ -77,6 +82,14 @@ export async function POST(request: Request) {
 
     if (!project) {
       throw new Error("Choose a FleetCrown project you own.");
+    }
+
+    // A handoff used to create a project with a name and a description and
+    // nothing else — no owner, no origin URL, no next step — so the agent
+    // dossier briefed builders with blanks. Fill what the token already knows.
+    // Best-effort: a profile that cannot be written must not lose the handoff.
+    if (project.entityProjectId) {
+      await fillProfileFromHandoff(userId, project.entityProjectId, intent).catch(() => {});
     }
 
     // Linking an existing project used to overwrite `orangecat_project_id`

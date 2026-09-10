@@ -7,7 +7,13 @@ boundaries.
 ## Contract
 
 - OrangeCat signs a ten-minute HS256 build intent containing the owner actor,
-  source entity, canonical URL, public description, and a generic Loki handoff.
+  source entity, canonical URL, public description, a generic Loki handoff and —
+  since 2026-09-10 — an `owner` block: who the builder is building FOR
+  (`user`, `group` or `unclaimed`), with their OrangeCat page and, for a page
+  set up on someone's behalf, the steward who answers for them until they claim
+  it. FleetCrown writes it into the project notes and profile (`owner`, `url`,
+  `customers`, `status`, `next_step`), so the dossier names the client from the
+  first dispatch. The steward of an unclaimed page may hand it over.
 - FleetCrown requires an OIDC-linked OrangeCat actor matching the intent `sub`.
 - Each intent `jti` is stored and can be consumed once.
 - The owner reviews the proposed context and chooses a new or existing
