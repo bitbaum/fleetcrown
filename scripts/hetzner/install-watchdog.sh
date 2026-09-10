@@ -30,8 +30,28 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$SCRIPT_DIR/_box-env.sh"   # SSOT: HETZNER_IP, BOX_ROOT, BOX_UBUNTU
-HOST="$BOX_ROOT"
 APPS_CONF="$SCRIPT_DIR/apps.conf"
+
+# The operator's laptop reaches the box as root. The box itself does not:
+# register-cd runs this (via sync-infra) inside fleetcrown-app as ubuntu, whose
+# only key is the CI deploy key, so root@box answers "Permission denied" and
+# a freshly registered site was left unmonitored — and, worse, registration
+# reported failure after everything else had succeeded. ubuntu has passwordless
+# sudo, so the same remote script runs there unchanged.
+if ssh -o BatchMode=yes -o ConnectTimeout=8 "$BOX_ROOT" true 2>/dev/null; then
+  HOST="$BOX_ROOT"
+  remote() { ssh -o BatchMode=yes "$HOST" "$@"; }
+else
+  HOST="$BOX_UBUNTU"
+  echo "→ root is not reachable from here; installing as ubuntu via sudo"
+  remote() {
+    if [ -r "${DEPLOY_KEY_PATH:-}" ]; then
+      ssh -o BatchMode=yes -i "$DEPLOY_KEY_PATH" "$HOST" sudo "$@"
+    else
+      ssh -o BatchMode=yes "$HOST" sudo "$@"
+    fi
+  }
+fi
 
 # ── Build the target list (SSOT-derived) ────────────────────────────────────
 # FleetCrown health is first — a 503 there means the env guardrail found a
@@ -57,7 +77,7 @@ fi
 echo "→ seeding $(printf '%s\n' "$TARGETS" | grep -c '|') monitoring targets"
 
 # ── Install on the box ──────────────────────────────────────────────────────
-ssh -o BatchMode=yes "$HOST" 'bash -s' <<'REMOTE'
+remote bash -s <<'REMOTE'
 set -euo pipefail
 mkdir -p /opt/monitoring/state
 
@@ -177,17 +197,17 @@ REMOTE
 
 # Ship the freshly-built target list (the heredoc above is static; targets are
 # data, written separately so a re-run refreshes them from apps.conf).
-printf '%s\n' "$TARGETS" | ssh -o BatchMode=yes "$HOST" 'cat > /opt/monitoring/targets.conf'
+printf '%s\n' "$TARGETS" | remote bash -c 'cat > /opt/monitoring/targets.conf'
 echo "✓ wrote /opt/monitoring/targets.conf"
 
 # Prime state + show the first read (currently-down targets alert on next tick).
-ssh -o BatchMode=yes "$HOST" '/opt/monitoring/watch.sh; echo "→ first watchdog pass done (journalctl -t watchdog for any alerts)"'
+remote bash -c '/opt/monitoring/watch.sh; echo "→ first watchdog pass done (journalctl -t watchdog for any alerts)"'
 
 # LOUD if delivery is dark. All the detection in the world is worthless if the
 # alerts reach nobody: telegram.env shipped as a commented template and stayed
 # that way for months — every alert went to the journal, which no one tails at
 # 04:00. Surface it every run until a real token is present.
-if ssh -o BatchMode=yes "$HOST" 'grep -qE "^TELEGRAM_BOT_TOKEN=.+" /opt/monitoring/telegram.env 2>/dev/null'; then
+if remote bash -c 'grep -qE "^TELEGRAM_BOT_TOKEN=.+" /opt/monitoring/telegram.env 2>/dev/null'; then
   echo "✓ Telegram delivery ACTIVE (token present)."
 else
   cat <<'DARK'
