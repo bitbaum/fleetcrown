@@ -240,18 +240,45 @@ fi
 # scaffold that aborts here leaves a directory, no repo and no register entry,
 # which is the mess this script exists to prevent.
 echo "→ FleetCrown project + widget token"
-WIDGET_TOKEN=""
+# provision-widget.ts prints the env fragment itself (widget token AND project
+# id) so this script appends rather than reformats. Reformatting one named
+# variable is how the project id would have been dropped in silence: the widget
+# would work, the day-zero page's only button would fall back to the project
+# list, and nothing anywhere would report a problem.
+FC_ENV=""
+# Carried to the final summary. A warning printed HERE scrolls off the top of a
+# run that goes on to build a repo, a box and a deploy — diplodoctor's widget
+# failed exactly this way and nobody noticed until the live page was read and
+# found to contain no widget at all. Non-fatal must still mean visible at the
+# end, next to the other things the operator has to finish.
+WIDGET_TODO=""
 if [ "$DRY" = 1 ]; then
   say "DRY  npx tsx $HERE/../provision-widget.ts $SLUG '$TITLE' $SLUG.$BASE_DOMAIN"
 else
-  WIDGET_TOKEN=$(cd "$HERE/../.." && npx tsx scripts/provision-widget.ts "$SLUG" "$TITLE" "$SLUG.$BASE_DOMAIN" 2>/dev/null || true)
-  if [ -n "$WIDGET_TOKEN" ]; then
-    printf 'NEXT_PUBLIC_FC_WIDGET_TOKEN=%s\n' "$WIDGET_TOKEN" >> "$REPO_DIR/.env.selfhost.local"
-    say "token provisioned and written to .env.selfhost.local"
+  FC_ENV=$(cd "$HERE/../.." && npx tsx scripts/provision-widget.ts "$SLUG" "$TITLE" "$SLUG.$BASE_DOMAIN" 2>/dev/null || true)
+  if [ -n "$FC_ENV" ]; then
+    printf '%s\n' "$FC_ENV" >> "$REPO_DIR/.env.selfhost.local"
+    say "project + token provisioned, written to .env.selfhost.local"
   else
     say "⚠ could not provision a widget token (needs the FleetCrown database)."
-    say "  The site is fine; wire it later with:"
-    say "    npx tsx scripts/provision-widget.ts $SLUG '$TITLE' $SLUG.$BASE_DOMAIN"
+    say "  The site is fine; wire it later — see the summary at the end."
+    # NOTE THE SECOND COMMAND. Appending to .env.selfhost.local is enough only
+    # BEFORE the first deploy: deploy.sh seeds /opt/<name>/shared/.env from this
+    # file only when the box has none, and the box is the env SSOT from then on.
+    # After that, appending here changes nothing at all — the build reads the
+    # box's copy — so the repair needs --env to push the new value up.
+    # NEXT_PUBLIC_* is inlined at BUILD time, which is why this is a redeploy
+    # and not a restart.
+    WIDGET_TODO="
+  4. This site has NO feedback widget, so its owner cannot change it without
+     asking a person — which is the dependency this scaffold exists to remove.
+     Provision it and push the value to the box:
+       npx tsx scripts/provision-widget.ts $SLUG '$TITLE' $SLUG.$BASE_DOMAIN \\
+         >> $REPO_DIR/.env.selfhost.local
+       bash $HERE/deploy.sh $SLUG --env
+     Then confirm it actually renders — the token existing proves nothing:
+       curl -s https://$SLUG.$BASE_DOMAIN | grep -c data-fc-project
+"
   fi
 fi
 
@@ -315,9 +342,19 @@ cat <<NEXT
 
   Still yours to do:
 
-  1. Change app/globals.css. Shipping in the default palette is the one thing
-     a bespoke site must not do.
+  1. Change app/globals.css. It ships in FleetCrown's palette on purpose, so a
+     new site reads as "made with FleetCrown" rather than "generated" — but a
+     bespoke site that STAYS in it is the one thing this studio must not ship.
 
   2. Commit the register change:
        cd $(dirname "$MANIFEST") && git add apps.conf && git commit
+
+  3. If this project is public on OrangeCat, point the day-zero page at it.
+     The page links it as a SECONDARY action (FleetCrown stays the button):
+       echo NEXT_PUBLIC_OC_PROJECT_ID=<uuid> >> $REPO_DIR/.env.selfhost.local
+       bash $HERE/deploy.sh $SLUG --env
+     There is no OrangeCat project by default — new-site.sh does not create one,
+     so the link simply does not render until this is set. That is deliberate:
+     a link to a page that does not exist is worse than no link.
+${WIDGET_TODO}
 NEXT
