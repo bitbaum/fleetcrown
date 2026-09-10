@@ -200,6 +200,9 @@ jobs:
           ln -sfn /opt/\$SLUG/shared/.env "\$RELDIR/.env"
           ln -sfn /opt/\$SLUG/shared/launch.sh "\$RELDIR/launch.sh"
           chown -R ubuntu:ubuntu /opt/\$SLUG
+          if [ -d /opt/\$SLUG/app ] && [ ! -L /opt/\$SLUG/app ]; then
+            mv /opt/\$SLUG/app /opt/\$SLUG/releases/legacy-\$(date +%s)
+          fi
           ln -sfn "\$RELDIR" /opt/\$SLUG/app.new && mv -T /opt/\$SLUG/app.new /opt/\$SLUG/app
           systemctl restart \$SLUG-app
 
