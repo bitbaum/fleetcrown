@@ -179,7 +179,8 @@ jobs:
             fi
           "
 
-          REL=\$(date +%Y%m%d-%H%M%S)-\$(git -C /home/ubuntu/dev/\$SLUG rev-parse --short HEAD)
+          git config --global --add safe.directory /home/ubuntu/dev/\$SLUG || true
+          REL=\$(date +%Y%m%d-%H%M%S)-\$(sudo -u ubuntu git -C /home/ubuntu/dev/\$SLUG rev-parse --short HEAD)
           RELDIR=/opt/\$SLUG/releases/\$REL
           mkdir -p "\$RELDIR"
           ST=/home/ubuntu/dev/\$SLUG/.next/standalone
