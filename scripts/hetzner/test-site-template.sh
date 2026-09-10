@@ -292,6 +292,47 @@ NS="$HERE/new-site.sh"
 if [ ! -f "$NS" ]; then
   bad "no new-site.sh"
 else
+  # WHERE it provisions decides WHETHER it provisions. Production FleetCrown is
+  # 127.0.0.1/fleetcrown — loopback only — so running provision-widget.ts from
+  # the laptop fails on every scaffold, and from an agent worktree it fails
+  # before the network (gitignored .env.local). Every agent-created site up to
+  # 2026-09-11 shipped with no widget because of it. Assert the box path, and
+  # assert the absence of the local one: adding the good call back while leaving
+  # the old one in place would look correct and still take the broken branch.
+  ns_live="$(sed 's/#.*//' "$NS")"
+  if grep -q 'provision-widget-on-box.sh' <<< "$ns_live"; then
+    ok "the widget is provisioned ON THE BOX, where the database actually is"
+  else
+    bad "new-site.sh does not use provision-widget-on-box.sh — prod FleetCrown is loopback-only"
+  fi
+  if grep -qE 'npx tsx .*scripts/provision-widget\.ts' <<< "$ns_live"; then
+    bad "new-site.sh still calls provision-widget.ts locally — that cannot reach prod"
+  else
+    ok "no local provision-widget.ts call left to fall back to"
+  fi
+
+  PWB="$HERE/provision-widget-on-box.sh"
+  if [ ! -f "$PWB" ]; then
+    bad "provision-widget-on-box.sh is missing"
+  else
+    # The older provisioner writes its token with NO trailing newline, and a
+    # bare `while read` drops an unterminated final line — silently discarding
+    # the one value the script exists to read, then reporting "no token" for a
+    # run that succeeded.
+    if grep -q 'read -r line || \[ -n "\$line" \]' "$PWB"; then
+      ok "the fragment reader keeps an unterminated final line"
+    else
+      bad "the fragment reader drops a token written without a trailing newline"
+    fi
+    # A half fragment (project id, no token) would look like success and leave
+    # the site with a widget that cannot authenticate.
+    if grep -q 'no token in output' "$PWB"; then
+      ok "it refuses to emit a fragment with no token"
+    else
+      bad "it can emit a token-less fragment, which reads as success"
+    fi
+  fi
+
   if grep -q 'WIDGET_TODO=' "$NS"; then
     ok "a failed widget provision is recorded for the summary"
   else
