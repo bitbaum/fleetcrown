@@ -204,6 +204,24 @@ else
   run "gh repo clone '$GH_REPO' '$REPO_DIR'"
 fi
 
+# ------------------------------------------------------------- runtime env
+# Before the shim: pushing deploy.yml to main starts the site's first Deploy
+# at once, and that job pulls /opt/<slug>/shared/.env from the box. Written
+# after sync-infra, the env did not exist yet and velokiosk-sep10's first
+# Deploy failed on "no runtime .env found" (2026-09-10). Never overwrites an
+# existing environment.
+echo "→ runtime env"
+if [ "$DRY" = 1 ]; then
+  say "DRY  would ensure /opt/$SLUG/shared/.env (NODE_ENV=production, PORT=$PORT)"
+else
+  box "sudo mkdir -p /opt/$SLUG/shared && sudo chown -R ubuntu:ubuntu /opt/$SLUG
+    if [ ! -f /opt/$SLUG/shared/.env ]; then
+      if [ -f /opt/$SLUG/app/.env ]; then cp -p /opt/$SLUG/app/.env /opt/$SLUG/shared/.env
+      else (umask 077; printf 'NODE_ENV=production\nPORT=$PORT\n' > /opt/$SLUG/shared/.env); fi
+    fi"
+  say "/opt/$SLUG/shared/.env present"
+fi
+
 # --------------------------------------------------------------- deploy.yml
 echo "→ deploy.yml"
 DEPLOY_YML="$REPO_DIR/.github/workflows/deploy.yml"
@@ -336,16 +354,6 @@ fi
 # ------------------------------------------------------------------------ box
 echo "→ box (systemd unit, launch.sh, Caddy vhost, monitoring)"
 run "bash '$SYNC_INFRA' '$SLUG'"
-
-# A fresh static Next.js site needs an environment too: CD always pulls it
-# from the box. Never overwrite an existing runtime environment.
-if [ "$DRY" != 1 ]; then
-  box "mkdir -p /opt/$SLUG/shared
-    if [ ! -f /opt/$SLUG/shared/.env ]; then
-      if [ -f /opt/$SLUG/app/.env ]; then cp -p /opt/$SLUG/app/.env /opt/$SLUG/shared/.env
-      else (umask 077; printf 'NODE_ENV=production\nPORT=$PORT\n' > /opt/$SLUG/shared/.env); fi
-    fi"
-fi
 
 # --------------------------------------------------------------------- deploy
 if [ "$DEPLOY" = 1 ]; then
