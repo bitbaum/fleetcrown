@@ -106,4 +106,9 @@ export const FLEET_SITES: readonly FleetSite[] = [
     url: "https://vitareba.orangecat.ch",
     blurb: "Metabolische Psychiatrie und systemische Longevity, Zürich.",
   },
+  {
+    name: "Heidi",
+    url: "https://heidi.orangecat.ch",
+    blurb: "Züritüütsch verstehen, dann wie ein Local texten. Im Aufbau.",
+  },
 ] as const;
