@@ -3,8 +3,16 @@
  *
  *   npx tsx scripts/provision-widget.ts <slug> <title> <host>
  *
- * Prints ONLY the token to stdout, so `new-site.sh` can capture it. Everything
- * else goes to stderr.
+ * Prints the site's env fragment to stdout — nothing else, so `new-site.sh` can
+ * append it verbatim. Everything human-readable goes to stderr.
+ *
+ *   NEXT_PUBLIC_FC_WIDGET_TOKEN=<token>
+ *   NEXT_PUBLIC_FC_PROJECT_ID=<uuid>
+ *
+ * The project id is emitted because the scaffold's day-zero page links its
+ * owner to their own FleetCrown project. Without it that link can only reach
+ * the project LIST — so the single call to action on a brand-new site would
+ * ask the person who just received it to go find themselves in a list.
  *
  * WHY THIS IS PART OF SPINNING UP A SITE
  *
@@ -97,7 +105,9 @@ async function main(): Promise<void> {
   if (!token) die("failed to mint a widget token");
 
   console.error(`✓ widget token bound to https://${host}`);
-  process.stdout.write(token.token);
+  process.stdout.write(
+    `NEXT_PUBLIC_FC_WIDGET_TOKEN=${token.token}\nNEXT_PUBLIC_FC_PROJECT_ID=${projectId}\n`,
+  );
 }
 
 main()
