@@ -97,7 +97,16 @@ async function main(): Promise<void> {
   if (!token) die("failed to mint a widget token");
 
   console.error(`✓ widget token bound to https://${host}`);
-  process.stdout.write(token.token);
+  // stdout contract: "<projectId> <token>", one line, space-separated.
+  //
+  // The project id used to reach stdout not at all — it was logged to stderr and
+  // dropped. new-site.sh therefore never wrote NEXT_PUBLIC_FC_PROJECT_ID, and
+  // the day-zero page reads exactly that variable to aim "Build this site" at
+  // THIS site's project. Its comment said the scaffold wrote it; nothing did, so
+  // every scaffolded site's primary call to action fell back to the generic
+  // project list. An id that is computed and then thrown away is the same as no
+  // id, and it is worse when a page is written as though it survived.
+  process.stdout.write(`${projectId} ${token.token}`);
 }
 
 main()
