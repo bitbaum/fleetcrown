@@ -12,6 +12,13 @@
  * The keywords exist so kickoff can pick a starter FROM the project's own
  * stack. A cold-start flow that stops to ask "which starter?" has already lost:
  * the profile it just filled in already says what this is built with.
+ *
+ * TWO PATHS (do not conflate):
+ * - Kickoff / GitHub provision seeds these TEMPLATES → agent-ready code repo.
+ * - Live Hetzner site + CD uses `scripts/hetzner/new-site.sh` +
+ *   `scripts/site-template` (apps.conf, deploy.yml → selfhost-deploy, secrets).
+ * Provisioned starters intentionally omit the self-host CD shim; registering a
+ * live URL is the new-site path, not an implied side effect of Create repo.
  */
 
 export const PROVISION_TEMPLATES = [

@@ -10,6 +10,7 @@ import type { FeedbackListItem } from "@/db/queries/site-feedback";
 import type { FeedbackListItemWithWork } from "@/lib/feedback/attach-work";
 import { FeedbackWorkBadge } from "@/components/feedback/FeedbackWorkBadge";
 import { fleetSurfaceHref } from "@/lib/fleet-context";
+import { absoluteFeedbackPageHref } from "@/lib/feedback/page-href";
 
 /**
  * One feedback item, everywhere feedback renders: the per-project section and
@@ -54,6 +55,8 @@ export function FeedbackItemRow({
   const progressTitle = watchLive
     ? (work.detail ?? "Live agent session")
     : "Open this project on Control — Terminal is empty until a session is actually running";
+  // Reported page surface — Check live must open this, not Control/Terminal.
+  const livePageHref = absoluteFeedbackPageHref(f.url, f.page);
   // Agent-filed rows get a typed badge instead of their magic contact string.
   const agentBadge =
     f.source === FEEDBACK_SOURCE.AI_REVIEW
@@ -92,7 +95,19 @@ export function FeedbackItemRow({
           <div className="flex items-start gap-2">
             <span className={dotClass} aria-label={work.label} />
             <p className="min-w-0 text-sm leading-relaxed text-text-primary">{f.suggestion}</p>
-            <FeedbackWorkBadge work={work} />
+            {work.phase === FEEDBACK_WORK_PHASE.NEEDS_VERIFY && livePageHref ? (
+              <a
+                href={livePageHref}
+                target="_blank"
+                rel="noreferrer"
+                className="shrink-0"
+                title="Open the reported page"
+              >
+                <FeedbackWorkBadge work={work} />
+              </a>
+            ) : (
+              <FeedbackWorkBadge work={work} />
+            )}
             {agentBadge && <span className="ui-tag shrink-0">{agentBadge}</span>}
             {f.duplicateCount > 1 && (
               <span className="ui-badge shrink-0" title={`Reported ${f.duplicateCount} times`}>
@@ -233,17 +248,30 @@ export function FeedbackItemRow({
             </>
           ) : work.phase === FEEDBACK_WORK_PHASE.NEEDS_VERIFY ? (
             <>
+              {livePageHref ? (
+                <a
+                  href={livePageHref}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="ui-btn-save gap-1"
+                  title="Open the reported page and confirm the live UI changed"
+                >
+                  Check live
+                </a>
+              ) : (
+                <a href={progressHref} className="ui-btn-secondary gap-1" title={progressTitle}>
+                  {progressLabel}
+                </a>
+              )}
               <button
                 type="button"
                 onClick={onResolve}
                 disabled={busy}
-                className="ui-btn-save gap-1"
+                className="ui-btn-secondary gap-1"
+                title="Mark resolved after you confirmed the live product"
               >
                 <Check className="h-3 w-3" /> Resolve
               </button>
-              <a href={progressHref} className="ui-btn-secondary gap-1" title={progressTitle}>
-                {progressLabel}
-              </a>
             </>
           ) : f.status === FEEDBACK_STATUS.RESOLVED ? (
             <>

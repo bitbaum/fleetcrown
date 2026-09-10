@@ -223,7 +223,11 @@ Edit \`src/app/page.tsx\` to make it yours. Tailwind classes work out of the box
 
 - Add a database: \`npm install drizzle-orm postgres\` + see [Drizzle docs](https://orm.drizzle.team)
 - Add auth: \`npm install next-auth@beta\` + see [Auth.js docs](https://authjs.dev)
-- Deploy: self-host behind a reverse proxy (build, then run \`next start\` on your server)
+- Local/self-host: build, then run \`next start\` behind your reverse proxy
+- Live site on bitbaum (FleetCrown CD): use \`scripts/hetzner/new-site.sh\` +
+  \`scripts/site-template\` — that path registers the app, emits deploy.yml →
+  selfhost-deploy, and sets the deploy secret. This provisioned starter is the
+  agent-ready repo, not that live-site scaffold.
 
 ## Need help?
 

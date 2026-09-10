@@ -3,8 +3,9 @@
 // promoteDevLogEntry / promoteMomentToOrangeCat are fire-and-forget at the
 // user-action call sites: a process restart, OC downtime, or an expired token
 // drops the promote silently. The bridge spec's rule is "best-effort must not
-// mean silently lossy" — this janitor makes that true by re-emitting recent
-// publish-worthy moments for every OC-linked project. External ids are
+// mean silently lossy" — this janitor re-emits recent publish-worthy moments
+// for projects that opted into Publish (orangecatProjectId). Linking alone is
+// not consent, and history from before publish is skipped. External ids are
 // deterministic (sha256 of the entry / stable project id), so re-posting is
 // idempotent: OrangeCat reconciles on (source, external_id) and returns 200
 // instead of double-posting.
@@ -26,8 +27,9 @@ import {
   type PromoteOutcome,
 } from "@/lib/integrations/orangecat-publish";
 import { getRecentSuccessfulRuns } from "@/db/queries/orchestration-runs";
+import { getOrangeCatLinksForProject } from "@/db/queries/orangecat-links";
 
-/** Only re-emit devlog entries this recent — older wall history is settled. */
+/** Upper bound on how far back we look — never past publish consent (below). */
 const BACKFILL_WINDOW_DAYS = 14;
 /** Cap re-emits per tick so a misconfig can't hammer the OC publish bus. */
 const MAX_PROMOTES_PER_TICK = 50;
@@ -35,8 +37,6 @@ const MAX_PROMOTES_PER_TICK = 50;
 export async function GET(req: NextRequest) {
   const denied = requireCronAuth(req);
   if (denied) return denied;
-
-  const cutoff = new Date(Date.now() - BACKFILL_WINDOW_DAYS * DAY_MS).toISOString().slice(0, 10);
 
   const linked = await db
     .select({
@@ -55,6 +55,23 @@ export async function GET(req: NextRequest) {
   let capped = false;
 
   outer: for (const project of linked) {
+    // Linking an OrangeCat account is not consent to publish. Publish sets the
+    // funding entity link; its createdAt is when the operator opted the project
+    // onto the public wall. Never backfill private history from before that.
+    const links = await getOrangeCatLinksForProject(project.userId, project.id);
+    const publishLink =
+      links.find((l) => l.entityId === project.orangecatProjectId) ??
+      links.find((l) => l.role === "funding");
+    const publishedAt = publishLink?.createdAt ?? null;
+    // No publish timestamp → only reconcile the "went public" moment; do not
+    // invent a 14-day dump of private notes onto the wall.
+    const historyCutoffIso = publishedAt
+      ? new Date(
+          Math.max(publishedAt.getTime(), Date.now() - BACKFILL_WINDOW_DAYS * DAY_MS),
+        ).toISOString()
+      : null;
+    const historyCutoffDate = historyCutoffIso ? historyCutoffIso.slice(0, 10) : null;
+
     // The "went public" moment first — it anchors the wall if the original
     // fire-and-forget emit was dropped during the publish call.
     const moments: Array<() => Promise<PromoteOutcome>> = [
@@ -66,17 +83,14 @@ export async function GET(req: NextRequest) {
           subjectId: project.orangecatProjectId ?? undefined,
         }),
       ...((project.devLog ?? []) as DevLogEntry[])
-        .filter((entry) => entry.date >= cutoff)
+        .filter((entry) => historyCutoffDate != null && entry.date >= historyCutoffDate)
         .map((entry) => () => promoteDevLogEntry(project.userId, project.id, project.name, entry)),
-      // Run→wall reconcile: re-emit recent successful runs — same idempotent
-      // external ids as the close-time fire-and-forget emit.
-      ...(
-        await getRecentSuccessfulRuns(
-          project.userId,
-          project.name,
-          new Date(Date.now() - BACKFILL_WINDOW_DAYS * DAY_MS),
-        )
-      ).map((run) => () => promoteRunClose(run)),
+      // Run→wall reconcile: only runs finished at/after publish consent.
+      ...(historyCutoffIso
+        ? (
+            await getRecentSuccessfulRuns(project.userId, project.name, new Date(historyCutoffIso))
+          ).map((run) => () => promoteRunClose(run))
+        : []),
     ];
 
     // Sequential on purpose: this is a janitor, not a hot path — one in-flight

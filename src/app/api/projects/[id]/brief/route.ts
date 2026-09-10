@@ -12,11 +12,9 @@ import { LONG_TEXT_MAX } from "@/lib/constants";
 
 const BriefBody = z.object({
   text: z.string().trim().min(10, "Tell us a bit more — at least a sentence.").max(LONG_TEXT_MAX),
-  // Defaults to false so the kickoff flow is unchanged: there the user has just
-  // edited the brief and means for the profile to be rewritten from it. The
-  // health worklist passes true — it fills gaps in a profile someone has
-  // already worked on, where quietly replacing their own mission with the
-  // model's would be a worse outcome than leaving the point unearned.
+  // Defaults to false so kickoff can fill attrs from the brief. Description is
+  // always the operator's exact text (see below) — onlyMissing still protects
+  // attrs the health worklist must not overwrite.
   onlyMissing: z.boolean().optional(),
 });
 
@@ -44,6 +42,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       { status: 502 },
     );
   }
+
+  // The operator's edited text IS the brief. Attrs may be model-filled; never
+  // overwrite that exact wording with a regenerated 1–2 sentence paraphrase.
+  profile = { ...profile, description: dataOrResp.text };
 
   const applied = await applyProjectProfile(userId, idOrResp, profile, {
     onlyMissing: dataOrResp.onlyMissing,

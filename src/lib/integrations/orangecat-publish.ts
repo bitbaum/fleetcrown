@@ -7,9 +7,11 @@
  * - publishProjectToOrangeCat: opt-in, per project. Creates the OC project as
  *   the USER's actor (their OIDC access token from Login with OrangeCat) and
  *   stores the back-link on user_projects.orangecatProjectId.
+ *   Account linking alone never publishes; publish consent is this call.
  * - promoteMomentToOrangeCat: async + fire-and-forget + idempotent. Consults
  *   PROMOTE_POLICY (src/config/orangecat-publish.ts) and posts onto the OC
  *   publish bus with a stable dedupe id, so retries never double-post.
+ *   Backfill must not promote moments from before the publish opt-in.
  */
 
 import { createHash } from "node:crypto";

@@ -360,10 +360,10 @@ export async function applyProjectProfile(
   options: ApplyProfileOptions = {},
 ): Promise<Partial<Record<keyof ExtractedProfile, string>> | null> {
   const applied: Partial<Record<keyof ExtractedProfile, string>> = {};
-  // Nothing is skipped by default — the kickoff flow deliberately rewrites a
-  // profile from a brief the user just edited. `onlyMissing` is for the callers
-  // that fill gaps in a profile someone has already worked on, where silently
-  // replacing their own mission with the model's is the whole risk.
+  // Nothing is skipped by default — kickoff fills attrs from the brief. The
+  // brief route forces description to the operator's exact text before apply,
+  // so a model paraphrase cannot overwrite what they just edited. `onlyMissing`
+  // is for callers that fill gaps in a profile someone already worked on.
   const existing = options.onlyMissing ? await readExistingProfileValues(userId, entityId) : null;
   // hasAnswer, not a bare emptiness test: it is the same predicate
   // computeProjectHealth uses, so "already answered" means exactly what the
