@@ -51,41 +51,35 @@ jobs:
           chown -R ubuntu:ubuntu /home/ubuntu/.ssh
           chmod 600 "\$AUTH"
 
-          # Durable fleetcrown must be on main for apps.conf + register-site.
+          # Durable fleetcrown owns apps.conf. Local dirty apps.conf from an
+          # earlier manual register blocks pull — reset to origin/main (dogfood
+          # row is already committed). Prefer /opt register-site (just Deployed).
           if [ -d /home/ubuntu/dev/fleetcrown/.git ]; then
-            sudo -u ubuntu bash -lc 'cd /home/ubuntu/dev/fleetcrown && git fetch origin main && git checkout main && git pull --ff-only origin main'
+            sudo -u ubuntu bash -lc 'cd /home/ubuntu/dev/fleetcrown && git fetch origin main && git checkout -f main && git reset --hard origin/main'
             echo "durable fleetcrown at \$(git -C /home/ubuntu/dev/fleetcrown rev-parse --short HEAD)"
           else
             echo "WARN: no durable fleetcrown checkout"
           fi
 
-          FC=/home/ubuntu/dev/fleetcrown
-          if [ ! -x "\$FC/scripts/hetzner/register-site.sh" ]; then
-            FC=/opt/fleetcrown/app
-          fi
-          export FLEETCROWN_REPO_ROOT=/home/ubuntu/dev/fleetcrown
-          export DEV_ROOT=/home/ubuntu/dev
-          export DEPLOY_KEY_PATH=/home/ubuntu/.ssh/fleetcrown_ci_deploy
-          # Key file for gh secret set — copy from authorized private if present, else skip secret.
-          if [ ! -r "\$DEPLOY_KEY_PATH" ]; then
-            echo "no private deploy key on box at \$DEPLOY_KEY_PATH — secret set will skip; pubkey is installed for GHA"
-          fi
+          REG=/opt/fleetcrown/app/scripts/hetzner/register-site.sh
+          DEP=/opt/fleetcrown/app/scripts/hetzner/deploy.sh
+          [ -x "\$REG" ] || REG=/home/ubuntu/dev/fleetcrown/scripts/hetzner/register-site.sh
+          [ -x "\$DEP" ] || DEP=/home/ubuntu/dev/fleetcrown/scripts/hetzner/deploy.sh
+          echo "using register=\$REG deploy=\$DEP"
+          export REG DEP
 
-          sudo -u ubuntu -E bash -lc "
-            set -euo pipefail
-            export FLEETCROWN_REPO_ROOT=/home/ubuntu/dev/fleetcrown
-            export DEV_ROOT=/home/ubuntu/dev
-            export DEPLOY_KEY_PATH=/home/ubuntu/.ssh/fleetcrown_ci_deploy
-            bash \$FC/scripts/hetzner/register-site.sh $SLUG --repo $REPO --title 'Dogfood site sep10 1201' --no-deploy
-          "
+          # Expand REG/DEP in this shell, pass literal paths into ubuntu's bash -lc.
+          sudo -u ubuntu -E env \
+            FLEETCROWN_REPO_ROOT=/home/ubuntu/dev/fleetcrown \
+            DEV_ROOT=/home/ubuntu/dev \
+            DEPLOY_KEY_PATH=/home/ubuntu/.ssh/fleetcrown_ci_deploy \
+            bash "\$REG" $SLUG --repo $REPO --title 'Dogfood site sep10 1201' --no-deploy
 
-          # First deploy for this slug only.
-          sudo -u ubuntu -E bash -lc "
-            set -euo pipefail
-            export FLEETCROWN_REPO_ROOT=/home/ubuntu/dev/fleetcrown
-            export DEV_ROOT=/home/ubuntu/dev
-            bash /home/ubuntu/dev/fleetcrown/scripts/hetzner/deploy.sh $SLUG
-          "
+          # First deploy for this slug only (do not touch fleetcrown).
+          sudo -u ubuntu -E env \
+            FLEETCROWN_REPO_ROOT=/home/ubuntu/dev/fleetcrown \
+            DEV_ROOT=/home/ubuntu/dev \
+            bash "\$DEP" $SLUG
 
           # Set liveUrl on the dogfood project (Hetzner SSOT column).
           ENV=/opt/fleetcrown/app/.env
