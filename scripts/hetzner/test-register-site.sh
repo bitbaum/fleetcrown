@@ -46,4 +46,9 @@ echo "$OUT" | grep -q "already served by another entry" || fail "must name the c
 ok "hostname conflicts are checked across both registers"
 
 echo
+echo "sync-infra's unit heredoc is unquoted, so a backtick anywhere in it would run here"
+grep -q '`' "$HERE/sync-infra.sh" && fail "sync-infra.sh contains a backtick (command substitution inside the unit heredoc)"
+ok "sync-infra.sh has no backticks"
+
+echo
 echo "OK: $PASSED passed"
