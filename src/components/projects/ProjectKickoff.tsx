@@ -157,7 +157,8 @@ export function ProjectKickoff({
       let siteNote = repo?.full_name ?? "created";
       try {
         const cdRes = await postJson(`/api/projects/${projectId}/register-cd`, {
-          template: template === "bare" || template === "nextjs-tailwind" ? template : "nextjs-tailwind",
+          template:
+            template === "bare" || template === "nextjs-tailwind" ? template : "nextjs-tailwind",
         });
         const cd = (await cdRes.json()) as {
           ok?: boolean;

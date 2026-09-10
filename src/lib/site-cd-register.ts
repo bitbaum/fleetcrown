@@ -15,11 +15,7 @@ import { HTTP_TIMEOUT_SHORT_MS } from "@/lib/constants/time";
 import { setProjectLiveUrl } from "@/db/queries/atlas";
 import { upsertEntityAttribute } from "@/db/queries/utils";
 import { PROJECT_ATTR } from "@/config/project-attrs";
-import {
-  DEPLOY_WORKFLOW_PATH,
-  planSiteCd,
-  type SiteCdPlan,
-} from "@/lib/site-cd";
+import { DEPLOY_WORKFLOW_PATH, planSiteCd, type SiteCdPlan } from "@/lib/site-cd";
 
 export type SiteCdRegisterResult = {
   plan: Extract<SiteCdPlan, { ok: true }>;
@@ -44,19 +40,20 @@ function registerScriptPath(): string {
     path.join(process.cwd(), "scripts/hetzner/register-site.sh"),
     "/opt/fleetcrown/app/scripts/hetzner/register-site.sh",
   ];
-  return candidates.find((p) => {
-    try {
-      return fs.existsSync(p);
-    } catch {
-      return false;
-    }
-  }) ?? candidates[0]!;
+  return (
+    candidates.find((p) => {
+      try {
+        return fs.existsSync(p);
+      } catch {
+        return false;
+      }
+    }) ?? candidates[0]!
+  );
 }
 
 function deployKeyPath(): string {
   return (
-    process.env.DEPLOY_KEY_PATH?.trim() ||
-    path.join(os.homedir(), ".ssh/fleetcrown_ci_deploy")
+    process.env.DEPLOY_KEY_PATH?.trim() || path.join(os.homedir(), ".ssh/fleetcrown_ci_deploy")
   );
 }
 
@@ -184,12 +181,7 @@ export async function registerProjectSiteCd(input: {
   const [owner, repo] = input.repoFullName.split("/");
   let deployYmlSeeded = false;
   if (owner && repo) {
-    deployYmlSeeded = await ensureDeployWorkflow(
-      input.githubToken,
-      owner,
-      repo,
-      plan.deployYml,
-    );
+    deployYmlSeeded = await ensureDeployWorkflow(input.githubToken, owner, repo, plan.deployYml);
   }
 
   // Do NOT write production_url / liveUrl until registration succeeds —
