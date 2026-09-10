@@ -105,3 +105,44 @@ FleetCrown **Make it happen** creates a different kind of repo (agent starters v
 `register-site.sh` is the CD half of `new-site.sh` without scaffolding: apps.conf
 row, deploy secret, sync-infra. Prefer it over a parallel host.
 
+## Auto-register on the studio box
+
+`POST /api/projects/[id]/register-cd` (also called from **Make it happen** after
+provision) runs `scripts/hetzner/register-site.sh` **in-process** when all of:
+
+1. **Eligible account** — `users.is_default` or `FLEETCROWN_CLOUD_BUILDER_USER_IDS`
+   (same gate as shared cloud builder; studio CD is not multi-tenant).
+2. **Script present** — resolved in order: `FLEETCROWN_REGISTER_SITE_SCRIPT`,
+   `$FLEETCROWN_REPO_ROOT/scripts/hetzner/register-site.sh`,
+   `$FLEETCROWN_BOX_DEV_ROOT/fleetcrown/...` (default durable root
+   `/home/ubuntu/dev` on the box), `process.cwd()/scripts/...`, then
+   `/opt/fleetcrown/app/scripts/hetzner/register-site.sh`.
+3. **Deploy key readable** — `DEPLOY_KEY_PATH` or
+   `/home/ubuntu/.ssh/fleetcrown_ci_deploy` (the same key `new-site.sh` pipes
+   into `gh secret set HETZNER_SSH_PRIVATE_KEY`). The production app runs as
+   `User=ubuntu`; a key that only exists on a laptop will make auto-register
+   return command-only with an explicit **missing-key** reason.
+4. **Not disabled** — unset `FLEETCROWN_SITE_CD_AUTO` (or anything other than
+   `0`).
+
+When any gate fails, the API returns `command` **and** `reason` / `gate` — the
+kickoff UI must show the reason (not only the bash line). Use **Register site**
+on the project header to retry (`register-cd` is idempotent once `liveUrl` is
+set).
+
+### One-time box setup (Cato / fleetcrown.orangecat.ch)
+
+```bash
+# On the studio box, as ubuntu — durable checkout + deploy key
+test -f /home/ubuntu/dev/fleetcrown/scripts/hetzner/apps.conf
+install -m 600 /path/to/fleetcrown_ci_deploy /home/ubuntu/.ssh/fleetcrown_ci_deploy
+
+# Optional explicit env in /opt/fleetcrown/app/.env (EnvironmentFile):
+# FLEETCROWN_REPO_ROOT=/home/ubuntu/dev/fleetcrown
+# FLEETCROWN_BOX_DEV_ROOT=/home/ubuntu/dev
+# DEPLOY_KEY_PATH=/home/ubuntu/.ssh/fleetcrown_ci_deploy
+```
+
+Keep `/home/ubuntu/dev/fleetcrown` on `main` so `apps.conf` edits survive the
+next `/opt/fleetcrown/app` release swap. `liveUrl` is written only after
+`register-site.sh` exits 0 — never faked.

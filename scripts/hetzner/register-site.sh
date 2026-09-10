@@ -34,9 +34,13 @@ if [ -f "$FC_REPO/scripts/hetzner/apps.conf" ]; then
   SYNC_INFRA="$FC_REPO/scripts/hetzner/sync-infra.sh"
   DEPLOY_SH="$FC_REPO/scripts/hetzner/deploy.sh"
 else
+  # Release /opt copy, or a checkout that only has the script beside apps.conf.
+  # Prefer durable FC_REPO when present; never leave MANIFEST unset.
+  MANIFEST="$HERE/apps.conf"
   SYNC_INFRA="$HERE/sync-infra.sh"
   DEPLOY_SH="$HERE/deploy.sh"
 fi
+[ -f "$MANIFEST" ] || { echo "✗ apps.conf missing at $MANIFEST (set FLEETCROWN_REPO_ROOT to the durable fleetcrown checkout)" >&2; exit 1; }
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -82,7 +86,18 @@ echo "→ validating '$SLUG'"
   || { echo "✗ slug must be lowercase letters, digits and hyphens, not starting or ending with one" >&2; exit 1; }
 
 if grep -q "^$SLUG|" "$MANIFEST" 2>/dev/null; then
-  echo "✗ '$SLUG' is already in $MANIFEST" >&2; exit 1
+  # Idempotent: kickoff retry / Register site after a prior successful register.
+  say "'$SLUG' already in $MANIFEST — treating as registered"
+  cat <<NEXT
+
+✓ $TITLE already registered for CD
+
+  live      https://$SLUG.$BASE_DOMAIN
+  repo      https://github.com/$GH_REPO
+  register  existing row in $MANIFEST
+
+NEXT
+  exit 0
 fi
 
 if grep -v '^#' "$MANIFEST" | cut -d'|' -f3 | tr ',' '\n' | grep -qx "$SLUG.$BASE_DOMAIN"; then

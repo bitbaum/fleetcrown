@@ -6,8 +6,6 @@
  * deploy.yml via the GitHub API and return the one command — never claim a
  * live site with no registration.
  */
-import fs from "fs";
-import os from "os";
 import path from "path";
 import { spawn } from "child_process";
 import { GITHUB_API_BASE } from "@/lib/github-api";
@@ -16,6 +14,23 @@ import { setProjectLiveUrl } from "@/db/queries/atlas";
 import { upsertEntityAttribute } from "@/db/queries/utils";
 import { PROJECT_ATTR } from "@/config/project-attrs";
 import { DEPLOY_WORKFLOW_PATH, planSiteCd, type SiteCdPlan } from "@/lib/site-cd";
+import {
+  probeRegisterSiteLocally,
+  studioDevRoot,
+  studioRepoRoot,
+  type RegisterSiteGate,
+} from "@/lib/site-cd-local";
+
+export {
+  canRunRegisterSiteLocally,
+  probeRegisterSiteLocally,
+  resolveDeployKeyPath,
+  resolveRegisterScriptPath,
+  studioDevRoot,
+  studioRepoRoot,
+  type RegisterSiteGate,
+  type RegisterSiteLocalProbe,
+} from "@/lib/site-cd-local";
 
 export type SiteCdRegisterResult = {
   plan: Extract<SiteCdPlan, { ok: true }>;
@@ -26,46 +41,9 @@ export type SiteCdRegisterResult = {
   /** Present when registration still needs an operator/box step. */
   command: string | null;
   reason: string | null;
+  /** Which local gate blocked auto-register, when applicable. */
+  gate: RegisterSiteGate | null;
 };
-
-function registerScriptPath(): string {
-  if (process.env.FLEETCROWN_REGISTER_SITE_SCRIPT?.trim()) {
-    return process.env.FLEETCROWN_REGISTER_SITE_SCRIPT.trim();
-  }
-  const repoRoot =
-    process.env.FLEETCROWN_REPO_ROOT?.trim() ||
-    path.join(process.env.FLEETCROWN_BOX_DEV_ROOT || path.join(os.homedir(), "dev"), "fleetcrown");
-  const candidates = [
-    path.join(repoRoot, "scripts/hetzner/register-site.sh"),
-    path.join(process.cwd(), "scripts/hetzner/register-site.sh"),
-    "/opt/fleetcrown/app/scripts/hetzner/register-site.sh",
-  ];
-  return (
-    candidates.find((p) => {
-      try {
-        return fs.existsSync(p);
-      } catch {
-        return false;
-      }
-    }) ?? candidates[0]!
-  );
-}
-
-function deployKeyPath(): string {
-  return (
-    process.env.DEPLOY_KEY_PATH?.trim() || path.join(os.homedir(), ".ssh/fleetcrown_ci_deploy")
-  );
-}
-
-/** Studio box can auto-register when the trusted script and deploy key exist. */
-export function canRunRegisterSiteLocally(): boolean {
-  if (process.env.FLEETCROWN_SITE_CD_AUTO === "0") return false;
-  try {
-    return fs.existsSync(registerScriptPath()) && fs.existsSync(deployKeyPath());
-  } catch {
-    return false;
-  }
-}
 
 async function ghJson(
   token: string,
@@ -120,8 +98,12 @@ function runRegisterSiteScript(args: {
   slug: string;
   repoFullName: string;
   title: string;
+  scriptPath: string;
+  deployKeyPath: string;
 }): Promise<{ ok: boolean; output: string }> {
-  const script = registerScriptPath();
+  const script = args.scriptPath;
+  const repoRoot = studioRepoRoot();
+  const devRoot = studioDevRoot();
   return new Promise((resolve) => {
     const child = spawn(
       "bash",
@@ -136,8 +118,14 @@ function runRegisterSiteScript(args: {
         "--no-deploy",
       ],
       {
-        env: { ...process.env },
-        cwd: path.dirname(path.dirname(script)), // scripts/ → repo-ish; register-site resolves FC_REPO itself
+        env: {
+          ...process.env,
+          FLEETCROWN_REPO_ROOT: repoRoot,
+          DEV_ROOT: devRoot,
+          DEPLOY_KEY_PATH: args.deployKeyPath,
+        },
+        // register-site resolves FC_REPO from env; cwd is only a fallback.
+        cwd: path.dirname(path.dirname(script)),
       },
     );
     let output = "";
@@ -189,6 +177,8 @@ export async function registerProjectSiteCd(input: {
   // predictedLiveUrl rides the API/UI response; next_step holds the command.
 
   if (!input.cloudBuilderAllowed) {
+    const reason =
+      "Shared bitbaum CD is studio-only (isDefault or FLEETCROWN_CLOUD_BUILDER_USER_IDS). Connect Fleet Runner for local work, or run the register command on the box.";
     await upsertEntityAttribute(
       input.userId,
       input.entityProjectId,
@@ -201,17 +191,18 @@ export async function registerProjectSiteCd(input: {
       registered: false,
       liveUrl: null,
       command: plan.command,
-      reason:
-        "Shared bitbaum CD is studio-only. Connect Fleet Runner for local work, or run the register command on the box.",
+      reason,
+      gate: "cloud-builder-private",
     };
   }
 
-  if (!canRunRegisterSiteLocally()) {
+  const probe = probeRegisterSiteLocally();
+  if (!probe.ok) {
     await upsertEntityAttribute(
       input.userId,
       input.entityProjectId,
       PROJECT_ATTR.NEXT_STEP,
-      plan.command,
+      `${probe.reason ?? "Auto-register unavailable"} — ${plan.command}`,
     );
     return {
       plan,
@@ -219,8 +210,8 @@ export async function registerProjectSiteCd(input: {
       registered: false,
       liveUrl: null,
       command: plan.command,
-      reason:
-        "Box register script or deploy key not available in this process — run the command on the studio box (same SSOT as new-site.sh).",
+      reason: probe.reason,
+      gate: probe.gate,
     };
   }
 
@@ -228,14 +219,17 @@ export async function registerProjectSiteCd(input: {
     slug: plan.slug,
     repoFullName: input.repoFullName,
     title: input.projectName,
+    scriptPath: probe.scriptPath!,
+    deployKeyPath: probe.deployKeyPath!,
   });
 
   if (!ran.ok) {
+    const reason = `register-site.sh failed — run manually. ${ran.output.slice(-400)}`;
     await upsertEntityAttribute(
       input.userId,
       input.entityProjectId,
       PROJECT_ATTR.NEXT_STEP,
-      plan.command,
+      `${reason} — ${plan.command}`,
     );
     return {
       plan,
@@ -243,7 +237,8 @@ export async function registerProjectSiteCd(input: {
       registered: false,
       liveUrl: null,
       command: plan.command,
-      reason: `register-site.sh failed — run manually. ${ran.output.slice(-400)}`,
+      reason,
+      gate: "script-failed",
     };
   }
 
@@ -268,5 +263,6 @@ export async function registerProjectSiteCd(input: {
     liveUrl: plan.liveUrl,
     command: null,
     reason: null,
+    gate: null,
   };
 }
