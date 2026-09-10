@@ -137,6 +137,34 @@ REPO_DIR="$DEV_ROOT/$SLUG"
 [ -e "$REPO_DIR" ] && { echo "✗ $REPO_DIR already exists" >&2; exit 1; }
 
 # ------------------------------------------------------------ port allocation
+# The register is the SSOT — but only the register on ORIGIN is.
+#
+# This reads a file in a local checkout, and this studio runs five to ten agent
+# sessions at once, each in its own worktree. A checkout that is an hour old
+# reports an hour-old highest port, so two sessions scaffolding in the same
+# afternoon both pick the same number and the second site silently takes the
+# first one's traffic. That is not hypothetical: on 2026-09-10 a stale checkout
+# offered 4024 for a new site while diplodoctor already held 4024 and heidi held
+# 4025 on origin. It was caught by hand, one command before it would have shipped.
+#
+# So: refuse rather than guess. A fetch is cheap and the failure it prevents is
+# a port collision on a live box, which is expensive and confusing to unpick.
+if git -C "$(dirname "$MANIFEST")" rev-parse --git-dir >/dev/null 2>&1; then
+  if git -C "$(dirname "$MANIFEST")" fetch origin main --quiet 2>/dev/null; then
+    REL="$(git -C "$(dirname "$MANIFEST")" ls-files --full-name "$MANIFEST" 2>/dev/null || true)"
+    if [ -n "$REL" ] && ! git -C "$(dirname "$MANIFEST")" diff --quiet origin/main -- "$MANIFEST" 2>/dev/null; then
+      echo "✗ $MANIFEST differs from origin/main." >&2
+      echo "  Ports are allocated from this file, so an out-of-date copy hands out" >&2
+      echo "  a number another session already took. Reconcile first:" >&2
+      echo "    git -C $(dirname "$MANIFEST") pull --rebase" >&2
+      echo "  (If your own unpushed register edit is the difference, push it.)" >&2
+      exit 1
+    fi
+  else
+    say "⚠ could not reach origin; port is allocated from a possibly stale register"
+  fi
+fi
+
 # From the register, not from `ss -ltnp`. The register is the SSOT; a port that
 # is free on the box but claimed here belongs to something not currently running.
 PORT=$(grep -v '^#' "$MANIFEST" | cut -d'|' -f2 | grep -E '^[0-9]+$' | sort -n | tail -1)
@@ -159,6 +187,25 @@ if [ "$DRY" = 0 ]; then
   done
   printf '# Runtime env. No secrets belong here — the box is the env SSOT.\nNODE_ENV=production\nNEXT_PUBLIC_APP_URL=https://%s.%s\n' "$SLUG" "$BASE_DOMAIN" > "$REPO_DIR/.env.selfhost.local"
   say "$(find "$REPO_DIR" -type f | wc -l) files"
+
+  # Resolve a lockfile INTO the first commit.
+  #
+  # Without one the repository is born unbuildable in two places at once: CI
+  # runs `pnpm install --frozen-lockfile`, which refuses to invent a lockfile,
+  # and the box's deploy resolves versions afresh on every release, so the site
+  # that was verified is not the site that ships. `--lockfile-only` writes
+  # pnpm-lock.yaml without unpacking node_modules, which keeps this to a few
+  # seconds and leaves nothing behind for .gitignore to catch.
+  if command -v pnpm >/dev/null 2>&1; then
+    if (cd "$REPO_DIR" && pnpm install --lockfile-only >/dev/null 2>&1); then
+      say "pnpm-lock.yaml resolved"
+    else
+      say "⚠ could not resolve pnpm-lock.yaml — CI will fail on --frozen-lockfile"
+      say "  Fix before merging:  cd $REPO_DIR && pnpm install --lockfile-only"
+    fi
+  else
+    say "⚠ pnpm not found; no lockfile written (CI needs one)"
+  fi
 else
   say "DRY  would copy $TEMPLATE -> $REPO_DIR and substitute __SLUG__/__TITLE__/__HOST__"
 fi
