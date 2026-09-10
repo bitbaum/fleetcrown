@@ -151,7 +151,39 @@ export function ProjectKickoff({
         return;
       }
       const repo = json.repo as { full_name?: string } | undefined;
-      mark("repo", "done", repo?.full_name ?? "created");
+      const template = typeof json.template === "string" ? json.template : undefined;
+      // Same flow, next beat: wire Hetzner CD (or return the one box command).
+      // Provision alone left dogfood projects with a repo and no public URL.
+      let siteNote = repo?.full_name ?? "created";
+      try {
+        const cdRes = await postJson(`/api/projects/${projectId}/register-cd`, {
+          template:
+            template === "bare" || template === "nextjs-tailwind" ? template : "nextjs-tailwind",
+        });
+        const cd = (await cdRes.json()) as {
+          ok?: boolean;
+          registered?: boolean;
+          liveUrl?: string | null;
+          predictedLiveUrl?: string;
+          command?: string | null;
+          reason?: string | null;
+          error?: string;
+        };
+        if (cdRes.ok && cd.ok) {
+          if (cd.registered && cd.liveUrl) {
+            siteNote = `${repo?.full_name ?? "repo"} · live ${cd.liveUrl}`;
+          } else if (cd.command) {
+            siteNote = `${repo?.full_name ?? "repo"} · next: ${cd.command}`;
+          } else if (cd.predictedLiveUrl) {
+            siteNote = `${repo?.full_name ?? "repo"} · intended ${cd.predictedLiveUrl}`;
+          }
+        } else if (cd.error) {
+          siteNote = `${repo?.full_name ?? "repo"} · CD: ${cd.error}`;
+        }
+      } catch {
+        siteNote = `${repo?.full_name ?? "repo"} · CD register skipped (network)`;
+      }
+      mark("repo", "done", siteNote);
     }
 
     // Dispatch last when setup that was planned actually landed. The prompt is
@@ -269,7 +301,7 @@ export function ProjectKickoff({
           )}
           <span className="text-xs text-text-secondary">
             {wantRepo
-              ? "Starter picked from your stack (agent-ready repo). Live URL on bitbaum is the separate new-site path."
+              ? "Starter from your stack, then bitbaum CD registration (live URL or one box command — never a fake site)."
               : "Skipped — an agent can still plan, but it has nowhere to write code."}
           </span>
         </div>
