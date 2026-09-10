@@ -1,0 +1,35 @@
+# Things that live on the box WITHOUT a register row, on purpose.
+#
+# Format: <kind>|<name>|<reason>
+#   kind = vhost  — a /etc/caddy/apps.d/<name>.caddy with no apps.conf row
+#          port   — a listener in the app band (4000-4099) with no apps.conf row
+#
+# A ratchet with reasons, the same shape as hosted-supabase.baseline: an entry
+# here is a DECISION someone can read, not a silence. Anything not listed is a
+# finding. Removing a row is how you retire an exception.
+#
+# Registering these would be actively wrong: sync-infra.sh regenerates
+# /etc/caddy/apps.d/<register name>.caddy from apps.conf with an unconditional
+# `tee`, so a row would replace each hand-written vhost with a plain proxy and
+# destroy exactly what makes it special.
+
+vhost|bitbaum|Static org page (bitbaum.orangecat.ch), served from /opt/bitbaum/app. Its own vhost says "sync-infra must not replace this with a proxy unless a real process is registered for the same name."
+vhost|annushka|A design concept for the painter Annushka, served noindex + robots Disallow so a second copy of an artist's work cannot outrank her own site.
+vhost|supabase|Part of the supabase stack, not a fleet app.
+vhost|hirnli|Same codebase as the revamp-info row; the middleware reads the Host header for tenant chrome. Listing it in apps.conf would make sync-infra emit the host TWICE and fail `caddy validate`, aborting the reload for every other app.
+vhost|hirnli-tenants|As above — additional tenant hosts for the same app.
+vhost|sink-legacy-redirect|Permanent redirect for the retired sink.orangecat.ch. Deliberately not named after a register key so sync-infra can never regenerate over it.
+vhost|zz-legacy-sbb-redirect|Permanent redirect for the retired sbb.orangecat.ch, same pattern.
+vhost|aoz-legacy-redirect|Permanent 308 for aoz-wohnen.orangecat.ch — printed on paper and bookmarked by residents. Split out of aoz-wohnen.caddy 2026-09-10 precisely so a sync cannot drop it.
+
+port|4030|annushka's enquiry API. The only process behind that host; everything else there is static.
+
+# apps.conf's own header excludes these four in prose: "Ports 4001-4004 are the
+# pre-existing handcrafted services (bridge, fleetcrown, orangecat, evig) — they
+# keep their own units and Caddy blocks and are NOT listed here." Prose is not
+# machine-readable, so this check found all four on its first run. Same fact,
+# now in a form a script can hold.
+port|4001|bridge — pre-existing handcrafted service, own unit and Caddy block.
+port|4002|fleetcrown — pre-existing handcrafted service, own unit and Caddy block.
+port|4003|orangecat — pre-existing handcrafted service, own unit and Caddy block.
+port|4004|evig — pre-existing handcrafted service, own unit and Caddy block.

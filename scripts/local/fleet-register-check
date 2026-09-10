@@ -61,11 +61,40 @@ git -C "$FLEETCROWN" fetch --quiet origin main 2>/dev/null || true
 # deliberately broken register; unset, it is origin/main and nothing else.
 REF="${REGISTER_REF:-origin/main}"
 git -C "$FLEETCROWN" rev-parse --verify --quiet "$REF" >/dev/null || REF=HEAD
-git -C "$FLEETCROWN" show "$REF:scripts/hetzner/apps.conf" > "$TMPD/apps.conf" 2>/dev/null || {
-  echo "fleet-register-check: cannot read apps.conf from $REF" >&2; exit 0; }
+# The SCRIPTS come from $REF too, not just the register.
+#
+# This read the register from origin/main and then ran the judge from the
+# working tree — the same tree the paragraph above calls a scratchpad. On
+# 2026-09-11 that produced a false alarm in exactly the shape this file exists
+# to prevent: ~/dev/fleetcrown sat on another session's branch, its
+# check-deploy-ready.sh predated the fix that stopped treating a box-side
+# repo_path as drift, and so an OLD judge reported three perfectly good rows of
+# a NEW register as drift. The register and the code that judges it have to come
+# from one commit, or the pair is a comparison between two different days.
+git -C "$FLEETCROWN" archive "$REF" scripts 2>/dev/null | tar -x -C "$TMPD" 2>/dev/null || {
+  echo "fleet-register-check: cannot extract scripts from $REF" >&2; exit 0; }
+[ -f "$TMPD/scripts/hetzner/apps.conf" ] || {
+  echo "fleet-register-check: no apps.conf in $REF" >&2; exit 0; }
+MANIFEST_AT_REF="$TMPD/scripts/hetzner/apps.conf"
 
-OUT=$(cd "$FLEETCROWN" && MANIFEST="$TMPD/apps.conf" bash scripts/ci/check-deploy-ready.sh 2>&1)
+OUT=$(cd "$TMPD" && MANIFEST="$MANIFEST_AT_REF" bash scripts/ci/check-deploy-ready.sh 2>&1)
 RC=$?
+
+# The shape check above and the reality check below answer different questions,
+# and both are worth the daily run. check-deploy-ready.sh asks whether the
+# register is well-formed; check-register-reality.sh asks whether it still
+# describes the box — every drift found on 2026-09-10 was shape-valid and still
+# wrong. Run here rather than in `verify` because it needs the network and the
+# box, which CI has neither of.
+#
+# Both outputs are combined BEFORE the cooldown key is computed, so a new
+# reality finding is never muted by a standing shape finding: the key is derived
+# from the content, and different content is a different incident.
+REALITY=$(cd "$TMPD" && MANIFEST="$MANIFEST_AT_REF" bash scripts/ci/check-register-reality.sh 2>&1)
+RRC=$?
+OUT="$OUT
+$REALITY"
+[ "$RRC" -eq 0 ] || RC=$RRC
 
 echo "$OUT"
 [ "$RC" -eq 0 ] && exit 0
