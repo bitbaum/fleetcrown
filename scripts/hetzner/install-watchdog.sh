@@ -38,17 +38,23 @@ APPS_CONF="$SCRIPT_DIR/apps.conf"
 # a freshly registered site was left unmonitored — and, worse, registration
 # reported failure after everything else had succeeded. ubuntu has passwordless
 # sudo, so the same remote script runs there unchanged.
+# remote <command-string>: one string, run by a root shell on the box. As
+# separate words ("$@") the quoting is lost across ssh's argument join, and a
+# redirect inside the command is applied by the LOGIN shell — as ubuntu, so
+# `cat > /opt/monitoring/targets.conf` was "Permission denied" right after
+# sudo had installed the watchdog fine (velokiosk-sep10, 2026-09-10).
 if ssh -o BatchMode=yes -o ConnectTimeout=8 "$BOX_ROOT" true 2>/dev/null; then
   HOST="$BOX_ROOT"
-  remote() { ssh -o BatchMode=yes "$HOST" "$@"; }
+  remote() { ssh -o BatchMode=yes "$HOST" "$*"; }
 else
   HOST="$BOX_UBUNTU"
   echo "→ root is not reachable from here; installing as ubuntu via sudo"
   remote() {
+    local cmd; cmd="sudo bash -c $(printf '%q' "$*")"
     if [ -r "${DEPLOY_KEY_PATH:-}" ]; then
-      ssh -o BatchMode=yes -i "$DEPLOY_KEY_PATH" "$HOST" sudo "$@"
+      ssh -o BatchMode=yes -i "$DEPLOY_KEY_PATH" "$HOST" "$cmd"
     else
-      ssh -o BatchMode=yes "$HOST" sudo "$@"
+      ssh -o BatchMode=yes "$HOST" "$cmd"
     fi
   }
 fi
@@ -77,7 +83,7 @@ fi
 echo "→ seeding $(printf '%s\n' "$TARGETS" | grep -c '|') monitoring targets"
 
 # ── Install on the box ──────────────────────────────────────────────────────
-remote bash -s <<'REMOTE'
+remote 'bash -s' <<'REMOTE'
 set -euo pipefail
 mkdir -p /opt/monitoring/state
 
@@ -197,17 +203,17 @@ REMOTE
 
 # Ship the freshly-built target list (the heredoc above is static; targets are
 # data, written separately so a re-run refreshes them from apps.conf).
-printf '%s\n' "$TARGETS" | remote bash -c 'cat > /opt/monitoring/targets.conf'
+printf '%s\n' "$TARGETS" | remote 'cat > /opt/monitoring/targets.conf'
 echo "✓ wrote /opt/monitoring/targets.conf"
 
 # Prime state + show the first read (currently-down targets alert on next tick).
-remote bash -c '/opt/monitoring/watch.sh; echo "→ first watchdog pass done (journalctl -t watchdog for any alerts)"'
+remote '/opt/monitoring/watch.sh; echo "→ first watchdog pass done (journalctl -t watchdog for any alerts)"'
 
 # LOUD if delivery is dark. All the detection in the world is worthless if the
 # alerts reach nobody: telegram.env shipped as a commented template and stayed
 # that way for months — every alert went to the journal, which no one tails at
 # 04:00. Surface it every run until a real token is present.
-if remote bash -c 'grep -qE "^TELEGRAM_BOT_TOKEN=.+" /opt/monitoring/telegram.env 2>/dev/null'; then
+if remote 'grep -qE "^TELEGRAM_BOT_TOKEN=.+" /opt/monitoring/telegram.env 2>/dev/null'; then
   echo "✓ Telegram delivery ACTIVE (token present)."
 else
   cat <<'DARK'
