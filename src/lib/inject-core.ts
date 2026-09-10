@@ -46,11 +46,16 @@ import { retrieveFleetContextBlock } from "@/db/queries/knowledge-embeddings";
 import { assembleInjectPrompt } from "@/lib/inject-prompt";
 import { buildOperatorContextSection } from "@/lib/dispatch-operator-context";
 import { getOpenEscalationBlock } from "@/db/queries/run-escalations";
+import { findInjectProject } from "@/lib/inject-project";
 
 type ResolvedAdapter = (typeof ORCHESTRATION_ADAPTER_IDS)[number];
 
 export type InjectParams = {
   tab: string;
+  /** Stable entity project id; when supplied names are transport labels only. */
+  projectId?: string;
+  /** Disable an alternate hosted executor for actions tied to a tracked run. */
+  allowHostedFallback?: boolean;
   promptKey?: string;
   customPrompt?: string;
   adapter?: ResolvedAdapter;
@@ -86,13 +91,13 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
     getOrgProjects(userId).catch(() => []),
   ]);
   const dbMatch =
-    dbProjects.find((p) => p.name.toLowerCase() === tab.toLowerCase()) ??
-    dbTeamProjects.find((p) => p.name.toLowerCase() === tab.toLowerCase());
+    findInjectProject(dbProjects, tab, params.projectId) ??
+    findInjectProject(dbTeamProjects, tab, params.projectId);
   if (!dbMatch) {
     logDebug({
       source: "api/inject",
       level: "warn",
-      message: `Unknown tab: ${tab}`,
+      message: `Project not found: ${params.projectId ?? tab}`,
       meta: { userId, tab, hasPromptKey: !!promptKey, hasCustomPrompt: !!customPrompt },
     });
     recordControlAuditEvent({
@@ -102,14 +107,14 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
       event: "inject_request",
       source: "api/inject",
       action: "refused",
-      reason: "Unknown tab",
+      reason: "Project not found",
       queueLength: null,
       blockerCount: null,
       promptHash: null,
       promptPreview: customPrompt?.slice(0, 220) ?? promptKey ?? null,
       meta: { hasPromptKey: !!promptKey, hasCustomPrompt: !!customPrompt },
     });
-    return { status: 404, body: { error: `Unknown tab: ${tab}` } };
+    return { status: 404, body: { error: `Project not found: ${params.projectId ?? tab}` } };
   }
 
   const canonical = dbMatch.name;
@@ -621,7 +626,7 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
   // Nous model, so we deliberately don't pass the local agent's model pref.
   const isLifecycle = promptKey === "close_session" || promptKey === "hard_stop";
   let hostedDispatchId: string | undefined;
-  if (queuedOffline && !isLifecycle && dbMatch.gitUrl) {
+  if (params.allowHostedFallback !== false && queuedOffline && !isLifecycle && dbMatch.gitUrl) {
     hostedDispatchId = await enqueueHostedDispatchCommand(userId, {
       projectKey: canonical,
       gitUrl: dbMatch.gitUrl,

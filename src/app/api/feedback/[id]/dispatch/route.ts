@@ -50,7 +50,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   // Verify the project actually exists in user_projects before dispatching.
   // This prevents creating runs for projects that can't be found by inject.
-  if (!row.projectName) {
+  if (!row.userProjectId) {
     return jsonError(
       "Project configuration not found. The project may need to be re-registered on the Projects page.",
       422,
@@ -78,11 +78,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const adapter = resolveImplementAdapter(row.agentPref);
   const currentSession =
-    adapter === "claude" ? await getCurrentClaudeSessionForProject(userId, row.projectName) : null;
+    adapter === "claude"
+      ? await getCurrentClaudeSessionForProject(
+          userId,
+          row.projectName,
+          new Date(),
+          row.feedback.projectId,
+        )
+      : null;
 
   const { status, body } = await injectPrompt(
     {
       tab: row.projectName,
+      projectId: row.feedback.projectId,
+      allowHostedFallback: false,
       adapter,
       sessionId: currentSession?.sessionId,
       customPrompt: composeFeedbackFixPrompt(

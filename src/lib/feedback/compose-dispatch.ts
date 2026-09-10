@@ -13,6 +13,9 @@ export type FeedbackPromptFields = {
   selectedElements: Array<{ elementType: string; elementText: string; selector: string }> | null;
 };
 
+const SHIP_INSTRUCTION =
+  "Implement includes shipping: use this repository’s normal PR/merge/deploy path, then verify the requested change at the reported live URL. Record the commit/PR, deployment result, live URL and visible evidence. If shipping is blocked, report the blocker explicitly; a local edit or a finished agent session is not a live fix. Leave feedback resolution to the operator after Check live.";
+
 function renderElements(feedback: FeedbackPromptFields): string[] {
   if (!feedback.selectedElements?.length) return [];
   const lines = ["Element(s) the visitor pointed at:"];
@@ -44,7 +47,7 @@ export function composeFeedbackFixPrompt(
   lines.push(
     "",
     "Scope: address exactly this feedback — no unrelated refactors.",
-    "Verify the fix in the running app before claiming done, and record what you actually did (with evidence) in your final session handoff.",
+    SHIP_INSTRUCTION,
   );
   return lines.join("\n");
 }
@@ -67,7 +70,7 @@ export function composeFeedbackBatchFixPrompt(
     ...(note ? [`OPERATOR INSTRUCTION: ${note}`, ""] : []),
     "Address every item below. Prefer one coherent change set when items share a root cause; otherwise fix them independently, most recent first.",
     "Scope: only these reports — no unrelated refactors.",
-    "Verify each fix in the running app before claiming done, and record evidence in your handoff.",
+    SHIP_INSTRUCTION,
     "",
   ];
   items.forEach((f, i) => {

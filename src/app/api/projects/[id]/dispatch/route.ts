@@ -41,7 +41,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (composed.error) return jsonError(composed.error, 409);
 
   const { status, body } = await injectPrompt(
-    { tab: dossier.detail.project.name, customPrompt: composed.prompt },
+    {
+      tab: dossier.detail.project.name,
+      projectId: id,
+      allowHostedFallback: false,
+      customPrompt: composed.prompt,
+    },
     userId,
   );
   return NextResponse.json(body, { status });
