@@ -54,6 +54,11 @@ ok(!templateSupportsSiteCd("hono-cloudflare"), "workers starter is not selfhost-
 const yml = deployWorkflowYaml("hamster-cheek");
 ok(yml.includes("app: hamster-cheek"), "deploy shim carries apps.conf key");
 ok(yml.includes("selfhost-deploy.yml@main"), "deploy shim calls fleetcrown reusable workflow");
+ok(
+  yml.includes("HETZNER_SSH_PRIVATE_KEY: ${{ secrets.HETZNER_SSH_PRIVATE_KEY }}"),
+  "deploy shim passes deploy key explicitly (cross-owner safe)",
+);
+ok(!yml.includes("secrets: inherit"), "deploy shim does not rely on secrets: inherit");
 eq(DEPLOY_WORKFLOW_PATH, ".github/workflows/deploy.yml", "workflow path SSOT");
 
 const cmd = registerSiteCommand({

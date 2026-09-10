@@ -70,7 +70,10 @@ async function ghJson(
   return { ok: res.ok, status: res.status, json };
 }
 
-/** Ensure deploy.yml exists on the default branch (Contents API). Non-fatal. */
+/** Ensure deploy.yml exists on the default branch (Contents API). Non-fatal.
+ * Also repairs legacy `secrets: inherit` shims — inherit does not pass secrets
+ * when the caller repo is outside the workflow owner's org (e.g. catomean → bitbaum).
+ */
 export async function ensureDeployWorkflow(
   token: string,
   owner: string,
@@ -79,7 +82,23 @@ export async function ensureDeployWorkflow(
 ): Promise<boolean> {
   const pathEnc = DEPLOY_WORKFLOW_PATH.split("/").map(encodeURIComponent).join("/");
   const existing = await ghJson(token, `/repos/${owner}/${repo}/contents/${pathEnc}`);
-  if (existing.ok) return true; // already present
+  if (existing.ok) {
+    const file = existing.json as { content?: string; sha?: string } | null;
+    const raw = Buffer.from(file?.content ?? "", "base64").toString("utf8");
+    if (raw.includes("secrets: inherit") && yaml.includes("HETZNER_SSH_PRIVATE_KEY")) {
+      const put = await ghJson(token, `/repos/${owner}/${repo}/contents/${pathEnc}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          message: `fix: pass HETZNER_SSH_PRIVATE_KEY explicitly for cross-owner deploy`,
+          content: Buffer.from(yaml, "utf8").toString("base64"),
+          sha: file?.sha,
+          branch: "main",
+        }),
+      });
+      return put.ok;
+    }
+    return true; // already present and OK
+  }
 
   const put = await ghJson(token, `/repos/${owner}/${repo}/contents/${pathEnc}`, {
     method: "PUT",

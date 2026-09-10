@@ -12,8 +12,10 @@
 # this script does what Make it happen could not safely invent: apps.conf
 # row, deploy secret, sync-infra, and (unless --no-deploy) first deploy.
 #
-# Idempotent where possible: existing apps.conf row with the same slug refuses;
-# deploy.yml is added only when missing; secret set is overwrite-safe.
+# Idempotent: existing apps.conf row with the same slug (compatible repo path)
+# succeeds — re-ensures deploy.yml + secret + sync-infra, prints live URL, does
+# not fail as "already exists". deploy.yml is added/repaired when missing;
+# secret set is overwrite-safe.
 #
 # Prints the live URL on success (and always ends with a summary block).
 set -euo pipefail
@@ -40,7 +42,7 @@ else
   SYNC_INFRA="$HERE/sync-infra.sh"
   DEPLOY_SH="$HERE/deploy.sh"
 fi
-[ -f "$MANIFEST" ] || { echo "✗ apps.conf missing at $MANIFEST (set FLEETCROWN_REPO_ROOT to the durable fleetcrown checkout)" >&2; exit 1; }
+[ -f "$MANIFEST" ] || { echo "✗ scripts/hetzner/apps.conf missing at $MANIFEST (set FLEETCROWN_REPO_ROOT to the durable fleetcrown checkout)" >&2; exit 1; }
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -85,34 +87,35 @@ echo "→ validating '$SLUG'"
 [[ "$SLUG" =~ ^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$ ]] \
   || { echo "✗ slug must be lowercase letters, digits and hyphens, not starting or ending with one" >&2; exit 1; }
 
-if grep -q "^$SLUG|" "$MANIFEST" 2>/dev/null; then
-  # Idempotent: kickoff retry / Register site after a prior successful register.
-  say "'$SLUG' already in $MANIFEST — treating as registered"
-  cat <<NEXT
-
-✓ $TITLE already registered for CD
-
-  live      https://$SLUG.$BASE_DOMAIN
-  repo      https://github.com/$GH_REPO
-  register  existing row in $MANIFEST
-
-NEXT
-  exit 0
+ALREADY=0
+EXISTING_LINE=""
+if EXISTING_LINE=$(grep "^$SLUG|" "$MANIFEST" 2>/dev/null); then
+  # Idempotent: Register site / kickoff retry after apps.conf was written earlier.
+  existing_dir=$(printf '%s' "$EXISTING_LINE" | cut -d'|' -f4)
+  existing_base=$(basename "$existing_dir")
+  repo_name="${GH_REPO##*/}"
+  if [ "$existing_base" != "$SLUG" ] && [ "$existing_base" != "$repo_name" ]; then
+    echo "✗ '$SLUG' already in scripts/hetzner/apps.conf but repo path '$existing_dir' is incompatible with --repo $GH_REPO" >&2
+    exit 1
+  fi
+  ALREADY=1
+  REPO_DIR="$existing_dir"
+  PORT=$(printf '%s' "$EXISTING_LINE" | cut -d'|' -f2)
+  say "'$SLUG' already in scripts/hetzner/apps.conf — re-ensuring deploy.yml, secret, sync-infra"
+else
+  if grep -v '^#' "$MANIFEST" | cut -d'|' -f3 | tr ',' '\n' | grep -qx "$SLUG.$BASE_DOMAIN"; then
+    echo "✗ $SLUG.$BASE_DOMAIN is already served by another entry" >&2; exit 1
+  fi
+  for reserved in www api app admin support security billing pay wallet login auth account \
+                  mail smtp imap ns1 ns2 mx cdn static assets vpn db status staging dev test \
+                  preview bridge fleetcrown orangecat supabase solon evig revampit root system; do
+    [ "$SLUG" = "$reserved" ] && { echo "✗ '$SLUG' is reserved (infrastructure or impersonation risk)" >&2; exit 1; }
+  done
+  REPO_DIR="$DEV_ROOT/$SLUG"
+  PORT=$(grep -v '^#' "$MANIFEST" | cut -d'|' -f2 | grep -E '^[0-9]+$' | sort -n | tail -1)
+  PORT=$((PORT + 1))
 fi
-
-if grep -v '^#' "$MANIFEST" | cut -d'|' -f3 | tr ',' '\n' | grep -qx "$SLUG.$BASE_DOMAIN"; then
-  echo "✗ $SLUG.$BASE_DOMAIN is already served by another entry" >&2; exit 1
-fi
-for reserved in www api app admin support security billing pay wallet login auth account \
-                mail smtp imap ns1 ns2 mx cdn static assets vpn db status staging dev test \
-                preview bridge fleetcrown orangecat supabase solon evig revampit root system; do
-  [ "$SLUG" = "$reserved" ] && { echo "✗ '$SLUG' is reserved (infrastructure or impersonation risk)" >&2; exit 1; }
-done
-
-REPO_DIR="$DEV_ROOT/$SLUG"
-PORT=$(grep -v '^#' "$MANIFEST" | cut -d'|' -f2 | grep -E '^[0-9]+$' | sort -n | tail -1)
-PORT=$((PORT + 1))
-say "port $PORT (next after the highest in the register)"
+say "port $PORT$([ "$ALREADY" = 1 ] && echo ' (existing)' || echo ' (next after the highest in the register)')"
 say "host $SLUG.$BASE_DOMAIN"
 say "repo $GH_REPO  ->  $REPO_DIR"
 say "manifest $MANIFEST"
@@ -128,14 +131,9 @@ fi
 # --------------------------------------------------------------- deploy.yml
 echo "→ deploy.yml"
 DEPLOY_YML="$REPO_DIR/.github/workflows/deploy.yml"
-if [ -f "$DEPLOY_YML" ]; then
-  say "already present"
-else
-  if [ "$DRY" = 1 ]; then
-    say "DRY  would write $DEPLOY_YML and push"
-  else
-    mkdir -p "$(dirname "$DEPLOY_YML")"
-    cat > "$DEPLOY_YML" <<YML
+write_deploy_yml() {
+  mkdir -p "$(dirname "$DEPLOY_YML")"
+  cat > "$DEPLOY_YML" <<YML
 name: Deploy
 
 on:
@@ -148,21 +146,41 @@ jobs:
     uses: ${WORKFLOW_OWNER}/fleetcrown/.github/workflows/selfhost-deploy.yml@main
     with:
       app: ${SLUG}
-    secrets: inherit
+    secrets:
+      HETZNER_SSH_PRIVATE_KEY: \${{ secrets.HETZNER_SSH_PRIVATE_KEY }}
 YML
-    (
-      cd "$REPO_DIR"
-      git add .github/workflows/deploy.yml
-      if git diff --cached --quiet; then
-        true
-      else
-        git -c user.name='Cato' -c user.email='catomean@users.noreply.github.com' \
-          commit -m "chore: add self-host deploy shim for $SLUG"
-        git push -u origin HEAD
-      fi
-    )
-    say "committed and pushed deploy.yml"
+}
+push_deploy_yml() {
+  local msg="$1"
+  (
+    cd "$REPO_DIR"
+    git add .github/workflows/deploy.yml
+    if git diff --cached --quiet; then
+      true
+    else
+      git -c user.name='Cato' -c user.email='catomean@users.noreply.github.com' \
+        commit -m "$msg"
+      git push -u origin HEAD
+    fi
+  )
+}
+if [ -f "$DEPLOY_YML" ] && grep -q 'secrets: inherit' "$DEPLOY_YML" 2>/dev/null; then
+  # Cross-owner callers (e.g. catomean/* → bitbaum/fleetcrown) cannot inherit.
+  if [ "$DRY" = 1 ]; then
+    say "DRY  would repair secrets: inherit → explicit HETZNER_SSH_PRIVATE_KEY"
+  else
+    write_deploy_yml
+    push_deploy_yml "fix: pass HETZNER_SSH_PRIVATE_KEY explicitly for cross-owner deploy"
+    say "repaired deploy.yml secrets mapping and pushed"
   fi
+elif [ -f "$DEPLOY_YML" ]; then
+  say "already present"
+elif [ "$DRY" = 1 ]; then
+  say "DRY  would write $DEPLOY_YML and push"
+else
+  write_deploy_yml
+  push_deploy_yml "chore: add self-host deploy shim for $SLUG"
+  say "committed and pushed deploy.yml"
 fi
 
 # ----------------------------------------------------------------- ci secret
@@ -182,8 +200,13 @@ fi
 
 # ------------------------------------------------------------------- register
 echo "→ register"
-LINE="$SLUG|$PORT|$SLUG.$BASE_DOMAIN|$REPO_DIR|.|-|$OWNER|$KIND|$STATUS|$PLAN|$PRICE|$(date -u +%Y-%m-%d)"
-if [ "$DRY" = 1 ]; then say "DRY  append: $LINE"; else
+if [ "$ALREADY" = 1 ]; then
+  say "apps.conf row already present — not appending"
+elif [ "$DRY" = 1 ]; then
+  LINE="$SLUG|$PORT|$SLUG.$BASE_DOMAIN|$REPO_DIR|.|-|$OWNER|$KIND|$STATUS|$PLAN|$PRICE|$(date -u +%Y-%m-%d)"
+  say "DRY  append: $LINE"
+else
+  LINE="$SLUG|$PORT|$SLUG.$BASE_DOMAIN|$REPO_DIR|.|-|$OWNER|$KIND|$STATUS|$PLAN|$PRICE|$(date -u +%Y-%m-%d)"
   printf '%s\n' "$LINE" >> "$MANIFEST"
   say "appended to $MANIFEST"
 fi
@@ -202,20 +225,36 @@ fi
 if   [ "$DRY" = 1 ];      then SECRET_OK_LABEL="would be set from $DEPLOY_KEY_PATH"
 elif [ "$SECRET_OK" = 1 ]; then SECRET_OK_LABEL="set — push deploys"
 else                            SECRET_OK_LABEL="NOT set — CD cannot reach the box"; fi
+STATUS_LABEL="registered for CD"
+REGISTER_NOTE="$SLUG|$PORT|... in scripts/hetzner/apps.conf"
+if [ "$ALREADY" = 1 ]; then
+  STATUS_LABEL="already registered for CD"
+  REGISTER_NOTE="$REGISTER_NOTE (existing)"
+fi
 cat <<NEXT
 
-✓ $TITLE registered for CD
+✓ $TITLE $STATUS_LABEL
 
   live      https://$SLUG.$BASE_DOMAIN
   repo      https://github.com/$GH_REPO
-  register  $SLUG|$PORT|... in apps.conf
+  register  $REGISTER_NOTE
 
   ci        deploy key ${SECRET_OK_LABEL}
 
+NEXT
+if [ "$ALREADY" != 1 ]; then
+  cat <<NEXT
   Still yours to do:
 
   1. Commit the register change in the fleetcrown checkout:
        cd $(dirname "$MANIFEST")/../.. && git add scripts/hetzner/apps.conf && git commit
 
-  2. If first deploy failed, fix the app until \`next build\` works, then push main.
+  2. If first deploy failed, fix the app until \`next build\` works, then push main (or workflow_dispatch Deploy).
 NEXT
+else
+  cat <<NEXT
+  Still yours to do:
+
+  1. If the hostname 502s, run deploy.sh for this slug (or workflow_dispatch Deploy) once CI is green.
+NEXT
+fi
