@@ -27,6 +27,7 @@
  * pickDispatchChannel makes a case below fail.
  */
 import {
+  isCloneOnlyProject,
   projectPreferredChannel,
   projectChannelLock,
   pickDispatchChannel,
@@ -294,3 +295,31 @@ if (
 }
 
 console.log("✓ builder channel routing");
+
+// ── Clone-only projects: a repo somewhere, a checkout nowhere ────────────────
+//
+// 2026-09-10, Heidi: created by API with a gitUrl and no dirPath. The laptop
+// was online, so policy routed it "local"; the laptop has no tree for it and
+// went looking for a zellij tab that could not exist. The lock stays null (a
+// laptop that happens to hold a clone can serve it), but policy must prefer
+// the builder that clones whenever it is online.
+const REPO_ONLY = { gitUrl: CLONEABLE };
+if (!isCloneOnlyProject(REPO_ONLY)) throw new Error("repo-only must be clone-only");
+if (isCloneOnlyProject({ dirPath: "/x", gitUrl: CLONEABLE }))
+  throw new Error("a checkout makes it not clone-only");
+if (isCloneOnlyProject({ gitUrl: "not-a-url" }))
+  throw new Error("an uncloneable url is not clone-only");
+if (projectChannelLock(REPO_ONLY) !== null) throw new Error("lock: repo-only stays unlocked");
+if (pickDispatchChannel(REPO_ONLY, BOTH) !== "cloud") {
+  throw new Error("repo-only must go to the builder that clones, even with the laptop online");
+}
+if (pickDispatchChannel(REPO_ONLY, ONLY_CLOUD) !== "cloud")
+  throw new Error("repo-only with only the box online → cloud");
+if (pickDispatchChannel(REPO_ONLY, ONLY_LOCAL) !== "local") {
+  throw new Error(
+    "repo-only with only the laptop online still names the laptop rather than waiting forever",
+  );
+}
+if (pickDispatchChannel({ dirPath: "/x", gitUrl: CLONEABLE }, BOTH) !== "local") {
+  throw new Error("a project the laptop HAS a tree of keeps preferring the laptop");
+}

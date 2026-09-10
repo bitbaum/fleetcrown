@@ -2,6 +2,8 @@ import type { RunnerChannel } from "@/db/schema/pending-commands";
 import type { BuilderChannelPresence, BuilderDurability } from "@/lib/builder-presence";
 import { isCloneableGitUrl } from "@/lib/git-url";
 import { DEFAULT_BUILDER_CHANNEL } from "@/lib/constants/statuses";
+import { BOX_DEV_ROOT, sanitizeWorkspaceKey } from "@/lib/agent-execution/box-workspace-path";
+import path from "path";
 
 const CLOUD_BUILDER_PRIVATE_MESSAGE =
   "Cloud builder access is private for this account. Connect Fleet Runner on this computer to run agent work.";
@@ -194,6 +196,34 @@ export function isBoxRootedDir(dirPath: string | null | undefined): boolean {
 }
 
 /**
+ * A project nobody has a checkout of, but a repo for. It can only be obtained
+ * by cloning — and only the box clones on demand (FLEETCROWN_BOX_PREPARE).
+ * Distinct from the lock above on purpose: a repo-only project is portable in
+ * principle (a laptop that happens to hold a clone can serve it), so it is
+ * routed by policy, not pinned by physics.
+ */
+export function isCloneOnlyProject(project: ProjectLocus): boolean {
+  return !project?.dirPath && isCloneableGitUrl(project?.gitUrl);
+}
+
+/**
+ * The directory a builder materializes `name` into when the project has no
+ * dirPath but a cloneable repo — the same path `ensureBoxWorkspace` and
+ * `resolveRunnerWorkspaceDir` derive on the runner, so the queue can carry a
+ * real `dir` and the executor enqueues a DISPATCH (cold start: clone → owned
+ * PTY → agent) instead of a bare INJECT (which can only puppet an existing
+ * zellij tab — the 2026-09-10 Heidi dead end on both channels).
+ * Null when the project cannot be materialized at all.
+ */
+export function coldStartWorkspaceDir(
+  name: string,
+  gitUrl: string | null | undefined,
+): string | null {
+  if (!isCloneableGitUrl(gitUrl)) return null;
+  return path.join(BOX_DEV_ROOT, sanitizeWorkspaceKey(name));
+}
+
+/**
  * Where should this dispatch run? The single answer for every caller.
  *
  * Local and cloud are two different products, not two servers. Local runs in the
@@ -225,7 +255,18 @@ export function pickDispatchChannel(
   //    laptop", but a dispatch sent from a phone while the laptop happens to be
   //    awake lands on a machine nobody is watching and that sleeps the instant
   //    the lid shuts. Battery is the honest proxy for "not a dependable host".
-  if (presence.local && localDurability !== "ephemeral") return "local";
+  if (
+    presence.local &&
+    localDurability !== "ephemeral" &&
+    !(isCloneOnlyProject(project) && presence.cloud)
+  ) {
+    return "local";
+  }
+
+  // 2b. "Run it in the operator's own checkout" is meaningless when there is
+  //     no checkout: a repo-only project goes to the builder that clones, even
+  //     with the laptop online. Without this, Heidi (gitUrl, no dirPath) was
+  //     pinned to a laptop that then hunted for a zellij tab that could not exist.
 
   // 3. Away, or the laptop is on battery — the always-on box.
   if (presence.cloud) return "cloud";

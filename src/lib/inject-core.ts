@@ -23,7 +23,7 @@ import { isRuntimeAvailable } from "@/lib/runtime";
 import { ORCH_STATE } from "@/lib/orchestration/contract";
 import { workspaceIdFor } from "@/lib/agent-execution/ownership";
 import { executeInject } from "@/lib/executor";
-import { pickDispatchChannel } from "@/lib/execution-access";
+import { coldStartWorkspaceDir, pickDispatchChannel } from "@/lib/execution-access";
 import { getBuilderFitness } from "@/db/queries/runner-presence";
 import {
   createOrchestrationEvent,
@@ -438,7 +438,10 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
       projectKey: canonical,
       runId,
       sessionId: params.sessionId,
-      dir: projectPath,
+      // A known checkout wins. Without one, hand the queue the directory the
+      // runner will clone into — executeInject chooses DISPATCH (cold start)
+      // over INJECT (tab puppeting) by whether `dir` is present.
+      dir: projectPath ?? coldStartWorkspaceDir(canonical, dbMatch.gitUrl),
       projectBusy,
       channel: pinnedChannel,
     },
