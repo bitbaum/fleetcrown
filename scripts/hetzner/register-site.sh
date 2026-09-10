@@ -284,8 +284,16 @@ if [ -f "$DEPLOY_YML" ] && grep -q 'secrets: inherit' "$DEPLOY_YML" 2>/dev/null;
     push_deploy_yml "fix: pass HETZNER_SSH_PRIVATE_KEY explicitly for cross-owner deploy"
     say "repaired deploy.yml secrets mapping (push best-effort)"
   fi
-elif [ -f "$DEPLOY_YML" ]; then
+elif [ -f "$DEPLOY_YML" ] && { [ "$DRY" = 1 ] || shim_on_remote; }; then
   say "already present"
+elif [ -f "$DEPLOY_YML" ]; then
+  # The clone has it, the remote does not: a push the caller's token could not
+  # make (no `workflow` scope) left a local commit behind. The file being on
+  # disk here proves nothing about GitHub — velokiosk-sep10 sat "already
+  # present" through two registrations while every GET said the workflow was
+  # missing. Re-push through push_deploy_yml, which verifies the remote.
+  push_deploy_yml "chore: add self-host deploy shim for $SLUG"
+  say "deploy.yml was local only — now on the remote"
 elif [ "$DRY" = 1 ]; then
   say "DRY  would write $DEPLOY_YML and push"
 else
