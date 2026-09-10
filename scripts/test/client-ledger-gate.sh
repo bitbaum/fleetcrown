@@ -59,18 +59,25 @@ give_terms() {
 echo "client-ledger gate"
 
 # --- the register as committed -------------------------------------------
+# Asserted against whatever it currently holds, NOT against a hardcoded count.
+# The first version of this file pinned "at baseline" and "a baseline of 4", so
+# recording real terms — the outcome the gate exists to produce — broke its own
+# test suite. A test that fails when the thing it guards SUCCEEDS is measuring
+# the fleet's commercial state, not the gate. The ratchet cases below build
+# their own registers for the same reason.
 fixture
 OUT=$("$GATE" 2>&1); RC=$?
 [ "$RC" = 0 ] || fail "the committed register must pass its own baseline (rc=$RC): $OUT"
-echo "$OUT" | grep -q "at baseline" || fail "committed register should sit AT baseline, got: $OUT"
-ok "the register as committed passes, at baseline"
+echo "$OUT" | grep -qE "client ledger: (all [0-9]+|[0-9]+ of [0-9]+)" \
+  || fail "the committed register must produce a verdict, got: $OUT"
+ok "the register as committed passes its own baseline"
 
 # --- a NEW live client engagement without terms is a regression ----------
 fixture
 add_row "newclient|4099|newclient.orangecat.ch|/nonexistent/dev/newclient|.|-|SomeGmbH|client-app|live|-|-|-"
 OUT=$("$GATE" 2>&1); RC=$?
-[ "$RC" = 1 ] || fail "a 5th live client without terms must fail the gate (rc=$RC): $OUT"
-echo "$OUT" | grep -q "up from a baseline of 4" || fail "must name the baseline it rose from, got: $OUT"
+[ "$RC" = 1 ] || fail "one more live client without terms must fail the gate (rc=$RC): $OUT"
+echo "$OUT" | grep -qE "up from a baseline of [0-9]+" || fail "must name the baseline it rose from, got: $OUT"
 echo "$OUT" | grep -q "newclient" || fail "must name the offending app, got: $OUT"
 ok "a new live client engagement without terms goes RED"
 
@@ -99,22 +106,51 @@ echo "$OUT" | grep -q "printcraft:prospect" || fail "a prospect must be named as
 ok "prospects are deferred but announced, never silently dropped"
 
 # --- an improvement passes AND says how to bank it -----------------------
+# Its own register and its own baseline, so this keeps testing the DIRECTION of
+# the ratchet no matter what the real fleet is charging today. Two unpriced live
+# clients against a baseline of 2; give one terms and the count must fall to 1.
 fixture
-give_terms sink
+cat > "$CONF" <<'EOF'
+alpha|4090|alpha.orangecat.ch|/nonexistent/dev/alpha|.|-|AlphaGmbH|client-app|live|-|-|-
+beta|4091|beta.orangecat.ch|/nonexistent/dev/beta|.|-|BetaAG|client-site|live|-|-|-
+EOF
+echo 2 > "$TMP/scripts/ci/client-ledger.baseline"
+give_terms alpha
 OUT=$("$GATE" 2>&1); RC=$?
 [ "$RC" = 0 ] || fail "recording terms must not fail the gate (rc=$RC): $OUT"
-echo "$OUT" | grep -q "down from a baseline of 4" || fail "an improvement must state the old baseline, got: $OUT"
-echo "$OUT" | grep -q "echo 3 >" || fail "must print the exact command to lower the baseline, got: $OUT"
+echo "$OUT" | grep -q "down from a baseline of 2" || fail "an improvement must state the old baseline, got: $OUT"
+echo "$OUT" | grep -q "echo 1 >" || fail "must print the exact command to lower the baseline, got: $OUT"
 ok "recording terms lowers the count and prints how to bank it"
 
 # --- the fully-recorded end state ----------------------------------------
 fixture
-for app in kivvi aoz-wohnen vitareba sink; do give_terms "$app"; done
+cat > "$CONF" <<'EOF'
+alpha|4090|alpha.orangecat.ch|/nonexistent/dev/alpha|.|-|AlphaGmbH|client-app|live|-|-|-
+beta|4091|beta.orangecat.ch|/nonexistent/dev/beta|.|-|BetaAG|client-site|live|-|-|-
+EOF
+echo 2 > "$TMP/scripts/ci/client-ledger.baseline"
+give_terms alpha; give_terms beta
 OUT=$("$GATE" 2>&1); RC=$?
 [ "$RC" = 0 ] || fail "a fully recorded ledger must pass (rc=$RC): $OUT"
-echo "$OUT" | grep -q "all 4 live client engagement(s) have recorded terms" \
+echo "$OUT" | grep -q "all 2 live client engagement(s) have recorded terms" \
   || fail "the goal state must be stated plainly, got: $OUT"
+echo "$OUT" | grep -q "echo 0 >" || fail "reaching zero must still say how to bank it, got: $OUT"
 ok "the goal state — every live engagement priced — reports clean"
+
+# --- 'favour|0' is a recorded answer, not an empty one -------------------
+# The real register uses it: George confirmed on 2026-09-10 that all four live
+# engagements are unpaid on purpose. The gate must treat that as SETTLED, or
+# recording the truth would look identical to never having asked.
+fixture
+cat > "$CONF" <<'EOF'
+gratis|4092|gratis.orangecat.ch|/nonexistent/dev/gratis|.|-|SomeClient|client-site|live|favour|0|2026-09-10
+EOF
+echo 0 > "$TMP/scripts/ci/client-ledger.baseline"
+OUT=$("$GATE" 2>&1); RC=$?
+[ "$RC" = 0 ] || fail "favour|0 must count as recorded terms (rc=$RC): $OUT"
+echo "$OUT" | grep -q "all 1 live client engagement(s) have recorded terms" \
+  || fail "favour|0 must read as settled, not missing: $OUT"
+ok "'favour|0' counts as recorded — unpaid ON PURPOSE is an answer"
 
 # --- a register with NOTHING to announce ---------------------------------
 #
