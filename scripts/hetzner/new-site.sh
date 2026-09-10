@@ -2,6 +2,9 @@
 #
 # Spin up a new site: repo → register → box → deploy. One command.
 #
+# Already have a GitHub repo (e.g. FleetCrown kickoff provision)? Use
+# register-site.sh instead — same CD registration without scaffolding.
+#
 #   new-site.sh <slug> [--title "Name"] [--owner X] [--kind K] [--status S]
 #               [--plan P] [--price N]
 #               [--private] [--no-deploy] [--dry-run]

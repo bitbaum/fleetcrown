@@ -83,3 +83,25 @@ box is served from the `hirnli` repo, `datacat-web` from `datacat`. The shim's
 | `no runtime .env found on the box` | The app has never been deployed, or `/opt/<app>` was renamed. |
 | `DEPLOY UNHEALTHY — rolling back` | The new release failed its health check; prod is back on the previous release. Read `journalctl -u <app>-app -n 50`. |
 | `https://<domain> returned <code> after the deploy` | The service is up but the public path is not — look at Caddy, not the app. |
+
+## FleetCrown kickoff (existing repo → CD)
+
+`scripts/hetzner/new-site.sh` scaffolds a **new** site from `scripts/site-template`.
+FleetCrown **Make it happen** creates a different kind of repo (agent starters via
+`/api/projects/[id]/provision`). To put that repo on the same CD path:
+
+1. Kickoff calls `POST /api/projects/[id]/register-cd` after provision.
+2. That seeds `.github/workflows/deploy.yml` (when missing) and, on the studio
+   box (register script + deploy key present, eligible account), runs:
+
+   ```bash
+   bash scripts/hetzner/register-site.sh <slug> --repo <owner>/<name> --title '…'
+   ```
+
+3. On success it writes `user_projects.live_url` and the `production_url` attr.
+   When auto-register cannot run, the API returns that same command as the
+   single next step — never a fake "site ready" with no URL.
+
+`register-site.sh` is the CD half of `new-site.sh` without scaffolding: apps.conf
+row, deploy secret, sync-infra. Prefer it over a parallel host.
+
