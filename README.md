@@ -1,20 +1,12 @@
 # FleetCrown
 
-FleetCrown is an execution operating system for builders who run many projects at
-once. It is the **engineering pillar** of a three-pillar stack:
+FleetCrown is an independent product for building and changing projects with AI
+agents. Start with a brief, create a real repository, build and deploy, then use
+project feedback to direct the next change. OrangeCat linking is optional;
+an OrangeCat account is not required to build in FleetCrown.
 
-| Pillar | Product | Role |
-| --- | --- | --- |
-| Economy | [OrangeCat](https://orangecat.ch) | Bitcoin-native funding, entities, and the public timeline |
-| Engineering | **FleetCrown** (this repo) | Agent fleets, project execution, and the deploy pipeline for the whole stack |
-| Governance | [Solon](https://solon.orangecat.ch) | Bitcoin-signed proposals, votes, and self-verifying decisions |
-
-The ties are real: FleetCrown dogfoods OrangeCat (OIDC login, publish
-bus, stakeholder graph, shared BTC wallet) — sibling-product integration; FleetCrown's agent Loki is a
-registered voting member in Solon, casting Bitcoin-signed votes from its own
-box (`scripts/solon/cast-vote.ts`) with decision webhooks landing at
-`/api/solon/events`; and `.github/workflows/selfhost-deploy.yml` is the shared
-CD pipeline that ships all three products to production.
+Org names and relationships come from [bitbaum/fleet](https://github.com/bitbaum/fleet/blob/main/AGENTS.md)
+and its registers. Hosting addresses are recorded in `scripts/hetzner/apps.conf`.
 
 The product thesis is simple: AI agents are becoming cheap execution capacity,
 but serious users still need a trustworthy command center. FleetCrown provides the
@@ -25,10 +17,9 @@ Production: https://fleetcrown.orangecat.ch
 
 ## What It Does
 
-- **Agent operations**: launch, monitor, switch, and dispatch Claude, Codex,
-  Gemini, Cursor, Grok, and OpenClaw across real project workspaces.
+- **Agent operations**: launch, monitor, switch, and dispatch supported agents across real project workspaces.
 - **Hybrid control plane**: hosted Next.js app owns auth, database, product UI,
-  and team state; a local daemon owns Zellij, shell, git, and agent CLIs.
+  and team state; an eligible cloud builder or connected Fleet Runner owns workspaces, shell, git, and agent CLIs.
 - **Project execution memory**: per-project handoffs, queues, recent outcomes,
   lifecycle signals, git state, and saved context are visible in one place.
 - **Builder life OS**: goals, people, habits, events, money, prompts, and
@@ -42,9 +33,9 @@ Production: https://fleetcrown.orangecat.ch
 
 ## Product And Economic Model
 
-FleetCrown is designed as a high-retention SaaS for power users and small teams. It uses OrangeCat economic services (typed relations, shared wallet). Both projects live on the OrangeCat platform with typed relations.
-The economic model is built around durable workflow ownership, not one-off AI
-novelty.
+FleetCrown serves individual builders and teams. Optional OrangeCat links connect
+build dossiers to public profiles and funding. Linking does not publish private
+work: publishing requires a separate owner choice.
 
 **Designed economic model** (planned monetization).
 
@@ -65,8 +56,8 @@ pricing logic, expansion loops, and defensibility.
 Hosted control plane (self-hosted Next.js on Hetzner, Caddy in front)
   Auth, database, UI, team state, command queue, runtime snapshots
 
-Local runtime (user machine)
-  Zellij tabs, agent CLIs, git, shell tools, daemon, hook bridge
+Execution runtime (eligible cloud builder or user machine)
+  Project workspaces, owned agent sessions, git, shell tools, runner
 
 Data layer (Postgres / Drizzle)
   User projects, runtime state, orchestration events, prompt queues,
@@ -78,9 +69,9 @@ Key design rules:
 - **SSOT first**: schema, navigation, agent registry, runtime snapshots, prompt
   queues, and design tokens each have one canonical owner.
 - **Cloud/local separation**: browser workflows stay cloud-safe; shell and
-  terminal work happens only through the authenticated local daemon.
-- **Runtime truth beats assumptions**: Control reflects live daemon pushes,
-  process detection, Zellij tabs, and timestamped handoff files.
+  terminal work routes through the authenticated builder for that project.
+- **Runtime truth beats assumptions**: Control reflects recorded runs and current worker sessions. A queued prompt
+  or successful agent turn is not deployment evidence.
 - **Agent-agnostic direction**: Claude-era compatibility remains where needed,
   but adapters and registry definitions are the migration path.
 
@@ -91,7 +82,7 @@ Key design rules:
 - **NextAuth v5** with GitHub OAuth and local owner-key support for private
   installs
 - **Tailwind CSS 4** with a tokenized dark-first design system
-- **Zellij + local daemon** for terminal runtime control
+- **Builder-owned agent sessions** for terminal runtime control
 - **Self-hosted on Hetzner** (`bitbaum` box, Caddy + systemd) — production deploys via `scripts/deploy-hetzner.sh` (build → rsync → restart); cron jobs run on the box
 - **Husky + GitHub Actions** for type, lint, and audit checks
 
@@ -155,7 +146,9 @@ On a fresh database, visit `/setup` to create the first user.
 
 ### Local Agent Runtime
 
-Agent dispatch from the hosted app needs a connected machine:
+Shared cloud building is restricted to eligible accounts. Other accounts need
+a connected Fleet Runner; see the execution access policy in
+`src/lib/execution-access.ts`. To connect your machine:
 
 ```bash
 curl -fsSL https://fleetcrown.orangecat.ch/api/agent/install | node - init --base-url https://fleetcrown.orangecat.ch

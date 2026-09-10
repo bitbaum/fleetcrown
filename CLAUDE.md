@@ -1,10 +1,13 @@
-# FleetCrown — Life Operating System
+# FleetCrown
 
 @~/.claude/CLAUDE.md
 
 ## Mission
 
-FleetCrown is a personal life OS and AI agent fleet for builders running multiple projects simultaneously. FleetCrown itself is the customer of sibling product OrangeCat (economic layer / transaction half). Both OrangeCat and FleetCrown appear as projects/profiles on orangecat.ch under Cato. Shared BTC wallet, typed "customer" stakeholder relation. See live data + integration in marketing-content.ts and stakeholder_relationships.
+Read [bitbaum/fleet AGENTS.md](https://github.com/bitbaum/fleet/blob/main/AGENTS.md)
+and its registers for org facts. Read this repo's `AGENTS.md` for the product
+contract. FleetCrown builds and changes projects independently; OrangeCat is an
+optional integration, with separate consent for public publishing.
 
 ## What This Is
 
@@ -101,9 +104,10 @@ home/              → Agent orchestration library. Pure pieces that tail one
                        • scripts/hosted-runner.ts — ephemeral hosted runs.
                      Do NOT describe any one of them as the sole executor; which
                      one serves a given workflow is SSOT in
-                     docs/development/cloud-local-workflows.md. Every dispatch
-                     still goes cloud /api/inject → pending_command → whichever
-                     runner is attached polls and types into zellij. To iterate
+                     docs/development/cloud-local-workflows.md. Dispatch goes through /api/inject → pending_command → an authorized
+                     runner. Project-owned sessions are the execution identity;
+                     Zellij names are a legacy transport detail, never a reason
+                     to add tab guessing to Control or feedback. To iterate
                      on a single piece, run it directly (`pnpm exec tsx
                      home/worker.ts --start`); test the whole library with
                      `pnpm run test:home`. Full docs: home/README.md.

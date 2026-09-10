@@ -24,15 +24,15 @@ User-facing copy lives in `src/config/executor-copy.ts`. Internal docs may still
 | 2. Onboarding — username, optional first project | Browser | No |
 | 3. **Go to Control** — explore, link GitHub repos, press Start building | Browser | No |
 | 4. Use goals, projects metadata, prompts library, Loki, settings | Browser | No |
-| 5. **Optional:** install desktop app from `/download` | Desktop | Only if you want agents on **this computer's** folders and CLIs |
+| 5. Connect Fleet Runner from `/download` if cloud execution is unavailable for your account | Desktop | Required for execution without eligible cloud access |
 
-### Desktop setup (optional — local execution)
+### Desktop setup (required without eligible cloud access)
 
 Use this when you want agents to run on your machine instead of (or alongside) cloud workers:
 
 1. **Download Fleet Runner** from [`/download`](https://fleetcrown.orangecat.ch/download) — same UI as the website, plus a background executor.
 2. **Sign in** with the same FleetCrown account (or paste an agent token from Settings).
-3. **Install at least one agent CLI** (Claude, Grok, Codex, Cursor, Gemini, …) — the desktop app can guide you.
+3. **Install at least one supported agent CLI** — the desktop app can guide you.
 4. **Launch at login** (Settings → Startup) so your machine stays connected.
 
 Until a builder is online, Control **queues** dispatches. **Start building** also queues when offline. Git-backed projects can route to the **hosted worker** (Hermes PR mode) when no builder claims the job.
@@ -66,7 +66,7 @@ Fleet Runner embeds the `home/` orchestration library (`watcher.ts` + `worker.ts
 | Component | Runs where | Responsibility |
 |-----------|------------|----------------|
 | **Web app** | Hosted Hetzner box (`fleetcrown-app`) or local dev | Auth, Postgres, Control/Loki UI, command queue — **control plane only on prod** (`RUNTIME_AVAILABLE` unset) |
-| **box-runner** | Hetzner box (`fleetcrown-box-runner.service`) | Default cloud builder: polls queue, owned PTY agents, peek-stream for Terminal → Cloud |
+| **box-runner** | Hetzner box (`fleetcrown-box-runner.service`) | Eligible-account cloud builder: polls queue, owned PTY agents, peek-stream for Terminal → Cloud |
 | **Fleet Runner** | Optional — operator's computer (Electron) | Same queue on local machine; Terminal → This computer |
 | **Hermes runner** | Hetzner sandbox | PR-mode offline dispatches when no builder claims |
 | **`home/` library** | Embedded in desktop runner | Local JSONL event loop; see `home/README.md` |
@@ -91,14 +91,14 @@ Priority stack: `docs/architecture/priority-plan-2026-H2.md`.
 | Schedule prompt job (Prompts → Schedule) | Stored in Postgres per user; **execution** still needs local openclaw |
 | Private zone (People, Money, Habits, Events) | PIN enforced server-side when `PRIVATE_ZONE_PIN_HASH` is set |
 
-### Requires local runtime (`RUNTIME_AVAILABLE=true` + Fleet Runner)
+### Execution and machine-dependent tools
 
 | Workflow | Local dependency |
 |----------|------------------|
-| Agent dispatch (Control) | Fleet Runner + Zellij + agent CLI |
+| Agent dispatch (Control) | Authorized cloud builder or connected Fleet Runner + supported agent CLI |
 | Live Zellij tab list on Control (cloud) | Fleet Runner pushes `openTabs` → `runtime_snapshots` table |
-| Claude orchestration (cloud queues; runner injects) | Same |
-| Codex / Gemini / OpenClaw orchestration | Local runtime only (503 in cloud) |
+| Project orchestration (cloud queues; runner executes) | Authorized builder and project worker session |
+| Agent selection | Project `agentPref`, adapter capabilities and builder availability; do not infer support from terminal labels |
 | Bootstrap with AI, AI brief | Local `claude` CLI |
 | Git sync / commit from Control | Local git |
 | Calendar (Today) | Local `gog` |
@@ -116,7 +116,7 @@ Two sources behind one view (toggle **Cloud** | **This computer**):
 
 | Source | Substrate | When to use |
 |--------|-----------|-------------|
-| **Cloud** | Agent PTYs on Hetzner (box-runner) | Default for web users — Loki and Control dispatches run here when the cloud builder is online |
+| **Cloud** | Agent PTYs on Hetzner (box-runner) | Eligible accounts only — Loki and Control dispatches run here when the cloud builder is online |
 | **This computer** | Fleet Runner-owned agent PTYs on your laptop | Live view of agents you dispatched locally; same queue as Cloud — only one builder claims each job |
 
 Loki and Control do **not** connect to Terminal directly. They enqueue `pending_commands`; a builder injects into the agent CLI; Terminal is the watch surface (`source=server` or `source=machine`).

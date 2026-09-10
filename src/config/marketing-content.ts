@@ -30,9 +30,9 @@ export const PHILOSOPHY = {
   lede: "The constraints we use when building the control layer for the age of autonomous creation — from software agents today to robot fleets in the future.",
   values: [
     {
-      name: "Local first. Always.",
+      name: "Choose where agents run.",
       description:
-        "Your machine is the privileged execution surface. When it can do the work, it should. Full environment access. Zero cloud sandbox compromise.",
+        "Connect Fleet Runner for work on your computer. Eligible accounts can also use the shared cloud builder. Keep project context and control in one place.",
     },
     {
       name: "Humans in the loop, by default.",
@@ -83,7 +83,7 @@ export const INVESTORS = {
   // fleet snapshot (same real data source as the homepage hero).
   traction: [
     "FleetCrown runs its creator's entire operation — a live fleet of projects dispatched, monitored, and governed daily through the product itself.",
-    "Every surface is proven in continuous real-world self-use before it ships; the operator is the first and most demanding user.",
+    "We use FleetCrown in our own work and verify changes against real workflows; a successful agent run alone does not prove a live result.",
     "The homepage hero and this page render the same live snapshot of that fleet — real data, never fabricated numbers.",
     "The bet: the same workflow generalizes to anyone running many agents at once.",
   ],
@@ -226,12 +226,8 @@ export const ROADMAP: {
           ],
         },
         {
-          title: "One agent per user",
-          line: 'Loki (FleetCrown) and Cat (OrangeCat) converge into one agent over one memory graph, one autonomy dial, and one approval inbox — the surfaces stay as engineering boundaries, the user perceives "my agent."',
-          essay: {
-            label: "Read the essay: From Two AIs to One",
-            href: "/thoughts/from-two-ais-to-one",
-          },
+          title: "Connected products, owner-controlled sharing",
+          line: "Build independently in FleetCrown. Optionally link an OrangeCat profile for public updates and funding, with separate consent before publishing work.",
         },
         {
           title: "Stakeholder graph",
@@ -245,7 +241,7 @@ export const ROADMAP: {
           title: "OrangeCat integration — the transaction half",
           line: "Make it natural to fund what people build and build what people choose to fund, without pretending the full loop is already automated.",
           details: [
-            "One OrangeCat identity across both products through the existing OIDC bridge.",
+            "Optionally connect an OrangeCat identity through the existing OIDC bridge; FleetCrown also works without an OrangeCat account.",
             "Typed links connect a FleetCrown project to any OrangeCat entity acting as its origin, public profile, funding page, offering, or community.",
             "A signed, ten-minute OrangeCat handoff can prefill a FleetCrown project and Loki plan; the owner approves before anything is created or dispatched.",
             "OrangeCat remains the share, promotion, and Bitcoin funding surface. FleetCrown shows its confirmed funding summary read-only.",
