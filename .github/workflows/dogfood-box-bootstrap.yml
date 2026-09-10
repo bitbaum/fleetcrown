@@ -1,0 +1,105 @@
+name: Dogfood box bootstrap
+
+# One-shot: install CI deploy pubkey, sync-infra, first deploy for
+# dogfood-site-sep10-1201, set liveUrl. Remove this workflow after green.
+on:
+  workflow_dispatch: {}
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup root SSH
+        env:
+          SSH_KEY: ${{ secrets.HETZNER_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$SSH_KEY"
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          IP="${{ vars.HETZNER_IP || '167.233.22.31' }}"
+          ssh-keyscan -H "$IP" >> ~/.ssh/known_hosts 2>/dev/null
+          echo "HOST=root@$IP" >> "$GITHUB_ENV"
+          ssh -i ~/.ssh/id_deploy -o BatchMode=yes "root@$IP" 'echo "root ssh to $(hostname) ok"'
+
+      - name: Install CI deploy pubkey + pull fleetcrown + register/deploy dogfood
+        env:
+          PUB: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICKvQZOr0MjQqaD3Mc9WqbCK5cO5aQAxhDQvjflRmWlo fleetcrown-ci-deploy@github-actions"
+          PROJECT_ID: "61fe26c4-1a8c-4937-a8bf-7c414547855b"
+          LIVE_URL: "https://dogfood-site-sep10-1201.orangecat.ch"
+          SLUG: "dogfood-site-sep10-1201"
+          REPO: "catomean/dogfood-site-sep10-1201"
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/id_deploy -o BatchMode=yes "$HOST" bash -s <<REMOTE
+          set -euo pipefail
+          PUB='$PUB'
+          AUTH=/home/ubuntu/.ssh/authorized_keys
+          mkdir -p /home/ubuntu/.ssh
+          chmod 700 /home/ubuntu/.ssh
+          touch "\$AUTH"
+          if ! grep -qxF "\$PUB" "\$AUTH" 2>/dev/null; then
+            printf '%s\n' "\$PUB" >> "\$AUTH"
+            echo "installed CI deploy pubkey for ubuntu"
+          else
+            echo "CI deploy pubkey already present"
+          fi
+          chown -R ubuntu:ubuntu /home/ubuntu/.ssh
+          chmod 600 "\$AUTH"
+
+          # Durable fleetcrown must be on main for apps.conf + register-site.
+          if [ -d /home/ubuntu/dev/fleetcrown/.git ]; then
+            sudo -u ubuntu bash -lc 'cd /home/ubuntu/dev/fleetcrown && git fetch origin main && git checkout main && git pull --ff-only origin main'
+            echo "durable fleetcrown at \$(git -C /home/ubuntu/dev/fleetcrown rev-parse --short HEAD)"
+          else
+            echo "WARN: no durable fleetcrown checkout"
+          fi
+
+          FC=/home/ubuntu/dev/fleetcrown
+          if [ ! -x "\$FC/scripts/hetzner/register-site.sh" ]; then
+            FC=/opt/fleetcrown/app
+          fi
+          export FLEETCROWN_REPO_ROOT=/home/ubuntu/dev/fleetcrown
+          export DEV_ROOT=/home/ubuntu/dev
+          export DEPLOY_KEY_PATH=/home/ubuntu/.ssh/fleetcrown_ci_deploy
+          # Key file for gh secret set — copy from authorized private if present, else skip secret.
+          if [ ! -r "\$DEPLOY_KEY_PATH" ]; then
+            echo "no private deploy key on box at \$DEPLOY_KEY_PATH — secret set will skip; pubkey is installed for GHA"
+          fi
+
+          sudo -u ubuntu -E bash -lc "
+            set -euo pipefail
+            export FLEETCROWN_REPO_ROOT=/home/ubuntu/dev/fleetcrown
+            export DEV_ROOT=/home/ubuntu/dev
+            export DEPLOY_KEY_PATH=/home/ubuntu/.ssh/fleetcrown_ci_deploy
+            bash \$FC/scripts/hetzner/register-site.sh $SLUG --repo $REPO --title 'Dogfood site sep10 1201' --no-deploy
+          "
+
+          # First deploy for this slug only.
+          sudo -u ubuntu -E bash -lc "
+            set -euo pipefail
+            export FLEETCROWN_REPO_ROOT=/home/ubuntu/dev/fleetcrown
+            export DEV_ROOT=/home/ubuntu/dev
+            bash /home/ubuntu/dev/fleetcrown/scripts/hetzner/deploy.sh $SLUG
+          "
+
+          # Set liveUrl on the dogfood project (Hetzner SSOT column).
+          ENV=/opt/fleetcrown/app/.env
+          DBURL=\$(grep -oP '^DATABASE_URL=\K.*' "\$ENV" 2>/dev/null | head -1 | tr -d '\"')
+          if [ -n "\$DBURL" ]; then
+            sudo -u postgres psql "\$DBURL" -v ON_ERROR_STOP=1 -c \
+              "UPDATE user_projects SET live_url = '$LIVE_URL', updated_at = NOW() WHERE id = '$PROJECT_ID';" \
+              || psql "\$DBURL" -v ON_ERROR_STOP=1 -c \
+              "UPDATE user_projects SET live_url = '$LIVE_URL', updated_at = NOW() WHERE id = '$PROJECT_ID';"
+            echo "liveUrl set for $PROJECT_ID"
+          else
+            echo "WARN: no DATABASE_URL — liveUrl not set"
+          fi
+
+          curl -sS -o /dev/null -w "local_health=%{http_code}\n" --max-time 10 "http://127.0.0.1:4023/" || true
+          curl -sS -o /dev/null -w "public=%{http_code}\n" --max-time 15 "$LIVE_URL/" || true
+          REMOTE
