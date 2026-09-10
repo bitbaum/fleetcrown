@@ -168,6 +168,14 @@ jobs:
           sudo -u ubuntu bash -lc "
             set -euo pipefail
             cd /home/ubuntu/dev/\$SLUG
+            git fetch origin && git reset --hard origin/main
+            # Ensure standalone output (starters sometimes omit it).
+            if [ -f next.config.ts ] && ! grep -q 'output: .standalone' next.config.ts; then
+              printf '%s\n' 'import type { NextConfig } from \"next\";' '' 'const nextConfig: NextConfig = { output: \"standalone\" };' '' 'export default nextConfig;' > next.config.ts
+            fi
+            if [ -f next.config.mjs ] && ! grep -q 'output:' next.config.mjs; then
+              printf '%s\n' '/** @type {import(\"next\").NextConfig} */' 'const nextConfig = { output: \"standalone\" };' 'export default nextConfig;' > next.config.mjs
+            fi
             set -a; source .env.selfhost.local; set +a
             if [ -f pnpm-lock.yaml ]; then
               corepack enable || true
