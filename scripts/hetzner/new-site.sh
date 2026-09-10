@@ -141,7 +141,29 @@ REPO_DIR="$DEV_ROOT/$SLUG"
 # is free on the box but claimed here belongs to something not currently running.
 PORT=$(grep -v '^#' "$MANIFEST" | cut -d'|' -f2 | grep -E '^[0-9]+$' | sort -n | tail -1)
 PORT=$((PORT + 1))
-say "port $PORT (next after the highest in the register)"
+
+# ...and then the other direction, which the line above cannot see: a port that
+# is LIVE on the box but absent from the register. That is not a defect in the
+# register — annushka's enquiry API holds 4030 behind a hand-written vhost on
+# purpose, and the 4001-4004 services are excluded by design — but it means
+# `max(registered)+1` was walking toward an occupied port. Both checks are
+# needed: the register owns "claimed", the box owns "occupied".
+#
+# Announced, never silent: if the box cannot be reached, the sweep returns
+# nothing, which is indistinguishable from "nothing is listening". Say which
+# one happened rather than let an unchecked port look like a checked one.
+TAKEN=$(listening_ports)
+if [ -z "$TAKEN" ]; then
+  say "port $PORT — next after the highest in the register, NOT verified against"
+  say "     the box (could not read its listeners; check by hand before deploying)"
+else
+  FREE=$(next_free_port "$PORT" "$TAKEN")
+  if [ "$FREE" != "$PORT" ]; then
+    say "port $PORT is live on the box but unregistered — advancing to $FREE"
+    PORT="$FREE"
+  fi
+  say "port $PORT (next after the highest in the register, verified free on the box)"
+fi
 say "host $SLUG.$BASE_DOMAIN  (wildcard DNS — no record needed)"
 say "repo $GH_OWNER/$SLUG  ->  $REPO_DIR"
 

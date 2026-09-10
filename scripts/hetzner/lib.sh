@@ -47,5 +47,34 @@ app_lookup() {
 
 app_names() { grep -v '^#' "$MANIFEST" | cut -d'|' -f1; }
 
+# next_free_port <candidate> <newline-separated taken ports> — the first port at
+# or above <candidate> that nothing holds.
+#
+# The register is NOT the only thing listening on this box, and it never claimed
+# to be: the four handcrafted services on 4001-4004 are excluded by design, and
+# annushka's enquiry API sits on 4030 behind a hand-written vhost precisely so
+# sync-infra will not touch it. Allocating from `max(registered)+1` alone was
+# therefore walking toward 4030 — four sites away as of 2026-09-10, and three
+# rows were added that day. A port collision does not fail loudly at allocation;
+# it fails when the new unit starts, binds nothing, and the OTHER app is the one
+# that looks broken.
+#
+# Pure so it can be tested without the box: the caller supplies what is taken.
+next_free_port() {
+  local p="$1" taken="${2:-}"
+  while printf '%s\n' "$taken" | grep -qx "$p"; do
+    p=$((p + 1))
+  done
+  printf '%s' "$p"
+}
+
+# listening_ports — every TCP port with a listener on the box, one per line.
+# Empty output means "could not ask", which the caller MUST announce rather than
+# treat as "nothing is listening"; those two look identical and only one is safe.
+listening_ports() {
+  box "ss -ltnH 2>/dev/null | awk '{print \$4}'" 2>/dev/null \
+    | sed 's/.*://' | grep -E '^[0-9]+$' | sort -un
+}
+
 # -n: don't consume stdin (box() is used inside while-read loops)
 box() { ssh -n -o BatchMode=yes "$BOX" "$@"; }
