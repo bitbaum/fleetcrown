@@ -13,9 +13,11 @@ type PublishState =
 
 /**
  * "Publish to OrangeCat" — opt-in per-project projection onto the OrangeCat
- * economic layer (cross-product bridge Part C). Once published, links to the
- * public OrangeCat project page; further dev-log entries auto-promote onto
- * its wall.
+ * economic layer (cross-product bridge Part C).
+ *
+ * Linking an OrangeCat account (OIDC) is NOT this button and is NOT consent to
+ * publish. Publish is per-project and starts from the moment of opt-in; past
+ * private history is not dumped onto the wall by default.
  */
 export function OrangeCatPublishButton({ projectId }: { projectId: string }) {
   const [state, setState] = useState<PublishState>({ phase: "loading" });

@@ -2,11 +2,13 @@
 
 ---
 created_date: 2026-05-21
-last_modified_date: 2026-07-04
-last_modified_summary: Cross-link to user-flow-audit.md (exhaustive flow grades).
+last_modified_date: 2026-09-10
+last_modified_summary: Clarify shared cloud builder is eligible-accounts only (execution-access).
 ---
 
-FleetCrown is a **hybrid** product: the hosted web app (cloud control plane) owns auth, the database, and the UI. Agents run via the **builder** — the cloud service on Hetzner (box-runner) and/or the optional desktop app on your computer. Users never need to pick; both share one queue.
+FleetCrown is a **hybrid** product: the hosted web app (cloud control plane) owns auth, the database, and the UI. Agents run via the **builder** — the cloud service on Hetzner (box-runner) and/or the optional desktop app on your computer.
+
+**Shared cloud execution is restricted.** The always-on box-runner is not a multi-tenant sandbox. Until hosted execution is sandboxed per account, only eligible accounts (`isDefault` or `FLEETCROWN_CLOUD_BUILDER_USER_IDS`) may use the shared cloud builder. Everyone else runs through their own Fleet Runner on this computer (`src/lib/execution-access.ts`). Docs and UI must not pretend cloud building is universal.
 
 User-facing copy lives in `src/config/executor-copy.ts`. Internal docs may still say Fleet Runner / box-runner.
 
@@ -35,16 +37,17 @@ Use this when you want agents to run on your machine instead of (or alongside) c
 
 Until a builder is online, Control **queues** dispatches. **Start building** also queues when offline. Git-backed projects can route to the **hosted worker** (Hermes PR mode) when no builder claims the job.
 
-### Cloud builder (box-runner) — always-on on Hetzner
+### Cloud builder (box-runner) — eligible accounts only
 
-For the product owner account, `fleetcrown-box-runner.service` is the default executor:
+`fleetcrown-box-runner.service` is the shared Hetzner executor for **eligible** accounts (product-owner / allowlisted), not every signed-in user:
 
 - **Enabled on boot**, `Restart=always` — intended to run 24/7 without a laptop.
 - **Separate from `fleetcrown-app`** — web deploys restart the site, not agent PTYs; deploy still **syncs + restarts** box-runner code via `scripts/deploy-hetzner.sh`.
 - **First install:** `bash scripts/hetzner/install-box-runner.sh`
 - Control shows **Cloud builder online** when the bridge connection is live and the runner reports a `box-*` version.
+- **Non-eligible accounts** get `cloud-builder-private` / `builder-required` from `resolveQueuedExecution` and must connect Fleet Runner locally.
 
-The optional **desktop app** is the same queue on your computer — use both; each job goes to one claimant.
+The optional **desktop app** is the same queue on your computer. Eligible accounts may use both; each job goes to one claimant.
 
 ### Reliability
 

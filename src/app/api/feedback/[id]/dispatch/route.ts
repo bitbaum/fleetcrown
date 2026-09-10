@@ -10,6 +10,7 @@ import { deriveFeedbackWork, FEEDBACK_WORK_PHASE } from "@/lib/feedback/work-pha
 import { runToFeedbackSnapshot } from "@/lib/feedback/attach-work";
 import { getCurrentClaudeSessionForProject } from "@/db/queries/agent-sessions";
 import { DEFAULT_ADAPTER_ID, ORCHESTRATION_ADAPTER_IDS, type AdapterId } from "@/lib/orchestration";
+import { feedbackInjectAccepted } from "@/lib/feedback/dispatch-accept";
 
 /**
  * One-click Implement: queue a scoped agent run via injectPrompt.
@@ -94,12 +95,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     userId,
   );
 
-  // Only mark as dispatched if the injection succeeded (status < 400).
-  // This ensures failed injections (e.g. "Unknown tab") don't mark the
-  // feedback as dispatched, which would make it look like work started
-  // when it never did.
-  if (status < 400) {
-    const runId = typeof body.runId === "string" ? body.runId : undefined;
+  // Accepted = inject returned ok with a tracked run id, and did not refuse
+  // (blocked: user typing). status < 400 alone is not enough: inject can answer
+  // 200/ok when it refused mid-keystroke or when run-create failed — marking
+  // those Queued/Working is the closed-loop lie.
+  const accepted = feedbackInjectAccepted(status, body);
+  const runId = accepted ? body.runId : undefined;
+  if (accepted) {
     await setFeedbackStatus(userId, idOrResp, FEEDBACK_STATUS.DISPATCHED, runId);
   }
 
@@ -110,12 +112,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       adapter,
       sessionId: currentSession?.sessionId ?? null,
       sessionAction: adapter === "claude" ? (currentSession ? "resumed" : "started") : "started",
-      workLabel: status < 400 ? "Queued" : undefined,
+      workLabel: accepted ? "Queued" : undefined,
       // Add helpful context for common failures
       ...(status === 404 && {
         hint: "The project may need to be registered on the Projects page, or the agent may need to be started.",
       }),
     },
-    { status },
+    {
+      // Keep blocked (user-typing) at its inject status so the UI can warn.
+      // A bare ok without a run id is not acceptance — surface it as a failure.
+      status: accepted || body.blocked ? status : status < 400 && !runId ? 502 : status,
+    },
   );
 }

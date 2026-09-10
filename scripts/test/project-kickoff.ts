@@ -287,5 +287,16 @@ eq(
   "every non-bare starter seeds files",
 );
 
+// Provisioned nextjs starter is NOT the Hetzner live-site scaffold.
+// Live CD = scripts/hetzner/new-site.sh + scripts/site-template (deploy.yml).
+eq(
+  Object.prototype.hasOwnProperty.call(
+    TEMPLATES["nextjs-tailwind"].files,
+    ".github/workflows/deploy.yml",
+  ),
+  false,
+  "kickoff nextjs starter omits selfhost deploy.yml — new-site.sh owns live CD",
+);
+
 console.log(`${fail === 0 ? "✓" : "✗"} project-kickoff: ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

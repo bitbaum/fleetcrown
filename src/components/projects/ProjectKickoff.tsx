@@ -141,15 +141,21 @@ export function ProjectKickoff({
     // just wrote, so this only picks well once that has landed.
     if (plan.includes("repo")) {
       const json = await step("repo", "provision", { template: "auto", visibility });
-      if (json) {
-        const repo = json.repo as { full_name?: string } | undefined;
-        mark("repo", "done", repo?.full_name ?? "created");
+      if (!json) {
+        // Repository setup failed — do not dispatch. An agent with nowhere to
+        // write code is worse than a paused kickoff; the operator can fix the
+        // repo step and Try again.
+        setRunning(false);
+        setFinished(true);
+        router.refresh();
+        return;
       }
+      const repo = json.repo as { full_name?: string } | undefined;
+      mark("repo", "done", repo?.full_name ?? "created");
     }
 
-    // Dispatch last, and unconditionally: a kickoff that sets everything up and
-    // then puts nobody to work is the same dead end in a new costume. The
-    // prompt is composed server-side from whatever actually landed above.
+    // Dispatch last when setup that was planned actually landed. The prompt is
+    // composed server-side from whatever actually landed above.
     const dispatched = await step("dispatch", "dispatch", { kind: "kickoff" });
     if (dispatched) {
       // `ok: true` is not the same as "an agent is working". injectPrompt
@@ -263,7 +269,7 @@ export function ProjectKickoff({
           )}
           <span className="text-xs text-text-secondary">
             {wantRepo
-              ? "Starter picked from your stack. Without a repo an agent has nowhere to build."
+              ? "Starter picked from your stack (agent-ready repo). Live URL on bitbaum is the separate new-site path."
               : "Skipped — an agent can still plan, but it has nowhere to write code."}
           </span>
         </div>

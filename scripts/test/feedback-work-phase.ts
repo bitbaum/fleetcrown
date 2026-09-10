@@ -15,6 +15,8 @@ import {
 } from "../../src/lib/feedback/work-phase";
 import { FEEDBACK_STATUS } from "../../src/lib/constants/statuses";
 import { ORCH_STATE, ORCHESTRATION_OUTCOME } from "../../src/lib/orchestration/contract";
+import { absoluteFeedbackPageHref } from "../../src/lib/feedback/page-href";
+import { feedbackInjectAccepted } from "../../src/lib/feedback/dispatch-accept";
 
 function snap(over: Partial<FeedbackRunSnapshot>): FeedbackRunSnapshot {
   return {
@@ -187,5 +189,21 @@ assert.equal(
   );
   assert.ok(failed.detail!.includes("Retry"), "and it still says what to do next");
 }
+
+// Check live page href + Implement acceptance gate.
+assert.equal(
+  absoluteFeedbackPageHref("https://example.com/pricing", "/pricing"),
+  "https://example.com/pricing",
+);
+assert.equal(absoluteFeedbackPageHref(null, "/pricing"), null, "relative page alone is not enough");
+assert.equal(
+  absoluteFeedbackPageHref(null, "https://kivvi.app/door"),
+  "https://kivvi.app/door",
+  "absolute page works when url is empty",
+);
+assert.equal(feedbackInjectAccepted(200, { runId: "run-1" }), true);
+assert.equal(feedbackInjectAccepted(200, { runId: "run-1", blocked: true }), false);
+assert.equal(feedbackInjectAccepted(200, {}), false);
+assert.equal(feedbackInjectAccepted(500, { runId: "run-1" }), false);
 
 console.log("✓ feedback work-phase tests passed");
