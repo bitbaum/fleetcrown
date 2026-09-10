@@ -173,8 +173,24 @@ export type ProjectLocus = { dirPath?: string | null; gitUrl?: string | null } |
  * else for it to go.
  */
 export function projectChannelLock(project: ProjectLocus): RunnerChannel | null {
+  if (isBoxRootedDir(project?.dirPath)) return "cloud";
   if (project?.dirPath && !isCloneableGitUrl(project.gitUrl)) return "local";
   return null;
+}
+
+/**
+ * A dirPath under the box's clone root was written by the product itself
+ * (kickoff provision sets `dirPath = FLEETCROWN_BOX_DEV_ROOT/<slug>`), so the
+ * workspace exists on the box and nowhere else. The desktop runner does not
+ * clone on demand: routed there, it launched claude in a directory that does
+ * not exist and reported "inject did not stick" — three times in a row for
+ * velokiosk-sep10 on 2026-09-10 while the box sat idle. Explicit env only:
+ * the default clone root is `~/dev`, which on a laptop is the laptop's tree.
+ */
+export function isBoxRootedDir(dirPath: string | null | undefined): boolean {
+  const root = process.env.FLEETCROWN_BOX_DEV_ROOT?.trim().replace(/\/+$/, "");
+  if (!root || !dirPath) return false;
+  return dirPath === root || dirPath.startsWith(`${root}/`);
 }
 
 /**

@@ -154,3 +154,42 @@ proven. Evidence, not intent.
   not the auto-merge gate (`ci.yml` is) and was not investigated here.
 - Widget embed at seed time is wired only for `/provision` (the kickoff path),
   not `/create-with-github`.
+
+### Walk A on production (2026-09-10, after #569 deployed as f25958dc)
+
+Project `velokiosk-sep10` (https://fleetcrown.orangecat.ch/projects/17b76f42-a8a5-49e9-b662-341b5181ac5f),
+brief only, through the same routes the kickoff UI calls. Profile (11 fields),
+roadmap (5 milestones) and repo (`catomean/velokiosk-sep10`, starter seeded
+with lockfile) all landed. Then four defects, none of them in the PR above:
+
+1. **No deploy workflow in the repo.** The GitHub OAuth grant is
+   `read:user user:email repo`; GitHub refuses to create `.github/workflows/*`
+   without `workflow`. Both the Contents API seed and register-site.sh's push
+   were refused, and the script said "remote may already have the shim" and
+   carried on. Fix: request `workflow` (new sign-ins), and register-site.sh
+   falls back to the host's own gh login for the shim, then verifies the file
+   is on the remote and fails if it is not.
+2. **register-site.sh cannot SSH to its own box.** `box()` named no identity;
+   ubuntu's only key is the CI deploy key. Fix: `box()` uses `DEPLOY_KEY_PATH`
+   when readable.
+3. **Port 4024 allocated twice.** The durable register on the box was three
+   commits behind main; main had given 4024 to diplodoctor, which was listening
+   on it. Fix: allocate and conflict-check against both the durable register
+   and the release copy beside the script; fast-forward the durable checkout
+   when all its rows are on main; send each new row to main as a PR
+   (`register/<slug>`) so the register has one home again.
+4. **Kickoff dispatch ran on the wrong builder.** The project's dirPath is
+   `/home/ubuntu/dev/velokiosk-sep10` (box clone root), but a Fleet Runner on
+   the operator's laptop was connected, so "operator present" routed the job
+   there; that runner does not clone on demand, launched claude in a directory
+   that does not exist, and reported "inject did not stick" three times. Fix:
+   `projectChannelLock` returns `cloud` for a dirPath under
+   `FLEETCROWN_BOX_DEV_ROOT` (explicit env only).
+
+Also seen while reproducing on the box: Claude Code shows a workspace-trust
+dialog for a fresh directory. `ensureClaudeReady` already pre-trusts it on the
+box path; it never ran because the job never reached the box.
+
+Open after this: the desktop runner should refuse (or release) a claim whose
+directory does not exist locally — defensive, in the desktop bundle, not
+shipped here.

@@ -158,6 +158,26 @@ if (pickDispatchChannel(LOCKED, BOTH) !== "local") {
 
 // The lock predicate itself: null means "either builder can obtain this", which
 // is a real answer, not an absent one — pickDispatchChannel resolves it.
+// A workspace the product created on the box (dirPath under the box clone root)
+// exists only there. Physics again, in the other direction — and it must beat
+// "operator present", which is exactly the misroute that stranded velokiosk.
+const BOX_ROOT = "/srv/box-dev";
+const BOX_PROJECT = { dirPath: `${BOX_ROOT}/velokiosk-sep10`, gitUrl: CLONEABLE };
+const prevBoxRoot = process.env.FLEETCROWN_BOX_DEV_ROOT;
+process.env.FLEETCROWN_BOX_DEV_ROOT = `${BOX_ROOT}/`;
+if (projectChannelLock(BOX_PROJECT) !== "cloud")
+  throw new Error("lock: box-rooted dirPath is cloud");
+if (pickDispatchChannel(BOX_PROJECT, BOTH, "durable") !== "cloud")
+  throw new Error("box-rooted dirPath must beat a present, durable laptop");
+if (projectChannelLock({ dirPath: `${BOX_ROOT}-other/x`, gitUrl: CLONEABLE }) !== null)
+  throw new Error("lock: a sibling prefix is not under the box root");
+if (projectChannelLock({ dirPath: `${BOX_ROOT}/only-here`, gitUrl: null }) !== "cloud")
+  throw new Error("lock: box-rooted without a git url is still the box's");
+delete process.env.FLEETCROWN_BOX_DEV_ROOT;
+if (projectChannelLock(BOX_PROJECT) !== null)
+  throw new Error("lock: without an explicit box root, nothing is box-rooted (laptop dev)");
+if (prevBoxRoot !== undefined) process.env.FLEETCROWN_BOX_DEV_ROOT = prevBoxRoot;
+
 if (projectChannelLock(LOCKED) !== "local") throw new Error("lock: dirPath-only is local");
 if (projectChannelLock(PORTABLE) !== null) throw new Error("lock: cloneable is unlocked");
 if (projectChannelLock(null) !== null) throw new Error("lock: absent project is unlocked");
