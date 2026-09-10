@@ -1,0 +1,32 @@
+name: Dogfood set liveUrl
+on:
+  workflow_dispatch: {}
+jobs:
+  set:
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH set liveUrl by name
+        env:
+          SSH_KEY: ${{ secrets.HETZNER_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          IP="${{ vars.HETZNER_IP || '167.233.22.31' }}"
+          ssh-keyscan -H "$IP" >> ~/.ssh/known_hosts 2>/dev/null
+          ssh -i ~/.ssh/id_deploy -o BatchMode=yes "root@$IP" bash -s <<'REMOTE'
+          set -euo pipefail
+          LIVE_URL='https://dogfood-site-sep10-1201.orangecat.ch'
+          ENV=/opt/fleetcrown/app/.env
+          DBURL=$(grep -oP '^DATABASE_URL=\K.*' "$ENV" | head -1 | tr -d '"')
+          psql "$DBURL" -c "SELECT id, name, live_url FROM user_projects WHERE name ILIKE '%dogfood%' OR id::text LIKE '61fe26c4%';"
+          psql "$DBURL" -v ON_ERROR_STOP=1 -c "
+            UPDATE user_projects
+            SET live_url = '$LIVE_URL', updated_at = NOW()
+            WHERE name ILIKE '%dogfood-site-sep10-1201%'
+               OR name ILIKE '%dogfood site sep10%'
+               OR id::text = '61fe26c4-1a8c-4937-a8bf-7c414547855b';
+          "
+          psql "$DBURL" -c "SELECT id, name, live_url FROM user_projects WHERE live_url = '$LIVE_URL';"
+          REMOTE
