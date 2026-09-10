@@ -63,27 +63,23 @@ jobs:
 
           REG=/opt/fleetcrown/app/scripts/hetzner/register-site.sh
           DEP=/opt/fleetcrown/app/scripts/hetzner/deploy.sh
-          SYNC=/opt/fleetcrown/app/scripts/hetzner/sync-infra.sh
           [ -x "\$REG" ] || REG=/home/ubuntu/dev/fleetcrown/scripts/hetzner/register-site.sh
           [ -x "\$DEP" ] || DEP=/home/ubuntu/dev/fleetcrown/scripts/hetzner/deploy.sh
-          [ -x "\$SYNC" ] || SYNC=/home/ubuntu/dev/fleetcrown/scripts/hetzner/sync-infra.sh
           echo "using register=\$REG deploy=\$DEP"
+          export REG DEP
 
-          sudo -u ubuntu -E bash -lc "
-            set -euo pipefail
-            export FLEETCROWN_REPO_ROOT=/home/ubuntu/dev/fleetcrown
-            export DEV_ROOT=/home/ubuntu/dev
-            export DEPLOY_KEY_PATH=/home/ubuntu/.ssh/fleetcrown_ci_deploy
-            bash \$REG $SLUG --repo $REPO --title 'Dogfood site sep10 1201' --no-deploy
-          "
+          # Expand REG/DEP in this shell, pass literal paths into ubuntu's bash -lc.
+          sudo -u ubuntu -E env \
+            FLEETCROWN_REPO_ROOT=/home/ubuntu/dev/fleetcrown \
+            DEV_ROOT=/home/ubuntu/dev \
+            DEPLOY_KEY_PATH=/home/ubuntu/.ssh/fleetcrown_ci_deploy \
+            bash "\$REG" $SLUG --repo $REPO --title 'Dogfood site sep10 1201' --no-deploy
 
           # First deploy for this slug only (do not touch fleetcrown).
-          sudo -u ubuntu -E bash -lc "
-            set -euo pipefail
-            export FLEETCROWN_REPO_ROOT=/home/ubuntu/dev/fleetcrown
-            export DEV_ROOT=/home/ubuntu/dev
-            bash \$DEP $SLUG
-          "
+          sudo -u ubuntu -E env \
+            FLEETCROWN_REPO_ROOT=/home/ubuntu/dev/fleetcrown \
+            DEV_ROOT=/home/ubuntu/dev \
+            bash "\$DEP" $SLUG
 
           # Set liveUrl on the dogfood project (Hetzner SSOT column).
           ENV=/opt/fleetcrown/app/.env
