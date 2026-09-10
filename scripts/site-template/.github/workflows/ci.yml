@@ -10,7 +10,7 @@ name: CI
 # Substrata shipped to production that way. So the scaffold emits this file with
 # every new site: the gate has something real to wait for from the first commit.
 #
-# Runs the same bundle as `npm run verify` locally — one definition of verified.
+# Runs the same bundle as `pnpm run verify` locally — one definition of verified.
 
 on:
   push:
@@ -32,14 +32,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # pnpm BEFORE setup-node: `cache: pnpm` needs the binary to resolve the
+      # store path, and setup-node fails outright if pnpm is not on PATH yet.
+      - uses: pnpm/action-setup@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version-file: ".nvmrc"
-          cache: npm
+          cache: pnpm
 
-      # `npm ci` not `npm install`: the lockfile is the contract, and a resolution
-      # that drifts from it is exactly how a dependency silently disappears.
-      - run: npm ci
+      # pnpm, not npm: the box deploys with `pnpm run build`, and this template
+      # previously scaffolded an npm CI over a repo that had no package-lock.json
+      # — so `npm ci` could never succeed and a new site's CI was red or absent
+      # from its first commit. .nvmrc is pinned to 22 for the same reason: pnpm 11
+      # imports node:sqlite, which does not exist before Node 22.13.
+      - run: pnpm install --frozen-lockfile
 
       # Next keeps its compiler output in .next/cache, and this job BUILDS. With
       # nothing restoring it, every run of every scaffolded site recompiles from
@@ -60,18 +67,18 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .next/cache
-          key: nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
+          key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
           restore-keys: |
-            nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+            nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
             nextjs-${{ runner.os }}-
 
       - name: Type check
-        run: npm run type-check
+        run: pnpm run type-check
 
       - name: Lint
-        run: npm run lint
+        run: pnpm run lint
 
       # The build is the real test for a content site: a broken import or a bad
       # config surfaces here and nowhere earlier.
       - name: Build
-        run: npm run build
+        run: pnpm run build

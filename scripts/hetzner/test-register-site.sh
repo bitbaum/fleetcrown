@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# register-site.sh allocates ports and checks conflicts against BOTH registers:
+# the durable checkout it writes to, and the release copy beside the script
+# (main's last shipped register). On 2026-09-10 it read only the durable copy,
+# which was behind main, and handed velokiosk-sep10 port 4024 while diplodoctor
+# (registered on main) was listening on it. Dry-run only: no gh, no ssh, no git.
+# Run: bash scripts/hetzner/test-register-site.sh
+set -uo pipefail
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
+PASSED=0
+fail() { echo "  ✗ $1" >&2; exit 1; }
+ok()   { PASSED=$((PASSED + 1)); echo "  ✓ $1"; }
+
+# Fixture: a durable checkout whose register is BEHIND the release register.
+mkdir -p "$TMP/fc/scripts/hetzner" "$TMP/dev" "$TMP/rel"
+cp "$HERE"/*.sh "$HERE"/launch.sh.tmpl "$TMP/rel/" 2>/dev/null
+printf 'old-app|4010|old.example.com|/nowhere/old|.|-|bitbaum|product|live|-|-|-\n' > "$TMP/fc/scripts/hetzner/apps.conf"
+printf 'old-app|4010|old.example.com|/nowhere/old|.|-|bitbaum|product|live|-|-|-\nnewer-on-main|4030|newer.example.com|/nowhere/newer|.|-|bitbaum|product|live|-|-|-\n' > "$TMP/rel/apps.conf"
+touch "$TMP/key"
+
+run_dry() {
+  DEV_ROOT="$TMP/dev" FLEETCROWN_REPO_ROOT="$TMP/fc" DEPLOY_KEY_PATH="$TMP/key" SITES_BASE_DOMAIN=example.com \
+    bash "$TMP/rel/register-site.sh" "$@" --dry-run 2>&1
+}
+
+echo
+echo "port allocation reads the release register too"
+OUT=$(run_dry fresh-site --repo owner/fresh-site); RC=$?
+[ "$RC" = 0 ] || fail "dry-run must succeed (rc=$RC): $OUT"
+echo "$OUT" | grep -q "port 4031" || fail "port must follow the highest in EITHER register (expected 4031): $OUT"
+ok "a slug new to both registers gets the port after main's highest, not the durable copy's"
+
+echo
+echo "a slug main already registered is refused until the durable copy catches up"
+OUT=$(run_dry newer-on-main --repo owner/newer-on-main); RC=$?
+[ "$RC" = 1 ] || fail "must refuse (rc=$RC): $OUT"
+echo "$OUT" | grep -q "registered on main but not in the durable register" || fail "must name the cause: $OUT"
+ok "main-only slug is refused with the cause"
+
+echo
+echo "a hostname served by a main-only row is refused"
+OUT=$(run_dry newer --repo owner/newer); RC=$?
+[ "$RC" = 1 ] || fail "must refuse (rc=$RC): $OUT"
+echo "$OUT" | grep -q "already served by another entry" || fail "must name the conflict: $OUT"
+ok "hostname conflicts are checked across both registers"
+
+echo
+echo "OK: $PASSED passed"

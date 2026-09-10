@@ -77,4 +77,15 @@ listening_ports() {
 }
 
 # -n: don't consume stdin (box() is used inside while-read loops)
-box() { ssh -n -o BatchMode=yes "$BOX" "$@"; }
+# -i: the deploy key when it is readable. On the box itself these scripts run
+# as ubuntu from inside fleetcrown-app (register-cd), and ubuntu's only private
+# key is the CI deploy key — whose public half is what authorizes CI. Without
+# naming it, ssh offers nothing and the box refuses itself ("Permission denied
+# (publickey)"), which is how sync-infra failed on velokiosk-sep10.
+box() {
+  if [ -r "${DEPLOY_KEY_PATH:-}" ]; then
+    ssh -n -o BatchMode=yes -i "$DEPLOY_KEY_PATH" "$BOX" "$@"
+  else
+    ssh -n -o BatchMode=yes "$BOX" "$@"
+  fi
+}
