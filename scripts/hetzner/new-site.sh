@@ -222,10 +222,18 @@ WIDGET_TOKEN=""
 if [ "$DRY" = 1 ]; then
   say "DRY  npx tsx $HERE/../provision-widget.ts $SLUG '$TITLE' $SLUG.$BASE_DOMAIN"
 else
-  WIDGET_TOKEN=$(cd "$HERE/../.." && npx tsx scripts/provision-widget.ts "$SLUG" "$TITLE" "$SLUG.$BASE_DOMAIN" 2>/dev/null || true)
+  # stdout is "<projectId> <token>" — see provision-widget.ts. Both are written,
+  # because the day-zero page needs the id to point "Build this site" at this
+  # site's own project rather than at the generic list.
+  PROVISIONED=$(cd "$HERE/../.." && npx tsx scripts/provision-widget.ts "$SLUG" "$TITLE" "$SLUG.$BASE_DOMAIN" 2>/dev/null || true)
+  FC_PROJECT_ID="${PROVISIONED%% *}"
+  WIDGET_TOKEN="${PROVISIONED##* }"
+  [ "$FC_PROJECT_ID" = "$WIDGET_TOKEN" ] && FC_PROJECT_ID=""
   if [ -n "$WIDGET_TOKEN" ]; then
+    [ -n "$FC_PROJECT_ID" ] && \
+      printf 'NEXT_PUBLIC_FC_PROJECT_ID=%s\n' "$FC_PROJECT_ID" >> "$REPO_DIR/.env.selfhost.local"
     printf 'NEXT_PUBLIC_FC_WIDGET_TOKEN=%s\n' "$WIDGET_TOKEN" >> "$REPO_DIR/.env.selfhost.local"
-    say "token provisioned and written to .env.selfhost.local"
+    say "project $FC_PROJECT_ID + widget token written to .env.selfhost.local"
   else
     say "⚠ could not provision a widget token (needs the FleetCrown database)."
     say "  The site is fine; wire it later with:"
