@@ -43,6 +43,14 @@ else
   DEPLOY_SH="$HERE/deploy.sh"
 fi
 [ -f "$MANIFEST" ] || { echo "✗ scripts/hetzner/apps.conf missing at $MANIFEST (set FLEETCROWN_REPO_ROOT to the durable fleetcrown checkout)" >&2; exit 1; }
+# The register beside this script is the one main last shipped. The durable
+# checkout can lag main (rows land there only on a pull nobody triggers) and
+# main can lag the durable checkout (rows appended here reach main only when
+# someone commits them). Ports are allocated and conflicts checked against
+# BOTH, or a port main already gave away gets handed out again — velokiosk
+# took 4024 on 2026-09-10 while diplodoctor was listening on it.
+RELEASE_MANIFEST="$HERE/apps.conf"
+registers() { printf '%s\n' "$MANIFEST"; [ "$RELEASE_MANIFEST" != "$MANIFEST" ] && [ -f "$RELEASE_MANIFEST" ] && printf '%s\n' "$RELEASE_MANIFEST"; return 0; }
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -68,7 +76,7 @@ done
 # executable comes from the current release and the register is durable.
 export MANIFEST
 if [ "$DRY" != 1 ]; then
-  exec 9>"$MANIFEST.lock"
+  exec 9>"${TMPDIR:-/tmp}/fleetcrown-register-site.lock"
   flock -w 60 -x 9 || { echo "ERROR: another registration is still running; retry shortly" >&2; exit 1; }
 fi
 
@@ -83,6 +91,40 @@ esac
 
 say() { printf '  %s\n' "$*"; }
 run() { if [ "$DRY" = 1 ]; then printf '  DRY  %s\n' "$*"; else eval "$@"; fi; }
+# The register is a file in git; a row that exists only on this box is lost to
+# the next clone and invisible to CI's uniqueness check. Send it to main the
+# way every other change gets there: a branch, a PR, the sweep. Best-effort —
+# the site is registered here either way — but always announced.
+publish_register_row() {
+  local line="$1" fc_git wt branch
+  fc_git="$(dirname "$(dirname "$(dirname "$MANIFEST")")")"
+  git -C "$fc_git" rev-parse --is-inside-work-tree >/dev/null 2>&1 || { say "register row not published: $fc_git is not a git checkout"; return 0; }
+  branch="register/$SLUG"
+  wt="$(mktemp -d)/fc"
+  if git -C "$fc_git" fetch -q origin main 2>/dev/null \
+     && git -C "$fc_git" worktree add -q -B "$branch" "$wt" origin/main 2>/dev/null; then
+    if grep -q "^$SLUG|" "$wt/scripts/hetzner/apps.conf"; then
+      say "register row already on main"
+    else
+      printf '%s\n' "$line" >> "$wt/scripts/hetzner/apps.conf"
+      if git -C "$wt" -c user.name='Cato' -c user.email='catomean@users.noreply.github.com' \
+           commit -q -am "chore(register): add $SLUG ($PORT)" \
+         && env -u GH_TOKEN -u GITHUB_TOKEN git -C "$wt" push -q -f -u origin "$branch" 2>/dev/null \
+         && pr=$(env -u GH_TOKEN -u GITHUB_TOKEN gh pr create --repo "$(git -C "$fc_git" remote get-url origin | sed -E 's#^https://github.com/##; s#^git@github.com:##; s#\.git$##')" \
+                 --head "$branch" --base main --title "chore(register): add $SLUG ($PORT)" \
+                 --body "Registered from the box by register-site.sh. Row: \`$line\`" 2>/dev/null); then
+        say "register row sent to main: $pr"
+      else
+        say "⚠ register row not published to main (push or PR failed) — the durable register still has it"
+      fi
+    fi
+    git -C "$fc_git" worktree remove -f "$wt" >/dev/null 2>&1 || true
+  else
+    say "⚠ register row not published to main (could not fetch or branch)"
+  fi
+  rm -rf "$(dirname "$wt")"
+  return 0
+}
 
 # Normalize OWNER/NAME from a URL if needed.
 if [[ "$REPO_REF" == https://github.com/* ]] || [[ "$REPO_REF" == git@github.com:* ]]; then
@@ -94,6 +136,27 @@ GH_REPO="$REPO_REF"
 echo "→ validating '$SLUG'"
 [[ "$SLUG" =~ ^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$ ]] \
   || { echo "✗ slug must be lowercase letters, digits and hyphens, not starting or ending with one" >&2; exit 1; }
+
+# Adopt main's register when every local row is already on main: the durable
+# checkout is then a stale copy, not a holder of unpublished rows. If it does
+# hold rows main lacks (a register PR still open), leave it — the allocation
+# below reads both registers anyway.
+FC_GIT="$(dirname "$(dirname "$(dirname "$MANIFEST")")")"
+if [ "$DRY" != 1 ] && git -C "$FC_GIT" rev-parse --is-inside-work-tree >/dev/null 2>&1 \
+   && git -C "$FC_GIT" fetch -q origin main 2>/dev/null; then
+  unpublished=$(comm -23 <(grep -v '^#' "$MANIFEST" | grep . | sort) \
+                         <(git -C "$FC_GIT" show origin/main:scripts/hetzner/apps.conf 2>/dev/null | grep -v '^#' | grep . | sort))
+  if [ -z "$unpublished" ]; then
+    git -C "$FC_GIT" checkout -q -- scripts/hetzner/apps.conf 2>/dev/null || true
+    if git -C "$FC_GIT" merge -q --ff-only origin/main 2>/dev/null; then
+      say "durable register fast-forwarded to origin/main ($(git -C "$FC_GIT" rev-parse --short HEAD))"
+    else
+      say "durable register not fast-forwarded (local changes beyond the register) — allocating against both registers"
+    fi
+  else
+    say "durable register holds $(printf '%s\n' "$unpublished" | grep -c .) row(s) not yet on main — keeping it"
+  fi
+fi
 
 ALREADY=0
 EXISTING_LINE=""
@@ -111,8 +174,11 @@ if EXISTING_LINE=$(grep "^$SLUG|" "$MANIFEST" 2>/dev/null); then
   PORT=$(printf '%s' "$EXISTING_LINE" | cut -d'|' -f2)
   say "'$SLUG' already in scripts/hetzner/apps.conf — re-ensuring deploy.yml, secret, sync-infra"
 else
-  if grep -v '^#' "$MANIFEST" | cut -d'|' -f3 | tr ',' '\n' | grep -qx "$SLUG.$BASE_DOMAIN"; then
+  if cat $(registers) | grep -v '^#' | cut -d'|' -f3 | tr ',' '\n' | grep -qx "$SLUG.$BASE_DOMAIN"; then
     echo "✗ $SLUG.$BASE_DOMAIN is already served by another entry" >&2; exit 1
+  fi
+  if grep -q "^$SLUG|" "$RELEASE_MANIFEST" 2>/dev/null; then
+    echo "✗ '$SLUG' is registered on main but not in the durable register at $MANIFEST — pull it before registering" >&2; exit 1
   fi
   for reserved in www api app admin support security billing pay wallet login auth account \
                   mail smtp imap ns1 ns2 mx cdn static assets vpn db status staging dev test \
@@ -120,10 +186,10 @@ else
     [ "$SLUG" = "$reserved" ] && { echo "✗ '$SLUG' is reserved (infrastructure or impersonation risk)" >&2; exit 1; }
   done
   REPO_DIR="$DEV_ROOT/$SLUG"
-  PORT=$(grep -v '^#' "$MANIFEST" | cut -d'|' -f2 | grep -E '^[0-9]+$' | sort -n | tail -1)
+  PORT=$(cat $(registers) | grep -v '^#' | cut -d'|' -f2 | grep -E '^[0-9]+$' | sort -n | tail -1)
   PORT=$((PORT + 1))
 fi
-say "port $PORT$([ "$ALREADY" = 1 ] && echo ' (existing)' || echo ' (next after the highest in the register)')"
+say "port $PORT$([ "$ALREADY" = 1 ] && echo ' (existing)' || echo ' (next after the highest in either register)')"
 say "host $SLUG.$BASE_DOMAIN"
 say "repo $GH_REPO  ->  $REPO_DIR"
 say "manifest $MANIFEST"
@@ -160,6 +226,13 @@ jobs:
       HETZNER_SSH_PRIVATE_KEY: \${{ secrets.HETZNER_SSH_PRIVATE_KEY }}
 YML
 }
+# Writes the shim to the remote through whichever identity may. The caller's
+# token (GH_TOKEN from register-cd is the user's OAuth grant) needs the
+# `workflow` scope to touch .github/workflows/*; grants issued before that
+# scope was requested cannot, and the push is refused. This host's own gh
+# login is the studio's and has it, so it is the fallback — announced, never
+# assumed. A shim that is not on the remote is fatal: without it there is no
+# Deploy, and "registered" would be a lie.
 push_deploy_yml() {
   local msg="$1"
   (
@@ -171,17 +244,36 @@ push_deploy_yml() {
       git -c user.name='Cato' -c user.email='catomean@users.noreply.github.com' \
         commit -m "$msg"
       # Contents API / another register may have landed the same fix first.
-      if ! git push -u origin HEAD; then
+      if ! git push -u origin HEAD 2>/dev/null; then
         git fetch origin HEAD 2>/dev/null || git fetch origin
         if git pull --rebase --autostash origin HEAD 2>/dev/null \
           || git pull --rebase --autostash origin main 2>/dev/null; then
-          git push -u origin HEAD || say "⚠ deploy.yml push still blocked — remote may already have the shim"
+          git push -u origin HEAD 2>/dev/null || say "⚠ caller identity could not push deploy.yml — trying this host's gh login"
         else
           say "⚠ deploy.yml commit kept local; remote already has a newer shim — continuing"
         fi
       fi
     fi
   )
+  if ! shim_on_remote; then
+    put_deploy_yml_as_host "$msg"
+  fi
+  shim_on_remote || { echo "ERROR: deploy.yml is not on $GH_REPO — no identity available here may write workflows" >&2; exit 1; }
+}
+shim_on_remote() {
+  env -u GH_TOKEN -u GITHUB_TOKEN gh api "repos/$GH_REPO/contents/.github/workflows/deploy.yml" --jq .sha >/dev/null 2>&1 \
+    || gh api "repos/$GH_REPO/contents/.github/workflows/deploy.yml" --jq .sha >/dev/null 2>&1
+}
+put_deploy_yml_as_host() {
+  local msg="$1" sha
+  sha=$(env -u GH_TOKEN -u GITHUB_TOKEN gh api "repos/$GH_REPO/contents/.github/workflows/deploy.yml" --jq .sha 2>/dev/null || true)
+  if env -u GH_TOKEN -u GITHUB_TOKEN gh api -X PUT "repos/$GH_REPO/contents/.github/workflows/deploy.yml" \
+       -f message="$msg" -f branch=main -f content="$(base64 -w0 < "$DEPLOY_YML")" ${sha:+-f sha="$sha"} >/dev/null 2>&1; then
+    say "deploy.yml written by this host's gh login ($(env -u GH_TOKEN -u GITHUB_TOKEN gh api user --jq .login 2>/dev/null || echo '?'))"
+    ( cd "$REPO_DIR" && git fetch -q origin && git reset -q --hard origin/main 2>/dev/null || true )
+  else
+    say "⚠ this host's gh login could not write deploy.yml either"
+  fi
 }
 if [ -f "$DEPLOY_YML" ] && grep -q 'secrets: inherit' "$DEPLOY_YML" 2>/dev/null; then
   # Cross-owner callers (e.g. catomean/* → bitbaum/fleetcrown) cannot inherit.
@@ -230,6 +322,7 @@ else
   LINE="$SLUG|$PORT|$SLUG.$BASE_DOMAIN|$REPO_DIR|.|-|$OWNER|$KIND|$STATUS|$PLAN|$PRICE|$(date -u +%Y-%m-%d)"
   printf '%s\n' "$LINE" >> "$MANIFEST"
   say "appended to $MANIFEST"
+  publish_register_row "$LINE"
 fi
 
 # ------------------------------------------------------------------------ box

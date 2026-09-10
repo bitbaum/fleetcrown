@@ -295,7 +295,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             // during dogfood 2026-06-05 as "GitHub API rejected the create (404)".
             // Existing tokens minted before this change won't pick up the new
             // scope automatically — users must sign out + sign back in to re-mint.
-            authorization: { params: { scope: "read:user user:email repo" } },
+            // `workflow`: without it GitHub refuses to create or update
+            // .github/workflows/* with this token, so kickoff could seed a
+            // starter but never its deploy shim — every fresh site sat with
+            // no CD until someone pushed the file by hand (velokiosk-sep10,
+            // 2026-09-10). Existing sessions keep the old grant until they
+            // sign in with GitHub again.
+            authorization: { params: { scope: "read:user user:email repo workflow" } },
           }),
         ]
       : []),
