@@ -162,6 +162,43 @@ else
 fi
 
 echo
+echo "a repo_path on ANOTHER host is announced, never called drift"
+# dogfood-site-sep10-1201 was scaffolded straight onto the box, so its repo_path
+# is /home/ubuntu/dev/... — a path that cannot exist on the laptop however
+# healthy the fleet is. The gate called it drift and failed pre-push for
+# everyone, on a register row that was correct and a site serving 200. "Missing
+# here" and "belongs elsewhere" are different claims.
+
+G=$(fixture)
+sed -i 's#^petvity|\([^|]*\)|\([^|]*\)|/home/g/dev/petvity|#petvity|\1|\2|/home/ubuntu/dev/petvity|#' \
+  "$TMP/scripts/hetzner/apps.conf"
+if [ -d /home/g/dev/kivvi ]; then
+  OUT=$("$G" 2>&1); RC=$?
+  [ "$RC" = 0 ] || fail "a box-side repo_path must NOT fail the gate (rc=$RC): $OUT"
+  echo "$OUT" | grep -q "another host" || fail "it must be announced, not silently dropped: $OUT"
+  echo "$OUT" | grep -q "petvity" || fail "the announcement must name the app: $OUT"
+  # Matched against the drift FAILURE line, not the bare word — the
+  # announcement itself says "Not drift", which a naive grep reads as a hit.
+  if echo "$OUT" | grep -q "drift, not a bare"; then
+    fail "a path on another host must not be reported as drift: $OUT"
+  fi
+  ok "a repo_path on another host is announced and does not fail the gate"
+
+  # The verdict must speak for what was INSPECTED. Saying "all 16 apps have CI"
+  # while one was never looked at is the absence-reads-as-success shape again,
+  # just one level up: the count itself does the overclaiming.
+  echo "$OUT" | grep -qE "CI: all [0-9]+ inspected apps have it" \
+    || fail "the CI verdict must be scoped to inspected apps: $OUT"
+  insp=$(echo "$OUT" | sed -nE 's/.*CI: all ([0-9]+) inspected apps have it.*/\1/p')
+  tot=$(echo "$OUT" | sed -nE 's/^✓ register: ([0-9]+) entries.*/\1/p')
+  [ -n "$insp" ] && [ -n "$tot" ] && [ "$insp" -lt "$tot" ] \
+    || fail "inspected ($insp) should be fewer than registered ($tot) here: $OUT"
+  ok "the CI/CD verdict counts only apps it actually inspected"
+else
+  ok "off-host case not exercised — the fleet is not checked out here (reported, not skipped silently)"
+fi
+
+echo
 echo "migrations with db=- — botsmann's root cause, and printcraft's after it"
 
 # deploy.sh skips apply-schema.sh entirely when db is '-'. An app that ships

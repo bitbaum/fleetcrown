@@ -90,11 +90,24 @@ echo "✓ register: $total entries, $FIELDS fields each, names and ports unique"
 
 # -------------------------------------------------- half 2: fleet inspection
 # Only meaningful where the sibling checkouts are present.
-missing_ci=""; missing_cd=""; stale=""; silent_schema=""; present=0
+missing_ci=""; missing_cd=""; stale=""; silent_schema=""; elsewhere=""; present=0
 shopt -s nullglob   # so `probe=(dir/[0-9]*.sql)` is EMPTY on no match, not a literal
 while IFS='|' read -r name port domains repo appdir db rest; do
   case "$name" in \#*|"") continue ;; esac
-  if [ ! -d "$repo" ]; then stale="$stale $name"; continue; fi
+  # A repo_path that is not under THIS machine's DEV_ROOT is an address on
+  # another host — a site scaffolded directly on the box keeps /home/ubuntu/... —
+  # so it can never exist here no matter how healthy the fleet is. Calling that
+  # "drift" is the same category error this file's header warns about: judging
+  # state that is not in front of you. dogfood-site-sep10-1201 did exactly that
+  # on 2026-09-10 and failed pre-push for everyone on the laptop, on a register
+  # row that was correct and a site that was serving 200.
+  if [ ! -d "$repo" ]; then
+    case "$repo" in
+      "$DEV_ROOT"/*) stale="$stale $name" ;;
+      *)             elsewhere="$elsewhere $name:$repo" ;;
+    esac
+    continue
+  fi
   present=$((present + 1))
   # "Has CI" means a workflow that actually verifies something — a repo whose
   # only workflow is deploy.yml has a pipeline, not a gate.
@@ -147,6 +160,16 @@ if [ "$present" = 0 ]; then
   exit 0
 fi
 
+# Announced, never silently skipped: these rows are also invisible to the CI and
+# CD counters below, because a repo that is not here cannot be inspected. Saying
+# so is the difference between "we looked and it was fine" and "we never looked",
+# which is the distinction this whole file exists to keep.
+if [ -n "$elsewhere" ]; then
+  echo "· not checkable here — repo_path lives on another host:"
+  for r in $elsewhere; do echo "    ${r%%:*} -> ${r#*:}"; done
+  echo "  Not drift: verify these on the box, not from the laptop."
+fi
+
 # A missing checkout is a REGISTER problem, not a CI problem. Reporting it as
 # "no CI" sent me to add a workflow to a repo that already had one — the real
 # fault was apps.conf pointing at /home/g/dev/s-ink, which does not exist.
@@ -188,9 +211,9 @@ elif [ "$ci_count" -lt "$ci_baseline" ]; then
   echo "✓ CI: $ci_count without it (was $ci_baseline) — lower the baseline:"
   echo "    echo $ci_count > $CI_BASELINE_FILE"
 elif [ "$ci_count" -gt 0 ]; then
-  echo "✓ CI: $ci_count of $total deployed app(s) still without it (at baseline):$missing_ci"
+  echo "✓ CI: $ci_count of $present inspected app(s) still without it (at baseline):$missing_ci"
 else
-  echo "✓ CI: all $total deployed apps have it"
+  echo "✓ CI: all $present inspected apps have it"
 fi
 
 cd_count=$(echo $missing_cd | wc -w | tr -d ' ')
@@ -207,9 +230,9 @@ elif [ "$cd_count" -lt "$cd_baseline" ]; then
   echo "✓ CD: $cd_count without it (was $cd_baseline) — lower the baseline:"
   echo "    echo $cd_count > $CD_BASELINE_FILE"
 elif [ "$cd_count" -gt 0 ]; then
-  echo "✓ CD: $cd_count of $total deployed app(s) still without it (at baseline):$missing_cd"
+  echo "✓ CD: $cd_count of $present inspected app(s) still without it (at baseline):$missing_cd"
 else
-  echo "✓ CD: all $total deployed apps have it"
+  echo "✓ CD: all $present inspected apps have it"
 fi
 
 [ "$failed" = 0 ]
