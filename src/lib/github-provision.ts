@@ -45,6 +45,7 @@ export async function seedTemplate(
   repoName: string,
   templateId: TemplateId,
   values: { name: string; description: string },
+  feedback?: { token: string; appUrl: string },
 ): Promise<boolean> {
   const template = TEMPLATES[templateId];
   if (!template || Object.keys(template.files).length === 0) return true;
@@ -78,7 +79,15 @@ export async function seedTemplate(
 
     const blobs = await Promise.all(
       Object.entries(template.files).map(async ([path, body]) => {
-        const content = renderTemplate(body, values);
+        let content = renderTemplate(body, values);
+        if (path === "src/app/layout.tsx" && feedback) {
+          content =
+            'import Script from "next/script";\n' +
+            content.replace(
+              "{children}</body>",
+              `{children}<Script src={${JSON.stringify(feedback.appUrl.replace(/\/$/, "") + "/widget.js")}} data-fc-project={${JSON.stringify(feedback.token)}} strategy="afterInteractive" /></body>`,
+            );
+        }
         const blobRes = await gh(`${repoPath}/git/blobs`, {
           method: "POST",
           body: JSON.stringify({ content, encoding: "utf-8" }),
@@ -119,6 +128,39 @@ export async function seedTemplate(
   }
 }
 
+/**
+ * Whether main already carries the starter's entry file. Seeding is non-fatal
+ * by contract, so a provision can succeed with a bare repo; the retry path
+ * uses this to re-seed that repo instead of refusing with "already linked".
+ * Unknown (network/auth) reads as seeded — never re-seed on a guess.
+ */
+export async function repoHasStarterFiles(
+  token: string,
+  ownerLogin: string,
+  repoName: string,
+  templateId: TemplateId,
+): Promise<boolean> {
+  const files = Object.keys(TEMPLATES[templateId]?.files ?? {});
+  const marker = files.includes("package.json") ? "package.json" : files[0];
+  if (!marker) return true;
+  try {
+    const res = await fetch(
+      `${GITHUB_API_BASE}/repos/${ownerLogin}/${repoName}/contents/${encodeURIComponent(marker)}`,
+      {
+        signal: AbortSignal.timeout(HTTP_TIMEOUT_SHORT_MS),
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/vnd.github+json",
+          "X-GitHub-Api-Version": "2022-11-28",
+        },
+      },
+    );
+    return res.status !== 404;
+  } catch {
+    return true;
+  }
+}
+
 export type ProvisionResult =
   | { ok: true; repo: ProvisionedRepo; templateSeeded: boolean }
   | { ok: false; status: number; error: string; detail?: string };
@@ -132,6 +174,7 @@ export async function provisionGithubRepo(
     visibility?: "private" | "public";
     initReadme?: boolean;
     template?: TemplateId;
+    feedback?: { token: string; appUrl: string };
   },
 ): Promise<ProvisionResult> {
   const name = repoSlug(opts.name);
@@ -188,10 +231,17 @@ export async function provisionGithubRepo(
   let templateSeeded = true;
   const template = opts.template ?? "bare";
   if (template !== "bare") {
-    templateSeeded = await seedTemplate(token, repo.owner.login, repo.name, template, {
-      name: opts.name,
-      description,
-    });
+    templateSeeded = await seedTemplate(
+      token,
+      repo.owner.login,
+      repo.name,
+      template,
+      {
+        name: opts.name,
+        description,
+      },
+      opts.feedback,
+    );
   }
 
   return { ok: true, repo, templateSeeded };

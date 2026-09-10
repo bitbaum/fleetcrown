@@ -2,15 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import {
-  GitBranch,
-  Terminal,
-  ChevronDown,
-  Loader2,
-  SquareTerminal,
-  UploadCloud,
-  Check,
-} from "lucide-react";
+import { GitBranch, ChevronDown, Loader2, SquareTerminal, UploadCloud, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { postJson } from "@/lib/api/fetch";
 import { fleetSurfaceHref } from "@/lib/fleet-context";
@@ -90,7 +82,6 @@ export function ProjectStatusChips({
   const runtimeLabel = runtimeStateKnown ? formatAgentRuntimeLabel(project, project.liveTab) : "";
   const runtimeStateLabel = working ? `${runtimeLabel} working` : runtimeLabel;
   const git = project.git;
-  const workspaceTab = project.liveTab ?? project.tab;
   const changesLabel = pendingChangesLabel(project);
   const dirtyHelp = git?.dirty
     ? `Pending changes means files were edited in this project but are not saved into Git history yet. Branch: ${git.branch}. In Git, a commit is the checkpoint that records those changes.`
@@ -115,42 +106,6 @@ export function ProjectStatusChips({
     !showAwaitingUser &&
     loop.state === "firing" &&
     (loop.noOpCount ?? 0) >= LOOP_NO_OP_DISPLAY_THRESHOLD;
-
-  // "Focus terminal" brings the project's terminal to the front ON THE USER'S
-  // MACHINE via the runner. The old embedded-PTY route (/control/workspace)
-  // spawned the shell on whatever server serves the app — i.e. the cloud box,
-  // which has neither the repo nor the agent CLI, so it exited instantly. We
-  // focus the local zellij tab instead; if no agent is running there yet, we
-  // launch it first so there's a terminal to focus.
-  const [wsState, setWsState] = useState<"idle" | "working" | "done" | "error">("idle");
-  // Focus can only succeed when there is a zellij tab to focus, or when we can
-  // launch one (agent not running yet + dir + agent known). An agent process
-  // running OUTSIDE zellij (e.g. a background CLI session) has no tab — the
-  // runner replies "tab not found" every time, so offering the chip there is a
-  // guaranteed-fail dead end ("Open terminal" still works from any device).
-  const canFocusTerminal =
-    tabOpen || (!project.agentRunning && Boolean(project.dir) && Boolean(effectiveAgentId));
-  const openWorkspace = async (event: React.MouseEvent) => {
-    event.stopPropagation();
-    if (wsState === "working") return;
-    setWsState("working");
-    try {
-      if (!project.agentRunning && project.dir && effectiveAgentId) {
-        await postJson("/api/agent/launch", {
-          tab: project.tab,
-          dir: project.dir,
-          agent: effectiveAgentId,
-        });
-      } else {
-        await postJson("/api/control/focus-tab", { tab: workspaceTab });
-      }
-      setWsState("done");
-      setTimeout(() => setWsState("idle"), TOAST_MEDIUM_MS);
-    } catch {
-      setWsState("error");
-      setTimeout(() => setWsState("idle"), TOAST_MEDIUM_MS);
-    }
-  };
 
   const quickCommit = async (event: React.MouseEvent) => {
     event.stopPropagation();
@@ -188,7 +143,7 @@ export function ProjectStatusChips({
   // Open terminal must stay reachable even when nothing is running yet.
   // Returning null here hid the chip for not_running projects with no git
   // snapshot — the exact Control rows where operators most need a path into
-  // `/terminal?project=…`. Focus terminal stays gated; this link does not.
+  // `/terminal?project=…`. The terminal handles session setup when needed.
   if (!runtimeLabel && !git && !tabOpen && !clickableWorkspace) return null;
 
   const chips = (
@@ -336,42 +291,12 @@ export function ProjectStatusChips({
         </span>
       )}
 
-      {clickableWorkspace && canFocusTerminal && (
-        <button
-          type="button"
-          onClick={openWorkspace}
-          disabled={wsState === "working"}
-          title={`Bring ${workspaceTab}'s terminal to the front on your machine (launches the agent there if it isn't running). Requires Fleet Runner online.`}
-          className={
-            compact
-              ? cn(
-                  "transition-colors",
-                  "text-status-positive/70 hover:text-status-positive disabled:opacity-60",
-                )
-              : statusChipClass("positive", true)
-          }
-        >
-          {!compact &&
-            (wsState === "working" ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Terminal className="h-3.5 w-3.5" />
-            ))}
-          {wsState === "done" ? "Focused ✓" : wsState === "error" ? "Failed" : "Focus terminal"}
-        </button>
-      )}
-
-      {/* Two different terminals, so two different chips. "Focus terminal"
-          raises the window on the user's own machine and needs Fleet Runner;
-          this one opens the session inside FleetCrown, which works from any
-          device. Control could reach the first but never the second — the
-          fastest path from a project card to watching its agent was to
-          navigate to /terminal and find the tab by hand. */}
+      {/* Address the project; Terminal resolves its worker session. */}
       {clickableWorkspace && (
         <Link
           href={fleetSurfaceHref("terminal", project.tab)}
           onClick={(event) => event.stopPropagation()}
-          title={`Open ${workspaceTab}'s session in FleetCrown's terminal — works from any device, no Fleet Runner needed.`}
+          title="Open this project’s terminal. Running an agent requires an eligible cloud builder or your connected Fleet Runner."
           className={
             compact
               ? "text-text-tertiary transition-colors hover:text-text-primary"

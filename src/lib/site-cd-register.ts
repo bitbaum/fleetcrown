@@ -7,6 +7,12 @@
  * live site with no registration.
  */
 import path from "path";
+import {
+  describeSiteDeployment,
+  siteDeploymentIsLive,
+  type SiteDeploymentRun,
+  type SiteDeploymentStatus,
+} from "@/lib/site-cd-deployment";
 import { spawn } from "child_process";
 import { GITHUB_API_BASE } from "@/lib/github-api";
 import { HTTP_TIMEOUT_SHORT_MS } from "@/lib/constants/time";
@@ -43,6 +49,8 @@ export type SiteCdRegisterResult = {
   reason: string | null;
   /** Which local gate blocked auto-register, when applicable. */
   gate: RegisterSiteGate | null;
+  deploymentStatus?: "pending" | "failed" | "live";
+  deploymentUrl?: string | null;
 };
 
 async function ghJson(
@@ -119,6 +127,7 @@ function runRegisterSiteScript(args: {
   title: string;
   scriptPath: string;
   deployKeyPath: string;
+  githubToken: string;
 }): Promise<{ ok: boolean; output: string }> {
   const script = args.scriptPath;
   const repoRoot = studioRepoRoot();
@@ -133,15 +142,17 @@ function runRegisterSiteScript(args: {
         args.repoFullName,
         "--title",
         args.title,
-        // First deploy often fails on a fresh starter — registration + URL matter more.
+        // CI owns builds. Dispatch only after registration, secret and env exist.
         "--no-deploy",
       ],
       {
+        detached: true,
         env: {
           ...process.env,
           FLEETCROWN_REPO_ROOT: repoRoot,
           DEV_ROOT: devRoot,
           DEPLOY_KEY_PATH: args.deployKeyPath,
+          GH_TOKEN: args.githubToken,
         },
         // register-site resolves FC_REPO from env; cwd is only a fallback.
         cwd: path.dirname(path.dirname(script)),
@@ -154,10 +165,21 @@ function runRegisterSiteScript(args: {
     child.stderr.on("data", (d: Buffer) => {
       output += d.toString();
     });
+    const timeout = setTimeout(() => {
+      if (child.pid) {
+        try {
+          process.kill(-child.pid, "SIGKILL");
+        } catch {
+          /* exited */
+        }
+      }
+    }, 90_000);
     child.on("error", (err) => {
+      clearTimeout(timeout);
       resolve({ ok: false, output: String(err) });
     });
     child.on("close", (code) => {
+      clearTimeout(timeout);
       resolve({ ok: code === 0, output });
     });
   });
@@ -240,6 +262,7 @@ export async function registerProjectSiteCd(input: {
     title: input.projectName,
     scriptPath: probe.scriptPath!,
     deployKeyPath: probe.deployKeyPath!,
+    githubToken: input.githubToken,
   });
 
   if (!ran.ok) {
@@ -261,27 +284,111 @@ export async function registerProjectSiteCd(input: {
     };
   }
 
-  await setProjectLiveUrl(input.userId, input.userProjectId, plan.liveUrl);
-  await upsertEntityAttribute(
-    input.userId,
-    input.entityProjectId,
-    PROJECT_ATTR.PRODUCTION_URL,
-    plan.liveUrl,
+  return checkProjectSiteDeployment(input, true);
+}
+
+/** A workflow success on the current main commit plus a public response is
+ * evidence of a deployment. A registered hostname alone is not a live site. */
+export async function checkProjectSiteDeployment(
+  input: {
+    userId: string;
+    entityProjectId: string;
+    userProjectId: string;
+    projectName: string;
+    repoFullName: string;
+    githubToken: string;
+  },
+  dispatch = false,
+): Promise<SiteCdRegisterResult | { ok: false; error: string; code: string }> {
+  const plan = planSiteCd(input);
+  if (!plan.ok) return plan;
+  const base = `/repos/${input.repoFullName}`;
+  const head = await ghJson(input.githubToken, `${base}/commits/main`);
+  const sha = (head.json as { sha?: string } | null)?.sha;
+  if (!head.ok || !sha)
+    return {
+      ok: false,
+      error: "Cannot read the repository's main commit.",
+      code: "github-unavailable",
+    };
+  // No head_sha filter: a run that is still queued for an OLDER commit, or one
+  // GitHub has not materialised yet for a dispatch sent seconds ago, must read
+  // as "starting", not "no deployment exists". The first GET after kickoff
+  // used to land in that gap and stop polling on a false failure.
+  const runs = await ghJson(
+    input.githubToken,
+    `${base}/actions/workflows/deploy.yml/runs?per_page=20`,
   );
+  const workflowMissing = runs.status === 404;
+  if (!runs.ok && !workflowMissing) {
+    return {
+      ok: false,
+      error: `Cannot read deployment status (GitHub HTTP ${runs.status}). Check repository Actions access and retry.`,
+      code: "github-unavailable",
+    };
+  }
+  const allRuns =
+    (runs.json as { workflow_runs?: SiteDeploymentRun[] } | null)?.workflow_runs ?? [];
+  const described = describeSiteDeployment(allRuns, sha, { dispatch, workflowMissing });
+  const { run, inFlight } = described;
+  let status: SiteDeploymentStatus = described.status;
+  let reason = described.reason;
+  if (run?.status === "completed" && run.conclusion === "success") {
+    try {
+      const response = await fetch(plan.liveUrl, {
+        signal: AbortSignal.timeout(10_000),
+        cache: "no-store",
+        redirect: "manual",
+      });
+      if (siteDeploymentIsLive(run, response.status)) status = "live";
+      else {
+        status = "failed";
+        reason = `Deployment completed, but the public site returned HTTP ${response.status}.`;
+      }
+    } catch {
+      status = "failed";
+      reason = "Deployment completed, but the public site is not reachable yet.";
+    }
+  }
+  if (dispatch && !inFlight && (!run || status === "failed")) {
+    const triggered = await ghJson(
+      input.githubToken,
+      `${base}/actions/workflows/deploy.yml/dispatches`,
+      {
+        method: "POST",
+        body: JSON.stringify({ ref: "main" }),
+      },
+    );
+    status = triggered.ok ? "pending" : "failed";
+    reason = triggered.ok
+      ? "Deployment queued. The live link appears after deployment and a public check pass."
+      : `Could not start deployment (GitHub HTTP ${triggered.status}). Retry registration.`;
+  }
+  if (status === "live") {
+    await setProjectLiveUrl(input.userId, input.userProjectId, plan.liveUrl);
+    await upsertEntityAttribute(
+      input.userId,
+      input.entityProjectId,
+      PROJECT_ATTR.PRODUCTION_URL,
+      plan.liveUrl,
+    );
+  }
   await upsertEntityAttribute(
     input.userId,
     input.entityProjectId,
     PROJECT_ATTR.NEXT_STEP,
-    `Live site registered: ${plan.liveUrl} — push to main deploys when CI is green.`,
+    status === "live" ? `Live site: ${plan.liveUrl}` : reason,
   );
-
+  const registered = Boolean(run) || inFlight || (dispatch && status !== "failed");
   return {
     plan,
-    deployYmlSeeded,
-    registered: true,
-    liveUrl: plan.liveUrl,
+    deployYmlSeeded: true,
+    registered,
+    liveUrl: status === "live" ? plan.liveUrl : null,
     command: null,
-    reason: null,
+    reason: status === "live" ? null : reason,
     gate: null,
+    deploymentStatus: status,
+    deploymentUrl: run?.html_url ?? null,
   };
 }

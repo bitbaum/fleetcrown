@@ -113,6 +113,7 @@ export async function getCurrentClaudeSessionForProject(
   userId: string,
   projectKey: string,
   now = new Date(),
+  projectId?: string,
 ): Promise<Pick<AgentSessionRow, "sessionId" | "cwd" | "endedAt" | "startedAt"> | null> {
   const cutoff = new Date(now.getTime() - OPEN_TURN_TTL_MS);
   const fields = {
@@ -123,7 +124,7 @@ export async function getCurrentClaudeSessionForProject(
   };
   const common = and(
     eq(agentSessions.userId, userId),
-    eq(agentSessions.projectKey, projectKey),
+    projectId ? eq(agentSessions.projectId, projectId) : eq(agentSessions.projectKey, projectKey),
     eq(agentSessions.agent, "claude"),
   );
 

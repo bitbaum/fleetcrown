@@ -22,6 +22,8 @@ import { useRouter } from "next/navigation";
 import { AlertCircle, Check, Loader2, Lock, Rocket, Zap } from "lucide-react";
 import { postJson } from "@/lib/api/fetch";
 import { fleetSurfaceHref } from "@/lib/fleet-context";
+import { useSiteDeployment } from "@/hooks/use-site-deployment";
+import { SiteDeploymentStatus } from "./SiteDeploymentStatus";
 import { LONG_TEXT_MAX } from "@/lib/constants";
 import {
   KICKOFF_STEP_LABEL,
@@ -74,6 +76,7 @@ export function ProjectKickoff({
   const [steps, setSteps] = useState<StepRun[] | null>(null);
   const [running, setRunning] = useState(false);
   const [finished, setFinished] = useState(false);
+  const { deployment, setDeployment } = useSiteDeployment(projectId);
 
   const source = text.trim() || null;
   const plan = planKickoff({
@@ -150,6 +153,20 @@ export function ProjectKickoff({
         router.refresh();
         return;
       }
+      if (json.templateSeeded === false) {
+        // The repo exists but is bare: nothing to deploy, nothing for an agent
+        // to build on. Registering CD here would only produce a failed Deploy.
+        // Try again re-seeds the same repo (provision detects the bare repo).
+        mark(
+          "repo",
+          "failed",
+          "Repository created, but the starter files were not written. Try again to add them.",
+        );
+        setRunning(false);
+        setFinished(true);
+        router.refresh();
+        return;
+      }
       const repo = json.repo as { full_name?: string } | undefined;
       const template = typeof json.template === "string" ? json.template : undefined;
       // Same flow, next beat: wire Hetzner CD (or return the one box command).
@@ -164,6 +181,8 @@ export function ProjectKickoff({
           ok?: boolean;
           registered?: boolean;
           liveUrl?: string | null;
+          deploymentStatus?: "pending" | "failed" | "live";
+          deploymentUrl?: string | null;
           predictedLiveUrl?: string;
           command?: string | null;
           reason?: string | null;
@@ -171,6 +190,7 @@ export function ProjectKickoff({
           error?: string;
         };
         if (cdRes.ok && cd.ok) {
+          setDeployment(cd);
           if (cd.registered && cd.liveUrl) {
             siteNote = `${repo?.full_name ?? "repo"} · live ${cd.liveUrl}`;
           } else if (cd.reason || cd.command) {
@@ -210,7 +230,7 @@ export function ProjectKickoff({
       } else if (dispatched.warning === "runner-offline") {
         mark("dispatch", "done", "queued — starts when a runner connects");
       } else {
-        mark("dispatch", "done", "agent working");
+        mark("dispatch", "done", "request accepted — follow progress in Control");
       }
     }
 
@@ -309,7 +329,7 @@ export function ProjectKickoff({
           )}
           <span className="text-xs text-text-secondary">
             {wantRepo
-              ? "Starter from your stack, then bitbaum CD registration (live URL or one box command — never a fake site)."
+              ? "Create a starter repository. Eligible cloud accounts also get automatic site deployment; other accounts connect their own builder."
               : "Skipped — an agent can still plan, but it has nowhere to write code."}
           </span>
         </div>
@@ -359,6 +379,8 @@ export function ProjectKickoff({
           ))}
         </ol>
       )}
+
+      <SiteDeploymentStatus deployment={deployment} />
 
       {finished && (
         <div className="space-y-2 border-t border-border-subtle pt-3">

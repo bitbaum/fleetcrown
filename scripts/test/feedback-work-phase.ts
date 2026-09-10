@@ -8,6 +8,11 @@
 //    Done is only FEEDBACK_STATUS.RESOLVED (operator Resolve / live stamp).
 //    Calling Done on inject-or-run-finish alone is the closed-loop lie.
 import assert from "node:assert/strict";
+import { findInjectProject } from "../../src/lib/inject-project";
+import {
+  composeFeedbackFixPrompt,
+  composeFeedbackBatchFixPrompt,
+} from "../../src/lib/feedback/compose-dispatch";
 import {
   deriveFeedbackWork,
   FEEDBACK_WORK_PHASE,
@@ -205,5 +210,29 @@ assert.equal(feedbackInjectAccepted(200, { runId: "run-1" }), true);
 assert.equal(feedbackInjectAccepted(200, { runId: "run-1", blocked: true }), false);
 assert.equal(feedbackInjectAccepted(200, {}), false);
 assert.equal(feedbackInjectAccepted(500, { runId: "run-1" }), false);
+
+// A renamed project and a same-named sibling must never redirect Implement.
+const projects = [
+  { name: "old-name", entityProjectId: "other" },
+  { name: "renamed", entityProjectId: "target" },
+];
+assert.equal(findInjectProject(projects, "old-name", "target")?.name, "renamed");
+assert.equal(findInjectProject(projects, "old-name", "missing"), undefined);
+assert.equal(findInjectProject(projects, "RENAMED")?.entityProjectId, "target");
+const report = {
+  suggestion: "Change heading",
+  duplicateCount: 1,
+  url: "https://example.com",
+  page: null,
+  scope: null,
+  selectedElements: null,
+};
+for (const prompt of [
+  composeFeedbackFixPrompt(report, "Site"),
+  composeFeedbackBatchFixPrompt([report, report], "Site"),
+]) {
+  assert.match(prompt, /normal PR\/merge\/deploy path/);
+  assert.match(prompt, /Leave feedback resolution to the operator/);
+}
 
 console.log("✓ feedback work-phase tests passed");

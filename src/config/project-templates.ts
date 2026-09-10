@@ -24,9 +24,9 @@
 export const PROVISION_TEMPLATES = [
   {
     id: "nextjs-tailwind",
-    label: "Next.js 15 + Tailwind v4",
+    label: "Next.js 16 + Tailwind v4",
     description:
-      "App Router, TypeScript, Tailwind v4. `npm install && npm run dev` and you're live.",
+      "App Router, TypeScript, Tailwind v4, standalone output. `pnpm install && pnpm dev` and you're live.",
     keywords: ["next.js", "nextjs", "react", "tailwind", "vercel", "shadcn"],
   },
   {

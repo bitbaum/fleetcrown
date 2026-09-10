@@ -2,10 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import os from "os";
 import path from "path";
+import { upsertWidgetToken } from "@/db/queries/widget-tokens";
+import { appUrl } from "@/lib/email";
+import { planSiteCd } from "@/lib/site-cd";
 import { getSessionUserId } from "@/lib/session";
 import { readIdParam, readJsonBody } from "@/lib/api/route-helpers";
 import { getGithubToken } from "@/lib/github-token";
-import { provisionGithubRepo, repoSlug } from "@/lib/github-provision";
+import {
+  parseGithubRepoUrl,
+  provisionGithubRepo,
+  repoHasStarterFiles,
+  repoSlug,
+  seedTemplate,
+} from "@/lib/github-provision";
 import { getProjectCore, patchProject } from "@/db/queries/projects";
 import { getUserProjectByEntityId, updateUserProject } from "@/db/queries/user-projects";
 import { fetchAttributesByEntityIds } from "@/db/queries/utils";
@@ -48,12 +57,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const project = await getProjectCore(userId, id);
   if (!project) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (project.gitUrl) {
-    return NextResponse.json(
-      { error: "Already provisioned — this project already has a repo linked." },
-      { status: 409 },
-    );
-  }
 
   const token = await getGithubToken(userId);
   if (!token) {
@@ -69,10 +72,70 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     template = inferProvisionTemplate(attrs[PROJECT_ATTR.STACK]);
   }
 
+  // An already-linked repo is refused unless it is bare: seeding is non-fatal
+  // inside provision, so a retry can meet a repo that exists with nothing in
+  // it. That repo has nothing to deploy and nothing for an agent to build on;
+  // re-seed it rather than refusing as "already linked".
+  const linked = project.gitUrl ? parseGithubRepoUrl(project.gitUrl) : null;
+  const reseed =
+    linked && template !== "bare"
+      ? !(await repoHasStarterFiles(token, linked.owner, linked.repo, template))
+      : false;
+  if (project.gitUrl && !reseed) {
+    return NextResponse.json(
+      { error: "Already provisioned — this project already has a repo linked." },
+      { status: 409 },
+    );
+  }
+
+  // The starter carries its own project-scoped feedback embed from first ship.
+  // Restrict ingest to the planned site origin without claiming it is live yet.
+  const cdPlan = planSiteCd({
+    projectName: project.name,
+    repoFullName: `pending/${repoSlug(project.name)}`,
+    template,
+  });
+  const widget =
+    template === "nextjs-tailwind" && cdPlan.ok
+      ? await upsertWidgetToken(userId, id, { origins: [cdPlan.liveUrl] })
+      : null;
+  const feedback = widget ? { token: widget.token, appUrl: appUrl() } : undefined;
+  const dirPath = path.join(DEV_ROOT, repoSlug(project.name));
+
+  if (linked && reseed) {
+    const seeded = await seedTemplate(
+      token,
+      linked.owner,
+      linked.repo,
+      template,
+      { name: project.name, description: `Started from FleetCrown · ${project.name}` },
+      feedback,
+    );
+    return NextResponse.json(
+      {
+        ok: seeded,
+        error: seeded
+          ? undefined
+          : "Starter files could not be written to the repository. Try again.",
+        repo: {
+          name: linked.repo,
+          full_name: `${linked.owner}/${linked.repo}`,
+          gitUrl: project.gitUrl,
+        },
+        dirPath,
+        template,
+        templateSeeded: seeded,
+        reseeded: true,
+      },
+      { status: seeded ? 200 : 502 },
+    );
+  }
+
   const result = await provisionGithubRepo(token, {
     name: project.name,
     visibility: dataOrResp.visibility,
     template,
+    feedback,
   });
   if (!result.ok) {
     return NextResponse.json(
@@ -87,7 +150,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   // The entity patch comes last: it only mirrors gitUrl for the dossier and
   // the "already provisioned" 409 guard, so a crash before it just means the
   // guard doesn't trip — the project itself is already fully dispatchable.
-  const dirPath = path.join(DEV_ROOT, repoSlug(project.name));
   const up = await getUserProjectByEntityId(userId, id);
   if (up) await updateUserProject(up.id, userId, { gitUrl: result.repo.html_url, dirPath });
   await patchProject(userId, id, { gitUrl: result.repo.html_url });

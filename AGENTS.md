@@ -1,19 +1,24 @@
 # AGENTS.md — FleetCrown
 
+Read [bitbaum/fleet AGENTS.md](https://github.com/bitbaum/fleet/blob/main/AGENTS.md)
+and the registers it names before working here.
+
 Operational quick-reference for agents working in this repo. Deep conventions
 (design system, SSOT rules, view map) live in `CLAUDE.md`; read it too.
 
 ## What this is
 
-FleetCrown — a personal life OS and multi-user SaaS for commanding AI agent
-fleets across projects. Users sign in (GitHub OAuth), register projects, and
-launch/monitor agents from one dashboard.
+FleetCrown is an independent product for building and changing projects with AI
+agents: brief → repository → deployed result → feedback → verified change.
+OrangeCat linking is optional. Execution access is defined in
+`src/lib/execution-access.ts`; project identity is not a terminal tab name.
+A queued run or successful agent turn does not prove a deployment.
 
 ## Stack
 
 - **Next.js 16** (App Router, Server Components, Server Actions)
 - **TypeScript strict** — no `any` without justification
-- **Tailwind CSS 4 + shadcn/ui** — always dark (`.dark` on `html`)
+- **Tailwind CSS 4 + shadcn/ui** — dark by default, with supported light mode
 - **Drizzle ORM** — schema is SSOT for types
 - **PostgreSQL 17** — self-hosted, `fleetcrown` database
 

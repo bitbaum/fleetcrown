@@ -63,7 +63,16 @@ if [ "$DB" != "-" ]; then
 fi
 
 echo "=== build $NAME ($SRC) ==="
-SELF_HOST=1 pnpm run build
+# Use the same manager as dependency installation. New sites use npm; invoking
+# pnpm here used to fail with exit 127 after a successful npm ci in Actions.
+BUILD_PACKAGE_MANAGER="${BUILD_PACKAGE_MANAGER:-}"
+if [ -z "$BUILD_PACKAGE_MANAGER" ]; then
+  if [ -f "$SRC/pnpm-lock.yaml" ] || [ -f "$REPO/pnpm-lock.yaml" ]; then BUILD_PACKAGE_MANAGER=pnpm
+  elif [ -f "$SRC/yarn.lock" ] || [ -f "$REPO/yarn.lock" ]; then BUILD_PACKAGE_MANAGER=yarn
+  else BUILD_PACKAGE_MANAGER=npm; fi
+fi
+case "$BUILD_PACKAGE_MANAGER" in npm|pnpm|yarn) ;; *) echo "ERROR: unsupported package manager"; exit 1 ;; esac
+SELF_HOST=1 "$BUILD_PACKAGE_MANAGER" run build
 
 ST="$SRC/.next/standalone"
 [ -d "$ST" ] || { echo "ERROR: no standalone output — set output:'standalone' in next.config"; exit 1; }

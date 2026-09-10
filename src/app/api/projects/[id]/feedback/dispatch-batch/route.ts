@@ -5,6 +5,7 @@ import { getProjectCore } from "@/db/queries/projects";
 import { listProjectFeedback, markFeedbackDispatchedBulk } from "@/db/queries/site-feedback";
 import { injectPrompt } from "@/lib/inject-core";
 import { FEEDBACK_SOURCE, FEEDBACK_STATUS } from "@/lib/constants/statuses";
+import { feedbackInjectAccepted } from "@/lib/feedback/dispatch-accept";
 import { composeFeedbackBatchFixPrompt } from "@/lib/feedback/compose-dispatch";
 
 /**
@@ -46,16 +47,26 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const prompt = composeFeedbackBatchFixPrompt(items, project.name, dataOrResp.note || undefined);
   const { status, body } = await injectPrompt(
-    { tab: project.name, customPrompt: prompt, notifyOnClose: true },
+    {
+      tab: project.name,
+      projectId: idOrResp,
+      allowHostedFallback: false,
+      customPrompt: prompt,
+      notifyOnClose: true,
+    },
     userId,
   );
-  if (status < 400) {
-    const runId = typeof body.runId === "string" ? body.runId : undefined;
+  const accepted = feedbackInjectAccepted(status, body);
+  if (accepted) {
+    const runId = body.runId;
     await markFeedbackDispatchedBulk(
       userId,
       items.map((f) => f.id),
       runId,
     );
   }
-  return NextResponse.json({ ...body, dispatchedCount: items.length }, { status });
+  return NextResponse.json(
+    { ...body, dispatchedCount: accepted ? items.length : 0 },
+    { status: accepted || body.blocked ? status : status < 400 ? 502 : status },
+  );
 }

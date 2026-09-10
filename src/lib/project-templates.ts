@@ -14,6 +14,8 @@
 
 import { APP_URL } from "@/config/brand";
 import { PROVISION_TEMPLATES, type ProvisionTemplateId } from "@/config/project-templates";
+import { STARTER_LOCK_FILE } from "@/lib/starter-locks/config";
+import { NEXTJS_TAILWIND_PNPM_LOCK } from "@/lib/starter-locks/nextjs-tailwind.generated";
 
 /** Ids + labels come from the light config so pickers can import them without
  *  pulling every starter's file bodies into their bundle. */
@@ -41,9 +43,9 @@ const NEXTJS_PAGE_TSX = `export default function Home() {
   return (
     <main className="min-h-screen flex flex-col items-center justify-center p-8">
       <div className="max-w-2xl text-center space-y-4">
-        <h1 className="text-4xl font-bold tracking-tight">{{NAME}}</h1>
+        <h1 className="text-4xl font-bold tracking-tight">{ {{NAME_JSON}} }</h1>
         <p className="text-lg text-gray-600 dark:text-gray-400">
-          {{DESCRIPTION}}
+          { {{DESCRIPTION_JSON}} }
         </p>
         <p className="text-sm text-gray-500 mt-8">
           Edit <code className="px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 font-mono text-xs">src/app/page.tsx</code> to get started.
@@ -58,8 +60,8 @@ const NEXTJS_LAYOUT_TSX = `import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "{{NAME}}",
-  description: "{{DESCRIPTION}}",
+  title: {{NAME_JSON}},
+  description: {{DESCRIPTION_JSON}},
 };
 
 export default function RootLayout({
@@ -87,17 +89,18 @@ const NEXTJS_GLOBALS_CSS = `@import "tailwindcss";
 `;
 
 const NEXTJS_PACKAGE_JSON = `{
-  "name": "{{NAME}}",
+  "name": {{SLUG_JSON}},
   "version": "0.1.0",
+  "packageManager": "pnpm@11.25.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "next": "^15.0.0",
+    "next": "16.3.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
@@ -138,7 +141,7 @@ const NEXTJS_TSCONFIG = `{
 const NEXTJS_NEXT_CONFIG = `import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Add your config here. See https://nextjs.org/docs/app/api-reference/next-config-js
+  output: "standalone",
 };
 
 export default nextConfig;
@@ -193,7 +196,7 @@ const NEXTJS_README = `# {{NAME}}
 
 ## Stack
 
-- [Next.js 15](https://nextjs.org) (App Router, Server Components)
+- [Next.js 16](https://nextjs.org) (App Router, Server Components)
 - [Tailwind CSS v4](https://tailwindcss.com)
 - TypeScript
 
@@ -202,8 +205,8 @@ const NEXTJS_README = `# {{NAME}}
 \`\`\`bash
 git clone <this-repo-url>
 cd {{NAME}}
-npm install
-npm run dev
+pnpm install
+pnpm dev
 \`\`\`
 
 Open [http://localhost:3000](http://localhost:3000).
@@ -221,8 +224,8 @@ Edit \`src/app/page.tsx\` to make it yours. Tailwind classes work out of the box
 
 ## What's next
 
-- Add a database: \`npm install drizzle-orm postgres\` + see [Drizzle docs](https://orm.drizzle.team)
-- Add auth: \`npm install next-auth@beta\` + see [Auth.js docs](https://authjs.dev)
+- Add a database: \`pnpm add drizzle-orm postgres\` + see [Drizzle docs](https://orm.drizzle.team)
+- Add auth: \`pnpm add next-auth@beta\` + see [Auth.js docs](https://authjs.dev)
 - Local/self-host: build, then run \`next start\` behind your reverse proxy
 - Live site on bitbaum (FleetCrown CD): after kickoff provision, register-cd
   seeds deploy.yml and runs (or returns) \`scripts/hetzner/register-site.sh\` —
@@ -370,7 +373,7 @@ const app = new Hono<{ Bindings: Bindings }>();
 app.get("/", (c) =>
   c.json({
     name: "{{NAME}}",
-    description: "{{DESCRIPTION}}",
+    description: {{DESCRIPTION_JSON}},
     status: "ok",
   }),
 );
@@ -534,10 +537,13 @@ const TEMPLATE_BUILDS: Record<TemplateId, TemplateBuild> = {
       "src/app/page.tsx": NEXTJS_PAGE_TSX,
       "src/app/layout.tsx": NEXTJS_LAYOUT_TSX,
       "src/app/globals.css": NEXTJS_GLOBALS_CSS,
+      // Resolved once by scripts/templates/refresh-starter-lock.ts: the deploy
+      // workflow installs with --frozen-lockfile and refuses a repo without one.
+      [STARTER_LOCK_FILE]: NEXTJS_TAILWIND_PNPM_LOCK,
     },
-    infra: ["npm install", "Database (Postgres via Drizzle, or SQLite)", "Dev server on :3000"],
+    infra: ["pnpm install", "Database (Postgres via Drizzle, or SQLite)", "Dev server on :3000"],
     firstTask:
-      'Set up this Next.js 15 project "{{NAME}}" end to end so it runs locally: run `npm install`; if the project needs persistence, add a database (Drizzle ORM + a local Postgres, or SQLite for a quick start), define an initial schema and migration, and create a `.env.local` with the connection string (never commit it); then start the dev server with `npm run dev`. Confirm it builds and renders at http://localhost:3000, then summarize what you set up and how to run it.',
+      'Set up this Next.js 16 project "{{NAME}}" end to end so it runs locally: run `pnpm install` (the repo ships a pnpm lockfile — do not switch package managers); if the project needs persistence, add a database (Drizzle ORM + a local Postgres, or SQLite for a quick start), define an initial schema and migration, and create a `.env.local` with the connection string (never commit it); then start the dev server with `pnpm dev`. Confirm it builds and renders at http://localhost:3000, then summarize what you set up and how to run it.',
   },
   "python-fastapi": {
     files: {
@@ -598,7 +604,20 @@ export function renderTemplate(
   content: string,
   values: { name: string; description: string },
 ): string {
-  return content
-    .replaceAll("{{NAME}}", values.name)
-    .replaceAll("{{DESCRIPTION}}", values.description);
+  const replacements: Record<string, string> = {
+    NAME: values.name,
+    DESCRIPTION: values.description,
+    NAME_JSON: JSON.stringify(values.name),
+    DESCRIPTION_JSON: JSON.stringify(values.description),
+    SLUG_JSON: JSON.stringify(
+      values.name
+        .toLowerCase()
+        .replace(/[^a-z0-9._-]+/g, "-")
+        .replace(/^-+|-+$/g, ""),
+    ),
+  };
+  return content.replace(
+    /\{\{(NAME|DESCRIPTION|NAME_JSON|DESCRIPTION_JSON|SLUG_JSON)\}\}/g,
+    (placeholder, key: string) => replacements[key] ?? placeholder,
+  );
 }
