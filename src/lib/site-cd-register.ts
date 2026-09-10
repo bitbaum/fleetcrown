@@ -15,7 +15,6 @@ import { upsertEntityAttribute } from "@/db/queries/utils";
 import { PROJECT_ATTR } from "@/config/project-attrs";
 import { DEPLOY_WORKFLOW_PATH, planSiteCd, type SiteCdPlan } from "@/lib/site-cd";
 import {
-  canRunRegisterSiteLocally,
   probeRegisterSiteLocally,
   studioDevRoot,
   studioRepoRoot,
