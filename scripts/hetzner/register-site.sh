@@ -160,7 +160,16 @@ push_deploy_yml() {
     else
       git -c user.name='Cato' -c user.email='catomean@users.noreply.github.com' \
         commit -m "$msg"
-      git push -u origin HEAD
+      # Contents API / another register may have landed the same fix first.
+      if ! git push -u origin HEAD; then
+        git fetch origin HEAD 2>/dev/null || git fetch origin
+        if git pull --rebase --autostash origin HEAD 2>/dev/null \
+          || git pull --rebase --autostash origin main 2>/dev/null; then
+          git push -u origin HEAD || say "⚠ deploy.yml push still blocked — remote may already have the shim"
+        else
+          say "⚠ deploy.yml commit kept local; remote already has a newer shim — continuing"
+        fi
+      fi
     fi
   )
 }
@@ -171,7 +180,7 @@ if [ -f "$DEPLOY_YML" ] && grep -q 'secrets: inherit' "$DEPLOY_YML" 2>/dev/null;
   else
     write_deploy_yml
     push_deploy_yml "fix: pass HETZNER_SSH_PRIVATE_KEY explicitly for cross-owner deploy"
-    say "repaired deploy.yml secrets mapping and pushed"
+    say "repaired deploy.yml secrets mapping (push best-effort)"
   fi
 elif [ -f "$DEPLOY_YML" ]; then
   say "already present"
