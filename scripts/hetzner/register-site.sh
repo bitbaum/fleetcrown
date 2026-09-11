@@ -199,9 +199,22 @@ say "manifest $MANIFEST"
 
 # ----------------------------------------------------------------- checkout
 echo "→ checkout"
+# canonical_repo <owner/name>: the name GitHub resolves it to today. A repo
+# transferred to another owner keeps answering under its old name, and the
+# checkout's remote may carry either — comparing the two as strings called a
+# legitimate checkout "another repository" after kaffeeklappe-sep11 moved
+# from catomean to bitbaum (2026-09-11). Falls back to the input when offline.
+canonical_repo() {
+  local n
+  n=$(env -u GH_TOKEN -u GITHUB_TOKEN gh api "repos/$1" --jq .full_name 2>/dev/null \
+      || gh api "repos/$1" --jq .full_name 2>/dev/null || true)
+  printf '%s' "${n:-$1}"
+}
 if [ -e "$REPO_DIR" ]; then
-  actual_repo=$(git -C "$REPO_DIR" remote get-url origin | sed -E 's#^https://github.com/##; s#^git@github.com:##; s#\.git$##')
-  [ "$actual_repo" = "$GH_REPO" ] || { echo "ERROR: existing checkout belongs to another repository" >&2; exit 1; }
+  actual_repo=$(git -C "$REPO_DIR" remote get-url origin | sed -E 's#^https://([^@/]+@)?github.com/##; s#^git@github.com:##; s#\.git$##')
+  if [ "$actual_repo" != "$GH_REPO" ] && [ "$(canonical_repo "$actual_repo")" != "$(canonical_repo "$GH_REPO")" ]; then
+    echo "ERROR: existing checkout belongs to another repository ($actual_repo, expected $GH_REPO)" >&2; exit 1
+  fi
   say "exists $REPO_DIR — leaving contents alone"
 else
   run "gh repo clone '$GH_REPO' '$REPO_DIR'"
