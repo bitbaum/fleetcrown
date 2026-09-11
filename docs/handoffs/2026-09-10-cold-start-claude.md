@@ -387,3 +387,39 @@ transport half of 6 (`projectKey` inside the runner transport), 7 (scheduled
 Audit workflow). Item 3 (refuse a claim whose directory does not exist locally)
 is moot for routing — the lock keeps box-rooted projects on the box — and
 remains a defensive nicety in the desktop bundle.
+
+### "Do it all" round (2026-09-11, 07:30–10:30 UTC)
+
+Everything on the open list that could be shipped was shipped and walked:
+
+| Item | Change | Evidence |
+| --- | --- | --- |
+| Agent PRs waited for a human | site-template ships `auto-merge.yml`; register seeds `ci.yml` + `auto-merge.yml` via the Contents API (#612, #625, #629) | kaffeeklappe-sep11 PR #4 (agent, "note Twint payment") merged by the site's own sweep at 10:22 with no human; the line is live and the report is resolved |
+| Inbox "Working now" forever | Implement prompt counts a green PR handed to auto-merge as shipped; agent ends with `status: ready` (#612) | run a1de2ca9 closed `completed` on its own after the handoff; inbox shows Check live |
+| New project hidden below the fold | Add navigates to the project page; list sorts a project created within a day first (#612) | test in `projects-display.ts` |
+| Starter favicon 404, `.nvmrc` | starter ships `app/icon.svg` and `.nvmrc`; template CI defaults `.nvmrc` for older sites (#612, #629) | CI on kaffeeklappe main green with the refreshed workflow |
+| Durable register never fast-forwarded | slug-keyed "unpublished" check (#612) | register output: "durable register fast-forwarded to origin/main" |
+| Watchdog seeded from the release register | reads the register it just wrote to (#607) | `/opt/monitoring/targets.conf` after registration |
+| Laptop runner launched into a box-only dir | non-box runner refuses a claim whose directory is not local (#614) | desktop build green; ships with the next runner release |
+| CI on main cancelling itself under bursts | fleet sweep re-arms CI only when no run exists for the new tip (bitbaum/fleet #44) | 19 sweep tests |
+| Daily Audit red since 09-07 | two transitive advisories pinned in `pnpm-workspace.yaml` (#613) | `pnpm audit --audit-level=high` exits 0 |
+| Register used the agent's clone as a git tree | workflow files written through the API only (#625) | no stray commits on agent branches since |
+| Repos transferred to `bitbaum` broke the checkout guard | guard resolves both names via the API (#633) | re-registration passes the guard |
+
+Remaining, ranked:
+
+1. ~~Deploy after a sweep merge on a site repo never fires~~ — the merge uses
+   `GITHUB_TOKEN` (no push event) and the re-armed CI is itself a dispatch
+   whose `workflow_run` is suppressed, so nothing started Deploy: measured
+   here as merged-and-green at 10:22, still serving the previous release at
+   11:23, with the sweep's cron not having fired in that hour. #635 gives the
+   site-template's `ci.yml` the `ship` job FleetCrown's own CI has. The one
+   deploy in this walk that a human started was this unstick, after the fix
+   was already written; every other step ran from the product.
+2. The product still stores `gitUrl` under the old owner after a transfer;
+   GitHub redirects, but provision/register should canonicalise from
+   `full_name`.
+3. Stale agent PR #3 on kaffeeklappe-sep11 (accessibility note) has red CI
+   from before the `.nvmrc` fix and will not merge; the next agent run on that
+   site can close or refresh it.
+4. Runner transport still keys on the project name internally (unchanged).
