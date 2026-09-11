@@ -44,7 +44,7 @@ jobs:
 
       - name: Node version file
 
-        run: '[ -f .nvmrc ] || echo 22 > .nvmrc'
+        run: "[ -f .nvmrc ] || echo 22 > .nvmrc"
 
       - uses: actions/setup-node@v4
         with:
