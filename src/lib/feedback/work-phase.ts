@@ -12,6 +12,7 @@ import { ORCH_STATE, type OrchestrationState } from "@/lib/orchestration/contrac
 import { ORCHESTRATION_OUTCOME } from "@/lib/orchestration/contract";
 import { EXECUTOR_COPY } from "@/config/executor-copy";
 import { isRunProgressFresh, RUN_PROGRESS_FRESH_MS } from "@/lib/run-progress";
+import { FIX_SHIP_STATE, firstSentence, type FixShipping } from "@/lib/feedback/fix-shipping";
 
 export const FEEDBACK_WORK_PHASE = {
   NOT_STARTED: "not_started",
@@ -61,6 +62,17 @@ export type FeedbackWorkView = {
   since?: string | null;
   /** Last runner heartbeat — the PTY printed something. ISO. */
   lastActivityAt?: string | null;
+  /**
+   * The fix ledger, once the agent finished: where its change is on the way
+   * to the live product. Drives the row's "Review PR" / "Check live" and is
+   * why "Check live" no longer appears while the PR is still open.
+   */
+  ship?: FixShipping | null;
+  /** The agent's own one-line account of what it did (first sentence of the handoff). */
+  didLine?: string | null;
+  /** Live page is worth opening: the change is merged and deployed (or we
+   *  cannot see a deploy at all and the reader has to look). */
+  checkLive?: boolean;
 };
 
 export type FeedbackRunSnapshot = {
@@ -73,6 +85,10 @@ export type FeedbackRunSnapshot = {
   /** payload.lastProgressAt — runner heartbeat, see src/lib/run-progress.ts. */
   lastProgressAt: string | null;
   error: string | null;
+  /** summary.done — the agent's handoff line naming what it did (and its PR). */
+  summaryDone?: string | null;
+  /** payload.fix — the cached fix ledger (see fix-shipping.ts). */
+  fix?: FixShipping | null;
 };
 
 const STARTING_MS = 90_000;
@@ -180,14 +196,7 @@ export function deriveFeedbackWork(
       // Not Done. SUCCESS/PARTIAL is the agent's claim that its session ended
       // well — not evidence the live UI changed. Done is only RESOLVED
       // (operator Resolve today; live stamp / merged PR later).
-      return {
-        phase: FEEDBACK_WORK_PHASE.NEEDS_VERIFY,
-        label: "Check live",
-        detail:
-          run.outcome === ORCHESTRATION_OUTCOME.PARTIAL
-            ? "Agent finished with partial success — confirm the live product changed, then Resolve."
-            : "Agent finished — confirm the live product changed, then Resolve.",
-      };
+      return shippingView(run);
     }
     return {
       phase: FEEDBACK_WORK_PHASE.FAILED,
@@ -254,4 +263,90 @@ export function deriveFeedbackWork(
     watchable: true,
     since,
   };
+}
+
+/**
+ * The verify phase, told by the fix ledger. The agent's job ends at a pull
+ * request; the product changes when that PR merges and deploys. Until the
+ * ledger says "deployed", the honest button is "Review PR", not "Check live".
+ */
+function shippingView(run: FeedbackRunSnapshot): FeedbackWorkView {
+  const didLine = firstSentence(run.summaryDone);
+  const fix = run.fix ?? null;
+  const base = {
+    phase: FEEDBACK_WORK_PHASE.NEEDS_VERIFY,
+    ship: fix,
+    didLine,
+    diagnostic: null,
+  };
+  const partial = run.outcome === ORCHESTRATION_OUTCOME.PARTIAL ? " (partial)" : "";
+  if (!fix) {
+    return {
+      ...base,
+      label: `Finished${partial}`,
+      detail: "Looking up where the change is…",
+    };
+  }
+  const pr = fix.pr ? `PR #${fix.pr.number}` : "the change";
+  switch (fix.state) {
+    case FIX_SHIP_STATE.NO_EVIDENCE:
+      return {
+        ...base,
+        label: "Finished · nothing shipped",
+        detail:
+          "The agent reported success, but no pull request or push was found. Retry, or Resolve if it was not a code change.",
+      };
+    case FIX_SHIP_STATE.PUSHED:
+      return {
+        ...base,
+        label: "Pushed · no PR",
+        detail:
+          "A branch was pushed but no pull request opened — open it from the branch, then it can merge and deploy.",
+      };
+    case FIX_SHIP_STATE.PR_OPEN:
+      return {
+        ...base,
+        label: fix.unverified ? `${pr} · open?` : `${pr} · open`,
+        detail: fix.unverified
+          ? "GitHub could not be asked (no linked GitHub account or API error) — this is what the agent claimed."
+          : "Review it and let the repository's path merge it. Not live yet — the page still shows the old version.",
+      };
+    case FIX_SHIP_STATE.PR_CLOSED:
+      return {
+        ...base,
+        phase: FEEDBACK_WORK_PHASE.FAILED,
+        label: `${pr} · closed`,
+        detail:
+          "The pull request was closed without merging. Nothing shipped — Retry with a note, or Resolve if it was withdrawn on purpose.",
+      };
+    case FIX_SHIP_STATE.MERGED:
+      return {
+        ...base,
+        label: `${pr} · merged`,
+        detail:
+          "Merged, but no deploy workflow was seen on the merge commit. Check the live page yourself — it changes when the site is next deployed.",
+        checkLive: true,
+      };
+    case FIX_SHIP_STATE.DEPLOYING:
+      return {
+        ...base,
+        label: `${pr} · deploying`,
+        detail: `Merged; ${fix.deploy?.name ?? "the deploy"} is running on the merge commit. Live in a few minutes.`,
+      };
+    case FIX_SHIP_STATE.DEPLOY_FAILED:
+      return {
+        ...base,
+        phase: FEEDBACK_WORK_PHASE.FAILED,
+        label: `${pr} · deploy failed`,
+        detail: `Merged, but ${fix.deploy?.name ?? "the deploy"} failed on the merge commit. The live page still shows the old version.`,
+      };
+    case FIX_SHIP_STATE.DEPLOYED:
+      return {
+        ...base,
+        label: `Live${partial} · confirm`,
+        detail:
+          "Merged and deployed. Open the live page, confirm the visitor's point is fixed, then Confirm — or Not fixed to send it back.",
+        checkLive: true,
+      };
+  }
 }

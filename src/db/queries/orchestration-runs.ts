@@ -1,3 +1,4 @@
+import type { FixShipping } from "@/lib/feedback/fix-shipping";
 import { and, desc, eq, gt, inArray, isNotNull, isNull, lt, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { EXECUTOR_COPY } from "@/config/executor-copy";
@@ -596,4 +597,15 @@ export async function stampRunProgress(runId: string, userId: string): Promise<b
     )
     .returning({ id: orchestrationRuns.id });
   return rows.length > 0;
+}
+
+/** Cache the fix ledger on the run (payload.fix). Closed runs included — the
+ *  PR merges and deploys long after the run ended. */
+export async function stampRunFix(runId: string, userId: string, fix: FixShipping): Promise<void> {
+  await db
+    .update(orchestrationRuns)
+    .set({
+      payload: sql`jsonb_set(COALESCE(payload, '{}'), '{fix}', ${JSON.stringify(fix)}::jsonb)`,
+    })
+    .where(and(eq(orchestrationRuns.id, runId), eq(orchestrationRuns.userId, userId)));
 }

@@ -4,7 +4,7 @@
 // 1. DISPATCHED + NO run record is STUCK (retryable, poll stops), never a
 //    perpetual QUEUED — the run row is created before the status flips, so
 //    "no record" always means failed-create or pruned.
-// 2. A SUCCESS/PARTIAL closed run is NEEDS_VERIFY ("Check live"), never Done.
+// 2. A SUCCESS/PARTIAL closed run is NEEDS_VERIFY ("Finished" until the fix ledger says where the PR is), never Done.
 //    Done is only FEEDBACK_STATUS.RESOLVED (operator Resolve / live stamp).
 //    Calling Done on inject-or-run-finish alone is the closed-loop lie.
 import assert from "node:assert/strict";
@@ -21,7 +21,7 @@ import {
 } from "../../src/lib/feedback/work-phase";
 import { FEEDBACK_STATUS } from "../../src/lib/constants/statuses";
 import { ORCH_STATE, ORCHESTRATION_OUTCOME } from "../../src/lib/orchestration/contract";
-import { absoluteFeedbackPageHref } from "../../src/lib/feedback/page-href";
+import { livePageHref } from "../../src/lib/feedback/fix-shipping";
 import { feedbackInjectAccepted } from "../../src/lib/feedback/dispatch-accept";
 
 function snap(over: Partial<FeedbackRunSnapshot>): FeedbackRunSnapshot {
@@ -107,7 +107,7 @@ assert.equal(
   FEEDBACK_WORK_PHASE.NEEDS_VERIFY,
   "SUCCESS close waits for live proof / operator Resolve — never Done alone",
 );
-assert.equal(successClosed.label, "Check live");
+assert.equal(successClosed.label, "Finished", "no ledger yet: Finished, not Check live");
 assert.ok(
   !successClosed.label.toLowerCase().includes("done"),
   "badge must not say Done before Resolve",
@@ -202,12 +202,12 @@ assert.equal(
 
 // Check live page href + Implement acceptance gate.
 assert.equal(
-  absoluteFeedbackPageHref("https://example.com/pricing", "/pricing"),
+  livePageHref(null, "https://example.com/pricing", "/pricing"),
   "https://example.com/pricing",
 );
-assert.equal(absoluteFeedbackPageHref(null, "/pricing"), null, "relative page alone is not enough");
+assert.equal(livePageHref(null, null, "/pricing"), null, "relative page alone is not enough");
 assert.equal(
-  absoluteFeedbackPageHref(null, "https://kivvi.app/door"),
+  livePageHref(null, null, "https://kivvi.app/door"),
   "https://kivvi.app/door",
   "absolute page works when url is empty",
 );
