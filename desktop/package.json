@@ -1,7 +1,7 @@
 {
   "name": "fleet-runner",
-  "version": "0.8.21",
-  "description": "Fleet Runner \u2014 the FleetCrown desktop agent runtime: owns the agent terminals on this computer for projects set to run here.",
+  "version": "0.8.22",
+  "description": "Fleet Runner — the FleetCrown desktop agent runtime: owns the agent terminals on this computer for projects set to run here.",
   "main": "./out/main/index.js",
   "author": {
     "name": "FleetCrown",

@@ -563,6 +563,21 @@ async function handleCommand(
           if (effDir !== dir) effPrompt = `${worktreePromptNote(runId)}\n\n${prompt}`
         }
         worktreeByTab.set(tab, { primaryDir: dir, launchDir: effDir })
+        // A workspace that is not on this machine cannot be worked on here.
+        // The box clones on demand (FLEETCROWN_BOX_PREPARE); a laptop runner
+        // does not, and launching claude in a directory that does not exist
+        // produced three "inject did not stick" failures for a box-rooted
+        // project on 2026-09-10 while the box sat idle. Routing now keeps such
+        // projects on the box; this is the runner's own refusal in case a
+        // command still arrives, so the ack names the real cause.
+        if (
+          !ptyAlreadyLive &&
+          process.env.FLEETCROWN_BOX_PREPARE !== 'true' &&
+          !fs.existsSync(effDir)
+        ) {
+          error = `workspace ${effDir} does not exist on this machine — the project lives on another builder; nothing was launched here`
+          break
+        }
         // Token accounting window opens at delivery. Claude-only: the usage
         // collector reads ~/.claude transcripts, which other agents don't write.
         //
