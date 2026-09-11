@@ -33,6 +33,17 @@ Wants=network-online.target
 # retrying (Restart=on-failure) instead of staying down until a manual
 # systemctl reset-failed.
 StartLimitIntervalSec=0
+# Any failure fires an instant Telegram (see install-host-alerts.sh). Wired here
+# so a newly-synced app is alertable from its first boot, not only after a
+# separate install-host-alerts run.
+#
+# MUST be in [Unit]. systemd ignores OnFailure in [Service] — it logs "Unknown
+# key 'OnFailure' in section [Service], ignoring" and carries on, so the unit
+# looks fine and simply never alerts. It sat in [Service] until 2026-09-11, and
+# the effect was exactly what the comment above promises it prevents: 10 of 28
+# app units had NO failure alerting, every one of them created after the last
+# install-host-alerts run, which is the only other thing that wires it.
+OnFailure=notify-failure@%n.service
 
 [Service]
 Type=simple
@@ -58,10 +69,6 @@ MemoryMax=1G
 MemoryHigh=768M
 StandardOutput=journal
 StandardError=journal
-# Any failure fires an instant Telegram (see install-host-alerts.sh). Wired here
-# so a newly-synced app is alertable from its first boot, not only after a
-# separate install-host-alerts run.
-OnFailure=notify-failure@%n.service
 
 [Install]
 WantedBy=multi-user.target
