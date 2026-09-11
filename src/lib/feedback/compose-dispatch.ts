@@ -17,11 +17,21 @@ export type FeedbackPromptFields = {
 // blocked → report the blocker", agents opened their PR, honestly wrote
 // `status: working` because they may not merge their own work, and the run
 // never closed: the inbox read "Working now" for an hour until the reaper
-// stamped it (velokiosk-sep10 and kaffeeklappe-sep11, 2026-09-11). Every
-// site FleetCrown registers carries ci.yml + auto-merge.yml, so a green PR
-// ships itself; the agent's job ends at the PR.
+// stamped it (velokiosk-sep10 and kaffeeklappe-sep11, 2026-09-11).
+//
+// This comment used to claim "every site FleetCrown registers carries ci.yml +
+// auto-merge.yml, so a green PR ships itself". It does not: site provisioning
+// writes deploy.yml and nothing else (src/lib/site-cd.ts). Two green agent PRs
+// sat open on dogfood-site-sep10-1201 for a day because of it, and the
+// instruction below told the agent that was "shipped".
+//
+// The agent's job still ends at the PR — it may not merge its own work, and
+// waiting for a merge is what kept runs open for an hour. What changed is that
+// the PR is no longer where FleetCrown stops looking: the fix ledger
+// (src/lib/feedback/fix-shipping.ts) follows it to merged and deployed, and
+// the feedback row asks the operator to merge when nothing else will.
 const SHIP_INSTRUCTION =
-  "Implement includes shipping: use this repository’s normal PR/merge/deploy path. Sites FleetCrown set up merge a green PR by themselves (auto-merge.yml), so an opened PR with passing checks counts as shipped — finish with `status: ready`, the PR URL and the commit; do not wait for the merge and do not merge it yourself. Then verify, or state what to verify, at the reported live URL after deploy. Only report a blocker when the PR could not be opened or its checks are red; a local edit or a finished agent session is not a live fix. Leave feedback resolution to the operator after Check live.";
+  "Implement includes shipping: use this repository’s normal PR/merge/deploy path. Your job ends at a green pull request — finish with `status: ready`, the PR URL and the commit; do not wait for the merge and do not merge it yourself. FleetCrown follows that PR to merged and deployed and tells the operator when it is their turn, so an open PR is honest progress, not a finished fix. State what to verify at the reported live URL once it deploys. Only report a blocker when the PR could not be opened or its checks are red; a local edit or a finished agent session is not a live fix. Leave feedback resolution to the operator.";
 
 function renderElements(feedback: FeedbackPromptFields): string[] {
   if (!feedback.selectedElements?.length) return [];
