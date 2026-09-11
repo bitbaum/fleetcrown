@@ -3,7 +3,6 @@ import { beaconSettings, userProjects } from "@/db/schema";
 import { and, eq, isNull, ne, or } from "drizzle-orm";
 import {
   DEFAULT_BEACON_COUNTDOWN_S,
-  DEFAULT_BEACON_MIN_IDLE_S,
   DEFAULT_POPUP_MODE,
   DEFAULT_AUTO_INJECT_MODE,
 } from "@/lib/constants/control";
@@ -11,10 +10,16 @@ import { AUTO_INJECT_MODE_VALUES, type AutoInjectMode } from "@/config/beacon";
 
 export type { AutoInjectMode } from "@/config/beacon";
 
+/**
+ * `min_idle_seconds` is deliberately absent. The column stays (migrations are
+ * forward-only), but nothing wrote a consumer for it in the ~year it was
+ * offered on /settings as "Skip popup if you've been active in the last Ns" —
+ * so the knob described behaviour that did not exist. Removed from the shape
+ * on 2026-09-11 rather than left reading back a number nobody honours.
+ */
 export type BeaconSettingsData = {
   popup_mode: string;
   countdown_seconds: number;
-  min_idle_seconds: number;
   whisper_model: string;
   transcription_provider: string;
   auto_inject_mode: AutoInjectMode;
@@ -23,7 +28,6 @@ export type BeaconSettingsData = {
 const DEFAULTS: BeaconSettingsData = {
   popup_mode: DEFAULT_POPUP_MODE,
   countdown_seconds: DEFAULT_BEACON_COUNTDOWN_S,
-  min_idle_seconds: DEFAULT_BEACON_MIN_IDLE_S,
   whisper_model: "base",
   transcription_provider: "auto",
   // Autopilot — see DEFAULT_AUTO_INJECT_MODE in src/lib/constants/control.ts for
@@ -55,7 +59,6 @@ export async function getBeaconSettings(userId: string): Promise<BeaconSettingsD
   return {
     popup_mode: coercePopupMode(rows[0].popupMode),
     countdown_seconds: rows[0].countdownSeconds,
-    min_idle_seconds: rows[0].minIdleSeconds,
     whisper_model: rows[0].whisperModel,
     transcription_provider: rows[0].transcriptionProvider,
     auto_inject_mode: coerceAutoInjectMode(rows[0].autoInjectMode),
@@ -97,7 +100,6 @@ export async function upsertBeaconSettings(
   };
   if (patch.popup_mode !== undefined) updateSet.popupMode = patch.popup_mode;
   if (patch.countdown_seconds !== undefined) updateSet.countdownSeconds = patch.countdown_seconds;
-  if (patch.min_idle_seconds !== undefined) updateSet.minIdleSeconds = patch.min_idle_seconds;
   if (patch.whisper_model !== undefined) updateSet.whisperModel = patch.whisper_model;
   if (patch.transcription_provider !== undefined)
     updateSet.transcriptionProvider = patch.transcription_provider;
@@ -109,7 +111,6 @@ export async function upsertBeaconSettings(
       userId,
       popupMode: inserted.popup_mode,
       countdownSeconds: inserted.countdown_seconds,
-      minIdleSeconds: inserted.min_idle_seconds,
       whisperModel: inserted.whisper_model,
       transcriptionProvider: inserted.transcription_provider,
       autoInjectMode: inserted.auto_inject_mode,

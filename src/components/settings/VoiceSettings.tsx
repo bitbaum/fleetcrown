@@ -67,8 +67,8 @@ export function VoiceSettings({ initialPrefs }: Props) {
       <h2 className="font-medium text-text-primary">Voice</h2>
       <p className="text-sm text-text-secondary -mt-1">
         How AI writes for you. This instruction layers on top of the house style and shapes
-        Loki&apos;s replies and any content the fleet drafts on your behalf. Leave it blank to use
-        the default voice.
+        Loki&apos;s replies. Agents you dispatch do not read it. Leave it blank to use the default
+        voice.
       </p>
 
       <div className="space-y-3">

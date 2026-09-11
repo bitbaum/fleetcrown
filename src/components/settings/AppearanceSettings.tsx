@@ -11,7 +11,8 @@ export function AppearanceSettings() {
           <h2 className="text-lg font-semibold text-text-primary">Theme</h2>
           <p className="mt-1 text-sm text-text-tertiary">
             Choose how {APP_NAME} looks. Auto follows your OS preference. Tap the sun/moon icon in
-            the top bar or sidebar to cycle modes quickly.
+            the top bar or sidebar to cycle modes quickly. This choice is remembered in this
+            browser, so a different device starts on Auto again.
           </p>
         </div>
         <ThemeToggle variant="select" />
