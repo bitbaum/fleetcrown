@@ -11,6 +11,9 @@ export const EXECUTOR_COPY = {
   /** Unified executor — cloud (box-runner) and/or this computer (desktop app) */
   builder: {
     online: "Builder online",
+    /** The two tiers a project can be pinned to (Control → project profile → "Runs on"). */
+    cloudChoice: "Cloud builder",
+    localChoice: "This computer",
     cloudOnline: "Cloud builder online",
     localComputerOnline: "This computer online",
     bothOnline: "Cloud + this computer online",

@@ -2,16 +2,8 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { runnerPresence } from "@/db/schema/runner-presence";
 import { runtimeSnapshots } from "@/db/schema/runtime-snapshots";
-import type {
-  BuilderChannelPresence,
-  ChannelHeartbeat,
-  BuilderDurability,
-} from "@/lib/builder-presence";
-import {
-  applyHeartbeatExpiry,
-  inferBuilderChannelPresence,
-  channelDurability,
-} from "@/lib/builder-presence";
+import type { BuilderChannelPresence, ChannelHeartbeat } from "@/lib/builder-presence";
+import { applyHeartbeatExpiry, inferBuilderChannelPresence } from "@/lib/builder-presence";
 
 /**
  * Is any builder connected for this user? Connection-based presence —
@@ -41,32 +33,11 @@ export async function getBuilderPresence(
   userId: string,
   runnerVersion?: string | null,
 ): Promise<BuilderChannelPresence> {
-  return (await getBuilderFitness(userId, runnerVersion)).presence;
-}
-
-/**
- * Presence AND durability from the same two reads.
- *
- * Both answers come out of the same heartbeat rows, so taking them separately
- * would mean reading those rows twice and — worse — comparing them against two
- * different `now`s. The comment on getBuilderPresence explains why that matters:
- * an age is only meaningful against the clock it is measured with, and this
- * subsystem has already shipped one bug where a liveness answer was computed
- * from timestamps loaded at a different moment.
- */
-export async function getBuilderFitness(
-  userId: string,
-  runnerVersion?: string | null,
-): Promise<{ presence: BuilderChannelPresence; localDurability: BuilderDurability }> {
   const [connection, beats] = await Promise.all([
     readConnectionFlags(userId, runnerVersion),
     readChannelHeartbeats(userId),
   ]);
-  const now = Date.now();
-  return {
-    presence: applyHeartbeatExpiry(connection, beats, now),
-    localDurability: channelDurability("local", beats, now),
-  };
+  return applyHeartbeatExpiry(connection, beats, Date.now());
 }
 
 /** Raw connect/disconnect bookkeeping — a claim with no expiry on its own. */

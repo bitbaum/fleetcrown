@@ -190,6 +190,7 @@ async function fetchRuntimeMetaByEntityIds(entityIds: string[]): Promise<
     {
       dirPath: string | null;
       agentPref: string | null;
+      builderPref: string | null;
       userProjectId: string;
       liveUrl: string | null;
       siteOk: boolean | null;
@@ -201,6 +202,7 @@ async function fetchRuntimeMetaByEntityIds(entityIds: string[]): Promise<
     {
       dirPath: string | null;
       agentPref: string | null;
+      builderPref: string | null;
       userProjectId: string;
       liveUrl: string | null;
       siteOk: boolean | null;
@@ -213,6 +215,7 @@ async function fetchRuntimeMetaByEntityIds(entityIds: string[]): Promise<
       userProjectId: userProjects.id,
       dirPath: userProjects.dirPath,
       agentPref: userProjects.agentPref,
+      builderPref: userProjects.builderPref,
       liveUrl: userProjects.liveUrl,
       siteOk: siteSnapshots.ok,
     })
@@ -224,6 +227,7 @@ async function fetchRuntimeMetaByEntityIds(entityIds: string[]): Promise<
       out.set(r.entityProjectId, {
         dirPath: r.dirPath,
         agentPref: r.agentPref,
+        builderPref: r.builderPref,
         userProjectId: r.userProjectId,
         liveUrl: r.liveUrl,
         siteOk: r.siteOk,
@@ -253,6 +257,7 @@ export async function getProjects(userId: string) {
       attrs: attrsByEntity.get(p.id) ?? {},
       dirPath: runtime?.dirPath ?? null,
       agentPref: runtime?.agentPref ?? null,
+      builderPref: runtime?.builderPref ?? null,
       userProjectId: runtime?.userProjectId ?? null,
       liveUrl: runtime?.liveUrl ?? null,
       siteOk: runtime?.siteOk ?? null,
@@ -310,6 +315,7 @@ export async function getOrgEntityProjects(
       attrs: attrsByEntity.get(p.id) ?? {},
       dirPath: runtime?.dirPath ?? null,
       agentPref: runtime?.agentPref ?? null,
+      builderPref: runtime?.builderPref ?? null,
       userProjectId: runtime?.userProjectId ?? null,
       liveUrl: runtime?.liveUrl ?? null,
       siteOk: runtime?.siteOk ?? null,

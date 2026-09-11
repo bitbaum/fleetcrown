@@ -177,28 +177,16 @@ export function isBuilderChannel(value: unknown): value is BuilderChannel {
 }
 
 /**
- * Where a dispatch runs when nothing else decides it.
+ * The tier a project runs on when its row says nothing: the always-on box.
  *
- * This must be a named constant, not a literal at each call site. A queued
- * command with NO channel is claimable by EVERY runner (see the claim gate in
- * db/queries/pending-commands.ts: `channel IS NULL OR channel = mine`), so an
- * unrouted dispatch is a race between the always-on box-runner and whatever
- * desktop happens to be polling. The desktop usually won — and closing the lid
- * then killed exactly the work it had claimed.
- *
- * "local" is the floor because local and cloud are NOT interchangeable. A local
- * agent works in the operator's own checkout — the tree their editor is already
- * showing, with their .env.local, their databases, their CLI logins — so its
- * work is visible the moment it happens. A cloud agent works in a fresh clone on
- * the box that no editor is pointed at, and its work reaches the operator only
- * if it pushes. Defaulting to cloud silently moves work somewhere nobody is
- * looking; that is a worse failure than waiting for a laptop to wake.
- *
- * This is only the floor. `pickDispatchChannel` is the real decision: it routes
- * to whichever builder is actually online (preferring local), and locus still
- * outranks both.
+ * Local is a stored, per-project decision (`user_projects.builder_pref`), never
+ * a guess from which runner happens to be connected. Guessing from presence is
+ * how a dispatch sent from a phone landed on a laptop nobody was watching and
+ * died when the lid shut, and how a repo-only project was pinned to a laptop
+ * that then hunted for a zellij tab that could not exist. `pickDispatchChannel`
+ * is the one rule: locus lock → stored preference → this floor.
  */
-export const DEFAULT_BUILDER_CHANNEL: BuilderChannel = "local";
+export const DEFAULT_BUILDER_CHANNEL: BuilderChannel = "cloud";
 
 /** Entity type values — used in people queries, projects queries, and API routes.
  *  `robot` is an actor (see src/config/actors.ts). Humans and robots share the
