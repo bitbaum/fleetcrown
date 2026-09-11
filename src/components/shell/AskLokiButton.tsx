@@ -29,8 +29,19 @@ import {
 import { postJson } from "@/lib/api/fetch";
 import { LOKI_OPEN_EVENT } from "@/lib/client-events";
 import { useEscapeToClose } from "@/hooks/use-escape-to-close";
+import { ProvenanceFooter } from "@/components/loki/ProvenanceFooter";
+import { pickProvenance } from "@/lib/loki/provenance";
 
-type Turn = { role: "user" | "loki"; text: string };
+/** Prior turns sent with an ask, and how much of each. Matches the loop's own trim. */
+const HISTORY_TURNS = 8;
+const HISTORY_CHARS = 600;
+
+type Turn = {
+  role: "user" | "loki";
+  text: string;
+  /** Provenance for a Loki turn — which model, what it read, whether it verified. */
+  meta?: Record<string, unknown>;
+};
 
 function subscribeContext(onChange: () => void) {
   return subscribeAssistantContext(onChange);
@@ -99,6 +110,14 @@ export function AskLokiButton() {
   const sentContextRef = useRef<string | null>(null);
   const transcriptRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // The transcript, for the history the next ask sends. A ref, not a dep: the
+  // ask callback must not be rebuilt on every turn, and reading the latest
+  // value at call time is exactly what is wanted here.
+  const turnsRef = useRef<Turn[]>([]);
+  useEffect(() => {
+    turnsRef.current = turns;
+  }, [turns]);
 
   const context = useSyncExternalStore(subscribeContext, readAssistantContext, () => null);
   // When a form is open, the assistant edits it instead of answering about it.
@@ -179,17 +198,32 @@ export function AskLokiButton() {
       // What the user can actually see, read from the rendered page — so the
       // answer is grounded in this screen rather than in route metadata.
       const pageContext = readPageContext();
+      // The panel's own transcript, so a follow-up has something to follow.
+      // These turns live in client state only — without sending them, "and the
+      // second one?" reached the model with no first one.
+      const history = turnsRef.current.slice(-HISTORY_TURNS).map((t) => ({
+        role: t.role === "loki" ? ("assistant" as const) : ("user" as const),
+        content: t.text.slice(0, HISTORY_CHARS),
+      }));
       const res = await postJson("/api/loki", {
         message,
         ...(pageContext ? { pageContext } : {}),
         ...(projectKey ? { projectKey, includeContext } : {}),
+        ...(history.length > 0 ? { history } : {}),
       });
-      const body = (await res.json()) as { ok?: boolean; text?: string; error?: string };
+      const body = (await res.json()) as {
+        ok?: boolean;
+        text?: string;
+        error?: string;
+      } & Record<string, unknown>;
       if (!res.ok || !body.ok || !body.text) {
         setAskError(body.error ?? "Loki did not answer — try again.");
       } else {
         if (includeContext && projectKey) sentContextRef.current = projectKey;
-        setTurns((prev) => [...prev, { role: "loki", text: body.text! }]);
+        setTurns((prev) => [
+          ...prev,
+          { role: "loki", text: body.text!, meta: pickProvenance(body) },
+        ]);
       }
     } catch {
       setAskError("Loki is unreachable — network error.");
@@ -326,6 +360,7 @@ export function AskLokiButton() {
                 >
                   {turn.text}
                 </p>
+                {turn.role === "loki" && <ProvenanceFooter meta={turn.meta ?? null} />}
               </div>
             ))}
             {asking && (

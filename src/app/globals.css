@@ -4976,6 +4976,24 @@
   .ui-loki-kind {
     @apply mb-1 inline-flex items-center gap-1 self-start text-micro uppercase tracking-wider text-text-muted;
   }
+  /* Provenance line under a Loki answer — which model, what was read, which
+     tools ran, how long. Quiet by default: it is there to be glanced at when
+     an answer surprises, not to compete with the answer. */
+  .ui-loki-provenance {
+    @apply mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 px-1 text-micro text-text-muted;
+  }
+  .ui-loki-provenance-sep {
+    @apply text-text-muted/60;
+  }
+  /* The verification warning is NOT quiet. An answer that failed the grounding
+     check must look different from one that passed — "being wrong looked
+     exactly like being right" is the failure this exists to end. */
+  .ui-loki-provenance-warn {
+    @apply mt-1.5 flex max-w-full flex-col gap-0.5 rounded-lg border border-status-warning/40 bg-status-warning/10 px-2.5 py-1.5 text-xs text-text-secondary sm:max-w-[75%];
+  }
+  .ui-loki-provenance-warn strong {
+    @apply text-text-primary;
+  }
   /* Outcome card under a dispatch bubble — status, target, and the two
      operational destinations the operator needs next: Control + Terminal. */
   .ui-loki-dispatch-card {

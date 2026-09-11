@@ -1,5 +1,12 @@
 /**
- * Loki's tools — reads over FleetCrown's OWN tables, and one proposal path.
+ * Loki's tools — reads over FleetCrown's OWN tables, and two proposal paths.
+ *
+ * Every read tool is a thin wrapper over an adapter in `src/lib/agent/sources*`
+ * — the SAME adapter the seed builder calls. That is the rule, not a
+ * convenience: a source reachable only by tool call is invisible on every turn
+ * where the tool loop cannot run (rate-limited, or the prompt too big for the
+ * vendor's window), and production served exactly that twice. The seed gives
+ * survivability; the tool adds depth (a filter, a name, a wider window).
  *
  * Every handler returns `Fact[]` built with `makeFact`, so unstored fields
  * render as `<not recorded>` and the verifier can check the answer against
@@ -12,23 +19,31 @@
  * gap as an invitation.
  */
 import { z } from "zod";
-import { getGoals, type GoalWithChildren } from "@/db/queries/goals";
-import { getTodayHabits } from "@/db/queries/habits";
-import { listUpcomingCommitments } from "@/db/queries/today";
-import { getEventsDueSoon } from "@/db/queries/events";
 import { proposeAction } from "@/db/queries/actions";
 import { listCrew } from "@/db/queries/crew";
-import { createHumanTask, listOpenHumanTasks } from "@/db/queries/human-tasks";
-import { HUMAN_TASK_STATUS_LABEL, TASK_ACTOR, formatFee } from "@/config/crew";
-import { ACTION_TYPE, type ActionType } from "@/lib/constants/statuses";
+import { createHumanTask } from "@/db/queries/human-tasks";
+import { TASK_ACTOR } from "@/config/crew";
+import { ACTION_TYPE, type ActionType, type FeedbackStatus } from "@/lib/constants/statuses";
+import { ORCHESTRATION_STATES, type OrchestrationState } from "@/lib/orchestration/contract";
+import { HOUR_MS } from "@/lib/constants/time";
 import { askGatewayAgent, isGatewayConfigured } from "@/lib/openclaw-gateway";
-import { makeFact, type Fact } from "@bitbaum/ai-kit/grounding";
+import { makeFact } from "@bitbaum/ai-kit/grounding";
 import {
+  alertFacts,
+  captureFacts,
+  commitmentFacts,
+  crewFacts,
+  documentFacts,
+  feedbackFacts,
+  fleetStatusFacts,
+  goalFacts,
+  habitFacts,
+  humanTaskFacts,
+  pendingApprovalFacts,
   peopleFacts,
   projectFacts,
-  documentFacts,
-  pendingApprovalFacts,
-  dateLabel,
+  runFacts,
+  sessionFacts,
 } from "@/lib/agent/sources";
 import { enrichReachPayload, reachFromPerson, resolvePersonToReach } from "@/lib/people-resolve";
 import { defineTool } from "@/lib/agent/tools/registry";
@@ -75,7 +90,7 @@ const searchKnowledgeTool = defineTool({
   name: "search_knowledge",
   kind: "read",
   description:
-    "Semantic search over project dossiers, dev logs, repo docs and essays (pgvector). Use for 'what did I decide about X' or 'how does Y work'. Returns excerpts — evidence that something was WRITTEN, not proof it is still true.",
+    "Semantic search over project dossiers, dev logs, repo docs and essays. Use for 'what did I decide about X' or 'how does Y work'. Returns excerpts — evidence that something was WRITTEN, not proof it is still true.",
   params: z.object({ query: z.string().min(2).max(200) }),
   example: 'TOOL: search_knowledge\nARGS: {"query": "why did we choose pgvector"}',
   handler: async ({ query }, ctx) => {
@@ -93,28 +108,8 @@ const listGoalsTool = defineTool({
   params: z.object({}),
   example: "TOOL: list_goals\nARGS: {}",
   handler: async (_args, ctx) => {
-    // getGoals returns a TREE. Sub-goals are goals — flatten, or "which goal is
-    // stuck" silently only ever considers top-level ones, which is exactly the
-    // kind of quiet narrowing that makes an assistant confidently incomplete.
-    const flatten = (nodes: GoalWithChildren[]): GoalWithChildren[] =>
-      nodes.flatMap((g) => [g, ...flatten(g.children ?? [])]);
-    const rows = flatten(await getGoals(ctx.userId).catch(() => [] as GoalWithChildren[]));
-    if (rows.length === 0) return empty("The operator has no active goals.");
-    const facts: Fact[] = rows.slice(0, LIST_LIMIT).map((g) =>
-      makeFact({
-        kind: "goal",
-        subject: g.title,
-        source: "goals table",
-        values: {
-          title: g.title,
-          project: g.entityName,
-          progress: g.progress === null || g.progress === undefined ? null : `${g.progress}%`,
-          target_date: dateLabel(g.targetDate),
-          last_updated: null,
-        },
-      }),
-    );
-    return { facts };
+    const facts = await goalFacts(ctx.userId, LIST_LIMIT);
+    return facts.length > 0 ? { facts } : empty("The operator has no active goals.");
   },
 });
 
@@ -125,22 +120,8 @@ const listHabitsTool = defineTool({
   params: z.object({}),
   example: "TOOL: list_habits\nARGS: {}",
   handler: async (_args, ctx) => {
-    const rows = await getTodayHabits(ctx.userId).catch(() => []);
-    if (rows.length === 0) return empty("The operator tracks no habits.");
-    const facts = rows.slice(0, LIST_LIMIT).map((h) =>
-      makeFact({
-        kind: "habit",
-        subject: h.title,
-        source: "habits table",
-        values: {
-          title: h.title,
-          frequency: h.frequency,
-          current_streak: `${h.streak}`,
-          last_checked: h.doneToday ? "done today" : "not yet done today",
-        },
-      }),
-    );
-    return { facts };
+    const facts = await habitFacts(ctx.userId, LIST_LIMIT);
+    return facts.length > 0 ? { facts } : empty("The operator tracks no habits.");
   },
 });
 
@@ -152,39 +133,7 @@ const listCommitmentsTool = defineTool({
   example: 'TOOL: list_commitments\nARGS: {"days": 7}',
   handler: async ({ days }, ctx) => {
     const window = typeof days === "number" ? days : 14;
-    const [commitments, events] = await Promise.all([
-      listUpcomingCommitments(ctx.userId, window).catch(() => []),
-      getEventsDueSoon(ctx.userId, window).catch(() => []),
-    ]);
-    const facts: Fact[] = [
-      ...commitments.map((c) =>
-        makeFact({
-          kind: "commitment",
-          subject: c.description,
-          source: "commitments table",
-          values: {
-            title: c.description,
-            due: dateLabel(c.dueDate),
-            counterparty: null,
-            status: "active",
-          },
-        }),
-      ),
-      ...events.map((e) =>
-        makeFact({
-          kind: "event",
-          subject: e.name,
-          source: "events table",
-          values: {
-            name: e.name,
-            type: e.type,
-            deadline: dateLabel(e.deadline),
-            url: e.url,
-            status: e.status,
-          },
-        }),
-      ),
-    ];
+    const facts = await commitmentFacts(ctx.userId, window);
     return facts.length > 0
       ? { facts }
       : empty(`Nothing due in the next ${window} days — the query ran and matched nothing.`);
@@ -195,7 +144,7 @@ const listPendingApprovalsTool = defineTool({
   name: "list_pending_approvals",
   kind: "read",
   description:
-    "The operator's approval queue — draft actions waiting for their approve/reject. Use when asked what is pending, waiting, or needs a decision. Decisions happen on the Approvals page (or via chat on WhatsApp/Telegram), not here.",
+    "The operator's approval queue — draft actions waiting for their approve/reject. Use when asked what is pending, waiting, or needs a decision. Decisions happen on the Approvals page, not here.",
   params: z.object({}),
   example: "TOOL: list_pending_approvals\nARGS: {}",
   handler: async (_args, ctx) => {
@@ -203,6 +152,124 @@ const listPendingApprovalsTool = defineTool({
     if (facts.length === 0)
       return empty("The approval queue is empty — nothing is waiting for the operator.");
     return { facts };
+  },
+});
+
+/**
+ * Visitor feedback — what people reported through the widget on the
+ * operator's sites, and what happened to each report.
+ */
+const listFeedbackTool = defineTool({
+  name: "list_feedback",
+  kind: "read",
+  description:
+    "Visitor feedback reports filed through the feedback widget, newest first. Filter by status (new, dispatched, resolved, archived) or project name. Use for 'what feedback came in', 'was my report received', 'what did visitors say about X'.",
+  params: z.object({
+    status: z.enum(["new", "dispatched", "resolved", "archived"]).optional(),
+    project: z.string().max(80).optional().describe("project name fragment"),
+    limit: z.number().int().min(1).max(20).optional(),
+  }),
+  example: 'TOOL: list_feedback\nARGS: {"status": "new", "limit": 5}',
+  handler: async ({ status, project, limit }, ctx) => {
+    const facts = await feedbackFacts(ctx.userId, {
+      limit: typeof limit === "number" ? limit : LIST_LIMIT,
+      ...(status ? { status: status as FeedbackStatus } : {}),
+      ...(project ? { projectName: String(project) } : {}),
+    });
+    if (facts.length === 0) {
+      const scope = [status ? `status ${status}` : "", project ? `project "${project}"` : ""]
+        .filter(Boolean)
+        .join(", ");
+      return empty(
+        `No feedback reports${scope ? ` with ${scope}` : ""} — the query ran and matched nothing.`,
+      );
+    }
+    return { facts };
+  },
+});
+
+/** Agent runs — did it start, finish, fail; what is waiting. */
+const listRunsTool = defineTool({
+  name: "list_runs",
+  kind: "read",
+  description:
+    "Agent runs (dispatches) across the fleet, newest first — state, outcome, error text, and the agent's own handoff. Filter by state (waiting, running, done, error, closed) or project, and by a window in hours. Use for 'did it finish', 'what failed', 'what is stuck waiting'.",
+  params: z.object({
+    state: z.enum(ORCHESTRATION_STATES).optional(),
+    project: z.string().max(80).optional().describe("project key"),
+    hours: z.number().int().min(1).max(720).optional().describe("look back this many hours"),
+    limit: z.number().int().min(1).max(30).optional(),
+  }),
+  example: 'TOOL: list_runs\nARGS: {"state": "waiting", "hours": 24}',
+  handler: async ({ state, project, hours, limit }, ctx) => {
+    const facts = await runFacts(ctx.userId, {
+      limit: typeof limit === "number" ? limit : LIST_LIMIT,
+      ...(state ? { states: [state as OrchestrationState] } : {}),
+      ...(project ? { projectKey: String(project) } : {}),
+      ...(typeof hours === "number" ? { sinceMs: hours * HOUR_MS } : {}),
+    });
+    if (facts.length === 0) {
+      const scope = [
+        state ? `state ${state}` : "",
+        project ? `project ${project}` : "",
+        typeof hours === "number" ? `last ${hours}h` : "",
+      ]
+        .filter(Boolean)
+        .join(", ");
+      return empty(
+        `No runs${scope ? ` matching ${scope}` : ""} — the query ran and matched nothing.`,
+      );
+    }
+    return { facts };
+  },
+});
+
+const listActiveAgentsTool = defineTool({
+  name: "list_active_agents",
+  kind: "read",
+  description:
+    "Agents working RIGHT NOW, by their own report (open Claude Code turns) — which project, since when.",
+  params: z.object({}),
+  example: "TOOL: list_active_agents\nARGS: {}",
+  handler: async (_args, ctx) => {
+    const facts = await sessionFacts(ctx.userId);
+    return facts.length > 0 ? { facts } : empty("No agent is reporting an open turn right now.");
+  },
+});
+
+const fleetStatusTool = defineTool({
+  name: "fleet_status",
+  kind: "read",
+  description:
+    "The fleet's pulse in one record: runner connected or not, agents working now, runs waiting/errored, open alerts, pending approvals, unread feedback, today's AI budget. Use for 'what needs me', 'status', 'is everything ok'.",
+  params: z.object({}),
+  example: "TOOL: fleet_status\nARGS: {}",
+  handler: async (_args, ctx) => ({ facts: await fleetStatusFacts(ctx.userId) }),
+});
+
+const listAlertsTool = defineTool({
+  name: "list_alerts",
+  kind: "read",
+  description:
+    "Open alerts FleetCrown raised and the operator has not dismissed — CI failures, overdue commitments, stale relationships, bills due.",
+  params: z.object({}),
+  example: "TOOL: list_alerts\nARGS: {}",
+  handler: async (_args, ctx) => {
+    const facts = await alertFacts(ctx.userId, LIST_LIMIT);
+    return facts.length > 0 ? { facts } : empty("No open alerts.");
+  },
+});
+
+const listCapturesTool = defineTool({
+  name: "list_notes",
+  kind: "read",
+  description:
+    "The operator's sticky notes — things they told Loki to remember or jot down, newest first.",
+  params: z.object({}),
+  example: "TOOL: list_notes\nARGS: {}",
+  handler: async (_args, ctx) => {
+    const facts = await captureFacts(ctx.userId, LIST_LIMIT);
+    return facts.length > 0 ? { facts } : empty("No sticky notes saved.");
   },
 });
 
@@ -297,6 +364,12 @@ const proposeActionTool = defineTool({
         ? await resolvePersonToReach(ctx.userId, a.to, a.title).catch(() => null)
         : null;
     const reach = person ? reachFromPerson(person) : null;
+    // A DB failure and the intentional dedupe (an identical draft title is
+    // already pending) must not collapse into the same `null`: the first is
+    // "nothing was queued", the second is "it is already queued". Reporting a
+    // failed write as a successful queue is the over-claim this tool exists
+    // to prevent.
+    let writeFailed = false;
     const created = await proposeAction(ctx.userId, {
       type: a.type ?? ACTION_TYPE.OTHER,
       title:
@@ -308,12 +381,14 @@ const proposeActionTool = defineTool({
         : (a.reasoning ?? null),
       payload: enrichReachPayload({ to: a.to, body: a.body, dueDate: a.dueDate }, reach),
       entityId: person?.id ?? null,
-    }).catch(() => null);
+    }).catch(() => {
+      writeFailed = true;
+      return null;
+    });
 
-    // proposeAction returns null when an identical draft title is already
-    // pending (a partial unique index dedupes it). That is a success for the
-    // operator — the item is queued — so it must not read as a failure the
-    // model then retries or apologises for.
+    if (writeFailed) {
+      return empty(`Could not write that draft to the approval queue. Nothing was queued.`);
+    }
     if (!created) {
       return empty(
         `A draft titled "${a.title}" is already waiting in the approval queue — not duplicated.`,
@@ -345,26 +420,10 @@ const listCrewTool = defineTool({
   params: z.object({}),
   example: "TOOL: list_crew\nARGS: {}",
   handler: async (_args, ctx) => {
-    const crew = await listCrew(ctx.userId).catch(() => []);
-    if (crew.length === 0) {
+    const facts = await crewFacts(ctx.userId, LIST_LIMIT);
+    if (facts.length === 0) {
       return empty("The operator has nobody in the loop yet — no crew to assign work to.");
     }
-    const facts = crew.slice(0, LIST_LIMIT).map((member) =>
-      makeFact({
-        kind: "crew_member",
-        subject: member.name,
-        source: "crew roster",
-        values: {
-          name: member.name,
-          role: member.role,
-          skills: member.skills.length ? member.skills.join(", ") : null,
-          engagement: member.engagement,
-          rate: member.rate,
-          availability: member.availability,
-          open_assignments: String(member.openTasks),
-        },
-      }),
-    );
     return { facts };
   },
 });
@@ -377,23 +436,8 @@ const listHumanTasksTool = defineTool({
   params: z.object({}),
   example: "TOOL: list_human_tasks\nARGS: {}",
   handler: async (_args, ctx) => {
-    const tasks = await listOpenHumanTasks(ctx.userId, LIST_LIMIT).catch(() => []);
-    if (tasks.length === 0) return empty("No assignments are open with anyone right now.");
-    const facts = tasks.map((task) =>
-      makeFact({
-        kind: "assignment",
-        subject: task.title,
-        source: "crew board",
-        values: {
-          title: task.title,
-          assignee: task.assigneeName,
-          status: HUMAN_TASK_STATUS_LABEL[task.status],
-          due: dateLabel(task.dueDate),
-          fee: formatFee(task.feeAmount, task.feeCurrency) || null,
-          why: task.reason,
-        },
-      }),
-    );
+    const facts = await humanTaskFacts(ctx.userId, LIST_LIMIT);
+    if (facts.length === 0) return empty("No assignments are open with anyone right now.");
     return { facts };
   },
 });
@@ -434,14 +478,19 @@ const proposeHumanTaskTool = defineTool({
       assignee?: string;
       dueDate?: string;
     };
-    // Resolve a NAME to a person the operator already has. An unmatched name
-    // leaves the draft unassigned rather than inventing a contact — the
-    // operator picks who does it on the board.
+    // Resolve a NAME to a person the operator already has. Exact match, then a
+    // whole-word match — never a bare substring, which is the dr-UZH-nikov
+    // pattern (registry.ts) reintroduced on the write side. An unmatched name
+    // leaves the draft unassigned rather than inventing a contact.
     const crew = await listCrew(ctx.userId).catch(() => []);
     const wanted = (a.assignee ?? "").trim().toLowerCase();
+    const wordMatch = (name: string) =>
+      name
+        .toLowerCase()
+        .split(/\s+/)
+        .some((w) => w === wanted || wanted.split(/\s+/).includes(w));
     const match = wanted
-      ? (crew.find((m) => m.name.toLowerCase() === wanted) ??
-        crew.find((m) => m.name.toLowerCase().includes(wanted)))
+      ? (crew.find((m) => m.name.toLowerCase() === wanted) ?? crew.find((m) => wordMatch(m.name)))
       : undefined;
 
     const created = await createHumanTask(
@@ -486,10 +535,16 @@ export const LOKI_TOOLS: ToolRegistry = Object.fromEntries(
     searchPeopleTool,
     searchProjectsTool,
     searchKnowledgeTool,
+    listFeedbackTool,
+    listRunsTool,
+    listActiveAgentsTool,
+    fleetStatusTool,
+    listAlertsTool,
     listGoalsTool,
     listHabitsTool,
     listCommitmentsTool,
     listPendingApprovalsTool,
+    listCapturesTool,
     askOpenClawTool,
     listCrewTool,
     listHumanTasksTool,

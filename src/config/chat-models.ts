@@ -73,3 +73,63 @@ export function usableChatChain(): ChatLink[] {
 export function chainFrom(model: string | undefined, chain = usableChatChain()): ChatLink[] {
   return chainFromLinks(model, chain);
 }
+
+/**
+ * ── Prompt budgets, PER LINK ─────────────────────────────────────────────────
+ *
+ * How many tokens one call may carry, decided by the vendor that will serve it.
+ *
+ * The loop used to size every prompt against a single constant derived from
+ * Groq's per-minute window (12000 × 0.8 / 3 rounds = 3200 tokens per call).
+ * Two things were wrong with that at once. Groq cut the window to 8000, so the
+ * constant was stale; and the constant was applied to EVERY vendor, so a
+ * prompt that OpenRouter's free models (128k–1M context) would have taken
+ * whole was shed to fit a Groq window it was never going to be sent to. The
+ * system prompt alone is ~1300 tokens and the native tool schema ~1000, so on
+ * the stale constant the fixed overhead exceeded the whole budget and every
+ * production turn shipped ZERO facts — "[loki] round 1: 40 facts exceed the
+ * call budget — sending 0" — and the model truthfully answered "Not in your
+ * data." about records the database held.
+ *
+ * The rule now: a prompt is sized against the LARGEST usable link, and the
+ * chain walker skips any link whose budget the prompt exceeds (a preflight,
+ * not a failure — the same move Cat makes with its Groq overflow check). Groq
+ * still serves the small turns it is fastest at; the big ones go straight to
+ * the vendor with room instead of being starved to fit the one without.
+ *
+ * Groq meters per MODEL, so each Groq link has its own minute window and a
+ * turn's second round can land on a sibling model with a fresh window.
+ */
+
+/** Groq free-tier tokens-per-minute per model. Observed 8000 on every current model (2026-09-11). */
+const GROQ_TPM_DEFAULT = 8000;
+/**
+ * Cap for vendors with large contexts. Not the context length: past this the
+ * turn is slow, expensive against the daily pool, and a small model answers
+ * about the wrong record. 24k tokens is roughly 90 rendered facts, far past
+ * the loop's fact cap.
+ */
+const LARGE_CONTEXT_PROMPT_TOKENS = 24_000;
+/** Reply reserve — the completion is charged against the same window. */
+const REPLY_RESERVE_TOKENS = 1400;
+/** Headroom for the char/4 estimator's slop. */
+const HEADROOM = 0.85;
+
+function envInt(name: string, fallback: number): number {
+  const n = Number(process.env[name]);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback;
+}
+
+/** Tokens one PROMPT may carry on this link (the reply reserve already deducted). */
+export function linkPromptBudgetTokens(link: ChatLink): number {
+  if (link.provider.id === "groq") {
+    const tpm = envInt("LOKI_GROQ_TPM", GROQ_TPM_DEFAULT);
+    return Math.max(0, Math.floor(tpm * HEADROOM) - REPLY_RESERVE_TOKENS);
+  }
+  return envInt("LOKI_PROMPT_TOKENS_MAX", LARGE_CONTEXT_PROMPT_TOKENS);
+}
+
+/** The largest prompt any usable link will take — what the loop sizes against. */
+export function maxPromptBudgetTokens(chain = usableChatChain()): number {
+  return chain.reduce((max, link) => Math.max(max, linkPromptBudgetTokens(link)), 0);
+}

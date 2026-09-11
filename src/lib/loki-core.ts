@@ -1,10 +1,24 @@
 /**
  * Loki chat core — SSOT for the assistant logic behind the app.
  *
- * Loki IS the OpenClaw agent (`main`) — the same brain + workspace memory as the
- * Telegram bot — reached over the gateway WebSocket (see openclaw-gateway.ts).
- * Groq remains only as a CLEARLY-LABELLED degraded fallback when the gateway is
- * down; we never silently pass Groq off as Loki.
+ * Order of preference, and the reasoning behind it:
+ *
+ *   1. IN-APP TOOL LOOP — context-first: the retrieval planner seeds the turn
+ *      with the records the question is about, the model answers from them
+ *      (one call, usually), and calls Loki's own tools only for depth. Every
+ *      record is a verifiable Fact. This is the only path where grounding is
+ *      actually enforceable, because it is the only one where we own retrieval.
+ *   2. GATEWAY — the OpenClaw agent, kept as a fallback for when the loop
+ *      cannot run (no key, loop disabled, loop threw). It gets the SAME seed
+ *      and the same post-hoc verification, but its retrieval is outside our
+ *      control. That is precisely why it is no longer first.
+ *   3. GROQ single-shot — last resort, clearly labelled.
+ *
+ * Every path returns the same envelope: the text, which path served it, the
+ * model, the sources retrieved, the tools used, the grounding verdict, and
+ * the real elapsed time. The UI renders all of it. Until 2026-09-11 the
+ * primary path's grounding flag was computed and then dropped by both routes,
+ * so a turn that failed verification rendered pixel-identical to a clean one.
  *
  * Returns `{ status, body }` — the /api/loki route wraps it in NextResponse;
  * in-process callers (the Loki messages route) read `body.text`.
@@ -12,8 +26,10 @@
 import { askGatewayAgent, isGatewayConfigured } from "@/lib/openclaw-gateway";
 import { callGroqText, GROQ_FAST_MODEL } from "@/lib/groq";
 import { getUserPreferences } from "@/db/queries/user-preferences";
-import { buildGroundedTurn, directiveEvidence } from "@/lib/agent/context";
+import { buildGroundedTurn, directiveEvidence, type RetrievedSource } from "@/lib/agent/context";
 import { runLokiTurn } from "@/lib/agent/loop";
+import type { ChatMessage } from "@/lib/agent/llm";
+import type { LokiProvenance as ProvenanceShape, LokiVia } from "@/lib/loki/provenance";
 import { verifyAnswer, buildRepairPrompt, type Violation } from "@bitbaum/ai-kit/grounding";
 import { NO_BASIS } from "@bitbaum/ai-kit/grounding";
 import { rateLimitMessage } from "@/lib/agent/groq-error";
@@ -27,34 +43,24 @@ const LOKI_SYSTEM_PROMPT =
   `When fleet context about the operator's projects is provided, treat it as current ground truth and answer specifically and accurately from it; if a question falls outside it, say so rather than inventing detail. Be concise and direct.`;
 
 /**
- * Ground-truth of what Loki can actually DO, injected into every turn's context.
+ * Ground-truth of what Loki can actually DO, injected into every fallback
+ * turn's context.
  *
- * Why a message preface and not just the system prompt: the real Loki is the
- * external OpenClaw agent reached over the gateway (askGatewayAgent) — it never
- * sees LOKI_SYSTEM_PROMPT (that only shapes the Groq fallback). The only reliable
- * way to bind the real brain per-turn is to prepend this to the message, exactly
- * as fleet context is. Kept terse to limit per-turn token cost.
+ * Why a message preface and not just the system prompt: the gateway Loki is
+ * the external OpenClaw agent — it never sees LOKI_SYSTEM_PROMPT. The only
+ * reliable way to bind that brain per-turn is to prepend this to the message.
  *
  * This exists because Loki once told the operator a "security sandbox hard-blocked"
  * a calendar write and invented an Approve button that would book it — both false.
- * The truth: Loki has no direct external powers; it only proposes to the queue.
  */
-const LOKI_CAPABILITIES = `CAPABILITIES — ground truth; never exceed or invent beyond this: You look up people with search_people (the operator's private book — name, company, title, channels, notes). OpenClaw is the WhatsApp/Telegram workspace behind many of those names; Hermes is a task CLI, not a contact book. You have NO ability to send messages or emails — outbound send is frozen while the book is built. You cannot change Google Calendar yourself. Your only lever is the ${APP_NAME} approval queue — you PROPOSE actions and the operator must approve each one. An approved calendar event is booked by running \`gog calendar create\` on the operator's own machine. Never claim a "security sandbox" blocked you, and never report a result (an event booked, a message sent) you did not receive confirmation of. If you cannot do something, say so plainly.`;
+const LOKI_CAPABILITIES = `CAPABILITIES — ground truth; never exceed or invent beyond this: You answer from the operator's FleetCrown records (projects, agent runs, visitor feedback, approvals, people, goals, habits, commitments, notes). You have NO ability to send messages or emails. You cannot change Google Calendar yourself. Your only lever is the ${APP_NAME} approval queue — you PROPOSE actions and the operator must approve each one. Never claim a "security sandbox" blocked you, and never report a result (an event booked, a message sent) you did not receive confirmation of. If you cannot do something, say so plainly.`;
 
-// The user's Settings → Voice preference, layered onto whichever brain answers.
-// SSOT for turning that free-text instruction into a directive — applied to both
-// the Groq fallback (system prompt) and the gateway agent (message preface) so
-// the voice holds no matter which path serves the turn.
 function voiceClause(voice: string | null | undefined): string {
   const v = voice?.trim();
   return v ? ` Adopt this writing voice in your reply: ${v}` : "";
 }
 
-/**
- * True when the gateway's text is not a real answer — empty, or the OpenClaw
- * "incomplete turn" marker a flaky/thinking model produces (payloads=0). Callers
- * treat these as failures and fall back rather than surfacing them to the user.
- */
+/** True when the gateway's text is not a real answer. */
 function isUnusableGatewayText(text: string): boolean {
   const t = text.trim();
   return t.length === 0 || /couldn'?t generate a response/i.test(t);
@@ -62,17 +68,16 @@ function isUnusableGatewayText(text: string): boolean {
 
 /**
  * True when a modest model degenerated into restating the injected fleet index
- * (a bulleted list of most/all projects) instead of answering — observed with
- * gemini-flash on fleet-wide questions. Eight+ `- **Name**` bullets is a listing,
- * not a focused answer; treat it as unusable so we fall back to a model that
- * actually answers (Groq handles these well). Belt to the prompt's suspenders.
+ * (a bulleted list of most/all projects) instead of answering. Eight+
+ * `- **Name**` bullets is a listing, not a focused answer. Applied to EVERY
+ * path now — the tool loop's free OpenRouter links are as prone to it as the
+ * gateway's model was.
  */
-function looksLikeFleetEcho(text: string): boolean {
+export function looksLikeFleetEcho(text: string): boolean {
   const bullets = text.match(/^\s*[-*]\s+\*\*[^*\n]+\*\*/gm);
   return (bullets?.length ?? 0) >= 8;
 }
 
-// Degraded fallback when the OpenClaw gateway is unavailable.
 async function callGroq(
   message: string,
   voice: string | null,
@@ -90,16 +95,10 @@ export type AskLokiResult = { status: number; body: Record<string, unknown> };
 /**
  * Per-turn grounding report, returned to the client alongside the answer.
  *
- * Surfaced rather than swallowed on purpose. When a claim survives the repair
- * pass the operator has to be able to SEE that this turn is suspect — the
- * failure this harness exists to prevent was not that Loki was wrong, it was
- * that being wrong looked exactly like being right. A visible flag restores the
- * distinction even when the model cannot.
- *
- * `checked: false` means the turn had no records to check against (e.g. an
- * anonymous caller), which is honestly different from "checked and clean".
+ * `checked: false` means the turn had no records to check against, which is
+ * honestly different from "checked and clean".
  */
-function groundingMeta(factCount: number, violations: Violation[]) {
+export function groundingMeta(factCount: number, violations: Violation[]) {
   return {
     checked: factCount > 0,
     ok: violations.length === 0,
@@ -108,46 +107,49 @@ function groundingMeta(factCount: number, violations: Violation[]) {
   };
 }
 
-/**
- * Loki's own tool loop is the primary brain when the caller is a known user.
- *
- * It is skipped for anonymous callers (no userId → no tables to read, so a loop
- * over them is pure latency) and can be forced off with LOKI_TOOL_LOOP=0, which
- * exists as an operational escape hatch rather than a feature flag: if the loop
- * misbehaves in production the gateway path is still there, one env var away.
- */
+/** Everything the UI needs to say where an answer came from — shape SSOT in lib/loki/provenance.ts. */
+type LokiProvenance = Omit<ProvenanceShape, "retrieved"> & { retrieved: RetrievedSource[] };
+
 function toolLoopEnabled(userId?: string): boolean {
-  return Boolean(userId) && process.env.LOKI_TOOL_LOOP !== "0" && Boolean(process.env.GROQ_API_KEY);
+  return (
+    Boolean(userId) &&
+    process.env.LOKI_TOOL_LOOP !== "0" &&
+    Boolean(process.env.GROQ_API_KEY || process.env.OPENROUTER_API_KEY)
+  );
 }
 
 /**
- * Ask Loki a question.
- *
- * Order of preference, and the reasoning behind it:
- *
- *   1. IN-APP TOOL LOOP — Loki reads FleetCrown's own tables through its own
- *      tools, and every result lands as a verifiable Fact. This is the only
- *      path where grounding is actually enforceable, because it is the only one
- *      where we own retrieval.
- *   2. GATEWAY — the OpenClaw agent, kept as a fallback for when the loop
- *      cannot run (no Groq key, loop disabled, loop threw). It answers with its
- *      own memory and its own workspace files, so it gets the grounded context
- *      and the same post-hoc verification, but its retrieval is outside our
- *      control. That is precisely why it is no longer first.
- *   3. GROQ single-shot — last resort, clearly labelled.
- *
- * `sessionKey` keeps a per-conversation thread on the gateway path.
+ * One journal line per served turn. Before, a turn that WORKED logged nothing
+ * and a turn that fell back logged only its failure — so "how is Loki doing"
+ * had no answer short of asking the operator. This is the line the next
+ * investigation greps for.
  */
-export async function askLoki(
-  message: string,
-  opts?: { sessionKey?: string; userId?: string },
-): Promise<AskLokiResult> {
+function logTurn(p: LokiProvenance & { userId?: string; textLength: number }) {
+  const retrieved = p.retrieved
+    .filter((r) => r.count > 0)
+    .map((r) => `${r.source}:${r.count}`)
+    .join(",");
+  console.info(
+    `[loki] turn via=${p.via} model=${p.model} ms=${p.durationMs} rounds=${p.rounds} facts=${p.grounding.factCount} retrieved=${retrieved || "-"} tools=${p.toolsUsed.join(",") || "-"} grounded=${p.grounding.checked ? (p.grounding.ok ? "ok" : `FLAGGED(${p.grounding.unsupported.length})`) : "unchecked"} chars=${p.textLength}`,
+  );
+}
+
+export type AskLokiOpts = {
+  sessionKey?: string;
+  userId?: string;
+  /** Prior turns of this conversation, oldest first. The loop trims them. */
+  history?: ChatMessage[];
+};
+
+/**
+ * Ask Loki a question.
+ */
+export async function askLoki(message: string, opts?: AskLokiOpts): Promise<AskLokiResult> {
+  const startedAt = Date.now();
   // Ration BEFORE any provider is called, and only for identified users —
   // an anonymous caller has no ledger to charge, and the paths they can reach
-  // do not draw on the rationed pool.
-  //
-  // The whole turn is gated once, not each path: every route below ends at a
-  // model, so admitting a turn here and refusing it three fallbacks later would
+  // do not draw on the rationed pool. The whole turn is gated once, not each
+  // path: admitting a turn here and refusing it three fallbacks later would
   // burn the budget it was meant to protect and still say no.
   if (opts?.userId) {
     const verdict = await checkAiBudget(opts.userId);
@@ -169,31 +171,41 @@ export async function askLoki(
       const voicePref = await getUserPreferences(opts!.userId!)
         .then((p) => p.writingVoice)
         .catch(() => null);
-      const result = await runLokiTurn({ userId: opts!.userId!, message, voice: voicePref });
+      const result = await runLokiTurn({
+        userId: opts!.userId!,
+        message,
+        voice: voicePref,
+        history: opts?.history,
+      });
       // Booked whether or not the turn produced usable text: the tokens were
       // spent either way, and only charging for successes would let a run of
       // empty answers drain the day for free.
       await recordAiSpend(opts!.userId!, result.usageTokens);
-      if (result.text.trim()) {
+      if (result.text.trim() && !looksLikeFleetEcho(result.text)) {
+        const provenance: LokiProvenance = {
+          via: "tool-loop",
+          model: `loki/${result.model}`,
+          durationMs: Date.now() - startedAt,
+          toolsUsed: result.toolsUsed,
+          rounds: result.rounds,
+          retrieved: result.retrieved,
+          grounding: groundingMeta(result.facts.length, result.violations),
+        };
+        logTurn({ ...provenance, userId: opts?.userId, textLength: result.text.length });
         return {
           status: 200,
           body: {
             ok: true,
             text: result.text,
-            model: `loki/${result.model}`,
-            durationMs: 0,
-            via: "tool-loop",
-            toolsUsed: result.toolsUsed,
-            rounds: result.rounds,
+            ...provenance,
             // Sent so the transcript can resolve [F8] to the record it names.
-            // Showing a raw citation id to the operator is worse than showing
-            // none: it is internal plumbing wearing the costume of a source.
             sources: result.sources,
-            grounding: groundingMeta(result.facts.length, result.violations),
           },
         };
       }
-      console.warn("[loki] tool loop produced no text — falling back to gateway");
+      console.warn(
+        `[loki] tool loop produced ${result.text.trim() ? "a fleet echo" : "no text"} — falling back to gateway`,
+      );
     } catch (e) {
       // Never let the loop take the turn down with it. A fallback that answers
       // is better than an error that does not, and the gateway path below is
@@ -202,19 +214,15 @@ export async function askLoki(
     }
   }
 
-  return askLokiViaGateway(message, opts);
+  return askLokiViaGateway(message, opts, startedAt);
 }
 
-/** The pre-tool-loop path: grounded context + gateway/Groq, kept as fallback. */
+/** The fallback path: the same grounded seed + gateway/Groq. */
 async function askLokiViaGateway(
   message: string,
-  opts?: { sessionKey?: string; userId?: string },
+  opts: AskLokiOpts | undefined,
+  startedAt: number,
 ): Promise<AskLokiResult> {
-  // Resolve the caller's writing-voice preference + the grounded turn once.
-  // The grounded turn (typed records + computed answers + the contract) is what
-  // makes Loki "on top of" the operator's work rather than a generic chat.
-  // Both are best-effort: a slow/failed lookup degrades to plain Loki, never a
-  // broken turn.
   const [voice, grounded] = await Promise.all([
     opts?.userId
       ? getUserPreferences(opts.userId)
@@ -227,12 +235,9 @@ async function askLokiViaGateway(
   ]);
 
   const facts: Fact[] = grounded?.facts ?? [];
+  const retrieved = grounded?.retrieved ?? [];
   const evidence = grounded ? directiveEvidence(grounded.directives) : [];
 
-  // The message the brain actually sees: capability ground-truth + the grounded
-  // context (both read-only background) ahead of the operator's question. Used
-  // by the gateway AND Groq paths so Loki answers from records and, critically,
-  // never over-claims — regardless of which one serves the turn.
   const background = grounded?.context
     ? `${LOKI_CAPABILITIES}\n\n---\n\n${grounded.context}`
     : LOKI_CAPABILITIES;
@@ -240,14 +245,8 @@ async function askLokiViaGateway(
 
   /**
    * Check an answer and, if it makes unsupported claims, give the model exactly
-   * one chance to delete them.
-   *
-   * One retry, not a loop: the repair asks the model to REMOVE claims, not to
-   * find better ones, so a model that fails twice is not going to succeed on a
-   * third pass — it is going to burn the operator's latency. What survives a
-   * failed repair is returned WITH its violations attached rather than
-   * suppressed, because a wrong answer the operator can see is flagged is
-   * strictly safer than a wrong answer that looks clean.
+   * one chance to delete them. What survives a failed repair is returned WITH
+   * its violations attached rather than suppressed.
    */
   async function groundOrRepair(
     text: string,
@@ -280,12 +279,35 @@ async function askLokiViaGateway(
       userMessage: message,
       extraEvidence: evidence,
     });
-    return { text: repaired, violations: second.violations };
+    // A repair is a deletion: keep it only if it removed claims without
+    // introducing different ones.
+    const before = new Set(first.violations.map((v) => v.text));
+    const inventedNew = second.violations.some((v) => !before.has(v.text));
+    if (second.violations.length < first.violations.length && !inventedNew) {
+      return { text: repaired, violations: second.violations };
+    }
+    return { text, violations: first.violations };
   }
 
-  // Real Loki: the OpenClaw agent (same brain + memory as Telegram). The voice
-  // rides in as a one-line preface so the shared `main` agent honours it per-turn
-  // without mutating its own persistent personality.
+  const finish = (
+    text: string,
+    via: LokiVia,
+    model: string,
+    violations: Violation[],
+  ): AskLokiResult => {
+    const provenance: LokiProvenance = {
+      via,
+      model,
+      durationMs: Date.now() - startedAt,
+      toolsUsed: [],
+      rounds: 1,
+      retrieved,
+      grounding: groundingMeta(facts.length, violations),
+    };
+    logTurn({ ...provenance, userId: opts?.userId, textLength: text.length });
+    return { status: 200, body: { ok: true, text, ...provenance } };
+  };
+
   if (isGatewayConfigured()) {
     const v = voice?.trim();
     const prefaced = v
@@ -293,30 +315,12 @@ async function askLokiViaGateway(
       : contextualMessage;
     const res = await askGatewayAgent(prefaced, { sessionKey: opts?.sessionKey });
     const text = (res.text ?? "").trim();
-    // The gateway can return ok=true with EMPTY or "couldn't generate a
-    // response" text when the underlying model flakes (e.g. a thinking model
-    // that emits no final payload — observed with gemini-2.5-pro on
-    // reasoning-heavy prompts). Passing that through would surface a broken
-    // answer as Loki's. Treat it as a failure and fall back — so Loki stays
-    // useful even when the model isn't.
     if (res.ok && !isUnusableGatewayText(text) && !looksLikeFleetEcho(text)) {
-      // Ground the answer before it reaches the operator. The repair re-asks
-      // the SAME agent on the SAME session, so its own prior turn is in scope
-      // and it is editing rather than starting over.
       const checked = await groundOrRepair(text, async (repair) => {
         const again = await askGatewayAgent(repair, { sessionKey: opts?.sessionKey });
         return again.ok ? (again.text ?? "") : "";
       });
-      return {
-        status: 200,
-        body: {
-          ok: true,
-          text: checked.text,
-          model: res.model ?? "openclaw/main",
-          durationMs: res.durationMs ?? 0,
-          grounding: groundingMeta(facts.length, checked.violations),
-        },
-      };
+      return finish(checked.text, "gateway", res.model ?? "openclaw/main", checked.violations);
     }
     const reason = !res.ok
       ? (res.error ?? "gateway error")
@@ -330,40 +334,23 @@ async function askLokiViaGateway(
     console.warn("[loki] degraded: falling back to Groq");
   }
 
-  // Groq fallback — DEGRADED, labelled `via: "groq-fallback"` (not the real Loki brain).
-  // Still gets the grounded context, and is still verified: the fallback path is
-  // a SMALLER model, so it is the path most likely to fabricate and the last one
-  // that should skip the check.
+  // Groq fallback — DEGRADED, labelled. Still grounded, still verified: the
+  // fallback path is a SMALLER model, so it is the path most likely to
+  // fabricate and the last one that should skip the check.
   try {
     const { text, model } = await callGroq(contextualMessage, voice);
-    // This path draws on the SAME rationed pool as the tool loop, so it must be
-    // booked too — otherwise a user degraded onto the fallback would spend the
-    // shared day for free, and the ledger would quietly understate the drain.
-    // `callGroqText` does not surface a usage count, so 0 books the estimate.
+    // Same rationed pool as the tool loop, so it is booked too. `callGroqText`
+    // surfaces no usage count, so 0 books the estimate.
     if (opts?.userId) await recordAiSpend(opts.userId, 0);
     const checked = await groundOrRepair(text, async (repair) => {
-      // Groq is stateless here, so the repair must carry the answer being
-      // repaired — there is no session for it to refer back to.
       const { text: fixed } = await callGroq(
         `${contextualMessage}\n\n---\n\nYour previous answer:\n${text}\n\n---\n\n${repair}`,
         voice,
       );
       return fixed;
     });
-    return {
-      status: 200,
-      body: {
-        ok: true,
-        text: checked.text,
-        model,
-        durationMs: 0,
-        via: "groq-fallback",
-        grounding: groundingMeta(facts.length, checked.violations),
-      },
-    };
+    return finish(checked.text, "groq-fallback", model, checked.violations);
   } catch (e) {
-    // Surface the actual Groq cause so the user can act (rotate key / wait out
-    // the rate limit) instead of a generic "unavailable" wall.
     const raw = e instanceof Error ? e.message : String(e);
     const hint = /\b401\b|invalid.api.key/i.test(raw)
       ? "Groq API key is invalid"

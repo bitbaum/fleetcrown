@@ -1,0 +1,185 @@
+/**
+ * The retrieval planner — which sources a turn reads, and in what order.
+ *
+ * Pure: a message in, a plan out. No database, no model. This is the decision
+ * that used to be made by the model inside the tool loop ("which tool do I
+ * call?"), and it moved here for one reason: the loop needs a healthy model
+ * AND a prompt that fits a per-minute window before it can ask a single
+ * question, and in production it had neither — every turn shipped zero facts
+ * and the model was asked to reason about an empty page. A keyword planner is
+ * dumber than a model and it is never rate-limited. It answers the cheap
+ * question ("is this about feedback?") so the model can spend its one call on
+ * the expensive one ("what does this feedback mean for the operator?").
+ *
+ * Cat (OrangeCat's assistant, which the operator considers good) works this
+ * way: fifteen sources fetched in parallel before the model is called, tools
+ * only as enrichment behind a keyword pre-filter. Loki now does the same.
+ *
+ * Ordering is the second half of the job. The fact set is head-sliced when it
+ * has to shrink, so the FIRST source in the plan is the one the operator asked
+ * about, and the always-on background (projects, the fleet pulse) comes last.
+ */
+import {
+  APPROVAL_CUES,
+  CAPTURE_CUES,
+  COMMITMENT_CUES,
+  CREW_CUES,
+  ECONOMY_CUES,
+  FEEDBACK_CUES,
+  GOAL_CUES,
+  HABIT_CUES,
+  KNOWLEDGE_CUES,
+  OPS_CUES,
+  PEOPLE_CUES,
+  PLANNING_CUES,
+  PROJECT_CUES,
+  RECENCY_CUES,
+  RUN_CUES,
+} from "@/lib/agent/cues";
+
+/** Every source the seed builder knows how to fetch. */
+export const SOURCE_IDS = [
+  "feedback",
+  "runs",
+  "sessions",
+  "alerts",
+  "fleet_status",
+  "approvals",
+  "goals",
+  "habits",
+  "commitments",
+  "crew",
+  "human_tasks",
+  "captures",
+  "people",
+  "knowledge",
+  "economy",
+  "projects",
+] as const;
+export type SourceId = (typeof SOURCE_IDS)[number];
+
+export type RetrievalPlan = {
+  /** Sources to fetch, leading subject first. Never empty. */
+  sources: SourceId[];
+  /** True when no cue matched — a broad, shallow sample is fetched instead. */
+  broad: boolean;
+  /** "Most recent X" shape: short lists, newest first. */
+  recency: boolean;
+  /** The computed daily brief (goals stuck, due soon, habits at risk) is wanted. */
+  brief: boolean;
+  /** The computed fleet brief (runs waiting/errored, unread feedback, runner) is wanted. */
+  fleetBrief: boolean;
+};
+
+/**
+ * Per-source limits. Two sizes: the leading subject gets depth, background
+ * sources get a glance. Numbers are small on purpose — the prompt has to fit
+ * a free-tier per-minute window on the first vendor in the chain, and every
+ * record past the one the operator asked about is a record the small model
+ * may answer about instead.
+ */
+export const SOURCE_LIMITS: Record<SourceId, { lead: number; background: number }> = {
+  feedback: { lead: 8, background: 3 },
+  runs: { lead: 10, background: 4 },
+  sessions: { lead: 8, background: 4 },
+  alerts: { lead: 8, background: 3 },
+  fleet_status: { lead: 1, background: 1 },
+  approvals: { lead: 8, background: 3 },
+  goals: { lead: 12, background: 4 },
+  habits: { lead: 12, background: 4 },
+  commitments: { lead: 12, background: 4 },
+  crew: { lead: 12, background: 4 },
+  human_tasks: { lead: 12, background: 4 },
+  captures: { lead: 10, background: 3 },
+  people: { lead: 12, background: 4 },
+  knowledge: { lead: 6, background: 2 },
+  economy: { lead: 3, background: 0 },
+  projects: { lead: 40, background: 40 },
+};
+
+/**
+ * Sources always worth a glance, in the order they should trail the subject.
+ * Projects last: it is the largest block and the least often the point.
+ */
+const BACKGROUND: SourceId[] = ["fleet_status", "projects"];
+
+/** The broad sample used when no cue matched — a little of each hot surface. */
+const BROAD_SAMPLE: SourceId[] = [
+  "people",
+  "fleet_status",
+  "runs",
+  "feedback",
+  "approvals",
+  "knowledge",
+  "projects",
+];
+
+export function planRetrieval(message: string): RetrievalPlan {
+  const m = message.trim();
+  const lead: SourceId[] = [];
+  const push = (id: SourceId) => {
+    if (!lead.includes(id)) lead.push(id);
+  };
+
+  // The order of these tests IS the precedence, and it runs from the most
+  // specifically NAMED surface to the most general. A question that says
+  // "goal" is a goal question even when it also says "stuck", and "stuck" is
+  // a run word — testing runs first made "which goal is stuck at 0%" lead with
+  // runs and shed the goals to the tail. Named noun beats shared adjective.
+  if (FEEDBACK_CUES.test(m)) push("feedback");
+  if (APPROVAL_CUES.test(m)) push("approvals");
+  if (GOAL_CUES.test(m)) push("goals");
+  if (HABIT_CUES.test(m)) push("habits");
+  if (COMMITMENT_CUES.test(m)) push("commitments");
+  if (CREW_CUES.test(m)) {
+    push("crew");
+    push("human_tasks");
+  }
+  if (CAPTURE_CUES.test(m)) push("captures");
+  if (RUN_CUES.test(m)) {
+    push("runs");
+    push("sessions");
+  }
+  if (OPS_CUES.test(m)) {
+    push("fleet_status");
+    push("alerts");
+    push("runs");
+    push("sessions");
+    push("feedback");
+    push("approvals");
+  }
+  if (PEOPLE_CUES.test(m)) push("people");
+  if (ECONOMY_CUES.test(m)) push("economy");
+  if (KNOWLEDGE_CUES.test(m)) push("knowledge");
+  if (PROJECT_CUES.test(m)) push("projects");
+
+  const planning = PLANNING_CUES.test(m);
+  const ops = OPS_CUES.test(m);
+  if (planning) {
+    push("goals");
+    push("commitments");
+    push("habits");
+    push("approvals");
+  }
+
+  const broad = lead.length === 0;
+  const sources = broad ? [...BROAD_SAMPLE] : [...lead];
+  for (const id of BACKGROUND) if (!sources.includes(id)) sources.push(id);
+
+  return {
+    sources,
+    broad,
+    recency: RECENCY_CUES.test(m),
+    brief: planning,
+    fleetBrief: ops || planning || FEEDBACK_CUES.test(m) || RUN_CUES.test(m),
+  };
+}
+
+/** The limit a source gets under this plan: depth for the subject, a glance otherwise. */
+export function sourceLimit(plan: RetrievalPlan, id: SourceId): number {
+  const limits = SOURCE_LIMITS[id];
+  const leadCount = plan.broad ? 0 : plan.sources.indexOf(id) < 2 ? 1 : 0;
+  const n = leadCount ? limits.lead : limits.background;
+  // "Most recent" wants the newest few, not a page of history.
+  return plan.recency && id !== "projects" ? Math.min(n, 5) : n;
+}

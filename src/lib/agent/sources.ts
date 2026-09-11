@@ -19,21 +19,17 @@ import { makeFact, type Fact } from "@bitbaum/ai-kit/grounding";
 import { isChannelAttrKey, stripChannelPrefix } from "@/config/channels";
 import { nameCandidates } from "@/lib/people-names";
 import type { DevLogEntry, UserProject } from "@/db/schema/user-projects";
+import { dateLabel } from "@/lib/agent/fact-utils";
+
+// One import surface for every adapter. The domain split (life / work / fleet)
+// is a file-size decision, not an API one.
+export { dateLabel, timeLabel, agoLabel } from "@/lib/agent/fact-utils";
+export * from "@/lib/agent/sources-work";
+export * from "@/lib/agent/sources-fleet";
 
 const PEOPLE_LIMIT = 12;
 const PROJECT_LIMIT = 40;
 const DOC_CHUNK_MAX = 400;
-
-/**
- * Date rendered for a fact value: calendar day, no time, no locale guessing.
- * A fact carries what was stored, and a timestamp's clock component is noise
- * the model will otherwise try to reason about.
- */
-export function dateLabel(d: Date | string | null | undefined): string | null {
-  if (!d) return null;
-  const date = typeof d === "string" ? new Date(d) : d;
-  return Number.isNaN(date.getTime()) ? null : date.toISOString().slice(0, 10);
-}
 
 /**
  * Attribute keys that map onto a declared `person` field. Anything not listed
