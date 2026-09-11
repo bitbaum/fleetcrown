@@ -174,8 +174,9 @@ export type ProvisionResult =
 export function orgCreateRefusedMessage(owner: string, status: number, detail: string): string {
   return (
     `GitHub would not create the repository in the ${owner} organisation (HTTP ${status}${detail ? `: ${detail}` : ""}). ` +
-    `Repositories are created there, never on a personal account. Approve FleetCrown for the org at ` +
-    `https://github.com/organizations/${owner}/settings/oauth_application_policy, or check your membership.`
+    `Repositories are created there, never on a personal account. Either set GITHUB_ORG_TOKEN on the server ` +
+    `(an org admin's token with repo + workflow scope), or approve FleetCrown for the org at ` +
+    `https://github.com/organizations/${owner}/settings/oauth_application_policy.`
   );
 }
 

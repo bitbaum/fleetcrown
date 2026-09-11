@@ -7,7 +7,7 @@ import { appUrl } from "@/lib/email";
 import { planSiteCd } from "@/lib/site-cd";
 import { getSessionUserId } from "@/lib/session";
 import { readIdParam, readJsonBody } from "@/lib/api/route-helpers";
-import { getGithubToken } from "@/lib/github-token";
+import { getRepoWriteToken } from "@/lib/github-org-token";
 import {
   parseGithubRepoUrl,
   provisionGithubRepo,
@@ -58,13 +58,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const project = await getProjectCore(userId, id);
   if (!project) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const token = await getGithubToken(userId);
-  if (!token) {
+  const write = await getRepoWriteToken(userId);
+  if (!write) {
     return NextResponse.json(
       { error: "No GitHub account linked. Sign in with GitHub first.", hasGithub: false },
       { status: 400 },
     );
   }
+  const token = write.token;
 
   let template = dataOrResp.template;
   if (template === "auto") {
