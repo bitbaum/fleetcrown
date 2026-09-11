@@ -36,7 +36,7 @@ const CORS_HEADERS = {
  * the launcher paints in one corner and then jumps to another.
  *
  * Theme colors also travel with boot so the widget never hardcodes hex values.
- * Colors come from PALETTE.widget, which mirrors the app's design tokens.
+ * Colors come from PALETTE.widget, generated from @bitbaum/design-tokens.
  *
  * Omitted entirely when the widget will not render — a paused token should
  * leak nothing about the project's configuration.

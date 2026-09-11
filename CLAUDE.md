@@ -121,9 +121,13 @@ widget/            → The embeddable feedback widget customer sites load as
                      budgeting the ingest route also relies on.
                      This is the ONLY surface strangers on other people's sites
                      touch, so it earns the same care as src/ — it is covered by
-                     `pnpm run lint` and tsc. It is deliberately NOT bound by the
-                     four-layer design system below: it cannot see globals.css
-                     or Tailwind, so its literal colors are correct, not debt.
+                     `pnpm run lint` and tsc. It cannot see globals.css or
+                     Tailwind, so its colours travel differently: the boot
+                     response ships PALETTE.widget, which is GENERATED from
+                     @bitbaum/design-tokens by scripts/generate-widget-theme.ts
+                     (scripts/test/widget-theme-from-tokens.ts fails on drift).
+                     Never type a colour into widget/ or palette.ts — change the
+                     tokens and regenerate.
 ```
 
 ## Key Conventions
