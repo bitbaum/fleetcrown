@@ -49,8 +49,7 @@ echo "[check:desktop] typecheck"
 npx tsc --noEmit -p tsconfig.json
 
 # `npx electron-vite build`, not `npm run build` — the latter fires the prebuild
-# hook, which regenerates icons and downloads a platform-specific Zellij binary.
-# Neither affects whether the code compiles, and both need the network.
+# hook, which regenerates icons. That does not affect whether the code compiles.
 echo "[check:desktop] build (main + preload)"
 npx electron-vite build
 

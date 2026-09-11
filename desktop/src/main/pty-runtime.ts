@@ -9,22 +9,13 @@
  * launch/dispatch into revampit/kivvi time out. Owning the PTY removes the
  * dependency on an attached human terminal entirely.
  *
- * Gated by FLEETCROWN_RUNNER_PTY for launches/switches (safe rollout: the runner
- * falls back to zellij when off). Inject/dispatch/close route PTY-first per tab —
- * if a live owned workspace exists we drive it, else zellij — so a half-migrated
- * fleet (some agents in PTYs, some still in zellij) keeps working.
+ * The owned PTY is the only place an agent runs on this runner. A tab with no
+ * live workspace has no agent; inject fails loudly and the cloud dispatches a
+ * cold start instead. There is no zellij path to fall back to.
  */
 import { executor } from "@/lib/agent-execution";
 import { provisionAgentWorkspace } from "@/lib/agent-execution/launch";
 import type { AgentOption } from "@/lib/agent-registry";
-
-/** Master switch for PTY-owned launches. Default ON — owning the PTY is the only
- *  launch path that can't hang on a detached zellij session (the recurring
- *  ETIMEDOUT). Set FLEETCROWN_RUNNER_PTY=false to force the legacy zellij path.
- *  Launch/dispatch fall back to zellij automatically if a PTY spawn throws, so
- *  default-on can only improve reliability, never regress it. Inject/dispatch
- *  routing is per-tab (isPtyBacked) regardless, so existing zellij agents work. */
-export const RUNNER_PTY_ENABLED = process.env.FLEETCROWN_RUNNER_PTY !== "false";
 
 /**
  * Stable runner-local workspace id for a project tab. The runner has no server
@@ -35,7 +26,7 @@ export function runnerWorkspaceId(tab: string): string {
   return `runner:${tab.toLowerCase()}`;
 }
 
-/** True when this tab is driven by a live FleetCrown-owned PTY (not zellij). */
+/** True when this tab is driven by a live FleetCrown-owned PTY. */
 export function isPtyBacked(tab: string): boolean {
   const handle = executor.get(runnerWorkspaceId(tab));
   return !!handle && handle.status !== "exited";

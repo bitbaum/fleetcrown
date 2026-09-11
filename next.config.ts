@@ -73,7 +73,7 @@ const nextConfig: NextConfig = {
     // CRITICAL — without this glob the standalone build's per-route bundles
     // ballooned (the tracer copies traced deps into each), wasting disk and
     // build time. The desktop/ subtree is the Electron app + its
-    // node_modules + bundled Zellij (~35 MB) + AppImage build artifacts.
+    // node_modules + AppImage build artifacts.
     // It has NOTHING to do with the web app, but Next.js's output:
     // "standalone" tracer was copying the whole tree into every function
     // on the off chance any web code happened to import something from

@@ -35,11 +35,10 @@ contextBridge.exposeInMainWorld('fleetRunner', {
   },
 
   // Local prerequisite scan — surfaces whether agent CLIs (claude, codex,
-  // grok, gemini, cursor) and zellij are on PATH. The web app uses this
+  // grok, gemini, cursor) are on PATH. The web app uses this
   // to render an "Install Claude" CTA instead of silently dispatching to
   // a missing binary.
   getInstalledCLIs: (): Promise<{
-    zellij: boolean;
     agents: Record<string, boolean>;
   }> => ipcRenderer.invoke('get-installed-clis'),
 
@@ -51,7 +50,7 @@ contextBridge.exposeInMainWorld('fleetRunner', {
     projects: Array<{ name: string; path: string; mtimeMs: number; remoteUrl: string | null }>;
   }> => ipcRenderer.invoke('get-local-dev-projects'),
 
-  // Peek tab — snapshot the visible scrollback of a Zellij tab without
+  // Peek tab — the retained output of the agent's owned terminal, without
   // requiring the user to switch their focused terminal. Returns plain
   // text with ANSI escapes stripped, ready to render in <pre>. v0.7.2+ —
   // older builds don't expose this, so callers must typeof-check.
