@@ -422,6 +422,7 @@ sync_runner "$PROJECT_DIR/scripts/box-runner.ts" \
   "$PROJECT_DIR/scripts/reindex-knowledge.ts" \
   "$PROJECT_DIR/scripts/hosted-runner.ts" \
   "$PROJECT_DIR/scripts/hermes-dispatch.ts" \
+  "$PROJECT_DIR/scripts/new-site-dispatch.ts" \
   "$HOST:$RUNNER_DIR/scripts/"
 # The deferred-restart script must reach the box BEFORE it is invoked below.
 sync_runner "$PROJECT_DIR/scripts/hetzner/drain-and-restart-runner.sh" \
