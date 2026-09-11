@@ -65,10 +65,12 @@ import type {
   ControlData,
   FailedCommand,
   LiveAgentTurns,
+  QueuedDispatchSummary,
 } from "@/lib/control-types";
 import {
   getRecentFailedCommands,
   hasUndeliveredCommandForRun,
+  getQueuedDispatchesByProjectKeys,
 } from "@/db/queries/pending-commands";
 import { getOpenAgentTurnsByProject } from "@/db/queries/agent-sessions";
 import { getRuntimeSnapshots } from "@/db/queries/runtime-snapshots";
@@ -306,6 +308,7 @@ export async function GET() {
     effectiveDbProjects,
     failedCommands,
     openAgentTurns,
+    queuedDispatchMap,
   ] = await Promise.all([
     getLatestRunsByProjectPaths(userId, dirs),
     getRecentCustomPromptsByProjectKeys(userId, projectKeys).catch((e) => {
@@ -358,6 +361,12 @@ export async function GET() {
     getOpenAgentTurnsByProject(userId).catch((e): Record<string, LiveAgentTurns> => {
       console.error("[control/GET] openAgentTurns failed:", e);
       return {};
+    }),
+    // Accepted dispatches no builder has taken yet, so the card can say
+    // "queued behind the current run" instead of nothing (ProjectState.queuedDispatch).
+    getQueuedDispatchesByProjectKeys(userId, projectKeys).catch((e) => {
+      console.error("[control/GET] queuedDispatches failed:", e);
+      return new Map<string, QueuedDispatchSummary>();
     }),
   ]);
   // Stale-run reaping moved EXCLUSIVELY to the reap-stale-runs cron (hourly),
@@ -588,6 +597,7 @@ export async function GET() {
         recentCustomPrompts: recentPromptsMap.get(tab) ?? [],
         recentActivity: activityByProject.get(tab) ?? [],
         recentOutcomes: recentOutcomesMap.get(tab) ?? [],
+        queuedDispatch: queuedDispatchMap.get(tab) ?? null,
         // Turns the agents reported open themselves. Keyed on the registry name,
         // which is exactly what /api/activity/capture resolves a cwd to — including
         // a worktree, which resolves to its parent project's row.

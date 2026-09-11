@@ -11,7 +11,7 @@ import {
   type RunnerChannel,
 } from "@/db/schema/pending-commands";
 import { eq, isNull, isNotNull, and, inArray, notInArray, desc, sql } from "drizzle-orm";
-import type { FailedCommand } from "@/lib/control-types";
+import type { FailedCommand, QueuedDispatchSummary } from "@/lib/control-types";
 import { STALE_RUN_MINUTES } from "./orchestration-runs";
 import { requireNotDemo } from "@/lib/demo-guard";
 
@@ -185,6 +185,57 @@ export async function hasOpenPendingForProject(
 /** True when this run's dispatch/inject command is still queued (gate-held or
  *  runner offline) — the prompt was never delivered, so no session handoff can
  *  be this run's work. The close sweep uses this to skip such runs. */
+/**
+ * Accepted dispatches nobody has picked up yet, per project — what the Control
+ * card reads to say "queued" instead of nothing.
+ *
+ * `claimable` reuses fifoEligibilitySql so this and the claim query cannot
+ * disagree about WHY a dispatch is waiting: held by the per-project gate
+ * (older run still open — waits by design) versus claimable and untaken
+ * (builder offline or its execution loop stalled). A summary that re-derived
+ * the gate would be a second definition of it, and the first time the gate
+ * changed the card would start lying.
+ *
+ * Unclaimed only: a claimed-not-executed row is being delivered this second
+ * and is the live status banner's business, not a queue.
+ */
+export async function getQueuedDispatchesByProjectKeys(
+  userId: string,
+  projectKeys: string[],
+): Promise<Map<string, QueuedDispatchSummary>> {
+  const out = new Map<string, QueuedDispatchSummary>();
+  if (projectKeys.length === 0) return out;
+  const projectKey = sql<string>`coalesce(${pendingCommands.payload}->>'projectKey', ${pendingCommands.payload}->>'tab')`;
+  const rows = await db
+    .select({
+      projectKey,
+      count: sql<number>`count(*)::int`,
+      oldestCreatedAt: sql<Date>`min(${pendingCommands.createdAt})`,
+      claimable: sql<boolean>`bool_or(${fifoEligibilitySql()})`,
+    })
+    .from(pendingCommands)
+    .where(
+      and(
+        eq(pendingCommands.userId, userId),
+        inArray(pendingCommands.type, ["dispatch", "inject"]),
+        isNull(pendingCommands.claimedAt),
+        isNull(pendingCommands.executedAt),
+        inArray(projectKey, projectKeys),
+      ),
+    )
+    .groupBy(projectKey);
+  for (const row of rows) {
+    const oldest = row.oldestCreatedAt;
+    out.set(row.projectKey, {
+      count: row.count,
+      oldestCreatedAt:
+        oldest instanceof Date ? oldest.toISOString() : new Date(String(oldest)).toISOString(),
+      claimable: Boolean(row.claimable),
+    });
+  }
+  return out;
+}
+
 export async function hasUndeliveredCommandForRun(userId: string, runId: string): Promise<boolean> {
   const [row] = await db
     .select({ id: pendingCommands.id })

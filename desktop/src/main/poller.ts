@@ -548,7 +548,18 @@ async function handleCommand(
         break
       }
       case 'focus_tab': {
-        focusWorkspaceTab(validation.command.payload.tab)
+        const { tab } = validation.command.payload
+        // An owned PTY is not a zellij tab: there is no screen to bring it to
+        // the front of, and hunting zellij for it threw "tab not found" — a
+        // red banner on Control for a session that was alive and working.
+        // Nothing to focus is a success here, not a failure; Terminal is
+        // where an owned PTY is watched.
+        if (isPtyBacked(tab)) {
+          text = `${tab} runs in an owned PTY — nothing to focus on screen; watch it on Terminal`
+          ok = true
+          break
+        }
+        focusWorkspaceTab(tab)
         ok = true
         break
       }

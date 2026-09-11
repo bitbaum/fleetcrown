@@ -15,6 +15,7 @@ import { STATE_DEFINITIONS, type ProjectStateKey } from "@/lib/control-states";
 
 export { inferAdapterFromTabName } from "@/lib/agent-resolution";
 import type { ControlData, ProjectState } from "@/lib/control-types";
+import type { DispatchLiveView } from "@/lib/dispatch-status";
 import type { OrchestrationOutcome } from "@/db/schema/orchestration-runs";
 import { isFailingOutcome } from "@/lib/events";
 import { latestActivitySummary } from "./project-activity-ledger";
@@ -381,6 +382,55 @@ export function getTabActivityText(
     return `${summary} · ${timeAgo(new Date(lastAt).getTime())}`;
   }
   return null;
+}
+
+/**
+ * The zellij tab a `/control?focus=<project>` deep link may physically focus
+ * on the operator's screen: only a tab the runner itself reported live.
+ *
+ * The deep link's job is to SELECT the project on Control. Focusing a zellij
+ * tab is a bonus that only makes sense when such a tab exists. The handler
+ * used to fire focus_tab whenever the project was merely REGISTERED, so
+ * arriving from a feedback row's "Open on Control" produced a guaranteed red
+ * "focus_tab → <project> failed: tab not found" banner with a "Start session"
+ * button — while the dispatch was in fact queued (box agents run in owned
+ * PTYs, which are not zellij tabs; a queued project has no session at all
+ * yet). Operator's own report, 2026-09-11: "it says focus tab not found".
+ */
+export function deepLinkFocusTarget(focusParam: string, liveTabNames: string[]): string | null {
+  const wanted = focusParam.trim().toLowerCase();
+  if (!wanted) return null;
+  return liveTabNames.find((name) => name.toLowerCase() === wanted) ?? null;
+}
+
+/**
+ * What the card says about dispatches accepted for a project that no builder
+ * has picked up yet. Same shape as the live dispatch banner so the card renders
+ * one status slot, not two — a dispatch fired from THIS card keeps its own
+ * live view; one fired from /feedback or Loki lands here.
+ *
+ * `claimable` (from fifoEligibilitySql, via the control route) decides the
+ * sentence: held by the serialization gate is a wait by design — say what it
+ * waits for; claimable-and-untaken is the builder's problem — point at the
+ * builder status, where the stall banner already lives.
+ */
+export function describeQueuedDispatch(
+  queued: ProjectState["queuedDispatch"],
+  nowS: number,
+): DispatchLiveView | null {
+  if (!queued || queued.count < 1) return null;
+  const ageS = Math.max(0, nowS - Math.floor(Date.parse(queued.oldestCreatedAt) / 1000));
+  const age = ageS < 60 ? "just now" : `${Math.floor(ageS / 60)}m ago`;
+  const noun = queued.count === 1 ? "1 dispatch queued" : `${queued.count} dispatches queued`;
+  return {
+    status: "queued",
+    label: `${noun} ${age}`,
+    detail: queued.claimable
+      ? "waiting for the builder to pick it up — see the builder status above"
+      : "starts when this project's current run closes",
+    tone: queued.claimable ? "warning" : "neutral",
+    terminal: false,
+  };
 }
 
 export function buildLiveTabRows(

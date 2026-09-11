@@ -14,6 +14,8 @@ import {
   getProjectDisplayState,
   isProjectTabOpen,
   isCurrentPromptStale,
+  deepLinkFocusTarget,
+  describeQueuedDispatch,
 } from "@/components/control/control-presenter";
 // From lib/, NOT db/queries — importing the query module would pull in the
 // database connection and fail this suite at import time with no DATABASE_URL.
@@ -43,6 +45,7 @@ function stubProject(overrides: Partial<ProjectState> & Pick<ProjectState, "tab"
     recentActivity: [],
     recentOutcomes: [],
     liveAgentTurns: null,
+    queuedDispatch: null,
     latestOrchestrationRun: null,
     ...overrides,
   };
@@ -790,6 +793,69 @@ function runTests(): void {
     // ...and the same fleet, once known, is NOT all-clear.
     const known = buildControlPageState(controlData(projects), nowS, true, false).dashboard;
     assert(known.idleCount === projects.length, "known state buckets them as idle");
+  });
+
+  // ── /control?focus= deep link: focus only what the runner reports live ──
+  // Operator's own report from /control (2026-09-11): arriving from a feedback
+  // row's "Open on Control" showed "focus_tab → <project> failed: tab not
+  // found". The project was registered and its Implement was queued; no
+  // zellij tab by that name existed (box agents run in owned PTYs), so the
+  // command could only ever fail.
+
+  check("deep link focuses a live tab the runner reported, case-insensitively", () => {
+    assert(
+      deepLinkFocusTarget("annushka wild spirit art", [
+        "Annushka Wild Spirit Art",
+        "fleetcrown",
+      ]) === "Annushka Wild Spirit Art",
+      "the runner's own spelling of the tab is returned",
+    );
+  });
+
+  check("deep link to a registered project with NO live tab focuses nothing", () => {
+    assert(
+      deepLinkFocusTarget("Annushka Wild Spirit Art", ["fleetcrown"]) === null,
+      "no live tab → no focus_tab command → no guaranteed-failure banner",
+    );
+    assert(deepLinkFocusTarget("   ", ["fleetcrown"]) === null, "blank param focuses nothing");
+  });
+
+  // ── A dispatch queued behind the current run is SAID, not hidden ─────────
+  // Same report: "it's not showing that it's fixing anything". The feedback
+  // row said Queued; the card it sent you to said nothing, because the
+  // serialization gate's wait was recorded nowhere a reader could see.
+
+  check("a gate-held dispatch reads as waiting for the current run to close", () => {
+    const nowS = Math.floor(Date.now() / 1000);
+    const view = describeQueuedDispatch(
+      { count: 1, oldestCreatedAt: new Date((nowS - 240) * 1000).toISOString(), claimable: false },
+      nowS,
+    );
+    assert(view !== null, "queued dispatch produces a status view");
+    assert(view!.label === "1 dispatch queued 4m ago", `label: ${view!.label}`);
+    assert(/current run closes/.test(view!.detail ?? ""), `detail: ${view!.detail}`);
+    assert(view!.tone === "neutral", "waiting by design is not a warning");
+    assert(view!.terminal === false, "never terminal — it resolves when the builder claims it");
+  });
+
+  check("a claimable-but-untaken dispatch points at the builder, as a warning", () => {
+    const nowS = Math.floor(Date.now() / 1000);
+    const view = describeQueuedDispatch(
+      { count: 2, oldestCreatedAt: new Date(nowS * 1000).toISOString(), claimable: true },
+      nowS,
+    );
+    assert(view!.label === "2 dispatches queued just now", `label: ${view!.label}`);
+    assert(/builder/.test(view!.detail ?? ""), `detail: ${view!.detail}`);
+    assert(view!.tone === "warning", "untaken work is the builder's problem — warn");
+  });
+
+  check("nothing queued → no status view", () => {
+    const nowS = Math.floor(Date.now() / 1000);
+    assert(describeQueuedDispatch(null, nowS) === null, "null → null");
+    assert(
+      describeQueuedDispatch({ count: 0, oldestCreatedAt: "", claimable: false }, nowS) === null,
+      "zero → null",
+    );
   });
 
   console.log(`\n${passed}/${passed} passed`);

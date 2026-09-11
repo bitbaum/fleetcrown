@@ -13,6 +13,7 @@ import {
   buildProjectOperationsSnapshots,
   buildLiveTabRows,
   deriveFleetPulse,
+  deepLinkFocusTarget,
 } from "./control-presenter";
 import { rememberFleetProject } from "@/lib/fleet-context";
 import { STATE_DEFINITIONS, deriveRunnerStateKey } from "@/lib/control-states";
@@ -258,7 +259,10 @@ export function ControlPanel() {
     const tabLower = focusParam.toLowerCase();
     const snapshot = snapshots?.find((s) => s.project.tab.toLowerCase() === tabLower);
     const snapshotTab = snapshot?.project.tab;
-    const liveTab = liveTabRows.find((r) => r.tabName.toLowerCase() === tabLower)?.tabName;
+    const liveTab = deepLinkFocusTarget(
+      focusParam,
+      liveTabRows.map((r) => r.tabName),
+    );
     const resolvedTab = snapshotTab ?? liveTab;
     if (!resolvedTab) return;
     const requestKey = `${tabLower}\u0000${switchToParam ?? ""}`;
@@ -276,9 +280,16 @@ export function ControlPanel() {
     setLiveTargetTab(resolvedTab);
     if (liveDetailsRef.current) liveDetailsRef.current.open = true;
     livePanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    postJson("/api/control/focus-tab", { tab: resolvedTab }).catch(() => {
-      /* best effort */
-    });
+    // Physically focus a zellij tab ONLY when the runner reports one by this
+    // name. A registered project with no live tab (queued dispatch, owned-PTY
+    // agent on the box) used to get a focus_tab anyway, which could only ever
+    // fail — and did, as a red "tab not found" banner on every arrival from a
+    // feedback row's "Open on Control". See deepLinkFocusTarget.
+    if (liveTab) {
+      postJson("/api/control/focus-tab", { tab: liveTab }).catch(() => {
+        /* best effort */
+      });
+    }
 
     if (switchToParam && snapshot?.project.dir) {
       const label = switchableRegistry.find((e) => e.id === switchToParam)?.label ?? switchToParam;

@@ -14,6 +14,7 @@ import {
   getProjectDisplayState,
   isProjectTabOpen,
   type ProjectOperationsSnapshot,
+  describeQueuedDispatch,
 } from "./control-presenter";
 import { ProjectProfile } from "./ProjectProfile";
 import { LatestOrchestrationPanel } from "./project-card-helpers";
@@ -315,6 +316,11 @@ export function ProjectCard({
 
   const latestOrchRun = project.latestOrchestrationRun;
   const showPreviousRunPanel = display.showLatestOrchestration && !display.tabOpen;
+  // One status slot: a dispatch fired from THIS card keeps its live view; one
+  // fired elsewhere (a feedback row's Implement, Loki) that is still waiting
+  // for a builder shows up here from the server snapshot, so arriving on
+  // Control via "Open on Control" never reads as "nothing is happening".
+  const statusView = dispatchStatus ?? describeQueuedDispatch(project.queuedDispatch, nowS);
   const queueBlockedReason =
     sessionHealthBlocksQueue() && queue.length > 0
       ? project.session?.health?.toLowerCase().includes("critical")
@@ -419,25 +425,25 @@ export function ProjectCard({
           rendered (desktop/local-runtime only). Watch → now goes straight to
           this project's session on /terminal, same destination Loki's own
           dispatch footer already offers. */}
-      {dispatchStatus && (
+      {statusView && (
         <div
           role="status"
           aria-live="polite"
           className={cn(
             "flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b px-4 py-2 text-xs",
-            dispatchStatus.tone === "negative"
+            statusView.tone === "negative"
               ? "border-status-negative/25 bg-status-negative/[0.05] text-status-negative"
-              : dispatchStatus.tone === "warning"
+              : statusView.tone === "warning"
                 ? "border-status-warning/25 bg-status-warning/[0.05] text-status-warning"
-                : dispatchStatus.tone === "positive"
+                : statusView.tone === "positive"
                   ? "border-status-positive/25 bg-status-positive/[0.03] text-text-secondary"
                   : "border-border-subtle bg-surface-base text-text-secondary",
           )}
         >
           <span className="min-w-0 flex-1">
-            <span className="font-medium">{dispatchStatus.label}</span>
-            {dispatchStatus.detail && (
-              <span className="text-text-tertiary"> — {dispatchStatus.detail}</span>
+            <span className="font-medium">{statusView.label}</span>
+            {statusView.detail && (
+              <span className="text-text-tertiary"> — {statusView.detail}</span>
             )}
           </span>
           <Link
@@ -447,7 +453,7 @@ export function ProjectCard({
             <TerminalSquare className="h-3.5 w-3.5" />
             Watch
           </Link>
-          {dispatchStatus.terminal && (
+          {statusView.terminal && (
             <button
               onClick={clearDispatchStatus}
               aria-label="Dismiss dispatch status"

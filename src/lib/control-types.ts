@@ -86,6 +86,20 @@ export type LiveAgentTurns = {
   cwds: string[];
 };
 
+/** Accepted-but-unclaimed dispatches for one project (see ProjectState.queuedDispatch). */
+export type QueuedDispatchSummary = {
+  count: number;
+  /** ISO timestamp of the oldest queued dispatch. */
+  oldestCreatedAt: string;
+  /**
+   * True when at least one queued dispatch is claimable right now — a builder
+   * simply has not taken it (offline, or its execution loop is stalled).
+   * False when every queued dispatch is held by the per-project serialization
+   * gate: it waits, by design, for the project's older open run to close.
+   */
+  claimable: boolean;
+};
+
 export type ProjectState = {
   id: string | null;
   projectId: string | null;
@@ -119,6 +133,21 @@ export type ProjectState = {
   autoContinueEnabled?: boolean;
   /** Last 5 outcomes for this project, newest first. Powers the streak chip + dispatch reasoner. */
   recentOutcomes: OrchestrationOutcome[];
+  /**
+   * Dispatches accepted for this project that no builder has picked up yet.
+   * `null` when nothing is queued.
+   *
+   * Implement on a feedback row answers 200 and the row says "Queued", but
+   * Control — where that row's "Open on Control" sends you — showed nothing:
+   * the per-project serialization gate holds a second dispatch until the
+   * project's older run CLOSES, and that wait was recorded nowhere a reader
+   * could see. The operator's own report (2026-09-11, from /control): "it's not
+   * showing that it's fixing anything".
+   *
+   * REQUIRED for the same reason `liveAgentTurns` is: an optional field lets
+   * the route forget it and the card silently never say "queued" again.
+   */
+  queuedDispatch: QueuedDispatchSummary | null;
   /**
    * Agent turns open RIGHT NOW, as reported by the agents themselves through
    * the Claude UserPromptSubmit → Stop hook pair (table: agent_sessions).
