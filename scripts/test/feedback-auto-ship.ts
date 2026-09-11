@@ -71,7 +71,21 @@ assert.equal(hold({ checkConclusions: ["success", "cancelled"] }), AUTO_SHIP_HOL
 // not permission.
 assert.equal(hold({ draft: true }), AUTO_SHIP_HOLD.NOT_MERGEABLE);
 assert.equal(hold({ mergeable: false }), AUTO_SHIP_HOLD.NOT_MERGEABLE);
-assert.equal(hold({ mergeable: null }), AUTO_SHIP_HOLD.NOT_MERGEABLE, "unknown is not mergeable");
+// Unknown is still a hold — it is never permission — but it is NOT the same
+// hold, because the row must not tell someone their pull request has
+// conflicts when GitHub has not finished looking. Observed live 2026-09-11:
+// GitHub computes mergeability lazily and answers null on a cold read.
+assert.equal(hold({ mergeable: null }), AUTO_SHIP_HOLD.MERGE_UNKNOWN, "unknown is not a conflict");
+assert.notEqual(
+  autoShipHoldNote(AUTO_SHIP_HOLD.MERGE_UNKNOWN),
+  autoShipHoldNote(AUTO_SHIP_HOLD.NOT_MERGEABLE),
+  "two different situations owe the reader two different sentences",
+);
+assert.doesNotMatch(
+  autoShipHoldNote(AUTO_SHIP_HOLD.MERGE_UNKNOWN) ?? "",
+  /conflict|draft/i,
+  "never assert a cause nobody checked",
+);
 
 // Only our own pull request, and only one that is actually open and verified.
 assert.equal(hold({ fromOurDispatch: false }), AUTO_SHIP_HOLD.NOT_OURS);

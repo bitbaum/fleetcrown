@@ -90,32 +90,70 @@ export function parseGithubRepoRef(
  * number needs the project's repo to mean anything). Returns null rather than
  * guessing when neither is present.
  */
+/**
+ * The pull request the agent named in its handoff.
+ *
+ * A handoff mentions MORE THAN ONE number more often than you would think —
+ * a retry says "prior PR #1 diverged and conflicted (closed #1, opened #3)".
+ * Taking the first match reported the CLOSED pull request and told the
+ * operator nothing had shipped, while #3 sat open and mergeable (observed on
+ * dogfood-site-sep10-1201, 2026-09-11). So: prefer a reference the sentence
+ * marks as the one the agent OPENED, and fall back to the highest number,
+ * because a later pull request supersedes an earlier one.
+ */
 export function parsePrRef(
   text: string | null | undefined,
   gitUrl: string | null | undefined,
 ): PrRef | null {
   const t = text ?? "";
-  const full = t.match(/https?:\/\/github\.com\/([^/\s]+)\/([^/\s]+)\/pull\/(\d+)/i);
-  if (full) {
-    const number = Number(full[3]);
-    return {
-      owner: full[1],
-      repo: full[2],
-      number,
-      url: `https://github.com/${full[1]}/${full[2]}/pull/${number}`,
-    };
-  }
+  const refs = collectPrRefs(t, gitUrl);
+  if (!refs.length) return null;
+  const opened = refs.find((r) => r.opened);
+  if (opened) return opened.ref;
+  return refs.reduce((best, r) => (r.ref.number > best.ref.number ? r : best)).ref;
+}
+
+/** Every PR reference in the text, in order, each flagged when the words just
+ *  before it say the agent opened (rather than closed or superseded) it. */
+function collectPrRefs(
+  t: string,
+  gitUrl: string | null | undefined,
+): Array<{ ref: PrRef; opened: boolean }> {
   const repo = parseGithubRepoRef(gitUrl);
-  if (!repo) return null;
-  const bare = t.match(/\bPR\s*#(\d+)|\bpull request\s*#(\d+)|\bpull\/(\d+)\b/i);
-  const n = bare ? Number(bare[1] ?? bare[2] ?? bare[3]) : NaN;
-  if (!Number.isFinite(n) || n <= 0) return null;
-  return {
-    owner: repo.owner,
-    repo: repo.repo,
-    number: n,
-    url: `https://github.com/${repo.owner}/${repo.repo}/pull/${n}`,
-  };
+  const out: Array<{ ref: PrRef; opened: boolean }> = [];
+  const seen = new Set<string>();
+  // A full URL carries its own owner/repo, so it works without a registered
+  // git URL; a bare "#3" only means something against the project's repo.
+  const pattern =
+    /https?:\/\/github\.com\/([^/\s]+)\/([^/\s]+)\/pull\/(\d+)|\bPR\s*#(\d+)|\bpull request\s*#(\d+)|\bpull\/(\d+)\b|\bopened\s+#(\d+)\b/gi;
+  for (const m of t.matchAll(pattern)) {
+    let ref: PrRef | null = null;
+    if (m[1] && m[2] && m[3]) {
+      const number = Number(m[3]);
+      ref = {
+        owner: m[1],
+        repo: m[2],
+        number,
+        url: `https://github.com/${m[1]}/${m[2]}/pull/${number}`,
+      };
+    } else if (repo) {
+      const n = Number(m[4] ?? m[5] ?? m[6] ?? m[7]);
+      if (Number.isFinite(n) && n > 0)
+        ref = {
+          owner: repo.owner,
+          repo: repo.repo,
+          number: n,
+          url: `https://github.com/${repo.owner}/${repo.repo}/pull/${n}`,
+        };
+    }
+    if (!ref || seen.has(ref.url)) continue;
+    seen.add(ref.url);
+    // "opened PR #3", "opened #3", "opened https://…/pull/3" — the 40
+    // characters before the match are enough to tell opening from closing.
+    const before = t.slice(Math.max(0, (m.index ?? 0) - 40), m.index ?? 0);
+    out.push({ ref, opened: /\bopen(?:ed|s|ing)?\b[^.]{0,20}$/i.test(before) });
+  }
+  return out;
 }
 
 /** GitHub's PR object, only the fields the ledger reads. */
