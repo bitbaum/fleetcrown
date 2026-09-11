@@ -252,6 +252,28 @@ export async function enqueueHostedNewSiteCommand(
   return enqueuePendingCommand({ userId, type: "hosted_new_site", payload });
 }
 
+/**
+ * How many sites this account has asked for since `since`.
+ *
+ * Counts REQUESTS, not successes, and that is deliberate: a caller firing ten
+ * provisioning requests that all fail downstream has still done ten rounds of
+ * work against a repo host, a DNS zone and a certificate authority, and a quota
+ * that only counted the ones that worked would have stopped none of it.
+ */
+export async function countRecentNewSiteCommands(userId: string, since: Date): Promise<number> {
+  const [row] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(pendingCommands)
+    .where(
+      and(
+        eq(pendingCommands.userId, userId),
+        eq(pendingCommands.type, "hosted_new_site"),
+        sql`${pendingCommands.createdAt} >= ${since}`,
+      ),
+    );
+  return row?.n ?? 0;
+}
+
 export async function enqueueSwitchAgentCommand(
   userId: string,
   payload: SwitchAgentPayload,
