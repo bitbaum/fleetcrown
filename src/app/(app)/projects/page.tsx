@@ -6,6 +6,7 @@ import { getProjects, getOrgEntityProjects, getProjectsLastDispatch } from "@/db
 import { listFeedbackSummary } from "@/db/queries/site-feedback";
 import { ProjectsWorkspace } from "@/components/projects/ProjectsWorkspace";
 import { NewProjectButton } from "@/components/projects/NewProjectButton";
+import { FleetRegisterNote } from "@/components/projects/FleetRegisterNote";
 import type { ProjectGridRow } from "@/components/projects/project-grid-row";
 import { requirePageUserId } from "@/lib/session";
 import { PullToRefresh } from "@/components/shared/PullToRefresh";
@@ -65,6 +66,9 @@ export default async function ProjectsPage({
             lastDispatchByProject={lastDispatchByProject}
             feedbackOpenByProject={feedbackOpenByProject}
           />
+        </Suspense>
+        <Suspense fallback={null}>
+          <FleetRegisterNote userId={userId} />
         </Suspense>
         <AutoRefresh intervalMs={REFRESH_CADENCE.projects} />
       </PageLayout>
