@@ -9,6 +9,19 @@ import { requestNewSite } from "@/lib/hosted-runner/provision";
 /**
  * The site factory's front door, opened to OrangeCat.
  *
+ * ## Why it lives under /api/orangecat/ and not somewhere tidier
+ *
+ * It does not, in fact, live wherever its author felt like putting it. The
+ * proxy matcher in src/proxy.ts exempts the prefix `api/orangecat/` — the
+ * self-authenticating receivers that verify their own HMAC — and it does NOT
+ * exempt anything else. A route placed under `api/integrations/orangecat/`
+ * deploys perfectly, answers 401 to every caller including a correctly signed
+ * one, and the 401 comes from the session middleware rather than from the
+ * signature check, so it reads exactly like a wrong secret. That is how this
+ * route spent its first deploy: live, reachable, and unusable.
+ *
+ * The path IS the auth decision. A fourth receiver goes here too.
+ *
  * The factory has been live on the box for weeks and had no HTTP entry point:
  * the only callers were a CLI and a test, so "OrangeCat asks FleetCrown to
  * build something" could not happen at all. `provision.ts` anticipated this
