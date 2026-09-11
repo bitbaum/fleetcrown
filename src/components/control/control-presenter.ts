@@ -295,7 +295,7 @@ export type LiveTabRow = {
   project: ProjectState | null;
   agentLabel: string | null;
   /** SSOT key for this row's state, when a registered project backs it.
-   *  Null for unmatched zellij tabs ("Open" rows). Consumers look up
+   *  Null for unmatched agent terminals ("Open" rows). Consumers look up
    *  description + problem from STATE_DEFINITIONS via this key. */
   stateKey: ProjectStateKey | null;
   stateLabel: ProjectDisplayState["stateLabel"] | "Open";
@@ -322,7 +322,7 @@ const LIVE_TAB_RANK: Record<LiveTabRankLabel, number> = {
   Open: 5,
 };
 
-/** Map an open Zellij tab name back to a registered fleet project. */
+/** Map an open agent terminal name back to a registered fleet project. */
 export function findProjectForOpenTab(
   openTab: string,
   projects: ProjectState[],
@@ -392,12 +392,12 @@ export function buildLiveTabRows(
   const uniqueTabs = [...new Set(liveTabs.map((t) => t.trim()).filter(Boolean))];
   return (
     uniqueTabs
-      // 2026-05-31: skip zellij tabs that don't map to any registered project.
+      // 2026-05-31: skip live tabs that don't map to any registered project.
       // The user surfaced "Tab #1 Unlinked" as visible noise — scratch tabs
-      // they opened manually that have nothing to do with the fleet. Their
-      // real zellij window already shows them; the FleetCrown UI is for fleet
-      // ops, not a generic tab list. To re-expose unregistered tabs later,
-      // gate this on a "show all tabs" toggle in the UI.
+      // (from the era when the runner listed every terminal tab) that had
+      // nothing to do with the fleet. The FleetCrown UI is for fleet ops, not
+      // a generic tab list. To re-expose unregistered tabs later, gate this on
+      // a "show all tabs" toggle in the UI.
       .map((tabName) => ({ tabName, project: findProjectForOpenTab(tabName, projects) }))
       .filter(
         (entry): entry is { tabName: string; project: ProjectState } => entry.project !== null,
@@ -791,9 +791,9 @@ export function buildProjectOperationsSnapshot(
   // internal-data state for the system. The recency is shown separately by
   // the row's timestamp column, so the prefix doesn't need to duplicate it.
   // Historical evidence: name the FRESHEST recorded signal, not a blanket
-  // "Idle". Sessions no longer run in named zellij tabs (kitty, unnamed,
-  // multi-project), so live process detection misses real work — but runs and
-  // dispatches still land in FleetCrown. "orangecat — Idle today" while its
+  // "Idle". Agents the user runs outside Fleet Runner (their own terminal,
+  // kitty, multi-project shells) are invisible to live process detection —
+  // but runs and dispatches still land in FleetCrown. "orangecat — Idle today" while its
   // last run finished 40 minutes ago (2026-08-13) read as a dead project;
   // "Last run 40m ago" is what actually happened.
   const lastRunAt = project.latestOrchestrationRun?.finishedAt
@@ -902,8 +902,8 @@ export function buildControlPageState(
   // Bucket every project by the SAME counterCategory the rail
   // (ProjectOperationsView) reads off each row's stateKey, so the header chips
   // and the rail counts come from one SSOT and can never disagree. Previously
-  // the header's third number was openTabCount — every project with a zellij
-  // tab open, a SUPERSET that double-counted the working/awaiting projects —
+  // the header's third number was openTabCount — every project with an agent
+  // terminal open, a SUPERSET that double-counted the working/awaiting projects —
   // while the rail showed the mutually-exclusive idle bucket: the same screen
   // had "open" meaning two different numbers. Now both read working/waiting/
   // idle off counterCategory. syncStale collapses stale projects to the

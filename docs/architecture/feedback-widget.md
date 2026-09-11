@@ -38,9 +38,9 @@ Run succeeds  →  feedback auto-resolves (+ optional reporter email)
 
 **You do not choose a terminal.** Dispatch never targets “this Cursor chat” or
 “FleetCrown’s Terminal page” directly. It injects into the **project’s agent
-session** through `injectPrompt` (`src/lib/inject-core.ts`): PTY / Fleet Runner
-when online, otherwise the hosted cloud builder queue (Hermes when local is
-offline). Control / Terminal / Loki are captain surfaces that *also* call the
+session** through `injectPrompt` (`src/lib/inject-core.ts`), which runs where the
+project’s stored routing decision says (`pickDispatchChannel`: locus lock → “Runs
+on” → cloud floor); an offline chosen builder queues visibly and is never rerouted. Control / Terminal / Loki are captain surfaces that *also* call the
 same SSOT — feedback Dispatch is that path with a composed prompt.
 
 ### Surfaces
@@ -57,7 +57,7 @@ same SSOT — feedback Dispatch is that path with a composed prompt.
 
 1. **No git URL and no local dir** → `422 no_repo` — agent cannot land the snippet; copy from Widget card instead.
 2. **Live site unreachable** (probe of `user_projects.liveUrl`, else legacy attrs) → `422 site_unreachable` — widget cannot appear until the Hetzner host responds; token may already exist.
-3. Only then queue `injectPrompt` (Fleet Runner on this computer if connected, else cloud box-runner). Response points to `/control?focus=…`. Terminal is empty until a session is actually running.
+3. Only then queue `injectPrompt` on the project’s chosen builder (cloud by default; Fleet Runner on this computer when “Runs on” says so). Response points to `/control?focus=…`, a client-side deep link that selects and highlights the project on Control (there is no server focus-tab call any more). Terminal is empty until a session is actually running.
 
 **One-click captain loop (intended):**
 

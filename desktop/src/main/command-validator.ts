@@ -43,7 +43,7 @@ export interface InjectCommand {
 }
 
 export interface TabCommand {
-  type: 'focus_tab' | 'close_tab'
+  type: 'close_tab'
   payload: {
     tab: string
   }
@@ -163,7 +163,6 @@ export function validateCommand(raw: unknown): ValidationResult {
       return validateInject(payload)
     case 'dispatch':
       return validateDispatch(payload)
-    case 'focus_tab':
     case 'close_tab':
       return validateTab(type, payload)
     case 'launch_agent':
@@ -282,7 +281,7 @@ function validateDispatch(payload: Record<string, unknown>): ValidationResult {
   }
 }
 
-function validateTab(type: 'focus_tab' | 'close_tab', payload: Record<string, unknown>): ValidationResult {
+function validateTab(type: 'close_tab', payload: Record<string, unknown>): ValidationResult {
   const tab = payload.tab
   if (typeof tab !== 'string' || tab.trim().length === 0) {
     return { ok: false, error: `${type} payload missing required string 'tab'` }

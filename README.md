@@ -146,15 +146,17 @@ On a fresh database, visit `/setup` to create the first user.
 
 ### Local Agent Runtime
 
-Shared cloud building is restricted to eligible accounts. Other accounts need
-a connected Fleet Runner; see the execution access policy in
-`src/lib/execution-access.ts`. To connect your machine:
+Work runs on the cloud builder by default; a project runs on your computer
+when its profile says so ("Runs on" in Control) or when its checkout exists
+only there. Shared cloud building is restricted to eligible accounts, so other
+accounts need a connected Fleet Runner; see `src/lib/execution-access.ts`. To
+connect your machine:
 
 ```bash
 curl -fsSL https://fleetcrown.orangecat.ch/api/agent/install | node - init --base-url https://fleetcrown.orangecat.ch
 ```
 
-The runtime requires Zellij and at least one supported CLI on `PATH`: `claude`,
+The runtime requires at least one supported CLI on `PATH`: `claude`,
 `codex`, `gemini`, `agent` (Cursor), `grok`, or `openclaw`.
 
 See [docs/development/cloud-local-workflows.md](docs/development/cloud-local-workflows.md)

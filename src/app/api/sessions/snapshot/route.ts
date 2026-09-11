@@ -6,7 +6,7 @@
 // payload like /api/control does.
 //
 // Why a separate endpoint vs reusing /api/control?
-//   - /api/control is /control-page-specific: pulls zellij tabs, runs git
+//   - /api/control is /control-page-specific: pulls live agent terminals, runs git
 //     status on every project dir, returns agent process info etc.
 //     ~50KB+ payload per call. Sessions drawer is visible on every
 //     authenticated page (today, people, money…) and polls every 30s, so
@@ -31,7 +31,7 @@ export type SessionSnapshotItem = {
     phase: "working" | "ready" | "open_idle" | "closed" | "offline" | "unknown";
     /** ISO timestamp of the last project_states.updated_at — null for never-tracked. */
     lastActivity: string | null;
-    /** zellij tab name (where the project's agent runs), if known. */
+    /** Agent terminal name (where the project's agent runs), if known. */
     tab: string | null;
   };
 };

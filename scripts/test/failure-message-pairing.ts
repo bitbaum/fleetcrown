@@ -35,7 +35,7 @@ const thrown = [...src.matchAll(/throw new Error\(\s*`([^`]{6,160})`/g)]
   .concat([...src.matchAll(/throw new Error\(\s*'([^']{6,160})'/g)].map((m) => m[1].trim()))
   .filter((s) => /running agent|terminal|focus|session/i.test(s));
 
-ok(thrown.length >= 2, `found agent/terminal throws in poller.ts (got ${thrown.length})`);
+ok(thrown.length >= 1, `found agent/terminal throws in poller.ts (got ${thrown.length})`);
 
 // The invariant is RECOGNITION: a message must reach a remedy because the
 // classifier was taught it, never by accident of the default.

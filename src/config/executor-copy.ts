@@ -70,7 +70,7 @@ export const EXECUTOR_COPY = {
     stepDescriptionTeam:
       "Use the web app from anywhere. Connect this computer when you want agents to run your repos and tools.",
     stepDescription: "Same app in your browser or on desktop — one account, one Control page.",
-    intro: `${APP_NAME} runs in your browser. Connect a builder when you want agents to work. Hosted cloud builders are private beta; Fleet Runner on this computer is the default path for new accounts.`,
+    intro: `${APP_NAME} runs in your browser. Connect a builder when you want agents to work. Work runs on the cloud builder by default. Choose “This computer” per project (Control → project profile → Runs on) when an agent should run in your own checkout through Fleet Runner.`,
     browserPath: {
       title: "Continue in your browser",
       body: "Create projects, keep strategy and context, and connect a builder before dispatching agent work.",
@@ -94,7 +94,7 @@ export const EXECUTOR_COPY = {
     neverSeenTitle: "Connect a builder to run agents",
     offlineTitle: "Builder offline",
     neverSeenBody:
-      "Connect Fleet Runner on this computer to execute agent work for this account. Hosted cloud builders are private beta.",
+      "Projects set to “This computer” run through Fleet Runner here; connect it to execute them. Everything else runs on the cloud builder.",
     offlineBody:
       "No builder is executing right now. Work stays queued — nothing is lost. Open the desktop app on this computer, or ensure the cloud builder is running.",
     reconnectHint: "Using this computer? Open the desktop app from the menu bar. Still stuck?",

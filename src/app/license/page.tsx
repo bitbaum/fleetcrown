@@ -73,10 +73,10 @@ export default function LicensePage() {
           <h2 className="ui-public-prose-h2">Third-party software</h2>
           <p>
             FleetCrown bundles open-source dependencies including but not limited to Electron,
-            React, Next.js, Tailwind, Drizzle, and Zellij. Each is governed by its own license,
-            included in the source tree under <code>node_modules/</code> for the JavaScript
-            ecosystem and in the released Fleet Runner binary&apos;s LICENSES files for the native
-            components. The terms on this page do not override those upstream licenses.
+            React, Next.js, Tailwind, and Drizzle. Each is governed by its own license, included in
+            the source tree under <code>node_modules/</code> for the JavaScript ecosystem and in the
+            released Fleet Runner binary&apos;s LICENSES files for the native components. The terms
+            on this page do not override those upstream licenses.
           </p>
         </section>
 

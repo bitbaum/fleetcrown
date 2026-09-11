@@ -90,7 +90,7 @@ export const ORCHESTRATION_CAPABILITIES = [
   "sessionHandoff",
   // Adapter may be queued for execution in cloud mode (no local runtime).
   "cloudQueueable",
-  // Adapter executes by injecting into a live terminal tab (zellij PTY).
+  // Adapter executes by injecting into a live agent terminal (owned PTY).
   "tabInjected",
 ] as const;
 

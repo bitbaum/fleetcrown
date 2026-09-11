@@ -70,7 +70,6 @@ EnvironmentFile=/opt/fleetcrown/runner/.env
 Environment=HOME=/home/ubuntu
 Environment=PATH=/home/ubuntu/.local/bin:/usr/local/bin:/usr/bin:/bin
 Environment=NODE_ENV=production
-Environment=FLEETCROWN_RUNNER_PTY=true
 Environment=FLEETCROWN_BOX_PREPARE=true
 Environment=FLEETCROWN_RUNNER_PRESENCE_CHANNEL=cloud
 Environment=FLEETCROWN_RUNNER_UNATTENDED=true

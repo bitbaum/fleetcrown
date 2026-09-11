@@ -36,9 +36,10 @@ shell on that box.** A prompt-injected or buggy agent there is a prod incident
 and, in multi-tenant mode, a cross-tenant breach. Every phase below is gated on
 isolation appropriate to what the agent can do.
 
-The box today (confirmed 2026-06-25): node/npx/git present; **no** agent CLIs,
-**no** zellij, **no** repo clones. So execution capability must be *added*, in a
-sandbox, not assumed.
+The box at the time (confirmed 2026-06-25): node/npx/git present; **no** agent
+CLIs, **no** repo clones. So execution capability had to be *added*, in a
+sandbox, not assumed. (No multiplexer is needed on any host: the runner owns
+each agent's PTY via node-pty.)
 
 ## Phases (ship in order; each is independently useful)
 
@@ -81,7 +82,7 @@ This is the precondition for "anyone can sign up and have the fleet build."
 | Claim queue | `pending_commands` + `claimNextCommand` (SKIP LOCKED) |
 | Project context to inject | `getProjectContext` (`db/queries/project-context.ts`) |
 | Outcome close + DoD gate | `closeRunFromSession`, `inferOutcome`, `dod-gate.ts` |
-| Reusable worker pieces | `home/` (watcher/worker/decide/render/state) |
+| Reusable local pieces | `home/` (watcher/decide/render/state/emit/log/projects/calendar-drain) |
 
 ## Credentials model
 - **GitHub token** — clone + push + PR. Scoped per user (the same

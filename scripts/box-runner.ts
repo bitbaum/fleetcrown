@@ -66,9 +66,7 @@ function main(): void {
     );
     process.exit(1);
   }
-  log(
-    `v${VERSION} → ${WEB} (token ${token.slice(0, 9)}…, PTY=${process.env.FLEETCROWN_RUNNER_PTY !== "false"})`,
-  );
+  log(`v${VERSION} → ${WEB} (token ${token.slice(0, 9)}…)`);
 
   // The desktop refreshes a tray tooltip from every poller status event
   // (~every 2s). Headless, that verbatim stream wrote "connected · last poll

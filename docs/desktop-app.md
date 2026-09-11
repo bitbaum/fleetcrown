@@ -1,5 +1,12 @@
 # Desktop App (Local Fleet Runner) — Execution Plan
 
+> **Status (2026-09-11): shipped in Fleet Runner 0.8.19 / on main.** The
+> phases below are history; the zellij-driven execution model described here
+> was replaced by Fleet Runner owning every agent PTY (node-pty), and the
+> zellij attach mode once proposed as an escape hatch never shipped and is not
+> planned. Superseded by `docs/architecture/box-owned-pty-executor.md` and
+> `docs/development/cloud-local-workflows.md`.
+>
 > **Status (2026-06-03): SHIPPED through v0.4.0.** This document is kept as
 > historical context for the original migration plan from the daemon to the
 > Electron app. Where the doc references `@cockpit/*` packages,
@@ -27,7 +34,7 @@ The current model (hosted web + background daemon that polls `pending_commands` 
 The target (converging with Cursor, Claude Code, Grok Build):
 
 - A **first-class local desktop application** ("the fleet runner") is the authoritative owner of execution on the user's machine.
-- It directly owns Zellij, agent CLIs, session watching, handoff files, git, etc. — no polling/queuing layer between the user and reality when the machine is available.
+- It directly owns the agent PTYs (node-pty), agent CLIs, session watching, handoff files, git, etc. — no multiplexer between the runner and the agent.
 - The web portal (and later mobile) are excellent **remote control surfaces** that talk to the local app(s) via a clean authenticated channel (outbound WebSocket + fallback queue).
 - The app can run fully standalone.
 - Cloud execution remains a complementary mode for scale + when the laptop is closed, with explicit handoff.
@@ -52,7 +59,7 @@ The essay's pragmatic path:
 
 **Why Electron (not Tauri or pure native) for v1 of this phase**:
 - Plans and public roadmap say "Native Electron application" repeatedly. Changing the name now would require updating marketing, essays, etc.
-- Full Node.js in main process makes porting the existing `home/` (pure Node/TS) and daemon logic trivial (Zellij control via child_process, file watching, event log, etc.). No immediate Rust rewrite needed.
+- Full Node.js in main process makes porting the existing `home/` (pure Node/TS) and daemon logic trivial (PTY spawning via node-pty, file watching, event log, etc.). No immediate Rust rewrite needed.
 - Chromium + web tech means we can literally run large parts of the existing web UI (or share components) inside the desktop shell. Huge leverage.
 - electron-vite + builder gives us fast iteration + cross-platform distributables quickly.
 - Tradeoffs accepted: Larger binary size (we'll measure and optimize; can consider Tauri migration or using a lighter runtime later if it becomes painful). We accept this to move fast on the *product* and architecture validation.
@@ -72,7 +79,7 @@ The essay's pragmatic path:
 
 **Why this over alternatives**:
 - Starting with a beautiful but empty UI shell would be theater. The hard/important part is **owning execution**.
-- Rewriting the runtime from scratch in Rust on day 1 violates YAGNI and "leverage existing work". `home/` is small, has 8 self-test suites, and was literally built as the modern local model.
+- Rewriting the runtime from scratch in Rust on day 1 violates YAGNI and "leverage existing work". `home/` is small, has inline self-test suites (`pnpm run test:home`), and was literally built as the modern local model.
 - Ignoring the web stack for the desktop UI would create two divergent design systems and double the maintenance.
 
 ## High-Level Target Architecture (Desktop App)
@@ -85,9 +92,9 @@ Desktop (Electron App)
 │   │   ├── State projection (applyEvent)
 │   │   ├── decide() + autonomy gates
 │   │   ├── Watcher (session.md changes → worker.idle)
-│   │   ├── Worker (inject into Zellij, manage agents)
+│   │   ├── PTY runtime (spawn agents in owned node-pty PTYs, write prompts)
 │   │   └── Projects config loader
-│   ├── Zellij / agent CLI control (direct, authoritative)
+│   ├── Agent CLI control (direct, authoritative — no multiplexer)
 │   ├── Optional: authenticated outbound WebSocket to hosted backend
 │   └── IPC server (expose to renderer + future TUIs/MCP)
 │
@@ -148,7 +155,7 @@ Cross-cutting: Every step runs the quality bar (lint, tsc, relevant tests, desig
 
 - User can install/run the desktop app.
 - It discovers projects from the existing `~/.config/agent-projects.conf` (or the new name).
-- It can dispatch intents and actually drive Zellij/agent sessions using the home/ logic.
+- It can dispatch intents and actually drive agent sessions in PTYs it owns, using the home/ logic.
 - It feels like a real app (not "just the old scripts in a window").
 - Existing daemon users are unaffected.
 - We have a clear path to the remote control channel.
@@ -163,7 +170,7 @@ This doc will be updated as we execute. The goal is to treat the architecture es
 
 - Packaged binaries now produced: `desktop/dist/FleetCrown Fleet Runner-0.1.0.AppImage` (104 MB, runnable on Linux) and `.deb`.
 - Users can follow the instructions on `/download` (and the updated component) to clone + `npm run dist:linux` (or equivalent for their OS) and immediately run a native x.ai-styled Fleet Runner that integrates the real home/ runtime logic.
-- Dispatch now renders real prompts (via orchestration renderers) and makes a best-effort injection into a running zellij session/tab matching the project key (falls back gracefully with the prompt shown in the UI). Uses the *canonical* `injectIntoTab` (go-to-tab + focus guard + write-chars + Enter + restore) — same code as daemon + home/worker.
+- Dispatch now renders real prompts (via orchestration renderers). At the time it injected into a running zellij tab matching the project key via `injectIntoTab`; since 0.8.19 that code is deleted and the runner writes into the PTY it spawned.
 - "Sync to Web" + auto-sync on token connect: posts projects + observed runtime state to the hosted `/api/control/runtime-state` using the ck_* token. Web /control then treats this desktop as the live local runner for those projects.
 - Project selection + custom free-text prompts: the UI lets you pick a project and type arbitrary instructions; they are forwarded as `queueHead` for `custom` intent and rendered end-to-end.
 - The desktop app is the local runtime you can start using today for your projects (reads your existing config, owns decide + render, attempts execution, surfaces results).
@@ -175,10 +182,9 @@ This doc will be updated as we execute. The goal is to treat the architecture es
   - Real appendEvent for bridge.dispatch + worker.started/crashed (with runId + /tmp sentinel for stop-hook correlation).
   - Embedded `home/watcher` (startWatcher): fs.watch on ~/.fleetcrown/sessions for registered projects, debounced `worker.idle` + parsed handoff on change. No external watcher process needed for full event emission when the Fleet Runner is the runtime.
 - Local UI + "Sync to Web" snapshots are still lightweight (eager apply of events seen by this process). A full in-process Brain (tail the log, serve rich state) is a smaller follow-on slice.
-- Standalone home/ trio and legacy daemon continue to work for headless use.
 - No tray/notifications, signed distributables with auto-update, or packaged "run as background runtime only" mode yet.
 
-This is the Fleet Runner becoming real. Legacy daemon + home/ stack still works in parallel for headless / transition use. See "Execution Log" for precise phase status.
+This is the Fleet Runner becoming real. See "Execution Log" for precise phase status. (The legacy daemon, `home/worker.ts` and every zellij code path were deleted on 2026-09-11.)
 
 ## Execution Log (immediate actions taken)
 
@@ -230,9 +236,9 @@ All changes keep daemon untouched, follow quality (tsc clean, builds pass), and 
 - 70+ file follow-up (rebrand + desktop + docs + marketing) prepared for commit as "feat(desktop) + fix(design,lint): ...".
 - During this session: hardened `src/lib/zellij.ts` (session resolution via findSessionForTab + --session qualified actions + `--` separator for write-chars to match legacy robustness). Advanced runtime.ts dispatch to real appendEvent path (with started/crashed + sentinel). Wired embedded watcher: refactored home/watcher.ts for library use (startWatcher() export, no auto-exit on import, conditional signal handlers), started from desktop main/index.ts on app ready, closed on before-quit. Desktop now emits the full local event lifecycle (dispatch + idle from session.md handoffs) without external home/ processes. This largely closes the "real worker idle path" for desktop-2/3.
 
-**Current prototype summary (post-landing)**:
-The app is usable for real work on a machine with zellij + claude running: build it, run it, connect token from web Settings, sync, dispatch from either surface. The "local authoritative runtime" story is demonstrable.
+**Current prototype summary (post-landing, June 2026)**:
+The app was usable for real work on a machine with zellij + claude running: build it, run it, connect token from web Settings, sync, dispatch from either surface. The "local authoritative runtime" story was demonstrable. Today (0.8.19) zellij is not required or supported: the runner spawns the agent itself.
 
 The remaining desktop-2/3 work is the deeper port: make the Electron main process the actual host of the append-only log + watcher + worker so that desktop UI state, web /control (when this is the selected runtime), and the agent sessions are all projections of the *same* event source with no "fake" in-memory layer.
 
-All changes keep daemon + home/ trio untouched and working. This is executing the plan.
+All changes at the time kept the daemon + home/ trio untouched and working. Both have since been retired (the daemon in June, `home/worker.ts` with the zellij removal on 2026-09-11).

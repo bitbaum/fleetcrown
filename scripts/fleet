@@ -99,7 +99,7 @@ case "${1:-help}" in
       -H "@$auth_header" \
       -H "Content-Type: application/json" \
       -d "{\"agent\":\"$agent\"}" | jq .
-    echo "Check your zellij for a new 'Install $agent' tab."
+    echo "The installer runs in a terminal Fleet Runner owns — watch it on Control → This computer."
     ;;
   status|s)
     echo "=== Running daemons ==="

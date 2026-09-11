@@ -80,7 +80,8 @@ Pricing should follow value captured, not token volume alone.
 
 - Multi-user auth and project registry
 - Production hosted control plane
-- Local daemon connected to Zellij and agent CLIs
+- Runner-owned agent PTYs (node-pty) on the cloud box by default and on the
+  user's machine via Fleet Runner; per-project "Runs on" choice
 - Multi-agent registry: Claude, Codex, Gemini, Cursor, Grok, OpenClaw
 - Runtime snapshots and per-project operational state
 - Life OS domains: Today, Goals, People, Habits, Events, Money, Prompts

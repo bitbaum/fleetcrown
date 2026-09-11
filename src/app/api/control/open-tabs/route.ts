@@ -2,7 +2,7 @@
  * GET /api/control/open-tabs — agent tabs currently open on a builder.
  *
  * Cloud control plane: runner-pushed openTabs from box-runner (owned PTY tabs).
- * Local runtime host (`RUNTIME_AVAILABLE=true`): live zellij query + owned PTYs.
+ * Local runtime host (`RUNTIME_AVAILABLE=true`): the owned PTYs it holds (`listOwnedTabs`).
  * Terminal Cloud and This computer both list these and stream via peek-stream.
  */
 import { NextResponse } from "next/server";

@@ -177,7 +177,7 @@ Current split:
 
 - DB user projects
 - projects conf parsing
-- live tab alias resolution
+- owned-PTY tab listing (`listOwnedTabs`, `src/lib/agent-execution/owned.ts`)
 
 Targets:
 
@@ -404,7 +404,9 @@ Still a shim:
 
 - `dotfiles` remains the place where Claude registers hook entrypoints
 - `lib.sh` in `dotfiles` still exists as compatibility/runtime residue
-- local hooks still perform direct Zellij injection instead of calling a fully neutral adapter API
+- local hooks only signal lifecycle (start/stop/handoff); since 2026-09-11 all
+  injection goes through runner-owned PTYs (node-pty) — there is no zellij path
+  left for a hook to call, and no terminal adapter to make neutral
 
 ### Good foundation files
 
