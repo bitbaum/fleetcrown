@@ -41,7 +41,12 @@ export async function bumpDuplicateFeedback(
 
 /** Inbox row: everything except the screenshot bytes (kept out of list
  *  payloads), plus a flag so the UI can offer the images on demand. */
-export type FeedbackListItem = Omit<SiteFeedback, "screenshots"> & { hasScreenshots: boolean };
+export type FeedbackListItem = Omit<SiteFeedback, "screenshots"> & {
+  hasScreenshots: boolean;
+  /** The project's public URL (user_projects.live_url) — where "Check live"
+   *  opens, with the reported path. The reported host is only a fallback. */
+  liveUrl: string | null;
+};
 
 /** Inbox for one project, newest first. Owner-scoped by userId. */
 export async function listProjectFeedback(
@@ -59,6 +64,13 @@ export async function listProjectFeedback(
         sql<boolean>`(${siteFeedback.screenshots} IS NOT NULL AND jsonb_array_length(${siteFeedback.screenshots}) > 0)`.as(
           "has_screenshots",
         ),
+      liveUrl: sql<string | null>`(
+        SELECT ${userProjects.liveUrl} FROM ${userProjects}
+        WHERE ${userProjects.entityProjectId} = ${siteFeedback.projectId}
+          AND ${userProjects.userId} = ${siteFeedback.userId}
+          AND ${userProjects.isActive} = true
+        ORDER BY ${userProjects.createdAt} ASC LIMIT 1
+      )`.as("live_url"),
     },
   });
 }
@@ -163,6 +175,13 @@ export async function listUserFeedback(
           "has_screenshots",
         ),
       projectName: entities.name,
+      liveUrl: sql<string | null>`(
+        SELECT ${userProjects.liveUrl} FROM ${userProjects}
+        WHERE ${userProjects.entityProjectId} = ${entities.id}
+          AND ${userProjects.userId} = ${siteFeedback.userId}
+          AND ${userProjects.isActive} = true
+        ORDER BY ${userProjects.createdAt} ASC LIMIT 1
+      )`.as("live_url"),
       runnable: sql<boolean>`EXISTS (
         SELECT 1 FROM ${userProjects}
         WHERE ${userProjects.entityProjectId} = ${entities.id}

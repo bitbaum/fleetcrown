@@ -24,6 +24,7 @@ import { FEEDBACK_SOURCE, FEEDBACK_STATUS } from "@/lib/constants/statuses";
 import { SYNTHESIZE_MIN_ITEMS } from "@/lib/feedback/compose-dispatch";
 import { deriveFeedbackWork, FEEDBACK_WORK_PHASE } from "@/lib/feedback/work-phase";
 import { fleetSurfaceHref } from "@/lib/fleet-context";
+import { livePageHref } from "@/lib/feedback/fix-shipping";
 import { FeedbackWorkBadge } from "@/components/feedback/FeedbackWorkBadge";
 import type { FeedbackListItemWithWork } from "@/lib/feedback/attach-work";
 import type { ProjectFeedbackSummary } from "@/db/queries/site-feedback";
@@ -548,6 +549,7 @@ function FeedbackTriage({
           // an agent PTY — Working, and Stalled too (it may be waiting on a person).
           const watchable = work.watchable === true;
           const needsVerify = work.phase === FEEDBACK_WORK_PHASE.NEEDS_VERIFY;
+          const liveHref = livePageHref(f.liveUrl, f.url, f.page);
           return (
             <li key={f.id} className="ui-inbox-row">
               <div className="ui-inbox-row-main">
@@ -594,22 +596,55 @@ function FeedbackTriage({
                   </a>
                 )}
                 {needsVerify ? (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      act(
-                        f.id,
-                        () =>
-                          patchJson(`/api/feedback/${f.id}`, { status: FEEDBACK_STATUS.RESOLVED }),
-                        "Update failed",
-                      )
-                    }
-                    disabled={busyId === f.id || batchBusy}
-                    className="ui-btn-save ui-btn-sm gap-1"
-                    title="Confirm the live product changed"
-                  >
-                    <Check className="h-3 w-3" /> Resolve
-                  </button>
+                  <>
+                    {work.checkLive && liveHref ? (
+                      <a
+                        href={liveHref}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="ui-btn-save ui-btn-sm"
+                        title="Open the live page and confirm the visitor's point is fixed"
+                      >
+                        Check live
+                      </a>
+                    ) : work.ship?.pr ? (
+                      <a
+                        href={work.ship.pr.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="ui-btn-secondary ui-btn-sm"
+                        title={work.ship.pr.title}
+                      >
+                        Review PR
+                      </a>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        act(
+                          f.id,
+                          () =>
+                            patchJson(`/api/feedback/${f.id}`, {
+                              status: FEEDBACK_STATUS.RESOLVED,
+                            }),
+                          "Update failed",
+                        )
+                      }
+                      disabled={busyId === f.id || batchBusy}
+                      className={
+                        work.checkLive ? "ui-btn-secondary ui-btn-sm gap-1" : "ui-btn-icon"
+                      }
+                      title={
+                        work.checkLive
+                          ? "You looked at the live page and it is fixed"
+                          : "Mark resolved"
+                      }
+                      aria-label="Confirm fixed"
+                    >
+                      <Check className="h-3 w-3" />
+                      {work.checkLive ? "Confirm" : null}
+                    </button>
+                  </>
                 ) : (
                   <button
                     type="button"

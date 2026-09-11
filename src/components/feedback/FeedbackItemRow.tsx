@@ -10,7 +10,7 @@ import type { FeedbackListItem } from "@/db/queries/site-feedback";
 import type { FeedbackListItemWithWork } from "@/lib/feedback/attach-work";
 import { FeedbackWorkBadge } from "@/components/feedback/FeedbackWorkBadge";
 import { fleetSurfaceHref } from "@/lib/fleet-context";
-import { absoluteFeedbackPageHref } from "@/lib/feedback/page-href";
+import { livePageHref } from "@/lib/feedback/fix-shipping";
 
 /**
  * One feedback item, everywhere feedback renders: the per-project section and
@@ -61,8 +61,11 @@ export function FeedbackItemRow({
   // flag and keep the one-click Implement; the server refuses the same case.
   const runnable = "runnable" in f ? f.runnable !== false : true;
   const projectHref = `/projects/${f.projectId}`;
-  // Reported page surface — Check live must open this, not Control/Terminal.
-  const livePageHref = absoluteFeedbackPageHref(f.url, f.page);
+  // The live page: the project's public origin plus the reported path. The
+  // visitor's host is only a fallback — they may have reported from a preview.
+  const liveHref = livePageHref("liveUrl" in f ? f.liveUrl : null, f.url, f.page);
+  const ship = work.ship ?? null;
+  const showCheckLive = work.checkLive === true && !!liveHref;
   // Agent-filed rows get a typed badge instead of their magic contact string.
   const agentBadge =
     f.source === FEEDBACK_SOURCE.AI_REVIEW
@@ -86,20 +89,19 @@ export function FeedbackItemRow({
   // The badge is the status; a "Not started" chip on every untouched report
   // said nothing the Implement button did not.
   const showBadge = work.phase !== FEEDBACK_WORK_PHASE.NOT_STARTED;
-  const badge =
-    work.phase === FEEDBACK_WORK_PHASE.NEEDS_VERIFY && livePageHref ? (
-      <a
-        href={livePageHref}
-        target="_blank"
-        rel="noreferrer"
-        className="shrink-0"
-        title="Open the reported page"
-      >
-        <FeedbackWorkBadge work={work} />
-      </a>
-    ) : (
+  const badge = showCheckLive ? (
+    <a
+      href={liveHref!}
+      target="_blank"
+      rel="noreferrer"
+      className="shrink-0"
+      title="Open the reported page"
+    >
       <FeedbackWorkBadge work={work} />
-    );
+    </a>
+  ) : (
+    <FeedbackWorkBadge work={work} />
+  );
 
   return (
     <div className="flex flex-col gap-2 py-3">
@@ -151,8 +153,14 @@ export function FeedbackItemRow({
           {/* The phase's sentence only when it changes what the reader does
               next: a failure or a stall. "Agent is generating…" is what the
               Working badge already says. */}
-          {(failed || work.phase === FEEDBACK_WORK_PHASE.WORKING) && work.detail && (
-            <p className="mt-1 text-xs text-text-secondary">{work.detail}</p>
+          {(failed ||
+            work.phase === FEEDBACK_WORK_PHASE.WORKING ||
+            work.phase === FEEDBACK_WORK_PHASE.NEEDS_VERIFY) &&
+            work.detail && <p className="mt-1 text-xs text-text-secondary">{work.detail}</p>}
+          {work.phase === FEEDBACK_WORK_PHASE.NEEDS_VERIFY && work.didLine && (
+            <p className="mt-0.5 text-xs text-text-tertiary" title="The agent's own account">
+              Agent: {work.didLine}
+            </p>
           )}
           {/* The run's raw error, opened on purpose rather than printed at the
             reader. It used to be the detail line itself, which is how an
@@ -270,29 +278,70 @@ export function FeedbackItemRow({
             </>
           ) : work.phase === FEEDBACK_WORK_PHASE.NEEDS_VERIFY ? (
             <>
-              {livePageHref ? (
+              {showCheckLive ? (
                 <a
-                  href={livePageHref}
+                  href={liveHref!}
                   target="_blank"
                   rel="noreferrer"
                   className="ui-btn-save gap-1"
-                  title="Open the reported page and confirm the live UI changed"
+                  title="Open the live page and confirm the visitor's point is fixed"
                 >
                   Check live
                 </a>
-              ) : (
-                <a href={progressHref} className="ui-btn-secondary gap-1" title={progressTitle}>
-                  {progressLabel}
+              ) : ship?.pr ? (
+                <a
+                  href={ship.pr.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="ui-btn-save gap-1"
+                  title={ship.pr.title}
+                >
+                  Review PR
                 </a>
-              )}
+              ) : ship?.push ? (
+                <a
+                  href={ship.push.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="ui-btn-secondary gap-1"
+                  title={ship.push.title}
+                >
+                  Open branch
+                </a>
+              ) : ship ? (
+                <button
+                  type="button"
+                  onClick={() => onDispatch()}
+                  disabled={busy}
+                  className="ui-btn-save gap-1.5"
+                  title="Queue again"
+                >
+                  {busy ? <Loader2 className="ui-spinner-xs" /> : <Rocket className="h-3 w-3" />}
+                  Retry
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={onResolve}
                 disabled={busy}
                 className="ui-btn-secondary gap-1"
-                title="Mark resolved after you confirmed the live product"
+                title={
+                  showCheckLive
+                    ? "You looked at the live page and the point is fixed"
+                    : "Mark resolved without a live check"
+                }
               >
-                <Check className="h-3 w-3" /> Resolve
+                <Check className="h-3 w-3" /> Confirm
+              </button>
+              <button
+                type="button"
+                onClick={onReopen}
+                disabled={busy}
+                className="ui-btn-icon"
+                title="Not fixed — reopen so it can be implemented again with a note"
+                aria-label="Not fixed"
+              >
+                <Undo2 className="h-3.5 w-3.5" />
               </button>
             </>
           ) : f.status === FEEDBACK_STATUS.RESOLVED ? (

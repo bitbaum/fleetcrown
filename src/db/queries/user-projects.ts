@@ -386,3 +386,22 @@ export async function getAllDistinctUserIds(): Promise<string[]> {
   const rows = await db.selectDistinct({ userId: userProjects.userId }).from(userProjects);
   return rows.map((r) => r.userId);
 }
+
+/** Registered projects for a set of project entities — one round trip for a
+ *  list that needs each row's live URL / repo (the feedback inbox). */
+export async function getUserProjectsByEntityIds(
+  userId: string,
+  entityProjectIds: string[],
+): Promise<Map<string, UserProject>> {
+  if (!entityProjectIds.length) return new Map();
+  const rows = await db.query.userProjects.findMany({
+    where: and(
+      eq(userProjects.userId, userId),
+      inArray(userProjects.entityProjectId, entityProjectIds),
+    ),
+  });
+  const out = new Map<string, UserProject>();
+  for (const r of rows)
+    if (r.entityProjectId && !out.has(r.entityProjectId)) out.set(r.entityProjectId, r);
+  return out;
+}

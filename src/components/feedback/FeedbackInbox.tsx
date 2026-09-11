@@ -7,7 +7,9 @@ import { AlertTriangle, Loader2, MessagesSquare } from "lucide-react";
 import { useFetch } from "@/hooks/use-fetch";
 import { compactDurationHours } from "@/lib/dates";
 import { FEEDBACK_SOURCE, FEEDBACK_STATUS, type FeedbackStatus } from "@/lib/constants/statuses";
-import { FEEDBACK_WORK_PHASE } from "@/lib/feedback/work-phase";
+import { WAITING_ON } from "@/lib/feedback/work-phase";
+import { StatRow } from "@/components/ui/stat-row";
+import { StatCard } from "@/components/ui/card";
 import type { FeedbackLoopMetrics, UserFeedbackListItem } from "@/db/queries/site-feedback";
 import type { FeedbackWorkView } from "@/lib/feedback/work-phase";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -62,14 +64,13 @@ export function FeedbackInbox() {
   // keep the phases fresh.
   useEffect(() => {
     const live = all.some(
-      (f) =>
-        f.work.phase === FEEDBACK_WORK_PHASE.QUEUED || f.work.phase === FEEDBACK_WORK_PHASE.WORKING,
+      (f) => f.status !== FEEDBACK_STATUS.RESOLVED && f.work.waitingOn === WAITING_ON.MACHINE,
     );
     if (!live) return;
     const t = window.setInterval(() => refetch(), 8_000);
     return () => window.clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- poll while any row is live; refetch identity is stable enough
-  }, [all.map((f) => f.work.phase).join("|")]);
+  }, [all.map((f) => `${f.work.phase}:${f.work.waitingOn}`).join("|")]);
 
   // Project chips come from the data itself — a project appears here exactly
   // when it has feedback, with its open count.
@@ -91,8 +92,17 @@ export function FeedbackInbox() {
     return true;
   });
 
-  const needsYou = filtered.filter((f) => f.status === FEEDBACK_STATUS.NEW);
-  const inProgress = filtered.filter((f) => f.status === FEEDBACK_STATUS.DISPATCHED);
+  // Grouped by WHO IS BLOCKED, not by DB status. `dispatched` covers both an
+  // agent mid-run and a fix that deployed an hour ago and is waiting for you
+  // to look — filing both under "In progress" hid the one row that needed a
+  // person. work.waitingOn is the SSOT (see work-phase.ts).
+  const active = filtered.filter((f) => f.status !== FEEDBACK_STATUS.ARCHIVED);
+  const needsYou = active.filter(
+    (f) => f.status !== FEEDBACK_STATUS.RESOLVED && f.work.waitingOn === WAITING_ON.YOU,
+  );
+  const underWay = active.filter(
+    (f) => f.status !== FEEDBACK_STATUS.RESOLVED && f.work.waitingOn === WAITING_ON.MACHINE,
+  );
   const shipped = filtered.filter((f) => f.status === FEEDBACK_STATUS.RESOLVED);
   const archived = filtered.filter((f) => f.status === FEEDBACK_STATUS.ARCHIVED);
 
@@ -150,7 +160,7 @@ export function FeedbackInbox() {
   // as naming it in a filter nobody can change.
   const hideProject = !!projectFilter || projects.length <= 1;
   const showSourceChips = sourcesPresent.size > 1;
-  const nothingWaiting = needsYou.length === 0 && inProgress.length === 0;
+  const nothingWaiting = needsYou.length === 0 && underWay.length === 0;
 
   return (
     <div className="space-y-6">
@@ -216,6 +226,35 @@ export function FeedbackInbox() {
       )}
 
       {error && <p className="ui-error">{error}</p>}
+      {/* The loop in three numbers. Fleet-wide, so it is hidden under a
+          project filter rather than quietly answering a different question. */}
+      {!projectFilter && metrics && metrics.total > 0 && (
+        <StatRow>
+          <StatCard
+            label="Reports"
+            value={String(metrics.total)}
+            sub={metrics.open > 0 ? `${metrics.open} still open` : "all handled"}
+          />
+          <StatCard
+            label="Shipped"
+            value={String(metrics.resolved)}
+            sub={
+              metrics.resolved30d > 0
+                ? `${metrics.resolved30d} in the last 30 days`
+                : "none in the last 30 days"
+            }
+          />
+          <StatCard
+            label="Report → fix"
+            value={
+              metrics.medianResolutionHours != null
+                ? compactDurationHours(metrics.medianResolutionHours)
+                : "—"
+            }
+            sub={metrics.medianResolutionHours != null ? "median" : "no fix shipped yet"}
+          />
+        </StatRow>
+      )}
 
       {/* One sentence when the answer is "nothing" — three headed sections each
           saying it was the noise. Sections render only when they hold rows. */}
@@ -242,9 +281,13 @@ export function FeedbackInbox() {
         </InboxSection>
       )}
 
-      {inProgress.length > 0 && (
-        <InboxSection title="In progress" count={inProgress.length}>
-          {inProgress.map((f) => (
+      {underWay.length > 0 && (
+        <InboxSection
+          title="Under way"
+          count={underWay.length}
+          aside="moving on its own — nothing to do"
+        >
+          {underWay.map((f) => (
             <Row
               key={f.id}
               f={f}
