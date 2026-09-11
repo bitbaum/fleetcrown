@@ -37,6 +37,19 @@ export function canonicalSlug(name: string): string {
   return SLUG_ALIASES[base] ?? base;
 }
 
+/**
+ * A description worth showing. The site factory writes "Website at <url>" into
+ * every project it provisions, which restates the column next to it and reads
+ * as filler — so it is treated as absent rather than rendered as content. An
+ * empty gap invites someone to write the real line; boilerplate does not.
+ */
+export function usefulDescription(d: string | null | undefined): string | null {
+  const t = (d ?? "").trim();
+  if (!t) return null;
+  if (/^website at https?:\/\//i.test(t)) return null;
+  return t;
+}
+
 /** Repo name from a git URL, or null. */
 export function repoFromGitUrl(gitUrl: string | null | undefined): string | null {
   if (!gitUrl) return null;
@@ -47,6 +60,7 @@ export function repoFromGitUrl(gitUrl: string | null | undefined): string | null
 export type RegisterProjectInput = {
   id: string;
   name: string;
+  description?: string | null;
   slug?: string | null;
   hostedApp?: string | null;
   gitUrl?: string | null;
@@ -59,6 +73,13 @@ export type RegisterProjectInput = {
 export type RegisterRow = {
   slug: string;
   name: string;
+  /**
+   * One line saying what the project IS. Without it the register is a list of
+   * slugs, which tells a reader who is not already the author precisely
+   * nothing. Comes from the project profile — the place a human already
+   * writes it — so there is no second copy to keep in sync.
+   */
+  description: string | null;
   repo: string | null;
   site: {
     url: string;
@@ -93,7 +114,16 @@ export function buildFleetRegister(
   const row = (slug: string, name: string): RegisterRow => {
     let r = bySlug.get(slug);
     if (!r) {
-      r = { slug, name, repo: null, site: null, fleetcrown: null, orangecat: null, solon: null };
+      r = {
+        slug,
+        name,
+        description: null,
+        repo: null,
+        site: null,
+        fleetcrown: null,
+        orangecat: null,
+        solon: null,
+      };
       bySlug.set(slug, r);
     }
     return r;
@@ -106,6 +136,7 @@ export function buildFleetRegister(
     // the display name folded through the alias table.
     const slug = canonicalSlug(p.slug || repo || p.name);
     const r = row(slug, p.name);
+    r.description = r.description ?? usefulDescription(p.description);
     r.repo = r.repo ?? repo;
     r.fleetcrown = { id: p.id, liveUrl: p.liveUrl ?? null };
     if (p.orangecatProjectId) r.orangecat = { projectId: p.orangecatProjectId };

@@ -11,6 +11,7 @@ import {
   TerminalSquare,
 } from "lucide-react";
 import { MarkdownText, type CitationMap } from "@/components/ui/markdown-text";
+import { ProvenanceFooter } from "./ProvenanceFooter";
 import type { LokiMessage } from "./types";
 import {
   deriveMultiDispatchView,
@@ -320,6 +321,7 @@ export function Transcript({
                 />
               )}
               {m.kind === "dispatch" && <DispatchFooter meta={m.meta} />}
+              {m.kind === "chat" && <ProvenanceFooter meta={m.meta} />}
               {m.kind === "chat" && <QueuedActionFooter meta={m.meta} />}
             </div>
           ),

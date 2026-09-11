@@ -322,6 +322,46 @@ console.log("feedback-fix-ledger: ok");
 
 console.log("feedback-waiting-on: ok");
 
+// Copy discipline. Two rules the row kept breaking:
+//  1. The badge is a STATUS, not a sentence — "Live (partial) · confirm" is
+//     three ideas in a chip, and "partial" is the agent's word about its own
+//     session, not something a person reads at a glance.
+//  2. A detail line must carry what the badge and buttons cannot. "Merged and
+//     deployed. Open the live page, confirm… then Confirm" printed the same
+//     18 words on every deployed row, next to buttons already labelled
+//     "Check live" and "Confirm".
+{
+  const at = new Date().toISOString();
+  const pr = { number: 9, url: `${GIT}/pull/9`, title: "t" };
+  const run = {
+    id: "r",
+    state: ORCH_STATE.DONE,
+    outcome: ORCHESTRATION_OUTCOME.PARTIAL,
+    startedAt: new Date(),
+    finishedAt: new Date(),
+    deliveredAt: null,
+    lastProgressAt: null,
+    error: null,
+    summaryDone: "opened PR #9",
+    fix: { state: FIX_SHIP_STATE.DEPLOYED, pr, checkedAt: at },
+  };
+  const partialLive = deriveFeedbackWork(FEEDBACK_STATUS.DISPATCHED, run);
+  assert.equal(partialLive.label, "Live · confirm", "the badge never carries (partial)");
+  assert.match(
+    partialLive.detail ?? "",
+    /partial success/,
+    "partial is said in the sentence instead",
+  );
+
+  const cleanLive = deriveFeedbackWork(FEEDBACK_STATUS.DISPATCHED, {
+    ...run,
+    outcome: ORCHESTRATION_OUTCOME.SUCCESS,
+  });
+  assert.equal(cleanLive.label, "Live · confirm");
+  assert.equal(cleanLive.detail, null, "a clean deployed row says nothing its buttons already say");
+}
+
+console.log("feedback-copy: ok");
 // The dispatch prompt must not promise the agent that its PR merges itself.
 // Site provisioning writes deploy.yml and nothing else (src/lib/site-cd.ts),
 // so "an opened PR with passing checks counts as shipped" was false, and two

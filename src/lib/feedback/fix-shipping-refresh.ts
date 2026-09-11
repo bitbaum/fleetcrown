@@ -121,8 +121,15 @@ export async function refreshFixShipping(input: FixRefreshInput): Promise<FixShi
       // The person's OAuth token is NOT enough: `bitbaum` has OAuth-app access
       // restrictions, so GitHub answers 403 for every org repo even with the
       // right scope — the ledger read "PR #2 · open?" while that PR had merged
-      // and deployed. getRepoWriteToken prefers the server's org token and
-      // falls back to the person's, which is the same order repo creation uses.
+      // and deployed.
+      //
+      // This is a read, and getRepoWriteToken is named for writes, but it is
+      // the picker that already encodes the rule this needs: the server's org
+      // token for accounts entitled to fleet infrastructure, the person's own
+      // otherwise. Reusing it means the ledger cannot hand an unentitled
+      // account a credential the rest of the app withholds — and an external
+      // user whose org refuses their token gets the honest `unverified` row
+      // below rather than a silent escalation.
       const picked = await getRepoWriteToken(input.userId);
       if (!picked) fix = claimed;
       else {

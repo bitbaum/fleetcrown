@@ -7,6 +7,14 @@ commit series in git history for the implementation.
 
 **Last modified:** 2026-06-30 — Grok-like composer pass; multi-project chips inside the composer; explicit Control/Terminal dispatch card.
 
+> **Scope note (2026-09-11).** This document covers the COMMAND surface — the
+> composer, project resolution, and the dispatch fast paths. It says nothing
+> about how Loki *answers* a question, because none of that existed when it was
+> written: the grounding harness, the typed fact set, the retrieval planner, the
+> model chain and the prompt budgets all came later. For the answering pipeline
+> see **`docs/architecture/loki-answering.md`**. Where the two disagree about
+> anything post-June, that one is current and this one is history.
+
 ### Shipped state (verified in the running app)
 
 The Loki page (`/loki`) is live and in daily use as the dogfood surface. Confirmed working:

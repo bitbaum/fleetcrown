@@ -16,4 +16,14 @@ if (pickRepoWriteToken(null, null) !== null) throw new Error("no token → null,
 if (pickRepoWriteToken("", "user-tok")?.source !== "user") {
   throw new Error("an empty org token is no org token");
 }
+// The entitlement is the caller's job (getRepoWriteToken passes null for an
+// account that may not use fleet infrastructure); this pins that passing null
+// is exactly equivalent to having no server token at all.
+if (pickRepoWriteToken(null, "user-tok")?.source !== "user") {
+  throw new Error("an unentitled account falls back to its own token, never the org's");
+}
+if (pickRepoWriteToken(null, null) !== null) {
+  throw new Error("an unentitled account with no token of its own gets nothing to write with");
+}
+
 console.log("✓ github org token");

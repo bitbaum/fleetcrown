@@ -371,8 +371,173 @@ async function main() {
     );
   }
 
+  // ── 12. Conversation history reaches the model ──────────────────────────────
+  // Before 2026-09-11 the loop received only the current message. The gateway
+  // FALLBACK carried memory (per session key), so thread continuity appeared
+  // and disappeared depending on which brain served the turn, and nothing in
+  // the UI said which. "And the second one?" was answered cold.
+  {
+    const seenMessages: Array<Array<{ role: string; content: string }>> = [];
+    const model = (async (input: { messages: Array<{ role: string; content: string }> }) => {
+      seenMessages.push(input.messages);
+      return { text: "The second report was about the header.", toolCalls: [], model: "stub" };
+    }) as never;
+
+    await runLokiTurn({
+      userId: "u1",
+      message: "and the second one?",
+      registry: STUB_REGISTRY,
+      callModel: model,
+      seed: SEED,
+      history: [
+        { role: "user", content: "what feedback came in today?" },
+        { role: "assistant", content: "Two reports: one on /control, one on /en/." },
+      ],
+    });
+
+    const roles = seenMessages[0].map((m) => m.role);
+    const joined = seenMessages[0].map((m) => m.content).join("\n");
+    assert.match(joined, /what feedback came in today/, "the prior question must reach the model");
+    assert.match(joined, /Two reports/, "the prior answer must reach the model");
+    assert.equal(roles[0], "system", "the system prompt stays first");
+    assert.ok(
+      roles.indexOf("assistant") < roles.lastIndexOf("user"),
+      `history must precede the current question, got [${roles.join(", ")}]`,
+    );
+  }
+
+  {
+    // History is trimmed, not trusted: a pasted wall of text must not crowd out
+    // the records, which are the part that makes the answer true.
+    const seenMessages: Array<Array<{ role: string; content: string }>> = [];
+    const model = (async (input: { messages: Array<{ role: string; content: string }> }) => {
+      seenMessages.push(input.messages);
+      return { text: "ok", toolCalls: [], model: "stub" };
+    }) as never;
+
+    await runLokiTurn({
+      userId: "u1",
+      message: "and?",
+      registry: STUB_REGISTRY,
+      callModel: model,
+      seed: SEED,
+      history: Array.from({ length: 30 }, (_, i) => ({
+        role: (i % 2 === 0 ? "user" : "assistant") as "user" | "assistant",
+        content: "x".repeat(5000),
+      })),
+    });
+
+    const priorTurns = seenMessages[0].filter((m) => m.content.startsWith("x"));
+    assert.ok(priorTurns.length <= 8, `history must be capped, got ${priorTurns.length} turns`);
+    for (const turn of priorTurns) {
+      assert.ok(
+        turn.content.length <= 601,
+        `each prior turn must be trimmed, got ${turn.content.length} chars`,
+      );
+    }
+  }
+
+  // ── 13. An unsendable prompt THROWS — it is never sent empty ────────────────
+  // The production failure, exactly: the fixed overhead exceeded the whole
+  // budget, the fit honestly returned zero facts, and the turn was sent anyway
+  // with an empty Records block. The model then said "Not in your data." about
+  // records that existed, and the sentence was true of what it had been given.
+  // A caller that cannot see anything must fail loudly so the fallback runs.
+  {
+    const facts = assignFactIds(
+      Array.from({ length: 10 }, (_, i) =>
+        makeFact({
+          kind: "project",
+          subject: `p${i}`,
+          source: "projects table",
+          values: { name: `p${i}` },
+        }),
+      ),
+    );
+    let called = 0;
+    const model = (async () => {
+      called++;
+      return { text: "answered from nothing", toolCalls: [], model: "stub" };
+    }) as never;
+
+    await runLokiTurn({
+      userId: "u1",
+      message: "what am I working on?",
+      registry: STUB_REGISTRY,
+      callModel: model,
+      seed: { facts, directives: [] },
+      // Smaller than the system prompt alone: nothing can fit.
+      promptBudgetTokens: 10,
+    }).then(
+      () => assert.fail("a prompt that cannot carry a single record must not be sent"),
+      (e: Error) => {
+        assert.match(e.message, /overhead/i, `expected an overhead error, got: ${e.message}`);
+        assert.equal(called, 0, "the model must not be called with an empty Records block");
+      },
+    );
+  }
+
+  // ── 14. A repair that invents something NEW is rejected ─────────────────────
+  // Fewer violations is not enough. Swapping "Program Manager at Impact Hub
+  // Zurich" for "Director at Seedstars Geneva" uses fewer proper nouns and
+  // passes a count test while being just as invented. A repair is a DELETION:
+  // every flagged span in the result must already have been flagged.
+  {
+    const model = scriptedModel([
+      { toolCalls: [{ id: "1", name: "search_people", args: { query: "Elena" } }] },
+      { text: "Elena Weber is Program Manager at Impact Hub Zurich and Basel [F1]." },
+      // The "repair" drops one fabrication and introduces a different one.
+      { text: "Elena Weber is Director at Seedstars Geneva [F1]." },
+    ]);
+    const r = await runLokiTurn({
+      userId: "u1",
+      message: "who is Elena?",
+      registry: STUB_REGISTRY,
+      callModel: model.fn,
+      seed: SEED,
+    });
+    assert.doesNotMatch(
+      r.text,
+      /Seedstars/i,
+      "a repair that invents a NEW unsupported claim must be rejected, not accepted for being shorter",
+    );
+    assert.ok(
+      r.violations.length > 0,
+      "the original's violations must be reported rather than silently swapped",
+    );
+  }
+
+  // ── 15. The turn reports what it retrieved ──────────────────────────────────
+  // Provenance the operator can see: which sources produced how many records.
+  // Without it, a thin answer is indistinguishable from a thin database.
+  {
+    const model = scriptedModel([{ text: "You have two projects." }]);
+    const r = await runLokiTurn({
+      userId: "u1",
+      message: "what am I working on?",
+      registry: STUB_REGISTRY,
+      callModel: model.fn,
+      seed: {
+        facts: [],
+        directives: [],
+        retrieved: [
+          { source: "projects", count: 2 },
+          { source: "feedback", count: 0 },
+        ],
+      },
+    });
+    assert.deepEqual(
+      r.retrieved,
+      [
+        { source: "projects", count: 2 },
+        { source: "feedback", count: 0 },
+      ],
+      "the loop must pass the seed's retrieval report through to the caller",
+    );
+  }
+
   console.log(
-    "✓ agent tool loop: 11 checks passed (protocol tolerance, catalog shape, no-execute boundary, fact accumulation, repair, bounds, 413 shedding)",
+    "✓ agent tool loop: 15 checks passed (protocol tolerance, catalog shape, no-execute boundary, fact accumulation, repair guards, bounds, 413 shedding, history, empty-prompt refusal, provenance)",
   );
 }
 

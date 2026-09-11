@@ -1,51 +1,136 @@
 /**
- * Loki's grounded context assembly — the replacement for the prose fleet-context
- * block that produced the 2026-08-13 fabrications.
+ * Loki's grounded context assembly — the seed every turn starts from.
  *
- * What changed, and why each change is load-bearing:
+ * One builder, used by BOTH paths: the in-app tool loop (primary) and the
+ * gateway fallback. Until 2026-09-11 there were two seeds. The loop's seed was
+ * people + projects and nothing else; the richer one here — approvals, the
+ * knowledge index, the economy feed, the cue-gated brief — was built only on
+ * the fallback path, which normal turns never reached. So the approval queue
+ * was "seeded so it survives losing the tool loop" (#262) on a path the tool
+ * loop never took, and the primary path could see the queue only by calling a
+ * tool it could not afford to call. One seed, one definition, both paths.
  *
- *   Before                                  After
- *   ──────────────────────────────────────  ────────────────────────────────────
- *   Projects + RAG chunks only.             Projects, PEOPLE, and RAG — people
- *                                           were never in context, which is why
- *                                           "who should I reach out to" was
- *                                           answered from an unrelated JSON blob
- *                                           in the OpenClaw agent's workspace.
+ * What goes in is decided by the retrieval planner (plan.ts): the sources the
+ * question is about, fetched in parallel, leading subject first. Facts are
+ * typed records with declared fields and `<not recorded>` for gaps; computed
+ * answers (the daily and fleet briefs) ride alongside as directives the model
+ * may only phrase.
  *
- *   Prose blob per project.                 Typed records with declared fields;
- *                                           unstored fields render as an
- *                                           explicit `<not recorded>`.
- *
- *   "cite the [source]" as advice.          Enumerated citation ids, checked
- *                                           mechanically after generation.
- *
- *   Goals/habits/commitments absent, but    Computed by SQL and handed over as
- *   routinely asked about.                  settled results.
- *
- * Budgeting note: the fact set is capped, because a small model given forty
- * records answers about the wrong one. Cheap deterministic facts (people,
- * projects) are kept whole; retrieved documents are the elastic part.
+ * Best-effort throughout: a source that throws contributes nothing rather
+ * than failing the turn, and the contract adapts — fewer facts permit fewer
+ * citations, and none instructs a refusal.
  */
 import { assignFactIds, renderFacts, type Fact } from "@bitbaum/ai-kit/grounding";
 import { buildGroundedContext, type Directive } from "@bitbaum/ai-kit/grounding";
 import {
-  peopleFacts,
-  projectFacts,
+  alertFacts,
+  captureFacts,
+  commitmentFacts,
+  crewFacts,
   documentFacts,
   economyFacts,
+  feedbackFacts,
+  fleetStatusFacts,
+  goalFacts,
+  habitFacts,
+  humanTaskFacts,
   pendingApprovalFacts,
+  peopleFacts,
+  projectFacts,
+  runFacts,
+  sessionFacts,
 } from "@/lib/agent/sources";
-import { buildDailyBrief } from "@/lib/agent/brief";
-import { PLANNING_CUES, APPROVAL_CUES } from "@/lib/agent/cues";
+import { buildDailyBrief, buildFleetBrief } from "@/lib/agent/brief";
+import { planRetrieval, sourceLimit, type RetrievalPlan, type SourceId } from "@/lib/agent/plan";
 
-/** Retrieved-document budget. Small models degrade past roughly this many. */
-const DOC_K = 6;
-/** External (OrangeCat) items per kind — a supporting signal, not the subject. */
-const ECON_K = 3;
+/** Window for commitments/events when they lead the turn. */
+const COMMITMENT_DAYS = 14;
 
-/** Approval-queue items to seed. The queue is short by design; a long one is a
- *  backlog to open the Approvals page for, not to recite in chat. */
-const APPROVAL_K = 8;
+/** What one source contributed — surfaced to the operator as provenance. */
+export type RetrievedSource = { source: SourceId; count: number };
+
+export type Seed = {
+  facts: Fact[];
+  directives: Directive[];
+  retrieved: RetrievedSource[];
+  plan: RetrievalPlan;
+};
+
+/** Fetch one planned source. Every branch is best-effort. */
+async function fetchSource(
+  id: SourceId,
+  userId: string,
+  message: string,
+  plan: RetrievalPlan,
+): Promise<Fact[]> {
+  const limit = sourceLimit(plan, id);
+  if (limit <= 0) return [];
+  switch (id) {
+    case "feedback":
+      return feedbackFacts(userId, { limit });
+    case "runs":
+      return runFacts(userId, { limit });
+    case "sessions":
+      return sessionFacts(userId).then((f) => f.slice(0, limit));
+    case "alerts":
+      return alertFacts(userId, limit);
+    case "fleet_status":
+      return fleetStatusFacts(userId);
+    case "approvals":
+      return pendingApprovalFacts(userId, limit);
+    case "goals":
+      return goalFacts(userId, limit);
+    case "habits":
+      return habitFacts(userId, limit);
+    case "commitments":
+      return commitmentFacts(userId, COMMITMENT_DAYS).then((f) => f.slice(0, limit));
+    case "crew":
+      return crewFacts(userId, limit);
+    case "human_tasks":
+      return humanTaskFacts(userId, limit);
+    case "captures":
+      return captureFacts(userId, limit);
+    case "people":
+      return peopleFacts(userId, message).then((f) => f.slice(0, limit));
+    case "knowledge":
+      return documentFacts(userId, message, limit);
+    case "economy":
+      return economyFacts(message, limit);
+    case "projects":
+      return projectFacts(userId).then((f) => f.slice(0, limit));
+  }
+}
+
+/**
+ * Assemble everything Loki is allowed to know this turn.
+ *
+ * Facts arrive in PLAN order — the subject first, background last — because
+ * the loop head-slices when the prompt must shrink, and the tail is what goes.
+ */
+export async function buildSeed(
+  userId: string,
+  message: string,
+  opts: { plan?: RetrievalPlan } = {},
+): Promise<Seed> {
+  const plan = opts.plan ?? planRetrieval(message);
+
+  const [perSource, daily, fleet] = await Promise.all([
+    Promise.all(
+      plan.sources.map((id) => fetchSource(id, userId, message, plan).catch(() => [] as Fact[])),
+    ),
+    plan.brief ? buildDailyBrief(userId).catch(() => [] as Directive[]) : Promise.resolve([]),
+    plan.fleetBrief
+      ? buildFleetBrief(userId).catch(() => [] as Directive[])
+      : Promise.resolve([] as Directive[]),
+  ]);
+
+  const retrieved: RetrievedSource[] = plan.sources.map((source, i) => ({
+    source,
+    count: perSource[i].length,
+  }));
+  const facts = assignFactIds(perSource.flat());
+  return { facts, directives: [...fleet, ...daily], retrieved, plan };
+}
 
 export type GroundedTurn = {
   /** The full block to prepend to the model's input. */
@@ -54,50 +139,28 @@ export type GroundedTurn = {
   facts: Fact[];
   /** Computed answers, kept so the verifier can admit them as evidence. */
   directives: Directive[];
+  retrieved: RetrievedSource[];
 };
 
-/**
- * Assemble everything Loki is allowed to know this turn.
- *
- * Best-effort by design: any source that throws contributes nothing rather than
- * failing the turn. The contract adapts automatically — with fewer facts it
- * permits fewer citations, and with none it instructs a refusal.
- */
+/** The seed rendered as one prompt block — what the gateway path prepends. */
 export async function buildGroundedTurn(userId: string, message: string): Promise<GroundedTurn> {
-  const wantsBrief = PLANNING_CUES.test(message);
-  const wantsApprovals = APPROVAL_CUES.test(message);
-
-  const [people, projects, docs, economy, approvals, directives] = await Promise.all([
-    peopleFacts(userId, message).catch(() => [] as Fact[]),
-    projectFacts(userId).catch(() => [] as Fact[]),
-    documentFacts(userId, message, DOC_K).catch(() => [] as Fact[]),
-    economyFacts(message, ECON_K).catch(() => [] as Fact[]),
-    wantsApprovals
-      ? pendingApprovalFacts(userId, APPROVAL_K).catch(() => [] as Fact[])
-      : Promise.resolve([] as Fact[]),
-    wantsBrief
-      ? buildDailyBrief(userId).catch(() => [] as Directive[])
-      : Promise.resolve([] as Directive[]),
-  ]);
-
-  // Order matters for attention: deterministic records first (they are simply
-  // true), then retrieved documents, then external signal (ranked guesses about
-  // relevance, from another system entirely). Approvals lead when they were
-  // asked for — they are the subject of the turn, and the tail of a long fact
-  // list is what gets shed when the prompt has to shrink.
-  const facts = assignFactIds([...approvals, ...projects, ...people, ...docs, ...economy]);
-
+  const seed = await buildSeed(userId, message);
   return {
-    facts,
-    directives,
-    context: buildGroundedContext({ facts, directives, renderedFacts: renderFacts(facts) }),
+    facts: seed.facts,
+    directives: seed.directives,
+    retrieved: seed.retrieved,
+    context: buildGroundedContext({
+      facts: seed.facts,
+      directives: seed.directives,
+      renderedFacts: renderFacts(seed.facts),
+    }),
   };
 }
 
 /**
  * Evidence strings the verifier may treat as legitimately known beyond the fact
- * set — currently the computed brief, whose contents are true by construction
- * but do not live in any Fact.
+ * set — the computed briefs, whose contents are true by construction but do
+ * not live in any Fact.
  */
 export function directiveEvidence(directives: Directive[]): string[] {
   return directives.flatMap((d) => [d.question, ...d.answer]);

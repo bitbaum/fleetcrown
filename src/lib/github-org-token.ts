@@ -12,6 +12,14 @@
  * identity the box's site factory already creates repos with), and fall back
  * to the person's token otherwise. Identity-scoped reads (which repos does
  * this person have, who are they) keep using the person's token.
+ *
+ * ENTITLEMENT. That token can create, seed and DELETE repositories in the
+ * fleet's organisation, so it is offered only to accounts already entitled to
+ * fleet-owned infrastructure (`isFleetInfrastructureAllowed` — founder or
+ * allowlist, the same boundary the shared cloud builder draws). Everyone else
+ * gets their own token and, if their org refuses it, an honest 403. A
+ * server-held admin credential available to every signed-in account is a
+ * privilege escalation waiting for the first external user.
  */
 export function getOrgGithubToken(): string | null {
   const token = process.env.GITHUB_ORG_TOKEN?.trim();
@@ -35,6 +43,13 @@ export function pickRepoWriteToken(
 export async function getRepoWriteToken(
   userId: string,
 ): Promise<{ token: string; source: "org" | "user" } | null> {
-  const { getGithubToken } = await import("@/lib/github-token");
-  return pickRepoWriteToken(getOrgGithubToken(), await getGithubToken(userId));
+  const [{ getGithubToken }, { isFleetInfrastructureAllowed }] = await Promise.all([
+    import("@/lib/github-token"),
+    import("@/lib/execution-access"),
+  ]);
+  const [userToken, entitled] = await Promise.all([
+    getGithubToken(userId),
+    isFleetInfrastructureAllowed(userId),
+  ]);
+  return pickRepoWriteToken(entitled ? getOrgGithubToken() : null, userToken);
 }

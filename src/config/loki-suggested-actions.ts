@@ -21,8 +21,26 @@ export type LokiComposerChip = {
 export const LOKI_NEW_PROJECT_HREF = "/control/new-from-scratch";
 export const LOKI_IMPORT_PROJECT_HREF = "/control/import";
 
+/**
+ * The openers, and why they are worded this way.
+ *
+ * Each names the surfaces it wants, because the retrieval planner reads the
+ * words of the question to decide what to fetch. A starter that says "review
+ * my fleet" plans projects; one that says "runs, feedback and approvals" plans
+ * those too. The chip text is therefore load-bearing, not decoration — and it
+ * is the reason the old "What needs me" could only ever answer about projects.
+ *
+ * Each also forbids the listing behaviour a modest model falls into when handed
+ * an index: name a few things and say why, rather than reciting the fleet.
+ */
 export const LOKI_ATTENTION_PROMPT =
-  "Review my whole fleet. Pick the 2–3 projects that most need my attention right now, and for each say in one line why. Then for each, ask me ONE specific question whose answer would most help you move it forward. Cite the project. Don't list every project.";
+  "What needs me right now? Check the fleet status, the runs that are waiting or errored, unread visitor feedback, open alerts, and anything pending my approval. Give me the 3 things that most need me, newest first, one line each saying what it is and why it matters. Give the time for anything time-sensitive. If nothing needs me, say so plainly. Don't list everything.";
+
+export const LOKI_FEEDBACK_PROMPT =
+  "What visitor feedback has come in recently? For each report give the project, when it was filed, what it says, and what happened to it — was it dispatched to an agent, is a run still waiting, or is nothing happening with it yet?";
+
+export const LOKI_RUNS_PROMPT =
+  "How are my agent runs doing? Show what is waiting to be picked up, what errored in the last 24 hours, and what is working right now. For anything waiting or failed, say how long it has been that way and whether the runner is even connected.";
 
 const NEW_PROJECT_CHIP: LokiComposerChip = {
   id: "new_project",
@@ -123,4 +141,6 @@ export type LokiProactiveStarter = { id: string; label: string; prompt: string }
 
 export const LOKI_PROACTIVE_STARTERS: LokiProactiveStarter[] = [
   { id: "attention", label: "What needs me", prompt: LOKI_ATTENTION_PROMPT },
+  { id: "runs", label: "How are my runs", prompt: LOKI_RUNS_PROMPT },
+  { id: "feedback", label: "Latest feedback", prompt: LOKI_FEEDBACK_PROMPT },
 ];

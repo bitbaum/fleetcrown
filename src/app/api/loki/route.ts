@@ -16,8 +16,29 @@ const AskLokiBody = z.object({
   includeContext: z.boolean().default(false),
   // Text the user can actually see, read from the rendered page. Grounds
   // answers about "this" in what is on screen instead of guessing from a route.
-  pageContext: z.string().trim().max(2000).optional(),
+  // CLAMPED, not rejected: the client reads the page unconditionally, so a
+  // long page used to turn the whole request into a 400 ("Loki did not
+  // answer") — the assistant broke on exactly the pages with the most on them.
+  pageContext: z
+    .string()
+    .trim()
+    .transform((s) => s.slice(0, PAGE_CONTEXT_MAX_CHARS))
+    .optional(),
+  // The panel's own transcript, oldest first, so a follow-up ("and the second
+  // one?") has something to follow. The floating assistant keeps its turns in
+  // client state only, so this is the only way they reach the model.
+  history: z
+    .array(
+      z.object({
+        role: z.enum(["user", "assistant"]),
+        content: z.string().max(4000),
+      }),
+    )
+    .max(12)
+    .optional(),
 });
+
+const PAGE_CONTEXT_MAX_CHARS = 2000;
 
 export async function POST(req: NextRequest) {
   const userId = await getApiUserId();
@@ -63,7 +84,7 @@ export async function POST(req: NextRequest) {
   // "nothing to queue this turn" and never blocks the reply. This is the queue's
   // producer; the operator still approves every draft before it executes.
   const [{ status, body }, queued] = await Promise.all([
-    askLoki(message, { sessionKey, userId }),
+    askLoki(message, { sessionKey, userId, history: dataOrResp.history }),
     enqueueProposalFromMessage(userId, dataOrResp.message, new Date().toISOString()).catch(
       () => null,
     ),

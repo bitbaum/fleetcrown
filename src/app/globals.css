@@ -1191,6 +1191,10 @@
   .ui-public-fleet-list {
     @apply divide-y divide-border-subtle border-y border-border-subtle;
   }
+  /* Landing on /fleet#causius should show you which row you came for. */
+  .ui-public-fleet-row:target {
+    @apply bg-surface-raised ring-1 ring-border-interactive;
+  }
   .ui-public-fleet-row {
     @apply -mx-3 grid grid-cols-1 gap-x-6 gap-y-2 rounded-lg px-3 py-4 transition-colors sm:grid-cols-[minmax(0,17rem)_minmax(0,1fr)_auto] sm:items-start;
   }
@@ -1202,6 +1206,12 @@
   }
   .ui-public-fleet-row:hover .ui-public-fleet-name {
     @apply decoration-border-interactive;
+  }
+  /* The line that says what the project IS. Content, not an identifier, so it
+     reads a step brighter than the slug it replaces. */
+  .ui-public-fleet-what {
+    @apply mt-0.5 text-sm leading-snug text-text-tertiary;
+    text-wrap: pretty;
   }
   .ui-public-fleet-slug {
     @apply mt-0.5 font-mono text-xs text-text-tertiary;
@@ -1217,6 +1227,13 @@
   }
   .ui-public-fleet-presence-on {
     @apply inline-flex items-center rounded-md border border-border-subtle px-2 py-1 font-mono text-[11px] text-text-secondary transition-colors hover:border-border-interactive hover:text-text-primary;
+  }
+  /* Present, but not openable by this reader (the project page needs a
+     session). Solid like the real thing because the fact is the same; no hover
+     response, because there is nothing to click and a chip that lights up under
+     the cursor promises otherwise. */
+  .ui-public-fleet-presence-flat {
+    @apply inline-flex items-center rounded-md border border-border-subtle px-2 py-1 font-mono text-[11px] text-text-tertiary;
   }
   .ui-public-fleet-presence-off {
     @apply inline-flex items-center rounded-md border border-dashed border-border-subtle px-2 py-1 font-mono text-[11px] text-text-muted opacity-60;
@@ -4975,6 +4992,24 @@
   /* Kind badge above an assistant turn (dispatch / chat / command). */
   .ui-loki-kind {
     @apply mb-1 inline-flex items-center gap-1 self-start text-micro uppercase tracking-wider text-text-muted;
+  }
+  /* Provenance line under a Loki answer — which model, what was read, which
+     tools ran, how long. Quiet by default: it is there to be glanced at when
+     an answer surprises, not to compete with the answer. */
+  .ui-loki-provenance {
+    @apply mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 px-1 text-micro text-text-muted;
+  }
+  .ui-loki-provenance-sep {
+    @apply text-text-muted/60;
+  }
+  /* The verification warning is NOT quiet. An answer that failed the grounding
+     check must look different from one that passed — "being wrong looked
+     exactly like being right" is the failure this exists to end. */
+  .ui-loki-provenance-warn {
+    @apply mt-1.5 flex max-w-full flex-col gap-0.5 rounded-lg border border-status-warning/40 bg-status-warning/10 px-2.5 py-1.5 text-xs text-text-secondary sm:max-w-[75%];
+  }
+  .ui-loki-provenance-warn strong {
+    @apply text-text-primary;
   }
   /* Outcome card under a dispatch bubble — status, target, and the two
      operational destinations the operator needs next: Control + Terminal. */
