@@ -29,6 +29,17 @@ export interface ReleaseEntry {
 /** Newest first. */
 export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
   {
+    version: "0.8.22",
+    tag: "fleet-runner-v0.8.22",
+    date: "2026-09-11T15:00:00Z",
+    highlights: [
+      "A dispatch for a project whose folder is not on this computer is refused instead of attempted. The runner used to launch the agent in a directory that does not exist and report that the prompt 'did not stick'; now the run says which workspace is missing and that the project lives on another builder.",
+    ],
+    breaking: [],
+    notes:
+      "Projects FleetCrown set up on the cloud builder are already routed there, so this is the belt to that braces: if such a dispatch reaches a laptop anyway, the failure names its real cause in one line instead of looking like a broken agent.",
+  },
+  {
     version: "0.8.21",
     tag: "fleet-runner-v0.8.21",
     date: "2026-09-11T13:00:00Z",
