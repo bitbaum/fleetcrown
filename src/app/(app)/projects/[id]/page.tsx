@@ -5,15 +5,23 @@ import { getActiveProjectShare } from "@/db/queries/project-shares";
 import { ProjectWorkspaceView } from "@/components/projects/ProjectWorkspaceView";
 import { ProjectSharePanel } from "@/components/projects/ProjectSharePanel";
 import { ROUTES } from "@/config/auth";
+import { isKickoffAuto } from "@/lib/integrations/orangecat-handoff-mode";
 
 export const metadata = { title: "Project" };
 
 /** The one canonical project workspace, rendered from the dossier SSOT. */
-export default async function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ProjectPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ kickoff?: string }>;
+}) {
   const session = await auth();
   if (!session?.user?.id) redirect(ROUTES.SIGN_IN);
 
   const { id } = await params;
+  const { kickoff } = await searchParams;
   const dossier = await getProjectDossier(session.user.id, id).catch(() => null);
   if (!dossier) notFound();
 
@@ -37,6 +45,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
   return (
     <ProjectWorkspaceView
       dossier={dossier}
+      autoKickoff={isKickoffAuto(kickoff)}
       shareAction={
         !dossier.readonly ? (
           <ProjectSharePanel projectId={id} initialShare={shareForClient} />

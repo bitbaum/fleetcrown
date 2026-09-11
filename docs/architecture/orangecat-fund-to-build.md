@@ -16,8 +16,13 @@ boundaries.
   first dispatch. The steward of an unclaimed page may hand it over.
 - FleetCrown requires an OIDC-linked OrangeCat actor matching the intent `sub`.
 - Each intent `jti` is stored and can be consumed once.
-- The owner reviews the proposed context and chooses a new or existing
-  FleetCrown project.
+- By default the handoff builds: the intent is consumed on arrival, a new
+  FleetCrown project is created from the entity, and the project page opens
+  with the kickoff running (profile → milestones → repository → agent). The
+  decision is `decideHandoffMode` in `src/lib/integrations/orangecat-handoff-mode.ts`.
+- The owner reviews and chooses a new or existing project instead when they
+  ask for it (`?review=1`), when a project with the same name already exists,
+  or when the entity is already connected (then it simply opens).
 - `orangecat_entity_links` stores typed many-to-many edges: `origin`,
   `public_profile`, `funding`, `offering`, and `community`.
 - `user_projects.orangecat_project_id` remains during compatibility migration.
@@ -36,5 +41,6 @@ Use the founder acceptance flow in OrangeCat's
 `docs/integrations/fund-to-build-dogfood.md`. Required secrets and canonical
 entity IDs are documented in both `.env.example` files.
 
-Fiat, privacy coins, smart contracts, full Nostr identity, milestone-driven
-work orders, and automatic dispatch are roadmap work, not current behavior.
+Fiat, privacy coins, smart contracts, full Nostr identity, and milestone-driven
+work orders are roadmap work, not current behavior. Automatic dispatch exists
+only as the kickoff above; a funding event never dispatches.

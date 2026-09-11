@@ -24,9 +24,12 @@ import { formatBtc } from "@/lib/format";
 export function ProjectWorkspaceView({
   dossier,
   shareAction,
+  autoKickoff = false,
 }: {
   dossier: ProjectDossier;
   shareAction?: React.ReactNode;
+  /** Arrived from a one-click build (OrangeCat handoff): start the kickoff without a press. */
+  autoKickoff?: boolean;
 }) {
   const { detail, userProject } = dossier;
   const project = detail.project;
@@ -192,6 +195,7 @@ export function ProjectWorkspaceView({
                     goalsLocked={detail.goalsLocked}
                     hasRepo={Boolean(links.repo)}
                     needed={showKickoff}
+                    autoStart={autoKickoff}
                   />
                 )}
                 <section className="scroll-mt-28" aria-labelledby="project-overview-title">
