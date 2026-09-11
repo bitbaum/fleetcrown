@@ -32,6 +32,7 @@ import { HTTP_TIMEOUT_LONG_MS } from "@/lib/constants/time";
 import { classifyGroqLimit, groqRetryAfterSeconds, humanizeWait } from "@/lib/agent/groq-error";
 import { chainFrom, linkPromptBudgetTokens, type ChatLink } from "@/config/chat-models";
 import { recordAIHealthFailure, recordAIHealthSuccess } from "@/lib/ai/health";
+import { readSseChunks } from "@/lib/agent/sse-stream";
 
 export type ChatMessage = {
   role: "system" | "user" | "assistant" | "tool";
@@ -185,6 +186,31 @@ export type ModelCallInput = {
    * simply have walked past.
    */
   promptTokens?: number;
+  /**
+   * Present = stream this call and hand prose to the operator as it arrives.
+   *
+   * Absent = the old buffered behaviour, which every non-interactive caller
+   * (probes, scheduled prompts, the form assist) still wants: there is nobody
+   * watching a screen, and a stream is only more moving parts.
+   */
+  sink?: StreamSink;
+};
+
+/**
+ * Where a streamed call sends prose while it is still being written.
+ *
+ * `reset` exists because a link can die AFTER it has emitted. The walker then
+ * hands the turn to the next link, which starts the answer over from nothing —
+ * so whatever the operator has already read is void and must be taken back,
+ * not appended to. Without it a vendor failing at 80% of an answer produces a
+ * visible splice of two different answers and nobody can tell which half is
+ * real.
+ */
+export type StreamSink = {
+  /** A chunk of prose that is safe to show. Tool-protocol lines never reach it. */
+  delta: (text: string) => void;
+  /** Discard everything emitted so far — another link is answering from scratch. */
+  reset: () => void;
 };
 
 /**
@@ -224,6 +250,11 @@ async function callOneLink(
       // handled by the retry in the walker rather than by feature-detection
       // tables that would go stale the moment a provider ships a change.
       ...(tools.length > 0 ? { tools, tool_choice: "auto" } : {}),
+      // `include_usage` is what keeps a streamed turn billable. Without it the
+      // final chunk carries no `usage` and the turn would be charged 0 — the
+      // day's ration would drain for free on exactly the turns an operator
+      // watches, which are the expensive ones.
+      ...(input.sink ? { stream: true, stream_options: { include_usage: true } } : {}),
       max_tokens: input.maxTokens ?? 1400,
       temperature: input.temperature ?? 0.2,
     }),
@@ -264,14 +295,10 @@ async function callOneLink(
     );
   }
 
-  const data = (await res.json()) as {
-    choices?: Array<{ message?: { content?: string; tool_calls?: NativeToolCall[] } }>;
-    usage?: { total_tokens?: number };
-  };
-  const msg = data.choices?.[0]?.message;
-  const rawText = (msg?.content ?? "").trim();
+  const raw = input.sink ? await readStreamedBody(res, input.sink) : await readBufferedBody(res);
+  const rawText = raw.text.trim();
 
-  const native: ToolCall[] = (msg?.tool_calls ?? [])
+  const native: ToolCall[] = raw.toolCalls
     .map((tc, i) => ({
       id: tc.id ?? `native_${i}`,
       name: tc.function?.name ?? "",
@@ -294,7 +321,140 @@ async function callOneLink(
     text: stripToolCallLines(rawText),
     toolCalls: [...native, ...fromText],
     model: `${link.provider.id}/${link.model}`,
-    usageTokens: Math.max(0, Math.round(data.usage?.total_tokens ?? 0)),
+    usageTokens: Math.max(0, Math.round(raw.usageTokens)),
+  };
+}
+
+/** What both body readers produce, before either protocol is parsed. */
+type RawBody = { text: string; toolCalls: NativeToolCall[]; usageTokens: number };
+
+/** The whole reply at once — the shape every non-streaming caller gets. */
+async function readBufferedBody(res: Response): Promise<RawBody> {
+  const data = (await res.json()) as {
+    choices?: Array<{ message?: { content?: string; tool_calls?: NativeToolCall[] } }>;
+    usage?: { total_tokens?: number };
+  };
+  const msg = data.choices?.[0]?.message;
+  return {
+    text: msg?.content ?? "",
+    toolCalls: msg?.tool_calls ?? [],
+    usageTokens: data.usage?.total_tokens ?? 0,
+  };
+}
+
+/** Matches a text-protocol call line in either of the shapes models emit. */
+const TOOL_LINE_RE = /^\s*(?:[-*>]\s*)?(?:\*\*)?(?:TOOL|ARGS)(?:\*\*)?\s*[:=]/i;
+
+/**
+ * Releases prose to a watching operator, and nothing else.
+ *
+ * Extracted from the stream reader so the one rule that can leak plumbing onto
+ * someone's screen is testable without a provider, a socket, or a model. Two
+ * properties, both load-bearing:
+ *
+ *   WHOLE LINES ONLY — a chunk ending in `TOO` could still become `TOOL:`, so
+ *                      nothing is released until a newline proves the line is
+ *                      finished. The buffered path strips these lines before
+ *                      anyone sees them; a naive stream would show them and
+ *                      delete them a second later.
+ *   ONCE SHUT, SHUT  — a call's `ARGS:` object spans several lines and a model
+ *                      may fence it, so after a TOOL/ARGS line the rest of this
+ *                      call is the call, not the answer.
+ *
+ * `end()` releases the final line, which has no newline to prove it complete —
+ * the stream ending is that proof.
+ */
+export function createProseGate(emit: (text: string) => void) {
+  let pending = "";
+  let shut = false;
+
+  const release = (line: string) => {
+    if (shut) return;
+    if (TOOL_LINE_RE.test(line)) {
+      shut = true;
+      return;
+    }
+    emit(`${line}\n`);
+  };
+
+  return {
+    push(chunk: string) {
+      pending += chunk;
+      const parts = pending.split("\n");
+      pending = parts.pop() ?? "";
+      for (const part of parts) release(part);
+    },
+    end() {
+      if (pending) release(pending);
+      pending = "";
+    },
+  };
+}
+
+/**
+ * The reply as it is written, forwarding prose to the sink.
+ *
+ * Two things make this more than a `for await` over lines:
+ *
+ * 1. **Tool-protocol lines must never reach the operator.** A weak model
+ *    narrates its calls as `TOOL:` / `ARGS:` lines (see `parseTextToolCalls`),
+ *    and the buffered path strips them before anyone sees them. A naive stream
+ *    would show the operator the plumbing first and delete it a second later.
+ *    So prose is released a COMPLETE LINE AT A TIME — a half-arrived `TOO` can
+ *    still turn out to be `TOOL:` — and once a `TOOL:` line appears the rest of
+ *    the message is that call (its `ARGS:` object spans several lines), so the
+ *    gate shuts for the remainder of the call.
+ *
+ * 2. **The stream is a preview, never the record.** What is persisted is the
+ *    buffered text put through `stripToolCallLines`, and the client swaps the
+ *    streamed preview for it when the turn lands. The two agree in the ordinary
+ *    case; where they disagree the persisted text wins, because it is the one
+ *    that was parsed rather than guessed at line boundaries.
+ */
+async function readStreamedBody(res: Response, sink: StreamSink): Promise<RawBody> {
+  const body = res.body;
+  if (!body) throw new LinkError("other", "streamed response had no body");
+
+  let text = ""; // everything the model wrote, gate or no gate
+  let usageTokens = 0;
+  const calls = new Map<number, { id?: string; name: string; args: string }>();
+  const gate = createProseGate(sink.delta);
+
+  await readSseChunks(body, (chunk) => {
+    // Usage rides the final chunk (stream_options.include_usage) and is what
+    // the day's budget is charged against — never estimated.
+    if (chunk.usage?.total_tokens) usageTokens = chunk.usage.total_tokens;
+
+    const delta = chunk.choices?.[0]?.delta;
+    if (!delta) return;
+
+    if (delta.content) {
+      text += delta.content;
+      gate.push(delta.content);
+    }
+
+    // Native calls arrive in fragments keyed by index: the name lands in the
+    // first fragment and the JSON arguments accumulate across many.
+    for (const tc of delta.tool_calls ?? []) {
+      const idx = tc.index ?? 0;
+      const slot = calls.get(idx) ?? { name: "", args: "" };
+      if (tc.id) slot.id = tc.id;
+      if (tc.function?.name) slot.name += tc.function.name;
+      if (tc.function?.arguments) slot.args += tc.function.arguments;
+      calls.set(idx, slot);
+    }
+  });
+
+  // The trailing line has no newline to prove it complete, but the stream
+  // ending proves it.
+  gate.end();
+
+  return {
+    text,
+    toolCalls: [...calls.entries()]
+      .sort(([a], [b]) => a - b)
+      .map(([, c]) => ({ id: c.id, function: { name: c.name, arguments: c.args } })),
+    usageTokens,
   };
 }
 
@@ -372,8 +532,26 @@ export async function callModelWithTools(
     // Two attempts at most: the second drops the native `tools` field for a
     // model that rejected it.
     for (const tools of [input.tools, [] as Array<Record<string, unknown>>]) {
+      // Per-ATTEMPT emission tracking. A link can fail after it has already
+      // written prose to the screen; the next link then answers from scratch,
+      // so what the operator has read is void and has to be taken back rather
+      // than appended to (see StreamSink.reset).
+      let emitted = false;
+      const outer = input.sink;
+      const attempt: ModelCallInput = outer
+        ? {
+            ...input,
+            sink: {
+              delta: (t) => {
+                emitted = true;
+                outer.delta(t);
+              },
+              reset: outer.reset,
+            },
+          }
+        : input;
       try {
-        const turn = await callOneLink(link, input, tools);
+        const turn = await callOneLink(link, attempt, tools);
         if (failures.length > 0 || skipped.length > 0) {
           console.warn(
             `[loki] answered on ${turn.model}` +
@@ -388,6 +566,7 @@ export async function callModelWithTools(
         recordAIHealthSuccess();
         return turn;
       } catch (e) {
+        if (emitted) outer?.reset();
         const err =
           e instanceof LinkError
             ? e

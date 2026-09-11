@@ -1,13 +1,28 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Plus, Search, SquarePen, Trash2 } from "lucide-react";
 import { LokiPaneBody } from "./LokiPaneBody";
 import { shortTimeAgo } from "@/lib/dates";
 import { groupConversations, visibleConversationGroups } from "@/lib/loki/conversation-groups";
 import type { ConversationSummary } from "./types";
 
-export function ConversationList({
+/** Below this, a search box is furniture: you can see every thread already. */
+const SEARCH_THRESHOLD = 8;
+
+/**
+ * Every thread, in one rail.
+ *
+ * This replaces a stack of four competing navigations that all led to the same
+ * place: the global sidebar, a Chat/Control/Terminal tab strip, a pinned
+ * history rail, AND a "Chats / New" toolbar above the transcript. Four controls
+ * for two actions — open a thread, start a thread.
+ *
+ * Same-work threads stay collapsed (`groupConversations`): "move forward on
+ * fleetcrown" fifteen times is one row with a count, not fifteen rows that
+ * read identically.
+ */
+export function ThreadRail({
   conversations,
   activeId,
   loading,
@@ -28,10 +43,26 @@ export function ConversationList({
 }) {
   const [armedId, setArmedId] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
+  const [query, setQuery] = useState("");
 
-  const groups = groupConversations(conversations, activeId);
+  const needle = query.trim().toLowerCase();
+  const filtered = useMemo(
+    () =>
+      needle
+        ? conversations.filter(
+            (c) =>
+              c.title.toLowerCase().includes(needle) ||
+              c.projectKeys.some((k) => k.toLowerCase().includes(needle)),
+          )
+        : conversations,
+    [conversations, needle],
+  );
+
+  const groups = groupConversations(filtered, activeId);
   const { visible, hidden } = visibleConversationGroups(groups);
-  const shown = expanded ? groups : visible;
+  // Searching means you already know roughly what you want — paging it behind
+  // "show older" would hide the match you searched for.
+  const shown = expanded || needle ? groups : visible;
 
   const handleDeleteClick = (id: string) => {
     if (armedId === id) {
@@ -43,21 +74,33 @@ export function ConversationList({
   };
 
   return (
-    <div className="flex h-full flex-col gap-3">
-      <div className="flex items-center justify-between gap-2 px-1">
-        <h2 className="ui-kicker">Chats</h2>
-        <button type="button" className="ui-btn-secondary min-h-9 px-3" onClick={onNew}>
-          <Plus className="h-4 w-4" />
-          New
-        </button>
-      </div>
+    <div className="ui-loki-rail">
+      <button type="button" className="ui-loki-rail-new" onClick={onNew}>
+        <SquarePen className="h-4 w-4 shrink-0" aria-hidden />
+        <span>New chat</span>
+      </button>
+
+      {conversations.length >= SEARCH_THRESHOLD && (
+        <div className="ui-loki-rail-search">
+          <Search className="h-3.5 w-3.5 shrink-0 text-text-muted" aria-hidden />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search chats"
+            aria-label="Search chats"
+            className="ui-loki-rail-search-input"
+          />
+        </div>
+      )}
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         <LokiPaneBody loading={loading} error={error} onRetry={onRetry}>
           {conversations.length === 0 ? (
-            <p className="ui-loki-convo-meta px-3">No chats yet. Type below to start one.</p>
+            <p className="ui-loki-rail-empty">No chats yet. Ask something below to start one.</p>
+          ) : shown.length === 0 ? (
+            <p className="ui-loki-rail-empty">No chat matches “{query}”.</p>
           ) : (
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-0.5">
               {shown.map(({ head: c, count }) => {
                 const armed = armedId === c.id;
                 return (
@@ -91,13 +134,13 @@ export function ConversationList({
                   </div>
                 );
               })}
-              {!expanded && hidden > 0 && (
+              {!expanded && !needle && hidden > 0 && (
                 <button
                   type="button"
-                  className="ui-btn-chip mt-1 self-start"
+                  className="ui-loki-rail-more"
                   onClick={() => setExpanded(true)}
                 >
-                  Show older · {hidden}
+                  <Plus className="h-3.5 w-3.5" aria-hidden /> {hidden} older
                 </button>
               )}
             </div>

@@ -2,26 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import {
-  Send,
-  Mic,
-  Check,
-  Loader2,
-  Paperclip,
-  X,
-  ImageIcon,
-  FolderKanban,
-  Plus,
-} from "lucide-react";
+import { ArrowUp, Check, FolderKanban, Loader2, Mic, Plus, Square, X } from "lucide-react";
 import { useVoiceInput } from "@/hooks/use-voice-input";
-import {
-  MAX_ATTACHMENTS,
-  MAX_ATTACHMENT_CHARS,
-  MAX_IMAGE_BYTES,
-  isImageMime,
-  stripDataUrlBase64,
-  type StagedAttachment,
-} from "@/lib/loki/attachments";
+import { useAttachments } from "@/hooks/use-attachments";
+import { AttachButton, AttachmentStrip } from "@/components/ui/attachment-strip";
 import {
   composerChips,
   fillSuggestedAction,
@@ -29,18 +13,35 @@ import {
 } from "@/config/loki-suggested-actions";
 import { ExecutorHonestyChip } from "@/components/executor/ExecutorHonestyChip";
 import type { ExecutorHonestyLabel } from "@/lib/executor-honesty";
+import { ModelPicker } from "./ModelPicker";
 import type { Attachment, LokiProject, ModelChoice } from "./types";
 
 const IMAGE_ONLY_DEFAULT = "What's wrong here and what should we change?";
+/** Matches the `max-h` in `ui-loki-composer-input`; both must move together. */
+const MAX_INPUT_PX = 240;
 
-function stageKey(a: StagedAttachment): string {
-  return `${a.kind}:${a.name}`;
-}
-
+/**
+ * The one control on the page.
+ *
+ * ── What changed, and why ────────────────────────────────────────────────────
+ * The previous composer stacked up to FIVE rows — scope pills, suggestion
+ * chips, the textarea, staged attachments, then a tools row — so on a phone the
+ * input you came to use was a band in the middle of its own furniture. Here
+ * there is the text, and one row of controls under it. Everything else appears
+ * only when it has something to say.
+ *
+ * ── Attachments are no longer a private copy ─────────────────────────────────
+ * `useAttachments` was lifted OUT of this file and adopted by the Control and
+ * Terminal composers — and this file kept its original inline copy, so the one
+ * surface the hook was extracted from was the only one not using it. Three
+ * copies of object-URL lifetimes and size limits is how they drift. Now there
+ * is one.
+ */
 export function Composer({
   disabled,
   sending,
   onSend,
+  onStop,
   defaultText = "",
   selectedProjects = [],
   projectCount = 0,
@@ -58,33 +59,30 @@ export function Composer({
     attachments: Attachment[],
     opts?: { chatOnly?: boolean },
   ) => void;
+  /** Cancel the turn in flight. The send button becomes this while one runs. */
+  onStop: () => void;
   defaultText?: string;
-  /** Selected projects from the project pane — visible inside the composer. */
   selectedProjects?: string[];
   projectCount?: number;
   selectedGoal?: LokiProject["topGoal"];
   onRemoveProject?: (name: string) => void;
   onOpenProjects?: () => void;
-  /** Shown beside Send when dispatches queue without a live builder. */
   dispatchHonesty?: ExecutorHonestyLabel | null;
-  /** Start-screen chips ("New project", "What needs me"). False mid-conversation:
-   *  they are openers, and on a phone they were eating a third of the transcript
-   *  to re-offer a decision the operator had already made. Project-scoped action
-   *  chips are not starters and stay. */
+  /** Openers belong on an empty thread. Mid-conversation they re-offer a
+   *  decision already made, and on a phone they ate a third of the transcript. */
   showStarters?: boolean;
 }) {
   const [text, setText] = useState(defaultText);
-  const [attachments, setAttachments] = useState<StagedAttachment[]>([]);
-  const [attachNote, setAttachNote] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [model, setModel] = useState<string | undefined>(undefined);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const attachments = useAttachments();
 
   const voice = useVoiceInput({
     onTranscript: (t) => setText((prev) => (prev ? `${prev} ${t}` : t)),
   });
-
   const recording = voice.status === "recording";
   const transcribing = voice.status === "transcribing";
+
   const recStartRef = useRef(0);
   const [elapsed, setElapsed] = useState(0);
   useEffect(() => {
@@ -98,185 +96,97 @@ export function Composer({
   }, [recording]);
   const fmtTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
-  const previewUrlsRef = useRef<Set<string>>(new Set());
-  useEffect(() => {
-    const previewUrls = previewUrlsRef.current;
-    return () => {
-      for (const url of previewUrls) URL.revokeObjectURL(url);
-      previewUrls.clear();
-    };
-  }, []);
-
-  const addAttachment = (item: StagedAttachment) => {
-    setAttachments((prev) => {
-      if (prev.length >= MAX_ATTACHMENTS) return prev;
-      if (prev.some((p) => stageKey(p) === stageKey(item))) return prev;
-      return [...prev, item];
-    });
-  };
-
-  const stageImageFile = (file: File) => {
-    if (!isImageMime(file.type)) {
-      setAttachNote(`${file.name}: use PNG, JPEG, GIF, or WebP.`);
-      return;
-    }
-    if (file.size > MAX_IMAGE_BYTES) {
-      setAttachNote(
-        `${file.name} is too large (max ${Math.round(MAX_IMAGE_BYTES / 1_000_000)}MB).`,
-      );
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = String(reader.result ?? "");
-      const dataBase64 = stripDataUrlBase64(dataUrl);
-      const previewUrl = URL.createObjectURL(file);
-      previewUrlsRef.current.add(previewUrl);
-      addAttachment({
-        kind: "image",
-        name: file.name,
-        mimeType: file.type,
-        dataBase64,
-        previewUrl,
-      });
-    };
-    reader.onerror = () => setAttachNote(`Could not read ${file.name}.`);
-    reader.readAsDataURL(file);
-  };
-
-  const stageTextFile = (file: File) => {
-    if (file.size > MAX_ATTACHMENT_CHARS) {
-      setAttachNote(
-        `${file.name} is too large (max ${Math.round(MAX_ATTACHMENT_CHARS / 1000)}k chars).`,
-      );
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const content = String(reader.result ?? "").slice(0, MAX_ATTACHMENT_CHARS);
-      addAttachment({ kind: "text", name: file.name, content });
-    };
-    reader.onerror = () => setAttachNote(`Could not read ${file.name}.`);
-    reader.readAsText(file);
-  };
-
-  const handleFiles = (files: FileList | null) => {
-    if (!files) return;
-    setAttachNote(null);
-    const room = MAX_ATTACHMENTS - attachments.length;
-    if (room <= 0) {
-      setAttachNote(`Up to ${MAX_ATTACHMENTS} files.`);
-      return;
-    }
-    for (const file of Array.from(files).slice(0, room)) {
-      if (isImageMime(file.type)) stageImageFile(file);
-      else stageTextFile(file);
-    }
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
-
-  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
-    const items = e.clipboardData?.items;
-    if (!items) return;
-    const imageItems = Array.from(items).filter((i) => i.type.startsWith("image/"));
-    if (imageItems.length === 0) return;
-    e.preventDefault();
-    setAttachNote(null);
-    for (const item of imageItems) {
-      const file = item.getAsFile();
-      if (file) stageImageFile(file);
-    }
-  };
-
-  const removeAttachment = (key: string) =>
-    setAttachments((prev) => {
-      const target = prev.find((a) => stageKey(a) === key);
-      if (target?.previewUrl) {
-        URL.revokeObjectURL(target.previewUrl);
-        previewUrlsRef.current.delete(target.previewUrl);
-      }
-      return prev.filter((a) => stageKey(a) !== key);
-    });
-
-  const toWire = (staged: StagedAttachment[]): Attachment[] =>
-    staged.map(({ previewUrl, ...rest }) => {
-      if (previewUrl) previewUrlsRef.current.delete(previewUrl);
-      return rest;
-    });
-
-  const submit = () => {
-    const trimmed = text.trim();
-    const hasAttach = attachments.length > 0;
-    if ((!trimmed && !hasAttach) || sending) return;
-    const outgoing = trimmed || (hasAttach ? IMAGE_ONLY_DEFAULT : "");
-    onSend(outgoing, {}, toWire(attachments));
-    setText("");
-    for (const a of attachments) {
-      if (a.previewUrl) {
-        URL.revokeObjectURL(a.previewUrl);
-        previewUrlsRef.current.delete(a.previewUrl);
-      }
-    }
-    setAttachments([]);
-    setAttachNote(null);
-  };
-
-  const canSend = (text.trim().length > 0 || attachments.length > 0) && !sending;
-  const scopedProjectForTemplate = selectedProjects.length === 1 ? selectedProjects[0] : null;
-  const allChips = composerChips({
-    projectCount,
-    selectedProjects,
-    selectedGoal,
-  });
-  // Mid-conversation only the scoped action chips survive; the openers do not.
-  const chips = showStarters || selectedProjects.length > 0 ? allChips : [];
-  // The scope row used to render unconditionally with a min-height, reserving
-  // 28px of a phone screen to display nothing. It appears when it has something
-  // in it: a scope pill, or the button that adds one.
-  const offersProjectButton =
-    selectedProjects.length === 0 &&
-    projectCount > 0 &&
-    Boolean(onOpenProjects) &&
-    (Boolean(text.trim()) || !chips.some((chip) => chip.kind === "open_projects"));
-  const showScopeRow = selectedProjects.length > 0 || offersProjectButton;
-
+  // Keyed on the VALUE, not the keystroke, so programmatic changes — a chip
+  // prefill, a dictated transcript, the clear after send — resize too.
   useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, 240)}px`;
+    el.style.height = `${Math.min(el.scrollHeight, MAX_INPUT_PX)}px`;
   }, [text]);
+
+  const submit = () => {
+    const trimmed = text.trim();
+    const hasAttach = attachments.attachments.length > 0;
+    if ((!trimmed && !hasAttach) || sending) return;
+    // An image with no question is still a question — the operator dropped a
+    // screenshot in, which says what they want more clearly than any prompt.
+    const outgoing = trimmed || (hasAttach ? IMAGE_ONLY_DEFAULT : "");
+    onSend(outgoing, model ? { model } : {}, attachments.toWire());
+    setText("");
+    attachments.clear();
+  };
+
+  const canSend = (text.trim().length > 0 || attachments.attachments.length > 0) && !sending;
+  const scopedProject = selectedProjects.length === 1 ? selectedProjects[0] : null;
+
+  const allChips = composerChips({ projectCount, selectedProjects, selectedGoal });
+  const chips = showStarters || selectedProjects.length > 0 ? allChips : [];
 
   const runChip = (chip: LokiComposerChip) => {
     if (disabled || sending) return;
-    if (chip.kind === "open_projects") {
-      onOpenProjects?.();
-      return;
-    }
+    if (chip.kind === "open_projects") return onOpenProjects?.();
     if (chip.kind === "href") return;
-    const template = chip.template ?? "";
-    const prompt = fillSuggestedAction(template, scopedProjectForTemplate);
+    const prompt = fillSuggestedAction(chip.template ?? "", scopedProject);
     if (!prompt) return;
     if (chip.kind === "prefill") {
       setText(prompt);
       textareaRef.current?.focus();
       return;
     }
-    onSend(prompt, {}, [], chip.chatOnly ? { chatOnly: true } : undefined);
+    onSend(prompt, model ? { model } : {}, [], chip.chatOnly ? { chatOnly: true } : undefined);
   };
 
   const placeholder = recording
     ? "Listening…"
-    : scopedProjectForTemplate
-      ? `Ask or dispatch on ${scopedProjectForTemplate}…`
+    : scopedProject
+      ? `Ask, or send work to ${scopedProject}…`
       : selectedProjects.length > 1
-        ? `Ask or dispatch on ${selectedProjects.length} projects…`
+        ? `Ask, or send work to ${selectedProjects.length} projects…`
         : projectCount === 0
           ? "Name a new project, or ask anything…"
-          : "Start a project, open one, or ask…";
+          : "Ask anything, or send work to a project…";
+
+  // Only when it has something in it. The old scope row reserved 28px of a
+  // phone screen to display nothing.
+  const offersProjectButton =
+    selectedProjects.length === 0 &&
+    projectCount > 0 &&
+    Boolean(onOpenProjects) &&
+    (Boolean(text.trim()) || !chips.some((c) => c.kind === "open_projects"));
+  const showScopeRow = selectedProjects.length > 0 || offersProjectButton;
 
   return (
     <div className="ui-loki-composer-wrap">
+      {!text.trim() && chips.length > 0 && (
+        <div className="ui-loki-suggest-row">
+          {chips.map((chip) => {
+            const title =
+              chip.kind === "href"
+                ? chip.label
+                : chip.kind === "open_projects"
+                  ? "Choose a project"
+                  : fillSuggestedAction(chip.template ?? "", scopedProject);
+            return chip.kind === "href" && chip.href ? (
+              <Link key={chip.id} href={chip.href} className="ui-loki-suggest-chip" title={title}>
+                {chip.label}
+              </Link>
+            ) : (
+              <button
+                key={chip.id}
+                type="button"
+                className="ui-loki-suggest-chip"
+                disabled={disabled || sending}
+                onClick={() => runChip(chip)}
+                title={title}
+              >
+                {chip.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       <div className="relative">
         {(recording || transcribing) && (
           <div className="ui-voice-bar" role="status" aria-live="polite">
@@ -314,17 +224,15 @@ export function Composer({
             )}
           </div>
         )}
+
         <div className="ui-loki-composer">
           {showScopeRow && (
             <div className="ui-loki-composer-scope-row">
-              {selectedProjects.length === 0 &&
-                projectCount > 0 &&
-                onOpenProjects &&
-                (text.trim() || !chips.some((chip) => chip.kind === "open_projects")) && (
-                  <button type="button" className="ui-btn-chip" onClick={onOpenProjects}>
-                    <FolderKanban className="h-3.5 w-3.5" /> Project
-                  </button>
-                )}
+              {offersProjectButton && (
+                <button type="button" className="ui-btn-chip" onClick={onOpenProjects}>
+                  <FolderKanban className="h-3.5 w-3.5" /> Project
+                </button>
+              )}
               {selectedProjects.map((project) => (
                 <span key={project} className="ui-loki-scope-pill">
                   <span className="truncate">{project}</span>
@@ -354,52 +262,17 @@ export function Composer({
             </div>
           )}
 
-          {!text.trim() && chips.length > 0 && (
-            <div className="ui-loki-suggest-row">
-              {chips.map((chip) => {
-                const title =
-                  chip.kind === "href"
-                    ? chip.label
-                    : chip.kind === "open_projects"
-                      ? "Choose a project"
-                      : fillSuggestedAction(chip.template ?? "", scopedProjectForTemplate);
-                if (chip.kind === "href" && chip.href) {
-                  return (
-                    <Link
-                      key={chip.id}
-                      href={chip.href}
-                      className="ui-loki-suggest-chip"
-                      title={title}
-                    >
-                      {chip.label}
-                    </Link>
-                  );
-                }
-                return (
-                  <button
-                    key={chip.id}
-                    type="button"
-                    className="ui-loki-suggest-chip"
-                    disabled={disabled || sending}
-                    onClick={() => runChip(chip)}
-                    title={title}
-                  >
-                    {chip.label}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
           <textarea
             ref={textareaRef}
             className="ui-loki-composer-input"
-            rows={2}
+            rows={1}
             value={text}
-            disabled={disabled || voice.status === "transcribing"}
+            disabled={disabled || transcribing}
             placeholder={placeholder}
             onChange={(e) => setText(e.target.value)}
-            onPaste={handlePaste}
+            onPaste={(e) => {
+              if (attachments.addFromPaste(e)) e.preventDefault();
+            }}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
@@ -408,85 +281,64 @@ export function Composer({
             }}
           />
 
-          {(attachments.length > 0 || attachNote) && (
-            <div className="ui-loki-attach-row">
-              {attachments.map((a) => (
-                <span key={stageKey(a)} className="ui-loki-attach-chip">
-                  {a.kind === "image" && a.previewUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- blob preview of a local paste
-                    <img src={a.previewUrl} alt="" className="ui-loki-attach-thumb" />
-                  ) : a.kind === "image" ? (
-                    <ImageIcon className="h-3 w-3" />
-                  ) : (
-                    <Paperclip className="h-3 w-3" />
-                  )}
-                  <span className="max-w-36 truncate">{a.name}</span>
-                  <button
-                    type="button"
-                    onClick={() => removeAttachment(stageKey(a))}
-                    aria-label={`Remove ${a.name}`}
-                    className="ui-loki-attach-remove"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </span>
-              ))}
-              {attachNote && <span className="text-xs text-status-warning">{attachNote}</span>}
-            </div>
+          <AttachmentStrip attachments={attachments} />
+          {attachments.note && (
+            <p className="ui-loki-attach-note" role="status">
+              {attachments.note}
+            </p>
           )}
 
           <div className="ui-loki-composer-actions">
             <div className="ui-loki-composer-tools">
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                accept="image/png,image/jpeg,image/gif,image/webp,text/*,.ts,.tsx,.js,.jsx,.json,.md,.css,.html,.py,.go,.rs,.txt,.log,.yaml,.yml,.toml"
-                className="hidden"
-                onChange={(e) => handleFiles(e.target.files)}
-              />
-              <button
-                type="button"
-                className="ui-loki-tool-btn"
-                disabled={disabled || attachments.length >= MAX_ATTACHMENTS}
-                onClick={() => fileInputRef.current?.click()}
-                aria-label="Attach file or screenshot"
-                title="Attach file or screenshot"
-              >
-                <Paperclip className="h-4 w-4" />
-              </button>
+              <AttachButton attachments={attachments} />
               {voice.isSupported && (
                 <button
                   type="button"
                   className={
                     recording ? "ui-loki-tool-btn ui-loki-tool-btn-rec" : "ui-loki-tool-btn"
                   }
-                  disabled={disabled || voice.status === "transcribing"}
-                  onClick={voice.status === "recording" ? voice.stop : () => void voice.start()}
-                  aria-label={voice.status === "recording" ? "Stop recording" : "Voice input"}
+                  disabled={disabled || transcribing}
+                  onClick={recording ? voice.stop : () => void voice.start()}
+                  aria-label={recording ? "Stop recording" : "Voice input"}
                 >
-                  {voice.status === "transcribing" ? (
+                  {transcribing ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : voice.status === "recording" ? (
+                  ) : recording ? (
                     <span className="ui-loki-rec-stop" aria-hidden />
                   ) : (
                     <Mic className="h-4 w-4" />
                   )}
                 </button>
               )}
+              <ModelPicker value={model} onChange={setModel} disabled={disabled} />
             </div>
+
             <div className="ui-loki-composer-submit-row">
               {selectedProjects.length > 0 && <ExecutorHonestyChip honesty={dispatchHonesty} />}
-              {!recording && (
+              {/* Send and Stop occupy the SAME slot. A turn you cannot cancel
+                  is the thing that makes a slow answer feel broken, and the
+                  old composer had no stop at all. */}
+              {sending ? (
                 <button
                   type="button"
-                  className="ui-loki-send-btn"
-                  disabled={disabled || !canSend}
-                  onClick={submit}
-                  aria-label="Send"
+                  className="ui-loki-send-btn ui-loki-send-btn-stop"
+                  onClick={onStop}
+                  aria-label="Stop generating"
                 >
-                  <Send className="h-4 w-4" />
+                  <Square className="h-3.5 w-3.5 fill-current" />
                 </button>
+              ) : (
+                !recording && (
+                  <button
+                    type="button"
+                    className="ui-loki-send-btn"
+                    disabled={disabled || !canSend}
+                    onClick={submit}
+                    aria-label="Send"
+                  >
+                    <ArrowUp className="h-4 w-4" />
+                  </button>
+                )
               )}
             </div>
           </div>

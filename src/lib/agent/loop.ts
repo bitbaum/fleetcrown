@@ -102,6 +102,31 @@ const FALLBACK_PROMPT_BUDGET_TOKENS = 24_000;
  */
 export type ModelCaller = typeof callModelWithTools;
 
+/**
+ * What a watching operator is told while the turn runs.
+ *
+ * This exists because the loop already does visible work — it retrieves from
+ * the knowledge graph, lists projects, reads goals — and every bit of it used
+ * to happen behind one static "Loki is thinking" spinner. `toolsUsed` was
+ * returned from here with the comment "surfaced so the UI can show work" and
+ * no caller ever surfaced it.
+ *
+ * `reset` is not a nicety. The loop REPLACES `text` at every round
+ * (`text = turn.text`), so prose streamed in an earlier round is not a prefix
+ * of the answer — it is superseded by it. Emitting the boundary is what keeps
+ * the preview honest instead of splicing two rounds into one fake answer.
+ */
+export type LokiTurnEvent =
+  | { type: "round"; round: number }
+  | { type: "delta"; text: string }
+  | { type: "reset" }
+  | { type: "tool"; name: string; phase: "start" }
+  | { type: "tool"; name: string; phase: "end"; facts: number }
+  // A failed tool is its own state, never "returned nothing" — the same
+  // distinction the model is given in the note it receives.
+  | { type: "tool"; name: string; phase: "fail" }
+  | { type: "status"; label: "verifying" };
+
 /** A citation the UI can resolve — what [F8] or [D1] actually refers to. */
 export type CitationSource = { id: string; label: string; detail: string };
 
@@ -212,6 +237,7 @@ async function runToolCalls(
   calls: ToolCall[],
   registry: ToolRegistry,
   ctx: { userId: string; message: string },
+  emit: (event: LokiTurnEvent) => void = () => {},
 ): Promise<{ facts: Fact[]; messages: ChatMessage[]; used: string[] }> {
   const facts: Fact[] = [];
   const messages: ChatMessage[] = [];
@@ -237,9 +263,11 @@ async function runToolCalls(
       continue;
     }
     used.push(call.name);
+    emit({ type: "tool", name: call.name, phase: "start" });
     try {
       const result = await tool.handler(parsed.data, ctx);
       facts.push(...result.facts);
+      emit({ type: "tool", name: call.name, phase: "end", facts: result.facts.length });
       messages.push({
         role: "user",
         content:
@@ -250,6 +278,7 @@ async function runToolCalls(
     } catch (e) {
       // A failed tool must read as "unknown", never as "none" — otherwise the
       // model reports an outage as an empty result and the operator believes it.
+      emit({ type: "tool", name: call.name, phase: "fail" });
       messages.push({
         role: "user",
         content: `[tool ${call.name}] FAILED (${e instanceof Error ? e.message.slice(0, 80) : "error"}). Treat this as unknown, not as empty.`,
@@ -275,6 +304,8 @@ export async function runLokiTurn(input: {
   registry?: ToolRegistry;
   /** Injected in tests; defaults to the real provider call. */
   callModel?: ModelCaller;
+  /** Present when someone is watching: stream the turn instead of buffering it. */
+  onEvent?: (event: LokiTurnEvent) => void;
   /** Injected in tests so the loop can run with no DB. */
   seed?: LoopSeed;
   /** Injected in tests; defaults to the largest usable link's budget. */
@@ -307,8 +338,23 @@ export async function runLokiTurn(input: {
   let usageTokens = 0;
   let rounds = 0;
 
+  const emit = input.onEvent ?? (() => {});
+  // Handed to the model call so prose reaches the screen as it is written.
+  // Absent when nobody is watching, which keeps every non-interactive caller
+  // (probes, scheduled prompts) on the buffered path it already had.
+  const sink = input.onEvent
+    ? {
+        delta: (text: string) => emit({ type: "delta", text }),
+        reset: () => emit({ type: "reset" }),
+      }
+    : undefined;
+
   for (let round = 0; round < MAX_ROUNDS; round++) {
     rounds = round + 1;
+    emit({ type: "round", round: rounds });
+    // Every round REPLACES the answer (`text = turn.text` below), so whatever
+    // the previous round streamed is superseded, not continued.
+    emit({ type: "reset" });
     const voiceLine = input.voice?.trim()
       ? `\n\nAdopt this writing voice: ${input.voice.trim()}`
       : "";
@@ -377,6 +423,7 @@ export async function runLokiTurn(input: {
             tools: lastRound ? [] : nativeTools,
             validToolNames: lastRound ? [] : names,
             promptTokens,
+            sink,
           });
         } catch (e) {
           const tooLarge = /\b413\b|too large|context length|reduce the length/i.test(
@@ -394,7 +441,7 @@ export async function runLokiTurn(input: {
 
     if (turn.toolCalls.length === 0) break;
 
-    const executed = await runToolCalls(turn.toolCalls, registry, ctx);
+    const executed = await runToolCalls(turn.toolCalls, registry, ctx, emit);
     used.push(...executed.used);
     if (executed.facts.length > 0) {
       retrievedTotal += executed.facts.length;
@@ -428,6 +475,12 @@ export async function runLokiTurn(input: {
     : [];
 
   if (violations.length > 0) {
+    // Named for the operator, who would otherwise watch a finished answer sit
+    // still for several seconds with no reason given. The repair is NOT
+    // streamed: it rewrites by deletion, so streaming it would show the answer
+    // being written a second time and the operator could not tell which pass
+    // they were reading.
+    emit({ type: "status", label: "verifying" });
     // Repair asks for DELETION, not regeneration — the model is not missing
     // knowledge, it added claims. Tools stay off so it cannot wander further.
     const repaired = await callModel({

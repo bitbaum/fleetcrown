@@ -3218,7 +3218,7 @@
     @apply w-full bg-transparent text-sm text-text-primary placeholder:text-text-muted outline-none;
   }
   .ui-assist-send {
-    @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent-primary text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:bg-surface-overlay disabled:text-text-muted;
+    @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent-primary text-text-inverted transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:bg-surface-overlay disabled:text-text-muted;
   }
   .ui-assist-note {
     @apply mt-2 flex items-start gap-2 text-micro text-text-secondary;
@@ -4840,14 +4840,12 @@
   .ui-loki-main {
     @apply flex min-h-0 min-w-0 flex-1 flex-col;
   }
-  .ui-loki-toolbar {
-    @apply flex shrink-0 items-center gap-1;
+  /* One reveal control where a whole duplicate toolbar used to sit. */
+  .ui-loki-topbar {
+    @apply flex shrink-0 items-center gap-0.5;
   }
-  .ui-loki-toolbar-btn {
-    @apply relative inline-flex items-center gap-1.5 rounded-lg px-2.5 text-sm text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary;
-  }
-  .ui-loki-toolbar-dot {
-    @apply absolute right-1 top-1.5 h-1.5 w-1.5 rounded-full bg-accent-primary;
+  .ui-loki-topbar-btn {
+    @apply inline-flex h-9 w-9 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-surface-raised hover:text-text-primary;
   }
   /* Reading measure for the conversation. Widens in steps on large displays:
      max-w-2xl (672px) was capping content at 63% of the available column on a
@@ -4873,8 +4871,8 @@
   .ui-loki-start {
     @apply flex min-h-0 shrink flex-col gap-2 overflow-y-auto;
   }
-  .ui-loki-start-lede {
-    @apply px-1 text-sm text-text-tertiary;
+  .ui-loki-start-title {
+    @apply px-1 text-lg font-medium text-text-primary sm:text-xl;
   }
   .ui-loki-start-list {
     @apply flex flex-col gap-1;
@@ -4973,9 +4971,15 @@
   .ui-loki-bubble-user {
     @apply self-end bg-accent-muted text-text-primary;
   }
-  .ui-loki-bubble-assistant {
-    @apply w-full self-start px-1 text-text-secondary;
-    max-width: 100%;
+  /* The answer is not a bubble.
+     A user aside is short and already known to its author, so it gets a pill.
+     An answer is the thing being READ — boxing it at 75% width makes a long
+     reply look like a quotation of itself and throws away a quarter of the
+     column it needs. It gets the full measure and the primary text colour;
+     the old rule had answers a shade quieter than the question that prompted
+     them. */
+  .ui-loki-answer {
+    @apply w-full text-sm leading-relaxed break-words text-text-primary;
   }
   /* Collapsed trigger for the save-to-project-context bar. Quiet by default so
      the transcript keeps the vertical space; expands to the full picker. */
@@ -4989,6 +4993,202 @@
   .ui-loki-cite {
     @apply ml-0.5 cursor-help align-super text-nano font-medium text-text-muted;
   }
+  /* ── The thread ───────────────────────────────────────────────────────────
+     The scroll container owns the scroll (flex-1); an `mt-auto` inner column
+     pushes a SHORT conversation down to meet the composer instead of stranding
+     it at the top of the pane, and goes inert once the content overflows. */
+  .ui-loki-thread-wrap {
+    @apply relative flex min-h-0 flex-1 flex-col;
+  }
+  /* `flex flex-col` is load-bearing, not decoration: without it the `mt-auto`
+     on the inner column is inert and a short conversation pins to the TOP of
+     the pane with a wall of dead space between it and the composer. */
+  .ui-loki-thread {
+    @apply flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain py-2;
+  }
+  .ui-loki-thread-inner {
+    @apply mt-auto flex flex-col gap-5;
+  }
+  .ui-loki-thread-loading {
+    @apply flex min-h-0 flex-1 items-center justify-center text-sm text-text-muted;
+  }
+  /* The way back down once you have scrolled away. Floats over the thread so
+     it costs no layout, and only exists while you are actually adrift. */
+  .ui-loki-jump {
+    @apply absolute bottom-3 left-1/2 inline-flex h-9 w-9 -translate-x-1/2 items-center justify-center rounded-full border border-border-default bg-surface-overlay text-text-secondary shadow-panel transition-colors hover:text-text-primary;
+  }
+
+  /* ── One turn ─────────────────────────────────────────────────────────────*/
+  .ui-loki-turn {
+    @apply flex w-full flex-col;
+  }
+  .ui-loki-turn-user {
+    @apply flex w-full justify-end;
+  }
+  /* Actions stay out of the way until the turn is hovered or focused — but a
+     touch device has no hover, so there they are simply always visible. */
+  .ui-loki-turn-actions {
+    @apply mt-1 flex items-center gap-1 opacity-0 transition-opacity group-hover/turn:opacity-100 group-focus-within/turn:opacity-100;
+  }
+  @media (hover: none) {
+    .ui-loki-turn-actions {
+      @apply opacity-100;
+    }
+  }
+  .ui-loki-turn-action {
+    @apply inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs text-text-muted transition-colors hover:bg-surface-raised hover:text-text-secondary;
+  }
+
+  /* ── The turn in flight ───────────────────────────────────────────────────*/
+  .ui-loki-live-status {
+    @apply flex items-center gap-2 py-1 text-sm text-text-tertiary;
+  }
+  .ui-loki-live-dots {
+    @apply inline-flex items-center gap-1;
+  }
+  .ui-loki-live-dots > span {
+    @apply h-1.5 w-1.5 rounded-full bg-text-muted;
+    animation: ui-loki-dot 1.2s ease-in-out infinite;
+  }
+  .ui-loki-live-dots > span:nth-child(2) {
+    animation-delay: 0.15s;
+  }
+  .ui-loki-live-dots > span:nth-child(3) {
+    animation-delay: 0.3s;
+  }
+  /* A turn you cannot cancel is what makes a slow answer feel broken. There
+     was no stop control at all before this. */
+  .ui-loki-stop {
+    @apply mt-2 inline-flex h-8 items-center gap-1.5 self-start rounded-full border border-border-subtle px-3 text-xs text-text-tertiary transition-colors hover:border-border-default hover:text-text-primary;
+  }
+  .ui-loki-stopped {
+    @apply text-sm text-text-muted;
+  }
+
+  /* ── The work trail ───────────────────────────────────────────────────────
+     What Loki actually did. The loop has always reported its tools; nothing
+     ever showed them. Live it is the status line, so it reads as one quiet
+     row; once the answer lands it collapses into provenance you can open. */
+  .ui-loki-trail {
+    @apply mb-2 flex flex-col gap-1;
+  }
+  .ui-loki-trail-summary {
+    @apply inline-flex h-8 max-w-full items-center gap-1.5 self-start rounded-lg px-1.5 text-xs text-text-muted transition-colors hover:text-text-secondary disabled:cursor-default disabled:hover:text-text-muted;
+  }
+  .ui-loki-trail-caret {
+    @apply h-3.5 w-3.5 shrink-0 transition-transform;
+  }
+  .ui-loki-trail-caret-open {
+    @apply rotate-90;
+  }
+  .ui-loki-trail-list {
+    @apply ml-1.5 flex flex-col gap-1 border-l border-border-subtle pl-3;
+  }
+  .ui-loki-trail-step {
+    @apply flex items-center gap-2 text-xs text-text-tertiary;
+  }
+  .ui-loki-trail-icon {
+    @apply h-3 w-3 shrink-0;
+  }
+  .ui-loki-trail-count {
+    @apply shrink-0 text-micro text-text-muted;
+  }
+
+  /* ── A failed turn ────────────────────────────────────────────────────────
+     Where the answer would have been, with the way out beside it — not a bare
+     line floating above the composer, detached from what failed. */
+  .ui-loki-error {
+    @apply flex items-center gap-3 rounded-xl border border-status-negative/30 bg-status-negative-subtle px-3 py-2 text-sm text-text-secondary;
+  }
+  .ui-loki-error-retry {
+    @apply shrink-0 rounded-lg px-2 py-1 text-xs font-medium text-text-primary underline underline-offset-2;
+  }
+
+  /* ── The rail ─────────────────────────────────────────────────────────────*/
+  .ui-loki-rail {
+    @apply flex h-full min-h-0 flex-col gap-2;
+  }
+  .ui-loki-rail-new {
+    @apply inline-flex h-10 shrink-0 items-center gap-2 rounded-xl border border-border-subtle px-3 text-sm font-medium text-text-primary transition-colors hover:border-border-default hover:bg-surface-raised;
+  }
+  .ui-loki-rail-search {
+    @apply flex h-9 shrink-0 items-center gap-2 rounded-lg bg-surface-raised px-2.5;
+  }
+  .ui-loki-rail-search-input {
+    @apply min-w-0 flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-muted outline-none;
+  }
+  .ui-loki-rail-empty {
+    @apply px-2 text-xs text-text-muted;
+  }
+  .ui-loki-rail-more {
+    @apply mt-1 inline-flex h-9 items-center gap-1 self-start rounded-lg px-2 text-xs text-text-tertiary transition-colors hover:text-text-primary;
+  }
+
+  /* ── Model picker ─────────────────────────────────────────────────────────
+     Low-profile: "Auto" is the right answer almost always, so the control
+     must not compete with the input for attention. Opens UPWARD — it lives at
+     the bottom of the screen and a downward menu would open off it. */
+  .ui-loki-model-trigger {
+    @apply inline-flex h-9 max-w-36 items-center gap-1.5 rounded-full px-2.5 text-xs text-text-muted transition-colors hover:bg-surface-raised hover:text-text-secondary disabled:opacity-45 sm:max-w-52;
+  }
+  .ui-loki-model-caret {
+    @apply h-3 w-3 shrink-0 transition-transform;
+  }
+  .ui-loki-model-caret-open {
+    @apply rotate-180;
+  }
+  .ui-loki-model-menu {
+    @apply absolute bottom-full z-50 mb-2 max-h-80 w-72 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-xl border border-border-default bg-surface-overlay py-1.5 shadow-panel-strong;
+  }
+  /* `min-h`, not `h`: a locked row carries a title AND the reason it is
+     locked, and a fixed 44px clips the second line. 44px is the tap floor, so
+     a minimum of it is already compliant — this is the one row here where the
+     floor and the natural height genuinely differ. */
+  .ui-loki-model-row {
+    @apply flex w-full min-h-11 items-center gap-2 px-3 py-1.5 text-left transition-colors hover:bg-surface-raised;
+  }
+  /* Real but unreachable. Listed and disabled with the reason, never hidden
+     (which answers "why can't I pick it" with silence) and never fake-enabled
+     (which answers with a failed turn). */
+  .ui-loki-model-row-locked {
+    @apply cursor-not-allowed opacity-60 hover:bg-transparent;
+  }
+  .ui-loki-model-row-text {
+    @apply flex min-w-0 flex-1 flex-col;
+  }
+  .ui-loki-model-row-title {
+    @apply truncate text-sm text-text-primary;
+  }
+  .ui-loki-model-row-sub {
+    @apply truncate text-xs text-text-muted;
+  }
+  .ui-loki-model-check {
+    @apply h-4 w-4 shrink-0 text-text-muted;
+  }
+  .ui-loki-model-group {
+    @apply mt-1 px-3 py-1 text-micro uppercase tracking-wider text-text-muted;
+  }
+  .ui-loki-model-note {
+    @apply border-t border-border-subtle px-3 pb-1 pt-2 text-xs text-text-muted;
+  }
+
+  .ui-loki-attach-note {
+    @apply px-1 text-xs text-status-warning;
+  }
+
+  @keyframes ui-loki-dot {
+    0%,
+    60%,
+    100% {
+      opacity: 0.25;
+      transform: translateY(0);
+    }
+    30% {
+      opacity: 1;
+      transform: translateY(-2px);
+    }
+  }
+
   /* Kind badge above an assistant turn (dispatch / chat / command). */
   .ui-loki-kind {
     @apply mb-1 inline-flex items-center gap-1 self-start text-micro uppercase tracking-wider text-text-muted;
@@ -5046,8 +5246,11 @@
   .ui-loki-composer-scope-row {
     @apply flex min-h-7 flex-wrap items-center gap-1.5;
   }
+  /* Grows from ONE line. The old rule reserved two rows (min-h-14 on desktop)
+     for a box that is empty most of the time. `text-base` is not a style
+     choice: iOS zooms the whole page when a focused input is under 16px. */
   .ui-loki-composer-input {
-    @apply max-h-60 min-h-12 w-full resize-none overflow-y-auto bg-transparent px-1 py-1 text-base leading-relaxed text-text-primary placeholder:text-text-tertiary outline-none sm:min-h-14;
+    @apply max-h-60 min-h-9 w-full resize-none overflow-y-auto bg-transparent px-1 py-1.5 text-base leading-relaxed text-text-primary placeholder:text-text-muted outline-none;
   }
   .ui-loki-composer-actions {
     @apply flex items-center justify-between gap-2 border-t border-border-subtle pt-2;
@@ -5057,11 +5260,6 @@
   }
   .ui-loki-composer-submit-row {
     @apply flex shrink-0 items-center justify-end;
-  }
-  /* Inline model picker — low-profile so "Auto" reads as a quiet default and
-     doesn't compete with the input for attention (cognitive-load north star). */
-  .ui-loki-composer-select {
-    @apply h-9 max-w-36 rounded-full border border-border-subtle bg-surface-raised px-3 text-xs text-text-secondary outline-none transition-colors hover:border-border-default focus:border-accent-primary sm:max-w-44;
   }
   .ui-loki-tool-btn {
     @apply inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border-subtle bg-surface-raised text-text-secondary transition-colors hover:border-border-default hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-45;
@@ -5073,7 +5271,13 @@
     @apply block h-3 w-3 rounded-sm bg-status-negative;
   }
   .ui-loki-send-btn {
-    @apply inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-primary text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:bg-surface-raised disabled:text-text-muted;
+    @apply inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-primary text-text-inverted transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:bg-surface-raised disabled:text-text-muted;
+  }
+  /* Stop takes the SAME slot as send. Two separate controls would mean the
+     button you want moves depending on state, which is how people cancel a
+     turn they meant to send. */
+  .ui-loki-send-btn-stop {
+    @apply bg-surface-raised text-text-primary hover:bg-surface-overlay;
   }
   .ui-loki-suggest-row {
     @apply flex min-w-0 flex-wrap gap-1.5;
@@ -5163,20 +5367,6 @@
     }
   }
 
-  /* Staged file attachment, shown above the composer until sent. */
-  .ui-loki-attach-chip {
-    @apply inline-flex items-center gap-1.5 rounded-lg border border-border-subtle bg-surface-base px-2 py-1 text-xs text-text-secondary;
-  }
-  .ui-loki-attach-row {
-    @apply flex flex-wrap items-center gap-1.5;
-  }
-  .ui-loki-attach-thumb {
-    @apply h-6 w-6 shrink-0 rounded object-cover;
-  }
-  .ui-loki-attach-remove {
-    @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-text-tertiary transition-colors hover:bg-surface-raised hover:text-text-primary;
-  }
-
   /* Composer context — scoped project + quick-action chips. */
   .ui-loki-scope-pill {
     @apply inline-flex max-w-44 items-center gap-1 rounded-full border border-accent-primary/30 bg-accent-muted px-2.5 py-1 text-xs font-medium text-accent-text;
@@ -5186,9 +5376,6 @@
   }
   .ui-loki-scope-add {
     @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border-subtle bg-surface-raised text-text-tertiary transition-colors hover:border-border-default hover:text-text-primary;
-  }
-  .ui-loki-scope-hint {
-    @apply text-xs text-text-tertiary;
   }
 
   /* Project multi-select (right pane). */
@@ -5332,7 +5519,8 @@
   .ui-theme-cycle-btn,
   .ui-topbar-btn,
   .ui-loki-convo-delete,
-  .ui-loki-toolbar-btn {
+  .ui-loki-topbar-btn,
+  .ui-loki-jump {
     min-height: 2.75rem;
     min-width: 2.75rem;
   }
