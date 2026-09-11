@@ -384,3 +384,49 @@ console.log("feedback-copy: ok");
 }
 
 console.log("feedback-ship-instruction: ok");
+
+// A handoff names more than one pull request more often than you would think.
+// The real one, from dogfood-site-sep10-1201 on 2026-09-11, after a retry:
+// taking the FIRST number reported the CLOSED pull request and told the
+// operator nothing had shipped, while #3 sat open and mergeable.
+{
+  const retry =
+    'Added a build-time "Last updated" date line to the shared footer (renders on the home page) per visitor feedback; redone from scratch on branch feat/footer-last-updated-v2 off current main after prior PR #1 diverged and conflicted (closed #1, opened #3, "test" check green).';
+  assert.equal(
+    parsePrRef(retry, GIT)?.number,
+    3,
+    "the pull request it OPENED, not the one it closed",
+  );
+
+  // The plain case still resolves the same way.
+  assert.equal(parsePrRef("opened PR #1 on branch feat/x (commit abc)", GIT)?.number, 1);
+
+  // No "opened" cue anywhere: a later pull request supersedes an earlier one.
+  assert.equal(
+    parsePrRef("superseded PR #4 with PR #9", GIT)?.number,
+    9,
+    "highest wins when nothing says which was opened",
+  );
+
+  // A BARE #number is not assumed to be a pull request — in prose it is far
+  // more often an issue, and resolving the wrong thing is worse than resolving
+  // nothing. It counts only with "PR"/"pull request"/"pull/" or after "opened".
+  assert.equal(parsePrRef("fixes #12", GIT), null, "a bare number is not a pull request");
+  assert.equal(
+    parsePrRef("opened #12", GIT)?.number,
+    12,
+    "…unless the sentence says it was opened",
+  );
+
+  // A full URL still carries its own repo, and still loses to an explicit open.
+  assert.equal(
+    parsePrRef(
+      "closed https://github.com/o/r/pull/2 and opened https://github.com/o/r/pull/5",
+      null,
+    )?.url,
+    "https://github.com/o/r/pull/5",
+  );
+  assert.equal(parsePrRef("nothing to see", GIT), null);
+}
+
+console.log("feedback-pr-ref: ok");
