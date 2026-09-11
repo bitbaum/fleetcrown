@@ -41,7 +41,6 @@ so accidental `| tail -N` pipes don't leave orphaned watchers behind:
 
 ```bash
 npx tsx home/watcher.ts --start   # Bridge — emits worker.idle when sessions change
-npx tsx home/worker.ts  --start   # Consumer — injects bridge.dispatch into zellij
 npx tsx home/worker.ts  --self-test   # Inline tests, no I/O
 ```
 

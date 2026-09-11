@@ -22,7 +22,7 @@
  */
 
 import { execSync } from "child_process";
-import { shellEscape } from "@/lib/zellij";
+import { shellEscape } from "@/lib/shell-escape";
 import { commandExistsInPath } from "./helpers";
 import type { AgentAdapter, AgentAvailability, AgentRuntimeConfig } from "./types";
 

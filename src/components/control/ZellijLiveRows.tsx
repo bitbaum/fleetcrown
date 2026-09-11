@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Crosshair, Eye, Maximize2, Trash2 } from "lucide-react";
+import { Eye, Maximize2, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { LiveTabRow } from "./control-presenter";
 import { PeekTabDrawer } from "./PeekTabDrawer";
@@ -30,7 +30,6 @@ type Props = {
   rows: LiveTabRow[];
   /** Row to visually emphasize (push-notification deep-link). */
   highlightTab?: string | null;
-  focusTab: (tabName: string) => void;
   closeTab: (tabName: string) => void;
   onFocusProject?: (tab: string) => void;
 };
@@ -47,7 +46,7 @@ type Props = {
  * back to the runner-backed pending_commands path, so it is useful from web
  * and mobile too.
  */
-export function ZellijLiveRows({ rows, highlightTab, focusTab, closeTab, onFocusProject }: Props) {
+export function ZellijLiveRows({ rows, highlightTab, closeTab, onFocusProject }: Props) {
   const [peekTab, setPeekTab] = useState<string | null>(null);
 
   const isHighlighted = (tabName: string) =>
@@ -107,14 +106,6 @@ export function ZellijLiveRows({ rows, highlightTab, focusTab, closeTab, onFocus
                     >
                       <Eye className="h-3.5 w-3.5" />
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => focusTab(row.tabName)}
-                      className="ui-icon-action p-0.5"
-                      title={`Focus ${row.tabName} in Zellij`}
-                    >
-                      <Crosshair className="h-3.5 w-3.5" />
-                    </button>
                     {row.project && onFocusProject && (
                       <button
                         type="button"
@@ -173,14 +164,6 @@ export function ZellijLiveRows({ rows, highlightTab, focusTab, closeTab, onFocus
                   title="Peek terminal"
                 >
                   <Eye className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => focusTab(row.tabName)}
-                  className="ui-icon-action p-0.5"
-                  title="Focus in Zellij"
-                >
-                  <Crosshair className="h-3.5 w-3.5" />
                 </button>
                 {row.project && onFocusProject && (
                   <button

@@ -42,7 +42,7 @@ import {
 export function ProjectCard({
   project,
   prompts,
-  zellijTabs,
+  liveTabs,
   currentAdapter,
   availableAgents,
   onInject,
@@ -63,7 +63,7 @@ export function ProjectCard({
 }: {
   project: ProjectState;
   prompts: PromptMeta[];
-  zellijTabs: string[];
+  liveTabs: string[];
   currentAdapter: string;
   availableAgents: { id: string; label: string; modelSuggestions: string[] }[];
   onInject: (
@@ -119,7 +119,7 @@ export function ProjectCard({
       patchJson(`/api/user-projects/${project.id}`, { agentPref: agentId }).catch(() => {});
     }
     const workspaceTab = project.liveTab ?? project.tab;
-    const tabIsOpen = isProjectTabOpen(project, zellijTabs);
+    const tabIsOpen = isProjectTabOpen(project, liveTabs);
     if (agentId === currentAgent || !tabIsOpen || !project.dir) return;
 
     setSwitchingAgent(true);
@@ -157,7 +157,7 @@ export function ProjectCard({
   // session state (mtime + outgoing agent) so a switch landing — which lags the
   // session poll — doesn't re-trigger or flash a false "exhausted".
   const autopilotOn = automationMode === "on";
-  const tabOpen = isProjectTabOpen(project, zellijTabs);
+  const tabOpen = isProjectTabOpen(project, liveTabs);
   const autoTriedAgentsRef = useRef<Set<string>>(new Set());
   const handledCapacitySignatureRef = useRef<string | null>(null);
   const [autoRerouteReason, setAutoRerouteReason] = useState<AutoRerouteSkipReason | null>(null);
@@ -233,9 +233,9 @@ export function ProjectCard({
   }
 
   const display = dismissed
-    ? getProjectDisplayState(project, zellijTabs, nowS, true, runtimeStateKnown, runnerSyncStale)
+    ? getProjectDisplayState(project, liveTabs, nowS, true, runtimeStateKnown, runnerSyncStale)
     : (snapshot?.display ??
-      getProjectDisplayState(project, zellijTabs, nowS, false, runtimeStateKnown, runnerSyncStale));
+      getProjectDisplayState(project, liveTabs, nowS, false, runtimeStateKnown, runnerSyncStale));
   const isReadyNow = display.isReady || display.isOrchestrationReady;
   useProjectLifecycleSync(project.tab, isReadyNow);
   // After the 2026-06-11 collapse autopilot is binary. "on" continues when
@@ -415,7 +415,7 @@ export function ProjectCard({
           UX audit gap (2026-08-19): this banner told the operator the truth
           but gave them nowhere to go act on it — a dismiss (X) was the only
           button. "Queued — runs when it's online" with no link reads as a
-          dead end on a phone, where the live Zellij panel below isn't even
+          dead end on a phone, where the live terminal panel below isn't even
           rendered (desktop/local-runtime only). Watch → now goes straight to
           this project's session on /terminal, same destination Loki's own
           dispatch footer already offers. */}

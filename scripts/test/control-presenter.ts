@@ -747,10 +747,10 @@ function runTests(): void {
   // would therefore announce a calm fleet at the exact moment it knows nothing
   // about it, on the surface whose whole job is saying what needs the operator.
   // countsKnown is how the derivation layer says "I don't know yet".
-  const controlData = (projects: ProjectState[], zellijTabs: string[] = []) =>
+  const controlData = (projects: ProjectState[], liveTabs: string[] = []) =>
     ({
       projects,
-      zellijTabs,
+      liveTabs,
       inventory: {
         source: "user_projects",
         trackedProjectCount: projects.length,

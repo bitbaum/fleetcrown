@@ -198,7 +198,7 @@ export type ControlData = {
   };
   projects: ProjectState[];
   prompts: import("@/lib/agent-config").PromptMeta[];
-  zellijTabs: string[];
+  liveTabs: string[];
   recentActivity: import("@/db/queries/prompt-history").ActivityItem[];
   runtimeAvailable: boolean;
   /** Latest RUNTIME push from any of this user's builders. Runtime pushes

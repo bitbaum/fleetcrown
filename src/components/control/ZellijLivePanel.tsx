@@ -59,14 +59,6 @@ export function ZellijLivePanel({
   const hiddenTabCount = Math.max(0, (openTabCount ?? rows.length) - rows.length);
   const effectiveTarget = targetTab || tabOptions[0] || "";
 
-  const focusTab = async (tabName: string) => {
-    try {
-      await postJson("/api/control/focus-tab", { tab: tabName });
-    } catch {
-      /* best effort */
-    }
-  };
-
   // Confirmation runs through <Modal>, never window.confirm — a native dialog
   // blocks the whole renderer (frozen page for remote/automation sessions).
   const [confirmCloseTab, setConfirmCloseTab] = useState<string | null>(null);
@@ -266,7 +258,6 @@ export function ZellijLivePanel({
           <ZellijLiveRows
             rows={rows}
             highlightTab={highlightTab}
-            focusTab={focusTab}
             closeTab={closeTab}
             onFocusProject={onFocusProject}
           />

@@ -24,7 +24,7 @@
 
 import { exec } from "child_process";
 import { promisify } from "util";
-import { shellEscape } from "@/lib/zellij";
+import { shellEscape } from "@/lib/shell-escape";
 import { EXEC_TIMEOUT_MS } from "@/lib/constants/time";
 import type { GitState } from "@/lib/control-types";
 

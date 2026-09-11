@@ -6,7 +6,7 @@ import { readAgentPreferences, resolveAgentConfig } from "@/lib/agent-preference
 import { buildSwitchableAgentCatalog } from "@/lib/agent-catalog";
 import { resolveEffectiveTab, normalizeTabName } from "@/lib/agent-config";
 import { getAgentProcesses, readFastState } from "@/lib/control-fast-state";
-import { getZellijTabs } from "@/lib/zellij";
+import { listOwnedTabs } from "@/lib/agent-execution/owned";
 import { getSessionUserId } from "@/lib/session";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { NOTIFY_CHANNEL } from "@/db/setup-notify-trigger";
@@ -122,10 +122,10 @@ export async function GET() {
   // Fetch state for own user + team owners so org-shared projects show live state too.
   const ownerIds = [...new Set([userId, ...confProjects.map((p) => p.ownerUserId)])];
 
-  // Resolve each project's canonical tab name to its exact zellij casing.
-  // The cache is refreshed every 10s in the background so new Claude sessions
-  // or tab renames don't leave the stream reading stale /tmp sentinel paths.
-  let zellijTabCache = await getZellijTabs();
+  // Tabs with a live owned PTY, refreshed every 10s so a freshly started
+  // session flips tabOpen without a reconnect.
+  const knownTabs = confProjects.map((p) => p.tab);
+  let liveTabCache = listOwnedTabs(userId, knownTabs);
   let lastTabRefreshMs = Date.now();
 
   const TAB_CACHE_TTL_MS = 10_000;
@@ -133,11 +133,11 @@ export async function GET() {
   const refreshTabsCacheIfStale = () => {
     if (Date.now() - lastTabRefreshMs < TAB_CACHE_TTL_MS) return;
     lastTabRefreshMs = Date.now();
-    getZellijTabs()
-      .then((tabs) => {
-        zellijTabCache = tabs;
-      })
-      .catch(() => {});
+    try {
+      liveTabCache = listOwnedTabs(userId, knownTabs);
+    } catch {
+      /* executor not ready — keep the last list */
+    }
   };
 
   let lastSent: FastProjectState[] = [];
@@ -148,7 +148,7 @@ export async function GET() {
   const scanProjects = async (): Promise<FastProjectState[]> => {
     const agentProcesses = getAgentProcesses(agentRegistry.agents);
     const scanInput = confProjects.map(({ tab, dir, sessionLifecycleSignals }) => {
-      const resolvedTab = resolveEffectiveTab(tab, zellijTabCache);
+      const resolvedTab = resolveEffectiveTab(tab, liveTabCache);
       const projectProcesses = agentProcesses.filter(
         (p) => p.cwd === dir || p.cwd.startsWith(dir + "/"),
       );
@@ -160,7 +160,7 @@ export async function GET() {
           projectProcesses.length > 0
             ? projectProcesses.some((p) => p.sessionLifecycleSignals)
             : sessionLifecycleSignals,
-        tabOpen: zellijTabCache.some((t) => t.toLowerCase() === resolvedTab.toLowerCase()),
+        tabOpen: liveTabCache.some((t) => t.toLowerCase() === resolvedTab.toLowerCase()),
       };
     });
     const agentCwds = agentProcesses.map((p) => p.cwd);
