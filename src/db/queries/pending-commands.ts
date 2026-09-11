@@ -252,6 +252,24 @@ export async function enqueueHostedNewSiteCommand(
   return enqueuePendingCommand({ userId, type: "hosted_new_site", payload });
 }
 
+/** Taking a site down: the inverse of the payload above, same closed shape.
+ *  `confirm:false` runs the script in plan mode, which touches nothing — that
+ *  is what makes a preview safe to queue. See lib/hosted-runner/retire-site.ts. */
+export type HostedRetireSitePayload = {
+  slug: string;
+  mode: string;
+  repo: string;
+  forceClient?: boolean;
+  confirm: boolean;
+};
+
+export async function enqueueHostedRetireSiteCommand(
+  userId: string,
+  payload: HostedRetireSitePayload,
+): Promise<string> {
+  return enqueuePendingCommand({ userId, type: "hosted_retire_site", payload });
+}
+
 /**
  * How many sites this account has asked for since `since`.
  *
@@ -357,7 +375,12 @@ const HOSTED_STALE_CLAIM_SECONDS = 20 * 60;
 // second drainer would re-run it — and re-running THIS one does not duplicate a
 // branch, it tries to create a second site on a slug the first is mid-way
 // through claiming.
-const HOSTED_COMMAND_TYPES = ["hosted_dispatch", "hosted_analyze", "hosted_new_site"] as const;
+const HOSTED_COMMAND_TYPES = [
+  "hosted_dispatch",
+  "hosted_analyze",
+  "hosted_new_site",
+  "hosted_retire_site",
+] as const;
 
 // Commands queued while the runner was offline go stale fast: executing a
 // days-old "inject into tab X" / "launch agent in Y" against a Zellij that has

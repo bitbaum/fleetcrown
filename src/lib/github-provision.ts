@@ -282,6 +282,57 @@ export async function provisionGithubRepo(
 export type DeprovisionResult =
   { ok: true } | { ok: false; status: number; error: string; detail?: string };
 
+/**
+ * Change a repository's visibility after the fact.
+ *
+ * Visibility was settable only at creation, and `new-site.sh` creates public
+ * repositories — so "I want this not to be public" had no answer for the code,
+ * only for the site. One PATCH; GitHub allows it in both directions, and the
+ * caller decides which.
+ */
+export async function setGithubRepoVisibility(
+  token: string,
+  gitUrl: string,
+  visibility: "private" | "public",
+): Promise<DeprovisionResult> {
+  const parsed = parseGithubRepoUrl(gitUrl);
+  if (!parsed) {
+    return { ok: false, status: 400, error: "Linked repo is not a GitHub repository URL." };
+  }
+  let res: Response;
+  try {
+    res = await fetch(`${GITHUB_API_BASE}/repos/${parsed.owner}/${parsed.repo}`, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ private: visibility === "private" }),
+      signal: AbortSignal.timeout(HTTP_TIMEOUT_SHORT_MS),
+    });
+  } catch {
+    return { ok: false, status: 502, error: "GitHub did not respond in time." };
+  }
+  if (!res.ok) {
+    let detail = "";
+    try {
+      const body = await res.json();
+      detail = body?.message ?? "";
+    } catch {
+      /* ignore */
+    }
+    return {
+      ok: false,
+      status: res.status,
+      error: `GitHub refused to make ${parsed.owner}/${parsed.repo} ${visibility} (${res.status})`,
+      detail,
+    };
+  }
+  return { ok: true };
+}
+
 export async function deprovisionGithubRepo(
   token: string,
   gitUrl: string,

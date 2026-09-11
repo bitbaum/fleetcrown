@@ -44,6 +44,11 @@ export function ProjectTeardown({
         <Trash2 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
         Danger zone
       </div>
+      <p className="text-xs text-text-tertiary">
+        This removes the project from FleetCrown — its brief, milestones, feedback and settings —
+        and, if you ask, its repository. It does not take a live site off the internet: use
+        &ldquo;The live site&rdquo; above for that.
+      </p>
       <div className="space-y-4">
         <div className="space-y-2 text-xs text-text-secondary">
           {hasRepo && (
