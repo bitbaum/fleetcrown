@@ -26,6 +26,11 @@ import {
   runNewSite,
   siteFactoryEnabled,
 } from "@/lib/hosted-runner/new-site";
+import {
+  runRetireSite,
+  siteFactoryEnabled as retireFactoryEnabled,
+  validateRetireSiteRequest,
+} from "@/lib/hosted-runner/retire-site";
 import { getProjectContext } from "@/db/queries/project-context";
 import {
   getRecentProjectActivity,
@@ -49,7 +54,7 @@ const POLL_MS = 5_000;
 // Both hosted classes: read-only analysis (Groq, Phase 0) + write-class dispatch
 // to a sandboxed coding agent (Hermes, Phase 1). Local-runner dispatch/inject
 // commands are deliberately NOT claimed here.
-const HOSTED_TYPES = ["hosted_analyze", "hosted_dispatch", "hosted_new_site"];
+const HOSTED_TYPES = ["hosted_analyze", "hosted_dispatch", "hosted_new_site", "hosted_retire_site"];
 
 /** Compact "what was just done" block so Hermes doesn't repeat or collide with
  *  recent work. Consumer-side because it enriches EVERY hosted dispatch (auto-
@@ -120,6 +125,55 @@ async function emitHostedEvent(
  * Validation failures are deterministic — a slug that is reserved now is
  * reserved on every redelivery — so retrying is just a queue that never drains.
  */
+/**
+ * Take a site down — plan or execute, decided by the payload's `confirm`.
+ *
+ * The plan path is the reason this is a command rather than a direct call: it
+ * runs the same script with the same arguments the real teardown would use and
+ * returns exactly what it WOULD touch, so the confirmation a person sees is
+ * produced by the code that acts, not by a second description of it that can
+ * drift.
+ */
+async function tickRetireSite(userId: string, cmdId: string, payload: unknown): Promise<boolean> {
+  const parsed = validateRetireSiteRequest(payload);
+  if (!parsed.ok) {
+    console.warn(`[hosted-runner] retire rejected: ${parsed.reason}`);
+    await markCommandExecuted(cmdId, userId, { ok: false, text: `rejected: ${parsed.reason}` });
+    return true;
+  }
+  const req = parsed.value;
+  const confirm = (payload as { confirm?: unknown })?.confirm === true;
+
+  if (!retireFactoryEnabled()) {
+    const msg = "site factory disabled on this runner (set FLEETCROWN_SITE_FACTORY=1 to arm it)";
+    console.warn(`[hosted-runner] ${msg}`);
+    await markCommandExecuted(cmdId, userId, { ok: false, text: msg });
+    return true;
+  }
+
+  const scriptPath = process.env.FLEETCROWN_RETIRE_SITE_SCRIPT;
+  if (!scriptPath) {
+    const msg =
+      "FLEETCROWN_RETIRE_SITE_SCRIPT is not set; refusing to guess where retire-site.sh lives";
+    console.warn(`[hosted-runner] ${msg}`);
+    await markCommandExecuted(cmdId, userId, { ok: false, text: msg });
+    return true;
+  }
+
+  console.log(
+    `[hosted-runner] retire ${req.slug} (${req.mode}, repo ${req.repo}, confirm=${confirm})`,
+  );
+  const res = await runRetireSite(req, { scriptPath, confirm });
+  await markCommandExecuted(
+    cmdId,
+    userId,
+    res.ok
+      ? { ok: true, text: res.output.slice(-4000) }
+      : { ok: false, text: res.error.slice(0, 4000) },
+  );
+  return true;
+}
+
 async function tickNewSite(userId: string, cmdId: string, payload: unknown): Promise<boolean> {
   const parsed = validateNewSiteRequest(payload as HostedNewSitePayload);
   if (!parsed.ok) {
@@ -175,6 +229,12 @@ async function tick(userId: string): Promise<boolean> {
   // command that brings those into being, so it carries neither.
   if (cmd.type === "hosted_new_site") {
     return await tickNewSite(userId, cmd.id, cmd.payload);
+  }
+
+  // Taking a site down carries no projectKey either: the slug IS the address,
+  // and by the time this runs the FleetCrown project may already be gone.
+  if (cmd.type === "hosted_retire_site") {
+    return await tickRetireSite(userId, cmd.id, cmd.payload);
   }
 
   const p = cmd.payload as HostedAnalyzePayload | HostedDispatchPayload;

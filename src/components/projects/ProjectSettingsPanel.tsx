@@ -4,15 +4,19 @@ import { useRouter } from "next/navigation";
 import { Settings } from "lucide-react";
 import { ProjectProvision } from "./ProjectProvision";
 import { ProjectTeardown } from "./ProjectTeardown";
+import { SiteRetirePanel } from "./SiteRetirePanel";
 
 export function ProjectSettingsPanel({
   projectId,
   hasRepo,
   hasLocalPath,
+  liveUrl,
 }: {
   projectId: string;
   hasRepo: boolean;
   hasLocalPath: boolean;
+  /** The public site, when this project has one. */
+  liveUrl?: string | null;
 }) {
   const router = useRouter();
 
@@ -23,6 +27,7 @@ export function ProjectSettingsPanel({
       </summary>
       <div className="space-y-5 border-t border-border-subtle py-5">
         {!hasRepo && <ProjectProvision projectId={projectId} onReload={() => router.refresh()} />}
+        {liveUrl && <SiteRetirePanel projectId={projectId} liveUrl={liveUrl} />}
         <ProjectTeardown
           projectId={projectId}
           hasRepo={hasRepo}

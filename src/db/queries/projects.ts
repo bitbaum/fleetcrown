@@ -170,6 +170,13 @@ export async function deleteProject(userId: string, id: string) {
       ),
     );
 
+  // Milestones hang off the project entity with ON DELETE SET NULL, so deleting
+  // a project used to leave its roadmap behind: unowned goals that still showed
+  // on /goals, belonging to something the operator had just removed. Nulling the
+  // link is right for a goal the user wrote themselves; these were written BY
+  // the kickoff FOR this project, so they go with it.
+  await db.delete(goals).where(and(eq(goals.userId, userId), eq(goals.entityId, id)));
+
   const [deleted] = await db
     .delete(entities)
     .where(and(eq(entities.id, id), eq(entities.userId, userId)))

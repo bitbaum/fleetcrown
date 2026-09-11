@@ -12,8 +12,12 @@
 // is the process that actually executes and therefore cannot trust that anyone
 // upstream checked. Neither is redundant — one is UX, the other is the boundary.
 
-import { enqueueHostedNewSiteCommand } from "@/db/queries/pending-commands";
+import {
+  enqueueHostedNewSiteCommand,
+  enqueueHostedRetireSiteCommand,
+} from "@/db/queries/pending-commands";
 import { validateNewSiteRequest, type NewSiteRequest } from "@/lib/hosted-runner/new-site";
+import { validateRetireSiteRequest, type RetireSiteRequest } from "@/lib/hosted-runner/retire-site";
 
 export type ProvisionSiteResult =
   | { ok: true; commandId: string; request: NewSiteRequest; host: string }
@@ -48,4 +52,39 @@ export async function requestNewSite(
     request: req,
     host: `${req.slug}.${opts.baseDomain ?? "orangecat.ch"}`,
   };
+}
+
+export type RetireSiteQueued =
+  | { ok: true; commandId: string; request: RetireSiteRequest; confirmed: boolean }
+  | { ok: false; status: number; error: string };
+
+/**
+ * Queue a site retirement — the single door, for the same reason requestNewSite
+ * is: a second caller building its own payload is how one path grows a check
+ * the other lacks, and this is the path that destroys things.
+ *
+ * `confirm` is the whole safety model. False (the default) runs the script in
+ * plan mode, which performs no action and returns the list of what WOULD be
+ * touched; true carries it out. A caller that never passes true can only ever
+ * produce a preview.
+ */
+export async function requestRetireSite(
+  userId: string,
+  input: unknown,
+  opts: { confirm?: boolean } = {},
+): Promise<RetireSiteQueued> {
+  const parsed = validateRetireSiteRequest(input);
+  if (!parsed.ok) {
+    return { ok: false, status: 400, error: parsed.reason };
+  }
+  const req = parsed.value;
+  const confirmed = opts.confirm === true;
+  const commandId = await enqueueHostedRetireSiteCommand(userId, {
+    slug: req.slug,
+    mode: req.mode,
+    repo: req.repo,
+    forceClient: req.forceClient,
+    confirm: confirmed,
+  });
+  return { ok: true, commandId, request: req, confirmed };
 }
