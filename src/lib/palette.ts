@@ -1,3 +1,5 @@
+import { WIDGET_THEME } from "./widget-theme.generated";
+
 // JS mirrors of globals.css design tokens for contexts that cannot read CSS
 // vars (satori OG images, email HTML, Next metadata themeColor, xterm).
 // If you change a value here, change the token in src/app/globals.css and
@@ -58,42 +60,11 @@ export const PALETTE = {
   /** Widget theme — mirrors the app's dark-mode design tokens for the embed.
    *  The widget is always dark (works on any host page background), so these
    *  map to .dark tokens in globals.css. Change both places together. */
-  widget: {
-    /** --accent-warm (dark) ≈ oklch(0.69 0.21 41) — the ONE accent: send, focus, selection */
-    accent: "#ff7519",
-    /** --accent-warm-hover (dark) ≈ oklch(0.75 0.19 43) */
-    accentHover: "#ff8534",
-    /** accent over the dark surface at ~10% — hint rows, recording state */
-    accentMuted: "#2b1a10",
-    /** --on-accent — dark ink on the warm orange; white fails contrast there */
-    inkOnAccent: "#0a0a0a",
-    /** --text-primary (dark) ≈ oklch(0.92 0 0) */
-    text: "#ededed",
-    /** --text-secondary (dark) ≈ oklch(0.6 0 0) */
-    textSecondary: "#9a9a9a",
-    /** --text-tertiary (dark) ≈ oklch(0.4 0 0) */
-    textTertiary: "#666666",
-    /** placeholders, counters, key hints */
-    textMuted: "#595959",
-    /** --surface-public — the near-black FleetCrown's own pages sit on */
-    surface: "#0a0a0a",
-    /** inputs and the segmented control's track */
-    surfaceRaised: "#141414",
-    /** hover fill for quiet buttons */
-    surfaceSubtle: "#1c1c1c",
-    /** --border-subtle (dark) */
-    border: "#262626",
-    /** --border-default (dark) */
-    borderStrong: "#3a3a3a",
-    /** launcher and picker-bar edge, which sit on unknown host backgrounds */
-    borderDark: "#4a4a4a",
-    /** --status-positive (dark) */
-    success: "#22a06b",
-    /** --status-negative (dark) */
-    error: "#ff6b57",
-    /** error over the dark surface */
-    errorSurface: "#2a1414",
-    black: "#0a0a0a",
-    white: "#ffffff",
-  },
+  /**
+   * The feedback widget's theme — DERIVED from @bitbaum/design-tokens by
+   * scripts/generate-widget-theme.ts, never typed here. It used to be a hand
+   * copy, which is how the widget drifted into "does not look like part of
+   * FleetCrown". scripts/test/widget-theme-from-tokens.ts fails on drift.
+   */
+  widget: WIDGET_THEME,
 } as const;
