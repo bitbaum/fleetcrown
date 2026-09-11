@@ -140,97 +140,147 @@ export function FeedbackInbox() {
     );
   }
 
+  // Filters earn their row only when they can change what is shown: one
+  // project needs no project chips, one source needs no source chips. On a
+  // project-scoped view (?project=…) the project is the page's subject, so it
+  // is named once in the heading and the rows stop repeating it.
+  const sourcesPresent = new Set(all.map((f) => f.source ?? FEEDBACK_SOURCE.VISITOR));
+  const showProjectChips = projects.length > 1;
+  const showSourceChips = sourcesPresent.size > 1;
+  const nothingWaiting = needsYou.length === 0 && inProgress.length === 0;
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          onClick={() => setProjectFilter(null)}
-          className={cn(
-            "ui-projects-filter-chip",
-            projectFilter === null && "ui-projects-filter-chip-active",
+      {(showProjectChips || showSourceChips || projectFilter) && (
+        <div className="flex flex-wrap items-center gap-2">
+          {projectFilter && !showProjectChips ? (
+            <button
+              type="button"
+              onClick={() => setProjectFilter(null)}
+              className="ui-projects-filter-chip ui-projects-filter-chip-active"
+              title="Show every project"
+            >
+              {projectFilter}
+              <span aria-hidden="true">×</span>
+            </button>
+          ) : null}
+          {showProjectChips && (
+            <>
+              <button
+                type="button"
+                onClick={() => setProjectFilter(null)}
+                className={cn(
+                  "ui-projects-filter-chip",
+                  projectFilter === null && "ui-projects-filter-chip-active",
+                )}
+              >
+                All projects
+              </button>
+              {projects.map((p) => (
+                <button
+                  key={p.name}
+                  type="button"
+                  onClick={() => setProjectFilter((v) => (v === p.name ? null : p.name))}
+                  className={cn(
+                    "ui-projects-filter-chip",
+                    projectFilter === p.name && "ui-projects-filter-chip-active",
+                  )}
+                >
+                  {p.name}
+                  {p.open > 0 && <span className="ui-projects-filter-count">{p.open}</span>}
+                </button>
+              ))}
+            </>
           )}
-        >
-          All projects
-        </button>
-        {projects.map((p) => (
-          <button
-            key={p.name}
-            type="button"
-            onClick={() => setProjectFilter((v) => (v === p.name ? null : p.name))}
-            className={cn(
-              "ui-projects-filter-chip",
-              projectFilter === p.name && "ui-projects-filter-chip-active",
-            )}
-          >
-            {p.name}
-            {p.open > 0 && <span className="ui-projects-filter-count">{p.open}</span>}
-          </button>
-        ))}
-        <span className="mx-1 hidden h-4 w-px bg-border-subtle sm:block" aria-hidden="true" />
-        {SOURCE_FILTERS.map((s) => (
-          <button
-            key={s.label}
-            type="button"
-            onClick={() => setSourceFilter(s.key)}
-            className={cn(
-              "ui-projects-filter-chip",
-              sourceFilter === s.key && "ui-projects-filter-chip-active",
-            )}
-          >
-            {s.label}
-          </button>
-        ))}
-      </div>
-
-      {metrics && metrics.resolved > 0 && (
-        <p className="text-xs text-text-tertiary">
-          {metrics.open} open · {metrics.resolved} resolved
-          {metrics.medianResolutionHours != null &&
-            ` · median ${compactDurationHours(metrics.medianResolutionHours)} report→fix`}
-        </p>
+          {showProjectChips && showSourceChips && (
+            <span className="mx-1 hidden h-4 w-px bg-border-subtle sm:block" aria-hidden="true" />
+          )}
+          {showSourceChips &&
+            SOURCE_FILTERS.filter((s) => s.key === null || sourcesPresent.has(s.key)).map((s) => (
+              <button
+                key={s.label}
+                type="button"
+                onClick={() => setSourceFilter(s.key)}
+                className={cn(
+                  "ui-projects-filter-chip",
+                  sourceFilter === s.key && "ui-projects-filter-chip-active",
+                )}
+              >
+                {s.label}
+              </button>
+            ))}
+        </div>
       )}
 
       {error && <p className="ui-error">{error}</p>}
 
-      <InboxSection title="Needs you" count={needsYou.length} emptyHint="Nothing waiting on you.">
-        {needsYou.map((f) => (
-          <Row
-            key={f.id}
-            f={f}
-            busyId={busyId}
-            dispatchFix={dispatchFix}
-            setStatus={setStatus}
-            feature={feature}
-          />
-        ))}
-      </InboxSection>
+      {/* One sentence when the answer is "nothing" — three headed sections each
+          saying it was the noise. Sections render only when they hold rows. */}
+      {nothingWaiting && (
+        <p className="text-sm text-text-tertiary">
+          Nothing waiting on you
+          {projectFilter ? ` for ${projectFilter}` : ""}.
+        </p>
+      )}
 
-      <InboxSection title="In progress" count={inProgress.length} emptyHint="No fixes in flight.">
-        {inProgress.map((f) => (
-          <Row
-            key={f.id}
-            f={f}
-            busyId={busyId}
-            dispatchFix={dispatchFix}
-            setStatus={setStatus}
-            feature={feature}
-          />
-        ))}
-      </InboxSection>
+      {needsYou.length > 0 && (
+        <InboxSection title="Needs you" count={needsYou.length}>
+          {needsYou.map((f) => (
+            <Row
+              key={f.id}
+              f={f}
+              busyId={busyId}
+              dispatchFix={dispatchFix}
+              setStatus={setStatus}
+              feature={feature}
+              hideProject={!!projectFilter}
+            />
+          ))}
+        </InboxSection>
+      )}
 
-      <InboxSection title="Shipped" count={shipped.length} emptyHint="Nothing resolved yet.">
-        {shipped.map((f) => (
-          <Row
-            key={f.id}
-            f={f}
-            busyId={busyId}
-            dispatchFix={dispatchFix}
-            setStatus={setStatus}
-            feature={feature}
-          />
-        ))}
-      </InboxSection>
+      {inProgress.length > 0 && (
+        <InboxSection title="In progress" count={inProgress.length}>
+          {inProgress.map((f) => (
+            <Row
+              key={f.id}
+              f={f}
+              busyId={busyId}
+              dispatchFix={dispatchFix}
+              setStatus={setStatus}
+              feature={feature}
+              hideProject={!!projectFilter}
+            />
+          ))}
+        </InboxSection>
+      )}
+
+      {shipped.length > 0 && (
+        <InboxSection
+          title="Shipped"
+          count={shipped.length}
+          aside={
+            metrics &&
+            metrics.resolved > 0 &&
+            metrics.medianResolutionHours != null &&
+            !projectFilter
+              ? `median ${compactDurationHours(metrics.medianResolutionHours)} report→fix`
+              : undefined
+          }
+        >
+          {shipped.map((f) => (
+            <Row
+              key={f.id}
+              f={f}
+              busyId={busyId}
+              dispatchFix={dispatchFix}
+              setStatus={setStatus}
+              feature={feature}
+              hideProject={!!projectFilter}
+            />
+          ))}
+        </InboxSection>
+      )}
 
       {archived.length > 0 && (
         <div>
@@ -252,6 +302,7 @@ export function FeedbackInbox() {
                   dispatchFix={dispatchFix}
                   setStatus={setStatus}
                   feature={feature}
+                  hideProject={!!projectFilter}
                 />
               ))}
             </div>
@@ -265,25 +316,23 @@ export function FeedbackInbox() {
 function InboxSection({
   title,
   count,
-  emptyHint,
+  aside,
   children,
 }: {
   title: string;
   count: number;
-  emptyHint: string;
+  /** A quiet fact for the right edge of the heading, e.g. the median report→fix. */
+  aside?: string;
   children: React.ReactNode;
 }) {
   return (
     <section aria-label={title}>
       <h2 className="mb-1 flex items-baseline gap-2 text-sm font-semibold text-text-primary">
         {title}
-        {count > 0 && <span className="ui-badge">{count}</span>}
+        <span className="ui-badge">{count}</span>
+        {aside && <span className="ml-auto text-xs font-normal text-text-muted">{aside}</span>}
       </h2>
-      {count === 0 ? (
-        <p className="py-2 text-xs text-text-muted">{emptyHint}</p>
-      ) : (
-        <div className="divide-y divide-border-subtle">{children}</div>
-      )}
+      <div className="divide-y divide-border-subtle">{children}</div>
     </section>
   );
 }
@@ -294,18 +343,21 @@ function Row({
   dispatchFix,
   setStatus,
   feature,
+  hideProject,
 }: {
   f: InboxItem;
   busyId: string | null;
   dispatchFix: (id: string, note?: string) => void;
   setStatus: (id: string, status: FeedbackStatus) => void;
   feature: (id: string, featured: boolean) => void;
+  /** On a project-scoped view the project is the heading, not a per-row chip. */
+  hideProject?: boolean;
 }) {
   return (
     <FeedbackItemRow
       feedback={f}
       projectName={f.projectName}
-      project={{ id: f.projectId, name: f.projectName }}
+      project={hideProject ? null : { id: f.projectId, name: f.projectName }}
       busy={busyId === f.id}
       onDispatch={(note) => dispatchFix(f.id, note)}
       onResolve={() => setStatus(f.id, FEEDBACK_STATUS.RESOLVED)}
