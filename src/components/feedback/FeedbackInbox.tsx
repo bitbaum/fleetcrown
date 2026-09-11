@@ -146,6 +146,9 @@ export function FeedbackInbox() {
   // is named once in the heading and the rows stop repeating it.
   const sourcesPresent = new Set(all.map((f) => f.source ?? FEEDBACK_SOURCE.VISITOR));
   const showProjectChips = projects.length > 1;
+  // One project in the whole inbox: naming it on every row is the same noise
+  // as naming it in a filter nobody can change.
+  const hideProject = !!projectFilter || projects.length <= 1;
   const showSourceChips = sourcesPresent.size > 1;
   const nothingWaiting = needsYou.length === 0 && inProgress.length === 0;
 
@@ -233,7 +236,7 @@ export function FeedbackInbox() {
               dispatchFix={dispatchFix}
               setStatus={setStatus}
               feature={feature}
-              hideProject={!!projectFilter}
+              hideProject={hideProject}
             />
           ))}
         </InboxSection>
@@ -249,7 +252,7 @@ export function FeedbackInbox() {
               dispatchFix={dispatchFix}
               setStatus={setStatus}
               feature={feature}
-              hideProject={!!projectFilter}
+              hideProject={hideProject}
             />
           ))}
         </InboxSection>
@@ -276,7 +279,7 @@ export function FeedbackInbox() {
               dispatchFix={dispatchFix}
               setStatus={setStatus}
               feature={feature}
-              hideProject={!!projectFilter}
+              hideProject={hideProject}
             />
           ))}
         </InboxSection>
@@ -302,7 +305,7 @@ export function FeedbackInbox() {
                   dispatchFix={dispatchFix}
                   setStatus={setStatus}
                   feature={feature}
-                  hideProject={!!projectFilter}
+                  hideProject={hideProject}
                 />
               ))}
             </div>
