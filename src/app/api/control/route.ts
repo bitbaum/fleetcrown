@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getZellijTabs } from "@/lib/zellij";
+import { listOwnedTabs } from "@/lib/agent-execution/owned";
 import { getProjects, type ProjectRow } from "@/db/queries/projects";
 import { getLatestEventsByProjectKeys } from "@/db/queries/orchestration-events";
 import {
@@ -102,7 +102,7 @@ export type { ProjectActivityEvent as ActivityTimelineEvent } from "@/db/queries
 type SlowCache = {
   key: string;
   gitMap: Map<string, GitState>;
-  zellijTabs: string[];
+  liveTabs: string[];
   dirs: string[]; // dirs list used to build this cache
   builtAt: number;
   runtimeSnapshotUpdatedAt: Date | null;
@@ -118,10 +118,15 @@ let slowCache: SlowCache | null = null;
 let cacheRefreshing = false;
 const CACHE_TTL_MS = 20_000; // 20s — stale after one 10s poll misses, triggers refresh
 
-async function buildSlowData(userId: string, dirs: string[], key: string): Promise<SlowCache> {
-  const [gitMap, zellijTabsLocal, dbStates, runtimeSnapshots] = await Promise.all([
+async function buildSlowData(
+  userId: string,
+  dirs: string[],
+  names: string[],
+  key: string,
+): Promise<SlowCache> {
+  const [gitMap, liveTabsLocal, dbStates, runtimeSnapshots] = await Promise.all([
     fetchAllGitStates(dirs),
-    isRuntimeAvailable() ? getZellijTabs() : Promise.resolve([] as string[]),
+    Promise.resolve(isRuntimeAvailable() ? listOwnedTabs(userId, names) : ([] as string[])),
     isRuntimeAvailable()
       ? Promise.resolve([] as DbProjectState[])
       : getProjectStatesByUserId(userId).catch((e): DbProjectState[] => {
@@ -149,12 +154,12 @@ async function buildSlowData(userId: string, dirs: string[], key: string): Promi
   const localSnapshot = freshSnapshots.find((s) => s.channel === "local") ?? null;
   const cloudSnapshot = freshSnapshots.find((s) => s.channel === "cloud") ?? null;
   const unionTabs = [...new Set(freshSnapshots.flatMap((s) => s.openTabs ?? []))];
-  // Locally: live Zellij query. On cloud: union of fresh runner-pushed tab
+  // Locally: the owned PTYs. On cloud: union of fresh runner-pushed tab
   // lists, falling back to per-project tabOpen flags from project_states —
   // gated on observation freshness so a dead runner's frozen rows can't
   // resurrect tabs it stopped reporting.
-  const zellijTabs = isRuntimeAvailable()
-    ? zellijTabsLocal
+  const liveTabs = isRuntimeAvailable()
+    ? liveTabsLocal
     : unionTabs.length
       ? unionTabs
       : dbStates.filter((s) => s.tabOpen && isRuntimeObservationFresh(s)).map((s) => s.tabName);
@@ -165,7 +170,7 @@ async function buildSlowData(userId: string, dirs: string[], key: string): Promi
   return {
     key,
     gitMap,
-    zellijTabs,
+    liveTabs,
     dirs,
     builtAt: Date.now(),
     runtimeSnapshotUpdatedAt: latestObservedAt,
@@ -180,7 +185,7 @@ async function buildSlowData(userId: string, dirs: string[], key: string): Promi
   };
 }
 
-async function getSlowData(userId: string, dirs: string[]): Promise<SlowCache> {
+async function getSlowData(userId: string, dirs: string[], names: string[]): Promise<SlowCache> {
   const now = Date.now();
   const dirsKey = [...dirs].sort().join(",");
   const key = `${userId}\0${dirsKey}`;
@@ -191,7 +196,7 @@ async function getSlowData(userId: string, dirs: string[]): Promise<SlowCache> {
     // Stale: return stale immediately, refresh in background
     if (!cacheRefreshing) {
       cacheRefreshing = true;
-      buildSlowData(userId, dirs, key)
+      buildSlowData(userId, dirs, names, key)
         .then((fresh) => {
           slowCache = fresh;
           cacheRefreshing = false;
@@ -205,7 +210,7 @@ async function getSlowData(userId: string, dirs: string[]): Promise<SlowCache> {
   }
 
   // Cold cache or a different user/project set: never serve mismatched data.
-  slowCache = await buildSlowData(userId, dirs, key);
+  slowCache = await buildSlowData(userId, dirs, names, key);
   return slowCache;
 }
 
@@ -238,6 +243,7 @@ export async function GET() {
     dir: p.dirPath!,
     agentPref: p.agentPref ?? null,
     modelPref: p.modelPref ?? null,
+    builderPref: p.builderPref ?? null,
     ownerUserId: p.userId,
     readonly: false as boolean,
   });
@@ -263,12 +269,16 @@ export async function GET() {
   // Slow data (git + DB) served from cache — no fork needed for CWD check
   const {
     gitMap,
-    zellijTabs,
+    liveTabs,
     runtimeSnapshotUpdatedAt,
     installedAgents,
     runnerVersion,
     builderVersions,
-  } = await getSlowData(userId, dirs);
+  } = await getSlowData(
+    userId,
+    dirs,
+    projects.map((p) => p.tab),
+  );
   const runtimeAvailable = isRuntimeAvailable();
   // Pull the canonical agent ID list straight from the registry — same source
   // buildSwitchableAgentCatalog reads from one line below. Pre-fix this was
@@ -376,13 +386,13 @@ export async function GET() {
   );
 
   const states: ProjectState[] = projects.map(
-    ({ id, projectId, tab, dir, agentPref, modelPref, ownerUserId, readonly }) => {
+    ({ id, projectId, tab, dir, agentPref, modelPref, builderPref, ownerUserId, readonly }) => {
       const latestRun = latestRuns.get(dir);
       const dbState = dbStateMap.get(`${ownerUserId}:${normalizeTabName(tab)}`);
 
-      // Resolve live Zellij tab first — session files and /tmp sentinels all use the live name.
+      // Resolve the live tab name first — session files and /tmp sentinels all use the live name.
       // e.g. canonical "FleetCrown" may run as "FleetCrown Claude", so sessions/FleetCrown Claude.md wins.
-      const liveTab = resolveEffectiveTab(tab, zellijTabs);
+      const liveTab = resolveEffectiveTab(tab, liveTabs);
       const projectProcesses = agentProcesses.filter(
         (process) => process.cwd === dir || process.cwd.startsWith(dir + "/"),
       );
@@ -570,6 +580,7 @@ export async function GET() {
         dir,
         agentPref,
         modelPref,
+        builderPref,
         session,
         git: gitMap.get(dir) ?? null,
         sessionLifecycleSignals,
@@ -650,7 +661,7 @@ export async function GET() {
       },
       projects: states,
       prompts,
-      zellijTabs,
+      liveTabs,
       recentActivity: recentActivity ?? [],
       runtimeAvailable: isRuntimeAvailable(),
       // "sync Xm ago" must mean A RUNNER PUSHED Xm ago — nothing else. This

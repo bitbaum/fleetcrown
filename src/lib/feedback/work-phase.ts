@@ -11,6 +11,7 @@ import { FEEDBACK_STATUS, type FeedbackStatus } from "@/lib/constants/statuses";
 import { ORCH_STATE, type OrchestrationState } from "@/lib/orchestration/contract";
 import { ORCHESTRATION_OUTCOME } from "@/lib/orchestration/contract";
 import { EXECUTOR_COPY } from "@/config/executor-copy";
+import { isRunProgressFresh, RUN_PROGRESS_FRESH_MS } from "@/lib/run-progress";
 
 export const FEEDBACK_WORK_PHASE = {
   NOT_STARTED: "not_started",
@@ -49,6 +50,17 @@ export type FeedbackWorkView = {
    * on the row. The fix is where it renders, not whether.
    */
   diagnostic?: string | null;
+  /**
+   * There is a terminal worth opening: the prompt reached an agent PTY. The row
+   * links "Watch" to Terminal when this is true and "Open on Control" when it
+   * is not — Terminal is empty before a session exists, and sending a reader
+   * there to watch nothing was the first thing that made the loop feel broken.
+   */
+  watchable?: boolean;
+  /** When the agent started on it (delivery, else run start). ISO. */
+  since?: string | null;
+  /** Last runner heartbeat — the PTY printed something. ISO. */
+  lastActivityAt?: string | null;
 };
 
 export type FeedbackRunSnapshot = {
@@ -58,15 +70,32 @@ export type FeedbackRunSnapshot = {
   startedAt: Date;
   finishedAt: Date | null;
   deliveredAt: string | null;
+  /** payload.lastProgressAt — runner heartbeat, see src/lib/run-progress.ts. */
+  lastProgressAt: string | null;
   error: string | null;
 };
 
 const STARTING_MS = 90_000;
-const THINKING_MS = 10 * 60_000;
+/** Delivered, then silent for this long = the honest word is Stalled. One
+ *  window, owned by the progress contract, so runner and reader agree. */
+const THINKING_MS = RUN_PROGRESS_FRESH_MS;
+
+/** "2 min" / "1 h 05 min" — how long the agent has been on it. Minutes only:
+ *  a seconds counter on a list that polls every 8 s reads as jitter. */
+export function workElapsedLabel(fromIso: string | Date, now = Date.now()): string {
+  const from = typeof fromIso === "string" ? Date.parse(fromIso) : fromIso.getTime();
+  const minutes = Math.max(0, Math.floor((now - from) / 60_000));
+  if (minutes < 1) return "under a minute";
+  if (minutes < 60) return `${minutes} min`;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return m ? `${h} h ${String(m).padStart(2, "0")} min` : `${h} h`;
+}
 
 export function deriveFeedbackWork(
   status: FeedbackStatus,
   run: FeedbackRunSnapshot | null,
+  now: number = Date.now(),
 ): FeedbackWorkView {
   if (status === FEEDBACK_STATUS.ARCHIVED) {
     return { phase: FEEDBACK_WORK_PHASE.ARCHIVED, label: "Archived", detail: null };
@@ -103,11 +132,15 @@ export function deriveFeedbackWork(
     };
   }
 
+  const since = run.deliveredAt ?? run.startedAt.toISOString();
   if (run.state === ORCH_STATE.RUNNING) {
     return {
       phase: FEEDBACK_WORK_PHASE.WORKING,
-      label: "Working now",
-      detail: `Agent is generating. Watch Terminal for live output. ${EXECUTOR_COPY.honesty.notificationWhenDone}`,
+      label: `Working · ${workElapsedLabel(since, now)}`,
+      detail: `Agent is generating — Watch opens its terminal. ${EXECUTOR_COPY.honesty.notificationWhenDone}`,
+      watchable: true,
+      since,
+      lastActivityAt: run.lastProgressAt,
     };
   }
 
@@ -164,13 +197,13 @@ export function deriveFeedbackWork(
     };
   }
 
-  // waiting / idle — the ambiguous zone that previously read as success
-  const ageMs = Date.now() - run.startedAt.getTime();
+  // waiting / idle — the ambiguous zone that previously read as success.
+  const ageMs = now - run.startedAt.getTime();
   if (!run.deliveredAt && ageMs > STARTING_MS) {
     return {
       phase: FEEDBACK_WORK_PHASE.STUCK,
       label: "Not running",
-      detail: "Queued, but the agent never started generating. Open Control — Retry if it stays.",
+      detail: "Queued, but no agent picked it up. Open Control — Retry if it stays.",
     };
   }
   if (!run.deliveredAt) {
@@ -180,16 +213,45 @@ export function deriveFeedbackWork(
       detail: `Starting — waiting for the agent to pick it up. ${EXECUTOR_COPY.honesty.notificationWhenDone}`,
     };
   }
-  if (ageMs > THINKING_MS) {
+  // Delivered. From here the runner's heartbeat is the truth: it beats while
+  // the agent's terminal keeps printing, and stops when it goes quiet. A run
+  // that reports progress is Working for as long as it takes — an hour-long
+  // fix used to flip to "Not running" at minute ten while the agent typed.
+  if (isRunProgressFresh(run.lastProgressAt, now)) {
+    return {
+      phase: FEEDBACK_WORK_PHASE.WORKING,
+      label: `Working · ${workElapsedLabel(since, now)}`,
+      detail: `Agent output ${workElapsedLabel(run.lastProgressAt!, now)} ago — Watch opens its terminal. ${EXECUTOR_COPY.honesty.notificationWhenDone}`,
+      watchable: true,
+      since,
+      lastActivityAt: run.lastProgressAt,
+    };
+  }
+  if (run.lastProgressAt) {
+    return {
+      phase: FEEDBACK_WORK_PHASE.STUCK,
+      label: "Stalled",
+      detail: `Worked for ${workElapsedLabel(since, run.lastProgressAt ? Date.parse(run.lastProgressAt) : now)}, then nothing for ${workElapsedLabel(run.lastProgressAt, now)}. Watch its terminal — it may be waiting on you — or Retry.`,
+      watchable: true,
+      since,
+      lastActivityAt: run.lastProgressAt,
+    };
+  }
+  const sinceDeliveryMs = now - Date.parse(run.deliveredAt);
+  if (sinceDeliveryMs > THINKING_MS) {
     return {
       phase: FEEDBACK_WORK_PHASE.STUCK,
       label: "Not running",
-      detail: "Prompt was delivered, but there is no live progress. Open Control.",
+      detail: `Prompt delivered ${workElapsedLabel(run.deliveredAt, now)} ago, but the agent never reported any output. Watch its terminal, or Retry.`,
+      watchable: true,
+      since,
     };
   }
   return {
     phase: FEEDBACK_WORK_PHASE.WORKING,
-    label: "Working now",
-    detail: `Prompt delivered — agent may still be thinking. Watch Terminal. ${EXECUTOR_COPY.honesty.notificationWhenDone}`,
+    label: `Working · ${workElapsedLabel(since, now)}`,
+    detail: `Prompt delivered — waiting for the first output. Watch opens its terminal. ${EXECUTOR_COPY.honesty.notificationWhenDone}`,
+    watchable: true,
+    since,
   };
 }

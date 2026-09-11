@@ -57,7 +57,7 @@ export function sessionFilePath(tab: string, adapter = "claude"): string {
 /**
  * Resolve the actual on-disk session file for a tab, tolerating case drift.
  *
- * The control poll reads handoffs by the LIVE zellij tab name (what
+ * The control poll reads handoffs by the LIVE tab name (what
  * resolveEffectiveTab returns, e.g. "Fleetcrown"), but agents/tooling write the
  * handoff with their own casing ("FleetCrown.md"). A case-sensitive lookup
  * misses the file, so parseSession returns null and the live completion signal
@@ -173,17 +173,20 @@ export function parseProjectsConf(): { tab: string; dir: string }[] {
 }
 
 /**
- * Given a canonical tab name and the currently active Zellij tab names,
- * return the live tab name to use for injection and /tmp sentinel files.
+ * Given a canonical tab name and the currently live tab names (the owned PTYs
+ * the runner reports), return the live tab name to use for injection and
+ * /tmp sentinel files.
  *
- * IMPORTANT: always returns the EXACT casing from activeTabs (zellij's ground
- * truth), never from the conf file. `zellij action go-to-tab-name` is
- * case-sensitive — returning conf casing causes silent navigation failure and
- * write-chars lands on whichever tab is currently focused (wrong tab).
+ * IMPORTANT: always returns the EXACT casing from activeTabs (the runner's
+ * ground truth), never from the conf file. Matching is case-insensitive
+ * because the owned-PTY workspace id is lower-cased — but session handoff
+ * files and /tmp sentinels are written under the live name, so returning conf
+ * casing would look up `sessions/Fleetcrown.md` while the agent wrote
+ * `sessions/FleetCrown.md` and silently lose the completion signal.
  */
 export function resolveEffectiveTab(canonical: string, activeTabs: string[]): string {
   if (!activeTabs.length) return canonical;
-  // Return exact zellij casing — case-insensitive match, exact-case return
+  // Return exact live casing — case-insensitive match, exact-case return
   const findAlive = (name: string) =>
     activeTabs.find((t) => t.toLowerCase() === name.toLowerCase());
   const liveMatch = findAlive(canonical);

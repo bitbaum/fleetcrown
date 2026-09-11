@@ -8,7 +8,7 @@ import { isRuntimeAvailable } from "@/lib/runtime";
 import { deriveProjectStateKey, projectStateDescription } from "@/lib/control-states";
 
 import { readJsonBody, z } from "@/lib/api/route-helpers";
-import { injectIntoTab, shellEscape, getZellijTabs } from "@/lib/zellij";
+import { injectOwned, listOwnedTabs } from "@/lib/agent-execution/owned";
 import { AGENT_DEFAULT_MODELS } from "@/lib/agent-registry";
 import { cancelActiveBeaconSessions } from "@/app/api/beacon/route";
 import {
@@ -51,7 +51,7 @@ import { getUserProjects, getOrgProjects } from "@/db/queries/user-projects";
 import { getProjectContext } from "@/db/queries/project-context";
 import { buildOperatorContextSection } from "@/lib/dispatch-operator-context";
 import { enqueueDispatchCommand } from "@/db/queries/pending-commands";
-import { getBuilderFitness } from "@/db/queries/runner-presence";
+import { getBuilderPresence } from "@/db/queries/runner-presence";
 import { logDebug } from "@/db/queries/debug-logs";
 import { APP_SLUG } from "@/config/brand";
 import { writePromptQueueMirror } from "@/lib/prompt-queue-mirror";
@@ -281,8 +281,8 @@ export async function POST(req: NextRequest) {
   let intent = getOrchestrationIntent(request.intent as OrchestrationTaskIntentId);
   let consumedQueueItem: string | null = null;
 
-  // Resolve zellij alias once — "FleetCrown" may run as "FleetCrown Claude" in this session.
-  const activeTabs = await getZellijTabs();
+  // Resolve the live tab once — the owned PTY's key may differ in case.
+  const activeTabs = listOwnedTabs(userId, [request.projectKey]);
   const effectiveKey =
     activeTabs.length > 0
       ? resolveEffectiveTab(request.projectKey, activeTabs)
@@ -419,19 +419,19 @@ export async function POST(req: NextRequest) {
       excludeRunId: trackedRunId ?? undefined,
     }).catch(() => false))
   ) {
-    // Route the queued row the same way the live branch routes: to whoever is
-    // actually online, preferring the operator's own machine, with a
-    // dirPath-only project still locked to the builder that can materialize it.
-    const fitness = await getBuilderFitness(userId).catch(() => ({
-      presence: { cloud: false, local: false, any: false },
-      localDurability: "unknown" as const,
+    // Route the queued row the same way the live branch routes: by the
+    // project's stored locus and builder preference, never by who is online.
+    const presence = await getBuilderPresence(userId).catch(() => ({
+      cloud: false,
+      local: false,
+      any: false,
     }));
-    const runnerConnected = fitness.presence.any;
+    const runnerConnected = presence.any;
     const busyMatch = [
       ...(await getUserProjects(userId).catch(() => [])),
       ...(await getOrgProjects(userId).catch(() => [])),
     ].find((p) => p.name.toLowerCase() === request.projectKey.toLowerCase());
-    const pinnedChannel = pickDispatchChannel(busyMatch, fitness.presence, fitness.localDurability);
+    const pinnedChannel = pickDispatchChannel(busyMatch);
 
     // Phase 2 of worktree-per-agent: same-project PARALLEL dispatch. With
     // checkout isolation in place (each run gets its own git worktree), the
@@ -531,7 +531,7 @@ export async function POST(req: NextRequest) {
         request.intent === "hard_stop"
           ? prompt
           : buildPromptWithSession(prompt, request.projectKey, stateDescription);
-      injectIntoTab(effectiveKey, fullPrompt);
+      injectOwned(userId, effectiveKey, fullPrompt);
       await cancelActiveBeaconSessions(userId, effectiveKey);
       clearHandshakeFiles(effectiveKey);
       if (request.intent === "hard_stop") {
@@ -681,21 +681,19 @@ export async function POST(req: NextRequest) {
         "scripts",
         request.adapter === "gemini" ? "run-gemini-task.sh" : "run-codex-task.sh",
       );
-      const command = [
-        "bash",
-        shellEscape(runner),
-        shellEscape(effectiveKey),
-        shellEscape(request.projectPath),
-        shellEscape(promptFile),
-        shellEscape(
-          request.model?.trim() ||
-            (request.adapter === "gemini"
-              ? AGENT_DEFAULT_MODELS.gemini
-              : AGENT_DEFAULT_MODELS.codex),
-        ),
-      ].join(" ");
-
-      injectIntoTab(effectiveKey, command);
+      const taskModel =
+        request.model?.trim() ||
+        (request.adapter === "gemini" ? AGENT_DEFAULT_MODELS.gemini : AGENT_DEFAULT_MODELS.codex);
+      // The task script runs as its own owned process — an argument vector, no
+      // shell line typed into a terminal — so the terminal page can watch it
+      // and it cannot land in the wrong tab.
+      const { executor } = await import("@/lib/agent-execution");
+      await executor.provision({
+        id: `${workspaceIdFor(userId, effectiveKey)}:task:${Date.now()}`,
+        cwd: request.projectPath,
+        command: "bash",
+        args: [runner, effectiveKey, request.projectPath, promptFile, taskModel],
+      });
       persistProjectRuntimeIfNewer({
         projectKey: request.projectKey,
         projectId: request.projectId ?? null,

@@ -301,3 +301,89 @@ session), #589, #592, #596; the box's own register-row PR #588.
    Codex list); Focus-tab remnants in `ZellijLivePanel`,
    `WorkspaceTerminalClient`, `ControlPanel`.
 7. Scheduled `Audit` workflow red on main since 2026-09-07 (not the gate).
+
+### UI walk (2026-09-11, 06:16–06:30 UTC, real browser)
+
+The earlier walks used the product's routes from curl. This one drove the
+actual FleetCrown UI in a Chromium (Playwright) with the studio session, plus
+the site's own feedback widget. Project `kaffeeklappe-sep11`, FleetCrown
+b06fde7.
+
+- Projects → Add: name + description → project created. It did not appear in
+  the default list of 25 (found via search); a just-created project should
+  surface first.
+- Project page → Make it happen with a brief: "Filling the profile — 9 fields",
+  "Creating the repository — catomean/kaffeeklappe-sep11", "Putting an agent
+  on it — request accepted". The deployment panel showed "Deployment is
+  running… Check deployment" and, on its own polling, flipped to "Site
+  deployed — Open live site → https://kaffeeklappe-sep11.orangecat.ch/". Port
+  4032, register row PR #606 from the box, runtime env, unit, vhost: no hand
+  on the box. After a reload the page shows a Live control and the kickoff
+  panel is gone.
+- Control listed the project as "Ready for next step · Last run completed"
+  once the kickoff agent finished; its PR #1 (the page, to the brief) was
+  merged by the operator; Deploy on push; live with menu, hours and widget.
+- On the live site, the widget's own form (scope, text, optional contact,
+  voice, screenshots) sent a visitor report. It appeared in FleetCrown's
+  Feedback inbox under "Needs you" with an Implement button. Implement →
+  "Queued — starting" → "Working now". The agent's PR #2 was merged by the
+  operator; the deploy put "Sonntags und an Feiertagen geschlossen" on the
+  live page. Resolve in the inbox → "Shipped · Done · resolved today".
+
+UI-only findings: (1) new project not surfaced in the list; (2) the inbox
+item stayed "Working now" after the agent had finished and opened its PR —
+the same run-record defect as walk B, now seen in the UI an operator would
+watch; "Check live" never appeared, only Resolve; (3) the watchdog seeded its
+targets from the release register, not the one just written (fixed in #607);
+(4) starter has no favicon (console 404).
+
+Still two operator merges on the path (agent PRs on a site repo with no CI or
+auto-merge); everything else ran from the product.
+
+---
+
+## Superseded on 2026-09-11
+
+The sections above are left as written. What follows is what changed on main
+the next day (Fleet Runner 0.8.19, "one substrate"), so the open items above
+are read against the current design rather than the one they were filed in.
+
+- **Routing is a stored decision.** `pickDispatchChannel(project)`
+  (`src/lib/execution-access.ts`) resolves: locus lock (a laptop-only checkout
+  stays local; a checkout under the box clone root stays cloud) →
+  `user_projects.builder_pref` ("Runs on" in Control → project profile) →
+  cloud floor (`DEFAULT_BUILDER_CHANNEL = "cloud"`). Runner presence and
+  laptop battery no longer route anything; an offline chosen builder queues
+  visibly (`runnerConnected: false`) and never reroutes. Walk A defect 4
+  above — "a Fleet Runner on the operator's laptop was connected, so
+  'operator present' routed the job there" — is the class of bug that was
+  deleted, not patched: there is no presence-based routing left to get wrong.
+- **The local runtime is PTY-only.** Fleet Runner owns every agent PTY
+  (node-pty). Zellij is gone from the product: no cold-start restore on boot,
+  no Settings "Restoration" section, no `/api/control/runtime-state/desired`,
+  no bundled zellij binary, no `FLEETCROWN_RUNNER_PTY`, no `src/lib/zellij.ts`,
+  no `src/lib/terminals/*`, no `home/worker.ts`, no `src/lib/agent-runtime.ts`.
+  The "local runtime path still has Zellij gating if no PTY" P2 above is
+  closed: an inject for a tab with no live owned PTY fails loudly ("no running
+  agent for … — dispatch to start one") and the cloud enqueues a dispatch (cold
+  start) instead. `/api/control` reports owned PTYs as `liveTabs`.
+- **Focus-tab is removed.** No `focus_tab` command, no
+  `/api/control/focus-tab`. The "Focus-tab remnants in `ZellijLivePanel`,
+  `WorkspaceTerminalClient`, `ControlPanel`" item is closed (the two Control
+  components are now `LiveTerminalPanel` / `LiveTerminalRows`). `/control?focus=…`
+  survives only as a client-side deep link that selects and highlights the
+  project on Control.
+- **Kickoff builds on arrival.** The OrangeCat "Build it with FleetCrown"
+  handoff creates the project and lands on `/projects/<id>?kickoff=auto` with
+  the kickoff running (profile → milestones → repository → agent); `?review=1`,
+  a same-named project, or an already-connected entity show the picker/open
+  instead. Linking an existing project never auto-starts; funding events never
+  dispatch.
+
+Still open from the ranked list above after this change: 1 (starter CI +
+auto-merge), 2 (run injected into an existing PTY never reaches `done`), 4
+(durable register never fast-forwards), 5 (CI cancels under rapid merges), the
+transport half of 6 (`projectKey` inside the runner transport), 7 (scheduled
+Audit workflow). Item 3 (refuse a claim whose directory does not exist locally)
+is moot for routing — the lock keeps box-rooted projects on the box — and
+remains a defensive nicety in the desktop bundle.

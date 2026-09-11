@@ -4,7 +4,6 @@ import { autoUpdater } from 'electron-updater'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { startWatcher } from '@home/watcher'
-import { peekTab as peekZellijTab } from '@/lib/zellij'
 import { writeFileSync, readFileSync, existsSync } from 'fs'
 import { execSync } from 'child_process'
 import { homedir } from 'os'
@@ -20,8 +19,7 @@ import {
 import { startPusher, stopPusher, restartPusher, pushNow } from './pusher'
 import { startCalendarDrain, stopCalendarDrain, restartCalendarDrain } from './calendar-drain'
 import { dispatchAutopilot } from './dispatch'
-import { ensureZellijReady } from '@/lib/zellij-bootstrap'
-import type { PaneRecord } from '@/db/schema/runtime-snapshots'
+import { peekPtyBuffer } from './pty-runtime'
 import { loadToken, saveToken, clearToken, tokenDir } from './token-store'
 import { ensureCaptureHook } from './capture-hook'
 
@@ -71,30 +69,6 @@ const TRAY_ICON_PATH = resourcePath('tray-icon.png')
 // on desktop. Subdomains (api.twitter.com, mobile.twitter.com) match via the
 // endsWith check below.
 const OAUTH_PROVIDER_HOSTS = ['github.com', 'accounts.google.com', 'x.com', 'twitter.com']
-
-// Bundled-binary directory. desktop/scripts/download-zellij.mjs drops a
-// platform-appropriate `zellij` here at prebuild time and electron-builder
-// packs the whole `resources/` tree into the installer. Prepending this to
-// PATH means every existing exec("zellij ...") in src/lib/zellij.ts and
-// home/worker.ts resolves to the bundled binary first, with the user's own
-// $PATH as fallback. No call-site changes needed.
-//
-// If the bundled binary is missing (dev box that hasn't run prebuild, custom
-// build that skipped the script), the PATH still works — the user just has
-// to have Zellij installed themselves, the original v0.1.0 contract.
-function bundledBinDir(): string {
-  const candidates = is.dev
-    ? [join(__dirname, '..', '..', 'resources', 'bin')]
-    : [join(process.resourcesPath, 'bin'), join(process.resourcesPath, 'resources', 'bin')]
-  for (const p of candidates) if (existsSync(p)) return p
-  return ''
-}
-
-const BUNDLED_BIN_DIR = bundledBinDir()
-if (BUNDLED_BIN_DIR) {
-  process.env.PATH = `${BUNDLED_BIN_DIR}${process.platform === 'win32' ? ';' : ':'}${process.env.PATH ?? ''}`
-  console.log(`[desktop] bundled bin prepended to PATH: ${BUNDLED_BIN_DIR}`)
-}
 
 // Chromium SUID sandbox on Linux AppImage is handled at the AppRun wrapper
 // level via `linux.executableArgs: ["--no-sandbox"]` in package.json's
@@ -230,8 +204,8 @@ function offlineHtml(targetUrl: string): string {
 </style></head><body>
 <h1>Can't reach FleetCrown</h1>
 <p>The cloud surface didn't respond. This is usually a transient network
-or hosting issue. Your local agents and Zellij tabs are running
-regardless — only the /control UI is offline.</p>
+or hosting issue. Your local agents keep running regardless —
+only the /control UI is offline.</p>
 <div class="target">${targetUrl}</div>
 <button onclick="window.location.assign('${targetUrl}')">Try again</button>
 <div class="hint">If this persists, check your connection. Closing and
@@ -667,26 +641,19 @@ function createWindow(): void {
       const entry = registry.find((r) => r.id === id)
       agents[id] = entry?.available ?? commandExistsInPath(id)
     }
-    return { zellij: commandExistsInPath('zellij'), agents }
+    return { agents }
   })
 
-  // Peek tab — snapshot the visible scrollback of a Zellij tab without
-  // requiring the user to context-switch into the terminal. v0.7.2 ships
-  // this so /control can show "what's actually in the tab" inline; the
-  // user clicks the eye icon next to a tab name and a drawer opens with
-  // the current screen content. Implementation: src/lib/zellij.peekTab
-  // (focus → dump-screen → restore focus dance, sub-200ms round-trip).
-  //
-  // Returns a discriminated result so the renderer can show a specific
-  // error message ("tab not open in zellij", "zellij not running") instead
-  // of a generic failure. Errors are swallowed at the IPC boundary and
-  // converted into {ok:false, error} — never raises across the bridge.
+  // Peek tab — the retained output of the agent's owned PTY, in memory and
+  // non-blocking. A tab with no live PTY has no screen to show; that is
+  // returned as a specific error rather than a generic failure.
   ipcMain.handle('peek-tab', async (_event, tab: string) => {
     if (typeof tab !== 'string' || tab.trim().length === 0) {
       return { ok: false as const, error: 'invalid tab name' }
     }
     try {
-      const content = peekZellijTab(tab.trim())
+      const content = peekPtyBuffer(tab.trim())
+      if (content === null) return { ok: false as const, error: `no running agent for "${tab.trim()}" on this runner` }
       return { ok: true as const, content }
     } catch (e) {
       const msg = (e as Error).message || 'peek failed'
@@ -843,7 +810,7 @@ app.on('open-url', (event, url) => {
 /** Kill other main runner processes. Singleton lock files can be cleared while
  *  an old instance is still alive (e.g. manual rm ~/.config/fleet-runner/Singleton*),
  *  leaving two pollers racing for commands — the loser often lacks the PTY state
- *  for peek streams and hangs on zellij instead. */
+ *  for peek streams and answers with nothing instead. */
 function terminateStaleRunnerInstances(): void {
   const myPid = process.pid
   try {
@@ -921,7 +888,7 @@ app.whenReady().then(async () => {
     applicationVersion: app.getVersion(),
     copyright: '© 2026 Mao Nakamoto · FleetCrown',
     website: APP_URL,
-    credits: 'Bundled Zellij, deep-link auth, auto-update.\nPart of the FleetCrown agent-fleet platform.',
+    credits: 'Owned agent terminals, deep-link auth, auto-update.\nPart of the FleetCrown agent-fleet platform.',
   })
 
   // Linux/Win cold-start: if Fleet Runner was launched directly via a
@@ -989,12 +956,6 @@ app.whenReady().then(async () => {
       if (!w.isDestroyed()) w.webContents.send('poller-status', status)
     })
   })
-  // Cold-start fleet restoration. Fetch "what should be running" from the
-  // cloud (= last observed snapshot's panes), then make sure zellij is up
-  // with those panes. Fire-and-forget; on failure the poller still starts
-  // so any queued dispatch flushes once the user brings zellij up by hand.
-  // No-op if no token is saved yet (auto-mint flow happens later).
-  void restoreFleetOnBoot()
   startPoller()
   // Typed-prompt capture: ensure the Claude UserPromptSubmit hook is installed
   // so prompts typed directly into a Claude tab (not dispatched through the
@@ -1186,67 +1147,6 @@ function createTray() {
   })
 }
 
-/**
- * Cold-start the user's zellij fleet. Fetches the last observed pane
- * topology from the cloud (= what should be running) and asks
- * ensureZellijReady to spawn it. Idempotent: a re-launch on a running
- * fleet is a fast no-op because ensureZellijReady detects the live
- * session.
- *
- * Failure modes are surfaced as a desktop notification but never block
- * the rest of boot — the poller still starts so any queued dispatch
- * flushes the moment the user brings zellij up by hand.
- *
- * TODO when FleetLifecycleSettings ships: replace the hardcoded defaults
- * (autoRestore=true, mode='fresh-spawn') with values from the settings
- * API.
- */
-async function restoreFleetOnBoot(): Promise<void> {
-  const token = loadToken()
-  if (!token) {
-    console.log('[desktop] fleet-restore: no token yet, skipping cold-start')
-    return
-  }
-  const baseUrl = (process.env.FLEETCROWN_WEB_URL || '').trim() || APP_URL
-  let panes: PaneRecord[] = []
-  let sessionName = 'fleet'
-  try {
-    const resp = await fetch(`${baseUrl}/api/control/runtime-state/desired`, {
-      headers: { Authorization: `Bearer ${token}` },
-      signal: AbortSignal.timeout(5000),
-    })
-    if (resp.ok) {
-      const data = (await resp.json()) as { panes?: PaneRecord[]; sessionName?: string }
-      panes = Array.isArray(data.panes) ? data.panes : []
-      if (typeof data.sessionName === 'string' && data.sessionName.trim()) {
-        sessionName = data.sessionName.trim()
-      }
-    } else if (resp.status === 401 || resp.status === 403) {
-      console.warn('[desktop] fleet-restore: token rejected, skipping cold-start')
-      return
-    } else {
-      console.warn(`[desktop] fleet-restore: /desired returned ${resp.status}, proceeding with empty panes`)
-    }
-  } catch (e) {
-    console.warn('[desktop] fleet-restore: /desired fetch failed:', (e as Error).message)
-  }
-
-  const result = await ensureZellijReady(sessionName, panes, { mode: 'fresh-spawn' })
-  if (result.ok) {
-    console.log(`[desktop] fleet-restore: zellij session "${result.sessionName}" → ${result.mode}`)
-  } else {
-    console.warn(`[desktop] fleet-restore failed: ${result.error}`)
-    if (Notification.isSupported()) {
-      new Notification({
-        title: 'Fleet Runner — restore failed',
-        body: `Could not bring zellij up: ${result.error}. Open Settings to retry or start zellij yourself.`,
-        silent: true,
-        ...(APP_ICON_PATH ? { icon: APP_ICON_PATH } : {}),
-      }).show()
-    }
-  }
-}
-
 // OS notification fired on each worker.idle event from the embedded watcher.
 // Clicking the notification surfaces the main window so the user can act on
 // the handoff immediately. Health is encoded in the title so a glance tells
@@ -1263,7 +1163,7 @@ function notifyOnIdle({ project, handoff }: { project: string; handoff: import('
   // trigger. When the agent self-reports status:ready, ask the cloud what to
   // do next; if it says queue/nextbest/composed, the resulting pending_command
   // flows back through poller.ts (already wired) and lands as a typed prompt
-  // in the agent's zellij tab. This replaces the bash Stop hook entirely.
+  // in the agent's owned terminal. This replaces the bash Stop hook entirely.
   // Status / cooldown / mode gating all live in dispatch.ts and dispatch-gates
   // .ts — this is just the wire.
   if (handoff.status === 'ready') {

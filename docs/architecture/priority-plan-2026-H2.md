@@ -2,8 +2,8 @@
 
 ---
 created_date: 2026-06-30
-last_modified_date: 2026-07-16
-last_modified_summary: Horizon C1-C4 completed: Loki resolves project context from natural language, suggests grounded next commands, sends suggestion chips immediately, shares project context with Control and Terminal, and Control has an honest first-paint skeleton.
+last_modified_date: 2026-09-11
+last_modified_summary: B6 closed (0.8.19, zellij deleted); routing is stored (lock → builder_pref → cloud floor); OrangeCat handoff auto-kickoffs. Previous: Horizon C1-C4 completed: Loki resolves project context from natural language, suggests grounded next commands, sends suggestion chips immediately, shares project context with Control and Terminal, and Control has an honest first-paint skeleton.
 ---
 
 **North star:** Borrow the workers, own the bridge — one captain's interface over swappable runtimes, with verification and fleet governance you can trust.
@@ -29,7 +29,7 @@ Goal: Talk to Loki → work runs on cloud → watch it without mental model hack
 | A1 | Terminal Cloud = dispatched agent (peek/box-runner) | `/terminal?source=server&tab=fleetcrown` shows box-runner Claude session; **interactive typing** (rawkey) | [x] |
 | A2 | Gate `/api/workspaces` on prod web | Cloud tab uses peek only; web app does not spawn PTYs when `!isRuntimeAvailable()` | [x] |
 | A3 | Box-runner hardening | Claude auth on box; clone-on-demand for git-backed projects; deploy + restart verified | [x] |
-| A4 | Builder presence clarity | Control/Loki show Cloud builder vs This computer vs queued offline | [x] |
+| A4 | Builder clarity | Control/Loki show the project's stored builder (`builder_pref`, cloud floor) and whether it is online; presence never routes | [x] |
 | A5 | Loki reliability (prefetch + error/retry) | Projects/conversations on first paint; `?project=fleetcrown` auto-select | [x] |
 | A6 | Doc refresh SSOT | HANDOFF, hosted-runner status, cloud-local workflows aligned to box-runner + Loki | [x] |
 
@@ -44,7 +44,7 @@ Goal: Talk to Loki → work runs on cloud → watch it without mental model hack
 | B3 | Run outcomes in Activity | Finished runs visible in timeline (not just "dispatched") | [x] |
 | B4 | Truthful chips | Stale-running, no-commit, block-reason surfaced on cards | [x] |
 | B5 | Runner stall recovery | Auto-recover or alert within one poll cycle | [x] alert |
-| B6 | Finish PTY cutover | Dispatch path off zellij name-puppeting; box-runner milestones 3–4 | [x] partial |
+| B6 | Finish PTY cutover | Dispatch path off zellij name-puppeting; box-runner milestones 3–4 | [x] 2026-09-11 (0.8.19: zellij deleted on both builders) |
 
 ## Horizon C — One command at scale (weeks 8–12)
 
@@ -70,7 +70,7 @@ Goal: Talk to Loki → work runs on cloud → watch it without mental model hack
 
 Only after D succeeds. See `docs/architecture/agent-execution-platform.md`, `docs/architecture/cross-product-identity-bridge.md`.
 
-**Current gate:** Horizon C1-C4 are complete as of 2026-07-16. Production dogfood also moved FleetCrown handoffs to `~/.fleetcrown/sessions`, outside Claude's protected configuration tree; startup migrates legacy Markdown state before watching it, and both desktop and box runners push completed handoffs immediately. C5 remains gated on hosted-runner isolation and product controls. B6 still has legacy zellij attach fallback; D/E require external-user onboarding, per-user agent credentials, rollback automation, and sandboxed multi-tenant execution.
+**Current gate:** Horizon C1-C4 are complete as of 2026-07-16. Production dogfood also moved FleetCrown handoffs to `~/.fleetcrown/sessions`, outside Claude's protected configuration tree; startup migrates legacy Markdown state before watching it, and both desktop and box runners push completed handoffs immediately. C5 remains gated on hosted-runner isolation and product controls. B6 closed 2026-09-11 — no zellij path remains, routing is stored (lock → `builder_pref` → cloud floor), and the OrangeCat handoff auto-kickoffs; D/E require external-user onboarding, per-user agent credentials, rollback automation, and sandboxed multi-tenant execution.
 
 ## Defer (anti-patterns)
 
@@ -93,7 +93,7 @@ OrangeCat identity bridge, multi-tenant SaaS launch, `packages/fleetcrown-core` 
 |-----------|---------|
 | HANDOFF: desktop runner is keystone | Box-runner is default cloud builder |
 | Hosted runner Phase 0 "in progress" | Phase 0 + Hermes dispatch largely implemented |
-| Loki: inject into Zellij | Owned PTY via box-runner |
+| Loki: inject into Zellij (historical) | Owned PTY on every builder; zellij deleted 2026-09-11 |
 | Multi-user SaaS ready | Execution is founder-single-tenant |
 | Two products integrated | OrangeCat bridge not built |
 

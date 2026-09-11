@@ -1,6 +1,17 @@
 # Box-side owned-PTY executor — delete the laptop dependency
 
-**Status:** P0 + P1 SHIPPED (2026-06-26) · **Date:** 2026-06-25
+**Status:** P0 + P1 SHIPPED (2026-06-26) · P4 SHIPPED (2026-09-11) · **Date:** 2026-06-25
+
+> **Update 2026-09-11 — P4 is live and the other substrate is gone.** Where a dispatch
+> runs is a stored decision: `pickDispatchChannel(project)` = locus lock (a laptop-only
+> checkout stays local; a checkout under the box clone root stays cloud) →
+> `user_projects.builder_pref` ("Runs on" in Control → project profile) → cloud floor
+> (`DEFAULT_BUILDER_CHANNEL = "cloud"`). Runner presence and laptop battery route
+> nothing; an offline chosen builder queues visibly (`runnerConnected: false`), never
+> reroutes. Fleet Runner 0.8.19 and the box runner own every agent PTY; zellij,
+> `src/lib/zellij.ts`, `src/lib/terminals/*`, `home/worker.ts` and the focus-tab command
+> are deleted. This document and `docs/development/cloud-local-workflows.md` supersede
+> `docs/fleet-runner-pty-ownership.md` and `docs/desktop-app.md`.
 
 > **Update 2026-06-26 — P1 is live.** `fleetcrown-box-runner.service` runs on the box
 > (headless, `tsx scripts/box-runner.ts`, `User=ubuntu`), reusing the desktop runner
@@ -33,7 +44,7 @@ This is not a from-scratch build. The execution engine already exists and is **s
 
 **So the only reasons the box doesn't execute today are operational:** `RUNTIME_AVAILABLE` is unset, the agent CLIs aren't installed/authed there, and there's no always-on process owning the PTYs across web-app deploys.
 
-Box readiness check (2026-06-25): `RUNTIME_AVAILABLE` unset · CLIs installed: **hermes only** (claude/grok/codex/cursor/zellij MISSING) · node-pty **OK** · isolation primitives **docker + unshare** present.
+Box readiness check (2026-06-25): `RUNTIME_AVAILABLE` unset · CLIs installed: **hermes only** (claude/grok/codex/cursor MISSING; no multiplexer needed) · node-pty **OK** · isolation primitives **docker + unshare** present.
 
 ## The decision: a headless Fleet Runner on the box (not RUNTIME_AVAILABLE on the web app)
 
@@ -90,7 +101,7 @@ Two complementary cloud executors, both killing the laptop dependency:
 2. **P1 — headless box-runner (single-tenant).** Factor the desktop runner core into a headless package; run it as `fleetcrown-box-runner.service`; it polls the queue, executes via `LocalPtyExecutor`, sets presence online for the owner, streams via peek. Now Control/Terminal are live with the laptop off. **This is the milestone that deletes the dependency for you.**
 3. **P2 — more CLIs.** grok, codex, cursor — install + auth, incremental.
 4. **P3 — `SandboxExecutor`.** Docker-backed substrate shipped behind `FLEETCROWN_EXECUTOR=sandbox`; public multi-tenant box execution still waits for per-user credentials, metering, and entitlement gates.
-5. **P4 — demote the desktop.** Reposition Fleet Runner as the *optional* power-user mode (your local env, your machine's CLIs/GPU); the box-runner is the default. "From anywhere" becomes literally true.
+5. **P4 — demote the desktop.** SHIPPED 2026-09-11: cloud is the default builder (`DEFAULT_BUILDER_CHANNEL = "cloud"`), Fleet Runner is the *optional* per-project choice ("Runs on"), and both run the same owned-PTY executor. "From anywhere" is literally true.
 
 ## Verification
 

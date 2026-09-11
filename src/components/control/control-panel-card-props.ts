@@ -16,7 +16,7 @@ type RegistryEntry = {
 
 type Deps = {
   prompts: PromptMeta[];
-  zellijTabs: string[];
+  liveTabs: string[];
   selectedAgent: string;
   switchableRegistry: RegistryEntry[];
   inject: (
@@ -74,7 +74,7 @@ export function buildCardProps(deps: Deps) {
   return (project: ProjectState) => ({
     project,
     prompts: deps.prompts,
-    zellijTabs: deps.zellijTabs,
+    liveTabs: deps.liveTabs,
     currentAdapter: deps.selectedAgent,
     availableAgents,
     onInject: async (

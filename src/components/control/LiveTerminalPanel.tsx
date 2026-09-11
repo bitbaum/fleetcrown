@@ -7,10 +7,10 @@ import { postJson } from "@/lib/api/fetch";
 import { FEEDBACK_SHORT_MS, REFRESH_AFTER_TAB_ACTION_MS } from "@/lib/constants/timings";
 import type { LiveTabRow } from "./control-presenter";
 import { Modal } from "@/components/ui/modal";
-import { ZellijLiveRows } from "./ZellijLiveRows";
+import { LiveTerminalRows } from "./LiveTerminalRows";
 import { useInsideFleetRunner } from "@/hooks/use-inside-fleet-runner";
 
-export function ZellijLivePanel({
+export function LiveTerminalPanel({
   rows,
   openTabCount,
   runnerNeverSeen,
@@ -24,9 +24,10 @@ export function ZellijLivePanel({
   embedded = false,
 }: {
   rows: LiveTabRow[];
-  /** Total open tabs the builders reported, including ones this panel filters
-   *  out (tabs that match no registered project). Without it the caption
-   *  claimed to list "open tabs from Zellij" while silently hiding them. */
+  /** Total open agent terminals the builders reported, including ones this
+   *  panel filters out (tabs that match no registered project). Without it
+   *  the caption claimed to list every open terminal while silently hiding
+   *  them. */
   openTabCount?: number;
   runnerNeverSeen: boolean;
   runnerSyncStale?: boolean;
@@ -58,14 +59,6 @@ export function ZellijLivePanel({
   const tabOptions = useMemo(() => rows.map((row) => row.tabName), [rows]);
   const hiddenTabCount = Math.max(0, (openTabCount ?? rows.length) - rows.length);
   const effectiveTarget = targetTab || tabOptions[0] || "";
-
-  const focusTab = async (tabName: string) => {
-    try {
-      await postJson("/api/control/focus-tab", { tab: tabName });
-    } catch {
-      /* best effort */
-    }
-  };
 
   // Confirmation runs through <Modal>, never window.confirm — a native dialog
   // blocks the whole renderer (frozen page for remote/automation sessions).
@@ -180,7 +173,7 @@ export function ZellijLivePanel({
           </div>
           <p className="font-medium text-text-secondary">No live workspace data — yet</p>
           <p className="mt-1 max-w-xl text-sm leading-relaxed text-text-tertiary">
-            The cloud can&apos;t see your local Zellij tabs until something on your machine pushes
+            The cloud can&apos;t see the agent terminals on your machine until Fleet Runner pushes
             state to it.
           </p>
           {/* Fleet Runner is the only local runtime — the bash runner was
@@ -228,7 +221,7 @@ export function ZellijLivePanel({
               value={effectiveTarget}
               onChange={(event) => setTargetTab(event.target.value)}
               className="ui-control-live-select"
-              aria-label="Target Zellij tab"
+              aria-label="Target agent terminal"
             >
               {tabOptions.map((tab) => (
                 <option key={tab} value={tab}>
@@ -247,8 +240,8 @@ export function ZellijLivePanel({
               }}
               className="ui-control-live-input"
               placeholder="Quick send to any open tab"
-              title="Quick send: fires immediately into the selected zellij tab. For project-focused dispatch with intent buttons, use the project card above."
-              aria-label="Prompt for selected Zellij tab"
+              title="Quick send: types immediately into the selected agent terminal — it needs a running agent there. To start one, or for project-focused dispatch with intent buttons, use Dispatch on the project card above."
+              aria-label="Prompt for selected agent terminal"
             />
             <button
               type="button"
@@ -263,10 +256,9 @@ export function ZellijLivePanel({
           </div>
           {sendError && <p className="text-xs text-status-negative">{sendError}</p>}
 
-          <ZellijLiveRows
+          <LiveTerminalRows
             rows={rows}
             highlightTab={highlightTab}
-            focusTab={focusTab}
             closeTab={closeTab}
             onFocusProject={onFocusProject}
           />
@@ -277,9 +269,9 @@ export function ZellijLivePanel({
         <Modal onClose={() => setConfirmCloseTab(null)} size="sm">
           <h3 className="text-sm font-semibold text-text-primary">Close workspace tab?</h3>
           <p className="text-sm text-text-secondary">
-            This closes the Zellij tab{" "}
-            <span className="font-medium text-text-primary">{confirmCloseTab}</span> on your
-            computer. Any agent running in it is stopped.
+            This closes the agent terminal{" "}
+            <span className="font-medium text-text-primary">{confirmCloseTab}</span> that Fleet
+            Runner owns on your computer. The agent running in it is stopped.
           </p>
           <div className="flex justify-end gap-2">
             <button

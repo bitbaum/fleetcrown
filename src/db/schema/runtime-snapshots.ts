@@ -3,26 +3,29 @@ import { users } from "./users";
 import type { RunnerChannel } from "./pending-commands";
 
 /**
- * One row per zellij pane the runner observed in the last heartbeat. Used by
- * Fleet Runner cold-start to regenerate a KDL layout that respawns each agent
- * in the correct tab + cwd, so the user never types `claude` after a restart.
+ * One row per owned PTY the runner observed in the last heartbeat — a
+ * topology report, nothing more. The cold-start restore that regenerated a
+ * terminal layout from these panes was retired with zellij (2026-09-11);
+ * nothing reads this back as desired state any more.
  *
- * Per-pane (not per-tab) so the "two panes in one tab" case round-trips.
+ * Per-pane (not per-tab) is kept so the wire shape stays compatible with
+ * runners that predate the retirement.
  */
 export type PaneRecord = {
-  /** Zellij tab name (already used as project key in user_projects.name). */
+  /** Agent terminal name (already used as project key in user_projects.name). */
   tab: string;
-  /** 0..N within the tab. Determines pane order in the regenerated layout. */
+  /** 0..N within the tab. Pane order as the runner reported it. */
   paneIndex: number;
   /** Agent CLI id ("claude" | "codex" | "cursor" | "gemini" | "grok"). Undefined = shell pane. */
   agentCli?: string;
   /** Working directory of the pane (from /proc/<pid>/cwd cross-ref). */
   cwd?: string;
-  /** Zellij session that owned this pane. Defaults to "fleet" if absent. */
+  /** Terminal session name as reported by pre-0.8.19 runners; owned PTYs
+   *  report none. Defaults to "fleet" if absent. */
   sessionName?: string;
 };
 
-/** Latest Zellij tab list pushed by the local runner (cloud control plane). */
+/** Latest agent-terminal list pushed by the local runner (cloud control plane). */
 export const runtimeSnapshots = pgTable(
   "runtime_snapshots",
   {
@@ -34,8 +37,9 @@ export const runtimeSnapshots = pgTable(
     installedAgents: text("installed_agents").array().notNull().default([]),
     runnerVersion: text("runner_version"),
     /**
-     * Per-pane topology. SSOT for Fleet Runner's cold-start restore path: the
-     * latest snapshot's panes IS the "desired state" we regenerate from. Empty
+     * Per-pane topology as the runner last reported it. Heartbeat report
+     * only: the cold-start restore that treated this as "desired state" is
+     * retired (2026-09-11), so nothing regenerates anything from it. Empty
      * array means no panes observed (legacy snapshots upgrade transparently).
      */
     panes: jsonb("panes").$type<PaneRecord[]>().notNull().default([]),

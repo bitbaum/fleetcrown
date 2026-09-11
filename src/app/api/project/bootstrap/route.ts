@@ -1,3 +1,4 @@
+import { GITHUB_REPO_OWNER, repoUrlFor } from "@/config/github-owner";
 import { NextRequest, NextResponse } from "next/server";
 import { exec } from "child_process";
 import { promisify } from "util";
@@ -29,7 +30,6 @@ const BootstrapBody = z.object({
   launchStrategy: z.string().max(300).optional(),
   db: z.enum(["postgres", "none"]).default("none"),
   visibility: z.enum(["private", "public"]).default("private"),
-  githubUser: z.string().max(80).optional(),
 });
 
 type StepResult = { step: string; ok: boolean; detail?: string };
@@ -65,7 +65,6 @@ export async function POST(req: NextRequest) {
     launchStrategy,
     db,
     visibility,
-    githubUser,
   } = dataOrResp;
   const repoSlug = slug(name);
   const devRoot = path.join(os.homedir(), "dev");
@@ -86,20 +85,20 @@ export async function POST(req: NextRequest) {
   // ── 2. Create GitHub repo ─────────────────────────────────────────────────
   let gitUrl = "";
   try {
-    const ghUser = githubUser ?? "bitbaum";
+    // The organisation, never the signed-in person — see config/github-owner.ts.
     const descArg = tagline ? `--description ${JSON.stringify(tagline)}` : "";
     const { stdout } = await execAsync(
-      `gh repo create ${ghUser}/${repoSlug} --${visibility} ${descArg} --json url,sshUrl`,
+      `gh repo create ${GITHUB_REPO_OWNER}/${repoSlug} --${visibility} ${descArg} --json url,sshUrl`,
       { timeout: 30_000 },
     );
     const ghData = JSON.parse(stdout.trim());
-    gitUrl = ghData.url ?? `https://github.com/${ghUser}/${repoSlug}`;
+    gitUrl = ghData.url ?? repoUrlFor(repoSlug);
     steps.push({ step: "Create GitHub repo", ok: true, detail: gitUrl });
   } catch (err) {
     const msg = String(err);
     // Repo may already exist — treat as non-fatal
     steps.push({ step: "Create GitHub repo", ok: false, detail: msg });
-    gitUrl = `https://github.com/${githubUser ?? "bitbaum"}/${repoSlug}`;
+    gitUrl = repoUrlFor(repoSlug);
   }
 
   // ── 3. Git init + remote ──────────────────────────────────────────────────

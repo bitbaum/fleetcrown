@@ -16,7 +16,7 @@ import type { FleetRunnerBridge } from "./types";
  *      with the request because we're on the same origin as the API).
  *   4. Persist the returned ck_… string via `fleetRunner.saveToken`,
  *      which auto-restarts the main-process poller and the next web
- *      dispatch lands in the user's Zellij with no further setup.
+ *      dispatch lands in a terminal Fleet Runner owns with no further setup.
  *
  * Failures degrade gracefully — the user can still mint a token by hand
  * from Settings → Agent tokens, which is the path used when the app is

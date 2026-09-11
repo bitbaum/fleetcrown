@@ -310,6 +310,7 @@ export async function updateUserProject(
       | "stack"
       | "agentPref"
       | "modelPref"
+      | "builderPref"
       | "position"
       | "isActive"
       | "notes"

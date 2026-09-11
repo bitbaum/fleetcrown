@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { DEFAULT_BUILDER_CHANNEL, type BuilderChannel } from "@/lib/constants/statuses";
+import { EXECUTOR_COPY } from "@/config/executor-copy";
 import Link from "next/link";
 import { ExternalLink, GitBranch, Loader2, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -15,6 +17,11 @@ import { buildSessionHandoffFromProjectSession, SessionHandoff } from "./Session
 
 type AgentEntry = { id: string; label: string; modelSuggestions: string[] };
 type AgentId = string;
+
+const BUILDER_CHOICES: { id: BuilderChannel; label: string }[] = [
+  { id: "cloud", label: EXECUTOR_COPY.builder.cloudChoice },
+  { id: "local", label: EXECUTOR_COPY.builder.localChoice },
+];
 
 function ProjectContextSummary({ project }: { project: ProjectState }) {
   const handoff = buildSessionHandoffFromProjectSession(project.session);
@@ -139,6 +146,16 @@ export function ProjectProfile({
     onSetAgent(agentId);
   };
 
+  const [localBuilder, setLocalBuilder] = useState<string | null>(project.builderPref ?? null);
+  const persistBuilderPref = (channel: BuilderChannel | null) => {
+    setLocalBuilder(channel);
+    if (project.id) {
+      patchJson(`/api/user-projects/${project.id}`, { builderPref: channel ?? undefined }).catch(
+        () => {},
+      );
+    }
+  };
+
   const persistModelPref = (model: string | null) => {
     setLocalModel(model);
     if (project.id) {
@@ -209,6 +226,31 @@ export function ProjectProfile({
           ))}
         </div>
         {sending && <Loader2 className="ml-auto ui-spinner-sm text-text-muted" />}
+      </div>
+
+      {/* Builder selector — where this project's work runs. Stored on the
+          project; routing never guesses it from which runner is online. */}
+      <div className="flex flex-col gap-3 border-t border-border-subtle px-4 py-3 sm:flex-row sm:items-center sm:px-5">
+        <span className="ui-kicker shrink-0">Runs on</span>
+        <div className="flex flex-wrap gap-1.5">
+          {BUILDER_CHOICES.map((c) => (
+            <button
+              key={c.id}
+              onClick={() => persistBuilderPref(c.id === DEFAULT_BUILDER_CHANNEL ? null : c.id)}
+              className={cn(
+                "rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors",
+                (localBuilder ?? DEFAULT_BUILDER_CHANNEL) === c.id
+                  ? "border-accent-primary/50 bg-accent-primary/10 text-accent-text"
+                  : "border-border-subtle bg-surface-base text-text-tertiary hover:text-text-secondary hover:border-border-default",
+              )}
+            >
+              {c.label}
+              {c.id === DEFAULT_BUILDER_CHANNEL && (
+                <span className="ml-1.5 opacity-40">default</span>
+              )}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Model selector — shows suggestions for the active agent */}

@@ -171,8 +171,7 @@ export default function QuickstartPage() {
             </li>
           </ul>
           <p>
-            You only need one. Zellij (the terminal session manager Fleet Runner uses internally)
-            ships inside the app since v0.2.0 — no separate install.
+            You only need one. Fleet Runner runs it in a terminal it owns — nothing else to install.
           </p>
         </section>
 
@@ -201,10 +200,10 @@ export default function QuickstartPage() {
             &ldquo;deploy_check&rdquo;). Hit dispatch.
           </p>
           <p>
-            Fleet Runner opens a Zellij session in a new terminal, launches the agent inside, and
-            tails its session output. When the agent writes its handoff (per Claude Code&apos;s
-            session.md convention), Fleet Runner ingests it and surfaces an OS notification:{" "}
-            <em>&ldquo;agent idle — done: X, next: Y, health: good.&rdquo;</em>
+            Fleet Runner opens a terminal it owns, launches the agent inside, streams it to the
+            Terminal page, and tails its session output. When the agent writes its handoff (per
+            Claude Code&apos;s session.md convention), Fleet Runner ingests it and surfaces an OS
+            notification: <em>&ldquo;agent idle — done: X, next: Y, health: good.&rdquo;</em>
           </p>
         </section>
 

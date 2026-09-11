@@ -295,7 +295,7 @@ export type LiveTabRow = {
   project: ProjectState | null;
   agentLabel: string | null;
   /** SSOT key for this row's state, when a registered project backs it.
-   *  Null for unmatched zellij tabs ("Open" rows). Consumers look up
+   *  Null for unmatched agent terminals ("Open" rows). Consumers look up
    *  description + problem from STATE_DEFINITIONS via this key. */
   stateKey: ProjectStateKey | null;
   stateLabel: ProjectDisplayState["stateLabel"] | "Open";
@@ -322,7 +322,7 @@ const LIVE_TAB_RANK: Record<LiveTabRankLabel, number> = {
   Open: 5,
 };
 
-/** Map an open Zellij tab name back to a registered fleet project. */
+/** Map an open agent terminal name back to a registered fleet project. */
 export function findProjectForOpenTab(
   openTab: string,
   projects: ProjectState[],
@@ -340,10 +340,10 @@ export function findProjectForOpenTab(
   return prefix ?? null;
 }
 
-export function isProjectTabOpen(project: ProjectState, zellijTabs: string[]): boolean {
+export function isProjectTabOpen(project: ProjectState, liveTabs: string[]): boolean {
   const canonical = (project.liveTab ?? project.tab).toLowerCase();
   const projectKey = project.tab.toLowerCase();
-  return zellijTabs.some((tab) => {
+  return liveTabs.some((tab) => {
     const open = tab.toLowerCase();
     return (
       open === canonical ||
@@ -384,20 +384,20 @@ export function getTabActivityText(
 }
 
 export function buildLiveTabRows(
-  zellijTabs: string[],
+  liveTabs: string[],
   projects: ProjectState[],
   nowS: number,
   syncStale = false,
 ): LiveTabRow[] {
-  const uniqueTabs = [...new Set(zellijTabs.map((t) => t.trim()).filter(Boolean))];
+  const uniqueTabs = [...new Set(liveTabs.map((t) => t.trim()).filter(Boolean))];
   return (
     uniqueTabs
-      // 2026-05-31: skip zellij tabs that don't map to any registered project.
+      // 2026-05-31: skip live tabs that don't map to any registered project.
       // The user surfaced "Tab #1 Unlinked" as visible noise — scratch tabs
-      // they opened manually that have nothing to do with the fleet. Their
-      // real zellij window already shows them; the FleetCrown UI is for fleet
-      // ops, not a generic tab list. To re-expose unregistered tabs later,
-      // gate this on a "show all tabs" toggle in the UI.
+      // (from the era when the runner listed every terminal tab) that had
+      // nothing to do with the fleet. The FleetCrown UI is for fleet ops, not
+      // a generic tab list. To re-expose unregistered tabs later, gate this on
+      // a "show all tabs" toggle in the UI.
       .map((tabName) => ({ tabName, project: findProjectForOpenTab(tabName, projects) }))
       .filter(
         (entry): entry is { tabName: string; project: ProjectState } => entry.project !== null,
@@ -505,7 +505,7 @@ export function inferAgentLabelFromTabName(tabName: string): string | null {
 
 export function getProjectDisplayState(
   project: ProjectState,
-  zellijTabs: string[],
+  liveTabs: string[],
   nowS: number,
   dismissed = false,
   runtimeStateKnown = true,
@@ -595,7 +595,7 @@ export function getProjectDisplayState(
     !isOrchestrationReady &&
     !isClosing &&
     !isClosed;
-  const tabOpen = isProjectTabOpen(project, zellijTabs);
+  const tabOpen = isProjectTabOpen(project, liveTabs);
   const isActive =
     isRunning ||
     isOrchestrationReady ||
@@ -708,7 +708,7 @@ export function getProjectDisplayState(
 
 export function buildProjectOperationsSnapshot(
   project: ProjectState,
-  zellijTabs: string[],
+  liveTabs: string[],
   nowS: number,
   runtimeStateKnown = true,
   syncCtx: RuntimeSyncContext = {},
@@ -716,7 +716,7 @@ export function buildProjectOperationsSnapshot(
   const { syncStale = false, lastSyncedAt = null } = syncCtx;
   const display = getProjectDisplayState(
     project,
-    zellijTabs,
+    liveTabs,
     nowS,
     false,
     runtimeStateKnown,
@@ -791,9 +791,9 @@ export function buildProjectOperationsSnapshot(
   // internal-data state for the system. The recency is shown separately by
   // the row's timestamp column, so the prefix doesn't need to duplicate it.
   // Historical evidence: name the FRESHEST recorded signal, not a blanket
-  // "Idle". Sessions no longer run in named zellij tabs (kitty, unnamed,
-  // multi-project), so live process detection misses real work — but runs and
-  // dispatches still land in FleetCrown. "orangecat — Idle today" while its
+  // "Idle". Agents the user runs outside Fleet Runner (their own terminal,
+  // kitty, multi-project shells) are invisible to live process detection —
+  // but runs and dispatches still land in FleetCrown. "orangecat — Idle today" while its
   // last run finished 40 minutes ago (2026-08-13) read as a dead project;
   // "Last run 40m ago" is what actually happened.
   const lastRunAt = project.latestOrchestrationRun?.finishedAt
@@ -850,7 +850,7 @@ export function buildProjectOperationsSnapshot(
 
 export function buildProjectOperationsSnapshots(
   projects: ProjectState[],
-  zellijTabs: string[],
+  liveTabs: string[],
   nowS: number,
   runtimeStateKnown = true,
   syncCtx: RuntimeSyncContext = {},
@@ -858,23 +858,23 @@ export function buildProjectOperationsSnapshots(
   const { syncStale = false } = syncCtx;
   return projects
     .map((project) =>
-      buildProjectOperationsSnapshot(project, zellijTabs, nowS, runtimeStateKnown, syncCtx),
+      buildProjectOperationsSnapshot(project, liveTabs, nowS, runtimeStateKnown, syncCtx),
     )
     .sort((a, b) =>
-      compareProjects(a.project, b.project, zellijTabs, nowS, runtimeStateKnown, syncStale),
+      compareProjects(a.project, b.project, liveTabs, nowS, runtimeStateKnown, syncStale),
     );
 }
 
 function compareProjects(
   a: ProjectState,
   b: ProjectState,
-  zellijTabs: string[],
+  liveTabs: string[],
   nowS: number,
   runtimeStateKnown: boolean,
   syncStale = false,
 ): number {
-  const aState = getProjectDisplayState(a, zellijTabs, nowS, false, runtimeStateKnown, syncStale);
-  const bState = getProjectDisplayState(b, zellijTabs, nowS, false, runtimeStateKnown, syncStale);
+  const aState = getProjectDisplayState(a, liveTabs, nowS, false, runtimeStateKnown, syncStale);
+  const bState = getProjectDisplayState(b, liveTabs, nowS, false, runtimeStateKnown, syncStale);
 
   const rank = (state: ProjectDisplayState): number => {
     if (state.isReady || state.isOrchestrationReady) return 0;
@@ -902,8 +902,8 @@ export function buildControlPageState(
   // Bucket every project by the SAME counterCategory the rail
   // (ProjectOperationsView) reads off each row's stateKey, so the header chips
   // and the rail counts come from one SSOT and can never disagree. Previously
-  // the header's third number was openTabCount — every project with a zellij
-  // tab open, a SUPERSET that double-counted the working/awaiting projects —
+  // the header's third number was openTabCount — every project with an agent
+  // terminal open, a SUPERSET that double-counted the working/awaiting projects —
   // while the rail showed the mutually-exclusive idle bucket: the same screen
   // had "open" meaning two different numbers. Now both read working/waiting/
   // idle off counterCategory. syncStale collapses stale projects to the
@@ -911,7 +911,7 @@ export function buildControlPageState(
   const categories = data.projects.map(
     (project) =>
       STATE_DEFINITIONS[
-        getProjectDisplayState(project, data.zellijTabs, nowS, false, runtimeStateKnown, syncStale)
+        getProjectDisplayState(project, data.liveTabs, nowS, false, runtimeStateKnown, syncStale)
           .stateKey
       ].counterCategory,
   );
@@ -921,7 +921,7 @@ export function buildControlPageState(
   const waitingCount = categories.filter((c) => c === "waiting").length;
   const idleCount = categories.filter((c) => c === "idle").length;
   const openTabCount = data.projects.filter((project) =>
-    isProjectTabOpen(project, data.zellijTabs),
+    isProjectTabOpen(project, data.liveTabs),
   ).length;
   const controlProjectCount = data.inventory.controlProjectCount ?? 0;
   const commitsToday = data.projects.reduce((sum, p) => sum + (p.git?.todayCount ?? 0), 0);

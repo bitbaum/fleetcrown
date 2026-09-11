@@ -80,7 +80,7 @@ export async function getRunnerExecutionStall(userId: string, graceSeconds = 120
  * (not mere existence) is what avoids deadlock: every queued dispatch opens its
  * own run, so "any other open run = busy" would have them block each other;
  * "oldest wins" drains them in order. Commands with no projectKey/runId
- * (focus_tab, peek, lifecycle — which open no run) are never blocked. The
+ * (peek, lifecycle — which open no run) are never blocked. The
  * started_at floor mirrors cleanupStaleOrchestrationRuns so a crashed run
  * can't wedge a project past STALE_RUN_MINUTES.
  *
@@ -268,7 +268,7 @@ export async function enqueueAutoContinueCommand(
 
 export async function enqueueTabCommand(
   userId: string,
-  type: "focus_tab" | "close_tab",
+  type: "close_tab",
   payload: TabPayload,
 ): Promise<string> {
   return enqueuePendingCommand({ userId, type, payload });

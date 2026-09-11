@@ -29,6 +29,47 @@ export interface ReleaseEntry {
 /** Newest first. */
 export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
   {
+    version: "0.8.21",
+    tag: "fleet-runner-v0.8.21",
+    date: "2026-09-11T13:00:00Z",
+    highlights: [
+      'The runner reports progress while an agent works: once a dispatched prompt has landed, it watches that agent\'s terminal and beats PATCH /api/control/runs/:id/progress at most every 45 seconds, only while the terminal keeps printing. Feedback and Control now read "Working · 47 min" with a Watch link into the terminal instead of guessing "Not running" from the clock at minute ten.',
+      "Silence is honest: no output means no beat, so a run that goes quiet turns Stalled with how long it worked and how long it has been silent.",
+    ],
+    breaking: [],
+    notes:
+      "Server side ships in the same FleetCrown deploy (the box runner restarts once idle). A desktop Fleet Runner on 0.8.20 keeps working; its runs simply show the pre-heartbeat phases until it updates.",
+  },
+  {
+    version: "0.8.20",
+    tag: "fleet-runner-v0.8.20",
+    date: "2026-09-11T10:00:00Z",
+    highlights: [
+      "The retired focus_tab command is now refused at the door: it no longer exists in the command contract, so nothing can enqueue it and the runner has no case for it.",
+      "Runner and desktop descriptions say what the app is now: the FleetCrown desktop agent runtime that owns the agent terminals on this computer.",
+    ],
+    breaking: [],
+    notes:
+      "Follow-up to 0.8.19. No behaviour change for a running fleet; this release exists because the desktop tree changed and the changelog is the single source of truth for what shipped.",
+  },
+  {
+    version: "0.8.19",
+    tag: "fleet-runner-v0.8.19",
+    date: "2026-09-11T09:21:39Z",
+    highlights: [
+      'Fleet Runner no longer tries to bring up a zellij session on boot, so the "Could not bring zellij up" notification is gone for good.',
+      "Every agent runs in a terminal Fleet Runner owns. A prompt for a project with no running agent is refused with a clear reason instead of being typed into a guessed terminal tab; the cloud starts the agent for you.",
+      "Agent installers run in an owned terminal too, so you can watch them from the web terminal.",
+      "The Restoration section of Settings → Agent is gone with the cold-start it configured.",
+    ],
+    breaking: [
+      "FLEETCROWN_RUNNER_PTY is ignored: there is no zellij mode to force any more. Agents that were driven in your own zellij tabs are not seen by Fleet Runner; dispatch them once to move them into an owned terminal.",
+      "The focus_tab command is retired. Watch the agent in the web terminal instead.",
+    ],
+    notes:
+      "One substrate. Since 0.8.3 the owned terminal was the default with zellij kept as a fallback for tabs it could not find, and the fallback is where every stuck dispatch ended up: a keystroke typed into a tab named 'Tab #9', a cold-start that spawned a session no terminal could show, a desired-state restore that reproduced the box's fleet on a laptop. This release deletes the fallback rather than hardening it again.",
+  },
+  {
     version: "0.8.18",
     tag: "fleet-runner-v0.8.18",
     date: "2026-09-09T15:35:00Z",

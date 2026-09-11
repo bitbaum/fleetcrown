@@ -26,7 +26,7 @@ import { ControlSettingsSheet } from "./ControlSettingsSheet";
 import { RunnerStatusBanner } from "./RunnerStatusBanner";
 import { APP_NAME } from "@/config/brand";
 import { ActivityLogPanel, BrainConfigPanel } from "./control-panel-helpers";
-import { ZellijLivePanel } from "./ZellijLivePanel";
+import { LiveTerminalPanel } from "./LiveTerminalPanel";
 import { buildCardProps } from "./control-panel-card-props";
 import { LaunchTabModal, NewProjectModal } from "./control-panel-modals";
 import { BootstrapModal } from "./BootstrapModal";
@@ -214,13 +214,13 @@ export function ControlPanel() {
       ),
   });
   const liveTabRows = useMemo(
-    () => (data ? buildLiveTabRows(data.zellijTabs, data.projects, nowS, runnerSyncStale) : []),
+    () => (data ? buildLiveTabRows(data.liveTabs, data.projects, nowS, runnerSyncStale) : []),
     [data, nowS, runnerSyncStale],
   );
   const snapshots = data
     ? buildProjectOperationsSnapshots(
         data.projects,
-        data.zellijTabs,
+        data.liveTabs,
         nowS,
         runtimeStateKnown,
         runtimeSyncCtx,
@@ -276,9 +276,6 @@ export function ControlPanel() {
     setLiveTargetTab(resolvedTab);
     if (liveDetailsRef.current) liveDetailsRef.current.open = true;
     livePanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    postJson("/api/control/focus-tab", { tab: resolvedTab }).catch(() => {
-      /* best effort */
-    });
 
     if (switchToParam && snapshot?.project.dir) {
       const label = switchableRegistry.find((e) => e.id === switchToParam)?.label ?? switchToParam;
@@ -329,7 +326,7 @@ export function ControlPanel() {
   // fetch resolved. Worse on slow networks, every time on cold reload.
   const cardProps = buildCardProps({
     prompts: data?.prompts ?? [],
-    zellijTabs: data?.zellijTabs ?? [],
+    liveTabs: data?.liveTabs ?? [],
     selectedAgent,
     switchableRegistry,
     inject,
@@ -352,7 +349,7 @@ export function ControlPanel() {
     rows: liveTabRows,
     // Total tabs the builders report, so the panel can admit how many it
     // filtered out instead of presenting a filtered list as "open tabs".
-    openTabCount: data?.zellijTabs.length ?? 0,
+    openTabCount: data?.liveTabs.length ?? 0,
     runnerNeverSeen,
     runnerSyncStale,
     refreshing,
@@ -367,7 +364,7 @@ export function ControlPanel() {
   // (mobile embedded + desktop standalone, toggled via md:hidden), and the
   // standalone variant repeated the <summary>'s "Workspaces · N open" header
   // inside the panel — the page showed the same heading and count twice.
-  const livePanel = <ZellijLivePanel {...livePanelProps} embedded />;
+  const livePanel = <LiveTerminalPanel {...livePanelProps} embedded />;
 
   if (!data) {
     return (
@@ -422,7 +419,7 @@ export function ControlPanel() {
         />
       )}
 
-      {/* Desktop-only — surfaces missing zellij + agent CLIs so the user
+      {/* Desktop-only — surfaces missing agent CLIs so the user
           knows what to install before dispatching. Renders null outside
           Fleet Runner (no IPC) and when all expected tools are present. */}
       <MissingCLIsBanner />
@@ -554,7 +551,7 @@ export function ControlPanel() {
       {/* Workspaces panel — collapsed by default. Projects already shows
           per-project state; auto-opening this duplicated the same facts in a
           second layout (dogfood: read as broken / demo chrome). Open when you
-          need Zellij quick-send or peek — not on every Control visit. */}
+          need quick-send or peek — not on every Control visit. */}
       <details ref={liveDetailsRef} className="ui-control-live-details">
         <summary className="ui-control-live-details-summary">
           <span>Workspaces</span>

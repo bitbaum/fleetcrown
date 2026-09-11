@@ -1,8 +1,9 @@
 # FleetCrown Agent Execution Platform
 
 **Status:** Architecture / north star. LocalPtyExecutor shipped; Docker-backed
-SandboxExecutor substrate shipped behind an explicit env flag.
-**Last updated:** 2026-07-03
+SandboxExecutor substrate shipped behind an explicit env flag. The zellij path is
+gone (2026-09-11, Fleet Runner 0.8.19): every agent PTY is owned by a runner.
+**Last updated:** 2026-09-11
 **Scope:** How FleetCrown runs, streams, observes, and controls agent processes for
 many tenants on arbitrary client devices — without puppeting anyone's terminal.
 
@@ -19,9 +20,9 @@ many tenants on arbitrary client devices — without puppeting anyone's terminal
 5. **Cost-efficient at scale.** Most agents are idle most of the time → you cannot keep
    billions of live containers; idle agents must hibernate and free their compute.
 
-The current path violates all five: it shells into the user's zellij, guesses
-session/tab **names**, mimes keystrokes, scrapes the screen for status, and depends on
-a `/tmp` sentinel. That is a single-user, single-box, one-multiplexer hack.
+The path this replaced violated all five: it shelled into the user's zellij, guessed
+session/tab **names**, mimed keystrokes, scraped the screen for status, and depended on
+a `/tmp` sentinel. That was a single-user, single-box, one-multiplexer hack.
 
 ---
 
@@ -85,8 +86,10 @@ Implementations are added in order — **same interface, no control-plane/UI cha
 | `SandboxExecutor` | Docker today; Firecracker / gVisor / K8s / Fly Machines / e2b later | **multi-tenant production scale** (replaces today's `pending_command` keystroke hack) |
 | `LocalRunnerExecutor` *(optional)* | the user's own machine via Fleet Runner | power users who want "run on my hardware" |
 
-zellij/tmux are **not executors** — at most an *optional view* a power user attaches to a
-`LocalRunnerExecutor`. The current zellij path is legacy, retired once `LocalPtyExecutor` lands.
+zellij/tmux are **not executors**. The zellij path was retired on 2026-09-11 (Fleet
+Runner 0.8.19): `src/lib/zellij.ts`, `src/lib/terminals/*` and `home/worker.ts` are deleted,
+and the web local runtime (`RUNTIME_AVAILABLE=true`) acts only on owned PTYs
+(`listOwnedTabs` in `src/lib/agent-execution/owned.ts`; the `/api/control` field is `liveTabs`).
 
 ---
 
@@ -105,8 +108,8 @@ not research.
    the event log, not `/proc` scans or `/tmp` sentinels.
 2. **`LocalPtyExecutor` + stream to the `@xterm/xterm` already shipped** — FleetCrown works
    with **zero zellij**, single-tenant. This is the proving ground for the interface.
-3. **Unify the dashboard on the Executor model** — wrap or deprecate the existing
-   zellij + cloud paths behind it; one mental model.
+3. **Unify the dashboard on the Executor model** — done: the zellij path is deleted and
+   the cloud path is the same executor on the box; one mental model.
 4. **`SandboxExecutor`** — Docker-backed substrate behind `FLEETCROWN_EXECUTOR=sandbox`.
    It enforces a workspace root, per-container resource limits, `no-new-privileges`,
    `cap-drop=ALL`, and deny-by-default networking. This is the execution primitive;
@@ -115,17 +118,30 @@ not research.
 6. **Native-attach gateway (optional)** — let power users attach their own terminal to a
    workspace over the connection plane.
 
-## What this retires
+## What this retired
 
-zellij/tmux name-guessing · `/proc` cwd matching · `/tmp` currentPrompt sentinels ·
-screen-scrape status derivation · the `pending_command` keystroke-injection transport.
+zellij/tmux name-guessing · `/tmp` currentPrompt sentinels · screen-scrape status
+derivation · keystroke injection into a borrowed pane. `pending_commands` remains the
+queue between the control plane and a runner, but what a runner does with a claimed row
+is write into a PTY it spawned — an inject for a tab with no live owned PTY fails loudly
+("no running agent for … — dispatch to start one") and the cloud enqueues a dispatch
+(cold start) instead.
 
 ## Relationship to current code
 
-The Next.js app stays as the **control plane**. The `feat/embedded-terminal` work
-(`@xterm/xterm`) is the **view** for step 2. The reliability fixes shipped 2026-06-17
-(timeouts, launch-state sentinel, verified inject) keep the **legacy zellij path** usable
-until `LocalPtyExecutor` replaces it — they are a bridge, explicitly not the destination.
+The Next.js app stays as the **control plane**. The `@xterm/xterm` terminal is the
+**view** for step 2. The reliability fixes shipped 2026-06-17 (timeouts, launch-state
+sentinel, verified inject) kept the legacy zellij path usable until `LocalPtyExecutor`
+replaced it; that bridge was removed with the zellij deletion on 2026-09-11.
+
+**Where a dispatch runs is a stored decision, not a presence check.**
+`pickDispatchChannel(project)` (`src/lib/execution-access.ts`) resolves: locus lock (a
+laptop-only checkout stays local; a checkout under the box clone root stays cloud) →
+`user_projects.builder_pref` ("Runs on" in Control → project profile) → cloud floor
+(`DEFAULT_BUILDER_CHANNEL = "cloud"`). Runner presence and laptop battery route nothing;
+an offline chosen builder queues visibly (`runnerConnected: false`) and never reroutes.
+Failure classification for a run lives in `src/lib/failure-remedy.ts`
+(`START_SESSION | RETRY | NONE`).
 
 ## SandboxExecutor Runtime Knobs
 

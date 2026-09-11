@@ -1,0 +1,35 @@
+name: Auto-merge
+
+# A green PR on this site merges itself; nobody has to open GitHub. The policy
+# lives once, in bitbaum/fleet (auto-merge-sweep.yml); this file only says
+# which workflow is CI and which one deploys. Without it every PR an agent
+# opens on a fresh site waits for a human forever — the last manual click on
+# the brief → repo → live site → feedback → live change loop (2026-09-11).
+#
+# `token` is optional: without an org PAT the sweep uses GITHUB_TOKEN, which
+# can merge anything except a PR that edits .github/workflows/*.
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+  checks: read
+  statuses: read
+
+jobs:
+  sweep:
+    uses: bitbaum/fleet/.github/workflows/auto-merge-sweep.yml@main
+    with:
+      base_branch: main
+      ci_workflow: ci.yml
+      rearm_workflows: "ci.yml"
+      deploy_workflow: deploy.yml
+    secrets:
+      token: ${{ secrets.FLEET_PAT }}

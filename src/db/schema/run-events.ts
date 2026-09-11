@@ -19,6 +19,7 @@ export const RUN_EVENT_KINDS = [
   "launched", // agent PTY created (fresh launch only)
   "submitted", // prompt verifiably submitted (CLI live status left idle)
   "generating", // agent confirmed generating
+  "progress", // runner heartbeat: the agent's PTY printed since the last beat (detail.outputBytes)
   "blocked", // agent blocked on input / auth / dialog (detail.reason)
   "handoff", // session handoff received (pusher persisted it)
   "closed", // run closed with outcome (closeRunFromSession / reaper)

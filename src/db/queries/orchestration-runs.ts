@@ -573,3 +573,27 @@ export async function getRecentOutcomes(
     )
     .map((r) => ({ outcome: r.outcome, intent: r.intent, finishedAt: r.finishedAt }));
 }
+
+/**
+ * Runner heartbeat: the agent's PTY printed something since the last beat.
+ * Stamps payload.lastProgressAt on the OPEN run only; returns false once the
+ * run is closed so the runner stops reporting. This is the signal Feedback's
+ * work phase reads to say "Working · 12 min" instead of guessing from the
+ * delivery time (see src/lib/run-progress.ts).
+ */
+export async function stampRunProgress(runId: string, userId: string): Promise<boolean> {
+  const rows = await db
+    .update(orchestrationRuns)
+    .set({
+      payload: sql`jsonb_set(COALESCE(payload, '{}'), '{lastProgressAt}', ${JSON.stringify(new Date().toISOString())}::jsonb)`,
+    })
+    .where(
+      and(
+        eq(orchestrationRuns.id, runId),
+        eq(orchestrationRuns.userId, userId),
+        isNull(orchestrationRuns.finishedAt),
+      ),
+    )
+    .returning({ id: orchestrationRuns.id });
+  return rows.length > 0;
+}

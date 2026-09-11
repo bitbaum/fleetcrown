@@ -544,7 +544,9 @@ function FeedbackTriage({
           const notStarted = work.phase === FEEDBACK_WORK_PHASE.NOT_STARTED;
           const broken =
             work.phase === FEEDBACK_WORK_PHASE.STUCK || work.phase === FEEDBACK_WORK_PHASE.FAILED;
-          const watchable = work.phase === FEEDBACK_WORK_PHASE.WORKING;
+          // Same rule as the Feedback row: a terminal exists once the prompt reached
+          // an agent PTY — Working, and Stalled too (it may be waiting on a person).
+          const watchable = work.watchable === true;
           const needsVerify = work.phase === FEEDBACK_WORK_PHASE.NEEDS_VERIFY;
           return (
             <li key={f.id} className="ui-inbox-row">
@@ -586,7 +588,7 @@ function FeedbackTriage({
                   <a
                     href={fleetSurfaceHref("terminal", projectName)}
                     className="ui-btn-secondary ui-btn-sm"
-                    title="Live agent session"
+                    title={work.detail ?? "Open the agent's terminal"}
                   >
                     Watch
                   </a>

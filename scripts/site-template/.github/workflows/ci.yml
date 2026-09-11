@@ -36,6 +36,16 @@ jobs:
       # store path, and setup-node fails outright if pnpm is not on PATH yet.
       - uses: pnpm/action-setup@v4
 
+      # Sites scaffolded before the starter shipped .nvmrc have none, and
+
+      # setup-node fails on a missing version file (kaffeeklappe-sep11 #3,
+
+      # 2026-09-11). Default to the fleet's Node line; a committed .nvmrc wins.
+
+      - name: Node version file
+
+        run: "[ -f .nvmrc ] || echo 22 > .nvmrc"
+
       - uses: actions/setup-node@v4
         with:
           node-version-file: ".nvmrc"
@@ -76,9 +86,37 @@ jobs:
         run: pnpm run type-check
 
       - name: Lint
-        run: pnpm run lint
+        # The FleetCrown starter declares no linter yet; a missing script must
+        # not fail the site's first CI run.
+        run: pnpm run --if-present lint
 
       # The build is the real test for a content site: a broken import or a bad
       # config surfaces here and nowhere earlier.
       - name: Build
         run: pnpm run build
+
+  # A sweep merge uses GITHUB_TOKEN, and a push made with that token triggers
+  # no workflows; the CI the sweep then re-arms is itself a dispatch, whose
+  # workflow_run event GitHub also suppresses. So after an agent's PR is
+  # auto-merged here, NOTHING starts Deploy — kaffeeklappe-sep11 sat an hour
+  # on 2026-09-11 with the change merged, CI green, and the site serving the
+  # previous release. The sweep's reconciler catches it on its next tick,
+  # which is correct, self-healing, and up to ten minutes late.
+  #
+  # A dispatch is not a push, so this job may start Deploy directly the moment
+  # CI proves main green. Same shape as bitbaum/fleetcrown's own ci.yml.
+  #
+  # Only for workflow_dispatch: a real push to main chains through
+  # workflow_run by itself, and dispatching here too would ship twice.
+  ship:
+    needs: verify
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dispatch Deploy now that main is green
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run deploy.yml --ref main

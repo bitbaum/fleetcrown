@@ -38,9 +38,9 @@ Run succeeds  →  feedback auto-resolves (+ optional reporter email)
 
 **You do not choose a terminal.** Dispatch never targets “this Cursor chat” or
 “FleetCrown’s Terminal page” directly. It injects into the **project’s agent
-session** through `injectPrompt` (`src/lib/inject-core.ts`): PTY / Fleet Runner
-when online, otherwise the hosted cloud builder queue (Hermes when local is
-offline). Control / Terminal / Loki are captain surfaces that *also* call the
+session** through `injectPrompt` (`src/lib/inject-core.ts`), which runs where the
+project’s stored routing decision says (`pickDispatchChannel`: locus lock → “Runs
+on” → cloud floor); an offline chosen builder queues visibly and is never rerouted. Control / Terminal / Loki are captain surfaces that *also* call the
 same SSOT — feedback Dispatch is that path with a composed prompt.
 
 ### Surfaces
@@ -49,15 +49,16 @@ same SSOT — feedback Dispatch is that path with a composed prompt.
 | --- | --- |
 | Enable & install (token + agent embed) | Control coverage strip; project Widget card |
 | Review open reports | Control feedback strip (new + in-progress); `/projects/{id}#feedback` |
-| Implement / Retry | Same rows — status is **Not started → Queued → Working now → Done** (or **Not running / Failed**) |
-| Watch live output | Only while **Working now** → Terminal. Otherwise **Open on Control** (empty Terminal ≠ progress) |
+| Implement / Retry | Same rows — status is **Not started → Queued → Working · N min → Check live → Done** (or **Not running / Stalled / Failed**). A project with no repository and no folder gets **Connect a repository** instead of Implement, and the dispatch route refuses the same case with a 422 |
+| Watch live output | **Watch** → Terminal whenever the prompt reached an agent PTY (Working, Stalled, Not running after delivery). **Open on Control** only while Queued (empty Terminal ≠ progress) |
+| Working vs Stalled | The box runner beats `PATCH /api/control/runs/:id/progress` while the agent's PTY keeps printing (contract: `src/lib/run-progress.ts`, at most one beat per 45 s, none when silent). A beat within 10 min = Working, however long the run; older = **Stalled**; never any = Not running after 10 min. Before this heartbeat every hour-long fix read "Not running" from minute ten |
 | Pause widget (instant, no deploy) | Project Widget card |
 
 **Enable & install preflight** (`POST …/widget-token/install`):
 
 1. **No git URL and no local dir** → `422 no_repo` — agent cannot land the snippet; copy from Widget card instead.
 2. **Live site unreachable** (probe of `user_projects.liveUrl`, else legacy attrs) → `422 site_unreachable` — widget cannot appear until the Hetzner host responds; token may already exist.
-3. Only then queue `injectPrompt` (Fleet Runner on this computer if connected, else cloud box-runner). Response points to `/control?focus=…`. Terminal is empty until a session is actually running.
+3. Only then queue `injectPrompt` on the project’s chosen builder (cloud by default; Fleet Runner on this computer when “Runs on” says so). Response points to `/control?focus=…`, a client-side deep link that selects and highlights the project on Control (there is no server focus-tab call any more). Terminal is empty until a session is actually running.
 
 **One-click captain loop (intended):**
 
@@ -67,7 +68,7 @@ same SSOT — feedback Dispatch is that path with a composed prompt.
 
 Status vocabulary is SSOT in `lib/feedback/work-phase.ts`. The DB may still store
 `dispatched`; the UI never presents that word as “finished.” **Queued / Install queued
-is not proof of work** — prove it with Working now, Failed/Not running, or Attention Retry.
+is not proof of work** — prove it with Working (heartbeat-backed), Failed/Not running/Stalled, or Attention Retry.
 
 Dogfood check 2026-08-14: botsmann.orangecat.ch boots `fcw_73518de7…` (`last_seen_origin`
 https://botsmann.orangecat.ch, `/api/widget-boot` `{active:true}`). Earlier “waiting for

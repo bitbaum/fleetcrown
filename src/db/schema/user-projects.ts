@@ -56,6 +56,11 @@ export const userProjects = pgTable(
     stack: text("stack"),
     agentPref: text("agent_pref"), // per-project agent override
     modelPref: text("model_pref"), // per-project model override
+    // Where this project's agent work runs. Null = the cloud tier (the always-on
+    // box). "local" = the operator's own machine through Fleet Runner. A stored
+    // decision, never inferred from which runner happens to be online — that
+    // inference is how a closed lid used to kill work (see execution-access.ts).
+    builderPref: text("builder_pref"),
     position: integer("position").default(0), // user-defined sort order
     isActive: boolean("is_active").default(true).notNull(),
     notes: text("notes"), // free-form scratchpad visible in the profile panel
@@ -64,6 +69,19 @@ export const userProjects = pgTable(
     // Cross-product bridge Part C: the published OrangeCat project this project
     // projects onto (opt-in "Publish to OrangeCat"). Null = not published.
     orangecatProjectId: uuid("orangecat_project_id"),
+    // Canonical identity. The fleet register (src/lib/register) joins the four
+    // surfaces — this table, apps.conf, OrangeCat, Solon — and "which project is
+    // this" was answered by NAME, which has drifted into several spellings
+    // (aoz-housing/aoz-wohnen, datacat/datacat-web, s-ink/sink…). `slug` is the
+    // repository name and the one key every other register must use.
+    slug: text("slug"),
+    // The apps.conf row this project is served by (its `name` column), when it
+    // is hosted on the box. Null = not hosted. Explicit rather than inferred
+    // from the name, because apps.conf keys are systemd unit names and cannot
+    // be renamed cheaply when a project is.
+    hostedApp: text("hosted_app"),
+    // The Solon organisation this project is governed by, if any.
+    solonOrgSlug: text("solon_org_slug"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },

@@ -15,6 +15,7 @@ import {
 } from "../../src/lib/feedback/compose-dispatch";
 import {
   deriveFeedbackWork,
+  workElapsedLabel,
   FEEDBACK_WORK_PHASE,
   type FeedbackRunSnapshot,
 } from "../../src/lib/feedback/work-phase";
@@ -31,6 +32,7 @@ function snap(over: Partial<FeedbackRunSnapshot>): FeedbackRunSnapshot {
     startedAt: new Date(),
     finishedAt: null,
     deliveredAt: null,
+    lastProgressAt: null,
     error: null,
     ...over,
   };
@@ -82,10 +84,13 @@ assert.equal(
 assert.equal(
   deriveFeedbackWork(
     FEEDBACK_STATUS.DISPATCHED,
-    snap({ startedAt: new Date(Date.now() - 20 * 60_000), deliveredAt: new Date().toISOString() }),
+    snap({
+      startedAt: new Date(Date.now() - 20 * 60_000),
+      deliveredAt: new Date(Date.now() - 19 * 60_000).toISOString(),
+    }),
   ).phase,
   FEEDBACK_WORK_PHASE.STUCK,
-  "delivered but silent past the thinking window is stuck",
+  "delivered, then silent past the thinking window (measured from delivery) is stuck",
 );
 
 // Closed states — SUCCESS is not Done (inject/run finish ≠ live UI changed).
@@ -236,3 +241,83 @@ for (const prompt of [
 }
 
 console.log("✓ feedback work-phase tests passed");
+
+// 3. The runner heartbeat decides Working vs Stalled after delivery — not the
+//    clock. Before this, every delivered run turned "Not running" at minute
+//    ten while the agent typed, because nothing between "submitted" and
+//    "closed" was ever written down (2026-09-11).
+{
+  const now = Date.now();
+  const delivered = new Date(now - 47 * 60_000).toISOString();
+  const long = deriveFeedbackWork(
+    FEEDBACK_STATUS.DISPATCHED,
+    snap({
+      startedAt: new Date(now - 48 * 60_000),
+      deliveredAt: delivered,
+      lastProgressAt: new Date(now - 30_000).toISOString(),
+    }),
+    now,
+  );
+  assert.equal(
+    long.phase,
+    FEEDBACK_WORK_PHASE.WORKING,
+    "fresh heartbeat = Working, however long ago delivery was",
+  );
+  assert.equal(long.label, "Working · 47 min", "the badge says how long the agent has been on it");
+  assert.equal(long.watchable, true, "a delivered run has a terminal to watch");
+  assert.equal(long.since, delivered);
+
+  const stalled = deriveFeedbackWork(
+    FEEDBACK_STATUS.DISPATCHED,
+    snap({
+      startedAt: new Date(now - 48 * 60_000),
+      deliveredAt: delivered,
+      lastProgressAt: new Date(now - 15 * 60_000).toISOString(),
+    }),
+    now,
+  );
+  assert.equal(stalled.phase, FEEDBACK_WORK_PHASE.STUCK, "a heartbeat gone quiet = Stalled");
+  assert.equal(stalled.label, "Stalled");
+  assert.equal(
+    stalled.watchable,
+    true,
+    "Stalled still links the terminal — it may be waiting on a person",
+  );
+  assert.match(stalled.detail ?? "", /Worked for 32 min, then nothing for 15 min/);
+
+  // Delivered and no heartbeat yet: Working for the grace window, then honest.
+  const fresh = deriveFeedbackWork(
+    FEEDBACK_STATUS.DISPATCHED,
+    snap({
+      startedAt: new Date(now - 3 * 60_000),
+      deliveredAt: new Date(now - 2 * 60_000).toISOString(),
+    }),
+    now,
+  );
+  assert.equal(fresh.phase, FEEDBACK_WORK_PHASE.WORKING);
+  assert.equal(fresh.label, "Working · 2 min");
+  const silent = deriveFeedbackWork(
+    FEEDBACK_STATUS.DISPATCHED,
+    snap({
+      startedAt: new Date(now - 20 * 60_000),
+      deliveredAt: new Date(now - 19 * 60_000).toISOString(),
+    }),
+    now,
+  );
+  assert.equal(silent.phase, FEEDBACK_WORK_PHASE.STUCK);
+  assert.equal(silent.watchable, true);
+
+  // Queued (never delivered) has no terminal: the row goes to Control.
+  const queued = deriveFeedbackWork(
+    FEEDBACK_STATUS.DISPATCHED,
+    snap({ startedAt: new Date(now - 10_000) }),
+    now,
+  );
+  assert.equal(queued.phase, FEEDBACK_WORK_PHASE.QUEUED);
+  assert.equal(queued.watchable, undefined);
+
+  // The elapsed label ladder.
+  assert.equal(workElapsedLabel(new Date(now - 20_000), now), "under a minute");
+  assert.equal(workElapsedLabel(new Date(now - 125 * 60_000), now), "2 h 05 min");
+  assert.equal(workElapsedLabel(new Date(now - 120 * 60_000), now), "2 h");
+}

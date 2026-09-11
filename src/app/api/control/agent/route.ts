@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { execSync } from "child_process";
 import {
   readAgentPreferences,
   resolveAgentConfig,
   writeAgentPreferences,
 } from "@/lib/agent-preferences";
 import { buildSwitchableAgentCatalog, type AgentCatalog } from "@/lib/agent-catalog";
-import { buildAgentLaunchCommand, AGENT_IDS, type Agent } from "@/lib/agent-registry";
-import { shellEscape } from "@/lib/zellij";
+import { AGENT_IDS, type Agent } from "@/lib/agent-registry";
+import { workspaceIdFor } from "@/lib/agent-execution/ownership";
 import { getUserProjects, getOrgProjects } from "@/db/queries/user-projects";
 import { getSessionUserId } from "@/lib/session";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
@@ -26,8 +25,8 @@ type SwitchTabResult = {
   dir?: string;
   command?: string;
   // "queued" is the cloud-mode outcome: a switch_agent pending_command was
-  // enqueued for the local runner to execute. Local mode still uses
-  // restarted/skipped/failed from the inline execSync path.
+  // enqueued for the runner to execute. Local mode restarts owned PTYs inline
+  // and reports restarted/skipped/failed.
   status: "restarted" | "skipped" | "failed" | "queued";
   reason?: string;
   error?: string;
@@ -43,58 +42,45 @@ export async function GET() {
   return NextResponse.json({ registry, config });
 }
 
-function applyToOpenTabs(
+/**
+ * Local runtime: restart every project that has a live owned PTY with the new
+ * agent/model. A project with no live session is skipped — there is nothing
+ * to restart, and starting one is a dispatch, not a preference change.
+ */
+async function applyToOpenTabs(
+  userId: string,
   agent: Agent,
   model: string,
   allProjects: { tab: string; dir: string }[],
-): SwitchTabResult[] {
-  try {
-    execSync("command -v zellij >/dev/null 2>&1");
-  } catch {
-    return [{ status: "failed", error: "zellij is not installed or not on PATH." }];
-  }
-
-  let openTabs: string[] = [];
-  try {
-    const out = execSync("zellij action query-tab-names 2>/dev/null || true", {
-      encoding: "utf-8",
-    });
-    const ansiRe = /\x1b\[[0-9;]*m/g;
-    openTabs = out
-      .split("\n")
-      .map((line) => line.replace(ansiRe, "").trim().toLowerCase())
-      .filter((s) => s.length > 0 && !s.includes("[created "));
-  } catch {
-    return [{ status: "failed", error: "Failed to read open zellij tabs." }];
-  }
-
+): Promise<SwitchTabResult[]> {
   if (allProjects.length === 0) {
     return [{ status: "skipped", reason: "No configured projects found." }];
   }
-
-  const openSet = new Set(openTabs);
-  return allProjects.map(({ tab, dir }) => {
-    const command = buildAgentLaunchCommand({ agent, model }, dir);
-    if (!openSet.has(tab.toLowerCase())) return { tab, dir, command, status: "skipped" as const };
+  const { executor } = await import("@/lib/agent-execution");
+  const { provisionAgentWorkspace } = await import("@/lib/agent-execution/launch");
+  const results: SwitchTabResult[] = [];
+  for (const { tab, dir } of allProjects) {
+    const workspaceId = workspaceIdFor(userId, tab);
+    const live = executor.get(workspaceId);
+    if (!live || live.status === "exited") {
+      results.push({ tab, dir, status: "skipped" as const, reason: "No running agent." });
+      continue;
+    }
     try {
-      execSync(`zellij action go-to-tab-name ${shellEscape(tab)}`);
-      execSync("sleep 0.2");
-      execSync("zellij action write 3");
-      execSync("sleep 0.1");
-      execSync(`zellij action write-chars ${shellEscape(command)}`);
-      execSync("sleep 0.1");
-      execSync("zellij action write 13");
-      return { tab, dir, command, status: "restarted" as const };
+      await executor.terminate(workspaceId);
+      await new Promise((r) => setTimeout(r, 400));
+      await provisionAgentWorkspace(userId, { projectKey: tab, dir, agent, model, workspaceId });
+      results.push({ tab, dir, status: "restarted" as const });
     } catch (error) {
-      return {
+      results.push({
         tab,
         dir,
-        command,
         status: "failed" as const,
         error: error instanceof Error ? error.message : String(error),
-      };
+      });
     }
-  });
+  }
+  return results;
 }
 
 export async function POST(req: NextRequest) {
@@ -164,7 +150,7 @@ export async function POST(req: NextRequest) {
           );
         }
       } else {
-        tabResults = applyToOpenTabs(dataOrResp.agent, dataOrResp.model, allProjects);
+        tabResults = await applyToOpenTabs(userId, dataOrResp.agent, dataOrResp.model, allProjects);
       }
     }
 

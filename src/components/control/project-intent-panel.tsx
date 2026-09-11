@@ -144,8 +144,8 @@ export function IntentButtonPanel({
   onSendText?: (text: string) => void;
   onCustomChange: (value: string) => void;
   onCustomFocusChange: (focused: boolean) => void;
-  /** False on the cloud app — gates buttons whose endpoints require a
-   *  local zellij/CLI runtime and would 503 silently otherwise. */
+  /** False on the cloud app — gates buttons whose endpoints require the
+   *  local runtime (owned agent PTYs) and would 503 silently otherwise. */
   runtimeAvailable?: boolean;
   /** False when cached runner-driven runtime fields cannot be trusted. */
   runtimeStateKnown?: boolean;
@@ -400,10 +400,10 @@ export function IntentButtonPanel({
                   {sending === id ? "…" : justSent?.id === id ? "✓" : label}
                 </button>
               ))}
-              {/* Hide on cloud — /api/project/clear-context calls
-                  injectIntoTab() which requires the local zellij binary
-                  and 503s otherwise; the click handler ignored failure
-                  so cloud users saw a brief spinner with no feedback. */}
+              {/* Hide on cloud — /api/project/clear-context writes into the
+                  local owned PTY and 503s otherwise; the click handler
+                  ignored failure so cloud users saw a brief spinner with no
+                  feedback. */}
               {(currentAdapter === "claude" || currentAdapter === "grok") && runtimeAvailable && (
                 <button
                   onClick={async () => {

@@ -171,22 +171,24 @@ A new top-level page **above Terminal** in the nav. Layout mirrors ChatGPT/Claud
 - **Terminal = the workbench** (watch the agent PTY — Cloud on Hetzner or This computer via
   the desktop app). Loki does **not** type into Terminal directly; it enqueues work the builder runs.
 - A Loki "dispatch a command" and a Control "Next best" click produce the **same**
-  `pending_command` → builder (box-runner and/or Fleet Runner) → agent CLI in Zellij. One backend,
-  three altitudes of UI.
+  `pending_command` → builder (box-runner or Fleet Runner, chosen by the project's stored
+  routing decision) → agent CLI in a PTY the builder owns. One backend, three altitudes of UI.
 
 ### Build chain (what happens when you talk to Loki)
 
 ```
 You → Loki composer → resolveCommand / fleet fast paths
-  → injectPrompt() → pending_commands (Postgres)
-  → builder claims job (cloud box-runner OR desktop Fleet Runner)
-  → inject into Zellij → Claude / Codex / …
+  → injectPrompt() → pickDispatchChannel: locus lock → "Runs on" (builder_pref) → cloud floor
+  → pending_commands (Postgres)
+  → the chosen builder claims the job (cloud box-runner OR desktop Fleet Runner)
+  → written into the builder-owned PTY (node-pty) → Claude / Codex / …
   → watch on Terminal (source=server | source=machine)
 ```
 
 - **Chat turns** (`askLoki`) answer questions — they do **not** run agents.
-- **Dispatch turns** run work — same queue as Control, including when the builder is offline
-  (queued until cloud or this computer is online).
+- **Dispatch turns** run work — same queue as Control. The builder is the project's stored
+  choice, not whoever is online: an offline chosen builder queues visibly
+  (`runnerConnected: false`) and is never rerouted.
 - Loki is connected to the **builder queue**, not to the xterm WebSocket. Terminal is a **view**
   of whichever machine is executing that project's session.
 

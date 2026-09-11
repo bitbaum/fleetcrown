@@ -144,8 +144,11 @@ echo "→ validating '$SLUG'"
 FC_GIT="$(dirname "$(dirname "$(dirname "$MANIFEST")")")"
 if [ "$DRY" != 1 ] && git -C "$FC_GIT" rev-parse --is-inside-work-tree >/dev/null 2>&1 \
    && git -C "$FC_GIT" fetch -q origin main 2>/dev/null; then
-  unpublished=$(comm -23 <(grep -v '^#' "$MANIFEST" | grep . | sort) \
-                         <(git -C "$FC_GIT" show origin/main:scripts/hetzner/apps.conf 2>/dev/null | grep -v '^#' | grep . | sort))
+  # Keyed on the slug, not the full row: main edits plan/price columns of
+  # existing rows, and a row-for-row comparison then reported "unpublished"
+  # forever, so the durable checkout never followed main (2026-09-11).
+  unpublished=$(comm -23 <(grep -v '^#' "$MANIFEST" | grep . | cut -d'|' -f1 | sort) \
+                         <(git -C "$FC_GIT" show origin/main:scripts/hetzner/apps.conf 2>/dev/null | grep -v '^#' | grep . | cut -d'|' -f1 | sort))
   if [ -z "$unpublished" ]; then
     git -C "$FC_GIT" checkout -q -- scripts/hetzner/apps.conf 2>/dev/null || true
     if git -C "$FC_GIT" merge -q --ff-only origin/main 2>/dev/null; then
@@ -196,9 +199,22 @@ say "manifest $MANIFEST"
 
 # ----------------------------------------------------------------- checkout
 echo "→ checkout"
+# canonical_repo <owner/name>: the name GitHub resolves it to today. A repo
+# transferred to another owner keeps answering under its old name, and the
+# checkout's remote may carry either — comparing the two as strings called a
+# legitimate checkout "another repository" after kaffeeklappe-sep11 moved
+# from catomean to bitbaum (2026-09-11). Falls back to the input when offline.
+canonical_repo() {
+  local n
+  n=$(env -u GH_TOKEN -u GITHUB_TOKEN gh api "repos/$1" --jq .full_name 2>/dev/null \
+      || gh api "repos/$1" --jq .full_name 2>/dev/null || true)
+  printf '%s' "${n:-$1}"
+}
 if [ -e "$REPO_DIR" ]; then
-  actual_repo=$(git -C "$REPO_DIR" remote get-url origin | sed -E 's#^https://github.com/##; s#^git@github.com:##; s#\.git$##')
-  [ "$actual_repo" = "$GH_REPO" ] || { echo "ERROR: existing checkout belongs to another repository" >&2; exit 1; }
+  actual_repo=$(git -C "$REPO_DIR" remote get-url origin | sed -E 's#^https://([^@/]+@)?github.com/##; s#^git@github.com:##; s#\.git$##')
+  if [ "$actual_repo" != "$GH_REPO" ] && [ "$(canonical_repo "$actual_repo")" != "$(canonical_repo "$GH_REPO")" ]; then
+    echo "ERROR: existing checkout belongs to another repository ($actual_repo, expected $GH_REPO)" >&2; exit 1
+  fi
   say "exists $REPO_DIR — leaving contents alone"
 else
   run "gh repo clone '$GH_REPO' '$REPO_DIR'"
@@ -222,12 +238,19 @@ else
   say "/opt/$SLUG/shared/.env present"
 fi
 
-# --------------------------------------------------------------- deploy.yml
-echo "→ deploy.yml"
-DEPLOY_YML="$REPO_DIR/.github/workflows/deploy.yml"
+# --------------------------------------------------------------- workflows
+# deploy.yml (the CD shim), ci.yml and auto-merge.yml (from site-template) are
+# written to the remote through the GitHub Contents API, never through the
+# clone. The clone under DEV_ROOT is the box agent's WORKSPACE: on 2026-09-11
+# this step committed auto-merge.yml onto the agent's feature branch there and
+# then failed to push it. The remote is the only state that matters here.
+# Identity: this host's gh login first (it has the `workflow` scope the
+# studio needs), the caller's token second.
+echo "→ workflows"
+WF_TMP="$(mktemp -d)"
+trap 'rm -rf "$WF_TMP"' EXIT
 write_deploy_yml() {
-  mkdir -p "$(dirname "$DEPLOY_YML")"
-  cat > "$DEPLOY_YML" <<YML
+  cat > "$WF_TMP/deploy.yml" <<YML
 name: Deploy
 
 on:
@@ -244,80 +267,70 @@ jobs:
       HETZNER_SSH_PRIVATE_KEY: \${{ secrets.HETZNER_SSH_PRIVATE_KEY }}
 YML
 }
-# Writes the shim to the remote through whichever identity may. The caller's
-# token (GH_TOKEN from register-cd is the user's OAuth grant) needs the
-# `workflow` scope to touch .github/workflows/*; grants issued before that
-# scope was requested cannot, and the push is refused. This host's own gh
-# login is the studio's and has it, so it is the fallback — announced, never
-# assumed. A shim that is not on the remote is fatal: without it there is no
-# Deploy, and "registered" would be a lie.
-push_deploy_yml() {
-  local msg="$1"
-  (
-    cd "$REPO_DIR"
-    git add .github/workflows/deploy.yml
-    if git diff --cached --quiet; then
-      true
+# The release under /opt carries scripts/site-template without its .github
+# directory; the durable checkout follows main and has the files.
+SITE_TEMPLATE_WF="$HERE/../site-template/.github/workflows"
+[ -d "$FC_REPO/scripts/site-template/.github/workflows" ] && SITE_TEMPLATE_WF="$FC_REPO/scripts/site-template/.github/workflows"
+write_sidecar_workflows() {
+  local f
+  for f in ci.yml auto-merge.yml; do
+    [ -f "$SITE_TEMPLATE_WF/$f" ] || { say "⚠ site-template has no $f — skipping"; continue; }
+    sed "s|__SLUG__|$SLUG|g; s|__WORKFLOW_OWNER__|$WORKFLOW_OWNER|g" "$SITE_TEMPLATE_WF/$f" > "$WF_TMP/$f"
+  done
+}
+gh_host() { env -u GH_TOKEN -u GITHUB_TOKEN gh "$@"; }
+remote_workflow_sha() {
+  gh_host api "repos/$GH_REPO/contents/.github/workflows/$1" --jq .sha 2>/dev/null \
+    || gh api "repos/$GH_REPO/contents/.github/workflows/$1" --jq .sha 2>/dev/null
+}
+remote_workflow_body() {
+  gh_host api "repos/$GH_REPO/contents/.github/workflows/$1" --jq .content 2>/dev/null | base64 -d 2>/dev/null
+}
+workflow_on_remote() { remote_workflow_sha "$1" >/dev/null; }
+shim_on_remote() { workflow_on_remote deploy.yml; }
+put_workflow() {
+  local f="$1" msg="$2" sha ident
+  sha=$(remote_workflow_sha "$f" || true)
+  for ident in host caller; do
+    if [ "$ident" = host ]; then
+      gh_host api -X PUT "repos/$GH_REPO/contents/.github/workflows/$f" -f message="$msg" -f branch=main \
+        -f content="$(base64 -w0 < "$WF_TMP/$f")" ${sha:+-f sha="$sha"} >/dev/null 2>&1 && { say "$f written ($ident gh login)"; return 0; }
     else
-      git -c user.name='Cato' -c user.email='catomean@users.noreply.github.com' \
-        commit -m "$msg"
-      # Contents API / another register may have landed the same fix first.
-      if ! git push -u origin HEAD 2>/dev/null; then
-        git fetch origin HEAD 2>/dev/null || git fetch origin
-        if git pull --rebase --autostash origin HEAD 2>/dev/null \
-          || git pull --rebase --autostash origin main 2>/dev/null; then
-          git push -u origin HEAD 2>/dev/null || say "⚠ caller identity could not push deploy.yml — trying this host's gh login"
-        else
-          say "⚠ deploy.yml commit kept local; remote already has a newer shim — continuing"
-        fi
-      fi
+      gh api -X PUT "repos/$GH_REPO/contents/.github/workflows/$f" -f message="$msg" -f branch=main \
+        -f content="$(base64 -w0 < "$WF_TMP/$f")" ${sha:+-f sha="$sha"} >/dev/null 2>&1 && { say "$f written ($ident token)"; return 0; }
     fi
-  )
-  if ! shim_on_remote; then
-    put_deploy_yml_as_host "$msg"
+  done
+  say "⚠ $f could not be written to $GH_REPO by any identity here"
+  return 1
+}
+write_deploy_yml
+write_sidecar_workflows
+if [ "$DRY" = 1 ]; then
+  say "DRY  would write deploy.yml, ci.yml and auto-merge.yml (from site-template) to $GH_REPO via the Contents API"
+else
+  if ! workflow_on_remote deploy.yml; then
+    put_workflow deploy.yml "chore: add self-host deploy shim for $SLUG" || true
+  elif remote_workflow_body deploy.yml | grep -q 'secrets: inherit'; then
+    # Cross-owner callers (e.g. catomean/* → bitbaum/fleetcrown) cannot inherit.
+    put_workflow deploy.yml "fix: pass HETZNER_SSH_PRIVATE_KEY explicitly for cross-owner deploy" || true
+  else
+    say "deploy.yml already on the remote"
   fi
   shim_on_remote || { echo "ERROR: deploy.yml is not on $GH_REPO — no identity available here may write workflows" >&2; exit 1; }
-}
-shim_on_remote() {
-  env -u GH_TOKEN -u GITHUB_TOKEN gh api "repos/$GH_REPO/contents/.github/workflows/deploy.yml" --jq .sha >/dev/null 2>&1 \
-    || gh api "repos/$GH_REPO/contents/.github/workflows/deploy.yml" --jq .sha >/dev/null 2>&1
-}
-put_deploy_yml_as_host() {
-  local msg="$1" sha
-  sha=$(env -u GH_TOKEN -u GITHUB_TOKEN gh api "repos/$GH_REPO/contents/.github/workflows/deploy.yml" --jq .sha 2>/dev/null || true)
-  if env -u GH_TOKEN -u GITHUB_TOKEN gh api -X PUT "repos/$GH_REPO/contents/.github/workflows/deploy.yml" \
-       -f message="$msg" -f branch=main -f content="$(base64 -w0 < "$DEPLOY_YML")" ${sha:+-f sha="$sha"} >/dev/null 2>&1; then
-    say "deploy.yml written by this host's gh login ($(env -u GH_TOKEN -u GITHUB_TOKEN gh api user --jq .login 2>/dev/null || echo '?'))"
-    ( cd "$REPO_DIR" && git fetch -q origin && git reset -q --hard origin/main 2>/dev/null || true )
-  else
-    say "⚠ this host's gh login could not write deploy.yml either"
-  fi
-}
-if [ -f "$DEPLOY_YML" ] && grep -q 'secrets: inherit' "$DEPLOY_YML" 2>/dev/null; then
-  # Cross-owner callers (e.g. catomean/* → bitbaum/fleetcrown) cannot inherit.
-  if [ "$DRY" = 1 ]; then
-    say "DRY  would repair secrets: inherit → explicit HETZNER_SSH_PRIVATE_KEY"
-  else
-    write_deploy_yml
-    push_deploy_yml "fix: pass HETZNER_SSH_PRIVATE_KEY explicitly for cross-owner deploy"
-    say "repaired deploy.yml secrets mapping (push best-effort)"
-  fi
-elif [ -f "$DEPLOY_YML" ] && { [ "$DRY" = 1 ] || shim_on_remote; }; then
-  say "already present"
-elif [ -f "$DEPLOY_YML" ]; then
-  # The clone has it, the remote does not: a push the caller's token could not
-  # make (no `workflow` scope) left a local commit behind. The file being on
-  # disk here proves nothing about GitHub — velokiosk-sep10 sat "already
-  # present" through two registrations while every GET said the workflow was
-  # missing. Re-push through push_deploy_yml, which verifies the remote.
-  push_deploy_yml "chore: add self-host deploy shim for $SLUG"
-  say "deploy.yml was local only — now on the remote"
-elif [ "$DRY" = 1 ]; then
-  say "DRY  would write $DEPLOY_YML and push"
-else
-  write_deploy_yml
-  push_deploy_yml "chore: add self-host deploy shim for $SLUG"
-  say "committed and pushed deploy.yml"
+  # A sidecar already on the remote is refreshed when the template moved on:
+  # the site-template is the one copy of "how a site verifies and ships", and
+  # a site registered last week must not keep last week's CI forever.
+  for f in ci.yml auto-merge.yml; do
+    [ -f "$WF_TMP/$f" ] || continue
+    if ! workflow_on_remote "$f"; then
+      put_workflow "$f" "ci: verify and auto-merge (seeded by FleetCrown register)" \
+        || say "⚠ $f is not on $GH_REPO — agent PRs on this site will wait for a human merge"
+    elif ! remote_workflow_body "$f" | cmp -s - "$WF_TMP/$f"; then
+      put_workflow "$f" "ci: refresh $f from the FleetCrown site-template" || say "⚠ $f on $GH_REPO is stale and could not be refreshed"
+    else
+      say "$f already on the remote"
+    fi
+  done
 fi
 
 # ----------------------------------------------------------------- ci secret

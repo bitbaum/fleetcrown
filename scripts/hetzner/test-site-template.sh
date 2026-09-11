@@ -34,6 +34,24 @@ if [ ! -f "$CI" ]; then
 fi
 ok "the scaffold ships a ci.yml"
 
+# Every new site must merge its own green PRs, or an agent's fix waits for a
+# human forever (the last manual click on the loop, 2026-09-11).
+AM="$HERE/../site-template/.github/workflows/auto-merge.yml"
+[ -f "$AM" ] || { echo "  ✗ scaffold has no auto-merge.yml — agent PRs would wait for a human"; exit 1; }
+grep -q 'auto-merge-sweep.yml@main' "$AM" || { echo "  ✗ auto-merge.yml does not call the fleet sweep"; exit 1; }
+grep -q 'ci_workflow: ci.yml' "$AM" && grep -q 'deploy_workflow: deploy.yml' "$AM" \
+  || { echo "  ✗ auto-merge.yml must name ci.yml as CI and deploy.yml as the deploy"; exit 1; }
+grep -q -- '--if-present lint' "$CI" || { echo "  ✗ ci.yml must tolerate a starter without a lint script"; exit 1; }
+ok "the scaffold ships an auto-merge.yml that names its CI and Deploy"
+
+# Without this the chain after an auto-merge is: token merge (no push event) →
+# re-armed CI (no workflow_run) → nothing. The site then waits for the sweep's
+# reconciler tick (kaffeeklappe-sep11 waited an hour, 2026-09-11).
+grep -q "^  ship:" "$CI" || { echo "  ✗ ci.yml has no ship job — an auto-merged PR would wait for a sweep tick to deploy"; exit 1; }
+grep -q "gh workflow run deploy.yml" "$CI" || { echo "  ✗ ci.yml ship job does not dispatch deploy.yml"; exit 1; }
+grep -q "event_name == 'workflow_dispatch'" "$CI" || { echo "  ✗ ci.yml ship job must fire only for workflow_dispatch, or a push would ship twice"; exit 1; }
+ok "ci.yml ships on green main without waiting for a sweep tick"
+
 # Read once. Comments are NOT stripped: this file's comments deliberately name
 # the very things it checks for, and a comment-blind scan would pass on a file
 # whose only mention of `.next/cache` is prose explaining its absence. So each
@@ -77,7 +95,7 @@ fi
 want "installs from the lockfile (pnpm install --frozen-lockfile)" \
      '^[[:space:]]*-[[:space:]]*run:[[:space:]]*pnpm install --frozen-lockfile[[:space:]]*$'
 want "type-checks" '(run:.*type-check)'
-want "lints"       '(run:.*pnpm run lint)'
+want "lints (tolerating a starter without a lint script)" '(run:.*pnpm run (--if-present )?lint)'
 want "builds"      '(run:.*pnpm run build)'
 want "runs on pull_request, not only on push" '^[[:space:]]*pull_request:'
 want "declares a concurrency group" '^concurrency:'
@@ -107,7 +125,7 @@ if [ ! -f "$NVMRC" ]; then
   bad "no .nvmrc — CI pins Node from it"
 else
   node_major="$(tr -dc '0-9.' < "$NVMRC" | cut -d. -f1)"
-  if grep -q "pnpm" && [ "${node_major:-0}" -lt 22 ] <<< "$src"; then
+  if grep -q "pnpm" <<< "$src" && [ "${node_major:-0}" -lt 22 ]; then
     bad "CI uses pnpm but .nvmrc pins Node $node_major — pnpm 11 needs >= 22.13"
   else
     ok "Node floor (.nvmrc = $node_major) satisfies the package manager CI uses"
@@ -292,6 +310,47 @@ NS="$HERE/new-site.sh"
 if [ ! -f "$NS" ]; then
   bad "no new-site.sh"
 else
+  # WHERE it provisions decides WHETHER it provisions. Production FleetCrown is
+  # 127.0.0.1/fleetcrown — loopback only — so running provision-widget.ts from
+  # the laptop fails on every scaffold, and from an agent worktree it fails
+  # before the network (gitignored .env.local). Every agent-created site up to
+  # 2026-09-11 shipped with no widget because of it. Assert the box path, and
+  # assert the absence of the local one: adding the good call back while leaving
+  # the old one in place would look correct and still take the broken branch.
+  ns_live="$(sed 's/#.*//' "$NS")"
+  if grep -q 'provision-widget-on-box.sh' <<< "$ns_live"; then
+    ok "the widget is provisioned ON THE BOX, where the database actually is"
+  else
+    bad "new-site.sh does not use provision-widget-on-box.sh — prod FleetCrown is loopback-only"
+  fi
+  if grep -qE 'npx tsx .*scripts/provision-widget\.ts' <<< "$ns_live"; then
+    bad "new-site.sh still calls provision-widget.ts locally — that cannot reach prod"
+  else
+    ok "no local provision-widget.ts call left to fall back to"
+  fi
+
+  PWB="$HERE/provision-widget-on-box.sh"
+  if [ ! -f "$PWB" ]; then
+    bad "provision-widget-on-box.sh is missing"
+  else
+    # The older provisioner writes its token with NO trailing newline, and a
+    # bare `while read` drops an unterminated final line — silently discarding
+    # the one value the script exists to read, then reporting "no token" for a
+    # run that succeeded.
+    if grep -q 'read -r line || \[ -n "\$line" \]' "$PWB"; then
+      ok "the fragment reader keeps an unterminated final line"
+    else
+      bad "the fragment reader drops a token written without a trailing newline"
+    fi
+    # A half fragment (project id, no token) would look like success and leave
+    # the site with a widget that cannot authenticate.
+    if grep -q 'no token in output' "$PWB"; then
+      ok "it refuses to emit a fragment with no token"
+    else
+      bad "it can emit a token-less fragment, which reads as success"
+    fi
+  fi
+
   if grep -q 'WIDGET_TODO=' "$NS"; then
     ok "a failed widget provision is recorded for the summary"
   else

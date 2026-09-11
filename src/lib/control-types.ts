@@ -96,6 +96,8 @@ export type ProjectState = {
   dir: string;
   agentPref: string | null;
   modelPref: string | null;
+  /** Stored builder tier (`user_projects.builder_pref`). Null = cloud. */
+  builderPref: string | null;
   session: SessionState | null;
   git: GitState | null;
   sessionLifecycleSignals: boolean;
@@ -196,7 +198,7 @@ export type ControlData = {
   };
   projects: ProjectState[];
   prompts: import("@/lib/agent-config").PromptMeta[];
-  zellijTabs: string[];
+  liveTabs: string[];
   recentActivity: import("@/db/queries/prompt-history").ActivityItem[];
   runtimeAvailable: boolean;
   /** Latest RUNTIME push from any of this user's builders. Runtime pushes

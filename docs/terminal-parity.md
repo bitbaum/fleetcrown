@@ -3,9 +3,8 @@
 **Status:** server terminal FIXED (deployed); machine-terminal interactive parity SHIPPED &
 VERIFIED END-TO-END (2026-06-18) — bridge rawkey/resize fast lane + cloud endpoint + runner
 0.8.9 + interactive TerminalView all live. The final literal keystroke-echo test is now done:
-launched a throwaway Claude agent on `truthseeker` (a project with no existing zellij tab, so
-the Fleet Runner owned a fresh PTY — confirmed `bash -lic … claude` as a direct child of the
-runner PID), opened "My machine" → that tab, typed `ECHOTEST42` in the browser xterm, and it
+launched a throwaway Claude agent on `truthseeker` (the Fleet Runner spawned it in a fresh
+owned PTY — confirmed `bash -lic … claude` as a direct child of the runner PID), opened "My machine" → that tab, typed `ECHOTEST42` in the browser xterm, and it
 round-tripped the full chain (xterm onData → `POST /api/control/tab-inject-raw` → bridge
 rawkey → runner `onRawKey` → `writeRawKey` → owned PTY → Claude TUI render → `pty.onData` →
 peek-stream SSE → xterm) and echoed in the prompt box. Killing the test agent left the runner
@@ -52,10 +51,11 @@ keystrokes → `tab-inject-raw` → bridge `rawkey` → runner `writeRawKey`. Op
   (the server-terminal race fix, now in ONE place), fit/resize and chrome; the transport owns
   I/O. This is the "same xterm view, two substrates" the `TerminalSurface` doc-comment promised
   — now delivered. Adding a third substrate = a third factory, no view change.
-- `PeekTabDrawer` (one-shot zellij dump-screen snapshot) is largely superseded by live PTY
-  streaming — candidate for removal.
-- `ZellijLivePanel` / `ZellijLiveRows` on Control overlap the "My machine" terminal — audit
-  for retirement once the unified terminal lands.
+- `PeekTabDrawer` now reads the owned PTY buffer (the zellij dump-screen snapshot it was
+  built on is gone as of 0.8.19). It overlaps live PTY streaming — candidate for removal.
+- `LiveTerminalPanel` / `LiveTerminalRows` on Control (renamed from `ZellijLivePanel` /
+  `ZellijLiveRows` on 2026-09-11) render the runner's owned PTYs (`liveTabs` from
+  `/api/control`); they overlap the "My machine" terminal — audit for retirement.
 
 ## Relationship to Loki
 

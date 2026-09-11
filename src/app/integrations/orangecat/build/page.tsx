@@ -17,9 +17,9 @@ export const metadata = {
 export default async function OrangeCatBuildPage({
   searchParams,
 }: {
-  searchParams: Promise<{ intent?: string }>;
+  searchParams: Promise<{ intent?: string; review?: string }>;
 }) {
-  const { intent: token } = await searchParams;
+  const { intent: token, review } = await searchParams;
   if (!token || token.length > 20_000) {
     return <InvalidHandoff message="This OrangeCat build handoff is missing or invalid." />;
   }
@@ -82,7 +82,12 @@ export default async function OrangeCatBuildPage({
   return (
     <PublicSurface right={<PublicHeaderActions />}>
       <main className="mx-auto max-w-5xl px-6 py-16 sm:py-24">
-        <OrangeCatBuildHandoff token={token} intent={intent} projects={options} />
+        <OrangeCatBuildHandoff
+          token={token}
+          intent={intent}
+          projects={options}
+          review={review === "1"}
+        />
       </main>
     </PublicSurface>
   );

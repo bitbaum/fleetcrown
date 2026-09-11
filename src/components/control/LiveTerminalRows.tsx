@@ -1,14 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Crosshair, Eye, Maximize2, Trash2 } from "lucide-react";
+import { Eye, Maximize2, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { LiveTabRow } from "./control-presenter";
 import { PeekTabDrawer } from "./PeekTabDrawer";
 import { STATE_DEFINITIONS } from "@/lib/control-states";
 
 /** Look up the SSOT description + problem hint for a row's state. Unmatched
- *  zellij tabs (stateKey === null, "Open" rows) get a generic description
+ *  agent terminals (stateKey === null, "Open" rows) get a generic description
  *  honest about what we know: only that a tab exists. */
 function rowStateMeta(row: LiveTabRow): {
   description: string;
@@ -30,7 +30,6 @@ type Props = {
   rows: LiveTabRow[];
   /** Row to visually emphasize (push-notification deep-link). */
   highlightTab?: string | null;
-  focusTab: (tabName: string) => void;
   closeTab: (tabName: string) => void;
   onFocusProject?: (tab: string) => void;
 };
@@ -39,7 +38,7 @@ type Props = {
  * Renders the live-tab rows in two flavors: a sortable-looking table at
  * md+ widths and a vertical card stack at smaller widths. Both are mounted
  * always — Tailwind toggles `hidden md:block` / `md:hidden`. Lives here
- * instead of inline inside ZellijLivePanel because the dual rendering is
+ * instead of inline inside LiveTerminalPanel because the dual rendering is
  * ~150 lines and obscures the panel's actual orchestration (header,
  * composer, empty states).
  *
@@ -47,7 +46,7 @@ type Props = {
  * back to the runner-backed pending_commands path, so it is useful from web
  * and mobile too.
  */
-export function ZellijLiveRows({ rows, highlightTab, focusTab, closeTab, onFocusProject }: Props) {
+export function LiveTerminalRows({ rows, highlightTab, closeTab, onFocusProject }: Props) {
   const [peekTab, setPeekTab] = useState<string | null>(null);
 
   const isHighlighted = (tabName: string) =>
@@ -107,14 +106,6 @@ export function ZellijLiveRows({ rows, highlightTab, focusTab, closeTab, onFocus
                     >
                       <Eye className="h-3.5 w-3.5" />
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => focusTab(row.tabName)}
-                      className="ui-icon-action p-0.5"
-                      title={`Focus ${row.tabName} in Zellij`}
-                    >
-                      <Crosshair className="h-3.5 w-3.5" />
-                    </button>
                     {row.project && onFocusProject && (
                       <button
                         type="button"
@@ -173,14 +164,6 @@ export function ZellijLiveRows({ rows, highlightTab, focusTab, closeTab, onFocus
                   title="Peek terminal"
                 >
                   <Eye className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => focusTab(row.tabName)}
-                  className="ui-icon-action p-0.5"
-                  title="Focus in Zellij"
-                >
-                  <Crosshair className="h-3.5 w-3.5" />
                 </button>
                 {row.project && onFocusProject && (
                   <button

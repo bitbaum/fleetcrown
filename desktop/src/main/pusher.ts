@@ -9,7 +9,7 @@
  * still worked, but the user couldn't tell the daemon was alive.
  *
  * This pusher fixes that. Every PUSH_INTERVAL_MS it sends:
- *   - openTabs: live list of Zellij tab names (so /control's per-project
+ *   - openTabs: live list of owned-PTY tab names (so /control's per-project
  *     "tab open" badges stay accurate)
  *   - projects: empty array (per-project session details are written by
  *     the embedded watcher to its own table; this pusher only signals
@@ -31,8 +31,6 @@
 import { readdirSync } from 'fs'
 import { homedir } from 'os'
 import { join } from 'path'
-import { getZellijTabs } from '@/lib/zellij'
-import { getZellijPaneTabMap } from '@/lib/terminals/zellij'
 import { APP_URL } from '@/config/brand'
 import { readPowerSource } from './power-source'
 import { DAEMON_HEARTBEAT_MS } from '@/lib/constants/daemon'
@@ -55,7 +53,6 @@ import { fleetSessionsDir, legacyClaudeSessionsDir } from '@/lib/session-paths'
 // because this was a load-time const.
 const runnerVersion = (): string => process.env.FLEETCROWN_RUNNER_VERSION ?? 'dev'
 
-const DEFAULT_SESSION_NAME = 'fleet'
 
 // v0.6 — liveness heartbeat ONLY. Actual state changes are pushed via
 // pushNow() the moment the watcher detects an agent file change (wired
@@ -85,17 +82,11 @@ async function pushOnce(): Promise<void> {
   let projects: ReturnType<typeof buildProjectRuntimePayload> = []
   let installedAgents: string[] = []
   let panes: PaneRecord[] = []
+  // "Open tabs" = tabs backed by a live owned PTY. Nothing else hosts an agent
+  // on this runner, so nothing else is a tab.
   try {
-    openTabs = await getZellijTabs()
-  } catch {
-    // No Zellij running, tab query failed — push anyway with an empty list
-    // so the daemon presence signal still gets through.
-  }
-  // Tabs backed by a FleetCrown-owned PTY aren't zellij tabs, so merge them in
-  // (deduped) — otherwise a PTY-run project reads as "no tab open" in the UI.
-  try {
-    openTabs = [...new Set([...openTabs, ...listPtyTabs()])]
-  } catch { /* executor not ready — ignore */ }
+    openTabs = listPtyTabs()
+  } catch { /* executor not ready — push an empty list so presence still lands */ }
   try {
     installedAgents = listAgentRegistry()
       .filter((entry) => entry.available)
@@ -198,24 +189,20 @@ type ProjectRuntimePayload = {
  * PaneRecord naming the tab it belongs to and the agent CLI running in it.
  * This is what lets the UI label a tab "claude" vs "grok" instead of guessing.
  * paneIndex is the array position within the tab — stable for sort but doesn't
- * correspond to zellij's internal pane index (zellij's dump-layout emits bare
+ * correspond to any terminal's pane index (there is no multiplexer; panes are
  * panes with no cwd or command, so there is nothing cheaper to read).
  * Stable order is the contract.
  *
- * Tab resolution walks three sources, in order:
- *   1. zellij's own pane→tab map, joined via the ZELLIJ_PANE_ID each agent
- *      process inherits. This is the only source that works for a
- *      DEFAULT-NAMED tab ("Tab #3"), which shares no string with the project
- *      dir — i.e. the common case of "claude in one tab, grok in another".
- *   2. agent-projects.conf, which names the tab for a dir explicitly.
- *   3. the process's own cwd basename — because conf is a LEGACY laptop
+ * Tab resolution walks two sources, in order:
+ *   1. agent-projects.conf, which names the tab for a dir explicitly.
+ *   2. the process's own cwd basename — because conf is a LEGACY laptop
  *      dotfile. The headless box never had one (it clones on demand), and
  *      laptops have stopped maintaining it, so a conf-only walk emitted ZERO
  *      panes on both channels and the agent badge could never populate. This
  *      is the same trap projectEntries() below already learned; the running
  *      processes are the ground truth this payload exists to report.
  *
- * A process we cannot tie to an open tab by any of the three is dropped.
+ * A process we cannot tie to an open tab by either is dropped.
  * Emitting a guess would be worse than emitting nothing: the UI would
  * confidently name the wrong agent.
  */
@@ -224,21 +211,10 @@ function buildPaneTopology(openTabs: string[]): PaneRecord[] {
   const agentProcesses = getAgentProcesses(registry)
   const conf = parseProjectsConf()
 
-  // One metadata read per zellij session present among the live processes.
-  const paneMaps = new Map<string, Map<number, string>>()
-  for (const p of agentProcesses) {
-    if (p.zellijSession && !paneMaps.has(p.zellijSession)) {
-      paneMaps.set(p.zellijSession, getZellijPaneTabMap(p.zellijSession))
-    }
-  }
-
   const byTab = new Map<string, typeof agentProcesses>()
   for (const p of agentProcesses) {
-    const viaPane = p.zellijSession && p.zellijPaneId !== undefined
-      ? paneMaps.get(p.zellijSession)?.get(p.zellijPaneId)
-      : undefined
     const confEntry = conf.find(({ dir }) => p.cwd === dir || p.cwd.startsWith(`${dir}/`))
-    const rawTab = viaPane ?? confEntry?.tab ?? (p.cwd.split('/').filter(Boolean).pop() ?? p.cwd)
+    const rawTab = confEntry?.tab ?? (p.cwd.split('/').filter(Boolean).pop() ?? p.cwd)
     const resolvedTab = resolveEffectiveTab(rawTab, openTabs)
     const openTab = openTabs.find((t) => t.toLowerCase() === resolvedTab.toLowerCase())
     if (!openTab) continue
@@ -260,7 +236,6 @@ function buildPaneTopology(openTabs: string[]): PaneRecord[] {
           paneIndex: i,
           agentCli: p.agentId,
           cwd: p.cwd,
-          sessionName: DEFAULT_SESSION_NAME,
         })
       })
   }

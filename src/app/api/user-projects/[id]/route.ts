@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { BUILDER_CHANNELS } from "@/lib/constants/statuses";
 import { getSessionUserId } from "@/lib/session";
 import { readJsonBody, readIdParam, z } from "@/lib/api/route-helpers";
 import { emptyToUndefined } from "@/lib/validation";
@@ -13,6 +14,7 @@ const UpdateBody = z.object({
   stack: z.preprocess(emptyToUndefined, z.string().trim().max(200).optional()),
   agentPref: z.preprocess(emptyToUndefined, z.string().trim().max(60).optional()),
   modelPref: z.preprocess(emptyToUndefined, z.string().trim().max(160).optional()),
+  builderPref: z.preprocess(emptyToUndefined, z.enum(BUILDER_CHANNELS).optional()),
   notes: z.preprocess(emptyToUndefined, z.string().trim().max(4000).optional()),
   position: z.number().int().min(0).optional(),
   isActive: z.boolean().optional(),

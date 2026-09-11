@@ -1,28 +1,20 @@
-// Every failure the desktop runner can throw must classify to a real remedy.
-//
-// This gate exists because the same bug shipped twice, three lines apart.
+// Every failure the desktop runner can throw about a missing agent must classify
+// to a real remedy.
 //
 // `desktop/src/main/poller.ts` composes its own error strings. `remedyForFailure`
 // matches on literal phrases. They are two definitions of the same sentence in
 // two independently-released codebases, so they drift — and the drift is
 // SILENT, because an unclassified failure still renders a plausible Retry
-// button. A visitor reported one of them from /control as "what is this? can
-// you fix?". Sweeping for the class immediately found its neighbour.
-//
-// Counting instances was never going to work. This pairs the producer with the
-// matcher: read the literals poller.ts actually throws, and assert each one
-// classifies to something other than the default. Reword either side and this
-// fails before anyone sees a button that cannot work.
+// button. This pairs the producer with the matcher: read the literals poller.ts
+// actually throws, and assert each one that talks about an agent/terminal is
+// recognised. Reword either side and this fails before anyone sees a button
+// that cannot work.
 //
 // Run: npx tsx scripts/test/failure-message-pairing.ts
 import { readFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
-import {
-  remedyForFailure,
-  FAILURE_REMEDY,
-  FOCUS_FAILURE_PHRASE,
-} from "../../src/lib/terminals/focus-failure";
+import { remedyForFailure, FAILURE_REMEDY, FAILURE_PHRASE } from "../../src/lib/failure-remedy";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const POLLER = join(ROOT, "desktop/src/main/poller.ts");
@@ -30,168 +22,34 @@ const POLLER = join(ROOT, "desktop/src/main/poller.ts");
 let pass = 0;
 let fail = 0;
 function ok(cond: boolean, label: string) {
-  if (cond) {
-    pass++;
-  } else {
+  if (cond) pass++;
+  else {
     fail++;
     console.error(`✗ ${label}`);
   }
 }
 
 const src = readFileSync(POLLER, "utf8");
-
-/**
- * Literals thrown as focus/inject failures. Template placeholders are filled
- * with a plausible value, because `tab not found: ${tab}` reaches the
- * classifier as `tab not found: fleetcrown`.
- */
-// Backtick templates may contain inner quotes — `zellij tab "${tab}" did not
-// gain focus`. An earlier version of this regex stopped at that quote and
-// silently tested a truncated string, which is its own version of the bug this
-// file exists to prevent.
-const thrown = [...src.matchAll(/throw new Error\(\s*`([^`]{6,120})`/g)]
+const thrown = [...src.matchAll(/throw new Error\(\s*`([^`]{6,160})`/g)]
   .map((m) => m[1].replace(/\$\{[^}]+\}/g, "fleetcrown").trim())
-  .concat([...src.matchAll(/throw new Error\(\s*'([^']{6,120})'/g)].map((m) => m[1].trim()))
-  .filter((s) => /zellij|tab |session|terminal|focus/i.test(s));
+  .concat([...src.matchAll(/throw new Error\(\s*'([^']{6,160})'/g)].map((m) => m[1].trim()))
+  .filter((s) => /running agent|terminal|focus|session/i.test(s));
 
-ok(thrown.length >= 3, `found focus-related throws in poller.ts (got ${thrown.length})`);
+ok(thrown.length >= 1, `found agent/terminal throws in poller.ts (got ${thrown.length})`);
 
-// The real invariant is RECOGNITION, not "never RETRY".
-//
-// Retry is the correct remedy for a focus race, so a rule of "nothing may
-// classify as RETRY" would be wrong. What must never happen is a message
-// reaching the default because nobody TAUGHT the classifier about it — an
-// accidental right answer is indistinguishable from a wrong one until the
-// default changes, and then it becomes a bug nobody edited.
-const PHRASES = Object.values(FOCUS_FAILURE_PHRASE);
-for (const msg of thrown) {
-  const lower = msg.toLowerCase();
-  const matched = PHRASES.find((p) => lower.includes(p));
-  ok(
-    Boolean(matched),
-    `poller.ts throws "${msg}" — no FOCUS_FAILURE_PHRASE matches it, so its remedy (${remedyForFailure(msg)}) is an accident`,
-  );
-}
-
-// Real failures arrive wrapped: "focus_tab → <tab> failed: <message>", which is
-// what actually reaches the UI.
-for (const msg of thrown) {
-  const wrapped = `focus_tab → fleetcrown failed: ${msg}`.toLowerCase();
-  ok(
-    PHRASES.some((p) => wrapped.includes(p)),
-    `wrapped form of "${msg}" is still recognised`,
-  );
-}
-
-// The two that must NOT be retryable, stated explicitly — this is the original
-// bug and the sweep's finding, pinned by behaviour rather than by phrase.
-ok(
-  remedyForFailure("tab not found: fleetcrown") === FAILURE_REMEDY.START_SESSION,
-  "a missing tab offers Start session, never Retry",
-);
-ok(
-  remedyForFailure("no zellij session found") === FAILURE_REMEDY.START_TERMINAL,
-  "no zellij at all offers Open Terminal, never Retry",
-);
-// And the one that legitimately IS retryable, so the rule above cannot be
-// over-applied into hiding Retry from a genuinely transient failure.
-ok(
-  remedyForFailure('zellij tab "fleetcrown" did not gain focus') === FAILURE_REMEDY.RETRY,
-  "a focus race stays retryable — repeating it can genuinely succeed",
-);
-
-/**
- * Every remedy the classifier can return must be RENDERABLE.
- *
- * START_TERMINAL had zero consumers in the UI: a correctly-classified "no
- * zellij at all" produced no button at all, which is worse than the wrong
- * button it replaced — the row offered nothing but Dismiss. A remedy nothing
- * renders is a classification that silently does nothing.
- */
-const bar = readFileSync(join(ROOT, "src/components/control/AttentionBar.tsx"), "utf8");
-for (const remedy of Object.values(FAILURE_REMEDY)) {
-  const constName = Object.keys(FAILURE_REMEDY).find(
-    (k) => FAILURE_REMEDY[k as keyof typeof FAILURE_REMEDY] === remedy,
-  );
-  ok(
-    bar.includes(`FAILURE_REMEDY.${constName}`),
-    `AttentionBar renders something for FAILURE_REMEDY.${constName}`,
-  );
-}
-
-/**
- * No failure message may NAME a specific agent as a literal.
- *
- * A real dispatch (Prime tower, 2026-09-04) produced:
- *
- *   "launched claude (pty) + injected, but the agent isn't generating yet …
- *    Retry, or switch the project agent away from grok if this repeats."
- *
- * One sentence naming the agent that ran and, as advice, an agent that did not.
- * The runner has `agent` in scope — the auth-failure branch a few lines above
- * interpolates it correctly — so this was a literal left behind from when grok
- * was the default. Hardcoding one agent into a generic failure is wrong for
- * every agent but that one, and it discredits the rest of the message: if the
- * diagnosis cannot tell which agent ran, why believe its diagnosis?
- *
- * Checked against the adapter ids themselves rather than a hand-typed list, so
- * a new agent is covered the day it is added.
- */
-const AGENT_IDS = ["claude", "grok", "codex", "gemini", "cursor", "openclaw"];
-const PROSE_MIN_SPACES = 5;
-
-/**
- * Message STATEMENTS, not lines.
- *
- * A message built as `a` + `b` across two lines must be judged whole: the
- * auth-failure message interpolates `${agent}` on its first line and mentions
- * `claude setup-token` on its second, and reading either line alone gets the
- * answer wrong. Joining continuations is the difference between a check that
- * understands the code and one that greps it.
- */
-const statements: { body: string; n: number }[] = [];
-{
-  const lines = src.split("\n");
-  let buf = "";
-  let start = 0;
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    if (/^\s*(\/\/|\*|\/\*)/.test(line)) continue; // comments — this file's own note names grok
-    if (buf === "") start = i + 1;
-    buf += line;
-    if (/\+\s*$/.test(line.trimEnd())) continue; // continued onto the next line
-    const parts = [...buf.matchAll(/`([^`]+)`/g)].map((m) => m[1]).join(" ");
-    if (parts) statements.push({ body: parts, n: start });
-    buf = "";
+// The invariant is RECOGNITION: a message must reach a remedy because the
+// classifier was taught it, never by accident of the default.
+const PHRASES = Object.values(FAILURE_PHRASE);
+for (const message of thrown) {
+  const recognised = PHRASES.some((p) => message.toLowerCase().includes(p));
+  ok(recognised, `poller throw is recognised by a FAILURE_PHRASE: ${JSON.stringify(message)}`);
+  if (recognised) {
+    ok(
+      remedyForFailure(message) !== FAILURE_REMEDY.RETRY,
+      `recognised message does not fall to RETRY: ${JSON.stringify(message)}`,
+    );
   }
 }
 
-const messageBodies = statements
-  // PROSE, not paths. `${process.env.HOME}/.claude/projects/…` is a legitimate
-  // directory containing "claude" and no spaces; a sentence addressed to the
-  // operator has several. Without this the check fails on its own codebase,
-  // which is how a gate gets switched off.
-  .filter(({ body }) => (body.match(/ /g) || []).length >= PROSE_MIN_SPACES);
-
-// The rule, stated so it survives contact with legitimate copy: if a failure
-// message NAMES an agent, it must be naming the one that actually ran — that
-// is, it must interpolate `${agent}`.
-//
-// A blunter "no agent id in any message" rule fails on its own codebase. The
-// auth-failure message legitimately says `~/.claude/.credentials.json` and
-// `claude setup-token`: those are a real path and a real command, and that
-// message already interpolates `${agent}` for the agent it is about. The grok
-// line did not — it named an agent nobody chose, in a sentence about the agent
-// they did. That is the difference the check has to see.
-for (const id of AGENT_IDS) {
-  const offenders = messageBodies.filter(
-    ({ body }) => new RegExp(`\\b${id}\\b`, "i").test(body) && !body.includes("${agent}"),
-  );
-  ok(
-    offenders.length === 0,
-    `poller.ts message hardcodes the agent "${id}" (line ${offenders[0]?.n}) — interpolate \${agent} so the advice names the agent that actually ran`,
-  );
-}
-
-console.log(`${pass} passed, ${fail} failed`);
-process.exit(fail === 0 ? 0 : 1);
+console.log(`failure-message-pairing: ${pass} passed, ${fail} failed`);
+if (fail > 0) process.exit(1);

@@ -2,11 +2,13 @@
 
 ---
 created_date: 2026-05-21
-last_modified_date: 2026-09-10
-last_modified_summary: Clarify shared cloud builder is eligible-accounts only (execution-access).
+last_modified_date: 2026-09-11
+last_modified_summary: Cloud is the stored default tier; local is a per-project choice; every builder drives owned PTYs (zellij removed, Fleet Runner 0.8.19).
 ---
 
 FleetCrown is a **hybrid** product: the hosted web app (cloud control plane) owns auth, the database, and the UI. Agents run via the **builder** — the cloud service on Hetzner (box-runner) and/or the optional desktop app on your computer.
+
+**Which builder runs a project is a stored decision, never a guess.** `pickDispatchChannel(project)` in `src/lib/execution-access.ts` reads the project only: a locus lock (a checkout that exists on one machine stays there; a checkout under the box clone root stays cloud), then the project's `builder_pref` ("Runs on" in Control → project profile), then the cloud floor (`DEFAULT_BUILDER_CHANNEL = "cloud"`). Runner presence and laptop power do not route; a chosen builder that is offline queues the work visibly (`runnerConnected: false`) instead of rerouting it. Every builder runs the agent in a PTY it owns (node-pty) — there is no terminal multiplexer anywhere in the product since Fleet Runner 0.8.19.
 
 **Shared cloud execution is restricted.** The always-on box-runner is not a multi-tenant sandbox. Until hosted execution is sandboxed per account, only eligible accounts (`isDefault` or `FLEETCROWN_CLOUD_BUILDER_USER_IDS`) may use the shared cloud builder. Everyone else runs through their own Fleet Runner on this computer (`src/lib/execution-access.ts`). Docs and UI must not pretend cloud building is universal.
 
@@ -58,7 +60,7 @@ Fleet Runner embeds the `home/` orchestration library (`watcher.ts` + `worker.ts
 | **Long-poll claim** | Runner claims pending commands via `SELECT … FOR UPDATE SKIP LOCKED` so two runners never grab the same job |
 | **Idempotent replay** | On restart the worker replays the JSONL log to rebuild which `runId`s already started; it refuses to double-fire |
 | **Append-only event log** | `~/.fleetcrown/events.jsonl` is the single source of truth for crash recovery |
-| **Connection-based presence** | Runner online/offline is the live bridge SSE connection, not a heartbeat (see `runner_presence`) |
+| **Connection-based presence** | Runner online/offline is the live bridge SSE connection, not a heartbeat (see `runner_presence`). Presence tells you whether queued work will run now; it never selects the builder |
 | **Auto-continue pause sentinel** | `/tmp/fleetcrown-auto-continue-<tab>` — respected by the runner's autopilot path |
 
 ## Component roles (builder vs web app)
@@ -96,7 +98,7 @@ Priority stack: `docs/architecture/priority-plan-2026-H2.md`.
 | Workflow | Local dependency |
 |----------|------------------|
 | Agent dispatch (Control) | Authorized cloud builder or connected Fleet Runner + supported agent CLI |
-| Live Zellij tab list on Control (cloud) | Fleet Runner pushes `openTabs` → `runtime_snapshots` table |
+| Live agent-terminal list on Control (cloud) | Each runner pushes its owned-PTY tabs as `openTabs` → `runtime_snapshots` (one row per channel) |
 | Project orchestration (cloud queues; runner executes) | Authorized builder and project worker session |
 | Agent selection | Project `agentPref`, adapter capabilities and builder availability; do not infer support from terminal labels |
 | Bootstrap with AI, AI brief | Local `claude` CLI |
@@ -108,7 +110,7 @@ Priority stack: `docs/architecture/priority-plan-2026-H2.md`.
 | Run cron job now | Local openclaw |
 | Auto-continue pause from web (cloud) | Queued `auto_continue` command → runner writes `/tmp` sentinel |
 | Push notifications (agent ready) | Browser subscribe + VAPID on server; `/api/push/notify` |
-| **Terminal → My machine** (live agent view) | Fleet Runner owns the agent PTY (v0.8.3+); `/terminal` streams it via peek_start → peek-frame → SSE. Requires Fleet Runner v0.8.5+ for reliable peek (no zellij hang on detached sessions). |
+| **Terminal → My machine** (live agent view) | Fleet Runner owns every agent PTY (0.8.19: no other terminal exists); `/terminal` streams it via peek_start → peek-frame → SSE; peek reads the owned buffer. |
 
 ### Terminal page (`/terminal`)
 
@@ -121,7 +123,7 @@ Two sources behind one view (toggle **Cloud** | **This computer**):
 
 Loki and Control do **not** connect to Terminal directly. They enqueue `pending_commands`; a builder injects into the agent CLI; Terminal is the watch surface (`source=server` or `source=machine`).
 
-**This computer** lists open tabs from the runner heartbeat (`/api/control/open-tabs`) and streams the selected tab via peek APIs. **Cloud** uses server workspaces for the hosted builder.
+**This computer** lists the owned PTYs the runner reported in its heartbeat (`/api/control/open-tabs`; locally `listOwnedTabs` in `src/lib/agent-execution/owned.ts`) and streams the selected one via peek APIs. **Cloud** uses server workspaces for the hosted builder.
 
 ### Environment-gated (optional features)
 
@@ -144,8 +146,8 @@ Loki and Control do **not** connect to Terminal directly. They enqueue `pending_
  PostgreSQL (pending_commands, runtime_snapshots, runner_presence, …)
    ▲
    │  long-poll claim (SKIP LOCKED) + push runtime state
- Fleet Runner desktop  (embeds home/ watcher + worker)
-   │  inject → Zellij tabs → agent CLIs
+ Fleet Runner desktop  (embeds home/ watcher)
+   │  inject → owned PTYs → agent CLIs
    ▼
  Your projects on disk
 ```

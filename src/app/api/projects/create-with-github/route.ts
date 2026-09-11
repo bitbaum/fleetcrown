@@ -10,7 +10,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSessionUserId } from "@/lib/session";
-import { getGithubToken } from "@/lib/github-token";
+import { getRepoWriteToken } from "@/lib/github-org-token";
 import { createProject } from "@/db/queries/projects";
 import { SOURCE_FLEETCROWN_UI } from "@/lib/constants";
 import { TEMPLATES, renderTemplate } from "@/lib/project-templates";
@@ -42,7 +42,8 @@ export async function POST(req: NextRequest) {
   }
   const { name, description, visibility, init_readme, template } = parsed.data;
 
-  const token = await getGithubToken(userId);
+  const write = await getRepoWriteToken(userId);
+  const token = write?.token ?? null;
   if (!token) {
     return NextResponse.json(
       {

@@ -54,8 +54,8 @@ worktree flag has been dogfooded). **SSOT:** `src/lib/run-tab.ts`.
 When a project is busy, instead of queueing (`queuedBehind`) the dispatch fires
 immediately under a **derived tab alias** `<project>~<runId8>`. Because the
 whole loop is tab-keyed, every mechanism composes unchanged: own PTY workspace
-(`runner:<alias>`), own session file (`<alias>.md`), own sentinels, own zellij
-tab, own worktree. The pieces that ARE alias-aware:
+(`runner:<alias>`), own session file (`<alias>.md`), own sentinels, own
+worktree. The pieces that ARE alias-aware:
 
 - **Dispatch route** (`run/route.ts`): mints the alias, bakes the Exit contract
   with the alias session path, stores `payload.sessionTab` on the run — the run

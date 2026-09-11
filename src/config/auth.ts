@@ -102,6 +102,11 @@ export const PUBLIC_NAV: PublicNavEntry[] = [
           },
           { label: "Roadmap", href: "/roadmap", description: "What works now and what comes next" },
           { label: "Changelog", href: "/releases", description: "Every shipped release" },
+          {
+            label: "The fleet",
+            href: "/fleet",
+            description: "Every project the studio runs, and where each one lives",
+          },
           { label: "Docs", href: "/docs", description: "Install, connect, and operate your fleet" },
           {
             label: "Whitepaper",

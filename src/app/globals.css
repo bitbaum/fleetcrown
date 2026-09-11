@@ -1162,6 +1162,53 @@
   }
   /* Collapsed archive sections on public index pages (thoughts, releases) —
      native <details>, opens without JS, links stay crawlable. */
+  /* /fleet — the register as a list. One row per project: name + slug,
+     the site (host, kind · status), and one chip per system the project
+     exists in. Absent chips stay in the row, dimmed, so every row has the
+     same shape and a missing profile reads as a gap rather than as nothing. */
+  .ui-public-fleet-list {
+    @apply divide-y divide-border-subtle border-y border-border-subtle;
+  }
+  .ui-public-fleet-row {
+    @apply grid grid-cols-1 gap-x-6 gap-y-2 py-4 sm:grid-cols-[minmax(0,1.3fr)_minmax(0,1.3fr)_auto] sm:items-start;
+  }
+  .ui-public-fleet-name {
+    @apply text-base font-semibold text-text-primary;
+  }
+  .ui-public-fleet-slug {
+    @apply mt-0.5 font-mono text-xs text-text-tertiary;
+  }
+  .ui-public-fleet-site {
+    @apply break-all text-sm text-text-secondary transition-colors hover:text-text-primary;
+  }
+  .ui-public-fleet-none {
+    @apply text-sm text-text-muted;
+  }
+  .ui-public-fleet-presence {
+    @apply flex flex-wrap gap-1.5 sm:justify-end;
+  }
+  .ui-public-fleet-presence-on {
+    @apply inline-flex items-center rounded-md border border-border-subtle px-2 py-1 font-mono text-[11px] text-text-secondary transition-colors hover:border-border-interactive hover:text-text-primary;
+  }
+  .ui-public-fleet-presence-off {
+    @apply inline-flex items-center rounded-md border border-dashed border-border-subtle px-2 py-1 font-mono text-[11px] text-text-muted opacity-60;
+  }
+  /* "What is missing" — three counts that should fall. Big number, one line
+     of consequence; the number is the accent because it is the only thing on
+     this page that asks for action. */
+  .ui-public-fleet-gaps {
+    @apply grid grid-cols-1 gap-4 sm:grid-cols-3;
+  }
+  .ui-public-fleet-gap {
+    @apply flex flex-col gap-2 rounded-2xl border border-border-subtle bg-surface-base p-5;
+  }
+  .ui-public-fleet-gap-num {
+    @apply font-mono text-4xl font-semibold tracking-tight text-accent-warm;
+  }
+  .ui-public-fleet-gap-label {
+    @apply text-sm leading-snug text-text-secondary;
+    text-wrap: pretty;
+  }
   .ui-public-archive {
     @apply rounded-2xl border border-border-subtle bg-surface-base px-5 py-4;
   }

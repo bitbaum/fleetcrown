@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import { stateFile } from "@/lib/agent-config";
-import { injectIntoTab } from "@/lib/zellij";
+import { injectOwned, NoLiveSessionError } from "@/lib/agent-execution/owned";
 import { getSessionUserId } from "@/lib/session";
 import { getUserProjects } from "@/db/queries/user-projects";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
@@ -15,10 +15,8 @@ export async function POST(req: NextRequest) {
   const userId = await getSessionUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  // Cloud mode has no zellij and no agent panes to clear. Before this guard
-  // the call landed at injectIntoTab which threw a generic "zellij not found"
-  // 500 that the UI didn't surface — silent no-op for the user. Returning
-  // a clear 503 lets the caller (and any future caller) react properly.
+  // Cloud mode owns no agent PTYs to clear. Returning a clear 503 lets the
+  // caller react instead of a silent no-op.
   if (!isRuntimeAvailable()) {
     return NextResponse.json(
       { ok: false, reason: "runtime_offline", error: "Clear context requires the local runner" },
@@ -38,7 +36,7 @@ export async function POST(req: NextRequest) {
   const canonical = dbMatch.name;
 
   try {
-    injectIntoTab(canonical, "/clear");
+    injectOwned(userId, canonical, "/clear");
     // /clear is not a prompt — clear the running-prompt state so UI shows idle
     try {
       fs.unlinkSync(stateFile.prompt(canonical));
@@ -46,6 +44,9 @@ export async function POST(req: NextRequest) {
       /* already gone */
     }
   } catch (err) {
+    if (err instanceof NoLiveSessionError) {
+      return NextResponse.json({ error: err.message, code: "no-live-session" }, { status: 409 });
+    }
     const msg = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ error: `Clear failed: ${msg}` }, { status: 500 });
   }

@@ -31,8 +31,8 @@ import os from "os";
 import path from "path";
 import { execFileSync } from "child_process";
 
-/** Master switch, default OFF for safe rollout (mirrors FLEETCROWN_RUNNER_PTY's
- *  pattern in reverse: PTY proved itself and defaulted on; worktrees start
+/** Master switch, default OFF for safe rollout (the same flag pattern that
+ *  carried owned PTYs from opt-in to the only substrate; worktrees start
  *  opt-in). Set FLEETCROWN_WORKTREE_DISPATCH=true to enable. */
 export const WORKTREE_DISPATCH_ENABLED = process.env.FLEETCROWN_WORKTREE_DISPATCH === "true";
 

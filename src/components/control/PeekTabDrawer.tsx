@@ -11,11 +11,11 @@ import { ActivityTimeline } from "./ActivityTimeline";
 //   • activity  — the unified activity SSOT timeline (default): every prompt,
 //                 run outcome, and lifecycle signal, newest first. The "what
 //                 happened" half of the cockpit; readable regardless of agent.
-//   • live      — stream the pane via xterm (real PTY bytes / dump-screen frames)
-//   • snapshot  — one-shot dump-screen capture, the pre-v0.7.2 fallback
+//   • live      — stream the owned PTY via xterm (real PTY bytes)
+//   • snapshot  — one-shot capture of the owned PTY buffer, the pre-v0.7.2 fallback
 //
-// Live/snapshot stream a Zellij pane; activity reads the DB, so it's the view
-// that always renders cleanly. See docs/architecture/embedded-terminal.md.
+// Live/snapshot read the owned PTY Fleet Runner holds for the tab; activity
+// reads the DB, so it's the view that always renders cleanly. See docs/architecture/embedded-terminal.md.
 
 type View = "activity" | "live" | "snapshot";
 
@@ -137,7 +137,7 @@ export function PeekTabDrawer({ tab, onClose }: { tab: string; onClose: () => vo
   useEffect(() => {
     if (!autoRefresh || view !== "snapshot") return;
     // 3s cadence — fast enough to feel live during a working agent, slow
-    // enough that the brief Zellij focus flash doesn't become annoying.
+    // enough not to hammer the runner's peek path with buffer reads.
     const id = setInterval(() => {
       void fetchPeek();
     }, 3_000);
@@ -224,8 +224,8 @@ export function PeekTabDrawer({ tab, onClose }: { tab: string; onClose: () => vo
             <p className="font-medium text-status-warning">Couldn&apos;t peek this tab</p>
             <p className="mt-2 text-text-tertiary">{error}</p>
             <p className="mt-4 text-xs text-text-muted">
-              Common reasons: the tab is no longer open in Zellij, Zellij is not running on your
-              machine, or neither Fleet Runner nor the local runner is online.
+              Common reasons: no agent is running for this project on the builder (dispatch to start
+              one), or neither Fleet Runner nor the cloud builder is online.
             </p>
           </div>
         ) : content === null ? (

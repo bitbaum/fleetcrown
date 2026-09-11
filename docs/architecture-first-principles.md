@@ -176,7 +176,8 @@ Implementation details should remain behind stable interfaces.
 Rules:
 
 - `/tmp` file layout is an adapter detail
-- Zellij tab names are transport handles, not business keys
+- the runner-owned PTY (node-pty) is the execution substrate; the project's
+  tab name is a display label and a runtime binding, not a business key
 - Claude session file format is a compatibility artifact, not the orchestration model
 
 ### Idempotence
@@ -282,7 +283,8 @@ Each project needs:
 - stable project ID
 - display name
 - canonical repo path
-- optional runtime bindings such as tab name or session ID
+- optional runtime bindings such as the owned-PTY workspace id, tab label, or
+  session ID
 
 Project identity must not depend on tab naming.
 
@@ -345,7 +347,8 @@ The current system works, but violates the target architecture in several ways:
 - `/tmp` sentinel names still encode Claude-era semantics
 - local hooks act as hidden truth producers
 - current prompt state is split across runtime files and DB fallbacks
-- tab names still leak into project identity and session ownership
+- the runner transport still carries the project name (`projectKey`)
+  internally; the API boundary is id-first (2026-09-10), the transport is not
 - UI banners partly encode orchestration behavior
 - event history is incomplete relative to the decisions the system makes
 

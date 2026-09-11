@@ -24,7 +24,6 @@ import { ORCH_STATE } from "@/lib/orchestration/contract";
 import { workspaceIdFor } from "@/lib/agent-execution/ownership";
 import { executeInject } from "@/lib/executor";
 import { coldStartWorkspaceDir, pickDispatchChannel } from "@/lib/execution-access";
-import { getBuilderFitness } from "@/db/queries/runner-presence";
 import {
   createOrchestrationEvent,
   createOrchestrationEventOnce,
@@ -123,9 +122,9 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
 
   // Is this project backed by a live FleetCrown-owned PTY (server-side launch)?
   // The executor registry is the SSOT — a live handle means we drive the agent's
-  // stdin directly and bypass every zellij concept (tab resolution, focus-dance,
-  // the zsh user-typing hook). No live workspace → fall back to the legacy zellij
-  // path unchanged (cloud mode never has one; injectFn is null there).
+  // stdin directly. No live workspace → there is no agent to type at, so the
+  // prompt is queued as a dispatch below (cloud mode never has one; injectFn is
+  // null there).
   const ptyWorkspaceId = workspaceIdFor(userId, canonical);
   const ptyExecutor = runtimeAvailable ? (await import("@/lib/agent-execution")).executor : null;
   const ptyHandle = ptyExecutor ? ptyExecutor.get(ptyWorkspaceId) : null;
@@ -152,34 +151,13 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
 
   let prompt: string;
   let promptLabel = "Custom";
-  let effectiveTab = canonical;
+  const effectiveTab = canonical;
 
   if (runtimeAvailable) {
-    // Local: resolve live zellij tab and build prompt with session context.
-    // These imports call execSync / read /tmp files — only safe locally.
-    const { resolveEffectiveTab, readPrompts, readPromptMeta, getZellijTabs } =
-      await import("@/lib/agent-config").then(async (m) => ({
-        ...m,
-        getZellijTabs: (await import("@/lib/zellij")).getZellijTabs,
-      }));
-
-    // PTY-backed agents have no zellij tab — effectiveTab stays canonical and we
-    // skip the "is the tab open in zellij" gate entirely.
-    if (!ptyBacked) {
-      const activeTabs = await getZellijTabs();
-      if (activeTabs.length > 0) {
-        effectiveTab = resolveEffectiveTab(canonical, activeTabs);
-        if (
-          effectiveTab === canonical &&
-          !activeTabs.some((t) => t.toLowerCase() === canonical.toLowerCase())
-        ) {
-          return {
-            status: 422,
-            body: { error: `Tab "${canonical}" is not open in Zellij. Open it and try again.` },
-          };
-        }
-      }
-    }
+    // Local: build the prompt with session context. These imports read /tmp
+    // files — only safe locally. The tab is the canonical project name; the
+    // owned PTY is keyed by it, and there is no other terminal to resolve.
+    const { readPrompts, readPromptMeta } = await import("@/lib/agent-config");
 
     // Global + Project tiers (operating principles + brief + active goals) — the
     // SAME assembler the /api/orchestration/run path uses. Previously this local
@@ -280,18 +258,17 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
   const nowS = Math.floor(Date.now() / 1000);
 
   // Build the local injection function. PTY-backed agents are driven directly via
-  // the executor (write to the owned PTY's stdin); otherwise fall back to the
-  // legacy zellij path. Null in cloud mode → executeInject queues for the runner.
-  const injectFn = !runtimeAvailable
-    ? null
-    : ptyBacked
+  // the executor (write to the owned PTY's stdin). Null in cloud mode →
+  // executeInject queues for the runner.
+  // Local + live owned PTY: write straight into it. Local + no PTY: there is
+  // no agent to type at, so the prompt is QUEUED as a dispatch (cold start)
+  // for the runner — visible in Control, never a keystroke into a guessed tab.
+  const injectFn =
+    runtimeAvailable && ptyBacked
       ? async () => {
           ptyExecutor?.write(ptyWorkspaceId, prompt.endsWith("\r") ? prompt : `${prompt}\r`);
         }
-      : async () => {
-          const { injectIntoTab } = await import("@/lib/zellij");
-          injectIntoTab(effectiveTab, prompt);
-        };
+      : null;
 
   // Open a tracked run for every trackable dispatch, on BOTH the cloud and the
   // local-runtime path. Previously the local path was excluded (it relied on
@@ -332,37 +309,8 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
     }
   }
 
-  // If the user is actively at the ZSH prompt in this tab, skip injection to
-  // avoid garbling whatever they're typing.  Requires the fleetcrown-typing hooks
-  // in ~/.zshrc (see scripts/install-fleetcrown-hooks.sh). This is a zellij-only
-  // concept — a FleetCrown-owned PTY has no human at its prompt, so skip it.
-  // Side effects (beacon cancel, /tmp state) run only after this gate passes.
-  if (runtimeAvailable && !ptyBacked) {
-    const { isUserTypingInTab } = await import("@/lib/zellij");
-    if (isUserTypingInTab(effectiveTab)) {
-      const fingerprint = promptFingerprint(prompt);
-      recordControlAuditEvent({
-        userId,
-        projectId,
-        projectKey: canonical,
-        tabName: effectiveTab,
-        event: "inject_request",
-        source: "api/inject",
-        action: "refused",
-        reason: "User is typing in the target tab",
-        promptHash: fingerprint.promptHash,
-        promptPreview: fingerprint.promptPreview,
-        meta: { adapter: eventAdapter, promptKey: promptKey ?? "custom", runtimeAvailable: true },
-      });
-      return {
-        status: 200,
-        body: { ok: true, blocked: true, reason: "user-typing", tab: effectiveTab },
-      };
-    }
-  }
-
   // Run local filesystem side-effects — the server process can always write to /tmp
-  // regardless of whether it's inside a Zellij pane or not.
+  // regardless of whether an owned PTY is live for this tab.
   if (runtimeAvailable) {
     const [{ cancelActiveBeaconSessions }, { stateFile, clearHandshakeFiles }, fs] =
       await Promise.all([
@@ -416,19 +364,15 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
   // Name the builder that will run this. A command with no channel is claimable
   // by EVERY runner at once, so leaving it open is a race the always-on box
   // loses to whatever desktop is polling — and closing the lid then kills the
-  // work the desktop just claimed. Route to whoever is actually online,
-  // preferring the operator's own machine (their tree, their env, visible while
-  // it happens); a dirPath-only project stays locked to the builder that can
-  // materialize it at all (the 2026-07-14 BiasLens misroute).
-  const fitness = await getBuilderFitness(userId).catch(() => ({
-    presence: { cloud: false, local: false, any: false },
-    localDurability: "unknown" as const,
-  }));
-  const pinnedChannel = pickDispatchChannel(dbMatch, fitness.presence, fitness.localDurability);
+  // work the desktop just claimed. The answer is stored on the project (locus
+  // lock, then builder_pref, then the cloud floor) — never guessed from which
+  // runner happens to be online.
+  const pinnedChannel = pickDispatchChannel(dbMatch);
 
   const result = await executeInject(
     {
       tab: effectiveTab,
+      queueOnly: runtimeAvailable && !ptyBacked,
       prompt,
       promptKey,
       promptLabel,

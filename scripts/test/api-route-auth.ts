@@ -74,6 +74,13 @@ const PUBLIC: Record<string, string> = {
   "x-login/start": "OAuth handshake begins before any session exists",
   "x-login/callback": "OAuth provider posts here; state parameter is the credential",
 
+  // — Published on purpose: the fleet register is what the bitbaum showcase and
+  //   the public footer derive from. Behind a session it would grow a private
+  //   copy on every consumer, which is the seven-lists problem it replaces.
+  //   Content is repo names, public URLs and whether a public profile exists —
+  //   all already public. Scoped to the studio owner, cached 5 min.
+  "fleet/register": "public register of the studio's projects; nothing private in the payload",
+
   // — The bearer IS the credential; there is no user to look up first.
   "invitations/[token]": "unguessable invite token in the path is the credential",
   "invitations/[token]/accept": "same token; accepting is what creates the membership",

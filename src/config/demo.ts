@@ -137,7 +137,6 @@ export const DEMO_DENIED_PREFIXES: ReadonlyArray<readonly [string, DemoDenialRea
   ["/api/orgs", "tenancy"],
   ["/api/workspaces", "tenancy"],
   ["/api/invitations", "tenancy"],
-  ["/api/settings", "tenancy"],
   ["/api/integrations", "tenancy"],
   ["/api/github", "tenancy"],
   ["/api/decisions", "content"],

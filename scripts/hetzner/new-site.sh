@@ -253,15 +253,22 @@ FC_ENV=""
 # end, next to the other things the operator has to finish.
 WIDGET_TODO=""
 if [ "$DRY" = 1 ]; then
-  say "DRY  npx tsx $HERE/../provision-widget.ts $SLUG '$TITLE' $SLUG.$BASE_DOMAIN"
+  say "DRY  bash $HERE/provision-widget-on-box.sh $SLUG '$TITLE' $SLUG.$BASE_DOMAIN"
 else
-  FC_ENV=$(cd "$HERE/../.." && npx tsx scripts/provision-widget.ts "$SLUG" "$TITLE" "$SLUG.$BASE_DOMAIN" 2>/dev/null || true)
+  # ON THE BOX, not here. Production FleetCrown's database is
+  # 127.0.0.1/fleetcrown — loopback only — so a laptop cannot reach it, and an
+  # agent worktree has no DATABASE_URL at all (.env.local is gitignored and
+  # never leaves the main checkout). Running it locally failed on EVERY
+  # scaffold, silently, and every agent-created site up to 2026-09-11 went live
+  # with no feedback widget as a result.
+  FC_ENV=$(bash "$HERE/provision-widget-on-box.sh" "$SLUG" "$TITLE" "$SLUG.$BASE_DOMAIN" 2>/dev/null || true)
   if [ -n "$FC_ENV" ]; then
     printf '%s\n' "$FC_ENV" >> "$REPO_DIR/.env.selfhost.local"
-    say "project + token provisioned, written to .env.selfhost.local"
+    say "project + token provisioned on the box, written to .env.selfhost.local"
   else
-    say "⚠ could not provision a widget token (needs the FleetCrown database)."
-    say "  The site is fine; wire it later — see the summary at the end."
+    say "⚠ could not provision a widget token."
+    say "  Run it directly to see why — it reports the cause on stderr:"
+    say "    bash $HERE/provision-widget-on-box.sh $SLUG '$TITLE' $SLUG.$BASE_DOMAIN"
     # NOTE THE SECOND COMMAND. Appending to .env.selfhost.local is enough only
     # BEFORE the first deploy: deploy.sh seeds /opt/<name>/shared/.env from this
     # file only when the box has none, and the box is the env SSOT from then on.
@@ -273,7 +280,7 @@ else
   4. This site has NO feedback widget, so its owner cannot change it without
      asking a person — which is the dependency this scaffold exists to remove.
      Provision it and push the value to the box:
-       npx tsx scripts/provision-widget.ts $SLUG '$TITLE' $SLUG.$BASE_DOMAIN \\
+       bash $HERE/provision-widget-on-box.sh $SLUG '$TITLE' $SLUG.$BASE_DOMAIN \\
          >> $REPO_DIR/.env.selfhost.local
        bash $HERE/deploy.sh $SLUG --env
      Then confirm it actually renders — the token existing proves nothing:

@@ -3,7 +3,6 @@ import { validateCommand } from "../../desktop/src/main/command-validator";
 
 const validCases = [
   { type: "inject", payload: { tab: "truthseeker", prompt: "summarize this repo" } },
-  { type: "focus_tab", payload: { tab: "truthseeker" } },
   { type: "close_tab", payload: { tab: "truthseeker" } },
   {
     type: "launch_agent",

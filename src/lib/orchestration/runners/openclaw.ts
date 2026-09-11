@@ -1,6 +1,6 @@
 import { APP_SLUG } from "@/config/brand";
 import { runTool } from "@/lib/tools";
-import { shellEscape } from "@/lib/zellij";
+import { shellEscape } from "@/lib/shell-escape";
 import type { OrchestrationTaskRequest } from "../contract";
 import { renderTaskForAdapter } from "../renderers";
 

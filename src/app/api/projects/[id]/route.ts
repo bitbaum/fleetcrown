@@ -20,7 +20,7 @@ import {
 import { getProjectActivity } from "@/db/queries/activity";
 import { getProjectStateByProjectId } from "@/db/queries/project-states";
 import { getUserProjectByEntityId } from "@/db/queries/user-projects";
-import { getGithubToken } from "@/lib/github-token";
+import { getRepoWriteToken } from "@/lib/github-org-token";
 import { deprovisionGithubRepo } from "@/lib/github-provision";
 
 function getLinkedJobs(projectId: string, projectName: string) {
@@ -97,7 +97,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
         { error: "No GitHub repo is linked to this project." },
         { status: 400 },
       );
-    const token = await getGithubToken(userId);
+    const token = (await getRepoWriteToken(userId))?.token ?? null;
     if (!token)
       return NextResponse.json(
         { error: "No GitHub account linked. Sign in with GitHub first." },

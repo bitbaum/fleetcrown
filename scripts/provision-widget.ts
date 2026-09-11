@@ -26,6 +26,7 @@
  * token is returned rather than rotated — rotating would silently invalidate a
  * snippet already deployed on a live site.
  */
+import { repoUrlFor } from "../src/config/github-owner";
 import { db } from "@/db";
 import { entities, users } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
@@ -89,7 +90,7 @@ async function main(): Promise<void> {
         description: `Website at https://${host}`,
         // Owner from the environment, matching _box-env.sh — hardcoding it
         // here is what made a rename touch this file at all.
-        gitUrl: `https://github.com/${process.env.GH_OWNER ?? "bitbaum"}/${slug}`,
+        gitUrl: repoUrlFor(slug),
       },
       "new-site.sh",
     );

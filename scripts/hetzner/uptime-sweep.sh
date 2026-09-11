@@ -59,10 +59,10 @@ SLEEP="${UPTIME_SLEEP:-5}"
 # The fleet convention, and what shared-inventory.sh ratchets a count of.
 DEFAULT_HEALTH_PATH=/api/health
 
-# ── The four apps.conf documents as deliberately absent ──────────────────────
+# ── The three apps.conf documents as deliberately absent ──────────────────────
 #
 # apps.conf says, in its own header: "Ports 4001-4004 are the pre-existing
-# handcrafted services (bridge, fleetcrown, orangecat, evig) — they keep
+# handcrafted services (bridge, fleetcrown, orangecat; evig joined the register on 2026-09-11) — they keep
 # their own units and Caddy blocks and are NOT listed here." They are still
 # public, still on the one box, and still unwatched, so leaving them out would
 # reproduce the exact blind spot this script exists to close.
@@ -83,7 +83,6 @@ EXTRA_TARGETS='
 bridge|bridge.orangecat.ch
 fleetcrown|fleetcrown.orangecat.ch
 orangecat|orangecat.ch
-evig|evig.orangecat.ch
 annushka|annushka.orangecat.ch
 '
 

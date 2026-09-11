@@ -242,18 +242,18 @@ export function useControlData(): ControlDataHook {
             : {}),
         };
       });
-      // Sync zellijTabs from tabOpen patches so active/idle categorisation stays live
+      // Sync liveTabs from tabOpen patches so active/idle categorisation stays live
       // without waiting for the next full poll (30 s).
-      let zellijTabs = prev.zellijTabs;
+      let liveTabs = prev.liveTabs;
       for (const patch of patches) {
         const tab = patch.tab.toLowerCase();
-        if (patch.tabOpen && !zellijTabs.some((t) => t.toLowerCase() === tab)) {
-          zellijTabs = [...zellijTabs, patch.tab];
-        } else if (!patch.tabOpen && zellijTabs.some((t) => t.toLowerCase() === tab)) {
-          zellijTabs = zellijTabs.filter((t) => t.toLowerCase() !== tab);
+        if (patch.tabOpen && !liveTabs.some((t) => t.toLowerCase() === tab)) {
+          liveTabs = [...liveTabs, patch.tab];
+        } else if (!patch.tabOpen && liveTabs.some((t) => t.toLowerCase() === tab)) {
+          liveTabs = liveTabs.filter((t) => t.toLowerCase() !== tab);
         }
       }
-      return { ...prev, projects: updated, zellijTabs };
+      return { ...prev, projects: updated, liveTabs };
     });
     setLastUpdated(Date.now());
   }, []);

@@ -49,12 +49,18 @@ export function FeedbackItemRow({
   const work = "work" in f && f.work ? f.work : deriveFeedbackWork(f.status, null);
   const controlHref = fleetSurfaceHref("control", projectName);
   const terminalHref = fleetSurfaceHref("terminal", projectName);
-  const watchLive = work.phase === FEEDBACK_WORK_PHASE.WORKING;
+  // Terminal when there is a PTY to look at (the prompt reached an agent),
+  // Control when there is not — Terminal is empty until a session exists.
+  const watchLive = work.watchable === true;
   const progressHref = watchLive ? terminalHref : controlHref;
   const progressLabel = watchLive ? "Watch" : "Open on Control";
   const progressTitle = watchLive
-    ? (work.detail ?? "Live agent session")
+    ? (work.detail ?? "Open the agent's terminal")
     : "Open this project on Control — Terminal is empty until a session is actually running";
+  // Somewhere for an agent to work. Rows from the per-project inbox carry no
+  // flag and keep the one-click Implement; the server refuses the same case.
+  const runnable = "runnable" in f ? f.runnable !== false : true;
+  const projectHref = `/projects/${f.projectId}`;
   // Reported page surface — Check live must open this, not Control/Terminal.
   const livePageHref = absoluteFeedbackPageHref(f.url, f.page);
   // Agent-filed rows get a typed badge instead of their magic contact string.
@@ -64,78 +70,96 @@ export function FeedbackItemRow({
       : f.source === FEEDBACK_SOURCE.SYNTHESIZER
         ? "brief"
         : null;
+  // One line of context: where, who, when. The scope is implied by the
+  // element chip (element) or by its absence (page); the run id is a lookup
+  // key, not something a reader can act on, so it stays out of the line.
+  const pageLabel = f.page || (f.url ? f.url.replace(/^https?:\/\/[^/]+/, "") || f.url : null);
   const meta = [
-    f.page || f.url,
-    f.scope,
+    pageLabel,
     !agentBadge && f.contact,
-    compactRelativeDate(f.createdAt),
-    f.status === FEEDBACK_STATUS.RESOLVED &&
-      f.resolvedAt &&
-      `resolved ${compactRelativeDate(f.resolvedAt)}`,
-    f.status === FEEDBACK_STATUS.RESOLVED &&
-      f.dispatchedRunId &&
-      `by run ${f.dispatchedRunId.slice(0, 8)}`,
+    f.status === FEEDBACK_STATUS.RESOLVED && f.resolvedAt
+      ? `resolved ${compactRelativeDate(f.resolvedAt)}`
+      : compactRelativeDate(f.createdAt),
   ].filter(Boolean);
-
-  const dotClass =
-    work.phase === FEEDBACK_WORK_PHASE.WORKING || work.phase === FEEDBACK_WORK_PHASE.DONE
-      ? "ui-dot-positive mt-1.5"
-      : work.phase === FEEDBACK_WORK_PHASE.FAILED || work.phase === FEEDBACK_WORK_PHASE.STUCK
-        ? "ui-dot-negative mt-1.5"
-        : work.phase === FEEDBACK_WORK_PHASE.QUEUED ||
-            work.phase === FEEDBACK_WORK_PHASE.NOT_STARTED ||
-            work.phase === FEEDBACK_WORK_PHASE.NEEDS_VERIFY
-          ? "ui-dot-warning mt-1.5"
-          : "ui-dot-neutral mt-1.5";
+  const failed =
+    work.phase === FEEDBACK_WORK_PHASE.FAILED || work.phase === FEEDBACK_WORK_PHASE.STUCK;
+  // The badge is the status; a "Not started" chip on every untouched report
+  // said nothing the Implement button did not.
+  const showBadge = work.phase !== FEEDBACK_WORK_PHASE.NOT_STARTED;
+  const badge =
+    work.phase === FEEDBACK_WORK_PHASE.NEEDS_VERIFY && livePageHref ? (
+      <a
+        href={livePageHref}
+        target="_blank"
+        rel="noreferrer"
+        className="shrink-0"
+        title="Open the reported page"
+      >
+        <FeedbackWorkBadge work={work} />
+      </a>
+    ) : (
+      <FeedbackWorkBadge work={work} />
+    );
 
   return (
     <div className="flex flex-col gap-2 py-3">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div className="min-w-0 flex-1">
-          <div className="flex items-start gap-2">
-            <span className={dotClass} aria-label={work.label} />
-            <p className="min-w-0 text-sm leading-relaxed text-text-primary">{f.suggestion}</p>
-            {work.phase === FEEDBACK_WORK_PHASE.NEEDS_VERIFY && livePageHref ? (
-              <a
-                href={livePageHref}
-                target="_blank"
-                rel="noreferrer"
-                className="shrink-0"
-                title="Open the reported page"
-              >
-                <FeedbackWorkBadge work={work} />
-              </a>
-            ) : (
-              <FeedbackWorkBadge work={work} />
-            )}
+          {/* The message leads, alone on its line. Status, source and repeat
+              count sit on the context line beneath it, where they read as
+              facts about the report instead of interrupting it. */}
+          <p className="min-w-0 text-sm leading-relaxed text-text-primary">{f.suggestion}</p>
+          <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-text-tertiary">
+            {showBadge && badge}
             {agentBadge && <span className="ui-tag shrink-0">{agentBadge}</span>}
             {f.duplicateCount > 1 && (
               <span className="ui-badge shrink-0" title={`Reported ${f.duplicateCount} times`}>
                 ×{f.duplicateCount}
               </span>
             )}
-          </div>
-          <p className="mt-1 pl-4 text-xs text-text-tertiary">
             {project && (
-              <>
-                <Link
-                  href={`/projects/${project.id}#feedback`}
-                  className="font-medium text-text-secondary underline-offset-2 hover:underline"
-                >
-                  {project.name}
-                </Link>
-                {meta.length > 0 && " · "}
-              </>
+              <Link
+                href={`/projects/${project.id}#feedback`}
+                className="font-medium text-text-secondary underline-offset-2 hover:underline"
+              >
+                {project.name}
+              </Link>
             )}
-            {meta.join(" · ")}
+            {f.selectedElements && f.selectedElements.length > 0 && (
+              <span
+                className="inline-flex max-w-full items-baseline gap-1 truncate"
+                title={f.selectedElements.map((el) => el.selector).join("\n")}
+              >
+                <span className="font-mono text-micro">
+                  {f.selectedElements.length > 1
+                    ? `${f.selectedElements.length} elements`
+                    : f.selectedElements[0].elementType || "element"}
+                </span>
+                {f.selectedElements.length === 1 && f.selectedElements[0].elementText && (
+                  <span className="truncate">
+                    “
+                    {f.selectedElements[0].elementText.length > 48
+                      ? `${f.selectedElements[0].elementText.slice(0, 48)}…`
+                      : f.selectedElements[0].elementText}
+                    ”
+                  </span>
+                )}
+              </span>
+            )}
+            <span className="text-text-muted">{meta.join(" · ")}</span>
           </p>
-          {work.detail && <p className="mt-0.5 pl-4 text-xs text-text-secondary">{work.detail}</p>}
+          {/* The phase's sentence only when it changes what the reader does
+              next: a failure or a stall. "Agent is generating…" is what the
+              Working badge already says. */}
+          {(failed || work.phase === FEEDBACK_WORK_PHASE.WORKING) && work.detail && (
+            <p className="mt-1 text-xs text-text-secondary">{work.detail}</p>
+          )}
           {/* The run's raw error, opened on purpose rather than printed at the
             reader. It used to be the detail line itself, which is how an
             engineer's note ("...acked verified:false and never started")
             ended up addressed to whoever filed the feedback. */}
-          {work.diagnostic && (
-            <details className="mt-0.5 pl-4">
+          {failed && work.diagnostic && (
+            <details className="mt-0.5">
               <summary className="cursor-pointer text-micro text-text-muted hover:text-text-secondary">
                 Technical details
               </summary>
@@ -144,32 +168,30 @@ export function FeedbackItemRow({
               </p>
             </details>
           )}
-          {f.selectedElements && f.selectedElements.length > 0 && (
-            <p className="mt-0.5 pl-4 text-xs text-text-muted">
-              {f.selectedElements.map((el, i) => (
-                <span
-                  key={`${el.selector}-${i}`}
-                  title={el.selector}
-                  className="mr-2 inline-flex items-baseline gap-1"
-                >
-                  <span className="font-mono text-micro">{el.elementType || "element"}</span>
-                  {el.elementText && (
-                    <span>
-                      “
-                      {el.elementText.length > 60
-                        ? `${el.elementText.slice(0, 60)}…`
-                        : el.elementText}
-                      ”
-                    </span>
-                  )}
-                </span>
-              ))}
-            </p>
-          )}
           {f.hasScreenshots && <ScreenshotsThumbnails feedbackId={f.id} />}
         </div>
-        <div className="flex shrink-0 items-center gap-1.5 pl-4 sm:pl-0">
-          {work.phase === FEEDBACK_WORK_PHASE.NOT_STARTED ? (
+        <div className="flex shrink-0 items-center gap-1.5">
+          {work.phase === FEEDBACK_WORK_PHASE.NOT_STARTED && !runnable ? (
+            <>
+              <Link
+                href={projectHref}
+                className="ui-btn-save gap-1"
+                title="This project has no repository or folder yet — the agent has nowhere to work. Add a Git URL, then Implement."
+              >
+                Connect a repository
+              </Link>
+              <button
+                type="button"
+                onClick={onResolve}
+                disabled={busy}
+                className="ui-btn-icon"
+                title="Mark resolved"
+                aria-label="Mark resolved"
+              >
+                <Check className="h-3.5 w-3.5" />
+              </button>
+            </>
+          ) : work.phase === FEEDBACK_WORK_PHASE.NOT_STARTED ? (
             <>
               <button
                 type="button"
@@ -318,7 +340,7 @@ export function FeedbackItemRow({
         </div>
       </div>
       {noteOpen && work.phase === FEEDBACK_WORK_PHASE.NOT_STARTED && (
-        <div className="flex items-center gap-2 pl-4">
+        <div className="flex items-center gap-2">
           <input
             type="text"
             value={note}

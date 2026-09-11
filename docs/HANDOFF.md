@@ -9,12 +9,13 @@
 >
 > | This file says | Actually |
 > |---|---|
-> | Desktop v0.7.5 latest | **v0.8.15** (31+ releases since) |
+> | Desktop v0.7.5 latest | **v0.8.19** (35+ releases since) |
 > | Electron 33 | **^43.4.1** |
 > | 39 tables | ~57 schema modules |
 > | `drizzle-kit migrate` on deploy | forward-only applier, `scripts/hetzner/apply-schema.sh` |
 > | "Next: A3, A4, A6" | all ticked in the priority plan |
 > | Release recipe: run the mirror by hand | automated in `desktop-release.yml` |
+> | `src/lib/terminals/*`, `src/lib/zellij.ts`, TerminalAdapter, "Fleet Runner bundles Zellij" | **deleted 2026-09-11 (Fleet Runner 0.8.19)** — the runner owns every agent PTY (node-pty); no zellij, no `home/worker.ts`, no focus-tab, no restore-on-boot |
 >
 > Because this file opens with "read this first", a stale number here propagates
 > further than one buried in a reference doc. Prefer `CLAUDE.md` for architecture
@@ -65,9 +66,10 @@ FleetCrown is a multi-user SaaS for builders who run **multiple AI agents across
 │ src/  (Next.js — Hetzner)   │  │ desktop/src/main/  (Electron) │
 │   Pages + /api/* routes     │  │   poller / pusher / watcher  │
 │   Adapters:                 │  │   IPC bridge (window.fleetRunner) │
-│   • lib/agents/<id>.ts      │  │   Adapters re-use src/lib/{agents,terminals} │
-│   • lib/terminals/<id>.ts   │  └──────────────────────────────┘
-│   • lib/git-state.ts        │            ↑ wraps ↑
+│   • lib/agents/<id>.ts      │  │   Owns agent PTYs (node-pty) via │
+│   • lib/agent-execution/*   │  │   src/lib/agent-execution/*     │
+│   • lib/git-state.ts        │  └──────────────────────────────┘
+│                             │            ↑ wraps ↑
 │   • Drizzle schemas         │     fleetcrown.orangecat.ch inside Electron
 └─────────────────────────────┘
         ↓ NOTIFY pg_notify ↓
@@ -82,7 +84,7 @@ FleetCrown is a multi-user SaaS for builders who run **multiple AI agents across
 
 ## 4. The adapter pattern (the strategic move)
 
-FleetCrown doesn't own a model or a terminal multiplexer. It owns the **coordination layer where any model and any terminal plug in**.
+FleetCrown doesn't own a model. It owns the **coordination layer where any model plugs in** — and, since 2026-09-11, it owns every agent's PTY itself rather than borrowing a multiplexer.
 
 ### Agents
 
@@ -102,33 +104,24 @@ src/lib/agents/
 
 **Adding a new agent** (Cline, Aider, opencode, whatever): create one new file `src/lib/agents/newagent.ts` exporting `newagentAdapter: AgentAdapter`, add it to `ALL_ADAPTERS` in `index.ts`. **No edits to any other file.** The catalog, the launcher, the availability badge, the install button, the UI dropdowns all read from the adapter automatically.
 
-### Terminals
+### Terminals — there is no terminal adapter any more
 
-```
-src/lib/terminals/
-├── types.ts        TerminalAdapter interface
-├── zellij.ts       Full Zellij implementation (only impl today)
-└── index.ts        ALL_TERMINALS = [zellijAdapter], findTerminal, activeTerminal
-```
-
-`src/lib/zellij.ts` is now a thin compat shim re-exporting historical names — 15 call sites keep working unchanged while migration to direct `@/lib/terminals` imports happens incrementally.
-
-**Adding a new multiplexer** (tmux, screen, browser-shell): same pattern.
+`src/lib/terminals/*` (the `TerminalAdapter` interface and its zellij implementation) and the `src/lib/zellij.ts` compat shim were deleted on 2026-09-11 with Fleet Runner 0.8.19. There is one substrate: the runner (desktop Fleet Runner or the headless box runner) spawns each agent in a node-pty PTY it owns (`src/lib/agent-execution/`). The web local runtime (`RUNTIME_AVAILABLE=true`) acts only on those owned PTYs: `/api/control` reports them as `liveTabs` (`listOwnedTabs` in `src/lib/agent-execution/owned.ts`); orchestration run, switch-agent, clear-context (409 when no live agent) and `/api/control/agent` apply-to-open-tabs all terminate/provision owned PTYs. `shellEscape` lives in `src/lib/shell-escape.ts`; failure classification is `src/lib/failure-remedy.ts` (`START_SESSION | RETRY | NONE`). An inject for a tab with no live owned PTY fails loudly ("no running agent for … — dispatch to start one") and the cloud enqueues a dispatch (cold start) instead. Agent installers run in an owned PTY watchable in the web terminal; Peek reads the owned PTY buffer.
 
 ### Agent switching (v0.8.0)
 
-Users switch agents without typing quit commands in Zellij:
+Users switch agents without touching a terminal:
 
 | Surface | How |
 |---|---|
 | Project card chip | Click the agent status chip (e.g. "Codex ready") → pick another installed agent |
-| Cmd+K palette | `Switch <project> to Cursor` → focuses tab + queues switch |
+| Cmd+K palette | `Switch <project> to Cursor` → deep-links `/control?focus=<project>&switchTo=<agent>` (selects the project on Control) + queues switch |
 | Rate-limit banner | Appears when session text matches capacity regex; one-click fallback |
-| API | `POST /api/control/switch-agent` — scans `/proc`, quits all running agents in `dir`, launches `toAgent` |
+| API | `POST /api/control/switch-agent` — terminates the owned PTY for the project and provisions a new one running `toAgent` |
 
 **Detection SSOT:** `src/lib/agent-resolution.ts` (client-safe) + `src/lib/agent-process-scan.ts` (server `/proc`). The UI warns on mismatch when `agentPref` disagrees with `activeAgents`.
 
-**Cloud mode:** switch enqueues `pending_commands` type `switch_agent`; Fleet Runner poller executes locally (improved in v0.8.0 to quit every running agent in the directory).
+**Cloud mode:** switch enqueues `pending_commands` type `switch_agent`; the runner that owns the project's PTY (box runner or Fleet Runner, per the stored routing decision) executes it.
 
 ### What's deferred
 
@@ -141,20 +134,23 @@ Critical for understanding everything else:
 ```
 User clicks "Send next-best to FleetCrown" on /control (browser or Electron)
   ↓
-POST /api/inject  → writes pending_commands row in Postgres
+POST /api/inject  → pickDispatchChannel(project): locus lock → user_projects.builder_pref
+                    ("Runs on") → cloud floor (DEFAULT_BUILDER_CHANNEL = "cloud").
+                    Presence routes nothing; an offline chosen builder queues visibly.
+                  → writes pending_commands row in Postgres
   ↓ AFTER INSERT trigger fc_notify_pending_commands fires pg_notify('fc:state', ...)
   ↓
 bridge.orangecat.ch (LISTEN 'fc:state') receives event
   ↓ HTTP/2 SSE fan-out
   ↓
-Desktop poller (or bash daemon) receives "wake" signal → calls /api/control/commands?wait=0
+Runner poller (box runner or desktop Fleet Runner) receives "wake" signal → calls /api/control/commands?wait=0
   ↓
 Server: claimNextPendingCommand (FOR UPDATE SKIP LOCKED) → returns the row
   ↓
-Desktop main process: validateCommand (zod) → injectIntoTab(tab, prompt)
-  ↓ src/lib/terminals/zellij.ts → withFocusedTab → zellij action write-chars + Enter
+Runner main process: validateCommand (zod) → writes the prompt into the owned PTY
+  ↓ no live PTY for the tab → dispatch spawns the agent CLI in a fresh node-pty PTY (cold start)
   ↓
-Zellij tab on user's machine receives keystrokes → Claude/Codex/etc. starts executing
+Claude/Codex/etc. starts executing inside the runner's own process tree
   ↓
 On idle, agent writes ~/.fleetcrown/sessions/<tab>.md
   ↓
@@ -165,7 +161,7 @@ desktop watcher detects file change → appends worker.idle event → pushNow() 
 Browser /control re-fetches → UI updates within ~200ms of the DB write
 ```
 
-**Sub-second cloud↔local round-trip** when daemon is connected. This is the v0.6 work; everything else builds on it.
+**Sub-second cloud↔runner round-trip** when the chosen runner is connected. This is the v0.6 work; everything else builds on it.
 
 ## 6. Status by area, as of 2026-06-07 17:00 UTC
 
@@ -178,7 +174,7 @@ Browser /control re-fetches → UI updates within ~200ms of the DB write
 
 1. **v0.7.1 → v0.7.5 desktop releases** — reverted broken Phase C bundled-renderer flip, shipped Peek feature, added token-401 auto-recovery, removed bundled renderer entirely, shipped in-app update banner with manual-install command for .deb.
 2. **Port 1 — AgentAdapter** (`src/lib/agents/*`). Was: 427-line registry with switch statements + per-agent functions scattered. Now: one file per agent, all behavior in one place.
-3. **Port 2 — TerminalAdapter** (`src/lib/terminals/*`). Was: 263 lines of hardcoded `zellij action ...` shellouts. Now: behind an interface; new multiplexers are one new file.
+3. **Port 2 — TerminalAdapter** (`src/lib/terminals/*`). Was: 263 lines of hardcoded `zellij action ...` shellouts. Then: behind an interface. (Deleted 2026-09-11 — see the staleness table.)
 4. **God-route extraction** — `/api/control/route.ts` went from 537 to 407 lines. Extracted `lib/git-state.ts`, `lib/project-profile-match.ts`. Two more sections (lifecycle writeback, response assembly) still inline; not blocking.
 5. **DB hygiene** — dropped duplicate `project_states_notify` trigger (was doubling NOTIFY traffic), fixed `/api/event-stream-token` minting a fresh token per request (10 stale tokens piled up in 36h; now reuses up to 7d old + daily cron cleanup at 05:00 UTC), bootstrapped `drizzle.__drizzle_migrations` (was missing — schema arrived via `push`, future migrations were untracked).
 6. **Code-quality SSOT batches** — daemon timing constants, token-store, ANSI strip, agent-list derived from registry, zellij focus-dance HOF + `zellijCmd` helper, refresh-delay timing constants, `PHASE_DOT_CLASS` exhaustive map. Total ~50 lines per touched file became ~10.
@@ -189,7 +185,7 @@ Browser /control re-fetches → UI updates within ~200ms of the DB write
 ### What's solid and you shouldn't touch
 - The dispatch pipeline (DB NOTIFY → bridge → SSE → UI). It's been hardened over v0.6.
 - The schema. 39 tables, FK-clean, drift-free, ledger now exists.
-- The AgentAdapter and TerminalAdapter interfaces. Lock them in; they're the SSOT for new plug-ins.
+- The AgentAdapter interface. Lock it in; it's the SSOT for new agent plug-ins. (The TerminalAdapter interface was deleted on 2026-09-11 — there is no multiplexer to adapt.)
 - The brand SSOT (`globals.css` four-layer system, `ui-*` classes). Don't introduce raw palette colors or arbitrary text sizes; the project CLAUDE.md has an audit grep that catches violations.
 
 ### What's deferred and why
@@ -206,7 +202,7 @@ Browser /control re-fetches → UI updates within ~200ms of the DB write
 - **Auto-update on .deb is silently broken at the OS level.** electron-updater downloads but can't apply (sudo needed). v0.7.5's UpdateBanner is the user-facing fix. The durable fix is task #48 (apt repo).
 - **Smoke test (`pnpm run smoke`) requires the local dev server.** Husky pre-push skips it when the server isn't running. Run `pnpm run dev` before pushing if you want full validation.
 - **`drizzle-kit push` is the historical migration path on prod.** Migration ledger now exists; future deploys should use `drizzle-kit migrate`. Push is still safe for dev DBs but DO NOT use on prod after this point.
-- **Agent CLI distribution is by official installer, not bundled.** Fleet Runner bundles Zellij but not Claude/Codex/Grok/Gemini/Cursor. The "Install X" UI button on /control launches the agent's official one-line installer in a new Zellij tab. Detection lives in each adapter's `detectAvailable()`.
+- **Agent CLI distribution is by official installer, not bundled.** Fleet Runner bundles no agent CLI (and, since 0.8.19, no zellij binary either). The "Install X" UI button on /control runs the agent's official one-line installer in an owned PTY you can watch in the web terminal. Detection lives in each adapter's `detectAvailable()`.
 
 ## 7. Strategic direction (what we are pursuing and why)
 

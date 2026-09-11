@@ -2,7 +2,7 @@
  * GET /api/control/open-tabs — agent tabs currently open on a builder.
  *
  * Cloud control plane: runner-pushed openTabs from box-runner (owned PTY tabs).
- * Local runtime host (`RUNTIME_AVAILABLE=true`): live zellij query + owned PTYs.
+ * Local runtime host (`RUNTIME_AVAILABLE=true`): the owned PTYs it holds (`listOwnedTabs`).
  * Terminal Cloud and This computer both list these and stream via peek-stream.
  */
 import { NextResponse } from "next/server";
@@ -39,8 +39,8 @@ export async function GET(req: Request) {
 
   let tabs: string[] = [];
   if (isRuntimeAvailable()) {
-    const { getZellijTabs } = await import("@/lib/zellij");
-    tabs = requestedChannel === "cloud" ? [] : await getZellijTabs().catch(() => []);
+    const { listOwnedTabs } = await import("@/lib/agent-execution/owned");
+    tabs = requestedChannel === "cloud" ? [] : listOwnedTabs(userId);
   } else {
     const snap = await getRuntimeSnapshot(userId, requestedChannel ?? undefined).catch(() => null);
     if (!snap) {

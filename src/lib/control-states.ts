@@ -1,7 +1,7 @@
 /**
  * SSOT for project control-surface states.
  *
- * Every consumer of project state (badge, chip, summary counter, Zellij row,
+ * Every consumer of project state (badge, chip, summary counter, live-terminal row,
  * file. Adding or removing a state requires editing exactly one literal — the
  * compiler then forces every Record below to remain exhaustive, so drift is
  * structurally impossible.
@@ -30,7 +30,7 @@ export const PROJECT_STATES = [
   "offline", // Runner has not pushed state — we genuinely don't know.
   "not_running", // No agent process and no tab — nothing exists for this project.
   "recently_active", // No live process visible, but a dispatch/run landed recently.
-  "tab_open", // Zellij tab open, no agent process detected in it.
+  "tab_open", // Agent terminal (owned PTY) open, no agent process detected in it.
   "open_idle", // Agent process detected, no recent lifecycle signal — likely at prompt.
   "working", // Agent mid-turn (lock sentinel fresh OR current prompt active).
   "ready", // Stop hook fired recently — agent just handed off.
@@ -113,8 +113,8 @@ export const STATE_DEFINITIONS: Record<ProjectStateKey, ProjectStateDefinition> 
     counterCategory: "idle",
     problem: null,
   },
-  // Sessions no longer run in named zellij tabs (kitty, unnamed tabs,
-  // multi-project sessions), so live process detection misses real work.
+  // Agents the user runs outside Fleet Runner (their own terminal, kitty,
+  // multi-project shells) are invisible to live process detection.
   // Hook-captured dispatches and orchestration runs still land in FleetCrown —
   // when one is recent, "Not running" is a lie the recorded facts contradict.
   // Counts as idle (it is NOT a live-process claim), but the badge stops

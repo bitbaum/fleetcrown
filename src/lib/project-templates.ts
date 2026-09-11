@@ -138,6 +138,9 @@ const NEXTJS_TSCONFIG = `{
 }
 `;
 
+const NEXTJS_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#111"/><circle cx="32" cy="32" r="14" fill="#fff"/></svg>
+`;
+
 const NEXTJS_NEXT_CONFIG = `import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
@@ -537,6 +540,11 @@ const TEMPLATE_BUILDS: Record<TemplateId, TemplateBuild> = {
       "src/app/page.tsx": NEXTJS_PAGE_TSX,
       "src/app/layout.tsx": NEXTJS_LAYOUT_TSX,
       "src/app/globals.css": NEXTJS_GLOBALS_CSS,
+      // Next serves app/icon.svg as the favicon; without it every page logs a
+      // 404 for /favicon.ico in the console (kaffeeklappe-sep11, 2026-09-11).
+      "src/app/icon.svg": NEXTJS_ICON_SVG,
+      // setup-node in the seeded ci.yml reads the toolchain from here.
+      ".nvmrc": "22\n",
       // Resolved once by scripts/templates/refresh-starter-lock.ts: the deploy
       // workflow installs with --frozen-lockfile and refuses a repo without one.
       [STARTER_LOCK_FILE]: NEXTJS_TAILWIND_PNPM_LOCK,

@@ -960,14 +960,6 @@ async function runSettingsSystemProbes(
     );
   }
 
-  const fleetGet = await apiJson(cookieHeader, "/api/settings/fleet-lifecycle", "GET");
-  if (fleetGet.status === 200 && fleetGet.json?.settings) {
-    const fleetPut = await apiJson(cookieHeader, "/api/settings/fleet-lifecycle", "PUT", {
-      settings: fleetGet.json.settings,
-    });
-    push("ST12 PUT /api/settings/fleet-lifecycle", "PUT", fleetPut.status, fleetPut.status === 200);
-  }
-
   const beaconGet = await apiJson(cookieHeader, "/api/beacon-settings", "GET");
   if (beaconGet.status === 200) {
     const countdown =
@@ -1362,7 +1354,6 @@ async function main(): Promise<void> {
     "/api/fleet/status",
     "/api/builder/presence",
     "/api/metrics",
-    "/api/settings/fleet-lifecycle",
     "/api/github/repos",
   ];
 

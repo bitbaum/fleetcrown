@@ -1,7 +1,7 @@
 /**
  * POST /api/control/peek-frame
  *
- * The Fleet Runner posts one changed dump-screen frame for a tab it is
+ * The Fleet Runner posts one changed frame for a tab it is
  * streaming (it only streams while a viewer is watching — see peek-stream).
  * We fan the frame to that (user, tab)'s SSE viewers via the in-process bus.
  *
@@ -19,7 +19,7 @@ const Channel = z.enum(BUILDER_CHANNELS);
 const Body = z.object({
   tab: z.string().trim().min(1).max(120),
   seq: z.number().int().nonnegative(),
-  // A zellij dump-screen snapshot OR a raw-PTY byte delta (when append=true).
+  // A full snapshot of the owned PTY buffer OR a raw-PTY byte delta (when append=true).
   // Capped to keep one frame well under typical body limits even with color
   // escapes + wide terminals.
   frame: z.string().max(256_000),

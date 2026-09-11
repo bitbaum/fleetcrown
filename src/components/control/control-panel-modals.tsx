@@ -51,7 +51,7 @@ export function NewProjectModal({
           value={name}
           onChange={(e) => onNameChange(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && onCreate()}
-          placeholder="Project name (= zellij tab)"
+          placeholder="Project name"
           className="ui-input w-full"
         />
         <input
