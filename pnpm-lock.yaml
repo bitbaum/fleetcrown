@@ -129,6 +129,9 @@ importers:
         specifier: ^4.5.4
         version: 4.5.4
     devDependencies:
+      '@bitbaum/design-tokens':
+        specifier: 1.1.0
+        version: 1.1.0
       '@tailwindcss/postcss':
         specifier: ^4
         version: 4.3.3
@@ -371,6 +374,10 @@ packages:
     peerDependenciesMeta:
       react:
         optional: true
+
+  '@bitbaum/design-tokens@1.1.0':
+    resolution: {integrity: sha512-sDVplKP4jKe0WHCOnW7xk75RC46JsAYqUngcVlctyAs9f1TQqZqbYTfbmyYipYCOaCIHMflnzAneQTbqrQbtBw==}
+    engines: {node: '>=20'}
 
   '@bitbaum/mail-kit@0.1.0':
     resolution: {integrity: sha512-RbFBDANTUEb2/O2duSXIp+lb8y9ycrdbSTPnvoQ8iZOZsfxQZLseKzgCZumN31q7jRbVNHjQRao0envGWsFJ5Q==}
@@ -5188,6 +5195,8 @@ snapshots:
       ai-forms: 0.1.2(react@19.2.8)
     optionalDependencies:
       react: 19.2.8
+
+  '@bitbaum/design-tokens@1.1.0': {}
 
   '@bitbaum/mail-kit@0.1.0': {}
 

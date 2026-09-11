@@ -50,6 +50,11 @@ type WidgetTheme = {
   accentMuted: string;
   /** Dark ink for text on the accent; older boot responses omit it. */
   inkOnAccent?: string;
+  /** Radii and type from the design tokens; older boot responses omit them. */
+  radiusControl?: string;
+  radiusSurface?: string;
+  fontSans?: string;
+  fontMono?: string;
   text: string;
   textSecondary: string;
   textTertiary: string;
@@ -90,10 +95,14 @@ interface FleetCrownApi {
 
 function buildShadowCSS(theme: WidgetTheme): string {
   const ink = theme.inkOnAccent ?? theme.black;
-  const mono = 'ui-monospace, "Geist Mono", SFMono-Regular, Menlo, Consolas, monospace';
+  const sans = theme.fontSans ?? "system-ui, -apple-system, sans-serif";
+  const mono = theme.fontMono ?? "ui-monospace, SFMono-Regular, Menlo, monospace";
+  // --radius-control / --radius-surface: controls 6px, surfaces 8px.
+  const rc = theme.radiusControl ?? "6px";
+  const rs = theme.radiusSurface ?? "8px";
   return `
 :host { all: initial; }
-* { box-sizing: border-box; margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+* { box-sizing: border-box; margin: 0; font-family: ${sans}; -webkit-font-smoothing: antialiased; }
 button { cursor: pointer; border: none; background: none; color: inherit; font: inherit; }
 button:focus-visible, textarea:focus-visible, input:focus-visible { outline: 2px solid ${theme.accent}; outline-offset: 2px; }
 .mono { font-family: ${mono}; letter-spacing: .08em; text-transform: uppercase; font-size: 10px; }
@@ -146,19 +155,19 @@ button:focus-visible, textarea:focus-visible, input:focus-visible { outline: 2px
 .hdr b { display: block; font-size: 15px; font-weight: 600; letter-spacing: -.01em; color: ${theme.text}; }
 .hdr .page { font-size: 11px; color: ${theme.textTertiary}; margin-top: 3px; max-width: 280px; font-family: ${mono};
              overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.x { color: ${theme.textSecondary}; width: 28px; height: 28px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; flex: none; }
+.x { color: ${theme.textSecondary}; width: 28px; height: 28px; border-radius: ${rc}; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; flex: none; }
 .x:hover { color: ${theme.text}; background: ${theme.surfaceSubtle}; }
 
 /* scope: one segmented control, not three loose chips */
-.chips { display: flex; padding: 3px; gap: 2px; margin-bottom: 12px; border: 1px solid ${theme.border}; border-radius: 8px; background: ${theme.surfaceRaised}; }
-.chip { flex: 1; padding: 7px 4px; font-size: 12px; border-radius: 6px; color: ${theme.textSecondary}; text-align: center; transition: background .12s ease, color .12s ease; }
+.chips { display: flex; padding: 3px; gap: 2px; margin-bottom: 12px; border: 1px solid ${theme.border}; border-radius: ${rs}; background: ${theme.surfaceRaised}; }
+.chip { flex: 1; padding: 7px 4px; font-size: 12px; border-radius: ${rc}; color: ${theme.textSecondary}; text-align: center; transition: background .12s ease, color .12s ease; }
 .chip:hover { color: ${theme.text}; }
 .chip.on { color: ${theme.text}; background: ${theme.surface}; box-shadow: inset 0 0 0 1px ${theme.borderStrong}; font-weight: 500; }
 .hint { font-size: 11px; color: ${theme.accent}; margin: -4px 0 10px; }
 
 textarea, input {
   width: 100%; font-size: 13px; line-height: 1.45; color: ${theme.text};
-  border: 1px solid ${theme.borderStrong}; border-radius: 8px; padding: 9px 11px; background: ${theme.surfaceRaised};
+  border: 1px solid ${theme.borderStrong}; border-radius: ${rs}; padding: 9px 11px; background: ${theme.surfaceRaised};
   transition: border-color .12s ease, box-shadow .12s ease;
 }
 textarea::placeholder, input::placeholder { color: ${theme.textMuted}; }
@@ -168,7 +177,7 @@ textarea { resize: none; min-height: 84px; }
 .cnt { font-size: 10px; color: ${theme.textMuted}; text-align: right; margin: 4px 0 8px; font-family: ${mono}; }
 .diag {
   font-size: 11px; color: ${theme.textSecondary}; background: ${theme.surfaceRaised};
-  border: 1px solid ${theme.border}; border-radius: 6px;
+  border: 1px solid ${theme.border}; border-radius: ${rc};
   padding: 5px 8px; margin: -4px 0 10px; cursor: help;
 }
 input { margin-bottom: 10px; }
@@ -178,14 +187,14 @@ input { margin-bottom: 10px; }
 .attach, .mic {
   display: inline-flex; align-items: center; gap: 7px;
   height: 34px; padding: 0 12px; font-size: 12px; font-weight: 500; color: ${theme.textSecondary};
-  border: 1px solid ${theme.borderStrong}; border-radius: 6px; background: transparent;
+  border: 1px solid ${theme.borderStrong}; border-radius: ${rc}; background: transparent;
   transition: border-color .12s ease, color .12s ease, background .12s ease;
 }
 .attach:hover, .mic:hover { color: ${theme.text}; border-color: ${theme.borderDark}; background: ${theme.surfaceSubtle}; }
 .attach svg, .mic svg { width: 14px; height: 14px; display: block; }
 .shots { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; }
 .shot { position: relative; display: inline-flex; }
-.shot img { height: 44px; max-width: 84px; object-fit: cover; border-radius: 6px; border: 1px solid ${theme.borderDark}; }
+.shot img { height: 44px; max-width: 84px; object-fit: cover; border-radius: ${rc}; border: 1px solid ${theme.borderDark}; }
 .shot .rm {
   position: absolute; top: -6px; right: -6px; width: 18px; height: 18px;
   border-radius: 50%; background: ${theme.text}; color: ${theme.surface}; font-size: 10px; line-height: 1;
@@ -202,11 +211,11 @@ input { margin-bottom: 10px; }
 .fabmenu {
   position: fixed; z-index: 2147483003;
   background: ${theme.surface}; color: ${theme.text};
-  border: 1px solid ${theme.borderDark}; border-radius: 8px;
+  border: 1px solid ${theme.borderDark}; border-radius: ${rs};
   box-shadow: 0 8px 32px rgba(0,0,0,.5);
   padding: 4px; min-width: 190px;
 }
-.fabmenu-item { display: block; width: 100%; text-align: left; font-size: 13px; color: ${theme.text}; padding: 9px 10px; border-radius: 6px; }
+.fabmenu-item { display: block; width: 100%; text-align: left; font-size: 13px; color: ${theme.text}; padding: 9px 10px; border-radius: ${rc}; }
 .fabmenu-item:hover { background: ${theme.surfaceSubtle}; }
 /* A menu is only reachable by long-press on touch, so its rows must clear the
    44px target guideline even though the launcher itself is smaller. */
@@ -223,11 +232,11 @@ input { margin-bottom: 10px; }
 .row { display: flex; gap: 8px; }
 .go {
   flex: 1; height: 38px; background: ${theme.accent}; color: ${ink}; font-size: 13px; font-weight: 600;
-  border-radius: 8px; letter-spacing: -.01em; transition: background .12s ease, opacity .12s ease;
+  border-radius: ${rs}; letter-spacing: -.01em; transition: background .12s ease, opacity .12s ease;
 }
 .go:hover { background: ${theme.accentHover}; }
 .go:disabled { cursor: default; background: ${theme.surfaceRaised}; color: ${theme.textMuted}; }
-.ghost { height: 38px; font-size: 13px; color: ${theme.textSecondary}; padding: 0 14px; border: 1px solid ${theme.borderStrong}; border-radius: 8px; }
+.ghost { height: 38px; font-size: 13px; color: ${theme.textSecondary}; padding: 0 14px; border: 1px solid ${theme.borderStrong}; border-radius: ${rs}; }
 .ghost:hover { color: ${theme.text}; border-color: ${theme.borderDark}; }
 .err { font-size: 12px; color: ${theme.error}; margin-top: 8px; }
 .keys { color: ${theme.textMuted}; text-align: center; margin-top: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; }
