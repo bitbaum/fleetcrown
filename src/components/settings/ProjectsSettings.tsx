@@ -157,7 +157,7 @@ export function ProjectsSettings({ projects: initial, teamProjects, projectLimit
         <p className="text-sm text-text-secondary bg-surface-raised rounded-lg px-4 py-3">
           You&apos;ve reached the {projectLimit}-project limit on your plan.{" "}
           <a href="/settings#billing" className="ui-link">
-            Upgrade to Pro
+            See plans
           </a>{" "}
           for unlimited projects.
         </p>

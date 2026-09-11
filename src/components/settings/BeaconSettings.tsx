@@ -8,8 +8,6 @@ import {
   DEFAULT_BEACON_COUNTDOWN_S,
   MIN_BEACON_COUNTDOWN_S,
   MAX_BEACON_COUNTDOWN_S,
-  DEFAULT_BEACON_MIN_IDLE_S,
-  MAX_BEACON_MIN_IDLE_S,
   DEFAULT_AUTO_INJECT_MODE,
 } from "@/lib/constants/control";
 import {
@@ -25,7 +23,6 @@ export function BeaconSettings() {
   const [data, setData] = useState<BeaconSettingsData | null>(null);
   const [popupMode, setPopupMode] = useState("web");
   const [countdown, setCountdown] = useState(DEFAULT_BEACON_COUNTDOWN_S);
-  const [minIdle, setMinIdle] = useState(DEFAULT_BEACON_MIN_IDLE_S);
   const [model, setModel] = useState("base");
   const [provider, setProvider] = useState("auto");
   const [autoInjectMode, setAutoInjectMode] = useState<AutoInjectMode>(DEFAULT_AUTO_INJECT_MODE);
@@ -40,7 +37,6 @@ export function BeaconSettings() {
         setData(d);
         setPopupMode(d.popup_mode);
         setCountdown(d.countdown_seconds);
-        setMinIdle(d.min_idle_seconds);
         setModel(d.whisper_model);
         setProvider(d.transcription_provider);
         setAutoInjectMode(d.auto_inject_mode);
@@ -52,7 +48,6 @@ export function BeaconSettings() {
     data !== null &&
     (popupMode !== data.popup_mode ||
       countdown !== data.countdown_seconds ||
-      minIdle !== data.min_idle_seconds ||
       model !== data.whisper_model ||
       provider !== data.transcription_provider ||
       autoInjectMode !== data.auto_inject_mode);
@@ -65,7 +60,6 @@ export function BeaconSettings() {
       const res = await patchJson("/api/beacon-settings", {
         popup_mode: popupMode,
         countdown_seconds: countdown,
-        min_idle_seconds: minIdle,
         whisper_model: model,
         transcription_provider: provider,
         auto_inject_mode: autoInjectMode,
@@ -74,7 +68,6 @@ export function BeaconSettings() {
       setData({
         popup_mode: popupMode,
         countdown_seconds: countdown,
-        min_idle_seconds: minIdle,
         whisper_model: model,
         transcription_provider: provider,
         auto_inject_mode: autoInjectMode,
@@ -141,32 +134,14 @@ export function BeaconSettings() {
                 When an agent finishes a task, autopilot sends the next queued instruction — or, if
                 the queue is empty, picks the next-best task automatically. It pauses on its own for
                 busy agents, pending blockers, and failing health checks. Set it Off to dispatch
-                every prompt by hand.
-              </p>
-            </div>
-
-            {/* ── Idle gate ── */}
-            <div className="space-y-1.5">
-              <label className="ui-kicker">Show popup after idle</label>
-              <div className="flex items-center gap-3">
-                <input
-                  type="number"
-                  min={0}
-                  max={MAX_BEACON_MIN_IDLE_S}
-                  value={minIdle}
-                  onChange={(e) =>
-                    setMinIdle(
-                      Math.max(0, Math.min(MAX_BEACON_MIN_IDLE_S, parseInt(e.target.value) || 0)),
-                    )
-                  }
-                  className="ui-input w-24 tabular-nums"
-                />
-                <span className="text-sm text-text-tertiary">seconds</span>
-              </div>
-              <p className="text-xs text-text-muted">
-                {minIdle === 0
-                  ? "Always show — popup fires every time a session ends regardless of keyboard activity."
-                  : `Skip popup if you've been active in the last ${minIdle}s — only show when idle.`}
+                every prompt by hand.{" "}
+                <span className="text-text-tertiary">
+                  This is the account-wide default. A project that sets its own autopilot on{" "}
+                  <a href="/control" className="ui-link">
+                    Control
+                  </a>{" "}
+                  overrides it.
+                </span>
               </p>
             </div>
 

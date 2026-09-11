@@ -6,25 +6,6 @@ import { patchJson } from "@/lib/api/fetch";
 import type { UserPreferencesData } from "@/db/queries/user-preferences";
 import { TOAST_SHORT_MS } from "@/lib/constants/timings";
 
-const LOCALE_OPTIONS: { value: string; label: string }[] = [
-  { value: "en-US", label: "English (US)" },
-  { value: "en-GB", label: "English (UK)" },
-  { value: "en-AU", label: "English (AU)" },
-  { value: "en-CA", label: "English (CA)" },
-  { value: "de-CH", label: "Deutsch (Schweiz)" },
-  { value: "de-DE", label: "Deutsch (Deutschland)" },
-  { value: "de-AT", label: "Deutsch (Österreich)" },
-  { value: "fr-FR", label: "Français (France)" },
-  { value: "fr-CH", label: "Français (Suisse)" },
-  { value: "es-ES", label: "Español (España)" },
-  { value: "es-MX", label: "Español (México)" },
-  { value: "it-IT", label: "Italiano (Italia)" },
-  { value: "pt-BR", label: "Português (Brasil)" },
-  { value: "ja-JP", label: "日本語" },
-  { value: "zh-CN", label: "中文 (简体)" },
-  { value: "ko-KR", label: "한국어" },
-];
-
 const TIMEZONES = Intl.supportedValuesOf("timeZone");
 
 type Props = { initialPrefs: UserPreferencesData };
@@ -36,7 +17,6 @@ export function LocationSettings({ initialPrefs }: Props) {
   // Home base
   const [homeCity, setHomeCity] = useState(initialPrefs.homeCity ?? "");
   const [homeTimezone, setHomeTimezone] = useState(initialPrefs.homeTimezone ?? "");
-  const [homeLocale, setHomeLocale] = useState(initialPrefs.homeLocale ?? "");
   const [homeSaving, setHomeSaving] = useState(false);
   const [homeError, setHomeError] = useState("");
   const [homeSaved, setHomeSaved] = useState(false);
@@ -55,9 +35,7 @@ export function LocationSettings({ initialPrefs }: Props) {
     new Date(savedPrefs.currentCityUntil) < new Date();
 
   const homeDirty =
-    homeCity !== (savedPrefs.homeCity ?? "") ||
-    homeTimezone !== (savedPrefs.homeTimezone ?? "") ||
-    homeLocale !== (savedPrefs.homeLocale ?? "");
+    homeCity !== (savedPrefs.homeCity ?? "") || homeTimezone !== (savedPrefs.homeTimezone ?? "");
 
   const currentDirty =
     currentCity !== (savedPrefs.currentCity ?? "") ||
@@ -72,7 +50,6 @@ export function LocationSettings({ initialPrefs }: Props) {
       const res = await patchJson("/api/me/preferences", {
         homeCity: homeCity.trim() || null,
         homeTimezone: homeTimezone || null,
-        homeLocale: homeLocale || null,
       });
       if (!res.ok) {
         const d = (await res.json()) as { error?: string };
@@ -82,7 +59,6 @@ export function LocationSettings({ initialPrefs }: Props) {
       const saved = {
         homeCity: homeCity.trim() || null,
         homeTimezone: homeTimezone || null,
-        homeLocale: homeLocale || null,
       };
       setSavedPrefs((p) => ({ ...p, ...saved }));
       setHomeSaved(true);
@@ -152,8 +128,8 @@ export function LocationSettings({ initialPrefs }: Props) {
     <section className="ui-settings-section">
       <h2 className="font-medium text-text-primary">Location</h2>
       <p className="text-sm text-text-secondary -mt-1">
-        Your location powers weather, event recommendations, and scheduling defaults. Set a home
-        base and optionally override it when traveling.
+        Your timezone is what scheduled jobs run against, and your city is what the weather panel
+        reports. Set a home base and optionally override it when traveling.
       </p>
 
       {/* Home base */}
@@ -187,21 +163,6 @@ export function LocationSettings({ initialPrefs }: Props) {
               ))}
             </select>
           </div>
-        </div>
-        <div className="space-y-1.5">
-          <label className="ui-kicker">Date & number format</label>
-          <select
-            value={homeLocale}
-            onChange={(e) => setHomeLocale(e.target.value)}
-            className="ui-input sm:max-w-xs"
-          >
-            <option value="">Select locale</option>
-            {LOCALE_OPTIONS.map(({ value, label }) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
         </div>
         {homeError && <p className="ui-error-xs">{homeError}</p>}
         {homeSaved && <p className="text-sm text-status-positive">Saved.</p>}
