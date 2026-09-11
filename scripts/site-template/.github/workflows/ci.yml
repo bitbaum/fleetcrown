@@ -94,3 +94,29 @@ jobs:
       # config surfaces here and nowhere earlier.
       - name: Build
         run: pnpm run build
+
+  # A sweep merge uses GITHUB_TOKEN, and a push made with that token triggers
+  # no workflows; the CI the sweep then re-arms is itself a dispatch, whose
+  # workflow_run event GitHub also suppresses. So after an agent's PR is
+  # auto-merged here, NOTHING starts Deploy — kaffeeklappe-sep11 sat an hour
+  # on 2026-09-11 with the change merged, CI green, and the site serving the
+  # previous release. The sweep's reconciler catches it on its next tick,
+  # which is correct, self-healing, and up to ten minutes late.
+  #
+  # A dispatch is not a push, so this job may start Deploy directly the moment
+  # CI proves main green. Same shape as bitbaum/fleetcrown's own ci.yml.
+  #
+  # Only for workflow_dispatch: a real push to main chains through
+  # workflow_run by itself, and dispatching here too would ship twice.
+  ship:
+    needs: verify
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dispatch Deploy now that main is green
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run deploy.yml --ref main
