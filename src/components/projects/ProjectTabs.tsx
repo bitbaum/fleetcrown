@@ -85,7 +85,7 @@ export function ProjectTabs({ tabs, initialId }: { tabs: ProjectTab[]; initialId
       <div
         role="tablist"
         aria-label="Project sections"
-        className="sticky top-0 z-20 -mx-4 flex gap-1 overflow-x-auto border-y border-border-subtle bg-surface-page/95 px-4 py-2 backdrop-blur-sm sm:mx-0 sm:rounded-lg sm:border sm:px-2"
+        className="sticky top-0 z-20 -mx-4 flex gap-1 overflow-x-auto border-y border-border-subtle bg-surface-page/95 px-4 py-2 backdrop-blur-sm sm:mx-0 sm:px-0"
       >
         {tabs.map((tab, i) => (
           <button
