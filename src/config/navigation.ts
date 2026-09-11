@@ -27,6 +27,7 @@ import {
   Globe,
   MessagesSquare,
   Handshake,
+  LayoutGrid,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -106,6 +107,15 @@ export const NAV = {
     description: "Your project catalog — health, context & goals",
     href: "/projects",
     icon: FolderKanban,
+    active: true,
+    mobile: false,
+  },
+  fleet: {
+    id: "fleet",
+    label: "Fleet",
+    description: "Every project and where it lives — sites, profiles, and the gaps between",
+    href: "/fleet",
+    icon: LayoutGrid,
     active: true,
     mobile: false,
   },
@@ -332,7 +342,15 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
     // Reachable from Menu, command palette, FleetSurfaceGuide, and deep
     // links. Not a daily peer of Work — opening them empty is a dead page.
     label: "More",
-    items: [NAV.approvals, NAV.terminal, NAV.prompts, NAV.activity, NAV.system, NAV.thoughts],
+    items: [
+      NAV.approvals,
+      NAV.terminal,
+      NAV.prompts,
+      NAV.activity,
+      NAV.system,
+      NAV.fleet,
+      NAV.thoughts,
+    ],
   },
   {
     id: "private",

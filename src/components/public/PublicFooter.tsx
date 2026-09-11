@@ -116,6 +116,11 @@ export function PublicFooter() {
         <summary className="ui-public-footer-fleet-summary">
           Part of the fleet — {FLEET_SITES.length} more sites
         </summary>
+        <div className="mt-3">
+          <Link href="/fleet" className="ui-public-link-standalone text-sm">
+            The whole register — every project, and where it lives →
+          </Link>
+        </div>
         <div className="ui-public-footer-fleet-grid mt-4">
           {FLEET_SITES.map((site) => (
             <a
