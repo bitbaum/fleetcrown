@@ -8,6 +8,7 @@
 // 2. The live page is the PROJECT's origin + the reported path. A visitor on a
 //    preview host or a fixture URL (…example/) must not become the link.
 import assert from "node:assert/strict";
+import { composeFeedbackFixPrompt } from "../../src/lib/feedback/compose-dispatch";
 import {
   deriveShippingFromPr,
   firstSentence,
@@ -320,3 +321,26 @@ console.log("feedback-fix-ledger: ok");
 }
 
 console.log("feedback-waiting-on: ok");
+
+// The dispatch prompt must not promise the agent that its PR merges itself.
+// Site provisioning writes deploy.yml and nothing else (src/lib/site-cd.ts),
+// so "an opened PR with passing checks counts as shipped" was false, and two
+// green agent PRs sat open on a dogfood site for a day because of it.
+{
+  const prompt = composeFeedbackFixPrompt(
+    {
+      suggestion: "Fix the opening hours.",
+      duplicateCount: 1,
+      url: "https://harbour-bakery.example/contact",
+      page: "/contact",
+      scope: "page",
+      selectedElements: null,
+    },
+    "Harbour Bakery",
+  );
+  assert.doesNotMatch(prompt, /auto-merge\.yml/, "never name a workflow the site may not have");
+  assert.doesNotMatch(prompt, /counts as shipped/, "an open PR is progress, not a shipped fix");
+  assert.match(prompt, /do not merge it yourself/, "the agent still may not merge its own work");
+}
+
+console.log("feedback-ship-instruction: ok");
