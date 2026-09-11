@@ -96,6 +96,26 @@ OUT="$OUT
 $REALITY"
 [ "$RRC" -eq 0 ] || RC=$RRC
 
+# Third question, and the one nothing else could answer: does each registered
+# site's widget actually ACTIVATE?
+#
+# A widget token is bound to an origin at provisioning and never looked at
+# again, while the host is renamed whenever the project is. When they disagree
+# the widget does not error — widget.js 200, widget-boot 200 {"active":false},
+# launcher never mounts, nothing logged. Two live sites sat like that for
+# months (aoz-housing bound to aoz-wohnen.orangecat.ch, sbb-lost-found bound to
+# sbb.orangecat.ch), and the repair needed no redeploy, only a rebind.
+#
+# Here rather than in `verify` for the same reason as the reality check: it
+# needs the network. It self-skips when FleetCrown is unreachable, because
+# offline every site would look dead — that is an instrument failure, not an
+# outage, and the two must not print the same thing.
+WIDGETS=$(cd "$TMPD" && MANIFEST="$MANIFEST_AT_REF" bash scripts/ci/check-widget-origins.sh 2>&1)
+WRC=$?
+OUT="$OUT
+$WIDGETS"
+[ "$WRC" -eq 0 ] || RC=$WRC
+
 echo "$OUT"
 [ "$RC" -eq 0 ] && exit 0
 
