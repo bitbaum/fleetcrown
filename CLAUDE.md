@@ -90,8 +90,8 @@ src/
 home/              → Agent orchestration library. Pure pieces that tail one
                      append-only JSONL event log: watcher.ts (Bridge — emits
                      worker.idle when ~/.fleetcrown/sessions/*.md changes),
-                     worker.ts (Consumer — injects bridge.dispatch into zellij,
-                     sends Ctrl+C on bridge.cancel), plus decide/render/state.
+                     plus decide/render/state/emit/log/projects/calendar-drain.
+                     The worker (zellij consumer) was deleted 2026-09-11.
                      The standalone Brain (home/server.ts, port 3001) and its
                      scripts/home-start.sh launcher were RETIRED in a3f470d.
                      These pieces are a LIBRARY, not a process — three different
@@ -106,10 +106,12 @@ home/              → Agent orchestration library. Pure pieces that tail one
                      one serves a given workflow is SSOT in
                      docs/development/cloud-local-workflows.md. Dispatch goes through /api/inject → pending_command → an authorized
                      runner. Project-owned sessions are the execution identity;
-                     Zellij names are a legacy transport detail, never a reason
-                     to add tab guessing to Control or feedback. To iterate
-                     on a single piece, run it directly (`pnpm exec tsx
-                     home/worker.ts --start`); test the whole library with
+                     Tabs are owned PTYs keyed by project; there is no
+                     multiplexer to guess. Which builder runs a project is a
+                     STORED decision (locus lock → `builder_pref` → cloud
+                     floor, src/lib/execution-access.ts), never presence. To
+                     iterate on a single piece, run it directly (`pnpm exec tsx
+                     home/watcher.ts --start`); test the whole library with
                      `pnpm run test:home`. Full docs: home/README.md.
 
 widget/            → The embeddable feedback widget customer sites load as
@@ -295,7 +297,7 @@ explicit rule to admit when something is not in that excerpt.
 
 ## Cloud vs local
 
-See `docs/development/cloud-local-workflows.md` — SSOT for which workflows run in the browser vs require the local daemon (hosted agent installer, Zellij, agent CLIs).
+See `docs/development/cloud-local-workflows.md` — SSOT for which workflows run in the browser vs require a builder (owned agent PTYs, agent CLIs), and for the stored routing rule.
 
 See `docs/development/responsive-design.md` — SSOT for mobile chrome tokens, shell layout, viewport-height panes, and responsive component patterns. All pages must work at 320px+ without horizontal scroll.
 
@@ -354,7 +356,7 @@ pnpm run check:desktop # Typecheck + build desktop/ (Fleet Runner). Part of `ver
 pnpm run db:generate  # Generate a versioned migration file from schema changes
 pnpm run db:push      # drizzle-kit push — LOCAL/scratch DB only, never shared/prod
 pnpm exec tsx scripts/seed.ts  # Re-seed database from knowledge.sqlite + contacts
-pnpm exec tsx home/worker.ts --start  # Run a single home/ piece for iteration
+pnpm exec tsx home/watcher.ts --start # Run a single home/ piece for iteration
                                 # (Fleet Runner desktop is the real executor)
 ```
 

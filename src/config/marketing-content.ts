@@ -78,7 +78,7 @@ export const INVESTORS = {
     "The same control patterns transfer to physical robotics. The market has not yet appreciated this.",
   ],
   built:
-    "A web command center coordinates fleets of AI agents across projects. A native Fleet Runner desktop app — same React tree as the web, plus tray and OS notifications — runs them directly in the operator's terminal environment via Zellij. Per-project autonomy controls, reliable handoff systems, queue management, and truthful status surfaces are live and in daily use. Multi-OS installers (Linux, macOS, Windows) ship from a single CI matrix on every release tag.",
+    "A web command center coordinates fleets of AI agents across projects. A native Fleet Runner desktop app — same React tree as the web, plus tray and OS notifications — runs them in terminals it owns on the operator's machine, watchable from the web. Per-project autonomy controls, reliable handoff systems, queue management, and truthful status surfaces are live and in daily use. Multi-OS installers (Linux, macOS, Windows) ship from a single CI matrix on every release tag.",
   // Scannable bullets, not a prose wall — the page pairs these with the live
   // fleet snapshot (same real data source as the homepage hero).
   traction: [
@@ -148,9 +148,9 @@ export const ROADMAP: {
         },
         {
           title: "Fleet Runner desktop app",
-          line: "One local execution path: the desktop app owns Zellij, agent launching, and state sync — the same React tree the web serves.",
+          line: "One local execution path: the desktop app owns the agent terminals, agent launching, and state sync — the same React tree the web serves.",
           details: [
-            "Tray icon, OS notifications on agent idle, and an embedded Zellij watcher for fire-and-walk-away dispatch.",
+            "Tray icon, OS notifications on agent idle, and an embedded session watcher for fire-and-walk-away dispatch.",
             "The legacy bash runner was retired by deletion — one path, not two.",
             "Multi-OS release pipeline: one tag push produces signed installers from a shared CI matrix.",
           ],
@@ -337,7 +337,7 @@ export const DESKTOP_DOWNLOAD = {
       tagline: "Adds local execution",
       bullets: [
         "Actually runs agents on your machine",
-        "Drives Zellij sessions and handoffs",
+        "Runs agents in terminals it owns, plus handoffs",
         "Native notifications when an agent finishes",
         "Keeps working after you close your browser",
       ],
@@ -443,7 +443,7 @@ export const DESKTOP_DOWNLOAD = {
   prerequisites: {
     title: "What Fleet Runner uses on your computer",
     description:
-      "Fleet Runner doesn't replace the tools you already use — it drives them. Only one thing must exist on your machine for an agent to actually run: a supported agent CLI. Pick whichever AI you prefer; you only need one to start. (Zellij — the terminal session manager that gives each agent its own pane — ships inside Fleet Runner since v0.2.0, so you no longer install it separately.)",
+      "Fleet Runner doesn't replace the tools you already use — it drives them. Only one thing must exist on your machine for an agent to actually run: a supported agent CLI. Pick whichever AI you prefer; you only need one to start. Each agent runs in a terminal Fleet Runner owns, so there is no terminal multiplexer to install or configure.",
     items: [
       {
         title: "Claude Code",
@@ -464,15 +464,6 @@ export const DESKTOP_DOWNLOAD = {
         href: "https://x.ai/cli",
         installLabel: "Install Grok CLI",
         command: "curl -fsSL https://x.ai/cli/install.sh | bash",
-      },
-      {
-        title: "Zellij",
-        role: "Bundled — no install needed",
-        required: false,
-        whyYouNeedIt:
-          "Fleet Runner v0.2.0+ ships with a known-good Zellij inside the bundle and prefers it over any system install. Listed here only so you know what's running. Install it yourself only if you also want a system-wide Zellij outside Fleet Runner.",
-        href: "https://zellij.dev/documentation/installation.html",
-        installLabel: "Zellij docs (optional)",
       },
     ],
   },
@@ -530,7 +521,7 @@ export const PRODUCT_SURFACES = [
   {
     label: "Runner",
     title: "Execution stays on your machine.",
-    body: "The local runner owns Zellij, git, agent launching, and handoff files. FleetCrown coordinates the work without turning your environment into a cloud sandbox.",
+    body: "The local runner owns the agent terminals, git, agent launching, and handoff files. FleetCrown coordinates the work without turning your environment into a cloud sandbox.",
     meta: "Desktop app · CLI agent fallback · agent tokens",
   },
   {

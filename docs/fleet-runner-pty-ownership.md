@@ -1,23 +1,30 @@
 # Fleet Runner v2 — Direct PTY Ownership
 
-**Status**: Proposal / decision doc. Extends and partially supersedes the zellij-centered execution model in `docs/desktop-app.md`.
+> **Status (2026-09-11): shipped in Fleet Runner 0.8.19 / on main.** The phases
+> below are history; the zellij attach mode described here never shipped and is
+> not planned. Fleet Runner owns every agent PTY (node-pty); zellij, the ZSH
+> typing hooks, `home/worker.ts`, `src/lib/zellij.ts` and `src/lib/terminals/*`
+> are deleted. Superseded by `docs/architecture/box-owned-pty-executor.md` and
+> `docs/development/cloud-local-workflows.md`.
+
+**Status**: Decision record (2026-06-02), shipped. Superseded the zellij-centered execution model in `docs/desktop-app.md`.
 **Date**: 2026-06-02
 **Author trigger**: zellij `async-std/runtime` panic (`WouldBlock`) crashing kitty sessions on large pastes — exposing zellij as both a UX liability and a hard onboarding dependency.
 
 ## The Problem
 
-FleetCrown's current execution path:
+FleetCrown's execution path at the time of writing:
 
 ```
 /control UI → /api/inject → home/worker.ts → zellij action write-chars → agent CLI in tab
 ```
 
-This shape carries two structural costs:
+This shape carried two structural costs:
 
 1. **Onboarding wall.** To get value, a new user must (a) install zellij, (b) open a tab named exactly like their project key, (c) launch the right agent CLI in that tab, (d) keep it alive. Three install steps and one fragile naming convention before the dashboard does anything. This is the **#1 reason FleetCrown can't onboard non-me users today.**
 2. **Reliability tax.** Zellij 0.43.x has a known upstream panic in `blocking-1.2.0` when the PTY write returns `EWOULDBLOCK` (`.unwrap()` on `Err`). Large writes from the worker — or large pastes from the user — crash the entire zellij server. We don't control the fix.
 
-Both costs trace to the same root: **FleetCrown does not own the agent's PTY.** Zellij does. We're a tenant in someone else's terminal multiplexer.
+Both costs traced to the same root: **FleetCrown did not own the agent's PTY.** Zellij did. We were a tenant in someone else's terminal multiplexer.
 
 ## The Pivot
 
@@ -34,38 +41,38 @@ xterm.js  ←──┘   ├── PtySession manager (node-pty)
                  └── Existing decide / strategist (unchanged)
 ```
 
-The agent process is a child of Fleet Runner, not of a zellij pane. The browser renders the live session through `xterm.js`, fed by an SSE stream off Fleet Runner. Zellij becomes optional — a power-user "attach to my existing zellij session" mode, not a default.
+The agent process is a child of Fleet Runner, not of a zellij pane. The browser renders the live session through `xterm.js`, fed by an SSE stream off Fleet Runner. Zellij is not part of the product: there is one substrate, the owned PTY.
 
 ## What Stays
 
 The pivot is **execution-layer only**. Everything upstream of injection is preserved:
 
 - The append-only JSONL event log (`~/.fleetcrown/events.jsonl`)
-- `applyEvent` / state projection (Brain layer in `home/server.ts`)
+- `applyEvent` / state projection (`home/state.ts`, consumed in-process by Fleet Runner)
 - `decide()` and autonomy gates
 - Strategist (`/api/control/dispatch` → Groq composition)
 - Project registry, agent preferences, dispatch gates, blockers
 - Session.md handoff format (still the agent's source of "what happened")
-- The watcher (file-change → `worker.idle`) — works identically whether the session.md is written by an agent in a zellij tab or in a Fleet Runner-owned PTY
+- The watcher (file-change → `worker.idle`) — reads the session.md the agent writes from its Fleet Runner-owned PTY
 - All web UI, all API routes, all DB schemas
 
 ## What Changes
 
 | Today | Fleet Runner v2 |
 |-------|-----------------|
-| `home/worker.ts` runs `zellij action write-chars` | `home/worker.ts` calls `PtySession.send(runId, prompt)` |
+| `home/worker.ts` runs `zellij action write-chars` | Fleet Runner writes the prompt into the owned PTY (`home/worker.ts` is deleted) |
 | Session is addressed by zellij tab name | Session is addressed by `runId` (or `projectKey` for the current session) |
 | User sees agent output in their zellij pane | User sees agent output in browser via xterm.js, or in Fleet Runner's renderer window |
 | Lifecycle: agent CLI started manually by user | Lifecycle: agent CLI spawned by Fleet Runner on first dispatch |
 | Resize: zellij handles | Resize: PtySession listens to xterm.js `resize` events, calls `pty.resize(cols, rows)` |
 | Kill: user `Ctrl+C` in their pane | Kill: UI "Stop" button → `PtySession.kill(runId)` |
 
-## What Gets Removed (or Demoted to Opt-In)
+## What Got Removed
 
 - `scripts/install-fleetcrown-hooks.sh` (the ZSH typing-hooks installer). Only needed because we were sharing the pane with the user's interactive shell. Gone.
 - `isUserTypingInTab()` — same reason.
 - The "open a tab named exactly like your project" onboarding step.
-- `injectIntoTab` from the default dispatch path. Kept in `src/lib/zellij.ts` for the opt-in **zellij attach mode** (power users who already live in zellij and want FleetCrown to drive their existing sessions).
+- `injectIntoTab`, `src/lib/zellij.ts` and `src/lib/terminals/*` — deleted outright on 2026-09-11. An inject for a tab with no live owned PTY fails loudly ("no running agent for … — dispatch to start one") and the cloud enqueues a dispatch (cold start) instead.
 
 ## New Components
 
@@ -118,15 +125,15 @@ Wraps `xterm.js`. Subscribes to the SSE stream, sends input back through a small
 
 Zero multiplexer install. Zero terminal-of-choice constraint. Zero tab-naming convention.
 
-## Phased Migration
+## Phased Migration (history)
 
-The existing zellij path stays alive for the whole migration — no flag day.
+The plan kept the zellij path alive during the migration — no flag day.
 
-- **Phase A** — Build `PtySession` + xterm.js panel + SSE stream as a parallel execution mode. Behind an env flag (`FLEETCROWN_EXEC_MODE=pty`). Default stays zellij. Ship and dogfood with the founder + 1-2 friendly users.
-- **Phase B** — Flip default for new desktop installs to `pty`. Existing zellij users explicitly opt in to keep zellij mode (one click in Settings). Documentation reframes zellij as "attach mode."
-- **Phase C** — Remove `injectIntoTab` from the default code path entirely. Keep `zellij.ts` only as the attach-mode integration. Drop the ZSH typing-hooks installer from onboarding.
+- **Phase A** — Build `PtySession` + xterm.js panel + SSE stream as a parallel execution mode behind an env flag. Ship and dogfood with the founder + 1-2 friendly users. (Shipped as `LocalPtyExecutor`, 2026-06.)
+- **Phase B** — Flip the default for desktop installs to the owned PTY. (Shipped.)
+- **Phase C** — Remove the zellij code path entirely and drop the ZSH typing-hooks installer. (Shipped 2026-09-11 in Fleet Runner 0.8.19: no attach mode, no `FLEETCROWN_RUNNER_PTY` flag, no bundled zellij binary — the code was deleted, not demoted.)
 
-Each phase is ship-on-green: the entire test suite, smoke tests, and home/ self-tests must pass.
+Each phase was ship-on-green: the entire test suite, smoke tests, and home/ self-tests had to pass.
 
 ## Tradeoffs and Risks
 
@@ -134,10 +141,10 @@ Each phase is ship-on-green: the entire test suite, smoke tests, and home/ self-
 |------|------------|
 | `node-pty` is a native module — Electron build matrix gets heavier | Already required for any real terminal anyway; electron-builder handles prebuilt binaries. Worst case, ship per-platform installers — we're doing that already (AppImage / deb). |
 | Agent CLIs may behave differently outside an "interactive" TTY (color codes, paging) | node-pty *is* a real PTY (allocates `/dev/pts/N`). Agents see a real terminal, not a pipe. Empirically Claude Code and Codex run identically in tmux/zellij/node-pty. |
-| xterm.js doesn't render exactly like the user's preferred terminal (fonts, ligatures, key bindings) | True. Acceptable cost for the onboarding win. Power users can still use attach mode. |
+| xterm.js doesn't render exactly like the user's preferred terminal (fonts, ligatures, key bindings) | True. Acceptable cost for the onboarding win. |
 | Browser-side terminal feels less native than a real terminal | Mitigated by Fleet Runner's own renderer window also showing the xterm.js panel — power users get a native-app feel without a browser. |
 | Streaming output over SSE adds latency vs zellij's direct PTY rendering | Negligible (<10ms localhost). Web users already accept this for VS Code Server, Replit, Codespaces. |
-| Losing the "I can see and interact in my actual terminal" UX | Opt-in zellij attach mode preserves this for users who want it. |
+| Losing the "I can see and interact in my actual terminal" UX | The web terminal is fully interactive against the owned PTY (see `docs/terminal-parity.md`); the multiplexer is not coming back. |
 | Web users on a different machine than Fleet Runner can't see the terminal | Already true for any local-execution model. The remote-control-plane work (`desktop-6-remote-plumbing`) routes events back through the hosted control plane — terminal streams can ride the same channel later. |
 
 ## Where This Sits in the Existing Plan
@@ -164,8 +171,9 @@ Fleet Runner v2 ships when:
 
 - A fresh Linux/macOS user with no zellij, no tmux, no pre-existing terminal setup can: install Fleet Runner → sign in → connect a project → see a running agent in the browser within 5 minutes of download click.
 - The `home/` event model continues to work unchanged (existing tests pass).
-- Zellij attach mode still works for users who opt in.
 - The WouldBlock panic class is impossible by construction — Fleet Runner backpressures writes; we own the buffer.
+
+All three hold on main as of 2026-09-11.
 
 ---
 

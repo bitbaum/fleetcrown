@@ -1,9 +1,9 @@
 // SSOT for matching a FleetCrown project key to the name a user actually gave
-// their Zellij tab. Project keys are slugs ("revampit", "aoz-housing"); the
+// their terminal tab. Project keys are slugs ("revampit", "aoz-housing"); the
 // live tab might be "revamp-it", "Revamp It", "AOZ Housing", etc. Matching used
-// to be exact-case-insensitive in three places (terminals/zellij.ts,
-// agent-runtime.ts, desktop poller), so "revampit" ≠ "revamp-it" → focus/inject
-// silently failed. Normalize away case + punctuation and they collapse.
+// to be exact-case-insensitive in three places (the since-deleted zellij
+// adapter, agent-runtime.ts, desktop poller), so "revampit" ≠ "revamp-it" →
+// inject silently failed. Normalize away case + punctuation and they collapse.
 
 /** Lowercase + strip everything that isn't a letter or digit. So "revamp-it",
  *  "Revamp It", "revamp_it" and "revampit" all become "revampit". */

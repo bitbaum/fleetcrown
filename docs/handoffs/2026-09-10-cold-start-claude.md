@@ -339,3 +339,51 @@ targets from the release register, not the one just written (fixed in #607);
 
 Still two operator merges on the path (agent PRs on a site repo with no CI or
 auto-merge); everything else ran from the product.
+
+---
+
+## Superseded on 2026-09-11
+
+The sections above are left as written. What follows is what changed on main
+the next day (Fleet Runner 0.8.19, "one substrate"), so the open items above
+are read against the current design rather than the one they were filed in.
+
+- **Routing is a stored decision.** `pickDispatchChannel(project)`
+  (`src/lib/execution-access.ts`) resolves: locus lock (a laptop-only checkout
+  stays local; a checkout under the box clone root stays cloud) →
+  `user_projects.builder_pref` ("Runs on" in Control → project profile) →
+  cloud floor (`DEFAULT_BUILDER_CHANNEL = "cloud"`). Runner presence and
+  laptop battery no longer route anything; an offline chosen builder queues
+  visibly (`runnerConnected: false`) and never reroutes. Walk A defect 4
+  above — "a Fleet Runner on the operator's laptop was connected, so
+  'operator present' routed the job there" — is the class of bug that was
+  deleted, not patched: there is no presence-based routing left to get wrong.
+- **The local runtime is PTY-only.** Fleet Runner owns every agent PTY
+  (node-pty). Zellij is gone from the product: no cold-start restore on boot,
+  no Settings "Restoration" section, no `/api/control/runtime-state/desired`,
+  no bundled zellij binary, no `FLEETCROWN_RUNNER_PTY`, no `src/lib/zellij.ts`,
+  no `src/lib/terminals/*`, no `home/worker.ts`, no `src/lib/agent-runtime.ts`.
+  The "local runtime path still has Zellij gating if no PTY" P2 above is
+  closed: an inject for a tab with no live owned PTY fails loudly ("no running
+  agent for … — dispatch to start one") and the cloud enqueues a dispatch (cold
+  start) instead. `/api/control` reports owned PTYs as `liveTabs`.
+- **Focus-tab is removed.** No `focus_tab` command, no
+  `/api/control/focus-tab`. The "Focus-tab remnants in `ZellijLivePanel`,
+  `WorkspaceTerminalClient`, `ControlPanel`" item is closed (the two Control
+  components are now `LiveTerminalPanel` / `LiveTerminalRows`). `/control?focus=…`
+  survives only as a client-side deep link that selects and highlights the
+  project on Control.
+- **Kickoff builds on arrival.** The OrangeCat "Build it with FleetCrown"
+  handoff creates the project and lands on `/projects/<id>?kickoff=auto` with
+  the kickoff running (profile → milestones → repository → agent); `?review=1`,
+  a same-named project, or an already-connected entity show the picker/open
+  instead. Linking an existing project never auto-starts; funding events never
+  dispatch.
+
+Still open from the ranked list above after this change: 1 (starter CI +
+auto-merge), 2 (run injected into an existing PTY never reaches `done`), 4
+(durable register never fast-forwards), 5 (CI cancels under rapid merges), the
+transport half of 6 (`projectKey` inside the runner transport), 7 (scheduled
+Audit workflow). Item 3 (refuse a claim whose directory does not exist locally)
+is moot for routing — the lock keeps box-rooted projects on the box — and
+remains a defensive nicety in the desktop bundle.

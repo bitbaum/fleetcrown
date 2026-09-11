@@ -27,9 +27,9 @@
  *  e.g. the agent-switcher only lists agents with tabSwitching=true,
  *  the autopilot only fires on agents with autonomousPromptLoop=true. */
 export interface AgentCapabilities {
-  /** Can FleetCrown launch this agent in a fresh Zellij tab and switch to it? */
+  /** Can FleetCrown launch this agent in a fresh owned PTY and switch the project to it? */
   tabSwitching: boolean;
-  /** Does the agent accept prompts via `zellij action write-chars`? */
+  /** Does the agent accept prompts typed into its PTY stdin? */
   manualPromptInjection: boolean;
   /** Does the agent loop on its own once given a queue? */
   autonomousPromptLoop: boolean;

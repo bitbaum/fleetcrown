@@ -8,7 +8,7 @@ import { PeekTabDrawer } from "./PeekTabDrawer";
 import { STATE_DEFINITIONS } from "@/lib/control-states";
 
 /** Look up the SSOT description + problem hint for a row's state. Unmatched
- *  zellij tabs (stateKey === null, "Open" rows) get a generic description
+ *  agent terminals (stateKey === null, "Open" rows) get a generic description
  *  honest about what we know: only that a tab exists. */
 function rowStateMeta(row: LiveTabRow): {
   description: string;
@@ -38,7 +38,7 @@ type Props = {
  * Renders the live-tab rows in two flavors: a sortable-looking table at
  * md+ widths and a vertical card stack at smaller widths. Both are mounted
  * always — Tailwind toggles `hidden md:block` / `md:hidden`. Lives here
- * instead of inline inside ZellijLivePanel because the dual rendering is
+ * instead of inline inside LiveTerminalPanel because the dual rendering is
  * ~150 lines and obscures the panel's actual orchestration (header,
  * composer, empty states).
  *
@@ -46,7 +46,7 @@ type Props = {
  * back to the runner-backed pending_commands path, so it is useful from web
  * and mobile too.
  */
-export function ZellijLiveRows({ rows, highlightTab, closeTab, onFocusProject }: Props) {
+export function LiveTerminalRows({ rows, highlightTab, closeTab, onFocusProject }: Props) {
   const [peekTab, setPeekTab] = useState<string | null>(null);
 
   const isHighlighted = (tabName: string) =>

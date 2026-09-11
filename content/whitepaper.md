@@ -2,7 +2,7 @@
 title: The Builder's Operating System
 subtitle: A technical architecture for sustained autonomous execution across many projects simultaneously
 publishedAt: 2026-08-12
-version: 0.2
+version: 0.3
 ---
 
 ## The Execution Gap
@@ -56,7 +56,7 @@ This is not automation for its own sake. It is a division of labor: the agent ha
 
 ## Architecture
 
-FleetCrown is a Next.js application that runs locally as a personal operating system and optionally connects to a cloud control plane for remote access and multi-device synchronization.
+FleetCrown is a hosted control plane (a Next.js application) plus a runner that owns the agents. The runner is the always-on cloud builder by default, or the Fleet Runner desktop app on your own machine when you choose that for a project. The control plane never touches a terminal of yours; it talks to runners.
 
 ### State Propagation
 
@@ -68,44 +68,29 @@ The FleetCrown SSE stream reads these files at 2-second intervals and emits diff
 
 On the client, a React hook consumes the SSE stream and maintains the full project state map. Render cycles are bounded: only components tied to changed projects re-render.
 
-### Agent Injection
+### Agent Execution: The Runner Owns the Process
 
-Sending a prompt to an agent is not a queue operation or an API call. It is a direct terminal injection.
+Sending a prompt to an agent is not typing into your terminal. FleetCrown never borrows a terminal pane, guesses a tab name, or mimics keystrokes into a window you might be using.
 
-FleetCrown uses Zellij's `write-chars` and `write 13` commands to type a prompt into the correct terminal pane and submit it. The injection sequence is:
+Instead, a runner spawns the agent CLI in a pseudo-terminal it owns (node-pty). The agent is a child process of the runner, with a real PTY — it sees a genuine terminal, not a pipe — and the runner holds both ends. Dispatching a prompt means writing into that PTY; watching the agent means reading from it. The browser renders the same byte stream through an embedded terminal, so you can see and type into the live session from the web or your phone.
 
-```
-1. go-to-tab-name <tab>        — focus the correct tab
-2. poll dump-layout             — wait for focus to confirm
-3. write-chars -- <prompt>     — type the prompt
-4. write 13                    — submit (Enter key)
-```
+Each project is identified by a stable id, not by whatever a tab happens to be called. If a project has no running agent when a prompt arrives, the runner starts one — a cold start — instead of failing silently or typing into the wrong place. If a prompt is sent to a session that no longer exists, the failure is loud and names the fix: dispatch to start one.
 
-The system resolves the correct tab name dynamically, matching against the live Zellij session at inject time. This handles tab renames and multiple sessions in the same directory.
+Because the runner owns the buffer, large prompts are written with backpressure; the class of multiplexer crash that motivated this design cannot happen by construction.
 
-### Typing Guard
+### Where a Project Runs Is a Decision, Not a Guess
 
-Injecting into a terminal while the user is composing a command garbles their input. FleetCrown solves this with a per-pane typing guard.
+Every project has a stored answer to "Runs on": the always-on cloud builder (the default) or the Fleet Runner on your own machine. A checkout that only exists on your laptop stays local; a checkout that lives on the cloud builder stays there. Nothing about who is currently online changes that answer. If the builder you chose is offline, the work queues and the UI says so — it is never quietly rerouted to a different machine.
 
-ZSH `zle-line-init` and `zle-line-finish` hooks write and delete a marker file at `/tmp/cockpit-typing-<ZELLIJ_PANE_ID>` containing the tab name and a Unix timestamp. Before any injection — direct or queued — FleetCrown reads these markers. If the target tab has a live marker under 60 seconds old, injection is deferred until the user stops typing.
+### Remote Access: The Command Queue
 
-The daemon bridge respects the same guard: queued commands from the cloud control plane wait up to 30 seconds for the user to finish before executing.
-
-### Remote Access: The Daemon Bridge
-
-FleetCrown is a local application by design. It needs to be on the same machine as the terminal to inject commands. But operators increasingly need to dispatch from a phone, a second machine, or a shared device.
-
-The daemon bridge is the solution.
-
-When the FleetCrown server runs on a remote host (today: self-hosted on a Hetzner box), injections are written to a `pending_commands` table in the database rather than executed immediately. A local daemon script polls the cloud control plane over HTTPS, claims pending commands, executes them using the same injection primitives, and marks them done.
-
-The same daemon pushes runtime state — agent processes, `/tmp` sentinel files, session health — to the cloud every 2 seconds, so the remote UI stays live.
+Operators dispatch from a phone, a second machine, or a shared device. The control plane writes each dispatch to a `pending_commands` table; the project's runner claims it over outbound HTTPS, executes it in the PTY it owns, and reports back. The runner pushes runtime state — live sessions, session handoffs, health — to the cloud so the remote UI stays live.
 
 ```
-Phone → Cloud control plane → pending_commands → Daemon → Zellij → Agent
+Phone → Cloud control plane → pending_commands → Runner-owned PTY → Agent
 ```
 
-No open ports. No SSH tunnels. No VPN. The local machine makes outbound HTTPS requests only.
+No open ports. No SSH tunnels. No VPN. A runner on your machine makes outbound HTTPS requests only.
 
 ### Dispatch Intelligence
 
@@ -139,7 +124,7 @@ FleetCrown is offered as a hosted SaaS product with four subscription levels: a 
 
 **Free** — for commanding your first projects. The full captain dashboard with your own runner and agent keys, limited in project count — enough to see the whole loop working before paying anything.
 
-**Personal** — for solo builders managing up to 5 projects. Local runtime with cloud backup and remote access via the daemon bridge. Full project/agent/life OS features. Designed for the individual operator who wants to run the full system without self-hosting.
+**Personal** — for solo builders managing up to 5 projects. Cloud builder by default, your own machine via Fleet Runner when you want it, remote access from anywhere. Full project/agent/life OS features. Designed for the individual operator who wants to run the full system without self-hosting.
 
 **Pro** — for power builders running 10+ active projects. Faster dispatch inference, extended prompt history, priority support, and direct access to new features in beta. Intended for builders where FleetCrown is an operational dependency.
 

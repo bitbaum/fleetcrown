@@ -17,12 +17,12 @@ export function emitStateChanged(userId: string) {
 }
 
 // Live-terminal frame fanout (docs/architecture/embedded-terminal.md). The
-// runner POSTs a changed dump-screen frame to /api/control/peek-frame, which
+// runner POSTs a changed frame to /api/control/peek-frame, which
 // emits it here; the /api/control/peek-stream SSE for the same (user, tab)
 // forwards it to the viewer. In-process only — fine on a single box instance;
 // frames are too big/frequent for the Postgres-NOTIFY bridge.
 // `append: true` marks a raw-PTY byte delta (the viewer xterm.write()s it onto
-// the existing buffer). Absent/false = a full zellij dump-screen snapshot (the
+// the existing buffer). Absent/false = a full snapshot of the PTY buffer (the
 // viewer reset()s then writes). One channel, two producers.
 export type PeekFrame = { seq: number; frame: string; at: number; append?: boolean };
 /** Alias of the shared BuilderChannel union — kept for existing importers. */

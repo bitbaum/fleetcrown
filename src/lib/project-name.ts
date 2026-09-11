@@ -8,7 +8,7 @@
  * differently in the web app vs the desktop. Enforcing one canonical form on
  * every registration keeps the registry consistent going forward.
  *
- * Zellij tab matching is already case-insensitive (see lib/terminals/zellij.ts),
+ * Tab matching is already case-insensitive (see lib/tab-match.ts),
  * so a lowercase canonical name still resolves a PascalCase tab.
  */
 export function normalizeProjectName(raw: string): string {

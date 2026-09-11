@@ -2,7 +2,7 @@
  * Project-profile lookup — SSOT.
  *
  * /control needs to attach a "profile" (description, status, maturity,
- * stack, mission, attrs blob) to each Zellij tab + dir pair it shows.
+ * stack, mission, attrs blob) to each agent terminal + dir pair it shows.
  * Match order:
  *   1. If the tab is linked to an entity_project_id (best signal), look up
  *      by id.

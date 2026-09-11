@@ -12,7 +12,7 @@ export interface ExecutorHonestyLabel {
 export type ExecutorHonestyInput = {
   /** Cloud and/or desktop builder connected (from bridge presence). */
   runnerConnected: boolean | null;
-  /** True when this machine hosts zellij / local runtime. */
+  /** True when this machine hosts the local runtime (owned PTYs). */
   runtimeAvailable?: boolean;
   /** Action requires linked GitHub repo / CI. */
   needsGitHub?: boolean;

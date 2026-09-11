@@ -60,17 +60,17 @@ type GoalSeed = {
 // Ordered to match docs/architecture/priority-plan-2026-H2.md (Horizons A→B, defer i18n).
 const GOALS: GoalSeed[] = [
   {
-    title: "Finish zellij -> FleetCrown-owned PTY terminal migration",
+    title: "FleetCrown-owned PTY terminals (zellij migration)",
     description:
-      "Own the agent terminal instead of puppeting zellij tab names. Horizon A: Terminal Cloud watches box-runner peek; web app must not spawn PTYs on prod. Acceptance: agents launch and receive injects through owned node-pty PTYs; zellij is no longer required on the cloud path.",
-    progress: 40,
+      "Own the agent terminal instead of puppeting zellij tab names. Done 2026-09-11 (Fleet Runner 0.8.19): every agent runs in an owned node-pty PTY on both builders; the zellij adapter, cold-start restore and focus-tab are deleted.",
+    progress: 100,
     milestones: [
       { title: "Single transport-parameterized xterm view", done: true },
       { title: "node-pty owned-PTY executor on box-runner (cloud builder)", done: true },
       { title: "Terminal Cloud = peek stream (not generic bash workspaces)", done: true },
       { title: "Gate /api/workspaces on cloud control plane", done: true },
-      { title: "Cut dispatch path from zellij name-puppeting to owned PTY", done: false },
-      { title: "Remove zellij dependency from the launch flow", done: false },
+      { title: "Cut dispatch path from zellij name-puppeting to owned PTY", done: true },
+      { title: "Remove zellij dependency from the launch flow", done: true },
     ],
   },
   {

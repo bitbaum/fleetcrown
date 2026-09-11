@@ -36,14 +36,14 @@ export const TOAST_LONG_MS = 6000;
  *  push, fast enough to feel instant to the user. */
 export const REFRESH_AFTER_DISPATCH_MS = 500;
 
-/** Refresh after a Zellij tab-side action (close-tab, tab-inject). Slightly
- *  longer than dispatch because Zellij's pane-state update can lag the
+/** Refresh after a terminal-side action (close-tab, tab-inject). Slightly
+ *  longer than dispatch because the runner's state push can lag the
  *  command return; 700ms covers the observed window. */
 export const REFRESH_AFTER_TAB_ACTION_MS = 700;
 
 /** Refresh after launching a brand-new project workspace. Larger budget
- *  because the launch spawns Zellij + the agent CLI, both of which need a
- *  moment before /control can see them. */
+ *  because the launch spawns the owned PTY + the agent CLI, both of which
+ *  need a moment before /control can see them. */
 export const REFRESH_AFTER_LAUNCH_MS = 1500;
 
 /** Wait between launching an agent CLI and dispatching the first prompt

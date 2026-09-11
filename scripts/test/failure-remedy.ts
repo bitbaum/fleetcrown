@@ -10,7 +10,6 @@ const cases: [string | null, string][] = [
     FAILURE_REMEDY.START_SESSION,
   ],
   ['No running agent for "Heidi" — dispatch to start one', FAILURE_REMEDY.START_SESSION],
-  ["focus_tab is retired — watch the agent in the web terminal", FAILURE_REMEDY.NONE],
   ["spawnSync /bin/sh ETIMEDOUT", FAILURE_REMEDY.RETRY],
   ["", FAILURE_REMEDY.RETRY],
   [null, FAILURE_REMEDY.RETRY],

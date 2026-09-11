@@ -1,7 +1,7 @@
 ---
 created_date: 2026-06-30
-last_modified_date: 2026-06-30
-last_modified_summary: Shared cloud builder remains private; Docker-backed SandboxExecutor substrate exists behind an explicit env flag, but public hosted execution still waits for credentials, metering, and entitlement gates.
+last_modified_date: 2026-09-11
+last_modified_summary: Routing is stored, not presence-based; previous: Shared cloud builder remains private; Docker-backed SandboxExecutor substrate exists behind an explicit env flag, but public hosted execution still waits for credentials, metering, and entitlement gates.
 ---
 
 # Multitenancy Execution Plan
@@ -33,7 +33,7 @@ The current slice chooses product honesty over fake availability.
 ## Path To Scalable Hosted Execution
 
 1. Keep control-plane data user/org scoped.
-2. Keep external beta users on Fleet Runner desktop by default.
+2. External beta users are not on the cloud allowlist, so their projects run through Fleet Runner desktop until hosted execution is sandboxed. Routing is still the stored rule (locus lock → `builder_pref` → cloud floor); for a non-allowlisted account `decideQueuedExecution` resolves the cloud floor to their connected runner or a clear `builder-required`.
 3. Build and harden hosted sandbox execution before enabling Cloud broadly:
    - one workspace per sandbox (`SandboxExecutor` substrate exists behind `FLEETCROWN_EXECUTOR=sandbox`)
    - fresh clone from `git_url` under `FLEETCROWN_SANDBOX_WORKSPACE_ROOT`
@@ -50,7 +50,7 @@ The current slice chooses product honesty over fake availability.
 Projects remains the strategic registry. Loki and Control compile intent into the same queue. Terminal verifies and lets the user type into the actual PTY. Multitenancy requires those surfaces to agree on executor availability:
 
 - If Cloud is unavailable, say so.
-- If This computer is connected, route work there.
+- Route by the project's stored builder (`builder_pref`, cloud floor); connection state only decides whether the work runs now or waits, visibly.
 - If no builder is connected, do not claim work has started.
 
 ## Current Implementation Boundary

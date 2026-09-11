@@ -501,11 +501,6 @@ async function handleCommand(
         }
         break
       }
-      case 'focus_tab': {
-        // Retired: there is no terminal tab on this machine to focus. The
-        // agent's PTY is watched in the web terminal.
-        throw new Error('focus_tab is retired — watch the agent in the web terminal')
-      }
       case 'close_tab': {
         const { tab } = validation.command.payload
         if (isPtyBacked(tab)) {

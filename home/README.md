@@ -1,47 +1,47 @@
-# `home/` — local Bridge + Worker (embedded in Fleet Runner)
+# `home/` — local Bridge + pure runtime pieces (embedded in Fleet Runner)
 
 These pure pieces tail one append-only JSONL event log on the user's machine.
 The standalone Brain (`server.ts`) that once served state over HTTP on :3001
-was retired in `a3f470d` — Fleet Runner desktop now embeds the watcher and
-owns execution. State projection (`state.ts`) is still computed from the same
-log; it's just consumed in-process instead of served. What runs locally:
+was retired in `a3f470d`, and the worker (`worker.ts`) that typed prompts into
+a zellij tab was deleted on 2026-09-11 with Fleet Runner 0.8.19 — the runner
+now spawns every agent in a PTY it owns (node-pty) and writes prompts there
+directly. State projection (`state.ts`) is still computed from the same log;
+it's consumed in-process. What runs locally:
 
 ```
 ~/.${APP_SLUG}/events.jsonl     ←  every event ever, version-stamped, one per line
 
-  ┌─────────────┐                     ┌──────────────┐
-  │  watcher.ts │                     │  worker.ts   │
-  │   (Bridge)  │                     │  (Consumer)  │
-  ├─────────────┤                     ├──────────────┤
-  │ session.md  │                     │ tails log    │
-  │ changes     │                     │ filters for  │
-  │ → worker.   │                     │ bridge.      │
-  │   idle      │                     │   dispatch   │
-  │   events    │                     │ → injects    │
-  └─────────────┘                     │   via zellij │
-                                      │ → worker.    │
-   state.ts folds the log into        │   started    │
-   per-project state, consumed        └──────────────┘
-   in-process by Fleet Runner
-   (formerly served by server.ts on :3001).
+  ┌─────────────┐                     ┌────────────────────────┐
+  │  watcher.ts │                     │  Fleet Runner (desktop/)│
+  │   (Bridge)  │                     │  owns the agent PTYs    │
+  ├─────────────┤                     ├────────────────────────┤
+  │ session.md  │                     │ claims pending_commands │
+  │ changes     │                     │ → spawns / writes into  │
+  │ → worker.   │                     │   the owned node-pty    │
+  │   idle      │                     │ → emits worker.started  │
+  │   events    │                     │   / crashed / finished  │
+  └─────────────┘                     └────────────────────────┘
+
+   state.ts folds the log into per-project state, consumed in-process
+   by Fleet Runner (formerly served by server.ts on :3001).
 ```
 
 ## Run
 
-> **The executor is Fleet Runner desktop.** The standalone Brain
-> (`home/server.ts`, port 3001) and its one-command `scripts/home-start.sh`
-> launcher were retired in `a3f470d`. In production every dispatch goes
-> cloud `/api/inject` → `pending_command` → Fleet Runner polls and types into
-> zellij. The pieces below stay individually runnable only for iterating on
-> one of them in isolation — there is no longer a combined launcher.
+> **The executor is Fleet Runner.** In production every dispatch goes
+> cloud `/api/inject` → `pickDispatchChannel` (locus lock → "Runs on" →
+> cloud floor) → `pending_command` → the chosen runner (box runner or desktop
+> Fleet Runner) claims it and writes into a PTY it owns. Nothing in `home/`
+> executes anything; the pieces below stay individually runnable only for
+> iterating on one of them in isolation.
 
 Run a single piece in its own terminal while you iterate on it. Each requires
 an explicit `--start` flag — naked invocations print a usage banner and exit 0
 so accidental `| tail -N` pipes don't leave orphaned watchers behind:
 
 ```bash
-npx tsx home/watcher.ts --start   # Bridge — emits worker.idle when sessions change
-npx tsx home/worker.ts  --self-test   # Inline tests, no I/O
+npx tsx home/watcher.ts --start          # Bridge — emits worker.idle when sessions change
+npx tsx home/calendar-drain.ts --start   # books approved calendar events via the local gog CLI
 ```
 
 Override the watcher sessions dir with `APP_SESSIONS_DIR=/tmp/test-sessions`
@@ -53,70 +53,35 @@ Override the watcher sessions dir with `APP_SESSIONS_DIR=/tmp/test-sessions`
 SLUG=$(grep '^export const APP_SLUG' src/config/brand.ts | cut -d'"' -f2)
 mkdir -p ~/.$SLUG
 
-cat <<EOF >> ~/.$SLUG/events.jsonl
+cat <<EOT >> ~/.$SLUG/events.jsonl
 {"v":1,"id":"$(uuidgen)","ts":"$(date -Iseconds)","kind":"worker.started","project":"Demo","adapter":"claude","intent":"next_best"}
-EOF
+EOT
 
-# A running `worker.ts --start` picks the event up on its next tail read.
+# Anything tailing the log (Fleet Runner's in-process projection, or
+# `npx tsx home/state.ts` over a copy) folds the event into Demo's state.
 ```
 
-## Smoke test — dispatch to the worker
-
-The HTTP `/api/dispatch` and `/api/cancel` endpoints lived on the retired Brain
-(`home/server.ts`). The worker now consumes events straight from the JSONL log,
-so a local smoke test appends a `bridge.dispatch` event the same way the
-`worker.started` example above does. With `npx tsx home/worker.ts --start`
-running and a `Demo` zellij tab open:
-
-```bash
-SLUG=$(grep '^export const APP_SLUG' src/config/brand.ts | cut -d'"' -f2)
-
-# Fire now: the worker injects "run the smoke test" into the Demo zellij tab
-# and appends its own worker.started event.
-cat <<EOF >> ~/.$SLUG/events.jsonl
-{"v":1,"id":"$(uuidgen)","ts":"$(date -Iseconds)","kind":"bridge.dispatch","project":"Demo","adapter":"claude","intent":"next_best","queueHead":"run the smoke test"}
-EOF
-```
-
-In production this event is written by the cloud `/api/inject` handler that
-Fleet Runner polls — the local append above just exercises the same consumer.
-Autonomy gating (the `manual` / `confirm` / `auto` / `sleep` thresholds) now
-lives in `home/decide.ts` and runs upstream of the event, not in this hop.
-
-## Smoke test — cancel an in-flight run
-
-```bash
-SLUG=$(grep '^export const APP_SLUG' src/config/brand.ts | cut -d'"' -f2)
-
-# Sends Ctrl+C to the project's zellij tab. runId must match the live run's
-# worker.started; the eventual worker.finished is tagged user_abort.
-cat <<EOF >> ~/.$SLUG/events.jsonl
-{"v":1,"id":"$(uuidgen)","ts":"$(date -Iseconds)","kind":"bridge.cancel","project":"Demo","runId":"<live-run-id>","reason":"changed my mind"}
-EOF
-```
+Autonomy gating (the `manual` / `confirm` / `auto` / `sleep` thresholds) lives
+in `home/decide.ts` and runs upstream of any dispatch event.
 
 ## Files
 
-| File          | Purpose                                                                          |
-|---------------|----------------------------------------------------------------------------------|
-| `state.ts`    | Pure `applyEvent(state, event) → state`. Re-labels cancelled runs as `user_abort`. |
-| `log.ts`      | Tail one JSONL file, parse via `@/lib/events`. Phase flag (replay/live).         |
-| `emit.ts`     | Single append-only writer. Stamps `v` + `id` + `ts` at write time.               |
-| `render.ts`   | Thin adapter over `@/lib/orchestration` to render full dispatch prompts.         |
-| `decide.ts`   | Pure decision function: `(state, queueHead, autonomy) → action + confidence`.    |
-| `projects.ts` | Reads `~/.config/agent-projects.conf` — the tab→path[→adapter] SSOT.            |
-| `state.ts`    | Pure event projection — folds the JSONL log into current per-project state. (Was served over HTTP by the retired `server.ts`; now consumed by Fleet Runner.) |
-| `log.ts`      | JSONL tailer — the replay path the worker uses to rebuild state on boot.          |
-| `watcher.ts`  | M3 Bridge. Watches `~/.fleetcrown/sessions/*.md`, emits `worker.idle`. Filters to registered projects only. |
-| `worker.ts`   | M8 Consumer. Acts on `bridge.dispatch` (inject) and `bridge.cancel` (Ctrl+C), emits `worker.started` / `worker.crashed`. |
+| File                | Purpose                                                                                                    |
+| ------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `state.ts`          | Pure `applyEvent(state, event) → state`. Folds the JSONL log into per-project state; re-labels cancelled runs as `user_abort`. |
+| `log.ts`            | Tail one JSONL file, parse via `@/lib/events`. Phase flag (replay/live).                                   |
+| `emit.ts`           | Single append-only writer. Stamps `v` + `id` + `ts` at write time.                                         |
+| `render.ts`         | Thin adapter over `@/lib/orchestration` to render full dispatch prompts.                                   |
+| `decide.ts`         | Pure decision function: `(state, queueHead, autonomy) → action + confidence`.                              |
+| `projects.ts`       | Reads `~/.config/agent-projects.conf` — the tab→path[→adapter] SSOT.                                       |
+| `watcher.ts`        | M3 Bridge. Watches `~/.fleetcrown/sessions/*.md`, emits `worker.idle`. Filters to registered projects only. |
+| `calendar-drain.ts` | Local half of calendar booking: drains approved-but-unbooked events from the cloud and books them via `gog`. |
 
 ## Idempotency
 
-The worker is safe to restart. On boot, it replays the entire log to build
-the set of `runId`s that already have a `worker.started` event downstream
-— those dispatches are considered handled and won't fire again. Dispatches
-in the log that *don't* yet have a matching `worker.started` are treated
-as crash-recovery and re-injected after replay completes.
+The log is the only durable thing. Fleet Runner replays it on boot to rebuild
+per-project state; processing the same event twice is safe by construction
+(`applyEvent` is pure and events carry stable ids).
 
 ## Inline self-tests
 
@@ -126,7 +91,7 @@ individually while iterating, all at once via the chained runner, or rely on
 the pre-push hook (`.husky/pre-push`) which calls `test:home` automatically:
 
 ```bash
-npm run test:home                     # all eight suites, ~14s — used by pre-push
+pnpm run test:home                   # all 11 suites (130 tests) — used by pre-push
 
 npx tsx home/state.ts                # event projection
 npx tsx home/decide.ts               # autonomy + confidence
@@ -135,23 +100,24 @@ npx tsx home/render.ts               # every intent renders
 npx tsx home/emit.ts    --self-test  # append-only writer
 npx tsx home/log.ts     --self-test  # JSONL tailer (replay path)
 npx tsx home/watcher.ts --self-test  # parseHandoff + tabFromFilename
-npx tsx home/worker.ts  --self-test  # applyEvent pure-function path
+npx tsx home/calendar-drain.ts --self-test
 ```
 
-Each suite prints its own `N/M passed` footer; `npm run test:home`
-aggregates them into a total. Counts grow as regression cases are
-added — don't hardcode them anywhere.
+`scripts/test-home.sh` also runs three suites that live under `src/lib/`
+(`actions/extract-proposal`, `actions/checkin-proposal`,
+`dispatch-operator-context-format`) because they share the same
+no-framework convention. Each suite prints its own `N/M passed` footer;
+`pnpm run test:home` aggregates them into a total. Counts grow as regression
+cases are added — the 11 / 130 figure above is the 2026-09-11 count, not a
+contract.
 
-`state.ts`, `decide.ts`, `render.ts`, `projects.ts`, `log.ts`, `emit.ts`,
-`watcher.ts`, and `worker.ts` each ship inline self-tests aggregated by
-`npm run test:home`. The HTTP serving that `server.ts` used to do is gone;
-Fleet Runner's own runtime (`desktop/`) now owns that surface and is tested
-there.
+The HTTP serving that `server.ts` used to do is gone; Fleet Runner's own
+runtime (`desktop/`) owns execution and is tested there.
 
-## What's not here yet
+## What's not here
 
 - **Persistence beyond the log**: state is in-memory. Restart replays.
   This is by design — the log is the only durable thing.
-- **Cutover from `/api/control/dispatch`**: the existing hosted API route still
-  exists. Once this loop is exercised against real agents, M9 retires it
-  and the daemon stops shipping pending_commands rows.
+- **Execution**: nothing in `home/` starts, types into, or stops an agent.
+  That is the runner's job (`desktop/src/main/pty-runtime.ts`, shared with the
+  headless box runner).

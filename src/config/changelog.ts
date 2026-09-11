@@ -29,9 +29,21 @@ export interface ReleaseEntry {
 /** Newest first. */
 export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
   {
+    version: "0.8.20",
+    tag: "fleet-runner-v0.8.20",
+    date: "2026-09-11T10:00:00Z",
+    highlights: [
+      "The retired focus_tab command is now refused at the door: it no longer exists in the command contract, so nothing can enqueue it and the runner has no case for it.",
+      "Runner and desktop descriptions say what the app is now: the FleetCrown desktop agent runtime that owns the agent terminals on this computer.",
+    ],
+    breaking: [],
+    notes:
+      "Follow-up to 0.8.19. No behaviour change for a running fleet; this release exists because the desktop tree changed and the changelog is the single source of truth for what shipped.",
+  },
+  {
     version: "0.8.19",
     tag: "fleet-runner-v0.8.19",
-    date: "2026-09-11T12:00:00Z",
+    date: "2026-09-11T09:21:39Z",
     highlights: [
       'Fleet Runner no longer tries to bring up a zellij session on boot, so the "Could not bring zellij up" notification is gone for good.',
       "Every agent runs in a terminal Fleet Runner owns. A prompt for a project with no running agent is refused with a clear reason instead of being typed into a guessed terminal tab; the cloud starts the agent for you.",

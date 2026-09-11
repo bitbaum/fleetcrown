@@ -2,15 +2,15 @@
  * Derived run-tabs — the identity primitive for same-project parallel dispatch.
  *
  * The whole dispatch loop is keyed by TAB: PTY workspace (`runner:<tab>`),
- * session handoff (`~/.fleetcrown/sessions/<tab>.md`), /tmp sentinels, zellij
- * tab, and (phase 1) the per-run git worktree. So the cheapest correct way to
+ * session handoff (`~/.fleetcrown/sessions/<tab>.md`), /tmp sentinels, the
+ * owned PTY, and (phase 1) the per-run git worktree. So the cheapest correct way to
  * run TWO agents on one project is to mint each extra concurrent run a unique
  * tab alias — `<project>~<runId8>` — and let every tab-keyed mechanism compose
  * unchanged, instead of re-keying the loop by runId.
  *
  * `~` is the reserved separator: project names never legitimately contain it
  * (registry names come from repo/tab names), and it is filesystem- and
- * zellij-safe. The runId suffix (not a counter) makes aliases collision-free
+ * shell-safe. The runId suffix (not a counter) makes aliases collision-free
  * without coordination.
  *
  * SSOT: base/derive/detect live ONLY here — both the server (dispatch route,

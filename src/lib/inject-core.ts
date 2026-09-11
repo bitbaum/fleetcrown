@@ -122,9 +122,9 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
 
   // Is this project backed by a live FleetCrown-owned PTY (server-side launch)?
   // The executor registry is the SSOT — a live handle means we drive the agent's
-  // stdin directly and bypass every zellij concept (tab resolution, focus-dance,
-  // the zsh user-typing hook). No live workspace → fall back to the legacy zellij
-  // path unchanged (cloud mode never has one; injectFn is null there).
+  // stdin directly. No live workspace → there is no agent to type at, so the
+  // prompt is queued as a dispatch below (cloud mode never has one; injectFn is
+  // null there).
   const ptyWorkspaceId = workspaceIdFor(userId, canonical);
   const ptyExecutor = runtimeAvailable ? (await import("@/lib/agent-execution")).executor : null;
   const ptyHandle = ptyExecutor ? ptyExecutor.get(ptyWorkspaceId) : null;
@@ -258,8 +258,8 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
   const nowS = Math.floor(Date.now() / 1000);
 
   // Build the local injection function. PTY-backed agents are driven directly via
-  // the executor (write to the owned PTY's stdin); otherwise fall back to the
-  // legacy zellij path. Null in cloud mode → executeInject queues for the runner.
+  // the executor (write to the owned PTY's stdin). Null in cloud mode →
+  // executeInject queues for the runner.
   // Local + live owned PTY: write straight into it. Local + no PTY: there is
   // no agent to type at, so the prompt is QUEUED as a dispatch (cold start)
   // for the runner — visible in Control, never a keystroke into a guessed tab.
@@ -310,7 +310,7 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
   }
 
   // Run local filesystem side-effects — the server process can always write to /tmp
-  // regardless of whether it's inside a Zellij pane or not.
+  // regardless of whether an owned PTY is live for this tab.
   if (runtimeAvailable) {
     const [{ cancelActiveBeaconSessions }, { stateFile, clearHandshakeFiles }, fs] =
       await Promise.all([

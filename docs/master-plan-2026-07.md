@@ -20,7 +20,8 @@ execution* stays gated).
 
 - **Execution spine is real and closed for founder use.** `injectPrompt()` is
   the SSOT dispatch spine; `LocalPtyExecutor` (node-pty, event-sourced, SSE
-  resumable) is shared by web, desktop Fleet Runner v0.8.9, and the headless
+  resumable) is shared by web, desktop Fleet Runner v0.8.9 (0.8.19 as of
+  2026-09-11, when zellij left the product entirely), and the headless
   `fleetcrown-box-runner` on Hetzner. The laptop dependency is deleted
   (box-owned-pty P0+P1 shipped 2026-06-26).
 - **The cross-product bridge is ~60% built and ahead of its own doc.**
@@ -94,7 +95,8 @@ not on a borrowed laptop — for **users**, not just the founder.
    have no way to connect an OC account (only the sign-in button exists).
 
 4. **Trust debt accumulates where nobody is looking.** Runner stalls
-   alert but don't recover (B5); the legacy zellij fallback lingers (B6);
+   alert but don't recover (B5); the legacy zellij fallback lingered (B6 —
+   deleted 2026-09-11);
    orchestration SSOT still has legacy DB fallbacks (B1); deploys have no
    ledger/rollback (D3); roadmap seed sync is a manual step. None of these
    blocks a launch, but each is a future 2 a.m. incident with a paying user
@@ -224,7 +226,7 @@ Each item is a future incident with a paying customer attached.
 |---|------|
 | 3.1 | Runner-stall auto-recover, not alert-only (B5) |
 | 3.2 | Deploy ledger + rollback (D3) — we tell users to trust our autonomy story; our own deploys should model it |
-| 3.3 | Retire the legacy zellij attach fallback (B6) and orchestration legacy DB fallbacks (B1) — one truth per state |
+| 3.3 | ~~Retire the legacy zellij attach fallback (B6)~~ **done 2026-09-11** (Fleet Runner 0.8.19: zellij, `src/lib/terminals/*`, `home/worker.ts` deleted; the runner owns every PTY) — orchestration legacy DB fallbacks (B1) still open — one truth per state |
 | 3.4 | Automate the roadmap-seed sync (kill the manual re-run step) |
 | 3.5 | Tests on the new money/identity paths: OIDC RP flow, publish/promote idempotency, Stripe webhook — same rule as OC 4.1: no untested path that moves money or grants identity |
 

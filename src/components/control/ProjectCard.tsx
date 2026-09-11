@@ -410,7 +410,7 @@ export function ProjectCard({
       {/* Honest dispatch status — the REAL lifecycle of the last queued
           dispatch (queued → picked up → ran / failed / unconfirmed), polled
           from the command row. Replaces the old silent "it 200'd, assume it's
-          working" gap where a runner focus_tab failure never reached the card.
+          working" gap where a runner command failure never reached the card.
 
           UX audit gap (2026-08-19): this banner told the operator the truth
           but gave them nowhere to go act on it — a dismiss (X) was the only

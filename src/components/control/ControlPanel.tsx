@@ -26,7 +26,7 @@ import { ControlSettingsSheet } from "./ControlSettingsSheet";
 import { RunnerStatusBanner } from "./RunnerStatusBanner";
 import { APP_NAME } from "@/config/brand";
 import { ActivityLogPanel, BrainConfigPanel } from "./control-panel-helpers";
-import { ZellijLivePanel } from "./ZellijLivePanel";
+import { LiveTerminalPanel } from "./LiveTerminalPanel";
 import { buildCardProps } from "./control-panel-card-props";
 import { LaunchTabModal, NewProjectModal } from "./control-panel-modals";
 import { BootstrapModal } from "./BootstrapModal";
@@ -364,7 +364,7 @@ export function ControlPanel() {
   // (mobile embedded + desktop standalone, toggled via md:hidden), and the
   // standalone variant repeated the <summary>'s "Workspaces · N open" header
   // inside the panel — the page showed the same heading and count twice.
-  const livePanel = <ZellijLivePanel {...livePanelProps} embedded />;
+  const livePanel = <LiveTerminalPanel {...livePanelProps} embedded />;
 
   if (!data) {
     return (
