@@ -37,10 +37,19 @@ export type FixRefreshInput = {
   /** The reaper's repo evidence, if it found one (payload.evidence). */
   evidence: { kind: string; url: string; title: string } | null | undefined;
   gitUrl: string | null | undefined;
-  /** user_projects.auto_ship — may FleetCrown merge this PR itself? */
-  autoShip?: boolean | null;
+  /**
+   * user_projects.auto_ship — may FleetCrown merge this PR itself?
+   *
+   * REQUIRED, not optional, and deliberately so. As an optional field it was
+   * simply never passed: the switch saved, the row read "PR #1 · open", and
+   * decideAutoShip was never reached, because `autoShip === true` is false for
+   * undefined just as it is for false. A feature that silently disables itself
+   * when a caller forgets a key is a feature with no gate — so the gate is the
+   * type. Pass `null` to mean "not chosen"; there is no way to omit it.
+   */
+  autoShip: boolean | null;
   /** Has an automatic ship on this project already broken the deploy? */
-  deployBroken?: boolean;
+  deployBroken: boolean;
 };
 
 function ghInit(token: string): RequestInit {
@@ -226,7 +235,7 @@ export async function refreshFixShipping(input: FixRefreshInput): Promise<FixShi
               draft: pr.draft === true,
               mergeable: pr.mergeable ?? null,
               checkConclusions: readiness?.checkConclusions ?? [],
-              deployBroken: input.deployBroken === true,
+              deployBroken: input.deployBroken,
             });
             if (decision.merge && (await mergePr(ref, picked.token, pr.title))) {
               // Re-read rather than assume: the merge answer says "accepted",

@@ -69,6 +69,7 @@ export async function attachFeedbackWork<T extends FeedbackListItem>(
     await Promise.all(
       candidates.slice(0, FIX_REFRESH_MAX_PER_REQUEST).map(async (item) => {
         const run = runs.get(item.dispatchedRunId!)!;
+        const project = projects.get(item.projectId);
         const fix = await refreshFixShipping({
           runId: run.id,
           userId,
@@ -77,7 +78,14 @@ export async function attachFeedbackWork<T extends FeedbackListItem>(
           evidence:
             (run.payload as { evidence?: FixShipping["push"] & { kind: string } } | null)
               ?.evidence ?? null,
-          gitUrl: projects.get(item.projectId)?.gitUrl ?? null,
+          gitUrl: project?.gitUrl ?? null,
+          // Without these two the merge path below can never run: decideAutoShip
+          // reads `autoShip === true` and holds on anything else, so an omitted
+          // field silently disables the whole feature. It shipped omitted once
+          // (2026-09-11) — the switch saved, the row read "PR #1 · open", and
+          // nothing ever decided. The gate test pins the wiring, not just the rule.
+          autoShip: project?.autoShip ?? null,
+          deployBroken: brokenProjects.has(item.projectId),
         });
         refreshed.set(run.id, fix);
       }),
