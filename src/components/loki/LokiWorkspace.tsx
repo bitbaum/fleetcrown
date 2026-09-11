@@ -2,17 +2,18 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { MessagesSquare, Plus } from "lucide-react";
+import { PanelLeft, SquarePen } from "lucide-react";
 import { getJson, postJson, deleteJson, throwApiError } from "@/lib/api/fetch";
+import { useLokiStream } from "@/hooks/use-loki-stream";
 import { resolveLokiProjectSelection } from "@/lib/loki/project-selection";
 import { rememberFleetProject } from "@/lib/fleet-context";
 import { deriveExecutorHonestyLabel } from "@/lib/executor-honesty";
 import { useBuilderPresence } from "@/hooks/use-builder-presence";
 import { useLocalStorageState } from "@/hooks/use-local-storage-state";
 import { Drawer } from "@/components/ui/modal";
-import { ConversationList } from "./ConversationList";
-import { LokiStartPanel } from "./LokiStartPanel";
-import { Transcript } from "./Transcript";
+import { ThreadRail } from "./ThreadRail";
+import { StartScreen } from "./StartScreen";
+import { Thread } from "./Thread";
 import { Composer } from "./Composer";
 import { SaveContextBar } from "./SaveContextBar";
 import { ProjectFilter } from "./ProjectFilter";
@@ -86,8 +87,9 @@ export function LokiWorkspace({
   const [activeId, setActiveId] = useState<string | null>(null);
   const [messages, setMessages] = useState<LokiMessage[]>([]);
   const [transcriptLoading, setTranscriptLoading] = useState(false);
-  const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** The text of the last turn sent, so "Try again" can re-send it verbatim. */
+  const [lastSent, setLastSent] = useState<{ text: string; choice: ModelChoice } | null>(null);
   // Compact slide-overs keep secondary lists out of the primary chat.
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyPinned, setHistoryPinned] = useLocalStorageState(
@@ -207,18 +209,43 @@ export function LokiWorkspace({
     router.replace(query ? `/loki?${query}` : "/loki", { scroll: false });
   }, [router, searchParams, selectedProjects, selectionInitialized]);
 
+  /**
+   * The thread THIS send just created, which must not be mistaken for a
+   * thread switch.
+   *
+   * State rather than a ref because it is READ during render, by the
+   * switch-detection adjustment below. Both writers set it from an event
+   * handler and in the same batch as `setActiveId`, so the two always land
+   * together and the adjustment never sees a half-applied pair.
+   *
+   * Sending the first message creates the conversation, which moves `activeId`
+   * from null to a real id — indistinguishable, to the logic below, from the
+   * operator clicking a different thread in the rail. So it cleared the
+   * transcript and refetched: the optimistic question vanished, the pane showed
+   * "Loading conversation" over the top of the turn being streamed, and the
+   * refetch returned a thread the server has not finished writing (it persists
+   * a turn only when the turn completes). The question disappeared and the
+   * answer arrived on its own.
+   */
+  const [justCreatedId, setJustCreatedId] = useState<string | null>(null);
+
   // Switching conversations clears the transcript and arms the loader in the
   // same render pass (guarded adjustment); the effect below only fetches.
   const [prevActiveId, setPrevActiveId] = useState<string | null>(null);
   if (activeId !== prevActiveId) {
     setPrevActiveId(activeId);
-    setMessages([]);
-    setTranscriptLoading(activeId !== null);
+    if (activeId !== justCreatedId) {
+      setMessages([]);
+      setTranscriptLoading(activeId !== null);
+    }
   }
 
   // Load the active conversation's transcript.
   useEffect(() => {
     if (!activeId) return;
+    // A thread we just created already holds exactly what is on screen, plus a
+    // turn still being written. Fetching it can only lose information.
+    if (activeId === justCreatedId) return;
     let current = true;
     getJson<{ messages: LokiMessage[] }>(`/api/conversations/${activeId}`)
       .then((d) => {
@@ -233,14 +260,61 @@ export function LokiWorkspace({
     return () => {
       current = false;
     };
-  }, [activeId]);
+  }, [activeId, justCreatedId]);
+
+  /**
+   * The persisted turn arriving off the stream.
+   *
+   * This is the RECORD, not the preview — whatever was streamed while it was
+   * being written is replaced by it (see lib/loki/stream.ts). Anything derived
+   * from a turn therefore has to happen here, never off a delta.
+   */
+  const handleMessage = useCallback(
+    (message: LokiMessage) => {
+      setMessages((prev) => [...prev, message]);
+
+      // A turn can resolve which project it was about (the model named one, or
+      // the command resolver picked one). Follow it, so the composer's scope
+      // matches what actually happened.
+      const resolved = message.meta
+        ? typeof message.meta.projectKey === "string"
+          ? [message.meta.projectKey]
+          : Array.isArray(message.meta.projectKeys)
+            ? message.meta.projectKeys.filter((v): v is string => typeof v === "string")
+            : []
+        : [];
+      const known = resolved.filter((name) => projects.some((p) => p.name === name));
+      if (known.length > 0) setSelectedProjects(known);
+
+      // Sync the list so the server's auto-title (derived from the first
+      // message) and the recency order appear live, not only after a reload.
+      void getJson<{ conversations: ConversationSummary[] }>("/api/conversations")
+        .then((d) => setConversations(d.conversations))
+        .catch(() => {
+          /* keep the existing list on a transient failure */
+        });
+    },
+    [projects],
+  );
+
+  const stream = useLokiStream({ onMessage: handleMessage });
+  const sending = stream.sending;
 
   // Client-side project filter over the full list (deselect = show all).
   const visibleConversations = useMemo(() => {
     if (selectedProjects.length === 0) return conversations;
     const wanted = new Set(selectedProjects);
-    return conversations.filter((c) => c.projectKeys.some((k) => wanted.has(k)));
-  }, [conversations, selectedProjects]);
+    // The thread you are IN is never filtered out of the rail.
+    //
+    // Scope follows the answer — a turn that resolves to a project selects it —
+    // so asking a question in a fresh thread could set a scope the thread
+    // itself does not carry yet, and the row for the conversation on screen
+    // vanished from the list while you were reading it. A filter may narrow
+    // what else is offered; it may not hide where you are.
+    return conversations.filter(
+      (c) => c.id === activeId || c.projectKeys.some((k) => wanted.has(k)),
+    );
+  }, [conversations, selectedProjects, activeId]);
 
   const createConversation = async (): Promise<string | null> => {
     // Title is omitted — the create route defaults it (SSOT), and the first
@@ -255,6 +329,9 @@ export function LokiWorkspace({
       return null;
     }
     const { conversation } = (await res.json()) as { conversation: ConversationSummary };
+    // Claimed BEFORE setActiveId, so the switch-detection below already knows
+    // this id is ours and never clears the transcript we are about to fill.
+    setJustCreatedId(conversation.id);
     setConversations((prev) => [conversation, ...prev]);
     setActiveId(conversation.id);
     setMessages([]);
@@ -294,65 +371,51 @@ export function LokiWorkspace({
     const dispatchOnly = opts.dispatchOnly ?? false;
     const chatOnly = opts.chatOnly ?? false;
     setError(null);
-    setSending(true);
+    setLastSent({ text, choice });
+
     // Ensure a thread exists; a fresh page send creates one implicitly.
     const convoId = activeId ?? (await createConversation());
-    if (!convoId) {
-      setSending(false);
-      return;
-    }
+    if (!convoId) return;
 
-    // Optimistic user bubble — skip when re-dispatching after a project pick.
+    // Optimistic user bubble — skipped when re-dispatching after a project
+    // pick, because their message is already in the transcript.
     if (!dispatchOnly) {
-      const optimistic: LokiMessage = {
-        id: `pending-${Date.now()}`,
-        conversationId: convoId,
-        role: "user",
-        kind: null,
-        content: text,
-        meta: null,
-        createdAt: new Date().toISOString(),
-      };
-      setMessages((prev) => [...prev, optimistic]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `pending-${Date.now()}`,
+          conversationId: convoId,
+          role: "user",
+          kind: null,
+          content: text,
+          meta: null,
+          createdAt: new Date().toISOString(),
+        },
+      ]);
     }
 
-    try {
-      const res = await postJson(`/api/conversations/${convoId}/messages`, {
-        text,
-        selectedProjects: scopedProjects,
-        ...(dispatchOnly ? { dispatchOnly: true } : {}),
-        ...(chatOnly ? { chatOnly: true } : {}),
-        // Model picker — omitted keys mean "Auto" (project default).
-        ...(choice.agent ? { agent: choice.agent } : {}),
-        ...(choice.model ? { model: choice.model } : {}),
-        ...(attachments.length > 0 ? { attachments } : {}),
-      });
-      if (!res.ok) await throwApiError(res, "Message failed.");
-      const { message } = (await res.json()) as { message: LokiMessage };
-      setMessages((prev) => [...prev, message]);
-      const resolvedProjects = message.meta
-        ? typeof message.meta.projectKey === "string"
-          ? [message.meta.projectKey]
-          : Array.isArray(message.meta.projectKeys)
-            ? message.meta.projectKeys.filter((value): value is string => typeof value === "string")
-            : []
-        : [];
-      const knownProjects = resolvedProjects.filter((name) =>
-        projects.some((project) => project.name === name),
-      );
-      if (knownProjects.length > 0) setSelectedProjects(knownProjects);
-      // Sync the list so the server's auto-title (first message) and recency
-      // ordering appear live, not only after a reload.
-      void getJson<{ conversations: ConversationSummary[] }>("/api/conversations")
-        .then((d) => setConversations(d.conversations))
-        .catch(() => {
-          /* keep the existing list on a transient failure */
-        });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Message failed.");
-    } finally {
-      setSending(false);
-    }
+    await stream.send(`/api/conversations/${convoId}/messages`, {
+      text,
+      selectedProjects: scopedProjects,
+      ...(dispatchOnly ? { dispatchOnly: true } : {}),
+      ...(chatOnly ? { chatOnly: true } : {}),
+      // Model picker — omitted keys mean "Auto" (walk the whole chain).
+      ...(choice.agent ? { agent: choice.agent } : {}),
+      ...(choice.model ? { model: choice.model } : {}),
+      ...(attachments.length > 0 ? { attachments } : {}),
+    });
+  };
+
+  /**
+   * Re-ask the last question.
+   *
+   * The previous answer stays in the thread rather than being replaced: a model
+   * that answered badly once is evidence, and silently swapping it would hide
+   * that the second answer is a second attempt.
+   */
+  const retryLast = () => {
+    if (!lastSent || sending) return;
+    void send(lastSent.text, lastSent.choice, [], { dispatchOnly: true });
   };
 
   const dispatchWithProject = (projectName: string, pendingText: string) => {
@@ -393,8 +456,9 @@ export function LokiWorkspace({
   const chatBody = (
     <>
       {isStart && (
-        <LokiStartPanel
+        <StartScreen
           conversations={conversations}
+          railVisible={historyPinned}
           loading={convosLoading}
           onResume={(id) => setActiveId(id)}
           onBrowseAll={() => {
@@ -406,15 +470,19 @@ export function LokiWorkspace({
           }}
         />
       )}
-      <div className={`flex min-h-0 flex-col ${isStart ? "" : "flex-1"} px-1 sm:px-0`}>
-        <Transcript
-          messages={messages}
-          loading={transcriptLoading}
-          sending={sending}
-          onPickProject={dispatchWithProject}
-          onAnswerAnyway={answerWithoutProject}
-        />
-      </div>
+
+      <Thread
+        messages={messages}
+        live={stream.live}
+        loading={transcriptLoading}
+        sending={sending}
+        stopped={stream.stopped}
+        onStop={stream.stop}
+        onPickProject={dispatchWithProject}
+        onAnswerAnyway={answerWithoutProject}
+        onRetry={lastSent ? retryLast : undefined}
+      />
+
       {messages.length > 0 && (
         <SaveContextBar
           projects={projects}
@@ -422,9 +490,33 @@ export function LokiWorkspace({
           selectedProject={selectedProjects[0] ?? null}
         />
       )}
-      {error && <p className="ui-error">{error}</p>}
+
+      {/* A turn that failed says so where the answer would have been, with the
+          way out next to it — not as a detached line above the input. */}
+      {(error ?? stream.error) && (
+        <div className="ui-loki-error" role="alert">
+          <span className="min-w-0 flex-1">{error ?? stream.error}</span>
+          {stream.error && lastSent && (
+            <button
+              type="button"
+              className="ui-loki-error-retry"
+              onClick={() => {
+                stream.clearError();
+                retryLast();
+              }}
+            >
+              Try again
+            </button>
+          )}
+        </div>
+      )}
+
       <Composer
-        key={`${activeId ?? "new"}:${composerPrefill ?? ""}`}
+        // Re-keyed only on a PREFILL, never on the thread id. Keying on
+        // `activeId` remounted the composer the moment a first message created
+        // the thread — mid-send — silently resetting the model choice and
+        // discarding anything still staged.
+        key={composerPrefill ? `prefill:${composerPrefill}` : "composer"}
         defaultText={composerPrefill ?? ""}
         selectedProjects={selectedProjects}
         projectCount={projects.length}
@@ -433,6 +525,7 @@ export function LokiWorkspace({
         onOpenProjects={() => setFilterOpen(true)}
         disabled={false}
         sending={sending}
+        onStop={stream.stop}
         showStarters={isStart}
         dispatchHonesty={dispatchHonesty}
         onSend={(t, choice, attachments, opts) =>
@@ -443,13 +536,16 @@ export function LokiWorkspace({
   );
 
   const historyList = (
-    <ConversationList
+    <ThreadRail
       conversations={visibleConversations}
       activeId={activeId}
       loading={convosLoading}
       error={convosError}
       onRetry={() => void reloadConversations()}
       onSelect={(id) => {
+        // A deliberate switch: release the just-created claim so the transcript
+        // is fetched even when they click back into the thread they just made.
+        setJustCreatedId(null);
         const convo = conversations.find((c) => c.id === id);
         if (convo && convo.projectKeys.length > 0) {
           const known = convo.projectKeys.filter((k) => projects.some((p) => p.name === k));
@@ -505,10 +601,20 @@ export function LokiWorkspace({
       )}
 
       <div className="ui-loki-main">
-        <div className="ui-loki-toolbar">
+        {/*
+          ONE control, not four.
+
+          This used to be a "Chats" button and a "New" button sitting above the
+          transcript, duplicating the rail that was already on screen and the
+          global sidebar above that. The rail itself owns "new chat" now, so
+          what is left here is the only thing the rail cannot do: reveal itself.
+          It is hidden entirely when the rail is already pinned open on a wide
+          screen, because a toggle for something you are looking at is noise.
+        */}
+        <div className="ui-loki-topbar">
           <button
             type="button"
-            className="ui-loki-toolbar-btn"
+            className="ui-loki-topbar-btn"
             onClick={() => {
               if (
                 typeof window !== "undefined" &&
@@ -519,23 +625,20 @@ export function LokiWorkspace({
               }
               setHistoryOpen(true);
             }}
-            aria-label={
-              conversations.length > 0 ? `Open chats (${conversations.length})` : "Open chats"
-            }
+            aria-label={historyPinned ? "Hide chats" : "Show chats"}
             aria-pressed={historyPinned}
           >
-            <MessagesSquare className="h-4 w-4" />
-            <span>Chats</span>
-            {conversations.length > 0 && <span className="ui-loki-toolbar-dot" aria-hidden />}
+            <PanelLeft className="h-4 w-4" aria-hidden />
           </button>
+          {/* On a phone the rail is a drawer, so starting a chat has to be
+              reachable without opening it first. */}
           <button
             type="button"
-            className="ui-loki-toolbar-btn"
+            className="ui-loki-topbar-btn md:hidden"
             onClick={startNewConversation}
             aria-label="New chat"
           >
-            <Plus className="h-4 w-4" />
-            <span>New</span>
+            <SquarePen className="h-4 w-4" aria-hidden />
           </button>
         </div>
 

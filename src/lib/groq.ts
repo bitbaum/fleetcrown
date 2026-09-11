@@ -18,6 +18,8 @@
 
 import { HTTP_TIMEOUT_SHORT_MS, HTTP_TIMEOUT_LONG_MS } from "@/lib/constants/time";
 import { chainFrom, type ChatLink } from "@/config/chat-models";
+import { createProseGate, type StreamSink } from "@/lib/agent/llm";
+import { readSseChunks } from "@/lib/agent/sse-stream";
 import { recordAIHealthFailure, recordAIHealthSuccess } from "@/lib/ai/health";
 
 /**
@@ -73,6 +75,12 @@ const GROQ_BASE_URL = "https://api.groq.com/openai/v1";
 const GROQ_AUDIO_URL = `${GROQ_BASE_URL}/audio/transcriptions`;
 
 type GroqOptions = {
+  /**
+   * Present when an operator is watching: stream the answer instead of
+   * buffering it. A link that fails after emitting calls `reset` so the next
+   * link's answer replaces what was shown rather than continuing it.
+   */
+  sink?: StreamSink;
   maxTokens?: number;
   temperature?: number;
   timeoutMs?: number;
@@ -115,7 +123,7 @@ async function callOneLink(
   link: ChatLink,
   prompt: string,
   o: Required<Pick<GroqOptions, "maxTokens" | "temperature" | "timeoutMs" | "reasoningEffort">> &
-    Pick<GroqOptions, "systemPrompt">,
+    Pick<GroqOptions, "systemPrompt" | "sink">,
 ): Promise<string> {
   const key = process.env[link.provider.keyEnv];
   if (!key) throw new Error(`${link.provider.keyEnv} not set`);
@@ -133,6 +141,7 @@ async function callOneLink(
       max_tokens: o.maxTokens,
       temperature: o.temperature,
       ...(supportsReasoningEffort(link.model) ? { reasoning_effort: o.reasoningEffort } : {}),
+      ...(o.sink ? { stream: true } : {}),
     }),
     signal: AbortSignal.timeout(o.timeoutMs),
   });
@@ -144,8 +153,30 @@ async function callOneLink(
     const body = await res.text().catch(() => "");
     throw new Error(`${link.provider.id} ${res.status}${body ? `: ${body.slice(0, 300)}` : ""}`);
   }
-  const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
-  const text = (data?.choices?.[0]?.message?.content ?? "").trim();
+  let text: string;
+  if (o.sink) {
+    // Streamed: forward prose through the same gate the tool loop uses, so a
+    // model that narrates a tool call cannot leak the plumbing here either.
+    // This path matters more than it looks — when the free tiers are drained
+    // the tool loop cannot run and EVERY turn arrives here, so a fallback that
+    // did not stream meant the operator saw no streaming at all on exactly the
+    // days the answers were slowest.
+    const body = res.body;
+    if (!body) throw new Error(`${link.provider.id} streamed response had no body`);
+    let acc = "";
+    const gate = createProseGate(o.sink.delta);
+    await readSseChunks(body, (chunk) => {
+      const piece = chunk.choices?.[0]?.delta?.content;
+      if (!piece) return;
+      acc += piece;
+      gate.push(piece);
+    });
+    gate.end();
+    text = acc.trim();
+  } else {
+    const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    text = (data?.choices?.[0]?.message?.content ?? "").trim();
+  }
   // A 200 with empty content is a failure for every caller here (they all parse
   // the text). Treating it as success would spend the fallback budget on
   // nothing and hand the caller an empty string to misparse.
@@ -172,6 +203,7 @@ export async function callTextDetailed(
     model = GROQ_FAST_MODEL,
     reasoningEffort = "low",
     fallback = true,
+    sink,
   } = options;
 
   const chain = chainFrom(model);
@@ -199,12 +231,29 @@ export async function callTextDetailed(
   const attempts: { model: string; error: string }[] = [];
   for (const link of links) {
     try {
+      // Per-ATTEMPT emission tracking: a link can die after writing to the
+      // screen, and the next link answers from scratch, so what was read is
+      // void and must be taken back rather than appended to.
+      let emitted = false;
+      const attemptSink: StreamSink | undefined = sink
+        ? {
+            delta: (t) => {
+              emitted = true;
+              sink.delta(t);
+            },
+            reset: sink.reset,
+          }
+        : undefined;
       const text = await callOneLink(link, prompt, {
         maxTokens,
         temperature,
         timeoutMs,
         systemPrompt,
         reasoningEffort,
+        sink: attemptSink,
+      }).catch((e) => {
+        if (emitted) sink?.reset();
+        throw e;
       });
       // A fallback that fires SILENTLY hides the very fault it is compensating
       // for: the feature still works, so nothing looks wrong, while the primary

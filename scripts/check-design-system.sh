@@ -133,6 +133,16 @@ check_paired "active nav styling without aria-current" \
   'ui-nav-item-active' 'aria-current' \
   src/components src/app -g '*.tsx'
 
+# A class name is the one part of a component that nothing else checks. A
+# reference to a rule that was renamed or deleted still typechecks, still
+# lints, still builds, and still renders — as unstyled markup. Both directions
+# matter: a missing rule is a broken component, an unused rule is dead weight
+# that the next person reads as load-bearing.
+checks_run=$((checks_run + 1))
+if ! node scripts/check-loki-classes.mjs; then
+  fail=1
+fi
+
 if [[ "$fail" -ne 0 ]]; then
   exit 1
 fi

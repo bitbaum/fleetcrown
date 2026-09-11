@@ -27,7 +27,7 @@ import { askGatewayAgent, isGatewayConfigured } from "@/lib/openclaw-gateway";
 import { callGroqText, GROQ_FAST_MODEL } from "@/lib/groq";
 import { getUserPreferences } from "@/db/queries/user-preferences";
 import { buildGroundedTurn, directiveEvidence, type RetrievedSource } from "@/lib/agent/context";
-import { runLokiTurn } from "@/lib/agent/loop";
+import { runLokiTurn, type LokiTurnEvent } from "@/lib/agent/loop";
 import type { ChatMessage } from "@/lib/agent/llm";
 import type { LokiProvenance as ProvenanceShape, LokiVia } from "@/lib/loki/provenance";
 import {
@@ -86,11 +86,25 @@ export function looksLikeFleetEcho(text: string): boolean {
 async function callGroq(
   message: string,
   voice: string | null,
+  onEvent?: (event: LokiTurnEvent) => void,
 ): Promise<{ text: string; model: string }> {
   const text = await callGroqText(message, {
     systemPrompt: LOKI_SYSTEM_PROMPT + voiceClause(voice),
     maxTokens: 1024,
     timeoutMs: HTTP_TIMEOUT_LONG_MS,
+    // The fallback streams too. It is tempting to treat this path as "degraded,
+    // so it can be silent" — but it is the path that runs precisely when the
+    // free tiers are drained and the tool loop cannot start, which is to say on
+    // the slowest days. Leaving it unstreamed meant the operator saw no
+    // streaming at all exactly when they most needed to see progress.
+    ...(onEvent
+      ? {
+          sink: {
+            delta: (text: string) => onEvent({ type: "delta", text }),
+            reset: () => onEvent({ type: "reset" }),
+          },
+        }
+      : {}),
   });
   return { text, model: `groq/${GROQ_FAST_MODEL}` };
 }
@@ -144,6 +158,14 @@ export type AskLokiOpts = {
   userId?: string;
   /** Prior turns of this conversation, oldest first. The loop trims them. */
   history?: ChatMessage[];
+  /**
+   * Present when an operator is watching the turn happen: the loop streams its
+   * prose and reports each tool it runs, instead of going quiet until it is
+   * finished. Only the tool-loop path can honour it — the fallbacks below
+   * produce their answer in one piece — so a turn that falls back simply stops
+   * emitting, which is the truth about what it is doing.
+   */
+  onEvent?: (event: LokiTurnEvent) => void;
 };
 
 /**
@@ -181,6 +203,7 @@ export async function askLoki(message: string, opts?: AskLokiOpts): Promise<AskL
         message,
         voice: voicePref,
         history: opts?.history,
+        onEvent: opts?.onEvent,
       });
       // Booked whether or not the turn produced usable text: the tokens were
       // spent either way, and only charging for successes would let a run of
@@ -228,6 +251,14 @@ async function askLokiViaGateway(
   opts: AskLokiOpts | undefined,
   startedAt: number,
 ): Promise<AskLokiResult> {
+  // Arriving here means the tool loop did not produce the answer — and it may
+  // have streamed prose before giving up. That text is void: this path answers
+  // from scratch, so it must REPLACE what is on screen, never continue it.
+  // Without this a loop that died at 80% of a sentence would splice into the
+  // fallback's opening words and the operator could not tell where one answer
+  // ended and the other began.
+  opts?.onEvent?.({ type: "reset" });
+
   const [voice, grounded] = await Promise.all([
     opts?.userId
       ? getUserPreferences(opts.userId)
@@ -352,11 +383,12 @@ async function askLokiViaGateway(
   // fallback path is a SMALLER model, so it is the path most likely to
   // fabricate and the last one that should skip the check.
   try {
-    const { text, model } = await callGroq(contextualMessage, voice);
+    const { text, model } = await callGroq(contextualMessage, voice, opts?.onEvent);
     // Same rationed pool as the tool loop, so it is booked too. `callGroqText`
     // surfaces no usage count, so 0 books the estimate.
     if (opts?.userId) await recordAiSpend(opts.userId, 0);
     const checked = await groundOrRepair(text, async (repair) => {
+      opts?.onEvent?.({ type: "status", label: "verifying" });
       const { text: fixed } = await callGroq(
         `${contextualMessage}\n\n---\n\nYour previous answer:\n${text}\n\n---\n\n${repair}`,
         voice,
