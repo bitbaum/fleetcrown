@@ -29,6 +29,13 @@ export const AUTO_SHIP_HOLD = {
   NOT_OURS: "not_ours",
   /** Draft, or GitHub says it cannot merge (conflicts, blocked). */
   NOT_MERGEABLE: "not_mergeable",
+  /**
+   * GitHub has not finished computing mergeability (`mergeable: null`). Still
+   * a hold — unknown is never permission — but a DIFFERENT one, because the
+   * row must not tell a person their pull request has conflicts when nobody
+   * has looked yet. This resolves itself on the next refresh.
+   */
+  MERGE_UNKNOWN: "merge_unknown",
   /** A required check failed or is still running. */
   CHECKS_NOT_GREEN: "checks_not_green",
   /** The repo runs no checks at all. Absence of red is not evidence of green. */
@@ -69,8 +76,9 @@ export function decideAutoShip(input: AutoShipInput): AutoShipDecision {
   // merge on a claim — the org-restriction 403 produced exactly that shape.
   if (input.fix.unverified) return { merge: false, hold: AUTO_SHIP_HOLD.NOT_OPEN };
   if (!input.fromOurDispatch) return { merge: false, hold: AUTO_SHIP_HOLD.NOT_OURS };
-  if (input.draft || input.mergeable !== true)
+  if (input.draft || input.mergeable === false)
     return { merge: false, hold: AUTO_SHIP_HOLD.NOT_MERGEABLE };
+  if (input.mergeable !== true) return { merge: false, hold: AUTO_SHIP_HOLD.MERGE_UNKNOWN };
   // "No checks configured" is UNKNOWN, not green. dogfood-site-sep10-1201's
   // first agent PR had zero checks; merging it would have been merging on no
   // evidence at all, which is the thing this whole feature exists to avoid.
@@ -90,6 +98,8 @@ export function autoShipHoldNote(hold: AutoShipHold): string | null {
       return "Automatic shipping is on and waiting for checks to pass.";
     case AUTO_SHIP_HOLD.NOT_MERGEABLE:
       return "Automatic shipping is on, but GitHub cannot merge this pull request — it is a draft or has conflicts.";
+    case AUTO_SHIP_HOLD.MERGE_UNKNOWN:
+      return "Automatic shipping is on; GitHub has not finished checking whether this can merge. It retries on its own.";
     case AUTO_SHIP_HOLD.DEPLOY_BROKEN:
       return "Automatic shipping is paused for this project: the last fix it merged failed to deploy. Fix that one first.";
     default:
