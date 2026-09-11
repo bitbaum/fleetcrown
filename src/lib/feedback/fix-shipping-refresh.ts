@@ -6,10 +6,10 @@
  * run, at most every REFRESH_MS while the state can still change, never
  * again once it is terminal. The inbox calls this for the handful of rows
  * sitting in "needs verify"; a fleet with fifty such rows costs fifty small
- * GitHub calls a minute at worst, with the user's own OAuth token.
+ * GitHub calls a minute at worst.
  */
 import { GITHUB_API_BASE } from "@/lib/github-api";
-import { getGithubToken } from "@/lib/github-token";
+import { getRepoWriteToken } from "@/lib/github-org-token";
 import { stampRunFix } from "@/db/queries/orchestration-runs";
 import {
   deriveShippingFromPr,
@@ -118,15 +118,20 @@ export async function refreshFixShipping(input: FixRefreshInput): Promise<FixShi
       unverified: true,
     };
     try {
-      const token = await getGithubToken(input.userId);
-      if (!token) fix = claimed;
+      // The person's OAuth token is NOT enough: `bitbaum` has OAuth-app access
+      // restrictions, so GitHub answers 403 for every org repo even with the
+      // right scope — the ledger read "PR #2 · open?" while that PR had merged
+      // and deployed. getRepoWriteToken prefers the server's org token and
+      // falls back to the person's, which is the same order repo creation uses.
+      const picked = await getRepoWriteToken(input.userId);
+      if (!picked) fix = claimed;
       else {
-        const pr = await fetchPr(ref, token);
+        const pr = await fetchPr(ref, picked.token);
         if (!pr) fix = claimed;
         else {
           const runs =
             pr.merged_at && pr.merge_commit_sha
-              ? await fetchRunsForSha(ref, pr.merge_commit_sha, token)
+              ? await fetchRunsForSha(ref, pr.merge_commit_sha, picked.token)
               : null;
           fix = deriveShippingFromPr(pr, runs, checkedAt);
         }
