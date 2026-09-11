@@ -101,7 +101,10 @@ const good = { slug: "causius", title: "Causius", kind: "product", status: "vali
 // Titles reach a page and a line-oriented env file, never a shell.
 {
   ok(!validateNewSiteRequest({ ...good, title: "a\nb" }).ok, "refuses a newline in the title");
-  ok(!validateNewSiteRequest({ ...good, title: "a|b" }).ok, "refuses '|' (the register's separator)");
+  ok(
+    !validateNewSiteRequest({ ...good, title: "a|b" }).ok,
+    "refuses '|' (the register's separator)",
+  );
   ok(!validateNewSiteRequest({ ...good, title: "x".repeat(61) }).ok, "refuses an over-long title");
   ok(validateNewSiteRequest({ ...good, title: "Café Ltd." }).ok, "accepts ordinary punctuation");
 }
@@ -131,7 +134,10 @@ const good = { slug: "causius", title: "Causius", kind: "product", status: "vali
 
 // --------------------------------------------------------------- the switch
 {
-  ok(siteFactoryEnabled({ FLEETCROWN_SITE_FACTORY: "1" } as NodeJS.ProcessEnv), "enabled when set to 1");
+  ok(
+    siteFactoryEnabled({ FLEETCROWN_SITE_FACTORY: "1" } as NodeJS.ProcessEnv),
+    "enabled when set to 1",
+  );
   ok(!siteFactoryEnabled({} as NodeJS.ProcessEnv), "OFF by default — merging must not arm it");
   ok(
     !siteFactoryEnabled({ FLEETCROWN_SITE_FACTORY: "true" } as NodeJS.ProcessEnv),

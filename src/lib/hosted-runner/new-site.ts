@@ -31,7 +31,14 @@ import { promisify } from "node:util";
 const run = promisify(execFile);
 
 /** The register's vocabulary. Mirrors apps.conf's documented columns. */
-export const SITE_KINDS = ["product", "client-app", "client-site", "demo", "infra", "library"] as const;
+export const SITE_KINDS = [
+  "product",
+  "client-app",
+  "client-site",
+  "demo",
+  "infra",
+  "library",
+] as const;
 export const SITE_STATUSES = [
   "live",
   "prospect",
@@ -62,11 +69,43 @@ export type NewSiteRequest = {
  * this list is the one that is wrong.
  */
 const RESERVED = new Set([
-  "www", "api", "app", "admin", "support", "security", "billing", "pay", "wallet",
-  "login", "auth", "account", "mail", "smtp", "imap", "ns1", "ns2", "mx", "cdn",
-  "static", "assets", "vpn", "db", "status", "staging", "dev", "test", "preview",
-  "bridge", "fleetcrown", "orangecat", "supabase", "solon", "evig", "revampit",
-  "root", "system",
+  "www",
+  "api",
+  "app",
+  "admin",
+  "support",
+  "security",
+  "billing",
+  "pay",
+  "wallet",
+  "login",
+  "auth",
+  "account",
+  "mail",
+  "smtp",
+  "imap",
+  "ns1",
+  "ns2",
+  "mx",
+  "cdn",
+  "static",
+  "assets",
+  "vpn",
+  "db",
+  "status",
+  "staging",
+  "dev",
+  "test",
+  "preview",
+  "bridge",
+  "fleetcrown",
+  "orangecat",
+  "supabase",
+  "solon",
+  "evig",
+  "revampit",
+  "root",
+  "system",
 ]);
 
 /**
@@ -85,9 +124,7 @@ const SLUG_RE = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/;
  */
 const TITLE_FORBIDDEN = /[\p{Cc}\p{Cf}|]/u;
 
-export type ValidationResult =
-  | { ok: true; value: NewSiteRequest }
-  | { ok: false; reason: string };
+export type ValidationResult = { ok: true; value: NewSiteRequest } | { ok: false; reason: string };
 
 /** Validate a dispatched payload. Pure — the unit suite runs it with no infra. */
 export function validateNewSiteRequest(input: unknown): ValidationResult {
@@ -104,7 +141,10 @@ export function validateNewSiteRequest(input: unknown): ValidationResult {
     };
   }
   if (RESERVED.has(slug)) {
-    return { ok: false, reason: `slug "${slug}" is reserved (infrastructure or impersonation risk)` };
+    return {
+      ok: false,
+      reason: `slug "${slug}" is reserved (infrastructure or impersonation risk)`,
+    };
   }
 
   // Default the title to the slug, exactly as new-site.sh does, so the two
@@ -147,13 +187,7 @@ export function validateNewSiteRequest(input: unknown): ValidationResult {
  * and an argument vector is the only form in which that is checkable.
  */
 export function newSiteArgv(scriptPath: string, req: NewSiteRequest): string[] {
-  return [
-    scriptPath,
-    req.slug,
-    "--title", req.title,
-    "--kind", req.kind,
-    "--status", req.status,
-  ];
+  return [scriptPath, req.slug, "--title", req.title, "--kind", req.kind, "--status", req.status];
 }
 
 /**
@@ -168,8 +202,7 @@ export function siteFactoryEnabled(env: NodeJS.ProcessEnv = process.env): boolea
 }
 
 export type NewSiteResult =
-  | { ok: true; host: string; repo: string; output: string }
-  | { ok: false; error: string };
+  { ok: true; host: string; repo: string; output: string } | { ok: false; error: string };
 
 /**
  * Run the scaffold. `execFile`, not `exec` — no shell is involved at any point,
@@ -180,7 +213,10 @@ export async function runNewSite(
   opts: { scriptPath: string; baseDomain: string; owner: string; timeoutMs?: number },
 ): Promise<NewSiteResult> {
   if (!siteFactoryEnabled()) {
-    return { ok: false, error: "site factory is not enabled on this runner (FLEETCROWN_SITE_FACTORY)" };
+    return {
+      ok: false,
+      error: "site factory is not enabled on this runner (FLEETCROWN_SITE_FACTORY)",
+    };
   }
   try {
     const { stdout, stderr } = await run("bash", newSiteArgv(opts.scriptPath, req), {

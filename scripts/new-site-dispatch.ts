@@ -29,9 +29,7 @@ import { requestNewSite } from "@/lib/hosted-runner/provision";
 async function main() {
   const [slug, title, kind = "product", status = "validating"] = process.argv.slice(2);
   if (!slug) {
-    console.error(
-      'Usage: npx tsx scripts/new-site-dispatch.ts <slug> "<Title>" [kind] [status]',
-    );
+    console.error('Usage: npx tsx scripts/new-site-dispatch.ts <slug> "<Title>" [kind] [status]');
     process.exit(1);
   }
 
