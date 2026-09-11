@@ -30,7 +30,12 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$SCRIPT_DIR/_box-env.sh"   # SSOT: HETZNER_IP, BOX_ROOT, BOX_UBUNTU
-APPS_CONF="$SCRIPT_DIR/apps.conf"
+# The register beside this script is the release copy: main's last deployed
+# apps.conf. When register-site.sh runs this (via sync-infra) it has just
+# appended the new site to the DURABLE register and exports MANIFEST; reading
+# the release copy here left every freshly registered site unmonitored until
+# its row reached main and deployed (kaffeeklappe-sep11, 2026-09-11).
+APPS_CONF="${MANIFEST:-$SCRIPT_DIR/apps.conf}"
 
 # The operator's laptop reaches the box as root. The box itself does not:
 # register-cd runs this (via sync-infra) inside fleetcrown-app as ubuntu, whose
