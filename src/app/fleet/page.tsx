@@ -112,6 +112,23 @@ export default async function FleetRegisterPage() {
             {solon.checked ? `${s.solon} Solon` : "Solon unreachable"}
           </span>
         </div>
+        {/* Proportion, not decoration: the widths are the group counts. */}
+        <div
+          className="ui-public-fleet-bar mt-6"
+          role="img"
+          aria-label={groups.map((g) => `${g.title}: ${g.rows.length}`).join(", ")}
+        >
+          {groups.map((g) => (
+            <div
+              key={g.id}
+              className={`ui-public-fleet-bar-seg ui-public-fleet-bar-seg-${
+                g.id === "live" ? "live" : g.id === "building" ? "building" : "rest"
+              }`}
+              style={{ width: `${(g.rows.length / Math.max(1, rows.length)) * 100}%` }}
+            />
+          ))}
+        </div>
+
         <nav className="ui-public-jumpbar" aria-label="Fleet sections">
           {groups.map((g) => (
             <a key={g.id} href={`#${g.id}`} className="ui-public-jumpbar-link">
