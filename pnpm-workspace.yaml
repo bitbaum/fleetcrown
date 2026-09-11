@@ -15,6 +15,12 @@ allowBuilds:
   sharp: true
   unrs-resolver: true
   "@sentry/cli": true
+  # Git dep needs its prepare build; pnpm demands the exact resolved URL.
+  # If the listkit pin moves, update this sha — pnpm prints the new key in its
+  # ERR_PNPM_GIT_DEP_PREPARE_NOT_ALLOWED message. (Same shape evig uses for
+  # ai-forms; it goes away if listkit is ever published to npm, because a
+  # published tarball ships dist/ and needs no build here.)
+  listkit@https://codeload.github.com/bitbaum/listkit/tar.gz/69cb4f4ef12d6a2a56b56db1bb4d4ac14aced525: true
 
 # Security pin. This lived in package.json "overrides", which pnpm silently
 # IGNORES (npm-only field) — it must live here to keep applying.

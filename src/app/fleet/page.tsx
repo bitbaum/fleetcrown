@@ -1,5 +1,16 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import Link from "next/link";
+import {
+  applyQuery,
+  emptyQuery,
+  isNarrowed,
+  parseQuery,
+  toggleFlag,
+  toggleInSet,
+  writeQuery,
+  type ListQuery,
+} from "listkit";
 import { PublicSurface } from "@/components/public/PublicSurface";
 import { PublicHeaderActions } from "@/components/public/PublicHeaderActions";
 import { FinalCta } from "@/components/public/FinalCta";
@@ -7,15 +18,17 @@ import { getSessionUserId } from "@/lib/session";
 import { getUserProjects } from "@/db/queries/user-projects";
 import { getSelfImprovementTarget } from "@/db/queries/frontier";
 import { readAppsConf } from "@/lib/register/apps-conf";
-import {
-  buildFleetRegister,
-  commerce,
-  isClientSite,
-  summarize,
-  type RegisterRow,
-} from "@/lib/register/build";
+import { buildFleetRegister, commerce, summarize, type RegisterRow } from "@/lib/register/build";
 import { solonOrgSlugs } from "@/lib/register/solon";
 import { orangecatProjectsThatResolve } from "@/lib/register/orangecat";
+import {
+  fleetListFor,
+  groupOf,
+  isDayZero,
+  GROUP_LABEL,
+  GROUP_OPTIONS,
+  SORT_LABEL,
+} from "@/config/fleet-list";
 
 export const metadata: Metadata = {
   title: "The fleet",
@@ -24,35 +37,31 @@ export const metadata: Metadata = {
 };
 export const dynamic = "force-dynamic";
 
+type Params = Promise<Record<string, string | string[] | undefined>>;
+
 /**
- * The register, rendered as a public page. Same join as /api/fleet/register —
- * this page calls the function, not the endpoint, so the two cannot disagree.
+ * The register, rendered and searchable.
  *
- * Three groups, in the order a visitor cares: what is live, what is being
- * built, and what exists only as a profile so far. Within a group the rows
- * are alphabetical by slug, which is the repository name — the one name every
- * system agrees on.
+ * The whole query lives in the URL and every control is a link or a GET form,
+ * so this page needs no JavaScript to work, the back button behaves, and any
+ * view of it can be sent to someone. That is not minimalism for its own sake:
+ * the state of a list IS its address, and the moment those two diverge the
+ * reader loses the ability to say "look at this one".
  *
- * Each row is also a to-do list. A dimmed chip is a gap: a project with no
- * site can be provisioned from its FleetCrown page; one with no OrangeCat
- * profile has nowhere to be funded; one with no Solon organisation has no
- * governance. The register does not hide the gaps — it is where you find
- * them.
+ * The narrowing comes from `listkit`, which is shared across the fleet because
+ * twelve repos had each written it once. What stays here is the markup and the
+ * tokens, because every app in the fleet has to keep looking like itself.
  */
-export default async function FleetRegisterPage() {
+export default async function FleetRegisterPage({ searchParams }: { searchParams: Params }) {
+  const params = await searchParams;
   const owner = await getSelfImprovementTarget();
   const projects = owner ? await getUserProjects(owner.userId) : [];
   const solon = await solonOrgSlugs();
   const apps = readAppsConf();
-  // What the studio charges is the studio's business. The register below is
-  // public; the commercial read of it is rendered only to the owner, and the
-  // numbers it needs never enter a row that a response body carries.
   const viewerId = await getSessionUserId();
   const viewerIsOwner = !!owner && viewerId === owner.userId;
-  // /projects/<id> redirects an anonymous caller to sign-in. A chip that leads
-  // to a wall is a promise the page cannot keep, so for a signed-out reader it
-  // stays a chip: "this project has a profile", stated, not linked.
   const canOpenProjects = !!viewerId;
+
   const rows = buildFleetRegister(
     projects.map((p) => ({
       id: p.id,
@@ -69,108 +78,186 @@ export default async function FleetRegisterPage() {
     apps,
     solon.orgs,
   );
+
+  const spec = fleetListFor(rows);
+  const query = parseQuery(params, spec);
+  const result = applyQuery(rows, spec, query);
   const s = summarize(rows);
-  // An id recorded once is not a page that answers now. Two of six OrangeCat
-  // links were 404 on 2026-09-11; a chip that leads nowhere costs the reader
-  // more than a missing chip would.
+  const money = viewerIsOwner ? commerce(apps) : null;
   const oc = await orangecatProjectsThatResolve(
     rows.map((r) => r.orangecat?.projectId).filter((id): id is string => !!id),
   );
 
-  const groups: { id: string; title: string; lede: string; rows: RegisterRow[] }[] = [
-    {
-      id: "live",
-      title: "Live",
-      lede: "A public address on the box, answering.",
-      rows: rows.filter((r) => r.site?.status === "live"),
-    },
-    {
-      id: "building",
-      title: "Being built",
-      lede: "Provisioned through FleetCrown — a day-zero page, or a prospect not yet verified.",
-      rows: rows.filter((r) => r.site && r.site.status !== "live"),
-    },
-    {
-      id: "profiles",
-      title: "Profile only",
-      lede: "A FleetCrown project without a hosted site yet. Each one is a site away.",
-      rows: rows.filter((r) => !r.site),
-    },
-  ].filter((g) => g.rows.length > 0);
+  /** The same page with one thing about the query changed. */
+  const href = (next: ListQuery) => `/fleet?${writeQuery(params, next, spec, query)}`;
+  const withFacet = (key: string, value: string): ListQuery => ({
+    ...query,
+    facets: { ...query.facets, [key]: toggleInSet(query.facets[key] ?? [], value) },
+  });
+  const withFlag = (key: string): ListQuery => ({
+    ...query,
+    facets: { ...query.facets, [key]: toggleFlag(query.facets[key] ?? []) },
+  });
+  const on = (key: string, value?: string) =>
+    value === undefined
+      ? (query.facets[key]?.length ?? 0) > 0
+      : (query.facets[key] ?? []).includes(value);
 
-  const money = viewerIsOwner ? commerce(apps) : null;
-  const gaps = {
-    site: rows.filter((r) => !r.site).length,
-    orangecat: rows.filter((r) => !r.orangecat).length,
-    solon: solon.checked ? rows.filter((r) => !r.solon).length : null,
-  };
+  const narrowed = isNarrowed(query);
+  const kindOptions = (spec.facets.find((f) => f.key === "kind")?.options ?? []) as string[];
+  const ownerOptions = (spec.facets.find((f) => f.key === "owner")?.options ?? []) as string[];
 
   return (
     <PublicSurface right={<PublicHeaderActions />}>
-      <div className="ui-public-container-mid py-12 sm:py-24 lg:py-32">
+      <div className="ui-public-container-mid py-12 sm:py-20 lg:py-24">
         <div className="ui-public-eyebrow">The fleet</div>
         <h1 className="ui-public-page-title mt-3 sm:mt-4">Every project, and where it lives.</h1>
         <p className="ui-public-lede mt-4 max-w-2xl sm:mt-6">
           This is the studio&rsquo;s whole catalogue — products, client work, demos, and the ones
           still only named. Most of them run on one box, and FleetCrown is what puts them there.
-          Follow any address to the thing itself.
-        </p>
-        <p className="ui-public-section-lede mt-4 max-w-2xl">
-          It is a join, computed when you load it, from whoever owns each fact: the hosting register
-          for addresses, this database for project profiles, Solon for organisations. Nothing here
-          is a second copy that someone remembers to update, which is why a gap shows as a gap
-          rather than as a blank.
+          Search it, narrow it, and send anyone the view you end up with.
         </p>
         <div className="ui-public-surface-card-meta">
           <span className="ui-public-surface-card-meta-chip">{s.projects} projects</span>
           <span className="ui-public-surface-card-meta-chip">{s.sites} sites</span>
-          <span className="ui-public-surface-card-meta-chip">{s.fleetcrown} FleetCrown</span>
           <span className="ui-public-surface-card-meta-chip">{s.orangecat} OrangeCat</span>
           <span className="ui-public-surface-card-meta-chip">
             {solon.checked ? `${s.solon} Solon` : "Solon unreachable"}
           </span>
         </div>
-        {/* Proportion, not decoration: the widths are the group counts. */}
-        <div
-          className="ui-public-fleet-bar mt-6"
-          role="img"
-          aria-label={groups.map((g) => `${g.title}: ${g.rows.length}`).join(", ")}
-        >
-          {groups.map((g) => (
-            <div
-              key={g.id}
-              className={`ui-public-fleet-bar-seg ui-public-fleet-bar-seg-${
-                g.id === "live" ? "live" : g.id === "building" ? "building" : "rest"
-              }`}
-              style={{ width: `${(g.rows.length / Math.max(1, rows.length)) * 100}%` }}
-            />
-          ))}
-        </div>
-
-        <nav className="ui-public-jumpbar" aria-label="Fleet sections">
-          {groups.map((g) => (
-            <a key={g.id} href={`#${g.id}`} className="ui-public-jumpbar-link">
-              {g.title} · {g.rows.length}
-            </a>
-          ))}
-          {money && (
-            <a href="#money" className="ui-public-jumpbar-link">
-              What it earns
-            </a>
-          )}
-          <a href="#gaps" className="ui-public-jumpbar-link">
-            What is missing
-          </a>
-        </nav>
       </div>
 
-      <div className="ui-public-container-mid space-y-12 pb-14 sm:space-y-20 sm:pb-24">
-        {groups.map((g) => (
-          <section key={g.id} id={g.id} className="border-t border-border-subtle pt-10 sm:pt-16">
-            <h2 className="ui-public-display-md">{g.title}</h2>
-            <p className="ui-public-section-lede mt-3 sm:mt-4">{g.lede}</p>
-            <ol className="ui-public-fleet-list mt-8 sm:mt-12">
-              {g.rows.map((r) => (
+      {/* The toolbar: a GET form and rows of links. No JavaScript, and the
+          address bar is the state. */}
+      <div className="ui-public-container-mid">
+        <form method="GET" action="/fleet" className="ui-fleet-searchbar">
+          {/* Carry the rest of the query through the submit — without these,
+              searching would silently clear every filter the reader had set. */}
+          {Object.entries(query.facets).flatMap(([k, vs]) =>
+            vs.length ? [<input key={k} type="hidden" name={k} value={vs.join(",")} />] : [],
+          )}
+          {query.sort !== spec.defaultSort && (
+            <input type="hidden" name="sort" value={query.sort} />
+          )}
+          <input
+            type="search"
+            name="q"
+            defaultValue={query.q}
+            placeholder="Search name, address, description, client…"
+            aria-label="Search the fleet"
+            className="ui-fleet-search-input"
+          />
+          <button type="submit" className="ui-fleet-search-go ui-tap">
+            Search
+          </button>
+        </form>
+
+        <FacetRow label="Where">
+          {GROUP_OPTIONS.map((g) => (
+            <Chip
+              key={g}
+              href={href(withFacet("group", g))}
+              active={on("group", g)}
+              count={result.counts.group?.[g]}
+            >
+              {GROUP_LABEL[g]}
+            </Chip>
+          ))}
+        </FacetRow>
+
+        <FacetRow label="Kind">
+          {kindOptions.map((k) => (
+            <Chip
+              key={k}
+              href={href(withFacet("kind", k))}
+              active={on("kind", k)}
+              count={result.counts.kind?.[k]}
+            >
+              {k}
+            </Chip>
+          ))}
+        </FacetRow>
+
+        {ownerOptions.length > 0 && (
+          <FacetRow label="For">
+            {ownerOptions.map((o) => (
+              <Chip
+                key={o}
+                href={href(withFacet("owner", o))}
+                active={on("owner", o)}
+                count={result.counts.owner?.[o]}
+              >
+                {o}
+              </Chip>
+            ))}
+          </FacetRow>
+        )}
+
+        {/* The register as a to-do list read sideways. These three are the
+            reason it is worth keeping, and until there was a filter the only
+            way to use them was to count 38 rows by eye. */}
+        <FacetRow label="Missing">
+          <Chip href={href(withFlag("nosite"))} active={on("nosite")}>
+            no site
+          </Chip>
+          <Chip href={href(withFlag("noorangecat"))} active={on("noorangecat")}>
+            no OrangeCat
+          </Chip>
+          <Chip href={href(withFlag("nosolon"))} active={on("nosolon")}>
+            no Solon
+          </Chip>
+        </FacetRow>
+
+        <div className="ui-fleet-resultbar">
+          <p className="ui-fleet-count">
+            {result.matched === result.total
+              ? `${result.total} projects`
+              : `${result.matched} of ${result.total} projects`}
+            {narrowed && (
+              <>
+                {" · "}
+                <Link href={href(emptyQuery(spec))} className="ui-public-link-standalone">
+                  clear
+                </Link>
+              </>
+            )}
+          </p>
+          <div className="ui-fleet-sorts">
+            <span className="ui-fleet-facet-label">Sort</span>
+            {spec.sorts.map((sort) => (
+              <Chip
+                key={sort.key}
+                href={href({
+                  ...query,
+                  sort: sort.key,
+                  dir: sort.key === "newest" ? "desc" : "asc",
+                })}
+                active={query.sort === sort.key}
+              >
+                {SORT_LABEL[sort.key] ?? sort.key}
+              </Chip>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="ui-public-container-mid space-y-12 pb-14 sm:space-y-16 sm:pb-24">
+        <section className="pt-8 sm:pt-10">
+          {result.rows.length === 0 ? (
+            <div className="ui-fleet-empty">
+              <p className="ui-public-section-lede">
+                Nothing matches that. {narrowed ? "The filters are narrower than the fleet." : null}
+              </p>
+              <Link
+                href={href(emptyQuery(spec))}
+                className="ui-public-link-standalone mt-3 text-sm"
+              >
+                Clear the filters →
+              </Link>
+            </div>
+          ) : (
+            <ol className="ui-public-fleet-list">
+              {result.rows.map((r) => (
                 <Row
                   key={r.slug}
                   r={r}
@@ -180,14 +267,9 @@ export default async function FleetRegisterPage() {
                 />
               ))}
             </ol>
-          </section>
-        ))}
+          )}
+        </section>
 
-        {/* The commercial read — owner only. It sits ABOVE the coverage gaps on
-            purpose: a studio's first question about its own register is not
-            "how many rows" but "which of these is a business". Every number is
-            computed from apps.conf's own owner/plan/price columns, so it cannot
-            be talked up. */}
         {money && (
           <section id="money" className="border-t border-border-subtle pt-10 sm:pt-16">
             <h2 className="ui-public-display-md">What it earns</h2>
@@ -222,33 +304,6 @@ export default async function FleetRegisterPage() {
           </section>
         )}
 
-        <section id="gaps" className="border-t border-border-subtle pt-10 sm:pt-16">
-          <h2 className="ui-public-display-md">What is missing</h2>
-          <p className="ui-public-section-lede mt-3 sm:mt-4">
-            The register is a to-do list read sideways. These are the counts that should fall.
-          </p>
-          <ul className="ui-public-fleet-stats mt-8">
-            <li className="ui-public-fleet-stat">
-              <span className="ui-public-fleet-stat-num">{gaps.site}</span>
-              <span className="ui-public-fleet-stat-label">
-                projects without a site — each one is a hosted provisioning away
-              </span>
-            </li>
-            <li className="ui-public-fleet-stat">
-              <span className="ui-public-fleet-stat-num">{gaps.orangecat}</span>
-              <span className="ui-public-fleet-stat-label">
-                without an OrangeCat profile — nowhere to be backed, funded or hired
-              </span>
-            </li>
-            <li className="ui-public-fleet-stat">
-              <span className="ui-public-fleet-stat-num">{gaps.solon ?? "?"}</span>
-              <span className="ui-public-fleet-stat-label">
-                without a Solon organisation — decisions with no recount
-              </span>
-            </li>
-          </ul>
-        </section>
-
         <section className="border-t border-border-subtle pt-10 sm:pt-16">
           <h2 className="ui-public-display-md">What this page does not know</h2>
           <p className="ui-public-section-lede mt-3 sm:mt-4">
@@ -257,22 +312,54 @@ export default async function FleetRegisterPage() {
             watched separately and alerts on its own; it does not feed this join yet. Saying so is
             cheaper than a status light that lies.
           </p>
-        </section>
-
-        <section className="border-t border-border-subtle pt-10 sm:pt-16">
-          <h2 className="ui-public-display-md">The same register, as data</h2>
-          <p className="ui-public-section-lede mt-3 sm:mt-4">
-            The bitbaum showcase and the footer of this site are rendered from it. Anything else can
-            be too.
-          </p>
           <Link href="/api/fleet/register" className="ui-public-link-standalone mt-4 text-sm">
-            /api/fleet/register →
+            The same register, as data → /api/fleet/register
           </Link>
         </section>
       </div>
 
       <FinalCta />
     </PublicSurface>
+  );
+}
+
+function FacetRow({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="ui-fleet-facet-row">
+      <span className="ui-fleet-facet-label">{label}</span>
+      <div className="ui-fleet-chips">{children}</div>
+    </div>
+  );
+}
+
+/**
+ * One filter. A link, not a button — so it opens in a new tab, shows its
+ * destination in the status bar, and works before any JavaScript arrives.
+ *
+ * The count is that option's own, computed with this facet's selection lifted:
+ * while filtering by one kind, the number beside another kind still says how
+ * many exist. A zero is worth seeing before the click rather than after.
+ */
+function Chip({
+  href,
+  active,
+  count,
+  children,
+}: {
+  href: string;
+  active: boolean;
+  count?: number;
+  children: ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`ui-tap ${active ? "ui-fleet-chip-active" : "ui-fleet-chip"}`}
+      aria-pressed={active}
+    >
+      {children}
+      {count !== undefined && <span className="ui-fleet-chip-count">{count}</span>}
+    </Link>
   );
 }
 
@@ -294,8 +381,7 @@ function Row({
 }) {
   const projectHref = r.fleetcrown && canOpenProjects ? `/projects/${r.fleetcrown.id}` : null;
   return (
-    // id = slug, so any single project is linkable: /fleet#causius. The slug is
-    // the one name every system in the join already agrees on.
+    // id = slug, so any single project is linkable: /fleet#causius.
     <li className="ui-public-fleet-row" id={r.slug}>
       <div className="min-w-0">
         {projectHref ? (
@@ -308,8 +394,6 @@ function Row({
         {r.description ? (
           <div className="ui-public-fleet-what">{r.description}</div>
         ) : (
-          // Only when the slug says something the name does not — "Substrata"
-          // over "substrata" is the same word twice.
           r.name &&
           norm(r.name) !== norm(r.slug) && <div className="ui-public-fleet-slug">{r.slug}</div>
         )}
@@ -326,17 +410,20 @@ function Row({
               {r.site.host}
             </a>
             <div className="ui-public-fleet-slug">
-              {r.site.kind} · {r.site.status}
-              {isClientSite(r) && <> · for {r.site.owner}</>}
+              {/* A day-zero address answers 200 with six to seventeen kilobytes
+                  of scaffold. Saying so is the difference between a reader
+                  trusting this list and concluding a third of it is broken. */}
+              {isDayZero(r) ? <span className="ui-fleet-dayzero">day-zero page</span> : r.site.kind}
+              {" · "}
+              {r.site.status}
+              {r.site.owner !== "bitbaum" && r.site.owner !== "-" && <> · for {r.site.owner}</>}
               {r.site.since !== "-" && <> · since {r.site.since}</>}
             </div>
           </>
-        ) : projectHref ? (
-          <Link href={projectHref} className="ui-public-fleet-none">
-            no site — provision one →
-          </Link>
         ) : (
-          <span className="ui-public-fleet-none">no site</span>
+          <span className="ui-public-fleet-none">
+            {groupOf(r) === "profile" ? "no site yet" : "no site"}
+          </span>
         )}
       </div>
       <div className="ui-public-fleet-presence">
@@ -357,22 +444,13 @@ function Row({
           present={!!r.orangecat}
         />
         {/* Solon publishes no per-organisation page — only `GET /api/orgs/<slug>`,
-            which is how this register knows the organisation exists. The old
-            href pointed at /orgs/<slug>, a route Solon does not have, and 404d
-            every time. Until there is a page to send someone to, the fact is
-            stated and not linked. */}
+            which is how this register knows the organisation exists. */}
         <Presence label="Solon" href={null} present={!!r.solon} unknown={!solonChecked} />
       </div>
     </li>
   );
 }
 
-/**
- * One chip per system. Present = a link to the profile; absent = the same chip
- * dimmed, so a row's shape stays constant and a missing profile reads as a
- * gap, not as nothing. Unknown (Solon unreachable) shows a question mark
- * rather than pretending to know.
- */
 function Presence({
   label,
   href,
