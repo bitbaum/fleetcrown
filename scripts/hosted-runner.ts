@@ -19,7 +19,13 @@ import {
   markCommandExecuted,
   type HostedAnalyzePayload,
   type HostedDispatchPayload,
+  type HostedNewSitePayload,
 } from "@/db/queries/pending-commands";
+import {
+  validateNewSiteRequest,
+  runNewSite,
+  siteFactoryEnabled,
+} from "@/lib/hosted-runner/new-site";
 import { getProjectContext } from "@/db/queries/project-context";
 import {
   getRecentProjectActivity,
@@ -43,7 +49,7 @@ const POLL_MS = 5_000;
 // Both hosted classes: read-only analysis (Groq, Phase 0) + write-class dispatch
 // to a sandboxed coding agent (Hermes, Phase 1). Local-runner dispatch/inject
 // commands are deliberately NOT claimed here.
-const HOSTED_TYPES = ["hosted_analyze", "hosted_dispatch"];
+const HOSTED_TYPES = ["hosted_analyze", "hosted_dispatch", "hosted_new_site"];
 
 /** Compact "what was just done" block so Hermes doesn't repeat or collide with
  *  recent work. Consumer-side because it enriches EVERY hosted dispatch (auto-
@@ -102,10 +108,75 @@ async function emitHostedEvent(
   }).catch((e) => console.error("[hosted-runner] event emit failed:", e));
 }
 
-/** Claim + execute one hosted command (analyze or dispatch). False when queue empty. */
+/**
+ * Provision a brand-new site from a validated payload.
+ *
+ * Deliberately its own function rather than a branch in the middle of tick():
+ * it shares nothing with the other two. No repo to clone, no project context to
+ * inject, no agent, no diff, no PR. It runs one audited script with an argument
+ * vector and reports what it built.
+ *
+ * A rejected payload is marked EXECUTED with the reason, not left to retry.
+ * Validation failures are deterministic — a slug that is reserved now is
+ * reserved on every redelivery — so retrying is just a queue that never drains.
+ */
+async function tickNewSite(userId: string, cmdId: string, payload: unknown): Promise<boolean> {
+  const parsed = validateNewSiteRequest(payload as HostedNewSitePayload);
+  if (!parsed.ok) {
+    console.warn(`[hosted-runner] new-site rejected: ${parsed.reason}`);
+    await markCommandExecuted(cmdId, userId, { ok: false, text: `rejected: ${parsed.reason}` });
+    return true;
+  }
+  const req = parsed.value;
+
+  if (!siteFactoryEnabled()) {
+    // Not an error in the payload — this runner simply is not the one allowed
+    // to create sites. Say which switch, so the answer is not a guess.
+    const msg = "site factory disabled on this runner (set FLEETCROWN_SITE_FACTORY=1 to arm it)";
+    console.warn(`[hosted-runner] ${msg}`);
+    await markCommandExecuted(cmdId, userId, { ok: false, text: msg });
+    return true;
+  }
+
+  const scriptPath = process.env.FLEETCROWN_NEW_SITE_SCRIPT;
+  if (!scriptPath) {
+    const msg = "FLEETCROWN_NEW_SITE_SCRIPT is not set; refusing to guess where new-site.sh lives";
+    console.warn(`[hosted-runner] ${msg}`);
+    await markCommandExecuted(cmdId, userId, { ok: false, text: msg });
+    return true;
+  }
+
+  console.log(`[hosted-runner] new-site ${req.slug} (${req.kind}/${req.status})`);
+  const res = await runNewSite(req, {
+    scriptPath,
+    baseDomain: process.env.SITES_BASE_DOMAIN ?? "orangecat.ch",
+    owner: process.env.GH_OWNER ?? "bitbaum",
+  });
+
+  if (res.ok) {
+    await markCommandExecuted(cmdId, userId, {
+      ok: true,
+      text: `Created ${req.title}\n\nhttps://${res.host}\n${res.repo}\n\n${res.output.slice(-4000)}`,
+    });
+  } else {
+    await markCommandExecuted(cmdId, userId, { ok: false, text: res.error.slice(0, 4000) });
+  }
+  return true;
+}
+
+/** Claim + execute one hosted command (analyze, dispatch, or new site). False when queue empty. */
 async function tick(userId: string): Promise<boolean> {
   const cmd = await claimNextPendingCommand([userId], HOSTED_TYPES);
   if (!cmd) return false;
+
+  // Site creation is handled BEFORE the project-context lookup below: it has no
+  // project to look up. hosted_analyze and hosted_dispatch both operate on a
+  // repo that already exists and key off `projectKey`/`gitUrl`; this one is the
+  // command that brings those into being, so it carries neither.
+  if (cmd.type === "hosted_new_site") {
+    return await tickNewSite(userId, cmd.id, cmd.payload);
+  }
+
   const p = cmd.payload as HostedAnalyzePayload | HostedDispatchPayload;
   const [ctx, dbToken] = await Promise.all([
     getProjectContext(userId, p.projectKey).catch(() => null),
