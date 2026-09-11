@@ -1170,10 +1170,16 @@
     @apply divide-y divide-border-subtle border-y border-border-subtle;
   }
   .ui-public-fleet-row {
-    @apply grid grid-cols-1 gap-x-6 gap-y-2 py-4 sm:grid-cols-[minmax(0,1.3fr)_minmax(0,1.3fr)_auto] sm:items-start;
+    @apply -mx-3 grid grid-cols-1 gap-x-6 gap-y-2 rounded-lg px-3 py-4 transition-colors sm:grid-cols-[minmax(0,17rem)_minmax(0,1fr)_auto] sm:items-start;
+  }
+  .ui-public-fleet-row:hover {
+    @apply bg-surface-raised;
   }
   .ui-public-fleet-name {
-    @apply text-base font-semibold text-text-primary;
+    @apply text-base font-semibold text-text-primary underline decoration-transparent underline-offset-4 transition-colors;
+  }
+  .ui-public-fleet-row:hover .ui-public-fleet-name {
+    @apply decoration-border-interactive;
   }
   .ui-public-fleet-slug {
     @apply mt-0.5 font-mono text-xs text-text-tertiary;
@@ -1193,19 +1199,25 @@
   .ui-public-fleet-presence-off {
     @apply inline-flex items-center rounded-md border border-dashed border-border-subtle px-2 py-1 font-mono text-[11px] text-text-muted opacity-60;
   }
-  /* "What is missing" — three counts that should fall. Big number, one line
-     of consequence; the number is the accent because it is the only thing on
-     this page that asks for action. */
-  .ui-public-fleet-gaps {
+  /* The two number bands — "What it earns" and "What is missing". Big number,
+     one line of consequence. The accented variant is reserved for the
+     commercial band; six equally loud numbers on one page is no hierarchy. */
+  .ui-public-fleet-stats {
     @apply grid grid-cols-1 gap-4 sm:grid-cols-3;
   }
-  .ui-public-fleet-gap {
+  .ui-public-fleet-stat {
     @apply flex flex-col gap-2 rounded-2xl border border-border-subtle bg-surface-base p-5;
   }
-  .ui-public-fleet-gap-num {
+  /* Coverage counts: loud, but not the loudest. Six equally accented numbers
+     on one page is no hierarchy at all — the accent is reserved for the
+     commercial band, which is the one that asks for a decision. */
+  .ui-public-fleet-stat-num {
+    @apply font-mono text-4xl font-semibold tracking-tight text-text-primary;
+  }
+  .ui-public-fleet-stat-num-accent {
     @apply font-mono text-4xl font-semibold tracking-tight text-accent-warm;
   }
-  .ui-public-fleet-gap-label {
+  .ui-public-fleet-stat-label {
     @apply text-sm leading-snug text-text-secondary;
     text-wrap: pretty;
   }

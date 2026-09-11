@@ -60,7 +60,16 @@ export type RegisterRow = {
   slug: string;
   name: string;
   repo: string | null;
-  site: { url: string; host: string; kind: string; status: string; owner: string } | null;
+  site: {
+    url: string;
+    host: string;
+    kind: string;
+    status: string;
+    /** Who the site is FOR. "bitbaum" = our own; anything else is a client. */
+    owner: string;
+    /** When it went up, or "-". A date, not a term. */
+    since: string;
+  } | null;
   fleetcrown: { id: string; liveUrl: string | null } | null;
   orangecat: { projectId: string } | null;
   solon: { slug: string } | null;
@@ -114,7 +123,18 @@ export function buildFleetRegister(
     const url = hostedUrl(a);
     if (!url) continue;
     const target = byHosted.get(a.name) ?? row(canonicalSlug(a.name), a.name);
-    target.site = { url, host: a.domains[0], kind: a.kind, status: a.status, owner: a.owner };
+    // NOTE the omission: `plan` and `price` are NOT copied here. This row is
+    // served by a public endpoint, and what a client is charged is theirs, not
+    // the internet's. The commercial read lives in commerce(), which takes
+    // apps.conf directly and is rendered only to the studio owner.
+    target.site = {
+      url,
+      host: a.domains[0],
+      kind: a.kind,
+      status: a.status,
+      owner: a.owner,
+      since: a.since,
+    };
   }
 
   if (solonOrgs) {
@@ -125,6 +145,65 @@ export function buildFleetRegister(
 
   for (const r of bySlug.values()) delete (r as RegisterRow & { hostedApp?: string }).hostedApp;
   return [...bySlug.values()].sort((a, b) => a.slug.localeCompare(b.slug));
+}
+
+/** Owners that mean "ours", not a client. Everything else is a third party. */
+const OWN = new Set(["bitbaum", "-", ""]);
+
+/** A site that exists for someone other than us. */
+export function isClientSite(r: RegisterRow): boolean {
+  return !!r.site && !OWN.has(r.site.owner.trim().toLowerCase());
+}
+
+/** The apps.conf form of the same question. */
+function appIsClient(a: HostedApp): boolean {
+  return !OWN.has(a.owner.trim().toLowerCase());
+}
+
+/** A price column that represents money actually charged. */
+export function isPaid(price: string): boolean {
+  const n = Number(String(price).replace(/[^0-9.]/g, ""));
+  return Number.isFinite(n) && n > 0;
+}
+
+export type FleetCommerce = {
+  /** Live sites built for someone else. */
+  engagements: number;
+  /** Distinct third parties served. */
+  clients: string[];
+  /** Engagements with a price above zero. */
+  paying: number;
+  /** Engagements with terms recorded at all (a price or a plan). */
+  priced: number;
+  /** Sites still being qualified — the pipeline, in the register's own words. */
+  pipeline: number;
+};
+
+/**
+ * The commercial read of the register.
+ *
+ * WHY it is computed and not typed by hand: every other count on the fleet page
+ * is derived, and the one number a studio most wants to believe — what it earns
+ * — is exactly the one that should not be editable prose. apps.conf already
+ * carries `owner|plan|price` per site; this only adds them up. When the answer
+ * is uncomfortable (four engagements, none priced) the page says so, because a
+ * register that flatters is a register nobody trusts about anything else.
+ *
+ * WHY it takes apps.conf rather than RegisterRow: prices are deliberately not
+ * on the row, because the row is public. This runs on the server for the owner
+ * and its inputs never reach a response body.
+ */
+export function commerce(apps: HostedApp[]): FleetCommerce {
+  const live = apps.filter((a) => appIsClient(a) && a.status === "live");
+  const clients = [...new Set(live.map((a) => a.owner.trim()))].sort((a, b) => a.localeCompare(b));
+  return {
+    engagements: live.length,
+    clients,
+    paying: live.filter((a) => isPaid(a.price)).length,
+    priced: live.filter((a) => isPaid(a.price) || a.plan !== "-").length,
+    pipeline: apps.filter((a) => ["prospect", "unverified", "validating"].includes(a.status))
+      .length,
+  };
 }
 
 export function summarize(rows: RegisterRow[]) {
