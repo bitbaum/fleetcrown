@@ -304,11 +304,19 @@ else
     say "deploy.yml already on the remote"
   fi
   shim_on_remote || { echo "ERROR: deploy.yml is not on $GH_REPO — no identity available here may write workflows" >&2; exit 1; }
+  # A sidecar already on the remote is refreshed when the template moved on:
+  # the site-template is the one copy of "how a site verifies and ships", and
+  # a site registered last week must not keep last week's CI forever.
   for f in ci.yml auto-merge.yml; do
     [ -f "$WF_TMP/$f" ] || continue
-    if workflow_on_remote "$f"; then say "$f already on the remote"
-    else put_workflow "$f" "ci: verify and auto-merge (seeded by FleetCrown register)" \
-           || say "⚠ $f is not on $GH_REPO — agent PRs on this site will wait for a human merge"; fi
+    if ! workflow_on_remote "$f"; then
+      put_workflow "$f" "ci: verify and auto-merge (seeded by FleetCrown register)" \
+        || say "⚠ $f is not on $GH_REPO — agent PRs on this site will wait for a human merge"
+    elif ! remote_workflow_body "$f" | cmp -s - "$WF_TMP/$f"; then
+      put_workflow "$f" "ci: refresh $f from the FleetCrown site-template" || say "⚠ $f on $GH_REPO is stale and could not be refreshed"
+    else
+      say "$f already on the remote"
+    fi
   done
 fi
 

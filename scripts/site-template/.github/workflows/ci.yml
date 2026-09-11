@@ -36,6 +36,16 @@ jobs:
       # store path, and setup-node fails outright if pnpm is not on PATH yet.
       - uses: pnpm/action-setup@v4
 
+      # Sites scaffolded before the starter shipped .nvmrc have none, and
+
+      # setup-node fails on a missing version file (kaffeeklappe-sep11 #3,
+
+      # 2026-09-11). Default to the fleet's Node line; a committed .nvmrc wins.
+
+      - name: Node version file
+
+        run: '[ -f .nvmrc ] || echo 22 > .nvmrc'
+
       - uses: actions/setup-node@v4
         with:
           node-version-file: ".nvmrc"
