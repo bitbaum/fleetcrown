@@ -1,17 +1,31 @@
 #!/usr/bin/env sh
-# Before code leaves this machine: run the SAME `pnpm run verify` bundle CI runs
-# (tsc + lint + check:design + test:unit + test:home) — one definition of
-# "verified", so a `git commit --no-verify` can't slip a red past the local gate.
-# Then the deploy-safety extras: schema-drift guard, dev-server smoke (if up),
-# and the prod dogfood.
-# To run fully authenticated: FLEETCROWN_SESSION_TOKEN=<token> git push
-
+#
+# pre-push: run the gates that the CHANGED FILES can affect, and nothing else.
+#
+# WHY NOT `pnpm run verify` — THE WHOLE BUNDLE — ON EVERY PUSH
+#
+# It used to. The bundle is fifteen steps (format, three register checks, tsc,
+# eslint, design, desktop, unit, home, five gate tests), and CI runs exactly the
+# same fifteen on every PR — this hook's own banner said "same bundle as CI".
+# Locally it ran on a 4-core laptop hosting five to twenty agent sessions at
+# once. On 2026-09-11 one push sat in this hook for SEVEN HOURS THIRTEEN MINUTES
+# at load 16.65 before it was killed — for a commit that touched four shell
+# scripts and no TypeScript at all. That is not a slow gate; that is a gate that
+# has stopped being one, because the only way through it was --no-verify.
+#
+# The definition of "verified" is CI calling `verify` verbatim. This hook is a
+# preview of that, and a preview that costs more than the thing it previews is
+# worth nothing. So:
+#
+#   1. Only run what the diff can break. Shell scripts cannot fail tsc.
+#   2. A hard watchdog. Fifteen minutes, then a loud exit that names CI as the
+#      gate and says how to proceed — instead of silence until someone notices.
+#   3. Print the load up front, so "slow" has a visible cause.
+#
+# Everything below the scoped gates — schema, smoke, prod dogfood — is unchanged.
 set -e
 
-# Branch deletions carry no commits to verify (git sends an all-zero local sha),
-# yet the full suite used to run for ~2min on every `git push --delete`. If every
-# ref in this push is a deletion, skip the checks. (Only skip when we actually
-# saw refs and none had commits — an empty stdin must NOT short-circuit.)
+# ── branch deletion only? nothing to check ────────────────────────────────────
 _saw_ref=""; _has_commits=""
 while read -r _lref _lsha _rref _rsha; do
   _saw_ref=1
@@ -22,15 +36,7 @@ if [ -n "$_saw_ref" ] && [ -z "$_has_commits" ]; then
   exit 0
 fi
 
-# ---------------------------------------------------------------------------
-# PRECONDITION, NOT A CHECK.
-#
-# A stale node_modules makes tsc report "Cannot find module '@bitbaum/ai-kit'", which
-# reads as a type error in your change and is not one. That exact confusion cost
-# a day: the dependency was unresolvable after a GitHub account rename, every
-# push went red, and the conclusion drawn was "the hook is broken". Fail loudly
-# on the real cause instead, before running anything that would mis-attribute it.
-# ---------------------------------------------------------------------------
+# ── stale install? that is not your change, fix it first ─────────────────────
 if [ pnpm-lock.yaml -nt node_modules/.modules.yaml ] 2>/dev/null; then
   echo "✗ node_modules is older than pnpm-lock.yaml."
   echo "  This is an INSTALL problem, not a problem with your change — and left"
@@ -39,41 +45,102 @@ if [ pnpm-lock.yaml -nt node_modules/.modules.yaml ] 2>/dev/null; then
   exit 1
 fi
 
-echo "→ verify (tsc + lint + check:design + test:unit + test:home) — same bundle as CI"
-pnpm run verify
+# ── watchdog: no hook runs for hours ─────────────────────────────────────────
+# A background timer that kills THIS shell. Not `timeout(1)` around each step:
+# the failure we saw was the SUM of steps under load, not one step hanging.
+_LIMIT=900
+(
+  sleep "$_LIMIT"
+  echo ""
+  echo "✗ pre-push exceeded $((_LIMIT / 60)) minutes (load $(cut -d' ' -f1 /proc/loadavg 2>/dev/null) on $(nproc 2>/dev/null) cores)."
+  echo "  This hook previews the CI bundle; CI runs the identical bundle on the PR."
+  echo "  On an oversubscribed box the preview is the bottleneck, not the check."
+  echo "  Push with:  git push --no-verify   — and let CI be the gate it already is."
+  kill -TERM "$$" 2>/dev/null
+) &
+_watchdog=$!
 
-# ---------------------------------------------------------------------------
-# AMBIENT CHECK — scoped to the diff.
-#
-# The schema guard already skips an UNREACHABLE database. It did not skip a
-# reachable but stale one, so a local scratch DB missing columns from somebody
-# else's migration blocked pushes that touched no schema at all.
-#
-# Rule: if this branch changes schema, a mismatch is yours and blocks. If it
-# does not, the mismatch predates you — report it and move on. Same principle as
-# desktop-release-drift, which is the only check here that has never blocked an
-# unrelated push.
-# ---------------------------------------------------------------------------
-# Resolve the default branch — this repo uses main, but three in the fleet use
-# master and two have no origin/HEAD. Hardcoding it makes the scoping below
-# silently treat every change as schema-touching on those repos.
+# ── what changed? ─────────────────────────────────────────────────────────────
 _def=$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's|^origin/||')
 [ -z "$_def" ] && for _c in main master; do
   git rev-parse --verify --quiet "refs/remotes/origin/$_c" >/dev/null 2>&1 && { _def="$_c"; break; }
 done
 _base=$(git merge-base HEAD "origin/${_def:-main}" 2>/dev/null || echo "")
+
+_changed=$(mktemp)
+trap 'kill "$_watchdog" 2>/dev/null; rm -f "$_changed"' EXIT
+if [ -n "$_base" ]; then
+  git diff --name-only "$_base"...HEAD > "$_changed" 2>/dev/null
+else
+  git ls-files > "$_changed"   # no base to diff against — treat everything as changed
+fi
+
+# Read from the FILE, never `printf | grep -q`: under pipefail that construct
+# reports failure on a successful match once the payload passes the pipe buffer
+# (fleet SHARED.md, "Central audits"). This hook has no pipefail, but the habit
+# is cheaper than the incident.
+touches() { grep -qE "$1" "$_changed"; }
+
+_app=""; _ops=""; _register=""
+touches '^(src|home|widget)/|^(package\.json|pnpm-lock\.yaml|tsconfig.*\.json|eslint\.config\.[cm]?js|next\.config\.[cm]?js)$' && _app=1
+touches '^scripts/(hetzner|site-template|test)/' && _ops=1
+touches '^scripts/hetzner/apps\.conf$|^scripts/ci/|^docs/telegram-notifications\.md$' && _register=1
+
+echo "→ pre-push: $(wc -l < "$_changed") file(s) vs origin/${_def:-main} — app:${_app:-0} ops:${_ops:-0} register:${_register:-0} — load $(cut -d' ' -f1 /proc/loadavg 2>/dev/null) on $(nproc 2>/dev/null) cores"
+
+# ── always: format, but only the files you touched ───────────────────────────
+# `prettier --check .` walks the whole repo and took minutes under load; the
+# files in the diff take seconds and are the only ones you can have broken.
+_fmt=$(grep -E '\.(ts|tsx|js|mjs|cjs|json|md|yml|yaml|css)$' "$_changed" | while read -r f; do [ -f "$f" ] && printf '%s\n' "$f"; done)
+if [ -n "$_fmt" ]; then
+  echo "→ format:check ($(printf '%s\n' "$_fmt" | wc -l) changed file(s))"
+  # shellcheck disable=SC2086
+  pnpm exec prettier --check $_fmt
+fi
+
+# ── ops: shell scripts and the site template ─────────────────────────────────
+if [ -n "$_ops" ]; then
+  grep -E '\.sh$' "$_changed" | while read -r f; do
+    [ -f "$f" ] && bash -n "$f"
+  done
+  echo "→ test:ops (scripts/ changed)"
+  pnpm run test:ops
+fi
+
+# ── register: apps.conf and the CI checks that read it ───────────────────────
+if [ -n "$_register" ]; then
+  echo "→ register checks (apps.conf / scripts/ci changed)"
+  pnpm run check:deploy-ready
+  pnpm run check:client-ledger
+  pnpm run check:telegram-registry
+  pnpm run test:deploy-ref-gate
+  pnpm run test:not-behind-gate
+  pnpm run test:deploy-ready-gate
+  pnpm run test:client-ledger-gate
+fi
+
+# ── app: TypeScript, lint, design, desktop, unit, home ───────────────────────
+if [ -n "$_app" ]; then
+  echo "→ app bundle (src/home/widget changed): tsc + lint + check:design + check:desktop + test:unit + test:home"
+  tsc --noEmit
+  pnpm run lint
+  pnpm run check:design
+  pnpm run check:desktop
+  pnpm run test:unit
+  pnpm run test:home
+fi
+
+if [ -z "$_app$_ops$_register" ]; then
+  echo "→ no gated paths changed (docs/config only) — nothing to run locally; CI still runs the full bundle"
+fi
+
+# ── schema (unchanged) ───────────────────────────────────────────────────────
 _touches_schema=""
 if [ -n "$_base" ]; then
-  # `src/db/schema/`, not `src/db/`. The wider pattern also matched
-  # `src/db/queries/` — data ACCESS, not the shape of the data — so a branch
-  # that only edited a SELECT was treated as schema-touching and a stale local
-  # scratch DB blocked it. That is the exact false block the scoping above was
-  # written to prevent, reintroduced by one directory level.
   git diff --name-only "$_base"...HEAD 2>/dev/null | grep -qE '^(src/db/schema/|drizzle/)' && _touches_schema=1
 else
   _touches_schema=1   # cannot tell — treat as yours
 fi
-
 if [ -n "$_touches_schema" ]; then
   echo "→ check:schema (this branch changes schema — a mismatch is yours)"
   pnpm run check:schema
@@ -82,17 +149,8 @@ else
   pnpm run check:schema || echo "  ⚠ schema mismatch predates this branch. Fix with: pnpm run db:push"
 fi
 
+# ── smoke against a running local server (unchanged) ─────────────────────────
 BASE="${COCKPIT_URL:-http://localhost:3000}"
-
-# No early exit here: the push-deploy block appended below must still run.
-# (A previous `exit 0` in this branch silently disabled push-to-deploy
-# whenever the local dev server was down.)
-#
-# Identity check, not just liveness: several apps share this laptop and any of
-# them can hold :3000. FleetCrown's /api/health returns {"ok":...,"commit":...};
-# OrangeCat's returns {"success":...,"data":...}. Smoking a foreign app read as
-# 41/46 routes FAILED and blocked an unrelated push — a wrong server must skip
-# exactly like a missing one.
 _health=$(curl -sf --max-time 2 "$BASE/api/health" 2>/dev/null || true)
 if [ -z "$_health" ]; then
   echo "→ smoke: server not running at $BASE — skipping (start with pnpm run dev or install-app)"
@@ -103,41 +161,8 @@ else
   pnpm run smoke
 fi
 
+# ── prod dogfood (unchanged; self-skips without SMOKE_PRIVATE_PIN) ───────────
 echo "→ test:pre-push-prod-dogfood"
 pnpm run test:pre-push-prod-dogfood
 
-# >>> fleetcrown push-deploy >>>
-# DISABLED 2026-07-28 — the Hetzner deploy now fires from GitHub Actions
-# (.github/workflows/deploy.yml, gated on repo var DEPLOY_VIA_CI=true), which
-# builds the exact CI-green commit in an isolated runner and ships it. That
-# removes this laptop from the deploy path entirely: no more 8–30 min local
-# builds that get SIGTERM-reaped, no shared-.next collisions between concurrent
-# sessions, and a red CI genuinely cannot ship (a local `--no-verify` can't
-# bypass a server-side gate).
-#
-# To ROLL BACK to laptop-driven deploys: `gh variable delete DEPLOY_VIA_CI`
-# and un-comment the block below (git history has the original).
-#
-# if git symbolic-ref --short HEAD 2>/dev/null | grep -qxE 'main|master'; then
-#   _sha=$(git rev-parse HEAD)
-#   _log="/tmp/push-deploy-fleetcrown-${_sha}.log"
-#   ln -sf "$_log" /tmp/push-deploy-fleetcrown-latest.log 2>/dev/null || true
-#   ( sleep 5
-#     _nwo=$(git remote get-url origin 2>/dev/null | sed -E 's#(git@github.com:|https://github.com/)##; s#\.git$##')
-#     if [ -n "$_nwo" ]; then
-#       bash "/home/g/dev/fleetcrown/scripts/hetzner/ci-gate.sh" "$_nwo" "$_sha"; _rc=$?
-#     else
-#       _rc=0  # no remote to gate against
-#     fi
-#     if [ "$_rc" -eq 0 ]; then
-#       env -u CI bash /home/g/dev/fleetcrown/scripts/deploy-hetzner.sh --ref "$_sha"
-#     elif [ "$_rc" -eq 3 ]; then
-#       echo "[push-deploy] fleetcrown: ${_sha} superseded — newer commit will deploy; skipping (not an error)"
-#     else
-#       echo "[push-deploy] fleetcrown: BLOCKED by CI gate for ${_sha} — fix CI, then re-push or deploy manually"
-#     fi
-#   ) >> "$_log" 2>&1 & disown 2>/dev/null || true
-#   echo "[push-deploy] fleetcrown: CI-gated deploy started → ${_log} (or: pnpm run deploy:status)"
-# fi
 echo "→ deploy: handled by GitHub Actions (deploy.yml, DEPLOY_VIA_CI=true) after CI passes on main"
-# <<< fleetcrown push-deploy <<<
