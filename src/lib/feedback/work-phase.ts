@@ -13,6 +13,7 @@ import { ORCHESTRATION_OUTCOME } from "@/lib/orchestration/contract";
 import { EXECUTOR_COPY } from "@/config/executor-copy";
 import { isRunProgressFresh, RUN_PROGRESS_FRESH_MS } from "@/lib/run-progress";
 import { FIX_SHIP_STATE, firstSentence, type FixShipping } from "@/lib/feedback/fix-shipping";
+import { autoShipHoldNote, type AutoShipHold } from "@/lib/feedback/auto-ship";
 
 export const FEEDBACK_WORK_PHASE = {
   NOT_STARTED: "not_started",
@@ -367,14 +368,19 @@ function shippingView(run: FeedbackRunSnapshot): Omit<FeedbackWorkView, "waiting
         detail:
           "A branch was pushed but no pull request opened — open it from the branch, then it can merge and deploy.",
       };
-    case FIX_SHIP_STATE.PR_OPEN:
+    case FIX_SHIP_STATE.PR_OPEN: {
+      // Automatic shipping is on but declined: say what it is waiting for,
+      // because "PR open" next to a switch the operator turned on otherwise
+      // reads as the feature not working.
+      const held = fix.autoShipHold ? autoShipHoldNote(fix.autoShipHold as AutoShipHold) : null;
       return {
         ...base,
         label: fix.unverified ? `${pr} · open?` : `${pr} · open`,
         detail: fix.unverified
           ? "GitHub could not be asked — this is what the agent claimed, unverified."
-          : `Not live yet — the page still shows the old version.${partialNote(partial)}`,
+          : (held ?? `Not live yet — the page still shows the old version.${partialNote(partial)}`),
       };
+    }
     case FIX_SHIP_STATE.PR_CLOSED:
       return {
         ...base,
@@ -404,6 +410,13 @@ function shippingView(run: FeedbackRunSnapshot): Omit<FeedbackWorkView, "waiting
         detail: `Merged, but ${fix.deploy?.name ?? "the deploy"} failed on the merge commit. The live page still shows the old version.`,
       };
     case FIX_SHIP_STATE.DEPLOYED:
+      if (fix.shippedByFleet)
+        return {
+          ...base,
+          label: "Live · confirm",
+          detail: `FleetCrown merged this and the site deployed.${partial ? " The agent reported only partial success — worth a closer look." : ""}`,
+          checkLive: true,
+        };
       return {
         ...base,
         // No sentence: the badge says Live, and the two buttons under it say
