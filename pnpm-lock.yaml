@@ -82,6 +82,9 @@ importers:
       limitkit:
         specifier: ^0.2.0
         version: 0.2.0
+      listkit:
+        specifier: github:bitbaum/listkit#v0.1.0
+        version: https://codeload.github.com/bitbaum/listkit/tar.gz/69cb4f4ef12d6a2a56b56db1bb4d4ac14aced525
       lucide-react:
         specifier: ^1.41.0
         version: 1.41.0(react@19.2.8)
@@ -3812,6 +3815,11 @@ packages:
 
   lines-and-columns@1.2.4:
     resolution: {integrity: sha512-7ylylesZQ/PV29jhEDl3Ufjo6ZX7gCqJr5F7PKrqc93v7fzSymt1BpwEU8nAUXs8qzzvqhbjhK5QZg6Mt/HkBg==}
+
+  listkit@https://codeload.github.com/bitbaum/listkit/tar.gz/69cb4f4ef12d6a2a56b56db1bb4d4ac14aced525:
+    resolution: {gitHosted: true, integrity: sha512-7SPjMC6YEyKQ1pKE+hlaMtMjmwV8DMCheB3KaRUzSdQ065ZpIj5+BQFTUiv2gDu/d1xfuKDn+dwt4urcwwu9KA==, tarball: https://codeload.github.com/bitbaum/listkit/tar.gz/69cb4f4ef12d6a2a56b56db1bb4d4ac14aced525}
+    version: 0.1.0
+    engines: {node: '>=20'}
 
   loader-runner@4.3.2:
     resolution: {integrity: sha512-DFEqQ3ihfS9blba08cLfYf1NRAIEm+dDjic073DRDc3/JspI/8wYmtDsHwd3+4hwvdxSK7PGaElfTmm0awWJ4w==}
@@ -8471,6 +8479,8 @@ snapshots:
   limitkit@0.2.0: {}
 
   lines-and-columns@1.2.4: {}
+
+  listkit@https://codeload.github.com/bitbaum/listkit/tar.gz/69cb4f4ef12d6a2a56b56db1bb4d4ac14aced525: {}
 
   loader-runner@4.3.2: {}
 

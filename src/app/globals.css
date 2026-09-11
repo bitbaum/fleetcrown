@@ -1188,6 +1188,58 @@
   .ui-public-fleet-bar-seg-rest {
     @apply bg-border-subtle;
   }
+  /* ── /fleet toolbar ────────────────────────────────────────────────────
+     Every control here is a link or a GET form, so the page filters without
+     JavaScript and the URL is the state. The chips reuse this repo's own
+     tokens rather than anything from listkit: the package ships the rule, the
+     app ships the look, because each app in the fleet must keep looking like
+     itself. */
+  .ui-fleet-searchbar {
+    @apply flex gap-2 pb-2;
+  }
+  .ui-fleet-search-input {
+    @apply w-full rounded-xl border border-border-default bg-surface-overlay px-4 py-3 text-base text-text-primary outline-none transition-colors placeholder:text-text-muted focus:border-border-interactive;
+  }
+  .ui-fleet-search-go {
+    @apply shrink-0 rounded-xl border border-border-subtle bg-surface-raised px-4 py-3 text-sm font-medium text-text-secondary transition-colors hover:border-border-default hover:text-text-primary;
+  }
+  .ui-fleet-facet-row {
+    @apply flex flex-col gap-1.5 border-t border-border-subtle py-3 sm:flex-row sm:items-center sm:gap-4;
+  }
+  .ui-fleet-facet-label {
+    @apply shrink-0 font-mono text-[11px] uppercase tracking-caps text-text-muted sm:w-16;
+  }
+  /* One scrolling line on a phone, wrapping from sm. A filter bar that wraps to
+     four rows on a small screen pushes the list it filters off the fold. */
+  .ui-fleet-chips {
+    @apply -mx-1 flex gap-1.5 overflow-x-auto px-1 sm:flex-wrap sm:overflow-visible;
+  }
+  .ui-fleet-chip {
+    @apply inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border-subtle bg-surface-base px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:border-border-default hover:text-text-primary;
+  }
+  .ui-fleet-chip-active {
+    @apply inline-flex shrink-0 items-center gap-1.5 rounded-full border border-accent-primary/40 bg-accent-muted px-3 py-1.5 text-xs font-medium text-text-primary ring-1 ring-accent-primary/30;
+  }
+  .ui-fleet-chip-count {
+    @apply font-mono text-[10px] text-text-muted;
+  }
+  .ui-fleet-resultbar {
+    @apply flex flex-col gap-3 border-t border-border-subtle py-3 sm:flex-row sm:items-center sm:justify-between;
+  }
+  .ui-fleet-count {
+    @apply font-mono text-xs uppercase tracking-caps text-text-muted;
+  }
+  .ui-fleet-sorts {
+    @apply -mx-1 flex items-center gap-1.5 overflow-x-auto px-1 sm:overflow-visible;
+  }
+  .ui-fleet-empty {
+    @apply rounded-2xl border border-dashed border-border-subtle px-6 py-10 text-center;
+  }
+  /* An address that answers 200 with a scaffold behind it. Warning-coloured
+     because it IS a warning: clicking it gets you nothing to read. */
+  .ui-fleet-dayzero {
+    @apply text-status-warning;
+  }
   .ui-public-fleet-list {
     @apply divide-y divide-border-subtle border-y border-border-subtle;
   }
