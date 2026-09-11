@@ -19,6 +19,11 @@ allowBuilds:
 # Security pin. This lived in package.json "overrides", which pnpm silently
 # IGNORES (npm-only field) — it must live here to keep applying.
 overrides:
+  # Transitive high advisories the daily Audit refuses (2026-09-07 → ): Sentry
+  # build tooling and shadcn's config loader; neither reachable at runtime.
+  # Drop each line once the parent ships a fixed range.
+  "browserslist@<=4.28.6": ">=4.28.7"
+  "js-yaml@>=4.0.0 <4.3.2": ">=4.3.2"
   fast-uri: ^3.1.6
 
 # pnpm refuses packages published within its minimum-release-age window — a
