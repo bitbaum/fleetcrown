@@ -34,14 +34,20 @@ overrides:
 
 # pnpm refuses packages published within its minimum-release-age window — a
 # supply-chain guard against a compromised release being installed before
-# anyone notices. @bitbaum/ai-kit 0.6.2 is our own package, published to npm
-# the day before this commit, so it needs an explicit exemption.
+# anyone notices. Our own packages need an explicit exemption, because we are
+# the ones who just published them.
 #
-# Temporary: once 0.6.2 is older than the window this entry is redundant and
-# should be deleted. Add lines only for versions we published ourselves —
-# never to hurry along a third-party package.
+# Add lines only for packages WE publish — never to hurry along a third-party
+# one, which is the entire threat this window exists to cover.
+#
+# Listed by NAME, not by version. A version-pinned exemption has to be edited
+# by hand for every release, and a release nobody edits this file for is simply
+# refused at install time — which would make ai-kit's minors arrive manually
+# again, one file edit at a time, immediately after 1.0.0 was published to stop
+# exactly that. `pnpm add` grew the old pin into `0.6.2 || 1.2.0` on its own,
+# which is the second version of a list that would never stop growing.
 minimumReleaseAgeExclude:
-  - '@bitbaum/ai-kit@0.6.2 || 1.2.0'
+  - "@bitbaum/ai-kit"
   - "@bitbaum/mail-kit"
   - "bip-kit"
   - "limitkit"
