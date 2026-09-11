@@ -48,8 +48,8 @@ surf-your-life|4009|*-*-* 18:00:00|/api/cron/reminders|GET
 surf-your-life|4009|Sun *-*-* 17:00:00|/api/cron/weekly-report|GET
 surf-your-life|4009|Sun *-*-* 19:00:00|/api/cron/ai-digest|GET
 surf-your-life|4009|*-*-* 03:00:00|/api/cron/embed-backfill|GET
-# nordbahn-fundbuero has no vercel.json; its schedule SSOT is this row + the app's TODO.md.
-nordbahn-fundbuero|4016|*-*-* 03:30:00|/api/cron/purge|POST
+# sbb-fundbuero has no vercel.json; its schedule SSOT is this row + the app's TODO.md.
+sbb-fundbuero|4016|*-*-* 03:30:00|/api/cron/purge|POST
 REG
 )"
 
