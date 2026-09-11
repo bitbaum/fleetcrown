@@ -56,6 +56,11 @@ export const userProjects = pgTable(
     stack: text("stack"),
     agentPref: text("agent_pref"), // per-project agent override
     modelPref: text("model_pref"), // per-project model override
+    // Where this project's agent work runs. Null = the cloud tier (the always-on
+    // box). "local" = the operator's own machine through Fleet Runner. A stored
+    // decision, never inferred from which runner happens to be online — that
+    // inference is how a closed lid used to kill work (see execution-access.ts).
+    builderPref: text("builder_pref"),
     position: integer("position").default(0), // user-defined sort order
     isActive: boolean("is_active").default(true).notNull(),
     notes: text("notes"), // free-form scratchpad visible in the profile panel

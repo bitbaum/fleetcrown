@@ -238,6 +238,7 @@ export async function GET() {
     dir: p.dirPath!,
     agentPref: p.agentPref ?? null,
     modelPref: p.modelPref ?? null,
+    builderPref: p.builderPref ?? null,
     ownerUserId: p.userId,
     readonly: false as boolean,
   });
@@ -376,7 +377,7 @@ export async function GET() {
   );
 
   const states: ProjectState[] = projects.map(
-    ({ id, projectId, tab, dir, agentPref, modelPref, ownerUserId, readonly }) => {
+    ({ id, projectId, tab, dir, agentPref, modelPref, builderPref, ownerUserId, readonly }) => {
       const latestRun = latestRuns.get(dir);
       const dbState = dbStateMap.get(`${ownerUserId}:${normalizeTabName(tab)}`);
 
@@ -570,6 +571,7 @@ export async function GET() {
         dir,
         agentPref,
         modelPref,
+        builderPref,
         session,
         git: gitMap.get(dir) ?? null,
         sessionLifecycleSignals,

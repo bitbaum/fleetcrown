@@ -24,7 +24,6 @@ import { ORCH_STATE } from "@/lib/orchestration/contract";
 import { workspaceIdFor } from "@/lib/agent-execution/ownership";
 import { executeInject } from "@/lib/executor";
 import { coldStartWorkspaceDir, pickDispatchChannel } from "@/lib/execution-access";
-import { getBuilderFitness } from "@/db/queries/runner-presence";
 import {
   createOrchestrationEvent,
   createOrchestrationEventOnce,
@@ -416,15 +415,10 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
   // Name the builder that will run this. A command with no channel is claimable
   // by EVERY runner at once, so leaving it open is a race the always-on box
   // loses to whatever desktop is polling — and closing the lid then kills the
-  // work the desktop just claimed. Route to whoever is actually online,
-  // preferring the operator's own machine (their tree, their env, visible while
-  // it happens); a dirPath-only project stays locked to the builder that can
-  // materialize it at all (the 2026-07-14 BiasLens misroute).
-  const fitness = await getBuilderFitness(userId).catch(() => ({
-    presence: { cloud: false, local: false, any: false },
-    localDurability: "unknown" as const,
-  }));
-  const pinnedChannel = pickDispatchChannel(dbMatch, fitness.presence, fitness.localDurability);
+  // work the desktop just claimed. The answer is stored on the project (locus
+  // lock, then builder_pref, then the cloud floor) — never guessed from which
+  // runner happens to be online.
+  const pinnedChannel = pickDispatchChannel(dbMatch);
 
   const result = await executeInject(
     {

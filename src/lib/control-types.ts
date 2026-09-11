@@ -96,6 +96,8 @@ export type ProjectState = {
   dir: string;
   agentPref: string | null;
   modelPref: string | null;
+  /** Stored builder tier (`user_projects.builder_pref`). Null = cloud. */
+  builderPref: string | null;
   session: SessionState | null;
   git: GitState | null;
   sessionLifecycleSignals: boolean;
