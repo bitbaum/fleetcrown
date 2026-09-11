@@ -259,7 +259,11 @@ YML
 # every PR an agent opened on it waited for a human merge. Written only when
 # the file is missing locally; pushed with the shim through whichever identity
 # may write workflows.
+# The release under /opt carries scripts/hetzner but not scripts/site-template
+# (kaffeeklappe-sep11, 2026-09-11: "site-template has no ci.yml — skipping").
+# Prefer the durable checkout, which follows main; fall back to a sibling dir.
 SITE_TEMPLATE_WF="$HERE/../site-template/.github/workflows"
+[ -d "$FC_REPO/scripts/site-template/.github/workflows" ] && SITE_TEMPLATE_WF="$FC_REPO/scripts/site-template/.github/workflows"
 write_sidecar_workflows() {
   local f
   for f in ci.yml auto-merge.yml; do
