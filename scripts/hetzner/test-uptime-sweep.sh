@@ -142,11 +142,11 @@ done <<<"$(extra_targets)"
   && ok "no EXTRA target duplicates a manifest app" \
   || no "now in apps.conf — delete from EXTRA_TARGETS: $dupes"
 
-# And they must actually be covered, or the four apps apps.conf excludes stay
+# And they must actually be covered, or the three apps apps.conf excludes stay
 # exactly as unwatched as they were before this script existed. Asserted BY
 # NAME rather than by counting: the list now holds two categories, and a count
-# would go green if one of the four were swapped for something else entirely.
-for svc in bridge fleetcrown orangecat evig; do
+# would go green if one of the three were swapped for something else entirely.
+for svc in bridge fleetcrown orangecat; do
   extra_targets | grep -q "^${svc}	" \
     && ok "$svc is covered — apps.conf documents it as deliberately absent" \
     || no "$svc is in no manifest and now in no hand-list either"
