@@ -193,3 +193,111 @@ box path; it never ran because the job never reached the box.
 Open after this: the desktop runner should refuse (or release) a claim whose
 directory does not exist locally — defensive, in the desktop bundle, not
 shipped here.
+
+### Walk A: result (2026-09-10, late evening)
+
+`velokiosk-sep10` is live at https://velokiosk-sep10.orangecat.ch (HTTP 200) with
+the page the kickoff agent built to the brief: title, Mon–Fri 07:00–19:00,
+three fixed prices (CHF 25 / 35 / 120), about, contact email, one accent
+token, and the project-scoped feedback embed. FleetCrown's own status for the
+project reads `deploymentStatus: live`, `liveUrl` persisted, release
+`20260910-233620-a4c5393` on port 4028, unit active.
+
+What the product did by itself, in order, after #569 / #585 / #589 / #592:
+project + profile (11 fields) + roadmap (5 milestones) + seeded repo with
+lockfile; kickoff dispatched to the box (cloud lock), agent built the page,
+opened PR #1 on the site repo; registration allocated 4028 against both
+registers, sent the row to main (#588, merged by the sweep), wrote the shim
+through the host gh login, set the deploy secret, wrote the runtime env, the
+unit and the Caddy vhost, and installed the watchdog via sudo. The push of the
+shim started the site's first Deploy on its own.
+
+What still needed a hand, and why:
+- The site repo's PR #1 (agent's landing page) was merged by the operator's
+  gh: a fresh starter has no CI and no auto-merge, so an agent PR waits for a
+  human. Either the starter ships a ci.yml + auto-merge, or the kickoff agent
+  pushes to main for a brand-new solo site. Decide once; today it is a click.
+- The first successful site Deploy was dispatched by the operator (gh) while
+  the last registration defect (#596, watchdog `remote` quoting) was still in
+  flight; the product's own dispatch is the same workflow, the button was the
+  only difference. Re-registration after #596 is the clean proof (see below).
+- Three earlier Deploys of the site failed: two before the runtime env existed
+  (env was written after sync-infra, now before the shim), one before the shim
+  reached the remote.
+
+Fleet-level findings, not fixed here:
+- Sibling sessions merged to main every few minutes; each merge cancels the
+  previous CI run on main (per-ref concurrency), so nothing deployed for ~25
+  minutes at a time. The sweep re-arming CI on every merge amplifies this.
+- The durable register on the box never fast-forwards: its rows differ from
+  main by plan/price edits made on main, so "unpublished rows" is always true.
+  Allocation reads both registers, so it is safe, but the checkout is stale
+  forever. A rule keyed on slug, not the full row, would let it follow main.
+
+### Walk B: result (2026-09-11, 00:06 UTC)
+
+Feedback filed through the site's own widget ingest (visitor, token-scoped
+to https://velokiosk-sep10.orangecat.ch): "add 'Sat–Sun closed' after the
+Mon–Fri hours". Row `d4f5c5dc` in the project inbox. Implement dispatched at
+23:38:33; the box agent committed the fix through the page's `OPENING_HOURS`
+config at 23:40:29, opened PR #2 with the verbatim feedback and a test plan,
+wrote its handoff at 23:41:07, and explicitly left the merge to the operator.
+Operator merged PR #2 (00:05); the push deployed `293adce`
+(`20260911-000520-293adce`, HTTP 200) and the live page shows "Sat–Sun ·
+closed". Check live done by the operator; feedback set to `resolved` at
+00:06:28 through the product API. Done.
+
+Under three minutes from Implement to PR. The merge is the only human step,
+and it is there for the same reason as in walk A: a fresh site repo has no CI
+or auto-merge, and the agent's contract forbids merging its own PR.
+
+One discrepancy: the run record for this Implement stayed `delivered /
+waiting for a completion handoff` although the watcher logged `worker.idle`
+with the handoff summary at 23:41:07, while the kickoff run on the same box
+did flip to `completed`. Control would show this fix as still running until
+someone looks. Not fixed here; see the note below on what the DB says.
+
+What the database says about the two runs on the box (`orchestration_runs`):
+
+| run | intent | state | outcome | finished_at |
+| --- | --- | --- | --- | --- |
+| abd5469d (kickoff) | custom | done | success | 23:17:33, the second the watcher logged `worker.idle` |
+| c317e8dd (feedback Implement) | custom | waiting | — | never, though `worker.idle` with its handoff was logged at 23:41:07 |
+
+The Implement run was "injected to running claude (pty)" into the session the
+kickoff had left open, where the kickoff run had been launched fresh. Start
+there: the idle-to-finish attribution seems to close only a run that launched
+the PTY, not one injected into an existing one.
+
+### Status of the acceptance one-liner
+
+Start in FleetCrown with only a brief, get a real repo and a live website
+with zero box babysitting, change it through feedback/Implement, see the live
+site update, no tab-name fiction on the critical path: **met for
+velokiosk-sep10 on 2026-09-11**, with two operator clicks left on the path
+(merging the agent's PRs on a site repo that has no CI/auto-merge yet). The
+registration path itself completes end to end from inside the product on
+FleetCrown 5c27d775: `registered: true`, `deploymentStatus: live`, liveUrl
+persisted, register row on main by PR, monitoring seeded.
+
+Shipped in this continuation: #569, #579 (landed as #585 by a sibling
+session), #589, #592, #596; the box's own register-row PR #588.
+
+### Still open (ranked)
+
+1. Fresh site repos: ship a `ci.yml` + auto-merge in the starter, or have the
+   kickoff agent push to main for a brand-new solo site. Today every agent PR
+   waits for a human.
+2. Runner: a run injected into an existing PTY never reaches `done` (table
+   above). Control shows "waiting" forever for a finished Implement.
+3. Desktop runner: refuse or release a claim whose directory does not exist
+   locally (defensive; the routing lock already keeps box-rooted projects on
+   the box).
+4. Durable register on the box never fast-forwards (rows differ from main by
+   plan/price edits); key the "unpublished" check on slug.
+5. CI on main cancels under rapid merges (per-ref concurrency + sweep
+   re-arms); deploys lag by tens of minutes while sessions merge in bursts.
+6. Runner transport still keys on the project name internally (P2 from the
+   Codex list); Focus-tab remnants in `ZellijLivePanel`,
+   `WorkspaceTerminalClient`, `ControlPanel`.
+7. Scheduled `Audit` workflow red on main since 2026-09-07 (not the gate).
