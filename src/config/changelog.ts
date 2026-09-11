@@ -29,6 +29,18 @@ export interface ReleaseEntry {
 /** Newest first. */
 export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
   {
+    version: "0.8.21",
+    tag: "fleet-runner-v0.8.21",
+    date: "2026-09-11T13:00:00Z",
+    highlights: [
+      'The runner reports progress while an agent works: once a dispatched prompt has landed, it watches that agent\'s terminal and beats PATCH /api/control/runs/:id/progress at most every 45 seconds, only while the terminal keeps printing. Feedback and Control now read "Working · 47 min" with a Watch link into the terminal instead of guessing "Not running" from the clock at minute ten.',
+      "Silence is honest: no output means no beat, so a run that goes quiet turns Stalled with how long it worked and how long it has been silent.",
+    ],
+    breaking: [],
+    notes:
+      "Server side ships in the same FleetCrown deploy (the box runner restarts once idle). A desktop Fleet Runner on 0.8.20 keeps working; its runs simply show the pre-heartbeat phases until it updates.",
+  },
+  {
     version: "0.8.20",
     tag: "fleet-runner-v0.8.20",
     date: "2026-09-11T10:00:00Z",
