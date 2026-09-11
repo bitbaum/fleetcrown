@@ -16,7 +16,7 @@
  * page claims it will.
  */
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertCircle, Check, Loader2, Lock, Rocket, Zap } from "lucide-react";
@@ -46,6 +46,7 @@ export function ProjectKickoff({
   goalsLocked,
   hasRepo,
   needed,
+  autoStart = false,
 }: {
   projectId: string;
   projectName: string;
@@ -62,6 +63,9 @@ export function ProjectKickoff({
    *  to false, and unmounting would take the result and the "watch it work"
    *  link with it. */
   needed: boolean;
+  /** Start on mount when the plan can run — the OrangeCat one-click path. The
+   *  same run() the button calls: no second orchestrator. */
+  autoStart?: boolean;
 }) {
   const router = useRouter();
   // Seeded with the project's own description, and editable from here. It used
@@ -241,6 +245,18 @@ export function ProjectKickoff({
     // it work are the only place the run is reported.
     router.refresh();
   }
+
+  // Auto-start fires once, and only when a press would have been allowed. A
+  // brief too thin to extract from stays put and shows the same hint the
+  // button shows — starting on nothing would just fail four steps in a row.
+  const autoFired = useRef(false);
+  useEffect(() => {
+    if (!autoStart || autoFired.current || !needed || !ready || running || steps) return;
+    autoFired.current = true;
+    void run();
+    // run() reads the current plan/brief; those are exactly the values gating this.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoStart, needed, ready, running, steps]);
 
   const failures = (steps ?? []).filter((s) => s.state === "failed");
   const dispatchOk = (steps ?? []).some((s) => s.id === "dispatch" && s.state === "done");

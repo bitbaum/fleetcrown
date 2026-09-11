@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AlertTriangle, ArrowRight, Bot, ExternalLink } from "lucide-react";
 import type { OrangeCatBuildIntent } from "@/lib/integrations/orangecat-build-intent";
+import { decideHandoffMode, kickoffAutoHref } from "@/lib/integrations/orangecat-handoff-mode";
 
 interface ProjectOption {
   id: string;
@@ -21,10 +22,13 @@ export function OrangeCatBuildHandoff({
   token,
   intent,
   projects,
+  review,
 }: {
   token: string;
   intent: OrangeCatBuildIntent;
   projects: ProjectOption[];
+  /** `?review=1`: the operator wants to choose where this lands before anything starts. */
+  review: boolean;
 }) {
   // If a project with the exact same name already exists, default to linking
   // it instead of "new" — the whole point of offering a picker is defeated if
@@ -43,6 +47,16 @@ export function OrangeCatBuildHandoff({
   const [replaceOrigin, setReplaceOrigin] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  // Build by default. A failed auto-create degrades to the picker with the
+  // error shown, so the operator can finish by hand instead of hitting a wall.
+  const [autoFailed, setAutoFailed] = useState(false);
+  const handoffMode = decideHandoffMode({
+    review,
+    connected: Boolean(connected),
+    exactMatch: Boolean(exactMatch),
+  });
+  const autoBuilding = handoffMode === "auto" && !autoFailed;
+  const reviewHref = `/integrations/orangecat/build?intent=${encodeURIComponent(token)}&review=1`;
 
   const selected = projects.find((project) => project.id === projectId) ?? null;
   // Only blocks when the chosen project is the origin of a *different* entity;
@@ -64,12 +78,26 @@ export function OrangeCatBuildHandoff({
       });
       const body = (await response.json()) as { url?: string; error?: string };
       if (!response.ok || !body.url) throw new Error(body.error || "Could not create project.");
-      window.location.assign(body.url);
+      // A new project lands with the kickoff running; a linked existing one
+      // lands as it is — linking is not consent to start work on it.
+      window.location.assign(mode === "new" ? kickoffAutoHref(body.url) : body.url);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not create project.");
       setSubmitting(false);
+      setAutoFailed(true);
     }
   }
+
+  // The one click: consume the intent as soon as the page is up. The ref makes
+  // this fire once — the intent is single-use, and React may run effects twice.
+  const autoFired = useRef(false);
+  useEffect(() => {
+    if (!autoBuilding || autoFired.current) return;
+    autoFired.current = true;
+    void confirm();
+    // confirm() closes over state that is stable for the life of this page.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoBuilding]);
 
   return (
     <>
@@ -88,20 +116,38 @@ export function OrangeCatBuildHandoff({
           the title and description across so you do not retype them.
         </p>
         <ul className="mt-5 space-y-2 text-sm text-text-secondary">
-          <li className="flex gap-2.5">
-            <span aria-hidden>—</span>
-            <span>
-              <strong className="font-medium text-text-primary">Nothing starts running.</strong> No
-              agent is dispatched, no money moves, and nothing is published.
-            </span>
-          </li>
-          <li className="flex gap-2.5">
-            <span aria-hidden>—</span>
-            <span>
-              <strong className="font-medium text-text-primary">You choose where it lands</strong> —
-              a new FleetCrown project, or one you already have.
-            </span>
-          </li>
+          {autoBuilding ? (
+            <li className="flex gap-2.5">
+              <span aria-hidden>—</span>
+              <span>
+                <strong className="font-medium text-text-primary">The build starts now.</strong>{" "}
+                FleetCrown creates the project, fills its profile, plans milestones, creates a
+                repository and puts an agent on it. No money moves and nothing is published.{" "}
+                <a href={reviewHref} className="ui-public-link">
+                  Prefer to choose where it lands first?
+                </a>
+              </span>
+            </li>
+          ) : (
+            <>
+              <li className="flex gap-2.5">
+                <span aria-hidden>—</span>
+                <span>
+                  <strong className="font-medium text-text-primary">Nothing starts running.</strong>{" "}
+                  No agent is dispatched, no money moves, and nothing is published.
+                </span>
+              </li>
+              <li className="flex gap-2.5">
+                <span aria-hidden>—</span>
+                <span>
+                  <strong className="font-medium text-text-primary">
+                    You choose where it lands
+                  </strong>{" "}
+                  — a new FleetCrown project, or one you already have.
+                </span>
+              </li>
+            </>
+          )}
           <li className="flex gap-2.5">
             <span aria-hidden>—</span>
             <span>
@@ -174,6 +220,13 @@ export function OrangeCatBuildHandoff({
                 Open “{connected.name}” in FleetCrown
                 <ArrowRight className="h-4 w-4" aria-hidden />
               </a>
+            </>
+          ) : autoBuilding ? (
+            <>
+              <h2 className="text-lg font-semibold text-text-primary">Creating the project</h2>
+              <p className="mt-2 text-sm text-text-secondary">
+                One moment — you will land on the new project with the kickoff already running.
+              </p>
             </>
           ) : (
             <>
