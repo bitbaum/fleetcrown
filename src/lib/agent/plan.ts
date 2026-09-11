@@ -94,7 +94,13 @@ export const SOURCE_LIMITS: Record<SourceId, { lead: number; background: number 
   people: { lead: 12, background: 4 },
   knowledge: { lead: 6, background: 2 },
   economy: { lead: 3, background: 0 },
-  projects: { lead: 40, background: 40 },
+  // A question ABOUT projects gets the whole fleet ("how many projects am I
+  // tracking" must not be answered from a sample). A question about anything
+  // else gets a glance: measured live, 38 project facts were the bulk of a
+  // 12912-token prompt on a question about FEEDBACK, which put the turn past
+  // every Groq window and forced it onto a vendor whose daily quota was spent.
+  // Background context that crowds out the subject is not context, it is cost.
+  projects: { lead: 40, background: 10 },
 };
 
 /**

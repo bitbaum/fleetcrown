@@ -110,6 +110,30 @@ async function main() {
       assert.ok(background > 0, "background must still be fetched");
     });
 
+    check("a question ABOUT projects still gets the whole fleet", () => {
+      // "How many projects am I tracking" must never be answered from a sample —
+      // a cited partial count reads as a checked one (fact-budget.ts:omission).
+      const aboutProjects = planRetrieval("list all my projects");
+      assert.equal(aboutProjects.sources[0], "projects", "projects must lead its own question");
+      assert.ok(
+        sourceLimit(aboutProjects, "projects") >= 40,
+        `the whole fleet must be fetched, got ${sourceLimit(aboutProjects, "projects")}`,
+      );
+    });
+
+    check("projects as BACKGROUND stay small — they crowded out the subject live", () => {
+      // Measured on the first production turn after this shipped: a question
+      // about FEEDBACK pulled 38 project facts, making a 12912-token prompt that
+      // exceeded every Groq window and fell to a vendor whose daily quota was
+      // spent. Background that crowds out the subject is cost, not context.
+      const aboutFeedback = planRetrieval("what was the most recent feedback sent");
+      const limit = sourceLimit(aboutFeedback, "projects");
+      assert.ok(
+        limit <= 12,
+        `projects are background on a feedback question; ${limit} of them is a prompt, not a hint`,
+      );
+    });
+
     check('"most recent" shortens the list — the newest few, not a page', () => {
       const recent = planRetrieval("what was the most recent feedback sent");
       const broad = planRetrieval("show me all the feedback on every project");

@@ -30,7 +30,12 @@ import { buildGroundedTurn, directiveEvidence, type RetrievedSource } from "@/li
 import { runLokiTurn } from "@/lib/agent/loop";
 import type { ChatMessage } from "@/lib/agent/llm";
 import type { LokiProvenance as ProvenanceShape, LokiVia } from "@/lib/loki/provenance";
-import { verifyAnswer, buildRepairPrompt, type Violation } from "@bitbaum/ai-kit/grounding";
+import {
+  verifyAnswer,
+  buildRepairPrompt,
+  directiveId,
+  type Violation,
+} from "@bitbaum/ai-kit/grounding";
 import { NO_BASIS } from "@bitbaum/ai-kit/grounding";
 import { rateLimitMessage } from "@/lib/agent/groq-error";
 import { checkAiBudget, recordAiSpend } from "@/lib/ai-budget/gate";
@@ -237,6 +242,13 @@ async function askLokiViaGateway(
   const facts: Fact[] = grounded?.facts ?? [];
   const retrieved = grounded?.retrieved ?? [];
   const evidence = grounded ? directiveEvidence(grounded.directives) : [];
+  // The computed briefs are rendered into the context as [D1]…[Dn], so the
+  // model cites them — and the verifier must be told those handles are real.
+  // Without this every directive citation is flagged `unknown-citation`, which
+  // triggers a repair pass on a CORRECT answer. Observed live on the first
+  // production turn after this shipped: five flags, all `[D5]`, all legitimate.
+  // The tool loop always passed these; this path never did.
+  const citationIds = (grounded?.directives ?? []).map((_, i) => directiveId(i));
 
   const background = grounded?.context
     ? `${LOKI_CAPABILITIES}\n\n---\n\n${grounded.context}`
@@ -258,6 +270,7 @@ async function askLokiViaGateway(
       facts,
       userMessage: message,
       extraEvidence: evidence,
+      extraCitationIds: citationIds,
     });
     if (first.ok) return { text, violations: [] };
 
@@ -278,6 +291,7 @@ async function askLokiViaGateway(
       facts,
       userMessage: message,
       extraEvidence: evidence,
+      extraCitationIds: citationIds,
     });
     // A repair is a deletion: keep it only if it removed claims without
     // introducing different ones.
