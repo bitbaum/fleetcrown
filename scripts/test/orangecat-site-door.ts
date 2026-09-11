@@ -3,7 +3,7 @@
  *
  * WHY THIS EXISTS
  * ---------------
- * `POST /api/integrations/orangecat/site` is the first endpoint in this repo
+ * `POST /api/orangecat/site` is the first endpoint in this repo
  * that lets ANOTHER SERVICE cause a repository, a DNS record and a TLS
  * certificate to come into existence. Everything else that reaches the site
  * factory is an operator at a CLI.
@@ -26,7 +26,8 @@ import { SITE_KINDS, SITE_STATUSES } from "../../src/lib/hosted-runner/new-site"
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = join(HERE, "..", "..");
-const ROUTE = join(REPO, "src/app/api/integrations/orangecat/site/route.ts");
+const ROUTE = join(REPO, "src/app/api/orangecat/site/route.ts");
+const PROXY = join(REPO, "src/proxy.ts");
 
 let failures = 0;
 function check(label: string, ok: boolean, detail = "") {
@@ -53,11 +54,11 @@ async function main(): Promise<void> {
   process.env.DATABASE_URL ||= "postgres://test:test@127.0.0.1:5432/test";
 
   const { POST, REMOTE_KINDS, FORCED_STATUS, DAILY_SITE_LIMIT } =
-    await import("../../src/app/api/integrations/orangecat/site/route");
+    await import("../../src/app/api/orangecat/site/route");
 
   function request(body: unknown, signature?: string): Request {
     const raw = JSON.stringify(body);
-    return new Request("https://fleetcrown.orangecat.ch/api/integrations/orangecat/site", {
+    return new Request("https://fleetcrown.orangecat.ch/api/orangecat/site", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -152,6 +153,29 @@ async function main(): Promise<void> {
   check(
     "provisioning goes through requestNewSite, not straight to the queue",
     routeSource.includes("requestNewSite") && !routeSource.includes("enqueueHostedNewSiteCommand"),
+  );
+
+  // ── the session middleware must not answer before the route does ───────────
+  //
+  // This check exists because the bug already happened, on this very route.
+  // Its first deploy sat at `api/integrations/orangecat/site`, a prefix the
+  // proxy matcher in src/proxy.ts does not exempt — so the session middleware
+  // answered every request, INCLUDING a correctly signed one, with 401 before
+  // the route ever ran.
+  //
+  // That is nastier than a 404. The endpoint is live and reachable, and a 401
+  // from the middleware is indistinguishable from a 401 for a wrong shared
+  // secret — so debugging it means suspecting the credential, which is the one
+  // thing that was fine. A route that authenticates ITSELF has to be exempt
+  // from the guard that authenticates everything else, and the only thing that
+  // decides that is where the file sits.
+  const proxySource = readFileSync(PROXY, "utf8");
+  const matcherLine = proxySource.split("\n").find((l) => l.includes('"/((?!'));
+  check("the proxy matcher was found at all", Boolean(matcherLine));
+  check(
+    "the site door's path is exempt from the session middleware",
+    Boolean(matcherLine?.includes("api/orangecat/")),
+    "a self-authenticating receiver outside an exempt prefix 401s every caller, signed or not",
   );
 
   if (failures > 0) {
