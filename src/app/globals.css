@@ -1191,6 +1191,10 @@
   .ui-public-fleet-list {
     @apply divide-y divide-border-subtle border-y border-border-subtle;
   }
+  /* Landing on /fleet#causius should show you which row you came for. */
+  .ui-public-fleet-row:target {
+    @apply bg-surface-raised ring-1 ring-border-interactive;
+  }
   .ui-public-fleet-row {
     @apply -mx-3 grid grid-cols-1 gap-x-6 gap-y-2 rounded-lg px-3 py-4 transition-colors sm:grid-cols-[minmax(0,17rem)_minmax(0,1fr)_auto] sm:items-start;
   }
@@ -1202,6 +1206,12 @@
   }
   .ui-public-fleet-row:hover .ui-public-fleet-name {
     @apply decoration-border-interactive;
+  }
+  /* The line that says what the project IS. Content, not an identifier, so it
+     reads a step brighter than the slug it replaces. */
+  .ui-public-fleet-what {
+    @apply mt-0.5 text-sm leading-snug text-text-tertiary;
+    text-wrap: pretty;
   }
   .ui-public-fleet-slug {
     @apply mt-0.5 font-mono text-xs text-text-tertiary;
@@ -1217,6 +1227,13 @@
   }
   .ui-public-fleet-presence-on {
     @apply inline-flex items-center rounded-md border border-border-subtle px-2 py-1 font-mono text-[11px] text-text-secondary transition-colors hover:border-border-interactive hover:text-text-primary;
+  }
+  /* Present, but not openable by this reader (the project page needs a
+     session). Solid like the real thing because the fact is the same; no hover
+     response, because there is nothing to click and a chip that lights up under
+     the cursor promises otherwise. */
+  .ui-public-fleet-presence-flat {
+    @apply inline-flex items-center rounded-md border border-border-subtle px-2 py-1 font-mono text-[11px] text-text-tertiary;
   }
   .ui-public-fleet-presence-off {
     @apply inline-flex items-center rounded-md border border-dashed border-border-subtle px-2 py-1 font-mono text-[11px] text-text-muted opacity-60;
