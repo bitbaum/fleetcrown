@@ -1166,6 +1166,28 @@
      the site (host, kind · status), and one chip per system the project
      exists in. Absent chips stay in the row, dimmed, so every row has the
      same shape and a missing profile reads as a gap rather than as nothing. */
+  /* The shape of the fleet in one line. Three segments, widths proportional to
+     the three groups, brightness descending with how real each group is: live
+     reads first, prospects recede. It answers the question a visitor actually
+     arrives with — "how much of this is finished?" — before they read a row.
+     Monochrome on purpose: the warm accent is reserved for the commercial
+     band, and a chart that invents colours starts meaning things it cannot
+     back up. */
+  .ui-public-fleet-bar {
+    @apply flex h-1.5 w-full max-w-2xl overflow-hidden rounded-full bg-surface-raised;
+  }
+  .ui-public-fleet-bar-seg {
+    @apply h-full;
+  }
+  .ui-public-fleet-bar-seg-live {
+    @apply bg-text-primary;
+  }
+  .ui-public-fleet-bar-seg-building {
+    @apply bg-text-tertiary;
+  }
+  .ui-public-fleet-bar-seg-rest {
+    @apply bg-border-subtle;
+  }
   .ui-public-fleet-list {
     @apply divide-y divide-border-subtle border-y border-border-subtle;
   }
