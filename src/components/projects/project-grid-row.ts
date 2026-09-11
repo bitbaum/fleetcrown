@@ -14,4 +14,6 @@ export type ProjectGridRow = {
   liveUrl?: string | null;
   /** Latest probe. null = never checked or no site. */
   siteOk?: boolean | null;
+  /** Entity creation time; a project created moments ago sorts to the top. */
+  createdAt?: Date | string | null;
 };

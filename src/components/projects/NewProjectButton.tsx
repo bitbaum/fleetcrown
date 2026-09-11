@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useAiForm } from "@fleet/ai-forms/react";
 import { Field } from "@/components/ui/form";
 import { ModalForm } from "@/components/ui/modal-form";
@@ -22,9 +23,18 @@ export function NewProjectButton({ autoOpen = false, initialName = "" }: Props) 
     fields: PROJECT_FORM.fields,
     initialValues: { name: initialName },
   });
-  const { create, saving, error, setError } = useCreateMutation<CreateProjectInput>({
+  const router = useRouter();
+  const { create, saving, error, setError } = useCreateMutation<
+    CreateProjectInput,
+    { project?: { id?: string } }
+  >({
     request: (body) => postJson("/api/projects", body),
     errorLabel: "project",
+    // Land on the new project: its kickoff panel is the next step, and the
+    // list folds at 25 rows, which hid a just-added project (2026-09-11).
+    onCreated: (data) => {
+      if (data.project?.id) router.push(`/projects/${data.project.id}`);
+    },
   });
 
   // Deep-link params are one-shot: strip them from the URL so a reload or

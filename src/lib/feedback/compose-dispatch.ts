@@ -13,8 +13,15 @@ export type FeedbackPromptFields = {
   selectedElements: Array<{ elementType: string; elementText: string; selector: string }> | null;
 };
 
+// "Shipped" must include a PR handed to auto-merge. Told only "shipping is
+// blocked → report the blocker", agents opened their PR, honestly wrote
+// `status: working` because they may not merge their own work, and the run
+// never closed: the inbox read "Working now" for an hour until the reaper
+// stamped it (velokiosk-sep10 and kaffeeklappe-sep11, 2026-09-11). Every
+// site FleetCrown registers carries ci.yml + auto-merge.yml, so a green PR
+// ships itself; the agent's job ends at the PR.
 const SHIP_INSTRUCTION =
-  "Implement includes shipping: use this repository’s normal PR/merge/deploy path, then verify the requested change at the reported live URL. Record the commit/PR, deployment result, live URL and visible evidence. If shipping is blocked, report the blocker explicitly; a local edit or a finished agent session is not a live fix. Leave feedback resolution to the operator after Check live.";
+  "Implement includes shipping: use this repository’s normal PR/merge/deploy path. Sites FleetCrown set up merge a green PR by themselves (auto-merge.yml), so an opened PR with passing checks counts as shipped — finish with `status: ready`, the PR URL and the commit; do not wait for the merge and do not merge it yourself. Then verify, or state what to verify, at the reported live URL after deploy. Only report a blocker when the PR could not be opened or its checks are red; a local edit or a finished agent session is not a live fix. Leave feedback resolution to the operator after Check live.";
 
 function renderElements(feedback: FeedbackPromptFields): string[] {
   if (!feedback.selectedElements?.length) return [];
