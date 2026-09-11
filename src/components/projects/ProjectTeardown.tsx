@@ -6,11 +6,14 @@ import { deleteJson, throwApiError } from "@/lib/api/fetch";
 
 export function ProjectTeardown({
   projectId,
+  projectName,
   hasRepo,
   hasLocalPath,
   onDeleted,
 }: {
   projectId: string;
+  /** Typed back by the operator to confirm — the bar account deletion sets. */
+  projectName: string;
   hasRepo: boolean;
   hasLocalPath: boolean;
   onDeleted: () => void;
@@ -18,6 +21,10 @@ export function ProjectTeardown({
   const [deprovision, setDeprovision] = useState<"none" | "archive-repo" | "delete-repo">("none");
   const [deleteLocal, setDeleteLocal] = useState(false);
   const [armed, setArmed] = useState(false);
+  // Deleting a project takes its brief, milestones and feedback with it and
+  // cannot be undone. Arming a button is a reflex; typing the name is a
+  // decision — and it is what deleting an ACCOUNT already asks for here.
+  const [typed, setTyped] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -97,26 +104,42 @@ export function ProjectTeardown({
         </div>
 
         {armed ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={destroy}
-              disabled={busy}
-              className="ui-btn-danger min-h-11 gap-1.5"
-            >
-              {busy ? <Loader2 className="ui-spinner-xs" /> : <Trash2 className="h-3.5 w-3.5" />}
-              Delete project
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setArmed(false);
-                setError(null);
-              }}
-              className="ui-btn-text-cancel min-h-11"
-            >
-              Cancel
-            </button>
+          <div className="space-y-3">
+            <label className="block space-y-1.5">
+              <span className="ui-kicker">
+                Type <span className="font-mono text-text-secondary">{projectName}</span> to confirm
+              </span>
+              <input
+                className="ui-input w-full sm:max-w-xs"
+                value={typed}
+                onChange={(e) => setTyped(e.target.value)}
+                placeholder={projectName}
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </label>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={destroy}
+                disabled={busy || typed.trim() !== projectName.trim()}
+                className="ui-btn-danger min-h-11 gap-1.5"
+              >
+                {busy ? <Loader2 className="ui-spinner-xs" /> : <Trash2 className="h-3.5 w-3.5" />}
+                Delete project
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setArmed(false);
+                  setTyped("");
+                  setError(null);
+                }}
+                className="ui-btn-text-cancel min-h-11"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         ) : (
           <button

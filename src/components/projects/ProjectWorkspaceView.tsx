@@ -339,6 +339,7 @@ export function ProjectWorkspaceView({
                   content: (
                     <ProjectSettingsPanel
                       projectId={project.id}
+                      projectName={project.name}
                       hasRepo={Boolean(links.repo)}
                       hasLocalPath={Boolean(userProject?.dirPath)}
                       liveUrl={userProject?.liveUrl ?? links.prodUrl}

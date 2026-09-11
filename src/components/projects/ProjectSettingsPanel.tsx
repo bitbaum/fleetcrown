@@ -8,11 +8,13 @@ import { SiteRetirePanel } from "./SiteRetirePanel";
 
 export function ProjectSettingsPanel({
   projectId,
+  projectName,
   hasRepo,
   hasLocalPath,
   liveUrl,
 }: {
   projectId: string;
+  projectName: string;
   hasRepo: boolean;
   hasLocalPath: boolean;
   /** The public site, when this project has one. */
@@ -29,6 +31,7 @@ export function ProjectSettingsPanel({
         {!hasRepo && <ProjectProvision projectId={projectId} onReload={() => router.refresh()} />}
         {liveUrl && <SiteRetirePanel projectId={projectId} liveUrl={liveUrl} />}
         <ProjectTeardown
+          projectName={projectName}
           projectId={projectId}
           hasRepo={hasRepo}
           hasLocalPath={hasLocalPath}
