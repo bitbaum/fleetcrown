@@ -1,7 +1,7 @@
 /**
  * Typed command executor — the boundary between "what to do" and "how to do it."
  *
- * Local runtime:  commands fire directly into zellij via injectIntoTab().
+ * Local runtime:  commands are written straight into the owned agent PTY.
  * Remote (cloud host): commands write to pending_commands in Postgres; the local runner picks them up.
  *
  * Callers express intent once. The executor routes to the correct mechanism.
@@ -26,7 +26,7 @@ export type ExecuteResult =
  * Execute a prompt injection.
  *
  * Local:  calls `injectFn` immediately (avoids importing child_process at module level
- *         so the route stays importable on the cloud host even though injectIntoTab calls execSync).
+ *         so the route stays importable on the cloud host).
  * Remote: writes to pending_commands and returns the queued command ID.
  */
 export async function executeInject(
@@ -42,25 +42,22 @@ export async function executeInject(
      *  runner claims it once the project frees (claimNextPendingCommand gates on
      *  the open run). */
     projectBusy?: boolean;
+    /** Local runtime with NO live owned PTY for this tab: there is nothing to
+     *  type at, so queue (a dispatch cold-starts the agent) instead of calling
+     *  injectFn. The queued row is visible in Control; a guessed terminal tab
+     *  never is. */
+    queueOnly?: boolean;
   },
   userId: string,
   injectFn: () => Promise<void>,
 ): Promise<ExecuteResult> {
   const runtimeAvailable = isRuntimeAvailable();
-  // Direct injection requires a local runtime (zellij + agents on this machine).
-  // It does NOT require this process to live inside a Zellij pane: the terminal
-  // adapter resolves the hosting session via findSessionForTab and qualifies
-  // every command with `--session <name>`, so injectIntoTab works from any
-  // local process (systemd service, CLI, etc.). The old ZELLIJ_SESSION_NAME
-  // guard predated that adapter and forced queuing for the runner even when
-  // direct injection would succeed — which silently broke project-card sends
-  // on the systemd standalone server (RUNTIME_AVAILABLE=true, no pane env).
-  // /api/control/tab-inject already gates on isRuntimeAvailable() alone; this
-  // keeps the two inject paths consistent (one SSOT for "inject into a tab").
-  // On the cloud host isRuntimeAvailable() is false, so remote still queues for the runner.
-  // `projectBusy` forces the queue path locally too: a 2nd same-project dispatch
-  // serializes behind the running agent instead of colliding in the shared PTY.
-  if (runtimeAvailable && !payload.projectBusy) {
+  // Direct injection requires a local runtime with a live owned PTY for the
+  // tab. On the cloud host isRuntimeAvailable() is false, so remote always
+  // queues for the runner. `projectBusy` forces the queue path locally too: a
+  // 2nd same-project dispatch serializes behind the running agent instead of
+  // colliding in the shared PTY. `queueOnly` is the no-live-PTY case.
+  if (runtimeAvailable && !payload.projectBusy && !payload.queueOnly) {
     try {
       await injectFn();
       return { ok: true, mode: "direct" };

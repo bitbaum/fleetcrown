@@ -184,44 +184,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, mode: "pty", tab, ...(runId ? { runId } : {}) });
   }
 
-  if (isRuntimeAvailable()) {
-    const [{ injectIntoTab, isUserTypingInTab }, { stateFile, clearHandshakeFiles }, fs] =
-      await Promise.all([import("@/lib/zellij"), import("@/lib/agent-config"), import("fs")]);
-    if (isUserTypingInTab(tab)) {
-      return NextResponse.json({ ok: true, blocked: true, reason: "user-typing", tab });
-    }
-    const nowS = Math.floor(Date.now() / 1000);
-    fs.writeFileSync(
-      stateFile.prompt(tab),
-      JSON.stringify({
-        key: "custom",
-        label: promptLabel,
-        startedAt: nowS,
-        source: "inject",
-        adapter,
-      }),
-    );
-    clearHandshakeFiles(tab);
-    injectIntoTab(tab, promptToSend);
-    const runId = await recordTabDispatch({
-      userId,
-      tab,
-      project,
-      adapter,
-      customPrompt: prompt,
-      resolvedPrompt: promptToSend,
-      promptLabel,
-      delivered: true,
-    });
-    return NextResponse.json({ ok: true, mode: "direct", tab, ...(runId ? { runId } : {}) });
-  }
-
-  // Cloud mode: prefer the self-healing `dispatch` command (ensure tab → launch
-  // agent if none is running → inject → verify) over a bare `inject`, which
-  // silently no-ops — and surfaces "tab not found" — when the tab's agent has
-  // exited or its zellij tab vanished. That no-op was the failure that broke the
-  // loop. Resolve the project's dir + agent so the runner can recover the tab.
-  // Fall back to bare inject only when the project/dir is unknown.
+  // No live owned PTY here (cloud host, or local runtime with no session for
+  // this tab): queue the self-healing `dispatch` command (launch the agent if
+  // none is running → inject → verify) rather than a bare `inject`, which can
+  // only reach an agent that already exists. Resolve the project's dir + agent
+  // so the runner can cold-start it. Bare inject only when the dir is unknown.
   // Project-aware default: a dirPath-only project (no cloneable repo) can only
   // execute where the directory exists — pin it to the local runner instead of
   // letting the cloud builder invent an empty workspace (BiasLens, 2026-07-14).

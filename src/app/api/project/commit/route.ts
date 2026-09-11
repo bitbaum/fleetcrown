@@ -2,7 +2,7 @@ import { execSync } from "child_process";
 import { NextRequest, NextResponse } from "next/server";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { isRuntimeAvailable } from "@/lib/runtime";
-import { shellEscape } from "@/lib/zellij";
+import { shellEscape } from "@/lib/shell-escape";
 import { getApiUserId } from "@/lib/session";
 
 const CommitBody = z.object({

@@ -340,10 +340,10 @@ export function findProjectForOpenTab(
   return prefix ?? null;
 }
 
-export function isProjectTabOpen(project: ProjectState, zellijTabs: string[]): boolean {
+export function isProjectTabOpen(project: ProjectState, liveTabs: string[]): boolean {
   const canonical = (project.liveTab ?? project.tab).toLowerCase();
   const projectKey = project.tab.toLowerCase();
-  return zellijTabs.some((tab) => {
+  return liveTabs.some((tab) => {
     const open = tab.toLowerCase();
     return (
       open === canonical ||
@@ -384,12 +384,12 @@ export function getTabActivityText(
 }
 
 export function buildLiveTabRows(
-  zellijTabs: string[],
+  liveTabs: string[],
   projects: ProjectState[],
   nowS: number,
   syncStale = false,
 ): LiveTabRow[] {
-  const uniqueTabs = [...new Set(zellijTabs.map((t) => t.trim()).filter(Boolean))];
+  const uniqueTabs = [...new Set(liveTabs.map((t) => t.trim()).filter(Boolean))];
   return (
     uniqueTabs
       // 2026-05-31: skip zellij tabs that don't map to any registered project.
@@ -505,7 +505,7 @@ export function inferAgentLabelFromTabName(tabName: string): string | null {
 
 export function getProjectDisplayState(
   project: ProjectState,
-  zellijTabs: string[],
+  liveTabs: string[],
   nowS: number,
   dismissed = false,
   runtimeStateKnown = true,
@@ -595,7 +595,7 @@ export function getProjectDisplayState(
     !isOrchestrationReady &&
     !isClosing &&
     !isClosed;
-  const tabOpen = isProjectTabOpen(project, zellijTabs);
+  const tabOpen = isProjectTabOpen(project, liveTabs);
   const isActive =
     isRunning ||
     isOrchestrationReady ||
@@ -708,7 +708,7 @@ export function getProjectDisplayState(
 
 export function buildProjectOperationsSnapshot(
   project: ProjectState,
-  zellijTabs: string[],
+  liveTabs: string[],
   nowS: number,
   runtimeStateKnown = true,
   syncCtx: RuntimeSyncContext = {},
@@ -716,7 +716,7 @@ export function buildProjectOperationsSnapshot(
   const { syncStale = false, lastSyncedAt = null } = syncCtx;
   const display = getProjectDisplayState(
     project,
-    zellijTabs,
+    liveTabs,
     nowS,
     false,
     runtimeStateKnown,
@@ -850,7 +850,7 @@ export function buildProjectOperationsSnapshot(
 
 export function buildProjectOperationsSnapshots(
   projects: ProjectState[],
-  zellijTabs: string[],
+  liveTabs: string[],
   nowS: number,
   runtimeStateKnown = true,
   syncCtx: RuntimeSyncContext = {},
@@ -858,23 +858,23 @@ export function buildProjectOperationsSnapshots(
   const { syncStale = false } = syncCtx;
   return projects
     .map((project) =>
-      buildProjectOperationsSnapshot(project, zellijTabs, nowS, runtimeStateKnown, syncCtx),
+      buildProjectOperationsSnapshot(project, liveTabs, nowS, runtimeStateKnown, syncCtx),
     )
     .sort((a, b) =>
-      compareProjects(a.project, b.project, zellijTabs, nowS, runtimeStateKnown, syncStale),
+      compareProjects(a.project, b.project, liveTabs, nowS, runtimeStateKnown, syncStale),
     );
 }
 
 function compareProjects(
   a: ProjectState,
   b: ProjectState,
-  zellijTabs: string[],
+  liveTabs: string[],
   nowS: number,
   runtimeStateKnown: boolean,
   syncStale = false,
 ): number {
-  const aState = getProjectDisplayState(a, zellijTabs, nowS, false, runtimeStateKnown, syncStale);
-  const bState = getProjectDisplayState(b, zellijTabs, nowS, false, runtimeStateKnown, syncStale);
+  const aState = getProjectDisplayState(a, liveTabs, nowS, false, runtimeStateKnown, syncStale);
+  const bState = getProjectDisplayState(b, liveTabs, nowS, false, runtimeStateKnown, syncStale);
 
   const rank = (state: ProjectDisplayState): number => {
     if (state.isReady || state.isOrchestrationReady) return 0;
@@ -911,7 +911,7 @@ export function buildControlPageState(
   const categories = data.projects.map(
     (project) =>
       STATE_DEFINITIONS[
-        getProjectDisplayState(project, data.zellijTabs, nowS, false, runtimeStateKnown, syncStale)
+        getProjectDisplayState(project, data.liveTabs, nowS, false, runtimeStateKnown, syncStale)
           .stateKey
       ].counterCategory,
   );
@@ -921,7 +921,7 @@ export function buildControlPageState(
   const waitingCount = categories.filter((c) => c === "waiting").length;
   const idleCount = categories.filter((c) => c === "idle").length;
   const openTabCount = data.projects.filter((project) =>
-    isProjectTabOpen(project, data.zellijTabs),
+    isProjectTabOpen(project, data.liveTabs),
   ).length;
   const controlProjectCount = data.inventory.controlProjectCount ?? 0;
   const commitsToday = data.projects.reduce((sum, p) => sum + (p.git?.todayCount ?? 0), 0);

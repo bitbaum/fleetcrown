@@ -39,8 +39,8 @@ export async function GET(req: Request) {
 
   let tabs: string[] = [];
   if (isRuntimeAvailable()) {
-    const { getZellijTabs } = await import("@/lib/zellij");
-    tabs = requestedChannel === "cloud" ? [] : await getZellijTabs().catch(() => []);
+    const { listOwnedTabs } = await import("@/lib/agent-execution/owned");
+    tabs = requestedChannel === "cloud" ? [] : listOwnedTabs(userId);
   } else {
     const snap = await getRuntimeSnapshot(userId, requestedChannel ?? undefined).catch(() => null);
     if (!snap) {

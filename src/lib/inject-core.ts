@@ -151,34 +151,13 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
 
   let prompt: string;
   let promptLabel = "Custom";
-  let effectiveTab = canonical;
+  const effectiveTab = canonical;
 
   if (runtimeAvailable) {
-    // Local: resolve live zellij tab and build prompt with session context.
-    // These imports call execSync / read /tmp files — only safe locally.
-    const { resolveEffectiveTab, readPrompts, readPromptMeta, getZellijTabs } =
-      await import("@/lib/agent-config").then(async (m) => ({
-        ...m,
-        getZellijTabs: (await import("@/lib/zellij")).getZellijTabs,
-      }));
-
-    // PTY-backed agents have no zellij tab — effectiveTab stays canonical and we
-    // skip the "is the tab open in zellij" gate entirely.
-    if (!ptyBacked) {
-      const activeTabs = await getZellijTabs();
-      if (activeTabs.length > 0) {
-        effectiveTab = resolveEffectiveTab(canonical, activeTabs);
-        if (
-          effectiveTab === canonical &&
-          !activeTabs.some((t) => t.toLowerCase() === canonical.toLowerCase())
-        ) {
-          return {
-            status: 422,
-            body: { error: `Tab "${canonical}" is not open in Zellij. Open it and try again.` },
-          };
-        }
-      }
-    }
+    // Local: build the prompt with session context. These imports read /tmp
+    // files — only safe locally. The tab is the canonical project name; the
+    // owned PTY is keyed by it, and there is no other terminal to resolve.
+    const { readPrompts, readPromptMeta } = await import("@/lib/agent-config");
 
     // Global + Project tiers (operating principles + brief + active goals) — the
     // SAME assembler the /api/orchestration/run path uses. Previously this local
@@ -281,16 +260,15 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
   // Build the local injection function. PTY-backed agents are driven directly via
   // the executor (write to the owned PTY's stdin); otherwise fall back to the
   // legacy zellij path. Null in cloud mode → executeInject queues for the runner.
-  const injectFn = !runtimeAvailable
-    ? null
-    : ptyBacked
+  // Local + live owned PTY: write straight into it. Local + no PTY: there is
+  // no agent to type at, so the prompt is QUEUED as a dispatch (cold start)
+  // for the runner — visible in Control, never a keystroke into a guessed tab.
+  const injectFn =
+    runtimeAvailable && ptyBacked
       ? async () => {
           ptyExecutor?.write(ptyWorkspaceId, prompt.endsWith("\r") ? prompt : `${prompt}\r`);
         }
-      : async () => {
-          const { injectIntoTab } = await import("@/lib/zellij");
-          injectIntoTab(effectiveTab, prompt);
-        };
+      : null;
 
   // Open a tracked run for every trackable dispatch, on BOTH the cloud and the
   // local-runtime path. Previously the local path was excluded (it relied on
@@ -328,35 +306,6 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
       });
     } catch (err) {
       console.error("[inject] tracked-run create failed:", err);
-    }
-  }
-
-  // If the user is actively at the ZSH prompt in this tab, skip injection to
-  // avoid garbling whatever they're typing.  Requires the fleetcrown-typing hooks
-  // in ~/.zshrc (see scripts/install-fleetcrown-hooks.sh). This is a zellij-only
-  // concept — a FleetCrown-owned PTY has no human at its prompt, so skip it.
-  // Side effects (beacon cancel, /tmp state) run only after this gate passes.
-  if (runtimeAvailable && !ptyBacked) {
-    const { isUserTypingInTab } = await import("@/lib/zellij");
-    if (isUserTypingInTab(effectiveTab)) {
-      const fingerprint = promptFingerprint(prompt);
-      recordControlAuditEvent({
-        userId,
-        projectId,
-        projectKey: canonical,
-        tabName: effectiveTab,
-        event: "inject_request",
-        source: "api/inject",
-        action: "refused",
-        reason: "User is typing in the target tab",
-        promptHash: fingerprint.promptHash,
-        promptPreview: fingerprint.promptPreview,
-        meta: { adapter: eventAdapter, promptKey: promptKey ?? "custom", runtimeAvailable: true },
-      });
-      return {
-        status: 200,
-        body: { ok: true, blocked: true, reason: "user-typing", tab: effectiveTab },
-      };
     }
   }
 
@@ -423,6 +372,7 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
   const result = await executeInject(
     {
       tab: effectiveTab,
+      queueOnly: runtimeAvailable && !ptyBacked,
       prompt,
       promptKey,
       promptLabel,

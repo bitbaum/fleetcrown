@@ -19,7 +19,7 @@
 import path from "path";
 import { existsSync } from "fs";
 import { HOME } from "@/lib/constants";
-import { shellEscape } from "@/lib/zellij";
+import { shellEscape } from "@/lib/shell-escape";
 import { commandExistsInPath } from "./helpers";
 import type { AgentAdapter, AgentAvailability, AgentRuntimeConfig } from "./types";
 

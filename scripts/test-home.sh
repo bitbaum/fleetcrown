@@ -22,7 +22,6 @@ declare -A SUITES=(
   [emit]="home/emit.ts --self-test"
   [log]="home/log.ts --self-test"
   [watcher]="home/watcher.ts --self-test"
-  [worker]="home/worker.ts --self-test"
   [calendar-drain]="home/calendar-drain.ts --self-test"
   [action-extract]="src/lib/actions/extract-proposal.ts --self-test"
   [checkin-proposal]="src/lib/actions/checkin-proposal.ts --self-test"
@@ -30,7 +29,7 @@ declare -A SUITES=(
 )
 
 # Stable order so the output reads top-to-bottom predictably.
-SUITES_ORDER=(state decide projects render emit log watcher worker calendar-drain action-extract checkin-proposal operator-context)
+SUITES_ORDER=(state decide projects render emit log watcher calendar-drain action-extract checkin-proposal operator-context)
 
 cd "$REPO_ROOT"
 

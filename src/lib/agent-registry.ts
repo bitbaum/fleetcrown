@@ -159,14 +159,6 @@ export function syncAgentSettings(agent: Agent, model: string): void {
   }
 }
 
-/** Build the launch command for the given agent in the given dir. */
-export function buildAgentLaunchCommand(
-  config: { agent: Agent; model: string },
-  dir: string,
-): string {
-  return buildAgentOptionLaunchCommand(config, dir);
-}
-
 /** Returns the official install command for the given agent (or empty if unknown). */
 export function getAgentInstallCommand(agent: AgentOption): string {
   return findAdapter(agent)?.installCommand ?? "";

@@ -16,7 +16,7 @@
 import fs from "fs";
 import path from "path";
 import { HOME } from "@/lib/constants";
-import { shellEscape } from "@/lib/zellij";
+import { shellEscape } from "@/lib/shell-escape";
 import type { AgentAdapter, AgentAvailability, AgentRuntimeConfig } from "./types";
 
 const SETTINGS_FILE = path.join(HOME, ".claude", "settings.json");

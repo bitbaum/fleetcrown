@@ -1,17 +1,11 @@
-import fs from "fs";
 import { NextRequest, NextResponse } from "next/server";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { isRuntimeAvailable } from "@/lib/runtime";
-import {
-  listAgentRegistry,
-  isAgentId,
-  buildAgentOptionLaunchCommand,
-  type Agent,
-} from "@/lib/agent-registry";
-import { injectIntoTab, sendRawKey } from "@/lib/zellij";
+import { isAgentId, type AgentOption } from "@/lib/agent-registry";
 import { getSessionUserId } from "@/lib/session";
 import { enqueueSwitchAgentCommand } from "@/db/queries/pending-commands";
-import { resolveOutgoingAgentForDir, resolveRunningAgentsInDir } from "@/lib/agent-process-scan";
+import { resolveOutgoingAgentForDir } from "@/lib/agent-process-scan";
+import { workspaceIdFor } from "@/lib/agent-execution/ownership";
 import { executionAccessErrorBody, resolveQueuedExecution } from "@/lib/execution-access";
 
 const SwitchAgentBody = z.object({
@@ -24,54 +18,6 @@ const SwitchAgentBody = z.object({
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function isAgentRunningInDir(processMatchers: string[], dir: string): boolean {
-  try {
-    for (const entry of fs.readdirSync("/proc")) {
-      if (!/^\d+$/.test(entry)) continue;
-      try {
-        const cmdline = fs.readFileSync(`/proc/${entry}/cmdline`, "utf-8");
-        const argv0 = cmdline.split("\0")[0] ?? "";
-        const basename = argv0.includes("/") ? argv0.split("/").pop()! : argv0;
-        if (!processMatchers.some((m) => basename === m || basename.startsWith(`${m}-`))) continue;
-        const cwd = fs.readlinkSync(`/proc/${entry}/cwd`);
-        if (cwd === dir || cwd.startsWith(dir + "/")) return true;
-      } catch {
-        /* process gone or permission denied */
-      }
-    }
-  } catch {
-    /* /proc unavailable */
-  }
-  return false;
-}
-
-async function quitAgentInTab(
-  tab: string,
-  agentId: Agent,
-  dir: string,
-  registry: ReturnType<typeof listAgentRegistry>,
-): Promise<void> {
-  const entry = registry.find((e) => e.id === agentId);
-  if (!entry) return;
-
-  if (entry.quitCommand) {
-    injectIntoTab(tab, entry.quitCommand);
-    await sleep(400);
-  }
-
-  await sleep(200);
-  sendRawKey(tab, 3);
-  await sleep(600);
-
-  if (entry.processMatchers?.length) {
-    const deadline = Date.now() + 2000;
-    while (Date.now() < deadline) {
-      await sleep(200);
-      if (!isAgentRunningInDir(entry.processMatchers, dir)) return;
-    }
-  }
 }
 
 export async function POST(req: NextRequest) {
@@ -111,33 +57,34 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const registry = listAgentRegistry();
-
+  // Local runtime: the agent is the owned PTY for this tab. Switching =
+  // replacing the owned process: terminate, settle, respawn with the new agent.
+  // No quit keystrokes, no /proc hunting — there is nothing else to quit.
+  const userId = await getSessionUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
-    const running = resolveRunningAgentsInDir(dir);
+    const { executor } = await import("@/lib/agent-execution");
+    const { provisionAgentWorkspace } = await import("@/lib/agent-execution/launch");
+    const workspaceId = workspaceIdFor(userId, tab);
+    const live = executor.get(workspaceId);
+    const wasLive = !!live && live.status !== "exited";
+    if (wasLive) {
+      await executor.terminate(workspaceId);
+      await sleep(400);
+    }
+    await provisionAgentWorkspace(userId, {
+      projectKey: tab,
+      dir,
+      agent: toAgent as AgentOption,
+      model,
+      workspaceId,
+    });
     const outgoing = resolveOutgoingAgentForDir(dir, fromAgent);
-    const agentsToQuit = running.length
-      ? running.filter((id) => id !== toAgent)
-      : outgoing && outgoing !== toAgent
-        ? [outgoing]
-        : [];
-
-    for (const agentId of agentsToQuit) {
-      await quitAgentInTab(tab, agentId, dir, registry);
-    }
-
-    if (agentsToQuit.length === 0 && fromAgent && isAgentId(fromAgent) && fromAgent !== toAgent) {
-      await quitAgentInTab(tab, fromAgent, dir, registry);
-    }
-
-    const launchCmd = buildAgentOptionLaunchCommand({ agent: toAgent, model }, dir);
-    injectIntoTab(tab, launchCmd);
-
     return NextResponse.json({
       ok: true,
       toAgent,
       fromAgent: outgoing ?? fromAgent ?? null,
-      quitAgents: agentsToQuit,
+      quitAgents: wasLive && outgoing ? [outgoing] : [],
     });
   } catch (err) {
     return NextResponse.json(
