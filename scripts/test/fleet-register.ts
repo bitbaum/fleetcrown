@@ -12,6 +12,7 @@ import {
   isPaid,
   repoFromGitUrl,
   summarize,
+  usefulDescription,
 } from "@/lib/register/build";
 
 let pass = 0;
@@ -56,10 +57,17 @@ const rows = buildFleetRegister(
     {
       id: "1",
       name: "kivvi",
+      description: "ERP for RevampIT",
       gitUrl: "https://github.com/bitbaum/kivvi.git",
       orangecatProjectId: null,
     },
-    { id: "2", name: "aoz-housing", gitUrl: "https://github.com/bitbaum/aoz-housing.git" },
+    {
+      id: "2",
+      name: "aoz-housing",
+      // What the site factory writes into every project it provisions.
+      description: "Website at https://aoz.orangecat.ch",
+      gitUrl: "https://github.com/bitbaum/aoz-housing.git",
+    },
     { id: "3", name: "Annushka Wild Spirit Art", gitUrl: null },
     {
       id: "4",
@@ -98,6 +106,25 @@ const s = summarize(rows);
 ok(
   s.projects === 7 && s.sites === 5 && s.fleetcrown === 5 && s.orangecat === 1 && s.solon === 1,
   `summary counts (${JSON.stringify(s)})`,
+);
+
+// ---------------------------------------------------------- descriptions
+// A register of slugs tells a reader who is not the author nothing. The line
+// comes from the project profile — and the factory's own filler does not count
+// as one, or every provisioned site would "describe" itself with its address.
+ok(by["kivvi"]?.description === "ERP for RevampIT", "description carried from the profile");
+ok(by["aoz-housing"]?.description === null, "factory boilerplate is treated as no description");
+ok(by["short"]?.description === null, "a hosted-only row has no description to carry");
+ok(usefulDescription("  ") === null && usefulDescription(null) === null, "blank is absent");
+ok(
+  usefulDescription("Website at https://x.ch") === null &&
+    usefulDescription("WEBSITE AT http://x.ch") === null,
+  "boilerplate is matched whatever its case or scheme",
+);
+ok(
+  usefulDescription("A website at https://x.ch that does one thing") ===
+    "A website at https://x.ch that does one thing",
+  "a real sentence that merely mentions a website survives",
 );
 
 // ------------------------------------------------------------- commerce

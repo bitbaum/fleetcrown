@@ -46,11 +46,17 @@ export default async function FleetRegisterPage() {
   // What the studio charges is the studio's business. The register below is
   // public; the commercial read of it is rendered only to the owner, and the
   // numbers it needs never enter a row that a response body carries.
-  const viewerIsOwner = !!owner && (await getSessionUserId()) === owner.userId;
+  const viewerId = await getSessionUserId();
+  const viewerIsOwner = !!owner && viewerId === owner.userId;
+  // /projects/<id> redirects an anonymous caller to sign-in. A chip that leads
+  // to a wall is a promise the page cannot keep, so for a signed-out reader it
+  // stays a chip: "this project has a profile", stated, not linked.
+  const canOpenProjects = !!viewerId;
   const rows = buildFleetRegister(
     projects.map((p) => ({
       id: p.id,
       name: p.name,
+      description: p.description,
       slug: p.slug,
       hostedApp: p.hostedApp,
       gitUrl: p.gitUrl,
@@ -98,10 +104,15 @@ export default async function FleetRegisterPage() {
         <div className="ui-public-eyebrow">The fleet</div>
         <h1 className="ui-public-page-title mt-3 sm:mt-4">Every project, and where it lives.</h1>
         <p className="ui-public-lede mt-4 max-w-2xl sm:mt-6">
-          One row per project, joined live from the owners of each fact: the hosting register for
-          sites, this database for FleetCrown profiles and their OrangeCat link, and Solon for
-          organisations. Nothing here is a copy, and nothing here is hidden — a dimmed chip is a
-          gap, and a gap is the next piece of work.
+          This is the studio&rsquo;s whole catalogue — products, client work, demos, and the ones
+          still only named. Most of them run on one box, and FleetCrown is what puts them there.
+          Follow any address to the thing itself.
+        </p>
+        <p className="ui-public-section-lede mt-4 max-w-2xl">
+          It is a join, computed when you load it, from whoever owns each fact: the hosting register
+          for addresses, this database for project profiles, Solon for organisations. Nothing here
+          is a second copy that someone remembers to update, which is why a gap shows as a gap
+          rather than as a blank.
         </p>
         <div className="ui-public-surface-card-meta">
           <span className="ui-public-surface-card-meta-chip">{s.projects} projects</span>
@@ -153,7 +164,12 @@ export default async function FleetRegisterPage() {
             <p className="ui-public-section-lede mt-3 sm:mt-4">{g.lede}</p>
             <ol className="ui-public-fleet-list mt-8 sm:mt-12">
               {g.rows.map((r) => (
-                <Row key={r.slug} r={r} solonChecked={solon.checked} />
+                <Row
+                  key={r.slug}
+                  r={r}
+                  solonChecked={solon.checked}
+                  canOpenProjects={canOpenProjects}
+                />
               ))}
             </ol>
           </section>
@@ -226,6 +242,16 @@ export default async function FleetRegisterPage() {
         </section>
 
         <section className="border-t border-border-subtle pt-10 sm:pt-16">
+          <h2 className="ui-public-display-md">What this page does not know</h2>
+          <p className="ui-public-section-lede mt-3 sm:mt-4">
+            &ldquo;Live&rdquo; here is what the hosting register declares, not a reading taken just
+            now. A host that fell over ten minutes ago still says live on this page. Uptime is
+            watched separately and alerts on its own; it does not feed this join yet. Saying so is
+            cheaper than a status light that lies.
+          </p>
+        </section>
+
+        <section className="border-t border-border-subtle pt-10 sm:pt-16">
           <h2 className="ui-public-display-md">The same register, as data</h2>
           <p className="ui-public-section-lede mt-3 sm:mt-4">
             The bitbaum showcase and the footer of this site are rendered from it. Anything else can
@@ -242,10 +268,25 @@ export default async function FleetRegisterPage() {
   );
 }
 
-function Row({ r, solonChecked }: { r: RegisterRow; solonChecked: boolean }) {
-  const projectHref = r.fleetcrown ? `/projects/${r.fleetcrown.id}` : null;
+/** Compare a name and a slug as the same word, ignoring case and separators. */
+function norm(v: string): string {
+  return v.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function Row({
+  r,
+  solonChecked,
+  canOpenProjects,
+}: {
+  r: RegisterRow;
+  solonChecked: boolean;
+  canOpenProjects: boolean;
+}) {
+  const projectHref = r.fleetcrown && canOpenProjects ? `/projects/${r.fleetcrown.id}` : null;
   return (
-    <li className="ui-public-fleet-row">
+    // id = slug, so any single project is linkable: /fleet#causius. The slug is
+    // the one name every system in the join already agrees on.
+    <li className="ui-public-fleet-row" id={r.slug}>
       <div className="min-w-0">
         {projectHref ? (
           <Link href={projectHref} className="ui-public-fleet-name">
@@ -254,7 +295,14 @@ function Row({ r, solonChecked }: { r: RegisterRow; solonChecked: boolean }) {
         ) : (
           <div className="ui-public-fleet-name">{r.name ?? r.slug}</div>
         )}
-        {r.name && r.name !== r.slug && <div className="ui-public-fleet-slug">{r.slug}</div>}
+        {r.description ? (
+          <div className="ui-public-fleet-what">{r.description}</div>
+        ) : (
+          // Only when the slug says something the name does not — "Substrata"
+          // over "substrata" is the same word twice.
+          r.name &&
+          norm(r.name) !== norm(r.slug) && <div className="ui-public-fleet-slug">{r.slug}</div>
+        )}
       </div>
       <div className="min-w-0">
         {r.site ? (
@@ -282,7 +330,7 @@ function Row({ r, solonChecked }: { r: RegisterRow; solonChecked: boolean }) {
         )}
       </div>
       <div className="ui-public-fleet-presence">
-        <Presence label="FleetCrown" href={projectHref} />
+        <Presence label="FleetCrown" href={projectHref} present={!!r.fleetcrown} />
         <Presence
           label="OrangeCat"
           href={r.orangecat ? `https://orangecat.ch/projects/${r.orangecat.projectId}` : null}
@@ -310,13 +358,24 @@ function Presence({
   href,
   external,
   unknown,
+  present,
 }: {
   label: string;
   href: string | null;
   external?: boolean;
   unknown?: boolean;
+  /** Exists, but this reader cannot open it. Absence and "not for you" are
+      different facts and must not render the same. */
+  present?: boolean;
 }) {
   if (!href) {
+    if (present) {
+      return (
+        <span className="ui-public-fleet-presence-flat" title="sign in to open">
+          {label}
+        </span>
+      );
+    }
     return (
       <span
         className="ui-public-fleet-presence-off"
