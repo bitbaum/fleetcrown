@@ -44,6 +44,14 @@ grep -q 'ci_workflow: ci.yml' "$AM" && grep -q 'deploy_workflow: deploy.yml' "$A
 grep -q -- '--if-present lint' "$CI" || { echo "  ✗ ci.yml must tolerate a starter without a lint script"; exit 1; }
 ok "the scaffold ships an auto-merge.yml that names its CI and Deploy"
 
+# Without this the chain after an auto-merge is: token merge (no push event) →
+# re-armed CI (no workflow_run) → nothing. The site then waits for the sweep's
+# reconciler tick (kaffeeklappe-sep11 waited an hour, 2026-09-11).
+grep -q "^  ship:" "$CI" || { echo "  ✗ ci.yml has no ship job — an auto-merged PR would wait for a sweep tick to deploy"; exit 1; }
+grep -q "gh workflow run deploy.yml" "$CI" || { echo "  ✗ ci.yml ship job does not dispatch deploy.yml"; exit 1; }
+grep -q "event_name == 'workflow_dispatch'" "$CI" || { echo "  ✗ ci.yml ship job must fire only for workflow_dispatch, or a push would ship twice"; exit 1; }
+ok "ci.yml ships on green main without waiting for a sweep tick"
+
 # Read once. Comments are NOT stripped: this file's comments deliberately name
 # the very things it checks for, and a comment-blind scan would pass on a file
 # whose only mention of `.next/cache` is prose explaining its absence. So each
