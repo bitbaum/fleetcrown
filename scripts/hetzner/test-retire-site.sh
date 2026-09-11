@@ -48,9 +48,14 @@ has "$out" "Nothing happened"
 [ "$(cat "$MAN")" = "$before" ] && ok 0 "" || ok 1 "a dry run must not edit apps.conf"
 
 echo "→ the plan names every artifact a delete removes"
-for phrase in "apps.d/demo-site.caddy" "demo-site-app" "/opt/demo-site" "apps.conf row" "port 4099" "checkout"; do
+for phrase in "apps.d/demo-site.caddy" "demo-site-app" "/opt/demo-site" "apps.conf row" "port 4099" "checkout" "GitHub Actions workflows" "HETZNER_SSH_PRIVATE_KEY"; do
   has "$out" "$phrase"
 done
+
+echo "→ a site taken offline keeps its workflows and its deploy key"
+off=$(retire demo-site --mode offline)
+hasnt "$off" "disable the repository"
+hasnt "$off" "HETZNER_SSH_PRIVATE_KEY"
 
 echo "→ offline is reversible and says so; it keeps what delete removes"
 out=$(retire demo-site --mode offline)

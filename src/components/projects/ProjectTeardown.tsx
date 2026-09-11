@@ -7,6 +7,7 @@ import { deleteJson, throwApiError } from "@/lib/api/fetch";
 export function ProjectTeardown({
   projectId,
   projectName,
+  hasSite,
   hasRepo,
   hasLocalPath,
   onDeleted,
@@ -14,6 +15,10 @@ export function ProjectTeardown({
   projectId: string;
   /** Typed back by the operator to confirm — the bar account deletion sets. */
   projectName: string;
+  /** Whether this project HAS a deployed site, so the note can point at the
+   *  panel that controls it. Pointing at a panel that is not rendered — which
+   *  is every project without a site — is worse than saying nothing. */
+  hasSite: boolean;
   hasRepo: boolean;
   hasLocalPath: boolean;
   onDeleted: () => void;
@@ -53,8 +58,14 @@ export function ProjectTeardown({
       </div>
       <p className="text-xs text-text-tertiary">
         This removes the project from FleetCrown — its brief, milestones, feedback and settings —
-        and, if you ask, its repository. It does not take a live site off the internet: use
-        &ldquo;The live site&rdquo; above for that.
+        and, if you ask, its repository.
+        {hasSite
+          ? " It does not take the live site off the internet: use “The live site” above for that."
+          : " This project has no deployed site, so there is nothing public to take down."}
+      </p>
+      <p className="text-xs text-text-tertiary">
+        What agents actually did — runs, prompts and their outcomes — is kept as history, under the
+        project&rsquo;s name. Queued work that has not run yet is cancelled with the project.
       </p>
       <div className="space-y-4">
         <div className="space-y-2 text-xs text-text-secondary">

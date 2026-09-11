@@ -10,8 +10,10 @@ import {
   orgs,
   siteSnapshots,
   promptHistory,
+  projectStates,
+  pendingCommands,
 } from "@/db/schema";
-import { eq, and, asc, desc, inArray, ilike, or, isNotNull, max } from "drizzle-orm";
+import { eq, and, asc, desc, inArray, ilike, isNull, or, isNotNull, max, sql } from "drizzle-orm";
 import { excludeSmokeDispatchesSql } from "./smoke-filter";
 import { fetchAttributesByEntityIds, getOrgPeerIds } from "./utils";
 import { findProjectEntityByName } from "./project-merge";
@@ -169,6 +171,35 @@ export async function deleteProject(userId: string, id: string) {
         or(eq(userProjects.entityProjectId, id), ilike(userProjects.name, project.name)),
       ),
     );
+
+  // OPERATIONAL state goes; the AUDIT TRAIL stays.
+  //
+  // Every history table (orchestration_runs, agent_sessions, prompt_history,
+  // control_audit_events) carries `project_key` beside `project_id`, so when the
+  // id is nulled the row is still attributable by name and remains readable as
+  // history. Those are kept deliberately: what an agent did for you is a record,
+  // not clutter, and deleting it to tidy up a foreign key would destroy the only
+  // account of work that really happened.
+  //
+  // These two are different. project_states is the Control card's live state,
+  // keyed by (user_id, project_key) with no id to null — left behind, it makes a
+  // ghost card and would silently re-attach to a NEW project that happens to
+  // reuse the name. And an unexecuted pending_command is not a record of
+  // anything: a runner would claim it and dispatch an agent into a project that
+  // no longer exists.
+  const stateKey = project.name.toLowerCase();
+  await db
+    .delete(projectStates)
+    .where(and(eq(projectStates.userId, userId), eq(projectStates.projectKey, stateKey)));
+  await db.delete(pendingCommands).where(
+    and(
+      eq(pendingCommands.userId, userId),
+      isNull(pendingCommands.executedAt),
+      // The project key lives in the payload, not a column — these commands are
+      // addressed by name because the runner has no entity ids.
+      sql`lower(coalesce(${pendingCommands.payload}->>'projectKey', ${pendingCommands.payload}->>'tab', '')) = ${stateKey}`,
+    ),
+  );
 
   // Milestones hang off the project entity with ON DELETE SET NULL, so deleting
   // a project used to leave its roadmap behind: unowned goals that still showed

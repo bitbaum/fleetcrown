@@ -167,6 +167,30 @@ if [ "$MODE" = "delete" ]; then
   if [ "$GO" = 1 ] && [ -x "$HERE/install-watchdog.sh" ]; then bash "$HERE/install-watchdog.sh" >/dev/null 2>&1 || say "watchdog refresh failed — run install-watchdog.sh by hand"; fi
 fi
 
+# A retired site's repository keeps deploying it. deploy.yml fires on every push
+# to main and tries to rsync to a box path that no longer exists; ci.yml and
+# auto-merge.yml keep merging agent PRs into a project that is gone. Disabling
+# is the right verb rather than deleting the files: it stops the runs without a
+# commit, and gh workflow enable brings them back if the site is rebuilt.
+#
+# Before the repository is archived, because an archived repository refuses
+# every mutation — including this one.
+if [ "$MODE" = "delete" ]; then
+  plan "disable the repository's GitHub Actions workflows (they would keep deploying a site that is gone)"
+  if [ "$GO" = 1 ]; then
+    ids=$(gh api "repos/$GH_OWNER/$SLUG/actions/workflows" --jq '.workflows[] | select(.state=="active") | .id' 2>/dev/null || true)
+    if [ -z "$ids" ]; then
+      say "no active workflows to disable"
+    else
+      for wf in $ids; do
+        gh api -X PUT "repos/$GH_OWNER/$SLUG/actions/workflows/$wf/disable" >/dev/null 2>&1 \
+          && say "workflow $wf disabled" \
+          || say "could not disable workflow $wf"
+      done
+    fi
+  fi
+fi
+
 # The box's SSH deploy key lives in the repository as HETZNER_SSH_PRIVATE_KEY
 # (register-site.sh sets it). Nothing ever removed it, so every retired site
 # kept a working key to this box in a repository that may outlive the site —
