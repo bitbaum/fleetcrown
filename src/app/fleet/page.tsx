@@ -15,6 +15,7 @@ import {
   type RegisterRow,
 } from "@/lib/register/build";
 import { solonOrgSlugs } from "@/lib/register/solon";
+import { orangecatProjectsThatResolve } from "@/lib/register/orangecat";
 
 export const metadata: Metadata = {
   title: "The fleet",
@@ -69,6 +70,12 @@ export default async function FleetRegisterPage() {
     solon.orgs,
   );
   const s = summarize(rows);
+  // An id recorded once is not a page that answers now. Two of six OrangeCat
+  // links were 404 on 2026-09-11; a chip that leads nowhere costs the reader
+  // more than a missing chip would.
+  const oc = await orangecatProjectsThatResolve(
+    rows.map((r) => r.orangecat?.projectId).filter((id): id is string => !!id),
+  );
 
   const groups: { id: string; title: string; lede: string; rows: RegisterRow[] }[] = [
     {
@@ -169,6 +176,7 @@ export default async function FleetRegisterPage() {
                   r={r}
                   solonChecked={solon.checked}
                   canOpenProjects={canOpenProjects}
+                  orangecatLive={oc.live}
                 />
               ))}
             </ol>
@@ -277,10 +285,12 @@ function Row({
   r,
   solonChecked,
   canOpenProjects,
+  orangecatLive,
 }: {
   r: RegisterRow;
   solonChecked: boolean;
   canOpenProjects: boolean;
+  orangecatLive: ReadonlySet<string>;
 }) {
   const projectHref = r.fleetcrown && canOpenProjects ? `/projects/${r.fleetcrown.id}` : null;
   return (
@@ -330,18 +340,28 @@ function Row({
         )}
       </div>
       <div className="ui-public-fleet-presence">
-        <Presence label="FleetCrown" href={projectHref} present={!!r.fleetcrown} />
+        <Presence
+          label="FleetCrown"
+          href={projectHref}
+          present={!!r.fleetcrown}
+          flatReason="sign in to open"
+        />
         <Presence
           label="OrangeCat"
-          href={r.orangecat ? `https://orangecat.ch/projects/${r.orangecat.projectId}` : null}
+          href={
+            r.orangecat && orangecatLive.has(r.orangecat.projectId)
+              ? `https://orangecat.ch/projects/${r.orangecat.projectId}`
+              : null
+          }
           external
+          present={!!r.orangecat}
         />
-        <Presence
-          label="Solon"
-          href={r.solon ? `https://solon.orangecat.ch/orgs/${r.solon.slug}` : null}
-          external
-          unknown={!solonChecked}
-        />
+        {/* Solon publishes no per-organisation page — only `GET /api/orgs/<slug>`,
+            which is how this register knows the organisation exists. The old
+            href pointed at /orgs/<slug>, a route Solon does not have, and 404d
+            every time. Until there is a page to send someone to, the fact is
+            stated and not linked. */}
+        <Presence label="Solon" href={null} present={!!r.solon} unknown={!solonChecked} />
       </div>
     </li>
   );
@@ -359,6 +379,7 @@ function Presence({
   external,
   unknown,
   present,
+  flatReason,
 }: {
   label: string;
   href: string | null;
@@ -367,11 +388,13 @@ function Presence({
   /** Exists, but this reader cannot open it. Absence and "not for you" are
       different facts and must not render the same. */
   present?: boolean;
+  /** Why it is not a link, for the tooltip. */
+  flatReason?: string;
 }) {
   if (!href) {
     if (present) {
       return (
-        <span className="ui-public-fleet-presence-flat" title="sign in to open">
+        <span className="ui-public-fleet-presence-flat" title={flatReason ?? "no page to open"}>
           {label}
         </span>
       );
