@@ -14,6 +14,14 @@ OrangeCat linking is optional. Execution access is defined in
 `src/lib/execution-access.ts`; project identity is not a terminal tab name.
 A queued run or successful agent turn does not prove a deployment.
 
+## Where code lives
+
+Every repository FleetCrown creates or registers lives in the `bitbaum` GitHub
+organisation. Never a personal account: `src/config/github-owner.ts` is the one
+place the owner is decided, creation goes to the org and fails loudly if it
+cannot, and `scripts/test/repos-are-created-in-the-org.ts` fails on any path
+that does otherwise. `gh repo list catomean` should show one repo (the profile).
+
 ## Stack
 
 - **Next.js 16** (App Router, Server Components, Server Actions)

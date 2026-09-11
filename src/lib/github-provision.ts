@@ -5,6 +5,7 @@
 
 import { TEMPLATES, renderTemplate, type TemplateId } from "@/lib/project-templates";
 import { GITHUB_API_BASE } from "@/lib/github-api";
+import { GITHUB_REPO_OWNER } from "@/config/github-owner";
 import { HTTP_TIMEOUT_SHORT_MS, HTTP_TIMEOUT_MS } from "@/lib/constants/time";
 
 export type ProvisionedRepo = {
@@ -165,7 +166,28 @@ export type ProvisionResult =
   | { ok: true; repo: ProvisionedRepo; templateSeeded: boolean }
   | { ok: false; status: number; error: string; detail?: string };
 
-/** Create a repo on the user's account and seed the chosen template. */
+/**
+ * The message a person can act on when the org refuses the create. GitHub
+ * answers 404 (not 403) when an OAuth token has no access to an org, so the
+ * two are treated alike.
+ */
+export function orgCreateRefusedMessage(owner: string, status: number, detail: string): string {
+  return (
+    `GitHub would not create the repository in the ${owner} organisation (HTTP ${status}${detail ? `: ${detail}` : ""}). ` +
+    `Repositories are created there, never on a personal account. Approve FleetCrown for the org at ` +
+    `https://github.com/organizations/${owner}/settings/oauth_application_policy, or check your membership.`
+  );
+}
+
+/**
+ * Create a repo in the fleet's organisation and seed the chosen template.
+ *
+ * ORG, NEVER THE PERSON. This used to call `POST /user/repos`, which creates
+ * under whoever is signed in; five sites created on 2026-09-10/11 landed on a
+ * personal account and had to be transferred by hand. There is deliberately
+ * no fallback to the personal account: a repo in the wrong place is a defect
+ * that costs more than a failed create with a clear message.
+ */
 export async function provisionGithubRepo(
   token: string,
   opts: {
@@ -188,7 +210,7 @@ export async function provisionGithubRepo(
   const description = opts.description ?? `Started from FleetCrown · ${opts.name}`;
   let res: Response;
   try {
-    res = await fetch(`${GITHUB_API_BASE}/user/repos`, {
+    res = await fetch(`${GITHUB_API_BASE}/orgs/${GITHUB_REPO_OWNER}/repos`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -217,11 +239,20 @@ export async function provisionGithubRepo(
     } catch {
       /* ignore */
     }
-    // 422 = name already exists on the account.
+    // 403/404 = the token cannot create in the org (not approved for it, or
+    // not a member). 422 = the name already exists in the org.
+    if (res.status === 403 || res.status === 404) {
+      return {
+        ok: false,
+        status: res.status,
+        error: orgCreateRefusedMessage(GITHUB_REPO_OWNER, res.status, detail),
+        detail,
+      };
+    }
     return {
       ok: false,
       status: res.status,
-      error: `GitHub rejected the create (${res.status})`,
+      error: `GitHub rejected the create in ${GITHUB_REPO_OWNER} (${res.status})`,
       detail,
     };
   }
