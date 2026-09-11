@@ -26,7 +26,7 @@
  */
 
 import { readdirSync, readFileSync, existsSync } from "fs";
-import { join, dirname, relative } from "path";
+import { join, dirname, relative, sep } from "path";
 import { fileURLToPath } from "url";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -159,6 +159,67 @@ for (const file of files) {
 for (const id of Object.keys(PUBLIC)) {
   if (!claimedPublic.has(id) && !guarded.has(id)) {
     problems.push(`${id} is on the PUBLIC list but no such route exists — delete the entry`);
+  }
+}
+
+// ── a self-authenticating route must be EXEMPT from the session middleware ──
+//
+// THIRD occurrence of this class, so it gets a derived check rather than
+// another hand-maintained list:
+//
+//   1. vitareba 2026-08-07 — the `/api` matcher blocked LOGIN itself.
+//   2. fleetcrown 2026-08-13 — `api/solon/` missing from the matcher; the
+//      Solon doorbell was unreachable from the day it shipped.
+//   3. fleetcrown 2026-09-11 — the OrangeCat site door shipped at
+//      `api/integrations/orangecat/site`, outside every exempt prefix.
+//
+// The existing pin in solon-message.ts checks that a hardcoded list of
+// PREFIXES appears in the matcher. It passed all three times — occurrence 3
+// included — because `api/orangecat/` was indeed exempt. What nothing checked
+// is the other direction: that every route which authenticates ITSELF actually
+// LIVES under one of those prefixes. A receiver put somewhere tidier deploys
+// green and 401s every caller, signed or not.
+//
+// So this derives the receivers from the source. Any route calling an HMAC or
+// shared-secret verifier is a self-authenticating route, wherever it sits, and
+// its path must fall inside the matcher's exemption.
+//
+// Why the failure is worth a gate rather than vigilance: the middleware's 401
+// is indistinguishable from the route's own 401 for a bad secret, so the first
+// instinct is to suspect the credential — the one thing that was fine. Only a
+// SIGNED replay tells them apart, and nobody signs a replay for a route they
+// believe they just shipped correctly.
+const SELF_AUTH_MARKERS = [
+  "verifyOrangeCatWebhookSignature",
+  "verifySolonSignature",
+  "stripe.webhooks.constructEvent",
+  "requireCronAuth",
+];
+
+const matcherExclusion = readFileSync(join(REPO, "src", "proxy.ts"), "utf8").match(
+  /"\/\(\(\?!(.+)\)\.\+\)"/,
+)?.[1];
+if (!matcherExclusion) {
+  problems.push("src/proxy.ts: the matcher exclusion pattern could not be read at all");
+} else {
+  const exemptPrefixes = matcherExclusion.split("|").map((p) => p.replace(/\\\./g, "."));
+  for (const file of files) {
+    const src = readFileSync(file, "utf8");
+    const marker = SELF_AUTH_MARKERS.find((m) => src.includes(m));
+    if (!marker) continue;
+
+    // "api/orangecat/site" — the URL path, route groups and the file name gone.
+    const urlPath = relative(API_ROOT, dirname(file)).split(sep).join("/");
+    const full = `api/${urlPath}`;
+    const exempt = exemptPrefixes.some((prefix) => prefix && full.startsWith(prefix));
+    if (!exempt) {
+      problems.push(
+        `${urlPath} authenticates itself (${marker}) but its path is NOT exempt in the ` +
+          `proxy.ts matcher — the session middleware will 401 every caller, including a ` +
+          `correctly signed one, before this route runs. Move it under an exempt prefix ` +
+          `(api/orangecat/, api/solon/, …) or add its prefix to the matcher.`,
+      );
+    }
   }
 }
 
