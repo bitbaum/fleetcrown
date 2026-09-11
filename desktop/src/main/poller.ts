@@ -3,7 +3,7 @@
  *
  * Long-polls the FleetCrown control plane for commands queued by the web
  * (`pending_commands` rows from `executeInject`'s remote branch) and executes
- * them locally via the same `injectIntoTab` primitive the runner uses.
+ * them locally into the agent's owned PTY.
  * This is the cable that closes the loop: a user dispatches from any browser
  * or phone, the row lands in Postgres, this poller drains it in <1s, the prompt
  * fires into the user's Zellij pane.
@@ -24,20 +24,14 @@
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
-import { execSync } from 'child_process'
-import { injectIntoTab, sendRawKey, shellEscape, getZellijSessionsSync, peekTab as peekZellijTab } from '@/lib/zellij'
-import { zellijExecutableForShell } from '@/lib/terminals/zellij'
 import { APP_URL } from '@/config/brand'
 import { APP_SLUG } from '@/config/brand'
-import { launchAgentInTab } from '@/lib/agent-runtime'
 import { startPeek, stopPeek } from './peek-streamer'
-import { getAgentInstallCommand, isAgentId, listAgentRegistry, type Agent, type AgentOption } from '@/lib/agent-registry'
-import { resolveOutgoingAgentForDir, resolveRunningAgentsInDir } from '@/lib/agent-process-scan'
+import { getAgentInstallCommand, listAgentRegistry, type AgentOption } from '@/lib/agent-registry'
+import { executor } from '@/lib/agent-execution'
 import { resolveRunnerWorkspaceDir } from '@/lib/agent-execution/box-workspace-path'
-import { findMatchingTab } from '@/lib/tab-match'
 import { readClaudeLiveSessions, claudeLiveSessionForDir } from '@/lib/control-fast-state'
 import {
-  RUNNER_PTY_ENABLED,
   runnerWorkspaceId,
   isPtyBacked,
   launchAgentPty,
@@ -66,7 +60,6 @@ import { isDerivedRunTab } from '@/lib/run-tab'
 const PUSH_AFTER = new Set(['launch_agent', 'dispatch', 'switch_agent', 'close_tab'])
 import { validateCommand } from './command-validator'
 import { loadToken, clearToken, isDevBaseOverride } from './token-store'
-import { ensureZellijReady } from '@/lib/zellij-bootstrap'
 import { fleetSessionsDir } from '@/lib/session-paths'
 import { FLEET_RUNNER_COMMAND_TYPES_PARAM } from '@/lib/pending-command-contract'
 
@@ -75,7 +68,6 @@ import { FLEET_RUNNER_COMMAND_TYPES_PARAM } from '@/lib/pending-command-contract
  *  few seconds of an inject, we know the agent received and reacted. */
 const SESSIONS_DIR = fleetSessionsDir()
 
-const DEFAULT_SESSION_NAME = 'fleet'
 
 /** Worktree-per-agent bookkeeping (see @/lib/agent-execution/worktree-workspace).
  *  Tracks, per tab, the primary checkout and the dir the last dispatch actually
@@ -329,29 +321,6 @@ async function runLoop(token: string, lifetimeSignal: AbortSignal): Promise<void
 }
 
 /**
- * Pre-flight: ensure a zellij session is alive before we try to inject
- * into it. If the session died (PC restart with poller still queueing
- * commands, user did `zellij kill-all-sessions`, etc.) bootstrap one
- * from an empty layout. Tabs get created on-demand by the existing
- * launch/inject paths. Cheap when the session is already live — just a
- * `zellij list-sessions` shellout.
- */
-async function ensureSessionForCommand(): Promise<void> {
-  // If ANY zellij session is already live, we're done — inject/launch resolve
-  // the target tab across all sessions (injectIntoTab → findSessionForTab), so
-  // they drive the user's own session (e.g. their interactive one) without
-  // needing the runner's dedicated 'fleet' session. Only bootstrap 'fleet' when
-  // zellij is entirely down (the "rebooted, nothing running" self-heal path).
-  //
-  // Forcing a 'fleet' fresh-spawn on every command was a real bug: on a box
-  // where headless 'fleet' won't spawn, the spawn-wait failed and injects never
-  // landed even though the user had a perfectly good live session. The comment
-  // above always intended "a zellij session", not "the fleet session".
-  if (getZellijSessionsSync().length > 0) return
-  await ensureZellijReady(DEFAULT_SESSION_NAME, [], { mode: 'fresh-spawn' })
-}
-
-/**
  * Post-flight verification for `inject`: did the agent actually receive
  * the prompt? Cheap heuristic — claude (and our session.md format) bump
  * the session file's mtime when an agent picks up a prompt. We snapshot
@@ -466,22 +435,10 @@ async function ackCommand(
   }
 }
 
-/** Non-blocking delay. The module's other `sleep()` is execSync-based and
+/** Non-blocking delay. A blocking sleep here would starve the event loop and
  *  would freeze the event loop (and the bridge SSE) — never use it inside the
  *  async command handlers. */
 const asleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
-
-/** Poll /proc until an agent process is running in `dir` (or timeout). Used by
- *  `dispatch` so we only paste the prompt once the freshly-launched agent CLI
- *  is actually up, not into the bare login shell. */
-async function waitForAgentInDir(dir: string, timeoutMs: number): Promise<boolean> {
-  const deadline = Date.now() + timeoutMs
-  while (Date.now() < deadline) {
-    if (resolveRunningAgentsInDir(dir).length > 0) return true
-    await asleep(500)
-  }
-  return false
-}
 
 async function handleCommand(
   base: string,
@@ -517,27 +474,24 @@ async function handleCommand(
   // Validate at the IPC boundary BEFORE touching any executor. Pre-v0.7
   // the payload was an unchecked cast; once the autonomous scheduler (v0.7+)
   // starts queuing pending_commands unattended, an unchecked cast lets a
-  // typo'd cron payload through to injectIntoTab() which would fail in a
+  // typo'd cron payload through to the PTY writer which would fail in a
   // less actionable place. See command-validator.ts for the contract.
   const validation = validateCommand(command)
   if (!validation.ok) {
     error = validation.error
   } else try {
-    // Pre-flight: zellij has to be alive for any of these to land. Self-heals
-    // the "I rebooted and nothing's running" path so the user doesn't have
-    // to open a terminal first.
-    const t = validation.command.type
-    if (t === 'inject' || t === 'dispatch' || t === 'launch_agent' || t === 'switch_agent' || t === 'focus_tab' || t === 'close_tab' || t === 'install_cli') {
-      await ensureSessionForCommand()
-    }
     switch (validation.command.type) {
       case 'inject': {
         const { tab, prompt } = validation.command.payload
         const baseline = readMtimeMs(sessionFilePath(tab))
-        // PTY-first: drive the owned PTY's stdin when this tab has a live one,
-        // else fall back to zellij. Verification below is file-based either way.
-        if (isPtyBacked(tab)) injectPty(tab, prompt)
-        else injectIntoTab(tab, prompt)
+        // Owned PTY or nothing. A bare inject cannot start an agent; the cloud
+        // enqueues a DISPATCH (cold start) for a project with no live session,
+        // so a miss here is a real error, reported as one — never a keystroke
+        // typed into a guessed terminal tab.
+        if (!isPtyBacked(tab)) {
+          throw new Error(`no running agent for "${tab}" on this runner — dispatch to start one`)
+        }
+        injectPty(tab, prompt)
         ok = true
         // Post-flight verification — best effort, doesn't block the ack on
         // failure (we still report ok:true because the keystrokes landed).
@@ -548,14 +502,18 @@ async function handleCommand(
         break
       }
       case 'focus_tab': {
-        focusWorkspaceTab(validation.command.payload.tab)
-        ok = true
-        break
+        // Retired: there is no terminal tab on this machine to focus. The
+        // agent's PTY is watched in the web terminal.
+        throw new Error('focus_tab is retired — watch the agent in the web terminal')
       }
       case 'close_tab': {
         const { tab } = validation.command.payload
-        if (isPtyBacked(tab)) await terminatePty(tab)
-        else closeTab(tab)
+        if (isPtyBacked(tab)) {
+          await terminatePty(tab)
+          clearHandoffSentinel(tab)
+        } else {
+          text = `no running agent for "${tab}" — nothing to close`
+        }
         // Worktree cleanup: sweep this tab's CLEAN worktrees (dirty ones are
         // never touched — an agent's unfinished work outlives its session).
         const wt = worktreeByTab.get(tab)
@@ -570,32 +528,15 @@ async function handleCommand(
         const { tab, dir, agent, model, initialPrompt } = validation.command.payload
         assertKnownLaunchAgent(agent)
         const prompt = initialPrompt?.trim()
-        // Own the agent's PTY (no zellij → can't hang on a detached session).
-        // If the PTY spawn throws, fall back to zellij so launch never dead-ends.
-        let usedPty = false
-        if (RUNNER_PTY_ENABLED) {
-          try {
-            await launchAgentPty(tab, dir, agent as AgentOption, model)
-            usedPty = true
-          } catch (e) {
-            console.warn('[poller] PTY launch failed — falling back to zellij:', (e as Error).message)
-          }
-        }
+        // Own the agent's PTY. A failed spawn is a failed launch, reported as
+        // such — there is no other place for the agent to run.
+        await launchAgentPty(tab, dir, agent as AgentOption, model)
         clearHandoffSentinel(tab)
-        if (usedPty) {
-          // Inject the initial prompt once the agent is actually up, not on a blind timer.
-          if (prompt) {
-            void waitForPtyReady(tab).then((ready) => setTimeout(() => {
-              try { injectPty(tab, prompt) } catch (e) { console.warn('[poller] initial prompt after PTY launch failed:', (e as Error).message) }
-            }, ready ? 1500 : 0))
-          }
-        } else {
-          launchAgentInTab(tab, dir, agent as AgentOption, model)
-          if (prompt) {
-            setTimeout(() => {
-              try { injectIntoTab(tab, prompt) } catch (e) { console.warn('[poller] initial prompt after launch failed:', (e as Error).message) }
-            }, 2500)
-          }
+        // Inject the initial prompt once the agent is actually up, not on a blind timer.
+        if (prompt) {
+          void waitForPtyReady(tab).then((ready) => setTimeout(() => {
+            try { injectPty(tab, prompt) } catch (e) { console.warn('[poller] initial prompt after PTY launch failed:', (e as Error).message) }
+          }, ready ? 1500 : 0))
         }
         ok = true
         break
@@ -641,29 +582,21 @@ async function handleCommand(
             deliveredAtMs: Date.now(),
           }
         }
-        // PTY path when enabled (or already PTY-backed): own the agent's PTY
-        // instead of puppeting a (possibly detached → hanging) zellij tab.
-        const usePty = RUNNER_PTY_ENABLED || ptyAlreadyLive
-        if (usePty) {
-          const ptyAlready = ptyAlreadyLive
+        // Own the agent's PTY. A failed spawn fails the dispatch; the cloud
+        // closes the run and says so. Nothing else can host the agent here.
+        {
           let launched = false
-          let ptyOk = ptyAlready
-          if (!ptyAlready) {
-            try {
-              // A live PTY already is the current session: inject in place.
-              // Resume is only for a fresh PTY, so runner restarts never kill a
-              // session merely because process-local bookkeeping was lost.
-              await launchAgentPty(tab, effDir, agent as AgentOption, model, sessionId)
-              clearHandoffSentinel(tab)
-              launched = true
-              ptyOk = true
-              // Wait for the agent to show life, then settle before pasting.
-              if (await waitForPtyReady(tab, 15000)) await asleep(1800)
-            } catch (e) {
-              console.warn('[poller] PTY dispatch launch failed — falling back to zellij:', (e as Error).message)
-            }
+          if (!ptyAlreadyLive) {
+            // A live PTY already is the current session: inject in place.
+            // Resume is only for a fresh PTY, so runner restarts never kill a
+            // session merely because process-local bookkeeping was lost.
+            await launchAgentPty(tab, effDir, agent as AgentOption, model, sessionId)
+            clearHandoffSentinel(tab)
+            launched = true
+            // Wait for the agent to show life, then settle before pasting.
+            if (await waitForPtyReady(tab, 15000)) await asleep(1800)
           }
-          if (ptyOk) {
+          {
             injectPty(tab, effPrompt)
             // Verify against the CLI's OWN session status (~/.claude/sessions/
             // <pid>.json): a submitted prompt flips status off "idle". The
@@ -738,49 +671,20 @@ async function handleCommand(
             }
             break
           }
-          // PTY launch failed → fall through to the zellij path below.
         }
-        const alreadyRunning = resolveRunningAgentsInDir(effDir).length > 0
-        let launched = false
-        if (!alreadyRunning) {
-          launchAgentInTab(tab, effDir, agent as AgentOption, model)
-          clearHandoffSentinel(tab)
-          launched = true
-          // Wait for the agent process to actually come up before pasting —
-          // otherwise the prompt lands in a bare login shell. Then settle so
-          // the CLI has finished drawing its prompt and accepts paste+enter.
-          if (await waitForAgentInDir(effDir, 15000)) await asleep(1800)
-        } else {
-          focusWorkspaceTab(tab)
-        }
-        const baseline = readMtimeMs(sessionFilePath(tab))
-        injectIntoTab(tab, effPrompt)
-        verified = await waitForSessionFileBump(tab, baseline, 8000)
-        if (!verified && launched) {
-          // A freshly-launched agent may still be finishing its boot banner —
-          // one retry covers the common race without spamming a live agent.
-          await asleep(2500)
-          const retryBaseline = readMtimeMs(sessionFilePath(tab))
-          injectIntoTab(tab, effPrompt)
-          verified = await waitForSessionFileBump(tab, retryBaseline, 6000)
-        }
-        ok = true
-        text = launched ? `launched ${agent} + injected` : `injected to running ${agent}`
-        if (!verified) warning = `${text}, but the agent didn't pick up the prompt within the window — it may be busy or hung`
         break
       }
       case 'switch_agent': {
         const { tab, dir, toAgent, fromAgent, model } = validation.command.payload
         assertKnownLaunchAgent(toAgent)
-        if (RUNNER_PTY_ENABLED || isPtyBacked(tab)) {
-          // Switching = replacing the owned process: terminate, settle, respawn.
+        // Switching = replacing the owned process: terminate, settle, respawn.
+        void fromAgent
+        if (isPtyBacked(tab)) {
           await terminatePty(tab)
           await asleep(400)
-          await launchAgentPty(tab, dir, toAgent as AgentOption, model)
-          clearHandoffSentinel(tab)
-        } else {
-          switchAgent(tab, dir, toAgent as AgentOption, fromAgent, model)
         }
+        await launchAgentPty(tab, dir, toAgent as AgentOption, model)
+        clearHandoffSentinel(tab)
         ok = true
         break
       }
@@ -790,16 +694,15 @@ async function handleCommand(
         break
       }
       case 'install_cli': {
-        openInstallerTab(validation.command.payload.agent)
+        await openInstallerPty(validation.command.payload.agent)
         ok = true
         break
       }
       case 'peek_tab': {
         const { tab } = validation.command.payload
-        // Owned PTY → its in-memory buffer (non-blocking). Only fall back to the
-        // synchronous zellij dump-screen for genuinely zellij-hosted tabs.
-        const ptyBuf = peekPtyBuffer(tab)
-        const content = ptyBuf ?? peekZellijTab(tab)
+        // Owned PTY → its in-memory buffer (non-blocking). No PTY, no screen:
+        // there is no other terminal on this machine to dump.
+        const content = peekPtyBuffer(tab) ?? `No running agent for "${tab}" on this runner.`
         ok = true
         await ackCommand(base, token, command, { ok, text: content })
         console.log(`[poller] handled ${command.type} command ${command.id}`)
@@ -809,8 +712,8 @@ async function handleCommand(
       case 'peek_start': {
         // Live terminal: start streaming this tab's screen to the cloud until a
         // peek_stop (last viewer left). See docs/architecture/embedded-terminal.md.
-        // Stop first so a stream started before a PTY launch (zellij fallback)
-        // upgrades to the owned-PTY byte stream once the agent is up.
+        // Stop first so a stream started before the PTY launch upgrades to the
+        // owned-PTY byte stream once the agent is up.
         stopPeek(validation.command.payload.tab)
         startPeek(base, token, validation.command.payload.tab)
         ok = true
@@ -824,15 +727,7 @@ async function handleCommand(
     }
   } catch (e) {
     ok = false
-    const raw = (e as Error).message ?? ''
-    // A zellij `action` against a detached session blocks until our hard timeout
-    // and surfaces as a cryptic "spawnSync /bin/sh ETIMEDOUT". Translate any such
-    // timeout that escaped the per-command handlers into an actionable message so
-    // the UI never shows the raw spawn error. (launchAgentInTab already does this
-    // for its own path; this is the catch-all for focus/inject/close helpers.)
-    error = /ETIMEDOUT|timed out|timeout/i.test(raw)
-      ? `Zellij didn't respond while handling "${command.type}" — the target session is likely detached. Attach it (zellij attach <session>) so Fleet Runner can drive it, then retry.`
-      : raw
+    error = (e as Error).message ?? 'unknown error'
   }
 
   // Drop the dedup sentinel on success so a re-served command (PATCH ack
@@ -863,78 +758,6 @@ function assertKnownLaunchAgent(agent: string): void {
   }
 }
 
-function tabNamesForSession(session: string): string[] {
-  const commands = [
-    `${zellijExecutableForShell()} --session ${shellEscape(session)} action query-tab-names 2>/dev/null`,
-    `ZELLIJ_SESSION_NAME=${shellEscape(session)} ${zellijExecutableForShell()} action query-tab-names 2>/dev/null`,
-  ]
-  for (const command of commands) {
-    try {
-      const out = execSync(command, { encoding: 'utf8', timeout: 2000 })
-      const tabs = out.split('\n').map((line) => line.trim()).filter(Boolean)
-      if (tabs.length > 0) return tabs
-    } catch {
-      // Try the next addressing mode.
-    }
-  }
-  return []
-}
-
-function findSessionForTab(tab: string): string | null {
-  for (const session of getZellijSessionsSync()) {
-    if (findMatchingTab(tab, tabNamesForSession(session))) return session
-  }
-  return null
-}
-
-function firstZellijSession(): string {
-  const session = getZellijSessionsSync()[0]
-  if (!session) throw new Error('no zellij session found')
-  return session
-}
-
-function focusWorkspaceTab(tab: string): void {
-  const session = findSessionForTab(tab)
-  if (!session) throw new Error(`tab not found: ${tab}`)
-  const liveTab = findMatchingTab(tab, tabNamesForSession(session)) ?? tab
-  execSync(`${zellijExecutableForShell()} --session ${shellEscape(session)} action go-to-tab-name ${shellEscape(liveTab)}`, { stdio: 'ignore', timeout: 3000 })
-  waitForFocusedTab(session, liveTab)
-}
-
-function closeTab(tab: string): void {
-  const session = findSessionForTab(tab)
-  if (!session) throw new Error(`tab not found: ${tab}`)
-  focusWorkspaceTab(tab)
-  execSync('sleep 0.15')
-  execSync(`${zellijExecutableForShell()} --session ${shellEscape(session)} action close-tab`, { stdio: 'ignore', timeout: 3000 })
-  clearHandoffSentinel(tab)
-}
-
-function focusedTabForSession(session: string): string | null {
-  try {
-    return execSync(
-      `${zellijExecutableForShell()} --session ${shellEscape(session)} action dump-layout 2>/dev/null | grep 'focus=true' | grep 'tab name=' | sed 's/.*tab name="\\([^"]*\\)".*/\\1/' | head -1`,
-      { encoding: 'utf8', timeout: 2000 },
-    ).trim() || null
-  } catch {
-    return null
-  }
-}
-
-function waitForFocusedTab(session: string, tab: string): void {
-  const deadline = Date.now() + 2000
-  while (Date.now() < deadline) {
-    if (focusedTabForSession(session) === tab) return
-    execSync('sleep 0.05', { timeout: 1000 })
-  }
-  throw new Error(`zellij tab "${tab}" did not gain focus`)
-}
-
-function newTab(session: string, tab: string): void {
-  execSync(`${zellijExecutableForShell()} --session ${shellEscape(session)} action new-tab --name ${shellEscape(tab)}`, { stdio: 'ignore', timeout: 3000 })
-  execSync('sleep 0.5')
-}
-
 function clearHandoffSentinel(tab: string): void {
   try { fs.unlinkSync(`/tmp/agent-handoff-sent-${tab}`) } catch { /* absent */ }
 }
@@ -951,86 +774,23 @@ function applyAutoContinue(tab: string, enabled: boolean): void {
   }
 }
 
-function openInstallerTab(agent: string): void {
+/**
+ * Run an agent CLI's installer in an owned PTY named `Install <label>`, so it
+ * streams to the web terminal like any agent session. Login-interactive shell
+ * for the same reason agent launches use one: PATH is only complete after the
+ * profile/nvm chain loads.
+ */
+async function openInstallerPty(agent: string): Promise<void> {
   const command = getAgentInstallCommand(agent as AgentOption)
   if (!command) throw new Error(`unknown agent for install: ${agent}`)
   const label = listAgentRegistry().find((entry) => entry.id === agent)?.label ?? agent
   const tab = `Install ${label}`
-  newTab(firstZellijSession(), tab)
-  injectIntoTab(tab, command)
-}
-
-function isAgentProcess(entry: { processMatchers: readonly string[] }, argv0: string): boolean {
-  const basename = argv0.includes('/') ? argv0.split('/').pop() ?? argv0 : argv0
-  return entry.processMatchers.some((matcher) => basename === matcher || basename.startsWith(`${matcher}-`))
-}
-
-function agentRunningInDir(agent: string | undefined, dir: string): boolean {
-  if (!agent || !isAgentId(agent)) return false
-  const entry = listAgentRegistry().find((candidate) => candidate.id === agent)
-  if (!entry) return false
-  try {
-    for (const proc of fs.readdirSync('/proc')) {
-      if (!/^\d+$/.test(proc)) continue
-      try {
-        const argv0 = fs.readFileSync(`/proc/${proc}/cmdline`, 'utf8').split('\0')[0] ?? ''
-        if (!isAgentProcess(entry, argv0)) continue
-        const cwd = fs.readlinkSync(`/proc/${proc}/cwd`)
-        if (cwd === dir || cwd.startsWith(`${dir}/`)) return true
-      } catch {
-        // Process disappeared or is not readable.
-      }
-    }
-  } catch {
-    // /proc unavailable.
-  }
-  return false
-}
-
-function sleep(ms: number): void {
-  execSync(`sleep ${Math.max(0, ms / 1000)}`)
-}
-
-function quitAgentInTab(tab: string, agentId: Agent, dir: string): void {
-  const registry = listAgentRegistry()
-  const entry = registry.find((candidate) => candidate.id === agentId)
-  if (!entry || entry.id === 'openclaw') return
-
-  if (entry.quitCommand) {
-    try { injectIntoTab(tab, entry.quitCommand) } catch { /* Ctrl+C fallback below */ }
-    sleep(500)
-  }
-  try { sendRawKey(tab, 3) } catch { /* best effort */ }
-  sleep(700)
-
-  if (entry.processMatchers?.length) {
-    const deadline = Date.now() + 2000
-    while (Date.now() < deadline) {
-      sleep(200)
-      if (!agentRunningInDir(agentId, dir)) return
-    }
-  }
-}
-
-function switchAgent(tab: string, dir: string, toAgent: AgentOption, fromAgent?: string, model?: string): void {
-  const running = resolveRunningAgentsInDir(dir)
-  const outgoing = resolveOutgoingAgentForDir(dir, fromAgent)
-  const agentsToQuit = running.length
-    ? running.filter((id) => id !== toAgent)
-    : outgoing && outgoing !== toAgent
-    ? [outgoing]
-    : []
-
-  for (const agentId of agentsToQuit) {
-    quitAgentInTab(tab, agentId, dir)
-  }
-
-  if (agentsToQuit.length === 0 && fromAgent && isAgentId(fromAgent) && fromAgent !== toAgent) {
-    quitAgentInTab(tab, fromAgent, dir)
-  }
-
-  clearHandoffSentinel(tab)
-  launchAgentInTab(tab, dir, toAgent, model)
+  await executor.provision({
+    id: runnerWorkspaceId(tab),
+    cwd: os.homedir(),
+    command: 'bash',
+    args: ['-lic', command],
+  })
 }
 
 /**

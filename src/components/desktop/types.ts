@@ -24,7 +24,6 @@ export type PollerStatus = {
 
 /** Result of the v0.6.0 `getInstalledCLIs` IPC scan. */
 export type InstalledCLIs = {
-  zellij: boolean;
   agents: Record<string, boolean>;
 };
 

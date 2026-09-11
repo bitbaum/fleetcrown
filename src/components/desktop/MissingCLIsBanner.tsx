@@ -6,12 +6,12 @@
 //
 // Each missing CLI gets an "Install Claude" / "Install Codex" / etc. button
 // that POSTs to /api/agent/install-cli, which the local runner picks up and
-// turns into a zellij tab with the installer command pre-typed. The user
-// approves the install in the terminal — never blind.
+// runs in an owned terminal the web terminal can show. The user watches the
+// install happen — never blind.
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Terminal, ExternalLink, RefreshCw } from "lucide-react";
+import { Terminal, RefreshCw } from "lucide-react";
 import type { FleetRunnerBridge, InstalledCLIs } from "./types";
 import { AGENT_LABELS, type AnyAgentId } from "@/lib/agent-labels";
 
@@ -48,8 +48,7 @@ export function MissingCLIsBanner() {
   if (!detected) return null;
 
   const missingAgents = AGENTS_TO_CHECK.filter((a) => !detected.agents[a]);
-  const missingZellij = !detected.zellij;
-  if (missingAgents.length === 0 && !missingZellij) return null;
+  if (missingAgents.length === 0) return null;
 
   async function installAgent(agent: string) {
     setInstalling(agent);
@@ -60,7 +59,7 @@ export function MissingCLIsBanner() {
         body: JSON.stringify({ agent }),
       });
       // Best effort: queue the install command for the runner to pick up.
-      // The user sees it land in a zellij tab. We don't poll for completion
+      // The user sees it run in an owned terminal. We don't poll for completion
       // here — the next refresh of getInstalledCLIs will reflect success.
     } catch {
       // Same silent-fail rationale as above.
@@ -91,8 +90,8 @@ export function MissingCLIsBanner() {
           <div>
             <span className="font-medium text-text-primary">Missing local tools</span>
             <p className="text-sm text-text-secondary mt-0.5">
-              Fleet Runner dispatches agents into zellij tabs. The following weren&apos;t found on
-              your PATH:
+              Fleet Runner runs agents on this computer. The following weren&apos;t found on your
+              PATH:
             </p>
           </div>
           <button
@@ -108,17 +107,6 @@ export function MissingCLIsBanner() {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {missingZellij && (
-            <a
-              href="https://zellij.dev/documentation/installation"
-              target="_blank"
-              rel="noreferrer"
-              className="ui-btn-secondary ui-btn-xs inline-flex items-center gap-1"
-            >
-              <ExternalLink className="h-3 w-3" />
-              Install Zellij
-            </a>
-          )}
           {missingAgents.map((id) => (
             <button
               key={id}
@@ -133,8 +121,8 @@ export function MissingCLIsBanner() {
         </div>
 
         <p className="ui-micro-label text-text-tertiary">
-          Each &quot;Install&quot; opens a zellij tab with the installer command pre-typed — review
-          it before pressing Enter.{" "}
+          Each &quot;Install&quot; runs the installer in a terminal Fleet Runner owns — watch it in
+          the web terminal.{" "}
           <Link href="/docs/quickstart" className="text-accent-text underline">
             Need help?
           </Link>
