@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSessionUserId } from "@/lib/session";
 import { readIdParam, readJsonBody } from "@/lib/api/route-helpers";
-import { getGithubToken } from "@/lib/github-token";
+import { getRepoWriteToken } from "@/lib/github-org-token";
 import { getProjectCore } from "@/db/queries/projects";
 import { getUserProjectByEntityId } from "@/db/queries/user-projects";
 import { getExecutionAccess } from "@/lib/execution-access";
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     );
   }
 
-  const token = await getGithubToken(userId);
+  const token = (await getRepoWriteToken(userId))?.token ?? null;
   if (!token) {
     return NextResponse.json(
       { error: "No GitHub account linked. Sign in with GitHub first.", hasGithub: false },
@@ -115,7 +115,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const up = await getUserProjectByEntityId(userId, id);
   if (!project || !up) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const parsed = project.gitUrl ? parseGithubRepoUrl(project.gitUrl) : null;
-  const token = await getGithubToken(userId);
+  const token = (await getRepoWriteToken(userId))?.token ?? null;
   if (!parsed || !token)
     return NextResponse.json(
       { error: "A linked GitHub repository and account are required." },
