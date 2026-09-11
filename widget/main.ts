@@ -406,8 +406,21 @@ function elementLabel(el: Element): string {
   const title = el.getAttribute("title")?.trim();
   if (title) return title.slice(0, 100);
   const text = (el.textContent ?? "").replace(/\s+/g, " ").trim();
-  if (text) return text.slice(0, 100);
-  return `<${el.tagName.toLowerCase()}>`;
+  const tag = el.tagName.toLowerCase();
+  if (text) {
+    // A container's textContent is every word inside it run together
+    // ("coldstart-sep10-2339Started from FleetCrown · …", seen live). Name it
+    // by its first heading, or the tag plus its opening words.
+    if (el.children.length > 0 && text.length > 60) {
+      const heading = el.querySelector("h1,h2,h3,h4,legend,summary,[role=heading]");
+      const head = heading?.textContent?.replace(/\s+/g, " ").trim();
+      return head
+        ? `${tag}: ${head.slice(0, 60)}`
+        : `${tag}: \u201c${text.slice(0, 40)}\u2026\u201d`;
+    }
+    return text.slice(0, 100);
+  }
+  return `<${tag}>`;
 }
 
 /** id / data-testid first; else tag + up to 2 classes (skip fcw-*). */
