@@ -301,3 +301,41 @@ session), #589, #592, #596; the box's own register-row PR #588.
    Codex list); Focus-tab remnants in `ZellijLivePanel`,
    `WorkspaceTerminalClient`, `ControlPanel`.
 7. Scheduled `Audit` workflow red on main since 2026-09-07 (not the gate).
+
+### UI walk (2026-09-11, 06:16–06:30 UTC, real browser)
+
+The earlier walks used the product's routes from curl. This one drove the
+actual FleetCrown UI in a Chromium (Playwright) with the studio session, plus
+the site's own feedback widget. Project `kaffeeklappe-sep11`, FleetCrown
+b06fde7.
+
+- Projects → Add: name + description → project created. It did not appear in
+  the default list of 25 (found via search); a just-created project should
+  surface first.
+- Project page → Make it happen with a brief: "Filling the profile — 9 fields",
+  "Creating the repository — catomean/kaffeeklappe-sep11", "Putting an agent
+  on it — request accepted". The deployment panel showed "Deployment is
+  running… Check deployment" and, on its own polling, flipped to "Site
+  deployed — Open live site → https://kaffeeklappe-sep11.orangecat.ch/". Port
+  4032, register row PR #606 from the box, runtime env, unit, vhost: no hand
+  on the box. After a reload the page shows a Live control and the kickoff
+  panel is gone.
+- Control listed the project as "Ready for next step · Last run completed"
+  once the kickoff agent finished; its PR #1 (the page, to the brief) was
+  merged by the operator; Deploy on push; live with menu, hours and widget.
+- On the live site, the widget's own form (scope, text, optional contact,
+  voice, screenshots) sent a visitor report. It appeared in FleetCrown's
+  Feedback inbox under "Needs you" with an Implement button. Implement →
+  "Queued — starting" → "Working now". The agent's PR #2 was merged by the
+  operator; the deploy put "Sonntags und an Feiertagen geschlossen" on the
+  live page. Resolve in the inbox → "Shipped · Done · resolved today".
+
+UI-only findings: (1) new project not surfaced in the list; (2) the inbox
+item stayed "Working now" after the agent had finished and opened its PR —
+the same run-record defect as walk B, now seen in the UI an operator would
+watch; "Check live" never appeared, only Resolve; (3) the watchdog seeded its
+targets from the release register, not the one just written (fixed in #607);
+(4) starter has no favicon (console 404).
+
+Still two operator merges on the path (agent PRs on a site repo with no CI or
+auto-merge); everything else ran from the product.
