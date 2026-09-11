@@ -11,6 +11,22 @@ const CLOUD_BUILDER_PRIVATE_MESSAGE =
 const BUILDER_REQUIRED_MESSAGE =
   "No builder is connected for this account. Open Fleet Runner on this computer, then dispatch again.";
 
+/**
+ * May this account use FLEET-OWNED infrastructure — the shared cloud builder,
+ * and the org GitHub token that creates repositories in the fleet's
+ * organisation? Founder or explicit allowlist, nothing else.
+ *
+ * Separate from getExecutionAccess because that one also reads runner
+ * presence, which a GitHub write has no use for; and because the question
+ * "may this account act as the fleet" deserves one name that every caller
+ * asks by, rather than each re-deriving `isDefault || allowlist`.
+ */
+export async function isFleetInfrastructureAllowed(userId: string): Promise<boolean> {
+  const { getUserById } = await import("@/db/queries/users");
+  const user = await getUserById(userId).catch(() => null);
+  return !!user?.isDefault || cloudBuilderAllowlist().has(userId);
+}
+
 function cloudBuilderAllowlist(): Set<string> {
   return new Set(
     (process.env.FLEETCROWN_CLOUD_BUILDER_USER_IDS ?? "")
