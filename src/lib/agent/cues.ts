@@ -1,28 +1,91 @@
 /**
- * Turn cues — pure predicates deciding which optional context a turn earns.
+ * Turn cues — pure predicates deciding which context a turn earns.
  *
- * Kept apart from context.ts (which imports the whole data layer) so the policy
- * can be tested without a database. The rule they share: the seed sits near the
- * small models' prompt ceiling, so optional context has to be asked for, and
- * every cue is matched loosely because the two errors are not symmetric — a
- * false positive costs a few tokens, a false negative costs a confident wrong
- * answer about the operator's own records.
+ * Kept apart from the data layer so the policy can be tested without a
+ * database. Every cue is matched loosely on purpose, because the two errors
+ * are not symmetric: a false positive costs a few hundred tokens of records
+ * the model ignores; a false negative costs a confident wrong answer about the
+ * operator's own data. Production served the false negative on 2026-08-14
+ * (approvals) and again on 2026-09-11 (feedback), and both times the answer
+ * — "Not in your data." — was indistinguishable from a checked one.
+ *
+ * Several independent words per cue rather than one canonical term, so the
+ * question survives any single one being missing or misspelled ("what is
+ * pening for approval" is a real transcript line).
  */
 
-/** Planning/triage turns, which is when the computed daily brief earns its tokens. */
+/** Planning/triage turns, when the computed daily brief earns its tokens. */
 export const PLANNING_CUES =
   /\b(plan|today|day|urgent|priorit|attention|focus|stuck|due|deadline|overdue|next|habit|commit|risk|blocked|first)\b/i;
 
-/**
- * Turns about the approval queue.
- *
- * This one is load-bearing beyond token budgeting. When Groq's org-wide TPM
- * window is exhausted the tool loop dies entirely and Loki answers from seed
- * facts on a TOOLLESS fallback model — so if this cue misses, a queue reachable
- * only by tool call is invisible and the operator is told nothing is pending
- * while drafts wait. Production served exactly that (2026-08-14). Hence several
- * independent words rather than one canonical term: the question survives any
- * single one of them being missing or misspelled.
- */
+/** Turns about the approval queue. */
 export const APPROVAL_CUES =
   /\b(approv|pending|queue|waiting|await|sign[- ]?off|authoriz|authoris|decide|decision|draft|reject)\w*/i;
+
+/** Visitor feedback — the widget, reports, suggestions, bug reports. */
+export const FEEDBACK_CUES =
+  /\b(feedback|feed back|report(?:ed|s)?|suggestion|widget|visitor|complain|bug report|inbox|filed|submitted|sent in)\w*/i;
+
+/** Agent runs and dispatches — did it run, finish, fail, what is waiting. */
+export const RUN_CUES =
+  /\b(run|runs|ran|running|dispatch|finish|finished|complet|fail|failed|failing|error|errored|crash|stuck|blocked|hang|hung|timeout|timed out|waiting|queued|working on|implement|autopilot|agent|agents|session|sessions|claude|codex|hermes)\w*/i;
+
+/** The fleet as a whole — status, health, what needs the operator. */
+export const OPS_CUES =
+  /\b(fleet|status|health|healthy|needs? me|need my|what'?s (?:up|new|happening|going on)|overview|summary|pulse|runner|offline|online|alert|alerts|budget|tokens|quota|rate.?limit|check on|anything (?:wrong|broken)|everything ok|how are things)\b/i;
+
+/** Goals, progress, targets. */
+export const GOAL_CUES = /\b(goal|goals|milestone|progress|target|objective|okr|roadmap)\w*/i;
+
+/** Habits and streaks. */
+export const HABIT_CUES = /\b(habit|habits|streak|routine|daily|check(?:ed)? off)\w*/i;
+
+/** Commitments, deadlines, calendar-shaped things. */
+export const COMMITMENT_CUES =
+  /\b(commit|commitment|deadline|due|event|events|meeting|calendar|appointment|promise|owe|schedule)\w*/i;
+
+/** People and outreach. */
+export const PEOPLE_CUES =
+  /\b(who|contact|contacts|person|people|reach|email|message|call|phone|whatsapp|telegram|intro|introduce|met|know)\b/i;
+
+/**
+ * The crew and delegated work.
+ *
+ * "owe" is here AND in COMMITMENT_CUES on purpose. "Who owes me what" has two
+ * true answers in this product — a commitment someone made, and an assignment
+ * someone accepted — and the words cannot tell them apart. Both are retrieved.
+ */
+export const CREW_CUES =
+  /\b(crew|delegat|assign|assignment|assignee|team|hand(?:ed)? (?:over|off)|task|tasks|human|owe|owes|owed)\w*/i;
+
+/** Sticky notes and things the operator asked to remember. */
+export const CAPTURE_CUES =
+  /\b(note|notes|noted|remember|remind|jot|capture|captured|wrote down|save[ds]?)\b/i;
+
+/** Knowledge, decisions, docs — the semantic index. */
+export const KNOWLEDGE_CUES =
+  /\b(why|how does|how do|decide|decided|decision|doc|docs|readme|architecture|design|explain|what is|what's the|remember when|history|wrote)\b/i;
+
+/**
+ * The outside economy — OrangeCat's open demand and matching listings: what
+ * the fleet could BUILD FOR, and who is asking for it.
+ *
+ * The one source here that is not the operator's own data, so it is asked for
+ * rather than always on. It was previously fetched on every fallback turn and
+ * never on a primary one, which is the worst of both: it cost tokens where it
+ * was rarely relevant and was missing where it was.
+ */
+export const ECONOMY_CUES =
+  /\b(demand|need(?:s|ed)?|opportunit|market|client|customer|lead|leads|sell|sale|revenue|money|earn|paid|build for|who wants|looking for|orangecat)\w*/i;
+
+/** Projects by name or in aggregate. */
+export const PROJECT_CUES =
+  /\b(project|projects|repo|repos|repository|app|apps|site|sites|stack|codebase|product|products)\w*/i;
+
+/**
+ * Words that mark "most recent / latest / last" — the shape of question where
+ * the ORDER of records is the answer. Used by the planner to put the newest
+ * record of the leading source first and to keep the list short.
+ */
+export const RECENCY_CUES =
+  /\b(recent|recently|latest|last|newest|just|today|this morning|tonight)\b/i;

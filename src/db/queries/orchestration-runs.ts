@@ -2,7 +2,7 @@ import type { FixShipping } from "@/lib/feedback/fix-shipping";
 import { and, desc, eq, gt, inArray, isNotNull, isNull, lt, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { EXECUTOR_COPY } from "@/config/executor-copy";
-import { ORCH_STATE } from "@/lib/orchestration/contract";
+import { ORCH_STATE, type OrchestrationState } from "@/lib/orchestration/contract";
 import {
   ORCHESTRATION_OUTCOME,
   orchestrationRuns,
@@ -608,4 +608,99 @@ export async function stampRunFix(runId: string, userId: string, fix: FixShippin
       payload: sql`jsonb_set(COALESCE(payload, '{}'), '{fix}', ${JSON.stringify(fix)}::jsonb)`,
     })
     .where(and(eq(orchestrationRuns.id, runId), eq(orchestrationRuns.userId, userId)));
+}
+/**
+ * The operator's most recent runs across every project, newest first — the
+ * read Loki uses to answer "did my agent finish?" and "what is waiting?".
+ *
+ * Bounded and narrow on purpose: no `raw`/`resultText` blobs, just the columns
+ * a one-line status needs. Filtering by state is optional so the same read
+ * serves "what's waiting" (states=[waiting]) and "what happened today" (any).
+ */
+export type RecentRunRow = {
+  id: string;
+  projectKey: string;
+  adapter: string;
+  intent: string;
+  state: string;
+  outcome: OrchestrationOutcome | null;
+  startedAt: Date;
+  finishedAt: Date | null;
+  error: string | null;
+  note: string | null;
+  summaryStatus: string | null;
+  summaryDone: string | null;
+  summaryNext: string | null;
+  commit: string | null;
+};
+
+export async function listRecentRuns(
+  userId: string,
+  opts: {
+    limit?: number;
+    states?: OrchestrationState[];
+    projectKey?: string;
+    sinceMs?: number;
+  } = {},
+): Promise<RecentRunRow[]> {
+  const limit = Math.min(Math.max(opts.limit ?? 10, 1), 50);
+  const conditions = [eq(orchestrationRuns.userId, userId)];
+  if (opts.states && opts.states.length > 0)
+    conditions.push(inArray(orchestrationRuns.state, opts.states));
+  if (opts.projectKey) conditions.push(eq(orchestrationRuns.projectKey, opts.projectKey));
+  if (opts.sinceMs)
+    conditions.push(gt(orchestrationRuns.startedAt, new Date(Date.now() - opts.sinceMs)));
+
+  const rows = await db
+    .select({
+      id: orchestrationRuns.id,
+      projectKey: orchestrationRuns.projectKey,
+      adapter: orchestrationRuns.adapter,
+      intent: orchestrationRuns.intent,
+      state: orchestrationRuns.state,
+      outcome: orchestrationRuns.outcome,
+      startedAt: orchestrationRuns.startedAt,
+      finishedAt: orchestrationRuns.finishedAt,
+      payload: orchestrationRuns.payload,
+      summary: orchestrationRuns.summary,
+    })
+    .from(orchestrationRuns)
+    .where(and(...conditions))
+    .orderBy(desc(orchestrationRuns.startedAt))
+    .limit(limit);
+
+  return rows.map((r) => ({
+    id: r.id,
+    projectKey: r.projectKey,
+    adapter: r.adapter,
+    intent: r.intent,
+    state: r.state,
+    outcome: r.outcome ?? null,
+    startedAt: r.startedAt,
+    finishedAt: r.finishedAt ?? null,
+    error: r.payload?.error ?? null,
+    note: r.payload?.note ?? null,
+    summaryStatus: r.summary?.status ?? null,
+    summaryDone: r.summary?.done ?? null,
+    summaryNext: r.summary?.next ?? null,
+    commit: r.summary?.commit ?? null,
+  }));
+}
+
+/** Runs started inside `sinceMs`, tallied per state — the fleet's pulse in one read. */
+export async function countRunsByStateSince(
+  userId: string,
+  sinceMs: number,
+): Promise<Record<string, number>> {
+  const rows = await db
+    .select({ state: orchestrationRuns.state, n: sql<number>`count(*)::int` })
+    .from(orchestrationRuns)
+    .where(
+      and(
+        eq(orchestrationRuns.userId, userId),
+        gt(orchestrationRuns.startedAt, new Date(Date.now() - sinceMs)),
+      ),
+    )
+    .groupBy(orchestrationRuns.state);
+  return Object.fromEntries(rows.map((r) => [r.state, Number(r.n)]));
 }

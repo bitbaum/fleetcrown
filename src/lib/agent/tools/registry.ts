@@ -147,7 +147,10 @@ export function toOpenAITools(registry: ToolRegistry): Array<Record<string, unkn
     type: "function",
     function: {
       name: t.name,
-      description: t.description,
+      // The first sentence only. The full description is already in the text
+      // catalog the model reads; repeating it here charged ~1000 tokens per
+      // call for the second copy, on the vendor with the smallest window.
+      description: t.description.split(/(?<=\.)\s+/)[0] ?? t.description,
       parameters: zodToJsonSchema(t.params),
     },
   }));

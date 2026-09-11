@@ -30,7 +30,7 @@
  */
 import { HTTP_TIMEOUT_LONG_MS } from "@/lib/constants/time";
 import { classifyGroqLimit, groqRetryAfterSeconds, humanizeWait } from "@/lib/agent/groq-error";
-import { chainFrom, type ChatLink } from "@/config/chat-models";
+import { chainFrom, linkPromptBudgetTokens, type ChatLink } from "@/config/chat-models";
 import { recordAIHealthFailure, recordAIHealthSuccess } from "@/lib/ai/health";
 
 export type ChatMessage = {
@@ -177,6 +177,14 @@ export type ModelCallInput = {
   maxTokens?: number;
   temperature?: number;
   timeoutMs?: number;
+  /**
+   * Estimated prompt size. Links whose per-call budget is smaller are SKIPPED
+   * before any request is made — a preflight, not a failure. Without it a
+   * prompt sized for a 128k-context vendor is first sent to Groq, refused as
+   * "request too large", and the loop sheds facts to fit the vendor it should
+   * simply have walked past.
+   */
+  promptTokens?: number;
 };
 
 /**
@@ -349,16 +357,30 @@ export async function callModelWithTools(
   const kinds = new Set<FailureKind>();
   const drained = new Set<string>();
 
+  const skipped: string[] = [];
   for (const link of chain) {
     if (drained.has(link.provider.id)) continue;
+    if (input.promptTokens !== undefined) {
+      const budget = linkPromptBudgetTokens(link);
+      if (input.promptTokens > budget) {
+        skipped.push(
+          `${link.provider.id}/${link.model} (prompt ~${input.promptTokens} > ${budget})`,
+        );
+        continue;
+      }
+    }
     // Two attempts at most: the second drops the native `tools` field for a
     // model that rejected it.
     for (const tools of [input.tools, [] as Array<Record<string, unknown>>]) {
       try {
         const turn = await callOneLink(link, input, tools);
-        if (failures.length > 0) {
+        if (failures.length > 0 || skipped.length > 0) {
           console.warn(
-            `[loki] answered on ${turn.model} after ${failures.length} refusal(s): ${failures.join("; ")}`,
+            `[loki] answered on ${turn.model}` +
+              (skipped.length ? ` after skipping ${skipped.join(", ")}` : "") +
+              (failures.length
+                ? ` after ${failures.length} refusal(s): ${failures.join("; ")}`
+                : ""),
           );
         }
         // Recorded once per top-level call — a later link answering is the
@@ -389,9 +411,16 @@ export async function callModelWithTools(
     return callModelWithTools({ ...input, waited429: true });
   }
 
+  // Every link was skipped on size and none was even tried: that is a `size`
+  // outcome too — the caller's one move is to shed and retry. Not a health
+  // failure, for the same reason a provider-side size refusal is not.
+  if (failures.length === 0 && skipped.length > 0) {
+    throw new Error(`request too large on every model: skipped ${skipped.join(", ")}`);
+  }
+
   // Surface the most ACTIONABLE failure, not the last one. Only `size` gives the
   // caller something to do (shed facts and retry), so it wins when present.
-  const summary = failures.join("; ");
+  const summary = [...failures, ...skipped.map((s) => `skipped ${s}`)].join("; ");
   const exhausted = kinds.has("size")
     ? new Error(`request too large on every model: ${summary}`)
     : kinds.has("daily")

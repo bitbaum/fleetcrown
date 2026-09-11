@@ -37,6 +37,7 @@ import {
 } from "@/lib/command-resolve";
 import { injectPrompt } from "@/lib/inject-core";
 import { askLoki } from "@/lib/loki-core";
+import { pickProvenance } from "@/lib/loki/provenance";
 import { enqueueProposalFromMessage } from "@/lib/actions/enqueue-proposal";
 import { ORCHESTRATION_ADAPTER_IDS, type AdapterId } from "@/lib/orchestration";
 import {
@@ -621,6 +622,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           ? `agent:main:web:ask:${userId}`
           : `agent:main:web:conv:${conversationId}`,
         userId,
+        // The thread so far, so the primary path has the same continuity the
+        // gateway's session memory used to give only the fallback. Trimmed by
+        // the loop; only role + content cross this seam.
+        history: existing.messages
+          .filter((m) => m.role === "user" || m.role === "assistant")
+          .map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
       }),
       enqueueProposalFromMessage(userId, text, new Date().toISOString()).catch(() => null),
     ]);
@@ -632,8 +639,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       kind: "chat",
       content: reply,
       meta: {
-        model: loki.body.model ?? null,
         projectKey: chatProject,
+        // Provenance — which brain, which model, what was retrieved, which
+        // tools ran, and whether the answer verified clean. Persisted whole:
+        // this used to keep `model` and `sources` and drop `grounding`, so a
+        // flagged answer reopened from history rendered as a clean one.
+        ...pickProvenance(loki.body),
         // Persisted so a reopened thread can still resolve its citations. A
         // transcript that renders [F8] as a bare handle after reload would be
         // showing the operator a source they cannot reach.

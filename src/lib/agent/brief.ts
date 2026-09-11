@@ -144,3 +144,152 @@ export async function buildDailyBrief(userId: string): Promise<Directive[]> {
 
   return directives;
 }
+
+/**
+ * The fleet half of the brief — computed answers about what the AGENTS did,
+ * for "what needs me?" and every question that mentions runs or feedback.
+ *
+ * Same principle as the daily brief above: these are SQL predicates with exact
+ * answers ("7 runs are waiting, the oldest since 06:25"), and a model handed
+ * raw rows will miscount them. Each directive says how it was computed, and a
+ * failed query says it failed rather than reading as "none".
+ *
+ * Why it exists: on 2026-09-11 the operator's feedback spawned four runs that
+ * sat in `waiting` for an hour while the runner reported connected, and no
+ * surface said so. The fleet pulse is the one place that adds up.
+ */
+export async function buildFleetBrief(userId: string): Promise<Directive[]> {
+  const [
+    { listRecentRuns, countRunsByStateSince },
+    { listUserFeedback },
+    { getRunnerConnected },
+    { getPendingActions },
+    { getActiveAlerts },
+    { ORCH_STATE },
+    { FEEDBACK_STATUS },
+    { DAY_MS },
+    { timeLabel, agoLabel, excerpt },
+  ] = await Promise.all([
+    import("@/db/queries/orchestration-runs"),
+    import("@/db/queries/site-feedback"),
+    import("@/db/queries/runner-presence"),
+    import("@/db/queries/actions"),
+    import("@/db/queries/alerts"),
+    import("@/lib/orchestration/contract"),
+    import("@/lib/constants/statuses"),
+    import("@/lib/constants/time"),
+    import("@/lib/agent/fact-utils"),
+  ]);
+
+  const [waiting, errored, byState, feedback, runner, approvals, alerts] = await Promise.all([
+    listRecentRuns(userId, { states: [ORCH_STATE.WAITING], limit: 20 }).catch(() => null),
+    listRecentRuns(userId, { states: [ORCH_STATE.ERROR], limit: 10, sinceMs: DAY_MS }).catch(
+      () => null,
+    ),
+    countRunsByStateSince(userId, DAY_MS).catch(() => null),
+    listUserFeedback(userId, 50).catch(() => null),
+    getRunnerConnected(userId).catch(() => null),
+    getPendingActions(userId).catch(() => null),
+    getActiveAlerts(userId).catch(() => null),
+  ]);
+
+  const failed = (question: string): Directive => ({
+    question,
+    answer: [],
+    method: "QUERY FAILED — treat as unknown, not as none",
+  });
+  const directives: Directive[] = [];
+
+  directives.push(
+    runner === null
+      ? failed("is the runner connected")
+      : {
+          question: "is the runner connected",
+          method: "runner_presence.connected for this operator",
+          answer: [runner ? "yes — connected" : "NO — offline; dispatched runs cannot start"],
+        },
+  );
+
+  directives.push(
+    waiting === null
+      ? failed("runs waiting for a runner to pick them up")
+      : {
+          question: "runs waiting for a runner to pick them up",
+          method: "SQL: orchestration_runs.state = 'waiting', newest first",
+          answer: waiting.map(
+            (r) =>
+              `${r.projectKey} (${r.intent}) — waiting since ${timeLabel(r.startedAt)}, ${agoLabel(r.startedAt)}`,
+          ),
+        },
+  );
+
+  directives.push(
+    errored === null
+      ? failed("runs that errored in the last 24 hours")
+      : {
+          question: "runs that errored in the last 24 hours",
+          method: "SQL: state = 'error' AND started_at > now() - 24h",
+          answer: errored.map(
+            (r) =>
+              `${r.projectKey} (${r.intent}) — ${excerpt(r.error, 120) ?? "no error text recorded"}, ${agoLabel(r.startedAt)}`,
+          ),
+        },
+  );
+
+  directives.push(
+    byState === null
+      ? failed("runs started in the last 24 hours, by state")
+      : {
+          question: "runs started in the last 24 hours, by state",
+          method: "SQL: count(*) GROUP BY state WHERE started_at > now() - 24h",
+          answer: Object.entries(byState).map(([state, n]) => `${n} ${state}`),
+        },
+  );
+
+  directives.push(
+    feedback === null
+      ? failed("the most recent visitor feedback")
+      : {
+          question: "the most recent visitor feedback",
+          method: "SQL: site_feedback ORDER BY created_at DESC LIMIT 3 (visitor-written, quoted)",
+          answer: feedback
+            .slice(0, 3)
+            .map(
+              (f) =>
+                `${f.projectName} · ${f.status} · filed ${timeLabel(f.createdAt)} (${agoLabel(f.createdAt)}) — "${excerpt(f.suggestion, 140)}"`,
+            ),
+        },
+  );
+
+  directives.push(
+    feedback === null
+      ? failed("unread feedback reports")
+      : {
+          question: "unread feedback reports",
+          method: `SQL: count(*) WHERE status = '${FEEDBACK_STATUS.NEW}'`,
+          answer: [String(feedback.filter((f) => f.status === FEEDBACK_STATUS.NEW).length)],
+        },
+  );
+
+  directives.push(
+    approvals === null
+      ? failed("drafts waiting for approval")
+      : {
+          question: "drafts waiting for approval",
+          method: "SQL: actions WHERE status = 'draft'",
+          answer: approvals.slice(0, 8).map((a) => `${a.title} (${a.type})`),
+        },
+  );
+
+  directives.push(
+    alerts === null
+      ? failed("open alerts")
+      : {
+          question: "open alerts",
+          method: "SQL: alerts WHERE dismissed = false, newest first",
+          answer: alerts.slice(0, 8).map((a) => `[${a.severity}] ${a.title}`),
+        },
+  );
+
+  return directives;
+}
