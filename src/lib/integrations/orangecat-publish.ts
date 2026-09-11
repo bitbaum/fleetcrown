@@ -25,7 +25,7 @@ import {
   FLEETCROWN_PUBLIC_ORIGIN,
   type PromotableMoment,
 } from "@/config/orangecat-publish";
-import { linkOrangeCatEntity } from "@/db/queries/orangecat-links";
+import { linkOrangeCatEntity, unlinkOrangeCatEntity } from "@/db/queries/orangecat-links";
 import { ECOSYSTEM } from "@/config/ecosystem";
 import { cleanDescription } from "@/lib/project-display";
 import { buildRunMoment, type RunPromoteInput } from "./orangecat-run-moment";
@@ -120,6 +120,83 @@ export async function publishProjectToOrangeCat(
     console.warn("[orangecat-publish] project publish errored", { userProjectId, err });
     return { ok: false, reason: "oc_error" };
   }
+}
+
+export type UnpublishResult =
+  | { ok: true; reason?: "not_published" }
+  | { ok: false; reason: "not_found" | "not_linked" | "oc_error" | "oc_too_old"; detail?: string };
+
+/**
+ * Take a published project back off OrangeCat.
+ *
+ * Publishing was one-way. FleetCrown could create the public page and had no
+ * way to remove it: the status primitive lived behind OrangeCat's session auth,
+ * which an integration holding an OAuth token cannot call, and the back-link
+ * this file writes could never be cleared — so `already_published` was a
+ * permanent verdict and the page stayed up for good.
+ *
+ * Unpublishing sets the OrangeCat project back to `draft`. That is the state
+ * that is owner-only there (its public-visibility list is `active` and
+ * `completed`, mirroring the row-level policy), and it is reversible: the
+ * project, its funding history and its wall survive, and publishing again
+ * returns it to `active`. Deleting the OrangeCat project is deliberately NOT
+ * what this does — that is theirs to do, on their side, with their data.
+ *
+ * The back-link is cleared only after OrangeCat confirms, so a failed call
+ * leaves a project that still knows where it was published.
+ */
+export async function unpublishProjectFromOrangeCat(
+  userId: string,
+  userProjectId: string,
+): Promise<UnpublishResult> {
+  const project = await db.query.userProjects.findFirst({
+    where: and(
+      eq(userProjects.userId, userId),
+      or(eq(userProjects.id, userProjectId), eq(userProjects.entityProjectId, userProjectId)),
+    ),
+  });
+  if (!project) return { ok: false, reason: "not_found" };
+  if (!project.orangecatProjectId) return { ok: true, reason: "not_published" };
+
+  const link = await getOrangeCatLink(userId);
+  if (!link) return { ok: false, reason: "not_linked" };
+
+  try {
+    const res = await fetch(`${OC_BASE}/api/v1/projects/${project.orangecatProjectId}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${link.accessToken}`,
+      },
+      body: JSON.stringify({ status: "draft" }),
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (res.status === 404 || res.status === 405) {
+      // The endpoint that makes this possible shipped on 2026-09-11. An
+      // OrangeCat older than that cannot be asked, and saying so is better
+      // than clearing our back-link and leaving their page public.
+      return { ok: false, reason: "oc_too_old" };
+    }
+    if (!res.ok) {
+      const detail = (await res.text()).slice(0, 300);
+      console.warn("[orangecat-publish] unpublish failed", {
+        userProjectId,
+        status: res.status,
+        detail,
+      });
+      return { ok: false, reason: "oc_error", detail };
+    }
+  } catch (err) {
+    console.warn("[orangecat-publish] unpublish errored", { userProjectId, err });
+    return { ok: false, reason: "oc_error" };
+  }
+
+  await db
+    .update(userProjects)
+    .set({ orangecatProjectId: null, updatedAt: new Date() })
+    .where(eq(userProjects.id, project.id));
+  await unlinkOrangeCatEntity({ userId, projectId: project.id, entityType: "project" });
+  return { ok: true };
 }
 
 interface PromoteContent {

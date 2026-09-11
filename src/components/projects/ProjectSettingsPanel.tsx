@@ -31,6 +31,7 @@ export function ProjectSettingsPanel({
         {!hasRepo && <ProjectProvision projectId={projectId} onReload={() => router.refresh()} />}
         {liveUrl && <SiteRetirePanel projectId={projectId} liveUrl={liveUrl} />}
         <ProjectTeardown
+          hasSite={Boolean(liveUrl)}
           projectName={projectName}
           projectId={projectId}
           hasRepo={hasRepo}

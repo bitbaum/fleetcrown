@@ -34,6 +34,33 @@ export async function linkOrangeCatEntity(input: {
   await db.insert(orangecatEntityLinks).values(input).onConflictDoNothing();
 }
 
+/**
+ * Forget a link to an OrangeCat entity.
+ *
+ * The counterpart to linkOrangeCatEntity, and it did not exist: links could
+ * only ever be added, so a project that had been published there carried that
+ * fact for good even after the page came down. Scoped to one entity TYPE per
+ * call so unpublishing a project cannot silently drop a funding or community
+ * link the operator still wants.
+ */
+export async function unlinkOrangeCatEntity(input: {
+  userId: string;
+  projectId: string;
+  entityType: string;
+}): Promise<number> {
+  const removed = await db
+    .delete(orangecatEntityLinks)
+    .where(
+      and(
+        eq(orangecatEntityLinks.userId, input.userId),
+        eq(orangecatEntityLinks.projectId, input.projectId),
+        eq(orangecatEntityLinks.entityType, input.entityType),
+      ),
+    )
+    .returning({ id: orangecatEntityLinks.id });
+  return removed.length;
+}
+
 export async function getProjectsByOrangeCatEntity(entityType: string, entityId: string) {
   return db
     .select({ project: userProjects, link: orangecatEntityLinks })

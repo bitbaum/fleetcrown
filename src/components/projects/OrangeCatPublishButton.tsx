@@ -9,7 +9,8 @@ type PublishState =
   | { phase: "unlinked" }
   | { phase: "unpublished" }
   | { phase: "publishing" }
-  | { phase: "published"; orangecatProjectId: string };
+  | { phase: "published"; orangecatProjectId: string }
+  | { phase: "unpublishing"; orangecatProjectId: string };
 
 /**
  * "Publish to OrangeCat" — opt-in per-project projection onto the OrangeCat
@@ -21,6 +22,9 @@ type PublishState =
  */
 export function OrangeCatPublishButton({ projectId }: { projectId: string }) {
   const [state, setState] = useState<PublishState>({ phase: "loading" });
+  // Taking it down can fail in ways the person can act on (not linked, an
+  // OrangeCat too old to be asked), so the reason is shown rather than swallowed.
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -66,20 +70,57 @@ export function OrangeCatPublishButton({ projectId }: { projectId: string }) {
     }
   }
 
+  async function unpublish() {
+    if (state.phase !== "published") return;
+    const ocId = state.orangecatProjectId;
+    setError(null);
+    setState({ phase: "unpublishing", orangecatProjectId: ocId });
+    try {
+      const res = await fetch(`/api/user-projects/${projectId}/publish-orangecat`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setState({ phase: "unpublished" });
+        return;
+      }
+      const json = (await res.json().catch(() => ({}))) as { error?: string };
+      setError(json.error ?? "Could not take it down — try again shortly.");
+      setState({ phase: "published", orangecatProjectId: ocId });
+    } catch {
+      setError("Could not reach OrangeCat — try again shortly.");
+      setState({ phase: "published", orangecatProjectId: ocId });
+    }
+  }
+
   if (state.phase === "loading" || state.phase === "unavailable") return null;
 
-  if (state.phase === "published") {
+  if (state.phase === "published" || state.phase === "unpublishing") {
+    const busy = state.phase === "unpublishing";
     return (
-      <a
-        href={`https://orangecat.ch/projects/${state.orangecatProjectId}`}
-        target="_blank"
-        rel="noreferrer"
-        className="ui-btn-ghost min-h-11 gap-1.5"
-        title="Published on OrangeCat — view public page"
-        aria-label="View on OrangeCat"
-      >
-        <Cat className="h-4 w-4 text-accent-text" aria-hidden /> Published
-      </a>
+      <span className="inline-flex flex-wrap items-center gap-1.5">
+        <a
+          href={`https://orangecat.ch/projects/${state.orangecatProjectId}`}
+          target="_blank"
+          rel="noreferrer"
+          className="ui-btn-ghost min-h-11 gap-1.5"
+          title="Published on OrangeCat — view public page"
+          aria-label="View on OrangeCat"
+        >
+          <Cat className="h-4 w-4 text-accent-text" aria-hidden /> Published
+        </a>
+        {/* Publishing was one-way until 2026-09-11. The way back belongs next
+            to the way out, not in a settings page the publisher never sees. */}
+        <button
+          type="button"
+          onClick={() => void unpublish()}
+          disabled={busy}
+          className="ui-btn-text-cancel min-h-11 gap-1.5 text-xs"
+          title="Set the OrangeCat project back to draft — it stops being public, and nothing is deleted"
+        >
+          {busy ? "Taking it down…" : "Take it down"}
+        </button>
+        {error && <span className="ui-error-xs">{error}</span>}
+      </span>
     );
   }
 
