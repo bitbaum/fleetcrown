@@ -59,41 +59,41 @@ export const PALETTE = {
    *  The widget is always dark (works on any host page background), so these
    *  map to .dark tokens in globals.css. Change both places together. */
   widget: {
-    /** --accent-warm (dark) ≈ oklch(0.69 0.21 41) — primary accent, CTAs, focus */
+    /** --accent-warm (dark) ≈ oklch(0.69 0.21 41) — the ONE accent: send, focus, selection */
     accent: "#ff7519",
-    /** --accent-warm-hover (dark) ≈ oklch(0.75 0.19 43) — hover state */
+    /** --accent-warm-hover (dark) ≈ oklch(0.75 0.19 43) */
     accentHover: "#ff8534",
-    /** --accent-warm at 8% opacity — muted accent surface */
-    accentMuted: "#fff7ed",
+    /** accent over the dark surface at ~10% — hint rows, recording state */
+    accentMuted: "#2b1a10",
+    /** --on-accent — dark ink on the warm orange; white fails contrast there */
+    inkOnAccent: "#0a0a0a",
     /** --text-primary (dark) ≈ oklch(0.92 0 0) */
     text: "#ededed",
     /** --text-secondary (dark) ≈ oklch(0.6 0 0) */
-    textSecondary: "#999999",
+    textSecondary: "#9a9a9a",
     /** --text-tertiary (dark) ≈ oklch(0.4 0 0) */
     textTertiary: "#666666",
-    /** --text-muted (dark) ≈ oklch(0.35 0 0) */
+    /** placeholders, counters, key hints */
     textMuted: "#595959",
-    /** --surface-base (dark) ≈ oklch(0.12 0 0) */
-    surface: "#1f1f1f",
-    /** --surface-raised (dark) ≈ oklch(0.16 0 0) */
-    surfaceRaised: "#292929",
-    /** --surface-overlay (dark) ≈ oklch(0.14 0 0) */
-    surfaceSubtle: "#242424",
-    /** --border-subtle (dark) ≈ oklch(0.2 0 0) */
-    border: "#333333",
-    /** --border-default (dark) ≈ oklch(0.26 0 0) */
-    borderStrong: "#424242",
-    /** Used for picker bar on dark pages */
-    borderDark: "#525252",
-    /** --status-positive (dark) ≈ oklch(0.55 0.16 145) */
-    success: "#00a000",
-    /** --status-negative (dark) ≈ oklch(0.6 0.24 25) */
-    error: "#ef4444",
-    /** --status-negative-subtle (dark) — error surface */
-    errorSurface: "#fee",
-    /** Pure black for high contrast elements */
-    black: "#000000",
-    /** Pure white for high contrast text */
+    /** --surface-public — the near-black FleetCrown's own pages sit on */
+    surface: "#0a0a0a",
+    /** inputs and the segmented control's track */
+    surfaceRaised: "#141414",
+    /** hover fill for quiet buttons */
+    surfaceSubtle: "#1c1c1c",
+    /** --border-subtle (dark) */
+    border: "#262626",
+    /** --border-default (dark) */
+    borderStrong: "#3a3a3a",
+    /** launcher and picker-bar edge, which sit on unknown host backgrounds */
+    borderDark: "#4a4a4a",
+    /** --status-positive (dark) */
+    success: "#22a06b",
+    /** --status-negative (dark) */
+    error: "#ff6b57",
+    /** error over the dark surface */
+    errorSurface: "#2a1414",
+    black: "#0a0a0a",
     white: "#ffffff",
   },
 } as const;
