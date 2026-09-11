@@ -68,14 +68,36 @@ export function filterProjects(
     );
   });
 
+  const now = Date.now();
   return result.sort((a, b) => {
     const aHasIssues = hasProjectAttention(a);
     const bHasIssues = hasProjectAttention(b);
     if (aHasIssues !== bHasIssues) return aHasIssues ? -1 : 1;
+    // A project created moments ago is the one the operator is here for; an
+    // alphabetical fold of 25 hid kaffeeklappe-sep11 right after Add
+    // (2026-09-11). Newest first for a day, then the usual order.
+    const aNew = isFreshProject(a, now);
+    const bNew = isFreshProject(b, now);
+    if (aNew !== bNew) return aNew ? -1 : 1;
+    if (aNew && bNew) return createdMs(b) - createdMs(a);
     const aHasNext = hasAnswer(a.attrs[PROJECT_ATTR.NEXT_STEP]);
     const bHasNext = hasAnswer(b.attrs[PROJECT_ATTR.NEXT_STEP]);
     if (aHasNext !== bHasNext) return aHasNext ? -1 : 1;
     if (a.readonly !== b.readonly) return a.readonly ? 1 : -1;
     return a.name.localeCompare(b.name);
   });
+}
+
+export const FRESH_PROJECT_MS = 24 * 60 * 60 * 1000;
+
+function createdMs(p: ProjectGridRow): number {
+  const v = p.createdAt;
+  if (!v) return 0;
+  const ms = v instanceof Date ? v.getTime() : Date.parse(String(v));
+  return Number.isFinite(ms) ? ms : 0;
+}
+
+export function isFreshProject(p: ProjectGridRow, now = Date.now()): boolean {
+  const ms = createdMs(p);
+  return ms > 0 && now - ms < FRESH_PROJECT_MS;
 }

@@ -17,13 +17,18 @@ import { haptic } from "@/lib/haptics";
  * Returns `{ create, saving, error, setError }` — `create(body)` resolves
  * to `true` on success so the caller can decide whether to close its modal.
  */
-export function useCreateMutation<TBody>({
+export function useCreateMutation<TBody, TData = Record<string, unknown>>({
   request,
   errorLabel = "item",
+  onCreated,
 }: {
   request: (body: TBody) => Promise<Response>;
   /** Used in the fallback error message: "Failed to create <errorLabel>". */
   errorLabel?: string;
+  /** Runs with the decoded success body before the refresh — e.g. to navigate
+   *  straight to the thing that was just created instead of leaving the user
+   *  to find it in a list. */
+  onCreated?: (data: TData) => void;
 }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
@@ -40,6 +45,7 @@ export function useCreateMutation<TBody>({
         setError(data.error ?? `Failed to create ${errorLabel}`);
         return false;
       }
+      onCreated?.(data as TData);
       router.refresh();
       return true;
     } catch (e) {

@@ -34,6 +34,16 @@ if [ ! -f "$CI" ]; then
 fi
 ok "the scaffold ships a ci.yml"
 
+# Every new site must merge its own green PRs, or an agent's fix waits for a
+# human forever (the last manual click on the loop, 2026-09-11).
+AM="$HERE/../site-template/.github/workflows/auto-merge.yml"
+[ -f "$AM" ] || { echo "  ✗ scaffold has no auto-merge.yml — agent PRs would wait for a human"; exit 1; }
+grep -q 'auto-merge-sweep.yml@main' "$AM" || { echo "  ✗ auto-merge.yml does not call the fleet sweep"; exit 1; }
+grep -q 'ci_workflow: ci.yml' "$AM" && grep -q 'deploy_workflow: deploy.yml' "$AM" \
+  || { echo "  ✗ auto-merge.yml must name ci.yml as CI and deploy.yml as the deploy"; exit 1; }
+grep -q -- '--if-present lint' "$CI" || { echo "  ✗ ci.yml must tolerate a starter without a lint script"; exit 1; }
+ok "the scaffold ships an auto-merge.yml that names its CI and Deploy"
+
 # Read once. Comments are NOT stripped: this file's comments deliberately name
 # the very things it checks for, and a comment-blind scan would pass on a file
 # whose only mention of `.next/cache` is prose explaining its absence. So each
@@ -77,7 +87,7 @@ fi
 want "installs from the lockfile (pnpm install --frozen-lockfile)" \
      '^[[:space:]]*-[[:space:]]*run:[[:space:]]*pnpm install --frozen-lockfile[[:space:]]*$'
 want "type-checks" '(run:.*type-check)'
-want "lints"       '(run:.*pnpm run lint)'
+want "lints (tolerating a starter without a lint script)" '(run:.*pnpm run (--if-present )?lint)'
 want "builds"      '(run:.*pnpm run build)'
 want "runs on pull_request, not only on push" '^[[:space:]]*pull_request:'
 want "declares a concurrency group" '^concurrency:'
@@ -107,7 +117,7 @@ if [ ! -f "$NVMRC" ]; then
   bad "no .nvmrc — CI pins Node from it"
 else
   node_major="$(tr -dc '0-9.' < "$NVMRC" | cut -d. -f1)"
-  if grep -q "pnpm" && [ "${node_major:-0}" -lt 22 ] <<< "$src"; then
+  if grep -q "pnpm" <<< "$src" && [ "${node_major:-0}" -lt 22 ]; then
     bad "CI uses pnpm but .nvmrc pins Node $node_major — pnpm 11 needs >= 22.13"
   else
     ok "Node floor (.nvmrc = $node_major) satisfies the package manager CI uses"

@@ -76,7 +76,9 @@ jobs:
         run: pnpm run type-check
 
       - name: Lint
-        run: pnpm run lint
+        # The FleetCrown starter declares no linter yet; a missing script must
+        # not fail the site's first CI run.
+        run: pnpm run --if-present lint
 
       # The build is the real test for a content site: a broken import or a bad
       # config surfaces here and nowhere earlier.
