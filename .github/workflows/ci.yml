@@ -10,10 +10,28 @@ on:
   # main by hand, every automated merge would land and silently never ship.
   workflow_dispatch: {}
 
-# Cancel in-progress runs of the same workflow on the same branch — saves
-# minutes when commits land in quick succession.
+# On a PR branch the newest push is the only one that matters, so cancel the
+# rest — that is where the minutes are saved.
+#
+# On main the group is keyed per COMMIT, and the bug that forced this was a
+# commit cancelling a DIFFERENT commit's run.
+#
+# Two paths ship a commit, and exactly one fires per commit by design: a push to
+# main chains through `workflow_run`, and a dispatch runs the `ship` job below.
+# Under one group-per-branch, the dispatch cancels the push run for the same
+# commit — that is intended, it is how `ship` becomes the single path. What was
+# never intended is the NEXT merge cancelling the surviving run of the previous
+# one, which kills both paths at once and leaves the commit in the repository.
+#
+# Seen four times on 2026-09-11. Nothing was red. `gh run list` showed, for one
+# commit, a cancelled push run and a cancelled dispatch run, and for the commit
+# five minutes later, a clean success. Main green, every check passing, and the
+# box still serving the previous build.
+#
+# Per-commit keeps same-commit cancellation (so it still ships once) and stops
+# cross-commit cancellation (so it ships at all).
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.ref == 'refs/heads/main' && github.sha || 'branch' }}
   cancel-in-progress: true
 
 jobs:
