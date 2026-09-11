@@ -134,14 +134,14 @@ const GIT = "https://github.com/bitbaum/dogfood-site-sep10-1201";
 // Refresh economics.
 {
   const now = Date.now();
-  assert.equal(fixNeedsRefresh(null, now), true);
+  assert.equal(fixNeedsRefresh(null, { now }), true);
   assert.equal(
     fixNeedsRefresh(
       {
         state: FIX_SHIP_STATE.DEPLOYED,
         checkedAt: new Date(now - 10 * FIX_REFRESH_MS).toISOString(),
       },
-      now,
+      { now },
     ),
     false,
     "terminal = never again",
@@ -149,7 +149,7 @@ const GIT = "https://github.com/bitbaum/dogfood-site-sep10-1201";
   assert.equal(
     fixNeedsRefresh(
       { state: FIX_SHIP_STATE.PR_OPEN, checkedAt: new Date(now - 1000).toISOString() },
-      now,
+      { now },
     ),
     false,
     "fresh = wait",
@@ -160,7 +160,7 @@ const GIT = "https://github.com/bitbaum/dogfood-site-sep10-1201";
         state: FIX_SHIP_STATE.PR_OPEN,
         checkedAt: new Date(now - FIX_REFRESH_MS - 1).toISOString(),
       },
-      now,
+      { now },
     ),
     true,
   );

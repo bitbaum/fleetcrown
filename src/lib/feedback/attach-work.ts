@@ -11,7 +11,7 @@ import {
   refreshFixShipping,
   FIX_REFRESH_MAX_PER_REQUEST,
 } from "@/lib/feedback/fix-shipping-refresh";
-import { FIX_SHIP_STATE, type FixShipping } from "@/lib/feedback/fix-shipping";
+import { FIX_SHIP_STATE, parsePrRef, type FixShipping } from "@/lib/feedback/fix-shipping";
 import { FEEDBACK_STATUS } from "@/lib/constants/statuses";
 import {
   ORCH_STATE,
@@ -46,12 +46,34 @@ export async function attachFeedbackWork<T extends FeedbackListItem>(
   ];
   const runs = await getOrchestrationRunsByIds(userId, runIds);
 
+  // Projects first: deciding whether a cached ledger is still ABOUT the right
+  // pull request means re-parsing the handoff, and that needs the repo.
+  const dispatched = items.filter(
+    (i) => i.status === FEEDBACK_STATUS.DISPATCHED && !!i.dispatchedRunId,
+  );
+  const projects = dispatched.length
+    ? await getUserProjectsByEntityIds(userId, [...new Set(dispatched.map((i) => i.projectId))])
+    : new Map<
+        string,
+        Awaited<ReturnType<typeof getUserProjectsByEntityIds>> extends Map<string, infer V>
+          ? V
+          : never
+      >();
+
   // The fix ledger: only for dispatched rows whose run closed well, only when
   // the cached answer can still change, and only a handful per request.
   const candidates = items.filter((item) => {
     if (item.status !== FEEDBACK_STATUS.DISPATCHED || !item.dispatchedRunId) return false;
     const run = runs.get(item.dispatchedRunId);
-    return !!run && runFinishedWell(run) && fixNeedsRefresh(runFix(run));
+    if (!run || !runFinishedWell(run)) return false;
+    // Re-parse the handoff every time (pure, free) so a cached answer about a
+    // DIFFERENT pull request is never trusted — that is how a parser bug froze
+    // rows in a terminal state nothing could correct.
+    const expected = parsePrRef(
+      (run.summary as { done?: string } | null)?.done ?? null,
+      projects.get(item.projectId)?.gitUrl ?? null,
+    );
+    return fixNeedsRefresh(runFix(run), { expectedPrUrl: expected?.url ?? null });
   });
   const refreshed = new Map<string, FixShipping>();
   // Projects whose last shipped fix failed to deploy, computed from the
@@ -63,9 +85,6 @@ export async function attachFeedbackWork<T extends FeedbackListItem>(
       brokenProjects.add(item.projectId);
   }
   if (candidates.length) {
-    const projects = await getUserProjectsByEntityIds(userId, [
-      ...new Set(candidates.map((c) => c.projectId)),
-    ]);
     await Promise.all(
       candidates.slice(0, FIX_REFRESH_MAX_PER_REQUEST).map(async (item) => {
         const run = runs.get(item.dispatchedRunId!)!;
