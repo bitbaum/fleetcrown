@@ -20,7 +20,11 @@ import {
   parsePrRef,
   pickDeployRun,
 } from "../../src/lib/feedback/fix-shipping";
-import { deriveFeedbackWork, FEEDBACK_WORK_PHASE } from "../../src/lib/feedback/work-phase";
+import {
+  deriveFeedbackWork,
+  FEEDBACK_WORK_PHASE,
+  WAITING_ON,
+} from "../../src/lib/feedback/work-phase";
 import { FEEDBACK_STATUS } from "../../src/lib/constants/statuses";
 import { ORCH_STATE, ORCHESTRATION_OUTCOME } from "../../src/lib/orchestration/contract";
 
@@ -245,3 +249,74 @@ const GIT = "https://github.com/bitbaum/dogfood-site-sep10-1201";
 }
 
 console.log("feedback-fix-ledger: ok");
+
+// Who is blocked — the inbox's grouping key. The page asks one question
+// ("is anything waiting on me?") and DB status could not answer it: a fix
+// that merged and deployed an hour ago sat under "In progress" next to an
+// agent mid-run, so the row that needed a person read as the one that didn't.
+{
+  const at = new Date().toISOString();
+  const pr = { number: 2, url: `${GIT}/pull/2`, title: "t" };
+  const closedRun = {
+    id: "r",
+    state: ORCH_STATE.DONE,
+    outcome: ORCHESTRATION_OUTCOME.SUCCESS,
+    startedAt: new Date(),
+    finishedAt: new Date(),
+    deliveredAt: null,
+    lastProgressAt: null,
+    error: null,
+    summaryDone: "opened PR #2",
+  };
+  const waitingFor = (state: (typeof FIX_SHIP_STATE)[keyof typeof FIX_SHIP_STATE] | null) =>
+    deriveFeedbackWork(FEEDBACK_STATUS.DISPATCHED, {
+      ...closedRun,
+      fix: state ? { state, pr, checkedAt: at } : null,
+    }).waitingOn;
+
+  assert.equal(
+    waitingFor(FIX_SHIP_STATE.PR_OPEN),
+    WAITING_ON.MACHINE,
+    "a green PR auto-merges — nothing for a person to do",
+  );
+  assert.equal(waitingFor(FIX_SHIP_STATE.DEPLOYING), WAITING_ON.MACHINE);
+  assert.equal(waitingFor(null), WAITING_ON.MACHINE, "still asking GitHub where the PR is");
+  assert.equal(
+    waitingFor(FIX_SHIP_STATE.DEPLOYED),
+    WAITING_ON.YOU,
+    "deployed = look at it and confirm",
+  );
+  assert.equal(waitingFor(FIX_SHIP_STATE.MERGED), WAITING_ON.YOU);
+  assert.equal(waitingFor(FIX_SHIP_STATE.NO_EVIDENCE), WAITING_ON.YOU);
+  assert.equal(waitingFor(FIX_SHIP_STATE.PUSHED), WAITING_ON.YOU);
+  assert.equal(waitingFor(FIX_SHIP_STATE.PR_CLOSED), WAITING_ON.YOU);
+  assert.equal(waitingFor(FIX_SHIP_STATE.DEPLOY_FAILED), WAITING_ON.YOU);
+
+  // The rest of the ladder.
+  assert.equal(deriveFeedbackWork(FEEDBACK_STATUS.NEW, null).waitingOn, WAITING_ON.YOU);
+  assert.equal(deriveFeedbackWork(FEEDBACK_STATUS.RESOLVED, null).waitingOn, WAITING_ON.NOBODY);
+  assert.equal(deriveFeedbackWork(FEEDBACK_STATUS.ARCHIVED, null).waitingOn, WAITING_ON.NOBODY);
+  assert.equal(
+    deriveFeedbackWork(FEEDBACK_STATUS.DISPATCHED, {
+      ...closedRun,
+      state: ORCH_STATE.RUNNING,
+      outcome: null,
+    }).waitingOn,
+    WAITING_ON.MACHINE,
+    "an agent generating is not waiting on you",
+  );
+  assert.equal(
+    deriveFeedbackWork(FEEDBACK_STATUS.DISPATCHED, {
+      ...closedRun,
+      state: ORCH_STATE.WAITING,
+      outcome: null,
+      startedAt: new Date(Date.now() - 30 * 60_000),
+      deliveredAt: new Date(Date.now() - 29 * 60_000).toISOString(),
+      lastProgressAt: new Date(Date.now() - 20 * 60_000).toISOString(),
+    }).waitingOn,
+    WAITING_ON.YOU,
+    "Stalled is a person's problem — the bug that put it under 'In progress'",
+  );
+}
+
+console.log("feedback-waiting-on: ok");

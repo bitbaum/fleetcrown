@@ -27,8 +27,28 @@ export const FEEDBACK_WORK_PHASE = {
 } as const;
 export type FeedbackWorkPhase = (typeof FEEDBACK_WORK_PHASE)[keyof typeof FEEDBACK_WORK_PHASE];
 
+/**
+ * Who the item is blocked on. THE grouping key for every feedback surface:
+ * the page's one question is "is anything waiting on me?", and DB status
+ * cannot answer it — `dispatched` covers both an agent mid-run (nobody is
+ * blocked) and a fix that merged and deployed an hour ago (entirely on you).
+ * Grouping by status put "Stalled" under "In progress", which is the page
+ * telling a person to relax about the one row that needed them.
+ */
+export const WAITING_ON = {
+  /** The next move is the operator's: implement, retry, confirm. */
+  YOU: "you",
+  /** It moves by itself: an agent is generating, a green PR auto-merges, a deploy runs. */
+  MACHINE: "machine",
+  /** Finished or archived. */
+  NOBODY: "nobody",
+} as const;
+export type WaitingOn = (typeof WAITING_ON)[keyof typeof WAITING_ON];
+
 export type FeedbackWorkView = {
   phase: FeedbackWorkPhase;
+  /** Who has to act next — see WAITING_ON. */
+  waitingOn: WaitingOn;
   /** Short status word for the badge — never "dispatched". */
   label: string;
   /** One line of what to do / what happened. Written for a human, always.
@@ -113,6 +133,43 @@ export function deriveFeedbackWork(
   run: FeedbackRunSnapshot | null,
   now: number = Date.now(),
 ): FeedbackWorkView {
+  const view = derivePhase(status, run, now);
+  return { ...view, waitingOn: waitingOnFor(view) };
+}
+
+/**
+ * Who acts next. Derived in ONE place from the phase and the fix ledger, so
+ * a new phase cannot quietly land in the wrong column — every surface that
+ * groups feedback reads this, nothing re-decides it.
+ */
+function waitingOnFor(view: Omit<FeedbackWorkView, "waitingOn">): WaitingOn {
+  switch (view.phase) {
+    case FEEDBACK_WORK_PHASE.DONE:
+    case FEEDBACK_WORK_PHASE.ARCHIVED:
+      return WAITING_ON.NOBODY;
+    case FEEDBACK_WORK_PHASE.QUEUED:
+    case FEEDBACK_WORK_PHASE.WORKING:
+      return WAITING_ON.MACHINE;
+    case FEEDBACK_WORK_PHASE.NEEDS_VERIFY: {
+      // An open PR auto-merges and a running deploy finishes on their own;
+      // everything else in this phase is a person's move (look, confirm,
+      // retry). No ledger yet = we are still asking GitHub.
+      const state = view.ship?.state;
+      if (!view.ship) return WAITING_ON.MACHINE;
+      return state === FIX_SHIP_STATE.PR_OPEN || state === FIX_SHIP_STATE.DEPLOYING
+        ? WAITING_ON.MACHINE
+        : WAITING_ON.YOU;
+    }
+    default:
+      return WAITING_ON.YOU;
+  }
+}
+
+function derivePhase(
+  status: FeedbackStatus,
+  run: FeedbackRunSnapshot | null,
+  now: number,
+): Omit<FeedbackWorkView, "waitingOn"> {
   if (status === FEEDBACK_STATUS.ARCHIVED) {
     return { phase: FEEDBACK_WORK_PHASE.ARCHIVED, label: "Archived", detail: null };
   }
@@ -270,7 +327,7 @@ export function deriveFeedbackWork(
  * request; the product changes when that PR merges and deploys. Until the
  * ledger says "deployed", the honest button is "Review PR", not "Check live".
  */
-function shippingView(run: FeedbackRunSnapshot): FeedbackWorkView {
+function shippingView(run: FeedbackRunSnapshot): Omit<FeedbackWorkView, "waitingOn"> {
   const didLine = firstSentence(run.summaryDone);
   const fix = run.fix ?? null;
   const base = {
