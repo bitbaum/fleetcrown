@@ -327,6 +327,10 @@ function derivePhase(
  * request; the product changes when that PR merges and deploys. Until the
  * ledger says "deployed", the honest button is "Review PR", not "Check live".
  */
+function partialNote(partial: boolean): string {
+  return partial ? " The agent reported only partial success." : "";
+}
+
 function shippingView(run: FeedbackRunSnapshot): Omit<FeedbackWorkView, "waitingOn"> {
   const didLine = firstSentence(run.summaryDone);
   const fix = run.fix ?? null;
@@ -336,11 +340,14 @@ function shippingView(run: FeedbackRunSnapshot): Omit<FeedbackWorkView, "waiting
     didLine,
     diagnostic: null,
   };
-  const partial = run.outcome === ORCHESTRATION_OUTCOME.PARTIAL ? " (partial)" : "";
+  // "partial" is the agent's word for its own session, not a status a person
+  // reads on a row. It belongs in the sentence that tells them to look harder,
+  // never inside the badge: "Live (partial) · confirm" is three ideas in a chip.
+  const partial = run.outcome === ORCHESTRATION_OUTCOME.PARTIAL;
   if (!fix) {
     return {
       ...base,
-      label: `Finished${partial}`,
+      label: "Finished",
       detail: "Looking up where the change is…",
     };
   }
@@ -365,8 +372,8 @@ function shippingView(run: FeedbackRunSnapshot): Omit<FeedbackWorkView, "waiting
         ...base,
         label: fix.unverified ? `${pr} · open?` : `${pr} · open`,
         detail: fix.unverified
-          ? "GitHub could not be asked (no linked GitHub account or API error) — this is what the agent claimed."
-          : "Review it and let the repository's path merge it. Not live yet — the page still shows the old version.",
+          ? "GitHub could not be asked — this is what the agent claimed, unverified."
+          : `Not live yet — the page still shows the old version.${partialNote(partial)}`,
       };
     case FIX_SHIP_STATE.PR_CLOSED:
       return {
@@ -380,8 +387,7 @@ function shippingView(run: FeedbackRunSnapshot): Omit<FeedbackWorkView, "waiting
       return {
         ...base,
         label: `${pr} · merged`,
-        detail:
-          "Merged, but no deploy workflow was seen on the merge commit. Check the live page yourself — it changes when the site is next deployed.",
+        detail: `No deploy workflow ran on the merge commit, so the change lands whenever the site is next deployed.${partialNote(partial)}`,
         checkLive: true,
       };
     case FIX_SHIP_STATE.DEPLOYING:
@@ -400,9 +406,11 @@ function shippingView(run: FeedbackRunSnapshot): Omit<FeedbackWorkView, "waiting
     case FIX_SHIP_STATE.DEPLOYED:
       return {
         ...base,
-        label: `Live${partial} · confirm`,
-        detail:
-          "Merged and deployed. Open the live page, confirm the visitor's point is fixed, then Confirm — or Not fixed to send it back.",
+        // No sentence: the badge says Live, and the two buttons under it say
+        // "Check live" and "Confirm". Repeating that as prose printed the same
+        // 18 words on every deployed row — the noise this page keeps growing.
+        label: "Live · confirm",
+        detail: partial ? "The agent reported only partial success — worth a closer look." : null,
         checkLive: true,
       };
   }
