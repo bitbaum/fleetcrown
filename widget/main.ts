@@ -108,7 +108,16 @@ button:focus-visible, textarea:focus-visible, input:focus-visible { outline: 2px
 .mono { font-family: ${mono}; letter-spacing: .08em; text-transform: uppercase; font-size: 10px; }
 .dot { width: 7px; height: 7px; border-radius: 50%; background: ${theme.accent}; flex: none; box-shadow: 0 0 0 3px ${theme.accentMuted}; }
 
-/* ---- launcher: a FleetCrown pill, not an orange circle ---- */
+/* ---- launcher: a FleetCrown pill, not an orange circle ----
+   QUIET UNTIL WANTED. This sits on every client's site, in the corner of every
+   page, forever. At full weight it competes with the page it is there to
+   improve — on Diplodoctor it read as the most saturated thing on screen.
+   So at rest it is small, translucent and shadowless: present enough to find,
+   faint enough to forget. Hover or keyboard focus brings it to full weight
+   with its label. (No "open" state: the launcher is display:none while the
+   panel is up — see the rect guard below — so a rule for it would be dead.)
+   The label is hidden at rest, not removed, so the accessible name never
+   changes. */
 .fab {
   position: fixed; right: 16px; bottom: 16px; z-index: 2147483000;
   display: inline-flex; align-items: center; gap: 9px;
@@ -117,9 +126,21 @@ button:focus-visible, textarea:focus-visible, input:focus-visible { outline: 2px
   border: 1px solid ${theme.borderDark};
   font-size: 13px; font-weight: 500; letter-spacing: -.01em;
   box-shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
-  transition: transform .15s ease, opacity .2s ease, border-color .15s ease;
+  transition: transform .15s ease, opacity .2s ease, border-color .15s ease, box-shadow .2s ease;
+  opacity: .38;
+  transform: scale(.85);
+  transform-origin: bottom right;
+  box-shadow: none;
 }
-.fab:hover { border-color: ${theme.textSecondary}; transform: translateY(-1px); }
+.fab .fab-label { display: none; }
+.fab:hover, .fab:focus-visible {
+  opacity: 1;
+  transform: scale(1) translateY(-1px);
+  border-color: ${theme.textSecondary};
+  box-shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+}
+.fab:hover .fab-label, .fab:focus-visible .fab-label { display: inline; }
+@media (prefers-reduced-motion: reduce) { .fab { transition: opacity .2s ease; transform: none; } .fab:hover, .fab:focus-visible { transform: none; } }
 .fab .fab-icon { display: none; width: 18px; height: 18px; }
 .fab .fab-icon svg { width: 18px; height: 18px; display: block; }
 @media (max-width: 480px) {
