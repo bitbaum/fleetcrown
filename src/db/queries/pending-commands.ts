@@ -228,6 +228,30 @@ export async function enqueueHostedDispatchCommand(
   return enqueuePendingCommand({ userId, type: "hosted_dispatch", payload });
 }
 
+/** Hosted runner: CREATE a new site (repo → register → box → deploy).
+ *
+ *  hosted_analyze reads a repo and hosted_dispatch changes one; neither can
+ *  bring a site into existence, so every site so far was made by a person at a
+ *  terminal — the one step of the factory that still needed a human to start it.
+ *
+ *  Its own type, and deliberately NOT a task string: the fields are a closed
+ *  set, validated against a fixed grammar, and they reach `new-site.sh` as an
+ *  argument vector. Nothing here is ever interpreted as a shell command or as an
+ *  instruction to an agent, which is the whole difference between this and the
+ *  tab-injection path. See src/lib/hosted-runner/new-site.ts. */
+export type HostedNewSitePayload = {
+  slug: string;
+  title?: string;
+  kind: string;
+  status: string;
+};
+export async function enqueueHostedNewSiteCommand(
+  userId: string,
+  payload: HostedNewSitePayload,
+): Promise<string> {
+  return enqueuePendingCommand({ userId, type: "hosted_new_site", payload });
+}
+
 export async function enqueueSwitchAgentCommand(
   userId: string,
   payload: SwitchAgentPayload,
@@ -305,7 +329,13 @@ const STALE_CLAIM_SECONDS = 90;
 // duplicate branches/PRs (observed 2026-07-22). Give hosted command types a
 // lease longer than the run timeout so only a genuinely dead run is reclaimed.
 const HOSTED_STALE_CLAIM_SECONDS = 20 * 60;
-const HOSTED_COMMAND_TYPES = ["hosted_dispatch", "hosted_analyze"] as const;
+// hosted_new_site belongs here for the same reason Hermes does: provisioning
+// runs a repo creation, a box sync and a deploy, which takes minutes. On the 90s
+// local-dispatch lease a healthy in-flight scaffold would be reclaimed and a
+// second drainer would re-run it — and re-running THIS one does not duplicate a
+// branch, it tries to create a second site on a slug the first is mid-way
+// through claiming.
+const HOSTED_COMMAND_TYPES = ["hosted_dispatch", "hosted_analyze", "hosted_new_site"] as const;
 
 // Commands queued while the runner was offline go stale fast: executing a
 // days-old "inject into tab X" / "launch agent in Y" against a Zellij that has
