@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { useFetch } from "@/hooks/use-fetch";
 import { useClipboard } from "@/hooks/use-clipboard";
-import { deleteJson, postJson, throwApiError } from "@/lib/api/fetch";
+import { deleteJson, patchJson, postJson, throwApiError } from "@/lib/api/fetch";
 import { compactDurationHours, compactRelativeDate } from "@/lib/dates";
 import { FEEDBACK_SOURCE, FEEDBACK_STATUS } from "@/lib/constants/statuses";
 import { SYNTHESIZE_MIN_ITEMS } from "@/lib/feedback/compose-dispatch";
@@ -248,6 +248,7 @@ export function ProjectFeedbackSection({
         </div>
       )}
 
+      <AutoShipToggle projectId={projectId} />
       {reviewOpen && token && (
         <AiReviewCard
           projectId={projectId}
@@ -743,6 +744,73 @@ function AiReviewCard({
         </form>
       )}
       {error && <p className="mt-2 ui-error">{error}</p>}
+    </div>
+  );
+}
+
+/**
+ * "Ship fixes automatically" — who presses merge on an agent's fix for this
+ * project. Lives here because it belongs to the same loop as the widget: the
+ * widget collects the report, this decides whether the fix reaches the site
+ * without a person clicking.
+ *
+ * Three states, and the never-chosen one matters: a project nobody has decided
+ * about gets an invitation, not a switch sitting in the off position that
+ * looks like somebody's decision. Off is the effective default either way, so
+ * client sites — which FleetCrown cannot distinguish from its own — never ship
+ * themselves by accident.
+ */
+function AutoShipToggle({ projectId }: { projectId: string }) {
+  const { data, refetch } = useFetch<{ autoShip: boolean | null; hasRepo: boolean }>(
+    `/api/projects/${projectId}/auto-ship`,
+  );
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  if (!data || !data.hasRepo) return null;
+  const on = data.autoShip === true;
+  const neverChosen = data.autoShip === null || data.autoShip === undefined;
+  const set = async (next: boolean) => {
+    setSaving(true);
+    setError(null);
+    try {
+      await patchJson(`/api/projects/${projectId}/auto-ship`, { autoShip: next });
+      refetch();
+    } catch {
+      setError("Couldn't save that — the setting is unchanged.");
+    } finally {
+      setSaving(false);
+    }
+  };
+  return (
+    <div className="mb-3 flex items-start justify-between gap-4 rounded-xl border border-border-subtle bg-surface-base px-3 py-3">
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-text-primary">Ship fixes automatically</p>
+        <p className="mt-0.5 text-xs text-text-tertiary">
+          {on
+            ? "When an agent's pull request passes its checks, FleetCrown merges it and the site deploys. A repository with no checks is never merged, and one broken deploy pauses this."
+            : neverChosen
+              ? "Right now a fix waits for you to merge its pull request. FleetCrown can do that itself once the checks pass — it only ever merges the pull request it opened for this project."
+              : "A fix waits for you to merge its pull request."}
+        </p>
+        {error && <p className="mt-1 text-xs text-status-negative">{error}</p>}
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={on}
+        aria-label="Ship fixes automatically"
+        onClick={() => void set(!on)}
+        disabled={saving}
+        className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50 ${
+          on ? "bg-accent-primary" : "border border-border-subtle bg-surface-overlay"
+        }`}
+      >
+        <span
+          className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+            on ? "translate-x-[22px]" : "translate-x-0.5"
+          }`}
+        />
+      </button>
     </div>
   );
 }

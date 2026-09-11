@@ -405,3 +405,21 @@ export async function getUserProjectsByEntityIds(
     if (r.entityProjectId && !out.has(r.entityProjectId)) out.set(r.entityProjectId, r);
   return out;
 }
+
+/**
+ * Turn "ship fixes automatically" on or off for one project, addressed by its
+ * ENTITY id (the id the project page holds). Explicit false is stored, not
+ * cleared: null means "never chosen" and the UI treats the two differently.
+ */
+export async function setProjectAutoShip(
+  userId: string,
+  entityProjectId: string,
+  autoShip: boolean,
+): Promise<UserProject | null> {
+  const [row] = await db
+    .update(userProjects)
+    .set({ autoShip })
+    .where(and(eq(userProjects.userId, userId), eq(userProjects.entityProjectId, entityProjectId)))
+    .returning();
+  return row ?? null;
+}

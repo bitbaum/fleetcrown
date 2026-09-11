@@ -61,6 +61,18 @@ export const userProjects = pgTable(
     // decision, never inferred from which runner happens to be online — that
     // inference is how a closed lid used to kill work (see execution-access.ts).
     builderPref: text("builder_pref"),
+    /**
+     * "Ship fixes automatically": may FleetCrown merge the pull request an
+     * agent opened for a visitor's feedback, once it is genuinely green?
+     *
+     * NULL is a third state on purpose — the operator has never chosen, so the
+     * Feedback section invites them instead of showing a switch that looks
+     * like a decision someone made. false means chosen off; stop asking.
+     * Default off protects client sites by construction: FleetCrown cannot
+     * tell a client site from its own (that ledger lives in apps.conf on the
+     * box, not here), so nothing ships itself until a person says so.
+     */
+    autoShip: boolean("auto_ship"),
     position: integer("position").default(0), // user-defined sort order
     isActive: boolean("is_active").default(true).notNull(),
     notes: text("notes"), // free-form scratchpad visible in the profile panel

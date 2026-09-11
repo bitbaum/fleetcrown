@@ -11,6 +11,7 @@
 import { GITHUB_API_BASE } from "@/lib/github-api";
 import { getRepoWriteToken } from "@/lib/github-org-token";
 import { stampRunFix } from "@/db/queries/orchestration-runs";
+import { decideAutoShip } from "@/lib/feedback/auto-ship";
 import {
   deriveShippingFromPr,
   FIX_SHIP_STATE,
@@ -36,6 +37,10 @@ export type FixRefreshInput = {
   /** The reaper's repo evidence, if it found one (payload.evidence). */
   evidence: { kind: string; url: string; title: string } | null | undefined;
   gitUrl: string | null | undefined;
+  /** user_projects.auto_ship — may FleetCrown merge this PR itself? */
+  autoShip?: boolean | null;
+  /** Has an automatic ship on this project already broken the deploy? */
+  deployBroken?: boolean;
 };
 
 function ghInit(token: string): RequestInit {
@@ -52,7 +57,8 @@ async function fetchPr(ref: PrRef, token: string): Promise<GithubPrDetail | null
     ghInit(token),
   );
   if (!res.ok) return null;
-  const j = (await res.json()) as Partial<GithubPrDetail>;
+  const raw = (await res.json()) as Partial<GithubPrDetail> & { head?: { sha?: string } };
+  const j = raw;
   if (typeof j.number !== "number" || typeof j.html_url !== "string") return null;
   return {
     number: j.number,
@@ -61,7 +67,74 @@ async function fetchPr(ref: PrRef, token: string): Promise<GithubPrDetail | null
     state: j.state === "closed" ? "closed" : "open",
     merged_at: typeof j.merged_at === "string" ? j.merged_at : null,
     merge_commit_sha: typeof j.merge_commit_sha === "string" ? j.merge_commit_sha : null,
+    draft: j.draft === true,
+    mergeable: typeof j.mergeable === "boolean" ? j.mergeable : null,
+    headSha: typeof raw.head?.sha === "string" ? raw.head.sha : null,
   };
+}
+
+/** Draft/mergeable + the conclusions of the checks on the PR head — the two
+ *  facts decideAutoShip needs that a PR lookup alone does not carry. */
+async function fetchMergeReadiness(
+  ref: PrRef,
+  headSha: string,
+  token: string,
+): Promise<{ checkConclusions: (string | null)[] } | null> {
+  // check-runs covers GitHub Actions; commit statuses cover older integrations
+  // (a repo can use either, and "no checks at all" must stay distinguishable
+  // from "checks that passed").
+  const [runsRes, statusRes] = await Promise.all([
+    fetch(
+      `${GITHUB_API_BASE}/repos/${ref.owner}/${ref.repo}/commits/${encodeURIComponent(headSha)}/check-runs?per_page=50`,
+      ghInit(token),
+    ).catch(() => null),
+    fetch(
+      `${GITHUB_API_BASE}/repos/${ref.owner}/${ref.repo}/commits/${encodeURIComponent(headSha)}/status`,
+      ghInit(token),
+    ).catch(() => null),
+  ]);
+  if (!runsRes?.ok && !statusRes?.ok) return null;
+  const conclusions: (string | null)[] = [];
+  if (runsRes?.ok) {
+    const j = (await runsRes.json().catch(() => null)) as {
+      check_runs?: Array<{ status?: string; conclusion?: string | null }>;
+    } | null;
+    for (const r of j?.check_runs ?? [])
+      conclusions.push(r.status === "completed" ? (r.conclusion ?? null) : null);
+  }
+  if (statusRes?.ok) {
+    const j = (await statusRes.json().catch(() => null)) as {
+      statuses?: Array<{ state?: string }>;
+    } | null;
+    for (const st of j?.statuses ?? [])
+      conclusions.push(st.state === "success" ? "success" : (st.state ?? null));
+  }
+  return { checkConclusions: conclusions };
+}
+
+/** Squash-merge the PR. Returns GitHub's answer, never throws. */
+async function mergePr(ref: PrRef, token: string, title: string): Promise<boolean> {
+  try {
+    const res = await fetch(
+      `${GITHUB_API_BASE}/repos/${ref.owner}/${ref.repo}/pulls/${ref.number}/merge`,
+      {
+        ...ghInit(token),
+        method: "PUT",
+        headers: {
+          ...(ghInit(token).headers as Record<string, string>),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          merge_method: "squash",
+          commit_title: `${title} (#${ref.number})`,
+          commit_message: "Shipped automatically by FleetCrown: a visitor's feedback, fixed.",
+        }),
+      },
+    );
+    return res.ok;
+  } catch {
+    return false;
+  }
 }
 
 async function fetchRunsForSha(
@@ -141,6 +214,38 @@ export async function refreshFixShipping(input: FixRefreshInput): Promise<FixShi
               ? await fetchRunsForSha(ref, pr.merge_commit_sha, picked.token)
               : null;
           fix = deriveShippingFromPr(pr, runs, checkedAt);
+          // Opted in? Then FleetCrown presses merge on THIS pull request —
+          // the one its own dispatch produced — and nothing else. Deciding is
+          // pure (auto-ship.ts); this only supplies GitHub's facts and acts.
+          if (input.autoShip === true && fix.state === FIX_SHIP_STATE.PR_OPEN && pr.headSha) {
+            const readiness = await fetchMergeReadiness(ref, pr.headSha, picked.token);
+            const decision = decideAutoShip({
+              autoShip: input.autoShip,
+              fix,
+              fromOurDispatch: true,
+              draft: pr.draft === true,
+              mergeable: pr.mergeable ?? null,
+              checkConclusions: readiness?.checkConclusions ?? [],
+              deployBroken: input.deployBroken === true,
+            });
+            if (decision.merge && (await mergePr(ref, picked.token, pr.title))) {
+              // Re-read rather than assume: the merge answer says "accepted",
+              // and what the row must show is where the change IS now.
+              const after = await fetchPr(ref, picked.token);
+              if (after) {
+                const afterRuns =
+                  after.merged_at && after.merge_commit_sha
+                    ? await fetchRunsForSha(ref, after.merge_commit_sha, picked.token)
+                    : null;
+                fix = {
+                  ...deriveShippingFromPr(after, afterRuns, checkedAt),
+                  shippedByFleet: true,
+                };
+              }
+            } else if (!decision.merge) {
+              fix = { ...fix, autoShipHold: decision.hold };
+            }
+          }
         }
       }
     } catch {

@@ -50,6 +50,10 @@ export type FixShipping = {
   checkedAt: string;
   /** No GitHub token / API failure: the state is what the handoff claimed, unverified. */
   unverified?: boolean;
+  /** FleetCrown merged this itself because the project opted in. */
+  shippedByFleet?: boolean;
+  /** Automatic shipping is on but declined to merge — why (see auto-ship.ts). */
+  autoShipHold?: string;
 };
 
 /** How long a non-terminal ledger entry is trusted before GitHub is asked again. */
@@ -122,6 +126,11 @@ export type GithubPrDetail = {
   state: "open" | "closed";
   merged_at: string | null;
   merge_commit_sha: string | null;
+  /** Only read when deciding whether FleetCrown may merge it (see auto-ship.ts). */
+  draft?: boolean;
+  /** null while GitHub is still computing mergeability — never treat as true. */
+  mergeable?: boolean | null;
+  headSha?: string | null;
 };
 /** GitHub's workflow run object, only the fields the ledger reads. */
 export type GithubWorkflowRun = {

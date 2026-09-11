@@ -11,7 +11,7 @@ import {
   refreshFixShipping,
   FIX_REFRESH_MAX_PER_REQUEST,
 } from "@/lib/feedback/fix-shipping-refresh";
-import type { FixShipping } from "@/lib/feedback/fix-shipping";
+import { FIX_SHIP_STATE, type FixShipping } from "@/lib/feedback/fix-shipping";
 import { FEEDBACK_STATUS } from "@/lib/constants/statuses";
 import {
   ORCH_STATE,
@@ -54,6 +54,14 @@ export async function attachFeedbackWork<T extends FeedbackListItem>(
     return !!run && runFinishedWell(run) && fixNeedsRefresh(runFix(run));
   });
   const refreshed = new Map<string, FixShipping>();
+  // Projects whose last shipped fix failed to deploy, computed from the
+  // ledgers already cached on their runs — no extra state to keep in sync.
+  const brokenProjects = new Set<string>();
+  for (const item of items) {
+    const run = item.dispatchedRunId ? runs.get(item.dispatchedRunId) : undefined;
+    if (run && runFix(run)?.state === FIX_SHIP_STATE.DEPLOY_FAILED)
+      brokenProjects.add(item.projectId);
+  }
   if (candidates.length) {
     const projects = await getUserProjectsByEntityIds(userId, [
       ...new Set(candidates.map((c) => c.projectId)),
