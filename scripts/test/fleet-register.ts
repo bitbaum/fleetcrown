@@ -4,7 +4,15 @@
 // that contains all four surfaces at once.
 // Run: npx tsx scripts/test/fleet-register.ts
 import { parseAppsConf } from "@/lib/register/apps-conf";
-import { buildFleetRegister, canonicalSlug, repoFromGitUrl, summarize } from "@/lib/register/build";
+import {
+  buildFleetRegister,
+  canonicalSlug,
+  commerce,
+  isClientSite,
+  isPaid,
+  repoFromGitUrl,
+  summarize,
+} from "@/lib/register/build";
 
 let pass = 0;
 let fail = 0;
@@ -91,6 +99,41 @@ ok(
   s.projects === 7 && s.sites === 5 && s.fleetcrown === 5 && s.orangecat === 1 && s.solon === 1,
   `summary counts (${JSON.stringify(s)})`,
 );
+
+// ------------------------------------------------------------- commerce
+// The page reports what the studio earns. That number must come from the
+// register, not from prose — so these pin the arithmetic, including the
+// uncomfortable case the real register is actually in.
+// The row is served publicly. A client's terms are not ours to publish, and a
+// field added "just for the page" is how that stops being true — so assert the
+// absence, not just the presence of what we do carry.
+const publicKeys = Object.keys(by["kivvi"]!.site!).sort().join(",");
+ok(
+  publicKeys === "host,kind,owner,since,status,url",
+  `public site payload carries no terms (${publicKeys})`,
+);
+ok(by["kivvi"]?.site?.since === "2026-03-01", "a start date IS public — it is a date, not a price");
+ok(isClientSite(by["kivvi"]), "a site owned by RevampIT is client work");
+ok(!isClientSite(by["factory-sep11-0110"]), "a site owned by bitbaum is our own");
+ok(!isClientSite(by["short"]), "owner '-' is not a client — unknown is not a sale");
+ok(isPaid("900") && isPaid("CHF 1200"), "a price above zero is paid");
+ok(!isPaid("0") && !isPaid("-") && !isPaid("favour"), "zero, blank and favour are not paid");
+
+const c = commerce(apps);
+// kivvi (RevampIT, 900), aoz (AOZ, no terms), sink (S-Ink, no terms) are live
+// client sites; factory is ours and `short` has no owner.
+ok(c.engagements === 3, `three live engagements (${c.engagements})`);
+ok(
+  c.clients.join(",") === "AOZ,RevampIT,S-Ink",
+  `clients listed once each, sorted (${c.clients.join(",")})`,
+);
+ok(c.paying === 1, `one of them pays (${c.paying})`);
+ok(c.priced === 1, `terms recorded for one (${c.priced})`);
+ok(c.pipeline === 0, "no prospects in this fixture");
+
+const favour = parseAppsConf(`x|1|x.ch|/r|.|-|Client A|client-site|live|favour|0|-`);
+ok(commerce(favour).paying === 0, "a favour at price 0 is an engagement, not revenue");
+ok(commerce(favour).priced === 1, "…but its terms ARE recorded — 'favour' is a decision");
 
 console.log(`fleet-register: ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

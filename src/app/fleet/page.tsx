@@ -3,10 +3,17 @@ import Link from "next/link";
 import { PublicSurface } from "@/components/public/PublicSurface";
 import { PublicHeaderActions } from "@/components/public/PublicHeaderActions";
 import { FinalCta } from "@/components/public/FinalCta";
+import { getSessionUserId } from "@/lib/session";
 import { getUserProjects } from "@/db/queries/user-projects";
 import { getSelfImprovementTarget } from "@/db/queries/frontier";
 import { readAppsConf } from "@/lib/register/apps-conf";
-import { buildFleetRegister, summarize, type RegisterRow } from "@/lib/register/build";
+import {
+  buildFleetRegister,
+  commerce,
+  isClientSite,
+  summarize,
+  type RegisterRow,
+} from "@/lib/register/build";
 import { solonOrgSlugs } from "@/lib/register/solon";
 
 export const metadata: Metadata = {
@@ -35,6 +42,11 @@ export default async function FleetRegisterPage() {
   const owner = await getSelfImprovementTarget();
   const projects = owner ? await getUserProjects(owner.userId) : [];
   const solon = await solonOrgSlugs();
+  const apps = readAppsConf();
+  // What the studio charges is the studio's business. The register below is
+  // public; the commercial read of it is rendered only to the owner, and the
+  // numbers it needs never enter a row that a response body carries.
+  const viewerIsOwner = !!owner && (await getSessionUserId()) === owner.userId;
   const rows = buildFleetRegister(
     projects.map((p) => ({
       id: p.id,
@@ -47,7 +59,7 @@ export default async function FleetRegisterPage() {
       solonOrgSlug: p.solonOrgSlug,
       isActive: p.isActive,
     })),
-    readAppsConf(),
+    apps,
     solon.orgs,
   );
   const s = summarize(rows);
@@ -73,6 +85,7 @@ export default async function FleetRegisterPage() {
     },
   ].filter((g) => g.rows.length > 0);
 
+  const money = viewerIsOwner ? commerce(apps) : null;
   const gaps = {
     site: rows.filter((r) => !r.site).length,
     orangecat: rows.filter((r) => !r.orangecat).length,
@@ -105,6 +118,14 @@ export default async function FleetRegisterPage() {
               {g.title} · {g.rows.length}
             </a>
           ))}
+          {money && (
+            <a href="#money" className="ui-public-jumpbar-link">
+              What it earns
+            </a>
+          )}
+          <a href="#gaps" className="ui-public-jumpbar-link">
+            What is missing
+          </a>
         </nav>
       </div>
 
@@ -121,27 +142,66 @@ export default async function FleetRegisterPage() {
           </section>
         ))}
 
+        {/* The commercial read — owner only. It sits ABOVE the coverage gaps on
+            purpose: a studio's first question about its own register is not
+            "how many rows" but "which of these is a business". Every number is
+            computed from apps.conf's own owner/plan/price columns, so it cannot
+            be talked up. */}
+        {money && (
+          <section id="money" className="border-t border-border-subtle pt-10 sm:pt-16">
+            <h2 className="ui-public-display-md">What it earns</h2>
+            <p className="ui-public-section-lede mt-3 sm:mt-4">
+              {money.engagements > 0 && money.paying === 0
+                ? "Work shipped for other people, and what it is charged for. Right now that is nothing: every engagement is on favour terms. The sites are real; the invoices are the missing half."
+                : "Work shipped for other people, and what it is charged for. Terms come from the hosting register, one line per site."}
+            </p>
+            <ul className="ui-public-fleet-stats mt-8">
+              <li className="ui-public-fleet-stat">
+                <span className="ui-public-fleet-stat-num-accent">{money.engagements}</span>
+                <span className="ui-public-fleet-stat-label">
+                  live engagements
+                  {money.clients.length > 0 && <> — {money.clients.join(", ")}</>}
+                </span>
+              </li>
+              <li className="ui-public-fleet-stat">
+                <span className="ui-public-fleet-stat-num-accent">{money.paying}</span>
+                <span className="ui-public-fleet-stat-label">
+                  of them priced above zero. The rest are favours, recorded as such rather than left
+                  blank
+                </span>
+              </li>
+              <li className="ui-public-fleet-stat">
+                <span className="ui-public-fleet-stat-num-accent">{money.pipeline}</span>
+                <span className="ui-public-fleet-stat-label">
+                  sites in the pipeline — prospects and unverified addresses, each one a
+                  conversation that has not happened yet
+                </span>
+              </li>
+            </ul>
+          </section>
+        )}
+
         <section id="gaps" className="border-t border-border-subtle pt-10 sm:pt-16">
           <h2 className="ui-public-display-md">What is missing</h2>
           <p className="ui-public-section-lede mt-3 sm:mt-4">
             The register is a to-do list read sideways. These are the counts that should fall.
           </p>
-          <ul className="ui-public-fleet-gaps mt-8">
-            <li className="ui-public-fleet-gap">
-              <span className="ui-public-fleet-gap-num">{gaps.site}</span>
-              <span className="ui-public-fleet-gap-label">
+          <ul className="ui-public-fleet-stats mt-8">
+            <li className="ui-public-fleet-stat">
+              <span className="ui-public-fleet-stat-num">{gaps.site}</span>
+              <span className="ui-public-fleet-stat-label">
                 projects without a site — each one is a hosted provisioning away
               </span>
             </li>
-            <li className="ui-public-fleet-gap">
-              <span className="ui-public-fleet-gap-num">{gaps.orangecat}</span>
-              <span className="ui-public-fleet-gap-label">
+            <li className="ui-public-fleet-stat">
+              <span className="ui-public-fleet-stat-num">{gaps.orangecat}</span>
+              <span className="ui-public-fleet-stat-label">
                 without an OrangeCat profile — nowhere to be backed, funded or hired
               </span>
             </li>
-            <li className="ui-public-fleet-gap">
-              <span className="ui-public-fleet-gap-num">{gaps.solon ?? "?"}</span>
-              <span className="ui-public-fleet-gap-label">
+            <li className="ui-public-fleet-stat">
+              <span className="ui-public-fleet-stat-num">{gaps.solon ?? "?"}</span>
+              <span className="ui-public-fleet-stat-label">
                 without a Solon organisation — decisions with no recount
               </span>
             </li>
@@ -192,6 +252,8 @@ function Row({ r, solonChecked }: { r: RegisterRow; solonChecked: boolean }) {
             </a>
             <div className="ui-public-fleet-slug">
               {r.site.kind} · {r.site.status}
+              {isClientSite(r) && <> · for {r.site.owner}</>}
+              {r.site.since !== "-" && <> · since {r.site.since}</>}
             </div>
           </>
         ) : projectHref ? (

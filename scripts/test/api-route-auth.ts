@@ -79,7 +79,8 @@ const PUBLIC: Record<string, string> = {
   //   copy on every consumer, which is the seven-lists problem it replaces.
   //   Content is repo names, public URLs and whether a public profile exists —
   //   all already public. Scoped to the studio owner, cached 5 min.
-  "fleet/register": "public register of the studio's projects; nothing private in the payload",
+  "fleet/register":
+    "public register of the studio's projects. The payload is repo names, public URLs, who a site is for, and whether a public profile exists — all visible by opening the site itself. Commercial terms (apps.conf's plan/price) are deliberately NOT joined onto the row; buildFleetRegister omits them and scripts/test/fleet-register.ts asserts their absence, so 'nothing private here' stays a checked claim rather than a remembered intention. Scoped to the studio owner, cached 5 min.",
 
   // — The bearer IS the credential; there is no user to look up first.
   "invitations/[token]": "unguessable invite token in the path is the credential",
