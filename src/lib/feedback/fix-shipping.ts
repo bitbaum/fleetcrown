@@ -59,8 +59,36 @@ export type FixShipping = {
 /** How long a non-terminal ledger entry is trusted before GitHub is asked again. */
 export const FIX_REFRESH_MS = 60_000;
 
-export function fixNeedsRefresh(cached: FixShipping | null | undefined, now = Date.now()): boolean {
+/**
+ * Should GitHub be asked again?
+ *
+ * `expectedPrUrl` is the pull request the CURRENT parser resolves from the
+ * handoff. A cache is only valid for the input it was computed from, and this
+ * one outlived its input: a parser bug resolved the wrong pull request, landed
+ * the row in PR_CLOSED — a terminal state — and terminal meant "never ask
+ * again". So the fix for the parser could not reach a single row it had
+ * already poisoned; the row said "nothing shipped" forever while the real
+ * pull request sat open (dogfood-site-sep10-1201, 2026-09-11, cleared by hand).
+ *
+ * Re-parsing is pure and free. Asking GitHub is what costs, and that is still
+ * gated by terminality and the refresh window — but only when the cached
+ * answer is about the pull request we would resolve today.
+ */
+export function fixNeedsRefresh(
+  cached: FixShipping | null | undefined,
+  // An options object, not positional arguments: this function already had a
+  // trailing `now`, and slipping a new parameter in front of it is how a
+  // caller silently passes a timestamp as a URL.
+  opts: { expectedPrUrl?: string | null; now?: number } = {},
+): boolean {
+  const { expectedPrUrl } = opts;
+  const now = opts.now ?? Date.now();
   if (!cached) return true;
+  // The cache answers a question we would no longer ask. Terminal or not, it
+  // is about the wrong pull request.
+  if (expectedPrUrl && cached.pr && cached.pr.url !== expectedPrUrl) return true;
+  // We can now resolve a pull request and the cache never had one.
+  if (expectedPrUrl && !cached.pr) return true;
   if (isFixShipTerminal(cached.state)) return false;
   const t = Date.parse(cached.checkedAt);
   return !Number.isFinite(t) || now - t > FIX_REFRESH_MS;
