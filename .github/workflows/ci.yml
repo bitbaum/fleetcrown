@@ -157,11 +157,35 @@ jobs:
       actions: write
     steps:
       - uses: actions/checkout@v7
-      - name: Dispatch Deploy now that main is green
+      - name: Dispatch Deploy now that main is green — unless the push already did
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ github.sha }}
         run: |
-          echo "main is green — dispatching Deploy without waiting for a sweep tick"
+          # This job is the fallback path. A merge made with GITHUB_TOKEN
+          # triggers no workflows, so nothing else would ship it — that is why
+          # the job exists. But the sweep now merges with a PAT, which DOES
+          # produce a push-triggered CI run, and that run chains to Deploy on
+          # its own through workflow_run. When both happen, the commit is built,
+          # rsynced and restarted twice.
+          #
+          # Before commits on main stopped cancelling each other this was
+          # mostly hidden: the dispatch usually cancelled the push run first.
+          # Now both survive on purpose, so the duplicate has to be declined
+          # here instead — by asking whether a push-triggered CI run for THIS
+          # commit has already succeeded, since that is exactly the condition
+          # under which Deploy is already coming.
+          pushed=$(gh run list --workflow ci.yml --event push --limit 30 \
+            --json headSha,conclusion \
+            --jq "[.[] | select(.headSha == \"$SHA\" and .conclusion == \"success\")] | length")
+          if [ "${pushed:-0}" -gt 0 ]; then
+            echo "a push-triggered CI run for $SHA already succeeded — Deploy is"
+            echo "already chained off it through workflow_run. Not dispatching a"
+            echo "second build of the same commit."
+            exit 0
+          fi
+          echo "no push-triggered CI run for $SHA — this dispatch is the only"
+          echo "path to the box, so dispatching Deploy without waiting for a sweep tick"
           gh workflow run deploy.yml --ref main
 
   # ---------------------------------------------------------------------------
