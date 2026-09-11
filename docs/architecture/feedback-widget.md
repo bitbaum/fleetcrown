@@ -49,8 +49,9 @@ same SSOT — feedback Dispatch is that path with a composed prompt.
 | --- | --- |
 | Enable & install (token + agent embed) | Control coverage strip; project Widget card |
 | Review open reports | Control feedback strip (new + in-progress); `/projects/{id}#feedback` |
-| Implement / Retry | Same rows — status is **Not started → Queued → Working now → Done** (or **Not running / Failed**) |
-| Watch live output | Only while **Working now** → Terminal. Otherwise **Open on Control** (empty Terminal ≠ progress) |
+| Implement / Retry | Same rows — status is **Not started → Queued → Working · N min → Check live → Done** (or **Not running / Stalled / Failed**). A project with no repository and no folder gets **Connect a repository** instead of Implement, and the dispatch route refuses the same case with a 422 |
+| Watch live output | **Watch** → Terminal whenever the prompt reached an agent PTY (Working, Stalled, Not running after delivery). **Open on Control** only while Queued (empty Terminal ≠ progress) |
+| Working vs Stalled | The box runner beats `PATCH /api/control/runs/:id/progress` while the agent's PTY keeps printing (contract: `src/lib/run-progress.ts`, at most one beat per 45 s, none when silent). A beat within 10 min = Working, however long the run; older = **Stalled**; never any = Not running after 10 min. Before this heartbeat every hour-long fix read "Not running" from minute ten |
 | Pause widget (instant, no deploy) | Project Widget card |
 
 **Enable & install preflight** (`POST …/widget-token/install`):
@@ -67,7 +68,7 @@ same SSOT — feedback Dispatch is that path with a composed prompt.
 
 Status vocabulary is SSOT in `lib/feedback/work-phase.ts`. The DB may still store
 `dispatched`; the UI never presents that word as “finished.” **Queued / Install queued
-is not proof of work** — prove it with Working now, Failed/Not running, or Attention Retry.
+is not proof of work** — prove it with Working (heartbeat-backed), Failed/Not running/Stalled, or Attention Retry.
 
 Dogfood check 2026-08-14: botsmann.orangecat.ch boots `fcw_73518de7…` (`last_seen_origin`
 https://botsmann.orangecat.ch, `/api/widget-boot` `{active:true}`). Earlier “waiting for

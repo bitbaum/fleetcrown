@@ -56,6 +56,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       422,
     );
   }
+  // No folder and no repository = the runner launches an agent into a
+  // directory that does not exist, the prompt lands on nothing, and the row
+  // reads "Not running" ten minutes later with no explanation. Refuse here,
+  // with the fix, before a run row exists.
+  if (!row.hasWorkspace) {
+    return jsonError(
+      "This project has no repository or folder yet, so there is nowhere for the agent to work. Add a Git URL on the project page, then Implement.",
+      422,
+    );
+  }
 
   if (
     row.feedback.status === FEEDBACK_STATUS.RESOLVED ||

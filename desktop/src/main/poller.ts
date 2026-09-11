@@ -27,6 +27,7 @@ import path from 'path'
 import { APP_URL } from '@/config/brand'
 import { APP_SLUG } from '@/config/brand'
 import { startPeek, stopPeek } from './peek-streamer'
+import { startRunProgress } from './run-progress'
 import { getAgentInstallCommand, listAgentRegistry, type AgentOption } from '@/lib/agent-registry'
 import { executor } from '@/lib/agent-execution'
 import { resolveRunnerWorkspaceDir } from '@/lib/agent-execution/box-workspace-path'
@@ -457,6 +458,8 @@ async function handleCommand(
   // Token accounting: set by the dispatch case when a Claude run is delivered;
   // consumed after the ack so tracking only starts for commands that landed.
   let usageTrack: { runId: string; dir: string; deliveredAtMs: number } | null = null
+  // Progress heartbeat opens once the prompt verifiably landed (see run-progress.ts).
+  let progressTrack: { runId: string; tab: string } | null = null
 
   // Idempotency dedup. If the PATCH ack timed out on a previous run, the
   // server will hand us the same command again. Without this, the prompt
@@ -570,6 +573,7 @@ async function handleCommand(
         // that cannot exist on the box → every report silently skipped. That is
         // why the first day of token accounting wrote zero rows (#145).
         // Identity on the laptop, where the requested dir exists.
+        if (runId) progressTrack = { runId, tab }
         if (runId && agent === 'claude') {
           usageTrack = {
             runId,
@@ -737,6 +741,8 @@ async function handleCommand(
   // Only start metering runs whose prompt actually landed — a nacked dispatch
   // is closed server-side and would never answer done:true.
   if (ok && usageTrack) trackRunUsage(usageTrack)
+  // Same bar for the heartbeat: only a run whose prompt landed can make progress.
+  if (ok && !warning && progressTrack) startRunProgress(base, token, progressTrack.runId, progressTrack.tab)
 
   if (ok) {
     console.log(`[poller] handled ${command.type} command ${command.id}`)
