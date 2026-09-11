@@ -137,7 +137,13 @@ export async function getFeedbackScreenshots(userId: string, id: string): Promis
 }
 
 /** Cross-project inbox row: the list shape plus which project it belongs to. */
-export type UserFeedbackListItem = FeedbackListItem & { projectName: string };
+export type UserFeedbackListItem = FeedbackListItem & {
+  projectName: string;
+  /** The project has somewhere for an agent to work (a folder or a
+   *  repository). False = Implement would launch an agent into nothing —
+   *  the row says so instead of letting the run fail ten minutes later. */
+  runnable: boolean;
+};
 
 /**
  * Every project's inbox in one read — the lens behind /feedback. Same
@@ -157,6 +163,13 @@ export async function listUserFeedback(
           "has_screenshots",
         ),
       projectName: entities.name,
+      runnable: sql<boolean>`EXISTS (
+        SELECT 1 FROM ${userProjects}
+        WHERE ${userProjects.entityProjectId} = ${entities.id}
+          AND ${userProjects.userId} = ${siteFeedback.userId}
+          AND ${userProjects.isActive} = true
+          AND (${userProjects.dirPath} IS NOT NULL OR ${userProjects.gitUrl} IS NOT NULL)
+      )`.as("runnable"),
     })
     .from(siteFeedback)
     .innerJoin(entities, eq(siteFeedback.projectId, entities.id))
@@ -221,6 +234,8 @@ export async function getFeedbackWithProject(
   projectName: string;
   userProjectId: string | null;
   agentPref: string | null;
+  /** A folder or a repository — somewhere for the agent to work. */
+  hasWorkspace: boolean;
 } | null> {
   const [row] = await db
     .select({
@@ -229,6 +244,7 @@ export async function getFeedbackWithProject(
       userProjectName: userProjects.name,
       userProjectId: userProjects.id,
       agentPref: userProjects.agentPref,
+      hasWorkspace: sql<boolean>`(${userProjects.dirPath} IS NOT NULL OR ${userProjects.gitUrl} IS NOT NULL)`,
     })
     .from(siteFeedback)
     .innerJoin(entities, eq(siteFeedback.projectId, entities.id))
@@ -249,6 +265,7 @@ export async function getFeedbackWithProject(
     projectName: row.userProjectName ?? row.projectName,
     userProjectId: row.userProjectId,
     agentPref: row.agentPref ?? null,
+    hasWorkspace: row.hasWorkspace === true,
   };
 }
 

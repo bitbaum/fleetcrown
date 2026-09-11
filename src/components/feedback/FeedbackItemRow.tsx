@@ -49,12 +49,18 @@ export function FeedbackItemRow({
   const work = "work" in f && f.work ? f.work : deriveFeedbackWork(f.status, null);
   const controlHref = fleetSurfaceHref("control", projectName);
   const terminalHref = fleetSurfaceHref("terminal", projectName);
-  const watchLive = work.phase === FEEDBACK_WORK_PHASE.WORKING;
+  // Terminal when there is a PTY to look at (the prompt reached an agent),
+  // Control when there is not — Terminal is empty until a session exists.
+  const watchLive = work.watchable === true;
   const progressHref = watchLive ? terminalHref : controlHref;
   const progressLabel = watchLive ? "Watch" : "Open on Control";
   const progressTitle = watchLive
-    ? (work.detail ?? "Live agent session")
+    ? (work.detail ?? "Open the agent's terminal")
     : "Open this project on Control — Terminal is empty until a session is actually running";
+  // Somewhere for an agent to work. Rows from the per-project inbox carry no
+  // flag and keep the one-click Implement; the server refuses the same case.
+  const runnable = "runnable" in f ? f.runnable !== false : true;
+  const projectHref = `/projects/${f.projectId}`;
   // Reported page surface — Check live must open this, not Control/Terminal.
   const livePageHref = absoluteFeedbackPageHref(f.url, f.page);
   // Agent-filed rows get a typed badge instead of their magic contact string.
@@ -145,7 +151,7 @@ export function FeedbackItemRow({
           {/* The phase's sentence only when it changes what the reader does
               next: a failure or a stall. "Agent is generating…" is what the
               Working badge already says. */}
-          {failed && work.detail && (
+          {(failed || work.phase === FEEDBACK_WORK_PHASE.WORKING) && work.detail && (
             <p className="mt-1 text-xs text-text-secondary">{work.detail}</p>
           )}
           {/* The run's raw error, opened on purpose rather than printed at the
@@ -165,7 +171,27 @@ export function FeedbackItemRow({
           {f.hasScreenshots && <ScreenshotsThumbnails feedbackId={f.id} />}
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
-          {work.phase === FEEDBACK_WORK_PHASE.NOT_STARTED ? (
+          {work.phase === FEEDBACK_WORK_PHASE.NOT_STARTED && !runnable ? (
+            <>
+              <Link
+                href={projectHref}
+                className="ui-btn-save gap-1"
+                title="This project has no repository or folder yet — the agent has nowhere to work. Add a Git URL, then Implement."
+              >
+                Connect a repository
+              </Link>
+              <button
+                type="button"
+                onClick={onResolve}
+                disabled={busy}
+                className="ui-btn-icon"
+                title="Mark resolved"
+                aria-label="Mark resolved"
+              >
+                <Check className="h-3.5 w-3.5" />
+              </button>
+            </>
+          ) : work.phase === FEEDBACK_WORK_PHASE.NOT_STARTED ? (
             <>
               <button
                 type="button"

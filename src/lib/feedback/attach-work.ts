@@ -51,6 +51,7 @@ export function runToFeedbackSnapshot(
     startedAt: row.startedAt,
     finishedAt: row.finishedAt,
     deliveredAt: (row.payload as { deliveredAt?: string } | null)?.deliveredAt ?? null,
+    lastProgressAt: (row.payload as { lastProgressAt?: string } | null)?.lastProgressAt ?? null,
     error: (row.payload as { error?: string } | null)?.error ?? null,
   };
 }
