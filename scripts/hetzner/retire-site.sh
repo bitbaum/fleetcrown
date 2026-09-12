@@ -93,10 +93,13 @@ fi
 case "$REPO_ACTION" in keep|private|archive|delete) ;; *) echo "ERROR: unknown --repo '$REPO_ACTION'" >&2; exit 2 ;; esac
 
 # Deleting a repository needs GitHub's delete_repo scope, which this host's
-# token deliberately does not carry. Refusing here, before anything is torn
-# down, beats discovering it after the service, vhost and files are gone.
-if [ "$REPO_ACTION" = "delete" ]; then
-  if ! gh auth status 2>&1 | grep -q "delete_repo"; then
+# token deliberately does not carry. Say so while it is still a PLAN — the
+# moment to learn that a step cannot happen is before choosing it — and refuse
+# outright only when asked to carry it out, so nothing is torn down first.
+REPO_DELETE_BLOCKED=""
+if [ "$REPO_ACTION" = "delete" ] && ! gh auth status 2>&1 | grep -q "delete_repo"; then
+  REPO_DELETE_BLOCKED=1
+  if [ "$GO" = 1 ]; then
     echo "ERROR: this host's GitHub token cannot delete repositories (no delete_repo scope)." >&2
     echo "       Use --repo archive, which is recoverable, or delete it yourself at" >&2
     echo "       https://github.com/$GH_OWNER_PREVIEW/$SLUG/settings" >&2
@@ -225,6 +228,9 @@ case "$REPO_ACTION" in
   archive) plan "archive $GH_OWNER/$SLUG (read-only, recoverable)"
            if [ "$GO" = 1 ]; then gh api -X PATCH "repos/$GH_OWNER/$SLUG" -F archived=true >/dev/null && say "repository archived"; fi ;;
   delete)  plan "DELETE $GH_OWNER/$SLUG — this cannot be undone"
+           if [ -n "$REPO_DELETE_BLOCKED" ]; then
+             plan "...but this host's token has no delete_repo scope, so --go would refuse. Use --repo archive."
+           fi
            if [ "$GO" = 1 ]; then gh repo delete "$GH_OWNER/$SLUG" --yes && say "repository deleted"; fi ;;
 esac
 
