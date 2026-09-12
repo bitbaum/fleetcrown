@@ -20,6 +20,7 @@ import { isChannelAttrKey, stripChannelPrefix } from "@/config/channels";
 import { nameCandidates } from "@/lib/people-names";
 import type { DevLogEntry, UserProject } from "@/db/schema/user-projects";
 import { dateLabel } from "@/lib/agent/fact-utils";
+import { rankProjectsByMessage } from "@/lib/agent/project-ranking";
 
 // One import surface for every adapter. The domain split (life / work / fleet)
 // is a file-size decision, not an API one.
@@ -143,8 +144,11 @@ function latestDevLog(project: UserProject): string | null {
 }
 
 /** Every registered project — breadth, so "across all my projects" is answerable. */
-export async function projectFacts(userId: string): Promise<Fact[]> {
-  const projects = await getUserProjects(userId).catch(() => [] as UserProject[]);
+export async function projectFacts(userId: string, message = ""): Promise<Fact[]> {
+  const all = await getUserProjects(userId).catch(() => [] as UserProject[]);
+  // Rank BEFORE slicing. Slicing first is what dropped the one project the
+  // operator asked about.
+  const projects = rankProjectsByMessage(all, message);
   return projects.slice(0, PROJECT_LIMIT).map((p) =>
     makeFact({
       kind: "project",

@@ -81,7 +81,10 @@ const searchProjectsTool = defineTool({
   params: z.object({}),
   example: "TOOL: list_projects\nARGS: {}",
   handler: async (_args, ctx) => {
-    const facts = await projectFacts(ctx.userId);
+    // The tool takes no arguments, so the operator's message is the only signal
+    // available for ranking — and this list is capped, so which projects survive
+    // the cap matters. Same ranking the seed uses, for the same reason.
+    const facts = await projectFacts(ctx.userId, ctx.message);
     return facts.length > 0 ? { facts } : empty("The operator has no registered projects.");
   },
 });

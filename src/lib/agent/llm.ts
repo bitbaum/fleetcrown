@@ -155,6 +155,60 @@ function safeJsonObject(raw: string): Record<string, unknown> | null {
 }
 
 /**
+ * Drop a reasoning model's `<think>…</think>` preamble.
+ *
+ * ── Why this lives here, at the model seam ───────────────────────────────────
+ * This repo already knew the trick — TWICE, in `frontier/propose.ts` and
+ * `orchestration/dod-gate.ts` — and both copies exist to make JSON parse. The
+ * one path where a HUMAN reads the text had none, so a turn on a reasoning
+ * model persisted its own chain-of-thought and rendered it as the answer:
+ *
+ *     ...`.
+ *
+ *     Everything is clean and strictly compliant.
+ *     </think>An opinion or assessment is: Not in your data.
+ *
+ * A fix applied at three call sites is a fix waiting to be forgotten at the
+ * fourth. Cleaning the model's output belongs at the boundary where it ENTERS
+ * the system, next to `stripToolCallLines`, which is the same category of job.
+ *
+ * `lastIndexOf` rather than a regex is deliberate and not laziness: the leak
+ * above has a CLOSING tag and no opening one, because the head of the reasoning
+ * was lost before it reached us. A `<think>[\s\S]*?</think>` pattern matches
+ * nothing there and would have left the whole thing on screen. Taking
+ * everything after the last close tag is correct whether or not the opener
+ * survived.
+ *
+ * It also protects the grounding check, which was being run over the model's
+ * private reasoning as though it were the answer.
+ */
+export function stripReasoning(text: string): string {
+  const end = text.lastIndexOf("</think>");
+  return end === -1 ? text : text.slice(end + "</think>".length).trimStart();
+}
+
+/**
+ * Rewrite a citation the model wrote in FULLWIDTH brackets as ASCII.
+ *
+ * Observed live on nemotron: `【F16】` instead of `[F16]`. Both readers of a
+ * citation are ASCII-only, so the two failures compound and neither is loud:
+ *
+ *   - the VERIFIER matches `/\[[FD]\d+\]/`, so it sees no citations at all and
+ *     the `unknown-citation` check silently has nothing to check;
+ *   - the RENDERER matches the same shape, so the handle is not recognised as a
+ *     citation and is printed verbatim — a raw `【F16】` sitting in the prose,
+ *     which the transcript's own rule calls "strictly worse than clean prose".
+ *
+ * Normalising at the seam fixes both at once, and has to happen BEFORE
+ * verification rather than in the renderer, or the check stays blind.
+ */
+export function normaliseCitations(text: string): string {
+  return text.replace(/[【［]\s*([FD]\d+(?:\s*,\s*[FD]\d+)*)\s*[】］]/gi, (_m, ids: string) =>
+    `[${ids.replace(/\s+/g, "")}]`.toUpperCase(),
+  );
+}
+
+/**
  * Remove text-protocol lines from prose so a call the model narrated never
  * reaches the operator as if it were an answer.
  */
@@ -296,7 +350,11 @@ async function callOneLink(
   }
 
   const raw = input.sink ? await readStreamedBody(res, input.sink) : await readBufferedBody(res);
-  const rawText = raw.text.trim();
+  // Reasoning first, then tool lines. Order matters: a model's `<think>` block
+  // routinely REHEARSES the call it is about to make ("I should use TOOL:
+  // search_people…"), and parsing that rehearsal as a real call runs a tool the
+  // model only considered.
+  const rawText = normaliseCitations(stripReasoning(raw.text)).trim();
 
   const native: ToolCall[] = raw.toolCalls
     .map((tc, i) => ({
@@ -364,17 +422,69 @@ const TOOL_LINE_RE = /^\s*(?:[-*>]\s*)?(?:\*\*)?(?:TOOL|ARGS)(?:\*\*)?\s*[:=]/i;
  * `end()` releases the final line, which has no newline to prove it complete —
  * the stream ending is that proof.
  */
-export function createProseGate(emit: (text: string) => void) {
+export function createProseGate(
+  emit: (text: string) => void,
+  /**
+   * Take back everything shown so far.
+   *
+   * Needed for the leak shape actually seen in production: reasoning that
+   * arrives with NO opening tag, because its head was lost upstream. Nothing
+   * can tell that text is a model thinking out loud until `</think>` finally
+   * appears — so the gate shows it, then retracts it the moment the tag proves
+   * what it was. Without this the operator reads the reasoning and it stays on
+   * screen until the persisted turn replaces it at the very end.
+   */
+  onReset?: () => void,
+) {
   let pending = "";
   let shut = false;
+  let sawOpen = false;
+  let released = false;
+  // A reasoning model opens with `<think>` and writes for several seconds
+  // before the answer begins. Streaming that is worse than streaming nothing:
+  // it shows the operator the model talking to itself, then deletes it when the
+  // real answer replaces it.
+  let thinking = false;
 
   const release = (line: string) => {
     if (shut) return;
+
+    // A close tag ends the reasoning wherever it appears — including on a line
+    // that never had an opener, which is exactly how the leak arrived. Whatever
+    // precedes it on this line is reasoning; whatever follows is the answer.
+    const close = line.lastIndexOf("</think>");
+    if (close !== -1) {
+      // A close tag with no opener means everything already shown was
+      // reasoning. Retract it rather than leaving it above the real answer.
+      if (!sawOpen && released) {
+        onReset?.();
+        released = false;
+      }
+      thinking = false;
+      sawOpen = false;
+      const after = line.slice(close + "</think>".length);
+      if (after.trim()) release(after);
+      return;
+    }
+    if (thinking) return;
+    if (line.includes("<think>")) {
+      thinking = true;
+      sawOpen = true;
+      // Anything before the opener is ordinary prose and is owed to the reader.
+      const before = line.slice(0, line.indexOf("<think>"));
+      if (before.trim()) {
+        emit(`${before}\n`);
+        released = true;
+      }
+      return;
+    }
+
     if (TOOL_LINE_RE.test(line)) {
       shut = true;
       return;
     }
     emit(`${line}\n`);
+    released = true;
   };
 
   return {
@@ -418,7 +528,7 @@ async function readStreamedBody(res: Response, sink: StreamSink): Promise<RawBod
   let text = ""; // everything the model wrote, gate or no gate
   let usageTokens = 0;
   const calls = new Map<number, { id?: string; name: string; args: string }>();
-  const gate = createProseGate(sink.delta);
+  const gate = createProseGate(sink.delta, sink.reset);
 
   await readSseChunks(body, (chunk) => {
     // Usage rides the final chunk (stream_options.include_usage) and is what
