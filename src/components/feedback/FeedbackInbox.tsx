@@ -32,9 +32,12 @@ const SOURCE_FILTERS = [
  * this page owns the ironing-out loop: every report across the fleet, what
  * phase its fix is in, and the next action, without opening a project first.
  *
- * Three groups in work order: Needs you (untriaged), In progress (a fix run
- * exists — queued/working/stuck/failed/done), Shipped (resolved). Archived
- * stays behind a toggle.
+ * Three groups, keyed on WHO IS BLOCKED (work.waitingOn), never on DB status:
+ * Needs you (your move — triage, retry, or look at a fix that is live), Under
+ * way (an agent is generating, a green pull request is merging, a deploy is
+ * running — nothing for you to do), Shipped (resolved). Archived stays behind a
+ * toggle. Status could not answer the page's one question: `dispatched` covers
+ * both an agent mid-run and a fix that deployed an hour ago.
  */
 export function FeedbackInbox() {
   // `loadError` is aliased because `error` below is the *mutation* error from
@@ -244,14 +247,18 @@ export function FeedbackInbox() {
                 : "none in the last 30 days"
             }
           />
+          {/* "Report → fix" overstated it: resolved_at is stamped when the
+              operator presses Confirm, so the number is dominated by how long
+              they took to look, not by how fast the loop shipped. Name what is
+              actually measured. */}
           <StatCard
-            label="Report → fix"
+            label="Report → confirmed"
             value={
               metrics.medianResolutionHours != null
                 ? compactDurationHours(metrics.medianResolutionHours)
                 : "—"
             }
-            sub={metrics.medianResolutionHours != null ? "median" : "no fix shipped yet"}
+            sub={metrics.medianResolutionHours != null ? "median" : "nothing confirmed yet"}
           />
         </StatRow>
       )}

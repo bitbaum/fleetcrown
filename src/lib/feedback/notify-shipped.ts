@@ -28,6 +28,19 @@ import { refreshOrInsertActiveAlert } from "@/db/queries/alerts";
 import { type FixShipping } from "@/lib/feedback/fix-shipping";
 import type { ShipAnnouncement } from "@/lib/feedback/fix-shipping";
 
+/**
+ * The two alert types raised here — must match src/config/alert-types.ts.
+ *
+ * Written as literal `type:` fields rather than a ternary at the call site
+ * because scripts/test/alert-registry.ts reads the raised types by scanning
+ * this file, and it FAILS on a file it cannot read instead of skipping it. A
+ * gate that refuses to skip is the right kind of gate, so meet it where it
+ * looks — and the branch reads better here anyway, since the severity differs
+ * with the type.
+ */
+const FIX_LIVE_ALERT = { type: "fix_live", severity: "info" } as const;
+const FIX_DEPLOY_FAILED_ALERT = { type: "fix_deploy_failed", severity: "warning" } as const;
+
 export async function notifyFixShipped(input: {
   userId: string;
   projectId: string;
@@ -80,8 +93,7 @@ export async function notifyFixShipped(input: {
       })(),
       refreshOrInsertActiveAlert({
         userId: input.userId,
-        type: live ? "fix_live" : "fix_deploy_failed",
-        severity: live ? "info" : "warning",
+        ...(live ? FIX_LIVE_ALERT : FIX_DEPLOY_FAILED_ALERT),
         title,
         description: body,
         actionUrl: live && input.livePageUrl ? input.livePageUrl : inboxPath,
