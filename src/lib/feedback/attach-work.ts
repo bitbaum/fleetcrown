@@ -187,6 +187,7 @@ export function runToFeedbackSnapshot(row: RunRow | null | undefined): FeedbackR
   const payload = row.payload as {
     deliveredAt?: string;
     lastProgressAt?: string;
+    blocked?: string | null;
     error?: string;
     fix?: FixShipping;
   } | null;
@@ -198,6 +199,7 @@ export function runToFeedbackSnapshot(row: RunRow | null | undefined): FeedbackR
     finishedAt: row.finishedAt,
     deliveredAt: payload?.deliveredAt ?? null,
     lastProgressAt: payload?.lastProgressAt ?? null,
+    blocked: payload?.blocked ?? null,
     error: payload?.error ?? null,
     summaryDone: (row.summary as { done?: string } | null)?.done ?? null,
     fix: payload?.fix ?? null,

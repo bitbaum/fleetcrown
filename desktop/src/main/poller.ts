@@ -27,6 +27,7 @@ import path from 'path'
 import { APP_URL } from '@/config/brand'
 import { APP_SLUG } from '@/config/brand'
 import { startPeek, stopPeek } from './peek-streamer'
+import { detectAuthFailure } from './agent-auth'
 import { startRunProgress } from './run-progress'
 import { getAgentInstallCommand, listAgentRegistry, type AgentOption } from '@/lib/agent-registry'
 import { executor } from '@/lib/agent-execution'
@@ -357,28 +358,6 @@ async function waitForSessionFileBump(tab: string, baselineMtime: number, timeou
  * live status files (hermes/codex/…) fall back to the output-activity
  * heuristic once, at the deadline.
  */
-/**
- * Auth canary: after a failed generate-verify, check the newest Claude Code
- * transcript for this dir for a credential failure. Dead box credentials
- * caused two silent fleet outages (2026-07-02/03): every run just timed out
- * with nothing naming the cause. Cheap — one file tail, only on verify failure.
- */
-function detectAuthFailure(dir: string): boolean {
-  try {
-    // claudeProjectSlug replaces "." as well as "/" — the old inline
-    // `replace(/\//g,'-')` silently missed dotted paths, so worktree
-    // dispatches (under .claude/worktrees/) never matched their transcript
-    // dir and auth failures there were undetectable.
-    const projDir = `${process.env.HOME}/.claude/projects/${claudeProjectSlug(dir)}`
-    const newest = fs.readdirSync(projDir)
-      .filter((f) => f.endsWith('.jsonl'))
-      .map((f) => ({ f, m: fs.statSync(`${projDir}/${f}`).mtimeMs }))
-      .sort((a, b) => b.m - a.m)[0]
-    if (!newest) return false
-    const tail = fs.readFileSync(`${projDir}/${newest.f}`, 'utf-8').slice(-4000)
-    return /401 Invalid authentication|Please run \/login/i.test(tail)
-  } catch { return false }
-}
 
 async function waitForAgentGenerating(dir: string, tab: string, timeoutMs = 8000): Promise<boolean> {
   const deadline = Date.now() + timeoutMs
@@ -459,7 +438,7 @@ async function handleCommand(
   // consumed after the ack so tracking only starts for commands that landed.
   let usageTrack: { runId: string; dir: string; deliveredAtMs: number } | null = null
   // Progress heartbeat opens once the prompt verifiably landed (see run-progress.ts).
-  let progressTrack: { runId: string; tab: string } | null = null
+  let progressTrack: { runId: string; tab: string; dir: string } | null = null
 
   // Idempotency dedup. If the PATCH ack timed out on a previous run, the
   // server will hand us the same command again. Without this, the prompt
@@ -588,7 +567,7 @@ async function handleCommand(
         // that cannot exist on the box → every report silently skipped. That is
         // why the first day of token accounting wrote zero rows (#145).
         // Identity on the laptop, where the requested dir exists.
-        if (runId) progressTrack = { runId, tab }
+        if (runId) progressTrack = { runId, tab, dir: resolveRunnerWorkspaceDir(tab, effDir) }
         if (runId && agent === 'claude') {
           usageTrack = {
             runId,
@@ -757,7 +736,8 @@ async function handleCommand(
   // is closed server-side and would never answer done:true.
   if (ok && usageTrack) trackRunUsage(usageTrack)
   // Same bar for the heartbeat: only a run whose prompt landed can make progress.
-  if (ok && !warning && progressTrack) startRunProgress(base, token, progressTrack.runId, progressTrack.tab)
+  if (ok && !warning && progressTrack)
+    startRunProgress(base, token, progressTrack.runId, progressTrack.tab, progressTrack.dir)
 
   if (ok) {
     console.log(`[poller] handled ${command.type} command ${command.id}`)

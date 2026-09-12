@@ -321,3 +321,34 @@ console.log("✓ feedback work-phase tests passed");
   assert.equal(workElapsedLabel(new Date(now - 125 * 60_000), now), "2 h 05 min");
   assert.equal(workElapsedLabel(new Date(now - 120 * 60_000), now), "2 h");
 }
+
+// 4. "Waiting for a sign-in" outranks every other reading of silence, because
+//    it is the only one the operator can act on — and acting takes ten seconds.
+//    Before this the row said "no output" for thirteen minutes (2026-09-12).
+{
+  const now = Date.now();
+  const base = {
+    startedAt: new Date(now - 14 * 60_000),
+    deliveredAt: new Date(now - 13 * 60_000).toISOString(),
+  };
+  const blocked = deriveFeedbackWork(
+    FEEDBACK_STATUS.DISPATCHED,
+    snap({ ...base, blocked: "auth" }),
+    now,
+  );
+  assert.equal(blocked.label, "Needs you to sign in");
+  assert.equal(blocked.watchable, true, "the terminal is where they sign in");
+  assert.match(blocked.detail ?? "", /sign-in prompt/);
+
+  // Same run, no reason known: the old, honest-but-useless wording stands.
+  const unexplained = deriveFeedbackWork(FEEDBACK_STATUS.DISPATCHED, snap(base), now);
+  assert.equal(unexplained.label, "Not running");
+
+  // And a blocked flag never overrides an agent that is actually producing.
+  const working = deriveFeedbackWork(
+    FEEDBACK_STATUS.DISPATCHED,
+    snap({ ...base, blocked: null, lastProgressAt: new Date(now - 20_000).toISOString() }),
+    now,
+  );
+  assert.equal(working.phase, FEEDBACK_WORK_PHASE.WORKING);
+}

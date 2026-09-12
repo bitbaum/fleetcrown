@@ -8,7 +8,15 @@
 // lets it call a silent agent stalled instead of guessing.
 import { executor } from '@/lib/agent-execution'
 import { runnerWorkspaceId } from './pty-runtime'
-import { RUN_PROGRESS_BEAT_MS, shouldBeat, type RunProgressBeat } from '@/lib/run-progress'
+import { detectAuthFailure } from './agent-auth'
+import {
+  RUN_BLOCKED,
+  RUN_PROGRESS_BEAT_MS,
+  shouldBeat,
+  shouldDiagnoseSilence,
+  type RunBlocked,
+  type RunProgressBeat,
+} from '@/lib/run-progress'
 
 type Track = {
   runId: string
@@ -19,11 +27,20 @@ type Track = {
   startedAt: number
   unsub: () => void
   timer: ReturnType<typeof setInterval>
+  /** The workspace dir, so a silent agent can be asked WHY it is silent. */
+  dir: string
+  blocked: RunBlocked | null
 }
 
 const tracks = new Map<string, Track>()
 
-export function startRunProgress(base: string, token: string, runId: string, tab: string): void {
+export function startRunProgress(
+  base: string,
+  token: string,
+  runId: string,
+  tab: string,
+  dir: string,
+): void {
   stopRunProgress(runId)
   // One agent per tab: a newer run on the same tab supersedes the old track,
   // otherwise the old run would keep looking alive on the new run's output.
@@ -37,6 +54,8 @@ export function startRunProgress(base: string, token: string, runId: string, tab
     lastBeatAt: now,
     startedAt: now,
     unsub: () => {},
+    dir,
+    blocked: null,
     timer: setInterval(() => void tick(base, token, runId), Math.min(RUN_PROGRESS_BEAT_MS, 15_000)),
   }
   // subscribe replays the retained buffer synchronously; skip it — the replay
@@ -64,12 +83,21 @@ export function stopRunProgress(runId: string): void {
 async function tick(base: string, token: string, runId: string): Promise<void> {
   const t = tracks.get(runId)
   if (!t) return
+  // Silence has two meanings and the operator can only act on one. Before
+  // deciding whether to beat, work out whether this quiet agent is thinking or
+  // waiting for a human — the runner is the only thing that can tell.
+  if (shouldDiagnoseSilence(t)) {
+    t.blocked = detectAuthFailure(t.dir) ? RUN_BLOCKED.AUTH : null
+  } else if (t.bytesSinceBeat > 0) {
+    t.blocked = null
+  }
   const decision = shouldBeat(t)
   if (decision === 'stop') { stopRunProgress(runId); return }
   if (decision === 'wait') return
   const beat: RunProgressBeat = {
     outputBytes: t.bytesSinceBeat,
     lastOutputAt: new Date(t.lastOutputAt).toISOString(),
+    blocked: t.blocked,
   }
   t.bytesSinceBeat = 0
   t.lastBeatAt = Date.now()

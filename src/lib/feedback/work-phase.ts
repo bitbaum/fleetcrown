@@ -105,6 +105,8 @@ export type FeedbackRunSnapshot = {
   deliveredAt: string | null;
   /** payload.lastProgressAt — runner heartbeat, see src/lib/run-progress.ts. */
   lastProgressAt: string | null;
+  /** payload.blocked — the runner named why the agent is quiet ("auth"). */
+  blocked?: string | null;
   error: string | null;
   /** summary.done — the agent's handoff line naming what it did (and its PR). */
   summaryDone?: string | null;
@@ -280,6 +282,23 @@ function derivePhase(
       detail: `Starting — waiting for the agent to pick it up. ${EXECUTOR_COPY.honesty.notificationWhenDone}`,
     };
   }
+  // A quiet agent that is quiet FOR A REASON. This outranks every other
+  // reading of silence, because it is the only one the operator can act on —
+  // and acting on it takes ten seconds. On 2026-09-12 a dispatch sat silent
+  // for thirteen minutes wanting a sign-in, while the row said "no output" and
+  // George opened a terminal by hand to find out.
+  if (run.blocked === "auth") {
+    return {
+      phase: FEEDBACK_WORK_PHASE.STUCK,
+      label: "Needs you to sign in",
+      detail:
+        "The agent is waiting at a sign-in prompt and cannot start until someone answers it. Watch opens its terminal — sign in there and it carries on.",
+      watchable: true,
+      since,
+      lastActivityAt: run.lastProgressAt,
+    };
+  }
+
   // Delivered. From here the runner's heartbeat is the truth: it beats while
   // the agent's terminal keeps printing, and stops when it goes quiet. A run
   // that reports progress is Working for as long as it takes — an hour-long

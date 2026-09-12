@@ -4,7 +4,10 @@
 import assert from "node:assert/strict";
 import {
   isRunProgressFresh,
+  RUN_BLOCKED,
+  RUN_SILENCE_BEFORE_DIAGNOSIS_MS,
   shouldBeat,
+  shouldDiagnoseSilence,
   RUN_PROGRESS_BEAT_MS,
   RUN_PROGRESS_FRESH_MS,
   RUN_PROGRESS_MAX_MS,
@@ -50,3 +53,54 @@ assert.equal(
 );
 
 console.log("run-progress: ok");
+
+// ── Silence has two meanings ────────────────────────────────────────────────
+//
+// A quiet agent is either thinking (nobody's problem) or waiting for a human
+// (the operator's problem, right now, and ten seconds to fix). On 2026-09-12 a
+// dispatch sat silent for thirteen minutes wanting a sign-in while the row
+// said only "no output", so George opened a terminal by hand to find out.
+{
+  const t0 = Date.UTC(2026, 8, 12, 15, 45, 0);
+  const quietFor = (ms: number) => ({ bytesSinceBeat: 0, lastOutputAt: t0 - ms });
+
+  assert.equal(shouldDiagnoseSilence(quietFor(0), t0), false, "just printed — nothing to explain");
+  assert.equal(
+    shouldDiagnoseSilence(quietFor(RUN_SILENCE_BEFORE_DIAGNOSIS_MS - 1), t0),
+    false,
+    "still plausibly thinking",
+  );
+  assert.equal(shouldDiagnoseSilence(quietFor(RUN_SILENCE_BEFORE_DIAGNOSIS_MS), t0), true);
+  assert.equal(
+    shouldDiagnoseSilence({ bytesSinceBeat: 500, lastOutputAt: t0 - 10 * 60_000 }, t0),
+    false,
+    "output this window means it is working, whatever the timestamp says",
+  );
+  // The diagnosis must land well before the row gives up on the run, or the
+  // reason arrives after the reader has already been told the wrong thing.
+  assert.ok(
+    RUN_SILENCE_BEFORE_DIAGNOSIS_MS < RUN_PROGRESS_FRESH_MS,
+    "the reason must be ready before the row has to say something",
+  );
+
+  // A blocked agent prints nothing, so the "no output, no beat" rule would
+  // suppress exactly the beat that carries the reason.
+  const silent = {
+    bytesSinceBeat: 0,
+    lastBeatAt: t0 - 5 * RUN_PROGRESS_BEAT_MS,
+    startedAt: t0 - 60_000,
+  };
+  assert.equal(shouldBeat(silent, t0), "wait", "silence alone still says nothing");
+  assert.equal(
+    shouldBeat({ ...silent, blocked: RUN_BLOCKED.AUTH }, t0),
+    "beat",
+    "silence WITH a reason is the message",
+  );
+  assert.equal(
+    shouldBeat({ ...silent, blocked: RUN_BLOCKED.AUTH, lastBeatAt: t0 - 1000 }, t0),
+    "wait",
+    "still no more than one beat per window",
+  );
+}
+
+console.log("run-progress-blocked: ok");
