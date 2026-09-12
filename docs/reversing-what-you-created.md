@@ -40,8 +40,58 @@ Granting the scope is possible (`gh auth refresh -s delete_repo` on the box)
 but it is a standing risk in exchange for a step that takes two clicks on
 GitHub, so the default stays as it is.
 
+## Clean up the test when the test is over
+
+**An experiment must not outlive the experiment.** Anything spun up to prove
+something — a dogfood site, a site-factory run, an end-to-end probe — is torn
+down in the same session that created it, including its GitHub repository. Not
+archived, not left private: gone.
+
+This is not tidiness. On 2026-09-12 six such sites were still live days later,
+five with repositories behind them, and two of them —
+"Velokiosk — Bike Repair at Zürich HB" and "Kaffeeklappe – Kaffee to go in
+Zürich Wiedikon" — read as real Zurich businesses that do not exist, on the
+founder's own domain. Nobody decided to keep them; they were just never
+removed. The GitHub account becomes unreadable at a glance, the register stops
+meaning "things we run", and every agent that reads either infers that
+half-finished experiments are normal here.
+
+The cleanup, in full — **and the order matters**:
+
+```bash
+# 1. the FleetCrown project FIRST, or the box puts the site back
+curl -X DELETE "$FC/api/projects/<entityId>?deleteLocal=1"   # or the UI
+
+# 2. on the box — service, files, vhost, port, register row, workflows
+bash scripts/hetzner/retire-site.sh <name> --mode delete --repo keep --go
+
+# 3. from a machine whose token has delete_repo (the box's deliberately does not)
+gh repo delete bitbaum/<name> --yes
+
+# 4. and in the repo, in the same commit
+#    remove the row from scripts/hetzner/apps.conf
+```
+
+Step 1 is not optional and is easy to skip, because the project row is invisible
+from the box. Deleting six sites in the other order on 2026-09-12 looked like it
+worked: the units stopped, the vhosts went, the directories were removed. Two
+minutes later the journal read
+
+    [box-prepare] cloning velokiosk-sep10 <- https://github.com/bitbaum/velokiosk-sep10
+
+and three of the six checkouts were back. A FleetCrown project that still names
+a `dirPath` is a standing instruction to restore it, so the site is only really
+gone once the project is. The repository outliving the checkout is what makes
+the resurrection possible, which is another reason the repo goes too.
+
+`pnpm run check:no-experiment-litter` fails the build if a generated throwaway
+name is ever committed to the register, so forgetting is caught rather than
+discovered months later.
+
 ## Verifying it still holds
 
 `npx tsx scripts/test/repo-delete-capability.ts` pins both halves: the refusal
 stays actionable, and no UI reintroduces the button that would always fail.
-`bash scripts/hetzner/test-retire-site.sh` covers the retire modes.
+`bash scripts/hetzner/test-retire-site.sh` covers the retire modes, and
+`bash scripts/test/experiment-litter-gate.sh` covers the litter gate — both
+that it fires on every throwaway shape and that it never flags a real product.
