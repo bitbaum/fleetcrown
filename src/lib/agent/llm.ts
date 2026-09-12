@@ -32,6 +32,7 @@ import { HTTP_TIMEOUT_LONG_MS } from "@/lib/constants/time";
 import { classifyGroqLimit, groqRetryAfterSeconds, humanizeWait } from "@/lib/agent/groq-error";
 import { chainFrom, linkPromptBudgetTokens, type ChatLink } from "@/config/chat-models";
 import { recordAIHealthFailure, recordAIHealthSuccess } from "@/lib/ai/health";
+import { recordVendorQuota } from "@/lib/ai/record-quota";
 import { readSseChunks } from "@/lib/agent/sse-stream";
 
 export type ChatMessage = {
@@ -314,6 +315,13 @@ async function callOneLink(
     }),
     signal: AbortSignal.timeout(input.timeoutMs ?? HTTP_TIMEOUT_LONG_MS),
   });
+
+  // Learn what is left at this vendor from the answer we already paid for.
+  // Success AND refusal both disclose it, and the refusal is the more valuable
+  // reading — it corrects a local counter that had drifted optimistic. Never
+  // awaited and never able to throw: a telemetry write must not be able to fail
+  // an answer the operator is waiting for.
+  recordVendorQuota(res.headers, link);
 
   if (!res.ok) {
     const body = await res.text().catch(() => "");

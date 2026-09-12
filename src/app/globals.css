@@ -3210,6 +3210,54 @@
     @apply space-y-5 rounded-2xl border border-border-subtle bg-surface-base p-5 sm:p-6;
     box-shadow: var(--shadow-panel);
   }
+  /* ── AI capacity, in Settings → AI ─────────────────────────────────────
+     Built to one rule: a number that does not imply an action is decoration.
+     The gauge is deliberately secondary to the sentence beside it, and a row
+     with no measurable ceiling gets no bar at all rather than an empty one
+     that would read as "nothing left". */
+  .ui-quota-summary {
+    @apply flex items-start gap-2 rounded-xl border border-border-subtle bg-surface-raised px-3 py-2.5 text-sm text-text-primary;
+  }
+  .ui-quota-row {
+    @apply space-y-1.5 rounded-xl border border-border-subtle bg-surface-base px-3 py-2.5;
+  }
+  /* Low and spent are told apart by hue AND by the word in the row head, so the
+     state survives for a reader who cannot separate the two colours. */
+  .ui-quota-row-low {
+    @apply border-status-warning/40 bg-status-warning/5;
+  }
+  .ui-quota-row-spent {
+    @apply border-status-negative/40 bg-status-negative/5;
+  }
+  .ui-quota-row-head {
+    @apply flex flex-wrap items-baseline gap-x-2 gap-y-1;
+  }
+  .ui-quota-provider {
+    @apply text-sm font-medium text-text-primary;
+  }
+  .ui-quota-model {
+    @apply font-mono text-micro text-text-muted;
+  }
+  .ui-quota-state {
+    @apply ml-auto text-xs font-medium text-text-secondary;
+    font-variant-numeric: tabular-nums;
+  }
+  .ui-quota-track {
+    @apply h-1 w-full overflow-hidden rounded-full bg-surface-raised;
+  }
+  .ui-quota-fill {
+    @apply block h-full rounded-full bg-accent-primary;
+  }
+  .ui-quota-fill-spent {
+    @apply block h-full rounded-full bg-status-negative;
+  }
+  .ui-quota-detail {
+    @apply text-xs text-text-secondary;
+    font-variant-numeric: tabular-nums;
+  }
+  .ui-quota-consequence {
+    @apply text-xs text-text-muted;
+  }
   .ui-settings-subpanel {
     @apply space-y-3 rounded-2xl border border-border-subtle bg-surface-raised p-4;
     box-shadow: var(--shadow-panel);

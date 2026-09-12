@@ -8,6 +8,7 @@ import { AppearanceSettings } from "./AppearanceSettings";
 import { PrivacySettings } from "./PrivacySettings";
 import { LocationSettings } from "./LocationSettings";
 import { VoiceSettings } from "./VoiceSettings";
+import { AiQuotaSettings } from "./AiQuotaSettings";
 import { AgentTokenSettings } from "./AgentTokenSettings";
 import { BeaconSettings } from "./BeaconSettings";
 import { BillingSettings } from "./BillingSettings";
@@ -44,6 +45,7 @@ const TABS = [
   { id: "notifications", label: "Notifications" },
   { id: "appearance", label: "Appearance" },
   { id: "voice", label: "Voice" },
+  { id: "ai", label: "AI" },
   { id: "privacy", label: "Privacy" },
   { id: "location", label: "Location" },
   { id: "agent", label: "Agent" },
@@ -144,6 +146,7 @@ export function SettingsTabs({
         {activeTab === "notifications" && <NotificationSettings />}
         {activeTab === "appearance" && <AppearanceSettings />}
         {activeTab === "voice" && <VoiceSettings initialPrefs={userPrefs} />}
+        {activeTab === "ai" && <AiQuotaSettings />}
         {activeTab === "privacy" && <PrivacySettings />}
         {activeTab === "location" && <LocationSettings initialPrefs={userPrefs} />}
         {activeTab === "agent" && (
