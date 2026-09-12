@@ -160,6 +160,25 @@ console.log("feedback-auto-ship: ok");
   assert.equal(prOpenedByRun("not a date", runStart), false);
   assert.equal(prOpenedByRun(t(60_000), new Date(Date.parse(runStart))), true, "Date works too");
 
+  // The real numbers, from dogfood-site-sep10-1201 on 2026-09-11. This is the
+  // best pin available: the guard must admit the merge that legitimately
+  // happened AND reject the exact pull request the parser wrongly resolved
+  // before it was fixed. It is a second, independent line of defence against
+  // that bug — prose said #1, but #1 predates the run by six hours.
+  {
+    const RUN_STARTED = "2026-09-11T16:13:25Z";
+    assert.equal(
+      prOpenedByRun("2026-09-11T16:15:37Z", RUN_STARTED),
+      true,
+      "PR #3, opened two minutes into the run — merged for real",
+    );
+    assert.equal(
+      prOpenedByRun("2026-09-11T10:21:48Z", RUN_STARTED),
+      false,
+      "PR #1, six hours older — the one the parser wrongly named",
+    );
+  }
+
   // And the decision honours it.
   assert.equal(
     hold({ fromOurDispatch: false }),
