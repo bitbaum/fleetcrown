@@ -29,6 +29,18 @@ export interface ReleaseEntry {
 /** Newest first. */
 export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
   {
+    version: "0.8.23",
+    tag: "fleet-runner-v0.8.23",
+    date: "2026-09-12T18:00:00Z",
+    highlights: [
+      'The runner now says WHY a quiet agent is quiet. After 90 seconds of no output from a dispatched run it asks the same question the dispatch path already asks — is this agent signed in? — and puts the answer on the next progress beat. FleetCrown\'s feedback row then reads "Needs you to sign in" with a link straight to that terminal, instead of "the agent never reported any output".',
+      "A blocked agent prints nothing, so a beat is now allowed through on silence that carries a reason; silence alone still stays quiet, and the rate stays one beat per window.",
+    ],
+    breaking: [],
+    notes:
+      "Fixes a real thirteen-minute wait on 2026-09-12: a dispatched fix sat at a Claude sign-in prompt and the only way to discover it was to open a terminal by hand. The authentication check already existed but ran once, in an 8-second window at inject time.",
+  },
+  {
     version: "0.8.22",
     tag: "fleet-runner-v0.8.22",
     date: "2026-09-11T15:00:00Z",
