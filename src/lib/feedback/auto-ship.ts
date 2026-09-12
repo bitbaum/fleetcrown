@@ -52,7 +52,10 @@ export type AutoShipInput = {
   autoShip: boolean | null | undefined;
   /** The run's fix ledger. */
   fix: FixShipping | null | undefined;
-  /** Did FleetCrown's own dispatch open this PR? */
+  /**
+   * Did THIS run open this pull request? Established by
+   * prOpenedByRun() from GitHub's own created_at, never asserted.
+   */
   fromOurDispatch: boolean;
   /** GitHub: pull.draft. */
   draft: boolean;
@@ -63,6 +66,35 @@ export type AutoShipInput = {
   /** Has an automatic ship on this project already produced a failed deploy? */
   deployBroken: boolean;
 };
+
+/**
+ * Does this pull request belong to this run?
+ *
+ * The guard existed as a field and was passed a hardcoded `true`, which made it
+ * decoration. It matters: the pull request is resolved from PROSE the agent
+ * wrote, and a handoff that merely mentions a number ("same approach as PR
+ * #42") would otherwise hand that number to the merge call. #42 could be a
+ * person's unrelated work.
+ *
+ * The hard fact is when GitHub says the pull request was opened. A run creates
+ * its row at dispatch, before any agent touches the repo, so a pull request the
+ * run produced is always NEWER than the run. One minute of slack absorbs clock
+ * skew between GitHub and the box; anything older belongs to someone else, or
+ * to a previous attempt — which is exactly the retry case that first exposed
+ * this (a handoff naming both the superseded pull request and the new one).
+ */
+export const RUN_CLOCK_SLACK_MS = 60_000;
+
+export function prOpenedByRun(
+  prCreatedAt: string | null | undefined,
+  runStartedAt: string | Date | null | undefined,
+): boolean {
+  if (!prCreatedAt || !runStartedAt) return false;
+  const pr = Date.parse(prCreatedAt);
+  const run = typeof runStartedAt === "string" ? Date.parse(runStartedAt) : runStartedAt.getTime();
+  if (!Number.isFinite(pr) || !Number.isFinite(run)) return false;
+  return pr >= run - RUN_CLOCK_SLACK_MS;
+}
 
 /** GitHub conclusions that mean "this check is not a reason to stop". */
 const PASSING = new Set(["success", "neutral", "skipped"]);
@@ -86,6 +118,29 @@ export function decideAutoShip(input: AutoShipInput): AutoShipDecision {
   if (!input.checkConclusions.every((c) => c !== null && PASSING.has(c)))
     return { merge: false, hold: AUTO_SHIP_HOLD.CHECKS_NOT_GREEN };
   return { merge: true };
+}
+
+/**
+ * Which projects have automatic shipping paused because a fix it merged failed
+ * to deploy.
+ *
+ * Pure, and exported, because the rule that matters is the STATUS FILTER and
+ * that lived in a loop nothing could test. Without it, resolving the broken row
+ * did not lift the pause — a deploy_failed ledger is terminal, so the project
+ * stayed paused forever with no action in the product that could end it. A
+ * pause nobody can lift is a dead end, not a safety feature.
+ */
+export function projectsPausedByBrokenDeploy(
+  items: ReadonlyArray<{ projectId: string; status: string }>,
+  fixOf: (item: { projectId: string; status: string }) => { state?: string } | null | undefined,
+  handledStatuses: ReadonlyArray<string>,
+): Set<string> {
+  const paused = new Set<string>();
+  for (const item of items) {
+    if (handledStatuses.includes(item.status)) continue;
+    if (fixOf(item)?.state === FIX_SHIP_STATE.DEPLOY_FAILED) paused.add(item.projectId);
+  }
+  return paused;
 }
 
 /** What the row says when automatic shipping looked and decided not to. Only

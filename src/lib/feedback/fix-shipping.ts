@@ -94,6 +94,38 @@ export function fixNeedsRefresh(
   return !Number.isFinite(t) || now - t > FIX_REFRESH_MS;
 }
 
+/**
+ * Sort key for "which ledger is most overdue a look": when it was last checked,
+ * 0 when never. Exported because the ordering IS the fix for a starvation bug —
+ * the inbox refreshes a bounded number of rows per request, and taking them in
+ * list order (newest first) meant everything past the bound was never looked at
+ * again. Oldest-first turns that bound into a rate limit instead.
+ */
+export function fixCheckedAtMs(fix: FixShipping | null | undefined): number {
+  const t = fix?.checkedAt ? Date.parse(fix.checkedAt) : NaN;
+  return Number.isFinite(t) ? t : 0;
+}
+
+/** Which ledger transitions are worth interrupting someone for. */
+export type ShipAnnouncement = "live" | "deploy_failed";
+
+/**
+ * Pure: does moving from `before` to `after` deserve an announcement?
+ *
+ * Only transitions announce. A row that was already deployed and is read again
+ * must stay silent, or every inbox load would re-announce every past fix.
+ */
+export function shipAnnouncementFor(
+  before: FixShipping | null | undefined,
+  after: FixShipping | null | undefined,
+): ShipAnnouncement | null {
+  if (!after) return null;
+  if (before?.state === after.state) return null;
+  if (after.state === FIX_SHIP_STATE.DEPLOYED) return "live";
+  if (after.state === FIX_SHIP_STATE.DEPLOY_FAILED) return "deploy_failed";
+  return null;
+}
+
 /** States that never change again — no point asking GitHub. */
 export function isFixShipTerminal(state: FixShipState): boolean {
   return (
@@ -184,6 +216,29 @@ function collectPrRefs(
   return out;
 }
 
+/**
+ * THE pull request this run's fix lives in. One function, because two callers
+ * deciding this separately is how a cache ends up permanently disagreeing with
+ * the thing that fills it: the refresher preferred the reaper's evidence while
+ * the cache-validity check read only the handoff, so a run whose evidence and
+ * handoff named different pull requests re-fetched GitHub on every single
+ * request, forever.
+ *
+ * The reaper's evidence wins when it has a pull request, because it is
+ * window-bounded fact from the GitHub API rather than prose the model wrote.
+ */
+export function resolveFixPrRef(input: {
+  summaryDone?: string | null;
+  evidence?: { kind?: string | null; url?: string | null } | null;
+  gitUrl?: string | null;
+}): PrRef | null {
+  if (input.evidence?.kind === "pr" && input.evidence.url) {
+    const fromEvidence = parsePrRef(input.evidence.url, input.gitUrl);
+    if (fromEvidence) return fromEvidence;
+  }
+  return parsePrRef(input.summaryDone, input.gitUrl);
+}
+
 /** GitHub's PR object, only the fields the ledger reads. */
 export type GithubPrDetail = {
   number: number;
@@ -197,6 +252,9 @@ export type GithubPrDetail = {
   /** null while GitHub is still computing mergeability — never treat as true. */
   mergeable?: boolean | null;
   headSha?: string | null;
+  /** When GitHub says the pull request was opened. The only hard evidence that
+   *  ties a pull request to the run that supposedly produced it. */
+  createdAt?: string | null;
 };
 /** GitHub's workflow run object, only the fields the ledger reads. */
 export type GithubWorkflowRun = {

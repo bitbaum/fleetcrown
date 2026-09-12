@@ -15,9 +15,16 @@ import {
   AUTO_SHIP_HOLD,
   autoShipHoldNote,
   decideAutoShip,
+  projectsPausedByBrokenDeploy,
+  prOpenedByRun,
+  RUN_CLOCK_SLACK_MS,
   type AutoShipInput,
 } from "../../src/lib/feedback/auto-ship";
-import { FIX_SHIP_STATE, type FixShipping } from "../../src/lib/feedback/fix-shipping";
+import {
+  FIX_SHIP_STATE,
+  shipAnnouncementFor,
+  type FixShipping,
+} from "../../src/lib/feedback/fix-shipping";
 
 const openPr: FixShipping = {
   state: FIX_SHIP_STATE.PR_OPEN,
@@ -122,3 +129,169 @@ for (const h of [AUTO_SHIP_HOLD.NOT_ENABLED, AUTO_SHIP_HOLD.NOT_OPEN, AUTO_SHIP_
   assert.equal(autoShipHoldNote(h), null, `${h} is not news to anyone`);
 
 console.log("feedback-auto-ship: ok");
+
+// ── The guard that was decoration ───────────────────────────────────────────
+//
+// `fromOurDispatch` existed as a field and was passed a hardcoded `true`, so
+// nothing checked it. It matters because the pull request is resolved from
+// PROSE the agent wrote: a handoff that merely mentions a number ("same
+// approach as PR #42") would hand #42 to the merge call, and #42 can be a
+// person's unrelated work. GitHub's created_at is the hard fact — a run exists
+// before any agent touches the repo, so its pull request is always newer.
+{
+  const runStart = "2026-09-11T12:00:00.000Z";
+  const t = (deltaMs: number) => new Date(Date.parse(runStart) + deltaMs).toISOString();
+
+  assert.equal(prOpenedByRun(t(60_000), runStart), true, "opened a minute into the run");
+  assert.equal(prOpenedByRun(t(5 * 60_000), runStart), true);
+  assert.equal(
+    prOpenedByRun(t(-30_000), runStart),
+    true,
+    "30s before the run row: clock skew, not someone else's work",
+  );
+  assert.equal(
+    prOpenedByRun(t(-RUN_CLOCK_SLACK_MS - 1), runStart),
+    false,
+    "older than the slack window — a previous attempt, or a person's PR",
+  );
+  assert.equal(prOpenedByRun(t(-86_400_000), runStart), false, "yesterday's pull request");
+  assert.equal(prOpenedByRun(null, runStart), false, "no created_at = no proof = no merge");
+  assert.equal(prOpenedByRun(t(60_000), null), false, "no run start = no proof = no merge");
+  assert.equal(prOpenedByRun("not a date", runStart), false);
+  assert.equal(prOpenedByRun(t(60_000), new Date(Date.parse(runStart))), true, "Date works too");
+
+  // The real numbers, from dogfood-site-sep10-1201 on 2026-09-11. This is the
+  // best pin available: the guard must admit the merge that legitimately
+  // happened AND reject the exact pull request the parser wrongly resolved
+  // before it was fixed. It is a second, independent line of defence against
+  // that bug — prose said #1, but #1 predates the run by six hours.
+  {
+    const RUN_STARTED = "2026-09-11T16:13:25Z";
+    assert.equal(
+      prOpenedByRun("2026-09-11T16:15:37Z", RUN_STARTED),
+      true,
+      "PR #3, opened two minutes into the run — merged for real",
+    );
+    assert.equal(
+      prOpenedByRun("2026-09-11T10:21:48Z", RUN_STARTED),
+      false,
+      "PR #1, six hours older — the one the parser wrongly named",
+    );
+  }
+
+  // And the decision honours it.
+  assert.equal(
+    hold({ fromOurDispatch: false }),
+    AUTO_SHIP_HOLD.NOT_OURS,
+    "a pull request this run did not open is never merged",
+  );
+}
+
+// ── A pause that can be lifted ──────────────────────────────────────────────
+//
+// One failed deploy pauses a project. Counting RESOLVED and ARCHIVED rows meant
+// the pause never lifted: a deploy_failed ledger is terminal, so the project
+// stayed paused forever and nothing in the product could end it.
+{
+  const HANDLED = ["resolved", "archived"];
+  const broken = { state: FIX_SHIP_STATE.DEPLOY_FAILED };
+  const fine = { state: FIX_SHIP_STATE.DEPLOYED };
+
+  assert.deepEqual(
+    [
+      ...projectsPausedByBrokenDeploy(
+        [{ projectId: "p1", status: "dispatched" }],
+        () => broken,
+        HANDLED,
+      ),
+    ],
+    ["p1"],
+    "an open row with a failed deploy pauses its project",
+  );
+  assert.equal(
+    projectsPausedByBrokenDeploy([{ projectId: "p1", status: "resolved" }], () => broken, HANDLED)
+      .size,
+    0,
+    "resolving it is the operator saying they handled it — the pause lifts",
+  );
+  assert.equal(
+    projectsPausedByBrokenDeploy([{ projectId: "p1", status: "archived" }], () => broken, HANDLED)
+      .size,
+    0,
+    "archiving lifts it too",
+  );
+  assert.equal(
+    projectsPausedByBrokenDeploy([{ projectId: "p1", status: "dispatched" }], () => fine, HANDLED)
+      .size,
+    0,
+  );
+  assert.equal(
+    projectsPausedByBrokenDeploy([{ projectId: "p1", status: "new" }], () => null, HANDLED).size,
+    0,
+    "no ledger, no pause",
+  );
+  // One project's failure never pauses another's.
+  assert.deepEqual(
+    [
+      ...projectsPausedByBrokenDeploy(
+        [
+          { projectId: "p1", status: "dispatched" },
+          { projectId: "p2", status: "dispatched" },
+        ],
+        (i) => (i.projectId === "p1" ? broken : fine),
+        HANDLED,
+      ),
+    ],
+    ["p1"],
+  );
+}
+
+console.log("feedback-auto-ship-guards: ok");
+
+// ── Announce the transition, never the state ────────────────────────────────
+//
+// The loop announced "a visitor filed something" and "an agent's run closed".
+// Neither is the event a person cares about: a run closes at a pull request,
+// and the product changes later. With automatic merging on, a deploy that
+// fails after an unattended merge is the worst state this system can produce,
+// and it was silent.
+//
+// It must fire on a TRANSITION, or every inbox load re-announces every past
+// fix — the inbox polls every 8 seconds.
+{
+  const at = "2026-09-11T12:00:00.000Z";
+  const st = (state) => ({ state, checkedAt: at });
+
+  assert.equal(
+    shipAnnouncementFor(st(FIX_SHIP_STATE.PR_OPEN), st(FIX_SHIP_STATE.DEPLOYED)),
+    "live",
+  );
+  assert.equal(shipAnnouncementFor(st(FIX_SHIP_STATE.MERGED), st(FIX_SHIP_STATE.DEPLOYED)), "live");
+  assert.equal(
+    shipAnnouncementFor(null, st(FIX_SHIP_STATE.DEPLOYED)),
+    "live",
+    "first look already live still counts",
+  );
+  assert.equal(
+    shipAnnouncementFor(st(FIX_SHIP_STATE.MERGED), st(FIX_SHIP_STATE.DEPLOY_FAILED)),
+    "deploy_failed",
+  );
+  assert.equal(
+    shipAnnouncementFor(st(FIX_SHIP_STATE.DEPLOYED), st(FIX_SHIP_STATE.DEPLOYED)),
+    null,
+    "already announced — the inbox polls every 8s, this must stay silent",
+  );
+  assert.equal(
+    shipAnnouncementFor(st(FIX_SHIP_STATE.DEPLOY_FAILED), st(FIX_SHIP_STATE.DEPLOY_FAILED)),
+    null,
+  );
+  assert.equal(
+    shipAnnouncementFor(st(FIX_SHIP_STATE.PR_OPEN), st(FIX_SHIP_STATE.MERGED)),
+    null,
+    "merged is not live",
+  );
+  assert.equal(shipAnnouncementFor(st(FIX_SHIP_STATE.PR_OPEN), st(FIX_SHIP_STATE.DEPLOYING)), null);
+  assert.equal(shipAnnouncementFor(st(FIX_SHIP_STATE.PR_OPEN), null), null);
+}
+
+console.log("feedback-ship-announcement: ok");
