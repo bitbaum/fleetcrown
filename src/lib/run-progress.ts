@@ -24,11 +24,29 @@ export const RUN_PROGRESS_FRESH_MS = 10 * 60_000;
  *  the honest state for something a human has to look at. */
 export const RUN_PROGRESS_MAX_MS = 6 * 60 * 60_000;
 
+/**
+ * Why an agent that is not printing is not printing.
+ *
+ * Silence has two very different meanings and the operator can only act on
+ * one. "Thinking" needs nothing; "waiting at a login prompt" needs THEM, now.
+ * On 2026-09-12 a dispatch sat silent for thirteen minutes because the cloud
+ * agent wanted a sign-in, and the product said only "no output" — so George
+ * opened a terminal by hand to discover it. The runner can already tell these
+ * apart (detectAuthFailure); it just never said so after the first 8 seconds.
+ */
+export const RUN_BLOCKED = {
+  /** The agent needs someone to sign in before it can do anything. */
+  AUTH: "auth",
+} as const;
+export type RunBlocked = (typeof RUN_BLOCKED)[keyof typeof RUN_BLOCKED];
+
 export type RunProgressBeat = {
   /** PTY bytes printed since the previous beat. */
   outputBytes: number;
   /** When the PTY last printed anything (ISO). */
   lastOutputAt: string;
+  /** Set when the runner can name why the terminal is quiet. */
+  blocked?: RunBlocked | null;
 };
 
 export function isRunProgressFresh(
@@ -42,12 +60,32 @@ export function isRunProgressFresh(
 }
 
 /** Pure decision the runner's timer makes on every tick. */
+/**
+ * How long a delivered run may print nothing before the runner stops assuming
+ * it is thinking and goes and looks at why.
+ *
+ * Well inside the ten minutes after which a reader is told the run is not
+ * running: the point is to have the REASON ready before the row has to say
+ * anything, not to explain the silence afterwards.
+ */
+export const RUN_SILENCE_BEFORE_DIAGNOSIS_MS = 90_000;
+
+export function shouldDiagnoseSilence(
+  s: { bytesSinceBeat: number; lastOutputAt: number },
+  now = Date.now(),
+): boolean {
+  return s.bytesSinceBeat <= 0 && now - s.lastOutputAt >= RUN_SILENCE_BEFORE_DIAGNOSIS_MS;
+}
+
 export function shouldBeat(
-  s: { bytesSinceBeat: number; lastBeatAt: number; startedAt: number },
+  s: { bytesSinceBeat: number; lastBeatAt: number; startedAt: number; blocked?: RunBlocked | null },
   now = Date.now(),
 ): "beat" | "wait" | "stop" {
   if (now - s.startedAt > RUN_PROGRESS_MAX_MS) return "stop";
-  if (s.bytesSinceBeat <= 0) return "wait";
+  // A blocked agent prints nothing, so the "no output, no beat" rule would
+  // suppress exactly the beat that carries the reason. Silence is the message
+  // here — send it, still no more than once per window.
+  if (s.bytesSinceBeat <= 0 && !s.blocked) return "wait";
   if (now - s.lastBeatAt < RUN_PROGRESS_BEAT_MS) return "wait";
   return "beat";
 }

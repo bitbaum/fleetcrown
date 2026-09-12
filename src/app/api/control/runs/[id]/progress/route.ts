@@ -3,6 +3,7 @@ import { getApiUserId } from "@/lib/session";
 import { isValidUuid } from "@/lib/utils";
 import { stampRunProgress } from "@/db/queries/orchestration-runs";
 import { emitRunEvent } from "@/db/queries/run-events";
+import { RUN_BLOCKED } from "@/lib/run-progress";
 
 /**
  * Runner heartbeat for a dispatched run — PATCH /api/control/runs/:id/progress
@@ -18,6 +19,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const body = (await req.json().catch(() => ({}))) as {
     outputBytes?: unknown;
     lastOutputAt?: unknown;
+    blocked?: unknown;
   };
   const outputBytes =
     typeof body.outputBytes === "number" && Number.isFinite(body.outputBytes)
@@ -27,7 +29,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     typeof body.lastOutputAt === "string" && !Number.isNaN(Date.parse(body.lastOutputAt))
       ? body.lastOutputAt
       : null;
-  const live = await stampRunProgress(id, userId);
-  if (live) void emitRunEvent(id, userId, "progress", { outputBytes, lastOutputAt });
+  // The runner can name why a quiet agent is quiet. "Waiting for a sign-in" is
+  // the operator's problem RIGHT NOW; "thinking" is nobody's. Before this, both
+  // looked identical from here and the row could only report the silence.
+  const blocked = body.blocked === RUN_BLOCKED.AUTH ? RUN_BLOCKED.AUTH : null;
+
+  const live = await stampRunProgress(id, userId, blocked);
+  if (live) {
+    void emitRunEvent(id, userId, "progress", { outputBytes, lastOutputAt });
+    // Once per stretch of being blocked, not once per beat: the runner clears
+    // the flag as soon as the agent prints, so a new event means a new block.
+    if (blocked) void emitRunEvent(id, userId, "blocked", { reason: "agent is not signed in" });
+  }
   return NextResponse.json({ ok: true, live });
 }

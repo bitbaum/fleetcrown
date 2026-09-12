@@ -582,11 +582,18 @@ export async function getRecentOutcomes(
  * work phase reads to say "Working · 12 min" instead of guessing from the
  * delivery time (see src/lib/run-progress.ts).
  */
-export async function stampRunProgress(runId: string, userId: string): Promise<boolean> {
+export async function stampRunProgress(
+  runId: string,
+  userId: string,
+  /** Why the agent is quiet, when the runner can tell. Cleared when it prints. */
+  blocked: string | null = null,
+): Promise<boolean> {
   const rows = await db
     .update(orchestrationRuns)
     .set({
-      payload: sql`jsonb_set(COALESCE(payload, '{}'), '{lastProgressAt}', ${JSON.stringify(new Date().toISOString())}::jsonb)`,
+      payload: sql`jsonb_set(
+        jsonb_set(COALESCE(payload, '{}'), '{lastProgressAt}', ${JSON.stringify(new Date().toISOString())}::jsonb),
+        '{blocked}', ${JSON.stringify(blocked)}::jsonb)`,
     })
     .where(
       and(
