@@ -56,18 +56,33 @@ removed. The GitHub account becomes unreadable at a glance, the register stops
 meaning "things we run", and every agent that reads either infers that
 half-finished experiments are normal here.
 
-The cleanup, in full:
+The cleanup, in full — **and the order matters**:
 
 ```bash
-# on the box — service, files, vhost, port, register row, workflows
+# 1. the FleetCrown project FIRST, or the box puts the site back
+curl -X DELETE "$FC/api/projects/<entityId>?deleteLocal=1"   # or the UI
+
+# 2. on the box — service, files, vhost, port, register row, workflows
 bash scripts/hetzner/retire-site.sh <name> --mode delete --repo keep --go
 
-# from a machine whose token has delete_repo (the box's deliberately does not)
+# 3. from a machine whose token has delete_repo (the box's deliberately does not)
 gh repo delete bitbaum/<name> --yes
 
-# and in the repo, in the same commit
-#   remove the row from scripts/hetzner/apps.conf
+# 4. and in the repo, in the same commit
+#    remove the row from scripts/hetzner/apps.conf
 ```
+
+Step 1 is not optional and is easy to skip, because the project row is invisible
+from the box. Deleting six sites in the other order on 2026-09-12 looked like it
+worked: the units stopped, the vhosts went, the directories were removed. Two
+minutes later the journal read
+
+    [box-prepare] cloning velokiosk-sep10 <- https://github.com/bitbaum/velokiosk-sep10
+
+and three of the six checkouts were back. A FleetCrown project that still names
+a `dirPath` is a standing instruction to restore it, so the site is only really
+gone once the project is. The repository outliving the checkout is what makes
+the resurrection possible, which is another reason the repo goes too.
 
 `pnpm run check:no-experiment-litter` fails the build if a generated throwaway
 name is ever committed to the register, so forgetting is caught rather than
