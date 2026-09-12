@@ -48,3 +48,12 @@ squashfs-root/
 # Scratch files used to compose commit messages and PR bodies (never content).
 .commitmsg
 .prbody
+
+# A clone of this repo, inside this repo.
+#
+# `fleetcrown-apps/` is 1.1 GB and its remote is bitbaum/fleetcrown — the same
+# repository it sits inside. It carried nothing unique (clean tree, nothing
+# unpushed), but it was untracked AND unignored, so `git add -A` would have
+# tried to commit it. Ignored rather than deleted: a redundant working copy is
+# still someone's working copy.
+/fleetcrown-apps/
