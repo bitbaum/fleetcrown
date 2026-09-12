@@ -11,12 +11,12 @@
 import { GITHUB_API_BASE } from "@/lib/github-api";
 import { getRepoWriteToken } from "@/lib/github-org-token";
 import { stampRunFix } from "@/db/queries/orchestration-runs";
-import { decideAutoShip } from "@/lib/feedback/auto-ship";
+import { decideAutoShip, prOpenedByRun } from "@/lib/feedback/auto-ship";
 import {
   deriveShippingFromPr,
   FIX_SHIP_STATE,
   fixNeedsRefresh,
-  parsePrRef,
+  resolveFixPrRef,
   type FixShipping,
   type GithubPrDetail,
   type GithubWorkflowRun,
@@ -50,6 +50,11 @@ export type FixRefreshInput = {
   autoShip: boolean | null;
   /** Has an automatic ship on this project already broken the deploy? */
   deployBroken: boolean;
+  /**
+   * When the run started. REQUIRED: it is the only fact that ties a pull
+   * request to this run, and automatic merging refuses without it.
+   */
+  runStartedAt: string | Date | null;
 };
 
 function ghInit(token: string): RequestInit {
@@ -66,7 +71,10 @@ async function fetchPr(ref: PrRef, token: string): Promise<GithubPrDetail | null
     ghInit(token),
   );
   if (!res.ok) return null;
-  const raw = (await res.json()) as Partial<GithubPrDetail> & { head?: { sha?: string } };
+  const raw = (await res.json()) as Partial<GithubPrDetail> & {
+    head?: { sha?: string };
+    created_at?: string;
+  };
   const j = raw;
   if (typeof j.number !== "number" || typeof j.html_url !== "string") return null;
   return {
@@ -79,6 +87,7 @@ async function fetchPr(ref: PrRef, token: string): Promise<GithubPrDetail | null
     draft: j.draft === true,
     mergeable: typeof j.mergeable === "boolean" ? j.mergeable : null,
     headSha: typeof raw.head?.sha === "string" ? raw.head.sha : null,
+    createdAt: typeof raw.created_at === "string" ? raw.created_at : null,
   };
 }
 
@@ -165,13 +174,14 @@ async function fetchRunsForSha(
   }));
 }
 
-/** Where the PR is named, in order of trust: the reaper's evidence URL, then the handoff. */
+/** Where the PR is named — resolveFixPrRef is the SSOT, shared with the
+ *  cache-validity check in attach-work.ts so the two can never disagree. */
 function findPrRef(input: FixRefreshInput): PrRef | null {
-  if (input.evidence?.kind === "pr") {
-    const fromEvidence = parsePrRef(input.evidence.url, input.gitUrl);
-    if (fromEvidence) return fromEvidence;
-  }
-  return parsePrRef(input.summaryDone, input.gitUrl);
+  return resolveFixPrRef({
+    summaryDone: input.summaryDone,
+    evidence: input.evidence,
+    gitUrl: input.gitUrl,
+  });
 }
 
 /**
@@ -231,7 +241,7 @@ export async function refreshFixShipping(input: FixRefreshInput): Promise<FixShi
             const decision = decideAutoShip({
               autoShip: input.autoShip,
               fix,
-              fromOurDispatch: true,
+              fromOurDispatch: prOpenedByRun(pr.createdAt, input.runStartedAt),
               draft: pr.draft === true,
               mergeable: pr.mergeable ?? null,
               checkConclusions: readiness?.checkConclusions ?? [],

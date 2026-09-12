@@ -46,6 +46,10 @@ export type FeedbackListItem = Omit<SiteFeedback, "screenshots"> & {
   /** The project's public URL (user_projects.live_url) — where "Check live"
    *  opens, with the reported path. The reported host is only a fallback. */
   liveUrl: string | null;
+  /** The project has somewhere for an agent to work (a folder or a
+   *  repository). False = Implement would launch an agent into nothing, so the
+   *  row says so instead of letting the run fail later. */
+  runnable: boolean;
 };
 
 /** Inbox for one project, newest first. Owner-scoped by userId. */
@@ -71,6 +75,17 @@ export async function listProjectFeedback(
           AND ${userProjects.isActive} = true
         ORDER BY ${userProjects.createdAt} ASC LIMIT 1
       )`.as("live_url"),
+      // Same flag the cross-project inbox carries. Without it this surface
+      // offered Implement on a project with nowhere for an agent to work and
+      // the operator got a 422 toast instead of the sentence telling them to
+      // connect a repository — the same row behaving differently in two places.
+      runnable: sql<boolean>`EXISTS (
+        SELECT 1 FROM ${userProjects}
+        WHERE ${userProjects.entityProjectId} = ${siteFeedback.projectId}
+          AND ${userProjects.userId} = ${siteFeedback.userId}
+          AND ${userProjects.isActive} = true
+          AND (${userProjects.dirPath} IS NOT NULL OR ${userProjects.gitUrl} IS NOT NULL)
+      )`.as("runnable"),
     },
   });
 }
@@ -149,13 +164,7 @@ export async function getFeedbackScreenshots(userId: string, id: string): Promis
 }
 
 /** Cross-project inbox row: the list shape plus which project it belongs to. */
-export type UserFeedbackListItem = FeedbackListItem & {
-  projectName: string;
-  /** The project has somewhere for an agent to work (a folder or a
-   *  repository). False = Implement would launch an agent into nothing —
-   *  the row says so instead of letting the run fail ten minutes later. */
-  runnable: boolean;
-};
+export type UserFeedbackListItem = FeedbackListItem & { projectName: string };
 
 /**
  * Every project's inbox in one read — the lens behind /feedback. Same

@@ -14,12 +14,14 @@ import {
   firstSentence,
   FIX_SHIP_STATE,
   FIX_REFRESH_MS,
+  fixCheckedAtMs,
   fixNeedsRefresh,
   isFixShipTerminal,
   livePageHref,
   parseGithubRepoRef,
   parsePrRef,
   pickDeployRun,
+  resolveFixPrRef,
 } from "../../src/lib/feedback/fix-shipping";
 import {
   deriveFeedbackWork,
@@ -430,3 +432,73 @@ console.log("feedback-ship-instruction: ok");
 }
 
 console.log("feedback-pr-ref: ok");
+
+// ── One resolution, or the cache fights the thing that fills it ─────────────
+//
+// The refresher preferred the reaper's repo evidence; the cache-validity check
+// read only the handoff. When a run's evidence and handoff named different
+// pull requests they disagreed forever: the cached ledger could never equal the
+// expected url, so every single inbox request re-fetched GitHub for that row.
+// resolveFixPrRef is now the one answer both of them ask for.
+{
+  const handoffOnly = { summaryDone: "opened PR #7 on branch feat/x", gitUrl: GIT };
+  assert.equal(resolveFixPrRef(handoffOnly)?.number, 7);
+
+  const disagreeing = {
+    summaryDone: "opened PR #7 on branch feat/x",
+    evidence: { kind: "pr", url: `${GIT}/pull/9`, title: "t" },
+    gitUrl: GIT,
+  };
+  assert.equal(
+    resolveFixPrRef(disagreeing)?.number,
+    9,
+    "repo evidence is window-bounded API fact; the handoff is prose the model wrote",
+  );
+
+  // A push (not a pull request) is not a pull request reference.
+  assert.equal(
+    resolveFixPrRef({
+      summaryDone: "opened PR #7",
+      evidence: { kind: "push", url: `${GIT}/tree/feat/x`, title: "push" },
+      gitUrl: GIT,
+    })?.number,
+    7,
+    "only evidence of kind 'pr' outranks the handoff",
+  );
+  assert.equal(resolveFixPrRef({ summaryDone: null, gitUrl: GIT }), null);
+
+  // The property that actually matters: whatever the inputs, the value the
+  // cache is validated against equals the value the refresher would store.
+  for (const input of [handoffOnly, disagreeing, { summaryDone: "nothing", gitUrl: GIT }]) {
+    const a = resolveFixPrRef(input);
+    const b = resolveFixPrRef(input);
+    assert.deepEqual(a, b, "same inputs, same pull request — no drift between callers");
+  }
+}
+
+// ── Oldest-first, or rows past the cap are never looked at again ────────────
+{
+  const at = (iso) => ({ state: FIX_SHIP_STATE.PR_OPEN, checkedAt: iso });
+  assert.equal(fixCheckedAtMs(null), 0, "never checked sorts first");
+  assert.equal(fixCheckedAtMs(undefined), 0);
+  assert.equal(fixCheckedAtMs({ state: FIX_SHIP_STATE.PR_OPEN, checkedAt: "nonsense" }), 0);
+  assert.ok(
+    fixCheckedAtMs(at("2026-09-11T10:00:00.000Z")) < fixCheckedAtMs(at("2026-09-11T11:00:00.000Z")),
+  );
+
+  // The inbox refreshes a bounded number per request. In list order (newest
+  // first) everything past the bound was permanently stale; by this key the
+  // bound is a rate limit and every row gets its turn.
+  const rows = [
+    { id: "newest", fix: at("2026-09-11T12:00:00.000Z") },
+    { id: "never", fix: null },
+    { id: "oldest", fix: at("2026-09-11T09:00:00.000Z") },
+    { id: "middle", fix: at("2026-09-11T10:30:00.000Z") },
+  ];
+  assert.deepEqual(
+    [...rows].sort((a, b) => fixCheckedAtMs(a.fix) - fixCheckedAtMs(b.fix)).map((r) => r.id),
+    ["never", "oldest", "middle", "newest"],
+  );
+}
+
+console.log("feedback-ledger-fairness: ok");

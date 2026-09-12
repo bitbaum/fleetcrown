@@ -11,7 +11,15 @@ import {
   refreshFixShipping,
   FIX_REFRESH_MAX_PER_REQUEST,
 } from "@/lib/feedback/fix-shipping-refresh";
-import { FIX_SHIP_STATE, parsePrRef, type FixShipping } from "@/lib/feedback/fix-shipping";
+import {
+  fixCheckedAtMs,
+  livePageHref,
+  resolveFixPrRef,
+  shipAnnouncementFor,
+  type FixShipping,
+} from "@/lib/feedback/fix-shipping";
+import { projectsPausedByBrokenDeploy } from "@/lib/feedback/auto-ship";
+import { notifyFixShipped } from "@/lib/feedback/notify-shipped";
 import { FEEDBACK_STATUS } from "@/lib/constants/statuses";
 import {
   ORCH_STATE,
@@ -69,24 +77,46 @@ export async function attachFeedbackWork<T extends FeedbackListItem>(
     // Re-parse the handoff every time (pure, free) so a cached answer about a
     // DIFFERENT pull request is never trusted — that is how a parser bug froze
     // rows in a terminal state nothing could correct.
-    const expected = parsePrRef(
-      (run.summary as { done?: string } | null)?.done ?? null,
-      projects.get(item.projectId)?.gitUrl ?? null,
-    );
+    const expected = resolveFixPrRef({
+      summaryDone: (run.summary as { done?: string } | null)?.done ?? null,
+      evidence: runEvidence(run),
+      gitUrl: projects.get(item.projectId)?.gitUrl ?? null,
+    });
     return fixNeedsRefresh(runFix(run), { expectedPrUrl: expected?.url ?? null });
   });
   const refreshed = new Map<string, FixShipping>();
   // Projects whose last shipped fix failed to deploy, computed from the
   // ledgers already cached on their runs — no extra state to keep in sync.
-  const brokenProjects = new Set<string>();
-  for (const item of items) {
-    const run = item.dispatchedRunId ? runs.get(item.dispatchedRunId) : undefined;
-    if (run && runFix(run)?.state === FIX_SHIP_STATE.DEPLOY_FAILED)
-      brokenProjects.add(item.projectId);
-  }
+  //
+  // Only rows still OPEN count. Resolving a row is the operator saying they
+  // have dealt with it, and a deploy_failed ledger is terminal — so counting
+  // resolved and archived rows meant one bad deploy paused a project's
+  // automatic shipping forever, with no action in the product that could lift
+  // it. A pause nobody can end is not a safety feature, it is a dead end.
+  const brokenProjects = projectsPausedByBrokenDeploy(
+    items,
+    (item) => {
+      const run = (item as FeedbackListItem).dispatchedRunId
+        ? runs.get((item as FeedbackListItem).dispatchedRunId!)
+        : undefined;
+      return run ? runFix(run) : null;
+    },
+    [FEEDBACK_STATUS.RESOLVED, FEEDBACK_STATUS.ARCHIVED],
+  );
   if (candidates.length) {
+    // Least-recently-checked first. The list arrives newest-first, so a plain
+    // slice always re-checked the same newest rows and the ones past the cap
+    // were never looked at again — a project with more pending fixes than the
+    // cap would leave its oldest permanently stale. Oldest-first turns the cap
+    // into a rate limit instead of a starvation boundary.
+    const due = [...candidates].sort((a, b) => checkedAtMs(runs, a) - checkedAtMs(runs, b));
+    if (due.length > FIX_REFRESH_MAX_PER_REQUEST) {
+      console.info(
+        `[feedback] ${due.length} fixes need a GitHub check; doing ${FIX_REFRESH_MAX_PER_REQUEST} oldest-first this request`,
+      );
+    }
     await Promise.all(
-      candidates.slice(0, FIX_REFRESH_MAX_PER_REQUEST).map(async (item) => {
+      due.slice(0, FIX_REFRESH_MAX_PER_REQUEST).map(async (item) => {
         const run = runs.get(item.dispatchedRunId!)!;
         const project = projects.get(item.projectId);
         const fix = await refreshFixShipping({
@@ -94,10 +124,11 @@ export async function attachFeedbackWork<T extends FeedbackListItem>(
           userId,
           cached: runFix(run),
           summaryDone: (run.summary as { done?: string } | null)?.done ?? null,
-          evidence:
-            (run.payload as { evidence?: FixShipping["push"] & { kind: string } } | null)
-              ?.evidence ?? null,
+          evidence: runEvidence(run),
           gitUrl: project?.gitUrl ?? null,
+          // The only fact that ties a pull request to this run; automatic
+          // merging refuses without it (see prOpenedByRun).
+          runStartedAt: run.startedAt ?? null,
           // Without these two the merge path below can never run: decideAutoShip
           // reads `autoShip === true` and holds on anything else, so an omitted
           // field silently disables the whole feature. It shipped omitted once
@@ -107,6 +138,20 @@ export async function attachFeedbackWork<T extends FeedbackListItem>(
           deployBroken: brokenProjects.has(item.projectId),
         });
         refreshed.set(run.id, fix);
+        // The one place that knows a ledger CHANGED. Announcing from here (not
+        // from the ledger writer) keeps the notification tied to a specific
+        // feedback row, which is what the operator is actually told about.
+        const announce = shipAnnouncementFor(runFix(run), fix);
+        if (announce) {
+          void notifyFixShipped({
+            userId,
+            projectId: item.projectId,
+            feedbackExcerpt: excerptOf(item.suggestion),
+            announcement: announce,
+            fix,
+            livePageUrl: livePageHref(item.liveUrl, item.url, item.page),
+          });
+        }
       }),
     );
   }
@@ -157,4 +202,25 @@ export function runToFeedbackSnapshot(row: RunRow | null | undefined): FeedbackR
     summaryDone: (row.summary as { done?: string } | null)?.done ?? null,
     fix: payload?.fix ?? null,
   };
+}
+
+/** payload.evidence, in the shape both the resolver and the refresher read. */
+function runEvidence(run: RunRow): { kind: string; url: string; title: string } | null {
+  return (
+    (run.payload as { evidence?: { kind: string; url: string; title: string } } | null)?.evidence ??
+    null
+  );
+}
+
+/** When this run's ledger was last checked — 0 (oldest) when never. */
+function checkedAtMs(runs: Map<string, RunRow>, item: FeedbackListItem): number {
+  const run = item.dispatchedRunId ? runs.get(item.dispatchedRunId) : undefined;
+  return fixCheckedAtMs(run ? runFix(run) : null);
+}
+
+/** Short enough for a push notification body. */
+function excerptOf(text: string | null | undefined, max = 120): string | null {
+  const t = (text ?? "").replace(/\s+/g, " ").trim();
+  if (!t) return null;
+  return t.length > max ? `${t.slice(0, max - 1)}…` : t;
 }
