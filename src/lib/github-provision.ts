@@ -333,6 +333,41 @@ export async function setGithubRepoVisibility(
   return { ok: true };
 }
 
+/** The OAuth scope GitHub requires before a token may delete a repository. */
+export const GITHUB_DELETE_SCOPE = "delete_repo";
+
+/** The scopes GitHub reports for a token in its `x-oauth-scopes` header. */
+export function parseTokenScopes(header: string | null): string[] {
+  return (header ?? "")
+    .split(",")
+    .map((scope) => scope.trim())
+    .filter((scope) => scope.length > 0);
+}
+
+/**
+ * Destroying a repository is the one GitHub action this product deliberately
+ * cannot perform: neither the org token nor a user's OAuth grant asks for
+ * `delete_repo`, so no credential FleetCrown holds can irreversibly destroy
+ * someone's code. Saying that plainly, with the two things the person can
+ * actually do, beats a 403 they cannot act on.
+ */
+export function repoDeleteNotPermitted(
+  scopes: string[],
+  owner: string,
+  repo: string,
+): DeprovisionResult {
+  return {
+    ok: false,
+    status: 403,
+    error: "This GitHub token is not allowed to delete repositories",
+    detail:
+      `Deleting a repository needs the ${GITHUB_DELETE_SCOPE} scope, which this token does not have ` +
+      `(it has: ${scopes.length > 0 ? scopes.join(", ") : "no scopes reported"}). ` +
+      `Archive it instead, which is recoverable, or delete it yourself at ` +
+      `https://github.com/${owner}/${repo}/settings.`,
+  };
+}
+
 export async function deprovisionGithubRepo(
   token: string,
   gitUrl: string,
@@ -362,6 +397,14 @@ export async function deprovisionGithubRepo(
     };
   }
   if (res.ok || res.status === 204) return { ok: true };
+  // GitHub reports the token's scopes on every response, errors included, so a
+  // refusal can name the actual cause instead of echoing a bare 403.
+  if (mode === "delete" && res.status === 403) {
+    const scopes = parseTokenScopes(res.headers.get("x-oauth-scopes"));
+    if (!scopes.includes(GITHUB_DELETE_SCOPE)) {
+      return repoDeleteNotPermitted(scopes, parsed.owner, parsed.repo);
+    }
+  }
   let detail = "";
   try {
     const body = await res.json();

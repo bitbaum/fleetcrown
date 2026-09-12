@@ -26,6 +26,26 @@ for slug in fleetcrown orangecat bridge supabase; do
   has "$out" "infrastructure"
 done
 
+echo "→ repo delete is refused when the host's token cannot do it"
+# CI and the box both run a token WITHOUT delete_repo, a developer laptop may
+# hold one, and the behaviour must not depend on which. So both answers are
+# stubbed rather than inherited.
+STUB="$(mktemp -d)"
+printf '#!/usr/bin/env bash\necho "  - Token scopes: %s"\n' "'gist', 'repo', 'workflow'" > "$STUB/gh"
+chmod +x "$STUB/gh"
+out=$(PATH="$STUB:$PATH" retire demo-site --mode delete --repo delete || true)
+has "$out" "no delete_repo scope"        # the plan says so before you commit
+has "$out" "PLAN"                        # ...and is still a plan, not an abort
+out=$(PATH="$STUB:$PATH" retire demo-site --mode delete --repo delete --go || true)
+has "$out" "cannot delete repositories"  # asked to do it, it refuses outright
+has "$out" "repo archive"                # and names the step that does work
+
+printf '#!/usr/bin/env bash\necho "  - Token scopes: %s"\n' "'delete_repo', 'repo'" > "$STUB/gh"
+out=$(PATH="$STUB:$PATH" retire demo-site --mode delete --repo delete || true)
+has "$out" "cannot be undone"
+hasnt "$out" "no delete_repo scope"  # a token that CAN delete is not lectured
+rm -rf "$STUB"
+
 echo "→ it refuses a mode it does not understand, and insists on one"
 out=$(retire demo-site --mode nuke || true);      has "$out" "unknown mode"
 out=$(retire demo-site || true);                  has "$out" "--mode is required"
