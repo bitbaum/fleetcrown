@@ -416,8 +416,12 @@ function Row({
               {isDayZero(r) ? <span className="ui-fleet-dayzero">day-zero page</span> : r.site.kind}
               {" · "}
               {r.site.status}
-              {r.site.owner !== "bitbaum" && r.site.owner !== "-" && <> · for {r.site.owner}</>}
-              {r.site.since !== "-" && <> · since {r.site.since}</>}
+              {r.site.owner !== "bitbaum" && r.site.owner !== "-" && (
+                <span className="ui-public-fleet-nowrap"> · for {r.site.owner}</span>
+              )}
+              {r.site.since !== "-" && (
+                <span className="ui-public-fleet-nowrap"> · since {r.site.since}</span>
+              )}
             </div>
           </>
         ) : (
