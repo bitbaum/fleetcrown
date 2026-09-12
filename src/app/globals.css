@@ -1248,7 +1248,7 @@
     @apply bg-surface-raised ring-1 ring-border-interactive;
   }
   .ui-public-fleet-row {
-    @apply -mx-3 grid grid-cols-1 gap-x-6 gap-y-2 rounded-lg px-3 py-4 transition-colors sm:grid-cols-[minmax(0,17rem)_minmax(0,1fr)_auto] sm:items-start;
+    @apply -mx-3 grid grid-cols-1 gap-x-6 gap-y-2 rounded-lg px-3 py-3.5 transition-colors sm:grid-cols-[minmax(0,18rem)_minmax(0,1.15fr)_auto] sm:items-baseline;
   }
   .ui-public-fleet-row:hover {
     @apply bg-surface-raised;
@@ -1260,13 +1260,24 @@
     @apply decoration-border-interactive;
   }
   /* The line that says what the project IS. Content, not an identifier, so it
-     reads a step brighter than the slug it replaces. */
+     reads a step brighter than the slug it replaces.
+     CLAMPED, because it was not: one project's description ran to eight lines
+     and another to twenty-two, so rows varied from 56px to 400px and the list
+     stopped being scannable — which is the only thing a register is for. Two
+     lines is the promise; the project page is where the prose belongs.
+     `line-clamp-2` sets display:-webkit-box; do not add a `block` display
+     alongside it or the clamp goes inert while still looking correct here. */
   .ui-public-fleet-what {
-    @apply mt-0.5 text-sm leading-snug text-text-tertiary;
+    @apply mt-0.5 line-clamp-2 text-sm leading-snug text-text-tertiary;
     text-wrap: pretty;
   }
   .ui-public-fleet-slug {
     @apply mt-0.5 font-mono text-xs text-text-tertiary;
+  }
+  /* A date is one token to a reader even though it is three to a line breaker;
+     "since 2026-" / "08-13" reads as corruption, not as wrapping. */
+  .ui-public-fleet-nowrap {
+    @apply whitespace-nowrap;
   }
   .ui-public-fleet-site {
     @apply break-all text-sm text-text-secondary transition-colors hover:text-text-primary;
@@ -1278,17 +1289,24 @@
     @apply flex flex-wrap gap-1.5 sm:justify-end;
   }
   .ui-public-fleet-presence-on {
-    @apply inline-flex items-center rounded-md border border-border-subtle px-2 py-1 font-mono text-[11px] text-text-secondary transition-colors hover:border-border-interactive hover:text-text-primary;
+    @apply inline-flex items-center rounded-md border border-border-subtle px-1.5 py-0.5 font-mono text-[11px] text-text-secondary transition-colors hover:border-border-interactive hover:text-text-primary;
   }
   /* Present, but not openable by this reader (the project page needs a
      session). Solid like the real thing because the fact is the same; no hover
      response, because there is nothing to click and a chip that lights up under
      the cursor promises otherwise. */
   .ui-public-fleet-presence-flat {
-    @apply inline-flex items-center rounded-md border border-border-subtle px-2 py-1 font-mono text-[11px] text-text-tertiary;
+    @apply inline-flex items-center rounded-md border border-border-subtle px-1.5 py-0.5 font-mono text-[11px] text-text-tertiary;
   }
+  /* ABSENCE IS NOT A THING, so it stops being drawn like one.
+     Every row rendered all three surfaces, so 34 rows put 102 bordered chips on
+     the page and roughly two thirds of them said "not here". The most repeated,
+     most strongly shaped element on a register was its least important fact,
+     and it out-shouted the project names. An absent surface now reads as quiet
+     text with no border and no box — present things keep the chip, so the
+     contrast between them carries the meaning instead of the label. */
   .ui-public-fleet-presence-off {
-    @apply inline-flex items-center rounded-md border border-dashed border-border-subtle px-2 py-1 font-mono text-[11px] text-text-muted opacity-60;
+    @apply inline-flex items-center px-1 py-1 font-mono text-[11px] text-text-muted;
   }
   /* The two number bands — "What it earns" and "What is missing". Big number,
      one line of consequence. The accented variant is reserved for the
