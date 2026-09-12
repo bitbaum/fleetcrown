@@ -37,7 +37,7 @@ export async function recordQuotaReadings(
         provider: r.provider,
         model: r.model,
         scope: r.scope,
-        window: r.window,
+        windowKind: r.window,
         quotaLimit: r.limit,
         remaining: r.remaining,
         resetAt: r.resetAt === null ? null : new Date(r.resetAt),
@@ -50,7 +50,7 @@ export async function recordQuotaReadings(
           providerQuota.provider,
           providerQuota.model,
           providerQuota.scope,
-          providerQuota.window,
+          providerQuota.windowKind,
         ],
         set: {
           quotaLimit: r.limit,
