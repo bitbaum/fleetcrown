@@ -15,6 +15,7 @@
 // generator — the whole point of the loop.
 
 import { callGroqText } from "@/lib/groq";
+import { stripReasoning } from "@/lib/agent/llm";
 import type { FrontierItem } from "./types";
 
 // Short, stable grounding so proposals stay on-target for what FleetCrown is.
@@ -78,14 +79,6 @@ const CRITIQUE_SYSTEM = `You are an adversarial reviewer of self-improvement pro
 Score each proposal 0-100. Be harsh: vague, derivative, or me-too proposals score below 50. Only proposals a thoughtful founder would actually add to the roadmap score 70+.
 
 Return STRICT JSON only: {"scores":[{"index":<number>,"score":<0-100>}]}`;
-
-// Reasoning models (e.g. qwen3) emit a <think>…</think> preamble before the
-// answer — drop it so the JSON after it parses, and so stray braces inside the
-// reasoning don't get mistaken for the payload.
-function stripReasoning(text: string): string {
-  const idx = text.lastIndexOf("</think>");
-  return idx === -1 ? text : text.slice(idx + "</think>".length);
-}
 
 // Pull the first balanced {...} object out of a (possibly fenced) model reply.
 function extractJson(raw: string): string | null {

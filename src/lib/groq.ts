@@ -18,7 +18,12 @@
 
 import { HTTP_TIMEOUT_SHORT_MS, HTTP_TIMEOUT_LONG_MS } from "@/lib/constants/time";
 import { chainFrom, type ChatLink } from "@/config/chat-models";
-import { createProseGate, type StreamSink } from "@/lib/agent/llm";
+import {
+  createProseGate,
+  normaliseCitations,
+  stripReasoning,
+  type StreamSink,
+} from "@/lib/agent/llm";
 import { readSseChunks } from "@/lib/agent/sse-stream";
 import { recordAIHealthFailure, recordAIHealthSuccess } from "@/lib/ai/health";
 
@@ -164,7 +169,7 @@ async function callOneLink(
     const body = res.body;
     if (!body) throw new Error(`${link.provider.id} streamed response had no body`);
     let acc = "";
-    const gate = createProseGate(o.sink.delta);
+    const gate = createProseGate(o.sink.delta, o.sink.reset);
     await readSseChunks(body, (chunk) => {
       const piece = chunk.choices?.[0]?.delta?.content;
       if (!piece) return;
@@ -172,10 +177,10 @@ async function callOneLink(
       gate.push(piece);
     });
     gate.end();
-    text = acc.trim();
+    text = normaliseCitations(stripReasoning(acc)).trim();
   } else {
     const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
-    text = (data?.choices?.[0]?.message?.content ?? "").trim();
+    text = normaliseCitations(stripReasoning(data?.choices?.[0]?.message?.content ?? "")).trim();
   }
   // A 200 with empty content is a failure for every caller here (they all parse
   // the text). Treating it as success would spend the fallback budget on

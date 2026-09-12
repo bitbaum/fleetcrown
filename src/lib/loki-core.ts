@@ -25,6 +25,7 @@
  */
 import { askGatewayAgent, isGatewayConfigured } from "@/lib/openclaw-gateway";
 import { callGroqText, GROQ_FAST_MODEL } from "@/lib/groq";
+import { normaliseCitations, stripReasoning } from "@/lib/agent/llm";
 import { getUserPreferences } from "@/db/queries/user-preferences";
 import { buildGroundedTurn, directiveEvidence, type RetrievedSource } from "@/lib/agent/context";
 import { runLokiTurn, type LokiTurnEvent } from "@/lib/agent/loop";
@@ -359,11 +360,15 @@ async function askLokiViaGateway(
       ? `[Voice for this reply — ${v}]\n\n${contextualMessage}`
       : contextualMessage;
     const res = await askGatewayAgent(prefaced, { sessionKey: opts?.sessionKey });
-    const text = (res.text ?? "").trim();
+    // The gateway is a third model seam, and the one that actually shipped a
+    // `</think>` block into the transcript: its agent runs whatever model it
+    // likes (gemini-flash-latest at the time), so reasoning output is not
+    // hypothetical here — it is the observed case.
+    const text = normaliseCitations(stripReasoning(res.text ?? "")).trim();
     if (res.ok && !isUnusableGatewayText(text) && !looksLikeFleetEcho(text)) {
       const checked = await groundOrRepair(text, async (repair) => {
         const again = await askGatewayAgent(repair, { sessionKey: opts?.sessionKey });
-        return again.ok ? (again.text ?? "") : "";
+        return again.ok ? normaliseCitations(stripReasoning(again.text ?? "")) : "";
       });
       return finish(checked.text, "gateway", res.model ?? "openclaw/main", checked.violations);
     }

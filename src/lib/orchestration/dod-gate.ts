@@ -14,6 +14,7 @@
 // the loop — a missed gate is recoverable, a stuck loop is not.
 
 import { callGroqText } from "@/lib/groq";
+import { stripReasoning } from "@/lib/agent/llm";
 import { ESCALATION_HUMAN_STREAK } from "./escalation-ladder";
 import type { RunClosePatch } from "./close-from-session";
 import type { OrchestrationTaskSummary } from "./contract";
@@ -90,10 +91,10 @@ export function summaryForJudge(s: OrchestrationTaskSummary): string {
 }
 
 function extractJson(raw: string): string | null {
-  const text = (() => {
-    const i = raw.lastIndexOf("</think>");
-    return i === -1 ? raw : raw.slice(i + 8);
-  })();
+  // Was a third hand-rolled copy of the same `</think>` slice. Three copies is
+  // how the CHAT path — the only one a human reads — ended up with none, and
+  // shipped a model's private reasoning into the transcript.
+  const text = stripReasoning(raw);
   const start = text.indexOf("{");
   if (start === -1) return null;
   let depth = 0;

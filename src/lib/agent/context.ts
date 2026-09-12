@@ -21,7 +21,8 @@
  * citations, and none instructs a refusal.
  */
 import { assignFactIds, renderFacts, type Fact } from "@bitbaum/ai-kit/grounding";
-import { buildGroundedContext, type Directive } from "@bitbaum/ai-kit/grounding";
+import { type Directive } from "@bitbaum/ai-kit/grounding";
+import { buildLokiContext } from "@/lib/agent/grounded-context";
 import {
   alertFacts,
   captureFacts,
@@ -97,7 +98,10 @@ async function fetchSource(
     case "economy":
       return economyFacts(message, limit);
     case "projects":
-      return projectFacts(userId).then((f) => f.slice(0, limit));
+      // The message is passed so a project the operator NAMED is ranked to the
+      // front before either slice. Without it the two slices below are a
+      // lottery over ~30 projects, and the one being asked about loses.
+      return projectFacts(userId, message).then((f) => f.slice(0, limit));
   }
 }
 
@@ -149,7 +153,11 @@ export async function buildGroundedTurn(userId: string, message: string): Promis
     facts: seed.facts,
     directives: seed.directives,
     retrieved: seed.retrieved,
-    context: buildGroundedContext({
+    // Same amended contract the tool loop uses. The production refusal
+    // ("An opinion or assessment is: Not in your data.") came through THIS
+    // path, so grounding the two differently is how one gets fixed and the
+    // other keeps the bug.
+    context: buildLokiContext({
       facts: seed.facts,
       directives: seed.directives,
       renderedFacts: renderFacts(seed.facts),
