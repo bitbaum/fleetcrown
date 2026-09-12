@@ -19,7 +19,7 @@
     "lint": "eslint --cache --cache-location node_modules/.cache/eslint src/ home/ widget/",
     "check:design": "bash scripts/check-design-system.sh",
     "check:desktop": "bash scripts/check-desktop.sh",
-    "verify": "pnpm run format:check && pnpm run check:deploy-ready && pnpm run check:client-ledger && pnpm run check:telegram-registry && tsc --noEmit && pnpm run lint && pnpm run check:design && pnpm run check:desktop && pnpm run test:unit && pnpm run test:home && pnpm run test:deploy-ref-gate && pnpm run test:not-behind-gate && pnpm run test:deploy-ready-gate && pnpm run test:client-ledger-gate && pnpm run test:ops",
+    "verify": "pnpm run format:check && pnpm run check:deploy-ready && pnpm run check:client-ledger && pnpm run check:no-experiment-litter && pnpm run check:telegram-registry && tsc --noEmit && pnpm run lint && pnpm run check:design && pnpm run check:desktop && pnpm run test:unit && pnpm run test:home && pnpm run test:deploy-ref-gate && pnpm run test:not-behind-gate && pnpm run test:deploy-ready-gate && pnpm run test:client-ledger-gate && pnpm run test:experiment-litter-gate && pnpm run test:ops",
     "check:telegram-registry": "bash scripts/ci/check-telegram-registry.sh",
     "smoke": "bash scripts/smoke.sh",
     "test:home": "bash scripts/test-home.sh",
@@ -103,7 +103,9 @@
     "check:client-ledger": "bash scripts/ci/check-client-ledger.sh",
     "test:client-ledger-gate": "bash scripts/test/client-ledger-gate.sh",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "check:no-experiment-litter": "bash scripts/ci/check-no-experiment-litter.sh",
+    "test:experiment-litter-gate": "bash scripts/test/experiment-litter-gate.sh"
   },
   "dependencies": {
     "@auth/core": "0.41.3",

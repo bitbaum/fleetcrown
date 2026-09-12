@@ -40,8 +40,43 @@ Granting the scope is possible (`gh auth refresh -s delete_repo` on the box)
 but it is a standing risk in exchange for a step that takes two clicks on
 GitHub, so the default stays as it is.
 
+## Clean up the test when the test is over
+
+**An experiment must not outlive the experiment.** Anything spun up to prove
+something — a dogfood site, a site-factory run, an end-to-end probe — is torn
+down in the same session that created it, including its GitHub repository. Not
+archived, not left private: gone.
+
+This is not tidiness. On 2026-09-12 six such sites were still live days later,
+five with repositories behind them, and two of them —
+"Velokiosk — Bike Repair at Zürich HB" and "Kaffeeklappe – Kaffee to go in
+Zürich Wiedikon" — read as real Zurich businesses that do not exist, on the
+founder's own domain. Nobody decided to keep them; they were just never
+removed. The GitHub account becomes unreadable at a glance, the register stops
+meaning "things we run", and every agent that reads either infers that
+half-finished experiments are normal here.
+
+The cleanup, in full:
+
+```bash
+# on the box — service, files, vhost, port, register row, workflows
+bash scripts/hetzner/retire-site.sh <name> --mode delete --repo keep --go
+
+# from a machine whose token has delete_repo (the box's deliberately does not)
+gh repo delete bitbaum/<name> --yes
+
+# and in the repo, in the same commit
+#   remove the row from scripts/hetzner/apps.conf
+```
+
+`pnpm run check:no-experiment-litter` fails the build if a generated throwaway
+name is ever committed to the register, so forgetting is caught rather than
+discovered months later.
+
 ## Verifying it still holds
 
 `npx tsx scripts/test/repo-delete-capability.ts` pins both halves: the refusal
 stays actionable, and no UI reintroduces the button that would always fail.
-`bash scripts/hetzner/test-retire-site.sh` covers the retire modes.
+`bash scripts/hetzner/test-retire-site.sh` covers the retire modes, and
+`bash scripts/test/experiment-litter-gate.sh` covers the litter gate — both
+that it fires on every throwaway shape and that it never flags a real product.
