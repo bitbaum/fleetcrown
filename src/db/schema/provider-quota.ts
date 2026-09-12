@@ -62,8 +62,15 @@ export const providerQuota = pgTable(
      * "unknown" is stored rather than guessed. The same header name counts a
      * day at one vendor and a minute at another, and a confident wrong window
      * turns "900 left today" into "900 left this minute".
+     *
+     * Called `window_kind`, because `window` is a RESERVED WORD in Postgres.
+     * Drizzle and the migration both quote identifiers so the app was never at
+     * risk — but every hand-written query would have needed `"window"` forever,
+     * and the very first ad-hoc SELECT against this table failed with a syntax
+     * error pointing at the wrong token. Renamed while it was a day old and
+     * held one row; the cost only ever goes up.
      */
-    window: text("window").notNull(),
+    windowKind: text("window_kind").notNull(),
     /** The ceiling, when the vendor stated one. */
     quotaLimit: integer("quota_limit"),
     /** What was left at `observedAt`. The number this table exists for. */
@@ -82,7 +89,13 @@ export const providerQuota = pgTable(
     // A unique INDEX rather than a unique CONSTRAINT so the migration can carry
     // `IF NOT EXISTS`, which the box's forward-only applier requires to be
     // re-runnable. Postgres infers the same arbiter for ON CONFLICT either way.
-    uniqueIndex("uq_provider_quota_counter").on(t.keyOwner, t.provider, t.model, t.scope, t.window),
+    uniqueIndex("uq_provider_quota_counter").on(
+      t.keyOwner,
+      t.provider,
+      t.model,
+      t.scope,
+      t.windowKind,
+    ),
     // The settings page reads every counter for one owner at once.
     index("idx_provider_quota_owner").on(t.keyOwner),
   ],

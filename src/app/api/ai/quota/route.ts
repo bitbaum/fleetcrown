@@ -45,7 +45,7 @@ export async function GET() {
         provider: r.provider,
         model: r.model,
         scope: r.scope,
-        window: r.window,
+        window: r.windowKind,
         quotaLimit: r.quotaLimit,
         remaining: r.remaining,
         resetAt: r.resetAt,
