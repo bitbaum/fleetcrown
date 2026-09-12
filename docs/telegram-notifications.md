@@ -18,6 +18,7 @@ message; test runs (`ALERT_DRY_RUN=1`) never deliver.
 | What arrives | Trigger | Source |
 |---|---|---|
 | 📨 New visitor feedback (project, excerpt, link to inbox) | A genuine visitor submits the feedback form (`POST /api/feedback`; AI/synthesizer filings stay silent) | `src/lib/feedback/notify-new.ts` |
+| ✅ A fix reached the live site, or 🚨 a merged fix failed to deploy (project, the visitor's words, the pull request, the live page) | The fix ledger sees a run's pull request TRANSITION into deployed or deploy-failed while the inbox is read — once per fix, never on re-reads. Says when FleetCrown merged it automatically, because that is the fact an operator needs to keep trusting the switch | `src/lib/feedback/notify-shipped.ts` |
 | Run outcome: what an agent run concluded (root cause → action → remains) | An orchestration run with `notifyOnClose` closes — includes every incident-dispatch remediation run | `src/lib/orchestration/notify-close.ts`, `src/lib/orchestration/gate-and-close.ts` |
 | Morning brief, evening wrap, weekly reflection, Monday digest, email deadlines, financial scan, life scorecard | Loki's scheduled jobs — schedules live in their own SSOT: `/home/openclaw/.openclaw/cron/jobs.json` on bitbaum (edit via Loki, not here) | off-repo: OpenClaw cron |
 
