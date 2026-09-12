@@ -10,12 +10,14 @@ export function ProjectSettingsPanel({
   projectId,
   projectName,
   hasRepo,
+  repoUrl,
   hasLocalPath,
   liveUrl,
 }: {
   projectId: string;
   projectName: string;
   hasRepo: boolean;
+  repoUrl?: string | null;
   hasLocalPath: boolean;
   /** The public site, when this project has one. */
   liveUrl?: string | null;
@@ -35,6 +37,7 @@ export function ProjectSettingsPanel({
           projectName={projectName}
           projectId={projectId}
           hasRepo={hasRepo}
+          repoUrl={repoUrl}
           hasLocalPath={hasLocalPath}
           onDeleted={() => router.push("/projects")}
         />

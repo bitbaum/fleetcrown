@@ -79,6 +79,8 @@ case "${KIND:-}" in
     fi ;;
 esac
 
+GH_OWNER_PREVIEW="${GITHUB_REPO_OWNER:-bitbaum}"
+
 # The repository default follows the mode: a private site wants a private repo,
 # a deleted site wants its repo archived (recoverable) rather than deleted.
 if [ -z "$REPO_ACTION" ]; then
@@ -89,6 +91,18 @@ if [ -z "$REPO_ACTION" ]; then
   esac
 fi
 case "$REPO_ACTION" in keep|private|archive|delete) ;; *) echo "ERROR: unknown --repo '$REPO_ACTION'" >&2; exit 2 ;; esac
+
+# Deleting a repository needs GitHub's delete_repo scope, which this host's
+# token deliberately does not carry. Refusing here, before anything is torn
+# down, beats discovering it after the service, vhost and files are gone.
+if [ "$REPO_ACTION" = "delete" ]; then
+  if ! gh auth status 2>&1 | grep -q "delete_repo"; then
+    echo "ERROR: this host's GitHub token cannot delete repositories (no delete_repo scope)." >&2
+    echo "       Use --repo archive, which is recoverable, or delete it yourself at" >&2
+    echo "       https://github.com/$GH_OWNER_PREVIEW/$SLUG/settings" >&2
+    exit 2
+  fi
+fi
 
 HOST="${DOMAINS%%,*}"
 GH_OWNER="${GITHUB_REPO_OWNER:-bitbaum}"

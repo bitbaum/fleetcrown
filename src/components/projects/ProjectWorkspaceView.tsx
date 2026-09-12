@@ -341,6 +341,7 @@ export function ProjectWorkspaceView({
                       projectId={project.id}
                       projectName={project.name}
                       hasRepo={Boolean(links.repo)}
+                      repoUrl={links.repo}
                       hasLocalPath={Boolean(userProject?.dirPath)}
                       liveUrl={userProject?.liveUrl ?? links.prodUrl}
                     />

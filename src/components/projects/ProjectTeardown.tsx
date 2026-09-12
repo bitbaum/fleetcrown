@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Archive, FolderX, Loader2, Trash2 } from "lucide-react";
+import { Archive, ExternalLink, FolderX, Loader2, Trash2 } from "lucide-react";
 import { deleteJson, throwApiError } from "@/lib/api/fetch";
 
 export function ProjectTeardown({
@@ -9,6 +9,7 @@ export function ProjectTeardown({
   projectName,
   hasSite,
   hasRepo,
+  repoUrl,
   hasLocalPath,
   onDeleted,
 }: {
@@ -20,10 +21,12 @@ export function ProjectTeardown({
    *  is every project without a site — is worse than saying nothing. */
   hasSite: boolean;
   hasRepo: boolean;
+  /** The linked repository, so deleting it on GitHub is one click away. */
+  repoUrl?: string | null;
   hasLocalPath: boolean;
   onDeleted: () => void;
 }) {
-  const [deprovision, setDeprovision] = useState<"none" | "archive-repo" | "delete-repo">("none");
+  const [deprovision, setDeprovision] = useState<"none" | "archive-repo">("none");
   const [deleteLocal, setDeleteLocal] = useState(false);
   const [armed, setArmed] = useState(false);
   // Deleting a project takes its brief, milestones and feedback with it and
@@ -89,15 +92,25 @@ export function ProjectTeardown({
                 />
                 <Archive className="h-3.5 w-3.5" aria-hidden="true" /> Archive GitHub repository
               </label>
-              <label className="flex min-h-11 items-center gap-2 text-status-negative">
-                <input
-                  className="h-5 w-5 shrink-0"
-                  type="radio"
-                  checked={deprovision === "delete-repo"}
-                  onChange={() => setDeprovision("delete-repo")}
-                />
-                <Trash2 className="h-3.5 w-3.5" aria-hidden="true" /> Delete GitHub repository
-              </label>
+              {/* No "delete the repository" option, and not an oversight: no
+                  credential FleetCrown holds carries GitHub's delete_repo
+                  scope, by design, so the app can never destroy code that
+                  cannot be recovered. Offering a button that always fails
+                  would be worse than sending people where it works. */}
+              <p className="text-xs text-text-tertiary">
+                Deleting the repository outright happens on GitHub — FleetCrown can archive it, but
+                never destroy it.{" "}
+                {repoUrl && (
+                  <a
+                    className="inline-flex items-center gap-1 underline hover:text-text-secondary"
+                    href={`${repoUrl.replace(/\.git$/, "")}/settings`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Delete it on GitHub <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                  </a>
+                )}
+              </p>
             </>
           )}
           {hasLocalPath && (
