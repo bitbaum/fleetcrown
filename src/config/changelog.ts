@@ -29,6 +29,20 @@ export interface ReleaseEntry {
 /** Newest first. */
 export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
   {
+    version: "0.8.24",
+    tag: "fleet-runner-v0.8.24",
+    date: "2026-09-14T00:00:00Z",
+    highlights: [
+      "The product is now called Loki, and the runner says so everywhere it used to say the old name: the app it connects to, the config folder it reads, and the environment keys it accepts (LOKI_*).",
+      "Existing installs keep working: the old host redirects to loki.orangecat.ch and the old config folder is still read.",
+    ],
+    breaking: [
+      "Environment keys were renamed from the old prefix to LOKI_*; a launcher that set the old keys must set the new ones.",
+    ],
+    notes:
+      "A rename, not a behaviour change. It ships as its own version so the tag, the /releases page and the machines that auto-update agree on what they run.",
+  },
+  {
     version: "0.8.23",
     tag: "fleet-runner-v0.8.23",
     date: "2026-09-12T18:00:00Z",
