@@ -2,7 +2,7 @@
 
 **created_date:** 2026-08-20  
 **last_modified_date:** 2026-08-21  
-**last_modified_summary:** Implementation SSOT is npm `bip-kit`; FleetCrown dogfoods; AOZ second consumer; local packages/bip retired.
+**last_modified_summary:** Implementation SSOT is npm `bip-kit`; Loki dogfoods; AOZ second consumer; local packages/bip retired.
 
 ---
 
@@ -13,7 +13,7 @@ Studio products each reinvented "markdown posts on the public site." That duplic
 ## Decision
 
 1. **`bip-kit` (npm)** is the shared parser + types: `parseContentBlocks`, video allowlist, roadmap/changelog shapes.
-2. **FleetCrown Thoughts** dogfoods the essay UX (React renderers, Mermaid, theme-aware public chrome).
+2. **Loki Thoughts** dogfoods the essay UX (React renderers, Mermaid, theme-aware public chrome).
 3. **Theme SSOT** is `THEME_OPTIONS` + `ThemeProvider` + CSS tokens. Public surfaces must not pin `.dark`.
 
 Programme: [building-in-public-ssot.md](./building-in-public-ssot.md).
@@ -34,7 +34,7 @@ Style voice: `docs/thoughts-style-guide.md`.
 
 | Phase | Work | Done when |
 |-------|------|-----------|
-| **A** | FleetCrown media + public theme | Done |
+| **A** | Loki media + public theme | Done |
 | **B** | Docs | Done |
 | **C** | Second consumer (AOZ) on `bip-kit` | AOZ package.json + tests |
 | **D** | OSS | Done — github.com/bitbaum/bip-kit |

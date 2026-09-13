@@ -79,7 +79,7 @@ assert.deepEqual(
 // --- a clean file reports nothing ------------------------------------------
 assert.deepEqual(
   retiredHandleMatches(
-    "name: CI\non: push\njobs:\n  x:\n    uses: bitbaum/fleetcrown/.github/workflows/selfhost-deploy.yml@main\n",
+    "name: CI\non: push\njobs:\n  x:\n    uses: bitbaum/loki/.github/workflows/selfhost-deploy.yml@main\n",
     RETIRED,
   ),
   [],
@@ -91,14 +91,14 @@ const usesOf = (text: string) =>
   [...text.matchAll(USES)].map(([, owner, name]) => `${owner}/${name}`);
 
 assert.deepEqual(
-  usesOf("jobs:\n  x:\n    uses: bitbaum/fleetcrown@main\n"),
-  ["bitbaum/fleetcrown"],
+  usesOf("jobs:\n  x:\n    uses: bitbaum/loki@main\n"),
+  ["bitbaum/loki"],
   "a plain owner/repo@ref uses: line is matched",
 );
 
 assert.deepEqual(
-  usesOf("jobs:\n  x:\n    uses: bitbaum/fleetcrown/.github/workflows/selfhost-deploy.yml@main\n"),
-  ["bitbaum/fleetcrown"],
+  usesOf("jobs:\n  x:\n    uses: bitbaum/loki/.github/workflows/selfhost-deploy.yml@main\n"),
+  ["bitbaum/loki"],
   "the owner/repo is extracted even with a path and filename after it",
 );
 
@@ -121,24 +121,23 @@ assert.deepEqual(
 );
 
 assert.deepEqual(
-  usesOf("      uses: bitbaum/fleetcrown@main\n"),
-  ["bitbaum/fleetcrown"],
+  usesOf("      uses: bitbaum/loki@main\n"),
+  ["bitbaum/loki"],
   "indentation before uses: does not prevent a match",
 );
 
 // --- verdictFor: the actual redirect-detection decision --------------------
 assert.deepEqual(
-  verdictFor("bitbaum/fleetcrown", "bitbaum/fleetcrown"),
+  verdictFor("bitbaum/loki", "bitbaum/loki"),
   { kind: "ok" },
   "a reference already naming its canonical owner is fine",
 );
 
 assert.deepEqual(
-  verdictFor("catomean/fleetcrown", "bitbaum/fleetcrown"),
+  verdictFor("catomean/loki", "bitbaum/loki"),
   {
     kind: "stale",
-    message:
-      "uses catomean/fleetcrown — canonical is bitbaum/fleetcrown (Actions will NOT follow this)",
+    message: "uses catomean/loki — canonical is bitbaum/loki (Actions will NOT follow this)",
   },
   "REST resolving a DIFFERENT canonical name is the exact redirect gap Actions falls into",
 );
@@ -150,8 +149,8 @@ assert.deepEqual(
 );
 
 assert.deepEqual(
-  verdictFor("bitbaum/fleetcrown", undefined),
-  { kind: "unreadable", message: "bitbaum/fleetcrown (lookup failed)" },
+  verdictFor("bitbaum/loki", undefined),
+  { kind: "unreadable", message: "bitbaum/loki (lookup failed)" },
   "a failed lookup (rate limit, 5xx) must be unreadable — never reported as clean, never as a false stale",
 );
 

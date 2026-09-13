@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
 // `window.fleetRunner` — the IPC bridge from the web shell (Next.js app
-// loaded from fleetcrown.orangecat.ch) into Fleet Runner's main process.
+// loaded from loki.orangecat.ch) into Fleet Runner's main process.
 //
 // Every method must justify itself with a real local-only capability:
 // something the cloud literally cannot do because it requires reaching
@@ -43,7 +43,7 @@ contextBridge.exposeInMainWorld('fleetRunner', {
   }> => ipcRenderer.invoke('get-installed-clis'),
 
   // Local /dev scan — walks ~/dev, ~/code, ~/Code, ~/Projects (overridable
-  // via FLEETCROWN_DEV_ROOTS) for git repos. The web app uses this to
+  // via LOKI_DEV_ROOTS) for git repos. The web app uses this to
   // surface "we see your local repos, register them?" CTAs alongside the
   // GitHub-side suggestions on /control. Returns up to 50 most-recent.
   getLocalDevProjects: (): Promise<{

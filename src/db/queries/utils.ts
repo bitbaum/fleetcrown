@@ -2,7 +2,7 @@ import { db } from "@/db";
 import { attributes, entities, interactions, orgMemberships, type Interaction } from "@/db/schema";
 import { alias } from "drizzle-orm/pg-core";
 import { and, eq, inArray, ne } from "drizzle-orm";
-import { SOURCE_FLEETCROWN_UI } from "@/lib/constants";
+import { SOURCE_LOKI_UI } from "@/lib/constants";
 import { INTERACTION_DIRECTION, type InteractionDirection } from "@/lib/constants/statuses";
 import { assertAttrAllowed } from "@/config/actors";
 import { z } from "zod";
@@ -85,7 +85,7 @@ export async function upsertEntityAttribute(
       entityId,
       key: normalizedKey,
       value,
-      source: SOURCE_FLEETCROWN_UI,
+      source: SOURCE_LOKI_UI,
     })
     .onConflictDoUpdate({
       target: [attributes.userId, attributes.entityId, attributes.key],

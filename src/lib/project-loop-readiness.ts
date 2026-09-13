@@ -46,7 +46,7 @@ export function deriveProjectLoopReadiness(
       label: "Needs path",
       tone: "warning",
       reason: "no_path",
-      description: "Add a local path before FleetCrown can dispatch agent loops for this project.",
+      description: "Add a local path before Loki can dispatch agent loops for this project.",
     };
   }
 

@@ -3,7 +3,7 @@
 #
 # Copies runtime assets into .next/standalone/ (required for the production
 # server to serve CSS, JS chunks, public files, and markdown content) then restarts
-# the fleetcrown-app systemd service if it is installed on this machine.
+# the loki-app systemd service if it is installed on this machine.
 # Legacy cockpit-app service name is supported as a fallback for transitional installs.
 #
 # Skips silently in CI or on machines where the service is not installed, so
@@ -59,7 +59,7 @@ swap_dir "$PROJECT_DIR/content"      "$STANDALONE/content"
 echo "→ deploy: runtime assets swapped into standalone (atomic)"
 
 # ── node-pty native binary ────────────────────────────────────────────────────
-# node-pty (the LocalPtyExecutor that backs FleetCrown-owned agent PTYs) loads
+# node-pty (the LocalPtyExecutor that backs Loki-owned agent PTYs) loads
 # its compiled .node binary dynamically, so Next's file tracer copies the JS
 # (lib/, package.json) into standalone but NOT build/Release/pty.node — the
 # server then 500s with "Failed to load native module: pty.node". Copy the whole
@@ -97,24 +97,24 @@ if printf '%s' "$DRIFT_OUT" | grep -q "MISSING"; then
 fi
 
 # ── Pinned-deploy guard ───────────────────────────────────────────────────────
-# When deploy-hetzner.sh runs a pinned (--ref) build it exports FLEETCROWN_DEPLOY_REF.
+# When deploy-hetzner.sh runs a pinned (--ref) build it exports LOKI_DEPLOY_REF.
 # If HEAD drifted during the build (a branch switch landed mid-compile), the
 # standalone we just assembled may be torn — so don't restart the LOCAL service
 # into it. deploy-hetzner.sh's own AFTER==REF check already aborts the box rsync;
 # this keeps local consistent, so one mid-build `git checkout` ships nothing,
 # anywhere, instead of silently leaving local prod on a torn build.
-if [ -n "${FLEETCROWN_DEPLOY_REF:-}" ]; then
+if [ -n "${LOKI_DEPLOY_REF:-}" ]; then
   HEAD_NOW="$(git -C "$PROJECT_DIR" rev-parse HEAD 2>/dev/null || echo unknown)"
-  if [ "$HEAD_NOW" != "$FLEETCROWN_DEPLOY_REF" ]; then
-    echo "→ deploy: ⚠ HEAD drifted to ${HEAD_NOW:0:12} (pinned ${FLEETCROWN_DEPLOY_REF:0:12}) — skipping local restart; build may be torn"
+  if [ "$HEAD_NOW" != "$LOKI_DEPLOY_REF" ]; then
+    echo "→ deploy: ⚠ HEAD drifted to ${HEAD_NOW:0:12} (pinned ${LOKI_DEPLOY_REF:0:12}) — skipping local restart; build may be torn"
     exit 0
   fi
 fi
 
 # ── Restart systemd service (local machine only) ──────────────────────────────
-# Prefer the canonical fleetcrown-app service; fall back to legacy cockpit-app
+# Prefer the canonical loki-app service; fall back to legacy cockpit-app
 # for machines still running the pre-rename install.
-for SERVICE in fleetcrown-app cockpit-app; do
+for SERVICE in loki-app cockpit-app; do
   SERVICE_FILE="$HOME/.config/systemd/user/${SERVICE}.service"
   if [ -f "$SERVICE_FILE" ] && systemctl --user is-enabled --quiet "$SERVICE" 2>/dev/null; then
     systemctl --user restart "$SERVICE"

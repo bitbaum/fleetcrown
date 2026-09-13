@@ -30,12 +30,12 @@ set -euo pipefail
 
 . "$(dirname "$0")/_box-env.sh"   # SSOT: HETZNER_IP, BOX_ROOT, BOX_UBUNTU
 HOST="${1:-$BOX_ROOT}"
-RUNNER_OWNER="${FLEETCROWN_RUNNER_OWNER:-ubuntu}"
+RUNNER_OWNER="${LOKI_RUNNER_OWNER:-ubuntu}"
 RUNNER_UHOME="$([ "$RUNNER_OWNER" = fcrunner ] && echo /home/fcrunner || echo /home/ubuntu)"
 SRC="$(dirname "$0")/box-agent-claude.md"
 
-BEGIN="<!-- BEGIN fleetcrown-managed: box agent contract -->"
-END="<!-- END fleetcrown-managed: box agent contract -->"
+BEGIN="<!-- BEGIN loki-managed: box agent contract -->"
+END="<!-- END loki-managed: box agent contract -->"
 
 [ -f "$SRC" ] || { echo "✗ missing contract source: $SRC" >&2; exit 1; }
 
@@ -45,7 +45,7 @@ echo "→ box agent contract: applying to ${HOST}:${RUNNER_UHOME}/.claude/CLAUDE
 # <<'REMOTE'` loses, because the heredoc claims stdin and the remote `cat` reads
 # nothing. Staging also leaves the exact bytes on the box if this ever needs
 # debugging.
-STAGE="/tmp/fleetcrown-box-contract.$$.md"
+STAGE="/tmp/loki-box-contract.$$.md"
 {
   printf '%s\n' "$BEGIN"
   printf '%s\n' "<!-- Generated from scripts/hetzner/box-agent-claude.md — edit there, not here. -->"

@@ -2,14 +2,14 @@
  * Loki → dispatch → Terminal (Cloud) dogfood on prod.
  *
  * Reuses the operator's Brave profile (same logged-in session as the browser)
- * so OAuth on fleetcrown.orangecat.ch is not automated. Headed by default.
+ * so OAuth on loki.orangecat.ch is not automated. Headed by default.
  *
  * Usage:
  *   node scripts/loki-dogfood.mjs
- *   BASE=https://fleetcrown.orangecat.ch PROJECT=fleetcrown node scripts/loki-dogfood.mjs
+ *   BASE=https://loki.orangecat.ch PROJECT=loki node scripts/loki-dogfood.mjs
  *   HEADLESS=1 node scripts/loki-dogfood.mjs
  *
- * Optional: `FLEETCROWN_SESSION_TOKEN=<authjs token>` skips profile copy (`COCKPIT_SESSION_TOKEN` legacy).
+ * Optional: `LOKI_SESSION_TOKEN=<authjs token>` skips profile copy (`COCKPIT_SESSION_TOKEN` legacy).
  */
 import fs, { cpSync, mkdtempSync, rmSync } from "node:fs";
 import path from "node:path";
@@ -20,12 +20,10 @@ const root = process.cwd();
 const outDir = path.join(root, ".tmp", "loki-dogfood");
 fs.mkdirSync(outDir, { recursive: true });
 
-const base = (process.env.BASE ?? "https://fleetcrown.orangecat.ch").replace(/\/$/, "");
-const projectNeedle = (process.env.PROJECT ?? "fleetcrown").toLowerCase();
+const base = (process.env.BASE ?? "https://loki.orangecat.ch").replace(/\/$/, "");
+const projectNeedle = (process.env.PROJECT ?? "loki").toLowerCase();
 const headless = process.env.HEADLESS === "1";
-const sessionToken = (
-  process.env.FLEETCROWN_SESSION_TOKEN ?? process.env.COCKPIT_SESSION_TOKEN
-)?.trim();
+const sessionToken = (process.env.LOKI_SESSION_TOKEN ?? process.env.COCKPIT_SESSION_TOKEN)?.trim();
 const sessionCookieName = base.startsWith("https://")
   ? "__Secure-authjs.session-token"
   : "authjs.session-token";

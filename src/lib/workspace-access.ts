@@ -43,7 +43,7 @@ export function decideWorkspaceAccessFromSignals(input: {
 /**
  * Server-owned workspaces are available in two cases:
  * - local/self-host runtime (`RUNTIME_AVAILABLE=true`);
- * - hosted sandbox runtime (`FLEETCROWN_EXECUTOR=sandbox`) for cloud-builder-
+ * - hosted sandbox runtime (`LOKI_EXECUTOR=sandbox`) for cloud-builder-
  *   allowed accounts only.
  */
 export async function decideWorkspaceAccess(userId: string): Promise<WorkspaceAccessDecision> {

@@ -17,11 +17,11 @@
  * re-polling is safe and idempotent.
  *
  * Config (env):
- *   FLEETCROWN_API_URL     cloud app base URL   (default: the APP_URL constant)
- *   FLEETCROWN_AGENT_TOKEN ck_* token from /settings → Agent tokens (required)
- *   FLEETCROWN_DRAIN_INTERVAL_MS  poll cadence (default 15000)
+ *   LOKI_API_URL     cloud app base URL   (default: the APP_URL constant)
+ *   LOKI_AGENT_TOKEN ck_* token from /settings → Agent tokens (required)
+ *   LOKI_DRAIN_INTERVAL_MS  poll cadence (default 15000)
  *
- * Run:    FLEETCROWN_AGENT_TOKEN=ck_… npx tsx home/calendar-drain.ts --start
+ * Run:    LOKI_AGENT_TOKEN=ck_… npx tsx home/calendar-drain.ts --start
  * Test:   npx tsx home/calendar-drain.ts --self-test   (pure logic, no I/O)
  */
 import { APP_URL } from "@/config/brand";
@@ -42,15 +42,13 @@ type DrainEvent = { id: string; title: string; payload: ActionPayload | null };
 export type DrainConfig = { baseUrl?: string; token?: string };
 
 function baseUrl(cfg?: DrainConfig): string {
-  return (cfg?.baseUrl ?? process.env.FLEETCROWN_API_URL ?? APP_URL).replace(/\/$/, "");
+  return (cfg?.baseUrl ?? process.env.LOKI_API_URL ?? APP_URL).replace(/\/$/, "");
 }
 
 function authHeader(cfg?: DrainConfig): Record<string, string> {
-  const token = (cfg?.token ?? process.env.FLEETCROWN_AGENT_TOKEN)?.trim();
+  const token = (cfg?.token ?? process.env.LOKI_AGENT_TOKEN)?.trim();
   if (!token)
-    throw new Error(
-      "FLEETCROWN_AGENT_TOKEN is required (mint a ck_* token at /settings → Agent tokens)",
-    );
+    throw new Error("LOKI_AGENT_TOKEN is required (mint a ck_* token at /settings → Agent tokens)");
   return { authorization: `Bearer ${token}` };
 }
 
@@ -88,7 +86,7 @@ export async function drainOnce(cfg?: DrainConfig): Promise<{ booked: number; fa
 }
 
 async function start(): Promise<void> {
-  const interval = Number(process.env.FLEETCROWN_DRAIN_INTERVAL_MS ?? 15000);
+  const interval = Number(process.env.LOKI_DRAIN_INTERVAL_MS ?? 15000);
   authHeader(); // fail fast if token missing
   console.log(`[calendar-drain] polling ${baseUrl()}/api/actions/drain-events every ${interval}ms`);
   for (;;) {
@@ -185,7 +183,7 @@ if (isDirectCli) {
   } else {
     console.log(`calendar-drain — book cloud-approved calendar events on the local machine.
 
-  npx tsx home/calendar-drain.ts --start        run the poll loop (needs gog + FLEETCROWN_AGENT_TOKEN)
+  npx tsx home/calendar-drain.ts --start        run the poll loop (needs gog + LOKI_AGENT_TOKEN)
   npx tsx home/calendar-drain.ts --self-test    run inline tests, no I/O`);
   }
 }

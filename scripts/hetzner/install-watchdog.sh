@@ -2,8 +2,8 @@
 # install-watchdog.sh — box-wide uptime + health watchdog for the bitbaum box.
 #
 # WHY separate from install-hetzner-crons.sh / install-backups.sh: this watches
-# EVERY app on the box (FleetCrown, OrangeCat + the apps.conf apps) and the
-# FleetCrown auth/email health signals, so it's box-wide infra and lives here
+# EVERY app on the box (Loki, OrangeCat + the apps.conf apps) and the
+# Loki auth/email health signals, so it's box-wide infra and lives here
 # next to sync-infra.sh / verify.sh / install-backups.sh.
 #
 # What it installs on the box (address SSOT: scripts/hetzner/_box-env.sh):
@@ -38,7 +38,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APPS_CONF="${MANIFEST:-$SCRIPT_DIR/apps.conf}"
 
 # The operator's laptop reaches the box as root. The box itself does not:
-# register-cd runs this (via sync-infra) inside fleetcrown-app as ubuntu, whose
+# register-cd runs this (via sync-infra) inside loki-app as ubuntu, whose
 # only key is the CI deploy key, so root@box answers "Permission denied" and
 # a freshly registered site was left unmonitored — and, worse, registration
 # reported failure after everything else had succeeded. ubuntu has passwordless
@@ -65,10 +65,10 @@ else
 fi
 
 # ── Build the target list (SSOT-derived) ────────────────────────────────────
-# FleetCrown health is first — a 503 there means the env guardrail found a
+# Loki health is first — a 503 there means the env guardrail found a
 # fatal/error config issue, so this check doubles as a config-rot alarm.
-TARGETS="fleetcrown-health|https://fleetcrown.orangecat.ch/api/health|200
-fleetcrown|https://fleetcrown.orangecat.ch/sign-in|200
+TARGETS="loki-health|https://loki.orangecat.ch/api/health|200
+loki|https://loki.orangecat.ch/sign-in|200
 orangecat|https://orangecat.ch|200"
 
 # Append every public domain from apps.conf (field 3, comma-sep, '-' = internal).
@@ -122,7 +122,7 @@ check() {  # label url   (targets.conf 3rd field is ignored — redirects are fo
   local code
   # Follow redirects (-L): a 3xx root (locale/trailing-slash) is the server
   # responding, not an outage. UP on a 2xx/3xx final status; DOWN on unreachable
-  # (000) or a 4xx/5xx error — incl. fleetcrown /api/health returning 503 when
+  # (000) or a 4xx/5xx error — incl. loki /api/health returning 503 when
   # the env guardrail finds a config issue.
   code=$(curl -sL -o /dev/null -m 15 -w "%{http_code}" "$url" 2>/dev/null || echo 000)
   local now="up"; { [ "$code" = "000" ] || [ "$code" -ge 400 ] 2>/dev/null; } && now="down"
@@ -173,21 +173,21 @@ Unit=watchdog.service
 WantedBy=timers.target
 TIMER
 
-# Alert delivery — inherit the bot fleetcrown/openclaw ALREADY use on this box,
+# Alert delivery — inherit the bot loki/openclaw ALREADY use on this box,
 # so alerting is delivery-active by default instead of shipping a dead template
 # that stays journal-only for months (which is exactly what happened until
-# 2026-07-22). Only when no active token exists (here OR in fleetcrown's env) do
+# 2026-07-22). Only when no active token exists (here OR in loki's env) do
 # we fall back to the commented template + the LOUD warning below.
 if ! grep -qE '^TELEGRAM_BOT_TOKEN=.+' /opt/monitoring/telegram.env 2>/dev/null; then
-  FC_ENV=/opt/fleetcrown/app/.env
+  FC_ENV=/opt/loki/app/.env
   fc_tok=$(grep -m1 '^TELEGRAM_BOT_TOKEN=' "$FC_ENV" 2>/dev/null | cut -d= -f2- | tr -d '"'"'"'"' | tr -d '\r')
   fc_chat=$(grep -m1 '^APP_TELEGRAM_CHAT_ID=' "$FC_ENV" 2>/dev/null | cut -d= -f2- | tr -d '"'"'"'"' | tr -d '\r')
   if [ -n "$fc_tok" ] && [ -n "$fc_chat" ]; then
-    { echo "# Inherited from fleetcrown's bot (same box) so delivery is active by default."
+    { echo "# Inherited from loki's bot (same box) so delivery is active by default."
       echo "TELEGRAM_BOT_TOKEN=$fc_tok"
       echo "TELEGRAM_CHAT_ID=$fc_chat"; } > /opt/monitoring/telegram.env
     chmod 600 /opt/monitoring/telegram.env
-    echo "[watchdog] inherited fleetcrown's Telegram bot — alert delivery ACTIVE"
+    echo "[watchdog] inherited loki's Telegram bot — alert delivery ACTIVE"
   else
     cat > /opt/monitoring/telegram.env <<'ENVT'
 # Drop your bot token + chat id here to activate Telegram alerts.

@@ -50,15 +50,15 @@ function ok(cond: unknown, msg: string) {
 eq(siteCdSlug("Hamster Cheek"), "hamster-cheek", "slug from display name");
 eq(siteCdLiveUrl("hamster-cheek"), "https://hamster-cheek.orangecat.ch", "predicted live URL");
 ok(isValidSiteSlug("hamster-cheek"), "valid slug");
-ok(!isValidSiteSlug("fleetcrown"), "fleetcrown reserved");
-ok(RESERVED_SITE_SLUGS.has("fleetcrown"), "reserved set includes control plane");
+ok(!isValidSiteSlug("loki"), "loki reserved");
+ok(RESERVED_SITE_SLUGS.has("loki"), "reserved set includes control plane");
 ok(templateSupportsSiteCd("nextjs-tailwind"), "nextjs supports CD");
 ok(templateSupportsSiteCd("bare"), "bare can register CD");
 ok(!templateSupportsSiteCd("hono-cloudflare"), "workers starter is not selfhost-deploy");
 
 const yml = deployWorkflowYaml("hamster-cheek");
 ok(yml.includes("app: hamster-cheek"), "deploy shim carries apps.conf key");
-ok(yml.includes("selfhost-deploy.yml@main"), "deploy shim calls fleetcrown reusable workflow");
+ok(yml.includes("selfhost-deploy.yml@main"), "deploy shim calls loki reusable workflow");
 ok(
   yml.includes("HETZNER_SSH_PRIVATE_KEY: ${{ secrets.HETZNER_SSH_PRIVATE_KEY }}"),
   "deploy shim passes deploy key explicitly (cross-owner safe)",
@@ -87,11 +87,11 @@ if (good.ok) {
 }
 
 const reserved = planSiteCd({
-  projectName: "fleetcrown",
-  repoFullName: "bitbaum/fleetcrown",
+  projectName: "loki",
+  repoFullName: "bitbaum/loki",
   template: "nextjs-tailwind",
 });
-ok(reserved.ok === false && reserved.code === "reserved-slug", "refuses fleetcrown slug");
+ok(reserved.ok === false && reserved.code === "reserved-slug", "refuses loki slug");
 
 const workers = planSiteCd({
   projectName: "edge-thing",
@@ -105,8 +105,8 @@ ok(
   "studioDevRoot returns a path",
 );
 ok(
-  studioRepoRoot().endsWith("fleetcrown") || studioRepoRoot().includes("fleetcrown"),
-  "studioRepoRoot names fleetcrown",
+  studioRepoRoot().endsWith("loki") || studioRepoRoot().includes("loki"),
+  "studioRepoRoot names loki",
 );
 const probe = probeRegisterSiteLocally();
 ok(typeof probe.ok === "boolean", "probe returns ok");

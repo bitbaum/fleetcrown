@@ -49,7 +49,7 @@ Rules:
 ### 2.2 X + LinkedIn — cross-post the strategy essays
 The ~8 essays that carry the strategic story, in posting order:
 
-1. [the-levelsio-pattern-productized-who-fleetcrown-is-for](/thoughts/the-levelsio-pattern-productized-who-fleetcrown-is-for) — the ICP essay; post first, it names the audience
+1. [the-levelsio-pattern-productized-who-loki-is-for](/thoughts/the-levelsio-pattern-productized-who-loki-is-for) — the ICP essay; post first, it names the audience
 2. [the-two-halves-joined](/thoughts/the-two-halves-joined) — the new bridge essay; the "we shipped what we promised" proof
 3. [the-two-halves-of-the-individual-singularity](/thoughts/the-two-halves-of-the-individual-singularity) — the thesis
 4. [the-captain-needs-a-ship](/thoughts/the-captain-needs-a-ship) — the honest gap essay
@@ -81,12 +81,12 @@ moves are product work, tracked in the master plan (Phase 1.5 detect-and-
 suggest, 1.6 wallet state on FC pages) — distribution's job here is only to
 narrate each one as it ships (cadence §1).
 
-## 3. The outbound GTM agent (FleetCrown runs its own outbound)
+## 3. The outbound GTM agent (Loki runs its own outbound)
 
-This is both FleetCrown's acquisition engine **and** a flagship FleetCrown
+This is both Loki's acquisition engine **and** a flagship Loki
 use-case: the same approval-queue + agent-fleet machinery the product sells,
-pointed at the product's own growth. "FleetCrown runs its own outbound" is a
-demo no slide can match — every step below is a FleetCrown feature being
+pointed at the product's own growth. "Loki runs its own outbound" is a
+demo no slide can match — every step below is a Loki feature being
 dogfooded.
 
 **Hard rule, stated once and absolute: no external message is ever sent
@@ -94,7 +94,7 @@ without the founder's explicit approval.** The agent researches, drafts, and
 queues; a human releases. (Same posture as Ivy: autonomous internally,
 supervised externally.)
 
-The pipeline, as FleetCrown dispatches:
+The pipeline, as Loki dispatches:
 
 1. **Target market (SSOT).** The ICP from master-plan §3.4: AI-assisted solo
    builders and micro-studios already shipping with agents — people running
@@ -112,9 +112,9 @@ The pipeline, as FleetCrown dispatches:
    The agent watches; the queue stays empty until a signal exists.
 5. **Draft outreach.** Every sentence in a draft must be one of four things:
    a **fact** (sourced, dated), an **inference** (labeled as such), an
-   **offer** (what FleetCrown does for their specific situation), or a
+   **offer** (what Loki does for their specific situation), or a
    **question**. Nothing else — no flattery filler, no fake familiarity.
-6. **Human approval.** The draft enters FleetCrown's approval queue
+6. **Human approval.** The draft enters Loki's approval queue
    (/approvals) — or Telegram when away — with the dossier attached. The
    founder approves, edits, or kills. Silence = not sent.
 7. **Send.** Only after approval, from the founder's own accounts.
@@ -137,7 +137,7 @@ has run honestly for a few weeks).
 | RSS feed | live | — (channel exists; subscriber counting is best-effort) | `/rss.xml` |
 | Newsletter signups | 0 | first 25 | `newsletter_subscribers` table |
 | Referral traffic to /thoughts | ~0 | measurable weekly stream | Caddy logs |
-| GitHub stars (bitbaum/fleetcrown) | baseline at start | growing week-over-week | GitHub |
+| GitHub stars (bitbaum/loki) | baseline at start | growing week-over-week | GitHub |
 | External users with connected runner | 0 | ≥ 10 | master-plan §5 |
 | Paying customers (any tier) | 0 | ≥ 5 | master-plan §5 |
 

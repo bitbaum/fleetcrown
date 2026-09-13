@@ -32,9 +32,9 @@ scp -q "$SRC" "$HOST:$MON/ai-provider-check.sh"
 ssh "$HOST" "chmod 0755 $MON/ai-provider-check.sh"
 
 echo "→ ai-provider-watch: writing unit + timer"
-ssh "$HOST" "cat > /etc/systemd/system/fleetcrown-ai-provider.service" <<'UNIT'
+ssh "$HOST" "cat > /etc/systemd/system/loki-ai-provider.service" <<'UNIT'
 [Unit]
-Description=FleetCrown: report model providers that keep failing behind the fallback chain
+Description=Loki: report model providers that keep failing behind the fallback chain
 After=network-online.target
 
 [Service]
@@ -46,9 +46,9 @@ Type=oneshot
 ExecStart=/opt/monitoring/ai-provider-check.sh
 UNIT
 
-ssh "$HOST" "cat > /etc/systemd/system/fleetcrown-ai-provider.timer" <<'TIMER'
+ssh "$HOST" "cat > /etc/systemd/system/loki-ai-provider.timer" <<'TIMER'
 [Unit]
-Description=FleetCrown: model-provider failure sweep (daily)
+Description=Loki: model-provider failure sweep (daily)
 
 [Timer]
 # Daily over a 24h window: this is a "has it been broken for days" watch, not a
@@ -63,7 +63,7 @@ WantedBy=timers.target
 TIMER
 
 echo "→ ai-provider-watch: enabling"
-ssh "$HOST" "systemctl daemon-reload && systemctl enable --now fleetcrown-ai-provider.timer && systemctl list-timers fleetcrown-ai-provider --no-pager | tail -2"
+ssh "$HOST" "systemctl daemon-reload && systemctl enable --now loki-ai-provider.timer && systemctl list-timers loki-ai-provider --no-pager | tail -2"
 
 echo "→ ai-provider-watch: first run (report only, no alerts)"
 ssh "$HOST" "$MON/ai-provider-check.sh --report"

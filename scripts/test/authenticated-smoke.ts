@@ -2,14 +2,14 @@
  * Authenticated smoke — exercises page + API routes with a real session.
  *
  * Session resolution (first match wins):
- *   1. FLEETCROWN_SESSION_TOKEN env (COCKPIT_SESSION_TOKEN legacy)
+ *   1. LOKI_SESSION_TOKEN env (COCKPIT_SESSION_TOKEN legacy)
  *   2. SMOKE_EMAIL + SMOKE_PASSWORD → NextAuth credentials sign-in
  *   3. Latest non-expired row in `sessions` (JWT deployments usually empty)
  *   4. Brave browser profile (AUTH_MODE=browser, or auto on prod when 1–3 fail)
  *
  * Usage:
  *   npm run test:authenticated-smoke
- *   BASE=https://fleetcrown.orangecat.ch npm run test:authenticated-smoke
+ *   BASE=https://loki.orangecat.ch npm run test:authenticated-smoke
  *   SMOKE_EMAIL=you@example.com SMOKE_PASSWORD=… npm run test:authenticated-smoke
  *
  * Writes a JSON report to .tmp/authenticated-smoke-report.json (gitignored).
@@ -193,11 +193,11 @@ async function tryMintJwtSession(
   const secret = process.env.AUTH_SECRET?.trim();
   if (!secret) return null;
 
-  const hetznerPassword = process.env.FLEETCROWN_DB_PASSWORD;
+  const hetznerPassword = process.env.LOKI_DB_PASSWORD;
   const hetznerHost = process.env.HETZNER_IP;
   const dbUrl =
     isProdBase && hetznerPassword && hetznerHost
-      ? `postgres://fleetcrown:${encodeURIComponent(hetznerPassword)}@${hetznerHost}:5432/fleetcrown?sslmode=require`
+      ? `postgres://loki:${encodeURIComponent(hetznerPassword)}@${hetznerHost}:5432/loki?sslmode=require`
       : process.env.DATABASE_URL;
   if (!dbUrl) return null;
 
@@ -263,9 +263,9 @@ async function resolveUserId(cookieHeader: string): Promise<string> {
 
 async function resolveSessionToken(): Promise<{ token: string; source: string }> {
   const fromEnv = smokeSessionToken().trim();
-  if (fromEnv) return { token: fromEnv, source: "FLEETCROWN_SESSION_TOKEN" };
+  if (fromEnv) return { token: fromEnv, source: "LOKI_SESSION_TOKEN" };
 
-  const isProdBase = BASE.includes("fleetcrown.orangecat.ch") || BASE.includes("orangecat.ch");
+  const isProdBase = BASE.includes("loki.orangecat.ch") || BASE.includes("orangecat.ch");
 
   const smokeEmail = process.env.SMOKE_EMAIL?.trim();
   const smokePassword = process.env.SMOKE_PASSWORD;
@@ -276,13 +276,13 @@ async function resolveSessionToken(): Promise<{ token: string; source: string }>
 
   const minted = await tryMintJwtSession(isProdBase);
   if (minted) return minted;
-  const hetznerPassword = process.env.FLEETCROWN_DB_PASSWORD;
+  const hetznerPassword = process.env.LOKI_DB_PASSWORD;
   const hetznerHost = process.env.HETZNER_IP;
 
   const dbUrls: { url: string; source: string }[] = [];
   if (isProdBase && hetznerPassword && hetznerHost) {
     dbUrls.push({
-      url: `postgres://fleetcrown:${encodeURIComponent(hetznerPassword)}@${hetznerHost}:5432/fleetcrown?sslmode=require`,
+      url: `postgres://loki:${encodeURIComponent(hetznerPassword)}@${hetznerHost}:5432/loki?sslmode=require`,
       source: "hetzner-database",
     });
   }
@@ -292,7 +292,7 @@ async function resolveSessionToken(): Promise<{ token: string; source: string }>
 
   if (dbUrls.length === 0 && !isProdBase) {
     throw new Error(
-      "No session: set FLEETCROWN_SESSION_TOKEN, SMOKE_EMAIL+SMOKE_PASSWORD, or DATABASE_URL",
+      "No session: set LOKI_SESSION_TOKEN, SMOKE_EMAIL+SMOKE_PASSWORD, or DATABASE_URL",
     );
   }
 
@@ -331,7 +331,7 @@ async function resolveSessionToken(): Promise<{ token: string; source: string }>
   }
 
   throw new Error(
-    "No session: set FLEETCROWN_SESSION_TOKEN, SMOKE_EMAIL+SMOKE_PASSWORD, or AUTH_MODE=browser",
+    "No session: set LOKI_SESSION_TOKEN, SMOKE_EMAIL+SMOKE_PASSWORD, or AUTH_MODE=browser",
   );
 }
 
@@ -731,7 +731,7 @@ async function runPrivateZoneCrudProbes(cookieHeader: string): Promise<ProbeResu
 type ProjectPick = { key: string; id: string | null };
 
 async function pickProject(cookieHeader: string): Promise<ProjectPick> {
-  const fallback: ProjectPick = { key: "fleetcrown", id: null };
+  const fallback: ProjectPick = { key: "loki", id: null };
   try {
     const res = await fetch(`${BASE}/api/user-projects`, {
       headers: { Cookie: cookieHeader },
@@ -740,7 +740,7 @@ async function pickProject(cookieHeader: string): Promise<ProjectPick> {
     if (!res.ok) return fallback;
     const rows = (await res.json()) as { name?: string; id?: string; dirPath?: string | null }[];
     const withDir = rows.find((p) => p.dirPath && p.name);
-    const named = rows.find((p) => p.name?.toLowerCase() === "fleetcrown");
+    const named = rows.find((p) => p.name?.toLowerCase() === "loki");
     const pick = withDir ?? named ?? rows[0];
     if (!pick?.name) return fallback;
     return { key: pick.name, id: pick.id ?? null };

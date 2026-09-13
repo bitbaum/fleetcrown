@@ -1,4 +1,4 @@
-# FleetCrown event bridge
+# Loki event bridge
 
 A ~300-line Node service that takes Postgres `NOTIFY` events on the `fc:state`
 channel and fans them out to subscribed browsers, desktop apps, and phones
@@ -35,7 +35,7 @@ over Server-Sent Events. The piece that lets v0.6 replace polling with push.
 ```
 
 Read the architectural narrative in
-[/thoughts/from-polling-to-listening-fleetcrown-v0-6](../content/thoughts/from-polling-to-listening-fleetcrown-v0-6.md)
+[/thoughts/from-polling-to-listening-loki-v0-6](../content/thoughts/from-polling-to-listening-loki-v0-6.md)
 for the why.
 
 ## Run locally
@@ -81,24 +81,24 @@ for the host setup. Once Postgres is up:
 
 ```bash
 # On the box
-git clone git@github.com:bitbaum/fleetcrown.git /opt/fleetcrown
-cd /opt/fleetcrown/bridge
+git clone git@github.com:bitbaum/loki.git /opt/loki
+cd /opt/loki/bridge
 npm ci
 npm run build
 
-# /etc/systemd/system/fleetcrown-bridge.service
-sudo tee /etc/systemd/system/fleetcrown-bridge.service <<'UNIT'
+# /etc/systemd/system/loki-bridge.service
+sudo tee /etc/systemd/system/loki-bridge.service <<'UNIT'
 [Unit]
-Description=FleetCrown event bridge (Postgres LISTEN → SSE)
+Description=Loki event bridge (Postgres LISTEN → SSE)
 After=postgresql.service network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
-User=fleetcrown
-WorkingDirectory=/opt/fleetcrown/bridge
-EnvironmentFile=/opt/fleetcrown/bridge/.env
-ExecStart=/usr/bin/node /opt/fleetcrown/bridge/dist/server.js
+User=loki
+WorkingDirectory=/opt/loki/bridge
+EnvironmentFile=/opt/loki/bridge/.env
+ExecStart=/usr/bin/node /opt/loki/bridge/dist/server.js
 Restart=on-failure
 RestartSec=5
 
@@ -107,13 +107,13 @@ WantedBy=multi-user.target
 UNIT
 
 sudo systemctl daemon-reload
-sudo systemctl enable --now fleetcrown-bridge
-sudo journalctl -u fleetcrown-bridge -f
+sudo systemctl enable --now loki-bridge
+sudo journalctl -u loki-bridge -f
 ```
 
 Then reverse-proxy 443 → 4001 via Caddy with a TLS cert (this is how the
-`bitbaum` box runs it today, as `fleetcrown-bridge.service` behind
-`bridge.orangecat.ch`). Point the web app's `FLEETCROWN_BRIDGE_URL` env at
+`bitbaum` box runs it today, as `loki-bridge.service` behind
+`bridge.orangecat.ch`). Point the web app's `LOKI_BRIDGE_URL` env at
 `https://your-host/sse` and the web client will subscribe instead of polling.
 
 ## Connection limits

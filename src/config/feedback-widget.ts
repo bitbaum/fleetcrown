@@ -1,5 +1,5 @@
 /**
- * SSOT: where FleetCrown shows its OWN feedback widget.
+ * SSOT: where Loki shows its OWN feedback widget.
  *
  * This used to be an allowlist of eleven public marketing routes, justified in
  * a comment that gave two reasons. Both were checked, and neither holds:

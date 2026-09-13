@@ -11,7 +11,7 @@ here and does not describe it.
 
 ## The failure this design exists to prevent
 
-On 2026-09-11 the operator filed two reports through FleetCrown's own feedback
+On 2026-09-11 the operator filed two reports through Loki's own feedback
 widget, watched nothing happen, and asked Loki:
 
 > **what was the most recent feedback sent**
@@ -30,7 +30,7 @@ Three independent causes, each sufficient on its own:
 1. **No source read the feedback table.** Not a tool, not a seed. The word did
    not appear anywhere under `src/lib/agent/`. Nor did runs, sessions, alerts,
    or notes. Loki could see the "life" half of the product (people, projects,
-   goals) and none of the "fleet" half that gives FleetCrown its name.
+   goals) and none of the "fleet" half that gives Loki its name.
 2. **The prompt budget was arithmetically impossible.** One module constant —
    Groq's 12000-token minute window × 0.8 ÷ 3 rounds = 3200 tokens — applied to
    every vendor. Groq had since cut the window to 8000, and the prompt's fixed

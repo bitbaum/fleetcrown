@@ -115,14 +115,14 @@ export const STATE_DEFINITIONS: Record<ProjectStateKey, ProjectStateDefinition> 
   },
   // Agents the user runs outside Fleet Runner (their own terminal, kitty,
   // multi-project shells) are invisible to live process detection.
-  // Hook-captured dispatches and orchestration runs still land in FleetCrown —
+  // Hook-captured dispatches and orchestration runs still land in Loki —
   // when one is recent, "Not running" is a lie the recorded facts contradict.
   // Counts as idle (it is NOT a live-process claim), but the badge stops
   // asserting death the evidence disproves.
   recently_active: {
     label: "Active recently",
     description:
-      "No live agent process is visible to FleetCrown, but a dispatch or run landed for this project recently — work likely happened in a terminal FleetCrown can't observe.",
+      "No live agent process is visible to Loki, but a dispatch or run landed for this project recently — work likely happened in a terminal Loki can't observe.",
     dotClass: "bg-status-positive",
     tagClass: "ui-tag ui-tag-neutral",
     counterCategory: "idle",

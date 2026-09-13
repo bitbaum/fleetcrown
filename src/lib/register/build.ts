@@ -1,7 +1,7 @@
 // The fleet register: one row per project, joined across the four surfaces.
 //
 // Why this exists: "which projects do we have, and which has a site, a
-// FleetCrown profile, an OrangeCat profile, a Solon profile" was answered by
+// Loki profile, an OrangeCat profile, a Solon profile" was answered by
 // SEVEN hand-kept lists that disagreed (apps.conf, this database, OrangeCat's,
 // Solon's, bitbaum's companies.json, the public footer, 24 markdown dossiers).
 // None is wrong about its own facts; each is wrong about the others. This is
@@ -91,13 +91,13 @@ export type RegisterRow = {
     /** When it went up, or "-". A date, not a term. */
     since: string;
   } | null;
-  fleetcrown: { id: string; liveUrl: string | null } | null;
+  loki: { id: string; liveUrl: string | null } | null;
   orangecat: { projectId: string } | null;
   solon: { slug: string } | null;
 };
 
 /**
- * Join FleetCrown projects with the hosting register (and the stored links to
+ * Join Loki projects with the hosting register (and the stored links to
  * OrangeCat and Solon). Pure: no I/O, so the whole thing is unit-testable and
  * the API/page/footer cannot disagree — they call this.
  *
@@ -120,7 +120,7 @@ export function buildFleetRegister(
         description: null,
         repo: null,
         site: null,
-        fleetcrown: null,
+        loki: null,
         orangecat: null,
         solon: null,
       };
@@ -138,7 +138,7 @@ export function buildFleetRegister(
     const r = row(slug, p.name);
     r.description = r.description ?? usefulDescription(p.description);
     r.repo = r.repo ?? repo;
-    r.fleetcrown = { id: p.id, liveUrl: p.liveUrl ?? null };
+    r.loki = { id: p.id, liveUrl: p.liveUrl ?? null };
     if (p.orangecatProjectId) r.orangecat = { projectId: p.orangecatProjectId };
     if (p.solonOrgSlug) r.solon = { slug: p.solonOrgSlug };
     if (p.hostedApp) (r as RegisterRow & { hostedApp?: string }).hostedApp = p.hostedApp;
@@ -241,7 +241,7 @@ export function summarize(rows: RegisterRow[]) {
   return {
     projects: rows.length,
     sites: rows.filter((r) => r.site).length,
-    fleetcrown: rows.filter((r) => r.fleetcrown).length,
+    loki: rows.filter((r) => r.loki).length,
     orangecat: rows.filter((r) => r.orangecat).length,
     solon: rows.filter((r) => r.solon).length,
   };

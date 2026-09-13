@@ -117,7 +117,7 @@ async function readChannelHeartbeats(userId: string): Promise<ChannelHeartbeat[]
  * NOT ENOUGH ON ITS OWN as of the heartbeat-expiry change: `getBuilderPresence`
  * now requires a fresh `runtime_snapshots` row for the channel, and this path
  * writes none — so a hosted runner alone reads offline. Deliberate, and today
- * inert (fleetcrown-hosted-runner.service is inactive; the box-runner supplies
+ * inert (loki-hosted-runner.service is inactive; the box-runner supplies
  * the cloud channel's heartbeat). Before running the hosted runner as the sole
  * cloud executor it needs its OWN channel — it cannot heartbeat into the
  * "cloud" snapshot row, because that row belongs to the box-runner and a

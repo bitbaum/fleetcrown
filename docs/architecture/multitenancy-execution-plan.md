@@ -6,7 +6,7 @@ last_modified_summary: Routing is stored, not presence-based; previous: Shared c
 
 # Multitenancy Execution Plan
 
-FleetCrown is already mostly tenant-shaped at the control-plane layer: users own projects, agent tokens are per-user, pending commands carry `user_id`, and runners claim commands with their own `ck_` token. The scaling risk is execution, not CRUD.
+Loki is already mostly tenant-shaped at the control-plane layer: users own projects, agent tokens are per-user, pending commands carry `user_id`, and runners claim commands with their own `ck_` token. The scaling risk is execution, not CRUD.
 
 ## Tenant Boundary
 
@@ -35,8 +35,8 @@ The current slice chooses product honesty over fake availability.
 1. Keep control-plane data user/org scoped.
 2. External beta users are not on the cloud allowlist, so their projects run through Fleet Runner desktop until hosted execution is sandboxed. Routing is still the stored rule (locus lock → `builder_pref` → cloud floor); for a non-allowlisted account `decideQueuedExecution` resolves the cloud floor to their connected runner or a clear `builder-required`.
 3. Build and harden hosted sandbox execution before enabling Cloud broadly:
-   - one workspace per sandbox (`SandboxExecutor` substrate exists behind `FLEETCROWN_EXECUTOR=sandbox`)
-   - fresh clone from `git_url` under `FLEETCROWN_SANDBOX_WORKSPACE_ROOT`
+   - one workspace per sandbox (`SandboxExecutor` substrate exists behind `LOKI_EXECUTOR=sandbox`)
+   - fresh clone from `git_url` under `LOKI_SANDBOX_WORKSPACE_ROOT`
    - no shared home directory (`HOME=/tmp` in the container)
    - per-tenant secret vault, explicitly injected per run
    - CPU/memory/PID/time quotas
@@ -57,7 +57,7 @@ Projects remains the strategic registry. Loki and Control compile intent into th
 
 `SandboxExecutor` is now a real `Executor` implementation, but it is a substrate,
 not a launch policy. It gives the control plane an isolated place to run a PTY
-when an operator deliberately enables `FLEETCROWN_EXECUTOR=sandbox`. The existing
+when an operator deliberately enables `LOKI_EXECUTOR=sandbox`. The existing
 product gate remains: non-founder users do not get shared hosted cloud execution
 until credentials, billing/metering, and registration→onboarding→dispatch→terminal
 smoke tests exist.

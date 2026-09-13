@@ -16,7 +16,7 @@ export const beaconSettings = pgTable(
     transcriptionProvider: text("transcription_provider").notNull().default("auto"),
     // off | on — autopilot is binary after the 2026-06-11 collapse (see
     // src/config/beacon.ts and content/thoughts/killing-the-bash-daemon.md).
-    // Default is "on": when an agent self-reports status:ready, FleetCrown
+    // Default is "on": when an agent self-reports status:ready, Loki
     // fires the queue head (or the canned next_best template if the queue
     // is empty). Safety rails (status:working/blocked, pending-blocker gate,
     // no-op fuse, health gate) all still apply. Legacy values queue_only |

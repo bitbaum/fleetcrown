@@ -1,12 +1,12 @@
 /**
  * Box-runner workspace prep — make a dispatched project runnable on the box.
  *
- * A dispatch carries the LAPTOP dir (e.g. /home/g/dev/fleetcrown), which doesn't
+ * A dispatch carries the LAPTOP dir (e.g. /home/g/dev/loki), which doesn't
  * exist on the always-on box. This resolves a box-local dir, clones the project
  * on demand from its gitUrl (GITHUB_TOKEN auth), and pre-trusts it for claude so
  * the agent launches unattended instead of hanging at the trust-folder gate.
  *
- * Loaded ONLY by the box-runner (FLEETCROWN_BOX_PREPARE=true), via dynamic import
+ * Loaded ONLY by the box-runner (LOKI_BOX_PREPARE=true), via dynamic import
  * from pty-runtime — keeps @/db + git out of the desktop Electron bundle.
  */
 import fs from "fs";

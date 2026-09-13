@@ -168,9 +168,9 @@ for (const id of Object.keys(PUBLIC)) {
 // another hand-maintained list:
 //
 //   1. vitareba 2026-08-07 — the `/api` matcher blocked LOGIN itself.
-//   2. fleetcrown 2026-08-13 — `api/solon/` missing from the matcher; the
+//   2. loki 2026-08-13 — `api/solon/` missing from the matcher; the
 //      Solon doorbell was unreachable from the day it shipped.
-//   3. fleetcrown 2026-09-11 — the OrangeCat site door shipped at
+//   3. loki 2026-09-11 — the OrangeCat site door shipped at
 //      `api/integrations/orangecat/site`, outside every exempt prefix.
 //
 // The existing pin in solon-message.ts checks that a hardcoded list of

@@ -36,8 +36,8 @@ export default function ImportFromLocalPage() {
                 <code className="px-1 rounded bg-surface-base text-text-primary">~/Projects</code>{" "}
                 (max 3 levels deep), filters to folders with a{" "}
                 <code className="px-1 rounded bg-surface-base text-text-primary">.git</code>{" "}
-                directory, and POSTs each as a FleetCrown project. Re-running is safe — duplicates
-                by name are skipped.
+                directory, and POSTs each as a Loki project. Re-running is safe — duplicates by name
+                are skipped.
               </p>
             </div>
           </div>

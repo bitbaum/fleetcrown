@@ -8,7 +8,7 @@
  *   npx tsx scripts/db/retire-stale-projects.ts            # dry run
  *   npx tsx scripts/db/retire-stale-projects.ts --apply    # execute
  *
- * Env: FLEETCROWN_DB_PASSWORD + HETZNER_IP from .env.hetzner.local (same as enrich-prod-profiles).
+ * Env: LOKI_DB_PASSWORD + HETZNER_IP from .env.hetzner.local (same as enrich-prod-profiles).
  */
 import { config } from "dotenv";
 
@@ -19,9 +19,9 @@ const APPLY = process.argv.includes("--apply");
 /** loser → winner (loser entity deleted; attrs/goals repointed). */
 const MERGE_PAIRS: Array<{ winner: string; loser: string; reason: string }> = [
   {
-    winner: "fleetcrown",
+    winner: "loki",
     loser: "Cockpit",
-    reason: "Cockpit renamed to FleetCrown — same product",
+    reason: "Cockpit renamed to Loki — same product",
   },
   { winner: "aoz-housing", loser: "AOZ", reason: "Empty duplicate shell" },
   { winner: "surf-your-life", loser: "SYL", reason: "Empty duplicate shell" },
@@ -55,11 +55,11 @@ const DELETE_NAMES: Array<{ name: string; reason: string }> = [
 ];
 
 async function main() {
-  const password = process.env.FLEETCROWN_DB_PASSWORD;
+  const password = process.env.LOKI_DB_PASSWORD;
   const host = process.env.HETZNER_IP;
   if (!password || !host)
-    throw new Error("FLEETCROWN_DB_PASSWORD / HETZNER_IP missing from .env.hetzner.local");
-  process.env.DATABASE_URL = `postgres://fleetcrown:${encodeURIComponent(password)}@${host}:5432/fleetcrown?sslmode=require`;
+    throw new Error("LOKI_DB_PASSWORD / HETZNER_IP missing from .env.hetzner.local");
+  process.env.DATABASE_URL = `postgres://loki:${encodeURIComponent(password)}@${host}:5432/loki?sslmode=require`;
 
   const { db } = await import("../../src/db");
   const { entities, users } = await import("../../src/db/schema");

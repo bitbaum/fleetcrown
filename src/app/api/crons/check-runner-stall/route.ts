@@ -63,7 +63,7 @@ export async function GET(req: NextRequest) {
       if (tg) {
         void sendTelegramMessage(
           tg,
-          `⚠️ FleetCrown: runner stalled — ${stall.stalledCount} command(s) waited ${stall.oldestSeconds}s with no builder executing. ` +
+          `⚠️ Loki: runner stalled — ${stall.stalledCount} command(s) waited ${stall.oldestSeconds}s with no builder executing. ` +
             `Reclaimed stuck claims for retry; check the builder.`,
         );
       }

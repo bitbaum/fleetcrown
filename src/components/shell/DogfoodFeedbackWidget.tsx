@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { isFeedbackWidgetRoute } from "@/config/feedback-widget";
 
 /**
- * Dogfood embed of FleetCrown's own feedback widget — on EVERY surface, not
+ * Dogfood embed of Loki's own feedback widget — on EVERY surface, not
  * just the public pages (see config/feedback-widget.ts for the short list of
  * exclusions and why each one is excluded). Injects the exact same
  * /widget.js script tag a customer site would use — same code path, same
@@ -28,7 +28,7 @@ export function DogfoodFeedbackWidget({ token }: { token: string }) {
     document.body.appendChild(script);
     return () => {
       script.remove();
-      document.getElementById("fleetcrown-feedback-host")?.remove();
+      document.getElementById("loki-feedback-host")?.remove();
     };
   }, [show, token]);
 

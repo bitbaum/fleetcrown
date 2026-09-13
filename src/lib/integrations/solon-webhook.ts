@@ -1,13 +1,13 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 /**
- * Solon → FleetCrown webhook verification, mirroring the OrangeCat rail
+ * Solon → Loki webhook verification, mirroring the OrangeCat rail
  * (orangecat-webhook.ts): Solon signs the raw request body with the shared
  * SOLON_WEBHOOK_SECRET (HMAC-SHA256) and sends `x-solon-signature` as
  * `sha256=<hex>`. Comparison is timing-safe.
  *
  * The webhook is a doorbell, not a courier: a decision.finalized payload only
- * names a decision. If FleetCrown ever ACTS on one, it must fetch the decision
+ * names a decision. If Loki ever ACTS on one, it must fetch the decision
  * document from Solon and re-verify every Bitcoin vote signature against its
  * own pinned keys first (the pattern OrangeCat's decision-verify implements).
  * v1 only records the doorbell.

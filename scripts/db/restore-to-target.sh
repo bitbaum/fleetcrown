@@ -48,7 +48,7 @@ if [[ "${RECREATE_DB:-}" = "1" ]]; then
 fi
 
 # Pre-flight: confirm the target is empty enough. We refuse to overwrite a
-# DB that already has FleetCrown's `users` table populated — too risky.
+# DB that already has Loki's `users` table populated — too risky.
 EXISTING_USERS=$(psql "${TARGET_DATABASE_URL}" -tAc "
   SELECT COALESCE((SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_name='users'), 0)
 " 2>/dev/null || echo "0")
@@ -107,5 +107,5 @@ echo
 echo "Next steps:"
 echo "  1. point the app .env DATABASE_URL at the restored DB"
 echo "  2. redeploy: bash scripts/deploy-hetzner.sh (build → rsync → systemctl restart)"
-echo "  3. curl https://fleetcrown.orangecat.ch/api/health → expect 200 with runtime info"
+echo "  3. curl https://loki.orangecat.ch/api/health → expect 200 with runtime info"
 echo "  4. dogfood /control, /settings, /system in the browser"

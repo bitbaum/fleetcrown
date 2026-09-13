@@ -2,7 +2,7 @@
 
 // Auto-suggest the user's top-N most-recent GitHub repos for one-click
 // bulk import. Renders only when:
-//   - the user has 0 FleetCrown projects (gated by the caller)
+//   - the user has 0 Loki projects (gated by the caller)
 //   - the user has a GitHub OAuth account linked (hasGithub=true)
 //   - at least 1 owner-affiliated repo exists
 //
@@ -97,8 +97,8 @@ export function GitHubRepoSuggestions() {
             Import your {repos.length} most recent GitHub repos?
           </div>
           <p className="text-sm text-text-muted mt-0.5">
-            One click pulls them in as FleetCrown projects. Pick others or add manually below if you
-            want different ones.
+            One click pulls them in as Loki projects. Pick others or add manually below if you want
+            different ones.
           </p>
         </div>
       </div>

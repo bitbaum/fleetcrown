@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # deploy-hetzner.sh — ship the production build to the bitbaum Hetzner box.
 #
-# The box serves FleetCrown at https://fleetcrown.orangecat.ch (Caddy →
-# 127.0.0.1:4002, systemd unit fleetcrown-app). Box-side .env, launch.sh and
+# The box serves Loki at https://loki.orangecat.ch (Caddy →
+# 127.0.0.1:4002, systemd unit loki-app). Box-side .env, launch.sh and
 # backups/ are owned by the box and never touched by a deploy.
 #
-# Also syncs + restarts fleetcrown-box-runner (the always-on cloud builder).
+# Also syncs + restarts loki-box-runner (the always-on cloud builder).
 # First-time install: bash scripts/hetzner/install-box-runner.sh
 #
 # Usage:
@@ -16,11 +16,11 @@ set -euo pipefail
 
 . "$(dirname "${BASH_SOURCE[0]}")/hetzner/_box-env.sh"   # SSOT: HETZNER_IP, BOX_ROOT, BOX_UBUNTU
 HOST="$BOX_ROOT"
-APP_DIR="/opt/fleetcrown/app"
+APP_DIR="/opt/loki/app"
 # The box-runner's Unix owner. Defaults to ubuntu; set to fcrunner AFTER running
 # migrate-box-runner-to-fcrunner.sh so the runner-code sync doesn't chown the
 # dir back to ubuntu on every deploy. The app + bridge stay ubuntu-owned.
-RUNNER_OWNER="${FLEETCROWN_RUNNER_OWNER:-ubuntu}"
+RUNNER_OWNER="${LOKI_RUNNER_OWNER:-ubuntu}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 STANDALONE="$PROJECT_DIR/.next/standalone"
@@ -61,14 +61,14 @@ fi
 deploy_alert() {
   local b64; b64=$(printf '%s' "$1" | base64 -w0 2>/dev/null || printf '%s' "$1" | base64)
   ssh "$HOST" "bash -s" <<REMOTE 2>/dev/null || true
-E=/opt/fleetcrown/app/.env
+E=/opt/loki/app/.env
 T=\$(grep -oP '^TELEGRAM_BOT_TOKEN=\K.*' "\$E" 2>/dev/null | tr -d '"')
 C=\$(grep -oP '^APP_TELEGRAM_CHAT_ID=\K.*' "\$E" 2>/dev/null | tr -d '"')
 MSG=\$(echo '$b64' | base64 -d)
 [ -n "\$T" ] && [ -n "\$C" ] && curl -s -m 10 -o /dev/null \
   "https://api.telegram.org/bot\$T/sendMessage" \
   --data-urlencode "chat_id=\$C" \
-  --data-urlencode "text=🚨 FleetCrown deploy: \$MSG" || true
+  --data-urlencode "text=🚨 Loki deploy: \$MSG" || true
 REMOTE
 }
 
@@ -78,7 +78,7 @@ REMOTE
 # build process is already running"), and the OLDER ref can win the race. A
 # blocking lock serializes deploys so the NEWEST ref ships last; every step
 # below is idempotent, so waiting is always safe.
-LOCK_FILE="${FLEETCROWN_DEPLOY_LOCK:-/tmp/fleetcrown-deploy.lock}"
+LOCK_FILE="${LOKI_DEPLOY_LOCK:-/tmp/loki-deploy.lock}"
 exec 9>"$LOCK_FILE"
 if command -v flock >/dev/null 2>&1; then
   if ! flock -w 900 9; then
@@ -109,14 +109,14 @@ report_deploy_status() {
   if [ "$code" = 0 ]; then
     level=info; msg="deploy OK: ${DEPLOY_REF_SHORT} to Hetzner"
   else
-    level=error; msg="deploy FAILED (exit ${code}) during [${DEPLOY_STEP}]: ${DEPLOY_REF_SHORT} — see /tmp/push-deploy-fleetcrown.log"
+    level=error; msg="deploy FAILED (exit ${code}) during [${DEPLOY_STEP}]: ${DEPLOY_REF_SHORT} — see /tmp/push-deploy-loki.log"
   fi
   echo "→ ${msg}"
-  command -v notify-send >/dev/null 2>&1 && notify-send "FleetCrown deploy" "$msg" >/dev/null 2>&1 || true
+  command -v notify-send >/dev/null 2>&1 && notify-send "Loki deploy" "$msg" >/dev/null 2>&1 || true
   # Durable record in the box DB — best-effort, must never change the exit code.
   # msg is fixed text + a short SHA (no single-quotes), so it is SQL-safe here.
   ssh -o ConnectTimeout=10 "$HOST" "LC_ALL=C bash -s" >/dev/null 2>&1 <<REMOTE || true
-DBURL=\$(grep -oP '^DATABASE_URL=\K.*' /opt/fleetcrown/app/.env 2>/dev/null | head -1 | tr -d '"')
+DBURL=\$(grep -oP '^DATABASE_URL=\K.*' /opt/loki/app/.env 2>/dev/null | head -1 | tr -d '"')
 [ -n "\$DBURL" ] && psql "\$DBURL" -q -c "insert into debug_logs (source, level, message) values ('deploy', '${level}', '${msg}')" 2>/dev/null
 REMOTE
 }
@@ -133,26 +133,26 @@ bash "$SCRIPT_DIR/ci/check-deploy-ref.sh" "$PROJECT_DIR" "${REF:-HEAD}"
 
 # Schema BEFORE build (same order as scripts/hetzner/deploy.sh): guarded,
 # forward-only drizzle migrations from ./drizzle via the shared applier — the
-# first run baselines the existing file set against the live fleetcrown DB. The
+# first run baselines the existing file set against the live loki DB. The
 # applier is filename-based, so it's immune to journal/snapshot state.
 # drizzle/meta now HAS a current-schema snapshot (0039) with an idx-aligned
 # journal, so `npm run db:generate` diffs and emits the next 0040+ migration
 # automatically — no more hand-written DDL (that reflex caused the box-DDL
 # ownership rollbacks; see scripts/db/apply-box.sh).
 step "schema migration"
-bash "$SCRIPT_DIR/hetzner/apply-schema.sh" fleetcrown "$PROJECT_DIR" fleetcrown "." \
+bash "$SCRIPT_DIR/hetzner/apply-schema.sh" loki "$PROJECT_DIR" loki "." \
   || { echo "✗ schema step failed — deploy aborted (no code shipped)" >&2; exit 1; }
 
 # Ownership self-heal: apply-schema.sh (shared infra) runs DDL as the postgres
 # superuser, so a freshly-migrated table would be owned by postgres and thus
-# INVISIBLE to the fleetcrown app role (privilege-filtered information_schema) —
+# INVISIBLE to the loki app role (privilege-filtered information_schema) —
 # the exact class that rolled back deploys. Idempotent reassignment: on a healthy
 # box this touches zero tables; when a new migration created a postgres-owned
 # object, it hands ownership to the app role before the drift-check runs.
-DBURL_OWN=$(ssh "$HOST" "grep -oP '^DATABASE_URL=\K.*' /opt/fleetcrown/app/.env 2>/dev/null | head -1 | tr -d '\"'")
+DBURL_OWN=$(ssh "$HOST" "grep -oP '^DATABASE_URL=\K.*' /opt/loki/app/.env 2>/dev/null | head -1 | tr -d '\"'")
 if [ -n "$DBURL_OWN" ]; then
   APP_ROLE=$(printf '%s' "$DBURL_OWN" | sed -E 's#^[^/]*//([^:]+):.*#\1#')
-  ssh "$HOST" "sudo -u postgres psql -d fleetcrown -v ON_ERROR_STOP=1 -q -c \"DO \\\$\\\$ DECLARE r record; n int := 0; BEGIN FOR r IN SELECT tablename FROM pg_tables WHERE schemaname='public' AND tableowner <> '${APP_ROLE}' LOOP EXECUTE format('ALTER TABLE public.%I OWNER TO ${APP_ROLE}', r.tablename); n := n + 1; END LOOP; IF n > 0 THEN RAISE NOTICE 'reassigned % table(s) to ${APP_ROLE}', n; END IF; END \\\$\\\$;\"" \
+  ssh "$HOST" "sudo -u postgres psql -d loki -v ON_ERROR_STOP=1 -q -c \"DO \\\$\\\$ DECLARE r record; n int := 0; BEGIN FOR r IN SELECT tablename FROM pg_tables WHERE schemaname='public' AND tableowner <> '${APP_ROLE}' LOOP EXECUTE format('ALTER TABLE public.%I OWNER TO ${APP_ROLE}', r.tablename); n := n + 1; END LOOP; IF n > 0 THEN RAISE NOTICE 'reassigned % table(s) to ${APP_ROLE}', n; END IF; END \\\$\\\$;\"" \
     && echo "  ✓ table ownership reconciled to ${APP_ROLE}" \
     || echo "  ⚠ ownership reconcile skipped (non-fatal)"
 fi
@@ -172,7 +172,7 @@ elif [ -n "$REF" ]; then
   # mid-build is caught here (box rsync aborts) but the postbuild has already
   # restarted the local prod service with the torn build — the box was protected
   # but local was not. Now a drifted pinned build restarts nothing, anywhere.
-  (cd "$PROJECT_DIR" && FLEETCROWN_DEPLOY_REF="$REF" pnpm run build)
+  (cd "$PROJECT_DIR" && LOKI_DEPLOY_REF="$REF" pnpm run build)
   AFTER="$(git_head)"
   if [ "$AFTER" != "$REF" ]; then
     echo "✗ pinned deploy ABORTED — HEAD moved to ${AFTER:0:12} during the build; not shipping a torn tree (local restart was skipped too)." >&2
@@ -237,8 +237,8 @@ rollback_box() {
   if ssh "$HOST" "test -d '$APP_DIR.prev' \
     && rsync -a --delete --exclude backups '$APP_DIR.prev/' '$APP_DIR/' \
     && chown -R ubuntu:ubuntu '$APP_DIR' \
-    && systemctl restart fleetcrown-app && sleep 3 \
-    && systemctl is-active fleetcrown-app >/dev/null"; then
+    && systemctl restart loki-app && sleep 3 \
+    && systemctl is-active loki-app >/dev/null"; then
     echo "  ✓ rolled back to previous build" >&2
     deploy_alert "❌ $why — auto-rolled back to the previous build. Box is serving the last-good version; the ship was aborted."
   else
@@ -260,7 +260,7 @@ rsync -az --delete -e "$RSYNC_SSH" \
   --exclude 'backups' \
   "$STANDALONE/" "$HOST:$APP_DIR/"
 
-echo "→ restart fleetcrown-app on box"
+echo "→ restart loki-app on box"
 # timeout: this ssh once hung for 47 minutes AFTER the restart completed on
 # the box (channel never closed), freezing the deploy before verification and
 # the runner sync — the push looked deployed but the runner kept old code.
@@ -268,10 +268,10 @@ echo "→ restart fleetcrown-app on box"
 # always safe; a silently hung one is not.
 if ! timeout 180 ssh -o ServerAliveInterval=15 -o ServerAliveCountMax=6 "$HOST" \
   "chown -R ubuntu:ubuntu $APP_DIR \
-  && systemctl restart fleetcrown-app \
+  && systemctl restart loki-app \
   && sleep 3 \
-  && systemctl is-active fleetcrown-app >/dev/null"; then
-  echo "✗ restart failed on box" >&2; rollback_box "fleetcrown-app failed to restart"; exit 1
+  && systemctl is-active loki-app >/dev/null"; then
+  echo "✗ restart failed on box" >&2; rollback_box "loki-app failed to restart"; exit 1
 fi
 
 # Post-deploy verification — fails the deploy LOUDLY instead of shipping a
@@ -321,12 +321,12 @@ echo "→ schema-drift check (box DB)"
 DECLARED=$(cd "$PROJECT_DIR" && npx tsx scripts/check-schema-drift.ts --print 2>/dev/null | LC_ALL=C sort)
 DECLARED_COLUMNS=$(cd "$PROJECT_DIR" && npx tsx scripts/check-schema-drift.ts --print-columns 2>/dev/null | LC_ALL=C sort)
 BOX_TABLES=$(ssh "$HOST" 'LC_ALL=C bash -s' <<'REMOTE' | LC_ALL=C sort
-DBURL=$(grep -oP '^DATABASE_URL=\K.*' /opt/fleetcrown/app/.env 2>/dev/null | head -1 | tr -d '"')
+DBURL=$(grep -oP '^DATABASE_URL=\K.*' /opt/loki/app/.env 2>/dev/null | head -1 | tr -d '"')
 psql "$DBURL" -t -A -c "select table_name from information_schema.tables where table_schema = 'public'" 2>/dev/null
 REMOTE
 )
 BOX_COLUMNS=$(ssh "$HOST" 'LC_ALL=C bash -s' <<'REMOTE' | LC_ALL=C sort
-DBURL=$(grep -oP '^DATABASE_URL=\K.*' /opt/fleetcrown/app/.env 2>/dev/null | head -1 | tr -d '"')
+DBURL=$(grep -oP '^DATABASE_URL=\K.*' /opt/loki/app/.env 2>/dev/null | head -1 | tr -d '"')
 psql "$DBURL" -t -A -c "select table_name || '.' || column_name from information_schema.columns where table_schema = 'public'" 2>/dev/null
 REMOTE
 )
@@ -371,7 +371,7 @@ elif [ "$LIVE_SHA" != "$SHIPPED_SHA" ]; then
   echo "  ⚠ live build is ${LIVE_SHA:0:12}, but this deploy shipped ${SHIPPED_SHA:0:12}" >&2
   echo "    The box is not serving what was just built — another deploy raced this one," >&2
   echo "    or the rsync did not take. Confirm before trusting prod:" >&2
-  echo "      curl -s https://fleetcrown.orangecat.ch/api/health" >&2
+  echo "      curl -s https://loki.orangecat.ch/api/health" >&2
   echo "      git log --oneline -1 ${LIVE_SHA:0:12}" >&2
 else
   echo "  ✓ live build is ${LIVE_SHA:0:12} — the commit this deploy shipped"
@@ -382,22 +382,22 @@ echo "✓ deployed $(git -C "$PROJECT_DIR" rev-parse --short "${REF:-HEAD}") to 
 # Event bridge — separate from the Next app and runner, but part of the same
 # control-plane protocol. Sync it here so SSE/rawkey/presence contracts cannot
 # drift between deploys.
-BRIDGE_DIR="/opt/fleetcrown/bridge"
+BRIDGE_DIR="/opt/loki/bridge"
 echo "→ sync event bridge → $HOST:$BRIDGE_DIR"
 rsync -az --delete --no-perms --omit-dir-times -e "$RSYNC_SSH" \
   --exclude '.env' \
   --exclude 'node_modules' \
   "$PROJECT_DIR/bridge/" "$HOST:$BRIDGE_DIR/"
 ssh "$HOST" "chown -R ubuntu:ubuntu $BRIDGE_DIR \
-  && systemctl restart fleetcrown-bridge \
+  && systemctl restart loki-bridge \
   && sleep 2 \
-  && systemctl is-active fleetcrown-bridge >/dev/null"
-echo "  ✓ fleetcrown-bridge active"
+  && systemctl is-active loki-bridge >/dev/null"
+echo "  ✓ loki-bridge active"
 
-# Cloud builder (box-runner) — separate systemd unit from fleetcrown-app so app
+# Cloud builder (box-runner) — separate systemd unit from loki-app so app
 # deploys never kill running agent PTYs. Still sync runner code on every ship
 # so poller/pty-runtime fixes reach the always-on executor.
-RUNNER_DIR="/opt/fleetcrown/runner"
+RUNNER_DIR="/opt/loki/runner"
 echo "→ sync box-runner code → $HOST:$RUNNER_DIR"
 
 # Track whether runner code actually changed. A systemd restart of the runner
@@ -433,7 +433,7 @@ sync_runner "$PROJECT_DIR/tsconfig.json" "$HOST:$RUNNER_DIR/tsconfig.json"
 # src/ was re-synced every deploy while its package.json was whatever the
 # original provisioning installed — so the moment a file under src/ gained a
 # new import, the runner broke at its next run and said nothing. Observed
-# 2026-08-24: fleetcrown-reindex had been dying nightly at 03:30 on
+# 2026-08-24: loki-reindex had been dying nightly at 03:30 on
 # `Cannot find module 'bip-kit'`, imported via src/lib/thoughts-content.ts,
 # because the box manifest still listed 31 deps and never learned about it.
 RUNNER_MANIFEST_CHANGED=0
@@ -494,12 +494,12 @@ if [ "$RUNNER_CHANGED" = 1 ]; then
   # Newest intent wins: a previous deploy's pending restart is superseded by
   # this one, which is already syncing newer code.
   ssh "$HOST" "
-    systemctl stop fleetcrown-runner-restart.service 2>/dev/null || true
-    systemctl reset-failed fleetcrown-runner-restart.service 2>/dev/null || true
-    systemd-run --unit=fleetcrown-runner-restart --collect --quiet \
-      --description='FleetCrown: restart box-runner once agents drain' \
+    systemctl stop loki-runner-restart.service 2>/dev/null || true
+    systemctl reset-failed loki-runner-restart.service 2>/dev/null || true
+    systemd-run --unit=loki-runner-restart --collect --quiet \
+      --description='Loki: restart box-runner once agents drain' \
       /bin/bash $RUNNER_DIR/scripts/drain-and-restart-runner.sh
-  " && echo "  ✓ restart scheduled — runs when the runner goes idle (journal: -t fleetcrown-drain)" \
+  " && echo "  ✓ restart scheduled — runs when the runner goes idle (journal: -t loki-drain)" \
     || echo "  ⚠ could not schedule the runner restart — runner keeps old code until the next deploy" >&2
 else
   echo "  ✓ runner code unchanged — restart skipped (in-flight agents undisturbed)"

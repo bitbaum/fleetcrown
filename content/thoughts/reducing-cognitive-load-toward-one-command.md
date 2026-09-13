@@ -1,6 +1,6 @@
 ---
 title: Reducing Cognitive Load — Toward One Command
-summary: The next step for FleetCrown is to collapse "page, project, action" into a single sentence. A look at why a conversational command surface (Loki) sits above Control, not beside it.
+summary: The next step for Loki is to collapse "page, project, action" into a single sentence. A look at why a conversational command surface (Loki) sits above Control, not beside it.
 excerpt: Every decision the interface forces on the operator is a tax. The goal is to drive that tax toward zero — one field, plain language, the system infers the rest.
 publishedAt: 2026-06-18
 tags: product,ux,agents,cognitive-load,loki
@@ -10,7 +10,7 @@ readingTimeMin: 6
 ---
 ## The tax of every decision
 
-To make an agent do something in FleetCrown today, the operator carries the structure of the
+To make an agent do something in Loki today, the operator carries the structure of the
 app in their head and pays a tax before any work starts:
 
 1. Which page — Control, Terminal, or Prompts?
@@ -55,7 +55,7 @@ and an intent — and a rule for what to do when the sentence is ambiguous (ask,
 
 The page that holds this composer should feel like the tools people already trust for talking
 to AI — one composer field with voice and attachments and a model picker; a list of
-conversations down the side; and, because FleetCrown is about *many* projects at once, a panel
+conversations down the side; and, because Loki is about *many* projects at once, a panel
 of projects you can select to scope and filter. Pick kivvi and orangecat, and you see only
 those conversations and your next command lands on them.
 

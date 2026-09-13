@@ -13,17 +13,17 @@ Install or refresh the local embed server, env vars, and daily reindex timer:
 bash scripts/hetzner/install-fleet-rag.sh
 ```
 
-Manual backfill (also runs nightly at 03:30 UTC via `fleetcrown-reindex.timer`):
+Manual backfill (also runs nightly at 03:30 UTC via `loki-reindex.timer`):
 
 ```bash
-ssh root@167.233.22.31 'systemctl start fleetcrown-reindex.service'
+ssh root@167.233.22.31 'systemctl start loki-reindex.service'
 ```
 
 Verify: `/memory` shows chunk counts; `pnpm exec tsx scripts/test/rag-retrieval.ts` exercises retrieval.
 
 ## Why now
 
-Context injection is FleetCrown's quiet moat. Today it's a **hand-curated project profile** (mission/stack/architecture/DoD) injected wholesale into every dispatch. High signal, but: static (doesn't track the live codebase), manual (someone writes it), and *task-blind* (the whole profile goes in regardless of what's being asked). RAG makes injected context **relevance-ranked and self-maintaining**. The harness essay already named the gap: *"memory is the weakest strut — a fleet should remember more than any one of its agents."* RAG is how that strut gets built.
+Context injection is Loki's quiet moat. Today it's a **hand-curated project profile** (mission/stack/architecture/DoD) injected wholesale into every dispatch. High signal, but: static (doesn't track the live codebase), manual (someone writes it), and *task-blind* (the whole profile goes in regardless of what's being asked). RAG makes injected context **relevance-ranked and self-maintaining**. The harness essay already named the gap: *"memory is the weakest strut — a fleet should remember more than any one of its agents."* RAG is how that strut gets built.
 
 ## The load-bearing decision: captain RAG ≠ runtime RAG
 
@@ -41,13 +41,13 @@ Stay out of the runtime's lane; own the fleet's.
 
 - **OrangeCat** (sibling product) already ships it: `services/ai/embeddings.ts` (provider-agnostic, OpenAI-compatible, `text-embedding-3-small` @ 1536-dim, switchable via `EMBEDDINGS_*` env), a `content_embeddings` table, a `match_content(query_embedding, match_count, min_similarity)` cosine RPC with **outcome-aware ranking** (similarity + a quality_score boost), `MIN_SIMILARITY=0.35`, and **hybrid** keyword+semantic with keyword fallback. It runs on Supabase (pgvector via SQL RPCs).
 - **Ivy/OpenClaw** already runs **sqlite-vec** local memory (the `main.sqlite` we scrubbed uses the `vec0` extension).
-- **FleetCrown box Postgres:** pgvector **0.8.2 available, not installed** — `CREATE EXTENSION vector` is one statement away.
+- **Loki box Postgres:** pgvector **0.8.2 available, not installed** — `CREATE EXTENSION vector` is one statement away.
 
 The pattern is proven by the same operator on the sibling product. Port it; don't re-derive it. This is exactly the kind of shared infra the bitbaum-holding thesis wants common across products.
 
-## Architecture (FleetCrown flavor)
+## Architecture (Loki flavor)
 
-FleetCrown is self-hosted Postgres + Drizzle (not Supabase), so use **raw pgvector via Drizzle**, not RPC functions.
+Loki is self-hosted Postgres + Drizzle (not Supabase), so use **raw pgvector via Drizzle**, not RPC functions.
 
 ```sql
 CREATE EXTENSION IF NOT EXISTS vector;
@@ -78,7 +78,7 @@ CREATE INDEX ON knowledge_embeddings (user_id, source_type);
 - **Dispatch context** (`assembleInjectPrompt` / inject-core / orchestration/run): project profile block + optional fleet RAG on **both cloud queue and local inject** paths. Previously cloud `/api/inject` queued bare `promptKey` strings.
 - **Cross-project reference:** *suggested references* = nearest project-profile embeddings to the task. RAG is the engine for that spec's Phase 3.
 - **Loki:** retrieve over life-OS sources before answering — real recall, not just the gateway agent's own memory.
-- **Self-improvement loop:** the frontier generator already wants "FleetCrown's real gaps" — retrieve over dev-logs/outcomes to ground proposals.
+- **Self-improvement loop:** the frontier generator already wants "Loki's real gaps" — retrieve over dev-logs/outcomes to ground proposals.
 
 ## What NOT to do (guardrails)
 
@@ -97,4 +97,4 @@ CREATE INDEX ON knowledge_embeddings (user_id, source_type);
 
 ## Cross-product note
 
-Keep `embeddings.ts` + the table shape aligned with OrangeCat so the two products share one embedding convention (same model, same 1536 dim). That makes a future *shared* knowledge layer (bitbaum-level) a migration, not a rewrite — and lets cross-product retrieval (FleetCrown work ↔ OrangeCat economy) become possible later.
+Keep `embeddings.ts` + the table shape aligned with OrangeCat so the two products share one embedding convention (same model, same 1536 dim). That makes a future *shared* knowledge layer (bitbaum-level) a migration, not a rewrite — and lets cross-product retrieval (Loki work ↔ OrangeCat economy) become possible later.

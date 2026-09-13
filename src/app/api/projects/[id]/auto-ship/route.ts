@@ -4,7 +4,7 @@ import { readIdParam, readJsonBody, jsonOk, jsonError, z } from "@/lib/api/route
 import { getUserProjectByEntityId, setProjectAutoShip } from "@/db/queries/user-projects";
 
 /**
- * "Ship fixes automatically" for one project — may FleetCrown merge the pull
+ * "Ship fixes automatically" for one project — may Loki merge the pull
  * request an agent opened for a visitor's report, once it is genuinely green?
  *
  * Addressed by ENTITY project id, like the widget token beside it, because

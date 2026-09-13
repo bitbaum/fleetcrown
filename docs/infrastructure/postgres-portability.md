@@ -10,13 +10,13 @@ Goal: **switching Postgres host later is a config + dump/restore job**, not a co
 
 Long-form narrative: [The Database Kill Switch](/thoughts/the-database-kill-switch-neon-oracle-and-the-studio-stack).
 
-Applies to FleetCrown first; copy the same env pattern to other Drizzle/Prisma apps in `~/dev`.
+Applies to Loki first; copy the same env pattern to other Drizzle/Prisma apps in `~/dev`.
 
 ## Where things stand
 
-FleetCrown's Postgres is **self-hosted on the Hetzner `bitbaum` box** (Postgres 17
+Loki's Postgres is **self-hosted on the Hetzner `bitbaum` box** (Postgres 17
 on the host, one role/database per app). The app reads `DATABASE_URL`; there is
-no managed-DB vendor in the loop. The one-time migration off Neon (FleetCrown)
+no managed-DB vendor in the loop. The one-time migration off Neon (Loki)
 and managed Supabase (OrangeCat) completed 2026-06-12 — see
 `docs/infrastructure/hetzner-migration.md` for the box layout and history. The
 vendor-neutral env pattern below is what made that move a config change rather
@@ -48,14 +48,14 @@ Implementation: `src/lib/db-url.ts` — `getDatabasePoolUrl()`, `getDatabaseDire
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │ Laptop: docker compose up db                                │
-│   DATABASE_URL=postgresql://fleetcrown:changeme@localhost:5432/fleetcrown
+│   DATABASE_URL=postgresql://loki:changeme@localhost:5432/loki
 │   (never the prod URL in .env.local)                        │
 └─────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────┐
 │ Production (self-hosted Next.js on the Hetzner box)         │
-│   DATABASE_URL=postgresql://user:pass@host:5432/fleetcrown     │
-│   DATABASE_POOL_URL=postgresql://user:pass@host:6432/fleetcrown (only if PgBouncer is in front)
+│   DATABASE_URL=postgresql://user:pass@host:5432/loki     │
+│   DATABASE_POOL_URL=postgresql://user:pass@host:6432/loki (only if PgBouncer is in front)
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -67,7 +67,7 @@ One VM, Postgres 17, optional PgBouncer (this is the current `bitbaum` setup):
 
 ```bash
 # On the VM (example)
-createdb fleetcrown
+createdb loki
 createdb kivvi
 createdb revampit
 # … one DB per project
@@ -83,13 +83,13 @@ Point each app at its own database name on the same host via its `DATABASE_URL`.
 
 ```bash
 # 1. Backup source
-DATABASE_URL="$OLD_DIRECT_URL" ./scripts/db/dump.sh fleetcrown-pre-migrate.sql.gz
+DATABASE_URL="$OLD_DIRECT_URL" ./scripts/db/dump.sh loki-pre-migrate.sql.gz
 
 # 2. Create empty DB on new host, push schema
 DATABASE_URL="$NEW_DIRECT_URL" pnpm run db:push
 
 # 3. Restore
-DATABASE_URL="$NEW_DIRECT_URL" ./scripts/db/restore.sh fleetcrown-pre-migrate.sql.gz
+DATABASE_URL="$NEW_DIRECT_URL" ./scripts/db/restore.sh loki-pre-migrate.sql.gz
 
 # 4. Set DATABASE_URL (+ DATABASE_POOL_URL) in the app env on the box, redeploy
 #    (scripts/deploy-hetzner.sh)
@@ -112,7 +112,7 @@ SOURCE_DATABASE_URL="$OLD" TARGET_DATABASE_URL="$NEW" TARGET_USER_ID="<uuid>" \
 - [ ] Control SSE / runner push updates `runtime_snapshots`
 - [ ] Decommission old host after 7 days (keep a cold dump for 30)
 
-## FleetCrown scripts
+## Loki scripts
 
 | Script | Purpose |
 |--------|---------|

@@ -10,7 +10,7 @@ import type { AgentLifecycle } from "@/lib/agent-execution/types";
 type ViewStatus = AgentLifecycle | "provisioning" | "error";
 
 /**
- * Live embedded terminal over a FleetCrown-owned PTY (LocalPtyExecutor).
+ * Live embedded terminal over a Loki-owned PTY (LocalPtyExecutor).
  * Only rendered when `decideWorkspaceAccess` allows server workspaces.
  */
 export function WorkspaceTerminalClient() {
@@ -79,11 +79,11 @@ export function WorkspaceTerminalClient() {
         <div className="mt-2 text-sm leading-relaxed text-text-secondary">
           {exitedFast ? (
             <>
-              This embedded terminal runs on the server hosting FleetCrown, which can&apos;t reach
-              your machine when you&apos;re on the hosted app — so the agent exited.{" "}
+              This embedded terminal runs on the server hosting Loki, which can&apos;t reach your
+              machine when you&apos;re on the hosted app — so the agent exited.{" "}
             </>
           ) : (
-            <>This embedded terminal runs on the server hosting FleetCrown. </>
+            <>This embedded terminal runs on the server hosting Loki. </>
           )}
           To have an agent work on a project, use <strong>Dispatch</strong> on it in{" "}
           <Link href="/control" className="text-accent-text underline">
@@ -97,11 +97,11 @@ export function WorkspaceTerminalClient() {
         <div className="text-sm leading-relaxed text-text-secondary">
           {exitedFast ? (
             <>
-              This embedded terminal runs on the server hosting FleetCrown, which can&apos;t reach
-              your machine when you&apos;re on the hosted app — so the agent exited.{" "}
+              This embedded terminal runs on the server hosting Loki, which can&apos;t reach your
+              machine when you&apos;re on the hosted app — so the agent exited.{" "}
             </>
           ) : (
-            <>This embedded terminal runs on the server hosting FleetCrown. </>
+            <>This embedded terminal runs on the server hosting Loki. </>
           )}
           To have an agent work on a project, use <strong>Dispatch</strong> on it in{" "}
           <Link href="/control" className="text-accent-text underline">

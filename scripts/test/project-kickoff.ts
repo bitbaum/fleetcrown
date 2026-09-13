@@ -181,7 +181,7 @@ eq(
 );
 
 // ── Private PIN must not gate Make it happen ────────────────────────────────
-// Observed on OrangeCat → FleetCrown dogfood: a person who never wants a
+// Observed on OrangeCat → Loki dogfood: a person who never wants a
 // private zone still hits Unlock before a public site can start. That was
 // wrong. Locked milestones skip inventing a roadmap; the brief + profile are
 // enough. Unlock is optional enrichment, never a hard gate.

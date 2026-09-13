@@ -155,9 +155,9 @@ _health=$(curl -sf --max-time 2 "$BASE/api/health" 2>/dev/null || true)
 if [ -z "$_health" ]; then
   echo "→ smoke: server not running at $BASE — skipping (start with pnpm run dev or install-app)"
 elif ! printf '%s' "$_health" | grep -q '"commit"'; then
-  echo "→ smoke: server at $BASE is NOT FleetCrown (health payload lacks \"commit\") — skipping"
+  echo "→ smoke: server at $BASE is NOT Loki (health payload lacks \"commit\") — skipping"
 else
-  echo "→ smoke: FleetCrown server detected at $BASE"
+  echo "→ smoke: Loki server detected at $BASE"
   pnpm run smoke
 fi
 

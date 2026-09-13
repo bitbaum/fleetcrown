@@ -1,13 +1,13 @@
 /**
  * Fleet Runner autopilot dispatch.
  *
- * Replaces the bash Stop hook (~/.local/share/fleetcrown-beacon/agent-hook-
+ * Replaces the bash Stop hook (~/.local/share/loki-beacon/agent-hook-
  * bridge.sh:autopilot_dispatch_and_inject) that was retired in Session 1
  * of the killing-the-bash-daemon migration (see /home/g/.claude/plans/
  * structured-baking-kazoo.md and content/thoughts/killing-the-bash-daemon.md).
  *
  * Trigger path now:
- *   home/watcher.ts detects ~/.fleetcrown/sessions/<P>.md changing to status:ready
+ *   home/watcher.ts detects ~/.loki/sessions/<P>.md changing to status:ready
  *     → desktop/src/main/index.ts notifyOnIdle() fires
  *     → dispatchAutopilot() here POSTs /api/control/dispatch
  *     → cloud writes a pending_command (action=queue or action=nextbest)
@@ -48,8 +48,8 @@ import { loadToken } from './token-store'
 import type { Handoff } from '@/lib/events'
 import { APP_URL } from '@/config/brand'
 
-const BASE_URL = (process.env.FLEETCROWN_WEB_URL || '').trim() || APP_URL
-const COOLDOWN_MS = Number(process.env.FLEETCROWN_AUTOPILOT_COOLDOWN_S || 300) * 1000
+const BASE_URL = (process.env.LOKI_WEB_URL || '').trim() || APP_URL
+const COOLDOWN_MS = Number(process.env.LOKI_AUTOPILOT_COOLDOWN_S || 300) * 1000
 const MAX_ATTEMPTS = 3
 const BACKOFF_MS = [0, 1000, 4000]
 const QUEUE_FETCH_TIMEOUT_MS = 4000

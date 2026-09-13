@@ -54,7 +54,7 @@ fake_repo() {
   for wf in "$@"; do
     case "$wf" in
       ci)     printf 'name: CI\non: push\njobs:\n  check:\n    steps:\n      - run: npm run verify\n' > "$dir/.github/workflows/ci.yml" ;;
-      deploy) printf 'name: Deploy\non:\n  push:\n    branches: [main]\njobs:\n  deploy:\n    uses: bitbaum/fleetcrown/.github/workflows/selfhost-deploy.yml@main\n' > "$dir/.github/workflows/deploy.yml" ;;
+      deploy) printf 'name: Deploy\non:\n  push:\n    branches: [main]\njobs:\n  deploy:\n    uses: bitbaum/loki/.github/workflows/selfhost-deploy.yml@main\n' > "$dir/.github/workflows/deploy.yml" ;;
       supabase-migrations)
         mkdir -p "$dir/supabase/migrations"
         printf 'CREATE TABLE IF NOT EXISTS t (id int);\n' > "$dir/supabase/migrations/001_init.sql" ;;

@@ -43,7 +43,7 @@ import { listPtyTabs, runnerWorkspaceId } from './pty-runtime'
 import { fleetSessionsDir, legacyClaudeSessionsDir } from '@/lib/session-paths'
 
 // Runner version is reported in the runtime-state heartbeat. The desktop sets
-// FLEETCROWN_RUNNER_VERSION from app.getVersion() inside app.whenReady() (so
+// LOKI_RUNNER_VERSION from app.getVersion() inside app.whenReady() (so
 // this module stays Electron-free and importable by the headless box-runner);
 // the box-runner derives it from its deployed package at startup.
 // Read lazily so hosts that set the version after this module is imported
@@ -51,7 +51,7 @@ import { fleetSessionsDir, legacyClaudeSessionsDir } from '@/lib/session-paths'
 // packaged desktop reported "dev" (whenReady runs after the static import),
 // and the box unit carried a hardcoded box-0.8.9 for three releases — both
 // because this was a load-time const.
-const runnerVersion = (): string => process.env.FLEETCROWN_RUNNER_VERSION ?? 'dev'
+const runnerVersion = (): string => process.env.LOKI_RUNNER_VERSION ?? 'dev'
 
 
 // v0.6 — liveness heartbeat ONLY. Actual state changes are pushed via
@@ -69,7 +69,7 @@ const runnerVersion = (): string => process.env.FLEETCROWN_RUNNER_VERSION ?? 'de
 // threshold to the right multiple.
 const PUSH_INTERVAL_MS = DAEMON_HEARTBEAT_MS
 
-const BASE_URL = (process.env.FLEETCROWN_WEB_URL || '').trim() || APP_URL
+const BASE_URL = (process.env.LOKI_WEB_URL || '').trim() || APP_URL
 
 let timer: NodeJS.Timeout | null = null
 let stopped = false
@@ -281,7 +281,7 @@ function projectEntries(agentProcesses: ReturnType<typeof getAgentProcesses>): {
   // Sessions auto-enter isolated worktrees (<repo>/.claude/worktrees/<name>),
   // so a process's cwd basename is the WORKTREE name, not the project. Keying
   // by it pushed ghost rows ("control-truth") while the real project's row
-  // froze and expired — fleetcrown read "Not running" with an agent actively
+  // froze and expired — loki read "Not running" with an agent actively
   // working in it (2026-08-13). Resolve the repo root before deriving the tab.
   for (const p of agentProcesses) {
     const root = resolveProjectRoot(p.cwd)

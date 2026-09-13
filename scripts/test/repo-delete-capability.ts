@@ -1,5 +1,5 @@
 /**
- * Deleting a GitHub repository is the one teardown step FleetCrown cannot do:
+ * Deleting a GitHub repository is the one teardown step Loki cannot do:
  * neither the org token nor a user's OAuth grant carries `delete_repo`, on
  * purpose, so the app can never destroy code beyond recovery. These tests pin
  * both halves of that contract — the refusal says something a person can act
@@ -89,7 +89,7 @@ async function checkGithubResponses() {
 const teardown = readFileSync("src/components/projects/ProjectTeardown.tsx", "utf8");
 if (teardown.includes('"delete-repo"')) {
   throw new Error(
-    "ProjectTeardown offers delete-repo again — no FleetCrown token can perform it, so it would always fail",
+    "ProjectTeardown offers delete-repo again — no Loki token can perform it, so it would always fail",
   );
 }
 if (!teardown.includes("/settings")) {

@@ -12,7 +12,7 @@
  * SandboxExecutor that can actually hibernate).
  */
 
-/** A stable, FleetCrown-assigned workspace id. Never a terminal/session name. */
+/** A stable, Loki-assigned workspace id. Never a terminal/session name. */
 export type WorkspaceId = string;
 
 export type AgentLifecycle = "starting" | "running" | "idle" | "exited";
@@ -62,7 +62,7 @@ export type EventListener = (event: AgentEvent) => void;
 export type Unsubscribe = () => void;
 
 export interface Executor {
-  /** Spawn the agent in a FleetCrown-owned PTY. Idempotent per id: re-provisioning
+  /** Spawn the agent in a Loki-owned PTY. Idempotent per id: re-provisioning
    *  a live workspace returns the existing handle. */
   provision(spec: WorkspaceSpec): Promise<WorkspaceHandle>;
 

@@ -11,7 +11,7 @@ ok()   { printf "  \033[32m✓\033[0m %s\n" "$1"; }
 warn() { printf "  \033[33m⚠\033[0m %s\n" "$1"; }
 bad()  { printf "  \033[31m✗\033[0m %s\n" "$1"; FAIL=1; }
 
-echo "── FleetCrown doctor ─────────────────────────────────────"
+echo "── Loki doctor ─────────────────────────────────────"
 
 # Node (CI pins 22)
 NODE_MAJOR=$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0)

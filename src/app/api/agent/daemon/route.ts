@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
  * GET /api/agent/daemon
  *
  * Used to serve a gzipped tarball of the bash daemon (~3000 lines across
- * fleetcrown-daemon.sh / agent-hook-bridge.sh / agent-hook-lib.sh + a
+ * loki-daemon.sh / agent-hook-bridge.sh / agent-hook-lib.sh + a
  * Python beacon stack) so a new customer could install the local helper
  * runtime in one command. Retired in Session 4 of killing-the-bash-daemon
  * (2026-06-11). The bash stack has been replaced by Fleet Runner desktop

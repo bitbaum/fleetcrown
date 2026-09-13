@@ -22,7 +22,7 @@ import { RUNNER_HEARTBEAT_MS } from '@/lib/constants/runner'
 import { APP_URL } from '@/config/brand'
 import { loadToken } from './token-store'
 
-const BASE_URL = (process.env.FLEETCROWN_WEB_URL || '').trim() || APP_URL
+const BASE_URL = (process.env.LOKI_WEB_URL || '').trim() || APP_URL
 const REPORT_INTERVAL_MS = RUNNER_HEARTBEAT_MS
 const MAX_TRACK_AGE_MS = 12 * 60 * 60 * 1000
 const POST_TIMEOUT_MS = 12_000

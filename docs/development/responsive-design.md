@@ -1,10 +1,10 @@
-# Responsive Design — FleetCrown Web App
+# Responsive Design — Loki Web App
 
 **Created:** 2026-06-27  
 **Last modified:** 2026-08-26  
 **Last modified summary:** Public marketing surface rebuilt mobile-first — sticky 56px header, drawer owns theme + sign-in, viewport-relative display scale, `ui-public-section`/`ui-public-container` rhythm.
 
-FleetCrown is **mobile-first and dark-first**. Every authenticated route must be usable on a 320px-wide phone without horizontal page scroll, with primary actions reachable above the floating bottom nav.
+Loki is **mobile-first and dark-first**. Every authenticated route must be usable on a 320px-wide phone without horizontal page scroll, with primary actions reachable above the floating bottom nav.
 
 ## Breakpoints
 

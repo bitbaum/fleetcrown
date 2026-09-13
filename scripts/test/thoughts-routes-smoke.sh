@@ -4,7 +4,7 @@
 #
 # Usage:
 #   npm run test:thoughts-routes
-#   BASE=https://fleetcrown.orangecat.ch npm run test:thoughts-routes
+#   BASE=https://loki.orangecat.ch npm run test:thoughts-routes
 
 set -euo pipefail
 

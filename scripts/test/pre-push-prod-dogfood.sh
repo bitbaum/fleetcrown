@@ -5,7 +5,7 @@
 #   SMOKE_PRIVATE_PIN=<pin> git push          # explicit override
 #   DOGFOOD_LOKI_ON_PUSH=1 … git push         # force loki dogfood even when builder offline
 #
-# Requires AUTH_SECRET + HETZNER_IP (or FLEETCROWN_SESSION_TOKEN) for JWT mint.
+# Requires AUTH_SECRET + HETZNER_IP (or LOKI_SESSION_TOKEN) for JWT mint.
 # Skips silently when SMOKE_PRIVATE_PIN is unset so default pushes stay fast.
 
 set -euo pipefail
@@ -33,13 +33,13 @@ if [ -z "${SMOKE_PRIVATE_PIN:-}" ]; then
   exit 0
 fi
 
-export BASE="${BASE:-https://fleetcrown.orangecat.ch}"
+export BASE="${BASE:-https://loki.orangecat.ch}"
 export SMOKE_PRIVATE_PIN
 export HEADLESS=1
 
 echo "→ prod dogfood: minting session ($BASE)"
 TOKEN="$(npx tsx scripts/test/print-session-token.ts)"
-export FLEETCROWN_SESSION_TOKEN="$TOKEN"
+export LOKI_SESSION_TOKEN="$TOKEN"
 
 echo "→ test:authenticated-smoke"
 npm run test:authenticated-smoke

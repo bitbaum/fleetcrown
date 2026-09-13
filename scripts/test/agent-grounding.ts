@@ -39,7 +39,7 @@ import {
 } from "@bitbaum/ai-kit/grounding";
 import { verifyAnswer, buildRepairPrompt } from "@bitbaum/ai-kit/grounding";
 
-// ── The real records, exactly as FleetCrown stores them ──────────────────────
+// ── The real records, exactly as Loki stores them ──────────────────────
 const FACTS = assignFactIds([
   makeFact({
     kind: "person",
@@ -155,14 +155,14 @@ const USER_MSG = "Plan my day. Who should I reach out to and why?";
   const r = verifyAnswer({
     answer: [
       "**truthseeker** — rotate the expired GROQ_API_KEY.",
-      "2. Update key in /opt/fleetcrown/runner/.env and /opt/fleet-runner/.env.",
+      "2. Update key in /opt/loki/runner/.env and /opt/fleet-runner/.env.",
     ].join("\n"),
     facts: FACTS,
     userMessage: USER_MSG,
   });
   assert.equal(r.ok, false, "invented file paths must be rejected");
   assert.ok(
-    r.violations.some((v) => v.kind === "novel-path" && v.text.includes("/opt/fleetcrown/runner")),
+    r.violations.some((v) => v.kind === "novel-path" && v.text.includes("/opt/loki/runner")),
     "the fabricated .env path must be flagged as a path claim",
   );
 }

@@ -47,7 +47,7 @@ export const userProjects = pgTable(
     name: text("name").notNull(), // display name + zellij tab identifier
     dirPath: text("dir_path"), // absolute local path (null = cloud-only)
     gitUrl: text("git_url"), // GitHub / GitLab URL
-    // Where this project lives on the public web. FleetCrown knew every project's
+    // Where this project lives on the public web. Loki knew every project's
     // REPO but never its SITE, so "give me the link" was a question only a human
     // (or an agent with ssh) could answer. This is the SSOT for that answer;
     // site_snapshots holds what probing the URL actually found.
@@ -62,13 +62,13 @@ export const userProjects = pgTable(
     // inference is how a closed lid used to kill work (see execution-access.ts).
     builderPref: text("builder_pref"),
     /**
-     * "Ship fixes automatically": may FleetCrown merge the pull request an
+     * "Ship fixes automatically": may Loki merge the pull request an
      * agent opened for a visitor's feedback, once it is genuinely green?
      *
      * NULL is a third state on purpose — the operator has never chosen, so the
      * Feedback section invites them instead of showing a switch that looks
      * like a decision someone made. false means chosen off; stop asking.
-     * Default off protects client sites by construction: FleetCrown cannot
+     * Default off protects client sites by construction: Loki cannot
      * tell a client site from its own (that ledger lives in apps.conf on the
      * box, not here), so nothing ships itself until a person says so.
      */

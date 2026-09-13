@@ -1,5 +1,5 @@
 /**
- * Agent adapter registry — SSOT for "every agent FleetCrown knows about."
+ * Agent adapter registry — SSOT for "every agent Loki knows about."
  *
  * Adding a new agent (Cline, Aider, opencode, whatever ships next):
  *   1. Write `./newagent.ts` exporting `newagentAdapter: AgentAdapter`.
@@ -24,13 +24,13 @@ import { geminiAdapter } from "./gemini";
 // Hermes is deliberately NOT an interactive adapter, but it IS a wired hosted
 // executor — two different things, so keep the distinction straight:
 //   • The interactive adapter (`hermesAdapter`, ./hermes.ts) is intentionally
-//     kept OUT of ALL_ADAPTERS and ORCHESTRATION_ADAPTER_IDS. FleetCrown does
+//     kept OUT of ALL_ADAPTERS and ORCHESTRATION_ADAPTER_IDS. Loki does
 //     not offer "drive Hermes in a terminal tab" the way it offers claude/codex/
 //     grok. That adapter file is preserved for a future interactive path; it is
 //     not selectable today.
 //   • The HOSTED path IS live and wired: `runHermesTask` (./hosted-runner/
 //     run-hermes.ts) has a real call site in scripts/hosted-runner.ts, which the
-//     `fleetcrown-hosted-runner.timer` drains (`hosted_dispatch` command type →
+//     `loki-hosted-runner.timer` drains (`hosted_dispatch` command type →
 //     clone → Hermes in its sandbox → PR). The `hermes` CLI IS installed on the
 //     box (/usr/local/bin/hermes, v0.17.0). inject-core auto-routes an offline
 //     coding dispatch to it (hostedRunner:"hermes").
@@ -46,7 +46,7 @@ export type {
   AgentRuntimeConfig,
 } from "./types";
 
-/** Every agent FleetCrown knows about. Order = UI display order. */
+/** Every agent Loki knows about. Order = UI display order. */
 export const ALL_ADAPTERS: readonly AgentAdapter[] = [
   claudeAdapter,
   grokAdapter,

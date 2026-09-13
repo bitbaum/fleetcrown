@@ -3,7 +3,7 @@
  *
  * The three kinds of 429 (capacity / size / daily) and their opposite responses
  * were learned here the expensive way, so the knowledge was extracted rather
- * than left in one app. This file remains the import path FleetCrown uses and
+ * than left in one app. This file remains the import path Loki uses and
  * keeps the Groq-flavoured names its callers were written against.
  *
  * The upstream names are vendor-neutral because the classifier is: it is applied

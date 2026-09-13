@@ -12,7 +12,7 @@ import {
 } from "@/lib/constants/timings";
 import type { Agent } from "@/lib/agent-registry";
 import type { Attachment } from "@/lib/loki/attachments";
-import { FLEETCROWN_REFRESH_EVENT } from "@/lib/client-events";
+import { LOKI_REFRESH_EVENT } from "@/lib/client-events";
 import { EXECUTOR_COPY } from "@/config/executor-copy";
 import { useEventStream } from "@/lib/event-stream";
 type AgentEntry = ControlData["agentRegistry"]["agents"][number];
@@ -156,7 +156,7 @@ export function useControlData(): ControlDataHook {
     // Three triggers for refetch after mount, all event-driven — no setInterval:
     //   1. visibilitychange: tab comes back to foreground (covers backgrounded
     //      tabs whose SSE was throttled by the browser).
-    //   2. FLEETCROWN_REFRESH_EVENT: pull-to-refresh, manual refresh button,
+    //   2. LOKI_REFRESH_EVENT: pull-to-refresh, manual refresh button,
     //      and other surfaces that broadcast "the world might have changed."
     //   3. The bridge SSE useEventStream subscription below — fires on every
     //      Postgres NOTIFY for this user.
@@ -168,14 +168,14 @@ export function useControlData(): ControlDataHook {
       if (!document.hidden) poll();
     };
     document.addEventListener("visibilitychange", onVisibilityChange);
-    const onFleetCrownRefresh = () => {
+    const onLokiRefresh = () => {
       poll();
     };
-    window.addEventListener(FLEETCROWN_REFRESH_EVENT, onFleetCrownRefresh);
+    window.addEventListener(LOKI_REFRESH_EVENT, onLokiRefresh);
 
     return () => {
       document.removeEventListener("visibilitychange", onVisibilityChange);
-      window.removeEventListener(FLEETCROWN_REFRESH_EVENT, onFleetCrownRefresh);
+      window.removeEventListener(LOKI_REFRESH_EVENT, onLokiRefresh);
     };
   }, [fetchControl]);
 
@@ -213,7 +213,7 @@ export function useControlData(): ControlDataHook {
   // is already wide. Tabs that don't care about the mode just ignore it.
   useEffect(() => {
     if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("fleetcrown:event-stream-mode", { detail: eventState }));
+      window.dispatchEvent(new CustomEvent("loki:event-stream-mode", { detail: eventState }));
     }
   }, [eventState]);
 

@@ -31,7 +31,7 @@ export function listedSites(apps: HostedApp[]) {
 }
 
 export function renderFleetSites(apps: HostedApp[]): string {
-  const sites = listedSites(apps).filter((s) => s.url !== "https://fleetcrown.orangecat.ch");
+  const sites = listedSites(apps).filter((s) => s.url !== "https://loki.orangecat.ch");
   const body = sites
     .map(
       (s) =>
@@ -54,7 +54,7 @@ export type FleetSite = {
   blurb: string;
 };
 
-/** Ordered by name. FleetCrown itself is absent on purpose. */
+/** Ordered by name. Loki itself is absent on purpose. */
 export const FLEET_SITES: readonly FleetSite[] = [
 ${body}
 ];

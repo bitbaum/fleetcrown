@@ -6,11 +6,11 @@ last_modified_date: 2026-09-11
 last_modified_summary: Cloud is the stored default tier; local is a per-project choice; every builder drives owned PTYs (zellij removed, Fleet Runner 0.8.19).
 ---
 
-FleetCrown is a **hybrid** product: the hosted web app (cloud control plane) owns auth, the database, and the UI. Agents run via the **builder** — the cloud service on Hetzner (box-runner) and/or the optional desktop app on your computer.
+Loki is a **hybrid** product: the hosted web app (cloud control plane) owns auth, the database, and the UI. Agents run via the **builder** — the cloud service on Hetzner (box-runner) and/or the optional desktop app on your computer.
 
 **Which builder runs a project is a stored decision, never a guess.** `pickDispatchChannel(project)` in `src/lib/execution-access.ts` reads the project only: a locus lock (a checkout that exists on one machine stays there; a checkout under the box clone root stays cloud), then the project's `builder_pref` ("Runs on" in Control → project profile), then the cloud floor (`DEFAULT_BUILDER_CHANNEL = "cloud"`). Runner presence and laptop power do not route; a chosen builder that is offline queues the work visibly (`runnerConnected: false`) instead of rerouting it. Every builder runs the agent in a PTY it owns (node-pty) — there is no terminal multiplexer anywhere in the product since Fleet Runner 0.8.19.
 
-**Shared cloud execution is restricted.** The always-on box-runner is not a multi-tenant sandbox. Until hosted execution is sandboxed per account, only eligible accounts (`isDefault` or `FLEETCROWN_CLOUD_BUILDER_USER_IDS`) may use the shared cloud builder. Everyone else runs through their own Fleet Runner on this computer (`src/lib/execution-access.ts`). Docs and UI must not pretend cloud building is universal.
+**Shared cloud execution is restricted.** The always-on box-runner is not a multi-tenant sandbox. Until hosted execution is sandboxed per account, only eligible accounts (`isDefault` or `LOKI_CLOUD_BUILDER_USER_IDS`) may use the shared cloud builder. Everyone else runs through their own Fleet Runner on this computer (`src/lib/execution-access.ts`). Docs and UI must not pretend cloud building is universal.
 
 User-facing copy lives in `src/config/executor-copy.ts`. Internal docs may still say Fleet Runner / box-runner.
 
@@ -32,8 +32,8 @@ User-facing copy lives in `src/config/executor-copy.ts`. Internal docs may still
 
 Use this when you want agents to run on your machine instead of (or alongside) cloud workers:
 
-1. **Download Fleet Runner** from [`/download`](https://fleetcrown.orangecat.ch/download) — same UI as the website, plus a background executor.
-2. **Sign in** with the same FleetCrown account (or paste an agent token from Settings).
+1. **Download Fleet Runner** from [`/download`](https://loki.orangecat.ch/download) — same UI as the website, plus a background executor.
+2. **Sign in** with the same Loki account (or paste an agent token from Settings).
 3. **Install at least one supported agent CLI** — the desktop app can guide you.
 4. **Launch at login** (Settings → Startup) so your machine stays connected.
 
@@ -41,10 +41,10 @@ Until a builder is online, Control **queues** dispatches. **Start building** als
 
 ### Cloud builder (box-runner) — eligible accounts only
 
-`fleetcrown-box-runner.service` is the shared Hetzner executor for **eligible** accounts (product-owner / allowlisted), not every signed-in user:
+`loki-box-runner.service` is the shared Hetzner executor for **eligible** accounts (product-owner / allowlisted), not every signed-in user:
 
 - **Enabled on boot**, `Restart=always` — intended to run 24/7 without a laptop.
-- **Separate from `fleetcrown-app`** — web deploys restart the site, not agent PTYs; deploy still **syncs + restarts** box-runner code via `scripts/deploy-hetzner.sh`.
+- **Separate from `loki-app`** — web deploys restart the site, not agent PTYs; deploy still **syncs + restarts** box-runner code via `scripts/deploy-hetzner.sh`.
 - **First install:** `bash scripts/hetzner/install-box-runner.sh`
 - Control shows **Cloud builder online** when the bridge connection is live and the runner reports a `box-*` version.
 - **Non-eligible accounts** get `cloud-builder-private` / `builder-required` from `resolveQueuedExecution` and must connect Fleet Runner locally.
@@ -59,16 +59,16 @@ Fleet Runner embeds the `home/` orchestration library (`watcher.ts` + `worker.ts
 |-----------|----------------|
 | **Long-poll claim** | Runner claims pending commands via `SELECT … FOR UPDATE SKIP LOCKED` so two runners never grab the same job |
 | **Idempotent replay** | On restart the worker replays the JSONL log to rebuild which `runId`s already started; it refuses to double-fire |
-| **Append-only event log** | `~/.fleetcrown/events.jsonl` is the single source of truth for crash recovery |
+| **Append-only event log** | `~/.loki/events.jsonl` is the single source of truth for crash recovery |
 | **Connection-based presence** | Runner online/offline is the live bridge SSE connection, not a heartbeat (see `runner_presence`). Presence tells you whether queued work will run now; it never selects the builder |
-| **Auto-continue pause sentinel** | `/tmp/fleetcrown-auto-continue-<tab>` — respected by the runner's autopilot path |
+| **Auto-continue pause sentinel** | `/tmp/loki-auto-continue-<tab>` — respected by the runner's autopilot path |
 
 ## Component roles (builder vs web app)
 
 | Component | Runs where | Responsibility |
 |-----------|------------|----------------|
-| **Web app** | Hosted Hetzner box (`fleetcrown-app`) or local dev | Auth, Postgres, Control/Loki UI, command queue — **control plane only on prod** (`RUNTIME_AVAILABLE` unset) |
-| **box-runner** | Hetzner box (`fleetcrown-box-runner.service`) | Eligible-account cloud builder: polls queue, owned PTY agents, peek-stream for Terminal → Cloud |
+| **Web app** | Hosted Hetzner box (`loki-app`) or local dev | Auth, Postgres, Control/Loki UI, command queue — **control plane only on prod** (`RUNTIME_AVAILABLE` unset) |
+| **box-runner** | Hetzner box (`loki-box-runner.service`) | Eligible-account cloud builder: polls queue, owned PTY agents, peek-stream for Terminal → Cloud |
 | **Fleet Runner** | Optional — operator's computer (Electron) | Same queue on local machine; Terminal → This computer |
 | **Hermes runner** | Hetzner sandbox | PR-mode offline dispatches when no builder claims |
 | **`home/` library** | Embedded in desktop runner | Local JSONL event loop; see `home/README.md` |
@@ -140,7 +140,7 @@ Loki and Control do **not** connect to Terminal directly. They enqueue `pending_
 ## Architecture sketch
 
 ```
- Browser (fleetcrown.orangecat.ch or localhost:3000)
+ Browser (loki.orangecat.ch or localhost:3000)
    │  auth, DB, UI, command queue, dispatch gates
    ▼
  PostgreSQL (pending_commands, runtime_snapshots, runner_presence, …)

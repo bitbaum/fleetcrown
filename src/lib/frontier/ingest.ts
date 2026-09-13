@@ -47,7 +47,7 @@ function tag(block: string, name: string): string {
 
 async function fetchText(url: string): Promise<string> {
   const res = await fetch(url, {
-    headers: { "User-Agent": `FleetCrown-FrontierDigest/1.0 (+${APP_URL})` },
+    headers: { "User-Agent": `Loki-FrontierDigest/1.0 (+${APP_URL})` },
     signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     cache: "no-store",
   });

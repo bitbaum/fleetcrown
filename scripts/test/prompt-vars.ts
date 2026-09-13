@@ -79,7 +79,7 @@ ok(
   "an unfilled variable with no default STAYS VISIBLE rather than blanking",
 );
 ok(
-  renderPromptBody("in {{ project_name }}", { project_name: "fleetcrown" }) === "in fleetcrown",
+  renderPromptBody("in {{ project_name }}", { project_name: "loki" }) === "in loki",
   "renders the spaced spelling — the old replaceAll shipped these braces",
 );
 ok(

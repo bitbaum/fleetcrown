@@ -3,7 +3,7 @@
 # Trigger: pushing a tag matching `fleet-runner-v*` (e.g. fleet-runner-v0.2.0).
 # Output: installers for macOS (.dmg, .zip), Windows (NSIS .exe), and
 # Linux (.AppImage, .deb), published in one public release on
-# bitbaum/fleetcrown-releases tagged `fleet-runner-v<version>`.
+# bitbaum/loki-releases tagged `fleet-runner-v<version>`.
 #
 # Two jobs, and the split is deliberate:
 #
@@ -11,16 +11,16 @@
 #           workflow artifacts. It does NOT publish. electron-builder's GitHub
 #           provider can only write to the repo the workflow runs in using the
 #           default GITHUB_TOKEN, but `publish` in desktop/package.json points
-#           at fleetcrown-releases — so letting it publish here fails the whole
+#           at loki-releases — so letting it publish here fails the whole
 #           matrix on an upload 403. That is exactly what silently broke the
 #           pipeline after v0.8.6: releases 0.8.7-0.8.9 had to be cut by hand
 #           on a Linux box and shipped without macOS or Windows builds at all.
 #
 #   mirror  collects all three sets of artifacts and publishes them to
-#           fleetcrown-releases under the `fleet-runner-v*` tag convention that
+#           loki-releases under the `fleet-runner-v*` tag convention that
 #           31 previous releases and the marketing /download URLs already use.
 #           Cross-repo writes need a PAT: RELEASES_REPO_TOKEN (repo scope on
-#           fleetcrown-releases). This replaces the manual post-build run of
+#           loki-releases). This replaces the manual post-build run of
 #           scripts/mirror-desktop-release.sh, which is the step everyone
 #           forgot. The job reuses that same script, so there is one
 #           implementation of "how a release is assembled", not two.
@@ -186,7 +186,7 @@ jobs:
   # partial matrix never ships.
   # ---------------------------------------------------------------------------
   mirror:
-    name: Publish to fleetcrown-releases
+    name: Publish to loki-releases
     needs: build
     if: startsWith(github.ref, 'refs/tags/fleet-runner-v')
     runs-on: ubuntu-latest
@@ -204,7 +204,7 @@ jobs:
           set -euo pipefail
           if [ -z "${GH_TOKEN:-}" ]; then
             echo "::error::RELEASES_REPO_TOKEN is not set — cannot publish to" \
-                 "bitbaum/fleetcrown-releases. Add a PAT with repo scope."
+                 "bitbaum/loki-releases. Add a PAT with repo scope."
             exit 1
           fi
           version="${GITHUB_REF_NAME#fleet-runner-v}"

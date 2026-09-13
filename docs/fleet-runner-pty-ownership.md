@@ -13,7 +13,7 @@
 
 ## The Problem
 
-FleetCrown's execution path at the time of writing:
+Loki's execution path at the time of writing:
 
 ```
 /control UI → /api/inject → home/worker.ts → zellij action write-chars → agent CLI in tab
@@ -21,10 +21,10 @@ FleetCrown's execution path at the time of writing:
 
 This shape carried two structural costs:
 
-1. **Onboarding wall.** To get value, a new user must (a) install zellij, (b) open a tab named exactly like their project key, (c) launch the right agent CLI in that tab, (d) keep it alive. Three install steps and one fragile naming convention before the dashboard does anything. This is the **#1 reason FleetCrown can't onboard non-me users today.**
+1. **Onboarding wall.** To get value, a new user must (a) install zellij, (b) open a tab named exactly like their project key, (c) launch the right agent CLI in that tab, (d) keep it alive. Three install steps and one fragile naming convention before the dashboard does anything. This is the **#1 reason Loki can't onboard non-me users today.**
 2. **Reliability tax.** Zellij 0.43.x has a known upstream panic in `blocking-1.2.0` when the PTY write returns `EWOULDBLOCK` (`.unwrap()` on `Err`). Large writes from the worker — or large pastes from the user — crash the entire zellij server. We don't control the fix.
 
-Both costs traced to the same root: **FleetCrown did not own the agent's PTY.** Zellij did. We were a tenant in someone else's terminal multiplexer.
+Both costs traced to the same root: **Loki did not own the agent's PTY.** Zellij did. We were a tenant in someone else's terminal multiplexer.
 
 ## The Pivot
 
@@ -47,7 +47,7 @@ The agent process is a child of Fleet Runner, not of a zellij pane. The browser 
 
 The pivot is **execution-layer only**. Everything upstream of injection is preserved:
 
-- The append-only JSONL event log (`~/.fleetcrown/events.jsonl`)
+- The append-only JSONL event log (`~/.loki/events.jsonl`)
 - `applyEvent` / state projection (`home/state.ts`, consumed in-process by Fleet Runner)
 - `decide()` and autonomy gates
 - Strategist (`/api/control/dispatch` → Groq composition)
@@ -69,7 +69,7 @@ The pivot is **execution-layer only**. Everything upstream of injection is prese
 
 ## What Got Removed
 
-- `scripts/install-fleetcrown-hooks.sh` (the ZSH typing-hooks installer). Only needed because we were sharing the pane with the user's interactive shell. Gone.
+- `scripts/install-loki-hooks.sh` (the ZSH typing-hooks installer). Only needed because we were sharing the pane with the user's interactive shell. Gone.
 - `isUserTypingInTab()` — same reason.
 - The "open a tab named exactly like your project" onboarding step.
 - `injectIntoTab`, `src/lib/zellij.ts` and `src/lib/terminals/*` — deleted outright on 2026-09-11. An inject for a tab with no live owned PTY fails loudly ("no running agent for … — dispatch to start one") and the cloud enqueues a dispatch (cold start) instead.
@@ -113,7 +113,7 @@ Wraps `xterm.js`. Subscribes to the SSE stream, sends input back through a small
 2. Run `zellij` from a terminal
 3. Create tabs named exactly after each project
 4. Launch `claude` / `codex` / etc. in each tab
-5. Open FleetCrown in browser
+5. Open Loki in browser
 6. Now dispatch works
 
 **After (Fleet Runner v2)**:
@@ -131,7 +131,7 @@ The plan kept the zellij path alive during the migration — no flag day.
 
 - **Phase A** — Build `PtySession` + xterm.js panel + SSE stream as a parallel execution mode behind an env flag. Ship and dogfood with the founder + 1-2 friendly users. (Shipped as `LocalPtyExecutor`, 2026-06.)
 - **Phase B** — Flip the default for desktop installs to the owned PTY. (Shipped.)
-- **Phase C** — Remove the zellij code path entirely and drop the ZSH typing-hooks installer. (Shipped 2026-09-11 in Fleet Runner 0.8.19: no attach mode, no `FLEETCROWN_RUNNER_PTY` flag, no bundled zellij binary — the code was deleted, not demoted.)
+- **Phase C** — Remove the zellij code path entirely and drop the ZSH typing-hooks installer. (Shipped 2026-09-11 in Fleet Runner 0.8.19: no attach mode, no `LOKI_RUNNER_PTY` flag, no bundled zellij binary — the code was deleted, not demoted.)
 
 Each phase was ship-on-green: the entire test suite, smoke tests, and home/ self-tests had to pass.
 
@@ -161,7 +161,7 @@ Suggested designation: **`desktop-7-pty-ownership`**, started in parallel with `
 
 1. **Where does PtySession live?** `desktop/src/main/` (Electron-only) or `packages/local-runtime/` (shared with `home/` headless mode)? Lean: extract to `packages/local-runtime` so headless daemon users also get PTY ownership.
 2. **Multi-session per project?** Current model is one active session per project key. Should we allow parallel sessions (e.g. two Claude tasks against the same repo)? Probably no for v2 — adds queueing complexity.
-3. **Persistence across Fleet Runner restarts?** Today the agent dies when zellij dies. With PTY ownership, the agent dies when Fleet Runner dies. Acceptable for v2; the persistent-runtime answer is "use a headless `fleetcrown-runner` daemon mode."
+3. **Persistence across Fleet Runner restarts?** Today the agent dies when zellij dies. With PTY ownership, the agent dies when Fleet Runner dies. Acceptable for v2; the persistent-runtime answer is "use a headless `loki-runner` daemon mode."
 4. **Cloud terminal streaming.** Once remote-plumbing is live, do we stream PTY output back through the hosted control plane to other devices (phone, second laptop)? Defer to remote-plumbing phase.
 5. **TUI handling.** Some agents may launch sub-TUIs (e.g. `claude` triggering an editor). xterm.js handles ANSI / alternate screen correctly, but we should verify with each adapter's edge cases before flipping the default.
 
@@ -177,4 +177,4 @@ All three hold on main as of 2026-09-11.
 
 ---
 
-This is the architecture move that turns FleetCrown from "tool the founder built for themselves" into "tool a stranger can sign up for." Everything else — packaging, marketing, mobile, remote control — gets easier once execution is detached from the user's terminal-of-choice.
+This is the architecture move that turns Loki from "tool the founder built for themselves" into "tool a stranger can sign up for." Everything else — packaging, marketing, mobile, remote control — gets easier once execution is detached from the user's terminal-of-choice.

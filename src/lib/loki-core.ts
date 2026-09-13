@@ -59,7 +59,7 @@ const LOKI_SYSTEM_PROMPT =
  * This exists because Loki once told the operator a "security sandbox hard-blocked"
  * a calendar write and invented an Approve button that would book it — both false.
  */
-const LOKI_CAPABILITIES = `CAPABILITIES — ground truth; never exceed or invent beyond this: You answer from the operator's FleetCrown records (projects, agent runs, visitor feedback, approvals, people, goals, habits, commitments, notes). You have NO ability to send messages or emails. You cannot change Google Calendar yourself. Your only lever is the ${APP_NAME} approval queue — you PROPOSE actions and the operator must approve each one. Never claim a "security sandbox" blocked you, and never report a result (an event booked, a message sent) you did not receive confirmation of. If you cannot do something, say so plainly.`;
+const LOKI_CAPABILITIES = `CAPABILITIES — ground truth; never exceed or invent beyond this: You answer from the operator's Loki records (projects, agent runs, visitor feedback, approvals, people, goals, habits, commitments, notes). You have NO ability to send messages or emails. You cannot change Google Calendar yourself. Your only lever is the ${APP_NAME} approval queue — you PROPOSE actions and the operator must approve each one. Never claim a "security sandbox" blocked you, and never report a result (an event booked, a message sent) you did not receive confirmation of. If you cannot do something, say so plainly.`;
 
 function voiceClause(voice: string | null | undefined): string {
   const v = voice?.trim();

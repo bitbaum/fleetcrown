@@ -139,7 +139,7 @@ export async function GET(req: NextRequest) {
       if (tg) {
         const sent = await sendTelegramMessage(
           tg,
-          `🕐 FleetCrown: ${s.pending} ${noun} waiting for your approval.\n` +
+          `🕐 Loki: ${s.pending} ${noun} waiting for your approval.\n` +
             `Oldest: "${s.oldestTitle}" (${waited}).\n` +
             `Approve or reject: ${APP_URL}/approvals`,
         );

@@ -210,7 +210,7 @@ ok(
   isDemoEmail(` ${DEMO_EMAIL.toUpperCase()} `),
   "case and surrounding space must not defeat the check",
 );
-ok(!isDemoEmail("demo@fleetcrown.app.attacker.example"), "a suffix must not match");
+ok(!isDemoEmail("demo@loki.app.attacker.example"), "a suffix must not match");
 ok(
   !isDemoEmail(null) && !isDemoEmail(undefined) && !isDemoEmail(""),
   "absent email is not the demo",

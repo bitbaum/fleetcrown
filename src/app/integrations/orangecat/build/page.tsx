@@ -11,7 +11,7 @@ import { PublicSurface } from "@/components/public/PublicSurface";
 
 export const metadata = {
   title: "Build from OrangeCat",
-  description: "Review an OrangeCat entity and turn it into a supervised FleetCrown project.",
+  description: "Review an OrangeCat entity and turn it into a supervised Loki project.",
 };
 
 export default async function OrangeCatBuildPage({
@@ -54,7 +54,7 @@ export default async function OrangeCatBuildPage({
   ]);
 
   // A picker that shows only names cannot be reasoned about: every option reads
-  // like a repository, and none of them is one. A FleetCrown project is a
+  // like a repository, and none of them is one. A Loki project is a
   // workspace row that MAY carry a repo, a local checkout and a live site — so
   // send those three facts down and let the reader see which a project has.
   const linksOfThisType = links.filter((row) => row.entityType === intent.entity.type);
@@ -64,10 +64,10 @@ export default async function OrangeCatBuildPage({
     return {
       id: project.id,
       name: project.name,
-      // Where this project lives in FleetCrown. Same id the API redirects to on
+      // Where this project lives in Loki. Same id the API redirects to on
       // confirm, so an already-connected project can be opened directly instead
       // of spending the one-shot handoff token to arrive at the same page.
-      fleetcrownPath: `/projects/${project.entityProjectId ?? project.id}`,
+      lokiPath: `/projects/${project.entityProjectId ?? project.id}`,
       repoUrl: project.gitUrl,
       dirPath: project.dirPath,
       liveUrl: project.liveUrl,

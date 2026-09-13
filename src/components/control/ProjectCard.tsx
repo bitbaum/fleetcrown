@@ -277,7 +277,7 @@ export function ProjectCard({
             // the hero's own stall banner one screen up.
             executionStalled
             ? "Autopilot on, but dispatches are queued and not executing — see the builder status above."
-            : "Autopilot on: queue is empty, so FleetCrown picks the next-best task when the agent waits.";
+            : "Autopilot on: queue is empty, so Loki picks the next-best task when the agent waits.";
 
   const {
     sending,

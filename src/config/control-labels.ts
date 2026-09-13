@@ -5,13 +5,13 @@
  * - Saved prompts (/prompts): reusable templates you author
  * - Up next (queue): waiting to dispatch on this project
  * - Recent dispatches / paste from history: already sent to an agent
- * - Prompt library: FleetCrown starter templates on the project card
+ * - Prompt library: Loki starter templates on the project card
  */
 
 /** User-authored templates on /prompts */
 export const SAVED_PROMPTS_TITLE = "Saved prompts";
 
-/** FleetCrown featured templates on the project card */
+/** Loki featured templates on the project card */
 export const PROMPT_LIBRARY_TITLE = "Prompt library";
 
 /** Per-project queue — autopilot drains head-first */

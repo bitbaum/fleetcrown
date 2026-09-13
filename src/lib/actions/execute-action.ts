@@ -129,7 +129,7 @@ export async function executeAction(userId: string, action: Action): Promise<Exe
   try {
     switch (action.type) {
       case ACTION_TYPE.CREATE_COMMITMENT: {
-        // Internal, reversible: writes to FleetCrown's own commitments table. Zero external risk.
+        // Internal, reversible: writes to Loki's own commitments table. Zero external risk.
         const payload = action.payload ?? {};
         const description =
           (typeof payload.commitment === "string" && payload.commitment.trim()) || action.title;

@@ -1,18 +1,18 @@
-# FleetCrown Sustainability Gates
+# Loki Sustainability Gates
 
 **What this is:** three frozen rules that keep unit economics from inverting as
-FleetCrown scales. Derived from the deep business-model analysis of 2026-07-19.
+Loki scales. Derived from the deep business-model analysis of 2026-07-19.
 Each gate names a threshold and the machinery that must exist *before* the
 threshold is crossed. These are anchors, not aspirations — do not cross a
 threshold with the gate still open.
 
-## Why FleetCrown is sustainable today
+## Why Loki is sustainable today
 
 The model works because the expensive part — agent execution — is offloaded onto
 the customer's own machine and their own agent keys (BYO-runner + BYO-keys,
-enforced in `src/lib/execution-access.ts`). FleetCrown sells the **captain layer**
+enforced in `src/lib/execution-access.ts`). Loki sells the **captain layer**
 (the control plane) for CHF 15–90/mo while the customer pays 100% of the actual
-Claude/OpenAI compute. At 10 / 100 / 1000 BYO users, FleetCrown's own marginal
+Claude/OpenAI compute. At 10 / 100 / 1000 BYO users, Loki's own marginal
 cost is ~one shared Groq key + opt-in Resend email; fixed cost is one box +
 Postgres. Break-even is ~2 paid subscriptions. This holds **only** while the
 three gates below stay shut.
@@ -24,13 +24,13 @@ webhook → plan grant); revenue observability ships on `/system` (founder-only
 
 ## Gate 1 — Metering before hosted execution opens beyond the founder
 
-**Threshold:** the moment any non-founder user can run agents on FleetCrown's own
+**Threshold:** the moment any non-founder user can run agents on Loki's own
 box (i.e. `execution-access.ts` stops being a founder-only allowlist, or
-`FLEETCROWN_EXECUTOR=sandbox` ships).
+`LOKI_EXECUTOR=sandbox` ships).
 
 **Why:** the pricing ladder gates *project count*, which is uncorrelated with
 compute cost. A flat CHF 40/mo Pro user running "build all my projects" autopilot
-24/7 on FleetCrown-paid Claude compute burns multiples of their subscription. A
+24/7 on Loki-paid Claude compute burns multiples of their subscription. A
 project-count paywall against unmetered autonomous runs inverts unit economics.
 
 **Machinery that must exist first:** per-run cost accounting + a prepaid
@@ -84,8 +84,8 @@ Team to a real studio.
 - **No trial mechanics, no conversion tracking.** The free tier is the permanent
   funnel entry; nothing measures paid conversion. `RevenueCard` is the first
   step — MRR is now visible; the funnel above it is not yet instrumented.
-- **The two-product complement.** FleetCrown has recurring pricing but no usage
+- **The two-product complement.** Loki has recurring pricing but no usage
   metering; OrangeCat has usage metering (`credit-metering.ts`) but no recurring
   product. Each built the half the other lacks — Gate 1's Fleet Credits is
   OrangeCat's pattern ported inward; OrangeCat's missing Supporter checkout is
-  FleetCrown's pass-product pattern ported outward. Solve them together.
+  Loki's pass-product pattern ported outward. Solve them together.

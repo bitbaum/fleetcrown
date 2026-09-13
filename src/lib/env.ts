@@ -131,7 +131,7 @@ export function checkEnv(): EnvIssue[] {
   // deploy pipeline — the operator is usually asleep when this trips, and an
   // outage is a worse answer than a loud signal.
   // presentAliased, not present: the app reads this key through envAlias, which
-  // only ever looks at APP_/FLEETCROWN_/COCKPIT_ prefixed names and NEVER the
+  // only ever looks at APP_/LOKI_/COCKPIT_ prefixed names and NEVER the
   // bare one. Checking the bare name was wrong in both directions:
   //
   //   - false alarm  — prod has APP_TELEGRAM_CHAT_ID set and delivery works,
@@ -147,7 +147,7 @@ export function checkEnv(): EnvIssue[] {
     issues.push({
       level: "warn",
       key: "TELEGRAM_CHAT_ID",
-      msg: "unset while TELEGRAM_BOT_TOKEN is set — every Telegram notification (run-close, feedback arrival) is discarded silently. Set APP_TELEGRAM_CHAT_ID (or FLEETCROWN_/COCKPIT_): the bare name is NOT read by the app",
+      msg: "unset while TELEGRAM_BOT_TOKEN is set — every Telegram notification (run-close, feedback arrival) is discarded silently. Set APP_TELEGRAM_CHAT_ID (or LOKI_/COCKPIT_): the bare name is NOT read by the app",
     });
   }
 

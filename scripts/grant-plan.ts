@@ -1,7 +1,7 @@
 /**
  * Manual plan grant — the Phase-0 OrangeCat-rail entitlement path.
  *
- * Until the OC→FC payment webhook exists (Phase 1), a FleetCrown tier bought in
+ * Until the OC→FC payment webhook exists (Phase 1), a Loki tier bought in
  * Bitcoin through OrangeCat is granted by hand with this: confirm the BTC payment
  * settled on the OC side, then run this to flip `users.plan` — the SAME write
  * (updateUserBilling) that /api/orangecat/entitlement performs, so a hand grant

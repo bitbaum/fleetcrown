@@ -49,7 +49,7 @@ print(("yes" if a43 else "no"), ("yes" if a53 else "no"))
 ' 2>/dev/null)"
 [ -n "${cx43:-}" ] || { logger -t hcloud-watch "parse failed"; exit 0; }
 
-# ── Structured state for the FleetCrown /system card ────────────────────────
+# ── Structured state for the Loki /system card ────────────────────────
 # Written on EVERY run so the UI can say how fresh the reading is. Specs are
 # taken from the API response, so the card never displays invented hardware
 # numbers. Best-effort: a failure here must not stop the Telegram alerting below.

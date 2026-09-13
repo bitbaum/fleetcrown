@@ -391,7 +391,7 @@ export async function GET() {
       const dbState = dbStateMap.get(`${ownerUserId}:${normalizeTabName(tab)}`);
 
       // Resolve the live tab name first — session files and /tmp sentinels all use the live name.
-      // e.g. canonical "FleetCrown" may run as "FleetCrown Claude", so sessions/FleetCrown Claude.md wins.
+      // e.g. canonical "Loki" may run as "Loki Claude", so sessions/Loki Claude.md wins.
       const liveTab = resolveEffectiveTab(tab, liveTabs);
       const projectProcesses = agentProcesses.filter(
         (process) => process.cwd === dir || process.cwd.startsWith(dir + "/"),

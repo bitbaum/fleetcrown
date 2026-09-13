@@ -70,34 +70,25 @@ function runTests(): void {
   };
 
   check("findProjectForOpenTab exact match", () => {
-    const projects = [stubProject({ tab: "FleetCrown", liveTab: "FleetCrown" })];
-    assert(
-      findProjectForOpenTab("FleetCrown", projects)?.tab === "FleetCrown",
-      "expected FleetCrown",
-    );
+    const projects = [stubProject({ tab: "Loki", liveTab: "Loki" })];
+    assert(findProjectForOpenTab("Loki", projects)?.tab === "Loki", "expected Loki");
   });
 
   check("findProjectForOpenTab prefix match (agent suffix tab)", () => {
-    const projects = [stubProject({ tab: "FleetCrown", liveTab: "FleetCrown Claude" })];
-    assert(
-      findProjectForOpenTab("FleetCrown Claude", projects)?.tab === "FleetCrown",
-      "expected prefix match",
-    );
+    const projects = [stubProject({ tab: "Loki", liveTab: "Loki Claude" })];
+    assert(findProjectForOpenTab("Loki Claude", projects)?.tab === "Loki", "expected prefix match");
   });
 
   check("isProjectTabOpen accepts agent-suffixed live tabs", () => {
-    const project = stubProject({ tab: "FleetCrown", liveTab: "FleetCrown" });
-    assert(
-      isProjectTabOpen(project, ["FleetCrown Claude"]),
-      "expected suffix tab to count as open",
-    );
+    const project = stubProject({ tab: "Loki", liveTab: "Loki" });
+    assert(isProjectTabOpen(project, ["Loki Claude"]), "expected suffix tab to count as open");
     assert(!isProjectTabOpen(project, ["Cockpit2 Claude"]), "must not match unrelated prefixes");
   });
 
   check("isProjectTabOpen accepts a different live agent suffix than cached liveTab", () => {
-    const project = stubProject({ tab: "FleetCrown", liveTab: "FleetCrown Claude" });
+    const project = stubProject({ tab: "Loki", liveTab: "Loki Claude" });
     assert(
-      isProjectTabOpen(project, ["FleetCrown Codex"]),
+      isProjectTabOpen(project, ["Loki Codex"]),
       "expected canonical project suffix to count as open",
     );
   });
@@ -156,7 +147,7 @@ function runTests(): void {
   });
 
   check("inferAgentLabelFromTabName reads common agent suffixes", () => {
-    assert(inferAgentLabelFromTabName("FleetCrown Codex") === "Codex", "expected Codex suffix");
+    assert(inferAgentLabelFromTabName("Loki Codex") === "Codex", "expected Codex suffix");
     assert(inferAgentLabelFromTabName("ops-grok") === "Grok", "expected Grok suffix");
     assert(inferAgentLabelFromTabName("scratch") === null, "expected no inferred agent");
   });
@@ -179,7 +170,7 @@ function runTests(): void {
   });
 
   check("no detected process is reported as not running, not inferred activity", () => {
-    const project = stubProject({ tab: "FleetCrown" });
+    const project = stubProject({ tab: "Loki" });
     const state = getProjectDisplayState(project, [], 1_700_000_000);
     assert(
       state.stateLabel === "Not running",
@@ -191,7 +182,7 @@ function runTests(): void {
     const nowS = 1_700_000_000;
     const snapshot = buildProjectOperationsSnapshot(
       stubProject({
-        tab: "FleetCrown",
+        tab: "Loki",
         session: {
           done: "Done earlier",
           next: "Continue later",
@@ -214,19 +205,19 @@ function runTests(): void {
     assert(snapshot.evidenceKind === "historical", "handoff provenance must be historical");
   });
 
-  check("a recent dispatch beats 'Not running' — work happens in tabs FleetCrown can't see", () => {
+  check("a recent dispatch beats 'Not running' — work happens in tabs Loki can't see", () => {
     // The user runs 5-10 parallel sessions in kitty with unnamed tabs, so
     // live process detection sees nothing — yet hook-captured dispatches
     // prove the project was worked on. "Not running" contradicted the
-    // recorded facts on the same card (fleetcrown, 2026-08-13).
+    // recorded facts on the same card (loki, 2026-08-13).
     const nowS = 1_700_000_000;
     const state = getProjectDisplayState(
       stubProject({
-        tab: "fleetcrown",
+        tab: "loki",
         recentActivity: [
           {
             id: "d1",
-            projectKey: "fleetcrown",
+            projectKey: "loki",
             at: new Date((nowS - 2_640) * 1000).toISOString(),
             kind: "dispatch",
             source: "user",
@@ -361,9 +352,9 @@ function runTests(): void {
 
   check("open session is labeled 'Awaiting input' to match the summary chip", () => {
     const nowS = 1_700_000_000;
-    const project = stubProject({ tab: "FleetCrown", agentRunning: true });
-    const state = getProjectDisplayState(project, ["FleetCrown"], nowS);
-    const snapshot = buildProjectOperationsSnapshot(project, ["FleetCrown"], nowS);
+    const project = stubProject({ tab: "Loki", agentRunning: true });
+    const state = getProjectDisplayState(project, ["Loki"], nowS);
+    const snapshot = buildProjectOperationsSnapshot(project, ["Loki"], nowS);
     // Previous label "Waiting for instructions" implied the project itself was
     // dormant when really the only known fact is "agent process detected, no
     // recent handoff signal" — actionable wording matches the summary section
@@ -381,9 +372,9 @@ function runTests(): void {
 
   check("ready sentinel is a next-step state, not generic waiting", () => {
     const nowS = 1_700_000_000;
-    const project = stubProject({ tab: "FleetCrown", readyAt: nowS - 5 });
-    const state = getProjectDisplayState(project, ["FleetCrown"], nowS);
-    const snapshot = buildProjectOperationsSnapshot(project, ["FleetCrown"], nowS);
+    const project = stubProject({ tab: "Loki", readyAt: nowS - 5 });
+    const state = getProjectDisplayState(project, ["Loki"], nowS);
+    const snapshot = buildProjectOperationsSnapshot(project, ["Loki"], nowS);
     assert(state.stateLabel === "Ready for next step", "ready signal must name the action state");
     assert(snapshot.phase === "ready", "ready signal remains actionable");
     assert(
@@ -431,7 +422,7 @@ function runTests(): void {
   check("millisecond handoff mtime does not make a fresh prompt stale", () => {
     const nowS = 1_700_000_100;
     const project = stubProject({
-      tab: "FleetCrown",
+      tab: "Loki",
       agentRunning: true,
       currentPrompt: { key: "custom", label: "Current work", startedAt: nowS - 10 },
       session: {
@@ -445,14 +436,14 @@ function runTests(): void {
     });
     assert(!isCurrentPromptStale(project, nowS), "older handoff must not end current work");
     assert(
-      getProjectDisplayState(project, ["FleetCrown"], nowS).stateLabel === "Working",
+      getProjectDisplayState(project, ["Loki"], nowS).stateLabel === "Working",
       "fresh prompt must show Working",
     );
   });
 
   check("direct-terminal observation is surfaced as Working", () => {
     // Runner-side path for prompts the user typed directly into Claude (no
-    // FleetCrown dispatch sentinel). fleetcrown-daemon.sh sets currentPrompt.key to
+    // Loki dispatch sentinel). loki-daemon.sh sets currentPrompt.key to
     // "direct_terminal" with startedAt = the transcript's mtime when the tab is
     // open, no other prompt is tracked, and the agent has not just signaled
     // ready. The presenter must treat this exactly like any tracked prompt so
@@ -460,7 +451,7 @@ function runTests(): void {
     // open" (the limitation 6da8d7e called out).
     const nowS = 1_700_000_100;
     const project = stubProject({
-      tab: "FleetCrown",
+      tab: "Loki",
       agentRunning: true,
       activeAgents: ["claude"],
       currentPrompt: {
@@ -469,10 +460,10 @@ function runTests(): void {
         startedAt: nowS - 3,
       },
     });
-    const state = getProjectDisplayState(project, ["FleetCrown"], nowS);
+    const state = getProjectDisplayState(project, ["Loki"], nowS);
     assert(state.stateLabel === "Working", "direct-terminal observation must report Working");
     assert(state.isAgentWorking, "isAgentWorking is the SSOT chips read");
-    const snapshot = buildProjectOperationsSnapshot(project, ["FleetCrown"], nowS);
+    const snapshot = buildProjectOperationsSnapshot(project, ["Loki"], nowS);
     assert(snapshot.phase === "working", "snapshot phase must match the badge");
     assert(
       snapshot.evidenceLabel === "Live agent process detected",
@@ -483,7 +474,7 @@ function runTests(): void {
   check("working handoff does not stale an active prompt", () => {
     const nowS = 1_700_000_100;
     const project = stubProject({
-      tab: "FleetCrown",
+      tab: "Loki",
       agentRunning: false,
       currentPrompt: { key: "custom", label: "Still implementing", startedAt: nowS - 30 },
       session: {
@@ -498,7 +489,7 @@ function runTests(): void {
     });
     assert(!isCurrentPromptStale(project, nowS), "status:working handoff must not clear Working");
     assert(
-      getProjectDisplayState(project, ["FleetCrown"], nowS).stateLabel === "Working",
+      getProjectDisplayState(project, ["Loki"], nowS).stateLabel === "Working",
       "fresh prompt must show Working without agentRunning",
     );
   });
@@ -506,7 +497,7 @@ function runTests(): void {
   check("handoff written after prompt marks it completed", () => {
     const nowS = 1_700_000_100;
     const project = stubProject({
-      tab: "FleetCrown",
+      tab: "Loki",
       agentRunning: true,
       currentPrompt: { key: "custom", label: "Current work", startedAt: nowS - 20 },
       session: {
@@ -660,7 +651,7 @@ function runTests(): void {
 
   // ── Hook-reported agent turns ───────────────────────────────────────────
   // The regression: Control read "0 working · 21 idle" while eight agents were
-  // mid-task, because every "working" signal required FleetCrown to have
+  // mid-task, because every "working" signal required Loki to have
   // dispatched the run or the runner to recognise a zellij tab name. A session
   // started any other way was structurally invisible.
 
@@ -725,17 +716,17 @@ function runTests(): void {
   check("bucketTurnsByProject: counts, oldest start, deduped cwds", () => {
     const iso = (m: number) => new Date(Date.UTC(2026, 7, 16, 12, m));
     const bucketed = bucketTurnsByProject([
-      { projectKey: "fleetcrown", cwd: "/dev/fleetcrown/.claude/worktrees/a", startedAt: iso(30) },
-      { projectKey: "fleetcrown", cwd: "/dev/fleetcrown/.claude/worktrees/b", startedAt: iso(10) },
-      { projectKey: "fleetcrown", cwd: "/dev/fleetcrown/.claude/worktrees/a", startedAt: iso(50) },
+      { projectKey: "loki", cwd: "/dev/loki/.claude/worktrees/a", startedAt: iso(30) },
+      { projectKey: "loki", cwd: "/dev/loki/.claude/worktrees/b", startedAt: iso(10) },
+      { projectKey: "loki", cwd: "/dev/loki/.claude/worktrees/a", startedAt: iso(50) },
       { projectKey: "petvity", cwd: "/dev/petvity", startedAt: iso(20) },
     ]);
-    assert(bucketed.fleetcrown.count === 3, "three open turns on fleetcrown");
+    assert(bucketed.loki.count === 3, "three open turns on loki");
     assert(
-      bucketed.fleetcrown.startedAt === iso(10).toISOString(),
+      bucketed.loki.startedAt === iso(10).toISOString(),
       "the OLDEST open turn is reported, not the newest",
     );
-    assert(bucketed.fleetcrown.cwds.length === 2, "repeated cwds are deduped");
+    assert(bucketed.loki.cwds.length === 2, "repeated cwds are deduped");
     assert(bucketed.petvity.count === 1, "petvity counted separately");
     assert(Object.keys(bucketed).length === 2, "no phantom projects");
   });

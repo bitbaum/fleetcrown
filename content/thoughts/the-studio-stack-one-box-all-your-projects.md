@@ -9,7 +9,7 @@ author: Mao Nakamoto
 readingTimeMin: 16
 ---
 
-> Follow-up to [The Database Kill Switch](/thoughts/the-database-kill-switch-neon-oracle-and-the-studio-stack) and [From Polling to Listening](/thoughts/from-polling-to-listening-fleetcrown-v0-6). The first told the story of why Neon shut us off. The second told the story of the architectural rebuild. This one is the infrastructure pattern that holds them together — and that scales to a whole portfolio, not just FleetCrown.
+> Follow-up to [The Database Kill Switch](/thoughts/the-database-kill-switch-neon-oracle-and-the-studio-stack) and [From Polling to Listening](/thoughts/from-polling-to-listening-loki-v0-6). The first told the story of why Neon shut us off. The second told the story of the architectural rebuild. This one is the infrastructure pattern that holds them together — and that scales to a whole portfolio, not just Loki.
 
 ## A Question About Shape
 
@@ -61,7 +61,7 @@ Compare to the "cloud-native" version of the same portfolio: Neon free tier blow
 
 The thing that makes the studio stack work is a Postgres feature most people don't think about: **a single Postgres process can host many independent databases**.
 
-When you create a Postgres database, you're not provisioning a new "instance" the way you do with managed services. You're creating a new logical container inside the same process. Each database has its own schema, its own tables, its own permissions. The role `fleetcrown` can only see the `fleetcrown` database; the role `orangecat` can only see `orangecat`. They share the underlying RAM cache, CPU, and disk, but they're cleanly isolated logically.
+When you create a Postgres database, you're not provisioning a new "instance" the way you do with managed services. You're creating a new logical container inside the same process. Each database has its own schema, its own tables, its own permissions. The role `loki` can only see the `loki` database; the role `orangecat` can only see `orangecat`. They share the underlying RAM cache, CPU, and disk, but they're cleanly isolated logically.
 
 The operational model becomes:
 
@@ -158,7 +158,7 @@ If you want to set this up for your own portfolio, the canonical sequence:
 
 The whole thing is a one-afternoon project. The result is a studio stack capable of hosting your portfolio for the next eighteen months at least, on a single line item that costs about as much as a cup of coffee.
 
-You can find the install scripts, runbooks, and migration kit in this repository under `scripts/db/` and `scripts/oracle/`. They're written for FleetCrown's specific shape but apply unchanged to any indie portfolio.
+You can find the install scripts, runbooks, and migration kit in this repository under `scripts/db/` and `scripts/oracle/`. They're written for Loki's specific shape but apply unchanged to any indie portfolio.
 
 The most valuable thing this stack gives you isn't the savings or the simplicity. It's the *attention back*. Time you'd have spent watching meters, debugging vendor quirks, and contemplating tier upgrades is time you can spend on the products themselves. That recovered attention is the real return on the boring stack.
 

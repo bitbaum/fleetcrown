@@ -1,4 +1,4 @@
-// Shared types for the FleetCrown event bridge.
+// Shared types for the Loki event bridge.
 //
 // Two surfaces consume the bridge SSE: the web client in src/lib/event-stream.ts
 // (browser EventSource) and the desktop client in desktop/src/main/bridge-subscriber.ts

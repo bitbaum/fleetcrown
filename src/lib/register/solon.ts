@@ -1,6 +1,6 @@
 // Which projects have a Solon organisation.
 //
-// Solon is its own product with its own database; FleetCrown must not read it
+// Solon is its own product with its own database; Loki must not read it
 // directly. Solon publishes `GET /api/orgs/<slug>` (public — membership is
 // public record there), so the register asks it per slug and remembers the
 // answer for a while. A probe that fails is reported as UNCHECKED, never as

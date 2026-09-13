@@ -125,7 +125,7 @@ export const ROBOT_ATTR = {
  * MEMBER is the roster gate: `"true"` puts the person on /crew. Everything else
  * is profile detail the assignment surface reads (who they are, what they cost,
  * where they get paid). The OrangeCat profile URL is the economic hand-off —
- * FleetCrown decides WHO does the work, OrangeCat settles WHAT it costs.
+ * Loki decides WHO does the work, OrangeCat settles WHAT it costs.
  */
 export const CREW_ATTR = {
   MEMBER: "crew:member",

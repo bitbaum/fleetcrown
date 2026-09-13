@@ -49,7 +49,7 @@ export const SORT_LABEL: Record<string, string> = {
 
 /** How many of the four places a project can exist in, it actually exists in. */
 export function presenceScore(r: RegisterRow): number {
-  return [r.site, r.fleetcrown, r.orangecat, r.solon].filter(Boolean).length;
+  return [r.site, r.loki, r.orangecat, r.solon].filter(Boolean).length;
 }
 
 export const FLEET_LIST: ListSpec<RegisterRow> = {

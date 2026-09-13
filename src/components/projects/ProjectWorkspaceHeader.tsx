@@ -96,7 +96,7 @@ export function ProjectWorkspaceHeader({
 
       {/* Clamped to three lines, expandable.
           A description is meant to say what this project IS. These have grown
-          into whole briefs — fleetcrown's is 202 words naming every route,
+          into whole briefs — loki's is 202 words naming every route,
           integration and monetisation rail — and printing all of it directly
           under the title pushes the page's actual controls below the fold.
           Three lines answers "what is this"; the rest is one click away, and

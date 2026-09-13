@@ -67,7 +67,7 @@ export const projectStates = pgTable(
     index("idx_project_states_project_id").on(table.projectId),
     index("idx_project_states_workspace_id").on(table.workspaceId),
     // Case-insensitive uniqueness: the composite PK above is case-sensitive,
-    // so 'cockpit' and 'FleetCrown' would otherwise create duplicate rows. See
+    // so 'cockpit' and 'Loki' would otherwise create duplicate rows. See
     // drizzle/0012_project_states_unique_lower_key.sql for the migration that
     // backfilled this on existing data.
     uniqueIndex("idx_project_states_user_lower_key").on(

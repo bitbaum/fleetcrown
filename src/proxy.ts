@@ -41,7 +41,7 @@ export const config = {
      *                                account by design (see config/crew.ts)
      *   beacon                     – public beacon page
      *   api/auth                   – NextAuth internal endpoints
-     *   api/agent/install          – serves the @fleetcrown/agent CLI for curl|node install
+     *   api/agent/install          – serves the @loki/agent CLI for curl|node install
      *                                (public so new customers can run it before they sign in)
      *   api/agent/daemon           – serves the gzipped daemon-scripts tarball for the
      *                                CLI's install step (same pre-auth rationale as /install)

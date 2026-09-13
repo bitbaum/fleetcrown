@@ -11,7 +11,7 @@ set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-PROD_URL="${FLEETCROWN_WEB_URL:-https://fleetcrown.orangecat.ch}"
+PROD_URL="${LOKI_WEB_URL:-https://loki.orangecat.ch}"
 
 cd "$PROJECT_DIR"
 LOCAL=$(git rev-parse --short HEAD 2>/dev/null || echo "?")
@@ -28,7 +28,7 @@ HEALTH="${HEALTH:-000}"
 INFLIGHT=$(pgrep -af 'deploy-hetzner\.sh' 2>/dev/null | grep -v pgrep \
   | grep -oE -- '--ref [a-f0-9]+' | awk '{print substr($2,1,7)}' | head -1)
 
-echo "── FleetCrown deploy status ──────────────────────────────"
+echo "── Loki deploy status ──────────────────────────────"
 printf "  %-14s %s\n" "local HEAD"  "$LOCAL"
 printf "  %-14s %s\n" "origin/main" "$ORIGIN"
 printf "  %-14s %s  (health %s)\n" "live on box" "$LIVE" "$HEALTH"
@@ -48,7 +48,7 @@ else
 fi
 
 # Most recent per-SHA deploy log — show its verdict line.
-LASTLOG=$(ls -t /tmp/push-deploy-fleetcrown-*.log 2>/dev/null | grep -v latest | head -1)
+LASTLOG=$(ls -t /tmp/push-deploy-loki-*.log 2>/dev/null | grep -v latest | head -1)
 if [ -n "$LASTLOG" ]; then
   echo "── last deploy log: $LASTLOG"
   grep -aiE 'deploy OK:|deployed .* verified|deploy FAILED|rolling box back|BLOCKED by CI|superseded' "$LASTLOG" 2>/dev/null | tail -3 | sed 's/^/  /'

@@ -1,8 +1,8 @@
 /**
- * FleetCrown Feedback Widget — self-contained embed for customer sites.
+ * Loki Feedback Widget — self-contained embed for customer sites.
  *
  * Usage (docs/architecture/feedback-widget.md):
- *   <script src="https://<fleetcrown-host>/widget.js" data-fc-project="fcw_..." async></script>
+ *   <script src="https://<loki-host>/widget.js" data-fc-project="fcw_..." async></script>
  *
  * Constraints that shape this file:
  * - Zero dependencies, one bundle: it must mount on ANY site (static HTML,
@@ -78,7 +78,7 @@ interface ReportInput {
   diagnostics?: ReportDiagnostics;
 }
 
-interface FleetCrownApi {
+interface LokiApi {
   /**
    * True once the panel can actually be opened — i.e. the boot gate said
    * active AND mount() has run.
@@ -108,7 +108,7 @@ button:focus-visible, textarea:focus-visible, input:focus-visible { outline: 2px
 .mono { font-family: ${mono}; letter-spacing: .08em; text-transform: uppercase; font-size: 10px; }
 .dot { width: 7px; height: 7px; border-radius: 50%; background: ${theme.accent}; flex: none; box-shadow: 0 0 0 3px ${theme.accentMuted}; }
 
-/* ---- launcher: a FleetCrown pill, not an orange circle ----
+/* ---- launcher: a Loki pill, not an orange circle ----
    QUIET UNTIL WANTED. This sits on every client's site, in the corner of every
    page, forever. At full weight it competes with the page it is there to
    improve — on Diplodoctor it read as the most saturated thing on screen.
@@ -157,7 +157,7 @@ button:focus-visible, textarea:focus-visible, input:focus-visible { outline: 2px
 
 .backdrop { position: fixed; inset: 0; z-index: 2147483001; background: rgba(0,0,0,.35); }
 
-/* ---- panel: FleetCrown's card ---- */
+/* ---- panel: Loki's card ---- */
 .panel {
   position: fixed; z-index: 2147483002;
   right: 16px; bottom: 16px; width: 372px; max-width: calc(100vw - 32px);
@@ -430,7 +430,7 @@ function elementLabel(el: Element): string {
   const tag = el.tagName.toLowerCase();
   if (text) {
     // A container's textContent is every word inside it run together
-    // ("coldstart-sep10-2339Started from FleetCrown · …", seen live). Name it
+    // ("coldstart-sep10-2339Started from Loki · …", seen live). Name it
     // by its first heading, or the tag plus its opening words.
     if (el.children.length > 0 && text.length > 60) {
       const heading = el.querySelector("h1,h2,h3,h4,legend,summary,[role=heading]");
@@ -476,7 +476,7 @@ function h<K extends keyof HTMLElementTagNameMap>(
   const script = document.currentScript as HTMLScriptElement | null;
   const token = script?.getAttribute("data-fc-project") ?? "";
   if (!token) {
-    console.warn("[fleetcrown-widget] missing data-fc-project attribute");
+    console.warn("[loki-widget] missing data-fc-project attribute");
     return;
   }
   const apiBase = script?.src ? new URL(script.src).origin : "";
@@ -491,7 +491,7 @@ function h<K extends keyof HTMLElementTagNameMap>(
   /** Where the visitor dragged/parked it, if they did. Their choice outranks
    *  both the operator's and the auto-avoid, and only for them. */
   let visitorOverride: Placement | null = readVisitorPlacement(token);
-  if (document.getElementById("fleetcrown-feedback-host")) return;
+  if (document.getElementById("loki-feedback-host")) return;
 
   // Publish the programmatic entry point SYNCHRONOUSLY, before the async boot
   // gate decides whether to render. A host page that calls report() from an
@@ -502,14 +502,14 @@ function h<K extends keyof HTMLElementTagNameMap>(
   // the widget is off, and a queued submission could not land anyway.
   let pendingReport: ReportInput | null = null;
   let liveReport: ((input: ReportInput) => void) | null = null;
-  const api: FleetCrownApi = {
+  const api: LokiApi = {
     ready: false,
     report(input: ReportInput = {}) {
       if (liveReport) liveReport(input);
       else pendingReport = input;
     },
   };
-  (window as unknown as { FleetCrown?: FleetCrownApi }).FleetCrown = api;
+  (window as unknown as { Loki?: LokiApi }).Loki = api;
 
   const mount = (theme: WidgetTheme) => {
     // ---- state ----
@@ -522,7 +522,7 @@ function h<K extends keyof HTMLElementTagNameMap>(
 
     // ---- shadow scaffold ----
     const host = h("div");
-    host.id = "fleetcrown-feedback-host";
+    host.id = "loki-feedback-host";
     const root = host.attachShadow({ mode: "open" });
     const style = h("style");
     style.textContent = buildShadowCSS(theme);
@@ -742,10 +742,10 @@ function h<K extends keyof HTMLElementTagNameMap>(
 
     const hdr = h("div", "hdr");
     const hdrText = h("div");
-    // The brand line is what makes this recognisably FleetCrown on a stranger's
-    // site — the same mono micro-label FleetCrown's own pages use.
+    // The brand line is what makes this recognisably Loki on a stranger's
+    // site — the same mono micro-label Loki's own pages use.
     const brand = h("div", "brand");
-    brand.append(h("span", "dot"), h("span", "mono", "FleetCrown · Feedback"));
+    brand.append(h("span", "dot"), h("span", "mono", "Loki · Feedback"));
     hdrText.appendChild(brand);
     hdrText.appendChild(h("b", undefined, "What should change?"));
     const hdrPage = h("div", "page");
@@ -1050,7 +1050,7 @@ function h<K extends keyof HTMLElementTagNameMap>(
       // HOST element when it crosses the boundary, the host's own
       // "is the user typing?" guard reads the wrong node and fires anyway —
       // stealing keystrokes while the user types feedback (observed on both
-      // orangecat.ch and fleetcrown.orangecat.ch, which embed this same widget).
+      // orangecat.ch and loki.orangecat.ch, which embed this same widget).
       // While the panel is open we own the keyboard: stop every keystroke at the
       // shadow boundary so nothing leaks to the host's global shortcuts. This is
       // standard modal keyboard-trap behaviour and is the single fix that covers
@@ -1236,7 +1236,7 @@ function h<K extends keyof HTMLElementTagNameMap>(
       ok.append(
         tick,
         h("p", undefined, "Sent. Thank you."),
-        h("div", "sub", "An agent picks this up in FleetCrown."),
+        h("div", "sub", "An agent picks this up in Loki."),
       );
       panel.appendChild(ok);
       setTimeout(() => {
@@ -1279,7 +1279,7 @@ function h<K extends keyof HTMLElementTagNameMap>(
         textarea.setSelectionRange(textarea.value.length, textarea.value.length);
       }
     };
-    // Only now can a click actually open something — see FleetCrownApi.ready.
+    // Only now can a click actually open something — see LokiApi.ready.
     api.ready = true;
     if (pendingReport) {
       const held = pendingReport;
@@ -1289,10 +1289,10 @@ function h<K extends keyof HTMLElementTagNameMap>(
   };
 
   // Boot gate — the server decides whether to render at all. This makes the
-  // FleetCrown token row a remote kill switch: pausing/revoking hides the FAB
+  // Loki token row a remote kill switch: pausing/revoking hides the FAB
   // on the customer site within the cache window, no deploy needed. It also
   // doubles as the heartbeat behind the setup UI's "Live" state. Fail closed:
-  // if FleetCrown is unreachable, submissions couldn't land anyway — don't
+  // if Loki is unreachable, submissions couldn't land anyway — don't
   // render a dead FAB.
   const boot = async () => {
     try {

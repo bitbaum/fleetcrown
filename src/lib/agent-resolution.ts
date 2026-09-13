@@ -15,7 +15,7 @@ export const AGENT_FALLBACK_ORDER = ["claude", "cursor", "codex", "gemini", "gro
 const CAPACITY_ISSUE_RE =
   /rate\s*limit|quota|credit|usage\s*limit|token\s*limit|out\s+of\s+tokens|context\s*(window|length|limit)|maximum\s+context|insufficient\s+quota/i;
 
-/** Tab suffix → adapter id: "FleetCrown Cursor" → "cursor". */
+/** Tab suffix → adapter id: "Loki Cursor" → "cursor". */
 export function inferAdapterFromTabName(tabName: string): AnyAgentId | null {
   const normalized = tabName.toLowerCase();
   for (const id of ALL_AGENT_IDS) {

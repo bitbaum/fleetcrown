@@ -29,7 +29,7 @@ import { resetDemoTenant, DemoDisabledError } from "@/lib/demo-seed";
  * is the layer where a misconfigured timer arrives, and it should be refused
  * with a clear message rather than an exception from three frames down.
  *
- * GET, not POST, because /opt/fleetcrown/fc-cron.sh curls every job without
+ * GET, not POST, because /opt/loki/fc-cron.sh curls every job without
  * -X — a POST-only handler here would 405 on every fire and the demo would
  * quietly stop resetting. Matching the shape the runner actually sends beats
  * matching HTTP semantics that nothing in this system enforces; CRON_SECRET,

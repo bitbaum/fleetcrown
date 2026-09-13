@@ -4,13 +4,13 @@
 --   * fc_notify_project_states (canonical — from 0022, fires on I/U/D, uses
 --     the generic fc_emit_change function with TG_ARGV='user_id,project_key')
 --   * project_states_notify (legacy — pre-rename, fires on I/U, calls a
---     standalone fleetcrown_notify_project_state function that emits a
---     different payload on the 'fleetcrown_state' channel)
+--     standalone loki_notify_project_state function that emits a
+--     different payload on the 'loki_state' channel)
 --
 -- Every UPDATE on project_states ran BOTH, doubling NOTIFY traffic on the
 -- bridge and processing cost on every connected SSE subscriber. The canonical
 -- fc_notify_project_states emits on 'fc:state' (the channel the bridge actually
--- listens on); the legacy one emits on 'fleetcrown_state' which nothing
+-- listens on); the legacy one emits on 'loki_state' which nothing
 -- subscribes to anymore — wasted work both sides.
 --
 -- This migration:
@@ -21,4 +21,4 @@
 -- Safe to re-run (uses IF EXISTS).
 
 DROP TRIGGER IF EXISTS project_states_notify ON project_states;
-DROP FUNCTION IF EXISTS fleetcrown_notify_project_state();
+DROP FUNCTION IF EXISTS loki_notify_project_state();

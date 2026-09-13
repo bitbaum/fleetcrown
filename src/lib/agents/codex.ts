@@ -7,7 +7,7 @@
  *
  * Per-user model config lives in ~/.codex/config.toml as a TOML string.
  * `readConfiguredModel` parses it so the UI defaults reflect the user's
- * choice (e.g. they configured `model = "codex-4"` outside FleetCrown).
+ * choice (e.g. they configured `model = "codex-4"` outside Loki).
  */
 
 import fs from "fs";

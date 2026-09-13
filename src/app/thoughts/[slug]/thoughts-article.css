@@ -1,5 +1,5 @@
 /**
- * FleetCrown tokens → bip-kit's --bp-* theming contract, for /thoughts only
+ * Loki tokens → bip-kit's --bp-* theming contract, for /thoughts only
  * (this file is imported by the essay route, not by globals.css).
  *
  * Every value is a var() reference into the design-token SSOT
@@ -25,7 +25,7 @@
   --bp-fg-faint: var(--text-tertiary);
   --bp-border: var(--border-default);
 
-  /* FleetCrown links are monochrome (accent-text ≈ foreground); the warm
+  /* Loki links are monochrome (accent-text ≈ foreground); the warm
      accent stays reserved for CTAs and the reading-progress hairline. */
   --bp-accent: var(--accent-text);
   --bp-accent-contrast: var(--accent-foreground);

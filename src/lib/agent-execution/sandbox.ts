@@ -62,17 +62,17 @@ function envValue(name: string, fallback: string): string {
 export function resolveSandboxConfig(): SandboxExecutorConfig {
   return {
     runtime: "docker",
-    image: envValue("FLEETCROWN_SANDBOX_IMAGE", "ubuntu:24.04"),
+    image: envValue("LOKI_SANDBOX_IMAGE", "ubuntu:24.04"),
     workspaceRoot: path.resolve(
-      envValue("FLEETCROWN_SANDBOX_WORKSPACE_ROOT", path.join(os.homedir(), "dev")),
+      envValue("LOKI_SANDBOX_WORKSPACE_ROOT", path.join(os.homedir(), "dev")),
     ),
-    network: envValue("FLEETCROWN_SANDBOX_NETWORK", "none") === "bridge" ? "bridge" : "none",
-    cpus: envValue("FLEETCROWN_SANDBOX_CPUS", "2"),
-    memory: envValue("FLEETCROWN_SANDBOX_MEMORY", "4g"),
-    pidsLimit: envValue("FLEETCROWN_SANDBOX_PIDS", "512"),
-    user: envValue("FLEETCROWN_SANDBOX_USER", "current") === "root" ? "root" : "current",
-    mountMode: envValue("FLEETCROWN_SANDBOX_MOUNT", "rw") === "ro" ? "ro" : "rw",
-    extraRunArgs: (process.env.FLEETCROWN_SANDBOX_DOCKER_ARGS ?? "").split(/\s+/).filter(Boolean),
+    network: envValue("LOKI_SANDBOX_NETWORK", "none") === "bridge" ? "bridge" : "none",
+    cpus: envValue("LOKI_SANDBOX_CPUS", "2"),
+    memory: envValue("LOKI_SANDBOX_MEMORY", "4g"),
+    pidsLimit: envValue("LOKI_SANDBOX_PIDS", "512"),
+    user: envValue("LOKI_SANDBOX_USER", "current") === "root" ? "root" : "current",
+    mountMode: envValue("LOKI_SANDBOX_MOUNT", "rw") === "ro" ? "ro" : "rw",
+    extraRunArgs: (process.env.LOKI_SANDBOX_DOCKER_ARGS ?? "").split(/\s+/).filter(Boolean),
   };
 }
 
@@ -86,7 +86,7 @@ export function assertSandboxCwdAllowed(cwd: string, workspaceRoot: string): str
   const root = path.resolve(workspaceRoot);
   const rel = path.relative(root, resolved);
   if (rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel))) return resolved;
-  throw new Error(`Sandbox cwd ${resolved} is outside FLEETCROWN_SANDBOX_WORKSPACE_ROOT (${root})`);
+  throw new Error(`Sandbox cwd ${resolved} is outside LOKI_SANDBOX_WORKSPACE_ROOT (${root})`);
 }
 
 export function buildDockerRunArgs(

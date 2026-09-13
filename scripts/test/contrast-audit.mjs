@@ -2,9 +2,9 @@
  * Contrast audit — finds ACTIONS the user cannot see.
  *
  * Run: npm run audit:contrast
- *      BASE=https://fleetcrown.orangecat.ch npm run audit:contrast
+ *      BASE=https://loki.orangecat.ch npm run audit:contrast
  *
- * Session: FLEETCROWN_SESSION_TOKEN, or AUDIT_DATABASE_URL + AUTH_SECRET
+ * Session: LOKI_SESSION_TOKEN, or AUDIT_DATABASE_URL + AUTH_SECRET
  * (same contract as responsive-audit.mjs — see mintToken there).
  *
  * ── Why this exists ─────────────────────────────────────────────────────────
@@ -29,7 +29,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 const root = process.cwd();
-const BASE = (process.env.BASE ?? "https://fleetcrown.orangecat.ch").replace(/\/$/, "");
+const BASE = (process.env.BASE ?? "https://loki.orangecat.ch").replace(/\/$/, "");
 const ROUTES = (
   process.env.ROUTES ?? "/control,/today,/projects,/activity,/prompts,/settings"
 ).split(",");
@@ -56,7 +56,7 @@ function cookieName() {
 }
 
 async function mintToken() {
-  const fromEnv = process.env.FLEETCROWN_SESSION_TOKEN?.trim();
+  const fromEnv = process.env.LOKI_SESSION_TOKEN?.trim();
   if (fromEnv) return fromEnv;
   const dbUrl = process.env.AUDIT_DATABASE_URL?.trim();
   const secret = process.env.AUTH_SECRET?.trim();
@@ -185,9 +185,7 @@ const MEASURE = `(() => {
 async function main() {
   const token = await mintToken();
   if (!token) {
-    console.error(
-      "✗ no session. Set FLEETCROWN_SESSION_TOKEN, or AUDIT_DATABASE_URL + AUTH_SECRET.",
-    );
+    console.error("✗ no session. Set LOKI_SESSION_TOKEN, or AUDIT_DATABASE_URL + AUTH_SECRET.");
     process.exit(2);
   }
   const browser = await chromium.launch();

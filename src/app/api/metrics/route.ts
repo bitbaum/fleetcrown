@@ -1,7 +1,7 @@
 /**
  * /api/metrics — operator dashboard endpoint.
  *
- * Returns a JSON snapshot of FleetCrown's last 24h activity for the
+ * Returns a JSON snapshot of Loki's last 24h activity for the
  * signed-in user. Auth: same session check as every /api route; non-
  * authenticated → 401. There's no separate "operator role" — every user
  * sees their own metrics.

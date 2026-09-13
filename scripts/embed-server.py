@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Local OpenAI-compatible embeddings server for FleetCrown's fleet-knowledge RAG.
+"""Local OpenAI-compatible embeddings server for Loki's fleet-knowledge RAG.
 
 No cloud key: runs BAAI/bge-small-en-v1.5 (384-dim) on CPU via fastembed/onnxruntime.
 Speaks just enough of the OpenAI /v1/embeddings shape that our provider-agnostic

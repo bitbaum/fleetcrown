@@ -11,7 +11,7 @@ import { ActionDecisionModal } from "./ActionDecisionModal";
  * arrived — the top proposal opens itself. Once per action id (localStorage),
  * so a popup you already dismissed does not reappear on every navigation.
  */
-const seenKey = (actionId: string) => `fleetcrown.advice.seen.${actionId}`;
+const seenKey = (actionId: string) => `loki.advice.seen.${actionId}`;
 
 export function ActionDecideButton({
   actionId,

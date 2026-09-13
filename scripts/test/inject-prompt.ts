@@ -12,7 +12,7 @@ async function main() {
   const [project] = await db
     .select({ id: entities.id, userId: entities.userId, name: entities.name })
     .from(entities)
-    .where(and(eq(entities.type, "project"), eq(entities.name, process.argv[2] ?? "fleetcrown")))
+    .where(and(eq(entities.type, "project"), eq(entities.name, process.argv[2] ?? "loki")))
     .limit(1);
   if (!project) throw new Error("No project found — pass name as argv[2]");
 

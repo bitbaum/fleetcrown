@@ -12,7 +12,7 @@
  * import it in `index.ts`. No switch statements. No registry edits beyond
  * the one new line.
  *
- * Why this matters strategically: FleetCrown's value isn't owning the model
+ * Why this matters strategically: Loki's value isn't owning the model
  * — it's owning the COORDINATION LAYER where any model plugs in. Linear,
  * Cursor, and similar tools each lock you into one vendor; the adapter pattern is how
  * we stay vendor-neutral as agents proliferate.
@@ -27,7 +27,7 @@
  *  e.g. the agent-switcher only lists agents with tabSwitching=true,
  *  the autopilot only fires on agents with autonomousPromptLoop=true. */
 export interface AgentCapabilities {
-  /** Can FleetCrown launch this agent in a fresh owned PTY and switch the project to it? */
+  /** Can Loki launch this agent in a fresh owned PTY and switch the project to it? */
   tabSwitching: boolean;
   /** Does the agent accept prompts typed into its PTY stdin? */
   manualPromptInjection: boolean;
@@ -87,7 +87,7 @@ export interface AgentAdapter {
 
   /** Read the user's currently-configured model from the CLI's own config
    *  file(s). Returns null when no config found. The agent-registry uses
-   *  this so FleetCrown's defaultModel for the adapter reflects whatever
+   *  this so Loki's defaultModel for the adapter reflects whatever
    *  the user already set (e.g. claude `~/.claude/settings.json` model). */
   readConfiguredModel(): string | null;
 
@@ -95,7 +95,7 @@ export interface AgentAdapter {
   buildLaunchCommand(config: AgentRuntimeConfig): string;
 
   /** Optional — persist the user-selected model to the CLI's config file
-   *  so the next direct invocation outside FleetCrown uses the same model.
+   *  so the next direct invocation outside Loki uses the same model.
    *  Only Claude needs this today (writes to ~/.claude/settings.json). */
   syncSelectedModel?(model: string): void;
 }

@@ -6,7 +6,7 @@ import { ProposalRow } from "./ProposalRow";
 
 /**
  * The self-improvement inbox. The daily frontier loop drafts proposals for how
- * FleetCrown should evolve, critiques them, and surfaces only those that clear
+ * Loki should evolve, critiques them, and surfaces only those that clear
  * the bar here. The owner accepts (→ a roadmap goal) or dismisses; the loop
  * never builds on its own. Server-read — re-renders on page revalidation.
  */

@@ -1,6 +1,6 @@
 "use client";
 
-// Unified prompt card — the single card format for FleetCrown default prompts.
+// Unified prompt card — the single card format for Loki default prompts.
 // Replaces the old FeaturedCard (Quick Access grid) + PromptRow (category rows)
 // split: one library, one card, rendered in one responsive grid. Featured
 // prompts are marked with a star and sorted first rather than duplicated into a

@@ -12,7 +12,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getBearerUserId } from "@/lib/runner-auth";
 import { upsertLocalUserProject } from "@/db/queries/user-projects";
-import { SOURCE_FLEETCROWN_UI } from "@/lib/constants";
+import { SOURCE_LOKI_UI } from "@/lib/constants";
 import { scheduleProjectProfileReindexByEntityId } from "@/lib/rag/reindex-project-profile";
 
 const FolderItem = z.object({
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
         name: folder.name,
         dirPath: folder.path,
         description: folder.remote_url
-          ? `Local repository imported from ${SOURCE_FLEETCROWN_UI}`
+          ? `Local repository imported from ${SOURCE_LOKI_UI}`
           : "Local repository",
         gitUrl: folder.remote_url || null,
       });

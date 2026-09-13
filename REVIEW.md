@@ -1,8 +1,8 @@
-# REVIEW.md — fleetcrown review bar
+# REVIEW.md — loki review bar
 
 Judge the DIFF against these gates, in order. Flag correctness and requirement
 gaps only — lint owns style. Global standards load via CLAUDE.md; this file is
-ONLY fleetcrown's scars.
+ONLY loki's scars.
 
 ## Fatal invariants (one violation = block)
 
@@ -16,7 +16,7 @@ ONLY fleetcrown's scars.
 3. **Design system** — only `ui-*` component classes + tokens from globals.css;
    no arbitrary hex/radius/shadow. Check `check:design` passes.
 4. **Runner protocol changes need a runner RELEASE** — publishing goes through
-   the `fleetcrown-releases` feed (NOT `fleetcrown`); a protocol change without
+   the `loki-releases` feed (NOT `loki`); a protocol change without
    a release strands every installed runner.
 
 ## Repo gotchas that have bitten before

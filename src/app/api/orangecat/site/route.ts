@@ -23,7 +23,7 @@ import { requestNewSite } from "@/lib/hosted-runner/provision";
  * The path IS the auth decision. A fourth receiver goes here too.
  *
  * The factory has been live on the box for weeks and had no HTTP entry point:
- * the only callers were a CLI and a test, so "OrangeCat asks FleetCrown to
+ * the only callers were a CLI and a test, so "OrangeCat asks Loki to
  * build something" could not happen at all. `provision.ts` anticipated this
  * exact caller in its header comment. This route is the door, and deliberately
  * nothing more — every decision it could have re-made (what a valid slug is,
@@ -33,7 +33,7 @@ import { requestNewSite } from "@/lib/hosted-runner/provision";
  *
  * ## Why HMAC and not a bearer token
  *
- * FleetCrown already has an agent-token rail (`ck_*`), and using it here would
+ * Loki already has an agent-token rail (`ck_*`), and using it here would
  * have been less code. It would also have been wrong: those tokens carry a
  * PERSON's full operator authority, so OrangeCat holding one would mean every
  * site built for any user was created by George, in George's account, with a
@@ -49,7 +49,7 @@ import { requestNewSite } from "@/lib/hosted-runner/provision";
  * The factory creates a repo, a DNS record and a TLS certificate. Those are
  * real, rate-limited, externally-visible resources, so the caller has to be
  * attributable to an account that can be held responsible for them. An OrangeCat
- * actor with no linked FleetCrown user is refused with a 409 the caller can act
+ * actor with no linked Loki user is refused with a 409 the caller can act
  * on, rather than being quietly attributed to the studio's own account — which
  * would turn this into an unmetered repo-and-domain creation primitive reachable
  * from a public "build it" button.
@@ -119,11 +119,11 @@ export async function POST(req: NextRequest) {
   if (!user) {
     return NextResponse.json(
       {
-        error: "no linked FleetCrown account",
+        error: "no linked Loki account",
         // The caller shows this to a person, so it has to name the next step
         // rather than describe the internal state.
         detail:
-          "This OrangeCat identity is not linked to a FleetCrown account yet. Sign in to FleetCrown with the same OrangeCat identity once, then try again.",
+          "This OrangeCat identity is not linked to a Loki account yet. Sign in to Loki with the same OrangeCat identity once, then try again.",
       },
       { status: 409 },
     );

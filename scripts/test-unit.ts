@@ -27,8 +27,7 @@ const TSX_BIN = join(SCRIPTS_DIR, "..", "node_modules", ".bin", "tsx");
 const SKIP: Record<string, string> = {
   "print-session-token.ts": "helper — prints a token, not a test",
   "print-private-zone-cookie.ts": "helper — prints the private-zone unlock, not a test",
-  "authenticated-smoke.ts":
-    "needs a running server + FLEETCROWN_SESSION_TOKEN (pre-push/prod dogfood)",
+  "authenticated-smoke.ts": "needs a running server + LOKI_SESSION_TOKEN (pre-push/prod dogfood)",
   "rag-retrieval.ts": "needs EMBEDDINGS_BASE_URL (fastembed service)",
   // push-notifications.ts was here, excluded as "needs push/web-push env —
   // run manually". It never needed env: every check is a static file read. It

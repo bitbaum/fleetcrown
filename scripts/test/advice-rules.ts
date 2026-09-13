@@ -39,7 +39,7 @@ function themePrompt(project: string, reports: Array<{ url: string; text: string
     UNTRUSTED_PREAMBLE,
     "",
     "THEME: Integration Issues",
-    "PROPOSED CHANGE: Wire the FleetCrown → OrangeCat activity link",
+    "PROPOSED CHANGE: Wire the Loki → OrangeCat activity link",
     "WHERE: https://orangecat.ch/projects/*",
     "",
     "The reports:",
@@ -52,9 +52,9 @@ function themePrompt(project: string, reports: Array<{ url: string; text: string
 
 // The verbatim pair from the live card that motivated this.
 const LOOP_TEST =
-  "E2E loop test from an anonymous visitor: confirming widget reports reach the FleetCrown inbox after the provider-rot fixes. Safe to archive.";
+  "E2E loop test from an anonymous visitor: confirming widget reports reach the Loki inbox after the provider-rot fixes. Safe to archive.";
 const REAL_BUG =
-  'Dogfooding FleetCrown<->OrangeCat as a real user. On this project profile: (1) FleetCrown ran 23 agent runs this week, but Recent Activity here shows "No recent activity yet" — the FC->OC activity link isn\'t wired, so a busy project reads as idle to supporters.';
+  'Dogfooding Loki<->OrangeCat as a real user. On this project profile: (1) Loki ran 23 agent runs this week, but Recent Activity here shows "No recent activity yet" — the FC->OC activity link isn\'t wired, so a busy project reads as idle to supporters.';
 
 // --- classification -------------------------------------------------------
 eq(classifyReportText(LOOP_TEST), REPORT_VERDICT.LOW_SIGNAL, "E2E loop test → low signal");

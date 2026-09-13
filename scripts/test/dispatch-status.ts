@@ -31,12 +31,12 @@ if (direct.warn || direct.label !== "Running now") {
   throw new Error("direct label");
 }
 
-const md = dispatchAssistantContent("fleetcrown", {
+const md = dispatchAssistantContent("loki", {
   ok: true,
   mode: "queued",
   runnerConnected: true,
 });
-if (!md.includes("fleetcrown") || !md.includes("builder")) {
+if (!md.includes("loki") || !md.includes("builder")) {
   throw new Error("assistant content");
 }
 
@@ -132,7 +132,7 @@ if (failedNamed.label !== "Dispatch failed" || !failedNamed.warn) {
 }
 
 // The assistant transcript carries it too, so the chat log stays self-explaining.
-const namedContent = dispatchAssistantContent("fleetcrown", {
+const namedContent = dispatchAssistantContent("loki", {
   ok: true,
   mode: "queued",
   runnerConnected: true,
@@ -162,17 +162,17 @@ for (const channel of BUILDER_CHANNELS) {
 // the fix: the badge and the text now agree, because they read the same data.
 
 const allStarted = deriveMultiDispatchView([
-  { projectKey: "fleetcrown", ok: true },
+  { projectKey: "loki", ok: true },
   { projectKey: "orangecat", ok: true },
 ]);
-if (allStarted.tone !== "positive" || allStarted.primaryProject !== "fleetcrown") {
+if (allStarted.tone !== "positive" || allStarted.primaryProject !== "loki") {
   throw new Error(
     `all-started must be positive and link the first started project — got ${JSON.stringify(allStarted)}`,
   );
 }
 
 const noneStarted = deriveMultiDispatchView([
-  { projectKey: "fleetcrown", ok: false, skipped: true, reason: "busy" },
+  { projectKey: "loki", ok: false, skipped: true, reason: "busy" },
   { projectKey: "orangecat", ok: false, skipped: true, reason: "pending_command" },
 ]);
 if (noneStarted.tone !== "negative" || noneStarted.primaryProject !== null) {
@@ -185,11 +185,11 @@ if (!noneStarted.label.includes("0 of 2")) {
 }
 
 const partialStarted = deriveMultiDispatchView([
-  { projectKey: "fleetcrown", ok: true },
+  { projectKey: "loki", ok: true },
   { projectKey: "orangecat", ok: false, skipped: true, reason: "busy" },
   { projectKey: "datacat", ok: false, skipped: true, reason: "concurrency_cap" },
 ]);
-if (partialStarted.tone !== "warning" || partialStarted.primaryProject !== "fleetcrown") {
+if (partialStarted.tone !== "warning" || partialStarted.primaryProject !== "loki") {
   throw new Error(
     `partial start must warn and link a project that actually started — got ${JSON.stringify(partialStarted)}`,
   );

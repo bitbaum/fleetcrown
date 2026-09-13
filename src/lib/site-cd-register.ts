@@ -149,7 +149,7 @@ function runRegisterSiteScript(args: {
         detached: true,
         env: {
           ...process.env,
-          FLEETCROWN_REPO_ROOT: repoRoot,
+          LOKI_REPO_ROOT: repoRoot,
           DEV_ROOT: devRoot,
           DEPLOY_KEY_PATH: args.deployKeyPath,
           GH_TOKEN: args.githubToken,
@@ -219,7 +219,7 @@ export async function registerProjectSiteCd(input: {
 
   if (!input.cloudBuilderAllowed) {
     const reason =
-      "Shared bitbaum CD is studio-only (isDefault or FLEETCROWN_CLOUD_BUILDER_USER_IDS). Connect Fleet Runner for local work, or run the register command on the box.";
+      "Shared bitbaum CD is studio-only (isDefault or LOKI_CLOUD_BUILDER_USER_IDS). Connect Fleet Runner for local work, or run the register command on the box.";
     await upsertEntityAttribute(
       input.userId,
       input.entityProjectId,

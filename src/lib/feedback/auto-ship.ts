@@ -3,14 +3,14 @@
  *
  * The agent's job ends at a pull request, and until someone merges it the
  * visitor's report is not fixed. Off (the default) the feedback row asks the
- * operator; on, FleetCrown merges the PR itself once it is genuinely green.
+ * operator; on, Loki merges the PR itself once it is genuinely green.
  *
- * WHY FLEETCROWN MERGES, AND NOT AN auto-merge.yml IN THE REPO. A workflow
+ * WHY LOKI MERGES, AND NOT AN auto-merge.yml IN THE REPO. A workflow
  * would be a commit in someone else's repository: it has to be back-filled
- * into repos FleetCrown never provisioned (annushka's was made by hand), it
+ * into repos Loki never provisioned (annushka's was made by hand), it
  * drifts, turning it off needs another commit, and — the real objection — it
  * merges ANY green pull request, including one a person opened for something
- * unrelated. FleetCrown already watches the exact PR its own dispatch
+ * unrelated. Loki already watches the exact PR its own dispatch
  * produced (the fix ledger), so merging that one and nothing else is both
  * narrower and instant: the setting applies to PRs already open and leaves no
  * trace in the repo when it is turned back off.
@@ -25,7 +25,7 @@ export const AUTO_SHIP_HOLD = {
   NOT_ENABLED: "not_enabled",
   /** Nothing to merge: no PR, or it is already merged/closed. */
   NOT_OPEN: "not_open",
-  /** This PR did not come from a FleetCrown dispatch. Never touch it. */
+  /** This PR did not come from a Loki dispatch. Never touch it. */
   NOT_OURS: "not_ours",
   /** Draft, or GitHub says it cannot merge (conflicts, blocked). */
   NOT_MERGEABLE: "not_mergeable",

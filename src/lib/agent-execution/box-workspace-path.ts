@@ -28,7 +28,7 @@ import os from "os";
 import path from "path";
 
 /** Where the box keeps its on-demand clones. */
-export const BOX_DEV_ROOT = process.env.FLEETCROWN_BOX_DEV_ROOT || path.join(os.homedir(), "dev");
+export const BOX_DEV_ROOT = process.env.LOKI_BOX_DEV_ROOT || path.join(os.homedir(), "dev");
 
 /** Directory-safe form of a project/tab name. */
 export function sanitizeWorkspaceKey(tab: string): string {

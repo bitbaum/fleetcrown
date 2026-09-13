@@ -1,6 +1,6 @@
 ---
 title: Killing the Bash Daemon — One Local Executor, By Deletion
-summary: FleetCrown runs two parallel local executors on every developer machine today — a legacy bash daemon and the Fleet Runner desktop product. The bash daemon must die. This is the plan, written before the cuts so the cuts can be argued with.
+summary: Loki runs two parallel local executors on every developer machine today — a legacy bash daemon and the Fleet Runner desktop product. The bash daemon must die. This is the plan, written before the cuts so the cuts can be argued with.
 excerpt: The customer who downloads Fleet Runner v0.9.0 never runs the bash daemon. So why is it running on the founder's machine? The customer's experience IS the production target. We are not on it. This essay closes that gap.
 publishedAt: 2026-06-10
 tags: architecture,fleet-runner,deletion,first-principles,executors,migration
@@ -14,7 +14,7 @@ readingTimeMin: 11
 `ps auxf` on the founder's machine, today:
 
 ```
-fleetcrown-daemon.service           bash, scripts/fleetcrown-daemon.sh
+loki-daemon.service           bash, scripts/loki-daemon.sh
 /opt/Fleet Runner/fleet-runner-bin  Electron, desktop/
 ```
 
@@ -55,16 +55,16 @@ The second step of the algorithm is the one most engineers refuse to do: actuall
 The targets:
 
 ```
-scripts/fleetcrown-daemon.sh          ~1900 lines bash
+scripts/loki-daemon.sh          ~1900 lines bash
 scripts/agent-hook-bridge.sh          ~600 lines bash + hook config
 scripts/agent-hook-lib.sh             ~400 lines bash
 ~/.config/systemd/user/
-  fleetcrown-daemon.service
-  fleetcrown-app.service               (the local prod build wrapper)
-  fleetcrown-beacon-window.service     (pre-warmed Chromium — see below)
+  loki-daemon.service
+  loki-app.service               (the local prod build wrapper)
+  loki-beacon-window.service     (pre-warmed Chromium — see below)
 ```
 
-That is roughly **3,000 lines of bash plus three systemd units**. When deletion happens we keep `fleetcrown-app.service` because that's the dev/test local Next.js instance — not part of the executor surface.
+That is roughly **3,000 lines of bash plus three systemd units**. When deletion happens we keep `loki-app.service` because that's the dev/test local Next.js instance — not part of the executor surface.
 
 We also delete from the codebase:
 
@@ -104,7 +104,7 @@ The user who asked for this migration asked for two things: follow the recommend
 **Pre-cut acceptance**:
 
 1. Inventory every command type either executor handles. Confirm Fleet Runner handles each, or that the type is on the delete-or-skip list.
-2. Walk the LOOP v2 fire path end-to-end on a test project with **only** Fleet Runner running. Bash daemon stopped via `systemctl --user stop fleetcrown-daemon`. Verify the filesystem-watcher → dispatch → inject chain works without the Stop hook.
+2. Walk the LOOP v2 fire path end-to-end on a test project with **only** Fleet Runner running. Bash daemon stopped via `systemctl --user stop loki-daemon`. Verify the filesystem-watcher → dispatch → inject chain works without the Stop hook.
 3. Walk a manual queue-fire from `/control`. Verify the dispatch endpoint produces the same behavior with the simplified two-mode enum.
 4. Walk a `peek_tab` from `/control` to confirm Fleet Runner's existing handler still works without the bash daemon.
 

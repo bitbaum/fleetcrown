@@ -9,7 +9,7 @@
  * exists to stop making — and told nothing at all when the change went live.
  *
  * That gap turned dangerous the moment "ship fixes automatically" shipped:
- * FleetCrown now merges and deploys onto a live site with nobody watching. A
+ * Loki now merges and deploys onto a live site with nobody watching. A
  * deploy that fails after an automatic merge is the single worst state this
  * system can produce, and until now it was silent.
  *
@@ -64,7 +64,7 @@ export async function notifyFixShipped(input: {
     const title = live
       ? `${projectName} · a fix is live`
       : `${projectName} · a merged fix failed to deploy`;
-    // Say who merged it. "FleetCrown merged this while you were away" is the
+    // Say who merged it. "Loki merged this while you were away" is the
     // fact an operator needs to trust — or switch off — automatic shipping.
     const body = live
       ? `${byFleet ? "Merged automatically and deployed" : "Merged and deployed"}. Check it and confirm: ${what}`

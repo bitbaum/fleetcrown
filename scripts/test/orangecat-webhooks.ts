@@ -3,11 +3,11 @@ import { createHmac } from "node:crypto";
 import { verifyOrangeCatWebhookSignature } from "../../src/lib/integrations/orangecat-webhook";
 
 /**
- * Cross-repo contract test for the OrangeCat → FleetCrown webhook HMAC.
+ * Cross-repo contract test for the OrangeCat → Loki webhook HMAC.
  *
  * Both receivers (/api/orangecat/entitlement, /api/orangecat/events) trust
  * verifyOrangeCatWebhookSignature. OrangeCat's emitters
- * (src/services/fleetcrown/entitlement-notify.ts in the orangecat repo) sign
+ * (src/services/loki/entitlement-notify.ts in the orangecat repo) sign
  * exactly like `ocSign` below: `sha256=` + hex HMAC-SHA256 of the raw JSON body
  * with the shared ORANGECAT_WEBHOOK_SECRET. If either side's scheme drifts,
  * this fails before a silently-rejected settlement ships.

@@ -1,4 +1,4 @@
-// SSOT for the FleetCrown brand mark — a dense Archimedean coil: a "trippy"
+// SSOT for the Loki brand mark — a dense Archimedean coil: a "trippy"
 // spiral that pulls the eye inward toward infinity. EVERY rendered asset
 // (favicon, desktop tray icon, desktop app icon, OpenGraph images, the in-app
 // BrandMark) derives its geometry from `spiralPathD()` here. Never hand-redraw

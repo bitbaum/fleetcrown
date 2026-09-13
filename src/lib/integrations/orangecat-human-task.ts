@@ -89,7 +89,7 @@ export async function publishTaskToOrangeCat(
         currency: task.feeCurrency ?? undefined,
         service_location_type: "remote",
       },
-      { idempotencyKey: `fleetcrown_human_task_${task.id}` },
+      { idempotencyKey: `loki_human_task_${task.id}` },
     );
     const url = orangeCatServiceUrl(service.id);
     await linkTaskToOrangeCat(userId, task.id, { serviceId: service.id, url });

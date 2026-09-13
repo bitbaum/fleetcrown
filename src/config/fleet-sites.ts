@@ -14,7 +14,7 @@ export type FleetSite = {
   blurb: string;
 };
 
-/** Ordered by name. FleetCrown itself is absent on purpose. */
+/** Ordered by name. Loki itself is absent on purpose. */
 export const FLEET_SITES: readonly FleetSite[] = [
   {
     name: "AOZ Begleitung",

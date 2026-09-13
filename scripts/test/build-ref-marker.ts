@@ -110,8 +110,8 @@ function stampIn(env: Record<string, string>): string {
 check("the pinned deploy ref wins over everything", () => {
   // deploy-hetzner.sh pins --ref and HEAD can drift mid-build; the stamp must
   // describe what was BUILT, not where the checkout wandered to.
-  const written = stampIn({ FLEETCROWN_DEPLOY_REF: "deadbeef", GITHUB_SHA: "cafe1234" });
-  assert(written === "deadbeef", `FLEETCROWN_DEPLOY_REF must win, got '${written}'`);
+  const written = stampIn({ LOKI_DEPLOY_REF: "deadbeef", GITHUB_SHA: "cafe1234" });
+  assert(written === "deadbeef", `LOKI_DEPLOY_REF must win, got '${written}'`);
 });
 
 check("GITHUB_SHA never overrides the commit that was actually checked out", () => {

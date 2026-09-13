@@ -13,13 +13,13 @@
  */
 import { USER_EXPORT_OMITTED_FIELDS, USER_WITHHELD_FIELDS } from "@/lib/user-client-view";
 
-export const ACCOUNT_EXPORT_FILENAME = "fleetcrown-account-export.json";
+export const ACCOUNT_EXPORT_FILENAME = "loki-account-export.json";
 
 export { toExportUser } from "@/lib/user-client-view";
 
 export function buildExportManifest(userId: string, sections: string[]) {
   return {
-    product: "FleetCrown",
+    product: "Loki",
     exported_at: new Date().toISOString(),
     user_id: userId,
     scope: sections,

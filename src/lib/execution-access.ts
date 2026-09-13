@@ -29,7 +29,7 @@ export async function isFleetInfrastructureAllowed(userId: string): Promise<bool
 
 function cloudBuilderAllowlist(): Set<string> {
   return new Set(
-    (process.env.FLEETCROWN_CLOUD_BUILDER_USER_IDS ?? "")
+    (process.env.LOKI_CLOUD_BUILDER_USER_IDS ?? "")
       .split(",")
       .map((id) => id.trim())
       .filter(Boolean),
@@ -197,7 +197,7 @@ export function projectChannelLock(project: ProjectLocus): RunnerChannel | null 
 
 /**
  * A dirPath under the box's clone root was written by the product itself
- * (kickoff provision sets `dirPath = FLEETCROWN_BOX_DEV_ROOT/<slug>`), so the
+ * (kickoff provision sets `dirPath = LOKI_BOX_DEV_ROOT/<slug>`), so the
  * workspace exists on the box and nowhere else. The desktop runner does not
  * clone on demand: routed there, it launched claude in a directory that does
  * not exist and reported "inject did not stick" — three times in a row for
@@ -205,7 +205,7 @@ export function projectChannelLock(project: ProjectLocus): RunnerChannel | null 
  * the default clone root is `~/dev`, which on a laptop is the laptop's tree.
  */
 export function isBoxRootedDir(dirPath: string | null | undefined): boolean {
-  const root = process.env.FLEETCROWN_BOX_DEV_ROOT?.trim().replace(/\/+$/, "");
+  const root = process.env.LOKI_BOX_DEV_ROOT?.trim().replace(/\/+$/, "");
   if (!root || !dirPath) return false;
   return dirPath === root || dirPath.startsWith(`${root}/`);
 }

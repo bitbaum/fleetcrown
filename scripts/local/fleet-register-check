@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Runs fleetcrown's own deploy-readiness gate — the half that can ONLY run
+# Runs loki's own deploy-readiness gate — the half that can ONLY run
 # here, because it needs the actual fleet checkouts under ~/dev, which no CI
 # runner has. Nothing else schedules this: CI can only verify apps.conf's
 # shape, never whether a registered repo_path still points at something real.
@@ -16,7 +16,7 @@
 #
 # On 2026-08-28 at 22:15 and 22:16 this sent George two identical Telegrams
 # saying `substrata: port 4022 already taken`. Nothing was wrong with the
-# fleet. A different agent session was mid-edit in ~/dev/fleetcrown, and the
+# fleet. A different agent session was mid-edit in ~/dev/loki, and the
 # check read apps.conf from that half-saved working tree. Around fifteen agent
 # sessions share these checkouts, so the working tree here is a scratchpad, not
 # a statement about production — judging it means paging about someone's
@@ -40,8 +40,8 @@ set -uo pipefail
 DRY_RUN=""
 [ "${1:-}" = "--dry-run" ] && DRY_RUN=1
 
-FLEETCROWN="${FLEETCROWN_DIR:-$HOME/dev/fleetcrown}"
-BOX_SSH="ssh -o ConnectTimeout=8 -i $HOME/.ssh/fleetcrown_ci_deploy ubuntu@167.233.22.31"
+LOKI="${LOKI_DIR:-$HOME/dev/loki}"
+BOX_SSH="ssh -o ConnectTimeout=8 -i $HOME/.ssh/loki_ci_deploy ubuntu@167.233.22.31"
 # A dry run keeps its own state dir, so it exercises the cooldown exactly like
 # the real thing (including "same finding, not repeating") without writing the
 # production stamps or delivering anything. A test path that skips the state is
@@ -50,28 +50,28 @@ STATE="${XDG_STATE_HOME:-$HOME/.local/state}/fleet-register-check${DRY_RUN:+/dry
 COOLDOWN=${REGISTER_COOLDOWN_SEC:-79200}   # 22h: at most one message per daily run
 mkdir -p "$STATE"
 
-[ -d "$FLEETCROWN" ] || { echo "fleet-register-check: $FLEETCROWN missing, skipping" >&2; exit 0; }
+[ -d "$LOKI" ] || { echo "fleet-register-check: $LOKI missing, skipping" >&2; exit 0; }
 
 # The committed register, from the remote's default branch. A fetch failure is
 # not fatal — a slightly stale origin/main is still a real commit, whereas the
 # working tree may be nobody's intention at all. Never fall back to the tree.
 TMPD=$(mktemp -d); trap 'rm -rf "$TMPD"' EXIT
-git -C "$FLEETCROWN" fetch --quiet origin main 2>/dev/null || true
+git -C "$LOKI" fetch --quiet origin main 2>/dev/null || true
 # REGISTER_REF exists so the failure path can actually be exercised against a
 # deliberately broken register; unset, it is origin/main and nothing else.
 REF="${REGISTER_REF:-origin/main}"
-git -C "$FLEETCROWN" rev-parse --verify --quiet "$REF" >/dev/null || REF=HEAD
+git -C "$LOKI" rev-parse --verify --quiet "$REF" >/dev/null || REF=HEAD
 # The SCRIPTS come from $REF too, not just the register.
 #
 # This read the register from origin/main and then ran the judge from the
 # working tree — the same tree the paragraph above calls a scratchpad. On
 # 2026-09-11 that produced a false alarm in exactly the shape this file exists
-# to prevent: ~/dev/fleetcrown sat on another session's branch, its
+# to prevent: ~/dev/loki sat on another session's branch, its
 # check-deploy-ready.sh predated the fix that stopped treating a box-side
 # repo_path as drift, and so an OLD judge reported three perfectly good rows of
 # a NEW register as drift. The register and the code that judges it have to come
 # from one commit, or the pair is a comparison between two different days.
-git -C "$FLEETCROWN" archive "$REF" scripts 2>/dev/null | tar -x -C "$TMPD" 2>/dev/null || {
+git -C "$LOKI" archive "$REF" scripts 2>/dev/null | tar -x -C "$TMPD" 2>/dev/null || {
   echo "fleet-register-check: cannot extract scripts from $REF" >&2; exit 0; }
 [ -f "$TMPD/scripts/hetzner/apps.conf" ] || {
   echo "fleet-register-check: no apps.conf in $REF" >&2; exit 0; }
@@ -107,7 +107,7 @@ $REALITY"
 # sbb.orangecat.ch), and the repair needed no redeploy, only a rebind.
 #
 # Here rather than in `verify` for the same reason as the reality check: it
-# needs the network. It self-skips when FleetCrown is unreachable, because
+# needs the network. It self-skips when Loki is unreachable, because
 # offline every site would look dead — that is an instrument failure, not an
 # outage, and the two must not print the same thing.
 WIDGETS=$(cd "$TMPD" && MANIFEST="$MANIFEST_AT_REF" bash scripts/ci/check-widget-origins.sh 2>&1)
@@ -143,13 +143,13 @@ fi
 
 notify-send -u critical -i dialog-warning "Fleet Register Check FAILED" "$(echo "$OUT" | tail -6)" 2>/dev/null || true
 printf '%s' "$MSG" | $BOX_SSH '
-    cd /opt/fleetcrown/app
+    cd /opt/loki/app
     set -a; source .env 2>/dev/null; set +a
     text=$(cat)
     # The app deliberately does not read the bare TELEGRAM_CHAT_ID name (see
     # src/lib/env.ts) — it is namespaced per-app to avoid collisions on a box
     # that runs several apps in the same env-var space. Check every alias.
-    CHAT_ID="${APP_TELEGRAM_CHAT_ID:-${FLEETCROWN_TELEGRAM_CHAT_ID:-${COCKPIT_TELEGRAM_CHAT_ID:-${TELEGRAM_CHAT_ID:-}}}}"
+    CHAT_ID="${APP_TELEGRAM_CHAT_ID:-${LOKI_TELEGRAM_CHAT_ID:-${COCKPIT_TELEGRAM_CHAT_ID:-${TELEGRAM_CHAT_ID:-}}}}"
     [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "$CHAT_ID" ] || { echo "no telegram creds on box" >&2; exit 0; }
     python3 - "$text" "$CHAT_ID" <<PY
 import json, os, sys, urllib.request

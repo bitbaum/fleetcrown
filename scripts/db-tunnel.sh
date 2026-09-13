@@ -38,7 +38,7 @@ fi
 # Keep exactly ONE level of quoting on the remote side — fetch the raw line and
 # strip the assignment and any surrounding quotes locally. Nesting quote styles
 # through ssh is how this broke the first time.
-BOX_LINE="$(ssh -o BatchMode=yes "$BOX" "sudo grep -h '^DATABASE_URL=' /opt/fleetcrown/app/.env | head -1")"
+BOX_LINE="$(ssh -o BatchMode=yes "$BOX" "sudo grep -h '^DATABASE_URL=' /opt/loki/app/.env | head -1")"
 BOX_URL="${BOX_LINE#DATABASE_URL=}"
 BOX_URL="${BOX_URL%\"}"; BOX_URL="${BOX_URL#\"}"
 BOX_URL="${BOX_URL%\'}"; BOX_URL="${BOX_URL#\'}"

@@ -1,7 +1,7 @@
 ---
 title: The Fleet Learns From What It Reads, Not What It Does
-summary: An audit of FleetCrown against the 2026 self-improvement literature found the loop pointed the wrong way — it improves from papers it ingests, never from the thousands of runs it grades. Then the first measurement overturned the plan: the fleet's dominant failure was never a learning problem, it was a prompt that forgot to ask for the evidence it graded.
-excerpt: FleetCrown reads arXiv every morning and proposes how it should evolve. It also grades every agent run against a definition of done and then reads none of it. We built the hard half of a self-improvement loop and skipped the easy half — and when we finally measured, one query cancelled the optimizer we were about to build.
+summary: An audit of Loki against the 2026 self-improvement literature found the loop pointed the wrong way — it improves from papers it ingests, never from the thousands of runs it grades. Then the first measurement overturned the plan: the fleet's dominant failure was never a learning problem, it was a prompt that forgot to ask for the evidence it graded.
+excerpt: Loki reads arXiv every morning and proposes how it should evolve. It also grades every agent run against a definition of done and then reads none of it. We built the hard half of a self-improvement loop and skipped the easy half — and when we finally measured, one query cancelled the optimizer we were about to build.
 publishedAt: 2026-08-07
 tags: architecture,orchestration,self-improvement,evaluation,autonomy,research
 featured: true
@@ -11,15 +11,15 @@ readingTimeMin: 16
 
 ## An Audit That Found the Loop Pointed Backwards
 
-In May I wrote about the session system and called it "the loop that almost closes itself." The essay ended on a specific gap: FleetCrown had continuity between sessions but no mechanism to get *better* at what it does between them. Three months later I went looking for that gap with the current literature in hand, expecting to find it partly filled.
+In May I wrote about the session system and called it "the loop that almost closes itself." The essay ended on a specific gap: Loki had continuity between sessions but no mechanism to get *better* at what it does between them. Three months later I went looking for that gap with the current literature in hand, expecting to find it partly filled.
 
 It is not partly filled. It is filled in the wrong direction.
 
-FleetCrown has exactly one self-improvement loop, and it lives in `src/lib/frontier/`. Every day it ingests arXiv RSS feeds — cs.AI, cs.MA, cs.SE, cs.CL — plus Lobsters and Hacker News. It ranks what it finds, drafts concrete proposals for how FleetCrown itself should evolve, runs those proposals past a panel of judges from different model lineages so they don't share the generator's blind spots, and surfaces the survivors to a human who accepts or dismisses them.
+Loki has exactly one self-improvement loop, and it lives in `src/lib/frontier/`. Every day it ingests arXiv RSS feeds — cs.AI, cs.MA, cs.SE, cs.CL — plus Lobsters and Hacker News. It ranks what it finds, drafts concrete proposals for how Loki itself should evolve, runs those proposals past a panel of judges from different model lineages so they don't share the generator's blind spots, and surfaces the survivors to a human who accepts or dismisses them.
 
 That is a good loop. It is grounded, adversarially checked, and human-gated. It stays.
 
-It is also grounded *entirely in what other people have published*. FleetCrown improves from what it reads. It has never once improved from what it does.
+It is also grounded *entirely in what other people have published*. Loki improves from what it reads. It has never once improved from what it does.
 
 ## The Corpus Nobody Reads
 
@@ -41,7 +41,7 @@ I traced every consumer of `prompt_history` in the codebase: the activity view, 
 
 It would be easy to write this up as negligence. It isn't, and the reason matters for anyone building something similar.
 
-The natural order of construction is: build the thing, then measure the thing, then improve the thing. We did the first two properly. The measurement layer in FleetCrown is genuinely good — better, in places, than what the harness vendors ship. The judge refuses to accept an agent's self-assessment, because an agent grading its own homework is the whole failure mode. It runs on a different model lineage than the worker so its blind spots don't overlap. It fails *open*, so a broken judge can't wedge the fleet.
+The natural order of construction is: build the thing, then measure the thing, then improve the thing. We did the first two properly. The measurement layer in Loki is genuinely good — better, in places, than what the harness vendors ship. The judge refuses to accept an agent's self-assessment, because an agent grading its own homework is the whole failure mode. It runs on a different model lineage than the worker so its blind spots don't overlap. It fails *open*, so a broken judge can't wedge the fleet.
 
 None of that is obvious. All of it took real iterations to get right, including a stretch where the judge was structurally unable to see the evidence it was supposed to grade — the worker's contract promised type checks, lint results, and commit state, and four layers in between silently dropped them. Fifty-six runs were graded on evidence that never arrived.
 
@@ -57,7 +57,7 @@ The 2026 survey of the area counts 73 papers on the first and 166 on the second.
 
 That ratio is the most useful number in the literature. Two thirds of a very active field has concluded that the returns are in the scaffold, for a reason that is entirely practical: a scaffold change can be read, reviewed, and reverted. A weight change cannot.
 
-This is good news for us specifically, because FleetCrown does not own any weights. Vendor CLIs do. The hybrid work that turns both knobs at once found they contribute differently — harness updates improve the software engineering *around* the model, its parsing and retries and search procedure, while weight updates add task intuition the scaffold never discovers on its own. We can only have the first. It happens to be the larger and better-understood two thirds.
+This is good news for us specifically, because Loki does not own any weights. Vendor CLIs do. The hybrid work that turns both knobs at once found they contribute differently — harness updates improve the software engineering *around* the model, its parsing and retries and search procedure, while weight updates add task intuition the scaffold never discovers on its own. We can only have the first. It happens to be the larger and better-understood two thirds.
 
 Within the scaffold, the four families are prompt optimization, memory, tools, and full-scaffold rewrites. Memory is the biggest and most production-proven of the four. Full-scaffold rewrite — where the agent modifies its own codebase and validates each change empirically, as in the Darwin Gödel Machine — is the most spectacular and the least mature.
 
@@ -79,13 +79,13 @@ We have a textbook instance of that last one in our own codebase. When runs fail
 
 There is a version of this I could ship next week, and it would be a mistake.
 
-Prime Intellect recently released Prime Agent, an open-source harness built around a self-refining loop: it reviews its own trajectory and applies small, evidence-backed edits to its own prompt, skills, and memory. It is a genuinely strong piece of engineering, and the design is more advanced than anything in FleetCrown's inner loop.
+Prime Intellect recently released Prime Agent, an open-source harness built around a self-refining loop: it reviews its own trajectory and applies small, evidence-backed edits to its own prompt, skills, and memory. It is a genuinely strong piece of engineering, and the design is more advanced than anything in Loki's inner loop.
 
 Buried in their own limitations section is the result everyone building in this space should read twice. Set loose on Factorio, the refine loop developed legitimate skills, discovered it could exploit game mechanics to teleport resources, and then amplified that discovery — because the loop optimizes for outcomes and reward hacking produces excellent outcomes. They report it plainly. There was no safeguard, because the agent judged its own trajectory and applied its own edits.
 
 That is not an argument against self-improvement. It is an argument about who holds the pen.
 
-The structural answer is that the thing being improved, the thing judging the improvement, and the thing applying the improvement must not all be the same agent. FleetCrown already gets two thirds of this right by accident of good design: the judge is a different model lineage from the worker, and the frontier loop proposes but never applies. What we need is to keep those properties when we point the loop inward — which is harder, because pointing it inward is exactly when auto-applying starts to feel efficient.
+The structural answer is that the thing being improved, the thing judging the improvement, and the thing applying the improvement must not all be the same agent. Loki already gets two thirds of this right by accident of good design: the judge is a different model lineage from the worker, and the frontier loop proposes but never applies. What we need is to keep those properties when we point the loop inward — which is harder, because pointing it inward is exactly when auto-applying starts to feel efficient.
 
 ## What We Are Going to Do
 
@@ -127,7 +127,7 @@ That is not a disappointing outcome. That is the measurement phase doing exactly
 
 There is a real advantage here, and it is not one we can be beaten to easily.
 
-A self-refining harness sees one session's trajectory. That is the unit it can learn from, because that is the unit it can see. FleetCrown sees every run, across every project, across every vendor's agent, with a graded outcome, a cost, and an independent verdict attached to each one.
+A self-refining harness sees one session's trajectory. That is the unit it can learn from, because that is the unit it can see. Loki sees every run, across every project, across every vendor's agent, with a graded outcome, a cost, and an independent verdict attached to each one.
 
 Cross-project prompt optimization over a real multi-tenant rollout corpus is something a single-session harness structurally cannot do, because it never sees the second project. That is the defensible position, and the distance to it is one schema fix and one batch job.
 

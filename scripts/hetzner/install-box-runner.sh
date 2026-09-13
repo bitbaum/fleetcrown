@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 #
-# Install / redeploy the headless FleetCrown box-runner (P1).
+# Install / redeploy the headless Loki box-runner (P1).
 #
 # The box-runner is the desktop Fleet Runner's core (poller + pusher + bridge +
 # owned PTYs) running as a systemd service on the box — no Electron, always-on,
 # survives web-app deploys. It deletes the "laptop must be on" dependency:
-# dispatches execute server-side in FleetCrown-owned PTYs.
+# dispatches execute server-side in Loki-owned PTYs.
 # See docs/architecture/box-owned-pty-executor.md.
 #
 # Idempotent: re-run to push code changes + restart. Mints the runner token only
@@ -16,11 +16,11 @@ set -euo pipefail
 
 . "$(dirname "$0")/_box-env.sh"   # SSOT: HETZNER_IP, BOX_ROOT, BOX_UBUNTU
 HOST="${1:-$BOX_ROOT}"
-RUNNER_DIR="/opt/fleetcrown/runner"
+RUNNER_DIR="/opt/loki/runner"
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-# Runner Unix owner — set FLEETCROWN_RUNNER_OWNER=fcrunner after the migration
+# Runner Unix owner — set LOKI_RUNNER_OWNER=fcrunner after the migration
 # (migrate-box-runner-to-fcrunner.sh). Defaults to ubuntu (no change until then).
-RUNNER_OWNER="${FLEETCROWN_RUNNER_OWNER:-ubuntu}"
+RUNNER_OWNER="${LOKI_RUNNER_OWNER:-ubuntu}"
 RUNNER_UHOME="$([ "$RUNNER_OWNER" = fcrunner ] && echo /home/fcrunner || echo /home/ubuntu)"
 
 echo "→ box-runner: syncing source into ${HOST}:${RUNNER_DIR} (node_modules untouched)"
@@ -33,7 +33,7 @@ ssh "$HOST" "chown -R $RUNNER_OWNER:$RUNNER_OWNER ${RUNNER_DIR}/src ${RUNNER_DIR
 
 echo "→ box-runner: minting runner token if absent"
 ssh "$HOST" "sudo -u $RUNNER_OWNER -H bash -c '
-  TF=$RUNNER_UHOME/.config/fleetcrown/fleet-runner-token
+  TF=$RUNNER_UHOME/.config/loki/fleet-runner-token
   if [ -s \"\$TF\" ]; then echo \"   token present, skipping mint\"; else
     cd ${RUNNER_DIR} && set -a && . ./.env && set +a && node_modules/.bin/tsx scripts/mint-box-runner-token.ts
   fi
@@ -47,17 +47,17 @@ echo "→ box-runner: applying agent operating contract"
 bash "$(dirname "$0")/apply-box-agent-contract.sh" "$HOST"
 
 echo "→ box-runner: writing systemd unit"
-ssh "$HOST" "cat > /etc/systemd/system/fleetcrown-box-runner.service" <<'UNIT'
+ssh "$HOST" "cat > /etc/systemd/system/loki-box-runner.service" <<'UNIT'
 [Unit]
-Description=FleetCrown box-runner (headless Fleet Runner — drains pending_commands, owns agent PTYs)
-After=network-online.target fleetcrown-app.service
+Description=Loki box-runner (headless Fleet Runner — drains pending_commands, owns agent PTYs)
+After=network-online.target loki-app.service
 Wants=network-online.target
 StartLimitIntervalSec=0
 
 [Service]
 Type=simple
 User=ubuntu
-WorkingDirectory=/opt/fleetcrown/runner
+WorkingDirectory=/opt/loki/runner
 # Blast-radius containment: hide co-tenant app secrets, backups, and the box SSH
 # keys from the runner AND every agent PTY it spawns (kernel-enforced). The
 # runner only needs its own dir + fresh clones under /home/ubuntu/dev + the
@@ -66,15 +66,15 @@ WorkingDirectory=/opt/fleetcrown/runner
 NoNewPrivileges=true
 PrivateTmp=true
 InaccessiblePaths=-/home/ubuntu/.ssh -/opt/orangecat -/opt/kivvi -/opt/botsmann -/opt/datacat-api -/opt/datacat-web -/opt/petvity -/opt/printcraft -/opt/reparaturbonus-zh -/opt/revamp-info -/opt/evig -/opt/sbb-fundbuero -/opt/solon -/opt/surf-your-life -/opt/vitareba -/opt/aoz-wohnen -/opt/supabase -/opt/backups -/opt/monitoring -/opt/_appcron
-EnvironmentFile=/opt/fleetcrown/runner/.env
+EnvironmentFile=/opt/loki/runner/.env
 Environment=HOME=/home/ubuntu
 Environment=PATH=/home/ubuntu/.local/bin:/usr/local/bin:/usr/bin:/bin
 Environment=NODE_ENV=production
-Environment=FLEETCROWN_BOX_PREPARE=true
-Environment=FLEETCROWN_RUNNER_PRESENCE_CHANNEL=cloud
-Environment=FLEETCROWN_RUNNER_UNATTENDED=true
-Environment=FLEETCROWN_WEB_URL=https://fleetcrown.orangecat.ch
-ExecStart=/opt/fleetcrown/runner/node_modules/.bin/tsx scripts/box-runner.ts
+Environment=LOKI_BOX_PREPARE=true
+Environment=LOKI_RUNNER_PRESENCE_CHANNEL=cloud
+Environment=LOKI_RUNNER_UNATTENDED=true
+Environment=LOKI_WEB_URL=https://loki.orangecat.ch
+ExecStart=/opt/loki/runner/node_modules/.bin/tsx scripts/box-runner.ts
 Restart=always
 RestartSec=5
 
@@ -83,6 +83,6 @@ WantedBy=multi-user.target
 UNIT
 
 echo "→ box-runner: (re)start"
-ssh "$HOST" "systemctl daemon-reload && systemctl enable --now fleetcrown-box-runner.service && systemctl restart fleetcrown-box-runner.service && sleep 4 && systemctl is-active fleetcrown-box-runner.service"
+ssh "$HOST" "systemctl daemon-reload && systemctl enable --now loki-box-runner.service && systemctl restart loki-box-runner.service && sleep 4 && systemctl is-active loki-box-runner.service"
 
-echo "✓ box-runner installed. Logs: ssh ${HOST} journalctl -u fleetcrown-box-runner -f"
+echo "✓ box-runner installed. Logs: ssh ${HOST} journalctl -u loki-box-runner -f"

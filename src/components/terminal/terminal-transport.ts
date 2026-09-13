@@ -48,7 +48,7 @@ const postJson = (url: string, body: unknown): Promise<void> =>
     .catch(() => undefined);
 
 /**
- * FleetCrown server-owned PTY (LocalPtyExecutor / SandboxExecutor) — real PTY
+ * Loki server-owned PTY (LocalPtyExecutor / SandboxExecutor) — real PTY
  * bytes over /api/workspaces/[id], resumable SSE on /stream. Input/resize POST
  * back to the same id.
  */
@@ -81,7 +81,7 @@ export function workspaceTransport(id: string): TerminalTransport {
 
 /**
  * Fleet Runner machine PTY, viewed via the peek stream — raw-PTY bytes when the
- * agent runs in a FleetCrown-owned PTY (append frames), zellij dump-screen
+ * agent runs in a Loki-owned PTY (append frames), zellij dump-screen
  * snapshots otherwise (reset+repaint frames). Input/resize ride the rawkey fast
  * lane (/api/control/tab-inject-raw → bridge → runner PTY).
  */

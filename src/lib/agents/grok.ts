@@ -1,7 +1,7 @@
 /**
  * Grok adapter — x.ai's `grok` CLI.
  *
- * Grok writes its own session log to ~/.grok/sessions so FleetCrown's
+ * Grok writes its own session log to ~/.grok/sessions so Loki's
  * watcher tails that directory for direct-activity events instead of
  * relying on hooks (which Grok doesn't expose).
  *

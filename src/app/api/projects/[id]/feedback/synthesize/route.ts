@@ -24,7 +24,7 @@ import type { FeedbackListItem } from "@/db/queries/site-feedback";
  * without a second triage gate. Synthesize when volume is high and themes help.
  */
 
-export const SYNTHESIZER_CONTACT = "FleetCrown synthesizer";
+export const SYNTHESIZER_CONTACT = "Loki synthesizer";
 const MAX_ITEMS = 60;
 
 function renderItem(f: FeedbackListItem): string {

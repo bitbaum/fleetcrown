@@ -18,7 +18,7 @@
 import { useState } from "react";
 import { Loader2, Pause, Play } from "lucide-react";
 import { patchJson } from "@/lib/api/fetch";
-import { FLEETCROWN_REFRESH_EVENT } from "@/lib/client-events";
+import { LOKI_REFRESH_EVENT } from "@/lib/client-events";
 import type { AutoInjectMode } from "@/config/beacon";
 import { cn } from "@/lib/utils";
 
@@ -78,7 +78,7 @@ export function ProjectAutopilotToggle({
         return;
       }
       if (typeof window !== "undefined") {
-        window.dispatchEvent(new CustomEvent(FLEETCROWN_REFRESH_EVENT));
+        window.dispatchEvent(new CustomEvent(LOKI_REFRESH_EVENT));
       }
       onAfter?.();
     } catch (e) {

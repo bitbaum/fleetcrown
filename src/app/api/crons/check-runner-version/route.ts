@@ -11,7 +11,7 @@
 //
 // WHAT IT CATCHES
 // ---------------
-// Publishing a release is not a machine installing one, and FleetCrown had no
+// Publishing a release is not a machine installing one, and Loki had no
 // way to tell the difference. On 2026-08-26 the laptop reported 0.8.12 while
 // the box ran box-0.8.13. That runner predates the inject-hardening from
 // 2026-08-23 (c350623c), so it kept acking unverified injects as `ok: true`
@@ -105,7 +105,7 @@ export async function GET(req: NextRequest) {
     if (created) {
       const tg = selfTelegramTarget();
       if (tg) {
-        void sendTelegramMessage(tg, `⚠️ FleetCrown: runner behind published release.\n${detail}`);
+        void sendTelegramMessage(tg, `⚠️ Loki: runner behind published release.\n${detail}`);
       }
     }
   } else if (unknown.length === 0) {

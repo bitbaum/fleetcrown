@@ -25,11 +25,11 @@ vhost|aoz-legacy-redirect|Permanent 308 for aoz-wohnen.orangecat.ch — printed 
 port|4030|annushka's enquiry API. The only process behind that host; everything else there is static.
 
 # apps.conf's own header excludes these four in prose: "Ports 4001-4004 are the
-# pre-existing handcrafted services (bridge, fleetcrown, orangecat, evig) — they
+# pre-existing handcrafted services (bridge, loki, orangecat, evig) — they
 # keep their own units and Caddy blocks and are NOT listed here." Prose is not
 # machine-readable, so this check found all four on its first run. Same fact,
 # now in a form a script can hold.
 port|4001|bridge — pre-existing handcrafted service, own unit and Caddy block.
-port|4002|fleetcrown — pre-existing handcrafted service, own unit and Caddy block.
+port|4002|loki — pre-existing handcrafted service, own unit and Caddy block.
 port|4003|orangecat — pre-existing handcrafted service, own unit and Caddy block.
 port|4004|evig — pre-existing handcrafted service, own unit and Caddy block.

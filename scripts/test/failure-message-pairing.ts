@@ -31,7 +31,7 @@ function ok(cond: boolean, label: string) {
 
 const src = readFileSync(POLLER, "utf8");
 const thrown = [...src.matchAll(/throw new Error\(\s*`([^`]{6,160})`/g)]
-  .map((m) => m[1].replace(/\$\{[^}]+\}/g, "fleetcrown").trim())
+  .map((m) => m[1].replace(/\$\{[^}]+\}/g, "loki").trim())
   .concat([...src.matchAll(/throw new Error\(\s*'([^']{6,160})'/g)].map((m) => m[1].trim()))
   .filter((s) => /running agent|terminal|focus|session/i.test(s));
 

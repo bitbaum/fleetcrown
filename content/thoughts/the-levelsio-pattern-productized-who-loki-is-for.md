@@ -1,7 +1,7 @@
 ---
-title: The Levelsio Pattern, Productized — Who FleetCrown Is For
-summary: One tweet from Pieter Levels describes the manual version of what FleetCrown automates. The audience for FleetCrown is not a generic "engineering team buying tools." It is the specific person who already SSHs into a Hetzner VPS to run Claude Code next to their codebase, and wants the missing dashboard.
-excerpt: FleetCrown is not a competitor to Cursor or Copilot. It is the productized version of a workflow indie hackers have been improvising for two years — Claude Code on a VPS, SSH in to drive it, walk away while it works. Here is the customer we are actually for.
+title: The Levelsio Pattern, Productized — Who Loki Is For
+summary: One tweet from Pieter Levels describes the manual version of what Loki automates. The audience for Loki is not a generic "engineering team buying tools." It is the specific person who already SSHs into a Hetzner VPS to run Claude Code next to their codebase, and wants the missing dashboard.
+excerpt: Loki is not a competitor to Cursor or Copilot. It is the productized version of a workflow indie hackers have been improvising for two years — Claude Code on a VPS, SSH in to drive it, walk away while it works. Here is the customer we are actually for.
 publishedAt: 2026-06-04
 tags: product,positioning,levelsio,fleet-runner,strategy,studio,architecture
 featured: true
@@ -19,13 +19,13 @@ A few weeks ago, Pieter Levels posted this:
 
 I read it twice. Then I read it a third time, because it took a beat to register what it was actually describing.
 
-He is describing the manual version of FleetCrown.
+He is describing the manual version of Loki.
 
 That tweet is a complete picture of an existing workflow: a builder runs AI coding agents on a small Linux server. He SSHes in from his laptop using a polished terminal client. The agents do their work in the server's shell, persisting across his network drops, his coffee breaks, his time zones, his sleep. When he wants to know what they did, he opens his laptop and looks. When he wants to give them a new task, he types it in the same SSH session. When he wakes up and the agent has finished, he reviews the diff and ships.
 
 This is a real workflow. It is being practiced today by a meaningful number of people. It is the closest thing to "AI agents for indie builders" that exists in the wild, and it works well enough that someone with hundreds of thousands of dollars a month in revenue is using it as his daily driver. He is *advocating for it publicly*, in fact, and dunking on people who don't do it.
 
-The interesting thing about that workflow is not that it works. It is that it has a missing piece, and the missing piece is exactly what FleetCrown is.
+The interesting thing about that workflow is not that it works. It is that it has a missing piece, and the missing piece is exactly what Loki is.
 
 ## What the Manual Pattern Has, and What It Doesn't
 
@@ -49,23 +49,23 @@ None of these missing pieces are critical to the basic workflow. He runs his bus
 4. *"It's 3 AM in Lisbon and the agent finished an hour ago and has been sitting idle."*
 5. *"Did the build pass? Where's the notification I configured?"*
 
-FleetCrown is the answer to all five.
+Loki is the answer to all five.
 
-## What FleetCrown Adds, in Plain Terms
+## What Loki Adds, in Plain Terms
 
-Look at FleetCrown's surface area honestly. It is, at the core, **a dashboard for a fleet of AI coding agents running on machines you control**. The dashboard sees what's happening across all the projects, lets you dispatch new tasks from any device, logs the history of who did what, applies a policy to "the agent just finished — what next?", and surfaces real-time notifications.
+Look at Loki's surface area honestly. It is, at the core, **a dashboard for a fleet of AI coding agents running on machines you control**. The dashboard sees what's happening across all the projects, lets you dispatch new tasks from any device, logs the history of who did what, applies a policy to "the agent just finished — what next?", and surfaces real-time notifications.
 
-The local component (Fleet Runner) is the bit that lives on each of your machines and actually drives the agents. The cloud component (the web UI at fleetcrown.orangecat.ch) is the bit you look at from wherever you are. They talk to each other over a thin sync layer.
+The local component (Fleet Runner) is the bit that lives on each of your machines and actually drives the agents. The cloud component (the web UI at loki.orangecat.ch) is the bit you look at from wherever you are. They talk to each other over a thin sync layer.
 
-This is precisely the architecture levelsio describes building manually with `tmux`, `ssh`, his eyes, and an iCloud calendar of "remember to check on the agent at 6 PM." FleetCrown replaces every piece of that stack with a real product. The terminal session becomes a managed agent runtime. The SSH attach becomes a real-time dashboard. The scrollback becomes a structured handoff log. The "remember at 6 PM" becomes an autopilot that fires the next task. The "is the build passing" becomes a push notification on his phone.
+This is precisely the architecture levelsio describes building manually with `tmux`, `ssh`, his eyes, and an iCloud calendar of "remember to check on the agent at 6 PM." Loki replaces every piece of that stack with a real product. The terminal session becomes a managed agent runtime. The SSH attach becomes a real-time dashboard. The scrollback becomes a structured handoff log. The "remember at 6 PM" becomes an autopilot that fires the next task. The "is the build passing" becomes a push notification on his phone.
 
-None of these features are competing with Cursor or GitHub Copilot. Cursor is an IDE; you use it to write code. FleetCrown is a control plane; you use it to *not* write code, but to know what the agents you delegated to are doing. The two products serve different parts of the day. The Cursor user is the agent operator at the moment of authoring. The FleetCrown user is the agent operator at the moment of supervision.
+None of these features are competing with Cursor or GitHub Copilot. Cursor is an IDE; you use it to write code. Loki is a control plane; you use it to *not* write code, but to know what the agents you delegated to are doing. The two products serve different parts of the day. The Cursor user is the agent operator at the moment of authoring. The Loki user is the agent operator at the moment of supervision.
 
 ## Who Actually Buys This
 
-The mistake I almost made for the first few months of building FleetCrown was thinking the customer was "a software engineering team that wants to coordinate AI agent work across many engineers." It is not. That market exists, but the people in it are reaching for different tools — Devin's clones, Sweep, agent IDEs with team-scope features. They have buyers in procurement and budget cycles measured in quarters.
+The mistake I almost made for the first few months of building Loki was thinking the customer was "a software engineering team that wants to coordinate AI agent work across many engineers." It is not. That market exists, but the people in it are reaching for different tools — Devin's clones, Sweep, agent IDEs with team-scope features. They have buyers in procurement and budget cycles measured in quarters.
 
-The customer for FleetCrown is the *levelsio-pattern operator*. Specifically:
+The customer for Loki is the *levelsio-pattern operator*. Specifically:
 
 - A solo founder, freelance developer, or small team of one or two.
 - Runs more than one project. Often more than five.
@@ -78,7 +78,7 @@ This is a smaller audience than "all engineers everywhere." But it's a *real* au
 
 They will pay for it. Not enterprise SaaS prices. Indie tool prices — somewhere between $10/mo (which is "free enough I don't think about it") and $50/mo (which is "I pay this because it pays itself back in a few hours of recovered attention per month"). The pricing model that fits is the one levelsio's own products use: a flat monthly fee, no per-seat scaling, no per-agent metering, no surprises.
 
-The size of the market is the size of the indie-builder cohort that's currently improvising the manual pattern. I don't have a precise number — nobody does — but the visible evidence is strong. Every other Twitter thread in #buildinpublic is now about agent workflows. Indie hackers have always loved boring stacks, ruthless costs, and tools that respect their attention. FleetCrown's pricing and positioning fit exactly where their wallets are open.
+The size of the market is the size of the indie-builder cohort that's currently improvising the manual pattern. I don't have a precise number — nobody does — but the visible evidence is strong. Every other Twitter thread in #buildinpublic is now about agent workflows. Indie hackers have always loved boring stacks, ruthless costs, and tools that respect their attention. Loki's pricing and positioning fit exactly where their wallets are open.
 
 ## What This Means for the Roadmap
 
@@ -86,7 +86,7 @@ Naming the customer changes the priority of every feature.
 
 The features that matter most for the levelsio-pattern operator:
 
-- **Multi-machine fleet visibility from one screen.** If you have five Hetzner boxes running agents across fifteen projects, you should see all of them in one place. (Today's FleetCrown shows multiple projects but assumes one machine. Real fleet topology is a v0.7+ thing.)
+- **Multi-machine fleet visibility from one screen.** If you have five Hetzner boxes running agents across fifteen projects, you should see all of them in one place. (Today's Loki shows multiple projects but assumes one machine. Real fleet topology is a v0.7+ thing.)
 - **Dispatch from anywhere.** Phone, tablet, browser at the coffee shop. Real-time. This is what v0.6's SSE bridge unlocks; we just shipped Phases A, B, and D.
 - **Long-lived agent sessions with structured history.** The local watcher already reads `~/.claude/sessions/*.md` and writes events.jsonl. The history view on the web needs polish.
 - **Policy-driven autopilot.** "When the OrangeCat agent finishes, give it the next item from its queue. Unless it failed, in which case raise a blocker." This exists in v0.1 as "strategist" but it's not yet a UI a non-engineer can configure.
@@ -100,7 +100,7 @@ The features that *don't* matter for this audience, despite being obvious next m
 - Marketplace / agent app store. The operator picks Claude Code, Grok, Codex from their command line. The marketplace is `npm install`.
 - Onboarding tutorials for new-to-AI users. The audience is already past the on-ramp.
 
-It is freeing to know what you're *not* building. Every line item above is on FleetCrown's competitors' roadmaps. We can skip them and ship the things our actual customer wants instead.
+It is freeing to know what you're *not* building. Every line item above is on Loki's competitors' roadmaps. We can skip them and ship the things our actual customer wants instead.
 
 ## The Naming, Now That It Clicks
 
@@ -114,11 +114,11 @@ The "your fleet keeps running while you walk away" line that I've been trying to
 
 A few concrete shifts:
 
-**Pricing strategy.** Whenever FleetCrown introduces paid plans, the model is a flat monthly. $19/mo or $29/mo for the personal plan. Not per-agent. Not per-machine. Not per-seat. The audience has been trained by levelsio and similar operators to expect predictable infrastructure costs. Match the expectation.
+**Pricing strategy.** Whenever Loki introduces paid plans, the model is a flat monthly. $19/mo or $29/mo for the personal plan. Not per-agent. Not per-machine. Not per-seat. The audience has been trained by levelsio and similar operators to expect predictable infrastructure costs. Match the expectation.
 
 **Marketing voice.** Frame as "the missing dashboard for the workflow you're already running." Not "the next-generation agent platform." Not "enterprise AI coordination." The audience is allergic to that language. They want to know what you do that they can't already do with `tmux` and SSH.
 
-**Distribution.** The levelsio crowd lives on Twitter, HN, and a handful of Discord servers. They are reached through public building, not through SEO funnels or paid ads. FleetCrown's marketing is *building in public*, *posting infrastructure receipts*, *publishing thoughts essays like this one*. The audience reads HN and #buildinpublic for sport.
+**Distribution.** The levelsio crowd lives on Twitter, HN, and a handful of Discord servers. They are reached through public building, not through SEO funnels or paid ads. Loki's marketing is *building in public*, *posting infrastructure receipts*, *publishing thoughts essays like this one*. The audience reads HN and #buildinpublic for sport.
 
 **Product copy.** Stop saying "AI agent platform." Start saying "the dashboard for the agents you already run." Stop showing graphs of "agent productivity over time." Show screenshots of a real terminal next to a real Fleet Runner window, both showing the same agent finishing the same task, captioned: *"This is the second view of the work. The first view is wherever you are."*
 
@@ -130,9 +130,9 @@ A few concrete shifts:
 
 ## The Quiet Insight
 
-The deepest thing here is that FleetCrown's customer was already in the wild, already paying for tools, already telling the world what they wanted in 280-character bursts. The mistake earlier in the year was looking for "a target market" the way enterprise SaaS thinks about target markets — assembling personas from imagined hypotheticals, sizing TAM, calculating willingness-to-pay from comparable products. The actual customer was on Twitter, posting screenshots of their Hetzner dashboards and tweeting about which terminal client they liked best.
+The deepest thing here is that Loki's customer was already in the wild, already paying for tools, already telling the world what they wanted in 280-character bursts. The mistake earlier in the year was looking for "a target market" the way enterprise SaaS thinks about target markets — assembling personas from imagined hypotheticals, sizing TAM, calculating willingness-to-pay from comparable products. The actual customer was on Twitter, posting screenshots of their Hetzner dashboards and tweeting about which terminal client they liked best.
 
-If you are building tools for builders, your customers are *building in public*. Read what they say. Don't decompose what they say into "feature requests" or "user research"; read it as *job descriptions for the product you should be building*. The job that levelsio described in that one tweet is a job description for FleetCrown. He told us, for free, exactly who we are for.
+If you are building tools for builders, your customers are *building in public*. Read what they say. Don't decompose what they say into "feature requests" or "user research"; read it as *job descriptions for the product you should be building*. The job that levelsio described in that one tweet is a job description for Loki. He told us, for free, exactly who we are for.
 
 The work now is to ship the product that lives up to the description. Which is a tractable problem.
 

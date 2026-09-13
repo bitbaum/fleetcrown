@@ -152,7 +152,7 @@ export async function POST(req: NextRequest) {
   // in Activity and prompt history.
   const promptLabel = assembled?.ok ? assembled.promptLabel : prompt.slice(0, 40);
 
-  // A FleetCrown-owned PTY agent is driven directly via the executor — no zellij.
+  // A Loki-owned PTY agent is driven directly via the executor — no zellij.
   const wsId = workspaceIdFor(userId, tab);
   const wsHandle = isRuntimeAvailable() ? executor.get(wsId) : null;
   if (wsHandle && wsHandle.status !== "exited") {

@@ -4,7 +4,7 @@ import { useCallback, useRef } from "react";
 import { useLocalStorageState } from "@/hooks/use-local-storage-state";
 import { TERMINAL_MOBILE_MAX_FONT, TERMINAL_MOBILE_MIN_FONT } from "@/lib/terminal-viewport";
 
-const FONT_SIZE_KEY = "fleetcrown:terminal-font-size";
+const FONT_SIZE_KEY = "loki:terminal-font-size";
 const MAX_FONT = 24;
 
 // Module scope so their identity is stable — useLocalStorageState keeps them in

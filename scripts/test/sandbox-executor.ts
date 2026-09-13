@@ -37,12 +37,12 @@ function hasPair(args: string[], key: string, value: string): boolean {
 }
 
 async function optionalDockerSmoke() {
-  if (process.env.FLEETCROWN_TEST_DOCKER_SANDBOX !== "true") return;
+  if (process.env.LOKI_TEST_DOCKER_SANDBOX !== "true") return;
   const fs = await import("node:fs");
   fs.mkdirSync(cwd, { recursive: true });
   const executor = new SandboxExecutor({
     ...config,
-    image: process.env.FLEETCROWN_TEST_DOCKER_IMAGE || "ubuntu:24.04",
+    image: process.env.LOKI_TEST_DOCKER_IMAGE || "ubuntu:24.04",
   });
   const events: AgentEvent[] = [];
   const id = "test:sandbox-smoke";

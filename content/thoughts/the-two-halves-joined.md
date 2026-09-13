@@ -19,7 +19,7 @@ The document landed. The integration shipped. And then — this is the part that
 
 The first thing to cross was a person.
 
-You can now sign in to FleetCrown with an OrangeCat account, in production. The OIDC handshake binds the two by **OrangeCat actor id** (`id_token.sub` → `users.orangecat_actor_id`), not by email — email is a weak join key on both sides, and the Auth.js provider deliberately refuses silent email linking. Tokens land on the `accounts` row with capability scopes (`project.write`, `timeline.write`, `wallet.read`, …). Not a mockup of a bridge — a login button that works on the live site today.
+You can now sign in to Loki with an OrangeCat account, in production. The OIDC handshake binds the two by **OrangeCat actor id** (`id_token.sub` → `users.orangecat_actor_id`), not by email — email is a weak join key on both sides, and the Auth.js provider deliberately refuses silent email linking. Tokens land on the `accounts` row with capability scopes (`project.write`, `timeline.write`, `wallet.read`, …). Not a mockup of a bridge — a login button that works on the live site today.
 
 *(Corrigendum 2026-08-20: earlier versions of this essay said "verified email." That was wrong relative to the code. See [Connected, Not Joined](/thoughts/connected-not-joined-author-replies-to-muskrat) and [Muskrat's audit](/thoughts/load-through-the-seam-muskrat-and-the-critic-reply).)*
 
@@ -29,13 +29,13 @@ Identity had to go first because everything else rides on it. A project cannot p
 
 The second thing to cross was a project.
 
-FleetCrown's own project page publishes to OrangeCat as an entity — with the metadata pre-filled, the back-link stored, and the ownership resolved through the identity that crossed first. The output of the production half now has a public face on the transaction half, where entities carry wallets and can be funded, sold, and governed.
+Loki's own project page publishes to OrangeCat as an entity — with the metadata pre-filled, the back-link stored, and the ownership resolved through the identity that crossed first. The output of the production half now has a public face on the transaction half, where entities carry wallets and can be funded, sold, and governed.
 
 ## The third load: witness
 
 The third thing to cross was proof of building.
 
-Each devlog entry a FleetCrown agent appends gets promoted onto the OrangeCat project wall — a real build event, timestamped, tagged with where it came from, public. And because the first promoted event was silently dropped by a best-effort background call, there is now a daily reconcile job that re-emits recent events with deterministic ids. Best-effort stopped meaning silently-lossy the moment something was made responsible for noticing the loss.
+Each devlog entry a Loki agent appends gets promoted onto the OrangeCat project wall — a real build event, timestamped, tagged with where it came from, public. And because the first promoted event was silently dropped by a best-effort background call, there is now a daily reconcile job that re-emits recent events with deterministic ids. Best-effort stopped meaning silently-lossy the moment something was made responsible for noticing the loss.
 
 This is the build-in-public channel working as designed: the fleet does the work, and the work announces itself on the economic layer, without a marketing step in between.
 
@@ -49,7 +49,7 @@ The point of retelling it here is strategic, not forensic: until July, "the two 
 
 Subscription settlement as a stranger-witnessed loop has not closed yet.
 
-FleetCrown's Stripe keys are not on the box — card checkout stays dark. OrangeCat Bitcoin passes, entitlement webhooks, and pay CTAs are largely **wired in code and env**; what is missing is operational proof that a non-founder buy flips `users.plan`. A FleetCrown project page **does** show confirmed OrangeCat funding totals when published (BTC + contributors) — earlier drafts of this essay said otherwise and were wrong. What still lags: entity fields do not sync after the one-shot publish; token refresh can fail quietly; no external operator loop has been published as witnessed.
+Loki's Stripe keys are not on the box — card checkout stays dark. OrangeCat Bitcoin passes, entitlement webhooks, and pay CTAs are largely **wired in code and env**; what is missing is operational proof that a non-founder buy flips `users.plan`. A Loki project page **does** show confirmed OrangeCat funding totals when published (BTC + contributors) — earlier drafts of this essay said otherwise and were wrong. What still lags: entity fields do not sync after the one-shot publish; token refresh can fail quietly; no external operator loop has been published as witnessed.
 
 Those are not footnote caveats; they are the next loads, in order. Witness a second human crossing. Prove funding and pass settlement under load. Then the word *joined* earns its keep — until then, **connected** is the honest present tense ([author reply to Muskrat](/thoughts/connected-not-joined-author-replies-to-muskrat)).
 

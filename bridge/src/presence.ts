@@ -3,7 +3,7 @@
 
 import type { Pool } from "pg";
 
-const STATE_NOTIFY_CHANNEL = (process.env.FC_STATE_NOTIFY_CHANNEL ?? "fleetcrown_state").trim();
+const STATE_NOTIFY_CHANNEL = (process.env.FC_STATE_NOTIFY_CHANNEL ?? "loki_state").trim();
 
 export type PresenceChannel = "cloud" | "local";
 

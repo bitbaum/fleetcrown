@@ -168,7 +168,7 @@ This doc will be updated as we execute. The goal is to treat the architecture es
 
 ## Readiness update (as of this execution)
 
-- Packaged binaries now produced: `desktop/dist/FleetCrown Fleet Runner-0.1.0.AppImage` (104 MB, runnable on Linux) and `.deb`.
+- Packaged binaries now produced: `desktop/dist/Loki Fleet Runner-0.1.0.AppImage` (104 MB, runnable on Linux) and `.deb`.
 - Users can follow the instructions on `/download` (and the updated component) to clone + `npm run dist:linux` (or equivalent for their OS) and immediately run a native x.ai-styled Fleet Runner that integrates the real home/ runtime logic.
 - Dispatch now renders real prompts (via orchestration renderers). At the time it injected into a running zellij tab matching the project key via `injectIntoTab`; since 0.8.19 that code is deleted and the runner writes into the PTY it spawned.
 - "Sync to Web" + auto-sync on token connect: posts projects + observed runtime state to the hosted `/api/control/runtime-state` using the ck_* token. Web /control then treats this desktop as the live local runner for those projects.
@@ -180,7 +180,7 @@ This doc will be updated as we execute. The goal is to treat the architecture es
 **Known gaps (current prototype — desktop-2/3 dispatch + idle paths complete)**:
 - Desktop main owns the core local loop for runs it originates:
   - Real appendEvent for bridge.dispatch + worker.started/crashed (with runId + /tmp sentinel for stop-hook correlation).
-  - Embedded `home/watcher` (startWatcher): fs.watch on ~/.fleetcrown/sessions for registered projects, debounced `worker.idle` + parsed handoff on change. No external watcher process needed for full event emission when the Fleet Runner is the runtime.
+  - Embedded `home/watcher` (startWatcher): fs.watch on ~/.loki/sessions for registered projects, debounced `worker.idle` + parsed handoff on change. No external watcher process needed for full event emission when the Fleet Runner is the runtime.
 - Local UI + "Sync to Web" snapshots are still lightweight (eager apply of events seen by this process). A full in-process Brain (tail the log, serve rich state) is a smaller follow-on slice.
 - No tray/notifications, signed distributables with auto-update, or packaged "run as background runtime only" mode yet.
 
@@ -211,7 +211,7 @@ This is the Fleet Runner becoming real. See "Execution Log" for precise phase st
 Current state (advanced prototype):
 - Packaged native apps (AppImage + deb) via `npm run dist:*` — ready to run after build.
 - x.ai-style UI: black, massive typography, minimal, powerful.
-- Full token connect: paste ck_* token, saves to ~/.config/fleetcrown/fleet-runner-token, "CONNECTED" badge. Auto-syncs projects to web on successful connect.
+- Full token connect: paste ck_* token, saves to ~/.config/loki/fleet-runner-token, "CONNECTED" badge. Auto-syncs projects to web on successful connect.
 - Project selection: click to select (ring highlight), dispatch buttons only for selected, custom command bar (free text) targets selected or first.
 - Runtime: loads projects from your config, uses real home/ decide + renderTaskForAdapter (SSOT), *canonical* `injectIntoTab` (go-to + focus guard + write + Enter + restore; same as daemon/worker; throws on fail so callers can surface crashes).
 - Sync to Web: button (and auto on connect) in UI that, using the token as Bearer, POSTs the current projects + observed state to the hosted /api/control/runtime-state so the web control plane immediately sees this desktop app as the active local runtime for those projects. Web dispatches then target the desktop.
@@ -230,7 +230,7 @@ All changes keep daemon untouched, follow quality (tsc clean, builds pass), and 
 - Full project selection in renderer, custom prompt bar that forwards `queueHead` for `custom` intent (free-text commands work end-to-end with renderTaskForAdapter).
 - Canonical `injectIntoTab` wired (same as worker/daemon); graceful fallback shows the rendered prompt in the UI when zellij not reachable.
 - "Sync to Web" + auto-sync: posts to `/api/control/runtime-state` (Bearer ck_* token) so the hosted control plane sees this desktop instance as the authoritative local runtime. Web dispatches then flow through the normal orchestration path and hit the desktop's local Zellij.
-- Rebrand + polish pass: cockpit → fleetcrown everywhere in desktop, scripts, docs, marketing, home/, packages/agent, legal, thoughts. New `ui-public-download-*` classes + `--public-accent` token to eliminate design violations in the web download surface (zero raw hex / arbitrary text sizes / opacity hacks left in DesktopDownload.tsx).
+- Rebrand + polish pass: cockpit → loki everywhere in desktop, scripts, docs, marketing, home/, packages/agent, legal, thoughts. New `ui-public-download-*` classes + `--public-accent` token to eliminate design violations in the web download surface (zero raw hex / arbitrary text sizes / opacity hacks left in DesktopDownload.tsx).
 - Desktop README and `docs/desktop-app.md` updated with capabilities + explicit known gaps (in-memory vs real emit + watcher).
 - Quality: `npm run desktop:build` clean, root `npx tsc --noEmit` clean, `npm run lint` clean on changed files, `npm run test:home` 89/89, design audit clean for the public surfaces touched.
 - 70+ file follow-up (rebrand + desktop + docs + marketing) prepared for commit as "feat(desktop) + fix(design,lint): ...".

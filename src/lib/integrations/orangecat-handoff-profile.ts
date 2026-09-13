@@ -1,5 +1,5 @@
 /**
- * Fill a FleetCrown project profile from an OrangeCat build handoff.
+ * Fill a Loki project profile from an OrangeCat build handoff.
  *
  * Deterministic first: everything the token states outright (origin URL,
  * client, status, next step) is written without a model. Then, if Groq is

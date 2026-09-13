@@ -2,7 +2,7 @@
 #
 # Spin up a new site: repo → register → box → deploy. One command.
 #
-# Already have a GitHub repo (e.g. FleetCrown kickoff provision)? Use
+# Already have a GitHub repo (e.g. Loki kickoff provision)? Use
 # register-site.sh instead — same CD registration without scaffolding.
 #
 #   new-site.sh <slug> [--title "Name"] [--owner X] [--kind K] [--status S]
@@ -47,7 +47,7 @@
 #     The secret is set per-repo on purpose: GitHub Free does not expose
 #     org-level secrets to PRIVATE repositories, so an org secret alone would
 #     silently cover only half the fleet.
-#   - It creates the FleetCrown project and widget token (provision-widget.ts),
+#   - It creates the Loki project and widget token (provision-widget.ts),
 #     but treats failure as non-fatal: a site without a widget is fixable in a
 #     minute, whereas aborting halfway leaves a half-registered site on the box.
 #
@@ -129,7 +129,7 @@ if grep -v '^#' "$MANIFEST" | cut -d'|' -f3 | tr ',' '\n' | grep -qx "$SLUG.$BAS
 fi
 for reserved in www api app admin support security billing pay wallet login auth account \
                 mail smtp imap ns1 ns2 mx cdn static assets vpn db status staging dev test \
-                preview bridge fleetcrown orangecat supabase solon evig revampit root system; do
+                preview bridge loki orangecat supabase solon evig revampit root system; do
   [ "$SLUG" = "$reserved" ] && { echo "✗ '$SLUG' is reserved (infrastructure or impersonation risk)" >&2; exit 1; }
 done
 
@@ -239,7 +239,7 @@ fi
 # NON-FATAL BY DESIGN. A site without a widget can be fixed in a minute; a
 # scaffold that aborts here leaves a directory, no repo and no register entry,
 # which is the mess this script exists to prevent.
-echo "→ FleetCrown project + widget token"
+echo "→ Loki project + widget token"
 # provision-widget.ts prints the env fragment itself (widget token AND project
 # id) so this script appends rather than reformats. Reformatting one named
 # variable is how the project id would have been dropped in silence: the widget
@@ -255,8 +255,8 @@ WIDGET_TODO=""
 if [ "$DRY" = 1 ]; then
   say "DRY  bash $HERE/provision-widget-on-box.sh $SLUG '$TITLE' $SLUG.$BASE_DOMAIN"
 else
-  # ON THE BOX, not here. Production FleetCrown's database is
-  # 127.0.0.1/fleetcrown — loopback only — so a laptop cannot reach it, and an
+  # ON THE BOX, not here. Production Loki's database is
+  # 127.0.0.1/loki — loopback only — so a laptop cannot reach it, and an
   # agent worktree has no DATABASE_URL at all (.env.local is gitignored and
   # never leaves the main checkout). Running it locally failed on EVERY
   # scaffold, silently, and every agent-created site up to 2026-09-11 went live
@@ -349,15 +349,15 @@ cat <<NEXT
 
   Still yours to do:
 
-  1. Change app/globals.css. It ships in FleetCrown's palette on purpose, so a
-     new site reads as "made with FleetCrown" rather than "generated" — but a
+  1. Change app/globals.css. It ships in Loki's palette on purpose, so a
+     new site reads as "made with Loki" rather than "generated" — but a
      bespoke site that STAYS in it is the one thing this studio must not ship.
 
   2. Commit the register change:
        cd $(dirname "$MANIFEST") && git add apps.conf && git commit
 
   3. If this project is public on OrangeCat, point the day-zero page at it.
-     The page links it as a SECONDARY action (FleetCrown stays the button):
+     The page links it as a SECONDARY action (Loki stays the button):
        echo NEXT_PUBLIC_OC_PROJECT_ID=<uuid> >> $REPO_DIR/.env.selfhost.local
        bash $HERE/deploy.sh $SLUG --env
      There is no OrangeCat project by default — new-site.sh does not create one,

@@ -1,6 +1,6 @@
 # Worktree-per-agent dispatch isolation
 
-**Status:** implemented, opt-in via `FLEETCROWN_WORKTREE_DISPATCH=true` on the runner.
+**Status:** implemented, opt-in via `LOKI_WORKTREE_DISPATCH=true` on the runner.
 **Module:** `src/lib/agent-execution/worktree-workspace.ts` · **wiring:** `desktop/src/main/poller.ts` (dispatch + close_tab) · **net:** `scripts/test/worktree-workspace.ts` (14 checks).
 
 ## The incident this kills
@@ -17,7 +17,7 @@ branch — two agents were sharing one worktree/index/HEAD. Prompt-level rules
 dispatch(tab, dir, runId)                       primary checkout: <dir>
    └─ fresh launch only (never inject-into-live)
         ├─ pruneWorktrees(tab, dir)             sweep clean leftovers
-        ├─ ensureWorktreeWorkspace(...)         ~/.fleetcrown/worktrees/<tab>/<runId>
+        ├─ ensureWorktreeWorkspace(...)         ~/.loki/worktrees/<tab>/<runId>
         │     git worktree add -B fc/<runId> … HEAD
         │     symlink node_modules + .env* from the primary
         └─ prompt := worktreePromptNote(runId) + prompt
@@ -28,11 +28,11 @@ dispatch(tab, dir, runId)                       primary checkout: <dir>
 - **Verification follows the agent.** Transcript/auth checks
   (`waitForAgentGenerating`, `detectAuthFailure`) are cwd-keyed, so the poller
   threads the *effective* dir everywhere (`worktreeByTab` map). The session
-  handoff is tab-keyed (`~/.fleetcrown/sessions/<tab>.md`), so the close loop
+  handoff is tab-keyed (`~/.loki/sessions/<tab>.md`), so the close loop
   (`close-from-session.ts`) is unaffected by the cwd change.
 - **Graceful degradation.** Any failure (not a git repo, git missing, disk
   full) logs and launches in the primary dir — the flag can only add isolation,
-  never break a dispatch. Mirrors the `FLEETCROWN_BOX_PREPARE` precedent.
+  never break a dispatch. Mirrors the `LOKI_BOX_PREPARE` precedent.
 - **Cleanup never destroys work.** `close_tab` prunes only *clean* worktrees:
   no uncommitted changes AND no commits unreachable from every other ref
   (pushed/merged work counts as shared). Dirty worktrees outlive their session
@@ -48,7 +48,7 @@ dispatches. What changed is only *where the agent's index lives*.
 
 ## Phase 2 — same-project parallel dispatch (implemented, opt-in)
 
-**Flag:** `FLEETCROWN_PARALLEL_DISPATCH=true` on the SERVER (flip only after the
+**Flag:** `LOKI_PARALLEL_DISPATCH=true` on the SERVER (flip only after the
 worktree flag has been dogfooded). **SSOT:** `src/lib/run-tab.ts`.
 
 When a project is busy, instead of queueing (`queuedBehind`) the dispatch fires
@@ -77,7 +77,7 @@ surface in Activity/runs, not /control cards. Net: `scripts/test/run-tab.ts`.
 ## Deliberate limits
 
 1. **Both flags default off** — worktree isolation first, then parallelism.
-2. **Box runner:** `FLEETCROWN_BOX_PREPARE` resolves its clone first; combining
+2. **Box runner:** `LOKI_BOX_PREPARE` resolves its clone first; combining
    both flags worktrees the box clone only when the box dir exists locally —
    fine, but the flags target the laptop runner first.
 3. **`switch_agent` / manual `launch_agent` stay on the primary** — isolation is

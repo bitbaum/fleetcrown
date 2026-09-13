@@ -3,7 +3,7 @@ import { users, accounts } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 
 /**
- * Find (or create) the FleetCrown user behind an X account, keyed by the X
+ * Find (or create) the Loki user behind an X account, keyed by the X
  * numeric user id. The link lives in the `accounts` table under
  * provider="twitter" — the same providerAccountId the OAuth2 flow used — so a
  * user who logged in via X before keeps the same account on the 1.0a path.

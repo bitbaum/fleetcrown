@@ -173,10 +173,10 @@ export async function runHermesTask(input: {
     }
 
     // Preserve the work: commit on a branch, push, open a PR (never auto-merge).
-    await run("git", ["-C", dir, "config", "user.email", "runner@fleetcrown.local"], {
+    await run("git", ["-C", dir, "config", "user.email", "runner@loki.local"], {
       timeout: 10_000,
     });
-    await run("git", ["-C", dir, "config", "user.name", "FleetCrown Hosted Runner"], {
+    await run("git", ["-C", dir, "config", "user.name", "Loki Hosted Runner"], {
       timeout: 10_000,
     });
     await run("git", ["-C", dir, "checkout", "-b", branch], { timeout: EXEC_TIMEOUT_MS });
@@ -197,7 +197,7 @@ export async function runHermesTask(input: {
         head: branch,
         base,
         title: `hermes: ${task.slice(0, 72)}`,
-        body: `Autonomous change by the FleetCrown hosted runner (Hermes) for an offline dispatch.\n\n**Task:** ${task}\n\n**Agent summary:**\n${output.slice(0, 4000)}\n\n_Review before merging — this was produced unattended._`,
+        body: `Autonomous change by the Loki hosted runner (Hermes) for an offline dispatch.\n\n**Task:** ${task}\n\n**Agent summary:**\n${output.slice(0, 4000)}\n\n_Review before merging — this was produced unattended._`,
       });
       if (url) prUrl = url;
     }

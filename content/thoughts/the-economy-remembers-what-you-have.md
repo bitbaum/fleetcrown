@@ -3,7 +3,7 @@ title: The Economy Remembers What You Have, Not What You Need
 summary: Every marketplace ever built indexes supply and lets demand evaporate in a search box. That asymmetry is a quiet bias toward the people who already have — and it lives, in most systems, in a single hardcoded list. This is what changed when we taught OrangeCat to remember need: discovery flips from pull to push, the person who wished for a thing is told when it exists, and an unmet need stops being a dead end and becomes a thing to build.
 excerpt: There is one technical fact with a moral shape sitting at the center of almost every marketplace: the system indexes what people have and drops what people need. Fixing it took adding one word to an array.
 publishedAt: 2026-07-22
-tags: abundance-economy,discovery,orangecat,fleetcrown,bitcoin,first-principles
+tags: abundance-economy,discovery,orangecat,loki,bitcoin,first-principles
 featured: false
 author: Loki
 readingTimeMin: 9
@@ -45,7 +45,7 @@ Here is where it stops being about search and starts being about the whole point
 
 Once a need is a standing, indexed object, an *unmet* one — a need that no existing supply matches — is no longer a place where the story ends. It is a signal. The economy can say "these people need a thing that doesn't exist yet," and a builder can go make it.
 
-This is the seam between our two products. OrangeCat is where needs are posted; FleetCrown is where things get built by a fleet of agents. We wired the demand straight into the build surface: FleetCrown's assistant can now query the economy by meaning and answer "what should I build?" with real, current need instead of guesses. Asked whether anyone was looking for art supplies, it named the actual open wishlist, found a related art project, and — because it also knows the operator's own projects — proposed concrete ways to meet the demand and list the result back. At which point the two-sided matcher introduces it to whoever wished for it.
+This is the seam between our two products. OrangeCat is where needs are posted; Loki is where things get built by a fleet of agents. We wired the demand straight into the build surface: Loki can now query the economy by meaning and answer "what should I build?" with real, current need instead of guesses. Asked whether anyone was looking for art supplies, it named the actual open wishlist, found a related art project, and — because it also knows the operator's own projects — proposed concrete ways to meet the demand and list the result back. At which point the two-sided matcher introduces it to whoever wished for it.
 
 That is the loop, and every link of it is now running: a need is posted, indexed, found to be unmet, built for, published, matched back to the person who needed it, and settled in Bitcoin — which funds the next build.
 

@@ -1,6 +1,6 @@
 // Cron target — model-rot detector.
 //
-// On 2026-08-18 Groq removed `llama-3.3-70b-versatile`. FleetCrown kept asking
+// On 2026-08-18 Groq removed `llama-3.3-70b-versatile`. Loki kept asking
 // for it for EIGHT DAYS: the frontier digest, the proposal generator, activity
 // digests, calendar extraction and voice-adjacent paths all 404'd, and nothing
 // said so. `npm run check:models` already answered the question — but it was a
@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
         title: `${broken} pinned AI model${broken === 1 ? " is" : "s are"} unusable`,
         description:
           `${rotted} removed from the provider, ${refused} still listed but refusing the request ` +
-          `FleetCrown builds. Every feature below is failing now, silently:\n${detail}\n\n` +
+          `Loki builds. Every feature below is failing now, silently:\n${detail}\n\n` +
           `Fix: a removed id needs a live one in the constant it comes from; a refused id needs the ` +
           `request changed — the provider's message above names the parameter. Then re-run ` +
           `\`npm run check:models\`.`,
@@ -85,7 +85,7 @@ export async function GET(req: NextRequest) {
         if (tg) {
           void sendTelegramMessage(
             tg,
-            `🚨 FleetCrown: ${broken} pinned AI model id(s) unusable ` +
+            `🚨 Loki: ${broken} pinned AI model id(s) unusable ` +
               `(${rotted} gone, ${refused} refusing our request).\n${detail}\n\n` +
               `These features are dark until it is fixed.`,
           );

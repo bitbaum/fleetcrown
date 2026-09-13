@@ -1,4 +1,4 @@
-# FleetCrown-owned Caddy blocks on the bitbaum box (/etc/caddy/Caddyfile).
+# Loki-owned Caddy blocks on the bitbaum box (/etc/caddy/Caddyfile).
 # Captured here for recoverability + audit — the box Caddyfile is handcrafted
 # and NOT auto-synced by sync-infra.sh (which owns the other apps' vhosts).
 # If you change the live Caddyfile, update this snippet too.
@@ -31,11 +31,11 @@ bridge.orangecat.ch {
 	}
 }
 
-# FleetCrown app (4002) — mostly regular pages (compressible), so `encode` is
+# Loki app (4002) — mostly regular pages (compressible), so `encode` is
 # a deliberate keep; the /control peek SSE tolerates it because flush_interval
 # -1 forces per-frame flushing. The load-bearing presence SSE runs on the
 # bridge (4001) above, which is correctly encode-free.
-fleetcrown.orangecat.ch {
+loki.orangecat.ch {
 	encode zstd gzip
 	reverse_proxy 127.0.0.1:4002 {
 		flush_interval -1

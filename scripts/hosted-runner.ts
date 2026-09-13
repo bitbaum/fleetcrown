@@ -145,16 +145,15 @@ async function tickRetireSite(userId: string, cmdId: string, payload: unknown): 
   const confirm = (payload as { confirm?: unknown })?.confirm === true;
 
   if (!retireFactoryEnabled()) {
-    const msg = "site factory disabled on this runner (set FLEETCROWN_SITE_FACTORY=1 to arm it)";
+    const msg = "site factory disabled on this runner (set LOKI_SITE_FACTORY=1 to arm it)";
     console.warn(`[hosted-runner] ${msg}`);
     await markCommandExecuted(cmdId, userId, { ok: false, text: msg });
     return true;
   }
 
-  const scriptPath = process.env.FLEETCROWN_RETIRE_SITE_SCRIPT;
+  const scriptPath = process.env.LOKI_RETIRE_SITE_SCRIPT;
   if (!scriptPath) {
-    const msg =
-      "FLEETCROWN_RETIRE_SITE_SCRIPT is not set; refusing to guess where retire-site.sh lives";
+    const msg = "LOKI_RETIRE_SITE_SCRIPT is not set; refusing to guess where retire-site.sh lives";
     console.warn(`[hosted-runner] ${msg}`);
     await markCommandExecuted(cmdId, userId, { ok: false, text: msg });
     return true;
@@ -186,15 +185,15 @@ async function tickNewSite(userId: string, cmdId: string, payload: unknown): Pro
   if (!siteFactoryEnabled()) {
     // Not an error in the payload — this runner simply is not the one allowed
     // to create sites. Say which switch, so the answer is not a guess.
-    const msg = "site factory disabled on this runner (set FLEETCROWN_SITE_FACTORY=1 to arm it)";
+    const msg = "site factory disabled on this runner (set LOKI_SITE_FACTORY=1 to arm it)";
     console.warn(`[hosted-runner] ${msg}`);
     await markCommandExecuted(cmdId, userId, { ok: false, text: msg });
     return true;
   }
 
-  const scriptPath = process.env.FLEETCROWN_NEW_SITE_SCRIPT;
+  const scriptPath = process.env.LOKI_NEW_SITE_SCRIPT;
   if (!scriptPath) {
-    const msg = "FLEETCROWN_NEW_SITE_SCRIPT is not set; refusing to guess where new-site.sh lives";
+    const msg = "LOKI_NEW_SITE_SCRIPT is not set; refusing to guess where new-site.sh lives";
     console.warn(`[hosted-runner] ${msg}`);
     await markCommandExecuted(cmdId, userId, { ok: false, text: msg });
     return true;
@@ -232,7 +231,7 @@ async function tick(userId: string): Promise<boolean> {
   }
 
   // Taking a site down carries no projectKey either: the slug IS the address,
-  // and by the time this runs the FleetCrown project may already be gone.
+  // and by the time this runs the Loki project may already be gone.
   if (cmd.type === "hosted_retire_site") {
     return await tickRetireSite(userId, cmd.id, cmd.payload);
   }
@@ -379,11 +378,11 @@ async function drain(userId: string): Promise<number> {
 
 async function main() {
   const once = process.argv.includes("--once");
-  // Phase 0 serves the FleetCrown product owner's projects. Multi-tenant
+  // Phase 0 serves the Loki product owner's projects. Multi-tenant
   // scheduling across users is Phase 3.
   const target = await getSelfImprovementTarget();
   if (!target) {
-    console.error("[hosted-runner] no fleetcrown owner resolved — nothing to serve");
+    console.error("[hosted-runner] no loki owner resolved — nothing to serve");
     process.exit(1);
   }
   const userId = target.userId;

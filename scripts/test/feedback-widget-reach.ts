@@ -1,4 +1,4 @@
-// A user of FleetCrown must be able to report a bug in FleetCrown.
+// A user of Loki must be able to report a bug in Loki.
 //
 // The widget was scoped to eleven public marketing routes, on the stated
 // grounds that "in-app feedback already has Loki". That was not true:

@@ -71,7 +71,7 @@ export default async function FrontierPage() {
           <h1 className="ui-public-doc-title">The Frontier</h1>
           <p className="ui-public-doc-subtitle">
             The latest and most significant developments in AI, robotics, and frontier technology —
-            distilled daily. FleetCrown reads the frontier so its fleet can build on it.
+            distilled daily. Loki reads the frontier so its fleet can build on it.
           </p>
         </div>
 

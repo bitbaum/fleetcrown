@@ -4,7 +4,7 @@
  * CR submit semantics) — this writes bytes VERBATIM, no CR, no prompt state.
  *
  * Routing mirrors tab-inject:
- *   - Same box as a live FleetCrown-owned PTY (local dev) → executor directly.
+ *   - Same box as a live Loki-owned PTY (local dev) → executor directly.
  *   - Otherwise (prod: web app on Hetzner, runner on the user's machine) →
  *     publish a non-durable fast-lane event to the bridge; the runner writes it
  *     into its PTY. NOT pending_commands — a DB row per keystroke is catastrophic.

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # install-hetzner-crons.sh — install the scheduled-job timers on the Hetzner box.
 #
-# The box (fleetcrown.orangecat.ch, systemd fleetcrown-app on 127.0.0.1:4002)
+# The box (loki.orangecat.ch, systemd loki-app on 127.0.0.1:4002)
 # runs the /api/crons/* janitors + email canary via systemd timers. Schedules are in UTC
 # (the box is Etc/UTC).
 #
@@ -19,10 +19,10 @@ set -euo pipefail
 
 # Runner: reads CRON_SECRET from the app .env and calls the local app. The
 # secret never leaves the box and isn't duplicated into the unit files.
-cat > /opt/fleetcrown/fc-cron.sh <<'SH'
+cat > /opt/loki/fc-cron.sh <<'SH'
 #!/usr/bin/env bash
 set -euo pipefail
-ENV_FILE=/opt/fleetcrown/app/.env
+ENV_FILE=/opt/loki/app/.env
 SECRET="$(grep -m1 '^CRON_SECRET=' "$ENV_FILE" | sed 's/^CRON_SECRET=//; s/^"//; s/"$//' | tr -d '\r')"
 NAME="$1"
 # Log the RESPONSE BODY, not just the status. These janitors report what they
@@ -46,7 +46,7 @@ NAME="$1"
 BODY_FILE="$(mktemp)"
 trap 'rm -f "$BODY_FILE"' EXIT
 rc=0
-# fleetcrown-app.service documents a real window on every deploy restart where
+# loki-app.service documents a real window on every deploy restart where
 # :4002 is "bound but refusing" (SIGTERM stops answering, then sits refused
 # until SIGKILL frees the port for the new process — measured up to ~13s).
 # Any *:15/*:30/*:45 cron tick that lands inside that window used to fail the
@@ -68,17 +68,17 @@ done
 echo "fc-cron ${NAME}: $(head -c 2000 "$BODY_FILE" | tr -d '\n')"
 exit "$rc"
 SH
-chmod +x /opt/fleetcrown/fc-cron.sh
+chmod +x /opt/loki/fc-cron.sh
 
 cat > /etc/systemd/system/fc-cron@.service <<'SVC'
 [Unit]
-Description=FleetCrown scheduled job %i
-After=network-online.target fleetcrown-app.service
+Description=Loki scheduled job %i
+After=network-online.target loki-app.service
 Wants=network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=/opt/fleetcrown/fc-cron.sh %i
+ExecStart=/opt/loki/fc-cron.sh %i
 SVC
 
 # Times are "HH:MM" (daily) or "*:MM" (hourly) — both expand to OnCalendar=*-*-* <val>:00.
@@ -86,7 +86,7 @@ declare -A SCHED=( [prune-debug-logs]="03:00" [nudge-idle]="04:00" [prune-agent-
 for name in "${!SCHED[@]}"; do
   cat > "/etc/systemd/system/fc-cron@${name}.timer" <<TIMER
 [Unit]
-Description=FleetCrown cron timer: ${name}
+Description=Loki cron timer: ${name}
 
 [Timer]
 OnCalendar=*-*-* ${SCHED[$name]}:00
@@ -105,6 +105,6 @@ for name in "${!SCHED[@]}"; do
   systemctl enable --now "fc-cron@${name}.timer" >/dev/null 2>&1
 done
 
-echo "✓ installed FleetCrown cron timers (UTC):"
+echo "✓ installed Loki cron timers (UTC):"
 systemctl list-timers 'fc-cron@*' --all --no-pager | grep -E 'fc-cron|NEXT' || true
 REMOTE

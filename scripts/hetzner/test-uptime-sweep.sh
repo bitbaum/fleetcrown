@@ -146,7 +146,7 @@ done <<<"$(extra_targets)"
 # exactly as unwatched as they were before this script existed. Asserted BY
 # NAME rather than by counting: the list now holds two categories, and a count
 # would go green if one of the three were swapped for something else entirely.
-for svc in bridge fleetcrown orangecat; do
+for svc in bridge loki orangecat; do
   extra_targets | grep -q "^${svc}	" \
     && ok "$svc is covered — apps.conf documents it as deliberately absent" \
     || no "$svc is in no manifest and now in no hand-list either"

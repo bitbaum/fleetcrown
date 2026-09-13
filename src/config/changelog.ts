@@ -5,7 +5,7 @@
  * (newest) is treated as "current"; the rest render as a vertical timeline.
  *
  * Editing rules:
- *  - One entry per `fleet-runner-vX.Y.Z` tag pushed to fleetcrown-releases.
+ *  - One entry per `fleet-runner-vX.Y.Z` tag pushed to loki-releases.
  *  - `date` is the GitHub release publishedAt (UTC, ISO 8601).
  *  - `highlights` is 1–6 short user-facing bullets, written as plain English
  *    sentences ending with a period. No commit-message slang ("refactor:",
@@ -33,7 +33,7 @@ export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
     tag: "fleet-runner-v0.8.23",
     date: "2026-09-12T18:00:00Z",
     highlights: [
-      'The runner now says WHY a quiet agent is quiet. After 90 seconds of no output from a dispatched run it asks the same question the dispatch path already asks — is this agent signed in? — and puts the answer on the next progress beat. FleetCrown\'s feedback row then reads "Needs you to sign in" with a link straight to that terminal, instead of "the agent never reported any output".',
+      'The runner now says WHY a quiet agent is quiet. After 90 seconds of no output from a dispatched run it asks the same question the dispatch path already asks — is this agent signed in? — and puts the answer on the next progress beat. Loki\'s feedback row then reads "Needs you to sign in" with a link straight to that terminal, instead of "the agent never reported any output".',
       "A blocked agent prints nothing, so a beat is now allowed through on silence that carries a reason; silence alone still stays quiet, and the rate stays one beat per window.",
     ],
     breaking: [],
@@ -49,7 +49,7 @@ export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
     ],
     breaking: [],
     notes:
-      "Projects FleetCrown set up on the cloud builder are already routed there, so this is the belt to that braces: if such a dispatch reaches a laptop anyway, the failure names its real cause in one line instead of looking like a broken agent.",
+      "Projects Loki set up on the cloud builder are already routed there, so this is the belt to that braces: if such a dispatch reaches a laptop anyway, the failure names its real cause in one line instead of looking like a broken agent.",
   },
   {
     version: "0.8.21",
@@ -61,7 +61,7 @@ export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
     ],
     breaking: [],
     notes:
-      "Server side ships in the same FleetCrown deploy (the box runner restarts once idle). A desktop Fleet Runner on 0.8.20 keeps working; its runs simply show the pre-heartbeat phases until it updates.",
+      "Server side ships in the same Loki deploy (the box runner restarts once idle). A desktop Fleet Runner on 0.8.20 keeps working; its runs simply show the pre-heartbeat phases until it updates.",
   },
   {
     version: "0.8.20",
@@ -69,7 +69,7 @@ export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
     date: "2026-09-11T10:00:00Z",
     highlights: [
       "The retired focus_tab command is now refused at the door: it no longer exists in the command contract, so nothing can enqueue it and the runner has no case for it.",
-      "Runner and desktop descriptions say what the app is now: the FleetCrown desktop agent runtime that owns the agent terminals on this computer.",
+      "Runner and desktop descriptions say what the app is now: the Loki desktop agent runtime that owns the agent terminals on this computer.",
     ],
     breaking: [],
     notes:
@@ -86,7 +86,7 @@ export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
       "The Restoration section of Settings → Agent is gone with the cold-start it configured.",
     ],
     breaking: [
-      "FLEETCROWN_RUNNER_PTY is ignored: there is no zellij mode to force any more. Agents that were driven in your own zellij tabs are not seen by Fleet Runner; dispatch them once to move them into an owned terminal.",
+      "LOKI_RUNNER_PTY is ignored: there is no zellij mode to force any more. Agents that were driven in your own zellij tabs are not seen by Fleet Runner; dispatch them once to move them into an owned terminal.",
       "The focus_tab command is retired. Watch the agent in the web terminal instead.",
     ],
     notes:
@@ -99,7 +99,7 @@ export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
     highlights: [
       "Feedback implementation now resumes Claude's durable native session instead of treating a terminal tab name as the identity of the work.",
       "Watch links follow the project to whichever runner owns its live session, without forcing Cloud or exposing a tab name in the URL.",
-      "A runner restart no longer makes FleetCrown kill a live terminal merely because an in-memory session map was lost.",
+      "A runner restart no longer makes Loki kill a live terminal merely because an in-memory session map was lost.",
     ],
     breaking: [],
     notes:
@@ -246,7 +246,7 @@ export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
     ],
     breaking: [],
     notes:
-      "Makes the owned-PTY execution from 0.8.2 the default (set FLEETCROWN_RUNNER_PTY=false to force Zellij). This removes the structural cause of the launch timeouts: launching no longer depends on an attached Zellij client.",
+      "Makes the owned-PTY execution from 0.8.2 the default (set LOKI_RUNNER_PTY=false to force Zellij). This removes the structural cause of the launch timeouts: launching no longer depends on an attached Zellij client.",
   },
   {
     version: "0.8.2",
@@ -255,11 +255,11 @@ export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
     highlights: [
       "Fleet Runner can now run each agent in a terminal it owns directly, instead of driving your Zellij by name — which is what made dispatch into some projects time out when the session wasn't attached.",
       "Watch any owned-terminal agent live from the web app, in full color with scrollback (a true byte stream, not a once-a-second screenshot).",
-      "Opt-in for now: set FLEETCROWN_RUNNER_PTY=true to switch a project's agents to owned terminals; everything else keeps using Zellij until you flip it.",
+      "Opt-in for now: set LOKI_RUNNER_PTY=true to switch a project's agents to owned terminals; everything else keeps using Zellij until you flip it.",
     ],
     breaking: [],
     notes:
-      "First step of moving agent execution off Zellij name-puppeting onto FleetCrown-owned PTYs (docs/architecture/agent-execution-platform.md). Ships node-pty in the runner (load-verified in the packaged build) but stays behind a flag so this release behaves exactly like 0.8.1 until you opt a project in.",
+      "First step of moving agent execution off Zellij name-puppeting onto Loki-owned PTYs (docs/architecture/agent-execution-platform.md). Ships node-pty in the runner (load-verified in the packaged build) but stays behind a flag so this release behaves exactly like 0.8.1 until you opt a project in.",
   },
   {
     version: "0.8.1",
@@ -274,7 +274,7 @@ export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
     ],
     breaking: [],
     notes:
-      "The reliability release for the dispatch loop (Control → your local Zellij). Pairs with the web app's new Terminal tab, real Activity timeline, sidebar Light/Dark/Auto switch, and the dark-first Geist redesign deployed on fleetcrown.orangecat.ch.",
+      "The reliability release for the dispatch loop (Control → your local Zellij). Pairs with the web app's new Terminal tab, real Activity timeline, sidebar Light/Dark/Auto switch, and the dark-first Geist redesign deployed on loki.orangecat.ch.",
   },
   {
     version: "0.8.0",
@@ -288,7 +288,7 @@ export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
     ],
     breaking: [],
     notes:
-      "Mostly a web UI + API release — deploys immediately on fleetcrown.orangecat.ch. Fleet Runner v0.8.0 picks up the improved remote switch_agent poller when you next update the desktop app; until then, cloud-queued switches still work on the existing runner.",
+      "Mostly a web UI + API release — deploys immediately on loki.orangecat.ch. Fleet Runner v0.8.0 picks up the improved remote switch_agent poller when you next update the desktop app; until then, cloud-queued switches still work on the existing runner.",
   },
   {
     version: "0.7.9",
@@ -395,7 +395,7 @@ export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
     ],
     breaking: [],
     notes:
-      "Closes the biggest visibility gap in /control: you could see tab names and state chips but had to alt-tab into Zellij to see what an agent was actually saying. Peek brings the agent's view into FleetCrown itself.",
+      "Closes the biggest visibility gap in /control: you could see tab names and state chips but had to alt-tab into Zellij to see what an agent was actually saying. Peek brings the agent's view into Loki itself.",
   },
   {
     version: "0.7.1",
@@ -403,7 +403,7 @@ export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
     date: "2026-06-06T12:51:05Z",
     highlights: [
       "Reverted the v0.7.0 'bundled-renderer-as-primary' boot flip.",
-      "Fleet Runner opens fleetcrown.orangecat.ch inside Electron again — the same UI you know from the browser.",
+      "Fleet Runner opens loki.orangecat.ch inside Electron again — the same UI you know from the browser.",
       "Updated download CTA on the marketing site to point at the latest release dynamically.",
     ],
     breaking: [],
@@ -470,7 +470,7 @@ export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
     highlights: [
       "Splash screen on launch (brand mark + spinner) — eliminates the Chromium-white flash before the web shell paints.",
       "Persisted window bounds across launches (geometry + maximized state).",
-      "Deep-link auth: clicking `fleetcrown://auth?token=...` from the web app hands a fresh token to the desktop without copy-paste.",
+      "Deep-link auth: clicking `loki://auth?token=...` from the web app hands a fresh token to the desktop without copy-paste.",
     ],
     breaking: [],
     notes: "",
@@ -481,7 +481,7 @@ export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
 export const CURRENT_RELEASE: ReleaseEntry = FLEET_RUNNER_RELEASES[0];
 
 /**
- * FleetCrown platform changelog — user-facing changes to the hosted web
+ * Loki platform changelog — user-facing changes to the hosted web
  * platform (as opposed to Fleet Runner desktop releases above). The platform
  * ships continuously, so entries are dated milestones, not versions: add one
  * when a feature is complete and verified in production, not per deploy.
@@ -517,7 +517,7 @@ export const PLATFORM_CHANGELOG: PlatformChangeEntry[] = [
     highlights: [
       "One script tag puts a feedback button on any site you run. Visitors point at the exact element that's broken; reports land in a per-project inbox.",
       "One click dispatches an agent to fix a report — with an optional instruction of yours prepended to the prompt.",
-      "Remote control without deploys: pause, resume, rotate, or revoke the widget from FleetCrown and the customer site follows within seconds. Live status comes from a real heartbeat, not install intent.",
+      "Remote control without deploys: pause, resume, rotate, or revoke the widget from Loki and the customer site follows within seconds. Live status comes from a real heartbeat, not install intent.",
       "Install and uninstall are one click too: an agent adds or removes the embed in your repo and ships it through your normal review flow.",
       "At volume, Synthesize clusters new reports into structured briefs, and a daily digest files themes as draft actions on Approvals — nothing executes without your approval.",
       "The loop closes itself: when a dispatched fix deploys, the report auto-resolves and the visitor who left an email hears their feedback shipped.",

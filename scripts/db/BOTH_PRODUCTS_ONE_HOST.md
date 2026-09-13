@@ -1,7 +1,7 @@
 # Both products, one Postgres host
 
 A single Hetzner box (the `bitbaum` box, `167.233.22.31`) hosts both
-FleetCrown and OrangeCat's Postgres databases as separate `DATABASE` rows
+Loki and OrangeCat's Postgres databases as separate `DATABASE` rows
 inside the same Postgres instance. This is the current production setup. This
 doc layers on top of `SETUP_HETZNER.md` — the box itself is the same; only the
 role + database setup differs.
@@ -31,17 +31,17 @@ that's the signal to split.
 ```bash
 sudo -u postgres psql <<'SQL'
 -- Two roles, two databases. Each role owns and can only access its own DB.
-CREATE ROLE fleetcrown WITH LOGIN PASSWORD 'CHANGE_ME_FLEETCROWN';
+CREATE ROLE loki WITH LOGIN PASSWORD 'CHANGE_ME_LOKI';
 CREATE ROLE orangecat  WITH LOGIN PASSWORD 'CHANGE_ME_ORANGECAT';
 
-CREATE DATABASE fleetcrown OWNER fleetcrown;
+CREATE DATABASE loki OWNER loki;
 CREATE DATABASE orangecat  OWNER orangecat;
 
 -- Belt-and-braces revoke: even the SUPERUSER's connections from outside
 -- shouldn't touch the other product's DB. (`pg_hba.conf` enforces this
 -- more strictly; this is a second layer.)
-REVOKE ALL ON DATABASE fleetcrown FROM orangecat;
-REVOKE ALL ON DATABASE orangecat  FROM fleetcrown;
+REVOKE ALL ON DATABASE loki FROM orangecat;
+REVOKE ALL ON DATABASE orangecat  FROM loki;
 SQL
 ```
 
@@ -52,8 +52,8 @@ Append to `/etc/postgresql/17/main/pg_hba.conf`:
 ```
 # Each product role can only authenticate to its own database.
 # Order matters — first matching line wins.
-hostssl fleetcrown fleetcrown 0.0.0.0/0 scram-sha-256
-hostssl fleetcrown fleetcrown ::/0      scram-sha-256
+hostssl loki loki 0.0.0.0/0 scram-sha-256
+hostssl loki loki ::/0      scram-sha-256
 hostssl orangecat  orangecat  0.0.0.0/0 scram-sha-256
 hostssl orangecat  orangecat  ::/0      scram-sha-256
 # Reject all other combinations.
@@ -66,8 +66,8 @@ hostssl all all ::/0      reject
 ## Connection URLs
 
 ```
-# FleetCrown app DATABASE_URL
-postgresql://fleetcrown:CHANGE_ME_FLEETCROWN@<host>:5432/fleetcrown?sslmode=require
+# Loki app DATABASE_URL
+postgresql://loki:CHANGE_ME_LOKI@<host>:5432/loki?sslmode=require
 
 # OrangeCat app DATABASE_URL
 postgresql://orangecat:CHANGE_ME_ORANGECAT@<host>:5432/orangecat?sslmode=require
@@ -92,9 +92,9 @@ To stand up another plain-Postgres app's database on the shared instance:
    `restore-to-target.sh` verifies row counts against the manifest and halts on
    mismatch.
 4. **Point the app at `DATABASE_URL`** in its env on the box, then redeploy
-   (`scripts/deploy-hetzner.sh` for FleetCrown; per-app deploy script otherwise).
+   (`scripts/deploy-hetzner.sh` for Loki; per-app deploy script otherwise).
 
-> Historical note: FleetCrown migrated off Neon and OrangeCat off managed
+> Historical note: Loki migrated off Neon and OrangeCat off managed
 > Supabase onto this box on 2026-06-12. That one-time migration (and the now
 > self-hosted Supabase stack that serves OrangeCat's auth/storage) is recorded
 > in `docs/infrastructure/hetzner-migration.md`.
@@ -103,7 +103,7 @@ To stand up another plain-Postgres app's database on the shared instance:
 
 | Product | Auth system | Notes |
 |---|---|---|
-| FleetCrown | Auth.js v5 with GitHub OAuth | session tables in `public` on the `fleetcrown` host DB |
+| Loki | Auth.js v5 with GitHub OAuth | session tables in `public` on the `loki` host DB |
 | OrangeCat | Supabase Auth (gotrue) | runs in the **self-hosted Supabase stack** at `supabase.orangecat.ch` (own PG15 container) — not a managed Supabase project |
 
 ## Backups
@@ -111,7 +111,7 @@ To stand up another plain-Postgres app's database on the shared instance:
 One cron for both databases. Add to root crontab on the Hetzner box:
 
 ```
-0 2 * * * sudo -u postgres pg_dump fleetcrown | gzip > /backups/fleetcrown-$(date +\%F).sql.gz
+0 2 * * * sudo -u postgres pg_dump loki | gzip > /backups/loki-$(date +\%F).sql.gz
 5 2 * * * sudo -u postgres pg_dump orangecat  | gzip > /backups/orangecat-$(date +\%F).sql.gz
 0 3 * * * find /backups -name '*-*.sql.gz' -mtime +30 -delete
 0 4 * * 0 rsync -a /backups/ <off-box-destination>:/backups-mirror/  # weekly off-box sync

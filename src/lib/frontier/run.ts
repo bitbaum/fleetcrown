@@ -92,7 +92,7 @@ export async function runFrontierProposals(digest: FrontierDigestRow): Promise<R
   if (!target) return { skipped: "no-target", drafted: 0, surfaced: 0 };
 
   const [activeGoals, consideredTitles] = await Promise.all([
-    // Scope to the FleetCrown entity so grounding uses engineering gaps, not the
+    // Scope to the Loki entity so grounding uses engineering gaps, not the
     // owner's unrelated personal life-OS goals (financial independence, burn, …).
     listActiveGoalsWithMilestones(target.userId, target.entityId),
     listConsideredProposalTitles(target.userId),

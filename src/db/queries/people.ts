@@ -1,4 +1,4 @@
-import { DEFAULT_USER_EXTERNAL_ID, SOURCE_FLEETCROWN_UI } from "@/lib/constants";
+import { DEFAULT_USER_EXTERNAL_ID, SOURCE_LOKI_UI } from "@/lib/constants";
 import {
   ENTITY_TYPE,
   SORT_MODE,
@@ -295,7 +295,7 @@ export async function createPerson(
       name,
       type: ENTITY_TYPE.PERSON,
       description: description || null,
-      source: source || SOURCE_FLEETCROWN_UI,
+      source: source || SOURCE_LOKI_UI,
       externalId: externalId || null,
     })
     .returning({ id: entities.id, name: entities.name });

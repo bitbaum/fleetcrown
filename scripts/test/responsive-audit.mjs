@@ -29,7 +29,7 @@
  * AUTH
  *
  * Needs a session. Resolution order:
- *   FLEETCROWN_SESSION_TOKEN  — set it and nothing else is needed
+ *   LOKI_SESSION_TOKEN  — set it and nothing else is needed
  *   AUDIT_DATABASE_URL        — mints a JWT itself (see scripts/db-tunnel.sh
  *                               for reaching a firewalled Postgres over SSH)
  * Deliberately NOT reusing print-session-token.ts: that resolves a DIRECT box
@@ -44,7 +44,7 @@ import { config } from "dotenv";
 
 config({ path: ".env.local", quiet: true });
 
-const BASE = (process.env.AUDIT_BASE ?? "https://fleetcrown.orangecat.ch").replace(/\/$/, "");
+const BASE = (process.env.AUDIT_BASE ?? "https://loki.orangecat.ch").replace(/\/$/, "");
 const OUT = ".tmp/responsive-audit";
 /** Optional CSS injected into every page before measuring — see the call site. */
 const EXTRA_CSS = process.env.AUDIT_EXTRA_CSS
@@ -103,7 +103,7 @@ const VIEWPORTS = [
  * reachable is a rule with holes exactly where nobody looked — which is the
  * comment above this list, so the list has to earn it.
  *
- * FLEETCROWN_PRIVATE_ZONE_COOKIE (scripts/test/print-private-zone-cookie.ts)
+ * LOKI_PRIVATE_ZONE_COOKIE (scripts/test/print-private-zone-cookie.ts)
  * supplies the unlock. Without it these pages still render — as their lock
  * screen — so the audit degrades to what it measured before rather than failing.
  */
@@ -140,7 +140,7 @@ function cookieName() {
 
 /** Mint a session JWT from an explicitly-supplied Postgres URL. */
 async function mintToken() {
-  const fromEnv = process.env.FLEETCROWN_SESSION_TOKEN?.trim();
+  const fromEnv = process.env.LOKI_SESSION_TOKEN?.trim();
   if (fromEnv) return fromEnv;
 
   const dbUrl = process.env.AUDIT_DATABASE_URL?.trim();
@@ -466,7 +466,7 @@ async function main() {
   const token = await mintToken();
   if (!token) {
     console.error(
-      "✗ no session. Set FLEETCROWN_SESSION_TOKEN, or AUDIT_DATABASE_URL + AUTH_SECRET.\n" +
+      "✗ no session. Set LOKI_SESSION_TOKEN, or AUDIT_DATABASE_URL + AUTH_SECRET.\n" +
         "  For a firewalled Postgres: bash scripts/db-tunnel.sh   (prints the URL to use)",
     );
     process.exit(2);
@@ -494,7 +494,7 @@ async function main() {
         secure: BASE.startsWith("https://"),
       },
     ];
-    const pz = process.env.FLEETCROWN_PRIVATE_ZONE_COOKIE?.trim();
+    const pz = process.env.LOKI_PRIVATE_ZONE_COOKIE?.trim();
     const pzEq = pz ? pz.indexOf("=") : -1;
     if (pzEq > 0) {
       cookies.push({

@@ -66,16 +66,16 @@ export const authConfig = {
         // Edge runtime — inline the alias logic instead of importing to keep the bundle tiny.
         const daemonToken =
           process.env.APP_DAEMON_TOKEN ??
-          process.env.FLEETCROWN_DAEMON_TOKEN ??
+          process.env.LOKI_DAEMON_TOKEN ??
           process.env.COCKPIT_DAEMON_TOKEN;
         const legacyAllowed =
           (process.env.APP_ALLOW_LEGACY_DAEMON_TOKEN ??
-            process.env.FLEETCROWN_ALLOW_LEGACY_DAEMON_TOKEN ??
+            process.env.LOKI_ALLOW_LEGACY_DAEMON_TOKEN ??
             process.env.COCKPIT_ALLOW_LEGACY_DAEMON_TOKEN) === "1";
         if (legacyAllowed && daemonToken && authHeader === `Bearer ${daemonToken}`) return true;
 
         // The app runs behind Caddy on a single known host
-        // (fleetcrown.orangecat.ch). x-forwarded-host carries the real host the
+        // (loki.orangecat.ch). x-forwarded-host carries the real host the
         // user typed, which we prefer over the internal request host.
         const host = request.headers.get("x-forwarded-host") ?? request.nextUrl.host;
         const proto =

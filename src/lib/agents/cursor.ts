@@ -18,7 +18,7 @@
  * only the legacy `agent` needs the cursor-path disambiguation there.
  *
  * No persistent config we read; model is selected at launch via Cursor's
- * own UI inside the CLI, not via FleetCrown's dropdown.
+ * own UI inside the CLI, not via Loki's dropdown.
  */
 
 import { execSync } from "child_process";

@@ -110,7 +110,7 @@ export async function seedTemplate(
     const commitRes = await gh(`${repoPath}/git/commits`, {
       method: "POST",
       body: JSON.stringify({
-        message: `Add ${template.label} starter (seeded by FleetCrown)`,
+        message: `Add ${template.label} starter (seeded by Loki)`,
         tree: newTreeSha,
         parents: [baseCommitSha],
       }),
@@ -175,7 +175,7 @@ export function orgCreateRefusedMessage(owner: string, status: number, detail: s
   return (
     `GitHub would not create the repository in the ${owner} organisation (HTTP ${status}${detail ? `: ${detail}` : ""}). ` +
     `Repositories are created there, never on a personal account. Either set GITHUB_ORG_TOKEN on the server ` +
-    `(an org admin's token with repo + workflow scope), or approve FleetCrown for the org at ` +
+    `(an org admin's token with repo + workflow scope), or approve Loki for the org at ` +
     `https://github.com/organizations/${owner}/settings/oauth_application_policy.`
   );
 }
@@ -208,7 +208,7 @@ export async function provisionGithubRepo(
       error: "Name must contain at least one alphanumeric character",
     };
 
-  const description = opts.description ?? `Started from FleetCrown · ${opts.name}`;
+  const description = opts.description ?? `Started from Loki · ${opts.name}`;
   let res: Response;
   try {
     res = await fetch(`${GITHUB_API_BASE}/orgs/${GITHUB_REPO_OWNER}/repos`, {
@@ -347,7 +347,7 @@ export function parseTokenScopes(header: string | null): string[] {
 /**
  * Destroying a repository is the one GitHub action this product deliberately
  * cannot perform: neither the org token nor a user's OAuth grant asks for
- * `delete_repo`, so no credential FleetCrown holds can irreversibly destroy
+ * `delete_repo`, so no credential Loki holds can irreversibly destroy
  * someone's code. Saying that plainly, with the two things the person can
  * actually do, beats a 403 they cannot act on.
  */

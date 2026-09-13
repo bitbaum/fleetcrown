@@ -1,4 +1,4 @@
-// FleetCrown event bridge — Postgres LISTEN → SSE fanout.
+// Loki event bridge — Postgres LISTEN → SSE fanout.
 //
 // One process. One Postgres LISTEN connection. An HTTP server that holds
 // long-lived SSE connections per authenticated user. When the DB sends

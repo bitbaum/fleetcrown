@@ -84,5 +84,5 @@ export const COMMS_COPY = {
   verifyBanner: "Verify your email for account recovery (optional).",
   verifySent: "Verification link sent — check your inbox.",
   digestSettingsTitle: "Activity digest emails",
-  digestSettingsBody: "What ran, what broke, what moved. This is the mail FleetCrown sends.",
+  digestSettingsBody: "What ran, what broke, what moved. This is the mail Loki sends.",
 } as const;

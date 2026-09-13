@@ -8,7 +8,7 @@
  * The first version of this check was a grep: "the dark block must override
  * --color-accent-fg and must NOT override --color-accent". That encoded one
  * palette's shape, not the property anyone cares about. The moment the template
- * adopted FleetCrown's monochrome action — near-black on light, near-white on
+ * adopted Loki's monochrome action — near-black on light, near-white on
  * dark — the primary action began INVERTING between schemes, and the grep
  * called a correct palette broken.
  *
@@ -21,7 +21,7 @@
  * 3.7:1 as text on the dark ground, and neither failure is visible in a build,
  * a lint, or a screenshot.
  *
- * oklch, because that is what FleetCrown uses and what the template now
+ * oklch, because that is what Loki uses and what the template now
  * mirrors. Conversion is oklch -> OKLab -> linear sRGB, and WCAG luminance is
  * taken from the LINEAR values directly (gamma-encoding and decoding again
  * would only add rounding).

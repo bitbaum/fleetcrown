@@ -1,6 +1,6 @@
 // Query layer for the user-owned prompts table.
 //
-// The /prompts page merges these rows with the FleetCrown defaults from
+// The /prompts page merges these rows with the Loki defaults from
 // src/config/prompt-library.ts at render time. This module is the SSOT
 // for CRUD on the user-owned half.
 //

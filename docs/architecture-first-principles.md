@@ -1,9 +1,9 @@
-# FleetCrown Architecture Principles And Execution Plan
+# Loki Architecture Principles And Execution Plan
 
 ## Purpose
 
 This document defines the engineering principles, first-principles framing,
-and implementation plan for turning FleetCrown from a useful Claude-shaped control
+and implementation plan for turning Loki from a useful Claude-shaped control
 surface into a neutral orchestration system for multiple projects, users, and
 agents.
 
@@ -104,7 +104,7 @@ Rules:
 
 Anti-patterns:
 
-- one state name in `dotfiles`, another in FleetCrown
+- one state name in `dotfiles`, another in Loki
 - prompt semantics duplicated across UI, routes, and local scripts
 - deriving domain truth from whichever file happens to exist
 
@@ -259,7 +259,7 @@ Owns:
 
 This layer is the brain of the system.
 
-### 4. FleetCrown UI
+### 4. Loki UI
 
 Owns:
 
@@ -412,7 +412,7 @@ Acceptance criteria:
 - orchestration core can trigger the same intent through multiple adapters
 - runtime-specific files are hidden behind adapter code
 
-### Phase 4: Move orchestration policy into FleetCrown
+### Phase 4: Move orchestration policy into Loki
 
 Goal:
 
@@ -461,14 +461,14 @@ Deliverables:
 
 - narrow compatibility hook surface
 - local runtime installer/bootstrap docs
-- migration of remaining semantic logic into FleetCrown
+- migration of remaining semantic logic into Loki
 - cleanup of obsolete Claude-only naming
 
 Acceptance criteria:
 
 - `dotfiles` is optional for orchestration semantics
 - local scripts no longer define canonical state names
-- a second machine/user setup can reproduce behavior from FleetCrown-owned logic
+- a second machine/user setup can reproduce behavior from Loki-owned logic
 
 ## Immediate Next Actions
 

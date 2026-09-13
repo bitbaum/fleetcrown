@@ -44,7 +44,7 @@
 
 set -euo pipefail
 
-RELEASES_REPO="${FLEET_RUNNER_RELEASES_REPO:-bitbaum/fleetcrown-releases}"
+RELEASES_REPO="${FLEET_RUNNER_RELEASES_REPO:-bitbaum/loki-releases}"
 APP_DIR="$HOME/Applications"
 CURRENT_LINK="$APP_DIR/FleetRunner"                # stable — never versioned
 UNIT_DIR="$HOME/.config/systemd/user"
@@ -193,7 +193,7 @@ write_units() {
   # under Wayland, so software rendering is what keeps the runner alive.
   cat > "$UNIT_DIR/$SERVICE" <<EOF
 [Unit]
-Description=Fleet Runner (FleetCrown local executor) — supervised
+Description=Fleet Runner (Loki local executor) — supervised
 After=graphical-session.target
 PartOf=graphical-session.target
 StartLimitIntervalSec=0

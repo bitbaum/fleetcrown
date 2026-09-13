@@ -24,7 +24,7 @@ import type { SharedTask } from "@/db/queries/human-tasks";
  * conversation: who is asking, what the work is, WHY it matters, what it pays,
  * and three honest answers — yes, no, or done. Declining is a first-class
  * button, not a link in small print: an ask you cannot refuse is an order, and
- * FleetCrown is not in the business of issuing those to people.
+ * Loki is not in the business of issuing those to people.
  */
 export function SharedTaskView({ token, initialTask }: { token: string; initialTask: SharedTask }) {
   const [task, setTask] = useState(initialTask);

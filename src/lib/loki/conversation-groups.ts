@@ -1,6 +1,6 @@
 /**
  * Collapse same-work Loki threads so history is a resume list, not a wall.
- * "move forward on fleetcrown" ×15 is one row. Newest (or the active thread)
+ * "move forward on loki" ×15 is one row. Newest (or the active thread)
  * is the head; count is how many siblings it stands for.
  */
 

@@ -5,7 +5,7 @@ const secret = "e2e-orangecat-webhook-secret-at-least-32-characters";
 process.env.ORANGECAT_WEBHOOK_SECRET = secret;
 
 /**
- * End-to-end proof for the FleetCrown side of the BTC pass rail (scope §4a).
+ * End-to-end proof for the Loki side of the BTC pass rail (scope §4a).
  *
  * scripts/test/orangecat-webhooks.ts only checks the HMAC helper in isolation.
  * This drives the real `/api/orangecat/entitlement` route handler against the

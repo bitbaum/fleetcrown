@@ -8,7 +8,7 @@
 #                     [--no-deploy] [--dry-run]
 #
 # This is the CD half of new-site.sh without scaffolding a new repo.
-# FleetCrown kickoff / provision creates the GitHub repo (agent starters);
+# Loki kickoff / provision creates the GitHub repo (agent starters);
 # this script does what Make it happen could not safely invent: apps.conf
 # row, deploy secret, sync-infra, and (unless --no-deploy) first deploy.
 #
@@ -29,8 +29,8 @@ DEPLOY=1; DRY=0
 PLAN="-"; PRICE="-"
 BASE_DOMAIN="$SITES_BASE_DOMAIN"
 # Prefer the durable studio checkout for apps.conf — writing the /opt release
-# copy is lost on the next fleetcrown deploy.
-FC_REPO="${FLEETCROWN_REPO_ROOT:-$DEV_ROOT/fleetcrown}"
+# copy is lost on the next loki deploy.
+FC_REPO="${LOKI_REPO_ROOT:-$DEV_ROOT/loki}"
 if [ -f "$FC_REPO/scripts/hetzner/apps.conf" ]; then
   MANIFEST="$FC_REPO/scripts/hetzner/apps.conf"
   SYNC_INFRA="$HERE/sync-infra.sh"
@@ -42,7 +42,7 @@ else
   SYNC_INFRA="$HERE/sync-infra.sh"
   DEPLOY_SH="$HERE/deploy.sh"
 fi
-[ -f "$MANIFEST" ] || { echo "✗ scripts/hetzner/apps.conf missing at $MANIFEST (set FLEETCROWN_REPO_ROOT to the durable fleetcrown checkout)" >&2; exit 1; }
+[ -f "$MANIFEST" ] || { echo "✗ scripts/hetzner/apps.conf missing at $MANIFEST (set LOKI_REPO_ROOT to the durable loki checkout)" >&2; exit 1; }
 # The register beside this script is the one main last shipped. The durable
 # checkout can lag main (rows land there only on a pull nobody triggers) and
 # main can lag the durable checkout (rows appended here reach main only when
@@ -76,7 +76,7 @@ done
 # executable comes from the current release and the register is durable.
 export MANIFEST
 if [ "$DRY" != 1 ]; then
-  exec 9>"${TMPDIR:-/tmp}/fleetcrown-register-site.lock"
+  exec 9>"${TMPDIR:-/tmp}/loki-register-site.lock"
   flock -w 60 -x 9 || { echo "ERROR: another registration is still running; retry shortly" >&2; exit 1; }
 fi
 
@@ -185,7 +185,7 @@ else
   fi
   for reserved in www api app admin support security billing pay wallet login auth account \
                   mail smtp imap ns1 ns2 mx cdn static assets vpn db status staging dev test \
-                  preview bridge fleetcrown orangecat supabase solon evig revampit root system; do
+                  preview bridge loki orangecat supabase solon evig revampit root system; do
     [ "$SLUG" = "$reserved" ] && { echo "✗ '$SLUG' is reserved (infrastructure or impersonation risk)" >&2; exit 1; }
   done
   REPO_DIR="$DEV_ROOT/$SLUG"
@@ -260,7 +260,7 @@ on:
 
 jobs:
   deploy:
-    uses: ${WORKFLOW_OWNER}/fleetcrown/.github/workflows/selfhost-deploy.yml@main
+    uses: ${WORKFLOW_OWNER}/loki/.github/workflows/selfhost-deploy.yml@main
     with:
       app: ${SLUG}
     secrets:
@@ -311,7 +311,7 @@ else
   if ! workflow_on_remote deploy.yml; then
     put_workflow deploy.yml "chore: add self-host deploy shim for $SLUG" || true
   elif remote_workflow_body deploy.yml | grep -q 'secrets: inherit'; then
-    # Cross-owner callers (e.g. catomean/* → bitbaum/fleetcrown) cannot inherit.
+    # Cross-owner callers (e.g. catomean/* → bitbaum/loki) cannot inherit.
     put_workflow deploy.yml "fix: pass HETZNER_SSH_PRIVATE_KEY explicitly for cross-owner deploy" || true
   else
     say "deploy.yml already on the remote"
@@ -323,10 +323,10 @@ else
   for f in ci.yml auto-merge.yml; do
     [ -f "$WF_TMP/$f" ] || continue
     if ! workflow_on_remote "$f"; then
-      put_workflow "$f" "ci: verify and auto-merge (seeded by FleetCrown register)" \
+      put_workflow "$f" "ci: verify and auto-merge (seeded by Loki register)" \
         || say "⚠ $f is not on $GH_REPO — agent PRs on this site will wait for a human merge"
     elif ! remote_workflow_body "$f" | cmp -s - "$WF_TMP/$f"; then
-      put_workflow "$f" "ci: refresh $f from the FleetCrown site-template" || say "⚠ $f on $GH_REPO is stale and could not be refreshed"
+      put_workflow "$f" "ci: refresh $f from the Loki site-template" || say "⚠ $f on $GH_REPO is stale and could not be refreshed"
     else
       say "$f already on the remote"
     fi
@@ -399,7 +399,7 @@ if [ "$ALREADY" != 1 ]; then
   cat <<NEXT
   Still yours to do:
 
-  1. Commit the register change in the fleetcrown checkout:
+  1. Commit the register change in the loki checkout:
        cd $(dirname "$MANIFEST")/../.. && git add scripts/hetzner/apps.conf && git commit
 
   2. If first deploy failed, fix the app until \`next build\` works, then push main (or workflow_dispatch Deploy).

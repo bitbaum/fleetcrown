@@ -79,7 +79,7 @@ bridge.orangecat.ch {
 Verified 2026-06-15: with `encode` present, disconnect took >5 min (never fired);
 removed, disconnect flips presence in <3s while connect stays ~instant. The same
 applies to any other SSE endpoint (e.g. the web `/control` stream on
-`fleetcrown.orangecat.ch`) if its disconnect cleanup ever needs to be prompt.
+`loki.orangecat.ch`) if its disconnect cleanup ever needs to be prompt.
 
 ## Verified behaviour (2026-06-15)
 

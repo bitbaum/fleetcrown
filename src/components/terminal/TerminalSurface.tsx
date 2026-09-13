@@ -137,7 +137,7 @@ export function TerminalSurface({
    *  that will be resolved to the actual tab name via context lookup. */
   initialTab?: string | null;
 }) {
-  // "shell" — a FleetCrown-owned bash PTY — is only offered where one can
+  // "shell" — a Loki-owned bash PTY — is only offered where one can
   // actually be provisioned. On the hosted control plane it is absent rather
   // than present-and-broken.
   const sources: TerminalSource[] = local ? ["cloud", "machine", "shell"] : ["cloud", "machine"];
@@ -183,7 +183,7 @@ export function TerminalSurface({
   );
 
   // Resolve project name to actual tab name using the same logic Control uses.
-  // When initialTab is "fleetcrown" (project) but the actual tab is "Bitbaum",
+  // When initialTab is "loki" (project) but the actual tab is "Bitbaum",
   // this maps it so all lookups use "Bitbaum". Prevents "tab not found" when
   // Watch/Focus/Open pass a project name instead of the live tab name.
   const resolveProjectToTab = useCallback(
@@ -248,7 +248,7 @@ export function TerminalSurface({
 
   // Separate user's manual selection from the deep-linked/resolved initial tab.
   // This way, selected automatically updates when resolvedInitialTab changes
-  // (e.g., when context loads and maps "fleetcrown" → "Bitbaum"), without
+  // (e.g., when context loads and maps "loki" → "Bitbaum"), without
   // needing an effect that triggers cascading renders.
   const [userSelection, setUserSelection] = useState<string | null>(null);
   const selected = userSelection ?? resolvedInitialTab;
@@ -339,7 +339,7 @@ export function TerminalSurface({
   const agentSwitchDisabledReason = !activeTab
     ? "Open a session first — switching swaps the CLI running in a tab."
     : !tabContext?.dir
-      ? `“${activeTab}” isn’t linked to a project directory, so FleetCrown doesn’t know where to relaunch the agent.`
+      ? `“${activeTab}” isn’t linked to a project directory, so Loki doesn’t know where to relaunch the agent.`
       : null;
 
   // Capture the one field the callback needs as a local, so the closure

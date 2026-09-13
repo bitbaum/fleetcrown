@@ -7,11 +7,11 @@ import {
   visibleConversationGroups,
 } from "../../src/lib/loki/conversation-groups";
 
-function row(id: string, title: string, projectKeys: string[] = ["fleetcrown"]) {
+function row(id: string, title: string, projectKeys: string[] = ["loki"]) {
   return { id, title, projectKeys };
 }
 
-assert.equal(normalizeConversationTitle("move forward on fleetcrown"), "move-forward");
+assert.equal(normalizeConversationTitle("move forward on loki"), "move-forward");
 assert.equal(normalizeConversationTitle("Move forward"), "move-forward");
 assert.equal(
   normalizeConversationTitle("Move HamsterCheek toward its active goal: Integrate all feat…"),
@@ -21,19 +21,19 @@ assert.equal(normalizeConversationTitle("code review for kivvi"), "code-review")
 assert.equal(normalizeConversationTitle("Website for restaurants"), "website for restaurants");
 
 assert.equal(
-  conversationGroupKey(row("1", "move forward on fleetcrown", ["fleetcrown"])),
-  conversationGroupKey(row("2", "Move forward", ["FleetCrown"])),
+  conversationGroupKey(row("1", "move forward on loki", ["loki"])),
+  conversationGroupKey(row("2", "Move forward", ["Loki"])),
 );
 assert.notEqual(
-  conversationGroupKey(row("1", "move forward on fleetcrown", ["fleetcrown"])),
-  conversationGroupKey(row("2", "move forward on fleetcrown", ["datacat"])),
+  conversationGroupKey(row("1", "move forward on loki", ["loki"])),
+  conversationGroupKey(row("2", "move forward on loki", ["datacat"])),
 );
 
 const mixed = [
-  row("a", "move forward on fleetcrown"),
-  row("b", "move forward on fleetcrown"),
+  row("a", "move forward on loki"),
+  row("b", "move forward on loki"),
   row("c", "Website for restaurants", []),
-  row("d", "Move fleetcrown toward its active goal: ship"),
+  row("d", "Move loki toward its active goal: ship"),
   row("e", "code review for kivvi", ["kivvi"]),
 ];
 const groups = groupConversations(mixed);

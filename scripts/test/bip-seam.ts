@@ -1,7 +1,7 @@
 /**
  * The Thoughts ↔ bip-kit seam.
  *
- * FleetCrown's essay parser now lives in the published `bip-kit` package (this
+ * Loki's essay parser now lives in the published `bip-kit` package (this
  * repo is its flagship dependent). These tests pin the seam: the re-exports
  * delegate for real, and every committed essay still parses into blocks the
  * renderer has cases for — so a bip-kit upgrade that changed block semantics

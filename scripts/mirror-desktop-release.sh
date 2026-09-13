@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Mirror a Fleet Runner build from the desktop-release GH Actions workflow
-# to the canonical public release host bitbaum/fleetcrown-releases,
+# to the canonical public release host bitbaum/loki-releases,
 # with the correct fleet-runner-v* tag.
 #
 # Why this exists: electron-builder's GH provider can only publish to the
 # workflow's own repo using the default GITHUB_TOKEN (cross-repo writes need
 # a PAT), and it derives its tag from package.json as `v<version>`. Marketing
-# URLs point at bitbaum/fleetcrown-releases tagged `fleet-runner-v<version>`.
+# URLs point at bitbaum/loki-releases tagged `fleet-runner-v<version>`.
 # So the build job publishes nothing at all, and this script assembles the
 # release from the build artifacts under the tag we actually want.
 #
@@ -28,7 +28,7 @@
 #   scripts/mirror-desktop-release.sh 0.3.0 26886696818   # explicit run
 #
 # Requirements:
-#   - gh CLI logged in with write access to fleetcrown-releases (admin/maintain).
+#   - gh CLI logged in with write access to loki-releases (admin/maintain).
 #   - A successful desktop-release workflow run for fleet-runner-v<version>.
 #
 # Idempotent: if the destination release already exists, missing assets are
@@ -70,9 +70,9 @@ else
   echo "warning: ${RELEASES_TS} not found — skipping the recorded-release check" >&2
 fi
 
-SRC_REPO="bitbaum/fleetcrown"
+SRC_REPO="bitbaum/loki"
 SRC_TAG="fleet-runner-v${VERSION}"   # git tag the workflow ran against
-DST_REPO="bitbaum/fleetcrown-releases"
+DST_REPO="bitbaum/loki-releases"
 DST_TAG="fleet-runner-v${VERSION}"
 
 # Resolve the workflow run that built this tag if the caller didn't pass one.

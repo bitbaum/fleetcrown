@@ -34,12 +34,12 @@ ok(shortPath("/var/www", undefined).startsWith("/"), "an absolute path stays abs
 
 // Home collapsing — only when it really is home, never on a prefix collision.
 eq(
-  shortPath("/home/g/dev/fleetcrown", "/home/g"),
-  "~/dev/fleetcrown",
+  shortPath("/home/g/dev/loki", "/home/g"),
+  "~/dev/loki",
   "under home: ~ makes it short enough to keep whole",
 );
 eq(
-  shortPath("/home/g/dev/fleetcrown/src/app", "/home/g"),
+  shortPath("/home/g/dev/loki/src/app", "/home/g"),
   "…/src/app",
   "under home, still long: last two segments",
 );
@@ -55,7 +55,7 @@ eq(shortPath("/home/g", undefined), "/home/g", "with no home known, nothing is c
 
 // Long absolute paths keep the end, which is the part that identifies the work.
 eq(
-  shortPath("/opt/fleetcrown/releases/20260913-5930415/app", undefined),
+  shortPath("/opt/loki/releases/20260913-5930415/app", undefined),
   "…/20260913-5930415/app",
   "a long path keeps its last two segments",
 );
@@ -63,7 +63,7 @@ eq(shortPath("/var", undefined), "/var", "a short path is returned unchanged");
 eq(shortPath("/", undefined), "/", "the root path survives");
 
 // Whatever it returns must be usable as a label: no empties, no stray markers.
-for (const p of ["/", "/var", "/home/g", "/home/g/dev/fleetcrown", "/a/b/c/d/e"]) {
+for (const p of ["/", "/var", "/home/g", "/home/g/dev/loki", "/a/b/c/d/e"]) {
   const out = shortPath(p, "/home/g");
   ok(out.length > 0, `never empty for ${p}`);
   ok(!out.includes("//"), `no doubled separator for ${p}`);

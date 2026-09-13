@@ -61,7 +61,7 @@ export type ProjectDossier = {
   /** Typed public/economic edges into OrangeCat. */
   orangecatLinks: OrangeCatEntityLink[];
   orangecatFunding: OrangeCatFundingSummary | null;
-  /** Recent repo commits — evidence of real work even when no FleetCrown run
+  /** Recent repo commits — evidence of real work even when no Loki run
    *  produced it. null when the project has no GitHub repo or no linked token. */
   commits: RepoCommit[] | null;
   /** Wall-clock at build time — the ONE `now` the render uses to age handoffs
@@ -175,7 +175,7 @@ export function renderProjectDossierForAgent(dossier: ProjectDossier): string {
   ];
 
   // cleanDescription filters the bulk-import placeholder ("Local repository
-  // imported from fleetcrown-ui") — feeding that to agents as the project
+  // imported from loki-ui") — feeding that to agents as the project
   // "Brief" was context poison, visible verbatim in every dispatched prompt.
   const description = cleanDescription(detail.project.description);
   if (description) lines.push(`Brief: ${description}`);

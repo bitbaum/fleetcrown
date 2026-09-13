@@ -64,7 +64,7 @@ export const PALETTE = {
    * The feedback widget's theme — DERIVED from @bitbaum/design-tokens by
    * scripts/generate-widget-theme.ts, never typed here. It used to be a hand
    * copy, which is how the widget drifted into "does not look like part of
-   * FleetCrown". scripts/test/widget-theme-from-tokens.ts fails on drift.
+   * Loki". scripts/test/widget-theme-from-tokens.ts fails on drift.
    */
   widget: WIDGET_THEME,
 } as const;

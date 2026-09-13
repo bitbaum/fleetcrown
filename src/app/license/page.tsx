@@ -3,7 +3,7 @@ import { PublicHeaderActions } from "@/components/public/PublicHeaderActions";
 
 export const metadata = {
   title: "License",
-  description: "How FleetCrown source and binaries may be used.",
+  description: "How Loki source and binaries may be used.",
 };
 
 export default function LicensePage() {
@@ -16,10 +16,10 @@ export default function LicensePage() {
         <section className="space-y-4 mb-10">
           <h2 className="ui-public-prose-h2">Plain English</h2>
           <p>
-            FleetCrown is a personal project by Cato, source-available on GitHub. You can read the
-            code, run it locally, and use the hosted product for free for personal and small-team
-            work. Commercial redistribution, repackaging, or running it as a competing hosted
-            service requires a separate agreement.
+            Loki is a personal project by Cato, source-available on GitHub. You can read the code,
+            run it locally, and use the hosted product for free for personal and small-team work.
+            Commercial redistribution, repackaging, or running it as a competing hosted service
+            requires a separate agreement.
           </p>
           <p>
             This will be replaced by a standard open-source license when the project incorporates
@@ -33,12 +33,12 @@ export default function LicensePage() {
             <li>
               Read, fork, and modify the source code at{" "}
               <a
-                href="https://github.com/bitbaum/fleetcrown"
+                href="https://github.com/bitbaum/loki"
                 className="ui-public-link"
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                github.com/bitbaum/fleetcrown
+                github.com/bitbaum/loki
               </a>
               .
             </li>
@@ -55,16 +55,15 @@ export default function LicensePage() {
           <h2 className="ui-public-prose-h2">You may not, without separate written agreement</h2>
           <ul className="list-disc pl-6 space-y-2">
             <li>
-              Operate FleetCrown as a hosted service for third parties (e.g. spin up a FleetCrown
-              clone and sell access to it).
+              Operate Loki as a hosted service for third parties (e.g. spin up a Loki clone and sell
+              access to it).
             </li>
             <li>
               Repackage the binaries or source as a different branded product and distribute that
               product to others.
             </li>
             <li>
-              Use the &ldquo;FleetCrown&rdquo; name or brand for a derivative product without
-              permission.
+              Use the &ldquo;Loki&rdquo; name or brand for a derivative product without permission.
             </li>
           </ul>
         </section>
@@ -72,9 +71,9 @@ export default function LicensePage() {
         <section className="space-y-4 mb-10">
           <h2 className="ui-public-prose-h2">Third-party software</h2>
           <p>
-            FleetCrown bundles open-source dependencies including but not limited to Electron,
-            React, Next.js, Tailwind, and Drizzle. Each is governed by its own license, included in
-            the source tree under <code>node_modules/</code> for the JavaScript ecosystem and in the
+            Loki bundles open-source dependencies including but not limited to Electron, React,
+            Next.js, Tailwind, and Drizzle. Each is governed by its own license, included in the
+            source tree under <code>node_modules/</code> for the JavaScript ecosystem and in the
             released Fleet Runner binary&apos;s LICENSES files for the native components. The terms
             on this page do not override those upstream licenses.
           </p>
@@ -85,12 +84,12 @@ export default function LicensePage() {
           <p>
             For licensing questions or to request commercial usage rights, open an issue at{" "}
             <a
-              href="https://github.com/bitbaum/fleetcrown/issues"
+              href="https://github.com/bitbaum/loki/issues"
               className="ui-public-link"
               target="_blank"
               rel="noopener noreferrer"
             >
-              github.com/bitbaum/fleetcrown/issues
+              github.com/bitbaum/loki/issues
             </a>{" "}
             or email Cato via the address on the GitHub profile.
           </p>
