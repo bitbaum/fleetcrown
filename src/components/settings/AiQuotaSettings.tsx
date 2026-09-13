@@ -182,6 +182,10 @@ function stateLabel(row: QuotaRowView): string {
   // Not "spent". This vendor has capacity and is never reached — the opposite
   // problem, with the opposite fix.
   if (row.state === "skipped") return "never reached";
+  // Not "spent" — the tank is not empty, it is under one answer's worth. The
+  // number beside this label says so, and a label that contradicts the number
+  // next to it is how a dashboard earns the word made-up.
+  if (row.shortfall) return "too low";
   if (row.state === "exhausted") return "spent";
   return row.answers === null ? "available" : `~${row.answers.toLocaleString("en-US")} answers`;
 }

@@ -319,6 +319,77 @@ check("a skip NEWER than every reading still leads — it is the current fact", 
   assert.equal(rows[0]!.state, "skipped", "the most recent thing that happened was a walk-past");
 });
 
+// ── "Spent" must never sit beside a number that says otherwise ──────────────
+// Rendered from the live table and caught by eye: a per-minute window holding
+// 3,984 of 8,000 tokens was labelled SPENT, because 3,984 buys no whole answer.
+// The state is right — the turn cannot be served — but the word contradicts the
+// figure printed next to it, which is how a page gets called made-up.
+const lowMinute = () =>
+  describeQuota(row({ scope: "tokens", window: "minute", quotaLimit: 8000, remaining: 3984 }), {
+    now: NOW,
+    nextProvider: "openrouter",
+  });
+
+check("a window holding half a tank is not called spent", () => {
+  const v = lowMinute();
+  assert.equal(v.shortfall, true);
+  assert.match(v.detail, /3,984 of 8,000/, "the figure is still shown in full");
+  assert.match(v.detail, /under one answer's worth/, "and it is explained, not contradicted");
+});
+
+check("an actually-empty counter is NOT a shortfall", () => {
+  const v = describeQuota(
+    row({ scope: "tokens", window: "minute", quotaLimit: 8000, remaining: 0 }),
+    {
+      now: NOW,
+      nextProvider: "openrouter",
+    },
+  );
+  assert.equal(v.shortfall, undefined, "zero left is spent, and must keep saying so");
+  assert.equal(v.state, "exhausted");
+});
+
+check("the summary counts 'too low' apart from 'spent'", () => {
+  const s = summarise([
+    lowMinute(),
+    describeQuota(
+      row({ provider: "openrouter", scope: "requests", remaining: 0, quotaLimit: 50 }),
+      {
+        now: NOW,
+        nextProvider: null,
+      },
+    ),
+  ]);
+  assert.match(s, /1 spent/, s);
+  assert.match(s, /1 too low for another answer/, s);
+});
+
+check("the 'also metered' line carries measurements only", () => {
+  // A skip notice is not a counter, and a stale counter does not even name
+  // which counter it is — neither belongs in a list of what was measured.
+  const [only] = bindingRows([
+    describeQuota(row({ scope: "tokens", window: "day", quotaLimit: 200_000, remaining: 227 }), {
+      now: NOW,
+      nextProvider: "openrouter",
+    }),
+    describeQuota(row({ scope: "requests", window: "day", quotaLimit: 1000, remaining: 997 }), {
+      now: NOW,
+      nextProvider: "openrouter",
+    }),
+    describeQuota(skipRow(), { now: NOW, nextProvider: "openrouter" }),
+    // Stale: a per-minute counter read an hour ago.
+    describeQuota(
+      {
+        ...row({ scope: "tokens", window: "minute", quotaLimit: 8000, remaining: 5000 }),
+        observedAt: new Date(NOW - 3_600_000),
+      },
+      { now: NOW, nextProvider: "openrouter" },
+    ),
+  ]);
+  assert.equal(only!.alsoMetered?.length, 1, only!.alsoMetered?.join(" | "));
+  assert.match(only!.alsoMetered![0]!, /997 of 1,000/);
+});
+
 check("two different models stay two rows", () => {
   const rows = bindingRows([
     describeQuota(row({ model: "a" }), { now: NOW, nextProvider: null }),
