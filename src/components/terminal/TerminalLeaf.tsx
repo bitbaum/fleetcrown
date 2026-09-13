@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Columns2, Rows2, X, Loader2 } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Columns2, Rows2, X, Loader2, RotateCw } from "lucide-react";
 import { TerminalView } from "./TerminalView";
 import { workspaceTransport } from "./terminal-transport";
 import type { AgentLifecycle } from "@/lib/agent-execution/types";
 import type { SplitDir } from "@/lib/terminal-layout";
 import { cn } from "@/lib/utils";
+import { shortPath } from "@/lib/terminal-path";
 
 type Props = {
   /** Stable pane id — also the workspace projectKey. */
@@ -30,6 +31,19 @@ const DOT: Record<string, string> = {
   error: "ui-dot-negative",
 };
 
+/* The pane used to print the raw lifecycle enum — "provisioning", "starting" —
+   straight into the header. Those are our words for our state machine, not an
+   answer to the only question the operator is asking, which is whether this
+   thing is working. */
+const STATE_LABEL: Record<string, string> = {
+  provisioning: "opening",
+  starting: "starting",
+  running: "ready",
+  idle: "idle",
+  exited: "closed",
+  error: "failed",
+};
+
 /** One terminal pane: provisions a FleetCrown-owned bash PTY, streams it into
  *  xterm (via TerminalView), and terminates it on unmount (pane close or
  *  leaving the page). Kept mounted while the terminal page is open so switching
@@ -46,7 +60,19 @@ export function TerminalLeaf({
   const [wsId, setWsId] = useState<string | null>(null);
   const [state, setState] = useState<State>("provisioning");
   const [error, setError] = useState<string | null>(null);
+  /** Where this shell actually runs. The operator asked for exactly this: when
+   *  something is working, be able to see where it is working. */
+  const [where, setWhere] = useState<string | null>(null);
+  const [homeDir, setHomeDir] = useState<string | undefined>(undefined);
+  const [attempt, setAttempt] = useState(0);
   const provisionedRef = useRef<string | null>(null);
+
+  const retry = useCallback(() => {
+    setError(null);
+    setWsId(null);
+    setState("provisioning");
+    setAttempt((n) => n + 1);
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -66,6 +92,8 @@ export function TerminalLeaf({
         }
         provisionedRef.current = body.workspace.id as string;
         setWsId(provisionedRef.current);
+        setWhere(typeof body.cwd === "string" ? body.cwd : null);
+        setHomeDir(typeof body.home === "string" ? body.home : undefined);
         setState(body.workspace.status as AgentLifecycle);
       } catch (e) {
         if (!alive) return;
@@ -84,14 +112,19 @@ export function TerminalLeaf({
         }).catch(() => {});
       }
     };
-  }, [paneId]);
+  }, [paneId, attempt]);
 
   return (
     <div className={cn("ui-term-pane", active && "ui-term-pane-active")}>
       <div className="ui-term-pane-head">
         <span className={cn("ui-term-dot", DOT[state] ?? "ui-dot-warning")} />
         <span className="ui-term-pane-label">{label}</span>
-        <span className="ui-term-pane-state">{state}</span>
+        <span className="ui-term-pane-state">{STATE_LABEL[state] ?? state}</span>
+        {where && (
+          <span className="ui-term-pane-where" title={where}>
+            {shortPath(where, homeDir)}
+          </span>
+        )}
         <div className="ui-term-pane-actions hidden md:flex">
           <button
             type="button"
@@ -127,11 +160,21 @@ export function TerminalLeaf({
           swallow their first click. */}
       <div className="ui-term-pane-body" onMouseDown={onFocus}>
         {state === "error" ? (
-          <div className="ui-term-pane-error">{error}</div>
+          <div className="ui-term-pane-error">
+            <p>{error}</p>
+            <button type="button" onClick={retry} className="ui-term-retry-btn">
+              <RotateCw className="h-3.5 w-3.5" aria-hidden="true" />
+              Try again
+            </button>
+          </div>
         ) : !wsId ? (
           <div className="ui-term-pane-loading">
             <Loader2 className="h-4 w-4 animate-spin" />
-            Starting shell…
+            Starting shell{where ? ` in ${shortPath(where, homeDir)}` : ""}…
+            <button type="button" onClick={retry} className="ui-term-retry-btn">
+              <RotateCw className="h-3.5 w-3.5" aria-hidden="true" />
+              Try again
+            </button>
           </div>
         ) : (
           <TerminalView
@@ -139,6 +182,16 @@ export function TerminalLeaf({
             interactive
             bare
             onStatus={setState}
+            /* TerminalView already detects a wedged session, and does it from
+               actual output rather than lifecycle state — which is the only
+               signal that cannot claim "no output yet" over a screen with
+               output on it. All this adds is the part it has no way to know:
+               WHERE the silent shell is. */
+            stalledHint={
+              where
+                ? `Connected, but nothing has come back from ${shortPath(where, homeDir)} — the shell may not have started.`
+                : undefined
+            }
             className="h-full w-full"
           />
         )}

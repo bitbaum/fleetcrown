@@ -71,7 +71,12 @@ export async function POST(req: NextRequest) {
     cols: data.cols,
     rows: data.rows,
   });
-  return NextResponse.json({ ok: true, workspace: handle });
+  // `cwd` is returned alongside the handle so the pane can say WHERE it runs.
+  // WorkspaceHandle deliberately does not carry it — the handle is the
+  // executor's contract, and this is a presentation fact the route already
+  // knows. Without it the UI would have to guess, and a guessed path is worse
+  // than no path.
+  return NextResponse.json({ ok: true, workspace: handle, cwd, home: homedir() });
 }
 
 /** GET /api/workspaces — list the caller's live workspaces. */
