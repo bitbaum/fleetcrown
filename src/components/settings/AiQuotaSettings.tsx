@@ -161,6 +161,12 @@ function QuotaRow({ row }: { row: QuotaRowView }) {
         {row.detail}
         {row.refills && <> · back {row.refills}</>}
       </p>
+      {/* The counters this vendor also meters, named rather than drawn. Only
+          the binding one gets a bar — three bars for one model asked the reader
+          to average limits that do not average. */}
+      {row.alsoMetered && row.alsoMetered.length > 0 && (
+        <p className="ui-quota-detail">also metered: {row.alsoMetered.join(" · ")}</p>
+      )}
       <p className="ui-quota-consequence">
         {(row.state === "exhausted" || row.state === "skipped") && (
           <AlertTriangle className="mr-1 inline h-3 w-3" aria-hidden="true" />

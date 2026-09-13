@@ -41,6 +41,10 @@ export type QuotaRowView = {
   level: number | null;
   /** Whether this row should draw attention. */
   urgent: boolean;
+  /** The other counters measured for this same model, phrased for a subtitle. */
+  alsoMetered?: string[];
+  /** When this counter was read, so a stale row cannot outrank a fresh one. */
+  observedAt?: number | null;
 };
 
 export type QuotaReadingRow = {
@@ -133,6 +137,7 @@ export function describeQuota(
       // The consequence is not "wait": waiting changes nothing. Say what would.
       consequence: "shorten the prompt or raise its budget, or this vendor is never used",
       level: null,
+      observedAt: observed,
       // Loud on purpose. A provider silently walked past on every turn is
       // capacity paid for and never spent.
       urgent: true,
@@ -168,6 +173,7 @@ export function describeQuota(
       consequence,
       level: null,
       urgent: false,
+      observedAt: observed,
     };
   }
 
@@ -187,6 +193,7 @@ export function describeQuota(
     consequence,
     level,
     urgent: exhausted || (level !== null && level <= URGENT_AT),
+    observedAt: observed,
   };
 }
 
@@ -217,6 +224,80 @@ export function unknownQuota(provider: string, reason: string): QuotaRowView {
  * Leads with what is actionable. If something is spent, that is the headline;
  * if everything is unknown, say THAT rather than implying health nobody checked.
  */
+/**
+ * One model, one row: the counter that actually stops you.
+ *
+ * A vendor meters several things at once. Groq meters three — tokens per
+ * minute, requests per day, and a daily token pool that only its refusals
+ * mention — and on 2026-09-13 two of them read healthy while the third was the
+ * reason every question returned a 503.
+ *
+ * Listing all three side by side is not more honest, it is less. It invites the
+ * reader to average them, and the answer to "can I use this right now" is not
+ * an average: it is the worst counter. Three bars per model also inflated the
+ * "(of N configured)" tail into counting COUNTERS as PROVIDERS, which is how a
+ * page with two vendors announced five.
+ *
+ * So the counters are ranked by how hard they are blocking and the leader is
+ * shown, with the rest named underneath so nothing measured is hidden.
+ *
+ * (It also gives each rendered row a unique provider+model identity. They were
+ * not unique before, and React was keying two Groq counters the same.)
+ */
+const BINDING_ORDER: Record<QuotaRowView["state"], number> = {
+  // Spent is the one stopping you now.
+  exhausted: 0,
+  // Never reached is the next most useful, and unlike "unknown" it has a cause
+  // the operator can act on.
+  skipped: 1,
+  // Measured and usable — among these, least headroom leads.
+  known: 2,
+  // Says nothing about now, so it can never outrank something that does.
+  unknown: 3,
+};
+
+export function bindingRows(views: QuotaRowView[]): QuotaRowView[] {
+  const byModel = new Map<string, QuotaRowView[]>();
+  for (const v of views) {
+    const key = `${v.provider}:${v.model}`;
+    const list = byModel.get(key);
+    if (list) list.push(v);
+    else byModel.set(key, [v]);
+  }
+
+  const out: QuotaRowView[] = [];
+  for (const group of byModel.values()) {
+    // A skip says "at time T we did not call this". A reading taken LATER is
+    // that statement being overtaken by events, and the skip row is never
+    // rewritten — it is only replaced by another skip. So without this, raising
+    // the budget that caused the skip would fix the provider and leave the page
+    // insisting it is still never reached, which is the shape of complaint this
+    // whole surface exists to answer.
+    const newestReading = group.reduce(
+      (max, r) =>
+        r.state !== "skipped" && r.observedAt != null ? Math.max(max, r.observedAt) : max,
+      Number.NEGATIVE_INFINITY,
+    );
+    const live = group.filter(
+      (r) => !(r.state === "skipped" && r.observedAt != null && r.observedAt < newestReading),
+    );
+
+    const ranked = [...(live.length > 0 ? live : group)].sort((a, b) => {
+      const byState = BINDING_ORDER[a.state] - BINDING_ORDER[b.state];
+      if (byState !== 0) return byState;
+      // Within a state, the tighter counter leads. A null level cannot be
+      // compared, so it sorts last rather than pretending to be zero.
+      const al = a.level ?? Number.POSITIVE_INFINITY;
+      const bl = b.level ?? Number.POSITIVE_INFINITY;
+      return al - bl;
+    });
+    const [lead, ...rest] = ranked;
+    if (!lead) continue;
+    out.push(rest.length === 0 ? lead : { ...lead, alsoMetered: rest.map((r) => r.detail) });
+  }
+  return out;
+}
+
 export function summarise(rows: QuotaRowView[]): string {
   if (rows.length === 0) return "No AI providers are configured.";
   const known = rows.filter((r) => r.state === "known");

@@ -1,4 +1,10 @@
-import { readQuota, type QuotaReading } from "@bitbaum/ai-kit";
+import {
+  readQuota,
+  readingFromRefusal,
+  readingFromRefusalBody,
+  type QuotaReading,
+  type QuotaScope,
+} from "@bitbaum/ai-kit";
 import type { ChatLink } from "@/config/chat-models";
 
 /**
@@ -62,6 +68,33 @@ export function recordPreflightSkip(link: ChatLink, promptTokens: number, budget
         `exceeds this model's ${budget.toLocaleString("en-US")}-token budget`,
     },
   ]);
+}
+
+/**
+ * Record what a REFUSAL disclosed — including the limit no header carries.
+ *
+ * Groq meters three things and publishes two. The per-minute token window and
+ * the per-day request count arrive as headers, so `recordVendorQuota` already
+ * has them; the per-day TOKEN pool is stated only in the prose of the 429 that
+ * enforces it. On 2026-09-13 that gap put the capacity page in exactly the
+ * position it was built to avoid: Groq drawn as healthy — 2,672 of 8,000 tokens
+ * left this minute, 999 of 1,000 requests left today — while every call was
+ * being refused, because a third counter the page could not see was at 227 of
+ * 200,000 and the operator's questions were returning 503.
+ *
+ * Falls back to the plain refusal reading when the body names no numbers: that
+ * still records the one fact any 429 carries, which is that this link is spent
+ * right now. What it must never do is invent a figure — an invented outage is
+ * the same failure as an invented allowance, and costs the operator a provider.
+ */
+export function recordRefusal(
+  link: ChatLink,
+  body: string,
+  retryAfterSec: number | null,
+  scope: QuotaScope = "requests",
+): void {
+  const stated = readingFromRefusalBody(link, body, retryAfterSec);
+  persist([stated ?? readingFromRefusal(link, retryAfterSec, scope)]);
 }
 
 /** Fire-and-forget, never throws, database imported lazily. */
