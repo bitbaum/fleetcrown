@@ -2,6 +2,7 @@ import { jsonOk, jsonError } from "@/lib/api/route-helpers";
 import { getSessionUserId } from "@/lib/session";
 import { listQuota } from "@/db/queries/provider-quota";
 import { usableChatChain } from "@/config/chat-models";
+import { isGatewayConfigured } from "@/lib/openclaw-gateway";
 import { describeQuota, unknownQuota, summarise, type QuotaRowView } from "@/lib/ai/quota-view";
 
 /**
@@ -50,6 +51,8 @@ export async function GET() {
         remaining: r.remaining,
         resetAt: r.resetAt,
         observedAt: r.observedAt,
+        source: r.source,
+        note: r.note,
       },
       { now, nextProvider: nextAfter(r.provider) },
     ),
@@ -64,7 +67,35 @@ export async function GET() {
     silent.push(unknownQuota(link.provider.id, "configured, but it has not served an answer yet"));
   }
 
-  const providers = [...measured, ...silent];
+  // Ordered by CHAIN POSITION, not by when each was last heard from. Recency
+  // order put the last link at the top of the page saying "this is the last
+  // link", directly above the provider that actually precedes it — a fallback
+  // list has one meaningful order and it is the order things are tried in.
+  const chainRank = (provider: string) => {
+    const i = chain.findIndex((l) => l.provider.id === provider);
+    return i === -1 ? Number.MAX_SAFE_INTEGER : i;
+  };
+  const providers = [...measured, ...silent].sort(
+    (a, b) => chainRank(a.provider) - chainRank(b.provider),
+  );
+
+  // The gateway is not in the ai-kit chain, has no rate-limit headers, and
+  // served most of today's answers. Omitting it let the page report every
+  // provider spent while Loki kept working — the omission, not the numbers,
+  // was what made the page read as untrue.
+  if (isGatewayConfigured()) {
+    providers.push({
+      provider: "openclaw gateway",
+      model: "—",
+      state: "unknown",
+      answers: null,
+      detail: "no rate-limit headers — this vendor discloses nothing to measure",
+      refills: null,
+      consequence: "the fallback that answers when every link above is unavailable",
+      level: null,
+      urgent: false,
+    });
+  }
   return jsonOk({
     summary: summarise(providers),
     providers,

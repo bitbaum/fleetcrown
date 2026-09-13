@@ -139,18 +139,21 @@ check("the summary leads with the total when things are healthy", () => {
       nextProvider: null,
     }),
   ];
-  assert.match(summarise(rows), /About 940 more answers available/);
+  assert.match(summarise(rows), /About 940 more answers/);
+  assert.match(summarise(rows), /of 2 configured/, "always counted out of the total");
 });
 
 check("all-unknown says so, instead of implying health nobody checked", () => {
   const s = summarise([unknownQuota("groq", "x"), unknownQuota("openrouter", "y")]);
-  assert.match(s, /Nothing measured yet across 2 providers/);
+  assert.match(s, /2 not measured yet/);
+  assert.match(s, /of 2 configured/);
 });
 
 check("everything spent is the headline, with the time it returns", () => {
   const s = summarise([describeQuota(row({ remaining: 0 }), { now: NOW, nextProvider: null })]);
-  assert.match(s, /Every measured provider is spent/);
+  assert.match(s, /1 spent/);
   assert.match(s, /in 12 hours/);
+  assert.match(s, /of 1 configured/, "never says 'every' when it means 'the one'");
 });
 
 check("a partial outage names both halves rather than averaging them away", () => {
@@ -160,12 +163,65 @@ check("a partial outage names both halves rather than averaging them away", () =
     unknownQuota("cloudflare", "not called yet"),
   ]);
   assert.match(s, /900 more answers/);
-  assert.match(s, /1 provider is spent/);
+  assert.match(s, /1 spent/);
   assert.match(s, /1 not measured yet/);
+  assert.match(s, /of 3 configured/);
 });
 
 check("no providers at all is stated plainly, not as zero remaining", () => {
   assert.match(summarise([]), /No AI providers are configured/);
+});
+
+// ── A skip is not an outage ─────────────────────────────────────────────────
+// The page shipped telling the operator Groq was "configured, but it has not
+// served an answer yet — will be measured on the next answer it serves". Both
+// halves were false: it HAD served (through an unmetered fallback), and it was
+// being walked past on every turn because the prompt exceeded its budget. It
+// would never be measured, and the operator was told to wait for that.
+
+const skipRow = (over = {}) => ({
+  provider: "groq",
+  model: "openai/gpt-oss-120b",
+  scope: "requests",
+  window: "unknown",
+  quotaLimit: null,
+  remaining: 0,
+  resetAt: null,
+  observedAt: new Date(NOW - 30_000),
+  source: "preflight",
+  note: "skipped without being called: a ~10,153-token prompt exceeds this model's 5,400-token budget",
+  ...over,
+});
+
+check("a SKIPPED provider is not reported as spent — opposite problem, opposite fix", () => {
+  const v = describeQuota(skipRow(), { now: NOW, nextProvider: "openrouter" });
+  assert.equal(v.state, "skipped", "remaining is 0 only to satisfy a non-null column");
+  assert.notEqual(v.state, "exhausted", "this vendor has capacity and is never reached");
+  assert.match(v.detail, /10,153-token prompt exceeds/, v.detail);
+});
+
+check("its consequence names the fix, because waiting changes nothing", () => {
+  const v = describeQuota(skipRow(), { now: NOW, nextProvider: "openrouter" });
+  assert.match(v.consequence, /shorten the prompt|raise its budget/, v.consequence);
+  assert.doesNotMatch(v.consequence, /moves to openrouter/, "it never gets that far");
+  assert.equal(v.refills, null, "nothing refills — it was never drawn from");
+});
+
+check("a silently-unused provider is URGENT: paid-for capacity never spent", () => {
+  assert.equal(describeQuota(skipRow(), { now: NOW, nextProvider: null }).urgent, true);
+});
+
+check("the summary names a skip separately from a spend", () => {
+  const s = summarise([
+    describeQuota(row({ provider: "openrouter", remaining: 0, quotaLimit: 50 }), {
+      now: NOW,
+      nextProvider: null,
+    }),
+    describeQuota(skipRow(), { now: NOW, nextProvider: null }),
+  ]);
+  assert.match(s, /1 spent/);
+  assert.match(s, /1 never reached/, s);
+  assert.match(s, /of 2 configured/);
 });
 
 console.log(`✓ quota view: ${passed} checks passed`);

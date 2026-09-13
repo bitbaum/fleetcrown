@@ -77,8 +77,25 @@ export const providerQuota = pgTable(
     remaining: integer("remaining").notNull(),
     /** When the counter refills. Null when the vendor did not say. */
     resetAt: timestamp("reset_at", { withTimezone: true }),
-    /** Which header (or "429") this came from, so a wrong number is traceable. */
+    /**
+     * Where this came from: a header name, `"429"`, or `"preflight"`.
+     *
+     * `preflight` is not a measurement — it records that the link was SKIPPED
+     * without being called, because the prompt exceeded its budget. That is a
+     * different state from empty, and conflating the two would report a
+     * perfectly healthy vendor as spent.
+     */
     source: text("source").notNull(),
+    /**
+     * Why this row reads the way it does, in a sentence a person can act on.
+     *
+     * Exists because the first version of the settings page could show a number
+     * but not a reason, and so told the operator that Groq was "waiting to be
+     * measured" when it was in fact being skipped on every single turn for a
+     * cause they could fix. A number with no reason is where an interface stops
+     * being useful and starts being decoration.
+     */
+    note: text("note"),
     /** When the vendor said it. A reading is evidence about a moment. */
     observedAt: timestamp("observed_at", { withTimezone: true }).defaultNow().notNull(),
   },
