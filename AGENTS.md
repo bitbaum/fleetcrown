@@ -1,5 +1,9 @@
 # AGENTS.md — FleetCrown
 
+> Any agent (Claude, Codex, Antigravity, Cursor, this product): org and
+> host facts live in `/home/g/dev/fleet/AGENTS.md`. Do not restate them here.
+
+
 Operational quick-reference for agents working in this repo. Deep conventions
 (design system, SSOT rules, view map) live in `CLAUDE.md`; read it too.
 
