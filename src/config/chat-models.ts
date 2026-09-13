@@ -129,6 +129,39 @@ export function linkPromptBudgetTokens(link: ChatLink): number {
   return envInt("LOKI_PROMPT_TOKENS_MAX", LARGE_CONTEXT_PROMPT_TOKENS);
 }
 
+/**
+ * The largest prompt worth OFFERING this link — the bound the chain walker
+ * skips against. Deliberately looser than the sizing budget above.
+ *
+ * Sizing and skipping look like the same question and are not, because the two
+ * mistakes cost wildly different amounts:
+ *
+ *   Size a prompt too big  → it is truncated, or the only link refuses it and
+ *                            the turn has nothing to fall back on. Unrecoverable,
+ *                            so sizing keeps the estimator headroom.
+ *   SKIP a link that would → measured on production: the turn goes to
+ *   have taken the prompt    OpenRouter instead, 19-25 s, and spends one of only
+ *                            50 free requests a day. That pool hit zero mid-eval
+ *                            and the next question returned a 503.
+ *   TRY a link that will   → Groq answers 429 in about a second and the chain
+ *   refuse it                moves on to that same OpenRouter call. A per-minute
+ *                            refusal is rejected before processing, so it costs
+ *                            nothing against the daily token pool either.
+ *
+ * One second against twenty-five and a scarce request. A gate with that payoff
+ * belongs at the hard limit, not below it — the 429 IS the safety net, which is
+ * why the estimator's 15% is not also charged here. It was, and it was charged
+ * against the reply reserve as well, a fixed allowance with no estimator error
+ * in it: floor(8000 * 0.85) - 1400 = 5400 where the honest bound is 6600.
+ */
+export function linkPromptCeilingTokens(link: ChatLink): number {
+  if (link.provider.id === "groq") {
+    const tpm = envInt("LOKI_GROQ_TPM", GROQ_TPM_DEFAULT);
+    return Math.max(0, tpm - REPLY_RESERVE_TOKENS);
+  }
+  return linkPromptBudgetTokens(link);
+}
+
 /** The largest prompt any usable link will take — what the loop sizes against. */
 export function maxPromptBudgetTokens(chain = usableChatChain()): number {
   return chain.reduce((max, link) => Math.max(max, linkPromptBudgetTokens(link)), 0);

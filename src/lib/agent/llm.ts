@@ -30,7 +30,7 @@
  */
 import { HTTP_TIMEOUT_LONG_MS } from "@/lib/constants/time";
 import { classifyGroqLimit, groqRetryAfterSeconds, humanizeWait } from "@/lib/agent/groq-error";
-import { chainFrom, linkPromptBudgetTokens, type ChatLink } from "@/config/chat-models";
+import { chainFrom, linkPromptCeilingTokens, type ChatLink } from "@/config/chat-models";
 import { recordAIHealthFailure, recordAIHealthSuccess } from "@/lib/ai/health";
 import { recordVendorQuota, recordPreflightSkip } from "@/lib/ai/record-quota";
 import { readSseChunks } from "@/lib/agent/sse-stream";
@@ -639,7 +639,11 @@ export async function callModelWithTools(
   for (const link of chain) {
     if (drained.has(link.provider.id)) continue;
     if (input.promptTokens !== undefined) {
-      const budget = linkPromptBudgetTokens(link);
+      // The CEILING, not the sizing budget: skipping a link that would have
+      // answered costs a 25-second detour and one of 50 daily free requests,
+      // while trying one that refuses costs a 1-second 429. See
+      // linkPromptCeilingTokens for the measurement behind that asymmetry.
+      const budget = linkPromptCeilingTokens(link);
       if (input.promptTokens > budget) {
         skipped.push(
           `${link.provider.id}/${link.model} (prompt ~${input.promptTokens} > ${budget})`,
