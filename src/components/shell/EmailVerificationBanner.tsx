@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { MailWarning, X } from "lucide-react";
 import { ROUTES } from "@/config/auth";
@@ -12,10 +13,23 @@ import { postJson } from "@/lib/api/fetch";
 // dismiss shouldn't reappear in every new tab. Dismiss once, gone for good.
 const DISMISS_KEY = "fleetcrown-verify-email-dismiss";
 
+/**
+ * Routes where the viewport IS the product, so an optional reminder may not
+ * take a slice of it.
+ *
+ * On a 844px phone the terminal already gives 268px to fixed chrome; this
+ * banner took another 74px — 18% of what was left for the actual screen — to
+ * say something that is explicitly not required and can wait for any other
+ * page. It is suppressed here, not removed: it still shows everywhere else,
+ * and dismissing it there still silences it for good.
+ */
+const IMMERSIVE_ROUTES = ["/terminal"];
+
 /** Optional verification reminder — email is not required to use the app. One
  *  calm line so it never outranks the actual page content beneath it. */
 export function EmailVerificationBanner() {
   const { data: session, status } = useSession();
+  const pathname = usePathname();
   const [dismissed, setDismissed] = useState(() => {
     if (typeof window === "undefined") return false;
     try {
@@ -28,6 +42,9 @@ export function EmailVerificationBanner() {
   const [sent, setSent] = useState(false);
 
   if (status !== "authenticated" || dismissed) return null;
+  if (pathname && IMMERSIVE_ROUTES.some((r) => pathname === r || pathname.startsWith(`${r}/`))) {
+    return null;
+  }
 
   const email = session?.user?.email;
   const verified = session?.user?.emailVerified;

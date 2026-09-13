@@ -2285,11 +2285,26 @@
   .ui-term-pane-body {
     @apply min-h-0 flex-1 overflow-hidden bg-surface-page p-1.5;
   }
+  /* WHERE this shell runs. The operator's question when something is working
+     is not "what state is the state machine in" but "where is this happening";
+     the pane knew the answer and never showed it. Truncates from the LEFT so
+     the leaf directory — the part that identifies the work — survives. */
+  .ui-term-pane-where {
+    @apply ml-auto max-w-[52%] truncate text-nano text-text-muted md:max-w-[60%];
+    font-family: var(--font-mono);
+  }
+  .ui-term-pane-actions ~ .ui-term-pane-where,
+  .ui-term-pane-where + .ui-term-pane-actions {
+    @apply ml-2;
+  }
   .ui-term-pane-loading {
-    @apply flex h-full items-center justify-center gap-2 text-xs text-text-tertiary;
+    @apply flex h-full flex-col items-center justify-center gap-3 text-xs text-text-tertiary;
   }
   .ui-term-pane-error {
-    @apply flex h-full items-center justify-center px-4 text-center text-xs text-status-negative;
+    @apply flex h-full flex-col items-center justify-center gap-3 px-4 text-center text-xs text-status-negative;
+  }
+  .ui-term-retry-btn {
+    @apply inline-flex min-h-[32px] items-center gap-1.5 rounded-md border border-border-subtle px-2.5 py-1 text-xs text-text-secondary transition-colors hover:border-border-interactive hover:text-text-primary;
   }
   .ui-term-empty {
     @apply flex h-full flex-col items-center justify-center gap-4 text-sm text-text-tertiary;
