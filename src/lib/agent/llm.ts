@@ -32,7 +32,7 @@ import { HTTP_TIMEOUT_LONG_MS } from "@/lib/constants/time";
 import { classifyGroqLimit, groqRetryAfterSeconds, humanizeWait } from "@/lib/agent/groq-error";
 import { chainFrom, linkPromptBudgetTokens, type ChatLink } from "@/config/chat-models";
 import { recordAIHealthFailure, recordAIHealthSuccess } from "@/lib/ai/health";
-import { recordVendorQuota } from "@/lib/ai/record-quota";
+import { recordVendorQuota, recordPreflightSkip } from "@/lib/ai/record-quota";
 import { readSseChunks } from "@/lib/agent/sse-stream";
 
 export type ChatMessage = {
@@ -644,6 +644,11 @@ export async function callModelWithTools(
         skipped.push(
           `${link.provider.id}/${link.model} (prompt ~${input.promptTokens} > ${budget})`,
         );
+        // Record the skip, because "never called" and "called and empty" look
+        // identical on a dashboard and mean opposite things. Without this the
+        // settings page told the operator Groq was waiting to be measured,
+        // while every turn was walking past it for a reason they could fix.
+        recordPreflightSkip(link, input.promptTokens, budget);
         continue;
       }
     }

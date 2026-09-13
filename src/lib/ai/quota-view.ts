@@ -28,7 +28,7 @@
 export type QuotaRowView = {
   provider: string;
   model: string;
-  state: "known" | "unknown" | "exhausted";
+  state: "known" | "unknown" | "exhausted" | "skipped";
   /** What is left, in answers where that is knowable. Null when unknown. */
   answers: number | null;
   /** The raw figure, for the reader who wants it. */
@@ -52,6 +52,10 @@ export type QuotaReadingRow = {
   remaining: number;
   resetAt: Date | string | null;
   observedAt: Date | string;
+  /** Header name, "429", or "preflight" — the last is a skip, not a measurement. */
+  source?: string;
+  /** Why this row reads as it does, when a number alone would mislead. */
+  note?: string | null;
 };
 
 /** Below this fraction of the ceiling, a row earns attention. */
@@ -113,6 +117,27 @@ export function describeQuota(
   const observed = ms(row.observedAt);
   const stale =
     row.window === "minute" && observed !== null && opts.now - observed > STALE_MINUTE_MS;
+
+  // A skip is not a measurement, and reporting it as one inverts the meaning:
+  // a healthy vendor that is never reached would read as an exhausted one. This
+  // branch comes FIRST because `remaining` is 0 on these rows purely to satisfy
+  // a non-null column, and every check below reads 0 as empty.
+  if (row.source === "preflight") {
+    return {
+      provider: row.provider,
+      model: row.model,
+      state: "skipped",
+      answers: null,
+      detail: row.note ?? "skipped without being called — the prompt exceeded its budget",
+      refills: null,
+      // The consequence is not "wait": waiting changes nothing. Say what would.
+      consequence: "shorten the prompt or raise its budget, or this vendor is never used",
+      level: null,
+      // Loud on purpose. A provider silently walked past on every turn is
+      // capacity paid for and never spent.
+      urgent: true,
+    };
+  }
 
   const answers =
     row.scope === "requests"
@@ -196,21 +221,30 @@ export function summarise(rows: QuotaRowView[]): string {
   if (rows.length === 0) return "No AI providers are configured.";
   const known = rows.filter((r) => r.state === "known");
   const exhausted = rows.filter((r) => r.state === "exhausted");
+  const skipped = rows.filter((r) => r.state === "skipped");
   const unknown = rows.filter((r) => r.state === "unknown");
 
-  if (known.length === 0 && exhausted.length === 0) {
-    return `Nothing measured yet across ${unknown.length} provider${unknown.length === 1 ? "" : "s"} — the first answer each serves will report its own limits.`;
+  // Count out of the TOTAL, always. The first version said "every measured
+  // provider is spent" while exactly one of two had been measured — true, and
+  // read as evasion, because it quietly redefined "every" to mean "the one".
+  const of = ` (of ${rows.length} configured)`;
+  const parts: string[] = [];
+
+  if (known.length > 0) {
+    const total = known.reduce((n, r) => n + (r.answers ?? 0), 0);
+    parts.push(`about ${total.toLocaleString("en-US")} more answer${total === 1 ? "" : "s"}`);
   }
-  if (exhausted.length > 0 && known.length === 0) {
-    const first = exhausted[0];
-    const when = first?.refills ? ` Comes back ${first.refills}.` : "";
-    return `Every measured provider is spent.${when} Answers fall back to whatever is left in the chain.`;
+  if (exhausted.length > 0) {
+    const back = exhausted.find((r) => r.refills)?.refills;
+    parts.push(`${exhausted.length} spent${back ? `, back ${back}` : ""}`);
   }
-  const total = known.reduce((n, r) => n + (r.answers ?? 0), 0);
-  const spentNote =
-    exhausted.length > 0
-      ? `, ${exhausted.length} provider${exhausted.length === 1 ? " is" : "s are"} spent`
-      : "";
-  const unknownNote = unknown.length > 0 ? `, ${unknown.length} not measured yet` : "";
-  return `About ${total.toLocaleString("en-US")} more answer${total === 1 ? "" : "s"} available${spentNote}${unknownNote}.`;
+  // Named before "not measured", because a skip is a fixable fault and an
+  // unmeasured provider is merely quiet.
+  if (skipped.length > 0) {
+    parts.push(`${skipped.length} never reached — prompts exceed their budget`);
+  }
+  if (unknown.length > 0) parts.push(`${unknown.length} not measured yet`);
+
+  const head = parts.length > 0 ? parts.join(" · ") : "nothing measured yet";
+  return `${head.charAt(0).toUpperCase()}${head.slice(1)}${of}.`;
 }

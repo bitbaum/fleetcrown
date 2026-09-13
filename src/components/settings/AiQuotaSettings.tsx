@@ -132,7 +132,11 @@ export function AiQuotaSettings() {
 
 function QuotaRow({ row }: { row: QuotaRowView }) {
   const tone =
-    row.state === "exhausted" ? "ui-quota-row-spent" : row.urgent ? "ui-quota-row-low" : "";
+    row.state === "exhausted" || row.state === "skipped"
+      ? "ui-quota-row-spent"
+      : row.urgent
+        ? "ui-quota-row-low"
+        : "";
 
   return (
     <div className={`ui-quota-row ${tone}`}>
@@ -158,7 +162,7 @@ function QuotaRow({ row }: { row: QuotaRowView }) {
         {row.refills && <> · back {row.refills}</>}
       </p>
       <p className="ui-quota-consequence">
-        {row.state === "exhausted" && (
+        {(row.state === "exhausted" || row.state === "skipped") && (
           <AlertTriangle className="mr-1 inline h-3 w-3" aria-hidden="true" />
         )}
         {row.consequence}
@@ -169,6 +173,9 @@ function QuotaRow({ row }: { row: QuotaRowView }) {
 
 function stateLabel(row: QuotaRowView): string {
   if (row.state === "unknown") return "not measured";
+  // Not "spent". This vendor has capacity and is never reached — the opposite
+  // problem, with the opposite fix.
+  if (row.state === "skipped") return "never reached";
   if (row.state === "exhausted") return "spent";
   return row.answers === null ? "available" : `~${row.answers.toLocaleString("en-US")} answers`;
 }

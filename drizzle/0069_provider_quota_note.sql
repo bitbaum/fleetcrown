@@ -1,0 +1,21 @@
+-- Migration: provider_quota.note — WHY a counter reads the way it does.
+--
+-- The page shipped saying Groq was "configured, but it has not served an answer
+-- yet — will be measured on the next answer it serves". Both halves were wrong,
+-- and the second was worse than wrong: it implied patience.
+--
+-- Groq had served (through a fallback path with no meter on it), and it is
+-- being actively SKIPPED — four times in six hours — because the prompt exceeds
+-- its per-minute budget:
+--
+--   skipped groq/openai/gpt-oss-120b (prompt ~10153 > 5400)
+--   skipped groq/openai/gpt-oss-20b  (prompt ~8312  > 5400)
+--
+-- So it will never be measured, and the operator was told to wait for something
+-- that cannot happen. The actionable truth — "your prompts are too large for
+-- this vendor's window, which is why the next one burns out" — had nowhere to
+-- live, because a row could carry a NUMBER but not a REASON.
+--
+-- Nullable and additive. Every existing row keeps its meaning.
+
+ALTER TABLE "provider_quota" ADD COLUMN IF NOT EXISTS "note" text;

@@ -22,8 +22,10 @@ import type { QuotaReading } from "@bitbaum/ai-kit";
  * reading older than the stored one is dropped, because a dashboard that
  * flickers backwards teaches people to distrust it.
  */
+export type RecordableReading = QuotaReading & { note?: string | null };
+
 export async function recordQuotaReadings(
-  readings: QuotaReading[],
+  readings: RecordableReading[],
   keyOwner: string = PLATFORM_KEY_OWNER,
 ): Promise<void> {
   if (readings.length === 0) return;
@@ -42,6 +44,7 @@ export async function recordQuotaReadings(
         remaining: r.remaining,
         resetAt: r.resetAt === null ? null : new Date(r.resetAt),
         source: r.source,
+        note: r.note ?? null,
         observedAt,
       })
       .onConflictDoUpdate({
@@ -57,6 +60,7 @@ export async function recordQuotaReadings(
           remaining: r.remaining,
           resetAt: r.resetAt === null ? null : new Date(r.resetAt),
           source: r.source,
+          note: r.note ?? null,
           observedAt,
         },
         // Out-of-order arrival is normal with concurrent turns, so the update
