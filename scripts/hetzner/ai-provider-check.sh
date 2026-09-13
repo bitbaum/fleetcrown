@@ -17,10 +17,11 @@
 #
 # WHAT THIS MEASURES — and what it cannot
 # ---------------------------------------
-# Failures are logged; successes are not. So this counts FAILURES PER LINK in a
-# window and alerts above a threshold. It is a floor, not a rate: a link with
-# zero failures here may simply not have been called. That is stated rather than
-# papered over, because a monitor that implies more than it knows is how the
+# Failures are always logged. Successes are logged only where the app emits
+# "model call served" (orangecat's platform-llm does; other paths may not), so
+# the rate is reported ONLY for links whose wins are visible. Everywhere else
+# this is a failure count and says so: a link with zero failures may simply not
+# have been called. A monitor that implies more than it knows is how the
 # registry audit came to report "zero adopters" for packages with eight.
 #
 # Usage:
@@ -67,15 +68,22 @@ if [ -z "$log" ]; then
 fi
 [ "$REPORT_ONLY" = 1 ] || alert_transition ai_provider_sweep ok "✅" "ai-provider sweep reachable"
 
-# Every shape a link failure takes in these logs. `link` is the canonical field
-# (provider/model); the chat orchestrator instead names from.provider+model.
-links=$(
+# A `link` field alone does not say what happened to the call — a served turn
+# and a dead one both carry it. Select by MESSAGE first, then read the link.
+FAILED_RE='model call failed|provider failed, trying next fallback'
+SERVED_RE='model call served'
+
+link_ids() {
   {
-    printf '%s\n' "$log" | grep -oE '"link":"[^"]+"' | sed 's/"link":"//; s/"$//'
-    printf '%s\n' "$log" | grep -oE '"from":\{"provider":"[^"]+","model":"[^"]+"' \
+    printf '%s\n' "$1" | grep -oE '"link":"[^"]+"' | sed 's/"link":"//; s/"$//'
+    printf '%s\n' "$1" | grep -oE '"from":\{"provider":"[^"]+","model":"[^"]+"' \
       | sed 's/.*"provider":"//; s/","model":"/\//; s/"$//'
-  } | sort | uniq -c | sort -rn
-)
+  }
+}
+
+failed_log=$(printf '%s\n' "$log" | grep -E "$FAILED_RE")
+served_log=$(printf '%s\n' "$log" | grep -E "$SERVED_RE")
+links=$(link_ids "$failed_log" | sort | uniq -c | sort -rn)
 
 findings=0
 while read -r count link; do
@@ -88,13 +96,23 @@ while read -r count link; do
   # lines — the ones carrying `reason` — are not silently excluded.
   provider="${link%%/*}"
   model="${link#*/}"
-  lines=$(printf '%s\n' "$log" | grep -F "$model" | grep -F "$provider")
+  lines=$(printf '%s\n' "$failed_log" | grep -F "$model" | grep -F "$provider")
   kinds=""
   for kind in json_validate_failed rate_limit 429 413 404 401 timeout; do
     n=$(printf '%s\n' "$lines" | grep -c -- "$kind")
     [ "$n" -gt 0 ] && kinds="$kinds $kind=$n"
   done
-  msg="$link: $count failure(s) in the last ${WINDOW%% ago}${kinds:+ —$kinds}"
+  # A rate only when the wins are observable. Until the app logs a served
+  # turn there is nothing to divide by, and inventing a denominator would
+  # turn "we cannot see" into a confident percentage.
+  served=$(link_ids "$served_log" | grep -c -x -- "$link")
+  total=$((count + served))
+  if [ "$served" -gt 0 ]; then
+    rate="$(( served * 100 / total ))% served ($served/$total)"
+  else
+    rate="no served turn seen — a floor, not a rate"
+  fi
+  msg="$link: $count failure(s) in the last ${WINDOW%% ago}${kinds:+ —$kinds} · $rate"
   findings=$((findings + 1))
   if [ "$REPORT_ONLY" = 1 ]; then
     echo "$msg"
