@@ -28,6 +28,7 @@ import {
   MessagesSquare,
   Handshake,
   LayoutGrid,
+  Clapperboard,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -134,6 +135,15 @@ export const NAV = {
     description: "Folded into Projects — live URL and down-state live there",
     href: "/projects",
     icon: Globe,
+    active: true,
+    mobile: false,
+  },
+  films: {
+    id: "films",
+    label: "Films",
+    description: "Screenplay in, clip-sized shots out, one film back",
+    href: "/films",
+    icon: Clapperboard,
     active: true,
     mobile: false,
   },
@@ -346,6 +356,7 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
       NAV.approvals,
       NAV.terminal,
       NAV.prompts,
+      NAV.films,
       NAV.activity,
       NAV.system,
       NAV.fleet,

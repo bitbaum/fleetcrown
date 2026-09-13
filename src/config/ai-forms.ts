@@ -14,6 +14,7 @@ import { defineFields, type FormTarget } from "@fleet/ai-forms";
 import { HABIT_FREQUENCY } from "@/lib/constants/statuses";
 import { ROBOT_CLASSES, ROBOT_CLASS_LABEL } from "@/config/actors";
 import { TASK_CURRENCIES } from "@/config/crew";
+import { ASPECT_RATIOS } from "@/config/film";
 import { VALID_CURRENCIES, VALID_FREQUENCIES } from "@/config/subscriptions";
 
 /** Turn a constant tuple/record of string values into assistant field options. */
@@ -47,6 +48,60 @@ export const GOAL_FORM: FormTarget = {
   instructions: [
     "A goal is an outcome, not a task. Prefer 'Ship the payments layer' over 'work on payments'.",
     "Only set a target date when the user gives one, explicitly or as a relative date.",
+  ],
+};
+
+export const FILM_FORM: FormTarget = {
+  key: "film",
+  name: "Film",
+  fields: defineFields([
+    {
+      name: "title",
+      label: "Title",
+      type: "text",
+      required: true,
+      maxLength: 160,
+      placeholder: "e.g. The Letter",
+    },
+    {
+      name: "logline",
+      label: "Logline",
+      type: "text",
+      maxLength: 400,
+      hint: "One sentence: who wants what, and what is in the way",
+    },
+    {
+      name: "premise",
+      label: "Premise",
+      type: "textarea",
+      maxLength: 4000,
+      hint: "The idea, in prose. The screenplay is written from this.",
+    },
+    {
+      name: "styleBible",
+      label: "Look & style",
+      type: "textarea",
+      maxLength: 4000,
+      hint: "Stock, lens, palette, lighting. This goes into EVERY shot prompt.",
+    },
+    {
+      name: "aspectRatio",
+      label: "Aspect ratio",
+      type: "select",
+      options: optionsOf(ASPECT_RATIOS),
+    },
+    {
+      name: "targetRuntimeSeconds",
+      label: "Target runtime (seconds)",
+      type: "number",
+      hint: "Roughly how long the finished film should run",
+    },
+  ]),
+  instructions: [
+    "A logline is one sentence naming the character, what they want, and the obstacle. Never a summary of the plot.",
+    "The style entry describes how the film LOOKS — stock, lens, palette, lighting, era. It is repeated in every shot prompt, so keep it short and concrete, and never put story in it.",
+    "The premise is story. The style is look. Never mix them.",
+    "Only set a target runtime when the user gives one.",
   ],
 };
 
@@ -261,6 +316,7 @@ export const SUBSCRIPTION_FORM: FormTarget = {
 /** Every registered form. The API route accepts these keys and no others. */
 export const AI_FORMS: FormTarget[] = [
   GOAL_FORM,
+  FILM_FORM,
   PROJECT_FORM,
   PERSON_FORM,
   ROBOT_FORM,

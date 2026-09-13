@@ -56,6 +56,10 @@ const SKIP: Record<string, string> = {
  */
 const SKIP_UNLESS_ENV: Record<string, string> = {
   "orangecat-entitlement-e2e.ts": "DATABASE_URL",
+  // Same reasoning: the pure film tests cannot prove what only Postgres can —
+  // that a re-breakdown leaves no orphan shots, and that one user's film is
+  // unreachable by another.
+  "film-queries.ts": "DATABASE_URL",
 };
 
 for (const [file, envVar] of Object.entries(SKIP_UNLESS_ENV)) {

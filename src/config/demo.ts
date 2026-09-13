@@ -226,6 +226,7 @@ export const DEMO_SAFE_FAMILIES: readonly string[] = [
   "event-stream-token",
   "events",
   "feedback",
+  "films",
   "fleet",
   "goals",
   "habits",
@@ -252,7 +253,7 @@ export const DEMO_SAFE_FAMILIES: readonly string[] = [
   "widget-boot",
   "x-login",
 ] as const;
-// Two of these deserve their reasoning written down rather than inferred:
+// Three of these deserve their reasoning written down rather than inferred:
 //
 //   crew  — assignments and the roster are the demo's own tenant rows, and
 //           FleetCrown never DELIVERS an assignment: handing one over mints a
@@ -261,6 +262,12 @@ export const DEMO_SAFE_FAMILIES: readonly string[] = [
 //           OrangeCat, and that route carries its own denyDemoInHandler call —
 //           it cannot live in DEMO_HANDLER_ENFORCED because the matcher does
 //           reach /api/crew, and this list is for families it excludes.
+//   films — a film, its screenplay and its shots are the demo's own tenant rows,
+//           and nothing in the pipeline renders or uploads anything: the shot
+//           prompts and the ffmpeg commands are text the operator copies. The
+//           two routes that DO spend model credit — writing the screenplay and
+//           breaking it down — each carry their own denyDemoInHandler call, for
+//           the same reason crew's publish route does.
 //   share — the assignee's endpoint. It answers on a token, before and without
 //           any session, exactly like /api/invitations/<token>. Gating the demo
 //           account on it would protect nothing: a caller holding a share token

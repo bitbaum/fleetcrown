@@ -41,6 +41,18 @@ src/
 │   │                 new full-width strip. ControlSettingsSheet = autopilot,
 │   │                 refresh, builder detail (settings, not state).
 │   │                 See docs/development/responsive-design.md.
+│   ├── films/     → FilmsWorkspace + FilmWorkspaceView (a film end to end),
+│   │                 ScreenplayPanel, ShotCard, AssemblyPanel, NewFilmButton.
+│   │                 A video model caps a single clip at a few seconds, so a
+│   │                 film is a dozen renders that must agree with each other.
+│   │                 The model proposes BEATS; lib/film/slice.ts enforces the
+│   │                 ceiling with arithmetic — never ask a model to respect a
+│   │                 hard limit. Clip length is SSOT in config/film.ts and
+│   │                 SNAPSHOT on each film, so raising it never re-cuts a film
+│   │                 already half-generated. Assembly emits TEXT only (concat
+│   │                 manifest + ffmpeg command); the server never runs ffmpeg
+│   │                 and never fetches a clip.
+│   │                 See docs/development/film-pipeline.md.
 │   ├── loki/      → LokiWorkspace, Transcript, Composer, ConversationList (chat assistant)
 │   ├── terminal/  → TerminalSurface (the ONE shell: tab strip + mode bar +
 │   │                 session + composer), TerminalTabStrip, TerminalModeBar,
@@ -384,6 +396,7 @@ expensive gate sits where the work becomes everyone's problem.
 | Approvals | /approvals | The Approval Queue as a destination — review/approve Loki's proposed actions; locked-zone state shows pending count + unlock CTA |
 | Feedback | /feedback | Every report across the fleet in one ironing-out loop: what phase each fix is in and the next action, without opening a project. Fed by the embeddable widget (`widget/`, served as `/widget.js`), AI review, and synthesized briefs. `ControlInbox` is the preview; this is the surface |
 | Terminal | /terminal | Live embedded terminal — watch/drive the cloud builder or local Fleet Runner PTY per project tab |
+| Films | /films | Screenplay in, clip-sized shots out, one film back. The clip ceiling is config (`FILM_MAX_CLIP_SECONDS`), never a literal — the model proposes beats, `lib/film/slice.ts` enforces the limit. See docs/development/film-pipeline.md |
 | Activity | /activity | Fleet activity timeline — digests, event stream, per-project status strip across windows (hour/day/week/month). `/digests`, `/decisions` and `/history` are redirect stubs onto this page |
 | Atlas | /atlas | RETIRED — redirects to /projects. Live URL and down-state live on Projects |
 | Duet | /duet | RETIRED — redirects to /agents, which now redirects on to /control (side-by-side prompt view earned nothing over Terminal + Control) |
