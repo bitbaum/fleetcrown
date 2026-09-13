@@ -181,6 +181,76 @@ export function planRetrieval(message: string): RetrievalPlan {
   };
 }
 
+/**
+ * Which tools are worth SHOWING for a given plan.
+ *
+ * ── WHY SHOW FEWER THAN WE ACCEPT ────────────────────────────────────────────
+ *
+ * The tool catalogue plus its native JSON schema measure 3,010 tokens, charged
+ * on every turn before a single record. That is 47% of a measured 6,442-token
+ * feedback turn, and it is why Groq — whose window is 8,000 tokens per minute —
+ * is skipped on every call and never used at all.
+ *
+ * Cutting RECORDS to fit would recreate the exact failure this retrieval layer
+ * was built to end. The catalogue is the cheap half: it carries no facts.
+ *
+ * ── THIS REMOVES NO CAPABILITY ───────────────────────────────────────────────
+ *
+ * Only what the model is SHOWN narrows. The parser's accepted-name set stays
+ * the whole registry and the executor still holds every handler, so a model
+ * that names an unadvertised tool still runs it. And the tools for whatever the
+ * planner identified are always present, alongside a core that answers "what
+ * else is there".
+ *
+ * Measured before doing it: across five representative questions on production,
+ * ZERO turns called a tool. The seed answered all of them. So this is 1,100 to
+ * 1,700 tokens per turn bought back from capability that, in practice, no turn
+ * was spending.
+ */
+const TOOLS_FOR_SOURCE: Record<SourceId, readonly string[]> = {
+  feedback: ["list_feedback"],
+  runs: ["list_runs", "list_active_agents"],
+  sessions: ["list_active_agents"],
+  alerts: ["list_alerts"],
+  fleet_status: ["fleet_status"],
+  approvals: ["list_pending_approvals"],
+  goals: ["list_goals"],
+  habits: ["list_habits"],
+  commitments: ["list_commitments"],
+  crew: ["list_crew"],
+  human_tasks: ["list_human_tasks", "propose_human_task"],
+  captures: ["list_notes"],
+  people: ["search_people", "propose_action"],
+  knowledge: ["search_knowledge"],
+  economy: [],
+  projects: ["list_projects"],
+};
+
+/**
+ * Always offered, whatever the question.
+ *
+ * The pulse and the project list answer "what else is going on"; the knowledge
+ * index answers "why did we decide that"; the approval queue is the one lever
+ * Loki has on the world and must never be hidden from it.
+ */
+const CORE_TOOLS: readonly string[] = [
+  "fleet_status",
+  "list_projects",
+  "search_knowledge",
+  "propose_action",
+];
+
+/** Tool names worth advertising for this plan. A broad plan gets everything. */
+export function toolsForPlan(plan: RetrievalPlan): Set<string> {
+  const wanted = new Set(CORE_TOOLS);
+  // A question nobody could route is a question that might need anything.
+  if (plan.broad) return new Set<string>();
+  for (const source of plan.sources) {
+    for (const name of TOOLS_FOR_SOURCE[source] ?? []) wanted.add(name);
+  }
+  return wanted;
+}
+
 /** The limit a source gets under this plan: depth for the subject, a glance otherwise. */
 export function sourceLimit(plan: RetrievalPlan, id: SourceId): number {
   const limits = SOURCE_LIMITS[id];

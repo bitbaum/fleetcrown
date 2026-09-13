@@ -537,11 +537,84 @@ async function main() {
   }
 
   console.log(
-    "✓ agent tool loop: 15 checks passed (protocol tolerance, catalog shape, no-execute boundary, fact accumulation, repair guards, bounds, 413 shedding, history, empty-prompt refusal, provenance)",
+    "✓ agent tool loop: 17 checks passed (protocol tolerance, catalog shape, no-execute boundary, fact accumulation, repair guards, bounds, 413 shedding, history, empty-prompt refusal, provenance, advertised-vs-callable)",
   );
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+// ── 16-17. Advertising fewer tools must not remove any ──────────────────────
+// The catalogue costs 3,010 tokens per turn before a single record, which is
+// why Groq's 8,000-token window is skipped on every call. Narrowing what the
+// model SEES buys that back; narrowing what it may CALL would be a capability
+// cut wearing the same clothes. These two pin the difference.
+
+async function advertisingChecks() {
+  const seen: Array<{ advertised: number; accepted: string[] }> = [];
+  let turn = 0;
+  const model = (async (input: { tools: unknown[]; validToolNames: string[] }) => {
+    seen.push({ advertised: input.tools.length, accepted: [...input.validToolNames] });
+    // First reply calls a tool that was deliberately NOT advertised this turn.
+    turn += 1;
+    return turn === 1
+      ? {
+          text: "",
+          toolCalls: [{ id: "1", name: "search_people", args: { query: "Elena" } }],
+          model: "stub",
+        }
+      : { text: "Elena Weber SINGA Switzerland [F1].", toolCalls: [], model: "stub" };
+  }) as never;
+
+  const r = await runLokiTurn({
+    userId: "u1",
+    message: "who is Elena?",
+    registry: STUB_REGISTRY,
+    callModel: model,
+    seed: {
+      facts: [],
+      directives: [],
+      // Advertise ONLY `boom`, so search_people is hidden from the catalogue.
+      advertiseTools: new Set(["boom"]),
+    },
+  });
+
+  assert.equal(
+    seen[0]?.advertised,
+    1,
+    `only the advertised tool is shown, saw ${seen[0]?.advertised}`,
+  );
+  assert.deepEqual(
+    seen[0]?.accepted.sort(),
+    Object.keys(STUB_REGISTRY).sort(),
+    "the ACCEPTED set stays the whole registry — narrowing it would be the capability cut",
+  );
+  assert.deepEqual(
+    r.toolsUsed,
+    ["search_people"],
+    "an unadvertised tool the model named must still EXECUTE",
+  );
+
+  // And with no advertising hint, nothing narrows.
+  const seenAll: number[] = [];
+  const modelAll = (async (input: { tools: unknown[] }) => {
+    seenAll.push(input.tools.length);
+    return { text: "fine", toolCalls: [], model: "stub" };
+  }) as never;
+  await runLokiTurn({
+    userId: "u1",
+    message: "hi",
+    registry: STUB_REGISTRY,
+    callModel: modelAll,
+    seed: { facts: [], directives: [] },
+  });
+  assert.equal(
+    seenAll[0],
+    Object.keys(STUB_REGISTRY).length,
+    "no hint means advertise everything — a test's own seed must not be narrowed",
+  );
+}
+
+main()
+  .then(advertisingChecks)
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });

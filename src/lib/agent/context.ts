@@ -42,7 +42,13 @@ import {
   sessionFacts,
 } from "@/lib/agent/sources";
 import { buildDailyBrief, buildFleetBrief } from "@/lib/agent/brief";
-import { planRetrieval, sourceLimit, type RetrievalPlan, type SourceId } from "@/lib/agent/plan";
+import {
+  planRetrieval,
+  sourceLimit,
+  toolsForPlan,
+  type RetrievalPlan,
+  type SourceId,
+} from "@/lib/agent/plan";
 
 /** Window for commitments/events when they lead the turn. */
 const COMMITMENT_DAYS = 14;
@@ -55,6 +61,8 @@ export type Seed = {
   directives: Directive[];
   retrieved: RetrievedSource[];
   plan: RetrievalPlan;
+  /** Tool names worth advertising — narrows what the model SEES, never what it may call. */
+  advertiseTools: Set<string>;
 };
 
 /** Fetch one planned source. Every branch is best-effort. */
@@ -133,7 +141,13 @@ export async function buildSeed(
     count: perSource[i].length,
   }));
   const facts = assignFactIds(perSource.flat());
-  return { facts, directives: [...fleet, ...daily], retrieved, plan };
+  return {
+    facts,
+    directives: [...fleet, ...daily],
+    retrieved,
+    plan,
+    advertiseTools: toolsForPlan(plan),
+  };
 }
 
 export type GroundedTurn = {
