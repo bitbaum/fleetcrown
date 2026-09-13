@@ -14,16 +14,15 @@ import { postJson } from "@/lib/api/fetch";
 const DISMISS_KEY = "fleetcrown-verify-email-dismiss";
 
 /**
- * Routes where the viewport IS the product, so an optional reminder may not
- * take a slice of it.
+ * Routes where the viewport IS the working surface, so an optional reminder
+ * may not take a slice of it.
  *
- * On a 844px phone the terminal already gives 268px to fixed chrome; this
- * banner took another 74px — 18% of what was left for the actual screen — to
- * say something that is explicitly not required and can wait for any other
- * page. It is suppressed here, not removed: it still shows everywhere else,
- * and dismissing it there still silences it for good.
+ * On a 844px phone these pages already give ~150-270px to fixed chrome; this
+ * banner took another 74px to say something explicitly not required, which can
+ * wait for any other page. Suppressed here, not removed: it still shows
+ * everywhere else, and dismissing it there still silences it for good.
  */
-const IMMERSIVE_ROUTES = ["/terminal"];
+const WORKSPACE_ROUTES = ["/terminal", "/control"];
 
 /** Optional verification reminder — email is not required to use the app. One
  *  calm line so it never outranks the actual page content beneath it. */
@@ -42,7 +41,7 @@ export function EmailVerificationBanner() {
   const [sent, setSent] = useState(false);
 
   if (status !== "authenticated" || dismissed) return null;
-  if (pathname && IMMERSIVE_ROUTES.some((r) => pathname === r || pathname.startsWith(`${r}/`))) {
+  if (pathname && WORKSPACE_ROUTES.some((r) => pathname === r || pathname.startsWith(`${r}/`))) {
     return null;
   }
 

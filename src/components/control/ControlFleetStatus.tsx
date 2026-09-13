@@ -26,6 +26,22 @@ const COUNT_SCOPE_TITLE =
   "Counts agents FleetCrown dispatched, plus workspaces it tracks by project name. " +
   "Agents you started yourself elsewhere are not counted here.";
 
+/**
+ * The same caveat, short enough to render.
+ *
+ * COUNT_SCOPE_TITLE was delivered as a `title` attribute — a tooltip, which
+ * does not exist on a touch screen. So on the device where this number is
+ * least checkable, the sentence that makes it honest could not be read at all.
+ *
+ * The number really does mislead: on 2026-09-13 this line read "0 working"
+ * while three agent sessions were busy in worktrees on the operator's own
+ * machine. They are invisible by construction — they write no dispatch
+ * sentinel and open no named tab — so the count is not wrong, it is narrow.
+ * A narrow number that presents as a total is the thing to fix, and until the
+ * runner can read the live-session registry, saying so is the fix available.
+ */
+const COUNT_SCOPE_SHORT = "FleetCrown-dispatched only";
+
 type Props = {
   dashboard: ControlDashboardState | null;
   failedCount: number;
@@ -359,6 +375,11 @@ export function ControlFleetStatus({
             )}
             {" · "}
             {idle} idle
+          </span>
+        )}
+        {countsKnown && (
+          <span className="ui-hero-count-scope" title={COUNT_SCOPE_TITLE}>
+            {COUNT_SCOPE_SHORT}
           </span>
         )}
         {versionDetail && <span className="ui-hero-sync hidden sm:inline">{versionDetail}</span>}
