@@ -112,8 +112,9 @@ export function OrangeCatBuildHandoff({
         <h1 className="ui-public-page-title mt-3">Bring “{intent.entity.title}” into FleetCrown</h1>
         <p className="ui-public-lede mt-4 max-w-2xl">
           You came from a “Build it with FleetCrown” button on OrangeCat. OrangeCat is where a
-          project is public and can be funded; FleetCrown is where it gets built. This link carries
-          the title and description across so you do not retype them.
+          project is made public, financed, and — in its Studio — where video, music, writing and
+          artwork get made; FleetCrown is where software gets built. This link carries the title and
+          description across so you do not retype them.
         </p>
         <ul className="mt-5 space-y-2 text-sm text-text-secondary">
           {autoBuilding ? (

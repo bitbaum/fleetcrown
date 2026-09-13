@@ -9,6 +9,12 @@ and its registers for org facts. Read this repo's `AGENTS.md` for the product
 contract. FleetCrown builds and changes projects independently; OrangeCat is an
 optional integration, with separate consent for public publishing.
 
+What the neighbour can do — OrangeCat's Studio renders video, music, longform
+writing and artwork, and finances or sells the result — is SSOT in
+`src/config/ecosystem.ts` → `ORANGECAT_CAPABILITIES`. Loki's capability preface
+reads it verbatim so the assistant can point there without ever claiming to
+render anything itself.
+
 ## What This Is
 
 FleetCrown is a multi-user SaaS platform for commanding AI agent fleets across projects. Users sign in (GitHub OAuth), register their projects, and launch/monitor AI agents from a single dashboard. Dark-first, mobile-ready, designed for builders who want control without complexity.

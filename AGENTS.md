@@ -14,6 +14,13 @@ OrangeCat linking is optional. Execution access is defined in
 `src/lib/execution-access.ts`; project identity is not a terminal tab name.
 A queued run or successful agent turn does not prove a deployment.
 
+**FleetCrown builds software. It does not make video, music or prose.** That
+neighbour capability lives on OrangeCat (its Studio), and what it can do is
+stated once in `src/config/ecosystem.ts` → `ORANGECAT_CAPABILITIES`, which
+Loki's capability preface reads verbatim. Do not restate it in prose anywhere
+else, and do not let any surface imply Loki renders media itself — it points at
+where that happens.
+
 ## Where code lives
 
 Every repository FleetCrown creates or registers lives in the `bitbaum` GitHub
