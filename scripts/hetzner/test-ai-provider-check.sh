@@ -52,6 +52,37 @@ echo "→ --report never touches the alert library"
 out=$(MON="$TMP/nowhere" run "$TMP/many.log")
 has "$out" "groq/openai/gpt-oss-120b"
 
+echo "→ it reports a real rate once the app logs the wins"
+{
+  for i in 1 2 3; do
+    printf '%s\n' '{"message":"platform-llm: model call failed","data":{"link":"groq/openai/gpt-oss-120b","error":"400 json_validate_failed"}}'
+  done
+  for i in 1 2 3 4 5 6 7; do
+    printf '%s\n' '{"message":"platform-llm: model call served","data":{"link":"groq/openai/gpt-oss-120b"}}'
+  done
+} > "$TMP/rate.log"
+out=$(run "$TMP/rate.log" 1)
+has "$out" "70% served (7/10)"
+has "$out" "3 failure"
+
+echo "→ a served turn is never counted as a failure"
+# The `link` field appears on BOTH shapes. Selecting on it alone would report
+# ten failures here and alert on a link that answered seven times out of ten.
+hasnt "$out" "10 failure"
+
+echo "→ a link that only ever succeeded raises nothing at all"
+for i in 1 2 3 4 5 6; do
+  printf '%s\n' '{"message":"platform-llm: model call served","data":{"link":"groq/openai/gpt-oss-20b"}}'
+done > "$TMP/won.log"
+out=$(run "$TMP/won.log" 1)
+hasnt "$out" "gpt-oss-20b"
+has "$out" "no link failed"
+
+echo "→ without served lines it still says floor, not rate"
+out=$(run "$TMP/many.log" 1)
+has "$out" "a floor, not a rate"
+hasnt "$out" "% served"
+
 echo
 echo "ai-provider-check: $pass passed, $fail failed"
 [ "$fail" = 0 ]
