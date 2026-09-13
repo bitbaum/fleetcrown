@@ -45,6 +45,12 @@ export type QuotaRowView = {
   alsoMetered?: string[];
   /** When this counter was read, so a stale row cannot outrank a fresh one. */
   observedAt?: number | null;
+  /**
+   * Blocking, but NOT empty: something is left, just less than one answer
+   * costs. "Spent" beside "3,984 of 8,000" is the kind of line that gets a
+   * dashboard called made-up, so this state gets its own word.
+   */
+  shortfall?: boolean;
 };
 
 export type QuotaReadingRow = {
@@ -177,7 +183,13 @@ export function describeQuota(
     };
   }
 
-  const exhausted = row.remaining <= 0 || (row.scope === "tokens" && answers === 0);
+  const empty = row.remaining <= 0;
+  // Under one answer's worth is still blocking — the turn cannot be served from
+  // this window — but it is a different fact from an empty tank, and it recovers
+  // differently: a minute window with 3,984 left refills in seconds.
+  const shortfall = !empty && row.scope === "tokens" && answers === 0;
+  const exhausted = empty || shortfall;
+  const shortfallDetail = shortfall ? `${detail} — under one answer's worth` : detail;
   const level =
     row.quotaLimit && row.quotaLimit > 0
       ? Math.max(0, Math.min(1, row.remaining / row.quotaLimit))
@@ -188,7 +200,8 @@ export function describeQuota(
     model: row.model,
     state: exhausted ? "exhausted" : "known",
     answers,
-    detail,
+    detail: shortfallDetail,
+    ...(shortfall ? { shortfall: true } : {}),
     refills: refillsIn(row.resetAt, opts.now),
     consequence,
     level,
@@ -293,7 +306,14 @@ export function bindingRows(views: QuotaRowView[]): QuotaRowView[] {
     });
     const [lead, ...rest] = ranked;
     if (!lead) continue;
-    out.push(rest.length === 0 ? lead : { ...lead, alsoMetered: rest.map((r) => r.detail) });
+    // Only real MEASUREMENTS go in the subtitle. A skip notice is not a counter
+    // (and repeating its sentence under a row that already says the same thing
+    // is noise dressed as detail), and a stale counter is not a measurement —
+    // its wording does not even name which counter it is talking about.
+    const also = rest
+      .filter((r) => r.state === "known" || r.state === "exhausted")
+      .map((r) => r.detail);
+    out.push(also.length === 0 ? lead : { ...lead, alsoMetered: also });
   }
   return out;
 }
@@ -301,7 +321,10 @@ export function bindingRows(views: QuotaRowView[]): QuotaRowView[] {
 export function summarise(rows: QuotaRowView[]): string {
   if (rows.length === 0) return "No AI providers are configured.";
   const known = rows.filter((r) => r.state === "known");
-  const exhausted = rows.filter((r) => r.state === "exhausted");
+  const exhausted = rows.filter((r) => r.state === "exhausted" && !r.shortfall);
+  // Counted apart from "spent": the tank is not empty, it is merely too low for
+  // one more answer, and it refills on a completely different timescale.
+  const tooLow = rows.filter((r) => r.shortfall);
   const skipped = rows.filter((r) => r.state === "skipped");
   const unknown = rows.filter((r) => r.state === "unknown");
 
@@ -321,6 +344,10 @@ export function summarise(rows: QuotaRowView[]): string {
   }
   // Named before "not measured", because a skip is a fixable fault and an
   // unmeasured provider is merely quiet.
+  if (tooLow.length > 0) {
+    const back = tooLow.find((r) => r.refills)?.refills;
+    parts.push(`${tooLow.length} too low for another answer${back ? `, back ${back}` : ""}`);
+  }
   if (skipped.length > 0) {
     parts.push(`${skipped.length} never reached — prompts exceed their budget`);
   }
