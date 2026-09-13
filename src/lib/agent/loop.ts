@@ -130,6 +130,18 @@ export type LoopSeed = {
   directives: Directive[];
   /** Which sources contributed how many records — provenance for the operator. */
   retrieved?: RetrievedSource[];
+  /**
+   * Tool names worth ADVERTISING this turn, from the retrieval plan.
+   *
+   * Narrows what the model is shown, never what it may call: the accepted-name
+   * set below stays the whole registry and every handler stays reachable. The
+   * catalogue and its JSON schema cost 3,010 tokens on every turn before a
+   * single record, which is why Groq's 8,000-token window is never reached.
+   *
+   * Absent (or empty) means advertise everything — the shape a test injecting
+   * its own seed gets, and the shape a question nobody could route gets.
+   */
+  advertiseTools?: Set<string>;
 };
 
 export type LoopResult = {
@@ -309,14 +321,26 @@ export async function runLokiTurn(input: {
 }): Promise<LoopResult> {
   const registry = input.registry ?? (await defaultRegistry());
   const callModel = input.callModel ?? callModelWithTools;
+  // The model may call ANY tool in the registry — this is the accepted set, and
+  // it is deliberately not narrowed alongside the advertised one.
   const names = toolNames(registry);
-  const nativeTools = toOpenAITools(registry);
   const ctx = { userId: input.userId, message: input.message };
   const budgetTokens =
     input.promptBudgetTokens ?? (maxPromptBudgetTokens() || FALLBACK_PROMPT_BUDGET_TOKENS);
 
   const seed = input.seed ?? (await defaultSeed(input.userId, input.message));
   const directives = seed.directives;
+
+  // What the model SEES. Everything stays callable; this only stops us paying
+  // for eighteen tool descriptions on a turn the planner already routed.
+  const wanted = seed.advertiseTools;
+  const advertised =
+    wanted && wanted.size > 0
+      ? (Object.fromEntries(
+          Object.entries(registry).filter(([name]) => wanted.has(name)),
+        ) as ToolRegistry)
+      : registry;
+  const nativeTools = toOpenAITools(advertised);
   const retrieved = seed.retrieved ?? [];
   const prior = historyMessages(input.history);
 
@@ -359,7 +383,7 @@ export async function runLokiTurn(input: {
     // model handed tools will keep calling them, and the operator would get a
     // dangling tool call instead of a reply.
     const lastRound = round === MAX_ROUNDS - 1;
-    const system = systemPrompt(registry, !lastRound) + voiceLine;
+    const system = systemPrompt(advertised, !lastRound) + voiceLine;
 
     // Everything charged besides facts. It GROWS as the loop proceeds — the
     // conversation carries each round's tool results — so the fit is recomputed

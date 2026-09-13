@@ -23,7 +23,13 @@
  * only (names and kinds) — no handler is invoked, so no database is touched.
  */
 import assert from "node:assert/strict";
-import { planRetrieval, sourceLimit, SOURCE_IDS, type SourceId } from "../../src/lib/agent/plan";
+import {
+  planRetrieval,
+  sourceLimit,
+  toolsForPlan,
+  SOURCE_IDS,
+  type SourceId,
+} from "../../src/lib/agent/plan";
 import {
   LOKI_ATTENTION_PROMPT,
   LOKI_FEEDBACK_PROMPT,
@@ -308,6 +314,88 @@ async function main() {
           reached.has(id),
           `source "${id}" is never planned by any probe — it can be fetched but nothing asks for it`,
         );
+      }
+    });
+
+    // ── The advertised catalogue ───────────────────────────────────────────
+    // Catalogue plus JSON schema cost 3,010 tokens on every turn before a
+    // single record — 47% of a measured 6,442-token turn, and the reason Groq's
+    // 8,000-token window is skipped on every call. Narrowing what the model is
+    // SHOWN buys that back. Narrowing what it may CALL would be a capability
+    // cut, so these pin the difference between the two.
+    const TOOL_FOR_SOURCE: Partial<Record<SourceId, string>> = {
+      feedback: "list_feedback",
+      runs: "list_runs",
+      sessions: "list_active_agents",
+      alerts: "list_alerts",
+      fleet_status: "fleet_status",
+      approvals: "list_pending_approvals",
+      goals: "list_goals",
+      habits: "list_habits",
+      commitments: "list_commitments",
+      crew: "list_crew",
+      human_tasks: "list_human_tasks",
+      captures: "list_notes",
+      people: "search_people",
+      knowledge: "search_knowledge",
+      projects: "list_projects",
+    };
+
+    check("every planned source has its tool advertised", () => {
+      for (const probe of [
+        "what was the most recent feedback sent",
+        "how are my agent runs doing",
+        "which goal is stuck",
+        "who owes me what",
+      ]) {
+        const plan = planRetrieval(probe);
+        const shown = toolsForPlan(plan);
+        if (shown.size === 0) continue; // a broad plan advertises everything
+        for (const source of plan.sources) {
+          const needed = TOOL_FOR_SOURCE[source];
+          if (!needed) continue;
+          assert.ok(
+            shown.has(needed),
+            `"${probe}" plans ${source} but never offers ${needed}: [${[...shown].join(", ")}]`,
+          );
+        }
+      }
+    });
+
+    check("the core tools are offered whatever the question", () => {
+      // The pulse and project list answer "what else"; the knowledge index
+      // answers "why did we decide that"; propose_action is the ONLY lever Loki
+      // has on the world, and hiding it would remove the product's point.
+      const shown = toolsForPlan(planRetrieval("who is Elena"));
+      for (const core of ["fleet_status", "list_projects", "search_knowledge", "propose_action"]) {
+        assert.ok(shown.has(core), `${core} must always be offered: [${[...shown].join(", ")}]`);
+      }
+    });
+
+    check("a question nobody could route advertises EVERYTHING", () => {
+      // Unroutable means it might need anything — the one case where the full
+      // catalogue is worth its tokens.
+      assert.equal(
+        toolsForPlan(planRetrieval("zxcvbnm qwerty")).size,
+        0,
+        "an empty set means no narrowing",
+      );
+    });
+
+    check("narrowing is strictly smaller than the registry, or it buys nothing", () => {
+      const shown = toolsForPlan(planRetrieval("what was the most recent feedback sent"));
+      assert.ok(shown.size > 0, "a routed question narrows");
+      assert.ok(
+        shown.size < Object.keys(LOKI_TOOLS).length,
+        `narrowed to ${shown.size} of ${Object.keys(LOKI_TOOLS).length}`,
+      );
+    });
+
+    check("every advertised name is a real tool — a catalogue cannot invent one", () => {
+      for (const probe of ["what needs me", "who is Elena", "how are my runs", "which goal"]) {
+        for (const name of toolsForPlan(planRetrieval(probe))) {
+          assert.ok(name in LOKI_TOOLS, `advertised "${name}" is not in the registry`);
+        }
       }
     });
 
