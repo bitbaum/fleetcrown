@@ -32,7 +32,7 @@ import { HTTP_TIMEOUT_LONG_MS } from "@/lib/constants/time";
 import { classifyGroqLimit, groqRetryAfterSeconds, humanizeWait } from "@/lib/agent/groq-error";
 import { chainFrom, linkPromptCeilingTokens, type ChatLink } from "@/config/chat-models";
 import { recordAIHealthFailure, recordAIHealthSuccess } from "@/lib/ai/health";
-import { recordVendorQuota, recordPreflightSkip } from "@/lib/ai/record-quota";
+import { recordVendorQuota, recordPreflightSkip, recordRefusal } from "@/lib/ai/record-quota";
 import { readSseChunks } from "@/lib/agent/sse-stream";
 
 export type ChatMessage = {
@@ -334,7 +334,17 @@ async function callOneLink(
     }
     if (res.status === 429) {
       const kind = classifyGroqLimit(body);
-      const wait = humanizeWait(groqRetryAfterSeconds(body));
+      const retryAfter = groqRetryAfterSeconds(body);
+      const wait = humanizeWait(retryAfter);
+      // The headers were already recorded above, and for Groq they are not the
+      // whole story: the per-day TOKEN pool is stated only here, in the prose of
+      // the refusal. Skipping this left the capacity page drawing a healthy
+      // provider through an outage. A "size" 429 is deliberately excluded — it
+      // reports THIS prompt being too big, which is a fact about the prompt and
+      // not about how much allowance is left.
+      if (kind !== "size") {
+        recordRefusal(link, body, retryAfter, kind === "daily" ? "tokens" : "requests");
+      }
       // Keep the wording the shed ladder greps for — `loop.ts` recognises
       // "request too large" and retries with fewer facts.
       if (kind === "size") {

@@ -3,7 +3,13 @@ import { getSessionUserId } from "@/lib/session";
 import { listQuota } from "@/db/queries/provider-quota";
 import { usableChatChain } from "@/config/chat-models";
 import { isGatewayConfigured } from "@/lib/openclaw-gateway";
-import { describeQuota, unknownQuota, summarise, type QuotaRowView } from "@/lib/ai/quota-view";
+import {
+  bindingRows,
+  describeQuota,
+  unknownQuota,
+  summarise,
+  type QuotaRowView,
+} from "@/lib/ai/quota-view";
 
 /**
  * What is left at each AI vendor, as something the operator can act on.
@@ -40,21 +46,25 @@ export async function GET() {
     return null;
   };
 
-  const measured: QuotaRowView[] = rows.map((r) =>
-    describeQuota(
-      {
-        provider: r.provider,
-        model: r.model,
-        scope: r.scope,
-        window: r.windowKind,
-        quotaLimit: r.quotaLimit,
-        remaining: r.remaining,
-        resetAt: r.resetAt,
-        observedAt: r.observedAt,
-        source: r.source,
-        note: r.note,
-      },
-      { now, nextProvider: nextAfter(r.provider) },
+  // One row per counter comes out of the table; one row per MODEL goes to the
+  // page, carrying whichever counter is actually blocking. See bindingRows.
+  const measured: QuotaRowView[] = bindingRows(
+    rows.map((r) =>
+      describeQuota(
+        {
+          provider: r.provider,
+          model: r.model,
+          scope: r.scope,
+          window: r.windowKind,
+          quotaLimit: r.quotaLimit,
+          remaining: r.remaining,
+          resetAt: r.resetAt,
+          observedAt: r.observedAt,
+          source: r.source,
+          note: r.note,
+        },
+        { now, nextProvider: nextAfter(r.provider) },
+      ),
     ),
   );
 

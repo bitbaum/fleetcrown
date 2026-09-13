@@ -11,6 +11,7 @@
  */
 import assert from "node:assert/strict";
 import {
+  bindingRows,
   describeQuota,
   unknownQuota,
   summarise,
@@ -222,6 +223,108 @@ check("the summary names a skip separately from a spend", () => {
   assert.match(s, /1 spent/);
   assert.match(s, /1 never reached/, s);
   assert.match(s, /of 2 configured/);
+});
+
+// ── One model, one row: the counter that actually stops you ─────────────────
+// The exact shape observed on production 2026-09-13: two healthy Groq counters
+// and a third, visible only in a refusal, that was the reason every question
+// returned a 503.
+const groqThree = () => [
+  describeQuota(row({ scope: "tokens", window: "minute", quotaLimit: 8000, remaining: 2672 }), {
+    now: NOW,
+    nextProvider: "openrouter",
+  }),
+  describeQuota(row({ scope: "requests", window: "day", quotaLimit: 1000, remaining: 999 }), {
+    now: NOW,
+    nextProvider: "openrouter",
+  }),
+  describeQuota(row({ scope: "tokens", window: "day", quotaLimit: 200_000, remaining: 227 }), {
+    now: NOW,
+    nextProvider: "openrouter",
+  }),
+];
+
+check("the BLOCKING counter leads, not the healthy one measured most recently", () => {
+  const [only, ...extra] = bindingRows(groqThree());
+  assert.equal(extra.length, 0, "three counters for one model must render as one row");
+  assert.equal(only!.state, "exhausted", "227 of 200,000 tokens is spent, whatever the others say");
+  assert.match(only!.detail, /today/, only!.detail);
+});
+
+check("the counters that did NOT win are still named, so nothing measured is hidden", () => {
+  const [only] = bindingRows(groqThree());
+  assert.equal(only!.alsoMetered?.length, 2);
+  assert.ok(
+    only!.alsoMetered?.some((d) => /this minute/.test(d)),
+    "the per-minute window is still reported, just not drawn",
+  );
+});
+
+check("the summary counts PROVIDERS, not counters", () => {
+  // Three rows for one model made a page with two vendors announce five.
+  const s = summarise([...bindingRows(groqThree()), unknownQuota("openrouter", "not called yet")]);
+  assert.match(s, /of 2 configured/, s);
+});
+
+check("among healthy counters the tightest one leads", () => {
+  const rows = bindingRows([
+    describeQuota(row({ scope: "requests", window: "day", quotaLimit: 1000, remaining: 990 }), {
+      now: NOW,
+      nextProvider: null,
+    }),
+    describeQuota(row({ scope: "tokens", window: "day", quotaLimit: 200_000, remaining: 40_000 }), {
+      now: NOW,
+      nextProvider: null,
+    }),
+  ]);
+  assert.equal(rows.length, 1);
+  assert.match(rows[0]!.detail, /tokens/, "20% left beats 99% left");
+});
+
+check("a model with one counter is unchanged, and carries no 'also' line", () => {
+  const [v] = bindingRows([describeQuota(row(), { now: NOW, nextProvider: "openrouter" })]);
+  assert.equal(v!.alsoMetered, undefined);
+  assert.equal(v!.state, "known");
+});
+
+check("a skip is superseded by a LATER reading — the fix must show as fixed", () => {
+  // The exact regression the budget fix would otherwise cause: the vendor
+  // starts answering, and the page keeps insisting it is never reached because
+  // a skip row is only ever replaced by another skip.
+  const rows = bindingRows([
+    describeQuota(
+      { ...skipRow(), observedAt: new Date(NOW - 3_600_000) },
+      { now: NOW, nextProvider: "openrouter" },
+    ),
+    describeQuota(
+      row({ scope: "tokens", window: "day", quotaLimit: 200_000, remaining: 150_000 }),
+      { now: NOW, nextProvider: "openrouter" },
+    ),
+  ]);
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0]!.state, "known", "an hour-old skip cannot outrank a reading from 30s ago");
+});
+
+check("a skip NEWER than every reading still leads — it is the current fact", () => {
+  const rows = bindingRows([
+    describeQuota(skipRow(), { now: NOW, nextProvider: "openrouter" }),
+    describeQuota(
+      {
+        ...row({ scope: "tokens", window: "day", quotaLimit: 200_000, remaining: 150_000 }),
+        observedAt: new Date(NOW - 3_600_000),
+      },
+      { now: NOW, nextProvider: "openrouter" },
+    ),
+  ]);
+  assert.equal(rows[0]!.state, "skipped", "the most recent thing that happened was a walk-past");
+});
+
+check("two different models stay two rows", () => {
+  const rows = bindingRows([
+    describeQuota(row({ model: "a" }), { now: NOW, nextProvider: null }),
+    describeQuota(row({ model: "b" }), { now: NOW, nextProvider: null }),
+  ]);
+  assert.equal(rows.length, 2, "grouping is per MODEL — Groq meters each one separately");
 });
 
 console.log(`✓ quota view: ${passed} checks passed`);
