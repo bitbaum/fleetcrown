@@ -57,3 +57,13 @@ squashfs-root/
 # tried to commit it. Ignored rather than deleted: a redundant working copy is
 # still someone's working copy.
 /fleetcrown-apps/
+
+# Vendored binaries under desktop/resources/bin/ — never commit.
+#
+# The .png negations above deliberately COMMIT generated brand icons so the
+# desktop build stays dependency-free. A 35 MB executable is the opposite case:
+# `desktop/resources/bin/zellij` (Nov 2024) sat here untracked and unignored,
+# referenced by nothing in desktop/ — one `git add -A` from landing 35 MB of
+# binary in a public repository's history, where it could not be removed
+# without a rewrite.
+desktop/resources/bin/
