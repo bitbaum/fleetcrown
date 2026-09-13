@@ -27,7 +27,11 @@
  * Pure: no network, no database, no model.
  */
 import assert from "node:assert/strict";
-import { linkPromptBudgetTokens, maxPromptBudgetTokens } from "../../src/config/chat-models";
+import {
+  linkPromptBudgetTokens,
+  linkPromptCeilingTokens,
+  maxPromptBudgetTokens,
+} from "../../src/config/chat-models";
 import { fitFactsToBudget, estimateTokens } from "../../src/lib/agent/fact-budget";
 import { systemPrompt } from "../../src/lib/agent/loop";
 import { toOpenAITools, type ToolRegistry } from "../../src/lib/agent/tools/registry";
@@ -86,6 +90,29 @@ const OPENROUTER = {
       max,
       linkPromptBudgetTokens(OPENROUTER),
       "sizing to the smallest link is what shed a prompt to fit a vendor it never reached",
+    );
+  });
+
+  check("the SKIP bound is looser than the SIZING budget, and never above the window", () => {
+    const sizing = linkPromptBudgetTokens(GROQ);
+    const ceiling = linkPromptCeilingTokens(GROQ);
+    assert.ok(
+      ceiling > sizing,
+      `skipping and sizing are different questions: a link refused costs ~1s, a link ` +
+        `skipped costs ~25s and one of 50 daily requests. Got ceiling=${ceiling} sizing=${sizing}`,
+    );
+    assert.ok(
+      ceiling < 8000,
+      `the ceiling must still leave room for the reply inside the 8000-token minute ` +
+        `window — the reply is charged against the same window. Got ${ceiling}`,
+    );
+  });
+
+  check("a large-context vendor has no separate ceiling to be raised to", () => {
+    assert.equal(
+      linkPromptCeilingTokens(OPENROUTER),
+      linkPromptBudgetTokens(OPENROUTER),
+      "the two bounds only diverge for a per-minute-metered vendor; elsewhere a second knob is a second thing to drift",
     );
   });
 
