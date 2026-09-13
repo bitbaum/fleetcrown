@@ -14,7 +14,7 @@
 # which host-check and the OnFailure notifier already use.
 #
 # ONE IMPLEMENTATION. It runs the very same scripts/ci/fleet-refs-audit.mjs the
-# repo ships, which the deploy rsyncs to /opt/fleetcrown/app — a second copy in
+# repo ships, which the deploy rsyncs to /opt/loki/app — a second copy in
 # shell would drift from the first the moment either changed.
 #
 # Idempotent — safe to re-run.
@@ -29,7 +29,7 @@ mkdir -p "$MON/state"
 
 cat > "$MON/fleet-refs-check.sh" <<'CHK'
 #!/usr/bin/env bash
-# Fleet reference audit -> Telegram. Invoked by fleetcrown-fleet-refs.timer.
+# Fleet reference audit -> Telegram. Invoked by loki-fleet-refs.timer.
 #
 # Deliberately NOT `set -e`: this script's whole job is to run a command that is
 # EXPECTED to exit non-zero and report on it. Under -e the failing run would
@@ -38,7 +38,7 @@ cat > "$MON/fleet-refs-check.sh" <<'CHK'
 set -u
 MON="${MON:-/opt/monitoring}"
 . "$MON/lib-alert.sh"
-AUDIT=/opt/fleetcrown/app/scripts/ci/fleet-refs-audit.mjs
+AUDIT=/opt/loki/app/scripts/ci/fleet-refs-audit.mjs
 
 # "Could not look" is tracked on its OWN key. Folding it into the verdict key
 # would let a broken probe overwrite a real finding, and would report a missing
@@ -55,7 +55,7 @@ fi
 alert_transition fleet_refs_probe ok "🔎" ""
 
 out=$(GITHUB_TOKEN="$TOKEN" FLEET_ORG=bitbaum RETIRED_HANDLES=maonakamoto \
-      SELF_REPO=fleetcrown MIN_REPOS=10 node "$AUDIT" 2>&1)
+      SELF_REPO=loki MIN_REPOS=10 node "$AUDIT" 2>&1)
 rc=$?
 
 # if/else, never `check && alert ... || alert ...`. A caller written that way
@@ -73,7 +73,7 @@ exit 0
 CHK
 chmod +x "$MON/fleet-refs-check.sh"
 
-cat > /etc/systemd/system/fleetcrown-fleet-refs.service <<'SVC'
+cat > /etc/systemd/system/loki-fleet-refs.service <<'SVC'
 [Unit]
 Description=Fleet reference audit (stale `uses:` owner detector)
 [Service]
@@ -81,7 +81,7 @@ Type=oneshot
 ExecStart=/opt/monitoring/fleet-refs-check.sh
 SVC
 
-cat > /etc/systemd/system/fleetcrown-fleet-refs.timer <<'TMR'
+cat > /etc/systemd/system/loki-fleet-refs.timer <<'TMR'
 [Unit]
 Description=Run the fleet reference audit every 6h
 [Timer]
@@ -93,7 +93,7 @@ WantedBy=timers.target
 TMR
 
 systemctl daemon-reload
-systemctl enable --now fleetcrown-fleet-refs.timer >/dev/null
+systemctl enable --now loki-fleet-refs.timer >/dev/null
 echo "installed:"
 systemctl list-timers --all | grep fleet-refs || true
 REMOTE

@@ -2,8 +2,8 @@
 # install-backups.sh — box-wide Postgres backups for the bitbaum Hetzner box.
 #
 # WHY this is separate from install-hetzner-crons.sh: that script installs the
-# FleetCrown *app* janitors (it calls fleetcrown's /api/crons/* endpoints).
-# Backups protect EVERY database on the box (FleetCrown, OrangeCat, revampit +
+# Loki *app* janitors (it calls loki's /api/crons/* endpoints).
+# Backups protect EVERY database on the box (Loki, OrangeCat, revampit +
 # the 12 apps in apps.conf), so they're box-wide infra and live here next to
 # sync-infra.sh / verify.sh.
 #
@@ -118,11 +118,11 @@ for name in $(ls -1 /opt 2>/dev/null); do
 done
 # Non-app service envs
 stage /opt/supabase/docker/.env    "$CFG/supabase.env"
-stage /opt/fleetcrown/runner/.env  "$CFG/fleetcrown-runner.env"
+stage /opt/loki/runner/.env  "$CFG/loki-runner.env"
 # Caddy (main config + every app vhost)
 stage /etc/caddy/Caddyfile "$CFG/caddy/Caddyfile"
 for v in /etc/caddy/apps.d/*.caddy; do stage "$v" "$CFG/caddy/$(basename "$v")"; done
-# Every fleetcrown-generated unit + drop-in + timer + launch script (regenerable
+# Every loki-generated unit + drop-in + timer + launch script (regenerable
 # from apps.conf, but cheap to snapshot so a restore is turnkey).
 for u in /etc/systemd/system/*-app.service /etc/systemd/system/appcron-*.service /etc/systemd/system/appcron-*.timer; do
   stage "$u" "$CFG/systemd/$(basename "$u")"

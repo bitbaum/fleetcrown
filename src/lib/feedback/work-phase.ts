@@ -433,7 +433,7 @@ function shippingView(run: FeedbackRunSnapshot): Omit<FeedbackWorkView, "waiting
         return {
           ...base,
           label: "Live · confirm",
-          detail: `FleetCrown merged this and the site deployed.${partial ? " The agent reported only partial success — worth a closer look." : ""}`,
+          detail: `Loki merged this and the site deployed.${partial ? " The agent reported only partial success — worth a closer look." : ""}`,
           checkLive: true,
         };
       return {

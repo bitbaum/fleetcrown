@@ -1,7 +1,7 @@
 {
-  "name": "fleetcrown-bridge",
+  "name": "loki-bridge",
   "version": "0.1.0",
-  "description": "FleetCrown event bus — Postgres LISTEN → SSE fanout. Replaces /api/control polling with push.",
+  "description": "Loki event bus — Postgres LISTEN → SSE fanout. Replaces /api/control polling with push.",
   "private": true,
   "type": "module",
   "main": "dist/server.js",

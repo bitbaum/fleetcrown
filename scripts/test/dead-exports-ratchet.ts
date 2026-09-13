@@ -69,7 +69,7 @@ const BASELINE: Record<string, string> = {
     "review was dropped deliberately or never wired is a product call, not a deletion.",
   getUserProjectByOrangeCatProjectId:
     "The FC->OC reverse lookup has no caller, so an OrangeCat webhook that identifies a project " +
-    "(not an operator) has no way to find which FleetCrown project owns it.",
+    "(not an operator) has no way to find which Loki project owns it.",
 };
 
 /**

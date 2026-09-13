@@ -1,4 +1,4 @@
-// A build handoff from OrangeCat used to create a FleetCrown project with a
+// A build handoff from OrangeCat used to create a Loki project with a
 // name and a description and nothing else. These pin what the token now
 // states outright — who the client is, where the page lives, what comes next —
 // and that a token from an older OrangeCat (no `owner`) still works.
@@ -11,7 +11,7 @@ import {
 
 const base: OrangeCatBuildIntent = {
   iss: "orangecat",
-  aud: "fleetcrown",
+  aud: "loki",
   sub: "actor",
   jti: "j",
   iat: 0,

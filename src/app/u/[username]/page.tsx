@@ -28,7 +28,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { username } = await params;
   const user = await getUser(username);
-  // Root layout's title template appends "— FleetCrown" — don't double it here.
+  // Root layout's title template appends "— Loki" — don't double it here.
   if (!user) return { title: "Not Found" };
   return {
     title: user.name ?? username,
@@ -47,7 +47,7 @@ export default async function PublicProfilePage({
 
   const projectsRaw = await getPublicProjects(user.id);
   // Hierarchy, not 18 equal cards — lead with the flagships.
-  const FLAGSHIPS = ["fleetcrown", "orangecat"];
+  const FLAGSHIPS = ["loki", "orangecat"];
   const projects = [...projectsRaw].sort((a, b) => {
     const ai = FLAGSHIPS.indexOf(a.name.toLowerCase());
     const bi = FLAGSHIPS.indexOf(b.name.toLowerCase());

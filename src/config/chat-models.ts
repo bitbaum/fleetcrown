@@ -9,9 +9,9 @@
  * that "fallback" was already dead. A chain across VENDORS is what buys headroom,
  * because each vendor meters its own free tier independently.
  *
- * What stays here is the wiring: FleetCrown's env prefix (`LOKI_*`, unchanged, so
+ * What stays here is the wiring: Loki's env prefix (`LOKI_*`, unchanged, so
  * the box needs no new variables) and the call signatures its callers already
- * use. What left is everything that was never FleetCrown-specific.
+ * use. What left is everything that was never Loki-specific.
  *
  * ── Before pinning a model here, PROBE IT ────────────────────────────────────
  * A model that cannot emit a parseable tool call cannot drive the loop, and that

@@ -1,4 +1,4 @@
-# Operating contract — agents running on the FleetCrown box
+# Operating contract — agents running on the Loki box
 
 You are running on the always-on box (bitbaum), not on the operator's laptop.
 Everything below follows from that one fact.

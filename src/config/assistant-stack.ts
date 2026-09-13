@@ -1,17 +1,13 @@
 /**
  * How the assistant stack actually fits together.
  *
- * One product. Four names people confuse. This file is the SSOT so the
+ * One product. Three names people confuse. This file is the SSOT so the
  * People page, Loki, and docs cannot tell different stories.
  */
 export const ASSISTANT_STACK = {
-  fleetcrown: {
-    name: "FleetCrown",
-    role: "The product — your private book, Control, Today, robots, and the UI you click.",
-  },
   loki: {
     name: "Loki",
-    role: "The in-app assistant. Talk to your fleet in /loki. It reads this book. It does not send messages until you unfreeze send.",
+    role: "The product and its assistant — your private book, Control, Today, robots, and the assistant you talk to in /loki. It reads this book. It does not send messages until you unfreeze send.",
   },
   openclaw: {
     name: "OpenClaw",

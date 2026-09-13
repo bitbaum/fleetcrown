@@ -74,7 +74,7 @@ in `home/decide.ts` and runs upstream of any dispatch event.
 | `render.ts`         | Thin adapter over `@/lib/orchestration` to render full dispatch prompts.                                   |
 | `decide.ts`         | Pure decision function: `(state, queueHead, autonomy) → action + confidence`.                              |
 | `projects.ts`       | Reads `~/.config/agent-projects.conf` — the tab→path[→adapter] SSOT.                                       |
-| `watcher.ts`        | M3 Bridge. Watches `~/.fleetcrown/sessions/*.md`, emits `worker.idle`. Filters to registered projects only. |
+| `watcher.ts`        | M3 Bridge. Watches `~/.loki/sessions/*.md`, emits `worker.idle`. Filters to registered projects only. |
 | `calendar-drain.ts` | Local half of calendar booking: drains approved-but-unbooked events from the cloud and books them via `gog`. |
 
 ## Idempotency

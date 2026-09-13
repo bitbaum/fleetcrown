@@ -25,21 +25,21 @@ import { ensureCaptureHook } from './capture-hook'
 
 // v0.7.4 — bundled renderer removed; one UI surface only.
 //
-// Fleet Runner wraps fleetcrown.orangecat.ch in a BrowserWindow + adds native
+// Fleet Runner wraps loki.orangecat.ch in a BrowserWindow + adds native
 // integrations (tray, deep-link auth, IPC for Peek + auto-mint + local-dev
 // scan, auto-update, splash, persisted window bounds). There is no longer
 // a parallel local renderer — the cloud /control IS the UI.
 //
 // Env overrides:
-//   - FLEETCROWN_WEB_URL=https://...  → load a preview/dev URL instead of
+//   - LOKI_WEB_URL=https://...  → load a preview/dev URL instead of
 //                                       the production cloud (for testing).
-//   - FLEETCROWN_WEB_URL unset/cloud  → fleetcrown.orangecat.ch (default).
+//   - LOKI_WEB_URL unset/cloud  → loki.orangecat.ch (default).
 //
 // On load failure (host down, no wifi, OAuth callback to unreachable
 // host) the user sees a branded offline page with a retry button, NOT
 // a half-working stub UI. The principle: be honest about cloud
 // dependency — Slack, Linear, Notion all do the same.
-const RAW_URL_OVERRIDE = (process.env.FLEETCROWN_WEB_URL || '').trim()
+const RAW_URL_OVERRIDE = (process.env.LOKI_WEB_URL || '').trim()
 const isHttpOverride = RAW_URL_OVERRIDE.startsWith('http://') || RAW_URL_OVERRIDE.startsWith('https://')
 const WEB_SHELL_URL = isHttpOverride ? RAW_URL_OVERRIDE : APP_URL
 
@@ -202,7 +202,7 @@ function offlineHtml(targetUrl: string): string {
   button:hover{filter:brightness(1.08);}
   .hint{margin-top:18px;font-size:11px;color:rgba(255,255,255,0.35);max-width:360px;line-height:1.6;}
 </style></head><body>
-<h1>Can't reach FleetCrown</h1>
+<h1>Can't reach Loki</h1>
 <p>The cloud surface didn't respond. This is usually a transient network
 or hosting issue. Your local agents keep running regardless —
 only the /control UI is offline.</p>
@@ -300,8 +300,8 @@ function buildAppMenu(): Menu {
       message: 'Fleet Runner',
       detail:
         `Version ${app.getVersion()}\n\n` +
-        'The local authoritative desktop application for the FleetCrown AI agent fleet platform.\n\n' +
-        '© 2026 Mao Nakamoto · FleetCrown',
+        'The local authoritative desktop application for the Loki AI agent fleet platform.\n\n' +
+        '© 2026 Mao Nakamoto · Loki',
       buttons: ['Visit Website', 'Close'],
       defaultId: 1,
       cancelId: 1,
@@ -392,10 +392,10 @@ function buildAppMenu(): Menu {
     {
       label: 'Help',
       submenu: [
-        { label: 'FleetCrown Website', click: openExternal(APP_URL) },
+        { label: 'Loki Website', click: openExternal(APP_URL) },
         { label: 'Quickstart Docs', click: openExternal(`${APP_URL}/docs/quickstart`) },
-        { label: 'Report an Issue', click: openExternal('https://github.com/bitbaum/fleetcrown/issues/new') },
-        { label: 'View Releases', click: openExternal('https://github.com/bitbaum/fleetcrown-releases/releases') },
+        { label: 'Report an Issue', click: openExternal('https://github.com/bitbaum/loki/issues/new') },
+        { label: 'View Releases', click: openExternal('https://github.com/bitbaum/loki-releases/releases') },
         { type: 'separator' },
         { label: 'Privacy', click: openExternal(`${APP_URL}/privacy`) },
         { label: 'Terms', click: openExternal(`${APP_URL}/terms`) },
@@ -516,7 +516,7 @@ function createWindow(): void {
   // Open devtools in dev so we can inspect cookies, CSP, network during the spike.
   if (is.dev) mainWindow.webContents.openDevTools({ mode: 'detach' })
 
-  // Token / connect support for using this app as the local runtime for hosted FleetCrown.
+  // Token / connect support for using this app as the local runtime for hosted Loki.
   // All persistence + path SSOT lives in ./token-store; this section is only the IPC
   // surface + the restart-on-write side effects the renderer wants.
   ipcMain.handle('save-token', async (_event, token: string) => {
@@ -566,7 +566,7 @@ function createWindow(): void {
   // Cursor-style "we see your local repos, import them?" CTA.
   // Roots are configurable via env; default covers the common layouts.
   ipcMain.handle('get-local-dev-projects', async () => {
-    const roots = (process.env.FLEETCROWN_DEV_ROOTS ?? '~/dev:~/code:~/Code:~/Projects')
+    const roots = (process.env.LOKI_DEV_ROOTS ?? '~/dev:~/code:~/Code:~/Projects')
       .split(':')
       .map((p) => p.trim().replace(/^~/, homedir()))
       .filter(Boolean)
@@ -700,22 +700,22 @@ function createWindow(): void {
   })
 }
 
-// Deep-link auth: clicking `fleetcrown://auth?token=ck_...` from the web app
+// Deep-link auth: clicking `loki://auth?token=ck_...` from the web app
 // (the "Open in Fleet Runner" button on Settings → Agent tokens) hands the
 // token to the desktop app without copy-paste. The same flow Slack/Linear use.
 //
 // Protocol registration:
 //   - mac/Windows: app.setAsDefaultProtocolClient handles it directly.
 //   - Linux .deb: electron-builder writes a .desktop file declaring
-//     x-scheme-handler/fleetcrown, so xdg-open routes the URL to Fleet Runner.
+//     x-scheme-handler/loki, so xdg-open routes the URL to Fleet Runner.
 //   - Linux AppImage: protocol routing depends on the user's launcher.
 //     AppImageLauncher and most distros pick it up after first run; some
 //     don't. The web UI keeps the "copy token" fallback for that case.
 //
-// Cold-start handling (Linux/Win): a fleetcrown:// click launches Electron,
+// Cold-start handling (Linux/Win): a loki:// click launches Electron,
 // and the URL lands in process.argv. We scan it once at boot. Mac uses the
 // 'open-url' event (fired before app.whenReady), which we wire below.
-app.setAsDefaultProtocolClient('fleetcrown')
+app.setAsDefaultProtocolClient('loki')
 
 // Pending URL captured before the main window exists. Filled by 'open-url'
 // on mac when the OS launches Fleet Runner via a deep-link before whenReady
@@ -725,7 +725,7 @@ let pendingDeepLink: string | null = null
 function extractTokenFromUrl(url: string): string | null {
   try {
     const u = new URL(url)
-    if (u.protocol !== 'fleetcrown:') return null
+    if (u.protocol !== 'loki:') return null
     // Both /auth and //auth host paths are accepted — different platforms
     // produce slightly different URL shapes for custom schemes and we don't
     // want a punctuation difference to break the flow.
@@ -745,16 +745,16 @@ async function handleDeepLinkUrl(url: string) {
     return
   }
 
-  // SECURITY: a fleetcrown:// deep-link can originate from ANY page the user
+  // SECURITY: a loki:// deep-link can originate from ANY page the user
   // visits (a link, a redirect, an <img>/<iframe> src) — the OS hands us the
   // URL with no proof the user meant it. Saving the token + restarting the
   // poller re-points this machine at whatever account owns that token, and the
   // runner then types that account's dispatched commands into local terminals.
   // Without a gate, a malicious page doing `location.href =
-  // 'fleetcrown://auth?token=<attacker>'` silently converts this machine into
+  // 'loki://auth?token=<attacker>'` silently converts this machine into
   // the attacker's executor (drive-by RCE). So we NEVER persist a deep-link
   // token without an explicit, human, per-link confirmation. The legitimate
-  // flow (user clicks "Connect this machine" in their own FleetCrown settings)
+  // flow (user clicks "Connect this machine" in their own Loki settings)
   // costs one extra click; the attack costs the whole exploit.
   if (mainWindow) {
     if (!mainWindow.isVisible()) mainWindow.show()
@@ -766,10 +766,10 @@ async function handleDeepLinkUrl(url: string) {
     defaultId: 0,
     cancelId: 0,
     title: 'Connect Fleet Runner?',
-    message: 'Connect this machine to a FleetCrown account?',
+    message: 'Connect this machine to a Loki account?',
     detail:
       'A link just asked to sign this Fleet Runner in. Only continue if YOU ' +
-      'just started this from your own FleetCrown settings.\n\n' +
+      'just started this from your own Loki settings.\n\n' +
       'After connecting, this machine will run AI-agent commands dispatched ' +
       'to that account. If you did not initiate this, click Cancel.',
     noLink: true,
@@ -796,7 +796,7 @@ async function handleDeepLinkUrl(url: string) {
   console.log('[desktop] deep-link auth: token saved, poller + pusher restarted')
 }
 
-// Mac: 'open-url' fires when fleetcrown:// is clicked, even before whenReady.
+// Mac: 'open-url' fires when loki:// is clicked, even before whenReady.
 // Buffer it until the window exists.
 app.on('open-url', (event, url) => {
   event.preventDefault()
@@ -805,7 +805,7 @@ app.on('open-url', (event, url) => {
 })
 
 // Linux/Windows: only one Fleet Runner should run. A second invocation (from
-// a fleetcrown:// click after the app is already up) triggers second-instance
+// a loki:// click after the app is already up) triggers second-instance
 // with the new argv; we scan it for the deep-link URL and surface the window.
 /** Kill other main runner processes. Singleton lock files can be cleared while
  *  an old instance is still alive (e.g. manual rm ~/.config/fleet-runner/Singleton*),
@@ -835,7 +835,7 @@ if (!gotLock) {
 } else {
   terminateStaleRunnerInstances()
   app.on('second-instance', (_event, argv) => {
-    const url = argv.find((a) => a.startsWith('fleetcrown://'))
+    const url = argv.find((a) => a.startsWith('loki://'))
     if (url) void handleDeepLinkUrl(url)
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore()
@@ -847,12 +847,12 @@ if (!gotLock) {
 
 app.whenReady().then(async () => {
   // Set app user model id for windows
-  electronApp.setAppUserModelId('com.fleetcrown.fleet-runner')
+  electronApp.setAppUserModelId('com.loki.fleet-runner')
 
   // Hand the desktop's version to the now-Electron-free pusher (it reads this
   // env so the same module runs in the headless box-runner). Set before any
   // pusher start below.
-  process.env.FLEETCROWN_RUNNER_VERSION = app.getVersion()
+  process.env.LOKI_RUNNER_VERSION = app.getVersion()
 
   // Crash reporting via Sentry — opt-in. The SDK is no-op until a DSN is
   // present in the environment (SENTRY_DSN or VITE_SENTRY_DSN), so this
@@ -886,15 +886,15 @@ app.whenReady().then(async () => {
   app.setAboutPanelOptions({
     applicationName: 'Fleet Runner',
     applicationVersion: app.getVersion(),
-    copyright: '© 2026 Mao Nakamoto · FleetCrown',
+    copyright: '© 2026 Mao Nakamoto · Loki',
     website: APP_URL,
-    credits: 'Owned agent terminals, deep-link auth, auto-update.\nPart of the FleetCrown agent-fleet platform.',
+    credits: 'Owned agent terminals, deep-link auth, auto-update.\nPart of the Loki agent-fleet platform.',
   })
 
   // Linux/Win cold-start: if Fleet Runner was launched directly via a
-  // fleetcrown:// click (not while already running), the URL is in argv.
+  // loki:// click (not while already running), the URL is in argv.
   // Buffer it so we apply it after the window finishes loading.
-  const argvUrl = process.argv.find((a) => a.startsWith('fleetcrown://'))
+  const argvUrl = process.argv.find((a) => a.startsWith('loki://'))
   if (argvUrl) pendingDeepLink = argvUrl
 
   // Mark requests with a Fleet-Runner UA suffix so the deployed app can detect
@@ -926,7 +926,7 @@ app.whenReady().then(async () => {
 
   // Start the embedded home/ watcher bridge inside the desktop main process.
   // This gives us the "real worker idle path": when a dispatched agent finishes
-  // and writes its handoff to ~/.fleetcrown/sessions/<project>.md, we append
+  // and writes its handoff to ~/.loki/sessions/<project>.md, we append
   // worker.idle events to the shared log (just like a standalone home/watcher.ts).
   // Combined with the dispatch-side appendEvent(bridge.dispatch + started/crashed),
   // desktop-originated runs now produce a more complete lifecycle in the event log
@@ -947,7 +947,7 @@ app.whenReady().then(async () => {
 
   // Wire the command poller — the cable that closes the web → local Zellij
   // loop. Status updates flow to the tray tooltip and to any renderer window
-  // that wants to surface "connected to fleetcrown.orangecat.ch" in the UI.
+  // that wants to surface "connected to loki.orangecat.ch" in the UI.
   onPollerStatus((status) => {
     if (tray) tray.setToolTip(formatTrayTooltip(status))
     // Push to all renderer windows — web-shell mode means the in-window
@@ -994,10 +994,10 @@ app.whenReady().then(async () => {
   })
 
   // Auto-update — read latest-<platform>.yml from the canonical public
-  // release host (bitbaum/fleetcrown-releases). We override the feed URL
+  // release host (bitbaum/loki-releases). We override the feed URL
   // explicitly instead of relying on desktop/package.json's publish.repo
   // because electron-builder's build pipeline targets a different repo
-  // (bitbaum/fleetcrown) than where users actually download from. The
+  // (bitbaum/loki) than where users actually download from. The
   // mirror script reconciles those.
   //
   // Behavior: silent background check on launch, downloads the newer
@@ -1007,7 +1007,7 @@ app.whenReady().then(async () => {
   //
   // Disabled in dev (would interfere with the local Electron dev cycle) and
   // when the renderer is in web-shell mode pointed at a non-prod URL
-  // (FLEETCROWN_WEB_URL override) — those builds aren't the public binary.
+  // (LOKI_WEB_URL override) — those builds aren't the public binary.
   if (!is.dev) {
     try {
       autoUpdater.autoDownload = true
@@ -1015,7 +1015,7 @@ app.whenReady().then(async () => {
       autoUpdater.setFeedURL({
         provider: 'github',
         owner: 'bitbaum',
-        repo: 'fleetcrown-releases',
+        repo: 'loki-releases',
       })
       autoUpdater.on('error', (err) => {
         console.warn('[desktop] auto-update error:', err?.message ?? err)
@@ -1056,7 +1056,7 @@ app.whenReady().then(async () => {
       })
       // Fire-and-forget — failures end up on the 'error' listener above.
       void autoUpdater.checkForUpdatesAndNotify()
-      console.log('[desktop] auto-update check kicked off (fleetcrown-releases)')
+      console.log('[desktop] auto-update check kicked off (loki-releases)')
     } catch (e) {
       console.warn('[desktop] auto-update setup failed:', (e as Error).message)
     }
@@ -1097,7 +1097,7 @@ app.on('before-quit', () => {
 })
 
 function createTray() {
-  // Tray icon: the FleetCrown control-window mark, pre-rendered to PNG by
+  // Tray icon: the Loki control-window mark, pre-rendered to PNG by
   // desktop/scripts/generate-tray-icon.mjs (kept visually identical to
   // public/icon.svg + BrandMark.tsx; re-run that script if the geometry changes).
   // Falls back to an empty image so the tray still mounts in dev if the file

@@ -16,7 +16,7 @@ assert.equal(reachChannels({ "channel:phone": "e164:+41790000000" })[0]?.value, 
 assert.equal(lastTalkLabel(null), ACTION_COPY.checkin.never);
 assert.match(ACTION_COPY.checkin.groupWhy, /does not message/i);
 assert.match(ACTION_COPY.checkin.remindedAll(3), /3 reminders/);
-assert.match(ACTION_COPY.dispatch.sent("fleetcrown"), /fleetcrown/);
+assert.match(ACTION_COPY.dispatch.sent("loki"), /loki/);
 
 assert.equal(
   whatsappHref("+41 78 659 86 13", "Hi Manu"),

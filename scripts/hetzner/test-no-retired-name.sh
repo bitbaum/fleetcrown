@@ -91,6 +91,33 @@ else
   bad "the pattern did not assemble correctly (got: '$RETIRED')"
 fi
 
+# ── the retired PRODUCT name ─────────────────────────────────────────────────
+# On 2026-09-14 the product was renamed to Loki, and the old name was to be gone
+# from every codebase — 3,000 mentions across 638 files in this repo alone. A
+# name that big lives on in examples, unit names, env keys, article slugs and
+# templates; a one-time sweep does not hold. Scope is the WHOLE repo (case-
+# insensitive), not just src/ and scripts/: docs and articles ship too.
+OLDPRODUCT="fleet"'crown'
+prod_hits=$(cd "$ROOT" && git grep -Il -i "$OLDPRODUCT" -- . 2>/dev/null \
+        | grep -v "^scripts/hetzner/$SELF$" || true)
+if [ -z "$prod_hits" ]; then
+  ok "the retired product name is gone from the whole repo"
+else
+  bad "the retired product name is back:"
+  printf '%s\n' "$prod_hits" | sed "s|^|      |"
+fi
+printf 'const app = "%s";\n' "$OLDPRODUCT" > "$probe/src/probe2.ts"
+if grep -rqi "$OLDPRODUCT" "$probe/src" 2>/dev/null; then
+  ok "the product pattern still matches a file that contains the name"
+else
+  bad "the product pattern no longer matches — this check is inert"
+fi
+if [ "${#OLDPRODUCT}" -eq 10 ]; then
+  ok "the product pattern assembled to the expected value"
+else
+  bad "the product pattern did not assemble correctly (got: '$OLDPRODUCT')"
+fi
+
 echo
 echo "passed $pass, failed $fail"
 [ "$fail" -eq 0 ] || {

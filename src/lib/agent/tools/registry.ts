@@ -5,11 +5,11 @@
  * OpenClaw `main` agent, whose tool root is `~/.openclaw/workspace/`. Asked who
  * to contact, it grepped a schema-less JSON blob there and narrated the
  * incidental matches as attributes — reporting a contact as "Ilya Druzhnikov
- * (UZH)" when UZH is the substring inside drUZHnikov. FleetCrown's own `people`
+ * (UZH)" when UZH is the substring inside drUZHnikov. Loki's own `people`
  * table, which is authoritative, was invisible to it.
  *
  * You cannot constrain an agent whose retrieval you do not own. So retrieval
- * moves in-app: these tools read FleetCrown's tables directly, and the gateway
+ * moves in-app: these tools read Loki's tables directly, and the gateway
  * is demoted to ONE tool among them, whose output is explicitly untrusted.
  *
  * THE INVARIANT THAT MAKES THIS SAFE: every tool returns `Fact[]`, never prose.

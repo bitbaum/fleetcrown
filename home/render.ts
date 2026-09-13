@@ -57,10 +57,10 @@ function selfTest() {
   let pass = 0,
     fail = 0;
   for (const intent of ORCHESTRATION_TASK_INTENT_IDS) {
-    const customBody = intent === "custom" ? "run security audit on FleetCrown" : undefined;
+    const customBody = intent === "custom" ? "run security audit on Loki" : undefined;
     const out = renderPromptForDispatch({
-      project: "FleetCrown",
-      projectPath: "/home/g/dev/fleetcrown",
+      project: "Loki",
+      projectPath: "/home/g/dev/loki",
       intent,
       customInstructions: customBody,
     });
@@ -82,7 +82,7 @@ function selfTest() {
       name: "queue items render under 'User's prompt queue for this project'",
       check: () => {
         const out = renderPromptForDispatch({
-          project: "FleetCrown",
+          project: "Loki",
           intent: "next_best",
           queue: ["fix tests", "ship the docs"],
         });
@@ -97,7 +97,7 @@ function selfTest() {
       name: "empty queue → no queue block rendered",
       check: () => {
         const out = renderPromptForDispatch({
-          project: "FleetCrown",
+          project: "Loki",
           intent: "next_best",
           queue: [],
         });
@@ -107,7 +107,7 @@ function selfTest() {
     {
       name: "undefined queue → no queue block rendered (back-compat)",
       check: () => {
-        const out = renderPromptForDispatch({ project: "FleetCrown", intent: "next_best" });
+        const out = renderPromptForDispatch({ project: "Loki", intent: "next_best" });
         return !out.includes("User's prompt queue");
       },
     },
@@ -116,7 +116,7 @@ function selfTest() {
       check: () => {
         const items = Array.from({ length: 13 }, (_, i) => `item ${i + 1}`);
         const out = renderPromptForDispatch({
-          project: "FleetCrown",
+          project: "Loki",
           intent: "next_best",
           queue: items,
         });

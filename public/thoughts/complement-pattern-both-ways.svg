@@ -10,11 +10,11 @@
   <text x="600" y="60" fill="var(--text-tertiary)" font-size="13" letter-spacing="0.16em" text-anchor="middle">SETTLEMENT</text>
   <text x="970" y="60" fill="var(--text-tertiary)" font-size="13" letter-spacing="0.16em" text-anchor="middle">GRANT</text>
 
-  <!-- ROW 1 — FleetCrown gets paid -->
+  <!-- ROW 1 — Loki gets paid -->
   <g>
     <rect x="80" y="90" width="300" height="132" rx="13" fill="var(--surface-base)" stroke="var(--border-default)"/>
-    <text x="104" y="124" fill="var(--status-warning)" font-size="12.5" letter-spacing="0.12em">FLEETCROWN GETS PAID</text>
-    <text x="104" y="162" fill="var(--text-primary)" font-size="18" font-family="ui-monospace, 'SF Mono', Menlo, monospace">fleetcrown-plan:pro</text>
+    <text x="104" y="124" fill="var(--status-warning)" font-size="12.5" letter-spacing="0.12em">LOKI GETS PAID</text>
+    <text x="104" y="162" fill="var(--text-primary)" font-size="18" font-family="ui-monospace, 'SF Mono', Menlo, monospace">loki-plan:pro</text>
     <text x="104" y="192" fill="var(--text-tertiary)" font-size="13.5">a product listed on OrangeCat</text>
 
     <rect x="450" y="90" width="300" height="132" rx="13" fill="var(--surface-base)" stroke="var(--border-default)"/>
@@ -23,7 +23,7 @@
 
     <rect x="820" y="90" width="300" height="132" rx="13" fill="var(--surface-base)" stroke="var(--border-default)"/>
     <text x="844" y="150" fill="var(--text-primary)" font-size="19" font-weight="500">Grant the subscription</text>
-    <text x="844" y="180" fill="var(--status-positive)" font-size="13.5">to FleetCrown, over a signed webhook</text>
+    <text x="844" y="180" fill="var(--status-positive)" font-size="13.5">to Loki, over a signed webhook</text>
 
     <path d="M380,156 L450,156" fill="none" stroke="var(--text-secondary)" stroke-opacity="0.75" stroke-width="1.6" marker-end="url(#p-arr)"/>
     <path d="M750,156 L820,156" fill="none" stroke="var(--text-secondary)" stroke-opacity="0.75" stroke-width="1.6" marker-end="url(#p-arr)"/>

@@ -13,7 +13,7 @@
 // marked done → re-served forever → the whole runner wedged (every dispatch
 // silently queued). That is removed. We stream ONLY owned PTYs, via
 // executor.subscribe (pure in-memory, async) — the product direction anyway
-// (agents run in FleetCrown-owned PTYs since v0.8.3). A tab with no owned PTY
+// (agents run in Loki-owned PTYs since v0.8.3). A tab with no owned PTY
 // gets one informational frame and no polling loop.
 
 import { executor } from '@/lib/agent-execution'
@@ -26,7 +26,7 @@ const streams = new Map<string, Stream>()
 
 const key = (tab: string) => tab.toLowerCase()
 const runnerChannel = (): 'cloud' | 'local' | undefined => {
-  const raw = (process.env.FLEETCROWN_RUNNER_PRESENCE_CHANNEL ?? 'local').trim()
+  const raw = (process.env.LOKI_RUNNER_PRESENCE_CHANNEL ?? 'local').trim()
   return raw === 'cloud' || raw === 'local' ? raw : undefined
 }
 

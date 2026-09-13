@@ -3,7 +3,7 @@
  *
  * WHY THIS EXISTS
  * ---------------
- * FleetCrown publishes desktop releases and had no idea whether any machine
+ * Loki publishes desktop releases and had no idea whether any machine
  * ever installed one. Both halves of that sentence were load-bearing on
  * 2026-08-26:
  *

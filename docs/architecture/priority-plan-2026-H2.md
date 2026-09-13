@@ -1,4 +1,4 @@
-# FleetCrown priority plan — H2 2026
+# Loki priority plan — H2 2026
 
 ---
 created_date: 2026-06-30
@@ -10,7 +10,7 @@ last_modified_summary: B6 closed (0.8.19, zellij deleted); routing is stored (lo
 
 **Honest status (2026-06):** pre-1.0, one paying operator (dogfood), schema-ready multi-user SaaS, single-tenant cloud execution (box-runner + optional desktop).
 
-**SSOT for autopilot:** re-run `FLEETCROWN_SEED_ROADMAP=1 DATABASE_URL=… pnpm exec tsx scripts/seed-fleetcrown-roadmap.ts` after milestone edits so `getProjectContext` goals match this plan.
+**SSOT for autopilot:** re-run `LOKI_SEED_ROADMAP=1 DATABASE_URL=… pnpm exec tsx scripts/seed-loki-roadmap.ts` after milestone edits so `getProjectContext` goals match this plan.
 
 ## Layer stack (dependency order)
 
@@ -26,11 +26,11 @@ Goal: Talk to Loki → work runs on cloud → watch it without mental model hack
 
 | ID | Initiative | Acceptance | Status |
 |----|------------|------------|--------|
-| A1 | Terminal Cloud = dispatched agent (peek/box-runner) | `/terminal?source=server&tab=fleetcrown` shows box-runner Claude session; **interactive typing** (rawkey) | [x] |
+| A1 | Terminal Cloud = dispatched agent (peek/box-runner) | `/terminal?source=server&tab=loki` shows box-runner Claude session; **interactive typing** (rawkey) | [x] |
 | A2 | Gate `/api/workspaces` on prod web | Cloud tab uses peek only; web app does not spawn PTYs when `!isRuntimeAvailable()` | [x] |
 | A3 | Box-runner hardening | Claude auth on box; clone-on-demand for git-backed projects; deploy + restart verified | [x] |
 | A4 | Builder clarity | Control/Loki show the project's stored builder (`builder_pref`, cloud floor) and whether it is online; presence never routes | [x] |
-| A5 | Loki reliability (prefetch + error/retry) | Projects/conversations on first paint; `?project=fleetcrown` auto-select | [x] |
+| A5 | Loki reliability (prefetch + error/retry) | Projects/conversations on first paint; `?project=loki` auto-select | [x] |
 | A6 | Doc refresh SSOT | HANDOFF, hosted-runner status, cloud-local workflows aligned to box-runner + Loki | [x] |
 
 **Sprint 1 (recommended):** A1 + A2 together, then A6, then B1.
@@ -70,20 +70,20 @@ Goal: Talk to Loki → work runs on cloud → watch it without mental model hack
 
 Only after D succeeds. See `docs/architecture/agent-execution-platform.md`, `docs/architecture/cross-product-identity-bridge.md`.
 
-**Current gate:** Horizon C1-C4 are complete as of 2026-07-16. Production dogfood also moved FleetCrown handoffs to `~/.fleetcrown/sessions`, outside Claude's protected configuration tree; startup migrates legacy Markdown state before watching it, and both desktop and box runners push completed handoffs immediately. C5 remains gated on hosted-runner isolation and product controls. B6 closed 2026-09-11 — no zellij path remains, routing is stored (lock → `builder_pref` → cloud floor), and the OrangeCat handoff auto-kickoffs; D/E require external-user onboarding, per-user agent credentials, rollback automation, and sandboxed multi-tenant execution.
+**Current gate:** Horizon C1-C4 are complete as of 2026-07-16. Production dogfood also moved Loki handoffs to `~/.loki/sessions`, outside Claude's protected configuration tree; startup migrates legacy Markdown state before watching it, and both desktop and box runners push completed handoffs immediately. C5 remains gated on hosted-runner isolation and product controls. B6 closed 2026-09-11 — no zellij path remains, routing is stored (lock → `builder_pref` → cloud floor), and the OrangeCat handoff auto-kickoffs; D/E require external-user onboarding, per-user agent credentials, rollback automation, and sandboxed multi-tenant execution.
 
 ## Defer (anti-patterns)
 
-OrangeCat identity bridge, multi-tenant SaaS launch, `packages/fleetcrown-core` extraction, Life OS surface expansion, CRDT/native mobile, OpenClaw as orchestration SSOT, i18n CI / de-CH SLAs.
+OrangeCat identity bridge, multi-tenant SaaS launch, `packages/loki-core` extraction, Life OS surface expansion, CRDT/native mobile, OpenClaw as orchestration SSOT, i18n CI / de-CH SLAs.
 
 ## Dogfood success metrics
 
 | Metric | Pass |
 |--------|------|
-| Loki → dispatch | `?project=fleetcrown` + "move forward" → "With builder — starting shortly" in <5s |
-| Watch | Terminal Cloud shows Claude output for fleetcrown within 10s; **typing echoes in the PTY** |
+| Loki → dispatch | `?project=loki` + "move forward" → "With builder — starting shortly" in <5s |
+| Watch | Terminal Cloud shows Claude output for loki within 10s; **typing echoes in the PTY** |
 | Laptop off | Same flow with lid closed (box-runner only) |
-| Control truth | fleetcrown card state matches agent reality |
+| Control truth | loki card state matches agent reality |
 | Activity | Last run shows outcome + commit, not just dispatch row |
 | Overnight | Autopilot completes ≥1 meaningful milestone without manual nudge |
 
@@ -104,4 +104,4 @@ OrangeCat identity bridge, multi-tenant SaaS launch, `packages/fleetcrown-core` 
 - `docs/debt-reduction-roadmap.md` — orchestration SSOT (B1)
 - `docs/loki-command-surface.md` — Loki phases
 - `docs/development/cloud-local-workflows.md` — builder vs control plane
-- `scripts/seed-fleetcrown-roadmap.ts` — autopilot goal seeds
+- `scripts/seed-loki-roadmap.ts` — autopilot goal seeds

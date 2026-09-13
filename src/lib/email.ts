@@ -182,7 +182,7 @@ export function feedbackShippedTemplate(input: {
   return { subject, html, text };
 }
 
-/** Operator-approved outbound mail — same chrome as every other FleetCrown email. */
+/** Operator-approved outbound mail — same chrome as every other Loki email. */
 export function operatorMailTemplate(input: { subject: string; body: string }) {
   const subject = mailSubject("operator", input.subject);
   const escaped = escapeHtmlWithBreaks(input.body);
@@ -252,7 +252,7 @@ function digestStat(value: number, label: string, color: string): string {
  * The digest email.
  *
  * It used to be the report markdown under a generic "Daily digest" heading,
- * with the subject line "FleetCrown daily digest" — identical every single day.
+ * with the subject line "Loki daily digest" — identical every single day.
  * An inbox shows you a subject and maybe a preview line, so a recurring email
  * whose subject never changes teaches you to archive it unread, no matter how
  * good the body is.

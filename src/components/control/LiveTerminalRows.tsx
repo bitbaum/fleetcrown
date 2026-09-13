@@ -16,7 +16,7 @@ function rowStateMeta(row: LiveTabRow): {
 } {
   if (row.stateKey === null) {
     return {
-      description: "Terminal tab exists but no FleetCrown project is registered for it.",
+      description: "Terminal tab exists but no Loki project is registered for it.",
       problem: null,
     };
   }

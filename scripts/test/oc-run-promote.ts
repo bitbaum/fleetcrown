@@ -31,7 +31,7 @@ const run: RunPromoteInput = {
 const moment = buildRunMoment("OrangeCat", run);
 
 // Deterministic external id = run id → OC reconciles instead of double-posting.
-assert.equal(moment.externalId, "fleetcrown_run_11111111-2222-3333-4444-555555555555");
+assert.equal(moment.externalId, "loki_run_11111111-2222-3333-4444-555555555555");
 assert.equal(buildRunMoment("OrangeCat", run).externalId, moment.externalId);
 
 // Title = project + first line of done; description carries done + next.

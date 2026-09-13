@@ -71,7 +71,7 @@ export function hasAnyOAuth(flags: OAuthEnabledFlags): boolean {
  * unable to discover OrangeCat login at all).
  *
  * OrangeCat comes first with the accent treatment: it is the stack's
- * identity root (one account across OrangeCat, FleetCrown, Solon), so it is
+ * identity root (one account across OrangeCat, Loki, Solon), so it is
  * the default door; the other providers are conveniences.
  */
 export function OAuthButtons({

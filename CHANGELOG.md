@@ -49,7 +49,7 @@ Notable, user-facing changes. Older history lives in the git log (conventional c
 ## 2026-08-07
 
 ### Added
-- **A learning phase on the roadmap.** FleetCrown grades every agent run against
+- **A learning phase on the roadmap.** Loki grades every agent run against
   a definition of done and then forgets the verdict. The new `LEARNING` phase
   commits to closing that loop: storing each dispatch with the prompt that
   produced it and the outcome it earned, reporting per-intent failure and cost,
@@ -60,7 +60,7 @@ Notable, user-facing changes. Older history lives in the git log (conventional c
   says to abandon the whole effort if the measurement phase shows failures are
   infrastructure noise rather than instruction quality.
 - **Thoughts: "The Fleet Learns From What It Reads, Not What It Does."** The
-  audit behind the plan. FleetCrown's only self-improvement loop reads arXiv and
+  audit behind the plan. Loki's only self-improvement loop reads arXiv and
   Hacker News every morning to propose how the product should evolve, while the
   prompt-and-outcome record it generates from thousands of its own runs is read
   by display surfaces only. The essay covers what the 2026 literature has
@@ -97,7 +97,7 @@ Notable, user-facing changes. Older history lives in the git log (conventional c
 ## 2026-07-23
 
 ### Added
-- **OrangeCat fund-to-build integration.** FleetCrown and its sibling product
+- **OrangeCat fund-to-build integration.** Loki and its sibling product
   OrangeCat are now one typed, two-way bridge. A project can carry several
   typed edges to the economy side — origin, public profile, funding, offering,
   community — instead of a single opaque link, and a signed, ten-minute,
@@ -117,9 +117,9 @@ Notable, user-facing changes. Older history lives in the git log (conventional c
 - **Frontier** reads like ranked editorial judgment rather than a raw feed.
 
 ### Fixed
-- **The agent install command pointed at a dead host.** `fleetcrown-agent`
-  still told users to `curl https://fleetcrown.vercel.app/...` months after the
-  Vercel exit; it now points at `https://fleetcrown.orangecat.ch`.
+- **The agent install command pointed at a dead host.** `loki-agent`
+  still told users to `curl https://loki.vercel.app/...` months after the
+  Vercel exit; it now points at `https://loki.orangecat.ch`.
 - Pinned `LC_ALL=C` in the deploy schema-drift check so a locale-sorted `comm`
   stops false-failing an otherwise-live deploy.
 
@@ -138,7 +138,7 @@ Notable, user-facing changes. Older history lives in the git log (conventional c
 - **Loki knows the economy.** Ask about what people need and Loki now pulls
   OrangeCat's open demand (wishlists + projects) straight into its context, and
   can search the whole economy by meaning — OrangeCat embeds the query
-  server-side, so a match comes back without FleetCrown holding a copy of the
+  server-side, so a match comes back without Loki holding a copy of the
   index. Find-what-exists and build-what's-missing are one conversation now.
 - **OrangeCat funding events land in the project timeline.** Money moving on the
   economy side shows up in the fleet's Activity — the two products share one story.
@@ -150,7 +150,7 @@ Notable, user-facing changes. Older history lives in the git log (conventional c
   documents, not just its database rows.
 
 ### Changed
-- **The feedback widget grew teeth.** It's dogfooded on FleetCrown's own public
+- **The feedback widget grew teeth.** It's dogfooded on Loki's own public
   pages, an agent can file page-review findings straight through its API, and a
   project's feedback inbox turns any report into a one-click, scoped agent run.
   FAB contrast, dark-site polish, and a `data-fc-bottom` offset for host sites
@@ -211,8 +211,8 @@ Notable, user-facing changes. Older history lives in the git log (conventional c
 - **Loki starts threads only when a message is sent.** Empty database threads no
   longer accumulate or appear in history, and stale transcripts cannot flash while
   a newly selected conversation loads.
-- **FleetCrown owns its handoff files.** New handoffs live under
-  `~/.fleetcrown/sessions`, outside Claude Code's protected configuration tree.
+- **Loki owns its handoff files.** New handoffs live under
+  `~/.loki/sessions`, outside Claude Code's protected configuration tree.
   Runner startup copies legacy Markdown handoffs forward before watching them,
   keeps legacy reads during the transition, leaves Claude's live JSON alone, and
   pushes box-runner completions immediately instead of waiting for a heartbeat.
@@ -436,7 +436,7 @@ Notable, user-facing changes. Older history lives in the git log (conventional c
   toggles use matching Building/Paused labels; project rail shows override chips.
 
 ### Changed
-- **`useAutomationPolicy`** refetches on `FLEETCROWN_REFRESH_EVENT` and broadcasts after
+- **`useAutomationPolicy`** refetches on `LOKI_REFRESH_EVENT` and broadcasts after
   global mode changes so Control stays in sync with Settings.
 
 ## 2026-06-28 (l)
@@ -604,11 +604,11 @@ Notable, user-facing changes. Older history lives in the git log (conventional c
   lone public page rendering light), with a flagship hierarchy, real descriptions, and a
   "Fleet activity" section (recent agent runs) — liveness a repo list can't show.
 - **Project descriptions backfilled** from real sources; the "Local repository imported
-  from fleetcrown-ui" placeholder is suppressed everywhere (profile, hero, RAG).
+  from loki-ui" placeholder is suppressed everywhere (profile, hero, RAG).
 
 ### Fixed
 - **Real-name leak.** Loki addressed the operator by their real name (the shared OpenClaw
   agent's persona/memory held it). Scrubbed across the agent's `USER.md`/`SOUL.md`/memory +
-  the FleetCrown source; Loki now uses the pseudonym. The internal routing slug is
+  the Loki source; Loki now uses the pseudonym. The internal routing slug is
   unchanged (cross-surface session continuity preserved).
 - **Orphaned-session / stale identity** healing in the auth JWT callback (earlier in the series).

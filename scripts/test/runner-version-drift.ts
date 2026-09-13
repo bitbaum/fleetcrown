@@ -3,7 +3,7 @@
  *
  * WHY
  * ---
- * FleetCrown published Fleet Runner releases and had no way to know whether
+ * Loki published Fleet Runner releases and had no way to know whether
  * any machine ever ran one. On 2026-08-26 the laptop was on **0.8.12** while
  * the box ran **box-0.8.13**, and nothing anywhere compared either number to
  * what had been published.

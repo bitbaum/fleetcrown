@@ -3,7 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { callGroqText } from "@/lib/groq";
 import { db } from "@/db";
 import { attributes, entities } from "@/db/schema";
-import { SOURCE_FLEETCROWN_UI } from "@/lib/constants";
+import { SOURCE_LOKI_UI } from "@/lib/constants";
 import { patchProject } from "@/db/queries/projects";
 import { syncUserProjectDescription } from "@/db/queries/user-projects";
 import { scheduleProjectProfileReindexByEntityId } from "@/lib/rag/reindex-project-profile";
@@ -427,7 +427,7 @@ export async function applyProjectProfile(
             entityId,
             key: normalized,
             value,
-            source: SOURCE_FLEETCROWN_UI,
+            source: SOURCE_LOKI_UI,
           })
           .onConflictDoUpdate({
             target: [attributes.userId, attributes.entityId, attributes.key],

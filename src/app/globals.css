@@ -72,7 +72,7 @@
      the fleet's most-used button, under it. Near-black is ~6:1. Paired with
      the background it belongs to so nobody has to remember which ink an
      orange button takes. Mirrors --on-accent in @fleet/design-tokens v1.1.0
-     (SSOT for Solon and OrangeCat); FleetCrown still declares its ramp
+     (SSOT for Solon and OrangeCat); Loki still declares its ramp
      locally, so the value is kept in step by hand. */
   --color-on-accent: var(--on-accent);
   /* Status tokens — the only chromatic colors in the system */
@@ -957,7 +957,7 @@
     @apply mt-12 text-xs tracking-[0.04em] text-text-muted sm:mt-16;
   }
   /* break-words, because these carry bare URLs in the legal pages. An unbroken
-     "github.com/maonakamoto/fleetcrown/issues" is 331px wide — wider than a
+     "github.com/maonakamoto/loki/issues" is 331px wide — wider than a
      320px phone — and .ui-public-surface clips overflow, so the tail of the
      address was not scrolled off, it was gone. */
   .ui-public-link {

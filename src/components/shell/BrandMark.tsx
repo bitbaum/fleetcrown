@@ -56,7 +56,7 @@ export function BrandMark({
           <p className={responsive ? "ui-kicker hidden sm:block" : "ui-kicker"}>{APP_KICKER}</p>
           {/* Below 360px the wordmark is dropped and the spiral carries the
               brand alone. At 320 — the narrowest width this app supports —
-              "FleetCrown" plus the header's CTA and menu button do not fit,
+              "Loki" plus the header's CTA and menu button do not fit,
               and the wordmark was being overlapped by the pill rather than
               yielding to it. The glyph is the mark; the word is the bonus. */}
           <span

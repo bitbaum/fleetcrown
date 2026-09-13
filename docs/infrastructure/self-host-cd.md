@@ -46,7 +46,7 @@ Two properties worth keeping:
 2. Add the deploy key to the app repo (one secret, nothing else):
 
    ```bash
-   gh secret set HETZNER_SSH_PRIVATE_KEY -R bitbaum/<repo> < ~/.ssh/fleetcrown_ci_deploy
+   gh secret set HETZNER_SSH_PRIVATE_KEY -R bitbaum/<repo> < ~/.ssh/loki_ci_deploy
    ```
 
 3. Commit this shim to the app repo as `.github/workflows/deploy.yml`:
@@ -60,7 +60,7 @@ Two properties worth keeping:
 
    jobs:
      deploy:
-       uses: bitbaum/fleetcrown/.github/workflows/selfhost-deploy.yml@main
+       uses: bitbaum/loki/.github/workflows/selfhost-deploy.yml@main
        with:
          app: <apps.conf key>
        secrets:
@@ -69,7 +69,7 @@ Two properties worth keeping:
 
    Use an explicit secret mapping (not `secrets: inherit`). Inherit only works
    inside the same GitHub org; kickoff repos under a personal account
-   (e.g. `catomean/…`) calling `bitbaum/fleetcrown` would otherwise fail with
+   (e.g. `catomean/…`) calling `bitbaum/loki` would otherwise fail with
    "Secret HETZNER_SSH_PRIVATE_KEY is required, but not provided while calling."
 
    Optional inputs: `node-version` (fallback `24` when the repo has no
@@ -90,10 +90,10 @@ box is served from the `hirnli` repo, `datacat-web` from `datacat`. The shim's
 | `DEPLOY UNHEALTHY — rolling back` | The new release failed its health check; prod is back on the previous release. Read `journalctl -u <app>-app -n 50`. |
 | `https://<domain> returned <code> after the deploy` | The service is up but the public path is not — look at Caddy, not the app. |
 
-## FleetCrown kickoff (existing repo → CD)
+## Loki kickoff (existing repo → CD)
 
 `scripts/hetzner/new-site.sh` scaffolds a **new** site from `scripts/site-template`.
-FleetCrown **Make it happen** creates a different kind of repo (agent starters via
+Loki **Make it happen** creates a different kind of repo (agent starters via
 `/api/projects/[id]/provision`). To put that repo on the same CD path:
 
 1. Kickoff calls `POST /api/projects/[id]/register-cd` after provision.
@@ -116,19 +116,19 @@ row, deploy secret, sync-infra. Prefer it over a parallel host.
 `POST /api/projects/[id]/register-cd` (also called from **Make it happen** after
 provision) runs `scripts/hetzner/register-site.sh` **in-process** when all of:
 
-1. **Eligible account** — `users.is_default` or `FLEETCROWN_CLOUD_BUILDER_USER_IDS`
+1. **Eligible account** — `users.is_default` or `LOKI_CLOUD_BUILDER_USER_IDS`
    (same gate as shared cloud builder; studio CD is not multi-tenant).
-2. **Script present** — resolved in order: `FLEETCROWN_REGISTER_SITE_SCRIPT`,
-   `$FLEETCROWN_REPO_ROOT/scripts/hetzner/register-site.sh`,
-   `$FLEETCROWN_BOX_DEV_ROOT/fleetcrown/...` (default durable root
+2. **Script present** — resolved in order: `LOKI_REGISTER_SITE_SCRIPT`,
+   `$LOKI_REPO_ROOT/scripts/hetzner/register-site.sh`,
+   `$LOKI_BOX_DEV_ROOT/loki/...` (default durable root
    `/home/ubuntu/dev` on the box), `process.cwd()/scripts/...`, then
-   `/opt/fleetcrown/app/scripts/hetzner/register-site.sh`.
+   `/opt/loki/app/scripts/hetzner/register-site.sh`.
 3. **Deploy key readable** — `DEPLOY_KEY_PATH` or
-   `/home/ubuntu/.ssh/fleetcrown_ci_deploy` (the same key `new-site.sh` pipes
+   `/home/ubuntu/.ssh/loki_ci_deploy` (the same key `new-site.sh` pipes
    into `gh secret set HETZNER_SSH_PRIVATE_KEY`). The production app runs as
    `User=ubuntu`; a key that only exists on a laptop will make auto-register
    return command-only with an explicit **missing-key** reason.
-4. **Not disabled** — unset `FLEETCROWN_SITE_CD_AUTO` (or anything other than
+4. **Not disabled** — unset `LOKI_SITE_CD_AUTO` (or anything other than
    `0`).
 
 When any gate fails, the API returns `command` **and** `reason` / `gate` — the
@@ -136,19 +136,19 @@ kickoff UI must show the reason (not only the bash line). Use **Register site**
 on the project header to retry (`register-cd` is idempotent once `liveUrl` is
 set).
 
-### One-time box setup (Cato / fleetcrown.orangecat.ch)
+### One-time box setup (Cato / loki.orangecat.ch)
 
 ```bash
 # On the studio box, as ubuntu — durable checkout + deploy key
-test -f /home/ubuntu/dev/fleetcrown/scripts/hetzner/apps.conf
-install -m 600 /path/to/fleetcrown_ci_deploy /home/ubuntu/.ssh/fleetcrown_ci_deploy
+test -f /home/ubuntu/dev/loki/scripts/hetzner/apps.conf
+install -m 600 /path/to/loki_ci_deploy /home/ubuntu/.ssh/loki_ci_deploy
 
-# Optional explicit env in /opt/fleetcrown/app/.env (EnvironmentFile):
-# FLEETCROWN_REPO_ROOT=/home/ubuntu/dev/fleetcrown
-# FLEETCROWN_BOX_DEV_ROOT=/home/ubuntu/dev
-# DEPLOY_KEY_PATH=/home/ubuntu/.ssh/fleetcrown_ci_deploy
+# Optional explicit env in /opt/loki/app/.env (EnvironmentFile):
+# LOKI_REPO_ROOT=/home/ubuntu/dev/loki
+# LOKI_BOX_DEV_ROOT=/home/ubuntu/dev
+# DEPLOY_KEY_PATH=/home/ubuntu/.ssh/loki_ci_deploy
 ```
 
-Keep `/home/ubuntu/dev/fleetcrown` on `main` so `apps.conf` edits survive the
-next `/opt/fleetcrown/app` release swap. `liveUrl` is written only after
+Keep `/home/ubuntu/dev/loki` on `main` so `apps.conf` edits survive the
+next `/opt/loki/app` release swap. `liveUrl` is written only after
 `register-site.sh` exits 0 — never faked.

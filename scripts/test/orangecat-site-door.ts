@@ -58,7 +58,7 @@ async function main(): Promise<void> {
 
   function request(body: unknown, signature?: string): Request {
     const raw = JSON.stringify(body);
-    return new Request("https://fleetcrown.orangecat.ch/api/orangecat/site", {
+    return new Request("https://loki.orangecat.ch/api/orangecat/site", {
       method: "POST",
       headers: {
         "content-type": "application/json",

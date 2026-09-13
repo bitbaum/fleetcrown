@@ -153,7 +153,7 @@ grep -q "1 commit(s) on main" <<<"$OUT" || fail "rollback count wrong: $OUT"
 ok "refusal names the rollback and counts both sides"
 
 # ── 5. the override works, and announces itself ──────────────────────────────
-OUT="$(FLEETCROWN_DEPLOY_ALLOW_OFF_MAIN=1 bash "$GATE" "$TMP/d/work" HEAD 2>&1)"; RC=$?
+OUT="$(LOKI_DEPLOY_ALLOW_OFF_MAIN=1 bash "$GATE" "$TMP/d/work" HEAD 2>&1)"; RC=$?
 [ $RC -ne 0 ] && fail "override did not permit the deploy"
 grep -q "OVERRIDDEN" <<<"$OUT" || fail "override is silent — it must announce itself: $OUT"
 ok "explicit override permits the deploy and says so"

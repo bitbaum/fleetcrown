@@ -1,6 +1,6 @@
 ---
 title: The Captain's Refactor — Making the Bridge Real
-summary: FleetCrown's thesis is sound — govern a fleet you can trust, with verification and economy no worker tool builds. The codebase still carries three eras at once. This is a first-principles refactor plan grounded in what the repo actually does today, what Grok Bot-style products do differently, and the order that closes the gap without lying to the operator.
+summary: Loki's thesis is sound — govern a fleet you can trust, with verification and economy no worker tool builds. The codebase still carries three eras at once. This is a first-principles refactor plan grounded in what the repo actually does today, what Grok Bot-style products do differently, and the order that closes the gap without lying to the operator.
 excerpt: The captain's job is not more features. It is one dispatch spine, one truth model, one executor contract, and a product that never claims a power it does not own.
 publishedAt: 2026-08-19
 tags: architecture,strategy,refactor,orchestration,loki,execution
@@ -11,7 +11,7 @@ readingTimeMin: 22
 
 ## The gap between the thesis and the repo
 
-FleetCrown's positioning is precise: **borrow the workers, own the bridge.** Claude Code, Grok Build, Codex, Cursor, OpenClaw — these are converging on the same worker substrate. FleetCrown sits one tier up. One captain's interface over swappable runtimes, with cross-model verification, fleet governance, and an economy underneath that no single-agent tool is trying to build.
+Loki's positioning is precise: **borrow the workers, own the bridge.** Claude Code, Grok Build, Codex, Cursor, OpenClaw — these are converging on the same worker substrate. Loki sits one tier up. One captain's interface over swappable runtimes, with cross-model verification, fleet governance, and an economy underneath that no single-agent tool is trying to build.
 
 That thesis is already partially real. The definition-of-done gate asks a different model lineage to judge a worker's handoff. Loki resolves natural language into project-scoped dispatches. `injectPrompt()` assembles project context, fleet RAG, operator goals, and escalation blocks before anything reaches an agent. Activity shows run outcomes, not just "something was sent." OrangeCat and Solon integrations exist on production paths that were witnessed end to end — a bar [Shipped Is Not Witnessed](/thoughts/shipped-is-not-witnessed) established the hard way.
 
@@ -21,23 +21,23 @@ Era one: Claude-shaped local hooks, zellij tab names, `/tmp` sentinels, session 
 
 Era two: Postgres-backed orchestration — `pending_commands`, `orchestration_runs`, `run_events`, adapter registry, FIFO claim gates.
 
-Era three: the north star in `docs/architecture/agent-execution-platform.md` — FleetCrown-owned PTYs, event-sourced workspace state, `LocalPtyExecutor` and `SandboxExecutor` behind one interface, terminal as view not substrate.
+Era three: the north star in `docs/architecture/agent-execution-platform.md` — Loki-owned PTYs, event-sourced workspace state, `LocalPtyExecutor` and `SandboxExecutor` behind one interface, terminal as view not substrate.
 
-The product narrative speaks in era three. Daily dogfood still walks through era one and two. Until those converge, FleetCrown cannot honestly do what Rahul's Grok Bot thread describes — nor should it try to copy that playbook blindly. It can become the **captain layer that orchestrates those workers**, including browser-native ones, once the hull is sealed.
+The product narrative speaks in era three. Daily dogfood still walks through era one and two. Until those converge, Loki cannot honestly do what Rahul's Grok Bot thread describes — nor should it try to copy that playbook blindly. It can become the **captain layer that orchestrates those workers**, including browser-native ones, once the hull is sealed.
 
 This post is the refactor map: what the codebase actually does, where it breaks the captain model, and the build order that makes the bridge real.
 
-## What Grok Bot optimizes for (and why FleetCrown is not that yet)
+## What Grok Bot optimizes for (and why Loki is not that yet)
 
 The viral Grok Bot playbook is not "better coding agent." It is **managed cloud hands for SaaS surfaces**: one shared cloud computer, account-level OAuth plugins, demonstration capture ("teach a task"), scheduled and event-triggered routines, and a roster of business-role bots (Chief of Staff, Scout, Quill, Guide, Ledger) coordinating in group chat.
 
 That product optimizes for a solo founder grinding LinkedIn, Gmail, Slack, and CRM clicks while the laptop is closed. The wedge is **browser-native autonomy with shared sessions**.
 
-FleetCrown optimizes for something else: a builder running **many code projects** who needs to command agents, verify outcomes, and compound project memory without trusting a single model's self-report. The wedge is **governance across a fleet** — queues, handoffs, cross-model verification, approval gates, OrangeCat demand signals, Solon-signed decisions.
+Loki optimizes for something else: a builder running **many code projects** who needs to command agents, verify outcomes, and compound project memory without trusting a single model's self-report. The wedge is **governance across a fleet** — queues, handoffs, cross-model verification, approval gates, OrangeCat demand signals, Solon-signed decisions.
 
 The overlap is real but smaller than the marketing implies:
 
-| Job | Grok Bot today | FleetCrown today |
+| Job | Grok Bot today | Loki today |
 | --- | --- | --- |
 | Cold email / LinkedIn / CRM clicks | Core product | Not built |
 | Inbox triage → draft reply | Core product | No Gmail integration; Loki cannot send |
@@ -51,7 +51,7 @@ The overlap is real but smaller than the marketing implies:
 
 The honest product audit (`docs/development/user-flow-audit.md`, verified 2026-07-04) puts the number on it: on hosted production, **~37% of mapped flows deliver the full implied outcome without a builder, integration, or known gap.** Page shells load. The loop does not always close.
 
-So the question is not "can FleetCrown beat Grok Bot at Grok Bot's game tomorrow?" It cannot, and copying that surface area first would dilute the captain thesis. The question is: **what refactor makes FleetCrown actually work as the bridge it claims to be** — and optionally orchestrate Grok-class workers later without becoming them.
+So the question is not "can Loki beat Grok Bot at Grok Bot's game tomorrow?" It cannot, and copying that surface area first would dilute the captain thesis. The question is: **what refactor makes Loki actually work as the bridge it claims to be** — and optionally orchestrate Grok-class workers later without becoming them.
 
 ## Forensic: how dispatch actually works today
 
@@ -80,13 +80,13 @@ But `inject-core.ts` still branches on realities the north-star doc explicitly r
 - **Human-at-prompt gate** via `isUserTypingInTab()` — a zellij-only concept tied to `~/.zshrc` hooks.
 - **Local-only imports** from `agent-config` and `zellij` modules gated by `isRuntimeAvailable()`.
 
-Meanwhile `src/lib/agent-execution/types.ts` defines the future correctly: stable `WorkspaceId`, event-sourced `AgentEvent` stream, no tab names. `LocalPtyExecutor` and `SandboxExecutor` are selectable via `FLEETCROWN_EXECUTOR`. The interface is minimal and intentional — grow it only when a concrete executor needs more.
+Meanwhile `src/lib/agent-execution/types.ts` defines the future correctly: stable `WorkspaceId`, event-sourced `AgentEvent` stream, no tab names. `LocalPtyExecutor` and `SandboxExecutor` are selectable via `LOKI_EXECUTOR`. The interface is minimal and intentional — grow it only when a concrete executor needs more.
 
 **The refactor starts here:** every dispatch must eventually read as `command → orchestrator → executor.provision/write → event log`, with zellij relegated to an optional power-user view, not a hidden branch inside the captain's spine.
 
 ## Forensic: where truth lives (and why it still lies sometimes)
 
-FleetCrown already has the bones of event-sourced orchestration:
+Loki already has the bones of event-sourced orchestration:
 
 - `orchestration_runs` with `ORCH_STATE` (`waiting`, `running`, `done`, `error`, …)
 - `run_events` via `emitRunEvent()` — dispatched, delivered, closed, etc.
@@ -99,7 +99,7 @@ Yet status still arrives through multiple partial truths, as `docs/debt-reductio
 
 - `/tmp` sentinels and typing hooks
 - process scans and zellij tab lists
-- `~/.fleetcrown/sessions/*.md` handoff files
+- `~/.loki/sessions/*.md` handoff files
 - DB rows in `project_states` and `runtime_snapshots`
 - latest orchestration run inference
 
@@ -122,7 +122,7 @@ CAPABILITIES — ground truth; never exceed or invent beyond this:
   search_people (private book)
   NO ability to send messages or emails — outbound frozen
   NO direct Google Calendar changes
-  ONLY lever: the FleetCrown approval queue — PROPOSE, operator APPROVES
+  ONLY lever: the Loki approval queue — PROPOSE, operator APPROVES
   approved calendar → gog calendar create on operator's machine
   never claim a result without confirmation
 ```
@@ -141,7 +141,7 @@ Every Loki turn should end in exactly one of: answer, draft action, queued run, 
 
 ## Forensic: execution — the borrowed ship
 
-[The Captain Needs a Ship](/thoughts/the-captain-needs-a-ship) named the keystone gap precisely: FleetCrown commands a fleet it does not fully run. box-runner on Hetzner (`fleetcrown-box-runner.service`) closes much of that for the founder account — 24/7 cloud builder, peek-stream Terminal, queue claim via bridge SSE. Fleet Runner desktop embeds the `home/` watcher/worker library; the standalone Brain on `:3001` was retired.
+[The Captain Needs a Ship](/thoughts/the-captain-needs-a-ship) named the keystone gap precisely: Loki commands a fleet it does not fully run. box-runner on Hetzner (`loki-box-runner.service`) closes much of that for the founder account — 24/7 cloud builder, peek-stream Terminal, queue claim via bridge SSE. Fleet Runner desktop embeds the `home/` watcher/worker library; the standalone Brain on `:3001` was retired.
 
 Still true in August 2026:
 
@@ -149,11 +149,11 @@ Still true in August 2026:
 - Horizon **B6** (PTY cutover off zellij name-puppeting) is **partial** — `inject-core.ts` uses owned PTY when present, zellij fallback otherwise.
 - External users still hit **D1–D5** onboarding gates in the priority plan.
 
-The worker tools moved execution to infrastructure that sleeps cheaply. FleetCrown's refactor must finish that move for all tenants, not only the operator's box — or permanently narrow the product promise to "captain for builders who connect a runner." Both are valid; **mixing them in one UI is not.**
+The worker tools moved execution to infrastructure that sleeps cheaply. Loki's refactor must finish that move for all tenants, not only the operator's box — or permanently narrow the product promise to "captain for builders who connect a runner." Both are valid; **mixing them in one UI is not.**
 
 ## The refactor — four boundaries, one spine
 
-If FleetCrown is to work as described, stop adding features at the surface and **harden four boundaries**:
+If Loki is to work as described, stop adding features at the surface and **harden four boundaries**:
 
 ### 1. Command surface (inputs)
 
@@ -215,7 +215,7 @@ Add missing lifecycle events the product already implies but does not always emi
 
 ## Capability classes — why "can Loki do X?" gets a real answer
 
-Grok Bot collapses everything into "the bot clicks it." FleetCrown should not. Split capabilities so policy, approval, and executor routing are obvious:
+Grok Bot collapses everything into "the bot clicks it." Loki should not. Split capabilities so policy, approval, and executor routing are obvious:
 
 | Class | Examples | Default executor | Approval |
 | --- | --- | --- | --- |
@@ -231,7 +231,7 @@ Loki's capability preface in `loki-core.ts` becomes generated from this table �
 
 Grok Bot's "teach a task" is demonstration capture on a shared cloud browser. Powerful. Also brittle — UI redesigns break routines; shared credentials enlarge blast radius.
 
-FleetCrown's native version should be **action graphs**, not GUI recording first:
+Loki's native version should be **action graphs**, not GUI recording first:
 
 1. **Phase 1 — Structured routines:** cron + intent + project scope + approval policy. Already partially exists (`ScheduledJobsCard`, prompt schedule modal); unify under orchestrator.
 2. **Phase 2 — Role packs:** Scout, Guide, Ledger as **policy bundles** — not separate chatbots. One Loki dispatches scoped commands with charter-like boundaries encoded in policy JSON.
@@ -241,7 +241,7 @@ Inspectability beats magic. The captain's job is to leave an audit trail Grok Bo
 
 ## Split Fleet domain from Life OS domain
 
-FleetCrown mixes project execution with goals, people, habits, money, events, thoughts. Philosophically coherent; architecturally expensive.
+Loki mixes project execution with goals, people, habits, money, events, thoughts. Philosophically coherent; architecturally expensive.
 
 Refactor rule: **the fleet must work when the life OS is passive.**
 
@@ -320,7 +320,7 @@ Upper layers fail if lower layers lie. Same stack as the H2 priority plan: **Exe
 
 - Isolated sessions per tenant, login handoff, no shared account blast radius.
 - Read-only integrations first (monitor competitor pricing → Slack alert).
-- Grok Bot as **adapter**, not identity — if xAI exposes stable automation API, register in agent registry; FleetCrown still owns verification and approval.
+- Grok Bot as **adapter**, not identity — if xAI exposes stable automation API, register in agent registry; Loki still owns verification and approval.
 
 **Exit criterion:** Reversible, low-stakes browser job completes with human approval gate — never unattended send on v1.
 
@@ -333,21 +333,21 @@ Upper layers fail if lower layers lie. Same stack as the H2 priority plan: **Exe
 
 ## What we should not do
 
-- **Rebuild Grok Bot inside FleetCrown** before executor unification — you would add a fourth era.
+- **Rebuild Grok Bot inside Loki** before executor unification — you would add a fourth era.
 - **Expand Life OS surfaces** while ~63% of hosted flows still grade B/C/D — [The Captain Needs a Ship](/thoughts/the-captain-needs-a-ship) applies to UX honesty too.
 - **Open box-runner to all tenants** before SandboxExecutor product gates — D5 exists for a reason.
 - **Let Loki send mail** without passing through approval and audit — one hallucinated send destroys captain trust faster than any missing feature.
 
 ## How this relates to Grok Bot — strategically
 
-Grok Bot is a **worker**. FleetCrown is a **captain**. The win is not feature parity on LinkedIn automation. The win is:
+Grok Bot is a **worker**. Loki is a **captain**. The win is not feature parity on LinkedIn automation. The win is:
 
 - orchestrate Grok (already in `ORCHESTRATION_ADAPTER_IDS`) alongside Claude and OpenClaw
 - verify outcomes with a different model lineage
 - enforce approval before external writes
 - compound project and fleet memory OrangeCat and Solon plug into
 
-Rahul's six-bot company is a **policy and routine design pattern** worth stealing — charters, boundaries, scheduled briefs — implemented as FleetCrown role packs and action graphs, not as six separate cloud chatbots with shared credentials.
+Rahul's six-bot company is a **policy and routine design pattern** worth stealing — charters, boundaries, scheduled briefs — implemented as Loki role packs and action graphs, not as six separate cloud chatbots with shared credentials.
 
 ## Dogfood metrics — know when the refactor worked
 
@@ -361,7 +361,7 @@ From `docs/architecture/priority-plan-2026-H2.md` and the user-flow audit, track
 
 ## The single line
 
-FleetCrown becomes real when **one sentence from Loki becomes one command, one run, one event trail, one executor, and one honest status** — with verification and approval built in, not bolted on.
+Loki becomes real when **one sentence from Loki becomes one command, one run, one event trail, one executor, and one honest status** — with verification and approval built in, not bolted on.
 
 The worker tools will keep getting better at clicking and coding. Let them. The refactor's job is to make the bridge trustworthy enough that those workers serve the fleet instead of replacing the need for a captain.
 

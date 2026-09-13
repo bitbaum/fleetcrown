@@ -10,7 +10,7 @@
 # without changing the user (the `claude` CLI lives in /home/ubuntu, so a full
 # user migration would need CLI relocation; this delivers the containment now).
 #
-# Safe because the runner only needs: its own dir (/opt/fleetcrown/runner),
+# Safe because the runner only needs: its own dir (/opt/loki/runner),
 # fresh git clones under /home/ubuntu/dev, the claude CLI in /home/ubuntu/.local,
 # its token/config in /home/ubuntu/.config + .claude, and system bins. It never
 # reads another /opt/<app> — verified in src/lib/agent-execution/box-workspace.ts
@@ -25,13 +25,13 @@
 set -euo pipefail
 
 . "$(dirname "${BASH_SOURCE[0]}")/_box-env.sh"   # SSOT: HETZNER_IP, BOX_ROOT, BOX_UBUNTU
-HOST="${FLEETCROWN_BOX_HOST:-$BOX_ROOT}"
-UNIT="fleetcrown-box-runner.service"
+HOST="${LOKI_BOX_HOST:-$BOX_ROOT}"
+UNIT="loki-box-runner.service"
 DROPIN_DIR="/etc/systemd/system/${UNIT}.d"
 DROPIN="${DROPIN_DIR}/10-hardening.conf"
 
 # Co-tenant paths the runner must never read. `-` prefix = ignore if absent, so
-# this stays correct as apps come and go. /opt/fleetcrown is intentionally NOT
+# this stays correct as apps come and go. /opt/loki is intentionally NOT
 # listed (the runner lives there); /home/ubuntu/.ssh hides the box SSH keys.
 read -r -d '' DROPIN_BODY <<'CONF' || true
 [Service]

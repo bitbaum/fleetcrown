@@ -29,7 +29,7 @@ export interface OrangeCatLink {
 }
 
 /**
- * Resolve a valid OrangeCat access token for a FleetCrown user, refreshing
+ * Resolve a valid OrangeCat access token for a Loki user, refreshing
  * (with rotation) when expired. Returns null when the user has never linked
  * OrangeCat or the link is broken (revoked / failed refresh) — callers treat
  * null as "feature unavailable", never as an error.

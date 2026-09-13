@@ -23,15 +23,15 @@ OrangeCat mounts as an Auth.js OIDC provider. The identity boundary is `id_token
 
 **2. Funding state is already on the project page.**
 
-The joined essay said the FleetCrown project page does not yet show the OrangeCat twin's wallet or funding. That overstates the gap. `fetchOrangeCatFundingSummary` reads `/api/v1/entities/{type}/{id}/funding`. `ProjectWorkspaceView` already renders confirmed BTC total and contributor count when a funding link exists, plus a "View and fund" deep link. It is not a full wallet dump (`wallet.read` is in the OIDC scope; the card is a public funding summary). Still: the essay was stale.
+The joined essay said the Loki project page does not yet show the OrangeCat twin's wallet or funding. That overstates the gap. `fetchOrangeCatFundingSummary` reads `/api/v1/entities/{type}/{id}/funding`. `ProjectWorkspaceView` already renders confirmed BTC total and contributor count when a funding link exists, plus a "View and fund" deep link. It is not a full wallet dump (`wallet.read` is in the OIDC scope; the card is a public funding summary). Still: the essay was stale.
 
 **3. "Money has not crossed" was too absolute.**
 
-What is true: Stripe keys are missing on the FleetCrown box — card checkout cannot go live. What is also true: Bitcoin pass catalogue, entitlement HMAC webhook, `oc_billing_grants`, plan expiry cron, and `ORANGECAT_PAY_URL_*` are **code and env**, not vapor. Project `payment.settled` events can land as orchestration `funding` events. The honest gap is **stranger-witnessed subscription settlement** — a non-founder buys a pass, `users.plan` flips, project limit lifts — not "zero rails exist."
+What is true: Stripe keys are missing on the Loki box — card checkout cannot go live. What is also true: Bitcoin pass catalogue, entitlement HMAC webhook, `oc_billing_grants`, plan expiry cron, and `ORANGECAT_PAY_URL_*` are **code and env**, not vapor. Project `payment.settled` events can land as orchestration `funding` events. The honest gap is **stranger-witnessed subscription settlement** — a non-founder buys a pass, `users.plan` flips, project limit lifts — not "zero rails exist."
 
 **4. Entity desync after publish is structural and unnamed.**
 
-`publishProjectToOrangeCat` is one-shot. If `orangecat_project_id` is set, return `already_published` — no PATCH of title or description. The 09:00 UTC promote backfill repairs **wall events** (14-day window, 50 emits/tick), not entity fields. Rename on FleetCrown and OrangeCat keeps the old name forever unless someone edits by hand. Muskrat was right to call that out. The original essay celebrated twins; it did not say the twin's face stops updating.
+`publishProjectToOrangeCat` is one-shot. If `orangecat_project_id` is set, return `already_published` — no PATCH of title or description. The 09:00 UTC promote backfill repairs **wall events** (14-day window, 50 emits/tick), not entity fields. Rename on Loki and OrangeCat keeps the old name forever unless someone edits by hand. Muskrat was right to call that out. The original essay celebrated twins; it did not say the twin's face stops updating.
 
 **5. Promote is curated, capped, and quiet on token failure.**
 
@@ -49,7 +49,7 @@ The claim in [The Two Halves of the Individual Singularity](/thoughts/the-two-ha
 
 That is a first-principles cut of the techno-capital flywheel sized for an individual ([The Techno-Capital Machine for Individuals](/thoughts/the-techno-capital-machine-for-individuals)): technology produces value; value becomes capital; capital funds the next round. Corporations historically owned both halves. Individuals got productivity tools on one side and payment apps on the other, leaking to institutions in the middle.
 
-FleetCrown is the production half: command, verify, govern fleets of agents across projects. OrangeCat is the transaction half: actors, wallets, public entities, Bitcoin settlement. Solon is the governance pillar — a **separate** HMAC doorbell into FleetCrown (`/api/solon/events`), not an OrangeCat project twin. Three pillars, one operator. The join between production and transaction is the seam Muskrat audited.
+Loki is the production half: command, verify, govern fleets of agents across projects. OrangeCat is the transaction half: actors, wallets, public entities, Bitcoin settlement. Solon is the governance pillar — a **separate** HMAC doorbell into Loki (`/api/solon/events`), not an OrangeCat project twin. Three pillars, one operator. The join between production and transaction is the seam Muskrat audited.
 
 ### Why the market does not cancel this
 
@@ -74,15 +74,15 @@ Workers commoditize weekly. Captains do not. Positioning (`docs/positioning.md`)
 | Pricing | Pay for the captain | Stripe when incorporated; BTC passes now |
 | Today / Money | Operator life ops + burn | Personal, not marketplace |
 
-The flywheel the code is aiming at: **find need on OrangeCat → build on FleetCrown → publish and witness on the wall → fund in BTC → grant plan / record funding back into the fleet.** Loki already pulls open demand and economy search as best-effort facts (`orangecat-demand.ts`). The OC matcher (`introduceMatches`) pairs wishlists to products/services — **not** automatically to FleetCrown-published projects. That scope limit is real; the essay should not pretend publish equals marketplace match.
+The flywheel the code is aiming at: **find need on OrangeCat → build on Loki → publish and witness on the wall → fund in BTC → grant plan / record funding back into the fleet.** Loki already pulls open demand and economy search as best-effort facts (`orangecat-demand.ts`). The OC matcher (`introduceMatches`) pairs wishlists to products/services — **not** automatically to Loki-published projects. That scope limit is real; the essay should not pretend publish equals marketplace match.
 
 ### Why two products remain correct
 
-[Two Products or One](/thoughts/two-products-or-one) still matches runtime truth: FleetCrown is Auth.js + Drizzle + self-hosted Postgres; OrangeCat is Supabase + RLS. Merging stacks is months of port for no user-facing win. Audiences differ — fleet operators vs broader economic participants. Regulatory blast radius differs. Optionality differs. UX should converge (one mental model); codebases stay paired until merge clearly reduces complexity. The identity bridge exists **because** that decision was deliberate, not because we forgot to merge.
+[Two Products or One](/thoughts/two-products-or-one) still matches runtime truth: Loki is Auth.js + Drizzle + self-hosted Postgres; OrangeCat is Supabase + RLS. Merging stacks is months of port for no user-facing win. Audiences differ — fleet operators vs broader economic participants. Regulatory blast radius differs. Optionality differs. UX should converge (one mental model); codebases stay paired until merge clearly reduces complexity. The identity bridge exists **because** that decision was deliberate, not because we forgot to merge.
 
 ```mermaid
 flowchart LR
-  subgraph production [FleetCrown]
+  subgraph production [Loki]
     Dispatch[Dispatch / verify]
     Publish[Publish project]
   end
@@ -118,11 +118,11 @@ Essays describe a world where production and settlement accelerate each other. C
 
 1. **Second human.** Connect OrangeCat from Settings, publish one project, see wall event — no founder SSH.
 2. **Funding under load.** Contribution on the OC twin moves the FC funding card without a manual refresh ritual.
-3. **Pass settlement.** Buy a seeded FleetCrown pass in Bitcoin; entitlement webhook grants; `users.plan` and limits update.
+3. **Pass settlement.** Buy a seeded Loki pass in Bitcoin; entitlement webhook grants; `users.plan` and limits update.
 
 Until those three are boring, public copy says **connected**. When they are boring, the next essay can earn **joined** without a critic having to open `auth.ts` to find the lie.
 
-Also owed, now that desync is admitted: either a project PATCH from FleetCrown when metadata changes, or an honest UI that says "OrangeCat copy is a snapshot — edit there." Silence is the third option and the worst.
+Also owed, now that desync is admitted: either a project PATCH from Loki when metadata changes, or an honest UI that says "OrangeCat copy is a snapshot — edit there." Silence is the third option and the worst.
 
 ## On rats and authors
 

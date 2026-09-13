@@ -26,7 +26,7 @@ export function runnerWorkspaceId(tab: string): string {
   return `runner:${tab.toLowerCase()}`;
 }
 
-/** True when this tab is driven by a live FleetCrown-owned PTY. */
+/** True when this tab is driven by a live Loki-owned PTY. */
 export function isPtyBacked(tab: string): boolean {
   const handle = executor.get(runnerWorkspaceId(tab));
   return !!handle && handle.status !== "exited";
@@ -61,7 +61,7 @@ export async function launchAgentPty(
   // Resolve a box-local workspace (clone-on-demand + pre-trust for claude)
   // before provisioning. Dynamic import keeps @/db + git out of the desktop
   // bundle — only the box-runner sets this env.
-  if (process.env.FLEETCROWN_BOX_PREPARE === "true") {
+  if (process.env.LOKI_BOX_PREPARE === "true") {
     try {
       const { ensureBoxWorkspace } = await import("@/lib/agent-execution/box-workspace");
       effectiveDir = await ensureBoxWorkspace(tab, dir);
@@ -73,7 +73,7 @@ export async function launchAgentPty(
   // Unattended-launch prep for claude on EVERY runner (not just the box):
   // pre-trust the workspace and merge the unattended allowlist so a dispatched
   // agent can never hang on a trust dialog or an out-of-cwd permission ask
-  // (e.g. the final session-handoff write to ~/.fleetcrown/sessions/<tab>.md) —
+  // (e.g. the final session-handoff write to ~/.loki/sessions/<tab>.md) —
   // with nobody at the PTY, an unanswered prompt is a dead run. Pure fs, no
   // dotfiles or hand-tuned settings required on the user's machine.
   if (agent === "claude") {

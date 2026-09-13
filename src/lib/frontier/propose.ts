@@ -1,6 +1,6 @@
 // The self-improvement half of the frontier loop.
 //
-// Given a day's digest, draft concrete proposals for how FleetCrown itself
+// Given a day's digest, draft concrete proposals for how Loki itself
 // should evolve, then put them through an adversarial self-critique gate before
 // any reach a human. The loop AUTO-PROPOSES ONLY — a human accepts (→ a roadmap
 // goal) or dismisses. Decision history grounds the next run so nothing is
@@ -18,8 +18,8 @@ import { callGroqText } from "@/lib/groq";
 import { stripReasoning } from "@/lib/agent/llm";
 import type { FrontierItem } from "./types";
 
-// Short, stable grounding so proposals stay on-target for what FleetCrown is.
-const FLEETCROWN_MISSION = `FleetCrown is a multi-user SaaS platform for commanding AI agent fleets across projects: builders register projects and launch/monitor/govern vendor-agnostic AI agents (claude, cursor, codex, gemini, grok) from one control plane. It is model-agnostic, self-hosted, and its north star is captain-mode: see and govern across the agents you've deployed. A local "Fleet Runner" desktop executes dispatches; the cloud orchestrates.`;
+// Short, stable grounding so proposals stay on-target for what Loki is.
+const LOKI_MISSION = `Loki is a multi-user SaaS platform for commanding AI agent fleets across projects: builders register projects and launch/monitor/govern vendor-agnostic AI agents (claude, cursor, codex, gemini, grok) from one control plane. It is model-agnostic, self-hosted, and its north star is captain-mode: see and govern across the agents you've deployed. A local "Fleet Runner" desktop executes dispatches; the cloud orchestrates.`;
 
 export type DraftProposal = { title: string; rationale: string; sourceUrls: string[] };
 
@@ -34,9 +34,9 @@ export type ProposalContext = {
   recentlyShipped: string[];
 };
 
-// FleetCrown's real subsystems, so proposals target a concrete part of the
+// Loki's real subsystems, so proposals target a concrete part of the
 // product rather than generic "use AI" ideas. Stable enough to live here.
-const FLEETCROWN_ARCHITECTURE = `FleetCrown's subsystems a proposal can target:
+const LOKI_ARCHITECTURE = `Loki's subsystems a proposal can target:
 - Control plane: dispatch intents to agents, real-time SSE status, per-project cards, git-sync guard.
 - Vendor-agnostic agents: adapter pattern over claude/cursor/codex/gemini/grok, AGENT_FALLBACK_ORDER, auto-reroute on capacity walls.
 - Orchestration: orchestration_runs (open→close with inferred outcome), session.md handoffs, outcome capture.
@@ -51,30 +51,30 @@ function digestForPrompt(items: FrontierItem[]): string {
     .join("\n");
 }
 
-const GENERATE_SYSTEM = `You are FleetCrown's self-improvement strategist.
+const GENERATE_SYSTEM = `You are Loki's self-improvement strategist.
 
-${FLEETCROWN_MISSION}
+${LOKI_MISSION}
 
-${FLEETCROWN_ARCHITECTURE}
+${LOKI_ARCHITECTURE}
 
-You will be given today's frontier developments, FleetCrown's RECENTLY SHIPPED features, its OPEN ROADMAP GAPS (planned-but-not-done milestones), and its current goals.
+You will be given today's frontier developments, Loki's RECENTLY SHIPPED features, its OPEN ROADMAP GAPS (planned-but-not-done milestones), and its current goals.
 
 Your reasoning procedure (follow it):
-1. Start from the OPEN ROADMAP GAPS and the subsystems above — that is what FleetCrown actually needs.
+1. Start from the OPEN ROADMAP GAPS and the subsystems above — that is what Loki actually needs.
 2. For each gap/subsystem, ask: does any of TODAY'S frontier developments offer a concrete technique, result, or tool that would advance it?
-3. Propose ONLY where there is a real match. The proposal's subject is the GAP; the frontier development is the means. Title it after the FleetCrown change, not the paper.
+3. Propose ONLY where there is a real match. The proposal's subject is the GAP; the frontier development is the means. Title it after the Loki change, not the paper.
 
 Propose your best 1-3 gap-anchored matches. Each MUST:
 - name a specific open gap or subsystem it advances, AND the specific frontier development it draws on;
 - be concrete enough that an engineer could start building it this week;
 - build ON recently-shipped work, never repropose it; not duplicate an active goal or a considered proposal.
 
-Lean toward proposing when there is a plausible connection — a separate panel of reviewers will score and filter your proposals, so your job is to surface the strongest candidate matches, not to pre-reject them. Title each after the FleetCrown change, not the paper. Only return an empty list if today's developments have genuinely no plausible bearing on any gap or subsystem.
+Lean toward proposing when there is a plausible connection — a separate panel of reviewers will score and filter your proposals, so your job is to surface the strongest candidate matches, not to pre-reject them. Title each after the Loki change, not the paper. Only return an empty list if today's developments have genuinely no plausible bearing on any gap or subsystem.
 
 Return STRICT JSON only:
-{"proposals":[{"title":"...","rationale":"... (2-3 sentences: name the frontier item, the FleetCrown subsystem/gap, and what concretely gets built)","sourceUrls":["<url from the candidate list>"]}]}`;
+{"proposals":[{"title":"...","rationale":"... (2-3 sentences: name the frontier item, the Loki subsystem/gap, and what concretely gets built)","sourceUrls":["<url from the candidate list>"]}]}`;
 
-const CRITIQUE_SYSTEM = `You are an adversarial reviewer of self-improvement proposals for FleetCrown (a model-agnostic AI-agent-fleet control plane). Default to REJECTING. A proposal only earns a high score if it is ALL of: genuinely actionable, specific to FleetCrown (not generic AI hype), tied to a real frontier development, and NOT a restatement of an existing goal.
+const CRITIQUE_SYSTEM = `You are an adversarial reviewer of self-improvement proposals for Loki (a model-agnostic AI-agent-fleet control plane). Default to REJECTING. A proposal only earns a high score if it is ALL of: genuinely actionable, specific to Loki (not generic AI hype), tied to a real frontier development, and NOT a restatement of an existing goal.
 
 Score each proposal 0-100. Be harsh: vague, derivative, or me-too proposals score below 50. Only proposals a thoughtful founder would actually add to the roadmap score 70+.
 
@@ -256,7 +256,7 @@ export async function generateProposals(
 
   const user = [
     ctx.openGaps.length
-      ? `OPEN ROADMAP GAPS — start here; these are what FleetCrown needs:\n- ${ctx.openGaps.join("\n- ")}`
+      ? `OPEN ROADMAP GAPS — start here; these are what Loki needs:\n- ${ctx.openGaps.join("\n- ")}`
       : "",
     `\nTODAY'S FRONTIER DEVELOPMENTS — match these against the gaps above:\n${digestForPrompt(items)}`,
     ctx.recentlyShipped.length

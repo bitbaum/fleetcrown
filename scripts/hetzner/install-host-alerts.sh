@@ -18,7 +18,7 @@
 # human must act on it AND nothing else can. One incident is one message
 # (alert_once + a duplicate-text floor in lib-alert.sh); anything with a
 # knowable remedy is applied, not announced; anything ELSE worth paging is also
-# worth queuing a FleetCrown remediation agent for (incident-dispatch.sh — one
+# worth queuing a Loki remediation agent for (incident-dispatch.sh — one
 # dispatch per incident, outcome delivered on run close); test runs set
 # ALERT_DRY_RUN=1 and reach the journal only. Suppressed is never invisible —
 # the journal always gets every alert.
@@ -295,7 +295,7 @@ SVC
 # directly: four appcron units re-paged every 30 minutes all morning (kivvi's
 # USE_NEON leftover, vitareba's sandbox sender, revamp-info's missing
 # CRON_SECRET), every one of them fixable by an agent, none of them fixed by
-# one, because nothing here knew FleetCrown exists. Meanwhile the FleetCrown
+# one, because nothing here knew Loki exists. Meanwhile the Loki
 # box-runner sat on this same machine polling an empty queue every 2 seconds.
 #
 # This script is the missing producer: when a unit failure is worth paging, it
@@ -325,8 +325,8 @@ unit="${1:?usage: incident-dispatch.sh <failed-unit>}"
 
 # Token SSOT: the same ck_* agent token Loki's fc.sh authenticates with.
 # Reusing the file means rotating the token stays a one-place edit.
-ENV_FILE="${FLEETCROWN_TOKEN_FILE:-/home/openclaw/.openclaw/calendar-drain.env}"
-BASE="${FLEETCROWN_API_URL:-http://127.0.0.1:4002}"
+ENV_FILE="${LOKI_TOKEN_FILE:-/home/openclaw/.openclaw/calendar-drain.env}"
+BASE="${LOKI_API_URL:-http://127.0.0.1:4002}"
 DISPATCH_COOLDOWN="${INCIDENT_DISPATCH_COOLDOWN_SEC:-21600}"   # 6h per unit
 
 sf="$MON/state/paged_$(_alert_key "dispatch:$unit")"
@@ -340,9 +340,9 @@ if [ ! -f "$ENV_FILE" ]; then
   logger -t watchdog "DISPATCH skipped for ${unit}: token file $ENV_FILE missing"
   exit 0
 fi
-token=$(grep -m1 '^FLEETCROWN_AGENT_TOKEN=' "$ENV_FILE" | cut -d= -f2- | tr -d '"' | tr -d "'")
+token=$(grep -m1 '^LOKI_AGENT_TOKEN=' "$ENV_FILE" | cut -d= -f2- | tr -d '"' | tr -d "'")
 if [ -z "$token" ]; then
-  logger -t watchdog "DISPATCH skipped for ${unit}: FLEETCROWN_AGENT_TOKEN not set in $ENV_FILE"
+  logger -t watchdog "DISPATCH skipped for ${unit}: LOKI_AGENT_TOKEN not set in $ENV_FILE"
   exit 0
 fi
 
@@ -350,7 +350,7 @@ fi
 # appcron unit name cannot be split by field — the unit's own ExecStart names
 # the app as run.sh's first argument, and that is the only place the answer
 # actually lives. Anything unmapped (restic, monitoring itself) goes to
-# fleetcrown, which owns scripts/hetzner and therefore this machinery.
+# loki, which owns scripts/hetzner and therefore this machinery.
 project=""
 case "$unit" in
   appcron-*)
@@ -359,7 +359,7 @@ case "$unit" in
     ;;
   *-app.service) project="${unit%-app.service}" ;;
 esac
-[ -n "$project" ] || project=fleetcrown
+[ -n "$project" ] || project=loki
 
 jtail=$(journalctl -u "$unit" -n 30 --no-pager -o cat 2>/dev/null | tail -c 3500)
 
@@ -391,11 +391,11 @@ _post() {  # $1 = project tab; prints the HTTP status code
 }
 
 http=$(_post "$project")
-if [ "${http:0:1}" != "2" ] && [ "$project" != "fleetcrown" ]; then
+if [ "${http:0:1}" != "2" ] && [ "$project" != "loki" ]; then
   # An unregistered project must not cost the dispatch — the fleet repo owner
   # can still diagnose from the journal excerpt embedded in the prompt.
-  logger -t watchdog "DISPATCH for ${unit}: project '${project}' rejected (HTTP ${http:-none}) — retrying as fleetcrown"
-  project=fleetcrown
+  logger -t watchdog "DISPATCH for ${unit}: project '${project}' rejected (HTTP ${http:-none}) — retrying as loki"
+  project=loki
   http=$(_post "$project")
 fi
 if [ "${http:0:1}" = "2" ]; then

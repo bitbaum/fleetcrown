@@ -1,6 +1,6 @@
 "use client";
 
-// User-owned prompts section on /prompts. Renders ABOVE the FleetCrown
+// User-owned prompts section on /prompts. Renders ABOVE the Loki
 // defaults so the user's own prompts are first-class — they grow over
 // time as the user works and become more relevant than the seed catalog.
 //
@@ -149,12 +149,12 @@ export function UserPromptsSection({
       )}
 
       {/* No full empty-state card here: the header already says "Build your own
-          library" with the New prompt button, and the forkable FleetCrown
+          library" with the New prompt button, and the forkable Loki
           defaults render immediately below. A padded card repeating that was a
           dead band — costly on mobile. One muted line keeps the fork pointer. */}
       {visiblePrompts.length === 0 && !isCreating && (
         <p className="text-xs text-text-muted">
-          …or fork a FleetCrown default below to make it your own.
+          …or fork a Loki default below to make it your own.
         </p>
       )}
 

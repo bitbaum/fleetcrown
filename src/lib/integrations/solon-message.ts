@@ -1,9 +1,9 @@
 /**
- * Bitcoin signed-message SIGNING for Loki's Solon votes — FleetCrown's
+ * Bitcoin signed-message SIGNING for Loki's Solon votes — Loki's
  * independent port of the format Solon verifies (magic + varint preimage,
  * double-SHA256, base64 65-byte signature with a compressed-key recovery
  * header). Used for exactly one key: LOKI_SOLON_PRIVKEY, this system's own
- * governance identity. A vote signed here is FleetCrown's attested judgment.
+ * governance identity. A vote signed here is Loki's attested judgment.
  *
  * Pinned to Solon's implementation by a fixed test vector generated there
  * (scripts/test/solon-message.ts) — deterministic RFC6979 signing means the

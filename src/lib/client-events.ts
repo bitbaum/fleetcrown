@@ -13,7 +13,7 @@
 /** Fired by PullToRefresh on a successful commit. useFetch listens and bumps
  *  its revision so client-side polls refetch in lockstep with the
  *  router.refresh() that drives server-component revalidation. */
-export const FLEETCROWN_REFRESH_EVENT = "fleetcrown:refresh";
+export const LOKI_REFRESH_EVENT = "loki:refresh";
 
 /** Fired (with `detail: { prompt }`) to open the floating assistant panel
  *  prefilled. Producer: LokiDispatchButton. Listener: AskLokiButton. */

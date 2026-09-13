@@ -16,7 +16,7 @@ export type ActiveFormHandle = {
   getAssist: () => UseAiForm | undefined;
 };
 
-export const ACTIVE_FORM_EVENT = "fleetcrown:active-form";
+export const ACTIVE_FORM_EVENT = "loki:active-form";
 
 let current: ActiveFormHandle | null = null;
 

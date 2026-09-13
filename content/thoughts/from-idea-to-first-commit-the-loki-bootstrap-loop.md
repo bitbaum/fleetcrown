@@ -1,7 +1,7 @@
 ---
-title: From Idea to First Commit — The FleetCrown Bootstrap Loop
-summary: How FleetCrown collapses the bureaucratic distance between "I have an idea" and "the agent is writing code for it," walked through with a concrete example — a tool that writes first-principles rebuttals to articles, with full source and author transparency.
-excerpt: The gap between having an idea and the first agent dispatch is mostly paperwork. FleetCrown removes the paperwork. Here is what that looks like today, end to end, with a real project as the example.
+title: From Idea to First Commit — The Loki Bootstrap Loop
+summary: How Loki collapses the bureaucratic distance between "I have an idea" and "the agent is writing code for it," walked through with a concrete example — a tool that writes first-principles rebuttals to articles, with full source and author transparency.
+excerpt: The gap between having an idea and the first agent dispatch is mostly paperwork. Loki removes the paperwork. Here is what that looks like today, end to end, with a real project as the example.
 publishedAt: 2026-06-05
 tags: control,agents,onboarding,product,bootstrap,first-principles
 featured: true
@@ -14,9 +14,9 @@ You have an idea. Maybe you just had it. Maybe you have been carrying it for wee
 
 Pick a name. Find an unclaimed slug. Decide on a stack. Open a terminal. Run create-next-app or pip init or cargo new. Initialize git. Create a remote. Push. Add a README. Write the first spec. Write the second spec. Decide what the first task should be. Open the editor. Sketch the first file. Realize you have not actually started yet.
 
-This is the part FleetCrown collapses.
+This is the part Loki collapses.
 
-The mental motion FleetCrown wants is: describe the idea once, in plain language, and have a working project — repo, folder, brief, first task in flight — appear around it. The user supplies intent. The system supplies coordination. The agent supplies code.
+The mental motion Loki wants is: describe the idea once, in plain language, and have a working project — repo, folder, brief, first task in flight — appear around it. The user supplies intent. The system supplies coordination. The agent supplies code.
 
 This essay is the honest walk-through: what that looks like in production today, what already works, what is still rough, and where the loop is going. We will use a specific example throughout so the description never floats. The example is a real project that this author wants to build and will build, possibly starting from this essay.
 
@@ -32,11 +32,11 @@ We will call the project `truthseeker` for the rest of the essay. The user can r
 
 This is not a hypothetical. Someone sent the author a link to a Republik essay arguing that Europe should stop copying Silicon Valley; the author wanted a structured response to it. They wanted the response generated and the analysis done in a system they trust — not pasted into a chat window and forgotten. They want the work to live somewhere, to accumulate, to compare across sources.
 
-That is the project. Now: how does FleetCrown take it from a sentence to a running agent?
+That is the project. Now: how does Loki take it from a sentence to a running agent?
 
 ## What happens when you sign in today
 
-Open a browser. Go to fleetcrown.vercel.app. Sign in with GitHub.
+Open a browser. Go to loki.vercel.app. Sign in with GitHub.
 
 The first thing that should be true on landing: you are on /control, not on an onboarding gate. As of 2026-06-05, the auto-onboard heal logic derives a username from your OAuth name or email local-part. If the derived handle is free, it is yours, and the onboarded-at timestamp is set in the same JWT mint. No forced setup page.
 
@@ -52,7 +52,7 @@ This is the path that works for every signed-in user today. No desktop install r
 
 The form asks for four things:
 
-1. **Name** — what the project is called. Letters, digits, hyphens. Becomes the GitHub repo slug and the FleetCrown project key.
+1. **Name** — what the project is called. Letters, digits, hyphens. Becomes the GitHub repo slug and the Loki project key.
 2. **Description** — one or two sentences. This is what `truthseeker` becomes: *"First-principles rebuttal generator with full source and author transparency."*
 3. **Visibility** — private or public on GitHub.
 4. **Template** — currently five choices: Next.js with Tailwind, Python FastAPI, Hono on Cloudflare Workers, plain HTML with Tailwind, or bare (just a README and a .gitignore).
@@ -61,12 +61,12 @@ Choose Next.js + Tailwind for `truthseeker`. The MVP is a web tool; the user wil
 
 Click Create. What happens:
 
-- The cloud route at `src/app/api/projects/create-with-github/route.ts` mints a GitHub repo under your account via the GitHub OAuth token attached to your FleetCrown session.
+- The cloud route at `src/app/api/projects/create-with-github/route.ts` mints a GitHub repo under your account via the GitHub OAuth token attached to your Loki session.
 - The same route seeds the template by writing all the starter files in a single Git Tree commit (no per-file API round-trips — one tree, one commit, fast).
-- A FleetCrown project entity is created (typed as `project` in the entities table) with the name, description, and a `gitUrl` pointing at the new GitHub repo.
+- A Loki project entity is created (typed as `project` in the entities table) with the name, description, and a `gitUrl` pointing at the new GitHub repo.
 - You are redirected to the success view, which shows the clone command (`git clone git@github.com:<owner>/truthseeker.git`), plus optional editor deeplinks (`vscode://`, `cursor://`) that open the repo directly if your local editor is configured.
 
-At this point, the project exists. It is on GitHub. It is in FleetCrown. You have not opened a terminal yet.
+At this point, the project exists. It is on GitHub. It is in Loki. You have not opened a terminal yet.
 
 ## The local path: Bootstrap modal (Fleet Runner only)
 
@@ -85,13 +85,13 @@ For `truthseeker`, the Bootstrap path produces:
 
 - `~/dev/truthseeker/` (local clone)
 - `https://github.com/<owner>/truthseeker` (remote)
-- FleetCrown project record with `gitUrl` set
+- Loki project record with `gitUrl` set
 - Zellij tab `truthseeker` open at the project root
 - First dispatch queued: "Read README and propose three-week MVP scope"
 
 ## The first dispatch and why it matters
 
-A project that exists but has never had a dispatch is not yet alive. The dispatch row is where FleetCrown crosses from "I created a folder" to "an agent is doing work for me."
+A project that exists but has never had a dispatch is not yet alive. The dispatch row is where Loki crosses from "I created a folder" to "an agent is doing work for me."
 
 The dispatch input lives on every ProjectCard in /control. Its placeholder asks you what the agent should work on, with one example. For a brand-new project, the most productive first dispatch is one of three things:
 
@@ -113,7 +113,7 @@ Let us be honest about what works and what does not as of 2026-06-05.
 
 - Sign-in to /control in one page load. Auto-onboard handles username derivation.
 - GitHub OAuth-linked accounts get a one-click "Import my recent repos" path.
-- The bare project-creation flow at `/control/new-from-scratch` mints a GitHub repo, seeds a template (one of five), and creates the FleetCrown project record.
+- The bare project-creation flow at `/control/new-from-scratch` mints a GitHub repo, seeds a template (one of five), and creates the Loki project record.
 - Fleet Runner's Bootstrap modal goes further: it clones the repo locally, opens a Zellij tab, and queues the first agent prompt.
 - Dispatch to a paired Fleet Runner delivers in sub-500ms via the bridge SSE channel.
 - Missing agent CLIs surface as a banner before the user tries to dispatch into a dead CLI.
@@ -129,13 +129,13 @@ Let us be honest about what works and what does not as of 2026-06-05.
 
 **Where this is going:**
 
-The unfinished items are the things that turn FleetCrown from a tool you initiate into a system that operates. The scheduler is the single biggest one. It would mean: idle projects pick up where they left off, on their own, at a cadence the user controls. Combined with the autopilot ladder, this becomes the path from L1 Manual to L5 Mission: the operator dials in trust, the system handles the dispatches.
+The unfinished items are the things that turn Loki from a tool you initiate into a system that operates. The scheduler is the single biggest one. It would mean: idle projects pick up where they left off, on their own, at a cadence the user controls. Combined with the autopilot ladder, this becomes the path from L1 Manual to L5 Mission: the operator dials in trust, the system handles the dispatches.
 
 The voice path is smaller but emotionally larger. Voice is the most natural input for "let me describe what I want to build." A four-sentence description spoken into Fleet Runner becomes a project brief, a repo, a folder, a first task. The bureaucratic distance from idea to first commit goes to roughly zero.
 
 ## How this essay informs the next development cycle
 
-Two things are true at once. FleetCrown is closer to the bootstrap loop the product wants than people assume. And it is not yet there. The gap is in three places:
+Two things are true at once. Loki is closer to the bootstrap loop the product wants than people assume. And it is not yet there. The gap is in three places:
 
 1. **Cloud-side cloning.** The cloud user should be able to start a project end-to-end without touching a terminal. This requires a hosted runtime — a sandboxed environment per user that can clone, run, and dispatch. Today's bootstrap requires the user's machine. The desktop app handles it; the cloud should be able to handle it too. This is not a small build.
 
@@ -143,13 +143,13 @@ Two things are true at once. FleetCrown is closer to the bootstrap loop the prod
 
 3. **Idea-as-input.** The current Description field is a single text input. The future version is a multimodal capture: voice, paste, link, upload. Whatever the user supplies — a paragraph, a podcast clip, a link to a paper, a screenshot of a hand-drawn sketch — becomes the brief. The system pre-processes it into a structured brief and presents it to the user for confirmation before any external state changes. This is the part that makes the loop feel magical instead of bureaucratic.
 
-When the `truthseeker` project ships, it will use this essay as a reference for two reasons. First, because the project is itself an instance of "system that closes a loop from input (article) to output (response with sources) with minimum bureaucratic distance." The architecture rhymes. Second, because the development of `truthseeker` will run on FleetCrown, and the project should be able to point at the essay and say: *this is how I was made; this is the kind of project I should also enable for my users; this is the loop I am closing in my own domain.*
+When the `truthseeker` project ships, it will use this essay as a reference for two reasons. First, because the project is itself an instance of "system that closes a loop from input (article) to output (response with sources) with minimum bureaucratic distance." The architecture rhymes. Second, because the development of `truthseeker` will run on Loki, and the project should be able to point at the essay and say: *this is how I was made; this is the kind of project I should also enable for my users; this is the loop I am closing in my own domain.*
 
 ## What the operator does next
 
 The honest minimum to start `truthseeker` today:
 
-1. Sign in to fleetcrown.vercel.app.
+1. Sign in to loki.vercel.app.
 2. On /control, click "Start a new project."
 3. Fill the form. Name `truthseeker`. Description as above. Visibility private. Template Next.js + Tailwind.
 4. Click Create. Wait for the success view.
@@ -159,10 +159,10 @@ The honest minimum to start `truthseeker` today:
 
 Seven steps. About four minutes if you are signed in already. The first commit on `truthseeker` will land within the next agent run.
 
-The thing FleetCrown adds to this is not magic. It is that steps 2 through 4 collapse seven manual setup steps (create-next-app, git init, gh repo create, push, README, GitHub Pages config if you want it, FleetCrown registration) into one form. It is that step 6 is a single text input that produces a working agent dispatch instead of three browser tabs and four CLI invocations. It is that the loop, once started, runs by itself for the duration of the task.
+The thing Loki adds to this is not magic. It is that steps 2 through 4 collapse seven manual setup steps (create-next-app, git init, gh repo create, push, README, GitHub Pages config if you want it, Loki registration) into one form. It is that step 6 is a single text input that produces a working agent dispatch instead of three browser tabs and four CLI invocations. It is that the loop, once started, runs by itself for the duration of the task.
 
 The destination is shorter. Sign in. Speak two sentences. The system asks one clarifying question. Click confirm. The repo, the folder, the brief, the first task, and the first commit happen in sequence without you having to attend to any of them. You come back to a project that exists, has a name, and has done its first thing.
 
-That is the loop FleetCrown is building toward. `truthseeker` will be one of the first real projects to use it. The article-rebuttal tool itself, once it works, will close the same kind of loop for someone else: paste a link, get a response, see the sources, see the bias. One pattern. Two applications.
+That is the loop Loki is building toward. `truthseeker` will be one of the first real projects to use it. The article-rebuttal tool itself, once it works, will close the same kind of loop for someone else: paste a link, get a response, see the sources, see the bias. One pattern. Two applications.
 
-The shortest path between an idea and the first version of itself is what FleetCrown is for.
+The shortest path between an idea and the first version of itself is what Loki is for.

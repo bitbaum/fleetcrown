@@ -15,7 +15,7 @@ export async function insertPromptHistory(
 /**
  * True when this exact prompt text was already recorded for the project
  * recently. Claude's UserPromptSubmit hook fires for EVERY prompt the CLI
- * receives — it cannot distinguish keystrokes FleetCrown injected from
+ * receives — it cannot distinguish keystrokes Loki injected from
  * keystrokes the human typed. Dispatch paths (inject-core, tab-inject) record
  * their prompt_history row at dispatch time, so when the capture hook's
  * payload matches a fresh dispatch row it is the echo of that dispatch, not

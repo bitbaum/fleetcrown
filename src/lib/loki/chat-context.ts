@@ -1,5 +1,5 @@
 /**
- * Project-aware Loki chat — SSOT for injecting FleetCrown project profiles into
+ * Project-aware Loki chat — SSOT for injecting Loki project profiles into
  * chat turns (same getProjectContext as dispatch, without sending work to the runner).
  */
 import { getProjectContext } from "@/db/queries/project-context";

@@ -6,7 +6,7 @@ import { entities } from "./entities";
  * Agent turns reported by the agent itself, via Claude Code hooks.
  *
  * ── The gap this closes ─────────────────────────────────────────────────────
- * Control counted an agent as working only when FleetCrown dispatched the run
+ * Control counted an agent as working only when Loki dispatched the run
  * (a /tmp current-prompt sentinel backed by a /proc scan) or when the runner
  * saw a zellij tab named after a registered project. Sessions started any other
  * way — a terminal you opened, a background job, a worktree — produced neither

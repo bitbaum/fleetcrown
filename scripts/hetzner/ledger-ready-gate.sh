@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Nightly-improver start gate (fleetcrown#136).
+# Nightly-improver start gate (loki#136).
 #
 # The improver learns from the run ledger, so it must not be built until the
 # ledger has real depth. This checks the documented threshold and pings once
@@ -16,10 +16,10 @@
 # Install: bash scripts/hetzner/install-ledger-ready.sh
 set -euo pipefail
 
-STATE=/var/lib/fleetcrown/ledger-ready.done
+STATE=/var/lib/loki/ledger-ready.done
 [ -f "$STATE" ] && exit 0
 
-set -a; . /opt/fleetcrown/app/.env; set +a
+set -a; . /opt/loki/app/.env; set +a
 
 read -r METERED ESCALATIONS DAYS <<<"$(LC_ALL=C psql "$DATABASE_URL" -tA -F' ' -c "
   select
@@ -48,7 +48,7 @@ curl -fsS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage
   -d parse_mode=Markdown \
   -d text="*Run ledger is deep enough — build the nightly improver.*
 ${METERED} metered runs · ${ESCALATIONS} escalations · ${DAYS} days covered.
-Spec + start condition: github.com/bitbaum/fleetcrown/issues/136" >/dev/null
+Spec + start condition: github.com/bitbaum/loki/issues/136" >/dev/null
 
 # Only after a delivery actually succeeded (curl -f + set -e) does the gate
 # disarm. Stamping before the send is how a one-shot notification becomes a

@@ -35,7 +35,7 @@ const projects = [
   "botsmann",
   "datacat",
   "evig",
-  "fleetcrown",
+  "loki",
   "HamsterCheek",
   "ivy-portal",
   "orangecat",

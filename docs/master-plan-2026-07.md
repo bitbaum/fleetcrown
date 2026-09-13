@@ -1,4 +1,4 @@
-# FleetCrown × OrangeCat — Master Plan, FleetCrown Side (July 2026)
+# Loki × OrangeCat — Master Plan, Loki Side (July 2026)
 
 **Companion to:** `orangecat/docs/business/executive/master-plan-2026-07.md`
 (the OC-side plan, written 2026-07-02). The two plans interlock: OC carries
@@ -22,7 +22,7 @@ execution* stays gated).
   the SSOT dispatch spine; `LocalPtyExecutor` (node-pty, event-sourced, SSE
   resumable) is shared by web, desktop Fleet Runner v0.8.9 (0.8.19 as of
   2026-09-11, when zellij left the product entirely), and the headless
-  `fleetcrown-box-runner` on Hetzner. The laptop dependency is deleted
+  `loki-box-runner` on Hetzner. The laptop dependency is deleted
   (box-owned-pty P0+P1 shipped 2026-06-26).
 - **The cross-product bridge is ~60% built and ahead of its own doc.**
   Parts A (Login with OrangeCat, `users.orangecatActorId`) and C (per-project
@@ -54,7 +54,7 @@ execution* stays gated).
 
 ### The vision (what the essays commit us to)
 
-Three-layer stack: models (swappable) → **FleetCrown = capability layer**
+Three-layer stack: models (swappable) → **Loki = capability layer**
 (captain mode: command + verify + govern across a fleet of different minds) →
 **OrangeCat = economic layer** (+ Solon, governance, later). Strategy in one
 line: *"Borrow the workers, own the bridge."* The moat is **governance +
@@ -106,10 +106,10 @@ not on a borrowed laptop — for **users**, not just the founder.
 
 ## 3. Strategy
 
-### 3.1 What FleetCrown is (positioning, held)
+### 3.1 What Loki is (positioning, held)
 
 The captain, not another worker. Single-agent tools (Claude Code, Codex,
-Hermes, OpenClaw) are converging on the worker substrate; FleetCrown bets one
+Hermes, OpenClaw) are converging on the worker substrate; Loki bets one
 tier up: **see + verify + govern across many agents and projects,
 vendor-agnostic**, with cross-model verification a single agent structurally
 cannot do (its judge would be itself), plus an economy no worker tool has
@@ -124,9 +124,9 @@ cannot do (its judge would be itself), plus an economy no worker tool has
   the full captain experience — dispatch, watch, verify, loops, Loki. Their
   compute, their API keys, their risk. This requires *no* SandboxExecutor.
   This is what we charge for first (Stripe, per the OC plan's division of
-  labor: "FleetCrown = the revenue engine. Stripe now").
+  labor: "Loki = the revenue engine. Stripe now").
 - **Tier "We provide the ship" (next):** hosted ephemeral execution on
-  FleetCrown infrastructure — the keystone essay's endgame. Gated on
+  Loki infrastructure — the keystone essay's endgame. Gated on
   `SandboxExecutor` (P3) + metering. This is the upgrade tier and, long
   term, the thing that settles over OC rails instead of Stripe.
 
@@ -177,14 +177,14 @@ payment" with "one real build event."
 
 | # | Item | Owner |
 |---|------|-------|
-| 0.1 | Live round-trip: sign in to fleetcrown.orangecat.ch with OrangeCat in production; confirm `orangecatActorId` persists | Founder (1 click) + Agent verify |
-| 0.2 | Publish the FleetCrown project itself to OC via `OrangeCatPublishButton`; confirm the entity + back-link (`orangecatProjectId`) | Agent |
+| 0.1 | Live round-trip: sign in to loki.orangecat.ch with OrangeCat in production; confirm `orangecatActorId` persists | Founder (1 click) + Agent verify |
+| 0.2 | Publish the Loki project itself to OC via `OrangeCatPublishButton`; confirm the entity + back-link (`orangecatProjectId`) | Agent |
 | 0.3 | Append a real devlog entry; watch `promoteDevLogEntry` land it on the OC project wall; screenshot it | Agent |
 | 0.4 | Add the **promote backfill/reconcile job** (cron): re-emit unacknowledged promotes; "best-effort must not mean silently lossy" | Agent |
 | 0.5 | Settings "Connect OrangeCat" for existing signed-in users (the D2 gap — today only the sign-in button exists) | Agent |
 | 0.6 | Tell the OC-side agent its plan's "FC side unbuilt" claims (Phase 1.1/1.3/1.4) are stale — shipped in FC PR #55 | Agent |
 
-**Proof:** the FleetCrown project page on orangecat.ch shows a live stream of
+**Proof:** the Loki project page on orangecat.ch shows a live stream of
 real build events (the OC plan's Phase 1 exit criterion — reachable this week).
 
 ### Phase 1 — Open the doors: BYO-runner SaaS (2–3 weeks) 🟠
@@ -210,13 +210,13 @@ dispatches, and pays. Revenue-ever goes 0 → 1.
 
 | # | Item | Notes |
 |---|------|-------|
-| 2.1 | **`SandboxExecutor`** (box-owned-pty P3): per-tenant isolation (container per workspace), resource limits, no cross-tenant filesystem | Substrate shipped behind `FLEETCROWN_EXECUTOR=sandbox`; next gate is per-user credentials + metering + hosted entitlement |
+| 2.1 | **`SandboxExecutor`** (box-owned-pty P3): per-tenant isolation (container per workspace), resource limits, no cross-tenant filesystem | Substrate shipped behind `LOKI_EXECUTOR=sandbox`; next gate is per-user credentials + metering + hosted entitlement |
 | 2.2 | Broaden box CLIs (P2): claude/codex/grok alongside hermes, per-user credentials | Cross-model verification needs >1 mind available hosted |
 | 2.3 | Metered hosted tier: dispatch-minutes or task-based; Stripe now, **OC rails (credits pattern) as the roadmap demonstration later** — mirrors OC's Cat Credits model | Don't invent a third billing model |
 | 2.4 | Hosted-runner (Hermes PR-mode) graduates from spike to a supported "no-runner-yet" fallback for onboarding | New users get a taste before installing anything |
 
 **Proof:** a user with no local runner dispatches a task that executes on
-FleetCrown infrastructure, isolated, metered, and billed.
+Loki infrastructure, isolated, metered, and billed.
 
 ### Phase 3 — Trust hardening (parallel, ongoing) 🟡
 
@@ -237,7 +237,7 @@ Each item is a future incident with a paying customer attached.
 | 4.1 | Write and publish the promised bridge essay the week Phase 0 verifies ("the first integration ships when the architecture document lands" — it landed; narrate it) |
 | 4.2 | Weekly build-in-public cadence: FC events on the OC wall + one essay; the two products marketing each other is the story no competitor tells |
 | 4.3 | Priority-plan Horizon C UX items (NL project pre-select, suggested-next-commands, chip→send) as onboarding friction data comes in — pull, don't push |
-| 4.4 | Resolve the FleetCrown domain question (fleetcrown.com unregistered; the brand decision blocks paid marketing, not the product) |
+| 4.4 | Resolve the Loki domain question (loki.com unregistered; the brand decision blocks paid marketing, not the product) |
 
 ---
 
@@ -297,6 +297,6 @@ public face, a wallet, and customers on OrangeCat.
 3. **Do the one-click live test** (Phase 0.1): sign in with OrangeCat on
    production once, so the loop verification can complete.
 4. **Stripe account + price IDs** (Phase 1.2) — founder-credentials-only.
-5. **Domain**: register fleetcrown.com or commit to the current name/domain
+5. **Domain**: register loki.com or commit to the current name/domain
    before any paid distribution.
 6. **Green-light the bridge essay** once Phase 0's screenshot exists.

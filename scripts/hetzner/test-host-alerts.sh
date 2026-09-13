@@ -160,11 +160,11 @@ export SEND_LOG="$TMP/sent.log"
 export DISPATCH_LOG="$TMP/dispatch.log"
 # A fake token file, ALWAYS set: incident-dispatch's default token path exists
 # for real when this suite runs ON the box, and a test that falls through to it
-# would enqueue a real remediation run against the live FleetCrown API — the
+# would enqueue a real remediation run against the live Loki API — the
 # same global-daemon trap as the docker-prune tier (a sandboxed MON does not
 # sandbox an absolute default). The stubbed curl is belt; this is braces.
-export FLEETCROWN_TOKEN_FILE="$TMP/fc-token.env"
-printf 'FLEETCROWN_AGENT_TOKEN=ck_test\n' > "$FLEETCROWN_TOKEN_FILE"
+export LOKI_TOKEN_FILE="$TMP/fc-token.env"
+printf 'LOKI_AGENT_TOKEN=ck_test\n' > "$LOKI_TOKEN_FILE"
 : > "$ALERT_LOG"; : > "$SEND_LOG"; : > "$DISPATCH_LOG"
 
 pass=0 fail=0
@@ -615,7 +615,7 @@ check "recovery: a blip inside the grace gets no closure — zero messages total
 # ── 14. A page queues its own fix: incident dispatch ─────────────────────────
 # On 2026-08-29 George called the whole channel out: four appcron units
 # re-paged every 30 minutes all morning, every one fixable by an agent, none
-# fixed by one — while the FleetCrown box-runner polled an empty queue on the
+# fixed by one — while the Loki box-runner polled an empty queue on the
 # same machine. The rule these cases pin: whatever is worth PAGING is worth
 # QUEUING a remediation agent for, exactly once per incident, and the page
 # itself must say the fix is in motion so the human knows to wait, not act.
@@ -667,8 +667,8 @@ check "dispatch: an appcron unit resolves its app from ExecStart (got $(dispatch
 # An unmapped unit still dispatches — at the repo that owns this machinery.
 reset_dispatch
 UNIT_TYPE=oneshot notify restic-check.service
-check "dispatch: an infra unit falls back to the fleetcrown project" \
-  "$([ "$(dispatches)" -eq 1 ] && grep -q '"tab": *"fleetcrown"' "$DISPATCH_LOG" && echo 0 || echo 1)"
+check "dispatch: an infra unit falls back to the loki project" \
+  "$([ "$(dispatches)" -eq 1 ] && grep -q '"tab": *"loki"' "$DISPATCH_LOG" && echo 0 || echo 1)"
 
 # API refusal: the page must stand alone (no false 'in motion' claim), nothing
 # is stamped, and the unknown-project retry happens before giving up.
@@ -678,8 +678,8 @@ check "dispatch: an API failure still pages (got $(pages))" \
   "$([ "$(pages)" -eq 1 ] && echo 0 || echo 1)"
 check "dispatch: a failed dispatch is not claimed on the page" \
   "$(! grep -q 'fix agent dispatched' "$ALERT_LOG" && echo 0 || echo 1)"
-check "dispatch: a rejected project is retried as fleetcrown before giving up" \
-  "$([ "$(dispatches)" -eq 2 ] && grep -q '"tab": *"fleetcrown"' "$DISPATCH_LOG" && echo 0 || echo 1)"
+check "dispatch: a rejected project is retried as loki before giving up" \
+  "$([ "$(dispatches)" -eq 2 ] && grep -q '"tab": *"loki"' "$DISPATCH_LOG" && echo 0 || echo 1)"
 check "dispatch: no stamp survives a failure — the next page retries the queue" \
   "$([ ! -e "$TMP/state/paged_dispatch_kivvi_app_service" ] && echo 0 || echo 1)"
 
@@ -693,7 +693,7 @@ check "dispatch: the dry-run decision is journalled" \
 
 # A missing token must cost the dispatch, never the page.
 reset_dispatch
-FLEETCROWN_TOKEN_FILE="$TMP/does-not-exist.env" notify solon-app.service
+LOKI_TOKEN_FILE="$TMP/does-not-exist.env" notify solon-app.service
 check "dispatch: a missing token file skips the queue but keeps the page (got $(pages))" \
   "$([ "$(pages)" -eq 1 ] && [ "$(dispatches)" -eq 0 ] && echo 0 || echo 1)"
 

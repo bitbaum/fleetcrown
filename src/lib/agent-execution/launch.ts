@@ -1,5 +1,5 @@
 /**
- * provisionAgentWorkspace — the SSOT for "launch an agent in a FleetCrown-owned
+ * provisionAgentWorkspace — the SSOT for "launch an agent in a Loki-owned
  * PTY." Used by both /api/workspaces (the browser terminal) and /api/agent/launch
  * (Control's launch button on a self-hosted box). Builds the SAME login-interactive
  * shell + registry launch command the legacy zellij path used, so PATH/env/model
@@ -36,7 +36,7 @@ export interface ProvisionAgentArgs {
 }
 
 /**
- * Provision (or re-attach to) a FleetCrown-owned PTY running the given agent.
+ * Provision (or re-attach to) a Loki-owned PTY running the given agent.
  * Idempotent per workspace id: a live workspace is returned, never respawned.
  */
 export async function provisionAgentWorkspace(

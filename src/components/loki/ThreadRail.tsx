@@ -19,7 +19,7 @@ const SEARCH_THRESHOLD = 8;
  * for two actions — open a thread, start a thread.
  *
  * Same-work threads stay collapsed (`groupConversations`): "move forward on
- * fleetcrown" fifteen times is one row with a count, not fifteen rows that
+ * loki" fifteen times is one row with a count, not fifteen rows that
  * read identically.
  */
 export function ThreadRail({

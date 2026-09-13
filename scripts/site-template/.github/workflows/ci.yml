@@ -2,7 +2,7 @@ name: CI
 
 # WHY THIS FILE EXISTS, AND WHY IT IS NOT OPTIONAL
 #
-# fleetcrown's ci-gate.sh treats "CI green" and "no CI at all" identically —
+# loki's ci-gate.sh treats "CI green" and "no CI at all" identically —
 # both exit 0 and let the deploy proceed. That is a sane default for a repo
 # that has not set CI up yet, and it means a site WITHOUT this file deploys
 # every push completely unverified while looking exactly like one that passed.
@@ -86,7 +86,7 @@ jobs:
         run: pnpm run type-check
 
       - name: Lint
-        # The FleetCrown starter declares no linter yet; a missing script must
+        # The Loki starter declares no linter yet; a missing script must
         # not fail the site's first CI run.
         run: pnpm run --if-present lint
 
@@ -104,7 +104,7 @@ jobs:
   # which is correct, self-healing, and up to ten minutes late.
   #
   # A dispatch is not a push, so this job may start Deploy directly the moment
-  # CI proves main green. Same shape as bitbaum/fleetcrown's own ci.yml.
+  # CI proves main green. Same shape as bitbaum/loki's own ci.yml.
   #
   # Only for workflow_dispatch: a real push to main chains through
   # workflow_run by itself, and dispatching here too would ship twice.

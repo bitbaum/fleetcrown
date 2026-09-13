@@ -12,7 +12,7 @@ export const metadata = { title: "Approvals" };
 /**
  * The Approval Queue as a first-class destination.
  *
- * Loki (and every other producer) tells the user "approve it in your FleetCrown
+ * Loki (and every other producer) tells the user "approve it in your Loki
  * Approval Queue" — this page is that place, linkable and in the nav, instead
  * of a card buried mid-way down /today that vanishes when the zone is locked.
  * The queue UI itself stays SSOT in ActionQueueCard.

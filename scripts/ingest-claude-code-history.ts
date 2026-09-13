@@ -1,4 +1,4 @@
-// Ingest local Claude Code conversation transcripts into the FleetCrown DB so
+// Ingest local Claude Code conversation transcripts into the Loki DB so
 // /activity can show "what was typed locally" alongside "what was dispatched
 // through /control." Source of truth is the per-session JSONL the CLI writes
 // at ~/.claude/projects/<encoded-cwd>/<sessionId>.jsonl.

@@ -1,5 +1,5 @@
 /**
- * Self-dogfood: use FleetCrown to drive work on the fleetcrown project.
+ * Self-dogfood: use Loki to drive work on the loki project.
  * Headed browser, screenshots at each step, weakness report.
  *
  *   npm run dogfood:self
@@ -15,9 +15,9 @@ const runId = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
 const outDir = path.join(root, ".tmp", "self-dogfood", runId);
 fs.mkdirSync(outDir, { recursive: true });
 
-const base = (process.env.BASE ?? "https://fleetcrown.orangecat.ch").replace(/\/$/, "");
+const base = (process.env.BASE ?? "https://loki.orangecat.ch").replace(/\/$/, "");
 const isLocal = base.includes("localhost") || base.includes("127.0.0.1");
-const project = process.env.PROJECT ?? "fleetcrown";
+const project = process.env.PROJECT ?? "loki";
 const headless = process.env.HEADLESS === "1";
 const slowMo = Number(process.env.SLOW_MO ?? 120);
 
@@ -166,7 +166,7 @@ try {
     await loginLocal(page);
     report.steps.push({ step: "login", mode: "owner-key", url: page.url() });
 
-    // ── 1. Control — fleet status + fleetcrown card ──
+    // ── 1. Control — fleet status + loki card ──
     await page.goto(`${base}/control`, { waitUntil: "domcontentloaded" });
     await page.waitForTimeout(2000);
     const controlAudit = await page.evaluate(() => ({
@@ -175,14 +175,14 @@ try {
           .querySelector(".ui-control-fleet-status, [class*='FleetStatus']")
           ?.textContent?.trim()
           .slice(0, 80) ?? null,
-      fleetcrownCard:
+      lokiCard:
         [...document.querySelectorAll("article, [data-project]")]
-          .find((el) => el.textContent?.toLowerCase().includes("fleetcrown"))
+          .find((el) => el.textContent?.toLowerCase().includes("loki"))
           ?.textContent?.trim()
           .slice(0, 120) ?? null,
     }));
     report.steps.push({ step: "control", audit: controlAudit });
-    report.shots.push(await shot(page, "01-control", "Control — fleet + fleetcrown card"));
+    report.shots.push(await shot(page, "01-control", "Control — fleet + loki card"));
 
     // ── 2. Loki — dispatch move forward ──
     await page.goto(`${base}/loki?project=${encodeURIComponent(project)}`, {
@@ -283,13 +283,13 @@ try {
         note(
           "terminal-tab",
           "high",
-          "Terminal Cloud did not focus fleetcrown agent session",
+          "Terminal Cloud did not focus loki agent session",
           "Deep-link tab= should open box-runner PTY for that project, not generic bash",
         );
       }
     }
 
-    // ── 4. Projects — fleetcrown profile ──
+    // ── 4. Projects — loki profile ──
     await page.goto(`${base}/projects`, { waitUntil: "domcontentloaded" });
     await page.waitForTimeout(1500);
     const fleetRow = page
@@ -298,7 +298,7 @@ try {
       .first();
     if (await fleetRow.count()) await fleetRow.click();
     await page.waitForTimeout(1000);
-    report.shots.push(await shot(page, "05-projects-fleetcrown", "Projects — fleetcrown detail"));
+    report.shots.push(await shot(page, "05-projects-loki", "Projects — loki detail"));
   } else {
     const hasDogfoodCredentials = Boolean(
       process.env.DOGFOOD_EMAIL && process.env.DOGFOOD_PASSWORD,
@@ -408,12 +408,12 @@ try {
     const api = await page.evaluate(async () => {
       const r = await fetch("/api/control");
       const d = r.ok ? await r.json() : {};
-      const fc = (d.projects ?? []).find((p) => p.tab?.toLowerCase() === "fleetcrown");
+      const fc = (d.projects ?? []).find((p) => p.tab?.toLowerCase() === "loki");
       return {
         runnerConnected: d.runnerConnected ?? d.builderPresence?.any ?? null,
         builderPresence: d.builderPresence ?? null,
         runnerVersion: d.runnerVersion,
-        fleetcrownState: fc?.stateKey ?? fc?.status ?? null,
+        lokiState: fc?.stateKey ?? fc?.status ?? null,
       };
     });
     report.steps.push({ step: "control-api", audit: api });

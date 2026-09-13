@@ -5,7 +5,7 @@
  *
  * Usage:
  *   node scripts/machine-dogfood.mjs
- *   SMOKE_PRIVATE_PIN=<pin> FLEETCROWN_SESSION_TOKEN=… HEADLESS=1 node scripts/machine-dogfood.mjs
+ *   SMOKE_PRIVATE_PIN=<pin> LOKI_SESSION_TOKEN=… HEADLESS=1 node scripts/machine-dogfood.mjs
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -32,11 +32,9 @@ function readLocalEnv() {
 
 readLocalEnv();
 
-const base = (process.env.BASE ?? "https://fleetcrown.orangecat.ch").replace(/\/$/, "");
+const base = (process.env.BASE ?? "https://loki.orangecat.ch").replace(/\/$/, "");
 const headless = process.env.HEADLESS !== "0";
-const sessionToken = (
-  process.env.FLEETCROWN_SESSION_TOKEN ?? process.env.COCKPIT_SESSION_TOKEN
-)?.trim();
+const sessionToken = (process.env.LOKI_SESSION_TOKEN ?? process.env.COCKPIT_SESSION_TOKEN)?.trim();
 const smokePin = process.env.SMOKE_PRIVATE_PIN?.trim();
 const force = process.env.DOGFOOD_MACHINE_FORCE === "1";
 
@@ -60,7 +58,7 @@ async function unlockPin(request) {
 
 async function main() {
   if (!sessionToken) {
-    throw new Error("FLEETCROWN_SESSION_TOKEN required for machine dogfood");
+    throw new Error("LOKI_SESSION_TOKEN required for machine dogfood");
   }
 
   const context = await chromium.launchPersistentContext(path.join(outDir, "profile"), {
@@ -132,7 +130,7 @@ async function main() {
     }
 
     const page = context.pages()[0] ?? (await context.newPage());
-    const tab = tabs[0] ?? "fleetcrown";
+    const tab = tabs[0] ?? "loki";
     await page.goto(`${base}/terminal?source=machine&tab=${encodeURIComponent(tab)}`, {
       waitUntil: "domcontentloaded",
       timeout: 60_000,

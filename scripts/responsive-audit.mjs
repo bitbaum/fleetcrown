@@ -32,7 +32,7 @@ const routes = [
   "/today",
   "/control",
   "/loki",
-  "/terminal?source=server&tab=fleetcrown",
+  "/terminal?source=server&tab=loki",
   "/projects",
   "/prompts",
   "/activity",

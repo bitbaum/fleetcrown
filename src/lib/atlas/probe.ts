@@ -208,7 +208,7 @@ export async function verifyPreviewImage(imageUrl: string): Promise<boolean> {
       redirect: "follow",
       signal: AbortSignal.timeout(PREVIEW_TIMEOUT_MS),
       headers: {
-        "user-agent": "FleetCrownAtlas/1.0 (+https://fleetcrown.orangecat.ch)",
+        "user-agent": "LokiAtlas/1.0 (+https://loki.orangecat.ch)",
         range: "bytes=0-0",
       },
       cache: "no-store",
@@ -244,7 +244,7 @@ export async function probeSite(url: string): Promise<SiteProbeResult> {
     response = await fetch(url, {
       redirect: "follow",
       signal: AbortSignal.timeout(TIMEOUT_MS),
-      headers: { "user-agent": "FleetCrownAtlas/1.0 (+https://fleetcrown.orangecat.ch)" },
+      headers: { "user-agent": "LokiAtlas/1.0 (+https://loki.orangecat.ch)" },
       cache: "no-store",
     });
   } catch (e) {

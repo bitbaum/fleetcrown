@@ -6,13 +6,13 @@ When an agent session stops the hook calls:
 
   beacon.py stop <project_label> [session_file]
 
-beacon.py creates a DB-backed beacon session through the FleetCrown API and
-opens the FleetCrown web popup at /beacon/live in a frameless Chrome `--app`
+beacon.py creates a DB-backed beacon session through the Loki API and
+opens the Loki web popup at /beacon/live in a frameless Chrome `--app`
 window. The popup receives that same session through SSE and patches the
-choice back via the FleetCrown API.
+choice back via the Loki API.
 
-If FleetCrown isn't reachable the launcher writes the session anyway (it'll
-surface via SSE the moment FleetCrown boots), fires the systemd user unit in
+If Loki isn't reachable the launcher writes the session anyway (it'll
+surface via SSE the moment Loki boots), fires the systemd user unit in
 the background, and exits silently. No blocking dialog, no foreign UI —
 design lives in src/components/control/* and the web popup is the single
 source of truth.
@@ -39,7 +39,7 @@ from _beacon_config import (
 
 # ── Shared helpers ─────────────────────────────────────────────────────────────
 
-_BEACON_DIR = "/tmp/fleetcrown-beacon"
+_BEACON_DIR = "/tmp/loki-beacon"
 
 
 def _cockpit_ready(timeout: float = 2.0) -> bool:
@@ -104,7 +104,7 @@ def _create_beacon_session_api(label: str, session_content: str) -> str | None:
 def _write_beacon_session(label: str, session_content: str, popup_mode: str = "web") -> str:
     """Fallback file session for offline diagnostics only.
 
-    The primary FleetCrown popup path is DB-backed now. This local JSON remains
+    The primary Loki popup path is DB-backed now. This local JSON remains
     as a last-resort breadcrumb when the app/API is offline.
     """
     session_id = str(uuid.uuid4())
@@ -167,7 +167,7 @@ def _read_beacon_choice_api(session_id: str) -> str | None:
 
 # ── Browser window ─────────────────────────────────────────────────────────────
 #
-# The fleetcrown-beacon-window.service systemd user unit owns the pre-warmed
+# The loki-beacon-window.service systemd user unit owns the pre-warmed
 # brave/chromium --app window. beacon.py does NOT spawn its own — that path
 # created rogue, untargetable windows whenever the unit wasn't running.
 #
@@ -177,14 +177,14 @@ def _read_beacon_choice_api(session_id: str) -> str | None:
 
 
 def _ensure_beacon_window_unit() -> None:
-    """Make sure fleetcrown-beacon-window.service is running. Idempotent and fast
+    """Make sure loki-beacon-window.service is running. Idempotent and fast
     (systemctl start on an already-active unit is a no-op). Tries the canonical
-    fleetcrown-beacon-window first and the legacy cockpit-beacon-window second so
+    loki-beacon-window first and the legacy cockpit-beacon-window second so
     transitional installs that still have the old unit name keep working.
     """
     if shutil.which("systemctl"):
         subprocess.Popen(
-            ["systemctl", "--user", "start", "fleetcrown-beacon-window"],
+            ["systemctl", "--user", "start", "loki-beacon-window"],
             start_new_session=True,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
@@ -223,19 +223,19 @@ def _poll_beacon_choice(session_id: str, timeout: float = 130.0, source: str = "
     return None
 
 
-# ── FleetCrown-not-running recovery ───────────────────────────────────────────────
+# ── Loki-not-running recovery ───────────────────────────────────────────────
 
-def _start_fleetcrown_background() -> None:
-    """Fire-and-forget start of the FleetCrown systemd user unit. No polling, no
+def _start_loki_background() -> None:
+    """Fire-and-forget start of the Loki systemd user unit. No polling, no
     blocking dialog. The session JSON has already been written to /tmp; once
-    FleetCrown boots, /api/beacon/sse picks it up on the next subscriber connect.
+    Loki boots, /api/beacon/sse picks it up on the next subscriber connect.
     """
     if shutil.which("systemctl"):
-        # Try canonical fleetcrown-app first; fall back to legacy cockpit-app for
+        # Try canonical loki-app first; fall back to legacy cockpit-app for
         # transitional installs. systemctl start is a no-op if the unit is already
         # running, so the duplicate call is safe.
         subprocess.Popen(
-            ["systemctl", "--user", "start", "fleetcrown-app"],
+            ["systemctl", "--user", "start", "loki-app"],
             start_new_session=True,
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
         )
@@ -264,7 +264,7 @@ def _stop(label: str, session_file: str) -> None:
 
     if not _cockpit_ready():
         _write_beacon_session(label, session_content, popup_mode)
-        _start_fleetcrown_background()
+        _start_loki_background()
         sys.exit(1)
 
     session_id = _create_beacon_session_api(label, session_content)

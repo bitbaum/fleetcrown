@@ -17,7 +17,7 @@ export type AssistantProjectContext = {
   readonly: boolean;
 };
 
-export const ASSISTANT_CONTEXT_EVENT = "fleetcrown:assistant-context";
+export const ASSISTANT_CONTEXT_EVENT = "loki:assistant-context";
 
 let current: AssistantProjectContext | null = null;
 

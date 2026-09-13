@@ -3,7 +3,7 @@ import { WebSocket, type RawData } from "ws";
 import { OPENCLAW_GATEWAY_URL } from "@/lib/constants";
 
 /**
- * Drives the OpenClaw gateway `agent` method over WebSocket so FleetCrown's
+ * Drives the OpenClaw gateway `agent` method over WebSocket so Loki's
  * in-app Loki IS the same agent (`main`) as the Telegram bot — one persona,
  * one workspace memory. Auth: a persistent Ed25519 device identity (from env)
  * that auto-pairs over loopback (silent approval) to obtain operator.write
@@ -129,7 +129,7 @@ export async function askGatewayAgent(
             maxProtocol: 3,
             client: {
               id: clientId,
-              displayName: "FleetCrown",
+              displayName: "Loki",
               version: "1.0.0",
               platform: "linux",
               mode: clientMode,

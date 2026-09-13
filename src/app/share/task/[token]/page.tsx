@@ -7,7 +7,7 @@ import { getSharedTask, markSharedTaskViewed } from "@/db/queries/human-tasks";
 export const metadata = { title: "An ask for you" };
 
 /**
- * The assignee's whole relationship with FleetCrown: one link, no account.
+ * The assignee's whole relationship with Loki: one link, no account.
  *
  * A revoked or unknown token is a 404 with nothing else said — the operator
  * pulling an ask back should not leave behind a page that confirms it ever

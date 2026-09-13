@@ -54,12 +54,12 @@ function runTests(): void {
   };
 
   check("inferAdapterFromTabName suffix", () => {
-    assert(inferAdapterFromTabName("FleetCrown Codex") === "codex", "expected codex");
+    assert(inferAdapterFromTabName("Loki Codex") === "codex", "expected codex");
   });
 
   check("resolveDetectedAgentIds prefers activeAgents", () => {
     const project = stubProject({
-      tab: "FleetCrown",
+      tab: "Loki",
       activeAgents: ["codex"],
       agentPref: "claude",
     });
@@ -68,7 +68,7 @@ function runTests(): void {
 
   check("resolveOutgoingAgent uses live scan over preference", () => {
     const project = stubProject({
-      tab: "FleetCrown",
+      tab: "Loki",
       activeAgents: ["codex"],
       agentPref: "claude",
     });
@@ -77,7 +77,7 @@ function runTests(): void {
 
   check("hasAgentLabelMismatch when pref disagrees with /proc", () => {
     const project = stubProject({
-      tab: "FleetCrown",
+      tab: "Loki",
       agentRunning: true,
       activeAgents: ["codex"],
       agentPref: "claude",
@@ -87,7 +87,7 @@ function runTests(): void {
 
   check("detectCapacityIssueFromProject reads session text", () => {
     const project = stubProject({
-      tab: "FleetCrown",
+      tab: "Loki",
       session: {
         status: "working",
         done: "rate limit exceeded",

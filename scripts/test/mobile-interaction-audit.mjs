@@ -14,7 +14,7 @@
  *
  * Runs against PROD by default, with a real touch-capable Chromium.
  *
- *   FLEETCROWN_SESSION_TOKEN=… FLEETCROWN_PRIVATE_ZONE_COOKIE=… \
+ *   LOKI_SESSION_TOKEN=… LOKI_PRIVATE_ZONE_COOKIE=… \
  *     node scripts/test/mobile-interaction-audit.mjs
  */
 import fs from "node:fs";
@@ -23,7 +23,7 @@ import { config } from "dotenv";
 
 config({ path: ".env.local", quiet: true });
 
-const BASE = (process.env.AUDIT_BASE ?? "https://fleetcrown.orangecat.ch").replace(/\/$/, "");
+const BASE = (process.env.AUDIT_BASE ?? "https://loki.orangecat.ch").replace(/\/$/, "");
 const OUT = ".tmp/mobile-audit";
 const PAGES = [
   "/today",
@@ -48,9 +48,9 @@ function cookieName() {
 }
 
 async function main() {
-  const token = process.env.FLEETCROWN_SESSION_TOKEN?.trim();
+  const token = process.env.LOKI_SESSION_TOKEN?.trim();
   if (!token) {
-    console.error("✗ FLEETCROWN_SESSION_TOKEN required");
+    console.error("✗ LOKI_SESSION_TOKEN required");
     process.exit(2);
   }
   fs.mkdirSync(OUT, { recursive: true });
@@ -60,7 +60,7 @@ async function main() {
   const cookies = [
     { name: cookieName(), value: token, domain: host, path: "/", httpOnly: true, secure },
   ];
-  const pz = process.env.FLEETCROWN_PRIVATE_ZONE_COOKIE?.trim();
+  const pz = process.env.LOKI_PRIVATE_ZONE_COOKIE?.trim();
   const pzEq = pz ? pz.indexOf("=") : -1;
   if (pzEq > 0) {
     cookies.push({

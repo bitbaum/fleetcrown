@@ -1,7 +1,7 @@
 /**
  * OrangeCat publish — project publish (Part C) + changelog→wall promote step.
  *
- * "FleetCrown emits, OrangeCat distributes": FleetCrown keeps the private
+ * "Loki emits, OrangeCat distributes": Loki keeps the private
  * build truth; this module projects the publish-worthy slice onto OrangeCat.
  *
  * - publishProjectToOrangeCat: opt-in, per project. Creates the OC project as
@@ -22,7 +22,7 @@ import { getOrangeCatLink } from "./orangecat-identity";
 import { OC_BASE } from "./orangecat";
 import {
   PROMOTE_POLICY,
-  FLEETCROWN_PUBLIC_ORIGIN,
+  LOKI_PUBLIC_ORIGIN,
   type PromotableMoment,
 } from "@/config/orangecat-publish";
 import { linkOrangeCatEntity, unlinkOrangeCatEntity } from "@/db/queries/orangecat-links";
@@ -41,7 +41,7 @@ export interface PublishResult {
 }
 
 /**
- * Publish a FleetCrown project to OrangeCat as a public project entity owned
+ * Publish a Loki project to OrangeCat as a public project entity owned
  * by the user's OC actor. Idempotent at our layer: a project that already has
  * an orangecatProjectId is not re-published.
  */
@@ -75,7 +75,7 @@ export async function publishProjectToOrangeCat(
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${link.accessToken}`,
-        "Idempotency-Key": `fleetcrown_project_${project.id}`,
+        "Idempotency-Key": `loki_project_${project.id}`,
       },
       body: JSON.stringify(buildOrangeCatProjectPayload(project)),
       signal: AbortSignal.timeout(15_000),
@@ -109,7 +109,7 @@ export async function publishProjectToOrangeCat(
 
     // First moment on the wall: the project went public.
     void promoteMomentToOrangeCat(userId, project.id, "project_published", {
-      externalId: `fleetcrown_project_published_${project.id}`,
+      externalId: `loki_project_published_${project.id}`,
       title: `${project.name} is now building in public`,
       description: cleanDescription(project.description) ?? undefined,
       subjectId: ocProjectId,
@@ -129,7 +129,7 @@ export type UnpublishResult =
 /**
  * Take a published project back off OrangeCat.
  *
- * Publishing was one-way. FleetCrown could create the public page and had no
+ * Publishing was one-way. Loki could create the public page and had no
  * way to remove it: the status primitive lived behind OrangeCat's session auth,
  * which an integration holding an OAuth token cannot call, and the back-link
  * this file writes could never be cleared — so `already_published` was a
@@ -247,14 +247,14 @@ export async function promoteMomentToOrangeCat(
         Authorization: `Bearer ${link.accessToken}`,
       },
       body: JSON.stringify({
-        source: "fleetcrown",
+        source: "loki",
         external_id: input.externalId,
         event_type: policy.eventType,
         subject_type: "project",
         subject_id: subjectId,
         title: input.title.slice(0, 200),
         description: input.description?.slice(0, 2000),
-        url: `${FLEETCROWN_PUBLIC_ORIGIN}/projects`,
+        url: `${LOKI_PUBLIC_ORIGIN}/projects`,
         content: input.content,
       }),
       signal: AbortSignal.timeout(15_000),
@@ -292,7 +292,7 @@ export function promoteDevLogEntry(
 ): Promise<PromoteOutcome> {
   const digest = createHash("sha256").update(JSON.stringify(entry)).digest("hex").slice(0, 24);
   return promoteMomentToOrangeCat(userId, userProjectId, "devlog_entry", {
-    externalId: `fleetcrown_devlog_${userProjectId}_${digest}`,
+    externalId: `loki_devlog_${userProjectId}_${digest}`,
     title: `${projectName}: ${firstLine(entry.done) || "progress update"}`,
     description: [entry.done, entry.next ? `Next: ${entry.next}` : null]
       .filter(Boolean)

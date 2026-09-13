@@ -30,14 +30,14 @@
 #
 # Overridable for tests (see test-ai-provider-check.sh):
 #   MON         alert state/config dir     (default /opt/monitoring)
-#   UNITS       systemd units to read      (default "orangecat-app fleetcrown-app")
+#   UNITS       systemd units to read      (default "orangecat-app loki-app")
 #   WINDOW      journalctl --since value   (default "24 hours ago")
 #   MIN_FAILS   alert threshold per link   (default 5)
 #   JOURNAL_FILE  read this file instead of journalctl (tests)
 set -uo pipefail   # NOT -e: one unreadable unit must never abort the sweep
 
 MON="${MON:-/opt/monitoring}"
-UNITS="${UNITS:-orangecat-app fleetcrown-app}"
+UNITS="${UNITS:-orangecat-app loki-app}"
 WINDOW="${WINDOW:-24 hours ago}"
 MIN_FAILS="${MIN_FAILS:-5}"
 REPORT_ONLY=0

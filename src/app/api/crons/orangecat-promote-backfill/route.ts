@@ -77,7 +77,7 @@ export async function GET(req: NextRequest) {
     const moments: Array<() => Promise<PromoteOutcome>> = [
       () =>
         promoteMomentToOrangeCat(project.userId, project.id, "project_published", {
-          externalId: `fleetcrown_project_published_${project.id}`,
+          externalId: `loki_project_published_${project.id}`,
           title: `${project.name} is now building in public`,
           description: project.description ?? undefined,
           subjectId: project.orangecatProjectId ?? undefined,

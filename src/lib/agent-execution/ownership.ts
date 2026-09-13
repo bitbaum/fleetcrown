@@ -1,6 +1,6 @@
 /**
  * Workspace id scheme + ownership. A workspace id is `${userId}:${projectKey}` —
- * a stable, FleetCrown-assigned handle (never a terminal/session name), namespaced
+ * a stable, Loki-assigned handle (never a terminal/session name), namespaced
  * by user so the streaming/input routes can authorize by simple prefix without a
  * DB lookup. Multi-tenant safe: a user can only address workspaces they own.
  */

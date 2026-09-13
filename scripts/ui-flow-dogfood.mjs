@@ -3,8 +3,8 @@
  *
  * Usage:
  *   node scripts/ui-flow-dogfood.mjs
- *   SMOKE_PRIVATE_PIN=<pin> BASE=https://fleetcrown.orangecat.ch HEADLESS=1 node scripts/ui-flow-dogfood.mjs
- *   FLEETCROWN_SESSION_TOKEN=… node scripts/ui-flow-dogfood.mjs
+ *   SMOKE_PRIVATE_PIN=<pin> BASE=https://loki.orangecat.ch HEADLESS=1 node scripts/ui-flow-dogfood.mjs
+ *   LOKI_SESSION_TOKEN=… node scripts/ui-flow-dogfood.mjs
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -31,17 +31,15 @@ function readLocalEnv() {
 
 readLocalEnv();
 
-const base = (process.env.BASE ?? "https://fleetcrown.orangecat.ch").replace(/\/$/, "");
+const base = (process.env.BASE ?? "https://loki.orangecat.ch").replace(/\/$/, "");
 const headless = process.env.HEADLESS !== "0";
-const sessionToken = (
-  process.env.FLEETCROWN_SESSION_TOKEN ?? process.env.COCKPIT_SESSION_TOKEN
-)?.trim();
+const sessionToken = (process.env.LOKI_SESSION_TOKEN ?? process.env.COCKPIT_SESSION_TOKEN)?.trim();
 const smokePin = process.env.SMOKE_PRIVATE_PIN?.trim();
 // `name=value` from scripts/test/print-private-zone-cookie.ts. Without it the
 // private pages (/people, /habits, /money, /events) render their lock screen,
 // and flows that look for real content — a person card, a heatmap cell — fail
 // as if the feature were broken. Two such "failures" were exactly this.
-const privateZoneCookie = process.env.FLEETCROWN_PRIVATE_ZONE_COOKIE?.trim();
+const privateZoneCookie = process.env.LOKI_PRIVATE_ZONE_COOKIE?.trim();
 const fullDispatchEnabled = process.env.UI_FLOW_FULL_DISPATCH !== "0";
 
 const report = {
@@ -323,7 +321,7 @@ async function runX07(page) {
 let context;
 try {
   if (!sessionToken) {
-    throw new Error("FLEETCROWN_SESSION_TOKEN required for headless UI dogfood");
+    throw new Error("LOKI_SESSION_TOKEN required for headless UI dogfood");
   }
 
   context = await launchContext();

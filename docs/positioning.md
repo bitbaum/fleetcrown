@@ -1,9 +1,9 @@
-# FleetCrown — positioning (one-pager)
+# Loki — positioning (one-pager)
 
-**FleetCrown is the captain's bridge over AI agent runtimes — not a runtime, not an agent.**
+**Loki is the captain's bridge over AI agent runtimes — not a runtime, not an agent.**
 
 ## What we are
-The **orchestration + governance layer** for builders running many AI agents across many projects. FleetCrown points runtimes (Claude Code, Grok Build, Codex, Cursor, OpenClaw, Hermes) at projects, and gives you one place to **command, see, verify, and govern** all of them — from anywhere, including your phone.
+The **orchestration + governance layer** for builders running many AI agents across many projects. Loki points runtimes (Claude Code, Grok Build, Codex, Cursor, OpenClaw, Hermes) at projects, and gives you one place to **command, see, verify, and govern** all of them — from anywhere, including your phone.
 
 ## What we are NOT
 A better coding agent. That layer is commoditizing and far better-funded than us. We don't out-build Nous's Hermes or Anthropic's Claude Code — **we orchestrate them.** OpenClaw and Hermes are *adapters in our registry*, not rivals.
@@ -14,7 +14,7 @@ Models            Claude · Grok · Llama …                      intelligence
 Model routing     OpenRouter                                   vendor-agnostic access
 Runtimes/workers  Claude Code · Grok Build · Hermes · OpenClaw  one agent: tools, memory,
                   · Cursor · Codex                              skills, execution
-► FLEETCROWN ◄    the captain                                   command + verify + govern
+► LOKI ◄    the captain                                   command + verify + govern
                                                                 across many agents & projects
 Economy/gov       OrangeCat · Solon                             work plugged into value
 ```

@@ -35,7 +35,7 @@ export const RunCronBody = z.object({
 export type CreateCronJobBody = z.infer<typeof CreateCronBody>;
 export type PatchCronJobBody = z.infer<typeof PatchCronBody>;
 
-/** Mirrors the openclaw cron job schema. FleetCrown-specific fields are optional. */
+/** Mirrors the openclaw cron job schema. Loki-specific fields are optional. */
 export type CronJob = {
   id: string;
   agentId: string;

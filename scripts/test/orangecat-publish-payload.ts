@@ -1,5 +1,5 @@
-// The FleetCrown → OrangeCat public projection. Pins the mapping that used to
-// hardcode FleetCrown's own dashboard as every published project's website.
+// The Loki → OrangeCat public projection. Pins the mapping that used to
+// hardcode Loki's own dashboard as every published project's website.
 // Run: npx tsx scripts/test/orangecat-publish-payload.ts
 import { buildOrangeCatProjectPayload } from "@/lib/integrations/orangecat-project-payload";
 
@@ -25,7 +25,7 @@ eq(withSite.website_url, "https://kivvi.orangecat.ch", "publishes the project's 
 eq(withSite.title, "kivvi", "title is the project name");
 
 // The regression that mattered: no live URL must mean NO website_url, never a
-// substituted FleetCrown link. A visitor clicking through must not land on a
+// substituted Loki link. A visitor clicking through must not land on a
 // private dashboard belonging to a different product.
 const noSite = buildOrangeCatProjectPayload({
   name: "Bitbaum",
@@ -33,7 +33,7 @@ const noSite = buildOrangeCatProjectPayload({
   liveUrl: null,
 });
 eq("website_url" in noSite, false, "no live URL → field omitted entirely");
-eq(noSite.description, "Built in public with FleetCrown.", "description falls back, not to a URL");
+eq(noSite.description, "Built in public with Loki.", "description falls back, not to a URL");
 
 // Never emit an empty string: OrangeCat renders website_url as a link, so ""
 // produces a visible link to nowhere (there is one in prod today).

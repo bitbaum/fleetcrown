@@ -2,7 +2,7 @@
  * SSOT for public demo access — the "explore without an account" door.
  *
  * Fleet standard (George, 2026-08-07): every project offers demo access a
- * visitor can use with no profile. FleetCrown was the last app without one,
+ * visitor can use with no profile. Loki was the last app without one,
  * and it is also the only one where a careless demo is dangerous: this app
  * dispatches Claude agents onto a real box, opens real terminal sessions, and
  * spends real API credit. So the demo is SANDBOXED — it may exercise the
@@ -33,7 +33,7 @@
  */
 
 /** Public demo identity. Seeded by scripts/seed-demo.ts, reset nightly. */
-export const DEMO_EMAIL = "demo@fleetcrown.app";
+export const DEMO_EMAIL = "demo@loki.app";
 /** Public by design — shown on the sign-in page. Not a secret. */
 export const DEMO_PASSWORD = "explore-the-fleet";
 export const DEMO_NAME = "Demo Pilot";
@@ -255,7 +255,7 @@ export const DEMO_SAFE_FAMILIES: readonly string[] = [
 // Two of these deserve their reasoning written down rather than inferred:
 //
 //   crew  — assignments and the roster are the demo's own tenant rows, and
-//           FleetCrown never DELIVERS an assignment: handing one over mints a
+//           Loki never DELIVERS an assignment: handing one over mints a
 //           link the operator copies themselves, so no inbox is reached. The
 //           one crew effect that does leave the tenant is publishing a fee to
 //           OrangeCat, and that route carries its own denyDemoInHandler call —

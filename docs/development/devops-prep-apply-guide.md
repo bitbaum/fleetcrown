@@ -28,7 +28,7 @@ bash scripts/hetzner/harden-box-runner.sh
 
 # VERIFY it still works: dispatch a small task from /control to a project and
 # confirm the runner clones + runs it:
-ssh root@167.233.22.31 journalctl -u fleetcrown-box-runner -f
+ssh root@167.233.22.31 journalctl -u loki-box-runner -f
 
 # Roll back instantly if anything breaks:
 bash scripts/hetzner/harden-box-runner.sh --revert
@@ -46,7 +46,7 @@ as the thorough follow-up once the drop-in is proven.
 ```bash
 bash scripts/hetzner/migrate-box-runner-to-fcrunner.sh --dry-run   # print the plan
 bash scripts/hetzner/migrate-box-runner-to-fcrunner.sh             # apply
-# THEN set FLEETCROWN_RUNNER_OWNER=fcrunner in the deploy env (push-deploy hook)
+# THEN set LOKI_RUNNER_OWNER=fcrunner in the deploy env (push-deploy hook)
 # or the next deploy chowns the runner dir back to ubuntu.
 bash scripts/hetzner/migrate-box-runner-to-fcrunner.sh --revert    # roll back
 ```
@@ -54,7 +54,7 @@ bash scripts/hetzner/migrate-box-runner-to-fcrunner.sh --revert    # roll back
 Verify after applying: dispatch a task and confirm the agent **authenticates**
 under the new home (the one real risk is claude auth surviving the home copy —
 the script prints the exact creds-copy fallback if it doesn't). `deploy-hetzner.sh`
-and `install-box-runner.sh` now honor `FLEETCROWN_RUNNER_OWNER` (default `ubuntu`).
+and `install-box-runner.sh` now honor `LOKI_RUNNER_OWNER` (default `ubuntu`).
 
 ---
 
@@ -79,7 +79,7 @@ The workflow ships on main but is **dormant** — it does nothing until the
      `root` `~/.ssh/authorized_keys` (mint a deploy-only key, don't reuse a personal one).
    - (optional) Variable `HETZNER_IP` (defaults to `167.233.22.31`).
 2. **Disable the local hook** (or you deploy twice): comment out the
-   `>>> fleetcrown push-deploy >>>` block in `.husky/pre-push`.
+   `>>> loki push-deploy >>>` block in `.husky/pre-push`.
 3. **Flip the switch:** add repo **variable** `DEPLOY_VIA_CI` = `true`. The
    workflow now runs on the next CI-green push to main.
 4. **Watch the first run's "Build" step.** It builds against a schema-only

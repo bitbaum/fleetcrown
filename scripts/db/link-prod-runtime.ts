@@ -5,7 +5,7 @@
  *   npx tsx scripts/db/link-prod-runtime.ts            # dry run
  *   npx tsx scripts/db/link-prod-runtime.ts --apply    # execute
  *
- * Env: FLEETCROWN_DB_PASSWORD + HETZNER_IP from .env.hetzner.local
+ * Env: LOKI_DB_PASSWORD + HETZNER_IP from .env.hetzner.local
  */
 import { config } from "dotenv";
 
@@ -23,11 +23,11 @@ const RUNTIME_LINKS: Array<{ name: string; dirPath: string; reason: string }> = 
 ];
 
 async function main() {
-  const password = process.env.FLEETCROWN_DB_PASSWORD;
+  const password = process.env.LOKI_DB_PASSWORD;
   const host = process.env.HETZNER_IP;
   if (!password || !host)
-    throw new Error("FLEETCROWN_DB_PASSWORD / HETZNER_IP missing from .env.hetzner.local");
-  process.env.DATABASE_URL = `postgres://fleetcrown:${encodeURIComponent(password)}@${host}:5432/fleetcrown?sslmode=require`;
+    throw new Error("LOKI_DB_PASSWORD / HETZNER_IP missing from .env.hetzner.local");
+  process.env.DATABASE_URL = `postgres://loki:${encodeURIComponent(password)}@${host}:5432/loki?sslmode=require`;
 
   const { db } = await import("../../src/db");
   const { entities, users, userProjects } = await import("../../src/db/schema");

@@ -1,7 +1,7 @@
 /**
  * Crew — SSOT for delegating work to humans.
  *
- * FleetCrown dispatches intents to agents. Some work is not an agent's to do:
+ * Loki dispatches intents to agents. Some work is not an agent's to do:
  * calling twelve suppliers on the company's behalf, signing something, walking
  * into a room. Crew is that half of the fleet — the humans in the loop, and the
  * assignments you hand them.
@@ -248,7 +248,7 @@ const trimmed = (max: number) => z.string().trim().max(max);
  * What an assignment may be denominated in.
  *
  * The fiat four come from the subscriptions SSOT; BTC is added HERE and only
- * here, because paying a person is the one place in FleetCrown where bitcoin is
+ * here, because paying a person is the one place in Loki where bitcoin is
  * the point rather than a curiosity. The list is deliberately identical to the
  * currency enum OrangeCat's `services.create` accepts — a fee we cannot mirror
  * is a fee that cannot be paid, and the two lists silently diverging is exactly

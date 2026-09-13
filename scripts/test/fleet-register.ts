@@ -88,23 +88,23 @@ ok(
   by["aoz-housing"]?.site?.host === "aoz.orangecat.ch",
   "aoz-wohnen row attaches to aoz-housing via alias",
 );
-ok(by["aoz-housing"]?.fleetcrown?.id === "2", "…and keeps its FleetCrown profile");
+ok(by["aoz-housing"]?.loki?.id === "2", "…and keeps its Loki profile");
 ok(by["s-ink"]?.site?.host === "sinktattoo.com", "sink row attaches to the stored slug s-ink");
-ok(by["s-ink"]?.fleetcrown?.id === "6", "stored slug wins over the display name");
+ok(by["s-ink"]?.loki?.id === "6", "stored slug wins over the display name");
 ok(by["orangecat"]?.orangecat?.projectId === "cb09", "OrangeCat link carried");
 ok(by["orangecat"]?.solon?.slug === "orangecat", "Solon membership from the org set");
 ok(by["kivvi"]?.solon === null && by["kivvi"]?.orangecat === null, "no link → null, not false");
 ok(
-  by["factory-sep11-0110"]?.fleetcrown === null && by["factory-sep11-0110"]?.site !== null,
+  by["factory-sep11-0110"]?.loki === null && by["factory-sep11-0110"]?.site !== null,
   "hosted-only project appears with site and no profile",
 );
-ok(by["wild-spirit"]?.fleetcrown?.id === "3", "display-name-only project folds to wild-spirit");
+ok(by["wild-spirit"]?.loki?.id === "3", "display-name-only project folds to wild-spirit");
 
 const s = summarize(rows);
 // 7 projects: five profiles (one inactive, excluded) + two hosted-only rows
 // (factory-sep11-0110 and `short`); 5 sites: kivvi, aoz, sink, factory, short.
 ok(
-  s.projects === 7 && s.sites === 5 && s.fleetcrown === 5 && s.orangecat === 1 && s.solon === 1,
+  s.projects === 7 && s.sites === 5 && s.loki === 5 && s.orangecat === 1 && s.solon === 1,
   `summary counts (${JSON.stringify(s)})`,
 );
 

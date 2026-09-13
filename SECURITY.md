@@ -1,12 +1,12 @@
 # Security Policy
 
-FleetCrown is a hybrid system: the hosted app stores account, project, and product
+Loki is a hybrid system: the hosted app stores account, project, and product
 state; the local daemon executes terminal, git, and agent work on the user's
 machine. Security work should preserve that boundary.
 
 ## Supported Surface
 
-- Production app: `https://fleetcrown.orangecat.ch` (self-hosted on the Hetzner `bitbaum` box, Caddy in front)
+- Production app: `https://loki.orangecat.ch` (self-hosted on the Hetzner `bitbaum` box, Caddy in front)
 - Default branch: `main`
 - Runtime bridge: per-user `ck_*` agent tokens
 - Database: PostgreSQL through direct and pooled URLs

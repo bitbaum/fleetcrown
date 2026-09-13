@@ -115,7 +115,7 @@ export default async function MoneyPage() {
   const userId = await requirePageUserId();
 
   // OrangeCat integration banner — company-level plumbing (a wallet BTC
-  // address, the internal stakeholder_relationships wiring between FleetCrown
+  // address, the internal stakeholder_relationships wiring between Loki
   // and OrangeCat), not a fact about the signed-in user's own subscriptions.
   //
   // Two bugs, not one. It rendered ABOVE the burn total and the subscription
@@ -144,13 +144,13 @@ export default async function MoneyPage() {
           no label — a sentence that is half schema and half unexplained
           hex. Founder-only or not, it should read like a note, not a dump. */}
       <div className="mt-1 break-words text-text-secondary">
-        FleetCrown is a paying customer of OrangeCat.{" "}
+        Loki is a paying customer of OrangeCat.{" "}
         <a href={INTEGRATION.orangeCat.projectUrl} target="_blank" className="ui-link">
           {INTEGRATION.orangeCat.title} project
         </a>{" "}
         ·{" "}
-        <a href={INTEGRATION.fleetCrown.projectUrl} target="_blank" className="ui-link">
-          {INTEGRATION.fleetCrown.title} project
+        <a href={INTEGRATION.loki.projectUrl} target="_blank" className="ui-link">
+          {INTEGRATION.loki.title} project
         </a>
         .
       </div>

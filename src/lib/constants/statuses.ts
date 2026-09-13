@@ -27,7 +27,7 @@ export type CommitmentStatus = (typeof COMMITMENT_STATUS)[keyof typeof COMMITMEN
  * Agent-reported session lifecycle status — the value an agent writes in its
  * `status:` handoff line, read by the auto-inject gate (dispatch-gates.ts) and
  * the session-state parser. SSOT so a rename cannot silently break the iron-rule
- * gate that keeps FleetCrown from interrupting a working/blocked agent.
+ * gate that keeps Loki from interrupting a working/blocked agent.
  * NOTE: distinct from project-STATE keys ("working"/"ready" chips) in
  * control-states.ts, which happen to share strings but mean a different thing.
  */

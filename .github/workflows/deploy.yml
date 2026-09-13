@@ -10,7 +10,7 @@
 # │    the box's root authorized_keys (a deploy-only key, ideally).            │
 # │ 2. (optional) repo variable HETZNER_IP (defaults to 167.233.22.31).       │
 # │ 3. DISABLE the local hook or you'll deploy twice: comment out the          │
-# │    `>>> fleetcrown push-deploy >>>` block in .husky/pre-push.              │
+# │    `>>> loki push-deploy >>>` block in .husky/pre-push.              │
 # │ 4. Merge this file to main. First run: watch the "Build" step — it builds  │
 # │    against a schema-only Postgres (no seed); if a page pre-renders off real │
 # │    data and fails, add a minimal seed step here.                            │
@@ -62,14 +62,14 @@ jobs:
         image: postgres:17
         env:
           POSTGRES_PASSWORD: ci
-          POSTGRES_DB: fleetcrown
+          POSTGRES_DB: loki
         ports: ["5432:5432"]
         options: >-
           --health-cmd pg_isready --health-interval 5s
           --health-timeout 5s --health-retries 10
 
     env:
-      DATABASE_URL: postgres://postgres:ci@localhost:5432/fleetcrown
+      DATABASE_URL: postgres://postgres:ci@localhost:5432/loki
       HETZNER_IP: ${{ vars.HETZNER_IP || '167.233.22.31' }}
 
     steps:

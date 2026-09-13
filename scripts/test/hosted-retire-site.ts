@@ -27,7 +27,7 @@ function rejects(input: unknown, needle: string, label: string) {
 }
 
 // ── infrastructure is never retirable, whatever the mode ──────────────────
-for (const slug of ["fleetcrown", "orangecat", "bridge", "supabase", "bitbaum", "root"]) {
+for (const slug of ["loki", "orangecat", "bridge", "supabase", "bitbaum", "root"]) {
   rejects({ slug, mode: "delete" }, "infrastructure", `${slug} refused`);
   rejects({ slug, mode: "offline" }, "infrastructure", `${slug} refused even to go offline`);
 }

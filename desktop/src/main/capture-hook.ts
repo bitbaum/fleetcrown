@@ -11,7 +11,7 @@
  * on the machine where the user types into Claude, and it owns the ck_* token.
  * On startup (and whenever a token is saved) it ensures:
  *
- *   1. ~/.claude/hooks/fleetcrown-capture.sh — reads the hook's stdin JSON
+ *   1. ~/.claude/hooks/loki-capture.sh — reads the hook's stdin JSON
  *      (Claude sends { prompt, cwd, session_id, … }) and forwards it verbatim
  *      to /api/activity/capture. The route's zod schema strips unknown keys,
  *      so no jq/reshaping is needed — curl is the only dependency. The token
@@ -35,8 +35,8 @@ import { loadToken, tokenPath } from './token-store'
 
 const CLAUDE_DIR = join(homedir(), '.claude')
 const HOOKS_DIR = join(CLAUDE_DIR, 'hooks')
-const HOOK_SCRIPT = join(HOOKS_DIR, 'fleetcrown-capture.sh')
-const END_HOOK_SCRIPT = join(HOOKS_DIR, 'fleetcrown-session-end.sh')
+const HOOK_SCRIPT = join(HOOKS_DIR, 'loki-capture.sh')
+const END_HOOK_SCRIPT = join(HOOKS_DIR, 'loki-session-end.sh')
 const SETTINGS_FILE = join(CLAUDE_DIR, 'settings.json')
 
 // Pre-runner capture hook (June 2026 era): posted to localhost:3000, where
@@ -47,7 +47,7 @@ const LEGACY_HOOK_MARKER = 'fleet-user-prompt.sh'
 
 /** Same base-URL resolution as poller/pusher: dev override, else brand SSOT. */
 function baseUrl(): string {
-  return ((process.env.FLEETCROWN_WEB_URL || '').trim() || APP_URL).replace(/\/$/, '')
+  return ((process.env.LOKI_WEB_URL || '').trim() || APP_URL).replace(/\/$/, '')
 }
 
 /**
@@ -58,7 +58,7 @@ function baseUrl(): string {
  */
 function hookScriptBody(event: string, endpoint: string, purpose: string): string {
   return `#!/usr/bin/env bash
-# FleetCrown ${event} hook — managed by Fleet Runner (capture-hook.ts).
+# Loki ${event} hook — managed by Fleet Runner (capture-hook.ts).
 # ${purpose}
 # Do not edit; Fleet Runner rewrites this file on startup.
 TOKEN_FILE="${tokenPath}"
@@ -87,7 +87,7 @@ export function ensureCaptureHook(): void {
     const body = hookScriptBody(
       'UserPromptSubmit',
       '/api/activity/capture',
-      'Forwards directly-typed Claude prompts to the FleetCrown activity ledger,',
+      'Forwards directly-typed Claude prompts to the Loki activity ledger,',
     )
     const current = existsSync(HOOK_SCRIPT) ? readFileSync(HOOK_SCRIPT, 'utf8') : null
     if (current !== body) {
@@ -144,7 +144,7 @@ export function ensureCaptureHook(): void {
     })
 
     const registered = entries.some((entry) =>
-      (entry.hooks ?? []).some((h) => typeof h.command === 'string' && h.command.includes('fleetcrown-capture.sh')),
+      (entry.hooks ?? []).some((h) => typeof h.command === 'string' && h.command.includes('loki-capture.sh')),
     )
     if (!registered) {
       entries.push({ hooks: [{ type: 'command', command: HOOK_SCRIPT }] })
@@ -161,7 +161,7 @@ export function ensureCaptureHook(): void {
     // its own two commands and nothing else in it.
     let stopEntries: HookEntry[] = Array.isArray(hooks.Stop) ? (hooks.Stop as HookEntry[]) : []
     const endRegistered = stopEntries.some((entry) =>
-      (entry.hooks ?? []).some((h) => typeof h.command === 'string' && h.command.includes('fleetcrown-session-end.sh')),
+      (entry.hooks ?? []).some((h) => typeof h.command === 'string' && h.command.includes('loki-session-end.sh')),
     )
     if (!endRegistered) {
       stopEntries = [...stopEntries, { hooks: [{ type: 'command', command: END_HOOK_SCRIPT }] }]

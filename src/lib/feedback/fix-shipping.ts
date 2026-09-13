@@ -50,7 +50,7 @@ export type FixShipping = {
   checkedAt: string;
   /** No GitHub token / API failure: the state is what the handoff claimed, unverified. */
   unverified?: boolean;
-  /** FleetCrown merged this itself because the project opted in. */
+  /** Loki merged this itself because the project opted in. */
   shippedByFleet?: boolean;
   /** Automatic shipping is on but declined to merge — why (see auto-ship.ts). */
   autoShipHold?: string;
@@ -247,7 +247,7 @@ export type GithubPrDetail = {
   state: "open" | "closed";
   merged_at: string | null;
   merge_commit_sha: string | null;
-  /** Only read when deciding whether FleetCrown may merge it (see auto-ship.ts). */
+  /** Only read when deciding whether Loki may merge it (see auto-ship.ts). */
   draft?: boolean;
   /** null while GitHub is still computing mergeability — never treat as true. */
   mergeable?: boolean | null;

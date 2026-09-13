@@ -81,7 +81,7 @@ export async function POST(request: Request) {
         });
 
     if (!project) {
-      throw new Error("Choose a FleetCrown project you own.");
+      throw new Error("Choose a Loki project you own.");
     }
 
     // A handoff used to create a project with a name and a description and
@@ -157,7 +157,7 @@ export async function POST(request: Request) {
         isNull(orangecatBuildIntents.consumedAt),
       ));
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Could not create the FleetCrown project." },
+      { error: error instanceof Error ? error.message : "Could not create the Loki project." },
       { status: 400 },
     );
   }

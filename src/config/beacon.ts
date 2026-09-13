@@ -54,13 +54,13 @@ export const AUTO_INJECT_MODES: readonly {
   {
     value: "off",
     label: "Off",
-    description: "FleetCrown dispatches nothing. You type every prompt in /control and click Send.",
+    description: "Loki dispatches nothing. You type every prompt in /control and click Send.",
   },
   {
     value: "on",
     label: "On",
     description:
-      "When an agent finishes, FleetCrown sends the next queued instruction — or, if the queue is empty, picks the next-best task. Busy agents, blockers, and failing health checks still pause dispatch.",
+      "When an agent finishes, Loki sends the next queued instruction — or, if the queue is empty, picks the next-best task. Busy agents, blockers, and failing health checks still pause dispatch.",
   },
 ];
 

@@ -62,7 +62,7 @@ DEFAULT_HEALTH_PATH=/api/health
 # ── The three apps.conf documents as deliberately absent ──────────────────────
 #
 # apps.conf says, in its own header: "Ports 4001-4004 are the pre-existing
-# handcrafted services (bridge, fleetcrown, orangecat; evig joined the register on 2026-09-11) — they keep
+# handcrafted services (bridge, loki, orangecat; evig joined the register on 2026-09-11) — they keep
 # their own units and Caddy blocks and are NOT listed here." They are still
 # public, still on the one box, and still unwatched, so leaving them out would
 # reproduce the exact blind spot this script exists to close.
@@ -81,7 +81,7 @@ DEFAULT_HEALTH_PATH=/api/health
 # while the static pages carry on serving perfectly. Exactly botsmann's shape.
 EXTRA_TARGETS='
 bridge|bridge.orangecat.ch
-fleetcrown|fleetcrown.orangecat.ch
+loki|loki.orangecat.ch
 orangecat|orangecat.ch
 annushka|annushka.orangecat.ch
 '

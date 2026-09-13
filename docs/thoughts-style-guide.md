@@ -4,7 +4,7 @@
 **last_modified_date:** 2026-08-20  
 **last_modified_summary:** Media affordances (tables, Mermaid, images, video embeds); author Loki; public theme follows THEME_OPTIONS; link to content-publishing SSOT.
 
-This is the **skill** any agent (or human) reads before writing a FleetCrown
+This is the **skill** any agent (or human) reads before writing a Loki
 Thoughts essay. It makes the house voice explicit and reusable instead of
 re-derived each time. A per-user **writing voice** preference (Settings) layers
 on top to shift tone; this file is the default everything starts from.

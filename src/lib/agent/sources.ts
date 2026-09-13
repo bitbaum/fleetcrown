@@ -1,9 +1,9 @@
 /**
- * FleetCrown → Fact adapters. The app-bound half of the harness: everything
- * here knows about Drizzle and FleetCrown's schema; nothing in core/ does.
+ * Loki → Fact adapters. The app-bound half of the harness: everything
+ * here knows about Drizzle and Loki's schema; nothing in core/ does.
  *
  * The rule these encode: a Fact may only carry values that were STORED. Nothing
- * here derives, guesses, or enriches. Where FleetCrown has no value for a
+ * here derives, guesses, or enriches. Where Loki has no value for a
  * declared field, the field stays null and renders as `<not recorded>` — which
  * is the whole mechanism, so resist the urge to be helpful by inferring an
  * affiliation from a name, a role from a description, or a status from silence.
@@ -179,7 +179,7 @@ export async function projectFacts(userId: string, message = ""): Promise<Fact[]
  * queue reachable only by tool call is invisible, and "what's pending for
  * approval?" gets the honest, useless answer "Not in your data." That is exactly
  * what production served (2026-08-14). The approval queue is the governance
- * surface FleetCrown exists to provide, so it is seeded like projects are.
+ * surface Loki exists to provide, so it is seeded like projects are.
  */
 export async function pendingApprovalFacts(userId: string, limit: number): Promise<Fact[]> {
   const rows = await getPendingActions(userId).catch(() => []);

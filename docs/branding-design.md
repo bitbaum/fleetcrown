@@ -1,14 +1,14 @@
-# FleetCrown Branding & Design System
+# Loki Branding & Design System
 
 **Created:** 2026-03-01  
 **Last modified:** 2026-08-14  
 **Last modified summary:** Note app-shell layout SSOT drift (PageLayout / max-width / ad-hoc panels) as known debt alongside the four-layer visual SSOT.
 
-**Decision: We are using FleetCrown.**
+**Decision: We are using Loki.**
 
 This is the canonical reference (in addition to the executable SSOTs). It captures decisions, criteria, and best practices so future changes (rebrands, new surfaces, major visual updates) stay consistent with first principles and the existing four-layer discipline.
 
-FleetCrown is locked as the product name. The criteria below were used to evaluate alternatives (FleetJockey, FleetSurfer, MuppetMaster, shadofleet/shadefleet, shadyfleet/piracyfleet, fleetclown, etc.) and FleetCrown was selected (and confirmed) because it best satisfies the requirements for fleet language, active command/control tone, serious infrastructure positioning, scalability to robotics, and ownability. Recent .com-available suggestions (including fleetclown.com) were considered for the domain advantage but rejected (see "Recent name evaluations" section).
+Loki is locked as the product name. The criteria below were used to evaluate alternatives (FleetJockey, FleetSurfer, MuppetMaster, shadofleet/shadefleet, shadyfleet/piracyfleet, fleetclown, etc.) and Loki was selected (and confirmed) because it best satisfies the requirements for fleet language, active command/control tone, serious infrastructure positioning, scalability to robotics, and ownability. Recent .com-available suggestions (including fleetclown.com) were considered for the domain advantage but rejected (see "Recent name evaluations" section).
 
 ## Brand SSOTs (never bypass)
 
@@ -19,11 +19,11 @@ FleetCrown is locked as the product name. The criteria below were used to evalua
   - `APP_EMAIL_FROM`
 - **Client persistence**: `src/config/brand-storage.ts`
   - Cookie names, localStorage keys, push tags — all prefixed with `APP_SLUG`.
-  - `LEGACY_*` constants are read-only migration paths from the pre-FleetCrown rename.
+  - `LEGACY_*` constants are read-only migration paths from the pre-Loki rename.
 - **Env aliases**: `src/lib/brand-env.ts` (`envAlias`, `smokeSessionToken`)
-  - Resolves `APP_*` → `FLEETCROWN_*` → `COCKPIT_*` so old machine env vars keep working.
+  - Resolves `APP_*` → `LOKI_*` → `COCKPIT_*` so old machine env vars keep working.
 - **Shell**: `scripts/_brand.sh`
-  - Same three core values + `_brand_env` (for legacy COCKPIT_* / FLEETCROWN_* transition) and `_brand_tmp`.
+  - Same three core values + `_brand_env` (for legacy COCKPIT_* / LOKI_* transition) and `_brand_tmp`.
   - Sourced by daemons, installers, hooks, beacon, etc.
 - **Domain / TLS**: Caddy vhost on the Hetzner box + DNS at the registrar (Infomaniak, `orangecat.ch` zone).
 - **Everything else** (manifest, layouts, components, OG images, desktop) must import from the above or use the generated `ui-*` / CSS custom properties. No other source of truth for the name or core positioning strings.
@@ -48,7 +48,7 @@ Anti-patterns we have explicitly rejected in evaluations:
 - Anything that reads as toy, meme, or children's entertainment when said in an investor, enterprise, or power-user context (e.g. anything built on "Muppet" — plus the hard trademark block from Disney).
 - Names that force us to rewrite the hero, mission, and "fleet orchestration" story.
 
-FleetCrown is the name because it positions the *product* as the authoritative command layer ("crown") over a fleet of execution, keeps the fleet language intact, sounds like durable infrastructure, and supports the long-term robotics vision. The control-window mark reinforces the "command center" and "control plane" essence.
+Loki is the name because it positions the *product* as the authoritative command layer ("crown") over a fleet of execution, keeps the fleet language intact, sounds like durable infrastructure, and supports the long-term robotics vision. The control-window mark reinforces the "command center" and "control plane" essence.
 
 ## Visual Identity (the four-layer rule + brand mark)
 
@@ -77,7 +77,7 @@ FleetCrown is the name because it positions the *product* as the authoritative c
 - `public/icon.svg` (PWA, apple, manifest) and every `opengraph-*.tsx` / `twitter-image.tsx` **must render the identical geometry** (scaled). They duplicate the paths for static/edge reasons but are annotated with "must stay visually identical".
 - Never introduce a third mark. The crosshair/target that previously lived in the icon/OG was replaced (2026) to match the in-app control window because the latter better communicates "command center / control plane".
 - The wordmark next to the mark always comes from `APP_NAME` (never a second source).
-- Desktop ("Fleet Runner") currently uses its own header treatment ("FLEETCROWN" + "Fleet Runner") for native app feel; it should continue to feel authoritative and local while still being recognizably part of the same system.
+- Desktop ("Fleet Runner") currently uses its own header treatment ("LOKI" + "Fleet Runner") for native app feel; it should continue to feel authoritative and local while still being recognizably part of the same system.
 
 **Public / auth / download surfaces:**
 - Always dark (near-black) by design, even when the app is in light mode. This is why `ui-public-*` and `ui-auth-*` legitimately contain `text-white/xx` and `bg-white/xx` *inside the class definitions in globals.css only*. Components never use the opacity utilities directly.
@@ -96,12 +96,12 @@ FleetCrown is the name because it positions the *product* as the authoritative c
 
 ## Additional Best Practices & Gaps Addressed (2026)
 
-- **Rebrand surface**: `PRODUCT_NAME` and the imported constants exist so marketing and most UI never hardcode the name. We cleaned several remaining user-visible literals (public header, settings, calendar/project empty states, onboarding, desktop responses, control hints and launch text) to use `APP_NAME` as part of finalizing the FleetCrown decision.
-- **Name locked**: FleetCrown confirmed as the name. All criteria, rationale, and anti-patterns from evaluations are preserved in this doc and brand.ts for any future consideration (though none is planned).
+- **Rebrand surface**: `PRODUCT_NAME` and the imported constants exist so marketing and most UI never hardcode the name. We cleaned several remaining user-visible literals (public header, settings, calendar/project empty states, onboarding, desktop responses, control hints and launch text) to use `APP_NAME` as part of finalizing the Loki decision.
+- **Name locked**: Loki confirmed as the name. All criteria, rationale, and anti-patterns from evaluations are preserved in this doc and brand.ts for any future consideration (though none is planned).
 - **High-flier esthetics & code (this review)**: Added CSS-only `fleet-live-pulse` animation (restrained breathing opacity) applied to running fleet indicators for a "command center is alive" feel without JS or excess. Subtle hover lift on metric cards and BrandMark mark for responsive command esthetics. Made AUTOMATION_HINT dynamic via getAutomationHint(APP_NAME) for SSOT. All changes preserve 4-layer discipline and were verified with audits.
 - **Local storage / daemon keys / legacy**: Many "cockpit" strings are intentional during the long transition (localStorage keys, systemd units, `/tmp/cockpit-*` sentinels, env var fallbacks in `_brand_env`). Do not "clean" them without updating the migration logic and testing real user machines. New code should prefer `APP_SLUG` / `_brand_tmp`.
 - **Tokens in JS contexts**: Currently design tokens live only in CSS (correct for 95% of the app). When we need numeric/color values in TypeScript (Recharts, canvas, Satori alternatives, status calculations, etc.) we will add `src/lib/tokens.ts` (or equivalent) that re-exports the *names* and lets runtime resolve from CSS vars or a small synced object. Do not duplicate raw OKLCH values in TS.
-- **Domain strategy**: Current production is `fleetcrown.orangecat.ch` (self-hosted on Hetzner, Caddy in front). A clean short .com (or .app) remains the long-term goal for credibility, email, and typing. Name evaluations must treat domain + social handle availability as a first-class constraint, not an afterthought. Update `brand.ts` `APP_DOMAIN` + the Caddy vhost domain + registrar when we move.
+- **Domain strategy**: Current production is `loki.orangecat.ch` (self-hosted on Hetzner, Caddy in front). A clean short .com (or .app) remains the long-term goal for credibility, email, and typing. Name evaluations must treat domain + social handle availability as a first-class constraint, not an afterthought. Update `brand.ts` `APP_DOMAIN` + the Caddy vhost domain + registrar when we move.
 - **Marketing content**: All public copy lives in `src/config/marketing-content.ts` (and pulls positioning from brand.ts). This is the place for hero, differentiation, mission, investors thesis, roadmap, etc. Components and pages stay presentation-only.
 - **PWA / manifest / icons**: `public/manifest.json` + layout metadata + `public/icon.svg` are the current surface. They were updated to reference the unified control-window mark. Future work: provide PNG fallbacks at common sizes for broader compatibility, and a proper maskable icon variant.
 - **Desktop app icons**: The Electron side still has placeholder comments ("in production add a real png/icns"). When shipping signed builds, the desktop/ build must produce branded .icns / .ico from the same mark.
@@ -130,7 +130,7 @@ Ask (in order):
 - `src/config/marketing-content.ts`
 - `pnpm run check:design`
 - Desktop: `desktop/src/renderer/src/App.tsx`, its globals.css, `desktop/src/main/index.ts`
-- Docs: this file + `CLAUDE.md` (design system section) + `docs/desktop-app.md` (rebrand notes from the cockpit→fleetcrown pass)
+- Docs: this file + `CLAUDE.md` (design system section) + `docs/desktop-app.md` (rebrand notes from the cockpit→loki pass)
 
 The system exists to serve builders who run many projects and many agents at once. Every pixel and every syllable should make that human feel more in control, not less.
 
@@ -149,7 +149,7 @@ Keep the crown on the fleet.
 **Specific high-flier changes made in this round (on top of branding unification, pulse, hovers, SSOT cleanups):**
 - **globals.css (design/esthetics):** Extended `.ui-control-hero` with very subtle 48px data-grid overlay (using existing --public-grid-stroke at low opacity + background-size). Evokes "mission control / fleet radar" for the command center without clutter or new tokens. Complements the radial accent. Added comment explaining the intent. Also added gentle hover response to `.ui-control-fleet-chip` for better interactive command feedback.
 - **Additional prior in round:** CSS `fleet-live-pulse` keyframe + `.ui-control-fleet-live` (restrained 1.8s opacity breath on working count). Applied to running indicator in ControlPanel. Hover lift on `.ui-control-metric-card`. Transition + micro-scale on BrandMark mark. Left warning accent border on AttentionBar for calmer priority visual. Metric card and hero refinements.
-- **Code quality:** Made AUTOMATION_HINT dynamic (getAutomationHint(APP_NAME)) in ControlFleetStatus. Added APP_NAME imports + interpolated in ControlPanel launch text, more control surfaces (calendar, github status, etc.). Removed more hard FleetCrown literals.
+- **Code quality:** Made AUTOMATION_HINT dynamic (getAutomationHint(APP_NAME)) in ControlFleetStatus. Added APP_NAME imports + interpolated in ControlPanel launch text, more control surfaces (calendar, github status, etc.). Removed more hard Loki literals.
 - **Esthetics:** Subtle interactive responses (hover scale on brand mark, lift on metrics, pulse on live fleet state, accent rail on attention) to make the control surface feel responsive and "high-flier" premium command tool. Grid in hero adds depth for "serious operators" without breaking minimal x.ai restraint.
 - **Docs:** Updated this file with decision lock, review process, specific changes, and "keep the crown" close. 
 
@@ -220,11 +220,11 @@ In 2026, user floated .com-available variants leaning on "shade/shady" + fleet: 
 - Rebrand cost: High (SSOT in brand.ts + _brand.sh, 100s of references in code/docs/desktop/marketing/OG images/legal, daemons, installers, user mental models). Would require rewriting hero ("Run your fleet"), mission, "control layer" language.
 - Visual/BrandMark fit: Current mark is a visible "control window" (rect + bars like a dashboard/terminal). "Shade" suggests dark/hidden, clashing with the explicit "command center" visual and "nothing hidden" principle.
 
-**Verdict:** Rejected. The .com availability is tempting (current prod is fleetcrown.orangecat.ch), but names actively undermine core value prop (visibility + trust + sovereign control) and invite negative real-world baggage from sanctioned shipping. "Shadyfleet" worse than "shadefleet" due to stronger "untrustworthy" slang. "Piracyfleet" even more toxic (theft/illegal).
+**Verdict:** Rejected. The .com availability is tempting (current prod is loki.orangecat.ch), but names actively undermine core value prop (visibility + trust + sovereign control) and invite negative real-world baggage from sanctioned shipping. "Shadyfleet" worse than "shadefleet" due to stronger "untrustworthy" slang. "Piracyfleet" even more toxic (theft/illegal).
 
-**FleetCrown remains the name** because it positions the *product* as the authoritative command layer ("crown") over a fleet of execution. Keeps fleet language, serious durable infrastructure tone, supports robotics vision ("same control patterns").
+**Loki remains the name** because it positions the *product* as the authoritative command layer ("crown") over a fleet of execution. Keeps fleet language, serious durable infrastructure tone, supports robotics vision ("same control patterns").
 
-If domain pressure is high, pursue purchasing fleetcrown.com (or .app / strong alternative) rather than changing name to fit available shady/shadow variants. These might suit a different product (e.g. underground stealth agent runner), not this one.
+If domain pressure is high, pursue purchasing loki.com (or .app / strong alternative) rather than changing name to fit available shady/shadow variants. These might suit a different product (e.g. underground stealth agent runner), not this one.
 
 See also earlier evaluations in this doc for FleetJockey (role-name mismatch), FleetSurfer (passive flow vs. active command), MuppetMaster (toy/meme + IP issues).
 
@@ -238,6 +238,6 @@ See also earlier evaluations in this doc for FleetJockey (role-name mismatch), F
 - Visual fit: BrandMark is a clean control-window/dashboard SVG. Pairing with "Clown" would look absurd next to the serious dark UI, ui-control-hero, etc.
 - Rebrand cost: Highest possible — every file, every user, every external reference (README, CLAUDE.md, legal, desktop "Fleet Runner", marketing-content.ts, etc.) would need scrubbing. The "crown" etymology and control-window mark would have to be abandoned.
 
-**Verdict:** Hard reject. This is the single worst suggestion in the entire evaluation history. It doesn't just fail the criteria — it inverts them. The domain availability does not come close to compensating for the permanent damage to credibility, tone, and positioning. If the goal is a memorable .com, FleetCrown + acquiring fleetcrown.com (or creative variant) remains far superior. "Clown" variants belong in the rejected meme bucket with MuppetMaster, only worse because it actively mocks the "serious builders" audience.
+**Verdict:** Hard reject. This is the single worst suggestion in the entire evaluation history. It doesn't just fail the criteria — it inverts them. The domain availability does not come close to compensating for the permanent damage to credibility, tone, and positioning. If the goal is a memorable .com, Loki + acquiring loki.com (or creative variant) remains far superior. "Clown" variants belong in the rejected meme bucket with MuppetMaster, only worse because it actively mocks the "serious builders" audience.
 
-FleetCrown stays locked. "Clown" would make the entire "serious infrastructure" thesis a punchline.
+Loki stays locked. "Clown" would make the entire "serious infrastructure" thesis a punchline.

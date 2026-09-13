@@ -80,7 +80,7 @@ jobs:
       # build/lint globs.
       - name: Fetch fleet tooling
         run: |
-          git clone --quiet --depth 1 https://github.com/bitbaum/fleetcrown.git "$RUNNER_TEMP/fleet-tooling"
+          git clone --quiet --depth 1 https://github.com/bitbaum/loki.git "$RUNNER_TEMP/fleet-tooling"
           echo "tooling at $(git -C "$RUNNER_TEMP/fleet-tooling" rev-parse --short HEAD)"
 
       - name: Setup SSH
@@ -107,8 +107,8 @@ jobs:
           [[ "$APP" =~ ^[a-z0-9][a-z0-9-]*$ ]] || exit 1
           if ! app_lookup "$APP"; then
             # Registration writes the durable canonical register. A new site
-            # must not wait for an unrelated FleetCrown source deployment.
-            ssh -o BatchMode=yes "ubuntu@$HETZNER_IP" 'cat /home/ubuntu/dev/fleetcrown/scripts/hetzner/apps.conf' > "$RUNNER_TEMP/registered-apps.conf"
+            # must not wait for an unrelated Loki source deployment.
+            ssh -o BatchMode=yes "ubuntu@$HETZNER_IP" 'cat /home/ubuntu/dev/loki/scripts/hetzner/apps.conf' > "$RUNNER_TEMP/registered-apps.conf"
             export MANIFEST="$RUNNER_TEMP/registered-apps.conf"
             app_lookup "$APP"
             # Prove the registered checkout belongs to this caller repository.
@@ -277,7 +277,7 @@ jobs:
       # COLD every single time — for every repo that calls this workflow.
       #
       # Measured 2026-09-07 across the fleet: nobody's deploy cached this, and
-      # only one repo's CI did. Deploy medians ran 2.9m (fleetcrown) to 12.7m
+      # only one repo's CI did. Deploy medians ran 2.9m (loki) to 12.7m
       # (evig) against CI medians of 1.9m to 10.7m for the same commits, because
       # the same compile happens twice from scratch.
       #

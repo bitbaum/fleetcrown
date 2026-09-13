@@ -1,6 +1,6 @@
 ---
 title: The Play Button Is the Product
-summary: One click that looks like play should be enough to have all your projects built without supervision. Why FleetCrown's autopilot became a play/pause button, and why project context had to stop being a form.
+summary: One click that looks like play should be enough to have all your projects built without supervision. Why Loki's autopilot became a play/pause button, and why project context had to stop being a form.
 excerpt: The cognitive load of building is not the building. It is deciding, again and again, that building should continue. A play button removes that decision. A pause button gives it back.
 publishedAt: 2026-06-12
 tags: autopilot,control,ux,context,vision
@@ -10,13 +10,13 @@ readingTimeMin: 7
 ---
 ## The end state
 
-The ideal interaction with FleetCrown is one sentence and one click. "I want a Versailles-like mansion." "I want this SaaS shipped." "I want cancer cured." The sentence sets the destination; the click — a button that looks like play — means *go build it, and don't make me supervise*. The same click, now showing pause, means *stop everything, I want to think*.
+The ideal interaction with Loki is one sentence and one click. "I want a Versailles-like mansion." "I want this SaaS shipped." "I want cancer cured." The sentence sets the destination; the click — a button that looks like play — means *go build it, and don't make me supervise*. The same click, now showing pause, means *stop everything, I want to think*.
 
-Everything between today's FleetCrown and that end state is implementation detail: agents that write code now, agents that hire labs and coordinate robots later. The interaction model doesn't change. What changes is how much of the world the fleet can reach.
+Everything between today's Loki and that end state is implementation detail: agents that write code now, agents that hire labs and coordinate robots later. The interaction model doesn't change. What changes is how much of the world the fleet can reach.
 
 ## What shipped today
 
-Autopilot in FleetCrown was already binary — on or off, globally and per project — after the mode collapse earlier this month. But the controls still looked like settings: a dropdown in the fleet header, another dropdown on every project card, a radio group buried in Settings. Functional, and completely wrong emotionally. Nobody feels "all my projects are being built" when they pick `on` from a select element.
+Autopilot in Loki was already binary — on or off, globally and per project — after the mode collapse earlier this month. But the controls still looked like settings: a dropdown in the fleet header, another dropdown on every project card, a radio group buried in Settings. Functional, and completely wrong emotionally. Nobody feels "all my projects are being built" when they pick `on` from a select element.
 
 So the controls became what they always were underneath:
 
@@ -27,7 +27,7 @@ The safety rails did not move: status:working, blockers, the no-op fuse, and hea
 
 ## Context is the fuel, and forms are a terrible pump
 
-A fleet that builds without supervision needs to know what it is building toward. That is the project profile: mission, vision, customers, stack, next step. And here was the embarrassing part — most profiles in FleetCrown were nearly empty, including FleetCrown's own, while the same information sat in every README and CLAUDE.md of every repo. The product asked humans to retype what machines already knew, one field at a time, through a form. People hate forms. So people don't fill them. So the fleet flies blind.
+A fleet that builds without supervision needs to know what it is building toward. That is the project profile: mission, vision, customers, stack, next step. And here was the embarrassing part — most profiles in Loki were nearly empty, including Loki's own, while the same information sat in every README and CLAUDE.md of every repo. The product asked humans to retype what machines already knew, one field at a time, through a form. People hate forms. So people don't fill them. So the fleet flies blind.
 
 Today that pipeline inverted:
 

@@ -21,13 +21,13 @@ export default function FeedbackWidgetDocsPage() {
         <section className="mb-10 space-y-4 sm:mb-12">
           <h2 className="ui-public-prose-h2">1. Enable it on a project</h2>
           <p>
-            Open the project&apos;s page in FleetCrown, scroll to <strong>Visitor feedback</strong>,
-            and click <strong>Enable &amp; install via agent</strong> (or from Control, use the
-            fleet coverage strip). That mints a project token and dispatches an agent to embed the
+            Open the project&apos;s page in Loki, scroll to <strong>Visitor feedback</strong>, and
+            click <strong>Enable &amp; install via agent</strong> (or from Control, use the fleet
+            coverage strip). That mints a project token and dispatches an agent to embed the
             snippet. Prefer that one click over copy-paste unless you are wiring a site by hand.
           </p>
           <pre className="ui-public-code-block ui-public-code-pre">
-            <code>{`<script src="https://fleetcrown.orangecat.ch/widget.js"
+            <code>{`<script src="https://loki.orangecat.ch/widget.js"
         data-fc-project="fcw_…" async></script>`}</code>
           </pre>
           <p>
@@ -94,7 +94,7 @@ export default function FeedbackWidgetDocsPage() {
           <h2 className="ui-public-prose-h2">4. Remote control — no deploys</h2>
           <p>
             The snippet is a pointer; all behavior is server-side. On every page load the widget
-            asks FleetCrown whether to render, and that call doubles as a heartbeat:
+            asks Loki whether to render, and that call doubles as a heartbeat:
           </p>
           <ul className="list-disc pl-6 space-y-2">
             <li>
@@ -125,7 +125,7 @@ export default function FeedbackWidgetDocsPage() {
           <ul className="list-disc pl-6 space-y-2">
             <li>
               <strong>Dispatch fix</strong> — one report → one scoped agent run. Routes through
-              FleetCrown&apos;s <code>injectPrompt</code> SSOT: local Fleet Runner when connected,
+              Loki&apos;s <code>injectPrompt</code> SSOT: local Fleet Runner when connected,
               otherwise the cloud builder. You do not pick a terminal.
             </li>
             <li>

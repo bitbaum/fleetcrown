@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
- * @fleetcrown/agent — CLI to enroll a local machine with the FleetCrown cloud control plane.
+ * @loki/agent — CLI to enroll a local machine with the Loki cloud control plane.
  *
  * Usage while the npm package is unpublished:
- *   curl -fsSL https://fleetcrown.orangecat.ch/api/agent/install | node - init
- *   curl -fsSL https://fleetcrown.orangecat.ch/api/agent/install | node - init --token ck_...
- *   curl -fsSL https://fleetcrown.orangecat.ch/api/agent/install | node - init --base-url https://fleetcrown.orangecat.ch
+ *   curl -fsSL https://loki.orangecat.ch/api/agent/install | node - init
+ *   curl -fsSL https://loki.orangecat.ch/api/agent/install | node - init --token ck_...
+ *   curl -fsSL https://loki.orangecat.ch/api/agent/install | node - init --base-url https://loki.orangecat.ch
  */
 
 const fs = require("fs");
@@ -13,10 +13,10 @@ const path = require("path");
 const os = require("os");
 const readline = require("readline");
 
-const DEFAULT_BASE_URL = "https://fleetcrown.orangecat.ch";
-const CONFIG_DIR = path.join(os.homedir(), ".config", "fleetcrown");
+const DEFAULT_BASE_URL = "https://loki.orangecat.ch";
+const CONFIG_DIR = path.join(os.homedir(), ".config", "loki");
 const ENV_FILE = path.join(CONFIG_DIR, "daemon.env");
-const DAEMON_DIR = path.join(os.homedir(), ".local", "share", "fleetcrown");
+const DAEMON_DIR = path.join(os.homedir(), ".local", "share", "loki");
 
 function parseArgs(argv) {
   const args = { command: argv[2], token: "", baseUrl: DEFAULT_BASE_URL, install: true };
@@ -93,9 +93,9 @@ async function verifyToken(baseUrl, token) {
 function writeEnvFile(token, baseUrl) {
   fs.mkdirSync(CONFIG_DIR, { recursive: true, mode: 0o700 });
   const content = [
-    `# Written by @fleetcrown/agent init`,
-    `FLEETCROWN_DAEMON_TOKEN=${token}`,
-    `FLEETCROWN_BASE_URL=${baseUrl}`,
+    `# Written by @loki/agent init`,
+    `LOKI_DAEMON_TOKEN=${token}`,
+    `LOKI_BASE_URL=${baseUrl}`,
     `APP_DAEMON_TOKEN=${token}`,
     `APP_BASE_URL=${baseUrl}`,
     "",
@@ -131,10 +131,10 @@ async function downloadDaemon(baseUrl) {
   // chmod +x the executables so the user can run them directly without
   // having to remember `bash ...`.
   for (const name of [
-    "fleetcrown-daemon.sh",
+    "loki-daemon.sh",
     "fleet",
     "agent-hook-bridge.sh",
-    "install-fleetcrown-daemon.sh",
+    "install-loki-daemon.sh",
   ]) {
     try {
       fs.chmodSync(path.join(DAEMON_DIR, name), 0o755);
@@ -145,7 +145,7 @@ async function downloadDaemon(baseUrl) {
 }
 
 function printHelp() {
-  console.log(`@fleetcrown/agent — connect your machine to FleetCrown
+  console.log(`@loki/agent — connect your machine to Loki
 
 Commands:
   init    Verify token, save config, and install daemon scripts to
@@ -153,7 +153,7 @@ Commands:
 
 Options:
   --token <ck_* token>     Agent token from Settings → Agent tokens
-  --base-url <url>         FleetCrown URL (default: ${DEFAULT_BASE_URL})
+  --base-url <url>         Loki URL (default: ${DEFAULT_BASE_URL})
   --no-install             Download files only; do not install/start the
                            persistent background helper service
 
@@ -187,7 +187,7 @@ async function main() {
       console.error("Non-interactive environment: pass --token ck_… as an argument.");
       process.exit(2);
     }
-    console.log("Mint a token in FleetCrown → Settings → Agent tokens");
+    console.log("Mint a token in Loki → Settings → Agent tokens");
     token = await prompt("Paste your ck_* agent token: ");
   }
   if (!token.startsWith("ck_")) {
@@ -216,7 +216,7 @@ async function main() {
   }
   console.log("\nNext steps:");
   console.log("  1. Install Zellij + at least one agent CLI (claude, codex, gemini, or openclaw)");
-  console.log("  2. Register projects in FleetCrown with local directory paths");
+  console.log("  2. Register projects in Loki with local directory paths");
   if (!daemonInstalledAt) {
     console.log(`  3. Re-run the install command once you're online to fetch the daemon scripts:`);
     console.log(`     curl -fsSL ${args.baseUrl}/api/agent/install | node - init --token ${token}`);
@@ -231,19 +231,19 @@ async function main() {
     // Prefer the just-downloaded copy in DAEMON_DIR; fall back to the
     // repo-clone location for developers running from inside the tree.
     const candidates = [
-      path.join(DAEMON_DIR, "install-fleetcrown-daemon.sh"),
-      path.join(process.cwd(), "scripts", "install-fleetcrown-daemon.sh"),
+      path.join(DAEMON_DIR, "install-loki-daemon.sh"),
+      path.join(process.cwd(), "scripts", "install-loki-daemon.sh"),
     ];
     const installScript = candidates.find(fs.existsSync);
     if (installScript) {
-      console.log(`\nRunning install-fleetcrown-daemon.sh (${installScript})…`);
+      console.log(`\nRunning install-loki-daemon.sh (${installScript})…`);
       const r = spawnSync("bash", [installScript], {
         stdio: "inherit",
-        env: { ...process.env, FLEETCROWN_DAEMON_TOKEN: token, FLEETCROWN_BASE_URL: args.baseUrl },
+        env: { ...process.env, LOKI_DAEMON_TOKEN: token, LOKI_BASE_URL: args.baseUrl },
       });
       process.exit(r.status ?? 1);
     } else {
-      console.warn("\nBackground helper setup skipped: install-fleetcrown-daemon.sh not found.");
+      console.warn("\nBackground helper setup skipped: install-loki-daemon.sh not found.");
     }
   }
 }

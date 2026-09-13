@@ -102,7 +102,7 @@ export type KickoffBlock = "goals-locked"; // retained for call sites; never ret
  * Private-zone PIN must not block starting a project.
  *
  * Goals/milestones may live behind the PIN for people who use that zone.
- * Many builders never want that zone at all — OrangeCat → FleetCrown → a public
+ * Many builders never want that zone at all — OrangeCat → Loki → a public
  * site should still run on the project brief alone. When goals are locked we
  * skip inventing a second roadmap (see missingKickoffSetup) and brief the agent
  * from the description/profile. Unlock is optional enrichment, not a gate.

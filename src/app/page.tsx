@@ -38,7 +38,7 @@ export default async function LandingPage({
   const session = await auth();
   // Onboarding is an unfinished flow — keep the redirect so the user finishes it.
   // But once onboarding is done, the homepage is just another public page they
-  // are allowed to read. PublicHeaderActions surfaces an "Open FleetCrown →"
+  // are allowed to read. PublicHeaderActions surfaces an "Open Loki →"
   // entry into the app for signed-in visitors.
   let signedIn = false;
   if (session?.user) {
@@ -240,8 +240,8 @@ export default async function LandingPage({
             <div className="ui-public-eyebrow">GET STARTED</div>
             <h2 className="ui-public-display-lg mt-3 sm:mt-4">Not another coding agent.</h2>
             <p className="ui-public-section-lede mx-auto mt-4">
-              Most tools help you write code faster in one file or one project. FleetCrown is for
-              running real agent operations at fleet scale — choose your entry point.
+              Most tools help you write code faster in one file or one project. Loki is for running
+              real agent operations at fleet scale — choose your entry point.
             </p>
           </div>
 

@@ -36,19 +36,19 @@ def clean_field(value: object) -> str:
 def sync_projects_from_cloud(target: Path, env: dict[str, str]) -> bool:
     base_url = (
         os.environ.get("APP_BASE_URL")
-        or os.environ.get("FLEETCROWN_BASE_URL")
+        or os.environ.get("LOKI_BASE_URL")
         or os.environ.get("COCKPIT_BASE_URL")
         or env.get("APP_BASE_URL")
-        or env.get("FLEETCROWN_BASE_URL")
+        or env.get("LOKI_BASE_URL")
         or env.get("COCKPIT_BASE_URL")
         or ""
     ).rstrip("/")
     token = (
         os.environ.get("APP_DAEMON_TOKEN")
-        or os.environ.get("FLEETCROWN_DAEMON_TOKEN")
+        or os.environ.get("LOKI_DAEMON_TOKEN")
         or os.environ.get("COCKPIT_DAEMON_TOKEN")
         or env.get("APP_DAEMON_TOKEN")
-        or env.get("FLEETCROWN_DAEMON_TOKEN")
+        or env.get("LOKI_DAEMON_TOKEN")
         or env.get("COCKPIT_DAEMON_TOKEN")
         or ""
     )
@@ -71,7 +71,7 @@ def sync_projects_from_cloud(target: Path, env: dict[str, str]) -> bool:
         return False
 
     lines = [
-        "# Managed by FleetCrown. Edit projects in the web Control page; the daemon syncs this file.",
+        "# Managed by Loki. Edit projects in the web Control page; the daemon syncs this file.",
         "# Format: tab_name|/absolute/path/to/project|agent|model",
     ]
     for project in projects:
@@ -95,9 +95,9 @@ def sync_projects_from_cloud(target: Path, env: dict[str, str]) -> bool:
 def main() -> int:
     home = Path(os.path.expanduser("~"))
     config = home / ".config"
-    fleetcrown_env = read_env_file(config / "fleetcrown" / "daemon.env")
+    loki_env = read_env_file(config / "loki" / "daemon.env")
     cockpit_env = read_env_file(config / "cockpit" / "daemon.env")
-    env = {**cockpit_env, **fleetcrown_env}
+    env = {**cockpit_env, **loki_env}
 
     if not sync_projects_from_cloud(config / "agent-projects.conf", env):
         sync_file(config / "agent-projects.conf", config / "claude-projects.conf")

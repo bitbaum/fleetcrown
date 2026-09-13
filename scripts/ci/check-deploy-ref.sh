@@ -20,15 +20,15 @@
 #
 # Usage:   bash scripts/ci/check-deploy-ref.sh <repo-dir> [ref]
 # Exit:    0 = safe to deploy (or gate legitimately skipped), 1 = refuse.
-# Override: FLEETCROWN_DEPLOY_ALLOW_OFF_MAIN=1 (deliberate, must be typed).
+# Override: LOKI_DEPLOY_ALLOW_OFF_MAIN=1 (deliberate, must be typed).
 
 set -euo pipefail
 
 REPO="${1:?usage: check-deploy-ref.sh <repo-dir> [ref]}"
 REF="${2:-HEAD}"
 
-if [ -n "${FLEETCROWN_DEPLOY_ALLOW_OFF_MAIN:-}" ]; then
-  echo "  ⚠ off-main gate OVERRIDDEN by FLEETCROWN_DEPLOY_ALLOW_OFF_MAIN"
+if [ -n "${LOKI_DEPLOY_ALLOW_OFF_MAIN:-}" ]; then
+  echo "  ⚠ off-main gate OVERRIDDEN by LOKI_DEPLOY_ALLOW_OFF_MAIN"
   exit 0
 fi
 
@@ -62,5 +62,5 @@ BEHIND="$(git -C "$REPO" rev-list --count "${SHIP_SHA}..${MAIN_REF}" 2>/dev/null
 echo "✗ deploy REFUSED — ${SHIP_SHA:0:12} (${BRANCH}) is not contained in origin/main." >&2
 echo "  ${AHEAD} commit(s) here are unreviewed; ${BEHIND} commit(s) on main would be ROLLED BACK." >&2
 echo "  Ship through the pipeline instead: open a PR, let it merge, Deploy runs on main." >&2
-echo "  To override deliberately: FLEETCROWN_DEPLOY_ALLOW_OFF_MAIN=1 bash scripts/deploy-hetzner.sh" >&2
+echo "  To override deliberately: LOKI_DEPLOY_ALLOW_OFF_MAIN=1 bash scripts/deploy-hetzner.sh" >&2
 exit 1

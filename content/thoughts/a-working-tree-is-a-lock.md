@@ -1,6 +1,6 @@
 ---
 title: A Working Tree Is a Lock
-summary: FleetCrown runs many AI-agent sessions at once, and for months they shared a single git checkout — so branches switched under live work, and an unrelated session's half-finished code could ride out to production on someone else's deploy. This is the full record of the fix: why a working tree is a mutual-exclusion resource, why the same tree must not also be the deploy artifact, the two isolations we built (per-session worktrees, a CI-owned deploy), the three latent bugs the first real deploy exposed, and an honest ledger of what the new machinery might cost us later.
+summary: Loki runs many AI-agent sessions at once, and for months they shared a single git checkout — so branches switched under live work, and an unrelated session's half-finished code could ride out to production on someone else's deploy. This is the full record of the fix: why a working tree is a mutual-exclusion resource, why the same tree must not also be the deploy artifact, the two isolations we built (per-session worktrees, a CI-owned deploy), the three latent bugs the first real deploy exposed, and an honest ledger of what the new machinery might cost us later.
 excerpt: A tree can be edited, or it can be the thing you ship from. Asking one tree to be both — for everyone, at once — was the whole bug.
 publishedAt: 2026-07-28
 tags: infrastructure,git,worktrees,ci,deploy,concurrency,agents,tooling
@@ -28,7 +28,7 @@ Those two roles fight. The first wants the tree to be mutable, in flux, owned by
 
 ```mermaid
 flowchart TD
-    S1["Session A\n(editing)"] --> T["ONE working tree\n/home/g/dev/fleetcrown\n(one HEAD · one index · one .next)"]
+    S1["Session A\n(editing)"] --> T["ONE working tree\n/home/g/dev/loki\n(one HEAD · one index · one .next)"]
     S2["Session B\n(editing)"] --> T
     S3["Session C\n(building)"] --> T
     T --> D["deploy: npm run build\non the floating tree"]

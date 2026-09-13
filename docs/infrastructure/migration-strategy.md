@@ -46,7 +46,7 @@ already closed (see the roadmap note: "ledger-based, never `drizzle-kit push`").
 CI, and by the local push-deploy hook) applies schema **before** shipping code via:
 
 ```
-scripts/hetzner/apply-schema.sh fleetcrown <repo> fleetcrown .
+scripts/hetzner/apply-schema.sh loki <repo> loki .
 ```
 
 That shared applier is already the safe pattern:
@@ -86,7 +86,7 @@ equivalent, filename+ledger-based (immune to journal/snapshot state).
 Not every migration lives in `drizzle/`. The two most recent
 (`scripts/db/migrations/074_*.sql`, `075_*.sql`) are hand-written raw SQL applied
 **manually** via `pnpm run db:apply-box <file>` — which SSHes to the box and
-runs the file **as the app role** (so created objects are owned by `fleetcrown`
+runs the file **as the app role** (so created objects are owned by `loki`
 and stay visible to the app; applying as `postgres` is the owner/grant footgun
 that has cost rollbacks before). `apply-schema.sh` reads only `<repo>/drizzle`,
 so it does **not** pick these up. Consequence: a raw-SQL migration must be
@@ -113,7 +113,7 @@ when hand-applied via `db:apply-box` ahead of the deploy.
   "schema at commit X." Recovery means a restore from backup.
 - **Environment-coupled.** `push` does exactly what its `DATABASE_URL` says.
   `pnpm run db:push` with a box URL in the shell = unreviewed prod DDL. This is
-  the single realistic route by which FleetCrown could still auto-mutate prod —
+  the single realistic route by which Loki could still auto-mutate prod —
   now named and documented so it reads as the forbidden path, not the default.
 - **Schema can exist with no migration file.** A change applied by `push` never
   produces a `drizzle/NNNN_*.sql`. It won't be in the reviewed PR, and it won't
@@ -153,11 +153,11 @@ genuinely intended, do it deliberately and out-of-band:
 1. Write the migration file as usual (so the intent is in the PR and reviewed).
 2. Apply it **by hand** against the box during a maintenance window:
    ```bash
-   ssh <box> "sudo -u postgres psql -d fleetcrown -f - < 00NN_migration.sql"
+   ssh <box> "sudo -u postgres psql -d loki -f - < 00NN_migration.sql"
    ```
 3. Record the tag so the automated applier skips it:
    ```bash
-   ssh <box> "sudo -u postgres psql -d fleetcrown \
+   ssh <box> "sudo -u postgres psql -d loki \
      -c \"INSERT INTO public._deploy_schema_history(tag) VALUES ('00NN_xxx')\""
    ```
 

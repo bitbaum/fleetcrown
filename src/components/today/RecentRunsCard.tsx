@@ -106,7 +106,7 @@ export async function RecentRunsCard() {
   // Cluster adjacent same-project runs. Iterates the (already finishedAt-desc)
   // list once; each row either extends the last cluster (incrementing count)
   // or starts a new one. Caught during a live audit at mobile width where
-  // five "FleetCrown · 5h ago" rows in a row dominated the card.
+  // five "Loki · 5h ago" rows in a row dominated the card.
   type Run = (typeof runs)[number];
   type Cluster = { latest: Run; count: number };
   const clusters: Cluster[] = [];

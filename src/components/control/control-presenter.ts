@@ -395,7 +395,7 @@ export function buildLiveTabRows(
       // 2026-05-31: skip live tabs that don't map to any registered project.
       // The user surfaced "Tab #1 Unlinked" as visible noise — scratch tabs
       // (from the era when the runner listed every terminal tab) that had
-      // nothing to do with the fleet. The FleetCrown UI is for fleet ops, not
+      // nothing to do with the fleet. The Loki UI is for fleet ops, not
       // a generic tab list. To re-expose unregistered tabs later, gate this on
       // a "show all tabs" toggle in the UI.
       .map((tabName) => ({ tabName, project: findProjectForOpenTab(tabName, projects) }))
@@ -532,7 +532,7 @@ export function getProjectDisplayState(
     };
   }
   // Track active work from a fresh current-prompt sentinel. Do not require
-  // agentRunning — cloud runner may hold a FleetCrown-dispatched prompt while
+  // agentRunning — cloud runner may hold a Loki-dispatched prompt while
   // /proc scan misses Cursor Agent or IDE-side Composer activity.
   const stale = isCurrentPromptStale(project, nowS);
   const currentPrompt = project.currentPrompt && !stale ? project.currentPrompt : null;
@@ -542,7 +542,7 @@ export function getProjectDisplayState(
   // working — full stop. This outranks every inference below (tab names, /proc
   // scans, sentinel files) because it is the agent's own report rather than a
   // guess about the machine it runs on, and it is the ONLY signal that sees a
-  // session started outside FleetCrown — which is how the fleet card read
+  // session started outside Loki — which is how the fleet card read
   // "0 working · 21 idle" with eight agents mid-task. Staleness is bounded
   // server-side by OPEN_TURN_TTL_MS; a second time check here would be a
   // second definition of "too old" for the two to disagree about.
@@ -638,7 +638,7 @@ export function getProjectDisplayState(
     idle: "not_running",
   };
   // "Not running" is a claim the recorded facts can contradict: sessions run
-  // in unnamed kitty tabs FleetCrown can't observe, but their hook-captured
+  // in unnamed kitty tabs Loki can't observe, but their hook-captured
   // dispatches and orchestration runs still land here. A project whose last
   // dispatch/run is recent gets "Active recently" instead of asserting death.
   const lastDispatchMs = project.recentActivity?.[0]?.at
@@ -793,7 +793,7 @@ export function buildProjectOperationsSnapshot(
   // Historical evidence: name the FRESHEST recorded signal, not a blanket
   // "Idle". Agents the user runs outside Fleet Runner (their own terminal,
   // kitty, multi-project shells) are invisible to live process detection —
-  // but runs and dispatches still land in FleetCrown. "orangecat — Idle today" while its
+  // but runs and dispatches still land in Loki. "orangecat — Idle today" while its
   // last run finished 40 minutes ago (2026-08-13) read as a dead project;
   // "Last run 40m ago" is what actually happened.
   const lastRunAt = project.latestOrchestrationRun?.finishedAt

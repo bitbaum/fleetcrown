@@ -31,11 +31,11 @@ async function main() {
   if (process.env.AUDIT_DATABASE_URL) {
     process.env.DATABASE_URL = process.env.AUDIT_DATABASE_URL;
   } else if (!process.env.DATABASE_URL) {
-    const password = process.env.FLEETCROWN_DB_PASSWORD;
+    const password = process.env.LOKI_DB_PASSWORD;
     const host = process.env.HETZNER_IP;
     if (!password || !host)
-      throw new Error("FLEETCROWN_DB_PASSWORD / HETZNER_IP missing from .env.hetzner.local");
-    process.env.DATABASE_URL = `postgres://fleetcrown:${encodeURIComponent(password)}@${host}:5432/fleetcrown?sslmode=require`;
+      throw new Error("LOKI_DB_PASSWORD / HETZNER_IP missing from .env.hetzner.local");
+    process.env.DATABASE_URL = `postgres://loki:${encodeURIComponent(password)}@${host}:5432/loki?sslmode=require`;
   }
 
   const { db } = await import("../src/db");

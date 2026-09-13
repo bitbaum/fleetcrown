@@ -13,7 +13,7 @@ import { users } from "./users";
 /**
  * Fleet-knowledge vector index (pgvector) — SSOT for retrieval-augmented context.
  *
- * The CAPTAIN's RAG layer, not the runtime's: we index what only FleetCrown sees
+ * The CAPTAIN's RAG layer, not the runtime's: we index what only Loki sees
  * across the whole fleet + life-OS (project profiles, dev-logs, orchestration
  * outcomes, decisions, entities) — never repo code, which the runtime retrieves
  * for itself. Embeddings are 384-dim (BAAI/bge-small-en-v1.5, local fastembed).

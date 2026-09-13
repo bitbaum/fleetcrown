@@ -1,6 +1,6 @@
 // Bulk-create projects from a list of GitHub repositories.
 //
-// Why this exists: a new FleetCrown user with multiple repos (the common case
+// Why this exists: a new Loki user with multiple repos (the common case
 // when they install FC because they're already managing 10+ projects across
 // the studio stack) shouldn't have to add projects one-by-one. They sign in
 // with GitHub → /api/github/repos returns their list → this endpoint takes
@@ -10,7 +10,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSessionUserId } from "@/lib/session";
-import { SOURCE_FLEETCROWN_UI } from "@/lib/constants";
+import { SOURCE_LOKI_UI } from "@/lib/constants";
 import { createProject } from "@/db/queries/projects";
 import { getGithubToken } from "@/lib/github-token";
 import type { GitHubRepo } from "@/app/api/github/repos/route";
@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
           description: repo.description ?? undefined,
           gitUrl: repo.html_url,
         },
-        SOURCE_FLEETCROWN_UI,
+        SOURCE_LOKI_UI,
       );
       scheduleProjectProfileReindexByEntityId(userId, project.id);
       created.push({ id: project.id, name: project.name, repoId });

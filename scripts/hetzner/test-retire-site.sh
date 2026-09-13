@@ -21,7 +21,7 @@ CONF
 retire() { MANIFEST="$MAN" bash "$SCRIPT" "$@" 2>&1; }
 
 echo "→ it refuses to touch infrastructure"
-for slug in fleetcrown orangecat bridge supabase; do
+for slug in loki orangecat bridge supabase; do
   out=$(retire "$slug" --mode delete --go || true)
   has "$out" "infrastructure"
 done

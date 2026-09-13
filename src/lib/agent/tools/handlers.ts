@@ -1,5 +1,5 @@
 /**
- * Loki's tools — reads over FleetCrown's OWN tables, and two proposal paths.
+ * Loki's tools — reads over Loki's OWN tables, and two proposal paths.
  *
  * Every read tool is a thin wrapper over an adapter in `src/lib/agent/sources*`
  * — the SAME adapter the seed builder calls. That is the rule, not a
@@ -254,7 +254,7 @@ const listAlertsTool = defineTool({
   name: "list_alerts",
   kind: "read",
   description:
-    "Open alerts FleetCrown raised and the operator has not dismissed — CI failures, overdue commitments, stale relationships, bills due.",
+    "Open alerts Loki raised and the operator has not dismissed — CI failures, overdue commitments, stale relationships, bills due.",
   params: z.object({}),
   example: "TOOL: list_alerts\nARGS: {}",
   handler: async (_args, ctx) => {
@@ -289,7 +289,7 @@ const askOpenClawTool = defineTool({
   name: "ask_openclaw",
   kind: "read",
   description:
-    "Ask the operator's OpenClaw agent (the Telegram/WhatsApp brain, with its own separate memory and workspace files). Use ONLY for things outside FleetCrown's database. Its reply is an unverified second-hand report — attribute it, never state it as fact.",
+    "Ask the operator's OpenClaw agent (the Telegram/WhatsApp brain, with its own separate memory and workspace files). Use ONLY for things outside Loki's database. Its reply is an unverified second-hand report — attribute it, never state it as fact.",
   params: z.object({ question: z.string().min(2).max(500) }),
   example:
     'TOOL: ask_openclaw\nARGS: {"question": "what did we agree in the Telegram thread about the lease?"}',
@@ -305,7 +305,7 @@ const askOpenClawTool = defineTool({
         makeFact({
           kind: "document",
           subject: `OpenClaw reply to "${String(question).slice(0, 60)}"`,
-          source: "openclaw agent (UNVERIFIED second-hand report, not FleetCrown data)",
+          source: "openclaw agent (UNVERIFIED second-hand report, not Loki data)",
           values: {
             title: "OpenClaw agent reply",
             source: "openclaw agent",
@@ -450,7 +450,7 @@ const listHumanTasksTool = defineTool({
  * as the action queue.
  *
  * A human assignment is written as a DRAFT: no link is minted, no person is
- * contacted, nothing leaves FleetCrown. Handing it over is a separate click the
+ * contacted, nothing leaves Loki. Handing it over is a separate click the
  * operator makes on /crew. So this tool cannot reach a human any more than
  * `propose_action` can send a message, which is what makes it safe to give a
  * small model.

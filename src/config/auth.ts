@@ -76,7 +76,7 @@ export const AUTH_COPY = {
 //   - "link" → single direct link in the top nav
 //   - "external" → link to another origin (sibling product, etc.)
 //                  Rendered with an explicit external-target indicator so
-//                  visitors know they are leaving fleetcrown.orangecat.ch.
+//                  visitors know they are leaving loki.orangecat.ch.
 // The shape is per-entry so we never paint a one-item dropdown.
 
 export type PublicNavItem = NavLink & { description: string };
@@ -94,7 +94,7 @@ export const PUBLIC_NAV: PublicNavEntry[] = [
       {
         title: "Understand",
         items: [
-          { label: "Mission", href: "/mission", description: "Why FleetCrown exists" },
+          { label: "Mission", href: "/mission", description: "Why Loki exists" },
           {
             label: "Philosophy",
             href: "/philosophy",

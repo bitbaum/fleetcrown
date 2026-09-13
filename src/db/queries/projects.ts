@@ -131,7 +131,7 @@ export async function getProjectCore(userId: string, id: string) {
  * dispatch routes use). Returns null when there's no override OR when the
  * stored value isn't a known AutoInjectMode (defensive — the column has no
  * CHECK constraint so unknown values must be tolerated). Project lookup is
- * by exact name match; FleetCrown bootstrap stores entities.name = projectKey
+ * by exact name match; Loki bootstrap stores entities.name = projectKey
  * for cloud-created projects.
  */
 export async function getProjectAutopilotOverride(

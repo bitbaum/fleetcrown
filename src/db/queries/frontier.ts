@@ -46,7 +46,7 @@ export async function getLatestFrontierDigest(): Promise<FrontierDigestRow | nul
 // ─── Self-improvement proposals ──────────────────────────────────────────────
 
 /** Who/what the self-improvement loop drafts proposals for: the owner of the
- *  "fleetcrown" product entity. Resolved (not hardcoded) so it survives reseeds. */
+ *  "loki" product entity. Resolved (not hardcoded) so it survives reseeds. */
 export async function getSelfImprovementTarget(): Promise<{
   userId: string;
   entityId: string;
@@ -54,7 +54,7 @@ export async function getSelfImprovementTarget(): Promise<{
   const [row] = await db
     .select({ userId: entities.userId, entityId: entities.id })
     .from(entities)
-    .where(eq(entities.name, "fleetcrown"))
+    .where(eq(entities.name, "loki"))
     .orderBy(asc(entities.createdAt))
     .limit(1);
   return row ?? null;

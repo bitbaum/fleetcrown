@@ -51,7 +51,7 @@ REPO="$TMP/repo"
 #   2. NOTHING is ever written with `git config`. That is the write which
 #      escaped a single branch: the sibling fixture's
 #      `config core.hooksPath /dev/null` landed in the SHARED
-#      /home/g/dev/fleetcrown/.git/config, silently disabling husky for the main
+#      /home/g/dev/loki/.git/config, silently disabling husky for the main
 #      checkout and every worktree — so for part of that day `--no-verify` was a
 #      no-op because there was no hook left to skip. Identity and hook
 #      suppression come from the environment and from per-command `-c`, neither
@@ -212,7 +212,7 @@ mkdir -p "$TMP/enclosing/inner"
 ok "g() refuses a non-repo directory nested inside another repo (would have hit the enclosing one)"
 
 # And the fixture must never persist config, since that is the write that
-# reached beyond a branch into the shared /home/g/dev/fleetcrown/.git/config.
+# reached beyond a branch into the shared /home/g/dev/loki/.git/config.
 # Anchored to COMMAND position: a line that merely mentions the words (this one
 # does) is prose, while a line that starts with `git`/`g` and reaches `config`
 # is the write that caused the damage.

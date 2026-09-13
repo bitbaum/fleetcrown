@@ -51,12 +51,12 @@ squashfs-root/
 
 # A clone of this repo, inside this repo.
 #
-# `fleetcrown-apps/` is 1.1 GB and its remote is bitbaum/fleetcrown — the same
+# `loki-apps/` is 1.1 GB and its remote is bitbaum/loki — the same
 # repository it sits inside. It carried nothing unique (clean tree, nothing
 # unpushed), but it was untracked AND unignored, so `git add -A` would have
 # tried to commit it. Ignored rather than deleted: a redundant working copy is
 # still someone's working copy.
-/fleetcrown-apps/
+/loki-apps/
 
 # Vendored binaries under desktop/resources/bin/ — never commit.
 #

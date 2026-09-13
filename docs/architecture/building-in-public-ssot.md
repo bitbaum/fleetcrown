@@ -2,7 +2,7 @@
 
 **created_date:** 2026-08-20  
 **last_modified_date:** 2026-08-21  
-**last_modified_summary:** bip-kit published (npm + public GitHub); FleetCrown consumes `bip-kit`; AOZ second consumer; local packages/bip superseded.
+**last_modified_summary:** bip-kit published (npm + public GitHub); Loki consumes `bip-kit`; AOZ second consumer; local packages/bip superseded.
 
 ---
 
@@ -18,7 +18,7 @@ Every public product in the studio ships **three surfaces**:
 
 That triad is **building in public**. Quality must be tremendous: theme SSOT, media when structure demands it, no claims that contradict the code.
 
-The reusable kit is **[`bip-kit`](https://github.com/bitbaum/bip-kit)** on npm — parser + types. Bring your own design system. Dogfood: FleetCrown Thoughts (flagship), AOZ Wohnen (second consumer).
+The reusable kit is **[`bip-kit`](https://github.com/bitbaum/bip-kit)** on npm — parser + types. Bring your own design system. Dogfood: Loki Thoughts (flagship), AOZ Wohnen (second consumer).
 
 ## Company voice vs user publishing
 
@@ -26,7 +26,7 @@ The reusable kit is **[`bip-kit`](https://github.com/bitbaum/bip-kit)** on npm �
 |--|----------------------|-------------------------|
 | **Who** | Studio / product owner | Actors / end users |
 | **Where** | Product domain (`/thoughts`, `/blog`, …) | **OrangeCat** only |
-| **FleetCrown** | Thoughts + Roadmap + Releases | **Never** a user Medium |
+| **Loki** | Thoughts + Roadmap + Releases | **Never** a user Medium |
 | **Trust** | Official shipping truth | Social reputation |
 
 ## Content contract
@@ -39,7 +39,7 @@ Roadmap and changelog are structured data (`RoadmapDoc`, `ChangelogEntry` in the
 
 | Phase | Work | Status |
 |-------|------|--------|
-| **1a** | FleetCrown Thoughts media + public theme | Done |
+| **1a** | Loki Thoughts media + public theme | Done |
 | **1b** | Document triad + company/UGC | Done |
 | **1c** | Extract + publish `bip-kit`; FC depends on npm | Done |
 | **1d** | Second studio consumer (AOZ) on `bip-kit` | In progress |
@@ -47,7 +47,7 @@ Roadmap and changelog are structured data (`RoadmapDoc`, `ChangelogEntry` in the
 
 ## Funnel
 
-Studio sites look excellent → `bip-kit` stars/PRs → hosted upgrade via OrangeCat site factory / FleetCrown.
+Studio sites look excellent → `bip-kit` stars/PRs → hosted upgrade via OrangeCat site factory / Loki.
 
 ## Related
 

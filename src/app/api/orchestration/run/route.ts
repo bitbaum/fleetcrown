@@ -68,7 +68,7 @@ import { shouldAnnounceOnClose } from "@/lib/orchestration/notify-close-format";
  *  queueing behind. Requires worktree isolation on the runner (the runner
  *  force-isolates derived tabs, so this can't create shared-checkout races).
  *  Default off — flip after the worktree flag has been dogfooded. */
-const PARALLEL_DISPATCH_ENABLED = process.env.FLEETCROWN_PARALLEL_DISPATCH === "true";
+const PARALLEL_DISPATCH_ENABLED = process.env.LOKI_PARALLEL_DISPATCH === "true";
 
 const RunOrchestrationBody = z.object({
   projectId: z.string().uuid().nullable().optional(),
@@ -202,7 +202,7 @@ export async function POST(req: NextRequest) {
     // inject-prompt/inject-core paths). Best-effort background section.
     const operatorSection = await buildOperatorContextSection(userId).catch(() => "");
     // Exit contract — WITHOUT it a box-executed agent finishes real work, writes
-    // no ~/.fleetcrown/sessions/<tab>.md handoff, and gets reaped as a timeout (the
+    // no ~/.loki/sessions/<tab>.md handoff, and gets reaped as a timeout (the
     // same gap inject-prompt.ts:66-74 closes for the inject path). The local
     // orchestration path gets this via buildPromptWithSession; the cloud path —
     // Control's dispatch / Next-best buttons — was the one bypass. Appended here
@@ -442,7 +442,7 @@ export async function POST(req: NextRequest) {
     // for derived tabs regardless of its env flag, so parallel-without-
     // isolation is impossible. Run row keeps the BASE projectKey (analytics,
     // busy checks aggregate per project); payload.sessionTab carries the alias
-    // for the close path. Opt-in via FLEETCROWN_PARALLEL_DISPATCH.
+    // for the close path. Opt-in via LOKI_PARALLEL_DISPATCH.
     if (PARALLEL_DISPATCH_ENABLED && trackedRunId) {
       const runTab = deriveRunTab(request.projectKey, trackedRunId);
       await updateOrchestrationRun(trackedRunId, {

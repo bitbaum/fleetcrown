@@ -39,14 +39,14 @@ const MAX_DOC_CHUNKS_PER_PROJECT = 120;
 
 /**
  * A project's own README + docs/ markdown from the local checkout
- * ($FLEETCROWN_REPOS_DIR or ~/dev/<project>). This is the product-level
+ * ($LOKI_REPOS_DIR or ~/dev/<project>). This is the product-level
  * knowledge (what the app does, how its features work) that profiles and
  * dev logs never contain — without it Loki answered "how does X work in
  * <project>" questions with generic filler (2026-07-17: revampit time
  * cards, while the repo had a complete Zeiterfassung feature).
  */
 function readRepoDocs(project: string): Array<{ rel: string; body: string }> {
-  const base = process.env.FLEETCROWN_REPOS_DIR || path.join(os.homedir(), "dev");
+  const base = process.env.LOKI_REPOS_DIR || path.join(os.homedir(), "dev");
   const repo = path.join(base, project);
   if (!fs.existsSync(path.join(repo, ".git"))) return [];
   const files: string[] = [];

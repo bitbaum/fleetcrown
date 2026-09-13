@@ -3,7 +3,7 @@
  *
  * Why a script and not a migration: which host serves which project is DATA
  * about one operator's box, not product schema. Baking it into a migration
- * would ship one person's deployment map to every FleetCrown install.
+ * would ship one person's deployment map to every Loki install.
  *
  * Only fills rows where live_url IS NULL — a URL the user has edited is the
  * SSOT and must never be overwritten by a seed. Safe to re-run.
@@ -21,7 +21,7 @@ const SITES: Record<string, string> = {
   "aoz-housing": "https://aoz-wohnen.orangecat.ch",
   botsmann: "https://botsmann.orangecat.ch",
   datacat: "https://datacat.orangecat.ch",
-  fleetcrown: "https://fleetcrown.orangecat.ch",
+  loki: "https://loki.orangecat.ch",
   kivvi: "https://kivvi.orangecat.ch",
   orangecat: "https://orangecat.ch",
   petvity: "https://petvity.orangecat.ch",

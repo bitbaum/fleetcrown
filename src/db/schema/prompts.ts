@@ -16,7 +16,7 @@ import { orgs } from "./orgs";
 //
 // Pre-v2.1 the prompt library was 41 templates baked into src/config/prompt-
 // library.ts. Users couldn't add their own. This table is the structural
-// fix: each row is a prompt OWNED by a user (or org-shared). FleetCrown's
+// fix: each row is a prompt OWNED by a user (or org-shared). Loki's
 // 41 defaults stay in code as the seed catalog; the /prompts page merges
 // them with rows from this table at read time, so users see both their
 // own and the defaults in one library view.
@@ -31,7 +31,7 @@ import { orgs } from "./orgs";
 // run-time UI can render an input per variable without re-parsing the body.
 //
 // Sources: "user" = manually created, "captured" = saved from a successful
-// ad-hoc dispatch via /history, "fc-default-fork" = forked from a FleetCrown
+// ad-hoc dispatch via /history, "fc-default-fork" = forked from a Loki
 // default and customized. The original FC defaults are NOT inserted here.
 export const prompts = pgTable(
   "prompts",

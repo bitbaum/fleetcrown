@@ -35,7 +35,7 @@ export async function PublicHeaderActions({
       </span>
       {signedIn ? (
         <Link href={ROUTES.APP_HOME} className="ui-public-primary-action-compact">
-          {/* "Open FleetCrown →" is ~150px of label. A phone header can spare
+          {/* "Open Loki →" is ~150px of label. A phone header can spare
               about 90 — so the phone gets the verb and the desktop keeps the
               full brand lockup. */}
           <span className="md:hidden">Open app</span>

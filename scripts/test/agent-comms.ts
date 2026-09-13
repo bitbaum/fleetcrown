@@ -20,20 +20,20 @@ function ok(cond: boolean, label: string) {
 }
 
 // A realistic inbox: preamble, timed + date-only headers, bold and plain Re:,
-// `---` separators, and a trailing READ marker — mirrors inbox-fleetcrown.md.
-const INBOX = `# Inbox — @fleetcrown
+// `---` separators, and a trailing READ marker — mirrors inbox-loki.md.
+const INBOX = `# Inbox — @loki
 
 **Status**: ACTIVE — this preamble is not a message.
 
 ---
-## 2026-07-06 13:16 — from @kivvi to @fleetcrown
+## 2026-07-06 13:16 — from @kivvi to @loki
 **Re**: handshake
 
 First body line.
 Second body line.
 
 ---
-## 2026-07-06 — from @fleetcrown to @kivvi
+## 2026-07-06 — from @loki to @kivvi
 Re: collaboration protocol
 
 Agreed on all points.
@@ -49,7 +49,7 @@ eq(msgs.length, 2, "parses two messages, ignores preamble");
 const [m1, m2] = msgs;
 eq(m1.ts, "2026-07-06 13:16", "timed header ts");
 eq(m1.from, "kivvi", "from");
-eq(m1.to, "fleetcrown", "to");
+eq(m1.to, "loki", "to");
 eq(m1.re, "handshake", "bold **Re** parsed");
 eq(m1.body, "First body line.\nSecond body line.", "body has no --- delimiter");
 eq(m1.read, false, "unread when no READ marker");
@@ -90,11 +90,11 @@ eq(sorted[1].body, "old", "oldest last");
 
 // Schema extraction: type/status lifted from a JSON payload in the body,
 // tolerant of pretty-printing and surrounding prose; absent → undefined.
-const RESULT = `## 2026-07-06 13:58 — from @kivvi to @fleetcrown
+const RESULT = `## 2026-07-06 13:58 — from @kivvi to @loki
 **Re**: round-trip proof
 
 Round-trip PROOF:
-{ "id":"t0-handshake", "from":"kivvi", "to":"fleetcrown", "type":"result",
+{ "id":"t0-handshake", "from":"kivvi", "to":"loki", "type":"result",
   "status":"done" }
 Evidence: green.
 `;

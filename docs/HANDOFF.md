@@ -1,6 +1,6 @@
-# FleetCrown — Handoff
+# Loki — Handoff
 
-**Read this first.** A 5-minute brief on what FleetCrown is, where it stands, what to work on next, and what you'll get wrong if you don't know.
+**Read this first.** A 5-minute brief on what Loki is, where it stands, what to work on next, and what you'll get wrong if you don't know.
 
 > **⚠ Written 2026-06-07. Re-checked 2026-09-02: the VERSION AND SCALE FIGURES
 > BELOW ARE WRONG.** The narrative — why the architecture is shaped this way,
@@ -23,14 +23,14 @@
 
 Written 2026-06-07 after a 2-day session that took the product from v0.7.0 (broken bundled-renderer disaster) to v0.7.5 (clean Electron web-shell + adapter architecture + observability + migration ledger). Audience is the next agent or contributor.
 
-> **Infra update (2026-06-12):** FleetCrown left Vercel entirely. The web app and
+> **Infra update (2026-06-12):** Loki left Vercel entirely. The web app and
 > Postgres are now **self-hosted on the Hetzner `bitbaum` box** (Caddy + systemd),
-> serving at `https://fleetcrown.orangecat.ch`; deploys run via
-> `scripts/deploy-hetzner.sh` (build → rsync → restart `fleetcrown-app`). The
+> serving at `https://loki.orangecat.ch`; deploys run via
+> `scripts/deploy-hetzner.sh` (build → rsync → restart `loki-app`). The
 > references to Vercel below have been updated to this reality, but read
 > `docs/infrastructure/hetzner-migration.md` for the authoritative current layout.
 
-> **Execution update (2026-06-30):** Cloud execution keystone is **`fleetcrown-box-runner.service`**
+> **Execution update (2026-06-30):** Cloud execution keystone is **`loki-box-runner.service`**
 > (headless builder on Hetzner), not the desktop Fleet Runner. The web app is a control
 > plane only (`RUNTIME_AVAILABLE` unset). Terminal → Cloud watches box-runner agents via
 > peek-stream; `/api/workspaces` is gated on prod. Priority stack:
@@ -40,25 +40,25 @@ Written 2026-06-07 after a 2-day session that took the product from v0.7.0 (brok
 
 ## 1. The product in one paragraph
 
-FleetCrown is a multi-user SaaS for builders who run **multiple AI agents across multiple projects in parallel**. The user signs into `fleetcrown.orangecat.ch` (GitHub OAuth), registers their projects, and dispatches prompts to agents running on the **cloud builder** (`fleetcrown-box-runner` on Hetzner) and/or optionally on their computer via the desktop Fleet Runner app. The cloud is the **coordination layer**; agents and terminals are pluggable adapters. FleetCrown itself is the customer of sibling product **OrangeCat** (BTC payment/economic layer). Both ship under solo pseudonymous founder **Cato**, pre-revenue, one paying user (himself, dogfooding).
+Loki is a multi-user SaaS for builders who run **multiple AI agents across multiple projects in parallel**. The user signs into `loki.orangecat.ch` (GitHub OAuth), registers their projects, and dispatches prompts to agents running on the **cloud builder** (`loki-box-runner` on Hetzner) and/or optionally on their computer via the desktop Fleet Runner app. The cloud is the **coordination layer**; agents and terminals are pluggable adapters. Loki itself is the customer of sibling product **OrangeCat** (BTC payment/economic layer). Both ship under solo pseudonymous founder **Cato**, pre-revenue, one paying user (himself, dogfooding).
 
 ## 2. The lay of the land
 
 | Surface | URL / path | Status |
 |---|---|---|
-| Cloud web app | `https://fleetcrown.orangecat.ch` | Production, self-hosted on Hetzner (Caddy + systemd), Postgres 17 on the same box |
+| Cloud web app | `https://loki.orangecat.ch` | Production, self-hosted on Hetzner (Caddy + systemd), Postgres 17 on the same box |
 | SSE bridge | `https://bridge.orangecat.ch` | Production, same Hetzner box — **CX33: 4 vCPU / 8 GB / 80 GB** (measured 2026-09-04: `nproc` 4, 7746 MiB, 75 G, 4 GB swap). Live figures: `/api/system/hetzner` |
-| DB | `postgresql://fleetcrown@postgresqlbridge.orangecat.ch:5432/fleetcrown` | Postgres 17.10, 10 MB used, 39 tables, all healthy |
+| DB | `postgresql://loki@postgresqlbridge.orangecat.ch:5432/loki` | Postgres 17.10, 10 MB used, 39 tables, all healthy |
 | Desktop app | `Fleet Runner` (Electron 33) | v0.7.5 latest, ships as .deb / .dmg / .exe / AppImage |
-| Releases | `https://github.com/bitbaum/fleetcrown-releases/releases` | Mirror of build artifacts |
-| Source repo | `https://github.com/bitbaum/fleetcrown` | Public |
-| /releases page | `https://fleetcrown.orangecat.ch/releases` | Public changelog (SSOT: `src/config/changelog.ts`) |
+| Releases | `https://github.com/bitbaum/loki-releases/releases` | Mirror of build artifacts |
+| Source repo | `https://github.com/bitbaum/loki` | Public |
+| /releases page | `https://loki.orangecat.ch/releases` | Public changelog (SSOT: `src/config/changelog.ts`) |
 
 ## 3. Architecture in one diagram
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│ packages/fleetcrown-core (NOT YET EXTRACTED — see §6)           │
+│ packages/loki-core (NOT YET EXTRACTED — see §6)           │
 │   types, zod contracts, pure domain functions                   │
 └─────────────────────────────────────────────────────────────────┘
         ↑ depended on by ↑
@@ -70,7 +70,7 @@ FleetCrown is a multi-user SaaS for builders who run **multiple AI agents across
 │   • lib/agent-execution/*   │  │   src/lib/agent-execution/*     │
 │   • lib/git-state.ts        │  └──────────────────────────────┘
 │                             │            ↑ wraps ↑
-│   • Drizzle schemas         │     fleetcrown.orangecat.ch inside Electron
+│   • Drizzle schemas         │     loki.orangecat.ch inside Electron
 └─────────────────────────────┘
         ↓ NOTIFY pg_notify ↓
 ┌─────────────────────────────────────────────────────────────────┐
@@ -84,7 +84,7 @@ FleetCrown is a multi-user SaaS for builders who run **multiple AI agents across
 
 ## 4. The adapter pattern (the strategic move)
 
-FleetCrown doesn't own a model. It owns the **coordination layer where any model plugs in** — and, since 2026-09-11, it owns every agent's PTY itself rather than borrowing a multiplexer.
+Loki doesn't own a model. It owns the **coordination layer where any model plugs in** — and, since 2026-09-11, it owns every agent's PTY itself rather than borrowing a multiplexer.
 
 ### Agents
 
@@ -132,7 +132,7 @@ A `TransportAdapter` (Hetzner SSE bridge → Cloudflare Durable Objects → WebS
 Critical for understanding everything else:
 
 ```
-User clicks "Send next-best to FleetCrown" on /control (browser or Electron)
+User clicks "Send next-best to Loki" on /control (browser or Electron)
   ↓
 POST /api/inject  → pickDispatchChannel(project): locus lock → user_projects.builder_pref
                     ("Runs on") → cloud floor (DEFAULT_BUILDER_CHANNEL = "cloud").
@@ -152,7 +152,7 @@ Runner main process: validateCommand (zod) → writes the prompt into the owned 
   ↓
 Claude/Codex/etc. starts executing inside the runner's own process tree
   ↓
-On idle, agent writes ~/.fleetcrown/sessions/<tab>.md
+On idle, agent writes ~/.loki/sessions/<tab>.md
   ↓
 desktop watcher detects file change → appends worker.idle event → pushNow() → POST /api/control/runtime-state
   ↓ INSERT into runtime_snapshots fires fc_notify_runtime_snapshots
@@ -166,7 +166,7 @@ Browser /control re-fetches → UI updates within ~200ms of the DB write
 ## 6. Status by area, as of 2026-06-07 17:00 UTC
 
 ### Production
-- ✅ **All systems green**. App deployed on the Hetzner box (`fleetcrown-app` healthy). Hetzner DB 10 MB, 2/100 conns. Bridge SSE running.
+- ✅ **All systems green**. App deployed on the Hetzner box (`loki-app` healthy). Hetzner DB 10 MB, 2/100 conns. Bridge SSE running.
 - ✅ Latest desktop: **v0.7.5**. Auto-update with explicit fallback banner on .deb.
 
 ### What was just done (this session)
@@ -193,10 +193,10 @@ Browser /control re-fetches → UI updates within ~200ms of the DB write
 |---|---|
 | **`useControlData` split into 3 hooks** (#56) | The hook is 325 lines doing 4 jobs. Audit said split into `useControlData` (snapshot), `useAgentConfigDraft` (form), `useControlMutations` (dispatch fns). Real refactor; many consumers; no integration test harness to prove safe. Worth a focused day. |
 | **`ProjectState` schema derivation** | The control-types ProjectState is a wire format that composes the DB row + computed fields. Audit suggested deriving from `DbProjectState` via Pick + extra fields. Risk: many UI components consume the current shape; touching it has wide blast radius. Worth careful diff. |
-| **Self-hosted apt repo at `apt.fleetcrown.com`** (#48) | The user has hit this. v0.7.5 banner covers the symptom; the durable answer is a proper apt repo with GPG signing. 1-2 day project (key gen + Packages.gz pipeline + static hosting on the box behind Caddy + docs). |
+| **Self-hosted apt repo at `apt.loki.com`** (#48) | The user has hit this. v0.7.5 banner covers the symptom; the durable answer is a proper apt repo with GPG signing. 1-2 day project (key gen + Packages.gz pipeline + static hosting on the box behind Caddy + docs). |
 | **Publish to Flathub** (#47) | Backlog; only relevant when Linux user count is meaningful. |
 | **First-launch wizard polish** (#61) | `/onboarding` + `EmptyStateWelcome` + `MissingCLIsBanner` already cover the major beats; a unified "agents detected ✓ terminal detected ✓ first project ✓" celebration screen would be nice but not blocking. |
-| **OrangeCat off managed Supabase** (#16) | Done 2026-06-12 — OrangeCat now runs on the self-hosted Supabase stack at `supabase.orangecat.ch` on the Hetzner box. Sibling product; not a FleetCrown task. |
+| **OrangeCat off managed Supabase** (#16) | Done 2026-06-12 — OrangeCat now runs on the self-hosted Supabase stack at `supabase.orangecat.ch` on the Hetzner box. Sibling product; not a Loki task. |
 
 ### What's broken / known footguns
 - **Auto-update on .deb is silently broken at the OS level.** electron-updater downloads but can't apply (sudo needed). v0.7.5's UpdateBanner is the user-facing fix. The durable fix is task #48 (apt repo).
@@ -209,17 +209,17 @@ Browser /control re-fetches → UI updates within ~200ms of the DB write
 ### The bet
 Solo founder + AI assistant building two products under the (planned) `bitbaum AG` holding:
 - **OrangeCat** — economic layer (BTC payments, escrow, transactions between humans). Runs on the self-hosted Supabase stack (`supabase.orangecat.ch`) on the Hetzner box since the 2026-06-12 exit off managed Supabase.
-- **FleetCrown** — agent-fleet coordination (this product). Customer of OrangeCat.
+- **Loki** — agent-fleet coordination (this product). Customer of OrangeCat.
 
 The thesis: builders who run multiple agents in parallel need a single coordination surface. Owning that surface — not the models, not the terminals — is the position.
 
 ### Why this product shape
-The "captain-mode SaaS" thesis says: the user shouldn't dispatch agents one at a time; they should **govern** a fleet. Auto-inject, autopilot, scheduler, prompt queue, beacon settings — every one of those is "FleetCrown decides when, the human approves." Hence: heavy investment in lifecycle signals (`session_status`, `session.md` handoffs), automation policy (`auto_inject_mode`), and dispatch decisioning (`lib/decide.ts`, autopilot watchdog).
+The "captain-mode SaaS" thesis says: the user shouldn't dispatch agents one at a time; they should **govern** a fleet. Auto-inject, autopilot, scheduler, prompt queue, beacon settings — every one of those is "Loki decides when, the human approves." Hence: heavy investment in lifecycle signals (`session_status`, `session.md` handoffs), automation policy (`auto_inject_mode`), and dispatch decisioning (`lib/decide.ts`, autopilot watchdog).
 
 ### Why we shipped 5 desktop releases in 36 hours (v0.7.0 → v0.7.5)
 v0.7.0 contained the **Phase C bundled-renderer-as-primary** flip — a premature architectural move that produced a broken user-visible experience (the "YOUR MACHINES. YOUR AGENTS. / 0 projects" screen). Each subsequent release reverted, fixed, or hardened: v0.7.1 reverted; v0.7.2 added Peek (the killer dignity feature); v0.7.3 auto-cleared dead tokens; v0.7.4 deleted the parallel UI for good; v0.7.5 fixed the silent-update gap that hid all of the above from the user.
 
-**Lesson encoded in v0.7.4**: one UI codebase. The Phase-C aspiration ("Cursor-like fully local renderer") was discarded as YAGNI. FleetCrown is in the Slack/Linear/Notion category — web UI + native integrations.
+**Lesson encoded in v0.7.4**: one UI codebase. The Phase-C aspiration ("Cursor-like fully local renderer") was discarded as YAGNI. Loki is in the Slack/Linear/Notion category — web UI + native integrations.
 
 ### What we are NOT pursuing
 - **Forking VSCode** (Cursor's path). Wrong product category; we are not an IDE.
@@ -246,21 +246,21 @@ git tag -a fleet-runner-v0.7.Y -m "v0.7.Y — <one line>"
 git push origin fleet-runner-v0.7.Y
 
 # Watch CI build (3-5 min) + mirror script auto-fires after success
-gh run watch --workflow=desktop-release.yml --repo bitbaum/fleetcrown
+gh run watch --workflow=desktop-release.yml --repo bitbaum/loki
 
 # Or use the existing Monitor pattern from earlier sessions:
-until s=$(gh run list --workflow=desktop-release.yml --repo bitbaum/fleetcrown --branch fleet-runner-v0.7.Y --limit 1 --json status,conclusion --jq '.[0] | "\(.status)/\(.conclusion)"' 2>/dev/null); [ -n "$s" ] && echo "$s" | grep -qE "completed/"; do sleep 30; done; echo "$s"
+until s=$(gh run list --workflow=desktop-release.yml --repo bitbaum/loki --branch fleet-runner-v0.7.Y --limit 1 --json status,conclusion --jq '.[0] | "\(.status)/\(.conclusion)"' 2>/dev/null); [ -n "$s" ] && echo "$s" | grep -qE "completed/"; do sleep 30; done; echo "$s"
 # Then on success:
 bash scripts/mirror-desktop-release.sh 0.7.Y
 ```
 
-The mirror script is the bridge between `bitbaum/fleetcrown` (where CI builds) and `bitbaum/fleetcrown-releases` (where users download). It uses workflow artifacts as the source, NOT the draft release — the draft race-conditions when matrix jobs all try to push.
+The mirror script is the bridge between `bitbaum/loki` (where CI builds) and `bitbaum/loki-releases` (where users download). It uses workflow artifacts as the source, NOT the draft release — the draft race-conditions when matrix jobs all try to push.
 
 ## 9. How to dogfood
 
 1. `pnpm run dev` — local Next.js at `:3000`.
-2. The user's daemon runs as `systemd --user` unit `fleetcrown-app` (NOT a fresh `next dev` process). See `pattern_local_prod_systemd` in agent memory — this is a footgun.
-3. Fleet Runner desktop wraps `fleetcrown.orangecat.ch` by default. Set `FLEETCROWN_WEB_URL=http://localhost:3000` for local dogfood.
+2. The user's daemon runs as `systemd --user` unit `loki-app` (NOT a fresh `next dev` process). See `pattern_local_prod_systemd` in agent memory — this is a footgun.
+3. Fleet Runner desktop wraps `loki.orangecat.ch` by default. Set `LOKI_WEB_URL=http://localhost:3000` for local dogfood.
 4. Hit `/api/metrics` to see what the cloud knows about the user's recent activity.
 5. Hit `/releases` to see the public changelog you've been writing.
 
@@ -288,13 +288,13 @@ The repo's `CLAUDE.md` files (project and user-global at `~/.claude/CLAUDE.md`) 
 - **Design tokens are SSOT.** Four-layer system in `globals.css`; no arbitrary hex / sizes in JSX.
 - **First-principles, not analogy.** Don't say "X does it this way." Say "the constraint is Y, so we do Z."
 
-Agent memory at `~/.claude/projects/-home-g-dev-fleetcrown/memory/` has additional historical context across sessions.
+Agent memory at `~/.claude/projects/-home-g-dev-loki/memory/` has additional historical context across sessions.
 
 ## 12. Where to look when something breaks
 
 | Symptom | First place to look |
 |---|---|
-| "Daemon offline" but the daemon is running | `~/.config/fleetcrown/fleet-runner-token` — is it 401-rejecting against `/api/control/runtime-state`? |
+| "Daemon offline" but the daemon is running | `~/.config/loki/fleet-runner-token` — is it 401-rejecting against `/api/control/runtime-state`? |
 | `/control` shows old data | Check the bridge SSE connection in browser DevTools network tab. Or check `runtime_snapshots` for `observed_at` freshness. |
 | Dispatch goes nowhere | `pending_commands` table — was the row inserted? Did the poller claim it? Check `result` field after claim. |
 | Auto-update silently fails | It does on .deb. That's why v0.7.5 ships the UpdateBanner. Task #48 is the real fix. |
@@ -303,6 +303,6 @@ Agent memory at `~/.claude/projects/-home-g-dev-fleetcrown/memory/` has addition
 
 ---
 
-**End of handoff.** When you're done with your session, append your own one-paragraph summary to the changelog (`src/config/changelog.ts` for desktop releases, this doc for architectural changes), and update `MEMORY.md` at `~/.claude/projects/-home-g-dev-fleetcrown/memory/` with anything surprising or non-obvious that future-you would want to know.
+**End of handoff.** When you're done with your session, append your own one-paragraph summary to the changelog (`src/config/changelog.ts` for desktop releases, this doc for architectural changes), and update `MEMORY.md` at `~/.claude/projects/-home-g-dev-loki/memory/` with anything surprising or non-obvious that future-you would want to know.
 
 Build for change. Ship correct code.

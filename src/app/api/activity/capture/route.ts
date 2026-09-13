@@ -5,7 +5,7 @@
 // Claude UserPromptSubmit hook so the activity view reflects ALL agent work,
 // not just dispatches routed through /api/inject or /api/orchestration/run.
 //
-// Auth: Bearer token (FLEETCROWN_DAEMON_TOKEN). Lives outside the cookie
+// Auth: Bearer token (LOKI_DAEMON_TOKEN). Lives outside the cookie
 // session — Claude hooks run as plain shell scripts with no browser context.
 
 import { NextRequest, NextResponse } from "next/server";
@@ -129,7 +129,7 @@ export async function POST(req: NextRequest) {
   }
 
   // UserPromptSubmit fires for injected prompts too — the CLI can't tell
-  // FleetCrown's keystrokes from the human's. If this exact text was just
+  // Loki's keystrokes from the human's. If this exact text was just
   // recorded by a dispatch path, this hook fire is that dispatch's echo.
   if (await hasRecentIdenticalPrompt(userId, project.projectKey, prompt)) {
     return NextResponse.json({ skipped: "dispatch_echo" });

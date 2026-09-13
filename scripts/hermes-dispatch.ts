@@ -7,7 +7,7 @@
  * queue a task for a project and let the hosted runner do it laptop-off.
  *
  * The task is enqueued as a `hosted_dispatch` command; the
- * fleetcrown-hosted-runner.timer drains it (~≤1 min): clone → Hermes in its
+ * loki-hosted-runner.timer drains it (~≤1 min): clone → Hermes in its
  * sandbox → commit on a branch → open a PR. Nothing auto-merges — you review it.
  * Progress is visible in Activity (source="hosted-runner", adapter="hermes").
  *
@@ -18,7 +18,7 @@
  * Usage:
  *   DATABASE_URL=… npx tsx scripts/hermes-dispatch.ts <projectKey> "<task>" [model]
  * Example:
- *   … scripts/hermes-dispatch.ts fleetcrown "Add a CONTRIBUTING.md with build + test steps"
+ *   … scripts/hermes-dispatch.ts loki "Add a CONTRIBUTING.md with build + test steps"
  */
 import { getSelfImprovementTarget } from "@/db/queries/frontier";
 import { dispatchToHostedRunner } from "@/lib/hosted-runner/dispatch";
@@ -31,7 +31,7 @@ async function main() {
   }
   const target = await getSelfImprovementTarget();
   if (!target) {
-    console.error("No FleetCrown owner resolved — nothing to dispatch for.");
+    console.error("No Loki owner resolved — nothing to dispatch for.");
     process.exit(1);
   }
 
@@ -52,10 +52,10 @@ async function main() {
   console.log(`  project: ${res.projectName}   repo: ${res.gitUrl}`);
   console.log(`  task:    ${task}`);
   console.log(
-    `  Drained by fleetcrown-hosted-runner.timer (~≤1 min) → clone → Hermes → PR (never auto-merged).`,
+    `  Drained by loki-hosted-runner.timer (~≤1 min) → clone → Hermes → PR (never auto-merged).`,
   );
   console.log(
-    `  Watch:   journalctl -u fleetcrown-hosted-runner -f    |    Activity (source=hosted-runner)`,
+    `  Watch:   journalctl -u loki-hosted-runner -f    |    Activity (source=hosted-runner)`,
   );
   process.exit(0);
 }

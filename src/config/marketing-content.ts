@@ -57,7 +57,7 @@ export const PHILOSOPHY = {
     {
       name: "Built for serious operators.",
       description:
-        "FleetCrown is infrastructure for builders running many agents at once across multiple projects — not a friendly chat assistant.",
+        "Loki is infrastructure for builders running many agents at once across multiple projects — not a friendly chat assistant.",
     },
   ],
   closer:
@@ -82,8 +82,8 @@ export const INVESTORS = {
   // Scannable bullets, not a prose wall — the page pairs these with the live
   // fleet snapshot (same real data source as the homepage hero).
   traction: [
-    "FleetCrown runs its creator's entire operation — a live fleet of projects dispatched, monitored, and governed daily through the product itself.",
-    "We use FleetCrown in our own work and verify changes against real workflows; a successful agent run alone does not prove a live result.",
+    "Loki runs its creator's entire operation — a live fleet of projects dispatched, monitored, and governed daily through the product itself.",
+    "We use Loki in our own work and verify changes against real workflows; a successful agent run alone does not prove a live result.",
     "The homepage hero and this page render the same live snapshot of that fleet — real data, never fabricated numbers.",
     "The bet: the same workflow generalizes to anyone running many agents at once.",
   ],
@@ -227,11 +227,11 @@ export const ROADMAP: {
         },
         {
           title: "Connected products, owner-controlled sharing",
-          line: "Build independently in FleetCrown. Optionally link an OrangeCat profile for public updates and funding, with separate consent before publishing work.",
+          line: "Build independently in Loki. Optionally link an OrangeCat profile for public updates and funding, with separate consent before publishing work.",
         },
         {
           title: "Stakeholder graph",
-          line: "Track each project's surrounding relationships — competitors, collaborators, investors, customers — as typed edges in OrangeCat's entity graph, surfaced on FleetCrown for the agent to act on. Competitors ship first as the most automatable category.",
+          line: "Track each project's surrounding relationships — competitors, collaborators, investors, customers — as typed edges in OrangeCat's entity graph, surfaced on Loki for the agent to act on. Competitors ship first as the most automatable category.",
           essay: {
             label: "Read the essay: Where Stakeholders Live",
             href: "/thoughts/where-stakeholders-live",
@@ -241,10 +241,10 @@ export const ROADMAP: {
           title: "OrangeCat integration — the transaction half",
           line: "Make it natural to fund what people build and build what people choose to fund, without pretending the full loop is already automated.",
           details: [
-            "Optionally connect an OrangeCat identity through the existing OIDC bridge; FleetCrown also works without an OrangeCat account.",
-            "Typed links connect a FleetCrown project to any OrangeCat entity acting as its origin, public profile, funding page, offering, or community.",
-            "A signed, ten-minute OrangeCat handoff can prefill a FleetCrown project and Loki plan; the owner approves before anything is created or dispatched.",
-            "OrangeCat remains the share, promotion, and Bitcoin funding surface. FleetCrown shows its confirmed funding summary read-only.",
+            "Optionally connect an OrangeCat identity through the existing OIDC bridge; Loki also works without an OrangeCat account.",
+            "Typed links connect a Loki project to any OrangeCat entity acting as its origin, public profile, funding page, offering, or community.",
+            "A signed, ten-minute OrangeCat handoff can prefill a Loki project and Loki plan; the owner approves before anything is created or dispatched.",
+            "OrangeCat remains the share, promotion, and Bitcoin funding surface. Loki shows its confirmed funding summary read-only.",
             "Bitcoin is the first live settlement rail because confirmed transfers can be independently audited. Automatic work orders, escrow, fiat, and privacy coins stay research — none is presented as available today.",
           ],
         },
@@ -312,12 +312,12 @@ export const DESKTOP_DOWNLOAD = {
   // Top-level back-compat fields (used by /download page metadata + homepage).
   eyebrow: "DESKTOP APP",
   title: "Get Fleet Runner",
-  lede: "FleetCrown runs in your browser as a full control plane. Fleet Runner is the optional desktop app that lets agents act on your computer — open files, run commands, drive terminal sessions — while you stay in command from the web or your phone.",
+  lede: "Loki runs in your browser as a full control plane. Fleet Runner is the optional desktop app that lets agents act on your computer — open files, run commands, drive terminal sessions — while you stay in command from the web or your phone.",
 
   hero: {
     eyebrow: "DESKTOP APP",
     title: "Get Fleet Runner",
-    lede: "FleetCrown runs in your browser as a full control plane. Fleet Runner is the optional desktop app that lets agents act on your computer — open files, run commands, drive terminal sessions — while you stay in command from the web or your phone.",
+    lede: "Loki runs in your browser as a full control plane. Fleet Runner is the optional desktop app that lets agents act on your computer — open files, run commands, drive terminal sessions — while you stay in command from the web or your phone.",
   },
 
   // Web vs. desktop — answers "do I need this?" in plain language.
@@ -356,7 +356,7 @@ export const DESKTOP_DOWNLOAD = {
     {
       number: "02",
       title: "Sign in — once",
-      body: 'Use the same FleetCrown account you signed up with on the web. The desktop app opens straight to your dashboard. From the web, you can also click "Open in Fleet Runner" to log the desktop app in without copy-pasting a token. From v0.3.0 onward, Fleet Runner checks for updates on launch and downloads them in the background — you\'ll never have to manually re-download.',
+      body: 'Use the same Loki account you signed up with on the web. The desktop app opens straight to your dashboard. From the web, you can also click "Open in Fleet Runner" to log the desktop app in without copy-pasting a token. From v0.3.0 onward, Fleet Runner checks for updates on launch and downloads them in the background — you\'ll never have to manually re-download.',
     },
     {
       number: "03",
@@ -378,19 +378,19 @@ export const DESKTOP_DOWNLOAD = {
         // perms + integration. AppImage hits KDE/KIO "for security reasons"
         // refusal on double-click (Dolphin blocks the +x bit by policy) and
         // requires terminal chmod, which is a dead-end for non-power-users.
-        // Most FleetCrown users are on Ubuntu/Debian derivatives where .deb
+        // Most Loki users are on Ubuntu/Debian derivatives where .deb
         // Just Works. AppImage stays as a secondary for Arch / Fedora /
         // immutable distros where .deb isn't the right format.
         label: "Download .deb (Ubuntu / Debian / Mint)",
         note: "Recommended · ~80 MB · installs via package manager",
         // /releases/latest/download/... — GitHub redirects to the current
         // release, so this URL survives future version bumps.
-        url: "https://github.com/bitbaum/fleetcrown-releases/releases/latest/download/Fleet-Runner-linux-amd64.deb",
+        url: "https://github.com/bitbaum/loki-releases/releases/latest/download/Fleet-Runner-linux-amd64.deb",
       },
       secondary: [
         {
           label: "AppImage (other distros)",
-          url: "https://github.com/bitbaum/fleetcrown-releases/releases/latest/download/Fleet-Runner-linux-x86_64.AppImage",
+          url: "https://github.com/bitbaum/loki-releases/releases/latest/download/Fleet-Runner-linux-x86_64.AppImage",
         },
       ],
       afterDownload:
@@ -409,12 +409,12 @@ export const DESKTOP_DOWNLOAD = {
       primary: {
         label: "Download .dmg",
         note: "Apple Silicon · ~98 MB",
-        url: "https://github.com/bitbaum/fleetcrown-releases/releases/latest/download/Fleet-Runner-mac-arm64.dmg",
+        url: "https://github.com/bitbaum/loki-releases/releases/latest/download/Fleet-Runner-mac-arm64.dmg",
       },
       secondary: [
         {
           label: ".zip (no installer)",
-          url: "https://github.com/bitbaum/fleetcrown-releases/releases/latest/download/Fleet-Runner-mac-arm64.zip",
+          url: "https://github.com/bitbaum/loki-releases/releases/latest/download/Fleet-Runner-mac-arm64.zip",
         },
       ],
       afterDownload:
@@ -429,7 +429,7 @@ export const DESKTOP_DOWNLOAD = {
       primary: {
         label: "Download installer",
         note: "x64 · ~81 MB",
-        url: "https://github.com/bitbaum/fleetcrown-releases/releases/latest/download/Fleet-Runner-win-x64.exe",
+        url: "https://github.com/bitbaum/loki-releases/releases/latest/download/Fleet-Runner-win-x64.exe",
       },
       secondary: [],
       afterDownload:
@@ -476,12 +476,12 @@ export const DESKTOP_DOWNLOAD = {
       label: "Build the desktop app from source",
       body: "Clone and build a native package for your machine. Useful if you're contributing, want a development build, or are on a platform we don't ship binaries for yet.",
       command:
-        "git clone https://github.com/bitbaum/fleetcrown.git && cd fleetcrown/desktop && npm install && npm run dist:linux  # or dist:mac / dist:win",
+        "git clone https://github.com/bitbaum/loki.git && cd loki/desktop && npm install && npm run dist:linux  # or dist:mac / dist:win",
     },
     legacyDaemon: {
       label: "Headless CLI agent",
       body: "For CI runners, headless servers, or operators who prefer a pure terminal flow. Fleet Runner is the recommended path; the CLI agent covers machines that can't run a desktop app.",
-      command: "curl -fsSL https://fleetcrown.orangecat.ch/api/agent/install | node - init",
+      command: "curl -fsSL https://loki.orangecat.ch/api/agent/install | node - init",
     },
   },
 
@@ -521,7 +521,7 @@ export const PRODUCT_SURFACES = [
   {
     label: "Runner",
     title: "Execution stays on your machine.",
-    body: "The local runner owns the agent terminals, git, agent launching, and handoff files. FleetCrown coordinates the work without turning your environment into a cloud sandbox.",
+    body: "The local runner owns the agent terminals, git, agent launching, and handoff files. Loki coordinates the work without turning your environment into a cloud sandbox.",
     meta: "Desktop app · CLI agent fallback · agent tokens",
   },
   {

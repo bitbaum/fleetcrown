@@ -11,7 +11,7 @@ readingTimeMin: 5
 
 ## The symptom
 
-A builder opens FleetCrown, signed in, everything green. Zero projects. The fleet brief reads *PROJECTS 0*. The control panel offers to help register a first project — as if twenty-one of them weren't sitting in the database with that same person's email on every row.
+A builder opens Loki, signed in, everything green. Zero projects. The fleet brief reads *PROJECTS 0*. The control panel offers to help register a first project — as if twenty-one of them weren't sitting in the database with that same person's email on every row.
 
 Nothing was down. No error, no 500, no failed query. The most dangerous kind of bug: the system confidently doing the wrong thing.
 

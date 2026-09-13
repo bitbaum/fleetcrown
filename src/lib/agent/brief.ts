@@ -7,7 +7,7 @@
  * of that data. It had projects and RAG chunks; it had no goals-with-dates, no
  * commitments, no habits, no events. So it produced plausible items.
  *
- * The striking part is that FleetCrown could already answer every one of those
+ * The striking part is that Loki could already answer every one of those
  * questions EXACTLY — `getStuckGoals`, `getGoalsDueSoon`, `listUpcomingCommitments`,
  * `getEventsDueSoon` and `getTodayHabits` have existed for months. They were
  * simply never wired into the assistant. The model was asked to guess at

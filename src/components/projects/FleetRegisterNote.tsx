@@ -4,7 +4,7 @@ import { buildFleetRegister } from "@/lib/register/build";
 import { getUserProjects } from "@/db/queries/user-projects";
 
 /**
- * The Projects page lists FleetCrown projects. The box hosts sites, and the two
+ * The Projects page lists Loki projects. The box hosts sites, and the two
  * sets are not the same — a site provisioned by the hosted factory, or one that
  * predates this database, has an address and no project here. That gap is
  * invisible from a page built by reading the projects table, which is exactly
@@ -29,7 +29,7 @@ export async function FleetRegisterNote({ userId }: { userId: string }) {
       })),
       readAppsConf(),
     );
-    unlinked = rows.filter((r) => r.site && !r.fleetcrown).length;
+    unlinked = rows.filter((r) => r.site && !r.loki).length;
   } catch {
     // A register that cannot be read must not take the page down with it.
     return null;

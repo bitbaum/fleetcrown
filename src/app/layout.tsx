@@ -78,7 +78,7 @@ export default function RootLayout({
         <SessionProvider>
           <ThemeProvider>{children}</ThemeProvider>
         </SessionProvider>
-        {/* Dogfood: FleetCrown's own feedback widget, on every surface except a
+        {/* Dogfood: Loki's own feedback widget, on every surface except a
             short excluded list (config/feedback-widget.ts). Active only where
             FEEDBACK_WIDGET_TOKEN is provisioned. It sits in the ROOT layout on
             purpose — a signed-in user hitting a bug in the app had no way to

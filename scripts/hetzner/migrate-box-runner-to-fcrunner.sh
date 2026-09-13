@@ -13,14 +13,14 @@
 #   2. copy the AGENT RUNTIME from /home/ubuntu → /home/fcrunner: .claude (auth +
 #      credentials.json + sessions/memory), .local (the claude CLI), .npm,
 #      .gitconfig, and the runner token — NOT ubuntu's .ssh or anything else
-#   3. chown /opt/fleetcrown/runner to fcrunner (it owns its code + its own .env)
+#   3. chown /opt/loki/runner to fcrunner (it owns its code + its own .env)
 #   4. install a systemd drop-in: User=fcrunner, HOME/PATH repointed, and
 #      InaccessiblePaths hiding ALL of /home/ubuntu + every co-tenant /opt/<app>
 #   5. daemon-reload + restart + verify
 #
 # COUPLING you must not forget: deploy-hetzner.sh / install-box-runner.sh chown
 # the runner dir on every run. After this migration, run those with
-# FLEETCROWN_RUNNER_OWNER=fcrunner (add it to the push-deploy hook env) or the
+# LOKI_RUNNER_OWNER=fcrunner (add it to the push-deploy hook env) or the
 # next deploy silently chowns the dir back to ubuntu. This script prints a
 # reminder; the vars already default to ubuntu so nothing breaks pre-migration.
 #
@@ -36,7 +36,7 @@
 set -euo pipefail
 
 . "$(dirname "${BASH_SOURCE[0]}")/_box-env.sh"   # SSOT: HETZNER_IP, BOX_ROOT, BOX_UBUNTU
-HOST="${FLEETCROWN_BOX_HOST:-$BOX_ROOT}"
+HOST="${LOKI_BOX_HOST:-$BOX_ROOT}"
 MODE="${1:-apply}"
 case "$MODE" in --dry-run) MODE=dry ;; --revert) MODE=revert ;; "" ) MODE=apply ;; --*) echo "unknown flag: $MODE" >&2; exit 2 ;; esac
 
@@ -45,10 +45,10 @@ case "$MODE" in --dry-run) MODE=dry ;; --revert) MODE=revert ;; "" ) MODE=apply 
 run_remote() {
   ssh "$HOST" "MODE='$1' bash -s" <<'REMOTE'
 set -euo pipefail
-UNIT=fleetcrown-box-runner.service
+UNIT=loki-box-runner.service
 DROPIN_DIR="/etc/systemd/system/${UNIT}.d"
 DROPIN="${DROPIN_DIR}/20-fcrunner.conf"
-RUNNER_DIR=/opt/fleetcrown/runner
+RUNNER_DIR=/opt/loki/runner
 SRC=/home/ubuntu
 DST=/home/fcrunner
 
@@ -75,14 +75,14 @@ if [ "$MODE" = revert ]; then
   systemctl daemon-reload
   systemctl restart "$UNIT"; sleep 4
   echo -n "  runner active: "; systemctl is-active "$UNIT"
-  echo "  → also unset FLEETCROWN_RUNNER_OWNER in your deploy env (back to ubuntu)."
+  echo "  → also unset LOKI_RUNNER_OWNER in your deploy env (back to ubuntu)."
   exit 0
 fi
 
 if [ "$MODE" = dry ]; then
   echo "PLAN (nothing changed):"
   echo "  1. useradd fcrunner (home $DST, shell /bin/bash) if missing"
-  echo "  2. copy from $SRC → $DST: ${COPY[*]} + .config/fleetcrown/fleet-runner-token"
+  echo "  2. copy from $SRC → $DST: ${COPY[*]} + .config/loki/fleet-runner-token"
   echo "  3. chown -R fcrunner:fcrunner $RUNNER_DIR  (chmod 600 its .env)"
   echo "  4. write $DROPIN:"; printf '%s\n' "$DROPIN_BODY" | sed 's/^/       /'
   echo "  5. daemon-reload + restart + verify"
@@ -97,9 +97,9 @@ echo "→ 2/5 copy agent runtime (auth/CLI/state) — NOT ubuntu's .ssh"
 for d in "${COPY[@]}"; do
   if [ -e "$SRC/$d" ] && [ ! -e "$DST/$d" ]; then cp -a "$SRC/$d" "$DST/$d"; echo "   copied $d"; fi
 done
-install -d -o fcrunner -g fcrunner -m 700 "$DST/.config/fleetcrown"
-if [ -f "$SRC/.config/fleetcrown/fleet-runner-token" ] && [ ! -f "$DST/.config/fleetcrown/fleet-runner-token" ]; then
-  cp -a "$SRC/.config/fleetcrown/fleet-runner-token" "$DST/.config/fleetcrown/"
+install -d -o fcrunner -g fcrunner -m 700 "$DST/.config/loki"
+if [ -f "$SRC/.config/loki/fleet-runner-token" ] && [ ! -f "$DST/.config/loki/fleet-runner-token" ]; then
+  cp -a "$SRC/.config/loki/fleet-runner-token" "$DST/.config/loki/"
   echo "   copied runner token"
 fi
 chown -R fcrunner:fcrunner "$DST"
@@ -142,13 +142,13 @@ cat <<NEXT
 ✓ box-runner migrated to fcrunner.
 
 MUST DO NEXT (or the next deploy reverts ownership to ubuntu):
-  Set FLEETCROWN_RUNNER_OWNER=fcrunner wherever deploy-hetzner.sh runs — add it
+  Set LOKI_RUNNER_OWNER=fcrunner wherever deploy-hetzner.sh runs — add it
   to the push-deploy block in .husky/pre-push, e.g.
-      env FLEETCROWN_RUNNER_OWNER=fcrunner bash scripts/deploy-hetzner.sh --ref "\$SHA"
+      env LOKI_RUNNER_OWNER=fcrunner bash scripts/deploy-hetzner.sh --ref "\$SHA"
 
 VERIFY BEFORE TRUSTING (the claude-auth-after-copy risk):
   1. Dispatch a small task from /control to a project.
-  2. ssh $BOX_ROOT journalctl -u fleetcrown-box-runner -f
+  2. ssh $BOX_ROOT journalctl -u loki-box-runner -f
   3. Confirm the runner clones into /home/fcrunner/dev, the agent AUTHENTICATES
      (no login prompt), runs, and reports back. If claude asks to log in, copy
      ubuntu's creds: cp -a /home/ubuntu/.claude/credentials.json /home/fcrunner/.claude/ && chown fcrunner:fcrunner /home/fcrunner/.claude/credentials.json

@@ -1,4 +1,4 @@
-# FleetCrown
+# Loki
 
 @~/.claude/CLAUDE.md
 
@@ -6,12 +6,12 @@
 
 Read [bitbaum/fleet AGENTS.md](https://github.com/bitbaum/fleet/blob/main/AGENTS.md)
 and its registers for org facts. Read this repo's `AGENTS.md` for the product
-contract. FleetCrown builds and changes projects independently; OrangeCat is an
+contract. Loki builds and changes projects independently; OrangeCat is an
 optional integration, with separate consent for public publishing.
 
 ## What This Is
 
-FleetCrown is a multi-user SaaS platform for commanding AI agent fleets across projects. Users sign in (GitHub OAuth), register their projects, and launch/monitor AI agents from a single dashboard. Dark-first, mobile-ready, designed for builders who want control without complexity.
+Loki is a multi-user SaaS platform for commanding AI agent fleets across projects. Users sign in (GitHub OAuth), register their projects, and launch/monitor AI agents from a single dashboard. Dark-first, mobile-ready, designed for builders who want control without complexity.
 
 ## Stack
 
@@ -22,7 +22,7 @@ FleetCrown is a multi-user SaaS platform for commanding AI agent fleets across p
   public nav, so light mode is a real state your styling must survive. Never
   assume a dark ground outside the always-dark surfaces noted below.
 - **Drizzle ORM** — schema is SSOT for types (`$inferSelect`, `$inferInsert`)
-- **PostgreSQL 17** (self-hosted, `fleetcrown` database)
+- **PostgreSQL 17** (self-hosted, `loki` database)
 
 ## Architecture
 
@@ -89,7 +89,7 @@ src/
 
 home/              → Agent orchestration library. Pure pieces that tail one
                      append-only JSONL event log: watcher.ts (Bridge — emits
-                     worker.idle when ~/.fleetcrown/sessions/*.md changes),
+                     worker.idle when ~/.loki/sessions/*.md changes),
                      plus decide/render/state/emit/log/projects/calendar-drain.
                      The worker (zellij consumer) was deleted 2026-09-11.
                      The standalone Brain (home/server.ts, port 3001) and its
@@ -136,7 +136,7 @@ widget/            → The embeddable feedback widget customer sites load as
 
 ### Design System — The Four-Layer Architecture
 
-Every pixel in FleetCrown flows through exactly four layers in order. Any shortcut past a layer is a violation.
+Every pixel in Loki flows through exactly four layers in order. Any shortcut past a layer is a violation.
 
 ```
 Layer 1  globals.css :root / .dark     → Raw values: OKLCH colors, rem sizes, shadows
@@ -305,7 +305,7 @@ That rule now has a check behind it. `pnpm run audit:responsive` drives the
 AUTHENTICATED pages through real viewports (320/390/768/1440) in headless
 Chromium, fails on horizontal overflow, reports touch targets under 44px, and
 writes a screenshot per page/viewport to `.tmp/responsive-audit/`. It needs a
-session: set `FLEETCROWN_SESSION_TOKEN`, or `AUDIT_DATABASE_URL` + `AUTH_SECRET`
+session: set `LOKI_SESSION_TOKEN`, or `AUDIT_DATABASE_URL` + `AUTH_SECRET`
 — and since prod Postgres is firewalled to the box, `eval "$(bash
 scripts/db-tunnel.sh)"` opens an SSH tunnel and exports the right URL. Not part
 of `pnpm run verify` (needs network, a session, and a browser download).

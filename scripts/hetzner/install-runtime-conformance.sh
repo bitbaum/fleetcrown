@@ -3,7 +3,7 @@
 # and alert to Telegram, per finding, on transition.
 #
 # The audit itself ships in the repo (scripts/ci/runtime-conformance-audit.sh)
-# and the deploy rsyncs it to /opt/fleetcrown/app, so there is ONE copy. This
+# and the deploy rsyncs it to /opt/loki/app, so there is ONE copy. This
 # installs only the wrapper and the timer.
 #
 # Per-FINDING alert keys, never one aggregate: host-check spent six weeks unable
@@ -28,7 +28,7 @@ cat > "$MON/runtime-conformance.sh" <<'CHK'
 set -u
 MON="${MON:-/opt/monitoring}"
 . "$MON/lib-alert.sh"
-AUDIT=/opt/fleetcrown/app/scripts/ci/runtime-conformance-audit.sh
+AUDIT=/opt/loki/app/scripts/ci/runtime-conformance-audit.sh
 
 # "Could not look" gets its OWN key so it can never overwrite a real finding
 # or be mistaken for a clean run.
@@ -61,7 +61,7 @@ exit 0
 CHK
 chmod +x "$MON/runtime-conformance.sh"
 
-cat > /etc/systemd/system/fleetcrown-runtime-conformance.service <<'SVC'
+cat > /etc/systemd/system/loki-runtime-conformance.service <<'SVC'
 [Unit]
 Description=Runtime conformance audit (what is deployed, not what is committed)
 OnFailure=notify-failure@%n.service
@@ -70,7 +70,7 @@ Type=oneshot
 ExecStart=/opt/monitoring/runtime-conformance.sh
 SVC
 
-cat > /etc/systemd/system/fleetcrown-runtime-conformance.timer <<'TMR'
+cat > /etc/systemd/system/loki-runtime-conformance.timer <<'TMR'
 [Unit]
 Description=Run the runtime conformance audit every 6h
 [Timer]
@@ -82,6 +82,6 @@ WantedBy=timers.target
 TMR
 
 systemctl daemon-reload
-systemctl enable --now fleetcrown-runtime-conformance.timer >/dev/null
+systemctl enable --now loki-runtime-conformance.timer >/dev/null
 systemctl list-timers --all --no-pager | grep runtime-conformance || true
 REMOTE

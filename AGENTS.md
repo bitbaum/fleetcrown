@@ -1,4 +1,4 @@
-# AGENTS.md — FleetCrown
+# AGENTS.md — Loki
 
 Read [bitbaum/fleet AGENTS.md](https://github.com/bitbaum/fleet/blob/main/AGENTS.md)
 and the registers it names before working here.
@@ -8,7 +8,7 @@ Operational quick-reference for agents working in this repo. Deep conventions
 
 ## What this is
 
-FleetCrown is an independent product for building and changing projects with AI
+Loki is an independent product for building and changing projects with AI
 agents: brief → repository → deployed result → feedback → verified change.
 OrangeCat linking is optional. Execution access is defined in
 `src/lib/execution-access.ts`; project identity is not a terminal tab name.
@@ -16,7 +16,7 @@ A queued run or successful agent turn does not prove a deployment.
 
 ## Where code lives
 
-Every repository FleetCrown creates or registers lives in the `bitbaum` GitHub
+Every repository Loki creates or registers lives in the `bitbaum` GitHub
 organisation. Never a personal account: `src/config/github-owner.ts` is the one
 place the owner is decided, creation goes to the org and fails loudly if it
 cannot, and `scripts/test/repos-are-created-in-the-org.ts` fails on any path
@@ -28,7 +28,7 @@ that does otherwise. `gh repo list catomean` should show one repo (the profile).
 - **TypeScript strict** — no `any` without justification
 - **Tailwind CSS 4 + shadcn/ui** — dark by default, with supported light mode
 - **Drizzle ORM** — schema is SSOT for types
-- **PostgreSQL 17** — self-hosted, `fleetcrown` database
+- **PostgreSQL 17** — self-hosted, `loki` database
 
 ## Layout
 
@@ -80,7 +80,7 @@ the dev server is up).
   review the SQL in the PR → the deploy applies it forward-only.
 - **Raw-SQL migrations** (`scripts/db/migrations/NNN_*.sql`, e.g. 074/075) are
   hand-applied via `pnpm run db:apply-box <file>` (runs as the app role so
-  objects are owned by `fleetcrown`). The deploy's `apply-schema.sh` does NOT
+  objects are owned by `loki`). The deploy's `apply-schema.sh` does NOT
   auto-apply these — apply them to the box **and** local dev *before* the code
   reaches `main`, or the drift-gate rolls the deploy back.
 - **`drizzle-kit push` is for a throwaway local/scratch DB only** — never a
@@ -90,8 +90,8 @@ the dev server is up).
 
 ## Self-host deploy path
 
-- Prod host: Hetzner box (`167.233.22.31`), app at `/opt/fleetcrown/app`,
-  self-hosted Postgres (`fleetcrown` DB).
+- Prod host: Hetzner box (`167.233.22.31`), app at `/opt/loki/app`,
+  self-hosted Postgres (`loki` DB).
 - CI-gated: `.github/workflows/deploy.yml` fires **after a green CI on `main`**
   (dormant until repo var `DEPLOY_VIA_CI=true` + `HETZNER_SSH_KEY` secret), then
   runs `scripts/deploy-hetzner.sh --no-build`.

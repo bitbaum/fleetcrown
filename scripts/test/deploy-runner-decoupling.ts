@@ -63,7 +63,7 @@ check("the deferred restart script exists and is shipped before it is invoked", 
 
 check("the deferred restart cannot be killed by the restart it performs", () => {
   const drain = readFileSync(drainPath, "utf8");
-  // systemd-run puts it in its OWN unit; restarting fleetcrown-box-runner kills
+  // systemd-run puts it in its OWN unit; restarting loki-box-runner kills
   // that unit's cgroup, which must not contain this script.
   assert(
     /--unit=/.test(deploy),

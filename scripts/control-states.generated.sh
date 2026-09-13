@@ -26,7 +26,7 @@ FC_DESCRIPTION_NOT_RUNNING='No agent process and no terminal tab detected for th
 FC_COUNTER_CATEGORY_NOT_RUNNING='idle'
 
 FC_LABEL_RECENTLY_ACTIVE='Active recently'
-FC_DESCRIPTION_RECENTLY_ACTIVE='No live agent process is visible to FleetCrown, but a dispatch or run landed for this project recently — work likely happened in a terminal FleetCrown can'\''t observe.'
+FC_DESCRIPTION_RECENTLY_ACTIVE='No live agent process is visible to Loki, but a dispatch or run landed for this project recently — work likely happened in a terminal Loki can'\''t observe.'
 FC_COUNTER_CATEGORY_RECENTLY_ACTIVE='idle'
 
 FC_LABEL_TAB_OPEN='Tab open'

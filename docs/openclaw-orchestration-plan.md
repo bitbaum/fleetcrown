@@ -16,7 +16,7 @@ Today, the highest-value project acceleration loop lives in a Claude-shaped loca
 - prompt intents live in Claude prompt files
 - session lifecycle signals are Claude-specific
 - state files are Claude-specific
-- FleetCrown reads Claude session state directly
+- Loki reads Claude session state directly
 - Codex is only partially integrated
 - OpenClaw is powerful, but not the orchestrator of this workflow
 
@@ -33,7 +33,7 @@ Claude, Codex, Gemini, and OpenClaw-native agents should become interchangeable 
 
 ## Non-goals
 
-- Do not rewrite the entire FleetCrown control surface in one pass
+- Do not rewrite the entire Loki control surface in one pass
 - Do not build a speculative adapter framework for hypothetical agents beyond known needs
 - Do not delete the Claude loop until the replacement is proven
 - Do not add more agent-specific state models
@@ -103,7 +103,7 @@ Owns:
 - inspection
 - manual interventions
 
-FleetCrown should not own orchestration truth. It should render and steer it.
+Loki should not own orchestration truth. It should render and steer it.
 
 ## Current system map
 
@@ -236,7 +236,7 @@ Only unavoidable local runtime/user configuration:
 - local hooks required by external CLIs
 - temporary compatibility files while migrating
 
-### Move to FleetCrown / OpenClaw-oriented code
+### Move to Loki / OpenClaw-oriented code
 
 - project registry abstraction
 - orchestration state model
@@ -355,7 +355,7 @@ Mitigation:
 The migration is complete when:
 
 - OpenClaw can run the key project-advancement intents without Claude
-- FleetCrown renders neutral orchestration state
+- Loki renders neutral orchestration state
 - Claude is an adapter, not the architecture
 - Codex is at least partially first-class
 - vendor-specific prompt/runtime details are below the adapter boundary

@@ -24,9 +24,9 @@ import type { ActionAdvice, AdviceReport } from "@/lib/actions/advisor";
  * approving is what lets untrusted visitor text reach an agent.
  */
 
-const AUTO_APPLY_ALL_KEY = "fleetcrown.advice.autoApplyAll";
+const AUTO_APPLY_ALL_KEY = "loki.advice.autoApplyAll";
 
-const AUTO_APPLY_EVENT = "fleetcrown:advice-auto-apply";
+const AUTO_APPLY_EVENT = "loki:advice-auto-apply";
 
 function readAutoApplyAll(): boolean {
   try {

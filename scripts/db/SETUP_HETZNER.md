@@ -1,8 +1,8 @@
-# Hetzner CX22 — FleetCrown Postgres host setup
+# Hetzner CX22 — Loki Postgres host setup
 
-A ~€4.5/mo Hetzner CX22 (2 vCPU, 4 GB RAM, 40 GB SSD, Helsinki/Falkenstein/Nuremberg/Ashburn/Hillsboro/Singapore) is more than enough headroom for FleetCrown's traffic and has no egress fees inside the EU. This runbook gets you from "open Hetzner Cloud account" to "the app pointed at the new DB" in ~30 min.
+A ~€4.5/mo Hetzner CX22 (2 vCPU, 4 GB RAM, 40 GB SSD, Helsinki/Falkenstein/Nuremberg/Ashburn/Hillsboro/Singapore) is more than enough headroom for Loki's traffic and has no egress fees inside the EU. This runbook gets you from "open Hetzner Cloud account" to "the app pointed at the new DB" in ~30 min.
 
-> This is FleetCrown's current production database setup — Postgres 17 self-hosted on the Hetzner `bitbaum` box. The app and DB both live on the box; deploys go through `scripts/deploy-hetzner.sh`.
+> This is Loki's current production database setup — Postgres 17 self-hosted on the Hetzner `bitbaum` box. The app and DB both live on the box; deploys go through `scripts/deploy-hetzner.sh`.
 
 ## 0. Prereqs
 
@@ -12,7 +12,7 @@ A ~€4.5/mo Hetzner CX22 (2 vCPU, 4 GB RAM, 40 GB SSD, Helsinki/Falkenstein/Nur
 
 ## 1. Provision the box
 
-Console → New project → "FleetCrown DB" → New server:
+Console → New project → "Loki DB" → New server:
 
 - Location: closest to your users (typically Falkenstein for EU, or Ashburn for US East)
 - Image: Ubuntu 24.04
@@ -20,7 +20,7 @@ Console → New project → "FleetCrown DB" → New server:
 - Networking: default IPv4 + IPv6
 - SSH keys: select your uploaded key
 - Firewall: skip for now (we'll add one in step 4)
-- Name: `fleetcrown-db`
+- Name: `loki-db`
 
 Hit Create. Note the public IPv4.
 
@@ -40,12 +40,12 @@ apt update
 apt install -y postgresql-17 postgresql-client-17 ufw fail2ban
 ```
 
-## 3. Create the FleetCrown role + database
+## 3. Create the Loki role + database
 
 ```bash
 sudo -u postgres psql <<'SQL'
-CREATE ROLE fleetcrown WITH LOGIN PASSWORD 'CHANGE_ME_BEFORE_USE';
-CREATE DATABASE fleetcrown OWNER fleetcrown;
+CREATE ROLE loki WITH LOGIN PASSWORD 'CHANGE_ME_BEFORE_USE';
+CREATE DATABASE loki OWNER loki;
 SQL
 ```
 
@@ -62,9 +62,9 @@ sed -i "s/^#listen_addresses.*/listen_addresses = '*'/" /etc/postgresql/17/main/
 # Require SSL for incoming connections
 sed -i "s/^#ssl = on/ssl = on/" /etc/postgresql/17/main/postgresql.conf
 
-# pg_hba: allow the fleetcrown user from anywhere over SSL with password
-echo "hostssl all fleetcrown 0.0.0.0/0 scram-sha-256" >> /etc/postgresql/17/main/pg_hba.conf
-echo "hostssl all fleetcrown ::/0      scram-sha-256" >> /etc/postgresql/17/main/pg_hba.conf
+# pg_hba: allow the loki user from anywhere over SSL with password
+echo "hostssl all loki 0.0.0.0/0 scram-sha-256" >> /etc/postgresql/17/main/pg_hba.conf
+echo "hostssl all loki ::/0      scram-sha-256" >> /etc/postgresql/17/main/pg_hba.conf
 
 systemctl restart postgresql
 
@@ -81,7 +81,7 @@ ufw --force enable
 ## 5. Verify from your laptop
 
 ```bash
-psql "postgresql://fleetcrown:CHANGE_ME_BEFORE_USE@<server-ip>:5432/fleetcrown?sslmode=require" -c "SELECT version();"
+psql "postgresql://loki:CHANGE_ME_BEFORE_USE@<server-ip>:5432/loki?sslmode=require" -c "SELECT version();"
 ```
 
 Should print Postgres 17.x.
@@ -90,8 +90,8 @@ Should print Postgres 17.x.
 
 ```bash
 # Locally — assumes you produced a dump with scripts/db/dump.sh first
-TARGET_DATABASE_URL="postgresql://fleetcrown:CHANGE_ME_BEFORE_USE@<server-ip>:5432/fleetcrown?sslmode=require" \
-DUMP_FILE="fleetcrown-<timestamp>.sql" \
+TARGET_DATABASE_URL="postgresql://loki:CHANGE_ME_BEFORE_USE@<server-ip>:5432/loki?sslmode=require" \
+DUMP_FILE="loki-<timestamp>.sql" \
 scripts/db/restore-to-target.sh
 ```
 
@@ -104,7 +104,7 @@ env on the box — for the `bitbaum` setup these live in the app's `.env` /
 `~/.db-credentials` (chmod 600), never in the repo:
 
 ```bash
-DATABASE_URL="postgresql://fleetcrown:CHANGE_ME_BEFORE_USE@<server-ip>:5432/fleetcrown?sslmode=require"
+DATABASE_URL="postgresql://loki:CHANGE_ME_BEFORE_USE@<server-ip>:5432/loki?sslmode=require"
 # DATABASE_POOL_URL=... only if PgBouncer (port 6432) is in front
 
 # Then rebuild + restart the app:
@@ -114,10 +114,10 @@ scripts/deploy-hetzner.sh
 ## 8. Smoke test
 
 ```bash
-curl -s https://fleetcrown.orangecat.ch/api/health
+curl -s https://loki.orangecat.ch/api/health
 # expect: {"ok":true,"runtime":false,"version":null}
 
-curl -s -o /dev/null -w "%{http_code}\n" -X POST https://fleetcrown.orangecat.ch/api/control/runtime-state \
+curl -s -o /dev/null -w "%{http_code}\n" -X POST https://loki.orangecat.ch/api/control/runtime-state \
   -H "Authorization: Bearer ock_..."  # an agent token
 # expect: 401 (no body) or 200 (with body)
 ```
@@ -127,7 +127,7 @@ Browse `/control`, `/settings`, `/system` — should load without "Something wen
 ## 9. Daily care
 
 - `apt update && apt upgrade -y` weekly (or set up unattended-upgrades)
-- `pg_dump fleetcrown | gzip > /backups/fleetcrown-$(date +%F).sql.gz` daily via cron
+- `pg_dump loki | gzip > /backups/loki-$(date +%F).sql.gz` daily via cron
 - Snapshot the Hetzner volume via their UI before major schema migrations
 
 ## Decommissioning the old host
@@ -137,5 +137,5 @@ the new box you can tear the old one down. Keep one full `pg_dump` of the old
 source in cold storage for at least 30 days before deleting it — recovering
 from a botched migration is much harder without it.
 
-(FleetCrown's own one-time migration off Neon completed 2026-06-12 and is
+(Loki's own one-time migration off Neon completed 2026-06-12 and is
 already decommissioned; see `docs/infrastructure/hetzner-migration.md`.)

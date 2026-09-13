@@ -33,7 +33,7 @@ function composeInstallPrompt(
   siteNote: string | null,
 ): string {
   return [
-    `Install the FleetCrown feedback widget on ${projectName}'s public site.`,
+    `Install the Loki feedback widget on ${projectName}'s public site.`,
     liveOrigin ? `\nLIVE SITE (Hetzner): ${liveOrigin}\n` : "",
     siteNote ? `\nSITE STATUS: ${siteNote}\n` : "",
     "THE SNIPPET (use exactly this — do not alter the token or attributes):",
@@ -43,10 +43,10 @@ function composeInstallPrompt(
     "",
     "1. If this exact snippet (or an embed referencing the same widget.js + data-fc-project token) is already present anywhere in the codebase, do NOT add a second one — verify it renders and report that in your handoff.",
     "2. Otherwise add it once, in the site's root layout/template so it loads on every public page:",
-    '   - Next.js App Router: next/script with strategy="afterInteractive" and the SAME data-fc-project token. Bake the token as a string literal (or ensure FLEETCROWN_FEEDBACK_TOKEN is present at `next build`). Runtime-only .env after deploy is NOT enough — Next tree-shakes an empty token and the Script never ships.',
+    '   - Next.js App Router: next/script with strategy="afterInteractive" and the SAME data-fc-project token. Bake the token as a string literal (or ensure LOKI_FEEDBACK_TOKEN is present at `next build`). Runtime-only .env after deploy is NOT enough — Next tree-shakes an empty token and the Script never ships.',
     "   - Plain HTML / other frameworks: the raw tag right before </body> in the base template.",
     '3. If the site already has its own floating action button in the bottom-right corner, add data-fc-bottom="88" to the snippet so the widget FAB stacks above it instead of overlapping.',
-    "4. Verify: run the site locally and confirm the page loads without console errors from the embed. (The FAB itself may stay hidden — rendering is server-gated per token — absence of the button is NOT a failure; absence of errors is the check.) If the host has a Content-Security-Policy, add https://fleetcrown.orangecat.ch to script-src AND connect-src — otherwise the browser blocks widget.js even when the tag is in the HTML.",
+    "4. Verify: run the site locally and confirm the page loads without console errors from the embed. (The FAB itself may stay hidden — rendering is server-gated per token — absence of the button is NOT a failure; absence of errors is the check.) If the host has a Content-Security-Policy, add https://loki.orangecat.ch to script-src AND connect-src — otherwise the browser blocks widget.js even when the tag is in the HTML.",
     "5. Ship it the way this repo ships changes (branch + PR if that's the convention). Deploy is on Hetzner — push/merge so the box picks it up. Smallest possible diff — the embed and nothing else.",
     "6. HANDOFF: state the exact file(s) touched and the verification evidence. If you could not push or the live URL is down, say so plainly — do not claim the widget is live.",
   ]
@@ -57,9 +57,9 @@ function composeInstallPrompt(
 function composeUninstallPrompt(projectName: string, token: string | null): string {
   const marker = token ? `data-fc-project="${token}"` : "data-fc-project";
   return [
-    `Remove the FleetCrown feedback widget embed from ${projectName}'s codebase.`,
+    `Remove the Loki feedback widget embed from ${projectName}'s codebase.`,
     "",
-    `1. Find every trace of the embed: search for "widget.js" together with ${marker}, and for any component that injects that script tag (a name like FleetCrownFeedbackEmbed is typical).`,
+    `1. Find every trace of the embed: search for "widget.js" together with ${marker}, and for any component that injects that script tag (a name like LokiFeedbackEmbed is typical).`,
     "2. Remove the snippet/component and its mount point (e.g. the import + JSX usage in the layout). Delete the embed component file if it exists solely for this.",
     "3. Do NOT touch anything else — no unrelated cleanup.",
     "4. Verify: the site builds and runs locally with no dangling imports and no reference to the widget left (grep proves it).",

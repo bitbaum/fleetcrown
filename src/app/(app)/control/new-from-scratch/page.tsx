@@ -1,7 +1,7 @@
 "use client";
 
 // "Start a new project from scratch" without local runtime.
-// Creates a brand new GitHub repo + FleetCrown project record in one shot.
+// Creates a brand new GitHub repo + Loki project record in one shot.
 // After, the user can `git clone` it on any machine — no Fleet Runner needed.
 //
 // Companion to BootstrapModal which does the full local stack scaffold but
@@ -119,10 +119,10 @@ export default function NewFromScratchPage() {
       <PageLayout title="Project ready" back={{ href: "/control", label: "Back to Control" }}>
         <div className="max-w-2xl space-y-6">
           <div className="ui-card-shell space-y-5 p-5 sm:p-6">
-            {/* What FleetCrown already did, automatically */}
+            {/* What Loki already did, automatically */}
             <div>
               <h2 className="ui-page-subtitle">{result.project.name}</h2>
-              <p className="text-sm text-text-muted mt-1">FleetCrown set these up for you:</p>
+              <p className="text-sm text-text-muted mt-1">Loki set these up for you:</p>
               <ul className="mt-3 space-y-1.5">
                 <li className="flex items-start gap-2 text-sm text-text-secondary">
                   <Check className="h-4 w-4 mt-0.5 shrink-0 text-status-positive" />
@@ -157,7 +157,7 @@ export default function NewFromScratchPage() {
                 )}
                 <li className="flex items-start gap-2 text-sm text-text-secondary">
                   <Check className="h-4 w-4 mt-0.5 shrink-0 text-status-positive" />
-                  <span>Registered as a FleetCrown project (it&apos;s in Control now)</span>
+                  <span>Registered as a Loki project (it&apos;s in Control now)</span>
                 </li>
               </ul>
             </div>
@@ -207,7 +207,7 @@ export default function NewFromScratchPage() {
               )}
 
               <div className="ui-card-shell p-3 text-xs text-text-muted">
-                The one thing FleetCrown can&apos;t do for you: run code on your machine.{" "}
+                The one thing Loki can&apos;t do for you: run code on your machine.{" "}
                 <Link href="/download" className="text-accent-text underline">
                   Connect Fleet Runner
                 </Link>{" "}
@@ -301,7 +301,7 @@ export default function NewFromScratchPage() {
   return (
     <PageLayout
       title="Start a new project"
-      subtitle="Name it and say what you want to build. FleetCrown creates the GitHub repo and — unless you choose otherwise below — picks the best stack and sets it up for you. No technical decisions required."
+      subtitle="Name it and say what you want to build. Loki creates the GitHub repo and — unless you choose otherwise below — picks the best stack and sets it up for you. No technical decisions required."
       back={{ href: "/control", label: "Back to Control" }}
     >
       <div className="max-w-2xl space-y-6">

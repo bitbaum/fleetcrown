@@ -1,6 +1,6 @@
 ---
 title: "One Button: Play and Pause the Fleet"
-summary: The end state FleetCrown is built toward — describe what you want, press play, and watch the fleet build it. Pause anytime. No forms, no supervision.
+summary: The end state Loki is built toward — describe what you want, press play, and watch the fleet build it. Pause anytime. No forms, no supervision.
 excerpt: The interface for building everything should look like a media player. Play means the fleet works on your projects. Pause means it stops. Everything else is context.
 publishedAt: 2026-06-12
 tags: vision,autopilot,context,product
@@ -10,7 +10,7 @@ readingTimeMin: 6
 ---
 ## The Interface Is a Media Player
 
-The end state FleetCrown is built toward is embarrassingly simple to describe:
+The end state Loki is built toward is embarrassingly simple to describe:
 you log in, you see your projects, and there is one button that looks like
 play. Press it, and development happens — across every project at once.
 Press it again, and it pauses. That's the whole interface.
@@ -46,7 +46,7 @@ The failure mode of every context system is the form. Fields named
 "mission" and "vision" that nobody fills in, so the system that depends on
 them runs blind.
 
-So FleetCrown doesn't ask. You describe the project in your own words —
+So Loki doesn't ask. You describe the project in your own words —
 typed, pasted, or spoken — and AI sorts it into the profile. Or you point at
 the repo, and the README and CLAUDE.md become the profile. The fields exist
 for the machine; humans speak freely. The same extraction pipeline backfills
@@ -75,5 +75,5 @@ that competes with every other one. A fleet you can play and pause removes
 the supervision tax. You hold the intent; the fleet holds the execution.
 
 Build that well enough for software, and the same control surface extends to
-everything humans build. That is the point of FleetCrown: one person, any
+everything humans build. That is the point of Loki: one person, any
 number of projects, one button.

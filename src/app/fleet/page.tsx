@@ -33,7 +33,7 @@ import {
 export const metadata: Metadata = {
   title: "The fleet",
   description:
-    "Every project the studio runs, and where each one exists: a site, a FleetCrown profile, an OrangeCat profile, a Solon organisation.",
+    "Every project the studio runs, and where each one exists: a site, a Loki profile, an OrangeCat profile, a Solon organisation.",
 };
 export const dynamic = "force-dynamic";
 
@@ -114,8 +114,8 @@ export default async function FleetRegisterPage({ searchParams }: { searchParams
         <h1 className="ui-public-page-title mt-3 sm:mt-4">Every project, and where it lives.</h1>
         <p className="ui-public-lede mt-4 max-w-2xl sm:mt-6">
           This is the studio&rsquo;s whole catalogue — products, client work, demos, and the ones
-          still only named. Most of them run on one box, and FleetCrown is what puts them there.
-          Search it, narrow it, and send anyone the view you end up with.
+          still only named. Most of them run on one box, and Loki is what puts them there. Search
+          it, narrow it, and send anyone the view you end up with.
         </p>
         <div className="ui-public-surface-card-meta">
           <span className="ui-public-surface-card-meta-chip">{s.projects} projects</span>
@@ -379,7 +379,7 @@ function Row({
   canOpenProjects: boolean;
   orangecatLive: ReadonlySet<string>;
 }) {
-  const projectHref = r.fleetcrown && canOpenProjects ? `/projects/${r.fleetcrown.id}` : null;
+  const projectHref = r.loki && canOpenProjects ? `/projects/${r.loki.id}` : null;
   return (
     // id = slug, so any single project is linkable: /fleet#causius.
     <li className="ui-public-fleet-row" id={r.slug}>
@@ -431,12 +431,7 @@ function Row({
         )}
       </div>
       <div className="ui-public-fleet-presence">
-        <Presence
-          label="FleetCrown"
-          href={projectHref}
-          present={!!r.fleetcrown}
-          flatReason="sign in to open"
-        />
+        <Presence label="Loki" href={projectHref} present={!!r.loki} flatReason="sign in to open" />
         <Presence
           label="OrangeCat"
           href={

@@ -14,7 +14,7 @@ import { solonOrgSlugs } from "@/lib/register/solon";
  * here is secret: repo names, public URLs, and whether a public profile exists.
  *
  * Scoped to the studio owner's projects (the same identity every hosted
- * dispatch runs for), not "all users" — FleetCrown is multi-tenant in shape.
+ * dispatch runs for), not "all users" — Loki is multi-tenant in shape.
  */
 export const dynamic = "force-dynamic";
 

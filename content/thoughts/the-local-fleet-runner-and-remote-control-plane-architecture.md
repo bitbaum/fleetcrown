@@ -1,6 +1,6 @@
 ---
 title: The Local Fleet Runner and the Remote Control Plane
-summary: Why the daemon-centric model was a necessary bootstrap, why the best teams are converging on something cleaner, and the right long-term shape for FleetCrown — a local runner that executes and a remote control plane that decides.
+summary: Why the daemon-centric model was a necessary bootstrap, why the best teams are converging on something cleaner, and the right long-term shape for Loki — a local runner that executes and a remote control plane that decides.
 excerpt: Our current daemon-centric model was a necessary bootstrap. The cleaner shape splits the system in two — a local runner that owns execution on the machine, and a remote control plane that owns state, decisions, and visibility.
 publishedAt: 2026-05-17
 tags: fleet-runner,architecture,control-plane,daemon,local-first
@@ -11,7 +11,7 @@ readingTimeMin: 6
 
 # The Local Fleet Runner + Remote Control Plane Architecture
 
-**Why our current daemon-centric model was a necessary bootstrap, why the best teams are converging on something cleaner, and what the right long-term shape actually looks like for FleetCrown.**
+**Why our current daemon-centric model was a necessary bootstrap, why the best teams are converging on something cleaner, and what the right long-term shape actually looks like for Loki.**
 
 *May 2026*
 
@@ -68,11 +68,11 @@ Get this wrong and you accumulate years of painful workarounds. Get it right and
 
 ## Our Current Architecture (The "Dual Runtime + Daemon" Model)
 
-As of May 2026, FleetCrown is a hybrid system. This is documented clearly in `docs/development/cloud-local-workflows.md`.
+As of May 2026, Loki is a hybrid system. This is documented clearly in `docs/development/cloud-local-workflows.md`.
 
 ### The Two Worlds
 
-When someone uses the hosted web portal (`fleetcrown.vercel.app`):
+When someone uses the hosted web portal (`loki.vercel.app`):
 
 - All commands (send prompt, switch agent, pause auto-continue, etc.) go to our backend.
 - Because the backend has no access to the user's machine, it writes the work into a queue (database or events).
@@ -159,7 +159,7 @@ This is not accidental. It is what happens when you have enough real usage to fe
 
 ---
 
-## The Better Model for FleetCrown
+## The Better Model for Loki
 
 If we take the vision seriously — a polished local "fleet runner" (Electron app) that people install, plus a web portal (and eventually mobile) that can control it — then the right architecture looks like this:
 
@@ -302,7 +302,7 @@ But we are past the discovery phase on the core vision.
 
 The teams that are winning right now (Cursor, Anthropic, and the parts of xAI that are moving fastest on agentic coding) are converging on a model where **local execution is first-class and remote control is a clean, intentional layer on top** — not an afterthought mediated by database polling.
 
-If we want FleetCrown to feel like a serious, long-term platform rather than a very advanced internal tool, we should stop treating the current daemon architecture as the foundation and start treating it as the bridge we needed to cross to get here.
+If we want Loki to feel like a serious, long-term platform rather than a very advanced internal tool, we should stop treating the current daemon architecture as the foundation and start treating it as the bridge we needed to cross to get here.
 
 The destination is a local fleet runner that people are happy to install, plus a web (and eventually mobile) experience that can control it without feeling like a second-class citizen.
 
@@ -310,6 +310,6 @@ That is the architecture the best teams are choosing. It is also the one that wi
 
 ---
 
-*This post synthesizes discussions from late May 2026 around FleetCrown's architecture, competitive analysis of Cursor, Claude Code, and Grok Build, and the practical realities of building a local-first + remote-control system that can credibly support a seed-stage SaaS.*
+*This post synthesizes discussions from late May 2026 around Loki's architecture, competitive analysis of Cursor, Claude Code, and Grok Build, and the practical realities of building a local-first + remote-control system that can credibly support a seed-stage SaaS.*
 
 *References: `docs/development/cloud-local-workflows.md`, recent control layer refactors, and public information on the architectures of the leading agentic coding tools as of May 2026.*

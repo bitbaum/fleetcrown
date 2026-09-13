@@ -5,7 +5,7 @@
  *
  * STATE FILE CONTRACT
  * ───────────────────
- * FleetCrown (inject/control routes) and dotfiles (stop.sh, notification.sh)
+ * Loki (inject/control routes) and dotfiles (stop.sh, notification.sh)
  * communicate exclusively through these /tmp sentinel files.
  * The bash scripts duplicate the names as string literals — keep in sync.
  *
@@ -58,8 +58,8 @@ export function sessionFilePath(tab: string, adapter = "claude"): string {
  * Resolve the actual on-disk session file for a tab, tolerating case drift.
  *
  * The control poll reads handoffs by the LIVE tab name (what
- * resolveEffectiveTab returns, e.g. "Fleetcrown"), but agents/tooling write the
- * handoff with their own casing ("FleetCrown.md"). A case-sensitive lookup
+ * resolveEffectiveTab returns, e.g. "Loki"), but agents/tooling write the
+ * handoff with their own casing ("Loki.md"). A case-sensitive lookup
  * misses the file, so parseSession returns null and the live completion signal
  * is lost — which (among other things) leaves orchestration runs unclosed.
  *
@@ -181,8 +181,8 @@ export function parseProjectsConf(): { tab: string; dir: string }[] {
  * ground truth), never from the conf file. Matching is case-insensitive
  * because the owned-PTY workspace id is lower-cased — but session handoff
  * files and /tmp sentinels are written under the live name, so returning conf
- * casing would look up `sessions/Fleetcrown.md` while the agent wrote
- * `sessions/FleetCrown.md` and silently lose the completion signal.
+ * casing would look up `sessions/Loki.md` while the agent wrote
+ * `sessions/Loki.md` and silently lose the completion signal.
  */
 export function resolveEffectiveTab(canonical: string, activeTabs: string[]): string {
   if (!activeTabs.length) return canonical;
@@ -192,7 +192,7 @@ export function resolveEffectiveTab(canonical: string, activeTabs: string[]): st
   const liveMatch = findAlive(canonical);
   if (liveMatch) return liveMatch;
   // Human-created tab names often differ only by punctuation/casing from the
-  // project key: `revampit` vs `revamp-it`, `FleetCrown` vs `Fleetcrown`.
+  // project key: `revampit` vs `revamp-it`, `Loki` vs `Loki`.
   // Treat those as the same tab before falling back to suffix matching.
   const normalizedCanonical = normalizeTabName(canonical);
   const normalizedMatch = activeTabs.find((tab) => normalizeTabName(tab) === normalizedCanonical);
@@ -261,7 +261,7 @@ export function readPrompts(): Record<string, string> {
  * must write when it finishes. Consumed by buildPromptWithSession (local
  * enrichment path) AND assembleInjectPrompt (cloud/queued path). The cloud
  * path once omitted it entirely, so box-executed agents finished real work,
- * searched ~/.fleetcrown/sessions/ for the contract, found nothing, wrote no
+ * searched ~/.loki/sessions/ for the contract, found nothing, wrote no
  * handoff — and their runs sat "waiting" until reaped as timeouts
  * (2026-07-02; laptop agents only ever complied because the founder's
  * personal global CLAUDE.md happens to describe the same contract).

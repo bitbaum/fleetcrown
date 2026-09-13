@@ -1,4 +1,4 @@
-// SSOT for matching a FleetCrown project key to the name a user actually gave
+// SSOT for matching a Loki project key to the name a user actually gave
 // their terminal tab. Project keys are slugs ("revampit", "aoz-housing"); the
 // live tab might be "revamp-it", "Revamp It", "AOZ Housing", etc. Matching used
 // to be exact-case-insensitive in three places (the since-deleted zellij

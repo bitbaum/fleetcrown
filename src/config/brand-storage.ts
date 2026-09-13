@@ -1,7 +1,7 @@
 /**
  * Client + cookie persistence identifiers derived from APP_SLUG.
  *
- * Display name lives in brand.ts; env vars use brand-env.ts (APP_* → FLEETCROWN_* → COCKPIT_*).
+ * Display name lives in brand.ts; env vars use brand-env.ts (APP_* → LOKI_* → COCKPIT_*).
  * This file is the SSOT for browser cookies, localStorage keys, and push tags so a
  * slug rename does not leave "cockpit" scattered in components.
  *

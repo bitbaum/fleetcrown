@@ -25,8 +25,8 @@ const check = (label: string, fn: () => void) => {
 };
 
 const ENVELOPE =
-  "# FleetCrown operator dispatch\n" +
-  "Everything in this message is assembled by FleetCrown's dispatch pipeline.\n\n" +
+  "# Loki operator dispatch\n" +
+  "Everything in this message is assembled by Loki's dispatch pipeline.\n\n" +
   "Project context & goals (what this project is trying to achieve):\n" +
   "Truthseeker verifies claims.\n" +
   "Favor the next step that most advances these goals.\n\n" +

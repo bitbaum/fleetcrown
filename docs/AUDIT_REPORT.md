@@ -61,7 +61,7 @@ lives in git history.
   migrated in BOTH local and box DBs (`UPDATE entities SET external_id='self'`).
 - **URL SSOT**: every product-code literal of the app's own domain now flows through
   `APP_URL` (desktop menus ×8, runner install banner, project-template READMEs ×4,
-  frontier User-Agent, doctor route, `FLEETCROWN_PUBLIC_ORIGIN`); new
+  frontier User-Agent, doctor route, `LOKI_PUBLIC_ORIGIN`); new
   `GITHUB_API_BASE` shared by 7 files; `ORANGECAT_BASE_FALLBACK` (was 4 copies);
   `LOCAL_DEV_URL` (was 3 copies); openclaw gateway fallback imports its constant
   (was silently re-hardcoded).

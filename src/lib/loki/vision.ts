@@ -38,7 +38,7 @@ export async function describeAttachedImages(
     });
 
     // The model is named in the block because this analysis is the ONE part of
-    // a Loki turn that is not grounded in FleetCrown's records — it is a model's
+    // a Loki turn that is not grounded in Loki's records — it is a model's
     // reading of a picture. Saying which model read it keeps that visible rather
     // than letting it blend into the cited answer around it.
     const blocks = images.map((img) => img.name).join(", ");

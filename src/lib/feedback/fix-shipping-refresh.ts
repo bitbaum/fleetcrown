@@ -38,7 +38,7 @@ export type FixRefreshInput = {
   evidence: { kind: string; url: string; title: string } | null | undefined;
   gitUrl: string | null | undefined;
   /**
-   * user_projects.auto_ship — may FleetCrown merge this PR itself?
+   * user_projects.auto_ship — may Loki merge this PR itself?
    *
    * REQUIRED, not optional, and deliberately so. As an optional field it was
    * simply never passed: the switch saved, the row read "PR #1 · open", and
@@ -145,7 +145,7 @@ async function mergePr(ref: PrRef, token: string, title: string): Promise<boolea
         body: JSON.stringify({
           merge_method: "squash",
           commit_title: `${title} (#${ref.number})`,
-          commit_message: "Shipped automatically by FleetCrown: a visitor's feedback, fixed.",
+          commit_message: "Shipped automatically by Loki: a visitor's feedback, fixed.",
         }),
       },
     );
@@ -233,7 +233,7 @@ export async function refreshFixShipping(input: FixRefreshInput): Promise<FixShi
               ? await fetchRunsForSha(ref, pr.merge_commit_sha, picked.token)
               : null;
           fix = deriveShippingFromPr(pr, runs, checkedAt);
-          // Opted in? Then FleetCrown presses merge on THIS pull request —
+          // Opted in? Then Loki presses merge on THIS pull request —
           // the one its own dispatch produced — and nothing else. Deciding is
           // pure (auto-ship.ts); this only supplies GitHub's facts and acts.
           if (input.autoShip === true && fix.state === FIX_SHIP_STATE.PR_OPEN && pr.headSha) {

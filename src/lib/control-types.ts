@@ -123,7 +123,7 @@ export type ProjectState = {
    * Agent turns open RIGHT NOW, as reported by the agents themselves through
    * the Claude UserPromptSubmit → Stop hook pair (table: agent_sessions).
    *
-   * This is the only "working" signal that does not depend on FleetCrown having
+   * This is the only "working" signal that does not depend on Loki having
    * dispatched the run or on the runner recognising a zellij tab name — which
    * is why the fleet card could read "0 working" with eight agents mid-task.
    * `null` means no open turn; it does NOT mean nothing is running, because a

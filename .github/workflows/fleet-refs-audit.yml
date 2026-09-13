@@ -18,7 +18,7 @@
 # nobody watches, so running it here on a timer closed detection and left
 # notification wide open — which is the same "green everywhere and nothing
 # ships" shape the audit exists to catch. The scheduled owner is now
-# fleetcrown-fleet-refs.timer on the Hetzner box, installed by
+# loki-fleet-refs.timer on the Hetzner box, installed by
 # scripts/hetzner/install-fleet-refs-audit.sh: it runs THIS EXACT script every
 # 6h and alerts to Telegram on transition, using the watchdog's existing
 # channel. No secret was added anywhere to do it.

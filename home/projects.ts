@@ -118,7 +118,7 @@ function selfTest() {
     tmpConf,
     [
       "# top-level comment",
-      "FleetCrown|/home/g/dev/fleetcrown",
+      "Loki|/home/g/dev/loki",
       "OrangeCat|/home/g/dev/orangecat|codex", // 3rd field: codex adapter
       "   ", // blank line — should be skipped
       "# inline comment",
@@ -138,11 +138,11 @@ function selfTest() {
       },
       {
         name: "case-insensitive lookup matches mixed-case names",
-        check: () => resolveProjectPath("FLEETCROWN", projects) === "/home/g/dev/fleetcrown",
+        check: () => resolveProjectPath("LOKI", projects) === "/home/g/dev/loki",
       },
       {
         name: "lowercase lookup also works",
-        check: () => resolveProjectPath("fleetcrown", projects) === "/home/g/dev/fleetcrown",
+        check: () => resolveProjectPath("loki", projects) === "/home/g/dev/loki",
       },
       {
         name: "tab name with embedded spaces resolves",
@@ -170,7 +170,7 @@ function selfTest() {
       },
       {
         name: "two-field entries (no adapter declared) have adapter=undefined",
-        check: () => projects.get("fleetcrown")?.adapter === undefined,
+        check: () => projects.get("loki")?.adapter === undefined,
       },
       {
         name: "unknown adapter value silently degrades to undefined (typo defence)",

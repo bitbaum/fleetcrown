@@ -1,5 +1,5 @@
 [Unit]
-Description=FleetCrown Next.js application server
+Description=Loki Next.js application server
 After=network-online.target postgresql.service
 Wants=network-online.target
 # Keep retrying past the default start-limit instead of locking to "failed"
@@ -9,9 +9,9 @@ StartLimitIntervalSec=0
 [Service]
 Type=simple
 User=ubuntu
-WorkingDirectory=/opt/fleetcrown/app
-EnvironmentFile=/opt/fleetcrown/app/.env
-ExecStart=/opt/fleetcrown/app/launch.sh
+WorkingDirectory=/opt/loki/app
+EnvironmentFile=/opt/loki/app/.env
+ExecStart=/opt/loki/app/launch.sh
 Restart=on-failure
 RestartSec=3
 # Bound how long a `systemctl restart` waits for the old node to drain. Next's

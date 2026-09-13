@@ -24,7 +24,7 @@
 #
 # The first version compared each token's `origins` against the register's
 # hosts. It flagged four sites that were completely fine: annushka and
-# orangecat.ch are not register rows but serve working widgets, fleetcrown does
+# orangecat.ch are not register rows but serve working widgets, loki does
 # not put a widget on itself, and one token belonged to an OrangeCat project
 # page that is not a hosted site at all. The register is not the universe of
 # hosts with widgets, so "origins ⊆ register" was never the property.
@@ -43,7 +43,7 @@ set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 MANIFEST="${MANIFEST:-$HERE/../hetzner/apps.conf}"
-FC_BASE="${FC_BASE:-https://fleetcrown.orangecat.ch}"
+FC_BASE="${FC_BASE:-https://loki.orangecat.ch}"
 TIMEOUT="${WIDGET_CHECK_TIMEOUT:-15}"
 
 [ -r "$MANIFEST" ] || { echo "✗ check-widget-origins: no register at $MANIFEST"; exit 1; }

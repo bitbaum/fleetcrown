@@ -32,7 +32,7 @@ The #1 data-loss risk: nightly dumps currently live on the same disk as the DBs.
 - [ ] **Run + verify one restore** (a backup you haven't restored is a hope):
   ```
   /opt/backups/pg-backup.sh
-  createdb restore_test && pg_restore -d restore_test /opt/backups/pg/<latest-fleetcrown>.dump && psql restore_test -c '\dt' && dropdb restore_test
+  createdb restore_test && pg_restore -d restore_test /opt/backups/pg/<latest-loki>.dump && psql restore_test -c '\dt' && dropdb restore_test
   ```
 
 ---
@@ -65,7 +65,7 @@ package → transfer → restore → perms) and stops at the judgment gates belo
 - [ ] **Non-root run user** (blast-radius isolation): `useradd -m -s /bin/bash openclaw` (decide: dedicated `openclaw` user vs existing `g` — dedicated is safer).
 - [ ] Node 22 (the laptop runs v22.22.0 via nvm) + `git sqlite3 ffmpeg`.
 - [ ] Install OpenClaw the same way as the laptop: `npm i -g openclaw@2026.4.23` (confirm it resolves on the box; if it's a private/git install, replicate that source).
-- [ ] **`pg_hba.conf` lockdown** (security): confirm the `openclaw` OS user CANNOT connect to the client databases. With `peer`/`ident` for local socket, the `openclaw` user maps to a Postgres role — ensure that role has **no access** to fleetcrown/orangecat/client DBs (it should own nothing, or not exist). Test: `sudo -u openclaw psql -l` and `sudo -u openclaw psql kivvi -c '\dt'` should be **denied**.
+- [ ] **`pg_hba.conf` lockdown** (security): confirm the `openclaw` OS user CANNOT connect to the client databases. With `peer`/`ident` for local socket, the `openclaw` user maps to a Postgres role — ensure that role has **no access** to loki/orangecat/client DBs (it should own nothing, or not exist). Test: `sudo -u openclaw psql -l` and `sudo -u openclaw psql kivvi -c '\dt'` should be **denied**.
 
 ### 1.2 Package + transfer (laptop)  — `scripts/migrate-openclaw.sh package`
 - Stops the laptop gateway FIRST (avoids two gateways → Telegram/WhatsApp session collision/ban), tars `~/.openclaw` excluding `.venv-stt`/`.venvs`/`browser`/`cache`/`node_modules`/`__pycache__`, rsyncs the archive **and this script** to the box `/tmp/`.

@@ -71,12 +71,12 @@ export default function QuickstartPage() {
 
         <section id="decide" className="mb-10 space-y-4 sm:mb-12">
           <h2 className="ui-public-prose-h2">1. Decide: web or desktop?</h2>
-          <p>FleetCrown has two surfaces that share the same account and the same data:</p>
+          <p>Loki has two surfaces that share the same account and the same data:</p>
           <ul className="list-disc pl-6 space-y-2">
             <li>
               <strong>Web</strong> (
               <Link href="/" className="ui-public-link">
-                fleetcrown.orangecat.ch
+                loki.orangecat.ch
               </Link>
               ) — works in any browser. Best for monitoring fleets, reviewing handoffs, and
               dispatching when you&apos;re not at the agent&apos;s machine.
@@ -104,8 +104,8 @@ export default function QuickstartPage() {
             <Link href="/sign-in" className="ui-public-link">
               /sign-in
             </Link>{" "}
-            and sign in with GitHub. First time only: GitHub asks you to authorize FleetCrown. After
-            that you land on the dashboard.
+            and sign in with GitHub. First time only: GitHub asks you to authorize Loki. After that
+            you land on the dashboard.
           </p>
         </section>
 
@@ -135,8 +135,8 @@ export default function QuickstartPage() {
               info&rdquo; → &ldquo;Run anyway&rdquo;.
             </li>
             <li>
-              Fleet Runner opens to the same FleetCrown interface you saw in the browser. If your
-              browser is signed in, the desktop app is signed in automatically (it shares cookies).
+              Fleet Runner opens to the same Loki interface you saw in the browser. If your browser
+              is signed in, the desktop app is signed in automatically (it shares cookies).
             </li>
             <li>
               Alternatively, from{" "}
@@ -221,7 +221,7 @@ export default function QuickstartPage() {
           <ul className="list-disc pl-6 space-y-2">
             <li>
               <a
-                href="https://github.com/bitbaum/fleetcrown/issues"
+                href="https://github.com/bitbaum/loki/issues"
                 className="ui-public-link"
                 target="_blank"
                 rel="noopener noreferrer"

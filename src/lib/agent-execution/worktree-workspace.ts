@@ -15,7 +15,7 @@
  * can only add isolation, never break a launch.
  *
  *   primary checkout        <dir>                    (human's / never dispatched-into)
- *   worktree per dispatch   ~/.fleetcrown/worktrees/<tab>/<runId>
+ *   worktree per dispatch   ~/.loki/worktrees/<tab>/<runId>
  *   branch per dispatch     fc/<runId>  (from the primary's current HEAD)
  *
  * Untracked essentials (node_modules, .env*) are symlinked from the primary so
@@ -33,11 +33,11 @@ import { execFileSync } from "child_process";
 
 /** Master switch, default OFF for safe rollout (the same flag pattern that
  *  carried owned PTYs from opt-in to the only substrate; worktrees start
- *  opt-in). Set FLEETCROWN_WORKTREE_DISPATCH=true to enable. */
-export const WORKTREE_DISPATCH_ENABLED = process.env.FLEETCROWN_WORKTREE_DISPATCH === "true";
+ *  opt-in). Set LOKI_WORKTREE_DISPATCH=true to enable. */
+export const WORKTREE_DISPATCH_ENABLED = process.env.LOKI_WORKTREE_DISPATCH === "true";
 
 const WORKTREES_ROOT =
-  process.env.FLEETCROWN_WORKTREES_ROOT || path.join(os.homedir(), ".fleetcrown", "worktrees");
+  process.env.LOKI_WORKTREES_ROOT || path.join(os.homedir(), ".loki", "worktrees");
 
 /** Untracked artifacts linked from the primary checkout into a fresh worktree.
  *  Symlinks, not copies: deps stay warm and env stays single-sourced. */
@@ -95,7 +95,7 @@ function linkArtifacts(primaryDir: string, wtDir: string): void {
 
 /**
  * Resolve the effective working dir for a dispatch: an isolated worktree at
- * ~/.fleetcrown/worktrees/<tab>/<runId> on branch fc/<runId>, created from the
+ * ~/.loki/worktrees/<tab>/<runId> on branch fc/<runId>, created from the
  * primary checkout's current HEAD.
  *
  * Graceful degradation: any failure (not a git repo, git missing, disk full)

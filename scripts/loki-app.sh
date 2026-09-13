@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# fleetcrown-app.sh — starts the FleetCrown Next.js production server.
+# loki-app.sh — starts the Loki Next.js production server.
 #
 # Sources .env.local from the project root, then launches the standalone
-# server. Intended to be called by the fleetcrown-app.service systemd unit.
+# server. Intended to be called by the loki-app.service systemd unit.
 #
-# Usage: ./scripts/fleetcrown-app.sh
+# Usage: ./scripts/loki-app.sh
 
 set -euo pipefail
 
@@ -13,8 +13,8 @@ PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 STANDALONE="$PROJECT_DIR/.next/standalone"
 
 if [ ! -f "$STANDALONE/server.js" ]; then
-  echo "[fleetcrown-app] ERROR: standalone build not found at $STANDALONE/server.js" >&2
-  echo "[fleetcrown-app] Run: pnpm run build && pnpm run install-app" >&2
+  echo "[loki-app] ERROR: standalone build not found at $STANDALONE/server.js" >&2
+  echo "[loki-app] Run: pnpm run build && pnpm run install-app" >&2
   exit 1
 fi
 
@@ -32,10 +32,10 @@ export PORT="${PORT:-3000}"
 # Next's standalone server reads it as the bind address. `unset` does NOT
 # make that default to localhost — it makes Next fall back to ITS OWN
 # default, which is 0.0.0.0 (every interface). Found 2026-08-29: this left
-# fleetcrown reachable on all interfaces (mitigated only by ufw's
+# loki reachable on all interfaces (mitigated only by ufw's
 # default-deny, which happened to block the port anyway — not something to
 # rely on). Every other app in the fleet already does this correctly via
-# sync-infra.sh's `HOSTNAME=127.0.0.1`; fleetcrown just never matched its
+# sync-infra.sh's `HOSTNAME=127.0.0.1`; loki just never matched its
 # own convention because it launches itself outside that shared script.
 export HOSTNAME=127.0.0.1
 # NEXTAUTH_URL must match the local URL so auth callbacks work.

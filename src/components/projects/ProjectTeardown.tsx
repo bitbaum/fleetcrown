@@ -60,8 +60,8 @@ export function ProjectTeardown({
         Danger zone
       </div>
       <p className="text-xs text-text-tertiary">
-        This removes the project from FleetCrown — its brief, milestones, feedback and settings —
-        and, if you ask, its repository.
+        This removes the project from Loki — its brief, milestones, feedback and settings — and, if
+        you ask, its repository.
         {hasSite
           ? " It does not take the live site off the internet: use “The live site” above for that."
           : " This project has no deployed site, so there is nothing public to take down."}
@@ -93,13 +93,13 @@ export function ProjectTeardown({
                 <Archive className="h-3.5 w-3.5" aria-hidden="true" /> Archive GitHub repository
               </label>
               {/* No "delete the repository" option, and not an oversight: no
-                  credential FleetCrown holds carries GitHub's delete_repo
+                  credential Loki holds carries GitHub's delete_repo
                   scope, by design, so the app can never destroy code that
                   cannot be recovered. Offering a button that always fails
                   would be worse than sending people where it works. */}
               <p className="text-xs text-text-tertiary">
-                Deleting the repository outright happens on GitHub — FleetCrown can archive it, but
-                never destroy it.{" "}
+                Deleting the repository outright happens on GitHub — Loki can archive it, but never
+                destroy it.{" "}
                 {repoUrl && (
                   <a
                     className="inline-flex items-center gap-1 underline hover:text-text-secondary"

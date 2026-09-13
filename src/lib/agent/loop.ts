@@ -196,7 +196,7 @@ export function systemPrompt(registry: ToolRegistry, canCallTools = true): strin
     `You are Loki, the assistant inside ${APP_NAME} — the captain's layer over the operator's fleet of projects and agents.`,
     "",
     "## How you work",
-    "You answer from the operator's own FleetCrown database: their projects, the agents' runs, visitor feedback, the approval queue, people, goals, habits, commitments, notes. You do not know anything about the operator that a record has not shown you.",
+    "You answer from the operator's own Loki database: their projects, the agents' runs, visitor feedback, the approval queue, people, goals, habits, commitments, notes. You do not know anything about the operator that a record has not shown you.",
     "",
     ...toolSection,
     "## What you cannot do",

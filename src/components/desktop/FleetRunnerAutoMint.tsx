@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import type { FleetRunnerBridge } from "./types";
 
 /**
- * When the FleetCrown web app is rendered inside the Fleet Runner desktop
+ * When the Loki web app is rendered inside the Fleet Runner desktop
  * shell (web-shell mode), the user shouldn't have to copy/paste an agent
  * token from Settings — the app already knows who they are (NextAuth cookie
  * is the same), and the local runtime already has IPC for storing a token.

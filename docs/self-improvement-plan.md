@@ -1,4 +1,4 @@
-# Self-Improvement Plan — Closing FleetCrown's Learning Loop
+# Self-Improvement Plan — Closing Loki's Learning Loop
 
 **Date**: 2026-08-07
 **Status**: Phase 1 MEASURED (see §3a) → Phase 3 **parked**, Phase 0 **deferred**,
@@ -10,15 +10,15 @@ root-cause fix **shipped**
 
 ## 1. The finding this plan answers
 
-FleetCrown improves from what it **reads**, not from what it **does**.
+Loki improves from what it **reads**, not from what it **does**.
 
 `src/lib/frontier/` is the only self-improvement loop in the product, and
 `src/lib/frontier/sources.ts` shows what feeds it: arXiv RSS, Lobsters, Hacker
-News. It reads the literature, drafts proposals for how FleetCrown should
+News. It reads the literature, drafts proposals for how Loki should
 evolve, runs them past a diverse judge panel, and surfaces survivors to a human.
 That loop is well-built and stays.
 
-But FleetCrown's own operational data — the one dataset nobody else has — feeds
+But Loki's own operational data — the one dataset nobody else has — feeds
 nothing. Every consumer of `prompt_history` (`today.ts`, `activity.ts`,
 `digests.ts`, `queries/users.ts`, `project-merge.ts`, `api/me/export`) is a
 **display** surface. There are zero optimizers.
@@ -113,7 +113,7 @@ agent that proposes the edit.*
 
 ## 3. Two corpus caveats that gate everything
 
-Both are already-known FleetCrown findings, and both invalidate naive use of the
+Both are already-known Loki findings, and both invalidate naive use of the
 run history as training data.
 
 1. **The evidence pipe was severed.** For 56 runs, `tsc`/`lint`/`commit` were
@@ -325,7 +325,7 @@ do prematurely.
 
 ## 5. What we are deliberately not doing
 
-- **No weight updates.** FleetCrown does not own weights; vendor CLIs do. The
+- **No weight updates.** Loki does not own weights; vendor CLIs do. The
   hybrid harness+weights work shows the two contribute differently — harness
   updates improve the engineering around the model, weight updates add
   task-specific intuition the scaffold never finds. We can only have the first,
@@ -337,9 +337,9 @@ do prematurely.
   planned expiry.
 - **No new graph, no second SSOT.** Learnings attach to existing entities.
 
-## 6. Where FleetCrown could actually lead
+## 6. Where Loki could actually lead
 
-A self-refining harness sees one session's trajectory. FleetCrown sees every run,
+A self-refining harness sees one session's trajectory. Loki sees every run,
 every project, every agent, with graded outcomes, cost, and a cross-lineage
 verdict. **Cross-project prompt optimization over a real multi-tenant rollout
 corpus is something no single-session harness vendor can do**, because they never

@@ -3,12 +3,12 @@
 #
 # The display brand name lives in ONE place: src/config/brand.ts (APP_NAME),
 # mirrored for shell in scripts/_brand.sh. A rename should be those edits only.
-# This script lists any hardcoded "FleetCrown" in rendered code so a rename is
+# This script lists any hardcoded "Loki" in rendered code so a rename is
 # one-place-verifiable and new hardcodes get caught.
 #
 # Scope: src/ TS/TSX, excluding the SSOT itself and comment lines. It deliberately
 # does NOT flag:
-#   - the lowercase `fleetcrown` SLUG (DB / systemd unit / repo / domain) — that's
+#   - the lowercase `loki` SLUG (DB / systemd unit / repo / domain) — that's
 #     infra identity that intentionally survives a display rebrand (see _brand.sh).
 #   - editorial prose in content/ (dated Thoughts essays, docs) — not auto-renamed.
 #
@@ -17,11 +17,11 @@
 set -u
 cd "$(dirname "$0")/.." || exit 2
 
-# Rendered "FleetCrown": in JSX text or string/template literals, NOT in comments.
-hits=$(grep -rnE "FleetCrown" src/ --include="*.ts" --include="*.tsx" 2>/dev/null \
+# Rendered "Loki": in JSX text or string/template literals, NOT in comments.
+hits=$(grep -rnE "Loki" src/ --include="*.ts" --include="*.tsx" 2>/dev/null \
   | grep -v "src/config/brand.ts" \
   | grep -vE ":[[:space:]]*(//|\*|/\*)" \
-  | grep -E ">[^<]*FleetCrown|\"[^\"]*FleetCrown|\`[^\`]*FleetCrown|'[^']*FleetCrown")
+  | grep -E ">[^<]*Loki|\"[^\"]*Loki|\`[^\`]*Loki|'[^']*Loki")
 
 count=$(printf "%s" "$hits" | grep -c . )
 if [ "$count" -eq 0 ]; then
@@ -33,5 +33,5 @@ echo "⚠ $count display-name string(s) bypass APP_NAME (should use {APP_NAME} /
 echo "$hits"
 echo
 echo "Fix: import { APP_NAME } from \"@/config/brand\" and interpolate. Comments + the"
-echo "lowercase 'fleetcrown' slug (DB/unit/repo/domain) are intentionally exempt."
+echo "lowercase 'loki' slug (DB/unit/repo/domain) are intentionally exempt."
 [ "${1:-}" = "--strict" ] && exit 1 || exit 0

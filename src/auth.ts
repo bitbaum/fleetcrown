@@ -269,7 +269,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               },
             },
             // Actor `sub`, not email, is the cross-product identity boundary.
-            // Do not silently attach an OrangeCat actor to an existing FleetCrown
+            // Do not silently attach an OrangeCat actor to an existing Loki
             // account merely because the email strings happen to match.
           },
         ]

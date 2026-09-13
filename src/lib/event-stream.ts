@@ -1,6 +1,6 @@
-// Client-side helpers for connecting to the FleetCrown event bridge.
+// Client-side helpers for connecting to the Loki event bridge.
 //
-// The bridge URL is configured via NEXT_PUBLIC_FLEETCROWN_BRIDGE_URL. When
+// The bridge URL is configured via NEXT_PUBLIC_LOKI_BRIDGE_URL. When
 // it's set, we open one EventSource per browser session and route incoming
 // change events through a typed dispatch. When it's NOT set (local dev,
 // preview deploys without the bridge), all the SSE-aware code degrades to
@@ -148,7 +148,7 @@ export function useEventStream(opts: {
 let cachedUrl: string | undefined;
 function bridgeUrl(): string {
   if (cachedUrl !== undefined) return cachedUrl;
-  const override = (process.env.NEXT_PUBLIC_FLEETCROWN_BRIDGE_URL ?? "").trim();
+  const override = (process.env.NEXT_PUBLIC_LOKI_BRIDGE_URL ?? "").trim();
   cachedUrl = override.length > 0 ? override : BRIDGE_URL;
   return cachedUrl;
 }

@@ -107,7 +107,7 @@ const TASK = "Work on the project at /srv/example and open a PR.";
 function dispatchAround(heading: string): string {
   const isExitContract = /^##\s*Exit contract\b/i.test(heading);
   return [
-    "# FleetCrown operator dispatch",
+    "# Loki operator dispatch",
     "You are operating a project on behalf of the operator.",
     "",
     ...(isExitContract

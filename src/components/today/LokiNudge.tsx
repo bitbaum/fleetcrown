@@ -5,7 +5,7 @@ import { Sparkles } from "lucide-react";
 import { postJson } from "@/lib/api/fetch";
 import { HOUR_MS } from "@/lib/constants/time";
 
-const CACHE_PREFIX = "fleetcrown-loki-nudge-v1:";
+const CACHE_PREFIX = "loki-loki-nudge-v1:";
 const CACHE_TTL_MS = HOUR_MS;
 
 type CacheEntry = { composed: string; expiresAt: number };

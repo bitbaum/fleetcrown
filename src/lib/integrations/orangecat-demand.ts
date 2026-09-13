@@ -2,7 +2,7 @@
  * Live open demand from OrangeCat's economy — the FIND → BUILD wire.
  *
  * OrangeCat is where needs are posted (public wishlists) and searched for; this
- * pulls that demand so FleetCrown's Loki can suggest building for real, current
+ * pulls that demand so Loki can suggest building for real, current
  * need instead of guesses. Build it → publish to OrangeCat (existing seam) →
  * the two-sided matcher introduces it to whoever wished for it → settled. That
  * is the flywheel closing across the two products.
@@ -68,7 +68,7 @@ export interface EconomyMatch {
 
 /**
  * Query-scoped semantic search over OrangeCat's economy. OrangeCat embeds the
- * text with its own model server-side (GET /api/v1/search), so FleetCrown never
+ * text with its own model server-side (GET /api/v1/search), so Loki never
  * needs a shared vector space — it just sends the operator's words and gets
  * meaning-ranked matches back. Best-effort; "[]" on any failure.
  */

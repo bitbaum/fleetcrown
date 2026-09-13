@@ -13,7 +13,7 @@ convert the vision's **load-bearing claims from hope into fact** — so every we
 after compounds on proof instead of belief. That is the highest-leverage thing a
 week can buy at this stage.
 
-**The 10-year vision, one line:** FleetCrown is the governance layer for a world
+**The 10-year vision, one line:** Loki is the governance layer for a world
 where humans command fleets of minds — the captain's bridge (trust,
 cross-model verification, governance of autonomy) with work plugged into an
 economy the builder owns. As models commoditize, the bridge is the scarce,
@@ -51,14 +51,14 @@ context, PR #62). Prove it as a human:
 ### Day 2 (Tue) — Witness the OrangeCat bridge (master-plan Phase 0.1–0.3) ✅ DONE 2026-07-13
 The code shipped weeks ago; nobody had watched it work in prod. Now witnessed:
 - ✅ Signed in with OrangeCat (OIDC); `orangecat_actor_id` c9e52937-… + access/refresh tokens persisted. (Caught + noted: state-cookie expiry if the consent screen sits >15 min.)
-- ✅ Published the FleetCrown project to OC → `orangecat_project_id` 856ef4ba-…; live at orangecat.ch/projects/856ef4ba-…
-- ✅ Promoted a real devlog entry → rendered LIVE on mao's OrangeCat profile **Timeline** ("Project Updated · via FleetCrown").
+- ✅ Published the Loki project to OC → `orangecat_project_id` 856ef4ba-…; live at orangecat.ch/projects/856ef4ba-…
+- ✅ Promoted a real devlog entry → rendered LIVE on mao's OrangeCat profile **Timeline** ("Project Updated · via Loki").
 - **Bug found + fixed to get here:** the loop "was never verified end-to-end" because OrangeCat's v1 entity-create inserted via a cookie-session Supabase client (anon under bearer auth) → RLS 42501. Fixed by applying OC's own service-role pattern (OC commit `d818ceb6`), deployed. See [[bug_oc_bridge_rls_entity_create]].
-- **Proof:** a real FleetCrown build event, live on orangecat.ch, tagged "via FleetCrown." *"The integration is the product"* is now a **fact**, not a claim.
+- **Proof:** a real Loki build event, live on orangecat.ch, tagged "via Loki." *"The integration is the product"* is now a **fact**, not a claim.
 
 ### Day 3 (Wed) — Make "best-effort" stop meaning "silently lossy" (Phase 0.4) ✅ DONE 2026-07-13
 Surprise: **both** pieces were already built (FC commit `d9b784d` "feat(bridge): promote backfill cron + settings Connect OrangeCat") — the Day-2 map was wrong. So Day 3 became a verify-day, and both are now proven working in prod:
-- ✅ **Backfill/reconcile cron** — `fc-cron@orangecat-promote-backfill.timer` active (daily 09:00 UTC, CRON_SECRET set, in install-hetzner-crons.sh). PROVEN: Day 2's publish dropped its `project_published` fire-and-forget promote (only the awaited devlog landed). Ran the backfill → `posted: 2, failed: 0` → the dropped **Project Published** anchor ("Life OS + AI agent fleet command · via FleetCrown") + a devlog entry appeared on the wall. "Best-effort" no longer means "silently lossy."
+- ✅ **Backfill/reconcile cron** — `fc-cron@orangecat-promote-backfill.timer` active (daily 09:00 UTC, CRON_SECRET set, in install-hetzner-crons.sh). PROVEN: Day 2's publish dropped its `project_published` fire-and-forget promote (only the awaited devlog landed). Ran the backfill → `posted: 2, failed: 0` → the dropped **Project Published** anchor ("Life OS + AI agent fleet command · via Loki") + a devlog entry appeared on the wall. "Best-effort" no longer means "silently lossy."
 - ✅ **Settings → Connect OrangeCat** — `AccountSettings.ConnectedAccountsSection` (`showOrangeCatConnect` → `signIn("orangecat", {callbackUrl:"/settings#account"})` + disconnect guard). VERIFIED: Settings → Account shows **OrangeCat · Connected** alongside Google + GitHub; connected-accounts API + `[provider]` disconnect route both live.
 - **Proof:** watched the reconcile cron heal a real dropped promote on orangecat.ch. The bridge is durable, not hopeful.
 - **Known residual fragility (not blocking):** the publish-time `project_published` promote is `void`-fire-and-forget after the response, so it drops on every publish and relies on the daily cron to heal. Awaiting it (or a proper queue) would make it lossless at the source. Also flagged from Day 2: FC publishes the project as OC-**Draft** (OC `createProject` hardcodes DRAFT, ignoring FC's `status:"active"`), so the public project page's "Recent Activity" (reads `project_updates`, active/completed only) shows nothing — the wall lives on the profile Timeline. Both are real "build-in-public" coherence gaps for a later day.
@@ -72,7 +72,7 @@ The DoD stop-gate already had a different-lineage judge (`gpt-oss-120b`) grading
 
 ### Day 5 (Fri) — Narrate it: the bridge essay (Phase 4.1) ✅ DONE 2026-07-13
 - ✅ Wrote + published **"Shipped Is Not Witnessed"** (`content/thoughts/shipped-is-not-witnessed.md`) — reportage of Days 2–4: the login that failed on an expired state cookie, the 403 that was an RLS/anon-write bug not a permissions problem, the fire-and-forget promote that dropped + the cron that healed it, the cross-model judge catching a Claude handoff with no deploy evidence. House voice, every detail verified (no fabricated timelines/metrics), reviewed + approved before publish.
-- ✅ Live at fleetcrown.orangecat.ch/thoughts/shipped-is-not-witnessed (200, renders correctly). Build events already on the OC wall from Days 2–3 as the living proof the essay points to.
+- ✅ Live at loki.orangecat.ch/thoughts/shipped-is-not-witnessed (200, renders correctly). Build events already on the OC wall from Days 2–3 as the living proof the essay points to.
 - **Proof:** a public essay that is reportage, not a promise — thesis: *shipping is a claim, witnessing is the fact.*
 
 ### Day 6 (Sat) — One stranger's on-ramp (Phase 1.1, sliced) ◑ PARTIAL 2026-07-13
@@ -80,7 +80,7 @@ Audited the whole signup → project → runner → first-dispatch path as code 
 - ✅ **Fixed 2 friction points** (FC commit `d068dc7`): onboarding finish routed to `/today` while its button said "Go to Control" → now lands on `/control` (the dispatch surface a new builder wants); and a GitHub-repo-picked project captured `gitUrl` but never `dirPath` (local-path field only showed in manual entry) → a local runner had nowhere to dispatch. Now the local-path field shows for picked repos too.
 - ✅ **Verified honest/correct (not bugs):** execution gating (stranger can't use the shared cloud builder — right, no per-tenant sandbox — but their own Fleet Runner dispatches on `local` with a clear message); `/pricing` CTAs gracefully route away when Stripe is dark (no dead-end); `/download` marks mac/win "coming soon" (no 404 link).
 - 🔴 **Founder-only blockers (I can't do these):**
-  - **Stripe is dark — and blocked on incorporation, not config** (confirmed 2026-07-13). Stripe *and* Payrexx both issue a merchant account to a registered legal entity; the bitbaum AG holding isn't registered yet, so neither can be connected regardless of keys. **Reframe:** don't wait on incorporation for revenue — lead with the OrangeCat/Bitcoin rail (a BTC/Lightning wallet on FleetCrown's own OrangeCat project already accepts funding; FleetCrown raised on OC this way). That's the on-thesis path ("settle over OC rails, not Stripe") and needs no merchant account. Stripe becomes the fiat on-ramp *after* incorporation. (Legal note: incorporation still governs WHO may receive business revenue on any rail — a question for a Swiss advisor, not this doc.)
+  - **Stripe is dark — and blocked on incorporation, not config** (confirmed 2026-07-13). Stripe *and* Payrexx both issue a merchant account to a registered legal entity; the bitbaum AG holding isn't registered yet, so neither can be connected regardless of keys. **Reframe:** don't wait on incorporation for revenue — lead with the OrangeCat/Bitcoin rail (a BTC/Lightning wallet on Loki's own OrangeCat project already accepts funding; Loki raised on OC this way). That's the on-thesis path ("settle over OC rails, not Stripe") and needs no merchant account. Stripe becomes the fiat on-ramp *after* incorporation. (Legal note: incorporation still governs WHO may receive business revenue on any rail — a question for a Swiss advisor, not this doc.)
   - **mac/win desktop builds don't exist** (only Linux). Needs a CI release matrix (electron-builder `--mac`/`--win`) — most strangers are on Mac, so this gates the majority. Can't build from the Linux box.
 - **Proof status:** the clean-room signup→first-dispatch recording needs a real fresh account (account creation is yours). The BYO-runner path works today for a Linux stranger; the two fixes remove the sharpest onboarding friction on it.
 

@@ -73,7 +73,7 @@ const good = { slug: "causius", title: "Causius", kind: "product", status: "vali
 }
 
 {
-  for (const slug of ["www", "api", "admin", "orangecat", "fleetcrown"]) {
+  for (const slug of ["www", "api", "admin", "orangecat", "loki"]) {
     const r = validateNewSiteRequest({ ...good, slug });
     ok(!r.ok, `refuses reserved slug: ${slug}`);
   }
@@ -134,13 +134,10 @@ const good = { slug: "causius", title: "Causius", kind: "product", status: "vali
 
 // --------------------------------------------------------------- the switch
 {
-  ok(
-    siteFactoryEnabled({ FLEETCROWN_SITE_FACTORY: "1" } as NodeJS.ProcessEnv),
-    "enabled when set to 1",
-  );
+  ok(siteFactoryEnabled({ LOKI_SITE_FACTORY: "1" } as NodeJS.ProcessEnv), "enabled when set to 1");
   ok(!siteFactoryEnabled({} as NodeJS.ProcessEnv), "OFF by default — merging must not arm it");
   ok(
-    !siteFactoryEnabled({ FLEETCROWN_SITE_FACTORY: "true" } as NodeJS.ProcessEnv),
+    !siteFactoryEnabled({ LOKI_SITE_FACTORY: "true" } as NodeJS.ProcessEnv),
     "only '1' arms it — no accidental truthiness",
   );
 }

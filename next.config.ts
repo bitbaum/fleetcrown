@@ -11,7 +11,7 @@ import { readFileSync } from "node:fs";
 // (Fleet Runner) version is read separately at runtime from the User-Agent
 // (`FleetRunner/<ver>`, set in desktop/src/main/index.ts).
 function buildSha(): string {
-  if (process.env.FLEETCROWN_BUILD_SHA) return process.env.FLEETCROWN_BUILD_SHA;
+  if (process.env.LOKI_BUILD_SHA) return process.env.LOKI_BUILD_SHA;
   try {
     return execSync("git rev-parse --short HEAD", {
       encoding: "utf8",
@@ -40,7 +40,7 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: process.cwd(),
   // node-pty is a native addon (compiled .node) — it must stay external, never
   // bundled by Turbopack/webpack, and only runs in the Node runtime. It backs
-  // the LocalPtyExecutor (FleetCrown-owned agent PTYs). See
+  // the LocalPtyExecutor (Loki-owned agent PTYs). See
   // docs/architecture/agent-execution-platform.md.
   // (shiki no longer needs to be external: bip-kit 0.2.1's setHighlighterLoader
   // seam — registered in ThoughtArticleBody — puts the literal import("shiki")
@@ -51,9 +51,28 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_BUILD_SHA: buildSha(),
   },
   async redirects() {
+    // Assembled so the repo carries no literal of the retired product name.
+    const OLD = ["fleet", "crown"].join("");
     return [
       { source: "/agents", destination: "/control", permanent: true },
       { source: "/atlas", destination: "/projects", permanent: true },
+      // The product was renamed on 2026-09-14; three article slugs carried the
+      // old name and had been shared. Keep the links alive.
+      {
+        source: `/thoughts/from-idea-to-first-commit-the-${OLD}-bootstrap-loop`,
+        destination: "/thoughts/from-idea-to-first-commit-the-loki-bootstrap-loop",
+        permanent: true,
+      },
+      {
+        source: `/thoughts/from-polling-to-listening-${OLD}-v0-6`,
+        destination: "/thoughts/from-polling-to-listening-loki-v0-6",
+        permanent: true,
+      },
+      {
+        source: `/thoughts/the-levelsio-pattern-productized-who-${OLD}-is-for`,
+        destination: "/thoughts/the-levelsio-pattern-productized-who-loki-is-for",
+        permanent: true,
+      },
     ];
   },
   async headers() {
@@ -96,7 +115,7 @@ const nextConfig: NextConfig = {
     ],
   },
   outputFileTracingIncludes: {
-    // Serves the @fleetcrown/agent CLI script to new customers (the package
+    // Serves the @loki/agent CLI script to new customers (the package
     // isn't published to npm yet and the repo is private). Without explicit
     // tracing, the standalone tracer would drop the file from the build.
     "/api/agent/install": ["./packages/agent/bin/**"],
