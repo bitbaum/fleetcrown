@@ -26,6 +26,9 @@ const SOURCE_FILTERS = [
   { key: FEEDBACK_SOURCE.SYNTHESIZER, label: "Briefs" },
 ] as const;
 
+/** Shipped rows shown before "Show all" — enough to see the loop closing. */
+const SHIPPED_PREVIEW = 5;
+
 /**
  * The cross-project feedback inbox behind /feedback. Separation of concerns:
  * Control stays operations (what is running), Projects stays the catalog —
@@ -58,7 +61,8 @@ export function FeedbackInbox() {
   );
   const [sourceFilter, setSourceFilter] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
-  const { busyId, error, dispatchFix, setStatus, feature } = useFeedbackActions(refetch);
+  const [showAllShipped, setShowAllShipped] = useState(false);
+  const { busyId, error, errorId, dispatchFix, setStatus, feature } = useFeedbackActions(refetch);
 
   const all = useMemo(() => data?.feedback ?? [], [data]);
   const metrics = data?.metrics ?? null;
@@ -168,12 +172,12 @@ export function FeedbackInbox() {
   return (
     <div className="space-y-6">
       {(showProjectChips || showSourceChips || projectFilter) && (
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="ui-filter-chip-row ui-scroll-fade-right items-center">
           {projectFilter && !showProjectChips ? (
             <button
               type="button"
               onClick={() => setProjectFilter(null)}
-              className="ui-projects-filter-chip ui-projects-filter-chip-active"
+              className="ui-projects-filter-chip ui-projects-filter-chip-active shrink-0"
               title="Show every project"
             >
               {projectFilter}
@@ -186,7 +190,7 @@ export function FeedbackInbox() {
                 type="button"
                 onClick={() => setProjectFilter(null)}
                 className={cn(
-                  "ui-projects-filter-chip",
+                  "ui-projects-filter-chip shrink-0",
                   projectFilter === null && "ui-projects-filter-chip-active",
                 )}
               >
@@ -198,7 +202,7 @@ export function FeedbackInbox() {
                   type="button"
                   onClick={() => setProjectFilter((v) => (v === p.name ? null : p.name))}
                   className={cn(
-                    "ui-projects-filter-chip",
+                    "ui-projects-filter-chip shrink-0",
                     projectFilter === p.name && "ui-projects-filter-chip-active",
                   )}
                 >
@@ -209,7 +213,7 @@ export function FeedbackInbox() {
             </>
           )}
           {showProjectChips && showSourceChips && (
-            <span className="mx-1 hidden h-4 w-px bg-border-subtle sm:block" aria-hidden="true" />
+            <span className="mx-1 h-4 w-px shrink-0 bg-border-subtle" aria-hidden="true" />
           )}
           {showSourceChips &&
             SOURCE_FILTERS.filter((s) => s.key === null || sourcesPresent.has(s.key)).map((s) => (
@@ -218,7 +222,7 @@ export function FeedbackInbox() {
                 type="button"
                 onClick={() => setSourceFilter(s.key)}
                 className={cn(
-                  "ui-projects-filter-chip",
+                  "ui-projects-filter-chip shrink-0",
                   sourceFilter === s.key && "ui-projects-filter-chip-active",
                 )}
               >
@@ -228,9 +232,64 @@ export function FeedbackInbox() {
         </div>
       )}
 
-      {error && <p className="ui-error">{error}</p>}
-      {/* The loop in three numbers. Fleet-wide, so it is hidden under a
-          project filter rather than quietly answering a different question. */}
+      {/* A failure that is not about one row (rows show their own, see
+          errorId) still needs somewhere to land. */}
+      {error && !errorId && <p className="ui-error">{error}</p>}
+
+      {/* One sentence when the answer is "nothing" — three headed sections each
+          saying it was the noise. Sections render only when they hold rows. */}
+      {nothingWaiting && (
+        <p className="text-sm text-text-tertiary">
+          Nothing waiting on you
+          {projectFilter ? ` for ${projectFilter}` : ""}.
+        </p>
+      )}
+
+      {needsYou.length > 0 && (
+        <InboxSection title="Needs you" count={needsYou.length}>
+          {needsYou.map((f) => (
+            <Row
+              key={f.id}
+              f={f}
+              busyId={busyId}
+              errorId={errorId}
+              error={error}
+              dispatchFix={dispatchFix}
+              setStatus={setStatus}
+              feature={feature}
+              hideProject={hideProject}
+            />
+          ))}
+        </InboxSection>
+      )}
+
+      {underWay.length > 0 && (
+        <InboxSection
+          title="Under way"
+          count={underWay.length}
+          aside="moving on its own — nothing to do"
+        >
+          {underWay.map((f) => (
+            <Row
+              key={f.id}
+              f={f}
+              busyId={busyId}
+              errorId={errorId}
+              error={error}
+              dispatchFix={dispatchFix}
+              setStatus={setStatus}
+              feature={feature}
+              hideProject={hideProject}
+            />
+          ))}
+        </InboxSection>
+      )}
+
+      {/* The loop in three numbers, placed AFTER the rows that need a person.
+          On a phone the three cards used to be the first thing on the page,
+          above the one row waiting on the reader — a scoreboard before the
+          work. Fleet-wide, so it is hidden under a project filter rather than
+          quietly answering a different question. */}
       {!projectFilter && metrics && metrics.total > 0 && (
         <StatRow>
           <StatCard
@@ -263,51 +322,6 @@ export function FeedbackInbox() {
         </StatRow>
       )}
 
-      {/* One sentence when the answer is "nothing" — three headed sections each
-          saying it was the noise. Sections render only when they hold rows. */}
-      {nothingWaiting && (
-        <p className="text-sm text-text-tertiary">
-          Nothing waiting on you
-          {projectFilter ? ` for ${projectFilter}` : ""}.
-        </p>
-      )}
-
-      {needsYou.length > 0 && (
-        <InboxSection title="Needs you" count={needsYou.length}>
-          {needsYou.map((f) => (
-            <Row
-              key={f.id}
-              f={f}
-              busyId={busyId}
-              dispatchFix={dispatchFix}
-              setStatus={setStatus}
-              feature={feature}
-              hideProject={hideProject}
-            />
-          ))}
-        </InboxSection>
-      )}
-
-      {underWay.length > 0 && (
-        <InboxSection
-          title="Under way"
-          count={underWay.length}
-          aside="moving on its own — nothing to do"
-        >
-          {underWay.map((f) => (
-            <Row
-              key={f.id}
-              f={f}
-              busyId={busyId}
-              dispatchFix={dispatchFix}
-              setStatus={setStatus}
-              feature={feature}
-              hideProject={hideProject}
-            />
-          ))}
-        </InboxSection>
-      )}
-
       {shipped.length > 0 && (
         <InboxSection
           title="Shipped"
@@ -321,17 +335,31 @@ export function FeedbackInbox() {
               : undefined
           }
         >
-          {shipped.map((f) => (
+          {(showAllShipped ? shipped : shipped.slice(0, SHIPPED_PREVIEW)).map((f) => (
             <Row
               key={f.id}
               f={f}
               busyId={busyId}
+              errorId={errorId}
+              error={error}
               dispatchFix={dispatchFix}
               setStatus={setStatus}
               feature={feature}
               hideProject={hideProject}
             />
           ))}
+          {/* Shipped is the record, not the work: the latest few say the loop
+              closes, and the rest is there for whoever comes looking. */}
+          {shipped.length > SHIPPED_PREVIEW && (
+            <button
+              type="button"
+              onClick={() => setShowAllShipped((v) => !v)}
+              className="ui-inbox-more"
+              aria-expanded={showAllShipped}
+            >
+              {showAllShipped ? "Show fewer" : `Show all ${shipped.length} shipped`}
+            </button>
+          )}
         </InboxSection>
       )}
 
@@ -346,12 +374,14 @@ export function FeedbackInbox() {
             {showArchived ? "Hide archived" : `Show archived (${archived.length})`}
           </button>
           {showArchived && (
-            <div className="mt-2 divide-y divide-border-subtle opacity-70">
+            <div className="mt-2 space-y-2">
               {archived.map((f) => (
                 <Row
                   key={f.id}
                   f={f}
                   busyId={busyId}
+                  errorId={errorId}
+                  error={error}
                   dispatchFix={dispatchFix}
                   setStatus={setStatus}
                   feature={feature}
@@ -380,12 +410,12 @@ function InboxSection({
 }) {
   return (
     <section aria-label={title}>
-      <h2 className="mb-1 flex items-baseline gap-2 text-sm font-semibold text-text-primary">
+      <h2 className="mb-2 flex items-baseline gap-2 text-sm font-semibold text-text-primary">
         {title}
         <span className="ui-badge">{count}</span>
         {aside && <span className="ml-auto text-xs font-normal text-text-muted">{aside}</span>}
       </h2>
-      <div className="divide-y divide-border-subtle">{children}</div>
+      <div className="space-y-2">{children}</div>
     </section>
   );
 }
@@ -393,6 +423,8 @@ function InboxSection({
 function Row({
   f,
   busyId,
+  errorId,
+  error,
   dispatchFix,
   setStatus,
   feature,
@@ -400,6 +432,8 @@ function Row({
 }: {
   f: InboxItem;
   busyId: string | null;
+  errorId: string | null;
+  error: string | null;
   dispatchFix: (id: string, note?: string) => void;
   setStatus: (id: string, status: FeedbackStatus) => void;
   feature: (id: string, featured: boolean) => void;
@@ -412,6 +446,7 @@ function Row({
       projectName={f.projectName}
       project={hideProject ? null : { id: f.projectId, name: f.projectName }}
       busy={busyId === f.id}
+      error={errorId === f.id ? error : null}
       onDispatch={(note) => dispatchFix(f.id, note)}
       onResolve={() => setStatus(f.id, FEEDBACK_STATUS.RESOLVED)}
       onArchive={() => setStatus(f.id, FEEDBACK_STATUS.ARCHIVED)}

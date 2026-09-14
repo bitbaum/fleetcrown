@@ -69,7 +69,7 @@ export function ProjectFeedbackSection({
   );
   const [setupOpen, setSetupOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
-  const { busyId, error, setError, dispatchFix, setStatus, feature } = useFeedbackActions(
+  const { busyId, error, errorId, setError, dispatchFix, setStatus, feature } = useFeedbackActions(
     feedbackFetch.refetch,
   );
   const [synthesizing, setSynthesizing] = useState(false);
@@ -294,7 +294,7 @@ export function ProjectFeedbackSection({
         />
       )}
 
-      {error && <p className="mb-3 ui-error">{error}</p>}
+      {error && !errorId && <p className="mb-3 ui-error">{error}</p>}
 
       {feedbackFetch.loading ? (
         <div className="flex items-center gap-2 py-6 text-sm text-text-tertiary">
@@ -307,13 +307,14 @@ export function ProjectFeedbackSection({
           </p>
         )
       ) : (
-        <div className="divide-y divide-border-subtle">
+        <div className="space-y-2">
           {items.map((f) => (
             <FeedbackItemRow
               key={f.id}
               feedback={f}
               projectName={projectName}
               busy={busyId === f.id}
+              error={errorId === f.id ? error : null}
               onDispatch={(note) => dispatchFix(f.id, note)}
               onResolve={() => setStatus(f.id, FEEDBACK_STATUS.RESOLVED)}
               onArchive={() => setStatus(f.id, FEEDBACK_STATUS.ARCHIVED)}

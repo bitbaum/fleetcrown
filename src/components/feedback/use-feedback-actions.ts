@@ -12,16 +12,23 @@ import { FEEDBACK_STATUS, type FeedbackStatus } from "@/lib/constants/statuses";
 export function useFeedbackActions(refetch: () => void) {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Which row the error belongs to. "Already working on this — open Control
+  // to watch" used to render at the top of a page whose rows each fill a
+  // phone screen, so the reader saw a red line about a button they pressed
+  // four screens further down. The row that failed shows its own failure.
+  const [errorId, setErrorId] = useState<string | null>(null);
 
   async function act(id: string, run: () => Promise<Response>, fallback: string) {
     setBusyId(id);
     setError(null);
+    setErrorId(null);
     try {
       const res = await run();
       if (!res.ok) await throwApiError(res, fallback);
       refetch();
     } catch (e) {
       setError(e instanceof Error ? e.message : fallback);
+      setErrorId(id);
     } finally {
       setBusyId(null);
     }
@@ -47,7 +54,14 @@ export function useFeedbackActions(refetch: () => void) {
   return {
     busyId,
     error,
-    setError,
+    /** The row `error` belongs to; null when the failure was not row-scoped. */
+    errorId,
+    // A caller reporting its own, non-row failure (Synthesize, Implement all)
+    // must not leave a stale row id pointing the message at the wrong card.
+    setError: (message: string | null) => {
+      setError(message);
+      setErrorId(null);
+    },
     act,
     dispatchFix,
     setStatus,

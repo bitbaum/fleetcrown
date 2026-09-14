@@ -4038,6 +4038,28 @@
   .ui-inbox-actions {
     @apply flex shrink-0 items-center justify-end gap-1.5 sm:justify-start;
   }
+
+  /* ── Feedback rows (/feedback inbox + a project's Feedback section) ──────
+     Each report is a card. It used to be a divider-separated run: a dictated
+     report is 100–200 words, and on a phone the only thing marking where one
+     ended and the next began was a 1px line under a row of buttons. */
+  .ui-feedback-item {
+    @apply flex flex-col gap-2 rounded-2xl border border-border-subtle bg-surface-base p-4;
+  }
+  /* The report leads, clamped: three lines answer "what is this about", the
+     rest is one tap away. No `block` on this element — a display utility
+     silently defeats -webkit-line-clamp (see .ui-loki-nudge-text). */
+  .ui-feedback-message {
+    @apply line-clamp-3 text-sm leading-relaxed text-text-primary;
+  }
+  .ui-feedback-message-open {
+    @apply line-clamp-none;
+  }
+  /* Right-aligned on a phone, where the thumb is; inline at sm+ where the
+     row has the width for a rail. */
+  .ui-feedback-actions {
+    @apply flex flex-wrap items-center justify-end gap-1.5 sm:justify-start;
+  }
   .ui-inbox-batch {
     @apply mb-2 flex flex-wrap items-center gap-1.5;
   }
