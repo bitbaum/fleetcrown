@@ -360,9 +360,19 @@ if ! gh api "orgs/$ORG" --jq .login >/dev/null 2>&1; then
 fi
 alert_transition sec_gh ok "" ""
 
-# Secrets pushed into a repo — GitHub found one; you need to rotate it.
-if ghq secrets "orgs/$ORG/secret-scanning/alerts?state=open&per_page=100" \
-     '.[] | "\(.repository.name)#\(.number)|\(.secret_type_display_name)|\(.html_url)"'; then
+# Secrets pushed into a repo — GitHub found one; you need to rotate it. Read
+# PER REPO: on 2026-09-14 the org-level endpoint answered [] while botsmann's
+# own endpoint listed three open alerts, so the org view would have stayed
+# silent forever. A repo whose alerts cannot be read (scanning unavailable on
+# the plan, no access) is noted in the journal and skipped, not treated as empty.
+if ghq repolist "orgs/$ORG/repos?per_page=100" '.[] | select(.archived==false) | .name'; then
+  : > "$S/gh-secrets.cur"
+  while read -r r; do
+    if out=$(gh api "repos/$ORG/$r/secret-scanning/alerts?state=open&per_page=100" \
+               --jq ".[] | \"$r#\(.number)|\(.secret_type_display_name)|\(.html_url)\"" 2>/dev/null); then
+      printf '%s\n' "$out" | sed '/^$/d' >> "$S/gh-secrets.cur"
+    else logger -t watchdog "github-security-check: secret alerts for $r unreadable (scanning off or no access)"; fi
+  done < "$S/gh-repolist.cur"
   set_diff "$S/gh-secrets" "$S/gh-secrets.cur" | while IFS='|' read -r id typ url; do
     alert "🕵️" "SECRET IN REPO: ${id%%#*} — $typ. Rotate it at the provider, then resolve: $url"
   done

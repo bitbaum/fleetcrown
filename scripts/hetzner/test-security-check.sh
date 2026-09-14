@@ -197,7 +197,8 @@ reset_log; touch -d '9 days ago' "$R/var/run/reboot-required"; run; run
 echo "github-security-check.sh"
 export GH_DIR="$TMP/gh"; mkdir -p "$GH_DIR"; export GH_ORG=testorg
 echo '{"login":"testorg"}' > "$GH_DIR/orgs_testorg.json"
-echo '[]' > "$GH_DIR/orgs_testorg_secret-scanning_alerts.json"
+echo '[]' > "$GH_DIR/repos_testorg_site_secret-scanning_alerts.json"
+echo '[]' > "$GH_DIR/repos_testorg_vault_secret-scanning_alerts.json"
 echo '[]' > "$GH_DIR/orgs_testorg_dependabot_alerts.json"
 echo '[{"name":"site","private":false,"archived":false,"security_and_analysis":{"secret_scanning":{"status":"enabled"}}},{"name":"vault","private":true,"archived":false,"security_and_analysis":{"secret_scanning":{"status":"disabled"}}}]' > "$GH_DIR/orgs_testorg_repos.json"
 echo '[{"login":"george"}]' > "$GH_DIR/orgs_testorg_members.json"
@@ -211,7 +212,8 @@ reset_log; "$MON/github-security-check.sh" >/dev/null 2>&1
 "$MON/github-security-check.sh" >/dev/null 2>&1
 [ "$(wc -l < "$ALERT_LOG")" -eq 0 ] && ok "steady state is silent" || bad "steady state alerted"
 
-echo '[{"repository":{"name":"site"},"number":7,"secret_type_display_name":"Stripe Live Key","html_url":"https://x/7"}]' > "$GH_DIR/orgs_testorg_secret-scanning_alerts.json"
+echo '[{"number":7,"secret_type_display_name":"Stripe Live Key","html_url":"https://x/7"}]' > "$GH_DIR/repos_testorg_site_secret-scanning_alerts.json"
+rm -f "$GH_DIR/repos_testorg_vault_secret-scanning_alerts.json"   # vault: scanning unavailable → 404 → skipped, not "empty"
 "$MON/github-security-check.sh" >/dev/null 2>&1; "$MON/github-security-check.sh" >/dev/null 2>&1
 [ "$(count 'SECRET IN REPO: site')" -eq 1 ] && grep -q "Stripe Live Key" "$ALERT_LOG" && ok "new secret-scanning alert: one message, names repo and type" || bad "secret alert count $(count 'SECRET IN REPO')"
 
